@@ -1,54 +1,56 @@
-name: Deploy
+name: Deploy MintRadar
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  detect-changes:
+  deploy:
     runs-on: ubuntu-latest
-    outputs:
-      mintradar: ${{ steps.filter.outputs.mintradar }}
-      mintradar-backend: ${{ steps.filter.outputs.mintradar-backend }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+
+      - name: Detect frontend changes
+        uses: dorny/paths-filter@v3
         id: filter
         with:
           filters: |
-            mintradar:
+            frontend:
               - 'src/**'
               - 'public/**'
               - 'index.html'
               - 'vite.config.ts'
               - 'package.json'
-            mintradar-backend:
-              - 'backend/src/**'
-              - 'backend/package.json'
-              - 'backend/Dockerfile'
-              - 'docker-compose.yml'
+              - 'package-lock.json'
 
-  build-and-deploy:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.mintradar == 'true'
-    name: Build & Deploy to Hetzner
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        if: steps.filter.outputs.frontend == 'true'
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install dependencies and build frontend
+        if: steps.filter.outputs.frontend == 'true'
+        run: npm ci && npm run build
 
-      - name: Build PWA
-        run: npm run build
+      - name: Deploy backend via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /var/www/mintradar-repo
+            git pull origin main
+            cd backend && npm run build && cd ..
+            docker compose build --no-cache backend
+            docker compose up -d
 
-      - name: Deploy to Hetzner via rsync
+      - name: Deploy frontend via rsync
+        if: steps.filter.outputs.frontend == 'true'
         uses: burnett01/rsync-deployments@7.0.1
         with:
           switches: -avzr --delete
@@ -57,24 +59,3 @@ jobs:
           remote_host: ${{ secrets.HETZNER_HOST }}
           remote_user: ${{ secrets.HETZNER_USER }}
           remote_key: ${{ secrets.HETZNER_SSH_KEY }}
-
-  deploy-mintradar-backend:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.mintradar-backend == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.HETZNER_HOST }}
-          username: ${{ secrets.HETZNER_USER }}
-          key: ${{ secrets.HETZNER_SSH_KEY }}
-          script: |
-            cd /var/www/mintradar-repo
-            git reset --hard origin/main
-            git pull origin main
-            cd backend
-            npm ci
-            npm run build
-            cd ..
-            docker compose build backend
-            docker compose up -d --no-deps backend

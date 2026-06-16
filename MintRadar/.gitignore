@@ -30,3 +30,6 @@ npm-debug.log*
 
 # TypeScript cache
 *.tsbuildinfo
+
+# Local Claude config (sensitive)
+CLAUDE.local.md

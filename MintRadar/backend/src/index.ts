@@ -175,7 +175,7 @@ app.use(cors({
 app.use(express.json())
 
 // Rate limiting — exempt public read-only endpoints that sit behind Cache-Control
-const RATE_LIMIT_EXEMPT = new Set(['/health', '/api/mints/known'])
+const RATE_LIMIT_EXEMPT = new Set(['/health', '/api/mints/known', '/api/stats'])
 
 // Stricter limiters for write endpoints that trigger outbound fetches /
 // DNS resolution. Each submit performs 2+ outbound probes; each discovered
@@ -296,9 +296,10 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
   const periodParam = req.query['period']
   // Support legacy `days` param for backward compat
   const daysParam = req.query['days']
-  let period: '24h' | '7d' | '30d'
+  let period: '24h' | '7d' | '30d' | '90d'
   if (periodParam === '7d') period = '7d'
   else if (periodParam === '30d') period = '30d'
+  else if (periodParam === '90d') period = '90d'
   else if (daysParam === '7') period = '7d'
   else period = '24h'
 
@@ -360,8 +361,7 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
           WHERE url = $1
             AND checked_at >= NOW() - INTERVAL '14 days'
             AND checked_at < NOW() - INTERVAL '7 days'`
-      } else {
-        // 30d
+      } else if (period === '30d') {
         segmentsQuery = `
           SELECT
             DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') AS bucket,
@@ -383,6 +383,29 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
           WHERE url = $1
             AND checked_at >= NOW() - INTERVAL '60 days'
             AND checked_at < NOW() - INTERVAL '30 days'`
+      } else {
+        // 90d — weekly buckets
+        segmentsQuery = `
+          SELECT
+            DATE_TRUNC('week', checked_at AT TIME ZONE 'UTC') AS bucket,
+            BOOL_OR(online) AS online,
+            ROUND(AVG(CASE WHEN online THEN latency_ms END))::int AS latency_ms,
+            COUNT(*) AS total,
+            SUM(CASE WHEN online THEN 1 ELSE 0 END) AS online_count
+          FROM mint_history
+          WHERE url = $1
+            AND checked_at >= NOW() - INTERVAL '90 days'
+            AND checked_at < NOW()
+          GROUP BY bucket
+          ORDER BY bucket ASC`
+        prevQuery = `
+          SELECT
+            SUM(CASE WHEN online THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0) AS uptime_ratio,
+            ROUND(AVG(CASE WHEN online THEN latency_ms END))::int AS avg_latency_ms
+          FROM mint_history
+          WHERE url = $1
+            AND checked_at >= NOW() - INTERVAL '180 days'
+            AND checked_at < NOW() - INTERVAL '90 days'`
       }
 
       return Promise.all([
@@ -437,6 +460,19 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
     })
 })
 
+function parseVerParts(v: string): [number, number, number] {
+  const m = v.match(/(\d+)\.(\d+)(?:\.(\d+))?/)
+  if (!m) return [0, 0, 0]
+  return [parseInt(m[1] ?? '0', 10), parseInt(m[2] ?? '0', 10), parseInt(m[3] ?? '0', 10)]
+}
+function versionGt(a: string, b: string): boolean {
+  const [a0, a1, a2] = parseVerParts(a)
+  const [b0, b1, b2] = parseVerParts(b)
+  if (a0 !== b0) return a0 > b0
+  if (a1 !== b1) return a1 > b1
+  return a2 > b2
+}
+
 app.get('/api/mints/version-history', (req: Request, res: Response): void => {
   const url = req.query['url']
 
@@ -461,24 +497,117 @@ app.get('/api/mints/version-history', (req: Request, res: Response): void => {
         res.status(400).json({ error: 'Invalid url' })
         return
       }
-      return pool
-        .query(
+      return Promise.all([
+        pool.query(
           `SELECT version, first_seen_at FROM mint_version_history
            WHERE url = $1 ORDER BY first_seen_at DESC LIMIT 50`,
           [url]
-        )
-        .then(result => {
-          res.json({
-            url,
-            history: result.rows.map(r => ({
-              version: r.version as string,
-              firstSeenAt: r.first_seen_at as string,
-            })),
-          })
+        ),
+        pool.query('SELECT DISTINCT version FROM mint_version_history'),
+      ]).then(([result, globalResult]) => {
+        const globalVersions = (globalResult.rows as { version: string }[]).map(r => r.version)
+        let latestGlobalVersion: string | null = null
+        for (const v of globalVersions) {
+          if (!latestGlobalVersion || versionGt(v, latestGlobalVersion)) latestGlobalVersion = v
+        }
+        res.json({
+          url,
+          history: result.rows.map(r => ({
+            version: r.version as string,
+            firstSeenAt: (r.first_seen_at as Date).toISOString(),
+          })),
+          latestGlobalVersion,
         })
+      })
     })
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/mints/version-history]', err)
+      res.status(500).json({ error: 'Internal server error' })
+    })
+})
+
+app.get('/api/nuts', (_req: Request, res: Response): void => {
+  pool.query(`
+    SELECT m.url, m.name, m.nuts_limits
+    FROM mints m
+    JOIN LATERAL (
+      SELECT online FROM mint_history
+      WHERE url = m.url ORDER BY checked_at DESC, id DESC LIMIT 1
+    ) latest ON true
+    WHERE latest.online = true AND m.nuts_limits IS NOT NULL
+  `)
+    .then(result => {
+      type Row = { url: string; name: string | null; nuts_limits: Record<string, unknown> }
+      const rows = result.rows as Row[]
+      const NUT_KEYS = ['4','5','7','8','9','10','11','12','14','15','17','19','20','29']
+      const total = rows.length
+      const nuts = NUT_KEYS.map(key => ({
+        nut: `NUT-${key.padStart(2, '0')}`,
+        percent: total > 0
+          ? Math.round(rows.filter(r => r.nuts_limits[key] != null).length / total * 100)
+          : 0,
+        mints: rows.filter(r => r.nuts_limits[key] != null).map(r => r.url),
+      }))
+      res.json(nuts)
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[/api/nuts]', err)
+      res.status(500).json({ error: 'Internal server error' })
+    })
+})
+
+app.get('/api/stats', (_req: Request, res: Response): void => {
+  Promise.all([
+    pool.query(`
+      SELECT m.url, m.name, m.last_trust_score, m.nuts_limits,
+        latest.online AS online, latest.latency_ms
+      FROM mints m
+      LEFT JOIN LATERAL (
+        SELECT online, latency_ms FROM mint_history
+        WHERE url = m.url ORDER BY checked_at DESC, id DESC LIMIT 1
+      ) latest ON true
+    `),
+    pool.query(`
+      SELECT ROUND(AVG(latency_ms))::int AS avg_latency
+      FROM mint_history
+      WHERE online = true AND checked_at > NOW() - INTERVAL '24 hours'
+    `),
+  ])
+    .then(([mintsResult, latencyResult]) => {
+      type MintRow = { url: string; name: string | null; last_trust_score: number | null; nuts_limits: Record<string, unknown> | null; online: boolean | null; latency_ms: number | null }
+      const rows = mintsResult.rows as MintRow[]
+      const online = rows.filter(r => r.online === true)
+      const offline = rows.filter(r => r.online === false)
+      const nonOffline = rows.filter(r => r.online !== false)
+      const onlineTrustScores = online.map(r => r.last_trust_score ?? 0)
+      const avgTrustScore = onlineTrustScores.length > 0
+        ? Math.round(onlineTrustScores.reduce((a, b) => a + b) / onlineTrustScores.length)
+        : null
+      const avgLatency24h = latencyResult.rows[0]?.avg_latency as number | null ?? null
+      const low = onlineTrustScores.filter(s => s < 40).length
+      const moderate = onlineTrustScores.filter(s => s >= 40 && s < 70).length
+      const high = onlineTrustScores.filter(s => s >= 70).length
+      // Matches ALL_NUTS in MintDetail — mandatory baseline NUTs (1,2,3,6) are never
+      // returned in /v1/info nuts object, so they cannot be tracked here.
+      const NUT_KEYS = ['4','5','7','8','9','10','11','12','14','15','17','19','20','29']
+      const onlineWithNuts = online.filter(r => r.nuts_limits != null)
+      const totalForAdoption = onlineWithNuts.length
+      const nutAdoption = NUT_KEYS.map(key => ({
+        nut: `NUT-${key.padStart(2, '0')}`,
+        count: onlineWithNuts.filter(r => r.nuts_limits && r.nuts_limits[key] != null).length,
+        percent: totalForAdoption > 0
+          ? Math.round(onlineWithNuts.filter(r => r.nuts_limits && r.nuts_limits[key] != null).length / totalForAdoption * 100)
+          : 0,
+      }))
+      const top5 = [...rows]
+        .filter(r => r.last_trust_score != null)
+        .sort((a, b) => (b.last_trust_score as number) - (a.last_trust_score as number))
+        .slice(0, 5)
+        .map(r => ({ url: r.url, name: r.name, trustScore: r.last_trust_score as number }))
+      res.json({ totalMints: nonOffline.length, onlineMints: online.length, offlineMints: nonOffline.length - online.length, avgTrustScore, avgLatency24h, trustDistribution: { low, moderate, high }, nutAdoption, top5ByTrustScore: top5 })
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[/api/stats]', err)
       res.status(500).json({ error: 'Internal server error' })
     })
 })

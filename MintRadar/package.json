@@ -2,6 +2,7 @@
   "name": "mintradar",
   "version": "0.1.0",
   "private": true,
+  "keywords": ["cashu", "bitcoin", "nostr", "ecash", "lightning", "mint-monitoring"],
   "type": "module",
   "scripts": {
     "dev": "vite",

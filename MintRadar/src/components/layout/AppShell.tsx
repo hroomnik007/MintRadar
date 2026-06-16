@@ -11,6 +11,23 @@ export function AppShell() {
   const { pathname } = useLocation()
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement).tagName
+      const editable = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable
+      if (e.key === '/') {
+        if (editable) return
+        e.preventDefault()
+        document.querySelector<HTMLInputElement>('[data-search-input]')?.focus()
+      }
+      if (e.key === 'Escape') {
+        window.dispatchEvent(new CustomEvent('mintradar:escape'))
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   useWatchlistSync()
   const profile = useAuthStore(state => state.profile)
   const login = useAuthStore(state => state.login)
@@ -19,8 +36,8 @@ export function AppShell() {
   const watchlistCount = useWatchlistStore(state => state.mints.length)
 
   async function handleLogout() {
-    await useWatchlistStore.getState().clearWatchlist()
     logout()
+    await useWatchlistStore.getState().clearWatchlist()
   }
 
   const [nip07Available, setNip07Available] = useState(false)
@@ -52,6 +69,12 @@ export function AppShell() {
             {watchlistCount > 0 && (
               <span className="nav-tab-badge">{watchlistCount}</span>
             )}
+          </NavLink>
+          <NavLink to="/stats" className={({isActive}) => `nav-tab${isActive ? ' active' : ''}`}>
+            Stats
+          </NavLink>
+          <NavLink to="/nuts" className={({isActive}) => `nav-tab${isActive ? ' active' : ''}`}>
+            NUTs
           </NavLink>
         </div>
 

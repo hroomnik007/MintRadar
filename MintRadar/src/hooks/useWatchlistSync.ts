@@ -9,46 +9,70 @@ export function useWatchlistSync() {
   const mints = useWatchlistStore(s => s.mints)
   const loadFromDb = useWatchlistStore(s => s.loadFromDb)
 
-  // tracks which pubkey has completed initial sync this session
   const syncedForPubkey = useRef<string | null>(null)
+  const isSyncing = useRef(false)
 
-  // Phase 1: on login, load Dexie → fetch remote → merge → publish merged state
+  // Reset ALL sync state on logout so the next login triggers a fresh sync
+  useEffect(() => {
+    if (!profile?.pubkey) {
+      console.log('sync: logout detected — resetting all sync state')
+      syncedForPubkey.current = null
+      isSyncing.current = false
+    }
+  }, [profile?.pubkey])
+
+  // Phase 1: on login, fetch remote → replace Dexie → load into store
   useEffect(() => {
     const pubkey = profile?.pubkey
     if (!pubkey || syncedForPubkey.current === pubkey) return
 
-    const doSync = async () => {
-      await loadFromDb()
+    // Set isSyncing IMMEDIATELY (synchronously) before any async work
+    // so Phase 2 is blocked from the moment this effect fires
+    isSyncing.current = true
+    console.log('sync: starting for pubkey', pubkey.slice(0, 8))
 
-      const remote = await fetchRemoteWatchlist(pubkey)
-      if (remote.length > 0) {
-        const local = await db.watchlist.toArray()
-        const localUrls = new Set(local.map(e => e.url))
-        const toAdd = remote.filter(u => !localUrls.has(u))
-        if (toAdd.length > 0) {
+    const doSync = async () => {
+      try {
+        console.log('sync: fetching kind:10003 from relays')
+        const remote = await fetchRemoteWatchlist(pubkey)
+        console.log(`sync: decrypted ${remote.length} mints`, remote)
+
+        if (remote.length > 0) {
+          // Remote is authoritative — replace Dexie content entirely
+          await db.watchlist.clear()
           await Promise.all(
-            toAdd.map(url =>
+            remote.map(url =>
               db.watchlist.put({ url, addedAt: new Date(), notifyOnDown: false, notifyOnUp: false })
             )
           )
-          await loadFromDb()
+          console.log('sync: written to Dexie')
+        } else {
+          console.log('sync: no remote data found — keeping local Dexie state')
         }
+
+        await loadFromDb()
+        syncedForPubkey.current = pubkey
+        console.log('sync: complete —', useWatchlistStore.getState().mints.length, 'mints in store')
+      } catch (err) {
+        console.warn('sync: error during Phase 1:', err)
+        // Mark complete even on error to avoid getting stuck; Phase 2 can resume
+        syncedForPubkey.current = pubkey
+      } finally {
+        isSyncing.current = false
       }
-
-      syncedForPubkey.current = pubkey
-
-      // publish the final merged state once
-      const finalMints = useWatchlistStore.getState().mints
-      await publishWatchlist(pubkey, finalMints)
     }
 
     void doSync()
   }, [profile?.pubkey, loadFromDb])
 
-  // Phase 2: after initial sync, publish on every subsequent mints change
+  // Phase 2: publish current state to relays on any mint change,
+  // but ONLY after sync has completed and is not currently running
   useEffect(() => {
     const pubkey = profile?.pubkey
-    if (!pubkey || syncedForPubkey.current !== pubkey) return
+    if (!pubkey) return
+    if (syncedForPubkey.current !== pubkey) return
+    if (isSyncing.current) return
+    console.log('sync: Phase 2 publishing', mints.length, 'mints to relays')
     void publishWatchlist(pubkey, mints)
   }, [mints, profile?.pubkey])
 }

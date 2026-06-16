@@ -24,11 +24,14 @@
 - 24-hour uptime percentage with color indicators (green/yellow/red)
 - Latency sparklines and historical charts powered by PostgreSQL data
 - Automatically hides mints that have been offline for more than 24 hours
+- Historical charts with interval selector (24h / 7d / 30d / 90d) for Latency, Uptime, and Trust Score
+- Per-period averages with delta vs previous period
 
 ### 🔍 NUT Compatibility
 - Overview of 14 tracked Cashu NUTs (NUT-04, NUT-05, NUT-07 to NUT-12, NUT-14, NUT-15, NUT-17, NUT-19, NUT-20, NUT-29)
 - Click any NUT card to see description, supported features, and link to specification
 - Min/max amount limits displayed for NUT-04 (Mint tokens) and NUT-05 (Melt tokens)
+- Mint Backup Checker — NUT-13 support indicator (Backup supported / No backup)
 
 ### 🏆 Trust Score
 - Composite trust score with interactive breakdown modal:
@@ -59,9 +62,30 @@
 - Additional discovery via **audit.8333.space API**
 - Manual mint submission by **URL** or **Nostr npub** (resolves the mint URL from the profile)
 - Dashboard sort by Status, Latency, Name, or Trust Score with ascending/descending toggle
+- Bulk mint submission — paste multiple URLs at once, probed and added sequentially
 
 ### ✍️ Reviews
 - Decentralized mint reviews via Nostr (kind 38000)
+
+### 🃏 Mint Cards
+- Compact / Expanded view toggle — compact shows status and uptime, expanded adds latency and NUT count
+- Mint Age badges — Fresh / Established / Veteran / OG based on time since discovery
+- Trust Score color coding — Low Trust (red) / Moderate Trust (orange) / High Trust (green)
+
+### 🔎 Search & Filter
+- Advanced filter panel — filter by Status, Trust Score minimum, Mint Age, and NUT support
+- Filters applied on demand; active filters shown as tags
+
+### ⚖️ Mint Comparison
+- Select 2–4 mints and compare side-by-side in a modal
+- Compares: Status, Trust Score, Uptime, Latency, NUT count, NUT support grid, Version, Backup support
+
+### 📈 Global Stats
+- Network-wide statistics page (/stats)
+- Total / Online / Offline mint counts, Average Trust Score and Latency
+- NUT adoption horizontal bar chart (NUT-01 to NUT-14, color-coded by adoption rate)
+- Trust Score distribution (Low Trust / Moderate Trust / High Trust)
+- Top 5 mints by Trust Score
 
 ---
 
@@ -85,7 +109,7 @@
 - **Backend:** Node.js + Express + TypeScript
 - **Database:** PostgreSQL
 - **Nostr:** nostr-tools
-- **Deployment:** Docker + Nginx
+- **Deployment:** Docker + Nginx + GitHub Actions CI/CD
 
 ---
 
