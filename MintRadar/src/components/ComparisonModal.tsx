@@ -25,13 +25,6 @@ function mintAgeBadge(discoveredAt: string | null | undefined) {
   return { label: 'OG', color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' }
 }
 
-function latencyColor(ms: number | null | undefined): string {
-  if (!ms || ms <= 0) return 'var(--text)'
-  if (ms < 800) return '#4ade80'
-  if (ms < 1500) return '#ffa500'
-  return '#ff4d4d'
-}
-
 function uptimeColor(pct: number | null | undefined): string {
   if (pct === null || pct === undefined) return 'var(--text3)'
   if (pct >= 80) return '#4ade80'
@@ -96,7 +89,7 @@ function CompareColumn({ mint, latestVersion }: { mint: KnownMint; latestVersion
         <span style={{ marginLeft: 5, fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: tsInfo.color }}>{trustScore}%</span>
       </div>
       <div className="cmp-cell" style={{ color: uptimeColor(uptimePct), fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600 }}>{uptimePct}%</div>
-      <div className="cmp-cell" style={{ color: latencyColor(mint.latencyMs), fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+      <div className="cmp-cell" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 13 }}>
         {isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
       </div>
       <div className="cmp-cell" style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>{mint.nutCount ?? 0} / 14</div>

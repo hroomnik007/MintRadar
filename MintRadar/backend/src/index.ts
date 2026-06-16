@@ -662,6 +662,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           discoveredAt: (r.discovered_at as string | null) ?? null,
           trustScore: (r.last_trust_score as number | null) ?? null,
           lastError: (r.last_error as string | null) ?? null,
+          uptimePct24h: total === 0 ? null : Math.round(onlineCount / total * 100),
         }
       })
       knownMintsCache = { data, expiresAt: Date.now() + KNOWN_MINTS_CACHE_TTL }

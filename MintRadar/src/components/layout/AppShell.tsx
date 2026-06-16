@@ -73,9 +73,6 @@ export function AppShell() {
           <NavLink to="/stats" className={({isActive}) => `nav-tab${isActive ? ' active' : ''}`}>
             Stats
           </NavLink>
-          <NavLink to="/nuts" className={({isActive}) => `nav-tab${isActive ? ' active' : ''}`}>
-            NUTs
-          </NavLink>
         </div>
 
         {/* Auth */}

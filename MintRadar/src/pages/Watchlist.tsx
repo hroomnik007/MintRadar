@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MintFavicon } from '@/components/mint/MintFavicon'
-import { useMintHistory } from '@/hooks/useMintHistory'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
@@ -82,7 +81,7 @@ function getHostname(url: string): string {
 
 const DEFAULT_SORT_DIRS: Record<'name' | 'latency' | 'status' | 'trust', 'asc' | 'desc'> = { status: 'desc', latency: 'asc', trust: 'desc', name: 'asc' }
 
-const NUT_FILTER_KEYS = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14']
+const NUT_FILTER_KEYS = ['4','5','7','8','9','10','11','12','14','15','17','19','20','29']
 const AGE_LABELS = ['Fresh', 'Established', 'Veteran', 'OG']
 
 interface FilterState {
@@ -132,7 +131,6 @@ function WatchlistCard({
   onToggleSelect?: (url: string, selected: boolean) => void
 }) {
   const navigate = useNavigate()
-  const { records, uptimePercent } = useMintHistory(url)
   const removeMint = useWatchlistStore(state => state.removeMint)
 
   const hostname = getHostname(url)
@@ -140,8 +138,8 @@ function WatchlistCard({
   const displayName = knownMint?.name ?? hostname
   const latency = knownMint?.latencyMs ?? null
   const iconUrl = knownMint?.iconUrl ?? null
-  const uptimePct = records.length > 0 ? uptimePercent : (isOnline ? 100 : 0)
-  const showUptime = records.length > 0 || isOnline
+  const uptimePct24h = knownMint?.uptimePct24h ?? null
+  const showUptime = uptimePct24h !== null
 
   const trustScore = listTrustScore(knownMint)
   const tsInfo = trustScoreInfo(trustScore)
@@ -191,9 +189,9 @@ function WatchlistCard({
         {showUptime && (
           <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:4}}>
             <div className="uptime-bar-track">
-              <div className="uptime-bar-fill" style={{width:`${uptimePct}%`,background:uptimeColor(uptimePct)}}/>
+              <div className="uptime-bar-fill" style={{width:`${uptimePct24h}%`,background:uptimeColor(uptimePct24h)}}/>
             </div>
-            <span className="uptime-pct" style={{color:uptimeColor(uptimePct)}}>{uptimePct}%</span>
+            <span className="uptime-pct" style={{color:uptimeColor(uptimePct24h)}}>{uptimePct24h}%</span>
           </div>
         )}
       </div>

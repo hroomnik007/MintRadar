@@ -325,6 +325,10 @@ function MintDetailContent({ url }: { url: string }) {
     const auditNMints = knownMint?.auditNMints ?? null
     const auditNMelts = knownMint?.auditNMelts ?? null
     const auditNErrors = knownMint?.auditNErrors ?? null
+    const emailVal = data?.info?.contact?.find((c: { method: string }) => c.method === 'email')?.info
+    const twitterVal = data?.info?.contact?.find((c: { method: string }) => c.method === 'twitter')?.info
+    const nostrVal = data?.info?.contact?.find((c: { method: string }) => c.method === 'nostr')?.info
+    const websiteVal = data?.info?.contact?.find((c: { method: string }) => c.method === 'website')?.info
     function bucketLabel(bucket: string): string {
       const d = new Date(bucket)
       if (chartInterval === '24h') return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -332,11 +336,11 @@ function MintDetailContent({ url }: { url: string }) {
     }
     return segs.map(seg => {
       const trustVal = seg.uptimePct !== null
-        ? computeTrustScore(seg.uptimePct, nutCount, versionStr, undefined, undefined, undefined, undefined, auditNMints, auditNMelts, auditNErrors)
+        ? computeTrustScore(seg.uptimePct, nutCount, versionStr, emailVal, twitterVal, nostrVal, websiteVal, auditNMints, auditNMelts, auditNErrors)
         : null
       return { label: bucketLabel(seg.bucket), latency: seg.latencyMs, uptime: seg.uptimePct, trust: trustVal }
     })
-  }, [chartHistoryData?.segments, chartInterval, knownMint, data?.info?.version])
+  }, [chartHistoryData?.segments, chartInterval, knownMint, data?.info?.version, data?.info?.contact])
 
   if (isLoading || data === undefined) {
     return (
@@ -503,7 +507,7 @@ function MintDetailContent({ url }: { url: string }) {
                 onClick={() => { void testClientLatency() }}
                 disabled={testingLatency}
                 className="latency-test-btn"
-                style={{background:'transparent',border:'0.5px solid #17E87F',borderRadius:6,color:'#17E87F',fontSize:13,padding:'8px 16px',cursor:testingLatency?'wait':'pointer',fontFamily:'var(--font-mono)',display:'inline-flex',alignItems:'center',gap:6}}
+                style={{background:'transparent',border:'0.5px solid #17E87F',borderRadius:6,color:'#17E87F',fontSize:12,padding:'4px 10px',cursor:testingLatency?'wait':'pointer',fontFamily:'var(--font-mono)',display:'inline-flex',alignItems:'center',gap:6}}
               >
                 {testingLatency && <span className="latency-spinner" />}
                 Show my latency

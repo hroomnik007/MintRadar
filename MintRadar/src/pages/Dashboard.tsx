@@ -10,7 +10,7 @@ import { useUserRelays } from '@/hooks/useUserRelays'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useNostrMints } from '@/hooks/useNostrMints'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
-import { useMintHistory } from '@/hooks/useMintHistory'
+
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
@@ -155,7 +155,7 @@ function formatTimeAgo(date: Date | null): string {
 const NOSTR_LOOKUP_RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.nostr.band']
 const DEFAULT_SORT_DIRS: Record<'name' | 'latency' | 'status' | 'trust', 'asc' | 'desc'> = { status: 'desc', latency: 'asc', trust: 'desc', name: 'asc' }
 
-const NUT_FILTER_KEYS = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14']
+const NUT_FILTER_KEYS = ['4','5','7','8','9','10','11','12','14','15','17','19','20','29']
 const AGE_LABELS = ['Fresh', 'Established', 'Veteran', 'OG']
 
 interface FilterState {
@@ -210,14 +210,12 @@ function MintCardDisplay({
   const isWatched = mints.includes(mint.url)
   const profile = useAuthStore(state => state.profile)
   const isLoggedIn = profile !== null
-  const { records, uptimePercent } = useMintHistory(mint.url)
-
   const cardStyle = isDegraded ? { opacity: 0.45 } : undefined
   const hostname = getHostname(mint.url)
   const isOnline = mint.online === true
   const displayName = mint.name ?? hostname
-  const uptimePct = records.length > 0 ? uptimePercent : (isOnline ? 100 : 0)
-  const showUptime = records.length > 0 || isOnline
+  const uptimePct24h = mint.uptimePct24h ?? null
+  const showUptime = uptimePct24h !== null
 
   const trustScore = listTrustScore(mint)
   const tsInfo = trustScoreInfo(trustScore)
@@ -267,9 +265,9 @@ function MintCardDisplay({
         {showUptime && (
           <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:4}}>
             <div className="uptime-bar-track">
-              <div className="uptime-bar-fill" style={{width:`${uptimePct}%`,background:uptimeColor(uptimePct)}}/>
+              <div className="uptime-bar-fill" style={{width:`${uptimePct24h}%`,background:uptimeColor(uptimePct24h)}}/>
             </div>
-            <span className="uptime-pct" style={{color:uptimeColor(uptimePct)}}>{uptimePct}%</span>
+            <span className="uptime-pct" style={{color:uptimeColor(uptimePct24h)}}>{uptimePct24h}%</span>
           </div>
         )}
       </div>

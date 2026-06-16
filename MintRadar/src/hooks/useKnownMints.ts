@@ -19,6 +19,7 @@ export interface KnownMint {
   discoveredAt?: string | null
   trustScore?: number | null
   lastError?: string | null
+  uptimePct24h?: number | null
 }
 
 async function fetchKnownMints(): Promise<KnownMint[]> {
