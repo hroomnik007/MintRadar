@@ -1,3 +1,4 @@
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -5,6 +6,7 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts'
 import { MintFavicon } from '@/components/mint/MintFavicon'
+import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import './Stats.css'
 
 interface StatsData {
@@ -19,17 +21,108 @@ interface StatsData {
 }
 
 function trustScoreInfo(score: number): { label: string; color: string; bg: string; border: string } {
-  if (score >= 70) return { label: 'High Trust', color: '#4ade80', bg: 'rgba(74,222,128,0.1)', border: 'rgba(74,222,128,0.25)' }
-  if (score >= 40) return { label: 'Moderate Trust', color: '#ffa500', bg: 'rgba(255,165,0,0.1)', border: 'rgba(255,165,0,0.25)' }
-  return { label: 'Low Trust', color: '#ff4d4d', bg: 'rgba(255,77,77,0.1)', border: 'rgba(255,77,77,0.25)' }
+  if (score >= 70) return { label: 'High Trust', color: '#17E87F', bg: 'rgba(23,232,127,0.1)', border: 'rgba(23,232,127,0.25)' }
+  if (score >= 40) return { label: 'Moderate Trust', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.25)' }
+  return { label: 'Low Trust', color: '#E24B4A', bg: 'rgba(226,75,74,0.1)', border: 'rgba(226,75,74,0.25)' }
 }
 
 function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
 }
 
+const NUT_META: Record<string, { short: string; desc: string; specNum: string }> = {
+  'NUT-04': { short: 'Mint tokens', desc: 'Minting new Cashu tokens against a Lightning invoice.', specNum: '04' },
+  'NUT-05': { short: 'Melt tokens', desc: 'Melting Cashu tokens to pay a Lightning invoice.', specNum: '05' },
+  'NUT-07': { short: 'Token state', desc: 'Checking whether a proof has been spent or is still valid.', specNum: '07' },
+  'NUT-08': { short: 'Overpay melt', desc: 'Overpaying melt fees and receiving change tokens back.', specNum: '08' },
+  'NUT-09': { short: 'Restore', desc: 'Restoring blinded signatures from mint backup data.', specNum: '09' },
+  'NUT-10': { short: 'Spending conditions', desc: 'Conditions that must be met to use a proof.', specNum: '10' },
+  'NUT-11': { short: 'Pay-to-PK', desc: 'Lock tokens to a specific public key for secure transfers.', specNum: '11' },
+  'NUT-12': { short: 'DLEQ proofs', desc: 'Discrete Log Equality proofs for verifiable blind signatures.', specNum: '12' },
+  'NUT-14': { short: 'HTLCs', desc: 'Hash Time Locked Contracts for atomic swaps.', specNum: '14' },
+  'NUT-15': { short: 'Multipart melt', desc: 'Split a melt payment across multiple Lightning invoices.', specNum: '15' },
+  'NUT-17': { short: 'WebSocket', desc: 'Real-time mint updates via WebSocket subscription.', specNum: '17' },
+  'NUT-19': { short: 'Cached responses', desc: 'Mints cache successful responses so wallets can replay after a network error.', specNum: '19' },
+  'NUT-20': { short: 'Mint quote sig', desc: 'Mint signs quote requests for authenticity.', specNum: '20' },
+  'NUT-29': { short: 'Batched minting', desc: 'Wallets can mint tokens for multiple quotes in a single atomic request.', specNum: '29' },
+}
+
+function NutMintsModal({ nutId, nutMeta, mints, onClose }: {
+  nutId: string
+  nutMeta: { short: string; desc: string; specNum: string }
+  mints: KnownMint[]
+  onClose: () => void
+}) {
+  const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return mints
+    const q = search.toLowerCase()
+    return mints.filter(m => {
+      const name = (m.name ?? getHostname(m.url)).toLowerCase()
+      return name.includes(q) || m.url.toLowerCase().includes(q)
+    })
+  }, [mints, search])
+
+  const total = mints.length
+  const online = mints.filter(m => m.online === true).length
+  const offline = mints.filter(m => m.online === false).length
+
+  return (
+    <div className="nut-modal-overlay" onClick={onClose}>
+      <div className="nut-modal" onClick={e => e.stopPropagation()}>
+        <button type="button" className="nut-modal-close" onClick={onClose}>✕</button>
+        <div className="nut-modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <span className="snc-nut-tag">{nutId}</span>
+            <span className="nut-modal-title">{nutMeta.short}</span>
+          </div>
+          <div className="nut-modal-subtitle">{total} mint{total !== 1 ? 's' : ''} support this NUT</div>
+        </div>
+        <input
+          className="nut-modal-search"
+          type="text"
+          placeholder="Filter by mint name or URL…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          autoFocus
+        />
+        <div className="nut-modal-list">
+          {filtered.map(m => (
+            <div key={m.url} className="nut-modal-row">
+              <MintFavicon url={m.url} iconUrl={m.iconUrl} size={22} />
+              <div className="nut-modal-row-info">
+                <span className="nut-modal-row-name">{m.name ?? getHostname(m.url)}</span>
+                <span className="nut-modal-row-url">{getHostname(m.url)}</span>
+              </div>
+              <span
+                className="nut-modal-row-dot"
+                style={{ background: m.online === true ? '#17E87F' : '#E24B4A' }}
+              />
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div className="nut-modal-empty">No mints match</div>
+          )}
+        </div>
+        <div className="nut-modal-footer">
+          {total} total · {online} online · {offline} offline
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Stats() {
   const navigate = useNavigate()
+  const [modalNut, setModalNut] = useState<string | null>(null)
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['stats'],
     queryFn: async (): Promise<StatsData> => {
@@ -40,6 +133,19 @@ export default function Stats() {
     staleTime: 2 * 60 * 1000,
     refetchInterval: 2 * 60 * 1000,
   })
+
+  const { data: knownMintsData } = useKnownMints()
+
+  const nutSupportingMints = useMemo(() => {
+    if (!knownMintsData) return {} as Record<string, KnownMint[]>
+    const NUT_KEYS = ['4','5','7','8','9','10','11','12','14','15','17','19','20','29']
+    const result: Record<string, KnownMint[]> = {}
+    for (const key of NUT_KEYS) {
+      const nutId = `NUT-${key.padStart(2, '0')}`
+      result[nutId] = knownMintsData.filter(m => m.nutsLimits?.[key] != null)
+    }
+    return result
+  }, [knownMintsData])
 
   if (isLoading) return (
     <div className="stats-page">
@@ -61,10 +167,16 @@ export default function Stats() {
 
   const avgTsInfo = data.avgTrustScore != null ? trustScoreInfo(data.avgTrustScore) : null
   const trustDistData = [
-    { name: 'Low Trust', value: data.trustDistribution.low, color: '#ff4d4d' },
-    { name: 'Moderate Trust', value: data.trustDistribution.moderate, color: '#ffa500' },
-    { name: 'High Trust', value: data.trustDistribution.high, color: '#4ade80' },
+    { name: 'Low Trust', value: data.trustDistribution.low, color: '#E24B4A' },
+    { name: 'Moderate', value: data.trustDistribution.moderate, color: '#f59e0b' },
+    { name: 'High Trust', value: data.trustDistribution.high, color: '#17E87F' },
   ]
+
+  const NUT_ORDER = ['NUT-04','NUT-05','NUT-07','NUT-08','NUT-09','NUT-10','NUT-11','NUT-12','NUT-14','NUT-15','NUT-17','NUT-19','NUT-20','NUT-29']
+  const nutAdoptionMap = Object.fromEntries(data.nutAdoption.map(n => [n.nut, n]))
+
+  const modalNutMints = modalNut ? (nutSupportingMints[modalNut] ?? []) : []
+  const modalNutMeta = modalNut ? NUT_META[modalNut] : null
 
   return (
     <div className="stats-page">
@@ -101,42 +213,24 @@ export default function Stats() {
         </div>
       </div>
 
-      <div className="stats-body">
-        <div className="stats-panel">
-          <div className="stats-panel-title">NUT Adoption (Online Mints)</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>
-            {data.nutAdoption.map(({ nut, percent }) => {
-              const barColor = percent >= 70 ? '#639922' : percent >= 40 ? '#EF9F27' : '#E24B4A'
-              return (
-                <div key={nut} style={{ display: 'grid', gridTemplateColumns: '68px 1fr 44px', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text2)', textAlign: 'right' }}>{nut}</span>
-                  <div style={{ height: 8, borderRadius: 99, background: 'var(--bg3)', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${percent}%`, borderRadius: 99, background: barColor }} />
-                  </div>
-                  <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: barColor, textAlign: 'right' }}>{percent}%</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
+      <div className="stats-body" style={{ gridTemplateColumns: '260px 1fr' }}>
         <div className="stats-panel">
           <div className="stats-panel-title">Trust Score Distribution</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 28, padding: '12px 0' }}>
-            <div style={{ width: 160, height: 160, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 72, height: 72, flexShrink: 0 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={trustDistData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
-                    outerRadius={72}
+                    innerRadius={15}
+                    outerRadius={26}
                     paddingAngle={2}
                     dataKey="value"
                   >
                     {trustDistData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.color} opacity={0.85} />
+                      <Cell key={idx} fill={entry.color} opacity={0.9} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -146,12 +240,12 @@ export default function Stats() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {trustDistData.map(d => (
-                <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: 2, background: d.color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text2)', minWidth: 90 }}>{d.name}</span>
-                  <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700, color: d.color }}>{d.value}</span>
+                <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: d.color, flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: '#8b949e' }}>{d.name}</span>
+                  <span style={{ fontSize: 14, fontFamily: 'var(--font-mono)', fontWeight: 500, color: 'var(--text)' }}>{d.value}</span>
                 </div>
               ))}
             </div>
@@ -190,6 +284,62 @@ export default function Stats() {
           )}
         </div>
       </div>
+
+      <div className="stats-section-divider" />
+
+      <div className="stats-nut-section">
+        <div className="stats-section-label">NUT Explorer</div>
+        <div className="stats-section-sublabel">Protocol adoption across {data.onlineMints} online mints · click +N more to see all supporting mints</div>
+        <div className="stats-nut-grid">
+          {NUT_ORDER.map(nut => {
+            const adoption = nutAdoptionMap[nut] ?? { count: 0, percent: 0 }
+            const { count, percent } = adoption
+            const meta = NUT_META[nut]
+            if (!meta) return null
+            const barColor = percent >= 80 ? '#17E87F' : percent >= 40 ? '#f59e0b' : '#E24B4A'
+            const specUrl = `https://github.com/cashubtc/nuts/blob/main/${meta.specNum}.md`
+            return (
+              <div key={nut} className="stats-nut-card">
+                <div className="snc-head">
+                  <span className="snc-nut-tag">{nut}</span>
+                  <a
+                    href={specUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="snc-spec-link"
+                    onClick={e => e.stopPropagation()}
+                  >spec ↗</a>
+                </div>
+                <div className="snc-name">{meta.short}</div>
+                <div className="snc-desc">{meta.desc}</div>
+                <div className="snc-bar-track">
+                  <div className="snc-bar-fill" style={{ width: `${percent}%`, background: barColor }} />
+                </div>
+                <div className="snc-footer">
+                  <span className="snc-pct" style={{ color: barColor }}>{percent}%</span>
+                  <span className="snc-count">{count} mint{count !== 1 ? 's' : ''}</span>
+                  {count > 0 && (
+                    <button
+                      type="button"
+                      className="snc-more-btn"
+                      onClick={() => setModalNut(nut)}
+                    >+{count} more</button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {modalNut !== null && modalNutMeta !== null && modalNutMeta !== undefined && (
+        <NutMintsModal
+          nutId={modalNut}
+          nutMeta={modalNutMeta}
+          mints={modalNutMints}
+          onClose={() => setModalNut(null)}
+        />
+      )}
     </div>
   )
 }
