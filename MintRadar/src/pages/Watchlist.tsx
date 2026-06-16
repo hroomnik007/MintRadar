@@ -1,12 +1,29 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useMintHistory } from '@/hooks/useMintHistory'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
+import { useUIStore } from '@/stores/ui.store'
+import { ComparisonModal } from '@/components/ComparisonModal'
 import './Watchlist.css'
 
+const IcList = () => (
+  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+    <rect x="1" y="2" width="11" height="1.5" rx="0.75" fill="currentColor"/>
+    <rect x="1" y="5.75" width="11" height="1.5" rx="0.75" fill="currentColor"/>
+    <rect x="1" y="9.5" width="11" height="1.5" rx="0.75" fill="currentColor"/>
+  </svg>
+)
+const IcCards = () => (
+  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+    <rect x="1" y="1" width="4.5" height="4.5" rx="1" fill="currentColor"/>
+    <rect x="7.5" y="1" width="4.5" height="4.5" rx="1" fill="currentColor"/>
+    <rect x="1" y="7.5" width="4.5" height="4.5" rx="1" fill="currentColor"/>
+    <rect x="7.5" y="7.5" width="4.5" height="4.5" rx="1" fill="currentColor"/>
+  </svg>
+)
 const IcRadar = () => (
   <svg width="48" height="48" viewBox="0 0 22 22" fill="none">
     <circle cx="11" cy="11" r="9.5" stroke="currentColor" strokeWidth="1.15"/>
@@ -16,7 +33,19 @@ const IcRadar = () => (
     <line x1="11" y1="11" x2="17" y2="5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
   </svg>
 )
-
+const IcFilter = () => (
+  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+    <line x1="1.5" y1="3" x2="11.5" y2="3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+    <line x1="3" y1="6.5" x2="10" y2="6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+    <line x1="4.5" y1="10" x2="8.5" y2="10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+  </svg>
+)
+const IcClose = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+    <line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+    <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+  </svg>
+)
 
 function uptimeColor(pct: number | null | undefined): string {
   if (pct === null || pct === undefined) return 'var(--text3)'
@@ -25,12 +54,27 @@ function uptimeColor(pct: number | null | undefined): string {
   return '#ff4d4d'
 }
 
+
+function trustScoreInfo(score: number): { label: string; color: string; bg: string; border: string } {
+  if (score >= 70) return { label: 'High Trust', color: '#4ade80', bg: 'rgba(74,222,128,0.1)', border: 'rgba(74,222,128,0.25)' }
+  if (score >= 40) return { label: 'Moderate Trust', color: '#ffa500', bg: 'rgba(255,165,0,0.1)', border: 'rgba(255,165,0,0.25)' }
+  return { label: 'Low Trust', color: '#ff4d4d', bg: 'rgba(255,77,77,0.1)', border: 'rgba(255,77,77,0.25)' }
+}
+
+function mintAgeBadge(discoveredAt: string | null | undefined): { label: string; color: string; bg: string; border: string } | null {
+  if (!discoveredAt) return null
+  const months = (Date.now() - new Date(discoveredAt).getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+  if (months < 1) return { label: 'Fresh', color: '#60a5fa', bg: 'rgba(96,165,250,0.1)', border: 'rgba(96,165,250,0.25)' }
+  if (months < 6) return { label: 'Established', color: '#4ade80', bg: 'rgba(74,222,128,0.1)', border: 'rgba(74,222,128,0.25)' }
+  if (months < 12) return { label: 'Veteran', color: '#ffa500', bg: 'rgba(255,165,0,0.1)', border: 'rgba(255,165,0,0.25)' }
+  return { label: 'OG', color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' }
+}
+
 function listTrustScore(mint: KnownMint | null): number {
   if (!mint || mint.online !== true) return 0
-  const nutScore = mint.nutCount !== null ? Math.min(mint.nutCount / 14, 1) * 60 : 0
-  const latScore = mint.latencyMs !== null ? Math.max(0, 1 - mint.latencyMs / 2000) * 40 : 0
-  return Math.round(nutScore + latScore)
+  return mint.trustScore ?? 0
 }
+
 
 function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
@@ -38,12 +82,54 @@ function getHostname(url: string): string {
 
 const DEFAULT_SORT_DIRS: Record<'name' | 'latency' | 'status' | 'trust', 'asc' | 'desc'> = { status: 'desc', latency: 'asc', trust: 'desc', name: 'asc' }
 
+const NUT_FILTER_KEYS = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14']
+const AGE_LABELS = ['Fresh', 'Established', 'Veteran', 'OG']
+
+interface FilterState {
+  status: 'all' | 'online' | 'offline'
+  minTrustScore: number
+  mintAges: string[]
+  requiredNuts: string[]
+}
+const DEFAULT_FILTERS: FilterState = { status: 'all', minTrustScore: 0, mintAges: [], requiredNuts: [] }
+
+function countActiveFilters(f: FilterState): number {
+  return [f.status !== 'all' ? 1 : 0, f.minTrustScore > 0 ? 1 : 0, f.mintAges.length > 0 ? 1 : 0, f.requiredNuts.length > 0 ? 1 : 0].reduce((a, b) => a + b, 0)
+}
+
+function applyFilters(urls: string[], knownMintsMap: Map<string, KnownMint>, filters: FilterState): string[] {
+  return urls.filter(url => {
+    const mint = knownMintsMap.get(url) ?? null
+    if (filters.status === 'online' && mint?.online !== true) return false
+    if (filters.status === 'offline' && mint?.online !== false) return false
+    if (listTrustScore(mint) < filters.minTrustScore) return false
+    if (filters.mintAges.length > 0) {
+      const badge = mintAgeBadge(mint?.discoveredAt)
+      if (!badge || !filters.mintAges.includes(badge.label)) return false
+    }
+    if (filters.requiredNuts.length > 0) {
+      const nuts = mint?.nutsLimits as Record<string, unknown> | null | undefined
+      if (!nuts) return false
+      if (!filters.requiredNuts.every(nut => nuts[nut] != null)) return false
+    }
+    return true
+  })
+}
+
+// ── Watchlist Card ─────────────────────────────────────────────
+
 function WatchlistCard({
   url,
   knownMint,
+  viewMode = 'compact',
+  isSelected = false,
+  onToggleSelect,
 }: {
   url: string
   knownMint: KnownMint | null
+  viewMode?: 'compact' | 'expanded'
+  isSelected?: boolean
+  onToggleSelect?: (url: string, selected: boolean) => void
 }) {
   const navigate = useNavigate()
   const { records, uptimePercent } = useMintHistory(url)
@@ -52,15 +138,14 @@ function WatchlistCard({
   const hostname = getHostname(url)
   const isOnline = knownMint?.online === true
   const displayName = knownMint?.name ?? hostname
-  const version = knownMint?.version ?? null
-  const nutCount = knownMint?.nutCount ?? null
   const latency = knownMint?.latencyMs ?? null
   const iconUrl = knownMint?.iconUrl ?? null
-  const uptimePct = records.length > 0 ? uptimePercent : 100
+  const uptimePct = records.length > 0 ? uptimePercent : (isOnline ? 100 : 0)
+  const showUptime = records.length > 0 || isOnline
 
-  const nutsLimits = knownMint?.nutsLimits as Record<string, { disabled?: boolean }> | null | undefined
-  const isMintingDisabled = nutsLimits?.['4']?.disabled === true
-  const isMeltingDisabled = nutsLimits?.['5']?.disabled === true
+  const trustScore = listTrustScore(knownMint)
+  const tsInfo = trustScoreInfo(trustScore)
+  const ageBadge = mintAgeBadge(knownMint?.discoveredAt)
 
   const isNew = knownMint?.discoveredAt != null
     && (Date.now() - new Date(knownMint.discoveredAt).getTime()) < 48 * 3600 * 1000
@@ -68,16 +153,30 @@ function WatchlistCard({
   return (
     <div
       className={`mint-card ${knownMint?.online === true ? 'online' : knownMint?.online === false ? 'offline' : ''}`}
+      style={{ position: 'relative' }}
       onClick={() => navigate(`/mint/${encodeURIComponent(url)}`)}
     >
+      {onToggleSelect && (
+        <div
+          className="card-select-box"
+          onClick={e => { e.stopPropagation(); onToggleSelect(url, !isSelected) }}
+        >
+          <div className={`card-checkbox${isSelected ? ' checked' : ''}`}>
+            {isSelected && <span>✓</span>}
+          </div>
+        </div>
+      )}
       <div className="card-top">
         <div className="card-name-row">
           <MintFavicon url={url} iconUrl={iconUrl} size={22} />
-          <div>
+          <div style={{minWidth:0}}>
             <div className="card-name" style={{display:'flex',alignItems:'center',gap:5,minWidth:0}}>
               <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{displayName}</span>
               {isNew && (
                 <span style={{flexShrink:0,background:'rgba(74,222,128,0.15)',color:'#4ade80',border:'0.5px solid rgba(74,222,128,0.3)',fontSize:10,padding:'1px 5px',borderRadius:4,fontFamily:'var(--font-mono)',fontWeight:600}}>New</span>
+              )}
+              {ageBadge && !isNew && (
+                <span style={{flexShrink:0,background:ageBadge.bg,color:ageBadge.color,border:`0.5px solid ${ageBadge.border}`,fontSize:9,padding:'1px 5px',borderRadius:4,fontFamily:'var(--font-mono)',fontWeight:600}}>{ageBadge.label}</span>
               )}
             </div>
             <div className="card-host">{hostname}</div>
@@ -86,33 +185,37 @@ function WatchlistCard({
         <div className="status-dot" style={{ background: isOnline ? 'var(--accent)' : '#ff4d4d' }} />
       </div>
 
-      <div className="card-badges">
-        {version !== null && <span className="badge">{version}</span>}
-        {nutCount !== null && <span className="badge">{nutCount} NUTs</span>}
-        {(records.length > 0 || isOnline) && (
-          <div className="uptime-bar-wrap">
+      <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
+        <span style={{fontSize:10,fontFamily:'var(--font-mono)',color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:4,padding:'1px 5px',flexShrink:0}}>{tsInfo.label}</span>
+        <span style={{fontSize:11,fontFamily:'var(--font-mono)',color:tsInfo.color,fontWeight:600}}>{trustScore}%</span>
+        {showUptime && (
+          <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:4}}>
             <div className="uptime-bar-track">
-              <div className="uptime-bar-fill" style={{ width: `${uptimePct}%`, background: uptimeColor(uptimePct) }} />
+              <div className="uptime-bar-fill" style={{width:`${uptimePct}%`,background:uptimeColor(uptimePct)}}/>
             </div>
-            <span className="uptime-pct" style={{ color: uptimeColor(uptimePct) }}>{uptimePct}%</span>
+            <span className="uptime-pct" style={{color:uptimeColor(uptimePct)}}>{uptimePct}%</span>
           </div>
-        )}
-        {!isOnline && knownMint?.online === false && <span className="badge unreachable">Unreachable</span>}
-        {(isMintingDisabled || isMeltingDisabled) && (
-          <span className="badge" style={{color:'#ffa500',background:'rgba(255,165,0,0.1)',border:'0.5px solid rgba(255,165,0,0.25)'}}>
-            {isMintingDisabled && isMeltingDisabled ? 'Disabled' : isMintingDisabled ? 'No minting' : 'No melting'}
-          </span>
         )}
       </div>
 
-      <div className="card-bottom">
-        <div className="latency-block">
-          <div className="latency-label">Latency</div>
-          <div className="latency-value" style={{ color: 'var(--text)' }}>
-            {!isOnline ? (knownMint?.online === null ? '—' : 'offline') : latency !== null ? latency : '—'}
-            {isOnline && latency !== null && <span className="latency-unit">ms</span>}
+      {viewMode === 'expanded' && (
+        <div style={{display:'flex',gap:14,marginBottom:8,fontSize:10,fontFamily:'var(--font-mono)',color:'var(--text2)'}}>
+          <div>
+            <span style={{color:'var(--text3)',marginRight:3}}>Latency</span>
+            <span style={{color:isOnline && latency !== null ? 'var(--text)' : 'var(--text3)'}}>
+              {!isOnline ? '—' : latency !== null ? `${latency}ms` : '—'}
+            </span>
           </div>
+          {knownMint?.nutCount !== null && knownMint?.nutCount !== undefined && (
+            <div>
+              <span style={{color:'var(--text3)',marginRight:3}}>NUTs</span>
+              <span>{knownMint.nutCount} / 14</span>
+            </div>
+          )}
         </div>
+      )}
+
+      <div className="card-bottom" style={{justifyContent:'flex-end'}}>
         <button
           type="button"
           className="wl-card-remove"
@@ -126,6 +229,25 @@ function WatchlistCard({
 export default function Watchlist() {
   const [sortBy, setSortBy] = useState<'name' | 'latency' | 'trust' | 'status'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const { viewMode, setViewMode } = useUIStore()
+
+  // Filter state
+  const [showFilters, setShowFilters] = useState(false)
+  const [pendingFilters, setPendingFilters] = useState<FilterState>(DEFAULT_FILTERS)
+  const [activeFilters, setActiveFilters] = useState<FilterState>(DEFAULT_FILTERS)
+
+  // Comparison state
+  const [selectedUrls, setSelectedUrls] = useState<Set<string>>(new Set())
+  const [showComparison, setShowComparison] = useState(false)
+
+  function toggleSelect(url: string, selected: boolean) {
+    setSelectedUrls(prev => {
+      const next = new Set(prev)
+      if (selected && next.size < 4) next.add(url)
+      else next.delete(url)
+      return next
+    })
+  }
 
   function handleSortClick(s: typeof sortBy) {
     if (s === sortBy) {
@@ -138,6 +260,7 @@ export default function Watchlist() {
 
   const mints = useWatchlistStore(state => state.mints)
   const loadFromDb = useWatchlistStore(state => state.loadFromDb)
+  const removeMintFromStore = useWatchlistStore(state => state.removeMint)
 
   const profile = useAuthStore(state => state.profile)
   const login = useAuthStore(state => state.login)
@@ -145,11 +268,41 @@ export default function Watchlist() {
   const authError = useAuthStore(state => state.error)
 
   const { data: knownMintsData } = useKnownMints()
-  const knownMintsMap = new Map(knownMintsData?.map(m => [m.url, m]) ?? [])
+  const knownMintsMap = useMemo(() => new Map(knownMintsData?.map(m => [m.url, m]) ?? []), [knownMintsData])
+
+  const activeFilterCount = countActiveFilters(activeFilters)
+  const filteredMints = useMemo(() => applyFilters(mints, knownMintsMap, activeFilters), [mints, knownMintsMap, activeFilters])
+  const selectedMints = useMemo(() => filteredMints.map(url => knownMintsMap.get(url)).filter((m): m is KnownMint => m !== undefined && selectedUrls.has(m.url)), [filteredMints, knownMintsMap, selectedUrls])
+
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const [visibleCount, setVisibleCount] = useState(20)
 
   useEffect(() => {
     void loadFromDb()
   }, [loadFromDb])
+
+  useEffect(() => { setVisibleCount(20) }, [filteredMints, sortBy, sortDir])
+
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0]?.isIntersecting) setVisibleCount(prev => prev + 20)
+    }, { rootMargin: '200px' })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if ((e as CustomEvent).type === 'mintradar:escape') {
+        setShowFilters(false)
+        setShowComparison(false)
+      }
+    }
+    window.addEventListener('mintradar:escape', handler)
+    return () => window.removeEventListener('mintradar:escape', handler)
+  }, [])
 
   function handleExport() {
     const payload = JSON.stringify({ exportedAt: new Date().toISOString(), mints }, null, 2)
@@ -208,6 +361,24 @@ export default function Watchlist() {
     )
   }
 
+  const sortedFiltered = [...filteredMints].sort((a, b) => {
+    const ma = knownMintsMap.get(a) ?? null
+    const mb = knownMintsMap.get(b) ?? null
+    let result = 0
+    if (sortBy === 'status') {
+      result = (mb?.online === true ? 1 : 0) - (ma?.online === true ? 1 : 0)
+    } else if (sortBy === 'latency') {
+      const la = ma?.online === true && ma.latencyMs != null ? ma.latencyMs : Infinity
+      const lb = mb?.online === true && mb.latencyMs != null ? mb.latencyMs : Infinity
+      result = la - lb
+    } else if (sortBy === 'trust') {
+      result = listTrustScore(mb) - listTrustScore(ma)
+    } else {
+      result = getHostname(a).localeCompare(getHostname(b))
+    }
+    return sortDir === DEFAULT_SORT_DIRS[sortBy] ? result : -result
+  })
+
   return (
     <div className="watchlist-page">
       <div className="wl-controls">
@@ -221,20 +392,122 @@ export default function Watchlist() {
             </div>
           )}
         </div>
-        <div className="sort-segment">
-          {(['status', 'latency', 'name', 'trust'] as const).map(s => (
-            <button
-              key={s}
-              type="button"
-              className={`sort-btn${sortBy === s ? ' active' : ''}`}
-              onClick={() => handleSortClick(s)}
-            >
-              {s === 'trust' ? 'Trust Score' : s.charAt(0).toUpperCase() + s.slice(1)}
-              {sortBy === s && <span style={{marginLeft: 3, fontSize: 10, opacity: 0.7}}>{sortDir === 'asc' ? '↑' : '↓'}</span>}
-            </button>
-          ))}
+        <div style={{display:'flex',alignItems:'center',gap:7}}>
+          <button
+            type="button"
+            className={`filter-btn${showFilters ? ' active' : ''}`}
+            onClick={() => setShowFilters(v => !v)}
+          >
+            <IcFilter />
+            Filtre
+            {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
+          </button>
+          <div className="sort-segment">
+            {(['status', 'latency', 'name', 'trust'] as const).map(s => (
+              <button
+                key={s}
+                type="button"
+                className={`sort-btn${sortBy === s ? ' active' : ''}`}
+                onClick={() => handleSortClick(s)}
+              >
+                {s === 'trust' ? 'Trust Score' : s.charAt(0).toUpperCase() + s.slice(1)}
+                {sortBy === s && <span style={{marginLeft: 3, fontSize: 10, opacity: 0.7}}>{sortDir === 'asc' ? '↑' : '↓'}</span>}
+              </button>
+            ))}
+          </div>
+          <div className="view-toggle">
+            <button type="button" className={`view-toggle-btn${viewMode === 'compact' ? ' active' : ''}`} onClick={() => setViewMode('compact')} title="Compact view"><IcList /></button>
+            <button type="button" className={`view-toggle-btn${viewMode === 'expanded' ? ' active' : ''}`} onClick={() => setViewMode('expanded')} title="Expanded view"><IcCards /></button>
+          </div>
         </div>
       </div>
+
+      {showFilters && (
+        <div className="filter-panel">
+          {activeFilterCount > 0 && (
+            <div className="filter-active-tags">
+              {activeFilters.status !== 'all' && (
+                <span className="filter-tag">
+                  {activeFilters.status === 'online' ? 'Len online' : 'Len offline'}
+                  <button type="button" onClick={() => { const f = { ...activeFilters, status: 'all' as const }; setActiveFilters(f); setPendingFilters(f) }}><IcClose /></button>
+                </span>
+              )}
+              {activeFilters.minTrustScore > 0 && (
+                <span className="filter-tag">
+                  Trust ≥ {activeFilters.minTrustScore}%
+                  <button type="button" onClick={() => { const f = { ...activeFilters, minTrustScore: 0 }; setActiveFilters(f); setPendingFilters(f) }}><IcClose /></button>
+                </span>
+              )}
+              {activeFilters.mintAges.map(age => (
+                <span key={age} className="filter-tag">
+                  {age}
+                  <button type="button" onClick={() => { const f = { ...activeFilters, mintAges: activeFilters.mintAges.filter(a => a !== age) }; setActiveFilters(f); setPendingFilters(f) }}><IcClose /></button>
+                </span>
+              ))}
+              {activeFilters.requiredNuts.map(nut => (
+                <span key={nut} className="filter-tag">
+                  NUT-{nut.padStart(2, '0')}
+                  <button type="button" onClick={() => { const f = { ...activeFilters, requiredNuts: activeFilters.requiredNuts.filter(n => n !== nut) }; setActiveFilters(f); setPendingFilters(f) }}><IcClose /></button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="filter-row">
+            <div className="filter-group">
+              <div className="filter-group-label">Stav</div>
+              <div className="filter-radio-group">
+                {(['all', 'online', 'offline'] as const).map(s => (
+                  <label key={s} className="filter-radio">
+                    <input type="radio" name="wl-filter-status" checked={pendingFilters.status === s} onChange={() => setPendingFilters(p => ({ ...p, status: s }))} />
+                    {s === 'all' ? 'Všetky' : s === 'online' ? 'Len online' : 'Len offline'}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="filter-group">
+              <div className="filter-group-label">Min. Trust Score: <strong>{pendingFilters.minTrustScore}%</strong></div>
+              <input
+                type="range" min={0} max={100} step={5}
+                value={pendingFilters.minTrustScore}
+                onChange={e => setPendingFilters(p => ({ ...p, minTrustScore: parseInt(e.target.value) }))}
+                className="filter-slider"
+              />
+            </div>
+
+            <div className="filter-group">
+              <div className="filter-group-label">Vek mintu</div>
+              <div className="filter-pills">
+                {AGE_LABELS.map(age => (
+                  <button key={age} type="button" className={`filter-pill${pendingFilters.mintAges.includes(age) ? ' active' : ''}`}
+                    onClick={() => setPendingFilters(p => ({ ...p, mintAges: p.mintAges.includes(age) ? p.mintAges.filter(a => a !== age) : [...p.mintAges, age] }))}
+                  >{age}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="filter-group" style={{ marginBottom: 10 }}>
+            <div className="filter-group-label">Podpora NUT</div>
+            <div className="filter-nut-grid">
+              {NUT_FILTER_KEYS.map(key => (
+                <button key={key} type="button" className={`filter-nut-chip${pendingFilters.requiredNuts.includes(key) ? ' active' : ''}`}
+                  onClick={() => setPendingFilters(p => ({ ...p, requiredNuts: p.requiredNuts.includes(key) ? p.requiredNuts.filter(n => n !== key) : [...p.requiredNuts, key] }))}
+                >NUT-{key.padStart(2, '0')}</button>
+              ))}
+            </div>
+          </div>
+
+          <div className="filter-footer">
+            <div className="filter-count">Zobrazených <strong>{filteredMints.length}</strong> z <strong>{mints.length}</strong> mintov</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="filter-reset-btn" onClick={() => { setPendingFilters(DEFAULT_FILTERS); setActiveFilters(DEFAULT_FILTERS) }}>Resetovať filtre</button>
+              <button type="button" className="filter-apply-btn" onClick={() => { setActiveFilters(pendingFilters); setShowFilters(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Použiť filtre</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {mints.length === 0 ? (
         <div className="wl-empty">
@@ -243,27 +516,48 @@ export default function Watchlist() {
           <div className="wl-empty-sub">Watch mints from the Dashboard to track them here</div>
         </div>
       ) : (
-        <div className="wl-grid">
-          {[...mints].sort((a, b) => {
-            const ma = knownMintsMap.get(a) ?? null
-            const mb = knownMintsMap.get(b) ?? null
-            let result = 0
-            if (sortBy === 'status') {
-              result = (mb?.online === true ? 1 : 0) - (ma?.online === true ? 1 : 0)
-            } else if (sortBy === 'latency') {
-              const la = ma?.online === true && ma.latencyMs != null ? ma.latencyMs : Infinity
-              const lb = mb?.online === true && mb.latencyMs != null ? mb.latencyMs : Infinity
-              result = la - lb
-            } else if (sortBy === 'trust') {
-              result = listTrustScore(mb) - listTrustScore(ma)
-            } else {
-              result = getHostname(a).localeCompare(getHostname(b))
-            }
-            return sortDir === DEFAULT_SORT_DIRS[sortBy] ? result : -result
-          }).map(url => (
-            <WatchlistCard key={url} url={url} knownMint={knownMintsMap.get(url) ?? null} />
-          ))}
+        <>
+          <div className="wl-grid">
+            {sortedFiltered.slice(0, visibleCount).map(url => (
+              <WatchlistCard
+                key={url}
+                url={url}
+                knownMint={knownMintsMap.get(url) ?? null}
+                viewMode={viewMode}
+                isSelected={selectedUrls.has(url)}
+                onToggleSelect={toggleSelect}
+              />
+            ))}
+          </div>
+          <div style={{fontSize:13,color:'var(--text3)',textAlign:'center',marginTop:16,fontFamily:'var(--font-mono)'}}>
+            Zobrazených {Math.min(visibleCount, sortedFiltered.length)} z {sortedFiltered.length}
+          </div>
+          {visibleCount < sortedFiltered.length && (
+            <div ref={sentinelRef} style={{height:1}} />
+          )}
+        </>
+      )}
+
+      {selectedUrls.size >= 1 && (
+        <div className="cmp-bar">
+          <span className="cmp-bar-text">Vybrané: {selectedUrls.size} mintov</span>
+          {selectedUrls.size >= 2 && (
+            <button type="button" className="cmp-bar-btn primary" onClick={() => setShowComparison(true)}>Porovnať</button>
+          )}
+          <button
+            type="button"
+            className="cmp-bar-btn danger"
+            onClick={() => {
+              selectedUrls.forEach(url => { void removeMintFromStore(url) })
+              setSelectedUrls(new Set())
+            }}
+          >Odstrániť z watchlistu</button>
+          <button type="button" className="cmp-bar-btn" onClick={() => setSelectedUrls(new Set())}>Zrušiť výber</button>
         </div>
+      )}
+
+      {showComparison && selectedMints.length >= 2 && (
+        <ComparisonModal mints={selectedMints} onClose={() => setShowComparison(false)} />
       )}
 
       <div className="wl-footer">Watchlist is stored locally in your browser. When logged in with Nostr, it is also synced as an encrypted event (NIP-44) to Nostr relays for cross-device access. Mint URLs are included in encrypted alert DMs when a watched mint goes offline.</div>
