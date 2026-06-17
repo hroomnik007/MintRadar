@@ -8,32 +8,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Detect frontend changes
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
-        id: filter
-        with:
-          filters: |
-            frontend:
-              - 'src/**'
-              - 'public/**'
-              - 'index.html'
-              - 'vite.config.ts'
-              - 'package.json'
-              - 'package-lock.json'
-
-      - name: Setup Node.js
-        if: steps.filter.outputs.frontend == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies and build frontend
-        if: steps.filter.outputs.frontend == 'true'
-        run: npm ci && npm run build
-
       - name: Deploy backend via SSH
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
@@ -52,13 +26,19 @@ jobs:
             docker compose build --no-cache backend
             docker compose up -d
 
-      - name: Deploy frontend via SSH + rsync
-        if: steps.filter.outputs.frontend == 'true'
-        uses: burnett01/rsync-deployments@7.0.1
+      - name: Deploy frontend via SSH
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
-          switches: -avzr --delete
-          path: dist/
-          remote_path: /var/www/mintradar/dist/
-          remote_host: ${{ secrets.HETZNER_HOST }}
-          remote_user: ${{ secrets.HETZNER_USER }}
-          remote_key: ${{ secrets.HETZNER_SSH_KEY }}
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /var/www/mintradar-repo
+            git fetch origin main
+            git reset --hard origin/main
+            cd MintRadar
+            npm ci
+            npm run build
+            sudo cp -r dist/* /var/www/mintradar/dist/
+            sudo systemctl reload nginx
