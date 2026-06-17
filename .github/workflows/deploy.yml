@@ -1,13 +1,13 @@
-name: Deploy to Hetzner
+name: Deploy MintRadar to Hetzner
+
 on:
   workflow_dispatch:
   push:
     branches:
       - main
     paths:
-      - 'finance-tracker/**'
-      - 'backend/**'
-      - 'landing/**'
+      - 'MintRadar/**'
+
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
@@ -16,67 +16,61 @@ jobs:
       changed_backend: ${{ steps.filter.outputs.backend }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
         id: filter
         with:
           filters: |
             frontend:
-              - 'finance-tracker/**'
-              - 'landing/**'
+              - 'MintRadar/src/**'
+              - 'MintRadar/public/**'
+              - 'MintRadar/index.html'
+              - 'MintRadar/vite.config.ts'
+              - 'MintRadar/package*.json'
             backend:
-              - 'backend/**'
+              - 'MintRadar/backend/**'
+
   deploy-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.changed_frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Deploy frontend via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          host: ${{ secrets.MINTRADAR_HOST }}
+          username: ${{ secrets.MINTRADAR_USER }}
+          key: ${{ secrets.MINTRADAR_SSH_KEY }}
           port: 22
           script: |
             set -euo pipefail
-            cd /var/www/finance-tracker-repo
-            git fetch origin main
-            git reset --hard origin/main
-            cd /var/www/finance-tracker-repo/finance-tracker
-            rm -rf node_modules && npm cache clean --force
-            npm ci --legacy-peer-deps
-            export PATH="$PATH:$(pwd)/node_modules/.bin"
-            git log --pretty=format:'{"hash":"%h","date":"%ad","message":"%s"}' --date=short -50 2>/dev/null | grep -v '^$' | awk 'NR==1{print "["} NR>1{print ","} {print} END{print "]"}' > public/changelog.json || echo "[]" > public/changelog.json
-            VITE_API_URL=https://api.pedani.eu VITE_BASE_URL=/ VITE_VAPID_PUBLIC_KEY=${{ secrets.VITE_VAPID_PUBLIC_KEY }} VITE_BUILD_DATE=$(date +'%Y.%m.%d') npm run build
-            sudo mkdir -p /var/www/finance-tracker/finance-tracker/dist
-            sudo chown -R deploy:deploy /var/www/finance-tracker/finance-tracker/dist
-            cp -r dist/* /var/www/finance-tracker/finance-tracker/dist/
-            cp /var/www/finance-tracker-repo/landing/index.html /var/www/landing/index.html 2>/dev/null || true
+            cd /var/www/mintradar-repo/MintRadar
+            git fetch origin main && git reset --hard origin/main
+            npm ci
+            npm run build
+            sudo mkdir -p /var/www/mintradar/dist
+            sudo chown -R deploy:deploy /var/www/mintradar/dist
+            cp -r dist/* /var/www/mintradar/dist/
             sudo systemctl reload nginx
+
   deploy-backend:
     needs: detect-changes
     if: needs.detect-changes.outputs.changed_backend == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Deploy backend via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          host: ${{ secrets.MINTRADAR_HOST }}
+          username: ${{ secrets.MINTRADAR_USER }}
+          key: ${{ secrets.MINTRADAR_SSH_KEY }}
           port: 22
           script: |
             set -euo pipefail
-            cd /var/www/finance-tracker-repo
-            git fetch origin main
-            git reset --hard origin/main
-            cd /var/www/finance-tracker-repo/backend
-            rm -rf node_modules && npm cache clean --force
-            npm ci --prefer-offline
-            # Add DATABASE_URL to GitHub repo Settings → Secrets and variables → Actions
-            DATABASE_URL=${{ secrets.DATABASE_URL }} npm run db:migrate
-            cd /var/www/finance-tracker-repo
+            cd /var/www/mintradar-repo/MintRadar/backend
+            git fetch origin main && git reset --hard origin/main
+            npm ci
+            npm run build
+            cd /var/www/mintradar-repo/MintRadar
             docker compose build backend
             docker compose down --remove-orphans || true
-            docker rm -f finance-tracker-repo-backend-1 2>/dev/null || true
             docker compose up -d --no-deps backend
