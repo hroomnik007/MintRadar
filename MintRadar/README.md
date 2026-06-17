@@ -68,24 +68,30 @@
 - Decentralized mint reviews via Nostr (kind 38000)
 
 ### 🃏 Mint Cards
-- Compact / Expanded view toggle — compact shows status and uptime, expanded adds latency and NUT count
+- Compact / Expanded view toggle — compact shows status and uptime, expanded adds latency and NUT count below the Watch button
 - Mint Age badges — Fresh / Established / Veteran / OG based on time since discovery
 - Trust Score color coding — Low Trust (red) / Moderate Trust (orange) / High Trust (green)
+- Online cards — green gradient with accent left border; offline/unknown cards — red gradient with red left border
+- Mint logo 32px, mint name 16px for improved readability
 
 ### 🔎 Search & Filter
 - Advanced filter panel — filter by Status, Trust Score minimum, Mint Age, and NUT support
 - Filters applied on demand; active filters shown as tags
+- Filter panel, comparison bar, and mint count text fully in English
 
 ### ⚖️ Mint Comparison
 - Select 2–4 mints and compare side-by-side in a modal
 - Compares: Status, Trust Score, Uptime, Latency, NUT count, NUT support grid, Version, Backup support
+- Row-aligned CSS Grid layout — all values in the same row always align horizontally
+- NUT support chips show all 14 tracked NUTs with green/gray color coding per mint
 
 ### 📈 Global Stats
 - Network-wide statistics page (/stats)
 - Total / Online / Offline mint counts, Average Trust Score and Latency
-- NUT adoption horizontal bar chart (NUT-01 to NUT-14, color-coded by adoption rate)
-- Trust Score distribution (Low Trust / Moderate Trust / High Trust)
+- Trust Score distribution donut chart — compact layout with legend side by side
 - Top 5 mints by Trust Score
+- **NUT Explorer** — 14 NUT cards (NUT-04, 05, 07–12, 14, 15, 17, 19, 20, 29) each showing adoption %, supporting mint count, spec link, and "+N more" button
+- "+N more" modal — searchable, scrollable list of all mints supporting that NUT with online/offline indicator
 
 ---
 

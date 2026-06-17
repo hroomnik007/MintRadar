@@ -1,5 +1,7 @@
 import express, { type Request, type Response, type NextFunction } from 'express'
 import cors from 'cors'
+import { SimplePool } from 'nostr-tools'
+import WebSocket from 'ws'
 import { pool, initDb } from './db.js'
 import { isSafeUrl, safeFetch } from './ssrf.js'
 import { upsertMint, probeMintToDb } from './prober.js'
@@ -7,6 +9,24 @@ import { seedKnownMints, startCron } from './cron.js'
 
 let knownMintsCache: { data: unknown; expiresAt: number } | null = null
 const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
+
+interface NostrReviewEntry {
+  id: string
+  pubkey: string
+  content: string
+  rating: number
+  createdAt: number
+  source: 'nostr'
+}
+
+const nostrReviewsCache = new Map<string, { data: NostrReviewEntry[]; expiresAt: number }>()
+const NOSTR_REVIEWS_CACHE_TTL = 10 * 60 * 1000 // 10 minutes
+const NOSTR_REVIEWS_RELAYS = [
+  'wss://relay.damus.io',
+  'wss://nos.lol',
+  'wss://relay.nostr.band',
+]
+const NOSTR_REVIEWS_TIMEOUT_MS = 8_000
 
 const PORT = parseInt(process.env['PORT'] ?? '3002', 10)
 const IS_DEV = process.env['NODE_ENV'] !== 'production'
@@ -821,6 +841,76 @@ app.post('/api/mints/discover', async (req: Request, res: Response): Promise<voi
 
   if (added > 0) knownMintsCache = null
   res.json({ added, total: body.urls.length })
+})
+
+app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {
+  const url = req.query['url']
+
+  if (typeof url !== 'string' || url.length === 0) {
+    res.status(400).json({ error: 'Missing required query parameter: url' })
+    return
+  }
+
+  if (!url.startsWith('https://')) {
+    res.status(400).json({ error: 'url must start with https://' })
+    return
+  }
+
+  if (url.length > MAX_URL_LENGTH) {
+    res.status(400).json({ error: `url exceeds maximum length of ${MAX_URL_LENGTH} characters` })
+    return
+  }
+
+  const cached = nostrReviewsCache.get(url)
+  if (cached && Date.now() < cached.expiresAt) {
+    res.json(cached.data)
+    return
+  }
+
+  if (!globalThis.WebSocket) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(globalThis as any).WebSocket = WebSocket
+  }
+
+  const nostrPool = new SimplePool()
+
+  Promise.race([
+    nostrPool.querySync(NOSTR_REVIEWS_RELAYS, { kinds: [38000], '#u': [url], limit: 50 }),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), NOSTR_REVIEWS_TIMEOUT_MS)
+    ),
+  ])
+    .then(events => {
+      // One review per pubkey — keep the most recent
+      const byPubkey = new Map<string, typeof events[0]>()
+      for (const e of events) {
+        const existing = byPubkey.get(e.pubkey)
+        if (!existing || e.created_at > existing.created_at) {
+          byPubkey.set(e.pubkey, e)
+        }
+      }
+
+      const reviews: NostrReviewEntry[] = []
+      for (const e of byPubkey.values()) {
+        const ratingTag = (e.tags as string[][]).find(t => t[0] === 'rating')
+        const commentTag = (e.tags as string[][]).find(t => t[0] === 'comment')
+        const rating = ratingTag ? parseInt(ratingTag[1] ?? '', 10) : 0
+        const content = commentTag ? (commentTag[1] ?? '') : (e.content ?? '')
+        if (rating >= 1 && rating <= 5) {
+          reviews.push({ id: e.id, pubkey: e.pubkey, content, rating, createdAt: e.created_at, source: 'nostr' })
+        }
+      }
+
+      reviews.sort((a, b) => b.createdAt - a.createdAt)
+      nostrReviewsCache.set(url, { data: reviews, expiresAt: Date.now() + NOSTR_REVIEWS_CACHE_TTL })
+      nostrPool.destroy()
+      res.json(reviews)
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[/api/mints/nostr-reviews]', err)
+      nostrPool.destroy()
+      res.json([])
+    })
 })
 
 // ── Start ──────────────────────────────────────────────────────

@@ -26,6 +26,12 @@ function trustScoreInfo(score: number): { label: string; color: string; bg: stri
   return { label: 'Low Trust', color: '#E24B4A', bg: 'rgba(226,75,74,0.1)', border: 'rgba(226,75,74,0.25)' }
 }
 
+function uptimeColor(pct: number): string {
+  if (pct >= 80) return '#17E87F'
+  if (pct >= 50) return '#f59e0b'
+  return '#E24B4A'
+}
+
 function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
 }
@@ -122,6 +128,7 @@ function NutMintsModal({ nutId, nutMeta, mints, onClose }: {
 export default function Stats() {
   const navigate = useNavigate()
   const [modalNut, setModalNut] = useState<string | null>(null)
+  const [top5Tab, setTop5Tab] = useState<'trust' | 'uptime'>('trust')
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['stats'],
@@ -145,6 +152,24 @@ export default function Stats() {
       result[nutId] = knownMintsData.filter(m => m.nutsLimits?.[key] != null)
     }
     return result
+  }, [knownMintsData])
+
+  const { avgUptime24h, uptimeMintCount } = useMemo(() => {
+    if (!knownMintsData || knownMintsData.length === 0) return { avgUptime24h: null, uptimeMintCount: 0 }
+    const total = knownMintsData.length
+    const sum = knownMintsData.reduce((acc, m) => acc + (m.uptimePct24h ?? 0), 0)
+    return {
+      avgUptime24h: Math.round(sum / total),
+      uptimeMintCount: total,
+    }
+  }, [knownMintsData])
+
+  const top5ByUptime = useMemo(() => {
+    if (!knownMintsData) return []
+    return [...knownMintsData]
+      .filter(m => m.online === true && m.uptimePct24h != null)
+      .sort((a, b) => (b.uptimePct24h ?? 0) - (a.uptimePct24h ?? 0))
+      .slice(0, 5)
   }, [knownMintsData])
 
   if (isLoading) return (
@@ -185,47 +210,65 @@ export default function Stats() {
         <div className="stats-subtitle">Network-wide metrics across all monitored Cashu mints</div>
       </div>
 
+      {/* ── Metric cards ── */}
       <div className="stats-metrics">
         <div className="stats-metric-card">
-          <div className="smc-label">Total Mints</div>
+          <div className="smc-label">
+            <span className="smc-dot" style={{ background: '#8b949e' }} />
+            Total Mints
+          </div>
           <div className="smc-value">{data.totalMints}</div>
         </div>
         <div className="stats-metric-card">
-          <div className="smc-label">Online</div>
-          <div className="smc-value" style={{ color: '#4ade80' }}>{data.onlineMints}</div>
+          <div className="smc-label">
+            <span className="smc-dot" style={{ background: '#17E87F', boxShadow: '0 0 5px #17E87F' }} />
+            Online
+          </div>
+          <div className="smc-value" style={{ color: '#17E87F', textShadow: '0 0 20px rgba(23,232,127,0.3)' }}>{data.onlineMints}</div>
         </div>
         <div className="stats-metric-card">
-          <div className="smc-label">Offline</div>
-          <div className="smc-value" style={{ color: '#ff4d4d' }}>{data.offlineMints}</div>
+          <div className="smc-label">
+            <span className="smc-dot" style={{ background: '#E24B4A' }} />
+            Offline
+          </div>
+          <div className="smc-value" style={{ color: '#E24B4A' }}>{data.offlineMints}</div>
         </div>
         <div className="stats-metric-card">
-          <div className="smc-label">Avg Trust Score</div>
-          <div className="smc-value" style={avgTsInfo ? { color: avgTsInfo.color } : undefined}>
+          <div className="smc-label">
+            <span className="smc-dot" style={{ background: '#8b949e' }} />
+            Avg Trust Score
+          </div>
+          <div className="smc-value" style={avgTsInfo ? { color: avgTsInfo.color, textShadow: '0 0 20px rgba(23,232,127,0.3)' } : undefined}>
             {data.avgTrustScore != null ? `${data.avgTrustScore}%` : '—'}
           </div>
           {avgTsInfo && <div className="smc-sub">{avgTsInfo.label}</div>}
         </div>
         <div className="stats-metric-card">
-          <div className="smc-label">Avg Latency (24h)</div>
-          <div className="smc-value">
-            {data.avgLatency24h != null ? `${data.avgLatency24h} ms` : '—'}
+          <div className="smc-label">
+            <span className="smc-dot" style={{ background: '#8b949e' }} />
+            Avg Uptime (24h)
+          </div>
+          <div className="smc-value" style={{ color: avgUptime24h != null ? uptimeColor(avgUptime24h) : undefined }}>
+            {avgUptime24h != null ? `${avgUptime24h}%` : '—'}
           </div>
         </div>
       </div>
 
-      <div className="stats-body" style={{ gridTemplateColumns: '260px 1fr' }}>
+      {/* ── Mid section ── */}
+      <div className="stats-body">
+        {/* Left — Trust Score Distribution + Avg Uptime */}
         <div className="stats-panel">
           <div className="stats-panel-title">Trust Score Distribution</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 72, height: 72, flexShrink: 0 }}>
+            <div className="trust-donut-wrap">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={trustDistData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={15}
-                    outerRadius={26}
+                    innerRadius={26}
+                    outerRadius={39}
                     paddingAngle={2}
                     dataKey="value"
                   >
@@ -243,50 +286,106 @@ export default function Stats() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {trustDistData.map(d => (
                 <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: d.color, flexShrink: 0 }} />
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: d.color, flexShrink: 0 }} />
                   <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: '#8b949e' }}>{d.name}</span>
-                  <span style={{ fontSize: 14, fontFamily: 'var(--font-mono)', fontWeight: 500, color: 'var(--text)' }}>{d.value}</span>
+                  <span style={{ fontSize: 16, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text)' }}>{d.value}</span>
                 </div>
               ))}
             </div>
           </div>
+
+          <div className="trust-divider" />
+
+          <div>
+            <div className="avg-uptime-label">Avg uptime (24h)</div>
+            <div className="avg-uptime-value">
+              {avgUptime24h != null ? `${avgUptime24h}%` : '—'}
+            </div>
+            <div className="avg-uptime-sub">across {uptimeMintCount} mints</div>
+          </div>
         </div>
 
+        {/* Right — Top 5 with toggle */}
         <div className="stats-panel">
-          <div className="stats-panel-title">Top 5 by Trust Score</div>
-          {data.top5ByTrustScore.length === 0 ? (
-            <div style={{ color: 'var(--text3)', fontSize: 12, fontFamily: 'var(--font-mono)', padding: '8px 0' }}>No data yet</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {data.top5ByTrustScore.map((mint, idx) => {
-                const tsInfo = trustScoreInfo(mint.trustScore)
-                const hostname = getHostname(mint.url)
-                return (
-                  <div
-                    key={mint.url}
-                    onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)}
-                    className="stats-top5-row"
-                  >
-                    <span className="stats-top5-rank">#{idx + 1}</span>
-                    <MintFavicon url={mint.url} iconUrl={null} size={20} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{mint.name ?? hostname}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hostname}</div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-                      <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: tsInfo.color, background: tsInfo.bg, border: `0.5px solid ${tsInfo.border}`, borderRadius: 4, padding: '1px 5px' }}>{tsInfo.label}</span>
-                      <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: tsInfo.color }}>{mint.trustScore}%</span>
-                    </div>
-                  </div>
-                )
-              })}
+          <div className="top5-header">
+            <div className="stats-panel-title" style={{ marginBottom: 0 }}>TOP 5</div>
+            <div className="top5-toggle">
+              <button
+                type="button"
+                className={`top5-toggle-btn${top5Tab === 'trust' ? ' active' : ''}`}
+                onClick={() => setTop5Tab('trust')}
+              >Trust Score</button>
+              <button
+                type="button"
+                className={`top5-toggle-btn${top5Tab === 'uptime' ? ' active' : ''}`}
+                onClick={() => setTop5Tab('uptime')}
+              >Uptime</button>
             </div>
+          </div>
+
+          {top5Tab === 'trust' ? (
+            data.top5ByTrustScore.length === 0 ? (
+              <div style={{ color: 'var(--text3)', fontSize: 12, fontFamily: 'var(--font-mono)', padding: '8px 0' }}>No data yet</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {data.top5ByTrustScore.map((mint, idx) => {
+                  const tsInfo = trustScoreInfo(mint.trustScore)
+                  const hostname = getHostname(mint.url)
+                  return (
+                    <div
+                      key={mint.url}
+                      onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)}
+                      className="stats-top5-row"
+                    >
+                      <span className="stats-top5-rank">#{idx + 1}</span>
+                      <MintFavicon url={mint.url} iconUrl={null} size={24} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{mint.name ?? hostname}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hostname}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                        <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: tsInfo.color, background: tsInfo.bg, border: `0.5px solid ${tsInfo.border}`, borderRadius: 4, padding: '1px 5px' }}>{tsInfo.label}</span>
+                        <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: tsInfo.color }}>{mint.trustScore}%</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          ) : (
+            top5ByUptime.length === 0 ? (
+              <div style={{ color: 'var(--text3)', fontSize: 12, fontFamily: 'var(--font-mono)', padding: '8px 0' }}>No uptime data yet</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {top5ByUptime.map((mint, idx) => {
+                  const uptime = mint.uptimePct24h ?? 0
+                  const color = uptimeColor(uptime)
+                  const hostname = getHostname(mint.url)
+                  return (
+                    <div
+                      key={mint.url}
+                      onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)}
+                      className="stats-top5-row"
+                    >
+                      <span className="stats-top5-rank">#{idx + 1}</span>
+                      <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={24} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{mint.name ?? hostname}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hostname}</div>
+                      </div>
+                      <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', fontWeight: 700, color, flexShrink: 0 }}>{uptime}%</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )
           )}
         </div>
       </div>
 
       <div className="stats-section-divider" />
 
+      {/* ── NUT Explorer ── */}
       <div className="stats-nut-section">
         <div className="stats-section-label">NUT Explorer</div>
         <div className="stats-section-sublabel">Protocol adoption across {data.onlineMints} online mints · click +N more to see all supporting mints</div>
@@ -313,7 +412,14 @@ export default function Stats() {
                 <div className="snc-name">{meta.short}</div>
                 <div className="snc-desc">{meta.desc}</div>
                 <div className="snc-bar-track">
-                  <div className="snc-bar-fill" style={{ width: `${percent}%`, background: barColor }} />
+                  <div
+                    className="snc-bar-fill"
+                    style={{
+                      width: `${percent}%`,
+                      background: barColor,
+                      ...(percent >= 40 ? { boxShadow: `0 0 6px ${barColor}66` } : {}),
+                    }}
+                  />
                 </div>
                 <div className="snc-footer">
                   <span className="snc-pct" style={{ color: barColor }}>{percent}%</span>

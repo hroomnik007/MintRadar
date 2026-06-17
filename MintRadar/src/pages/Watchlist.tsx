@@ -397,7 +397,7 @@ export default function Watchlist() {
             onClick={() => setShowFilters(v => !v)}
           >
             <IcFilter />
-            Filtre
+            Filters
             {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
           </button>
           <div className="sort-segment">
@@ -426,7 +426,7 @@ export default function Watchlist() {
             <div className="filter-active-tags">
               {activeFilters.status !== 'all' && (
                 <span className="filter-tag">
-                  {activeFilters.status === 'online' ? 'Len online' : 'Len offline'}
+                  {activeFilters.status === 'online' ? 'Online only' : 'Offline only'}
                   <button type="button" onClick={() => { const f = { ...activeFilters, status: 'all' as const }; setActiveFilters(f); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
@@ -453,12 +453,12 @@ export default function Watchlist() {
 
           <div className="filter-row">
             <div className="filter-group">
-              <div className="filter-group-label">Stav</div>
+              <div className="filter-group-label">Status</div>
               <div className="filter-radio-group">
                 {(['all', 'online', 'offline'] as const).map(s => (
                   <label key={s} className="filter-radio">
                     <input type="radio" name="wl-filter-status" checked={pendingFilters.status === s} onChange={() => setPendingFilters(p => ({ ...p, status: s }))} />
-                    {s === 'all' ? 'Všetky' : s === 'online' ? 'Len online' : 'Len offline'}
+                    {s === 'all' ? 'All' : s === 'online' ? 'Online only' : 'Offline only'}
                   </label>
                 ))}
               </div>
@@ -475,7 +475,7 @@ export default function Watchlist() {
             </div>
 
             <div className="filter-group">
-              <div className="filter-group-label">Vek mintu</div>
+              <div className="filter-group-label">Mint age</div>
               <div className="filter-pills">
                 {AGE_LABELS.map(age => (
                   <button key={age} type="button" className={`filter-pill${pendingFilters.mintAges.includes(age) ? ' active' : ''}`}
@@ -487,7 +487,7 @@ export default function Watchlist() {
           </div>
 
           <div className="filter-group" style={{ marginBottom: 10 }}>
-            <div className="filter-group-label">Podpora NUT</div>
+            <div className="filter-group-label">NUT support</div>
             <div className="filter-nut-grid">
               {NUT_FILTER_KEYS.map(key => (
                 <button key={key} type="button" className={`filter-nut-chip${pendingFilters.requiredNuts.includes(key) ? ' active' : ''}`}
@@ -498,10 +498,10 @@ export default function Watchlist() {
           </div>
 
           <div className="filter-footer">
-            <div className="filter-count">Zobrazených <strong>{filteredMints.length}</strong> z <strong>{mints.length}</strong> mintov</div>
+            <div className="filter-count">Showing <strong>{filteredMints.length}</strong> of <strong>{mints.length}</strong> mints</div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" className="filter-reset-btn" onClick={() => { setPendingFilters(DEFAULT_FILTERS); setActiveFilters(DEFAULT_FILTERS) }}>Resetovať filtre</button>
-              <button type="button" className="filter-apply-btn" onClick={() => { setActiveFilters(pendingFilters); setShowFilters(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Použiť filtre</button>
+              <button type="button" className="filter-reset-btn" onClick={() => { setPendingFilters(DEFAULT_FILTERS); setActiveFilters(DEFAULT_FILTERS) }}>Reset filters</button>
+              <button type="button" className="filter-apply-btn" onClick={() => { setActiveFilters(pendingFilters); setShowFilters(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Apply filter</button>
             </div>
           </div>
         </div>
@@ -528,7 +528,7 @@ export default function Watchlist() {
             ))}
           </div>
           <div style={{fontSize:13,color:'var(--text3)',textAlign:'center',marginTop:16,fontFamily:'var(--font-mono)'}}>
-            Zobrazených {Math.min(visibleCount, sortedFiltered.length)} z {sortedFiltered.length}
+            Showing {Math.min(visibleCount, sortedFiltered.length)} of {sortedFiltered.length}
           </div>
           {visibleCount < sortedFiltered.length && (
             <div ref={sentinelRef} style={{height:1}} />
@@ -538,9 +538,9 @@ export default function Watchlist() {
 
       {selectedUrls.size >= 1 && (
         <div className="cmp-bar">
-          <span className="cmp-bar-text">Vybrané: {selectedUrls.size} mintov</span>
+          <span className="cmp-bar-text">Selected: {selectedUrls.size} mints</span>
           {selectedUrls.size >= 2 && (
-            <button type="button" className="cmp-bar-btn primary" onClick={() => setShowComparison(true)}>Porovnať</button>
+            <button type="button" className="cmp-bar-btn primary" onClick={() => setShowComparison(true)}>Compare</button>
           )}
           <button
             type="button"
@@ -549,8 +549,8 @@ export default function Watchlist() {
               selectedUrls.forEach(url => { void removeMintFromStore(url) })
               setSelectedUrls(new Set())
             }}
-          >Odstrániť z watchlistu</button>
-          <button type="button" className="cmp-bar-btn" onClick={() => setSelectedUrls(new Set())}>Zrušiť výber</button>
+          >Remove from watchlist</button>
+          <button type="button" className="cmp-bar-btn" onClick={() => setSelectedUrls(new Set())}>Clear selection</button>
         </div>
       )}
 

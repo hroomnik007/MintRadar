@@ -55,45 +55,45 @@
 .status-dot.offline { background: #ff4d4d; }
 
 .md-watch-btn {
-  background: var(--accent);
-  color: var(--bg);
-  border: none;
+  background: transparent;
+  color: #17E87F;
+  border: 0.5px solid #17E87F;
   border-radius: 7px;
   padding: 6px 14px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   font-family: var(--font-mono);
   flex-shrink: 0;
-  transition: opacity var(--transition), box-shadow var(--transition);
+  transition: opacity var(--transition);
   letter-spacing: 0.03em;
 }
 
-.md-watch-btn:hover { opacity: 0.9; box-shadow: var(--accent-glow); }
+.md-watch-btn:hover { opacity: 0.8; }
 
 .md-watch-btn.watching {
   background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text3);
+  border: 0.5px solid #17E87F;
+  color: #17E87F;
 }
 
-.md-watch-btn.watching:hover { box-shadow: none; opacity: 1; border-color: var(--border2); }
+.md-watch-btn.watching:hover { opacity: 0.8; }
 
 .md-compare-btn {
   background: transparent;
-  color: var(--text3);
-  border: 0.5px solid var(--border);
+  color: #58a6ff;
+  border: 0.5px solid #58a6ff;
   border-radius: 7px;
   padding: 6px 12px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   font-family: var(--font-mono);
   flex-shrink: 0;
-  transition: color 150ms ease, border-color 150ms ease;
+  transition: opacity 150ms ease;
 }
 
-.md-compare-btn:hover { color: var(--text2); border-color: var(--border2); }
+.md-compare-btn:hover { opacity: 0.8; }
 
 /* ── Summary Strip ──────────────────────────────────────────── */
 .md-summary {
@@ -142,7 +142,7 @@
   gap: 2px;
   border-bottom: 0.5px solid var(--border);
   margin-bottom: 0;
-  padding: 8px 2px 0;
+  padding: 0 2px 0;
 }
 
 .md-tab {
