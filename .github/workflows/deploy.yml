@@ -37,9 +37,9 @@ jobs:
       - name: Deploy frontend via SSH
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
-          host: ${{ secrets.MINTRADAR_HOST }}
-          username: ${{ secrets.MINTRADAR_USER }}
-          key: ${{ secrets.MINTRADAR_SSH_KEY }}
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
           port: 22
           script: |
             set -euo pipefail
@@ -60,9 +60,9 @@ jobs:
       - name: Deploy backend via SSH
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
-          host: ${{ secrets.MINTRADAR_HOST }}
-          username: ${{ secrets.MINTRADAR_USER }}
-          key: ${{ secrets.MINTRADAR_SSH_KEY }}
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
           port: 22
           script: |
             set -euo pipefail
