@@ -93,7 +93,7 @@
 /* ── Body layout ─────────────────────────────────────────────── */
 .stats-body {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 280px 500px;
   gap: 16px;
   padding: 14px 24px;
   align-items: start;

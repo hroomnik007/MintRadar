@@ -201,6 +201,7 @@ export default function Stats() {
     { name: 'Moderate', value: data.trustDistribution.moderate, color: '#f59e0b' },
     { name: 'High Trust', value: data.trustDistribution.high, color: '#17E87F' },
   ]
+  const singleSegment = trustDistData.filter(d => d.value > 0).length === 1
 
   const NUT_ORDER = ['NUT-04','NUT-05','NUT-07','NUT-08','NUT-09','NUT-10','NUT-11','NUT-12','NUT-14','NUT-15','NUT-17','NUT-19','NUT-20','NUT-29']
   const nutAdoptionMap = Object.fromEntries(data.nutAdoption.map(n => [n.nut, n]))
@@ -274,7 +275,7 @@ export default function Stats() {
                     cy="50%"
                     innerRadius={26}
                     outerRadius={39}
-                    paddingAngle={2}
+                    paddingAngle={singleSegment ? 0 : 2}
                     dataKey="value"
                   >
                     {trustDistData.map((entry, idx) => (
