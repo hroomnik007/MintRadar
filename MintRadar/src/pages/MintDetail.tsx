@@ -18,7 +18,7 @@ import './MintDetail.css'
 import {
   Copy, Check, Info, ShieldCheck, ShieldOff, ChevronDown, ChevronUp,
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
-  Clock, GitBranch, Plug, Database, Award, Layers,
+  Clock, GitBranch, Plug, Database, Award, Layers, Zap,
 } from 'lucide-react'
 
 interface NutMethod {
@@ -176,7 +176,7 @@ function formatTime(date: Date): string {
 function MintDetailContent({ url }: { url: string }) {
   const navigate = useNavigate()
   const { data, isLoading } = useMintProbe(url)
-  const { records, uptimePercent } = useMintHistory(url)
+  useMintHistory(url)
   const { data: knownMintsData } = useKnownMints()
   const knownMint = knownMintsData?.find(m => m.url === url) ?? null
   const [historyPeriod, setHistoryPeriod] = useState<'24h' | '7d' | '30d'>('24h')
@@ -253,6 +253,29 @@ function MintDetailContent({ url }: { url: string }) {
   const profile = useAuthStore(state => state.profile)
   const isLoggedIn = profile !== null
   const { reviews, loading: reviewsLoading } = useMintReviews(url)
+  const { data: nostrReviewsData } = useQuery({
+    queryKey: ['mint', 'nostr-reviews', url],
+    queryFn: async () => {
+      try {
+        const res = await fetch(`/api/mints/nostr-reviews?url=${encodeURIComponent(url)}`)
+        if (!res.ok) return []
+        return res.json() as Promise<Array<{ id: string; pubkey: string; content: string; rating: number; createdAt: number; source: 'nostr' }>>
+      } catch {
+        return []
+      }
+    },
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  })
+  const mergedReviews = useMemo(() => {
+    const mintradarIds = new Set(reviews.map(r => r.id))
+    const nostrOnly = (nostrReviewsData ?? []).filter(r => !mintradarIds.has(r.id))
+    const all: Array<{ id: string; pubkey: string; rating: number; comment: string; createdAt: number; source: 'mintradar' | 'nostr' }> = [
+      ...reviews.map(r => ({ ...r, source: 'mintradar' as const })),
+      ...nostrOnly.map(r => ({ id: r.id, pubkey: r.pubkey, rating: r.rating, comment: r.content, createdAt: r.createdAt, source: 'nostr' as const })),
+    ]
+    return all.sort((a, b) => b.createdAt - a.createdAt)
+  }, [reviews, nostrReviewsData])
   const [selectedNut, setSelectedNut] = useState<string | null>(null)
   const [copiedContact, setCopiedContact] = useState<string | null>(null)
   const [copiedUrl, setCopiedUrl] = useState(false)
@@ -373,7 +396,7 @@ function MintDetailContent({ url }: { url: string }) {
   const website = data.info?.contact?.find(c => c.method === 'website')?.info
   const urls = data.info?.urls
 
-  const uptimePct = records.length > 0 ? uptimePercent : 0
+  const uptimePct = uptime24hData?.uptimePct ?? 0
 
   // Header "Uptime 24H" — always sourced from server API (same 24h window as Mint History panel)
   const headerUptimePct = uptime24hData?.uptimePct ?? null
@@ -1087,26 +1110,37 @@ function MintDetailContent({ url }: { url: string }) {
               </div>
               {reviewsLoading ? (
                 <div style={{fontSize:11,color:'var(--text3)',marginTop:8}}>Loading reviews...</div>
-              ) : reviews.length > 0 ? (
+              ) : mergedReviews.length > 0 ? (
                 <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:8}}>
-                  {reviews.slice(0,5).map(r => (
+                  {mergedReviews.slice(0,5).map(r => (
                     <div key={r.id} style={{background:'var(--bg3)',border:'0.5px solid var(--border)',borderRadius:8,padding:'8px 10px'}}>
                       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
                         <span style={{color:'var(--yellow)',fontSize:12}}>{'★'.repeat(r.rating)}{'☆'.repeat(5-r.rating)}</span>
-                        <span style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>
-                          {r.pubkey.slice(0,8)}…
-                        </span>
+                        <div style={{display:'flex',alignItems:'center',gap:5}}>
+                          {r.source === 'nostr' ? (
+                            <span style={{display:'inline-flex',alignItems:'center',gap:2,fontSize:9,fontFamily:'var(--font-mono)',fontWeight:600,color:'#8b5cf6',background:'rgba(139,92,246,0.1)',border:'0.5px solid rgba(139,92,246,0.3)',borderRadius:4,padding:'1px 5px'}}>
+                              <Zap size={8} />Nostr
+                            </span>
+                          ) : (
+                            <span style={{fontSize:9,fontFamily:'var(--font-mono)',fontWeight:600,color:'#17E87F',background:'rgba(23,232,127,0.1)',border:'0.5px solid rgba(23,232,127,0.3)',borderRadius:4,padding:'1px 5px'}}>
+                              MintRadar
+                            </span>
+                          )}
+                          <span style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>
+                            {r.pubkey.slice(0,8)}…
+                          </span>
+                        </div>
                       </div>
                       {r.comment && <p style={{fontSize:11,color:'var(--text2)',lineHeight:1.5,margin:0}}>{r.comment}</p>}
                     </div>
                   ))}
-                  {reviews.length > 5 && (
-                    <div style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>{reviews.length - 5} more reviews</div>
+                  {mergedReviews.length > 5 && (
+                    <div style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>{mergedReviews.length - 5} more reviews</div>
                   )}
                 </div>
               ) : (
                 <div style={{fontSize:11,color:'var(--text3)',marginTop:8}}>
-                  No reviews yet. Login with Nostr to write one.
+                  {isLoggedIn ? 'No reviews yet. Be the first to write one!' : 'No reviews yet. Login with Nostr to write one.'}
                 </div>
               )}
             </div>
