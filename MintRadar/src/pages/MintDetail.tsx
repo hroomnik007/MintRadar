@@ -956,7 +956,9 @@ function MintDetailContent({ url }: { url: string }) {
                     tick={{ fontSize: 9, fill: 'var(--text3)' }}
                     axisLine={false} tickLine={false}
                     width={60}
-                    domain={chartMetric === 'latency' ? ['auto', 'auto'] : [0, 100]}
+                    domain={chartMetric === 'latency'
+                    ? [(min: number) => Math.round(min * 0.95), (max: number) => Math.round(max * 1.05)]
+                    : [0, 100]}
                     tickFormatter={(v: number) => chartMetric === 'latency' ? `${v}ms` : `${v}%`}
                   />
                   <Tooltip

@@ -340,7 +340,7 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
       if (period === '24h') {
         segmentsQuery = `
           SELECT
-            DATE_TRUNC('hour', checked_at AT TIME ZONE 'UTC') AS bucket,
+            (DATE_TRUNC('hour', checked_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS bucket,
             BOOL_OR(online) AS online,
             ROUND(AVG(CASE WHEN online THEN latency_ms END))::int AS latency_ms,
             COUNT(*) AS total,
@@ -349,8 +349,8 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
           WHERE url = $1
             AND checked_at >= NOW() - INTERVAL '24 hours'
             AND checked_at < NOW()
-          GROUP BY bucket
-          ORDER BY bucket ASC`
+          GROUP BY DATE_TRUNC('hour', checked_at AT TIME ZONE 'UTC')
+          ORDER BY DATE_TRUNC('hour', checked_at AT TIME ZONE 'UTC') ASC`
         prevQuery = `
           SELECT
             SUM(CASE WHEN online THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0) AS uptime_ratio,
@@ -362,7 +362,7 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
       } else if (period === '7d') {
         segmentsQuery = `
           SELECT
-            DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') AS bucket,
+            (DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS bucket,
             BOOL_OR(online) AS online,
             ROUND(AVG(CASE WHEN online THEN latency_ms END))::int AS latency_ms,
             COUNT(*) AS total,
@@ -371,8 +371,8 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
           WHERE url = $1
             AND checked_at >= NOW() - INTERVAL '7 days'
             AND checked_at < NOW()
-          GROUP BY bucket
-          ORDER BY bucket ASC`
+          GROUP BY DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC')
+          ORDER BY DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') ASC`
         prevQuery = `
           SELECT
             SUM(CASE WHEN online THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0) AS uptime_ratio,
@@ -384,7 +384,7 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
       } else if (period === '30d') {
         segmentsQuery = `
           SELECT
-            DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') AS bucket,
+            (DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS bucket,
             BOOL_OR(online) AS online,
             ROUND(AVG(CASE WHEN online THEN latency_ms END))::int AS latency_ms,
             COUNT(*) AS total,
@@ -393,8 +393,8 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
           WHERE url = $1
             AND checked_at >= NOW() - INTERVAL '30 days'
             AND checked_at < NOW()
-          GROUP BY bucket
-          ORDER BY bucket ASC`
+          GROUP BY DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC')
+          ORDER BY DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') ASC`
         prevQuery = `
           SELECT
             SUM(CASE WHEN online THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0) AS uptime_ratio,
@@ -407,7 +407,7 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
         // 90d — weekly buckets
         segmentsQuery = `
           SELECT
-            DATE_TRUNC('week', checked_at AT TIME ZONE 'UTC') AS bucket,
+            (DATE_TRUNC('week', checked_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS bucket,
             BOOL_OR(online) AS online,
             ROUND(AVG(CASE WHEN online THEN latency_ms END))::int AS latency_ms,
             COUNT(*) AS total,
@@ -416,8 +416,8 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
           WHERE url = $1
             AND checked_at >= NOW() - INTERVAL '90 days'
             AND checked_at < NOW()
-          GROUP BY bucket
-          ORDER BY bucket ASC`
+          GROUP BY DATE_TRUNC('week', checked_at AT TIME ZONE 'UTC')
+          ORDER BY DATE_TRUNC('week', checked_at AT TIME ZONE 'UTC') ASC`
         prevQuery = `
           SELECT
             SUM(CASE WHEN online THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0) AS uptime_ratio,
@@ -722,13 +722,13 @@ app.get('/api/mints/daily-uptime', (req: Request, res: Response): void => {
       return pool
         .query(
           `SELECT
-            DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') AS day,
+            (DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS day,
             SUM(CASE WHEN online THEN 1 ELSE 0 END)::int AS online_count,
             COUNT(*)::int AS total_count
            FROM mint_history
            WHERE url = $1 AND checked_at > NOW() - INTERVAL '30 days'
            GROUP BY DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC')
-           ORDER BY day ASC`,
+           ORDER BY DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') ASC`,
           [url]
         )
         .then(result => {
