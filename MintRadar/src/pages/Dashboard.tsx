@@ -226,7 +226,7 @@ function MintCardDisplay({
 
   return (
     <div
-      className={`mint-card ${mint.online === true ? 'online' : mint.online === false ? 'offline' : ''}`}
+      className={`mint-card ${mint.online === true ? 'online' : 'offline'}`}
       style={cardStyle}
       onClick={() => { navigate(`/mint/${encodeURIComponent(mint.url)}`) }}
     >
@@ -240,9 +240,9 @@ function MintCardDisplay({
           </div>
         </div>
       )}
-      <div className="card-top">
+      <div className="card-top" style={onToggleSelect ? { paddingLeft: 24 } : undefined}>
         <div className="card-name-row">
-          <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={22} />
+          <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={32} />
           <div style={{minWidth:0}}>
             <div className="card-name" style={{display:'flex',alignItems:'center',gap:5,minWidth:0}}>
               <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{displayName}</span>
@@ -259,7 +259,7 @@ function MintCardDisplay({
         <div className="status-dot" style={{background: isOnline ? 'var(--accent)' : '#ff4d4d'}} />
       </div>
 
-      <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
+      <div style={{display:'flex',alignItems:'center',gap:6,marginBottom: viewMode === 'expanded' ? 0 : 8}}>
         <span style={{fontSize:10,fontFamily:'var(--font-mono)',color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:4,padding:'1px 5px',flexShrink:0}}>{tsInfo.label}</span>
         <span style={{fontSize:11,fontFamily:'var(--font-mono)',color:tsInfo.color,fontWeight:600}}>{trustScore}%</span>
         {showUptime && (
@@ -312,6 +312,7 @@ function MintGrid({
   viewMode,
   selectedUrls,
   onToggleSelect,
+  totalAll,
 }: {
   mints: KnownMint[]
   search: string
@@ -320,6 +321,7 @@ function MintGrid({
   viewMode: 'compact' | 'expanded'
   selectedUrls: Set<string>
   onToggleSelect: (url: string, selected: boolean) => void
+  totalAll?: number
 }) {
   const [visibleCount, setVisibleCount] = useState(20)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -379,7 +381,7 @@ function MintGrid({
         ))}
       </div>
       <div style={{fontSize:13,color:'var(--text3)',textAlign:'center',marginTop:16,fontFamily:'var(--font-mono)'}}>
-        Zobrazených {visible.length} z {sortedFiltered.length}
+        Showing {visible.length} of {totalAll ?? sortedFiltered.length}
       </div>
       {hasMore && <div ref={sentinelRef} style={{height:1}} />}
     </>
@@ -457,16 +459,18 @@ export default function Dashboard() {
   const userReadRelays = useUserRelays()
   useWatchlistNotifications(statusRecord, trustScoreRecord, userReadRelays)
 
-  const { degradedCount, allMints } = useMemo(() => {
+  const { degradedCount, allMints, totalAllCount } = useMemo(() => {
     const degradedUrls = knownMintsData?.filter(m => m.degraded).map(m => m.url) ?? []
     const knownMintUrlSet = new Set(knownMintsData?.map(m => m.url) ?? [])
     const degradedSetLocal = new Set(degradedUrls)
+    const nostrOnly = nostrMints.filter(m => !knownMintUrlSet.has(m.url))
     return {
       degradedCount: degradedUrls.length,
+      totalAllCount: (knownMintsData?.length ?? 0) + nostrOnly.length,
       allMints: [
-        ...(knownMintsData?.filter(m => showDegraded ? true : (!m.degraded && m.online !== false)) ?? []),
-        ...nostrMints
-          .filter(m => !knownMintUrlSet.has(m.url) && (showDegraded || !degradedSetLocal.has(m.url)))
+        ...(knownMintsData?.filter(m => showDegraded ? true : !m.degraded) ?? []),
+        ...nostrOnly
+          .filter(m => showDegraded || !degradedSetLocal.has(m.url))
           .map((m): KnownMint => ({ url: m.url, name: null, iconUrl: null, degraded: false, online: null, latencyMs: null, version: null, nutCount: null, tosUrl: null, descriptionLong: null, nutsLimits: null, auditNMints: null, auditNMelts: null, auditNErrors: null, auditCheckedAt: null })),
       ] as KnownMint[],
     }
@@ -766,7 +770,7 @@ export default function Dashboard() {
           onClick={() => setShowFilters(v => !v)}
         >
           <IcFilter />
-          Filtre
+          Filters
           {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
         </button>
         <div className="sort-segment">
@@ -801,7 +805,7 @@ export default function Dashboard() {
             <div className="filter-active-tags">
               {activeFilters.status !== 'all' && (
                 <span className="filter-tag">
-                  {activeFilters.status === 'online' ? 'Len online' : 'Len offline'}
+                  {activeFilters.status === 'online' ? 'Online only' : 'Offline only'}
                   <button type="button" onClick={() => { const f = { ...activeFilters, status: 'all' as const }; setActiveFilters(f); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
@@ -828,12 +832,12 @@ export default function Dashboard() {
 
           <div className="filter-row">
             <div className="filter-group">
-              <div className="filter-group-label">Stav</div>
+              <div className="filter-group-label">Status</div>
               <div className="filter-radio-group">
                 {(['all', 'online', 'offline'] as const).map(s => (
                   <label key={s} className="filter-radio">
                     <input type="radio" name="filter-status" checked={pendingFilters.status === s} onChange={() => setPendingFilters(p => ({ ...p, status: s }))} />
-                    {s === 'all' ? 'Všetky' : s === 'online' ? 'Len online' : 'Len offline'}
+                    {s === 'all' ? 'All' : s === 'online' ? 'Online only' : 'Offline only'}
                   </label>
                 ))}
               </div>
@@ -850,7 +854,7 @@ export default function Dashboard() {
             </div>
 
             <div className="filter-group">
-              <div className="filter-group-label">Vek mintu</div>
+              <div className="filter-group-label">Mint age</div>
               <div className="filter-pills">
                 {AGE_LABELS.map(age => (
                   <button
@@ -868,7 +872,7 @@ export default function Dashboard() {
           </div>
 
           <div className="filter-group" style={{ marginBottom: 10 }}>
-            <div className="filter-group-label">Podpora NUT</div>
+            <div className="filter-group-label">NUT support</div>
             <div className="filter-nut-grid">
               {NUT_FILTER_KEYS.map(key => (
                 <button
@@ -885,10 +889,10 @@ export default function Dashboard() {
           </div>
 
           <div className="filter-footer">
-            <div className="filter-count">Zobrazených <strong>{filteredMints.length}</strong> z <strong>{totalCount}</strong> mintov</div>
+            <div className="filter-count">Showing <strong>{filteredMints.length}</strong> of <strong>{totalCount}</strong> mints</div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" className="filter-reset-btn" onClick={() => { setPendingFilters(DEFAULT_FILTERS); setActiveFilters(DEFAULT_FILTERS) }}>Resetovať filtre</button>
-              <button type="button" className="filter-apply-btn" onClick={() => { setActiveFilters(pendingFilters); setShowFilters(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Použiť filtre</button>
+              <button type="button" className="filter-reset-btn" onClick={() => { setPendingFilters(DEFAULT_FILTERS); setActiveFilters(DEFAULT_FILTERS) }}>Reset filters</button>
+              <button type="button" className="filter-apply-btn" onClick={() => { setActiveFilters(pendingFilters); setShowFilters(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Apply filter</button>
             </div>
           </div>
         </div>
@@ -912,10 +916,11 @@ export default function Dashboard() {
             viewMode={viewMode}
             selectedUrls={selectedUrls}
             onToggleSelect={toggleSelect}
+            totalAll={!showDegraded && degradedCount > 0 ? totalAllCount : undefined}
           />
           {degradedCount > 0 && (
             <p className="degraded-note">
-              {degradedCount} mints hidden (offline 24h+){' '}
+              {!showDegraded && <>{degradedCount} mints hidden (offline 24h+){' '}</>}
               <button onClick={() => setShowDegraded(v => !v)}
                 style={{background:'none',border:'none',color:'var(--accent)',fontSize:11,cursor:'pointer',textDecoration:'underline'}}>
                 {showDegraded ? 'Hide' : 'Show'}
@@ -928,9 +933,9 @@ export default function Dashboard() {
       {/* Floating comparison bar */}
       {selectedUrls.size >= 2 && (
         <div className="cmp-bar">
-          <span className="cmp-bar-text">Porovnať {selectedUrls.size} mintov</span>
-          <button type="button" className="cmp-bar-btn primary" onClick={() => setShowComparison(true)}>Porovnať</button>
-          <button type="button" className="cmp-bar-btn" onClick={clearSelection}>Zrušiť výber</button>
+          <span className="cmp-bar-text">Compare {selectedUrls.size} mints</span>
+          <button type="button" className="cmp-bar-btn primary" onClick={() => setShowComparison(true)}>Compare</button>
+          <button type="button" className="cmp-bar-btn" onClick={clearSelection}>Clear selection</button>
         </div>
       )}
 
