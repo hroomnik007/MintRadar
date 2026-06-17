@@ -642,7 +642,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
       SELECT m.url, m.name, m.icon_url, m.version, m.nut_count,
         m.tos_url, m.description_long, m.nuts_limits,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
-        m.discovered_at, m.last_trust_score, m.last_error,
+        m.discovered_at, m.last_trust_score, m.last_error, m.server_location,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
         latest.online AS latest_online,
@@ -656,7 +656,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
       GROUP BY m.url, m.name, m.icon_url, m.version, m.nut_count,
         m.tos_url, m.description_long, m.nuts_limits,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
-        m.discovered_at, m.last_trust_score, m.last_error,
+        m.discovered_at, m.last_trust_score, m.last_error, m.server_location,
         latest.online, latest.latency_ms
     `)
     .then(result => {
@@ -683,6 +683,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           trustScore: (r.last_trust_score as number | null) ?? null,
           lastError: (r.last_error as string | null) ?? null,
           uptimePct24h: total === 0 ? null : Math.round(onlineCount / total * 100),
+          serverLocation: (r.server_location as string | null) ?? null,
         }
       })
       knownMintsCache = { data, expiresAt: Date.now() + KNOWN_MINTS_CACHE_TTL }

@@ -53,6 +53,21 @@ const NUT_META: Record<string, { short: string; desc: string; specNum: string }>
   'NUT-29': { short: 'Batched minting', desc: 'Wallets can mint tokens for multiple quotes in a single atomic request.', specNum: '29' },
 }
 
+function countryFlag(cc: string): string {
+  if (cc.length !== 2) return ''
+  const base = 0x1F1E6 - 65
+  return String.fromCodePoint(base + cc.toUpperCase().charCodeAt(0), base + cc.toUpperCase().charCodeAt(1))
+}
+
+function geoLabel(loc: string): { display: string; flag: string } {
+  if (loc === 'Unknown') return { display: 'Unknown', flag: '' }
+  const commaIdx = loc.lastIndexOf(', ')
+  if (commaIdx === -1) return { display: loc, flag: '' }
+  const cc = loc.slice(commaIdx + 2)
+  const city = loc.slice(0, commaIdx)
+  return { display: city, flag: cc.length === 2 ? countryFlag(cc) : '' }
+}
+
 function NutMintsModal({ nutId, nutMeta, mints, onClose }: {
   nutId: string
   nutMeta: { short: string; desc: string; specNum: string }
@@ -175,6 +190,36 @@ export default function Stats() {
       .filter(m => m.online === true && m.uptimePct24h != null)
       .sort((a, b) => (b.uptimePct24h ?? 0) - (a.uptimePct24h ?? 0))
       .slice(0, 5)
+  }, [knownMintsData])
+
+  const softwareDist = useMemo(() => {
+    if (!knownMintsData) return []
+    const counts = new Map<string, number>()
+    for (const m of knownMintsData) {
+      if (m.online !== true) continue
+      const raw = m.version ?? ''
+      const software = raw.includes('/') ? raw.split('/')[0]! : raw.trim() || 'Unknown'
+      counts.set(software, (counts.get(software) ?? 0) + 1)
+    }
+    const total = [...counts.values()].reduce((a, b) => a + b, 0)
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ name, count, pct: total > 0 ? Math.round(count / total * 100) : 0 }))
+  }, [knownMintsData])
+
+  const geoDist = useMemo(() => {
+    if (!knownMintsData) return []
+    const counts = new Map<string, number>()
+    for (const m of knownMintsData) {
+      if (m.online !== true) continue
+      const loc = m.serverLocation ?? 'Unknown'
+      counts.set(loc, (counts.get(loc) ?? 0) + 1)
+    }
+    const total = [...counts.values()].reduce((a, b) => a + b, 0)
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([loc, count]) => ({ loc, count, pct: total > 0 ? Math.round(count / total * 100) : 0 }))
   }, [knownMintsData])
 
   if (isLoading) return (
@@ -386,6 +431,42 @@ export default function Stats() {
               </div>
             )
           )}
+        </div>
+      </div>
+
+      {/* ── Distribution row ── */}
+      <div className="stats-dist-row">
+        <div className="stats-panel">
+          <div className="stats-panel-title">Software Distribution</div>
+          {softwareDist.length === 0 ? (
+            <div style={{ color: 'var(--text3)', fontSize: 12, fontFamily: 'var(--font-mono)' }}>No data</div>
+          ) : softwareDist.map(({ name, count, pct }) => (
+            <div key={name} className="dist-row">
+              <span className="dist-label">{name}</span>
+              <div className="dist-track">
+                <div className="dist-fill" style={{ width: `${pct}%`, background: '#17E87F' }} />
+              </div>
+              <span className="dist-count">{count}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="stats-panel">
+          <div className="stats-panel-title">Geographic Distribution</div>
+          {geoDist.length === 0 ? (
+            <div style={{ color: 'var(--text3)', fontSize: 12, fontFamily: 'var(--font-mono)' }}>No data</div>
+          ) : geoDist.map(({ loc, count, pct }) => {
+            const { display, flag } = geoLabel(loc)
+            return (
+              <div key={loc} className="dist-row">
+                <span className="dist-label">{flag ? `${flag} ${display}` : display}</span>
+                <div className="dist-track">
+                  <div className="dist-fill" style={{ width: `${pct}%`, background: '#60a5fa' }} />
+                </div>
+                <span className="dist-count">{count}</span>
+              </div>
+            )
+          })}
         </div>
       </div>
 

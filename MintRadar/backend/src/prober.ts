@@ -1,6 +1,24 @@
 import { pool } from './db.js'
 import { isSafeUrl, safeFetch } from './ssrf.js'
 
+async function lookupServerLocation(mintUrl: string): Promise<string | null> {
+  try {
+    const hostname = new URL(mintUrl).hostname
+    const res = await fetch(`https://ipinfo.io/${encodeURIComponent(hostname)}/json`, {
+      signal: AbortSignal.timeout(5_000),
+    })
+    if (!res.ok) return null
+    const data = await res.json() as Record<string, unknown>
+    if (data['bogon'] === true) return null
+    const city = typeof data['city'] === 'string' ? data['city'] : null
+    const country = typeof data['country'] === 'string' ? data['country'] : null
+    if (!city && !country) return null
+    return [city, country].filter(Boolean).join(', ')
+  } catch {
+    return null
+  }
+}
+
 const PROBE_TIMEOUT_MS = 10000
 const RETENTION_DAYS = 30
 
@@ -126,6 +144,15 @@ export async function probeMintToDb(url: string): Promise<void> {
                ON CONFLICT (url, version) DO NOTHING`,
               [url, version]
             )
+          }
+
+          const locRow = await pool.query('SELECT server_location FROM mints WHERE url = $1', [url])
+          const currentLoc = locRow.rows[0]?.server_location as string | null | undefined
+          if (currentLoc == null) {
+            const location = await lookupServerLocation(url)
+            if (location !== null) {
+              await pool.query('UPDATE mints SET server_location = $1 WHERE url = $2', [location, url])
+            }
           }
         }
       } catch { lastError = 'Invalid JSON response' }

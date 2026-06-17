@@ -228,6 +228,58 @@
   margin: 0 24px;
 }
 
+/* ── Distribution row ───────────────────────────────────────── */
+.stats-dist-row {
+  display: flex;
+  gap: 16px;
+  padding: 0 24px 14px;
+}
+
+.stats-dist-row .stats-panel {
+  flex: 1;
+}
+
+.dist-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+}
+
+.dist-label {
+  width: 110px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text);
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dist-track {
+  flex: 1;
+  height: 5px;
+  background: var(--bg3);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.dist-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 400ms ease;
+}
+
+.dist-count {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text3);
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
 /* ── NUT Explorer section ────────────────────────────────────── */
 .stats-nut-section {
   padding: 14px 24px 24px;

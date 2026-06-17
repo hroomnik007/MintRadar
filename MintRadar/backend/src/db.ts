@@ -56,6 +56,7 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_checked_at TIMESTAMPTZ',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS last_trust_score INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS last_error TEXT',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS server_location TEXT',
   ]
 
   for (const sql of migrations) {
