@@ -323,9 +323,6 @@ function MintGrid({
   onToggleSelect: (url: string, selected: boolean) => void
   totalAll?: number
 }) {
-  const [visibleCount, setVisibleCount] = useState(20)
-  const sentinelRef = useRef<HTMLDivElement>(null)
-
   const sortedFiltered = useMemo(() => {
     const q = search.toLowerCase()
     const filtered = mints.filter(mint => {
@@ -351,25 +348,10 @@ function MintGrid({
     })
   }, [mints, search, sortBy, sortDir])
 
-  useEffect(() => { setVisibleCount(20) }, [sortedFiltered])
-
-  useEffect(() => {
-    const el = sentinelRef.current
-    if (!el) return
-    const observer = new IntersectionObserver(entries => {
-      if (entries[0]?.isIntersecting) setVisibleCount(prev => prev + 20)
-    }, { rootMargin: '200px' })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
-  const visible = sortedFiltered.slice(0, visibleCount)
-  const hasMore = visibleCount < sortedFiltered.length
-
   return (
     <>
       <div className="mint-grid">
-        {visible.map(mint => (
+        {sortedFiltered.map(mint => (
           <MintCardDisplay
             key={mint.url}
             mint={mint}
@@ -381,9 +363,8 @@ function MintGrid({
         ))}
       </div>
       <div style={{fontSize:13,color:'var(--text3)',textAlign:'center',marginTop:16,fontFamily:'var(--font-mono)'}}>
-        Showing {visible.length} of {totalAll || sortedFiltered.length}
+        Showing {sortedFiltered.length} of {totalAll || sortedFiltered.length}
       </div>
-      {hasMore && <div ref={sentinelRef} style={{height:1}} />}
     </>
   )
 }
