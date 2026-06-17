@@ -1,74 +1,64 @@
-name: Deploy MintRadar to Hetzner
-
+name: Deploy MintRadar
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
-    paths:
-      - 'MintRadar/**'
 
 jobs:
-  detect-changes:
+  deploy:
     runs-on: ubuntu-latest
-    outputs:
-      changed_frontend: ${{ steps.filter.outputs.frontend }}
-      changed_backend: ${{ steps.filter.outputs.backend }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+
+      - name: Detect frontend changes
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
         id: filter
         with:
           filters: |
             frontend:
-              - 'MintRadar/src/**'
-              - 'MintRadar/public/**'
-              - 'MintRadar/index.html'
-              - 'MintRadar/vite.config.ts'
-              - 'MintRadar/package*.json'
-            backend:
-              - 'MintRadar/backend/**'
+              - 'src/**'
+              - 'public/**'
+              - 'index.html'
+              - 'vite.config.ts'
+              - 'package.json'
+              - 'package-lock.json'
 
-  deploy-frontend:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.changed_frontend == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy frontend via SSH
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+      - name: Setup Node.js
+        if: steps.filter.outputs.frontend == 'true'
+        uses: actions/setup-node@v4
         with:
-          host: ${{ secrets.HETZNER_HOST }}
-          username: ${{ secrets.HETZNER_USER }}
-          key: ${{ secrets.HETZNER_SSH_KEY }}
-          port: 22
-          script: |
-            set -euo pipefail
-            cd /var/www/mintradar-repo/MintRadar
-            git fetch origin main && git reset --hard origin/main
-            npm ci
-            npm run build
-            sudo mkdir -p /var/www/mintradar/dist
-            sudo chown -R deploy:deploy /var/www/mintradar/dist
-            cp -r dist/* /var/www/mintradar/dist/
-            sudo systemctl reload nginx
+          node-version: '22'
+          cache: 'npm'
 
-  deploy-backend:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.changed_backend == 'true'
-    runs-on: ubuntu-latest
-    steps:
+      - name: Install dependencies and build frontend
+        if: steps.filter.outputs.frontend == 'true'
+        run: npm ci && npm run build
+
       - name: Deploy backend via SSH
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          port: 22
           script: |
             set -euo pipefail
             cd /var/www/mintradar-repo
             git fetch origin main
             git reset --hard origin/main
-            cd MintRadar/backend && npm ci && npm run build && cd ../..
-            cd MintRadar && docker compose build --no-cache backend
-            docker compose up -d backend
+            cd MintRadar/backend
+            npm ci
+            npm run build
+            cd /var/www/mintradar-repo/MintRadar
+            docker compose build --no-cache backend
+            docker compose up -d
+
+      - name: Deploy frontend via SSH + rsync
+        if: steps.filter.outputs.frontend == 'true'
+        uses: burnett01/rsync-deployments@7.0.1
+        with:
+          switches: -avzr --delete
+          path: dist/
+          remote_path: /var/www/mintradar/dist/
+          remote_host: ${{ secrets.HETZNER_HOST }}
+          remote_user: ${{ secrets.HETZNER_USER }}
+          remote_key: ${{ secrets.HETZNER_SSH_KEY }}
