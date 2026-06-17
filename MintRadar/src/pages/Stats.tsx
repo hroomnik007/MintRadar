@@ -164,6 +164,11 @@ export default function Stats() {
     }
   }, [knownMintsData])
 
+  const mintIconByUrl = useMemo(() => {
+    if (!knownMintsData) return {} as Record<string, string | null>
+    return Object.fromEntries(knownMintsData.map(m => [m.url, m.iconUrl]))
+  }, [knownMintsData])
+
   const top5ByUptime = useMemo(() => {
     if (!knownMintsData) return []
     return [...knownMintsData]
@@ -298,7 +303,7 @@ export default function Stats() {
 
           <div>
             <div className="avg-uptime-label">Avg uptime (24h)</div>
-            <div className="avg-uptime-value">
+            <div className="avg-uptime-value" style={{ color: avgUptime24h != null ? uptimeColor(avgUptime24h) : 'var(--text3)' }}>
               {avgUptime24h != null ? `${avgUptime24h}%` : '—'}
             </div>
             <div className="avg-uptime-sub">across {uptimeMintCount} mints</div>
@@ -338,7 +343,7 @@ export default function Stats() {
                       className="stats-top5-row"
                     >
                       <span className="stats-top5-rank">#{idx + 1}</span>
-                      <MintFavicon url={mint.url} iconUrl={null} size={24} />
+                      <MintFavicon url={mint.url} iconUrl={mintIconByUrl[mint.url] ?? null} size={24} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{mint.name ?? hostname}</div>
                         <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hostname}</div>

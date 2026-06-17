@@ -93,7 +93,7 @@
 /* ── Body layout ─────────────────────────────────────────────── */
 .stats-body {
   display: grid;
-  grid-template-columns: 300px 520px;
+  grid-template-columns: 280px 1fr;
   gap: 16px;
   padding: 14px 24px;
   align-items: start;
@@ -145,10 +145,8 @@
 .avg-uptime-value {
   font-size: 26px;
   font-weight: 700;
-  color: #17E87F;
   font-family: var(--font-mono);
   line-height: 1;
-  text-shadow: 0 0 20px rgba(23, 232, 127, 0.4);
 }
 
 .avg-uptime-sub {
@@ -251,7 +249,7 @@
 
 .stats-nut-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
 }
 
