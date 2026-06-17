@@ -70,5 +70,5 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             cd MintRadar/backend && npm ci && npm run build && cd ../..
-            cd MintRadar && docker compose build --no-deps --no-cache backend
-            docker compose up -d --no-deps backend
+            cd MintRadar && docker compose build --no-cache backend
+            docker compose up -d backend
