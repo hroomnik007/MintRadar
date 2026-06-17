@@ -381,7 +381,7 @@ function MintGrid({
         ))}
       </div>
       <div style={{fontSize:13,color:'var(--text3)',textAlign:'center',marginTop:16,fontFamily:'var(--font-mono)'}}>
-        Showing {visible.length} of {totalAll ?? sortedFiltered.length}
+        Showing {visible.length} of {totalAll || sortedFiltered.length}
       </div>
       {hasMore && <div ref={sentinelRef} style={{height:1}} />}
     </>
@@ -916,7 +916,7 @@ export default function Dashboard() {
             viewMode={viewMode}
             selectedUrls={selectedUrls}
             onToggleSelect={toggleSelect}
-            totalAll={!showDegraded && degradedCount > 0 ? totalAllCount : undefined}
+            totalAll={!showDegraded && degradedCount > 0 ? totalAllCount : 0}
           />
           {degradedCount > 0 && (
             <p className="degraded-note">
