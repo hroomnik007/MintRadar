@@ -957,7 +957,7 @@ function MintDetailContent({ url }: { url: string }) {
                     axisLine={false} tickLine={false}
                     width={60}
                     domain={chartMetric === 'latency'
-                    ? [(min: number) => Math.round(min * 0.95), (max: number) => Math.round(max * 1.05)]
+                    ? [(dataMin: number) => dataMin * 0.9, (dataMax: number) => dataMax * 1.1]
                     : [0, 100]}
                     tickFormatter={(v: number) => chartMetric === 'latency' ? `${v}ms` : `${v}%`}
                   />
