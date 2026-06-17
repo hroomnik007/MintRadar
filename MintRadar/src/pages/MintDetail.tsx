@@ -357,11 +357,28 @@ function MintDetailContent({ url }: { url: string }) {
       if (chartInterval === '24h') return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
       return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
     }
-    return segs.map(seg => {
+    function makePoint(seg: typeof segs[0] | null, label: string) {
+      if (!seg) return { label, latency: null as number | null, uptime: null as number | null, trust: null as number | null }
       const trustVal = seg.uptimePct !== null
         ? computeTrustScore(seg.uptimePct, nutCount, versionStr, emailVal, twitterVal, nostrVal, websiteVal, auditNMints, auditNMelts, auditNErrors)
         : null
-      return { label: bucketLabel(seg.bucket), latency: seg.latencyMs, uptime: seg.uptimePct, trust: trustVal }
+      return { label, latency: seg.latencyMs, uptime: seg.uptimePct, trust: trustVal }
+    }
+    // For empty data or 90d (weekly buckets), use segments as-is
+    if (segs.length === 0 || chartInterval === '90d') {
+      return segs.map(seg => makePoint(seg, bucketLabel(seg.bucket)))
+    }
+    // Generate full expected time slots so sparse data maps to correct X positions
+    const isHourly = chartInterval === '24h'
+    const slotCount = chartInterval === '24h' ? 24 : chartInterval === '7d' ? 7 : 30
+    const bucketMs = isHourly ? 3_600_000 : 86_400_000
+    const currentBucketMs = Math.floor(Date.now() / bucketMs) * bucketMs
+    const keyLen = isHourly ? 13 : 10
+    const segMap = new Map(segs.map(s => [s.bucket.slice(0, keyLen), s]))
+    return Array.from({ length: slotCount }, (_, i) => {
+      const slotMs = currentBucketMs - (slotCount - 1 - i) * bucketMs
+      const iso = new Date(slotMs).toISOString()
+      return makePoint(segMap.get(iso.slice(0, keyLen)) ?? null, bucketLabel(iso))
     })
   }, [chartHistoryData?.segments, chartInterval, knownMint, data?.info?.version, data?.info?.contact])
 
@@ -939,7 +956,7 @@ function MintDetailContent({ url }: { url: string }) {
                     tick={{ fontSize: 9, fill: 'var(--text3)' }}
                     axisLine={false} tickLine={false}
                     width={60}
-                    domain={[0, 'auto']}
+                    domain={chartMetric === 'latency' ? ['auto', 'auto'] : [0, 100]}
                     tickFormatter={(v: number) => chartMetric === 'latency' ? `${v}ms` : `${v}%`}
                   />
                   <Tooltip
@@ -1191,6 +1208,22 @@ function MintDetailContent({ url }: { url: string }) {
               return '30d ago'
             })()
 
+            // Fill full expected time range so missing buckets appear as gray bars
+            const barBucketMs = historyPeriod === '24h' ? 3_600_000 : 86_400_000
+            const barSlotCount = historyPeriod === '24h' ? 24 : historyPeriod === '7d' ? 7 : 30
+            const barCurrentBucketMs = Math.floor(Date.now() / barBucketMs) * barBucketMs
+            const barKeyLen = historyPeriod === '24h' ? 13 : 10
+            const barSegMap = new Map(segments.map(s => [s.bucket.slice(0, barKeyLen), s]))
+            const displaySegments = (historyData !== undefined && segments.length > 0)
+              ? Array.from({ length: barSlotCount }, (_, i) => {
+                  const slotMs = barCurrentBucketMs - (barSlotCount - 1 - i) * barBucketMs
+                  const iso = new Date(slotMs).toISOString()
+                  return barSegMap.get(iso.slice(0, barKeyLen)) ?? {
+                    bucket: iso, online: false, latencyMs: null, total: 0, onlineCount: 0, uptimePct: null,
+                  }
+                })
+              : segments
+
             return (
               <div className="md-panel">
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
@@ -1246,7 +1279,7 @@ function MintDetailContent({ url }: { url: string }) {
 
                 <div style={{position:'relative',paddingBottom:6}}>
                   <div style={{display:'flex',gap:2}}>
-                    {segments.map((seg, i) => (
+                    {displaySegments.map((seg, i) => (
                       <div
                         key={i}
                         style={{flex:1,height:20,background:segColor(seg.uptimePct),borderRadius:2,cursor:'default'}}
@@ -1254,14 +1287,14 @@ function MintDetailContent({ url }: { url: string }) {
                         onMouseLeave={() => setSegmentTooltip(null)}
                       />
                     ))}
-                    {segments.length === 0 && (
+                    {displaySegments.length === 0 && (
                       <div style={{flex:1,height:20,background:'var(--bg3)',borderRadius:2,display:'flex',alignItems:'center',justifyContent:'center'}}>
                         <span style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>No data available for this period</span>
                       </div>
                     )}
-                    {segmentTooltip !== null && segments[segmentTooltip] !== undefined && (() => {
-                      const seg = segments[segmentTooltip]!
-                      const leftPct = Math.min(Math.max((segmentTooltip + 0.5) / segments.length * 100, 10), 90)
+                    {segmentTooltip !== null && displaySegments[segmentTooltip] !== undefined && (() => {
+                      const seg = displaySegments[segmentTooltip]!
+                      const leftPct = Math.min(Math.max((segmentTooltip + 0.5) / displaySegments.length * 100, 10), 90)
                       return (
                         <div style={{position:'absolute',bottom:'calc(100% + 6px)',left:`${leftPct}%`,transform:'translateX(-50%)',background:'var(--bg2)',border:'0.5px solid var(--border2)',borderRadius:6,padding:'4px 8px',fontSize:10,whiteSpace:'nowrap',fontFamily:'var(--font-mono)',zIndex:10,pointerEvents:'none'}}>
                           <div style={{color:'var(--text2)'}}>{formatBucket(seg.bucket)}</div>
