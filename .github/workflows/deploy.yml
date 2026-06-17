@@ -66,8 +66,9 @@ jobs:
           port: 22
           script: |
             set -euo pipefail
-            cd /var/www/mintradar-repo/MintRadar/backend
+            cd /var/www/mintradar-repo/MintRadar
             git fetch origin main && git reset --hard origin/main
+            cd /var/www/mintradar-repo/MintRadar/backend
             npm ci
             npm run build
             cd /var/www/mintradar-repo/MintRadar
