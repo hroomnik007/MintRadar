@@ -32,32 +32,64 @@
 
 /* ── Design tokens ──────────────────────────────────────────── */
 :root {
-  --bg:           #111318;
-  --bg2:          #1a1d24;
-  --bg3:          #13161c;
-  --bg4:          #1c1f26;
+  /* Backgrounds — new names */
+  --bg:           #0B0C11;
+  --surface:      #111318;
+  --elevated:     #181B22;
+  --raised:       #1E2129;
 
-  --border:       #252830;
-  --border2:      rgba(255,255,255,0.08);
-  --border-hi:    rgba(255,255,255,0.16);
+  /* Backgrounds — legacy aliases (used by components) */
+  --bg2:          #111318;
+  --bg3:          #181B22;
+  --bg4:          #1E2129;
 
-  --text:         #F0F0F0;
-  --text2:        #C0BDD8;
-  --text3:        #8A87A0;
+  /* Borders — new names */
+  --brd:          rgba(255,255,255,0.07);
+  --brd-md:       rgba(255,255,255,0.11);
+  --brd-hi:       rgba(255,255,255,0.18);
 
-  --accent:       #4ade80;
-  --accent-dim:   rgba(74,222,128,0.09);
-  --accent-brd:   rgba(74,222,128,0.26);
-  --accent-glow:  0 0 16px rgba(74, 222, 128, 0.3);
-  --accent-glow-lg: 0 0 32px rgba(74, 222, 128, 0.18);
+  /* Borders — legacy aliases */
+  --border:       rgba(255,255,255,0.07);
+  --border2:      rgba(255,255,255,0.11);
+  --border-hi:    rgba(255,255,255,0.18);
 
-  --red:           #F04560;
-  --yellow:        #EFA030;
+  /* Text — new names */
+  --t1:           #F0F2F7;
+  --t2:           #8B90A0;
+  --t3:           #555B6E;
 
-  --font-display: 'DM Sans', system-ui, sans-serif;
-  --font-mono:    'JetBrains Mono', 'Fira Code', monospace;
-  --font-body:    'DM Sans', system-ui, sans-serif;
+  /* Text — legacy aliases */
+  --text:         #F0F2F7;
+  --text2:        #8B90A0;
+  --text3:        #555B6E;
 
+  /* Accent (green) */
+  --accent:       #17E87F;
+  --accent-dim:   color-mix(in srgb, #17E87F 11%, transparent);
+  --accent-brd:   color-mix(in srgb, #17E87F 30%, transparent);
+  --accent-glow:  0 0 16px rgba(23, 232, 127, 0.3);
+  --accent-glow-lg: 0 0 32px rgba(23, 232, 127, 0.18);
+
+  /* Status colors */
+  --fast:         #17E87F;
+  --med:          #F5A623;
+  --slow:         #E24B4A;
+
+  /* Status — legacy aliases */
+  --red:          #E24B4A;
+  --yellow:       #F5A623;
+
+  /* Typography — new names */
+  --sans:         'Inter', system-ui, sans-serif;
+  --mono:         'JetBrains Mono', monospace;
+
+  /* Typography — legacy aliases */
+  --font-display: 'Inter', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+  --font-body:    'Inter', system-ui, sans-serif;
+
+  /* Spacing */
+  --r:            10px;
   --radius-sm:    5px;
   --radius:       9px;
   --radius-lg:    16px;
