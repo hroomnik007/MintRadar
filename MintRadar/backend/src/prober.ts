@@ -1,3 +1,4 @@
+import dns from 'dns'
 import { fetch as undiciFetch } from 'undici'
 import { pool } from './db.js'
 import { isSafeUrl, safeFetch } from './ssrf.js'
@@ -6,7 +7,9 @@ async function lookupServerLocation(mintUrl: string): Promise<string | null> {
   try {
     const hostname = new URL(mintUrl).hostname
     console.log(`[geo] looking up: ${hostname}`)
-    const res = await undiciFetch(`https://ipinfo.io/${encodeURIComponent(hostname)}/json`, {
+    const { address } = await dns.promises.lookup(hostname)
+    console.log(`[geo] ${hostname} resolved to ${address}`)
+    const res = await undiciFetch(`https://ipinfo.io/${address}/json`, {
       signal: AbortSignal.timeout(5_000),
     }) as unknown as Response
     if (!res.ok) {
