@@ -942,7 +942,11 @@ function MintDetailContent({ url }: { url: string }) {
             </div>
 
             {/* Line chart */}
-            {histLineData.length > 0 ? (
+            {histLineData.length === 0 ? (
+              <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>Žiadne historické dáta pre toto obdobie.</p>
+            ) : histLineData.filter(d => d[chartMetric] !== null).length < 2 ? (
+              <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>Not enough data for this period</p>
+            ) : (
               <ResponsiveContainer width="100%" height={140}>
                 <LineChart data={histLineData} margin={{ top: 4, right: 4, left: 10, bottom: 0 }}>
                   <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
@@ -950,16 +954,16 @@ function MintDetailContent({ url }: { url: string }) {
                     dataKey="label"
                     tick={{ fontSize: 9, fill: 'var(--text3)' }}
                     axisLine={false} tickLine={false}
-                    interval="preserveStartEnd"
+                    interval={chartInterval === '24h' ? 3 : histLineData.length <= 7 ? 0 : Math.ceil(histLineData.length / 7) - 1}
                   />
                   <YAxis
                     tick={{ fontSize: 9, fill: 'var(--text3)' }}
                     axisLine={false} tickLine={false}
                     width={60}
                     domain={chartMetric === 'latency'
-                    ? [(dataMin: number) => dataMin * 0.9, (dataMax: number) => dataMax * 1.1]
-                    : [0, 100]}
-                    tickFormatter={(v: number) => chartMetric === 'latency' ? `${v}ms` : `${v}%`}
+                      ? [(dataMin: number) => dataMin * 0.9, (dataMax: number) => dataMax * 1.1]
+                      : [0, 100]}
+                    tickFormatter={(v: number) => chartMetric === 'latency' ? `${Math.round(v / 100) * 100}ms` : `${Math.round(v)}%`}
                   />
                   <Tooltip
                     contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 11 }}
@@ -975,8 +979,6 @@ function MintDetailContent({ url }: { url: string }) {
                   />
                 </LineChart>
               </ResponsiveContainer>
-            ) : (
-              <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>Žiadne historické dáta pre toto obdobie.</p>
             )}
           </div>
 
