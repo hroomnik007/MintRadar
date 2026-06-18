@@ -14,18 +14,23 @@
 }
 
 .md-back {
-  color: var(--text3);
+  color: #c9d1d9;
   font-size: 11px;
   cursor: pointer;
   flex-shrink: 0;
-  background: none;
-  border: none;
+  background: transparent;
+  border: 1px solid #30363d;
+  border-radius: 20px;
+  padding: 6px 14px;
   font-family: var(--font-mono);
-  transition: color var(--transition);
+  transition: border-color var(--transition), background var(--transition);
   letter-spacing: 0.02em;
 }
 
-.md-back:hover { color: var(--text2); }
+.md-back:hover {
+  border-color: #484f58;
+  background: rgba(255, 255, 255, 0.03);
+}
 
 .md-namebox { flex: 1; min-width: 0; }
 .md-name { font-size: 22px; font-weight: 500; color: var(--text); }

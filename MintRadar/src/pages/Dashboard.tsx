@@ -66,21 +66,7 @@ const IcEye = () => (
     <circle cx="7" cy="7" r="1.8" stroke="currentColor" strokeWidth="1.3"/>
   </svg>
 )
-const IcList = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <rect x="1" y="2" width="11" height="1.5" rx="0.75" fill="currentColor"/>
-    <rect x="1" y="5.75" width="11" height="1.5" rx="0.75" fill="currentColor"/>
-    <rect x="1" y="9.5" width="11" height="1.5" rx="0.75" fill="currentColor"/>
-  </svg>
-)
-const IcCards = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <rect x="1" y="1" width="4.5" height="4.5" rx="1" fill="currentColor"/>
-    <rect x="7.5" y="1" width="4.5" height="4.5" rx="1" fill="currentColor"/>
-    <rect x="1" y="7.5" width="4.5" height="4.5" rx="1" fill="currentColor"/>
-    <rect x="7.5" y="7.5" width="4.5" height="4.5" rx="1" fill="currentColor"/>
-  </svg>
-)
+
 const IcTimer = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
     <circle cx="8" cy="9.5" r="5" stroke="currentColor" strokeWidth="1.1"/>
@@ -193,7 +179,6 @@ function MintCardDisplay({
 }: {
   mint: KnownMint
   isDegraded?: boolean
-  viewMode?: 'compact' | 'expanded'
   isSelected?: boolean
   onToggleSelect?: (url: string, selected: boolean) => void
 }) {
@@ -214,7 +199,7 @@ function MintCardDisplay({
   return (
     <div
       className="mint-card"
-      style={{ borderLeftColor }}
+      style={{ borderLeft: `3px solid ${borderLeftColor}` }}
       onClick={() => { navigate(`/mint/${encodeURIComponent(mint.url)}`) }}
     >
       {onToggleSelect && (
@@ -283,7 +268,6 @@ function MintGrid({
   search,
   sortBy,
   sortDir,
-  viewMode,
   selectedUrls,
   onToggleSelect,
   totalAll,
@@ -292,7 +276,6 @@ function MintGrid({
   search: string
   sortBy: 'name' | 'latency' | 'status' | 'trust'
   sortDir: 'asc' | 'desc'
-  viewMode: 'compact' | 'expanded'
   selectedUrls: Set<string>
   onToggleSelect: (url: string, selected: boolean) => void
   totalAll?: number
@@ -330,7 +313,6 @@ function MintGrid({
             key={mint.url}
             mint={mint}
             isDegraded={mint.degraded}
-            viewMode={viewMode}
             isSelected={selectedUrls.has(mint.url)}
             onToggleSelect={onToggleSelect}
           />
@@ -349,7 +331,6 @@ export default function Dashboard() {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'name' | 'latency' | 'status' | 'trust'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
-  const { viewMode, setViewMode } = useUIStore()
 
   // Filter state
   const [showFilters, setShowFilters] = useState(false)
@@ -680,7 +661,7 @@ export default function Dashboard() {
           <div className="stat-icon orange"><IcTimer /></div>
           <div>
             <div className="stat-label">Avg Latency</div>
-            <div className={`stat-value${avgLatency24h !== null ? ' orange' : ''}`}>
+            <div className="stat-value">
               {avgLatency24h !== null ? `${avgLatency24h} ms` : '—'}
             </div>
           </div>
@@ -741,11 +722,7 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
-        <div className="view-toggle">
-          <button type="button" className={`view-toggle-btn${viewMode === 'compact' ? ' active' : ''}`} onClick={() => setViewMode('compact')} title="Compact view"><IcList /></button>
-          <button type="button" className={`view-toggle-btn${viewMode === 'expanded' ? ' active' : ''}`} onClick={() => setViewMode('expanded')} title="Expanded view"><IcCards /></button>
-        </div>
-        <button type="button" className="submit-btn" onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setSubmitUrl(''); setProbeState('idle'); setProbeResult(null); setNostrLookupState('idle'); setNostrLookupMsg(''); setBulkInput(''); setBulkProgress([]); setBulkRunning(false); setBulkDone(false) }}>
+<button type="button" className="submit-btn" onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setSubmitUrl(''); setProbeState('idle'); setProbeResult(null); setNostrLookupState('idle'); setNostrLookupMsg(''); setBulkInput(''); setBulkProgress([]); setBulkRunning(false); setBulkDone(false) }}>
           <IcPlus /> Submit mint
         </button>
         <button type="button" className="refresh-btn" onClick={() => void queryClient.invalidateQueries({ queryKey: ['mints-known'] })}>
@@ -868,7 +845,6 @@ export default function Dashboard() {
             search={search}
             sortBy={sortBy}
             sortDir={sortDir}
-            viewMode={viewMode}
             selectedUrls={selectedUrls}
             onToggleSelect={toggleSelect}
             totalAll={!showDegraded && degradedCount > 0 ? totalAllCount : 0}

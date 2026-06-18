@@ -508,7 +508,7 @@ function MintDetailContent({ url }: { url: string }) {
               Latency
               <span title="Measured from our server in Frankfurt, DE. Click 'Test' for your local latency." style={{cursor:'help',color:'#8b949e',fontSize:9}}>ⓘ</span>
             </div>
-            <div className="md-sc-value orange">{latency !== null ? `${latency} ms` : '—'}</div>
+            <div className="md-sc-value">{latency !== null ? `${latency} ms` : '—'}</div>
             <div className="md-sc-sub">
               <span>server · Frankfurt</span>
               <span
@@ -1292,7 +1292,7 @@ function MintDetailContent({ url }: { url: string }) {
             </div>
             <div style={{display:'flex',justifyContent:'center',margin:'16px 0'}}>
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}&bgcolor=0d1117&color=17E87F&qzone=2`}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}&bgcolor=ffffff&color=000000&qzone=2`}
                 alt="QR Code"
                 style={{borderRadius:10,width:200,height:200,border:'1px solid #21262d'}}
               />

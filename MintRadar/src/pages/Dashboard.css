@@ -245,7 +245,11 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.mint-card:hover { border-color: var(--brd-md); }
+.mint-card:hover {
+  border-top-color: var(--brd-md);
+  border-right-color: var(--brd-md);
+  border-bottom-color: var(--brd-md);
+}
 
 .card-top {
   display: flex;

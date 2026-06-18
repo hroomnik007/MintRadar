@@ -266,7 +266,7 @@ export default function Stats() {
           </div>
           <div>
             <div className="smc-label">Online Now</div>
-            <div className="smc-value smc-green">{data.onlineMints}</div>
+            <div className="smc-value">{data.onlineMints}</div>
           </div>
         </div>
         <div className="stats-metric-card">
@@ -286,7 +286,7 @@ export default function Stats() {
           </div>
           <div>
             <div className="smc-label">Median Latency</div>
-            <div className="smc-value smc-orange">{data.avgLatency24h != null ? `${data.avgLatency24h} ms` : '—'}</div>
+            <div className="smc-value">{data.avgLatency24h != null ? `${data.avgLatency24h} ms` : '—'}</div>
           </div>
         </div>
         <div className="stats-metric-card">
@@ -295,7 +295,7 @@ export default function Stats() {
           </div>
           <div>
             <div className="smc-label">NUTs in Spec</div>
-            <div className="smc-value smc-green">{NUT_ORDER.length}</div>
+            <div className="smc-value">{NUT_ORDER.length}</div>
           </div>
         </div>
       </div>
@@ -385,7 +385,7 @@ export default function Stats() {
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data yet</div>
               ) : top5ByLatency.map((mint, idx) => {
                 const lat = mint.latencyMs ?? 0
-                const color = lat < 500 ? '#17E87F' : lat < 2000 ? '#F5A623' : '#E24B4A'
+                const color = '#e6edf3'
                 const hostname = getHostname(mint.url)
                 return (
                   <div key={mint.url} onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} className="stats-top5-row">
