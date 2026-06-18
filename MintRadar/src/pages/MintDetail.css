@@ -98,43 +98,58 @@
 /* ── Summary Strip ──────────────────────────────────────────── */
 .md-summary {
   display: flex;
-  background: #0f1115;
+  gap: 12px;
+  padding: 12px 18px;
   border-bottom: 1px solid var(--border);
 }
 
 .md-sc {
   flex: 1;
-  padding: 12px 20px;
-  border-right: 1px solid var(--border);
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.md-sc:last-child { border-right: none; }
-
-.md-sc.uptime {
-  background: rgba(74, 222, 128, 0.04);
+.md-sc-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
+
+.md-sc-icon.orange { background: rgba(245, 166, 35, 0.1); color: #F5A623; }
+.md-sc-icon.gray   { background: rgba(139, 148, 158, 0.1); color: #8b949e; }
+.md-sc-icon.green  { background: rgba(23, 232, 127, 0.1);  color: #17E87F; }
 
 .md-sc-label {
   font-size: 9px;
-  color: var(--text2);
+  color: #8b949e;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   font-family: var(--font-mono);
 }
 
 .md-sc-value {
-  font-size: 22px;
-  font-weight: 500;
-  color: var(--text);
+  font-size: 20px;
+  font-weight: 700;
+  color: #e6edf3;
   line-height: 1;
   font-family: var(--font-mono);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
 }
 
-.md-sc-value.green { color: var(--accent); }
-.md-sc-value.sm    { font-size: 13px; padding-top: 3px; letter-spacing: 0; }
-.md-sc-sub { font-size: 10px; color: var(--text2); margin-top: 3px; font-family: var(--font-mono); }
+.md-sc-value.orange { color: #F5A623; }
+.md-sc-value.green  { color: #17E87F; }
+.md-sc-value.sm     { font-size: 13px; padding-top: 2px; letter-spacing: 0; font-weight: 600; }
+.md-sc-sub { font-size: 10px; color: #8b949e; margin-top: 3px; font-family: var(--font-mono); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
 /* ── Tab Navigation ─────────────────────────────────────────── */
 .md-tabs {
@@ -618,3 +633,34 @@
 }
 
 .md-picker-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── QR Code Modal ───────────────────────────────────────────── */
+.qr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.qr-modal {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 14px;
+  padding: 24px;
+  max-width: 320px;
+  width: 100%;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7);
+}
+
+.qr-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
