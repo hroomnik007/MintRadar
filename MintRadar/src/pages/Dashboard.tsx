@@ -81,10 +81,11 @@ const IcCards = () => (
     <rect x="7.5" y="7.5" width="4.5" height="4.5" rx="1" fill="currentColor"/>
   </svg>
 )
-const IcShield = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-    <path d="M7 1.5L2 3.5v3.5C2 9.8 4.2 12.3 7 13c2.8-.7 5-3.2 5-6V3.5L7 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-    <polyline points="4.5,7 6.2,8.7 9.5,5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+const IcTimer = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <circle cx="8" cy="9.5" r="5" stroke="currentColor" strokeWidth="1.1"/>
+    <path d="M8 7v2.5l1.5 1" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M6 1.5h4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
   </svg>
 )
 const IcFilter = () => (
@@ -102,12 +103,6 @@ const IcClose = () => (
 )
 
 // ── Helpers ────────────────────────────────────────────────────
-
-function trustScoreInfo(score: number): { label: string; color: string; bg: string; border: string } {
-  if (score >= 70) return { label: 'High Trust', color: '#4ade80', bg: 'rgba(74,222,128,0.1)', border: 'rgba(74,222,128,0.25)' }
-  if (score >= 40) return { label: 'Moderate Trust', color: '#ffa500', bg: 'rgba(255,165,0,0.1)', border: 'rgba(255,165,0,0.25)' }
-  return { label: 'Low Trust', color: '#ff4d4d', bg: 'rgba(255,77,77,0.1)', border: 'rgba(255,77,77,0.25)' }
-}
 
 function mintAgeBadge(discoveredAt: string | null | undefined): { label: string; color: string; bg: string; border: string } | null {
   if (!discoveredAt) return null
@@ -262,7 +257,7 @@ function MintCardDisplay({
         <div className="latency-block">
           <div className="latency-label">LATENCY</div>
           {isOnline && mint.latencyMs !== null ? (
-            <div className="latency-value" style={{ color: latencyColor(mint.latencyMs) }}>
+            <div className="latency-value" style={{ color: '#e6edf3' }}>
               {mint.latencyMs}<span className="latency-unit">ms</span>
             </div>
           ) : (
@@ -439,11 +434,12 @@ export default function Dashboard() {
   const filteredMints = useMemo(() => applyFilters(allMints, activeFilters), [allMints, activeFilters])
   const activeFilterCount = countActiveFilters(activeFilters)
 
-  const avgTrustScore = useMemo(() => {
-    const scores = allMints.filter(m => m.online === true).map(m => listTrustScore(m))
-    return scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b) / scores.length) : 0
+  const avgLatency24h = useMemo(() => {
+    const lats = allMints
+      .filter(m => m.online === true && m.latencyMs !== null)
+      .map(m => m.latencyMs as number)
+    return lats.length > 0 ? Math.round(lats.reduce((a, b) => a + b) / lats.length) : null
   }, [allMints])
-  const avgTsInfo = trustScoreInfo(avgTrustScore)
 
   const totalCount = allMints.length
   const onlineCount = allMints.filter(m => m.online === true).length
@@ -677,17 +673,16 @@ export default function Dashboard() {
           <div className="stat-icon green"><IcSignal /></div>
           <div>
             <div className="stat-label">Online Mints</div>
-            <div className={`stat-value ${onlineCount > 0 ? 'green' : ''}`}>{onlineCount} / {totalCount}</div>
+            <div className="stat-value green">{onlineCount} / {totalCount}</div>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: avgTsInfo.bg, color: avgTsInfo.color, width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <IcShield />
-          </div>
+          <div className="stat-icon orange"><IcTimer /></div>
           <div>
-            <div className="stat-label">Avg Trust Score</div>
-            <div className="stat-value" style={{ color: avgTsInfo.color }}>{avgTrustScore > 0 ? `${avgTrustScore}%` : '—'}</div>
-            {avgTrustScore > 0 && <div style={{ fontSize: 9, color: avgTsInfo.color, fontFamily: 'var(--font-mono)', marginTop: 2 }}>{avgTsInfo.label}</div>}
+            <div className="stat-label">Avg Latency</div>
+            <div className={`stat-value${avgLatency24h !== null ? ' orange' : ''}`}>
+              {avgLatency24h !== null ? `${avgLatency24h} ms` : '—'}
+            </div>
           </div>
         </div>
         <div className="stat-card">
@@ -698,7 +693,7 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon yellow"><IcSuccess /></div>
+          <div className="stat-icon gray"><IcSuccess /></div>
           <div>
             <div className="stat-label">Last Check</div>
             <div className="stat-value muted">{formatTimeAgo(lastCheckTime)}</div>

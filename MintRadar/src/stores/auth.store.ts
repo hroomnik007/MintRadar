@@ -1,12 +1,13 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { loginWithNip07, type NostrProfile } from '@/core/nostr/client'
+import { loginWithNip07, loginWithNsec, type NostrProfile } from '@/core/nostr/client'
 
 interface AuthState {
   profile: NostrProfile | null
   isLoading: boolean
   error: string | null
   login: () => Promise<void>
+  loginNsec: (input: string) => Promise<void>
   logout: () => void
   isLoggedIn: () => boolean
 }
@@ -22,6 +23,19 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null })
         try {
           const profile = await loginWithNip07()
+          set({ profile, isLoading: false })
+        } catch (err) {
+          set({
+            error: err instanceof Error ? err.message : 'Login failed',
+            isLoading: false,
+          })
+        }
+      },
+
+      loginNsec: async (input: string) => {
+        set({ isLoading: true, error: null })
+        try {
+          const profile = await loginWithNsec(input)
           set({ profile, isLoading: false })
         } catch (err) {
           set({

@@ -6,6 +6,18 @@ import { useWatchlistSync } from '@/hooks/useWatchlistSync'
 import { NavLogo } from './NavLogo'
 import './AppShell.css'
 
+const IcClose = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+    <line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+    <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+  </svg>
+)
+const IcShield = () => (
+  <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+    <path d="M7 1.5L2 3.5v3.5C2 9.8 4.2 12.3 7 13c2.8-.7 5-3.2 5-6V3.5L7 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+    <polyline points="4.5,7 6.2,8.7 9.5,5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+)
 
 export function AppShell() {
   const { pathname } = useLocation()
@@ -31,23 +43,64 @@ export function AppShell() {
   useWatchlistSync()
   const profile = useAuthStore(state => state.profile)
   const login = useAuthStore(state => state.login)
+  const loginNsec = useAuthStore(state => state.loginNsec)
   const logout = useAuthStore(state => state.logout)
   const isLoading = useAuthStore(state => state.isLoading)
+  const authError = useAuthStore(state => state.error)
   const watchlistCount = useWatchlistStore(state => state.mints.length)
 
-  async function handleLogout() {
-    logout()
-    await useWatchlistStore.getState().clearWatchlist()
-  }
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [loginMethod, setLoginMethod] = useState<'nip07' | 'nsec' | 'amber'>('nip07')
+  const [nsecInput, setNsecInput] = useState('')
+  const [nsecError, setNsecError] = useState('')
 
   const [nip07Available, setNip07Available] = useState(false)
-
   useEffect(() => {
     const check = () => setNip07Available(typeof window !== 'undefined' && !!window.nostr)
     check()
     const timer = setTimeout(check, 500)
     return () => clearTimeout(timer)
   }, [])
+
+  // Close modal on successful login
+  useEffect(() => {
+    if (profile !== null) setShowLoginModal(false)
+  }, [profile])
+
+  // Reset modal state on close
+  useEffect(() => {
+    if (!showLoginModal) {
+      setNsecInput('')
+      setNsecError('')
+      setLoginMethod('nip07')
+    }
+  }, [showLoginModal])
+
+  // Close modal on Escape key
+  useEffect(() => {
+    if (!showLoginModal) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowLoginModal(false) }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [showLoginModal])
+
+  async function handleLogout() {
+    logout()
+    await useWatchlistStore.getState().clearWatchlist()
+  }
+
+  async function handleModalConnect() {
+    if (loginMethod === 'nip07') {
+      await login()
+    } else if (loginMethod === 'nsec') {
+      const trimmed = nsecInput.trim()
+      if (!trimmed) { setNsecError('Please enter your nsec key'); return }
+      await loginNsec(trimmed)
+      if (useAuthStore.getState().error) {
+        setNsecError(useAuthStore.getState().error ?? 'Login failed')
+      }
+    }
+  }
 
   return (
     <div className="app-shell">
@@ -77,13 +130,9 @@ export function AppShell() {
 
         {/* Auth */}
         <div className="navbar-auth">
-          {!nip07Available ? (
-            <a href="https://getalby.com" target="_blank" rel="noreferrer" className="navbar-install-link">
-              Install Nostr extension
-            </a>
-          ) : profile === null ? (
-            <button type="button" className="navbar-auth-btn" onClick={() => { void login() }} disabled={isLoading}>
-              {isLoading ? 'Connecting...' : 'Login with Nostr'}
+          {profile === null ? (
+            <button type="button" className="navbar-login-btn" onClick={() => setShowLoginModal(true)}>
+              ⚡ Login via Nostr
             </button>
           ) : (
             <>
@@ -105,6 +154,99 @@ export function AppShell() {
           )}
         </div>
       </nav>
+
+      {/* Nostr login modal */}
+      {showLoginModal && (
+        <div className="nostr-modal-overlay" onClick={() => setShowLoginModal(false)}>
+          <div className="nostr-modal" onClick={e => e.stopPropagation()}>
+            <div className="nostr-modal-header">
+              <div className="nostr-modal-icon">⚡</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="nostr-modal-title">Connect with Nostr</div>
+                <div className="nostr-modal-subtitle">MintRadar uses your Nostr identity to save watchlists and post reviews. No email, no password.</div>
+              </div>
+              <button type="button" className="nostr-modal-close" onClick={() => setShowLoginModal(false)}>
+                <IcClose />
+              </button>
+            </div>
+
+            <div className="nostr-modal-methods">
+              {([
+                { id: 'nip07', title: 'Nostr extension', desc: 'Sign in with Alby, nos2x or any NIP-07 signer' },
+                { id: 'nsec', title: 'Nostr key (nsec)', desc: 'Paste a private key — stored only in this browser' },
+                { id: 'amber', title: 'Amber / remote', desc: 'Approve the request on a remote signer' },
+              ] as const).map(m => (
+                <div
+                  key={m.id}
+                  className={`nostr-method-card${loginMethod === m.id ? ' selected' : ''}`}
+                  onClick={() => setLoginMethod(m.id)}
+                >
+                  <div className="nostr-method-radio">
+                    <div className={`nostr-radio-dot${loginMethod === m.id ? ' active' : ''}`} />
+                  </div>
+                  <div>
+                    <div className="nostr-method-title">{m.title}</div>
+                    <div className="nostr-method-desc">{m.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {loginMethod === 'nsec' && (
+              <div className="nostr-nsec-wrap">
+                <input
+                  className="nostr-nsec-input"
+                  type="password"
+                  placeholder="nsec1... or 64-char hex private key"
+                  value={nsecInput}
+                  onChange={e => { setNsecInput(e.target.value); setNsecError('') }}
+                  autoFocus
+                />
+                {nsecError && <div className="nostr-nsec-error">{nsecError}</div>}
+              </div>
+            )}
+
+            {loginMethod === 'nip07' && !nip07Available && (
+              <div className="nostr-warn">
+                No Nostr extension detected.{' '}
+                <a href="https://getalby.com" target="_blank" rel="noreferrer">Install Alby</a> or nos2x to continue.
+              </div>
+            )}
+
+            {loginMethod === 'amber' && (
+              <div className="nostr-warn">Remote signer (NIP-46) support coming soon.</div>
+            )}
+
+            {authError && loginMethod !== 'nsec' && (
+              <div className="nostr-auth-error">{authError}</div>
+            )}
+
+            <div className="nostr-modal-footer">
+              <div className="nostr-privacy-note">
+                <IcShield /> Your keys never leave your device. MintRadar only reads your public profile.
+              </div>
+              <div className="nostr-modal-actions">
+                <button type="button" className="nostr-cancel-btn" onClick={() => setShowLoginModal(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="nostr-connect-btn"
+                  disabled={
+                    isLoading ||
+                    loginMethod === 'amber' ||
+                    (loginMethod === 'nip07' && !nip07Available)
+                  }
+                  onClick={() => { void handleModalConnect() }}
+                >
+                  {isLoading ? 'Connecting…' : <>⚡ Connect</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="app-content">
         <Outlet />
       </main>
