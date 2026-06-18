@@ -175,16 +175,16 @@
 
 /* ── Panels ─────────────────────────────────────────────────── */
 .md-panel {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--brd);
+  border-radius: var(--r);
   padding: 14px 16px;
 }
 
 .md-panel-title {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
-  color: var(--text2);
+  color: var(--t3);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin-bottom: 11px;

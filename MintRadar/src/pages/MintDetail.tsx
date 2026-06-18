@@ -1186,13 +1186,6 @@ function MintDetailContent({ url }: { url: string }) {
               return '#f87171'
             }
 
-            function latencyBadgeColor(ms: number | null): string {
-              if (ms === null) return 'var(--text3)'
-              if (ms < 300) return '#4ade80'
-              if (ms < 800) return '#fb923c'
-              return '#f87171'
-            }
-
             function formatBucket(bucket: string): string {
               const d = new Date(bucket)
               if (historyPeriod === '24h') {
@@ -1258,7 +1251,7 @@ function MintDetailContent({ url }: { url: string }) {
 
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
                   <div style={{display:'flex',alignItems:'center',gap:6}}>
-                    <span style={{fontSize:20,fontWeight:600,color: displayUptimePct !== null ? segColor(displayUptimePct) : 'var(--text3)',fontFamily:'var(--font-mono)',letterSpacing:'-0.03em',lineHeight:1}}>
+                    <span style={{fontSize:28,fontWeight:700,color: displayUptimePct !== null ? segColor(displayUptimePct) : 'var(--t3)',fontFamily:'var(--font-mono)',letterSpacing:'-0.03em',lineHeight:1}}>
                       {displayUptimePct !== null ? `${displayUptimePct}%` : '—'}
                     </span>
                     {uptimeTrend !== null && (
@@ -1268,12 +1261,12 @@ function MintDetailContent({ url }: { url: string }) {
                     )}
                   </div>
                   <div style={{display:'flex',alignItems:'center',gap:6}}>
-                    <span style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Avg. latency</span>
+                    <span style={{fontSize:10,color:'var(--t3)',fontFamily:'var(--font-mono)'}}>Avg. latency</span>
                     <span style={{
                       fontSize:10,fontFamily:'var(--font-mono)',
-                      color: 'var(--text)',
-                      background: apiAvgLatency !== null ? `${latencyBadgeColor(apiAvgLatency)}18` : 'var(--bg3)',
-                      border: `0.5px solid ${apiAvgLatency !== null ? latencyBadgeColor(apiAvgLatency) : 'var(--border)'}40`,
+                      color: 'var(--med)',
+                      background: 'rgba(245,166,35,0.1)',
+                      border: '0.5px solid rgba(245,166,35,0.25)',
                       borderRadius:4,padding:'1px 6px',
                     }}>
                       {apiAvgLatency !== null ? `${apiAvgLatency}ms` : '—'}
@@ -1366,7 +1359,7 @@ function MintDetailContent({ url }: { url: string }) {
                   </span>
                 </div>
               </div>
-              <div style={{fontSize:9,color:'var(--text3)',textAlign:'center'}}>tap for details</div>
+              <div style={{fontSize:9,color:'var(--t3)',textAlign:'center'}}>tap for details</div>
             </div>
           </div>
 
