@@ -3,6 +3,16 @@ import { fetch as undiciFetch } from 'undici'
 import { pool } from './db.js'
 import { isSafeUrl, safeFetch } from './ssrf.js'
 
+function isCloudflareIP(address: string): boolean {
+  const parts = address.split('.').map(Number)
+  if (parts.length !== 4 || parts.some(n => isNaN(n))) return false
+  const a = parts[0]!, b = parts[1]!, c = parts[2]!
+  if (a === 172 && b >= 64 && b <= 71) return true          // 172.64.0.0/13
+  if (a === 188 && b === 114 && c >= 96 && c <= 111) return true  // 188.114.96.0/20
+  if (a === 104 && b >= 16 && b <= 23) return true          // 104.16.0.0/13
+  return false
+}
+
 async function lookupServerLocation(mintUrl: string): Promise<string | null> {
   try {
     const hostname = new URL(mintUrl).hostname
@@ -26,6 +36,10 @@ async function lookupServerLocation(mintUrl: string): Promise<string | null> {
     if (!city && !country) {
       console.log(`[geo] no city/country in ipinfo response for ${hostname}`)
       return null
+    }
+    if (city === 'San Francisco' && isCloudflareIP(address)) {
+      console.log(`[geo] ${hostname} (${address}) detected as Cloudflare CDN`)
+      return 'Cloudflare CDN'
     }
     const location = [city, country].filter(Boolean).join(', ')
     console.log(`[geo] ${hostname} → ${location}`)
