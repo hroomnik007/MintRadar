@@ -356,117 +356,116 @@ export default function Stats() {
           </div>
         </div>
 
-        {/* Right — Top 5 with toggle */}
-        <div className="stats-panel">
-          <div className="top5-header">
-            <div className="stats-panel-title" style={{ marginBottom: 0 }}>TOP 5</div>
-            <div className="top5-toggle">
-              <button
-                type="button"
-                className={`top5-toggle-btn${top5Tab === 'trust' ? ' active' : ''}`}
-                onClick={() => setTop5Tab('trust')}
-              >Trust Score</button>
-              <button
-                type="button"
-                className={`top5-toggle-btn${top5Tab === 'uptime' ? ' active' : ''}`}
-                onClick={() => setTop5Tab('uptime')}
-              >Uptime</button>
+        {/* Right — Top 5 + Distributions */}
+        <div className="stats-right-grid">
+          <div className="stats-panel">
+            <div className="top5-header">
+              <div className="stats-panel-title" style={{ marginBottom: 0 }}>TOP 5</div>
+              <div className="top5-toggle">
+                <button
+                  type="button"
+                  className={`top5-toggle-btn${top5Tab === 'trust' ? ' active' : ''}`}
+                  onClick={() => setTop5Tab('trust')}
+                >Trust Score</button>
+                <button
+                  type="button"
+                  className={`top5-toggle-btn${top5Tab === 'uptime' ? ' active' : ''}`}
+                  onClick={() => setTop5Tab('uptime')}
+                >Uptime</button>
+              </div>
             </div>
+
+            {top5Tab === 'trust' ? (
+              data.top5ByTrustScore.length === 0 ? (
+                <div style={{ color: 'var(--text3)', fontSize: 12, fontFamily: 'var(--font-mono)', padding: '8px 0' }}>No data yet</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {data.top5ByTrustScore.map((mint, idx) => {
+                    const tsInfo = trustScoreInfo(mint.trustScore)
+                    const hostname = getHostname(mint.url)
+                    return (
+                      <div
+                        key={mint.url}
+                        onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)}
+                        className="stats-top5-row"
+                      >
+                        <span className="stats-top5-rank">#{idx + 1}</span>
+                        <MintFavicon url={mint.url} iconUrl={mintIconByUrl[mint.url] ?? null} size={24} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{mint.name ?? hostname}</div>
+                          <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hostname}</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                          <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: tsInfo.color, background: tsInfo.bg, border: `0.5px solid ${tsInfo.border}`, borderRadius: 4, padding: '1px 5px' }}>{tsInfo.label}</span>
+                          <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: tsInfo.color }}>{mint.trustScore}%</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            ) : (
+              top5ByUptime.length === 0 ? (
+                <div style={{ color: 'var(--text3)', fontSize: 12, fontFamily: 'var(--font-mono)', padding: '8px 0' }}>No uptime data yet</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {top5ByUptime.map((mint, idx) => {
+                    const uptime = mint.uptimePct24h ?? 0
+                    const color = uptimeColor(uptime)
+                    const hostname = getHostname(mint.url)
+                    return (
+                      <div
+                        key={mint.url}
+                        onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)}
+                        className="stats-top5-row"
+                      >
+                        <span className="stats-top5-rank">#{idx + 1}</span>
+                        <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={24} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{mint.name ?? hostname}</div>
+                          <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hostname}</div>
+                        </div>
+                        <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', fontWeight: 700, color, flexShrink: 0 }}>{uptime}%</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            )}
           </div>
 
-          {top5Tab === 'trust' ? (
-            data.top5ByTrustScore.length === 0 ? (
-              <div style={{ color: 'var(--text3)', fontSize: 12, fontFamily: 'var(--font-mono)', padding: '8px 0' }}>No data yet</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {data.top5ByTrustScore.map((mint, idx) => {
-                  const tsInfo = trustScoreInfo(mint.trustScore)
-                  const hostname = getHostname(mint.url)
-                  return (
-                    <div
-                      key={mint.url}
-                      onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)}
-                      className="stats-top5-row"
-                    >
-                      <span className="stats-top5-rank">#{idx + 1}</span>
-                      <MintFavicon url={mint.url} iconUrl={mintIconByUrl[mint.url] ?? null} size={24} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{mint.name ?? hostname}</div>
-                        <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hostname}</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-                        <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: tsInfo.color, background: tsInfo.bg, border: `0.5px solid ${tsInfo.border}`, borderRadius: 4, padding: '1px 5px' }}>{tsInfo.label}</span>
-                        <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: tsInfo.color }}>{mint.trustScore}%</span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          ) : (
-            top5ByUptime.length === 0 ? (
-              <div style={{ color: 'var(--text3)', fontSize: 12, fontFamily: 'var(--font-mono)', padding: '8px 0' }}>No uptime data yet</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {top5ByUptime.map((mint, idx) => {
-                  const uptime = mint.uptimePct24h ?? 0
-                  const color = uptimeColor(uptime)
-                  const hostname = getHostname(mint.url)
-                  return (
-                    <div
-                      key={mint.url}
-                      onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)}
-                      className="stats-top5-row"
-                    >
-                      <span className="stats-top5-rank">#{idx + 1}</span>
-                      <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={24} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{mint.name ?? hostname}</div>
-                        <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hostname}</div>
-                      </div>
-                      <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', fontWeight: 700, color, flexShrink: 0 }}>{uptime}%</span>
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          )}
-        </div>
-      </div>
-
-      {/* ── Distribution row ── */}
-      <div className="stats-dist-row">
-        <div className="stats-panel">
-          <div className="stats-panel-title">Software Distribution</div>
-          {softwareDist.length === 0 ? (
-            <div style={{ color: 'var(--text3)', fontSize: 12, fontFamily: 'var(--font-mono)' }}>No data</div>
-          ) : softwareDist.map(({ name, count, pct }) => (
-            <div key={name} className="dist-row">
-              <span className="dist-label">{name}</span>
-              <div className="dist-track">
-                <div className="dist-fill" style={{ width: `${pct}%`, background: '#17E87F' }} />
-              </div>
-              <span className="dist-count">{count}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="stats-panel">
-          <div className="stats-panel-title">Geographic Distribution</div>
-          {geoDist.length === 0 ? (
-            <div style={{ color: 'var(--text3)', fontSize: 12, fontFamily: 'var(--font-mono)' }}>No data</div>
-          ) : geoDist.map(({ loc, count, pct }) => {
-            const { display, flag } = geoLabel(loc)
-            return (
-              <div key={loc} className="dist-row">
-                <span className="dist-label">{flag ? `${flag} ${display}` : display}</span>
+          <div className="stats-panel">
+            <div className="stats-panel-title">Software Distribution</div>
+            {softwareDist.length === 0 ? (
+              <div style={{ color: 'var(--text3)', fontSize: 12, fontFamily: 'var(--font-mono)' }}>No data</div>
+            ) : softwareDist.map(({ name, count, pct }) => (
+              <div key={name} className="dist-row">
+                <span className="dist-label">{name}</span>
                 <div className="dist-track">
-                  <div className="dist-fill" style={{ width: `${pct}%`, background: '#60a5fa' }} />
+                  <div className="dist-fill" style={{ width: `${pct}%`, background: '#17E87F' }} />
                 </div>
                 <span className="dist-count">{count}</span>
               </div>
-            )
-          })}
+            ))}
+
+            <div className="trust-divider" />
+
+            <div className="stats-panel-title">Geographic Distribution</div>
+            {geoDist.length === 0 ? (
+              <div style={{ color: 'var(--text3)', fontSize: 12, fontFamily: 'var(--font-mono)' }}>No data</div>
+            ) : geoDist.map(({ loc, count, pct }) => {
+              const { display, flag } = geoLabel(loc)
+              return (
+                <div key={loc} className="dist-row">
+                  <span className="dist-label">{flag ? `${flag} ${display}` : display}</span>
+                  <div className="dist-track">
+                    <div className="dist-fill" style={{ width: `${pct}%`, background: '#60a5fa' }} />
+                  </div>
+                  <span className="dist-count">{count}</span>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
 
