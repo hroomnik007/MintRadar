@@ -1,5 +1,5 @@
 import cron from 'node-cron'
-import { getKnownMints, probeMintToDb, pruneOldHistory } from './prober.js'
+import { getKnownMints, probeMintToDb, pruneOldHistory, backfillServerLocations } from './prober.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
 
 const KNOWN_MINTS = [
@@ -59,6 +59,9 @@ export function startCron(): void {
     await discoverMintsFromNostr()
     await discoverMintsFromApi()
   }, 10_000)
+
+  // Backfill server_location for mints that were never resolved (one-time catch-up)
+  setTimeout(() => { void backfillServerLocations() }, 30_000)
   setInterval(async () => {
     console.log('[cron] running scheduled discovery...')
     await discoverMintsFromNostr()

@@ -1,21 +1,55 @@
+import { fetch as undiciFetch } from 'undici'
 import { pool } from './db.js'
 import { isSafeUrl, safeFetch } from './ssrf.js'
 
 async function lookupServerLocation(mintUrl: string): Promise<string | null> {
   try {
     const hostname = new URL(mintUrl).hostname
-    const res = await fetch(`https://ipinfo.io/${encodeURIComponent(hostname)}/json`, {
+    console.log(`[geo] looking up: ${hostname}`)
+    const res = await undiciFetch(`https://ipinfo.io/${encodeURIComponent(hostname)}/json`, {
       signal: AbortSignal.timeout(5_000),
-    })
-    if (!res.ok) return null
+    }) as unknown as Response
+    if (!res.ok) {
+      console.log(`[geo] ipinfo.io returned HTTP ${res.status} for ${hostname}`)
+      return null
+    }
     const data = await res.json() as Record<string, unknown>
-    if (data['bogon'] === true) return null
+    if (data['bogon'] === true) {
+      console.log(`[geo] ${hostname} is bogon — skipping`)
+      return null
+    }
     const city = typeof data['city'] === 'string' ? data['city'] : null
     const country = typeof data['country'] === 'string' ? data['country'] : null
-    if (!city && !country) return null
-    return [city, country].filter(Boolean).join(', ')
-  } catch {
+    if (!city && !country) {
+      console.log(`[geo] no city/country in ipinfo response for ${hostname}`)
+      return null
+    }
+    const location = [city, country].filter(Boolean).join(', ')
+    console.log(`[geo] ${hostname} → ${location}`)
+    return location
+  } catch (err) {
+    console.error(`[geo] lookup error for ${mintUrl}:`, err)
     return null
+  }
+}
+
+export async function backfillServerLocations(): Promise<void> {
+  try {
+    const res = await pool.query('SELECT url FROM mints WHERE server_location IS NULL')
+    const urls = (res.rows as { url: string }[]).map(r => r.url)
+    console.log(`[geo] backfill: ${urls.length} mints with NULL server_location`)
+    let found = 0
+    for (const mintUrl of urls) {
+      const location = await lookupServerLocation(mintUrl)
+      if (location !== null) {
+        await pool.query('UPDATE mints SET server_location = $1 WHERE url = $2', [location, mintUrl])
+        found++
+      }
+      await new Promise<void>(resolve => setTimeout(resolve, 150))
+    }
+    console.log(`[geo] backfill complete: ${found}/${urls.length} locations populated`)
+  } catch (err) {
+    console.error('[geo] backfill error:', err)
   }
 }
 
@@ -146,6 +180,12 @@ export async function probeMintToDb(url: string): Promise<void> {
             )
           }
 
+        }
+      } catch { lastError = 'Invalid JSON response' }
+
+      // Geo-IP lookup — isolated so errors never affect probe result or lastError
+      if (online) {
+        try {
           const locRow = await pool.query('SELECT server_location FROM mints WHERE url = $1', [url])
           const currentLoc = locRow.rows[0]?.server_location as string | null | undefined
           if (currentLoc == null) {
@@ -154,8 +194,10 @@ export async function probeMintToDb(url: string): Promise<void> {
               await pool.query('UPDATE mints SET server_location = $1 WHERE url = $2', [location, url])
             }
           }
+        } catch (err) {
+          console.error('[geo] db error during location update:', err)
         }
-      } catch { lastError = 'Invalid JSON response' }
+      }
     } else if (res && !res.ok) {
       lastError = `HTTP ${res.status}`
     } else {
