@@ -230,12 +230,14 @@
 /* ── Mint Card ──────────────────────────────────────────────── */
 .mint-card {
   background: var(--surface);
-  border: 1px solid var(--brd);
+  border-top: 1px solid var(--brd);
+  border-right: 1px solid var(--brd);
+  border-bottom: 1px solid var(--brd);
+  border-left: 3px solid var(--card-status-color, transparent);
   border-radius: var(--r);
-  border-left: 3px solid transparent; /* color set via inline style by status */
   padding: 14px 16px;
   cursor: pointer;
-  transition: border-color var(--transition);
+  transition: border-top-color var(--transition), border-right-color var(--transition), border-bottom-color var(--transition);
   position: relative;
   animation: fadein 0.22s ease both;
 }

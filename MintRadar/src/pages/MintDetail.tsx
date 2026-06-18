@@ -1169,7 +1169,7 @@ function MintDetailContent({ url }: { url: string }) {
             </div>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 0',borderBottom:'0.5px solid #21262d',marginBottom:12}}>
               <span style={{fontSize:11,color:'#8b949e',fontFamily:'var(--font-mono)'}}>Avg latency</span>
-              <span style={{fontSize:12,fontWeight:600,fontFamily:'var(--font-mono)',color:'#F5A623'}}>
+              <span style={{fontSize:12,fontWeight:600,fontFamily:'var(--font-mono)',color:'#e6edf3'}}>
                 {uptime24hData?.avgLatencyMs !== null && uptime24hData?.avgLatencyMs !== undefined ? `${uptime24hData.avgLatencyMs} ms` : '—'}
               </span>
             </div>
@@ -1214,7 +1214,7 @@ function MintDetailContent({ url }: { url: string }) {
                 </div>
                 <div className="trust-row">
                   <span className="trust-label">Latency</span>
-                  <span className="trust-value" style={{color: latency !== null ? (latency < 500 ? '#17E87F' : latency < 2000 ? '#F5A623' : '#E24B4A') : 'var(--text3)'}}>
+                  <span className="trust-value" style={{color: '#e6edf3'}}>
                     {latency !== null ? `${latency} ms` : '—'}
                   </span>
                 </div>
@@ -1291,11 +1291,13 @@ function MintDetailContent({ url }: { url: string }) {
               <button onClick={() => setShowQr(false)} style={{background:'none',border:'none',color:'#8b949e',fontSize:20,cursor:'pointer',lineHeight:1,padding:'2px 6px'}}>×</button>
             </div>
             <div style={{display:'flex',justifyContent:'center',margin:'16px 0'}}>
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}&bgcolor=ffffff&color=000000&qzone=2`}
-                alt="QR Code"
-                style={{borderRadius:10,width:200,height:200,border:'1px solid #21262d'}}
-              />
+              <div style={{background:'#ffffff',borderRadius:10,padding:8,border:'1px solid #e0e0e0'}}>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=184x184&data=${encodeURIComponent(url)}&bgcolor=ffffff&color=000000&qzone=1`}
+                  alt="QR Code"
+                  style={{display:'block',width:184,height:184}}
+                />
+              </div>
             </div>
             <div style={{display:'flex',gap:8,alignItems:'center'}}>
               <input

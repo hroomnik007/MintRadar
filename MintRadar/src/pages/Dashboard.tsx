@@ -199,7 +199,7 @@ function MintCardDisplay({
   return (
     <div
       className="mint-card"
-      style={{ borderLeft: `3px solid ${borderLeftColor}` }}
+      style={{ '--card-status-color': borderLeftColor } as React.CSSProperties}
       onClick={() => { navigate(`/mint/${encodeURIComponent(mint.url)}`) }}
     >
       {onToggleSelect && (
