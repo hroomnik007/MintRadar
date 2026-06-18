@@ -119,17 +119,17 @@ function mintAgeBadge(discoveredAt: string | null | undefined): { label: string;
 }
 
 function latencyColor(ms: number | null | undefined): string {
-  if (!ms || ms <= 0) return 'var(--text)'
-  if (ms < 800) return '#4ade80'
-  if (ms < 1500) return '#ffa500'
-  return '#ff4d4d'
+  if (!ms || ms <= 0) return 'var(--t3)'
+  if (ms < 500) return 'var(--fast)'
+  if (ms < 2000) return 'var(--med)'
+  return 'var(--slow)'
 }
 
 function uptimeColor(pct: number | null | undefined): string {
-  if (pct === null || pct === undefined) return 'var(--text3)'
-  if (pct >= 80) return '#4ade80'
-  if (pct >= 50) return '#ffa500'
-  return '#ff4d4d'
+  if (pct === null || pct === undefined) return 'var(--t3)'
+  if (pct >= 95) return 'var(--fast)'
+  if (pct >= 80) return 'var(--med)'
+  return 'var(--slow)'
 }
 
 function listTrustScore(mint: KnownMint): number {
@@ -193,7 +193,6 @@ function countActiveFilters(f: FilterState): number {
 function MintCardDisplay({
   mint,
   isDegraded = false,
-  viewMode = 'compact',
   isSelected = false,
   onToggleSelect,
 }: {
@@ -210,24 +209,17 @@ function MintCardDisplay({
   const isWatched = mints.includes(mint.url)
   const profile = useAuthStore(state => state.profile)
   const isLoggedIn = profile !== null
-  const cardStyle = isDegraded ? { opacity: 0.45 } : undefined
   const hostname = getHostname(mint.url)
   const isOnline = mint.online === true
   const displayName = mint.name ?? hostname
   const uptimePct24h = mint.uptimePct24h ?? null
-  const showUptime = uptimePct24h !== null
 
-  const trustScore = listTrustScore(mint)
-  const tsInfo = trustScoreInfo(trustScore)
-  const ageBadge = mintAgeBadge(mint.discoveredAt)
-
-  const isNew = mint.discoveredAt != null
-    && (Date.now() - new Date(mint.discoveredAt).getTime()) < 48 * 3600 * 1000
+  const borderLeftColor = isDegraded ? '#F5A623' : isOnline ? '#17E87F' : '#E24B4A'
 
   return (
     <div
-      className={`mint-card ${mint.online === true ? 'online' : 'offline'}`}
-      style={cardStyle}
+      className="mint-card"
+      style={{ borderLeftColor }}
       onClick={() => { navigate(`/mint/${encodeURIComponent(mint.url)}`) }}
     >
       {onToggleSelect && (
@@ -240,56 +232,43 @@ function MintCardDisplay({
           </div>
         </div>
       )}
+
       <div className="card-top" style={onToggleSelect ? { paddingLeft: 24 } : undefined}>
         <div className="card-name-row">
-          <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={32} />
-          <div style={{minWidth:0}}>
-            <div className="card-name" style={{display:'flex',alignItems:'center',gap:5,minWidth:0}}>
-              <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{displayName}</span>
-              {isNew && (
-                <span style={{flexShrink:0,background:'rgba(74,222,128,0.15)',color:'#4ade80',border:'0.5px solid rgba(74,222,128,0.3)',fontSize:10,padding:'1px 5px',borderRadius:4,fontFamily:'var(--font-mono)',fontWeight:600}}>New</span>
-              )}
-              {ageBadge && !isNew && (
-                <span style={{flexShrink:0,background:ageBadge.bg,color:ageBadge.color,border:`0.5px solid ${ageBadge.border}`,fontSize:9,padding:'1px 5px',borderRadius:4,fontFamily:'var(--font-mono)',fontWeight:600}}>{ageBadge.label}</span>
-              )}
-            </div>
+          <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={32} radius={7} />
+          <div style={{ minWidth: 0 }}>
+            <div className="card-name">{displayName}</div>
             <div className="card-host">{hostname}</div>
           </div>
         </div>
-        <div className="status-dot" style={{background: isOnline ? 'var(--accent)' : '#ff4d4d'}} />
+        <div className={`status-dot${isOnline ? ' online' : ''}`} />
       </div>
 
-      <div style={{display:'flex',alignItems:'center',gap:6,marginBottom: viewMode === 'expanded' ? 0 : 8}}>
-        <span style={{fontSize:10,fontFamily:'var(--font-mono)',color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:4,padding:'1px 5px',flexShrink:0}}>{tsInfo.label}</span>
-        <span style={{fontSize:11,fontFamily:'var(--font-mono)',color:tsInfo.color,fontWeight:600}}>{trustScore}%</span>
-        {showUptime && (
-          <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:4}}>
-            <div className="uptime-bar-track">
-              <div className="uptime-bar-fill" style={{width:`${uptimePct24h}%`,background:uptimeColor(uptimePct24h)}}/>
-            </div>
-            <span className="uptime-pct" style={{color:uptimeColor(uptimePct24h)}}>{uptimePct24h}%</span>
-          </div>
+      <div className="card-pills">
+        {mint.version && (
+          <span className="card-pill">{mint.version}</span>
+        )}
+        {mint.nutCount !== null && mint.nutCount !== undefined && (
+          <span className="card-pill">{mint.nutCount} NUTs</span>
+        )}
+        {uptimePct24h !== null && (
+          <span className="card-pill" style={{ color: uptimeColor(uptimePct24h) }}>
+            {uptimePct24h}% up
+          </span>
         )}
       </div>
 
-      {viewMode === 'expanded' && (
-        <div style={{display:'flex',gap:14,marginBottom:8,fontSize:10,fontFamily:'var(--font-mono)',color:'var(--text2)'}}>
-          <div>
-            <span style={{color:'var(--text3)',marginRight:3}}>Latency</span>
-            <span style={{color:isOnline && mint.latencyMs !== null ? 'var(--text)' : 'var(--text3)'}}>
-              {!isOnline ? '—' : mint.latencyMs !== null ? `${mint.latencyMs}ms` : '—'}
-            </span>
-          </div>
-          {mint.nutCount !== null && (
-            <div>
-              <span style={{color:'var(--text3)',marginRight:3}}>NUTs</span>
-              <span>{mint.nutCount} / 14</span>
+      <div className="card-bottom">
+        <div className="latency-block">
+          <div className="latency-label">LATENCY</div>
+          {isOnline && mint.latencyMs !== null ? (
+            <div className="latency-value" style={{ color: latencyColor(mint.latencyMs) }}>
+              {mint.latencyMs}<span className="latency-unit">ms</span>
             </div>
+          ) : (
+            <div className="latency-value muted">—</div>
           )}
         </div>
-      )}
-
-      <div className="card-bottom" style={{justifyContent:'flex-end'}}>
         {isLoggedIn && (
           <button
             type="button"
