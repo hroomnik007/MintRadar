@@ -131,12 +131,17 @@ function WatchlistCard({
   const latency = knownMint?.latencyMs ?? null
   const uptimePct24h = knownMint?.uptimePct24h ?? null
 
-  const borderLeftColor = isDegraded ? '#F5A623' : knownMint?.online === true ? '#17E87F' : '#E24B4A'
+  const cardStyle: React.CSSProperties =
+    knownMint?.online === true
+      ? { border: '1px solid rgba(23, 232, 127, 0.4)', boxShadow: '0 0 0 1px rgba(23, 232, 127, 0.15), 0 0 12px rgba(23, 232, 127, 0.08)' }
+      : knownMint?.online === false
+      ? { border: '1px solid rgba(226, 75, 74, 0.4)', boxShadow: '0 0 0 1px rgba(226, 75, 74, 0.15), 0 0 12px rgba(226, 75, 74, 0.08)' }
+      : { border: '1px solid #21262d' }
 
   return (
     <div
       className="mint-card"
-      style={{ borderLeft: `3px solid ${borderLeftColor}` }}
+      style={cardStyle}
       onClick={() => navigate(`/mint/${encodeURIComponent(url)}`)}
     >
       {onToggleSelect && (

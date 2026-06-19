@@ -194,12 +194,17 @@ function MintCardDisplay({
   const displayName = mint.name ?? hostname
   const uptimePct24h = mint.uptimePct24h ?? null
 
-  const borderLeftColor = isDegraded ? '#F5A623' : mint.online === true ? '#17E87F' : '#E24B4A'
+  const cardStyle: React.CSSProperties =
+    mint.online === true
+      ? { border: '1px solid rgba(23, 232, 127, 0.4)', boxShadow: '0 0 0 1px rgba(23, 232, 127, 0.15), 0 0 12px rgba(23, 232, 127, 0.08)' }
+      : mint.online === false
+      ? { border: '1px solid rgba(226, 75, 74, 0.4)', boxShadow: '0 0 0 1px rgba(226, 75, 74, 0.15), 0 0 12px rgba(226, 75, 74, 0.08)' }
+      : { border: '1px solid #21262d' }
 
   return (
     <div
       className="mint-card"
-      style={{ borderLeft: `3px solid ${borderLeftColor}` }}
+      style={cardStyle}
       onClick={() => { navigate(`/mint/${encodeURIComponent(mint.url)}`) }}
     >
       {onToggleSelect && (

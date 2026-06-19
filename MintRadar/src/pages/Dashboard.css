@@ -230,14 +230,11 @@
 /* ── Mint Card ──────────────────────────────────────────────── */
 .mint-card {
   background: var(--surface);
-  border-top: 1px solid var(--brd);
-  border-right: 1px solid var(--brd);
-  border-bottom: 1px solid var(--brd);
-  border-left: 3px solid transparent;
+  border: 1px solid var(--brd);
   border-radius: var(--r);
   padding: 14px 16px;
   cursor: pointer;
-  transition: border-top-color var(--transition), border-right-color var(--transition), border-bottom-color var(--transition);
+  transition: box-shadow var(--transition), border-color var(--transition);
   position: relative;
   animation: fadein 0.22s ease both;
 }
@@ -246,16 +243,6 @@
   from { opacity: 0; transform: translateY(5px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
-.mint-card:hover {
-  border-top-color: var(--brd-md);
-  border-right-color: var(--brd-md);
-  border-bottom-color: var(--brd-md);
-}
-
-.mint-card--online   { border-left-color: #17E87F !important; }
-.mint-card--offline  { border-left-color: #E24B4A !important; }
-.mint-card--degraded { border-left-color: #F5A623 !important; }
 
 .card-top {
   display: flex;
