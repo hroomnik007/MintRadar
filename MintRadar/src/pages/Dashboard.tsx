@@ -197,9 +197,7 @@ function MintCardDisplay({
   const cardStyle: React.CSSProperties =
     mint.online === true
       ? { background: 'linear-gradient(135deg, rgba(23, 232, 127, 0.28) 0%, rgba(13, 17, 23, 1) 55%)', border: '1px solid rgba(23, 232, 127, 0.45)', boxShadow: '0 0 0 1px rgba(23, 232, 127, 0.15), 0 0 12px rgba(23, 232, 127, 0.08)' }
-      : mint.online === false
-      ? { background: 'linear-gradient(135deg, rgba(226, 75, 74, 0.28) 0%, rgba(13, 17, 23, 1) 55%)', border: '1px solid rgba(226, 75, 74, 0.45)', boxShadow: '0 0 0 1px rgba(226, 75, 74, 0.15), 0 0 12px rgba(226, 75, 74, 0.08)' }
-      : { background: '#0d1117', border: '1px solid #21262d' }
+      : { background: 'linear-gradient(135deg, rgba(226, 75, 74, 0.28) 0%, rgba(13, 17, 23, 1) 55%)', border: '1px solid rgba(226, 75, 74, 0.45)', boxShadow: '0 0 0 1px rgba(226, 75, 74, 0.15), 0 0 12px rgba(226, 75, 74, 0.08)' }
 
   return (
     <div
