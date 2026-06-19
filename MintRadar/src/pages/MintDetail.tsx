@@ -285,7 +285,7 @@ function MintDetailContent({ url }: { url: string }) {
   const [testingLatency, setTestingLatency] = useState(false)
   const [latencyBtnTooltip, setLatencyBtnTooltip] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'nuts' | 'audit' | 'reviews'>('overview')
-  const [auditExpanded, setAuditExpanded] = useState(false)
+  const [auditExpanded, setAuditExpanded] = useState(true)
   const [showComparePicker, setShowComparePicker] = useState(false)
   const [comparePickerSelected, setComparePickerSelected] = useState<Set<string>>(new Set())
   const [showComparisonModal, setShowComparisonModal] = useState(false)
@@ -456,48 +456,54 @@ function MintDetailContent({ url }: { url: string }) {
   return (
     <div className="mint-detail">
       <div className="md-header">
-        <button className="md-back" onClick={() => navigate(-1)}>← Back</button>
-        <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={32} />
-        <div className="md-namebox">
-          <div className="md-name" style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-            <span>{displayName}</span>
-            {ageBadge && (
-              <span style={{fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:ageBadge.color,background:ageBadge.bg,border:`0.5px solid ${ageBadge.border}`,borderRadius:4,padding:'1px 6px',flexShrink:0}}>{ageBadge.label}</span>
-            )}
+        <div className="md-header-row1">
+          <div className="md-header-left">
+            <button className="md-back" onClick={() => navigate(-1)}>← Back</button>
+            <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={32} />
+            <div className="md-namebox">
+              <div className="md-name" style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                <span>{displayName}</span>
+                {ageBadge && (
+                  <span style={{fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:ageBadge.color,background:ageBadge.bg,border:`0.5px solid ${ageBadge.border}`,borderRadius:4,padding:'1px 6px',flexShrink:0}}>{ageBadge.label}</span>
+                )}
+              </div>
+              <div className="md-url">{url}</div>
+            </div>
           </div>
-          <div className="md-url">{url}</div>
+          <div className={`md-online-badge ${isOnline ? '' : 'offline'}`}>
+            <div className={`status-dot ${isOnline ? '' : 'offline'}`} />
+            {isOnline ? 'Online' : 'Offline'}
+          </div>
         </div>
-        <div className={`md-online-badge ${isOnline ? '' : 'offline'}`}>
-          <div className={`status-dot ${isOnline ? '' : 'offline'}`} />
-          {isOnline ? 'Online' : 'Offline'}
+        <div className="md-header-row2">
+          {!isOnline && knownMint?.lastError && (
+            <span style={{fontSize:11,color:'#ff4d4d',fontFamily:'var(--font-mono)',background:'rgba(255,77,77,0.08)',border:'0.5px solid rgba(255,77,77,0.25)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap'}}>
+              {knownMint.lastError}
+            </span>
+          )}
+          {isLoggedIn
+            ? (
+              <button className={`md-watch-btn ${isWatching ? 'watching' : ''}`} onClick={toggleWatch}>
+                {isWatching ? '⊙ Watching' : '+ Watch'}
+              </button>
+            ) : (
+              <button
+                className="md-watch-btn"
+                style={{ color: 'var(--text3)', cursor: 'default' }}
+                onClick={e => e.preventDefault()}
+                title="Login with Nostr to add to watchlist"
+              >
+                + Watch
+              </button>
+            )
+          }
+          <button
+            className="md-compare-btn"
+            onClick={() => { setShowComparePicker(true); setComparePickerSelected(new Set()); setComparePickerSearch('') }}
+          >
+            ⇆ Compare
+          </button>
         </div>
-        {!isOnline && knownMint?.lastError && (
-          <span style={{fontSize:11,color:'#ff4d4d',fontFamily:'var(--font-mono)',background:'rgba(255,77,77,0.08)',border:'0.5px solid rgba(255,77,77,0.25)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap'}}>
-            {knownMint.lastError}
-          </span>
-        )}
-        {isLoggedIn
-          ? (
-            <button className={`md-watch-btn ${isWatching ? 'watching' : ''}`} onClick={toggleWatch}>
-              {isWatching ? '⊙ Watching' : '+ Watch'}
-            </button>
-          ) : (
-            <button
-              className="md-watch-btn"
-              style={{ color: 'var(--text3)', cursor: 'default' }}
-              onClick={e => e.preventDefault()}
-              title="Login with Nostr to add to watchlist"
-            >
-              + Watch
-            </button>
-          )
-        }
-        <button
-          className="md-compare-btn"
-          onClick={() => { setShowComparePicker(true); setComparePickerSelected(new Set()); setComparePickerSearch('') }}
-        >
-          ⇆ Compare
-        </button>
       </div>
 
       <div className="md-summary">
