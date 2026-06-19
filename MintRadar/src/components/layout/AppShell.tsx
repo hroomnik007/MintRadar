@@ -119,7 +119,7 @@ export function AppShell() {
           </NavLink>
           <NavLink to="/watchlist" className={({isActive}) => `nav-tab${isActive ? ' active' : ''}`}>
             Watchlist
-            {watchlistCount > 0 && (
+            {profile !== null && watchlistCount > 0 && (
               <span className="nav-tab-badge">{watchlistCount}</span>
             )}
           </NavLink>

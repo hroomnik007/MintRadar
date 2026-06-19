@@ -1160,32 +1160,6 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-right">
 
           <div className="md-panel">
-            <div className="md-panel-title">Mint History</div>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 0',borderBottom:'0.5px solid #21262d',marginBottom:5}}>
-              <span style={{fontSize:11,color:'#8b949e',fontFamily:'var(--font-mono)'}}>Uptime 24h</span>
-              <span style={{fontSize:14,fontWeight:700,fontFamily:'var(--font-mono)',color: uptime24hData?.uptimePct !== null && uptime24hData?.uptimePct !== undefined ? (uptime24hData.uptimePct === 100 ? '#4ade80' : uptime24hData.uptimePct >= 50 ? '#fb923c' : '#f87171') : '#8b949e'}}>
-                {uptime24hData?.uptimePct !== null && uptime24hData?.uptimePct !== undefined ? `${uptime24hData.uptimePct}%` : '—'}
-              </span>
-            </div>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 0',borderBottom:'0.5px solid #21262d',marginBottom:12}}>
-              <span style={{fontSize:11,color:'#8b949e',fontFamily:'var(--font-mono)'}}>Avg latency</span>
-              <span style={{fontSize:12,fontWeight:600,fontFamily:'var(--font-mono)',color:'#e6edf3'}}>
-                {uptime24hData?.avgLatencyMs !== null && uptime24hData?.avgLatencyMs !== undefined ? `${uptime24hData.avgLatencyMs} ms` : '—'}
-              </span>
-            </div>
-            {sparkline7dData && sparkline7dData.segments.filter(s => s.latencyMs !== null).length > 2 && (
-              <div>
-                <div style={{fontSize:8,color:'#8b949e',fontFamily:'var(--font-mono)',marginBottom:4,textTransform:'uppercase',letterSpacing:'0.06em'}}>7d latency trend</div>
-                <ResponsiveContainer width="100%" height={44}>
-                  <LineChart data={sparkline7dData.segments.map(s => ({v: s.latencyMs}))} margin={{top:2,right:2,left:2,bottom:2}}>
-                    <Line type="monotone" dataKey="v" stroke="#F5A623" strokeWidth={1.5} dot={false} connectNulls />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </div>
-
-          <div className="md-panel">
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:11}}>
               <div className="md-panel-title" style={{marginBottom:0}}>Trust Score</div>
               <button onClick={() => setShowTrustBreakdown(true)} style={{background:'none',border:'none',color:'var(--accent)',fontSize:10,cursor:'pointer',fontFamily:'var(--font-mono)',padding:0}}>Details ›</button>

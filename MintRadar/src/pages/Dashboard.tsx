@@ -194,12 +194,11 @@ function MintCardDisplay({
   const displayName = mint.name ?? hostname
   const uptimePct24h = mint.uptimePct24h ?? null
 
-  const borderLeftColor = isDegraded ? '#F5A623' : isOnline ? '#17E87F' : '#E24B4A'
+  const statusClass = isDegraded ? 'mint-card--degraded' : isOnline ? 'mint-card--online' : 'mint-card--offline'
 
   return (
     <div
-      className="mint-card"
-      style={{ '--card-status-color': borderLeftColor } as React.CSSProperties}
+      className={`mint-card ${statusClass}`}
       onClick={() => { navigate(`/mint/${encodeURIComponent(mint.url)}`) }}
     >
       {onToggleSelect && (
@@ -221,7 +220,10 @@ function MintCardDisplay({
             <div className="card-host">{hostname}</div>
           </div>
         </div>
-        <div className={`status-dot${isOnline ? ' online' : ''}`} />
+        <div
+          className={`status-dot${isOnline ? ' online' : ''}`}
+          style={{ background: mint.online === true ? '#17E87F' : mint.online === false ? '#E24B4A' : '#6b7280' }}
+        />
       </div>
 
       <div className="card-pills">
@@ -234,6 +236,11 @@ function MintCardDisplay({
         {uptimePct24h !== null && (
           <span className="card-pill" style={{ color: uptimeColor(uptimePct24h) }}>
             {uptimePct24h}% up
+          </span>
+        )}
+        {mint.online === true && mint.trustScore != null && (
+          <span className="card-pill" style={{ color: mint.trustScore >= 70 ? '#4ade80' : mint.trustScore >= 40 ? '#ffa500' : '#ff4d4d' }}>
+            ★ {mint.trustScore}%
           </span>
         )}
       </div>

@@ -4,23 +4,19 @@ import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
-import { useUIStore } from '@/stores/ui.store'
 import { ComparisonModal } from '@/components/ComparisonModal'
 import './Watchlist.css'
 
-const IcList = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <rect x="1" y="2" width="11" height="1.5" rx="0.75" fill="currentColor"/>
-    <rect x="1" y="5.75" width="11" height="1.5" rx="0.75" fill="currentColor"/>
-    <rect x="1" y="9.5" width="11" height="1.5" rx="0.75" fill="currentColor"/>
+const IcEye = () => (
+  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+    <path d="M1 7s2.4-4 6-4 6 4 6 4-2.4 4-6 4-6-4-6-4z" stroke="currentColor" strokeWidth="1.3"/>
+    <circle cx="7" cy="7" r="1.8" stroke="currentColor" strokeWidth="1.3"/>
   </svg>
 )
-const IcCards = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <rect x="1" y="1" width="4.5" height="4.5" rx="1" fill="currentColor"/>
-    <rect x="7.5" y="1" width="4.5" height="4.5" rx="1" fill="currentColor"/>
-    <rect x="1" y="7.5" width="4.5" height="4.5" rx="1" fill="currentColor"/>
-    <rect x="7.5" y="7.5" width="4.5" height="4.5" rx="1" fill="currentColor"/>
+const IcPlus = () => (
+  <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+    <line x1="6" y1="1.5" x2="6" y2="10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <line x1="1.5" y1="6" x2="10.5" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
 )
 const IcRadar = () => (
@@ -53,12 +49,6 @@ function uptimeColor(pct: number | null | undefined): string {
   return '#ff4d4d'
 }
 
-
-function trustScoreInfo(score: number): { label: string; color: string; bg: string; border: string } {
-  if (score >= 70) return { label: 'High Trust', color: '#4ade80', bg: 'rgba(74,222,128,0.1)', border: 'rgba(74,222,128,0.25)' }
-  if (score >= 40) return { label: 'Moderate Trust', color: '#ffa500', bg: 'rgba(255,165,0,0.1)', border: 'rgba(255,165,0,0.25)' }
-  return { label: 'Low Trust', color: '#ff4d4d', bg: 'rgba(255,77,77,0.1)', border: 'rgba(255,77,77,0.25)' }
-}
 
 function mintAgeBadge(discoveredAt: string | null | undefined): { label: string; color: string; bg: string; border: string } | null {
   if (!discoveredAt) return null
@@ -120,38 +110,32 @@ function applyFilters(urls: string[], knownMintsMap: Map<string, KnownMint>, fil
 function WatchlistCard({
   url,
   knownMint,
-  viewMode = 'compact',
   isSelected = false,
   onToggleSelect,
 }: {
   url: string
   knownMint: KnownMint | null
-  viewMode?: 'compact' | 'expanded'
   isSelected?: boolean
   onToggleSelect?: (url: string, selected: boolean) => void
 }) {
   const navigate = useNavigate()
+  const mints = useWatchlistStore(state => state.mints)
+  const addMint = useWatchlistStore(state => state.addMint)
   const removeMint = useWatchlistStore(state => state.removeMint)
+  const isWatched = mints.includes(url)
 
   const hostname = getHostname(url)
   const isOnline = knownMint?.online === true
+  const isDegraded = knownMint?.degraded ?? false
   const displayName = knownMint?.name ?? hostname
   const latency = knownMint?.latencyMs ?? null
-  const iconUrl = knownMint?.iconUrl ?? null
   const uptimePct24h = knownMint?.uptimePct24h ?? null
-  const showUptime = uptimePct24h !== null
 
-  const trustScore = listTrustScore(knownMint)
-  const tsInfo = trustScoreInfo(trustScore)
-  const ageBadge = mintAgeBadge(knownMint?.discoveredAt)
-
-  const isNew = knownMint?.discoveredAt != null
-    && (Date.now() - new Date(knownMint.discoveredAt).getTime()) < 48 * 3600 * 1000
+  const statusClass = isDegraded ? 'mint-card--degraded' : isOnline ? 'mint-card--online' : 'mint-card--offline'
 
   return (
     <div
-      className={`mint-card ${knownMint?.online === true ? 'online' : knownMint?.online === false ? 'offline' : ''}`}
-      style={{ position: 'relative' }}
+      className={`mint-card ${statusClass}`}
       onClick={() => navigate(`/mint/${encodeURIComponent(url)}`)}
     >
       {onToggleSelect && (
@@ -164,61 +148,53 @@ function WatchlistCard({
           </div>
         </div>
       )}
-      <div className="card-top">
+      <div className="card-top" style={onToggleSelect ? { paddingLeft: 24 } : undefined}>
         <div className="card-name-row">
-          <MintFavicon url={url} iconUrl={iconUrl} size={22} />
-          <div style={{minWidth:0}}>
-            <div className="card-name" style={{display:'flex',alignItems:'center',gap:5,minWidth:0}}>
-              <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{displayName}</span>
-              {isNew && (
-                <span style={{flexShrink:0,background:'rgba(74,222,128,0.15)',color:'#4ade80',border:'0.5px solid rgba(74,222,128,0.3)',fontSize:10,padding:'1px 5px',borderRadius:4,fontFamily:'var(--font-mono)',fontWeight:600}}>New</span>
-              )}
-              {ageBadge && !isNew && (
-                <span style={{flexShrink:0,background:ageBadge.bg,color:ageBadge.color,border:`0.5px solid ${ageBadge.border}`,fontSize:9,padding:'1px 5px',borderRadius:4,fontFamily:'var(--font-mono)',fontWeight:600}}>{ageBadge.label}</span>
-              )}
-            </div>
+          <MintFavicon url={url} iconUrl={knownMint?.iconUrl ?? null} size={32} radius={7} />
+          <div style={{ minWidth: 0 }}>
+            <div className="card-name">{displayName}</div>
             <div className="card-host">{hostname}</div>
           </div>
         </div>
-        <div className="status-dot" style={{ background: isOnline ? 'var(--accent)' : '#ff4d4d' }} />
+        <div
+          className={`status-dot${isOnline ? ' online' : ''}`}
+          style={{ background: knownMint?.online === true ? '#17E87F' : knownMint?.online === false ? '#E24B4A' : '#6b7280' }}
+        />
       </div>
-
-      <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
-        <span style={{fontSize:10,fontFamily:'var(--font-mono)',color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:4,padding:'1px 5px',flexShrink:0}}>{tsInfo.label}</span>
-        <span style={{fontSize:11,fontFamily:'var(--font-mono)',color:tsInfo.color,fontWeight:600}}>{trustScore}%</span>
-        {showUptime && (
-          <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:4}}>
-            <div className="uptime-bar-track">
-              <div className="uptime-bar-fill" style={{width:`${uptimePct24h}%`,background:uptimeColor(uptimePct24h)}}/>
-            </div>
-            <span className="uptime-pct" style={{color:uptimeColor(uptimePct24h)}}>{uptimePct24h}%</span>
-          </div>
+      <div className="card-pills">
+        {knownMint?.version && <span className="card-pill">{knownMint.version}</span>}
+        {knownMint?.nutCount != null && (
+          <span className="card-pill">{knownMint.nutCount} NUTs</span>
+        )}
+        {uptimePct24h !== null && (
+          <span className="card-pill" style={{ color: uptimeColor(uptimePct24h) }}>
+            {uptimePct24h}% up
+          </span>
+        )}
+        {isOnline && knownMint != null && knownMint.trustScore != null && (
+          <span className="card-pill" style={{ color: knownMint.trustScore >= 70 ? '#4ade80' : knownMint.trustScore >= 40 ? '#ffa500' : '#ff4d4d' }}>
+            ★ {knownMint.trustScore}%
+          </span>
         )}
       </div>
-
-      {viewMode === 'expanded' && (
-        <div style={{display:'flex',gap:14,marginBottom:8,fontSize:10,fontFamily:'var(--font-mono)',color:'var(--text2)'}}>
-          <div>
-            <span style={{color:'var(--text3)',marginRight:3}}>Latency</span>
-            <span style={{color:isOnline && latency !== null ? 'var(--text)' : 'var(--text3)'}}>
-              {!isOnline ? '—' : latency !== null ? `${latency}ms` : '—'}
-            </span>
-          </div>
-          {knownMint?.nutCount !== null && knownMint?.nutCount !== undefined && (
-            <div>
-              <span style={{color:'var(--text3)',marginRight:3}}>NUTs</span>
-              <span>{knownMint.nutCount} / 14</span>
+      <div className="card-bottom">
+        <div className="latency-block">
+          <div className="latency-label">LATENCY</div>
+          {isOnline && latency !== null ? (
+            <div className="latency-value" style={{ color: '#e6edf3' }}>
+              {latency}<span className="latency-unit">ms</span>
             </div>
+          ) : (
+            <div className="latency-value muted">—</div>
           )}
         </div>
-      )}
-
-      <div className="card-bottom" style={{justifyContent:'flex-end'}}>
         <button
           type="button"
-          className="wl-card-remove"
-          onClick={e => { e.stopPropagation(); void removeMint(url) }}
-        >Remove</button>
+          className={`watch-btn${isWatched ? ' watching' : ''}`}
+          onClick={e => { e.stopPropagation(); void (isWatched ? removeMint(url) : addMint(url)) }}
+        >
+          {isWatched ? <><IcEye /><span>Watching</span></> : <><IcPlus /><span>Watch</span></>}
+        </button>
       </div>
     </div>
   )
@@ -227,7 +203,6 @@ function WatchlistCard({
 export default function Watchlist() {
   const [sortBy, setSortBy] = useState<'name' | 'latency' | 'trust' | 'status'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
-  const { viewMode, setViewMode } = useUIStore()
 
   // Filter state
   const [showFilters, setShowFilters] = useState(false)
@@ -344,14 +319,14 @@ export default function Watchlist() {
       <div className="watchlist-page">
         <div className="wl-login-gate">
           <h2>My Watchlist</h2>
-          <p>Login with Nostr to track your personal mints. Your data stays in your browser.</p>
+          <p>Login via Nostr to track your personal mints. Your data stays in your browser.</p>
           <button
             type="button"
             className="wl-add-btn"
             onClick={() => { void login() }}
             disabled={authIsLoading}
           >
-            {authIsLoading ? 'Connecting...' : 'Login with Nostr'}
+            {authIsLoading ? 'Connecting...' : 'Login via Nostr'}
           </button>
           {authError !== null && <p style={{ color: 'var(--red)', fontSize: '13px', marginTop: '8px' }}>{authError}</p>}
         </div>
@@ -412,10 +387,6 @@ export default function Watchlist() {
                 {sortBy === s && <span style={{marginLeft: 3, fontSize: 10, opacity: 0.7}}>{sortDir === 'asc' ? '↑' : '↓'}</span>}
               </button>
             ))}
-          </div>
-          <div className="view-toggle">
-            <button type="button" className={`view-toggle-btn${viewMode === 'compact' ? ' active' : ''}`} onClick={() => setViewMode('compact')} title="Compact view"><IcList /></button>
-            <button type="button" className={`view-toggle-btn${viewMode === 'expanded' ? ' active' : ''}`} onClick={() => setViewMode('expanded')} title="Expanded view"><IcCards /></button>
           </div>
         </div>
       </div>
@@ -521,7 +492,6 @@ export default function Watchlist() {
                 key={url}
                 url={url}
                 knownMint={knownMintsMap.get(url) ?? null}
-                viewMode={viewMode}
                 isSelected={selectedUrls.has(url)}
                 onToggleSelect={toggleSelect}
               />

@@ -233,7 +233,7 @@
   border-top: 1px solid var(--brd);
   border-right: 1px solid var(--brd);
   border-bottom: 1px solid var(--brd);
-  border-left: 3px solid var(--card-status-color, transparent);
+  border-left: 3px solid transparent;
   border-radius: var(--r);
   padding: 14px 16px;
   cursor: pointer;
@@ -252,6 +252,10 @@
   border-right-color: var(--brd-md);
   border-bottom-color: var(--brd-md);
 }
+
+.mint-card--online   { border-left-color: #17E87F !important; }
+.mint-card--offline  { border-left-color: #E24B4A !important; }
+.mint-card--degraded { border-left-color: #F5A623 !important; }
 
 .card-top {
   display: flex;
