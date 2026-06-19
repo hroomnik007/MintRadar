@@ -194,11 +194,12 @@ function MintCardDisplay({
   const displayName = mint.name ?? hostname
   const uptimePct24h = mint.uptimePct24h ?? null
 
-  const statusClass = isDegraded ? 'mint-card--degraded' : isOnline ? 'mint-card--online' : 'mint-card--offline'
+  const borderLeftColor = isDegraded ? '#F5A623' : mint.online === true ? '#17E87F' : '#E24B4A'
 
   return (
     <div
-      className={`mint-card ${statusClass}`}
+      className="mint-card"
+      style={{ borderLeft: `3px solid ${borderLeftColor}` }}
       onClick={() => { navigate(`/mint/${encodeURIComponent(mint.url)}`) }}
     >
       {onToggleSelect && (
@@ -222,7 +223,7 @@ function MintCardDisplay({
         </div>
         <div
           className={`status-dot${isOnline ? ' online' : ''}`}
-          style={{ background: mint.online === true ? '#17E87F' : mint.online === false ? '#E24B4A' : '#6b7280' }}
+          style={{ background: mint.online === true ? '#17E87F' : '#E24B4A' }}
         />
       </div>
 

@@ -60,13 +60,13 @@
 .status-dot.offline { background: #ff4d4d; }
 
 .md-watch-btn {
-  background: #17E87F;
-  color: #000;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 12px;
-  font-weight: 600;
+  background: transparent;
+  color: #c9d1d9;
+  border: 0.5px solid #30363d;
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 500;
   cursor: pointer;
   font-family: var(--font-mono);
   flex-shrink: 0;
@@ -74,7 +74,7 @@
   letter-spacing: 0.03em;
 }
 
-.md-watch-btn:hover { opacity: 0.85; }
+.md-watch-btn:hover { opacity: 0.8; }
 
 .md-watch-btn.watching {
   background: transparent;

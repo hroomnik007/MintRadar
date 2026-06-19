@@ -131,11 +131,12 @@ function WatchlistCard({
   const latency = knownMint?.latencyMs ?? null
   const uptimePct24h = knownMint?.uptimePct24h ?? null
 
-  const statusClass = isDegraded ? 'mint-card--degraded' : isOnline ? 'mint-card--online' : 'mint-card--offline'
+  const borderLeftColor = isDegraded ? '#F5A623' : knownMint?.online === true ? '#17E87F' : '#E24B4A'
 
   return (
     <div
-      className={`mint-card ${statusClass}`}
+      className="mint-card"
+      style={{ borderLeft: `3px solid ${borderLeftColor}` }}
       onClick={() => navigate(`/mint/${encodeURIComponent(url)}`)}
     >
       {onToggleSelect && (
@@ -158,7 +159,7 @@ function WatchlistCard({
         </div>
         <div
           className={`status-dot${isOnline ? ' online' : ''}`}
-          style={{ background: knownMint?.online === true ? '#17E87F' : knownMint?.online === false ? '#E24B4A' : '#6b7280' }}
+          style={{ background: knownMint?.online === true ? '#17E87F' : '#E24B4A' }}
         />
       </div>
       <div className="card-pills">
