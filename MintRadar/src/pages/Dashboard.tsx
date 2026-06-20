@@ -842,7 +842,7 @@ export default function Dashboard() {
       )}
 
       {knownError ? (
-        <p className="error-msg">Nepodarilo sa načítať minty</p>
+        <p className="error-msg">Failed to load mints</p>
       ) : knownLoading ? (
         <div className="mint-grid">
           {[0, 1, 2, 3, 4, 5].map(i => (
@@ -951,7 +951,7 @@ export default function Dashboard() {
             {submitTab === 'bulk' && (
               <>
                 <div className="submit-modal-desc">
-                  Vlož URL mintov, každý na nový riadok. Každý musí začínať <code>https://</code>.
+                  Paste one mint URL per line. Each must start with <code>https://</code>.
                 </div>
                 {!bulkRunning && !bulkDone && (
                   <>
@@ -991,7 +991,7 @@ export default function Dashboard() {
                 {bulkDone && (
                   <div style={{ marginTop: 10 }}>
                     <div className={`submit-result ${bulkFailed === 0 ? 'success' : 'error'}`}>
-                      {bulkAdded} pridaných, {bulkFailed} zlyhalo
+                      {bulkAdded} added, {bulkFailed} failed
                     </div>
                     <div className="submit-modal-actions">
                       <button className="submit-ok-btn" onClick={() => setShowSubmit(false)}>Close</button>

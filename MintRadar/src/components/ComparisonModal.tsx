@@ -98,7 +98,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
     <div className="cmp-overlay" onClick={onClose}>
       <div className="cmp-modal" onClick={e => e.stopPropagation()}>
         <div className="cmp-modal-header">
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Porovnanie mintov</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Mint Comparison</div>
           <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', padding: 4 }}><IcClose /></button>
         </div>
 

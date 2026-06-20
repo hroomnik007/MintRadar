@@ -937,7 +937,7 @@ function MintDetailContent({ url }: { url: string }) {
 
             {/* Line chart */}
             {histLineData.length === 0 ? (
-              <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>Žiadne historické dáta pre toto obdobie.</p>
+              <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>No historical data for this period.</p>
             ) : histLineData.filter(d => d[chartMetric] !== null).length < 2 ? (
               <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>Not enough data for this period</p>
             ) : (
