@@ -4,6 +4,8 @@ import { useWatchlistStore } from '@/stores/watchlist.store'
 import { fetchRemoteWatchlist, publishWatchlist } from '@/core/nostr/watchlistSync'
 import { db } from '@/db'
 
+const WATCHLIST_OWNER_KEY = 'watchlistOwner'
+
 export function useWatchlistSync() {
   const profile = useAuthStore(s => s.profile)
   const mints = useWatchlistStore(s => s.mints)
@@ -33,6 +35,20 @@ export function useWatchlistSync() {
 
     const doSync = async () => {
       try {
+        // Check if the Dexie data belongs to the current pubkey.
+        // If a different user was previously logged in on this device, their Dexie
+        // data must be cleared before loading — otherwise they'd see another user's mints.
+        let dexieOwner: string | undefined
+        try {
+          const ownerEntry = await db.meta.get(WATCHLIST_OWNER_KEY)
+          dexieOwner = ownerEntry?.value
+        } catch { /* meta table not yet available on first run */ }
+
+        if (dexieOwner !== pubkey) {
+          console.log('sync: different owner in Dexie — clearing before load')
+          await db.watchlist.clear()
+        }
+
         console.log('sync: fetching kind:10003 from relays')
         const remote = await fetchRemoteWatchlist(pubkey)
         console.log(`sync: decrypted ${remote.length} mints`, remote)
@@ -47,8 +63,11 @@ export function useWatchlistSync() {
           )
           console.log('sync: written to Dexie')
         } else {
-          console.log('sync: no remote data found — keeping local Dexie state')
+          console.log('sync: no remote data — using existing Dexie state for this pubkey')
         }
+
+        // Record ownership so a different pubkey on next login clears Dexie
+        await db.meta.put({ key: WATCHLIST_OWNER_KEY, value: pubkey })
 
         await loadFromDb()
         syncedForPubkey.current = pubkey

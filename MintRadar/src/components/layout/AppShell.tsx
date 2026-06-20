@@ -84,9 +84,9 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', handler)
   }, [showLoginModal])
 
-  async function handleLogout() {
+  function handleLogout() {
     logout()
-    await useWatchlistStore.getState().clearWatchlist()
+    useWatchlistStore.getState().resetInMemory()
   }
 
   async function handleModalConnect() {
@@ -147,7 +147,7 @@ export function AppShell() {
                   {profile.name ?? `${profile.pubkey.slice(0,8)}...`}
                 </span>
               </div>
-              <button type="button" className="navbar-disconnect-btn" onClick={() => { void handleLogout() }}>
+              <button type="button" className="navbar-disconnect-btn" onClick={handleLogout}>
                 Disconnect
               </button>
             </>

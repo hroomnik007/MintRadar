@@ -9,6 +9,7 @@ interface WatchlistState {
   addMint: (url: string) => Promise<void>
   removeMint: (url: string) => Promise<void>
   clearWatchlist: () => Promise<void>
+  resetInMemory: () => void
   isWatching: (url: string) => boolean
 }
 
@@ -51,6 +52,13 @@ export const useWatchlistStore = create<WatchlistState>()(
 
     clearWatchlist: async () => {
       await db.watchlist.clear()
+      set(state => {
+        state.mints = []
+        state.isLoaded = false
+      })
+    },
+
+    resetInMemory: () => {
       set(state => {
         state.mints = []
         state.isLoaded = false

@@ -22,10 +22,16 @@ interface WatchlistEntry {
   notifyOnUp: boolean
 }
 
+interface MetaEntry {
+  key: string
+  value: string
+}
+
 const db = new Dexie('mintradar-v1') as Dexie & {
   mints: Table<Mint, string>
   mintHistory: Table<MintHistory, number>
   watchlist: Table<WatchlistEntry, string>
+  meta: Table<MetaEntry, string>
 }
 
 db.version(1).stores({
@@ -34,5 +40,9 @@ db.version(1).stores({
   watchlist: 'url, addedAt',
 })
 
+db.version(2).stores({
+  meta: 'key',
+})
+
 export { db }
-export type { Mint, MintHistory, WatchlistEntry }
+export type { Mint, MintHistory, WatchlistEntry, MetaEntry }

@@ -221,9 +221,34 @@ Affected packages (all transitive, same root): `vite`, `vite-plugin-pwa`, `vite-
 | `backend/package-lock.json` | `npm audit fix` — patched `undici` and `esbuild` (backend now 0 vulnerabilities) |
 | `src/core/crypto/vault.ts` | Deleted — confirmed dead code (zero imports), also contained broken bech32 decode |
 | `src/core/nostr/client.ts` | Added `privkeyBytes.fill(0)` after public key derivation in `loginWithNsec` |
+| `deploy/nginx.conf` | Updated CSP (`img-src 'self' https: data:`, `connect-src 'self' https:`); security headers repeated in all location blocks that define `add_header` (nginx non-inheritance fix) |
+| `src/db/index.ts` | Added `MetaEntry` interface and Dexie `meta` table (version 2) for watchlist owner tracking |
+| `src/stores/watchlist.store.ts` | Added `resetInMemory()` action — clears Zustand state only, does not touch Dexie |
+| `src/components/layout/AppShell.tsx` | `handleLogout` now calls `resetInMemory()` instead of `clearWatchlist()` — Dexie data preserved on logout |
+| `src/hooks/useWatchlistSync.ts` | Phase 1 checks `watchlistOwner` in Dexie meta; clears Dexie only if a different pubkey owned the data; writes `watchlistOwner` after successful sync |
 
 ## Open Recommendations (No Code Change Made)
 
 1. **Vite v8 upgrade** — resolve remaining 6 frontend vulnerabilities (all dev-server only, low production risk). Test PWA plugin, routing, and build output after upgrading.
 2. **Redis-backed rate limiting** — Current in-process rate limit stores reset on restart and don't share state across processes. If the backend ever scales horizontally, migrate to Redis.
-3. **nginx.conf re-deploy** — After the next nginx config update on the VPS, verify headers with `curl -I https://mintradar.pedani.eu` and confirm `Strict-Transport-Security` is present.
+3. **nginx.conf re-deploy** — After updating nginx config on the VPS, verify headers with `curl -I https://mintradar.pedani.eu`.
+
+---
+
+## Bug Fixes (Found During Security/Production Verification)
+
+### Watchlist not restored after logout/login with same Nostr pubkey
+
+**Root cause:** `handleLogout` called `clearWatchlist()` which deleted all rows from the IndexedDB `watchlist` table (Dexie). On re-login, `useWatchlistSync` Phase 1 called `fetchRemoteWatchlist(pubkey)` to restore from Nostr relays (kind:10003 events). However, `fetchRemoteWatchlist` returns `[]` whenever `window.nostr?.nip44` is not available (older extensions, nsec login, relay timeout). With `remote.length === 0`, Phase 1 fell back to "keep local Dexie state" — but Dexie was already empty. The watchlist was permanently lost every time.
+
+**Fix:**
+- Logout no longer clears Dexie — it only resets the in-memory Zustand store via `resetInMemory()`.
+- Dexie `meta` table (version 2) stores `watchlistOwner = pubkey` after each successful sync.
+- Phase 1 reads `watchlistOwner` before fetching remote. If the stored owner pubkey **differs** from the current login pubkey (different user on same device), it clears Dexie first. If the pubkey **matches**, Dexie data is preserved as a fallback when relay returns no data.
+
+**Result:**
+- Same user logs out and back in → watchlist is restored from Dexie even when NIP-44 is unavailable. ✅
+- Different user logs in on same device → their Dexie data is cleared before loading; they start with whatever their relay has (or empty). ✅
+- Remote relay data (when available) is still authoritative and replaces Dexie. ✅
+
+**Files changed:** `src/db/index.ts`, `src/stores/watchlist.store.ts`, `src/components/layout/AppShell.tsx`, `src/hooks/useWatchlistSync.ts`
