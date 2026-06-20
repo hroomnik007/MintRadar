@@ -247,7 +247,6 @@ function WatchlistCard({
 export default function Watchlist() {
   const [sortBy, setSortBy] = useState<'name' | 'latency' | 'trust' | 'status'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
-  const [highTrustOnly, setHighTrustOnly] = useState(false)
 
   // Filter state
   const [showFilters, setShowFilters] = useState(false)
@@ -290,13 +289,8 @@ export default function Watchlist() {
 
   const activeFilterCount = countActiveFilters(activeFilters)
   const filteredMints = useMemo(() => {
-    let result = applyFilters(mints, knownMintsMap, activeFilters)
-    if (highTrustOnly) result = result.filter(url => {
-      const m = knownMintsMap.get(url)
-      return m?.online === true && (m.trustScore ?? 0) >= 70
-    })
-    return result
-  }, [mints, knownMintsMap, activeFilters, highTrustOnly])
+    return applyFilters(mints, knownMintsMap, activeFilters)
+  }, [mints, knownMintsMap, activeFilters])
   const selectedMints = useMemo(() => filteredMints.map(url => knownMintsMap.get(url)).filter((m): m is KnownMint => m !== undefined && selectedUrls.has(m.url)), [filteredMints, knownMintsMap, selectedUrls])
 
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -426,13 +420,6 @@ export default function Watchlist() {
             <IcFilter />
             Filters
             {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
-          </button>
-          <button
-            type="button"
-            className={`high-trust-btn${highTrustOnly ? ' active' : ''}`}
-            onClick={() => setHighTrustOnly(v => !v)}
-          >
-            <span style={{ fontSize: 12 }}>★</span> High Trust only
           </button>
           <div className="sort-segment">
             {(['status', 'latency', 'name', 'trust'] as const).map(s => (

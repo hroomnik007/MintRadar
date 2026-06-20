@@ -390,7 +390,6 @@ export default function Dashboard() {
 
   const [lastCheckTime, setLastCheckTime] = useState<Date | null>(null)
   const [, setTick] = useState(0)
-  const [highTrustOnly, setHighTrustOnly] = useState(false)
   const [showDegraded, setShowDegraded] = useState(false)
   const [showSubmit, setShowSubmit] = useState(false)
   const [submitTab, setSubmitTab] = useState<'single' | 'bulk'>('single')
@@ -451,10 +450,8 @@ export default function Dashboard() {
   }, [knownMintsData, nostrMints, showDegraded])
 
   const filteredMints = useMemo(() => {
-    let result = applyFilters(allMints, activeFilters)
-    if (highTrustOnly) result = result.filter(m => m.online === true && (m.trustScore ?? 0) >= 70)
-    return result
-  }, [allMints, activeFilters, highTrustOnly])
+    return applyFilters(allMints, activeFilters)
+  }, [allMints, activeFilters])
   const activeFilterCount = countActiveFilters(activeFilters)
 
   const avgLatency24h = useMemo(() => {
@@ -470,9 +467,15 @@ export default function Dashboard() {
   const selectedMints = useMemo(() => allMints.filter(m => selectedUrls.has(m.url)), [allMints, selectedUrls])
 
   useEffect(() => {
-    if (knownMintsData && knownMintsData.length > 0) {
-      setLastCheckTime(new Date())
+    if (!knownMintsData || knownMintsData.length === 0) return
+    let latest: Date | null = null
+    for (const mint of knownMintsData) {
+      if (mint.lastCheckedAt) {
+        const t = new Date(mint.lastCheckedAt)
+        if (!latest || t > latest) latest = t
+      }
     }
+    setLastCheckTime(latest)
   }, [knownMintsData])
 
   useEffect(() => {
@@ -764,14 +767,7 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          className={`high-trust-btn${highTrustOnly ? ' active' : ''}`}
-          onClick={() => setHighTrustOnly(v => !v)}
-        >
-          <span style={{ fontSize: 12 }}>★</span> High Trust only
-        </button>
-<button type="button" className="submit-btn" onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setSubmitUrl(''); setProbeState('idle'); setProbeResult(null); setNostrLookupState('idle'); setNostrLookupMsg(''); setBulkInput(''); setBulkProgress([]); setBulkRunning(false); setBulkDone(false) }}>
+        <button type="button" className="submit-btn" onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setSubmitUrl(''); setProbeState('idle'); setProbeResult(null); setNostrLookupState('idle'); setNostrLookupMsg(''); setBulkInput(''); setBulkProgress([]); setBulkRunning(false); setBulkDone(false) }}>
           <IcPlus /> Submit mint
         </button>
         <button type="button" className="refresh-btn" onClick={() => void queryClient.invalidateQueries({ queryKey: ['mints-known'] })}>

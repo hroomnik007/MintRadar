@@ -447,30 +447,6 @@
   animation: shimmer 1.4s ease infinite;
 }
 
-/* ── High Trust filter toggle ───────────────────────────────── */
-.high-trust-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: 1px solid rgba(23, 232, 127, 0.4);
-  border-radius: 20px;
-  padding: 5.5px 12px;
-  color: #17E87F;
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: var(--font-body);
-  transition: all var(--transition);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.high-trust-btn:hover { background: rgba(23, 232, 127, 0.06); }
-.high-trust-btn.active {
-  background: rgba(23, 232, 127, 0.12);
-  border-color: rgba(23, 232, 127, 0.7);
-}
-
 /* ── Misc ───────────────────────────────────────────────────── */
 .degraded-note {
   text-align: center;
