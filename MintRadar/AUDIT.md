@@ -189,7 +189,7 @@ Affected packages (all transitive, same root): `vite`, `vite-plugin-pwa`, `vite-
 
 | Header | Value |
 |--------|-------|
-| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https:; connect-src 'self' wss: ws:; worker-src 'self'; frame-ancestors 'none';` |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self' https: wss:;` |
 | `X-Frame-Options` | `DENY` |
 | `X-Content-Type-Options` | `nosniff` |
 | `Referrer-Policy` | `no-referrer` |
@@ -200,7 +200,7 @@ Affected packages (all transitive, same root): `vite`, `vite-plugin-pwa`, `vite-
 - `script-src 'self'` — no `'unsafe-eval'`, no CDN scripts. ✅
 - `font-src 'self'` — consistent with self-hosted fonts (Google Fonts removed). ✅
 - `img-src ... https:` — required for mint favicons fetched from external mint servers. ✅
-- `connect-src 'self' wss: ws:` — covers Nostr relay WebSocket connections. ✅
+- `connect-src 'self' https: wss:` — `wss:` must be listed explicitly for Nostr relay WebSocket connections. Empirically verified in production: browsers blocked `wss://relay.damus.io/` etc. until `wss:` was added. The earlier assumption that `https:` implicitly covers `wss:` under CSP3 proved incorrect in practice. ✅
 - `frame-ancestors 'none'` — equivalent to `X-Frame-Options: DENY`, belt-and-suspenders. ✅
 
 **Fixed in:** `deploy/nginx.conf`
