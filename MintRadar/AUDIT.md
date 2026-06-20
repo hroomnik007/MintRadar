@@ -25,7 +25,7 @@
 
 ## 2. Nostr Private Key Handling (nsec)
 
-**What was checked:** All auth-related files — `src/stores/auth.store.ts`, `src/core/nostr/client.ts`, `src/core/crypto/vault.ts`, `src/core/nostr/watchlistSync.ts`, `src/hooks/useSubmitReview.ts`, `src/hooks/useWatchlistNotifications.ts`.
+**What was checked:** All auth-related files — `src/stores/auth.store.ts`, `src/core/nostr/client.ts`, `src/core/nostr/watchlistSync.ts`, `src/hooks/useSubmitReview.ts`, `src/hooks/useWatchlistNotifications.ts`.
 
 **Findings:**
 
@@ -39,12 +39,13 @@
 - The `NostrProfile` object (public data only) is persisted to `sessionStorage` via Zustand persist middleware — **no private key in sessionStorage**.
 - Logout clears the session: `set({ profile: null })`.
 
-**`vault.ts` — dead code note:**
-- `src/core/crypto/vault.ts` contains module-scope private key storage (`_privkey`) and NIP-44 encryption helpers. This file is **not imported by any active code path** in the current build. Its `importPrivkey()` function also has a broken nsec bech32 decode (`nsec1` is stripped via `.slice(5)` rather than proper bech32 decode). Since it is unused it poses no runtime risk, but it should be removed or properly implemented in a future cleanup.
+**`vault.ts` — removed (dead code):**
+- `src/core/crypto/vault.ts` was a module containing module-scope private key storage (`_privkey`), NIP-44 v2 encryption helpers, and an incognito ephemeral key system. It was **not imported by any code path** in the codebase (confirmed by full-codebase grep). Additionally, its `importPrivkey()` had a broken nsec bech32 decode (`nsec1` stripped via `.slice(5)` instead of proper bech32 decode via `nip19`). **File and its containing directory `src/core/crypto/` have been deleted.**
+
+**Explicit key wipe — hardening applied:**
+- `privkeyBytes.fill(0)` is now called immediately after `secp.getPublicKey(privkeyBytes, ...)` in `loginWithNsec`. The raw key bytes are zeroed before the async profile fetch begins, minimising the window during which key material sits in memory. JavaScript GC does not guarantee prompt reclamation of `Uint8Array` buffers; explicit zeroing is the defence-in-depth mitigation for this.
 
 **No private key logging:** Confirmed no `console.log`, error handler, or network request includes private key material.
-
-**Minor recommendation:** The `privkeyBytes` buffer in `loginWithNsec` is not explicitly zeroed (`privkeyBytes.fill(0)`) before it goes out of scope. JavaScript GC does not guarantee immediate collection. For a high-security implementation, explicitly zeroing the buffer before the function returns would reduce the window where key material exists in memory.
 
 **Status: CLEAN**
 
@@ -218,11 +219,11 @@ Affected packages (all transitive, same root): `vite`, `vite-plugin-pwa`, `vite-
 | `deploy/nginx.conf` | Corrected domain, SSL paths, root path, added `/api/` proxy block, added `Strict-Transport-Security` header |
 | `package-lock.json` (frontend) | `npm audit fix` — patched `@babel/core` and `js-yaml` |
 | `backend/package-lock.json` | `npm audit fix` — patched `undici` and `esbuild` (backend now 0 vulnerabilities) |
+| `src/core/crypto/vault.ts` | Deleted — confirmed dead code (zero imports), also contained broken bech32 decode |
+| `src/core/nostr/client.ts` | Added `privkeyBytes.fill(0)` after public key derivation in `loginWithNsec` |
 
 ## Open Recommendations (No Code Change Made)
 
 1. **Vite v8 upgrade** — resolve remaining 6 frontend vulnerabilities (all dev-server only, low production risk). Test PWA plugin, routing, and build output after upgrading.
-2. **vault.ts cleanup** — `src/core/crypto/vault.ts` is dead code. Either remove it or properly wire it up (fix the broken bech32 decode in `importPrivkey`).
-3. **privkeyBytes zeroing** — In `src/core/nostr/client.ts` `loginWithNsec()`, explicitly `privkeyBytes.fill(0)` before the function returns to minimize the window where key material exists in memory.
-4. **Redis-backed rate limiting** — Current in-process rate limit stores reset on restart and don't share state across processes. If the backend ever scales horizontally, migrate to Redis.
-5. **nginx.conf re-deploy** — After the next nginx config update on the VPS, verify headers with `curl -I https://mintradar.pedani.eu` and confirm `Strict-Transport-Security` is present.
+2. **Redis-backed rate limiting** — Current in-process rate limit stores reset on restart and don't share state across processes. If the backend ever scales horizontally, migrate to Redis.
+3. **nginx.conf re-deploy** — After the next nginx config update on the VPS, verify headers with `curl -I https://mintradar.pedani.eu` and confirm `Strict-Transport-Security` is present.

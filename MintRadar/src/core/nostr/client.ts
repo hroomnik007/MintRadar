@@ -60,6 +60,7 @@ export async function loginWithNsec(input: string): Promise<NostrProfile> {
     throw new Error('Enter a valid nsec1... key or 64-char hex private key')
   }
   const pubkeyHex = bytesToHex(secp.getPublicKey(privkeyBytes, true).slice(1))
+  privkeyBytes.fill(0)
   const npub = nip19.npubEncode(pubkeyHex)
   const meta = await fetchNostrProfile(pubkeyHex)
   const profile: NostrProfile = { pubkey: pubkeyHex, npub }
