@@ -646,18 +646,19 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
         latest.online AS latest_online,
-        latest.latency_ms AS latest_latency_ms
+        latest.latency_ms AS latest_latency_ms,
+        latest.checked_at AS latest_checked_at
       FROM mints m
       LEFT JOIN mint_history h ON h.url = m.url AND h.checked_at > NOW() - INTERVAL '24 hours'
       LEFT JOIN LATERAL (
-        SELECT online, latency_ms FROM mint_history
+        SELECT online, latency_ms, checked_at FROM mint_history
         WHERE url = m.url ORDER BY checked_at DESC, id DESC LIMIT 1
       ) latest ON true
       GROUP BY m.url, m.name, m.icon_url, m.version, m.nut_count,
         m.tos_url, m.description_long, m.nuts_limits,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.discovered_at, m.last_trust_score, m.last_error, m.server_location,
-        latest.online, latest.latency_ms
+        latest.online, latest.latency_ms, latest.checked_at
     `)
     .then(result => {
       const data = result.rows.map(r => {
@@ -684,6 +685,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           lastError: (r.last_error as string | null) ?? null,
           uptimePct24h: total === 0 ? null : Math.round(onlineCount / total * 100),
           serverLocation: (r.server_location as string | null) ?? null,
+          lastCheckedAt: (r.latest_checked_at as string | null) ?? null,
         }
       })
       knownMintsCache = { data, expiresAt: Date.now() + KNOWN_MINTS_CACHE_TTL }

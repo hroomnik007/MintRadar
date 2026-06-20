@@ -169,6 +169,32 @@ function countActiveFilters(f: FilterState): number {
   return [f.status !== 'all' ? 1 : 0, f.minTrustScore > 0 ? 1 : 0, f.mintAges.length > 0 ? 1 : 0, f.requiredNuts.length > 0 ? 1 : 0].reduce((a, b) => a + b, 0)
 }
 
+// ── Skeleton Card ─────────────────────────────────────────────
+
+function SkeletonCard() {
+  return (
+    <div className="skeleton-card">
+      <div className="sk-row">
+        <div className="sk-avatar" />
+        <div className="sk-lines">
+          <div className="sk-line" style={{ width: '58%' }} />
+          <div className="sk-line" style={{ width: '38%', marginTop: 6 }} />
+        </div>
+        <div className="sk-dot" />
+      </div>
+      <div className="sk-pills">
+        <div className="sk-pill" style={{ width: 48 }} />
+        <div className="sk-pill" style={{ width: 54 }} />
+        <div className="sk-pill" style={{ width: 42 }} />
+      </div>
+      <div className="sk-bottom">
+        <div className="sk-latency" />
+        <div className="sk-btn" />
+      </div>
+    </div>
+  )
+}
+
 // ── Mint Card ──────────────────────────────────────────────────
 
 function MintCardDisplay({
@@ -364,6 +390,7 @@ export default function Dashboard() {
 
   const [lastCheckTime, setLastCheckTime] = useState<Date | null>(null)
   const [, setTick] = useState(0)
+  const [highTrustOnly, setHighTrustOnly] = useState(false)
   const [showDegraded, setShowDegraded] = useState(false)
   const [showSubmit, setShowSubmit] = useState(false)
   const [submitTab, setSubmitTab] = useState<'single' | 'bulk'>('single')
@@ -423,7 +450,11 @@ export default function Dashboard() {
     }
   }, [knownMintsData, nostrMints, showDegraded])
 
-  const filteredMints = useMemo(() => applyFilters(allMints, activeFilters), [allMints, activeFilters])
+  const filteredMints = useMemo(() => {
+    let result = applyFilters(allMints, activeFilters)
+    if (highTrustOnly) result = result.filter(m => m.online === true && (m.trustScore ?? 0) >= 70)
+    return result
+  }, [allMints, activeFilters, highTrustOnly])
   const activeFilterCount = countActiveFilters(activeFilters)
 
   const avgLatency24h = useMemo(() => {
@@ -733,6 +764,13 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          className={`high-trust-btn${highTrustOnly ? ' active' : ''}`}
+          onClick={() => setHighTrustOnly(v => !v)}
+        >
+          <span style={{ fontSize: 12 }}>★</span> High Trust only
+        </button>
 <button type="button" className="submit-btn" onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setSubmitUrl(''); setProbeState('idle'); setProbeResult(null); setNostrLookupState('idle'); setNostrLookupMsg(''); setBulkInput(''); setBulkProgress([]); setBulkRunning(false); setBulkDone(false) }}>
           <IcPlus /> Submit mint
         </button>
@@ -845,9 +883,7 @@ export default function Dashboard() {
         <p className="error-msg">Failed to load mints</p>
       ) : knownLoading ? (
         <div className="mint-grid">
-          {[0, 1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="skeleton-card" />
-          ))}
+          {Array.from({ length: 9 }, (_, i) => <SkeletonCard key={i} />)}
         </div>
       ) : (
         <>

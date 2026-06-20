@@ -69,6 +69,39 @@ function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
 }
 
+function formatCheckedAt(iso: string): string {
+  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  if (seconds < 60) return `${seconds}s ago`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  return `${hours}h ago`
+}
+
+function SkeletonCard() {
+  return (
+    <div className="skeleton-card">
+      <div className="sk-row">
+        <div className="sk-avatar" />
+        <div className="sk-lines">
+          <div className="sk-line" style={{ width: '58%' }} />
+          <div className="sk-line" style={{ width: '38%', marginTop: 6 }} />
+        </div>
+        <div className="sk-dot" />
+      </div>
+      <div className="sk-pills">
+        <div className="sk-pill" style={{ width: 48 }} />
+        <div className="sk-pill" style={{ width: 54 }} />
+        <div className="sk-pill" style={{ width: 42 }} />
+      </div>
+      <div className="sk-bottom">
+        <div className="sk-latency" />
+        <div className="sk-btn" />
+      </div>
+    </div>
+  )
+}
+
 const DEFAULT_SORT_DIRS: Record<'name' | 'latency' | 'status' | 'trust', 'asc' | 'desc'> = { status: 'desc', latency: 'asc', trust: 'desc', name: 'asc' }
 
 const NUT_FILTER_KEYS = ['4','5','7','8','9','10','11','12','14','15','17','19','20','29']
@@ -160,10 +193,17 @@ function WatchlistCard({
             <div className="card-host">{hostname}</div>
           </div>
         </div>
-        <div
-          className={`status-dot${isOnline ? ' online' : ''}`}
-          style={{ background: knownMint?.online === true ? '#17E87F' : '#E24B4A' }}
-        />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+          <div
+            className={`status-dot${isOnline ? ' online' : ''}`}
+            style={{ background: knownMint?.online === true ? '#17E87F' : '#E24B4A' }}
+          />
+          {knownMint?.lastCheckedAt && (
+            <div style={{ color: '#6e7681', fontSize: 10, whiteSpace: 'nowrap' }}>
+              checked {formatCheckedAt(knownMint.lastCheckedAt)}
+            </div>
+          )}
+        </div>
       </div>
       <div className="card-pills">
         {knownMint?.version && <span className="card-pill">{knownMint.version}</span>}
@@ -207,6 +247,7 @@ function WatchlistCard({
 export default function Watchlist() {
   const [sortBy, setSortBy] = useState<'name' | 'latency' | 'trust' | 'status'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [highTrustOnly, setHighTrustOnly] = useState(false)
 
   // Filter state
   const [showFilters, setShowFilters] = useState(false)
@@ -244,11 +285,18 @@ export default function Watchlist() {
   const authIsLoading = useAuthStore(state => state.isLoading)
   const authError = useAuthStore(state => state.error)
 
-  const { data: knownMintsData } = useKnownMints()
+  const { data: knownMintsData, isLoading: knownLoading } = useKnownMints()
   const knownMintsMap = useMemo(() => new Map(knownMintsData?.map(m => [m.url, m]) ?? []), [knownMintsData])
 
   const activeFilterCount = countActiveFilters(activeFilters)
-  const filteredMints = useMemo(() => applyFilters(mints, knownMintsMap, activeFilters), [mints, knownMintsMap, activeFilters])
+  const filteredMints = useMemo(() => {
+    let result = applyFilters(mints, knownMintsMap, activeFilters)
+    if (highTrustOnly) result = result.filter(url => {
+      const m = knownMintsMap.get(url)
+      return m?.online === true && (m.trustScore ?? 0) >= 70
+    })
+    return result
+  }, [mints, knownMintsMap, activeFilters, highTrustOnly])
   const selectedMints = useMemo(() => filteredMints.map(url => knownMintsMap.get(url)).filter((m): m is KnownMint => m !== undefined && selectedUrls.has(m.url)), [filteredMints, knownMintsMap, selectedUrls])
 
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -369,7 +417,7 @@ export default function Watchlist() {
             </div>
           )}
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:7}}>
+        <div style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap'}}>
           <button
             type="button"
             className={`filter-btn${showFilters ? ' active' : ''}`}
@@ -378,6 +426,13 @@ export default function Watchlist() {
             <IcFilter />
             Filters
             {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
+          </button>
+          <button
+            type="button"
+            className={`high-trust-btn${highTrustOnly ? ' active' : ''}`}
+            onClick={() => setHighTrustOnly(v => !v)}
+          >
+            <span style={{ fontSize: 12 }}>★</span> High Trust only
           </button>
           <div className="sort-segment">
             {(['status', 'latency', 'name', 'trust'] as const).map(s => (
@@ -482,7 +537,11 @@ export default function Watchlist() {
         </div>
       )}
 
-      {mints.length === 0 ? (
+      {knownLoading ? (
+        <div className="wl-grid">
+          {Array.from({ length: 9 }, (_, i) => <SkeletonCard key={i} />)}
+        </div>
+      ) : mints.length === 0 ? (
         <div className="wl-empty">
           <div className="wl-empty-icon"><IcRadar /></div>
           <div className="wl-empty-title">Nothing on radar</div>
