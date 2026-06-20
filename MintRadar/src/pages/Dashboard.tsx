@@ -269,8 +269,8 @@ function MintCardDisplay({
           </span>
         )}
         {mint.online === true && mint.trustScore != null && (
-          <span className="card-pill" style={{ color: mint.trustScore >= 70 ? '#4ade80' : mint.trustScore >= 40 ? '#ffa500' : '#ff4d4d' }}>
-            ★ {mint.trustScore}%
+          <span className="card-pill" style={{ color: mint.trustScore >= 70 ? '#4ade80' : mint.trustScore >= 40 ? '#ffa500' : '#ff4d4d', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 15, lineHeight: 1 }}>★</span><span>{mint.trustScore}%</span>
           </span>
         )}
       </div>
@@ -715,7 +715,7 @@ export default function Dashboard() {
           <div className="stat-icon gray"><IcGrid /></div>
           <div>
             <div className="stat-label">Known Mints</div>
-            <div className="stat-value">{totalCount}</div>
+            <div className="stat-value">{knownMintsData?.filter(m => m.online !== false).length ?? 0}</div>
           </div>
         </div>
         <div className="stat-card">

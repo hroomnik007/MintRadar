@@ -216,8 +216,8 @@ function WatchlistCard({
           </span>
         )}
         {isOnline && knownMint != null && knownMint.trustScore != null && (
-          <span className="card-pill" style={{ color: knownMint.trustScore >= 70 ? '#4ade80' : knownMint.trustScore >= 40 ? '#ffa500' : '#ff4d4d' }}>
-            ★ {knownMint.trustScore}%
+          <span className="card-pill" style={{ color: knownMint.trustScore >= 70 ? '#4ade80' : knownMint.trustScore >= 40 ? '#ffa500' : '#ff4d4d', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 15, lineHeight: 1 }}>★</span><span>{knownMint.trustScore}%</span>
           </span>
         )}
       </div>
