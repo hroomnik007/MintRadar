@@ -624,7 +624,7 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
         .sort((a, b) => (b.last_trust_score as number) - (a.last_trust_score as number))
         .slice(0, 5)
         .map(r => ({ url: r.url, name: r.name, trustScore: r.last_trust_score as number }))
-      res.json({ totalMints: nonOffline.length, onlineMints: online.length, offlineMints: nonOffline.length - online.length, avgTrustScore, avgLatency24h, trustDistribution: { low, moderate, high }, nutAdoption, top5ByTrustScore: top5 })
+      res.json({ totalMints: rows.length, onlineMints: online.length, offlineMints: offline.length, avgTrustScore, avgLatency24h, trustDistribution: { low, moderate, high }, nutAdoption, top5ByTrustScore: top5 })
     })
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/stats]', err)
