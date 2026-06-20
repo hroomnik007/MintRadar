@@ -17,12 +17,12 @@ Sensitive values are in CLAUDE.local.md (gitignored) — ask the developer
 ## Stack
 - Frontend: React 18 + TypeScript + Vite 5 + TanStack Query v5 + Zustand + Dexie (IndexedDB) + Recharts + vite-plugin-pwa
 - Backend: Node.js/Express + TypeScript + pg (PostgreSQL) + nostr-tools
-- Auth: Nostr NIP-07 (nos2x-fox, Alby)
+- Auth: Nostr NIP-07 (nos2x-fox, Alby) + nsec manual entry (key zeroed after derivation); Amber NIP-46 planned
 - Fonts: DM Sans (self-hosted variable font)
 - CSS: CSS variables (var(--bg), var(--bg2), var(--accent) #17E87F, var(--border), var(--text), var(--text2), var(--text3))
 
 ## Architecture
-- Personal watchlist → IndexedDB only (never on server, cleared on logout)
+- Personal watchlist → IndexedDB (never on server); logout calls resetInMemory() — Dexie NOT wiped on logout; see Watchlist Persistence below
 - Public mint history → PostgreSQL (mint_history table)
 - Mint discovery → NIP-87 kind:38172 server cron every 6h + client-side after Nostr login
 - Backend proxy → /api/* proxied by Nginx to localhost:3002
@@ -127,6 +127,54 @@ Frontend:
 5. Deploy: rsync -avz --delete dist/ $VPS_USER@$VPS_HOST:$VPS_DIST_PATH/
 6. Reload nginx: ssh $VPS_USER@$VPS_HOST "sudo systemctl reload nginx"
 7. Commit: git add -A && git commit -m "type: description" && git push origin main
+
+## Nostr Login
+
+Login modal (`src/components/layout/AppShell.tsx`) supports three methods selectable via radio cards:
+- **NIP-07** — calls `window.nostr.getPublicKey()`; all signing stays in the extension
+- **nsec** — decoded in `src/core/nostr/client.ts:loginWithNsec`; `privkeyBytes.fill(0)` called immediately after public key derivation; private key never assigned to module scope, never persisted
+- **Amber** — NIP-46 remote signer, UI placeholder only (coming soon)
+
+`sessionStorage` (Zustand persist) stores only the public `NostrProfile` `{ pubkey, npub, name, picture }` — no private key material ever in storage.
+
+## Watchlist Persistence
+
+**Rule:** Logout MUST call `resetInMemory()`, NOT `clearWatchlist()`. Dexie must survive logout.
+
+**Why:** `fetchRemoteWatchlist()` returns `[]` when `window.nostr?.nip44` is unavailable (nsec login, older extensions, relay timeout). If Dexie was cleared on logout and the relay returns empty, the watchlist is permanently lost.
+
+**Implementation:**
+- Dexie `meta` table (version 2): stores `{ key: 'watchlistOwner', value: pubkeyHex }` after every successful sync
+- `useWatchlistSync` Phase 1: reads `watchlistOwner` before fetching remote
+  - Same pubkey → Dexie preserved as fallback if remote returns `[]`
+  - Different pubkey → Dexie cleared (different user on same device), then load from remote
+- `handleLogout` in `AppShell.tsx` calls `resetInMemory()` (in-memory Zustand reset only)
+
+## Security & Infrastructure Gotchas
+
+### nginx CSP: `wss:` must be explicit in connect-src
+
+**GOTCHA — do not regress this.** `connect-src 'self' https:` does NOT cover `wss://` connections in practice. This was a real production incident: Nostr relay WebSocket connections (`wss://relay.damus.io/`, `wss://nos.lol/`, etc.) were blocked by the browser until `wss:` was added explicitly.
+
+Current correct value: `connect-src 'self' https: wss:;`
+
+### nginx add_header non-inheritance
+
+**GOTCHA.** When a `location {}` block defines ANY `add_header` directive, it does NOT inherit the parent `server {}` block's `add_header` directives. Security headers (CSP, HSTS, X-Frame-Options, etc.) MUST be repeated verbatim in every `location` block that defines its own `add_header`.
+
+Affected blocks in `deploy/nginx.conf`: `location ~* \.(js|css|png|svg|ico|woff2|webmanifest)$` and `location = /sw.js`.
+
+### deploy/nginx.conf is reference/documentation only
+
+The file `deploy/nginx.conf` in the repo documents the intended production config but is NOT automatically deployed. The live config lives at `/etc/nginx/sites-available/mintradar.pedani.eu.conf` on the VPS and must be manually kept in sync. After updating `deploy/nginx.conf`, copy the relevant changes to the VPS manually and run `sudo systemctl reload nginx`.
+
+### vault.ts removed (dead code)
+
+`src/core/crypto/vault.ts` was deleted. It had zero imports across the codebase and contained a broken nsec bech32 decode (`.slice(5)` instead of `nip19.decode`). The entire `src/core/crypto/` directory no longer exists — do not recreate it.
+
+### Security audit
+
+Full report in `AUDIT.md` at the repo root. Covers: telemetry, key handling, dependencies, XSS, backend API, secrets, Docker, HTTP headers. Backend is at 0 npm vulnerabilities. Frontend has 6 remaining (all dev-server only; Vite v8 upgrade needed to fix).
 
 ## Key rules
 - NEVER modify anything not explicitly requested
