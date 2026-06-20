@@ -143,7 +143,7 @@ function NutMintsModal({ nutId, nutMeta, mints, onClose }: {
 export default function Stats() {
   const navigate = useNavigate()
   const [modalNut, setModalNut] = useState<string | null>(null)
-  const [reliableTab, setReliableTab] = useState<'reliable' | 'fastest'>('reliable')
+  const [reliableTab, setReliableTab] = useState<'reliable' | 'trust'>('reliable')
   const [softGeoTab, setSoftGeoTab] = useState<'software' | 'geographic'>('software')
 
   const { data, isLoading, error } = useQuery({
@@ -190,6 +190,14 @@ export default function Stats() {
     return [...knownMintsData]
       .filter(m => m.online === true && m.latencyMs != null)
       .sort((a, b) => (a.latencyMs ?? Infinity) - (b.latencyMs ?? Infinity))
+      .slice(0, 6)
+  }, [knownMintsData])
+
+  const top5ByTrust = useMemo(() => {
+    if (!knownMintsData) return []
+    return [...knownMintsData]
+      .filter(m => m.online === true && m.trustScore != null)
+      .sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
       .slice(0, 6)
   }, [knownMintsData])
 
@@ -353,11 +361,11 @@ export default function Stats() {
         <div className="stats-panel">
           <div className="stats-card-header">
             <div className="stats-panel-title" style={{marginBottom:0}}>
-              {reliableTab === 'reliable' ? 'Most Reliable · 24H' : 'Fastest Right Now'}
+              {reliableTab === 'reliable' ? 'Most Reliable · 24H' : 'Top Trust Score'}
             </div>
             <div className="stats-tab-toggle">
               <button type="button" className={`stats-tab-btn${reliableTab === 'reliable' ? ' active' : ''}`} onClick={() => setReliableTab('reliable')}>Most Reliable</button>
-              <button type="button" className={`stats-tab-btn${reliableTab === 'fastest' ? ' active' : ''}`} onClick={() => setReliableTab('fastest')}>Fastest</button>
+              <button type="button" className={`stats-tab-btn${reliableTab === 'trust' ? ' active' : ''}`} onClick={() => setReliableTab('trust')}>Trust Score</button>
             </div>
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:5,marginTop:10}}>
@@ -381,11 +389,11 @@ export default function Stats() {
                 )
               })
             ) : (
-              top5ByLatency.length === 0 ? (
+              top5ByTrust.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data yet</div>
-              ) : top5ByLatency.map((mint, idx) => {
-                const lat = mint.latencyMs ?? 0
-                const color = '#e6edf3'
+              ) : top5ByTrust.map((mint, idx) => {
+                const score = mint.trustScore ?? 0
+                const color = score >= 70 ? '#4ade80' : score >= 40 ? '#ffa500' : '#ff4d4d'
                 const hostname = getHostname(mint.url)
                 return (
                   <div key={mint.url} onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} className="stats-top5-row">
@@ -395,7 +403,7 @@ export default function Stats() {
                       <div style={{fontSize:12,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{mint.name ?? hostname}</div>
                       <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{hostname}</div>
                     </div>
-                    <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:700,color,flexShrink:0}}>{lat} ms</span>
+                    <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:700,color,flexShrink:0}}>{score}%</span>
                   </div>
                 )
               })
