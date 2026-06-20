@@ -715,7 +715,7 @@ export default function Dashboard() {
           <div className="stat-icon gray"><IcGrid /></div>
           <div>
             <div className="stat-label">Known Mints</div>
-            <div className="stat-value">{totalCount}</div>
+            <div className="stat-value">{knownMintsData?.length ?? 0}</div>
           </div>
         </div>
         <div className="stat-card">
