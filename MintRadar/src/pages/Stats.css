@@ -483,7 +483,7 @@
 
 @media (max-width: 700px) {
   .stats-metrics { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
-  .stats-metric-card { flex: 1 1 calc(50% - 4px); }
+  .stats-metric-card { flex: 1 1 calc(50% - 4px); padding: 10px 14px; }
   .stats-cards-grid { padding: 10px 14px; gap: 10px; }
   .stats-nut-section { padding: 10px 14px 20px; }
   .stats-nut-row { grid-template-columns: 60px 1fr 80px 40px; gap: 6px; padding: 8px 10px; }
