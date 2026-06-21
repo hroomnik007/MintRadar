@@ -280,9 +280,6 @@ export default function Watchlist() {
   const removeMintFromStore = useWatchlistStore(state => state.removeMint)
 
   const profile = useAuthStore(state => state.profile)
-  const login = useAuthStore(state => state.login)
-  const authIsLoading = useAuthStore(state => state.isLoading)
-  const authError = useAuthStore(state => state.error)
 
   const { data: knownMintsData, isLoading: knownLoading } = useKnownMints()
   const knownMintsMap = useMemo(() => new Map(knownMintsData?.map(m => [m.url, m]) ?? []), [knownMintsData])
@@ -369,12 +366,10 @@ export default function Watchlist() {
           <button
             type="button"
             className="wl-add-btn"
-            onClick={() => { void login() }}
-            disabled={authIsLoading}
+            onClick={() => window.dispatchEvent(new CustomEvent('mintradar:open-login'))}
           >
-            {authIsLoading ? 'Connecting...' : 'Login via Nostr'}
+            Login via Nostr
           </button>
-          {authError !== null && <p style={{ color: 'var(--red)', fontSize: '13px', marginTop: '8px' }}>{authError}</p>}
         </div>
       </div>
     )

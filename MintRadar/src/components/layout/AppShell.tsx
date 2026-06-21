@@ -84,6 +84,13 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', handler)
   }, [showLoginModal])
 
+  // Allow any page to open the login modal via custom event
+  useEffect(() => {
+    const handler = () => setShowLoginModal(true)
+    window.addEventListener('mintradar:open-login', handler)
+    return () => window.removeEventListener('mintradar:open-login', handler)
+  }, [])
+
   function handleLogout() {
     logout()
     useWatchlistStore.getState().resetInMemory()
