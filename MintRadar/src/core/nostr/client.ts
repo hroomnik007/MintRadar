@@ -20,11 +20,14 @@ const META_RELAYS = [
   'wss://nostr-pub.wellorder.net',
 ]
 
-async function fetchNostrProfile(pubkey: string): Promise<{ name?: string; picture?: string }> {
+export async function fetchNostrProfile(pubkey: string, extraRelays?: string[]): Promise<{ name?: string; picture?: string }> {
+  const relays = extraRelays && extraRelays.length > 0
+    ? [...new Set([...META_RELAYS, ...extraRelays])]
+    : META_RELAYS
   const pool = new SimplePool()
   try {
     const events = await Promise.race([
-      pool.querySync(META_RELAYS, { kinds: [0], authors: [pubkey], limit: 1 }),
+      pool.querySync(relays, { kinds: [0], authors: [pubkey], limit: 1 }),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
     ])
     const event = events[0]

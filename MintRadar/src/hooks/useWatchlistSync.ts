@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { fetchRemoteWatchlist, publishWatchlist } from '@/core/nostr/watchlistSync'
+import { useUserRelays } from '@/hooks/useUserRelays'
 import { db } from '@/db'
 
 const WATCHLIST_OWNER_KEY = 'watchlistOwner'
@@ -10,6 +11,7 @@ export function useWatchlistSync() {
   const profile = useAuthStore(s => s.profile)
   const mints = useWatchlistStore(s => s.mints)
   const loadFromDb = useWatchlistStore(s => s.loadFromDb)
+  const { write: userWriteRelays } = useUserRelays()
 
   const syncedForPubkey = useRef<string | null>(null)
   const isSyncing = useRef(false)
@@ -50,7 +52,7 @@ export function useWatchlistSync() {
         }
 
         console.log('sync: fetching kind:10003 from relays')
-        const remote = await fetchRemoteWatchlist(pubkey)
+        const remote = await fetchRemoteWatchlist(pubkey, userWriteRelays)
         console.log(`sync: decrypted ${remote.length} mints`, remote)
 
         if (remote.length > 0) {
@@ -92,6 +94,6 @@ export function useWatchlistSync() {
     if (syncedForPubkey.current !== pubkey) return
     if (isSyncing.current) return
     console.log('sync: Phase 2 publishing', mints.length, 'mints to relays')
-    void publishWatchlist(pubkey, mints)
-  }, [mints, profile?.pubkey])
+    void publishWatchlist(pubkey, mints, userWriteRelays)
+  }, [mints, profile?.pubkey, userWriteRelays])
 }

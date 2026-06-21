@@ -437,7 +437,7 @@ export default function Dashboard() {
     return Object.fromEntries(knownMintsData.map(m => [m.url, m.trustScore ?? null]))
   }, [knownMintsData])
 
-  const userReadRelays = useUserRelays()
+  const { read: userReadRelays } = useUserRelays()
   useWatchlistNotifications(statusRecord, trustScoreRecord, userReadRelays)
 
   const { degradedCount, allMints, totalAllCount } = useMemo(() => {

@@ -12,12 +12,15 @@ export const WATCHLIST_RELAYS = [
 
 const WATCHLIST_KIND = 10003
 
-export async function fetchRemoteWatchlist(pubkey: string): Promise<string[]> {
+export async function fetchRemoteWatchlist(pubkey: string, userWriteRelays?: string[] | null): Promise<string[]> {
   if (!window.nostr?.nip44) return []
+  const relays = userWriteRelays && userWriteRelays.length > 0
+    ? [...new Set([...WATCHLIST_RELAYS, ...userWriteRelays])]
+    : WATCHLIST_RELAYS
   const pool = new SimplePool()
   try {
     // Query each relay independently — take the first one that returns an event
-    const relayQueries = WATCHLIST_RELAYS.map(relay =>
+    const relayQueries = relays.map(relay =>
       pool.querySync([relay], { kinds: [WATCHLIST_KIND], authors: [pubkey], limit: 1 })
         .then(events => {
           if (!events[0]?.content) throw new Error('no event')
@@ -40,8 +43,11 @@ export async function fetchRemoteWatchlist(pubkey: string): Promise<string[]> {
   }
 }
 
-export async function publishWatchlist(pubkey: string, mints: string[]): Promise<void> {
+export async function publishWatchlist(pubkey: string, mints: string[], userWriteRelays?: string[] | null): Promise<void> {
   if (!window.nostr?.nip44) return
+  const relays = userWriteRelays && userWriteRelays.length > 0
+    ? [...new Set([...WATCHLIST_RELAYS, ...userWriteRelays])]
+    : WATCHLIST_RELAYS
   const pool = new SimplePool()
   try {
     const encrypted = await window.nostr.nip44.encrypt(pubkey, JSON.stringify(mints))
@@ -53,7 +59,7 @@ export async function publishWatchlist(pubkey: string, mints: string[]): Promise
     }
     const signed = await window.nostr.signEvent(event) as NostrEvent
     await Promise.any(
-      WATCHLIST_RELAYS.map(relay => pool.publish([relay], signed))
+      relays.map(relay => pool.publish([relay], signed))
     ).catch((err: unknown) => {
       console.warn('[watchlistSync] all relays rejected publish:', err)
     })
