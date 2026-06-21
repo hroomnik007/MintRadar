@@ -6,6 +6,10 @@ const BOOTSTRAP_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
   'wss://purplepag.es',
+  'wss://relay.primal.net',
+  'wss://relay.snort.social',
+  'wss://offchain.pub',
+  'wss://nostr-pub.wellorder.net',
 ]
 
 // Fetches the logged-in user's NIP-65 kind:10002 relay list and returns their

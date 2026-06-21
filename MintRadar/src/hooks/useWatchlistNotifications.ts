@@ -9,6 +9,10 @@ const NOTIFICATION_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
   'wss://purplepag.es',
+  'wss://relay.primal.net',
+  'wss://relay.snort.social',
+  'wss://offchain.pub',
+  'wss://nostr-pub.wellorder.net',
 ]
 
 // Track previous online states and trust scores to detect transitions

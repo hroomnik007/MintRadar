@@ -11,6 +11,8 @@ const DISCOVERY_RELAYS = [
   'wss://relay.primal.net',
   'wss://relay.cashumints.space',
   'wss://relay.azzamo.net',
+  'wss://offchain.pub',
+  'wss://nostr-pub.wellorder.net',
 ]
 
 export function useNostrDiscovery() {

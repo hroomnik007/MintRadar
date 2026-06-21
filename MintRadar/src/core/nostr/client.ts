@@ -10,7 +10,15 @@ export interface NostrProfile {
   picture?: string
 }
 
-const META_RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://purplepag.es']
+const META_RELAYS = [
+  'wss://relay.damus.io',
+  'wss://nos.lol',
+  'wss://purplepag.es',
+  'wss://relay.primal.net',
+  'wss://relay.snort.social',
+  'wss://offchain.pub',
+  'wss://nostr-pub.wellorder.net',
+]
 
 async function fetchNostrProfile(pubkey: string): Promise<{ name?: string; picture?: string }> {
   const pool = new SimplePool()

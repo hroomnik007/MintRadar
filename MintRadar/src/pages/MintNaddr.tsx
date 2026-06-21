@@ -8,6 +8,10 @@ const FALLBACK_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
   'wss://relay.cashumints.space',
+  'wss://relay.primal.net',
+  'wss://relay.snort.social',
+  'wss://offchain.pub',
+  'wss://nostr-pub.wellorder.net',
 ]
 
 // Handles NIP-89 deep links: /mint/nostr/:naddr

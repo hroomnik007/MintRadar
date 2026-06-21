@@ -16,6 +16,7 @@ const DISCOVERY_RELAYS: string[] = [
   'wss://relay.snort.social',
   'wss://relay.primal.net',
   'wss://nos.lol',
+  'wss://offchain.pub',
 ]
 
 const MAX_URL_LENGTH = 500

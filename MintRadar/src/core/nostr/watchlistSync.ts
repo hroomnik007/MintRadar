@@ -5,6 +5,9 @@ export const WATCHLIST_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
   'wss://relay.primal.net',
+  'wss://relay.snort.social',
+  'wss://offchain.pub',
+  'wss://nostr-pub.wellorder.net',
 ]
 
 const WATCHLIST_KIND = 10003

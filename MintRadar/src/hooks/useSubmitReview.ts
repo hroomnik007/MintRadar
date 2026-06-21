@@ -6,6 +6,10 @@ const REVIEW_RELAYS = [
   'wss://nos.lol',
   'wss://relay.cashumints.space',
   'wss://purplepag.es',
+  'wss://relay.primal.net',
+  'wss://relay.snort.social',
+  'wss://offchain.pub',
+  'wss://nostr-pub.wellorder.net',
 ]
 
 export async function submitMintReview(

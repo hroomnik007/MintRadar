@@ -133,7 +133,15 @@ function formatTimeAgo(date: Date | null): string {
 }
 
 
-const NOSTR_LOOKUP_RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.nostr.band']
+const NOSTR_LOOKUP_RELAYS = [
+  'wss://relay.damus.io',
+  'wss://nos.lol',
+  'wss://relay.nostr.band',
+  'wss://relay.primal.net',
+  'wss://relay.snort.social',
+  'wss://offchain.pub',
+  'wss://nostr-pub.wellorder.net',
+]
 const DEFAULT_SORT_DIRS: Record<'name' | 'latency' | 'status' | 'trust', 'asc' | 'desc'> = { status: 'desc', latency: 'asc', trust: 'desc', name: 'asc' }
 
 const NUT_FILTER_KEYS = ['4','5','7','8','9','10','11','12','14','15','17','19','20','29']
