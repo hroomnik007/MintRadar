@@ -199,7 +199,7 @@ function WatchlistCard({
             style={{ background: knownMint?.online === true ? '#17E87F' : '#E24B4A' }}
           />
           {knownMint?.lastCheckedAt && (
-            <div style={{ color: '#6e7681', fontSize: 10, whiteSpace: 'nowrap' }}>
+            <div style={{ color: 'var(--text3)', fontSize: 10, whiteSpace: 'nowrap' }}>
               checked {formatCheckedAt(knownMint.lastCheckedAt)}
             </div>
           )}

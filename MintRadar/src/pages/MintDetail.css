@@ -512,7 +512,7 @@
 
 .audit-stat-label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text3);
   letter-spacing: 0.02em;
   display: flex;
   align-items: center;
