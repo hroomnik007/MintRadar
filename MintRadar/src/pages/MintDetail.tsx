@@ -19,7 +19,7 @@ import './MintDetail.css'
 import {
   Copy, Check, Info, ShieldCheck, ShieldOff, ChevronDown, ChevronUp,
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
-  Clock, GitBranch, Plug, Database, Award, Layers, Zap,
+  Clock, GitBranch, Plug, Database, Award, Layers, Zap, Plus, X,
 } from 'lucide-react'
 
 interface NutMethod {
@@ -484,7 +484,7 @@ function MintDetailContent({ url }: { url: string }) {
           {isLoggedIn
             ? (
               <button className={`md-watch-btn ${isWatching ? 'watching' : ''}`} onClick={toggleWatch}>
-                {isWatching ? '⊙ Watching' : '+ Watch'}
+                {isWatching ? <><X size={12} /><span>Unwatch</span></> : <><Plus size={11} /><span>Watch</span></>}
               </button>
             ) : (
               <button
@@ -493,7 +493,7 @@ function MintDetailContent({ url }: { url: string }) {
                 onClick={e => e.preventDefault()}
                 title="Login with Nostr to add to watchlist"
               >
-                + Watch
+                <Plus size={11} /><span>Watch</span>
               </button>
             )
           }
