@@ -57,6 +57,7 @@
   color: #e6edf3;
   font-family: var(--font-mono);
   line-height: 1;
+  letter-spacing: -0.02em;
 }
 
 .stat-value.green  { color: #17E87F; }

@@ -1,3 +1,4 @@
+import { nip19 } from 'nostr-tools'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect, useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -1141,11 +1142,11 @@ function MintDetailContent({ url }: { url: string }) {
                             </span>
                           )}
                           <span style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>
-                            {r.pubkey.slice(0,8)}…
+                            {nip19.npubEncode(r.pubkey).slice(0,12)}…
                           </span>
                         </div>
                       </div>
-                      {r.comment && <p style={{fontSize:11,color:'var(--text2)',lineHeight:1.5,margin:0}}>{r.comment}</p>}
+                      {r.comment && <p style={{fontSize:12,color:'var(--text2)',lineHeight:1.5,margin:0}}>{r.comment}</p>}
                     </div>
                   ))}
                   {mergedReviews.length > 5 && (

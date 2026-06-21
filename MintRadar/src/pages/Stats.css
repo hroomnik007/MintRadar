@@ -67,12 +67,13 @@
 .smc-orange{ background: rgba(245, 166, 35, 0.1);  color: #F5A623; }
 
 .smc-label {
-  font-size: 9px;
+  font-size: 10px;
   color: #8b949e;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 3px;
+  letter-spacing: 0.07em;
+  margin-bottom: 4px;
   font-family: var(--font-mono);
+  font-weight: 500;
 }
 
 .smc-value {
