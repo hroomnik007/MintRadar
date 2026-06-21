@@ -322,7 +322,7 @@
   border: 1px solid var(--brd);
   border-radius: 4px;
   padding: 2px 7px;
-  font-size: 9.5px;
+  font-size: 11px;
   color: var(--t3);
   font-family: var(--font-mono);
 }
