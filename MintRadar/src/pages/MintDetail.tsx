@@ -1204,26 +1204,21 @@ function MintDetailContent({ url }: { url: string }) {
           <div className="md-panel">
             <div className="md-panel-title">Add to Wallet</div>
             <p style={{fontSize:12, color:'var(--text3)', marginBottom:12, lineHeight:1.5}}>
-              Copy this mint's address and paste it into your Cashu wallet to start using it.
+              Scan the QR code or open directly in your Cashu wallet to start using this mint.
             </p>
             <button
-              onClick={() => {
-                void navigator.clipboard.writeText(url)
-                setCopiedUrl(true)
-                setTimeout(() => setCopiedUrl(false), 2000)
-              }}
+              onClick={() => setShowQr(true)}
               style={{
-                width: '100%', background: copiedUrl ? '#0d2018' : 'var(--accent)',
-                color: copiedUrl ? 'var(--accent)' : 'var(--bg)',
-                border: copiedUrl ? '0.5px solid #1a3a28' : 'none',
+                width: '100%', background: 'var(--accent)',
+                color: 'var(--bg)',
+                border: 'none',
                 borderRadius: 8, padding: '10px 16px',
                 fontSize: 13, fontWeight: 700, cursor: 'pointer',
                 fontFamily: 'var(--font-body)', marginBottom: 8,
-                transition: 'all 150ms ease',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               }}
             >
-              {copiedUrl ? <><Check size={14} /> Copied!</> : <><Copy size={14} /> Copy Mint URL</>}
+              ▣ Show QR code
             </button>
             <a
               href={`https://wallet.cashu.me/?mint=${encodeURIComponent(url)}`}
@@ -1236,26 +1231,13 @@ function MintDetailContent({ url }: { url: string }) {
                 border: '0.5px solid var(--border)',
                 borderRadius: 8, padding: '9px 16px',
                 fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                fontFamily: 'var(--font-body)', marginBottom: 8,
+                fontFamily: 'var(--font-body)',
                 textDecoration: 'none', boxSizing: 'border-box',
                 transition: 'border-color 150ms ease',
               }}
             >
               ↗ Open in Cashu.me
             </a>
-            <button
-              onClick={() => setShowQr(true)}
-              style={{
-                background: 'var(--bg3)', border: '0.5px solid var(--border)',
-                borderRadius: 8, padding: '9px 16px',
-                cursor: 'pointer', color: 'var(--text2)', fontSize: 13,
-                fontWeight: 600, fontFamily: 'var(--font-body)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                width: '100%', boxSizing: 'border-box',
-              }}
-            >
-              ▣ Show QR code
-            </button>
           </div>
 
         </div>
@@ -1265,12 +1247,17 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="qr-modal-overlay" onClick={() => setShowQr(false)}>
           <div className="qr-modal" onClick={e => e.stopPropagation()}>
             <div className="qr-modal-header">
-              <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={24} />
-              <span style={{fontSize:15,fontWeight:700,color:'#e6edf3',flex:1}}>Add to wallet</span>
-              <button onClick={() => setShowQr(false)} style={{background:'none',border:'none',color:'#8b949e',fontSize:20,cursor:'pointer',lineHeight:1,padding:'2px 6px'}}>×</button>
+              <div style={{width:38,height:38,borderRadius:9,background:'linear-gradient(135deg,rgba(23,232,127,0.15),rgba(23,232,127,0.05))',border:'1px solid rgba(23,232,127,0.2)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={22} radius={5} />
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:14,fontWeight:700,color:'#e6edf3',lineHeight:1.25,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Add {displayName} to wallet</div>
+                <div style={{fontSize:11,color:'#8b949e',marginTop:2}}>Scan with any Cashu wallet app</div>
+              </div>
+              <button onClick={() => setShowQr(false)} style={{background:'none',border:'none',color:'#8b949e',fontSize:20,cursor:'pointer',lineHeight:1,padding:'2px 6px',flexShrink:0}}>×</button>
             </div>
             <div style={{display:'flex',justifyContent:'center',margin:'16px 0'}}>
-              <div style={{background:'#ffffff',borderRadius:10,padding:8,border:'1px solid #e0e0e0'}}>
+              <div style={{background:'#ffffff',borderRadius:12,padding:12,border:'2px solid rgba(23,232,127,0.35)'}}>
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=184x184&data=${encodeURIComponent(url)}&bgcolor=ffffff&color=000000&qzone=1`}
                   alt="QR Code"
@@ -1286,7 +1273,7 @@ function MintDetailContent({ url }: { url: string }) {
               />
               <button
                 onClick={() => { void navigator.clipboard.writeText(url); setCopiedUrl(true); setTimeout(() => setCopiedUrl(false), 2000) }}
-                style={{background: copiedUrl ? '#0d2018' : 'var(--accent)',color: copiedUrl ? 'var(--accent)' : '#000',border:'none',borderRadius:8,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'var(--font-body)',whiteSpace:'nowrap',flexShrink:0}}
+                style={{background: copiedUrl ? '#0d2018' : '#17E87F',color: copiedUrl ? 'var(--accent)' : '#000',border:'none',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'var(--font-body)',whiteSpace:'nowrap',flexShrink:0}}
               >
                 {copiedUrl ? 'Copied!' : 'Copy'}
               </button>
