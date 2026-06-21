@@ -88,7 +88,7 @@ export function MintCard({ status, onAddToWatchlist, isWatching = false }: MintC
             className={`watch-btn${isWatching ? ' watching' : ''}`}
             onClick={e => { e.stopPropagation(); onAddToWatchlist?.() }}
           >
-            {isWatching ? '✓ Watching' : '+ Watch'}
+            {isWatching ? '✕ Unwatch' : '+ Watch'}
           </button>
         )}
       </div>

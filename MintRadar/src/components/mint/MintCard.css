@@ -105,6 +105,11 @@
 }
 
 .watch-btn.watching {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: rgba(226, 75, 74, 0.45);
+  color: #ff6b6a;
+}
+
+.watch-btn.watching:hover {
+  border-color: rgba(226, 75, 74, 0.65);
+  color: #ff6b6a;
 }
