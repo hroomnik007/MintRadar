@@ -267,7 +267,7 @@
 }
 
 .md-info-row:last-child { border-bottom: none; }
-.md-info-label { font-size: 11px; color: var(--text2); flex-shrink: 0; font-family: var(--font-mono); font-weight: 600; }
+.md-info-label { font-size: 11px; color: var(--text2); flex-shrink: 0; font-family: var(--font-mono); font-weight: 700; }
 .md-info-value {
   font-size: 11px;
   color: var(--text);

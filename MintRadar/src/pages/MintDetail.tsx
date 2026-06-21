@@ -609,7 +609,7 @@ function MintDetailContent({ url }: { url: string }) {
               </div>
             )}
             <div className="md-info-row">
-              <span className="md-info-label" style={{ fontWeight: 600 }}>Name</span>
+              <span className="md-info-label">Name</span>
               <span className="md-info-value green">{name ?? '—'}</span>
             </div>
             {description && (
