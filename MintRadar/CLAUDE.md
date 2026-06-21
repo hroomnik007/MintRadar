@@ -172,6 +172,16 @@ The file `deploy/nginx.conf` in the repo documents the intended production confi
 
 `src/core/crypto/vault.ts` was deleted. It had zero imports across the codebase and contained a broken nsec bech32 decode (`.slice(5)` instead of `nip19.decode`). The entire `src/core/crypto/` directory no longer exists — do not recreate it.
 
+### MintCard.tsx removed (dead code)
+
+`src/components/mint/MintCard.tsx` and `src/components/mint/MintCard.css` were deleted. Both had zero imports anywhere in the codebase.
+
+**CRITICAL for future prompts:** Dashboard and Watchlist do NOT share a common card component. Each has its own separate inline card renderer:
+- `src/pages/Dashboard.tsx` → `MintCardDisplay` function (defined around line 208)
+- `src/pages/Watchlist.tsx` → anonymous inline card renderer (no separate named component)
+
+Any future task targeting "the mint card" or "the watch button" MUST specify which file to edit (Dashboard.tsx and/or Watchlist.tsx), or the same mistake of editing non-existent shared code will repeat.
+
 ### Security audit
 
 Full report in `AUDIT.md` at the repo root. Covers: telemetry, key handling, dependencies, XSS, backend API, secrets, Docker, HTTP headers. Backend is at 0 npm vulnerabilities. Frontend has 6 remaining (all dev-server only; Vite v8 upgrade needed to fix).
