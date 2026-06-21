@@ -95,6 +95,7 @@ function computeServerTrustScore(
   uptimePct: number,
   nutCount: number | null,
   version: string | null,
+  contactCount: number,
   auditNMints: number | null,
   auditNMelts: number | null,
   auditNErrors: number | null
@@ -102,6 +103,7 @@ function computeServerTrustScore(
   const uScore = Math.round(uptimePct * 0.45)
   const nScore = Math.round(Math.min((nutCount ?? 0) / 14, 1) * 30)
   const vScore = Math.round(serverVersionFreshnessScore(version) / 10 * 15)
+  const cScore = Math.round((contactCount / 3) * 5)
   const total = (auditNMints ?? 0) + (auditNMelts ?? 0) + (auditNErrors ?? 0)
   const errRate = total === 0 ? 0 : (auditNErrors ?? 0) / total
   const aScore = auditNMints === null
@@ -111,7 +113,7 @@ function computeServerTrustScore(
     : errRate < 0.05 ? 3
     : errRate < 0.15 ? 2
     : 1
-  return Math.min(100, Math.round(uScore + nScore + vScore + aScore))
+  return Math.min(100, Math.round(uScore + nScore + vScore + cScore + aScore))
 }
 
 function classifyFetchError(err: unknown): string {
@@ -151,6 +153,7 @@ export async function probeMintToDb(url: string): Promise<void> {
   let latencyMs: number | null = null
   let lastError: string | null = null
   let capturedErr: unknown = null
+  let contactCount = 0
 
   try {
     const res = await safeFetch(`${url}/v1/info`, {
@@ -172,6 +175,9 @@ export async function probeMintToDb(url: string): Promise<void> {
           const tosUrl = typeof raw['tos_url'] === 'string' ? raw['tos_url'] : null
           const descriptionLong = typeof raw['description_long'] === 'string' ? raw['description_long'] : null
           const nutCount = Object.keys(nuts).length
+
+          const contactArr = Array.isArray(raw['contact']) ? raw['contact'] as Array<{ method: string }> : []
+          contactCount = contactArr.filter(c => c.method === 'email' || c.method === 'twitter' || c.method === 'nostr').length
 
           const storedVersionRes = await pool.query('SELECT version FROM mints WHERE url = $1', [url])
           const storedVersion = storedVersionRes.rows[0]?.version as string | null
@@ -255,6 +261,7 @@ export async function probeMintToDb(url: string): Promise<void> {
         uptimePct,
         row.nut_count as number | null,
         row.version as string | null,
+        contactCount,
         row.audit_n_mints as number | null,
         row.audit_n_melts as number | null,
         row.audit_n_errors as number | null

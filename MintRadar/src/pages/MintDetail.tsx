@@ -126,9 +126,9 @@ function versionFreshnessScore(versionStr: string | null | undefined): number {
   return Math.max(0, 10 - idx * 2)
 }
 
-function contactInfoScore(email?: string, twitter?: string, nostr?: string, website?: string): number {
-  const count = [email, twitter, nostr, website].filter(Boolean).length
-  return Math.round((count / 4) * 5)
+function contactInfoScore(email?: string, twitter?: string, nostr?: string): number {
+  const count = [email, twitter, nostr].filter(Boolean).length
+  return Math.round((count / 3) * 5)
 }
 
 function auditReliabilityScore(nMints: number | null, nMelts: number | null, nErrors: number | null): number {
@@ -150,7 +150,6 @@ function computeTrustScore(
   email?: string,
   twitter?: string,
   nostr?: string,
-  website?: string,
   auditNMints?: number | null,
   auditNMelts?: number | null,
   auditNErrors?: number | null,
@@ -158,7 +157,7 @@ function computeTrustScore(
   const uptimeScore = Math.round(uptimePct * 0.45)
   const nutScore = Math.round(Math.min(nutCount / ALL_NUTS.length, 1) * 30)
   const verScore = Math.round(versionFreshnessScore(versionStr) / 10 * 15)
-  const cScore = contactInfoScore(email, twitter, nostr, website)
+  const cScore = contactInfoScore(email, twitter, nostr)
   const aScore = auditReliabilityScore(auditNMints ?? null, auditNMelts ?? null, auditNErrors ?? null)
   return Math.round(Math.min(100, uptimeScore + nutScore + verScore + cScore + aScore))
 }
@@ -351,7 +350,7 @@ function MintDetailContent({ url }: { url: string }) {
     function makePoint(seg: typeof segs[0] | null, label: string) {
       if (!seg) return { label, latency: null as number | null, uptime: null as number | null, trust: null as number | null }
       const trustVal = seg.uptimePct !== null
-        ? computeTrustScore(seg.uptimePct, nutCount, versionStr, emailVal, twitterVal, nostrVal, websiteVal, auditNMints, auditNMelts, auditNErrors)
+        ? computeTrustScore(seg.uptimePct, nutCount, versionStr, emailVal, twitterVal, nostrVal, auditNMints, auditNMelts, auditNErrors)
         : null
       return { label, latency: seg.latencyMs, uptime: seg.uptimePct, trust: trustVal }
     }
@@ -432,7 +431,7 @@ function MintDetailContent({ url }: { url: string }) {
   )
   const supportsNut13 = supportedNutNumbers.has('13')
 
-  const trustScore = knownMint?.trustScore ?? computeTrustScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, website, knownMint?.auditNMints ?? null, knownMint?.auditNMelts ?? null, knownMint?.auditNErrors ?? null)
+  const trustScore = knownMint?.trustScore ?? computeTrustScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, knownMint?.auditNMints ?? null, knownMint?.auditNMelts ?? null, knownMint?.auditNErrors ?? null)
   const tsInfo = trustScoreInfo(trustScore)
   const ageBadge = mintAgeBadge(discoveredAt)
   const isOutdated = version !== null && latestGlobalVersion !== null
@@ -1315,9 +1314,9 @@ function MintDetailContent({ url }: { url: string }) {
               const uScore = Math.round(uptimePct * 0.45)
               const nScore = Math.round(Math.min(supportedNuts.length / ALL_NUTS.length, 1) * 30)
               const vScore = Math.round(versionFreshnessScore(version) / 10 * 15)
-              const contactFields = [email, twitter, nostr, website].filter(Boolean)
-              const cScore = Math.round((contactFields.length / 4) * 5)
-              const contactDisplay = contactFields.length === 0 ? 'None' : (email ? 'Email' : '') + (twitter ? (email ? ' + Twitter' : 'Twitter') : '') + (nostr ? ((email || twitter) ? ' + Nostr' : 'Nostr') : '') + (website ? ((email || twitter || nostr) ? ' + Web' : 'Web') : '')
+              const contactFields = [email, twitter, nostr].filter(Boolean)
+              const cScore = Math.round((contactFields.length / 3) * 5)
+              const contactDisplay = contactFields.length === 0 ? 'None' : (email ? 'Email' : '') + (twitter ? (email ? ' + Twitter' : 'Twitter') : '') + (nostr ? ((email || twitter) ? ' + Nostr' : 'Nostr') : '')
               const auditNMints = knownMint?.auditNMints ?? null
               const auditNMelts = knownMint?.auditNMelts ?? null
               const auditNErrors = knownMint?.auditNErrors ?? null
@@ -1328,7 +1327,7 @@ function MintDetailContent({ url }: { url: string }) {
                 { label: 'Uptime (45%)', display: `${uptimePct}%`, score: uScore, max: 45, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.' },
                 { label: 'NUT Support (30%)', display: `${supportedNuts.length} / ${ALL_NUTS.length} NUTs`, score: nScore, max: 30, color: supportedNuts.length >= 12 ? '#4ade80' : supportedNuts.length >= 8 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.' },
                 { label: 'Version (15%)', display: version ?? 'Unknown', score: vScore, max: 15, color: vScore >= 12 ? '#4ade80' : vScore >= 6 ? '#ffa500' : '#ff4d4d', tooltip: "How recent the mint's software version is compared to the latest known Nutshell releases. Newer = higher score." },
-                { label: 'Contact (5%)', display: contactDisplay, score: cScore, max: 5, color: cScore >= 4 ? '#4ade80' : cScore >= 2 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of contact methods provided (email, Twitter, Nostr, website). More contact options = higher score.' },
+                { label: 'Contact (5%)', display: contactDisplay, score: cScore, max: 5, color: cScore >= 4 ? '#4ade80' : cScore >= 2 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.' },
                 { label: 'Audit reliability (5%)', display: auditDisplay, score: aScore, max: 5, color: aScore >= 4 ? '#4ade80' : aScore >= 3 ? '#ffa500' : '#ff4d4d', tooltip: 'Based on error rate from audit.8333.space — the percentage of failed mint/melt operations out of all tested operations. Lower error rate = higher score.' },
               ]
               return rows.map(row => (
