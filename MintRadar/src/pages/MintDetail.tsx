@@ -616,13 +616,13 @@ function MintDetailContent({ url }: { url: string }) {
             {description && (
               <div className="md-info-row">
                 <span className="md-info-label">Description</span>
-                <span className="md-info-value" style={{ color: 'var(--text2)', fontWeight: 700 }}>{description}</span>
+                <span className="md-info-value">{description}</span>
               </div>
             )}
             {descriptionLong && (
               <div className="md-info-row" style={{flexDirection:'column', alignItems:'flex-start', gap:4}}>
                 <span className="md-info-label">Full description</span>
-                <span style={{fontSize:11, color:'var(--text2)', lineHeight:1.5, fontFamily:'var(--font-mono)', fontWeight:700}}>
+                <span className="md-info-value" style={{textAlign:'left', maxWidth:'none', lineHeight:1.5}}>
                   {descriptionLong}
                 </span>
               </div>
