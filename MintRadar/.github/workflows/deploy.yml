@@ -49,6 +49,15 @@ jobs:
             docker compose build --no-cache backend
             docker compose up -d
 
+      - name: Clean old frontend assets
+        if: steps.filter.outputs.frontend == 'true'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: rm -rf /var/www/mintradar/dist/assets/*
+
       - name: Deploy frontend via rsync
         if: steps.filter.outputs.frontend == 'true'
         uses: burnett01/rsync-deployments@7.0.1
