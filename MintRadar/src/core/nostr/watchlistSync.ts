@@ -8,7 +8,6 @@ export const WATCHLIST_RELAYS = [
   'wss://relay.snort.social',
   'wss://offchain.pub',
   'wss://nostr-pub.wellorder.net',
-  'wss://nostr.wine',
   'wss://relay.nostr.band',
   'wss://nostr.bitcoiner.social',
   'wss://nostr.mom',
@@ -63,9 +62,9 @@ export async function publishWatchlist(pubkey: string, mints: string[], userWrit
       content: encrypted,
     }
     const signed = await window.nostr.signEvent(event) as NostrEvent
-    await Promise.any(
-      relays.map(relay => sharedPool.publish([relay], signed))
-    ).catch((err: unknown) => {
+    const publishPromises = sharedPool.publish(relays, signed)
+    publishPromises.forEach(p => p.catch(() => {}))
+    await Promise.any(publishPromises).catch((err: unknown) => {
       console.warn('[watchlistSync] all relays rejected publish:', err)
     })
   } catch (err) {

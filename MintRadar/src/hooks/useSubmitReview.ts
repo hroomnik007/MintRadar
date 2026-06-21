@@ -10,7 +10,6 @@ const REVIEW_RELAYS = [
   'wss://relay.snort.social',
   'wss://offchain.pub',
   'wss://nostr-pub.wellorder.net',
-  'wss://nostr.wine',
   'wss://relay.nostr.band',
   'wss://nostr.bitcoiner.social',
   'wss://nostr.mom',
@@ -41,5 +40,7 @@ export async function submitMintReview(
   }
 
   const signed = await window.nostr.signEvent(event) as NostrEvent
-  await Promise.any(sharedPool.publish(REVIEW_RELAYS, signed))
+  const publishPromises = sharedPool.publish(REVIEW_RELAYS, signed)
+  publishPromises.forEach(p => p.catch(() => {}))
+  await Promise.any(publishPromises)
 }

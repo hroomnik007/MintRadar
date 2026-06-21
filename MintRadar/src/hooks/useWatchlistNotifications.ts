@@ -13,7 +13,6 @@ const NOTIFICATION_RELAYS = [
   'wss://relay.snort.social',
   'wss://offchain.pub',
   'wss://nostr-pub.wellorder.net',
-  'wss://nostr.wine',
   'wss://relay.nostr.band',
   'wss://nostr.bitcoiner.social',
   'wss://nostr.mom',
@@ -147,11 +146,9 @@ async function sendNostrDM(recipientPubkey: string, content: string, relays: str
       content: wrapContent,
     }, ephemeralKey)
 
-    await Promise.any(
-      relays.map(relay =>
-        sharedPool.publish([relay], giftWrap)
-      )
-    )
+    const publishPromises = sharedPool.publish(relays, giftWrap)
+    publishPromises.forEach(p => p.catch(() => {}))
+    await Promise.any(publishPromises)
 
     console.log('[notifications] gift-wrapped DM sent successfully')
   } catch (err) {
