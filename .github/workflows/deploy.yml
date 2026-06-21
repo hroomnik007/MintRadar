@@ -40,5 +40,6 @@ jobs:
             cd MintRadar
             npm ci
             npm run build
+            sudo rm -rf /var/www/mintradar/dist/assets/*
             sudo cp -r dist/* /var/www/mintradar/dist/
             sudo systemctl reload nginx
