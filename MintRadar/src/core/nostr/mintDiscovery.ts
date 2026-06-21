@@ -34,7 +34,9 @@ function extractTag(tags: string[][], name: string): string | undefined {
 
 export async function fetchNostrMints(signal?: AbortSignal): Promise<NostrMintEvent[]> {
   const seen = new Map<string, NostrMintEvent>()
-  let sub: { close(): void } | null = null
+  // Object property avoids TypeScript CFA narrowing `let` variables assigned inside
+  // closures to `never` in finally blocks (TypeScript 5.4+ behaviour).
+  const cleanup: { sub: ReturnType<typeof sharedPool.subscribeMany> | null } = { sub: null }
 
   try {
     await new Promise<void>((resolve) => {
@@ -47,7 +49,7 @@ export async function fetchNostrMints(signal?: AbortSignal): Promise<NostrMintEv
         }, { once: true })
       }
 
-      sub = sharedPool.subscribeMany(
+      cleanup.sub = sharedPool.subscribeMany(
         DISCOVERY_RELAYS,
         { kinds: [38172], limit: 100 } as import('nostr-tools').Filter,
         {
@@ -87,6 +89,6 @@ export async function fetchNostrMints(signal?: AbortSignal): Promise<NostrMintEv
     }
     return []
   } finally {
-    sub?.close()
+    cleanup.sub?.close()
   }
 }
