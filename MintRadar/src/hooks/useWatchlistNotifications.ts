@@ -13,6 +13,10 @@ const NOTIFICATION_RELAYS = [
   'wss://relay.snort.social',
   'wss://offchain.pub',
   'wss://nostr-pub.wellorder.net',
+  'wss://nostr.wine',
+  'wss://relay.nostr.band',
+  'wss://nostr.bitcoiner.social',
+  'wss://nostr.mom',
 ]
 
 // Track previous online states and trust scores to detect transitions
