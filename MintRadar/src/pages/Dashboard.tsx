@@ -300,7 +300,7 @@ function MintCardDisplay({
             className={`watch-btn${isWatched ? ' watching' : ''}`}
             onClick={e => { e.stopPropagation(); void (isWatched ? removeMint(mint.url) : addMint(mint.url)) }}
           >
-            {isWatched ? <><IcEye /><span>Watching</span></> : <><IcPlus /><span>Watch</span></>}
+            {isWatched ? <><IcClose /><span>Unwatch</span></> : <><IcPlus /><span>Watch</span></>}
           </button>
         )}
       </div>

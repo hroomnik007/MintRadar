@@ -376,9 +376,13 @@
 
 .watch-btn:hover { border-color: var(--brd-hi); color: var(--t1); }
 .watch-btn.watching {
-  background: var(--accent-dim);
-  border-color: var(--accent-brd);
-  color: var(--accent);
+  border-color: rgba(226, 75, 74, 0.45);
+  color: #ff6b6a;
+}
+
+.watch-btn.watching:hover {
+  border-color: rgba(226, 75, 74, 0.65);
+  color: #ff6b6a;
 }
 
 /* ── Skeleton ───────────────────────────────────────────────── */

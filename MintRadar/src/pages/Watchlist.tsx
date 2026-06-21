@@ -237,7 +237,7 @@ function WatchlistCard({
           className={`watch-btn${isWatched ? ' watching' : ''}`}
           onClick={e => { e.stopPropagation(); void (isWatched ? removeMint(url) : addMint(url)) }}
         >
-          {isWatched ? <><IcEye /><span>Watching</span></> : <><IcPlus /><span>Watch</span></>}
+          {isWatched ? <><IcClose /><span>Unwatch</span></> : <><IcPlus /><span>Watch</span></>}
         </button>
       </div>
     </div>
