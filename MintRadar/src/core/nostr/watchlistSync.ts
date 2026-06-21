@@ -12,6 +12,11 @@ export const WATCHLIST_RELAYS = [
   'wss://relay.nostr.band',
   'wss://nostr.bitcoiner.social',
   'wss://nostr.mom',
+  'wss://nostr.oxtr.dev/',
+  'wss://relay.mostr.pub/',
+  'wss://relay.noswhere.com/',
+  'wss://pyramid.fiatjaf.com/',
+  'wss://nostr.lopp.social/',
 ]
 
 const WATCHLIST_KIND = 10003
