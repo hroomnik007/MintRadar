@@ -72,6 +72,9 @@
 .status-dot.offline { background: #ff4d4d; }
 
 .md-watch-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   background: transparent;
   color: #c9d1d9;
   border: 0.5px solid #30363d;
@@ -90,8 +93,8 @@
 
 .md-watch-btn.watching {
   background: transparent;
-  border: 0.5px solid #17E87F;
-  color: #17E87F;
+  border-color: rgba(226, 75, 74, 0.45);
+  color: #ff6b6a;
 }
 
 .md-watch-btn.watching:hover { opacity: 0.8; }
