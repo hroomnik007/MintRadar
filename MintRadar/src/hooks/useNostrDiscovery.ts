@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useQueryClient } from '@tanstack/react-query'
-import { SimplePool } from 'nostr-tools/pool'
+import { sharedPool } from '@/core/nostr/pool'
 
 const DISCOVERY_RELAYS = [
   'wss://relay.damus.io',
@@ -27,12 +27,11 @@ export function useNostrDiscovery() {
 
     const run = async () => {
       console.log('[nostr-discovery] starting client-side NIP-87 discovery...')
-      const pool = new SimplePool()
       const discovered: Set<string> = new Set()
 
       try {
         const events = await Promise.race([
-          pool.querySync(DISCOVERY_RELAYS, { kinds: [38172], limit: 500 }),
+          sharedPool.querySync(DISCOVERY_RELAYS, { kinds: [38172], limit: 500 }),
           new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error('timeout')), 20_000)
           ),
@@ -59,8 +58,6 @@ export function useNostrDiscovery() {
         }
       } catch (err) {
         console.warn('[nostr-discovery] error:', err)
-      } finally {
-        pool.destroy()
       }
 
       if (discovered.size === 0) return

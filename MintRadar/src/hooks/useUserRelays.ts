@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
-import { SimplePool } from 'nostr-tools/pool'
+import { sharedPool } from '@/core/nostr/pool'
 import { fetchNostrProfile } from '@/core/nostr/client'
 
 const BOOTSTRAP_RELAYS = [
@@ -34,11 +34,10 @@ export function useUserRelays(): { read: string[] | null; write: string[] | null
     if (inFlightPubkey === pubkey) return  // fetch in progress in another instance
 
     inFlightPubkey = pubkey
-    const pool = new SimplePool()
     let cancelled = false
 
     Promise.race([
-      pool.querySync(BOOTSTRAP_RELAYS, {
+      sharedPool.querySync(BOOTSTRAP_RELAYS, {
         kinds: [10002],
         authors: [pubkey],
         limit: 1,
@@ -78,7 +77,6 @@ export function useUserRelays(): { read: string[] | null; write: string[] | null
       })
       .catch(() => { /* timeout or relay error — callers fall back to hardcoded lists */ })
       .finally(() => {
-        pool.destroy()
         if (inFlightPubkey === pubkey) inFlightPubkey = null
       })
 

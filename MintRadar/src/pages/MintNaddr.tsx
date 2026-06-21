@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { nip19 } from 'nostr-tools'
-import { SimplePool } from 'nostr-tools/pool'
 import type { NostrEvent } from 'nostr-tools'
+import { sharedPool } from '@/core/nostr/pool'
 
 const FALLBACK_RELAYS = [
   'wss://relay.damus.io',
@@ -38,10 +38,9 @@ export default function MintNaddr() {
     if (kind !== 38172) { navigate('/'); return }
 
     const queryRelays = relays && relays.length > 0 ? relays : FALLBACK_RELAYS
-    const pool = new SimplePool()
 
     Promise.race([
-      pool.querySync(queryRelays, {
+      sharedPool.querySync(queryRelays, {
         kinds: [38172],
         authors: [pubkey],
         '#d': [identifier],
@@ -57,7 +56,6 @@ export default function MintNaddr() {
         navigate(`/mint/${encodeURIComponent(mintUrl)}`, { replace: true })
       })
       .catch(() => navigate('/'))
-      .finally(() => pool.destroy())
   }, [naddr, navigate])
 
   return (

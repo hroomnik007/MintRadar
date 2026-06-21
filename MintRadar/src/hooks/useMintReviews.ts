@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { SimplePool } from 'nostr-tools/pool'
+import { sharedPool } from '@/core/nostr/pool'
 
 const REVIEW_RELAYS = [
   'wss://relay.damus.io',
@@ -27,9 +27,8 @@ export function useMintReviews(mintUrl: string) {
   useEffect(() => {
     if (!mintUrl) return
     setLoading(true)
-    const pool = new SimplePool()
 
-    pool.querySync(REVIEW_RELAYS, {
+    sharedPool.querySync(REVIEW_RELAYS, {
       kinds: [38000],
       '#u': [mintUrl],
       limit: 50,
@@ -63,7 +62,6 @@ export function useMintReviews(mintUrl: string) {
       setReviews(parsed)
     }).catch(() => {}).finally(() => {
       setLoading(false)
-      pool.destroy()
     })
   }, [mintUrl])
 

@@ -12,6 +12,9 @@ export function useWatchlistSync() {
   const mints = useWatchlistStore(s => s.mints)
   const loadFromDb = useWatchlistStore(s => s.loadFromDb)
   const { write: userWriteRelays } = useUserRelays()
+  // Ref so Phase 2 always uses the current relay list without re-triggering on relay changes
+  const userWriteRelaysRef = useRef<string[] | null>(null)
+  userWriteRelaysRef.current = userWriteRelays
 
   const syncedForPubkey = useRef<string | null>(null)
   const isSyncing = useRef(false)
@@ -87,13 +90,15 @@ export function useWatchlistSync() {
   }, [profile?.pubkey, loadFromDb])
 
   // Phase 2: publish current state to relays on any mint change,
-  // but ONLY after sync has completed and is not currently running
+  // but ONLY after sync has completed and is not currently running.
+  // userWriteRelays is read from ref (not in deps) so NIP-65 relay list
+  // resolving does not trigger an extra publish when mints haven't changed.
   useEffect(() => {
     const pubkey = profile?.pubkey
     if (!pubkey) return
     if (syncedForPubkey.current !== pubkey) return
     if (isSyncing.current) return
     console.log('sync: Phase 2 publishing', mints.length, 'mints to relays')
-    void publishWatchlist(pubkey, mints, userWriteRelays)
-  }, [mints, profile?.pubkey, userWriteRelays])
+    void publishWatchlist(pubkey, mints, userWriteRelaysRef.current)
+  }, [mints, profile?.pubkey])
 }

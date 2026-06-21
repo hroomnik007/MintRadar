@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
-import { SimplePool } from 'nostr-tools/pool'
+import { sharedPool } from '@/core/nostr/pool'
 import type { NostrEvent, EventTemplate, UnsignedEvent } from 'nostr-tools'
 import { nip44, generateSecretKey, finalizeEvent, getEventHash } from 'nostr-tools'
 
@@ -26,12 +26,6 @@ export function useWatchlistNotifications(
 ) {
   const profile = useAuthStore(s => s.profile)
   const { mints: watchlist } = useWatchlistStore()
-  const poolRef = useRef<SimplePool | null>(null)
-
-  useEffect(() => {
-    if (!poolRef.current) poolRef.current = new SimplePool()
-    return () => { poolRef.current?.destroy(); poolRef.current = null }
-  }, [])
 
   useEffect(() => {
     if (!profile?.pubkey) return
@@ -53,7 +47,6 @@ export function useWatchlistNotifications(
           await sendNostrDM(
             profile.pubkey,
             `⚠️ MintRadar Alert\n\nMint is down: ${url}\n\nCheck status: https://mintradar.pedani.eu`,
-            poolRef.current!,
             dmRelays
           )
         }
@@ -64,7 +57,6 @@ export function useWatchlistNotifications(
           await sendNostrDM(
             profile.pubkey,
             `✅ MintRadar Alert\n\nMint is back online: ${url}\n\nLatency: ${current.latencyMs}ms`,
-            poolRef.current!,
             dmRelays
           )
         }
@@ -81,7 +73,6 @@ export function useWatchlistNotifications(
               await sendNostrDM(
                 profile.pubkey,
                 `⚡ MintRadar Alert\n\nTrust Score for ${url} changed from ${prevScore}% to ${currentScore}%.\n\nCheck details: https://mintradar.pedani.eu/mint/${mintId}`,
-                poolRef.current!,
                 dmRelays
               )
             }
@@ -106,7 +97,7 @@ function randomizedTimestamp(): number {
 // NIP-44 encryption (replaces legacy NIP-04 kind:4). The seal is signed by
 // the user's NIP-07 extension; the outer gift wrap is signed by a throwaway
 // ephemeral key so the sender's identity is not exposed on the relay.
-async function sendNostrDM(recipientPubkey: string, content: string, pool: SimplePool, relays: string[]) {
+async function sendNostrDM(recipientPubkey: string, content: string, relays: string[]) {
   try {
     if (!window.nostr?.nip44) {
       console.warn('[notifications] nip44 not available — skipping DM')
@@ -149,7 +140,7 @@ async function sendNostrDM(recipientPubkey: string, content: string, pool: Simpl
 
     await Promise.any(
       relays.map(relay =>
-        pool.publish([relay], giftWrap)
+        sharedPool.publish([relay], giftWrap)
       )
     )
 

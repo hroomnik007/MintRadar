@@ -1,4 +1,4 @@
-import { SimplePool } from 'nostr-tools'
+import { sharedPool } from '@/core/nostr/pool'
 
 export interface NostrMintEvent {
   url: string
@@ -33,8 +33,8 @@ function extractTag(tags: string[][], name: string): string | undefined {
 }
 
 export async function fetchNostrMints(signal?: AbortSignal): Promise<NostrMintEvent[]> {
-  const pool = new SimplePool()
   const seen = new Map<string, NostrMintEvent>()
+  let sub: { close(): void } | null = null
 
   try {
     await new Promise<void>((resolve) => {
@@ -47,7 +47,7 @@ export async function fetchNostrMints(signal?: AbortSignal): Promise<NostrMintEv
         }, { once: true })
       }
 
-      const sub = pool.subscribeMany(
+      sub = sharedPool.subscribeMany(
         DISCOVERY_RELAYS,
         { kinds: [38172], limit: 100 } as import('nostr-tools').Filter,
         {
@@ -74,7 +74,6 @@ export async function fetchNostrMints(signal?: AbortSignal): Promise<NostrMintEv
           },
           oneose() {
             clearTimeout(timer)
-            sub.close()
             resolve()
           },
         }
@@ -88,6 +87,6 @@ export async function fetchNostrMints(signal?: AbortSignal): Promise<NostrMintEv
     }
     return []
   } finally {
-    pool.close(DISCOVERY_RELAYS)
+    sub?.close()
   }
 }

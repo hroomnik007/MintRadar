@@ -1,5 +1,5 @@
-import { SimplePool } from 'nostr-tools/pool'
 import type { NostrEvent } from 'nostr-tools'
+import { sharedPool } from '@/core/nostr/pool'
 
 const REVIEW_RELAYS = [
   'wss://relay.damus.io',
@@ -32,10 +32,5 @@ export async function submitMintReview(
   }
 
   const signed = await window.nostr.signEvent(event) as NostrEvent
-  const pool = new SimplePool()
-  try {
-    await Promise.any(pool.publish(REVIEW_RELAYS, signed))
-  } finally {
-    pool.destroy()
-  }
+  await Promise.any(sharedPool.publish(REVIEW_RELAYS, signed))
 }

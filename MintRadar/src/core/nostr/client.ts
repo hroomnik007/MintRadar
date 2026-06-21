@@ -1,7 +1,7 @@
 import { nip19 } from 'nostr-tools'
-import { SimplePool } from 'nostr-tools/pool'
 import * as secp from '@noble/secp256k1'
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils'
+import { sharedPool } from '@/core/nostr/pool'
 
 export interface NostrProfile {
   pubkey: string
@@ -24,10 +24,9 @@ export async function fetchNostrProfile(pubkey: string, extraRelays?: string[]):
   const relays = extraRelays && extraRelays.length > 0
     ? [...new Set([...META_RELAYS, ...extraRelays])]
     : META_RELAYS
-  const pool = new SimplePool()
   try {
     const events = await Promise.race([
-      pool.querySync(relays, { kinds: [0], authors: [pubkey], limit: 1 }),
+      sharedPool.querySync(relays, { kinds: [0], authors: [pubkey], limit: 1 }),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
     ])
     const event = events[0]
@@ -39,7 +38,6 @@ export async function fetchNostrProfile(pubkey: string, extraRelays?: string[]):
     if (meta.picture !== undefined) result.picture = meta.picture
     return result
   } catch { return {} }
-  finally { pool.destroy() }
 }
 
 export function isNip07Available(): boolean {

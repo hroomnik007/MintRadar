@@ -2,8 +2,8 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { nip19 } from 'nostr-tools'
-import { SimplePool } from 'nostr-tools/pool'
 import type { NostrEvent } from 'nostr-tools'
+import { sharedPool } from '@/core/nostr/pool'
 import { useNostrDiscovery } from '@/hooks/useNostrDiscovery'
 import { useWatchlistNotifications } from '@/hooks/useWatchlistNotifications'
 import { useUserRelays } from '@/hooks/useUserRelays'
@@ -563,7 +563,6 @@ export default function Dashboard() {
     setNostrLookupMsg('')
     const timer = setTimeout(() => {
       void (async () => {
-        const pool = new SimplePool()
         try {
           let pubkey = input
           if (isNpub) {
@@ -576,7 +575,7 @@ export default function Dashboard() {
             pubkey = decoded.data as string
           }
           const events = await Promise.race([
-            pool.querySync(NOSTR_LOOKUP_RELAYS, { kinds: [38172], authors: [pubkey], limit: 5 }),
+            sharedPool.querySync(NOSTR_LOOKUP_RELAYS, { kinds: [38172], authors: [pubkey], limit: 5 }),
             new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
           ]) as NostrEvent[]
           const mintUrl = events
@@ -592,8 +591,6 @@ export default function Dashboard() {
         } catch {
           setNostrLookupState('error')
           setNostrLookupMsg('Failed to reach Nostr relays. Try again.')
-        } finally {
-          pool.destroy()
         }
       })()
     }, 600)

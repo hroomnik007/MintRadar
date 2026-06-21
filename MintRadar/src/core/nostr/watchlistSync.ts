@@ -1,5 +1,5 @@
-import { SimplePool } from 'nostr-tools/pool'
 import type { NostrEvent } from 'nostr-tools'
+import { sharedPool } from '@/core/nostr/pool'
 
 export const WATCHLIST_RELAYS = [
   'wss://relay.damus.io',
@@ -17,11 +17,10 @@ export async function fetchRemoteWatchlist(pubkey: string, userWriteRelays?: str
   const relays = userWriteRelays && userWriteRelays.length > 0
     ? [...new Set([...WATCHLIST_RELAYS, ...userWriteRelays])]
     : WATCHLIST_RELAYS
-  const pool = new SimplePool()
   try {
     // Query each relay independently — take the first one that returns an event
     const relayQueries = relays.map(relay =>
-      pool.querySync([relay], { kinds: [WATCHLIST_KIND], authors: [pubkey], limit: 1 })
+      sharedPool.querySync([relay], { kinds: [WATCHLIST_KIND], authors: [pubkey], limit: 1 })
         .then(events => {
           if (!events[0]?.content) throw new Error('no event')
           return events[0]
@@ -38,8 +37,6 @@ export async function fetchRemoteWatchlist(pubkey: string, userWriteRelays?: str
   } catch (err) {
     console.warn('[watchlistSync] fetch failed:', err)
     return []
-  } finally {
-    pool.destroy()
   }
 }
 
@@ -48,7 +45,6 @@ export async function publishWatchlist(pubkey: string, mints: string[], userWrit
   const relays = userWriteRelays && userWriteRelays.length > 0
     ? [...new Set([...WATCHLIST_RELAYS, ...userWriteRelays])]
     : WATCHLIST_RELAYS
-  const pool = new SimplePool()
   try {
     const encrypted = await window.nostr.nip44.encrypt(pubkey, JSON.stringify(mints))
     const event = {
@@ -59,13 +55,11 @@ export async function publishWatchlist(pubkey: string, mints: string[], userWrit
     }
     const signed = await window.nostr.signEvent(event) as NostrEvent
     await Promise.any(
-      relays.map(relay => pool.publish([relay], signed))
+      relays.map(relay => sharedPool.publish([relay], signed))
     ).catch((err: unknown) => {
       console.warn('[watchlistSync] all relays rejected publish:', err)
     })
   } catch (err) {
     console.warn('[watchlistSync] publish failed:', err)
-  } finally {
-    pool.destroy()
   }
 }
