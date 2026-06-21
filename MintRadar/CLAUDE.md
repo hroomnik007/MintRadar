@@ -18,7 +18,7 @@ Sensitive values are in CLAUDE.local.md (gitignored) — ask the developer
 - Frontend: React 18 + TypeScript + Vite 5 + TanStack Query v5 + Zustand + Dexie (IndexedDB) + Recharts + vite-plugin-pwa
 - Backend: Node.js/Express + TypeScript + pg (PostgreSQL) + nostr-tools
 - Auth: Nostr NIP-07 (nos2x-fox, Alby) + nsec manual entry (key zeroed after derivation); Amber NIP-46 planned
-- Fonts: DM Sans (self-hosted variable font)
+- Fonts: DM Sans (self-hosted variable, weights 100–900), JetBrains Mono (self-hosted; Regular 400, Medium 500, Bold 700)
 - CSS: CSS variables (var(--bg), var(--bg2), var(--accent) #17E87F, var(--border), var(--text), var(--text2), var(--text3))
 
 ## Architecture
@@ -128,6 +128,12 @@ Frontend:
 6. Reload nginx: ssh $VPS_USER@$VPS_HOST "sudo systemctl reload nginx"
 7. Commit: git add -A && git commit -m "type: description" && git push origin main
 
+## Deploy Pipeline Notes
+
+- The ONLY active GitHub Actions workflow is `/.github/workflows/deploy.yml` at the **repo root**. A dead duplicate previously existed at `MintRadar/.github/workflows/deploy.yml` inside the project subdirectory — GitHub Actions never ran it, but it caused confusion during debugging. It has been deleted. When editing CI/CD config, always confirm you're editing the root-level file.
+- The deploy sequence runs `sudo rm -rf /var/www/mintradar/dist/assets/*` before copying the new build. This is intentional: `rsync --delete` was silently failing to remove old `root:root`-owned asset files left over from a prior deploy mechanism while still reporting success, causing stale content-hashed files to accumulate alongside new ones.
+- The GH Actions workflow SSHes into the VPS, pulls latest code, builds on the server (`npm ci && npm run build`), then copies dist to the nginx root. The `rsync dist/` step documented in the deploy workflow above reflects the original mechanism — the active workflow in `.github/workflows/deploy.yml` is authoritative.
+
 ## Nostr Login
 
 Login modal (`src/components/layout/AppShell.tsx`) supports three methods selectable via radio cards:
@@ -168,6 +174,30 @@ Affected blocks in `deploy/nginx.conf`: `location ~* \.(js|css|png|svg|ico|woff2
 
 The file `deploy/nginx.conf` in the repo documents the intended production config but is NOT automatically deployed. The live config lives at `/etc/nginx/sites-available/mintradar.pedani.eu.conf` on the VPS and must be manually kept in sync. After updating `deploy/nginx.conf`, copy the relevant changes to the VPS manually and run `sudo systemctl reload nginx`.
 
+### Service Worker / PWA auto-update
+
+`vite-plugin-pwa` (`registerType: 'autoUpdate'`) only reliably delivers deploys to users when ALL THREE of the following are correct simultaneously:
+
+1. **`public/registerSW.js` listens for `controllerchange` and calls `window.location.reload()` exactly once** — guarded by `let refreshing = false` to prevent reload loops. This file intentionally overrides the library-generated registration script.
+2. **`register()` uses `updateViaCache: 'none'`** — without it, the browser may HTTP-cache the workbox chunk (`workbox-xxxxx.js`) that `sw.js` imports, causing update detection to silently fail even though `sw.js` itself is fetched fresh via nginx `no-store`.
+3. **nginx serves `sw.js`, `registerSW.js`, and `manifest.webmanifest` with `no-store`** — these files must NOT be caught by the long-lived `immutable` caching rule for content-hashed assets. The explicit `location = /sw.js` and `location = /registerSW.js` blocks in `deploy/nginx.conf` take priority over the wildcard `location ~*` block; do not remove them.
+
+`setInterval(() => registration.update(), 3600000)` in `public/registerSW.js` ensures long-open tabs detect new deploys without requiring a navigation event.
+
+**One-time bootstrap issue:** A user with a very old SW (from before the `controllerchange` listener existed) must manually unregister once via DevTools → Application → Service Workers → Unregister. All subsequent deploys auto-update from that point forward.
+
+### Debugging stale-looking deploys
+
+When a deployed change doesn't appear to users, verify in this order before assuming a code bug:
+
+1. Commit is pushed to `origin/main` and the GH Actions run completed successfully
+2. `curl` the exact asset filename referenced by the live `index.html` — confirm the response body contains the expected change (don't trust local build state or git log alone)
+3. Only then suspect the service worker / browser cache as the culprit
+
+**Color can mask font-weight:** If a computed property looks "correct" in DevTools but still LOOKS wrong visually, inspect all related computed properties. Example: `font-weight:700` on `var(--text2)` (`#8B90A0`, muted gray) looks visually weaker than non-bold `var(--text)` (`#F0F2F7`, near-white) — this led to a false diagnosis of "bold not working" when the real issue was a color override. Always check the full computed style.
+
+**Synthetic (faux) bold:** JetBrains Mono (`var(--font-mono)`) was only self-hosted at weights 400 and 500. Using `font-weight:700` on any mono element triggered browser-synthesized bold, which renders very weakly. `public/fonts/JetBrainsMono-Bold.woff2` was added with a matching `@font-face` at weight 700 to fix this.
+
 ### vault.ts removed (dead code)
 
 `src/core/crypto/vault.ts` was deleted. It had zero imports across the codebase and contained a broken nsec bech32 decode (`.slice(5)` instead of `nip19.decode`). The entire `src/core/crypto/` directory no longer exists — do not recreate it.
@@ -196,6 +226,18 @@ The Dashboard stat bar intentionally shows TWO different denominators that repre
 These are intentionally different numbers (e.g. "ONLINE MINTS 50/69" vs "KNOWN MINTS 88"). Do NOT "fix" this as an inconsistency in future sessions without re-confirming with the maintainer first.
 
 The grid's default behavior of hiding 24h+ offline mints is intentional decluttering. The footer shows: "Showing X of Y — N mints hidden (offline 24h+) Show".
+
+## Typography & Design System Notes
+
+Self-hosted font weights:
+- **DM Sans** — variable, weights 100–900; `--font-body`, `--font-display`, `--sans`
+- **JetBrains Mono** — 400 Regular, 500 Medium, 700 Bold; `--font-mono`. Bold was added in `public/fonts/JetBrainsMono-Bold.woff2` + `@font-face` because weight 700 previously triggered faux bold.
+
+**Stat box padding** — Desktop: Dashboard `.stat-card` and Stats `.stats-metric-card` both use `14px 20px`. MintDetail `.md-sc` uses `12px 16px` intentionally (tighter layout, product decision — do not "unify" without confirmation). Mobile: Dashboard reduces to `10px 14px` at `≤600px`; Stats reduces to `10px 14px` at `≤700px`.
+
+**Mint Info value rows** (MintDetail) — all value `<span>` elements use `.md-info-value` class only, with no inline color/weight/family overrides. Inline `color: var(--text2)` previously made bold text look dim. Full description keeps `style={{textAlign:'left', maxWidth:'none', lineHeight:1.5}}` for layout only.
+
+**Text colors** — `--text` (`#F0F2F7`) for primary/bold values, `--text2` (`#8B90A0`) for secondary/muted, `--text3`/`--t3` (`#AAB4C7`) for tertiary labels. `--text3` was changed from `#80899B` to `#AAB4C7` (brighter) in a previous session.
 
 ## Key rules
 - NEVER modify anything not explicitly requested
