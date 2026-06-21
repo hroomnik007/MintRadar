@@ -146,12 +146,13 @@
 .md-sc-icon.green  { background: rgba(23, 232, 127, 0.1);  color: #17E87F; }
 
 .md-sc-label {
-  font-size: 9px;
+  font-size: 10px;
   color: #8b949e;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 3px;
+  letter-spacing: 0.07em;
+  margin-bottom: 4px;
   font-family: var(--font-mono);
+  font-weight: 500;
 }
 
 .md-sc-value {
