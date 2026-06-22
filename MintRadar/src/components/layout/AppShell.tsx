@@ -169,8 +169,6 @@ export function AppShell() {
           </NavLink>
         </div>
 
-        <div style={{flex:1}}/>
-
         <div className="navbar-auth">
           {profile === null ? (
             <button type="button" className="navbar-login-btn" onClick={() => setShowLoginModal(true)}>
