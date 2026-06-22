@@ -227,6 +227,7 @@ function MintCardDisplay({
   const isOnline = mint.online === true
   const displayName = mint.name ?? hostname
   const uptimePct24h = mint.uptimePct24h ?? null
+  const ageBadge = mintAgeBadge(mint.discoveredAt ?? null)
 
   const cardStyle: React.CSSProperties =
     mint.online === true
@@ -239,24 +240,18 @@ function MintCardDisplay({
       style={cardStyle}
       onClick={() => { navigate(`/mint/${encodeURIComponent(mint.url)}`) }}
     >
-      {onToggleSelect && (
-        <div
-          className="card-select-box"
-          onClick={e => { e.stopPropagation(); onToggleSelect(mint.url, !isSelected) }}
-        >
-          <div className={`card-checkbox${isSelected ? ' checked' : ''}`}>
-            {isSelected && <span>✓</span>}
-          </div>
-        </div>
-      )}
-
-      <div className="card-top" style={onToggleSelect ? { paddingLeft: 24 } : undefined}>
+      <div className="card-top">
         <div className="card-name-row">
           <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={32} radius={7} />
           <div style={{ minWidth: 0 }}>
             <div className="card-name">{displayName}</div>
             <div className="card-host">{hostname}</div>
           </div>
+          {ageBadge && (
+            <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: ageBadge.color, background: ageBadge.bg, border: `1px solid ${ageBadge.border}`, borderRadius: 5, padding: '2px 7px', flexShrink: 0, marginLeft: 'auto' }}>
+              {ageBadge.label}
+            </span>
+          )}
         </div>
         <div
           className={`status-dot${isOnline ? ' online' : ''}`}
@@ -294,6 +289,27 @@ function MintCardDisplay({
             <div className="latency-value muted">—</div>
           )}
         </div>
+        {onToggleSelect && (
+          <button
+            type="button"
+            style={{
+              background: 'transparent',
+              color: isSelected ? '#17E87F' : '#58a6ff',
+              border: `0.5px solid ${isSelected ? '#17E87F' : '#58a6ff'}`,
+              borderRadius: 7,
+              padding: '5px 10px',
+              fontSize: 11,
+              fontWeight: 500,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-mono)',
+              flexShrink: 0,
+              transition: 'opacity 150ms ease',
+            }}
+            onClick={e => { e.stopPropagation(); onToggleSelect(mint.url, !isSelected) }}
+          >
+            {isSelected ? '✓ Comparing' : 'Compare'}
+          </button>
+        )}
         {isLoggedIn && (
           <button
             type="button"

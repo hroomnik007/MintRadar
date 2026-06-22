@@ -162,7 +162,7 @@ export function AppShell() {
           </NavLink>
           <NavLink to="/watchlist" className={({isActive}) => `nav-tab${isActive ? ' active' : ''}`}>
             Watchlist
-            {watchlistCount > 0 && <span className="nav-tab-badge">{watchlistCount}</span>}
+            {profile !== null && watchlistCount > 0 && <span className="nav-tab-badge">{watchlistCount}</span>}
           </NavLink>
           <NavLink to="/stats" className={({isActive}) => `nav-tab${isActive ? ' active' : ''}`}>
             Stats
@@ -171,25 +171,30 @@ export function AppShell() {
 
         <div style={{flex:1}}/>
 
-        {profile ? (
-          <>
-            <div className="navbar-profile">
-              {profile.picture && (
-                <img src={profile.picture} alt="" className="navbar-avatar" />
-              )}
-              <span className="navbar-profile-name">{profile.name ?? profile.npub.slice(0, 12) + '…'}</span>
-            </div>
-            <button type="button" className="navbar-btn" onClick={handleLogout}>
-              Sign out
+        <div className="navbar-auth">
+          {profile === null ? (
+            <button type="button" className="navbar-login-btn" onClick={() => setShowLoginModal(true)}>
+              ⚡ Login via Nostr
             </button>
-          </>
-        ) : (
-          <>
-            <button type="button" className="navbar-btn navbar-btn-primary" onClick={() => setShowLoginModal(true)}>
-              Sign in
-            </button>
-          </>
-        )}
+          ) : (
+            <>
+              <div className="navbar-profile">
+                {profile.picture !== undefined && (
+                  <img src={profile.picture} alt=""
+                    className="navbar-avatar"
+                    onError={(e) => { e.currentTarget.style.display = 'none' }}
+                  />
+                )}
+                <span className="navbar-username">
+                  {profile.name ?? `${profile.pubkey.slice(0,8)}...`}
+                </span>
+              </div>
+              <button type="button" className="navbar-disconnect-btn" onClick={handleLogout}>
+                Disconnect
+              </button>
+            </>
+          )}
+        </div>
       </nav>
 
       {/* Nostr login modal */}
