@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { QRCodeSVG } from 'qrcode.react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useWatchlistSync } from '@/hooks/useWatchlistSync'
+import { initBunkerQR } from '@/core/nostr/client'
 import { NavLogo } from './NavLogo'
 import './AppShell.css'
 
@@ -44,6 +46,7 @@ export function AppShell() {
   const profile = useAuthStore(state => state.profile)
   const login = useAuthStore(state => state.login)
   const loginNsec = useAuthStore(state => state.loginNsec)
+  const loginBunker = useAuthStore(state => state.loginBunker)
   const logout = useAuthStore(state => state.logout)
   const isLoading = useAuthStore(state => state.isLoading)
   const authError = useAuthStore(state => state.error)
@@ -53,6 +56,10 @@ export function AppShell() {
   const [loginMethod, setLoginMethod] = useState<'nip07' | 'nsec' | 'amber'>('nip07')
   const [nsecInput, setNsecInput] = useState('')
   const [nsecError, setNsecError] = useState('')
+  const [bunkerInput, setBunkerInput] = useState('')
+  const [bunkerError, setBunkerError] = useState('')
+  const [qrUri, setQrUri] = useState('')
+  const qrCancelRef = useRef<(() => void) | null>(null)
 
   const [nip07Available, setNip07Available] = useState(false)
   useEffect(() => {
@@ -73,6 +80,11 @@ export function AppShell() {
       setNsecInput('')
       setNsecError('')
       setLoginMethod('nip07')
+      setBunkerInput('')
+      setBunkerError('')
+      setQrUri('')
+      qrCancelRef.current?.()
+      qrCancelRef.current = null
     }
   }, [showLoginModal])
 
@@ -96,6 +108,21 @@ export function AppShell() {
     useWatchlistStore.getState().resetInMemory()
   }
 
+  function handleShowQR() {
+    qrCancelRef.current?.()
+    const { uri, loginPromise, cancel } = initBunkerQR()
+    qrCancelRef.current = cancel
+    setQrUri(uri)
+    setBunkerError('')
+    void loginPromise
+      .then(p => { useAuthStore.setState({ profile: p, isLoading: false, error: null }) })
+      .catch(err => {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          setBunkerError(err.message || 'QR connection failed')
+        }
+      })
+  }
+
   async function handleModalConnect() {
     if (loginMethod === 'nip07') {
       await login()
@@ -106,6 +133,14 @@ export function AppShell() {
       await loginNsec(trimmed)
       if (useAuthStore.getState().error) {
         setNsecError(useAuthStore.getState().error ?? 'Login failed')
+      }
+    } else if (loginMethod === 'amber') {
+      const trimmed = bunkerInput.trim()
+      if (!trimmed) { setBunkerError('Please enter a bunker:// URI or NIP-05 identifier'); return }
+      setBunkerError('')
+      await loginBunker(trimmed)
+      if (useAuthStore.getState().error) {
+        setBunkerError(useAuthStore.getState().error ?? 'Connection failed')
       }
     }
   }
@@ -127,40 +162,34 @@ export function AppShell() {
           </NavLink>
           <NavLink to="/watchlist" className={({isActive}) => `nav-tab${isActive ? ' active' : ''}`}>
             Watchlist
-            {profile !== null && watchlistCount > 0 && (
-              <span className="nav-tab-badge">{watchlistCount}</span>
-            )}
+            {watchlistCount > 0 && <span className="nav-tab-badge">{watchlistCount}</span>}
           </NavLink>
           <NavLink to="/stats" className={({isActive}) => `nav-tab${isActive ? ' active' : ''}`}>
             Stats
           </NavLink>
         </div>
 
-        {/* Auth */}
-        <div className="navbar-auth">
-          {profile === null ? (
-            <button type="button" className="navbar-login-btn" onClick={() => setShowLoginModal(true)}>
-              ⚡ Login via Nostr
+        <div style={{flex:1}}/>
+
+        {profile ? (
+          <>
+            <div className="navbar-profile">
+              {profile.picture && (
+                <img src={profile.picture} alt="" className="navbar-avatar" />
+              )}
+              <span className="navbar-profile-name">{profile.name ?? profile.npub.slice(0, 12) + '…'}</span>
+            </div>
+            <button type="button" className="navbar-btn" onClick={handleLogout}>
+              Sign out
             </button>
-          ) : (
-            <>
-              <div className="navbar-profile">
-                {profile.picture !== undefined && (
-                  <img src={profile.picture} alt=""
-                    className="navbar-avatar"
-                    onError={(e) => { e.currentTarget.style.display = 'none' }}
-                  />
-                )}
-                <span className="navbar-username">
-                  {profile.name ?? `${profile.pubkey.slice(0,8)}...`}
-                </span>
-              </div>
-              <button type="button" className="navbar-disconnect-btn" onClick={handleLogout}>
-                Disconnect
-              </button>
-            </>
-          )}
-        </div>
+          </>
+        ) : (
+          <>
+            <button type="button" className="navbar-btn navbar-btn-primary" onClick={() => setShowLoginModal(true)}>
+              Sign in
+            </button>
+          </>
+        )}
       </nav>
 
       {/* Nostr login modal */}
@@ -182,7 +211,7 @@ export function AppShell() {
               {([
                 { id: 'nip07', title: 'Nostr extension', desc: 'Sign in with Alby, nos2x or any NIP-07 signer' },
                 { id: 'nsec', title: 'Nostr key (nsec)', desc: 'Paste a private key — stored only in this browser' },
-                { id: 'amber', title: 'Amber / remote', desc: 'Approve the request on a remote signer' },
+                { id: 'amber', title: 'Amber / remote', desc: 'Connect via NIP-46 bunker or mobile Amber app' },
               ] as const).map(m => (
                 <div
                   key={m.id}
@@ -225,10 +254,34 @@ export function AppShell() {
             )}
 
             {loginMethod === 'amber' && (
-              <div className="nostr-warn">Remote signer (NIP-46) support coming soon.</div>
+              <div className="nostr-amber-wrap">
+                <input
+                  className="nostr-nsec-input"
+                  type="text"
+                  placeholder="bunker://... or user@domain.com"
+                  value={bunkerInput}
+                  onChange={e => { setBunkerInput(e.target.value); setBunkerError('') }}
+                  autoFocus
+                />
+                {bunkerError && <div className="nostr-nsec-error">{bunkerError}</div>}
+                <div className="nostr-amber-qr-row">
+                  <button type="button" className="nostr-qr-btn" onClick={handleShowQR}>
+                    {qrUri ? 'Refresh QR' : 'Show QR for Amber'}
+                  </button>
+                  {qrUri && <span className="nostr-qr-hint">Scan with Amber on your phone</span>}
+                </div>
+                {qrUri && (
+                  <div className="nostr-qr-wrap">
+                    <QRCodeSVG value={qrUri} size={192} bgColor="#0d1117" fgColor="#e6edf3" />
+                  </div>
+                )}
+                {isLoading && (
+                  <div className="nostr-warn">Connecting to remote signer…</div>
+                )}
+              </div>
             )}
 
-            {authError && loginMethod !== 'nsec' && (
+            {authError && loginMethod !== 'nsec' && loginMethod !== 'amber' && (
               <div className="nostr-auth-error">{authError}</div>
             )}
 
@@ -245,8 +298,8 @@ export function AppShell() {
                   className="nostr-connect-btn"
                   disabled={
                     isLoading ||
-                    loginMethod === 'amber' ||
-                    (loginMethod === 'nip07' && !nip07Available)
+                    (loginMethod === 'nip07' && !nip07Available) ||
+                    (loginMethod === 'amber' && (!!qrUri || !bunkerInput.trim()))
                   }
                   onClick={() => { void handleModalConnect() }}
                 >

@@ -1,4 +1,6 @@
-import { nip19 } from 'nostr-tools'
+import { nip19, generateSecretKey, getPublicKey as nostrGetPublicKey } from 'nostr-tools'
+import { BunkerSigner, parseBunkerInput, createNostrConnectURI, toBunkerURL } from 'nostr-tools/nip46'
+import type { EventTemplate } from 'nostr-tools'
 import * as secp from '@noble/secp256k1'
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils'
 import { sharedPool } from '@/core/nostr/pool'
@@ -76,4 +78,142 @@ export async function loginWithNsec(input: string): Promise<NostrProfile> {
   if (meta.name !== undefined) profile.name = meta.name
   if (meta.picture !== undefined) profile.picture = meta.picture
   return profile
+}
+
+// ── NIP-46 bunker session ──────────────────────────────────────
+
+// Ephemeral client key for the NIP-46 session — NOT the user's identity key.
+// Lives only in sessionStorage; cleared on logout or tab close.
+let activeBunkerSigner: BunkerSigner | null = null
+// Saved NIP-07 extension reference so it can be restored on logout
+let originalNostr: Window['nostr'] | undefined = undefined
+
+const BUNKER_URI_KEY = 'bunkerURI'
+const BUNKER_SECRET_KEY = 'bunkerClientSecretKey'
+const BUNKER_PUBKEY_KEY = 'bunkerPubkey'
+
+const NIP46_RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net']
+
+function installBunkerShim(signer: BunkerSigner, pubkeyHex: string): void {
+  if (typeof window === 'undefined') return
+  if (window.nostr !== undefined) {
+    originalNostr = window.nostr
+  }
+  activeBunkerSigner = signer
+  window.nostr = {
+    getPublicKey: async () => pubkeyHex,
+    signEvent: (event: object) =>
+      signer.signEvent(event as EventTemplate) as Promise<object>,
+    nip44: {
+      encrypt: (pubkey: string, plaintext: string) => signer.nip44Encrypt(pubkey, plaintext),
+      decrypt: (pubkey: string, ciphertext: string) => signer.nip44Decrypt(pubkey, ciphertext),
+    },
+    nip04: {
+      encrypt: async () => { throw new Error('NIP-04 not supported by remote signer') },
+      decrypt: async () => { throw new Error('NIP-04 not supported by remote signer') },
+    },
+  }
+}
+
+export function removeBunkerShim(): void {
+  if (activeBunkerSigner === null) return
+  if (typeof window !== 'undefined') {
+    if (originalNostr !== undefined) {
+      window.nostr = originalNostr
+      originalNostr = undefined
+    } else {
+      delete window.nostr
+    }
+  }
+  activeBunkerSigner.close().catch(() => {})
+  activeBunkerSigner = null
+  sessionStorage.removeItem(BUNKER_URI_KEY)
+  sessionStorage.removeItem(BUNKER_SECRET_KEY)
+  sessionStorage.removeItem(BUNKER_PUBKEY_KEY)
+}
+
+export async function loginWithBunker(bunkerInput: string): Promise<NostrProfile> {
+  const clientSecretKey = generateSecretKey()
+  const bp = await parseBunkerInput(bunkerInput)
+  if (!bp) throw new Error('Invalid bunker URI or NIP-05 identifier')
+  const signer = BunkerSigner.fromBunker(clientSecretKey, bp, {
+    onauth: (url) => window.open(url, '_blank'),
+  })
+  await signer.connect()
+  const pubkeyHex = await signer.getPublicKey()
+  installBunkerShim(signer, pubkeyHex)
+  // Store canonical bunker:// URL so restore never needs a network lookup
+  sessionStorage.setItem(BUNKER_URI_KEY, toBunkerURL(bp))
+  sessionStorage.setItem(BUNKER_SECRET_KEY, bytesToHex(clientSecretKey))
+  sessionStorage.setItem(BUNKER_PUBKEY_KEY, pubkeyHex)
+  const npub = nip19.npubEncode(pubkeyHex)
+  const meta = await fetchNostrProfile(pubkeyHex)
+  const profile: NostrProfile = { pubkey: pubkeyHex, npub }
+  if (meta.name !== undefined) profile.name = meta.name
+  if (meta.picture !== undefined) profile.picture = meta.picture
+  return profile
+}
+
+// Initiates a nostrconnect:// QR flow (mobile Amber pairing).
+// Returns the URI to display as QR and a promise that resolves when Amber scans.
+export function initBunkerQR(): {
+  uri: string
+  loginPromise: Promise<NostrProfile>
+  cancel: () => void
+} {
+  const clientSecretKey = generateSecretKey()
+  const clientPubkey = nostrGetPublicKey(clientSecretKey)
+  const secret = bytesToHex(generateSecretKey()).slice(0, 16)
+  const uri = createNostrConnectURI({
+    clientPubkey,
+    relays: NIP46_RELAYS,
+    secret,
+    name: 'MintRadar',
+  })
+  const abortCtrl = new AbortController()
+  const loginPromise = BunkerSigner.fromURI(
+    clientSecretKey,
+    uri,
+    { onauth: (url) => window.open(url, '_blank') },
+    abortCtrl.signal
+  ).then(async signer => {
+    const pubkeyHex = await signer.getPublicKey()
+    installBunkerShim(signer, pubkeyHex)
+    // Derive canonical bunker:// from signer.bp so restore doesn't reuse a one-time URI
+    sessionStorage.setItem(BUNKER_URI_KEY, toBunkerURL(signer.bp))
+    sessionStorage.setItem(BUNKER_SECRET_KEY, bytesToHex(clientSecretKey))
+    sessionStorage.setItem(BUNKER_PUBKEY_KEY, pubkeyHex)
+    const npub = nip19.npubEncode(pubkeyHex)
+    const meta = await fetchNostrProfile(pubkeyHex)
+    const profile: NostrProfile = { pubkey: pubkeyHex, npub }
+    if (meta.name !== undefined) profile.name = meta.name
+    if (meta.picture !== undefined) profile.picture = meta.picture
+    return profile
+  })
+  return { uri, loginPromise, cancel: () => abortCtrl.abort() }
+}
+
+// Restores a bunker session after a page refresh.
+// Installs the window.nostr shim synchronously with the stored pubkey,
+// then re-establishes the relay subscription in the background.
+export async function restoreBunkerSession(): Promise<void> {
+  const storedUri = sessionStorage.getItem(BUNKER_URI_KEY)
+  const secretHex = sessionStorage.getItem(BUNKER_SECRET_KEY)
+  const storedPubkey = sessionStorage.getItem(BUNKER_PUBKEY_KEY)
+  if (!storedUri || !secretHex || !storedPubkey) return
+  try {
+    const clientSecretKey = hexToBytes(secretHex)
+    const bp = await parseBunkerInput(storedUri)
+    if (!bp) throw new Error('Invalid stored bunker URI')
+    const signer = BunkerSigner.fromBunker(clientSecretKey, bp, {
+      onauth: (url) => window.open(url, '_blank'),
+    })
+    installBunkerShim(signer, storedPubkey)
+    // Reconnect relay subscription in background; clear session if it fails
+    void signer.connect().catch(() => { removeBunkerShim() })
+  } catch {
+    sessionStorage.removeItem(BUNKER_URI_KEY)
+    sessionStorage.removeItem(BUNKER_SECRET_KEY)
+    sessionStorage.removeItem(BUNKER_PUBKEY_KEY)
+  }
 }

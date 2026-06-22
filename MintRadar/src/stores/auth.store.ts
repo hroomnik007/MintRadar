@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { loginWithNip07, loginWithNsec, type NostrProfile } from '@/core/nostr/client'
+import { loginWithNip07, loginWithNsec, loginWithBunker, removeBunkerShim, type NostrProfile } from '@/core/nostr/client'
 
 export interface Nip65Relays {
   read: string[]
@@ -14,6 +14,7 @@ interface AuthState {
   error: string | null
   login: () => Promise<void>
   loginNsec: (input: string) => Promise<void>
+  loginBunker: (input: string) => Promise<void>
   logout: () => void
   isLoggedIn: () => boolean
   setNip65Relays: (relays: Nip65Relays) => void
@@ -54,7 +55,21 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      loginBunker: async (input: string) => {
+        set({ isLoading: true, error: null })
+        try {
+          const profile = await loginWithBunker(input)
+          set({ profile, isLoading: false })
+        } catch (err) {
+          set({
+            error: err instanceof Error ? err.message : 'Connection failed',
+            isLoading: false,
+          })
+        }
+      },
+
       logout: () => {
+        removeBunkerShim()
         set({ profile: null, nip65Relays: null, error: null })
       },
 
