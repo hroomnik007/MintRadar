@@ -1,4 +1,5 @@
 import cron from 'node-cron'
+import pLimit from 'p-limit'
 import { getKnownMints, probeMintToDb, pruneOldHistory, backfillServerLocations } from './prober.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
 
@@ -34,12 +35,8 @@ export function startCron(): void {
   cron.schedule('*/5 * * * *', async () => {
     try {
       const mints = await getKnownMints()
-      const PROBE_CONCURRENCY = 10
-      for (let i = 0; i < mints.length; i += PROBE_CONCURRENCY) {
-        await Promise.allSettled(
-          mints.slice(i, i + PROBE_CONCURRENCY).map(url => probeMintToDb(url))
-        )
-      }
+      const limit = pLimit(10)
+      await Promise.allSettled(mints.map(url => limit(() => probeMintToDb(url))))
     } catch (err) {
       if (process.env['NODE_ENV'] !== 'production') {
         console.error('[cron] probe error:', err)
