@@ -1,4 +1,5 @@
 import type { NostrEvent } from 'nostr-tools'
+import { verifyEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
 
 export const WATCHLIST_RELAYS = [
@@ -30,8 +31,9 @@ export async function fetchRemoteWatchlist(pubkey: string, userWriteRelays?: str
     const relayQueries = relays.map(relay =>
       sharedPool.querySync([relay], { kinds: [WATCHLIST_KIND], authors: [pubkey], limit: 1 })
         .then(events => {
-          if (!events[0]?.content) throw new Error('no event')
-          return events[0]
+          const validEvents = events.filter(e => verifyEvent(e))
+          if (!validEvents[0]?.content) throw new Error('no event')
+          return validEvents[0]
         })
     )
     const event = await Promise.race([

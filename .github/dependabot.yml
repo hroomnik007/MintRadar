@@ -1,0 +1,10 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/MintRadar"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/MintRadar/backend"
+    schedule:
+      interval: "weekly"

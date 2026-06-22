@@ -34,7 +34,12 @@ export function startCron(): void {
   cron.schedule('*/5 * * * *', async () => {
     try {
       const mints = await getKnownMints()
-      await Promise.allSettled(mints.map(url => probeMintToDb(url)))
+      const PROBE_CONCURRENCY = 10
+      for (let i = 0; i < mints.length; i += PROBE_CONCURRENCY) {
+        await Promise.allSettled(
+          mints.slice(i, i + PROBE_CONCURRENCY).map(url => probeMintToDb(url))
+        )
+      }
     } catch (err) {
       if (process.env['NODE_ENV'] !== 'production') {
         console.error('[cron] probe error:', err)

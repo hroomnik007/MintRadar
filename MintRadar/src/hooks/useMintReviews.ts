@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { verifyEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
 
 const REVIEW_RELAYS = [
@@ -33,8 +34,9 @@ export function useMintReviews(mintUrl: string) {
       '#u': [mintUrl],
       limit: 50,
     }).then(events => {
-      const byPubkey = new Map<string, typeof events[0]>()
-      for (const e of events) {
+      const validEvents = events.filter(e => verifyEvent(e))
+      const byPubkey = new Map<string, typeof validEvents[0]>()
+      for (const e of validEvents) {
         const existing = byPubkey.get(e.pubkey)
         if (!existing || e.created_at > existing.created_at) {
           byPubkey.set(e.pubkey, e)

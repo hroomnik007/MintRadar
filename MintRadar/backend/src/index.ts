@@ -1,6 +1,6 @@
 import express, { type Request, type Response, type NextFunction } from 'express'
 import cors from 'cors'
-import { SimplePool } from 'nostr-tools'
+import { SimplePool, verifyEvent } from 'nostr-tools'
 import WebSocket from 'ws'
 import { pool, initDb } from './db.js'
 import { isSafeUrl, safeFetch } from './ssrf.js'
@@ -884,9 +884,10 @@ app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {
     ),
   ])
     .then(events => {
+      const validEvents = events.filter(e => verifyEvent(e))
       // One review per pubkey — keep the most recent
-      const byPubkey = new Map<string, typeof events[0]>()
-      for (const e of events) {
+      const byPubkey = new Map<string, typeof validEvents[0]>()
+      for (const e of validEvents) {
         const existing = byPubkey.get(e.pubkey)
         if (!existing || e.created_at > existing.created_at) {
           byPubkey.set(e.pubkey, e)

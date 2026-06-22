@@ -170,7 +170,9 @@ export async function probeMintToDb(url: string): Promise<void> {
         } else {
           online = true
           latencyMs = Date.now() - start
-          const iconUrl = typeof raw['icon_url'] === 'string' ? raw['icon_url'] : null
+          const iconUrl = typeof raw['icon_url'] === 'string' && raw['icon_url'].startsWith('https://')
+            ? raw['icon_url']
+            : null
           const version = typeof raw['version'] === 'string' ? raw['version'] : null
           const tosUrl = typeof raw['tos_url'] === 'string' ? raw['tos_url'] : null
           const descriptionLong = typeof raw['description_long'] === 'string' ? raw['description_long'] : null

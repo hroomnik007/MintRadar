@@ -56,7 +56,7 @@ export function useWatchlistSync() {
 
         console.log('sync: fetching kind:10003 from relays')
         const remote = await fetchRemoteWatchlist(pubkey, userWriteRelays)
-        console.log(`sync: decrypted ${remote.length} mints`, remote)
+        if (import.meta.env.DEV) { console.log(`sync: decrypted ${remote.length} mints`, remote) }
 
         if (remote.length > 0) {
           // Remote is authoritative — replace Dexie content entirely
@@ -98,7 +98,7 @@ export function useWatchlistSync() {
     if (!pubkey) return
     if (syncedForPubkey.current !== pubkey) return
     if (isSyncing.current) return
-    console.log('sync: Phase 2 publishing', mints.length, 'mints to relays')
+    if (import.meta.env.DEV) { console.log('sync: Phase 2 publishing', mints.length, 'mints to relays') }
     void publishWatchlist(pubkey, mints, userWriteRelaysRef.current)
   }, [mints, profile?.pubkey])
 }

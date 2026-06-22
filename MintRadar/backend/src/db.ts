@@ -40,6 +40,9 @@ export async function initDb(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_mint_version_history_url_date
       ON mint_version_history(url, first_seen_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_mints_trust_score
+      ON mints(last_trust_score DESC NULLS LAST);
   `)
 
   // Column migrations — each in its own query so a failure in one doesn't block others

@@ -1,3 +1,4 @@
+import { verifyEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
 
 export interface NostrMintEvent {
@@ -54,6 +55,7 @@ export async function fetchNostrMints(signal?: AbortSignal): Promise<NostrMintEv
         { kinds: [38172], limit: 100 } as import('nostr-tools').Filter,
         {
           onevent(event) {
+            if (!verifyEvent(event)) return
             const rawUrl = extractTag(event.tags as string[][], 'u')
             if (!rawUrl) return
             if (!rawUrl.startsWith('https://') || rawUrl.length > MAX_URL_LENGTH) return
