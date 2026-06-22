@@ -246,7 +246,7 @@ function MintCardDisplay({
             <div className="card-host">{hostname}</div>
           </div>
           {ageBadge && (
-            <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: ageBadge.color, background: ageBadge.bg, border: `1px solid ${ageBadge.border}`, borderRadius: 5, padding: '2px 7px', flexShrink: 0, marginLeft: 'auto', marginRight: 6 }}>
+            <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: ageBadge.color, background: ageBadge.bg, border: `1px solid ${ageBadge.border}`, borderRadius: 5, padding: '2px 7px', flexShrink: 0, marginLeft: 'auto', marginRight: 12 }}>
               {ageBadge.label}
             </span>
           )}
@@ -287,7 +287,7 @@ function MintCardDisplay({
             <div className="latency-value muted">—</div>
           )}
         </div>
-        {onCompare && (
+        {onCompare && isOnline && (
           <button
             type="button"
             style={{
@@ -295,7 +295,7 @@ function MintCardDisplay({
               color: '#58a6ff',
               border: '0.5px solid #58a6ff',
               borderRadius: 7,
-              padding: '5px 10px',
+              padding: '6px 12px',
               fontSize: 11,
               fontWeight: 500,
               cursor: 'pointer',
@@ -930,6 +930,7 @@ export default function Dashboard() {
         const q = comparePickerSearch.toLowerCase()
         const otherMints = allMints.filter(m =>
           m.url !== compareBaseUrl &&
+          m.online === true &&
           (q === '' || (m.name ?? m.url).toLowerCase().includes(q) || m.url.toLowerCase().includes(q))
         )
         return (
