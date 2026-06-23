@@ -756,7 +756,7 @@ export default function Dashboard() {
             ref={searchInputRef}
             className="search-input"
             type="text"
-            placeholder="Search mints by name, URL or version…"
+            placeholder="Search mints by name, URL or version…  ( / )"
             value={search}
             onChange={e => setSearch(e.target.value)}
             onFocus={() => setSearchFocused(true)}
