@@ -1,0 +1,1 @@
+Replace screenshot-mobile.png with actual app screenshot (390x844px) before PWABuilder submission

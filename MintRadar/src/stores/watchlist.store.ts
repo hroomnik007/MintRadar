@@ -1,0 +1,72 @@
+import { create } from 'zustand'
+import { immer } from 'zustand/middleware/immer'
+import { db } from '@/db'
+
+interface WatchlistState {
+  mints: string[]
+  isLoaded: boolean
+  loadFromDb: () => Promise<void>
+  addMint: (url: string) => Promise<void>
+  removeMint: (url: string) => Promise<void>
+  clearWatchlist: () => Promise<void>
+  resetInMemory: () => void
+  isWatching: (url: string) => boolean
+}
+
+export const useWatchlistStore = create<WatchlistState>()(
+  immer((set, get) => ({
+    mints: [],
+    isLoaded: false,
+
+    loadFromDb: async () => {
+      const entries = await db.watchlist.toArray()
+      set(state => {
+        state.mints = entries.map(e => e.url)
+        state.isLoaded = true
+      })
+    },
+
+    addMint: async (url: string) => {
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        throw new TypeError('URL must start with http:// or https://')
+      }
+      await db.watchlist.put({
+        url,
+        addedAt: new Date(),
+        notifyOnDown: false,
+        notifyOnUp: false,
+      })
+      set(state => {
+        if (!state.mints.includes(url)) {
+          state.mints.push(url)
+        }
+      })
+    },
+
+    removeMint: async (url: string) => {
+      await db.watchlist.delete(url)
+      set(state => {
+        state.mints = state.mints.filter(m => m !== url)
+      })
+    },
+
+    clearWatchlist: async () => {
+      await db.watchlist.clear()
+      set(state => {
+        state.mints = []
+        state.isLoaded = false
+      })
+    },
+
+    resetInMemory: () => {
+      set(state => {
+        state.mints = []
+        state.isLoaded = false
+      })
+    },
+
+    isWatching: (url: string) => {
+      return get().mints.includes(url)
+    },
+  }))
+)
