@@ -588,9 +588,13 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
       ) latest ON true
     `),
     pool.query(`
-      SELECT ROUND(AVG(latency_ms))::int AS avg_latency
+      SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY latency_ms)::int AS avg_latency
       FROM mint_history
-      WHERE online = true AND checked_at > NOW() - INTERVAL '24 hours'
+      WHERE online = true
+        AND checked_at > NOW() - INTERVAL '24 hours'
+        AND latency_ms IS NOT NULL
+        AND latency_ms > 0
+        AND latency_ms < 10000
     `),
   ])
     .then(([mintsResult, latencyResult]) => {
