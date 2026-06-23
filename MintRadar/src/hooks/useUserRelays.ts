@@ -1,4 +1,6 @@
 import { useEffect } from 'react'
+import { verifyEvent } from 'nostr-tools'
+import type { NostrEvent } from 'nostr-tools'
 import { useAuthStore } from '@/stores/auth.store'
 import { sharedPool } from '@/core/nostr/pool'
 import { fetchNostrProfile } from '@/core/nostr/client'
@@ -46,8 +48,8 @@ export function useUserRelays(): { read: string[] | null; write: string[] | null
     ])
       .then(events => {
         if (cancelled) return
-        const event = (events as { tags: string[][] }[])[0]
-        if (!event) return
+        const event = (events as NostrEvent[])[0]
+        if (!event || !verifyEvent(event)) return
 
         // NIP-65: unmarked r-tags = both read+write, t[2]==='read' = read only,
         // t[2]==='write' = write only

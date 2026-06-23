@@ -1,9 +1,10 @@
-import { nip19, generateSecretKey, getPublicKey as nostrGetPublicKey } from 'nostr-tools'
+import { nip19, generateSecretKey, getPublicKey as nostrGetPublicKey, verifyEvent } from 'nostr-tools'
 import { BunkerSigner, parseBunkerInput, createNostrConnectURI, toBunkerURL } from 'nostr-tools/nip46'
 import type { EventTemplate } from 'nostr-tools'
 import * as secp from '@noble/secp256k1'
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils'
 import { sharedPool } from '@/core/nostr/pool'
+import { useAuthStore } from '@/stores/auth.store'
 
 export interface NostrProfile {
   pubkey: string
@@ -32,7 +33,7 @@ export async function fetchNostrProfile(pubkey: string, extraRelays?: string[]):
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
     ])
     const event = events[0]
-    if (!event) return {}
+    if (!event || !verifyEvent(event)) return {}
     const meta = JSON.parse(event.content) as { display_name?: string; name?: string; picture?: string }
     const result: { name?: string; picture?: string } = {}
     const nameVal = meta.display_name ?? meta.name
@@ -139,7 +140,10 @@ export async function loginWithBunker(bunkerInput: string): Promise<NostrProfile
   const signer = BunkerSigner.fromBunker(clientSecretKey, bp, {
     onauth: (url) => window.open(url, '_blank'),
   })
-  await signer.connect()
+  await Promise.race([
+    signer.connect(),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Connection timeout — bunker relay did not respond within 30 seconds')), 30000)),
+  ])
   const pubkeyHex = await signer.getPublicKey()
   installBunkerShim(signer, pubkeyHex)
   // Store canonical bunker:// URL so restore never needs a network lookup
@@ -208,9 +212,15 @@ export async function restoreBunkerSession(): Promise<void> {
     const signer = BunkerSigner.fromBunker(clientSecretKey, bp, {
       onauth: (url) => window.open(url, '_blank'),
     })
+    // Optimistic restore: shim installed before connect() resolves to allow
+    // synchronous window.nostr access on page refresh. If connect() fails,
+    // M-1 fix ensures auth store is cleared and user is logged out cleanly.
     installBunkerShim(signer, storedPubkey)
-    // Reconnect relay subscription in background; clear session if it fails
-    void signer.connect().catch(() => { removeBunkerShim() })
+    // Reconnect relay subscription in background; clear session and log out if it fails
+    void signer.connect().catch(() => {
+      removeBunkerShim()
+      useAuthStore.getState().logout()
+    })
   } catch {
     sessionStorage.removeItem(BUNKER_URI_KEY)
     sessionStorage.removeItem(BUNKER_SECRET_KEY)

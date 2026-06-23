@@ -16,11 +16,11 @@ const NOTIFICATION_RELAYS = [
   'wss://relay.nostr.band',
   'wss://nostr.bitcoiner.social',
   'wss://nostr.mom',
-  'wss://nostr.oxtr.dev/',
-  'wss://relay.mostr.pub/',
-  'wss://relay.noswhere.com/',
-  'wss://pyramid.fiatjaf.com/',
-  'wss://nostr.lopp.social/',
+  'wss://nostr.oxtr.dev',
+  'wss://relay.mostr.pub',
+  'wss://relay.noswhere.com',
+  'wss://pyramid.fiatjaf.com',
+  'wss://nostr.lopp.social',
 ]
 
 // Track previous online states and trust scores to detect transitions
@@ -51,7 +51,7 @@ export function useWatchlistNotifications(
 
         // Detect online → offline transition
         if (prev === true && isOnline === false) {
-          console.log(`[notifications] mint down: ${url}`)
+          if (import.meta.env.DEV) console.log(`[notifications] mint down: ${url}`)
           await sendNostrDM(
             profile.pubkey,
             `⚠️ MintRadar Alert\n\nMint is down: ${url}\n\nCheck status: https://mintradar.pedani.eu`,
@@ -61,7 +61,7 @@ export function useWatchlistNotifications(
 
         // Detect offline → online transition
         if (prev === false && isOnline === true) {
-          console.log(`[notifications] mint recovered: ${url}`)
+          if (import.meta.env.DEV) console.log(`[notifications] mint recovered: ${url}`)
           await sendNostrDM(
             profile.pubkey,
             `✅ MintRadar Alert\n\nMint is back online: ${url}\n\nLatency: ${current.latencyMs}ms`,
@@ -150,7 +150,7 @@ async function sendNostrDM(recipientPubkey: string, content: string, relays: str
     publishPromises.forEach(p => p.catch(() => {}))
     await Promise.any(publishPromises)
 
-    console.log('[notifications] gift-wrapped DM sent successfully')
+    if (import.meta.env.DEV) console.log('[notifications] gift-wrapped DM sent successfully')
   } catch (err) {
     console.warn('[notifications] failed to send DM:', err)
   }

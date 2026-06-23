@@ -1,4 +1,4 @@
-import { SimplePool } from 'nostr-tools'
+import { SimplePool, verifyEvent } from 'nostr-tools'
 import type { Filter } from 'nostr-tools'
 import WebSocket from 'ws'
 import { pool } from './db.js'
@@ -41,7 +41,8 @@ export async function discoverMintsFromNostr(): Promise<number> {
       ),
     ])
 
-    for (const event of events) {
+    const validEvents = events.filter(e => verifyEvent(e))
+    for (const event of validEvents) {
       const uTag = event.tags.find((t: string[]) => t[0] === 'u')
       if (!uTag || !uTag[1]) continue
       const raw = uTag[1].trim()
