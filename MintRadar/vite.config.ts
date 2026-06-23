@@ -50,12 +50,13 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react':  ['react', 'react-dom', 'react-router-dom'],
-          'vendor-nostr':  ['nostr-tools'],
-          'vendor-charts': ['recharts'],
-          'vendor-db':     ['dexie', 'dexie-react-hooks'],
-          crypto:          ['@noble/secp256k1', '@noble/ciphers', '@noble/hashes'],
+        // Vite 8 (rolldown) requires manualChunks as a function, not a record object
+        manualChunks(id) {
+          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router-dom/')) return 'vendor-react'
+          if (id.includes('/nostr-tools/')) return 'vendor-nostr'
+          if (id.includes('/recharts/')) return 'vendor-charts'
+          if (id.includes('/dexie/') || id.includes('/dexie-react-hooks/')) return 'vendor-db'
+          if (id.includes('/@noble/')) return 'crypto'
         },
       },
     },
