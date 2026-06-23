@@ -1,0 +1,45 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#0B0C11"/>
+  <rect x="50" y="50" width="1100" height="530" fill="#111318" rx="16"/>
+
+  <!-- NavLogo scaled 6x (28→168px), positioned at left -->
+  <g transform="translate(90, 155) scale(6)">
+    <circle cx="14" cy="14" r="12" stroke="#00E676" stroke-width="1" opacity="0.2" fill="none"/>
+    <circle cx="14" cy="14" r="8.5" stroke="#00E676" stroke-width="1" opacity="0.4" fill="none"/>
+    <circle cx="14" cy="14" r="5" stroke="#00E676" stroke-width="1.5" opacity="0.7" fill="none"/>
+    <circle cx="14" cy="14" r="2" fill="#00E676"/>
+    <line x1="14" y1="2" x2="14" y2="9" stroke="#00E676" stroke-width="1" opacity="0.5"/>
+    <line x1="14" y1="19" x2="14" y2="26" stroke="#00E676" stroke-width="1" opacity="0.5"/>
+    <line x1="2" y1="14" x2="9" y2="14" stroke="#00E676" stroke-width="1" opacity="0.5"/>
+    <line x1="19" y1="14" x2="26" y2="14" stroke="#00E676" stroke-width="1" opacity="0.5"/>
+    <circle cx="20" cy="8" r="1.5" fill="#00E676" opacity="0.8"/>
+  </g>
+
+  <!-- MintRadar text -->
+  <text x="270" y="215" font-family="monospace" font-size="88" font-weight="700" fill="white">Mint</text>
+  <text x="270" y="215" font-family="monospace" font-size="88" font-weight="700" fill="none">
+    <tspan fill="white">Mint</tspan><tspan fill="#00E676">Radar</tspan>
+  </text>
+  <text x="272" y="270" font-family="monospace" font-size="28" fill="#AAB4C7">Real-time Cashu mint monitoring &amp; discovery</text>
+
+  <line x1="90" y1="310" x2="1110" y2="310" stroke="#1E2229" stroke-width="2"/>
+
+  <!-- Feature pills row 1 -->
+  <rect x="90" y="338" width="260" height="68" fill="#161B22" rx="10" stroke="#1E2229" stroke-width="1.5"/>
+  <text x="220" y="380" font-family="monospace" font-size="24" fill="#00E676" text-anchor="middle">✓ Trust Score</text>
+
+  <rect x="370" y="338" width="260" height="68" fill="#161B22" rx="10" stroke="#1E2229" stroke-width="1.5"/>
+  <text x="500" y="380" font-family="monospace" font-size="24" fill="#00E676" text-anchor="middle">✓ NUT Coverage</text>
+
+  <rect x="650" y="338" width="260" height="68" fill="#161B22" rx="10" stroke="#1E2229" stroke-width="1.5"/>
+  <text x="780" y="380" font-family="monospace" font-size="24" fill="#00E676" text-anchor="middle">✓ Uptime 24h</text>
+
+  <!-- Feature pills row 2 -->
+  <rect x="230" y="422" width="260" height="68" fill="#161B22" rx="10" stroke="#1E2229" stroke-width="1.5"/>
+  <text x="360" y="464" font-family="monospace" font-size="24" fill="#00E676" text-anchor="middle">✓ Watchlist</text>
+
+  <rect x="510" y="422" width="260" height="68" fill="#161B22" rx="10" stroke="#1E2229" stroke-width="1.5"/>
+  <text x="640" y="464" font-family="monospace" font-size="24" fill="#00E676" text-anchor="middle">✓ Nostr Login</text>
+
+  <text x="600" y="548" font-family="monospace" font-size="22" fill="#444B5A" text-anchor="middle">mintradar.pedani.eu · Open source · Privacy first</text>
+</svg>
