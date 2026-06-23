@@ -20,6 +20,7 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             cd MintRadar/backend
+            rm -rf node_modules
             npm ci
             npm run build
             cd /var/www/mintradar-repo/MintRadar
