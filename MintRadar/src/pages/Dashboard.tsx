@@ -475,9 +475,12 @@ export default function Dashboard() {
 
   const avgLatency24h = useMemo(() => {
     const lats = allMints
-      .filter(m => m.online === true && m.latencyMs !== null)
+      .filter(m => m.online === true && m.latencyMs !== null && m.latencyMs > 0 && m.latencyMs < 10000)
       .map(m => m.latencyMs as number)
-    return lats.length > 0 ? Math.round(lats.reduce((a, b) => a + b) / lats.length) : null
+      .sort((a, b) => a - b)
+    if (lats.length === 0) return null
+    const mid = Math.floor(lats.length / 2)
+    return lats.length % 2 !== 0 ? lats[mid]! : Math.round((lats[mid - 1]! + lats[mid]!) / 2)
   }, [allMints])
 
   const totalCount = allMints.length
@@ -727,7 +730,7 @@ export default function Dashboard() {
         <div className="stat-card">
           <div className="stat-icon orange"><IcTimer /></div>
           <div>
-            <div className="stat-label">Avg Latency</div>
+            <div className="stat-label">Median Latency</div>
             <div className="stat-value">
               {avgLatency24h !== null ? `${avgLatency24h} ms` : '—'}
             </div>
