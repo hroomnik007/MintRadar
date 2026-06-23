@@ -6,7 +6,7 @@
 [![Self-Hostable](https://img.shields.io/badge/self--hostable-yes-green.svg)](#-getting-started--self-hosting)
 [![Open Source](https://img.shields.io/badge/open%20source-%E2%9D%A4-red.svg)](https://github.com/hroomnik007/MintRadar)
 
-**Live Demo:** [mintradar.pedani.eu](https://mintradar.pedani.eu)
+**Live:** [mintradar.pedani.eu](https://mintradar.pedani.eu)
 
 ---
 
