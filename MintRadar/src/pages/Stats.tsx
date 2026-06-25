@@ -322,6 +322,11 @@ export default function Stats() {
       .map(([loc, count]) => ({ loc, count, pct: total > 0 ? Math.round(count / total * 100) : 0 }))
   }, [knownMintsData])
 
+  const cityMints = useMemo(() => {
+    if (!cityModal || !knownMintsData) return []
+    return knownMintsData.filter(m => m.serverLocation === cityModal)
+  }, [cityModal, knownMintsData])
+
   if (isLoading) return (
     <div className="stats-page">
       <div className="stats-header">
@@ -345,10 +350,6 @@ export default function Stats() {
 
   const modalNutMints = modalNut ? (nutSupportingMints[modalNut] ?? []) : []
   const modalNutMeta = modalNut ? NUT_META[modalNut] : null
-  const cityMints = useMemo(() => {
-    if (!cityModal || !knownMintsData) return []
-    return knownMintsData.filter(m => m.serverLocation === cityModal)
-  }, [cityModal, knownMintsData])
 
   return (
     <div className="stats-page">
