@@ -58,7 +58,7 @@
 - Sent directly from the browser (NIP-07) — server never sees your keys
 
 ### ⚡ Mint Discovery
-- Automatic discovery via **Nostr kind 38172** (relays: damus.io, nos.lol, primal.net, cashumints.space, azzamo.net, snort.social, purplepag.es)
+- Automatic discovery via **Nostr kind:38172** and **kind:38000** (7 relays: damus.io, nos.lol, primal.net, cashumints.space, azzamo.net, snort.social, purplepag.es)
 - Additional discovery via **audit.8333.space API**
 - Manual mint submission by **URL** or **Nostr npub** (resolves the mint URL from the profile)
 - Dashboard sort by Status, Latency, Name, or Trust Score with ascending/descending toggle
@@ -103,29 +103,29 @@
 | Nostr keys       | NIP-07 extension — server never sees them                                             |
 | Analytics        | None                                                                                  |
 | Cookies          | None                                                                                  |
-| Fonts            | Self-hosted (DM Sans)                                                                 |
+| Fonts            | Self-hosted (DM Sans, JetBrains Mono)                                                 |
 
 ---
 
 ## 🛠 Tech Stack
 
-- **Frontend:** React 18 + TypeScript + Vite
-- **State:** TanStack Query + Zustand + Dexie
+- **Frontend:** React 19 + TypeScript + Vite 8
+- **State:** TanStack Query v5 + Zustand + Dexie (IndexedDB)
 - **Charts:** Recharts
-- **Backend:** Node.js + Express + TypeScript
-- **Database:** PostgreSQL
-- **Nostr:** nostr-tools
+- **Backend:** Node.js 22 + Express 5 + TypeScript
+- **Database:** PostgreSQL 17
+- **Nostr:** nostr-tools (NIP-07, NIP-44, NIP-46)
 - **Deployment:** Docker + Nginx + GitHub Actions CI/CD
 
 ---
 
-## 📥 Browser Extension Support
+## 🔑 Nostr Login
 
-To write reviews you need a Nostr browser extension:
+Three login methods are supported:
 
-- **[Alby](https://getalby.com/alby-extension)** — recommended (Lightning + Nostr)
-- **[nos2x](https://chromewebstore.google.com/detail/nos2x/kpgefcfmnafjgpblomihpgmejjdanjjp)** — Chrome / Edge
-- **[nos2x-fox](https://addons.mozilla.org/en-US/firefox/addon/nos2x-fox/)** — Firefox
+- **NIP-07 extension** — [Alby](https://getalby.com/alby-extension) (recommended), [nos2x](https://chromewebstore.google.com/detail/nos2x/kpgefcfmnafjgpblomihpgmejjdanjjp) (Chrome/Edge), [nos2x-fox](https://addons.mozilla.org/en-US/firefox/addon/nos2x-fox/) (Firefox)
+- **nsec** — paste your private key; it's used only to derive the public key and then immediately zeroed in memory, never stored
+- **Amber / NIP-46 bunker** — connect via `bunker://` URI or NIP-05 identifier; also supports QR pairing with the Amber mobile app
 
 ---
 

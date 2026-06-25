@@ -15,9 +15,9 @@ Sensitive values are in CLAUDE.local.md (gitignored) — ask the developer
 - DB: PostgreSQL in Docker ($DB_NAME, user: $DB_USER)
 
 ## Stack
-- Frontend: React 18 + TypeScript + Vite 5 + TanStack Query v5 + Zustand + Dexie (IndexedDB) + Recharts + vite-plugin-pwa
-- Backend: Node.js/Express + TypeScript + pg (PostgreSQL) + nostr-tools
-- Auth: Nostr NIP-07 (nos2x-fox, Alby) + nsec manual entry (key zeroed after derivation); Amber NIP-46 planned
+- Frontend: React 19 + TypeScript + Vite 8 + TanStack Query v5 + Zustand + Dexie (IndexedDB) + Recharts + vite-plugin-pwa
+- Backend: Node.js 22 + Express 5 + TypeScript + pg (PostgreSQL 17) + nostr-tools
+- Auth: Nostr NIP-07 (nos2x-fox, Alby) + nsec manual entry (key zeroed after derivation) + NIP-46 bunker (implemented, nostr-tools/nip46 BunkerSigner)
 - Fonts: DM Sans (self-hosted variable, weights 100–900), JetBrains Mono (self-hosted; Regular 400, Medium 500, Bold 700)
 - CSS: CSS variables (var(--bg), var(--bg2), var(--accent) #17E87F, var(--border), var(--text), var(--text2), var(--text3))
 
@@ -139,7 +139,7 @@ Frontend:
 Login modal (`src/components/layout/AppShell.tsx`) supports three methods selectable via radio cards:
 - **NIP-07** — calls `window.nostr.getPublicKey()`; all signing stays in the extension
 - **nsec** — decoded in `src/core/nostr/client.ts:loginWithNsec`; `privkeyBytes.fill(0)` called immediately after public key derivation; private key never assigned to module scope, never persisted
-- **Amber** — NIP-46 remote signer, UI placeholder only (coming soon)
+- **Amber / NIP-46 bunker** — fully implemented via `nostr-tools/nip46` `BunkerSigner`; accepts `bunker://` URI or NIP-05 identifier; QR pairing flow for mobile Amber; session persisted in `sessionStorage` (`bunkerURI`, `bunkerClientSecretKey`, `bunkerPubkey`); 30s connection timeout; client keypair is ephemeral (NOT the user's identity key)
 
 `sessionStorage` (Zustand persist) stores only the public `NostrProfile` `{ pubkey, npub, name, picture }` — no private key material ever in storage.
 
@@ -239,10 +239,23 @@ Self-hosted font weights:
 
 **Text colors** — `--text` (`#F0F2F7`) for primary/bold values, `--text2` (`#8B90A0`) for secondary/muted, `--text3`/`--t3` (`#AAB4C7`) for tertiary labels. `--text3` was changed from `#80899B` to `#AAB4C7` (brighter) in a previous session.
 
+## Nostr pool singleton
+
+`src/core/nostr/pool.ts` exports `sharedPool` — a single `SimplePool` instance patched with exponential backoff (1s base, doubles per attempt, 5-min cap, ±20% jitter). All frontend Nostr reads/writes must use `sharedPool`. Never call `sharedPool.destroy()`.
+
+## Backup cron
+
+Runs every 6h: `0 */6 * * *` → `scripts/backup-db.sh`
+- Output: `/var/backups/mintradar/mintradar_YYYYMMDD_HHMMSS.sql.gz` (rotates to 7 days)
+- Log: `/var/log/mintradar-backup.log`
+- Format: `pg_dump | gzip` — plain SQL, suitable for `zcat | psql` restore
+- NOTE: `/var/backups/mintradar/` and `/var/log/mintradar-backup.log` must be owned by `deploy` user (created with `sudo`, `mkdir -p` in script cannot create them itself)
+
 ## Key rules
 - NEVER modify anything not explicitly requested
 - ALWAYS run typecheck before build
 - ALWAYS rsync dist after build
-- ALWAYS commit and push after deploy
+- ALWAYS commit and push after deploy: `git push origin main && git push gitea main` (both remotes required)
 - Conventional commits: feat:, fix:, refactor:, docs:, chore:
 - Security: always audit new code for SSRF, rate limits, XSS
+- Security: `verifyEvent()` from nostr-tools must be called on all inbound Nostr events (frontend hooks and backend discovery)
