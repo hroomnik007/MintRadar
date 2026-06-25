@@ -297,36 +297,38 @@ function MintCardDisplay({
             <div className="latency-value muted">—</div>
           )}
         </div>
-        {onCompare && isOnline && (
-          <button
-            type="button"
-            style={{
-              background: 'transparent',
-              color: '#58a6ff',
-              border: '0.5px solid #58a6ff',
-              borderRadius: 7,
-              padding: '6px 12px',
-              fontSize: 11,
-              fontWeight: 500,
-              cursor: 'pointer',
-              fontFamily: 'var(--font-mono)',
-              flexShrink: 0,
-              transition: 'opacity 150ms ease',
-            }}
-            onClick={e => { e.stopPropagation(); onCompare(mint.url) }}
-          >
-            Compare
-          </button>
-        )}
-        {isLoggedIn && (
-          <button
-            type="button"
-            className={`watch-btn${isWatched ? ' watching' : ''}`}
-            onClick={e => { e.stopPropagation(); void (isWatched ? removeMint(mint.url) : addMint(mint.url)) }}
-          >
-            {isWatched ? <><IcClose /><span>Unwatch</span></> : <><IcPlus /><span>Watch</span></>}
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {isLoggedIn && (
+            <button
+              type="button"
+              className={`watch-btn${isWatched ? ' watching' : ''}`}
+              onClick={e => { e.stopPropagation(); void (isWatched ? removeMint(mint.url) : addMint(mint.url)) }}
+            >
+              {isWatched ? <><IcClose /><span>Unwatch</span></> : <><IcPlus /><span>Watch</span></>}
+            </button>
+          )}
+          {onCompare && isOnline && (
+            <button
+              type="button"
+              style={{
+                background: 'transparent',
+                color: '#378ADD',
+                border: '1px solid #378ADD',
+                borderRadius: 7,
+                padding: '6px 12px',
+                fontSize: 11,
+                fontWeight: 500,
+                cursor: 'pointer',
+                fontFamily: 'var(--font-mono)',
+                flexShrink: 0,
+                transition: 'opacity 150ms ease',
+              }}
+              onClick={e => { e.stopPropagation(); onCompare(mint.url) }}
+            >
+              ⇄ Compare
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
