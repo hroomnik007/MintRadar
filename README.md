@@ -65,7 +65,7 @@ Select 2–4 mints and compare side-by-side: Status, Trust Score, Uptime, Latenc
 
 ### 👁️ Watchlist with Nostr Login
 
-- Login via **NIP-07 browser extension** (Alby, nos2x, nos2x-fox) or **nsec private key**
+- Login via **NIP-07 browser extension**, **nsec private key**, or **NIP-46 bunker / Amber**
 - Watchlist stored locally in IndexedDB — never sent to the server
 - Optionally synced across devices as **NIP-44 encrypted kind:10003** events on Nostr relays
 - Export as **JSON** or **CSV**
@@ -74,7 +74,7 @@ Select 2–4 mints and compare side-by-side: Status, Trust Score, Uptime, Latenc
 
 ### 📡 Nostr NIP-87 Discovery
 
-Automatic mint discovery from 7 Nostr relays (damus.io, nos.lol, primal.net, cashumints.space, azzamo.net, snort.social, purplepag.es) using **kind:38172** events, plus the **audit.8333.space** API. Decentralized mint reviews via **kind:38000**.
+Automatic mint discovery from 7 Nostr relays (damus.io, nos.lol, primal.net, cashumints.space, azzamo.net, snort.social, purplepag.es) using **kind:38172** and **kind:38000** events, plus the **audit.8333.space** API. Decentralized mint reviews via **kind:38000**.
 
 ### 🏷️ Mint Age Badges
 
@@ -89,7 +89,7 @@ Automatic mint discovery from 7 Nostr relays (damus.io, nos.lol, primal.net, cas
 
 - **No analytics, no tracking, no telemetry, no third-party scripts**
 - **No cookies**
-- Fonts are self-hosted (DM Sans) — no requests to Google Fonts or any external font CDN
+- Fonts are self-hosted (DM Sans, JetBrains Mono) — no requests to Google Fonts or any external font CDN
 - Nostr private keys **never leave your browser** and are never stored or transmitted to the backend
 - Watchlist data lives only in your browser (IndexedDB) or encrypted on Nostr relays under your own key
 - Full security and privacy audit documented in [AUDIT.md](MintRadar/AUDIT.md)
@@ -103,14 +103,15 @@ PostgreSQL database backed up every 6 hours via server cron.
 ## 🛠️ Tech Stack
 
 **Frontend**
-- React 18 + TypeScript + Vite 5
+- React 19 + TypeScript + Vite 8
 - TanStack Query v5, Zustand, Dexie (IndexedDB)
 - Recharts, vite-plugin-pwa (PWA / offline support)
-- nostr-tools, @noble/secp256k1
+- nostr-tools (NIP-07, NIP-44, NIP-46), @noble/secp256k1
+- Self-hosted fonts: DM Sans (variable), JetBrains Mono
 
 **Backend**
-- Node.js 20 + Express + TypeScript
-- PostgreSQL (via `pg`)
+- Node.js 22 + Express 5 + TypeScript
+- PostgreSQL 17 (via `pg`)
 - nostr-tools for relay communication
 
 **Deployment**
@@ -120,11 +121,21 @@ PostgreSQL database backed up every 6 hours via server cron.
 
 ---
 
+## 🔑 Nostr Login
+
+Three login methods are supported:
+
+- **NIP-07 extension** — [Alby](https://getalby.com/alby-extension) (recommended), [nos2x](https://chromewebstore.google.com/detail/nos2x/kpgefcfmnafjgpblomihpgmejjdanjjp) (Chrome/Edge), [nos2x-fox](https://addons.mozilla.org/en-US/firefox/addon/nos2x-fox/) (Firefox)
+- **nsec** — paste your private key; it's used only to derive the public key and then immediately zeroed in memory, never stored
+- **Amber / NIP-46 bunker** — connect via `bunker://` URI or NIP-05 identifier; also supports QR pairing with the Amber mobile app
+
+---
+
 ## 🚀 Getting Started / Self-Hosting
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - Docker and Docker Compose
 - Nginx (for production deployments)
 
