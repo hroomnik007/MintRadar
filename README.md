@@ -190,7 +190,7 @@ Serve the `dist/` directory with Nginx. See `MintRadar/deploy/nginx.conf` for th
 
 ## 🔐 Security
 
-MintRadar handles Nostr private keys and is used by the Bitcoin/Cashu community where trust matters. A full security and privacy audit is documented in **[AUDIT.md](MintRadar/AUDIT.md)**, covering:
+MintRadar handles Nostr private keys and is used by the Bitcoin/Cashu community where trust matters. To report a vulnerability, see **[SECURITY.md](SECURITY.md)**. A full security and privacy audit is documented in **[AUDIT.md](MintRadar/AUDIT.md)**, covering:
 
 - No tracking or telemetry (verified by code review)
 - Nostr private key handling — keys never stored or sent to the server; raw key bytes explicitly zeroed in memory after use

@@ -29,6 +29,14 @@ const NOSTR_REVIEWS_RELAYS = [
 ]
 const NOSTR_REVIEWS_TIMEOUT_MS = 8_000
 
+const REQUIRED_ENV_VARS = ['DATABASE_URL', 'ALLOWED_ORIGINS'] as const
+const missingVars = REQUIRED_ENV_VARS.filter(v => !process.env[v])
+if (missingVars.length > 0) {
+  for (const v of missingVars) console.error(`ERROR: Missing required environment variable: ${v}`)
+  process.exit(1)
+}
+console.log('ENV OK')
+
 const PORT = parseInt(process.env['PORT'] ?? '3002', 10)
 const IS_DEV = process.env['NODE_ENV'] !== 'production'
 
