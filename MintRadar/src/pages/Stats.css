@@ -189,6 +189,24 @@
   padding: 5px 0;
 }
 
+.dist-row-clickable {
+  cursor: pointer;
+  border-radius: 5px;
+  padding: 5px 4px;
+  margin: 0 -4px;
+  transition: background 120ms ease;
+}
+
+.dist-row-clickable:hover {
+  background: var(--bg3);
+}
+
+.dist-label-city {
+  text-decoration: underline;
+  text-decoration-color: currentColor;
+  text-underline-offset: 2px;
+}
+
 .dist-label {
   width: 110px;
   font-size: 11px;

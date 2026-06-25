@@ -90,19 +90,21 @@ interface MintStatus {
 
 const rateLimitStore = new Map<string, RateLimitEntry>()
 
-function checkRateLimit(ip: string): boolean {
+function checkRateLimit(ip: string): { allowed: boolean; remaining: number; limit: number } {
   const now = Date.now()
   const entry = rateLimitStore.get(ip)
 
   if (entry === undefined || now >= entry.resetAt) {
     rateLimitStore.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
-    return true
+    return { allowed: true, remaining: RATE_LIMIT_MAX - 1, limit: RATE_LIMIT_MAX }
   }
 
-  if (entry.count >= RATE_LIMIT_MAX) return false
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return { allowed: false, remaining: 0, limit: RATE_LIMIT_MAX }
+  }
 
   entry.count++
-  return true
+  return { allowed: true, remaining: RATE_LIMIT_MAX - entry.count, limit: RATE_LIMIT_MAX }
 }
 
 // Prevent unbounded memory growth
@@ -255,7 +257,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     return
   }
   const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown'
-  if (!checkRateLimit(ip)) {
+  const { allowed, remaining, limit } = checkRateLimit(ip)
+  res.setHeader('X-RateLimit-Limit', String(limit))
+  res.setHeader('X-RateLimit-Remaining', String(remaining))
+  if (!allowed) {
     res.status(429).json({ error: 'Too many requests' })
     return
   }

@@ -87,6 +87,16 @@ const IcClose = () => (
     <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
   </svg>
 )
+const IcList = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <line x1="5" y1="4" x2="14" y2="4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+    <line x1="5" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+    <line x1="5" y1="12" x2="14" y2="12" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+    <circle cx="2.5" cy="4" r="1" fill="currentColor"/>
+    <circle cx="2.5" cy="8" r="1" fill="currentColor"/>
+    <circle cx="2.5" cy="12" r="1" fill="currentColor"/>
+  </svg>
+)
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -322,6 +332,114 @@ function MintCardDisplay({
   )
 }
 
+function trustColor(score: number): string {
+  if (score >= 70) return '#4ade80'
+  if (score >= 40) return '#ffa500'
+  return '#ff4d4d'
+}
+
+function MintListView({
+  mints,
+  search,
+  sortBy,
+  sortDir,
+  totalAll,
+}: {
+  mints: KnownMint[]
+  search: string
+  sortBy: 'name' | 'latency' | 'status' | 'trust'
+  sortDir: 'asc' | 'desc'
+  totalAll?: number
+}) {
+  const navigate = useNavigate()
+  const sortedFiltered = useMemo(() => {
+    const q = search.toLowerCase()
+    const filtered = mints.filter(mint => {
+      if (!q) return true
+      const name = (mint.name ?? getHostname(mint.url)).toLowerCase()
+      return getHostname(mint.url).toLowerCase().includes(q) || name.includes(q)
+    })
+    return [...filtered].sort((a, b) => {
+      let result = 0
+      if (sortBy === 'status') {
+        result = (b.online === true ? 1 : 0) - (a.online === true ? 1 : 0)
+      } else if (sortBy === 'latency') {
+        const la = a.online === true && a.latencyMs != null ? a.latencyMs : Infinity
+        const lb = b.online === true && b.latencyMs != null ? b.latencyMs : Infinity
+        result = la - lb
+      } else if (sortBy === 'trust') {
+        result = listTrustScore(b) - listTrustScore(a)
+      } else {
+        result = (a.name ?? getHostname(a.url)).localeCompare(b.name ?? getHostname(b.url))
+      }
+      return sortDir === DEFAULT_SORT_DIRS[sortBy] ? result : -result
+    })
+  }, [mints, search, sortBy, sortDir])
+
+  return (
+    <>
+      <div className="mint-list-table-wrap">
+        <table className="mint-list-table">
+          <thead>
+            <tr>
+              <th>Mint</th>
+              <th>Status</th>
+              <th>Uptime 24h</th>
+              <th>Latency</th>
+              <th>Trust</th>
+              <th>NUTs</th>
+              <th>Age</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedFiltered.map(mint => {
+              const isOnline = mint.online === true
+              const displayName = mint.name ?? getHostname(mint.url)
+              const ageBadge = mintAgeBadge(mint.discoveredAt ?? null)
+              const score = mint.trustScore ?? null
+              return (
+                <tr key={mint.url} className="mint-list-row" onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)}>
+                  <td className="mint-list-td-name">
+                    <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={24} radius={5} />
+                    <span className="mint-list-name">{displayName}</span>
+                  </td>
+                  <td>
+                    <span style={{ fontSize: 10, color: isOnline ? '#17E87F' : '#E24B4A' }}>
+                      {isOnline ? '● Online' : '● Offline'}
+                    </span>
+                  </td>
+                  <td style={{ color: uptimeColor(mint.uptimePct24h), fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                    {mint.uptimePct24h != null ? `${mint.uptimePct24h}%` : '—'}
+                  </td>
+                  <td style={{ color: latencyColor(mint.latencyMs), fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                    {isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
+                  </td>
+                  <td style={{ color: score != null ? trustColor(score) : 'var(--text3)', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600 }}>
+                    {score != null ? `${score}%` : '—'}
+                  </td>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text2)' }}>
+                    {mint.nutCount != null ? `${mint.nutCount}/14` : '—'}
+                  </td>
+                  <td>
+                    {ageBadge && (
+                      <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: ageBadge.color, background: ageBadge.bg, border: `1px solid ${ageBadge.border}`, borderRadius: 5, padding: '2px 6px', whiteSpace: 'nowrap' }}>
+                        {ageBadge.label}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center', marginTop: 16, fontFamily: 'var(--font-mono)' }}>
+        Showing {sortedFiltered.length} of {totalAll || sortedFiltered.length}
+      </div>
+    </>
+  )
+}
+
 function MintGrid({
   mints,
   search,
@@ -387,6 +505,10 @@ export default function Dashboard() {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'name' | 'latency' | 'status' | 'trust'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>(() => {
+    const saved = localStorage.getItem('mintRadar_viewMode')
+    return saved === 'list' ? 'list' : 'cards'
+  })
 
   // Filter state
   const [showFilters, setShowFilters] = useState(false)
@@ -547,6 +669,11 @@ export default function Dashboard() {
     const timer = setTimeout(() => setShowSubmit(false), 3000)
     return () => clearTimeout(timer)
   }, [submitState])
+
+  function handleViewMode(mode: 'cards' | 'list') {
+    setViewMode(mode)
+    localStorage.setItem('mintRadar_viewMode', mode)
+  }
 
   function handleSortClick(s: typeof sortBy) {
     if (s === sortBy) {
@@ -792,6 +919,14 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
+        <div className="view-toggle">
+          <button type="button" className={`view-toggle-btn${viewMode === 'cards' ? ' active' : ''}`} onClick={() => handleViewMode('cards')} title="Card view">
+            <IcGrid />
+          </button>
+          <button type="button" className={`view-toggle-btn${viewMode === 'list' ? ' active' : ''}`} onClick={() => handleViewMode('list')} title="List view">
+            <IcList />
+          </button>
+        </div>
         <button type="button" className="submit-btn" onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setSubmitUrl(''); setProbeState('idle'); setProbeResult(null); setNostrLookupState('idle'); setNostrLookupMsg(''); setBulkInput(''); setBulkProgress([]); setBulkRunning(false); setBulkDone(false) }}>
           <IcPlus /> Submit mint
         </button>
@@ -908,14 +1043,24 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          <MintGrid
-            mints={filteredMints}
-            search={search}
-            sortBy={sortBy}
-            sortDir={sortDir}
-            onCompare={openComparePicker}
-            totalAll={!showDegraded && degradedCount > 0 ? totalAllCount : 0}
-          />
+          {viewMode === 'list' ? (
+            <MintListView
+              mints={filteredMints}
+              search={search}
+              sortBy={sortBy}
+              sortDir={sortDir}
+              totalAll={!showDegraded && degradedCount > 0 ? totalAllCount : 0}
+            />
+          ) : (
+            <MintGrid
+              mints={filteredMints}
+              search={search}
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onCompare={openComparePicker}
+              totalAll={!showDegraded && degradedCount > 0 ? totalAllCount : 0}
+            />
+          )}
           {degradedCount > 0 && (
             <p className="degraded-note">
               {!showDegraded && <>{degradedCount} mints hidden (offline 24h+){' '}</>}

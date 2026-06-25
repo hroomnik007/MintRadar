@@ -140,9 +140,100 @@ function NutMintsModal({ nutId, nutMeta, mints, onClose }: {
   )
 }
 
+function mintAgeBadge(discoveredAt: string | null | undefined): { label: string; color: string; bg: string; border: string } | null {
+  if (!discoveredAt) return null
+  const months = (Date.now() - new Date(discoveredAt).getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+  if (months < 1) return { label: 'Fresh', color: '#60a5fa', bg: 'rgba(96,165,250,0.1)', border: 'rgba(96,165,250,0.25)' }
+  if (months < 6) return { label: 'Established', color: '#4ade80', bg: 'rgba(74,222,128,0.1)', border: 'rgba(74,222,128,0.25)' }
+  if (months < 12) return { label: 'Veteran', color: '#ffa500', bg: 'rgba(255,165,0,0.1)', border: 'rgba(255,165,0,0.25)' }
+  return { label: 'OG', color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' }
+}
+
+function CityMintsModal({ loc, mints, onClose }: {
+  loc: string
+  mints: KnownMint[]
+  onClose: () => void
+}) {
+  const navigate = useNavigate()
+  const [showAll, setShowAll] = useState(false)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const sorted = useMemo(() =>
+    [...mints].sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
+  , [mints])
+
+  const { display, flag } = geoLabel(loc)
+  const displayed = showAll ? sorted : sorted.slice(0, 10)
+  const onlineCount = mints.filter(m => m.online === true).length
+  const offlineCount = mints.filter(m => m.online === false).length
+
+  return (
+    <div className="nut-modal-overlay" onClick={onClose}>
+      <div className="nut-modal" onClick={e => e.stopPropagation()}>
+        <button type="button" className="nut-modal-close" onClick={onClose}>✕</button>
+        <div className="nut-modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            {flag && <span style={{ fontSize: 20 }}>{flag}</span>}
+            <span className="nut-modal-title">{display}</span>
+            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{mints.length} mints</span>
+          </div>
+        </div>
+        <div className="nut-modal-list">
+          {displayed.map(m => {
+            const score = m.trustScore ?? null
+            const scoreColor = score != null ? (score >= 70 ? '#4ade80' : score >= 40 ? '#ffa500' : '#ff4d4d') : 'var(--text3)'
+            const badge = mintAgeBadge(m.discoveredAt ?? null)
+            return (
+              <div
+                key={m.url}
+                className="nut-modal-row"
+                style={{ cursor: 'pointer' }}
+                onClick={() => { onClose(); navigate(`/mint/${encodeURIComponent(m.url)}`) }}
+              >
+                <span
+                  style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? '#17E87F' : '#E24B4A', display: 'inline-block', flexShrink: 0 }}
+                />
+                <div className="nut-modal-row-info" style={{ flex: 1 }}>
+                  <span className="nut-modal-row-name" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{m.name ?? getHostname(m.url)}</span>
+                  {badge && (
+                    <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: badge.color, background: badge.bg, border: `1px solid ${badge.border}`, borderRadius: 4, padding: '1px 5px', marginLeft: 6 }}>{badge.label}</span>
+                  )}
+                </div>
+                <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
+                  {score != null ? `${score}%` : '—'}
+                </span>
+              </div>
+            )
+          })}
+          {!showAll && sorted.length > 10 && (
+            <button
+              type="button"
+              onClick={() => setShowAll(true)}
+              style={{ width: '100%', background: 'none', border: 'none', color: 'var(--accent)', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer', padding: '8px 0' }}
+            >
+              Show all {sorted.length} mints
+            </button>
+          )}
+          {sorted.length === 0 && <div className="nut-modal-empty">No mints</div>}
+        </div>
+        <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span>{onlineCount} online · {offlineCount} offline</span>
+          <span>Sorted by Trust Score</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Stats() {
   const navigate = useNavigate()
   const [modalNut, setModalNut] = useState<string | null>(null)
+  const [cityModal, setCityModal] = useState<string | null>(null)
   const [reliableTab, setReliableTab] = useState<'reliable' | 'trust'>('reliable')
   const [softGeoTab, setSoftGeoTab] = useState<'software' | 'geographic'>('software')
 
@@ -254,6 +345,10 @@ export default function Stats() {
 
   const modalNutMints = modalNut ? (nutSupportingMints[modalNut] ?? []) : []
   const modalNutMeta = modalNut ? NUT_META[modalNut] : null
+  const cityMints = useMemo(() => {
+    if (!cityModal || !knownMintsData) return []
+    return knownMintsData.filter(m => m.serverLocation === cityModal)
+  }, [cityModal, knownMintsData])
 
   return (
     <div className="stats-page">
@@ -339,8 +434,8 @@ export default function Stats() {
                 const {display, flag, color: geoColor} = geoLabel(loc)
                 const barColor = geoColor ?? '#60a5fa'
                 return (
-                  <div key={loc} className="dist-row">
-                    <span className="dist-label" style={geoColor ? {color:geoColor} : undefined}>
+                  <div key={loc} className="dist-row dist-row-clickable" onClick={() => setCityModal(loc)}>
+                    <span className="dist-label dist-label-city" style={geoColor ? {color:geoColor} : undefined}>
                       {flag ? `${flag} ${display}` : display}
                     </span>
                     <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:barColor}} /></div>
@@ -445,6 +540,13 @@ export default function Stats() {
           nutMeta={modalNutMeta}
           mints={modalNutMints}
           onClose={() => setModalNut(null)}
+        />
+      )}
+      {cityModal !== null && (
+        <CityMintsModal
+          loc={cityModal}
+          mints={cityMints}
+          onClose={() => setCityModal(null)}
         />
       )}
     </div>
