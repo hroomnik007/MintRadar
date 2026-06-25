@@ -6,6 +6,7 @@ import { pool, initDb } from './db.js'
 import { isSafeUrl, safeFetch } from './ssrf.js'
 import { upsertMint, probeMintToDb } from './prober.js'
 import { seedKnownMints, startCron } from './cron.js'
+import { normalizeUrl } from './discovery.js'
 
 let knownMintsCache: { data: unknown; expiresAt: number } | null = null
 const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
@@ -780,24 +781,26 @@ app.post('/api/mint/submit', (req: Request, res: Response): void => {
     return
   }
 
-  isSafeUrl(url)
+  const normalized = normalizeUrl(url)
+
+  isSafeUrl(normalized)
     .then(safe => {
       if (!safe) {
         res.status(400).json({ error: 'Invalid url' })
         return
       }
-      return probeMint(url).then(async status => {
+      return probeMint(normalized).then(async status => {
         if (!status.online) {
           res.status(400).json({ error: 'URL does not appear to be a valid Cashu mint' })
           return
         }
         const result = await pool.query(
           'INSERT INTO mints (url, is_known) VALUES ($1, true) ON CONFLICT (url) DO NOTHING',
-          [url]
+          [normalized]
         )
         const isNew = (result.rowCount ?? 0) > 0
         try {
-          await probeMintToDb(url)
+          await probeMintToDb(normalized)
         } catch (probeErr) {
           if (IS_DEV) console.error('[submit] post-insert probe failed:', probeErr)
         }
@@ -836,11 +839,12 @@ app.post('/api/mints/discover', async (req: Request, res: Response): Promise<voi
     if (typeof url !== 'string') continue
     if (url.length > MAX_URL_LENGTH) continue
     if (!url.startsWith('https://')) continue
+    const normalized = normalizeUrl(url)
     try {
-      if (!(await isSafeUrl(url))) continue
+      if (!(await isSafeUrl(normalized))) continue
       const result = await pool.query(
         'INSERT INTO mints (url, is_known) VALUES ($1, true) ON CONFLICT (url) DO NOTHING',
-        [url]
+        [normalized]
       )
       if (result.rowCount !== null && result.rowCount > 0) added++
     } catch { continue }

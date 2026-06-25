@@ -12,6 +12,20 @@ function isObviouslyPrivate(hostname: string): boolean {
   return /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|100\.(6[4-9]|[7-9]\d|1[0-1]\d|12[0-7])\.)/u.test(hostname)
 }
 
+// Normalizes a mint URL by lowercasing the hostname.
+// Mint URLs with uppercase hostnames (e.g. https://Mint.coinos.io) are treated
+// as identical to their lowercase form by DNS, but would create duplicate DB rows.
+export function normalizeUrl(raw: string): string {
+  try {
+    const parsed = new URL(raw)
+    const lower = parsed.hostname.toLowerCase()
+    if (lower === parsed.hostname) return raw
+    return raw.replace(parsed.hostname, lower)
+  } catch {
+    return raw
+  }
+}
+
 const DISCOVERY_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
@@ -31,49 +45,83 @@ export async function discoverMintsFromNostr(): Promise<number> {
     ;(globalThis as any).WebSocket = WebSocket
   }
   const nostrPool = new SimplePool()
-  const discovered: Set<string> = new Set()
+  const discovered38172: Set<string> = new Set()
+  const discovered38000: Set<string> = new Set()
 
   try {
-    const events = await Promise.race([
-      nostrPool.querySync(DISCOVERY_RELAYS, { kinds: [38172], limit: 1000 } as Filter),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), DISCOVERY_TIMEOUT_MS)
-      ),
+    const [res38172, res38000] = await Promise.allSettled([
+      Promise.race([
+        nostrPool.querySync(DISCOVERY_RELAYS, { kinds: [38172], limit: 1000 } as Filter),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), DISCOVERY_TIMEOUT_MS)
+        ),
+      ]),
+      Promise.race([
+        nostrPool.querySync(DISCOVERY_RELAYS, { kinds: [38000], limit: 2000 } as Filter),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), DISCOVERY_TIMEOUT_MS)
+        ),
+      ]),
     ])
 
-    const validEvents = events.filter(e => verifyEvent(e))
-    for (const event of validEvents) {
-      const uTag = event.tags.find((t: string[]) => t[0] === 'u')
-      if (!uTag || !uTag[1]) continue
-      const raw = uTag[1].trim()
-      if (!raw.startsWith('https://')) continue
-      try {
-        const parsed = new URL(raw)
-        // Fast pre-filter; isSafeUrl() in probeMintToDb is the authoritative SSRF gate
-        const h = parsed.hostname.toLowerCase().replace(/\.$/, '')
-        if (isObviouslyPrivate(h)) continue
-        discovered.add(raw)
-      } catch { continue }
+    if (res38172.status === 'fulfilled') {
+      for (const event of res38172.value.filter(e => verifyEvent(e))) {
+        const uTag = event.tags.find((t: string[]) => t[0] === 'u')
+        if (!uTag || !uTag[1]) continue
+        const raw = uTag[1].trim()
+        if (!raw.startsWith('https://')) continue
+        try {
+          const parsed = new URL(raw)
+          const h = parsed.hostname.toLowerCase().replace(/\.$/, '')
+          if (isObviouslyPrivate(h)) continue
+          discovered38172.add(normalizeUrl(raw))
+        } catch { continue }
+      }
+    } else {
+      console.error('[discovery] NIP-87 fetch error:', res38172.reason)
     }
-  } catch (err) {
-    console.error('[discovery] NIP-87 fetch error:', err)
+
+    if (res38000.status === 'fulfilled') {
+      for (const event of res38000.value.filter(e => verifyEvent(e))) {
+        for (const tag of event.tags as string[][]) {
+          if (tag[0] !== 'u' || typeof tag[1] !== 'string' || !tag[1].startsWith('https://')) continue
+          const raw = tag[1].trim()
+          try {
+            const parsed = new URL(raw)
+            const h = parsed.hostname.toLowerCase().replace(/\.$/, '')
+            if (isObviouslyPrivate(h)) continue
+            discovered38000.add(normalizeUrl(raw))
+          } catch { continue }
+        }
+      }
+    } else {
+      console.error('[discovery] kind:38000 fetch error:', res38000.reason)
+    }
   } finally {
     nostrPool.destroy()
   }
 
-  if (discovered.size === 0) return 0
-
-  let added = 0
-  for (const url of discovered) {
-    const result = await pool.query(
+  let added38172 = 0
+  for (const url of discovered38172) {
+    const r = await pool.query(
       'INSERT INTO mints (url, is_known) VALUES ($1, true) ON CONFLICT (url) DO NOTHING',
       [url]
     )
-    if ((result.rowCount ?? 0) > 0) added++
+    if ((r.rowCount ?? 0) > 0) added38172++
   }
+  console.log(`[discovery] kind:38172 found ${discovered38172.size} mints, added ${added38172} new`)
 
-  console.log(`[discovery] found ${discovered.size} mints, added ${added} new`)
-  return added
+  let added38000 = 0
+  for (const url of discovered38000) {
+    const r = await pool.query(
+      'INSERT INTO mints (url, is_known) VALUES ($1, true) ON CONFLICT (url) DO NOTHING',
+      [url]
+    )
+    if ((r.rowCount ?? 0) > 0) added38000++
+  }
+  console.log(`[discovery] kind:38000 found ${discovered38000.size} mints, added ${added38000} new`)
+
+  return added38172 + added38000
 }
 
 const AUDIT_API_BASE = 'https://api.audit.8333.space/mints/'
@@ -110,7 +158,7 @@ export async function discoverMintsFromApi(): Promise<number> {
           const h = parsed.hostname.toLowerCase().replace(/\.$/, '')
           if (isObviouslyPrivate(h)) continue
           records.push({
-            url: trimmed,
+            url: normalizeUrl(trimmed),
             n_mints: typeof r['n_mints'] === 'number' ? r['n_mints'] : null,
             n_melts: typeof r['n_melts'] === 'number' ? r['n_melts'] : null,
             n_errors: typeof r['n_errors'] === 'number' ? r['n_errors'] : null,
