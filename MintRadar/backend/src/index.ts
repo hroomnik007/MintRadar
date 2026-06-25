@@ -353,7 +353,8 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
             BOOL_OR(online) AS online,
             ROUND(AVG(CASE WHEN online THEN latency_ms END))::int AS latency_ms,
             COUNT(*) AS total,
-            SUM(CASE WHEN online THEN 1 ELSE 0 END) AS online_count
+            SUM(CASE WHEN online THEN 1 ELSE 0 END) AS online_count,
+            ROUND(AVG(trust_score))::int AS trust_score
           FROM mint_history
           WHERE url = $1
             AND checked_at >= NOW() - INTERVAL '24 hours'
@@ -375,7 +376,8 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
             BOOL_OR(online) AS online,
             ROUND(AVG(CASE WHEN online THEN latency_ms END))::int AS latency_ms,
             COUNT(*) AS total,
-            SUM(CASE WHEN online THEN 1 ELSE 0 END) AS online_count
+            SUM(CASE WHEN online THEN 1 ELSE 0 END) AS online_count,
+            ROUND(AVG(trust_score))::int AS trust_score
           FROM mint_history
           WHERE url = $1
             AND checked_at >= NOW() - INTERVAL '7 days'
@@ -397,7 +399,8 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
             BOOL_OR(online) AS online,
             ROUND(AVG(CASE WHEN online THEN latency_ms END))::int AS latency_ms,
             COUNT(*) AS total,
-            SUM(CASE WHEN online THEN 1 ELSE 0 END) AS online_count
+            SUM(CASE WHEN online THEN 1 ELSE 0 END) AS online_count,
+            ROUND(AVG(trust_score))::int AS trust_score
           FROM mint_history
           WHERE url = $1
             AND checked_at >= NOW() - INTERVAL '30 days'
@@ -420,7 +423,8 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
             BOOL_OR(online) AS online,
             ROUND(AVG(CASE WHEN online THEN latency_ms END))::int AS latency_ms,
             COUNT(*) AS total,
-            SUM(CASE WHEN online THEN 1 ELSE 0 END) AS online_count
+            SUM(CASE WHEN online THEN 1 ELSE 0 END) AS online_count,
+            ROUND(AVG(trust_score))::int AS trust_score
           FROM mint_history
           WHERE url = $1
             AND checked_at >= NOW() - INTERVAL '90 days'
@@ -449,6 +453,7 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
           onlineCount: Number(r.online_count),
           uptimePct: Number(r.total) === 0 ? null
             : Math.round(Number(r.online_count) / Number(r.total) * 100),
+          trustScore: r.trust_score != null ? Number(r.trust_score) : null,
         }))
         const prevRow = prevResult.rows[0]
         const prevUptimePct = prevRow?.uptime_ratio != null

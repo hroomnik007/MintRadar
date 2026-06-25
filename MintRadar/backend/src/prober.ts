@@ -232,11 +232,13 @@ export async function probeMintToDb(url: string): Promise<void> {
     lastError = 'Unreachable'
   }
 
-  await pool.query(
+  const histInsert = await pool.query(
     `INSERT INTO mint_history (url, online, latency_ms, checked_at)
-     VALUES ($1, $2, $3, NOW())`,
+     VALUES ($1, $2, $3, NOW())
+     RETURNING id`,
     [url, online, latencyMs]
   )
+  const histId: number | undefined = histInsert.rows[0]?.id as number | undefined
 
   try {
     const statsRes = await pool.query(
@@ -272,6 +274,12 @@ export async function probeMintToDb(url: string): Promise<void> {
         `UPDATE mints SET last_trust_score = $1, last_error = $2 WHERE url = $3`,
         [trustScore, lastError, url]
       )
+      if (histId !== undefined) {
+        await pool.query(
+          `UPDATE mint_history SET trust_score = $1 WHERE id = $2`,
+          [trustScore, histId]
+        )
+      }
     }
   } catch { /* ignore trust score errors */ }
 }

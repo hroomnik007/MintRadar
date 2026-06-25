@@ -188,7 +188,7 @@ function MintDetailContent({ url }: { url: string }) {
       if (!res.ok) throw new Error('Failed to fetch chart history')
       return res.json() as Promise<{
         period: string
-        segments: Array<{ bucket: string; online: boolean; latencyMs: number | null; total: number; onlineCount: number; uptimePct: number | null }>
+        segments: Array<{ bucket: string; online: boolean; latencyMs: number | null; total: number; onlineCount: number; uptimePct: number | null; trustScore: number | null }>
         uptimePct: number | null
         avgLatencyMs: number | null
         prevUptimePct: number | null
@@ -205,7 +205,7 @@ function MintDetailContent({ url }: { url: string }) {
       if (!res.ok) throw new Error('Failed to fetch history')
       return res.json() as Promise<{
         period: string
-        segments: Array<{ bucket: string; online: boolean; latencyMs: number | null; total: number; onlineCount: number; uptimePct: number | null }>
+        segments: Array<{ bucket: string; online: boolean; latencyMs: number | null; total: number; onlineCount: number; uptimePct: number | null; trustScore: number | null }>
         uptimePct: number | null
         avgLatencyMs: number | null
         prevUptimePct: number | null
@@ -350,9 +350,11 @@ function MintDetailContent({ url }: { url: string }) {
     }
     function makePoint(seg: typeof segs[0] | null, label: string) {
       if (!seg) return { label, latency: null as number | null, uptime: null as number | null, trust: null as number | null }
-      const trustVal = seg.uptimePct !== null
-        ? computeTrustScore(seg.uptimePct, nutCount, versionStr, emailVal, twitterVal, nostrVal, auditNMints, auditNMelts, auditNErrors)
-        : null
+      const trustVal = seg.trustScore !== null && seg.trustScore !== undefined
+        ? seg.trustScore
+        : seg.uptimePct !== null
+          ? computeTrustScore(seg.uptimePct, nutCount, versionStr, emailVal, twitterVal, nostrVal, auditNMints, auditNMelts, auditNErrors)
+          : null
       return { label, latency: seg.latencyMs, uptime: seg.uptimePct, trust: trustVal }
     }
     // For empty data or 90d (weekly buckets), use segments as-is
