@@ -326,6 +326,13 @@ function MintDetailContent({ url }: { url: string }) {
   }, [showReviewModal])
 
   useEffect(() => {
+    if (!showQr) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowQr(false) }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [showQr])
+
+  useEffect(() => {
     if (!showTrustBreakdown) return
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowTrustBreakdown(false) }
     window.addEventListener('keydown', h)
@@ -1221,7 +1228,7 @@ function MintDetailContent({ url }: { url: string }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               }}
             >
-              ▣ Show QR code
+              <i className="ti ti-qrcode" aria-hidden="true"></i> Show QR code
             </button>
             <a
               href={`https://wallet.cashu.me/?mint=${encodeURIComponent(url)}`}
