@@ -210,7 +210,7 @@ Issues and pull requests are welcome. Please open an issue to discuss significan
 
 ## 🔗 Links
 
-- [Live Demo](https://mintradar.pedani.eu)
+- [Live](https://mintradar.pedani.eu)
 - [Cashu Protocol](https://cashu.space)
 - [Nostr Protocol](https://nostr.com)
 - [NIP-87 — Mint Discovery](https://github.com/nostr-protocol/nips/blob/master/87.md)
