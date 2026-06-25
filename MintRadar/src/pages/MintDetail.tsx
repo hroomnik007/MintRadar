@@ -19,7 +19,7 @@ import './MintDetail.css'
 import {
   Copy, Check, Info, ShieldCheck, ShieldOff, ChevronDown, ChevronUp,
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
-  Clock, GitBranch, Plug, Database, Award, Layers, Zap, Plus, X,
+  Clock, GitBranch, Plug, Database, Award, Layers, Zap, Plus, X, QrCode,
 } from 'lucide-react'
 
 interface NutMethod {
@@ -1228,7 +1228,7 @@ function MintDetailContent({ url }: { url: string }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               }}
             >
-              <i className="ti ti-qrcode" aria-hidden="true"></i> Show QR code
+              <QrCode size={14} /> Show QR code
             </button>
             <a
               href={`https://wallet.cashu.me/?mint=${encodeURIComponent(url)}`}

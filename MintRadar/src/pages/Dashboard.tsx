@@ -298,15 +298,6 @@ function MintCardDisplay({
           )}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {isLoggedIn && (
-            <button
-              type="button"
-              className={`watch-btn${isWatched ? ' watching' : ''}`}
-              onClick={e => { e.stopPropagation(); void (isWatched ? removeMint(mint.url) : addMint(mint.url)) }}
-            >
-              {isWatched ? <><IcClose /><span>Unwatch</span></> : <><IcPlus /><span>Watch</span></>}
-            </button>
-          )}
           {onCompare && isOnline && (
             <button
               type="button"
@@ -326,6 +317,15 @@ function MintCardDisplay({
               onClick={e => { e.stopPropagation(); onCompare(mint.url) }}
             >
               ⇄ Compare
+            </button>
+          )}
+          {isLoggedIn && (
+            <button
+              type="button"
+              className={`watch-btn${isWatched ? ' watching' : ''}`}
+              onClick={e => { e.stopPropagation(); void (isWatched ? removeMint(mint.url) : addMint(mint.url)) }}
+            >
+              {isWatched ? <><IcClose /><span>Unwatch</span></> : <><IcPlus /><span>Watch</span></>}
             </button>
           )}
         </div>
