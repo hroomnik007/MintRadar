@@ -387,10 +387,10 @@ function MintListView({
               <th>Mint</th>
               <th>Status</th>
               <th>Uptime 24h</th>
-              <th>Latency</th>
+              <th className="col-hide-mobile">Latency</th>
               <th>Trust</th>
-              <th>NUTs</th>
-              <th>Age</th>
+              <th className="col-hide-mobile">NUTs</th>
+              <th className="col-hide-mobile">Age</th>
             </tr>
           </thead>
           <tbody>
@@ -407,22 +407,22 @@ function MintListView({
                   </td>
                   <td>
                     <span style={{ fontSize: 10, color: isOnline ? '#17E87F' : '#E24B4A' }}>
-                      {isOnline ? '● Online' : '● Offline'}
+                      ●<span className="status-text-mobile-hide">{isOnline ? ' Online' : ' Offline'}</span>
                     </span>
                   </td>
                   <td style={{ color: uptimeColor(mint.uptimePct24h), fontFamily: 'var(--font-mono)', fontSize: 12 }}>
                     {mint.uptimePct24h != null ? `${mint.uptimePct24h}%` : '—'}
                   </td>
-                  <td style={{ color: latencyColor(mint.latencyMs), fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                  <td className="col-hide-mobile" style={{ color: latencyColor(mint.latencyMs), fontFamily: 'var(--font-mono)', fontSize: 12 }}>
                     {isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
                   </td>
                   <td style={{ color: score != null ? trustColor(score) : 'var(--text3)', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600 }}>
                     {score != null ? `${score}%` : '—'}
                   </td>
-                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text2)' }}>
+                  <td className="col-hide-mobile" style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text2)' }}>
                     {mint.nutCount != null ? `${mint.nutCount}/14` : '—'}
                   </td>
-                  <td>
+                  <td className="col-hide-mobile">
                     {ageBadge && (
                       <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: ageBadge.color, background: ageBadge.bg, border: `1px solid ${ageBadge.border}`, borderRadius: 5, padding: '2px 6px', whiteSpace: 'nowrap' }}>
                         {ageBadge.label}

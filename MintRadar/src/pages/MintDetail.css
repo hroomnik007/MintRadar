@@ -439,16 +439,19 @@
 .chart-tooltip-value { font-family: var(--font-mono); font-size: 13px; color: var(--text); letter-spacing: -0.02em; }
 
 /* ── Responsive ─────────────────────────────────────────────── */
-@media (max-width: 700px) {
-  .md-summary { flex-wrap: wrap; }
-  .md-sc {
-    flex: 1 1 50%;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    padding: 10px 16px;
+@media (max-width: 768px) {
+  .md-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
   }
-  .md-sc:last-child { border-bottom: none; }
-  .md-sc:nth-child(2) { border-right: none; }
+  .md-sc {
+    padding: 12px;
+  }
+  .md-sc-value { font-size: 20px; }
+  .md-sc-value.sm { font-size: 13px; }
+  .md-sc-label { font-size: 10px; }
+  .md-sc-sub { font-size: 10px; }
 
   .md-body {
     grid-template-columns: 1fr;
