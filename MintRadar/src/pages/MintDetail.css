@@ -452,6 +452,13 @@
   .md-sc-value.sm { font-size: 13px; }
   .md-sc-label { font-size: 10px; }
   .md-sc-sub { font-size: 10px; }
+  .latency-test-btn {
+    font-size: 10px !important;
+    padding: 3px 6px !important;
+    border-radius: 4px !important;
+    width: 100%;
+    box-sizing: border-box;
+  }
 
   .md-body {
     grid-template-columns: 1fr;

@@ -416,7 +416,7 @@ function MintListView({
                   <td className="col-hide-mobile" style={{ color: latencyColor(mint.latencyMs), fontFamily: 'var(--font-mono)', fontSize: 12 }}>
                     {isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
                   </td>
-                  <td style={{ color: score != null ? trustColor(score) : 'var(--text3)', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600 }}>
+                  <td className="trust-col" style={{ color: score != null ? trustColor(score) : 'var(--text3)', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600 }}>
                     {score != null ? `${score}%` : '—'}
                   </td>
                   <td className="col-hide-mobile" style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text2)' }}>

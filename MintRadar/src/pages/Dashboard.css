@@ -267,6 +267,7 @@
   gap: 8px;
   min-width: 150px;
   max-width: 280px;
+  width: 100%;
 }
 
 .mint-list-name {
@@ -1066,6 +1067,10 @@
 @media (max-width: 768px) {
   .col-hide-mobile { display: none; }
   .status-text-mobile-hide { display: none; }
+  .mint-list-table-wrap { padding: 0 14px; }
+  .mint-list-td-name { min-width: 0; max-width: none; }
+  .mint-list-name { max-width: 120px; }
+  .mint-list-table td.trust-col { min-width: 48px; }
 }
 
 @media (max-width: 600px) {
