@@ -17,17 +17,18 @@ function isObviouslyPrivate(hostname: string): boolean {
 //   uppercase hostname (https://Mint.coinos.io → https://mint.coinos.io)
 //   trailing slash    (https://mint.example.com/ → https://mint.example.com)
 //   http scheme       (http://mint.example.com  → https://mint.example.com)
+// NOTE: pathname = '' is ignored by WHATWG URL parser (normalizes back to '/'),
+// so trailing slash removal is done via string replace on the final output.
 export function normalizeUrl(raw: string): string {
   try {
     const parsed = new URL(raw.trim())
     parsed.protocol = 'https:'
     parsed.hostname = parsed.hostname.toLowerCase()
-    if (parsed.pathname !== '/') {
-      parsed.pathname = parsed.pathname.replace(/\/+$/, '')
-    } else {
-      parsed.pathname = ''
+    let result = parsed.toString()
+    if (parsed.pathname === '/') {
+      result = result.replace(/\/$/, '')
     }
-    return parsed.toString()
+    return result
   } catch {
     return raw.trim()
   }
