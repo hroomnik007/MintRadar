@@ -9,7 +9,6 @@ import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
-import { ComparisonModal } from '@/components/ComparisonModal'
 import './Watchlist.css'
 
 const IcEye = () => (
@@ -148,13 +147,9 @@ function applyFilters(urls: string[], knownMintsMap: Map<string, KnownMint>, fil
 function WatchlistCard({
   url,
   knownMint,
-  isSelected = false,
-  onToggleSelect,
 }: {
   url: string
   knownMint: KnownMint | null
-  isSelected?: boolean
-  onToggleSelect?: (url: string, selected: boolean) => void
 }) {
   const navigate = useNavigate()
   const mints = useWatchlistStore(state => state.mints)
@@ -169,28 +164,12 @@ function WatchlistCard({
   const latency = knownMint?.latencyMs ?? null
   const uptimePct24h = knownMint?.uptimePct24h ?? null
 
-  const cardStyle: React.CSSProperties =
-    knownMint?.online === true
-      ? { background: 'linear-gradient(135deg, rgba(23, 232, 127, 0.28) 0%, rgba(13, 17, 23, 1) 55%)', border: '1px solid rgba(23, 232, 127, 0.45)', boxShadow: '0 0 0 1px rgba(23, 232, 127, 0.15), 0 0 12px rgba(23, 232, 127, 0.08)' }
-      : { background: 'linear-gradient(135deg, rgba(226, 75, 74, 0.28) 0%, rgba(13, 17, 23, 1) 55%)', border: '1px solid rgba(226, 75, 74, 0.45)', boxShadow: '0 0 0 1px rgba(226, 75, 74, 0.15), 0 0 12px rgba(226, 75, 74, 0.08)' }
-
   return (
     <div
       className="mint-card"
-      style={cardStyle}
       onClick={() => navigate(`/mint/${encodeURIComponent(url)}`)}
     >
-      {onToggleSelect && (
-        <div
-          className="card-select-box"
-          onClick={e => { e.stopPropagation(); onToggleSelect(url, !isSelected) }}
-        >
-          <div className={`card-checkbox${isSelected ? ' checked' : ''}`}>
-            {isSelected && <span>✓</span>}
-          </div>
-        </div>
-      )}
-      <div className="card-top" style={onToggleSelect ? { paddingLeft: 24 } : undefined}>
+      <div className="card-top">
         <div className="card-name-row">
           <MintFavicon url={url} iconUrl={knownMint?.iconUrl ?? null} size={32} radius={7} />
           <div style={{ minWidth: 0 }}>
@@ -315,7 +294,7 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
   return (
     <div className="wl-rec-panel">
       <div className="wl-rec-panel-header">
-        <span className="wl-rec-panel-title">RECOMMENDED BY FOLLOWS</span>
+        <span className="wl-rec-panel-title">Recommended by Follows</span>
         <span className="wl-rec-panel-badge">NIP-87</span>
       </div>
       {!isLoading && filteredRecs.length > 0 && (
@@ -398,19 +377,6 @@ export default function Watchlist() {
   const [pendingFilters, setPendingFilters] = useState<FilterState>(DEFAULT_FILTERS)
   const [activeFilters, setActiveFilters] = useState<FilterState>(DEFAULT_FILTERS)
 
-  // Comparison state
-  const [selectedUrls, setSelectedUrls] = useState<Set<string>>(new Set())
-  const [showComparison, setShowComparison] = useState(false)
-
-  function toggleSelect(url: string, selected: boolean) {
-    setSelectedUrls(prev => {
-      const next = new Set(prev)
-      if (selected && next.size < 4) next.add(url)
-      else next.delete(url)
-      return next
-    })
-  }
-
   function handleSortClick(s: typeof sortBy) {
     if (s === sortBy) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -422,7 +388,6 @@ export default function Watchlist() {
 
   const mints = useWatchlistStore(state => state.mints)
   const loadFromDb = useWatchlistStore(state => state.loadFromDb)
-  const removeMintFromStore = useWatchlistStore(state => state.removeMint)
 
   const profile = useAuthStore(state => state.profile)
 
@@ -433,7 +398,6 @@ export default function Watchlist() {
   const filteredMints = useMemo(() => {
     return applyFilters(mints, knownMintsMap, activeFilters)
   }, [mints, knownMintsMap, activeFilters])
-  const selectedMints = useMemo(() => filteredMints.map(url => knownMintsMap.get(url)).filter((m): m is KnownMint => m !== undefined && selectedUrls.has(m.url)), [filteredMints, knownMintsMap, selectedUrls])
 
   const sentinelRef = useRef<HTMLDivElement>(null)
   const [visibleCount, setVisibleCount] = useState(20)
@@ -458,7 +422,6 @@ export default function Watchlist() {
     const handler = (e: Event) => {
       if ((e as CustomEvent).type === 'mintradar:escape') {
         setShowFilters(false)
-        setShowComparison(false)
       }
     }
     window.addEventListener('mintradar:escape', handler)
@@ -684,8 +647,6 @@ export default function Watchlist() {
                     key={url}
                     url={url}
                     knownMint={knownMintsMap.get(url) ?? null}
-                    isSelected={selectedUrls.has(url)}
-                    onToggleSelect={toggleSelect}
                   />
                 ))}
               </div>
@@ -705,28 +666,6 @@ export default function Watchlist() {
         <div className="wl-showing">
           Showing {Math.min(visibleCount, sortedFiltered.length)} of {sortedFiltered.length}
         </div>
-      )}
-
-      {selectedUrls.size >= 1 && (
-        <div className="cmp-bar">
-          <span className="cmp-bar-text">Selected: {selectedUrls.size} mints</span>
-          {selectedUrls.size >= 2 && (
-            <button type="button" className="cmp-bar-btn primary" onClick={() => setShowComparison(true)}>Compare</button>
-          )}
-          <button
-            type="button"
-            className="cmp-bar-btn danger"
-            onClick={() => {
-              selectedUrls.forEach(url => { void removeMintFromStore(url) })
-              setSelectedUrls(new Set())
-            }}
-          >Remove from watchlist</button>
-          <button type="button" className="cmp-bar-btn" onClick={() => setSelectedUrls(new Set())}>Clear selection</button>
-        </div>
-      )}
-
-      {showComparison && selectedMints.length >= 2 && (
-        <ComparisonModal mints={selectedMints} onClose={() => setShowComparison(false)} />
       )}
 
       <div className="wl-footer">Watchlist is stored locally in your browser. When logged in with Nostr, it is also synced as an encrypted event (NIP-44) to Nostr relays for cross-device access. Mint URLs are included in encrypted alert DMs when a watched mint goes offline.</div>

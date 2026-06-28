@@ -530,104 +530,104 @@ export default function Stats() {
           </div>
         </div>
 
-        {/* Card 3: Most Reliable / Trust Score */}
-        <div className="stats-panel">
-          <div className="stats-card-header">
-            <div className="stats-panel-title" style={{marginBottom:0}}>
-              {reliableTab === 'reliable' ? 'Most Reliable · 24H' : 'Top Trust Score'}
+        {/* Card 3 + Trend: right column */}
+        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          <div className="stats-panel">
+            <div className="stats-card-header">
+              <div className="stats-panel-title" style={{marginBottom:0}}>
+                {reliableTab === 'reliable' ? 'Most Reliable · 24H' : 'Top Trust Score'}
+              </div>
+              <div className="stats-tab-toggle">
+                <button type="button" className={`stats-tab-btn${reliableTab === 'reliable' ? ' active' : ''}`} onClick={() => setReliableTab('reliable')}>Reliable</button>
+                <button type="button" className={`stats-tab-btn${reliableTab === 'trust' ? ' active' : ''}`} onClick={() => setReliableTab('trust')}>Trust</button>
+              </div>
             </div>
-            <div className="stats-tab-toggle">
-              <button type="button" className={`stats-tab-btn${reliableTab === 'reliable' ? ' active' : ''}`} onClick={() => setReliableTab('reliable')}>Reliable</button>
-              <button type="button" className={`stats-tab-btn${reliableTab === 'trust' ? ' active' : ''}`} onClick={() => setReliableTab('trust')}>Trust</button>
+            <div style={{display:'flex',flexDirection:'column',gap:5,marginTop:10}}>
+              {reliableTab === 'reliable' ? (
+                top5ByUptime.length === 0 ? (
+                  <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data yet</div>
+                ) : top5ByUptime.map((mint, idx) => {
+                  const uptime = mint.uptimePct24h ?? 0
+                  const color = uptimeColor(uptime)
+                  const hostname = getHostname(mint.url)
+                  return (
+                    <div key={mint.url} onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} className="stats-top5-row">
+                      <span className="stats-top5-rank">#{idx+1}</span>
+                      <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:12,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{mint.name ?? hostname}</div>
+                        <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{hostname}</div>
+                      </div>
+                      <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:700,color,flexShrink:0}}>{uptime}%</span>
+                    </div>
+                  )
+                })
+              ) : (
+                top5ByTrust.length === 0 ? (
+                  <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data yet</div>
+                ) : top5ByTrust.map((mint, idx) => {
+                  const score = mint.trustScore ?? 0
+                  const color = score >= 70 ? '#4ade80' : score >= 40 ? '#ffa500' : '#ff4d4d'
+                  const hostname = getHostname(mint.url)
+                  return (
+                    <div key={mint.url} onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} className="stats-top5-row">
+                      <span className="stats-top5-rank">#{idx+1}</span>
+                      <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:12,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{mint.name ?? hostname}</div>
+                        <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{hostname}</div>
+                      </div>
+                      <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:700,color,flexShrink:0}}>{score}%</span>
+                    </div>
+                  )
+                })
+              )}
             </div>
           </div>
-          <div style={{display:'flex',flexDirection:'column',gap:5,marginTop:10}}>
-            {reliableTab === 'reliable' ? (
-              top5ByUptime.length === 0 ? (
-                <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data yet</div>
-              ) : top5ByUptime.map((mint, idx) => {
-                const uptime = mint.uptimePct24h ?? 0
-                const color = uptimeColor(uptime)
-                const hostname = getHostname(mint.url)
-                return (
-                  <div key={mint.url} onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} className="stats-top5-row">
-                    <span className="stats-top5-rank">#{idx+1}</span>
-                    <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{mint.name ?? hostname}</div>
-                      <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{hostname}</div>
-                    </div>
-                    <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:700,color,flexShrink:0}}>{uptime}%</span>
-                  </div>
-                )
-              })
-            ) : (
-              top5ByTrust.length === 0 ? (
-                <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data yet</div>
-              ) : top5ByTrust.map((mint, idx) => {
-                const score = mint.trustScore ?? 0
-                const color = score >= 70 ? '#4ade80' : score >= 40 ? '#ffa500' : '#ff4d4d'
-                const hostname = getHostname(mint.url)
-                return (
-                  <div key={mint.url} onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} className="stats-top5-row">
-                    <span className="stats-top5-rank">#{idx+1}</span>
-                    <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{mint.name ?? hostname}</div>
-                      <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{hostname}</div>
-                    </div>
-                    <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:700,color,flexShrink:0}}>{score}%</span>
-                  </div>
-                )
-              })
-            )}
-          </div>
-        </div>
-      </div>
 
-      {/* ── Trust Score Trend (full width) ── */}
-      <div className="stats-trend-row">
-        <div className="stats-panel">
-          <div className="stats-card-header">
-            <div className="stats-panel-title" style={{marginBottom:0}}>Trust Score Trend</div>
-            <div className="stats-tab-toggle">
-              <button type="button" className={`stats-tab-btn${trendDays === 30 ? ' active' : ''}`} onClick={() => setTrendDays(30)}>30d</button>
-              <button type="button" className={`stats-tab-btn${trendDays === 90 ? ' active' : ''}`} onClick={() => setTrendDays(90)}>90d</button>
+          {/* Trust Score Trend — stacked below Most Reliable */}
+          <div className="stats-panel">
+            <div className="stats-card-header">
+              <div className="stats-panel-title" style={{marginBottom:0}}>Trust Score Trend</div>
+              <div className="stats-tab-toggle">
+                <button type="button" className={`stats-tab-btn${trendDays === 30 ? ' active' : ''}`} onClick={() => setTrendDays(30)}>30d</button>
+                <button type="button" className={`stats-tab-btn${trendDays === 90 ? ' active' : ''}`} onClick={() => setTrendDays(90)}>90d</button>
+              </div>
             </div>
-          </div>
-          <div style={{marginTop:12,height:120}}>
-            {(!trendData || trendData.length === 0) ? (
-              <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)',paddingTop:30,textAlign:'center'}}>No data yet</div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData} margin={{top:4,right:4,left:-28,bottom:0}}>
-                  <defs>
-                    <linearGradient id="trustGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#17E87F" stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor="#17E87F" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="date" tick={{fontSize:9,fill:'#8b949e',fontFamily:'var(--font-mono)'}} tickFormatter={d => d.slice(5)} interval="preserveStartEnd" axisLine={false} tickLine={false} />
-                  <YAxis domain={[0,100]} tick={{fontSize:9,fill:'#8b949e',fontFamily:'var(--font-mono)'}} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{background:'#0d1117',border:'1px solid #21262d',borderRadius:6,fontSize:11,fontFamily:'var(--font-mono)'}}
-                    labelStyle={{color:'#8b949e'}}
-                    formatter={(v) => [`${v ?? '—'}%`, 'Avg Trust']}
-                  />
-                  <Area type="monotone" dataKey="avgTrust" stroke="#17E87F" strokeWidth={1.5} fill="url(#trustGrad)" dot={false} />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div style={{marginTop:12,height:120}}>
+              {(!trendData || trendData.length === 0) ? (
+                <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)',paddingTop:30,textAlign:'center'}}>No data yet</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={trendData} margin={{top:4,right:4,left:-28,bottom:0}}>
+                    <defs>
+                      <linearGradient id="trustGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#17E87F" stopOpacity={0.25}/>
+                        <stop offset="95%" stopColor="#17E87F" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="date" tick={{fontSize:9,fill:'#8b949e',fontFamily:'var(--font-mono)'}} tickFormatter={d => d.slice(5)} interval="preserveStartEnd" axisLine={false} tickLine={false} />
+                    <YAxis domain={[0,100]} tick={{fontSize:9,fill:'#8b949e',fontFamily:'var(--font-mono)'}} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{background:'#0d1117',border:'1px solid #21262d',borderRadius:6,fontSize:11,fontFamily:'var(--font-mono)'}}
+                      labelStyle={{color:'#8b949e'}}
+                      formatter={(v) => [`${v ?? '—'}%`, 'Avg Trust']}
+                    />
+                    <Area type="monotone" dataKey="avgTrust" stroke="#17E87F" strokeWidth={1.5} fill="url(#trustGrad)" dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+            {trendSummary && (
+              <div className="trend-summary-row">
+                <span className="trend-summary-item"><span className="trend-summary-label">Current</span><span style={{color:'#17E87F',fontWeight:700}}>{trendSummary.current}%</span></span>
+                <span className="trend-summary-sep">·</span>
+                <span className="trend-summary-item"><span className="trend-summary-label">{trendDays}d High</span><span style={{color:'#4ade80'}}>{trendSummary.high}%</span></span>
+                <span className="trend-summary-sep">·</span>
+                <span className="trend-summary-item"><span className="trend-summary-label">{trendDays}d Low</span><span style={{color:'var(--text2)'}}>{trendSummary.low}%</span></span>
+              </div>
             )}
           </div>
-          {trendSummary && (
-            <div className="trend-summary-row">
-              <span className="trend-summary-item"><span className="trend-summary-label">Current</span><span style={{color:'#17E87F',fontWeight:700}}>{trendSummary.current}%</span></span>
-              <span className="trend-summary-sep">·</span>
-              <span className="trend-summary-item"><span className="trend-summary-label">{trendDays}d High</span><span style={{color:'#4ade80'}}>{trendSummary.high}%</span></span>
-              <span className="trend-summary-sep">·</span>
-              <span className="trend-summary-item"><span className="trend-summary-label">{trendDays}d Low</span><span style={{color:'var(--text2)'}}>{trendSummary.low}%</span></span>
-            </div>
-          )}
         </div>
       </div>
 

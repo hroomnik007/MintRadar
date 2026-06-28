@@ -89,7 +89,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   return (
     <div className="tool-card">
       <div className="tool-header">
-        <div className="tool-title">🔍 Token Inspector</div>
+        <div className="tool-title">Token Inspector</div>
         <div className="tool-subtitle">Paste a Cashu token to inspect its mint, amount, and trust status before redeeming</div>
       </div>
 
@@ -269,7 +269,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
   return (
     <div className="tool-card">
       <div className="tool-header">
-        <div className="tool-title">🧭 Best Mint for Me</div>
+        <div className="tool-title">Best Mint for Me</div>
         <div className="tool-subtitle">Answer 3 quick questions and we'll recommend the best mints for your needs · latency measured from your browser</div>
       </div>
 
