@@ -253,7 +253,7 @@ function MintCardDisplay({
           <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={32} radius={7} />
           <div style={{ minWidth: 0 }}>
             <div className="card-name">{displayName}</div>
-            <div className="card-host">{hostname}</div>
+            {mint.name && <div className="card-host">{hostname}</div>}
           </div>
           {ageBadge && (
             <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: ageBadge.color, background: ageBadge.bg, border: `1px solid ${ageBadge.border}`, borderRadius: 5, padding: '2px 7px', flexShrink: 0, marginLeft: 'auto', marginRight: 12 }}>
@@ -403,7 +403,10 @@ function MintListView({
                 <tr key={mint.url} className="mint-list-row" onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)}>
                   <td className="mint-list-td-name">
                     <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={24} radius={5} />
-                    <span className="mint-list-name">{displayName}</span>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="mint-list-name">{displayName}</div>
+                      {mint.name && <div className="mint-list-url">{getHostname(mint.url)}</div>}
+                    </div>
                   </td>
                   <td>
                     <span style={{ fontSize: 10, color: isOnline ? '#17E87F' : '#E24B4A' }}>

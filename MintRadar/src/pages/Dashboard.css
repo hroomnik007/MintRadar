@@ -278,6 +278,16 @@
   color: var(--text);
 }
 
+.mint-list-url {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text2);
+  font-family: var(--font-mono);
+  margin-top: 1px;
+}
+
 /* ── Mint Grid — auto-fill on desktop ───────────────────────── */
 .mint-grid {
   display: grid;
@@ -320,7 +330,7 @@
 
 .card-name {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--t1);
   line-height: 1.2;
   white-space: nowrap;
