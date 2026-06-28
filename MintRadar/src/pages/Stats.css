@@ -88,19 +88,17 @@
 .smc-value.smc-green  { color: #17E87F; }
 .smc-value.smc-orange { color: #F5A623; }
 
-/* ── 2-column card grid ──────────────────────────────────────── */
+/* ── 3-column card grid ──────────────────────────────────────── */
 .stats-cards-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 14px;
-  padding: 14px 18px;
+  padding: 14px 18px 0;
   align-items: start;
 }
 
-.stats-left-col {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+.stats-trend-row {
+  padding: 14px 18px;
 }
 
 /* ── Version breakdown ───────────────────────────────────────── */
@@ -557,15 +555,16 @@
 }
 
 /* ── Responsive ─────────────────────────────────────────────── */
-@media (max-width: 900px) {
-  .stats-cards-grid { grid-template-columns: 1fr; }
-  .stats-nut-rows-grid { grid-template-columns: 1fr; }
+@media (max-width: 1100px) {
+  .stats-cards-grid { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 700px) {
+  .stats-cards-grid { grid-template-columns: 1fr; padding: 10px 14px 0; gap: 10px; }
+  .stats-trend-row { padding: 10px 14px; }
   .stats-metrics { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
   .stats-metric-card { flex: 1 1 calc(50% - 4px); padding: 10px 14px; }
-  .stats-cards-grid { padding: 10px 14px; gap: 10px; }
+  .stats-nut-rows-grid { grid-template-columns: 1fr; }
   .stats-nut-section { padding: 10px 14px 20px; }
   .stats-nut-row { grid-template-columns: 60px 1fr 80px 40px; gap: 6px; padding: 8px 10px; }
 }

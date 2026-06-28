@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useWatchlistSync } from '@/hooks/useWatchlistSync'
+import { useFollowRecommendations } from '@/hooks/useFollowRecommendations'
 import { initBunkerQR } from '@/core/nostr/client'
 import { NavLogo } from './NavLogo'
 import './AppShell.css'
@@ -44,6 +45,7 @@ export function AppShell() {
 
   useWatchlistSync()
   const profile = useAuthStore(state => state.profile)
+  useFollowRecommendations(profile?.pubkey ?? null)
   const login = useAuthStore(state => state.login)
   const loginNsec = useAuthStore(state => state.loginNsec)
   const loginBunker = useAuthStore(state => state.loginBunker)
