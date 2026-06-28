@@ -531,7 +531,7 @@ export default function Stats() {
         </div>
 
         {/* Card 3 + Trend: right column */}
-        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+        <div style={{display:'flex',flexDirection:'column',gap:14,alignSelf:'stretch'}}>
           <div className="stats-panel">
             <div className="stats-card-header">
               <div className="stats-panel-title" style={{marginBottom:0}}>
@@ -585,8 +585,8 @@ export default function Stats() {
             </div>
           </div>
 
-          {/* Trust Score Trend — stacked below Most Reliable */}
-          <div className="stats-panel">
+          {/* Trust Score Trend — stacked below Most Reliable, fills remaining height */}
+          <div className="stats-panel" style={{flex:1,display:'flex',flexDirection:'column'}}>
             <div className="stats-card-header">
               <div className="stats-panel-title" style={{marginBottom:0}}>Trust Score Trend</div>
               <div className="stats-tab-toggle">

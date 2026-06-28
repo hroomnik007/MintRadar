@@ -93,8 +93,8 @@
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 14px;
-  padding: 14px 18px 0;
-  align-items: start;
+  padding: 14px 18px 14px;
+  align-items: stretch;
 }
 
 /* ── Version breakdown ───────────────────────────────────────── */
@@ -160,15 +160,16 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 14px 16px;
-  align-self: start;
 }
 
 .stats-panel-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.01em;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   margin-bottom: 12px;
+  font-family: var(--font-mono);
 }
 
 .stats-card-header {
@@ -310,10 +311,12 @@
 }
 
 .stats-section-label {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.01em;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: var(--font-mono);
   margin-bottom: 2px;
 }
 
