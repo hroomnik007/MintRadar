@@ -655,6 +655,33 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
     })
 })
 
+app.get('/api/stats/trust-trend', (req: Request, res: Response): void => {
+  const daysParam = parseInt(String(req.query['days'] ?? '30'), 10)
+  const days = [30, 90].includes(daysParam) ? daysParam : 30
+  pool.query(
+    `SELECT
+       (DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')::date AS date,
+       ROUND(AVG(trust_score))::int AS avg_trust
+     FROM mint_history
+     WHERE trust_score IS NOT NULL
+       AND online = true
+       AND checked_at > NOW() - INTERVAL '1 day' * $1
+     GROUP BY DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC')
+     ORDER BY 1 ASC`,
+    [days]
+  )
+    .then(result => {
+      res.json(result.rows.map(r => ({
+        date: (r.date as Date).toISOString().slice(0, 10),
+        avgTrust: r.avg_trust as number,
+      })))
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[/api/stats/trust-trend]', err)
+      res.status(500).json({ error: 'Internal server error' })
+    })
+})
+
 app.get('/api/mints/known', (_req: Request, res: Response): void => {
   if (knownMintsCache && Date.now() < knownMintsCache.expiresAt) {
     res.json(knownMintsCache.data)

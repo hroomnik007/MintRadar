@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { nip19 } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
@@ -600,15 +600,17 @@ export default function Dashboard() {
   }, [allMints, activeFilters])
   const activeFilterCount = countActiveFilters(activeFilters)
 
-  const avgLatency24h = useMemo(() => {
-    const lats = allMints
-      .filter(m => m.online === true && m.latencyMs !== null && m.latencyMs > 0 && m.latencyMs < 10000)
-      .map(m => m.latencyMs as number)
-      .sort((a, b) => a - b)
-    if (lats.length === 0) return null
-    const mid = Math.floor(lats.length / 2)
-    return lats.length % 2 !== 0 ? lats[mid]! : Math.round((lats[mid - 1]! + lats[mid]!) / 2)
-  }, [allMints])
+  const { data: statsData } = useQuery({
+    queryKey: ['stats'],
+    queryFn: async () => {
+      const res = await fetch('/api/stats')
+      if (!res.ok) throw new Error('stats fetch failed')
+      return res.json() as Promise<{ avgLatency24h: number | null }>
+    },
+    staleTime: 2 * 60 * 1000,
+    refetchInterval: 2 * 60 * 1000,
+  })
+  const avgLatency24h = statsData?.avgLatency24h ?? null
 
   const totalCount = allMints.length
   const onlineCount = allMints.filter(m => m.online === true).length
@@ -947,7 +949,7 @@ export default function Dashboard() {
             <div className="filter-active-tags">
               {activeFilters.status !== 'all' && (
                 <span className="filter-tag">
-                  {activeFilters.status === 'online' ? 'Online only' : 'Offline only'}
+                  {activeFilters.status === 'online' ? 'Online' : 'Offline'}
                   <button type="button" onClick={() => { const f = { ...activeFilters, status: 'all' as const }; setActiveFilters(f); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
@@ -979,7 +981,7 @@ export default function Dashboard() {
                 {(['all', 'online', 'offline'] as const).map(s => (
                   <label key={s} className="filter-radio">
                     <input type="radio" name="filter-status" checked={pendingFilters.status === s} onChange={() => setPendingFilters(p => ({ ...p, status: s }))} />
-                    {s === 'all' ? 'All' : s === 'online' ? 'Online only' : 'Offline only'}
+                    {s === 'all' ? 'All' : s === 'online' ? 'Online' : 'Offline'}
                   </label>
                 ))}
               </div>
@@ -1011,22 +1013,22 @@ export default function Dashboard() {
                 ))}
               </div>
             </div>
-          </div>
 
-          <div className="filter-group" style={{ marginBottom: 10 }}>
-            <div className="filter-group-label">NUT support</div>
-            <div className="filter-nut-grid">
-              {NUT_FILTER_KEYS.map(key => (
-                <button
-                  key={key}
-                  type="button"
-                  className={`filter-nut-chip${pendingFilters.requiredNuts.includes(key) ? ' active' : ''}`}
-                  onClick={() => setPendingFilters(p => ({
-                    ...p,
-                    requiredNuts: p.requiredNuts.includes(key) ? p.requiredNuts.filter(n => n !== key) : [...p.requiredNuts, key],
-                  }))}
-                >NUT-{key.padStart(2, '0')}</button>
-              ))}
+            <div className="filter-group filter-group-nuts">
+              <div className="filter-group-label">NUT support</div>
+              <div className="filter-nut-grid filter-nut-grid-nowrap">
+                {NUT_FILTER_KEYS.map(key => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`filter-nut-chip${pendingFilters.requiredNuts.includes(key) ? ' active' : ''}`}
+                    onClick={() => setPendingFilters(p => ({
+                      ...p,
+                      requiredNuts: p.requiredNuts.includes(key) ? p.requiredNuts.filter(n => n !== key) : [...p.requiredNuts, key],
+                    }))}
+                  >NUT-{key.padStart(2, '0')}</button>
+                ))}
+              </div>
             </div>
           </div>
 

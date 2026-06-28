@@ -734,7 +734,23 @@
   display: flex;
   gap: 24px;
   flex-wrap: wrap;
+  align-items: flex-start;
   margin-bottom: 10px;
+}
+
+.filter-group-nuts {
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-nut-grid-nowrap {
+  flex-wrap: wrap;
+}
+
+@media (min-width: 1200px) {
+  .filter-nut-grid-nowrap {
+    flex-wrap: nowrap;
+  }
 }
 
 .filter-group {

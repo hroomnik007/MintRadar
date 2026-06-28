@@ -6,6 +6,7 @@ import Stats from '@/pages/Stats'
 import NutExplorer from '@/pages/NutExplorer'
 import MintDetail from '@/pages/MintDetail'
 import MintNaddr from '@/pages/MintNaddr'
+import Tools from '@/pages/Tools'
 
 export const router = createBrowserRouter([
   {
@@ -14,6 +15,7 @@ export const router = createBrowserRouter([
       { index: true, element: <Dashboard /> },
       { path: 'watchlist', element: <Watchlist /> },
       { path: 'stats', element: <Stats /> },
+      { path: 'tools', element: <Tools /> },
       { path: 'nuts', element: <NutExplorer /> },
       { path: 'mint/nostr/:naddr', element: <MintNaddr /> },
       { path: 'mint/:url', element: <MintDetail /> },

@@ -1,0 +1,437 @@
+.tools-page {
+  min-height: 100vh;
+  background: transparent;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 18px;
+  align-items: start;
+}
+
+/* ── Shared tool card ─────────────────────────────────────────── */
+.tool-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tool-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tool-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.tool-subtitle {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  line-height: 1.5;
+}
+
+.tool-btn-primary {
+  width: 100%;
+  padding: 10px;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 150ms ease;
+  font-family: var(--font-sans);
+}
+
+.tool-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tool-btn-primary:not(:disabled):hover {
+  opacity: 0.85;
+}
+
+/* ── Token Inspector ──────────────────────────────────────────── */
+.token-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text);
+  resize: vertical;
+  outline: none;
+  transition: border-color 150ms ease;
+  line-height: 1.5;
+}
+
+.token-input:focus {
+  border-color: var(--accent);
+}
+
+.token-input::placeholder {
+  color: var(--text3);
+}
+
+.token-error {
+  font-size: 12px;
+  color: #E24B4A;
+  font-family: var(--font-mono);
+  padding: 8px 12px;
+  background: rgba(226, 75, 74, 0.08);
+  border: 1px solid rgba(226, 75, 74, 0.2);
+  border-radius: 7px;
+}
+
+.token-result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.token-result-cell {
+  background: var(--bg3);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trc-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: var(--font-mono);
+}
+
+.trc-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trc-value.trc-accent {
+  color: var(--accent);
+}
+
+.trc-value.trc-muted {
+  color: var(--text3);
+  font-weight: 400;
+}
+
+.trc-sub {
+  font-size: 10px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+}
+
+.token-details-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text2);
+  flex-wrap: wrap;
+}
+
+.tdr-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tdr-label {
+  color: var(--text3);
+  font-size: 10px;
+}
+
+.tdr-sep {
+  color: var(--border);
+}
+
+.token-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.token-action-btn {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text2);
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  transition: border-color 150ms ease, color 150ms ease;
+  white-space: nowrap;
+}
+
+.token-action-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Best Mint Wizard ─────────────────────────────────────────── */
+.wizard-steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  padding: 4px 0;
+}
+
+.wizard-step-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--border);
+  z-index: 0;
+}
+
+.wizard-step-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text3);
+  z-index: 1;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 200ms ease, border-color 200ms ease, color 200ms ease;
+}
+
+.wizard-step-dot.active {
+  background: var(--bg2);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.wizard-step-dot.done {
+  background: rgba(23, 232, 127, 0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.wizard-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wizard-q {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.wizard-options {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.wizard-options-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.wizard-opt {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: var(--font-sans);
+}
+
+.wizard-options-row .wizard-opt {
+  flex: 1;
+  min-width: 80px;
+}
+
+.wizard-opt:hover {
+  border-color: var(--accent);
+}
+
+.wizard-opt.active {
+  border-color: var(--accent);
+  background: rgba(23, 232, 127, 0.06);
+}
+
+.wizard-opt-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.wizard-opt-sub {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+}
+
+.wizard-back-btn {
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  transition: color 150ms ease;
+}
+
+.wizard-back-btn:hover {
+  color: var(--text2);
+}
+
+.wizard-results {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wizard-no-results {
+  text-align: center;
+  padding: 24px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.wizard-rec-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.wizard-rec-row:hover {
+  border-color: var(--accent);
+  background: rgba(23, 232, 127, 0.04);
+}
+
+.wizard-rank {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text3);
+  width: 20px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.wizard-rec-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.wizard-rec-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wizard-rec-meta {
+  font-size: 10px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wizard-rec-score {
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+.wizard-rec-view {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+/* ── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .tools-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .tools-grid {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .tool-card {
+    padding: 16px;
+  }
+
+  .wizard-options-row {
+    flex-wrap: wrap;
+  }
+}

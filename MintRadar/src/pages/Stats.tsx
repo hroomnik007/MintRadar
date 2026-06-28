@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import './Stats.css'
@@ -230,12 +231,23 @@ function CityMintsModal({ loc, mints, onClose }: {
   )
 }
 
+function semverCmp(a: string, b: string): number {
+  const parse = (s: string) => s.split('.').map(n => parseInt(n) || 0)
+  const pa = parse(a), pb = parse(b)
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pb[i] ?? 0) - (pa[i] ?? 0)
+    if (diff !== 0) return diff
+  }
+  return 0
+}
+
 export default function Stats() {
   const navigate = useNavigate()
   const [modalNut, setModalNut] = useState<string | null>(null)
   const [cityModal, setCityModal] = useState<string | null>(null)
   const [reliableTab, setReliableTab] = useState<'reliable' | 'trust'>('reliable')
   const [softGeoTab, setSoftGeoTab] = useState<'software' | 'geographic'>('software')
+  const [trendDays, setTrendDays] = useState<30 | 90>(30)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['stats'],
@@ -327,6 +339,58 @@ export default function Stats() {
     return knownMintsData.filter(m => m.serverLocation === cityModal)
   }, [cityModal, knownMintsData])
 
+  const { data: trendData } = useQuery({
+    queryKey: ['stats-trust-trend', trendDays],
+    queryFn: async (): Promise<Array<{ date: string; avgTrust: number }>> => {
+      const res = await fetch(`/api/stats/trust-trend?days=${trendDays}`)
+      if (!res.ok) throw new Error('trust-trend fetch failed')
+      return res.json() as Promise<Array<{ date: string; avgTrust: number }>>
+    },
+    staleTime: 10 * 60 * 1000,
+  })
+
+  const trendSummary = useMemo(() => {
+    if (!trendData || trendData.length === 0) return null
+    const vals = trendData.map(d => d.avgTrust)
+    const current = vals[vals.length - 1] ?? null
+    const high90 = Math.max(...vals)
+    const low90 = Math.min(...vals)
+    return { current, high: high90, low: low90 }
+  }, [trendData])
+
+  const versionDist = useMemo(() => {
+    if (!knownMintsData) return []
+    const swMap = new Map<string, Map<string, number>>()
+    for (const m of knownMintsData) {
+      if (m.online !== true || !m.version) continue
+      const slashIdx = m.version.indexOf('/')
+      const sw = slashIdx >= 0 ? m.version.slice(0, slashIdx) : m.version
+      const ver = slashIdx >= 0 ? m.version.slice(slashIdx + 1) : ''
+      if (!swMap.has(sw)) swMap.set(sw, new Map())
+      const vmap = swMap.get(sw)!
+      vmap.set(ver, (vmap.get(ver) ?? 0) + 1)
+    }
+    return [...swMap.entries()]
+      .sort((a, b) => {
+        const sumA = [...a[1].values()].reduce((s, n) => s + n, 0)
+        const sumB = [...b[1].values()].reduce((s, n) => s + n, 0)
+        return sumB - sumA
+      })
+      .map(([sw, vmap]) => {
+        const versions = [...vmap.entries()]
+          .sort((a, b) => semverCmp(a[0], b[0]))
+          .map(([ver, count], idx) => ({
+            ver,
+            count,
+            badge: idx === 0 ? 'latest' : idx === 1 ? 'outdated' : 'old',
+            badgeColor: idx === 0 ? '#17E87F' : idx === 1 ? '#f59e0b' : '#E24B4A',
+          }))
+        const total = versions.reduce((s, v) => s + v.count, 0)
+        const accentColor = sw === 'Nutshell' ? '#17E87F' : sw === 'cdk-mintd' ? '#378ADD' : '#a78bfa'
+        return { sw, total, versions, accentColor }
+      })
+  }, [knownMintsData])
+
   if (isLoading) return (
     <div className="stats-page">
       <div className="stats-header">
@@ -406,51 +470,115 @@ export default function Stats() {
 
       {/* ── 2-column card grid ── */}
       <div className="stats-cards-grid">
-        {/* Card 1: Software / Geographic */}
-        <div className="stats-panel">
-          <div className="stats-card-header">
-            <div className="stats-panel-title" style={{marginBottom:0}}>
-              {softGeoTab === 'software' ? 'Software in Use' : 'Geographic Distribution'}
+        {/* Left column: Software/Geo + Trust Trend */}
+        <div className="stats-left-col">
+          {/* Card 1: Software / Geographic */}
+          <div className="stats-panel">
+            <div className="stats-card-header">
+              <div className="stats-panel-title" style={{marginBottom:0}}>
+                {softGeoTab === 'software' ? 'Software in Use' : 'Geographic Distribution'}
+              </div>
+              <div className="stats-tab-toggle">
+                <button type="button" className={`stats-tab-btn${softGeoTab === 'software' ? ' active' : ''}`} onClick={() => setSoftGeoTab('software')}>Software</button>
+                <button type="button" className={`stats-tab-btn${softGeoTab === 'geographic' ? ' active' : ''}`} onClick={() => setSoftGeoTab('geographic')}>Geographic</button>
+              </div>
             </div>
-            <div className="stats-tab-toggle">
-              <button type="button" className={`stats-tab-btn${softGeoTab === 'software' ? ' active' : ''}`} onClick={() => setSoftGeoTab('software')}>Software</button>
-              <button type="button" className={`stats-tab-btn${softGeoTab === 'geographic' ? ' active' : ''}`} onClick={() => setSoftGeoTab('geographic')}>Geographic</button>
+            <div style={{marginTop:10}}>
+              {softGeoTab === 'software' ? (
+                versionDist.length === 0 ? (
+                  <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
+                ) : versionDist.map(({sw, total, versions, accentColor}) => {
+                  const totalOnline = versionDist.reduce((s, d) => s + d.total, 0)
+                  const pct = totalOnline > 0 ? Math.round(total / totalOnline * 100) : 0
+                  return (
+                    <div key={sw} className="sw-group" style={{borderLeft:`2px solid ${accentColor}`, paddingLeft:8, marginBottom:10}}>
+                      <div className="dist-row" style={{marginBottom:3}}>
+                        <span className="dist-label" style={{fontWeight:600,color:'var(--text)'}}>{sw}</span>
+                        <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:accentColor}} /></div>
+                        <span className="dist-count" style={{color:'var(--text2)'}}>{total}</span>
+                      </div>
+                      {versions.map(({ver, count, badge, badgeColor}) => {
+                        const vPct = total > 0 ? Math.round(count / total * 100) : 0
+                        return (
+                          <div key={ver} className="dist-row sw-ver-row">
+                            <span className="dist-label sw-ver-label" style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--text2)'}}>{ver || '—'}</span>
+                            <div className="dist-track"><div className="dist-fill" style={{width:`${vPct}%`,background:accentColor,opacity:0.55}} /></div>
+                            <span className="dist-count" style={{fontSize:10}}>{count}</span>
+                            <span className="sw-badge" style={{color:badgeColor,borderColor:badgeColor+'44',background:badgeColor+'11'}}>{badge}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })
+              ) : (
+                geoDist.length === 0 ? (
+                  <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
+                ) : geoDist.map(({loc, count, pct}) => {
+                  const {display, flag, color: geoColor} = geoLabel(loc)
+                  const barColor = geoColor ?? '#60a5fa'
+                  return (
+                    <div key={loc} className="dist-row dist-row-clickable" onClick={() => setCityModal(loc)}>
+                      <span className="dist-label dist-label-city" style={geoColor ? {color:geoColor} : undefined}>
+                        {flag ? `${flag} ${display}` : display}
+                      </span>
+                      <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:barColor}} /></div>
+                      <span className="dist-count">{count}</span>
+                    </div>
+                  )
+                })
+              )}
             </div>
-          </div>
-          <div style={{marginTop:10}}>
-            {softGeoTab === 'software' ? (
-              softwareDist.length === 0 ? (
-                <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
-              ) : softwareDist.map(({name, count, pct}) => (
-                <div key={name} className="dist-row">
-                  <span className="dist-label">{name}</span>
-                  <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:'#17E87F'}} /></div>
-                  <span className="dist-count">{count}</span>
-                </div>
-              ))
-            ) : (
-              geoDist.length === 0 ? (
-                <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
-              ) : geoDist.map(({loc, count, pct}) => {
-                const {display, flag, color: geoColor} = geoLabel(loc)
-                const barColor = geoColor ?? '#60a5fa'
-                return (
-                  <div key={loc} className="dist-row dist-row-clickable" onClick={() => setCityModal(loc)}>
-                    <span className="dist-label dist-label-city" style={geoColor ? {color:geoColor} : undefined}>
-                      {flag ? `${flag} ${display}` : display}
-                    </span>
-                    <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:barColor}} /></div>
-                    <span className="dist-count">{count}</span>
-                  </div>
-                )
-              })
+            {softGeoTab === 'software' && versionDist.length > 0 && (
+              <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:10,lineHeight:1.5}}>
+                Implementation reported by each mint's info document.
+              </div>
             )}
           </div>
-          {softGeoTab === 'software' && softwareDist.length > 0 && (
-            <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:10,lineHeight:1.5}}>
-              Implementation reported by each mint's info document.
+
+          {/* Trust Trend Chart */}
+          <div className="stats-panel">
+            <div className="stats-card-header">
+              <div className="stats-panel-title" style={{marginBottom:0}}>Network Trust Score Trend</div>
+              <div className="stats-tab-toggle">
+                <button type="button" className={`stats-tab-btn${trendDays === 30 ? ' active' : ''}`} onClick={() => setTrendDays(30)}>30d</button>
+                <button type="button" className={`stats-tab-btn${trendDays === 90 ? ' active' : ''}`} onClick={() => setTrendDays(90)}>90d</button>
+              </div>
             </div>
-          )}
+            <div style={{marginTop:12,height:110}}>
+              {(!trendData || trendData.length === 0) ? (
+                <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)',paddingTop:30,textAlign:'center'}}>No data yet</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={trendData} margin={{top:4,right:4,left:-28,bottom:0}}>
+                    <defs>
+                      <linearGradient id="trustGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#17E87F" stopOpacity={0.25}/>
+                        <stop offset="95%" stopColor="#17E87F" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="date" tick={{fontSize:9,fill:'#8b949e',fontFamily:'var(--font-mono)'}} tickFormatter={d => d.slice(5)} interval="preserveStartEnd" axisLine={false} tickLine={false} />
+                    <YAxis domain={[0,100]} tick={{fontSize:9,fill:'#8b949e',fontFamily:'var(--font-mono)'}} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{background:'#0d1117',border:'1px solid #21262d',borderRadius:6,fontSize:11,fontFamily:'var(--font-mono)'}}
+                      labelStyle={{color:'#8b949e'}}
+                      formatter={(v) => [`${v ?? '—'}%`, 'Avg Trust']}
+                    />
+                    <Area type="monotone" dataKey="avgTrust" stroke="#17E87F" strokeWidth={1.5} fill="url(#trustGrad)" dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+            {trendSummary && (
+              <div className="trend-summary-row">
+                <span className="trend-summary-item"><span className="trend-summary-label">Current</span><span style={{color:'#17E87F',fontWeight:700}}>{trendSummary.current}%</span></span>
+                <span className="trend-summary-sep">·</span>
+                <span className="trend-summary-item"><span className="trend-summary-label">{trendDays}d High</span><span style={{color:'#4ade80'}}>{trendSummary.high}%</span></span>
+                <span className="trend-summary-sep">·</span>
+                <span className="trend-summary-item"><span className="trend-summary-label">{trendDays}d Low</span><span style={{color:'var(--text2)'}}>{trendSummary.low}%</span></span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Card 2: Most Reliable / Fastest */}
