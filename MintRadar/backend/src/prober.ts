@@ -177,6 +177,8 @@ export async function probeMintToDb(url: string): Promise<void> {
           const tosUrl = typeof raw['tos_url'] === 'string' ? raw['tos_url'] : null
           const descriptionLong = typeof raw['description_long'] === 'string' ? raw['description_long'] : null
           const nutCount = Object.keys(nuts).length
+          const nameRaw = typeof raw['name'] === 'string' ? raw['name'].trim().slice(0, 100) : null
+          const name = nameRaw && nameRaw.length > 0 ? nameRaw : null
 
           const contactArr = Array.isArray(raw['contact']) ? raw['contact'] as Array<{ method: string }> : []
           contactCount = contactArr.filter(c => c.method === 'email' || c.method === 'twitter' || c.method === 'nostr').length
@@ -186,14 +188,15 @@ export async function probeMintToDb(url: string): Promise<void> {
 
           await pool.query(
             `UPDATE mints SET
-              icon_url         = COALESCE($1, icon_url),
-              version          = COALESCE($2, version),
-              nut_count        = COALESCE($3, nut_count),
-              tos_url          = COALESCE($4, tos_url),
-              description_long = COALESCE($5, description_long),
-              nuts_limits      = COALESCE($6::jsonb, nuts_limits)
-            WHERE url = $7`,
-            [iconUrl, version, nutCount, tosUrl, descriptionLong, JSON.stringify(nuts), url]
+              name             = COALESCE($1, name),
+              icon_url         = COALESCE($2, icon_url),
+              version          = COALESCE($3, version),
+              nut_count        = COALESCE($4, nut_count),
+              tos_url          = COALESCE($5, tos_url),
+              description_long = COALESCE($6, description_long),
+              nuts_limits      = COALESCE($7::jsonb, nuts_limits)
+            WHERE url = $8`,
+            [name, iconUrl, version, nutCount, tosUrl, descriptionLong, JSON.stringify(nuts), url]
           )
 
           if (version !== null && version !== storedVersion) {
