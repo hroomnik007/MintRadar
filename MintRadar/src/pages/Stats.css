@@ -103,8 +103,16 @@
 }
 
 .sw-ver-row {
-  padding: 1px 0;
+  padding: 2px 4px;
   gap: 4px;
+  margin: 0 -4px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.sw-ver-row:hover {
+  background: var(--bg3);
 }
 
 .sw-ver-row .dist-track {
@@ -168,7 +176,7 @@
   color: var(--text2);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   font-family: var(--font-mono);
 }
 
@@ -317,7 +325,7 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-family: var(--font-mono);
-  margin-bottom: 2px;
+  margin-bottom: 14px;
 }
 
 .stats-section-sublabel {

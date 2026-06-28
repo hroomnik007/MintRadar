@@ -150,6 +150,85 @@ function mintAgeBadge(discoveredAt: string | null | undefined): { label: string;
   return { label: 'OG', color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' }
 }
 
+function VersionMintsModal({ sw, ver, mints, onClose }: {
+  sw: string
+  ver: string
+  mints: KnownMint[]
+  onClose: () => void
+}) {
+  const navigate = useNavigate()
+  const [showAll, setShowAll] = useState(false)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const sorted = useMemo(() =>
+    [...mints].sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
+  , [mints])
+
+  const title = ver ? `${sw} ${ver}` : sw
+  const displayed = showAll ? sorted : sorted.slice(0, 10)
+  const onlineCount = mints.filter(m => m.online === true).length
+  const offlineCount = mints.filter(m => m.online === false).length
+
+  return (
+    <div className="nut-modal-overlay" onClick={onClose}>
+      <div className="nut-modal" onClick={e => e.stopPropagation()}>
+        <button type="button" className="nut-modal-close" onClick={onClose}>✕</button>
+        <div className="nut-modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <span className="nut-modal-title">{title}</span>
+            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{mints.length} mint{mints.length !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+        <div className="nut-modal-list">
+          {displayed.map(m => {
+            const score = m.trustScore ?? null
+            const scoreColor = score != null ? (score >= 70 ? '#4ade80' : score >= 40 ? '#ffa500' : '#ff4d4d') : 'var(--text3)'
+            const badge = mintAgeBadge(m.discoveredAt ?? null)
+            return (
+              <div
+                key={m.url}
+                className="nut-modal-row"
+                style={{ cursor: 'pointer' }}
+                onClick={() => { onClose(); navigate(`/mint/${encodeURIComponent(m.url)}`) }}
+              >
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? '#17E87F' : '#E24B4A', display: 'inline-block', flexShrink: 0 }} />
+                <div className="nut-modal-row-info" style={{ flex: 1 }}>
+                  <span className="nut-modal-row-name" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{m.name ?? getHostname(m.url)}</span>
+                  {badge && (
+                    <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: badge.color, background: badge.bg, border: `1px solid ${badge.border}`, borderRadius: 4, padding: '1px 5px', marginLeft: 6 }}>{badge.label}</span>
+                  )}
+                </div>
+                <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
+                  {score != null ? `${score}%` : '—'}
+                </span>
+              </div>
+            )
+          })}
+          {!showAll && sorted.length > 10 && (
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); setShowAll(true) }}
+              style={{ width: '100%', background: 'none', border: 'none', color: 'var(--accent)', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer', padding: '8px 0' }}
+            >
+              Show all {sorted.length} mints
+            </button>
+          )}
+          {sorted.length === 0 && <div className="nut-modal-empty">No mints</div>}
+        </div>
+        <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span>{onlineCount} online · {offlineCount} offline</span>
+          <span>Sorted by Trust Score</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function CityMintsModal({ loc, mints, onClose }: {
   loc: string
   mints: KnownMint[]
@@ -245,6 +324,7 @@ export default function Stats() {
   const navigate = useNavigate()
   const [modalNut, setModalNut] = useState<string | null>(null)
   const [cityModal, setCityModal] = useState<string | null>(null)
+  const [versionModal, setVersionModal] = useState<{ sw: string; ver: string; fullVersion: string } | null>(null)
   const [reliableTab, setReliableTab] = useState<'reliable' | 'trust'>('reliable')
   const [trendDays, setTrendDays] = useState<30 | 90>(30)
 
@@ -338,6 +418,11 @@ export default function Stats() {
     return knownMintsData.filter(m => m.serverLocation === cityModal)
   }, [cityModal, knownMintsData])
 
+  const versionMints = useMemo(() => {
+    if (!versionModal || !knownMintsData) return []
+    return knownMintsData.filter(m => m.version === versionModal.fullVersion)
+  }, [versionModal, knownMintsData])
+
   const { data: trendData } = useQuery({
     queryKey: ['stats-trust-trend', trendDays],
     queryFn: async (): Promise<Array<{ date: string; avgTrust: number }>> => {
@@ -381,6 +466,7 @@ export default function Stats() {
           .map(([ver, count], idx) => ({
             ver,
             count,
+            fullVersion: ver ? `${sw}/${ver}` : sw,
             badge: idx === 0 ? 'latest' : idx === 1 ? 'outdated' : 'old',
             badgeColor: idx === 0 ? '#17E87F' : idx === 1 ? '#f59e0b' : '#E24B4A',
           }))
@@ -486,10 +572,10 @@ export default function Stats() {
                     <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:accentColor}} /></div>
                     <span className="dist-count" style={{color:'var(--text2)'}}>{total}</span>
                   </div>
-                  {versions.map(({ver, count, badge, badgeColor}) => {
+                  {versions.map(({ver, count, fullVersion, badge, badgeColor}) => {
                     const vPct = total > 0 ? Math.round(count / total * 100) : 0
                     return (
-                      <div key={ver} className="dist-row sw-ver-row">
+                      <div key={ver} className="dist-row sw-ver-row" onClick={e => { e.stopPropagation(); setVersionModal({ sw, ver, fullVersion }) }}>
                         <span className="dist-label sw-ver-label" style={{fontFamily:'var(--font-mono)',fontSize:12,color:'var(--text2)'}}>{ver || '—'}</span>
                         <div className="dist-track"><div className="dist-fill" style={{width:`${vPct}%`,background:accentColor,opacity:0.55}} /></div>
                         <span className="dist-count" style={{fontSize:10}}>{count}</span>
@@ -671,6 +757,14 @@ export default function Stats() {
           loc={cityModal}
           mints={cityMints}
           onClose={() => setCityModal(null)}
+        />
+      )}
+      {versionModal !== null && (
+        <VersionMintsModal
+          sw={versionModal.sw}
+          ver={versionModal.ver}
+          mints={versionMints}
+          onClose={() => setVersionModal(null)}
         />
       )}
     </div>
