@@ -73,15 +73,6 @@ function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
 }
 
-function formatCheckedAt(iso: string): string {
-  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
-  if (seconds < 60) return `${seconds}s ago`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  return `${hours}h ago`
-}
-
 function SkeletonCard() {
   return (
     <div className="skeleton-card">
@@ -159,14 +150,19 @@ function WatchlistCard({
 
   const hostname = getHostname(url)
   const isOnline = knownMint?.online === true
-  const isDegraded = knownMint?.degraded ?? false
   const displayName = knownMint?.name ?? hostname
-  const latency = knownMint?.latencyMs ?? null
   const uptimePct24h = knownMint?.uptimePct24h ?? null
+  const ageBadge = mintAgeBadge(knownMint?.discoveredAt ?? null)
+
+  const cardStyle: React.CSSProperties =
+    knownMint?.online === true
+      ? { background: 'linear-gradient(135deg, rgba(23, 232, 127, 0.28) 0%, rgba(13, 17, 23, 1) 55%)', border: '1px solid rgba(23, 232, 127, 0.45)', boxShadow: '0 0 0 1px rgba(23, 232, 127, 0.15), 0 0 12px rgba(23, 232, 127, 0.08)' }
+      : { background: 'linear-gradient(135deg, rgba(226, 75, 74, 0.28) 0%, rgba(13, 17, 23, 1) 55%)', border: '1px solid rgba(226, 75, 74, 0.45)', boxShadow: '0 0 0 1px rgba(226, 75, 74, 0.15), 0 0 12px rgba(226, 75, 74, 0.08)' }
 
   return (
     <div
       className="mint-card"
+      style={cardStyle}
       onClick={() => navigate(`/mint/${encodeURIComponent(url)}`)}
     >
       <div className="card-top">
@@ -174,20 +170,18 @@ function WatchlistCard({
           <MintFavicon url={url} iconUrl={knownMint?.iconUrl ?? null} size={32} radius={7} />
           <div style={{ minWidth: 0 }}>
             <div className="card-name">{displayName}</div>
-            <div className="card-host">{hostname}</div>
+            {knownMint?.name && <div className="card-host">{hostname}</div>}
           </div>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-          <div
-            className={`status-dot${isOnline ? ' online' : ''}`}
-            style={{ background: knownMint?.online === true ? '#17E87F' : '#E24B4A' }}
-          />
-          {knownMint?.lastCheckedAt && (
-            <div style={{ color: 'var(--text3)', fontSize: 10, whiteSpace: 'nowrap' }}>
-              checked {formatCheckedAt(knownMint.lastCheckedAt)}
-            </div>
+          {ageBadge && (
+            <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: ageBadge.color, background: ageBadge.bg, border: `1px solid ${ageBadge.border}`, borderRadius: 5, padding: '2px 7px', flexShrink: 0, marginLeft: 'auto', marginRight: 12 }}>
+              {ageBadge.label}
+            </span>
           )}
         </div>
+        <div
+          className={`status-dot${isOnline ? ' online' : ''}`}
+          style={{ background: knownMint?.online === true ? '#17E87F' : '#E24B4A' }}
+        />
       </div>
       <div className="card-pills">
         {knownMint?.version && <span className="card-pill">{knownMint.version}</span>}
@@ -208,21 +202,23 @@ function WatchlistCard({
       <div className="card-bottom">
         <div className="latency-block">
           <div className="latency-label">LATENCY</div>
-          {isOnline && latency !== null ? (
+          {isOnline && knownMint?.latencyMs != null ? (
             <div className="latency-value" style={{ color: '#e6edf3' }}>
-              {latency}<span className="latency-unit">ms</span>
+              {knownMint.latencyMs}<span className="latency-unit">ms</span>
             </div>
           ) : (
             <div className="latency-value muted">—</div>
           )}
         </div>
-        <button
-          type="button"
-          className={`watch-btn${isWatched ? ' watching' : ''}`}
-          onClick={e => { e.stopPropagation(); void (isWatched ? removeMint(url) : addMint(url)) }}
-        >
-          {isWatched ? <><IcClose /><span>Unwatch</span></> : <><IcPlus /><span>Watch</span></>}
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button
+            type="button"
+            className={`watch-btn${isWatched ? ' watching' : ''}`}
+            onClick={e => { e.stopPropagation(); void (isWatched ? removeMint(url) : addMint(url)) }}
+          >
+            {isWatched ? <><IcClose /><span>Unwatch</span></> : <><IcPlus /><span>Watch</span></>}
+          </button>
+        </div>
       </div>
     </div>
   )
