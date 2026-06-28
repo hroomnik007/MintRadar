@@ -12,17 +12,24 @@ function isObviouslyPrivate(hostname: string): boolean {
   return /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|100\.(6[4-9]|[7-9]\d|1[0-1]\d|12[0-7])\.)/u.test(hostname)
 }
 
-// Normalizes a mint URL by lowercasing the hostname.
-// Mint URLs with uppercase hostnames (e.g. https://Mint.coinos.io) are treated
-// as identical to their lowercase form by DNS, but would create duplicate DB rows.
+// Normalizes a mint URL: enforces https, lowercases hostname, strips trailing slash.
+// Handles cases that would otherwise create duplicate DB rows:
+//   uppercase hostname (https://Mint.coinos.io → https://mint.coinos.io)
+//   trailing slash    (https://mint.example.com/ → https://mint.example.com)
+//   http scheme       (http://mint.example.com  → https://mint.example.com)
 export function normalizeUrl(raw: string): string {
   try {
-    const parsed = new URL(raw)
-    const lower = parsed.hostname.toLowerCase()
-    if (lower === parsed.hostname) return raw
-    return raw.replace(parsed.hostname, lower)
+    const parsed = new URL(raw.trim())
+    parsed.protocol = 'https:'
+    parsed.hostname = parsed.hostname.toLowerCase()
+    if (parsed.pathname !== '/') {
+      parsed.pathname = parsed.pathname.replace(/\/+$/, '')
+    } else {
+      parsed.pathname = ''
+    }
+    return parsed.toString()
   } catch {
-    return raw
+    return raw.trim()
   }
 }
 
