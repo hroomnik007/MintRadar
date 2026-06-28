@@ -642,3 +642,23 @@
   font-family: var(--font-mono);
   text-align: center;
 }
+
+.wl-rec-names {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.wl-rec-follower-name {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text3);
+  white-space: nowrap;
+}
+
+.wl-rec-follower-name + .wl-rec-follower-name::before {
+  content: '·';
+  margin-right: 4px;
+  color: var(--border);
+}

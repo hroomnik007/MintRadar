@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { verifyEvent } from 'nostr-tools'
+import { useQuery } from '@tanstack/react-query'
+import { verifyEvent, nip19 } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
 import { MintFavicon } from '@/components/mint/MintFavicon'
@@ -254,74 +255,55 @@ const FOLLOW_RELAYS = [
   'wss://relay.primal.net',
 ]
 
-function useFollowRecommendations(pubkey: string | null, watchlistUrls: string[]) {
-  const [recs, setRecs] = useState<Array<{ url: string; count: number; recommenders: string[] }>>([])
-  const [loading, setLoading] = useState(false)
-  const [followCount, setFollowCount] = useState(0)
+async function fetchFollowRecs(pubkey: string): Promise<{ recs: Array<{ url: string; count: number; recommenders: string[] }>; followCount: number }> {
+  const followEvents = await Promise.race([
+    sharedPool.querySync(FOLLOW_RELAYS, { kinds: [3], authors: [pubkey], limit: 1 }),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+  ]).catch(() => [] as NostrEvent[])
 
-  useEffect(() => {
-    if (!pubkey) return
-    let cancelled = false
-    setLoading(true)
-    setRecs([])
-    setFollowCount(0)
+  const followEvent = (followEvents as NostrEvent[]).filter(e => verifyEvent(e))[0]
+  if (!followEvent) return { recs: [], followCount: 0 }
 
-    const run = async () => {
-      // 1. Fetch follow list (kind:3)
-      const followEvents = await Promise.race([
-        sharedPool.querySync(FOLLOW_RELAYS, { kinds: [3], authors: [pubkey], limit: 1 }),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
-      ]).catch(() => [] as NostrEvent[])
+  const follows = followEvent.tags
+    .filter((t: string[]) => t[0] === 'p' && typeof t[1] === 'string')
+    .map((t: string[]) => t[1] as string)
+    .slice(0, 500)
 
-      if (cancelled) return
-      const followEvent = (followEvents as NostrEvent[]).filter(e => verifyEvent(e))[0]
-      if (!followEvent) { setLoading(false); return }
+  if (follows.length === 0) return { recs: [], followCount: 0 }
 
-      const follows = followEvent.tags
-        .filter((t: string[]) => t[0] === 'p' && typeof t[1] === 'string')
-        .map((t: string[]) => t[1] as string)
-        .slice(0, 500)
+  const reviewEvents = await Promise.race([
+    sharedPool.querySync(FOLLOW_RELAYS, { kinds: [38000], authors: follows, limit: 2000 }),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 12000)),
+  ]).catch(() => [] as NostrEvent[])
 
-      if (follows.length === 0) { setLoading(false); return }
-      if (cancelled) return
-      setFollowCount(follows.length)
-
-      // 2. Fetch their kind:38000 events
-      const reviewEvents = await Promise.race([
-        sharedPool.querySync(FOLLOW_RELAYS, { kinds: [38000], authors: follows, limit: 2000 }),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 12000)),
-      ]).catch(() => [] as NostrEvent[])
-
-      if (cancelled) return
-
-      // 3. Aggregate by mint URL
-      const urlMap = new Map<string, Set<string>>()
-      for (const ev of (reviewEvents as NostrEvent[])) {
-        if (!verifyEvent(ev)) continue
-        for (const tag of ev.tags as string[][]) {
-          if (tag[0] === 'u' && typeof tag[1] === 'string' && tag[1].startsWith('https://')) {
-            const url = tag[1].trim()
-            if (!urlMap.has(url)) urlMap.set(url, new Set())
-            urlMap.get(url)!.add(ev.pubkey)
-          }
-        }
+  const urlMap = new Map<string, Set<string>>()
+  for (const ev of (reviewEvents as NostrEvent[])) {
+    if (!verifyEvent(ev)) continue
+    for (const tag of ev.tags as string[][]) {
+      if (tag[0] === 'u' && typeof tag[1] === 'string' && tag[1].startsWith('https://')) {
+        const url = tag[1].trim()
+        if (!urlMap.has(url)) urlMap.set(url, new Set())
+        urlMap.get(url)!.add(ev.pubkey)
       }
-
-      const watchlistSet = new Set(watchlistUrls)
-      const result = [...urlMap.entries()]
-        .filter(([url]) => !watchlistSet.has(url))
-        .map(([url, pubkeys]) => ({ url, count: pubkeys.size, recommenders: [...pubkeys].slice(0, 3) }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10)
-
-      if (!cancelled) { setRecs(result); setLoading(false) }
     }
+  }
 
-    void run()
-    return () => { cancelled = true }
-  }, [pubkey, watchlistUrls.join(',')])  // eslint-disable-line react-hooks/exhaustive-deps
+  const recs = [...urlMap.entries()]
+    .map(([url, pubkeys]) => ({ url, count: pubkeys.size, recommenders: [...pubkeys].slice(0, 5) }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 20)
 
-  return { recs, loading, followCount }
+  return { recs, followCount: follows.length }
+}
+
+function useFollowRecommendations(pubkey: string | null) {
+  return useQuery({
+    queryKey: ['follow-recs', pubkey],
+    queryFn: () => fetchFollowRecs(pubkey!),
+    enabled: !!pubkey,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  })
 }
 
 function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
@@ -331,13 +313,57 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
 }) {
   const navigate = useNavigate()
   const addMint = useWatchlistStore(s => s.addMint)
-  const { recs, loading, followCount } = useFollowRecommendations(pubkey, watchlistUrls)
+  const { data, isLoading } = useFollowRecommendations(pubkey)
 
   const knownMap = useMemo(() => {
     const m = new Map<string, KnownMint>()
     if (knownMintsData) for (const mint of knownMintsData) m.set(mint.url, mint)
     return m
   }, [knownMintsData])
+
+  const watchlistSet = useMemo(() => new Set(watchlistUrls), [watchlistUrls])
+
+  const filteredRecs = useMemo(() => {
+    if (!data) return []
+    return data.recs
+      .filter(r => !watchlistSet.has(r.url))
+      .filter(r => knownMap.get(r.url)?.online === true)
+      .slice(0, 3)
+  }, [data, watchlistSet, knownMap])
+
+  const allRecommenderPubkeys = useMemo(
+    () => [...new Set(filteredRecs.flatMap(r => r.recommenders))],
+    [filteredRecs]
+  )
+
+  const { data: profiles } = useQuery({
+    queryKey: ['nostr-profiles-batch', [...allRecommenderPubkeys].sort().join(',')],
+    queryFn: async () => {
+      const events = await Promise.race([
+        sharedPool.querySync(FOLLOW_RELAYS, { kinds: [0], authors: allRecommenderPubkeys }),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000)),
+      ]).catch(() => [] as NostrEvent[])
+      const map: Record<string, string> = {}
+      for (const ev of (events as NostrEvent[])) {
+        if (!verifyEvent(ev)) continue
+        try {
+          const content = JSON.parse(ev.content) as Record<string, unknown>
+          const name = (content['display_name'] ?? content['name']) as string | undefined
+          if (name) map[ev.pubkey] = name
+        } catch { /* ignore */ }
+      }
+      return map
+    },
+    enabled: allRecommenderPubkeys.length > 0,
+    staleTime: 10 * 60 * 1000,
+  })
+
+  const getProfileName = (pk: string): string => {
+    if (profiles?.[pk]) return profiles[pk].slice(0, 14)
+    try { return nip19.npubEncode(pk).slice(0, 10) + '…' } catch { return pk.slice(0, 8) + '…' }
+  }
+
+  const followCount = data?.followCount ?? 0
 
   return (
     <div className="wl-recs-section">
@@ -346,12 +372,12 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
           Recommended by people you follow
           <span className="wl-recs-badge">via Nostr · NIP-87</span>
         </div>
-        {!loading && recs.length > 0 && (
-          <div className="wl-recs-meta">{recs.length} mints · from {followCount} follows</div>
+        {!isLoading && filteredRecs.length > 0 && (
+          <div className="wl-recs-meta">{filteredRecs.length} mints · from {followCount} follows</div>
         )}
       </div>
-      <div className="wl-recs-subtitle">Mints recommended by people you follow on Nostr (kind:38000)</div>
-      {loading ? (
+      <div className="wl-recs-subtitle">Online mints recommended by people you follow on Nostr (kind:38000)</div>
+      {isLoading ? (
         <div className="wl-recs-loading">
           {Array.from({ length: 3 }, (_, i) => (
             <div key={i} className="wl-rec-skeleton">
@@ -363,17 +389,16 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
             </div>
           ))}
         </div>
-      ) : recs.length === 0 ? (
-        <div className="wl-recs-empty">No recommendations found from your follows</div>
+      ) : filteredRecs.length === 0 ? (
+        <div className="wl-recs-empty">No online mint recommendations found from your follows</div>
       ) : (
         <>
           <div className="wl-recs-list">
-            {recs.map(({ url, count, recommenders }) => {
+            {filteredRecs.map(({ url, count, recommenders }) => {
               const mint = knownMap.get(url)
               const hostname = (() => { try { return new URL(url).hostname } catch { return url } })()
               const name = mint?.name ?? hostname
               const score = mint?.trustScore ?? null
-              const isOnline = mint?.online === true
               const scoreColor = score == null ? 'var(--text3)' : score >= 70 ? '#4ade80' : score >= 40 ? '#f59e0b' : '#E24B4A'
               return (
                 <div key={url} className="wl-rec-row">
@@ -388,13 +413,17 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
                     {score != null && (
                       <span className="wl-rec-trust" style={{ color: scoreColor, borderColor: scoreColor + '44', background: scoreColor + '11' }}>{score}%</span>
                     )}
-                    <span className="wl-rec-status" style={{ color: isOnline ? '#17E87F' : '#E24B4A' }}>●</span>
                     <span className="wl-rec-count">{count}×</span>
                     <div className="wl-rec-avatars">
                       {recommenders.map(pk => (
-                        <div key={pk} className="wl-rec-avatar" title={pk.slice(0, 12) + '…'}>
-                          {pk.slice(0, 2).toUpperCase()}
+                        <div key={pk} className="wl-rec-avatar" title={profiles?.[pk] ?? pk}>
+                          {(profiles?.[pk] ?? pk).slice(0, 2).toUpperCase()}
                         </div>
+                      ))}
+                    </div>
+                    <div className="wl-rec-names">
+                      {recommenders.slice(0, 3).map(pk => (
+                        <span key={pk} className="wl-rec-follower-name">{getProfileName(pk)}</span>
                       ))}
                     </div>
                     <button type="button" className="wl-rec-watch-btn" onClick={() => void addMint(url)}>+ Watch</button>
@@ -403,7 +432,7 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
               )
             })}
           </div>
-          <div className="wl-recs-footer">Mints already in your watchlist are not shown · Sorted by number of recommendations</div>
+          <div className="wl-recs-footer">Online mints only · not in your watchlist · sorted by recommendation count</div>
         </>
       )}
     </div>
@@ -604,7 +633,7 @@ export default function Watchlist() {
             <div className="filter-active-tags">
               {activeFilters.status !== 'all' && (
                 <span className="filter-tag">
-                  {activeFilters.status === 'online' ? 'Online only' : 'Offline only'}
+                  {activeFilters.status === 'online' ? 'Online' : 'Offline'}
                   <button type="button" onClick={() => { const f = { ...activeFilters, status: 'all' as const }; setActiveFilters(f); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
@@ -636,7 +665,7 @@ export default function Watchlist() {
                 {(['all', 'online', 'offline'] as const).map(s => (
                   <label key={s} className="filter-radio">
                     <input type="radio" name="wl-filter-status" checked={pendingFilters.status === s} onChange={() => setPendingFilters(p => ({ ...p, status: s }))} />
-                    {s === 'all' ? 'All' : s === 'online' ? 'Online only' : 'Offline only'}
+                    {s === 'all' ? 'All' : s === 'online' ? 'Online' : 'Offline'}
                   </label>
                 ))}
               </div>
@@ -662,16 +691,16 @@ export default function Watchlist() {
                 ))}
               </div>
             </div>
-          </div>
 
-          <div className="filter-group" style={{ marginBottom: 10 }}>
-            <div className="filter-group-label">NUT support</div>
-            <div className="filter-nut-grid">
-              {NUT_FILTER_KEYS.map(key => (
-                <button key={key} type="button" className={`filter-nut-chip${pendingFilters.requiredNuts.includes(key) ? ' active' : ''}`}
-                  onClick={() => setPendingFilters(p => ({ ...p, requiredNuts: p.requiredNuts.includes(key) ? p.requiredNuts.filter(n => n !== key) : [...p.requiredNuts, key] }))}
-                >NUT-{key.padStart(2, '0')}</button>
-              ))}
+            <div className="filter-group filter-group-nuts">
+              <div className="filter-group-label">NUT support</div>
+              <div className="filter-nut-grid filter-nut-grid-nowrap">
+                {NUT_FILTER_KEYS.map(key => (
+                  <button key={key} type="button" className={`filter-nut-chip${pendingFilters.requiredNuts.includes(key) ? ' active' : ''}`}
+                    onClick={() => setPendingFilters(p => ({ ...p, requiredNuts: p.requiredNuts.includes(key) ? p.requiredNuts.filter(n => n !== key) : [...p.requiredNuts, key] }))}
+                  >NUT-{key.padStart(2, '0')}</button>
+                ))}
+              </div>
             </div>
           </div>
 

@@ -491,7 +491,7 @@ export default function Stats() {
                   const totalOnline = versionDist.reduce((s, d) => s + d.total, 0)
                   const pct = totalOnline > 0 ? Math.round(total / totalOnline * 100) : 0
                   return (
-                    <div key={sw} className="sw-group" style={{borderLeft:`2px solid ${accentColor}`, paddingLeft:8, marginBottom:10}}>
+                    <div key={sw} className="sw-group" style={{borderLeft:`2px solid ${accentColor}`, paddingLeft:8, marginBottom:6}}>
                       <div className="dist-row" style={{marginBottom:3}}>
                         <span className="dist-label" style={{fontWeight:600,color:'var(--text)'}}>{sw}</span>
                         <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:accentColor}} /></div>
@@ -501,7 +501,7 @@ export default function Stats() {
                         const vPct = total > 0 ? Math.round(count / total * 100) : 0
                         return (
                           <div key={ver} className="dist-row sw-ver-row">
-                            <span className="dist-label sw-ver-label" style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--text2)'}}>{ver || '—'}</span>
+                            <span className="dist-label sw-ver-label" style={{fontFamily:'var(--font-mono)',color:'var(--text2)'}}>{ver || '—'}</span>
                             <div className="dist-track"><div className="dist-fill" style={{width:`${vPct}%`,background:accentColor,opacity:0.55}} /></div>
                             <span className="dist-count" style={{fontSize:10}}>{count}</span>
                             <span className="sw-badge" style={{color:badgeColor,borderColor:badgeColor+'44',background:badgeColor+'11'}}>{badge}</span>
@@ -539,7 +539,7 @@ export default function Stats() {
           {/* Trust Trend Chart */}
           <div className="stats-panel">
             <div className="stats-card-header">
-              <div className="stats-panel-title" style={{marginBottom:0}}>Network Trust Score Trend</div>
+              <div className="stats-panel-title" style={{marginBottom:0}}>Trust Score Trend</div>
               <div className="stats-tab-toggle">
                 <button type="button" className={`stats-tab-btn${trendDays === 30 ? ' active' : ''}`} onClick={() => setTrendDays(30)}>30d</button>
                 <button type="button" className={`stats-tab-btn${trendDays === 90 ? ' active' : ''}`} onClick={() => setTrendDays(90)}>90d</button>
