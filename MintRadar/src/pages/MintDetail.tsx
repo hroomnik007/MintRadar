@@ -1155,7 +1155,7 @@ function MintDetailContent({ url }: { url: string }) {
                 <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:8}}>
                   {(showAllReviews ? mergedReviews : mergedReviews.slice(0, 5)).map(r => {
                     const npub = nip19.npubEncode(r.pubkey)
-                    const profile = profiles.get(r.pubkey)
+                    const profile = profiles[r.pubkey]
                     const displayName = profile?.name ?? shortNpub(npub)
                     const initial = (profile?.name ?? npub).slice(0, 1).toUpperCase()
                     return (

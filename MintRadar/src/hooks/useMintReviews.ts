@@ -87,14 +87,20 @@ const PROFILE_RELAYS = [
   'wss://relay.damus.io',
 ]
 
-export function useNostrProfiles(pubkeys: string[]): Map<string, NostrProfile> {
-  const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(() => new Map(profileCache))
+export function useNostrProfiles(pubkeys: string[]): Record<string, NostrProfile> {
+  const [profiles, setProfiles] = useState<Record<string, NostrProfile>>({})
+
+  const flushCache = () => {
+    const obj: Record<string, NostrProfile> = {}
+    for (const [k, v] of profileCache) obj[k] = v
+    setProfiles({ ...obj })
+  }
 
   useEffect(() => {
     if (pubkeys.length === 0) return
     const missing = pubkeys.filter(pk => !profileCache.has(pk))
     if (missing.length === 0) {
-      setProfiles(new Map(profileCache))
+      flushCache()
       return
     }
     console.log('[profiles] fetching', missing.length, 'profiles for pubkeys:', missing.slice(0, 3))
@@ -122,7 +128,7 @@ export function useNostrProfiles(pubkeys: string[]): Map<string, NostrProfile> {
         for (const pk of missing) {
           if (!profileCache.has(pk)) profileCache.set(pk, {})
         }
-        setProfiles(new Map(profileCache))
+        flushCache()
         console.log('[profiles] cache size:', profileCache.size)
       } finally {
         pool.close(PROFILE_RELAYS)
