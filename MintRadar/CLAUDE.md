@@ -101,6 +101,17 @@ UNIQUE (url, version)
 - Every 5min: probe all mints in DB → write to mint_history, update mints metadata + last_trust_score
 - Every 6h: NIP-87 discovery from 7 relays + audit.8333.space API → INSERT new mints
 
+## Discovery pipeline
+
+`discoverMintsFromNostr()` in `backend/src/discovery.ts` runs 3 sources in parallel via `Promise.allSettled`:
+- **kind:38172** — NIP-87 mint announcements (direct `u` tag)
+- **kind:38000** — reviews; `#u` tag mining extracts reviewed mint URLs
+- **audit.8333.space** — external audit API
+
+Approximate yields (as of 2026-06-29): kind:38172 ~33 mints, kind:38000 ~37 mints, audit.8333.space ~61 mints. Total DB: ~97 mints.
+
+**URL normalization:** `normalizeUrl()` lowercases the hostname before every INSERT. Applied in 4 places: `discoverMintsFromNostr`, `discoverMintsFromApi`, `POST /api/mint/submit`, `POST /api/mints/discover`. Prevents duplicates like `https://Mint.coinos.io` vs `https://mint.coinos.io` (the capital-M variant was a seed bug and was manually deleted).
+
 ## Discovery relays (backend + frontend)
 wss://relay.damus.io, wss://nos.lol, wss://relay.primal.net,
 wss://relay.cashumints.space, wss://relay.azzamo.net,
@@ -133,6 +144,7 @@ Frontend:
 - The ONLY active GitHub Actions workflow is `/.github/workflows/deploy.yml` at the **repo root**. A dead duplicate previously existed at `MintRadar/.github/workflows/deploy.yml` inside the project subdirectory — GitHub Actions never ran it, but it caused confusion during debugging. It has been deleted. When editing CI/CD config, always confirm you're editing the root-level file.
 - The deploy sequence runs `sudo rm -rf /var/www/mintradar/dist/assets/*` before copying the new build. This is intentional: `rsync --delete` was silently failing to remove old `root:root`-owned asset files left over from a prior deploy mechanism while still reporting success, causing stale content-hashed files to accumulate alongside new ones.
 - The GH Actions workflow SSHes into the VPS, pulls latest code, builds on the server (`npm ci && npm run build`), then copies dist to the nginx root. The `rsync dist/` step documented in the deploy workflow above reflects the original mechanism — the active workflow in `.github/workflows/deploy.yml` is authoritative.
+- **GOTCHA — Dependabot PRs:** Never merge multiple Dependabot PRs in rapid succession. Each merge triggers a GH Actions deploy that runs `rm -rf node_modules && npm ci` on the VPS. Concurrent runs race on the same node_modules directory, corrupting TypeScript's lib files and causing `Cannot find global type 'Boolean'` / `lib.es2022.d.ts not found` errors. Merge one, wait for the run to complete, then merge the next.
 
 ## Nostr Login
 
@@ -215,6 +227,33 @@ Any future task targeting "the mint card" or "the watch button" MUST specify whi
 ### Security audit
 
 Full report in `AUDIT.md` at the repo root. Covers: telemetry, key handling, dependencies, XSS, backend API, secrets, Docker, HTTP headers. Backend is at 0 npm vulnerabilities. Frontend has 6 remaining (all dev-server only; Vite v8 upgrade needed to fix).
+
+## Dependency versions (as of 2026-06-29)
+
+### Frontend
+- eslint: 10.6.0 (upgraded from 9.x)
+- eslint-plugin-react-hooks: 7.1.1 (upgraded from 5.2.0 — v7 adds ESLint v10 support)
+- lucide-react: 1.22.0
+- globals: 17.7.0
+- @types/node: 26.0.1
+- immer: 10.2.0 (intentionally held at v10 — PR #14 closed; v11 breaking changes unverified with Zustand)
+
+### Backend
+- undici: 8.5.0 (security fix — 8 CVE patched)
+- pg: 8.22.0
+- node-cron: 4.5.0
+- @typescript-eslint/eslint-plugin: 8.62.0
+- @types/node: 26.0.1
+
+## Stats Page Layout (as of 2026-06-29)
+
+3-column grid (`.stats-cards-grid`) with `align-items: start` — cards shrink to content height:
+- **Row 1, col 1:** Software in Use (accordion — click SW row to expand versions)
+- **Row 1, col 2:** Geographic Distribution
+- **Col 3, rows 1–2:** `.stats-right-col` with `grid-row: span 2` (desktop only; resets at ≤1100px) — contains Most Reliable (Top 5) + Trust Score Trend stacked
+- **Row 2, col 1–2:** NUT Coverage with `gridColumn: 'span 2'` and `column-gap: 48px` between the two NUT columns
+
+At ≤1100px: `stats-right-col` gets `grid-row: auto`. At ≤700px: single column.
 
 ## Dashboard Mint Count Distinction (deliberate product decision — 2026-06-20)
 
