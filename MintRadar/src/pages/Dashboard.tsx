@@ -1163,7 +1163,7 @@ export default function Dashboard() {
       {showSubmit && (
         <div className="submit-modal-overlay" onClick={() => setShowSubmit(false)}>
           <div className="submit-modal" onClick={e => e.stopPropagation()}>
-            <div className="submit-modal-title">Submit a mint</div>
+            <div className="submit-modal-title">Submit a Mint</div>
             <div className="submit-tabs">
               <button type="button" className={`submit-tab-btn${submitTab === 'single' ? ' active' : ''}`} onClick={() => setSubmitTab('single')}>Single</button>
               <button type="button" className={`submit-tab-btn${submitTab === 'bulk' ? ' active' : ''}`} onClick={() => setSubmitTab('bulk')}>Bulk</button>
