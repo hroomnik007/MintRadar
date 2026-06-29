@@ -365,7 +365,7 @@ export default function Stats() {
     return [...knownMintsData]
       .filter(m => m.online === true && m.uptimePct24h != null)
       .sort((a, b) => (b.uptimePct24h ?? 0) - (a.uptimePct24h ?? 0))
-      .slice(0, 6)
+      .slice(0, 5)
   }, [knownMintsData])
 
   const top5ByLatency = useMemo(() => {
@@ -373,7 +373,7 @@ export default function Stats() {
     return [...knownMintsData]
       .filter(m => m.online === true && m.latencyMs != null)
       .sort((a, b) => (a.latencyMs ?? Infinity) - (b.latencyMs ?? Infinity))
-      .slice(0, 6)
+      .slice(0, 5)
   }, [knownMintsData])
 
   const top5ByTrust = useMemo(() => {
@@ -381,7 +381,7 @@ export default function Stats() {
     return [...knownMintsData]
       .filter(m => m.online === true && m.trustScore != null)
       .sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
-      .slice(0, 6)
+      .slice(0, 5)
   }, [knownMintsData])
 
   const softwareDist = useMemo(() => {

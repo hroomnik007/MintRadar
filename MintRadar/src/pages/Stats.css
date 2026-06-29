@@ -94,7 +94,7 @@
   grid-template-columns: 1fr 1fr 1fr;
   gap: 14px;
   padding: 14px 18px 14px;
-  align-items: stretch;
+  align-items: start;
 }
 
 /* ── Software accordion ──────────────────────────────────────── */
