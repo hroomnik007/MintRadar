@@ -78,6 +78,14 @@ export function useMintReviews(mintUrl: string) {
   return { reviews, loading }
 }
 
+const PROFILE_RELAYS = [
+  'wss://relay.nostr.band',
+  'wss://nos.lol',
+  'wss://relay.primal.net',
+  'wss://purplepag.es',
+  'wss://relay.damus.io',
+]
+
 export function useNostrProfiles(pubkeys: string[]): Map<string, NostrProfile> {
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(() => new Map(profileCache))
 
@@ -88,7 +96,7 @@ export function useNostrProfiles(pubkeys: string[]): Map<string, NostrProfile> {
       setProfiles(new Map(profileCache))
       return
     }
-    sharedPool.querySync(REVIEW_RELAYS, { kinds: [0], authors: missing, limit: missing.length + 5 })
+    sharedPool.querySync(PROFILE_RELAYS, { kinds: [0], authors: missing, limit: missing.length + 5 })
       .then(events => {
         const byPubkey = new Map<string, typeof events[0]>()
         for (const e of events) {
