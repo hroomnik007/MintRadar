@@ -18,7 +18,7 @@ const REVIEW_RELAYS = [
 export interface MintReview {
   id: string
   pubkey: string
-  rating: number
+  rating: number | null
   comment: string
   createdAt: number
 }
@@ -49,17 +49,20 @@ export function useMintReviews(mintUrl: string) {
       for (const e of byPubkey.values()) {
         const ratingTag = e.tags.find((t: string[]) => t[0] === 'rating')
         const commentTag = e.tags.find((t: string[]) => t[0] === 'comment')
-        const rating = ratingTag ? parseInt(ratingTag[1] ?? '', 10) : 0
-        const comment = commentTag ? (commentTag[1] ?? '') : ''
-        if (rating >= 1 && rating <= 5) {
-          parsed.push({
-            id: e.id,
-            pubkey: e.pubkey,
-            rating,
-            comment,
-            createdAt: e.created_at,
-          })
-        }
+        let rating: number | null = ratingTag ? parseInt(ratingTag[1] ?? '', 10) : null
+        if (rating !== null && (rating < 1 || rating > 5)) rating = null
+        // Fallback: extract rating from content "[X/5] ..." format
+        const contentMatch = !rating ? /^\[(\d)\/5\]/.exec(e.content ?? '') : null
+        if (contentMatch?.[1]) rating = parseInt(contentMatch[1], 10)
+        const rawComment = commentTag ? (commentTag[1] ?? '') : (e.content ?? '')
+        const comment = rawComment.replace(/^\[\d\/5\]\s*/, '').trim()
+        parsed.push({
+          id: e.id,
+          pubkey: e.pubkey,
+          rating,
+          comment,
+          createdAt: e.created_at,
+        })
       }
 
       parsed.sort((a, b) => b.createdAt - a.createdAt)

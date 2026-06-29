@@ -15,7 +15,7 @@ interface NostrReviewEntry {
   id: string
   pubkey: string
   content: string
-  rating: number
+  rating: number | null
   createdAt: number
   source: 'nostr'
 }
@@ -952,11 +952,14 @@ app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {
       for (const e of byPubkey.values()) {
         const ratingTag = (e.tags as string[][]).find(t => t[0] === 'rating')
         const commentTag = (e.tags as string[][]).find(t => t[0] === 'comment')
-        const rating = ratingTag ? parseInt(ratingTag[1] ?? '', 10) : 0
-        const content = commentTag ? (commentTag[1] ?? '') : (e.content ?? '')
-        if (rating >= 1 && rating <= 5) {
-          reviews.push({ id: e.id, pubkey: e.pubkey, content, rating, createdAt: e.created_at, source: 'nostr' })
-        }
+        let rating: number | null = ratingTag ? parseInt(ratingTag[1] ?? '', 10) : null
+        if (rating !== null && (rating < 1 || rating > 5)) rating = null
+        // Fallback: extract rating from content "[X/5] ..." format
+        const contentMatch = !rating ? /^\[(\d)\/5\]/.exec(e.content ?? '') : null
+        if (contentMatch) rating = parseInt(contentMatch[1], 10)
+        const rawComment = commentTag ? (commentTag[1] ?? '') : (e.content ?? '')
+        const content = rawComment.replace(/^\[\d\/5\]\s*/, '').trim()
+        reviews.push({ id: e.id, pubkey: e.pubkey, content, rating, createdAt: e.created_at, source: 'nostr' })
       }
 
       reviews.sort((a, b) => b.createdAt - a.createdAt)

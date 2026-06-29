@@ -251,7 +251,7 @@ function MintDetailContent({ url }: { url: string }) {
       try {
         const res = await fetch(`/api/mints/nostr-reviews?url=${encodeURIComponent(url)}`)
         if (!res.ok) return []
-        return res.json() as Promise<Array<{ id: string; pubkey: string; content: string; rating: number; createdAt: number; source: 'nostr' }>>
+        return res.json() as Promise<Array<{ id: string; pubkey: string; content: string; rating: number | null; createdAt: number; source: 'nostr' }>>
       } catch {
         return []
       }
@@ -262,7 +262,7 @@ function MintDetailContent({ url }: { url: string }) {
   const mergedReviews = useMemo(() => {
     const mintradarIds = new Set(reviews.map(r => r.id))
     const nostrOnly = (nostrReviewsData ?? []).filter(r => !mintradarIds.has(r.id))
-    const all: Array<{ id: string; pubkey: string; rating: number; comment: string; createdAt: number; source: 'mintradar' | 'nostr' }> = [
+    const all: Array<{ id: string; pubkey: string; rating: number | null; comment: string; createdAt: number; source: 'mintradar' | 'nostr' }> = [
       ...reviews.map(r => ({ ...r, source: 'mintradar' as const })),
       ...nostrOnly.map(r => ({ id: r.id, pubkey: r.pubkey, rating: r.rating, comment: r.content, createdAt: r.createdAt, source: 'nostr' as const })),
     ]
@@ -447,8 +447,9 @@ function MintDetailContent({ url }: { url: string }) {
   const isOutdated = version !== null && latestGlobalVersion !== null
     && (parseMinorVer(latestGlobalVersion) - parseMinorVer(version)) > 2
 
-  const avgRating = reviews.length > 0
-    ? Math.round(reviews.reduce((s, r) => s + r.rating, 0) / reviews.length * 10) / 10
+  const ratedReviews = reviews.filter(r => r.rating !== null)
+  const avgRating = ratedReviews.length > 0
+    ? Math.round(ratedReviews.reduce((s, r) => s + (r.rating as number), 0) / ratedReviews.length * 10) / 10
     : null
 
   const chartAvgLatency = chartHistoryData?.avgLatencyMs ?? null
@@ -1139,7 +1140,11 @@ function MintDetailContent({ url }: { url: string }) {
                   {mergedReviews.slice(0,5).map(r => (
                     <div key={r.id} style={{background:'var(--bg3)',border:'0.5px solid var(--border)',borderRadius:8,padding:'8px 10px'}}>
                       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
-                        <span style={{color:'var(--yellow)',fontSize:12}}>{'★'.repeat(r.rating)}{'☆'.repeat(5-r.rating)}</span>
+                        {r.rating !== null ? (
+                          <span style={{color:'var(--yellow)',fontSize:12}}>{'★'.repeat(r.rating)}{'☆'.repeat(5-r.rating)}</span>
+                        ) : (
+                          <span style={{color:'var(--text3)',fontSize:10}}>No rating</span>
+                        )}
                         <div style={{display:'flex',alignItems:'center',gap:5}}>
                           {r.source === 'nostr' ? (
                             <span style={{display:'inline-flex',alignItems:'center',gap:2,fontSize:9,fontFamily:'var(--font-mono)',fontWeight:600,color:'#8b5cf6',background:'rgba(139,92,246,0.1)',border:'0.5px solid rgba(139,92,246,0.3)',borderRadius:4,padding:'1px 5px'}}>
