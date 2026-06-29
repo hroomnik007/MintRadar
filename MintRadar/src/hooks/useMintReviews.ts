@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { verifyEvent } from 'nostr-tools'
+import { SimplePool } from 'nostr-tools/pool'
 import { sharedPool } from '@/core/nostr/pool'
 
 const REVIEW_RELAYS = [
@@ -96,8 +97,10 @@ export function useNostrProfiles(pubkeys: string[]): Map<string, NostrProfile> {
       setProfiles(new Map(profileCache))
       return
     }
-    sharedPool.querySync(PROFILE_RELAYS, { kinds: [0], authors: missing, limit: missing.length + 5 })
-      .then(events => {
+    const pool = new SimplePool()
+    ;(async () => {
+      try {
+        const events = await pool.querySync(PROFILE_RELAYS, { kinds: [0], authors: missing })
         const byPubkey = new Map<string, typeof events[0]>()
         for (const e of events) {
           const ex = byPubkey.get(e.pubkey)
@@ -118,8 +121,10 @@ export function useNostrProfiles(pubkeys: string[]): Map<string, NostrProfile> {
           if (!profileCache.has(pk)) profileCache.set(pk, {})
         }
         setProfiles(new Map(profileCache))
-      })
-      .catch(() => {})
+      } finally {
+        pool.close(PROFILE_RELAYS)
+      }
+    })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pubkeys.join(',')])
 
