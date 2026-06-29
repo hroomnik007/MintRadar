@@ -10,7 +10,7 @@ import {
 import { useMintProbe } from '@/hooks/useMintProbe'
 import { useMintHistory } from '@/hooks/useMintHistory'
 import { useKnownMints } from '@/hooks/useKnownMints'
-import { useMintReviews } from '@/hooks/useMintReviews'
+import { useMintReviews, useNostrProfiles } from '@/hooks/useMintReviews'
 import { submitMintReview } from '@/hooks/useSubmitReview'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
@@ -21,6 +21,17 @@ import {
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
   Clock, GitBranch, Plug, Database, Award, Layers, Zap, Plus, X, QrCode,
 } from 'lucide-react'
+
+const REVIEW_AVATAR_COLORS = ['#17E87F','#8b5cf6','#F5A623','#3b82f6','#ef4444','#ec4899']
+function reviewAvatarColor(pubkey: string): string {
+  return REVIEW_AVATAR_COLORS[parseInt(pubkey.slice(0, 8), 16) % REVIEW_AVATAR_COLORS.length] ?? '#17E87F'
+}
+function shortNpub(npub: string): string {
+  return npub.slice(0, 10) + '...' + npub.slice(-4)
+}
+function formatReviewDate(ts: number): string {
+  return new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+}
 
 interface NutMethod {
   method: string
@@ -261,19 +272,24 @@ function MintDetailContent({ url }: { url: string }) {
   })
   const mergedReviews = useMemo(() => {
     const mintradarIds = new Set(reviews.map(r => r.id))
-    const nostrOnly = (nostrReviewsData ?? []).filter(r => !mintradarIds.has(r.id))
+    const nostrOnly = (nostrReviewsData ?? [])
+      .filter(r => !mintradarIds.has(r.id))
+      .filter(r => r.rating !== null || r.content.trim().length > 0)
     const all: Array<{ id: string; pubkey: string; rating: number | null; comment: string; createdAt: number; source: 'mintradar' | 'nostr' }> = [
       ...reviews.map(r => ({ ...r, source: 'mintradar' as const })),
       ...nostrOnly.map(r => ({ id: r.id, pubkey: r.pubkey, rating: r.rating, comment: r.content, createdAt: r.createdAt, source: 'nostr' as const })),
     ]
     return all.sort((a, b) => b.createdAt - a.createdAt)
   }, [reviews, nostrReviewsData])
+  const reviewPubkeys = useMemo(() => [...new Set(mergedReviews.map(r => r.pubkey))], [mergedReviews])
+  const profiles = useNostrProfiles(reviewPubkeys)
   const [selectedNut, setSelectedNut] = useState<string | null>(null)
   const [copiedContact, setCopiedContact] = useState<string | null>(null)
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [showQr, setShowQr] = useState(false)
   const [showTrustBreakdown, setShowTrustBreakdown] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
+  const [showAllReviews, setShowAllReviews] = useState(false)
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewComment, setReviewComment] = useState('')
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
@@ -1137,34 +1153,39 @@ function MintDetailContent({ url }: { url: string }) {
                 <div style={{fontSize:11,color:'var(--text3)',marginTop:8}}>Loading reviews...</div>
               ) : mergedReviews.length > 0 ? (
                 <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:8}}>
-                  {mergedReviews.slice(0,5).map(r => (
-                    <div key={r.id} style={{background:'var(--bg3)',border:'0.5px solid var(--border)',borderRadius:8,padding:'8px 10px'}}>
-                      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
-                        {r.rating !== null ? (
-                          <span style={{color:'var(--yellow)',fontSize:12}}>{'★'.repeat(r.rating)}{'☆'.repeat(5-r.rating)}</span>
-                        ) : (
-                          <span style={{color:'var(--text3)',fontSize:10}}>No rating</span>
-                        )}
-                        <div style={{display:'flex',alignItems:'center',gap:5}}>
-                          {r.source === 'nostr' ? (
-                            <span style={{display:'inline-flex',alignItems:'center',gap:2,fontSize:9,fontFamily:'var(--font-mono)',fontWeight:600,color:'#8b5cf6',background:'rgba(139,92,246,0.1)',border:'0.5px solid rgba(139,92,246,0.3)',borderRadius:4,padding:'1px 5px'}}>
-                              <Zap size={8} />Nostr
-                            </span>
-                          ) : (
-                            <span style={{fontSize:9,fontFamily:'var(--font-mono)',fontWeight:600,color:'#17E87F',background:'rgba(23,232,127,0.1)',border:'0.5px solid rgba(23,232,127,0.3)',borderRadius:4,padding:'1px 5px'}}>
-                              MintRadar
-                            </span>
-                          )}
-                          <span style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>
-                            {nip19.npubEncode(r.pubkey).slice(0,12)}…
-                          </span>
+                  {(showAllReviews ? mergedReviews : mergedReviews.slice(0, 5)).map(r => {
+                    const npub = nip19.npubEncode(r.pubkey)
+                    const profile = profiles.get(r.pubkey)
+                    const displayName = profile?.name ?? shortNpub(npub)
+                    const initial = (profile?.name ?? npub).slice(0, 1).toUpperCase()
+                    return (
+                      <div key={r.id} className="review-card">
+                        <div className="review-card-header">
+                          <div className="review-avatar">
+                            {profile?.picture
+                              ? <img src={profile.picture} alt="" className="review-avatar-img" />
+                              : <div className="review-avatar-fallback" style={{background: reviewAvatarColor(r.pubkey)}}>{initial}</div>
+                            }
+                          </div>
+                          <div className="review-author">
+                            <span className="review-author-name">{displayName}</span>
+                            <span className="review-author-npub">{shortNpub(npub)}</span>
+                          </div>
+                          <div className="review-meta">
+                            {r.rating !== null && (
+                              <span className="review-stars">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                            )}
+                            <span className="review-date">{formatReviewDate(r.createdAt)}</span>
+                          </div>
                         </div>
+                        {r.comment && <p className="review-comment">{r.comment}</p>}
                       </div>
-                      {r.comment && <p style={{fontSize:12,color:'var(--text2)',lineHeight:1.5,margin:0}}>{r.comment}</p>}
-                    </div>
-                  ))}
-                  {mergedReviews.length > 5 && (
-                    <div style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>{mergedReviews.length - 5} more reviews</div>
+                    )
+                  })}
+                  {!showAllReviews && mergedReviews.length > 5 && (
+                    <button className="reviews-load-more" onClick={() => setShowAllReviews(true)}>
+                      Show {mergedReviews.length - 5} more review{mergedReviews.length - 5 !== 1 ? 's' : ''}
+                    </button>
                   )}
                 </div>
               ) : (

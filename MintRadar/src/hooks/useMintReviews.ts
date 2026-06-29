@@ -23,6 +23,13 @@ export interface MintReview {
   createdAt: number
 }
 
+export interface NostrProfile {
+  name?: string
+  picture?: string
+}
+
+const profileCache = new Map<string, NostrProfile>()
+
 export function useMintReviews(mintUrl: string) {
   const [reviews, setReviews] = useState<MintReview[]>([])
   const [loading, setLoading] = useState(true)
@@ -56,13 +63,9 @@ export function useMintReviews(mintUrl: string) {
         if (contentMatch?.[1]) rating = parseInt(contentMatch[1], 10)
         const rawComment = commentTag ? (commentTag[1] ?? '') : (e.content ?? '')
         const comment = rawComment.replace(/^\[\d\/5\]\s*/, '').trim()
-        parsed.push({
-          id: e.id,
-          pubkey: e.pubkey,
-          rating,
-          comment,
-          createdAt: e.created_at,
-        })
+        // Skip events with neither rating nor comment text
+        if (rating === null && comment.length === 0) continue
+        parsed.push({ id: e.id, pubkey: e.pubkey, rating, comment, createdAt: e.created_at })
       }
 
       parsed.sort((a, b) => b.createdAt - a.createdAt)
@@ -73,4 +76,44 @@ export function useMintReviews(mintUrl: string) {
   }, [mintUrl])
 
   return { reviews, loading }
+}
+
+export function useNostrProfiles(pubkeys: string[]): Map<string, NostrProfile> {
+  const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(() => new Map(profileCache))
+
+  useEffect(() => {
+    if (pubkeys.length === 0) return
+    const missing = pubkeys.filter(pk => !profileCache.has(pk))
+    if (missing.length === 0) {
+      setProfiles(new Map(profileCache))
+      return
+    }
+    sharedPool.querySync(REVIEW_RELAYS, { kinds: [0], authors: missing, limit: missing.length + 5 })
+      .then(events => {
+        const byPubkey = new Map<string, typeof events[0]>()
+        for (const e of events) {
+          const ex = byPubkey.get(e.pubkey)
+          if (!ex || e.created_at > ex.created_at) byPubkey.set(e.pubkey, e)
+        }
+        for (const [pk, e] of byPubkey) {
+          try {
+            const meta = JSON.parse(e.content) as { name?: string; picture?: string }
+            const profile: NostrProfile = {}
+            if (meta.name) profile.name = meta.name
+            if (meta.picture) profile.picture = meta.picture
+            profileCache.set(pk, profile)
+          } catch {
+            profileCache.set(pk, {})
+          }
+        }
+        for (const pk of missing) {
+          if (!profileCache.has(pk)) profileCache.set(pk, {})
+        }
+        setProfiles(new Map(profileCache))
+      })
+      .catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pubkeys.join(',')])
+
+  return profiles
 }
