@@ -351,6 +351,15 @@
   margin: 0 18px;
 }
 
+/* ── Right column (spans 2 grid rows on desktop) ────────────── */
+.stats-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-self: stretch;
+  grid-row: span 2;
+}
+
 /* ── NUT Coverage section ────────────────────────────────────── */
 .stats-nut-section {
   padding: 14px 18px 24px;
@@ -385,10 +394,10 @@
 
 .stats-nut-row {
   display: grid;
-  grid-template-columns: 70px 1fr 100px 50px;
+  grid-template-columns: 62px 1fr 80px 42px;
   align-items: center;
-  gap: 10px;
-  padding: 9px 14px;
+  gap: 8px;
+  padding: 6px 10px;
   border-bottom: 0.5px solid var(--border);
   cursor: pointer;
   transition: background 120ms ease;
@@ -397,20 +406,20 @@
 .stats-nut-row:hover { background: #161b22; }
 
 .snr-nut-tag {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
   font-family: var(--font-mono);
   color: var(--accent);
   background: rgba(23, 232, 127, 0.1);
   border: 0.5px solid rgba(23, 232, 127, 0.2);
   border-radius: 4px;
-  padding: 1px 6px;
+  padding: 1px 5px;
   text-align: center;
   flex-shrink: 0;
 }
 
 .snr-nut-name {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text);
   font-family: var(--font-mono);
   overflow: hidden;
@@ -419,7 +428,7 @@
 }
 
 .snr-bar-track {
-  height: 4px;
+  height: 3px;
   background: var(--bg3);
   border-radius: 99px;
   overflow: hidden;
@@ -432,7 +441,7 @@
 }
 
 .snr-nut-count {
-  font-size: 10px;
+  font-size: 9px;
   font-family: var(--font-mono);
   font-weight: 600;
   text-align: right;
@@ -601,6 +610,7 @@
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 1100px) {
   .stats-cards-grid { grid-template-columns: 1fr 1fr; }
+  .stats-right-col { grid-row: auto; align-self: start; }
 }
 
 @media (max-width: 700px) {
@@ -609,5 +619,5 @@
   .stats-metric-card { flex: 1 1 calc(50% - 4px); padding: 10px 14px; }
   .stats-nut-rows-grid { grid-template-columns: 1fr; }
   .stats-nut-section { padding: 10px 14px 20px; }
-  .stats-nut-row { grid-template-columns: 60px 1fr 80px 40px; gap: 6px; padding: 8px 10px; }
+  .stats-nut-row { grid-template-columns: 55px 1fr 70px 38px; gap: 6px; padding: 5px 8px; }
 }

@@ -626,8 +626,8 @@ export default function Stats() {
           </div>
         </div>
 
-        {/* Card 3 + Trend: right column */}
-        <div style={{display:'flex',flexDirection:'column',gap:14,alignSelf:'stretch'}}>
+        {/* Card 3 + Trend: right column — spans 2 grid rows */}
+        <div className="stats-right-col">
           <div className="stats-panel">
             <div className="stats-card-header">
               <div className="stats-panel-title" style={{marginBottom:0}}>
@@ -725,32 +725,30 @@ export default function Stats() {
             )}
           </div>
         </div>
-      </div>
 
-      <div className="stats-section-divider" />
-
-      {/* ── NUT Coverage ── */}
-      <div className="stats-nut-section">
-        <div className="stats-section-label">NUT Coverage Across the Network</div>
-        <div className="stats-section-sublabel">Protocol adoption across {data.onlineMints} online mints · click any NUT to see supporting mints</div>
-        <div className="stats-nut-rows-grid">
-          {NUT_ORDER.map(nut => {
-            const adoption = nutAdoptionMap[nut] ?? { count: 0, percent: 0 }
-            const { count, percent } = adoption
-            const meta = NUT_META[nut]
-            if (!meta) return null
-            const barColor = percent >= 80 ? '#17E87F' : percent >= 40 ? '#f59e0b' : '#E24B4A'
-            return (
-              <div key={nut} className="stats-nut-row" onClick={() => setModalNut(nut)}>
-                <span className="snr-nut-tag">{nut}</span>
-                <span className="snr-nut-name">{meta.short}</span>
-                <div className="snr-bar-track">
-                  <div className="snr-bar-fill" style={{width:`${percent}%`,background:barColor}} />
+        {/* NUT Coverage — spans cols 1-2, row 2 */}
+        <div className="stats-panel" style={{gridColumn:'span 2'}}>
+          <div className="stats-panel-title">NUT Coverage Across the Network</div>
+          <div className="stats-section-sublabel" style={{marginBottom:10}}>Protocol adoption across {data.onlineMints} online mints · click any NUT to see supporting mints</div>
+          <div className="stats-nut-rows-grid">
+            {NUT_ORDER.map(nut => {
+              const adoption = nutAdoptionMap[nut] ?? { count: 0, percent: 0 }
+              const { count, percent } = adoption
+              const meta = NUT_META[nut]
+              if (!meta) return null
+              const barColor = percent >= 80 ? '#17E87F' : percent >= 40 ? '#f59e0b' : '#E24B4A'
+              return (
+                <div key={nut} className="stats-nut-row" onClick={() => setModalNut(nut)}>
+                  <span className="snr-nut-tag">{nut}</span>
+                  <span className="snr-nut-name">{meta.short}</span>
+                  <div className="snr-bar-track">
+                    <div className="snr-bar-fill" style={{width:`${percent}%`,background:barColor}} />
+                  </div>
+                  <span className="snr-nut-count" style={{color:barColor}}>{count}/{data.onlineMints}</span>
                 </div>
-                <span className="snr-nut-count" style={{color:barColor}}>{count}/{data.onlineMints}</span>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
 
