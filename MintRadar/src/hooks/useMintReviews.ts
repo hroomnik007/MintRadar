@@ -92,6 +92,9 @@ export function useMintReviews(mintUrl: string) {
           if (p.name || p.picture) profileMap[e.pubkey] = p
         } catch {}
       }
+      console.log('[profileMap] keys:', Object.keys(profileMap).map(k => k.slice(0, 8)))
+      console.log('[profileMap] first review pubkey:', parsed[0]?.pubkey?.slice(0, 8))
+      console.log('[profileMap] match:', parsed[0] ? !!profileMap[parsed[0].pubkey] : false)
       setReviews(parsed.map(r => {
         const p = profileMap[r.pubkey]
         return p ? { ...r, profile: p } : r
