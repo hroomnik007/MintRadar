@@ -644,7 +644,7 @@ function MintDetailContent({ url }: { url: string }) {
               <div className="md-info-row" style={{alignItems: 'center'}}>
                 <span className="md-info-label">Public key</span>
                 <div style={{display: 'flex', alignItems: 'center', gap: 4}}>
-                  <span style={{fontSize: 11, color: 'var(--text)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap'}}>{pubkey.slice(0, 16)}…</span>
+                  <span style={{fontSize: 11, color: 'var(--text)', fontFamily: 'var(--font-mono)', wordBreak: 'break-all'}}>{pubkey}</span>
                   <button
                     onClick={() => {
                       void navigator.clipboard.writeText(pubkey)
