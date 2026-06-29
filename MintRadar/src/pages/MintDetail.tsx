@@ -1160,7 +1160,7 @@ function MintDetailContent({ url }: { url: string }) {
                       <div key={r.id} className="review-card">
                         <div className="review-card-header">
                           <div className="review-avatar">
-                            {profile?.picture
+                            {profile?.picture?.startsWith('https://')
                               ? <img src={profile.picture} alt="" className="review-avatar-img" />
                               : <div className="review-avatar-fallback" style={{background: reviewAvatarColor(r.pubkey)}}>{initial}</div>
                             }
