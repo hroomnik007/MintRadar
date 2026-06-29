@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { verifyEvent } from 'nostr-tools'
-import { SimplePool } from 'nostr-tools/pool'
 import { sharedPool } from '@/core/nostr/pool'
 
 const REVIEW_RELAYS = [
@@ -16,20 +15,22 @@ const REVIEW_RELAYS = [
   'wss://relay.minibits.cash',
 ]
 
+const PROFILE_RELAYS = [
+  'wss://relay.nostr.band',
+  'wss://nos.lol',
+  'wss://relay.primal.net',
+  'wss://purplepag.es',
+  'wss://relay.damus.io',
+]
+
 export interface MintReview {
   id: string
   pubkey: string
   rating: number | null
   comment: string
   createdAt: number
+  profile?: { name?: string; picture?: string }
 }
-
-export interface NostrProfile {
-  name?: string
-  picture?: string
-}
-
-const profileCache = new Map<string, NostrProfile>()
 
 export function useMintReviews(mintUrl: string) {
   const [reviews, setReviews] = useState<MintReview[]>([])
@@ -43,7 +44,7 @@ export function useMintReviews(mintUrl: string) {
       kinds: [38000],
       '#u': [mintUrl],
       limit: 50,
-    }).then(events => {
+    }).then(async events => {
       const validEvents = events.filter(e => verifyEvent(e))
       const byPubkey = new Map<string, typeof validEvents[0]>()
       for (const e of validEvents) {
@@ -70,72 +71,35 @@ export function useMintReviews(mintUrl: string) {
       }
 
       parsed.sort((a, b) => b.createdAt - a.createdAt)
-      setReviews(parsed)
+
+      if (parsed.length === 0) {
+        setReviews(parsed)
+        return
+      }
+
+      const pubkeys = [...new Set(parsed.map(r => r.pubkey))]
+      const profileEvents = await sharedPool.querySync(PROFILE_RELAYS, {
+        kinds: [0],
+        authors: pubkeys,
+      })
+      const profileMap: Record<string, { name?: string; picture?: string }> = {}
+      for (const e of profileEvents) {
+        try {
+          const meta = JSON.parse(e.content) as { name?: string; picture?: string }
+          const p: { name?: string; picture?: string } = {}
+          if (meta.name) p.name = meta.name
+          if (meta.picture) p.picture = meta.picture
+          if (p.name || p.picture) profileMap[e.pubkey] = p
+        } catch {}
+      }
+      setReviews(parsed.map(r => {
+        const p = profileMap[r.pubkey]
+        return p ? { ...r, profile: p } : r
+      }))
     }).catch(() => {}).finally(() => {
       setLoading(false)
     })
   }, [mintUrl])
 
   return { reviews, loading }
-}
-
-const PROFILE_RELAYS = [
-  'wss://relay.nostr.band',
-  'wss://nos.lol',
-  'wss://relay.primal.net',
-  'wss://purplepag.es',
-  'wss://relay.damus.io',
-]
-
-export function useNostrProfiles(pubkeys: string[]): Record<string, NostrProfile> {
-  const [profiles, setProfiles] = useState<Record<string, NostrProfile>>({})
-
-  const flushCache = () => {
-    const obj: Record<string, NostrProfile> = {}
-    for (const [k, v] of profileCache) obj[k] = v
-    setProfiles({ ...obj })
-  }
-
-  useEffect(() => {
-    if (pubkeys.length === 0) return
-    const missing = pubkeys.filter(pk => !profileCache.has(pk))
-    if (missing.length === 0) {
-      flushCache()
-      return
-    }
-    console.log('[profiles] fetching', missing.length, 'profiles for pubkeys:', missing.slice(0, 3))
-    const pool = new SimplePool()
-    ;(async () => {
-      try {
-        const events = await pool.querySync(PROFILE_RELAYS, { kinds: [0], authors: missing })
-        console.log('[profiles] got', events.length, 'events')
-        const byPubkey = new Map<string, typeof events[0]>()
-        for (const e of events) {
-          const ex = byPubkey.get(e.pubkey)
-          if (!ex || e.created_at > ex.created_at) byPubkey.set(e.pubkey, e)
-        }
-        for (const [pk, e] of byPubkey) {
-          try {
-            const meta = JSON.parse(e.content) as { name?: string; picture?: string }
-            const profile: NostrProfile = {}
-            if (meta.name) profile.name = meta.name
-            if (meta.picture) profile.picture = meta.picture
-            profileCache.set(pk, profile)
-          } catch {
-            profileCache.set(pk, {})
-          }
-        }
-        for (const pk of missing) {
-          if (!profileCache.has(pk)) profileCache.set(pk, {})
-        }
-        flushCache()
-        console.log('[profiles] cache size:', profileCache.size)
-      } finally {
-        pool.close(PROFILE_RELAYS)
-      }
-    })()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pubkeys.join(',')])
-
-  return profiles
 }

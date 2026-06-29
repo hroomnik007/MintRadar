@@ -10,7 +10,7 @@ import {
 import { useMintProbe } from '@/hooks/useMintProbe'
 import { useMintHistory } from '@/hooks/useMintHistory'
 import { useKnownMints } from '@/hooks/useKnownMints'
-import { useMintReviews, useNostrProfiles } from '@/hooks/useMintReviews'
+import { useMintReviews } from '@/hooks/useMintReviews'
 import { submitMintReview } from '@/hooks/useSubmitReview'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
@@ -275,14 +275,12 @@ function MintDetailContent({ url }: { url: string }) {
     const nostrOnly = (nostrReviewsData ?? [])
       .filter(r => !mintradarIds.has(r.id))
       .filter(r => r.rating !== null || r.content.trim().length > 0)
-    const all: Array<{ id: string; pubkey: string; rating: number | null; comment: string; createdAt: number; source: 'mintradar' | 'nostr' }> = [
+    const all: Array<{ id: string; pubkey: string; rating: number | null; comment: string; createdAt: number; source: 'mintradar' | 'nostr'; profile?: { name?: string; picture?: string } }> = [
       ...reviews.map(r => ({ ...r, source: 'mintradar' as const })),
       ...nostrOnly.map(r => ({ id: r.id, pubkey: r.pubkey, rating: r.rating, comment: r.content, createdAt: r.createdAt, source: 'nostr' as const })),
     ]
     return all.sort((a, b) => b.createdAt - a.createdAt)
   }, [reviews, nostrReviewsData])
-  const reviewPubkeys = useMemo(() => reviews.map(r => r.pubkey), [reviews])
-  const profiles = useNostrProfiles(reviewPubkeys)
   const [selectedNut, setSelectedNut] = useState<string | null>(null)
   const [copiedContact, setCopiedContact] = useState<string | null>(null)
   const [copiedUrl, setCopiedUrl] = useState(false)
@@ -1155,7 +1153,7 @@ function MintDetailContent({ url }: { url: string }) {
                 <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:8}}>
                   {(showAllReviews ? mergedReviews : mergedReviews.slice(0, 5)).map(r => {
                     const npub = nip19.npubEncode(r.pubkey)
-                    const profile = profiles[r.pubkey]
+                    const profile = r.profile
                     const displayName = profile?.name ?? shortNpub(npub)
                     const initial = (profile?.name ?? npub).slice(0, 1).toUpperCase()
                     return (
