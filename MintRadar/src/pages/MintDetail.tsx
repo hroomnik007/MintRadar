@@ -783,7 +783,7 @@ function MintDetailContent({ url }: { url: string }) {
                   <div className="md-contact-card">
                     <div>
                       <div className="md-contact-type">Nostr</div>
-                      <div className="md-contact-val">{nostr.slice(0, 16)}…</div>
+                      <div className="md-contact-val" style={{wordBreak:'break-all'}}>{nostr}</div>
                     </div>
                     <button
                       onClick={(e) => {
