@@ -11,6 +11,8 @@ const REVIEW_RELAYS = [
   'wss://relay.snort.social',
   'wss://offchain.pub',
   'wss://nostr-pub.wellorder.net',
+  'wss://relay.nostr.band',
+  'wss://relay.minibits.cash',
 ]
 
 export interface MintReview {

@@ -26,6 +26,7 @@ const NOSTR_REVIEWS_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
   'wss://relay.nostr.band',
+  'wss://relay.minibits.cash',
 ]
 const NOSTR_REVIEWS_TIMEOUT_MS = 8_000
 
