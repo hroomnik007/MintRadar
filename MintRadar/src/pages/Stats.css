@@ -385,7 +385,8 @@
 .stats-nut-rows-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0;
+  row-gap: 0;
+  column-gap: 48px;
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 10px;
