@@ -71,31 +71,33 @@ export function useMintReviews(mintUrl: string) {
       }
 
       parsed.sort((a, b) => b.createdAt - a.createdAt)
+      // Show reviews immediately without waiting for profiles
+      setReviews(parsed)
 
-      if (parsed.length === 0) {
-        setReviews(parsed)
-        return
-      }
+      if (parsed.length === 0) return
 
+      // Fetch profiles non-blocking — update reviews when profiles arrive
       const pubkeys = [...new Set(parsed.map(r => r.pubkey))]
-      const profileEvents = await Promise.race([
-        sharedPool.querySync(PROFILE_RELAYS, { kinds: [0], authors: pubkeys }),
-        new Promise<[]>(resolve => setTimeout(() => resolve([]), 8000)),
-      ])
-      const profileMap: Record<string, { name?: string; picture?: string }> = {}
-      for (const e of profileEvents) {
-        try {
-          const meta = JSON.parse(e.content) as { name?: string; picture?: string }
-          const p: { name?: string; picture?: string } = {}
-          if (meta.name) p.name = meta.name
-          if (meta.picture) p.picture = meta.picture
-          if (p.name || p.picture) profileMap[e.pubkey] = p
-        } catch {}
-      }
-setReviews(parsed.map(r => {
-        const p = profileMap[r.pubkey]
-        return p ? { ...r, profile: p } : r
-      }))
+      sharedPool.querySync(PROFILE_RELAYS, { kinds: [0], authors: pubkeys })
+        .then(profileEvents => {
+          const profileMap: Record<string, { name?: string; picture?: string }> = {}
+          for (const e of profileEvents) {
+            try {
+              const meta = JSON.parse(e.content) as { name?: string; picture?: string }
+              const p: { name?: string; picture?: string } = {}
+              if (meta.name) p.name = meta.name
+              if (meta.picture) p.picture = meta.picture
+              if (p.name || p.picture) profileMap[e.pubkey] = p
+            } catch {}
+          }
+          if (Object.keys(profileMap).length > 0) {
+            setReviews(prev => prev.map(r => {
+              const p = profileMap[r.pubkey]
+              return p ? { ...r, profile: p } : r
+            }))
+          }
+        })
+        .catch(() => {})
     }).catch(() => {}).finally(() => {
       setLoading(false)
     })
