@@ -614,6 +614,13 @@
   .stats-right-col { grid-row: auto; align-self: start; }
 }
 
+@media (max-width: 768px) {
+  .stats-cards-grid { grid-template-columns: 1fr; }
+  .stats-right-col { grid-row: auto; align-self: start; }
+  .stats-nut-rows-grid { grid-template-columns: 1fr; overflow: hidden; }
+  .snr-bar-track { max-width: 80px; }
+}
+
 @media (max-width: 700px) {
   .stats-cards-grid { grid-template-columns: 1fr; padding: 10px 14px 0; gap: 10px; }
   .stats-metrics { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }

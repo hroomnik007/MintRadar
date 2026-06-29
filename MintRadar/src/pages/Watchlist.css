@@ -429,6 +429,12 @@
 .cmp-label-cell { font-size: 9.5px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; font-family: var(--font-mono); align-items: center; }
 
 /* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .filter-row { flex-direction: column; gap: 14px; }
+  .filter-group-nuts { width: 100%; }
+  .filter-nut-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+}
+
 @media (max-width: 600px) {
   .wl-controls {
     padding: 10px 14px;

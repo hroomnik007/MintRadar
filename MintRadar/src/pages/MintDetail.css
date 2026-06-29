@@ -521,7 +521,11 @@
 .chart-tooltip-value { font-family: var(--font-mono); font-size: 13px; color: var(--text); letter-spacing: -0.02em; }
 
 /* ── Responsive ─────────────────────────────────────────────── */
+.pubkey-short { display: none; }
+
 @media (max-width: 768px) {
+  .pubkey-full { display: none; }
+  .pubkey-short { display: inline; }
   .md-summary {
     display: grid;
     grid-template-columns: 1fr 1fr;
