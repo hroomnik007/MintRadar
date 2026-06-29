@@ -21,7 +21,6 @@ const PROFILE_RELAYS = [
   'wss://relay.primal.net',
   'wss://purplepag.es',
   'wss://relay.damus.io',
-  'wss://relay.cashumints.space',
 ]
 
 export interface MintReview {
@@ -79,10 +78,10 @@ export function useMintReviews(mintUrl: string) {
       }
 
       const pubkeys = [...new Set(parsed.map(r => r.pubkey))]
-      const profileEvents = await sharedPool.querySync(PROFILE_RELAYS, {
-        kinds: [0],
-        authors: pubkeys,
-      })
+      const profileEvents = await Promise.race([
+        sharedPool.querySync(PROFILE_RELAYS, { kinds: [0], authors: pubkeys }),
+        new Promise<[]>(resolve => setTimeout(() => resolve([]), 8000)),
+      ])
       const profileMap: Record<string, { name?: string; picture?: string }> = {}
       for (const e of profileEvents) {
         try {
