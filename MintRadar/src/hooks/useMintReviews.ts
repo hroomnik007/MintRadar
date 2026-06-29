@@ -97,10 +97,12 @@ export function useNostrProfiles(pubkeys: string[]): Map<string, NostrProfile> {
       setProfiles(new Map(profileCache))
       return
     }
+    console.log('[profiles] fetching', missing.length, 'profiles for pubkeys:', missing.slice(0, 3))
     const pool = new SimplePool()
     ;(async () => {
       try {
         const events = await pool.querySync(PROFILE_RELAYS, { kinds: [0], authors: missing })
+        console.log('[profiles] got', events.length, 'events')
         const byPubkey = new Map<string, typeof events[0]>()
         for (const e of events) {
           const ex = byPubkey.get(e.pubkey)
@@ -121,6 +123,7 @@ export function useNostrProfiles(pubkeys: string[]): Map<string, NostrProfile> {
           if (!profileCache.has(pk)) profileCache.set(pk, {})
         }
         setProfiles(new Map(profileCache))
+        console.log('[profiles] cache size:', profileCache.size)
       } finally {
         pool.close(PROFILE_RELAYS)
       }
