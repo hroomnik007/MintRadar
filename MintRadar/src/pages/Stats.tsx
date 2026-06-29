@@ -325,6 +325,7 @@ export default function Stats() {
   const [modalNut, setModalNut] = useState<string | null>(null)
   const [cityModal, setCityModal] = useState<string | null>(null)
   const [versionModal, setVersionModal] = useState<{ sw: string; ver: string; fullVersion: string } | null>(null)
+  const [expandedSw, setExpandedSw] = useState<string | null>(null)
   const [reliableTab, setReliableTab] = useState<'reliable' | 'trust'>('reliable')
   const [trendDays, setTrendDays] = useState<30 | 90>(30)
 
@@ -559,37 +560,46 @@ export default function Stats() {
         {/* Card 1: Software in Use */}
         <div className="stats-panel">
           <div className="stats-panel-title">Software in Use</div>
-          <div style={{marginTop:10}}>
+          <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:6}}>
             {versionDist.length === 0 ? (
               <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
             ) : versionDist.map(({sw, total, versions, accentColor}) => {
               const totalOnline = versionDist.reduce((s, d) => s + d.total, 0)
               const pct = totalOnline > 0 ? Math.round(total / totalOnline * 100) : 0
+              const isExpanded = expandedSw === sw
               return (
-                <div key={sw} className="sw-group" style={{borderLeft:`2px solid ${accentColor}`, paddingLeft:8, marginBottom:8}}>
-                  <div className="dist-row" style={{marginBottom:3}}>
-                    <span className="dist-label" style={{fontWeight:600,color:'var(--text)',fontSize:13}}>{sw}</span>
+                <div key={sw} className="sw-accordion" style={isExpanded ? {borderLeft:`2px solid ${accentColor}`} : {}}>
+                  <div
+                    className={`sw-accordion-header${isExpanded ? ' expanded' : ''}`}
+                    onClick={() => setExpandedSw(isExpanded ? null : sw)}
+                  >
+                    <span className="dist-label" style={{fontWeight:600,color:isExpanded ? accentColor : 'var(--text)',fontSize:13}}>{sw}</span>
                     <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:accentColor}} /></div>
                     <span className="dist-count" style={{color:'var(--text2)'}}>{total}</span>
+                    <span className="sw-chevron" style={{color:isExpanded ? accentColor : 'var(--text3)'}}>{isExpanded ? '▲' : '▼'}</span>
                   </div>
-                  {versions.map(({ver, count, fullVersion, badge, badgeColor}) => {
-                    const vPct = total > 0 ? Math.round(count / total * 100) : 0
-                    return (
-                      <div key={ver} className="dist-row sw-ver-row" onClick={e => { e.stopPropagation(); setVersionModal({ sw, ver, fullVersion }) }}>
-                        <span className="dist-label sw-ver-label" style={{fontFamily:'var(--font-mono)',fontSize:12,color:'var(--text2)'}}>{ver || '—'}</span>
-                        <div className="dist-track"><div className="dist-fill" style={{width:`${vPct}%`,background:accentColor,opacity:0.55}} /></div>
-                        <span className="dist-count" style={{fontSize:10}}>{count}</span>
-                        <span className="sw-badge" style={{color:badgeColor,borderColor:badgeColor+'44',background:badgeColor+'11'}}>{badge}</span>
-                      </div>
-                    )
-                  })}
+                  {isExpanded && (
+                    <div className="sw-ver-panel">
+                      {versions.map(({ver, count, fullVersion, badge, badgeColor}) => {
+                        const vPct = total > 0 ? Math.round(count / total * 100) : 0
+                        return (
+                          <div key={ver} className="dist-row sw-ver-row" onClick={e => { e.stopPropagation(); setVersionModal({ sw, ver, fullVersion }) }}>
+                            <span className="dist-label sw-ver-label" style={{fontFamily:'var(--font-mono)',fontSize:12,color:'var(--text2)'}}>{ver || '—'}</span>
+                            <div className="dist-track"><div className="dist-fill" style={{width:`${vPct}%`,background:accentColor,opacity:0.55}} /></div>
+                            <span className="dist-count" style={{fontSize:10}}>{count}</span>
+                            <span className="sw-badge" style={{color:badgeColor,borderColor:badgeColor+'44',background:badgeColor+'11'}}>{badge}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               )
             })}
           </div>
           {versionDist.length > 0 && (
             <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
-              Reported by each mint's info document.
+              Implementation reported by each mint's info document.
             </div>
           )}
         </div>
