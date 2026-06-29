@@ -281,7 +281,7 @@ function MintDetailContent({ url }: { url: string }) {
     ]
     return all.sort((a, b) => b.createdAt - a.createdAt)
   }, [reviews, nostrReviewsData])
-  const reviewPubkeys = useMemo(() => [...new Set(mergedReviews.map(r => r.pubkey))], [mergedReviews])
+  const reviewPubkeys = useMemo(() => reviews.map(r => r.pubkey), [reviews])
   const profiles = useNostrProfiles(reviewPubkeys)
   const [selectedNut, setSelectedNut] = useState<string | null>(null)
   const [copiedContact, setCopiedContact] = useState<string | null>(null)
