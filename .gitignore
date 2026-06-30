@@ -39,6 +39,11 @@ dev-dist/
 public/sw.js
 public/workbox-*.js
 
+# Playwright E2E
+test-results/
+playwright-report/
+playwright/.cache/
+
 # Unrelated local projects
 Finvu/
 privyzap_phase1/
