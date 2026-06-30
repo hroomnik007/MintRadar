@@ -181,7 +181,7 @@ async function probeMint(url: string): Promise<MintStatus> {
 
 // ── App ────────────────────────────────────────────────────────
 
-const app = express()
+export const app = express()
 
 app.set('trust proxy', 1)
 
@@ -972,21 +972,26 @@ app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {
 
 // ── Start ──────────────────────────────────────────────────────
 
-const server = app.listen(PORT, () => {
-  console.log(`MintRadar backend listening on port ${PORT}`)
-  initDb()
-    .then(() => seedKnownMints(upsertMint))
-    .then(() => { startCron() })
-    .catch((err: unknown) => {
-      console.error('[startup] DB init failed — exiting:', err)
-      process.exit(1)
-    })
-})
+// Only bind the port and run startup side effects when not under test.
+// Integration tests import `app` directly and drive it via supertest, so the
+// real server, DB init, seeding and cron must not run on import.
+if (process.env['NODE_ENV'] !== 'test') {
+  const server = app.listen(PORT, () => {
+    console.log(`MintRadar backend listening on port ${PORT}`)
+    initDb()
+      .then(() => seedKnownMints(upsertMint))
+      .then(() => { startCron() })
+      .catch((err: unknown) => {
+        console.error('[startup] DB init failed — exiting:', err)
+        process.exit(1)
+      })
+  })
 
-process.on('SIGTERM', () => {
-  server.close(() => { process.exit(0) })
-})
+  process.on('SIGTERM', () => {
+    server.close(() => { process.exit(0) })
+  })
 
-process.on('SIGINT', () => {
-  server.close(() => { process.exit(0) })
-})
+  process.on('SIGINT', () => {
+    server.close(() => { process.exit(0) })
+  })
+}
