@@ -5,7 +5,21 @@ on:
       - main
 
 jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run backend tests
+        run: cd MintRadar/backend && npm ci && npm test
+      - name: Run frontend tests
+        run: cd MintRadar && npm ci && npm test
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Deploy backend via SSH
