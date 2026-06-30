@@ -727,7 +727,7 @@ export default function Stats() {
         </div>
 
         {/* NUT Coverage — spans cols 1-2, row 2 */}
-        <div className="stats-panel" style={{gridColumn:'span 2'}}>
+        <div className="stats-panel stats-nut-panel">
           <div className="stats-panel-title">NUT Coverage Across the Network</div>
           <div className="stats-section-sublabel" style={{marginBottom:10}}>Protocol adoption across {data.onlineMints} online mints · click any NUT to see supporting mints</div>
           <div className="stats-nut-rows-grid">

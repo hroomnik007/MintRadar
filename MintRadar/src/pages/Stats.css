@@ -95,6 +95,11 @@
   gap: 14px;
   padding: 14px 18px 14px;
   align-items: start;
+  min-width: 0;
+}
+
+.stats-nut-panel {
+  grid-column: span 2;
 }
 
 /* ── Software accordion ──────────────────────────────────────── */
@@ -618,7 +623,7 @@
   .stats-cards-grid { grid-template-columns: 1fr; }
   .stats-right-col { grid-row: auto; align-self: start; }
   .stats-nut-rows-grid { grid-template-columns: 1fr; overflow: hidden; }
-  .snr-bar-track { max-width: 80px; }
+  .stats-nut-panel { grid-column: 1 / -1; }
 }
 
 @media (max-width: 700px) {
@@ -627,5 +632,5 @@
   .stats-metric-card { flex: 1 1 calc(50% - 4px); padding: 10px 14px; }
   .stats-nut-rows-grid { grid-template-columns: 1fr; }
   .stats-nut-section { padding: 10px 14px 20px; }
-  .stats-nut-row { grid-template-columns: 55px 1fr 70px 38px; gap: 6px; padding: 5px 8px; }
+  .stats-nut-row { grid-template-columns: 55px 1fr 60px 38px; gap: 6px; padding: 5px 8px; }
 }

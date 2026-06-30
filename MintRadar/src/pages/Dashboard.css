@@ -224,6 +224,7 @@
 .mint-list-table-wrap {
   padding: 0 24px;
   overflow-x: auto;
+  min-width: 0;
 }
 
 .mint-list-table {
