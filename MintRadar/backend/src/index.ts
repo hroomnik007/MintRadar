@@ -7,6 +7,8 @@ import { isSafeUrl, safeFetch } from './ssrf.js'
 import { upsertMint, probeMintToDb } from './prober.js'
 import { seedKnownMints, startCron } from './cron.js'
 import { normalizeUrl } from './discovery.js'
+import { computeDegraded } from './degraded.js'
+import { parseReviewRatingAndComment } from './reviews.js'
 
 let knownMintsCache: { data: unknown; expiresAt: number } | null = null
 const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
@@ -717,14 +719,11 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         const onlineCount = Number(r.online_count)
         const latestOnline = r.latest_online as boolean | null
         const latestCheckedAt = r.latest_checked_at as string | null
-        const isStaleOffline = latestOnline === false &&
-          latestCheckedAt !== null &&
-          Date.now() - new Date(latestCheckedAt).getTime() > 24 * 60 * 60 * 1000
         return {
           url: r.url as string,
           name: r.name as string | null,
           iconUrl: (r.icon_url as string | null) ?? null,
-          degraded: (total >= 4 && onlineCount === 0) || isStaleOffline,
+          degraded: computeDegraded(total, onlineCount, latestOnline, latestCheckedAt),
           online: r.latest_online as boolean | null,
           latencyMs: r.latest_latency_ms as number | null,
           version: r.version as string | null,
@@ -955,15 +954,7 @@ app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {
 
       const reviews: NostrReviewEntry[] = []
       for (const e of byPubkey.values()) {
-        const ratingTag = (e.tags as string[][]).find(t => t[0] === 'rating')
-        const commentTag = (e.tags as string[][]).find(t => t[0] === 'comment')
-        let rating: number | null = ratingTag ? parseInt(ratingTag[1] ?? '', 10) : null
-        if (rating !== null && (rating < 1 || rating > 5)) rating = null
-        // Fallback: extract rating from content "[X/5] ..." format
-        const contentMatch = !rating ? /^\[(\d)\/5\]/.exec(e.content ?? '') : null
-        if (contentMatch) rating = parseInt(contentMatch[1], 10)
-        const rawComment = commentTag ? (commentTag[1] ?? '') : (e.content ?? '')
-        const content = rawComment.replace(/^\[\d\/5\]\s*/, '').trim()
+        const { rating, comment: content } = parseReviewRatingAndComment(e.tags as string[][], e.content ?? '')
         reviews.push({ id: e.id, pubkey: e.pubkey, content, rating, createdAt: e.created_at, source: 'nostr' })
       }
 

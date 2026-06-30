@@ -78,7 +78,7 @@ const SERVER_NUTSHELL_VERSIONS: [number, number][] = [
   [0, 16], [0, 15], [0, 14], [0, 13], [0, 12], [0, 11],
 ]
 
-function serverVersionFreshnessScore(v: string | null | undefined): number {
+export function serverVersionFreshnessScore(v: string | null | undefined): number {
   if (!v) return 0
   const m = v.match(/(\d+)\.(\d+)/)
   if (!m || !m[1] || !m[2]) return 3
@@ -91,7 +91,7 @@ function serverVersionFreshnessScore(v: string | null | undefined): number {
   return Math.max(0, 10 - idx * 2)
 }
 
-function computeServerTrustScore(
+export function computeServerTrustScore(
   uptimePct: number,
   nutCount: number | null,
   version: string | null,
