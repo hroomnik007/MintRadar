@@ -76,6 +76,11 @@ Select 2–4 mints and compare side-by-side: Status, Trust Score, Uptime, Latenc
 
 Automatic mint discovery running every 6 hours from 7 Nostr relays (damus.io, nos.lol, primal.net, cashumints.space, azzamo.net, snort.social, purplepag.es) using **kind:38172** mint announcements and **kind:38000** review events (URL mining), plus the **audit.8333.space** API — 3 sources running in parallel.
 
+### 🔧 Tools
+
+- **Token Inspector** — paste a Cashu token (cashuA / v3 format) to instantly see its mint, amount, unit, proof count, mint status, and Trust Score — with a direct link to the Mint Detail page or Cashu.me for redeeming
+- **Best Mint for Me** — a 3-step wizard: pick your storage size, what matters most (speed / trust / NUT features), and software preference; latency to each candidate is measured live from your browser, and the top 3 matches are ranked with a weighted score
+
 ### ⭐ Nostr-Based Reviews
 
 Mint Detail page shows community reviews fetched from 10 relays as **kind:38000** events. Ratings are parsed from review text (`[N/5]` format). Author profiles (name + avatar) are resolved from Nostr and displayed alongside each review. Images are only loaded over HTTPS.
