@@ -16,6 +16,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
 import type { MintStatus } from '@core/mint/api'
 import { ComparisonModal } from '@/components/ComparisonModal'
+import { mintAgeBadge, latencyColor, trustColor } from '@/utils/mintFormatting'
 import './Dashboard.css'
 
 // ── SVG Icons ──────────────────────────────────────────────────
@@ -99,22 +100,6 @@ const IcList = () => (
 )
 
 // ── Helpers ────────────────────────────────────────────────────
-
-function mintAgeBadge(discoveredAt: string | null | undefined): { label: string; color: string; bg: string; border: string } | null {
-  if (!discoveredAt) return null
-  const months = (Date.now() - new Date(discoveredAt).getTime()) / (1000 * 60 * 60 * 24 * 30.44)
-  if (months < 1) return { label: 'Fresh', color: '#60a5fa', bg: 'rgba(96,165,250,0.1)', border: 'rgba(96,165,250,0.25)' }
-  if (months < 6) return { label: 'Established', color: '#4ade80', bg: 'rgba(74,222,128,0.1)', border: 'rgba(74,222,128,0.25)' }
-  if (months < 12) return { label: 'Veteran', color: '#ffa500', bg: 'rgba(255,165,0,0.1)', border: 'rgba(255,165,0,0.25)' }
-  return { label: 'OG', color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' }
-}
-
-function latencyColor(ms: number | null | undefined): string {
-  if (!ms || ms <= 0) return 'var(--t3)'
-  if (ms < 500) return 'var(--fast)'
-  if (ms < 2000) return 'var(--med)'
-  return 'var(--slow)'
-}
 
 function uptimeColor(pct: number | null | undefined): string {
   if (pct === null || pct === undefined) return 'var(--t3)'
@@ -332,12 +317,6 @@ function MintCardDisplay({
       </div>
     </div>
   )
-}
-
-function trustColor(score: number): string {
-  if (score >= 70) return '#4ade80'
-  if (score >= 40) return '#ffa500'
-  return '#ff4d4d'
 }
 
 function MintListView({
