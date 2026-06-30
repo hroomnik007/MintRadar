@@ -156,10 +156,20 @@ export async function probeMintToDb(url: string): Promise<void> {
   let contactCount = 0
 
   try {
-    const res = await safeFetch(`${url}/v1/info`, {
+    let res = await safeFetch(`${url}/v1/info`, {
       timeoutMs: PROBE_TIMEOUT_MS,
       onError: (err) => { capturedErr = err },
     })
+
+    // Retry once on network/DNS failure (res === null) — avoids false-positive offline
+    if (res === null) {
+      await new Promise<void>(r => setTimeout(r, 1000))
+      capturedErr = null
+      res = await safeFetch(`${url}/v1/info`, {
+        timeoutMs: PROBE_TIMEOUT_MS,
+        onError: (err) => { capturedErr = err },
+      })
+    }
 
     if (res && res.ok) {
       try {
