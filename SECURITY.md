@@ -57,3 +57,27 @@ Expected response time: best effort, typically within 7 days.
 ---
 
 See [AUDIT.md](MintRadar/AUDIT.md) for the full security and privacy audit.
+
+---
+
+## Automated Security Testing
+
+MintRadar maintains a suite of **275 automated tests**, including **40 dedicated security tests** located in `backend/src/__tests__/security/`.
+
+### Coverage
+
+| Area | What is tested |
+|------|---------------|
+| SSRF protection | `isSafeUrl()` blocks private IPv4/IPv6 ranges, loopback, link-local, CGNAT, and DNS rebinding attempts |
+| SQL injection | All DB queries use parameterized `pg` queries; injection payloads in `url`, `period`, and filter fields are verified safe |
+| Rate limiting | Per-IP limits on `/api/mint/submit` (20/hr) and `/api/mints/discover` (10/hr) return 429 on excess |
+| CORS allow-list | Only allowed origins receive `Access-Control-Allow-Origin`; arbitrary origins are rejected |
+| HTTP security headers | `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Content-Security-Policy` presence verified |
+| Input validation | XSS payloads, null bytes, oversized payloads (>10 kB URL), mass assignment fields, and prototype pollution keys are all rejected |
+| Error message leakage | 4xx/5xx responses are verified NOT to expose stack traces, internal paths, or DB schema details |
+
+### CI enforcement
+
+The GitHub Actions `deploy` workflow includes a `test` job that runs all 275 tests. The `deploy` job declares `needs: test` and is blocked if any test fails. Security regressions cannot reach production undetected.
+
+Last security test review: **2026-06-30** — no defects found.

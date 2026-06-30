@@ -321,6 +321,50 @@ Frontend hides degraded mints by default (`showDegraded=false`); footer shows "N
 - **Stats page:** Sections stack vertically on mobile; NUT Coverage bars don't overflow (`overflow: hidden`, shorter progress bar max-width)
 - **Mint Detail:** Public key truncated on mobile (first+last 8 chars), full hex on desktop
 
+## Testing Infrastructure
+
+### Test counts (as of 2026-06-30): 275 total
+
+| Suite | Count | Tool | Location |
+|-------|-------|------|----------|
+| Backend unit | 102 | Vitest | `backend/src/__tests__/` |
+| Frontend unit | 70 | Vitest | `MintRadar/src/__tests__/` |
+| API integration | 46 | Vitest | `backend/src/__tests__/integration/` |
+| Security | 40 | Vitest | `backend/src/__tests__/security/` |
+| E2E | 17 | Playwright | `MintRadar/e2e/` |
+
+### Key tested modules
+
+- **Backend:** `normalizeUrl`, Trust Score calculation (prober.ts), degraded/offline detection logic, review parsing (kind:38000 regex), SSRF guard (`backend/src/ssrf.ts`) — DNS rebinding, private ranges, link-local
+- **Frontend:** `mintFormatting` and `reviewUtils` (extracted from components into `src/utils/` for testability), Trust Score display helpers
+
+### Run commands
+
+```bash
+# Backend (unit + integration + security)
+cd backend && npm test
+
+# Frontend unit
+cd MintRadar && npm test
+
+# E2E
+cd MintRadar && npm run test:e2e
+```
+
+### E2E mocking strategy
+
+- **HTTP:** `page.route('**/api/**', …)` with deterministic fixtures in `e2e/fixtures/mocks.ts`
+- **Nostr relays (wss):** `page.routeWebSocket(/^wss:\/\//)` stub — replies `["EOSE", subId]` to every `REQ`, `["OK", id, true, ""]` to every `EVENT`. Required because `SimplePool.querySync()` hangs until EOSE; simply closing the socket is not sufficient.
+- **NIP-07 login:** `page.addInitScript()` injects `window.nostr` mock (getPublicKey/signEvent/nip04/nip44) and pre-seeds Zustand persist key `mintradar_session` in `sessionStorage`
+
+### Notable finding (not a bug)
+
+The `+ Watch` button on Dashboard mint cards only renders when `isLoggedIn === true` (intentional — watchlist is identity-bound). E2E tests for the add-to-watchlist flow therefore require a mocked NIP-07 session.
+
+### CI
+
+`test` job in `.github/workflows/deploy.yml` runs all 275 tests. `deploy` job declares `needs: test` — a failing test blocks deployment.
+
 ## Key rules
 - NEVER modify anything not explicitly requested
 - ALWAYS run typecheck before build
