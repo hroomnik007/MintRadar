@@ -290,6 +290,37 @@ Runs every 6h: `0 */6 * * *` → `scripts/backup-db.sh`
 - Format: `pg_dump | gzip` — plain SQL, suitable for `zcat | psql` restore
 - NOTE: `/var/backups/mintradar/` and `/var/log/mintradar-backup.log` must be owned by `deploy` user (created with `sudo`, `mkdir -p` in script cannot create them itself)
 
+## Reviews Feature (Mint Detail)
+
+`src/hooks/useMintReviews.ts` fetches kind:38000 events from **REVIEW_RELAYS**:
+`relay.damus.io, nos.lol, relay.cashumints.space, purplepag.es, relay.primal.net, relay.snort.social, offchain.pub, nostr-pub.wellorder.net, nostr.band, relay.minibits.cash`
+
+Key implementation details:
+- Rating parsed from `content` via regex `/\[(\d)\/5\]/` — the `rating` tag does not exist in practice
+- Events without a rating AND without text body are discarded as meaningless
+- Author Nostr profiles (name + avatar) are fetched inline inside `useMintReviews.ts` via **PROFILE_RELAYS** (`relay.nostr.band, nos.lol, relay.primal.net, purplepag.es, relay.damus.io`) — a separate `useNostrProfiles` hook was removed due to a React state sync bug
+- Security: `profile.picture` is rendered only if it starts with `https://`
+
+## Mint Probe — Degraded/Offline Detection
+
+**isSafeUrl** returns `'safe' | 'blocked' | 'dns-error'` — DNS failures are now written to `mint_history` as `online: false` instead of being silently skipped.
+
+**Degraded logic** (in `backend/src/index.ts`):
+```
+degraded = (total24h >= 4 && onlineCount === 0) || isStaleOffline
+isStaleOffline = last known state is offline AND older than 24h
+```
+
+Frontend hides degraded mints by default (`showDegraded=false`); footer shows "N mints hidden (offline 24h+) — Show".
+
+**Known edge case:** After the first DNS-failure write, a mint may briefly show `degraded=false` for ~20 min until 4 probe records accumulate. Self-correcting, no intervention needed.
+
+## Mobile Responsive Fixes (as of 2026-06-30)
+
+- **Filter panel (Dashboard + Watchlist):** NUT SUPPORT — 7 chips per row via `grid-template-columns: repeat(7, 1fr)`; STATUS + MIN TRUST SCORE side by side (50/50) using `filter-group-row-top` wrapper with `display: contents` on desktop (transparent to flex layout) and `display: flex; flex-direction: row` at ≤768px
+- **Stats page:** Sections stack vertically on mobile; NUT Coverage bars don't overflow (`overflow: hidden`, shorter progress bar max-width)
+- **Mint Detail:** Public key truncated on mobile (first+last 8 chars), full hex on desktop
+
 ## Key rules
 - NEVER modify anything not explicitly requested
 - ALWAYS run typecheck before build

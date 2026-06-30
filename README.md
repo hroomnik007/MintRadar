@@ -74,7 +74,11 @@ Select 2–4 mints and compare side-by-side: Status, Trust Score, Uptime, Latenc
 
 ### 📡 Nostr NIP-87 Discovery
 
-Automatic mint discovery from 7 Nostr relays (damus.io, nos.lol, primal.net, cashumints.space, azzamo.net, snort.social, purplepag.es) using **kind:38172** and **kind:38000** events, plus the **audit.8333.space** API. Decentralized mint reviews via **kind:38000**.
+Automatic mint discovery running every 6 hours from 7 Nostr relays (damus.io, nos.lol, primal.net, cashumints.space, azzamo.net, snort.social, purplepag.es) using **kind:38172** mint announcements and **kind:38000** review events (URL mining), plus the **audit.8333.space** API — 3 sources running in parallel.
+
+### ⭐ Nostr-Based Reviews
+
+Mint Detail page shows community reviews fetched from 10 relays as **kind:38000** events. Ratings are parsed from review text (`[N/5]` format). Author profiles (name + avatar) are resolved from Nostr and displayed alongside each review. Images are only loaded over HTTPS.
 
 ### 🏷️ Mint Age Badges
 
