@@ -1,7 +1,7 @@
 import dns from 'dns'
 import { fetch as undiciFetch } from 'undici'
 import { pool } from './db.js'
-import { isSafeUrl, safeFetch } from './ssrf.js'
+import { checkUrlSafety, safeFetch } from './ssrf.js'
 
 function isCloudflareIP(address: string): boolean {
   const parts = address.split('.').map(Number)
@@ -141,10 +141,24 @@ function classifyFetchError(err: unknown): string {
 }
 
 export async function probeMintToDb(url: string): Promise<void> {
-  if (!(await isSafeUrl(url))) {
+  const urlSafety = await checkUrlSafety(url)
+  if (urlSafety === 'blocked') {
     if (process.env['NODE_ENV'] !== 'production') {
       console.warn('[prober] blocked unsafe URL:', url)
     }
+    return
+  }
+  if (urlSafety === 'dns-error') {
+    // DNS failure is not an SSRF attempt — record the mint as offline so
+    // uptime history and the degraded flag remain accurate.
+    await pool.query(
+      `INSERT INTO mint_history (url, online, latency_ms, checked_at) VALUES ($1, false, NULL, NOW())`,
+      [url]
+    )
+    await pool.query(
+      `UPDATE mints SET last_error = $1 WHERE url = $2`,
+      ['DNS resolution failed', url]
+    )
     return
   }
 

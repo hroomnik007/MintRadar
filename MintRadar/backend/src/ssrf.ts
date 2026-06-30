@@ -36,38 +36,55 @@ function isBlockedIpString(ip: string): boolean {
   }
 }
 
-export async function isSafeUrl(rawUrl: string): Promise<boolean> {
+// 'safe'      — proceed with fetch
+// 'blocked'   — SSRF-blocked (private IP, bad protocol, etc.) — do not probe, do not write history
+// 'dns-error' — DNS lookup failed, mint is unreachable — write offline history entry
+export type UrlSafetyResult = 'safe' | 'blocked' | 'dns-error'
+
+export async function checkUrlSafety(rawUrl: string): Promise<UrlSafetyResult> {
   try {
     const url = new URL(rawUrl)
-    if (url.protocol !== 'https:') return false
-    if (rawUrl.length > 500) return false
+    if (url.protocol !== 'https:') return 'blocked'
+    if (rawUrl.length > 500) return 'blocked'
 
     const hostname = url.hostname
 
-    // Block if hostname is already an IP address
+    // Block if hostname is already a private/blocked IP address
     try {
       const addr = parse(hostname)
-      if (isBlockedAddress(addr)) return false
+      if (isBlockedAddress(addr)) return 'blocked'
     } catch {
       // Not a raw IP — continue to DNS lookup
     }
 
-    // Resolve DNS and check all returned addresses
-    const addresses = await lookup(hostname, { all: true })
-    if (addresses.length === 0) return false
+    // Resolve DNS — failure here is a network error, not an SSRF attempt
+    let addresses: LookupAddress[]
+    try {
+      addresses = await lookup(hostname, { all: true })
+    } catch {
+      return 'dns-error'
+    }
+
+    if (addresses.length === 0) return 'dns-error'
+
     for (const addr of addresses) {
       try {
         const parsed = parse(addr.address)
-        if (isBlockedAddress(parsed)) return false
+        if (isBlockedAddress(parsed)) return 'blocked'
       } catch {
-        return false
+        return 'blocked'
       }
     }
 
-    return true
+    return 'safe'
   } catch {
-    return false
+    return 'blocked'
   }
+}
+
+export async function isSafeUrl(rawUrl: string): Promise<boolean> {
+  const result = await checkUrlSafety(rawUrl)
+  return result === 'safe'
 }
 
 // ── SSRF-safe fetch ────────────────────────────────────────────

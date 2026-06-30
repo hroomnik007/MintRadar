@@ -715,11 +715,16 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
       const data = result.rows.map(r => {
         const total = Number(r.total)
         const onlineCount = Number(r.online_count)
+        const latestOnline = r.latest_online as boolean | null
+        const latestCheckedAt = r.latest_checked_at as string | null
+        const isStaleOffline = latestOnline === false &&
+          latestCheckedAt !== null &&
+          Date.now() - new Date(latestCheckedAt).getTime() > 24 * 60 * 60 * 1000
         return {
           url: r.url as string,
           name: r.name as string | null,
           iconUrl: (r.icon_url as string | null) ?? null,
-          degraded: total >= 4 && onlineCount === 0,
+          degraded: (total >= 4 && onlineCount === 0) || isStaleOffline,
           online: r.latest_online as boolean | null,
           latencyMs: r.latest_latency_ms as number | null,
           version: r.version as string | null,
