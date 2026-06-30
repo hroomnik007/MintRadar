@@ -568,6 +568,7 @@ export default function Watchlist() {
           )}
 
           <div className="filter-row">
+            <div className="filter-group-row-top">
             <div className="filter-group">
               <div className="filter-group-label">Status</div>
               <div className="filter-radio-group">
@@ -588,6 +589,7 @@ export default function Watchlist() {
                 onChange={e => setPendingFilters(p => ({ ...p, minTrustScore: parseInt(e.target.value) }))}
                 className="filter-slider"
               />
+            </div>
             </div>
 
             <div className="filter-group">

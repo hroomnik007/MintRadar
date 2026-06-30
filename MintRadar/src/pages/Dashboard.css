@@ -755,6 +755,8 @@
   }
 }
 
+.filter-group-row-top { display: contents; }
+
 .filter-group {
   display: flex;
   flex-direction: column;
@@ -1100,6 +1102,9 @@
   .mint-list-name { max-width: 120px; }
   .mint-list-table td.trust-col { min-width: 48px; }
   .filter-row { flex-direction: column; gap: 14px; }
+  .filter-group-row-top { display: flex; flex-direction: row; gap: 16px; width: 100%; }
+  .filter-group-row-top .filter-group { flex: 1; min-width: 0; }
+  .filter-group-row-top .filter-slider { width: 100%; }
   .filter-group-nuts { width: 100%; }
   .filter-nut-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
 }

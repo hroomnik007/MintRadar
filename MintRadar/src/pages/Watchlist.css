@@ -370,6 +370,7 @@
 
 .filter-row { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 10px; }
 
+.filter-group-row-top { display: contents; }
 .filter-group { display: flex; flex-direction: column; gap: 7px; }
 .filter-group-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; font-family: var(--font-mono); }
 .filter-group-label strong { color: var(--text2); }
@@ -431,6 +432,9 @@
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .filter-row { flex-direction: column; gap: 14px; }
+  .filter-group-row-top { display: flex; flex-direction: row; gap: 16px; width: 100%; }
+  .filter-group-row-top .filter-group { flex: 1; min-width: 0; }
+  .filter-group-row-top .filter-slider { width: 100%; }
   .filter-group-nuts { width: 100%; }
   .filter-nut-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
 }
