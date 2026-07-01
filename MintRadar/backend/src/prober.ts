@@ -250,6 +250,34 @@ export async function probeMintToDb(url: string): Promise<void> {
           console.error('[geo] db error during location update:', err)
         }
       }
+    } else if (res && res.status === 429) {
+      // Rate-limited — mint is up, just throttling us. Skip this probe cycle
+      // entirely rather than recording a false-positive offline.
+      return
+    } else if (res && [502, 503, 504].includes(res.status)) {
+      // Likely a transient server-side blip (restart/deploy) — retry once
+      // before concluding the mint is offline.
+      await new Promise<void>(r => setTimeout(r, 2000))
+      const retryRes = await safeFetch(`${url}/v1/info`, {
+        timeoutMs: PROBE_TIMEOUT_MS,
+        onError: (err) => { capturedErr = err },
+      })
+      if (retryRes && retryRes.ok) {
+        try {
+          const raw = await retryRes.json() as Record<string, unknown>
+          const nuts = raw['nuts'] !== null && typeof raw['nuts'] === 'object' ? raw['nuts'] as Record<string, unknown> : null
+          if (nuts === null) {
+            lastError = 'Invalid Cashu response'
+          } else {
+            online = true
+            latencyMs = Date.now() - start
+          }
+        } catch { lastError = 'Invalid JSON response' }
+      } else if (retryRes && !retryRes.ok) {
+        lastError = `HTTP ${retryRes.status}`
+      } else {
+        lastError = classifyFetchError(capturedErr)
+      }
     } else if (res && !res.ok) {
       lastError = `HTTP ${res.status}`
     } else {
