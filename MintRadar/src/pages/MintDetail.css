@@ -601,7 +601,6 @@
   align-items: center;
   gap: 4px;
   min-width: 0;
-  overflow: hidden;
 }
 
 .audit-stat-value {

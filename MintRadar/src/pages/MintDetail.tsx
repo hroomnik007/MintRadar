@@ -292,6 +292,7 @@ function MintDetailContent({ url }: { url: string }) {
   const [clientLatency, setClientLatency] = useState<number | string | null>(null)
   const [testingLatency, setTestingLatency] = useState(false)
   const [latencyBtnTooltip, setLatencyBtnTooltip] = useState(false)
+  const [errorBadgeTooltip, setErrorBadgeTooltip] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'nuts' | 'audit' | 'reviews'>('overview')
   const [auditExpanded, setAuditExpanded] = useState(true)
   const [showComparePicker, setShowComparePicker] = useState(false)
@@ -500,10 +501,17 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-header-row2">
           {!isOnline && knownMint?.lastError && (
             <span
-              title={httpErrorTooltip(knownMint.lastError)}
-              style={{fontSize:11,color:'#ff4d4d',fontFamily:'var(--font-mono)',background:'rgba(255,77,77,0.08)',border:'0.5px solid rgba(255,77,77,0.25)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap',cursor:'help'}}
+              style={{position:'relative',display:'inline-flex',fontSize:11,color:'#ff4d4d',fontFamily:'var(--font-mono)',background:'rgba(255,77,77,0.08)',border:'0.5px solid rgba(255,77,77,0.25)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap',cursor:'help'}}
+              onMouseEnter={() => setErrorBadgeTooltip(true)}
+              onMouseLeave={() => setErrorBadgeTooltip(false)}
+              onClick={() => setErrorBadgeTooltip(v => !v)}
             >
               {knownMint.lastError}
+              {errorBadgeTooltip && httpErrorTooltip(knownMint.lastError) && (
+                <div className="audit-tooltip" style={{width:200,left:'50%',transform:'translateX(-50%)'}}>
+                  {httpErrorTooltip(knownMint.lastError)}
+                </div>
+              )}
             </span>
           )}
           {isLoggedIn
