@@ -165,6 +165,19 @@ function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
+const HTTP_ERROR_EXPLANATIONS: Record<string, string> = {
+  '502': "The mint's server is unreachable — the application behind the proxy may have crashed or restarted",
+  '503': "The mint's server is temporarily unavailable — likely under maintenance or overloaded",
+  '504': "The mint's server took too long to respond — likely overloaded or misconfigured",
+  '429': 'The mint is rate-limiting requests',
+}
+
+function httpErrorTooltip(lastError: string): string | undefined {
+  const m = lastError.match(/^HTTP (\d+)$/)
+  if (!m || !m[1]) return undefined
+  return HTTP_ERROR_EXPLANATIONS[m[1]] ?? 'The mint returned an unexpected error'
+}
+
 function MintDetailContent({ url }: { url: string }) {
   const navigate = useNavigate()
   const { data, isLoading } = useMintProbe(url)
@@ -486,7 +499,10 @@ function MintDetailContent({ url }: { url: string }) {
         </div>
         <div className="md-header-row2">
           {!isOnline && knownMint?.lastError && (
-            <span style={{fontSize:11,color:'#ff4d4d',fontFamily:'var(--font-mono)',background:'rgba(255,77,77,0.08)',border:'0.5px solid rgba(255,77,77,0.25)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap'}}>
+            <span
+              title={httpErrorTooltip(knownMint.lastError)}
+              style={{fontSize:11,color:'#ff4d4d',fontFamily:'var(--font-mono)',background:'rgba(255,77,77,0.08)',border:'0.5px solid rgba(255,77,77,0.25)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap',cursor:'help'}}
+            >
               {knownMint.lastError}
             </span>
           )}
