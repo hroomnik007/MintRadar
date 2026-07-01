@@ -293,9 +293,13 @@ function MintDetailContent({ url }: { url: string }) {
     const timeout = setTimeout(() => ctrl.abort(), 5000)
     const t0 = performance.now()
     try {
-      await fetch(url.replace(/\/$/, '') + '/v1/info', { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal })
+      const res = await fetch(url.replace(/\/$/, '') + '/v1/info', { cache: 'no-store', signal: ctrl.signal })
       clearTimeout(timeout)
-      setClientLatency(Math.round(performance.now() - t0))
+      if (res.ok) {
+        setClientLatency(Math.round(performance.now() - t0))
+      } else {
+        setClientLatency(`Unreachable (HTTP ${res.status})`)
+      }
     } catch {
       clearTimeout(timeout)
       setClientLatency('Unreachable from your location')
