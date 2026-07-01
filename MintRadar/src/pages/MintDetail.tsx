@@ -508,7 +508,7 @@ function MintDetailContent({ url }: { url: string }) {
             >
               {knownMint.lastError}
               {errorBadgeTooltip && httpErrorTooltip(knownMint.lastError) && (
-                <div className="audit-tooltip" style={{width:200,left:'50%',transform:'translateX(-50%)'}}>
+                <div className="audit-tooltip" style={{width:200,left:'50%',transform:'translateX(-50%)',bottom:'auto',top:'calc(100% + 6px)'}}>
                   {httpErrorTooltip(knownMint.lastError)}
                 </div>
               )}
