@@ -36,12 +36,24 @@ const NUT_META: Record<string, { short: string; desc: string; specNum: string }>
   'NUT-10': { short: 'Spending conditions', desc: 'Conditions that must be met to use a proof.', specNum: '10' },
   'NUT-11': { short: 'Pay-to-PK', desc: 'Lock tokens to a specific public key for secure transfers.', specNum: '11' },
   'NUT-12': { short: 'DLEQ proofs', desc: 'Discrete Log Equality proofs for verifiable blind signatures.', specNum: '12' },
+  'NUT-13': { short: 'Det. secrets', desc: 'Deterministic secrets derived from a wallet seed for backup and recovery.', specNum: '13' },
   'NUT-14': { short: 'HTLCs', desc: 'Hash Time Locked Contracts for atomic swaps.', specNum: '14' },
   'NUT-15': { short: 'Multipart melt', desc: 'Split a melt payment across multiple Lightning invoices.', specNum: '15' },
+  'NUT-16': { short: 'Animated QR', desc: 'Animated QR codes for transferring large tokens between devices.', specNum: '16' },
   'NUT-17': { short: 'WebSocket', desc: 'Real-time mint updates via WebSocket subscription.', specNum: '17' },
+  'NUT-18': { short: 'Payment req.', desc: 'Structured payment requests so wallets can pay a requested amount.', specNum: '18' },
   'NUT-19': { short: 'Cached responses', desc: 'Mints cache successful responses so wallets can replay after a network error.', specNum: '19' },
   'NUT-20': { short: 'Mint quote sig', desc: 'Mint signs quote requests for authenticity.', specNum: '20' },
+  'NUT-21': { short: 'Clear auth', desc: 'Clear-text (OAuth/OpenID) authentication for protected mint endpoints.', specNum: '21' },
+  'NUT-22': { short: 'Blind auth', desc: 'Blind authentication tokens for privacy-preserving mint access.', specNum: '22' },
+  'NUT-23': { short: 'BOLT11', desc: 'BOLT11 Lightning invoices as a payment method for mint and melt.', specNum: '23' },
+  'NUT-24': { short: 'HTTP 402', desc: 'HTTP 402 Payment Required flow for paywalled resources using Cashu.', specNum: '24' },
+  'NUT-25': { short: 'BOLT12', desc: 'BOLT12 offers as a payment method for mint and melt.', specNum: '25' },
+  'NUT-26': { short: 'Bech32m req.', desc: 'Bech32m encoding for Cashu payment requests.', specNum: '26' },
+  'NUT-27': { short: 'Nostr backup', desc: 'Backing up wallet state to Nostr relays for cross-device recovery.', specNum: '27' },
+  'NUT-28': { short: 'Pay-to-BK', desc: 'Lock tokens to a blinded public key for enhanced recipient privacy.', specNum: '28' },
   'NUT-29': { short: 'Batched minting', desc: 'Wallets can mint tokens for multiple quotes in a single atomic request.', specNum: '29' },
+  'NUT-30': { short: 'Onchain', desc: 'On-chain Bitcoin as a payment method for mint and melt.', specNum: '30' },
 }
 
 function countryFlag(cc: string): string {
@@ -344,7 +356,7 @@ export default function Stats() {
 
   const nutSupportingMints = useMemo(() => {
     if (!knownMintsData) return {} as Record<string, KnownMint[]>
-    const NUT_KEYS = ['4','5','7','8','9','10','11','12','14','15','17','19','20','29']
+    const NUT_KEYS = ['4','5','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
     const result: Record<string, KnownMint[]> = {}
     for (const key of NUT_KEYS) {
       const nutId = `NUT-${key.padStart(2, '0')}`
@@ -495,7 +507,7 @@ export default function Stats() {
     </div>
   )
 
-  const NUT_ORDER = ['NUT-04','NUT-05','NUT-07','NUT-08','NUT-09','NUT-10','NUT-11','NUT-12','NUT-14','NUT-15','NUT-17','NUT-19','NUT-20','NUT-29']
+  const NUT_ORDER = ['NUT-04','NUT-05','NUT-07','NUT-08','NUT-09','NUT-10','NUT-11','NUT-12','NUT-13','NUT-14','NUT-15','NUT-16','NUT-17','NUT-18','NUT-19','NUT-20','NUT-21','NUT-22','NUT-23','NUT-24','NUT-25','NUT-26','NUT-27','NUT-28','NUT-29','NUT-30']
   const nutAdoptionMap = Object.fromEntries(data.nutAdoption.map(n => [n.nut, n]))
 
   const modalNutMints = modalNut ? (nutSupportingMints[modalNut] ?? []) : []

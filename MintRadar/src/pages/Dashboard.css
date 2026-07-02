@@ -751,7 +751,7 @@
 
 @media (min-width: 1200px) {
   .filter-nut-grid-nowrap {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
   }
 }
 

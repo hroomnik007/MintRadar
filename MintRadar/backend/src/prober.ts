@@ -101,7 +101,7 @@ export function computeServerTrustScore(
   auditNErrors: number | null
 ): number {
   const uScore = Math.round(uptimePct * 0.45)
-  const nScore = Math.round(Math.min((nutCount ?? 0) / 14, 1) * 30)
+  const nScore = Math.round(Math.min((nutCount ?? 0) / 26, 1) * 30)
   const vScore = Math.round(serverVersionFreshnessScore(version) / 10 * 15)
   const cScore = Math.round((contactCount / 3) * 5)
   const total = (auditNMints ?? 0) + (auditNMelts ?? 0) + (auditNErrors ?? 0)

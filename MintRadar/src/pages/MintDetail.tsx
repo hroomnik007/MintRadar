@@ -21,6 +21,8 @@ import {
   Copy, Check, Info, ShieldCheck, ShieldOff, ChevronDown, ChevronUp,
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
   Clock, GitBranch, Plug, Database, Award, Layers, Zap, Plus, X, QrCode,
+  Binary, Receipt, UserCheck, EyeOff, CreditCard, Send, Code, Cloud,
+  Fingerprint, Bitcoin,
 } from 'lucide-react'
 
 const REVIEW_AVATAR_COLORS = ['#17E87F','#8b5cf6','#F5A623','#3b82f6','#ef4444','#ec4899']
@@ -60,17 +62,31 @@ const NUT_DESCRIPTIONS: Record<string, { short: string; desc: string; features: 
   'NUT-10': { short: 'Spending cond.', desc: 'Spending conditions that must be met to use a proof.', features: ['Conditional spending', 'Script conditions', 'Extensible'], useCase: 'Base for advanced features like P2PK and HTLCs.' },
   'NUT-11': { short: 'Pay-to-PK', desc: 'Lock tokens to a specific public key for secure transfers.', features: ['Public key locking', 'Signature verification', 'Selective unlock'], useCase: 'Send tokens that only a specific recipient can spend.' },
   'NUT-12': { short: 'DLEQ proofs', desc: 'Discrete Log Equality proofs for verifiable blind signatures.', features: ['Cryptographic proofs', 'Signature verification', 'Privacy preserving'], useCase: 'Clients verify mint honesty without revealing token data.' },
+  'NUT-13': { short: 'Det. secrets', desc: 'Deterministic secrets derived from a wallet seed for backup and recovery.', features: ['Seed-derived secrets', 'Wallet backup', 'Restore support'], useCase: 'Recover a wallet from a seed phrase without losing tokens.' },
   'NUT-14': { short: 'HTLCs', desc: 'Hash Time Locked Contracts for atomic swaps.', features: ['Hash preimage', 'Timelock expiry', 'Atomic swaps'], useCase: 'Enable trustless cross-mint or cross-chain swaps.' },
   'NUT-15': { short: 'Multipart melt', desc: 'Split a melt payment across multiple Lightning invoices.', features: ['Multi-invoice payment', 'Amount splitting', 'Partial melt'], useCase: 'Pay invoices larger than a single proof allows.' },
+  'NUT-16': { short: 'Animated QR', desc: 'Animated QR codes for transferring large tokens between devices.', features: ['Chunked QR frames', 'Large token transfer', 'Offline transfer'], useCase: 'Move big tokens between devices when no network is available.' },
   'NUT-17': { short: 'WebSocket', desc: 'Real-time mint updates via WebSocket subscription.', features: ['Live updates', 'Event subscription', 'Low latency'], useCase: 'Receive instant confirmation without polling.' },
+  'NUT-18': { short: 'Payment req.', desc: 'Structured payment requests so wallets can pay a requested amount.', features: ['Structured requests', 'Amount + mint hints', 'Wallet interop'], useCase: 'Let a payee encode exactly what they want to be paid.' },
   'NUT-19': { short: 'Cached responses', desc: 'Mints cache successful responses for critical operations so wallets can replay after a network error.', features: ['Response caching', 'Network recovery', 'Idempotent replay'], useCase: 'Prevents loss of funds when a network interruption occurs during mint/swap/melt.' },
   'NUT-20': { short: 'Mint quote sig', desc: 'Mint signs quote requests for authenticity.', features: ['Quote signatures', 'Request authentication', 'Replay protection'], useCase: 'Prevent quote tampering between client and mint.' },
+  'NUT-21': { short: 'Clear auth', desc: 'Clear-text (OAuth/OpenID) authentication for protected mint endpoints.', features: ['OAuth / OpenID', 'Access tokens', 'Protected endpoints'], useCase: 'Restrict mint access to authenticated users.' },
+  'NUT-22': { short: 'Blind auth', desc: 'Blind authentication tokens for privacy-preserving mint access.', features: ['Blind auth tokens', 'Unlinkable access', 'Rate limiting'], useCase: 'Authenticate to a mint without revealing your identity.' },
+  'NUT-23': { short: 'BOLT11', desc: 'BOLT11 Lightning invoices as a payment method for mint and melt.', features: ['Lightning invoices', 'Mint & melt method', 'Standard payments'], useCase: 'Fund and spend tokens via ordinary Lightning invoices.' },
+  'NUT-24': { short: 'HTTP 402', desc: 'HTTP 402 Payment Required flow for paywalled resources using Cashu.', features: ['402 paywall flow', 'Machine payments', 'Resource access'], useCase: 'Pay for web resources programmatically with Cashu tokens.' },
+  'NUT-25': { short: 'BOLT12', desc: 'BOLT12 offers as a payment method for mint and melt.', features: ['BOLT12 offers', 'Reusable payment codes', 'Mint & melt method'], useCase: 'Use reusable Lightning offers instead of single-use invoices.' },
+  'NUT-26': { short: 'Bech32m req.', desc: 'Bech32m encoding for Cashu payment requests.', features: ['Bech32m encoding', 'Compact requests', 'Error detection'], useCase: 'Share payment requests as short, typo-resistant strings.' },
+  'NUT-27': { short: 'Nostr backup', desc: 'Backing up wallet state to Nostr relays for cross-device recovery.', features: ['Nostr relay backup', 'Cross-device sync', 'Encrypted state'], useCase: 'Restore a wallet from Nostr on a new device.' },
+  'NUT-28': { short: 'Pay-to-BK', desc: 'Lock tokens to a blinded public key for enhanced recipient privacy.', features: ['Blinded key lock', 'Recipient privacy', 'Selective unlock'], useCase: 'Send tokens to a recipient without exposing their public key.' },
   'NUT-29': { short: 'Batched minting', desc: 'Wallets can mint tokens for multiple quotes in a single atomic request.', features: ['Multi-quote batch', 'Atomic operation', 'Efficiency'], useCase: 'Reduces round-trips when minting from multiple paid invoices at once.' },
+  'NUT-30': { short: 'Onchain', desc: 'On-chain Bitcoin as a payment method for mint and melt.', features: ['On-chain Bitcoin', 'Mint & melt method', 'Chain settlement'], useCase: 'Fund or redeem tokens directly with on-chain Bitcoin.' },
 }
 
 const ALL_NUTS = [
   'NUT-04', 'NUT-05', 'NUT-07', 'NUT-08', 'NUT-09', 'NUT-10', 'NUT-11',
-  'NUT-12', 'NUT-14', 'NUT-15', 'NUT-17', 'NUT-19', 'NUT-20', 'NUT-29',
+  'NUT-12', 'NUT-13', 'NUT-14', 'NUT-15', 'NUT-16', 'NUT-17', 'NUT-18',
+  'NUT-19', 'NUT-20', 'NUT-21', 'NUT-22', 'NUT-23', 'NUT-24', 'NUT-25',
+  'NUT-26', 'NUT-27', 'NUT-28', 'NUT-29', 'NUT-30',
 ]
 
 const NUT_ICONS: Record<string, JSX.Element> = {
@@ -82,12 +98,24 @@ const NUT_ICONS: Record<string, JSX.Element> = {
   'NUT-10': <Lock size={13} />,
   'NUT-11': <Key size={13} />,
   'NUT-12': <Shield size={13} />,
+  'NUT-13': <Binary size={13} />,
   'NUT-14': <Clock size={13} />,
   'NUT-15': <GitBranch size={13} />,
+  'NUT-16': <QrCode size={13} />,
   'NUT-17': <Plug size={13} />,
+  'NUT-18': <Receipt size={13} />,
   'NUT-19': <Database size={13} />,
   'NUT-20': <Award size={13} />,
+  'NUT-21': <UserCheck size={13} />,
+  'NUT-22': <EyeOff size={13} />,
+  'NUT-23': <Zap size={13} />,
+  'NUT-24': <CreditCard size={13} />,
+  'NUT-25': <Send size={13} />,
+  'NUT-26': <Code size={13} />,
+  'NUT-27': <Cloud size={13} />,
+  'NUT-28': <Fingerprint size={13} />,
   'NUT-29': <Layers size={13} />,
+  'NUT-30': <Bitcoin size={13} />,
 }
 
 function uptimeColor(pct: number | null | undefined): string {
