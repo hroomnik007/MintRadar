@@ -92,7 +92,7 @@ UNIQUE (url, version)
 
 ## Trust Score calculation (server-side, in prober.ts)
 - Uptime 45%: uptimePct * 0.45 (from 24h mint_history)
-- NUT Support 30%: min(nutCount/14, 1) * 30
+- NUT Support 30%: min(nutCount/26, 1) * 30
 - Version freshness 15%: based on Nutshell version recency
 - Audit reliability 5%: based on error rate from audit_n_errors/(audit_n_mints+audit_n_melts+audit_n_errors)
 - Stored in mints.last_trust_score after each probe
@@ -364,6 +364,35 @@ The `+ Watch` button on Dashboard mint cards only renders when `isLoggedIn === t
 ### CI
 
 `test` job in `.github/workflows/deploy.yml` runs all 275 tests. `deploy` job declares `needs: test` — a failing test blocks deployment.
+
+## NUT tracking expansion (2026-07-02)
+
+- Tracking 26 NUTs now (was 14) — added: 13, 16, 18, 21, 22, 23, 24, 25, 26, 27, 28, 30
+- Mandatory NUTs (00-03, 06) are deliberately never tracked — implicitly 100% supported, zero information value
+- Trust Score NUT divisor changed from /14 to /26 in `prober.ts` — existing mints get a lower/more accurate score at their next probe cycle
+- NUT-24 (HTTP 402) has 0% adoption across the ecosystem — expected, no implementation exists yet anywhere
+
+## Probe fixes — HTTP status handling
+
+- HTTP 429 → probe cycle is skipped entirely (nothing written to `mint_history`); mint stays at its last known state instead of a false-positive offline
+- HTTP 502/503/504 → one retry after 2s before recording offline (handles transient server-side blips like restarts/deploys)
+- "Show my latency" (client-side test in MintDetail) fixed — previously used `mode: 'no-cors'` which hid the HTTP error status, so `fetch` resolved "successfully" even on a 502 and showed a fake latency. Now uses standard cors mode, reads `res.ok`/`res.status`, and shows `Unreachable (HTTP XXX)` instead of a bogus number
+- Tooltip on the HTTP error badge (Mint Detail header) — maps 429/502/503/504 to an explanatory message for less technical users
+
+## Mint Age Badge — known data limitation
+
+- `mintAgeBadge()` in `src/utils/mintFormatting.ts` uses thresholds in **months**, not hours/days as previously assumed: `< 1 month` Fresh, `< 6` Established, `< 12` Veteran, `≥ 12` OG
+- Input is `mints.discovered_at` — when MintRadar discovered/inserted the mint, NOT when the mint actually came into existence
+- All 95 mints currently have `discovered_at` in the window 2026-06-17 to 2026-06-30 (from bulk seeding) → all show Fresh right now, none has reached even 1 month
+- This is NOT a bug — it's expected behavior until the data naturally "ages." The badge will start differentiating mints automatically over the following months.
+
+## Grok external review (2026-07-02)
+
+- An external AI analysis of the project identified that not all official NUTs were tracked — led to the NUT tracking expansion above.
+- Other recommendations were either already implemented, or knowingly rejected (see decisions below).
+- Rejected: reserve audit verification (no standardized NUT for it), dark/light mode toggle, watchlist share link (conflicts with privacy-first design), historical NUT snapshots, comparison tool for more than 4 mints, search by operator pubkey (no data linkage exists), multi-region probe infrastructure.
+- NUT security warning badge (NUT-09/11/12) — verified against live data: currently 0 of 55 online mints are missing these NUTs, so the badge would be dead code. Rejected.
+- Multi-unit criterion in Best Mint Wizard — DEFERRED (not rejected). Units are currently never persisted to the DB (only transiently via `GET /api/mint/probe`, never written to `mints`). Implementing this requires: a new DB column, extending `prober.ts` to parse `/v1/keysets`, and adding the field to the `KnownMint` type and `/api/mints/known` response — deferred to a dedicated, larger session.
 
 ## Key rules
 - NEVER modify anything not explicitly requested
