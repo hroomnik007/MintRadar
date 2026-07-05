@@ -50,13 +50,20 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        // Vite 8 (rolldown) requires manualChunks as a function, not a record object
-        manualChunks(id) {
-          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router-dom/')) return 'vendor-react'
-          if (id.includes('/nostr-tools/')) return 'vendor-nostr'
-          if (id.includes('/recharts/')) return 'vendor-charts'
-          if (id.includes('/dexie/') || id.includes('/dexie-react-hooks/')) return 'vendor-db'
-          if (id.includes('/@noble/')) return 'crypto'
+        // Rolldown-native chunk grouping (Vite 8). The legacy manualChunks
+        // compat layer silently ignored group changes. First matching group wins.
+        advancedChunks: {
+          groups: [
+            // immer is shared by the watchlist store (eager) and recharts (lazy) —
+            // without its own group it lands inside vendor-charts and forces the
+            // whole 380 kB chart bundle to preload on every page.
+            { name: 'vendor-immer', test: /\/immer\// },
+            { name: 'vendor-react', test: /\/react\/|\/react-dom\/|\/react-router-dom\// },
+            { name: 'vendor-nostr', test: /\/nostr-tools\// },
+            { name: 'vendor-charts', test: /\/recharts\// },
+            { name: 'vendor-db', test: /\/dexie\/|\/dexie-react-hooks\// },
+            { name: 'crypto', test: /\/@noble\// },
+          ],
         },
       },
     },
