@@ -12,9 +12,13 @@ export function useWatchlistSync() {
   const mints = useWatchlistStore(s => s.mints)
   const loadFromDb = useWatchlistStore(s => s.loadFromDb)
   const { write: userWriteRelays } = useUserRelays()
-  // Ref so Phase 2 always uses the current relay list without re-triggering on relay changes
+  // Ref so Phase 1/2 always use the current relay list without re-triggering on relay changes.
+  // Written in an effect (not during render) — this effect is declared first, so it runs
+  // before Phase 1/2 effects within the same commit.
   const userWriteRelaysRef = useRef<string[] | null>(null)
-  userWriteRelaysRef.current = userWriteRelays
+  useEffect(() => {
+    userWriteRelaysRef.current = userWriteRelays
+  }, [userWriteRelays])
 
   const syncedForPubkey = useRef<string | null>(null)
   const isSyncing = useRef(false)
@@ -55,7 +59,7 @@ export function useWatchlistSync() {
         }
 
         console.log('sync: fetching kind:10003 from relays')
-        const remote = await fetchRemoteWatchlist(pubkey, userWriteRelays)
+        const remote = await fetchRemoteWatchlist(pubkey, userWriteRelaysRef.current)
         if (import.meta.env.DEV) { console.log(`sync: decrypted ${remote.length} mints`, remote) }
 
         if (remote.length > 0) {

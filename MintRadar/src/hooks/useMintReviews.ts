@@ -34,24 +34,26 @@ export interface MintReview {
 }
 
 export function useMintReviews(mintUrl: string) {
-  const [reviews, setReviews] = useState<MintReview[]>([])
-  const [loading, setLoading] = useState(true)
+  // Reviews are keyed by the URL they were fetched for, so switching mints
+  // never shows stale data and loading state is derived instead of set in the effect.
+  const [result, setResult] = useState<{ url: string; reviews: MintReview[] }>({ url: '', reviews: [] })
 
   useEffect(() => {
     if (!mintUrl) return
-    setLoading(true)
+    let cancelled = false
 
     sharedPool.querySync(REVIEW_RELAYS, {
       kinds: [38000],
       '#u': [mintUrl],
       limit: 50,
     }).then(async events => {
+      if (cancelled) return
       const validEvents = events.filter(e => verifyEvent(e))
       const parsed = filterAndSortReviews(
         deduplicateByPubkey(validEvents).map(parseReviewEvent)
       )
       // Show reviews immediately without waiting for profiles
-      setReviews(parsed)
+      setResult({ url: mintUrl, reviews: parsed })
 
       if (parsed.length === 0) return
 
@@ -59,6 +61,7 @@ export function useMintReviews(mintUrl: string) {
       const pubkeys = [...new Set(parsed.map(r => r.pubkey))]
       sharedPool.querySync(PROFILE_RELAYS, { kinds: [0], authors: pubkeys })
         .then(profileEvents => {
+          if (cancelled) return
           const profileMap: Record<string, { name?: string; picture?: string }> = {}
           for (const e of profileEvents) {
             try {
@@ -67,20 +70,26 @@ export function useMintReviews(mintUrl: string) {
               if (meta.name) p.name = meta.name
               if (meta.picture) p.picture = meta.picture
               if (p.name || p.picture) profileMap[e.pubkey] = p
-            } catch {}
+            } catch { /* invalid profile JSON — skip */ }
           }
           if (Object.keys(profileMap).length > 0) {
-            setReviews(prev => prev.map(r => {
-              const p = profileMap[r.pubkey]
-              return p ? { ...r, profile: p } : r
-            }))
+            setResult(prev => prev.url !== mintUrl ? prev : {
+              url: prev.url,
+              reviews: prev.reviews.map(r => {
+                const p = profileMap[r.pubkey]
+                return p ? { ...r, profile: p } : r
+              }),
+            })
           }
         })
         .catch(() => {})
-    }).catch(() => {}).finally(() => {
-      setLoading(false)
+    }).catch(() => {
+      if (!cancelled) setResult({ url: mintUrl, reviews: [] })
     })
+
+    return () => { cancelled = true }
   }, [mintUrl])
 
-  return { reviews, loading }
+  const isCurrent = result.url === mintUrl
+  return { reviews: isCurrent ? result.reviews : [], loading: !isCurrent }
 }

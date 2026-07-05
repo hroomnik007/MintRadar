@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { MintFavicon } from '@/components/mint/MintFavicon'
+import { useNow } from '@/hooks/useNow'
 import './Tools.css'
 
 function getHostname(url: string): string {
@@ -53,6 +54,7 @@ function parseCashuToken(token: string): TokenInfo | null {
 
 function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   const navigate = useNavigate()
+  const now = useNow()
   const [input, setInput] = useState('')
   const [result, setResult] = useState<TokenInfo | null>(null)
   const [parseError, setParseError] = useState<string | null>(null)
@@ -132,7 +134,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
                   </div>
                   {mintInfo.lastCheckedAt && (
                     <div className="trc-sub">
-                      checked {Math.round((Date.now() - new Date(mintInfo.lastCheckedAt).getTime()) / 60000)}m ago
+                      checked {Math.round((now - new Date(mintInfo.lastCheckedAt).getTime()) / 60000)}m ago
                     </div>
                   )}
                 </>

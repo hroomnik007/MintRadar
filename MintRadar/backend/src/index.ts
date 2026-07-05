@@ -624,7 +624,6 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
       const rows = mintsResult.rows as MintRow[]
       const online = rows.filter(r => r.online === true)
       const offline = rows.filter(r => r.online === false)
-      const nonOffline = rows.filter(r => r.online !== false)
       const onlineTrustScores = online.map(r => r.last_trust_score ?? 0)
       const avgTrustScore = onlineTrustScores.length > 0
         ? Math.round(onlineTrustScores.reduce((a, b) => a + b) / onlineTrustScores.length)

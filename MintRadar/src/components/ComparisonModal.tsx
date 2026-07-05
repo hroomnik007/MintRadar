@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { type KnownMint } from '@/hooks/useKnownMints'
 import { useMintHistory } from '@/hooks/useMintHistory'
+import { useNow } from '@/hooks/useNow'
 
 const IcClose = () => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -57,6 +58,7 @@ const EMPTY_MINT: KnownMint = {
 
 function useMintCompareData(mint: KnownMint, latestVersion: string | null) {
   const { records, uptimePercent } = useMintHistory(mint.url)
+  const now = useNow()
   const isOnline = mint.online === true
   const displayName = mint.name ?? getHostname(mint.url)
   const hostname = getHostname(mint.url)
@@ -64,7 +66,7 @@ function useMintCompareData(mint: KnownMint, latestVersion: string | null) {
   const trustScore = listTrustScore(mint)
   const tsInfo = trustScoreInfo(trustScore)
   const ageBadge = mintAgeBadge(mint.discoveredAt)
-  const isNew = mint.discoveredAt != null && (Date.now() - new Date(mint.discoveredAt).getTime()) < 48 * 3600 * 1000
+  const isNew = mint.discoveredAt != null && (now - new Date(mint.discoveredAt).getTime()) < 48 * 3600 * 1000
   const nutsLimits = (mint.nutsLimits ?? {}) as Record<string, unknown>
   const supportsNut13 = nutsLimits['13'] != null
   const isOutdated = mint.version != null && latestVersion != null

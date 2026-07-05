@@ -380,35 +380,12 @@ export default function Stats() {
       .slice(0, 5)
   }, [knownMintsData])
 
-  const top5ByLatency = useMemo(() => {
-    if (!knownMintsData) return []
-    return [...knownMintsData]
-      .filter(m => m.online === true && m.latencyMs != null)
-      .sort((a, b) => (a.latencyMs ?? Infinity) - (b.latencyMs ?? Infinity))
-      .slice(0, 5)
-  }, [knownMintsData])
-
   const top5ByTrust = useMemo(() => {
     if (!knownMintsData) return []
     return [...knownMintsData]
       .filter(m => m.online === true && m.trustScore != null)
       .sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
       .slice(0, 5)
-  }, [knownMintsData])
-
-  const softwareDist = useMemo(() => {
-    if (!knownMintsData) return []
-    const counts = new Map<string, number>()
-    for (const m of knownMintsData) {
-      if (m.online !== true) continue
-      const raw = m.version ?? ''
-      const software = raw.includes('/') ? raw.split('/')[0]! : raw.trim() || 'Unknown'
-      counts.set(software, (counts.get(software) ?? 0) + 1)
-    }
-    const total = [...counts.values()].reduce((a, b) => a + b, 0)
-    return [...counts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, count]) => ({ name, count, pct: total > 0 ? Math.round(count / total * 100) : 0 }))
   }, [knownMintsData])
 
   const geoDist = useMemo(() => {

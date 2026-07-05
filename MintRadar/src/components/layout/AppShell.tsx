@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { useAuthStore } from '@/stores/auth.store'
@@ -71,32 +71,27 @@ export function AppShell() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Close modal on successful login
-  useEffect(() => {
-    if (profile !== null) setShowLoginModal(false)
-  }, [profile])
-
-  // Reset modal state on close
-  useEffect(() => {
-    if (!showLoginModal) {
-      setNsecInput('')
-      setNsecError('')
-      setLoginMethod('nip07')
-      setBunkerInput('')
-      setBunkerError('')
-      setQrUri('')
-      qrCancelRef.current?.()
-      qrCancelRef.current = null
-    }
-  }, [showLoginModal])
+  // Close the modal and reset all its local state — single close path used by
+  // overlay click, X button, Cancel, Escape, and successful login.
+  const closeLoginModal = useCallback(() => {
+    setShowLoginModal(false)
+    setNsecInput('')
+    setNsecError('')
+    setLoginMethod('nip07')
+    setBunkerInput('')
+    setBunkerError('')
+    setQrUri('')
+    qrCancelRef.current?.()
+    qrCancelRef.current = null
+  }, [])
 
   // Close modal on Escape key
   useEffect(() => {
     if (!showLoginModal) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowLoginModal(false) }
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') closeLoginModal() }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [showLoginModal])
+  }, [showLoginModal, closeLoginModal])
 
   // Allow any page to open the login modal via custom event
   useEffect(() => {
@@ -117,7 +112,11 @@ export function AppShell() {
     setQrUri(uri)
     setBunkerError('')
     void loginPromise
-      .then(p => { useAuthStore.setState({ profile: p, isLoading: false, error: null }) })
+      .then(p => {
+        qrCancelRef.current = null
+        useAuthStore.setState({ profile: p, isLoading: false, error: null })
+        closeLoginModal()
+      })
       .catch(err => {
         if (err instanceof Error && err.name !== 'AbortError') {
           setBunkerError(err.message || 'QR connection failed')
@@ -135,6 +134,7 @@ export function AppShell() {
       await loginNsec(trimmed)
       if (useAuthStore.getState().error) {
         setNsecError(useAuthStore.getState().error ?? 'Login failed')
+        return
       }
     } else if (loginMethod === 'amber') {
       const trimmed = bunkerInput.trim()
@@ -143,8 +143,10 @@ export function AppShell() {
       await loginBunker(trimmed)
       if (useAuthStore.getState().error) {
         setBunkerError(useAuthStore.getState().error ?? 'Connection failed')
+        return
       }
     }
+    if (useAuthStore.getState().profile !== null) closeLoginModal()
   }
 
   return (
@@ -202,7 +204,7 @@ export function AppShell() {
 
       {/* Nostr login modal */}
       {showLoginModal && (
-        <div className="nostr-modal-overlay" onClick={() => setShowLoginModal(false)}>
+        <div className="nostr-modal-overlay" onClick={closeLoginModal}>
           <div className="nostr-modal" onClick={e => e.stopPropagation()}>
             <div className="nostr-modal-header">
               <div className="nostr-modal-icon">⚡</div>
@@ -210,7 +212,7 @@ export function AppShell() {
                 <div className="nostr-modal-title">Connect with Nostr</div>
                 <div className="nostr-modal-subtitle">MintRadar uses your Nostr identity to save watchlists and post reviews. No email, no password.</div>
               </div>
-              <button type="button" className="nostr-modal-close" onClick={() => setShowLoginModal(false)}>
+              <button type="button" className="nostr-modal-close" onClick={closeLoginModal}>
                 <IcClose />
               </button>
             </div>
@@ -298,7 +300,7 @@ export function AppShell() {
                 <IcShield /> Your keys never leave your device. MintRadar only reads your public profile.
               </div>
               <div className="nostr-modal-actions">
-                <button type="button" className="nostr-cancel-btn" onClick={() => setShowLoginModal(false)}>
+                <button type="button" className="nostr-cancel-btn" onClick={closeLoginModal}>
                   Cancel
                 </button>
                 <button

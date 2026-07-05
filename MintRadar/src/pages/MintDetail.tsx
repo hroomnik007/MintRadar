@@ -16,6 +16,7 @@ import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { ComparisonModal } from '@/components/ComparisonModal'
 import { mintAgeBadge, trustScoreColor, trustScoreInfo } from '@/utils/mintFormatting'
+import { useNow } from '@/hooks/useNow'
 import './MintDetail.css'
 import {
   Copy, Check, Info, ShieldCheck, ShieldOff, ChevronDown, ChevronUp,
@@ -208,6 +209,7 @@ function httpErrorTooltip(lastError: string): string | undefined {
 
 function MintDetailContent({ url }: { url: string }) {
   const navigate = useNavigate()
+  const now = useNow()
   const { data, isLoading } = useMintProbe(url)
   useMintHistory(url)
   const { data: knownMintsData } = useKnownMints()
@@ -248,17 +250,6 @@ function MintDetailContent({ url }: { url: string }) {
     },
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
-  })
-  const { data: sparkline7dData } = useQuery({
-    queryKey: ['mint', 'history-api', url, '7d'],
-    queryFn: async () => {
-      const res = await fetch(`/api/mints/history?url=${encodeURIComponent(url)}&period=7d`)
-      if (!res.ok) throw new Error('Failed to fetch history')
-      return res.json() as Promise<{
-        segments: Array<{ bucket: string; latencyMs: number | null; uptimePct: number | null }>
-      }>
-    },
-    staleTime: 5 * 60 * 1000,
   })
   const { data: versionHistoryData } = useQuery({
     queryKey: ['mint', 'version-history', url],
@@ -390,7 +381,6 @@ function MintDetailContent({ url }: { url: string }) {
     const emailVal = data?.info?.contact?.find((c: { method: string }) => c.method === 'email')?.info
     const twitterVal = data?.info?.contact?.find((c: { method: string }) => c.method === 'twitter')?.info
     const nostrVal = data?.info?.contact?.find((c: { method: string }) => c.method === 'nostr')?.info
-    const websiteVal = data?.info?.contact?.find((c: { method: string }) => c.method === 'website')?.info
     function bucketLabel(bucket: string): string {
       const d = new Date(bucket)
       if (chartInterval === '24h') return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -413,7 +403,7 @@ function MintDetailContent({ url }: { url: string }) {
     const isHourly = chartInterval === '24h'
     const slotCount = chartInterval === '24h' ? 24 : chartInterval === '7d' ? 7 : 30
     const bucketMs = isHourly ? 3_600_000 : 86_400_000
-    const currentBucketMs = Math.floor(Date.now() / bucketMs) * bucketMs
+    const currentBucketMs = Math.floor(now / bucketMs) * bucketMs
     const keyLen = isHourly ? 13 : 10
     const segMap = new Map(segs.map(s => [s.bucket.slice(0, keyLen), s]))
     return Array.from({ length: slotCount }, (_, i) => {
@@ -421,7 +411,7 @@ function MintDetailContent({ url }: { url: string }) {
       const iso = new Date(slotMs).toISOString()
       return makePoint(segMap.get(iso.slice(0, keyLen)) ?? null, bucketLabel(iso))
     })
-  }, [chartHistoryData?.segments, chartInterval, knownMint, data?.info?.version, data?.info?.contact])
+  }, [chartHistoryData?.segments, chartInterval, knownMint, data?.info?.version, data?.info?.contact, now])
 
   if (isLoading || data === undefined) {
     return (
@@ -451,7 +441,6 @@ function MintDetailContent({ url }: { url: string }) {
   const email = data.info?.contact?.find(c => c.method === 'email')?.info
   const twitter = data.info?.contact?.find(c => c.method === 'twitter')?.info
   const nostr = data.info?.contact?.find(c => c.method === 'nostr')?.info
-  const website = data.info?.contact?.find(c => c.method === 'website')?.info
   const urls = data.info?.urls
 
   const uptimePct = uptime24hData?.uptimePct ?? 0

@@ -11,12 +11,6 @@ import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import './Watchlist.css'
 
-const IcEye = () => (
-  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-    <path d="M1 7s2.4-4 6-4 6 4 6 4-2.4 4-6 4-6-4-6-4z" stroke="currentColor" strokeWidth="1.3"/>
-    <circle cx="7" cy="7" r="1.8" stroke="currentColor" strokeWidth="1.3"/>
-  </svg>
-)
 const IcPlus = () => (
   <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
     <line x1="6" y1="1.5" x2="6" y2="10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -396,23 +390,27 @@ export default function Watchlist() {
   }, [mints, knownMintsMap, activeFilters])
 
   const sentinelRef = useRef<HTMLDivElement>(null)
-  const [visibleCount, setVisibleCount] = useState(20)
+  // Pagination extra is keyed by the current list content + sort, so it
+  // resets automatically when the visible list changes — no reset effect needed.
+  const [extraVisible, setExtraVisible] = useState<{ key: string; n: number }>({ key: '', n: 0 })
+  const listKey = `${sortBy}|${sortDir}|${filteredMints.join('\n')}`
+  const visibleCount = 20 + (extraVisible.key === listKey ? extraVisible.n : 0)
 
   useEffect(() => {
     void loadFromDb()
   }, [loadFromDb])
 
-  useEffect(() => { setVisibleCount(20) }, [filteredMints, sortBy, sortDir])
-
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
     const observer = new IntersectionObserver(entries => {
-      if (entries[0]?.isIntersecting) setVisibleCount(prev => prev + 20)
+      if (entries[0]?.isIntersecting) {
+        setExtraVisible(prev => ({ key: listKey, n: prev.key === listKey ? prev.n + 20 : 20 }))
+      }
     }, { rootMargin: '200px' })
     observer.observe(el)
     return () => observer.disconnect()
-  }, [])
+  }, [listKey])
 
   useEffect(() => {
     const handler = (e: Event) => {

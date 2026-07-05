@@ -13,7 +13,6 @@ import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
-import { useUIStore } from '@/stores/ui.store'
 import type { MintStatus } from '@core/mint/api'
 import { ComparisonModal } from '@/components/ComparisonModal'
 import { mintAgeBadge, latencyColor, trustColor } from '@/utils/mintFormatting'
@@ -61,13 +60,6 @@ const IcRefresh = () => (
     <polyline points="2,4.5 2,7 4.5,7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
-const IcEye = () => (
-  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-    <path d="M1 7s2.4-4 6-4 6 4 6 4-2.4 4-6 4-6-4-6-4z" stroke="currentColor" strokeWidth="1.3"/>
-    <circle cx="7" cy="7" r="1.8" stroke="currentColor" strokeWidth="1.3"/>
-  </svg>
-)
-
 const IcTimer = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
     <circle cx="8" cy="9.5" r="5" stroke="currentColor" strokeWidth="1.1"/>
@@ -202,11 +194,9 @@ function SkeletonCard() {
 
 function MintCardDisplay({
   mint,
-  isDegraded = false,
   onCompare,
 }: {
   mint: KnownMint
-  isDegraded?: boolean
   onCompare?: (url: string) => void
 }) {
   const navigate = useNavigate()
@@ -471,7 +461,6 @@ function MintGrid({
           <MintCardDisplay
             key={mint.url}
             mint={mint}
-            isDegraded={mint.degraded}
             {...(onCompare ? { onCompare } : {})}
           />
         ))}
@@ -513,7 +502,6 @@ export default function Dashboard() {
     setShowComparePicker(true)
   }
 
-  const [lastCheckTime, setLastCheckTime] = useState<Date | null>(null)
   const [, setTick] = useState(0)
   const [showDegraded, setShowDegraded] = useState(false)
   const [showSubmit, setShowSubmit] = useState(false)
@@ -522,12 +510,25 @@ export default function Dashboard() {
   const [submitUrl, setSubmitUrl] = useState('')
   const [submitState, setSubmitState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [submitMsg, setSubmitMsg] = useState('')
-  const [probeState, setProbeState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
-  const [probeResult, setProbeResult] = useState<{ name: string | null; version: string | null; nutCount: number; latencyMs: number | null } | null>(null)
-  const [nostrLookupState, setNostrLookupState] = useState<'idle' | 'loading' | 'error'>('idle')
+  // Probe/lookup results are keyed by the input they were produced for —
+  // 'loading' and 'idle' are derived below instead of set synchronously in effects.
+  const [probe, setProbe] = useState<{ url: string; state: 'success' | 'error'; result: { name: string | null; version: string | null; nutCount: number; latencyMs: number | null } | null }>({ url: '', state: 'error', result: null })
+  const [nostrLookup, setNostrLookup] = useState<{ input: string; state: 'idle' | 'error'; msg: string }>({ input: '', state: 'idle', msg: '' })
   const [searchFocused, setSearchFocused] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const [nostrLookupMsg, setNostrLookupMsg] = useState('')
+
+  const submitTrimmed = submitInput.trim()
+  const submitIsNostrKey = submitTrimmed.startsWith('npub1') || /^[0-9a-f]{64}$/i.test(submitTrimmed)
+  const nostrLookupState: 'idle' | 'loading' | 'error' =
+    !submitIsNostrKey ? 'idle'
+    : nostrLookup.input === submitTrimmed ? nostrLookup.state
+    : 'loading'
+  const nostrLookupMsg = submitIsNostrKey && nostrLookup.input === submitTrimmed ? nostrLookup.msg : ''
+  const probeState: 'idle' | 'loading' | 'success' | 'error' =
+    !submitUrl.startsWith('https://') ? 'idle'
+    : probe.url === submitUrl ? probe.state
+    : 'loading'
+  const probeResult = probe.url === submitUrl && probeState === 'success' ? probe.result : null
 
   // Bulk submit state
   const [bulkInput, setBulkInput] = useState('')
@@ -601,8 +602,8 @@ export default function Dashboard() {
     return [base, ...allMints.filter(m => comparePickerSelected.has(m.url))]
   }, [allMints, compareBaseUrl, comparePickerSelected])
 
-  useEffect(() => {
-    if (!knownMintsData || knownMintsData.length === 0) return
+  const lastCheckTime = useMemo(() => {
+    if (!knownMintsData) return null
     let latest: Date | null = null
     for (const mint of knownMintsData) {
       if (mint.lastCheckedAt) {
@@ -610,7 +611,7 @@ export default function Dashboard() {
         if (!latest || t > latest) latest = t
       }
     }
-    setLastCheckTime(latest)
+    return latest
   }, [knownMintsData])
 
   useEffect(() => {
@@ -675,8 +676,6 @@ export default function Dashboard() {
     const trimmed = value.trim()
     if (trimmed.startsWith('https://')) {
       setSubmitUrl(trimmed)
-      setNostrLookupState('idle')
-      setNostrLookupMsg('')
     } else {
       setSubmitUrl('')
     }
@@ -687,13 +686,7 @@ export default function Dashboard() {
     const input = submitInput.trim()
     const isNpub = input.startsWith('npub1')
     const isHex = /^[0-9a-f]{64}$/i.test(input)
-    if (!isNpub && !isHex) {
-      setNostrLookupState('idle')
-      setNostrLookupMsg('')
-      return
-    }
-    setNostrLookupState('loading')
-    setNostrLookupMsg('')
+    if (!isNpub && !isHex) return
     const timer = setTimeout(() => {
       void (async () => {
         try {
@@ -701,8 +694,7 @@ export default function Dashboard() {
           if (isNpub) {
             const decoded = nip19.decode(input)
             if (decoded.type !== 'npub') {
-              setNostrLookupState('error')
-              setNostrLookupMsg('Invalid npub format')
+              setNostrLookup({ input, state: 'error', msg: 'Invalid npub format' })
               return
             }
             pubkey = decoded.data as string
@@ -715,15 +707,13 @@ export default function Dashboard() {
             .flatMap(e => e.tags)
             .find(t => t[0] === 'u' && t[1])?.[1]
           if (!mintUrl) {
-            setNostrLookupState('error')
-            setNostrLookupMsg('No mint announcement found for this Nostr key')
+            setNostrLookup({ input, state: 'error', msg: 'No mint announcement found for this Nostr key' })
             return
           }
-          setNostrLookupState('idle')
+          setNostrLookup({ input, state: 'idle', msg: '' })
           setSubmitUrl(mintUrl)
         } catch {
-          setNostrLookupState('error')
-          setNostrLookupMsg('Failed to reach Nostr relays. Try again.')
+          setNostrLookup({ input, state: 'error', msg: 'Failed to reach Nostr relays. Try again.' })
         }
       })()
     }, 600)
@@ -732,32 +722,28 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!showSubmit) return
-    if (!submitUrl.startsWith('https://')) {
-      setProbeState('idle')
-      setProbeResult(null)
-      return
-    }
-    setProbeState('loading')
+    if (!submitUrl.startsWith('https://')) return
     const timer = setTimeout(() => {
       fetch(`/api/mint/probe?url=${encodeURIComponent(submitUrl)}`)
         .then(res => { if (!res.ok) throw new Error(); return res.json() as Promise<MintStatus> })
         .then(data => {
           if (data.online && data.info) {
-            setProbeState('success')
-            setProbeResult({
-              name: data.info.name ?? null,
-              version: data.info.version ?? null,
-              nutCount: Object.keys(data.info.nuts).length,
-              latencyMs: data.latencyMs,
+            setProbe({
+              url: submitUrl,
+              state: 'success',
+              result: {
+                name: data.info.name ?? null,
+                version: data.info.version ?? null,
+                nutCount: Object.keys(data.info.nuts).length,
+                latencyMs: data.latencyMs,
+              },
             })
           } else {
-            setProbeState('error')
-            setProbeResult(null)
+            setProbe({ url: submitUrl, state: 'error', result: null })
           }
         })
         .catch(() => {
-          setProbeState('error')
-          setProbeResult(null)
+          setProbe({ url: submitUrl, state: 'error', result: null })
         })
     }, 600)
     return () => clearTimeout(timer)
@@ -913,7 +899,7 @@ export default function Dashboard() {
             <IcList />
           </button>
         </div>
-        <button type="button" className="submit-btn" onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setSubmitUrl(''); setProbeState('idle'); setProbeResult(null); setNostrLookupState('idle'); setNostrLookupMsg(''); setBulkInput(''); setBulkProgress([]); setBulkRunning(false); setBulkDone(false) }}>
+        <button type="button" className="submit-btn" onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setSubmitUrl(''); setProbe({ url: '', state: 'error', result: null }); setNostrLookup({ input: '', state: 'idle', msg: '' }); setBulkInput(''); setBulkProgress([]); setBulkRunning(false); setBulkDone(false) }}>
           <IcPlus /> Submit mint
         </button>
         <button type="button" className="refresh-btn" onClick={() => void queryClient.invalidateQueries({ queryKey: ['mints-known'] })}>
