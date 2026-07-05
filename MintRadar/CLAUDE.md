@@ -394,6 +394,26 @@ The `+ Watch` button on Dashboard mint cards only renders when `isLoggedIn === t
 - NUT security warning badge (NUT-09/11/12) — verified against live data: currently 0 of 55 online mints are missing these NUTs, so the badge would be dead code. Rejected.
 - Multi-unit criterion in Best Mint Wizard — DEFERRED (not rejected). Units are currently never persisted to the DB (only transiently via `GET /api/mint/probe`, never written to `mints`). Implementing this requires: a new DB column, extending `prober.ts` to parse `/v1/keysets`, and adding the field to the `KnownMint` type and `/api/mints/known` response — deferred to a dedicated, larger session.
 
+## ESLint zero-errors cleanup (2026-07-05)
+
+The codebase is at **0 ESLint errors** (frontend + backend). Keep it that way — `eslint-plugin-react-hooks` v7 enforces compiler-grade rules (`purity`, `set-state-in-effect`, `refs`). Patterns established during the cleanup; reuse them instead of re-introducing effects:
+
+- **`useNow()`** (`src/hooks/useNow.ts`) — ticking clock store via `useSyncExternalStore` (30 s interval, shared across subscribers). Use it for ANY "current time" read during render ("checked Xm ago", age thresholds, chart bucket alignment). Never call `Date.now()` in render/useMemo — the purity rule blocks it. Used by: ComparisonModal, MintDetail (chart slots), Tools (Token Inspector).
+- **Keyed/derived state instead of setState-in-effect** — async results are stored keyed by the input they were produced for; `loading` is derived (`key !== currentInput`), never set synchronously in an effect. Applied in:
+  - `useMintReviews` — reviews keyed by mint URL (also fixed a stale-data race when switching mints)
+  - Dashboard submit form — `probe` keyed by `submitUrl`, `nostrLookup` keyed by trimmed input
+  - Watchlist pagination — `extraVisible` keyed by `listKey` (sort + filtered list content); side effect: pagination no longer resets on every 60 s data refetch
+- **AppShell login modal** — single `closeLoginModal()` callback resets all modal state and is wired into every close path (overlay, X, Cancel, Escape, successful login incl. QR flow). Do NOT re-add "close on profile change" / "reset on close" effects. In the QR success path `qrCancelRef` is nulled BEFORE close so the live BunkerSigner is not aborted.
+- **`useWatchlistSync`** — `userWriteRelaysRef` is written in an effect (declared before Phase 1/2 effects, so it's current within the same commit); Phase 1 reads relays from the ref.
+- **`pool.ts`** — `PatchableRelay` is a standalone type, NOT an intersection with `AbstractRelay` (its private `reconnectAttempts` collapses intersections to `never`). GOTCHA: `npm run typecheck` (`tsc --noEmit`) missed this; only `tsc -b` (used by `npm run build`) caught it — build is the authoritative type gate.
+
+## Code splitting & bundle layout (2026-07-05)
+
+- `/stats` and `/mint/:url` routes are `React.lazy` + `Suspense` in `App.tsx` — the only Recharts consumers. Initial load dropped ~1124 → ~671 kB raw (~130 kB gzip saved); `vendor-charts` (350 kB) loads on first chart-page visit.
+- **GOTCHA — `manualChunks` is dead in Vite 8 (rolldown):** the compat layer silently ignores group changes (builds byte-identical output). Chunking lives in `rollupOptions.output.advancedChunks.groups` — first matching group wins, order matters.
+- **`vendor-immer` group must stay:** immer is shared by the watchlist store (eager, via zustand middleware) and recharts (lazy, via @reduxjs/toolkit — a second nested copy exists). Without its own group it lands inside `vendor-charts` and drags the whole chart bundle back into the initial modulepreload set. If a new eager module ever shares a dep with recharts, give that dep its own group too — verify with: `grep vendor-charts dist/index.html` (must NOT appear in modulepreload).
+- **GOTCHA — `vite.config.js` is a compiled artifact:** `tsc -b` emits it from `vite.config.ts` (tsconfig.node.json has no `noEmit`), and Vite resolves `.js` BEFORE `.ts`. Always edit `vite.config.ts`, then run `npm run build` to regenerate the `.js` — editing only the `.ts` without a build means Vite still uses the stale `.js`.
+
 ## Key rules
 - NEVER modify anything not explicitly requested
 - ALWAYS run typecheck before build
