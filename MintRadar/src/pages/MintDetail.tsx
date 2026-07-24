@@ -1259,10 +1259,10 @@ function MintDetailContent({ url }: { url: string }) {
             <button
               onClick={() => setShowQr(true)}
               style={{
-                width: '100%', background: 'var(--accent)',
-                color: 'var(--bg)',
-                border: 'none',
-                borderRadius: 8, padding: '10px 16px',
+                width: '100%', background: 'var(--green-soft)',
+                color: 'var(--green-bright)',
+                border: '1px solid var(--green-soft-strong)',
+                borderRadius: 'var(--radius-m)', padding: '10px 16px',
                 fontSize: 13, fontWeight: 700, cursor: 'pointer',
                 fontFamily: 'var(--font-body)', marginBottom: 8,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -1323,7 +1323,7 @@ function MintDetailContent({ url }: { url: string }) {
               />
               <button
                 onClick={() => { void navigator.clipboard.writeText(url); setCopiedUrl(true); setTimeout(() => setCopiedUrl(false), 2000) }}
-                style={{background: copiedUrl ? '#0d2018' : '#17E87F',color: copiedUrl ? 'var(--accent)' : '#000',border:'none',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'var(--font-body)',whiteSpace:'nowrap',flexShrink:0}}
+                style={{background: 'var(--green-soft)', color: 'var(--green-bright)', border: '1px solid var(--green-soft-strong)', borderRadius: 'var(--radius-m)', padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'var(--font-body)',whiteSpace:'nowrap',flexShrink:0}}
               >
                 {copiedUrl ? 'Copied!' : 'Copy'}
               </button>

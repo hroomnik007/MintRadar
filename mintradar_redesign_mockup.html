@@ -338,6 +338,38 @@
 
   .note-box{ max-width:1320px; margin: 18px auto 0; padding: 14px 20px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-m); font-size:12.5px; color:var(--text-faint); line-height:1.6;}
   .note-box b{ color:var(--text-dim); }
+
+  /* ===================== FIXES PAGE ===================== */
+  .fix-compare{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:8px; }
+  .frame.mobile .fix-compare{ grid-template-columns:1fr; }
+  .fix-col{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-m); padding:16px; }
+  .fix-tag{ display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:4px 10px; border-radius:999px; margin-bottom:12px; }
+  .fix-tag.bad{ background:var(--red-soft); color:var(--red); }
+  .fix-tag.good{ background:var(--green-soft); color:var(--green-bright); }
+  .fix-note{ font-size:12px; color:var(--text-faint); margin-top:10px; line-height:1.5; }
+  .fix-note code{ font-family:var(--font-mono); background:var(--surface-3); padding:1px 5px; border-radius:4px; color:var(--text-dim); }
+  .bad-bg{ background:#050705 !important; border-color:#000 !important; }
+
+  .mini-nav{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-radius:var(--radius-s); background:var(--bg); border:1px solid var(--border); }
+
+  .expand-demo{ background:var(--surface-2); border-radius:var(--radius-s); padding:12px 14px; }
+  .version-row{ display:flex; align-items:center; gap:10px; padding:8px 0; font-size:12.5px; color:var(--text-dim); border-top:1px solid var(--border); }
+  .version-row span:first-child{ font-family:var(--font-mono); width:52px; }
+  .v-badge{ font-size:10px; font-weight:700; padding:2px 7px; border-radius:5px; }
+  .v-badge.latest{ background:var(--green-soft); color:var(--green-bright); }
+  .v-badge.outdated{ background:var(--red-soft); color:var(--red); }
+  .v-num{ margin-left:auto; font-family:var(--font-mono); color:var(--text-faint); }
+
+  .geo-modal-demo{ max-width:560px; background:var(--surface-2); border:1px solid var(--border-strong); border-radius:var(--radius-l); padding:18px; margin-bottom:8px; }
+  .geo-modal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .geo-modal-title{ font-size:15px; font-weight:700; display:flex; align-items:center; }
+  .geo-mint-row{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:var(--radius-s); background:var(--surface); border:1px solid var(--border); margin-bottom:7px; }
+  .geo-mint-name{ font-size:13px; font-weight:600; flex:1; }
+  .geo-mint-score{ font-family:var(--font-mono); font-weight:700; color:var(--green-bright); }
+  .geo-modal-foot{ display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-faint); margin-top:10px; }
+
+  .qr-btn-demo{ display:flex; gap:10px; }
+  .btn-solid-old{ background:#22c55e; color:#04150c; border:none; padding:10px 16px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -350,6 +382,7 @@
       <button class="tab-btn" data-page="login">Login modal</button>
       <button class="tab-btn" data-page="watchlist">Watchlist</button>
       <button class="tab-btn" data-page="stats">Stats</button>
+      <button class="tab-btn" data-page="fixes">Opravy (nav/stats/geo/QR)</button>
     </div>
     <div class="device-toggle" id="device">
       <button class="active" data-mode="desktop">Desktop</button>
@@ -579,6 +612,113 @@
               <div class="bar-row"><div class="bar-label">Amsterdam</div><div class="bar-track"><div class="bar-fill copper" style="width:10%"></div></div><div class="bar-num">2</div></div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ============ FIXES: nav / stats expand / geo modal / QR btn ============ -->
+      <div class="page" id="page-fixes">
+        <div class="app-nav">
+          <div class="brand"><div class="brand-mark"></div><div class="brand-name">Mint<span class="r">Radar</span></div></div>
+          <div class="nav-links"><a class="active">Dashboard</a><a>Watchlist</a><a>Stats</a><a>Tools</a></div>
+          <button class="btn-login"><span class="bolt">⚡</span> Login via Nostr</button>
+        </div>
+        <div class="app-body">
+
+          <h2 class="section-title" style="margin-top:0">1 · Nav bar — pred / po</h2>
+          <div class="fix-compare">
+            <div class="fix-col">
+              <div class="fix-tag bad">PRED (regresia)</div>
+              <div class="mini-nav bad-bg">
+                <div class="brand"><div class="brand-mark"></div><div class="brand-name" style="color:#fff">Mint<span class="r">Radar</span></div></div>
+                <button class="btn-login"><span class="bolt">⚡</span> Login via Nostr</button>
+              </div>
+              <div class="fix-note">Nav má hardcoded čiernu, celý zvyšok stránky používa novú paletu → vizuálny "šev".</div>
+            </div>
+            <div class="fix-col">
+              <div class="fix-tag good">PO (oprava)</div>
+              <div class="mini-nav">
+                <div class="brand"><div class="brand-mark"></div><div class="brand-name">Mint<span class="r">Radar</span></div></div>
+                <button class="btn-login"><span class="bolt">⚡</span> Login via Nostr</button>
+              </div>
+              <div class="fix-note">Nav používa <code>var(--bg)</code>/<code>var(--surface)</code> ako zvyšok appky, žiadny hardcoded #000.</div>
+            </div>
+          </div>
+
+          <h2 class="section-title">2 · Software in Use — rozbalená verzia</h2>
+          <div class="fix-compare">
+            <div class="fix-col">
+              <div class="fix-tag bad">PRED (regresia)</div>
+              <div class="expand-demo bad-bg">
+                <div class="bar-row" style="border:none"><div class="bar-label">Nutshell</div><div class="bar-track"><div class="bar-fill" style="width:76%"></div></div><div class="bar-num">38</div></div>
+                <div class="version-row"><span>0.20.3</span><span class="v-badge latest">latest</span><span class="v-num">2</span></div>
+                <div class="version-row"><span>0.20.2</span><span class="v-badge outdated">outdated</span><span class="v-num">5</span></div>
+              </div>
+              <div class="fix-note">Rozbalený obsah padá na čierne pozadie namiesto <code>--surface-2</code>.</div>
+            </div>
+            <div class="fix-col">
+              <div class="fix-tag good">PO (oprava)</div>
+              <div class="expand-demo">
+                <div class="bar-row" style="border:none"><div class="bar-label">Nutshell</div><div class="bar-track"><div class="bar-fill" style="width:76%"></div></div><div class="bar-num">38</div></div>
+                <div class="version-row"><span>0.20.3</span><span class="v-badge latest">latest</span><span class="v-num">2</span></div>
+                <div class="version-row"><span>0.20.2</span><span class="v-badge outdated">outdated</span><span class="v-num">5</span></div>
+              </div>
+              <div class="fix-note">Rovnaké <code>--surface-2</code> ako ostatné vnorené panely (napr. MOTD box na Mint Detail).</div>
+            </div>
+          </div>
+
+          <h2 class="section-title">3 · Geographic Distribution — modal po kliknutí na lokalitu</h2>
+          <div class="fix-note" style="margin-bottom:10px">Predtým to bol prakticky nenaštýlovaný zoznam odkazov na svetlom paneli. Nový návrh: rovnaký modal komponent ako "Trust Score Breakdown" / "Login" — konzistentný header, status dot + badge + trust % v jednom riadku, mini stat prúžok dole.</div>
+          <div class="geo-modal-demo">
+            <div class="geo-modal-head">
+              <div class="geo-modal-title">🇺🇸 San Francisco <span class="tag" style="margin-left:8px">23 mints</span></div>
+              <button class="modal-close">✕</button>
+            </div>
+            <div class="geo-mint-row"><span class="status-dot"></span><div class="geo-mint-name">BTCforPlebs Mint <span class="badge established" style="margin-left:6px">Established</span></div><div class="geo-mint-score">83%</div></div>
+            <div class="geo-mint-row"><span class="status-dot off"></span><div class="geo-mint-name">lnwallet.app <span class="badge established" style="margin-left:6px">Established</span></div><div class="geo-mint-score">80%</div></div>
+            <div class="geo-mint-row"><span class="status-dot"></span><div class="geo-mint-name">Voltz Mint <span class="badge established" style="margin-left:6px">Established</span></div><div class="geo-mint-score">80%</div></div>
+            <div class="geo-mint-row"><span class="status-dot"></span><div class="geo-mint-name">RoutstrMint <span class="badge established" style="margin-left:6px">Established</span></div><div class="geo-mint-score">79%</div></div>
+            <div class="geo-mint-row"><span class="status-dot"></span><div class="geo-mint-name">Nebula <span class="badge established" style="margin-left:6px">Established</span></div><div class="geo-mint-score">78%</div></div>
+            <div class="geo-modal-foot"><span>16 online · 7 offline</span><span>Sorted by Trust Score</span></div>
+          </div>
+
+          <h2 class="section-title">4 · "Add to wallet" QR modal — Show QR code / Copy tlačidlá</h2>
+          <div class="fix-compare">
+            <div class="fix-col">
+              <div class="fix-tag bad">PRED (zabudnuté)</div>
+              <div class="qr-btn-demo bad-bg">
+                <button class="btn-solid-old">▦ Show QR code</button>
+                <button class="btn-solid-old">Copy</button>
+              </div>
+              <div class="fix-note">Oba tlačidlá majú plný neónový fill — nezladené so zvyškom nového dizajnu.</div>
+            </div>
+            <div class="fix-col">
+              <div class="fix-tag good">PO (oprava)</div>
+              <div class="qr-btn-demo">
+                <button class="btn-outline accent">▦ Show QR code</button>
+                <button class="btn-outline accent">Copy</button>
+              </div>
+              <div class="fix-note">Tónovaný outline štýl, rovnaký ako "Compare"/"+ Watch" inde v appke.</div>
+            </div>
+          </div>
+
+          <h2 class="section-title">5 · Login tlačidlo na Watchliste — zjednotenie</h2>
+          <div class="fix-compare">
+            <div class="fix-col">
+              <div class="fix-tag bad">PRED</div>
+              <div style="padding:20px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-m); text-align:center;">
+                <button class="btn-outline accent">Login via Nostr</button>
+              </div>
+              <div class="fix-note">Chýba blesk ⚡, text síce rovnaký ako v nave, ale ikonka chýba.</div>
+            </div>
+            <div class="fix-col">
+              <div class="fix-tag good">PO</div>
+              <div style="padding:20px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-m); text-align:center;">
+                <button class="btn-outline accent"><span class="bolt">⚡</span> Login via Nostr</button>
+              </div>
+              <div class="fix-note">Identické s nav tlačidlom — text aj blesk. Modal titulok "Connect with Nostr" ostáva (je to nadpis, nie tlačidlo).</div>
+            </div>
+          </div>
+
         </div>
       </div>
 

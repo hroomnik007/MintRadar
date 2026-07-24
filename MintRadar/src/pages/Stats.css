@@ -139,7 +139,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  background: #0d1117;
+  background: var(--surface-2);
   border-radius: 0 0 6px 6px;
   padding: 8px 10px;
 }

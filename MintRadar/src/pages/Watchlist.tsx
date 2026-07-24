@@ -470,7 +470,7 @@ export default function Watchlist() {
             className="wl-add-btn"
             onClick={() => window.dispatchEvent(new CustomEvent('mintradar:open-login'))}
           >
-            Login via Nostr
+            ⚡ Login via Nostr
           </button>
         </div>
       </div>

@@ -278,7 +278,7 @@ function CityMintsModal({ loc, mints, onClose }: {
         <div className="nut-modal-list">
           {displayed.map(m => {
             const score = m.trustScore ?? null
-            const scoreColor = score != null ? (score >= 70 ? '#4ade80' : score >= 40 ? '#ffa500' : '#ff4d4d') : 'var(--text3)'
+            const scoreColor = score != null ? (score >= 70 ? 'var(--green-bright)' : score >= 40 ? 'var(--amber)' : 'var(--red)') : 'var(--text3)'
             const badge = mintAgeBadge(m.discoveredAt ?? null)
             return (
               <div
@@ -288,15 +288,15 @@ function CityMintsModal({ loc, mints, onClose }: {
                 onClick={() => { onClose(); navigate(`/mint/${encodeURIComponent(m.url)}`) }}
               >
                 <span
-                  style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? '#17E87F' : '#E24B4A', display: 'inline-block', flexShrink: 0 }}
+                  style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? 'var(--green-bright)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }}
                 />
-                <div className="nut-modal-row-info" style={{ flex: 1 }}>
-                  <span className="nut-modal-row-name" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{m.name ?? getHostname(m.url)}</span>
+                <div className="nut-modal-row-info" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <span className="nut-modal-row-name">{m.name ?? getHostname(m.url)}</span>
                   {badge && (
-                    <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: badge.color, background: badge.bg, border: `1px solid ${badge.border}`, borderRadius: 4, padding: '1px 5px', marginLeft: 6 }}>{badge.label}</span>
+                    <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: badge.color, background: badge.bg, border: `1px solid ${badge.border}`, borderRadius: 4, padding: '1px 5px' }}>{badge.label}</span>
                   )}
                 </div>
-                <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
+                <span style={{ fontSize: 12, fontFamily: 'var(--font-mono-data)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
                   {score != null ? `${score}%` : '—'}
                 </span>
               </div>
