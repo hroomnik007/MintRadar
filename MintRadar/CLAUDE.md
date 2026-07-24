@@ -19,7 +19,7 @@ Sensitive values are in CLAUDE.local.md (gitignored) — ask the developer
 - Backend: Node.js 22 + Express 5 + TypeScript + pg (PostgreSQL 17) + nostr-tools
 - Auth: Nostr NIP-07 (nos2x-fox, Alby) + nsec manual entry (key zeroed after derivation) + NIP-46 bunker (implemented, nostr-tools/nip46 BunkerSigner)
 - Fonts: DM Sans (self-hosted variable, weights 100–900), JetBrains Mono (self-hosted; Regular 400, Medium 500, Bold 700)
-- CSS: CSS variables (var(--bg), var(--bg2), var(--accent) #17E87F, var(--border), var(--text), var(--text2), var(--text3))
+- CSS: CSS variables — "patina/copper" palette as of 2026-07-24 (var(--bg) #10201c, var(--surface)/var(--surface-2)/var(--surface-3), var(--green)/var(--green-bright) #45ad8c/#5cc9a3, var(--copper) #c98058, var(--amber), var(--red), var(--text)/var(--text-dim)/var(--text-faint)); see "Visual Redesign" section below for details
 
 ## Architecture
 - Personal watchlist → IndexedDB (never on server); logout calls resetInMemory() — Dexie NOT wiped on logout; see Watchlist Persistence below
@@ -94,7 +94,7 @@ UNIQUE (url, version)
 - Uptime 45%: uptimePct * 0.45 (from 24h mint_history)
 - NUT Support 30%: min(nutCount/26, 1) * 30
 - Version freshness 15%: based on Nutshell version recency
-- Audit reliability 5%: based on error rate from audit_n_errors/(audit_n_mints+audit_n_melts+audit_n_errors)
+- Audit reliability 5%: based on error rate from audit_n_errors/(audit_n_mints+audit_n_melts+audit_n_errors) — bucket logic (0%→5, <1%→4, <5%→3, <15%→2, ≥15%→1, null→2.5) lives in `backend/src/shared/auditScore.ts` (`auditReliabilityScore()`), the source of truth shared with the frontend's Trust Score Breakdown. `src/utils/auditScore.ts` is a manually-synced copy (the two packages have no workspace set up between them) — edit both if the logic ever changes.
 - Stored in mints.last_trust_score after each probe
 
 ## Cron jobs
@@ -112,10 +112,25 @@ Approximate yields (as of 2026-06-29): kind:38172 ~33 mints, kind:38000 ~37 mint
 
 **URL normalization:** `normalizeUrl()` lowercases the hostname before every INSERT. Applied in 4 places: `discoverMintsFromNostr`, `discoverMintsFromApi`, `POST /api/mint/submit`, `POST /api/mints/discover`. Prevents duplicates like `https://Mint.coinos.io` vs `https://mint.coinos.io` (the capital-M variant was a seed bug and was manually deleted).
 
-## Discovery relays (backend + frontend)
-wss://relay.damus.io, wss://nos.lol, wss://relay.primal.net,
-wss://relay.cashumints.space, wss://relay.azzamo.net,
-wss://purplepag.es, wss://relay.snort.social
+## Discovery relays (backend + frontend) — unified 2026-07-24
+Frontend source of truth: `src/core/nostr/relays.ts` (`DISCOVERY_RELAYS`), imported by
+`src/core/nostr/mintDiscovery.ts` and `src/hooks/useNostrDiscovery.ts`. Backend can't import
+this (separate npm package, no workspace set up) — `backend/src/discovery.ts` keeps its own
+`DISCOVERY_RELAYS` constant manually in sync; mirror any change to both.
+
+wss://relay.damus.io, wss://nos.lol, wss://purplepag.es, wss://relay.snort.social,
+wss://relay.primal.net, wss://relay.cashumints.space, wss://relay.azzamo.net,
+wss://relay.nostr.band, wss://nostr.wine, wss://nostr-pub.wellorder.net,
+wss://offchain.pub, wss://relay.8333.space
+
+`wss://relay.8333.space` was added to every discovery/review relay list in the project —
+same operator as `audit.8333.space`, likely higher density of Cashu-specific NIP-87 events.
+
+**Streaming vs. batch discovery:** considered and deliberately rejected. Discovery runs in
+the background with no live UI to update, so a streaming subscription (incremental
+per-event handling) wouldn't produce any visible benefit over the current EOSE/timeout
+batch pattern (`querySync` + race against a timeout, or `subscribeMany` resolved on
+`oneose`). Do not "improve" this to streaming without a concrete reason.
 
 ## Key features
 - Dashboard: compact/expanded card view, advanced filter panel (Status/TrustScore/Age/NUTs), search, sort, mint comparison tool (up to 4), stats bar, submit form (single + bulk)
@@ -268,15 +283,55 @@ The grid's default behavior of hiding 24h+ offline mints is intentional declutte
 
 ## Typography & Design System Notes
 
-Self-hosted font weights:
+Self-hosted font weights (unchanged by the 2026-07-24 color redesign — see "Visual Redesign" section below):
 - **DM Sans** — variable, weights 100–900; `--font-body`, `--font-display`, `--sans`
-- **JetBrains Mono** — 400 Regular, 500 Medium, 700 Bold; `--font-mono`. Bold was added in `public/fonts/JetBrainsMono-Bold.woff2` + `@font-face` because weight 700 previously triggered faux bold.
+- **JetBrains Mono** — 400 Regular, 500 Medium, 700 Bold; `--font-mono` (non-numeric mono text: pubkeys, URLs, version strings). Bold was added in `public/fonts/JetBrainsMono-Bold.woff2` + `@font-face` because weight 700 previously triggered faux bold.
+- **`--font-mono-data`** (new, 2026-07-24) — system `ui-monospace` stack (no webfont), used exclusively for numeric/data values (latency, %, NUT counts). See "Visual Redesign" section.
 
 **Stat box padding** — Desktop: Dashboard `.stat-card` and Stats `.stats-metric-card` both use `14px 20px`. MintDetail `.md-sc` uses `12px 16px` intentionally (tighter layout, product decision — do not "unify" without confirmation). Mobile: Dashboard reduces to `10px 14px` at `≤600px`; Stats reduces to `10px 14px` at `≤700px`.
 
 **Mint Info value rows** (MintDetail) — all value `<span>` elements use `.md-info-value` class only, with no inline color/weight/family overrides. Inline `color: var(--text2)` previously made bold text look dim. Full description keeps `style={{textAlign:'left', maxWidth:'none', lineHeight:1.5}}` for layout only.
 
-**Text colors** — `--text` (`#F0F2F7`) for primary/bold values, `--text2` (`#8B90A0`) for secondary/muted, `--text3`/`--t3` (`#AAB4C7`) for tertiary labels. `--text3` was changed from `#80899B` to `#AAB4C7` (brighter) in a previous session.
+**Text colors (as of 2026-07-24 redesign)** — `--text` (`#f2f7f4`) for primary/bold values, `--text2`/`--text-dim` (`#b7c8c0`) for secondary/muted, `--text3`/`--t3`/`--text-faint` (`#86988f`) for tertiary labels. These replace the old DM Sans v2 values (`#F0F2F7`/`#8B90A0`/`#AAB4C7`) — verified at ~5.5:1 contrast (WCAG AA) on the new `--bg` for the weakest pair (`--text-faint` on `--bg`).
+
+## Visual Redesign — "Patina/Copper" Palette (2026-07-24)
+
+**Why:** the original palette (pure `#000` background + full neon green) had low contrast on
+secondary text and a "punk"/cheap look on buttons (solid color fill, large pill radius with
+no subtlety). The new palette fixes both.
+
+**Reference mockup:** `mintradar_redesign_mockup.html` (repo root) — an interactive
+Dashboard/Mint Detail/Login/Watchlist/Stats preview, desktop + mobile. Treat it as the
+source of truth for any future palette/component work; check it before changing colors again.
+
+**New design tokens (`src/index.css`):**
+- `--bg` / `--surface` / `--surface-2` / `--surface-3` — dark "verdigris/patina" green-gray instead of pure black (`--bg: #10201c`)
+- `--text` / `--text-dim` / `--text-faint` — see Typography section above for exact values and contrast verification
+- `--green` / `--green-bright` — muted "patina" green instead of neon (reference: patina on coins)
+- `--copper` — new secondary accent (reference: coin minting); alternates with green on the Stats page's Software-in-Use and Geographic-Distribution bars
+- `--amber`, `--red` — semantic colors (fresh/warning, offline/error)
+- every color has a `-soft` and `-soft-strong` variant, used for tonal backgrounds/borders instead of solid fills
+- `--font-mono-data` — system `ui-monospace` stack for numeric values only (see Typography section)
+- `--radius-m` (10px) — smaller radius for buttons, replacing the old large pill shape
+- fonts remain 100% system/self-hosted — no Google Fonts, no external CDN, zero tracking
+
+**Component changes:**
+- Buttons (`Login via Nostr`, `Connect`, `+Submit mint`, `+Watch`, `Compare`) — solid neon fill → tonal outline style
+- Dashboard mint cards — removed the per-status colored border/gradient (previously every card had a green-tinted border/background regardless of online/offline state); now a neutral border, with color reserved for the status dot and the trust-score chip only
+- Login modal — option cards (Nostr extension/nsec/Amber) get a green tonal border+background only when selected; the nsec security notice box changed from yellow to copper
+- Trust Score ring (Mint Detail) — fixed `--green-bright` ring color (no longer colored by score band), track `--surface-3` — the ring is now purely visual, the score band ("High/Moderate/Low Trust") is still conveyed by the badge text below it
+- `mintAgeBadge()` (`src/utils/mintFormatting.ts`) — Established badge → new tonal green, Fresh badge → copper/amber (was blue); Veteran/OG badges intentionally unchanged (out of scope)
+- Stats page — progress bars alternate green/copper by row index instead of one fixed color for all
+
+**Audit reliability score:** see the shared-module note under "Trust Score calculation" above.
+
+**Audit data source caveat:** `audit.8333.space`'s `GET /mints/` API (paginated, 100/page)
+returns **cumulative lifetime counts** for `n_mints`/`n_melts`/`n_errors`, not a rolling window
+of the last N swaps like the reference `pablof7z/cashu-mint-audit` project. This is a known,
+documented trade-off — not implemented/changed now.
+
+**Manually added mint:** `mint.hanbitkorea.org` was found via an `audit.8333.space` cross-check
+and was missing from the DB; added manually.
 
 ## Nostr pool singleton
 
@@ -292,13 +347,17 @@ Runs every 6h: `0 */6 * * *` → `scripts/backup-db.sh`
 
 ## Reviews Feature (Mint Detail)
 
-`src/hooks/useMintReviews.ts` fetches kind:38000 events from **REVIEW_RELAYS**:
-`relay.damus.io, nos.lol, relay.cashumints.space, purplepag.es, relay.primal.net, relay.snort.social, offchain.pub, nostr-pub.wellorder.net, nostr.band, relay.minibits.cash`
+All review-related relay lists now live in `src/core/nostr/relays.ts` (unified 2026-07-24):
+- **REVIEW_RELAYS** (= DISCOVERY_RELAYS + `relay.minibits.cash`) — used by `src/hooks/useMintReviews.ts` to fetch kind:38000 events for a mint
+- **REVIEW_PUBLISH_RELAYS** (= REVIEW_RELAYS + 7 extra relays: bitcoiner.social, nostr.mom, oxtr.dev, mostr.pub, noswhere.com, pyramid.fiatjaf.com, lopp.social) — a deliberately wider net used only by `src/hooks/useSubmitReview.ts` when publishing a new review, for propagation reach
+- **PROFILE_RELAYS** (`relay.nostr.band, nos.lol, relay.primal.net, purplepag.es, relay.damus.io`) — unchanged, used for kind:0 profile lookups only
+
+`backend/src/index.ts`'s `NOSTR_REVIEWS_RELAYS` (server-side review fetch endpoint) mirrors REVIEW_RELAYS manually — same no-workspace caveat as the discovery relays above.
 
 Key implementation details:
 - Rating parsed from `content` via regex `/\[(\d)\/5\]/` — the `rating` tag does not exist in practice
 - Events without a rating AND without text body are discarded as meaningless
-- Author Nostr profiles (name + avatar) are fetched inline inside `useMintReviews.ts` via **PROFILE_RELAYS** (`relay.nostr.band, nos.lol, relay.primal.net, purplepag.es, relay.damus.io`) — a separate `useNostrProfiles` hook was removed due to a React state sync bug
+- Author Nostr profiles (name + avatar) are fetched inline inside `useMintReviews.ts` via **PROFILE_RELAYS** — a separate `useNostrProfiles` hook was removed due to a React state sync bug
 - Security: `profile.picture` is rendered only if it starts with `https://`
 
 ## Mint Probe — Degraded/Offline Detection
@@ -336,7 +395,7 @@ Frontend hides degraded mints by default (`showDegraded=false`); footer shows "N
 ### Key tested modules
 
 - **Backend:** `normalizeUrl`, Trust Score calculation (prober.ts), degraded/offline detection logic, review parsing (kind:38000 regex), SSRF guard (`backend/src/ssrf.ts`) — DNS rebinding, private ranges, link-local
-- **Frontend:** `mintFormatting` and `reviewUtils` (extracted from components into `src/utils/` for testability), Trust Score display helpers
+- **Frontend:** `mintFormatting` and `reviewUtils` (extracted from components into `src/utils/` for testability), Trust Score display helpers. `mintFormatting.test.ts`'s `mintAgeBadge` Fresh/Established color assertions were updated 2026-07-24 to the new redesign hex values (`#d3a446`/`#5cc9a3`) — see "Visual Redesign" section.
 
 ### Run commands
 
