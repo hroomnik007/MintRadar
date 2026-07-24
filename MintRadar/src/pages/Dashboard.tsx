@@ -11,11 +11,10 @@ import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useNostrMints } from '@/hooks/useNostrMints'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 
-import { useWatchlistStore } from '@/stores/watchlist.store'
-import { useAuthStore } from '@/stores/auth.store'
 import type { MintStatus } from '@core/mint/api'
 import { ComparisonModal } from '@/components/ComparisonModal'
-import { mintAgeBadge, latencyColor, trustColor } from '@/utils/mintFormatting'
+import { MintCard } from '@/components/mint/MintCard'
+import { mintAgeBadge, latencyColor, trustColor, uptimeColor } from '@/utils/mintFormatting'
 import './Dashboard.css'
 
 // ── SVG Icons ──────────────────────────────────────────────────
@@ -92,13 +91,6 @@ const IcList = () => (
 )
 
 // ── Helpers ────────────────────────────────────────────────────
-
-function uptimeColor(pct: number | null | undefined): string {
-  if (pct === null || pct === undefined) return 'var(--t3)'
-  if (pct >= 95) return 'var(--fast)'
-  if (pct >= 80) return 'var(--med)'
-  return 'var(--slow)'
-}
 
 function listTrustScore(mint: KnownMint): number {
   if (mint.online !== true) return 0
@@ -185,119 +177,6 @@ function SkeletonCard() {
       <div className="sk-bottom">
         <div className="sk-latency" />
         <div className="sk-btn" />
-      </div>
-    </div>
-  )
-}
-
-// ── Mint Card ──────────────────────────────────────────────────
-
-function MintCardDisplay({
-  mint,
-  onCompare,
-}: {
-  mint: KnownMint
-  onCompare?: (url: string) => void
-}) {
-  const navigate = useNavigate()
-  const mints = useWatchlistStore(state => state.mints)
-  const addMint = useWatchlistStore(state => state.addMint)
-  const removeMint = useWatchlistStore(state => state.removeMint)
-  const isWatched = mints.includes(mint.url)
-  const profile = useAuthStore(state => state.profile)
-  const isLoggedIn = profile !== null
-  const hostname = getHostname(mint.url)
-  const isOnline = mint.online === true
-  const displayName = mint.name ?? hostname
-  const uptimePct24h = mint.uptimePct24h ?? null
-  const ageBadge = mintAgeBadge(mint.discoveredAt ?? null)
-
-  return (
-    <div
-      className="mint-card"
-      onClick={() => { navigate(`/mint/${encodeURIComponent(mint.url)}`) }}
-    >
-      <div className="card-top">
-        <div className="card-name-row">
-          <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={32} radius={7} />
-          <div style={{ minWidth: 0 }}>
-            <div className="card-name">{displayName}</div>
-            {mint.name && <div className="card-host">{hostname}</div>}
-          </div>
-          {ageBadge && (
-            <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: ageBadge.color, background: ageBadge.bg, border: `1px solid ${ageBadge.border}`, borderRadius: 5, padding: '2px 7px', flexShrink: 0, marginLeft: 'auto', marginRight: 12 }}>
-              {ageBadge.label}
-            </span>
-          )}
-        </div>
-        <div
-          className={`status-dot${isOnline ? ' online' : ''}`}
-          style={{ background: mint.online === true ? 'var(--green-bright)' : 'var(--red)' }}
-        />
-      </div>
-
-      <div className="card-pills">
-        {mint.version && (
-          <span className="card-pill">{mint.version}</span>
-        )}
-        {mint.nutCount !== null && mint.nutCount !== undefined && (
-          <span className="card-pill" style={{ fontFamily: 'var(--font-mono-data)' }}>{mint.nutCount} NUTs</span>
-        )}
-        {uptimePct24h !== null && (
-          <span className="card-pill" style={{ color: uptimeColor(uptimePct24h), fontFamily: 'var(--font-mono-data)' }}>
-            {uptimePct24h}% up
-          </span>
-        )}
-        {mint.online === true && mint.trustScore != null && (
-          <span className="card-pill" style={{ color: mint.trustScore >= 70 ? 'var(--green-bright)' : mint.trustScore >= 40 ? 'var(--amber)' : 'var(--red)', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-mono-data)' }}>
-            <span style={{ fontSize: 15, lineHeight: 1 }}>★</span><span>{mint.trustScore}%</span>
-          </span>
-        )}
-      </div>
-
-      <div className="card-bottom">
-        <div className="latency-block">
-          <div className="latency-label">LATENCY</div>
-          {isOnline && mint.latencyMs !== null ? (
-            <div className="latency-value" style={{ color: 'var(--text)' }}>
-              {mint.latencyMs}<span className="latency-unit">ms</span>
-            </div>
-          ) : (
-            <div className="latency-value muted">—</div>
-          )}
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {onCompare && isOnline && (
-            <button
-              type="button"
-              style={{
-                background: 'transparent',
-                color: 'var(--green-bright)',
-                border: '1px solid var(--green-soft-strong)',
-                borderRadius: 'var(--radius-m)',
-                padding: '6px 12px',
-                fontSize: 11,
-                fontWeight: 500,
-                cursor: 'pointer',
-                fontFamily: 'var(--font-mono)',
-                flexShrink: 0,
-                transition: 'all 150ms ease',
-              }}
-              onClick={e => { e.stopPropagation(); onCompare(mint.url) }}
-            >
-              ⇄ Compare
-            </button>
-          )}
-          {isLoggedIn && (
-            <button
-              type="button"
-              className={`watch-btn${isWatched ? ' watching' : ''}`}
-              onClick={e => { e.stopPropagation(); void (isWatched ? removeMint(mint.url) : addMint(mint.url)) }}
-            >
-              {isWatched ? <><IcClose /><span>Unwatch</span></> : <><IcPlus /><span>Watch</span></>}
-            </button>
-          )}
-        </div>
       </div>
     </div>
   )
@@ -452,7 +331,7 @@ function MintGrid({
     <>
       <div className="mint-grid">
         {sortedFiltered.map(mint => (
-          <MintCardDisplay
+          <MintCard
             key={mint.url}
             mint={mint}
             {...(onCompare ? { onCompare } : {})}
@@ -1033,7 +912,7 @@ export default function Dashboard() {
             <p className="degraded-note">
               {!showDegraded && <>{degradedCount} mints hidden (offline 24h+){' '}</>}
               <button onClick={() => setShowDegraded(v => !v)}
-                style={{background:'none',border:'none',color:'var(--accent)',fontSize:11,cursor:'pointer',textDecoration:'underline'}}>
+                style={{background:'none',border:'none',color:'var(--green-bright)',fontSize:11,fontWeight:600,cursor:'pointer'}}>
                 {showDegraded ? 'Hide' : 'Show'}
               </button>
             </p>

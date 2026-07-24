@@ -486,8 +486,8 @@ function MintDetailContent({ url }: { url: string }) {
     <div className="mint-detail">
       <div className="md-header">
         <div className="md-header-row1">
-          <div className="md-header-left">
-            <button className="md-back" onClick={() => navigate(-1)}>← Back</button>
+          <button className="md-back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
+          <div className="md-avatar-id">
             <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={32} />
             <div className="md-namebox">
               <div className="md-name" style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
@@ -507,6 +507,7 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-header-row2">
           {!isOnline && knownMint?.lastError && (
             <span
+              className="md-error-badge"
               style={{position:'relative',display:'inline-flex',fontSize:11,color:'#ff4d4d',fontFamily:'var(--font-mono)',background:'rgba(255,77,77,0.08)',border:'0.5px solid rgba(255,77,77,0.25)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap',cursor:'help'}}
               onMouseEnter={() => setErrorBadgeTooltip(true)}
               onMouseLeave={() => setErrorBadgeTooltip(false)}
@@ -570,7 +571,6 @@ function MintDetailContent({ url }: { url: string }) {
                   onClick={() => { void testClientLatency() }}
                   disabled={testingLatency}
                   className="latency-test-btn"
-                  style={{background:'transparent',border:'0.5px solid #17E87F',borderRadius:6,color:'#17E87F',fontSize:12,padding:'4px 10px',cursor:testingLatency?'wait':'pointer',fontFamily:'var(--font-mono)',display:'inline-flex',alignItems:'center',gap:6}}
                 >
                   {testingLatency && <span className="latency-spinner" />}
                   Show my latency

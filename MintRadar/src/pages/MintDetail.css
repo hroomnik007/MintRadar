@@ -32,11 +32,13 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+.md-back-label { display: inline; }
+
 /* Transparent on desktop — children appear as direct flex items of md-header */
 .md-header-row1,
 .md-header-row2 { display: contents; }
 
-.md-header-left {
+.md-avatar-id {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -114,6 +116,23 @@
 }
 
 .md-compare-btn:hover { background: var(--green-soft); border-color: var(--green); }
+
+.latency-test-btn {
+  background: var(--green-soft);
+  border: 1px solid var(--green-soft-strong);
+  border-radius: var(--radius-m);
+  color: var(--green-bright);
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition);
+}
+
+.latency-test-btn:disabled { cursor: wait; }
 
 /* ── Summary Strip ──────────────────────────────────────────── */
 .md-summary {
@@ -552,23 +571,38 @@
   }
   .md-header {
     padding: 10px 16px;
-    gap: 8px;
+    gap: 10px;
     flex-direction: column;
     align-items: stretch;
   }
   .md-header-row1 {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 10px;
   }
-  .md-header-left { gap: 8px; }
+  .md-back {
+    order: 1;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+  }
+  .md-back-label { display: none; }
+  .md-online-badge { order: 2; margin-left: auto; }
+  .md-avatar-id { order: 3; flex: 1 1 100%; gap: 8px; }
   .md-header-row2 {
     display: flex;
-    justify-content: flex-end;
     gap: 8px;
     flex-wrap: wrap;
   }
+  .md-header-row2 > .md-watch-btn,
+  .md-header-row2 > .md-compare-btn { flex: 1; justify-content: center; }
+  .md-error-badge { flex: 1 1 100%; }
   .md-name { font-size: 14px; }
   .md-url  { font-size: 9px; }
 
@@ -641,7 +675,8 @@
 }
 
 .latency-test-btn:hover:not(:disabled) {
-  background: rgba(23,232,127,0.08) !important;
+  background: var(--green-soft-strong);
+  border-color: var(--green);
 }
 
 /* ── Latency spinner ────────────────────────────────────────── */

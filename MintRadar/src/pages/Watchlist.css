@@ -261,21 +261,21 @@
 
 /* ── Add mint button (login gate) ───────────────────────────── */
 .wl-add-btn {
-  background: var(--green-soft);
-  color: var(--green-bright);
-  border: 1px solid var(--green-soft-strong);
+  background: var(--green);
+  color: #04120d;
+  border: 1px solid var(--green);
   border-radius: var(--radius-m);
-  padding: 7px 16px;
-  font-size: 11px;
+  padding: 11px 22px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   white-space: nowrap;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.01em;
   transition: all var(--transition);
 }
 
-.wl-add-btn:hover { background: var(--green-soft-strong); border-color: var(--green); }
+.wl-add-btn:hover { background: var(--green-bright); border-color: var(--green-bright); }
 
 /* ── Empty state ────────────────────────────────────────────── */
 .wl-empty {
@@ -525,9 +525,9 @@
 .wl-rec-panel-badge {
   font-size: 9px;
   font-family: var(--font-mono);
-  color: #a78bfa;
-  background: rgba(167,139,250,0.1);
-  border: 1px solid rgba(167,139,250,0.3);
+  color: var(--copper);
+  background: var(--copper-soft);
+  border: 1px solid var(--copper-soft-strong);
   border-radius: 4px;
   padding: 1px 6px;
 }

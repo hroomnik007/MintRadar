@@ -46,6 +46,7 @@
   --raised:       #24352c;
   --surface-2:    #1c2b24;
   --surface-3:    #24352c;
+  --surface-card: #1c2b25;
 
   /* Backgrounds — legacy aliases (used by components) */
   --bg2:          #17251f;

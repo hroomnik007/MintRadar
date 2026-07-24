@@ -370,6 +370,28 @@
 
   .qr-btn-demo{ display:flex; gap:10px; }
   .btn-solid-old{ background:#22c55e; color:#04150c; border:none; padding:10px 16px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; }
+
+  /* ===================== WATCHLIST LOGGED IN ===================== */
+  .nav-count{ background:var(--green-soft); color:var(--green-bright); font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; margin-left:5px; }
+  .user-chip{ display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:6px 14px 6px 6px; font-size:13px; font-weight:600; color:var(--text-dim); }
+  .user-avatar{ width:24px; height:24px; border-radius:50%; background:var(--surface-3); }
+  .rec-row{ display:flex; align-items:center; gap:11px; padding:11px 0; border-bottom:1px solid var(--border); }
+  .rec-row:last-child{ border-bottom:none; }
+
+  /* ===================== MOBILE MINT DETAIL HEADER ===================== */
+  .mh-demo{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-m); padding:16px; }
+  .mh-top-row{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .mh-back{ width:34px; height:34px; border-radius:50%; background:var(--surface-3); border:1px solid var(--border); color:var(--text-dim); font-size:15px; cursor:pointer; }
+  .mh-id-row{ display:flex; align-items:flex-start; gap:11px; margin-bottom:14px; }
+  .mh-actions{ display:flex; gap:8px; }
+
+  /* ===================== MISC: latency btn / offline / elevation ===================== */
+  .btn-plain-outline{ background:transparent; border:1px solid var(--green); color:var(--green-bright); padding:9px 16px; border-radius:6px; font-size:12.5px; font-weight:600; cursor:pointer; }
+  .mint-card.offline{ opacity:.7; }
+  .badge.offline-badge{ background:var(--red-soft); color:var(--red); }
+  .hidden-footer{ text-align:center; font-size:12.5px; color:var(--text-faint); padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-m); }
+  .hidden-footer a{ color:var(--green-bright); font-weight:600; text-decoration:none; }
+  .mint-card.elevated{ background:#1c2b25; position:relative; box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
 </style>
 </head>
 <body>
@@ -383,6 +405,9 @@
       <button class="tab-btn" data-page="watchlist">Watchlist</button>
       <button class="tab-btn" data-page="stats">Stats</button>
       <button class="tab-btn" data-page="fixes">Opravy (nav/stats/geo/QR)</button>
+      <button class="tab-btn" data-page="watchlist2">Watchlist prihlásený</button>
+      <button class="tab-btn" data-page="mobilehead">Mint Detail mobil header</button>
+      <button class="tab-btn" data-page="misc">Latency btn / Offline / Card elevation</button>
     </div>
     <div class="device-toggle" id="device">
       <button class="active" data-mode="desktop">Desktop</button>
@@ -579,6 +604,7 @@
           <div class="empty-title">My Watchlist</div>
           <div class="empty-sub">Login via Nostr to track your personal mints. Your data stays in your browser.</div>
           <button class="btn-connect" style="margin:0 auto">⚡ Login via Nostr</button>
+          <div class="fix-note" style="max-width:380px;margin:14px auto 0">Toto je referenčný dizajn (aj vy screenshot 4) — nav tlačidlo hore je zámerne menšie/outline (sekundárne), toto CTA je zámerne väčšie/plné (primárna akcia). Ak implementácia ukazuje oboje rovnako, treba primárne tlačidlo prerobiť na <code>.btn-connect</code> štýl, nie <code>.btn-outline</code>.</div>
         </div>
       </div>
 
@@ -719,6 +745,189 @@
             </div>
           </div>
 
+        </div>
+      </div>
+
+      <!-- ============ WATCHLIST LOGGED IN (redesign) ============ -->
+      <div class="page" id="page-watchlist2">
+        <div class="app-nav">
+          <div class="brand"><div class="brand-mark"></div><div class="brand-name">Mint<span class="r">Radar</span></div></div>
+          <div class="nav-links"><a>Dashboard</a><a class="active">Watchlist <span class="nav-count">3</span></a><a>Stats</a><a>Tools</a></div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="user-chip"><div class="user-avatar"></div>WildCitizen7</div>
+            <button class="btn-outline" style="border-color:var(--red-soft);color:var(--red)">Disconnect</button>
+          </div>
+        </div>
+        <div class="app-body">
+          <div class="toolrow" style="justify-content:space-between">
+            <h2 class="section-title" style="margin:0">My Watchlist</h2>
+            <div class="chip-row"><span class="chip">↓ JSON</span><span class="chip">↓ CSV</span></div>
+          </div>
+          <div class="chip-row" style="margin-bottom:16px">
+            <div class="chip">Status</div><div class="chip active">Name ↑</div><div class="chip">Latency</div><div class="chip">Trust Score</div>
+          </div>
+
+          <div class="mint-grid">
+            <div class="mint-card">
+              <div class="mint-head">
+                <div class="mint-avatar" style="color:var(--copper);background:var(--copper-soft)">C</div>
+                <div class="mint-name-row"><div class="mint-name"><span class="status-dot"></span>cashu.cz</div><div class="mint-url">cashu.cz</div></div>
+                <div class="badge established">Established</div>
+              </div>
+              <div class="mint-tags"><span class="tag">Nutshell/0.20.1</span><span class="tag">12 NUTs</span><span class="tag up">100% up</span><span class="tag trust">★ 81%</span></div>
+              <div class="mint-foot"><div><div class="latency-label">Latency</div><div class="latency-value">815<span>ms</span></div></div><button class="btn-compare" style="border-color:var(--red-soft);color:var(--red)">✕ Unwatch</button></div>
+            </div>
+            <div class="mint-card">
+              <div class="mint-head">
+                <div class="mint-avatar">Ø</div>
+                <div class="mint-name-row"><div class="mint-name"><span class="status-dot off"></span>Coinos</div><div class="mint-url">mint.coinos.io</div></div>
+                <div class="badge established">Established</div>
+              </div>
+              <div class="mint-tags"><span class="tag">Nutshell/0.20.0</span><span class="tag">12 NUTs</span><span class="tag" style="color:var(--red)">0% up</span></div>
+              <div class="mint-foot"><div><div class="latency-label">Latency</div><div class="latency-value" style="color:var(--text-faint)">—</div></div><button class="btn-compare" style="border-color:var(--red-soft);color:var(--red)">✕ Unwatch</button></div>
+            </div>
+            <div class="mint-card">
+              <div class="mint-head">
+                <div class="mint-avatar" style="color:var(--copper);background:var(--copper-soft)">L</div>
+                <div class="mint-name-row"><div class="mint-name"><span class="status-dot"></span>LNpay Mint</div><div class="mint-url">mint.lnpay.cz</div></div>
+                <div class="badge established">Established</div>
+              </div>
+              <div class="mint-tags"><span class="tag">Nutshell/0.20.2</span><span class="tag">13 NUTs</span><span class="tag up">100% up</span><span class="tag trust">★ 79%</span></div>
+              <div class="mint-foot"><div><div class="latency-label">Latency</div><div class="latency-value">70<span>ms</span></div></div><button class="btn-compare" style="border-color:var(--red-soft);color:var(--red)">✕ Unwatch</button></div>
+            </div>
+          </div>
+
+          <h2 class="section-title">Recommended by follows</h2>
+          <div class="panel" style="max-width:420px">
+            <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center">
+              <span>3 mints · from 85 follows</span><span class="tag" style="color:var(--copper)">NIP-87</span>
+            </div>
+            <div class="rec-row"><div class="mint-avatar" style="width:32px;height:32px;font-size:12px">F</div><div style="flex:1"><div style="font-weight:600;font-size:13px">Flash Forge</div><div style="font-size:11.5px;color:var(--text-faint)">forge.flashapp.me</div></div><div style="text-align:right"><div class="tag trust" style="margin-bottom:6px">80%</div><button class="chip" style="padding:5px 12px">+ Watch</button></div></div>
+            <div class="rec-row"><div class="mint-avatar" style="width:32px;height:32px;font-size:12px">M</div><div style="flex:1"><div style="font-weight:600;font-size:13px">Voltz Mint</div><div style="font-size:11.5px;color:var(--text-faint)">mint.lnvoltz.com</div></div><div style="text-align:right"><div class="tag trust" style="margin-bottom:6px">80%</div><button class="chip" style="padding:5px 12px">+ Watch</button></div></div>
+          </div>
+          <div class="fix-note" style="margin-top:16px;max-width:640px">Karty aj badge zjednotené s Dashboardom (rovnaká <code>.mint-card</code>/<code>.badge</code>). "Unwatch" je tónovaný červený outline namiesto plného fillu. "NIP-87" badge prešiel z fialovej na medenú (drží sa palety, žiadna tretia farba navyše). Latencia/percentá na <code>--font-mono-data</code>.</div>
+        </div>
+      </div>
+
+      <!-- ============ MOBILE MINT DETAIL HEADER FIX ============ -->
+      <div class="page" id="page-mobilehead">
+        <div class="app-nav">
+          <div class="brand"><div class="brand-mark"></div><div class="brand-name">Mint<span class="r">Radar</span></div></div>
+          <div class="nav-links"><a>Dashboard</a><a>Watchlist</a><a>Stats</a><a>Tools</a></div>
+          <button class="btn-login"><span class="bolt">⚡</span> Login via Nostr</button>
+        </div>
+        <div class="app-body">
+          <div class="fix-compare">
+            <div class="fix-col">
+              <div class="fix-tag bad">PRED (natlačené na mobile)</div>
+              <div class="mh-demo bad-bg" style="max-width:360px">
+                <button class="back-btn" style="width:100%;margin-bottom:10px">← Back</button>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <div class="mint-avatar lg">C</div>
+                  <div style="min-width:0"><div class="detail-title" style="font-size:15px">cashu.cz</div><div class="badge established" style="margin-top:4px">Established</div></div>
+                </div>
+                <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn-outline" style="border-color:var(--red-soft);color:var(--red)">✕ Unwatch</button><button class="btn-outline accent">⇄ Compare</button></div>
+              </div>
+              <div class="fix-note">Plný "← Back" pill zaberá celú šírku, hlavička sa láme na viac riadkov, tlačidlá dole tlačia zvyšný obsah.</div>
+            </div>
+            <div class="fix-col">
+              <div class="fix-tag good">PO (kompaktná hlavička)</div>
+              <div class="mh-demo" style="max-width:360px">
+                <div class="mh-top-row">
+                  <button class="mh-back">←</button>
+                  <div class="online-pill" style="margin:0">● Online</div>
+                </div>
+                <div class="mh-id-row">
+                  <div class="mint-avatar lg" style="width:40px;height:40px">C</div>
+                  <div style="min-width:0;flex:1">
+                    <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><div class="detail-title" style="font-size:15px">cashu.cz</div><div class="badge established">Established</div></div>
+                    <div class="detail-url" style="font-size:11.5px">cashu.cz</div>
+                  </div>
+                </div>
+                <div class="mh-actions">
+                  <button class="btn-outline" style="flex:1;border-color:var(--red-soft);color:var(--red)">✕ Unwatch</button>
+                  <button class="btn-outline accent" style="flex:1">⇄ Compare</button>
+                </div>
+              </div>
+              <div class="fix-note">Back je len ikona (36px kruh), Online pill ide vedľa neho namiesto samostatného riadku. Avatar+meno+badge v jednom kompaktnom riadku, URL pod tým. Akcie ako 2 rovnako široké tlačidlá pod tým — žiadne zalamovanie.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ MISC: latency btn / offline mints / card elevation ============ -->
+      <div class="page" id="page-misc">
+        <div class="app-nav">
+          <div class="brand"><div class="brand-mark"></div><div class="brand-name">Mint<span class="r">Radar</span></div></div>
+          <div class="nav-links"><a>Dashboard</a><a>Watchlist</a><a>Stats</a><a>Tools</a></div>
+          <button class="btn-login"><span class="bolt">⚡</span> Login via Nostr</button>
+        </div>
+        <div class="app-body">
+
+          <h2 class="section-title" style="margin-top:0">1 · "Show my latency" tlačidlo</h2>
+          <div class="fix-compare">
+            <div class="fix-col">
+              <div class="fix-tag bad">PRED</div>
+              <div class="tile" style="max-width:320px">
+                <div class="tile-icon">⏱</div><div class="tile-value">1096<span>ms</span></div><div class="tile-sub">server · Frankfurt</div>
+                <button class="btn-plain-outline" style="margin-top:10px">Show my latency</button>
+              </div>
+              <div class="fix-note">Len tenký outline bez tónovanej výplne — nesedí s "+Watch"/"Compare", ktoré majú <code>--green-soft</code> pozadie navyše.</div>
+            </div>
+            <div class="fix-col">
+              <div class="fix-tag good">PO</div>
+              <div class="tile" style="max-width:320px">
+                <div class="tile-icon">⏱</div><div class="tile-value">1096<span>ms</span></div><div class="tile-sub">server · Frankfurt</div>
+                <button class="btn-outline accent" style="margin-top:10px">Show my latency</button>
+              </div>
+              <div class="fix-note">Rovnaká <code>.btn-outline.accent</code> trieda ako všade inde — tónované pozadie + border.</div>
+            </div>
+          </div>
+
+          <h2 class="section-title">2 · Offline / degraded minty na Dashboarde</h2>
+          <div class="fix-note" style="margin-bottom:12px">Podľa CLAUDE.md logiky: degraded/offline 24h+ minty sú defaultne skryté, footer ukazuje počet + "Show" toggle. Návrh ako to má vyzerať v novej palete:</div>
+          <div class="mint-grid" style="margin-bottom:14px">
+            <div class="mint-card offline">
+              <div class="mint-head">
+                <div class="mint-avatar">Ø</div>
+                <div class="mint-name-row"><div class="mint-name"><span class="status-dot off"></span>Coinos</div><div class="mint-url">mint.coinos.io</div></div>
+                <div class="badge offline-badge">Offline 24h+</div>
+              </div>
+              <div class="mint-tags"><span class="tag">Nutshell/0.20.0</span><span class="tag">12 NUTs</span><span class="tag" style="color:var(--red)">0% up</span></div>
+              <div class="mint-foot"><div><div class="latency-label">Last seen</div><div class="latency-value" style="font-size:15px;color:var(--text-faint)">2d ago</div></div><button class="btn-compare">⇄ Compare</button></div>
+            </div>
+          </div>
+          <div class="hidden-footer">
+            <span>⌄</span> 6 mints hidden (offline 24h+) — <a href="#">Show</a>
+          </div>
+          <div class="fix-note" style="margin-top:10px">Karta má tlmenejšiu opacitu (celá karta ~0.7), status dot červený, badge "Offline 24h+" v <code>--red-soft</code> namiesto "Established"/"Fresh", latencia nahradená "Last seen" časovým údajom keďže latencia nemá zmysel pri offline mint.</div>
+
+          <h2 class="section-title">3 · Odlíšenie mint kariet od pozadia (elevation)</h2>
+          <div class="fix-compare">
+            <div class="fix-col">
+              <div class="fix-tag bad">TERAZ — karta = rovnaká farba ako iné panely</div>
+              <div class="mint-card" style="max-width:340px">
+                <div class="mint-head">
+                  <div class="mint-avatar">21</div>
+                  <div class="mint-name-row"><div class="mint-name"><span class="status-dot"></span>21Mint</div><div class="mint-url">21mint.me</div></div>
+                  <div class="badge established">Established</div>
+                </div>
+                <div class="mint-tags"><span class="tag">Nutshell/0.18.2</span><span class="tag up">100% up</span></div>
+              </div>
+            </div>
+            <div class="fix-col">
+              <div class="fix-tag good">NÁVRH — jemne zdvihnutá karta</div>
+              <div class="mint-card elevated" style="max-width:340px">
+                <div class="mint-head">
+                  <div class="mint-avatar">21</div>
+                  <div class="mint-name-row"><div class="mint-name"><span class="status-dot"></span>21Mint</div><div class="mint-url">21mint.me</div></div>
+                  <div class="badge established">Established</div>
+                </div>
+                <div class="mint-tags"><span class="tag">Nutshell/0.18.2</span><span class="tag up">100% up</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="fix-note" style="margin-top:10px">Návrh: <code>--surface-card</code> o niečo svetlejší odtieň než <code>--surface</code> (napr. <code>#1c2b25</code>) + veľmi jemný vnútorný horný highlight (1px, biela s nízkou opacitou) — karta pôsobí "nadvihnuto", bez potreby tieňov (tie by na tmavom pozadí vyzerali špinavo). Panely (Trust Score, MOTD, atď.) ostávajú na <code>--surface</code>, takže si karty zachovajú vlastnú identitu oproti iným UI blokom.</div>
         </div>
       </div>
 

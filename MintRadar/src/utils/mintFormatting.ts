@@ -61,3 +61,24 @@ export function latencyColor(ms: number | null | undefined): string {
   if (ms < 2000) return 'var(--med)'
   return 'var(--slow)'
 }
+
+// ── Uptime colour (Dashboard/Watchlist card pill) ──────────────
+export function uptimeColor(pct: number | null | undefined): string {
+  if (pct === null || pct === undefined) return 'var(--t3)'
+  if (pct >= 95) return 'var(--fast)'
+  if (pct >= 80) return 'var(--med)'
+  return 'var(--slow)'
+}
+
+// ── Relative time (e.g. "3 min ago", "2d ago") ─────────────────
+export function formatTimeAgo(date: Date | null): string {
+  if (!date) return '—'
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (seconds < 60) return `${seconds}s ago`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes} min ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
