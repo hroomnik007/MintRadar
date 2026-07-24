@@ -16,6 +16,7 @@ import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { ComparisonModal } from '@/components/ComparisonModal'
 import { mintAgeBadge, trustScoreColor, trustScoreInfo } from '@/utils/mintFormatting'
+import { auditReliabilityScore } from '@/utils/auditScore'
 import { useNow } from '@/hooks/useNow'
 import './MintDetail.css'
 import {
@@ -151,18 +152,6 @@ function versionFreshnessScore(versionStr: string | null | undefined): number {
 function contactInfoScore(email?: string, twitter?: string, nostr?: string): number {
   const count = [email, twitter, nostr].filter(Boolean).length
   return Math.round((count / 3) * 5)
-}
-
-function auditReliabilityScore(nMints: number | null, nMelts: number | null, nErrors: number | null): number {
-  if (nMints === null) return 2.5
-  const total = nMints + (nMelts ?? 0) + (nErrors ?? 0)
-  if (total === 0) return 5
-  const errorRate = (nErrors ?? 0) / total
-  if (errorRate === 0) return 5
-  if (errorRate < 0.01) return 4
-  if (errorRate < 0.05) return 3
-  if (errorRate < 0.15) return 2
-  return 1
 }
 
 function computeTrustScore(

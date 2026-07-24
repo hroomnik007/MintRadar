@@ -2,6 +2,7 @@ import dns from 'dns'
 import { fetch as undiciFetch } from 'undici'
 import { pool } from './db.js'
 import { checkUrlSafety, safeFetch } from './ssrf.js'
+import { auditReliabilityScore } from './shared/auditScore.js'
 
 function isCloudflareIP(address: string): boolean {
   const parts = address.split('.').map(Number)
@@ -104,15 +105,7 @@ export function computeServerTrustScore(
   const nScore = Math.round(Math.min((nutCount ?? 0) / 26, 1) * 30)
   const vScore = Math.round(serverVersionFreshnessScore(version) / 10 * 15)
   const cScore = Math.round((contactCount / 3) * 5)
-  const total = (auditNMints ?? 0) + (auditNMelts ?? 0) + (auditNErrors ?? 0)
-  const errRate = total === 0 ? 0 : (auditNErrors ?? 0) / total
-  const aScore = auditNMints === null
-    ? 2.5
-    : errRate === 0 ? 5
-    : errRate < 0.01 ? 4
-    : errRate < 0.05 ? 3
-    : errRate < 0.15 ? 2
-    : 1
+  const aScore = auditReliabilityScore(auditNMints, auditNMelts, auditNErrors)
   return Math.min(100, Math.round(uScore + nScore + vScore + cScore + aScore))
 }
 

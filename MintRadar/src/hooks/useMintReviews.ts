@@ -1,28 +1,8 @@
 import { useState, useEffect } from 'react'
 import { verifyEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
+import { REVIEW_RELAYS, PROFILE_RELAYS } from '@/core/nostr/relays'
 import { deduplicateByPubkey, parseReviewEvent, filterAndSortReviews } from '@/utils/reviewUtils'
-
-const REVIEW_RELAYS = [
-  'wss://relay.damus.io',
-  'wss://nos.lol',
-  'wss://relay.cashumints.space',
-  'wss://purplepag.es',
-  'wss://relay.primal.net',
-  'wss://relay.snort.social',
-  'wss://offchain.pub',
-  'wss://nostr-pub.wellorder.net',
-  'wss://relay.nostr.band',
-  'wss://relay.minibits.cash',
-]
-
-const PROFILE_RELAYS = [
-  'wss://relay.nostr.band',
-  'wss://nos.lol',
-  'wss://relay.primal.net',
-  'wss://purplepag.es',
-  'wss://relay.damus.io',
-]
 
 export interface MintReview {
   id: string

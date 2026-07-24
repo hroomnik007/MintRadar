@@ -2,18 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useQueryClient } from '@tanstack/react-query'
 import { sharedPool } from '@/core/nostr/pool'
-
-const DISCOVERY_RELAYS = [
-  'wss://relay.damus.io',
-  'wss://nos.lol',
-  'wss://purplepag.es',
-  'wss://relay.snort.social',
-  'wss://relay.primal.net',
-  'wss://relay.cashumints.space',
-  'wss://relay.azzamo.net',
-  'wss://offchain.pub',
-  'wss://nostr-pub.wellorder.net',
-]
+import { DISCOVERY_RELAYS } from '@/core/nostr/relays'
 
 export function useNostrDiscovery() {
   const profile = useAuthStore(s => s.profile)

@@ -1,24 +1,6 @@
 import type { NostrEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
-
-const REVIEW_RELAYS = [
-  'wss://relay.damus.io',
-  'wss://nos.lol',
-  'wss://relay.cashumints.space',
-  'wss://purplepag.es',
-  'wss://relay.primal.net',
-  'wss://relay.snort.social',
-  'wss://offchain.pub',
-  'wss://nostr-pub.wellorder.net',
-  'wss://relay.nostr.band',
-  'wss://nostr.bitcoiner.social',
-  'wss://nostr.mom',
-  'wss://nostr.oxtr.dev/',
-  'wss://relay.mostr.pub/',
-  'wss://relay.noswhere.com/',
-  'wss://pyramid.fiatjaf.com/',
-  'wss://nostr.lopp.social/',
-]
+import { REVIEW_PUBLISH_RELAYS } from '@/core/nostr/relays'
 
 export async function submitMintReview(
   mintUrl: string,
@@ -40,7 +22,7 @@ export async function submitMintReview(
   }
 
   const signed = await window.nostr.signEvent(event) as NostrEvent
-  const publishPromises = sharedPool.publish(REVIEW_RELAYS, signed)
+  const publishPromises = sharedPool.publish(REVIEW_PUBLISH_RELAYS, signed)
   publishPromises.forEach(p => p.catch(() => {}))
   await Promise.any(publishPromises)
 }

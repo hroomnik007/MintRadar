@@ -1,5 +1,6 @@
 import { verifyEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
+import { DISCOVERY_RELAYS } from '@/core/nostr/relays'
 
 export interface NostrMintEvent {
   url: string
@@ -8,17 +9,6 @@ export interface NostrMintEvent {
   pubkey: string
   createdAt: number
 }
-
-const DISCOVERY_RELAYS: string[] = [
-  'wss://relay.nostr.band',
-  'wss://relay.damus.io',
-  'wss://nostr.wine',
-  'wss://nostr-pub.wellorder.net',
-  'wss://relay.snort.social',
-  'wss://relay.primal.net',
-  'wss://nos.lol',
-  'wss://offchain.pub',
-]
 
 const MAX_URL_LENGTH = 500
 const MAX_TEXT_LENGTH = 100

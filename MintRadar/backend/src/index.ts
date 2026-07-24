@@ -24,10 +24,22 @@ interface NostrReviewEntry {
 
 const nostrReviewsCache = new Map<string, { data: NostrReviewEntry[]; expiresAt: number }>()
 const NOSTR_REVIEWS_CACHE_TTL = 10 * 60 * 1000 // 10 minutes
+// Mirrors the frontend's REVIEW_RELAYS (src/core/nostr/relays.ts) — the two packages
+// can't share a module directly (separate npm packages, no workspace set up), so keep
+// these two arrays in sync manually when editing either one.
 const NOSTR_REVIEWS_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
+  'wss://purplepag.es',
+  'wss://relay.snort.social',
+  'wss://relay.primal.net',
+  'wss://relay.cashumints.space',
+  'wss://relay.azzamo.net',
   'wss://relay.nostr.band',
+  'wss://nostr.wine',
+  'wss://nostr-pub.wellorder.net',
+  'wss://offchain.pub',
+  'wss://relay.8333.space',
   'wss://relay.minibits.cash',
 ]
 const NOSTR_REVIEWS_TIMEOUT_MS = 8_000
