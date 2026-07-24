@@ -160,6 +160,9 @@ Frontend:
 - The deploy sequence runs `sudo rm -rf /var/www/mintradar/dist/assets/*` before copying the new build. This is intentional: `rsync --delete` was silently failing to remove old `root:root`-owned asset files left over from a prior deploy mechanism while still reporting success, causing stale content-hashed files to accumulate alongside new ones.
 - The GH Actions workflow SSHes into the VPS, pulls latest code, builds on the server (`npm ci && npm run build`), then copies dist to the nginx root. The `rsync dist/` step documented in the deploy workflow above reflects the original mechanism — the active workflow in `.github/workflows/deploy.yml` is authoritative.
 - **GOTCHA — Dependabot PRs:** Never merge multiple Dependabot PRs in rapid succession. Each merge triggers a GH Actions deploy that runs `rm -rf node_modules && npm ci` on the VPS. Concurrent runs race on the same node_modules directory, corrupting TypeScript's lib files and causing `Cannot find global type 'Boolean'` / `lib.es2022.d.ts not found` errors. Merge one, wait for the run to complete, then merge the next.
+  - Confirmed working (2026-07-24, commit 9abda76 session): 10/10 open Dependabot PRs (patch/minor bumps + one ESLint 9→10 major) merged sequentially, each followed by `gh run watch` on the deploy workflow before starting the next. Zero failures, zero VPS races.
+  - **ESLint major-version bumps:** before writing/changing any `eslint.config.js`, check whether the package actually has its own config file. `MintRadar/backend` has none — its `npm run lint` resolves ESLint's flat config by walking up to `MintRadar/eslint.config.js` (this works because ESM imports inside that config file resolve relative to the config file's own path, not the invoking CWD). Verify this kind of resolution still works after a major bump with `eslint src/ --debug 2>&1 | grep -i "config"` (look for `Using config file ... and base path ...` plus a nonzero linted-file count) *before* assuming a config rewrite is needed.
+  - **`npm install`/`npm ci` working directory:** this is a monorepo with THREE `package.json` locations if you're not careful — `MintRadar/` (frontend), `MintRadar/backend/`, and (accidentally, if you run `npm install` from the repo root) a stray root-level one. Always run `pwd` immediately before `npm install`/`npm ci` here. A 2026-07-24 session created a stray root `package.json`/`package-lock.json`/`node_modules` this way mid-Dependabot-batch (caught via `git status` before committing, deleted, redone in the right directory) — the same class of mistake previously happened in the separate Finvu project too.
 
 ## Nostr Login
 
@@ -229,15 +232,11 @@ When a deployed change doesn't appear to users, verify in this order before assu
 
 `src/core/crypto/vault.ts` was deleted. It had zero imports across the codebase and contained a broken nsec bech32 decode (`.slice(5)` instead of `nip19.decode`). The entire `src/core/crypto/` directory no longer exists — do not recreate it.
 
-### MintCard.tsx removed (dead code)
+### MintCard.tsx — history (was dead code, now the real shared component)
 
-`src/components/mint/MintCard.tsx` and `src/components/mint/MintCard.css` were deleted. Both had zero imports anywhere in the codebase.
+An earlier `src/components/mint/MintCard.tsx`/`.css` was deleted (zero imports at the time). For a while Dashboard and Watchlist each had their own separate inline card renderer instead of a shared one.
 
-**CRITICAL for future prompts:** Dashboard and Watchlist do NOT share a common card component. Each has its own separate inline card renderer:
-- `src/pages/Dashboard.tsx` → `MintCardDisplay` function (defined around line 208)
-- `src/pages/Watchlist.tsx` → anonymous inline card renderer (no separate named component)
-
-Any future task targeting "the mint card" or "the watch button" MUST specify which file to edit (Dashboard.tsx and/or Watchlist.tsx), or the same mistake of editing non-existent shared code will repeat.
+**This is no longer true as of the "Post-redesign fixes round 2" session (commit f98694a) below.** `src/components/mint/MintCard.tsx` was recreated and is now the real, actively-imported shared card component used by both `src/pages/Dashboard.tsx` and `src/pages/Watchlist.tsx`. Any task targeting "the mint card" or "the watch button" should edit this file — not Dashboard.tsx/Watchlist.tsx directly — unless the change is genuinely page-specific.
 
 ### Security audit
 
@@ -360,6 +359,15 @@ Verified: typecheck, ESLint, 70/70 unit tests, production build all pass; visual
 Reference mockup `mintradar_redesign_mockup.html` (tabs "Watchlist prihlásený", "Mint Detail mobil header", "Latency btn / Offline / Card elevation") documents before/after for all items.
 
 Verified: typecheck, ESLint, 70/70 unit tests, production build all pass; visually confirmed via Playwright with mocked API (7 screenshots).
+
+### Card elevation contrast fix (commit 9abda76)
+
+The `--surface-card` token introduced in round 2 above was visually too subtle — on an actual screenshot it was nearly indistinguishable from `--bg`. Strengthened:
+- `--surface-card`: `#1c2b25` → `#223a2f`
+- `.mint-card` border: now `var(--border-strong)` directly (not just on `:hover`)
+- Inset top highlight: opacity `.05` → `.07`
+
+Applied automatically everywhere via the shared `MintCard.tsx` component (Dashboard and Watchlist both pick it up with no per-page changes needed) — see "MintCard.tsx — history" above for why that component being shared matters here.
 
 ## Nostr pool singleton
 
