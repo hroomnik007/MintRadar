@@ -392,6 +392,18 @@
   .hidden-footer{ text-align:center; font-size:12.5px; color:var(--text-faint); padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-m); }
   .hidden-footer a{ color:var(--green-bright); font-weight:600; text-decoration:none; }
   .mint-card.elevated{ background:#1c2b25; position:relative; box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
+  .mint-card.elevated2{ background:#223a2f; border-color:var(--border-strong); position:relative; box-shadow: inset 0 1px 0 rgba(255,255,255,.07); }
+
+  /* ===================== TOOLTIP + MOBILE HEADER V2 ===================== */
+  .tooltip-demo{ max-width:420px; margin-bottom:14px; }
+  .tooltip-box{ background:var(--surface-2); border:1px solid var(--border-strong); border-radius:var(--radius-s); padding:12px 14px; font-size:12px; color:var(--text-dim); line-height:1.5; }
+  .mh-id-row-v2{ display:flex; align-items:center; gap:9px; }
+  .mh-back-sm{ width:28px; height:28px; border-radius:50%; background:var(--surface-3); border:1px solid var(--border); color:var(--text-dim); font-size:13px; cursor:pointer; flex-shrink:0; }
+  .tile-grid-sm{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+  .tile-sm{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-s); padding:10px 12px; }
+  .tile-sm-label{ font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); font-weight:600; margin-bottom:3px; }
+  .tile-sm-value{ font-family:var(--font-mono); font-size:15px; font-weight:600; }
+  .tile-sm-value span{ font-size:11px; color:var(--text-dim); font-weight:500; }
 </style>
 </head>
 <body>
@@ -408,6 +420,7 @@
       <button class="tab-btn" data-page="watchlist2">Watchlist prihlásený</button>
       <button class="tab-btn" data-page="mobilehead">Mint Detail mobil header</button>
       <button class="tab-btn" data-page="misc">Latency btn / Offline / Card elevation</button>
+      <button class="tab-btn" data-page="mobilehead2">Mobil header v2 / Tooltip</button>
     </div>
     <div class="device-toggle" id="device">
       <button class="active" data-mode="desktop">Desktop</button>
@@ -926,8 +939,81 @@
                 <div class="mint-tags"><span class="tag">Nutshell/0.18.2</span><span class="tag up">100% up</span></div>
               </div>
             </div>
+            <div class="fix-col">
+              <div class="fix-tag good">NÁVRH v2 — silnejší kontrast</div>
+              <div class="mint-card elevated2" style="max-width:340px">
+                <div class="mint-head">
+                  <div class="mint-avatar">21</div>
+                  <div class="mint-name-row"><div class="mint-name"><span class="status-dot"></span>21Mint</div><div class="mint-url">21mint.me</div></div>
+                  <div class="badge established">Established</div>
+                </div>
+                <div class="mint-tags"><span class="tag">Nutshell/0.18.2</span><span class="tag up">100% up</span></div>
+              </div>
+            </div>
           </div>
-          <div class="fix-note" style="margin-top:10px">Návrh: <code>--surface-card</code> o niečo svetlejší odtieň než <code>--surface</code> (napr. <code>#1c2b25</code>) + veľmi jemný vnútorný horný highlight (1px, biela s nízkou opacitou) — karta pôsobí "nadvihnuto", bez potreby tieňov (tie by na tmavom pozadí vyzerali špinavo). Panely (Trust Score, MOTD, atď.) ostávajú na <code>--surface</code>, takže si karty zachovajú vlastnú identitu oproti iným UI blokom.</div>
+          <div class="fix-note" style="margin-top:10px">Pôvodný <code>--surface-card: #1c2b25</code> bol príliš blízko pozadiu (<code>#10201c</code>) — v praxi na screenshote takmer nevidno rozdiel. Nová hodnota <code>#223a2f</code> je výraznejšie svetlejšia + border zosilnený z <code>--border</code> na <code>--border-strong</code> priamo na karte (nie len pri hoveri). Karty by mali byť rozoznateľné od pozadia aj bez priblíženia. Vnútorný horný highlight (1px, jemná biela) ostáva zachovaný ako v pôvodnom návrhu.</div>
+        </div>
+      </div>
+
+      <!-- ============ MOBILE HEADER V2 + TOOLTIP ============ -->
+      <div class="page" id="page-mobilehead2">
+        <div class="app-nav">
+          <div class="brand"><div class="brand-mark"></div><div class="brand-name">Mint<span class="r">Radar</span></div></div>
+          <div class="nav-links"><a>Dashboard</a><a>Watchlist</a><a>Stats</a><a>Tools</a></div>
+          <button class="btn-login"><span class="bolt">⚡</span> Login via Nostr</button>
+        </div>
+        <div class="app-body">
+
+          <h2 class="section-title" style="margin-top:0">1 · Tooltip (Offline / HTTP 502 dôvod)</h2>
+          <div class="fix-note" style="margin-bottom:10px">Over v kóde, akú farbu/border tooltip aktuálne používa. Referenčný štýl nižšie — rovnaké tokeny ako zvyšok appky:</div>
+          <div class="tooltip-demo">
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <span class="badge" style="background:var(--red-soft);color:var(--red)">● Offline</span>
+              <span class="tag" style="color:var(--red)">HTTP 502</span>
+              <button class="btn-compare" style="border-color:var(--red-soft);color:var(--red)">✕ Unwatch</button>
+            </div>
+            <div class="tooltip-box">The mint's server is unreachable — the application behind the proxy may have crashed or restarted</div>
+          </div>
+          <div class="fix-note">Tooltip: <code>var(--surface-2)</code> pozadie, <code>var(--border-strong)</code> okraj, text <code>var(--text-dim)</code>, <code>var(--radius-s)</code>. Rovnaké ako iné vyskakovacie panely (Geo modal, Trust Score).</div>
+
+          <h2 class="section-title">2 · Mint Detail — kompaktnejší mobil header (v2)</h2>
+          <div class="fix-compare">
+            <div class="fix-col">
+              <div class="fix-tag bad">TERAZ — back má vlastný riadok</div>
+              <div class="mh-demo bad-bg" style="max-width:360px">
+                <div class="mh-top-row"><button class="mh-back">←</button><div class="online-pill" style="margin:0">● Online</div></div>
+                <div class="mh-id-row"><div class="mint-avatar lg" style="width:40px;height:40px">A</div><div style="min-width:0;flex:1"><div style="display:flex;align-items:center;gap:7px"><div class="detail-title" style="font-size:15px">antifiat mint</div><div class="badge established">Established</div></div><div class="detail-url" style="font-size:11.5px">antifiat.cash</div></div></div>
+                <div class="mh-actions"><button class="btn-outline accent" style="flex:1">+ Watch</button><button class="btn-outline accent" style="flex:1">⇄ Compare</button></div>
+                <div class="tile-grid" style="margin-top:14px;grid-template-columns:repeat(2,1fr)">
+                  <div class="tile"><div class="tile-icon">⏱</div><div class="tile-value">442<span>ms</span></div><div class="tile-sub">Frankfurt</div></div>
+                  <div class="tile"><div class="tile-icon g">◈</div><div class="tile-value">100%</div><div class="tile-sub">288/288</div></div>
+                </div>
+              </div>
+              <div class="fix-note">Back tlačidlo + Online pill tvoria samostatný riadok navyše. 4 dlaždice majú veľký padding/ikonu, zaberajú veľa výšky na malej obrazovke.</div>
+            </div>
+            <div class="fix-col">
+              <div class="fix-tag good">NÁVRH v2 — back splynie do id riadku</div>
+              <div class="mh-demo" style="max-width:360px">
+                <div class="mh-id-row-v2">
+                  <button class="mh-back-sm">←</button>
+                  <div class="mint-avatar lg" style="width:36px;height:36px;font-size:13px">A</div>
+                  <div style="min-width:0;flex:1">
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="status-dot"></span><div class="detail-title" style="font-size:14.5px">antifiat mint</div></div>
+                    <div class="detail-url" style="font-size:11px">antifiat.cash</div>
+                  </div>
+                  <div class="badge established" style="flex-shrink:0">Established</div>
+                </div>
+                <div class="mh-actions" style="margin-top:12px"><button class="btn-outline accent" style="flex:1">+ Watch</button><button class="btn-outline accent" style="flex:1">⇄ Compare</button></div>
+                <div class="tile-grid-sm" style="margin-top:12px">
+                  <div class="tile-sm"><div class="tile-sm-label">Latency</div><div class="tile-sm-value">442<span>ms</span></div></div>
+                  <div class="tile-sm"><div class="tile-sm-label">Uptime</div><div class="tile-sm-value">100%</div></div>
+                  <div class="tile-sm"><div class="tile-sm-label">Version</div><div class="tile-sm-value" style="font-size:12px">0.20.0</div></div>
+                  <div class="tile-sm"><div class="tile-sm-label">NUTs</div><div class="tile-sm-value">12</div></div>
+                </div>
+              </div>
+              <div class="fix-note">Back je malá šípka (28px) hneď vedľa avatara v tom istom riadku — meno je posunuté doprava, presne ako si žiadal. Online stav teraz status dot pri mene (rovnaký vzor ako karty), badge presunutý vpravo. 4 dlaždice zošťahané na kompaktný 2×2 grid s malým labelom + hodnotou namiesto veľkej ikony a paddingu.</div>
+            </div>
+          </div>
         </div>
       </div>
 
