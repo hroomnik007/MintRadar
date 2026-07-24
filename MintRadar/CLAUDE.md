@@ -333,6 +333,19 @@ documented trade-off — not implemented/changed now.
 **Manually added mint:** `mint.hanbitkorea.org` was found via an `audit.8333.space` cross-check
 and was missing from the DB; added manually.
 
+### Post-redesign fixes (commit 3af7e6f)
+
+Follow-up fix commit addressing regressions/missed spots from the original redesign above:
+- Nav bar (`AppShell.css`) — background changed from hardcoded `rgba(15,17,21,.92)` to `var(--bg)`, removing a visible "seam" against the page body
+- Stats — Software in Use expand panel (`Stats.css`, `.sw-ver-panel`) — hardcoded `#0d1117` → `var(--surface-2)`
+- Stats — Geographic Distribution modal (`Stats.tsx`, `CityMintsModal`) — rebuilt to match the Trust Score/NUT modal pattern (flag+name+count chip+close header, status dot/name/badge/trust % rows, footer summary); status dot and trust colors moved to the new tokens, percentage uses `--font-mono-data`; functionality (click-through to detail, sorting) unchanged
+- Mint Detail — "Show QR code" and "Copy" buttons (`MintDetail.tsx`) — solid neon fill → tonal outline, matching "Compare"/"+ Watch"
+- Watchlist — Login button (`Watchlist.tsx`) — added ⚡ icon, now identical to the nav button
+
+Reference mockup `mintradar_redesign_mockup.html` (tab "Opravy") shows before/after for all 5 items; the mockup is now included directly in this commit.
+
+Verified: typecheck, ESLint, 70/70 unit tests, production build all pass; visually confirmed via Playwright.
+
 ## Nostr pool singleton
 
 `src/core/nostr/pool.ts` exports `sharedPool` — a single `SimplePool` instance patched with exponential backoff (1s base, doubles per attempt, 5-min cap, ±20% jitter). All frontend Nostr reads/writes must use `sharedPool`. Never call `sharedPool.destroy()`.
