@@ -450,7 +450,7 @@ export default function Stats() {
         const sumB = [...b[1].values()].reduce((s, n) => s + n, 0)
         return sumB - sumA
       })
-      .map(([sw, vmap]) => {
+      .map(([sw, vmap], swIdx) => {
         const versions = [...vmap.entries()]
           .sort((a, b) => semverCmp(a[0], b[0]))
           .map(([ver, count], idx) => ({
@@ -461,7 +461,7 @@ export default function Stats() {
             badgeColor: idx === 0 ? '#17E87F' : idx === 1 ? '#f59e0b' : '#E24B4A',
           }))
         const total = versions.reduce((s, v) => s + v.count, 0)
-        const accentColor = sw === 'Nutshell' ? '#17E87F' : sw === 'cdk-mintd' ? '#378ADD' : '#a78bfa'
+        const accentColor = swIdx % 2 === 0 ? 'var(--green)' : 'var(--copper)'
         return { sw, total, versions, accentColor }
       })
   }, [knownMintsData])
@@ -599,9 +599,9 @@ export default function Stats() {
           <div style={{marginTop:10}}>
             {geoDist.length === 0 ? (
               <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
-            ) : geoDist.map(({loc, count, pct}) => {
+            ) : geoDist.map(({loc, count, pct}, idx) => {
               const {display, flag, color: geoColor} = geoLabel(loc)
-              const barColor = geoColor ?? '#60a5fa'
+              const barColor = geoColor ?? (idx % 2 === 0 ? 'var(--green)' : 'var(--copper)')
               return (
                 <div key={loc} className="dist-row dist-row-clickable" onClick={() => setCityModal(loc)}>
                   <span className="dist-label dist-label-city" style={geoColor ? {color:geoColor} : undefined}>

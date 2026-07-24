@@ -212,15 +212,9 @@ function MintCardDisplay({
   const uptimePct24h = mint.uptimePct24h ?? null
   const ageBadge = mintAgeBadge(mint.discoveredAt ?? null)
 
-  const cardStyle: React.CSSProperties =
-    mint.online === true
-      ? { background: 'linear-gradient(135deg, rgba(23, 232, 127, 0.28) 0%, rgba(13, 17, 23, 1) 55%)', border: '1px solid rgba(23, 232, 127, 0.45)', boxShadow: '0 0 0 1px rgba(23, 232, 127, 0.15), 0 0 12px rgba(23, 232, 127, 0.08)' }
-      : { background: 'linear-gradient(135deg, rgba(226, 75, 74, 0.28) 0%, rgba(13, 17, 23, 1) 55%)', border: '1px solid rgba(226, 75, 74, 0.45)', boxShadow: '0 0 0 1px rgba(226, 75, 74, 0.15), 0 0 12px rgba(226, 75, 74, 0.08)' }
-
   return (
     <div
       className="mint-card"
-      style={cardStyle}
       onClick={() => { navigate(`/mint/${encodeURIComponent(mint.url)}`) }}
     >
       <div className="card-top">
@@ -238,7 +232,7 @@ function MintCardDisplay({
         </div>
         <div
           className={`status-dot${isOnline ? ' online' : ''}`}
-          style={{ background: mint.online === true ? '#17E87F' : '#E24B4A' }}
+          style={{ background: mint.online === true ? 'var(--green-bright)' : 'var(--red)' }}
         />
       </div>
 
@@ -247,15 +241,15 @@ function MintCardDisplay({
           <span className="card-pill">{mint.version}</span>
         )}
         {mint.nutCount !== null && mint.nutCount !== undefined && (
-          <span className="card-pill">{mint.nutCount} NUTs</span>
+          <span className="card-pill" style={{ fontFamily: 'var(--font-mono-data)' }}>{mint.nutCount} NUTs</span>
         )}
         {uptimePct24h !== null && (
-          <span className="card-pill" style={{ color: uptimeColor(uptimePct24h) }}>
+          <span className="card-pill" style={{ color: uptimeColor(uptimePct24h), fontFamily: 'var(--font-mono-data)' }}>
             {uptimePct24h}% up
           </span>
         )}
         {mint.online === true && mint.trustScore != null && (
-          <span className="card-pill" style={{ color: mint.trustScore >= 70 ? '#4ade80' : mint.trustScore >= 40 ? '#ffa500' : '#ff4d4d', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span className="card-pill" style={{ color: mint.trustScore >= 70 ? 'var(--green-bright)' : mint.trustScore >= 40 ? 'var(--amber)' : 'var(--red)', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-mono-data)' }}>
             <span style={{ fontSize: 15, lineHeight: 1 }}>★</span><span>{mint.trustScore}%</span>
           </span>
         )}
@@ -265,7 +259,7 @@ function MintCardDisplay({
         <div className="latency-block">
           <div className="latency-label">LATENCY</div>
           {isOnline && mint.latencyMs !== null ? (
-            <div className="latency-value" style={{ color: '#e6edf3' }}>
+            <div className="latency-value" style={{ color: 'var(--text)' }}>
               {mint.latencyMs}<span className="latency-unit">ms</span>
             </div>
           ) : (
@@ -278,16 +272,16 @@ function MintCardDisplay({
               type="button"
               style={{
                 background: 'transparent',
-                color: '#378ADD',
-                border: '1px solid #378ADD',
-                borderRadius: 7,
+                color: 'var(--green-bright)',
+                border: '1px solid var(--green-soft-strong)',
+                borderRadius: 'var(--radius-m)',
                 padding: '6px 12px',
                 fontSize: 11,
                 fontWeight: 500,
                 cursor: 'pointer',
                 fontFamily: 'var(--font-mono)',
                 flexShrink: 0,
-                transition: 'opacity 150ms ease',
+                transition: 'all 150ms ease',
               }}
               onClick={e => { e.stopPropagation(); onCompare(mint.url) }}
             >
@@ -382,16 +376,16 @@ function MintListView({
                       ●<span className="status-text-mobile-hide">{isOnline ? ' Online' : ' Offline'}</span>
                     </span>
                   </td>
-                  <td style={{ color: uptimeColor(mint.uptimePct24h), fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                  <td style={{ color: uptimeColor(mint.uptimePct24h), fontFamily: 'var(--font-mono-data)', fontSize: 12 }}>
                     {mint.uptimePct24h != null ? `${mint.uptimePct24h}%` : '—'}
                   </td>
-                  <td className="col-hide-mobile" style={{ color: latencyColor(mint.latencyMs), fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                  <td className="col-hide-mobile" style={{ color: latencyColor(mint.latencyMs), fontFamily: 'var(--font-mono-data)', fontSize: 12 }}>
                     {isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
                   </td>
-                  <td className="trust-col col-hide-mobile" style={{ color: score != null ? trustColor(score) : 'var(--text3)', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600 }}>
+                  <td className="trust-col col-hide-mobile" style={{ color: score != null ? trustColor(score) : 'var(--text3)', fontFamily: 'var(--font-mono-data)', fontSize: 12, fontWeight: 600 }}>
                     {score != null ? `${score}%` : '—'}
                   </td>
-                  <td className="col-hide-mobile" style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text2)' }}>
+                  <td className="col-hide-mobile" style={{ fontFamily: 'var(--font-mono-data)', fontSize: 12, color: 'var(--text2)' }}>
                     {mint.nutCount != null ? `${mint.nutCount}/14` : '—'}
                   </td>
                   <td className="col-hide-mobile">

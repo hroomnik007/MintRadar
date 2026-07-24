@@ -1233,14 +1233,14 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="trust-wrap" style={{cursor:'pointer'}} onClick={() => setShowTrustBreakdown(true)}>
               <div className="gauge-wrap">
                 <svg viewBox="0 0 72 72">
-                  <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg3)" strokeWidth="7" />
-                  <circle cx="36" cy="36" r="27" fill="none" stroke={trustScoreColor(trustScore)} strokeWidth="7"
+                  <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
+                  <circle cx="36" cy="36" r="27" fill="none" stroke="var(--green-bright)" strokeWidth="7"
                     strokeDasharray={`${(trustScore * 1.696).toFixed(1)} 169.6`}
                     strokeDashoffset="42.4"
                     strokeLinecap="round"
                     transform="rotate(-90 36 36)" />
                 </svg>
-                <div className="gauge-num" style={{ color: trustScoreColor(trustScore) }}>{trustScore}%</div>
+                <div className="gauge-num" style={{ color: 'var(--green-bright)', fontFamily: 'var(--font-mono-data)' }}>{trustScore}%</div>
               </div>
               <span style={{fontSize:9,fontFamily:'var(--font-mono)',fontWeight:600,color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:4,padding:'1px 6px',textAlign:'center'}}>{tsInfo.label}</span>
               <div className="trust-info">
@@ -1254,7 +1254,7 @@ function MintDetailContent({ url }: { url: string }) {
                 </div>
                 <div className="trust-row">
                   <span className="trust-label">Latency</span>
-                  <span className="trust-value" style={{color: '#e6edf3'}}>
+                  <span className="trust-value" style={{color: 'var(--text)'}}>
                     {latency !== null ? `${latency} ms` : '—'}
                   </span>
                 </div>

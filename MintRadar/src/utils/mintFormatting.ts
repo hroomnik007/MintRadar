@@ -18,8 +18,8 @@ export function mintAgeBadge(
 ): AgeBadge | null {
   if (!discoveredAt) return null
   const months = (now - new Date(discoveredAt).getTime()) / (1000 * 60 * 60 * 24 * 30.44)
-  if (months < 1)  return { label: 'Fresh',       color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.25)'  }
-  if (months < 6)  return { label: 'Established', color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.25)'  }
+  if (months < 1)  return { label: 'Fresh',       color: '#d3a446', bg: 'rgba(211,164,70,.14)',  border: 'rgba(211,164,70,.3)'  }
+  if (months < 6)  return { label: 'Established', color: '#5cc9a3', bg: 'rgba(69,173,140,.14)',  border: 'rgba(69,173,140,.28)'  }
   if (months < 12) return { label: 'Veteran',     color: '#ffa500', bg: 'rgba(255,165,0,0.1)',   border: 'rgba(255,165,0,0.25)'   }
   return              { label: 'OG',          color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' }
 }

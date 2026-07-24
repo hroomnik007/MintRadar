@@ -34,8 +34,8 @@ describe('mintAgeBadge', () => {
       expect(mintAgeBadge(daysAgo(29), NOW)?.label).toBe('Fresh')
     })
 
-    it('Fresh has the correct blue colour', () => {
-      expect(mintAgeBadge(daysAgo(1), NOW)?.color).toBe('#60a5fa')
+    it('Fresh has the correct amber colour', () => {
+      expect(mintAgeBadge(daysAgo(1), NOW)?.color).toBe('#d3a446')
     })
   })
 
@@ -55,7 +55,7 @@ describe('mintAgeBadge', () => {
     })
 
     it('Established has the correct green colour', () => {
-      expect(mintAgeBadge(monthsAgo(3), NOW)?.color).toBe('#4ade80')
+      expect(mintAgeBadge(monthsAgo(3), NOW)?.color).toBe('#5cc9a3')
     })
   })
 
