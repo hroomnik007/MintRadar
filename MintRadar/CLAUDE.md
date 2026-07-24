@@ -346,6 +346,21 @@ Reference mockup `mintradar_redesign_mockup.html` (tab "Opravy") shows before/af
 
 Verified: typecheck, ESLint, 70/70 unit tests, production build all pass; visually confirmed via Playwright.
 
+### Post-redesign fixes round 2 (commit f98694a)
+
+- New shared component `src/components/mint/MintCard.tsx` — used by both Dashboard and Watchlist (Watchlist previously had its own, non-redesigned copy of the mint card). If the card style changes again, change only this file.
+- Shared utilities moved into `mintFormatting.ts`: `mintAgeBadge`, `uptimeColor`, `formatTimeAgo` — Watchlist no longer has its own duplicate version.
+- New design token `--surface-card` (slightly lighter than `--surface`) + `inset` top highlight on `.mint-card` — visually distinguishes mint cards from other panels.
+- Watchlist CTA (empty state) — `.wl-add-btn` is a solid primary button (`var(--green)` fill), deliberately distinct from the smaller outline nav button (secondary vs. primary action).
+- Offline/degraded mint cards — opacity 0.7, "Offline 24h+" badge, "Last seen" (from `lastCheckedAt`) instead of latency.
+- Mint Detail mobile header — compact version on the mobile breakpoint only (icon back button, online pill on the same row, Watch/Compare 50/50); desktop layout unchanged.
+- "Show my latency" button unified with the others (tonal outline).
+- "NIP-87" badge on Watchlist: purple → copper (`--copper`).
+
+Reference mockup `mintradar_redesign_mockup.html` (tabs "Watchlist prihlásený", "Mint Detail mobil header", "Latency btn / Offline / Card elevation") documents before/after for all items.
+
+Verified: typecheck, ESLint, 70/70 unit tests, production build all pass; visually confirmed via Playwright with mocked API (7 screenshots).
+
 ## Nostr pool singleton
 
 `src/core/nostr/pool.ts` exports `sharedPool` — a single `SimplePool` instance patched with exponential backoff (1s base, doubles per attempt, 5-min cap, ±20% jitter). All frontend Nostr reads/writes must use `sharedPool`. Never call `sharedPool.destroy()`.
