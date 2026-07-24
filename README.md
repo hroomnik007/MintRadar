@@ -26,7 +26,7 @@ Composite score (0–100) calculated server-side after every probe:
 | Component | Weight | Basis |
 |-----------|--------|-------|
 | Uptime | 45% | 24 h availability |
-| NUT Support | 30% | Supported NUT specs (out of 14 tracked) |
+| NUT Support | 30% | Supported NUT specs (out of 26 tracked) |
 | Version Freshness | 15% | Recency of Nutshell release vs. latest known version |
 | Contact Info | 5% | Contact methods provided (email, Twitter, Nostr, website) |
 | Audit Reliability | 5% | Error rate from audit.8333.space third-party audits |
@@ -57,7 +57,7 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 
 ### 🧩 NUT Explorer
 
-14 tracked NUT cards (NUT-04, 05, 07–12, 14, 15, 17, 19, 20, 29) — each showing adoption %, supporting mint count, and a link to the specification. Expandable "+N more" modal with a searchable list of all supporting mints.
+26 tracked NUT cards (NUT-04, 05, 07–30) — each showing adoption %, supporting mint count, and a link to the specification. Expandable "+N more" modal with a searchable list of all supporting mints.
 
 ### ⚖️ Mint Comparison Tool
 
@@ -74,7 +74,7 @@ Select 2–4 mints and compare side-by-side: Status, Trust Score, Uptime, Latenc
 
 ### 📡 Nostr NIP-87 Discovery
 
-Automatic mint discovery running every 6 hours from 7 Nostr relays (damus.io, nos.lol, primal.net, cashumints.space, azzamo.net, snort.social, purplepag.es) using **kind:38172** mint announcements and **kind:38000** review events (URL mining), plus the **audit.8333.space** API — 3 sources running in parallel.
+Automatic mint discovery running every 6 hours from 12 Nostr relays (damus.io, nos.lol, purplepag.es, snort.social, primal.net, cashumints.space, azzamo.net, nostr.band, nostr.wine, nostr-pub.wellorder.net, offchain.pub, relay.8333.space) using **kind:38172** mint announcements and **kind:38000** review events (URL mining), plus the **audit.8333.space** API — 3 sources running in parallel.
 
 ### 🔧 Tools
 
@@ -83,7 +83,7 @@ Automatic mint discovery running every 6 hours from 7 Nostr relays (damus.io, no
 
 ### ⭐ Nostr-Based Reviews
 
-Mint Detail page shows community reviews fetched from 10 relays as **kind:38000** events. Ratings are parsed from review text (`[N/5]` format). Author profiles (name + avatar) are resolved from Nostr and displayed alongside each review. Images are only loaded over HTTPS.
+Mint Detail page shows community reviews fetched from 13 relays as **kind:38000** events. Ratings are parsed from review text (`[N/5]` format). Author profiles (name + avatar) are resolved from Nostr and displayed alongside each review. Images are only loaded over HTTPS.
 
 ### 🏷️ Mint Age Badges
 
@@ -116,7 +116,7 @@ PostgreSQL database backed up every 6 hours via server cron.
 - TanStack Query v5, Zustand, Dexie (IndexedDB)
 - Recharts, vite-plugin-pwa (PWA / offline support)
 - nostr-tools (NIP-07, NIP-44, NIP-46), @noble/secp256k1
-- Self-hosted fonts: DM Sans (variable), JetBrains Mono
+- Self-hosted fonts: DM Sans (variable) for body text, JetBrains Mono for general monospace UI — numeric/data values (latency, %, NUT counts) use a system `ui-monospace` stack instead, not a webfont
 
 **Backend**
 - Node.js 22 + Express 5 + TypeScript
