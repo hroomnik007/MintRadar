@@ -431,6 +431,11 @@ export default function Dashboard() {
   const { read: userReadRelays } = useUserRelays()
   useWatchlistNotifications(statusRecord, trustScoreRecord, userReadRelays)
 
+  // Explicit "Offline" status filter must surface degraded (offline 24h+) mints
+  // even when the default hidden-mints toggle is off — otherwise the filter
+  // would AND against the hidden set and return nothing.
+  const effectiveShowDegraded = showDegraded || activeFilters.status === 'offline'
+
   const { degradedCount, allMints, totalAllCount } = useMemo(() => {
     const degradedUrls = knownMintsData?.filter(m => m.degraded).map(m => m.url) ?? []
     const knownMintUrlSet = new Set(knownMintsData?.map(m => m.url) ?? [])
@@ -440,13 +445,13 @@ export default function Dashboard() {
       degradedCount: degradedUrls.length,
       totalAllCount: (knownMintsData?.length ?? 0) + nostrOnly.length,
       allMints: [
-        ...(knownMintsData?.filter(m => showDegraded ? true : !m.degraded) ?? []),
+        ...(knownMintsData?.filter(m => effectiveShowDegraded ? true : !m.degraded) ?? []),
         ...nostrOnly
-          .filter(m => showDegraded || !degradedSetLocal.has(m.url))
+          .filter(m => effectiveShowDegraded || !degradedSetLocal.has(m.url))
           .map((m): KnownMint => ({ url: m.url, name: null, iconUrl: null, degraded: false, online: null, latencyMs: null, version: null, nutCount: null, tosUrl: null, descriptionLong: null, nutsLimits: null, auditNMints: null, auditNMelts: null, auditNErrors: null, auditCheckedAt: null })),
       ] as KnownMint[],
     }
-  }, [knownMintsData, nostrMints, showDegraded])
+  }, [knownMintsData, nostrMints, effectiveShowDegraded])
 
   const filteredMints = useMemo(() => {
     return applyFilters(allMints, activeFilters)
@@ -775,7 +780,21 @@ export default function Dashboard() {
         <button type="button" className="submit-btn" onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setSubmitUrl(''); setProbe({ url: '', state: 'error', result: null }); setNostrLookup({ input: '', state: 'idle', msg: '' }); setBulkInput(''); setBulkProgress([]); setBulkRunning(false); setBulkDone(false) }}>
           <IcPlus /> Submit mint
         </button>
-        <button type="button" className="refresh-btn" onClick={() => void queryClient.invalidateQueries({ queryKey: ['mints-known'] })}>
+        <button
+          type="button"
+          className="refresh-btn"
+          title="Reset filters & refresh"
+          onClick={() => {
+            setSearch('')
+            setSortBy('name')
+            setSortDir('asc')
+            setActiveFilters(DEFAULT_FILTERS)
+            setPendingFilters(DEFAULT_FILTERS)
+            setShowFilters(false)
+            setShowDegraded(false)
+            void queryClient.invalidateQueries({ queryKey: ['mints-known'] })
+          }}
+        >
           <IcRefresh />
         </button>
       </div>
@@ -896,7 +915,7 @@ export default function Dashboard() {
               search={search}
               sortBy={sortBy}
               sortDir={sortDir}
-              totalAll={!showDegraded && degradedCount > 0 ? totalAllCount : 0}
+              totalAll={!effectiveShowDegraded && degradedCount > 0 ? totalAllCount : 0}
             />
           ) : (
             <MintGrid
@@ -905,10 +924,10 @@ export default function Dashboard() {
               sortBy={sortBy}
               sortDir={sortDir}
               onCompare={openComparePicker}
-              totalAll={!showDegraded && degradedCount > 0 ? totalAllCount : 0}
+              totalAll={!effectiveShowDegraded && degradedCount > 0 ? totalAllCount : 0}
             />
           )}
-          {degradedCount > 0 && (
+          {degradedCount > 0 && activeFilters.status !== 'offline' && (
             <p className="degraded-note">
               {!showDegraded && <>{degradedCount} mints hidden (offline 24h+){' '}</>}
               <button onClick={() => setShowDegraded(v => !v)}
