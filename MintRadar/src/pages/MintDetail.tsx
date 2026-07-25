@@ -491,9 +491,10 @@ function MintDetailContent({ url }: { url: string }) {
             <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={32} />
             <div className="md-namebox">
               <div className="md-name" style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                <span className={`status-dot md-status-dot-mobile ${isOnline ? '' : 'offline'}`} />
                 <span>{displayName}</span>
                 {ageBadge && (
-                  <span style={{fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:ageBadge.color,background:ageBadge.bg,border:`0.5px solid ${ageBadge.border}`,borderRadius:4,padding:'1px 6px',flexShrink:0}}>{ageBadge.label}</span>
+                  <span className="md-age-badge-inline" style={{fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:ageBadge.color,background:ageBadge.bg,border:`0.5px solid ${ageBadge.border}`,borderRadius:4,padding:'1px 6px',flexShrink:0}}>{ageBadge.label}</span>
                 )}
               </div>
               <div className="md-url">{url}</div>
@@ -503,6 +504,9 @@ function MintDetailContent({ url }: { url: string }) {
             <div className={`status-dot ${isOnline ? '' : 'offline'}`} />
             {isOnline ? 'Online' : 'Offline'}
           </div>
+          {ageBadge && (
+            <span className="md-age-badge-row" style={{fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:ageBadge.color,background:ageBadge.bg,border:`0.5px solid ${ageBadge.border}`,borderRadius:4,padding:'1px 6px'}}>{ageBadge.label}</span>
+          )}
         </div>
         <div className="md-header-row2">
           {!isOnline && knownMint?.lastError && (
@@ -1297,14 +1301,12 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="qr-modal-overlay" onClick={() => setShowQr(false)}>
           <div className="qr-modal" onClick={e => e.stopPropagation()}>
             <div className="qr-modal-header">
-              <div style={{width:38,height:38,borderRadius:9,background:'linear-gradient(135deg,rgba(23,232,127,0.15),rgba(23,232,127,0.05))',border:'1px solid rgba(23,232,127,0.2)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={22} radius={5} />
-              </div>
+              <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={38} radius={9} />
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:14,fontWeight:700,color:'#e6edf3',lineHeight:1.25,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Add {displayName} to wallet</div>
-                <div style={{fontSize:11,color:'#8b949e',marginTop:2}}>Scan with any Cashu wallet app</div>
+                <div style={{fontSize:14,fontWeight:700,color:'var(--text)',lineHeight:1.25,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Add {displayName} to wallet</div>
+                <div style={{fontSize:11,color:'var(--text-faint)',marginTop:2}}>Scan with any Cashu wallet app</div>
               </div>
-              <button onClick={() => setShowQr(false)} style={{background:'none',border:'none',color:'#8b949e',fontSize:20,cursor:'pointer',lineHeight:1,padding:'2px 6px',flexShrink:0}}>×</button>
+              <button onClick={() => setShowQr(false)} style={{background:'none',border:'none',color:'var(--text-faint)',fontSize:20,cursor:'pointer',lineHeight:1,padding:'2px 6px',flexShrink:0}}>×</button>
             </div>
             <div style={{display:'flex',justifyContent:'center',margin:'16px 0'}}>
               <div style={{background:'#ffffff',borderRadius:12,padding:12,border:'2px solid rgba(23,232,127,0.35)'}}>
@@ -1319,7 +1321,7 @@ function MintDetailContent({ url }: { url: string }) {
               <input
                 readOnly
                 value={url}
-                style={{flex:1,background:'#0d1117',border:'1px solid #21262d',borderRadius:8,padding:'8px 10px',color:'#8b949e',fontSize:11,fontFamily:'var(--font-mono)',outline:'none'}}
+                style={{flex:1,background:'var(--surface-3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 10px',color:'var(--text-dim)',fontSize:11,fontFamily:'var(--font-mono)',outline:'none'}}
               />
               <button
                 onClick={() => { void navigator.clipboard.writeText(url); setCopiedUrl(true); setTimeout(() => setCopiedUrl(false), 2000) }}

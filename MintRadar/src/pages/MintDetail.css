@@ -73,6 +73,9 @@
 
 .status-dot.offline { background: var(--red); }
 
+.md-status-dot-mobile { display: none; }
+.md-age-badge-row { display: none; }
+
 .md-watch-btn {
   display: flex;
   align-items: center;
@@ -551,9 +554,10 @@
     gap: 8px;
   }
   .md-sc {
-    padding: 12px;
+    padding: 10px 12px;
   }
-  .md-sc-value { font-size: 20px; }
+  .md-sc-icon { display: none; }
+  .md-sc-value { font-size: 15px; font-weight: 600; }
   .md-sc-value.sm { font-size: 13px; }
   .md-sc-label { font-size: 10px; }
   .md-sc-sub { font-size: 10px; }
@@ -578,23 +582,26 @@
   .md-header-row1 {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
+    flex-wrap: nowrap;
+    gap: 8px;
   }
   .md-back {
-    order: 1;
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 30px;
     padding: 0;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 15px;
+    font-size: 14px;
+    flex-shrink: 0;
   }
   .md-back-label { display: none; }
-  .md-online-badge { order: 2; margin-left: auto; }
-  .md-avatar-id { order: 3; flex: 1 1 100%; gap: 8px; }
+  .md-online-badge { display: none; }
+  .md-avatar-id { flex: 1 1 auto; min-width: 0; gap: 8px; }
+  .md-status-dot-mobile { display: inline-block; }
+  .md-age-badge-inline { display: none; }
+  .md-age-badge-row { display: inline-flex; flex-shrink: 0; }
   .md-header-row2 {
     display: flex;
     gap: 8px;
@@ -819,8 +826,8 @@
 }
 
 .qr-modal {
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
   border-radius: 14px;
   padding: 24px;
   max-width: 320px;
