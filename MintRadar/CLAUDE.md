@@ -369,6 +369,20 @@ The `--surface-card` token introduced in round 2 above was visually too subtle �
 
 Applied automatically everywhere via the shared `MintCard.tsx` component (Dashboard and Watchlist both pick it up with no per-page changes needed) — see "MintCard.tsx — history" above for why that component being shared matters here.
 
+### QR modal design fix + Mint Detail mobile header v2 (retry)
+
+- QR "Add to wallet" modal — container hardcoded `#161b22`/`#30363d` → `var(--surface-2)`/`var(--border-strong)`; header icon replaced with `MintFavicon` directly; URL input → `var(--surface-3)`/`var(--border)`
+- Mint Detail mobile header — finally implemented (it was prepared in an earlier prompt round but never actually shipped by mistake): back arrow (30px circle) on the same row as avatar/name/URL, status dot instead of a separate "Online" pill, age badge on the right. Desktop layout unchanged (new elements hidden outside `@media (max-width: 768px)`)
+- Mobile stat tiles (Latency/Uptime/Version/NUTs) — at ≤768px the large icon is hidden, padding narrowed, value 15px/600 on `--font-mono-data`
+
+### Dashboard filter bugs (fixed)
+
+- **Reset button (↻):** previously only did `queryClient.invalidateQueries` (refetched data) without resetting search/sort/filters/`showDegraded`. Fixed — now resets everything to default (search cleared, sort `name`/`asc`, `activeFilters`/`pendingFilters` → `DEFAULT_FILTERS`, `showDegraded=false`, closes filter panel) and only then refetches.
+- **Status=Offline filter returning empty results:** root cause — `allMints` was computed by hiding degraded mints via `showDegraded` *before* `applyFilters()` ran, so Status=Offline and the default `showDegraded=false` behaved like an AND and cancelled each other out. Fix: `effectiveShowDegraded = showDegraded || activeFilters.status === 'offline'` — explicitly picking the Offline filter now overrides the default hiding. The "N mints hidden" message only shows when the Status filter isn't "Offline" (otherwise it would be misleading).
+- File: `Dashboard.tsx`
+
+Verified: typecheck ✅, build ✅, 70/70 unit tests ✅, Playwright confirmed both scenarios (Status=Offline shows offline mints including 24h+; Reset restores default state).
+
 ## Nostr pool singleton
 
 `src/core/nostr/pool.ts` exports `sharedPool` — a single `SimplePool` instance patched with exponential backoff (1s base, doubles per attempt, 5-min cap, ±20% jitter). All frontend Nostr reads/writes must use `sharedPool`. Never call `sharedPool.destroy()`.
