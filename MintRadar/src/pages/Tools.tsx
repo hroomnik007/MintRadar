@@ -104,7 +104,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
         spellCheck={false}
       />
 
-      <button type="button" className="tool-btn-primary" onClick={handleInspect} disabled={!input.trim()}>
+      <button type="button" className="tool-btn-primary inspect-token-btn" onClick={handleInspect} disabled={!input.trim()}>
         Inspect Token
       </button>
 
@@ -287,7 +287,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       {step === 1 && (
         <div className="wizard-step-body">
           <div className="wizard-q">How much do you plan to store?</div>
-          <div className="wizard-options wizard-options-compact">
+          <div className="wizard-options">
             {[
               { id: 'small' as SizeOption, label: 'Small', sub: '< 10k sats' },
               { id: 'medium' as SizeOption, label: 'Medium', sub: '10k–100k sats' },
