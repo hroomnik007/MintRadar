@@ -287,7 +287,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       {step === 1 && (
         <div className="wizard-step-body">
           <div className="wizard-q">How much do you plan to store?</div>
-          <div className="wizard-options">
+          <div className="wizard-options wizard-options-compact">
             {[
               { id: 'small' as SizeOption, label: 'Small', sub: '< 10k sats' },
               { id: 'medium' as SizeOption, label: 'Medium', sub: '10k–100k sats' },
