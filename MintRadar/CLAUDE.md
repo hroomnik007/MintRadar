@@ -163,6 +163,13 @@ Frontend:
   - Confirmed working (2026-07-24, commit 9abda76 session): 10/10 open Dependabot PRs (patch/minor bumps + one ESLint 9→10 major) merged sequentially, each followed by `gh run watch` on the deploy workflow before starting the next. Zero failures, zero VPS races.
   - **ESLint major-version bumps:** before writing/changing any `eslint.config.js`, check whether the package actually has its own config file. `MintRadar/backend` has none — its `npm run lint` resolves ESLint's flat config by walking up to `MintRadar/eslint.config.js` (this works because ESM imports inside that config file resolve relative to the config file's own path, not the invoking CWD). Verify this kind of resolution still works after a major bump with `eslint src/ --debug 2>&1 | grep -i "config"` (look for `Using config file ... and base path ...` plus a nonzero linted-file count) *before* assuming a config rewrite is needed.
   - **`npm install`/`npm ci` working directory:** this is a monorepo with THREE `package.json` locations if you're not careful — `MintRadar/` (frontend), `MintRadar/backend/`, and (accidentally, if you run `npm install` from the repo root) a stray root-level one. Always run `pwd` immediately before `npm install`/`npm ci` here. A 2026-07-24 session created a stray root `package.json`/`package-lock.json`/`node_modules` this way mid-Dependabot-batch (caught via `git status` before committing, deleted, redone in the right directory) — the same class of mistake previously happened in the separate Finvu project too.
+  - **Batch 2 (2026-08-01, PRs #32-#41):** 10/10 merged sequentially, same one-at-a-time + `gh run watch` discipline as batch 1. Zero failures.
+    - Patch/minor: `@types/supertest`, `@vitest/coverage-v8`, `@tanstack/react-query`, `ws` (frontend only — backend still declares `ws@^8.21.0`; Dependabot hasn't opened a matching backend PR yet), `eslint` (backend, 10.6.0→10.8.0), `tsx`, `@playwright/test`, `nostr-tools` (backend, 2.23.5→2.24.1).
+    - Major bumps (extra scrutiny, both verified safe with no source changes needed):
+      - `react-router-dom` 6→7 — the app has no loaders/actions/fetchers/`json()`/`defer()`, so v7's main breaking surface (the data APIs) doesn't apply. Side effect: `react-router` no longer lands in the `vendor-react` chunk (+~9 kB gzip in the initial payload) — documented, not addressed; revisit only as part of a dedicated chunking pass.
+      - `@noble/secp256k1` 2→3 — the app calls it in exactly one place (`getPublicKey` for nsec login) and never signs with it, so v3's breaking surface (the signing API) doesn't apply. Verified byte-identical output against an independent oracle, confirmed the `privkeyBytes.fill(0)` zeroing guarantee still holds, and manually exercised all three login flows (nsec/NIP-07/NIP-46) in a real browser.
+    - `nostr-tools` and `@noble/secp256k1` are completely independent — `nostr-tools` depends on `@noble/curves`, not the standalone `@noble/secp256k1` package, which is physically absent from the backend's dependency tree.
+    - PRs #22-31 from batch 1 closed themselves in the meantime (Dependabot detected the bumps were already applied directly to `main` and auto-closed the stale PRs) — no manual cleanup needed; expect the same on future batches.
 
 ## Nostr Login
 
@@ -382,6 +389,15 @@ Applied automatically everywhere via the shared `MintCard.tsx` component (Dashbo
 - File: `Dashboard.tsx`
 
 Verified: typecheck ✅, build ✅, 70/70 unit tests ✅, Playwright confirmed both scenarios (Status=Offline shows offline mints including 24h+; Reset restores default state).
+
+### Tools page layout — iterations and final state
+
+Two desktop-layout attempts for the Tools page (`Tools.css`/`Tools.tsx`) were tried and reverted before landing on the final, minimal fix:
+- **Attempt 1 (rejected):** `max-width: 420px` on individual elements (`.token-input`, `.tool-btn-primary`, a `.wizard-options-compact` modifier on the Small/Medium/Large option rows). Created dead space inside the panels on wide screens.
+- **Attempt 2 (rejected):** `max-width` on the whole content grid via a centered container. Created empty margins on very wide monitors (32"+).
+- **Final state:** layout reverted to full width everywhere — panels, the token textarea, and the Small/Medium/Large option rows are all 100% width again, matching the pre-iteration baseline. The only surviving change is the "Inspect Token" button: it got its own `inspect-token-btn` class (kept separate from the shared `.tool-btn-primary` specifically so the wizard's "Find my mints" button, which also uses `.tool-btn-primary`, is unaffected), with `max-width: 280px` and centered, desktop-only.
+- Mobile layout was never touched across any of these iterations — confirmed correct throughout.
+- Reference mockup `mintradar_redesign_mockup.html` still contains the "Tools desktop fix" and "Tools v2" tabs from the two rejected attempts — left in place deliberately as a record of what was tried and why it didn't work, not as current guidance.
 
 ## Nostr pool singleton
 

@@ -90,6 +90,7 @@
     transition: max-width .25s ease;
   }
   .frame.mobile{ max-width: 402px; }
+  .frame.wide{ max-width: 1900px; }
   .page{ display:none; }
   .page.active{ display:block; }
 
@@ -416,6 +417,14 @@
   .tools-option{ display:flex; justify-content:space-between; align-items:center; max-width:420px; padding:11px 15px; background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-s); font-size:13.5px; font-weight:600; margin-bottom:8px; cursor:pointer; }
   .tools-option span{ font-size:12px; color:var(--text-faint); font-weight:500; }
   .tools-option:hover{ border-color:var(--green-soft-strong); }
+
+  /* ===================== TOOLS V2 ===================== */
+  .tools-grid-v2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:1100px; margin:0 auto; }
+  .frame.mobile .tools-grid-v2{ grid-template-columns:1fr; max-width:100%; }
+  .tools-textarea-v2{ width:100%; height:70px; background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-s); padding:10px 12px; color:var(--text-dim); font-family:var(--font-mono); font-size:12px; resize:none; margin-bottom:12px; display:block; }
+  .tools-option-v2{ display:flex; justify-content:space-between; align-items:center; width:100%; padding:12px 15px; background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-s); font-size:13.5px; font-weight:600; margin-bottom:8px; cursor:pointer; }
+  .tools-option-v2 span{ font-size:12px; color:var(--text-faint); font-weight:500; }
+  .tools-option-v2:hover{ border-color:var(--green-soft-strong); }
 </style>
 </head>
 <body>
@@ -435,9 +444,11 @@
       <button class="tab-btn" data-page="mobilehead2">Mobil header v2 / Tooltip</button>
       <button class="tab-btn" data-page="qrmodal">QR Modal fix</button>
       <button class="tab-btn" data-page="tools">Tools desktop fix</button>
+      <button class="tab-btn" data-page="tools2">Tools v2 — max-width container</button>
     </div>
     <div class="device-toggle" id="device">
       <button class="active" data-mode="desktop">Desktop</button>
+      <button data-mode="wide">Široký monitor</button>
       <button data-mode="mobile">Mobil</button>
     </div>
   </div>
@@ -1103,6 +1114,38 @@
         </div>
       </div>
 
+      <!-- ============ TOOLS V2 — MAX-WIDTH CONTAINER ============ -->
+      <div class="page" id="page-tools2">
+        <div class="app-nav">
+          <div class="brand"><div class="brand-mark"></div><div class="brand-name">Mint<span class="r">Radar</span></div></div>
+          <div class="nav-links"><a>Dashboard</a><a>Watchlist</a><a>Stats</a><a class="active">Tools</a></div>
+          <button class="btn-login"><span class="bolt">⚡</span> Login via Nostr</button>
+        </div>
+        <div class="app-body">
+          <div class="fix-note" style="margin-bottom:14px">Predošlý pokus obmedzil len vnútorné prvky → mŕtva plocha vpravo v rámci naťahovaného panelu. Správne: obmedziť celý <code>.app-body</code> obsah (nie len Tools, dá sa použiť všeobecne) na <code>max-width: 1100px</code> + <code>margin: 0 auto</code>. Panely aj ich obsah potom prirodzene vyplnia rozumnú šírku bez toho, aby čokoľvek muselo mať vlastný umelý max-width.</div>
+          <div class="tools-grid-v2">
+            <div class="panel">
+              <div class="panel-title" style="font-size:13px;letter-spacing:normal;text-transform:none;color:var(--text);font-weight:700;margin-bottom:6px">Token Inspector</div>
+              <div style="font-size:12.5px;color:var(--text-faint);margin-bottom:14px">Paste a Cashu token to inspect its mint, amount, and trust status before redeeming</div>
+              <textarea class="tools-textarea-v2" readonly>cashuAeyJ0b2tlbiI6W3sibWludCI6Imh0dHBzOi8v...</textarea>
+              <button class="btn-connect" style="width:100%;justify-content:center;padding:12px">Inspect Token</button>
+            </div>
+            <div class="panel">
+              <div class="panel-title" style="font-size:13px;letter-spacing:normal;text-transform:none;color:var(--text);font-weight:700;margin-bottom:6px">Best Mint for Me</div>
+              <div style="font-size:12.5px;color:var(--text-faint);margin-bottom:14px">Answer 3 quick questions and we'll recommend the best mints for your needs</div>
+              <div style="display:flex;gap:8px;margin-bottom:16px">
+                <div class="step-dot active">1</div><div class="step-line"></div><div class="step-dot">2</div><div class="step-line"></div><div class="step-dot">3</div>
+              </div>
+              <div style="font-size:13.5px;font-weight:600;margin-bottom:10px">How much do you plan to store?</div>
+              <div class="tools-option-v2">Small <span>&lt; 10k sats</span></div>
+              <div class="tools-option-v2">Medium <span>10k–100k sats</span></div>
+              <div class="tools-option-v2">Large <span>&gt; 100k sats</span></div>
+            </div>
+          </div>
+          <div class="fix-note" style="margin-top:14px; max-width:1100px">Rovnaký princíp sa oplatí zvážiť aj pre iné stránky s podobným "prázdnym" pocitom na širokých monitoroch (napr. Watchlist prázdny stav to už má vyriešené vlastným spôsobom, keďže je to jeden centrovaný blok). Dashboard/Stats grid s viacerými kartami toto zvyčajne nepotrebuje, lebo karty prirodzene vyplnia priestor.</div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1122,7 +1165,10 @@
     if(e.target.tagName!=='BUTTON') return;
     document.querySelectorAll('#device button').forEach(b=>b.classList.remove('active'));
     e.target.classList.add('active');
-    document.getElementById('frame').classList.toggle('mobile', e.target.dataset.mode==='mobile');
+    const frame = document.getElementById('frame');
+    frame.classList.remove('mobile','wide');
+    if(e.target.dataset.mode==='mobile') frame.classList.add('mobile');
+    if(e.target.dataset.mode==='wide') frame.classList.add('wide');
   });
 </script>
 </body>
