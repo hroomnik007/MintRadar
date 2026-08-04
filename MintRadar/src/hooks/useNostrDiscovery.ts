@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { verifyEvent } from 'nostr-tools'
 import { useAuthStore } from '@/stores/auth.store'
 import { useQueryClient } from '@tanstack/react-query'
 import { sharedPool } from '@/core/nostr/pool'
@@ -39,6 +40,7 @@ export function useNostrDiscovery() {
         }
 
         for (const event of events) {
+          if (!verifyEvent(event)) continue
           const uTag = event.tags.find((t: string[]) => t[0] === 'u')
           if (!uTag?.[1]) continue
           const url = uTag[1].trim()

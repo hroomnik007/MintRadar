@@ -10,18 +10,48 @@ const BLOCKED_RANGES = [
   'unspecified', 'reserved', 'carrierGradeNat', 'broadcast'
 ] as const
 
+// Extracts an embedded IPv4 address from an IPv6 address that uses one of
+// the well-known IPv4-in-IPv6 embedding schemes, so it can be re-checked
+// against BLOCKED_RANGES. Returns null if the range isn't one we know how
+// to unwrap.
+function extractEmbeddedIPv4(addr: IPv6): IPv4 | null {
+  const range = addr.range()
+  const bytes = addr.toByteArray()
+
+  if (range === 'ipv4Mapped') {
+    return addr.toIPv4Address()
+  }
+
+  // NAT64 well-known prefix 64:ff9b::/96 (RFC 6052) — embedded IPv4 is the
+  // last 4 bytes, unmodified.
+  if (range === 'rfc6052') {
+    return new IPv4(bytes.slice(12, 16))
+  }
+
+  // 6to4 2002::/16 (RFC 3056) — embedded IPv4 is bytes 2-5.
+  if (range === '6to4') {
+    return new IPv4(bytes.slice(2, 6))
+  }
+
+  // Teredo 2001::/32 (RFC 4380) — the client IPv4 occupies the last 4
+  // bytes, XOR-obfuscated with 0xFFFFFFFF.
+  if (range === 'teredo') {
+    return new IPv4(bytes.slice(12, 16).map(b => b ^ 0xff))
+  }
+
+  return null
+}
+
 function isBlockedAddress(addr: IPv4 | IPv6): boolean {
   const range = addr.range()
   if ((BLOCKED_RANGES as readonly string[]).includes(range)) return true
 
-  // Handle IPv4-mapped IPv6 addresses (::ffff:x.x.x.x)
+  // Handle IPv4 addresses embedded in IPv6 (::ffff:x.x.x.x, NAT64, 6to4,
+  // Teredo) — unwrap and re-check the embedded address against the same
+  // blocklist, since routing/translation may deliver traffic to it.
   if (addr.kind() === 'ipv6') {
-    const v6 = addr as IPv6
-    if (v6.isIPv4MappedAddress()) {
-      const v4 = v6.toIPv4Address()
-      const v4range = v4.range()
-      if ((BLOCKED_RANGES as readonly string[]).includes(v4range)) return true
-    }
+    const v4 = extractEmbeddedIPv4(addr as IPv6)
+    if (v4 && (BLOCKED_RANGES as readonly string[]).includes(v4.range())) return true
   }
 
   return false
