@@ -78,6 +78,24 @@ describe('checkUrlSafety', () => {
       expect(await checkUrlSafety('https://mapped.example.com')).toBe('blocked')
     })
 
+    it('blocks a NAT64 (RFC 6052) address embedding a link-local metadata IP', async () => {
+      // 64:ff9b::a9fe:a9fe embeds 169.254.169.254 (cloud metadata endpoint)
+      resolvesTo({ address: '64:ff9b::a9fe:a9fe', family: 6 })
+      expect(await checkUrlSafety('https://nat64.example.com')).toBe('blocked')
+    })
+
+    it('blocks a 6to4 (RFC 3056) address embedding a loopback IP', async () => {
+      // 2002:7f00:1:: embeds 127.0.0.1
+      resolvesTo({ address: '2002:7f00:1::', family: 6 })
+      expect(await checkUrlSafety('https://6to4.example.com')).toBe('blocked')
+    })
+
+    it('blocks a Teredo (RFC 4380) address whose obfuscated client IP is private', async () => {
+      // Teredo XORs the client IPv4 with 0xFFFFFFFF; XOR(10.0.0.5) = f5.ff.ff.fa
+      resolvesTo({ address: '2001:0000:0000:0000:0000:0000:f5ff:fffa', family: 6 })
+      expect(await checkUrlSafety('https://teredo.example.com')).toBe('blocked')
+    })
+
     it('blocks if ANY resolved address is private (fail-safe over the set)', async () => {
       resolvesTo({ address: '1.2.3.4', family: 4 }, { address: '10.0.0.1', family: 4 })
       expect(await checkUrlSafety('https://multi.example.com')).toBe('blocked')
