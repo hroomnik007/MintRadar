@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { nip19 } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
@@ -154,6 +154,54 @@ function applyFilters(mints: KnownMint[], filters: FilterState): KnownMint[] {
 
 function countActiveFilters(f: FilterState): number {
   return [f.status !== 'all' ? 1 : 0, f.minTrustScore > 0 ? 1 : 0, f.mintAges.length > 0 ? 1 : 0, f.requiredNuts.length > 0 ? 1 : 0].reduce((a, b) => a + b, 0)
+}
+
+// ── URL persistence (search/sort/filters) ────────────────────────
+// Committed Dashboard state (not the in-progress filter-panel draft) is
+// encoded into the URL query string so it survives refresh and is
+// navigable via browser back/forward. Keys are omitted when at their
+// default value, keeping the URL clean (e.g. "/" for the default view).
+
+type SortByValue = 'name' | 'latency' | 'status' | 'trust'
+const SORT_KEYS: readonly SortByValue[] = ['name', 'latency', 'status', 'trust']
+
+function parseFilterParams(params: URLSearchParams): {
+  search: string
+  sortBy: SortByValue
+  sortDir: 'asc' | 'desc'
+  filters: FilterState
+} {
+  const sortByRaw = params.get('sort')
+  const sortBy: SortByValue = (SORT_KEYS as readonly string[]).includes(sortByRaw ?? '') ? (sortByRaw as SortByValue) : 'name'
+  const dirRaw = params.get('dir')
+  const sortDir: 'asc' | 'desc' = dirRaw === 'asc' || dirRaw === 'desc' ? dirRaw : DEFAULT_SORT_DIRS[sortBy]
+  const statusRaw = params.get('status')
+  const status: FilterState['status'] = statusRaw === 'online' || statusRaw === 'offline' ? statusRaw : 'all'
+  const trustRaw = params.get('trust')
+  const trustParsed = trustRaw !== null ? Number(trustRaw) : 0
+  const minTrustScore = Number.isFinite(trustParsed) ? Math.min(100, Math.max(0, trustParsed)) : 0
+  const ageRaw = params.get('age')
+  const mintAges = ageRaw ? ageRaw.split(',').filter(a => AGE_LABELS.includes(a)) : []
+  const nutsRaw = params.get('nuts')
+  const requiredNuts = nutsRaw ? nutsRaw.split(',').filter(n => NUT_FILTER_KEYS.includes(n)) : []
+  return {
+    search: params.get('q') ?? '',
+    sortBy,
+    sortDir,
+    filters: { status, minTrustScore, mintAges, requiredNuts },
+  }
+}
+
+function buildFilterParams(search: string, sortBy: SortByValue, sortDir: 'asc' | 'desc', filters: FilterState): URLSearchParams {
+  const params = new URLSearchParams()
+  if (search) params.set('q', search)
+  if (sortBy !== 'name') params.set('sort', sortBy)
+  if (sortDir !== DEFAULT_SORT_DIRS[sortBy]) params.set('dir', sortDir)
+  if (filters.status !== 'all') params.set('status', filters.status)
+  if (filters.minTrustScore > 0) params.set('trust', String(filters.minTrustScore))
+  if (filters.mintAges.length > 0) params.set('age', filters.mintAges.join(','))
+  if (filters.requiredNuts.length > 0) params.set('nuts', filters.requiredNuts.join(','))
+  return params
 }
 
 // ── Skeleton Card ─────────────────────────────────────────────
@@ -348,18 +396,39 @@ function MintGrid({
 // ── Dashboard ──────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [search, setSearch] = useState('')
-  const [sortBy, setSortBy] = useState<'name' | 'latency' | 'status' | 'trust'>('name')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  // Search/sort/filters are persisted in the URL query string (not plain
+  // useState) so they survive a refresh and are navigable via browser
+  // back/forward — see parseFilterParams/buildFilterParams above.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { search, sortBy, sortDir, filters: activeFilters } = useMemo(
+    () => parseFilterParams(searchParams),
+    [searchParams]
+  )
+
+  function commitFilters(
+    next: { search?: string; sortBy?: SortByValue; sortDir?: 'asc' | 'desc'; filters?: FilterState },
+    opts?: { replace?: boolean }
+  ) {
+    const merged = {
+      search: next.search ?? search,
+      sortBy: next.sortBy ?? sortBy,
+      sortDir: next.sortDir ?? sortDir,
+      filters: next.filters ?? activeFilters,
+    }
+    setSearchParams(buildFilterParams(merged.search, merged.sortBy, merged.sortDir, merged.filters), opts)
+  }
+
   const [viewMode, setViewMode] = useState<'cards' | 'list'>(() => {
     const saved = localStorage.getItem('mintRadar_viewMode')
     return saved === 'list' ? 'list' : 'cards'
   })
 
-  // Filter state
+  // Filter panel draft state — only committed to the URL (activeFilters) via
+  // "Apply filter". Re-synced from activeFilters whenever the panel opens
+  // (see the "Filters" button below) so it can't go stale after a
+  // browser back/forward navigation changed activeFilters while closed.
   const [showFilters, setShowFilters] = useState(false)
   const [pendingFilters, setPendingFilters] = useState<FilterState>(DEFAULT_FILTERS)
-  const [activeFilters, setActiveFilters] = useState<FilterState>(DEFAULT_FILTERS)
 
   // Comparison state
   const [compareBaseUrl, setCompareBaseUrl] = useState<string | null>(null)
@@ -542,10 +611,9 @@ export default function Dashboard() {
 
   function handleSortClick(s: typeof sortBy) {
     if (s === sortBy) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+      commitFilters({ sortDir: sortDir === 'asc' ? 'desc' : 'asc' })
     } else {
-      setSortBy(s)
-      setSortDir(DEFAULT_SORT_DIRS[s])
+      commitFilters({ sortBy: s, sortDir: DEFAULT_SORT_DIRS[s] })
     }
   }
 
@@ -738,7 +806,7 @@ export default function Dashboard() {
             type="text"
             placeholder="Search mints by name, URL or version…  ( / )"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => commitFilters({ search: e.target.value }, { replace: true })}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
             data-search-input
@@ -750,7 +818,7 @@ export default function Dashboard() {
         <button
           type="button"
           className={`filter-btn${showFilters ? ' active' : ''}`}
-          onClick={() => setShowFilters(v => !v)}
+          onClick={() => { if (!showFilters) setPendingFilters(activeFilters); setShowFilters(v => !v) }}
         >
           <IcFilter />
           Filters
@@ -785,10 +853,7 @@ export default function Dashboard() {
           className="refresh-btn"
           title="Reset filters & refresh"
           onClick={() => {
-            setSearch('')
-            setSortBy('name')
-            setSortDir('asc')
-            setActiveFilters(DEFAULT_FILTERS)
+            commitFilters({ search: '', sortBy: 'name', sortDir: 'asc', filters: DEFAULT_FILTERS })
             setPendingFilters(DEFAULT_FILTERS)
             setShowFilters(false)
             setShowDegraded(false)
@@ -807,25 +872,25 @@ export default function Dashboard() {
               {activeFilters.status !== 'all' && (
                 <span className="filter-tag">
                   {activeFilters.status === 'online' ? 'Online' : 'Offline'}
-                  <button type="button" onClick={() => { const f = { ...activeFilters, status: 'all' as const }; setActiveFilters(f); setPendingFilters(f) }}><IcClose /></button>
+                  <button type="button" onClick={() => { const f = { ...activeFilters, status: 'all' as const }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
               {activeFilters.minTrustScore > 0 && (
                 <span className="filter-tag">
                   Trust ≥ {activeFilters.minTrustScore}%
-                  <button type="button" onClick={() => { const f = { ...activeFilters, minTrustScore: 0 }; setActiveFilters(f); setPendingFilters(f) }}><IcClose /></button>
+                  <button type="button" onClick={() => { const f = { ...activeFilters, minTrustScore: 0 }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
               {activeFilters.mintAges.map(age => (
                 <span key={age} className="filter-tag">
                   {age}
-                  <button type="button" onClick={() => { const f = { ...activeFilters, mintAges: activeFilters.mintAges.filter(a => a !== age) }; setActiveFilters(f); setPendingFilters(f) }}><IcClose /></button>
+                  <button type="button" onClick={() => { const f = { ...activeFilters, mintAges: activeFilters.mintAges.filter(a => a !== age) }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               ))}
               {activeFilters.requiredNuts.map(nut => (
                 <span key={nut} className="filter-tag">
                   NUT-{nut.padStart(2, '0')}
-                  <button type="button" onClick={() => { const f = { ...activeFilters, requiredNuts: activeFilters.requiredNuts.filter(n => n !== nut) }; setActiveFilters(f); setPendingFilters(f) }}><IcClose /></button>
+                  <button type="button" onClick={() => { const f = { ...activeFilters, requiredNuts: activeFilters.requiredNuts.filter(n => n !== nut) }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               ))}
             </div>
@@ -894,8 +959,8 @@ export default function Dashboard() {
           <div className="filter-footer">
             <div className="filter-count">Showing <strong>{filteredMints.length}</strong> of <strong>{totalCount}</strong> mints</div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" className="filter-reset-btn" onClick={() => { setPendingFilters(DEFAULT_FILTERS); setActiveFilters(DEFAULT_FILTERS) }}>Reset filters</button>
-              <button type="button" className="filter-apply-btn" onClick={() => { setActiveFilters(pendingFilters); setShowFilters(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Apply filter</button>
+              <button type="button" className="filter-reset-btn" onClick={() => { setPendingFilters(DEFAULT_FILTERS); commitFilters({ filters: DEFAULT_FILTERS }) }}>Reset filters</button>
+              <button type="button" className="filter-apply-btn" onClick={() => { commitFilters({ filters: pendingFilters }); setShowFilters(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Apply filter</button>
             </div>
           </div>
         </div>
