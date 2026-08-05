@@ -583,12 +583,13 @@ function MintDetailContent({ url }: { url: string }) {
             <span
               ref={errorBadgeRef}
               className="md-error-badge"
-              style={{position:'relative',display:'inline-flex',fontSize:11,color:'#ff4d4d',fontFamily:'var(--font-mono)',background:'rgba(255,77,77,0.08)',border:'0.5px solid rgba(255,77,77,0.25)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap',cursor:'help'}}
+              style={{position:'relative',display:'inline-flex',alignItems:'center',gap:4,fontSize:11,color:'#ff4d4d',fontFamily:'var(--font-mono)',background:'rgba(255,77,77,0.08)',border:'0.5px solid rgba(255,77,77,0.25)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap',cursor:'help'}}
               onPointerEnter={errorBadgeTooltip.onPointerEnter}
               onPointerLeave={errorBadgeTooltip.onPointerLeave}
               onClick={errorBadgeTooltip.onClick}
             >
               {knownMint.lastError}
+              <Info size={11} color="#6b7280" style={{cursor:'help',flexShrink:0}} />
               {errorBadgeTooltip.open && httpErrorTooltip(knownMint.lastError) && (
                 <div className="audit-tooltip" style={{width:200,left:'50%',transform:'translateX(-50%)',bottom:'auto',top:'calc(100% + 6px)'}}>
                   {httpErrorTooltip(knownMint.lastError)}
