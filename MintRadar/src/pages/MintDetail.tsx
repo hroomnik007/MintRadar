@@ -629,12 +629,12 @@ function MintDetailContent({ url }: { url: string }) {
               Latency
               <span
                 ref={latencyInfoRef}
-                style={{position:'relative',display:'inline-flex',cursor:'help',color:'#8b949e',fontSize:9}}
+                style={{position:'relative',display:'inline-flex'}}
                 onPointerEnter={latencyInfoTooltip.onPointerEnter}
                 onPointerLeave={latencyInfoTooltip.onPointerLeave}
                 onClick={latencyInfoTooltip.onClick}
               >
-                ⓘ
+                <Info size={11} color="#6b7280" style={{cursor:'help'}} />
                 {latencyInfoTooltip.open && (
                   <div className="audit-tooltip" style={{width:200}}>
                     Measured from our server in Frankfurt, DE. Click &quot;Test&quot; for your local latency.
@@ -656,12 +656,12 @@ function MintDetailContent({ url }: { url: string }) {
                 </button>
                 <span
                   ref={clientLatencyInfoRef}
-                  style={{position:'relative',display:'inline-flex',cursor:'help',color:'#8b949e',fontSize:11}}
+                  style={{position:'relative',display:'inline-flex'}}
                   onPointerEnter={clientLatencyInfoTooltip.onPointerEnter}
                   onPointerLeave={clientLatencyInfoTooltip.onPointerLeave}
                   onClick={clientLatencyInfoTooltip.onClick}
                 >
-                  ⓘ
+                  <Info size={11} color="#6b7280" style={{cursor:'help'}} />
                   {clientLatencyInfoTooltip.open && (
                     <div className="audit-tooltip" style={{width:200}}>
                       Your latency from this browser to the mint (client-side measurement).
