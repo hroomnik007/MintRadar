@@ -132,14 +132,20 @@ setInterval(() => {
 
 // ── Mint probe ─────────────────────────────────────────────────
 
+// On-demand single-mint probe (GET /api/mint/probe) — matches the cron
+// prober's PROBE_TIMEOUT_MS (prober.ts) so a hanging mint fails at the same
+// ceiling everywhere, and stays comfortably under the frontend's own
+// AbortSignal.timeout(15000) around this endpoint (src/core/mint/api.ts).
+const ON_DEMAND_PROBE_TIMEOUT_MS = 10_000
+
 async function probeMint(url: string): Promise<MintStatus> {
   const start = Date.now()
 
   // safeFetch validates the URL and every redirect hop against isSafeUrl()
   // and pins DNS at connect time (SSRF + rebinding protection).
   const [infoRes, keysetsRes] = await Promise.all([
-    safeFetch(`${url}/v1/info`),
-    safeFetch(`${url}/v1/keysets`),
+    safeFetch(`${url}/v1/info`, { timeoutMs: ON_DEMAND_PROBE_TIMEOUT_MS }),
+    safeFetch(`${url}/v1/keysets`, { timeoutMs: ON_DEMAND_PROBE_TIMEOUT_MS }),
   ])
 
   const latencyMs = Date.now() - start

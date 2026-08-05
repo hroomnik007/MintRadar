@@ -170,6 +170,10 @@ export async function safeFetch(
   options: SafeFetchOptions = {}
 ): Promise<Response | null> {
   const timeoutMs = options.timeoutMs ?? 10_000
+  // One deadline for the whole call, not per hop — a signal fresh per redirect
+  // hop let a mint that redirects a couple of times before hanging block for
+  // up to (MAX_REDIRECTS + 1) * timeoutMs instead of timeoutMs total.
+  const deadline = AbortSignal.timeout(timeoutMs)
   let currentUrl = rawUrl
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
@@ -178,7 +182,7 @@ export async function safeFetch(
     let res: Response
     try {
       res = await undiciFetch(currentUrl, {
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: deadline,
         credentials: 'omit',
         redirect: 'manual',
         dispatcher: safeAgent,

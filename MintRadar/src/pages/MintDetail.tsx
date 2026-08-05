@@ -436,7 +436,16 @@ function MintDetailContent({ url }: { url: string }) {
     })
   }, [chartHistoryData?.segments, chartInterval, knownMint, data?.info?.version, data?.info?.contact, now])
 
-  if (isLoading || data === undefined) {
+  // Render as soon as EITHER source is ready: the cached mints-known list
+  // (near-instant — already fetched by Dashboard in the common flow) or the
+  // live probe. Previously this blocked on the live probe alone, so an
+  // offline/unresponsive mint showed nothing but the Back button for as
+  // long as the probe took to time out (up to ~10-20s+). Header/stat
+  // tiles/Overview now render from `knownMint` immediately; fields that
+  // only the live probe has (MOTD, description, pubkey, contact, alt URLs)
+  // appear once `data` resolves, with `probeLoading` available to show a
+  // loading state for just those pieces.
+  if (knownMintsData === undefined && data === undefined) {
     return (
       <div className="mint-detail">
         <div className="md-header">
@@ -446,25 +455,27 @@ function MintDetailContent({ url }: { url: string }) {
     )
   }
 
+  const probeLoading = isLoading || data === undefined
+
   const hostname = (() => { try { return new URL(url).hostname } catch { return url } })()
-  const displayName = data.info?.name ?? hostname
-  const isOnline = data.online
+  const displayName = data?.info?.name ?? knownMint?.name ?? hostname
+  const isOnline = data?.online ?? knownMint?.online ?? false
   const latency = knownMint?.latencyMs ?? null
-  const version = data.info?.version
-  const nutCount = data.info !== null ? Object.keys(data.info.nuts).length : 0
-  const motd = data.info?.motd
-  const description = data.info?.description
-  const pubkey = data.info?.pubkey
-  const name = data.info?.name
+  const version = data?.info?.version ?? knownMint?.version ?? undefined
+  const nutCount = data?.info ? Object.keys(data.info.nuts).length : (knownMint?.nutCount ?? 0)
+  const motd = data?.info?.motd
+  const description = data?.info?.description
+  const pubkey = data?.info?.pubkey
+  const name = data?.info?.name
 
-  const tosUrl = data.info?.tos_url
-  const descriptionLong = data.info?.description_long
-  const mintTime = data.info?.time
+  const tosUrl = data?.info?.tos_url ?? knownMint?.tosUrl ?? undefined
+  const descriptionLong = data?.info?.description_long ?? knownMint?.descriptionLong ?? undefined
+  const mintTime = data?.info?.time
 
-  const email = data.info?.contact?.find(c => c.method === 'email')?.info
-  const twitter = data.info?.contact?.find(c => c.method === 'twitter')?.info
-  const nostr = data.info?.contact?.find(c => c.method === 'nostr')?.info
-  const urls = data.info?.urls
+  const email = data?.info?.contact?.find(c => c.method === 'email')?.info
+  const twitter = data?.info?.contact?.find(c => c.method === 'twitter')?.info
+  const nostr = data?.info?.contact?.find(c => c.method === 'nostr')?.info
+  const urls = data?.info?.urls
 
   const uptimePct = uptime24hData?.uptimePct ?? 0
 
@@ -475,11 +486,11 @@ function MintDetailContent({ url }: { url: string }) {
 
   // NUT-04 (minting) and NUT-05 (melting) disabled detection
   const nut4Disabled = (() => {
-    const raw = data.info?.nuts?.['4'] ?? knownMint?.nutsLimits?.['4']
+    const raw = data?.info?.nuts?.['4'] ?? knownMint?.nutsLimits?.['4']
     return raw !== null && raw !== undefined && typeof raw === 'object' && (raw as NutConfig).disabled === true
   })()
   const nut5Disabled = (() => {
-    const raw = data.info?.nuts?.['5'] ?? knownMint?.nutsLimits?.['5']
+    const raw = data?.info?.nuts?.['5'] ?? knownMint?.nutsLimits?.['5']
     return raw !== null && raw !== undefined && typeof raw === 'object' && (raw as NutConfig).disabled === true
   })()
 
@@ -488,7 +499,9 @@ function MintDetailContent({ url }: { url: string }) {
   const isWatching = watchlistMints.includes(url)
   const toggleWatch = () => { void (isWatching ? removeMint(url) : addMint(url)) }
 
-  const supportedNutNumbers = new Set(data.info !== null ? Object.keys(data.info.nuts) : [])
+  const supportedNutNumbers = new Set(
+    data?.info ? Object.keys(data.info.nuts) : Object.keys(knownMint?.nutsLimits ?? {})
+  )
   const supportedNuts = ALL_NUTS.filter(nut =>
     supportedNutNumbers.has(String(parseInt(nut.slice(4), 10)))
   )
@@ -713,6 +726,11 @@ function MintDetailContent({ url }: { url: string }) {
           {activeTab === 'overview' && (<>
             <div className="md-panel">
               <div className="md-panel-title">Mint info</div>
+            {probeLoading && (
+              <div style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',marginBottom:12}}>
+                Loading live mint data (MOTD, description, contact)…
+              </div>
+            )}
             {(nut4Disabled || nut5Disabled) && (
               <div style={{background:'rgba(255,165,0,0.08)',border:'0.5px solid rgba(255,165,0,0.3)',borderRadius:8,padding:'9px 12px',marginBottom:12,display:'flex',alignItems:'flex-start',gap:8}}>
                 <span style={{color:'#ffa500',fontSize:14,flexShrink:0,lineHeight:1.3}}>⚠</span>
@@ -939,7 +957,7 @@ function MintDetailContent({ url }: { url: string }) {
                 const supported = supportedNuts.includes(nut)
                 const meta = NUT_DESCRIPTIONS[nut]
                 const nutKey = parseInt(nut.slice(4), 10).toString()
-                const rawConfig = data.info?.nuts?.[nutKey]
+                const rawConfig = data?.info?.nuts?.[nutKey]
                 const nutConfig = (rawConfig !== null && rawConfig !== undefined && typeof rawConfig === 'object') ? rawConfig as NutConfig : null
                 const isDisabled = supported && nutConfig?.disabled === true
                 return (
@@ -961,8 +979,8 @@ function MintDetailContent({ url }: { url: string }) {
           </div>
 
           {(() => {
-            const nut4 = (data.info?.nuts?.['4'] ?? knownMint?.nutsLimits?.['4']) as NutConfig | null | undefined
-            const nut5 = (data.info?.nuts?.['5'] ?? knownMint?.nutsLimits?.['5']) as NutConfig | null | undefined
+            const nut4 = (data?.info?.nuts?.['4'] ?? knownMint?.nutsLimits?.['4']) as NutConfig | null | undefined
+            const nut5 = (data?.info?.nuts?.['5'] ?? knownMint?.nutsLimits?.['5']) as NutConfig | null | undefined
             const hasAnyLimits =
               nut4?.methods?.some(m => m.min_amount != null || m.max_amount != null) ||
               nut5?.methods?.some(m => m.min_amount != null || m.max_amount != null)
@@ -1540,7 +1558,7 @@ function MintDetailContent({ url }: { url: string }) {
         const meta = NUT_DESCRIPTIONS[selectedNut]
         const supported = supportedNuts.includes(selectedNut)
         const nutKey = parseInt(selectedNut.slice(4), 10).toString()
-        const rawNutConfig = data.info?.nuts?.[nutKey] ?? knownMint?.nutsLimits?.[nutKey]
+        const rawNutConfig = data?.info?.nuts?.[nutKey] ?? knownMint?.nutsLimits?.[nutKey]
         const nutConfig = (rawNutConfig !== null && typeof rawNutConfig === 'object') ? rawNutConfig as NutConfig : null
         const isNutDisabled = supported && nutConfig?.disabled === true
         return (
