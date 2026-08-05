@@ -1,6 +1,6 @@
 import { nip19 } from 'nostr-tools'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useEffect, useState, useMemo, type JSX } from 'react'
+import { useEffect, useState, useMemo, useRef, type JSX } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import {
@@ -18,6 +18,7 @@ import { ComparisonModal } from '@/components/ComparisonModal'
 import { mintAgeBadge, trustScoreColor, trustScoreInfo } from '@/utils/mintFormatting'
 import { auditReliabilityScore } from '@/utils/auditScore'
 import { useNow } from '@/hooks/useNow'
+import { useTapTooltip } from '@/hooks/useTapTooltip'
 import './MintDetail.css'
 import {
   Copy, Check, Info, ShieldCheck, ShieldOff, ChevronDown, ChevronUp,
@@ -310,12 +311,30 @@ function MintDetailContent({ url }: { url: string }) {
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
   const [reviewError, setReviewError] = useState<string | null>(null)
   const [reviewSuccess, setReviewSuccess] = useState(false)
-  const [auditTooltip, setAuditTooltip] = useState<'mints' | 'melts' | 'errors' | null>(null)
-  const [breakdownTooltip, setBreakdownTooltip] = useState<string | null>(null)
   const [clientLatency, setClientLatency] = useState<number | string | null>(null)
   const [testingLatency, setTestingLatency] = useState(false)
-  const [latencyBtnTooltip, setLatencyBtnTooltip] = useState(false)
-  const [errorBadgeTooltip, setErrorBadgeTooltip] = useState(false)
+  const errorBadgeRef = useRef<HTMLSpanElement>(null)
+  const errorBadgeTooltip = useTapTooltip(errorBadgeRef)
+  const latencyInfoRef = useRef<HTMLSpanElement>(null)
+  const latencyInfoTooltip = useTapTooltip(latencyInfoRef)
+  const clientLatencyInfoRef = useRef<HTMLSpanElement>(null)
+  const clientLatencyInfoTooltip = useTapTooltip(clientLatencyInfoRef)
+  const auditMintsRef = useRef<HTMLSpanElement>(null)
+  const auditMintsTooltip = useTapTooltip(auditMintsRef)
+  const auditMeltsRef = useRef<HTMLSpanElement>(null)
+  const auditMeltsTooltip = useTapTooltip(auditMeltsRef)
+  const auditErrorsRef = useRef<HTMLSpanElement>(null)
+  const auditErrorsTooltip = useTapTooltip(auditErrorsRef)
+  const breakdownUptimeRef = useRef<HTMLSpanElement>(null)
+  const breakdownUptimeTooltip = useTapTooltip(breakdownUptimeRef)
+  const breakdownNutRef = useRef<HTMLSpanElement>(null)
+  const breakdownNutTooltip = useTapTooltip(breakdownNutRef)
+  const breakdownVersionRef = useRef<HTMLSpanElement>(null)
+  const breakdownVersionTooltip = useTapTooltip(breakdownVersionRef)
+  const breakdownContactRef = useRef<HTMLSpanElement>(null)
+  const breakdownContactTooltip = useTapTooltip(breakdownContactRef)
+  const breakdownAuditRef = useRef<HTMLSpanElement>(null)
+  const breakdownAuditTooltip = useTapTooltip(breakdownAuditRef)
   const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'nuts' | 'audit' | 'reviews'>('overview')
   const [auditExpanded, setAuditExpanded] = useState(true)
   const [showComparePicker, setShowComparePicker] = useState(false)
@@ -477,6 +496,29 @@ function MintDetailContent({ url }: { url: string }) {
 
   const trustScore = knownMint?.trustScore ?? computeTrustScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, knownMint?.auditNMints ?? null, knownMint?.auditNMelts ?? null, knownMint?.auditNErrors ?? null)
   const tsInfo = trustScoreInfo(trustScore)
+
+  // Trust Score Breakdown modal rows — hoisted out of the modal's JSX (was a
+  // nested IIFE) because the react-compiler ESLint rules disallow reading a
+  // ref from inside a hand-rolled nested function during render.
+  const breakdownUScore = Math.round(uptimePct * 0.45)
+  const breakdownNScore = Math.round(Math.min(supportedNuts.length / ALL_NUTS.length, 1) * 30)
+  const breakdownVScore = Math.round(versionFreshnessScore(version) / 10 * 15)
+  const breakdownContactFields = [email, twitter, nostr].filter(Boolean)
+  const breakdownCScore = Math.round((breakdownContactFields.length / 3) * 5)
+  const breakdownContactDisplay = breakdownContactFields.length === 0 ? 'None' : (email ? 'Email' : '') + (twitter ? (email ? ' + Twitter' : 'Twitter') : '') + (nostr ? ((email || twitter) ? ' + Nostr' : 'Nostr') : '')
+  const breakdownAuditNMints = knownMint?.auditNMints ?? null
+  const breakdownAuditNMelts = knownMint?.auditNMelts ?? null
+  const breakdownAuditNErrors = knownMint?.auditNErrors ?? null
+  const breakdownAScore = auditReliabilityScore(breakdownAuditNMints, breakdownAuditNMelts, breakdownAuditNErrors)
+  const breakdownAuditTotal = (breakdownAuditNMints ?? 0) + (breakdownAuditNMelts ?? 0) + (breakdownAuditNErrors ?? 0)
+  const breakdownAuditDisplay = breakdownAuditNMints === null ? '—' : breakdownAuditTotal === 0 ? '0%' : `${((breakdownAuditNErrors ?? 0) / breakdownAuditTotal * 100).toFixed(1)}% err`
+  const trustBreakdownRows = [
+    { label: 'Uptime (45%)', display: `${uptimePct}%`, score: breakdownUScore, max: 45, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.', tooltipRef: breakdownUptimeRef, tooltipHook: breakdownUptimeTooltip },
+    { label: 'NUT Support (30%)', display: `${supportedNuts.length} / ${ALL_NUTS.length} NUTs`, score: breakdownNScore, max: 30, color: supportedNuts.length >= 12 ? '#4ade80' : supportedNuts.length >= 8 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.', tooltipRef: breakdownNutRef, tooltipHook: breakdownNutTooltip },
+    { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? '#4ade80' : breakdownVScore >= 6 ? '#ffa500' : '#ff4d4d', tooltip: "How recent the mint's software version is compared to the latest known Nutshell releases. Newer = higher score.", tooltipRef: breakdownVersionRef, tooltipHook: breakdownVersionTooltip },
+    { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? '#4ade80' : breakdownCScore >= 2 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.', tooltipRef: breakdownContactRef, tooltipHook: breakdownContactTooltip },
+    { label: 'Audit reliability (5%)', display: breakdownAuditDisplay, score: breakdownAScore, max: 5, color: breakdownAScore >= 4 ? '#4ade80' : breakdownAScore >= 3 ? '#ffa500' : '#ff4d4d', tooltip: 'Based on error rate from audit.8333.space — the percentage of failed mint/melt operations out of all tested operations. Lower error rate = higher score.', tooltipRef: breakdownAuditRef, tooltipHook: breakdownAuditTooltip },
+  ]
   const ageBadge = mintAgeBadge(discoveredAt)
   const isOutdated = version !== null && latestGlobalVersion !== null
     && (parseMinorVer(latestGlobalVersion) - parseMinorVer(version)) > 2
@@ -526,14 +568,15 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-header-row2">
           {!isOnline && knownMint?.lastError && (
             <span
+              ref={errorBadgeRef}
               className="md-error-badge"
               style={{position:'relative',display:'inline-flex',fontSize:11,color:'#ff4d4d',fontFamily:'var(--font-mono)',background:'rgba(255,77,77,0.08)',border:'0.5px solid rgba(255,77,77,0.25)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap',cursor:'help'}}
-              onMouseEnter={() => setErrorBadgeTooltip(true)}
-              onMouseLeave={() => setErrorBadgeTooltip(false)}
-              onClick={() => setErrorBadgeTooltip(v => !v)}
+              onPointerEnter={errorBadgeTooltip.onPointerEnter}
+              onPointerLeave={errorBadgeTooltip.onPointerLeave}
+              onClick={errorBadgeTooltip.onClick}
             >
               {knownMint.lastError}
-              {errorBadgeTooltip && httpErrorTooltip(knownMint.lastError) && (
+              {errorBadgeTooltip.open && httpErrorTooltip(knownMint.lastError) && (
                 <div className="audit-tooltip" style={{width:200,left:'50%',transform:'translateX(-50%)',bottom:'auto',top:'calc(100% + 6px)'}}>
                   {httpErrorTooltip(knownMint.lastError)}
                 </div>
@@ -571,21 +614,25 @@ function MintDetailContent({ url }: { url: string }) {
           <div style={{flex:1}}>
             <div className="md-sc-label" style={{display:'flex',alignItems:'center',gap:4}}>
               Latency
-              <span title="Measured from our server in Frankfurt, DE. Click 'Test' for your local latency." style={{cursor:'help',color:'#8b949e',fontSize:9}}>ⓘ</span>
+              <span
+                ref={latencyInfoRef}
+                style={{position:'relative',display:'inline-flex',cursor:'help',color:'#8b949e',fontSize:9}}
+                onPointerEnter={latencyInfoTooltip.onPointerEnter}
+                onPointerLeave={latencyInfoTooltip.onPointerLeave}
+                onClick={latencyInfoTooltip.onClick}
+              >
+                ⓘ
+                {latencyInfoTooltip.open && (
+                  <div className="audit-tooltip" style={{width:200}}>
+                    Measured from our server in Frankfurt, DE. Click &quot;Test&quot; for your local latency.
+                  </div>
+                )}
+              </span>
             </div>
             <div className="md-sc-value">{latency !== null ? `${latency} ms` : '—'}</div>
             <div className="md-sc-sub">
               <span>server · Frankfurt</span>
-              <span
-                style={{position:'relative',display:'inline-flex'}}
-                onMouseEnter={() => setLatencyBtnTooltip(true)}
-                onMouseLeave={() => setLatencyBtnTooltip(false)}
-              >
-                {latencyBtnTooltip && (
-                  <div className="audit-tooltip" style={{width:200}}>
-                    Your latency from this browser to the mint (client-side measurement).
-                  </div>
-                )}
+              <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
                 <button
                   onClick={() => { void testClientLatency() }}
                   disabled={testingLatency}
@@ -594,6 +641,20 @@ function MintDetailContent({ url }: { url: string }) {
                   {testingLatency && <span className="latency-spinner" />}
                   Show my latency
                 </button>
+                <span
+                  ref={clientLatencyInfoRef}
+                  style={{position:'relative',display:'inline-flex',cursor:'help',color:'#8b949e',fontSize:11}}
+                  onPointerEnter={clientLatencyInfoTooltip.onPointerEnter}
+                  onPointerLeave={clientLatencyInfoTooltip.onPointerLeave}
+                  onClick={clientLatencyInfoTooltip.onClick}
+                >
+                  ⓘ
+                  {clientLatencyInfoTooltip.open && (
+                    <div className="audit-tooltip" style={{width:200}}>
+                      Your latency from this browser to the mint (client-side measurement).
+                    </div>
+                  )}
+                </span>
               </span>
             </div>
             {clientLatency !== null && (
@@ -1091,13 +1152,15 @@ function MintDetailContent({ url }: { url: string }) {
                     <div className="audit-stat-value" style={{color:'#4ade80'}}>{(knownMint.auditNMints ?? 0).toLocaleString()}</div>
                     <div className="audit-stat-label">
                       Mint ops
-                      <span style={{position:'relative',display:'inline-flex',marginLeft:3}}
-                        onMouseEnter={() => setAuditTooltip('mints')}
-                        onMouseLeave={() => setAuditTooltip(null)}
-                        onClick={() => setAuditTooltip(auditTooltip === 'mints' ? null : 'mints')}
+                      <span
+                        ref={auditMintsRef}
+                        style={{position:'relative',display:'inline-flex',marginLeft:3}}
+                        onPointerEnter={auditMintsTooltip.onPointerEnter}
+                        onPointerLeave={auditMintsTooltip.onPointerLeave}
+                        onClick={auditMintsTooltip.onClick}
                       >
                         <Info size={11} color="#6b7280" style={{cursor:'help'}} />
-                        {auditTooltip === 'mints' && (
+                        {auditMintsTooltip.open && (
                           <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
                             Number of successful ecash minting operations. The auditor actively creates ecash tokens to verify the mint works correctly.
                           </div>
@@ -1109,13 +1172,15 @@ function MintDetailContent({ url }: { url: string }) {
                     <div className="audit-stat-value" style={{color:'#4ade80'}}>{(knownMint.auditNMelts ?? 0).toLocaleString()}</div>
                     <div className="audit-stat-label">
                       Melt ops
-                      <span style={{position:'relative',display:'inline-flex',marginLeft:3}}
-                        onMouseEnter={() => setAuditTooltip('melts')}
-                        onMouseLeave={() => setAuditTooltip(null)}
-                        onClick={() => setAuditTooltip(auditTooltip === 'melts' ? null : 'melts')}
+                      <span
+                        ref={auditMeltsRef}
+                        style={{position:'relative',display:'inline-flex',marginLeft:3}}
+                        onPointerEnter={auditMeltsTooltip.onPointerEnter}
+                        onPointerLeave={auditMeltsTooltip.onPointerLeave}
+                        onClick={auditMeltsTooltip.onClick}
                       >
                         <Info size={11} color="#6b7280" style={{cursor:'help'}} />
-                        {auditTooltip === 'melts' && (
+                        {auditMeltsTooltip.open && (
                           <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
                             Number of successful ecash melting operations. The auditor redeems ecash back to Lightning to verify withdrawals work.
                           </div>
@@ -1127,13 +1192,15 @@ function MintDetailContent({ url }: { url: string }) {
                     <div className="audit-stat-value" style={{color: (knownMint.auditNErrors ?? 0) > 0 ? '#ff4d4d' : '#4ade80'}}>{(knownMint.auditNErrors ?? 0).toLocaleString()}</div>
                     <div className="audit-stat-label">
                       Errors
-                      <span style={{position:'relative',display:'inline-flex',marginLeft:3}}
-                        onMouseEnter={() => setAuditTooltip('errors')}
-                        onMouseLeave={() => setAuditTooltip(null)}
-                        onClick={() => setAuditTooltip(auditTooltip === 'errors' ? null : 'errors')}
+                      <span
+                        ref={auditErrorsRef}
+                        style={{position:'relative',display:'inline-flex',marginLeft:3}}
+                        onPointerEnter={auditErrorsTooltip.onPointerEnter}
+                        onPointerLeave={auditErrorsTooltip.onPointerLeave}
+                        onClick={auditErrorsTooltip.onClick}
                       >
                         <Info size={11} color="#6b7280" style={{cursor:'help'}} />
-                        {auditTooltip === 'errors' && (
+                        {auditErrorsTooltip.open && (
                           <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
                             Number of failed mint or melt operations detected by the auditor. Higher error count indicates reliability issues.
                           </div>
@@ -1364,38 +1431,20 @@ function MintDetailContent({ url }: { url: string }) {
                 <span style={{fontSize:11,fontFamily:'var(--font-mono)',fontWeight:600,color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:5,padding:'2px 8px'}}>{tsInfo.label}</span>
               </div>
             </div>
-            {(() => {
-              const uScore = Math.round(uptimePct * 0.45)
-              const nScore = Math.round(Math.min(supportedNuts.length / ALL_NUTS.length, 1) * 30)
-              const vScore = Math.round(versionFreshnessScore(version) / 10 * 15)
-              const contactFields = [email, twitter, nostr].filter(Boolean)
-              const cScore = Math.round((contactFields.length / 3) * 5)
-              const contactDisplay = contactFields.length === 0 ? 'None' : (email ? 'Email' : '') + (twitter ? (email ? ' + Twitter' : 'Twitter') : '') + (nostr ? ((email || twitter) ? ' + Nostr' : 'Nostr') : '')
-              const auditNMints = knownMint?.auditNMints ?? null
-              const auditNMelts = knownMint?.auditNMelts ?? null
-              const auditNErrors = knownMint?.auditNErrors ?? null
-              const aScore = auditReliabilityScore(auditNMints, auditNMelts, auditNErrors)
-              const auditTotal = (auditNMints ?? 0) + (auditNMelts ?? 0) + (auditNErrors ?? 0)
-              const auditDisplay = auditNMints === null ? '—' : auditTotal === 0 ? '0%' : `${((auditNErrors ?? 0) / auditTotal * 100).toFixed(1)}% err`
-              const rows = [
-                { label: 'Uptime (45%)', display: `${uptimePct}%`, score: uScore, max: 45, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.' },
-                { label: 'NUT Support (30%)', display: `${supportedNuts.length} / ${ALL_NUTS.length} NUTs`, score: nScore, max: 30, color: supportedNuts.length >= 12 ? '#4ade80' : supportedNuts.length >= 8 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.' },
-                { label: 'Version (15%)', display: version ?? 'Unknown', score: vScore, max: 15, color: vScore >= 12 ? '#4ade80' : vScore >= 6 ? '#ffa500' : '#ff4d4d', tooltip: "How recent the mint's software version is compared to the latest known Nutshell releases. Newer = higher score." },
-                { label: 'Contact (5%)', display: contactDisplay, score: cScore, max: 5, color: cScore >= 4 ? '#4ade80' : cScore >= 2 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.' },
-                { label: 'Audit reliability (5%)', display: auditDisplay, score: aScore, max: 5, color: aScore >= 4 ? '#4ade80' : aScore >= 3 ? '#ffa500' : '#ff4d4d', tooltip: 'Based on error rate from audit.8333.space — the percentage of failed mint/melt operations out of all tested operations. Lower error rate = higher score.' },
-              ]
-              return rows.map(row => (
+            {trustBreakdownRows.map(row => (
                 <div key={row.label} style={{marginBottom:14}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
                     <span style={{fontSize:12,color:'var(--text2)',display:'flex',alignItems:'center',gap:4}}>
                       {row.label}
-                      <span style={{position:'relative',display:'inline-flex'}}
-                        onMouseEnter={() => setBreakdownTooltip(row.label)}
-                        onMouseLeave={() => setBreakdownTooltip(null)}
-                        onClick={e => { e.stopPropagation(); setBreakdownTooltip(breakdownTooltip === row.label ? null : row.label) }}
+                      <span
+                        ref={row.tooltipRef}
+                        style={{position:'relative',display:'inline-flex'}}
+                        onPointerEnter={row.tooltipHook.onPointerEnter}
+                        onPointerLeave={row.tooltipHook.onPointerLeave}
+                        onClick={row.tooltipHook.onClick}
                       >
                         <Info size={11} color="#6b7280" style={{flexShrink:0,cursor:'help'}} />
-                        {breakdownTooltip === row.label && (
+                        {row.tooltipHook.open && (
                           <div className="audit-tooltip" style={{width:220,left:'50%',transform:'translateX(-50%)'}}>{row.tooltip}</div>
                         )}
                       </span>
@@ -1409,8 +1458,7 @@ function MintDetailContent({ url }: { url: string }) {
                     <div style={{height:'100%',width:`${(row.score/row.max)*100}%`,background:row.color,borderRadius:2,transition:'width 0.3s ease'}}/>
                   </div>
                 </div>
-              ))
-            })()}
+              ))}
             <div style={{borderTop:'0.5px solid var(--border)',paddingTop:12,marginTop:4,fontSize:10,color:'var(--text3)',lineHeight:1.6}}>
               Score = Uptime×45% + NUT support×30% + Version×15% + Contact×5% + Audit×5%
             </div>
