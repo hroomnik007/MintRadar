@@ -540,6 +540,7 @@ The codebase is at **0 ESLint errors** (frontend + backend). Keep it that way �
 - **GOTCHA — `vite.config.js` is a compiled artifact:** `tsc -b` emits it from `vite.config.ts` (tsconfig.node.json has no `noEmit`), and Vite resolves `.js` BEFORE `.ts`. Always edit `vite.config.ts`, then run `npm run build` to regenerate the `.js` — editing only the `.ts` without a build means Vite still uses the stale `.js`.
 
 ## Key rules
+- **Before starting ANY new task, check `git branch --show-current`.** If it isn't `main`, find out why (an in-progress PR still awaiting merge vs. a forgotten checkout left over from a prior session) before committing anything. A 2026-08-05 session left a feature branch checked out after its PR had already merged; two unrelated follow-up fixes got committed there instead of on `main` and had to be recovered via a second PR (#54).
 - NEVER modify anything not explicitly requested
 - ALWAYS run typecheck before build
 - ALWAYS rsync dist after build
