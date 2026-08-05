@@ -184,16 +184,31 @@ function formatTime(date: Date): string {
 }
 
 const HTTP_ERROR_EXPLANATIONS: Record<string, string> = {
+  '400': "The mint's info endpoint rejected the request as malformed — likely a misconfiguration on the mint's side",
+  '401': "The mint's info endpoint unexpectedly requires authentication — likely a misconfiguration, NUT-06 should be public",
+  '403': "The mint's info endpoint is blocking this request — may be a firewall/WAF rule or IP block",
+  '404': "Mint's info endpoint returned 404 — it may not implement NUT-06, or the URL has changed",
+  '429': 'The mint is rate-limiting requests',
+  '500': "The mint's server hit an internal error while handling the request",
   '502': "The mint's server is unreachable — the application behind the proxy may have crashed or restarted",
   '503': "The mint's server is temporarily unavailable — likely under maintenance or overloaded",
   '504': "The mint's server took too long to respond — likely overloaded or misconfigured",
-  '429': 'The mint is rate-limiting requests',
+}
+
+const NON_HTTP_ERROR_EXPLANATIONS: Record<string, string> = {
+  'Invalid JSON response': "The mint returned a response that isn't valid JSON — its info endpoint may be misconfigured",
+  'Invalid Cashu response': "The mint's info endpoint responded, but the body is missing the expected `nuts` field — it may not be a valid Cashu mint",
+  'DNS resolution failed': "The mint's domain name could not be resolved — it may no longer exist or its DNS is misconfigured",
+  'Connection timeout': "The mint didn't respond in time — its server may be overloaded or unreachable",
+  'Connection refused': "The mint's server actively refused the connection — it may be down or blocking this request",
+  'TLS/SSL error': "The mint's HTTPS certificate could not be verified — it may be expired, invalid, or misconfigured",
+  'Unreachable': 'The mint could not be reached — the server may be down or the network path is blocked',
 }
 
 function httpErrorTooltip(lastError: string): string | undefined {
   const m = lastError.match(/^HTTP (\d+)$/)
-  if (!m || !m[1]) return undefined
-  return HTTP_ERROR_EXPLANATIONS[m[1]] ?? 'The mint returned an unexpected error'
+  if (m && m[1]) return HTTP_ERROR_EXPLANATIONS[m[1]] ?? `The mint returned HTTP ${m[1]} — an unexpected error status`
+  return NON_HTTP_ERROR_EXPLANATIONS[lastError]
 }
 
 function MintDetailContent({ url }: { url: string }) {
