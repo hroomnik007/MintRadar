@@ -1,8 +1,14 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useQueries } from '@tanstack/react-query'
+import {
+  XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, LineChart, Line,
+} from 'recharts'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { type KnownMint } from '@/hooks/useKnownMints'
 import { useMintHistory } from '@/hooks/useMintHistory'
 import { useNow } from '@/hooks/useNow'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 const IcClose = () => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -50,6 +56,42 @@ function parseMinorVer(v: string | null | undefined): number {
 
 const NUT_FILTER_KEYS = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14']
 
+// Per-mint line colors for the historical trend overlay — reuses hues already
+// established elsewhere in the app (Trust Trend green, copper accent, the
+// Fresh/OG badge blue and purple) rather than inventing new ones.
+const MINT_COLORS = ['#17E87F', '#c98058', '#60a5fa', '#a78bfa']
+
+type HistoryPeriod = '24h' | '7d' | '30d' | '90d'
+type HistoryMetric = 'latency' | 'uptime' | 'trust'
+
+interface HistorySegment {
+  bucket: string
+  online: boolean
+  latencyMs: number | null
+  total: number
+  onlineCount: number
+  uptimePct: number | null
+  trustScore: number | null
+}
+
+interface HistoryResponse {
+  period: string
+  segments: HistorySegment[]
+  uptimePct: number | null
+  avgLatencyMs: number | null
+  prevUptimePct: number | null
+  prevAvgLatencyMs: number | null
+  earliestCheckedAt: string | null
+  daysOfDataAvailable: number
+  periodDays: number
+  prevPeriodInsufficientHistory: boolean
+}
+
+interface VersionHistoryResponse {
+  history: Array<{ version: string; firstSeenAt: string }>
+  latestGlobalVersion: string | null
+}
+
 const EMPTY_MINT: KnownMint = {
   url: '', name: null, iconUrl: null, degraded: false, online: null,
   latencyMs: null, version: null, nutCount: null, tosUrl: null,
@@ -95,6 +137,75 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
   const allData = [d0, d1, d2, d3].slice(0, mints.length)
 
   const gridCols = `140px ${mints.map(() => 'minmax(160px, 1fr)').join(' ')}`
+
+  const isMobile = useIsMobile()
+  const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('7d')
+  const [metric, setMetric] = useState<HistoryMetric>('latency')
+
+  const historyQueries = useQueries({
+    queries: mints.map(m => ({
+      queryKey: ['mint', 'chart-history', m.url, historyPeriod],
+      queryFn: async (): Promise<HistoryResponse> => {
+        const res = await fetch(`/api/mints/history?url=${encodeURIComponent(m.url)}&period=${historyPeriod}`)
+        if (!res.ok) throw new Error('Failed to fetch chart history')
+        return res.json() as Promise<HistoryResponse>
+      },
+      staleTime: 5 * 60 * 1000,
+    })),
+  })
+
+  const versionQueries = useQueries({
+    queries: mints.map(m => ({
+      queryKey: ['mint', 'version-history', m.url],
+      queryFn: async (): Promise<VersionHistoryResponse> => {
+        const res = await fetch(`/api/mints/version-history?url=${encodeURIComponent(m.url)}`)
+        if (!res.ok) throw new Error('Failed to fetch version history')
+        return res.json() as Promise<VersionHistoryResponse>
+      },
+      staleTime: 10 * 60 * 1000,
+    })),
+  })
+
+  const isLoadingHistory = historyQueries.some(q => q.isLoading)
+
+  const loadedHistory = historyQueries.map(q => q.data).filter((d): d is HistoryResponse => d != null)
+  const periodDaysValue = loadedHistory[0]?.periodDays ?? null
+  const minDaysAvailable = loadedHistory.length > 0
+    ? Math.min(...loadedHistory.map(d => d.daysOfDataAvailable))
+    : null
+  const coverageText = (periodDaysValue !== null && minDaysAvailable !== null && minDaysAvailable < periodDaysValue)
+    ? `Showing ${minDaysAvailable} of ${periodDaysValue} days of data (history retention started recently)`
+    : null
+
+  const chartData = useMemo(() => {
+    const bucketSet = new Set<string>()
+    const segMaps = historyQueries.map(q => {
+      const map = new Map<string, HistorySegment>()
+      q.data?.segments.forEach(s => { map.set(s.bucket, s); bucketSet.add(s.bucket) })
+      return map
+    })
+    const buckets = [...bucketSet].sort()
+    return buckets.map(bucket => {
+      const d = new Date(bucket)
+      const label = historyPeriod === '24h'
+        ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+        : d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+      const row: Record<string, string | number | null> = { label }
+      segMaps.forEach((map, i) => {
+        const seg = map.get(bucket)
+        const value = !seg ? null
+          : metric === 'latency' ? seg.latencyMs
+          : metric === 'uptime' ? seg.uptimePct
+          : seg.trustScore
+        row[`m${i}`] = value
+      })
+      return row
+    })
+  }, [historyQueries, historyPeriod, metric])
+
+  const chartHasEnoughData = chartData.filter(
+    row => mints.some((_, i) => row[`m${i}`] != null)
+  ).length >= 2
 
   return (
     <div className="cmp-overlay" onClick={onClose}>
@@ -231,6 +342,162 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           })}
 
         </div>
+
+        <div style={{ padding: '4px 20px 20px', borderTop: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', margin: '12px 0 18px', lineHeight: 1.5 }}>
+            The comparison above reflects each mint&apos;s current snapshot only — including NUT Support,
+            which MintRadar does not track over time. The sections below add historical context where it does.
+          </div>
+
+          {/* ── Historical Trends ── */}
+          <div style={{ marginBottom: 26 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>Historical Trends</div>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 2, background: 'var(--bg3)', borderRadius: 6, padding: 2 }}>
+                  {(['latency', 'uptime', 'trust'] as const).map(m => (
+                    <button
+                      key={m}
+                      onClick={() => setMetric(m)}
+                      style={{
+                        background: metric === m ? 'var(--bg2)' : 'transparent',
+                        border: metric === m ? '1px solid var(--border2)' : '1px solid transparent',
+                        borderRadius: 5, padding: '3px 10px',
+                        fontSize: 10.5, fontFamily: 'var(--font-mono)',
+                        color: metric === m ? 'var(--text)' : 'var(--text3)',
+                        cursor: 'pointer',
+                      }}
+                    >{m === 'latency' ? 'Latency' : m === 'uptime' ? 'Uptime' : 'Trust Score'}</button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', background: 'var(--bg3)', borderRadius: 6, padding: 2, gap: 1 }}>
+                  {(['24h', '7d', '30d', '90d'] as const).map(iv => (
+                    <button
+                      key={iv}
+                      onClick={() => setHistoryPeriod(iv)}
+                      style={{
+                        background: historyPeriod === iv ? 'var(--accent)' : 'transparent',
+                        color: historyPeriod === iv ? 'var(--bg)' : 'var(--text2)',
+                        border: 'none', borderRadius: 4, padding: '2px 8px',
+                        fontSize: 10, fontFamily: 'var(--font-mono)',
+                        cursor: 'pointer', fontWeight: historyPeriod === iv ? 700 : 400,
+                      }}
+                    >{iv}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {coverageText && (
+              <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', marginBottom: 8 }}>{coverageText}</div>
+            )}
+
+            {isLoadingHistory ? (
+              <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>Loading history…</p>
+            ) : chartData.length === 0 ? (
+              <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>No historical data for this period.</p>
+            ) : !chartHasEnoughData ? (
+              <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>Not enough data for this period</p>
+            ) : isMobile ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {mints.map((mint, i) => (
+                  <div key={mint.url}>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: MINT_COLORS[i]!, fontFamily: 'var(--font-mono)', marginBottom: 2 }}>
+                      {allData[i]!.displayName}
+                    </div>
+                    <ResponsiveContainer width="100%" height={90}>
+                      <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                        <XAxis dataKey="label" tick={{ fontSize: 8, fill: 'var(--text3)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                        <YAxis
+                          hide
+                          domain={metric === 'latency'
+                            ? [(dataMin: number) => dataMin * 0.9, (dataMax: number) => dataMax * 1.1]
+                            : [0, 100]}
+                        />
+                        <Tooltip
+                          contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 11 }}
+                          formatter={(value) => [metric === 'latency' ? `${String(value)}ms` : `${String(value)}%`, allData[i]!.displayName]}
+                        />
+                        <Line type="monotone" dataKey={`m${i}`} stroke={MINT_COLORS[i]!} dot={false} strokeWidth={1.5} connectNulls />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={180}>
+                  <LineChart data={chartData} margin={{ top: 4, right: 4, left: 10, bottom: 0 }}>
+                    <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fontSize: 9, fill: 'var(--text3)' }}
+                      axisLine={false} tickLine={false}
+                      interval={historyPeriod === '24h' ? 3 : chartData.length <= 7 ? 0 : Math.ceil(chartData.length / 7) - 1}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 9, fill: 'var(--text3)' }}
+                      axisLine={false} tickLine={false}
+                      width={44}
+                      domain={metric === 'latency'
+                        ? [(dataMin: number) => dataMin * 0.9, (dataMax: number) => dataMax * 1.1]
+                        : [0, 100]}
+                      tickFormatter={(v: number) => metric === 'latency' ? `${Math.round(v / 100) * 100}ms` : `${Math.round(v)}%`}
+                    />
+                    <Tooltip
+                      contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 11 }}
+                      formatter={(value, name) => [metric === 'latency' ? `${String(value)}ms` : `${String(value)}%`, name]}
+                    />
+                    {mints.map((mint, i) => (
+                      <Line
+                        key={mint.url}
+                        type="monotone"
+                        dataKey={`m${i}`}
+                        name={allData[i]!.displayName}
+                        stroke={MINT_COLORS[i]!}
+                        dot={false}
+                        strokeWidth={2}
+                        connectNulls
+                      />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
+                  {mints.map((mint, i) => (
+                    <span key={mint.url} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: MINT_COLORS[i]!, display: 'inline-block', flexShrink: 0 }} />
+                      {allData[i]!.displayName}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* ── Software Version History ── */}
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>Software Version History</div>
+            <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: '0 16px' }}>
+              <div className="cmp-lbl cmp-last">Versions</div>
+              {mints.map((mint, i) => {
+                const versionHistory = versionQueries[i]?.data?.history ?? []
+                return (
+                  <div key={mint.url} className="cmp-val cmp-last" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 5, maxHeight: 140, overflowY: 'auto' }}>
+                    {versionHistory.length === 0 ? (
+                      <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>No data</span>
+                    ) : versionHistory.map((vh, j) => (
+                      <div key={j} style={{ fontSize: 10, fontFamily: 'var(--font-mono)', lineHeight: 1.4 }}>
+                        <span style={{ color: 'var(--text)', fontWeight: j === 0 ? 700 : 400 }}>{vh.version}</span>
+                        <span style={{ color: 'var(--text3)' }}> since {new Date(vh.firstSeenAt).toLocaleDateString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   )

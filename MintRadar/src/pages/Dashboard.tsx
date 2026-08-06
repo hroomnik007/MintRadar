@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { nip19 } from 'nostr-tools'
@@ -12,10 +12,14 @@ import { useNostrMints } from '@/hooks/useNostrMints'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 
 import type { MintStatus } from '@core/mint/api'
-import { ComparisonModal } from '@/components/ComparisonModal'
 import { MintCard } from '@/components/mint/MintCard'
 import { mintAgeBadge, latencyColor, trustColor, uptimeColor } from '@/utils/mintFormatting'
 import './Dashboard.css'
+
+// Historical trend charts pull in Recharts (~380 kB chunk) — lazy-load so
+// that chunk only loads when a user actually opens Compare, not on every
+// Dashboard visit. Matches the Stats/MintDetail lazy-loading pattern in App.tsx.
+const ComparisonModal = lazy(() => import('@/components/ComparisonModal').then(m => ({ default: m.ComparisonModal })))
 
 // ── SVG Icons ──────────────────────────────────────────────────
 
@@ -1081,7 +1085,9 @@ export default function Dashboard() {
 
       {/* Comparison modal */}
       {showComparisonModal && comparedMints.length >= 2 && (
-        <ComparisonModal mints={comparedMints} onClose={() => setShowComparisonModal(false)} />
+        <Suspense fallback={null}>
+          <ComparisonModal mints={comparedMints} onClose={() => setShowComparisonModal(false)} />
+        </Suspense>
       )}
 
       {showSubmit && (
