@@ -6,7 +6,6 @@ import {
 } from 'recharts'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { type KnownMint } from '@/hooks/useKnownMints'
-import { useMintHistory } from '@/hooks/useMintHistory'
 import { useNow } from '@/hooks/useNow'
 import { useIsMobile } from '@/hooks/useIsMobile'
 
@@ -99,12 +98,10 @@ const EMPTY_MINT: KnownMint = {
 }
 
 function useMintCompareData(mint: KnownMint, latestVersion: string | null) {
-  const { records, uptimePercent } = useMintHistory(mint.url)
   const now = useNow()
   const isOnline = mint.online === true
   const displayName = mint.name ?? getHostname(mint.url)
   const hostname = getHostname(mint.url)
-  const uptimePct = records.length > 0 ? uptimePercent : (isOnline ? 100 : 0)
   const trustScore = listTrustScore(mint)
   const tsInfo = trustScoreInfo(trustScore)
   const ageBadge = mintAgeBadge(mint.discoveredAt)
@@ -113,7 +110,7 @@ function useMintCompareData(mint: KnownMint, latestVersion: string | null) {
   const supportsNut13 = nutsLimits['13'] != null
   const isOutdated = mint.version != null && latestVersion != null
     && (parseMinorVer(latestVersion) - parseMinorVer(mint.version)) > 2
-  return { isOnline, displayName, hostname, uptimePct, trustScore, tsInfo, ageBadge, isNew, nutsLimits, supportsNut13, isOutdated }
+  return { isOnline, displayName, hostname, trustScore, tsInfo, ageBadge, isNew, nutsLimits, supportsNut13, isOutdated }
 }
 
 export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClose: () => void }) {
@@ -148,6 +145,21 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
       queryFn: async (): Promise<HistoryResponse> => {
         const res = await fetch(`/api/mints/history?url=${encodeURIComponent(m.url)}&period=${historyPeriod}`)
         if (!res.ok) throw new Error('Failed to fetch chart history')
+        return res.json() as Promise<HistoryResponse>
+      },
+      staleTime: 5 * 60 * 1000,
+    })),
+  })
+
+  // Summary-row Uptime — always the server's 24h figure, independent of the
+  // chart's selected historyPeriod, so it matches Mint Detail's header. Same
+  // queryKey shape as MintDetail's dedicated 24h query, so the two share cache.
+  const uptime24hQueries = useQueries({
+    queries: mints.map(m => ({
+      queryKey: ['mint', 'history-api', m.url, '24h'],
+      queryFn: async (): Promise<HistoryResponse> => {
+        const res = await fetch(`/api/mints/history?url=${encodeURIComponent(m.url)}&period=24h`)
+        if (!res.ok) throw new Error('Failed to fetch 24h uptime')
         return res.json() as Promise<HistoryResponse>
       },
       staleTime: 5 * 60 * 1000,
@@ -263,13 +275,13 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             )
           })}
 
-          {/* ── Uptime ── */}
+          {/* ── Uptime (24h, matches Mint Detail's header figure) ── */}
           <div className="cmp-lbl">Uptime</div>
           {mints.map((mint, i) => {
-            const d = allData[i]!
+            const uptimePct = uptime24hQueries[i]?.data?.uptimePct ?? null
             return (
-              <div key={mint.url} className="cmp-val" style={{ color: uptimeColor(d.uptimePct), fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600 }}>
-                {d.uptimePct}%
+              <div key={mint.url} className="cmp-val" style={{ color: uptimeColor(uptimePct), fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600 }}>
+                {uptimePct !== null ? `${uptimePct}%` : '—'}
               </div>
             )
           })}
