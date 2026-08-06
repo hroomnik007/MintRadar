@@ -358,6 +358,10 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
   else if (daysParam === '7') period = '7d'
   else period = '24h'
 
+  const PERIOD_DAYS: Record<typeof period, number> = { '24h': 1, '7d': 7, '30d': 30, '90d': 90 }
+  // Matches each branch's prevQuery window start below (24h→48h ago, 7d→14d ago, 30d→60d ago, 90d→180d ago).
+  const PREV_WINDOW_START_HOURS: Record<typeof period, number> = { '24h': 48, '7d': 336, '30d': 1440, '90d': 4320 }
+
   isSafeUrl(url)
     .then(safe => {
       if (!safe) {
@@ -470,7 +474,8 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
       return Promise.all([
         pool.query(segmentsQuery, [url]),
         pool.query(prevQuery, [url]),
-      ]).then(([segResult, prevResult]) => {
+        pool.query('SELECT MIN(checked_at) AS earliest FROM mint_history WHERE url = $1', [url]),
+      ]).then(([segResult, prevResult, earliestResult]) => {
         const segments = segResult.rows.map(r => ({
           bucket: (r.bucket as Date).toISOString(),
           online: r.online as boolean,
@@ -489,6 +494,15 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
           ? Number(prevRow.avg_latency_ms)
           : null
 
+        const earliestRaw = earliestResult.rows[0]?.earliest as Date | null
+        const earliestCheckedAt = earliestRaw ? earliestRaw.toISOString() : null
+        const periodDays = PERIOD_DAYS[period]
+        const daysOfDataAvailable = earliestRaw
+          ? Math.min(periodDays, Math.max(0, Math.floor((Date.now() - earliestRaw.getTime()) / 86_400_000)))
+          : 0
+        const prevPeriodInsufficientHistory = earliestRaw === null
+          || earliestRaw.getTime() > (Date.now() - PREV_WINDOW_START_HOURS[period] * 3_600_000)
+
         // Compute overall stats for the period
         const totalChecks = segments.reduce((s, r) => s + r.total, 0)
         const totalOnline = segments.reduce((s, r) => s + r.onlineCount, 0)
@@ -505,6 +519,10 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
           avgLatencyMs,
           prevUptimePct,
           prevAvgLatencyMs,
+          earliestCheckedAt,
+          daysOfDataAvailable,
+          periodDays,
+          prevPeriodInsufficientHistory,
           // Legacy field for backward compat
           history: segResult.rows.map(r => ({
             online: r.online as boolean,
@@ -678,23 +696,38 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
 app.get('/api/stats/trust-trend', (req: Request, res: Response): void => {
   const daysParam = parseInt(String(req.query['days'] ?? '30'), 10)
   const days = [30, 90].includes(daysParam) ? daysParam : 30
-  pool.query(
-    `SELECT
-       (DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')::date AS date,
-       ROUND(AVG(trust_score))::int AS avg_trust
-     FROM mint_history
-     WHERE trust_score IS NOT NULL
-       AND online = true
-       AND checked_at > NOW() - INTERVAL '1 day' * $1
-     GROUP BY DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC')
-     ORDER BY 1 ASC`,
-    [days]
-  )
-    .then(result => {
-      res.json(result.rows.map(r => ({
-        date: (r.date as Date).toISOString().slice(0, 10),
-        avgTrust: r.avg_trust as number,
-      })))
+  Promise.all([
+    pool.query(
+      `SELECT
+         (DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')::date AS date,
+         ROUND(AVG(trust_score))::int AS avg_trust
+       FROM mint_history
+       WHERE trust_score IS NOT NULL
+         AND online = true
+         AND checked_at > NOW() - INTERVAL '1 day' * $1
+       GROUP BY DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC')
+       ORDER BY 1 ASC`,
+      [days]
+    ),
+    // Network-wide oldest probe, unbounded — used to tell the frontend when
+    // the selected window (e.g. 90d) exceeds what's actually been collected.
+    pool.query('SELECT MIN(checked_at) AS earliest FROM mint_history'),
+  ])
+    .then(([result, earliestResult]) => {
+      const earliestRaw = earliestResult.rows[0]?.earliest as Date | null
+      const earliestCheckedAt = earliestRaw ? earliestRaw.toISOString() : null
+      const daysOfDataAvailable = earliestRaw
+        ? Math.min(days, Math.max(0, Math.floor((Date.now() - earliestRaw.getTime()) / 86_400_000)))
+        : 0
+      res.json({
+        trend: result.rows.map(r => ({
+          date: (r.date as Date).toISOString().slice(0, 10),
+          avgTrust: r.avg_trust as number,
+        })),
+        periodDays: days,
+        earliestCheckedAt,
+        daysOfDataAvailable,
+      })
     })
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/stats/trust-trend]', err)

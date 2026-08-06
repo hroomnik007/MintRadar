@@ -232,6 +232,10 @@ function MintDetailContent({ url }: { url: string }) {
         avgLatencyMs: number | null
         prevUptimePct: number | null
         prevAvgLatencyMs: number | null
+        earliestCheckedAt: string | null
+        daysOfDataAvailable: number
+        periodDays: number
+        prevPeriodInsufficientHistory: boolean
       }>
     },
     staleTime: 5 * 60 * 1000,
@@ -550,9 +554,14 @@ function MintDetailContent({ url }: { url: string }) {
   const chartPrevLatency = chartHistoryData?.prevAvgLatencyMs ?? null
   const chartAvgUptime = chartHistoryData?.uptimePct ?? null
   const chartPrevUptime = chartHistoryData?.prevUptimePct ?? null
+  const chartPrevInsufficientHistory = chartHistoryData?.prevPeriodInsufficientHistory ?? false
+  const chartCoverage = chartHistoryData && chartHistoryData.daysOfDataAvailable < chartHistoryData.periodDays
+    ? `Showing ${chartHistoryData.daysOfDataAvailable} of ${chartHistoryData.periodDays} days of data (history retention started recently)`
+    : null
 
-  function deltaStr(curr: number | null, prev: number | null, unit = ''): string | null {
-    if (curr === null || prev === null) return null
+  function deltaStr(curr: number | null, prev: number | null, unit = '', insufficientHistory = false): string | null {
+    if (prev === null) return (curr !== null && insufficientHistory) ? 'Not enough history yet' : null
+    if (curr === null) return null
     const diff = curr - prev
     return `${diff >= 0 ? '+' : ''}${diff.toFixed(0)}${unit} vs prev period`
   }
@@ -1055,8 +1064,8 @@ function MintDetailContent({ url }: { url: string }) {
             {/* Summary metric cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 14 }}>
               {[
-                { label: 'Avg Latency', value: chartAvgLatency !== null ? `${chartAvgLatency}ms` : '—', delta: deltaStr(chartAvgLatency, chartPrevLatency, 'ms'), color: 'var(--text)' },
-                { label: 'Avg Uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%'), color: '#4ade80' },
+                { label: 'Avg Latency', value: chartAvgLatency !== null ? `${chartAvgLatency}ms` : '—', delta: deltaStr(chartAvgLatency, chartPrevLatency, 'ms', chartPrevInsufficientHistory), color: 'var(--text)' },
+                { label: 'Avg Uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%', chartPrevInsufficientHistory), color: '#4ade80' },
                 { label: 'Avg Trust', value: `${trustScore}%`, delta: null, color: tsInfo.color },
               ].map(({ label, value, delta, color }) => (
                 <div key={label} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px' }}>
@@ -1123,6 +1132,9 @@ function MintDetailContent({ url }: { url: string }) {
                   />
                 </LineChart>
               </ResponsiveContainer>
+            )}
+            {chartCoverage && (
+              <div style={{ marginTop: 8, fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>{chartCoverage}</div>
             )}
           </div>
 

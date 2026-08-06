@@ -72,7 +72,7 @@ export async function backfillServerLocations(): Promise<void> {
 }
 
 const PROBE_TIMEOUT_MS = 10000
-const RETENTION_DAYS = 30
+const RETENTION_DAYS = 90
 
 // [major, minor] descending — newest first
 const SERVER_NUTSHELL_VERSIONS: [number, number][] = [

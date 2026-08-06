@@ -118,6 +118,10 @@ function historyPayload() {
     avgLatencyMs: 55,
     prevUptimePct: 98,
     prevAvgLatencyMs: 60,
+    earliestCheckedAt: daysAgo(30),
+    daysOfDataAvailable: 1,
+    periodDays: 1,
+    prevPeriodInsufficientHistory: false,
     history: [{ online: true, latencyMs: 50, checkedAt: bucket }],
   }
 }
@@ -133,7 +137,7 @@ export async function installApiMocks(page: Page): Promise<void> {
     route.fulfill({ json: MOCK_KNOWN_MINTS }),
   )
   await page.route('**/api/stats', route => route.fulfill({ json: MOCK_STATS }))
-  await page.route('**/api/stats/trust-trend**', route => route.fulfill({ json: [] }))
+  await page.route('**/api/stats/trust-trend**', route => route.fulfill({ json: { trend: [], periodDays: 30, earliestCheckedAt: null, daysOfDataAvailable: 0 } }))
   await page.route('**/api/mints/history**', route => route.fulfill({ json: historyPayload() }))
   await page.route('**/api/mints/version-history**', route =>
     route.fulfill({ json: { history: [{ version: 'Nutshell/0.16.0', firstSeenAt: daysAgo(30) }], latestGlobalVersion: 'Nutshell/0.16.0' } }),

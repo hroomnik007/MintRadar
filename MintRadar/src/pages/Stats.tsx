@@ -478,15 +478,27 @@ export default function Stats() {
     return knownMintsData.filter(m => m.version === versionModal.fullVersion)
   }, [versionModal, knownMintsData])
 
-  const { data: trendData } = useQuery({
+  interface TrustTrendResponse {
+    trend: Array<{ date: string; avgTrust: number }>
+    periodDays: number
+    earliestCheckedAt: string | null
+    daysOfDataAvailable: number
+  }
+
+  const { data: trendResponse } = useQuery({
     queryKey: ['stats-trust-trend', trendDays],
-    queryFn: async (): Promise<Array<{ date: string; avgTrust: number }>> => {
+    queryFn: async (): Promise<TrustTrendResponse> => {
       const res = await fetch(`/api/stats/trust-trend?days=${trendDays}`)
       if (!res.ok) throw new Error('trust-trend fetch failed')
-      return res.json() as Promise<Array<{ date: string; avgTrust: number }>>
+      return res.json() as Promise<TrustTrendResponse>
     },
     staleTime: 10 * 60 * 1000,
   })
+
+  const trendData = trendResponse?.trend
+  const trendCoverage = trendResponse && trendResponse.daysOfDataAvailable < trendResponse.periodDays
+    ? `Showing ${trendResponse.daysOfDataAvailable} of ${trendResponse.periodDays} days of data (history retention started recently)`
+    : null
 
   const trendSummary = useMemo(() => {
     if (!trendData || trendData.length === 0) return null
@@ -873,6 +885,9 @@ export default function Stats() {
                 <span className="trend-summary-sep">·</span>
                 <span className="trend-summary-item"><span className="trend-summary-label">{trendDays}d Low</span><span style={{color:'var(--text2)'}}>{trendSummary.low}%</span></span>
               </div>
+            )}
+            {trendCoverage && (
+              <div style={{marginTop:6,fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>{trendCoverage}</div>
             )}
           </div>
         </div>
