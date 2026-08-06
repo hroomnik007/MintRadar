@@ -16,7 +16,7 @@ import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { ComparisonModal } from '@/components/ComparisonModal'
 import { mintAgeBadge, trustScoreColor, trustScoreInfo } from '@/utils/mintFormatting'
-import { auditReliabilityScore } from '@/utils/auditScore'
+import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { useNow } from '@/hooks/useNow'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import './MintDetail.css'
@@ -162,15 +162,14 @@ function computeTrustScore(
   email?: string,
   twitter?: string,
   nostr?: string,
-  auditNMints?: number | null,
-  auditNMelts?: number | null,
-  auditNErrors?: number | null,
+  auditRecentTotal?: number | null,
+  auditRecentErrors?: number | null,
 ): number {
   const uptimeScore = Math.round(uptimePct * 0.45)
   const nutScore = Math.round(Math.min(nutCount / ALL_NUTS.length, 1) * 30)
   const verScore = Math.round(versionFreshnessScore(versionStr) / 10 * 15)
   const cScore = contactInfoScore(email, twitter, nostr)
-  const aScore = auditReliabilityScore(auditNMints ?? null, auditNMelts ?? null, auditNErrors ?? null)
+  const aScore = auditReliabilityScore(auditRecentTotal ?? null, auditRecentErrors ?? null)
   return Math.round(Math.min(100, uptimeScore + nutScore + verScore + cScore + aScore))
 }
 
@@ -398,9 +397,8 @@ function MintDetailContent({ url }: { url: string }) {
     const segs = chartHistoryData?.segments ?? []
     const nutCount = knownMint?.nutCount ?? 0
     const versionStr = knownMint?.version ?? data?.info?.version ?? null
-    const auditNMints = knownMint?.auditNMints ?? null
-    const auditNMelts = knownMint?.auditNMelts ?? null
-    const auditNErrors = knownMint?.auditNErrors ?? null
+    const auditRecentTotal = knownMint?.auditRecentTotal ?? null
+    const auditRecentErrors = knownMint?.auditRecentErrors ?? null
     const emailVal = data?.info?.contact?.find((c: { method: string }) => c.method === 'email')?.info
     const twitterVal = data?.info?.contact?.find((c: { method: string }) => c.method === 'twitter')?.info
     const nostrVal = data?.info?.contact?.find((c: { method: string }) => c.method === 'nostr')?.info
@@ -414,7 +412,7 @@ function MintDetailContent({ url }: { url: string }) {
       const trustVal = seg.trustScore !== null && seg.trustScore !== undefined
         ? seg.trustScore
         : seg.uptimePct !== null
-          ? computeTrustScore(seg.uptimePct, nutCount, versionStr, emailVal, twitterVal, nostrVal, auditNMints, auditNMelts, auditNErrors)
+          ? computeTrustScore(seg.uptimePct, nutCount, versionStr, emailVal, twitterVal, nostrVal, auditRecentTotal, auditRecentErrors)
           : null
       return { label, latency: seg.latencyMs, uptime: seg.uptimePct, trust: trustVal }
     }
@@ -505,9 +503,14 @@ function MintDetailContent({ url }: { url: string }) {
   const supportedNuts = ALL_NUTS.filter(nut =>
     supportedNutNumbers.has(String(parseInt(nut.slice(4), 10)))
   )
-  const supportsNut13 = supportedNutNumbers.has('13')
+  // NUT-13 (deterministic secrets) is wallet-side only — mints never advertise
+  // it in /v1/info (confirmed against live Nutshell mints and the cashubtc/nuts
+  // spec, which lists no mint implementations for NUT-13 at all). The mint-side
+  // capability that actually gates seed-phrase backup/restore is NUT-09
+  // (restore signatures) — check that instead.
+  const supportsBackupRestore = supportedNutNumbers.has('9')
 
-  const trustScore = knownMint?.trustScore ?? computeTrustScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, knownMint?.auditNMints ?? null, knownMint?.auditNMelts ?? null, knownMint?.auditNErrors ?? null)
+  const trustScore = knownMint?.trustScore ?? computeTrustScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, knownMint?.auditRecentTotal ?? null, knownMint?.auditRecentErrors ?? null)
   const tsInfo = trustScoreInfo(trustScore)
 
   // Trust Score Breakdown modal rows — hoisted out of the modal's JSX (was a
@@ -519,18 +522,20 @@ function MintDetailContent({ url }: { url: string }) {
   const breakdownContactFields = [email, twitter, nostr].filter(Boolean)
   const breakdownCScore = Math.round((breakdownContactFields.length / 3) * 5)
   const breakdownContactDisplay = breakdownContactFields.length === 0 ? 'None' : (email ? 'Email' : '') + (twitter ? (email ? ' + Twitter' : 'Twitter') : '') + (nostr ? ((email || twitter) ? ' + Nostr' : 'Nostr') : '')
-  const breakdownAuditNMints = knownMint?.auditNMints ?? null
-  const breakdownAuditNMelts = knownMint?.auditNMelts ?? null
-  const breakdownAuditNErrors = knownMint?.auditNErrors ?? null
-  const breakdownAScore = auditReliabilityScore(breakdownAuditNMints, breakdownAuditNMelts, breakdownAuditNErrors)
-  const breakdownAuditTotal = (breakdownAuditNMints ?? 0) + (breakdownAuditNMelts ?? 0) + (breakdownAuditNErrors ?? 0)
-  const breakdownAuditDisplay = breakdownAuditNMints === null ? '—' : breakdownAuditTotal === 0 ? '0%' : `${((breakdownAuditNErrors ?? 0) / breakdownAuditTotal * 100).toFixed(1)}% err`
+  const breakdownAuditRecentTotal = knownMint?.auditRecentTotal ?? null
+  const breakdownAuditRecentErrors = knownMint?.auditRecentErrors ?? null
+  const breakdownAScore = auditReliabilityScore(breakdownAuditRecentTotal, breakdownAuditRecentErrors)
+  const breakdownAuditDisplay = breakdownAuditRecentTotal === null
+    ? '—'
+    : isAuditUnknown(breakdownAuditRecentTotal)
+      ? 'Unknown'
+      : `${((breakdownAuditRecentErrors ?? 0) / breakdownAuditRecentTotal * 100).toFixed(1)}% err`
   const trustBreakdownRows = [
     { label: 'Uptime (45%)', display: `${uptimePct}%`, score: breakdownUScore, max: 45, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.', tooltipRef: breakdownUptimeRef, tooltipHook: breakdownUptimeTooltip },
     { label: 'NUT Support (30%)', display: `${supportedNuts.length} / ${ALL_NUTS.length} NUTs`, score: breakdownNScore, max: 30, color: supportedNuts.length >= 12 ? '#4ade80' : supportedNuts.length >= 8 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.', tooltipRef: breakdownNutRef, tooltipHook: breakdownNutTooltip },
     { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? '#4ade80' : breakdownVScore >= 6 ? '#ffa500' : '#ff4d4d', tooltip: "How recent the mint's software version is compared to the latest known Nutshell releases. Newer = higher score.", tooltipRef: breakdownVersionRef, tooltipHook: breakdownVersionTooltip },
     { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? '#4ade80' : breakdownCScore >= 2 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.', tooltipRef: breakdownContactRef, tooltipHook: breakdownContactTooltip },
-    { label: 'Audit reliability (5%)', display: breakdownAuditDisplay, score: breakdownAScore, max: 5, color: breakdownAScore >= 4 ? '#4ade80' : breakdownAScore >= 3 ? '#ffa500' : '#ff4d4d', tooltip: 'Based on error rate from audit.8333.space — the percentage of failed mint/melt operations out of all tested operations. Lower error rate = higher score.', tooltipRef: breakdownAuditRef, tooltipHook: breakdownAuditTooltip },
+    { label: 'Audit reliability (5%)', display: breakdownAuditDisplay, score: breakdownAScore, max: 5, color: breakdownAScore >= 4 ? '#4ade80' : breakdownAScore >= 3 ? '#ffa500' : '#ff4d4d', tooltip: "Based on error rate from audit.8333.space — the percentage of failed swaps out of the mint's last ~100 tested operations. Lower error rate = higher score. Shows \"Unknown\" when fewer than 3 recent swaps are available.", tooltipRef: breakdownAuditRef, tooltipHook: breakdownAuditTooltip },
   ]
   const ageBadge = mintAgeBadge(discoveredAt)
   const isOutdated = version !== null && latestGlobalVersion !== null
@@ -949,12 +954,12 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="md-panel">
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:11}}>
                 <div className="md-panel-title" style={{marginBottom:0}}>NUT Compatibility</div>
-              {supportsNut13 ? (
-                <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'#4ade80',background:'rgba(74,222,128,0.1)',border:'0.5px solid rgba(74,222,128,0.3)',borderRadius:5,padding:'2px 7px'}}>
+              {supportsBackupRestore ? (
+                <span title="This mint supports restoring blind signatures (NUT-09), which lets a wallet recover its ecash from a seed phrase after losing its device." style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'#4ade80',background:'rgba(74,222,128,0.1)',border:'0.5px solid rgba(74,222,128,0.3)',borderRadius:5,padding:'2px 7px'}}>
                   <ShieldCheck size={11} /> Backup supported
                 </span>
               ) : (
-                <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--text3)',background:'var(--bg3)',border:'0.5px solid var(--border)',borderRadius:5,padding:'2px 7px'}}>
+                <span title="This mint doesn't support wallet backup restore (NUT-09) — losing your device may mean losing funds stored here." style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--text3)',background:'var(--bg3)',border:'0.5px solid var(--border)',borderRadius:5,padding:'2px 7px'}}>
                   <ShieldOff size={11} /> No backup
                 </span>
               )}

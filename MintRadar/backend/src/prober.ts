@@ -97,15 +97,14 @@ export function computeServerTrustScore(
   nutCount: number | null,
   version: string | null,
   contactCount: number,
-  auditNMints: number | null,
-  auditNMelts: number | null,
-  auditNErrors: number | null
+  auditRecentTotal: number | null,
+  auditRecentErrors: number | null
 ): number {
   const uScore = Math.round(uptimePct * 0.45)
   const nScore = Math.round(Math.min((nutCount ?? 0) / 26, 1) * 30)
   const vScore = Math.round(serverVersionFreshnessScore(version) / 10 * 15)
   const cScore = Math.round((contactCount / 3) * 5)
-  const aScore = auditReliabilityScore(auditNMints, auditNMelts, auditNErrors)
+  const aScore = auditReliabilityScore(auditRecentTotal, auditRecentErrors)
   return Math.min(100, Math.round(uScore + nScore + vScore + cScore + aScore))
 }
 
@@ -292,14 +291,14 @@ export async function probeMintToDb(url: string): Promise<void> {
     const statsRes = await pool.query(
       `SELECT
         m.nut_count, m.version,
-        m.audit_n_mints, m.audit_n_melts, m.audit_n_errors,
+        m.audit_recent_total, m.audit_recent_errors,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count
        FROM mints m
        LEFT JOIN mint_history h
          ON h.url = m.url AND h.checked_at > NOW() - INTERVAL '24 hours'
        WHERE m.url = $1
-       GROUP BY m.nut_count, m.version, m.audit_n_mints, m.audit_n_melts, m.audit_n_errors`,
+       GROUP BY m.nut_count, m.version, m.audit_recent_total, m.audit_recent_errors`,
       [url]
     )
     const row = statsRes.rows[0]
@@ -314,9 +313,8 @@ export async function probeMintToDb(url: string): Promise<void> {
         row.nut_count as number | null,
         row.version as string | null,
         contactCount,
-        row.audit_n_mints as number | null,
-        row.audit_n_melts as number | null,
-        row.audit_n_errors as number | null
+        row.audit_recent_total as number | null,
+        row.audit_recent_errors as number | null
       )
       await pool.query(
         `UPDATE mints SET last_trust_score = $1, last_error = $2 WHERE url = $3`,

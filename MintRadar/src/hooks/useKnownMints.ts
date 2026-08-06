@@ -16,6 +16,8 @@ export interface KnownMint {
   auditNMelts?: number | null
   auditNErrors?: number | null
   auditCheckedAt?: string | null
+  auditRecentTotal?: number | null
+  auditRecentErrors?: number | null
   discoveredAt?: string | null
   trustScore?: number | null
   lastError?: string | null

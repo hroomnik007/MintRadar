@@ -42,6 +42,8 @@ function sampleRow(overrides: Record<string, unknown> = {}) {
     audit_n_melts: 50,
     audit_n_errors: 0,
     audit_checked_at: '2026-06-30T00:00:00.000Z',
+    audit_recent_total: 100,
+    audit_recent_errors: 0,
     discovered_at: '2026-01-01T00:00:00.000Z',
     last_trust_score: 88,
     last_error: null,

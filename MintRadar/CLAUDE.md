@@ -94,7 +94,7 @@ UNIQUE (url, version)
 - Uptime 45%: uptimePct * 0.45 (from 24h mint_history)
 - NUT Support 30%: min(nutCount/26, 1) * 30
 - Version freshness 15%: based on Nutshell version recency
-- Audit reliability 5%: based on error rate from audit_n_errors/(audit_n_mints+audit_n_melts+audit_n_errors) — bucket logic (0%→5, <1%→4, <5%→3, <15%→2, ≥15%→1, null→2.5) lives in `backend/src/shared/auditScore.ts` (`auditReliabilityScore()`), the source of truth shared with the frontend's Trust Score Breakdown. `src/utils/auditScore.ts` is a manually-synced copy (the two packages have no workspace set up between them) — edit both if the logic ever changes.
+- Audit reliability 5%: based on error rate from a **rolling window of the mint's last ~100 swaps** (`audit_recent_errors`/`audit_recent_total`, fetched per-mint from `GET /swaps/mint/{id}` on audit.8333.space — see Discovery pipeline below), not audit.8333.space's cumulative lifetime counters — bucket logic (0%→5, <1%→4, <5%→3, <15%→2, ≥15%→1, null or <3 samples ("Unknown")→2.5) lives in `backend/src/shared/auditScore.ts` (`auditReliabilityScore()`/`isAuditUnknown()`), the source of truth shared with the frontend's Trust Score Breakdown. `src/utils/auditScore.ts` is a manually-synced copy (the two packages have no workspace set up between them) — edit both if the logic ever changes. `audit_n_mints`/`audit_n_melts`/`audit_n_errors` (cumulative lifetime counts) are kept separately and still used for the read-only "Audit stats" panel on Mint Detail — they no longer feed the score.
 - Stored in mints.last_trust_score after each probe
 
 ## Cron jobs
@@ -106,7 +106,7 @@ UNIQUE (url, version)
 `discoverMintsFromNostr()` in `backend/src/discovery.ts` runs 3 sources in parallel via `Promise.allSettled`:
 - **kind:38172** — NIP-87 mint announcements (direct `u` tag)
 - **kind:38000** — reviews; `#u` tag mining extracts reviewed mint URLs
-- **audit.8333.space** — external audit API
+- **audit.8333.space** — external audit API. `discoverMintsFromApi()` does 2 passes over the ~65 mints audit.8333.space knows about: (1) one paginated `GET /mints/` call (100/page) for discovery + cumulative lifetime counts (`audit_n_mints`/`audit_n_melts`/`audit_n_errors`, display-only, feeds the "Audit stats" panel) and to capture each mint's audit.8333.space `id` (stored as `audit_id`); (2) a sequential per-mint `GET /swaps/mint/{id}?limit=100` pass (~65 extra requests, 150ms apart) for the rolling-window reliability score (`audit_recent_total`/`audit_recent_errors`, feeds Trust Score — see above). Runs once per 6h discovery cycle, so ~65 extra requests/6h — not throttled further, well within reasonable API use.
 
 Approximate yields (as of 2026-06-29): kind:38172 ~33 mints, kind:38000 ~37 mints, audit.8333.space ~61 mints. Total DB: ~97 mints.
 
@@ -331,10 +331,14 @@ source of truth for any future palette/component work; check it before changing 
 
 **Audit reliability score:** see the shared-module note under "Trust Score calculation" above.
 
-**Audit data source caveat:** `audit.8333.space`'s `GET /mints/` API (paginated, 100/page)
-returns **cumulative lifetime counts** for `n_mints`/`n_melts`/`n_errors`, not a rolling window
-of the last N swaps like the reference `pablof7z/cashu-mint-audit` project. This is a known,
-documented trade-off — not implemented/changed now.
+**Audit data source (resolved 2026-08-06):** `audit.8333.space`'s `GET /mints/` API (paginated,
+100/page) returns cumulative lifetime counts for `n_mints`/`n_melts`/`n_errors` — these are kept
+(as `audit_n_*`) purely for the display-only "Audit stats" panel. The Trust Score's audit
+component now matches the reference `pablof7z/cashu-mint-audit` project's approach: it uses a
+rolling window of each mint's last ~100 swaps, fetched per-mint from `GET /swaps/mint/{id}`
+(`audit_recent_total`/`audit_recent_errors`) — see "Discovery pipeline" above. A mint with fewer
+than 3 recent swaps scores as "Unknown" (2.5, same neutral default as no audit data at all)
+instead of a misleadingly precise error rate from a tiny sample.
 
 **Manually added mint:** `mint.hanbitkorea.org` was found via an `audit.8333.space` cross-check
 and was missing from the DB; added manually.

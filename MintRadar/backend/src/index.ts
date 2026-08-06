@@ -712,6 +712,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
       SELECT m.url, m.name, m.icon_url, m.version, m.nut_count,
         m.tos_url, m.description_long, m.nuts_limits,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
+        m.audit_recent_total, m.audit_recent_errors,
         m.discovered_at, m.last_trust_score, m.last_error, m.server_location,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
@@ -727,6 +728,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
       GROUP BY m.url, m.name, m.icon_url, m.version, m.nut_count,
         m.tos_url, m.description_long, m.nuts_limits,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
+        m.audit_recent_total, m.audit_recent_errors,
         m.discovered_at, m.last_trust_score, m.last_error, m.server_location,
         latest.online, latest.latency_ms, latest.checked_at
     `)
@@ -752,6 +754,8 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           auditNMelts: (r.audit_n_melts as number | null) ?? null,
           auditNErrors: (r.audit_n_errors as number | null) ?? null,
           auditCheckedAt: (r.audit_checked_at as string | null) ?? null,
+          auditRecentTotal: (r.audit_recent_total as number | null) ?? null,
+          auditRecentErrors: (r.audit_recent_errors as number | null) ?? null,
           discoveredAt: (r.discovered_at as string | null) ?? null,
           trustScore: (r.last_trust_score as number | null) ?? null,
           lastError: (r.last_error as string | null) ?? null,

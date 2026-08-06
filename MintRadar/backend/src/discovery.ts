@@ -143,13 +143,48 @@ export async function discoverMintsFromNostr(): Promise<number> {
 const AUDIT_API_BASE = 'https://api.audit.8333.space/mints/'
 const AUDIT_PAGE_SIZE = 100
 const AUDIT_MAX_RECORDS = 10_000
+const AUDIT_SWAPS_BASE = 'https://api.audit.8333.space/swaps/mint/'
+// Rolling-window sample size for the reliability score — matches the reference
+// pablof7z/cashu-mint-audit project ("last ~100 swaps") instead of audit.8333.space's
+// cumulative lifetime counters. See auditReliabilityScore() in shared/auditScore.ts.
+const AUDIT_SWAPS_WINDOW = 100
+// Small delay between per-mint swap-history requests so a ~65-mint discovery cycle doesn't
+// hammer audit.8333.space with a burst of back-to-back requests.
+const AUDIT_SWAPS_DELAY_MS = 150
 
 interface AuditRecord {
+  id: number
   url: string
   n_mints?: number | null
   n_melts?: number | null
   n_errors?: number | null
   updated_at?: string | null
+}
+
+interface RecentSwapStats {
+  total: number
+  errors: number
+}
+
+// Fetches the mint's last ~100 swaps (as either source or destination) from
+// audit.8333.space and counts how many failed, for the rolling-window reliability score.
+async function fetchRecentSwapStats(auditId: number): Promise<RecentSwapStats | null> {
+  try {
+    const url = `${AUDIT_SWAPS_BASE}${auditId}?limit=${AUDIT_SWAPS_WINDOW}`
+    const res = await fetch(url, { signal: AbortSignal.timeout(10_000) })
+    if (!res.ok) return null
+    const data: unknown = await res.json()
+    if (!Array.isArray(data)) return null
+    let errors = 0
+    for (const item of data) {
+      if (typeof item !== 'object' || item === null) continue
+      if ((item as Record<string, unknown>)['state'] !== 'OK') errors++
+    }
+    return { total: data.length, errors }
+  } catch (err) {
+    console.error(`[discovery] audit.8333.space swaps fetch error (mint ${auditId}):`, err)
+    return null
+  }
 }
 
 export async function discoverMintsFromApi(): Promise<number> {
@@ -167,6 +202,7 @@ export async function discoverMintsFromApi(): Promise<number> {
         const r = record as Record<string, unknown>
         const rawUrl = r['url']
         if (typeof rawUrl !== 'string') continue
+        if (typeof r['id'] !== 'number') continue
         const trimmed = rawUrl.trim()
         if (!trimmed.startsWith('https://')) continue
         try {
@@ -174,6 +210,7 @@ export async function discoverMintsFromApi(): Promise<number> {
           const h = parsed.hostname.toLowerCase().replace(/\.$/, '')
           if (isObviouslyPrivate(h)) continue
           records.push({
+            id: r['id'],
             url: normalizeUrl(trimmed),
             n_mints: typeof r['n_mints'] === 'number' ? r['n_mints'] : null,
             n_melts: typeof r['n_melts'] === 'number' ? r['n_melts'] : null,
@@ -206,12 +243,13 @@ export async function discoverMintsFromApi(): Promise<number> {
     }
     await pool.query(
       `UPDATE mints SET
-        audit_n_mints = $1,
-        audit_n_melts = $2,
-        audit_n_errors = $3,
-        audit_checked_at = $4
-       WHERE url = $5`,
-      [rec.n_mints, rec.n_melts, rec.n_errors, rec.updated_at, rec.url]
+        audit_id = $1,
+        audit_n_mints = $2,
+        audit_n_melts = $3,
+        audit_n_errors = $4,
+        audit_checked_at = $5
+       WHERE url = $6`,
+      [rec.id, rec.n_mints, rec.n_melts, rec.n_errors, rec.updated_at, rec.url]
     )
   }
 
@@ -220,5 +258,23 @@ export async function discoverMintsFromApi(): Promise<number> {
   }
 
   console.log(`[discovery] audit.8333.space found ${records.length} mints, added ${added} new`)
+
+  // Rolling-window reliability data — one extra request per mint (~65 today), run as its own
+  // sequential pass (rate-limited via AUDIT_SWAPS_DELAY_MS) so it doesn't block the discovery/
+  // insert work above.
+  let swapsUpdated = 0
+  for (const rec of records) {
+    const stats = await fetchRecentSwapStats(rec.id)
+    if (stats) {
+      await pool.query(
+        `UPDATE mints SET audit_recent_total = $1, audit_recent_errors = $2 WHERE url = $3`,
+        [stats.total, stats.errors, rec.url]
+      )
+      swapsUpdated++
+    }
+    await new Promise<void>(resolve => setTimeout(resolve, AUDIT_SWAPS_DELAY_MS))
+  }
+  console.log(`[discovery] audit.8333.space rolling-window swaps updated for ${swapsUpdated}/${records.length} mints`)
+
   return added
 }
