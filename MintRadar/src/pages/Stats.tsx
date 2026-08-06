@@ -466,6 +466,18 @@ export default function Stats() {
       })
   }, [knownMintsData])
 
+  const swFreshnessSummary = useMemo(() => {
+    let total = 0
+    let outdatedOrOld = 0
+    for (const { versions } of versionDist) {
+      for (const v of versions) {
+        total += v.count
+        if (v.badge !== 'latest') outdatedOrOld += v.count
+      }
+    }
+    return { total, pct: total > 0 ? Math.round(outdatedOrOld / total * 100) : 0 }
+  }, [versionDist])
+
   if (isLoading) return (
     <div className="stats-page">
       <div className="stats-header">
@@ -549,6 +561,15 @@ export default function Stats() {
         {/* Card 1: Software in Use */}
         <div className="stats-panel">
           <div className="stats-panel-title">Software in Use</div>
+          {swFreshnessSummary.total > 0 && (
+            <div style={{marginTop:10}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:4}}>
+                <span style={{fontSize:12,color:'var(--text2)'}}>Running outdated or older versions</span>
+                <span style={{fontSize:13,fontWeight:swFreshnessSummary.pct >= 50 ? 700 : 600,color:'var(--amber)',fontFamily:'var(--font-mono-data)'}}>{swFreshnessSummary.pct}%</span>
+              </div>
+              <div className="dist-track"><div className="dist-fill" style={{width:`${swFreshnessSummary.pct}%`,background:'var(--amber)',opacity:swFreshnessSummary.pct >= 50 ? 0.9 : 0.6}} /></div>
+            </div>
+          )}
           <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:6}}>
             {versionDist.length === 0 ? (
               <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
