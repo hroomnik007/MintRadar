@@ -1,10 +1,12 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { Info } from 'lucide-react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { trustColor, trustScoreInfo } from '@/utils/mintFormatting'
+import { useTapTooltip } from '@/hooks/useTapTooltip'
 import './Stats.css'
 
 interface StatsData {
@@ -37,7 +39,6 @@ const NUT_META: Record<string, { short: string; desc: string; specNum: string }>
   'NUT-10': { short: 'Spending conditions', desc: 'Conditions that must be met to use a proof.', specNum: '10' },
   'NUT-11': { short: 'Pay-to-PK', desc: 'Lock tokens to a specific public key for secure transfers.', specNum: '11' },
   'NUT-12': { short: 'DLEQ proofs', desc: 'Discrete Log Equality proofs for verifiable blind signatures.', specNum: '12' },
-  'NUT-13': { short: 'Det. secrets', desc: 'Deterministic secrets derived from a wallet seed for backup and recovery.', specNum: '13' },
   'NUT-14': { short: 'HTLCs', desc: 'Hash Time Locked Contracts for atomic swaps.', specNum: '14' },
   'NUT-15': { short: 'Multipart melt', desc: 'Split a melt payment across multiple Lightning invoices.', specNum: '15' },
   'NUT-16': { short: 'Animated QR', desc: 'Animated QR codes for transferring large tokens between devices.', specNum: '16' },
@@ -331,7 +332,7 @@ function CityMintsModal({ loc, mints, onClose }: {
 
 function NetworkHealthModal({ score, components, onClose }: {
   score: number
-  components: Array<{ label: string; value: number; weight: number }>
+  components: Array<{ label: string; value: number; weight: number; tooltip: string }>
   onClose: () => void
 }) {
   useEffect(() => {
@@ -342,6 +343,21 @@ function NetworkHealthModal({ score, components, onClose }: {
 
   const info = trustScoreInfo(score)
   const label = score >= 70 ? 'Healthy' : score >= 40 ? 'Moderate' : 'At Risk'
+
+  // One ref/tooltip per component row — components is a fixed-length (5) array
+  // built inline in Stats(), so a fixed number of hooks here is safe.
+  const row0Ref = useRef<HTMLSpanElement>(null)
+  const row0Tooltip = useTapTooltip(row0Ref)
+  const row1Ref = useRef<HTMLSpanElement>(null)
+  const row1Tooltip = useTapTooltip(row1Ref)
+  const row2Ref = useRef<HTMLSpanElement>(null)
+  const row2Tooltip = useTapTooltip(row2Ref)
+  const row3Ref = useRef<HTMLSpanElement>(null)
+  const row3Tooltip = useTapTooltip(row3Ref)
+  const row4Ref = useRef<HTMLSpanElement>(null)
+  const row4Tooltip = useTapTooltip(row4Ref)
+  const rowTooltips = [row0Tooltip, row1Tooltip, row2Tooltip, row3Tooltip, row4Tooltip]
+  const rowRefs = [row0Ref, row1Ref, row2Ref, row3Ref, row4Ref]
 
   return (
     <div className="nut-modal-overlay" onClick={onClose}>
@@ -357,13 +373,29 @@ function NetworkHealthModal({ score, components, onClose }: {
           </span>
         </div>
         <div style={{ overflowY: 'auto' }}>
-          {components.map(c => {
+          {components.map((c, i) => {
             const points = Math.round(c.value * c.weight / 100)
             const color = trustColor(c.value)
+            const tooltipRef = rowRefs[i]!
+            const tooltipHook = rowTooltips[i]!
             return (
               <div key={c.label} style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, color: 'var(--text2)' }}>{c.label} <span style={{ color: 'var(--text3)' }}>({c.weight}%)</span></span>
+                  <span style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {c.label} <span style={{ color: 'var(--text3)' }}>({c.weight}%)</span>
+                    <span
+                      ref={tooltipRef}
+                      style={{ position: 'relative', display: 'inline-flex' }}
+                      onPointerEnter={tooltipHook.onPointerEnter}
+                      onPointerLeave={tooltipHook.onPointerLeave}
+                      onClick={tooltipHook.onClick}
+                    >
+                      <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
+                      {tooltipHook.open && (
+                        <div className="audit-tooltip" style={{ width: 220, left: '50%', transform: 'translateX(-50%)' }}>{c.tooltip}</div>
+                      )}
+                    </span>
+                  </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono-data)' }}>{Math.round(c.value)}%</span>
                     <span style={{ fontSize: 13, fontWeight: 600, color }}>{points}/{c.weight}</span>
@@ -405,6 +437,8 @@ export default function Stats() {
   const [reliableTab, setReliableTab] = useState<'reliable' | 'trust'>('reliable')
   const [trendDays, setTrendDays] = useState<30 | 90>(30)
   const [showHealthBreakdown, setShowHealthBreakdown] = useState(false)
+  const nhiInfoRef = useRef<HTMLSpanElement>(null)
+  const nhiInfoTooltip = useTapTooltip(nhiInfoRef)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['stats'],
@@ -421,7 +455,7 @@ export default function Stats() {
 
   const nutSupportingMints = useMemo(() => {
     if (!knownMintsData) return {} as Record<string, KnownMint[]>
-    const NUT_KEYS = ['4','5','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
+    const NUT_KEYS = ['4','5','7','8','9','10','11','12','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
     const result: Record<string, KnownMint[]> = {}
     for (const key of NUT_KEYS) {
       const nutId = `NUT-${key.padStart(2, '0')}`
@@ -585,11 +619,11 @@ export default function Stats() {
     return {
       score,
       components: [
-        { label: 'Online mints', value: onlinePct, weight: 30 },
-        { label: 'Avg. Trust Score', value: avgTrust, weight: 25 },
-        { label: 'Software diversity', value: diversity, weight: 15 },
-        { label: 'Advanced feature adoption', value: advancedAdoption, weight: 15 },
-        { label: 'Network stability', value: stability, weight: 15 },
+        { label: 'Online mints', value: onlinePct, weight: 30, tooltip: 'Share of tracked mints that responded online at their last probe.' },
+        { label: 'Avg. Trust Score', value: avgTrust, weight: 25, tooltip: 'Average Trust Score across all currently online mints.' },
+        { label: 'Software diversity', value: diversity, weight: 15, tooltip: 'How spread out mint software versions are across the network (Herfindahl-Hirschman based) — a network dominated by one version scores lower.' },
+        { label: 'Advanced feature adoption', value: advancedAdoption, weight: 15, tooltip: 'Average adoption rate of optional, security/privacy-oriented NUTs (P2PK, DLEQ, HTLCs, WebSocket, auth, BOLT12, Nostr backup, Pay-to-BK, on-chain) beyond the baseline mint/melt/state-check/restore lifecycle.' },
+        { label: 'Network stability', value: stability, weight: 15, tooltip: 'Share of mints that have been tracked for 1 month or more. Used as a stand-in for churn rate, since mints are never marked "removed" in the database so actual churn isn\'t reliably measurable yet.' },
       ],
     }
   }, [data, knownMintsData, versionDist])
@@ -618,7 +652,7 @@ export default function Stats() {
     </div>
   )
 
-  const NUT_ORDER = ['NUT-04','NUT-05','NUT-07','NUT-08','NUT-09','NUT-10','NUT-11','NUT-12','NUT-13','NUT-14','NUT-15','NUT-16','NUT-17','NUT-18','NUT-19','NUT-20','NUT-21','NUT-22','NUT-23','NUT-24','NUT-25','NUT-26','NUT-27','NUT-28','NUT-29','NUT-30']
+  const NUT_ORDER = ['NUT-04','NUT-05','NUT-07','NUT-08','NUT-09','NUT-10','NUT-11','NUT-12','NUT-14','NUT-15','NUT-16','NUT-17','NUT-18','NUT-19','NUT-20','NUT-21','NUT-22','NUT-23','NUT-24','NUT-25','NUT-26','NUT-27','NUT-28','NUT-29','NUT-30']
   const nutAdoptionMap = Object.fromEntries(data.nutAdoption.map(n => [n.nut, n]))
 
   const modalNutMints = modalNut ? (nutSupportingMints[modalNut] ?? []) : []
@@ -649,8 +683,22 @@ export default function Stats() {
                   {healthLabel(networkHealth.score)}
                 </span>
               </div>
-              <div className="nhi-hint">
-                Composite score across uptime, trust, software diversity, advanced feature adoption &amp; network stability · click for breakdown
+              <div className="nhi-hint" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                Composite score across 5 factors · click for breakdown
+                <span
+                  ref={nhiInfoRef}
+                  style={{ position: 'relative', display: 'inline-flex' }}
+                  onPointerEnter={nhiInfoTooltip.onPointerEnter}
+                  onPointerLeave={nhiInfoTooltip.onPointerLeave}
+                  onClick={nhiInfoTooltip.onClick}
+                >
+                  <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
+                  {nhiInfoTooltip.open && (
+                    <div className="audit-tooltip" style={{ width: 240, left: 0 }}>
+                      Composite 0-100 score across uptime, average Trust Score, software diversity, advanced feature adoption &amp; network stability. Tap the gauge for the full breakdown.
+                    </div>
+                  )}
+                </span>
               </div>
             </div>
           </div>

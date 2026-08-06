@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQueries } from '@tanstack/react-query'
+import { Info } from 'lucide-react'
 import {
   XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, LineChart, Line,
@@ -8,6 +9,7 @@ import { MintFavicon } from '@/components/mint/MintFavicon'
 import { type KnownMint } from '@/hooks/useKnownMints'
 import { useNow } from '@/hooks/useNow'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { useTapTooltip } from '@/hooks/useTapTooltip'
 
 const IcClose = () => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -107,10 +109,13 @@ function useMintCompareData(mint: KnownMint, latestVersion: string | null) {
   const ageBadge = mintAgeBadge(mint.discoveredAt)
   const isNew = mint.discoveredAt != null && (now - new Date(mint.discoveredAt).getTime()) < 48 * 3600 * 1000
   const nutsLimits = (mint.nutsLimits ?? {}) as Record<string, unknown>
-  const supportsNut13 = nutsLimits['13'] != null
+  // NUT-13 (deterministic secrets) is wallet-side only — mints never advertise
+  // it in /v1/info. NUT-09 (restore signatures) is the mint-side capability
+  // that actually gates backup/restore — matches MintDetail's supportsBackupRestore.
+  const supportsBackupRestore = nutsLimits['9'] != null
   const isOutdated = mint.version != null && latestVersion != null
     && (parseMinorVer(latestVersion) - parseMinorVer(mint.version)) > 2
-  return { isOnline, displayName, hostname, trustScore, tsInfo, ageBadge, isNew, nutsLimits, supportsNut13, isOutdated }
+  return { isOnline, displayName, hostname, trustScore, tsInfo, ageBadge, isNew, nutsLimits, supportsBackupRestore, isOutdated }
 }
 
 export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClose: () => void }) {
@@ -136,6 +141,8 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
   const gridCols = `140px ${mints.map(() => 'minmax(160px, 1fr)').join(' ')}`
 
   const isMobile = useIsMobile()
+  const backupInfoRef = useRef<HTMLSpanElement>(null)
+  const backupInfoTooltip = useTapTooltip(backupInfoRef)
   const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('7d')
   const [metric, setMetric] = useState<HistoryMetric>('latency')
 
@@ -340,12 +347,35 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           })}
 
           {/* ── Backup ── */}
-          <div className="cmp-lbl cmp-last">Backup</div>
+          <div className="cmp-lbl cmp-last" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            Backup
+            <span
+              ref={backupInfoRef}
+              style={{ position: 'relative', display: 'inline-flex' }}
+              onPointerEnter={backupInfoTooltip.onPointerEnter}
+              onPointerLeave={backupInfoTooltip.onPointerLeave}
+              onClick={backupInfoTooltip.onClick}
+            >
+              <Info size={11} color="#6b7280" style={{ cursor: 'help', flexShrink: 0 }} />
+              {backupInfoTooltip.open && (
+                <div style={{
+                  position: 'absolute', bottom: 'calc(100% + 6px)', left: 0,
+                  background: 'var(--bg)', border: '0.5px solid var(--border2)', borderRadius: 8,
+                  padding: '8px 10px', fontSize: 10, color: 'var(--text2)', lineHeight: 1.5,
+                  width: 200, zIndex: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                  pointerEvents: 'none', whiteSpace: 'normal', textAlign: 'left',
+                  fontFamily: 'var(--font-body)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400,
+                }}>
+                  Whether this mint supports NUT-09, letting wallets restore proofs after data loss.
+                </div>
+              )}
+            </span>
+          </div>
           {mints.map((mint, i) => {
             const d = allData[i]!
             return (
               <div key={mint.url} className="cmp-val cmp-last">
-                {d.supportsNut13
+                {d.supportsBackupRestore
                   ? <span style={{ fontSize: 10, color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.3)', borderRadius: 4, padding: '1px 6px', fontFamily: 'var(--font-mono)' }}>✓ Supported</span>
                   : <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--bg3)', border: '0.5px solid var(--border)', borderRadius: 4, padding: '1px 6px', fontFamily: 'var(--font-mono)' }}>No backup</span>
                 }

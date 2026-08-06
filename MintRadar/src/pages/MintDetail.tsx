@@ -24,7 +24,7 @@ import {
   Copy, Check, Info, ShieldCheck, ShieldOff, ChevronDown, ChevronUp,
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
   Clock, GitBranch, Plug, Database, Award, Layers, Zap, Plus, X, QrCode,
-  Binary, Receipt, UserCheck, EyeOff, CreditCard, Send, Code, Cloud,
+  Receipt, UserCheck, EyeOff, CreditCard, Send, Code, Cloud,
   Fingerprint, Bitcoin,
 } from 'lucide-react'
 
@@ -65,7 +65,6 @@ const NUT_DESCRIPTIONS: Record<string, { short: string; desc: string; features: 
   'NUT-10': { short: 'Spending cond.', desc: 'Spending conditions that must be met to use a proof.', features: ['Conditional spending', 'Script conditions', 'Extensible'], useCase: 'Base for advanced features like P2PK and HTLCs.' },
   'NUT-11': { short: 'Pay-to-PK', desc: 'Lock tokens to a specific public key for secure transfers.', features: ['Public key locking', 'Signature verification', 'Selective unlock'], useCase: 'Send tokens that only a specific recipient can spend.' },
   'NUT-12': { short: 'DLEQ proofs', desc: 'Discrete Log Equality proofs for verifiable blind signatures.', features: ['Cryptographic proofs', 'Signature verification', 'Privacy preserving'], useCase: 'Clients verify mint honesty without revealing token data.' },
-  'NUT-13': { short: 'Det. secrets', desc: 'Deterministic secrets derived from a wallet seed for backup and recovery.', features: ['Seed-derived secrets', 'Wallet backup', 'Restore support'], useCase: 'Recover a wallet from a seed phrase without losing tokens.' },
   'NUT-14': { short: 'HTLCs', desc: 'Hash Time Locked Contracts for atomic swaps.', features: ['Hash preimage', 'Timelock expiry', 'Atomic swaps'], useCase: 'Enable trustless cross-mint or cross-chain swaps.' },
   'NUT-15': { short: 'Multipart melt', desc: 'Split a melt payment across multiple Lightning invoices.', features: ['Multi-invoice payment', 'Amount splitting', 'Partial melt'], useCase: 'Pay invoices larger than a single proof allows.' },
   'NUT-16': { short: 'Animated QR', desc: 'Animated QR codes for transferring large tokens between devices.', features: ['Chunked QR frames', 'Large token transfer', 'Offline transfer'], useCase: 'Move big tokens between devices when no network is available.' },
@@ -85,9 +84,12 @@ const NUT_DESCRIPTIONS: Record<string, { short: string; desc: string; features: 
   'NUT-30': { short: 'Onchain', desc: 'On-chain Bitcoin as a payment method for mint and melt.', features: ['On-chain Bitcoin', 'Mint & melt method', 'Chain settlement'], useCase: 'Fund or redeem tokens directly with on-chain Bitcoin.' },
 }
 
+// NUT-13 (deterministic secrets) is deliberately excluded — it's a wallet-side
+// spec, never advertised by a mint's /v1/info, so tracking it here is
+// structurally guaranteed 0% for every mint forever.
 const ALL_NUTS = [
   'NUT-04', 'NUT-05', 'NUT-07', 'NUT-08', 'NUT-09', 'NUT-10', 'NUT-11',
-  'NUT-12', 'NUT-13', 'NUT-14', 'NUT-15', 'NUT-16', 'NUT-17', 'NUT-18',
+  'NUT-12', 'NUT-14', 'NUT-15', 'NUT-16', 'NUT-17', 'NUT-18',
   'NUT-19', 'NUT-20', 'NUT-21', 'NUT-22', 'NUT-23', 'NUT-24', 'NUT-25',
   'NUT-26', 'NUT-27', 'NUT-28', 'NUT-29', 'NUT-30',
 ]
@@ -101,7 +103,6 @@ const NUT_ICONS: Record<string, JSX.Element> = {
   'NUT-10': <Lock size={13} />,
   'NUT-11': <Key size={13} />,
   'NUT-12': <Shield size={13} />,
-  'NUT-13': <Binary size={13} />,
   'NUT-14': <Clock size={13} />,
   'NUT-15': <GitBranch size={13} />,
   'NUT-16': <QrCode size={13} />,
@@ -1253,7 +1254,7 @@ function MintDetailContent({ url }: { url: string }) {
                 </div>
                 {knownMint.auditCheckedAt ? (
                   <div style={{fontSize:9,color:'var(--text3)',marginTop:10,fontFamily:'var(--font-mono)'}}>
-                    Last checked {new Date(knownMint.auditCheckedAt).toLocaleDateString()}
+                    Last checked {new Date(knownMint.auditCheckedAt).toLocaleDateString()} · all-time totals from audit.8333.space (not the rolling-window score used in Trust Score)
                   </div>
                 ) : null}
                 </div>

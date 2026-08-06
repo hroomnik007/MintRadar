@@ -617,7 +617,7 @@ app.get('/api/nuts', (_req: Request, res: Response): void => {
     .then(result => {
       type Row = { url: string; name: string | null; nuts_limits: Record<string, unknown> }
       const rows = result.rows as Row[]
-      const NUT_KEYS = ['4','5','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
+      const NUT_KEYS = ['4','5','7','8','9','10','11','12','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
       const total = rows.length
       const nuts = NUT_KEYS.map(key => ({
         nut: `NUT-${key.padStart(2, '0')}`,
@@ -670,7 +670,7 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
       const high = onlineTrustScores.filter(s => s >= 70).length
       // Matches ALL_NUTS in MintDetail — mandatory baseline NUTs (1,2,3,6) are never
       // returned in /v1/info nuts object, so they cannot be tracked here.
-      const NUT_KEYS = ['4','5','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
+      const NUT_KEYS = ['4','5','7','8','9','10','11','12','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
       const onlineWithNuts = online.filter(r => r.nuts_limits != null)
       const totalForAdoption = onlineWithNuts.length
       const nutAdoption = NUT_KEYS.map(key => ({

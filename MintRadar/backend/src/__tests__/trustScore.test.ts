@@ -9,8 +9,8 @@ import { computeServerTrustScore, serverVersionFreshnessScore } from '../prober.
 // lifetime counters.
 describe('computeServerTrustScore', () => {
   it('returns ~100 for a perfect mint (100% on every component)', () => {
-    // uptime 100→45, nutCount 26→30, version 0.16→15, contact 3→5, audit errRate 0→5
-    expect(computeServerTrustScore(100, 26, '0.16', 3, 100, 0)).toBe(100)
+    // uptime 100→45, nutCount 25→30, version 0.16→15, contact 3→5, audit errRate 0→5
+    expect(computeServerTrustScore(100, 25, '0.16', 3, 100, 0)).toBe(100)
   })
 
   it('caps the total at 100 even when components would exceed it', () => {
@@ -28,7 +28,7 @@ describe('computeServerTrustScore', () => {
 
   it('computes from remaining components when audit data is missing', () => {
     // 45 + 30 + 15 + 5 + (audit null →2.5) = 97.5 → round 98
-    expect(computeServerTrustScore(100, 26, '0.16', 3, null, null)).toBe(98)
+    expect(computeServerTrustScore(100, 25, '0.16', 3, null, null)).toBe(98)
   })
 
   describe('uptime component (45%)', () => {
@@ -46,12 +46,12 @@ describe('computeServerTrustScore', () => {
     it('contributes 0 with 0 nuts', () => {
       expect(computeServerTrustScore(0, 0, null, 0, null, null)).toBe(3) // 0 + 2.5
     })
-    it('contributes 30 at 26 nuts', () => {
+    it('contributes 30 at 25 nuts', () => {
       // 0 + 30 + 2.5 = 32.5 → 33
-      expect(computeServerTrustScore(0, 26, null, 0, null, null)).toBe(33)
+      expect(computeServerTrustScore(0, 25, null, 0, null, null)).toBe(33)
     })
-    it('caps NUT support at 26 nuts (52 nuts gives the same score)', () => {
-      expect(computeServerTrustScore(0, 52, null, 0, null, null)).toBe(33)
+    it('caps NUT support at 25 nuts (50 nuts gives the same score)', () => {
+      expect(computeServerTrustScore(0, 50, null, 0, null, null)).toBe(33)
     })
   })
 
