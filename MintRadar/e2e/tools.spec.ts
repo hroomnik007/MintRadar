@@ -37,8 +37,8 @@ test.describe('Tools', () => {
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
     // Step 2 — what matters most (auto-advances to step 3).
     await page.locator('.wizard-opt', { hasText: 'Speed' }).click()
-    // Step 3 — software preference (does not auto-advance).
-    await page.locator('.wizard-opt', { hasText: 'Any' }).click()
+    // Step 3 — backup/restore preference (does not auto-advance).
+    await page.locator('.wizard-opt', { hasText: 'Not sure' }).click()
 
     await page.getByRole('button', { name: /Find my mints/ }).click()
 

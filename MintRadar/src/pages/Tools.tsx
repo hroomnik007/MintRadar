@@ -187,48 +187,57 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
 }
 
 type Preference = 'speed' | 'trust' | 'features'
-type SoftwarePref = 'any' | 'nutshell' | 'latest'
+type BackupPref = 'yes' | 'no' | 'unsure'
 type SizeOption = 'small' | 'medium' | 'large'
 
 interface WizardRec { url: string; mint: KnownMint; score: number; latencyMs: number | null }
+
+const BASE_WEIGHTS: Record<Preference, { latency: number; trust: number; nuts: number }> = {
+  speed:    { latency: 0.6, trust: 0.3, nuts: 0.1 },
+  trust:    { latency: 0.2, trust: 0.7, nuts: 0.1 },
+  features: { latency: 0.2, trust: 0.3, nuts: 0.5 },
+}
+
+// Larger stored balances carry more risk if the mint turns out unreliable, so
+// shift weight toward trust — proportionally reducing latency/nuts so the
+// three weights still sum to 1.
+const LARGE_TRUST_BOOST = 0.15
+
+function weightsFor(preference: Preference, size: SizeOption): { latency: number; trust: number; nuts: number } {
+  const base = BASE_WEIGHTS[preference]
+  if (size !== 'large') return base
+  const scale = (1 - base.trust - LARGE_TRUST_BOOST) / (1 - base.trust)
+  return { latency: base.latency * scale, trust: base.trust + LARGE_TRUST_BOOST, nuts: base.nuts * scale }
+}
 
 function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
   const [size, setSize] = useState<SizeOption | null>(null)
   const [preference, setPreference] = useState<Preference | null>(null)
-  const [softPref, setSoftPref] = useState<SoftwarePref | null>(null)
+  const [backupPref, setBackupPref] = useState<BackupPref | null>(null)
   const [finding, setFinding] = useState(false)
   const [recs, setRecs] = useState<WizardRec[] | null>(null)
 
-  const ready = size !== null && preference !== null && softPref !== null
+  const ready = size !== null && preference !== null && backupPref !== null
 
   const handleFind = async () => {
-    if (!preference) return
+    if (!preference || !size) return
     setFinding(true)
     setRecs(null)
 
     const candidates = knownMints
       .filter(m => m.online === true && m.trustScore != null)
       .filter(m => {
-        if (softPref === 'nutshell') return m.version?.startsWith('Nutshell') ?? false
-        if (softPref === 'latest') {
-          if (!m.version) return false
-          const ver = m.version.split('/')[1] ?? ''
-          const latest = '0.20.0'
-          return ver >= latest
-        }
-        return true
+        if (backupPref !== 'yes') return true
+        // NUT-9 (restore signatures) is the mint-side capability that actually
+        // gates seed-phrase backup/restore — see the note in MintDetail.tsx.
+        return m.nutsLimits?.['9'] != null
       })
       .sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
       .slice(0, 20)
 
-    const weights: Record<Preference, { latency: number; trust: number; nuts: number }> = {
-      speed:    { latency: 0.6, trust: 0.3, nuts: 0.1 },
-      trust:    { latency: 0.2, trust: 0.7, nuts: 0.1 },
-      features: { latency: 0.2, trust: 0.3, nuts: 0.5 },
-    }
-    const w = weights[preference]
+    const w = weightsFor(preference, size)
 
     const latencyResults = await Promise.allSettled(
       candidates.map(async m => {
@@ -310,7 +319,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
             {[
               { id: 'speed' as Preference, label: '⚡ Speed', sub: 'I want the fastest mint from my location' },
               { id: 'trust' as Preference, label: '🛡 Trust', sub: 'I want the most reliable and audited mint' },
-              { id: 'features' as Preference, label: '🧩 Features', sub: 'I need specific NUT support' },
+              { id: 'features' as Preference, label: '🧩 Features', sub: 'I have specific security/backup needs' },
             ].map(opt => (
               <button key={opt.id} type="button" className={`wizard-opt${preference === opt.id ? ' active' : ''}`}
                 onClick={() => { setPreference(opt.id); setStep(3) }}>
@@ -324,15 +333,15 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
 
       {step === 3 && (
         <div className="wizard-step-body">
-          <div className="wizard-q">Software preference?</div>
+          <div className="wizard-q">Do you want to be able to restore your wallet from a backup phrase if you lose your device?</div>
           <div className="wizard-options wizard-options-row">
             {[
-              { id: 'any' as SoftwarePref, label: 'Any' },
-              { id: 'nutshell' as SoftwarePref, label: 'Nutshell only' },
-              { id: 'latest' as SoftwarePref, label: 'Latest version only' },
+              { id: 'yes' as BackupPref, label: 'Yes' },
+              { id: 'no' as BackupPref, label: 'No' },
+              { id: 'unsure' as BackupPref, label: 'Not sure' },
             ].map(opt => (
-              <button key={opt.id} type="button" className={`wizard-opt${softPref === opt.id ? ' active' : ''}`}
-                onClick={() => setSoftPref(opt.id)}>
+              <button key={opt.id} type="button" className={`wizard-opt${backupPref === opt.id ? ' active' : ''}`}
+                onClick={() => setBackupPref(opt.id)}>
                 <div className="wizard-opt-label">{opt.label}</div>
               </button>
             ))}
@@ -355,7 +364,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       {recs !== null && (
         <div className="wizard-results">
           {recs.length === 0 ? (
-            <div className="wizard-no-results">No mints match your criteria. Try changing software preference.</div>
+            <div className="wizard-no-results">No mints match your criteria. Try changing your answers.</div>
           ) : (
             recs.map((rec, idx) => {
               const hostname = getHostname(rec.url)
@@ -379,7 +388,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
             })
           )}
           <button type="button" className="wizard-back-btn" style={{ marginTop: 8 }}
-            onClick={() => { setStep(1); setSize(null); setPreference(null); setSoftPref(null); setRecs(null) }}>
+            onClick={() => { setStep(1); setSize(null); setPreference(null); setBackupPref(null); setRecs(null) }}>
             ← Start over
           </button>
         </div>
