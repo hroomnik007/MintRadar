@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
+import { trustColor, trustScoreInfo } from '@/utils/mintFormatting'
 import './Stats.css'
 
 interface StatsData {
@@ -55,6 +56,12 @@ const NUT_META: Record<string, { short: string; desc: string; specNum: string }>
   'NUT-29': { short: 'Batched minting', desc: 'Wallets can mint tokens for multiple quotes in a single atomic request.', specNum: '29' },
   'NUT-30': { short: 'Onchain', desc: 'On-chain Bitcoin as a payment method for mint and melt.', specNum: '30' },
 }
+
+// "Advanced" features: security/privacy capabilities that go beyond the
+// baseline mint/melt/state-check/restore lifecycle every mint needs just to
+// function (NUT-04/05/07/08/09/10). Used by the Network Health Index's
+// feature-adoption component.
+const ADVANCED_NUT_KEYS = ['11', '12', '14', '17', '21', '22', '25', '27', '28', '30']
 
 function countryFlag(cc: string): string {
   if (cc.length !== 2) return ''
@@ -322,6 +329,63 @@ function CityMintsModal({ loc, mints, onClose }: {
   )
 }
 
+function NetworkHealthModal({ score, components, onClose }: {
+  score: number
+  components: Array<{ label: string; value: number; weight: number }>
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const info = trustScoreInfo(score)
+  const label = score >= 70 ? 'Healthy' : score >= 40 ? 'Moderate' : 'At Risk'
+
+  return (
+    <div className="nut-modal-overlay" onClick={onClose}>
+      <div className="nut-modal" onClick={e => e.stopPropagation()} style={{ width: 420 }}>
+        <button type="button" className="nut-modal-close" onClick={onClose}>✕</button>
+        <div className="nut-modal-header">
+          <span className="nut-modal-title">Network Health Index Breakdown</span>
+        </div>
+        <div style={{ textAlign: 'center', marginBottom: 4 }}>
+          <div style={{ fontSize: 42, fontWeight: 700, color: info.color, lineHeight: 1, fontFamily: 'var(--font-mono-data)' }}>{score}</div>
+          <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 600, color: info.color, background: info.bg, border: `0.5px solid ${info.border}`, borderRadius: 5, padding: '2px 8px', display: 'inline-block', marginTop: 6 }}>
+            {label}
+          </span>
+        </div>
+        <div style={{ overflowY: 'auto' }}>
+          {components.map(c => {
+            const points = Math.round(c.value * c.weight / 100)
+            const color = trustColor(c.value)
+            return (
+              <div key={c.label} style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontSize: 12, color: 'var(--text2)' }}>{c.label} <span style={{ color: 'var(--text3)' }}>({c.weight}%)</span></span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono-data)' }}>{Math.round(c.value)}%</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color }}>{points}/{c.weight}</span>
+                  </div>
+                </div>
+                <div style={{ height: 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, c.value))}%`, background: color, borderRadius: 2, transition: 'width 0.3s ease' }} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 10, marginTop: 2, fontSize: 10, color: 'var(--text3)', lineHeight: 1.6 }}>
+          Score = Online%×30 + Trust×25 + SW Diversity×15 + Advanced NUTs×15 + Stability×15.
+          Network Stability (share of mints tracked 1 month+) stands in for churn rate — churn
+          isn't reliably measurable yet, since mints are never marked "removed" in the database.
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function semverCmp(a: string, b: string): number {
   const parse = (s: string) => s.split('.').map(n => parseInt(n) || 0)
   const pa = parse(a), pb = parse(b)
@@ -340,6 +404,7 @@ export default function Stats() {
   const [expandedSw, setExpandedSw] = useState<string | null>(null)
   const [reliableTab, setReliableTab] = useState<'reliable' | 'trust'>('reliable')
   const [trendDays, setTrendDays] = useState<30 | 90>(30)
+  const [showHealthBreakdown, setShowHealthBreakdown] = useState(false)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['stats'],
@@ -478,6 +543,51 @@ export default function Stats() {
     return { total, pct: total > 0 ? Math.round(outdatedOrOld / total * 100) : 0 }
   }, [versionDist])
 
+  // Cashu Network Health Index: composite 0-100 score across 5 weighted
+  // components. All inputs are already fetched by this page (no new backend
+  // calls). "Network stability" (mint-age composition) stands in for churn
+  // rate — see the commit message / task writeup for why churn rate itself
+  // isn't reliably computable from current data.
+  const networkHealth = useMemo(() => {
+    if (!data || !knownMintsData || knownMintsData.length === 0) return null
+
+    const onlinePct = data.totalMints > 0 ? data.onlineMints / data.totalMints * 100 : 0
+    const avgTrust = data.avgTrustScore ?? 0
+
+    const swTotal = versionDist.reduce((s, d) => s + d.total, 0)
+    const hhi = swTotal > 0 ? versionDist.reduce((s, d) => s + (d.total / swTotal) ** 2, 0) : 1
+    const diversity = swTotal > 0 ? (1 - hhi) * 100 : 0
+
+    const advPercents = ADVANCED_NUT_KEYS.map(key =>
+      data.nutAdoption.find(n => n.nut === `NUT-${key.padStart(2, '0')}`)?.percent ?? 0
+    )
+    const advancedAdoption = advPercents.reduce((s, p) => s + p, 0) / advPercents.length
+
+    const notFresh = knownMintsData.filter(m => mintAgeBadge(m.discoveredAt)?.label !== 'Fresh').length
+    const stability = notFresh / knownMintsData.length * 100
+
+    const score = Math.round(
+      onlinePct * 0.30 + avgTrust * 0.25 + diversity * 0.15 + advancedAdoption * 0.15 + stability * 0.15
+    )
+
+    return {
+      score,
+      components: [
+        { label: 'Online mints', value: onlinePct, weight: 30 },
+        { label: 'Avg. Trust Score', value: avgTrust, weight: 25 },
+        { label: 'Software diversity', value: diversity, weight: 15 },
+        { label: 'Advanced feature adoption', value: advancedAdoption, weight: 15 },
+        { label: 'Network stability', value: stability, weight: 15 },
+      ],
+    }
+  }, [data, knownMintsData, versionDist])
+
+  const healthLabel = (score: number): string => {
+    if (score >= 70) return 'Healthy'
+    if (score >= 40) return 'Moderate'
+    return 'At Risk'
+  }
+
   if (isLoading) return (
     <div className="stats-page">
       <div className="stats-header">
@@ -504,6 +614,37 @@ export default function Stats() {
 
   return (
     <div className="stats-page">
+      {/* ── Cashu Network Health Index ── */}
+      {networkHealth && (() => {
+        const info = trustScoreInfo(networkHealth.score)
+        return (
+          <div className="nhi-panel" onClick={() => setShowHealthBreakdown(true)}>
+            <div className="nhi-gauge-wrap">
+              <svg viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--bg4)" strokeWidth="9" />
+                <circle cx="50" cy="50" r="42" fill="none" stroke={info.color} strokeWidth="9"
+                  strokeDasharray={`${(networkHealth.score * 2.639).toFixed(1)} 263.9`}
+                  strokeDashoffset="66"
+                  strokeLinecap="round"
+                  transform="rotate(-90 50 50)" />
+              </svg>
+              <div className="nhi-gauge-num" style={{ color: info.color }}>{networkHealth.score}</div>
+            </div>
+            <div className="nhi-info">
+              <div className="nhi-title-row">
+                <span className="nhi-title">Cashu Network Health Index</span>
+                <span className="nhi-badge" style={{ color: info.color, background: info.bg, border: `0.5px solid ${info.border}` }}>
+                  {healthLabel(networkHealth.score)}
+                </span>
+              </div>
+              <div className="nhi-hint">
+                Composite score across uptime, trust, software diversity, advanced feature adoption &amp; network stability · click for breakdown
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* ── 5 flat stat boxes ── */}
       <div className="stats-metrics">
         <div className="stats-metric-card">
@@ -783,6 +924,13 @@ export default function Stats() {
           ver={versionModal.ver}
           mints={versionMints}
           onClose={() => setVersionModal(null)}
+        />
+      )}
+      {showHealthBreakdown && networkHealth && (
+        <NetworkHealthModal
+          score={networkHealth.score}
+          components={networkHealth.components}
+          onClose={() => setShowHealthBreakdown(false)}
         />
       )}
     </div>

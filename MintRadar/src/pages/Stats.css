@@ -88,6 +88,81 @@
 .smc-value.smc-green  { color: var(--green-bright); }
 .smc-value.smc-orange { color: var(--amber); }
 
+/* ── Network Health Index ────────────────────────────────────── */
+.nhi-panel {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin: 14px 18px 0;
+  padding: 16px 20px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+
+.nhi-panel:hover {
+  border-color: var(--border-hi);
+}
+
+.nhi-gauge-wrap {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  flex-shrink: 0;
+}
+
+.nhi-gauge-wrap svg { width: 88px; height: 88px; }
+
+.nhi-gauge-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  font-family: var(--font-mono-data);
+}
+
+.nhi-info { flex: 1; min-width: 0; }
+
+.nhi-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.nhi-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.nhi-badge {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  border-radius: 5px;
+  padding: 2px 8px;
+}
+
+.nhi-hint {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  line-height: 1.5;
+}
+
+@media (max-width: 700px) {
+  .nhi-panel { margin: 10px 12px 0; padding: 14px; gap: 14px; }
+  .nhi-gauge-wrap, .nhi-gauge-wrap svg { width: 68px; height: 68px; }
+  .nhi-gauge-num { font-size: 19px; }
+}
+
 /* ── 3-column card grid ──────────────────────────────────────── */
 .stats-cards-grid {
   display: grid;
