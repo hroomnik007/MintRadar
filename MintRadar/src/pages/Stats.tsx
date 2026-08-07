@@ -392,7 +392,12 @@ function NetworkHealthModal({ score, components, onClose }: {
                     >
                       <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
                       {tooltipHook.open && (
-                        <div className="audit-tooltip" style={{ width: 220, left: '50%', transform: 'translateX(-50%)' }}>{c.tooltip}</div>
+                        <div
+                          className="audit-tooltip"
+                          style={i === 0
+                            ? { width: 220, left: '50%', transform: 'translateX(-50%)', bottom: 'auto', top: 'calc(100% + 6px)' }
+                            : { width: 220, left: '50%', transform: 'translateX(-50%)' }}
+                        >{c.tooltip}</div>
                       )}
                     </span>
                   </span>
