@@ -170,6 +170,7 @@ Frontend:
       - `@noble/secp256k1` 2→3 — the app calls it in exactly one place (`getPublicKey` for nsec login) and never signs with it, so v3's breaking surface (the signing API) doesn't apply. Verified byte-identical output against an independent oracle, confirmed the `privkeyBytes.fill(0)` zeroing guarantee still holds, and manually exercised all three login flows (nsec/NIP-07/NIP-46) in a real browser.
     - `nostr-tools` and `@noble/secp256k1` are completely independent — `nostr-tools` depends on `@noble/curves`, not the standalone `@noble/secp256k1` package, which is physically absent from the backend's dependency tree.
     - PRs #22-31 from batch 1 closed themselves in the meantime (Dependabot detected the bumps were already applied directly to `main` and auto-closed the stale PRs) — no manual cleanup needed; expect the same on future batches.
+  - **VPS maintenance (2026-08-07):** `docker builder prune -f` freed 10.81 GB of build cache, taking free disk from 17GB to 28GB — worth running periodically if disk pressure shows up again. A one-off deploy race ("removal of container is already in progress") was caused by two deploys firing back-to-back and colliding on `node_modules` during the backend `tsc` build — not a recurring problem, no fix needed unless it repeats. If it does repeat, consider adding `docker compose down --timeout 10` before `up` in the deploy script (not yet implemented).
 
 ## Nostr Login
 
@@ -275,6 +276,16 @@ Full report in `AUDIT.md` at the repo root. Covers: telemetry, key handling, dep
 - **Row 2, col 1–2:** NUT Coverage with `gridColumn: 'span 2'` and `column-gap: 48px` between the two NUT columns
 
 At ≤1100px: `stats-right-col` gets `grid-row: auto`. At ≤700px: single column.
+
+### Network Health Index — final layout (commit 92c28d8, several iterations)
+
+Went through multiple repositioning attempts before landing on the final placement:
+- **Final:** own panel in the right column (`.stats-right-col`), stacked between "Most Reliable" and "Trust Score Trend" — not merged with either.
+- **Rejected earlier attempt:** living inside the left 3-column block alongside Software in Use + Geographic Distribution. Reverted — the left block is back to its original 2 columns (Software in Use + Geographic Distribution only).
+- **NUT Coverage Across the Network** was never touched during any of these iterations — its CSS/position is exactly as in the original "Stats Page Layout" section above.
+- Card format: horizontal — 60px ring on the left, badge on the right. `align-items: start` on the outer grid so panels don't stretch/merge into each other.
+
+**Lesson learned:** when a layout "looks different" or "looks empty" mid-iteration, ask immediately for a `getComputedStyle`/pixel probe instead of judging from a screenshot — visual estimation on this task burned several unnecessary rounds before the probe was requested.
 
 ## Dashboard Mint Count Distinction (deliberate product decision — 2026-06-20)
 
@@ -484,7 +495,32 @@ production contrast is what actually proved the ring's position and shape.
 
 Regression test: `e2e/chart-tap-focus.spec.ts` (Pixel 7 emulation). It asserts that *no*
 element in the chain under the tap point has a non-`none` `outline-style`, so it stays
-correct even if recharts moves the focus to a different node.
+correct even if recharts moves the focus to a different node. Verified the test actually
+fails without the CSS rule (not just that it passes with it) before landing.
+
+**Verified on Chromium/Android only** (Playwright + Pixel 7 emulation). iOS Safari/WebKit
+has NOT been verified — WebKit handles focus on `tabindex="-1"` differently from Chrome,
+so if the white ring reappears on iOS this needs its own targeted diagnostic pass, not an
+assumption that the same fix covers it.
+
+## Tooltip positioning in scrollable/small containers
+
+**Pattern:** in a small or scrollable container (e.g. the Network Health Index Breakdown
+modal), a tooltip that always pops in one fixed direction (e.g. always upward) gets
+clipped for rows near the edge that don't have room in that direction.
+
+**Fix applied in `NetworkHealthModal` (`Stats.tsx`):** direction is chosen dynamically by
+position in the list — the last 2 rows pop downward, the rest pop upward (rather than
+one fixed direction for every row).
+
+Same fix pattern as the existing precedent in `MintDetail.tsx:616` — when a similar
+tooltip-clipping issue shows up in a small container elsewhere in the app, check this
+pattern first before inventing a new one.
+
+**Established visual rule:** info icons attached to a badge (e.g. "Backup supported", the
+error badge) must be a separate sibling element placed next to the badge — never nested
+inside the same pill-shaped container as the badge. This convention is used consistently
+across the app.
 
 ## Testing Infrastructure
 
