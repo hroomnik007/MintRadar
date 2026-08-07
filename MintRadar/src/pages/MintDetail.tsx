@@ -967,8 +967,10 @@ function MintDetailContent({ url }: { url: string }) {
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:11}}>
                 <div className="md-panel-title" style={{marginBottom:0}}>NUT Compatibility</div>
               {supportsBackupRestore ? (
-                <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'#4ade80',background:'rgba(74,222,128,0.1)',border:'0.5px solid rgba(74,222,128,0.3)',borderRadius:5,padding:'2px 7px'}}>
-                  <ShieldCheck size={11} /> Backup supported
+                <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
+                  <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'#4ade80',background:'rgba(74,222,128,0.1)',border:'0.5px solid rgba(74,222,128,0.3)',borderRadius:5,padding:'2px 7px'}}>
+                    <ShieldCheck size={11} /> Backup supported
+                  </span>
                   <span
                     ref={backupBadgeRef}
                     style={{position:'relative',display:'inline-flex'}}
@@ -985,8 +987,10 @@ function MintDetailContent({ url }: { url: string }) {
                   </span>
                 </span>
               ) : (
-                <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--text3)',background:'var(--bg3)',border:'0.5px solid var(--border)',borderRadius:5,padding:'2px 7px'}}>
-                  <ShieldOff size={11} /> No backup
+                <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
+                  <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--text3)',background:'var(--bg3)',border:'0.5px solid var(--border)',borderRadius:5,padding:'2px 7px'}}>
+                    <ShieldOff size={11} /> No backup
+                  </span>
                   <span
                     ref={backupBadgeRef}
                     style={{position:'relative',display:'inline-flex'}}
