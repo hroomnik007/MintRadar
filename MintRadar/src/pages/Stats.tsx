@@ -714,55 +714,8 @@ export default function Stats() {
       {/* ── 3-column card grid ── */}
       <div className="stats-cards-grid">
 
-        {/* Left block (cols 1-2): Health Index + Software in Use + Geographic Distribution */}
-        <div className="stats-nhi-left">
-
-          {/* Card 0: Cashu Network Health Index — same visual pattern as the
-              Trust Score panel on Mint Detail (.md-panel header row with
-              "Details ›" + centered gauge/badge wrap), no custom colors. */}
-          {networkHealth && (() => {
-            const info = trustScoreInfo(networkHealth.score)
-            return (
-              <div className="stats-panel">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 11 }}>
-                  <div className="stats-panel-title nhi-title-row" style={{ marginBottom: 0 }}>
-                    Network Health
-                    <span
-                      ref={nhiInfoRef}
-                      style={{ position: 'relative', display: 'inline-flex' }}
-                      onPointerEnter={nhiInfoTooltip.onPointerEnter}
-                      onPointerLeave={nhiInfoTooltip.onPointerLeave}
-                      onClick={nhiInfoTooltip.onClick}
-                    >
-                      <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
-                      {nhiInfoTooltip.open && (
-                        <div className="audit-tooltip" style={{ width: 220, left: 0 }}>
-                          Composite 0-100 score across uptime, average Trust Score, software diversity, advanced feature adoption &amp; network stability. Tap the gauge for the full breakdown.
-                        </div>
-                      )}
-                    </span>
-                  </div>
-                  <button onClick={() => setShowHealthBreakdown(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', padding: 0 }}>Details ›</button>
-                </div>
-                <div className="nhi-wrap" onClick={() => setShowHealthBreakdown(true)}>
-                  <div className="nhi-gauge-wrap">
-                    <svg viewBox="0 0 72 72">
-                      <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
-                      <circle cx="36" cy="36" r="27" fill="none" stroke={info.color} strokeWidth="7"
-                        strokeDasharray={`${(networkHealth.score * 1.696).toFixed(1)} 169.6`}
-                        strokeDashoffset="42.4"
-                        strokeLinecap="round"
-                        transform="rotate(-90 36 36)" />
-                    </svg>
-                    <div className="nhi-gauge-num" style={{ color: info.color }}>{networkHealth.score}</div>
-                  </div>
-                  <span className="nhi-badge" style={{ color: info.color, background: info.bg, border: `0.5px solid ${info.border}` }}>
-                    {healthLabel(networkHealth.score)}
-                  </span>
-                </div>
-              </div>
-            )
-          })()}
+        {/* Left block (cols 1-2): Software in Use + Geographic Distribution */}
+        <div className="stats-left-col">
 
           {/* Card 1: Software in Use */}
           <div className="stats-panel">
@@ -842,9 +795,10 @@ export default function Stats() {
             </div>
           </div>
 
-        </div>{/* /stats-nhi-left */}
+        </div>{/* /stats-left-col */}
 
-        {/* Card 3 + Trend: right column — spans 2 grid rows */}
+        {/* Right column: Most Reliable + Network Health Index + Trust Score Trend,
+            three separate panels stacked, each at its own content height. */}
         <div className="stats-right-col">
           <div className="stats-panel">
             <div className="stats-card-header">
@@ -899,8 +853,55 @@ export default function Stats() {
             </div>
           </div>
 
-          {/* Trust Score Trend — stacked below Most Reliable, fills remaining height */}
-          <div className="stats-panel" style={{flex:1,display:'flex',flexDirection:'column'}}>
+          {/* Cashu Network Health Index — own panel between Most Reliable and
+              Trust Score Trend. Title row with "Details ›", then the ring and
+              badge side by side, so the panel is only as tall as its content. */}
+          {networkHealth && (() => {
+            const info = trustScoreInfo(networkHealth.score)
+            return (
+              <div className="stats-panel">
+                <div className="stats-card-header" style={{marginBottom:8}}>
+                  <div className="stats-panel-title nhi-title-row" style={{ marginBottom: 0 }}>
+                    Network Health Index
+                    <span
+                      ref={nhiInfoRef}
+                      style={{ position: 'relative', display: 'inline-flex' }}
+                      onPointerEnter={nhiInfoTooltip.onPointerEnter}
+                      onPointerLeave={nhiInfoTooltip.onPointerLeave}
+                      onClick={nhiInfoTooltip.onClick}
+                    >
+                      <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
+                      {nhiInfoTooltip.open && (
+                        <div className="audit-tooltip" style={{ width: 220, left: 0 }}>
+                          Composite 0-100 score across uptime, average Trust Score, software diversity, advanced feature adoption &amp; network stability. Tap the gauge for the full breakdown.
+                        </div>
+                      )}
+                    </span>
+                  </div>
+                  <button onClick={() => setShowHealthBreakdown(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', padding: 0 }}>Details ›</button>
+                </div>
+                <div className="nhi-wrap" onClick={() => setShowHealthBreakdown(true)}>
+                  <div className="nhi-gauge-wrap">
+                    <svg viewBox="0 0 72 72">
+                      <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
+                      <circle cx="36" cy="36" r="27" fill="none" stroke={info.color} strokeWidth="7"
+                        strokeDasharray={`${(networkHealth.score * 1.696).toFixed(1)} 169.6`}
+                        strokeDashoffset="42.4"
+                        strokeLinecap="round"
+                        transform="rotate(-90 36 36)" />
+                    </svg>
+                    <div className="nhi-gauge-num" style={{ color: info.color }}>{networkHealth.score}</div>
+                  </div>
+                  <span className="nhi-badge" style={{ color: info.color, background: info.bg, border: `0.5px solid ${info.border}` }}>
+                    {healthLabel(networkHealth.score)}
+                  </span>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Trust Score Trend — stacked below the Network Health Index panel */}
+          <div className="stats-panel">
             <div className="stats-card-header">
               <div className="stats-panel-title" style={{marginBottom:0}}>Trust Score Trend</div>
               <div className="stats-tab-toggle">
