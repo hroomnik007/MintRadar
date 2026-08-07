@@ -124,14 +124,23 @@
 
 .nhi-info { min-width: 0; }
 
+/* Typography matches .stats-panel-title exactly (same size/weight/color/
+   uppercase/letter-spacing/font) so this reads as the same kind of panel
+   heading as "SOFTWARE IN USE" / "GEOGRAPHIC DISTRIBUTION" / "MOST RELIABLE".
+   Kept as its own rule (not the shared class) because this title also holds
+   an inline info icon and has no margin-bottom — .stats-panel-title's 14px
+   margin-bottom is for a title sitting above a content block, not here. */
 .nhi-title-row {
   display: flex;
   align-items: center;
   gap: 5px;
   flex-wrap: wrap;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: var(--font-mono);
   line-height: 1.3;
 }
 
