@@ -259,6 +259,22 @@ input:focus, textarea:focus {
   outline-offset: 2px;
 }
 
+/* ── Recharts touch-focus ring ─────────────────────────────────
+   Recharts' accessibility layer puts tabIndex={0}/role="application" on the
+   chart's root <svg class="recharts-surface">, so tapping any chart on
+   mobile focuses it and the browser paints its default focus halo. Applies
+   globally to every chart (Mint Detail history, Stats trend, Compare tool)
+   since recharts uses this class name everywhere. Keep the accent ring for
+   real keyboard focus-visible navigation. */
+.recharts-surface:focus {
+  outline: none;
+}
+
+.recharts-surface:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* ── Link ───────────────────────────────────────────────────── */
 a {
   color: var(--accent);
