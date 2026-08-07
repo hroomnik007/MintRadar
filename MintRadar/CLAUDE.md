@@ -450,6 +450,42 @@ Frontend hides degraded mints by default (`showDegraded=false`); footer shows "N
 - **Stats page:** Sections stack vertically on mobile; NUT Coverage bars don't overflow (`overflow: hidden`, shorter progress bar max-width)
 - **Mint Detail:** Public key truncated on mobile (first+last 8 chars), full hex on desktop
 
+### White focus ring on chart tap (2026-08-07) — the element is the `<g>`, not the `<svg>`
+
+**GOTCHA — two earlier fixes targeted the wrong element and shipped without effect.**
+
+Tapping any Recharts chart on mobile painted a white, rounded rectangle around the
+chart's plot area. Root cause: Recharts 3.x renders its internal z-index layers as
+`<g tabindex="-1">` inside the chart `<svg>` (`recharts/zIndex/ZIndexPortal.js` —
+`.recharts-zIndex-layer_100` for Area, `_400` for Line, and so on; the tooltip wrapper
+in `component/TooltipBoundingBox.js` is the same). `tabindex="-1"` is not
+keyboard-reachable, but Chrome **does** focus such an element when it is tapped, and
+then paints its default two-tone focus ring (`outline: auto` — white outer ring, dark
+`rgb(16,16,16)` inner ring, rounded corners) around that `<g>`'s box.
+
+Why the earlier attempts missed it:
+- `.recharts-surface:focus { outline: none }` — `.recharts-surface` is the `<svg>`. The
+  innermost focusable element under the finger is the `<g>` inside it, so the `<svg>`
+  only ever gets focus when the tap lands on the chart's blank outer margin.
+- `-webkit-tap-highlight-color` — that controls the Android tap *flash*, a different
+  mechanism entirely from a focus ring.
+
+Fix (`src/index.css`): `.recharts-wrapper [tabindex="-1"]:focus{,-visible}` → `outline: none`.
+Matching on the attribute rather than the generated class name survives recharts
+renaming its layers. Zero a11y cost — `tabindex="-1"` can never be reached by keyboard,
+and the keyboard ring on the `<svg>` (`tabIndex={0}`) is deliberately kept.
+
+**Diagnostic method that found it** (use it again for any "mystery visual state on tap"):
+`page.touchscreen.tap()` on an emulated mobile device, then walk the full ancestor chain
+from `document.elementFromPoint(x,y)` to `<html>` and diff `getComputedStyle()` before vs.
+immediately after the tap — never assume which element is involved. Automated assertions
+alone were what let the two bad fixes pass; a clipped screenshot before/after at
+production contrast is what actually proved the ring's position and shape.
+
+Regression test: `e2e/chart-tap-focus.spec.ts` (Pixel 7 emulation). It asserts that *no*
+element in the chain under the tap point has a non-`none` `outline-style`, so it stays
+correct even if recharts moves the focus to a different node.
+
 ## Testing Infrastructure
 
 ### Test counts (as of 2026-06-30): 275 total

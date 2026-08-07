@@ -261,8 +261,8 @@ input:focus, textarea:focus {
 
 /* ── Recharts touch-focus ring ─────────────────────────────────
    Recharts' accessibility layer puts tabIndex={0}/role="application" on the
-   chart's root <svg class="recharts-surface">, so tapping any chart on
-   mobile focuses it and the browser paints its default focus halo. Applies
+   chart's root <svg class="recharts-surface">, so tapping the chart's blank
+   margin focuses it and the browser paints its default focus halo. Applies
    globally to every chart (Mint Detail history, Stats trend, Compare tool)
    since recharts uses this class name everywhere. Keep the accent ring for
    real keyboard focus-visible navigation. */
@@ -273,6 +273,23 @@ input:focus, textarea:focus {
 .recharts-surface:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* The <svg> is NOT what gets focused when the tap lands on the plot itself.
+   Recharts renders its internal z-index layers as <g tabindex="-1"> inside the
+   surface (recharts/zIndex/ZIndexPortal.js — `.recharts-zIndex-layer_100` for
+   Area, `_400` for Line, etc.), and the tooltip wrapper the same way
+   (component/TooltipBoundingBox.js). tabindex="-1" is not keyboard-reachable,
+   but Chrome DOES focus such an element on tap/click — and then paints its
+   default two-tone focus ring (outline:auto — white outer + dark inner, with
+   rounded corners) around that <g>'s plot-area box. That is the white rounded
+   frame seen on mobile; the .recharts-surface rules above never matched it
+   because the innermost focusable element under the finger is the <g>, not the
+   <svg>. Suppressing it costs nothing for accessibility: tabindex="-1" can
+   never be reached by keyboard, so no keyboard user ever loses a focus ring. */
+.recharts-wrapper [tabindex="-1"]:focus,
+.recharts-wrapper [tabindex="-1"]:focus-visible {
+  outline: none;
 }
 
 /* ── Link ───────────────────────────────────────────────────── */
