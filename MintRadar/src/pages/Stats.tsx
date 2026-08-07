@@ -717,24 +717,15 @@ export default function Stats() {
         {/* Left block (cols 1-2): Health Index + Software in Use + Geographic Distribution */}
         <div className="stats-nhi-left">
 
-          {/* Card 0: Cashu Network Health Index (compact) */}
+          {/* Card 0: Cashu Network Health Index — same visual pattern as the
+              Trust Score panel on Mint Detail (.md-panel header row with
+              "Details ›" + centered gauge/badge wrap), no custom colors. */}
           {networkHealth && (() => {
             const info = trustScoreInfo(networkHealth.score)
             return (
-              <div className="stats-panel nhi-col" onClick={() => setShowHealthBreakdown(true)}>
-                <div className="nhi-gauge-wrap">
-                  <svg viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="var(--bg4)" strokeWidth="9" />
-                    <circle cx="50" cy="50" r="42" fill="none" stroke={info.color} strokeWidth="9"
-                      strokeDasharray={`${(networkHealth.score * 2.639).toFixed(1)} 263.9`}
-                      strokeDashoffset="66"
-                      strokeLinecap="round"
-                      transform="rotate(-90 50 50)" />
-                  </svg>
-                  <div className="nhi-gauge-num" style={{ color: info.color }}>{networkHealth.score}</div>
-                </div>
-                <div className="nhi-info">
-                  <div className="stats-panel-title nhi-title-row">
+              <div className="stats-panel">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 11 }}>
+                  <div className="stats-panel-title nhi-title-row" style={{ marginBottom: 0 }}>
                     Network Health
                     <span
                       ref={nhiInfoRef}
@@ -750,6 +741,20 @@ export default function Stats() {
                         </div>
                       )}
                     </span>
+                  </div>
+                  <button onClick={() => setShowHealthBreakdown(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', padding: 0 }}>Details ›</button>
+                </div>
+                <div className="nhi-wrap" onClick={() => setShowHealthBreakdown(true)}>
+                  <div className="nhi-gauge-wrap">
+                    <svg viewBox="0 0 72 72">
+                      <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
+                      <circle cx="36" cy="36" r="27" fill="none" stroke={info.color} strokeWidth="7"
+                        strokeDasharray={`${(networkHealth.score * 1.696).toFixed(1)} 169.6`}
+                        strokeDashoffset="42.4"
+                        strokeLinecap="round"
+                        transform="rotate(-90 36 36)" />
+                    </svg>
+                    <div className="nhi-gauge-num" style={{ color: info.color }}>{networkHealth.score}</div>
                   </div>
                   <span className="nhi-badge" style={{ color: info.color, background: info.bg, border: `0.5px solid ${info.border}` }}>
                     {healthLabel(networkHealth.score)}

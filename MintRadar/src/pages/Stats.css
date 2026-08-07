@@ -88,64 +88,62 @@
 .smc-value.smc-green  { color: var(--green-bright); }
 .smc-value.smc-orange { color: var(--amber); }
 
-/* ── Network Health Index (compact card, 1st column of stats-cards-grid) ── */
-.nhi-col {
+/* ── Network Health Index (compact card, 1st column of stats-cards-grid) ──
+   Container is the plain .stats-panel background/border used by every other
+   card on this page — no custom color. Gauge/badge sizing below is copied
+   1:1 from MintDetail.css's .trust-wrap/.gauge-wrap/.gauge-num (Trust Score
+   panel) so this reads as the exact same visual pattern, just without the
+   Uptime/NUTs/Latency rows that panel has beneath its badge. */
+.nhi-wrap {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   cursor: pointer;
-  transition: border-color 120ms ease;
-}
-
-.nhi-col:hover {
-  border-color: var(--border-hi);
 }
 
 .nhi-gauge-wrap {
   position: relative;
-  width: 52px;
-  height: 52px;
+  width: 72px;
+  height: 72px;
   flex-shrink: 0;
 }
 
-.nhi-gauge-wrap svg { width: 52px; height: 52px; }
+.nhi-gauge-wrap svg { width: 72px; height: 72px; }
 
 .nhi-gauge-num {
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
+  text-align: center;
   font-family: var(--font-mono-data);
+  letter-spacing: -0.02em;
 }
-
-.nhi-info { min-width: 0; }
 
 /* Typography comes from .stats-panel-title itself (applied as a second class
    in the markup), so this heading is byte-identical to "SOFTWARE IN USE" /
    "GEOGRAPHIC DISTRIBUTION" / "MOST RELIABLE" by construction. Only layout is
-   adjusted here: the title holds an inline info icon and sits directly above
-   the badge, so the class's 14px margin-bottom (sized for a title above a
-   content block) is dropped. */
+   adjusted here: the title holds an inline info icon, so the class's 14px
+   margin-bottom is overridden inline (matches Trust Score panel's header,
+   which zeroes .md-panel-title's own margin-bottom the same way). */
 .nhi-title-row {
   display: flex;
   align-items: center;
   gap: 5px;
   white-space: nowrap;
-  margin-bottom: 0;
 }
 
 .nhi-badge {
   display: inline-block;
-  margin-top: 5px;
-  font-size: 10px;
+  font-size: 9px;
   font-family: var(--font-mono);
   font-weight: 600;
-  border-radius: 5px;
-  padding: 2px 8px;
+  border-radius: 4px;
+  padding: 1px 6px;
+  text-align: center;
 }
 
 .audit-tooltip {
