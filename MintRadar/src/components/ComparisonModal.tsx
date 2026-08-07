@@ -55,7 +55,11 @@ function parseMinorVer(v: string | null | undefined): number {
   return m ? parseInt(m[1] ?? '0', 10) : 0
 }
 
-const NUT_FILTER_KEYS = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14']
+// Every optional NUT the app tracks — mirrors MintDetail.tsx's ALL_NUTS and
+// Stats.tsx's NUT_ORDER (04-30, no mandatory 00-03/06, no NUT-13 — deliberately
+// excluded there since mints never advertise it in /v1/info). Keep in sync with
+// both when either changes; no shared module exists between these files.
+const NUT_FILTER_KEYS = ['4','5','7','8','9','10','11','12','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
 
 // Per-mint line colors for the historical trend overlay — reuses hues already
 // established elsewhere in the app (Trust Trend green, copper accent, the

@@ -88,32 +88,28 @@
 .smc-value.smc-green  { color: var(--green-bright); }
 .smc-value.smc-orange { color: var(--amber); }
 
-/* ── Network Health Index ────────────────────────────────────── */
-.nhi-panel {
+/* ── Network Health Index (compact card, 1st column of stats-cards-grid) ── */
+.nhi-col {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 20px;
-  margin: 14px 18px 0;
-  padding: 16px 20px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  gap: 12px;
   cursor: pointer;
   transition: border-color 120ms ease;
 }
 
-.nhi-panel:hover {
+.nhi-col:hover {
   border-color: var(--border-hi);
 }
 
 .nhi-gauge-wrap {
   position: relative;
-  width: 88px;
-  height: 88px;
+  width: 52px;
+  height: 52px;
   flex-shrink: 0;
 }
 
-.nhi-gauge-wrap svg { width: 88px; height: 88px; }
+.nhi-gauge-wrap svg { width: 52px; height: 52px; }
 
 .nhi-gauge-num {
   position: absolute;
@@ -121,40 +117,32 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 14px;
   font-weight: 700;
   font-family: var(--font-mono-data);
 }
 
-.nhi-info { flex: 1; min-width: 0; }
+.nhi-info { min-width: 0; }
 
 .nhi-title-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
   flex-wrap: wrap;
-  margin-bottom: 6px;
-}
-
-.nhi-title {
-  font-size: 15px;
+  font-size: 12.5px;
   font-weight: 700;
   color: var(--text);
+  line-height: 1.3;
 }
 
 .nhi-badge {
+  display: inline-block;
+  margin-top: 5px;
   font-size: 10px;
   font-family: var(--font-mono);
   font-weight: 600;
   border-radius: 5px;
   padding: 2px 8px;
-}
-
-.nhi-hint {
-  font-size: 11px;
-  color: var(--text3);
-  font-family: var(--font-mono);
-  line-height: 1.5;
 }
 
 .audit-tooltip {
@@ -178,16 +166,10 @@
   letter-spacing: normal;
 }
 
-@media (max-width: 700px) {
-  .nhi-panel { margin: 10px 12px 0; padding: 14px; gap: 14px; }
-  .nhi-gauge-wrap, .nhi-gauge-wrap svg { width: 68px; height: 68px; }
-  .nhi-gauge-num { font-size: 19px; }
-}
-
-/* ── 3-column card grid ──────────────────────────────────────── */
+/* ── 4-column card grid (Health Index / Software / Geo / Most Reliable+Trend) ── */
 .stats-cards-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 0.8fr 1fr 1fr 1fr;
   gap: 14px;
   padding: 14px 18px 14px;
   align-items: start;
@@ -195,7 +177,11 @@
 }
 
 .stats-nut-panel {
-  grid-column: span 2;
+  /* Explicit start (not just "span 2") so it lands under Software in Use +
+     Geographic Distribution (columns 2-3), not under the narrower Health
+     Index column (1) + Software — see the 1100px/768px overrides below,
+     which reset to full-width once there aren't 4 columns to anchor into. */
+  grid-column: 2 / span 2;
 }
 
 /* ── Software accordion ──────────────────────────────────────── */
@@ -713,6 +699,7 @@
 @media (max-width: 1100px) {
   .stats-cards-grid { grid-template-columns: 1fr 1fr; }
   .stats-right-col { grid-row: auto; align-self: start; }
+  .stats-nut-panel { grid-column: 1 / -1; }
 }
 
 @media (max-width: 768px) {

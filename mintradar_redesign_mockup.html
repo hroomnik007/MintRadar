@@ -425,6 +425,11 @@
   .tools-option-v2{ display:flex; justify-content:space-between; align-items:center; width:100%; padding:12px 15px; background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-s); font-size:13.5px; font-weight:600; margin-bottom:8px; cursor:pointer; }
   .tools-option-v2 span{ font-size:12px; color:var(--text-faint); font-weight:500; }
   .tools-option-v2:hover{ border-color:var(--green-soft-strong); }
+
+  /* ===================== NHI 4-COLUMN LAYOUT ===================== */
+  .nhi-4col{ display:grid; grid-template-columns: 0.8fr 1fr 1fr 1fr; gap:14px; }
+  .frame.mobile .nhi-4col{ grid-template-columns:1fr; }
+  .nhi-col{ display:flex; flex-direction:column; justify-content:center; }
 </style>
 </head>
 <body>
@@ -445,6 +450,7 @@
       <button class="tab-btn" data-page="qrmodal">QR Modal fix</button>
       <button class="tab-btn" data-page="tools">Tools desktop fix</button>
       <button class="tab-btn" data-page="tools2">Tools v2 — max-width container</button>
+      <button class="tab-btn" data-page="nhilayout">Network Health Index layout</button>
     </div>
     <div class="device-toggle" id="device">
       <button class="active" data-mode="desktop">Desktop</button>
@@ -1143,6 +1149,79 @@
             </div>
           </div>
           <div class="fix-note" style="margin-top:14px; max-width:1100px">Rovnaký princíp sa oplatí zvážiť aj pre iné stránky s podobným "prázdnym" pocitom na širokých monitoroch (napr. Watchlist prázdny stav to už má vyriešené vlastným spôsobom, keďže je to jeden centrovaný blok). Dashboard/Stats grid s viacerými kartami toto zvyčajne nepotrebuje, lebo karty prirodzene vyplnia priestor.</div>
+        </div>
+      </div>
+
+      <!-- ============ NETWORK HEALTH INDEX LAYOUT ============ -->
+      <div class="page" id="page-nhilayout">
+        <div class="app-nav">
+          <div class="brand"><div class="brand-mark"></div><div class="brand-name">Mint<span class="r">Radar</span></div></div>
+          <div class="nav-links"><a>Dashboard</a><a>Watchlist</a><a>Stats</a><a class="active">Tools</a></div>
+          <button class="btn-login"><span class="bolt">⚡</span> Login via Nostr</button>
+        </div>
+        <div class="app-body">
+
+          <div class="fix-tag bad">PRED — celá šírka, tooltip orezaný hore</div>
+          <div class="tile" style="max-width:none; display:flex; align-items:center; gap:16px; margin-bottom:24px; position:relative;">
+            <div class="ring-wrap" style="width:64px;height:64px;margin:0"><svg width="64" height="64" viewBox="0 0 150 150"><circle class="ring-track" cx="75" cy="75" r="62"/><circle class="ring-val" cx="75" cy="75" r="62" stroke-dasharray="389" stroke-dashoffset="150" stroke="var(--amber)"/></svg><div class="ring-center"><div class="ring-pct" style="font-size:16px;color:var(--amber)">62</div></div></div>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:15px">Cashu Network Health Index <span class="badge" style="background:var(--amber-soft);color:var(--amber)">Moderate</span></div>
+              <div style="font-size:12px;color:var(--text-faint)">Composite score across uptime, trust, software diversity, advanced feature adoption &amp; network stability · click for breakdown</div>
+            </div>
+          </div>
+          <div class="fix-note" style="margin-bottom:24px">Panel je naťahovaný na celú šírku, no obsah je len naľavo — veľká prázdna plocha vpravo. Dlhý popis navyše spôsobuje, že tooltip (keby bol) by musel byť extrémne dlhý a orezával by sa hore, lebo panel je hneď pod navom bez miesta.</div>
+
+          <div class="fix-tag good">NÁVRH A — kompaktná karta v rade so stat kartami (odporúčam)</div>
+          <div class="stat-grid" style="margin-bottom:10px">
+            <div class="stat-card" style="border-color:var(--amber-soft)">
+              <div class="ring-wrap" style="width:34px;height:34px;margin:0;flex-shrink:0"><svg width="34" height="34" viewBox="0 0 150 150"><circle class="ring-track" cx="75" cy="75" r="62"/><circle class="ring-val" cx="75" cy="75" r="62" stroke-dasharray="389" stroke-dashoffset="150" stroke="var(--amber)"/></svg></div>
+              <div><div class="stat-label" style="display:flex;align-items:center;gap:4px">Network Health <span style="cursor:help;color:var(--text-faint)">ⓘ</span></div><div class="stat-value" style="color:var(--amber)">62 <span class="dim" style="font-size:12px">Moderate</span></div></div>
+            </div>
+            <div class="stat-card"><div class="stat-icon">◎</div><div><div class="stat-label">Online now</div><div class="stat-value">56</div></div></div>
+            <div class="stat-card"><div class="stat-icon">⏱</div><div><div class="stat-label">Network uptime</div><div class="stat-value warn">54%</div></div></div>
+            <div class="stat-card"><div class="stat-icon">⏱</div><div><div class="stat-label">Median latency</div><div class="stat-value">438<span class="stat-unit">ms</span></div></div></div>
+          </div>
+          <div class="fix-note" style="margin-bottom:24px">Health Index sa stane piatou kartou v existujúcom stat riadku (rovnaká výška/štýl ako "Mints tracked"/"Online now" atď.) — malý kruh namiesto veľkého, dlhý popis presunutý do ⓘ tooltipu. Zaberá presne toľko miesta, koľko potrebuje, žiadna prázdna plocha. "Mints tracked"/"NUTs in spec" karty by sa presunuli na druhý riadok alebo by sa upravil grid na 5 stĺpcov.</div>
+
+          <div class="fix-tag good">NÁVRH B — samostatná, ale úzka karta (ak má byť vizuálne odlíšená od bežných stat kariet)</div>
+          <div class="tile" style="max-width:380px; display:flex; align-items:center; gap:14px;">
+            <div class="ring-wrap" style="width:52px;height:52px;margin:0;flex-shrink:0"><svg width="52" height="52" viewBox="0 0 150 150"><circle class="ring-track" cx="75" cy="75" r="62"/><circle class="ring-val" cx="75" cy="75" r="62" stroke-dasharray="389" stroke-dashoffset="150" stroke="var(--amber)"/></svg><div class="ring-center"><div class="ring-pct" style="font-size:14px;color:var(--amber)">62</div></div></div>
+            <div>
+              <div style="font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:6px">Network Health <span style="cursor:help;color:var(--text-faint);font-size:11px">ⓘ</span></div>
+              <div class="badge" style="background:var(--amber-soft);color:var(--amber);margin-top:4px">Moderate</div>
+            </div>
+          </div>
+          <div class="fix-note" style="margin-top:10px">Zostáva samostatný element (nie súčasť stat gridu), ale s pevným <code>max-width</code> namiesto naťahovania — ring aj text kompaktnejšie, popis len v tooltipe. Vhodné ak chceš, aby Health Index vizuálne vynikal ako "hlavné číslo" stránky, nie splynul so štatistikami.</div>
+
+          <div class="fix-note" style="margin-top:20px"><b>Odporúčanie:</b> Návrh A — konzistentnejšie s existujúcim dizajn systémom (stat karty už majú presne tento vzor: malá ikona/ring vľavo, label+hodnota vpravo), žiadny nový komponent typ netreba zavádzať. Tooltip pri oboch návrhoch treba pozicovať tak, aby sa neorezával — keďže karta už nie je hneď pod navom bez okolia, malo by to byť menší problém, ale treba overiť pri implementácii.</div>
+
+          <h2 class="section-title">Návrh C — Health Index ako 4. stĺpec vedľa Software in Use / Geo / Most Reliable</h2>
+          <div class="fix-note" style="margin-bottom:12px">Existujúci 3-stĺpcový rad (Software in Use / Geographic Distribution / Most Reliable+Trend) sa rozšíri na 4 stĺpce, Health Index pridaný ako prvý, ostatné mierne zúžené.</div>
+          <div class="nhi-4col">
+            <div class="panel nhi-col" style="flex-direction:row;align-items:center;gap:12px">
+              <div class="ring-wrap" style="width:52px;height:52px;margin:0;flex-shrink:0"><svg width="52" height="52" viewBox="0 0 150 150"><circle class="ring-track" cx="75" cy="75" r="62"/><circle class="ring-val" cx="75" cy="75" r="62" stroke-dasharray="389" stroke-dashoffset="150" stroke="var(--amber)"/></svg><div class="ring-center"><div class="ring-pct" style="font-size:14px;color:var(--amber)">62</div></div></div>
+              <div style="min-width:0">
+                <div style="font-weight:700;font-size:12.5px;line-height:1.3;display:flex;align-items:center;gap:5px;flex-wrap:wrap">Cashu Network Health Index <span style="cursor:help;color:var(--text-faint);font-size:10px;flex-shrink:0">ⓘ</span></div>
+                <div class="badge" style="background:var(--amber-soft);color:var(--amber);margin-top:5px;display:inline-block">Moderate</div>
+              </div>
+            </div>
+            <div class="panel nhi-col">
+              <div class="panel-title">Software in Use</div>
+              <div class="bar-row" style="border:none;padding:8px 0"><div class="bar-label" style="width:70px;font-size:12px">Nutshell</div><div class="bar-track"><div class="bar-fill" style="width:76%"></div></div><div class="bar-num">41</div></div>
+              <div class="bar-row" style="padding:8px 0"><div class="bar-label" style="width:70px;font-size:12px">cdk-mintd</div><div class="bar-track"><div class="bar-fill copper" style="width:22%"></div></div><div class="bar-num">12</div></div>
+            </div>
+            <div class="panel nhi-col">
+              <div class="panel-title">Geographic Dist.</div>
+              <div class="bar-row" style="border:none;padding:8px 0"><div class="bar-label" style="width:70px;font-size:12px">San Fran…</div><div class="bar-track"><div class="bar-fill" style="width:80%"></div></div><div class="bar-num">17</div></div>
+              <div class="bar-row" style="padding:8px 0"><div class="bar-label" style="width:70px;font-size:12px">Frankfurt</div><div class="bar-track"><div class="bar-fill copper" style="width:35%"></div></div><div class="bar-num">7</div></div>
+            </div>
+            <div class="panel nhi-col">
+              <div class="panel-title">Most Reliable</div>
+              <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:12px"><span>#1 Nostrodomo</span><span class="tag trust">100%</span></div>
+              <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:12px"><span>#2 Lek Mint</span><span class="tag trust">100%</span></div>
+            </div>
+          </div>
+          <div class="fix-note" style="margin-top:10px">Nevýhoda: pri 4 stĺpcoch majú Software in Use/Geo Distribution/Most Reliable menej priestoru — dlhšie názvy miest/mintov (napr. "San Francisco", "Cypherflow Mint") sa budú viac skracovať, a accordion rozbaľovanie (verzie/mintov v danom meste) môže na užšom stĺpci pôsobiť stiesnenejšie než teraz. Návrh A toto riziko nemá, lebo nezasahuje do existujúceho 3-stĺpcového radu vôbec.</div>
         </div>
       </div>
 

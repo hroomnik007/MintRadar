@@ -319,6 +319,8 @@ function MintDetailContent({ url }: { url: string }) {
   const [testingLatency, setTestingLatency] = useState(false)
   const errorBadgeRef = useRef<HTMLSpanElement>(null)
   const errorBadgeTooltip = useTapTooltip(errorBadgeRef)
+  const backupBadgeRef = useRef<HTMLSpanElement>(null)
+  const backupBadgeTooltip = useTapTooltip(backupBadgeRef)
   const latencyInfoRef = useRef<HTMLSpanElement>(null)
   const latencyInfoTooltip = useTapTooltip(latencyInfoRef)
   const clientLatencyInfoRef = useRef<HTMLSpanElement>(null)
@@ -965,12 +967,40 @@ function MintDetailContent({ url }: { url: string }) {
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:11}}>
                 <div className="md-panel-title" style={{marginBottom:0}}>NUT Compatibility</div>
               {supportsBackupRestore ? (
-                <span title="This mint supports restoring blind signatures (NUT-09), which lets a wallet recover its ecash from a seed phrase after losing its device." style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'#4ade80',background:'rgba(74,222,128,0.1)',border:'0.5px solid rgba(74,222,128,0.3)',borderRadius:5,padding:'2px 7px'}}>
+                <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'#4ade80',background:'rgba(74,222,128,0.1)',border:'0.5px solid rgba(74,222,128,0.3)',borderRadius:5,padding:'2px 7px'}}>
                   <ShieldCheck size={11} /> Backup supported
+                  <span
+                    ref={backupBadgeRef}
+                    style={{position:'relative',display:'inline-flex'}}
+                    onPointerEnter={backupBadgeTooltip.onPointerEnter}
+                    onPointerLeave={backupBadgeTooltip.onPointerLeave}
+                    onClick={backupBadgeTooltip.onClick}
+                  >
+                    <Info size={11} color="#6b7280" style={{cursor:'help'}} />
+                    {backupBadgeTooltip.open && (
+                      <div className="audit-tooltip" style={{width:220,left:'50%',transform:'translateX(-50%)'}}>
+                        This mint supports restoring blind signatures (NUT-09), which lets a wallet recover its ecash from a seed phrase after losing its device.
+                      </div>
+                    )}
+                  </span>
                 </span>
               ) : (
-                <span title="This mint doesn't support wallet backup restore (NUT-09) — losing your device may mean losing funds stored here." style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--text3)',background:'var(--bg3)',border:'0.5px solid var(--border)',borderRadius:5,padding:'2px 7px'}}>
+                <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--text3)',background:'var(--bg3)',border:'0.5px solid var(--border)',borderRadius:5,padding:'2px 7px'}}>
                   <ShieldOff size={11} /> No backup
+                  <span
+                    ref={backupBadgeRef}
+                    style={{position:'relative',display:'inline-flex'}}
+                    onPointerEnter={backupBadgeTooltip.onPointerEnter}
+                    onPointerLeave={backupBadgeTooltip.onPointerLeave}
+                    onClick={backupBadgeTooltip.onClick}
+                  >
+                    <Info size={11} color="#6b7280" style={{cursor:'help'}} />
+                    {backupBadgeTooltip.open && (
+                      <div className="audit-tooltip" style={{width:220,left:'50%',transform:'translateX(-50%)'}}>
+                        This mint doesn't support wallet backup restore (NUT-09) — losing your device may mean losing funds stored here.
+                      </div>
+                    )}
+                  </span>
                 </span>
               )}
             </div>

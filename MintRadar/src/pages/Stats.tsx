@@ -660,51 +660,6 @@ export default function Stats() {
 
   return (
     <div className="stats-page">
-      {/* ── Cashu Network Health Index ── */}
-      {networkHealth && (() => {
-        const info = trustScoreInfo(networkHealth.score)
-        return (
-          <div className="nhi-panel" onClick={() => setShowHealthBreakdown(true)}>
-            <div className="nhi-gauge-wrap">
-              <svg viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--bg4)" strokeWidth="9" />
-                <circle cx="50" cy="50" r="42" fill="none" stroke={info.color} strokeWidth="9"
-                  strokeDasharray={`${(networkHealth.score * 2.639).toFixed(1)} 263.9`}
-                  strokeDashoffset="66"
-                  strokeLinecap="round"
-                  transform="rotate(-90 50 50)" />
-              </svg>
-              <div className="nhi-gauge-num" style={{ color: info.color }}>{networkHealth.score}</div>
-            </div>
-            <div className="nhi-info">
-              <div className="nhi-title-row">
-                <span className="nhi-title">Cashu Network Health Index</span>
-                <span className="nhi-badge" style={{ color: info.color, background: info.bg, border: `0.5px solid ${info.border}` }}>
-                  {healthLabel(networkHealth.score)}
-                </span>
-              </div>
-              <div className="nhi-hint" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                Composite score across 5 factors · click for breakdown
-                <span
-                  ref={nhiInfoRef}
-                  style={{ position: 'relative', display: 'inline-flex' }}
-                  onPointerEnter={nhiInfoTooltip.onPointerEnter}
-                  onPointerLeave={nhiInfoTooltip.onPointerLeave}
-                  onClick={nhiInfoTooltip.onClick}
-                >
-                  <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
-                  {nhiInfoTooltip.open && (
-                    <div className="audit-tooltip" style={{ width: 240, left: 0 }}>
-                      Composite 0-100 score across uptime, average Trust Score, software diversity, advanced feature adoption &amp; network stability. Tap the gauge for the full breakdown.
-                    </div>
-                  )}
-                </span>
-              </div>
-            </div>
-          </div>
-        )
-      })()}
-
       {/* ── 5 flat stat boxes ── */}
       <div className="stats-metrics">
         <div className="stats-metric-card">
@@ -756,8 +711,50 @@ export default function Stats() {
         </div>
       </div>
 
-      {/* ── 3-column card grid ── */}
+      {/* ── 4-column card grid ── */}
       <div className="stats-cards-grid">
+
+        {/* Card 0: Cashu Network Health Index (compact) */}
+        {networkHealth && (() => {
+          const info = trustScoreInfo(networkHealth.score)
+          return (
+            <div className="stats-panel nhi-col" onClick={() => setShowHealthBreakdown(true)}>
+              <div className="nhi-gauge-wrap">
+                <svg viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="var(--bg4)" strokeWidth="9" />
+                  <circle cx="50" cy="50" r="42" fill="none" stroke={info.color} strokeWidth="9"
+                    strokeDasharray={`${(networkHealth.score * 2.639).toFixed(1)} 263.9`}
+                    strokeDashoffset="66"
+                    strokeLinecap="round"
+                    transform="rotate(-90 50 50)" />
+                </svg>
+                <div className="nhi-gauge-num" style={{ color: info.color }}>{networkHealth.score}</div>
+              </div>
+              <div className="nhi-info">
+                <div className="nhi-title-row">
+                  Network Health Index
+                  <span
+                    ref={nhiInfoRef}
+                    style={{ position: 'relative', display: 'inline-flex' }}
+                    onPointerEnter={nhiInfoTooltip.onPointerEnter}
+                    onPointerLeave={nhiInfoTooltip.onPointerLeave}
+                    onClick={nhiInfoTooltip.onClick}
+                  >
+                    <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
+                    {nhiInfoTooltip.open && (
+                      <div className="audit-tooltip" style={{ width: 220, left: 0 }}>
+                        Composite 0-100 score across uptime, average Trust Score, software diversity, advanced feature adoption &amp; network stability. Tap the gauge for the full breakdown.
+                      </div>
+                    )}
+                  </span>
+                </div>
+                <span className="nhi-badge" style={{ color: info.color, background: info.bg, border: `0.5px solid ${info.border}` }}>
+                  {healthLabel(networkHealth.score)}
+                </span>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Card 1: Software in Use */}
         <div className="stats-panel">
