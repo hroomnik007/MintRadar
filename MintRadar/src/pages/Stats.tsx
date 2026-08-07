@@ -711,128 +711,133 @@ export default function Stats() {
         </div>
       </div>
 
-      {/* ── 4-column card grid ── */}
+      {/* ── 3-column card grid ── */}
       <div className="stats-cards-grid">
 
-        {/* Card 0: Cashu Network Health Index (compact) */}
-        {networkHealth && (() => {
-          const info = trustScoreInfo(networkHealth.score)
-          return (
-            <div className="stats-panel nhi-col" onClick={() => setShowHealthBreakdown(true)}>
-              <div className="nhi-gauge-wrap">
-                <svg viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="42" fill="none" stroke="var(--bg4)" strokeWidth="9" />
-                  <circle cx="50" cy="50" r="42" fill="none" stroke={info.color} strokeWidth="9"
-                    strokeDasharray={`${(networkHealth.score * 2.639).toFixed(1)} 263.9`}
-                    strokeDashoffset="66"
-                    strokeLinecap="round"
-                    transform="rotate(-90 50 50)" />
-                </svg>
-                <div className="nhi-gauge-num" style={{ color: info.color }}>{networkHealth.score}</div>
+        {/* Left block (cols 1-2): Health Index + Software in Use + Geographic Distribution */}
+        <div className="stats-nhi-left">
+
+          {/* Card 0: Cashu Network Health Index (compact) */}
+          {networkHealth && (() => {
+            const info = trustScoreInfo(networkHealth.score)
+            return (
+              <div className="stats-panel nhi-col" onClick={() => setShowHealthBreakdown(true)}>
+                <div className="nhi-gauge-wrap">
+                  <svg viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="var(--bg4)" strokeWidth="9" />
+                    <circle cx="50" cy="50" r="42" fill="none" stroke={info.color} strokeWidth="9"
+                      strokeDasharray={`${(networkHealth.score * 2.639).toFixed(1)} 263.9`}
+                      strokeDashoffset="66"
+                      strokeLinecap="round"
+                      transform="rotate(-90 50 50)" />
+                  </svg>
+                  <div className="nhi-gauge-num" style={{ color: info.color }}>{networkHealth.score}</div>
+                </div>
+                <div className="nhi-info">
+                  <div className="stats-panel-title nhi-title-row">
+                    Network Health
+                    <span
+                      ref={nhiInfoRef}
+                      style={{ position: 'relative', display: 'inline-flex' }}
+                      onPointerEnter={nhiInfoTooltip.onPointerEnter}
+                      onPointerLeave={nhiInfoTooltip.onPointerLeave}
+                      onClick={nhiInfoTooltip.onClick}
+                    >
+                      <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
+                      {nhiInfoTooltip.open && (
+                        <div className="audit-tooltip" style={{ width: 220, left: 0 }}>
+                          Composite 0-100 score across uptime, average Trust Score, software diversity, advanced feature adoption &amp; network stability. Tap the gauge for the full breakdown.
+                        </div>
+                      )}
+                    </span>
+                  </div>
+                  <span className="nhi-badge" style={{ color: info.color, background: info.bg, border: `0.5px solid ${info.border}` }}>
+                    {healthLabel(networkHealth.score)}
+                  </span>
+                </div>
               </div>
-              <div className="nhi-info">
-                <div className="nhi-title-row">
-                  Network Health Index
-                  <span
-                    ref={nhiInfoRef}
-                    style={{ position: 'relative', display: 'inline-flex' }}
-                    onPointerEnter={nhiInfoTooltip.onPointerEnter}
-                    onPointerLeave={nhiInfoTooltip.onPointerLeave}
-                    onClick={nhiInfoTooltip.onClick}
-                  >
-                    <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
-                    {nhiInfoTooltip.open && (
-                      <div className="audit-tooltip" style={{ width: 220, left: 0 }}>
-                        Composite 0-100 score across uptime, average Trust Score, software diversity, advanced feature adoption &amp; network stability. Tap the gauge for the full breakdown.
+            )
+          })()}
+
+          {/* Card 1: Software in Use */}
+          <div className="stats-panel">
+            <div className="stats-panel-title">Software in Use</div>
+            {swFreshnessSummary.total > 0 && (
+              <div style={{marginTop:10}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:4}}>
+                  <span style={{fontSize:12,color:'var(--text2)'}}>Running outdated or older versions</span>
+                  <span style={{fontSize:13,fontWeight:swFreshnessSummary.pct >= 50 ? 700 : 600,color:'var(--amber)',fontFamily:'var(--font-mono-data)'}}>{swFreshnessSummary.pct}%</span>
+                </div>
+                <div className="dist-track"><div className="dist-fill" style={{width:`${swFreshnessSummary.pct}%`,background:'var(--amber)',opacity:swFreshnessSummary.pct >= 50 ? 0.9 : 0.6}} /></div>
+              </div>
+            )}
+            <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:6}}>
+              {versionDist.length === 0 ? (
+                <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
+              ) : versionDist.map(({sw, total, versions, accentColor}) => {
+                const totalOnline = versionDist.reduce((s, d) => s + d.total, 0)
+                const pct = totalOnline > 0 ? Math.round(total / totalOnline * 100) : 0
+                const isExpanded = expandedSw === sw
+                return (
+                  <div key={sw} className="sw-accordion" style={isExpanded ? {borderLeft:`2px solid ${accentColor}`} : {}}>
+                    <div
+                      className={`sw-accordion-header${isExpanded ? ' expanded' : ''}`}
+                      onClick={() => setExpandedSw(isExpanded ? null : sw)}
+                    >
+                      <span className="dist-label" style={{fontWeight:600,color:isExpanded ? accentColor : 'var(--text)',fontSize:13}}>{sw}</span>
+                      <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:accentColor}} /></div>
+                      <span className="dist-count" style={{color:'var(--text2)'}}>{total}</span>
+                      <span className="sw-chevron" style={{color:isExpanded ? accentColor : 'var(--text3)'}}>{isExpanded ? '▲' : '▼'}</span>
+                    </div>
+                    {isExpanded && (
+                      <div className="sw-ver-panel">
+                        {versions.map(({ver, count, fullVersion, badge, badgeColor}) => {
+                          const vPct = total > 0 ? Math.round(count / total * 100) : 0
+                          return (
+                            <div key={ver} className="dist-row sw-ver-row" onClick={e => { e.stopPropagation(); setVersionModal({ sw, ver, fullVersion }) }}>
+                              <span className="dist-label sw-ver-label" style={{fontFamily:'var(--font-mono)',fontSize:12,color:'var(--text2)'}}>{ver || '—'}</span>
+                              <div className="dist-track"><div className="dist-fill" style={{width:`${vPct}%`,background:accentColor,opacity:0.55}} /></div>
+                              <span className="dist-count" style={{fontSize:10}}>{count}</span>
+                              <span className="sw-badge" style={{color:badgeColor,borderColor:badgeColor+'44',background:badgeColor+'11'}}>{badge}</span>
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
-                  </span>
-                </div>
-                <span className="nhi-badge" style={{ color: info.color, background: info.bg, border: `0.5px solid ${info.border}` }}>
-                  {healthLabel(networkHealth.score)}
-                </span>
-              </div>
-            </div>
-          )
-        })()}
-
-        {/* Card 1: Software in Use */}
-        <div className="stats-panel">
-          <div className="stats-panel-title">Software in Use</div>
-          {swFreshnessSummary.total > 0 && (
-            <div style={{marginTop:10}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:4}}>
-                <span style={{fontSize:12,color:'var(--text2)'}}>Running outdated or older versions</span>
-                <span style={{fontSize:13,fontWeight:swFreshnessSummary.pct >= 50 ? 700 : 600,color:'var(--amber)',fontFamily:'var(--font-mono-data)'}}>{swFreshnessSummary.pct}%</span>
-              </div>
-              <div className="dist-track"><div className="dist-fill" style={{width:`${swFreshnessSummary.pct}%`,background:'var(--amber)',opacity:swFreshnessSummary.pct >= 50 ? 0.9 : 0.6}} /></div>
-            </div>
-          )}
-          <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:6}}>
-            {versionDist.length === 0 ? (
-              <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
-            ) : versionDist.map(({sw, total, versions, accentColor}) => {
-              const totalOnline = versionDist.reduce((s, d) => s + d.total, 0)
-              const pct = totalOnline > 0 ? Math.round(total / totalOnline * 100) : 0
-              const isExpanded = expandedSw === sw
-              return (
-                <div key={sw} className="sw-accordion" style={isExpanded ? {borderLeft:`2px solid ${accentColor}`} : {}}>
-                  <div
-                    className={`sw-accordion-header${isExpanded ? ' expanded' : ''}`}
-                    onClick={() => setExpandedSw(isExpanded ? null : sw)}
-                  >
-                    <span className="dist-label" style={{fontWeight:600,color:isExpanded ? accentColor : 'var(--text)',fontSize:13}}>{sw}</span>
-                    <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:accentColor}} /></div>
-                    <span className="dist-count" style={{color:'var(--text2)'}}>{total}</span>
-                    <span className="sw-chevron" style={{color:isExpanded ? accentColor : 'var(--text3)'}}>{isExpanded ? '▲' : '▼'}</span>
                   </div>
-                  {isExpanded && (
-                    <div className="sw-ver-panel">
-                      {versions.map(({ver, count, fullVersion, badge, badgeColor}) => {
-                        const vPct = total > 0 ? Math.round(count / total * 100) : 0
-                        return (
-                          <div key={ver} className="dist-row sw-ver-row" onClick={e => { e.stopPropagation(); setVersionModal({ sw, ver, fullVersion }) }}>
-                            <span className="dist-label sw-ver-label" style={{fontFamily:'var(--font-mono)',fontSize:12,color:'var(--text2)'}}>{ver || '—'}</span>
-                            <div className="dist-track"><div className="dist-fill" style={{width:`${vPct}%`,background:accentColor,opacity:0.55}} /></div>
-                            <span className="dist-count" style={{fontSize:10}}>{count}</span>
-                            <span className="sw-badge" style={{color:badgeColor,borderColor:badgeColor+'44',background:badgeColor+'11'}}>{badge}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-          {versionDist.length > 0 && (
-            <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
-              Implementation reported by each mint's info document.
+                )
+              })}
             </div>
-          )}
-        </div>
-
-        {/* Card 2: Geographic Distribution */}
-        <div className="stats-panel">
-          <div className="stats-panel-title">Geographic Distribution</div>
-          <div style={{marginTop:10}}>
-            {geoDist.length === 0 ? (
-              <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
-            ) : geoDist.map(({loc, count, pct}, idx) => {
-              const {display, flag, color: geoColor} = geoLabel(loc)
-              const barColor = geoColor ?? (idx % 2 === 0 ? 'var(--green)' : 'var(--copper)')
-              return (
-                <div key={loc} className="dist-row dist-row-clickable" onClick={() => setCityModal(loc)}>
-                  <span className="dist-label dist-label-city" style={geoColor ? {color:geoColor} : undefined}>
-                    {flag ? `${flag} ${display}` : display}
-                  </span>
-                  <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:barColor}} /></div>
-                  <span className="dist-count">{count}</span>
-                </div>
-              )
-            })}
+            {versionDist.length > 0 && (
+              <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
+                Implementation reported by each mint's info document.
+              </div>
+            )}
           </div>
-        </div>
+
+          {/* Card 2: Geographic Distribution */}
+          <div className="stats-panel">
+            <div className="stats-panel-title">Geographic Distribution</div>
+            <div style={{marginTop:10}}>
+              {geoDist.length === 0 ? (
+                <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
+              ) : geoDist.map(({loc, count, pct}, idx) => {
+                const {display, flag, color: geoColor} = geoLabel(loc)
+                const barColor = geoColor ?? (idx % 2 === 0 ? 'var(--green)' : 'var(--copper)')
+                return (
+                  <div key={loc} className="dist-row dist-row-clickable" onClick={() => setCityModal(loc)}>
+                    <span className="dist-label dist-label-city" style={geoColor ? {color:geoColor} : undefined}>
+                      {flag ? `${flag} ${display}` : display}
+                    </span>
+                    <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:barColor}} /></div>
+                    <span className="dist-count">{count}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+        </div>{/* /stats-nhi-left */}
 
         {/* Card 3 + Trend: right column — spans 2 grid rows */}
         <div className="stats-right-col">

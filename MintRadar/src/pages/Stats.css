@@ -124,23 +124,18 @@
 
 .nhi-info { min-width: 0; }
 
-/* Typography matches .stats-panel-title exactly (same size/weight/color/
-   uppercase/letter-spacing/font) so this reads as the same kind of panel
-   heading as "SOFTWARE IN USE" / "GEOGRAPHIC DISTRIBUTION" / "MOST RELIABLE".
-   Kept as its own rule (not the shared class) because this title also holds
-   an inline info icon and has no margin-bottom — .stats-panel-title's 14px
-   margin-bottom is for a title sitting above a content block, not here. */
+/* Typography comes from .stats-panel-title itself (applied as a second class
+   in the markup), so this heading is byte-identical to "SOFTWARE IN USE" /
+   "GEOGRAPHIC DISTRIBUTION" / "MOST RELIABLE" by construction. Only layout is
+   adjusted here: the title holds an inline info icon and sits directly above
+   the badge, so the class's 14px margin-bottom (sized for a title above a
+   content block) is dropped. */
 .nhi-title-row {
   display: flex;
   align-items: center;
   gap: 5px;
-  flex-wrap: wrap;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text2);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-family: var(--font-mono);
+  white-space: nowrap;
+  margin-bottom: 0;
 }
 
 .nhi-badge {
@@ -174,10 +169,10 @@
   letter-spacing: normal;
 }
 
-/* ── 4-column card grid (Health Index / Software / Geo / Most Reliable+Trend) ── */
+/* ── 3-column card grid ──────────────────────────────────────── */
 .stats-cards-grid {
   display: grid;
-  grid-template-columns: 0.8fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 14px;
   padding: 14px 18px 14px;
   align-items: start;
@@ -185,11 +180,20 @@
 }
 
 .stats-nut-panel {
-  /* Explicit start (not just "span 2") so it lands under Software in Use +
-     Geographic Distribution (columns 2-3), not under the narrower Health
-     Index column (1) + Software — see the 1100px/768px overrides below,
-     which reset to full-width once there aren't 4 columns to anchor into. */
-  grid-column: 2 / span 2;
+  grid-column: span 2;
+}
+
+/* Left block: Health Index + Software in Use + Geographic Distribution
+   subdivide exactly the space Software + Geo used to occupy on their own
+   (columns 1-2), so Most Reliable (column 3) and the NUT Coverage panel below
+   keep their original widths — the outer grid itself is untouched. */
+.stats-nhi-left {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: 0.75fr 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+  min-width: 0;
 }
 
 /* ── Software accordion ──────────────────────────────────────── */
@@ -707,11 +711,11 @@
 @media (max-width: 1100px) {
   .stats-cards-grid { grid-template-columns: 1fr 1fr; }
   .stats-right-col { grid-row: auto; align-self: start; }
-  .stats-nut-panel { grid-column: 1 / -1; }
 }
 
 @media (max-width: 768px) {
   .stats-cards-grid { grid-template-columns: 1fr; }
+  .stats-nhi-left { grid-template-columns: 1fr; }
   .stats-right-col { grid-row: auto; align-self: start; }
   .stats-nut-rows-grid { grid-template-columns: 1fr; overflow: hidden; }
   .stats-nut-panel { grid-column: 1 / -1; }
