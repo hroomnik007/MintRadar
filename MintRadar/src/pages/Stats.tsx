@@ -394,9 +394,9 @@ function NetworkHealthModal({ score, components, onClose }: {
                       {tooltipHook.open && (
                         <div
                           className="audit-tooltip"
-                          style={i === 0
-                            ? { width: 220, left: '50%', transform: 'translateX(-50%)', bottom: 'auto', top: 'calc(100% + 6px)' }
-                            : { width: 220, left: '50%', transform: 'translateX(-50%)' }}
+                          style={i >= components.length - 2
+                            ? { width: 220, left: '50%', transform: 'translateX(-50%)', top: 'auto', bottom: 'calc(100% + 6px)' }
+                            : { width: 220, left: '50%', transform: 'translateX(-50%)', bottom: 'auto', top: 'calc(100% + 6px)' }}
                         >{c.tooltip}</div>
                       )}
                     </span>
