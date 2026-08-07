@@ -98,13 +98,6 @@
   transition: border-color 120ms ease;
 }
 
-/* Higher specificity than .stats-panel (defined later in this file) so this
-   actually overrides its background/border instead of losing on source order. */
-.stats-panel.nhi-col {
-  background: var(--surface-card);
-  border-color: var(--border-strong);
-}
-
 .nhi-col:hover {
   border-color: var(--border-hi);
 }
