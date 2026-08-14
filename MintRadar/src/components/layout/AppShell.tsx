@@ -243,7 +243,12 @@ export function AppShell() {
             {loginMethod === 'nsec' && (
               <div className="nostr-nsec-wrap">
                 <div className="nostr-nsec-security-warn">
-                  ⚠️ Security notice: Entering your nsec key in a browser is inherently risky. On desktop, we recommend using a NIP-07 extension (Alby, nos2x) instead — your key never leaves the extension. On mobile, only use nsec login on a trusted personal device with no suspicious apps installed.
+                  <p style={{ margin: 0 }}>
+                    ⚠️ Security notice: Entering your nsec key in a browser is inherently risky. On desktop, we recommend using a NIP-07 extension (Alby, nos2x) instead — your key never leaves the extension. On mobile, only use nsec login on a trusted personal device with no suspicious apps installed.
+                  </p>
+                  <p style={{ margin: '6px 0 0' }}>
+                    Once connected, your key stays in this browser&apos;s memory for the session so MintRadar can sign notifications, sync, and reviews on your behalf. It&apos;s cleared when you disconnect or close the tab.
+                  </p>
                 </div>
                 <input
                   className="nostr-nsec-input"
@@ -298,7 +303,7 @@ export function AppShell() {
 
             <div className="nostr-modal-footer">
               <div className="nostr-privacy-note">
-                <IcShield /> Your keys never leave your device. MintRadar only reads your public profile.
+                <IcShield /> Your key stays only in this browser&apos;s memory for this session — used to sign on your behalf, never sent anywhere, never saved to disk.
               </div>
               <div className="nostr-modal-actions">
                 <button type="button" className="nostr-cancel-btn" onClick={closeLoginModal}>

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { loginWithNip07, loginWithNsec, loginWithBunker, removeBunkerShim, type NostrProfile } from '@/core/nostr/client'
+import { loginWithNip07, loginWithNsec, loginWithBunker, removeBunkerShim, removeNsecShim, type NostrProfile } from '@/core/nostr/client'
 
 export interface Nip65Relays {
   read: string[]
@@ -70,6 +70,7 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         removeBunkerShim()
+        removeNsecShim()
         set({ profile: null, nip65Relays: null, error: null })
       },
 

@@ -1,4 +1,4 @@
-import { nip19, generateSecretKey, getPublicKey as nostrGetPublicKey, verifyEvent } from 'nostr-tools'
+import { nip19, nip44, generateSecretKey, getPublicKey as nostrGetPublicKey, verifyEvent, finalizeEvent } from 'nostr-tools'
 import { BunkerSigner, parseBunkerInput, createNostrConnectURI, toBunkerURL } from 'nostr-tools/nip46'
 import type { EventTemplate } from 'nostr-tools'
 import * as secp from '@noble/secp256k1'
@@ -48,9 +48,11 @@ export function isNip07Available(): boolean {
 }
 
 // Best-effort classification of the active signer, for diagnostic logging only.
-// Bunker installs a window.nostr shim too, so it must be checked before nip-07.
+// Bunker AND nsec both install a window.nostr shim too, so both must be
+// checked before falling back to "a real nip-07 extension is present".
 export function detectLoginMethod(): 'bunker' | 'nip-07' | 'nsec' {
   if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(BUNKER_PUBKEY_KEY)) return 'bunker'
+  if (activeNsecPrivkey !== null) return 'nsec'
   if (typeof window !== 'undefined' && window.nostr !== undefined) return 'nip-07'
   return 'nsec'
 }
@@ -80,13 +82,67 @@ export async function loginWithNsec(input: string): Promise<NostrProfile> {
     throw new Error('Enter a valid nsec1... key or 64-char hex private key')
   }
   const pubkeyHex = bytesToHex(secp.getPublicKey(privkeyBytes, true).slice(1))
-  privkeyBytes.fill(0)
+  installNsecShim(privkeyBytes, pubkeyHex)
   const npub = nip19.npubEncode(pubkeyHex)
   const meta = await fetchNostrProfile(pubkeyHex)
   const profile: NostrProfile = { pubkey: pubkeyHex, npub }
   if (meta.name !== undefined) profile.name = meta.name
   if (meta.picture !== undefined) profile.picture = meta.picture
   return profile
+}
+
+// ── nsec session (in-memory signing) ────────────────────────────
+
+// The derived private key is held in memory for the session so this app can
+// sign events on the user's behalf (notifications, watchlist sync, reviews).
+// Module-scope only — NEVER written to sessionStorage/localStorage/IndexedDB —
+// so it does not survive a page reload, and is explicitly zeroed on logout via
+// removeNsecShim(). installNsecShim() holds the exact same Uint8Array instance
+// passed in (no copy), so zeroing it here invalidates every closure that
+// captured it, without needing to track/duplicate the key material elsewhere.
+let activeNsecPrivkey: Uint8Array | null = null
+// Saved NIP-07 extension reference so it can be restored on logout (same
+// distinction installBunkerShim/removeBunkerShim make below).
+let originalNostrForNsec: Window['nostr'] | undefined = undefined
+
+function installNsecShim(privkeyBytes: Uint8Array, pubkeyHex: string): void {
+  if (typeof window === 'undefined') return
+  if (window.nostr !== undefined) {
+    originalNostrForNsec = window.nostr
+  }
+  activeNsecPrivkey = privkeyBytes
+  window.nostr = {
+    getPublicKey: async () => pubkeyHex,
+    signEvent: async (event: object) => finalizeEvent(event as EventTemplate, privkeyBytes),
+    nip44: {
+      encrypt: async (pubkey: string, plaintext: string) => {
+        const conversationKey = nip44.getConversationKey(privkeyBytes, pubkey)
+        return nip44.encrypt(plaintext, conversationKey)
+      },
+      decrypt: async (pubkey: string, ciphertext: string) => {
+        const conversationKey = nip44.getConversationKey(privkeyBytes, pubkey)
+        return nip44.decrypt(ciphertext, conversationKey)
+      },
+    },
+    nip04: {
+      encrypt: async () => { throw new Error('NIP-04 not supported for nsec login') },
+      decrypt: async () => { throw new Error('NIP-04 not supported for nsec login') },
+    },
+  }
+}
+
+export function removeNsecShim(): void {
+  if (activeNsecPrivkey === null) return
+  activeNsecPrivkey.fill(0)
+  activeNsecPrivkey = null
+  if (typeof window !== 'undefined') {
+    if (originalNostrForNsec !== undefined) {
+      window.nostr = originalNostrForNsec
+      originalNostrForNsec = undefined
+    } else {
+      delete window.nostr
+    }
+  }
 }
 
 // ── NIP-46 bunker session ──────────────────────────────────────
