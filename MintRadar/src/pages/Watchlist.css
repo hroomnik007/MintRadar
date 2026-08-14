@@ -723,6 +723,7 @@
 @media (max-width: 900px) {
   .wl-body-two-col {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .wl-side-col {
