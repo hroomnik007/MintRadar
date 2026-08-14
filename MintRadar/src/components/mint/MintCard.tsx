@@ -154,15 +154,6 @@ export function MintCard({
               ⇄ Compare
             </button>
           )}
-          {isLoggedIn && (
-            <button
-              type="button"
-              className={`watch-btn${isWatched ? ' watching' : ''}`}
-              onClick={e => { e.stopPropagation(); void (isWatched ? removeMint(mint.url) : addMint(mint.url)) }}
-            >
-              {isWatched ? <><IcClose /><span>Unwatch</span></> : <><IcPlus /><span>Watch</span></>}
-            </button>
-          )}
           {showNotifyToggles && notifyEntry && (
             <>
               <button
@@ -180,6 +171,15 @@ export function MintCard({
                 <IcBellUp /><span>Up</span>
               </button>
             </>
+          )}
+          {isLoggedIn && (
+            <button
+              type="button"
+              className={`watch-btn${isWatched ? ' watching' : ''}`}
+              onClick={e => { e.stopPropagation(); void (isWatched ? removeMint(mint.url) : addMint(mint.url)) }}
+            >
+              {isWatched ? <><IcClose /><span>Unwatch</span></> : <><IcPlus /><span>Watch</span></>}
+            </button>
           )}
         </div>
       </div>
