@@ -1,9 +1,12 @@
+import type { MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { mintAgeBadge, uptimeColor, formatTimeAgo } from '@/utils/mintFormatting'
+import { db } from '@/db'
 
 const IcPlus = () => (
   <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
@@ -17,6 +20,18 @@ const IcClose = () => (
     <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
   </svg>
 )
+const IcBellDown = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+    <path d="M6 1.2C4.6 1.2 3.5 2.4 3.5 3.9V5.6C3.5 6.3 3.2 6.9 2.8 7.3H9.2C8.8 6.9 8.5 6.3 8.5 5.6V3.9C8.5 2.4 7.4 1.2 6 1.2Z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/>
+    <path d="M6 7.3V10.3M6 10.3L4.7 9M6 10.3L7.3 9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+)
+const IcBellUp = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+    <path d="M6 4.7C4.6 4.7 3.5 5.9 3.5 7.4V9.1C3.5 9.8 3.2 10.4 2.8 10.8H9.2C8.8 10.4 8.5 9.8 8.5 9.1V7.4C8.5 5.9 7.4 4.7 6 4.7Z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/>
+    <path d="M6 4.7V1.7M6 1.7L4.7 3M6 1.7L7.3 3" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+)
 
 function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
@@ -26,9 +41,11 @@ function getHostname(url: string): string {
 export function MintCard({
   mint,
   onCompare,
+  showNotifyToggles,
 }: {
   mint: KnownMint
   onCompare?: (url: string) => void
+  showNotifyToggles?: boolean
 }) {
   const navigate = useNavigate()
   const mints = useWatchlistStore(state => state.mints)
@@ -38,6 +55,15 @@ export function MintCard({
   const profile = useAuthStore(state => state.profile)
   const isLoggedIn = profile !== null
   const hostname = getHostname(mint.url)
+  const notifyEntry = useLiveQuery(
+    () => showNotifyToggles ? db.watchlist.get(mint.url) : undefined,
+    [mint.url, showNotifyToggles]
+  )
+  const toggleNotify = (field: 'notifyOnDown' | 'notifyOnUp') => (e: MouseEvent) => {
+    e.stopPropagation()
+    if (!notifyEntry) return
+    void db.watchlist.update(mint.url, { [field]: !notifyEntry[field] })
+  }
   const isOnline = mint.online === true
   const isOfflineDegraded = mint.degraded === true
   const displayName = mint.name ?? hostname
@@ -106,7 +132,7 @@ export function MintCard({
             <div className="latency-value muted">—</div>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {onCompare && isOnline && (
             <button
               type="button"
@@ -136,6 +162,24 @@ export function MintCard({
             >
               {isWatched ? <><IcClose /><span>Unwatch</span></> : <><IcPlus /><span>Watch</span></>}
             </button>
+          )}
+          {showNotifyToggles && notifyEntry && (
+            <>
+              <button
+                type="button"
+                className={`notify-toggle-btn${notifyEntry.notifyOnDown ? ' on' : ''}`}
+                onClick={toggleNotify('notifyOnDown')}
+              >
+                <IcBellDown /><span>Down</span>
+              </button>
+              <button
+                type="button"
+                className={`notify-toggle-btn${notifyEntry.notifyOnUp ? ' on' : ''}`}
+                onClick={toggleNotify('notifyOnUp')}
+              >
+                <IcBellUp /><span>Up</span>
+              </button>
+            </>
           )}
         </div>
       </div>

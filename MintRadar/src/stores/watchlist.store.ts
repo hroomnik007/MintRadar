@@ -33,8 +33,8 @@ export const useWatchlistStore = create<WatchlistState>()(
       await db.watchlist.put({
         url,
         addedAt: new Date(),
-        notifyOnDown: false,
-        notifyOnUp: false,
+        notifyOnDown: true,
+        notifyOnUp: true,
       })
       set(state => {
         if (!state.mints.includes(url)) {

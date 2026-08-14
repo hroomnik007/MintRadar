@@ -534,6 +534,7 @@ export default function Watchlist() {
                       latencyMs: null, version: null, nutCount: null, tosUrl: null,
                       descriptionLong: null, nutsLimits: null,
                     }}
+                    showNotifyToggles
                   />
                 ))}
               </div>

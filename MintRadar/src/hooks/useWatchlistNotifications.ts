@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { sharedPool } from '@/core/nostr/pool'
+import { db } from '@/db'
 import type { NostrEvent, EventTemplate, UnsignedEvent } from 'nostr-tools'
 import { nip44, generateSecretKey, finalizeEvent, getEventHash } from 'nostr-tools'
 
@@ -51,22 +52,28 @@ export function useWatchlistNotifications(
 
         // Detect online → offline transition
         if (prev === true && isOnline === false) {
-          if (import.meta.env.DEV) console.log(`[notifications] mint down: ${url}`)
-          await sendNostrDM(
-            profile.pubkey,
-            `⚠️ MintRadar Alert\n\nMint is down: ${url}\n\nCheck status: https://mintradar.pedani.eu`,
-            dmRelays
-          )
+          const entry = await db.watchlist.get(url)
+          if (entry?.notifyOnDown) {
+            if (import.meta.env.DEV) console.log(`[notifications] mint down: ${url}`)
+            await sendNostrDM(
+              profile.pubkey,
+              `⚠️ MintRadar Alert\n\nMint is down: ${url}\n\nCheck status: https://mintradar.pedani.eu`,
+              dmRelays
+            )
+          }
         }
 
         // Detect offline → online transition
         if (prev === false && isOnline === true) {
-          if (import.meta.env.DEV) console.log(`[notifications] mint recovered: ${url}`)
-          await sendNostrDM(
-            profile.pubkey,
-            `✅ MintRadar Alert\n\nMint is back online: ${url}\n\nLatency: ${current.latencyMs}ms`,
-            dmRelays
-          )
+          const entry = await db.watchlist.get(url)
+          if (entry?.notifyOnUp) {
+            if (import.meta.env.DEV) console.log(`[notifications] mint recovered: ${url}`)
+            await sendNostrDM(
+              profile.pubkey,
+              `✅ MintRadar Alert\n\nMint is back online: ${url}\n\nLatency: ${current.latencyMs}ms`,
+              dmRelays
+            )
+          }
         }
 
         prevStates.set(url, isOnline)
