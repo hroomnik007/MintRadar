@@ -7,6 +7,7 @@ import { useWatchlistSync } from '@/hooks/useWatchlistSync'
 import { useFollowRecommendations } from '@/hooks/useFollowRecommendations'
 import { initBunkerQR } from '@/core/nostr/client'
 import { NavLogo } from './NavLogo'
+import { DebugLogOverlay } from './DebugLogOverlay'
 import './AppShell.css'
 
 const IcClose = () => (
@@ -324,6 +325,8 @@ export function AppShell() {
       <main className="app-content">
         <Outlet />
       </main>
+
+      <DebugLogOverlay />
     </div>
   )
 }

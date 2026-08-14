@@ -5,7 +5,10 @@ import { RouterProvider } from 'react-router-dom'
 import { router } from '@/App'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { restoreBunkerSession } from '@/core/nostr/client'
+import { installConsoleWarnInterceptor } from '@/core/debugLog'
 import './index.css'
+
+installConsoleWarnInterceptor()
 
 void useWatchlistStore.getState().loadFromDb()
 void restoreBunkerSession()
