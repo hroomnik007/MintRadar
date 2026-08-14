@@ -1,6 +1,7 @@
 import type { NostrEvent } from 'nostr-tools'
 import { verifyEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
+import { detectLoginMethod } from '@/core/nostr/client'
 
 export const WATCHLIST_RELAYS = [
   'wss://relay.damus.io',
@@ -22,10 +23,21 @@ export const WATCHLIST_RELAYS = [
 const WATCHLIST_KIND = 10003
 
 export async function fetchRemoteWatchlist(pubkey: string, userWriteRelays?: string[] | null): Promise<string[]> {
-  if (!window.nostr?.nip44) return []
+  const pk = pubkey.slice(0, 8)
+  const method = detectLoginMethod()
+
+  if (!window.nostr?.nip44) {
+    console.warn(`[watchlist-sync] no nip44 support on signer, skipping remote fetch (pubkey=${pk}, method=${method})`)
+    return []
+  }
+
   const relays = userWriteRelays && userWriteRelays.length > 0
     ? [...new Set([...WATCHLIST_RELAYS, ...userWriteRelays])]
     : WATCHLIST_RELAYS
+
+  let responded = 0
+  const total = relays.length
+
   try {
     // Query each relay independently — take the first one that returns an event
     const relayQueries = relays.map(relay =>
@@ -35,17 +47,44 @@ export async function fetchRemoteWatchlist(pubkey: string, userWriteRelays?: str
           if (!validEvents[0]?.content) throw new Error('no event')
           return validEvents[0]
         })
+        .finally(() => { responded++ })
     )
     const event = await Promise.race([
       Promise.any(relayQueries),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
     ])
-    const decrypted = await window.nostr.nip44.decrypt(pubkey, event.content)
-    const parsed: unknown = JSON.parse(decrypted)
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter((u): u is string => typeof u === 'string')
+
+    let decrypted: string
+    try {
+      decrypted = await window.nostr.nip44.decrypt(pubkey, event.content)
+    } catch (decryptErr) {
+      console.warn(`[watchlist-sync] decryption failed for event ${event.id} (pubkey=${pk}, method=${method})`, decryptErr)
+      return []
+    }
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(decrypted)
+    } catch (parseErr) {
+      console.warn(`[watchlist-sync] decryption failed for event ${event.id} (pubkey=${pk}, method=${method}) — malformed JSON payload`, parseErr)
+      return []
+    }
+
+    if (!Array.isArray(parsed)) {
+      console.warn(`[watchlist-sync] remote list genuinely empty (kind:10003 not found or empty content) (pubkey=${pk}, method=${method})`)
+      return []
+    }
+    const urls = parsed.filter((u): u is string => typeof u === 'string')
+    if (urls.length === 0) {
+      console.warn(`[watchlist-sync] remote list genuinely empty (kind:10003 not found or empty content) (pubkey=${pk}, method=${method})`)
+    }
+    return urls
   } catch (err) {
-    console.warn('[watchlistSync] fetch failed:', err)
+    if (err instanceof Error && err.message === 'timeout') {
+      console.warn(`[watchlist-sync] relay timeout after 3s, ${responded}/${total} relays responded (pubkey=${pk}, method=${method})`)
+    } else {
+      console.warn(`[watchlist-sync] remote list genuinely empty (kind:10003 not found or empty content) — no relay returned a valid event (pubkey=${pk}, method=${method}, ${responded}/${total} relays responded)`, err)
+    }
     return []
   }
 }

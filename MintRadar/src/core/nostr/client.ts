@@ -47,6 +47,14 @@ export function isNip07Available(): boolean {
   return typeof window !== 'undefined' && window.nostr !== undefined
 }
 
+// Best-effort classification of the active signer, for diagnostic logging only.
+// Bunker installs a window.nostr shim too, so it must be checked before nip-07.
+export function detectLoginMethod(): 'bunker' | 'nip-07' | 'nsec' {
+  if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(BUNKER_PUBKEY_KEY)) return 'bunker'
+  if (typeof window !== 'undefined' && window.nostr !== undefined) return 'nip-07'
+  return 'nsec'
+}
+
 export async function loginWithNip07(): Promise<NostrProfile> {
   if (!isNip07Available()) {
     throw new Error('NIP-07 extension not available')
