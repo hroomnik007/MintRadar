@@ -26,7 +26,7 @@ export async function fetchFollowRecs(pubkey: string): Promise<{ recs: FollowRec
   if (!followEvent) return { recs: [], followCount: 0 }
 
   const follows = followEvent.tags
-    .filter((t: string[]) => t[0] === 'p' && typeof t[1] === 'string')
+    .filter((t: string[]) => t[0] === 'p' && typeof t[1] === 'string' && t[1] !== pubkey)
     .map((t: string[]) => t[1] as string)
     .slice(0, 500)
 
