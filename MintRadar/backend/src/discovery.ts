@@ -53,6 +53,8 @@ const DISCOVERY_RELAYS = [
   'wss://nostr.oxtr.dev',
   'wss://relay.nostr.net',
   'wss://nostr21.com',
+  'wss://nostr.bitcoiner.social',
+  'wss://nostr.cypherpunk.today',
 ]
 
 const DISCOVERY_TIMEOUT_MS = 15_000

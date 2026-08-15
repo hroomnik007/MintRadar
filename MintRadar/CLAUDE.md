@@ -122,7 +122,19 @@ wss://relay.damus.io, wss://nos.lol, wss://purplepag.es, wss://relay.snort.socia
 wss://relay.primal.net, wss://relay.cashumints.space, wss://relay.azzamo.net,
 wss://eden.nostr.land, wss://nostr.wine, wss://nostr-pub.wellorder.net,
 wss://offchain.pub, wss://relay.8333.space, wss://nostr.oxtr.dev, wss://relay.nostr.net,
-wss://nostr21.com
+wss://nostr21.com, wss://nostr.bitcoiner.social, wss://nostr.cypherpunk.today
+
+**2026-08-16 — `nostr.bitcoiner.social` and `nostr.cypherpunk.today` added**, alongside
+`relay.snort.social` filling in wherever it was still missing. Verified reachable (TCP:443
+connect) before adding. Requested to go into every relay list in the project, not just the
+unified discovery set above — also added to `REVIEW_PUBLISH_RELAYS`/`PROFILE_RELAYS`
+(`src/core/nostr/relays.ts`), `META_RELAYS`/`NOTIFICATION_RELAYS` (backend `nostrService.ts`
++ frontend `client.ts`/`useWatchlistNotifications.ts`), `NIP46_RELAYS` (`client.ts`),
+`BOOTSTRAP_RELAYS` (`useUserRelays.ts`), `FOLLOW_RELAYS` (`useFollowRecommendations.ts`), and
+`WATCHLIST_RELAYS` (`watchlistSync.ts`) — i.e. every relay array in the codebase, not just
+the 4 "unified" discovery/review locations this section otherwise tracks. `REVIEW_PUBLISH_RELAYS`'s
+own explicit `nostr.bitcoiner.social` entry was removed since it's now inherited via
+`DISCOVERY_RELAYS` (same dedup pattern as the `nostr.oxtr.dev` case below).
 
 `wss://relay.8333.space` was added to every discovery/review relay list in the project —
 same operator as `audit.8333.space`, likely higher density of Cashu-specific NIP-87 events.

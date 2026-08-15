@@ -20,6 +20,8 @@ export const DISCOVERY_RELAYS: string[] = [
   'wss://nostr.oxtr.dev',
   'wss://relay.nostr.net',
   'wss://nostr21.com',
+  'wss://nostr.bitcoiner.social',
+  'wss://nostr.cypherpunk.today',
 ]
 
 // Discovery relays plus relay.minibits.cash (a Cashu-wallet-specific relay that tends to
@@ -33,7 +35,6 @@ export const REVIEW_RELAYS: string[] = [
 // signed event propagates further across the network.
 export const REVIEW_PUBLISH_RELAYS: string[] = [
   ...REVIEW_RELAYS,
-  'wss://nostr.bitcoiner.social',
   'wss://nostr.mom',
   'wss://relay.mostr.pub/',
   'wss://relay.noswhere.com/',
@@ -51,4 +52,7 @@ export const PROFILE_RELAYS: string[] = [
   'wss://nostr.oxtr.dev',
   'wss://relay.nostr.net',
   'wss://nostr21.com',
+  'wss://relay.snort.social',
+  'wss://nostr.bitcoiner.social',
+  'wss://nostr.cypherpunk.today',
 ]

@@ -21,6 +21,8 @@ const META_RELAYS = [
   'wss://relay.snort.social',
   'wss://offchain.pub',
   'wss://nostr-pub.wellorder.net',
+  'wss://nostr.bitcoiner.social',
+  'wss://nostr.cypherpunk.today',
 ]
 
 export async function fetchNostrProfile(pubkey: string, extraRelays?: string[]): Promise<{ name?: string; picture?: string }> {
@@ -162,7 +164,7 @@ const BUNKER_URI_KEY = 'bunkerURI'
 const BUNKER_SECRET_KEY = 'bunkerClientSecretKey'
 const BUNKER_PUBKEY_KEY = 'bunkerPubkey'
 
-const NIP46_RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net']
+const NIP46_RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net', 'wss://relay.snort.social', 'wss://nostr.bitcoiner.social', 'wss://nostr.cypherpunk.today']
 
 function installBunkerShim(signer: BunkerSigner, pubkeyHex: string): void {
   if (typeof window === 'undefined') return

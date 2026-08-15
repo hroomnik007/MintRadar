@@ -25,6 +25,7 @@ export const NOTIFICATION_RELAYS = [
   'wss://relay.noswhere.com',
   'wss://pyramid.fiatjaf.com',
   'wss://nostr.lopp.social',
+  'wss://nostr.cypherpunk.today',
 ]
 
 // Track previous online states and trust scores to detect transitions

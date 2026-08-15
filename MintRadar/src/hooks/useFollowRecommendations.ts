@@ -8,6 +8,9 @@ export const FOLLOW_RELAYS = [
   'wss://nos.lol',
   'wss://relay.nostr.band',
   'wss://relay.primal.net',
+  'wss://relay.snort.social',
+  'wss://nostr.bitcoiner.social',
+  'wss://nostr.cypherpunk.today',
 ]
 
 export interface FollowRec {

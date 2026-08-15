@@ -43,6 +43,8 @@ const META_RELAYS = [
   'wss://relay.snort.social',
   'wss://offchain.pub',
   'wss://nostr-pub.wellorder.net',
+  'wss://nostr.bitcoiner.social',
+  'wss://nostr.cypherpunk.today',
 ]
 
 // Mirrors the frontend's NOTIFICATION_RELAYS (src/hooks/useWatchlistNotifications.ts)
@@ -64,6 +66,7 @@ const NOTIFICATION_RELAYS = [
   'wss://relay.noswhere.com',
   'wss://pyramid.fiatjaf.com',
   'wss://nostr.lopp.social',
+  'wss://nostr.cypherpunk.today',
 ]
 
 const RELAY_PUBLISH_TIMEOUT_MS = 5_000

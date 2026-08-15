@@ -46,6 +46,8 @@ const NOSTR_REVIEWS_RELAYS = [
   'wss://nostr.oxtr.dev',
   'wss://relay.nostr.net',
   'wss://nostr21.com',
+  'wss://nostr.bitcoiner.social',
+  'wss://nostr.cypherpunk.today',
 ]
 const NOSTR_REVIEWS_TIMEOUT_MS = 8_000
 

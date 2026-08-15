@@ -13,6 +13,8 @@ const BOOTSTRAP_RELAYS = [
   'wss://relay.snort.social',
   'wss://offchain.pub',
   'wss://nostr-pub.wellorder.net',
+  'wss://nostr.bitcoiner.social',
+  'wss://nostr.cypherpunk.today',
 ]
 
 // Module-level in-flight guard — prevents duplicate kind:10002 fetches when

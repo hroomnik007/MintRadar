@@ -18,6 +18,7 @@ export const WATCHLIST_RELAYS = [
   'wss://relay.noswhere.com',
   'wss://pyramid.fiatjaf.com',
   'wss://nostr.lopp.social',
+  'wss://nostr.cypherpunk.today',
 ]
 
 const WATCHLIST_KIND = 10003
