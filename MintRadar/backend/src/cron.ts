@@ -3,6 +3,7 @@ import pLimit from 'p-limit'
 import { getKnownMints, probeMintToDb, pruneOldHistory, backfillServerLocations } from './prober.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
 import { pruneOldNotificationSubscriptions } from './db.js'
+import { publishServiceProfile } from './nostrService.js'
 
 const KNOWN_MINTS = [
   'https://mint.minibits.cash/Bitcoin',
@@ -66,6 +67,9 @@ export function startCron(): void {
         console.error('[cron] notification subscription prune error:', err)
       }
     }
+    // Cheap, idempotent replaceable event — safe to repeat daily, keeps the
+    // service profile fresh on relays with short retention.
+    await publishServiceProfile()
   })
 
   // Discovery: run once after 10s, then every 6h

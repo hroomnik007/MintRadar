@@ -3,6 +3,7 @@ import { fetch as undiciFetch } from 'undici'
 import { pool } from './db.js'
 import { checkUrlSafety, safeFetch } from './ssrf.js'
 import { auditReliabilityScore } from './shared/auditScore.js'
+import { notifySubscribers, isNotificationServiceEnabled } from './nostrService.js'
 
 function isCloudflareIP(address: string): boolean {
   const parts = address.split('.').map(Number)
@@ -279,6 +280,15 @@ export async function probeMintToDb(url: string): Promise<void> {
     lastError = 'Unreachable'
   }
 
+  // Snapshot the previous state before inserting the new row, so a
+  // down/up transition can be detected. No prior row (first-ever probe of
+  // this mint) means nothing to compare against — skip detection entirely.
+  const prevRow = await pool.query(
+    'SELECT online FROM mint_history WHERE url = $1 ORDER BY checked_at DESC LIMIT 1',
+    [url]
+  )
+  const previousOnline: boolean | null = prevRow.rows.length > 0 ? (prevRow.rows[0].online as boolean) : null
+
   const histInsert = await pool.query(
     `INSERT INTO mint_history (url, online, latency_ms, checked_at)
      VALUES ($1, $2, $3, NOW())
@@ -286,6 +296,19 @@ export async function probeMintToDb(url: string): Promise<void> {
     [url, online, latencyMs]
   )
   const histId: number | undefined = histInsert.rows[0]?.id as number | undefined
+
+  if (previousOnline !== null && isNotificationServiceEnabled()) {
+    let direction: 'down' | 'up' | null = null
+    if (previousOnline === true && online === false) direction = 'down'
+    else if (previousOnline === false && online === true) direction = 'up'
+    if (direction !== null) {
+      // Fire-and-forget: notifySubscribers has its own internal try/catch and
+      // never throws, so this can't block or serialize with the next probe.
+      void notifySubscribers(url, direction, new Date()).catch(err => {
+        console.error(`[notify] unhandled notifySubscribers error for ${url}:`, err)
+      })
+    }
+  }
 
   try {
     const statsRes = await pool.query(

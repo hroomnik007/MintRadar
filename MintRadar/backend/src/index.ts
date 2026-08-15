@@ -6,6 +6,7 @@ import { pool, initDb } from './db.js'
 import { isSafeUrl, checkWsUrlSafety, safeFetch } from './ssrf.js'
 import { upsertMint, probeMintToDb } from './prober.js'
 import { seedKnownMints, startCron } from './cron.js'
+import { publishServiceProfile } from './nostrService.js'
 import { normalizeUrl } from './discovery.js'
 import { computeDegraded } from './degraded.js'
 import { parseReviewRatingAndComment } from './reviews.js'
@@ -1236,7 +1237,10 @@ if (process.env['NODE_ENV'] !== 'test') {
     console.log(`MintRadar backend listening on port ${PORT}`)
     initDb()
       .then(() => seedKnownMints(upsertMint))
-      .then(() => { startCron() })
+      .then(() => {
+        startCron()
+        void publishServiceProfile()
+      })
       .catch((err: unknown) => {
         console.error('[startup] DB init failed — exiting:', err)
         process.exit(1)
