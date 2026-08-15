@@ -272,6 +272,92 @@ describe('POST /api/notifications/subscribe', () => {
       expect(res.status).toBe(400)
       expect(query).not.toHaveBeenCalled()
     })
+
+    // Regression test for a real production bug: a subscribe request with
+    // exactly 10 valid wss:// relays was rejected with a generic 400 because
+    // ONE relay (relay.nostr.bg) has no DNS records at all (confirmed via
+    // `dig` — a genuinely dead hostname, not a sandbox/network artifact).
+    // isSafeWsUrl collapsed 'dns-error' and 'blocked' into the same `false`,
+    // so a single unresolvable relay failed the entire otherwise-valid batch.
+    // A DNS failure isn't an SSRF signal (checkWsUrlSafety already models it
+    // as a distinct third state for exactly this reason) — it should not be
+    // treated the same as a relay that actually resolves to a private IP.
+    it('regression: accepts a 10-relay batch where exactly one relay has no DNS records', async () => {
+      const { header, pubkey } = await nip98Header(SUBSCRIBE_PATH, 'POST')
+      const relays = [
+        'wss://relay.primal.net', 'wss://nos.lol', 'wss://nostr.wine',
+        'wss://nostr.bitcoiner.social', 'wss://nostr.mom', 'wss://relay.damus.io',
+        'wss://nostr.oxtr.dev', 'wss://relay.mostr.pub', 'wss://relay.nostr.bg',
+        'wss://relay.noswhere.com',
+      ]
+      const deadHost = 'relay.nostr.bg'
+      lookup.mockImplementation(async (hostname: unknown) => {
+        if (hostname === deadHost) {
+          throw Object.assign(new Error(`getaddrinfo ENOTFOUND ${deadHost}`), { code: 'ENOTFOUND' })
+        }
+        return [{ address: '1.2.3.4', family: 4 }]
+      })
+      query.mockResolvedValueOnce({ rowCount: 1, rows: [{}] }) // mint lookup hit
+      query.mockResolvedValueOnce({ rowCount: 1 }) // upsert
+
+      const res = await post(
+        SUBSCRIBE_PATH,
+        { mintUrl: 'https://mint.example.com', notifyOnDown: true, notifyOnUp: true, relays },
+        header
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ success: true })
+      // The unresolvable relay is still stored exactly as submitted.
+      const [, params] = query.mock.calls[1]
+      expect(params).toEqual([pubkey, 'https://mint.example.com', true, true, relays])
+    })
+
+    it('still rejects the whole batch when a relay is genuinely SSRF-blocked, even alongside an unresolvable one', async () => {
+      const { header } = await nip98Header(SUBSCRIBE_PATH, 'POST')
+      lookup.mockImplementation(async (hostname: unknown) => {
+        if (hostname === 'dead.example.com') {
+          throw Object.assign(new Error('nx'), { code: 'ENOTFOUND' })
+        }
+        if (hostname === 'internal.example.com') {
+          return [{ address: '10.0.0.5', family: 4 }]
+        }
+        return [{ address: '1.2.3.4', family: 4 }]
+      })
+
+      const res = await post(
+        SUBSCRIBE_PATH,
+        {
+          mintUrl: 'https://mint.example.com',
+          notifyOnDown: true,
+          notifyOnUp: true,
+          relays: ['wss://good.example.com', 'wss://dead.example.com', 'wss://internal.example.com'],
+        },
+        header
+      )
+
+      expect(res.status).toBe(400)
+      expect(query).not.toHaveBeenCalled()
+    })
+
+    it('logs server-side which relay was blocked and why, without exposing it in the client response', async () => {
+      const { header } = await nip98Header(SUBSCRIBE_PATH, 'POST')
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      resolvesTo({ address: '10.0.0.5', family: 4 })
+
+      const res = await post(
+        SUBSCRIBE_PATH,
+        { mintUrl: 'https://mint.example.com', notifyOnDown: true, notifyOnUp: true, relays: ['wss://internal.example.com'] },
+        header
+      )
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).not.toContain('internal.example.com')
+      const logged = warnSpy.mock.calls.map(c => c.join(' ')).join('\n')
+      expect(logged).toContain('internal.example.com')
+      expect(logged.toLowerCase()).toContain('blocked')
+      warnSpy.mockRestore()
+    })
   })
 
   it('rate-limits a single pubkey after 30 requests/hour (31st → 429)', async () => {

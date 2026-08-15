@@ -3,7 +3,7 @@ import cors from 'cors'
 import { SimplePool, verifyEvent } from 'nostr-tools'
 import WebSocket from 'ws'
 import { pool, initDb } from './db.js'
-import { isSafeUrl, isSafeWsUrl, safeFetch } from './ssrf.js'
+import { isSafeUrl, checkWsUrlSafety, safeFetch } from './ssrf.js'
 import { upsertMint, probeMintToDb } from './prober.js'
 import { seedKnownMints, startCron } from './cron.js'
 import { normalizeUrl } from './discovery.js'
@@ -1057,15 +1057,58 @@ const MAX_RELAYS = 10
 // ws(s) scheme in ssrf.ts) — prevents a subscription from later being used to
 // make the (future, phase-2) DM-sending code connect to internal
 // infrastructure via an attacker-supplied "relay".
-async function validateRelays(relays: unknown): Promise<string[] | null> {
-  if (!Array.isArray(relays)) return null
-  if (relays.length < MIN_RELAYS || relays.length > MAX_RELAYS) return null
+//
+// `logContext` (a truncated pubkey — never full request data) is included in
+// every rejection log line so a rejected batch is diagnosable server-side
+// without needing to expose which specific relay/reason failed to the client.
+async function validateRelays(relays: unknown, logContext: string): Promise<string[] | null> {
+  if (!Array.isArray(relays)) {
+    console.warn(`[notifications] relay validation rejected (${logContext}): relays is not an array`)
+    return null
+  }
+  if (relays.length < MIN_RELAYS || relays.length > MAX_RELAYS) {
+    console.warn(`[notifications] relay validation rejected (${logContext}): ${relays.length} relays, expected ${MIN_RELAYS}-${MAX_RELAYS}`)
+    return null
+  }
   for (const r of relays) {
-    if (typeof r !== 'string' || r.length === 0 || r.length > MAX_URL_LENGTH) return null
+    if (typeof r !== 'string' || r.length === 0 || r.length > MAX_URL_LENGTH) {
+      console.warn(`[notifications] relay validation rejected (${logContext}): malformed relay entry (not a string, empty, or over ${MAX_URL_LENGTH} chars)`)
+      return null
+    }
   }
   const typedRelays = relays as string[]
-  const safety = await Promise.all(typedRelays.map(r => isSafeWsUrl(r)))
-  if (safety.some(safe => !safe)) return null
+  const checks = await Promise.all(
+    typedRelays.map(async url => ({ url, result: await checkWsUrlSafety(url) }))
+  )
+
+  // A DNS failure is not an SSRF signal — mirrors checkWsUrlSafety's own
+  // three-state contract (ssrf.ts), where 'dns-error' means "currently
+  // unreachable", not "malicious" (only 'blocked' does: bad scheme, or
+  // resolves to a private/internal address). Treating 'dns-error' the same
+  // as 'blocked' was the actual bug: a single relay with a dead/unresolvable
+  // hostname (e.g. relay.nostr.bg — confirmed via `dig`, no DNS records at
+  // all) rejected the ENTIRE subscribe request, even with 9 other perfectly
+  // valid relays in the same batch. A relay list naturally includes relays
+  // that are temporarily or permanently down; that's not something the
+  // request as a whole should fail on. Only a genuinely 'blocked' relay
+  // invalidates the batch — 'dns-error' relays are still stored as given.
+  const blocked = checks.filter(c => c.result === 'blocked')
+  if (blocked.length > 0) {
+    console.warn(
+      `[notifications] relay validation rejected (${logContext}): blocked — ` +
+      blocked.map(c => c.url).join(', ')
+    )
+    return null
+  }
+
+  const dnsErrors = checks.filter(c => c.result === 'dns-error')
+  if (dnsErrors.length > 0) {
+    console.warn(
+      `[notifications] relay(s) unresolvable but accepted (${logContext}): ` +
+      dnsErrors.map(c => c.url).join(', ')
+    )
+  }
+
   return typedRelays
 }
 
@@ -1106,7 +1149,7 @@ app.post('/api/notifications/subscribe', (req: Request, res: Response): void => 
         return
       }
 
-      return validateRelays(body.relays).then(relays => {
+      return validateRelays(body.relays, pubkey.slice(0, 8)).then(relays => {
         if (relays === null) {
           res.status(400).json({
             error: `relays must be an array of ${MIN_RELAYS}-${MAX_RELAYS} valid ws:// or wss:// URLs`,
