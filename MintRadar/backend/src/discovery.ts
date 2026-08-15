@@ -51,6 +51,8 @@ const DISCOVERY_RELAYS = [
   'wss://offchain.pub',
   'wss://relay.8333.space',
   'wss://nostr.oxtr.dev',
+  'wss://relay.nostr.net',
+  'wss://nostr21.com',
 ]
 
 const DISCOVERY_TIMEOUT_MS = 15_000

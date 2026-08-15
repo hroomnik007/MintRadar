@@ -18,6 +18,8 @@ export const DISCOVERY_RELAYS: string[] = [
   'wss://offchain.pub',
   'wss://relay.8333.space',
   'wss://nostr.oxtr.dev',
+  'wss://relay.nostr.net',
+  'wss://nostr21.com',
 ]
 
 // Discovery relays plus relay.minibits.cash (a Cashu-wallet-specific relay that tends to
@@ -46,4 +48,7 @@ export const PROFILE_RELAYS: string[] = [
   'wss://relay.primal.net',
   'wss://purplepag.es',
   'wss://relay.damus.io',
+  'wss://nostr.oxtr.dev',
+  'wss://relay.nostr.net',
+  'wss://nostr21.com',
 ]

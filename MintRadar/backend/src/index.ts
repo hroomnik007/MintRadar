@@ -44,6 +44,8 @@ const NOSTR_REVIEWS_RELAYS = [
   'wss://relay.8333.space',
   'wss://relay.minibits.cash',
   'wss://nostr.oxtr.dev',
+  'wss://relay.nostr.net',
+  'wss://nostr21.com',
 ]
 const NOSTR_REVIEWS_TIMEOUT_MS = 8_000
 

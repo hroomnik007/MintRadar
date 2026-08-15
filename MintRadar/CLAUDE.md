@@ -120,11 +120,37 @@ this (separate npm package, no workspace set up) — `backend/src/discovery.ts` 
 
 wss://relay.damus.io, wss://nos.lol, wss://purplepag.es, wss://relay.snort.social,
 wss://relay.primal.net, wss://relay.cashumints.space, wss://relay.azzamo.net,
-wss://relay.nostr.band, wss://nostr.wine, wss://nostr-pub.wellorder.net,
-wss://offchain.pub, wss://relay.8333.space
+wss://eden.nostr.land, wss://nostr.wine, wss://nostr-pub.wellorder.net,
+wss://offchain.pub, wss://relay.8333.space, wss://nostr.oxtr.dev, wss://relay.nostr.net,
+wss://nostr21.com
 
 `wss://relay.8333.space` was added to every discovery/review relay list in the project —
 same operator as `audit.8333.space`, likely higher density of Cashu-specific NIP-87 events.
+
+**2026-08-15 — `relay.nostr.band` replaced, 3 relays added (all 4 relay-list locations):**
+User noticed devtools showing `relay.nostr.band` (`NS_ERROR_UNKNOWN_HOST`/timeout) and
+`relay.8333.space` (`NS_ERROR_CONNECTION_REFUSED`) failing, plus `relay.damus.io`
+returning occasional 503s. Investigated each:
+- `relay.nostr.band` — genuinely down (TCP handshake to `95.216.33.150:443` hangs/times
+  out; confirmed not a general network issue since other Hetzner-hosted relays, e.g.
+  `nos.lol`, connect fine). **Replaced** with `eden.nostr.land` everywhere it appeared.
+- `relay.8333.space` — also down right now (`EHOSTUNREACH`), but **kept** in the list (its
+  Cashu-specific NIP-87 density is worth it once it recovers — same operator as
+  `audit.8333.space`, which is up).
+- `relay.damus.io` 503s — NOT a bug, confirmed by hammering it with 10 sequential
+  WebSocket connects: ~20% hit HTTP 503 (Cloudflare load-shedding), ~80% open in
+  ~200-400ms. `sharedPool` already races all relays in a list simultaneously
+  (`querySync`/`subscribeMany`), so this doesn't cause user-visible failures — it was
+  flagged in devtools but the login flow succeeded regardless. No fix needed.
+- **Added** `nostr.oxtr.dev` (99ms connect — already trusted, was previously only in
+  `REVIEW_PUBLISH_RELAYS`'s own extra list; that duplicate entry was removed since it's
+  now inherited via `DISCOVERY_RELAYS`), `relay.nostr.net` (284ms), and `nostr21.com`
+  (483ms) — all verified reachable via a direct `ws` handshake test before adding.
+  `relay.current.fyi` (DNS doesn't resolve) and `relay.nostrati.com`/`relayable.org`
+  (502/timeout) were also tried as candidates and rejected as unreliable.
+- All 4 relay-list locations kept in sync: frontend `DISCOVERY_RELAYS` + `PROFILE_RELAYS`
+  (`src/core/nostr/relays.ts`), backend `DISCOVERY_RELAYS` (`discovery.ts`), backend
+  `NOSTR_REVIEWS_RELAYS` (`index.ts`).
 
 **Streaming vs. batch discovery:** considered and deliberately rejected. Discovery runs in
 the background with no live UI to update, so a streaming subscription (incremental
