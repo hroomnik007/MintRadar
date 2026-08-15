@@ -149,9 +149,11 @@ export async function notifySubscribers(mintUrl: string, direction: 'down' | 'up
     const rows = result.rows as SubscriberRow[]
     if (rows.length === 0) return
 
+    const hostname = new URL(mintUrl).hostname
+    const detailUrl = `https://mintradar.pedani.eu/mint/${encodeURIComponent(mintUrl)}`
     const message = direction === 'down'
-      ? `⚠️ ${mintUrl} just went offline.`
-      : `✅ ${mintUrl} is back online.`
+      ? `⚠️ ${hostname} just went offline.\nView details: ${detailUrl}`
+      : `✅ ${hostname} is back online.\nView details: ${detailUrl}`
 
     let sent = 0
     let cooldownSkipped = 0

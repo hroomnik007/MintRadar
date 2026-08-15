@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { generateSecretKey, nip19, verifyEvent, getPublicKey } from 'nostr-tools'
+import { generateSecretKey, nip17, nip19, verifyEvent, getPublicKey } from 'nostr-tools'
 import type { Event as NostrEvent } from 'nostr-tools'
 
 // nostrService.ts holds the "MintRadar Alerts" service identity and sends
@@ -245,6 +245,38 @@ describe('notifySubscribers', () => {
     await svc.notifySubscribers(MINT, 'down', new Date())
 
     expect(publishMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('down message uses the plain hostname (no scheme) plus a URL-encoded MintRadar deep link', async () => {
+    const recipientSecretKey = generateSecretKey()
+    const pubkey = getPublicKey(recipientSecretKey)
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    query
+      .mockResolvedValueOnce({ rows: [{ pubkey, relays: ['wss://relay.example.com'], last_notified_at: null }] })
+      .mockResolvedValueOnce({ rowCount: 1 })
+
+    await svc.notifySubscribers(MINT, 'down', new Date())
+
+    const [, giftWrap] = publishMock.mock.calls[0] as [string[], NostrEvent]
+    const rumor = nip17.unwrapEvent(giftWrap, recipientSecretKey)
+    const expectedUrl = `https://mintradar.pedani.eu/mint/${encodeURIComponent(MINT)}`
+    expect(rumor.content).toBe(`⚠️ mint.example.com just went offline.\nView details: ${expectedUrl}`)
+  })
+
+  it('up message uses the plain hostname (no scheme) plus a URL-encoded MintRadar deep link', async () => {
+    const recipientSecretKey = generateSecretKey()
+    const pubkey = getPublicKey(recipientSecretKey)
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    query
+      .mockResolvedValueOnce({ rows: [{ pubkey, relays: ['wss://relay.example.com'], last_notified_at: null }] })
+      .mockResolvedValueOnce({ rowCount: 1 })
+
+    await svc.notifySubscribers(MINT, 'up', new Date())
+
+    const [, giftWrap] = publishMock.mock.calls[0] as [string[], NostrEvent]
+    const rumor = nip17.unwrapEvent(giftWrap, recipientSecretKey)
+    const expectedUrl = `https://mintradar.pedani.eu/mint/${encodeURIComponent(MINT)}`
+    expect(rumor.content).toBe(`✅ mint.example.com is back online.\nView details: ${expectedUrl}`)
   })
 
   it('never throws even if the initial DB query rejects', async () => {
