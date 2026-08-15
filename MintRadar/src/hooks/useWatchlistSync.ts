@@ -63,12 +63,24 @@ export function useWatchlistSync() {
         if (import.meta.env.DEV) { console.log(`sync: decrypted ${remote.length} mints`, remote) }
 
         if (remote.length > 0) {
-          // Remote is authoritative — replace Dexie content entirely
+          // Remote is authoritative for WHICH urls are watched, but notifyOnDown/
+          // notifyOnUp (and addedAt) are local-only data never synced to Nostr —
+          // preserve them for urls that already exist locally instead of resetting
+          // to defaults on every successful sync. New urls (not previously in
+          // Dexie) default to on/on, matching addMint()'s default.
+          const existing = await db.watchlist.toArray()
+          const existingByUrl = new Map(existing.map(e => [e.url, e]))
           await db.watchlist.clear()
           await Promise.all(
-            remote.map(url =>
-              db.watchlist.put({ url, addedAt: new Date(), notifyOnDown: false, notifyOnUp: false })
-            )
+            remote.map(url => {
+              const prior = existingByUrl.get(url)
+              return db.watchlist.put({
+                url,
+                addedAt: prior?.addedAt ?? new Date(),
+                notifyOnDown: prior?.notifyOnDown ?? true,
+                notifyOnUp: prior?.notifyOnUp ?? true,
+              })
+            })
           )
           console.log('sync: written to Dexie')
         } else {

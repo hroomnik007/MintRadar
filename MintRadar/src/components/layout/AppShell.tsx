@@ -7,7 +7,6 @@ import { useWatchlistSync } from '@/hooks/useWatchlistSync'
 import { useFollowRecommendations } from '@/hooks/useFollowRecommendations'
 import { initBunkerQR } from '@/core/nostr/client'
 import { NavLogo } from './NavLogo'
-import { DebugLogOverlay } from './DebugLogOverlay'
 import './AppShell.css'
 
 const IcClose = () => (
@@ -303,7 +302,11 @@ export function AppShell() {
 
             <div className="nostr-modal-footer">
               <div className="nostr-privacy-note">
-                <IcShield /> Your key stays only in this browser&apos;s memory for this session — used to sign on your behalf, never sent anywhere, never saved to disk.
+                <IcShield /> {loginMethod === 'nip07'
+                  ? <>Your key never leaves your extension. MintRadar only requests signatures — it can&apos;t read your private key.</>
+                  : loginMethod === 'amber'
+                  ? <>Your key stays on your signer device (e.g. Amber). Only a temporary session key is stored in this browser to relay requests — it can&apos;t sign anything on its own.</>
+                  : <>Your key stays only in this browser&apos;s memory for this session — used to sign on your behalf, never sent anywhere, never saved to disk.</>}
               </div>
               <div className="nostr-modal-actions">
                 <button type="button" className="nostr-cancel-btn" onClick={closeLoginModal}>
@@ -330,8 +333,6 @@ export function AppShell() {
       <main className="app-content">
         <Outlet />
       </main>
-
-      <DebugLogOverlay />
     </div>
   )
 }
