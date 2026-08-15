@@ -2,6 +2,7 @@ import cron from 'node-cron'
 import pLimit from 'p-limit'
 import { getKnownMints, probeMintToDb, pruneOldHistory, backfillServerLocations } from './prober.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
+import { pruneOldNotificationSubscriptions } from './db.js'
 
 const KNOWN_MINTS = [
   'https://mint.minibits.cash/Bitcoin',
@@ -51,6 +52,18 @@ export function startCron(): void {
     } catch (err) {
       if (process.env['NODE_ENV'] !== 'production') {
         console.error('[cron] prune error:', err)
+      }
+    }
+  })
+
+  // Prune notification subscriptions not updated in 30 days, every day at 3:30am
+  cron.schedule('30 3 * * *', async () => {
+    try {
+      const deleted = await pruneOldNotificationSubscriptions()
+      console.log(`[cron] pruned ${deleted} stale notification subscription(s)`)
+    } catch (err) {
+      if (process.env['NODE_ENV'] !== 'production') {
+        console.error('[cron] notification subscription prune error:', err)
       }
     }
   })

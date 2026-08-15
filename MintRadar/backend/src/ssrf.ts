@@ -71,10 +71,15 @@ function isBlockedIpString(ip: string): boolean {
 // 'dns-error' — DNS lookup failed, mint is unreachable — write offline history entry
 export type UrlSafetyResult = 'safe' | 'blocked' | 'dns-error'
 
-export async function checkUrlSafety(rawUrl: string): Promise<UrlSafetyResult> {
+// Shared by checkUrlSafety (https:) and checkWsUrlSafety (ws:/wss:) — only the
+// allowed protocol set differs; hostname/DNS/private-range checks are identical.
+async function checkUrlSafetyForProtocols(
+  rawUrl: string,
+  allowedProtocols: readonly string[]
+): Promise<UrlSafetyResult> {
   try {
     const url = new URL(rawUrl)
-    if (url.protocol !== 'https:') return 'blocked'
+    if (!allowedProtocols.includes(url.protocol)) return 'blocked'
     if (rawUrl.length > 500) return 'blocked'
 
     const hostname = url.hostname
@@ -112,8 +117,25 @@ export async function checkUrlSafety(rawUrl: string): Promise<UrlSafetyResult> {
   }
 }
 
+export async function checkUrlSafety(rawUrl: string): Promise<UrlSafetyResult> {
+  return checkUrlSafetyForProtocols(rawUrl, ['https:'])
+}
+
 export async function isSafeUrl(rawUrl: string): Promise<boolean> {
   const result = await checkUrlSafety(rawUrl)
+  return result === 'safe'
+}
+
+// Same guard as checkUrlSafety, but for Nostr relay URLs (ws:/wss:) instead of
+// mint URLs (https:) — used to validate user-supplied relay lists before they
+// are stored, so they can't be used to make the server probe/connect to
+// internal infrastructure later.
+export async function checkWsUrlSafety(rawUrl: string): Promise<UrlSafetyResult> {
+  return checkUrlSafetyForProtocols(rawUrl, ['ws:', 'wss:'])
+}
+
+export async function isSafeWsUrl(rawUrl: string): Promise<boolean> {
+  const result = await checkWsUrlSafety(rawUrl)
   return result === 'safe'
 }
 

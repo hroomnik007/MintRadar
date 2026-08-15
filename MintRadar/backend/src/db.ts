@@ -43,6 +43,19 @@ export async function initDb(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_mints_trust_score
       ON mints(last_trust_score DESC NULLS LAST);
+
+    CREATE TABLE IF NOT EXISTS notification_subscriptions (
+      pubkey TEXT NOT NULL,
+      mint_url TEXT NOT NULL REFERENCES mints(url) ON DELETE CASCADE,
+      notify_on_down BOOLEAN NOT NULL DEFAULT true,
+      notify_on_up BOOLEAN NOT NULL DEFAULT true,
+      relays TEXT[] NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (pubkey, mint_url)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_notification_subs_updated_at
+      ON notification_subscriptions(updated_at);
   `)
 
   // Column migrations — each in its own query so a failure in one doesn't block others
@@ -69,4 +82,13 @@ export async function initDb(): Promise<void> {
   for (const sql of migrations) {
     await pool.query(sql)
   }
+}
+
+// 30-day retention: a subscription not touched (created/updated) in 30 days
+// is dropped. Returns the deleted row count for cron logging.
+export async function pruneOldNotificationSubscriptions(): Promise<number> {
+  const result = await pool.query(
+    `DELETE FROM notification_subscriptions WHERE updated_at < now() - interval '30 days'`
+  )
+  return result.rowCount ?? 0
 }

@@ -3,12 +3,13 @@ import cors from 'cors'
 import { SimplePool, verifyEvent } from 'nostr-tools'
 import WebSocket from 'ws'
 import { pool, initDb } from './db.js'
-import { isSafeUrl, safeFetch } from './ssrf.js'
+import { isSafeUrl, isSafeWsUrl, safeFetch } from './ssrf.js'
 import { upsertMint, probeMintToDb } from './prober.js'
 import { seedKnownMints, startCron } from './cron.js'
 import { normalizeUrl } from './discovery.js'
 import { computeDegraded } from './degraded.js'
 import { parseReviewRatingAndComment } from './reviews.js'
+import { authenticateNip98 } from './nip98Auth.js'
 
 let knownMintsCache: { data: unknown; expiresAt: number } | null = null
 const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
@@ -243,11 +244,20 @@ const SUBMIT_RATE_LIMIT_MAX = 20
 const discoverRateLimitStore = new Map<string, RateLimitEntry>()
 const DISCOVER_RATE_LIMIT_MAX = 10
 
-function checkWindowedLimit(store: Map<string, RateLimitEntry>, max: number, ip: string): boolean {
+// Notifications subscribe/unsubscribe: 30 req/pubkey/hour each. Keyed on the
+// NIP-98-authenticated pubkey rather than IP — these routes require auth, so
+// the pubkey is the meaningful identity to throttle (an IP-based limit would
+// let one attacker-controlled IP exhaust the budget of many pubkeys, or one
+// pubkey rotate through many IPs to bypass it).
+const notifySubscribeRateLimitStore = new Map<string, RateLimitEntry>()
+const notifyUnsubscribeRateLimitStore = new Map<string, RateLimitEntry>()
+const NOTIFY_RATE_LIMIT_MAX = 30
+
+function checkWindowedLimit(store: Map<string, RateLimitEntry>, max: number, key: string): boolean {
   const now = Date.now()
-  const entry = store.get(ip)
+  const entry = store.get(key)
   if (entry === undefined || now >= entry.resetAt) {
-    store.set(ip, { count: 1, resetAt: now + HOUR_MS })
+    store.set(key, { count: 1, resetAt: now + HOUR_MS })
     return true
   }
   if (entry.count >= max) return false
@@ -263,11 +273,19 @@ function checkDiscoverRateLimit(ip: string): boolean {
   return checkWindowedLimit(discoverRateLimitStore, DISCOVER_RATE_LIMIT_MAX, ip)
 }
 
+function checkNotifySubscribeRateLimit(pubkey: string): boolean {
+  return checkWindowedLimit(notifySubscribeRateLimitStore, NOTIFY_RATE_LIMIT_MAX, pubkey)
+}
+
+function checkNotifyUnsubscribeRateLimit(pubkey: string): boolean {
+  return checkWindowedLimit(notifyUnsubscribeRateLimitStore, NOTIFY_RATE_LIMIT_MAX, pubkey)
+}
+
 setInterval(() => {
   const now = Date.now()
-  for (const store of [submitRateLimitStore, discoverRateLimitStore]) {
-    for (const [ip, entry] of store) {
-      if (now >= entry.resetAt) store.delete(ip)
+  for (const store of [submitRateLimitStore, discoverRateLimitStore, notifySubscribeRateLimitStore, notifyUnsubscribeRateLimitStore]) {
+    for (const [key, entry] of store) {
+      if (now >= entry.resetAt) store.delete(key)
     }
   }
 }, HOUR_MS)
@@ -1021,6 +1039,147 @@ app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {
       if (IS_DEV) console.error('[/api/mints/nostr-reviews]', err)
       nostrPool.destroy()
       res.json([])
+    })
+})
+
+// ── Routes: notification subscriptions ────────────────────────
+//
+// Phase 1: storage only — no sending. A subscription records that `pubkey`
+// wants a DM (over `relays`) when `mintUrl` transitions online/offline.
+// Both routes require NIP-98 auth (RFC 27235 "Nostr" HTTP Auth) so a
+// subscription can only be created/removed by the key that owns it.
+
+const MIN_RELAYS = 1
+const MAX_RELAYS = 10
+
+// Validates the relay list shape and, for each entry, that it's a ws:/wss:
+// URL that passes the same SSRF guard used for mint probing (adapted for the
+// ws(s) scheme in ssrf.ts) — prevents a subscription from later being used to
+// make the (future, phase-2) DM-sending code connect to internal
+// infrastructure via an attacker-supplied "relay".
+async function validateRelays(relays: unknown): Promise<string[] | null> {
+  if (!Array.isArray(relays)) return null
+  if (relays.length < MIN_RELAYS || relays.length > MAX_RELAYS) return null
+  for (const r of relays) {
+    if (typeof r !== 'string' || r.length === 0 || r.length > MAX_URL_LENGTH) return null
+  }
+  const typedRelays = relays as string[]
+  const safety = await Promise.all(typedRelays.map(r => isSafeWsUrl(r)))
+  if (safety.some(safe => !safe)) return null
+  return typedRelays
+}
+
+app.post('/api/notifications/subscribe', (req: Request, res: Response): void => {
+  authenticateNip98(req)
+    .then(auth => {
+      if (!auth.ok) {
+        res.status(auth.status).json({ error: auth.error })
+        return
+      }
+      const { pubkey } = auth
+
+      if (!checkNotifySubscribeRateLimit(pubkey)) {
+        res.status(429).json({ error: 'Too many requests. Try again later.' })
+        return
+      }
+
+      const body = req.body as {
+        mintUrl?: unknown
+        notifyOnDown?: unknown
+        notifyOnUp?: unknown
+        relays?: unknown
+      }
+
+      const mintUrl = body.mintUrl
+      if (typeof mintUrl !== 'string' || mintUrl.length === 0) {
+        res.status(400).json({ error: 'Missing required field: mintUrl' })
+        return
+      }
+      if (mintUrl.length > MAX_URL_LENGTH) {
+        res.status(400).json({ error: `mintUrl exceeds maximum length of ${MAX_URL_LENGTH} characters` })
+        return
+      }
+
+      const { notifyOnDown, notifyOnUp } = body
+      if (typeof notifyOnDown !== 'boolean' || typeof notifyOnUp !== 'boolean') {
+        res.status(400).json({ error: 'notifyOnDown and notifyOnUp must be boolean' })
+        return
+      }
+
+      return validateRelays(body.relays).then(relays => {
+        if (relays === null) {
+          res.status(400).json({
+            error: `relays must be an array of ${MIN_RELAYS}-${MAX_RELAYS} valid ws:// or wss:// URLs`,
+          })
+          return
+        }
+
+        return pool.query('SELECT 1 FROM mints WHERE url = $1', [mintUrl]).then(mintResult => {
+          if ((mintResult.rowCount ?? 0) === 0) {
+            res.status(400).json({ error: 'Unknown mint' })
+            return
+          }
+
+          return pool.query(
+            `INSERT INTO notification_subscriptions (pubkey, mint_url, notify_on_down, notify_on_up, relays, updated_at)
+             VALUES ($1, $2, $3, $4, $5, now())
+             ON CONFLICT (pubkey, mint_url) DO UPDATE SET
+               notify_on_down = EXCLUDED.notify_on_down,
+               notify_on_up = EXCLUDED.notify_on_up,
+               relays = EXCLUDED.relays,
+               updated_at = now()`,
+            [pubkey, mintUrl, notifyOnDown, notifyOnUp, relays]
+          ).then(() => {
+            // Audit trail: truncated pubkey + mint only — never relays/notify
+            // flags, which is the rest of the request body.
+            console.log(`[notifications/subscribe] pubkey=${pubkey.slice(0, 8)}… mint=${mintUrl}`)
+            res.json({ success: true })
+          })
+        })
+      })
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[/api/notifications/subscribe]', err)
+      if (!res.headersSent) res.status(500).json({ error: 'Internal server error' })
+    })
+})
+
+app.post('/api/notifications/unsubscribe', (req: Request, res: Response): void => {
+  authenticateNip98(req)
+    .then(auth => {
+      if (!auth.ok) {
+        res.status(auth.status).json({ error: auth.error })
+        return
+      }
+      const { pubkey } = auth
+
+      if (!checkNotifyUnsubscribeRateLimit(pubkey)) {
+        res.status(429).json({ error: 'Too many requests. Try again later.' })
+        return
+      }
+
+      const body = req.body as { mintUrl?: unknown }
+      const mintUrl = body.mintUrl
+      if (typeof mintUrl !== 'string' || mintUrl.length === 0) {
+        res.status(400).json({ error: 'Missing required field: mintUrl' })
+        return
+      }
+      if (mintUrl.length > MAX_URL_LENGTH) {
+        res.status(400).json({ error: `mintUrl exceeds maximum length of ${MAX_URL_LENGTH} characters` })
+        return
+      }
+
+      return pool.query(
+        'DELETE FROM notification_subscriptions WHERE pubkey = $1 AND mint_url = $2',
+        [pubkey, mintUrl]
+      ).then(() => {
+        console.log(`[notifications/unsubscribe] pubkey=${pubkey.slice(0, 8)}… mint=${mintUrl}`)
+        res.json({ success: true })
+      })
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[/api/notifications/unsubscribe]', err)
+      if (!res.headersSent) res.status(500).json({ error: 'Internal server error' })
     })
 })
 

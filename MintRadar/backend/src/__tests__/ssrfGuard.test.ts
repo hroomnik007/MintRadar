@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('dns/promises', () => ({ lookup: vi.fn() }))
 
 import { lookup } from 'dns/promises'
-import { checkUrlSafety, isSafeUrl } from '../ssrf.js'
+import { checkUrlSafety, isSafeUrl, checkWsUrlSafety, isSafeWsUrl } from '../ssrf.js'
 
 const mockedLookup = vi.mocked(lookup)
 
@@ -134,5 +134,60 @@ describe('isSafeUrl', () => {
   it('is false for a dns-error (only "safe" maps to true)', async () => {
     mockedLookup.mockRejectedValue(new Error('boom'))
     expect(await isSafeUrl('https://nx.example.com')).toBe(false)
+  })
+})
+
+// checkWsUrlSafety/isSafeWsUrl — same guard as checkUrlSafety/isSafeUrl, used
+// for Nostr relay URLs (notification subscriptions) instead of mint URLs.
+// Only the accepted protocol set differs (ws:/wss: vs https:); the
+// private-range/DNS-rebinding logic is shared, so this focuses on the
+// protocol-specific behavior plus a couple of representative shared checks.
+describe('checkWsUrlSafety', () => {
+  it('accepts ws:// and wss:// but rejects https://', async () => {
+    resolvesTo({ address: '1.2.3.4', family: 4 })
+    expect(await checkWsUrlSafety('wss://relay.example.com')).toBe('safe')
+    resolvesTo({ address: '1.2.3.4', family: 4 })
+    expect(await checkWsUrlSafety('ws://relay.example.com')).toBe('safe')
+    expect(await checkWsUrlSafety('https://relay.example.com')).toBe('blocked')
+  })
+
+  it.each([
+    ['ws://127.0.0.1', 'loopback'],
+    ['wss://10.0.0.1', 'private 10/8'],
+    ['ws://169.254.1.1', 'link-local'],
+    ['wss://0.0.0.0', 'unspecified'],
+  ])('blocks %s (%s) without a DNS lookup', async (url) => {
+    expect(await checkWsUrlSafety(url)).toBe('blocked')
+    expect(mockedLookup).not.toHaveBeenCalled()
+  })
+
+  it('blocks a relay hostname that resolves to a private IP (DNS-rebinding style)', async () => {
+    resolvesTo({ address: '192.168.1.10', family: 4 })
+    expect(await checkWsUrlSafety('wss://rebind.example.com')).toBe('blocked')
+  })
+
+  it('blocks "localhost" resolving to loopback', async () => {
+    resolvesTo({ address: '127.0.0.1', family: 4 })
+    expect(await checkWsUrlSafety('wss://localhost')).toBe('blocked')
+  })
+
+  it('returns dns-error (not blocked) on DNS resolution failure', async () => {
+    mockedLookup.mockRejectedValue(Object.assign(new Error('nx'), { code: 'ENOTFOUND' }))
+    expect(await checkWsUrlSafety('wss://nx.example.com')).toBe('dns-error')
+  })
+
+  it('blocks malformed URLs without throwing', async () => {
+    expect(await checkWsUrlSafety('not a url')).toBe('blocked')
+  })
+})
+
+describe('isSafeWsUrl', () => {
+  it('is false for a raw link-local (cloud metadata) IP', async () => {
+    expect(await isSafeWsUrl('ws://169.254.169.254')).toBe(false)
+  })
+
+  it('is true for a public relay hostname resolving to a public IP', async () => {
+    resolvesTo({ address: '5.6.7.8', family: 4 })
+    expect(await isSafeWsUrl('wss://relay.example.com')).toBe(true)
   })
 })
