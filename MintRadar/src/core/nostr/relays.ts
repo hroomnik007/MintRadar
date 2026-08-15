@@ -12,11 +12,12 @@ export const DISCOVERY_RELAYS: string[] = [
   'wss://relay.primal.net',
   'wss://relay.cashumints.space',
   'wss://relay.azzamo.net',
-  'wss://relay.nostr.band',
+  'wss://eden.nostr.land',
   'wss://nostr.wine',
   'wss://nostr-pub.wellorder.net',
   'wss://offchain.pub',
   'wss://relay.8333.space',
+  'wss://nostr.oxtr.dev',
 ]
 
 // Discovery relays plus relay.minibits.cash (a Cashu-wallet-specific relay that tends to
@@ -32,7 +33,6 @@ export const REVIEW_PUBLISH_RELAYS: string[] = [
   ...REVIEW_RELAYS,
   'wss://nostr.bitcoiner.social',
   'wss://nostr.mom',
-  'wss://nostr.oxtr.dev/',
   'wss://relay.mostr.pub/',
   'wss://relay.noswhere.com/',
   'wss://pyramid.fiatjaf.com/',
@@ -41,7 +41,7 @@ export const REVIEW_PUBLISH_RELAYS: string[] = [
 
 // Small relay set for looking up kind:0 profile metadata (review author name/avatar).
 export const PROFILE_RELAYS: string[] = [
-  'wss://relay.nostr.band',
+  'wss://eden.nostr.land',
   'wss://nos.lol',
   'wss://relay.primal.net',
   'wss://purplepag.es',

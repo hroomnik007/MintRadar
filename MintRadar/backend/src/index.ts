@@ -37,12 +37,13 @@ const NOSTR_REVIEWS_RELAYS = [
   'wss://relay.primal.net',
   'wss://relay.cashumints.space',
   'wss://relay.azzamo.net',
-  'wss://relay.nostr.band',
+  'wss://eden.nostr.land',
   'wss://nostr.wine',
   'wss://nostr-pub.wellorder.net',
   'wss://offchain.pub',
   'wss://relay.8333.space',
   'wss://relay.minibits.cash',
+  'wss://nostr.oxtr.dev',
 ]
 const NOSTR_REVIEWS_TIMEOUT_MS = 8_000
 
