@@ -66,26 +66,37 @@ export function MintCard({
     e.stopPropagation()
     if (!notifyEntry) return
     const nextValue = !notifyEntry[field]
-    const notifyOnDown = field === 'notifyOnDown' ? nextValue : notifyEntry.notifyOnDown
-    const notifyOnUp = field === 'notifyOnUp' ? nextValue : notifyEntry.notifyOnUp
-    void db.watchlist.update(mint.url, { [field]: nextValue })
+    // Local Dexie write is the source of truth for the UI. It's awaited
+    // inside the async IIFE below (not fired separately) so the server
+    // mirror's follow-up read can't race ahead of it.
+    const writeAndSync = async () => {
+      await db.watchlist.update(mint.url, { [field]: nextValue })
 
-    // Best-effort server mirror — local Dexie state above is already
-    // committed and stays the source of truth regardless of what happens
-    // here. Both flags off → no preference left → remove the server row
-    // entirely rather than upserting an all-false one.
-    if (isLoggedIn) {
-      if (notifyOnDown || notifyOnUp) {
-        void syncSubscribeToServer({
+      if (!isLoggedIn) return
+
+      // Best-effort server mirror. Re-read from Dexie (not the `notifyEntry`
+      // React closure) for the flag that ISN'T being toggled here: if the
+      // user (or an automated test) fires the Down and Up toggles in rapid
+      // succession, the second click's render closure can still reflect the
+      // pre-first-click state, which would send a stale combination to the
+      // server. Awaiting the write above, then reading Dexie fresh, makes
+      // this immune to that ordering regardless of click speed.
+      const current = await db.watchlist.get(mint.url)
+      if (!current) return
+      // Both flags off → no preference left → remove the server row
+      // entirely rather than upserting an all-false one.
+      if (current.notifyOnDown || current.notifyOnUp) {
+        await syncSubscribeToServer({
           mintUrl: mint.url,
-          notifyOnDown,
-          notifyOnUp,
+          notifyOnDown: current.notifyOnDown,
+          notifyOnUp: current.notifyOnUp,
           relays: resolveNotificationRelays(userReadRelays),
         })
       } else {
-        void syncUnsubscribeFromServer(mint.url)
+        await syncUnsubscribeFromServer(mint.url)
       }
     }
+    void writeAndSync()
   }
   const isOnline = mint.online === true
   const isOfflineDegraded = mint.degraded === true
