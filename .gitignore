@@ -48,3 +48,6 @@ playwright/.cache/
 Finvu/
 privyzap_phase1/
 CLAUDE.local.md
+
+# Stray local scratch file (untracked leftover, not part of the project)
+/notif-toggle-final.html

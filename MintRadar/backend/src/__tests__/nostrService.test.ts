@@ -8,11 +8,17 @@ import type { Event as NostrEvent } from 'nostr-tools'
 //   - nostr-tools's SimplePool → no real relay connections
 // finalizeEvent/verifyEvent/nip19/nip17 run for real, so signature and event
 // shape are genuinely verified, not assumed.
+//
+// nostrService.ts deliberately imports SimplePool from the 'nostr-tools/pool'
+// subpath rather than the root 'nostr-tools' package (see the comment at the
+// top of nostrService.ts) — root and subpath are separate compiled bundles
+// with independent state, so the mock must target the same subpath the
+// source file actually imports from, or this mock silently stops applying.
 
 const publishMock = vi.fn()
 
-vi.mock('nostr-tools', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('nostr-tools')>()
+vi.mock('nostr-tools/pool', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('nostr-tools/pool')>()
   return {
     ...actual,
     SimplePool: vi.fn().mockImplementation(function SimplePoolMock() {

@@ -1,5 +1,16 @@
-import { nip19, nip17, getPublicKey, finalizeEvent, SimplePool } from 'nostr-tools'
-import { useWebSocketImplementation } from 'nostr-tools/pool'
+import { nip19, nip17, getPublicKey, finalizeEvent } from 'nostr-tools'
+// SimplePool and useWebSocketImplementation are deliberately both imported from
+// the 'nostr-tools/pool' subpath rather than the root 'nostr-tools' package.
+// The two entry points are separate compiled bundles with their own
+// module-scoped `_WebSocket` variable — the root package's SimplePool has no
+// wiring to the useWebSocketImplementation() exported by 'nostr-tools/pool'
+// (and vice versa), so calling useWebSocketImplementation() while importing
+// SimplePool from the other entry point would silently have no effect on the
+// pool actually used below. Verified against node_modules/nostr-tools's
+// compiled output (lib/cjs/index.js's SimplePool captures its own _WebSocket2
+// at module-load time and exposes no setter; lib/cjs/pool.js's SimplePool
+// reads the _WebSocket useWebSocketImplementation() mutates).
+import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool'
 import type { Event as NostrEvent } from 'nostr-tools'
 import WebSocket from 'ws'
 import type { ClientRequestArgs } from 'http'
