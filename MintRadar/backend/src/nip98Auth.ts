@@ -14,11 +14,29 @@ export interface Nip98AuthFail {
 
 export type Nip98AuthResult = Nip98AuthOk | Nip98AuthFail
 
+const IS_DEV = process.env['NODE_ENV'] !== 'production'
+
 // Reconstructs the absolute URL the client must have signed into its NIP-98
-// event's `u` tag. `trust proxy` is enabled in index.ts, so req.protocol
-// reflects X-Forwarded-Proto from nginx rather than the raw (http) socket.
+// event's `u` tag.
+//
+// GOTCHA: nginx's `location /api/` block (deploy/nginx.conf) does NOT set
+// X-Forwarded-Proto — only Host, X-Real-IP, X-Forwarded-For. `trust proxy`
+// (index.ts) makes Express fall back to the *actual* connection scheme when
+// that header is absent, which between nginx and this process is always
+// plain HTTP, even for requests the public client made over HTTPS. Trusting
+// req.protocol here would make every production NIP-98 token fail url-tag
+// validation (client signs https://…, server checks against http://…) —
+// confirmed against the live server, see notification-subscribe deploy
+// verification. So: honor X-Forwarded-Proto if a proxy ever does set it,
+// otherwise assume the scheme this service is actually reachable on
+// (https in production, http for local dev) — the same default-scheme
+// convention DEFAULT_ORIGINS already uses in index.ts.
 function getRequestUrl(req: Request): string {
-  return `${req.protocol}://${req.get('host') ?? ''}${req.originalUrl}`
+  const forwardedProto = req.headers['x-forwarded-proto']
+  const proto = typeof forwardedProto === 'string' && forwardedProto.length > 0
+    ? forwardedProto.split(',')[0]!.trim()
+    : (IS_DEV ? 'http' : 'https')
+  return `${proto}://${req.get('host') ?? ''}${req.originalUrl}`
 }
 
 // Verifies the NIP-98 "Authorization: Nostr <base64-event>" header via
