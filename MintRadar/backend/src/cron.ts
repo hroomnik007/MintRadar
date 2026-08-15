@@ -1,6 +1,6 @@
 import cron from 'node-cron'
 import pLimit from 'p-limit'
-import { getKnownMints, probeMintToDb, pruneOldHistory, backfillServerLocations } from './prober.js'
+import { getKnownMints, probeMintToDb, pruneOldHistory, pruneUnvalidatedMints, backfillServerLocations } from './prober.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
 import { pruneOldNotificationSubscriptions } from './db.js'
 import { publishServiceProfile } from './nostrService.js'
@@ -53,6 +53,18 @@ export function startCron(): void {
     } catch (err) {
       if (process.env['NODE_ENV'] !== 'production') {
         console.error('[cron] prune error:', err)
+      }
+    }
+  })
+
+  // Prune mint candidates that never passed a validating probe, every day at 3:15am
+  cron.schedule('15 3 * * *', async () => {
+    try {
+      const deleted = await pruneUnvalidatedMints()
+      console.log(`[cron] pruned ${deleted} unvalidated mint candidate(s)`)
+    } catch (err) {
+      if (process.env['NODE_ENV'] !== 'production') {
+        console.error('[cron] unvalidated mint prune error:', err)
       }
     }
   })

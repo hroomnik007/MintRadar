@@ -4,23 +4,30 @@ import type { Express } from 'express'
 
 // POST /api/mints/discover batch-inserts discovered mint URLs. It is the most
 // security-sensitive read path: every URL is run through the REAL isSafeUrl()
-// SSRF guard before any INSERT. We mock only the two true external boundaries:
-//   - db.js pool  → no database
+// SSRF guard, then the REAL isValidCashuMint() Cashu-content probe, before
+// any INSERT. We mock only the true external boundaries:
+//   - db.js pool          → no database
 //   - dns/promises lookup → deterministic resolution for the SSRF guard
-// so the rate limiter, validation, normalization and SSRF logic all execute
-// for real.
+//   - ssrf.js safeFetch   → no outbound network (isValidCashuMint's probe)
+// so the rate limiter, validation, normalization, SSRF and probe-gating logic
+// all execute for real.
 
 vi.mock('../../db.js', () => ({
   pool: { query: vi.fn() },
   initDb: vi.fn(),
 }))
 vi.mock('dns/promises', () => ({ lookup: vi.fn() }))
+vi.mock('../../ssrf.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../ssrf.js')>()
+  return { ...actual, safeFetch: vi.fn() }
+})
 
 const FIXED_IP = '203.0.113.7'
 
 let app: Express
 let query: ReturnType<typeof vi.fn>
 let lookup: ReturnType<typeof vi.fn>
+let safeFetch: ReturnType<typeof vi.fn>
 
 beforeEach(async () => {
   vi.resetModules()
@@ -30,12 +37,23 @@ beforeEach(async () => {
   const dns = await import('dns/promises')
   lookup = dns.lookup as unknown as ReturnType<typeof vi.fn>
   lookup.mockReset()
+  const ssrf = await import('../../ssrf.js')
+  safeFetch = ssrf.safeFetch as unknown as ReturnType<typeof vi.fn>
+  safeFetch.mockReset()
   ;({ app } = await import('../../index.js'))
 })
 
 // Make the SSRF guard's DNS resolution deterministic.
 function resolvesTo(...addrs: { address: string; family: number }[]): void {
   lookup.mockResolvedValue(addrs as never)
+}
+
+// Make the post-SSRF Cashu-content probe (isValidCashuMint) succeed.
+function mintReachable(info: Record<string, unknown> = { nuts: { '4': {} } }): void {
+  safeFetch.mockImplementation(async (u: string) => {
+    if (u.endsWith('/v1/info')) return { ok: true, json: async () => info }
+    return null
+  })
 }
 
 function post(body: unknown, ip = FIXED_IP) {
@@ -45,6 +63,7 @@ function post(body: unknown, ip = FIXED_IP) {
 describe('POST /api/mints/discover', () => {
   it('inserts a valid public mint URL and reports it added', async () => {
     resolvesTo({ address: '1.2.3.4', family: 4 })
+    mintReachable()
     query.mockResolvedValueOnce({ rowCount: 1 })
 
     const res = await post({ urls: ['https://mint.example.com'] })
@@ -55,6 +74,7 @@ describe('POST /api/mints/discover', () => {
 
   it('reports added: 0 when the mint already exists (ON CONFLICT DO NOTHING)', async () => {
     resolvesTo({ address: '1.2.3.4', family: 4 })
+    mintReachable()
     query.mockResolvedValueOnce({ rowCount: 0 })
 
     const res = await post({ urls: ['https://mint.example.com'] })
@@ -120,6 +140,7 @@ describe('POST /api/mints/discover', () => {
 
   it('handles a SQL-injection payload safely via parameterized queries (no crash, no interpolation)', async () => {
     resolvesTo({ address: '1.2.3.4', family: 4 })
+    mintReachable()
     query.mockResolvedValueOnce({ rowCount: 1 })
     const evil = "https://evil.example.com/'; DROP TABLE mints; --"
 

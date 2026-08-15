@@ -107,6 +107,7 @@ export function AppShell() {
 
   function handleShowQR() {
     qrCancelRef.current?.()
+    useAuthStore.setState({ isLoading: true, error: null })
     const { uri, loginPromise, cancel } = initBunkerQR()
     qrCancelRef.current = cancel
     setQrUri(uri)
@@ -121,6 +122,9 @@ export function AppShell() {
         if (err instanceof Error && err.name !== 'AbortError') {
           setBunkerError(err.message || 'QR connection failed')
         }
+      })
+      .finally(() => {
+        useAuthStore.setState({ isLoading: false })
       })
   }
 

@@ -108,10 +108,15 @@ let originalNostrForNsec: Window['nostr'] | undefined = undefined
 function installNsecShim(privkeyBytes: Uint8Array, pubkeyHex: string): void {
   if (typeof window === 'undefined') return
   if (window.nostr !== undefined) {
-    originalNostrForNsec = window.nostr
+    if (window.nostr.__mintradarShim) {
+      forceTeardownExistingShim()
+    } else {
+      originalNostrForNsec = window.nostr
+    }
   }
   activeNsecPrivkey = privkeyBytes
   window.nostr = {
+    __mintradarShim: true,
     getPublicKey: async () => pubkeyHex,
     signEvent: async (event: object) => finalizeEvent(event as EventTemplate, privkeyBytes),
     nip44: {
@@ -162,10 +167,15 @@ const NIP46_RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.prim
 function installBunkerShim(signer: BunkerSigner, pubkeyHex: string): void {
   if (typeof window === 'undefined') return
   if (window.nostr !== undefined) {
-    originalNostr = window.nostr
+    if (window.nostr.__mintradarShim) {
+      forceTeardownExistingShim()
+    } else {
+      originalNostr = window.nostr
+    }
   }
   activeBunkerSigner = signer
   window.nostr = {
+    __mintradarShim: true,
     getPublicKey: async () => pubkeyHex,
     signEvent: (event: object) =>
       signer.signEvent(event as EventTemplate) as Promise<object>,
@@ -195,6 +205,29 @@ export function removeBunkerShim(): void {
   sessionStorage.removeItem(BUNKER_URI_KEY)
   sessionStorage.removeItem(BUNKER_SECRET_KEY)
   sessionStorage.removeItem(BUNKER_PUBKEY_KEY)
+}
+
+// Called by installNsecShim/installBunkerShim when window.nostr is already a
+// still-live MintRadar shim (marked __mintradarShim) from a different,
+// incomplete login flow — e.g. a bunker/QR pairing still in flight when an
+// nsec login is submitted. Actively tears down whichever shim is live
+// instead of capturing it as `original`, so it can never be resurrected via
+// removeNsecShim()/removeBunkerShim() restoring it after logout.
+function forceTeardownExistingShim(): void {
+  if (activeNsecPrivkey !== null) {
+    activeNsecPrivkey.fill(0)
+    activeNsecPrivkey = null
+    originalNostrForNsec = undefined
+  }
+  if (activeBunkerSigner !== null) {
+    activeBunkerSigner.close().catch(() => {})
+    activeBunkerSigner = null
+    originalNostr = undefined
+    sessionStorage.removeItem(BUNKER_URI_KEY)
+    sessionStorage.removeItem(BUNKER_SECRET_KEY)
+    sessionStorage.removeItem(BUNKER_PUBKEY_KEY)
+  }
+  if (typeof window !== 'undefined') delete window.nostr
 }
 
 export async function loginWithBunker(bunkerInput: string): Promise<NostrProfile> {

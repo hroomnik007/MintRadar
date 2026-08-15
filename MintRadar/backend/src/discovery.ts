@@ -2,7 +2,7 @@ import { SimplePool, verifyEvent } from 'nostr-tools'
 import type { Filter } from 'nostr-tools'
 import WebSocket from 'ws'
 import { pool } from './db.js'
-import { probeMintToDb } from './prober.js'
+import { probeMintToDb, isValidCashuMint } from './prober.js'
 
 // Fast string-based pre-filter. isSafeUrl() in probeMintToDb is the authoritative SSRF
 // gate (ipaddr.js + full DNS resolution). This just avoids inserting obvious junk into DB.
@@ -122,6 +122,7 @@ export async function discoverMintsFromNostr(): Promise<number> {
 
   let added38172 = 0
   for (const url of discovered38172) {
+    if (!(await isValidCashuMint(url))) continue
     const r = await pool.query(
       'INSERT INTO mints (url, is_known) VALUES ($1, true) ON CONFLICT (url) DO NOTHING',
       [url]
@@ -132,6 +133,7 @@ export async function discoverMintsFromNostr(): Promise<number> {
 
   let added38000 = 0
   for (const url of discovered38000) {
+    if (!(await isValidCashuMint(url))) continue
     const r = await pool.query(
       'INSERT INTO mints (url, is_known) VALUES ($1, true) ON CONFLICT (url) DO NOTHING',
       [url]

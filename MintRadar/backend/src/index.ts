@@ -4,7 +4,7 @@ import { SimplePool, verifyEvent } from 'nostr-tools'
 import WebSocket from 'ws'
 import { pool, initDb } from './db.js'
 import { isSafeUrl, checkWsUrlSafety, safeFetch } from './ssrf.js'
-import { upsertMint, probeMintToDb } from './prober.js'
+import { upsertMint, probeMintToDb, isValidCashuMint } from './prober.js'
 import { seedKnownMints, startCron } from './cron.js'
 import { publishServiceProfile } from './nostrService.js'
 import { normalizeUrl } from './discovery.js'
@@ -968,6 +968,7 @@ app.post('/api/mints/discover', async (req: Request, res: Response): Promise<voi
     const normalized = normalizeUrl(url)
     try {
       if (!(await isSafeUrl(normalized))) continue
+      if (!(await isValidCashuMint(normalized))) continue
       const result = await pool.query(
         'INSERT INTO mints (url, is_known) VALUES ($1, true) ON CONFLICT (url) DO NOTHING',
         [normalized]
@@ -1216,11 +1217,23 @@ app.post('/api/notifications/unsubscribe', (req: Request, res: Response): void =
         return
       }
 
+      // Normalize the same way every other mint-URL entry point does before
+      // using it anywhere — including in the log line below, where a raw
+      // client-supplied string with an embedded newline could otherwise
+      // forge a second, fabricated log entry.
+      try {
+        new URL(mintUrl.trim())
+      } catch {
+        res.status(400).json({ error: 'Invalid mintUrl' })
+        return
+      }
+      const normalizedMintUrl = normalizeUrl(mintUrl)
+
       return pool.query(
         'DELETE FROM notification_subscriptions WHERE pubkey = $1 AND mint_url = $2',
-        [pubkey, mintUrl]
+        [pubkey, normalizedMintUrl]
       ).then(() => {
-        console.log(`[notifications/unsubscribe] pubkey=${pubkey.slice(0, 8)}… mint=${mintUrl}`)
+        console.log(`[notifications/unsubscribe] pubkey=${pubkey.slice(0, 8)}… mint=${normalizedMintUrl}`)
         res.json({ success: true })
       })
     })

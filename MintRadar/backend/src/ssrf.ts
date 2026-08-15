@@ -152,7 +152,7 @@ export async function isSafeWsUrl(rawUrl: string): Promise<boolean> {
 // Custom DNS lookup that rejects any resolved address in a blocked range.
 // undici uses this for the actual TCP connect, closing the TOCTOU window
 // while preserving the original hostname for SNI and the Host header.
-const safeLookup: LookupFunction = (hostname, options, callback): void => {
+export const safeLookup: LookupFunction = (hostname, options, callback): void => {
   dnsLookupCb(hostname, { ...options, all: true }, (err, addresses) => {
     if (err) { callback(err, '', 0); return }
     const list = addresses as unknown as LookupAddress[]

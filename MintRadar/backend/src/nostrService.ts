@@ -1,7 +1,10 @@
 import { nip19, nip17, getPublicKey, finalizeEvent, SimplePool } from 'nostr-tools'
+import { useWebSocketImplementation } from 'nostr-tools/pool'
 import type { Event as NostrEvent } from 'nostr-tools'
 import WebSocket from 'ws'
+import type { ClientRequestArgs } from 'http'
 import { pool } from './db.js'
+import { safeLookup } from './ssrf.js'
 
 // Node.js 20 has no native WebSocket — inject ws polyfill for nostr-tools
 // (same pattern as discovery.ts / index.ts's nostr-reviews endpoint).
@@ -9,6 +12,25 @@ if (!globalThis.WebSocket) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(globalThis as any).WebSocket = WebSocket
 }
+
+// DNS-rebinding TOCTOU fix: relay URLs stored on subscribe are SSRF-checked
+// once (checkWsUrlSafety in index.ts), but nostr-tools' SimplePool otherwise
+// opens `new WebSocket(url)` at publish time with no re-validation — a
+// low-TTL domain could repoint to an internal address between subscribe and
+// the next notification. `ws` forwards unrecognized constructor options
+// straight through to the underlying `http`/`https`/`net`/`tls` connect
+// (see initAsClient in ws/lib/websocket.js), which accepts the same `lookup`
+// option undici's Agent uses in ssrf.ts — so pinning DNS resolution at
+// connect time works here exactly like it does for HTTPS probing. This is
+// installed as the nostr-tools-wide WebSocket implementation (there is no
+// per-relay hook on SimplePool), so it applies to every relay connection the
+// backend makes, closing the gap for good rather than just narrowing it.
+class DnsPinnedWebSocket extends WebSocket {
+  constructor(address: string | URL, protocols?: string | string[]) {
+    super(address, protocols, { lookup: safeLookup } as ClientRequestArgs)
+  }
+}
+useWebSocketImplementation(DnsPinnedWebSocket)
 
 // Mirrors the frontend's META_RELAYS (src/core/nostr/client.ts) — the two
 // packages can't share a module directly (no workspace set up), so keep

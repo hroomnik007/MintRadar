@@ -133,6 +133,42 @@ function classifyFetchError(err: unknown): string {
   return 'Unreachable'
 }
 
+// Lightweight Cashu-content validation with no DB side effects — confirms a
+// URL actually serves a valid /v1/info response (an object with a `nuts`
+// field) before it's allowed into the mints table. Mirrors the check
+// probeMint() (index.ts, POST /api/mint/submit) already performs, so every
+// insertion path requires the same proof of being a real Cashu mint rather
+// than relying on isObviouslyPrivate()/isSafeUrl() (SSRF/reachability only).
+export async function isValidCashuMint(url: string): Promise<boolean> {
+  try {
+    const res = await safeFetch(`${url}/v1/info`, { timeoutMs: PROBE_TIMEOUT_MS })
+    if (!res || !res.ok) return false
+    const raw = await res.json() as Record<string, unknown>
+    return raw['nuts'] !== null && typeof raw['nuts'] === 'object'
+  } catch {
+    return false
+  }
+}
+
+// Second-layer defense alongside isValidCashuMint(): deletes any mint row
+// that has NEVER had a successful (online=true) probe recorded in
+// mint_history and is older than the TTL below. Covers any insertion path
+// that isn't (or stops being) gated by isValidCashuMint() — e.g. a future
+// bug or a new discovery source — since there is otherwise no DELETE FROM
+// mints anywhere in the app and an unvalidated row would be probed forever.
+const UNVALIDATED_CANDIDATE_TTL_HOURS = 24
+
+export async function pruneUnvalidatedMints(): Promise<number> {
+  const res = await pool.query(
+    `DELETE FROM mints
+     WHERE discovered_at < NOW() - INTERVAL '${UNVALIDATED_CANDIDATE_TTL_HOURS} hours'
+       AND NOT EXISTS (
+         SELECT 1 FROM mint_history h WHERE h.url = mints.url AND h.online = true
+       )`
+  )
+  return res.rowCount ?? 0
+}
+
 export async function probeMintToDb(url: string): Promise<void> {
   const urlSafety = await checkUrlSafety(url)
   if (urlSafety === 'blocked') {
