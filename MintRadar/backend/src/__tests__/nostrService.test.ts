@@ -110,6 +110,7 @@ describe('publishServiceProfile', () => {
       name: 'MintRadar Alerts',
       about: expect.stringContaining('mintradar.pedani.eu') as unknown,
       website: 'https://mintradar.pedani.eu',
+      picture: 'https://mintradar.pedani.eu/icons/icon-512x512.png',
     })
   })
 })

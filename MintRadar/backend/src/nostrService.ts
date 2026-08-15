@@ -108,6 +108,7 @@ export async function publishServiceProfile(): Promise<void> {
           name: 'MintRadar Alerts',
           about: 'Automated Cashu mint status notifications from mintradar.pedani.eu. Replies are not monitored — manage your subscriptions in the app.',
           website: 'https://mintradar.pedani.eu',
+          picture: 'https://mintradar.pedani.eu/icons/icon-512x512.png',
         }),
         tags: [],
         created_at: Math.floor(Date.now() / 1000),
