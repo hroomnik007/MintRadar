@@ -2,7 +2,7 @@ import { nip19, nip44, generateSecretKey, getPublicKey as nostrGetPublicKey, ver
 import { BunkerSigner, parseBunkerInput, createNostrConnectURI, toBunkerURL } from 'nostr-tools/nip46'
 import type { EventTemplate } from 'nostr-tools'
 import * as secp from '@noble/secp256k1'
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils'
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js'
 import { sharedPool } from '@/core/nostr/pool'
 import { useAuthStore } from '@/stores/auth.store'
 
