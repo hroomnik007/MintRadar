@@ -6,7 +6,10 @@ import { db } from '@/db'
 import type { NostrEvent, EventTemplate, UnsignedEvent } from 'nostr-tools'
 import { nip44, generateSecretKey, finalizeEvent, getEventHash } from 'nostr-tools'
 
-const NOTIFICATION_RELAYS = [
+// Exported so the server subscribe/unsubscribe client (notificationSubscription.ts)
+// can reuse it as a fallback when the user has no NIP-65 read relays — the task
+// explicitly requires not inventing a second default list.
+export const NOTIFICATION_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
   'wss://purplepag.es',

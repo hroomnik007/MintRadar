@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { fetchRemoteWatchlist, publishWatchlist } from '@/core/nostr/watchlistSync'
 import { useUserRelays } from '@/hooks/useUserRelays'
+import { refreshAllSubscriptions } from '@/core/nostr/notificationSubscription'
 import { db } from '@/db'
 
 const WATCHLIST_OWNER_KEY = 'watchlistOwner'
@@ -11,7 +12,7 @@ export function useWatchlistSync() {
   const profile = useAuthStore(s => s.profile)
   const mints = useWatchlistStore(s => s.mints)
   const loadFromDb = useWatchlistStore(s => s.loadFromDb)
-  const { write: userWriteRelays } = useUserRelays()
+  const { read: userReadRelays, write: userWriteRelays } = useUserRelays()
   // Ref so Phase 1/2 always use the current relay list without re-triggering on relay changes.
   // Written in an effect (not during render) — this effect is declared first, so it runs
   // before Phase 1/2 effects within the same commit.
@@ -19,6 +20,12 @@ export function useWatchlistSync() {
   useEffect(() => {
     userWriteRelaysRef.current = userWriteRelays
   }, [userWriteRelays])
+  // Same pattern, for the notification-subscription refresh below (needs
+  // read relays — where the user's client actually listens for DMs).
+  const userReadRelaysRef = useRef<string[] | null>(null)
+  useEffect(() => {
+    userReadRelaysRef.current = userReadRelays
+  }, [userReadRelays])
 
   const syncedForPubkey = useRef<string | null>(null)
   const isSyncing = useRef(false)
@@ -93,6 +100,12 @@ export function useWatchlistSync() {
         await loadFromDb()
         syncedForPubkey.current = pubkey
         console.log('sync: complete —', useWatchlistStore.getState().mints.length, 'mints in store')
+
+        // Best-effort: refresh server-side notification_subscriptions rows
+        // (resets their 30-day retention clock) for every entry with a
+        // notify toggle on. Non-blocking — failures are logged and
+        // swallowed inside refreshAllSubscriptions itself.
+        void refreshAllSubscriptions(userReadRelaysRef.current)
       } catch (err) {
         console.warn('sync: error during Phase 1:', err)
         // Mark complete even on error to avoid getting stuck; Phase 2 can resume

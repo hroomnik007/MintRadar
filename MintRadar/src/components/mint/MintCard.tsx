@@ -5,8 +5,10 @@ import { MintFavicon } from '@/components/mint/MintFavicon'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
+import { useUserRelays } from '@/hooks/useUserRelays'
 import { mintAgeBadge, uptimeColor, formatTimeAgo } from '@/utils/mintFormatting'
 import { db } from '@/db'
+import { resolveNotificationRelays, syncSubscribeToServer, syncUnsubscribeFromServer } from '@/core/nostr/notificationSubscription'
 
 const IcPlus = () => (
   <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
@@ -54,6 +56,7 @@ export function MintCard({
   const isWatched = mints.includes(mint.url)
   const profile = useAuthStore(state => state.profile)
   const isLoggedIn = profile !== null
+  const { read: userReadRelays } = useUserRelays()
   const hostname = getHostname(mint.url)
   const notifyEntry = useLiveQuery(
     () => showNotifyToggles ? db.watchlist.get(mint.url) : undefined,
@@ -62,7 +65,27 @@ export function MintCard({
   const toggleNotify = (field: 'notifyOnDown' | 'notifyOnUp') => (e: MouseEvent) => {
     e.stopPropagation()
     if (!notifyEntry) return
-    void db.watchlist.update(mint.url, { [field]: !notifyEntry[field] })
+    const nextValue = !notifyEntry[field]
+    const notifyOnDown = field === 'notifyOnDown' ? nextValue : notifyEntry.notifyOnDown
+    const notifyOnUp = field === 'notifyOnUp' ? nextValue : notifyEntry.notifyOnUp
+    void db.watchlist.update(mint.url, { [field]: nextValue })
+
+    // Best-effort server mirror — local Dexie state above is already
+    // committed and stays the source of truth regardless of what happens
+    // here. Both flags off → no preference left → remove the server row
+    // entirely rather than upserting an all-false one.
+    if (isLoggedIn) {
+      if (notifyOnDown || notifyOnUp) {
+        void syncSubscribeToServer({
+          mintUrl: mint.url,
+          notifyOnDown,
+          notifyOnUp,
+          relays: resolveNotificationRelays(userReadRelays),
+        })
+      } else {
+        void syncUnsubscribeFromServer(mint.url)
+      }
+    }
   }
   const isOnline = mint.online === true
   const isOfflineDegraded = mint.degraded === true
