@@ -245,9 +245,6 @@ export function AppShell() {
                   <p style={{ margin: 0 }}>
                     ⚠️ Security notice: Entering your nsec key in a browser is inherently risky. On desktop, we recommend using a NIP-07 extension (Alby, nos2x) instead — your key never leaves the extension. On mobile, only use nsec login on a trusted personal device with no suspicious apps installed.
                   </p>
-                  <p style={{ margin: '6px 0 0' }}>
-                    Once connected, your key stays in this browser&apos;s memory for the session so MintRadar can sign notifications, sync, and reviews on your behalf. It&apos;s cleared when you disconnect or close the tab.
-                  </p>
                 </div>
                 <input
                   className="nostr-nsec-input"
