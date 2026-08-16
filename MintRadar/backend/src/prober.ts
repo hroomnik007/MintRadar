@@ -111,9 +111,13 @@ export function computeServerTrustScore(
 
 function classifyFetchError(err: unknown): string {
   if (!(err instanceof Error)) return 'Unreachable'
-  const code = (err as { code?: string }).code
+  // undici's fetch wraps connect-level errors (ECONNREFUSED, DNS, TLS,
+  // connect timeouts) in a generic `TypeError: fetch failed` — the actual
+  // error with its `code` lives in `.cause`, not on the top-level error.
+  const effective = err.cause instanceof Error ? err.cause : err
+  const code = (effective as { code?: string }).code
   const name = err.name
-  const msg = err.message.toLowerCase()
+  const msg = effective.message.toLowerCase()
   if (
     name === 'AbortError' || name === 'TimeoutError' ||
     code === 'UND_ERR_CONNECT_TIMEOUT'
