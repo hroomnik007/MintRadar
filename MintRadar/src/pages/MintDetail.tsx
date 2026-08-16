@@ -1414,6 +1414,43 @@ function MintDetailContent({ url }: { url: string }) {
             </div>
           </div>
 
+          {knownMint?.units && knownMint.units.length > 0 && (
+            <div className="md-panel">
+              <div className="md-panel-title">Units & Methods</div>
+              {knownMint.units.map(unit => {
+                const mintChips = (knownMint.mintMethods ?? []).filter(m => m.unit === unit)
+                const meltChips = (knownMint.meltMethods ?? []).filter(m => m.unit === unit)
+                return (
+                  <div className="unit-block" key={unit}>
+                    <div className="unit-header"><span className="unit-badge">{unit.toUpperCase()}</span></div>
+                    <div className="method-rows">
+                      {mintChips.length > 0 && (
+                        <div className="method-row">
+                          <span className="method-label">Mint</span>
+                          <div className="method-chips">
+                            {mintChips.map((m, i) => (
+                              <span className="method-chip mint" key={i}>{m.method}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {meltChips.length > 0 && (
+                        <div className="method-row">
+                          <span className="method-label">Melt</span>
+                          <div className="method-chips">
+                            {meltChips.map((m, i) => (
+                              <span className="method-chip melt" key={i}>{m.method}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           <div className="md-panel">
             <div className="md-panel-title">Add to Wallet</div>
             <p style={{fontSize:12, color:'var(--text3)', marginBottom:12, lineHeight:1.5}}>
