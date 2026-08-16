@@ -20,13 +20,17 @@ vi.mock('../../ssrf.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../ssrf.js')>()
   return { ...actual, safeFetch: vi.fn() }
 })
-vi.mock('../../prober.js', () => ({
-  upsertMint: vi.fn(),
-  probeMintToDb: vi.fn(),
-  getKnownMints: vi.fn(),
-  pruneOldHistory: vi.fn(),
-  backfillServerLocations: vi.fn(),
-}))
+vi.mock('../../prober.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../prober.js')>()
+  return {
+    ...actual,
+    upsertMint: vi.fn(),
+    probeMintToDb: vi.fn(),
+    getKnownMints: vi.fn(),
+    pruneOldHistory: vi.fn(),
+    backfillServerLocations: vi.fn(),
+  }
+})
 
 const FIXED_IP = '203.0.113.9'
 

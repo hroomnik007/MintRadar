@@ -12,6 +12,9 @@ export interface KnownMint {
   tosUrl: string | null
   descriptionLong: string | null
   nutsLimits: Record<string, unknown> | null
+  units?: string[] | null
+  mintMethods?: { method: string; unit: string; [key: string]: unknown }[] | null
+  meltMethods?: { method: string; unit: string; [key: string]: unknown }[] | null
   auditNMints?: number | null
   auditNMelts?: number | null
   auditNErrors?: number | null

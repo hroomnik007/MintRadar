@@ -139,6 +139,11 @@ export function MintCard({
         {mint.nutCount !== null && mint.nutCount !== undefined && (
           <span className="card-pill" style={{ fontFamily: 'var(--font-mono-data)' }}>{mint.nutCount} NUTs</span>
         )}
+        {mint.units && mint.units.length > 0 && (
+          <span className="card-pill" style={{ fontFamily: 'var(--font-mono-data)' }}>
+            {mint.units.map(u => u.toUpperCase()).join(' / ')}
+          </span>
+        )}
         {uptimePct24h !== null && (
           <span className="card-pill" style={{ color: uptimeColor(uptimePct24h), fontFamily: 'var(--font-mono-data)' }}>
             {uptimePct24h}% up

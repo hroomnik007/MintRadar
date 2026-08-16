@@ -4,7 +4,7 @@ import { SimplePool, verifyEvent } from 'nostr-tools'
 import WebSocket from 'ws'
 import { pool, initDb } from './db.js'
 import { isSafeUrl, checkWsUrlSafety, safeFetch } from './ssrf.js'
-import { upsertMint, probeMintToDb, isValidCashuMint } from './prober.js'
+import { upsertMint, probeMintToDb, isValidCashuMint, parseMintMethods, type MintMethodEntry } from './prober.js'
 import { seedKnownMints, startCron } from './cron.js'
 import { publishServiceProfile } from './nostrService.js'
 import { normalizeUrl } from './discovery.js'
@@ -106,6 +106,9 @@ interface MintStatus {
   keysets: MintKeyset[] | null
   checkedAt: string
   error?: string
+  units: string[] | null
+  mintMethods: MintMethodEntry[] | null
+  meltMethods: MintMethodEntry[] | null
 }
 
 // ── Rate limiter ───────────────────────────────────────────────
@@ -188,6 +191,8 @@ async function probeMint(url: string): Promise<MintStatus> {
     } catch { /* invalid JSON — skip keysets */ }
   }
 
+  const { units, mintMethods, meltMethods } = parseMintMethods(info?.nuts ?? null)
+
   const status: MintStatus = {
     url,
     online,
@@ -195,6 +200,9 @@ async function probeMint(url: string): Promise<MintStatus> {
     info,
     keysets,
     checkedAt: new Date().toISOString(),
+    units,
+    mintMethods,
+    meltMethods,
   }
 
   if (!online) {
@@ -768,6 +776,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
     .query(`
       SELECT m.url, m.name, m.icon_url, m.version, m.nut_count,
         m.tos_url, m.description_long, m.nuts_limits,
+        m.units, m.mint_methods, m.melt_methods,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_recent_total, m.audit_recent_errors,
         m.discovered_at, m.last_trust_score, m.last_error, m.server_location,
@@ -784,6 +793,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
       ) latest ON true
       GROUP BY m.url, m.name, m.icon_url, m.version, m.nut_count,
         m.tos_url, m.description_long, m.nuts_limits,
+        m.units, m.mint_methods, m.melt_methods,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_recent_total, m.audit_recent_errors,
         m.discovered_at, m.last_trust_score, m.last_error, m.server_location,
@@ -807,6 +817,9 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           tosUrl: (r.tos_url as string | null) ?? null,
           descriptionLong: (r.description_long as string | null) ?? null,
           nutsLimits: (r.nuts_limits as Record<string, unknown> | null) ?? null,
+          units: (r.units as string[] | null) ?? null,
+          mintMethods: (r.mint_methods as Record<string, unknown>[] | null) ?? null,
+          meltMethods: (r.melt_methods as Record<string, unknown>[] | null) ?? null,
           auditNMints: (r.audit_n_mints as number | null) ?? null,
           auditNMelts: (r.audit_n_melts as number | null) ?? null,
           auditNErrors: (r.audit_n_errors as number | null) ?? null,

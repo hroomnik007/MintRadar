@@ -109,6 +109,45 @@ export function computeServerTrustScore(
   return Math.min(100, Math.round(uScore + nScore + vScore + cScore + aScore))
 }
 
+export interface MintMethodEntry {
+  method: string
+  unit: string
+  [key: string]: unknown
+}
+
+function isMintMethodArray(val: unknown): val is MintMethodEntry[] {
+  return Array.isArray(val) && val.every(
+    m => m !== null && typeof m === 'object' &&
+      typeof (m as Record<string, unknown>)['method'] === 'string' &&
+      typeof (m as Record<string, unknown>)['unit'] === 'string'
+  )
+}
+
+// Derives units/mint_methods/melt_methods from a mint's `nuts` object (the
+// same object already stored verbatim in nuts_limits) — no new network call,
+// pure re-parsing of NUT-04 (mint methods) / NUT-05 (melt methods). Some
+// mints don't expose method-level detail (older Nutshell versions, custom
+// implementations), so each field is null rather than throwing when absent
+// or malformed.
+export function parseMintMethods(nuts: Record<string, unknown> | null | undefined): {
+  units: string[] | null
+  mintMethods: MintMethodEntry[] | null
+  meltMethods: MintMethodEntry[] | null
+} {
+  if (nuts === null || nuts === undefined) return { units: null, mintMethods: null, meltMethods: null }
+
+  const nut4 = nuts['4'] as Record<string, unknown> | undefined
+  const nut5 = nuts['5'] as Record<string, unknown> | undefined
+  const mintMethods = isMintMethodArray(nut4?.['methods']) ? nut4!['methods'] as MintMethodEntry[] : null
+  const meltMethods = isMintMethodArray(nut5?.['methods']) ? nut5!['methods'] as MintMethodEntry[] : null
+
+  const unitSet = new Set<string>()
+  for (const m of [...(mintMethods ?? []), ...(meltMethods ?? [])]) unitSet.add(m.unit)
+  const units = unitSet.size > 0 ? [...unitSet] : null
+
+  return { units, mintMethods, meltMethods }
+}
+
 function classifyFetchError(err: unknown): string {
   if (!(err instanceof Error)) return 'Unreachable'
   // undici's fetch wraps connect-level errors (ECONNREFUSED, DNS, TLS,
@@ -243,6 +282,8 @@ export async function probeMintToDb(url: string): Promise<void> {
           const storedVersionRes = await pool.query('SELECT version FROM mints WHERE url = $1', [url])
           const storedVersion = storedVersionRes.rows[0]?.version as string | null
 
+          const { units, mintMethods, meltMethods } = parseMintMethods(nuts)
+
           await pool.query(
             `UPDATE mints SET
               name             = COALESCE($1, name),
@@ -251,9 +292,17 @@ export async function probeMintToDb(url: string): Promise<void> {
               nut_count        = COALESCE($4, nut_count),
               tos_url          = COALESCE($5, tos_url),
               description_long = COALESCE($6, description_long),
-              nuts_limits      = COALESCE($7::jsonb, nuts_limits)
+              nuts_limits      = COALESCE($7::jsonb, nuts_limits),
+              units            = COALESCE($9::jsonb, units),
+              mint_methods     = COALESCE($10::jsonb, mint_methods),
+              melt_methods     = COALESCE($11::jsonb, melt_methods)
             WHERE url = $8`,
-            [name, iconUrl, version, nutCount, tosUrl, descriptionLong, JSON.stringify(nuts), url]
+            [
+              name, iconUrl, version, nutCount, tosUrl, descriptionLong, JSON.stringify(nuts), url,
+              units !== null ? JSON.stringify(units) : null,
+              mintMethods !== null ? JSON.stringify(mintMethods) : null,
+              meltMethods !== null ? JSON.stringify(meltMethods) : null,
+            ]
           )
 
           if (version !== null && version !== storedVersion) {
