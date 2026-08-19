@@ -4,6 +4,7 @@ import { pool } from './db.js'
 import { checkUrlSafety, safeFetch } from './ssrf.js'
 import { computeTrustScore, versionFreshnessScore } from './shared/trustScore.js'
 import { notifySubscribers, isNotificationServiceEnabled } from './nostrService.js'
+import { getLatestVersionsMap } from './versionCatalog.js'
 
 function isCloudflareIP(address: string): boolean {
   const parts = address.split('.').map(Number)
@@ -402,13 +403,15 @@ export async function probeMintToDb(url: string): Promise<void> {
       // contact points on top of its uptime points — the metadata didn't change,
       // only our ability to read it did.
       const effectiveContactCount = contactCount ?? Number(row.contact_count ?? 0)
+      const latestVersions = await getLatestVersionsMap()
       const trustScore = computeServerTrustScore(
         uptimePct,
         row.nut_count as number | null,
         row.version as string | null,
         effectiveContactCount,
         row.audit_recent_total as number | null,
-        row.audit_recent_errors as number | null
+        row.audit_recent_errors as number | null,
+        latestVersions
       )
       await pool.query(
         `UPDATE mints SET last_trust_score = $1, last_error = $2 WHERE url = $3`,

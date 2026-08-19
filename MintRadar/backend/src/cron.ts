@@ -4,6 +4,7 @@ import { getKnownMints, probeMintToDb, pruneOldHistory, pruneUnvalidatedMints, b
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
 import { pruneOldNotificationSubscriptions } from './db.js'
 import { publishServiceProfile } from './nostrService.js'
+import { fetchLatestUpstreamVersions } from './versionCatalog.js'
 
 const KNOWN_MINTS = [
   'https://mint.minibits.cash/Bitcoin',
@@ -82,6 +83,18 @@ export function startCron(): void {
     // Cheap, idempotent replaceable event — safe to repeat daily, keeps the
     // service profile fresh on relays with short retention.
     await publishServiceProfile()
+  })
+
+  // Refresh the software_versions cache (latest Nutshell/cdk releases from GitHub)
+  // every day at 3:45am — feeds versionFreshnessScore (shared/trustScore.ts).
+  cron.schedule('45 3 * * *', async () => {
+    try {
+      await fetchLatestUpstreamVersions()
+    } catch (err) {
+      if (process.env['NODE_ENV'] !== 'production') {
+        console.error('[cron] version catalog update error:', err)
+      }
+    }
   })
 
   // Discovery: run once after 10s, then every 6h

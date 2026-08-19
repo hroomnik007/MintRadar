@@ -44,6 +44,13 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_mints_trust_score
       ON mints(last_trust_score DESC NULLS LAST);
 
+    CREATE TABLE IF NOT EXISTS software_versions (
+      software TEXT PRIMARY KEY,
+      latest_version TEXT,
+      fetched_at TIMESTAMPTZ,
+      source_url TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS notification_subscriptions (
       pubkey TEXT NOT NULL,
       mint_url TEXT NOT NULL REFERENCES mints(url) ON DELETE CASCADE,
@@ -88,6 +95,19 @@ export async function initDb(): Promise<void> {
   for (const sql of migrations) {
     await pool.query(sql)
   }
+
+  // Seed software_versions so scoring works identically right after deploy, even
+  // before fetchLatestUpstreamVersions' daily cron job has run for the first time.
+  // Values mirror STATIC_LATEST_VERSIONS in shared/trustScore.ts (major.minor must
+  // stay in sync — the exact patch here doesn't affect scoring). ON CONFLICT DO
+  // NOTHING makes this a no-op after the first run, once the cron job owns the row.
+  await pool.query(`
+    INSERT INTO software_versions (software, latest_version, fetched_at, source_url)
+    VALUES
+      ('nutshell', '0.20.3', NOW(), NULL),
+      ('cdk', '0.17.5', NOW(), NULL)
+    ON CONFLICT (software) DO NOTHING
+  `)
 }
 
 // 30-day retention: a subscription not touched (created/updated) in 30 days

@@ -10,11 +10,11 @@ import {
 // trustScore.ts ever drift, these assertions fail here first.
 describe('computeTrustScore — parity with the backend source of truth', () => {
   it('returns 100 for a perfect mint', () => {
-    expect(computeTrustScore(100, 25, '0.20', 3, 100, 0)).toBe(100)
+    expect(computeTrustScore(100, 25, 'Nutshell/0.20', 3, 100, 0)).toBe(100)
   })
 
   it('caps the total at 100', () => {
-    expect(computeTrustScore(100, 28, '1.0', 6, 100, 0)).toBe(100)
+    expect(computeTrustScore(100, 28, 'Nutshell/0.20', 6, 100, 0)).toBe(100)
   })
 
   it('returns 3 for a mint with no data at all', () => {
@@ -22,12 +22,12 @@ describe('computeTrustScore — parity with the backend source of truth', () => 
   })
 
   it('returns 98 when only audit data is missing', () => {
-    expect(computeTrustScore(100, 25, '0.20', 3, null, null)).toBe(98)
+    expect(computeTrustScore(100, 25, 'Nutshell/0.20', 3, null, null)).toBe(98)
   })
 
   it('rounds the total exactly once, after summing the components', () => {
     // 45 + 30 + 15 + 5 + 2.5 = 97.5 → 98, not 97
-    expect(computeTrustScore(100, 25, '0.20', 3, null, null)).toBe(98)
+    expect(computeTrustScore(100, 25, 'Nutshell/0.20', 3, null, null)).toBe(98)
     // 0 + 0 + 0 + 0 + 2.5 = 2.5 → 3
     expect(computeTrustScore(0, 0, null, 0, null, null)).toBe(3)
   })
@@ -58,7 +58,7 @@ describe('components', () => {
 
   it('version is worth 15 points at the freshest known release', () => {
     expect(versionComponent(null)).toBe(0)
-    expect(versionComponent('0.20')).toBe(15)
+    expect(versionComponent('Nutshell/0.20')).toBe(15)
   })
 
   it('contact is worth 5 points at 3 methods and is not capped per-component', () => {
@@ -68,7 +68,7 @@ describe('components', () => {
   })
 
   it('breakdown components sum to the same total the score reports', () => {
-    const [uptime, nuts, version, contacts] = [97, 20, '0.15', 1] as const
+    const [uptime, nuts, version, contacts] = [97, 20, 'Nutshell/0.15', 1] as const
     const sum = uptimeComponent(uptime) + nutComponent(nuts) + versionComponent(version)
       + contactComponent(contacts) + 2.5 /* audit: no data */
     expect(computeTrustScore(uptime, nuts, version, contacts, null, null))
@@ -77,27 +77,52 @@ describe('components', () => {
 })
 
 describe('versionFreshnessScore', () => {
-  it('returns 0 for missing versions and 3 for unparseable ones', () => {
+  it('returns 0 for missing versions', () => {
     expect(versionFreshnessScore(null)).toBe(0)
     expect(versionFreshnessScore('')).toBe(0)
-    expect(versionFreshnessScore('garbage')).toBe(3)
+  })
+
+  it('returns 2.5 for a string with no recognizable software name (no "/", same neutral default as Unknown audit reliability)', () => {
+    expect(versionFreshnessScore('garbage')).toBe(2.5)
+    expect(versionFreshnessScore('0.20')).toBe(2.5)
+  })
+
+  it('returns 3 for a recognized software with an unparseable version number', () => {
+    expect(versionFreshnessScore('Nutshell/garbage')).toBe(3)
   })
 
   it('decreases by 2 per version step below the freshest, floored at 0 five steps back', () => {
-    expect(versionFreshnessScore('0.20')).toBe(10)
-    expect(versionFreshnessScore('0.19')).toBe(8)
-    expect(versionFreshnessScore('0.16')).toBe(2)
-    expect(versionFreshnessScore('0.15')).toBe(0)
-    expect(versionFreshnessScore('0.11')).toBe(0)
-    expect(versionFreshnessScore('0.10')).toBe(0)
+    expect(versionFreshnessScore('Nutshell/0.20')).toBe(10)
+    expect(versionFreshnessScore('Nutshell/0.19')).toBe(8)
+    expect(versionFreshnessScore('Nutshell/0.16')).toBe(2)
+    expect(versionFreshnessScore('Nutshell/0.15')).toBe(0)
+    expect(versionFreshnessScore('Nutshell/0.11')).toBe(0)
+    expect(versionFreshnessScore('Nutshell/0.10')).toBe(0)
   })
 
-  it('treats a newer-than-known version as freshest', () => {
-    expect(versionFreshnessScore('1.0')).toBe(10)
-    expect(versionFreshnessScore('0.21')).toBe(10)
+  it('treats a newer-than-known Nutshell version as freshest', () => {
+    expect(versionFreshnessScore('Nutshell/1.0')).toBe(10)
+    expect(versionFreshnessScore('Nutshell/0.21')).toBe(10)
   })
 
   it('matches the first major.minor inside a longer version string', () => {
     expect(versionFreshnessScore('Nutshell/0.19.1')).toBe(8)
+  })
+
+  it('recognizes cdk-mintd against its own leaderboard instead of Nutshell\'s', () => {
+    // Was previously scored against NUTSHELL_VERSIONS regardless of software —
+    // a current cdk-mintd release used to be penalized as a stale Nutshell.
+    expect(versionFreshnessScore('cdk-mintd/0.17.5')).toBe(10)
+    expect(versionFreshnessScore('cdk-mintd/0.16.0')).toBe(8)
+  })
+
+  it('strips a leading "v" and a "-rc.N" prerelease suffix before comparing', () => {
+    expect(versionFreshnessScore('cdk-mintd/v0.17.5')).toBe(10)
+    expect(versionFreshnessScore('cdk-mintd/0.17.0-rc.3')).toBe(10)
+  })
+
+  it('scores unrecognized software neutrally instead of 0 or an automatic 10 (the bug this fixes)', () => {
+    expect(versionFreshnessScore('LekMint/1.1.1')).toBe(2.5)
+    expect(versionFreshnessScore('Nutshell-CF/1.0.0')).toBe(2.5)
   })
 })

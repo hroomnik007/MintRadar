@@ -10,12 +10,12 @@ import { computeServerTrustScore, serverVersionFreshnessScore } from '../prober.
 describe('computeServerTrustScore', () => {
   it('returns ~100 for a perfect mint (100% on every component)', () => {
     // uptime 100→45, nutCount 25→30, version 0.20→15, contact 3→5, audit errRate 0→5
-    expect(computeServerTrustScore(100, 25, '0.20', 3, 100, 0)).toBe(100)
+    expect(computeServerTrustScore(100, 25, 'Nutshell/0.20', 3, 100, 0)).toBe(100)
   })
 
   it('caps the total at 100 even when components would exceed it', () => {
     // contactCount 6 → cScore 10 (uncapped per-component), so raw sum > 100
-    expect(computeServerTrustScore(100, 28, '1.0', 6, 100, 0)).toBe(100)
+    expect(computeServerTrustScore(100, 28, 'Nutshell/0.20', 6, 100, 0)).toBe(100)
   })
 
   it('returns a low, finite score for a mint with no data (no crash, no NaN)', () => {
@@ -28,7 +28,7 @@ describe('computeServerTrustScore', () => {
 
   it('computes from remaining components when audit data is missing', () => {
     // 45 + 30 + 15 + 5 + (audit null →2.5) = 97.5 → round 98
-    expect(computeServerTrustScore(100, 25, '0.20', 3, null, null)).toBe(98)
+    expect(computeServerTrustScore(100, 25, 'Nutshell/0.20', 3, null, null)).toBe(98)
   })
 
   describe('uptime component (45%)', () => {
@@ -130,35 +130,66 @@ describe('serverVersionFreshnessScore', () => {
     expect(serverVersionFreshnessScore('')).toBe(0)
   })
 
-  it('returns 3 for a non-version string (regex no-match fallback)', () => {
-    expect(serverVersionFreshnessScore('garbage')).toBe(3)
-    expect(serverVersionFreshnessScore('12')).toBe(3) // no dot
+  it('returns 2.5 for a string with no recognizable software name (no "/", same neutral default as Unknown audit reliability)', () => {
+    expect(serverVersionFreshnessScore('garbage')).toBe(2.5)
+    expect(serverVersionFreshnessScore('12')).toBe(2.5)
+    expect(serverVersionFreshnessScore('0.20')).toBe(2.5)
   })
 
-  it('scores the newest known version highest', () => {
-    expect(serverVersionFreshnessScore('0.20')).toBe(10)
+  it('returns 3 for a recognized software with an unparseable version number', () => {
+    expect(serverVersionFreshnessScore('Nutshell/garbage')).toBe(3)
+    expect(serverVersionFreshnessScore('Nutshell/12')).toBe(3) // no dot
+  })
+
+  it('scores the newest known Nutshell version highest', () => {
+    expect(serverVersionFreshnessScore('Nutshell/0.20')).toBe(10)
   })
 
   it('decreases by 2 per version step, floored at 0 five steps back', () => {
-    expect(serverVersionFreshnessScore('0.19')).toBe(8)
-    expect(serverVersionFreshnessScore('0.18')).toBe(6)
-    expect(serverVersionFreshnessScore('0.17')).toBe(4)
-    expect(serverVersionFreshnessScore('0.16')).toBe(2)
-    expect(serverVersionFreshnessScore('0.15')).toBe(0)
-    expect(serverVersionFreshnessScore('0.11')).toBe(0)
+    expect(serverVersionFreshnessScore('Nutshell/0.19')).toBe(8)
+    expect(serverVersionFreshnessScore('Nutshell/0.18')).toBe(6)
+    expect(serverVersionFreshnessScore('Nutshell/0.17')).toBe(4)
+    expect(serverVersionFreshnessScore('Nutshell/0.16')).toBe(2)
+    expect(serverVersionFreshnessScore('Nutshell/0.15')).toBe(0)
+    expect(serverVersionFreshnessScore('Nutshell/0.11')).toBe(0)
   })
 
   it('returns 0 for a version older than the known list', () => {
-    expect(serverVersionFreshnessScore('0.10')).toBe(0)
+    expect(serverVersionFreshnessScore('Nutshell/0.10')).toBe(0)
   })
 
-  it('treats a future/newer version as freshest', () => {
-    expect(serverVersionFreshnessScore('1.0')).toBe(10)
-    expect(serverVersionFreshnessScore('0.21')).toBe(10)
+  it('treats a future/newer Nutshell version as freshest', () => {
+    expect(serverVersionFreshnessScore('Nutshell/1.0')).toBe(10)
+    expect(serverVersionFreshnessScore('Nutshell/0.21')).toBe(10)
   })
 
   it('matches the first major.minor inside a longer version string', () => {
-    expect(serverVersionFreshnessScore('0.20.3')).toBe(10)
+    expect(serverVersionFreshnessScore('Nutshell/0.20.3')).toBe(10)
     expect(serverVersionFreshnessScore('Nutshell/0.19.1')).toBe(8)
+  })
+
+  it('recognizes cdk-mintd against its own (not Nutshell\'s) leaderboard', () => {
+    expect(serverVersionFreshnessScore('cdk-mintd/0.17.5')).toBe(10) // current version — was wrongly scored as a stale Nutshell before
+    expect(serverVersionFreshnessScore('cdk-mintd/0.16.0')).toBe(8)
+    expect(serverVersionFreshnessScore('cdk-mintd/0.9.0')).toBe(0)
+  })
+
+  it('strips a leading "v" and a "-rc.N" prerelease suffix before comparing', () => {
+    expect(serverVersionFreshnessScore('cdk-mintd/v0.17.5')).toBe(10)
+    expect(serverVersionFreshnessScore('cdk-mintd/0.17.0-rc.3')).toBe(10) // 0.17 still matches the top rung
+  })
+
+  it('scores unrecognized software neutrally instead of 0 or an automatic 10 (the bug this fixes)', () => {
+    // A higher major version on unknown software no longer auto-wins full marks.
+    expect(serverVersionFreshnessScore('LekMint/1.1.1')).toBe(2.5)
+    // Similarly-named but distinct software must not prefix-match "nutshell".
+    expect(serverVersionFreshnessScore('Nutshell-CF/1.0.0')).toBe(2.5)
+  })
+
+  it('prefers the latestVersions cache over the static fallback ladder when supplied', () => {
+    const latest = { cdk: { major: 0, minor: 18 } }
+    // 0.17.5 is now one step behind the (hypothetical) cached latest of 0.18.
+    expect(serverVersionFreshnessScore('cdk-mintd/0.17.5', latest)).toBe(8)
+    expect(serverVersionFreshnessScore('cdk-mintd/0.18.0', latest)).toBe(10)
   })
 })
