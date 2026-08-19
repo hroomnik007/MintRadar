@@ -9,8 +9,8 @@ import { computeServerTrustScore, serverVersionFreshnessScore } from '../prober.
 // lifetime counters.
 describe('computeServerTrustScore', () => {
   it('returns ~100 for a perfect mint (100% on every component)', () => {
-    // uptime 100→45, nutCount 25→30, version 0.16→15, contact 3→5, audit errRate 0→5
-    expect(computeServerTrustScore(100, 25, '0.16', 3, 100, 0)).toBe(100)
+    // uptime 100→45, nutCount 25→30, version 0.20→15, contact 3→5, audit errRate 0→5
+    expect(computeServerTrustScore(100, 25, '0.20', 3, 100, 0)).toBe(100)
   })
 
   it('caps the total at 100 even when components would exceed it', () => {
@@ -28,7 +28,7 @@ describe('computeServerTrustScore', () => {
 
   it('computes from remaining components when audit data is missing', () => {
     // 45 + 30 + 15 + 5 + (audit null →2.5) = 97.5 → round 98
-    expect(computeServerTrustScore(100, 25, '0.16', 3, null, null)).toBe(98)
+    expect(computeServerTrustScore(100, 25, '0.20', 3, null, null)).toBe(98)
   })
 
   describe('uptime component (45%)', () => {
@@ -136,14 +136,15 @@ describe('serverVersionFreshnessScore', () => {
   })
 
   it('scores the newest known version highest', () => {
-    expect(serverVersionFreshnessScore('0.16')).toBe(10)
+    expect(serverVersionFreshnessScore('0.20')).toBe(10)
   })
 
-  it('decreases by 2 per version step', () => {
-    expect(serverVersionFreshnessScore('0.15')).toBe(8)
-    expect(serverVersionFreshnessScore('0.14')).toBe(6)
-    expect(serverVersionFreshnessScore('0.13')).toBe(4)
-    expect(serverVersionFreshnessScore('0.12')).toBe(2)
+  it('decreases by 2 per version step, floored at 0 five steps back', () => {
+    expect(serverVersionFreshnessScore('0.19')).toBe(8)
+    expect(serverVersionFreshnessScore('0.18')).toBe(6)
+    expect(serverVersionFreshnessScore('0.17')).toBe(4)
+    expect(serverVersionFreshnessScore('0.16')).toBe(2)
+    expect(serverVersionFreshnessScore('0.15')).toBe(0)
     expect(serverVersionFreshnessScore('0.11')).toBe(0)
   })
 
@@ -153,11 +154,11 @@ describe('serverVersionFreshnessScore', () => {
 
   it('treats a future/newer version as freshest', () => {
     expect(serverVersionFreshnessScore('1.0')).toBe(10)
-    expect(serverVersionFreshnessScore('0.20')).toBe(10)
+    expect(serverVersionFreshnessScore('0.21')).toBe(10)
   })
 
   it('matches the first major.minor inside a longer version string', () => {
-    expect(serverVersionFreshnessScore('0.16.3')).toBe(10)
-    expect(serverVersionFreshnessScore('Nutshell/0.15.1')).toBe(8)
+    expect(serverVersionFreshnessScore('0.20.3')).toBe(10)
+    expect(serverVersionFreshnessScore('Nutshell/0.19.1')).toBe(8)
   })
 })

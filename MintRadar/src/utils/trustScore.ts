@@ -20,7 +20,7 @@ export const TRACKED_NUT_COUNT = 25
 
 // [major, minor] descending — newest first.
 export const NUTSHELL_VERSIONS: [number, number][] = [
-  [0, 16], [0, 15], [0, 14], [0, 13], [0, 12], [0, 11],
+  [0, 20], [0, 19], [0, 18], [0, 17], [0, 16], [0, 15], [0, 14], [0, 13], [0, 12], [0, 11],
 ]
 
 /** Version recency on a 0-10 scale (scaled to the 15-point component below). */

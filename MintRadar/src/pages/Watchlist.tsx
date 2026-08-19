@@ -368,7 +368,7 @@ export default function Watchlist() {
   const sortedFiltered = [...filteredMints].sort((a, b) => {
     const ma = knownMintsMap.get(a) ?? null
     const mb = knownMintsMap.get(b) ?? null
-    let result = 0
+    let result: number
     if (sortBy === 'status') {
       result = (mb?.online === true ? 1 : 0) - (ma?.online === true ? 1 : 0)
     } else if (sortBy === 'latency') {

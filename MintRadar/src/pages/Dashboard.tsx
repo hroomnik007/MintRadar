@@ -256,7 +256,7 @@ function MintListView({
       return getHostname(mint.url).toLowerCase().includes(q) || name.includes(q)
     })
     return [...filtered].sort((a, b) => {
-      let result = 0
+      let result: number
       if (sortBy === 'status') {
         result = (b.online === true ? 1 : 0) - (a.online === true ? 1 : 0)
       } else if (sortBy === 'latency') {
@@ -363,7 +363,7 @@ function MintGrid({
     })
 
     return [...filtered].sort((a, b) => {
-      let result = 0
+      let result: number
       if (sortBy === 'status') {
         result = (b.online === true ? 1 : 0) - (a.online === true ? 1 : 0)
       } else if (sortBy === 'latency') {

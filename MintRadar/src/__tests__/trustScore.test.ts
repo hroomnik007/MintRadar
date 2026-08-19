@@ -10,7 +10,7 @@ import {
 // trustScore.ts ever drift, these assertions fail here first.
 describe('computeTrustScore — parity with the backend source of truth', () => {
   it('returns 100 for a perfect mint', () => {
-    expect(computeTrustScore(100, 25, '0.16', 3, 100, 0)).toBe(100)
+    expect(computeTrustScore(100, 25, '0.20', 3, 100, 0)).toBe(100)
   })
 
   it('caps the total at 100', () => {
@@ -22,12 +22,12 @@ describe('computeTrustScore — parity with the backend source of truth', () => 
   })
 
   it('returns 98 when only audit data is missing', () => {
-    expect(computeTrustScore(100, 25, '0.16', 3, null, null)).toBe(98)
+    expect(computeTrustScore(100, 25, '0.20', 3, null, null)).toBe(98)
   })
 
   it('rounds the total exactly once, after summing the components', () => {
     // 45 + 30 + 15 + 5 + 2.5 = 97.5 → 98, not 97
-    expect(computeTrustScore(100, 25, '0.16', 3, null, null)).toBe(98)
+    expect(computeTrustScore(100, 25, '0.20', 3, null, null)).toBe(98)
     // 0 + 0 + 0 + 0 + 2.5 = 2.5 → 3
     expect(computeTrustScore(0, 0, null, 0, null, null)).toBe(3)
   })
@@ -58,7 +58,7 @@ describe('components', () => {
 
   it('version is worth 15 points at the freshest known release', () => {
     expect(versionComponent(null)).toBe(0)
-    expect(versionComponent('0.16')).toBe(15)
+    expect(versionComponent('0.20')).toBe(15)
   })
 
   it('contact is worth 5 points at 3 methods and is not capped per-component', () => {
@@ -83,19 +83,21 @@ describe('versionFreshnessScore', () => {
     expect(versionFreshnessScore('garbage')).toBe(3)
   })
 
-  it('decreases by 2 per version step below the freshest', () => {
-    expect(versionFreshnessScore('0.16')).toBe(10)
-    expect(versionFreshnessScore('0.15')).toBe(8)
+  it('decreases by 2 per version step below the freshest, floored at 0 five steps back', () => {
+    expect(versionFreshnessScore('0.20')).toBe(10)
+    expect(versionFreshnessScore('0.19')).toBe(8)
+    expect(versionFreshnessScore('0.16')).toBe(2)
+    expect(versionFreshnessScore('0.15')).toBe(0)
     expect(versionFreshnessScore('0.11')).toBe(0)
     expect(versionFreshnessScore('0.10')).toBe(0)
   })
 
   it('treats a newer-than-known version as freshest', () => {
     expect(versionFreshnessScore('1.0')).toBe(10)
-    expect(versionFreshnessScore('0.20')).toBe(10)
+    expect(versionFreshnessScore('0.21')).toBe(10)
   })
 
   it('matches the first major.minor inside a longer version string', () => {
-    expect(versionFreshnessScore('Nutshell/0.15.1')).toBe(8)
+    expect(versionFreshnessScore('Nutshell/0.19.1')).toBe(8)
   })
 })
