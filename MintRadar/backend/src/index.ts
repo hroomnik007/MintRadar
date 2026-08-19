@@ -976,24 +976,41 @@ app.post('/api/mints/discover', async (req: Request, res: Response): Promise<voi
   }
 
   let added = 0
+  const results: Array<{ url: string; success: boolean; isNew: boolean; error?: string }> = []
   for (const url of body.urls) {
     if (typeof url !== 'string') continue
-    if (url.length > MAX_URL_LENGTH) continue
-    if (!url.startsWith('https://')) continue
+    if (url.length > MAX_URL_LENGTH) {
+      results.push({ url, success: false, isNew: false, error: `url exceeds maximum length of ${MAX_URL_LENGTH} characters` })
+      continue
+    }
+    if (!url.startsWith('https://')) {
+      results.push({ url, success: false, isNew: false, error: 'url must start with https://' })
+      continue
+    }
     const normalized = normalizeUrl(url)
     try {
-      if (!(await isSafeUrl(normalized))) continue
-      if (!(await isValidCashuMint(normalized))) continue
+      if (!(await isSafeUrl(normalized))) {
+        results.push({ url: normalized, success: false, isNew: false, error: 'Invalid url' })
+        continue
+      }
+      if (!(await isValidCashuMint(normalized))) {
+        results.push({ url: normalized, success: false, isNew: false, error: 'URL does not appear to be a valid Cashu mint' })
+        continue
+      }
       const result = await pool.query(
         'INSERT INTO mints (url, is_known) VALUES ($1, true) ON CONFLICT (url) DO NOTHING',
         [normalized]
       )
-      if (result.rowCount !== null && result.rowCount > 0) added++
-    } catch { continue }
+      const isNew = result.rowCount !== null && result.rowCount > 0
+      if (isNew) added++
+      results.push({ url: normalized, success: true, isNew })
+    } catch {
+      results.push({ url: normalized, success: false, isNew: false, error: 'Internal error' })
+    }
   }
 
   if (added > 0) knownMintsCache = null
-  res.json({ added, total: body.urls.length })
+  res.json({ added, total: body.urls.length, results })
 })
 
 app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {

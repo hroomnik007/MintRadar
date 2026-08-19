@@ -69,7 +69,11 @@ describe('POST /api/mints/discover', () => {
     const res = await post({ urls: ['https://mint.example.com'] })
 
     expect(res.status).toBe(200)
-    expect(res.body).toEqual({ added: 1, total: 1 })
+    expect(res.body).toEqual({
+      added: 1,
+      total: 1,
+      results: [{ url: 'https://mint.example.com', success: true, isNew: true }],
+    })
   })
 
   it('reports added: 0 when the mint already exists (ON CONFLICT DO NOTHING)', async () => {
@@ -80,7 +84,11 @@ describe('POST /api/mints/discover', () => {
     const res = await post({ urls: ['https://mint.example.com'] })
 
     expect(res.status).toBe(200)
-    expect(res.body).toEqual({ added: 0, total: 1 })
+    expect(res.body).toEqual({
+      added: 0,
+      total: 1,
+      results: [{ url: 'https://mint.example.com', success: true, isNew: false }],
+    })
   })
 
   it('rate-limits a single IP after 10 requests/hour (11th → 429)', async () => {
@@ -99,7 +107,11 @@ describe('POST /api/mints/discover', () => {
     const res = await post({ urls: ['https://127.0.0.1'] })
 
     expect(res.status).toBe(200)
-    expect(res.body).toEqual({ added: 0, total: 1 })
+    expect(res.body).toEqual({
+      added: 0,
+      total: 1,
+      results: [{ url: 'https://127.0.0.1', success: false, isNew: false, error: 'Invalid url' }],
+    })
     // Raw private IP is blocked before any DNS lookup or INSERT.
     expect(lookup).not.toHaveBeenCalled()
     expect(query).not.toHaveBeenCalled()
@@ -108,7 +120,11 @@ describe('POST /api/mints/discover', () => {
   it('rejects a private 10.0.0.0/8 URL (SSRF) without inserting it', async () => {
     const res = await post({ urls: ['https://10.0.0.5'] })
 
-    expect(res.body).toEqual({ added: 0, total: 1 })
+    expect(res.body).toEqual({
+      added: 0,
+      total: 1,
+      results: [{ url: 'https://10.0.0.5', success: false, isNew: false, error: 'Invalid url' }],
+    })
     expect(query).not.toHaveBeenCalled()
   })
 
@@ -117,7 +133,11 @@ describe('POST /api/mints/discover', () => {
 
     const res = await post({ urls: ['https://metadata.attacker.example'] })
 
-    expect(res.body).toEqual({ added: 0, total: 1 })
+    expect(res.body).toEqual({
+      added: 0,
+      total: 1,
+      results: [{ url: 'https://metadata.attacker.example', success: false, isNew: false, error: 'Invalid url' }],
+    })
     expect(query).not.toHaveBeenCalled()
   })
 
@@ -125,7 +145,15 @@ describe('POST /api/mints/discover', () => {
     const res = await post({ urls: ['not a url', 'http://insecure.example', 'ftp://x.example'] })
 
     expect(res.status).toBe(200)
-    expect(res.body).toEqual({ added: 0, total: 3 })
+    expect(res.body).toEqual({
+      added: 0,
+      total: 3,
+      results: [
+        { url: 'not a url', success: false, isNew: false, error: 'url must start with https://' },
+        { url: 'http://insecure.example', success: false, isNew: false, error: 'url must start with https://' },
+        { url: 'ftp://x.example', success: false, isNew: false, error: 'url must start with https://' },
+      ],
+    })
     expect(query).not.toHaveBeenCalled()
   })
 
@@ -134,7 +162,11 @@ describe('POST /api/mints/discover', () => {
 
     const res = await post({ urls: [longUrl] })
 
-    expect(res.body).toEqual({ added: 0, total: 1 })
+    expect(res.body).toEqual({
+      added: 0,
+      total: 1,
+      results: [{ url: longUrl, success: false, isNew: false, error: 'url exceeds maximum length of 500 characters' }],
+    })
     expect(query).not.toHaveBeenCalled()
   })
 

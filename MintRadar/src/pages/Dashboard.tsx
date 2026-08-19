@@ -478,7 +478,7 @@ export default function Dashboard() {
 
   // Bulk submit state
   const [bulkInput, setBulkInput] = useState('')
-  const [bulkProgress, setBulkProgress] = useState<Array<{ url: string; status: 'pending' | 'probing' | 'added' | 'failed'; error?: string }>>([])
+  const [bulkProgress, setBulkProgress] = useState<Array<{ url: string; status: 'pending' | 'probing' | 'added' | 'duplicate' | 'failed'; error?: string }>>([])
   const [bulkRunning, setBulkRunning] = useState(false)
   const [bulkDone, setBulkDone] = useState(false)
 
@@ -712,13 +712,17 @@ export default function Dashboard() {
       body: JSON.stringify({ url: submitUrl }),
     })
       .then(res => res.json().then(data => ({ ok: res.ok, data })))
-      .then(({ ok, data }: { ok: boolean; data: { success?: boolean; error?: string; name?: string | null } }) => {
+      .then(({ ok, data }: { ok: boolean; data: { success?: boolean; isNew?: boolean; error?: string; name?: string | null } }) => {
         if (!ok) {
           setSubmitState('error')
           setSubmitMsg((data.error) ?? 'Submission failed')
         } else {
           setSubmitState('success')
-          setSubmitMsg('Mint submitted! It will appear on the dashboard after the next probe cycle (~5 min).')
+          setSubmitMsg(
+            data.isNew === false
+              ? 'Already tracked — this mint is already known to MintRadar.'
+              : 'Mint submitted! It will appear on the dashboard after the next probe cycle (~5 min).'
+          )
           void queryClient.invalidateQueries({ queryKey: ['mints-known'] })
         }
       })
@@ -735,35 +739,54 @@ export default function Dashboard() {
     setBulkRunning(true)
     setBulkDone(false)
 
-    for (let i = 0; i < lines.length; i++) {
-      const url = lines[i]!
-      if (!url.startsWith('https://')) {
+    const validIndices: number[] = []
+    const validUrls: string[] = []
+    lines.forEach((url, i) => {
+      if (url.startsWith('https://')) {
+        validIndices.push(i)
+        validUrls.push(url)
+      } else {
         setBulkProgress(prev => prev.map((p, j) => j === i ? { ...p, status: 'failed', error: 'Must start with https://' } : p))
-        continue
       }
-      setBulkProgress(prev => prev.map((p, j) => j === i ? { ...p, status: 'probing' } : p))
+    })
+
+    if (validUrls.length > 0) {
+      setBulkProgress(prev => prev.map((p, j) => validIndices.includes(j) ? { ...p, status: 'probing' } : p))
       try {
-        const res = await fetch('/api/mint/submit', {
+        const res = await fetch('/api/mints/discover', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url }),
+          body: JSON.stringify({ urls: validUrls }),
         })
-        const data = await res.json() as { success?: boolean; error?: string }
-        if (res.ok && data.success) {
-          setBulkProgress(prev => prev.map((p, j) => j === i ? { ...p, status: 'added' } : p))
+        const data = await res.json() as {
+          error?: string
+          results?: Array<{ url: string; success: boolean; isNew: boolean; error?: string }>
+        }
+        if (res.ok && data.results) {
+          const results = data.results
+          setBulkProgress(prev => prev.map((p, j) => {
+            const k = validIndices.indexOf(j)
+            if (k === -1) return p
+            const r = results[k]
+            if (!r || !r.success) return { ...p, status: 'failed', error: r?.error ?? 'Failed' }
+            return { ...p, status: r.isNew ? 'added' : 'duplicate' }
+          }))
         } else {
-          setBulkProgress(prev => prev.map((p, j) => j === i ? { ...p, status: 'failed', error: data.error ?? 'Failed' } : p))
+          const err = data.error ?? 'Failed'
+          setBulkProgress(prev => prev.map((p, j) => validIndices.includes(j) ? { ...p, status: 'failed', error: err } : p))
         }
       } catch {
-        setBulkProgress(prev => prev.map((p, j) => j === i ? { ...p, status: 'failed', error: 'Network error' } : p))
+        setBulkProgress(prev => prev.map((p, j) => validIndices.includes(j) ? { ...p, status: 'failed', error: 'Network error' } : p))
       }
     }
+
     setBulkRunning(false)
     setBulkDone(true)
     void queryClient.invalidateQueries({ queryKey: ['mints-known'] })
   }
 
   const bulkAdded = bulkProgress.filter(p => p.status === 'added').length
+  const bulkDuplicate = bulkProgress.filter(p => p.status === 'duplicate').length
   const bulkFailed = bulkProgress.filter(p => p.status === 'failed').length
 
   return (
@@ -1186,6 +1209,7 @@ export default function Dashboard() {
                           {p.status === 'pending' && '…'}
                           {p.status === 'probing' && '⟳ probing'}
                           {p.status === 'added' && '✓ Added'}
+                          {p.status === 'duplicate' && '• Already tracked'}
                           {p.status === 'failed' && `✗ ${p.error ?? 'Failed'}`}
                         </span>
                       </div>
@@ -1195,7 +1219,7 @@ export default function Dashboard() {
                 {bulkDone && (
                   <div style={{ marginTop: 10 }}>
                     <div className={`submit-result ${bulkFailed === 0 ? 'success' : 'error'}`}>
-                      {bulkAdded} added, {bulkFailed} failed
+                      {bulkAdded} added, {bulkDuplicate} already tracked, {bulkFailed} failed
                     </div>
                     <div className="submit-modal-actions">
                       <button className="submit-ok-btn" onClick={() => setShowSubmit(false)}>Close</button>
