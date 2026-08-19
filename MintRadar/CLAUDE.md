@@ -92,10 +92,14 @@ UNIQUE (url, version)
 
 ## Trust Score calculation (server-side, in prober.ts)
 - Uptime 45%: uptimePct * 0.45 (from 24h mint_history)
-- NUT Support 30%: min(nutCount/26, 1) * 30
+- NUT Support 30%: min(nutCount/25, 1) * 30 — 25 is the number of NUTs actually tracked (`TRACKED_NUTS` in `src/constants/nuts.ts`, mirrored as `TRACKED_NUT_COUNT` in `backend/src/shared/trustScore.ts`); the "/26" written here previously was never what the code did
 - Version freshness 15%: based on Nutshell version recency
 - Audit reliability 5%: based on error rate from a **rolling window of the mint's last ~100 swaps** (`audit_recent_errors`/`audit_recent_total`, fetched per-mint from `GET /swaps/mint/{id}` on audit.8333.space — see Discovery pipeline below), not audit.8333.space's cumulative lifetime counters — bucket logic (0%→5, <1%→4, <5%→3, <15%→2, ≥15%→1, null or <3 samples ("Unknown")→2.5) lives in `backend/src/shared/auditScore.ts` (`auditReliabilityScore()`/`isAuditUnknown()`), the source of truth shared with the frontend's Trust Score Breakdown. `src/utils/auditScore.ts` is a manually-synced copy (the two packages have no workspace set up between them) — edit both if the logic ever changes. `audit_n_mints`/`audit_n_melts`/`audit_n_errors` (cumulative lifetime counts) are kept separately and still used for the read-only "Audit stats" panel on Mint Detail — they no longer feed the score.
 - Stored in mints.last_trust_score after each probe
+- **The whole computation lives in `backend/src/shared/trustScore.ts`** (`computeTrustScore()` plus the per-component `uptimeComponent`/`nutComponent`/`versionComponent`/`contactComponent` helpers). `prober.ts` re-exports it as `computeServerTrustScore`/`serverVersionFreshnessScore` for its existing call sites and tests. `src/utils/trustScore.ts` is the manually-synced frontend copy (same no-workspace caveat as `auditScore.ts`) — edit both if the logic changes. The frontend used to carry a second, silently divergent implementation in `MintDetail.tsx` (its own `NUTSHELL_VERSIONS` list topped out at 0.21 vs. the backend's 0.16, so the Trust Score Breakdown's Version row could disagree with the total it was breaking down); that duplicate is gone.
+- The stored server-side score is authoritative. `MintDetail.tsx` computes a score itself only as a fallback — when `knownMint.trustScore` is missing, or for a historical chart bucket with no stored `trust_score`.
+- Rounding: each component rounds individually, then the total gets exactly one outer `Math.round` before the cap — `Math.min(100, Math.round(sum))`. Both copies must keep this ordering or a mint's breakdown rows won't add up to its stored total.
+- Contact component: `mints.contact_count` stores the last successfully observed count. A probe that can't reach `/v1/info` learns nothing about contacts, so it falls back to the stored value instead of scoring the mint as having none (previously a failed probe silently zeroed this component).
 
 ## Cron jobs
 - Every 5min: probe all mints in DB → write to mint_history, update mints metadata + last_trust_score
@@ -458,6 +462,24 @@ Two desktop-layout attempts for the Tools page (`Tools.css`/`Tools.tsx`) were tr
 - Mobile layout was never touched across any of these iterations — confirmed correct throughout.
 - Reference mockup `mintradar_redesign_mockup.html` still contains the "Tools desktop fix" and "Tools v2" tabs from the two rejected attempts — left in place deliberately as a record of what was tried and why it didn't work, not as current guidance.
 
+## NUT list — single source of truth (2026-08-19)
+
+`src/constants/nuts.ts` is the only place the tracked-NUT list and its display metadata
+live: `TRACKED_NUTS` (25 entries, ascending), `TRACKED_NUT_KEYS` (the unpadded `'4'`/`'5'`…
+form used by `/v1/info`'s `nuts` object and the `nuts_limits` column), `NUT_META`
+(short label / description / `specNum`) and `nutSpecUrl()`.
+
+It replaced four drifting copies: `MintDetail.tsx`'s `ALL_NUTS`, `Stats.tsx`'s `NUT_ORDER`
+(plus its own near-identical `NUT_META`), `ComparisonModal.tsx`'s `NUT_FILTER_KEYS`, and
+`NutExplorer.tsx`'s `NUT_META`. `src/__tests__/nuts.test.ts` pins the invariants, including
+`TRACKED_NUTS.length === TRACKED_NUT_COUNT` (the Trust Score's NUT divisor).
+
+**Deliberately NOT folded in** — these are different lists, not copies:
+- `NUT_FILTER_KEYS` in `Dashboard.tsx` and `Watchlist.tsx` — filter chips that intentionally
+  include `'13'`, which `TRACKED_NUTS` excludes. Merging them would silently drop a filter.
+- `NUT_DESCRIPTIONS` in `MintDetail.tsx` — a richer structure (`features`, `useCase`) that
+  also covers the mandatory NUTs 00-03/06 for the NUT detail modal.
+
 ## Nostr pool singleton
 
 `src/core/nostr/pool.ts` exports `sharedPool` — a single `SimplePool` instance patched with exponential backoff (1s base, doubles per attempt, 5-min cap, ±20% jitter). All frontend Nostr reads/writes must use `sharedPool`. Never call `sharedPool.destroy()`.
@@ -615,6 +637,7 @@ The `+ Watch` button on Dashboard mint cards only renders when `isLoggedIn === t
 - Tracking 26 NUTs now (was 14) — added: 13, 16, 18, 21, 22, 23, 24, 25, 26, 27, 28, 30
 - Mandatory NUTs (00-03, 06) are deliberately never tracked — implicitly 100% supported, zero information value
 - Trust Score NUT divisor changed from /14 to /26 in `prober.ts` — existing mints get a lower/more accurate score at their next probe cycle
+  - **Correction (2026-08-19):** the divisor that actually shipped is **/25**, not /26, and NUT-13 is not tracked — it is a wallet-side spec a mint never advertises, so the list above ("added: 13, 16, …") overcounts by one. The live list is `TRACKED_NUTS` in `src/constants/nuts.ts` (25 entries); the divisor is `TRACKED_NUT_COUNT` in `backend/src/shared/trustScore.ts`.
 - NUT-24 (HTTP 402) has 0% adoption across the ecosystem — expected, no implementation exists yet anywhere
 
 ## Probe fixes — HTTP status handling
@@ -637,7 +660,7 @@ The `+ Watch` button on Dashboard mint cards only renders when `isLoggedIn === t
 - Other recommendations were either already implemented, or knowingly rejected (see decisions below).
 - Rejected: reserve audit verification (no standardized NUT for it), dark/light mode toggle, watchlist share link (conflicts with privacy-first design), historical NUT snapshots, comparison tool for more than 4 mints, search by operator pubkey (no data linkage exists), multi-region probe infrastructure.
 - NUT security warning badge (NUT-09/11/12) — verified against live data: currently 0 of 55 online mints are missing these NUTs, so the badge would be dead code. Rejected.
-- Multi-unit criterion in Best Mint Wizard — DEFERRED (not rejected). Units are currently never persisted to the DB (only transiently via `GET /api/mint/probe`, never written to `mints`). Implementing this requires: a new DB column, extending `prober.ts` to parse `/v1/keysets`, and adding the field to the `KnownMint` type and `/api/mints/known` response — deferred to a dedicated, larger session.
+- Multi-unit criterion in Best Mint Wizard — **IMPLEMENTED (2026-08-19)**. The original 2026-07-02 note here said units were "never persisted... requires parsing `/v1/keysets`" — that has been obsolete since the `units`/`mint_methods`/`melt_methods` columns landed. Units are parsed by `parseMintMethods()` in `prober.ts` from the NUT-04/NUT-05 `methods` arrays of `/v1/info` (no `/v1/keysets` call is involved), persisted on every probe cycle, and served by `/api/mints/known` on the `KnownMint` type. The wizard now has a unit dropdown built from the distinct units of online mints, filters candidates to mints advertising that unit, and shows the per-unit NUT-04/05 min/max limits on each recommendation. Trust Score / latency / nutCount remain whole-mint metrics — the results panel says so explicitly.
 
 ## ESLint zero-errors cleanup (2026-07-05)
 

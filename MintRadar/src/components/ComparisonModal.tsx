@@ -7,6 +7,7 @@ import {
 } from 'recharts'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { type KnownMint } from '@/hooks/useKnownMints'
+import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { useNow } from '@/hooks/useNow'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
@@ -54,12 +55,6 @@ function parseMinorVer(v: string | null | undefined): number {
   const m = v.match(/\d+\.(\d+)/)
   return m ? parseInt(m[1] ?? '0', 10) : 0
 }
-
-// Every optional NUT the app tracks — mirrors MintDetail.tsx's ALL_NUTS and
-// Stats.tsx's NUT_ORDER (04-30, no mandatory 00-03/06, no NUT-13 — deliberately
-// excluded there since mints never advertise it in /v1/info). Keep in sync with
-// both when either changes; no shared module exists between these files.
-const NUT_FILTER_KEYS = ['4','5','7','8','9','10','11','12','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
 
 // Per-mint line colors for the historical trend overlay — reuses hues already
 // established elsewhere in the app (Trust Trend green, copper accent, the
@@ -323,7 +318,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             return (
               <div key={mint.url} className="cmp-val">
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, width: '100%' }}>
-                  {NUT_FILTER_KEYS.map(key => {
+                  {TRACKED_NUT_KEYS.map(key => {
                     const supported = d.nutsLimits[key] != null
                     return (
                       <span key={key} style={{ fontSize: 9, fontFamily: 'var(--font-mono)', padding: '1px 4px', borderRadius: 3, background: supported ? 'rgba(74,222,128,0.1)' : 'var(--bg3)', color: supported ? '#4ade80' : 'var(--text3)', border: `0.5px solid ${supported ? 'rgba(74,222,128,0.3)' : 'var(--border)'}` }}>

@@ -5,6 +5,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { Info } from 'lucide-react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
+import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
 import { trustColor, trustScoreInfo } from '@/utils/mintFormatting'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import './Stats.css'
@@ -30,33 +31,6 @@ function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
 }
 
-const NUT_META: Record<string, { short: string; desc: string; specNum: string }> = {
-  'NUT-04': { short: 'Mint tokens', desc: 'Minting new Cashu tokens against a Lightning invoice.', specNum: '04' },
-  'NUT-05': { short: 'Melt tokens', desc: 'Melting Cashu tokens to pay a Lightning invoice.', specNum: '05' },
-  'NUT-07': { short: 'Token state', desc: 'Checking whether a proof has been spent or is still valid.', specNum: '07' },
-  'NUT-08': { short: 'Overpay melt', desc: 'Overpaying melt fees and receiving change tokens back.', specNum: '08' },
-  'NUT-09': { short: 'Restore', desc: 'Restoring blinded signatures from mint backup data.', specNum: '09' },
-  'NUT-10': { short: 'Spending conditions', desc: 'Conditions that must be met to use a proof.', specNum: '10' },
-  'NUT-11': { short: 'Pay-to-PK', desc: 'Lock tokens to a specific public key for secure transfers.', specNum: '11' },
-  'NUT-12': { short: 'DLEQ proofs', desc: 'Discrete Log Equality proofs for verifiable blind signatures.', specNum: '12' },
-  'NUT-14': { short: 'HTLCs', desc: 'Hash Time Locked Contracts for atomic swaps.', specNum: '14' },
-  'NUT-15': { short: 'Multi-mint MPP', desc: 'Split a single Lightning payment across multiple mints simultaneously.', specNum: '15' },
-  'NUT-16': { short: 'Animated QR', desc: 'Animated QR codes for transferring large tokens between devices.', specNum: '16' },
-  'NUT-17': { short: 'WebSocket', desc: 'Real-time mint updates via WebSocket subscription.', specNum: '17' },
-  'NUT-18': { short: 'Payment req.', desc: 'Structured payment requests so wallets can pay a requested amount.', specNum: '18' },
-  'NUT-19': { short: 'Cached responses', desc: 'Mints cache successful responses so wallets can replay after a network error.', specNum: '19' },
-  'NUT-20': { short: 'Mint quote sig', desc: 'Mint signs quote requests for authenticity.', specNum: '20' },
-  'NUT-21': { short: 'Clear auth', desc: 'Clear-text (OAuth/OpenID) authentication for protected mint endpoints.', specNum: '21' },
-  'NUT-22': { short: 'Blind auth', desc: 'Blind authentication tokens for privacy-preserving mint access.', specNum: '22' },
-  'NUT-23': { short: 'BOLT11', desc: 'BOLT11 Lightning invoices as a payment method for mint and melt.', specNum: '23' },
-  'NUT-24': { short: 'HTTP 402', desc: 'HTTP 402 Payment Required flow for paywalled resources using Cashu.', specNum: '24' },
-  'NUT-25': { short: 'BOLT12', desc: 'BOLT12 offers as a payment method for mint and melt.', specNum: '25' },
-  'NUT-26': { short: 'Bech32m req.', desc: 'Bech32m encoding for Cashu payment requests.', specNum: '26' },
-  'NUT-27': { short: 'Nostr backup', desc: 'Backing up wallet state to Nostr relays for cross-device recovery.', specNum: '27' },
-  'NUT-28': { short: 'Pay-to-BK', desc: 'Lock tokens to a blinded public key for enhanced recipient privacy.', specNum: '28' },
-  'NUT-29': { short: 'Batched minting', desc: 'Wallets can mint tokens for multiple quotes in a single atomic request.', specNum: '29' },
-  'NUT-30': { short: 'Onchain', desc: 'On-chain Bitcoin as a payment method for mint and melt.', specNum: '30' },
-}
 
 // "Advanced" features: security/privacy capabilities that go beyond the
 // baseline mint/melt/state-check/restore lifecycle every mint needs just to
@@ -657,7 +631,6 @@ export default function Stats() {
     </div>
   )
 
-  const NUT_ORDER = ['NUT-04','NUT-05','NUT-07','NUT-08','NUT-09','NUT-10','NUT-11','NUT-12','NUT-14','NUT-15','NUT-16','NUT-17','NUT-18','NUT-19','NUT-20','NUT-21','NUT-22','NUT-23','NUT-24','NUT-25','NUT-26','NUT-27','NUT-28','NUT-29','NUT-30']
   const nutAdoptionMap = Object.fromEntries(data.nutAdoption.map(n => [n.nut, n]))
 
   const modalNutMints = modalNut ? (nutSupportingMints[modalNut] ?? []) : []
@@ -711,7 +684,7 @@ export default function Stats() {
           </div>
           <div>
             <div className="smc-label">NUTs in Spec</div>
-            <div className="smc-value">{NUT_ORDER.length}</div>
+            <div className="smc-value">{TRACKED_NUTS.length}</div>
           </div>
         </div>
       </div>
@@ -958,7 +931,7 @@ export default function Stats() {
           <div className="stats-panel-title">NUT Coverage Across the Network</div>
           <div className="stats-section-sublabel" style={{marginBottom:10}}>Protocol adoption across {data.onlineMints} online mints · click any NUT to see supporting mints</div>
           <div className="stats-nut-rows-grid">
-            {NUT_ORDER.map(nut => {
+            {TRACKED_NUTS.map(nut => {
               const adoption = nutAdoptionMap[nut] ?? { count: 0, percent: 0 }
               const { count, percent } = adoption
               const meta = NUT_META[nut]

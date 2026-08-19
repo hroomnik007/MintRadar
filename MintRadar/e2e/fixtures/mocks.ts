@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import { nip19 } from 'nostr-tools'
+import { Amount, getEncodedToken } from '@cashu/cashu-ts'
 
 // ── Mock mint data ─────────────────────────────────────────────
 // Deterministic fixtures used by every E2E test so flows never depend on the
@@ -17,6 +18,8 @@ export interface MockMint {
   nutCount: number
   uptimePct24h: number | null
   discoveredAt: string
+  /** Units this mint issues, as persisted by prober.ts's parseMintMethods(). */
+  units: string[] | null
 }
 
 const now = Date.now()
@@ -27,10 +30,10 @@ const daysAgo = (d: number) => new Date(now - d * 86_400_000).toISOString()
 //   latency ↑  → Alpha(50), Delta(120), Bravo(300), Charlie(offline)
 //   trust  ↓   → Alpha(92), Delta(78), Bravo(55), Charlie(0)
 export const MOCK_MINTS: MockMint[] = [
-  { url: 'https://alpha.mint.example',   name: 'Alpha Mint',   online: true,  latencyMs: 50,   trustScore: 92, version: 'Nutshell/0.16.0', nutCount: 12, uptimePct24h: 99, discoveredAt: daysAgo(400) },
-  { url: 'https://bravo.mint.example',   name: 'Bravo Mint',   online: true,  latencyMs: 300,  trustScore: 55, version: 'Nutshell/0.15.0', nutCount: 8,  uptimePct24h: 80, discoveredAt: daysAgo(10) },
-  { url: 'https://charlie.mint.example', name: 'Charlie Mint', online: false, latencyMs: null, trustScore: null, version: null,            nutCount: 0,  uptimePct24h: 12, discoveredAt: daysAgo(120) },
-  { url: 'https://delta.mint.example',   name: 'Delta Mint',   online: true,  latencyMs: 120,  trustScore: 78, version: 'Nutshell/0.20.0', nutCount: 14, uptimePct24h: 95, discoveredAt: daysAgo(200) },
+  { url: 'https://alpha.mint.example',   name: 'Alpha Mint',   online: true,  latencyMs: 50,   trustScore: 92, version: 'Nutshell/0.16.0', nutCount: 12, uptimePct24h: 99, discoveredAt: daysAgo(400), units: ['sat'] },
+  { url: 'https://bravo.mint.example',   name: 'Bravo Mint',   online: true,  latencyMs: 300,  trustScore: 55, version: 'Nutshell/0.15.0', nutCount: 8,  uptimePct24h: 80, discoveredAt: daysAgo(10),  units: ['sat', 'usd'] },
+  { url: 'https://charlie.mint.example', name: 'Charlie Mint', online: false, latencyMs: null, trustScore: null, version: null,            nutCount: 0,  uptimePct24h: 12, discoveredAt: daysAgo(120), units: null },
+  { url: 'https://delta.mint.example',   name: 'Delta Mint',   online: true,  latencyMs: 120,  trustScore: 78, version: 'Nutshell/0.20.0', nutCount: 14, uptimePct24h: 95, discoveredAt: daysAgo(200), units: ['sat'] },
 ]
 
 const NUT_POOL = ['4', '5', '7', '8', '9', '10', '11', '12', '13', '14', '15', '17', '19', '20']
@@ -41,6 +44,13 @@ function buildNuts(count: number): Record<string, unknown> {
     nuts[NUT_POOL[i]!] = { methods: [] }
   }
   return nuts
+}
+
+// NUT-04/NUT-05 method entries, one per unit — the shape prober.ts persists into
+// mint_methods/melt_methods and the Best Mint Wizard reads per-unit limits from.
+function buildMethods(units: string[] | null, min: number, max: number) {
+  if (!units) return null
+  return units.map(unit => ({ method: 'bolt11', unit, min_amount: min, max_amount: max }))
 }
 
 function knownMintPayload(m: MockMint) {
@@ -56,6 +66,9 @@ function knownMintPayload(m: MockMint) {
     tosUrl: null,
     descriptionLong: null,
     nutsLimits: buildNuts(m.nutCount),
+    units: m.units,
+    mintMethods: buildMethods(m.units, 1, 1_000_000),
+    meltMethods: buildMethods(m.units, 1, 500_000),
     auditNMints: 100,
     auditNMelts: 50,
     auditNErrors: 0,
@@ -230,6 +243,24 @@ export async function loginAs(page: Page, name = 'E2E Tester'): Promise<void> {
  * Build a valid cashuA (v3) token string for the given mint + amounts.
  * Mirrors the decoder in src/pages/Tools.tsx (base64url, no padding).
  */
+/**
+ * v4 (cashuB, CBOR) token — encoded with the same library the app decodes with,
+ * so the fixture can't drift from the real wire format.
+ */
+export function makeCashuTokenV4(mint: string, amounts: number[], unit = 'sat'): string {
+  return getEncodedToken({
+    mint,
+    unit,
+    proofs: amounts.map(amount => ({
+      id: '009a1f293253e41e',
+      amount: Amount.from(amount),
+      secret: `secret-${amount}`,
+      C: '02bc9097997d81afb2cc7346b5e4345a9346bd2a506eb7958598a72f0cf85163ea',
+    })),
+  })
+}
+
+/** v3 (cashuA, base64url JSON) token — the legacy encoding, built by hand. */
 export function makeCashuToken(mint: string, amounts: number[], unit = 'sat'): string {
   const payload = {
     token: [{ mint, proofs: amounts.map(amount => ({ amount, secret: 'x', C: '02abc' })) }],

@@ -16,7 +16,12 @@ import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { ComparisonModal } from '@/components/ComparisonModal'
 import { mintAgeBadge, trustScoreColor, trustScoreInfo } from '@/utils/mintFormatting'
+import { TRACKED_NUTS } from '@/constants/nuts'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
+import {
+  computeTrustScore as sharedComputeTrustScore,
+  uptimeComponent, nutComponent, versionComponent, contactComponent,
+} from '@/utils/trustScore'
 import { useNow } from '@/hooks/useNow'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import './MintDetail.css'
@@ -84,16 +89,6 @@ const NUT_DESCRIPTIONS: Record<string, { short: string; desc: string; features: 
   'NUT-30': { short: 'Onchain', desc: 'On-chain Bitcoin as a payment method for mint and melt.', features: ['On-chain Bitcoin', 'Mint & melt method', 'Chain settlement'], useCase: 'Fund or redeem tokens directly with on-chain Bitcoin.' },
 }
 
-// NUT-13 (deterministic secrets) is deliberately excluded — it's a wallet-side
-// spec, never advertised by a mint's /v1/info, so tracking it here is
-// structurally guaranteed 0% for every mint forever.
-const ALL_NUTS = [
-  'NUT-04', 'NUT-05', 'NUT-07', 'NUT-08', 'NUT-09', 'NUT-10', 'NUT-11',
-  'NUT-12', 'NUT-14', 'NUT-15', 'NUT-16', 'NUT-17', 'NUT-18',
-  'NUT-19', 'NUT-20', 'NUT-21', 'NUT-22', 'NUT-23', 'NUT-24', 'NUT-25',
-  'NUT-26', 'NUT-27', 'NUT-28', 'NUT-29', 'NUT-30',
-]
-
 const NUT_ICONS: Record<string, JSX.Element> = {
   'NUT-04': <Coins size={13} />,
   'NUT-05': <Flame size={13} />,
@@ -136,26 +131,13 @@ function parseMinorVer(v: string | null | undefined): number {
   return m ? parseInt(m[1] ?? '0', 10) : 0
 }
 
-const NUTSHELL_VERSIONS: [number, number][] = [
-  [0, 21], [0, 20], [0, 19], [0, 18], [0, 17], [0, 16], [0, 15],
-]
-
-function versionFreshnessScore(versionStr: string | null | undefined): number {
-  if (!versionStr) return 0
-  const match = versionStr.match(/(\d+)\.(\d+)/)
-  if (!match || match[1] === undefined || match[2] === undefined) return 3
-  const major = parseInt(match[1], 10)
-  const minor = parseInt(match[2], 10)
-  const idx = NUTSHELL_VERSIONS.findIndex(([mj, mn]) => major > mj || (major === mj && minor >= mn))
-  if (idx === -1) return 0
-  return Math.max(0, 10 - idx * 2)
+function contactCountOf(email?: string, twitter?: string, nostr?: string): number {
+  return [email, twitter, nostr].filter(Boolean).length
 }
 
-function contactInfoScore(email?: string, twitter?: string, nostr?: string): number {
-  const count = [email, twitter, nostr].filter(Boolean).length
-  return Math.round((count / 3) * 5)
-}
-
+// Thin adapter over the shared computation so the call sites can keep passing the
+// three contact fields they already have. Only ever used as a fallback — the
+// server-side score in KnownMint.trustScore wins whenever it exists.
 function computeTrustScore(
   uptimePct: number,
   nutCount: number,
@@ -166,12 +148,14 @@ function computeTrustScore(
   auditRecentTotal?: number | null,
   auditRecentErrors?: number | null,
 ): number {
-  const uptimeScore = Math.round(uptimePct * 0.45)
-  const nutScore = Math.round(Math.min(nutCount / ALL_NUTS.length, 1) * 30)
-  const verScore = Math.round(versionFreshnessScore(versionStr) / 10 * 15)
-  const cScore = contactInfoScore(email, twitter, nostr)
-  const aScore = auditReliabilityScore(auditRecentTotal ?? null, auditRecentErrors ?? null)
-  return Math.round(Math.min(100, uptimeScore + nutScore + verScore + cScore + aScore))
+  return sharedComputeTrustScore(
+    uptimePct,
+    nutCount,
+    versionStr ?? null,
+    contactCountOf(email, twitter, nostr),
+    auditRecentTotal ?? null,
+    auditRecentErrors ?? null,
+  )
 }
 
 const WARNING_KEYWORDS = ['rug', 'shutdown', 'warning', 'beware', 'risk', 'danger', 'caution', 'maintenance']
@@ -507,7 +491,7 @@ function MintDetailContent({ url }: { url: string }) {
   const supportedNutNumbers = new Set(
     data?.info ? Object.keys(data.info.nuts) : Object.keys(knownMint?.nutsLimits ?? {})
   )
-  const supportedNuts = ALL_NUTS.filter(nut =>
+  const supportedNuts = TRACKED_NUTS.filter(nut =>
     supportedNutNumbers.has(String(parseInt(nut.slice(4), 10)))
   )
   // NUT-13 (deterministic secrets) is wallet-side only — mints never advertise
@@ -523,11 +507,11 @@ function MintDetailContent({ url }: { url: string }) {
   // Trust Score Breakdown modal rows — hoisted out of the modal's JSX (was a
   // nested IIFE) because the react-compiler ESLint rules disallow reading a
   // ref from inside a hand-rolled nested function during render.
-  const breakdownUScore = Math.round(uptimePct * 0.45)
-  const breakdownNScore = Math.round(Math.min(supportedNuts.length / ALL_NUTS.length, 1) * 30)
-  const breakdownVScore = Math.round(versionFreshnessScore(version) / 10 * 15)
+  const breakdownUScore = uptimeComponent(uptimePct)
+  const breakdownNScore = nutComponent(supportedNuts.length)
+  const breakdownVScore = versionComponent(version)
   const breakdownContactFields = [email, twitter, nostr].filter(Boolean)
-  const breakdownCScore = Math.round((breakdownContactFields.length / 3) * 5)
+  const breakdownCScore = contactComponent(breakdownContactFields.length)
   const breakdownContactDisplay = breakdownContactFields.length === 0 ? 'None' : (email ? 'Email' : '') + (twitter ? (email ? ' + Twitter' : 'Twitter') : '') + (nostr ? ((email || twitter) ? ' + Nostr' : 'Nostr') : '')
   const breakdownAuditRecentTotal = knownMint?.auditRecentTotal ?? null
   const breakdownAuditRecentErrors = knownMint?.auditRecentErrors ?? null
@@ -539,7 +523,7 @@ function MintDetailContent({ url }: { url: string }) {
       : `${((breakdownAuditRecentErrors ?? 0) / breakdownAuditRecentTotal * 100).toFixed(1)}% err`
   const trustBreakdownRows = [
     { label: 'Uptime (45%)', display: `${uptimePct}%`, score: breakdownUScore, max: 45, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.', tooltipRef: breakdownUptimeRef, tooltipHook: breakdownUptimeTooltip },
-    { label: 'NUT Support (30%)', display: `${supportedNuts.length} / ${ALL_NUTS.length} NUTs`, score: breakdownNScore, max: 30, color: supportedNuts.length >= 12 ? '#4ade80' : supportedNuts.length >= 8 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.', tooltipRef: breakdownNutRef, tooltipHook: breakdownNutTooltip },
+    { label: 'NUT Support (30%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 30, color: supportedNuts.length >= 12 ? '#4ade80' : supportedNuts.length >= 8 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.', tooltipRef: breakdownNutRef, tooltipHook: breakdownNutTooltip },
     { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? '#4ade80' : breakdownVScore >= 6 ? '#ffa500' : '#ff4d4d', tooltip: "How recent the mint's software version is compared to the latest known Nutshell releases. Newer = higher score.", tooltipRef: breakdownVersionRef, tooltipHook: breakdownVersionTooltip },
     { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? '#4ade80' : breakdownCScore >= 2 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.', tooltipRef: breakdownContactRef, tooltipHook: breakdownContactTooltip },
     { label: 'Audit reliability (5%)', display: breakdownAuditDisplay, score: breakdownAScore, max: 5, color: breakdownAScore >= 4 ? '#4ade80' : breakdownAScore >= 3 ? '#ffa500' : '#ff4d4d', tooltip: "Based on error rate from audit.8333.space — the percentage of failed swaps out of the mint's last ~100 tested operations. Lower error rate = higher score. Shows \"Unknown\" when fewer than 3 recent swaps are available.", tooltipRef: breakdownAuditRef, tooltipHook: breakdownAuditTooltip },
@@ -1009,7 +993,7 @@ function MintDetailContent({ url }: { url: string }) {
               )}
             </div>
             <div className="nut-grid">
-              {ALL_NUTS.map(nut => {
+              {TRACKED_NUTS.map(nut => {
                 const supported = supportedNuts.includes(nut)
                 const meta = NUT_DESCRIPTIONS[nut]
                 const nutKey = parseInt(nut.slice(4), 10).toString()
@@ -1046,7 +1030,8 @@ function MintDetailContent({ url }: { url: string }) {
                 <span key={i} style={{fontSize:11,color:'var(--text)',fontFamily:'var(--font-mono)'}}>
                   {m.min_amount != null ? m.min_amount.toLocaleString() : '—'}
                   {' – '}
-                  {m.max_amount != null ? m.max_amount.toLocaleString() : '—'} sat
+                  {m.max_amount != null ? m.max_amount.toLocaleString() : '—'}
+                  {m.unit ? ` ${m.unit}` : ''}
                   {cfg.methods && i < cfg.methods.length - 1 ? ', ' : ''}
                 </span>
               ))
@@ -1402,7 +1387,7 @@ function MintDetailContent({ url }: { url: string }) {
                 </div>
                 <div className="trust-row">
                   <span className="trust-label">NUTs</span>
-                  <span className="trust-value">{supportedNuts.length}/{ALL_NUTS.length}</span>
+                  <span className="trust-value">{supportedNuts.length}/{TRACKED_NUTS.length}</span>
                 </div>
                 <div className="trust-row">
                   <span className="trust-label">Latency</span>

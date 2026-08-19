@@ -2,7 +2,7 @@ import dns from 'dns'
 import { fetch as undiciFetch } from 'undici'
 import { pool } from './db.js'
 import { checkUrlSafety, safeFetch } from './ssrf.js'
-import { auditReliabilityScore } from './shared/auditScore.js'
+import { computeTrustScore, versionFreshnessScore } from './shared/trustScore.js'
 import { notifySubscribers, isNotificationServiceEnabled } from './nostrService.js'
 
 function isCloudflareIP(address: string): boolean {
@@ -75,39 +75,11 @@ export async function backfillServerLocations(): Promise<void> {
 const PROBE_TIMEOUT_MS = 10000
 const RETENTION_DAYS = 90
 
-// [major, minor] descending — newest first
-const SERVER_NUTSHELL_VERSIONS: [number, number][] = [
-  [0, 16], [0, 15], [0, 14], [0, 13], [0, 12], [0, 11],
-]
-
-export function serverVersionFreshnessScore(v: string | null | undefined): number {
-  if (!v) return 0
-  const m = v.match(/(\d+)\.(\d+)/)
-  if (!m || !m[1] || !m[2]) return 3
-  const major = parseInt(m[1], 10)
-  const minor = parseInt(m[2], 10)
-  const idx = SERVER_NUTSHELL_VERSIONS.findIndex(
-    ([mj, mn]) => major > mj || (major === mj && minor >= mn)
-  )
-  if (idx === -1) return 0
-  return Math.max(0, 10 - idx * 2)
-}
-
-export function computeServerTrustScore(
-  uptimePct: number,
-  nutCount: number | null,
-  version: string | null,
-  contactCount: number,
-  auditRecentTotal: number | null,
-  auditRecentErrors: number | null
-): number {
-  const uScore = Math.round(uptimePct * 0.45)
-  const nScore = Math.round(Math.min((nutCount ?? 0) / 25, 1) * 30)
-  const vScore = Math.round(serverVersionFreshnessScore(version) / 10 * 15)
-  const cScore = Math.round((contactCount / 3) * 5)
-  const aScore = auditReliabilityScore(auditRecentTotal, auditRecentErrors)
-  return Math.min(100, Math.round(uScore + nScore + vScore + cScore + aScore))
-}
+// Trust Score maths now lives in shared/trustScore.ts, shared (via a synced copy)
+// with the frontend's Trust Score Breakdown. These re-exports keep prober.ts the
+// import site the rest of the backend and its tests already use.
+export const serverVersionFreshnessScore = versionFreshnessScore
+export const computeServerTrustScore = computeTrustScore
 
 export interface MintMethodEntry {
   method: string
@@ -239,7 +211,7 @@ export async function probeMintToDb(url: string): Promise<void> {
   let latencyMs: number | null = null
   let lastError: string | null = null
   let capturedErr: unknown = null
-  let contactCount = 0
+  let contactCount: number | null = null
 
   try {
     let res = await safeFetch(`${url}/v1/info`, {
@@ -295,13 +267,17 @@ export async function probeMintToDb(url: string): Promise<void> {
               nuts_limits      = COALESCE($7::jsonb, nuts_limits),
               units            = COALESCE($9::jsonb, units),
               mint_methods     = COALESCE($10::jsonb, mint_methods),
-              melt_methods     = COALESCE($11::jsonb, melt_methods)
+              melt_methods     = COALESCE($11::jsonb, melt_methods),
+              -- not COALESCE'd: 0 is a meaningful value here (mint publishes no
+              -- contact methods), and this line only runs on a successful probe
+              contact_count    = $12
             WHERE url = $8`,
             [
               name, iconUrl, version, nutCount, tosUrl, descriptionLong, JSON.stringify(nuts), url,
               units !== null ? JSON.stringify(units) : null,
               mintMethods !== null ? JSON.stringify(mintMethods) : null,
               meltMethods !== null ? JSON.stringify(meltMethods) : null,
+              contactCount,
             ]
           )
 
@@ -402,7 +378,7 @@ export async function probeMintToDb(url: string): Promise<void> {
   try {
     const statsRes = await pool.query(
       `SELECT
-        m.nut_count, m.version,
+        m.nut_count, m.version, m.contact_count,
         m.audit_recent_total, m.audit_recent_errors,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count
@@ -410,7 +386,7 @@ export async function probeMintToDb(url: string): Promise<void> {
        LEFT JOIN mint_history h
          ON h.url = m.url AND h.checked_at > NOW() - INTERVAL '24 hours'
        WHERE m.url = $1
-       GROUP BY m.nut_count, m.version, m.audit_recent_total, m.audit_recent_errors`,
+       GROUP BY m.nut_count, m.version, m.contact_count, m.audit_recent_total, m.audit_recent_errors`,
       [url]
     )
     const row = statsRes.rows[0]
@@ -420,11 +396,17 @@ export async function probeMintToDb(url: string): Promise<void> {
       const uptimePct = total === 0
         ? (online ? 100 : 0)
         : Math.round((onlineCount / total) * 100)
+      // A failed probe never reaches /v1/info, so it learns nothing about the
+      // mint's contact methods (contactCount stays null). Falling back to the
+      // stored value keeps a temporarily-unreachable mint from also losing its
+      // contact points on top of its uptime points — the metadata didn't change,
+      // only our ability to read it did.
+      const effectiveContactCount = contactCount ?? Number(row.contact_count ?? 0)
       const trustScore = computeServerTrustScore(
         uptimePct,
         row.nut_count as number | null,
         row.version as string | null,
-        contactCount,
+        effectiveContactCount,
         row.audit_recent_total as number | null,
         row.audit_recent_errors as number | null
       )

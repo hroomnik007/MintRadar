@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useNow } from '@/hooks/useNow'
+import { parseCashuToken, type TokenInfo } from '@/utils/cashuToken'
 import './Tools.css'
 
 function getHostname(url: string): string {
@@ -18,38 +19,6 @@ function normUrl(raw: string): string {
     if (p.pathname === '/') r = r.replace(/\/$/, '')
     return r
   } catch { return raw.trim() }
-}
-
-interface TokenInfo {
-  mint: string
-  amount: number
-  unit: string
-  proofsCount: number
-  version: string
-}
-
-function parseCashuToken(token: string): TokenInfo | null {
-  try {
-    if (token.startsWith('cashuA')) {
-      const encoded = token.slice(6)
-      const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/')
-      const padded = base64 + '='.repeat((4 - base64.length % 4) % 4)
-      const json = atob(padded)
-      const data = JSON.parse(json) as {
-        token?: Array<{ mint: string; proofs: Array<{ amount: number }> }>
-        unit?: string
-      }
-      const tokenArr = data.token ?? []
-      if (!Array.isArray(tokenArr) || tokenArr.length === 0) return null
-      const first = tokenArr[0]
-      if (!first) return null
-      const mint = first.mint ?? ''
-      const proofs = Array.isArray(first.proofs) ? first.proofs : []
-      const amount = proofs.reduce((s, p) => s + (p.amount ?? 0), 0)
-      return { mint, amount, unit: data.unit ?? 'sat', proofsCount: proofs.length, version: 'v3 (cashuA)' }
-    }
-  } catch { /* fall through */ }
-  return null
 }
 
 function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
@@ -76,13 +45,13 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     const token = input.trim()
     if (!token) return
     setInspected(true)
-    const parsed = parseCashuToken(token)
-    if (!parsed) {
-      setParseError('Invalid token format — only cashuA (v3) tokens are supported')
+    const { info, error } = parseCashuToken(token)
+    if (!info) {
+      setParseError(error ?? 'Could not decode this token.')
       setResult(null)
     } else {
       setParseError(null)
-      setResult(parsed)
+      setResult(info)
     }
   }
 
@@ -92,12 +61,12 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     <div className="tool-card">
       <div className="tool-header">
         <div className="tool-title">Token Inspector</div>
-        <div className="tool-subtitle">Paste a Cashu token to inspect its mint, amount, and trust status before redeeming</div>
+        <div className="tool-subtitle">Paste a Cashu token (v3 or v4) to inspect its mint, amount, and trust status before redeeming</div>
       </div>
 
       <textarea
         className="token-input"
-        placeholder="cashuAeyJ0b2tlbiI6W3sibWludCI6Imh0dHBzOi8v..."
+        placeholder="cashuB… (v4) or cashuA… (v3)"
         value={input}
         onChange={e => { setInput(e.target.value); setInspected(false); setResult(null); setParseError(null) }}
         rows={3}
@@ -160,8 +129,10 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
           <div className="token-details-row">
             <span className="tdr-item"><span className="tdr-label">Version</span>{result.version}</span>
             <span className="tdr-sep">·</span>
-            <span className="tdr-item"><span className="tdr-label">Proofs</span>{result.proofsCount}</span>
-            <span className="tdr-sep">·</span>
+            {result.proofsCount !== null && (<>
+              <span className="tdr-item"><span className="tdr-label">Proofs</span>{result.proofsCount}</span>
+              <span className="tdr-sep">·</span>
+            </>)}
             <span className="tdr-item"><span className="tdr-label">Unit</span>{result.unit}</span>
           </div>
 
@@ -171,13 +142,26 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
                 → View Mint Detail
               </button>
             )}
+            {/* Both deep links were verified against the tools' own sources, not guessed:
+                wallet.cashu.me reads `?token=` in WalletPage.vue's created() hook
+                (cashubtc/cashu.me @ b51fee3), and redeem.cashu.me reads the same `?token=`
+                param in its client bundle. rel="noreferrer" keeps the token out of the
+                Referer header on the way there. */}
             <a
               className="token-action-btn"
               href={`https://wallet.cashu.me/?token=${encodeURIComponent(input.trim())}`}
               target="_blank"
               rel="noreferrer"
             >
-              ↗ Open in Cashu.me
+              ↗ Open in wallet
+            </a>
+            <a
+              className="token-action-btn"
+              href={`https://redeem.cashu.me/?token=${encodeURIComponent(input.trim())}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              ⚡ Redeem to Lightning
             </a>
           </div>
         </>
@@ -190,7 +174,44 @@ type Preference = 'speed' | 'trust' | 'features'
 type BackupPref = 'yes' | 'no' | 'unsure'
 type SizeOption = 'small' | 'medium' | 'large'
 
-interface WizardRec { url: string; mint: KnownMint; score: number; latencyMs: number | null }
+interface UnitLimits { min: number | null; max: number | null }
+interface WizardRec {
+  url: string
+  mint: KnownMint
+  score: number
+  latencyMs: number | null
+  mintLimits: UnitLimits | null
+  meltLimits: UnitLimits | null
+}
+
+// Collapses a mint's NUT-04/NUT-05 method entries for one unit into a single
+// min/max range — a mint can advertise several methods (bolt11, bolt12, …) per
+// unit, each with its own limits, so the widest usable range is what the user
+// actually faces.
+function limitsForUnit(methods: KnownMint['mintMethods'], unit: string): UnitLimits | null {
+  const forUnit = (methods ?? []).filter(m => m.unit === unit)
+  if (forUnit.length === 0) return null
+  const mins: number[] = []
+  const maxs: number[] = []
+  for (const m of forUnit) {
+    const min = m['min_amount']
+    const max = m['max_amount']
+    if (typeof min === 'number') mins.push(min)
+    if (typeof max === 'number') maxs.push(max)
+  }
+  if (mins.length === 0 && maxs.length === 0) return null
+  return {
+    min: mins.length > 0 ? Math.min(...mins) : null,
+    max: maxs.length > 0 ? Math.max(...maxs) : null,
+  }
+}
+
+function formatLimits(limits: UnitLimits | null, unit: string): string | null {
+  if (!limits) return null
+  const min = limits.min !== null ? limits.min.toLocaleString() : '—'
+  const max = limits.max !== null ? limits.max.toLocaleString() : '∞'
+  return `${min}–${max} ${unit}`
+}
 
 const BASE_WEIGHTS: Record<Preference, { latency: number; trust: number; nuts: number }> = {
   speed:    { latency: 0.6, trust: 0.3, nuts: 0.1 },
@@ -213,21 +234,40 @@ function weightsFor(preference: Preference, size: SizeOption): { latency: number
 function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
+  const [unit, setUnit] = useState<string | null>(null)
   const [size, setSize] = useState<SizeOption | null>(null)
   const [preference, setPreference] = useState<Preference | null>(null)
   const [backupPref, setBackupPref] = useState<BackupPref | null>(null)
   const [finding, setFinding] = useState(false)
   const [recs, setRecs] = useState<WizardRec[] | null>(null)
+  const [recsUnit, setRecsUnit] = useState<string | null>(null)
 
-  const ready = size !== null && preference !== null && backupPref !== null
+  // Built from the distinct units the online mints actually advertise, never a
+  // hardcoded sat/usd/eur list — a mint offering a new unit shows up here on its
+  // own. 'sat' is pinned first because it is the ecosystem default.
+  const availableUnits = useMemo(() => {
+    const set = new Set<string>()
+    for (const m of knownMints) {
+      if (m.online !== true) continue
+      for (const u of m.units ?? []) set.add(u)
+    }
+    return [...set].sort((a, b) => a === 'sat' ? -1 : b === 'sat' ? 1 : a.localeCompare(b))
+  }, [knownMints])
+
+  const selectedUnit = unit ?? availableUnits[0] ?? null
+
+  const ready = selectedUnit !== null && size !== null && preference !== null && backupPref !== null
 
   const handleFind = async () => {
-    if (!preference || !size) return
+    if (!preference || !size || !selectedUnit) return
     setFinding(true)
     setRecs(null)
 
     const candidates = knownMints
       .filter(m => m.online === true && m.trustScore != null)
+      // A mint that doesn't issue this unit can't serve the user at all, so it
+      // is dropped before scoring rather than ranked and then explained away.
+      .filter(m => (m.units ?? []).includes(selectedUnit))
       .filter(m => {
         if (backupPref !== 'yes') return true
         // NUT-9 (restore signatures) is the mint-side capability that actually
@@ -268,10 +308,13 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
         mint: m,
         score: w.latency * latScore + w.trust * trustScore + w.nuts * nutsScore,
         latencyMs: latMs,
+        mintLimits: limitsForUnit(m.mintMethods ?? null, selectedUnit),
+        meltLimits: limitsForUnit(m.meltMethods ?? null, selectedUnit),
       }
     }).sort((a, b) => b.score - a.score).slice(0, 3)
 
     setRecs(scored)
+    setRecsUnit(selectedUnit)
     setFinding(false)
   }
 
@@ -281,7 +324,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
     <div className="tool-card">
       <div className="tool-header">
         <div className="tool-title">Best Mint for Me</div>
-        <div className="tool-subtitle">Answer 3 quick questions and we'll recommend the best mints for your needs · latency measured from your browser</div>
+        <div className="tool-subtitle">Answer a few quick questions and we'll recommend the best mints for your needs · latency measured from your browser</div>
       </div>
 
       <div className="wizard-steps">
@@ -295,6 +338,22 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
 
       {step === 1 && (
         <div className="wizard-step-body">
+          <div className="wizard-q">Which currency do you want to hold?</div>
+          {availableUnits.length === 0 ? (
+            <div className="wizard-no-results">No unit data available yet — mints report their units on the next probe cycle.</div>
+          ) : (
+            <select
+              className="wizard-unit-select"
+              value={selectedUnit ?? ''}
+              onChange={e => { setUnit(e.target.value); setRecs(null) }}
+              aria-label="Currency unit"
+            >
+              {availableUnits.map(u => (
+                <option key={u} value={u}>{u.toUpperCase()}</option>
+              ))}
+            </select>
+          )}
+
           <div className="wizard-q">How much do you plan to store?</div>
           <div className="wizard-options">
             {[
@@ -364,11 +423,14 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       {recs !== null && (
         <div className="wizard-results">
           {recs.length === 0 ? (
-            <div className="wizard-no-results">No mints match your criteria. Try changing your answers.</div>
+            <div className="wizard-no-results">No online mint supports {recsUnit} with the options you picked. Try another currency or change your answers.</div>
           ) : (
             recs.map((rec, idx) => {
               const hostname = getHostname(rec.url)
               const score = rec.mint.trustScore ?? 0
+              const unitLabel = recsUnit ?? ''
+              const mintRange = formatLimits(rec.mintLimits, unitLabel)
+              const meltRange = formatLimits(rec.meltLimits, unitLabel)
               return (
                 <div key={rec.url} className="wizard-rec-row" onClick={() => navigate(`/mint/${encodeURIComponent(rec.url)}`)}>
                   <span className="wizard-rank">#{idx + 1}</span>
@@ -380,6 +442,17 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
                       {rec.mint.uptimePct24h != null && <span>· {rec.mint.uptimePct24h}% uptime</span>}
                       {rec.mint.nutCount != null && <span>· {rec.mint.nutCount} NUTs</span>}
                     </div>
+                    <div className="wizard-rec-limits">
+                      {(mintRange ?? meltRange) !== null ? (
+                        <>
+                          {mintRange && <span>Mint {mintRange}</span>}
+                          {mintRange && meltRange && <span> · </span>}
+                          {meltRange && <span>Melt {meltRange}</span>}
+                        </>
+                      ) : (
+                        <span>No {unitLabel} limits published by this mint</span>
+                      )}
+                    </div>
                   </div>
                   <span className="wizard-rec-score" style={{ color: scoreColor(score) }}>{score}%</span>
                   <span className="wizard-rec-view">View →</span>
@@ -387,8 +460,14 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
               )
             })
           )}
+          {recs.length > 0 && (
+            <div className="wizard-rec-note">
+              Trust Score reflects the whole mint, not this specific currency — uptime, NUT support and
+              version freshness are measured per mint. Only the limits above are {recsUnit}-specific.
+            </div>
+          )}
           <button type="button" className="wizard-back-btn" style={{ marginTop: 8 }}
-            onClick={() => { setStep(1); setSize(null); setPreference(null); setBackupPref(null); setRecs(null) }}>
+            onClick={() => { setStep(1); setSize(null); setPreference(null); setBackupPref(null); setRecs(null); setRecsUnit(null) }}>
             ← Start over
           </button>
         </div>
