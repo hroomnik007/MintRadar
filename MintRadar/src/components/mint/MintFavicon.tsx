@@ -10,7 +10,6 @@ interface Props {
 
 export function MintFavicon({ url, iconUrl, size = 22, radius = 5, className = '' }: Props) {
   const hostname = (() => { try { return new URL(url).hostname } catch { return url } })()
-  const letter = hostname[0]?.toUpperCase() ?? '?'
   const [imgFailed, setImgFailed] = useState(false)
 
   if (iconUrl && !imgFailed) {
@@ -31,6 +30,8 @@ export function MintFavicon({ url, iconUrl, size = 22, radius = 5, className = '
     )
   }
 
+  const iconSize = size * 0.64
+
   return (
     <div
       className={className}
@@ -39,11 +40,20 @@ export function MintFavicon({ url, iconUrl, size = 22, radius = 5, className = '
         borderRadius: radius, background: 'var(--bg3)',
         border: '0.5px solid var(--border)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: size * 0.5, color: 'var(--text3)',
-        fontFamily: 'var(--font-mono)', textTransform: 'uppercase', flexShrink: 0,
+        flexShrink: 0,
       }}
     >
-      {letter}
+      <svg
+        width={iconSize}
+        height={iconSize}
+        viewBox="0 0 24 24"
+        role="img"
+        aria-label={`${hostname} mint icon placeholder`}
+      >
+        <circle cx="12" cy="12" r="9" fill="var(--copper-soft)" stroke="var(--copper)" strokeWidth="1.5" />
+        <circle cx="12" cy="12" r="6.2" fill="none" stroke="var(--copper)" strokeWidth="1" opacity="0.45" />
+        <path d="M7 15.5a6.9 6.9 0 0 0 10 0" fill="none" stroke="var(--copper)" strokeWidth="1" strokeLinecap="round" opacity="0.3" />
+      </svg>
     </div>
   )
 }
