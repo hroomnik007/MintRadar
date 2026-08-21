@@ -1,0 +1,41 @@
+.habit-essential {
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-soft-strong);
+  border-left: 3px solid var(--amber);
+  border-radius: var(--r);
+  padding: 16px 18px;
+  margin: 28px 0;
+}
+
+.habit-essential h3 {
+  margin: 0 0 10px;
+}
+
+.habit-essential p {
+  margin: 0;
+}
+
+.habit-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--amber);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: var(--font-mono);
+  margin-bottom: 8px;
+}
+
+.habit-medium {
+  border-left: 2px solid var(--copper);
+  padding-left: 14px;
+  margin: 28px 0;
+}
+
+.habit-medium h3 {
+  margin: 0 0 10px;
+}
+
+.habit-medium p {
+  margin: 0;
+}
