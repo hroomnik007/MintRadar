@@ -20,6 +20,20 @@
   line-height: 1.5;
 }
 
+/* Decorative radar band opening the page — ornamental only, so it is kept
+   deliberately faint and is skipped by assistive tech. */
+.learn-hero {
+  padding: 4px 24px 0;
+  pointer-events: none;
+}
+
+.learn-hero-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 88px;
+}
+
 .learn-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -43,6 +57,30 @@
 
 .learn-card:hover {
   border-color: var(--accent-brd);
+}
+
+.learn-card-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.learn-card-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--copper-soft);
+  border: 1px solid var(--copper-soft-strong);
+  color: var(--copper);
+}
+
+.learn-card-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .learn-card-number {
@@ -84,6 +122,14 @@
 @media (max-width: 700px) {
   .learn-page-header {
     padding: 18px 16px 4px;
+  }
+
+  .learn-hero {
+    padding: 4px 16px 0;
+  }
+
+  .learn-hero-svg {
+    max-height: 76px;
   }
 
   .learn-grid {

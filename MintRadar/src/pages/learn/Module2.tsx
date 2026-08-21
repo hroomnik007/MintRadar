@@ -1,4 +1,5 @@
 import { KeyTakeaway } from '@/components/learn/KeyTakeaway'
+import { RiskAsymmetryDiagram } from '@/components/learn/RiskAsymmetryDiagram'
 
 export default function Module2() {
   return (
@@ -8,6 +9,8 @@ export default function Module2() {
       <p>
         This is the most important module in this course. Read it before you put any real money into Cashu.
       </p>
+
+      <RiskAsymmetryDiagram />
 
       <h3>Risk #1: The mint could disappear or refuse to pay</h3>
       <p>

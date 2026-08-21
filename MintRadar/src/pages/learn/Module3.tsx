@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { TrustScoreDonut } from '@/components/learn/TrustScoreDonut'
 
 export default function Module3() {
   return (
@@ -35,6 +36,9 @@ export default function Module3() {
       <p>
         MintRadar combines several of these signals into a single Trust Score out of 100:
       </p>
+
+      <TrustScoreDonut />
+
       <ul>
         <li><strong>Uptime (45%)</strong> — how reliably the mint has responded over the last 24 hours</li>
         <li><strong>NUT Support (30%)</strong> — how many of the tracked NUTs the mint supports</li>

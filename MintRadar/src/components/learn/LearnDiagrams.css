@@ -1,0 +1,287 @@
+/* Shared layout for the Learn module diagrams (token flow, risk asymmetry,
+   Trust Score donut). All colour comes from the existing patina/copper
+   tokens — no diagram introduces a colour of its own. */
+
+.learn-diagram {
+  margin: 22px 0;
+}
+
+/* ── Module 1 — token flow ──────────────────────────────────── */
+.flow-diagram {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.flow-step {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 10px;
+}
+
+.flow-step-icon {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  flex-shrink: 0;
+}
+
+.flow-step-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.flow-tone-green {
+  color: var(--green-bright);
+  background: var(--green-soft);
+  border: 1px solid var(--green-soft-strong);
+}
+
+.flow-tone-copper {
+  color: var(--copper);
+  background: var(--copper-soft);
+  border: 1px solid var(--copper-soft-strong);
+}
+
+.flow-step-label {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--text2);
+}
+
+.flow-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--t3);
+  flex-shrink: 0;
+}
+
+.flow-arrow svg {
+  width: 22px;
+  height: 11px;
+}
+
+/* ── Module 2 — risk asymmetry ──────────────────────────────── */
+.risk-diagram {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.risk-box {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  border-radius: var(--r);
+  padding: 16px 12px;
+}
+
+/* Solid, filled — real reserves sitting somewhere concrete. */
+.risk-box-solid {
+  background: var(--copper-soft);
+  border: 1.5px solid var(--copper-soft-strong);
+}
+
+.risk-box-solid .risk-box-icon {
+  color: var(--copper);
+}
+
+/* Dashed and dimmed — a claim that only holds while the mint honours it. */
+.risk-box-fragile {
+  background: transparent;
+  border: 1.5px dashed var(--border-strong);
+  opacity: 0.82;
+}
+
+.risk-box-fragile .risk-box-icon {
+  color: var(--amber);
+}
+
+.risk-box-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.risk-box-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.risk-box-sub {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  color: var(--t3);
+  line-height: 1.4;
+}
+
+/* Fixed narrow column: lets the label wrap onto two lines instead of holding
+   the connector open at its full single-line width, which squeezed the boxes. */
+.risk-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--t3);
+  flex-shrink: 0;
+  width: 84px;
+}
+
+.risk-link-arrow {
+  width: 44px;
+  height: 12px;
+}
+
+.risk-link-label {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+  color: var(--t3);
+  text-align: center;
+}
+
+/* ── Module 3 — Trust Score weights donut ───────────────────── */
+.donut-diagram {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  flex-wrap: wrap;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px 20px;
+}
+
+.donut-chart-wrap {
+  width: 152px;
+  flex-shrink: 0;
+}
+
+.donut-chart-wrap svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.donut-center-num {
+  fill: var(--text);
+  font-family: var(--font-mono-data);
+  font-size: 23px;
+  font-weight: 700;
+}
+
+.donut-center-lbl {
+  fill: var(--t3);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.donut-legend {
+  flex: 1;
+  min-width: 168px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.donut-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.donut-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.donut-legend-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--text2);
+}
+
+.donut-legend-weight {
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: var(--font-mono-data);
+  color: var(--text);
+}
+
+/* ── Mobile ─────────────────────────────────────────────────── */
+@media (max-width: 620px) {
+  /* Both step/box rows become vertical stacks; the connectors rotate a
+     quarter turn so they keep pointing along the new reading direction. */
+  .flow-diagram,
+  .risk-diagram {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .flow-step {
+    flex-direction: row;
+    text-align: left;
+    gap: 12px;
+    padding: 11px 14px;
+  }
+
+  .flow-step-label {
+    font-size: 13px;
+  }
+
+  /* A rotated element keeps its pre-rotation layout box, so both connectors
+     get an explicit min-height to reserve the room their turned glyph
+     visually occupies — without it they bleed into the boxes above/below. */
+  .flow-arrow {
+    min-height: 24px;
+  }
+
+  .flow-arrow svg {
+    transform: rotate(90deg);
+  }
+
+  .risk-link {
+    flex-direction: row;
+    justify-content: center;
+    gap: 8px;
+    width: auto;
+    min-height: 40px;
+  }
+
+  /* Points from the token box (now below) up to the mint box (now above). */
+  .risk-link-arrow {
+    transform: rotate(90deg);
+    width: 30px;
+  }
+
+  .donut-diagram {
+    gap: 18px;
+    padding: 16px;
+    justify-content: center;
+  }
+}

@@ -1,4 +1,5 @@
 import { KeyTakeaway } from '@/components/learn/KeyTakeaway'
+import { TokenFlowDiagram } from '@/components/learn/TokenFlowDiagram'
 
 export default function Module1() {
   return (
@@ -24,6 +25,9 @@ export default function Module1() {
         <li>You can send these tokens to anyone — over Nostr, a chat app, even an emoji — and the mint never sees the transaction happen.</li>
         <li>Whoever receives the tokens can spend them again, or redeem them back to Bitcoin/Lightning through the mint.</li>
       </ol>
+
+      <TokenFlowDiagram />
+
       <p>
         This is called <strong>Chaumian ecash</strong>, named after cryptographer David Chaum, who invented the concept decades before Bitcoin existed.
       </p>

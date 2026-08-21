@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { LEARN_MODULES } from '@/constants/learnModules'
+import { LearnModuleIcon, LearnHero } from '@/components/learn/LearnIcons'
 import './Learn.css'
 
 export default function Learn() {
@@ -13,6 +14,10 @@ export default function Learn() {
         <div className="learn-page-subtitle">A short course on how Cashu works, what can go wrong, and how to use it safely.</div>
       </div>
 
+      <div className="learn-hero" aria-hidden="true">
+        <LearnHero />
+      </div>
+
       <div className="learn-grid">
         {modules.map(mod => (
           <div
@@ -20,7 +25,10 @@ export default function Learn() {
             className="learn-card"
             onClick={() => navigate(`/learn/${mod.id}`)}
           >
-            <div className="learn-card-number">Module {mod.order}</div>
+            <div className="learn-card-head">
+              <LearnModuleIcon moduleId={mod.id} />
+              <span className="learn-card-number">Module {mod.order}</span>
+            </div>
             <div className="learn-card-title">{mod.title}</div>
             <div className="learn-card-summary">{mod.summary}</div>
             <div className="learn-card-cta">Start module →</div>
