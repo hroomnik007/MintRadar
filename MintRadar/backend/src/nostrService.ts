@@ -158,6 +158,40 @@ export async function publishServiceProfile(): Promise<void> {
   }
 }
 
+// Publishes a NIP-23 long-form article (kind:30023). `identifier` is the
+// event's `d` tag — publishing again with the same identifier replaces the
+// previous version on relays that honor replaceable events, so this is safe
+// to re-run for edits. Same relay set and short-lived-pool publish pattern
+// as publishServiceProfile.
+export async function publishLongFormArticle(params: {
+  identifier: string
+  title: string
+  content: string
+  summary?: string
+}): Promise<{ succeeded: number; failed: number }> {
+  if (!serviceSecretKey) throw new Error('NOTIFICATION_SERVICE_NSEC not configured — cannot publish')
+
+  const tags: string[][] = [
+    ['d', params.identifier],
+    ['title', params.title],
+    ['published_at', String(Math.floor(Date.now() / 1000))],
+  ]
+  if (params.summary) tags.push(['summary', params.summary])
+
+  const event = finalizeEvent(
+    {
+      kind: 30023,
+      content: params.content,
+      tags,
+      created_at: Math.floor(Date.now() / 1000),
+    },
+    serviceSecretKey
+  )
+  const { succeeded, failed } = await publishToRelays(META_RELAYS, event)
+  console.log(`[nostr-service] published kind:30023 "${params.identifier}" (${succeeded} succeeded, ${failed} failed)`)
+  return { succeeded, failed }
+}
+
 interface SubscriberRow {
   pubkey: string
   relays: string[]

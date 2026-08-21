@@ -1,0 +1,33 @@
+.key-takeaway {
+  background: var(--copper-soft);
+  border: 1px solid var(--copper-soft-strong);
+  border-left: 3px solid var(--copper);
+  border-radius: var(--r);
+  padding: 14px 18px;
+  margin: 20px 0;
+}
+
+.key-takeaway-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--copper);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: var(--font-mono);
+  margin-bottom: 6px;
+}
+
+.key-takeaway-quote {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.key-takeaway-quote p {
+  margin: 8px 0 0;
+}
+
+.key-takeaway-quote p:first-child {
+  margin-top: 0;
+}

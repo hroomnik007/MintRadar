@@ -5,6 +5,8 @@ import Dashboard from '@/pages/Dashboard'
 import Watchlist from '@/pages/Watchlist'
 import NutExplorer from '@/pages/NutExplorer'
 import MintNaddr from '@/pages/MintNaddr'
+import Learn from '@/pages/Learn'
+import LearnModule from '@/pages/LearnModule'
 
 // Stats and MintDetail are the only pages that pull in Recharts (~380 kB chunk),
 // so they load lazily — the chart vendor bundle is fetched only when first visited.
@@ -26,6 +28,8 @@ export const router = createBrowserRouter([
       { path: 'watchlist', element: <Watchlist /> },
       { path: 'stats', element: <Suspense fallback={lazyFallback}><Stats /></Suspense> },
       { path: 'tools', element: <Suspense fallback={lazyFallback}><Tools /></Suspense> },
+      { path: 'learn', element: <Learn /> },
+      { path: 'learn/:moduleId', element: <LearnModule /> },
       { path: 'nuts', element: <NutExplorer /> },
       { path: 'mint/nostr/:naddr', element: <MintNaddr /> },
       { path: 'mint/:url', element: <Suspense fallback={lazyFallback}><MintDetail /></Suspense> },
