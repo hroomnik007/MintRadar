@@ -36,8 +36,10 @@
 
 .learn-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
+  max-width: 1600px;
+  margin: 0 auto;
   padding: 16px 24px;
 }
 
