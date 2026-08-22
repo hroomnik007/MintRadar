@@ -7,10 +7,10 @@ export default function Module4() {
 
       <h3>Choosing your first wallet</h3>
       <p>
-        Cashu has several wallet options. For your first time, we recommend <strong>cashu.me</strong> — it works in any browser, requires no installation, and can be saved to your phone's home screen like an app (a "Progressive Web App").
+        Cashu has several solid wallet options — which one to start with mostly comes down to browser vs. native app, not one being "better." If you're new to Cashu, <strong><a href="https://cashu.me" target="_blank" rel="noreferrer">cashu.me</a></strong> is a good first stop: it runs in any browser with no installation, and can be saved to your phone's home screen like an app (a "Progressive Web App").
       </p>
       <p>
-        Other popular options include Minibits (Android) and eNuts (iOS/Android), if you'd prefer a native mobile app from the start.
+        If you'd rather have a native mobile app from the start, <strong><a href="https://minibits.cash" target="_blank" rel="noreferrer">Minibits</a></strong> (Android) and <strong><a href="https://enuts.cash" target="_blank" rel="noreferrer">eNuts</a></strong> (iOS/Android) are both established, actively maintained wallets — a genuine starting point, not just a fallback if cashu.me doesn't suit you.
       </p>
 
       <h3>Setting up your first mint</h3>
@@ -20,7 +20,7 @@ export default function Module4() {
         <li>Your wallet will connect and fetch the mint's public keys. You're now ready to use it.</li>
       </ol>
       <p>
-        <strong>Tip:</strong> if you're just testing things out and don't want to risk real sats yet, you can use <code>https://testnut.cashu.space</code> — a public test mint that issues unbacked "fake" ecash for practice. These tokens have no real value and can't be exchanged for actual Bitcoin — nothing you do there can cost you real money, which makes it a safe place to get comfortable with the wallet before using a real mint.
+        <strong>Tip:</strong> if you're just testing things out and don't want to risk real sats yet, you can use <a href="https://testnut.cashu.space" target="_blank" rel="noreferrer"><code>testnut.cashu.space</code></a> — a public test mint that issues unbacked "fake" ecash for practice. These tokens have no real value and can't be exchanged for actual Bitcoin — nothing you do there can cost you real money, which makes it a safe place to get comfortable with the wallet before using a real mint.
       </p>
 
       <h3>Your first deposit</h3>

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { TrustScoreDonut } from '@/components/learn/TrustScoreDonut'
+import { KeyTakeaway } from '@/components/learn/KeyTakeaway'
 
 export default function Module3() {
   return (
@@ -49,6 +50,10 @@ export default function Module3() {
       <p>
         No single number can tell you everything, so we also show a full breakdown — click on any mint's Trust Score to see exactly what's contributing to it.
       </p>
+
+      <KeyTakeaway>
+        <strong>A high Trust Score reduces risk — it doesn't eliminate it.</strong> The right mint is the one that fits what you actually need, not just whichever number is highest.
+      </KeyTakeaway>
 
       <h3>Try it yourself</h3>
       <p>
