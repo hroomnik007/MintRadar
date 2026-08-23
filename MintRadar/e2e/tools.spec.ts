@@ -91,6 +91,22 @@ test.describe('Tools', () => {
     await expect(result).toHaveClass(/tv-unknown/)
   })
 
+  test('Token Inspector action buttons keep their full label text on mobile (no clipping)', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    const token = makeCashuToken(MOCK_MINTS[0]!.url, [21, 8])
+
+    await page.locator('.token-input').fill(token)
+    await page.getByRole('button', { name: 'Inspect Token' }).click()
+    await expect(page.locator('.token-result-grid')).toBeVisible()
+
+    // A clipped label has scrollWidth > clientWidth (overflow hidden behind the button's
+    // own edge) — that was the bug: flex:1 + min-width:0 let these shrink past their text.
+    const overflowing = await page.locator('.token-action-btn').evaluateAll(
+      els => els.filter(el => el.scrollWidth > el.clientWidth + 1).map(el => el.textContent)
+    )
+    expect(overflowing).toEqual([])
+  })
+
   test('Token Inspector shows an error for an invalid token (no crash)', async ({ page }) => {
     await page.locator('.token-input').fill('this-is-not-a-cashu-token')
     await page.getByRole('button', { name: 'Inspect Token' }).click()

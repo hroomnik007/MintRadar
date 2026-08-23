@@ -185,8 +185,12 @@
 }
 
 .token-action-btn {
-  flex: 1;
-  min-width: 0;
+  /* A basis of 0 (plain "flex: 1") lets flexbox shrink each button past its label's
+     natural width instead of wrapping to a new line — that's what was clipping "View
+     Mint Detail"/"Open in wallet"/"Redeem to Lightning" on narrow screens. A real
+     basis makes the row wrap onto two lines once three buttons don't fit, instead of
+     squeezing all three onto one. */
+  flex: 1 1 140px;
   padding: 7px 12px;
   background: var(--bg3);
   border: 1px solid var(--border);

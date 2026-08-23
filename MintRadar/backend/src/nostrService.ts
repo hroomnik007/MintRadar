@@ -41,6 +41,9 @@ class DnsPinnedWebSocket extends WebSocket {
     super(address, protocols, { lookup: safeLookup } as ClientRequestArgs)
   }
 }
+// Not a React hook — the react-hooks plugin flags this purely because of the "use" name
+// prefix nostr-tools chose for this function.
+// eslint-disable-next-line react-hooks/rules-of-hooks
 useWebSocketImplementation(DnsPinnedWebSocket)
 
 // Mirrors the frontend's META_RELAYS (src/core/nostr/client.ts) — the two
@@ -84,7 +87,6 @@ const RELAY_PUBLISH_TIMEOUT_MS = 5_000
 const COOLDOWN_MS = 60 * 60 * 1000
 
 let serviceSecretKey: Uint8Array | null = null
-let servicePubkeyHex: string | null = null
 
 const rawNsec = process.env['NOTIFICATION_SERVICE_NSEC']
 if (!rawNsec) {
@@ -96,7 +98,7 @@ if (!rawNsec) {
       console.warn('[notify-service] NOTIFICATION_SERVICE_NSEC is not a valid nsec — notification sending disabled')
     } else {
       serviceSecretKey = decoded.data
-      servicePubkeyHex = getPublicKey(serviceSecretKey)
+      const servicePubkeyHex = getPublicKey(serviceSecretKey)
       console.log(`[notify-service] service identity loaded (pubkey ${servicePubkeyHex.slice(0, 8)}…)`)
     }
   } catch {
