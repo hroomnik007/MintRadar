@@ -59,6 +59,27 @@ const DISCOVERY_RELAYS = [
 
 const DISCOVERY_TIMEOUT_MS = 15_000
 
+// Renders "relay.damus.io=12, nos.lol=8" for a discovery pass, busiest relay first.
+// Counts come from SimplePool's `seenOn` map (event id → relays that served it), so a
+// single event fetched from five relays is counted once per relay — these are per-relay
+// delivery counts, not a partition of the total.
+function formatRelayBreakdown<R extends { url: string }>(
+  events: { id: string }[],
+  seenOn: Map<string, Set<R>>,
+): string {
+  const counts = new Map<string, number>()
+  for (const event of events) {
+    for (const relay of seenOn.get(event.id) ?? []) {
+      counts.set(relay.url, (counts.get(relay.url) ?? 0) + 1)
+    }
+  }
+  if (counts.size === 0) return 'no per-relay attribution available'
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([url, n]) => `${url.replace(/^wss:\/\//, '').replace(/\/$/, '')}=${n}`)
+    .join(', ')
+}
+
 export async function discoverMintsFromNostr(): Promise<number> {
   // Node.js 20 has no native WebSocket — inject ws polyfill for nostr-tools
   if (!globalThis.WebSocket) {
@@ -66,6 +87,16 @@ export async function discoverMintsFromNostr(): Promise<number> {
     ;(globalThis as any).WebSocket = WebSocket
   }
   const nostrPool = new SimplePool()
+  // Opt into per-event relay attribution so the logs below can show which relay actually
+  // served what. Off by default in nostr-tools; it only costs a Map of event id → relays
+  // for the lifetime of this pool, which is destroyed at the end of the cycle.
+  nostrPool.trackRelays = true
+
+  // Relays that never got far enough to answer. `onRelayConnectionFailure` is a public
+  // field rather than a SimplePool constructor option, so it is assigned here.
+  const failedRelays = new Set<string>()
+  nostrPool.onRelayConnectionFailure = (url: string) => { failedRelays.add(url) }
+
   const discovered38172: Set<string> = new Set()
   const discovered38000: Set<string> = new Set()
 
@@ -86,6 +117,10 @@ export async function discoverMintsFromNostr(): Promise<number> {
     ])
 
     if (res38172.status === 'fulfilled') {
+      console.log(
+        `[discovery] kind:38172 per-relay: ${formatRelayBreakdown(res38172.value, nostrPool.seenOn)} ` +
+        `(${res38172.value.length} events total)`
+      )
       for (const event of res38172.value.filter(e => verifyEvent(e))) {
         const uTag = event.tags.find((t: string[]) => t[0] === 'u')
         if (!uTag || !uTag[1]) continue
@@ -103,6 +138,10 @@ export async function discoverMintsFromNostr(): Promise<number> {
     }
 
     if (res38000.status === 'fulfilled') {
+      console.log(
+        `[discovery] kind:38000 per-relay: ${formatRelayBreakdown(res38000.value, nostrPool.seenOn)} ` +
+        `(${res38000.value.length} events total)`
+      )
       for (const event of res38000.value.filter(e => verifyEvent(e))) {
         for (const tag of event.tags as string[][]) {
           if (tag[0] !== 'u' || typeof tag[1] !== 'string' || !tag[1].startsWith('https://')) continue
@@ -119,6 +158,23 @@ export async function discoverMintsFromNostr(): Promise<number> {
       console.error('[discovery] kind:38000 fetch error:', res38000.reason)
     }
   } finally {
+    // Two different failure modes, logged separately because they mean different things:
+    // a relay that never connected at all, vs. one that connected but served nothing
+    // this cycle (which can be legitimate — it may simply hold no NIP-87 events).
+    if (failedRelays.size > 0) {
+      console.warn(
+        `[discovery] relay(s) unreachable this cycle (${failedRelays.size}/${DISCOVERY_RELAYS.length}): ` +
+        [...failedRelays].join(', ')
+      )
+    }
+    const connected = nostrPool.listConnectionStatus()
+    const silent = DISCOVERY_RELAYS.filter(url => !failedRelays.has(url) && connected.get(url) !== true)
+    if (silent.length > 0) {
+      console.warn(
+        `[discovery] relay(s) connected but returned nothing (${silent.length}/${DISCOVERY_RELAYS.length}): ` +
+        silent.join(', ')
+      )
+    }
     nostrPool.destroy()
   }
 

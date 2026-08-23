@@ -47,6 +47,50 @@ test.describe('Tools', () => {
     await expect(redeem).toHaveAttribute('href', new RegExp(`^https://redeem\\.cashu\\.me/\\?token=${token}$`))
   })
 
+  test('Token Inspector renders a fiat amount in its minor unit, not as whole currency', async ({ page }) => {
+    // NUT-01: a usd token carrying 20 is 20 cents, so this must read $0.20 and never $20.
+    const token = makeCashuToken(MOCK_MINTS[0]!.url, [15, 5], 'usd')
+
+    await page.locator('.token-input').fill(token)
+    await page.getByRole('button', { name: 'Inspect Token' }).click()
+
+    const grid = page.locator('.token-result-grid')
+    await expect(grid).toContainText('$0.20')
+    await expect(grid).not.toContainText('$20')
+  })
+
+  test('Token Inspector keeps sat amounts as whole numbers', async ({ page }) => {
+    const token = makeCashuToken(MOCK_MINTS[0]!.url, [21, 8])
+
+    await page.locator('.token-input').fill(token)
+    await page.getByRole('button', { name: 'Inspect Token' }).click()
+
+    const amount = page.locator('.token-result-cell', { hasText: 'Amount' })
+    await expect(amount).toContainText('29')
+    await expect(amount).not.toContainText('$')
+    await expect(amount).not.toContainText('0.29')
+  })
+
+  test('Verify with mint reports an unreachable mint distinctly from an invalid token', async ({ page }) => {
+    const token = makeCashuToken(MOCK_MINTS[0]!.url, [21])
+
+    await page.locator('.token-input').fill(token)
+    await page.getByRole('button', { name: 'Inspect Token' }).click()
+
+    // The verify button is opt-in: nothing runs until it is clicked.
+    await expect(page.locator('.token-verify-result')).toHaveCount(0)
+
+    await page.getByRole('button', { name: /Verify with mint/ }).click()
+
+    // /v1/keysets and /v1/keys are not mocked, so loadMint() fails — that is a transport
+    // failure and must NOT be reported as a bad signature.
+    const result = page.locator('.token-verify-result')
+    await expect(result).toBeVisible({ timeout: 15_000 })
+    await expect(result).toContainText(/Could not reach mint/)
+    await expect(result).not.toContainText(/Invalid signature/)
+    await expect(result).toHaveClass(/tv-unknown/)
+  })
+
   test('Token Inspector shows an error for an invalid token (no crash)', async ({ page }) => {
     await page.locator('.token-input').fill('this-is-not-a-cashu-token')
     await page.getByRole('button', { name: 'Inspect Token' }).click()

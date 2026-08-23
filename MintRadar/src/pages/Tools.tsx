@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useNow } from '@/hooks/useNow'
-import { parseCashuToken, type TokenInfo } from '@/utils/cashuToken'
+import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, type TokenInfo } from '@/utils/cashuToken'
 import './Tools.css'
 
 function getHostname(url: string): string {
@@ -21,6 +21,18 @@ function normUrl(raw: string): string {
   } catch { return raw.trim() }
 }
 
+// DLEQ verification is a live, on-demand check against the mint, so it gets its own
+// state machine rather than folding into the parse result. "unreachable" is deliberately
+// distinct from "invalid": failing to reach the mint tells us nothing about the token,
+// while "invalid" is a positive finding that the signature does not check out.
+type VerifyState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'valid'; count: number }
+  | { status: 'invalid' }
+  | { status: 'no-dleq' }
+  | { status: 'unreachable' }
+
 function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   const navigate = useNavigate()
   const now = useNow()
@@ -28,6 +40,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   const [result, setResult] = useState<TokenInfo | null>(null)
   const [parseError, setParseError] = useState<string | null>(null)
   const [inspected, setInspected] = useState(false)
+  const [verify, setVerify] = useState<VerifyState>({ status: 'idle' })
 
   const knownMap = useMemo(() => {
     const m = new Map<string, KnownMint>()
@@ -45,6 +58,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     const token = input.trim()
     if (!token) return
     setInspected(true)
+    setVerify({ status: 'idle' })
     const { info, error } = parseCashuToken(token)
     if (!info) {
       setParseError(error ?? 'Could not decode this token.')
@@ -52,6 +66,28 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     } else {
       setParseError(null)
       setResult(info)
+    }
+  }
+
+  const handleVerify = async () => {
+    const token = input.trim()
+    if (!token) return
+    setVerify({ status: 'loading' })
+    try {
+      const decoded = await decodeTokenWithMint(token)
+      if (decoded.proofsWithDleq === 0) {
+        // The mint issued these proofs without DLEQ data, so there is simply nothing
+        // to check — not a pass, not a failure.
+        setVerify({ status: 'no-dleq' })
+      } else if (decoded.allDleqValid) {
+        setVerify({ status: 'valid', count: decoded.proofs.length })
+      } else {
+        setVerify({ status: 'invalid' })
+      }
+    } catch {
+      // Any throw here is a transport/mint problem (loadMint failed, timeout, keyset
+      // missing) — never evidence that the token itself is bad.
+      setVerify({ status: 'unreachable' })
     }
   }
 
@@ -68,7 +104,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
         className="token-input"
         placeholder="cashuB… (v4) or cashuA… (v3)"
         value={input}
-        onChange={e => { setInput(e.target.value); setInspected(false); setResult(null); setParseError(null) }}
+        onChange={e => { setInput(e.target.value); setInspected(false); setResult(null); setParseError(null); setVerify({ status: 'idle' }) }}
         rows={3}
         spellCheck={false}
       />
@@ -91,7 +127,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             </div>
             <div className="token-result-cell">
               <div className="trc-label">Amount</div>
-              <div className="trc-value trc-accent">{result.amount.toLocaleString()}</div>
+              <div className="trc-value trc-accent">{formatTokenAmount(result.amount, result.unit)}</div>
               <div className="trc-sub">{result.unit}</div>
             </div>
             <div className="token-result-cell">
@@ -163,6 +199,48 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             >
               ⚡ Redeem to Lightning
             </a>
+          </div>
+
+          <div className="token-verify">
+            <button
+              type="button"
+              className="token-action-btn token-verify-btn"
+              onClick={() => void handleVerify()}
+              disabled={verify.status === 'loading'}
+            >
+              {verify.status === 'loading' ? '⏳ Verifying…' : '🔐 Verify with mint'}
+            </button>
+
+            {verify.status === 'valid' && (
+              <div className="token-verify-result tv-ok">
+                ✅ Cryptographically verified — all {verify.count} proof{verify.count === 1 ? '' : 's'} carry a
+                valid mint signature (NUT-12 DLEQ).
+              </div>
+            )}
+            {verify.status === 'invalid' && (
+              <div className="token-verify-result tv-bad">
+                ❌ Invalid signature — do not trust this token. At least one proof failed its DLEQ check.
+              </div>
+            )}
+            {verify.status === 'no-dleq' && (
+              <div className="token-verify-result tv-unknown">
+                ➖ Nothing to verify — this token carries no DLEQ data, so its signatures can't be checked
+                offline. That is a property of the issuing mint, not a sign the token is bad.
+              </div>
+            )}
+            {verify.status === 'unreachable' && (
+              <div className="token-verify-result tv-unknown">
+                ⚠️ Could not reach mint to verify (try again later). This says nothing about the token itself.
+              </div>
+            )}
+
+            <div className="token-verify-note">
+              DLEQ verification asks the mint for its public keys and checks this specific token's
+              signatures cryptographically. It is a different question from Mint Status and Trust Score
+              above — those describe the mint's reputation and uptime from MintRadar's database, while
+              this proves whether these particular proofs were really issued by that mint. It needs a live
+              request, so it only runs when you click.
+            </div>
           </div>
         </>
       )}

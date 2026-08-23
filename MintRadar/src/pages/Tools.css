@@ -206,6 +206,57 @@
   color: var(--accent);
 }
 
+/* ── Token Inspector: DLEQ verification ───────────────────────── */
+.token-verify {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Unlike the row of .token-action-btn links above (which share a flex row), this one
+   stands alone, so the flex:1 stretch inherited from .token-action-btn is undone. */
+.token-verify-btn {
+  flex: none;
+  align-self: flex-start;
+}
+
+.token-verify-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.token-verify-result {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  line-height: 1.5;
+  padding: 8px 12px;
+  border-radius: 7px;
+}
+
+.tv-ok {
+  color: var(--green-bright);
+  background: var(--green-soft);
+  border: 1px solid var(--green-soft-strong);
+}
+
+.tv-bad {
+  color: #E24B4A;
+  background: rgba(226, 75, 74, 0.08);
+  border: 1px solid rgba(226, 75, 74, 0.2);
+}
+
+.tv-unknown {
+  color: var(--copper);
+  background: var(--copper-soft);
+  border: 1px solid var(--copper-soft-strong);
+}
+
+.token-verify-note {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text3);
+}
+
 /* ── Best Mint Wizard ─────────────────────────────────────────── */
 .wizard-steps {
   display: flex;

@@ -29,6 +29,60 @@ export interface TokenParseResult {
   error: string | null
 }
 
+// NUT-01: "For Bitcoin, ISO 4217 currencies (and stablecoins pegged to those
+// currencies), Keyset amount values MUST represent an amount in the Minor Unit of that
+// currency." So a `usd` token carrying amount 20 is 20 cents ($0.20), not $20.
+//
+// The exponent is per-currency, NOT a blanket 2 — the spec's own examples are usd → 2
+// (1 = 1 cent), jpy → 0 (1 = 1 JPY) and bhd → 3 (1 = 1 fils). A hardcoded /100 would
+// silently inflate jpy by 100x and deflate bhd by 10x, so the exponent is looked up.
+//
+// `sat` is itself Bitcoin's minor unit (and `msat`/`auth` are plain counts), so they are
+// deliberately absent here and render as whole numbers.
+const MINOR_UNIT_EXPONENT: Record<string, number> = {
+  usd: 2, eur: 2, gbp: 2, chf: 2, cad: 2, aud: 2, nzd: 2, cny: 2, hkd: 2,
+  sek: 2, nok: 2, dkk: 2, pln: 2, czk: 2, brl: 2, mxn: 2, zar: 2, inr: 2, try: 2,
+  jpy: 0, krw: 0, isk: 0, huf: 0, clp: 0, vnd: 0,
+  bhd: 3, kwd: 3, omr: 3, jod: 3, tnd: 3,
+  // Stablecoins inherit the minor unit of the currency they are pegged to.
+  usdt: 2, usdc: 2, dai: 2, eurc: 2, gyen: 0,
+}
+
+const CURRENCY_SYMBOL: Record<string, string> = {
+  usd: '$', usdt: '$', usdc: '$', dai: '$',
+  eur: '€', eurc: '€',
+  gbp: '£',
+  jpy: '¥', gyen: '¥',
+  cny: '¥',
+  inr: '₹',
+  krw: '₩',
+  brl: 'R$',
+}
+
+/**
+ * Render a token's raw amount the way a human reads it, honouring the unit's NUT-01
+ * minor-unit exponent. An unrecognised or future unit falls back to the raw integer
+ * rather than guessing an exponent — better a plain number than a wrong one.
+ */
+export function formatTokenAmount(amount: number, unit: string): string {
+  const key = unit.trim().toLowerCase()
+  const exponent = MINOR_UNIT_EXPONENT[key]
+  if (exponent === undefined) return amount.toLocaleString()
+
+  // Integer math throughout — dividing by 100 in floating point would round amounts
+  // like 1234567890 incorrectly, and this is money.
+  const negative = amount < 0
+  const abs = Math.abs(Math.trunc(amount))
+  const divisor = 10 ** exponent
+  const whole = Math.floor(abs / divisor)
+  const frac = abs % divisor
+
+  const wholeText = whole.toLocaleString()
+  const body = exponent === 0 ? wholeText : `${wholeText}.${String(frac).padStart(exponent, '0')}`
+  const symbol = CURRENCY_SYMBOL[key] ?? ''
+  return `${negative ? '-' : ''}${symbol}${body}`
+}
+
 /**
  * Decode a Cashu token to its metadata. Never throws — an undecodable token
  * comes back as `{ info: null, error }` so the caller can render a message
@@ -63,6 +117,8 @@ export function parseCashuToken(raw: string): TokenParseResult {
 
 export interface DecodedProof {
   proof: Proof
+  /** Whether this proof actually carries a NUT-12 DLEQ payload at all. */
+  hasDleq: boolean
   /** null when the keyset for this proof couldn't be resolved from the mint. */
   dleqValid: boolean | null
 }
@@ -70,7 +126,9 @@ export interface DecodedProof {
 export interface FullTokenDecode {
   info: TokenInfo
   proofs: DecodedProof[]
-  /** True only when every proof carries a DLEQ proof that verifies. */
+  /** How many proofs carried a DLEQ payload that could be checked. */
+  proofsWithDleq: number
+  /** True only when every proof carries a DLEQ proof AND all of them verify. */
   allDleqValid: boolean
 }
 
@@ -94,20 +152,26 @@ export async function decodeTokenWithMint(raw: string): Promise<FullTokenDecode>
 
   const decoded = wallet.decodeToken(token)
   const proofs: DecodedProof[] = decoded.proofs.map(proof => {
+    const hasDleq = proof.dleq != null
     let dleqValid: boolean | null
     try {
       // require:false — NUT-12 mandates "verify if present", so a proof with no
-      // DLEQ payload is not itself a failure.
+      // DLEQ payload is not itself a failure. Note this also means it returns true
+      // for a proof carrying no DLEQ at all, which is why `hasDleq` is tracked
+      // separately: "nothing to check" must never be reported as "verified".
       dleqValid = hasValidDleq(proof, wallet.getKeyset(proof.id), { require: false })
     } catch {
       dleqValid = null
     }
-    return { proof, dleqValid }
+    return { proof, hasDleq, dleqValid }
   })
+
+  const proofsWithDleq = proofs.filter(p => p.hasDleq).length
 
   return {
     info: { ...info, proofsCount: proofs.length },
     proofs,
-    allDleqValid: proofs.length > 0 && proofs.every(p => p.dleqValid === true),
+    proofsWithDleq,
+    allDleqValid: proofs.length > 0 && proofs.every(p => p.hasDleq && p.dleqValid === true),
   }
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { Amount, getEncodedToken } from '@cashu/cashu-ts'
-import { parseCashuToken } from '../utils/cashuToken'
+import { parseCashuToken, formatTokenAmount } from '../utils/cashuToken'
 
 const MINT = 'https://testnut.cashu.space'
 const PROOFS = [
@@ -57,5 +57,47 @@ describe('parseCashuToken', () => {
     const { info, error } = parseCashuToken('cashuBnot-a-real-token')
     expect(info).toBeNull()
     expect(error).toBeTruthy()
+  })
+})
+
+// NUT-01 denominates ISO 4217 units in the currency's Minor Unit, so the raw integer in
+// the token is cents for usd/eur but whole yen for jpy.
+describe('formatTokenAmount', () => {
+  it('renders sat as a plain integer', () => {
+    expect(formatTokenAmount(21, 'sat')).toBe('21')
+    expect(formatTokenAmount(2100000, 'sat')).toBe('2,100,000')
+  })
+
+  it('renders usd in cents with a currency symbol', () => {
+    expect(formatTokenAmount(20, 'usd')).toBe('$0.20')
+    expect(formatTokenAmount(5, 'usd')).toBe('$0.05')
+    expect(formatTokenAmount(1234, 'usd')).toBe('$12.34')
+    expect(formatTokenAmount(100000, 'usd')).toBe('$1,000.00')
+  })
+
+  it('renders eur in cents with a euro symbol', () => {
+    expect(formatTokenAmount(20, 'eur')).toBe('€0.20')
+    expect(formatTokenAmount(999, 'eur')).toBe('€9.99')
+  })
+
+  it('honours a zero-exponent currency instead of assuming /100', () => {
+    expect(formatTokenAmount(500, 'jpy')).toBe('¥500')
+  })
+
+  it('honours a three-exponent currency', () => {
+    expect(formatTokenAmount(1234, 'bhd')).toBe('1.234')
+  })
+
+  it('is case-insensitive about the unit', () => {
+    expect(formatTokenAmount(20, 'USD')).toBe('$0.20')
+  })
+
+  it('falls back to the raw amount for an unknown or future unit', () => {
+    expect(formatTokenAmount(42, 'xyz')).toBe('42')
+    expect(formatTokenAmount(1000, 'msat')).toBe('1,000')
+  })
+
+  it('handles zero without producing a malformed fraction', () => {
+    expect(formatTokenAmount(0, 'usd')).toBe('$0.00')
   })
 })
