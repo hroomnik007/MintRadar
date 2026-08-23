@@ -13,7 +13,7 @@ test.describe('Tools', () => {
     const token = makeCashuToken(MOCK_MINTS[0]!.url, [21, 8]) // Alpha Mint, 29 sat total
 
     await page.locator('.token-input').fill(token)
-    await page.getByRole('button', { name: 'Inspect Token' }).click()
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
 
     const grid = page.locator('.token-result-grid')
     await expect(grid).toBeVisible()
@@ -26,7 +26,7 @@ test.describe('Tools', () => {
     const token = makeCashuTokenV4(MOCK_MINTS[0]!.url, [21, 8])
 
     await page.locator('.token-input').fill(token)
-    await page.getByRole('button', { name: 'Inspect Token' }).click()
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
 
     const grid = page.locator('.token-result-grid')
     await expect(grid).toBeVisible()
@@ -39,7 +39,7 @@ test.describe('Tools', () => {
     const token = makeCashuToken(MOCK_MINTS[0]!.url, [21])
 
     await page.locator('.token-input').fill(token)
-    await page.getByRole('button', { name: 'Inspect Token' }).click()
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
 
     const wallet = page.getByRole('link', { name: /Open in wallet/ })
     await expect(wallet).toHaveAttribute('href', new RegExp(`^https://wallet\\.cashu\\.me/\\?token=${token}$`))
@@ -52,7 +52,7 @@ test.describe('Tools', () => {
     const token = makeCashuToken(MOCK_MINTS[0]!.url, [15, 5], 'usd')
 
     await page.locator('.token-input').fill(token)
-    await page.getByRole('button', { name: 'Inspect Token' }).click()
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
 
     const grid = page.locator('.token-result-grid')
     await expect(grid).toContainText('$0.20')
@@ -63,7 +63,7 @@ test.describe('Tools', () => {
     const token = makeCashuToken(MOCK_MINTS[0]!.url, [21, 8])
 
     await page.locator('.token-input').fill(token)
-    await page.getByRole('button', { name: 'Inspect Token' }).click()
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
 
     const amount = page.locator('.token-result-cell', { hasText: 'Amount' })
     await expect(amount).toContainText('29')
@@ -71,24 +71,84 @@ test.describe('Tools', () => {
     await expect(amount).not.toContainText('0.29')
   })
 
-  test('Verify with mint reports an unreachable mint distinctly from an invalid token', async ({ page }) => {
+  test('Inspect & Verify Token runs the local parse then the DLEQ check automatically, no second click', async ({ page }) => {
     const token = makeCashuToken(MOCK_MINTS[0]!.url, [21])
 
     await page.locator('.token-input').fill(token)
-    await page.getByRole('button', { name: 'Inspect Token' }).click()
-
-    // The verify button is opt-in: nothing runs until it is clicked.
     await expect(page.locator('.token-verify-result')).toHaveCount(0)
 
-    await page.getByRole('button', { name: /Verify with mint/ }).click()
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
 
-    // /v1/keysets and /v1/keys are not mocked, so loadMint() fails — that is a transport
-    // failure and must NOT be reported as a bad signature.
+    // Parse result (mint/amount/etc.) appears without waiting on the network call.
+    await expect(page.locator('.token-result-grid')).toBeVisible()
+    await expect(page.locator('.token-result-grid')).toContainText('Alpha Mint')
+
+    // The DLEQ step then runs on its own — no second click anywhere in this test.
+    // /v1/keysets and /v1/keys are not mocked, so loadMint() fails — a transport
+    // failure, which must be reported distinctly from an invalid signature.
     const result = page.locator('.token-verify-result')
     await expect(result).toBeVisible({ timeout: 15_000 })
     await expect(result).toContainText(/Could not reach mint/)
     await expect(result).not.toContainText(/Invalid signature/)
     await expect(result).toHaveClass(/tv-unknown/)
+
+    // The parse result stays on screen throughout — a DLEQ failure never clears it.
+    await expect(page.locator('.token-result-grid')).toBeVisible()
+  })
+
+  test('Inspect & Verify Token shows a distinct two-phase loading state', async ({ page }) => {
+    // The dev server's CSP (connect-src 'self' wss: ws: — deliberately stricter than
+    // production's, see vite.config.ts) blocks a real fetch to an external mint before
+    // it ever reaches the network layer, so page.route() can't intercept or delay it.
+    // Patching fetch in-page sidesteps that: it never calls the real fetch for the mint
+    // host, so CSP is never triggered, and the "Verifying…" phase becomes observable on
+    // a timer this test controls instead of racing an instant CSP rejection.
+    await page.addInitScript(() => {
+      const realFetch = window.fetch.bind(window)
+      window.fetch = (input, init) => {
+        const url = typeof input === 'string' ? input : (input as Request).url ?? String(input)
+        if (url.includes('mint.example')) {
+          return new Promise((_, reject) => setTimeout(() => reject(new TypeError('simulated slow network failure')), 1500))
+        }
+        return realFetch(input, init)
+      }
+    })
+    // addInitScript only applies to future navigations — beforeEach already loaded the
+    // page before this test body ran, so reload to pick it up (mocked routes persist
+    // across the reload; the token box just needs refilling).
+    await page.reload()
+    await expect(page.getByText('Token Inspector')).toBeVisible()
+
+    const token = makeCashuToken(MOCK_MINTS[0]!.url, [21])
+    await page.locator('.token-input').fill(token)
+
+    const button = page.getByRole('button', { name: /Inspect|Verifying/ })
+    await button.click()
+
+    // Phase 1: local parse — held on screen just long enough to be readable.
+    await expect(button).toHaveText(/Inspecting/)
+
+    // Phase 2: the live mint check — a different label, so the user can tell this
+    // step is the one waiting on the network, not a frozen app.
+    await expect(button).toHaveText(/Verifying with mint/, { timeout: 5_000 })
+
+    // Button re-enables once the whole flow (both phases) settles.
+    await expect(button).toBeEnabled({ timeout: 15_000 })
+    await expect(button).toHaveText('Inspect & Verify Token')
+  })
+
+  test('A malformed token never triggers the DLEQ network step', async ({ page }) => {
+    let mintFetchSeen = false
+    await page.route('**/v1/keysets', route => { mintFetchSeen = true; return route.abort() })
+
+    await page.locator('.token-input').fill('this-is-not-a-cashu-token')
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+
+    await expect(page.locator('.token-error')).toBeVisible()
+    // Give any (incorrect) network call a chance to fire before asserting it didn't.
+    await page.waitForTimeout(500)
+    expect(mintFetchSeen).toBe(false)
+    await expect(page.locator('.token-verify-result')).toHaveCount(0)
   })
 
   test('Token Inspector action buttons keep their full label text on mobile (no clipping)', async ({ page }) => {
@@ -96,7 +156,7 @@ test.describe('Tools', () => {
     const token = makeCashuToken(MOCK_MINTS[0]!.url, [21, 8])
 
     await page.locator('.token-input').fill(token)
-    await page.getByRole('button', { name: 'Inspect Token' }).click()
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
     await expect(page.locator('.token-result-grid')).toBeVisible()
 
     // A clipped label has scrollWidth > clientWidth (overflow hidden behind the button's
@@ -109,7 +169,7 @@ test.describe('Tools', () => {
 
   test('Token Inspector shows an error for an invalid token (no crash)', async ({ page }) => {
     await page.locator('.token-input').fill('this-is-not-a-cashu-token')
-    await page.getByRole('button', { name: 'Inspect Token' }).click()
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
 
     await expect(page.locator('.token-error')).toBeVisible()
     await expect(page.locator('.token-error')).toContainText(/Not a Cashu token/)

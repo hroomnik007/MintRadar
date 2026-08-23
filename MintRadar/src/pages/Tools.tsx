@@ -21,17 +21,20 @@ function normUrl(raw: string): string {
   } catch { return raw.trim() }
 }
 
-// DLEQ verification is a live, on-demand check against the mint, so it gets its own
-// state machine rather than folding into the parse result. "unreachable" is deliberately
-// distinct from "invalid": failing to reach the mint tells us nothing about the token,
-// while "invalid" is a positive finding that the signature does not check out.
-type VerifyState =
-  | { status: 'idle' }
-  | { status: 'loading' }
+// DLEQ verification's outcome, once it has run. "unreachable" is deliberately distinct
+// from "invalid": failing to reach the mint tells us nothing about the token, while
+// "invalid" is a positive finding that the signature does not check out.
+type VerifyResult =
   | { status: 'valid'; count: number }
   | { status: 'invalid' }
   | { status: 'no-dleq' }
   | { status: 'unreachable' }
+
+// The combined flow runs two phases back to back: a synchronous local parse, then a
+// live DLEQ check against the mint. Tracked separately from VerifyResult so the button
+// label and loading row can distinguish "reading the token" from "waiting on the
+// network" instead of collapsing both into one generic spinner.
+type Phase = 'idle' | 'inspecting' | 'verifying'
 
 function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   const navigate = useNavigate()
@@ -40,7 +43,8 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   const [result, setResult] = useState<TokenInfo | null>(null)
   const [parseError, setParseError] = useState<string | null>(null)
   const [inspected, setInspected] = useState(false)
-  const [verify, setVerify] = useState<VerifyState>({ status: 'idle' })
+  const [phase, setPhase] = useState<Phase>('idle')
+  const [verify, setVerify] = useState<VerifyResult | null>(null)
 
   const knownMap = useMemo(() => {
     const m = new Map<string, KnownMint>()
@@ -54,25 +58,32 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     return knownMap.get(normalized) ?? knownMap.get(result.mint) ?? null
   }, [result, knownMap])
 
-  const handleInspect = () => {
+  const handleInspectAndVerify = async () => {
     const token = input.trim()
     if (!token) return
     setInspected(true)
-    setVerify({ status: 'idle' })
+    setVerify(null)
+    setPhase('inspecting')
+
+    // The local parse below is synchronous and effectively instant, so without a
+    // deliberate minimum display time "Inspecting…" would never be perceptible — it'd
+    // be replaced by "Verifying…" before a human eye could register it. This holds the
+    // first phase on screen long enough to actually read, not just technically paint.
+    await new Promise<void>(resolve => setTimeout(resolve, 300))
+
     const { info, error } = parseCashuToken(token)
     if (!info) {
       setParseError(error ?? 'Could not decode this token.')
       setResult(null)
-    } else {
-      setParseError(null)
-      setResult(info)
+      setPhase('idle')
+      return
     }
-  }
+    setParseError(null)
+    setResult(info)
 
-  const handleVerify = async () => {
-    const token = input.trim()
-    if (!token) return
-    setVerify({ status: 'loading' })
+    // DLEQ needs the mint reachable, so a malformed token above never reaches this —
+    // no wasted network call for input that was never going to verify anyway.
+    setPhase('verifying')
     try {
       const decoded = await decodeTokenWithMint(token)
       if (decoded.proofsWithDleq === 0) {
@@ -86,9 +97,11 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
       }
     } catch {
       // Any throw here is a transport/mint problem (loadMint failed, timeout, keyset
-      // missing) — never evidence that the token itself is bad.
+      // missing) — never evidence that the token itself is bad. The parse result set
+      // above stays on screen regardless of how this turns out.
       setVerify({ status: 'unreachable' })
     }
+    setPhase('idle')
   }
 
   const scoreColor = (s: number) => s >= 70 ? '#4ade80' : s >= 40 ? '#f59e0b' : '#E24B4A'
@@ -104,13 +117,18 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
         className="token-input"
         placeholder="cashuB… (v4) or cashuA… (v3)"
         value={input}
-        onChange={e => { setInput(e.target.value); setInspected(false); setResult(null); setParseError(null); setVerify({ status: 'idle' }) }}
+        onChange={e => { setInput(e.target.value); setInspected(false); setResult(null); setParseError(null); setVerify(null); setPhase('idle') }}
         rows={3}
         spellCheck={false}
       />
 
-      <button type="button" className="tool-btn-primary inspect-token-btn" onClick={handleInspect} disabled={!input.trim()}>
-        Inspect Token
+      <button
+        type="button"
+        className="tool-btn-primary inspect-token-btn"
+        onClick={() => void handleInspectAndVerify()}
+        disabled={!input.trim() || phase !== 'idle'}
+      >
+        {phase === 'inspecting' ? '🔎 Inspecting…' : phase === 'verifying' ? '🔐 Verifying with mint…' : 'Inspect & Verify Token'}
       </button>
 
       {parseError && inspected && (
@@ -172,6 +190,44 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             <span className="tdr-item"><span className="tdr-label">Unit</span>{result.unit}</span>
           </div>
 
+          <div className="token-verify">
+            {phase === 'verifying' && (
+              <div className="token-verify-result tv-loading">
+                🔐 Verifying with mint… checking this token's signatures against its NUT-12 DLEQ proof.
+              </div>
+            )}
+            {verify?.status === 'valid' && (
+              <div className="token-verify-result tv-ok">
+                ✅ Cryptographically verified — all {verify.count} proof{verify.count === 1 ? '' : 's'} carry a
+                valid mint signature (NUT-12 DLEQ).
+              </div>
+            )}
+            {verify?.status === 'invalid' && (
+              <div className="token-verify-result tv-bad">
+                ❌ Invalid signature — do not trust this token. At least one proof failed its DLEQ check.
+              </div>
+            )}
+            {verify?.status === 'no-dleq' && (
+              <div className="token-verify-result tv-unknown">
+                ➖ Nothing to verify — this token carries no DLEQ data, so its signatures can't be checked
+                offline. That is a property of the issuing mint, not a sign the token is bad.
+              </div>
+            )}
+            {verify?.status === 'unreachable' && (
+              <div className="token-verify-result tv-unknown">
+                ⚠️ Could not reach mint to verify (try again later). This says nothing about the token itself.
+              </div>
+            )}
+
+            <div className="token-verify-note">
+              DLEQ verification asks the mint for its public keys and checks this specific token's
+              signatures cryptographically — a different question from Mint Status and Trust Score above,
+              which describe the mint's reputation and uptime from MintRadar's database rather than
+              whether these particular proofs were really issued by that mint. "Inspect & Verify Token"
+              runs both automatically: the local read first, then this live check against the mint.
+            </div>
+          </div>
+
           <div className="token-actions">
             {mintInfo && (
               <button type="button" className="token-action-btn" onClick={() => navigate(`/mint/${encodeURIComponent(result.mint)}`)}>
@@ -199,48 +255,6 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             >
               ⚡ Redeem to Lightning
             </a>
-          </div>
-
-          <div className="token-verify">
-            <button
-              type="button"
-              className="token-action-btn token-verify-btn"
-              onClick={() => void handleVerify()}
-              disabled={verify.status === 'loading'}
-            >
-              {verify.status === 'loading' ? '⏳ Verifying…' : '🔐 Verify with mint'}
-            </button>
-
-            {verify.status === 'valid' && (
-              <div className="token-verify-result tv-ok">
-                ✅ Cryptographically verified — all {verify.count} proof{verify.count === 1 ? '' : 's'} carry a
-                valid mint signature (NUT-12 DLEQ).
-              </div>
-            )}
-            {verify.status === 'invalid' && (
-              <div className="token-verify-result tv-bad">
-                ❌ Invalid signature — do not trust this token. At least one proof failed its DLEQ check.
-              </div>
-            )}
-            {verify.status === 'no-dleq' && (
-              <div className="token-verify-result tv-unknown">
-                ➖ Nothing to verify — this token carries no DLEQ data, so its signatures can't be checked
-                offline. That is a property of the issuing mint, not a sign the token is bad.
-              </div>
-            )}
-            {verify.status === 'unreachable' && (
-              <div className="token-verify-result tv-unknown">
-                ⚠️ Could not reach mint to verify (try again later). This says nothing about the token itself.
-              </div>
-            )}
-
-            <div className="token-verify-note">
-              DLEQ verification asks the mint for its public keys and checks this specific token's
-              signatures cryptographically. It is a different question from Mint Status and Trust Score
-              above — those describe the mint's reputation and uptime from MintRadar's database, while
-              this proves whether these particular proofs were really issued by that mint. It needs a live
-              request, so it only runs when you click.
-            </div>
           </div>
         </>
       )}

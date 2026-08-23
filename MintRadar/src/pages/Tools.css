@@ -217,24 +217,18 @@
   gap: 8px;
 }
 
-/* Unlike the row of .token-action-btn links above (which share a flex row), this one
-   stands alone, so the flex:1 stretch inherited from .token-action-btn is undone. */
-.token-verify-btn {
-  flex: none;
-  align-self: flex-start;
-}
-
-.token-verify-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
 .token-verify-result {
   font-size: 12px;
   font-family: var(--font-mono);
   line-height: 1.5;
   padding: 8px 12px;
   border-radius: 7px;
+}
+
+.tv-loading {
+  color: var(--text2);
+  background: var(--bg3);
+  border: 1px solid var(--border);
 }
 
 .tv-ok {
