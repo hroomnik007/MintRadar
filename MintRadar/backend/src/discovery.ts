@@ -1,4 +1,5 @@
 import { SimplePool, verifyEvent } from 'nostr-tools'
+import { normalizeURL as normalizeRelayUrl } from 'nostr-tools/utils'
 import type { Filter } from 'nostr-tools'
 import WebSocket from 'ws'
 import { pool } from './db.js'
@@ -80,6 +81,39 @@ function formatRelayBreakdown<R extends { url: string }>(
     .join(', ')
 }
 
+// Same `seenOn` attribution formatRelayBreakdown() uses above, but reduced to just the set
+// of relay URLs that delivered at least one event — the source of truth for "did this relay
+// respond this cycle" (see computeSilentRelays() below). URLs here are in nostr-tools'
+// normalized form (relay.url is set via normalizeURL() internally), matching seenOn's keys.
+export function relayUrlsThatResponded<R extends { url: string }>(
+  events: { id: string }[],
+  seenOn: Map<string, Set<R>>,
+): Set<string> {
+  const urls = new Set<string>()
+  for (const event of events) {
+    for (const relay of seenOn.get(event.id) ?? []) {
+      urls.add(relay.url)
+    }
+  }
+  return urls
+}
+
+// A relay is "silent" if it never failed to connect AND its normalized URL never showed up
+// among the relays that actually delivered an event (either kind) this cycle. Both sides are
+// run through nostr-tools' own normalizeURL() before comparing — `discoveryRelays` entries
+// have no trailing slash, while `respondedRelays` URLs (from relay.url, via seenOn) always
+// do, so comparing the raw strings directly would never match and would misreport every
+// non-failed relay as silent regardless of what it actually returned.
+export function computeSilentRelays(
+  discoveryRelays: string[],
+  failedRelays: ReadonlySet<string>,
+  respondedRelays: ReadonlySet<string>,
+): string[] {
+  return discoveryRelays.filter(
+    url => !failedRelays.has(url) && !respondedRelays.has(normalizeRelayUrl(url))
+  )
+}
+
 export async function discoverMintsFromNostr(): Promise<number> {
   // Node.js 20 has no native WebSocket — inject ws polyfill for nostr-tools
   if (!globalThis.WebSocket) {
@@ -99,6 +133,9 @@ export async function discoverMintsFromNostr(): Promise<number> {
 
   const discovered38172: Set<string> = new Set()
   const discovered38000: Set<string> = new Set()
+  // Relay URLs (normalized) that delivered at least one event this cycle, across either
+  // kind — fed by relayUrlsThatResponded() below, feeds computeSilentRelays() in `finally`.
+  const respondedRelays = new Set<string>()
 
   try {
     const [res38172, res38000] = await Promise.allSettled([
@@ -121,6 +158,7 @@ export async function discoverMintsFromNostr(): Promise<number> {
         `[discovery] kind:38172 per-relay: ${formatRelayBreakdown(res38172.value, nostrPool.seenOn)} ` +
         `(${res38172.value.length} events total)`
       )
+      for (const url of relayUrlsThatResponded(res38172.value, nostrPool.seenOn)) respondedRelays.add(url)
       for (const event of res38172.value.filter(e => verifyEvent(e))) {
         const uTag = event.tags.find((t: string[]) => t[0] === 'u')
         if (!uTag || !uTag[1]) continue
@@ -142,6 +180,7 @@ export async function discoverMintsFromNostr(): Promise<number> {
         `[discovery] kind:38000 per-relay: ${formatRelayBreakdown(res38000.value, nostrPool.seenOn)} ` +
         `(${res38000.value.length} events total)`
       )
+      for (const url of relayUrlsThatResponded(res38000.value, nostrPool.seenOn)) respondedRelays.add(url)
       for (const event of res38000.value.filter(e => verifyEvent(e))) {
         for (const tag of event.tags as string[][]) {
           if (tag[0] !== 'u' || typeof tag[1] !== 'string' || !tag[1].startsWith('https://')) continue
@@ -159,16 +198,21 @@ export async function discoverMintsFromNostr(): Promise<number> {
     }
   } finally {
     // Two different failure modes, logged separately because they mean different things:
-    // a relay that never connected at all, vs. one that connected but served nothing
-    // this cycle (which can be legitimate — it may simply hold no NIP-87 events).
+    // a relay that never connected at all, vs. one that connected but delivered zero events
+    // to either kind this cycle (which can be legitimate — it may simply hold no NIP-87
+    // events). "Silent" is decided from the same seenOn attribution the per-relay breakdown
+    // logs above use (via respondedRelays/computeSilentRelays), NOT from a live WebSocket
+    // connection check — a relay's connection state at the end of the cycle says nothing
+    // about whether it actually returned data, and comparing DISCOVERY_RELAYS' un-normalized
+    // URLs against listConnectionStatus()'s normalized (trailing-slash) keys meant this used
+    // to misreport every connected relay as silent every cycle, regardless of reality.
     if (failedRelays.size > 0) {
       console.warn(
         `[discovery] relay(s) unreachable this cycle (${failedRelays.size}/${DISCOVERY_RELAYS.length}): ` +
         [...failedRelays].join(', ')
       )
     }
-    const connected = nostrPool.listConnectionStatus()
-    const silent = DISCOVERY_RELAYS.filter(url => !failedRelays.has(url) && connected.get(url) !== true)
+    const silent = computeSilentRelays(DISCOVERY_RELAYS, failedRelays, respondedRelays)
     if (silent.length > 0) {
       console.warn(
         `[discovery] relay(s) connected but returned nothing (${silent.length}/${DISCOVERY_RELAYS.length}): ` +
