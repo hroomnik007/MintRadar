@@ -366,9 +366,14 @@ Self-hosted font weights (unchanged by the 2026-07-24 color redesign — see "Vi
 secondary text and a "punk"/cheap look on buttons (solid color fill, large pill radius with
 no subtlety). The new palette fixes both.
 
-**Reference mockup:** `mintradar_redesign_mockup.html` (repo root) — an interactive
-Dashboard/Mint Detail/Login/Watchlist/Stats preview, desktop + mobile. Treat it as the
-source of truth for any future palette/component work; check it before changing colors again.
+**Source of truth:** the design system now lives directly in code, not in a separate
+mockup file. Colors/tokens are defined in `src/index.css` (see the CSS custom properties
+listed below); component patterns are established by existing shared components (e.g.
+`src/components/mint/MintCard.tsx`, `src/components/learn/KeyTakeaway.tsx`). Check those
+before changing colors or introducing new component patterns.
+(`mintradar_redesign_mockup.html`, previously kept at the repo root as a reference mockup
+for this redesign, was deleted once the palette/components below landed in code — do not
+recreate it or reference it as if it still exists.)
 
 **New design tokens (`src/index.css`):**
 - `--bg` / `--surface` / `--surface-2` / `--surface-3` — dark "verdigris/patina" green-gray instead of pure black (`--bg: #10201c`)
@@ -412,7 +417,7 @@ Follow-up fix commit addressing regressions/missed spots from the original redes
 - Mint Detail — "Show QR code" and "Copy" buttons (`MintDetail.tsx`) — solid neon fill → tonal outline, matching "Compare"/"+ Watch"
 - Watchlist — Login button (`Watchlist.tsx`) — added ⚡ icon, now identical to the nav button
 
-Reference mockup `mintradar_redesign_mockup.html` (tab "Opravy") shows before/after for all 5 items; the mockup is now included directly in this commit.
+A before/after reference mockup for all 5 items (tab "Opravy") was included in this commit as `mintradar_redesign_mockup.html`; the file has since been deleted (design system fully landed in code — see "Visual Redesign" above), so this is historical context only, not a file that still exists in the repo.
 
 Verified: typecheck, ESLint, 70/70 unit tests, production build all pass; visually confirmed via Playwright.
 
@@ -427,7 +432,7 @@ Verified: typecheck, ESLint, 70/70 unit tests, production build all pass; visual
 - "Show my latency" button unified with the others (tonal outline).
 - "NIP-87" badge on Watchlist: purple → copper (`--copper`).
 
-Reference mockup `mintradar_redesign_mockup.html` (tabs "Watchlist prihlásený", "Mint Detail mobil header", "Latency btn / Offline / Card elevation") documents before/after for all items.
+A before/after reference mockup for all items (tabs "Watchlist prihlásený", "Mint Detail mobil header", "Latency btn / Offline / Card elevation") was included in this commit as `mintradar_redesign_mockup.html`; the file has since been deleted (see "Visual Redesign" above), so this is historical context only, not a file that still exists in the repo.
 
 Verified: typecheck, ESLint, 70/70 unit tests, production build all pass; visually confirmed via Playwright with mocked API (7 screenshots).
 
@@ -461,7 +466,7 @@ Two desktop-layout attempts for the Tools page (`Tools.css`/`Tools.tsx`) were tr
 - **Attempt 2 (rejected):** `max-width` on the whole content grid via a centered container. Created empty margins on very wide monitors (32"+).
 - **Final state:** layout reverted to full width everywhere — panels, the token textarea, and the Small/Medium/Large option rows are all 100% width again, matching the pre-iteration baseline. The only surviving change is the "Inspect Token" button: it got its own `inspect-token-btn` class (kept separate from the shared `.tool-btn-primary` specifically so the wizard's "Find my mints" button, which also uses `.tool-btn-primary`, is unaffected), with `max-width: 280px` and centered, desktop-only.
 - Mobile layout was never touched across any of these iterations — confirmed correct throughout.
-- Reference mockup `mintradar_redesign_mockup.html` still contains the "Tools desktop fix" and "Tools v2" tabs from the two rejected attempts — left in place deliberately as a record of what was tried and why it didn't work, not as current guidance.
+- The "Tools desktop fix" and "Tools v2" tabs documenting the two rejected attempts lived in `mintradar_redesign_mockup.html`, which has since been deleted (see "Visual Redesign" above) — this list is now the only record of what was tried and why it didn't work.
 
 ## NUT list — single source of truth (2026-08-19)
 
