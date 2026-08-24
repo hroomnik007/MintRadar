@@ -7,6 +7,7 @@ import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
 import { trustColor, trustScoreInfo } from '@/utils/mintFormatting'
+import { computeGeoDistribution } from '@/utils/geoDistribution'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import './Stats.css'
 
@@ -55,7 +56,7 @@ function shortenCity(city: string): string {
 
 function geoLabel(loc: string): { display: string; flag: string; color?: string } {
   if (loc === 'Cloudflare CDN') return { display: 'Cloudflare CDN', flag: '🌐', color: '#f59e0b' }
-  if (loc === 'Unknown') return { display: 'Unknown', flag: '' }
+  if (loc === 'Unknown') return { display: 'Geolocation unavailable', flag: '' }
   const commaIdx = loc.lastIndexOf(', ')
   if (commaIdx === -1) return { display: shortenCity(loc), flag: '' }
   const cc = loc.slice(commaIdx + 2)
@@ -466,20 +467,7 @@ export default function Stats() {
       .slice(0, 5)
   }, [knownMintsData])
 
-  const geoDist = useMemo(() => {
-    if (!knownMintsData) return []
-    const counts = new Map<string, number>()
-    for (const m of knownMintsData) {
-      if (m.online !== true) continue
-      const loc = m.serverLocation ?? 'Unknown'
-      counts.set(loc, (counts.get(loc) ?? 0) + 1)
-    }
-    const total = [...counts.values()].reduce((a, b) => a + b, 0)
-    return [...counts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([loc, count]) => ({ loc, count, pct: total > 0 ? Math.round(count / total * 100) : 0 }))
-  }, [knownMintsData])
+  const geoDist = useMemo(() => computeGeoDistribution(knownMintsData ?? []), [knownMintsData])
 
   const cityMints = useMemo(() => {
     if (!cityModal || !knownMintsData) return []
@@ -755,9 +743,9 @@ export default function Stats() {
           <div className="stats-panel">
             <div className="stats-panel-title">Geographic Distribution</div>
             <div style={{marginTop:10}}>
-              {geoDist.length === 0 ? (
+              {geoDist.top.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
-              ) : geoDist.map(({loc, count, pct}, idx) => {
+              ) : geoDist.top.map(({loc, count, pct}, idx) => {
                 const {display, flag, color: geoColor} = geoLabel(loc)
                 const barColor = geoColor ?? (idx % 2 === 0 ? 'var(--green)' : 'var(--copper)')
                 return (
@@ -771,6 +759,16 @@ export default function Stats() {
                 )
               })}
             </div>
+            {(geoDist.moreCount > 0 || (geoDist.unknownCount > 0 && !geoDist.unknownShownInTop)) && (
+              <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
+                {geoDist.moreCount > 0 && (
+                  <div>+{geoDist.moreCount} more in {geoDist.moreLocations} other location{geoDist.moreLocations === 1 ? '' : 's'}</div>
+                )}
+                {geoDist.unknownCount > 0 && !geoDist.unknownShownInTop && (
+                  <div>Geolocation unavailable: {geoDist.unknownCount} mint{geoDist.unknownCount === 1 ? '' : 's'}</div>
+                )}
+              </div>
+            )}
           </div>
 
         </div>{/* /stats-left-col */}
