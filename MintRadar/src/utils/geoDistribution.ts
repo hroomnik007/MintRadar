@@ -6,6 +6,7 @@ export interface GeoDistEntry {
 
 export interface GeoDistribution {
   top: GeoDistEntry[]
+  more: GeoDistEntry[]
   moreCount: number
   moreLocations: number
   unknownCount: number
@@ -42,8 +43,9 @@ export function computeGeoDistribution(mints: GeoDistMintInput[], topN = 8): Geo
   const unknownRestEntry = restEntries.find(([loc]) => loc === 'Unknown')
   const unknownCount = unknownRestEntry ? unknownRestEntry[1] : 0
   const otherRestEntries = restEntries.filter(([loc]) => loc !== 'Unknown')
+  const more = otherRestEntries.map(([loc, count]) => ({ loc, count, pct: total > 0 ? Math.round(count / total * 100) : 0 }))
   const moreCount = otherRestEntries.reduce((sum, [, count]) => sum + count, 0)
   const moreLocations = otherRestEntries.length
 
-  return { top, moreCount, moreLocations, unknownCount, unknownShownInTop, total }
+  return { top, more, moreCount, moreLocations, unknownCount, unknownShownInTop, total }
 }

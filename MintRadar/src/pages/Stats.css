@@ -399,6 +399,18 @@
   background: var(--bg3);
 }
 
+.dist-more-row {
+  border-radius: 5px;
+  padding: 3px 4px;
+  margin: 0 -4px;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.dist-more-row:hover {
+  background: var(--bg3);
+  color: var(--text2);
+}
+
 .dist-label-city {
   text-decoration: underline;
   text-decoration-color: currentColor;

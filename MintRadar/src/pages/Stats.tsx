@@ -305,6 +305,60 @@ function CityMintsModal({ loc, mints, onClose }: {
   )
 }
 
+function MoreLocationsModal({ locations, onClose, onSelectLocation }: {
+  locations: { loc: string; count: number; pct: number }[]
+  onClose: () => void
+  onSelectLocation: (loc: string) => void
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const total = locations.reduce((sum, l) => sum + l.count, 0)
+
+  return (
+    <div className="nut-modal-overlay" onClick={onClose}>
+      <div className="nut-modal" onClick={e => e.stopPropagation()}>
+        <button type="button" className="nut-modal-close" onClick={onClose}>✕</button>
+        <div className="nut-modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <span className="nut-modal-title">Other locations</span>
+            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{locations.length} locations</span>
+          </div>
+        </div>
+        <div className="nut-modal-list">
+          {locations.map(({ loc, count }) => {
+            const { display, flag, color: geoColor } = geoLabel(loc)
+            return (
+              <div
+                key={loc}
+                className="nut-modal-row"
+                style={{ cursor: 'pointer' }}
+                onClick={() => onSelectLocation(loc)}
+              >
+                <div className="nut-modal-row-info" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <span className="nut-modal-row-name" style={geoColor ? { color: geoColor } : undefined}>
+                    {flag ? `${flag} ${display}` : display}
+                  </span>
+                </div>
+                <span style={{ fontSize: 12, fontFamily: 'var(--font-mono-data)', fontWeight: 700, color: 'var(--text2)', flexShrink: 0 }}>
+                  {count}
+                </span>
+              </div>
+            )
+          })}
+          {locations.length === 0 && <div className="nut-modal-empty">No locations</div>}
+        </div>
+        <div className="nut-modal-footer">
+          <span>{total} mints across {locations.length} location{locations.length === 1 ? '' : 's'}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function NetworkHealthModal({ score, components, onClose }: {
   score: number
   components: Array<{ label: string; value: number; weight: number; tooltip: string }>
@@ -412,6 +466,7 @@ export default function Stats() {
   const navigate = useNavigate()
   const [modalNut, setModalNut] = useState<string | null>(null)
   const [cityModal, setCityModal] = useState<string | null>(null)
+  const [showMoreLocations, setShowMoreLocations] = useState(false)
   const [versionModal, setVersionModal] = useState<{ sw: string; ver: string; fullVersion: string } | null>(null)
   const [expandedSw, setExpandedSw] = useState<string | null>(null)
   const [reliableTab, setReliableTab] = useState<'reliable' | 'trust'>('reliable')
@@ -471,7 +526,7 @@ export default function Stats() {
 
   const cityMints = useMemo(() => {
     if (!cityModal || !knownMintsData) return []
-    return knownMintsData.filter(m => m.serverLocation === cityModal)
+    return knownMintsData.filter(m => (m.serverLocation ?? 'Unknown') === cityModal)
   }, [cityModal, knownMintsData])
 
   const versionMints = useMemo(() => {
@@ -762,10 +817,22 @@ export default function Stats() {
             {(geoDist.moreCount > 0 || (geoDist.unknownCount > 0 && !geoDist.unknownShownInTop)) && (
               <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
                 {geoDist.moreCount > 0 && (
-                  <div>+{geoDist.moreCount} more in {geoDist.moreLocations} other location{geoDist.moreLocations === 1 ? '' : 's'}</div>
+                  <div
+                    className="dist-more-row"
+                    style={{cursor:'pointer'}}
+                    onClick={() => setShowMoreLocations(true)}
+                  >
+                    +{geoDist.moreCount} more in {geoDist.moreLocations} other location{geoDist.moreLocations === 1 ? '' : 's'} →
+                  </div>
                 )}
                 {geoDist.unknownCount > 0 && !geoDist.unknownShownInTop && (
-                  <div>Geolocation unavailable: {geoDist.unknownCount} mint{geoDist.unknownCount === 1 ? '' : 's'}</div>
+                  <div
+                    className="dist-more-row"
+                    style={{cursor:'pointer'}}
+                    onClick={() => setCityModal('Unknown')}
+                  >
+                    Geolocation unavailable: {geoDist.unknownCount} mint{geoDist.unknownCount === 1 ? '' : 's'} →
+                  </div>
                 )}
               </div>
             )}
@@ -963,6 +1030,13 @@ export default function Stats() {
           loc={cityModal}
           mints={cityMints}
           onClose={() => setCityModal(null)}
+        />
+      )}
+      {showMoreLocations && (
+        <MoreLocationsModal
+          locations={geoDist.more}
+          onClose={() => setShowMoreLocations(false)}
+          onSelectLocation={loc => { setShowMoreLocations(false); setCityModal(loc) }}
         />
       )}
       {versionModal !== null && (

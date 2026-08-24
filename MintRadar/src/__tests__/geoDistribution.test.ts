@@ -34,6 +34,12 @@ describe('computeGeoDistribution', () => {
     expect(result.moreLocations).toBe(2)
     expect(result.unknownCount).toBe(0)
     expect(result.unknownShownInTop).toBe(false)
+    // `more` is what the "+N more" modal renders — must list the actual overflow
+    // locations (never just the aggregate counts), excluding the Unknown bucket.
+    expect(result.more).toEqual([
+      { loc: 'Loc8', count: 1, pct: expect.any(Number) },
+      { loc: 'Loc9', count: 1, pct: expect.any(Number) },
+    ])
   })
 
   it('reports mints with no serverLocation as a distinct "Unknown" bucket when it falls outside the top 8', () => {
