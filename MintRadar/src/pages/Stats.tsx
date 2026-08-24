@@ -819,19 +819,19 @@ export default function Stats() {
                 {geoDist.moreCount > 0 && (
                   <div
                     className="dist-more-row"
-                    style={{cursor:'pointer'}}
                     onClick={() => setShowMoreLocations(true)}
                   >
-                    +{geoDist.moreCount} more in {geoDist.moreLocations} other location{geoDist.moreLocations === 1 ? '' : 's'} →
+                    <span>+{geoDist.moreCount} more in {geoDist.moreLocations} other location{geoDist.moreLocations === 1 ? '' : 's'}</span>
+                    <span className="dist-more-chip">View →</span>
                   </div>
                 )}
                 {geoDist.unknownCount > 0 && !geoDist.unknownShownInTop && (
                   <div
                     className="dist-more-row"
-                    style={{cursor:'pointer'}}
                     onClick={() => setCityModal('Unknown')}
                   >
-                    Geolocation unavailable: {geoDist.unknownCount} mint{geoDist.unknownCount === 1 ? '' : 's'} →
+                    <span>Geolocation unavailable: {geoDist.unknownCount} mint{geoDist.unknownCount === 1 ? '' : 's'}</span>
+                    <span className="dist-more-chip">View →</span>
                   </div>
                 )}
               </div>
