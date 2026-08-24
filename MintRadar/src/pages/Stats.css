@@ -400,10 +400,6 @@
 }
 
 .dist-more-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
   cursor: pointer;
   border-radius: 5px;
   padding: 3px 4px;
@@ -413,21 +409,6 @@
 
 .dist-more-row:hover {
   background: var(--bg3);
-}
-
-.dist-more-chip {
-  flex-shrink: 0;
-  font-size: 9px;
-  color: var(--text2);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 1px 5px;
-  transition: border-color 120ms ease, color 120ms ease;
-}
-
-.dist-more-row:hover .dist-more-chip {
-  border-color: var(--accent);
-  color: var(--accent);
 }
 
 .dist-label-city {

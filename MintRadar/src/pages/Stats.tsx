@@ -817,21 +817,13 @@ export default function Stats() {
             {(geoDist.moreCount > 0 || (geoDist.unknownCount > 0 && !geoDist.unknownShownInTop)) && (
               <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
                 {geoDist.moreCount > 0 && (
-                  <div
-                    className="dist-more-row"
-                    onClick={() => setShowMoreLocations(true)}
-                  >
-                    <span>+{geoDist.moreCount} more in {geoDist.moreLocations} other location{geoDist.moreLocations === 1 ? '' : 's'}</span>
-                    <span className="dist-more-chip">View →</span>
+                  <div className="dist-more-row" onClick={() => setShowMoreLocations(true)}>
+                    View others →
                   </div>
                 )}
                 {geoDist.unknownCount > 0 && !geoDist.unknownShownInTop && (
-                  <div
-                    className="dist-more-row"
-                    onClick={() => setCityModal('Unknown')}
-                  >
-                    <span>Geolocation unavailable: {geoDist.unknownCount} mint{geoDist.unknownCount === 1 ? '' : 's'}</span>
-                    <span className="dist-more-chip">View →</span>
+                  <div className="dist-more-row" onClick={() => setCityModal('Unknown')}>
+                    Geolocation unavailable: {geoDist.unknownCount} mint{geoDist.unknownCount === 1 ? '' : 's'} →
                   </div>
                 )}
               </div>
