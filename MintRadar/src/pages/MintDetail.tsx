@@ -158,6 +158,15 @@ function computeTrustScore(
   )
 }
 
+// Must match backend/src/index.ts's NOSTR_REVIEWS_CACHE_TTL — that endpoint's
+// cache is only as fresh as this value lets the frontend re-ask for it, so a
+// staleTime longer than the backend TTL silently defeats a backend-side
+// shortening (this happened once already: backend TTL was cut from 10min to
+// 2min while this stayed at 10min, so nothing changed for users). No shared
+// workspace between the two packages (same caveat as NOSTR_REVIEWS_RELAYS in
+// CLAUDE.md's "Reviews Feature" section) — keep both in sync by hand.
+const NOSTR_REVIEWS_STALE_TIME_MS = 2 * 60 * 1000 // 2 minutes
+
 const WARNING_KEYWORDS = ['rug', 'shutdown', 'warning', 'beware', 'risk', 'danger', 'caution', 'maintenance']
 function isWarningMotd(text: string): boolean {
   const lower = text.toLowerCase()
@@ -273,7 +282,7 @@ function MintDetailContent({ url }: { url: string }) {
         return []
       }
     },
-    staleTime: 10 * 60 * 1000,
+    staleTime: NOSTR_REVIEWS_STALE_TIME_MS,
     retry: false,
   })
   // Deliberate two-mechanism review fetch, not redundant duplication: `reviews`
