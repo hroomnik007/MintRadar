@@ -90,9 +90,12 @@
 
 /* ── Network Health Index (standalone panel, row 2 col 4 — .stats-nhi-panel) ──
    Container is the plain .stats-panel background/border used by every other
-   card on this page — no custom color. Horizontal layout: title row (with
-   "Details ›") on top, then the ring and badge side by side on one line, so
-   the panel is only as tall as those two rows. */
+   card on this page — no custom color. Horizontal layout: title row on top
+   (mobile-only "Details ›" opens the breakdown modal), then the ring and
+   badge side by side on one line. Desktop (>768px) renders the breakdown
+   inline below the ring instead of behind a click — see NetworkHealthComponentRow
+   usage in Stats.tsx — so the gauge isn't clickable there and "Details ›" is
+   hidden (nothing new the click would reveal). */
 .nhi-wrap {
   display: flex;
   flex-direction: row;

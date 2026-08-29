@@ -10,6 +10,7 @@ import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
 import { trustColor, trustScoreInfo } from '@/utils/mintFormatting'
 import { computeGeoDistribution } from '@/utils/geoDistribution'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import './Stats.css'
 
 interface StatsData {
@@ -360,9 +361,75 @@ function MoreLocationsModal({ locations, onClose, onSelectLocation }: {
   )
 }
 
+interface NetworkHealthComponent { label: string; value: number; weight: number; tooltip: string }
+
+// Single source of truth for rendering one Network Health Index breakdown row
+// — used identically by NetworkHealthModal (mobile, in a floating overlay)
+// and the inline desktop breakdown in Stats() below, so the two can never
+// silently drift apart. `compact` shrinks spacing/type for the narrower
+// desktop panel (span-1 grid column) without changing the modal's sizing.
+function NetworkHealthComponentRow({ component: c, index, total, compact }: {
+  component: NetworkHealthComponent
+  index: number
+  total: number
+  compact?: boolean
+}) {
+  const tooltipRef = useRef<HTMLSpanElement>(null)
+  const tooltip = useTapTooltip(tooltipRef)
+  const points = Math.round(c.value * c.weight / 100)
+  const color = trustColor(c.value)
+
+  return (
+    <div style={{ marginBottom: compact ? 8 : 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+        <span style={{ fontSize: compact ? 10.5 : 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
+          <span style={{ color: 'var(--text3)', flexShrink: 0 }}>({c.weight}%)</span>
+          <span
+            ref={tooltipRef}
+            style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}
+            onPointerEnter={tooltip.onPointerEnter}
+            onPointerLeave={tooltip.onPointerLeave}
+            onClick={tooltip.onClick}
+          >
+            <Info size={compact ? 10 : 11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
+            {tooltip.open && (
+              <div
+                className="audit-tooltip"
+                style={index >= total - 2
+                  ? { width: 220, left: '50%', transform: 'translateX(-50%)', top: 'auto', bottom: 'calc(100% + 6px)' }
+                  : { width: 220, left: '50%', transform: 'translateX(-50%)', bottom: 'auto', top: 'calc(100% + 6px)' }}
+              >{c.tooltip}</div>
+            )}
+          </span>
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 5 : 8, flexShrink: 0 }}>
+          <span style={{ fontSize: compact ? 10 : 11, color: 'var(--text3)', fontFamily: 'var(--font-mono-data)' }}>{Math.round(c.value)}%</span>
+          <span style={{ fontSize: compact ? 11.5 : 13, fontWeight: 600, color }}>{points}/{c.weight}</span>
+        </div>
+      </div>
+      <div style={{ height: compact ? 3 : 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, c.value))}%`, background: color, borderRadius: 2, transition: 'width 0.3s ease' }} />
+      </div>
+    </div>
+  )
+}
+
+// Shared formula/explanation footer — same text in the modal and the inline
+// desktop breakdown.
+function NetworkHealthFormulaNote({ compact }: { compact?: boolean }) {
+  return (
+    <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: compact ? 8 : 10, marginTop: 2, fontSize: compact ? 9 : 10, color: 'var(--text3)', lineHeight: 1.5 }}>
+      Score = Online%×30 + Trust×25 + SW Diversity×15 + Advanced NUTs×15 + Stability×15.
+      Network Stability (share of mints tracked 1 month+) stands in for churn rate — churn
+      isn't reliably measurable yet, since mints are never marked "removed" in the database.
+    </div>
+  )
+}
+
 function NetworkHealthModal({ score, components, onClose }: {
   score: number
-  components: Array<{ label: string; value: number; weight: number; tooltip: string }>
+  components: NetworkHealthComponent[]
   onClose: () => void
 }) {
   useEffect(() => {
@@ -373,21 +440,6 @@ function NetworkHealthModal({ score, components, onClose }: {
 
   const info = trustScoreInfo(score)
   const label = score >= 70 ? 'Healthy' : score >= 40 ? 'Moderate' : 'At Risk'
-
-  // One ref/tooltip per component row — components is a fixed-length (5) array
-  // built inline in Stats(), so a fixed number of hooks here is safe.
-  const row0Ref = useRef<HTMLSpanElement>(null)
-  const row0Tooltip = useTapTooltip(row0Ref)
-  const row1Ref = useRef<HTMLSpanElement>(null)
-  const row1Tooltip = useTapTooltip(row1Ref)
-  const row2Ref = useRef<HTMLSpanElement>(null)
-  const row2Tooltip = useTapTooltip(row2Ref)
-  const row3Ref = useRef<HTMLSpanElement>(null)
-  const row3Tooltip = useTapTooltip(row3Ref)
-  const row4Ref = useRef<HTMLSpanElement>(null)
-  const row4Tooltip = useTapTooltip(row4Ref)
-  const rowTooltips = [row0Tooltip, row1Tooltip, row2Tooltip, row3Tooltip, row4Tooltip]
-  const rowRefs = [row0Ref, row1Ref, row2Ref, row3Ref, row4Ref]
 
   return (
     <div className="nut-modal-overlay" onClick={onClose}>
@@ -403,51 +455,11 @@ function NetworkHealthModal({ score, components, onClose }: {
           </span>
         </div>
         <div style={{ overflowY: 'auto' }}>
-          {components.map((c, i) => {
-            const points = Math.round(c.value * c.weight / 100)
-            const color = trustColor(c.value)
-            const tooltipRef = rowRefs[i]!
-            const tooltipHook = rowTooltips[i]!
-            return (
-              <div key={c.label} style={{ marginBottom: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {c.label} <span style={{ color: 'var(--text3)' }}>({c.weight}%)</span>
-                    <span
-                      ref={tooltipRef}
-                      style={{ position: 'relative', display: 'inline-flex' }}
-                      onPointerEnter={tooltipHook.onPointerEnter}
-                      onPointerLeave={tooltipHook.onPointerLeave}
-                      onClick={tooltipHook.onClick}
-                    >
-                      <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
-                      {tooltipHook.open && (
-                        <div
-                          className="audit-tooltip"
-                          style={i >= components.length - 2
-                            ? { width: 220, left: '50%', transform: 'translateX(-50%)', top: 'auto', bottom: 'calc(100% + 6px)' }
-                            : { width: 220, left: '50%', transform: 'translateX(-50%)', bottom: 'auto', top: 'calc(100% + 6px)' }}
-                        >{c.tooltip}</div>
-                      )}
-                    </span>
-                  </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono-data)' }}>{Math.round(c.value)}%</span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color }}>{points}/{c.weight}</span>
-                  </div>
-                </div>
-                <div style={{ height: 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, c.value))}%`, background: color, borderRadius: 2, transition: 'width 0.3s ease' }} />
-                </div>
-              </div>
-            )
-          })}
+          {components.map((c, i) => (
+            <NetworkHealthComponentRow key={c.label} component={c} index={i} total={components.length} />
+          ))}
         </div>
-        <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 10, marginTop: 2, fontSize: 10, color: 'var(--text3)', lineHeight: 1.6 }}>
-          Score = Online%×30 + Trust×25 + SW Diversity×15 + Advanced NUTs×15 + Stability×15.
-          Network Stability (share of mints tracked 1 month+) stands in for churn rate — churn
-          isn't reliably measurable yet, since mints are never marked "removed" in the database.
-        </div>
+        <NetworkHealthFormulaNote />
       </div>
     </div>
   )
@@ -476,6 +488,11 @@ export default function Stats() {
   const [showHealthBreakdown, setShowHealthBreakdown] = useState(false)
   const nhiInfoRef = useRef<HTMLSpanElement>(null)
   const nhiInfoTooltip = useTapTooltip(nhiInfoRef)
+  // Same 768px breakpoint as the rest of the app's mobile/desktop split (see
+  // useIsMobile.ts). Desktop shows the breakdown inline in the panel itself
+  // (no reason to click through to a modal that would show the exact same
+  // rows again); mobile keeps today's compact panel + tap-to-open modal.
+  const isMobile = useIsMobile()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['stats'],
@@ -964,14 +981,16 @@ export default function Stats() {
                     <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
                     {nhiInfoTooltip.open && (
                       <div className="audit-tooltip" style={{ width: 220, left: 0 }}>
-                        Composite 0-100 score across uptime, average Trust Score, software diversity, advanced feature adoption &amp; network stability. Tap the gauge for the full breakdown.
+                        Composite 0-100 score across uptime, average Trust Score, software diversity, advanced feature adoption &amp; network stability.{isMobile ? ' Tap the gauge for the full breakdown.' : ''}
                       </div>
                     )}
                   </span>
                 </div>
-                <button onClick={() => setShowHealthBreakdown(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', padding: 0 }}>Details ›</button>
+                {isMobile && (
+                  <button onClick={() => setShowHealthBreakdown(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', padding: 0 }}>Details ›</button>
+                )}
               </div>
-              <div className="nhi-wrap" onClick={() => setShowHealthBreakdown(true)}>
+              <div className="nhi-wrap" onClick={isMobile ? () => setShowHealthBreakdown(true) : undefined} style={isMobile ? undefined : { cursor: 'default' }}>
                 <div className="nhi-gauge-wrap">
                   <svg viewBox="0 0 72 72">
                     <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
@@ -987,6 +1006,18 @@ export default function Stats() {
                   {healthLabel(networkHealth.score)}
                 </span>
               </div>
+              {/* Desktop only: same breakdown the mobile modal shows, inline
+                  instead of behind a click — fills the empty space this panel
+                  used to have below the gauge (height was set by the wider
+                  NUT Coverage panel next to it in the same row). */}
+              {!isMobile && (
+                <div style={{ marginTop: 14 }}>
+                  {networkHealth.components.map((c, i) => (
+                    <NetworkHealthComponentRow key={c.label} component={c} index={i} total={networkHealth.components.length} compact />
+                  ))}
+                  <NetworkHealthFormulaNote compact />
+                </div>
+              )}
             </div>
           )
         })()}
