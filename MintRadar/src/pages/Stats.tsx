@@ -415,14 +415,21 @@ function NetworkHealthComponentRow({ component: c, index, total, compact }: {
   )
 }
 
-// Shared formula/explanation footer — same text in the modal and the inline
-// desktop breakdown.
+// Single source of truth for the formula explanation text — used by the
+// modal's footer (NetworkHealthFormulaNote, unchanged) and appended to the
+// desktop header's ⓘ tooltip (Stats() below, replacing the old always-visible
+// inline footer under the desktop breakdown).
+const NETWORK_HEALTH_FORMULA_TEXT =
+  'Score = Online%×30 + Trust×25 + SW Diversity×15 + Advanced NUTs×15 + Stability×15. ' +
+  'Network Stability (share of mints tracked 1 month+) stands in for churn rate — churn ' +
+  'isn\'t reliably measurable yet, since mints are never marked "removed" in the database.'
+
+// Shared formula/explanation footer — modal only now (desktop inline
+// breakdown no longer renders this; see NETWORK_HEALTH_FORMULA_TEXT above).
 function NetworkHealthFormulaNote({ compact }: { compact?: boolean }) {
   return (
     <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: compact ? 8 : 10, marginTop: 2, fontSize: compact ? 9 : 10, color: 'var(--text3)', lineHeight: 1.5 }}>
-      Score = Online%×30 + Trust×25 + SW Diversity×15 + Advanced NUTs×15 + Stability×15.
-      Network Stability (share of mints tracked 1 month+) stands in for churn rate — churn
-      isn't reliably measurable yet, since mints are never marked "removed" in the database.
+      {NETWORK_HEALTH_FORMULA_TEXT}
     </div>
   )
 }
@@ -980,8 +987,8 @@ export default function Stats() {
                   >
                     <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
                     {nhiInfoTooltip.open && (
-                      <div className="audit-tooltip" style={{ width: 220, left: 0 }}>
-                        Composite 0-100 score across uptime, average Trust Score, software diversity, advanced feature adoption &amp; network stability.{isMobile ? ' Tap the gauge for the full breakdown.' : ''}
+                      <div className="audit-tooltip" style={isMobile ? { width: 220, left: 0 } : { width: 260, right: 0 }}>
+                        Composite 0-100 score across uptime, average Trust Score, software diversity, advanced feature adoption &amp; network stability.{isMobile ? ' Tap the gauge for the full breakdown.' : ` ${NETWORK_HEALTH_FORMULA_TEXT}`}
                       </div>
                     )}
                   </span>
@@ -991,8 +998,8 @@ export default function Stats() {
                 )}
               </div>
               <div className="nhi-wrap" onClick={isMobile ? () => setShowHealthBreakdown(true) : undefined} style={isMobile ? undefined : { cursor: 'default' }}>
-                <div className="nhi-gauge-wrap">
-                  <svg viewBox="0 0 72 72">
+                <div className="nhi-gauge-wrap" style={isMobile ? undefined : { width: 84, height: 84 }}>
+                  <svg viewBox="0 0 72 72" style={isMobile ? undefined : { width: 84, height: 84 }}>
                     <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
                     <circle cx="36" cy="36" r="27" fill="none" stroke={info.color} strokeWidth="7"
                       strokeDasharray={`${(networkHealth.score * 1.696).toFixed(1)} 169.6`}
@@ -1000,7 +1007,7 @@ export default function Stats() {
                       strokeLinecap="round"
                       transform="rotate(-90 36 36)" />
                   </svg>
-                  <div className="nhi-gauge-num" style={{ color: info.color }}>{networkHealth.score}</div>
+                  <div className="nhi-gauge-num" style={{ color: info.color, ...(isMobile ? {} : { fontSize: 20 }) }}>{networkHealth.score}</div>
                 </div>
                 <span className="nhi-badge" style={{ color: info.color, background: info.bg, border: `0.5px solid ${info.border}` }}>
                   {healthLabel(networkHealth.score)}
@@ -1009,13 +1016,15 @@ export default function Stats() {
               {/* Desktop only: same breakdown the mobile modal shows, inline
                   instead of behind a click — fills the empty space this panel
                   used to have below the gauge (height was set by the wider
-                  NUT Coverage panel next to it in the same row). */}
+                  NUT Coverage panel next to it in the same row). The formula
+                  footer is NOT repeated here (moved to the header ⓘ tooltip,
+                  see NETWORK_HEALTH_FORMULA_TEXT above) — the space it freed
+                  up went to enlarging the gauge instead. */}
               {!isMobile && (
                 <div style={{ marginTop: 14 }}>
                   {networkHealth.components.map((c, i) => (
                     <NetworkHealthComponentRow key={c.label} component={c} index={i} total={networkHealth.components.length} compact />
                   ))}
-                  <NetworkHealthFormulaNote compact />
                 </div>
               )}
             </div>

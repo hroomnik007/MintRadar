@@ -95,7 +95,14 @@
    badge side by side on one line. Desktop (>768px) renders the breakdown
    inline below the ring instead of behind a click — see NetworkHealthComponentRow
    usage in Stats.tsx — so the gauge isn't clickable there and "Details ›" is
-   hidden (nothing new the click would reveal). */
+   hidden (nothing new the click would reveal). The formula explanation text
+   lives only in the header ⓘ tooltip on desktop (widened to 260px there) and
+   in the mobile modal's footer — never as a permanent block under the
+   breakdown. Desktop also renders a larger 84px gauge (mobile stays 60px,
+   via .nhi-gauge-wrap/.nhi-gauge-wrap svg below) — set with an inline style
+   override in Stats.tsx rather than a CSS media query, since the panel's
+   desktop/mobile split is already driven by the useIsMobile() JS check, not
+   a breakpoint this stylesheet owns. */
 .nhi-wrap {
   display: flex;
   flex-direction: row;
