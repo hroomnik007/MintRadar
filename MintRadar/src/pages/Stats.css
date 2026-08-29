@@ -115,17 +115,45 @@
    via .nhi-gauge-wrap/.nhi-gauge-wrap svg below) — set with an inline style
    override in Stats.tsx rather than a CSS media query, since the panel's
    desktop/mobile split is already driven by the useIsMobile() JS check, not
-   a breakpoint this stylesheet owns. margin-top here is --stats-header-gap
-   (10px) — same header→content mechanism as Most Reliable/Trust Score
-   Movers (.stats-card-header's own 2px margin-bottom collapses with this,
-   settling on the larger value). The header no longer carries its own
-   marginBottom override in Stats.tsx for this reason. */
+   a breakpoint this stylesheet owns.
+
+   .stats-nhi-panel is a flex column with align-self:stretch, opting this one
+   panel out of the grid's own align-items:start — at ≥1300px it shares a row
+   with the much taller NUT Coverage panel, so this lets it actually grow to
+   match instead of staying pinned to its own (shorter) content height. .nhi-
+   fill (wrapping .nhi-wrap + the breakdown block) is the flex:1 region that
+   absorbs that surplus height and redistributes it via justify-content:
+   space-between, so the breakdown block ends up flush with the panel's
+   bottom edge instead of leaving dead space below it. Its margin-top is
+   --stats-header-gap (10px) — same header→content mechanism as Most
+   Reliable/Trust Score Movers (.stats-card-header's own 2px margin-bottom
+   collapses with this, settling on the larger value); this lives on
+   .nhi-fill rather than .nhi-wrap specifically so the collapse still reaches
+   .stats-card-header directly (a flex container's children never collapse
+   margins with anything outside it). The header no longer carries its own
+   marginBottom override in Stats.tsx for this reason. On mobile, .nhi-fill
+   only ever has one child (no breakdown block) and nothing stretches the
+   panel taller than its content, so space-between has nothing to do — no
+   visual change there. */
+.stats-nhi-panel {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
+
+.nhi-fill {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  margin-top: var(--stats-header-gap);
+}
+
 .nhi-wrap {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 12px;
-  margin-top: var(--stats-header-gap);
   cursor: pointer;
 }
 
@@ -284,37 +312,9 @@
   margin: var(--stats-row-gap) 0 6px;
 }
 
-/* No vertical padding — inter-row spacing comes from the wrapping flex
-   column's --stats-row-gap (TrustMoversPanel.tsx), not stacked row padding
-   (previously 5px top+bottom summed to ~10px between rows). `gap: 8px`
-   below is this row's own internal flex gap (name ↔ delta badge), unrelated
-   to between-rows spacing. */
-.stats-movers-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  cursor: pointer;
-  border-radius: 5px;
-  padding: 0 4px;
-  margin: 0 -4px;
-  transition: background 120ms ease;
-}
-
-.stats-movers-row:hover {
-  background: var(--bg3);
-}
-
-.stats-movers-name {
-  font-size: 12px;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-  flex: 1;
-}
-
+/* Row container is .stats-top5-row (shared with Most Reliable) — rows here
+   no longer have their own container class. Only the right-hand value (this
+   delta badge) and the section labels above stay Movers-specific. */
 .stats-movers-delta {
   font-family: var(--font-mono);
   font-size: 11.5px;

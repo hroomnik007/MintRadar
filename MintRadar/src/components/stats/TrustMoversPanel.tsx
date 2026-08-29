@@ -1,4 +1,5 @@
 import { TrendingUp, TrendingDown } from 'lucide-react'
+import { MintFavicon } from '../mint/MintFavicon'
 
 export interface TrustMover {
   url: string
@@ -17,6 +18,11 @@ interface TrustMoversPanelProps {
   data: TrustMoversData | undefined
   onMintClick: (url: string) => void
   getDisplayName: (mover: TrustMover) => string
+  getIconUrl: (mover: TrustMover) => string | null
+}
+
+function getHostname(url: string): string {
+  try { return new URL(url).hostname } catch { return url }
 }
 
 // Extracted from Stats.tsx (rather than kept inline like its sibling modals)
@@ -24,8 +30,13 @@ interface TrustMoversPanelProps {
 // be unit-tested without mounting the whole Stats page — see
 // TrustMoversPanel.test.tsx. No `@/...`-aliased imports: vitest.config.ts has
 // no path-alias resolution (unlike vite.config.ts), so this component takes
-// all data via props instead of reaching into hooks/utils itself.
-export function TrustMoversPanel({ period, onPeriodChange, data, onMintClick, getDisplayName }: TrustMoversPanelProps) {
+// all data via props instead of reaching into hooks/utils itself, and imports
+// MintFavicon by relative path.
+export function TrustMoversPanel({ period, onPeriodChange, data, onMintClick, getDisplayName, getIconUrl }: TrustMoversPanelProps) {
+  // Row markup mirrors .stats-top5-row (Most Reliable, in Stats.tsx) — favicon,
+  // name on top with its hostname underneath, value flush right — so the two
+  // panels in the same grid row read as one visual family. Only the right-hand
+  // value differs: a colored delta badge instead of a plain percentage.
   const renderRows = (movers: TrustMover[], direction: 'up' | 'down') => {
     if (!data) {
       return <div style={{ color: 'var(--text3)', fontSize: 12, fontFamily: 'var(--font-mono)' }}>No data yet</div>
@@ -33,12 +44,19 @@ export function TrustMoversPanel({ period, onPeriodChange, data, onMintClick, ge
     if (movers.length === 0) {
       return <div className="stats-movers-empty">No significant changes this period</div>
     }
-    return movers.map(m => (
-      <div key={m.url} className="stats-movers-row" onClick={() => onMintClick(m.url)}>
-        <span className="stats-movers-name">{getDisplayName(m)}</span>
-        <span className={`stats-movers-delta ${direction}`}>{direction === 'up' ? '+' : ''}{m.delta}%</span>
-      </div>
-    ))
+    return movers.map(m => {
+      const hostname = getHostname(m.url)
+      return (
+        <div key={m.url} className="stats-top5-row" onClick={() => onMintClick(m.url)}>
+          <MintFavicon url={m.url} iconUrl={getIconUrl(m)} size={22} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{getDisplayName(m)}</div>
+            <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hostname}</div>
+          </div>
+          <span className={`stats-movers-delta ${direction}`}>{direction === 'up' ? '+' : ''}{m.delta}%</span>
+        </div>
+      )
+    })
   }
 
   return (

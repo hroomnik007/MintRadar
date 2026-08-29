@@ -17,6 +17,7 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof TrustMoversP
       data={sample}
       onMintClick={onMintClick}
       getDisplayName={m => m.name ?? m.url}
+      getIconUrl={() => null}
       {...overrides}
     />
   )

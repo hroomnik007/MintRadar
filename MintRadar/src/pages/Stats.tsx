@@ -638,20 +638,23 @@ export default function Stats() {
     return Math.round(sum / total)
   }, [knownMintsData])
 
-  const top5ByUptime = useMemo(() => {
+  // Top 4, not top 5 — matching the panel's row-count/height to its row-1
+  // siblings (Software in Use, Geographic Distribution, Trust Score Movers),
+  // which were all one row shorter than this one before the change.
+  const top4ByUptime = useMemo(() => {
     if (!knownMintsData) return []
     return [...knownMintsData]
       .filter(m => m.online === true && m.uptimePct24h != null)
       .sort((a, b) => (b.uptimePct24h ?? 0) - (a.uptimePct24h ?? 0))
-      .slice(0, 5)
+      .slice(0, 4)
   }, [knownMintsData])
 
-  const top5ByTrust = useMemo(() => {
+  const top4ByTrust = useMemo(() => {
     if (!knownMintsData) return []
     return [...knownMintsData]
       .filter(m => m.online === true && m.trustScore != null)
       .sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
-      .slice(0, 5)
+      .slice(0, 4)
   }, [knownMintsData])
 
   const geoDist = useMemo(() => computeGeoDistribution(knownMintsData ?? []), [knownMintsData])
@@ -970,9 +973,9 @@ export default function Stats() {
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:'var(--stats-row-gap)',marginTop:10}}>
             {reliableTab === 'reliable' ? (
-              top5ByUptime.length === 0 ? (
+              top4ByUptime.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data yet</div>
-              ) : top5ByUptime.map((mint, idx) => {
+              ) : top4ByUptime.map((mint, idx) => {
                 const uptime = mint.uptimePct24h ?? 0
                 const color = uptimeColor(uptime)
                 const hostname = getHostname(mint.url)
@@ -989,9 +992,9 @@ export default function Stats() {
                 )
               })
             ) : (
-              top5ByTrust.length === 0 ? (
+              top4ByTrust.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data yet</div>
-              ) : top5ByTrust.map((mint, idx) => {
+              ) : top4ByTrust.map((mint, idx) => {
                 const score = mint.trustScore ?? 0
                 const color = score >= 70 ? '#4ade80' : score >= 40 ? '#ffa500' : '#ff4d4d'
                 const hostname = getHostname(mint.url)
@@ -1018,6 +1021,7 @@ export default function Stats() {
           data={moversData}
           onMintClick={url => navigate(`/mint/${encodeURIComponent(url)}`)}
           getDisplayName={m => m.name ?? getHostname(m.url)}
+          getIconUrl={m => knownMintsData?.find(km => km.url === m.url)?.iconUrl ?? null}
         />
 
         {/* Row 2, cols 1-3: NUT Coverage — widened from span 2 to span 3 so its
@@ -1081,36 +1085,48 @@ export default function Stats() {
                   <button onClick={() => setShowHealthBreakdown(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', padding: 0 }}>Details ›</button>
                 )}
               </div>
-              <div className="nhi-wrap" onClick={isMobile ? () => setShowHealthBreakdown(true) : undefined} style={isMobile ? undefined : { cursor: 'default' }}>
-                <div className="nhi-gauge-wrap" style={isMobile ? undefined : { width: 84, height: 84 }}>
-                  <svg viewBox="0 0 72 72" style={isMobile ? undefined : { width: 84, height: 84 }}>
-                    <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
-                    <circle cx="36" cy="36" r="27" fill="none" stroke={info.color} strokeWidth="7"
-                      strokeDasharray={`${(networkHealth.score * 1.696).toFixed(1)} 169.6`}
-                      strokeDashoffset="42.4"
-                      strokeLinecap="round"
-                      transform="rotate(-90 36 36)" />
-                  </svg>
-                  <div className="nhi-gauge-num" style={{ color: info.color, ...(isMobile ? {} : { fontSize: 20 }) }}>{networkHealth.score}</div>
+              {/* .nhi-fill is the flex:1 region below the header — at ≥1300px
+                  this panel shares its grid row with the much-taller NUT
+                  Coverage panel and stretches to match it (align-self:stretch
+                  on .stats-nhi-panel, opting out of the grid's own
+                  align-items:start just for this one panel), so there's real
+                  surplus height here to distribute. justify-content:
+                  space-between pins the gauge/badge to the top and the
+                  breakdown block to the bottom edge, putting any extra space
+                  between them instead of leaving it all as dead space below
+                  the breakdown. On mobile (no breakdown block, and nothing
+                  stretches this panel taller than its own content) this is a
+                  no-op — the gauge just sits at its natural position. */}
+              <div className="nhi-fill">
+                <div className="nhi-wrap" onClick={isMobile ? () => setShowHealthBreakdown(true) : undefined} style={isMobile ? undefined : { cursor: 'default' }}>
+                  <div className="nhi-gauge-wrap" style={isMobile ? undefined : { width: 84, height: 84 }}>
+                    <svg viewBox="0 0 72 72" style={isMobile ? undefined : { width: 84, height: 84 }}>
+                      <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
+                      <circle cx="36" cy="36" r="27" fill="none" stroke={info.color} strokeWidth="7"
+                        strokeDasharray={`${(networkHealth.score * 1.696).toFixed(1)} 169.6`}
+                        strokeDashoffset="42.4"
+                        strokeLinecap="round"
+                        transform="rotate(-90 36 36)" />
+                    </svg>
+                    <div className="nhi-gauge-num" style={{ color: info.color, ...(isMobile ? {} : { fontSize: 20 }) }}>{networkHealth.score}</div>
+                  </div>
+                  <span className="nhi-badge" style={{ color: info.color, background: info.bg, border: `0.5px solid ${info.border}` }}>
+                    {healthLabel(networkHealth.score)}
+                  </span>
                 </div>
-                <span className="nhi-badge" style={{ color: info.color, background: info.bg, border: `0.5px solid ${info.border}` }}>
-                  {healthLabel(networkHealth.score)}
-                </span>
+                {/* Desktop only: same breakdown the mobile modal shows, inline
+                    instead of behind a click. The formula footer is NOT
+                    repeated here (moved to the header ⓘ tooltip, see
+                    NETWORK_HEALTH_FORMULA_TEXT above) — the space it freed up
+                    went to enlarging the gauge instead. */}
+                {!isMobile && (
+                  <div style={{ marginTop: 14 }}>
+                    {networkHealth.components.map((c, i) => (
+                      <NetworkHealthComponentRow key={c.label} component={c} index={i} total={networkHealth.components.length} compact />
+                    ))}
+                  </div>
+                )}
               </div>
-              {/* Desktop only: same breakdown the mobile modal shows, inline
-                  instead of behind a click — fills the empty space this panel
-                  used to have below the gauge (height was set by the wider
-                  NUT Coverage panel next to it in the same row). The formula
-                  footer is NOT repeated here (moved to the header ⓘ tooltip,
-                  see NETWORK_HEALTH_FORMULA_TEXT above) — the space it freed
-                  up went to enlarging the gauge instead. */}
-              {!isMobile && (
-                <div style={{ marginTop: 14 }}>
-                  {networkHealth.components.map((c, i) => (
-                    <NetworkHealthComponentRow key={c.label} component={c} index={i} total={networkHealth.components.length} compact />
-                  ))}
-                </div>
-              )}
             </div>
           )
         })()}
