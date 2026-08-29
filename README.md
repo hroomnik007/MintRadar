@@ -81,6 +81,16 @@ Automatic mint discovery running every 6 hours from 17 Nostr relays (damus.io, n
 - **Token Inspector** — paste a Cashu token (cashuA / v3 format) to instantly see its mint, amount, unit, proof count, mint status, and Trust Score — with a direct link to the Mint Detail page or Cashu.me for redeeming
 - **Best Mint for Me** — a 3-step wizard: pick your storage size, what matters most (speed / trust / NUT features), and software preference; latency to each candidate is measured live from your browser, and the top 3 matches are ranked with a weighted score
 
+### 📚 Learn
+
+A 5-module "Cashu 101" course, written as plain-language text with custom illustrated diagrams and highlighted key-takeaway callouts — no quizzes or progress tracking, just prev/next navigation between modules:
+
+1. **Cashu Basics** — what Cashu actually is: the mint holds your Bitcoin, you hold a bearer token, and blind signatures keep person-to-person transfers private
+2. **Understanding the Risks** — why a mint can disappear or refuse to pay, why nobody can currently verify a mint has real backing, and how to limit what you stand to lose
+3. **How to Choose a Mint** — what to check before trusting a mint (uptime, NUT support, operator transparency) and how MintRadar's Trust Score combines those signals
+4. **Getting Started with a Wallet** — choosing a wallet, adding your first mint, making a deposit, sending tokens, and why backing up your seed phrase is non-negotiable
+5. **Safe Habits** — day-to-day habits (diversifying mints, redeeming regularly, checking Trust Score first) that meaningfully reduce your risk
+
 ### ⭐ Nostr-Based Reviews
 
 Mint Detail page shows community reviews fetched from 18 relays as **kind:38000** events. Ratings are parsed from review text (`[N/5]` format). Author profiles (name + avatar) are resolved from Nostr and displayed alongside each review. Images are only loaded over HTTPS.
