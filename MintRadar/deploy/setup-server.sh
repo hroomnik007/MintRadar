@@ -5,7 +5,7 @@ set -e
 
 DOMAIN="mintradar.pedani.eu"
 WEB_ROOT="/var/www/mintradar/dist"
-NGINX_CONF="/etc/nginx/sites-available/${DOMAIN}"
+NGINX_CONF="/etc/nginx/sites-available/${DOMAIN}.conf"
 EMAIL="your@email.com"  # replace before running
 
 echo "==> Creating web root ${WEB_ROOT}"

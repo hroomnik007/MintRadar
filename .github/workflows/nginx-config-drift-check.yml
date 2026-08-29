@@ -1,0 +1,66 @@
+name: Nginx Config Drift Check
+
+# Read-only, informational check: compares the repo's deploy/nginx.conf against
+# the live nginx config on the VPS (which is deployed manually — see CLAUDE.md
+# "deploy/nginx.conf is reference/documentation only"). Runs independently of
+# the deploy workflow: no `needs:` link to it, and never fails the run on drift
+# — it only surfaces the diff in the Job Summary so it doesn't get missed.
+on:
+  schedule:
+    - cron: '0 6 * * *' # 06:00 UTC daily
+  workflow_dispatch: {} # allow manual runs for testing
+
+jobs:
+  drift-check:
+    name: Compare repo vs. live nginx config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch live nginx config from server
+        id: fetch_live_conf
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          capture_stdout: true
+          script: |
+            sudo cat /etc/nginx/sites-available/mintradar.pedani.eu.conf
+
+      - name: Diff repo config against live config
+        env:
+          LIVE_CONF_CONTENT: ${{ steps.fetch_live_conf.outputs.stdout }}
+        run: |
+          set -euo pipefail
+          REPO_CONF="MintRadar/deploy/nginx.conf"
+          LIVE_CONF="$RUNNER_TEMP/live-nginx.conf"
+
+          printf '%s' "$LIVE_CONF_CONTENT" > "$LIVE_CONF"
+
+          {
+            echo "## Nginx Config Drift Check"
+            echo ""
+            echo "Comparing \`deploy/nginx.conf\` (repo) against"
+            echo "\`/etc/nginx/sites-available/mintradar.pedani.eu.conf\` (live on server)."
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if diff -u "$REPO_CONF" "$LIVE_CONF" > "$RUNNER_TEMP/diff.txt"; then
+            echo "✅ **No drift detected** — repo and live config match." >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "⚠️ **Drift detected** — repo and live config differ."
+              echo ""
+              echo '```diff'
+              cat "$RUNNER_TEMP/diff.txt"
+              echo '```'
+              echo ""
+              echo "Reminder: \`deploy/nginx.conf\` is not auto-deployed (see CLAUDE.md,"
+              echo "\"deploy/nginx.conf is reference/documentation only\"). If this drift is"
+              echo "intentional (a manual server-side change), update the repo file to match."
+              echo "If it isn't, the server is running an unreviewed config."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # Informational only — never fail the job on drift.
+          exit 0
