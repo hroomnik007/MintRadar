@@ -3,6 +3,19 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  /* Single source of truth for the two spacing values unified across this
+     page's panels (see the spacing-consistency investigation/fix session) —
+     --stats-row-gap for spacing between list rows inside a panel (Software
+     in Use, Most Reliable, Geographic Distribution, Trust Score Movers, NUT
+     Coverage), --stats-header-gap for the panel header → content gap
+     (Most Reliable, Trust Score Movers, Trust Score Trend, Network Health
+     Index desktop breakdown — the panels using .stats-card-header). NOT
+     used by Software in Use / Geographic Distribution's title-to-content
+     spacing (those use .stats-panel-title's own 14px default, out of scope
+     for this unification) or by the Network Health Index modal's footer
+     (overlay context, not part of the main panel grid). */
+  --stats-row-gap: 8px;
+  --stats-header-gap: 10px;
 }
 
 .stats-header {
@@ -102,12 +115,17 @@
    via .nhi-gauge-wrap/.nhi-gauge-wrap svg below) — set with an inline style
    override in Stats.tsx rather than a CSS media query, since the panel's
    desktop/mobile split is already driven by the useIsMobile() JS check, not
-   a breakpoint this stylesheet owns. */
+   a breakpoint this stylesheet owns. margin-top here is --stats-header-gap
+   (10px) — same header→content mechanism as Most Reliable/Trust Score
+   Movers (.stats-card-header's own 2px margin-bottom collapses with this,
+   settling on the larger value). The header no longer carries its own
+   marginBottom override in Stats.tsx for this reason. */
 .nhi-wrap {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 12px;
+  margin-top: var(--stats-header-gap);
   cursor: pointer;
 }
 
@@ -249,6 +267,11 @@
 }
 
 /* ── Trust Score Movers (risers/fallers) ──────────────────────── */
+/* Top margin uses --stats-row-gap (8px) for both the "Risers" and "Fallers"
+   labels — previously Fallers had its own inline marginTop:12 override
+   while Risers used this class's then-10px default, an inconsistency
+   within the same component (see the spacing-consistency fix). Both now
+   read this one declaration; TrustMoversPanel.tsx no longer overrides it. */
 .stats-movers-section-label {
   display: flex;
   align-items: center;
@@ -258,9 +281,14 @@
   letter-spacing: 0.06em;
   color: var(--text3);
   text-transform: uppercase;
-  margin: 10px 0 6px;
+  margin: var(--stats-row-gap) 0 6px;
 }
 
+/* No vertical padding — inter-row spacing comes from the wrapping flex
+   column's --stats-row-gap (TrustMoversPanel.tsx), not stacked row padding
+   (previously 5px top+bottom summed to ~10px between rows). `gap: 8px`
+   below is this row's own internal flex gap (name ↔ delta badge), unrelated
+   to between-rows spacing. */
 .stats-movers-row {
   display: flex;
   align-items: center;
@@ -268,7 +296,7 @@
   gap: 8px;
   cursor: pointer;
   border-radius: 5px;
-  padding: 5px 4px;
+  padding: 0 4px;
   margin: 0 -4px;
   transition: background 120ms ease;
 }
@@ -427,17 +455,23 @@
 }
 
 /* ── Distribution bars ───────────────────────────────────────── */
+/* No vertical padding here — inter-row spacing for Geographic Distribution
+   comes entirely from the wrapping flex column's --stats-row-gap (Stats.tsx),
+   not from stacked row padding (previously 5px top+bottom summed to ~10px
+   between rows; see the spacing-consistency fix). The `gap: 8px` below is
+   unrelated — it's this row's own internal flex gap between the label/bar/
+   count children, not the between-rows spacing. */
 .dist-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 0;
+  padding: 0;
 }
 
 .dist-row-clickable {
   cursor: pointer;
   border-radius: 5px;
-  padding: 5px 4px;
+  padding: 0 4px;
   margin: 0 -4px;
   transition: background 120ms ease;
 }
@@ -498,29 +532,7 @@
   flex-shrink: 0;
 }
 
-/* ── Section divider ─────────────────────────────────────────── */
-.stats-section-divider {
-  height: 0;
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 0 18px;
-}
-
 /* ── NUT Coverage section ────────────────────────────────────── */
-.stats-nut-section {
-  padding: 14px 18px 24px;
-}
-
-.stats-section-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text2);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-family: var(--font-mono);
-  margin-bottom: 14px;
-}
-
 .stats-section-sublabel {
   font-size: 11px;
   color: var(--text3);
@@ -528,10 +540,15 @@
   margin-bottom: 12px;
 }
 
+/* row-gap is --stats-row-gap (8px) — the inter-row spacing mechanism,
+   replacing the old row-gap:0 + stacked .stats-nut-row padding (6px top+bottom
+   + the row's own border-bottom summed to ~12.5px; see the spacing-
+   consistency fix). column-gap (32px, between the 3 inner columns) is
+   untouched — a separate, deliberate value not part of that unification. */
 .stats-nut-rows-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  row-gap: 0;
+  row-gap: var(--stats-row-gap);
   column-gap: 32px;
   background: var(--bg2);
   border: 1px solid var(--border);
@@ -539,12 +556,18 @@
   overflow: hidden;
 }
 
+/* No vertical padding — inter-row spacing comes from .stats-nut-rows-grid's
+   row-gap (--stats-row-gap) instead of stacked row padding (previously 6px
+   top+bottom + this row's own border-bottom summed to ~12.5px; see the
+   spacing-consistency fix). border-bottom is a deliberate divider between
+   NUT rows within a column and is kept — `gap: 8px` below is unrelated,
+   this row's own internal grid gap between the tag/name/bar/count cells. */
 .stats-nut-row {
   display: grid;
   grid-template-columns: 62px 1fr 80px 42px;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
+  padding: 0 10px;
   border-bottom: 0.5px solid var(--border);
   cursor: pointer;
   transition: background 120ms ease;
@@ -819,6 +842,5 @@
   .stats-metrics { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
   .stats-metric-card { flex: 1 1 calc(50% - 4px); padding: 10px 14px; }
   .stats-nut-rows-grid { grid-template-columns: 1fr; }
-  .stats-nut-section { padding: 10px 14px 20px; }
-  .stats-nut-row { grid-template-columns: 55px 1fr 60px 38px; gap: 6px; padding: 5px 8px; }
+  .stats-nut-row { grid-template-columns: 55px 1fr 60px 38px; gap: 6px; padding: 0 8px; }
 }

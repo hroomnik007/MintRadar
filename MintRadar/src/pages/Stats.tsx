@@ -890,7 +890,7 @@ export default function Stats() {
                 <div className="dist-track"><div className="dist-fill" style={{width:`${swFreshnessSummary.pct}%`,background:'var(--amber)',opacity:swFreshnessSummary.pct >= 50 ? 0.9 : 0.6}} /></div>
               </div>
             )}
-            <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:6}}>
+            <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:'var(--stats-row-gap)'}}>
               {versionDist.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
               ) : versionDist.map(({sw, total, accentColor}) => {
@@ -920,7 +920,7 @@ export default function Stats() {
           {/* Card 2: Geographic Distribution */}
           <div className="stats-panel">
             <div className="stats-panel-title">Geographic Distribution</div>
-            <div style={{marginTop:10}}>
+            <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:'var(--stats-row-gap)'}}>
               {geoDist.top.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
               ) : geoDist.top.map(({loc, count, pct}, idx) => {
@@ -968,7 +968,7 @@ export default function Stats() {
               <button type="button" className={`stats-tab-btn${reliableTab === 'trust' ? ' active' : ''}`} onClick={() => setReliableTab('trust')}>Trust</button>
             </div>
           </div>
-          <div style={{display:'flex',flexDirection:'column',gap:5,marginTop:10}}>
+          <div style={{display:'flex',flexDirection:'column',gap:'var(--stats-row-gap)',marginTop:10}}>
             {reliableTab === 'reliable' ? (
               top5ByUptime.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data yet</div>
@@ -1059,7 +1059,7 @@ export default function Stats() {
           const info = trustScoreInfo(networkHealth.score)
           return (
             <div className="stats-panel stats-nhi-panel">
-              <div className="stats-card-header" style={{marginBottom:8}}>
+              <div className="stats-card-header">
                 <div className="stats-panel-title nhi-title-row" style={{ marginBottom: 0 }}>
                   Network Health Index
                   <span
@@ -1128,7 +1128,7 @@ export default function Stats() {
               <button type="button" className={`stats-tab-btn${trendDays === 90 ? ' active' : ''}`} onClick={() => setTrendDays(90)}>90d</button>
             </div>
           </div>
-          <div style={{marginTop:12,height:120}}>
+          <div style={{marginTop:'var(--stats-header-gap)',height:120}}>
             {(!trendData || trendData.length === 0) ? (
               <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)',paddingTop:30,textAlign:'center'}}>No data yet</div>
             ) : (

@@ -52,10 +52,14 @@ export function TrustMoversPanel({ period, onPeriodChange, data, onMintClick, ge
       </div>
       <div style={{ marginTop: 10 }}>
         <div className="stats-movers-section-label"><TrendingUp size={11} /> Risers</div>
-        {renderRows(data?.risers ?? [], 'up')}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stats-row-gap)' }}>
+          {renderRows(data?.risers ?? [], 'up')}
+        </div>
 
-        <div className="stats-movers-section-label" style={{ marginTop: 12 }}><TrendingDown size={11} /> Fallers</div>
-        {renderRows(data?.fallers ?? [], 'down')}
+        <div className="stats-movers-section-label"><TrendingDown size={11} /> Fallers</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stats-row-gap)' }}>
+          {renderRows(data?.fallers ?? [], 'down')}
+        </div>
       </div>
     </div>
   )
