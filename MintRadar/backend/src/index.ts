@@ -12,9 +12,12 @@ import { computeDegraded } from './degraded.js'
 import { parseReviewRatingAndComment } from './reviews.js'
 import { authenticateNip98 } from './nip98Auth.js'
 import { fetchOgMintData, renderMintOgHtml } from './og.js'
+import { computeTrustMovers, type MintScoreSnapshot } from './trustMovers.js'
 
 let knownMintsCache: { data: unknown; expiresAt: number } | null = null
 const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
+
+const trustMoversCache = new Map<string, { data: unknown; expiresAt: number }>()
 
 interface NostrReviewEntry {
   id: string
@@ -764,6 +767,62 @@ app.get('/api/stats/trust-trend', (req: Request, res: Response): void => {
     })
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/stats/trust-trend]', err)
+      res.status(500).json({ error: 'Internal server error' })
+    })
+})
+
+// Trust Score risers/fallers over the last 7 or 30 days. "old" resolves each
+// mint's most recent trust_score at-or-before the N-day cutoff — a point-in-
+// time snapshot, never an average — via the same LATERAL/DISTINCT ON pattern
+// used elsewhere in this file; the INNER JOIN against "latest" naturally
+// excludes any mint with no history reaching that far back (no special
+// exclusion flag needed, it just isn't in the result set). The +/-3 threshold
+// and top-3 ranking live in trustMovers.ts (computeTrustMovers), unit-tested
+// independently of this query.
+app.get('/api/stats/trust-movers', (req: Request, res: Response): void => {
+  const period: '7d' | '30d' = req.query['period'] === '30d' ? '30d' : '7d'
+  const days = period === '30d' ? 30 : 7
+
+  const cached = trustMoversCache.get(period)
+  if (cached && Date.now() < cached.expiresAt) {
+    res.setHeader('Cache-Control', `max-age=${Math.floor(KNOWN_MINTS_CACHE_TTL / 1000)}`)
+    res.json(cached.data)
+    return
+  }
+
+  pool.query(
+    `WITH latest AS (
+       SELECT DISTINCT ON (url) url, trust_score
+       FROM mint_history
+       WHERE trust_score IS NOT NULL
+       ORDER BY url, checked_at DESC
+     ),
+     old AS (
+       SELECT DISTINCT ON (url) url, trust_score
+       FROM mint_history
+       WHERE trust_score IS NOT NULL AND checked_at <= NOW() - INTERVAL '1 day' * $1
+       ORDER BY url, checked_at DESC
+     )
+     SELECT m.url, m.name, latest.trust_score AS latest_score, old.trust_score AS old_score
+     FROM latest
+     JOIN old ON old.url = latest.url
+     JOIN mints m ON m.url = latest.url`,
+    [days]
+  )
+    .then(result => {
+      const snapshots: MintScoreSnapshot[] = result.rows.map(r => ({
+        url: r.url as string,
+        name: r.name as string | null,
+        latestScore: Number(r.latest_score),
+        oldScore: Number(r.old_score),
+      }))
+      const data = { period, ...computeTrustMovers(snapshots) }
+      trustMoversCache.set(period, { data, expiresAt: Date.now() + KNOWN_MINTS_CACHE_TTL })
+      res.setHeader('Cache-Control', `max-age=${Math.floor(KNOWN_MINTS_CACHE_TTL / 1000)}`)
+      res.json(data)
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[/api/stats/trust-movers]', err)
       res.status(500).json({ error: 'Internal server error' })
     })
 })

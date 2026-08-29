@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Info } from 'lucide-react'
+import { TrustMoversPanel } from '@/components/stats/TrustMoversPanel'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
@@ -470,6 +471,7 @@ export default function Stats() {
   const [versionModal, setVersionModal] = useState<{ sw: string; ver: string; fullVersion: string } | null>(null)
   const [expandedSw, setExpandedSw] = useState<string | null>(null)
   const [reliableTab, setReliableTab] = useState<'reliable' | 'trust'>('reliable')
+  const [moversPeriod, setMoversPeriod] = useState<'7d' | '30d'>('7d')
   const [trendDays, setTrendDays] = useState<30 | 90>(30)
   const [showHealthBreakdown, setShowHealthBreakdown] = useState(false)
   const nhiInfoRef = useRef<HTMLSpanElement>(null)
@@ -564,6 +566,19 @@ export default function Stats() {
     const low90 = Math.min(...vals)
     return { current, high: high90, low: low90 }
   }, [trendData])
+
+  interface TrustMover { url: string; name: string | null; delta: number }
+  interface TrustMoversResponse { period: '7d' | '30d'; risers: TrustMover[]; fallers: TrustMover[] }
+
+  const { data: moversData } = useQuery({
+    queryKey: ['stats-trust-movers', moversPeriod],
+    queryFn: async (): Promise<TrustMoversResponse> => {
+      const res = await fetch(`/api/stats/trust-movers?period=${moversPeriod}`)
+      if (!res.ok) throw new Error('trust-movers fetch failed')
+      return res.json() as Promise<TrustMoversResponse>
+    },
+    staleTime: 60 * 1000,
+  })
 
   const versionDist = useMemo(() => {
     if (!knownMintsData) return []
@@ -982,6 +997,18 @@ export default function Stats() {
             )}
           </div>
         </div>
+
+        {/* Trust Score Movers — 4th top-level grid child, auto-placed into the
+            remaining column next to stats-right-col. Single panel (no row
+            span), same as Software in Use / Geographic Distribution / Most
+            Reliable — not stretched to match stats-right-col's stacked height. */}
+        <TrustMoversPanel
+          period={moversPeriod}
+          onPeriodChange={setMoversPeriod}
+          data={moversData}
+          onMintClick={url => navigate(`/mint/${encodeURIComponent(url)}`)}
+          getDisplayName={m => m.name ?? getHostname(m.url)}
+        />
 
         {/* NUT Coverage — spans cols 1-2, row 2 */}
         <div className="stats-panel stats-nut-panel">

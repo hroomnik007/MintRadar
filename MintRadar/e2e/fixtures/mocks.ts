@@ -97,6 +97,16 @@ export const MOCK_STATS = {
     .map(m => ({ url: m.url, name: m.name, trustScore: m.trustScore as number })),
 }
 
+export const MOCK_TRUST_MOVERS = {
+  risers: [
+    { url: 'https://alpha.mint.example', name: 'Alpha Mint', delta: 12 },
+    { url: 'https://echo.mint.example', name: 'Echo Mint', delta: 7 },
+  ],
+  fallers: [
+    { url: 'https://bravo.mint.example', name: 'Bravo Mint', delta: -9 },
+  ],
+}
+
 function probePayload(url: string) {
   const m = MOCK_MINTS.find(x => x.url === url)
   const name = m?.name ?? 'Unknown Mint'
@@ -151,6 +161,11 @@ export async function installApiMocks(page: Page): Promise<void> {
   )
   await page.route('**/api/stats', route => route.fulfill({ json: MOCK_STATS }))
   await page.route('**/api/stats/trust-trend**', route => route.fulfill({ json: { trend: [], periodDays: 30, earliestCheckedAt: null, daysOfDataAvailable: 0 } }))
+  await page.route('**/api/stats/trust-movers**', route => {
+    const u = new URL(route.request().url())
+    const period = u.searchParams.get('period') === '30d' ? '30d' : '7d'
+    route.fulfill({ json: { period, ...MOCK_TRUST_MOVERS } })
+  })
   await page.route('**/api/mints/history**', route => route.fulfill({ json: historyPayload() }))
   await page.route('**/api/mints/version-history**', route =>
     route.fulfill({ json: { history: [{ version: 'Nutshell/0.16.0', firstSeenAt: daysAgo(30) }], latestGlobalVersion: 'Nutshell/0.16.0' } }),
