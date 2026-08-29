@@ -48,6 +48,9 @@ export default function Module3() {
         <li><strong>Audit reliability (5%)</strong> — real transaction success data from an independent auditor</li>
       </ul>
       <p>
+        That audit signal comes from <strong><a href="https://audit.8333.space" target="_blank" rel="noreferrer">audit.8333.space</a></strong>, an independent third party that continuously runs real mint/melt transactions against known Cashu mints and publishes how often they actually succeed. MintRadar's own 5-minute checks only confirm a mint is reachable — they can't tell you whether its token operations are working correctly. The audit reliability score looks at the mint's last ~100 real swaps and reflects how many of those transactions actually went through.
+      </p>
+      <p>
         No single number can tell you everything, so we also show a full breakdown — click on any mint's Trust Score to see exactly what's contributing to it.
       </p>
 
