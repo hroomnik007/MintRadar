@@ -716,6 +716,17 @@
   min-width: 0;
 }
 
+/* .nut-modal-row-info is flex-direction: column, so its default cross-axis
+   (align-items: stretch) makes any child span the container's full width —
+   fine for the name/url text rows, but an age badge (e.g. "Veteran") is
+   meant to be a compact pill, not stretched into a wide bar. Used in
+   VersionMintsView's mint-list row (Software modal); align-self overrides
+   only this child, no effect on the row/column layout variants that
+   already pass their own flexDirection: 'row' + alignItems: 'center'. */
+.nut-modal-row-badge {
+  align-self: flex-start;
+}
+
 .nut-modal-row-name {
   font-size: 12px;
   color: var(--text);
