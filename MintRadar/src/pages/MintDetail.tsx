@@ -18,6 +18,7 @@ import { ComparisonModal } from '@/components/ComparisonModal'
 import { mintAgeBadge, trustScoreColor, trustScoreInfo } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
+import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import {
   computeTrustScore as sharedComputeTrustScore,
   uptimeComponent, nutComponent, versionComponent, contactComponent,
@@ -1043,15 +1044,19 @@ function MintDetailContent({ url }: { url: string }) {
             const hasAnyLimits =
               nut4?.methods?.some(m => m.min_amount != null || m.max_amount != null) ||
               nut5?.methods?.some(m => m.min_amount != null || m.max_amount != null)
+            // Ranges shared by several payment methods collapse into one entry
+            // labelled with those methods — see groupNutLimits() for why this
+            // groups rather than plainly deduplicating.
             const renderLimits = (cfg: NutConfig | null | undefined) => {
-              if (!cfg?.methods?.length) return <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>—</span>
-              return cfg.methods.map((m, i) => (
+              const groups = groupNutLimits(cfg?.methods)
+              if (!groups.length) return <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>—</span>
+              return groups.map((g, i) => (
                 <span key={i} style={{fontSize:11,color:'var(--text)',fontFamily:'var(--font-mono)'}}>
-                  {m.min_amount != null ? m.min_amount.toLocaleString() : '—'}
-                  {' – '}
-                  {m.max_amount != null ? m.max_amount.toLocaleString() : '—'}
-                  {m.unit ? ` ${m.unit}` : ''}
-                  {cfg.methods && i < cfg.methods.length - 1 ? ', ' : ''}
+                  {formatNutLimitRange(g)}
+                  {g.methods.length > 0 && (
+                    <span style={{color:'var(--text3)'}}> ({g.methods.join(', ')})</span>
+                  )}
+                  {i < groups.length - 1 ? ', ' : ''}
                 </span>
               ))
             }

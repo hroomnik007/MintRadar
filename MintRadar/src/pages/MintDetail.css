@@ -532,19 +532,24 @@
 .reviews-load-more:hover { border-color: var(--border2); color: var(--text2); }
 
 /* ── Units & Methods ────────────────────────────────────────── */
+/* Font sizes follow this page's existing vocabulary rather than their own
+   scale, which ran a step larger than everything around them: 11px for body
+   text (matching .md-info-label/.md-info-value, the Mint Info rows in the same
+   right-hand column) and 10px for the small uppercase mono label (matching
+   .md-panel-title). .method-chip was already at 11px and is left as-is. */
 .unit-block { margin-bottom: 14px; }
 .unit-block:last-child { margin-bottom: 0; }
 .unit-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .unit-badge {
-  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
   color: var(--green-bright); background: var(--green-soft);
   border: 1px solid var(--green-soft-strong);
   padding: 3px 10px; border-radius: 100px;
 }
 .method-rows { display: flex; flex-direction: column; gap: 6px; padding-left: 2px; }
-.method-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.method-row { display: flex; align-items: center; gap: 8px; font-size: 11px; }
 .method-label {
-  width: 40px; flex-shrink: 0; color: var(--text3); font-size: 10.5px;
+  width: 40px; flex-shrink: 0; color: var(--text3); font-size: 10px;
   text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-mono);
 }
 .method-chips { display: flex; gap: 6px; flex-wrap: wrap; }
