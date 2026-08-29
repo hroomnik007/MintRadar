@@ -191,6 +191,15 @@
     order: 3;
     flex: 0 0 100%;
     justify-content: center;
+    /* Flex items default to min-width: auto, which for a flex container's own
+       children is based on ITS children's min-content — the 5 nowrap .nav-tab
+       labels together need ~369px, wider than the ~347px this row actually
+       has at 375px viewport. Without min-width: 0, that default overrides
+       flex-basis: 100% and the tab strip balloons past .navbar's edge,
+       causing horizontal scroll on the whole page. overflow-x: auto keeps
+       any remaining overflow contained to the tab strip itself. */
+    min-width: 0;
+    overflow-x: auto;
   }
   .nav-tab { flex: 1; justify-content: center; }
   .navbar-auth { margin-left: auto; }
