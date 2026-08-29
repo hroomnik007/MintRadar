@@ -88,7 +88,7 @@
 .smc-value.smc-green  { color: var(--green-bright); }
 .smc-value.smc-orange { color: var(--amber); }
 
-/* ── Network Health Index (compact panel, stacked in .stats-right-col) ──
+/* ── Network Health Index (standalone panel, row 2 col 4 — .stats-nhi-panel) ──
    Container is the plain .stats-panel background/border used by every other
    card on this page — no custom color. Horizontal layout: title row (with
    "Details ›") on top, then the ring and badge side by side on one line, so
@@ -176,14 +176,21 @@
   min-width: 0;
 }
 
+/* Row 2: NUT Coverage (span 3) + Network Health Index (1 col, no override
+   needed — auto-placement drops it into the remaining column). Row 3: Trust
+   Score Trend, full width (.stats-trend-panel below). */
 .stats-nut-panel {
-  grid-column: span 2;
+  grid-column: span 3;
+}
+
+.stats-trend-panel {
+  grid-column: 1 / -1;
 }
 
 /* Left block: Software in Use + Geographic Distribution, splitting the two
    columns they have always occupied. Keeping the wrapper (rather than letting
-   the two panels sit in the outer grid directly) means the NUT Coverage panel
-   below still spans exactly this same width with its own CSS untouched. */
+   the two panels sit in the outer grid directly) means row 1 stays a clean
+   4-across layout regardless of how NUT Coverage/NHI/Trend are spanned below. */
 .stats-left-col {
   grid-column: span 2;
   display: grid;
@@ -525,20 +532,6 @@
   margin: 0 18px;
 }
 
-/* ── Right column (spans 2 grid rows on desktop) ──────────────
-   Most Reliable / Network Health Index / Trust Score Trend stacked as three
-   separate panels. No align-self: stretch — the grid's own align-items: start
-   governs, so the column ends where its content ends instead of being pulled
-   down to the height of the left block + NUT Coverage. It still spans both
-   grid rows so the NUT Coverage panel's placement below the left block is
-   unaffected by how tall this column happens to be. */
-.stats-right-col {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  grid-row: span 2;
-}
-
 /* ── NUT Coverage section ────────────────────────────────────── */
 .stats-nut-section {
   padding: 14px 18px 24px;
@@ -563,9 +556,9 @@
 
 .stats-nut-rows-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   row-gap: 0;
-  column-gap: 48px;
+  column-gap: 32px;
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -792,19 +785,29 @@
    equal columns (Trust Score Movers) — each column is narrower than before,
    so the 2-column fallback needs to kick in earlier to avoid the 4-across
    row cramping mint names/version rows before the columns get too tight.
-   At this width the 4 top-level grid children (left-col span 2, right-col,
-   the movers panel, NUT Coverage span 2) naturally settle into a 2x2-ish
-   flow: [Software in Use | Geo] full row, then [Most Reliable+NHI+Trend |
-   Trust Score Movers] side by side, then NUT Coverage full-width below. */
+   At this width row 1's items settle into a 2x2-ish flow: [Software in Use |
+   Geo] full row (via left-col's own internal split), then [Most Reliable |
+   Trust Score Movers] side by side.
+   NUT Coverage and Network Health Index are reset to full-width (1 / -1)
+   here rather than left at span 3 / span 1 — a span larger than the grid's
+   actual column count doesn't clamp, it grows extra implicit columns, which
+   would silently break this 2-column layout. Trust Score Trend needs no
+   override: .stats-trend-panel is always 1 / -1 regardless of column count. */
 @media (max-width: 1300px) {
   .stats-cards-grid { grid-template-columns: 1fr 1fr; }
-  .stats-right-col { grid-row: auto; align-self: start; }
+  .stats-nut-panel { grid-column: 1 / -1; }
+  .stats-nhi-panel { grid-column: 1 / -1; }
 }
 
 @media (max-width: 768px) {
   .stats-cards-grid { grid-template-columns: 1fr; }
-  .stats-left-col { grid-template-columns: 1fr; }
-  .stats-right-col { grid-row: auto; align-self: start; }
+  /* .stats-left-col's base `grid-column: span 2` was never reset at this
+     breakpoint — with the outer grid down to 1 explicit column, a leftover
+     span 2 doesn't clamp, it grows an implicit 2nd column, which silently
+     paired up whichever two single-span panels came right after it in DOM
+     order (Most Reliable + Trust Score Movers) into that phantom column
+     instead of stacking them, causing horizontal overflow on mobile. */
+  .stats-left-col { grid-column: 1 / -1; grid-template-columns: 1fr; }
   .stats-nut-rows-grid { grid-template-columns: 1fr; overflow: hidden; }
   .stats-nut-panel { grid-column: 1 / -1; }
 }
