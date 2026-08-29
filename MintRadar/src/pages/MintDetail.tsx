@@ -276,6 +276,16 @@ function MintDetailContent({ url }: { url: string }) {
     staleTime: 10 * 60 * 1000,
     retry: false,
   })
+  // Deliberate two-mechanism review fetch, not redundant duplication: `reviews`
+  // (useMintReviews, live client-side via sharedPool) is the PRIMARY source — it's
+  // what lets a user see their own review immediately after submitting one (see
+  // useSubmitReview.ts), since it re-fetches on every visit with no cache.
+  // `nostrReviewsData` (GET /api/mints/nostr-reviews, backend-cached) is a
+  // fallback/secondary source: a second, independent network vantage point (the
+  // server may reach relays the user's own connection can't, or vice versa).
+  // Only reviews the live fetch missed are added in (`nostrOnly` below) — never
+  // shown twice. Do not remove either side without re-confirming with the
+  // maintainer first.
   const mergedReviews = useMemo(() => {
     const mintradarIds = new Set(reviews.map(r => r.id))
     const nostrOnly = (nostrReviewsData ?? [])

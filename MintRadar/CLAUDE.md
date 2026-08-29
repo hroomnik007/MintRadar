@@ -83,6 +83,7 @@ UNIQUE (url, version)
 - POST /api/mint/submit — submit new mint URL { url: string }, rate limited 20/IP/hr
 - POST /api/mints/discover — batch insert discovered URLs { urls: string[] }, rate limited 10/IP/hr
 - GET /api/og/mint?url= — bot-only OG HTML fragment for /mint/:url, routed here by nginx UA-sniffing (see "OG tags for /mint/:url" under Security & Infrastructure Gotchas); always 200, never 404/500
+- GET /api/mints/nostr-reviews?url= — server-side kind:38000 review fetch, TTL cached 2min; fallback/secondary source alongside the frontend's own live fetch, see "Reviews Feature" below
 
 ## /api/stats calculation rules
 - totalMints: mints where latest online IS NOT FALSE (online=true or null) — matches Dashboard "Known Mints"
@@ -522,7 +523,12 @@ All review-related relay lists now live in `src/core/nostr/relays.ts` (unified 2
 - **REVIEW_PUBLISH_RELAYS** (= REVIEW_RELAYS + 7 extra relays: bitcoiner.social, nostr.mom, oxtr.dev, mostr.pub, noswhere.com, pyramid.fiatjaf.com, lopp.social) — a deliberately wider net used only by `src/hooks/useSubmitReview.ts` when publishing a new review, for propagation reach
 - **PROFILE_RELAYS** (`relay.nostr.band, nos.lol, relay.primal.net, purplepag.es, relay.damus.io`) — unchanged, used for kind:0 profile lookups only
 
-`backend/src/index.ts`'s `NOSTR_REVIEWS_RELAYS` (server-side review fetch endpoint) mirrors REVIEW_RELAYS manually — same no-workspace caveat as the discovery relays above.
+`backend/src/index.ts`'s `NOSTR_REVIEWS_RELAYS` (server-side review fetch endpoint) mirrors REVIEW_RELAYS manually — same no-workspace caveat as the discovery relays above. A backend unit test (`backend/src/__tests__/nostrReviewsRelays.test.ts`) pins the exact array as a tripwire — it doesn't catch a frontend-only edit, but a future change to this list requires deliberately updating that test too.
+
+**Two independent review-fetch mechanisms, by design (documented 2026-08-29 after an investigation confirmed this wasn't accidental duplication):**
+- **Primary — `useMintReviews.ts`** (above): live, client-side, no cache, fetched fresh on every Mint Detail visit. This is what lets a user see their own review immediately after posting one (`useSubmitReview.ts`).
+- **Secondary/fallback — `GET /api/mints/nostr-reviews`** (`backend/src/index.ts`, `nostrReviewsCache`, TTL `NOSTR_REVIEWS_CACHE_TTL = 2 minutes`, shortened from an original 10 — long enough that the endpoint had plausibly been showing stale data for most of a page visit, given its role is only ever to catch what the primary source missed): runs the same kind:38000 query from the server as a second, independent network vantage point (relays the user's own connection can't reach, or vice versa). `MintDetail.tsx`'s `mergedReviews` (~line 279) only adds reviews the primary fetch didn't find — never shown twice. The endpoint also logs `[nostr-reviews] <url>: <N> events → <M> unique reviews` on every non-cached fetch, the only visibility into review counts anywhere in the app (no DB persistence, no stats field).
+- Do not remove either mechanism without re-confirming with the maintainer — see the review-fetch investigation report for the full reasoning.
 
 Key implementation details:
 - Rating parsed from `content` via regex `/\[(\d)\/5\]/` — the `rating` tag does not exist in practice

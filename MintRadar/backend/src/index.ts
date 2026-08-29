@@ -29,11 +29,23 @@ interface NostrReviewEntry {
 }
 
 const nostrReviewsCache = new Map<string, { data: NostrReviewEntry[]; expiresAt: number }>()
-const NOSTR_REVIEWS_CACHE_TTL = 10 * 60 * 1000 // 10 minutes
-// Mirrors the frontend's REVIEW_RELAYS (src/core/nostr/relays.ts) — the two packages
-// can't share a module directly (separate npm packages, no workspace set up), so keep
-// these two arrays in sync manually when editing either one.
-const NOSTR_REVIEWS_RELAYS = [
+// This endpoint is the fallback/secondary source in a two-mechanism pattern (see
+// the comment on the route below) — its data only needs to be "recent enough" to
+// catch what the client's own live fetch missed, never authoritative-fresh. 2
+// minutes keeps that staleness risk low while still meaningfully cutting relay
+// load for back-to-back page views (e.g. bouncing between a few mints), instead
+// of refetching from all 18 relays on every single request. Shortened from the
+// original 10 minutes, which was long enough to plausibly hide a just-published
+// review from this fallback path for most of a page visit.
+const NOSTR_REVIEWS_CACHE_TTL = 2 * 60 * 1000 // 2 minutes
+// NOSTR_REVIEWS_RELAYS mirrors the frontend's REVIEW_RELAYS constant
+// (src/core/nostr/relays.ts) — the two npm packages have no shared workspace, so
+// this array MUST be kept in sync with that one manually whenever either changes.
+// backend/src/__tests__/nostrReviewsRelays.test.ts pins this exact array as a
+// tripwire: it won't catch a silent frontend-only edit, but it forces a
+// deliberate test update (and, ideally, a matching edit on the other side)
+// before this list can drift here.
+export const NOSTR_REVIEWS_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
   'wss://purplepag.es',
@@ -1101,6 +1113,19 @@ app.post('/api/mints/discover', async (req: Request, res: Response): Promise<voi
   res.json({ added, total: body.urls.length, results })
 })
 
+// Fallback/secondary source in a deliberate two-mechanism review-fetch pattern.
+// The frontend's useMintReviews.ts (src/hooks/useMintReviews.ts) fetches live,
+// client-side, on every Mint Detail page view — that's the PRIMARY source, and
+// the only one guaranteed to show a user their own just-published review
+// immediately (see useSubmitReview.ts). This endpoint runs the same kind:38000
+// query from the server instead, cached (NOSTR_REVIEWS_CACHE_TTL above), as a
+// second, independent network vantage point: it can reach relays the user's own
+// (possibly restricted/slow) connection can't, or vice versa. MintDetail.tsx
+// merges both and only adds this endpoint's results where the live fetch found
+// nothing (see the dedup comment there) — this is not redundant duplication,
+// it's belt-and-suspenders coverage. Do not remove either side without
+// re-confirming with the maintainer; see the investigation report this pattern
+// was documented from.
 app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {
   const url = req.query['url']
 
@@ -1158,6 +1183,7 @@ app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {
       reviews.sort((a, b) => b.createdAt - a.createdAt)
       nostrReviewsCache.set(url, { data: reviews, expiresAt: Date.now() + NOSTR_REVIEWS_CACHE_TTL })
       nostrPool.destroy()
+      console.log(`[nostr-reviews] ${url}: ${validEvents.length} events → ${reviews.length} unique reviews`)
       res.json(reviews)
     })
     .catch((err: unknown) => {
