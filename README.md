@@ -26,10 +26,10 @@ Composite score (0–100) calculated server-side after every probe:
 | Component | Weight | Basis |
 |-----------|--------|-------|
 | Uptime | 45% | 24 h availability |
-| NUT Support | 30% | Supported NUT specs (out of 26 tracked) |
-| Version Freshness | 15% | Recency of Nutshell release vs. latest known version |
+| NUT Support | 30% | Supported NUT specs (out of 25 tracked) |
+| Version Freshness | 15% | Recency of the mint's software release (Nutshell or cdk) vs. latest known version |
 | Contact Info | 5% | Contact methods provided (email, Twitter, Nostr, website) |
-| Audit Reliability | 5% | Error rate from audit.8333.space third-party audits |
+| Audit Reliability | 5% | Rolling-window error rate (last ~100 real swaps) from audit.8333.space |
 
 Interactive breakdown modal on each mint — hover any row for a tooltip explaining the scoring logic.
 
@@ -57,7 +57,7 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 
 ### 🧩 NUT Explorer
 
-26 tracked NUT cards (NUT-04, 05, 07–30) — each showing adoption %, supporting mint count, and a link to the specification. Expandable "+N more" modal with a searchable list of all supporting mints.
+25 tracked NUT cards (NUT-04, 05, 07–30, excluding NUT-13 — a wallet-side spec no mint ever advertises) — each showing adoption %, supporting mint count, and a link to the specification. Expandable "+N more" modal with a searchable list of all supporting mints.
 
 ### ⚖️ Mint Comparison Tool
 
@@ -74,7 +74,7 @@ Select 2–4 mints and compare side-by-side: Status, Trust Score, Uptime, Latenc
 
 ### 📡 Nostr NIP-87 Discovery
 
-Automatic mint discovery running every 6 hours from 12 Nostr relays (damus.io, nos.lol, purplepag.es, snort.social, primal.net, cashumints.space, azzamo.net, nostr.band, nostr.wine, nostr-pub.wellorder.net, offchain.pub, relay.8333.space) using **kind:38172** mint announcements and **kind:38000** review events (URL mining), plus the **audit.8333.space** API — 3 sources running in parallel.
+Automatic mint discovery running every 6 hours from 17 Nostr relays (damus.io, nos.lol, purplepag.es, snort.social, primal.net, cashumints.space, azzamo.net, eden.nostr.land, nostr.wine, nostr-pub.wellorder.net, offchain.pub, relay.8333.space, oxtr.dev, nostr.net, nostr21.com, nostr.bitcoiner.social, nostr.cypherpunk.today) using **kind:38172** mint announcements and **kind:38000** review events (URL mining), plus the **audit.8333.space** API — 3 sources running in parallel.
 
 ### 🔧 Tools
 
@@ -83,16 +83,20 @@ Automatic mint discovery running every 6 hours from 12 Nostr relays (damus.io, n
 
 ### ⭐ Nostr-Based Reviews
 
-Mint Detail page shows community reviews fetched from 13 relays as **kind:38000** events. Ratings are parsed from review text (`[N/5]` format). Author profiles (name + avatar) are resolved from Nostr and displayed alongside each review. Images are only loaded over HTTPS.
+Mint Detail page shows community reviews fetched from 18 relays as **kind:38000** events. Ratings are parsed from review text (`[N/5]` format). Author profiles (name + avatar) are resolved from Nostr and displayed alongside each review. Images are only loaded over HTTPS.
+
+### 🔗 Social Link Previews
+
+Sharing a mint page link on Twitter/X, Discord, Telegram, Slack, or WhatsApp shows a live preview card with that mint's actual name, Trust Score, and online status — server-rendered specifically for the sharing platform's link-preview crawler, since it doesn't run JavaScript.
 
 ### 🏷️ Mint Age Badges
 
 | Badge | Age |
 |-------|-----|
-| 🌱 Fresh | < 7 days |
-| ✅ Established | 7 – 90 days |
-| 🏛️ Veteran | 90 days – 1 year |
-| 👑 OG | > 1 year |
+| 🌱 Fresh | < 1 month |
+| ✅ Established | 1 – 6 months |
+| 🏛️ Veteran | 6 – 12 months |
+| 👑 OG | ≥ 12 months |
 
 ### 🔒 Privacy-First
 
