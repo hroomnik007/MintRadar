@@ -11,6 +11,7 @@ import { normalizeUrl } from './discovery.js'
 import { computeDegraded } from './degraded.js'
 import { parseReviewRatingAndComment } from './reviews.js'
 import { authenticateNip98 } from './nip98Auth.js'
+import { fetchOgMintData, renderMintOgHtml } from './og.js'
 
 let knownMintsCache: { data: unknown; expiresAt: number } | null = null
 const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
@@ -841,6 +842,34 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/mints/known]', err)
       res.status(500).json({ error: 'Internal server error' })
+    })
+})
+
+// Bot-only OG tag fragment for /mint/:url — nginx routes social-crawler user
+// agents here (see deploy/nginx.conf); regular browsers never hit this route
+// and get the normal client-rendered SPA instead. Always responds 200 with a
+// valid HTML fragment (generic fallback if the mint/url isn't found or the DB
+// lookup fails) since a crawler getting a 404/500 means no preview at all.
+app.get('/api/og/mint', (req: Request, res: Response): void => {
+  const rawUrl = req.query['url']
+  const hasValidUrl = typeof rawUrl === 'string' && rawUrl.length > 0 && rawUrl.length <= MAX_URL_LENGTH
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8')
+  res.setHeader('Cache-Control', `max-age=${Math.floor(KNOWN_MINTS_CACHE_TTL / 1000)}`)
+
+  if (!hasValidUrl) {
+    res.send(renderMintOgHtml(null, ''))
+    return
+  }
+
+  const normalized = normalizeUrl(rawUrl)
+  fetchOgMintData(normalized)
+    .then(mint => {
+      res.send(renderMintOgHtml(mint, normalized))
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[/api/og/mint]', err)
+      res.send(renderMintOgHtml(null, normalized))
     })
 })
 
