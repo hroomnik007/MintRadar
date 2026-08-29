@@ -147,20 +147,28 @@ function mintAgeBadge(discoveredAt: string | null | undefined): { label: string;
   return { label: 'OG', color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' }
 }
 
-function VersionMintsModal({ sw, ver, mints, onClose }: {
+interface SoftwareVersionEntry {
+  ver: string
+  count: number
+  fullVersion: string
+  badge: string
+  badgeColor: string
+}
+
+// Mint-list drill-down level of SoftwareModal — this is the body the
+// standalone per-version modal used to render, unchanged (rows, Trust Score,
+// age badge, "Show all", "X online · Y offline", "Sorted by Trust Score").
+// Kept as its own component so the call site can `key` it by version, which
+// resets `showAll` when the user backs out and drills into a different one.
+function VersionMintsView({ sw, ver, mints, onBack, onClose }: {
   sw: string
   ver: string
   mints: KnownMint[]
+  onBack: () => void
   onClose: () => void
 }) {
   const navigate = useNavigate()
   const [showAll, setShowAll] = useState(false)
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
 
   const sorted = useMemo(() =>
     [...mints].sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
@@ -172,17 +180,16 @@ function VersionMintsModal({ sw, ver, mints, onClose }: {
   const offlineCount = mints.filter(m => m.online === false).length
 
   return (
-    <div className="nut-modal-overlay" onClick={onClose}>
-      <div className="nut-modal" onClick={e => e.stopPropagation()}>
-        <button type="button" className="nut-modal-close" onClick={onClose}>✕</button>
-        <div className="nut-modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span className="nut-modal-title">{title}</span>
-            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{mints.length} mint{mints.length !== 1 ? 's' : ''}</span>
-          </div>
+    <>
+      <div className="nut-modal-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <button type="button" className="nut-modal-back" onClick={onBack} aria-label={`Back to ${sw} versions`}>‹</button>
+          <span className="nut-modal-title">{title}</span>
+          <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{mints.length} mint{mints.length !== 1 ? 's' : ''}</span>
         </div>
-        <div className="nut-modal-list">
-          {displayed.map(m => {
+      </div>
+      <div className="nut-modal-list">
+        {displayed.map(m => {
             const score = m.trustScore ?? null
             const scoreColor = score != null ? (score >= 70 ? '#4ade80' : score >= 40 ? '#ffa500' : '#ff4d4d') : 'var(--text3)'
             const badge = mintAgeBadge(m.discoveredAt ?? null)
@@ -206,21 +213,121 @@ function VersionMintsModal({ sw, ver, mints, onClose }: {
               </div>
             )
           })}
-          {!showAll && sorted.length > 10 && (
-            <button
-              type="button"
-              onClick={e => { e.stopPropagation(); setShowAll(true) }}
-              style={{ width: '100%', background: 'none', border: 'none', color: 'var(--accent)', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer', padding: '8px 0' }}
+        {!showAll && sorted.length > 10 && (
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); setShowAll(true) }}
+            style={{ width: '100%', background: 'none', border: 'none', color: 'var(--accent)', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer', padding: '8px 0' }}
+          >
+            Show all {sorted.length} mints
+          </button>
+        )}
+        {sorted.length === 0 && <div className="nut-modal-empty">No mints</div>}
+      </div>
+      <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span>{onlineCount} online · {offlineCount} offline</span>
+        <span>Sorted by Trust Score</span>
+      </div>
+    </>
+  )
+}
+
+// Version-list level of SoftwareModal. Replaces the inline accordion that used
+// to expand inside the Software in Use panel (which stretched the panel and
+// left the neighbouring fixed-height panels with dead space). Same data the
+// accordion showed — version, mint count, latest/outdated/old badge — restyled
+// onto the .nut-modal-row/.sw-badge vocabulary the mint-list level already uses.
+function SoftwareVersionsView({ sw, versions, total, accentColor, onSelectVersion }: {
+  sw: string
+  versions: SoftwareVersionEntry[]
+  total: number
+  accentColor: string
+  onSelectVersion: (v: SoftwareVersionEntry) => void
+}) {
+  return (
+    <>
+      <div className="nut-modal-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <span className="nut-modal-title">{sw}</span>
+          <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{versions.length} version{versions.length !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
+      <div className="nut-modal-list">
+        {versions.map(v => {
+          const vPct = total > 0 ? Math.round(v.count / total * 100) : 0
+          return (
+            <div
+              key={v.ver}
+              className="nut-modal-row"
+              style={{ cursor: 'pointer' }}
+              onClick={() => onSelectVersion(v)}
             >
-              Show all {sorted.length} mints
-            </button>
-          )}
-          {sorted.length === 0 && <div className="nut-modal-empty">No mints</div>}
-        </div>
-        <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span>{onlineCount} online · {offlineCount} offline</span>
-          <span>Sorted by Trust Score</span>
-        </div>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text2)', flexShrink: 0, minWidth: 90 }}>{v.ver || '—'}</span>
+              <div className="dist-track" style={{ flex: 1, height: 3 }}>
+                <div className="dist-fill" style={{ width: `${vPct}%`, background: accentColor, opacity: 0.55 }} />
+              </div>
+              <span style={{ fontSize: 11, fontFamily: 'var(--font-mono-data)', color: 'var(--text2)', flexShrink: 0 }}>{v.count}</span>
+              <span className="sw-badge" style={{ color: v.badgeColor, borderColor: v.badgeColor + '44', background: v.badgeColor + '11' }}>{v.badge}</span>
+            </div>
+          )
+        })}
+        {versions.length === 0 && <div className="nut-modal-empty">No versions</div>}
+      </div>
+      <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span>{total} mint{total !== 1 ? 's' : ''} running {sw}</span>
+        <span>Newest version first</span>
+      </div>
+    </>
+  )
+}
+
+// Two-level drill-down modal: version list → mint list, sharing one overlay
+// and one close button. Close (✕ / overlay click / Escape) always tears down
+// the whole modal regardless of the level; only the mint-list level's "‹"
+// steps back up, and it never closes the modal.
+function SoftwareModal({ sw, versions, total, accentColor, allMints, onClose }: {
+  sw: string
+  versions: SoftwareVersionEntry[]
+  total: number
+  accentColor: string
+  allMints: KnownMint[]
+  onClose: () => void
+}) {
+  const [drilled, setDrilled] = useState<SoftwareVersionEntry | null>(null)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const drilledMints = useMemo(
+    () => drilled ? allMints.filter(m => m.version === drilled.fullVersion) : [],
+    [drilled, allMints]
+  )
+
+  return (
+    <div className="nut-modal-overlay" onClick={onClose}>
+      <div className="nut-modal" onClick={e => e.stopPropagation()}>
+        <button type="button" className="nut-modal-close" onClick={onClose}>✕</button>
+        {drilled ? (
+          <VersionMintsView
+            key={drilled.fullVersion}
+            sw={sw}
+            ver={drilled.ver}
+            mints={drilledMints}
+            onBack={() => setDrilled(null)}
+            onClose={onClose}
+          />
+        ) : (
+          <SoftwareVersionsView
+            sw={sw}
+            versions={versions}
+            total={total}
+            accentColor={accentColor}
+            onSelectVersion={setDrilled}
+          />
+        )}
       </div>
     </div>
   )
@@ -487,8 +594,7 @@ export default function Stats() {
   const [modalNut, setModalNut] = useState<string | null>(null)
   const [cityModal, setCityModal] = useState<string | null>(null)
   const [showMoreLocations, setShowMoreLocations] = useState(false)
-  const [versionModal, setVersionModal] = useState<{ sw: string; ver: string; fullVersion: string } | null>(null)
-  const [expandedSw, setExpandedSw] = useState<string | null>(null)
+  const [softwareModal, setSoftwareModal] = useState<string | null>(null)
   const [reliableTab, setReliableTab] = useState<'reliable' | 'trust'>('reliable')
   const [moversPeriod, setMoversPeriod] = useState<'7d' | '30d'>('7d')
   const [trendDays, setTrendDays] = useState<30 | 90>(30)
@@ -554,11 +660,6 @@ export default function Stats() {
     if (!cityModal || !knownMintsData) return []
     return knownMintsData.filter(m => (m.serverLocation ?? 'Unknown') === cityModal)
   }, [cityModal, knownMintsData])
-
-  const versionMints = useMemo(() => {
-    if (!versionModal || !knownMintsData) return []
-    return knownMintsData.filter(m => m.version === versionModal.fullVersion)
-  }, [versionModal, knownMintsData])
 
   interface TrustTrendResponse {
     trend: Array<{ date: string; avgTrust: number }>
@@ -792,36 +893,19 @@ export default function Stats() {
             <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:6}}>
               {versionDist.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
-              ) : versionDist.map(({sw, total, versions, accentColor}) => {
+              ) : versionDist.map(({sw, total, accentColor}) => {
                 const totalOnline = versionDist.reduce((s, d) => s + d.total, 0)
                 const pct = totalOnline > 0 ? Math.round(total / totalOnline * 100) : 0
-                const isExpanded = expandedSw === sw
                 return (
-                  <div key={sw} className="sw-accordion" style={isExpanded ? {borderLeft:`2px solid ${accentColor}`} : {}}>
-                    <div
-                      className={`sw-accordion-header${isExpanded ? ' expanded' : ''}`}
-                      onClick={() => setExpandedSw(isExpanded ? null : sw)}
-                    >
-                      <span className="dist-label" style={{fontWeight:600,color:isExpanded ? accentColor : 'var(--text)',fontSize:13}}>{sw}</span>
-                      <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:accentColor}} /></div>
-                      <span className="dist-count" style={{color:'var(--text2)'}}>{total}</span>
-                      <span className="sw-chevron" style={{color:isExpanded ? accentColor : 'var(--text3)'}}>{isExpanded ? '▲' : '▼'}</span>
-                    </div>
-                    {isExpanded && (
-                      <div className="sw-ver-panel">
-                        {versions.map(({ver, count, fullVersion, badge, badgeColor}) => {
-                          const vPct = total > 0 ? Math.round(count / total * 100) : 0
-                          return (
-                            <div key={ver} className="dist-row sw-ver-row" onClick={e => { e.stopPropagation(); setVersionModal({ sw, ver, fullVersion }) }}>
-                              <span className="dist-label sw-ver-label" style={{fontFamily:'var(--font-mono)',fontSize:12,color:'var(--text2)'}}>{ver || '—'}</span>
-                              <div className="dist-track"><div className="dist-fill" style={{width:`${vPct}%`,background:accentColor,opacity:0.55}} /></div>
-                              <span className="dist-count" style={{fontSize:10}}>{count}</span>
-                              <span className="sw-badge" style={{color:badgeColor,borderColor:badgeColor+'44',background:badgeColor+'11'}}>{badge}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
+                  <div
+                    key={sw}
+                    className="sw-row"
+                    onClick={() => setSoftwareModal(sw)}
+                  >
+                    <span className="dist-label" style={{fontWeight:600,color:'var(--text)',fontSize:13}}>{sw}</span>
+                    <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:accentColor}} /></div>
+                    <span className="dist-count" style={{color:'var(--text2)'}}>{total}</span>
+                    <span className="sw-chevron" style={{color:'var(--text3)'}}>›</span>
                   </div>
                 )
               })}
@@ -1105,14 +1189,20 @@ export default function Stats() {
           onSelectLocation={loc => { setShowMoreLocations(false); setCityModal(loc) }}
         />
       )}
-      {versionModal !== null && (
-        <VersionMintsModal
-          sw={versionModal.sw}
-          ver={versionModal.ver}
-          mints={versionMints}
-          onClose={() => setVersionModal(null)}
-        />
-      )}
+      {softwareModal !== null && (() => {
+        const entry = versionDist.find(d => d.sw === softwareModal)
+        if (!entry) return null
+        return (
+          <SoftwareModal
+            sw={entry.sw}
+            versions={entry.versions}
+            total={entry.total}
+            accentColor={entry.accentColor}
+            allMints={knownMintsData ?? []}
+            onClose={() => setSoftwareModal(null)}
+          />
+        )
+      })()}
       {showHealthBreakdown && networkHealth && (
         <NetworkHealthModal
           score={networkHealth.score}

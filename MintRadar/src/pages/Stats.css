@@ -211,12 +211,12 @@
 }
 
 /* ── Software accordion ──────────────────────────────────────── */
-.sw-accordion {
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.sw-accordion-header {
+/* One software row in the Software in Use panel. Opens SoftwareModal
+   (version list → mint list drill-down) — it deliberately does NOT expand
+   in place any more: the old accordion stretched this panel and left the
+   neighbouring fixed-height panels in the same grid row with dead space.
+   The panel is now a constant height regardless of interaction. */
+.sw-row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -227,51 +227,15 @@
   transition: background 120ms ease;
 }
 
-.sw-accordion-header:hover {
+.sw-row:hover {
   background: #161b22;
 }
 
-.sw-accordion-header.expanded {
-  border-radius: 6px 6px 0 0;
-  border-bottom: 1px solid var(--border);
-}
-
 .sw-chevron {
-  font-size: 8px;
+  font-size: 13px;
   flex-shrink: 0;
   line-height: 1;
   transition: color 150ms ease;
-}
-
-.sw-ver-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  background: var(--surface-2);
-  border-radius: 0 0 6px 6px;
-  padding: 8px 10px;
-}
-
-/* ── Version breakdown ───────────────────────────────────────── */
-.sw-ver-row {
-  padding: 2px 4px;
-  gap: 4px;
-  margin: 0 -4px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 120ms ease;
-}
-
-.sw-ver-row:hover {
-  background: rgba(255,255,255,0.05);
-}
-
-.sw-ver-row .dist-track {
-  height: 3px;
-}
-
-.sw-ver-label {
-  width: 110px;
 }
 
 .sw-badge {
@@ -671,6 +635,23 @@
   line-height: 1;
 }
 .nut-modal-close:hover { background: var(--bg3); color: var(--text); }
+
+/* Drill-down "back" affordance in SoftwareModal's mint-list level. Inline in
+   the header row (not absolutely positioned like .nut-modal-close), so it
+   never overlaps the ✕ in the corner — the two are separate actions: this one
+   steps back up to the version list, ✕ closes the whole modal. */
+.nut-modal-back {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 8px 4px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+.nut-modal-back:hover { background: var(--bg3); color: var(--text); border-color: var(--border-hi); }
 
 .nut-modal-header { padding-right: 24px; }
 
