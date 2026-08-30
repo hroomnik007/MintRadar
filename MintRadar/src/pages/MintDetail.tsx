@@ -1215,7 +1215,7 @@ function MintDetailContent({ url }: { url: string }) {
             {!versionHistory || versionHistory.length === 0 ? (
               <div style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>No version history available.</div>
             ) : (
-              <>
+              <div style={{maxWidth:420}}>
                 <div style={{display:'grid',gridTemplateColumns:'auto 1fr 1fr',gap:'0 12px',marginBottom:4}}>
                   <span style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Date</span>
                   <span style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>From</span>
@@ -1239,7 +1239,7 @@ function MintDetailContent({ url }: { url: string }) {
                     </span>
                   </div>
                 ))}
-              </>
+              </div>
             )}
           </div>
           </>)}
