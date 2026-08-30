@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { verifyEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
 import { REVIEW_RELAYS, PROFILE_RELAYS } from '@/core/nostr/relays'
-import { deduplicateByPubkey, parseReviewEvent, filterAndSortReviews } from '@/utils/reviewUtils'
+import { deduplicateByPubkey, parseReviewEvent, sortReviewsByNewest } from '@/utils/reviewUtils'
 
 export interface MintReview {
   id: string
@@ -25,11 +25,11 @@ export function useMintReviews(mintUrl: string) {
     sharedPool.querySync(REVIEW_RELAYS, {
       kinds: [38000],
       '#u': [mintUrl],
-      limit: 50,
+      limit: 500,
     }).then(async events => {
       if (cancelled) return
       const validEvents = events.filter(e => verifyEvent(e))
-      const parsed = filterAndSortReviews(
+      const parsed = sortReviewsByNewest(
         deduplicateByPubkey(validEvents).map(parseReviewEvent)
       )
       // Show reviews immediately without waiting for profiles

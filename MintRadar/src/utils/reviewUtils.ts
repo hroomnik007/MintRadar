@@ -45,16 +45,17 @@ export function parseReviewEvent(e: ReviewEvent): ParsedReview {
   return { id: e.id, pubkey: e.pubkey, rating, comment, createdAt: e.created_at }
 }
 
-// Filter events with neither rating nor comment, then sort newest-first.
-export function filterAndSortReviews(parsed: ParsedReview[]): ParsedReview[] {
-  return parsed
-    .filter(r => r.rating !== null || r.comment.length > 0)
-    .sort((a, b) => b.createdAt - a.createdAt)
+// Sort newest-first. Rating-less / comment-less events are kept: a bare kind:38000
+// event pointing at a mint is still an endorsement and is counted as a review
+// (matches how cashumints.space counts). The average-rating calculation excludes
+// them separately (see MintDetail.tsx) — they never carried a score to begin with.
+export function sortReviewsByNewest(parsed: ParsedReview[]): ParsedReview[] {
+  return [...parsed].sort((a, b) => b.createdAt - a.createdAt)
 }
 
-// Convenience: run the full dedup → parse → filter+sort pipeline.
+// Convenience: run the full dedup → parse → sort pipeline.
 export function processReviewEvents(events: ReviewEvent[]): ParsedReview[] {
   const deduped = deduplicateByPubkey(events)
   const parsed = deduped.map(parseReviewEvent)
-  return filterAndSortReviews(parsed)
+  return sortReviewsByNewest(parsed)
 }

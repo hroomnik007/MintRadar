@@ -1158,7 +1158,7 @@ app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {
   const nostrPool = new SimplePool()
 
   Promise.race([
-    nostrPool.querySync(NOSTR_REVIEWS_RELAYS, { kinds: [38000], '#u': [url], limit: 50 }),
+    nostrPool.querySync(NOSTR_REVIEWS_RELAYS, { kinds: [38000], '#u': [url], limit: 500 }),
     new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error('timeout')), NOSTR_REVIEWS_TIMEOUT_MS)
     ),

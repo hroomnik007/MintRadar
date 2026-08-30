@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   deduplicateByPubkey,
   parseReviewEvent,
-  filterAndSortReviews,
+  sortReviewsByNewest,
   processReviewEvents,
   type ReviewEvent,
 } from '../utils/reviewUtils'
@@ -125,36 +125,40 @@ describe('parseReviewEvent', () => {
   })
 })
 
-// ── filterAndSortReviews ───────────────────────────────────────
+// ── sortReviewsByNewest ────────────────────────────────────────
 
-describe('filterAndSortReviews', () => {
+describe('sortReviewsByNewest', () => {
   it('keeps reviews with a rating even if comment is empty', () => {
     const r = { id: '1', pubkey: 'a', rating: 5, comment: '', createdAt: 1 }
-    expect(filterAndSortReviews([r])).toHaveLength(1)
+    expect(sortReviewsByNewest([r])).toHaveLength(1)
   })
 
   it('keeps reviews with a non-empty comment even if rating is null', () => {
     const r = { id: '1', pubkey: 'a', rating: null, comment: 'Nice', createdAt: 1 }
-    expect(filterAndSortReviews([r])).toHaveLength(1)
+    expect(sortReviewsByNewest([r])).toHaveLength(1)
   })
 
-  it('removes reviews with neither rating nor comment', () => {
+  it('keeps rating-less, comment-less endorsement events (counted as reviews)', () => {
     const empty = { id: '1', pubkey: 'a', rating: null, comment: '', createdAt: 1 }
     const good  = { id: '2', pubkey: 'b', rating: 4, comment: '', createdAt: 2 }
-    expect(filterAndSortReviews([empty, good])).toHaveLength(1)
+    expect(sortReviewsByNewest([empty, good])).toHaveLength(2)
   })
 
   it('sorts by createdAt descending (newest first)', () => {
     const old  = { id: '1', pubkey: 'a', rating: 3, comment: '', createdAt: 100 }
     const mid  = { id: '2', pubkey: 'b', rating: 4, comment: '', createdAt: 200 }
     const newest = { id: '3', pubkey: 'c', rating: 5, comment: '', createdAt: 300 }
-    const result = filterAndSortReviews([old, newest, mid])
+    const result = sortReviewsByNewest([old, newest, mid])
     expect(result.map(r => r.createdAt)).toEqual([300, 200, 100])
   })
 
-  it('returns an empty array when all reviews are meaningless', () => {
-    const bad = { id: '1', pubkey: 'a', rating: null, comment: '', createdAt: 1 }
-    expect(filterAndSortReviews([bad])).toEqual([])
+  it('does not mutate the input array', () => {
+    const input = [
+      { id: '1', pubkey: 'a', rating: 3, comment: '', createdAt: 100 },
+      { id: '2', pubkey: 'b', rating: 4, comment: '', createdAt: 200 },
+    ]
+    sortReviewsByNewest(input)
+    expect(input.map(r => r.createdAt)).toEqual([100, 200])
   })
 })
 
@@ -165,12 +169,12 @@ describe('processReviewEvents', () => {
     expect(processReviewEvents([])).toEqual([])
   })
 
-  it('deduplicates, parses, filters meaningless, and sorts in one call', () => {
+  it('deduplicates, parses, and sorts in one call (rating-less events kept)', () => {
     const events: ReviewEvent[] = [
       // Two events from same pubkey — only the newest (created_at 300) should survive
       makeEvent({ pubkey: 'alice', created_at: 100, content: '[3/5] old alice' }),
       makeEvent({ pubkey: 'alice', created_at: 300, content: '[5/5] new alice' }),
-      // Meaningless event — neither rating nor comment
+      // Rating-less, comment-less endorsement — kept, counted as a review
       makeEvent({ pubkey: 'bob', created_at: 200, content: '' }),
       // Valid event from carol
       makeEvent({ pubkey: 'carol', created_at: 150, content: 'Just text, no rating' }),
@@ -178,15 +182,18 @@ describe('processReviewEvents', () => {
 
     const result = processReviewEvents(events)
 
-    // bob filtered out; alice deduplicated (newest kept); carol kept
-    expect(result).toHaveLength(2)
-    // sorted newest-first: alice (300), carol (150)
+    // alice deduplicated (newest kept); bob + carol kept
+    expect(result).toHaveLength(3)
+    // sorted newest-first: alice (300), bob (200), carol (150)
     expect(result[0]!.pubkey).toBe('alice')
     expect(result[0]!.rating).toBe(5)
     expect(result[0]!.comment).toBe('new alice')
-    expect(result[1]!.pubkey).toBe('carol')
+    expect(result[1]!.pubkey).toBe('bob')
     expect(result[1]!.rating).toBeNull()
-    expect(result[1]!.comment).toBe('Just text, no rating')
+    expect(result[1]!.comment).toBe('')
+    expect(result[2]!.pubkey).toBe('carol')
+    expect(result[2]!.rating).toBeNull()
+    expect(result[2]!.comment).toBe('Just text, no rating')
   })
 
   it('keeps reviews from many distinct pubkeys', () => {

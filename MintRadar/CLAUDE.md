@@ -532,7 +532,10 @@ All review-related relay lists now live in `src/core/nostr/relays.ts` (unified 2
 
 Key implementation details:
 - Rating parsed from `content` via regex `/\[(\d)\/5\]/` — the `rating` tag does not exist in practice
-- Events without a rating AND without text body are discarded as meaningless
+- **REQ `limit` is 500** (`useMintReviews.ts` + backend `/api/mints/nostr-reviews`), raised from 50 on 2026-08-30 — with limit 50 the dominant relays all returned the same newest 50 events, so the pool union barely exceeded 50 and undercounted mints like `mint.minibits.cash/Bitcoin` (~85 real reviews, cashumints.space shows 82) by ~40%.
+- Rating-less / comment-less kind:38000 events are **kept and counted** as reviews (a bare event pointing at a mint is still an endorsement — matches how cashumints.space counts). `sortReviewsByNewest()` in `reviewUtils.ts` no longer filters them (was `filterAndSortReviews`). The **average-★ calculation excludes them** (`MintDetail.tsx` `ratedReviews = mergedReviews.filter(r => r.rating !== null)`) so they never dilute the score; the UI list renders them with no stars.
+- The header count ("X reviews · via NIP-87") reflects `mergedReviews.length` — the exact array rendered in the list — not the primary browser fetch alone.
+- Author Nostr profiles (name + avatar) are fetched inline inside `useMintReviews.ts` via **PROFILE_RELAYS** — a separate `useNostrProfiles` hook was removed due to a React state sync bug
 - Author Nostr profiles (name + avatar) are fetched inline inside `useMintReviews.ts` via **PROFILE_RELAYS** — a separate `useNostrProfiles` hook was removed due to a React state sync bug
 - Security: `profile.picture` is rendered only if it starts with `https://`
 

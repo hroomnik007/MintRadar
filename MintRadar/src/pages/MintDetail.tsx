@@ -300,7 +300,6 @@ function MintDetailContent({ url }: { url: string }) {
     const mintradarIds = new Set(reviews.map(r => r.id))
     const nostrOnly = (nostrReviewsData ?? [])
       .filter(r => !mintradarIds.has(r.id))
-      .filter(r => r.rating !== null || r.content.trim().length > 0)
     const all: Array<{ id: string; pubkey: string; rating: number | null; comment: string; createdAt: number; source: 'mintradar' | 'nostr'; profile?: { name?: string; picture?: string } }> = [
       ...reviews.map(r => ({ ...r, source: 'mintradar' as const })),
       ...nostrOnly.map(r => ({ id: r.id, pubkey: r.pubkey, rating: r.rating, comment: r.content, createdAt: r.createdAt, source: 'nostr' as const })),
@@ -552,7 +551,10 @@ function MintDetailContent({ url }: { url: string }) {
   const isOutdated = version !== null && latestGlobalVersion !== null
     && (parseMinorVer(latestGlobalVersion) - parseMinorVer(version)) > 2
 
-  const ratedReviews = reviews.filter(r => r.rating !== null)
+  // Average rating is computed only over events that actually carry a numeric
+  // rating — rating-less endorsement events are counted in the review total but
+  // never contribute to (or dilute) the star average.
+  const ratedReviews = mergedReviews.filter(r => r.rating !== null)
   const avgRating = ratedReviews.length > 0
     ? Math.round(ratedReviews.reduce((s, r) => s + (r.rating as number), 0) / ratedReviews.length * 10) / 10
     : null
@@ -1322,11 +1324,13 @@ function MintDetailContent({ url }: { url: string }) {
                         {'★'.repeat(Math.round(avgRating))}{'☆'.repeat(5-Math.round(avgRating))}
                       </span>
                     </div>
-                  ) : (
+                  ) : mergedReviews.length === 0 ? (
                     <span style={{fontSize:12,color:'var(--text3)'}}>No reviews yet</span>
+                  ) : (
+                    <span style={{fontSize:12,color:'var(--text3)'}}>No star ratings yet</span>
                   )}
-                  {reviews.length > 0 && (
-                    <span className="reviews-count">{reviews.length} review{reviews.length !== 1 ? 's' : ''} · via NIP-87</span>
+                  {mergedReviews.length > 0 && (
+                    <span className="reviews-count">{mergedReviews.length} review{mergedReviews.length !== 1 ? 's' : ''} · via NIP-87</span>
                   )}
                 </div>
                 {isLoggedIn && (
