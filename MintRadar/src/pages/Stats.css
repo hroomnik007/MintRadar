@@ -580,8 +580,13 @@
 
 .stats-nut-row:hover { background: #161b22; }
 
+/* Font sizes here follow this page's existing vocabulary rather than their
+   own smaller scale (measured in-browser, same approach as the Units &
+   Methods font fix): 9px to match .snc-nut-tag (the identical NUT badge
+   pill used elsewhere, e.g. in NutMintsModal) and 11px to match
+   .dist-label/.dist-count (Geographic Distribution's row text) below. */
 .snr-nut-tag {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 700;
   font-family: var(--font-mono);
   color: var(--accent);
@@ -594,7 +599,7 @@
 }
 
 .snr-nut-name {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text);
   font-family: var(--font-mono);
   overflow: hidden;
@@ -616,7 +621,7 @@
 }
 
 .snr-nut-count {
-  font-size: 9px;
+  font-size: 11px;
   font-family: var(--font-mono);
   font-weight: 600;
   text-align: right;
