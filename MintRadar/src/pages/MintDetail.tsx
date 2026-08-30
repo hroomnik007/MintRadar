@@ -1094,13 +1094,13 @@ function MintDetailContent({ url }: { url: string }) {
                 {!hasAnyLimits ? (
                   <div style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Limits not specified by this mint.</div>
                 ) : (
-                  <div style={{display:'flex',flexDirection:'column',gap:0}}>
-                    <div style={{display:'grid',gridTemplateColumns:'auto 1fr',gap:'0 12px',marginBottom:4}}>
+                  <div style={{display:'flex',flexDirection:'column',gap:0,maxWidth:480}}>
+                    <div style={{display:'grid',gridTemplateColumns:'150px 1fr',gap:'0 12px',marginBottom:4}}>
                       <span style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>NUT</span>
                       <span style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Min – Max</span>
                     </div>
                     {[{ key: 'NUT-04 (Minting)', cfg: nut4 }, { key: 'NUT-05 (Melting)', cfg: nut5 }].map(({ key, cfg }) => (
-                      <div key={key} style={{display:'grid',gridTemplateColumns:'auto 1fr',gap:'0 12px',padding:'5px 0',borderBottom:'0.5px solid var(--border)',alignItems:'center'}}>
+                      <div key={key} style={{display:'grid',gridTemplateColumns:'150px 1fr',gap:'0 12px',padding:'5px 0',borderBottom:'0.5px solid var(--border)',alignItems:'center'}}>
                         <span style={{fontSize:11,fontWeight:600,color:'var(--text2)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap'}}>{key}</span>
                         <div>{renderLimits(cfg)}</div>
                       </div>
