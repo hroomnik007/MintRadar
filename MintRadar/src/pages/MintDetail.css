@@ -120,6 +120,27 @@
 
 .md-compare-btn:hover { background: var(--green-soft); border-color: var(--green); }
 
+.md-quick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  color: var(--green-bright);
+  border: 1px solid var(--green-soft-strong);
+  border-radius: var(--radius-m);
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+  transition: all 150ms ease;
+  text-decoration: none;
+  letter-spacing: 0.03em;
+}
+
+.md-quick-btn:hover { background: var(--green-soft); border-color: var(--green); }
+
 .latency-test-btn {
   background: var(--green-soft);
   border: 1px solid var(--green-soft-strong);
@@ -171,7 +192,7 @@
 .md-sc-icon.green  { background: var(--green-soft);  color: var(--green-bright); }
 
 .md-sc-label {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-faint);
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -181,8 +202,8 @@
 }
 
 .md-sc-value {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 500;
   color: var(--text);
   line-height: 1;
   font-family: var(--font-mono-data);
@@ -638,7 +659,8 @@
     flex-wrap: wrap;
   }
   .md-header-row2 > .md-watch-btn,
-  .md-header-row2 > .md-compare-btn { flex: 1; justify-content: center; }
+  .md-header-row2 > .md-compare-btn,
+  .md-header-row2 > .md-quick-btn { flex: 1 1 auto; justify-content: center; }
   .md-error-badge { flex: 1 1 100%; }
   .md-name { font-size: 14px; }
   .md-url  { font-size: 9px; }

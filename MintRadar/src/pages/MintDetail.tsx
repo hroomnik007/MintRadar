@@ -31,7 +31,7 @@ import {
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
   Clock, GitBranch, Plug, Database, Award, Layers, Zap, Plus, X, QrCode,
   Receipt, UserCheck, EyeOff, CreditCard, Send, Code, Cloud,
-  Fingerprint, Bitcoin,
+  Fingerprint, Bitcoin, Star,
 } from 'lucide-react'
 
 const REVIEW_AVATAR_COLORS = ['#17E87F','#8b5cf6','#F5A623','#3b82f6','#ef4444','#ec4899']
@@ -648,6 +648,17 @@ function MintDetailContent({ url }: { url: string }) {
           >
             ⇆ Compare
           </button>
+          <button className="md-quick-btn" onClick={() => setShowQr(true)}>
+            <QrCode size={12} /> Mint QR
+          </button>
+          <a
+            className="md-quick-btn"
+            href={`https://wallet.cashu.me/?mint=${encodeURIComponent(url)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            ↗ Open in Cashu.me
+          </a>
         </div>
       </div>
 
@@ -734,6 +745,20 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="md-sc-label">NUTs</div>
             <div className="md-sc-value green">{nutCount}</div>
             <div className="md-sc-sub">supported</div>
+          </div>
+        </div>
+        <div className="md-sc">
+          <div className="md-sc-icon orange"><Star size={14} /></div>
+          <div style={{flex:1}}>
+            <div className="md-sc-label">Community</div>
+            {mergedReviews.length === 0 ? (
+              <div className="md-sc-value sm" style={{color:'var(--text-faint)'}}>No reviews yet</div>
+            ) : (
+              <>
+                <div className="md-sc-value">★ {avgRating ?? '—'}</div>
+                <div className="md-sc-sub">{mergedReviews.length} review{mergedReviews.length !== 1 ? 's' : ''}</div>
+              </>
+            )}
           </div>
         </div>
       </div>
