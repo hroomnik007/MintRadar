@@ -1,5 +1,6 @@
 import { WALLETS } from '@/constants/wallets'
 import { WalletPlatformIcon } from '@/components/wallets/WalletIcons'
+import { LearnHero } from '@/components/learn/LearnIcons'
 import './Wallets.css'
 
 function hostname(url: string): string {
@@ -14,6 +15,10 @@ export default function Wallets() {
         <div className="wallets-subtitle">Cashu-compatible wallets — a plain list, no ranking or reviews</div>
       </div>
 
+      <div className="wallets-hero" aria-hidden="true">
+        <LearnHero />
+      </div>
+
       <div className="wallets-grid">
         {WALLETS.map(w => (
           <a
@@ -25,13 +30,15 @@ export default function Wallets() {
           >
             <div className="wallet-card-head">
               <WalletPlatformIcon platform={w.platforms[0]} />
-              <span className="wallet-name">{w.name}</span>
+              <span className="wallet-platform-label">{w.platforms[0]}</span>
               <div className="wallet-platforms">
                 {w.platforms.map(p => (
                   <span key={p} className="wallet-platform-tag">{p}</span>
                 ))}
               </div>
             </div>
+
+            <div className="wallet-name">{w.name}</div>
 
             <p className="wallet-blurb">{w.blurb}</p>
 

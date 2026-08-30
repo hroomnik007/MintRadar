@@ -23,6 +23,21 @@
   margin-top: 2px;
 }
 
+/* Decorative radar band opening the page — the same ornamental illustration
+   used on /learn (LearnHero), reused verbatim so both pages read as one set.
+   Ornamental only, so it is skipped by assistive tech. */
+.wallets-hero {
+  padding: 4px 24px 0;
+  pointer-events: none;
+}
+
+.wallets-hero .learn-hero-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 88px;
+}
+
 /* ── Grid ────────────────────────────────────────────────────── */
 .wallets-grid {
   display: grid;
@@ -41,9 +56,16 @@
   flex-direction: column;
   gap: 8px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  text-decoration: none;
   color: inherit;
   transition: border-color 150ms ease;
+}
+
+/* The whole card is one <a>; keep every descendant free of underlines so a
+   hover never underlines the title/blurb. Hover changes only the border,
+   matching .learn-card:hover. */
+.wallet-card,
+.wallet-card * {
+  text-decoration: none !important;
 }
 
 .wallet-card:hover {
@@ -75,10 +97,23 @@
   height: 18px;
 }
 
+/* Caps platform label sitting next to the icon in the top row — mirrors
+   .learn-card-number ("MODULE N"). */
+.wallet-platform-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--copper);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: var(--font-mono);
+}
+
+/* Title on its own row below the head — mirrors .learn-card-title. */
 .wallet-name {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--text);
+  letter-spacing: -0.01em;
 }
 
 .wallet-platforms {
@@ -102,19 +137,17 @@
 .wallet-blurb {
   margin: 0;
   font-size: 12.5px;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--text2);
+  flex: 1;
 }
 
 .wallet-link {
   align-self: flex-start;
+  margin-top: 4px;
   font-size: 11px;
   font-family: var(--font-mono);
   color: var(--accent);
-}
-
-.wallet-card:hover .wallet-link {
-  text-decoration: underline;
 }
 
 .wallets-footnote {
@@ -132,5 +165,11 @@
   .wallets-footnote {
     padding-left: 16px;
     padding-right: 16px;
+  }
+  .wallets-hero {
+    padding: 4px 16px 0;
+  }
+  .wallets-hero .learn-hero-svg {
+    max-height: 76px;
   }
 }
