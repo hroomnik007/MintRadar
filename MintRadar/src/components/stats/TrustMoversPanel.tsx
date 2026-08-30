@@ -60,7 +60,7 @@ export function TrustMoversPanel({ period, onPeriodChange, data, onMintClick, ge
   }
 
   return (
-    <div className="stats-panel">
+    <div className="stats-panel stats-movers-panel">
       <div className="stats-card-header">
         <div className="stats-panel-title" style={{ marginBottom: 0 }}>Trust Score Movers</div>
         <div className="stats-tab-toggle">

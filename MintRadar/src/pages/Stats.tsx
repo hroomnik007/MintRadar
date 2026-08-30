@@ -1014,51 +1014,14 @@ export default function Stats() {
           </div>
         </div>
 
-        {/* Row 1, 4th panel: Trust Score Movers. */}
-        <TrustMoversPanel
-          period={moversPeriod}
-          onPeriodChange={setMoversPeriod}
-          data={moversData}
-          onMintClick={url => navigate(`/mint/${encodeURIComponent(url)}`)}
-          getDisplayName={m => m.name ?? getHostname(m.url)}
-          getIconUrl={m => knownMintsData?.find(km => km.url === m.url)?.iconUrl ?? null}
-        />
-
-        {/* Row 2, cols 1-3: NUT Coverage — widened from span 2 to span 3 so its
-            25 rows split into 3 inner columns instead of 2 (shorter, less
-            vertical scrolling) now that Network Health Index shares this row
-            as a standalone 1-column panel instead of being stacked below
-            Most Reliable. DOM order matters here: this must come before the
-            NHI/Trend panels below so CSS Grid's auto-placement fills row 2
-            left-to-right (NUT Coverage cols 1-3, then NHI falls into the
-            remaining col 4) instead of NHI grabbing col 1 first. */}
-        <div className="stats-panel stats-nut-panel">
-          <div className="stats-panel-title">NUT Coverage Across the Network</div>
-          <div className="stats-section-sublabel" style={{marginBottom:10}}>Protocol adoption across {data.onlineMints} online mints · click any NUT to see supporting mints</div>
-          <div className="stats-nut-rows-grid">
-            {TRACKED_NUTS.map(nut => {
-              const adoption = nutAdoptionMap[nut] ?? { count: 0, percent: 0 }
-              const { count, percent } = adoption
-              const meta = NUT_META[nut]
-              if (!meta) return null
-              const barColor = percent >= 80 ? '#17E87F' : percent >= 40 ? '#f59e0b' : '#E24B4A'
-              return (
-                <div key={nut} className="stats-nut-row" onClick={() => setModalNut(nut)}>
-                  <span className="snr-nut-tag">{nut}</span>
-                  <span className="snr-nut-name">{meta.short}</span>
-                  <div className="snr-bar-track">
-                    <div className="snr-bar-fill" style={{width:`${percent}%`,background:barColor}} />
-                  </div>
-                  <span className="snr-nut-count" style={{color:barColor}}>{count}/{data.onlineMints}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Row 2, col 4: Network Health Index — just a number + badge, a
-            narrow single column doesn't hurt it. Standalone panel now
-            (previously stacked inside .stats-right-col below Most Reliable). */}
+        {/* Row 1, 4th panel: Network Health Index. Moved here from row 2 (was
+            paired with NUT Coverage) — Trust Score Movers, which used to sit
+            here, has a variable row count (2-6+, depending on how many
+            mints moved this period) that stood out against this row's other
+            three panels' comparatively stable heights. NHI's height is far
+            more consistent (fixed gauge + fixed 5-row breakdown), a better
+            fit for 4 equal-width columns. Swapped with Trust Score Movers
+            below — see the comment on that panel's new spot in row 2. */}
         {networkHealth && (() => {
           const info = trustScoreInfo(networkHealth.score)
           return (
@@ -1086,11 +1049,12 @@ export default function Stats() {
                 )}
               </div>
               {/* .nhi-fill is the flex:1 region below the header — at ≥1300px
-                  this panel shares its grid row with the much-taller NUT
-                  Coverage panel and stretches to match it (align-self:stretch
-                  on .stats-nhi-panel, opting out of the grid's own
-                  align-items:start just for this one panel), so there's real
-                  surplus height here to distribute. justify-content:
+                  this panel shares its grid row with three other panels
+                  (Software in Use, Geographic Distribution, Most Reliable)
+                  and stretches to match whichever is tallest (align-self:
+                  stretch on .stats-nhi-panel, opting out of the grid's own
+                  align-items:start just for this one panel), so there can be
+                  real surplus height here to distribute. justify-content:
                   space-between pins the gauge/badge to the top and the
                   breakdown block to the bottom edge, putting any extra space
                   between them instead of leaving it all as dead space below
@@ -1130,6 +1094,57 @@ export default function Stats() {
             </div>
           )
         })()}
+
+        {/* Row 2, cols 1-3: NUT Coverage — span 3 so its 25 rows split into 3
+            inner columns instead of 2 (shorter, less vertical scrolling) now
+            that Trust Score Movers shares this row as a standalone
+            1-column panel. DOM order matters here: this must come before
+            Trust Score Movers below so CSS Grid's auto-placement fills row 2
+            left-to-right (NUT Coverage cols 1-3, then Movers falls into the
+            remaining col 4) instead of Movers grabbing col 1 first. */}
+        <div className="stats-panel stats-nut-panel">
+          <div className="stats-panel-title">NUT Coverage Across the Network</div>
+          <div className="stats-section-sublabel" style={{marginBottom:10}}>Protocol adoption across {data.onlineMints} online mints · click any NUT to see supporting mints</div>
+          <div className="stats-nut-rows-grid">
+            {TRACKED_NUTS.map(nut => {
+              const adoption = nutAdoptionMap[nut] ?? { count: 0, percent: 0 }
+              const { count, percent } = adoption
+              const meta = NUT_META[nut]
+              if (!meta) return null
+              const barColor = percent >= 80 ? '#17E87F' : percent >= 40 ? '#f59e0b' : '#E24B4A'
+              return (
+                <div key={nut} className="stats-nut-row" onClick={() => setModalNut(nut)}>
+                  <span className="snr-nut-tag">{nut}</span>
+                  <span className="snr-nut-name">{meta.short}</span>
+                  <div className="snr-bar-track">
+                    <div className="snr-bar-fill" style={{width:`${percent}%`,background:barColor}} />
+                  </div>
+                  <span className="snr-nut-count" style={{color:barColor}}>{count}/{data.onlineMints}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Row 2, col 4: Trust Score Movers. Moved here from row 1 (was the
+            4th equal column alongside Software in Use/Geographic
+            Distribution/Most Reliable) — its row count varies with how many
+            mints actually moved this period (2 empty-state lines up to
+            6+ rows across risers+fallers), which stood out against that
+            row's other panels' comparatively stable heights. Here, next to
+            the naturally taller NUT Coverage panel, a shorter/variable
+            height reads as normal rather than as a mismatch — nothing else
+            in row 2 is uniform height either (NUT Coverage's 25 rows vs. a
+            single narrow column). Swapped with Network Health Index, which
+            took this panel's old spot in row 1. */}
+        <TrustMoversPanel
+          period={moversPeriod}
+          onPeriodChange={setMoversPeriod}
+          data={moversData}
+          onMintClick={url => navigate(`/mint/${encodeURIComponent(url)}`)}
+          getDisplayName={m => m.name ?? getHostname(m.url)}
+          getIconUrl={m => knownMintsData?.find(km => km.url === m.url)?.iconUrl ?? null}
+        />
 
         {/* Row 3, full width: Trust Score Trend. Chart height is unchanged
             (height:120 below, same as before) — only the panel's width grows,

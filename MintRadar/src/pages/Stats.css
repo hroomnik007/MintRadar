@@ -101,7 +101,7 @@
 .smc-value.smc-green  { color: var(--green-bright); }
 .smc-value.smc-orange { color: var(--amber); }
 
-/* ── Network Health Index (standalone panel, row 2 col 4 — .stats-nhi-panel) ──
+/* ── Network Health Index (standalone panel, row 1 col 4 — .stats-nhi-panel) ──
    Container is the plain .stats-panel background/border used by every other
    card on this page — no custom color. Horizontal layout: title row on top
    (mobile-only "Details ›" opens the breakdown modal), then the ring and
@@ -117,24 +117,29 @@
    desktop/mobile split is already driven by the useIsMobile() JS check, not
    a breakpoint this stylesheet owns.
 
+   Moved here from row 2 (col 4, next to NUT Coverage) — swapped with Trust
+   Score Movers, whose row count varies too much (2-6+ rows) to sit well
+   among row 1's other three comparatively fixed-height panels; see the
+   Stats.tsx comments on both panels' new spots for the full reasoning.
+
    .stats-nhi-panel is a flex column with align-self:stretch, opting this one
    panel out of the grid's own align-items:start — at ≥1300px it shares a row
-   with the much taller NUT Coverage panel, so this lets it actually grow to
-   match instead of staying pinned to its own (shorter) content height. .nhi-
-   fill (wrapping .nhi-wrap + the breakdown block) is the flex:1 region that
-   absorbs that surplus height and redistributes it via justify-content:
-   space-between, so the breakdown block ends up flush with the panel's
-   bottom edge instead of leaving dead space below it. Its margin-top is
-   --stats-header-gap (10px) — same header→content mechanism as Most
-   Reliable/Trust Score Movers (.stats-card-header's own 2px margin-bottom
-   collapses with this, settling on the larger value); this lives on
-   .nhi-fill rather than .nhi-wrap specifically so the collapse still reaches
-   .stats-card-header directly (a flex container's children never collapse
-   margins with anything outside it). The header no longer carries its own
-   marginBottom override in Stats.tsx for this reason. On mobile, .nhi-fill
-   only ever has one child (no breakdown block) and nothing stretches the
-   panel taller than its content, so space-between has nothing to do — no
-   visual change there. */
+   with Software in Use/Geographic Distribution/Most Reliable, so this lets
+   it grow to match whichever of those is tallest instead of staying pinned
+   to its own content height. .nhi-fill (wrapping .nhi-wrap + the breakdown
+   block) is the flex:1 region that absorbs that surplus height and
+   redistributes it via justify-content: space-between, so the breakdown
+   block ends up flush with the panel's bottom edge instead of leaving dead
+   space below it. Its margin-top is --stats-header-gap (10px) — same
+   header→content mechanism as Most Reliable/Trust Score Movers
+   (.stats-card-header's own 2px margin-bottom collapses with this, settling
+   on the larger value); this lives on .nhi-fill rather than .nhi-wrap
+   specifically so the collapse still reaches .stats-card-header directly (a
+   flex container's children never collapse margins with anything outside
+   it). The header no longer carries its own marginBottom override in
+   Stats.tsx for this reason. On mobile, .nhi-fill only ever has one child
+   (no breakdown block) and nothing stretches the panel taller than its
+   content, so space-between has nothing to do — no visual change there. */
 .stats-nhi-panel {
   display: flex;
   flex-direction: column;
@@ -807,21 +812,27 @@
 
 /* ── Responsive ─────────────────────────────────────────────── */
 /* Threshold raised from 1100px to 1300px when the top row grew from 3 to 4
-   equal columns (Trust Score Movers) — each column is narrower than before,
-   so the 2-column fallback needs to kick in earlier to avoid the 4-across
-   row cramping mint names/version rows before the columns get too tight.
-   At this width row 1's items settle into a 2x2-ish flow: [Software in Use |
-   Geo] full row (via left-col's own internal split), then [Most Reliable |
-   Trust Score Movers] side by side.
-   NUT Coverage and Network Health Index are reset to full-width (1 / -1)
-   here rather than left at span 3 / span 1 — a span larger than the grid's
+   equal columns (Network Health Index) — each column is narrower than
+   before, so the 2-column fallback needs to kick in earlier to avoid the
+   4-across row cramping mint names/version rows before the columns get too
+   tight. At this width row 1's items settle into a 2x2-ish flow: [Software
+   in Use | Geo] full row (via left-col's own internal split), then [Most
+   Reliable | Network Health Index] side by side — same DOM-order auto-flow
+   Trust Score Movers used before the two panels swapped positions.
+   NUT Coverage and Trust Score Movers are reset to full-width (1 / -1) here
+   rather than left at span 3 / span 1 — a span larger than the grid's
    actual column count doesn't clamp, it grows extra implicit columns, which
-   would silently break this 2-column layout. Trust Score Trend needs no
+   would silently break this 2-column layout. (Movers needs this now that
+   it's the one sitting next to NUT Coverage's span-3 override — without it,
+   it would auto-flow into its own half-empty row below NUT Coverage instead
+   of taking the full width. Network Health Index doesn't need this any
+   more, now that it naturally pairs with Most Reliable per the paragraph
+   above instead of sitting beside NUT Coverage.) Trust Score Trend needs no
    override: .stats-trend-panel is always 1 / -1 regardless of column count. */
 @media (max-width: 1300px) {
   .stats-cards-grid { grid-template-columns: 1fr 1fr; }
   .stats-nut-panel { grid-column: 1 / -1; }
-  .stats-nhi-panel { grid-column: 1 / -1; }
+  .stats-movers-panel { grid-column: 1 / -1; }
 }
 
 @media (max-width: 768px) {
@@ -830,8 +841,11 @@
      breakpoint — with the outer grid down to 1 explicit column, a leftover
      span 2 doesn't clamp, it grows an implicit 2nd column, which silently
      paired up whichever two single-span panels came right after it in DOM
-     order (Most Reliable + Trust Score Movers) into that phantom column
-     instead of stacking them, causing horizontal overflow on mobile. */
+     order (originally Most Reliable + Trust Score Movers, now Most Reliable
+     + Network Health Index after the two panels swapped positions — the bug
+     and its fix are about DOM order, not which specific panels those are)
+     into that phantom column instead of stacking them, causing horizontal
+     overflow on mobile. */
   .stats-left-col { grid-column: 1 / -1; grid-template-columns: 1fr; }
   .stats-nut-rows-grid { grid-template-columns: 1fr; overflow: hidden; }
   .stats-nut-panel { grid-column: 1 / -1; }
