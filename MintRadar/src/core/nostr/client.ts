@@ -1,5 +1,6 @@
 import { nip19, nip44, generateSecretKey, getPublicKey as nostrGetPublicKey, verifyEvent, finalizeEvent } from 'nostr-tools'
 import { BunkerSigner, parseBunkerInput, createNostrConnectURI, toBunkerURL } from 'nostr-tools/nip46'
+import { SimplePool } from 'nostr-tools/pool'
 import type { EventTemplate } from 'nostr-tools'
 import * as secp from '@noble/secp256k1'
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js'
@@ -157,6 +158,10 @@ export function removeNsecShim(): void {
 // Ephemeral client key for the NIP-46 session — NOT the user's identity key.
 // Lives only in sessionStorage; cleared on logout or tab close.
 let activeBunkerSigner: BunkerSigner | null = null
+// The QR pairing flow runs on its own disposable SimplePool (not the app's
+// sharedPool, which must never be destroyed). Once a pairing succeeds the pool
+// is handed to the live signer and kept here so logout can close its sockets.
+let activeBunkerPool: SimplePool | null = null
 // Saved NIP-07 extension reference so it can be restored on logout
 let originalNostr: Window['nostr'] | undefined = undefined
 
@@ -210,6 +215,8 @@ export function removeBunkerShim(): void {
   }
   activeBunkerSigner.close().catch(() => {})
   activeBunkerSigner = null
+  activeBunkerPool?.destroy()
+  activeBunkerPool = null
   sessionStorage.removeItem(BUNKER_URI_KEY)
   sessionStorage.removeItem(BUNKER_SECRET_KEY)
   sessionStorage.removeItem(BUNKER_PUBKEY_KEY)
@@ -230,6 +237,8 @@ function forceTeardownExistingShim(): void {
   if (activeBunkerSigner !== null) {
     activeBunkerSigner.close().catch(() => {})
     activeBunkerSigner = null
+    activeBunkerPool?.destroy()
+    activeBunkerPool = null
     originalNostr = undefined
     sessionStorage.removeItem(BUNKER_URI_KEY)
     sessionStorage.removeItem(BUNKER_SECRET_KEY)
@@ -288,10 +297,16 @@ export function initBunkerQR(): {
   const abortCtrl = new AbortController()
   let timeoutId: ReturnType<typeof setTimeout> | undefined
 
+  // Dedicated pool for this attempt so cancel()/timeout can close every socket
+  // it opened. On success the live signer takes ownership (see `handedOff`).
+  const pairingPool = new SimplePool()
+  let handedOff = false
+  const disposePool = () => { if (!handedOff) pairingPool.destroy() }
+
   const rawSigner = BunkerSigner.fromURI(
     clientSecretKey,
     uri,
-    { onauth: (url) => window.open(url, '_blank') },
+    { onauth: (url) => window.open(url, '_blank'), pool: pairingPool },
     abortCtrl.signal
   )
   // If the timeout wins the race below, fromURI still rejects on abort — keep
@@ -307,6 +322,8 @@ export function initBunkerQR(): {
       }, QR_PAIRING_TIMEOUT_MS)
     }),
   ]).then(async signer => {
+    handedOff = true
+    activeBunkerPool = pairingPool
     const pubkeyHex = await signer.getPublicKey()
     installBunkerShim(signer, pubkeyHex)
     // Derive canonical bunker:// from signer.bp so restore doesn't reuse a one-time URI
@@ -319,12 +336,19 @@ export function initBunkerQR(): {
     if (meta.name !== undefined) profile.name = meta.name
     if (meta.picture !== undefined) profile.picture = meta.picture
     return profile
-  }).finally(() => { if (timeoutId !== undefined) clearTimeout(timeoutId) })
+  }).finally(() => {
+    if (timeoutId !== undefined) clearTimeout(timeoutId)
+    disposePool()
+  })
 
   return {
     uri,
     loginPromise,
-    cancel: () => { if (timeoutId !== undefined) clearTimeout(timeoutId); abortCtrl.abort() },
+    cancel: () => {
+      if (timeoutId !== undefined) clearTimeout(timeoutId)
+      abortCtrl.abort()
+      disposePool()
+    },
   }
 }
 

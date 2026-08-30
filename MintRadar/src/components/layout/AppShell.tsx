@@ -22,6 +22,36 @@ const IcShield = () => (
   </svg>
 )
 
+// Method badges — Tabler icon paths (MIT), stroke-only to match the project's
+// hand-drawn icon set (see LearnIcons.tsx / WalletIcons.tsx).
+const svgProps = {
+  viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+  strokeWidth: 1.75, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const,
+  'aria-hidden': true,
+}
+const IcPuzzle = () => (
+  <svg {...svgProps}>
+    <path d="M4 7h3a1 1 0 0 0 1 -1v-1a2 2 0 0 1 4 0v1a1 1 0 0 0 1 1h3a1 1 0 0 1 1 1v3a1 1 0 0 0 1 1h1a2 2 0 0 1 0 4h-1a1 1 0 0 0 -1 1v3a1 1 0 0 1 -1 1h-3a1 1 0 0 1 -1 -1v-1a2 2 0 0 0 -4 0v1a1 1 0 0 1 -1 1h-3a1 1 0 0 1 -1 -1v-3a1 1 0 0 1 1 -1h1a2 2 0 0 0 0 -4h-1a1 1 0 0 1 -1 -1v-3a1 1 0 0 1 1 -1" />
+  </svg>
+)
+const IcKey = () => (
+  <svg {...svgProps}>
+    <path d="M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.977a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.977a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z" />
+    <path d="M15 9h.01" />
+  </svg>
+)
+const IcQrcode = () => (
+  <svg {...svgProps}>
+    <path d="M4 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" />
+    <path d="M7 17l0 .01" />
+    <path d="M4 15m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" />
+    <path d="M17 7l0 .01" />
+    <path d="M14 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" />
+    <path d="M14 14l0 .01" /><path d="M14 17l3 0" /><path d="M17 17l0 .01" />
+    <path d="M14 20l6 0" /><path d="M20 14l0 6" />
+  </svg>
+)
+
 export function AppShell() {
   const { pathname } = useLocation()
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
@@ -105,27 +135,46 @@ export function AppShell() {
     useWatchlistStore.getState().resetInMemory()
   }
 
-  function handleShowQR() {
+  // Start a fresh nostrconnect pairing: opens the websockets, shows the QR, and
+  // begins the 120s timeout. Any prior attempt is aborted first. Stale promise
+  // callbacks bail out by comparing qrCancelRef against their own `cancel`.
+  const startPairing = useCallback(() => {
     qrCancelRef.current?.()
-    useAuthStore.setState({ isLoading: true, error: null })
     const { uri, loginPromise, cancel } = initBunkerQR()
     qrCancelRef.current = cancel
     setQrUri(uri)
     setBunkerError('')
     void loginPromise
       .then(p => {
+        if (qrCancelRef.current !== cancel) return
         qrCancelRef.current = null
         useAuthStore.setState({ profile: p, isLoading: false, error: null })
         closeLoginModal()
       })
-      .catch(err => {
-        if (err instanceof Error && err.name !== 'AbortError') {
-          setBunkerError(err.message || 'QR connection failed')
+      .catch((err: unknown) => {
+        if (qrCancelRef.current !== cancel || !(err instanceof Error)) return
+        if (err.name !== 'AbortError' && !err.message.includes('subscription closed')) {
+          setBunkerError(err.message || 'Pairing failed')
         }
       })
-      .finally(() => {
-        useAuthStore.setState({ isLoading: false })
-      })
+  }, [closeLoginModal])
+
+  // Abort a live pairing if the component ever unmounts.
+  useEffect(() => () => { qrCancelRef.current?.() }, [])
+
+  // Method selection. Switching TO Remote signer auto-starts pairing; switching
+  // away tears the websockets down (the modal-close and unmount paths are
+  // covered by closeLoginModal / the effect above).
+  function selectMethod(id: 'nip07' | 'nsec' | 'remote-signer') {
+    if (id === loginMethod) return
+    if (loginMethod === 'remote-signer') {
+      qrCancelRef.current?.()
+      qrCancelRef.current = null
+      setQrUri('')
+      setBunkerError('')
+    }
+    setLoginMethod(id)
+    if (id === 'remote-signer') startPairing()
   }
 
   async function handleModalConnect() {
@@ -156,6 +205,7 @@ export function AppShell() {
   return (
     <div className="app-shell">
       <nav className="navbar">
+       <div className="navbar-inner">
         <NavLink to="/" className="navbar-brand nav-logo">
           <NavLogo />
           <span>Mint<span style={{color:'var(--accent)'}}>Radar</span></span>
@@ -210,6 +260,7 @@ export function AppShell() {
             </>
           )}
         </div>
+       </div>
       </nav>
 
       {/* Nostr login modal */}
@@ -229,18 +280,19 @@ export function AppShell() {
 
             <div className="nostr-modal-methods">
               {([
-                { id: 'nip07', title: 'Nostr extension', desc: 'Sign in with Alby, nos2x or any NIP-07 signer' },
-                { id: 'nsec', title: 'Nostr key (nsec)', desc: 'Paste a private key — stored only in this browser' },
-                { id: 'remote-signer', title: 'Remote signer', desc: 'NIP-46 bunker or a mobile signer app (e.g. Amber, nsec.app)' },
+                { id: 'nip07', title: 'Nostr extension', desc: 'Sign in with Alby, nos2x or any NIP-07 signer', icon: <IcPuzzle /> },
+                { id: 'nsec', title: 'Nostr key (nsec)', desc: 'Paste a private key — stored only in this browser', icon: <IcKey /> },
+                { id: 'remote-signer', title: 'Remote signer', desc: 'NIP-46 bunker or a mobile signer app (e.g. Amber, nsec.app)', icon: <IcQrcode /> },
               ] as const).map(m => (
                 <div
                   key={m.id}
                   className={`nostr-method-card${loginMethod === m.id ? ' selected' : ''}`}
-                  onClick={() => setLoginMethod(m.id)}
+                  onClick={() => selectMethod(m.id)}
                 >
                   <div className="nostr-method-radio">
                     <div className={`nostr-radio-dot${loginMethod === m.id ? ' active' : ''}`} />
                   </div>
+                  <div className="nostr-method-icon">{m.icon}</div>
                   <div>
                     <div className="nostr-method-title">{m.title}</div>
                     <div className="nostr-method-desc">{m.desc}</div>
@@ -277,21 +329,6 @@ export function AppShell() {
 
             {loginMethod === 'remote-signer' && (
               <div className="nostr-remote-wrap">
-                <input
-                  className="nostr-nsec-input"
-                  type="text"
-                  placeholder="bunker://... or user@domain.com"
-                  value={bunkerInput}
-                  onChange={e => { setBunkerInput(e.target.value); setBunkerError('') }}
-                  autoFocus
-                />
-                {bunkerError && <div className="nostr-nsec-error">{bunkerError}</div>}
-                <div className="nostr-remote-qr-row">
-                  <button type="button" className="nostr-qr-btn" onClick={handleShowQR}>
-                    {qrUri ? 'Refresh QR' : 'Show pairing QR'}
-                  </button>
-                  {qrUri && <span className="nostr-qr-hint">Scan with your signer app (Amber, nsec.app, …)</span>}
-                </div>
                 {qrUri && (
                   <div className="nostr-qr-wrap">
                     {/* #17251f === var(--surface); qrcode.react renders bgColor as an
@@ -299,9 +336,25 @@ export function AppShell() {
                     <QRCodeSVG value={qrUri} size={192} bgColor="#17251f" fgColor="#f2f7f4" />
                   </div>
                 )}
-                {isLoading && (
+                <div className="nostr-qr-caption">
+                  <span>Scan with your signer app (Amber, nsec.app, …)</span>
+                  <button type="button" className="nostr-qr-refresh" onClick={startPairing}>
+                    Refresh
+                  </button>
+                </div>
+                {qrUri && !bunkerError && (
                   <div className="nostr-warn">Waiting for your remote signer to connect…</div>
                 )}
+                {bunkerError && <div className="nostr-nsec-error">{bunkerError}</div>}
+
+                <div className="nostr-remote-divider"><span>or paste a connection string</span></div>
+                <input
+                  className="nostr-nsec-input"
+                  type="text"
+                  placeholder="bunker://... or user@domain.com"
+                  value={bunkerInput}
+                  onChange={e => { setBunkerInput(e.target.value); setBunkerError('') }}
+                />
               </div>
             )}
 
@@ -327,7 +380,7 @@ export function AppShell() {
                   disabled={
                     isLoading ||
                     (loginMethod === 'nip07' && !nip07Available) ||
-                    (loginMethod === 'remote-signer' && (!!qrUri || !bunkerInput.trim()))
+                    (loginMethod === 'remote-signer' && !bunkerInput.trim())
                   }
                   onClick={() => { void handleModalConnect() }}
                 >

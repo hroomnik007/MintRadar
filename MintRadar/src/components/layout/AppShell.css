@@ -5,18 +5,27 @@
 }
 
 .navbar {
+  /* Full-bleed sticky background; the CONTENT is constrained to the same
+     centred 1400px shell as .app-content via .navbar-inner. */
   background: var(--bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
-  height: var(--nav-h);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 18px;
   position: sticky;
   top: 0;
   z-index: 100;
+}
+
+.navbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--nav-h);
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 18px;
+  box-sizing: border-box;
 }
 
 .navbar-brand {
@@ -189,7 +198,7 @@
 .navbar-install-link:hover { color: var(--accent); }
 
 @media (max-width: 640px) {
-  .navbar {
+  .navbar-inner {
     height: auto;
     flex-wrap: wrap;
     /* Horizontal gutter must match the page content below (18px until ≤600px,
@@ -219,7 +228,7 @@
 
 @media (max-width: 600px) {
   /* Page content drops to a 14px gutter at this width — keep the nav in step. */
-  .navbar { padding-left: 14px; padding-right: 14px; }
+  .navbar-inner { padding-left: 14px; padding-right: 14px; }
 }
 
 /* ── Nostr Login Modal ──────────────────────────────────────── */
@@ -320,6 +329,21 @@
 }
 .nostr-radio-dot.active { background: var(--green-bright); }
 
+/* Same badge treatment as Learn module / Wallets cards */
+.nostr-method-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--copper-soft);
+  border: 1px solid var(--copper-soft-strong);
+  color: var(--copper);
+}
+.nostr-method-icon svg { width: 18px; height: 18px; }
+
 .nostr-method-title {
   font-size: 13px; font-weight: 600; color: var(--text);
   margin-bottom: 2px;
@@ -333,41 +357,58 @@
 
 .nostr-remote-wrap { margin-bottom: 12px; }
 
-.nostr-remote-qr-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 8px;
-}
-
-.nostr-qr-btn {
-  font-size: 11px;
-  font-family: var(--font-mono);
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  padding: 5px 10px;
-  cursor: pointer;
-  transition: border-color 0.12s;
-  white-space: nowrap;
-}
-.nostr-qr-btn:hover { border-color: var(--green-soft-strong); color: var(--green-bright); }
-
-.nostr-qr-hint {
-  font-size: 11px;
-  color: var(--text-faint);
-  font-family: var(--font-mono);
-}
-
 .nostr-qr-wrap {
-  margin-top: 12px;
+  margin-top: 4px;
   display: flex;
   justify-content: center;
   padding: 14px;
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: 8px;
+}
+
+.nostr-qr-caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+}
+
+.nostr-qr-refresh {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text2);
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+.nostr-qr-refresh:hover { border-color: var(--green-soft-strong); color: var(--green-bright); }
+
+.nostr-remote-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 10px;
+  font-size: 10.5px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  text-transform: lowercase;
+  letter-spacing: 0.03em;
+}
+.nostr-remote-divider::before,
+.nostr-remote-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
 }
 
 .nostr-nsec-input {
