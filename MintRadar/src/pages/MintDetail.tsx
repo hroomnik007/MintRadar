@@ -754,22 +754,20 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="md-sc-sub">supported</div>
           </div>
         </div>
-        {activeTab !== 'reviews' && (
-          <div className="md-sc">
-            <div className="md-sc-icon orange"><Star size={14} /></div>
-            <div style={{flex:1}}>
-              <div className="md-sc-label">Community</div>
-              {mergedReviews.length === 0 ? (
-                <div className="md-sc-value sm" style={{color:'var(--text-faint)'}}>No reviews yet</div>
-              ) : (
-                <>
-                  <div className="md-sc-value">★ {avgRating ?? '—'}</div>
-                  <div className="md-sc-sub">{mergedReviews.length} review{mergedReviews.length !== 1 ? 's' : ''}</div>
-                </>
-              )}
-            </div>
+        <div className="md-sc">
+          <div className="md-sc-icon orange"><Star size={14} /></div>
+          <div style={{flex:1}}>
+            <div className="md-sc-label">Community</div>
+            {mergedReviews.length === 0 ? (
+              <div className="md-sc-value sm" style={{color:'var(--text-faint)'}}>No reviews yet</div>
+            ) : (
+              <>
+                <div className="md-sc-value">★ {avgRating ?? '—'}</div>
+                <div className="md-sc-sub">{mergedReviews.length} review{mergedReviews.length !== 1 ? 's' : ''}</div>
+              </>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       <div className="md-tabs">
@@ -847,7 +845,7 @@ function MintDetailContent({ url }: { url: string }) {
                 <div className="md-info-row" style={{alignItems: 'center'}}>
                   <span className="md-info-label">Public key</span>
                   <div style={{display: 'flex', alignItems: 'center', gap: 4}}>
-                    <span style={{fontSize: 15, color: 'var(--text)', fontFamily: 'var(--font-mono)'}}>{pubkey.slice(0, 8)}…{pubkey.slice(-8)}</span>
+                    <span style={{fontSize: 14, color: 'var(--text)', fontFamily: 'var(--font-mono)'}}>{pubkey.slice(0, 8)}…{pubkey.slice(-8)}</span>
                     <button
                       onClick={() => {
                         void navigator.clipboard.writeText(pubkey)
@@ -891,7 +889,7 @@ function MintDetailContent({ url }: { url: string }) {
                     return (
                       <div key={u} style={{display:'flex', alignItems:'center', gap:6, justifyContent:'space-between'}}>
                         <span style={{
-                          fontSize:10, color: isActive ? 'var(--accent)' : 'var(--text3)',
+                          fontSize:12, color: isActive ? 'var(--accent)' : 'var(--text3)',
                           fontFamily:'var(--font-mono)', wordBreak:'break-all', flex:1
                         }}>
                           {isActive ? '● ' : '○ '}{u}
@@ -1089,9 +1087,9 @@ function MintDetailContent({ url }: { url: string }) {
             // groups rather than plainly deduplicating.
             const renderLimits = (cfg: NutConfig | null | undefined) => {
               const groups = groupNutLimits(cfg?.methods)
-              if (!groups.length) return <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>—</span>
+              if (!groups.length) return <span style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>—</span>
               return groups.map((g, i) => (
-                <span key={i} style={{fontSize:11,color:'var(--text)',fontFamily:'var(--font-mono)'}}>
+                <span key={i} style={{fontSize:13,color:'var(--text)',fontFamily:'var(--font-mono)'}}>
                   {formatNutLimitRange(g)}
                   {g.methods.length > 0 && (
                     <span style={{color:'var(--text3)'}}> ({g.methods.join(', ')})</span>
@@ -1104,13 +1102,13 @@ function MintDetailContent({ url }: { url: string }) {
               <div className="md-panel">
                 <div className="md-panel-title">NUT Limits</div>
                 {!hasAnyLimits ? (
-                  <div style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Limits not specified by this mint.</div>
+                  <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Limits not specified by this mint.</div>
                 ) : (
                   <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
                     {[{ key: 'NUT-04 (Minting)', cfg: nut4 }, { key: 'NUT-05 (Melting)', cfg: nut5 }].map(({ key, cfg }) => (
                       <div key={key} style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:5}}>
-                        <span style={{fontSize:11,fontWeight:600,color:'var(--text2)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap'}}>{key}</span>
-                        <span style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Min – Max</span>
+                        <span style={{fontSize:13,fontWeight:600,color:'var(--text2)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap'}}>{key}</span>
+                        <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Min – Max</span>
                         <div>{renderLimits(cfg)}</div>
                       </div>
                     ))}
@@ -1133,8 +1131,8 @@ function MintDetailContent({ url }: { url: string }) {
                     style={{
                       background: chartInterval === iv ? 'var(--accent)' : 'transparent',
                       color: chartInterval === iv ? 'var(--bg)' : 'var(--text2)',
-                      border: 'none', borderRadius: 4, padding: '2px 8px',
-                      fontSize: 10, fontFamily: 'var(--font-mono)',
+                      border: 'none', borderRadius: 4, padding: '3px 10px',
+                      fontSize: 12, fontFamily: 'var(--font-mono)',
                       cursor: 'pointer', fontWeight: chartInterval === iv ? 700 : 400,
                     }}
                   >{iv}</button>
@@ -1149,10 +1147,10 @@ function MintDetailContent({ url }: { url: string }) {
                 { label: 'Avg Uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%', chartPrevInsufficientHistory), color: '#4ade80' },
                 { label: 'Avg Trust', value: `${trustScore}%`, delta: null, color: tsInfo.color },
               ].map(({ label, value, delta, color }) => (
-                <div key={label} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px' }}>
-                  <div style={{ fontSize: 9, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3, fontFamily: 'var(--font-mono)' }}>{label}</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color, fontFamily: 'var(--font-mono)', lineHeight: 1 }}>{value}</div>
-                  {delta && <div style={{ fontSize: 9, color: 'var(--text3)', marginTop: 3, fontFamily: 'var(--font-mono)' }}>{delta}</div>}
+                <div key={label} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 11px' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4, fontFamily: 'var(--font-mono)' }}>{label}</div>
+                  <div style={{ fontSize: 19, fontWeight: 700, color, fontFamily: 'var(--font-mono)', lineHeight: 1 }}>{value}</div>
+                  {delta && <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4, fontFamily: 'var(--font-mono)' }}>{delta}</div>}
                 </div>
               ))}
             </div>
@@ -1166,8 +1164,8 @@ function MintDetailContent({ url }: { url: string }) {
                   style={{
                     background: chartMetric === m ? 'var(--bg2)' : 'transparent',
                     border: chartMetric === m ? '1px solid var(--border2)' : '1px solid transparent',
-                    borderRadius: 5, padding: '3px 10px',
-                    fontSize: 10.5, fontFamily: 'var(--font-mono)',
+                    borderRadius: 5, padding: '4px 12px',
+                    fontSize: 12, fontFamily: 'var(--font-mono)',
                     color: chartMetric === m ? 'var(--text)' : 'var(--text3)',
                     cursor: 'pointer',
                   }}
@@ -1177,9 +1175,9 @@ function MintDetailContent({ url }: { url: string }) {
 
             {/* Line chart */}
             {histLineData.length === 0 ? (
-              <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>No historical data for this period.</p>
+              <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>No historical data for this period.</p>
             ) : histLineData.filter(d => d[chartMetric] !== null).length < 2 ? (
-              <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>Not enough data for this period</p>
+              <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>Not enough data for this period</p>
             ) : (
               <ResponsiveContainer width="100%" height={140}>
                 <LineChart data={histLineData} margin={{ top: 4, right: 4, left: 10, bottom: 0 }}>
@@ -1215,35 +1213,35 @@ function MintDetailContent({ url }: { url: string }) {
               </ResponsiveContainer>
             )}
             {chartCoverage && (
-              <div style={{ marginTop: 8, fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>{chartCoverage}</div>
+              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>{chartCoverage}</div>
             )}
           </div>
 
           <div className="md-panel">
             <div className="md-panel-title">Version history</div>
             {!versionHistory || versionHistory.length === 0 ? (
-              <div style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>No version history available.</div>
+              <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>No version history available.</div>
             ) : (
               <div>
-                <div style={{display:'grid',gridTemplateColumns:'auto minmax(140px,220px) minmax(140px,220px)',gap:'0 24px',marginBottom:4}}>
-                  <span style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Date</span>
-                  <span style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>From</span>
-                  <span style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>To</span>
+                <div style={{display:'grid',gridTemplateColumns:'auto 1fr 1fr',gap:'0 16px',marginBottom:4}}>
+                  <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Date</span>
+                  <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>From</span>
+                  <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>To</span>
                 </div>
                 {versionHistory.map((vh, i) => (
                   <div key={i} style={{
-                    display: 'grid', gridTemplateColumns: 'auto minmax(140px,220px) minmax(140px,220px)', gap: '0 24px',
-                    padding: '4px 0',
+                    display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: '0 16px',
+                    padding: '5px 0',
                     borderBottom: i < versionHistory.length - 1 ? '0.5px solid var(--border)' : 'none',
                     alignItems: 'center',
                   }}>
-                    <span style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap'}}>
+                    <span style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap'}}>
                       {new Date(vh.firstSeenAt).toLocaleDateString()}
                     </span>
-                    <span style={{fontSize:11,color:'var(--text2)',fontFamily:'var(--font-mono)'}}>
+                    <span style={{fontSize:13,color:'var(--text2)',fontFamily:'var(--font-mono)'}}>
                       {versionHistory[i + 1]?.version ?? '—'}
                     </span>
-                    <span style={{fontSize:11,color:'var(--text)',fontFamily:'var(--font-mono)',fontWeight:500}}>
+                    <span style={{fontSize:13,color:'var(--text)',fontFamily:'var(--font-mono)',fontWeight:500}}>
                       {vh.version}
                     </span>
                   </div>
@@ -1263,16 +1261,13 @@ function MintDetailContent({ url }: { url: string }) {
                 >
                   <div style={{display:'flex',alignItems:'baseline',gap:6}}>
                     <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
-                    <span style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>· via audit.8333.space</span>
+                    <span style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>· via audit.8333.space</span>
                   </div>
                   <span className="md-audit-chevron">
                     {auditExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                   </span>
                 </button>
                 <div className={`md-audit-content${auditExpanded ? ' expanded' : ''}`}>
-                <p style={{fontSize:12,color:'var(--text2)',lineHeight:1.6,marginBottom:12,maxWidth:'68ch'}}>
-                  These are payments the community auditor sent through this mint to check whether it actually pays out. Unlike Trust Score (a rolling window), this is the mint&apos;s all-time record. A high error rate here — even with a good Trust Score — means the mint has had real trouble in the past, and is worth watching before you commit larger amounts.
-                </p>
                 <div className="audit-stats-grid">
                   <div className="audit-stat-card">
                     <div className="audit-stat-value" style={{color:'#4ade80'}}>{auditNMints.toLocaleString()}</div>
@@ -1339,7 +1334,7 @@ function MintDetailContent({ url }: { url: string }) {
                   </div>
                 </div>
                 {knownMint.auditCheckedAt ? (
-                  <div style={{fontSize:9,color:'var(--text3)',marginTop:10,fontFamily:'var(--font-mono)'}}>
+                  <div style={{fontSize:12,color:'var(--text3)',marginTop:10,fontFamily:'var(--font-mono)',lineHeight:1.5}}>
                     Last checked {new Date(knownMint.auditCheckedAt).toLocaleDateString()} · all-time totals from audit.8333.space (not the rolling-window score used in Trust Score)
                   </div>
                 ) : null}
@@ -1348,32 +1343,15 @@ function MintDetailContent({ url }: { url: string }) {
             ) : (
               <div className="md-panel">
                 <div className="md-panel-title">Audit stats</div>
-                <div style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>No audit data available for this mint.</div>
+                <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>No audit data available for this mint.</div>
               </div>
             )
           )}
 
           {activeTab === 'reviews' && (
             <div className="md-panel">
-              <div className="md-panel-title">Reviews</div>
               <div className="reviews-header">
-                <div>
-                  {avgRating !== null ? (
-                    <div style={{display:'flex',alignItems:'center',gap:6}}>
-                      <span className="reviews-avg">{avgRating}</span>
-                      <span className="reviews-stars">
-                        {'★'.repeat(Math.round(avgRating))}{'☆'.repeat(5-Math.round(avgRating))}
-                      </span>
-                    </div>
-                  ) : mergedReviews.length === 0 ? (
-                    <span style={{fontSize:12,color:'var(--text3)'}}>No reviews yet</span>
-                  ) : (
-                    <span style={{fontSize:12,color:'var(--text3)'}}>No star ratings yet</span>
-                  )}
-                  {mergedReviews.length > 0 && (
-                    <span className="reviews-count">{mergedReviews.length} review{mergedReviews.length !== 1 ? 's' : ''} · via NIP-87</span>
-                  )}
-                </div>
+                <div className="md-panel-title" style={{marginBottom:0}}>Reviews</div>
                 {isLoggedIn && (
                   <button className="reviews-write-btn" onClick={() => setShowReviewModal(true)}>
                     Write review
@@ -1381,7 +1359,7 @@ function MintDetailContent({ url }: { url: string }) {
                 )}
               </div>
               {reviewsLoading ? (
-                <div style={{fontSize:11,color:'var(--text3)',marginTop:8}}>Loading reviews...</div>
+                <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>Loading reviews...</div>
               ) : mergedReviews.length > 0 ? (
                 <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:8}}>
                   {(showAllReviews ? mergedReviews : mergedReviews.slice(0, 5)).map(r => {
@@ -1420,7 +1398,7 @@ function MintDetailContent({ url }: { url: string }) {
                   )}
                 </div>
               ) : (
-                <div style={{fontSize:11,color:'var(--text3)',marginTop:8}}>
+                <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>
                   {isLoggedIn ? 'No reviews yet. Be the first to write one!' : 'No reviews yet. Login with Nostr to write one.'}
                 </div>
               )}
@@ -1504,45 +1482,6 @@ function MintDetailContent({ url }: { url: string }) {
               })}
             </div>
           )}
-
-          <div className="md-panel">
-            <div className="md-panel-title">Add to Wallet</div>
-            <p style={{fontSize:12, color:'var(--text3)', marginBottom:12, lineHeight:1.5}}>
-              Scan the QR code or open directly in your Cashu wallet to start using this mint.
-            </p>
-            <button
-              onClick={() => setShowQr(true)}
-              style={{
-                width: '100%', background: 'var(--green-soft)',
-                color: 'var(--green-bright)',
-                border: '1px solid var(--green-soft-strong)',
-                borderRadius: 'var(--radius-m)', padding: '10px 16px',
-                fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                fontFamily: 'var(--font-body)', marginBottom: 8,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              }}
-            >
-              <QrCode size={14} /> Show QR code
-            </button>
-            <a
-              href={`https://wallet.cashu.me/?mint=${encodeURIComponent(url)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                width: '100%', background: 'var(--bg3)',
-                color: 'var(--text2)',
-                border: '0.5px solid var(--border)',
-                borderRadius: 8, padding: '9px 16px',
-                fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                fontFamily: 'var(--font-body)',
-                textDecoration: 'none', boxSizing: 'border-box',
-                transition: 'border-color 150ms ease',
-              }}
-            >
-              ↗ Open in Cashu.me
-            </a>
-          </div>
 
         </div>
       </div>
