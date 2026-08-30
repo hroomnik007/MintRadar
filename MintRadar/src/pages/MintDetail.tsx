@@ -785,7 +785,7 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-sc">
           <div className="md-sc-icon orange"><Star size={14} /></div>
           <div style={{flex:1}}>
-            <div className="md-sc-label">Community</div>
+            <div className="md-sc-label">Community rating</div>
             {mergedReviews.length === 0 ? (
               <div className="md-sc-value sm" style={{color:'var(--text-faint)'}}>No reviews yet</div>
             ) : (
@@ -793,7 +793,7 @@ function MintDetailContent({ url }: { url: string }) {
                 {avgRating !== null ? (
                   <div className="md-sc-value" style={{display:'flex',alignItems:'baseline',gap:6}}>
                     <span className="md-sc-stars" aria-label={`${avgRating} out of 5`}>{starString(avgRating)}</span>
-                    <span style={{fontSize:13,fontWeight:600}}>{avgRating}</span>
+                    <span style={{color:'var(--text2)'}}>{avgRating}</span>
                   </div>
                 ) : (
                   <div className="md-sc-value sm" style={{color:'var(--text-faint)'}}>Unrated</div>

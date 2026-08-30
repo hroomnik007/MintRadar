@@ -242,7 +242,9 @@
 .md-sc-value.orange { color: var(--amber); }
 .md-sc-value.green  { color: var(--green-bright); }
 .md-sc-value.sm     { font-size: 13px; padding-top: 2px; letter-spacing: 0; font-weight: 600; }
-.md-sc-stars        { color: var(--yellow); font-size: 13px; letter-spacing: 1px; font-family: var(--font-mono); }
+/* inherits the 20px .md-sc-value size (15px on mobile) so it matches the sibling
+   metric cards — only colour/spacing differ */
+.md-sc-stars        { color: var(--yellow); letter-spacing: 2px; font-family: var(--font-mono); }
 .md-sc-sub { font-size: 10px; color: var(--text-faint); margin-top: 3px; font-family: var(--font-mono); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
 /* ── Tab Navigation ─────────────────────────────────────────── */
