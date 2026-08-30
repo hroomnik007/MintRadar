@@ -55,7 +55,7 @@ export function AppShell() {
   const watchlistCount = useWatchlistStore(state => state.mints.length)
 
   const [showLoginModal, setShowLoginModal] = useState(false)
-  const [loginMethod, setLoginMethod] = useState<'nip07' | 'nsec' | 'amber'>('nip07')
+  const [loginMethod, setLoginMethod] = useState<'nip07' | 'nsec' | 'remote-signer'>('nip07')
   const [nsecInput, setNsecInput] = useState('')
   const [nsecError, setNsecError] = useState('')
   const [bunkerInput, setBunkerInput] = useState('')
@@ -140,7 +140,7 @@ export function AppShell() {
         setNsecError(useAuthStore.getState().error ?? 'Login failed')
         return
       }
-    } else if (loginMethod === 'amber') {
+    } else if (loginMethod === 'remote-signer') {
       const trimmed = bunkerInput.trim()
       if (!trimmed) { setBunkerError('Please enter a bunker:// URI or NIP-05 identifier'); return }
       setBunkerError('')
@@ -231,7 +231,7 @@ export function AppShell() {
               {([
                 { id: 'nip07', title: 'Nostr extension', desc: 'Sign in with Alby, nos2x or any NIP-07 signer' },
                 { id: 'nsec', title: 'Nostr key (nsec)', desc: 'Paste a private key — stored only in this browser' },
-                { id: 'amber', title: 'Amber / remote', desc: 'Connect via NIP-46 bunker or mobile Amber app' },
+                { id: 'remote-signer', title: 'Remote signer', desc: 'NIP-46 bunker or a mobile signer app (e.g. Amber, nsec.app)' },
               ] as const).map(m => (
                 <div
                   key={m.id}
@@ -275,8 +275,8 @@ export function AppShell() {
               </div>
             )}
 
-            {loginMethod === 'amber' && (
-              <div className="nostr-amber-wrap">
+            {loginMethod === 'remote-signer' && (
+              <div className="nostr-remote-wrap">
                 <input
                   className="nostr-nsec-input"
                   type="text"
@@ -286,24 +286,26 @@ export function AppShell() {
                   autoFocus
                 />
                 {bunkerError && <div className="nostr-nsec-error">{bunkerError}</div>}
-                <div className="nostr-amber-qr-row">
+                <div className="nostr-remote-qr-row">
                   <button type="button" className="nostr-qr-btn" onClick={handleShowQR}>
-                    {qrUri ? 'Refresh QR' : 'Show QR for Amber'}
+                    {qrUri ? 'Refresh QR' : 'Show pairing QR'}
                   </button>
-                  {qrUri && <span className="nostr-qr-hint">Scan with Amber on your phone</span>}
+                  {qrUri && <span className="nostr-qr-hint">Scan with your signer app (Amber, nsec.app, …)</span>}
                 </div>
                 {qrUri && (
                   <div className="nostr-qr-wrap">
-                    <QRCodeSVG value={qrUri} size={192} bgColor="#0d1117" fgColor="#e6edf3" />
+                    {/* #17251f === var(--surface); qrcode.react renders bgColor as an
+                        SVG fill attribute, where CSS custom properties don't resolve */}
+                    <QRCodeSVG value={qrUri} size={192} bgColor="#17251f" fgColor="#f2f7f4" />
                   </div>
                 )}
                 {isLoading && (
-                  <div className="nostr-warn">Connecting to remote signer…</div>
+                  <div className="nostr-warn">Waiting for your remote signer to connect…</div>
                 )}
               </div>
             )}
 
-            {authError && loginMethod !== 'nsec' && loginMethod !== 'amber' && (
+            {authError && loginMethod !== 'nsec' && loginMethod !== 'remote-signer' && (
               <div className="nostr-auth-error">{authError}</div>
             )}
 
@@ -311,8 +313,8 @@ export function AppShell() {
               <div className="nostr-privacy-note">
                 <IcShield /> {loginMethod === 'nip07'
                   ? <>Your key never leaves your extension. MintRadar only requests signatures — it can&apos;t read your private key.</>
-                  : loginMethod === 'amber'
-                  ? <>Your key stays on your signer device (e.g. Amber). Only a temporary session key is stored in this browser to relay requests — it can&apos;t sign anything on its own.</>
+                  : loginMethod === 'remote-signer'
+                  ? <>Your key stays on your remote signer (e.g. Amber, nsec.app). Only a temporary session key is stored in this browser to relay requests — it can&apos;t sign anything on its own.</>
                   : <>Your key stays only in this browser&apos;s memory for this session — used to sign on your behalf, never sent anywhere, never saved to disk.</>}
               </div>
               <div className="nostr-modal-actions">
@@ -325,7 +327,7 @@ export function AppShell() {
                   disabled={
                     isLoading ||
                     (loginMethod === 'nip07' && !nip07Available) ||
-                    (loginMethod === 'amber' && (!!qrUri || !bunkerInput.trim()))
+                    (loginMethod === 'remote-signer' && (!!qrUri || !bunkerInput.trim()))
                   }
                   onClick={() => { void handleModalConnect() }}
                 >

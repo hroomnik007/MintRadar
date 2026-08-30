@@ -166,6 +166,12 @@ const BUNKER_PUBKEY_KEY = 'bunkerPubkey'
 
 const NIP46_RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net', 'wss://relay.snort.social', 'wss://nostr.bitcoiner.social', 'wss://nostr.cypherpunk.today']
 
+// bunker:// paste is a pure relay round-trip → 30s. The QR flow additionally
+// waits for a human to pick up their phone, open the signer app, scan and
+// approve, so it gets a longer budget.
+const BUNKER_CONNECT_TIMEOUT_MS = 30_000
+const QR_PAIRING_TIMEOUT_MS = 120_000
+
 function installBunkerShim(signer: BunkerSigner, pubkeyHex: string): void {
   if (typeof window === 'undefined') return
   if (window.nostr !== undefined) {
@@ -241,7 +247,7 @@ export async function loginWithBunker(bunkerInput: string): Promise<NostrProfile
   })
   await Promise.race([
     signer.connect(),
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Connection timeout — bunker relay did not respond within 30 seconds')), 30000)),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Connection timeout — bunker relay did not respond within 30 seconds')), BUNKER_CONNECT_TIMEOUT_MS)),
   ])
   const pubkeyHex = await signer.getPublicKey()
   installBunkerShim(signer, pubkeyHex)
@@ -257,29 +263,50 @@ export async function loginWithBunker(bunkerInput: string): Promise<NostrProfile
   return profile
 }
 
-// Initiates a nostrconnect:// QR flow (mobile Amber pairing).
-// Returns the URI to display as QR and a promise that resolves when Amber scans.
+// Builds a fresh client-initiated nostrconnect:// URI plus its ephemeral client
+// key. Exported so the URI-shape invariants (secret entropy, relay set, name)
+// can be unit-tested without touching the network.
+export function buildNostrConnectURI(): { uri: string; clientSecretKey: Uint8Array } {
+  const clientSecretKey = generateSecretKey()
+  const clientPubkey = nostrGetPublicKey(clientSecretKey)
+  // Full 32-byte random secret (NIP-46 puts no length cap on it; BunkerSigner
+  // only does an exact string compare against the signer's ack).
+  const secret = bytesToHex(generateSecretKey())
+  const uri = createNostrConnectURI({ clientPubkey, relays: NIP46_RELAYS, secret, name: 'MintRadar' })
+  return { uri, clientSecretKey }
+}
+
+// Initiates a client-initiated nostrconnect:// pairing flow (QR scanned by a
+// mobile signer app). Returns the URI to display as QR and a promise that
+// resolves once the signer connects back.
 export function initBunkerQR(): {
   uri: string
   loginPromise: Promise<NostrProfile>
   cancel: () => void
 } {
-  const clientSecretKey = generateSecretKey()
-  const clientPubkey = nostrGetPublicKey(clientSecretKey)
-  const secret = bytesToHex(generateSecretKey()).slice(0, 16)
-  const uri = createNostrConnectURI({
-    clientPubkey,
-    relays: NIP46_RELAYS,
-    secret,
-    name: 'MintRadar',
-  })
+  const { uri, clientSecretKey } = buildNostrConnectURI()
   const abortCtrl = new AbortController()
-  const loginPromise = BunkerSigner.fromURI(
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+  const rawSigner = BunkerSigner.fromURI(
     clientSecretKey,
     uri,
     { onauth: (url) => window.open(url, '_blank') },
     abortCtrl.signal
-  ).then(async signer => {
+  )
+  // If the timeout wins the race below, fromURI still rejects on abort — keep
+  // that from surfacing as an unhandled rejection.
+  rawSigner.catch(() => {})
+
+  const loginPromise = Promise.race([
+    rawSigner,
+    new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        abortCtrl.abort()
+        reject(new Error('Pairing timed out — no signer connected within 2 minutes. Refresh the QR and try again.'))
+      }, QR_PAIRING_TIMEOUT_MS)
+    }),
+  ]).then(async signer => {
     const pubkeyHex = await signer.getPublicKey()
     installBunkerShim(signer, pubkeyHex)
     // Derive canonical bunker:// from signer.bp so restore doesn't reuse a one-time URI
@@ -292,8 +319,13 @@ export function initBunkerQR(): {
     if (meta.name !== undefined) profile.name = meta.name
     if (meta.picture !== undefined) profile.picture = meta.picture
     return profile
-  })
-  return { uri, loginPromise, cancel: () => abortCtrl.abort() }
+  }).finally(() => { if (timeoutId !== undefined) clearTimeout(timeoutId) })
+
+  return {
+    uri,
+    loginPromise,
+    cancel: () => { if (timeoutId !== undefined) clearTimeout(timeoutId); abortCtrl.abort() },
+  }
 }
 
 // Restores a bunker session after a page refresh.

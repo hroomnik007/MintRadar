@@ -331,9 +331,9 @@
 
 .nostr-nsec-wrap { margin-bottom: 12px; }
 
-.nostr-amber-wrap { margin-bottom: 12px; }
+.nostr-remote-wrap { margin-bottom: 12px; }
 
-.nostr-amber-qr-row {
+.nostr-remote-qr-row {
   display: flex;
   align-items: center;
   gap: 10px;
