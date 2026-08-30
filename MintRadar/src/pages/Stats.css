@@ -561,18 +561,28 @@
   overflow: hidden;
 }
 
-/* No vertical padding — inter-row spacing comes from .stats-nut-rows-grid's
-   row-gap (--stats-row-gap) instead of stacked row padding (previously 6px
-   top+bottom + this row's own border-bottom summed to ~12.5px; see the
-   spacing-consistency fix). border-bottom is a deliberate divider between
-   NUT rows within a column and is kept — `gap: 8px` below is unrelated,
-   this row's own internal grid gap between the tag/name/bar/count cells. */
+/* 4px vertical padding (was 0, per the earlier spacing-consistency fix,
+   which relied on .stats-nut-rows-grid's row-gap alone) — that fix
+   pre-dates the row text growing from 8-10px to 9-11px (see the NUT
+   Coverage font-size fix above), and with zero padding around the larger
+   text the rows read as cramped. Deliberately a bespoke value here rather
+   than --stats-row-gap: this row's border-bottom divider already occupies
+   part of the boundary between rows, so combined with row-gap (8px) the
+   total space between two rows' text is 4+0.5(border)+8+4 ≈ 16.5px — in
+   the same ballpark as .stats-top5-row's 6px padding + 8px row-gap ≈ 14px
+   "airy" feel (Most Reliable/Trust Score Movers) without stacking a second
+   full --stats-row-gap on top of the divider and making this the loosest
+   list on the page. row-gap itself is untouched — it's a shared token used
+   by five other panels, out of scope for this fix. border-bottom stays, as
+   the deliberate divider it's been documented as since that same earlier
+   fix — `gap: 8px` below is unrelated, this row's own internal grid gap
+   between the tag/name/bar/count cells. */
 .stats-nut-row {
   display: grid;
   grid-template-columns: 62px 1fr 80px 42px;
   align-items: center;
   gap: 8px;
-  padding: 0 10px;
+  padding: 4px 10px;
   border-bottom: 0.5px solid var(--border);
   cursor: pointer;
   transition: background 120ms ease;
@@ -861,5 +871,5 @@
   .stats-metrics { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
   .stats-metric-card { flex: 1 1 calc(50% - 4px); padding: 10px 14px; }
   .stats-nut-rows-grid { grid-template-columns: 1fr; }
-  .stats-nut-row { grid-template-columns: 55px 1fr 60px 38px; gap: 6px; padding: 0 8px; }
+  .stats-nut-row { grid-template-columns: 55px 1fr 60px 38px; gap: 6px; padding: 4px 8px; }
 }
