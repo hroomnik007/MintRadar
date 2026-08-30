@@ -27,7 +27,7 @@ import { useNow } from '@/hooks/useNow'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import './MintDetail.css'
 import {
-  Copy, Check, Info, ShieldCheck, ShieldOff, ChevronDown, ChevronUp,
+  Copy, Check, Info, ShieldCheck, ShieldOff, ChevronDown, ChevronUp, AlertTriangle,
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
   Clock, GitBranch, Plug, Database, Award, Layers, Zap, Plus, X, QrCode,
   Receipt, UserCheck, EyeOff, CreditCard, Send, Code, Cloud,
@@ -854,11 +854,30 @@ function MintDetailContent({ url }: { url: string }) {
               </div>
             )}
             {(nut4Disabled || nut5Disabled) && (
-              <div style={{background:'rgba(255,165,0,0.08)',border:'0.5px solid rgba(255,165,0,0.3)',borderRadius:8,padding:'9px 12px',marginBottom:12,display:'flex',alignItems:'flex-start',gap:8}}>
-                <span style={{color:'#ffa500',fontSize:14,flexShrink:0,lineHeight:1.3}}>⚠</span>
-                <div style={{fontSize:12,color:'#ffa500',fontFamily:'var(--font-mono)',lineHeight:1.6}}>
-                  {nut4Disabled && <div>Minting is currently disabled by this mint operator</div>}
-                  {nut5Disabled && <div>Melting is currently disabled by this mint operator</div>}
+              <div className="md-mint-alert">
+                <AlertTriangle size={16} className="md-mint-alert-icon" />
+                <div className="md-mint-alert-body">
+                  {nut4Disabled && (
+                    <>
+                      <div className="md-mint-alert-title">This mint has stopped issuing new ecash</div>
+                      <div className="md-mint-alert-text">
+                        You can no longer deposit here, but any ecash you already hold can still
+                        be melted or withdrawn. A mint turning off minting usually means the
+                        operator is winding it down — if you have a balance on this mint,
+                        withdraw it while you still can.
+                      </div>
+                    </>
+                  )}
+                  {nut5Disabled && (
+                    <>
+                      <div className="md-mint-alert-title">This mint has disabled withdrawals</div>
+                      <div className="md-mint-alert-text">
+                        Melting ecash back to Lightning is switched off right now. Funds already
+                        held on this mint can&apos;t be moved out until the operator re-enables it —
+                        avoid depositing more here in the meantime.
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -1090,6 +1109,9 @@ function MintDetailContent({ url }: { url: string }) {
                 </span>
               )}
             </div>
+            <div className="nut-summary-line">
+              <strong>{supportedNuts.length}</strong> of {TRACKED_NUTS.length} known NUTs supported
+            </div>
             <div className="nut-grid">
               {TRACKED_NUTS.map(nut => {
                 const supported = supportedNuts.includes(nut)
@@ -1122,6 +1144,9 @@ function MintDetailContent({ url }: { url: string }) {
             const hasAnyLimits =
               nut4?.methods?.some(m => m.min_amount != null || m.max_amount != null) ||
               nut5?.methods?.some(m => m.min_amount != null || m.max_amount != null)
+            // Still render the grid when a method is disabled, so the "disabled by
+            // operator" state is shown instead of a silent omission.
+            const showLimitsGrid = hasAnyLimits || nut4Disabled || nut5Disabled
             // Ranges shared by several payment methods collapse into one entry
             // labelled with those methods — see groupNutLimits() for why this
             // groups rather than plainly deduplicating.
@@ -1141,15 +1166,21 @@ function MintDetailContent({ url }: { url: string }) {
             return (
               <div className="md-panel">
                 <div className="md-panel-title">NUT Limits</div>
-                {!hasAnyLimits ? (
+                {!showLimitsGrid ? (
                   <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Limits not specified by this mint.</div>
                 ) : (
                   <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
-                    {[{ key: 'NUT-04 (Minting)', cfg: nut4 }, { key: 'NUT-05 (Melting)', cfg: nut5 }].map(({ key, cfg }) => (
-                      <div key={key} style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:5}}>
-                        <span style={{fontSize:13,fontWeight:600,color:'var(--text2)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap'}}>{key}</span>
-                        <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Min – Max</span>
-                        <div>{renderLimits(cfg)}</div>
+                    {[{ key: 'NUT-04 (Minting)', cfg: nut4, disabled: nut4Disabled }, { key: 'NUT-05 (Melting)', cfg: nut5, disabled: nut5Disabled }].map(({ key, cfg, disabled }) => (
+                      <div key={key} style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:5,opacity: disabled ? 0.75 : 1}}>
+                        <span style={{fontSize:13,fontWeight:600,color:'var(--text2)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',textDecoration: disabled ? 'line-through' : 'none'}}>{key}</span>
+                        {disabled ? (
+                          <span className="md-limit-off"><AlertTriangle size={11} /> Disabled by operator</span>
+                        ) : (
+                          <>
+                            <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Min – Max</span>
+                            <div>{renderLimits(cfg)}</div>
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1519,23 +1550,25 @@ function MintDetailContent({ url }: { url: string }) {
                   <div className="unit-block" key={unit}>
                     <div className="unit-header"><span className="unit-badge">{unit.toUpperCase()}</span></div>
                     <div className="method-rows">
-                      {mintChips.length > 0 && (
-                        <div className="method-row">
+                      {(mintChips.length > 0 || nut4Disabled) && (
+                        <div className={`method-row${nut4Disabled ? ' method-row-off' : ''}`}>
                           <span className="method-label">Mint</span>
                           <div className="method-chips">
                             {mintChips.map((m, i) => (
                               <span className="method-chip mint" key={i}>{m.method}</span>
                             ))}
+                            {nut4Disabled && <span className="method-chip-off"><AlertTriangle size={10} /> disabled</span>}
                           </div>
                         </div>
                       )}
-                      {meltChips.length > 0 && (
-                        <div className="method-row">
+                      {(meltChips.length > 0 || nut5Disabled) && (
+                        <div className={`method-row${nut5Disabled ? ' method-row-off' : ''}`}>
                           <span className="method-label">Melt</span>
                           <div className="method-chips">
                             {meltChips.map((m, i) => (
                               <span className="method-chip melt" key={i}>{m.method}</span>
                             ))}
+                            {nut5Disabled && <span className="method-chip-off"><AlertTriangle size={10} /> disabled</span>}
                           </div>
                         </div>
                       )}

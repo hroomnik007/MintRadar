@@ -332,6 +332,41 @@
 
 .md-motd:last-child { margin-bottom: 0; }
 
+/* ── Minting/melting disabled warning ──────────────────────────
+   A call-to-action warning, not a status line: the operator has turned off
+   deposits (or withdrawals) and the user may need to act on funds held here. */
+.md-mint-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-soft-strong);
+  border-left: 3px solid var(--amber);
+  border-radius: 8px;
+  padding: 11px 13px;
+  margin-bottom: 12px;
+}
+.md-mint-alert-icon { color: var(--amber); flex-shrink: 0; margin-top: 1px; }
+.md-mint-alert-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.md-mint-alert-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--amber);
+  font-family: var(--font-mono);
+  line-height: 1.4;
+}
+.md-mint-alert-text {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.55;
+}
+/* second block (both minting AND melting disabled) gets a divider above it */
+.md-mint-alert-title:not(:first-child) {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--amber-soft-strong);
+}
+
 .md-motd.warning {
   border-left-color: #ffa500;
   background: rgba(255, 165, 0, 0.06);
@@ -419,6 +454,14 @@
 .md-contact-val  { font-size: 12px; color: var(--text); font-family: var(--font-mono); word-break: break-all; }
 
 /* ── NUT grid ───────────────────────────────────────────────── */
+.nut-summary-line {
+  font-size: 12px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  margin-bottom: 10px;
+}
+.nut-summary-line strong { color: var(--text); font-weight: 700; }
+
 .nut-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -667,6 +710,32 @@
 }
 .method-chip.mint { color: var(--green-bright); border-color: var(--green-soft-strong); background: var(--green-soft); }
 .method-chip.melt { color: var(--copper); border-color: var(--copper-soft-strong); background: var(--copper-soft); }
+
+/* A method the operator has switched off — struck through, with an amber tag. */
+.method-row-off .method-chip { text-decoration: line-through; opacity: 0.5; }
+.method-chip-off {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--amber);
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-soft-strong);
+  padding: 3px 7px;
+  border-radius: 7px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.md-limit-off {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--amber);
+}
 
 /* ── Chart tooltip ──────────────────────────────────────────── */
 .chart-tooltip {
