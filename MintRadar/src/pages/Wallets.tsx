@@ -1,4 +1,5 @@
 import { WALLETS } from '@/constants/wallets'
+import { WalletPlatformIcon } from '@/components/wallets/WalletIcons'
 import './Wallets.css'
 
 function hostname(url: string): string {
@@ -15,8 +16,15 @@ export default function Wallets() {
 
       <div className="wallets-grid">
         {WALLETS.map(w => (
-          <div key={w.name} className="wallet-card">
+          <a
+            key={w.name}
+            className="wallet-card"
+            href={w.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <div className="wallet-card-head">
+              <WalletPlatformIcon platform={w.platforms[0]} />
               <span className="wallet-name">{w.name}</span>
               <div className="wallet-platforms">
                 {w.platforms.map(p => (
@@ -27,15 +35,8 @@ export default function Wallets() {
 
             <p className="wallet-blurb">{w.blurb}</p>
 
-            <a
-              className="wallet-link"
-              href={w.url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {hostname(w.url)} ↗
-            </a>
-          </div>
+            <span className="wallet-link">{hostname(w.url)} ↗</span>
+          </a>
         ))}
       </div>
 
