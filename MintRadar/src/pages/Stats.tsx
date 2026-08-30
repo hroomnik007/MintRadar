@@ -638,26 +638,31 @@ export default function Stats() {
     return Math.round(sum / total)
   }, [knownMintsData])
 
-  // Top 4, not top 5 — matching the panel's row-count/height to its row-1
-  // siblings (Software in Use, Geographic Distribution, Trust Score Movers),
-  // which were all one row shorter than this one before the change.
-  const top4ByUptime = useMemo(() => {
+  // Back to top 5 (was briefly top 4, matching row-1 siblings before those
+  // siblings got their own height fixes — see the row-1 height
+  // investigation) — top 5 now lands close to Network Health Index's 319px.
+  const top5ByUptime = useMemo(() => {
     if (!knownMintsData) return []
     return [...knownMintsData]
       .filter(m => m.online === true && m.uptimePct24h != null)
       .sort((a, b) => (b.uptimePct24h ?? 0) - (a.uptimePct24h ?? 0))
-      .slice(0, 4)
+      .slice(0, 5)
   }, [knownMintsData])
 
-  const top4ByTrust = useMemo(() => {
+  const top5ByTrust = useMemo(() => {
     if (!knownMintsData) return []
     return [...knownMintsData]
       .filter(m => m.online === true && m.trustScore != null)
       .sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
-      .slice(0, 4)
+      .slice(0, 5)
   }, [knownMintsData])
 
-  const geoDist = useMemo(() => computeGeoDistribution(knownMintsData ?? []), [knownMintsData])
+  // topN=10 (not the util's own default of 8) — closes most of the height
+  // gap to Network Health Index (319px) in row 1 using real distinct
+  // locations rather than an artificial cutoff; see the row-1 height
+  // investigation. computeGeoDistribution's own default stays 8 for other
+  // callers/tests — only this page's usage needs the taller panel.
+  const geoDist = useMemo(() => computeGeoDistribution(knownMintsData ?? [], 10), [knownMintsData])
 
   const cityMints = useMemo(() => {
     if (!cityModal || !knownMintsData) return []
@@ -881,43 +886,57 @@ export default function Stats() {
         {/* Left block (cols 1-2): Software in Use + Geographic Distribution */}
         <div className="stats-left-col">
 
-          {/* Card 1: Software in Use */}
-          <div className="stats-panel">
+          {/* Card 1: Software in Use — the only row-1 panel with no natural
+              way to grow closer to Network Health Index's 319px (only 4
+              distinct software implementations actually exist among online
+              mints today, no artificial cutoff to lift; see the row-1
+              height investigation). Stretched via align-self:stretch +
+              flex-fill, same mechanism as .stats-nhi-panel: the freshness
+              bar + version list sit in a "top group" at the top, and the
+              existing footnote is pinned to the panel's bottom edge by
+              .stats-sw-fill's justify-content:space-between, filling
+              whatever extra height align-self:stretch grants this panel
+              instead of leaving it as dead space below the footnote. */}
+          <div className="stats-panel stats-sw-panel">
             <div className="stats-panel-title">Software in Use</div>
-            {swFreshnessSummary.total > 0 && (
-              <div style={{marginTop:10}}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:4}}>
-                  <span style={{fontSize:12,color:'var(--text2)'}}>Running outdated or older versions</span>
-                  <span style={{fontSize:13,fontWeight:swFreshnessSummary.pct >= 50 ? 700 : 600,color:'var(--amber)',fontFamily:'var(--font-mono-data)'}}>{swFreshnessSummary.pct}%</span>
-                </div>
-                <div className="dist-track"><div className="dist-fill" style={{width:`${swFreshnessSummary.pct}%`,background:'var(--amber)',opacity:swFreshnessSummary.pct >= 50 ? 0.9 : 0.6}} /></div>
-              </div>
-            )}
-            <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:'var(--stats-row-gap)'}}>
-              {versionDist.length === 0 ? (
-                <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
-              ) : versionDist.map(({sw, total, accentColor}) => {
-                const totalOnline = versionDist.reduce((s, d) => s + d.total, 0)
-                const pct = totalOnline > 0 ? Math.round(total / totalOnline * 100) : 0
-                return (
-                  <div
-                    key={sw}
-                    className="sw-row"
-                    onClick={() => setSoftwareModal(sw)}
-                  >
-                    <span className="dist-label" style={{fontWeight:600,color:'var(--text)',fontSize:13}}>{sw}</span>
-                    <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:accentColor}} /></div>
-                    <span className="dist-count" style={{color:'var(--text2)'}}>{total}</span>
-                    <span className="sw-chevron" style={{color:'var(--text3)'}}>›</span>
+            <div className="stats-sw-fill">
+              <div>
+                {swFreshnessSummary.total > 0 && (
+                  <div>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:4}}>
+                      <span style={{fontSize:12,color:'var(--text2)'}}>Running outdated or older versions</span>
+                      <span style={{fontSize:13,fontWeight:swFreshnessSummary.pct >= 50 ? 700 : 600,color:'var(--amber)',fontFamily:'var(--font-mono-data)'}}>{swFreshnessSummary.pct}%</span>
+                    </div>
+                    <div className="dist-track"><div className="dist-fill" style={{width:`${swFreshnessSummary.pct}%`,background:'var(--amber)',opacity:swFreshnessSummary.pct >= 50 ? 0.9 : 0.6}} /></div>
                   </div>
-                )
-              })}
-            </div>
-            {versionDist.length > 0 && (
-              <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
-                Implementation reported by each mint's info document.
+                )}
+                <div style={{marginTop:swFreshnessSummary.total > 0 ? 10 : 0,display:'flex',flexDirection:'column',gap:'var(--stats-row-gap)'}}>
+                  {versionDist.length === 0 ? (
+                    <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
+                  ) : versionDist.map(({sw, total, accentColor}) => {
+                    const totalOnline = versionDist.reduce((s, d) => s + d.total, 0)
+                    const pct = totalOnline > 0 ? Math.round(total / totalOnline * 100) : 0
+                    return (
+                      <div
+                        key={sw}
+                        className="sw-row"
+                        onClick={() => setSoftwareModal(sw)}
+                      >
+                        <span className="dist-label" style={{fontWeight:600,color:'var(--text)',fontSize:13}}>{sw}</span>
+                        <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:accentColor}} /></div>
+                        <span className="dist-count" style={{color:'var(--text2)'}}>{total}</span>
+                        <span className="sw-chevron" style={{color:'var(--text3)'}}>›</span>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-            )}
+              {versionDist.length > 0 && (
+                <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
+                  Implementation reported by each mint's info document.
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Card 2: Geographic Distribution */}
@@ -973,9 +992,9 @@ export default function Stats() {
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:'var(--stats-row-gap)',marginTop:10}}>
             {reliableTab === 'reliable' ? (
-              top4ByUptime.length === 0 ? (
+              top5ByUptime.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data yet</div>
-              ) : top4ByUptime.map((mint, idx) => {
+              ) : top5ByUptime.map((mint, idx) => {
                 const uptime = mint.uptimePct24h ?? 0
                 const color = uptimeColor(uptime)
                 const hostname = getHostname(mint.url)
@@ -992,9 +1011,9 @@ export default function Stats() {
                 )
               })
             ) : (
-              top4ByTrust.length === 0 ? (
+              top5ByTrust.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data yet</div>
-              ) : top4ByTrust.map((mint, idx) => {
+              ) : top5ByTrust.map((mint, idx) => {
                 const score = mint.trustScore ?? 0
                 const color = score >= 70 ? '#4ade80' : score >= 40 ? '#ffa500' : '#ff4d4d'
                 const hostname = getHostname(mint.url)

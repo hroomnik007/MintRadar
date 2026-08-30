@@ -251,7 +251,11 @@
 /* Left block: Software in Use + Geographic Distribution, splitting the two
    columns they have always occupied. Keeping the wrapper (rather than letting
    the two panels sit in the outer grid directly) means row 1 stays a clean
-   4-across layout regardless of how NUT Coverage/NHI/Trend are spanned below. */
+   4-across layout regardless of how NUT Coverage/NHI/Trend are spanned below.
+   align-items:start here is deliberately untouched — Geographic Distribution
+   doesn't get a stretch treatment (its own height comes from real data via
+   Stats.tsx's topN=10, see .stats-sw-panel below for why only Software in
+   Use needs the flex-fill mechanism). */
 .stats-left-col {
   grid-column: span 2;
   display: grid;
@@ -259,6 +263,34 @@
   gap: 14px;
   align-items: start;
   min-width: 0;
+}
+
+/* Software in Use is the one row-1 panel with no real-data lever to grow
+   closer to Network Health Index's 319px — only 4 distinct software
+   implementations exist among online mints today (no artificial cutoff to
+   lift, unlike Geographic Distribution's topN or Most Reliable's slice
+   count; see the row-1 height investigation). align-self:stretch here
+   mirrors .stats-nhi-panel, but relative to .stats-left-col's own
+   align-items:start (above) rather than the outer .stats-cards-grid — once
+   Geographic Distribution grows via topN=10, it's usually the taller of
+   the two .stats-left-col children, so this stretches Software in Use to
+   match ITS height rather than needing its own outer-grid override.
+   .stats-sw-fill (wrapping the freshness-bar/version-list group and the
+   existing "Implementation reported by..." footnote) is the flex:1 region
+   that distributes any resulting surplus height via justify-content:
+   space-between, pinning the footnote to the panel's bottom edge — same
+   pattern as .nhi-fill. */
+.stats-sw-panel {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
+
+.stats-sw-fill {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
 }
 
 /* ── Software accordion ──────────────────────────────────────── */
