@@ -6,7 +6,7 @@
 /* ── Header ─────────────────────────────────────────────────── */
 .md-header {
   margin: 14px 18px 0;
-  padding: 12px 16px;
+  padding: 22px 20px;
   border: 1px solid var(--border);
   border-radius: var(--r);
   background: var(--bg2);
@@ -46,15 +46,14 @@
   min-width: 0;
 }
 
+/* No outer frame: Online status + Mint QR + Open in Cashu.me sit loose in the
+   row, the same way Watch/Compare (.md-hdr-right) do. The buttons keep their own
+   tonal style; there is deliberately no box grouping them. */
 .md-hdr-center {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-  border: 1px solid var(--accent-brd);
-  background: var(--accent-dim);
-  border-radius: var(--radius-m);
-  padding: 5px 8px;
 }
 
 /* All five header-row buttons (Mint QR, Open in Cashu.me, Watch, Compare) share
@@ -71,14 +70,14 @@
 .md-avatar-id {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   flex: 1;
   min-width: 0;
 }
 
 .md-namebox { flex: 1; min-width: 0; }
-.md-name { font-size: 22px; font-weight: 500; color: var(--text); }
-.md-url  { font-size: 11px; color: var(--text3); font-family: var(--font-mono); margin-top: 1px; }
+.md-name { font-size: 31px; font-weight: 600; color: var(--text); line-height: 1.15; }
+.md-url  { font-size: 13px; color: var(--text3); font-family: var(--font-mono); margin-top: 3px; }
 
 .md-online-badge {
   display: flex;
@@ -782,7 +781,7 @@
   .md-tab { padding: 10px 10px; font-size: 13px; }
   .md-header {
     margin: 10px 18px 0;
-    padding: 10px 14px;
+    padding: 14px 14px;
     gap: 10px;
     flex-direction: column;
     align-items: stretch;
@@ -809,10 +808,19 @@
     flex-shrink: 0;
   }
   .md-back-label { display: none; }
-  .md-avatar-id { flex: 1 1 auto; min-width: 0; gap: 8px; }
+  .md-avatar-id { flex: 1 1 auto; min-width: 0; gap: 10px; }
   .md-error-badge { flex: 1 1 100%; }
-  .md-name { font-size: 14px; }
-  .md-url  { font-size: 9px; }
+  .md-name { font-size: 19px; }
+  .md-url  { font-size: 11px; }
+  /* Override MintFavicon's inline width/height (set via its `size` prop, 52 on
+     desktop) — the compact mobile header wants a smaller mark next to the
+     30px round back button. */
+  .md-hdr-favicon {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+  }
+  .md-age-badge-inline { font-size: 11px !important; padding: 2px 7px !important; }
 
   .md-contact-grid { grid-template-columns: 1fr; }
   .nut-grid        { grid-template-columns: 1fr 1fr; }

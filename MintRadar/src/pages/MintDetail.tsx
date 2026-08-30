@@ -617,13 +617,13 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-hdr-left">
           <button className="md-back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
           <div className="md-avatar-id">
-            <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={32} />
+            <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={52} radius={12} className="md-hdr-favicon" />
             <div className="md-namebox">
-              <div className="md-name" style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+              <div className="md-name" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                 <span className={`status-dot md-status-dot-mobile ${isOnline ? '' : 'offline'}`} />
                 <span>{displayName}</span>
                 {ageBadge && (
-                  <span className="md-age-badge-inline" style={{fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:ageBadge.color,background:ageBadge.bg,border:`0.5px solid ${ageBadge.border}`,borderRadius:4,padding:'1px 6px',flexShrink:0}}>{ageBadge.label}</span>
+                  <span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:ageBadge.color,background:ageBadge.bg,border:`0.5px solid ${ageBadge.border}`,borderRadius:5,padding:'3px 9px',flexShrink:0}}>{ageBadge.label}</span>
                 )}
               </div>
               <div className="md-url">{url}</div>
