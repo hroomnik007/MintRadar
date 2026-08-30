@@ -44,6 +44,23 @@ function shortNpub(npub: string): string {
 function formatReviewDate(ts: number): string {
   return new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
+/** A five-character ★/☆ string for a rating, rounded to whole stars. */
+function starString(rating: number): string {
+  const full = Math.max(0, Math.min(5, Math.round(rating)))
+  return '★'.repeat(full) + '☆'.repeat(5 - full)
+}
+/** Page numbers to show in a pager, collapsing long runs to '…'. */
+function reviewPageList(current: number, total: number): (number | '…')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const out: (number | '…')[] = [1]
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+  if (start > 2) out.push('…')
+  for (let i = start; i <= end; i++) out.push(i)
+  if (end < total - 1) out.push('…')
+  out.push(total)
+  return out
+}
 
 interface NutMethod {
   method: string
@@ -312,7 +329,7 @@ function MintDetailContent({ url }: { url: string }) {
   const [showQr, setShowQr] = useState(false)
   const [showTrustBreakdown, setShowTrustBreakdown] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
-  const [showAllReviews, setShowAllReviews] = useState(false)
+  const [reviewsPageState, setReviewsPageState] = useState<{ key: string; page: number }>({ key: '', page: 1 })
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewComment, setReviewComment] = useState('')
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
@@ -567,6 +584,17 @@ function MintDetailContent({ url }: { url: string }) {
     ? Math.round(ratedReviews.reduce((s, r) => s + (r.rating as number), 0) / ratedReviews.length * 10) / 10
     : null
 
+  // Numbered pagination for the Reviews tab. Page is keyed by mint URL so it
+  // resets to 1 when navigating to a different mint (no reset effect needed).
+  const REVIEWS_PER_PAGE = 5
+  const reviewsTotalPages = Math.max(1, Math.ceil(mergedReviews.length / REVIEWS_PER_PAGE))
+  const reviewsPage = Math.min(
+    reviewsPageState.key === url ? reviewsPageState.page : 1,
+    reviewsTotalPages,
+  )
+  const pagedReviews = mergedReviews.slice((reviewsPage - 1) * REVIEWS_PER_PAGE, reviewsPage * REVIEWS_PER_PAGE)
+  const goToReviewsPage = (p: number) => setReviewsPageState({ key: url, page: Math.max(1, Math.min(p, reviewsTotalPages)) })
+
   const chartAvgLatency = chartHistoryData?.avgLatencyMs ?? null
   const chartPrevLatency = chartHistoryData?.prevAvgLatencyMs ?? null
   const chartAvgUptime = chartHistoryData?.uptimePct ?? null
@@ -762,7 +790,14 @@ function MintDetailContent({ url }: { url: string }) {
               <div className="md-sc-value sm" style={{color:'var(--text-faint)'}}>No reviews yet</div>
             ) : (
               <>
-                <div className="md-sc-value">★ {avgRating ?? '—'}</div>
+                {avgRating !== null ? (
+                  <div className="md-sc-value" style={{display:'flex',alignItems:'baseline',gap:6}}>
+                    <span className="md-sc-stars" aria-label={`${avgRating} out of 5`}>{starString(avgRating)}</span>
+                    <span style={{fontSize:13,fontWeight:600}}>{avgRating}</span>
+                  </div>
+                ) : (
+                  <div className="md-sc-value sm" style={{color:'var(--text-faint)'}}>Unrated</div>
+                )}
                 <div className="md-sc-sub">{mergedReviews.length} review{mergedReviews.length !== 1 ? 's' : ''}</div>
               </>
             )}
@@ -786,6 +821,31 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-left">
 
           {activeTab === 'overview' && (<>
+            {(motd || description || descriptionLong) && (
+              <div className="md-panel">
+                <div className="md-panel-title">About</div>
+                {motd && (
+                  <div className={`md-motd${isWarningMotd(motd) ? ' warning' : ''}`}>
+                    <div className="md-motd-label">Message of the Day</div>
+                    <div className="md-motd-text">{motd}</div>
+                  </div>
+                )}
+                {description && (
+                  <div className="md-info-row md-desc-row">
+                    <span className="md-info-label">Description</span>
+                    <span className="md-info-value">{description}</span>
+                  </div>
+                )}
+                {descriptionLong && (
+                  <div className="md-info-row md-desc-row">
+                    <span className="md-info-label">Full description</span>
+                    <span className="md-info-value">
+                      {descriptionLong}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="md-panel">
               <div className="md-panel-title">Mint info</div>
             {probeLoading && (
@@ -800,26 +860,6 @@ function MintDetailContent({ url }: { url: string }) {
                   {nut4Disabled && <div>Minting is currently disabled by this mint operator</div>}
                   {nut5Disabled && <div>Melting is currently disabled by this mint operator</div>}
                 </div>
-              </div>
-            )}
-            {motd && (
-              <div className={`md-motd${isWarningMotd(motd) ? ' warning' : ''}`}>
-                <div className="md-motd-label">Message of the Day</div>
-                <div className="md-motd-text">{motd}</div>
-              </div>
-            )}
-            {description && (
-              <div className="md-info-row md-desc-row">
-                <span className="md-info-label">Description</span>
-                <span className="md-info-value">{description}</span>
-              </div>
-            )}
-            {descriptionLong && (
-              <div className="md-info-row md-desc-row">
-                <span className="md-info-label">Full description</span>
-                <span className="md-info-value">
-                  {descriptionLong}
-                </span>
               </div>
             )}
             <div className="md-info-grid">
@@ -1362,7 +1402,7 @@ function MintDetailContent({ url }: { url: string }) {
                 <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>Loading reviews...</div>
               ) : mergedReviews.length > 0 ? (
                 <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:8}}>
-                  {(showAllReviews ? mergedReviews : mergedReviews.slice(0, 5)).map(r => {
+                  {pagedReviews.map(r => {
                     const npub = nip19.npubEncode(r.pubkey)
                     const profile = r.profile
                     const displayName = profile?.name ?? shortNpub(npub)
@@ -1382,7 +1422,7 @@ function MintDetailContent({ url }: { url: string }) {
                           </div>
                           <div className="review-meta">
                             {r.rating !== null && (
-                              <span className="review-stars">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                              <span className="review-stars">{starString(r.rating)}</span>
                             )}
                             <span className="review-date">{formatReviewDate(r.createdAt)}</span>
                           </div>
@@ -1391,10 +1431,33 @@ function MintDetailContent({ url }: { url: string }) {
                       </div>
                     )
                   })}
-                  {!showAllReviews && mergedReviews.length > 5 && (
-                    <button className="reviews-load-more" onClick={() => setShowAllReviews(true)}>
-                      Show {mergedReviews.length - 5} more review{mergedReviews.length - 5 !== 1 ? 's' : ''}
-                    </button>
+                  {reviewsTotalPages > 1 && (
+                    <nav className="reviews-pagination" aria-label="Reviews pages">
+                      <button
+                        className="reviews-page-btn"
+                        disabled={reviewsPage === 1}
+                        onClick={() => goToReviewsPage(reviewsPage - 1)}
+                        aria-label="Previous page"
+                      >‹</button>
+                      {reviewPageList(reviewsPage, reviewsTotalPages).map((p, i) =>
+                        p === '…'
+                          ? <span key={`gap-${i}`} className="reviews-page-ellipsis">…</span>
+                          : (
+                            <button
+                              key={p}
+                              className={`reviews-page-btn${p === reviewsPage ? ' active' : ''}`}
+                              aria-current={p === reviewsPage ? 'page' : undefined}
+                              onClick={() => goToReviewsPage(p)}
+                            >{p}</button>
+                          ),
+                      )}
+                      <button
+                        className="reviews-page-btn"
+                        disabled={reviewsPage === reviewsTotalPages}
+                        onClick={() => goToReviewsPage(reviewsPage + 1)}
+                        aria-label="Next page"
+                      >›</button>
+                    </nav>
                   )}
                 </div>
               ) : (

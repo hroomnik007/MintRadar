@@ -57,10 +57,9 @@
   padding: 5px 8px;
 }
 
-.md-hdr-center .md-quick-btn {
-  background: var(--green-soft);
-  border-color: transparent;
-}
+/* All five header-row buttons (Mint QR, Open in Cashu.me, Watch, Compare) share
+   one tonal recipe — soft tint + border, never a saturated fill. Keep them
+   visually equal; there is no single "primary" action in this row. */
 
 .md-hdr-right {
   display: flex;
@@ -135,7 +134,7 @@
 .md-watch-btn.watching:hover { border-color: rgba(219, 106, 93, 0.65); }
 
 .md-compare-btn {
-  background: transparent;
+  background: var(--green-soft);
   color: var(--green-bright);
   border: 1px solid var(--green-soft-strong);
   border-radius: var(--radius-m);
@@ -148,13 +147,13 @@
   transition: all 150ms ease;
 }
 
-.md-compare-btn:hover { background: var(--green-soft); border-color: var(--green); }
+.md-compare-btn:hover { background: var(--green-soft-strong); border-color: var(--green); }
 
 .md-quick-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: transparent;
+  background: var(--green-soft);
   color: var(--green-bright);
   border: 1px solid var(--green-soft-strong);
   border-radius: var(--radius-m);
@@ -169,7 +168,7 @@
   letter-spacing: 0.03em;
 }
 
-.md-quick-btn:hover { background: var(--green-soft); border-color: var(--green); }
+.md-quick-btn:hover { background: var(--green-soft-strong); border-color: var(--green); }
 
 .latency-test-btn {
   background: var(--green-soft);
@@ -243,6 +242,7 @@
 .md-sc-value.orange { color: var(--amber); }
 .md-sc-value.green  { color: var(--green-bright); }
 .md-sc-value.sm     { font-size: 13px; padding-top: 2px; letter-spacing: 0; font-weight: 600; }
+.md-sc-stars        { color: var(--yellow); font-size: 13px; letter-spacing: 1px; font-family: var(--font-mono); }
 .md-sc-sub { font-size: 10px; color: var(--text-faint); margin-top: 3px; font-family: var(--font-mono); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
 /* ── Tab Navigation ─────────────────────────────────────────── */
@@ -329,6 +329,8 @@
   font-style: italic;
   font-family: var(--font-mono);
 }
+
+.md-motd:last-child { margin-bottom: 0; }
 
 .md-motd.warning {
   border-left-color: #ffa500;
@@ -600,20 +602,44 @@
   line-height: 1.5;
   margin: 10px 0 0 0;
 }
-.reviews-load-more {
+.reviews-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.reviews-page-btn {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 7px 14px;
+  border-radius: 6px;
   color: var(--text3);
   font-size: 11px;
   font-family: var(--font-mono);
   cursor: pointer;
-  width: 100%;
   transition: all var(--transition);
-  letter-spacing: 0.02em;
 }
-.reviews-load-more:hover { border-color: var(--border2); color: var(--text2); }
+.reviews-page-btn:hover:not(:disabled):not(.active) { border-color: var(--border2); color: var(--text2); }
+.reviews-page-btn.active {
+  background: var(--green-soft);
+  border-color: var(--green-soft-strong);
+  color: var(--green-bright);
+}
+.reviews-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.reviews-page-ellipsis {
+  min-width: 18px;
+  text-align: center;
+  color: var(--text3);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
 
 /* ── Units & Methods ────────────────────────────────────────── */
 /* Font sizes: 11px for body text and 10px for the small uppercase mono label
