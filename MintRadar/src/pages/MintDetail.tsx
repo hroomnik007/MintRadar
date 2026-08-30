@@ -31,7 +31,7 @@ import {
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
   Clock, GitBranch, Plug, Database, Award, Layers, Zap, Plus, X, QrCode,
   Receipt, UserCheck, EyeOff, CreditCard, Send, Code, Cloud,
-  Fingerprint, Bitcoin, Star,
+  Fingerprint, Bitcoin, Star, Mail, AtSign,
 } from 'lucide-react'
 
 const REVIEW_AVATAR_COLORS = ['#17E87F','#8b5cf6','#F5A623','#3b82f6','#ef4444','#ec4899']
@@ -586,7 +586,7 @@ function MintDetailContent({ url }: { url: string }) {
   return (
     <div className="mint-detail">
       <div className="md-header">
-        <div className="md-header-row1">
+        <div className="md-hdr-left">
           <button className="md-back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
           <div className="md-avatar-id">
             <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={32} />
@@ -601,15 +601,12 @@ function MintDetailContent({ url }: { url: string }) {
               <div className="md-url">{url}</div>
             </div>
           </div>
+        </div>
+        <div className="md-hdr-center">
           <div className={`md-online-badge ${isOnline ? '' : 'offline'}`}>
             <div className={`status-dot ${isOnline ? '' : 'offline'}`} />
             {isOnline ? 'Online' : 'Offline'}
           </div>
-          {ageBadge && (
-            <span className="md-age-badge-row" style={{fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:ageBadge.color,background:ageBadge.bg,border:`0.5px solid ${ageBadge.border}`,borderRadius:4,padding:'1px 6px'}}>{ageBadge.label}</span>
-          )}
-        </div>
-        <div className="md-header-row2">
           {!isOnline && knownMint?.lastError && (
             <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
               <span
@@ -634,6 +631,19 @@ function MintDetailContent({ url }: { url: string }) {
               </span>
             </span>
           )}
+          <button className="md-quick-btn" onClick={() => setShowQr(true)}>
+            <QrCode size={12} /> Mint QR
+          </button>
+          <a
+            className="md-quick-btn"
+            href={`https://wallet.cashu.me/?mint=${encodeURIComponent(url)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            ↗ Open in Cashu.me
+          </a>
+        </div>
+        <div className="md-hdr-right">
           {isLoggedIn
             ? (
               <button className={`md-watch-btn ${isWatching ? 'watching' : ''}`} onClick={toggleWatch}>
@@ -656,17 +666,6 @@ function MintDetailContent({ url }: { url: string }) {
           >
             ⇆ Compare
           </button>
-          <button className="md-quick-btn" onClick={() => setShowQr(true)}>
-            <QrCode size={12} /> Mint QR
-          </button>
-          <a
-            className="md-quick-btn"
-            href={`https://wallet.cashu.me/?mint=${encodeURIComponent(url)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            ↗ Open in Cashu.me
-          </a>
         </div>
       </div>
 
@@ -755,20 +754,22 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="md-sc-sub">supported</div>
           </div>
         </div>
-        <div className="md-sc">
-          <div className="md-sc-icon orange"><Star size={14} /></div>
-          <div style={{flex:1}}>
-            <div className="md-sc-label">Community</div>
-            {mergedReviews.length === 0 ? (
-              <div className="md-sc-value sm" style={{color:'var(--text-faint)'}}>No reviews yet</div>
-            ) : (
-              <>
-                <div className="md-sc-value">★ {avgRating ?? '—'}</div>
-                <div className="md-sc-sub">{mergedReviews.length} review{mergedReviews.length !== 1 ? 's' : ''}</div>
-              </>
-            )}
+        {activeTab !== 'reviews' && (
+          <div className="md-sc">
+            <div className="md-sc-icon orange"><Star size={14} /></div>
+            <div style={{flex:1}}>
+              <div className="md-sc-label">Community</div>
+              {mergedReviews.length === 0 ? (
+                <div className="md-sc-value sm" style={{color:'var(--text-faint)'}}>No reviews yet</div>
+              ) : (
+                <>
+                  <div className="md-sc-value">★ {avgRating ?? '—'}</div>
+                  <div className="md-sc-sub">{mergedReviews.length} review{mergedReviews.length !== 1 ? 's' : ''}</div>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="md-tabs">
@@ -810,15 +811,15 @@ function MintDetailContent({ url }: { url: string }) {
               </div>
             )}
             {description && (
-              <div className="md-info-row">
+              <div className="md-info-row md-desc-row">
                 <span className="md-info-label">Description</span>
                 <span className="md-info-value">{description}</span>
               </div>
             )}
             {descriptionLong && (
-              <div className="md-info-row" style={{flexDirection:'column', alignItems:'flex-start', gap:4}}>
+              <div className="md-info-row md-desc-row">
                 <span className="md-info-label">Full description</span>
-                <span className="md-info-value" style={{textAlign:'left', maxWidth:'none', lineHeight:1.5}}>
+                <span className="md-info-value">
                   {descriptionLong}
                 </span>
               </div>
@@ -924,7 +925,8 @@ function MintDetailContent({ url }: { url: string }) {
               <div className="md-contact-grid">
                 {email && (
                   <div className="md-contact-card">
-                    <div>
+                    <div className="md-contact-icon"><Mail size={14} /></div>
+                    <div style={{minWidth:0}}>
                       <div className="md-contact-type">Email</div>
                       <div className="md-contact-val">{email}</div>
                     </div>
@@ -949,7 +951,8 @@ function MintDetailContent({ url }: { url: string }) {
                 )}
                 {twitter && (
                   <div className="md-contact-card">
-                    <div>
+                    <div className="md-contact-icon"><AtSign size={14} /></div>
+                    <div style={{minWidth:0}}>
                       <div className="md-contact-type">Twitter</div>
                       <div className="md-contact-val">{twitter}</div>
                     </div>
@@ -974,7 +977,8 @@ function MintDetailContent({ url }: { url: string }) {
                 )}
                 {nostr && (
                   <div className="md-contact-card">
-                    <div>
+                    <div className="md-contact-icon"><Zap size={14} /></div>
+                    <div style={{minWidth:0}}>
                       <div className="md-contact-type">Nostr</div>
                       <div className="md-contact-val" style={{wordBreak:'break-all'}}>{nostr}</div>
                     </div>
@@ -1102,14 +1106,11 @@ function MintDetailContent({ url }: { url: string }) {
                 {!hasAnyLimits ? (
                   <div style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Limits not specified by this mint.</div>
                 ) : (
-                  <div style={{display:'flex',flexDirection:'column',gap:0,maxWidth:480}}>
-                    <div style={{display:'grid',gridTemplateColumns:'150px 1fr',gap:'0 12px',marginBottom:4}}>
-                      <span style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>NUT</span>
-                      <span style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Min – Max</span>
-                    </div>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
                     {[{ key: 'NUT-04 (Minting)', cfg: nut4 }, { key: 'NUT-05 (Melting)', cfg: nut5 }].map(({ key, cfg }) => (
-                      <div key={key} style={{display:'grid',gridTemplateColumns:'150px 1fr',gap:'0 12px',padding:'5px 0',borderBottom:'0.5px solid var(--border)',alignItems:'center'}}>
+                      <div key={key} style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:5}}>
                         <span style={{fontSize:11,fontWeight:600,color:'var(--text2)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap'}}>{key}</span>
+                        <span style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Min – Max</span>
                         <div>{renderLimits(cfg)}</div>
                       </div>
                     ))}
@@ -1223,15 +1224,15 @@ function MintDetailContent({ url }: { url: string }) {
             {!versionHistory || versionHistory.length === 0 ? (
               <div style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>No version history available.</div>
             ) : (
-              <div style={{maxWidth:420}}>
-                <div style={{display:'grid',gridTemplateColumns:'auto 1fr 1fr',gap:'0 12px',marginBottom:4}}>
+              <div>
+                <div style={{display:'grid',gridTemplateColumns:'auto minmax(140px,220px) minmax(140px,220px)',gap:'0 24px',marginBottom:4}}>
                   <span style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Date</span>
                   <span style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>From</span>
                   <span style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>To</span>
                 </div>
                 {versionHistory.map((vh, i) => (
                   <div key={i} style={{
-                    display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: '0 12px',
+                    display: 'grid', gridTemplateColumns: 'auto minmax(140px,220px) minmax(140px,220px)', gap: '0 24px',
                     padding: '4px 0',
                     borderBottom: i < versionHistory.length - 1 ? '0.5px solid var(--border)' : 'none',
                     alignItems: 'center',
@@ -1268,8 +1269,8 @@ function MintDetailContent({ url }: { url: string }) {
                     {auditExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                   </span>
                 </button>
-                <div className={`md-audit-content${auditExpanded ? ' expanded' : ''}`} style={{maxWidth:640}}>
-                <p style={{fontSize:12,color:'var(--text2)',lineHeight:1.6,marginBottom:12}}>
+                <div className={`md-audit-content${auditExpanded ? ' expanded' : ''}`}>
+                <p style={{fontSize:12,color:'var(--text2)',lineHeight:1.6,marginBottom:12,maxWidth:'68ch'}}>
                   These are payments the community auditor sent through this mint to check whether it actually pays out. Unlike Trust Score (a rolling window), this is the mint&apos;s all-time record. A high error rate here — even with a good Trust Score — means the mint has had real trouble in the past, and is worth watching before you commit larger amounts.
                 </p>
                 <div className="audit-stats-grid">
@@ -1382,7 +1383,7 @@ function MintDetailContent({ url }: { url: string }) {
               {reviewsLoading ? (
                 <div style={{fontSize:11,color:'var(--text3)',marginTop:8}}>Loading reviews...</div>
               ) : mergedReviews.length > 0 ? (
-                <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:8,maxWidth:560}}>
+                <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:8}}>
                   {(showAllReviews ? mergedReviews : mergedReviews.slice(0, 5)).map(r => {
                     const npub = nip19.npubEncode(r.pubkey)
                     const profile = r.profile
