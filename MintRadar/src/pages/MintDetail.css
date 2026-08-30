@@ -5,7 +5,7 @@
 
 /* ── Header ─────────────────────────────────────────────────── */
 .md-header {
-  margin: 14px 24px 0;
+  margin: 14px 18px 0;
   padding: 12px 16px;
   border: 1px solid var(--border);
   border-radius: var(--r);
@@ -251,7 +251,7 @@
   gap: 2px;
   border-bottom: 0.5px solid var(--border);
   margin-bottom: 0;
-  padding: 0 24px;
+  padding: 0 18px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -281,7 +281,7 @@
   display: grid;
   grid-template-columns: 1fr 250px;
   gap: 12px;
-  padding: 14px 24px;
+  padding: 14px 18px;
 }
 
 .md-left  { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
@@ -562,7 +562,7 @@
   justify-content: center;
   font-size: 15px;
   font-weight: 600;
-  color: #0B0C11;
+  color: var(--bg);
   flex-shrink: 0;
 }
 .review-author {
@@ -679,12 +679,12 @@
 
   .md-body {
     grid-template-columns: 1fr;
-    padding: 12px 16px;
+    padding: 12px 18px;
   }
-  .md-tabs { padding: 0 12px; }
+  .md-tabs { padding: 0 18px; }
   .md-tab { padding: 10px 10px; font-size: 13px; }
   .md-header {
-    margin: 10px 12px 0;
+    margin: 10px 18px 0;
     padding: 10px 14px;
     gap: 10px;
     flex-direction: column;
@@ -721,6 +721,14 @@
   .nut-grid        { grid-template-columns: 1fr 1fr; }
 }
 
+/* Match the navbar + Dashboard content gutter, which drops to 14px at ≤600px. */
+@media (max-width: 600px) {
+  .md-header { margin: 10px 14px 0; }
+  .md-summary { padding: 12px 14px; }
+  .md-tabs { padding: 0 14px; }
+  .md-body { padding: 12px 14px; }
+}
+
 @media (max-width: 400px) {
   .md-watch-btn {
     font-size: 10px;
@@ -737,8 +745,8 @@
 }
 
 .audit-stat-card {
-  background: #1a1d24;
-  border: 0.5px solid #252830;
+  background: var(--surface-2);
+  border: 0.5px solid var(--border);
   border-radius: 6px;
   padding: 8px 6px;
   display: flex;

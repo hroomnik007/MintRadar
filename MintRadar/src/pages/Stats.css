@@ -311,7 +311,7 @@
 }
 
 .sw-row:hover {
-  background: #161b22;
+  background: var(--surface-2);
 }
 
 .sw-chevron {
@@ -436,7 +436,7 @@
 /* ── Toggle tabs ─────────────────────────────────────────────── */
 .stats-tab-toggle {
   display: flex;
-  background: #0d1117;
+  background: var(--bg2);
   border-radius: 6px;
   padding: 2px;
   gap: 2px;
@@ -456,7 +456,7 @@
 }
 
 .stats-tab-btn.active {
-  background: #21262d;
+  background: var(--surface-3);
   color: var(--text);
 }
 
@@ -478,8 +478,8 @@
 }
 
 .stats-top5-row:hover {
-  background: #161b22;
-  border-color: #30363d;
+  background: var(--surface-2);
+  border-color: var(--border2);
 }
 
 .stats-top5-rank {
@@ -620,7 +620,7 @@
   transition: background 120ms ease;
 }
 
-.stats-nut-row:hover { background: #161b22; }
+.stats-nut-row:hover { background: var(--surface-2); }
 
 /* Font sizes here follow this page's existing vocabulary rather than their
    own smaller scale (measured in-browser, same approach as the Units &
@@ -764,12 +764,12 @@
   flex-direction: column;
   gap: 3px;
   scrollbar-width: thin;
-  scrollbar-color: #30363d transparent;
+  scrollbar-color: var(--border2) transparent;
 }
 
 .nut-modal-list::-webkit-scrollbar { width: 4px; }
 .nut-modal-list::-webkit-scrollbar-track { background: transparent; }
-.nut-modal-list::-webkit-scrollbar-thumb { background: #30363d; border-radius: 99px; }
+.nut-modal-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
 
 .nut-modal-row {
   display: flex;

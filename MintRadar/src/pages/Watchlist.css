@@ -12,7 +12,7 @@
   gap: 8px;
   padding: 10px 18px;
   border-bottom: 1px solid var(--border);
-  background: #0f1115;
+  background: var(--bg2);
 }
 
 .wl-controls-top {
@@ -71,8 +71,8 @@
 }
 
 .skeleton-card {
-  background: #0d1117;
-  border: 1px solid #21262d;
+  background: var(--bg2);
+  border: 1px solid var(--border);
   border-radius: 9px;
   padding: 14px 16px;
   display: flex;
@@ -81,15 +81,15 @@
 }
 
 .sk-row { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
-.sk-avatar { width: 32px; height: 32px; border-radius: 7px; flex-shrink: 0; background: linear-gradient(90deg, #161b22 25%, #1c2128 37%, #161b22 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
+.sk-avatar { width: 32px; height: 32px; border-radius: 7px; flex-shrink: 0; background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
 .sk-lines { flex: 1; min-width: 0; }
-.sk-line { height: 10px; border-radius: 4px; background: linear-gradient(90deg, #161b22 25%, #1c2128 37%, #161b22 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
-.sk-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(90deg, #161b22 25%, #1c2128 37%, #161b22 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
+.sk-line { height: 10px; border-radius: 4px; background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
+.sk-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
 .sk-pills { display: flex; gap: 5px; }
-.sk-pill { height: 20px; border-radius: 4px; background: linear-gradient(90deg, #161b22 25%, #1c2128 37%, #161b22 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
+.sk-pill { height: 20px; border-radius: 4px; background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
 .sk-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
-.sk-latency { width: 60px; height: 28px; border-radius: 4px; background: linear-gradient(90deg, #161b22 25%, #1c2128 37%, #161b22 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
-.sk-btn { width: 80px; height: 28px; border-radius: 6px; background: linear-gradient(90deg, #161b22 25%, #1c2128 37%, #161b22 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
+.sk-latency { width: 60px; height: 28px; border-radius: 4px; background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
+.sk-btn { width: 80px; height: 28px; border-radius: 6px; background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
 
 @keyframes pulse-green {
   0%,100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.55); }
@@ -352,10 +352,9 @@
   min-width: 15px; text-align: center; line-height: 1.6;
 }
 
-.filter-panel {
-  background: #0f1115; border-bottom: 1px solid var(--border);
-  padding: 12px 18px;
-}
+/* .filter-panel is defined once in Dashboard.css (shared filter markup) — do not
+   redefine it here; a second global rule silently overrode the Dashboard copy
+   depending on CSS bundle order. */
 
 .filter-active-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 
@@ -482,12 +481,12 @@
   max-height: calc(100vh - 56px);
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: #30363d transparent;
+  scrollbar-color: var(--border2) transparent;
 }
 
 .wl-side-col::-webkit-scrollbar { width: 4px; }
 .wl-side-col::-webkit-scrollbar-track { background: transparent; }
-.wl-side-col::-webkit-scrollbar-thumb { background: #30363d; border-radius: 99px; }
+.wl-side-col::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
 
 .wl-showing {
   font-size: 12px;
@@ -601,8 +600,8 @@
 }
 
 .wl-rec-row:hover {
-  background: #161b22;
-  border-color: #30363d;
+  background: var(--surface-2);
+  border-color: var(--border2);
 }
 
 .wl-rec-body {
@@ -647,7 +646,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #21262d;
+  background: var(--surface-3);
   border: 1.5px solid var(--bg3);
   font-size: 7px;
   font-family: var(--font-mono);

@@ -4,9 +4,9 @@
 }
 
 .nuts-header {
-  padding: 14px 24px;
+  padding: 14px 18px;
   border-bottom: 1px solid var(--border);
-  background: #0f1115;
+  background: var(--bg2);
 }
 
 .nuts-title {
@@ -36,7 +36,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px;
-  padding: 16px 24px;
+  padding: 16px 18px;
 }
 
 /* ── Card ────────────────────────────────────────────────────── */

@@ -192,7 +192,10 @@
   .navbar {
     height: auto;
     flex-wrap: wrap;
-    padding: 8px 14px;
+    /* Horizontal gutter must match the page content below (18px until ≤600px,
+       then 14px — see the ≤600px block). The nav still needs to wrap here at
+       640px or the 6 tabs overflow the viewport. */
+    padding: 8px 18px;
     gap: 8px;
   }
   .navbar-tabs {
@@ -212,6 +215,11 @@
     padding: 5px 11px;
   }
   .navbar-auth { margin-left: auto; }
+}
+
+@media (max-width: 600px) {
+  /* Page content drops to a 14px gutter at this width — keep the nav in step. */
+  .navbar { padding-left: 14px; padding-right: 14px; }
 }
 
 /* ── Nostr Login Modal ──────────────────────────────────────── */

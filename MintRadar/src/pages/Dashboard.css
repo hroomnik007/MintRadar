@@ -222,7 +222,7 @@
 
 /* ── Mint List View ─────────────────────────────────────────── */
 .mint-list-table-wrap {
-  padding: 0 24px;
+  padding: 0 18px;
   overflow-x: auto;
   min-width: 0;
 }
@@ -294,7 +294,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
   gap: 16px;
-  padding: 16px 24px;
+  padding: 16px 18px;
 }
 
 /* ── Mint Card ──────────────────────────────────────────────── */
@@ -493,8 +493,8 @@
 }
 
 .skeleton-card {
-  background: #0d1117;
-  border: 1px solid #21262d;
+  background: var(--bg2);
+  border: 1px solid var(--border);
   border-radius: var(--card-radius);
   padding: 14px 16px;
   display: flex;
@@ -506,7 +506,7 @@
 
 .sk-avatar {
   width: 32px; height: 32px; border-radius: 7px; flex-shrink: 0;
-  background: linear-gradient(90deg, #161b22 25%, #1c2128 37%, #161b22 63%);
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%);
   background-size: 400% 100%;
   animation: shimmer 1.4s ease infinite;
 }
@@ -515,14 +515,14 @@
 
 .sk-line {
   height: 10px; border-radius: 4px;
-  background: linear-gradient(90deg, #161b22 25%, #1c2128 37%, #161b22 63%);
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%);
   background-size: 400% 100%;
   animation: shimmer 1.4s ease infinite;
 }
 
 .sk-dot {
   width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
-  background: linear-gradient(90deg, #161b22 25%, #1c2128 37%, #161b22 63%);
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%);
   background-size: 400% 100%;
   animation: shimmer 1.4s ease infinite;
 }
@@ -531,7 +531,7 @@
 
 .sk-pill {
   height: 20px; border-radius: 4px;
-  background: linear-gradient(90deg, #161b22 25%, #1c2128 37%, #161b22 63%);
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%);
   background-size: 400% 100%;
   animation: shimmer 1.4s ease infinite;
 }
@@ -540,14 +540,14 @@
 
 .sk-latency {
   width: 60px; height: 28px; border-radius: 4px;
-  background: linear-gradient(90deg, #161b22 25%, #1c2128 37%, #161b22 63%);
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%);
   background-size: 400% 100%;
   animation: shimmer 1.4s ease infinite;
 }
 
 .sk-btn {
   width: 80px; height: 28px; border-radius: 6px;
-  background: linear-gradient(90deg, #161b22 25%, #1c2128 37%, #161b22 63%);
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%);
   background-size: 400% 100%;
   animation: shimmer 1.4s ease infinite;
 }
@@ -923,7 +923,7 @@
 .card-checkbox {
   width: 16px;
   height: 16px;
-  border: 1.5px solid #30363d;
+  border: 1.5px solid var(--border2);
   border-radius: 4px;
   background: var(--bg3);
   display: flex;
@@ -1020,10 +1020,10 @@
 
 .cmp-lbl {
   padding: 12px 16px 12px 0;
-  border-bottom: 0.5px solid #30363d;
+  border-bottom: 0.5px solid var(--border2);
   font-size: 11px;
   font-weight: 600;
-  color: #8b949e;
+  color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-family: var(--font-mono);
@@ -1033,7 +1033,7 @@
 
 .cmp-val {
   padding: 12px 16px 12px 0;
-  border-bottom: 0.5px solid #30363d;
+  border-bottom: 0.5px solid var(--border2);
   font-size: 11px;
   color: var(--text);
   align-self: center;

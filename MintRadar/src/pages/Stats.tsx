@@ -1190,11 +1190,11 @@ export default function Stats() {
                       <stop offset="95%" stopColor="#17E87F" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="date" tick={{fontSize:9,fill:'#8b949e',fontFamily:'var(--font-mono)'}} tickFormatter={d => d.slice(5)} interval="preserveStartEnd" axisLine={false} tickLine={false} />
-                  <YAxis domain={[0,100]} tick={{fontSize:9,fill:'#8b949e',fontFamily:'var(--font-mono)'}} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="date" tick={{fontSize:9,fill:'var(--text3)',fontFamily:'var(--font-mono)'}} tickFormatter={d => d.slice(5)} interval="preserveStartEnd" axisLine={false} tickLine={false} />
+                  <YAxis domain={[0,100]} tick={{fontSize:9,fill:'var(--text3)',fontFamily:'var(--font-mono)'}} axisLine={false} tickLine={false} />
                   <Tooltip
-                    contentStyle={{background:'#0d1117',border:'1px solid #21262d',borderRadius:6,fontSize:11,fontFamily:'var(--font-mono)'}}
-                    labelStyle={{color:'#8b949e'}}
+                    contentStyle={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:6,fontSize:11,fontFamily:'var(--font-mono)'}}
+                    labelStyle={{color:'var(--text3)'}}
                     formatter={(v) => [`${v ?? '—'}%`, 'Avg Trust']}
                   />
                   <Area type="monotone" dataKey="avgTrust" stroke="#17E87F" strokeWidth={1.5} fill="url(#trustGrad)" dot={false} />
