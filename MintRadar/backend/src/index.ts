@@ -1,7 +1,5 @@
 import express, { type Request, type Response, type NextFunction } from 'express'
 import cors from 'cors'
-import { SimplePool, verifyEvent } from 'nostr-tools'
-import WebSocket from 'ws'
 import { pool, initDb } from './db.js'
 import { isSafeUrl, checkWsUrlSafety, safeFetch } from './ssrf.js'
 import { upsertMint, probeMintToDb, isValidCashuMint, parseMintMethods, type MintMethodEntry } from './prober.js'
@@ -9,7 +7,6 @@ import { seedKnownMints, startCron } from './cron.js'
 import { publishServiceProfile } from './nostrService.js'
 import { normalizeUrl } from './discovery.js'
 import { computeDegraded } from './degraded.js'
-import { parseReviewRatingAndComment } from './reviews.js'
 import { authenticateNip98 } from './nip98Auth.js'
 import { fetchOgMintData, renderMintOgHtml } from './og.js'
 import { computeTrustMovers, type MintScoreSnapshot } from './trustMovers.js'
@@ -19,53 +16,12 @@ const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
 
 const trustMoversCache = new Map<string, { data: unknown; expiresAt: number }>()
 
-interface NostrReviewEntry {
-  id: string
-  pubkey: string
-  content: string
-  rating: number | null
-  createdAt: number
-  source: 'nostr'
-}
-
-const nostrReviewsCache = new Map<string, { data: NostrReviewEntry[]; expiresAt: number }>()
-// This endpoint is the fallback/secondary source in a two-mechanism pattern (see
-// the comment on the route below) — its data only needs to be "recent enough" to
-// catch what the client's own live fetch missed, never authoritative-fresh. 2
-// minutes keeps that staleness risk low while still meaningfully cutting relay
-// load for back-to-back page views (e.g. bouncing between a few mints), instead
-// of refetching from all 18 relays on every single request. Shortened from the
-// original 10 minutes, which was long enough to plausibly hide a just-published
-// review from this fallback path for most of a page visit.
-const NOSTR_REVIEWS_CACHE_TTL = 2 * 60 * 1000 // 2 minutes
-// NOSTR_REVIEWS_RELAYS mirrors the frontend's REVIEW_RELAYS constant
-// (src/core/nostr/relays.ts) — the two npm packages have no shared workspace, so
-// this array MUST be kept in sync with that one manually whenever either changes.
-// backend/src/__tests__/nostrReviewsRelays.test.ts pins this exact array as a
-// tripwire: it won't catch a silent frontend-only edit, but it forces a
-// deliberate test update (and, ideally, a matching edit on the other side)
-// before this list can drift here.
-export const NOSTR_REVIEWS_RELAYS = [
-  'wss://relay.damus.io',
-  'wss://nos.lol',
-  'wss://purplepag.es',
-  'wss://relay.snort.social',
-  'wss://relay.primal.net',
-  'wss://relay.cashumints.space',
-  'wss://relay.azzamo.net',
-  'wss://eden.nostr.land',
-  'wss://nostr.wine',
-  'wss://nostr-pub.wellorder.net',
-  'wss://offchain.pub',
-  'wss://relay.8333.space',
-  'wss://relay.minibits.cash',
-  'wss://nostr.oxtr.dev',
-  'wss://relay.nostr.net',
-  'wss://nostr21.com',
-  'wss://nostr.bitcoiner.social',
-  'wss://nostr.cypherpunk.today',
-]
-const NOSTR_REVIEWS_TIMEOUT_MS = 8_000
+// Re-exported for backend/src/__tests__/nostrReviewsRelays.test.ts (a drift
+// tripwire that pins the exact array). The list itself now lives in
+// reviewsSync.ts, which owns the only remaining server-side relay fetch of
+// kind:38000 reviews (the 6h background sync). GET /api/mints/nostr-reviews no
+// longer touches a relay — it serves the DB rows that sync populates.
+export { REVIEW_SYNC_RELAYS as NOSTR_REVIEWS_RELAYS } from './reviewsSync.js'
 
 const REQUIRED_ENV_VARS = ['DATABASE_URL', 'ALLOWED_ORIGINS'] as const
 const missingVars = REQUIRED_ENV_VARS.filter(v => !process.env[v])
@@ -852,6 +808,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_recent_total, m.audit_recent_errors,
         m.discovered_at, m.last_trust_score, m.last_error, m.server_location,
+        m.review_count, m.review_avg_rating,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
         latest.online AS latest_online,
@@ -869,6 +826,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_recent_total, m.audit_recent_errors,
         m.discovered_at, m.last_trust_score, m.last_error, m.server_location,
+        m.review_count, m.review_avg_rating,
         latest.online, latest.latency_ms, latest.checked_at
     `)
     .then(result => {
@@ -904,6 +862,8 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           uptimePct24h: total === 0 ? null : Math.round(onlineCount / total * 100),
           serverLocation: (r.server_location as string | null) ?? null,
           lastCheckedAt: (r.latest_checked_at as string | null) ?? null,
+          reviewCount: (r.review_count as number | null) ?? null,
+          reviewAvgRating: r.review_avg_rating != null ? Number(r.review_avg_rating) : null,
         }
       })
       knownMintsCache = { data, expiresAt: Date.now() + KNOWN_MINTS_CACHE_TTL }
@@ -1113,19 +1073,17 @@ app.post('/api/mints/discover', async (req: Request, res: Response): Promise<voi
   res.json({ added, total: body.urls.length, results })
 })
 
-// Fallback/secondary source in a deliberate two-mechanism review-fetch pattern.
-// The frontend's useMintReviews.ts (src/hooks/useMintReviews.ts) fetches live,
-// client-side, on every Mint Detail page view — that's the PRIMARY source, and
-// the only one guaranteed to show a user their own just-published review
-// immediately (see useSubmitReview.ts). This endpoint runs the same kind:38000
-// query from the server instead, cached (NOSTR_REVIEWS_CACHE_TTL above), as a
-// second, independent network vantage point: it can reach relays the user's own
-// (possibly restricted/slow) connection can't, or vice versa. MintDetail.tsx
-// merges both and only adds this endpoint's results where the live fetch found
-// nothing (see the dedup comment there) — this is not redundant duplication,
-// it's belt-and-suspenders coverage. Do not remove either side without
-// re-confirming with the maintainer; see the investigation report this pattern
-// was documented from.
+// Secondary review source in a two-mechanism pattern. The frontend's
+// useMintReviews.ts fetches live from Nostr relays client-side on every Mint
+// Detail view (PRIMARY — the only path guaranteed to surface a user's own
+// just-published review immediately, see useSubmitReview.ts). This endpoint
+// serves the `mint_reviews` rows that the 6h background sync (reviewsSync.ts)
+// populates — an independent server-side vantage point that can reach relays a
+// user's connection can't. It used to do its OWN live relay query on every
+// request (~3s, the single biggest contributor to slow Mint Detail loads); now
+// it's a fast DB read. MintDetail.tsx merges both sources and only adds rows
+// the live fetch missed (see the dedup comment there). Do not collapse the two
+// mechanisms without re-confirming with the maintainer.
 app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {
   const url = req.query['url']
 
@@ -1144,51 +1102,27 @@ app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {
     return
   }
 
-  const cached = nostrReviewsCache.get(url)
-  if (cached && Date.now() < cached.expiresAt) {
-    res.json(cached.data)
-    return
-  }
-
-  if (!globalThis.WebSocket) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(globalThis as any).WebSocket = WebSocket
-  }
-
-  const nostrPool = new SimplePool()
-
-  Promise.race([
-    nostrPool.querySync(NOSTR_REVIEWS_RELAYS, { kinds: [38000], '#u': [url], limit: 500 }),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('timeout')), NOSTR_REVIEWS_TIMEOUT_MS)
-    ),
-  ])
-    .then(events => {
-      const validEvents = events.filter(e => verifyEvent(e))
-      // One review per pubkey — keep the most recent
-      const byPubkey = new Map<string, typeof validEvents[0]>()
-      for (const e of validEvents) {
-        const existing = byPubkey.get(e.pubkey)
-        if (!existing || e.created_at > existing.created_at) {
-          byPubkey.set(e.pubkey, e)
-        }
-      }
-
-      const reviews: NostrReviewEntry[] = []
-      for (const e of byPubkey.values()) {
-        const { rating, comment: content } = parseReviewRatingAndComment(e.tags as string[][], e.content ?? '')
-        reviews.push({ id: e.id, pubkey: e.pubkey, content, rating, createdAt: e.created_at, source: 'nostr' })
-      }
-
-      reviews.sort((a, b) => b.createdAt - a.createdAt)
-      nostrReviewsCache.set(url, { data: reviews, expiresAt: Date.now() + NOSTR_REVIEWS_CACHE_TTL })
-      nostrPool.destroy()
-      console.log(`[nostr-reviews] ${url}: ${validEvents.length} events → ${reviews.length} unique reviews`)
+  pool
+    .query(
+      `SELECT event_id, pubkey, rating, comment, created_at
+       FROM mint_reviews WHERE url = $1
+       ORDER BY created_at DESC`,
+      [url],
+    )
+    .then(result => {
+      const reviews = result.rows.map(r => ({
+        id: r.event_id as string,
+        pubkey: r.pubkey as string,
+        content: (r.comment as string | null) ?? '',
+        rating: r.rating as number | null,
+        createdAt: Number(r.created_at),
+        source: 'nostr' as const,
+      }))
+      res.setHeader('Cache-Control', 'max-age=120')
       res.json(reviews)
     })
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/mints/nostr-reviews]', err)
-      nostrPool.destroy()
       res.json([])
     })
 })

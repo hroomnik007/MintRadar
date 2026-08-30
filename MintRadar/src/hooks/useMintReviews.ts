@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { verifyEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
-import { REVIEW_RELAYS, PROFILE_RELAYS } from '@/core/nostr/relays'
+import { REVIEW_READ_RELAYS, PROFILE_RELAYS } from '@/core/nostr/relays'
 import { deduplicateByPubkey, parseReviewEvent, sortReviewsByNewest } from '@/utils/reviewUtils'
 
 export interface MintReview {
@@ -22,11 +22,17 @@ export function useMintReviews(mintUrl: string) {
     if (!mintUrl) return
     let cancelled = false
 
-    sharedPool.querySync(REVIEW_RELAYS, {
+    // maxWait caps how long querySync waits for slow/stalled relays before
+    // resolving with whatever arrived — without it, nostr-tools falls back to a
+    // 4400ms per-relay EOSE ceiling, which was the bulk of the client-side
+    // review-load delay. This is only the fast first paint; the authoritative
+    // count/rating comes from the DB-backed endpoints. 2000ms is comfortably
+    // above the measured connect+EOSE time of every REVIEW_READ_RELAYS entry.
+    sharedPool.querySync(REVIEW_READ_RELAYS, {
       kinds: [38000],
       '#u': [mintUrl],
       limit: 500,
-    }).then(async events => {
+    }, { maxWait: 2000 }).then(async events => {
       if (cancelled) return
       const validEvents = events.filter(e => verifyEvent(e))
       const parsed = sortReviewsByNewest(
@@ -39,7 +45,7 @@ export function useMintReviews(mintUrl: string) {
 
       // Fetch profiles non-blocking — update reviews when profiles arrive
       const pubkeys = [...new Set(parsed.map(r => r.pubkey))]
-      sharedPool.querySync(PROFILE_RELAYS, { kinds: [0], authors: pubkeys })
+      sharedPool.querySync(PROFILE_RELAYS, { kinds: [0], authors: pubkeys }, { maxWait: 2000 })
         .then(profileEvents => {
           if (cancelled) return
           const profileMap: Record<string, { name?: string; picture?: string }> = {}

@@ -27,6 +27,10 @@ export interface KnownMint {
   uptimePct24h?: number | null
   serverLocation?: string | null
   lastCheckedAt?: string | null
+  // NIP-87 review rollup, refreshed by the backend's 6h reviews sync
+  // (backend/src/reviewsSync.ts). Null until that sync has run for the mint.
+  reviewCount?: number | null
+  reviewAvgRating?: number | null
 }
 
 async function fetchKnownMints(): Promise<KnownMint[]> {

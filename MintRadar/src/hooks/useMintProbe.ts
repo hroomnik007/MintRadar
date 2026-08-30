@@ -19,10 +19,14 @@ async function saveHistory(result: MintStatus): Promise<void> {
   }
 }
 
-export function useMintProbe(url: string): UseQueryResult<MintStatus> {
-  return useQuery({
-    queryKey: ['mint', 'probe', url],
-    queryFn: async () => {
+// Shared so MintCard's hover-prefetch (src/core/mint/prefetch.ts) primes the
+// exact same cache entry this hook reads — same queryKey, same queryFn, same
+// staleTime — so navigating to Mint Detail finds the probe already done (or
+// in-flight) instead of starting it on click.
+export function mintProbeQueryOptions(url: string) {
+  return {
+    queryKey: ['mint', 'probe', url] as const,
+    queryFn: async (): Promise<MintStatus> => {
       const result = await probeMint(url)
       try {
         await saveHistory(result)
@@ -34,6 +38,12 @@ export function useMintProbe(url: string): UseQueryResult<MintStatus> {
       return result
     },
     staleTime: 1000 * 60 * 2,
+  }
+}
+
+export function useMintProbe(url: string): UseQueryResult<MintStatus> {
+  return useQuery({
+    ...mintProbeQueryOptions(url),
     refetchInterval: 2 * 60 * 1000,
     refetchIntervalInBackground: false,
     retry: 1,

@@ -25,9 +25,33 @@ export const DISCOVERY_RELAYS: string[] = [
 ]
 
 // Discovery relays plus relay.minibits.cash (a Cashu-wallet-specific relay that tends to
-// carry kind:38000 mint reviews) — used when READING reviews for a mint.
+// carry kind:38000 mint reviews). Used as the base for REVIEW_PUBLISH_RELAYS (propagation
+// reach on write). NOT used for the client-side read path anymore — see REVIEW_READ_RELAYS.
 export const REVIEW_RELAYS: string[] = [
   ...DISCOVERY_RELAYS,
+  'wss://relay.minibits.cash',
+]
+
+// Curated fast-path list for READING reviews client-side (useMintReviews.ts). Deliberately
+// small and only relays measured to connect + EOSE reliably in <600ms as of 2026-08-30,
+// because `sharedPool.querySync` resolves only once EVERY listed relay has EOSE'd or hit
+// the per-relay timeout — one dead relay stalls the whole read. Excluded from the full
+// REVIEW_RELAYS set here and why:
+//   relay.8333.space   — EHOSTUNREACH (down since 2026-08, cost ~3s of dead wait)
+//   relay.snort.social — persistent Cloudflare 503 on anon REQ
+//   nostr.wine         — 403 on anon REQ (paid relay)
+//   azzamo/eden/oxtr/nostr21/wellorder/offchain/bitcoiner/cypherpunk/purplepag.es
+//                      — slower connect and/or negligible kind:38000 yield for this path
+// This is the client's fast first paint; the authoritative count/rating comes from the
+// DB-backed /api/mints/known + /api/mints/nostr-reviews (populated by the 6h backend sync,
+// which uses a much broader relay set — see backend/src/reviewsSync.ts).
+export const REVIEW_READ_RELAYS: string[] = [
+  'wss://nos.lol',
+  'wss://relay.primal.net',
+  'wss://relay.damus.io',
+  'wss://relay.nostr.net',
+  'wss://nostr.oxtr.dev',
+  'wss://relay.cashumints.space',
   'wss://relay.minibits.cash',
 ]
 

@@ -2,114 +2,92 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import type { Express } from 'express'
 
-// GET /api/mints/nostr-reviews fetches NIP-87 kind:38000 events from Nostr
-// relays, verifies their signatures, dedupes by author, and parses the rating
-// + comment. We mock the nostr-tools boundary (SimplePool.querySync +
-// verifyEvent) so the route, validation, dedupe and real parseReviewRatingAndComment
-// logic run without hitting any relay. db.js is mocked to avoid a real pool.
+// GET /api/mints/nostr-reviews serves the `mint_reviews` rows that the 6h
+// background sync (reviewsSync.ts) populates from Nostr relays — it no longer
+// does its own live relay query per request. These tests mock the pg pool and
+// assert the route's validation, row→JSON mapping, ordering pass-through, and
+// error fallback.
 
-const { querySyncMock, verifyEventMock } = vi.hoisted(() => ({
-  querySyncMock: vi.fn(),
-  verifyEventMock: vi.fn(),
-}))
+const { queryMock } = vi.hoisted(() => ({ queryMock: vi.fn() }))
 
 vi.mock('../../db.js', () => ({
-  pool: { query: vi.fn() },
+  pool: { query: queryMock },
   initDb: vi.fn(),
-}))
-vi.mock('nostr-tools', () => ({
-  // Must be a `function` (not an arrow) so the handler's `new SimplePool()` works.
-  SimplePool: vi.fn(function () {
-    return { querySync: querySyncMock, destroy: vi.fn() }
-  }),
-  verifyEvent: verifyEventMock,
 }))
 
 let app: Express
 
 beforeEach(async () => {
   vi.resetModules()
-  querySyncMock.mockReset()
-  verifyEventMock.mockReset()
-  verifyEventMock.mockReturnValue(true) // signatures valid unless a test says otherwise
+  queryMock.mockReset()
   ;({ app } = await import('../../index.js'))
 })
 
-let pubkeyCounter = 0
-function review(overrides: Partial<{ id: string; pubkey: string; content: string; tags: string[][]; created_at: number }> = {}) {
-  pubkeyCounter++
+let n = 0
+function row(overrides: Partial<{ event_id: string; pubkey: string; rating: number | null; comment: string; created_at: number }> = {}) {
+  n++
   return {
-    id: `id-${pubkeyCounter}`,
-    pubkey: `pubkey-${pubkeyCounter}`,
-    content: '[5/5] Solid mint',
-    tags: [] as string[][],
-    created_at: 1_700_000_000 + pubkeyCounter,
+    event_id: `evt-${n}`,
+    pubkey: `pubkey-${n}`,
+    rating: 5,
+    comment: 'Solid mint',
+    created_at: 1_700_000_000 + n,
     ...overrides,
   }
 }
 
-// Each test uses a distinct mint URL so the per-URL response cache never bleeds
-// across tests (and the resetModules in beforeEach starts from a clean cache).
-let urlCounter = 0
-function freshUrl() {
-  urlCounter++
-  return `https://mint${urlCounter}.example.com`
-}
-
 describe('GET /api/mints/nostr-reviews', () => {
-  it('returns parsed reviews for a valid mint URL', async () => {
-    querySyncMock.mockResolvedValue([
-      review({ pubkey: 'alice', content: '[4/5] Good', created_at: 100 }),
-      review({ pubkey: 'bob', content: '[2/5] Meh', created_at: 200 }),
-    ])
+  it('maps DB rows to the review JSON shape', async () => {
+    queryMock.mockResolvedValue({
+      rows: [
+        row({ pubkey: 'bob', rating: 2, comment: 'Meh', created_at: 200 }),
+        row({ pubkey: 'alice', rating: 4, comment: 'Good', created_at: 100 }),
+      ],
+    })
 
-    const res = await request(app).get('/api/mints/nostr-reviews').query({ url: freshUrl() })
+    const res = await request(app).get('/api/mints/nostr-reviews').query({ url: 'https://mint.example.com' })
 
     expect(res.status).toBe(200)
-    expect(Array.isArray(res.body)).toBe(true)
     expect(res.body).toHaveLength(2)
-    // Sorted newest-first.
-    expect(res.body[0].pubkey).toBe('bob')
-    expect(res.body[0]).toMatchObject({ rating: 2, content: 'Meh', source: 'nostr' })
+    expect(res.body[0]).toMatchObject({ pubkey: 'bob', rating: 2, content: 'Meh', createdAt: 200, source: 'nostr' })
+    expect(res.body[0].id).toBe(res.body[0].id) // event_id surfaced as `id`
     expect(res.body[1]).toMatchObject({ pubkey: 'alice', rating: 4, content: 'Good' })
   })
 
-  it('returns an empty array (not an error) when no reviews exist', async () => {
-    querySyncMock.mockResolvedValue([])
+  it('queries the given url, ordered newest-first', async () => {
+    queryMock.mockResolvedValue({ rows: [] })
 
-    const res = await request(app).get('/api/mints/nostr-reviews').query({ url: freshUrl() })
+    await request(app).get('/api/mints/nostr-reviews').query({ url: 'https://mint.example.com' })
+
+    expect(queryMock).toHaveBeenCalledTimes(1)
+    const [sql, params] = queryMock.mock.calls[0]!
+    expect(sql).toMatch(/FROM mint_reviews WHERE url = \$1/)
+    expect(sql).toMatch(/ORDER BY created_at DESC/)
+    expect(params).toEqual(['https://mint.example.com'])
+  })
+
+  it('returns an empty array when the mint has no cached reviews', async () => {
+    queryMock.mockResolvedValue({ rows: [] })
+
+    const res = await request(app).get('/api/mints/nostr-reviews').query({ url: 'https://mint.example.com' })
 
     expect(res.status).toBe(200)
     expect(res.body).toEqual([])
   })
 
-  it('keeps only the most recent review per author (dedupe by pubkey)', async () => {
-    querySyncMock.mockResolvedValue([
-      review({ pubkey: 'alice', content: '[1/5] old', created_at: 100 }),
-      review({ pubkey: 'alice', content: '[5/5] new', created_at: 999 }),
-    ])
+  it('passes a null rating through unchanged (rating-less endorsement event)', async () => {
+    queryMock.mockResolvedValue({ rows: [row({ rating: null, comment: '' })] })
 
-    const res = await request(app).get('/api/mints/nostr-reviews').query({ url: freshUrl() })
+    const res = await request(app).get('/api/mints/nostr-reviews').query({ url: 'https://mint.example.com' })
 
-    expect(res.body).toHaveLength(1)
-    expect(res.body[0]).toMatchObject({ rating: 5, content: 'new' })
+    expect(res.body[0]).toMatchObject({ rating: null, content: '' })
   })
 
-  it('drops events whose signature fails verification', async () => {
-    verifyEventMock.mockReturnValue(false)
-    querySyncMock.mockResolvedValue([review({ content: '[5/5] forged' })])
-
-    const res = await request(app).get('/api/mints/nostr-reviews').query({ url: freshUrl() })
-
-    expect(res.status).toBe(200)
-    expect(res.body).toEqual([])
-  })
-
-  it('returns an empty array (not 500) when the relay query fails', async () => {
+  it('returns an empty array (not 500) when the DB query fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
-    querySyncMock.mockRejectedValue(new Error('relay timeout'))
+    queryMock.mockRejectedValue(new Error('db down'))
 
-    const res = await request(app).get('/api/mints/nostr-reviews').query({ url: freshUrl() })
+    const res = await request(app).get('/api/mints/nostr-reviews').query({ url: 'https://mint.example.com' })
 
     expect(res.status).toBe(200)
     expect(res.body).toEqual([])
@@ -120,7 +98,7 @@ describe('GET /api/mints/nostr-reviews', () => {
 
     expect(res.status).toBe(400)
     expect(res.body).toEqual({ error: 'Missing required query parameter: url' })
-    expect(querySyncMock).not.toHaveBeenCalled()
+    expect(queryMock).not.toHaveBeenCalled()
   })
 
   it('returns 400 for a non-https url', async () => {
@@ -128,6 +106,7 @@ describe('GET /api/mints/nostr-reviews', () => {
 
     expect(res.status).toBe(400)
     expect(res.body).toEqual({ error: 'url must start with https://' })
+    expect(queryMock).not.toHaveBeenCalled()
   })
 
   it('returns 400 for a url exceeding the max length', async () => {
@@ -141,9 +120,9 @@ describe('GET /api/mints/nostr-reviews', () => {
 
   it('returns an XSS payload in a review comment verbatim (no dangerous server-side transform)', async () => {
     const xss = '<script>alert(document.cookie)</script>'
-    querySyncMock.mockResolvedValue([review({ pubkey: 'mallory', content: xss })])
+    queryMock.mockResolvedValue({ rows: [row({ pubkey: 'mallory', comment: xss })] })
 
-    const res = await request(app).get('/api/mints/nostr-reviews').query({ url: freshUrl() })
+    const res = await request(app).get('/api/mints/nostr-reviews').query({ url: 'https://mint.example.com' })
 
     expect(res.status).toBe(200)
     // Backend passes the comment through as inert JSON data — no execution, no
@@ -152,13 +131,11 @@ describe('GET /api/mints/nostr-reviews', () => {
     expect(res.headers['content-type']).toMatch(/application\/json/)
   })
 
-  it('serves the cached payload on a second request for the same url (one relay round-trip)', async () => {
-    querySyncMock.mockResolvedValue([review({ pubkey: 'alice', content: '[3/5] ok' })])
-    const url = freshUrl()
+  it('sets a short Cache-Control so the CDN/browser can reuse it briefly', async () => {
+    queryMock.mockResolvedValue({ rows: [] })
 
-    await request(app).get('/api/mints/nostr-reviews').query({ url })
-    await request(app).get('/api/mints/nostr-reviews').query({ url })
+    const res = await request(app).get('/api/mints/nostr-reviews').query({ url: 'https://mint.example.com' })
 
-    expect(querySyncMock).toHaveBeenCalledTimes(1)
+    expect(res.headers['cache-control']).toMatch(/max-age=\d+/)
   })
 })

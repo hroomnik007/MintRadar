@@ -2,6 +2,7 @@ import cron from 'node-cron'
 import pLimit from 'p-limit'
 import { getKnownMints, probeMintToDb, pruneOldHistory, pruneUnvalidatedMints, backfillServerLocations } from './prober.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
+import { refreshAllMintReviews } from './reviewsSync.js'
 import { pruneOldNotificationSubscriptions } from './db.js'
 import { publishServiceProfile } from './nostrService.js'
 import { fetchLatestUpstreamVersions } from './versionCatalog.js'
@@ -97,11 +98,22 @@ export function startCron(): void {
     }
   })
 
-  // Discovery: run once after 10s, then every 6h
+  // Discovery: run once after 10s, then every 6h. The mint-reviews sync
+  // (reviewsSync.ts) piggy-backs on the same cadence — it fetches kind:38000
+  // reviews for every known mint into `mint_reviews` so Mint Detail can serve
+  // review count / avg rating / list from the DB instead of a live relay query
+  // on every page open. It's single-flight internally and logs its own summary.
   setTimeout(async () => {
     console.log('[cron] running initial discovery...')
     await discoverMintsFromNostr()
     await discoverMintsFromApi()
+    try {
+      await refreshAllMintReviews()
+    } catch (err) {
+      if (process.env['NODE_ENV'] !== 'production') {
+        console.error('[cron] initial reviews sync error:', err)
+      }
+    }
   }, 10_000)
 
   // Backfill server_location for mints that were never resolved (one-time catch-up)
@@ -110,5 +122,12 @@ export function startCron(): void {
     console.log('[cron] running scheduled discovery...')
     await discoverMintsFromNostr()
     await discoverMintsFromApi()
+    try {
+      await refreshAllMintReviews()
+    } catch (err) {
+      if (process.env['NODE_ENV'] !== 'production') {
+        console.error('[cron] scheduled reviews sync error:', err)
+      }
+    }
   }, 6 * 60 * 60 * 1000)
 }

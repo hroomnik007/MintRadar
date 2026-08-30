@@ -72,6 +72,19 @@ first_seen_at TIMESTAMPTZ DEFAULT NOW()
 UNIQUE (url, version)
 ```
 
+### mint_reviews (added 2026-08-30 — review-load perf work)
+```
+url TEXT REFERENCES mints(url) ON DELETE CASCADE
+pubkey TEXT NOT NULL
+event_id TEXT NOT NULL
+rating INTEGER            -- null for rating-less endorsement events
+comment TEXT NOT NULL DEFAULT ''   -- capped at 2000 chars on write
+created_at BIGINT NOT NULL         -- nostr event created_at (unix seconds)
+PRIMARY KEY (url, pubkey)          -- one row per author per mint, newest wins
+```
+Index: (url, created_at DESC). Populated by the 6h reviews sync (`backend/src/reviewsSync.ts`).
+Rollup columns on `mints`: `review_count INTEGER`, `review_avg_rating REAL`, `reviews_checked_at TIMESTAMPTZ`.
+
 ## Backend API
 - GET /health — health check
 - GET /api/mints/known — all mints with online status, latency, trust score, degraded flag (TTL cached 60s)
@@ -83,7 +96,8 @@ UNIQUE (url, version)
 - POST /api/mint/submit — submit new mint URL { url: string }, rate limited 20/IP/hr
 - POST /api/mints/discover — batch insert discovered URLs { urls: string[] }, rate limited 10/IP/hr
 - GET /api/og/mint?url= — bot-only OG HTML fragment for /mint/:url, routed here by nginx UA-sniffing (see "OG tags for /mint/:url" under Security & Infrastructure Gotchas); always 200, never 404/500
-- GET /api/mints/nostr-reviews?url= — server-side kind:38000 review fetch, TTL cached 2min; fallback/secondary source alongside the frontend's own live fetch, see "Reviews Feature" below
+- GET /api/mints/nostr-reviews?url= — **DB read from `mint_reviews`** (as of 2026-08-30; previously a live per-request kind:38000 relay query, ~3s — the biggest Mint Detail load cost). Serves the rows the 6h reviews sync populates; `Cache-Control: max-age=120`. Still the secondary source alongside the frontend's own live fetch — see "Reviews Feature" below.
+- `/api/mints/known` also now carries `reviewCount` / `reviewAvgRating` (from the `mints` rollup columns) so Mint Detail's Community-rating tile renders immediately without waiting on any relay.
 
 ## /api/stats calculation rules
 - totalMints: mints where latest online IS NOT FALSE (online=true or null) — matches Dashboard "Known Mints"
@@ -105,7 +119,7 @@ UNIQUE (url, version)
 
 ## Cron jobs
 - Every 5min: probe all mints in DB → write to mint_history, update mints metadata + last_trust_score
-- Every 6h: NIP-87 discovery from 7 relays + audit.8333.space API → INSERT new mints
+- Every 6h: NIP-87 discovery from 7 relays + audit.8333.space API → INSERT new mints, **then `refreshAllMintReviews()`** (`backend/src/reviewsSync.ts`): per-mint kind:38000 fetch (broad `REVIEW_SYNC_RELAYS`, 8s timeout, concurrency 3) → atomic per-mint replace of `mint_reviews` + `mints.review_count`/`review_avg_rating` rollup inside one transaction (READ COMMITTED: readers see old-complete or new-complete, never partial). Single-flight (`isReviewSyncRunning`).
 - Daily 3:45am: refresh `software_versions` cache from the GitHub Releases API (`cashubtc/nutshell`, `cashubtc/cdk`) — see Trust Score calculation above
 
 ## Discovery pipeline
@@ -311,6 +325,10 @@ When a deployed change doesn't appear to users, verify in this order before assu
 An earlier `src/components/mint/MintCard.tsx`/`.css` was deleted (zero imports at the time). For a while Dashboard and Watchlist each had their own separate inline card renderer instead of a shared one.
 
 **This is no longer true as of the "Post-redesign fixes round 2" session (commit f98694a) below.** `src/components/mint/MintCard.tsx` was recreated and is now the real, actively-imported shared card component used by both `src/pages/Dashboard.tsx` and `src/pages/Watchlist.tsx`. Any task targeting "the mint card" or "the watch button" should edit this file — not Dashboard.tsx/Watchlist.tsx directly — unless the change is genuinely page-specific.
+
+### Mint Detail hover-prefetch (2026-08-30)
+
+`useMintHoverPrefetch()` (`src/hooks/useMintHoverPrefetch.ts`) → `prefetchMintDetail()` (`src/core/mint/prefetch.ts`). `MintCard` and Dashboard's compact list row wire `onPointerEnter`/`onPointerLeave` to it. After a **150ms hover-intent delay** (so a fast grid sweep doesn't fire anything) it `queryClient.prefetchQuery`s the exact queryKeys Mint Detail's own `useQuery` calls use — `['mint','probe',url]` (via the shared `mintProbeQueryOptions` exported from `useMintProbe.ts`), `['mint','chart-history',url,'7d']`, `['mint','history-api',url,'24h']`, `['mint','version-history',url]`, `['mint','nostr-reviews',url]`. Navigation then reuses the primed cache with **zero refetch** (verified). Prefetches that lead to a click are net-neutral on request count; only hover-without-click adds load, which the intent delay minimises. Keys MUST stay in sync with MintDetail.tsx or the prefetch silently primes a dead slot.
 
 ### Security audit
 
@@ -518,16 +536,18 @@ Runs every 6h: `0 */6 * * *` → `scripts/backup-db.sh`
 
 ## Reviews Feature (Mint Detail)
 
-All review-related relay lists now live in `src/core/nostr/relays.ts` (unified 2026-07-24):
-- **REVIEW_RELAYS** (= DISCOVERY_RELAYS + `relay.minibits.cash`) — used by `src/hooks/useMintReviews.ts` to fetch kind:38000 events for a mint
-- **REVIEW_PUBLISH_RELAYS** (= REVIEW_RELAYS + 7 extra relays: bitcoiner.social, nostr.mom, oxtr.dev, mostr.pub, noswhere.com, pyramid.fiatjaf.com, lopp.social) — a deliberately wider net used only by `src/hooks/useSubmitReview.ts` when publishing a new review, for propagation reach
-- **PROFILE_RELAYS** (`relay.nostr.band, nos.lol, relay.primal.net, purplepag.es, relay.damus.io`) — unchanged, used for kind:0 profile lookups only
+All review-related relay lists live in `src/core/nostr/relays.ts`:
+- **REVIEW_READ_RELAYS** (added 2026-08-30) — curated 7-relay fast-path used by `src/hooks/useMintReviews.ts` for the client-side read. `querySync` resolves only once EVERY listed relay EOSEs or times out, so this is deliberately small and only relays measured to connect+EOSE <600ms. Excludes `relay.8333.space` (EHOSTUNREACH), `relay.snort.social` (503 on anon REQ), `nostr.wine` (403), and the slower long-tail. Paired with `{ maxWait: 2000 }` on the querySync call (without it, nostr-tools falls back to a 4400ms per-relay EOSE ceiling — that was the bulk of the old client-side review-load delay).
+- **REVIEW_RELAYS** (= DISCOVERY_RELAYS + `relay.minibits.cash`) — no longer used for the read path; kept only as the base for REVIEW_PUBLISH_RELAYS.
+- **REVIEW_PUBLISH_RELAYS** (= REVIEW_RELAYS + 7 extra relays: bitcoiner.social, nostr.mom, oxtr.dev, mostr.pub, noswhere.com, pyramid.fiatjaf.com, lopp.social) — wider net used only by `src/hooks/useSubmitReview.ts` when publishing, for propagation reach
+- **PROFILE_RELAYS** — unchanged, used for kind:0 profile lookups only
 
-`backend/src/index.ts`'s `NOSTR_REVIEWS_RELAYS` (server-side review fetch endpoint) mirrors REVIEW_RELAYS manually — same no-workspace caveat as the discovery relays above. A backend unit test (`backend/src/__tests__/nostrReviewsRelays.test.ts`) pins the exact array as a tripwire — it doesn't catch a frontend-only edit, but a future change to this list requires deliberately updating that test too.
+Backend `REVIEW_SYNC_RELAYS` (`backend/src/reviewsSync.ts`, re-exported from `index.ts` as `NOSTR_REVIEWS_RELAYS`) is the broad list used by the 6h background sync — it has a generous time budget so it favours coverage over latency (opposite trade-off from REVIEW_READ_RELAYS). It's a manual mirror of the old REVIEW_RELAYS; `backend/src/__tests__/nostrReviewsRelays.test.ts` pins the exact array as a drift tripwire. The frontend fast-path list is deliberately NOT mirrored.
 
-**Two independent review-fetch mechanisms, by design (documented 2026-08-29 after an investigation confirmed this wasn't accidental duplication):**
-- **Primary — `useMintReviews.ts`** (above): live, client-side, no cache, fetched fresh on every Mint Detail visit. This is what lets a user see their own review immediately after posting one (`useSubmitReview.ts`).
-- **Secondary/fallback — `GET /api/mints/nostr-reviews`** (`backend/src/index.ts`, `nostrReviewsCache`, TTL `NOSTR_REVIEWS_CACHE_TTL = 2 minutes`, shortened from an original 10 — long enough that the endpoint had plausibly been showing stale data for most of a page visit, given its role is only ever to catch what the primary source missed): runs the same kind:38000 query from the server as a second, independent network vantage point (relays the user's own connection can't reach, or vice versa). `MintDetail.tsx`'s `mergedReviews` (~line 279) only adds reviews the primary fetch didn't find — never shown twice. The endpoint also logs `[nostr-reviews] <url>: <N> events → <M> unique reviews` on every non-cached fetch, the only visibility into review counts anywhere in the app (no DB persistence, no stats field).
+**Two independent review-fetch mechanisms, by design (documented 2026-08-29; reworked 2026-08-30 for load perf):**
+- **Primary — `useMintReviews.ts`**: live, client-side, no cache, fetched fresh on every Mint Detail visit via REVIEW_READ_RELAYS + maxWait 2000ms. Still what lets a user see their own review immediately after posting one (`useSubmitReview.ts`). It's now the *background refresh*, not the gate for first paint.
+- **Secondary — `GET /api/mints/nostr-reviews`**: as of 2026-08-30 this is a **DB read from `mint_reviews`** (was a live per-request relay query, ~3s — the single biggest Mint Detail load cost). The rows come from the 6h `refreshAllMintReviews()` sync. `MintDetail.tsx`'s `mergedReviews` still only adds reviews the primary fetch didn't find — never shown twice.
+- **Community-rating stat tile** reads `knownMint.reviewCount` / `reviewAvgRating` (the `mints` rollup, in `/api/mints/known`) while the live fetch is still running — `tileReviewCount` / `tileAvgRating` in `MintDetail.tsx`. This replaced a ~4s window where the empty live array made the tile flash a wrong "No reviews yet". `null` on both the rollup and the live side renders a "…" skeleton (same idea as the existing "Loading live mint data" placeholder).
 - Do not remove either mechanism without re-confirming with the maintainer — see the review-fetch investigation report for the full reasoning.
 
 Key implementation details:

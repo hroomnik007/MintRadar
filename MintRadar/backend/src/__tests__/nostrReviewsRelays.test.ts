@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Drift tripwire, not a cross-package sync mechanism: NOSTR_REVIEWS_RELAYS
-// (backend/src/index.ts) is a manually-maintained copy of the frontend's
-// REVIEW_RELAYS (src/core/nostr/relays.ts) — the two npm packages have no
-// shared workspace, so nothing here can automatically catch a frontend-only
-// edit. What this test DOES do: pin the exact expected array, so any future
-// change to NOSTR_REVIEWS_RELAYS forces a deliberate edit to this test too,
-// rather than drifting silently. If you're updating this list because
-// REVIEW_RELAYS changed, update both files and this test together.
+// Drift tripwire, not a cross-package sync mechanism. The relay list now lives
+// in backend/src/reviewsSync.ts as REVIEW_SYNC_RELAYS (the 6h background review
+// sync uses it); backend/src/index.ts re-exports it as NOSTR_REVIEWS_RELAYS for
+// this test. It is a manually-maintained mirror of what the frontend historically
+// called REVIEW_RELAYS (src/core/nostr/relays.ts). The two npm packages have no
+// shared workspace, so nothing here catches a frontend-only edit — but pinning
+// the exact array forces a deliberate edit to this test on any future change,
+// rather than silent drift. NOTE: the frontend's CLIENT-SIDE read path uses a
+// deliberately smaller, curated REVIEW_READ_RELAYS (fast-path) that is NOT
+// mirrored here on purpose — see the comment on REVIEW_READ_RELAYS.
 
 vi.mock('../db.js', () => ({
   pool: { query: vi.fn() },
@@ -21,7 +23,7 @@ beforeEach(async () => {
   ;({ NOSTR_REVIEWS_RELAYS } = await import('../index.js'))
 })
 
-describe('NOSTR_REVIEWS_RELAYS (backend copy of frontend REVIEW_RELAYS)', () => {
+describe('NOSTR_REVIEWS_RELAYS (= reviewsSync REVIEW_SYNC_RELAYS, backend mirror of frontend REVIEW_RELAYS)', () => {
   it('matches the exact, currently-expected relay list', () => {
     expect(NOSTR_REVIEWS_RELAYS).toEqual([
       'wss://relay.damus.io',

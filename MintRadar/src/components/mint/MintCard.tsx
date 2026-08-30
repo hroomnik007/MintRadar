@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
@@ -50,6 +51,7 @@ export function MintCard({
   showNotifyToggles?: boolean
 }) {
   const navigate = useNavigate()
+  const { onMintPointerEnter, onMintPointerLeave } = useMintHoverPrefetch()
   const mints = useWatchlistStore(state => state.mints)
   const addMint = useWatchlistStore(state => state.addMint)
   const removeMint = useWatchlistStore(state => state.removeMint)
@@ -108,6 +110,8 @@ export function MintCard({
     <div
       className={`mint-card${isOfflineDegraded ? ' offline' : ''}`}
       onClick={() => { navigate(`/mint/${encodeURIComponent(mint.url)}`) }}
+      onPointerEnter={() => { onMintPointerEnter(mint.url) }}
+      onPointerLeave={onMintPointerLeave}
     >
       <div className="card-top">
         <div className="card-name-row">

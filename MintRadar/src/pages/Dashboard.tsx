@@ -13,6 +13,7 @@ import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 
 import type { MintStatus } from '@core/mint/api'
 import { MintCard } from '@/components/mint/MintCard'
+import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { mintAgeBadge, latencyColor, trustColor, uptimeColor } from '@/utils/mintFormatting'
 import './Dashboard.css'
 
@@ -248,6 +249,7 @@ function MintListView({
   totalAll?: number
 }) {
   const navigate = useNavigate()
+  const { onMintPointerEnter, onMintPointerLeave } = useMintHoverPrefetch()
   const sortedFiltered = useMemo(() => {
     const q = search.toLowerCase()
     const filtered = mints.filter(mint => {
@@ -294,7 +296,7 @@ function MintListView({
               const ageBadge = mintAgeBadge(mint.discoveredAt ?? null)
               const score = mint.trustScore ?? null
               return (
-                <tr key={mint.url} className="mint-list-row" onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)}>
+                <tr key={mint.url} className="mint-list-row" onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} onPointerEnter={() => onMintPointerEnter(mint.url)} onPointerLeave={onMintPointerLeave}>
                   <td className="mint-list-td-name">
                     <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={24} radius={5} />
                     <div style={{ minWidth: 0 }}>

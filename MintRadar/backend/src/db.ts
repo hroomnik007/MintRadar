@@ -63,6 +63,19 @@ export async function initDb(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_notification_subs_updated_at
       ON notification_subscriptions(updated_at);
+
+    CREATE TABLE IF NOT EXISTS mint_reviews (
+      url TEXT NOT NULL REFERENCES mints(url) ON DELETE CASCADE,
+      pubkey TEXT NOT NULL,
+      event_id TEXT NOT NULL,
+      rating INTEGER,
+      comment TEXT NOT NULL DEFAULT '',
+      created_at BIGINT NOT NULL,
+      PRIMARY KEY (url, pubkey)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_mint_reviews_url_created
+      ON mint_reviews(url, created_at DESC);
   `)
 
   // Column migrations — each in its own query so a failure in one doesn't block others
@@ -88,6 +101,9 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS melt_methods JSONB',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS contact_count INTEGER',
     'ALTER TABLE mint_history ADD COLUMN IF NOT EXISTS trust_score INTEGER',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS review_count INTEGER',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS review_avg_rating REAL',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS reviews_checked_at TIMESTAMPTZ',
     'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_down_at TIMESTAMPTZ',
     'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_up_at TIMESTAMPTZ',
   ]

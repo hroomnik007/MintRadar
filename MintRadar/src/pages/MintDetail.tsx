@@ -584,6 +584,17 @@ function MintDetailContent({ url }: { url: string }) {
     ? Math.round(ratedReviews.reduce((s, r) => s + (r.rating as number), 0) / ratedReviews.length * 10) / 10
     : null
 
+  // Community-rating stat tile: while the live client-side review fetch
+  // (useMintReviews) is still running, show the server-side rollup instead
+  // (knownMint.reviewCount / reviewAvgRating, kept fresh by the backend's 6h
+  // reviews sync) — that's real data available immediately, rather than the
+  // wrong "No reviews yet" the empty live array used to flash for ~4s. Once the
+  // live fetch resolves its count/rating take over (they'd include a review the
+  // user just published, which the rollup wouldn't have yet). `null` on both
+  // sides (rollup not yet computed AND live fetch pending) renders a skeleton.
+  const tileReviewCount = reviewsLoading ? (knownMint?.reviewCount ?? null) : mergedReviews.length
+  const tileAvgRating = reviewsLoading ? (knownMint?.reviewAvgRating ?? null) : avgRating
+
   // Numbered pagination for the Reviews tab. Page is keyed by mint URL so it
   // resets to 1 when navigating to a different mint (no reset effect needed).
   const REVIEWS_PER_PAGE = 5
@@ -786,19 +797,21 @@ function MintDetailContent({ url }: { url: string }) {
           <div className="md-sc-icon orange"><Star size={14} /></div>
           <div style={{flex:1}}>
             <div className="md-sc-label">Community rating</div>
-            {mergedReviews.length === 0 ? (
+            {tileReviewCount === null ? (
+              <div className="md-sc-value sm" style={{color:'var(--text-faint)'}} aria-label="Loading reviews">…</div>
+            ) : tileReviewCount === 0 ? (
               <div className="md-sc-value sm" style={{color:'var(--text-faint)'}}>No reviews yet</div>
             ) : (
               <>
-                {avgRating !== null ? (
+                {tileAvgRating !== null ? (
                   <div className="md-sc-value" style={{display:'flex',alignItems:'baseline',gap:6}}>
-                    <span className="md-sc-stars" aria-label={`${avgRating} out of 5`}>{starString(avgRating)}</span>
-                    <span style={{color:'var(--text2)'}}>{avgRating}</span>
+                    <span className="md-sc-stars" aria-label={`${tileAvgRating} out of 5`}>{starString(tileAvgRating)}</span>
+                    <span style={{color:'var(--text2)'}}>{tileAvgRating}</span>
                   </div>
                 ) : (
                   <div className="md-sc-value sm" style={{color:'var(--text-faint)'}}>Unrated</div>
                 )}
-                <div className="md-sc-sub">{mergedReviews.length} review{mergedReviews.length !== 1 ? 's' : ''}</div>
+                <div className="md-sc-sub">{tileReviewCount} review{tileReviewCount !== 1 ? 's' : ''}</div>
               </>
             )}
           </div>
