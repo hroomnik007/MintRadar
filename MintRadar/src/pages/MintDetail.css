@@ -714,6 +714,13 @@
   gap: 3px;
 }
 
+.audit-stat-sub {
+  font-size: 10px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
 .audit-tooltip {
   position: absolute;
   bottom: calc(100% + 6px);

@@ -551,6 +551,14 @@ function MintDetailContent({ url }: { url: string }) {
   const isOutdated = version !== null && latestGlobalVersion !== null
     && (parseMinorVer(latestGlobalVersion) - parseMinorVer(version)) > 2
 
+  // audit.8333.space lifetime counters (display-only "Audit stats" panel) — the
+  // rolling-window figures that feed Trust Score are auditRecent* / breakdownAudit* above.
+  const auditNMints = knownMint?.auditNMints ?? 0
+  const auditNMelts = knownMint?.auditNMelts ?? 0
+  const auditNErrors = knownMint?.auditNErrors ?? 0
+  const auditTotalOps = auditNMints + auditNMelts + auditNErrors
+  const auditErrorPct = auditTotalOps > 0 ? (auditNErrors / auditTotalOps) * 100 : null
+
   // Average rating is computed only over events that actually carry a numeric
   // rating — rating-less endorsement events are counted in the review total but
   // never contribute to (or dilute) the star average.
@@ -1260,10 +1268,13 @@ function MintDetailContent({ url }: { url: string }) {
                     {auditExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                   </span>
                 </button>
-                <div className={`md-audit-content${auditExpanded ? ' expanded' : ''}`}>
+                <div className={`md-audit-content${auditExpanded ? ' expanded' : ''}`} style={{maxWidth:640}}>
+                <p style={{fontSize:12,color:'var(--text2)',lineHeight:1.6,marginBottom:12}}>
+                  These are payments the community auditor sent through this mint to check whether it actually pays out. Unlike Trust Score (a rolling window), this is the mint&apos;s all-time record. A high error rate here — even with a good Trust Score — means the mint has had real trouble in the past, and is worth watching before you commit larger amounts.
+                </p>
                 <div className="audit-stats-grid">
                   <div className="audit-stat-card">
-                    <div className="audit-stat-value" style={{color:'#4ade80'}}>{(knownMint.auditNMints ?? 0).toLocaleString()}</div>
+                    <div className="audit-stat-value" style={{color:'#4ade80'}}>{auditNMints.toLocaleString()}</div>
                     <div className="audit-stat-label">
                       Mint ops
                       <span
@@ -1281,9 +1292,10 @@ function MintDetailContent({ url }: { url: string }) {
                         )}
                       </span>
                     </div>
+                    <div className="audit-stat-sub">succeeded</div>
                   </div>
                   <div className="audit-stat-card">
-                    <div className="audit-stat-value" style={{color:'#4ade80'}}>{(knownMint.auditNMelts ?? 0).toLocaleString()}</div>
+                    <div className="audit-stat-value" style={{color:'#4ade80'}}>{auditNMelts.toLocaleString()}</div>
                     <div className="audit-stat-label">
                       Melt ops
                       <span
@@ -1301,9 +1313,10 @@ function MintDetailContent({ url }: { url: string }) {
                         )}
                       </span>
                     </div>
+                    <div className="audit-stat-sub">succeeded</div>
                   </div>
                   <div className="audit-stat-card">
-                    <div className="audit-stat-value" style={{color: (knownMint.auditNErrors ?? 0) > 0 ? '#ff4d4d' : '#4ade80'}}>{(knownMint.auditNErrors ?? 0).toLocaleString()}</div>
+                    <div className="audit-stat-value" style={{color: auditNErrors > 0 ? '#ff4d4d' : '#4ade80'}}>{auditNErrors.toLocaleString()}</div>
                     <div className="audit-stat-label">
                       Errors
                       <span
@@ -1321,6 +1334,7 @@ function MintDetailContent({ url }: { url: string }) {
                         )}
                       </span>
                     </div>
+                    <div className="audit-stat-sub">{auditErrorPct !== null ? `${auditErrorPct.toFixed(1)}% of ops` : '—'}</div>
                   </div>
                 </div>
                 {knownMint.auditCheckedAt ? (
