@@ -1382,7 +1382,7 @@ function MintDetailContent({ url }: { url: string }) {
               {reviewsLoading ? (
                 <div style={{fontSize:11,color:'var(--text3)',marginTop:8}}>Loading reviews...</div>
               ) : mergedReviews.length > 0 ? (
-                <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:8}}>
+                <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:8,maxWidth:560}}>
                   {(showAllReviews ? mergedReviews : mergedReviews.slice(0, 5)).map(r => {
                     const npub = nip19.npubEncode(r.pubkey)
                     const profile = r.profile
