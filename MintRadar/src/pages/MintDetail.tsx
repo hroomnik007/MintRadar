@@ -801,10 +801,6 @@ function MintDetailContent({ url }: { url: string }) {
                 <div className="md-motd-text">{motd}</div>
               </div>
             )}
-            <div className="md-info-row">
-              <span className="md-info-label">Name</span>
-              <span className="md-info-value green">{name ?? '—'}</span>
-            </div>
             {description && (
               <div className="md-info-row">
                 <span className="md-info-label">Description</span>
@@ -819,59 +815,64 @@ function MintDetailContent({ url }: { url: string }) {
                 </span>
               </div>
             )}
-            <div className="md-info-row">
-              <span className="md-info-label">Version</span>
-              <span className="md-info-value">{version ?? '—'}</span>
-            </div>
-            {pubkey && (
-              <div className="md-info-row" style={{alignItems: 'center'}}>
-                <span className="md-info-label">Public key</span>
-                <div style={{display: 'flex', alignItems: 'center', gap: 4}}>
-                  <span className="pubkey-full" style={{fontSize: 11, color: 'var(--text)', fontFamily: 'var(--font-mono)', wordBreak: 'break-all'}}>{pubkey}</span>
-                  <span className="pubkey-short" style={{fontSize: 11, color: 'var(--text)', fontFamily: 'var(--font-mono)'}}>{pubkey.slice(0, 8)}...{pubkey.slice(-8)}</span>
-                  <button
-                    onClick={() => {
-                      void navigator.clipboard.writeText(pubkey)
-                      setCopiedContact('pubkey')
-                      setTimeout(() => setCopiedContact(null), 2000)
-                    }}
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      color: copiedContact === 'pubkey' ? 'var(--accent)' : 'var(--text3)',
-                      padding: '2px 4px', flexShrink: 0, display: 'flex',
-                    }}
-                    title="Copy full public key"
-                  >
-                    {copiedContact === 'pubkey' ? <Check size={13} /> : <Copy size={13} />}
-                  </button>
+            <div className="md-info-grid">
+              <div className="md-info-row">
+                <span className="md-info-label">Name</span>
+                <span className="md-info-value green">{name ?? '—'}</span>
+              </div>
+              <div className="md-info-row">
+                <span className="md-info-label">Version</span>
+                <span className="md-info-value">{version ?? '—'}</span>
+              </div>
+              <div className="md-info-row">
+                <span className="md-info-label">Discovered</span>
+                <span className="md-info-value">NIP-87</span>
+              </div>
+              {mintTime && (
+                <div className="md-info-row">
+                  <span className="md-info-label">Server time</span>
+                  <span className="md-info-value">{formatTime(new Date(mintTime * 1000))}</span>
                 </div>
-              </div>
-            )}
-            <div className="md-info-row">
-              <span className="md-info-label">Discovered</span>
-              <span className="md-info-value">NIP-87</span>
+              )}
+              {pubkey && (
+                <div className="md-info-row" style={{alignItems: 'center'}}>
+                  <span className="md-info-label">Public key</span>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 4}}>
+                    <span style={{fontSize: 15, color: 'var(--text)', fontFamily: 'var(--font-mono)'}}>{pubkey.slice(0, 8)}…{pubkey.slice(-8)}</span>
+                    <button
+                      onClick={() => {
+                        void navigator.clipboard.writeText(pubkey)
+                        setCopiedContact('pubkey')
+                        setTimeout(() => setCopiedContact(null), 2000)
+                      }}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: copiedContact === 'pubkey' ? 'var(--accent)' : 'var(--text3)',
+                        padding: '2px 4px', flexShrink: 0, display: 'flex',
+                      }}
+                      title="Copy full public key"
+                    >
+                      {copiedContact === 'pubkey' ? <Check size={13} /> : <Copy size={13} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {tosUrl && (tosUrl.startsWith('https://') || tosUrl.startsWith('http://')) && (
+                <div className="md-info-row">
+                  <span className="md-info-label">Terms of Service</span>
+                  <a
+                    href={tosUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="md-info-value"
+                    style={{color:'var(--accent)', textDecoration:'none'}}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    View ToS ↗
+                  </a>
+                </div>
+              )}
             </div>
-            {mintTime && (
-              <div className="md-info-row">
-                <span className="md-info-label">Server time</span>
-                <span className="md-info-value">{formatTime(new Date(mintTime * 1000))}</span>
-              </div>
-            )}
-            {tosUrl && (tosUrl.startsWith('https://') || tosUrl.startsWith('http://')) && (
-              <div className="md-info-row">
-                <span className="md-info-label">Terms of Service</span>
-                <a
-                  href={tosUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="md-info-value"
-                  style={{color:'var(--accent)', textDecoration:'none'}}
-                  onClick={e => e.stopPropagation()}
-                >
-                  View ToS ↗
-                </a>
-              </div>
-            )}
             {urls && urls.length > 1 && (
               <div className="md-info-row" style={{flexDirection:'column', alignItems:'flex-start', gap:4}}>
                 <span className="md-info-label">URLs</span>

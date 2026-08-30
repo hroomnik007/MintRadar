@@ -289,7 +289,7 @@
 }
 
 .md-motd-text {
-  font-size: 12px;
+  font-size: 15px;
   color: var(--text2);
   font-style: italic;
   font-family: var(--font-mono);
@@ -314,15 +314,23 @@
 }
 
 .md-info-row:last-child { border-bottom: none; }
-.md-info-label { font-size: 11px; color: var(--text2); flex-shrink: 0; font-family: var(--font-mono); font-weight: 700; }
+.md-info-label { font-size: 15px; color: var(--text2); flex-shrink: 0; font-family: var(--font-mono); font-weight: 700; }
 .md-info-value {
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--text);
   font-family: var(--font-mono);
   text-align: right;
   word-break: break-all;
   max-width: 60%;
+}
+
+/* Short fields (Name/Version/Discovered/Server time/Public key/ToS) in two columns;
+   collapses to one column on mobile. MOTD/Description/Full description stay full-width. */
+.md-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 40px;
 }
 .md-info-value.green { color: var(--accent); }
 .md-info-value.trunc {
@@ -553,11 +561,8 @@
 .reviews-load-more:hover { border-color: var(--border2); color: var(--text2); }
 
 /* ── Units & Methods ────────────────────────────────────────── */
-/* Font sizes follow this page's existing vocabulary rather than their own
-   scale, which ran a step larger than everything around them: 11px for body
-   text (matching .md-info-label/.md-info-value, the Mint Info rows in the same
-   right-hand column) and 10px for the small uppercase mono label (matching
-   .md-panel-title). .method-chip was already at 11px and is left as-is. */
+/* Font sizes: 11px for body text and 10px for the small uppercase mono label
+   (matching .md-panel-title). .method-chip was already at 11px and is left as-is. */
 .unit-block { margin-bottom: 14px; }
 .unit-block:last-child { margin-bottom: 0; }
 .unit-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
@@ -594,11 +599,8 @@
 .chart-tooltip-value { font-family: var(--font-mono); font-size: 13px; color: var(--text); letter-spacing: -0.02em; }
 
 /* ── Responsive ─────────────────────────────────────────────── */
-.pubkey-short { display: none; }
-
 @media (max-width: 768px) {
-  .pubkey-full { display: none; }
-  .pubkey-short { display: inline; }
+  .md-info-grid { grid-template-columns: 1fr; gap: 0; }
   .md-summary {
     display: grid;
     grid-template-columns: 1fr 1fr;
