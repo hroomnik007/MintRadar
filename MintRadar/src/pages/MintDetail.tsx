@@ -1557,7 +1557,7 @@ function MintDetailContent({ url }: { url: string }) {
                 <div className="md-panel-title" style={{marginBottom:0}}>Reviews</div>
                 {isLoggedIn && (
                   <button className="reviews-write-btn" onClick={() => setShowReviewModal(true)}>
-                    Write review
+                    Write a review
                   </button>
                 )}
               </div>
