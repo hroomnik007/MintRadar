@@ -21,6 +21,13 @@ const IcShield = () => (
     <polyline points="4.5,7 6.2,8.7 9.5,5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
+// Logout glyph — only rendered on the mobile navbar, where the "Disconnect"
+// label is dropped so the profile chip + button fit on the logo's row.
+const IcLogout = () => (
+  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+    <path d="M5.5 1.5H2.5v11h3M8.5 4l3.5 3-3.5 3M12 7H5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+)
 
 // Method badges — Tabler icon paths (MIT), stroke-only to match the project's
 // hand-drawn icon set (see LearnIcons.tsx / WalletIcons.tsx).
@@ -211,7 +218,7 @@ export function AppShell() {
           <span>Mint<span style={{color:'var(--accent)'}}>Radar</span></span>
         </NavLink>
 
-        <div style={{flex:1}}/>
+        <div className="navbar-spacer" style={{flex:1}}/>
 
         {/* Tab segment group */}
         <div className="navbar-tabs">
@@ -254,8 +261,9 @@ export function AppShell() {
                   {profile.name ?? `${profile.pubkey.slice(0,8)}...`}
                 </span>
               </div>
-              <button type="button" className="navbar-disconnect-btn" onClick={handleLogout}>
-                Disconnect
+              <button type="button" className="navbar-disconnect-btn" onClick={handleLogout} aria-label="Disconnect">
+                <IcLogout />
+                <span className="navbar-disconnect-label">Disconnect</span>
               </button>
             </>
           )}

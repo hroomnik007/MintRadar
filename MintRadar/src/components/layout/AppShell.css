@@ -171,6 +171,9 @@
 .navbar-login-btn:hover { background: var(--green-soft-strong); border-color: var(--green); }
 
 .navbar-disconnect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   background: transparent;
   border: 1px solid var(--border2);
   color: var(--text2);
@@ -182,6 +185,9 @@
   font-family: var(--font-body);
   transition: all var(--transition);
 }
+
+/* The logout glyph only appears on the mobile navbar (see the ≤640px block). */
+.navbar-disconnect-btn svg { display: none; }
 
 .navbar-disconnect-btn:hover {
   border-color: var(--red);
@@ -244,14 +250,30 @@
     text-decoration: underline;
     text-underline-offset: 3px;
   }
-  /* Profile chip + Disconnect (or the Login CTA) share the same left-aligned
-     block, on their own row directly under the links. */
+  /* Row 1: logo left, auth (Login CTA, or profile chip + logout) right —
+     same row, pushed apart. Nav links wrap to row 2+ (order 3). */
+  .navbar-spacer { display: none; }
   .navbar-auth {
-    order: 4;
-    flex: 0 0 100%;
-    justify-content: flex-start;
-    margin-left: 0;
+    order: 2;
+    flex: 0 1 auto;
+    min-width: 0;
+    margin-left: auto;
+    justify-content: flex-end;
   }
+  /* Keep a long display name from pushing the row past the viewport. */
+  .navbar-username {
+    display: block;
+    min-width: 0;
+    max-width: 128px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* Drop the "Disconnect" word — show just the logout glyph — so the chip +
+     button clear the logo on 375px. aria-label on the button keeps it named. */
+  .navbar-disconnect-label { display: none; }
+  .navbar-disconnect-btn svg { display: block; }
+  .navbar-disconnect-btn { padding: 6px; }
 }
 
 @media (max-width: 600px) {
