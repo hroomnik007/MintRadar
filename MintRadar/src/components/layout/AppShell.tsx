@@ -98,6 +98,7 @@ export function AppShell() {
   const [bunkerInput, setBunkerInput] = useState('')
   const [bunkerError, setBunkerError] = useState('')
   const [qrUri, setQrUri] = useState('')
+  const [copiedUri, setCopiedUri] = useState(false)
   const qrCancelRef = useRef<(() => void) | null>(null)
 
   const [nip07Available, setNip07Available] = useState(false)
@@ -118,6 +119,7 @@ export function AppShell() {
     setBunkerInput('')
     setBunkerError('')
     setQrUri('')
+    setCopiedUri(false)
     qrCancelRef.current?.()
     qrCancelRef.current = null
   }, [])
@@ -150,6 +152,7 @@ export function AppShell() {
     const { uri, loginPromise, cancel } = initBunkerQR()
     qrCancelRef.current = cancel
     setQrUri(uri)
+    setCopiedUri(false)
     setBunkerError('')
     void loginPromise
       .then(p => {
@@ -178,6 +181,7 @@ export function AppShell() {
       qrCancelRef.current?.()
       qrCancelRef.current = null
       setQrUri('')
+      setCopiedUri(false)
       setBunkerError('')
     }
     setLoginMethod(id)
@@ -290,7 +294,7 @@ export function AppShell() {
               {([
                 { id: 'nip07', title: 'Nostr extension', desc: 'Sign in with Alby, nos2x or any NIP-07 signer', icon: <IcPuzzle /> },
                 { id: 'nsec', title: 'Nostr key (nsec)', desc: 'Paste a private key — stored only in this browser', icon: <IcKey /> },
-                { id: 'remote-signer', title: 'Remote signer', desc: 'NIP-46 bunker or a mobile signer app (e.g. Amber, nsec.app)', icon: <IcQrcode /> },
+                { id: 'remote-signer', title: 'Remote signer', desc: 'Sign in with Amber, Primal or any NIP-46 signer — your key stays on your phone', icon: <IcQrcode /> },
               ] as const).map(m => (
                 <div
                   key={m.id}
@@ -345,17 +349,33 @@ export function AppShell() {
                   </div>
                 )}
                 <div className="nostr-qr-caption">
-                  <span>Scan with your signer app (Amber, nsec.app, …)</span>
+                  <span>Scan this QR with your signer app.</span>
                   <button type="button" className="nostr-qr-refresh" onClick={startPairing}>
-                    Refresh
+                    New QR
                   </button>
                 </div>
+                {qrUri && (
+                  <button
+                    type="button"
+                    className="nostr-qr-copy"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(qrUri)
+                      setCopiedUri(true)
+                      setTimeout(() => setCopiedUri(false), 2000)
+                    }}
+                  >
+                    {copiedUri ? 'Copied' : 'Copy pairing link'}
+                  </button>
+                )}
                 {qrUri && !bunkerError && (
-                  <div className="nostr-warn">Waiting for your remote signer to connect…</div>
+                  <div className="nostr-warn">Waiting for your signer to connect… (up to 2 min)</div>
                 )}
                 {bunkerError && <div className="nostr-nsec-error">{bunkerError}</div>}
 
-                <div className="nostr-remote-divider"><span>or paste a connection string</span></div>
+                <p className="nostr-remote-hint">
+                  QR or copy link connects this device to your signer. Pasting a string is the reverse — your signer connects to this device.
+                </p>
+                <div className="nostr-remote-divider"><span>or paste a connection string from your signer</span></div>
                 <input
                   className="nostr-nsec-input"
                   type="text"

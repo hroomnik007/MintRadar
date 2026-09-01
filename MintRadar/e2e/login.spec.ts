@@ -46,8 +46,18 @@ test('remote-signer: QR appears automatically on selection (no extra click)', as
   const fills = await page.$$eval('.nostr-qr-wrap svg path', ps => ps.map(p => p.getAttribute('fill')))
   expect(fills).toEqual(expect.arrayContaining(['#17251f', '#f2f7f4']))
   await expect(page.locator('.nostr-qr-caption')).toContainText(/signer app/i)
-  await expect(page.locator('.nostr-warn')).toContainText(/remote signer to connect/i)
+  await expect(page.locator('.nostr-warn')).toContainText(/waiting for your signer to connect/i)
   await expect(page.locator('.nostr-remote-divider')).toContainText(/paste a connection string/i)
+
+  // Copy connection link puts the nostrconnect:// pairing URI on the clipboard
+  // with brief "Copied" feedback.
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.locator('.nostr-qr-copy').click()
+  await expect(page.locator('.nostr-qr-copy')).toHaveText(/copied/i)
+  const clip = await page.evaluate(() => navigator.clipboard.readText())
+  expect(clip.startsWith('nostrconnect://')).toBe(true)
+  expect(clip).toMatch(/[?&]relay=/)
+  expect(clip).toMatch(/[?&]secret=/)
 })
 
 test('remote-signer: bunker:// paste stays available alongside the QR', async ({ page }) => {
