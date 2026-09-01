@@ -175,7 +175,7 @@ export function MintCard({
             <div className="latency-value muted">—</div>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {onCompare && isOnline && (
             <button
               type="button"
@@ -184,7 +184,7 @@ export function MintCard({
                 color: 'var(--green-bright)',
                 border: '1px solid var(--green-soft-strong)',
                 borderRadius: 'var(--radius-m)',
-                padding: '6px 12px',
+                padding: '5px 10px',
                 fontSize: 11,
                 fontWeight: 500,
                 cursor: 'pointer',

@@ -697,10 +697,6 @@ function MintDetailContent({ url }: { url: string }) {
           </div>
         </div>
         <div className="md-hdr-center">
-          <div className={`md-online-badge ${isOnline ? '' : 'offline'}`}>
-            <div className={`status-dot ${isOnline ? '' : 'offline'}`} />
-            {isOnline ? 'Online' : 'Offline'}
-          </div>
           {!isOnline && knownMint?.lastError && (
             <span className="md-hdr-error" style={{display:'inline-flex',alignItems:'center',gap:4}}>
               <span
@@ -1167,6 +1163,56 @@ function MintDetailContent({ url }: { url: string }) {
           </>)}
 
           {activeTab === 'nuts' && (<>
+          {(() => {
+            const nut4 = (data?.info?.nuts?.['4'] ?? knownMint?.nutsLimits?.['4']) as NutConfig | null | undefined
+            const nut5 = (data?.info?.nuts?.['5'] ?? knownMint?.nutsLimits?.['5']) as NutConfig | null | undefined
+            const hasAnyLimits =
+              nut4?.methods?.some(m => m.min_amount != null || m.max_amount != null) ||
+              nut5?.methods?.some(m => m.min_amount != null || m.max_amount != null)
+            // Still render the grid when a method is disabled, so the "disabled by
+            // operator" state is shown instead of a silent omission.
+            const showLimitsGrid = hasAnyLimits || nut4Disabled || nut5Disabled
+            // Ranges shared by several payment methods collapse into one entry
+            // labelled with those methods — see groupNutLimits() for why this
+            // groups rather than plainly deduplicating.
+            const renderLimits = (cfg: NutConfig | null | undefined) => {
+              const groups = groupNutLimits(cfg?.methods)
+              if (!groups.length) return <span style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>—</span>
+              return groups.map((g, i) => (
+                <span key={i} style={{fontSize:13,color:'var(--text)',fontFamily:'var(--font-mono)'}}>
+                  {formatNutLimitRange(g)}
+                  {g.methods.length > 0 && (
+                    <span style={{color:'var(--text3)'}}> ({g.methods.join(', ')})</span>
+                  )}
+                  {i < groups.length - 1 ? ', ' : ''}
+                </span>
+              ))
+            }
+            return (
+              <div className="md-panel">
+                <div className="md-panel-title">NUT Limits</div>
+                {!showLimitsGrid ? (
+                  <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Limits not specified by this mint.</div>
+                ) : (
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
+                    {[{ key: 'NUT-04 (Minting)', cfg: nut4, disabled: nut4Disabled }, { key: 'NUT-05 (Melting)', cfg: nut5, disabled: nut5Disabled }].map(({ key, cfg, disabled }) => (
+                      <div key={key} style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:5,opacity: disabled ? 0.75 : 1}}>
+                        <span style={{fontSize:13,fontWeight:600,color:'var(--text2)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',textDecoration: disabled ? 'line-through' : 'none'}}>{key}</span>
+                        {disabled ? (
+                          <span className="md-limit-off"><AlertTriangle size={11} /> Disabled by operator</span>
+                        ) : (
+                          <>
+                            <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Min – Max</span>
+                            <div>{renderLimits(cfg)}</div>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
             <div className="md-panel">
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:11}}>
                 <div className="md-panel-title" style={{marginBottom:0}}>NUT Compatibility</div>
@@ -1240,57 +1286,6 @@ function MintDetailContent({ url }: { url: string }) {
               })}
             </div>
           </div>
-
-          {(() => {
-            const nut4 = (data?.info?.nuts?.['4'] ?? knownMint?.nutsLimits?.['4']) as NutConfig | null | undefined
-            const nut5 = (data?.info?.nuts?.['5'] ?? knownMint?.nutsLimits?.['5']) as NutConfig | null | undefined
-            const hasAnyLimits =
-              nut4?.methods?.some(m => m.min_amount != null || m.max_amount != null) ||
-              nut5?.methods?.some(m => m.min_amount != null || m.max_amount != null)
-            // Still render the grid when a method is disabled, so the "disabled by
-            // operator" state is shown instead of a silent omission.
-            const showLimitsGrid = hasAnyLimits || nut4Disabled || nut5Disabled
-            // Ranges shared by several payment methods collapse into one entry
-            // labelled with those methods — see groupNutLimits() for why this
-            // groups rather than plainly deduplicating.
-            const renderLimits = (cfg: NutConfig | null | undefined) => {
-              const groups = groupNutLimits(cfg?.methods)
-              if (!groups.length) return <span style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>—</span>
-              return groups.map((g, i) => (
-                <span key={i} style={{fontSize:13,color:'var(--text)',fontFamily:'var(--font-mono)'}}>
-                  {formatNutLimitRange(g)}
-                  {g.methods.length > 0 && (
-                    <span style={{color:'var(--text3)'}}> ({g.methods.join(', ')})</span>
-                  )}
-                  {i < groups.length - 1 ? ', ' : ''}
-                </span>
-              ))
-            }
-            return (
-              <div className="md-panel">
-                <div className="md-panel-title">NUT Limits</div>
-                {!showLimitsGrid ? (
-                  <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Limits not specified by this mint.</div>
-                ) : (
-                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
-                    {[{ key: 'NUT-04 (Minting)', cfg: nut4, disabled: nut4Disabled }, { key: 'NUT-05 (Melting)', cfg: nut5, disabled: nut5Disabled }].map(({ key, cfg, disabled }) => (
-                      <div key={key} style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:5,opacity: disabled ? 0.75 : 1}}>
-                        <span style={{fontSize:13,fontWeight:600,color:'var(--text2)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',textDecoration: disabled ? 'line-through' : 'none'}}>{key}</span>
-                        {disabled ? (
-                          <span className="md-limit-off"><AlertTriangle size={11} /> Disabled by operator</span>
-                        ) : (
-                          <>
-                            <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Min – Max</span>
-                            <div>{renderLimits(cfg)}</div>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })()}
           </>)}
 
           {activeTab === 'history' && (<>

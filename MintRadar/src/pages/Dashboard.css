@@ -307,7 +307,7 @@
   background: var(--surface-card);
   border: 1px solid var(--border-strong);
   border-radius: var(--r);
-  padding: 14px 16px;
+  padding: 11px 13px;
   cursor: pointer;
   transition: box-shadow var(--transition), border-color var(--transition);
   position: relative;
@@ -326,13 +326,13 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .card-name-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   flex: 1;
 }
@@ -390,16 +390,16 @@
 .card-pills {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .card-pill {
   background: var(--elevated);
   border: 1px solid var(--brd);
   border-radius: 4px;
-  padding: 2px 7px;
+  padding: 2px 6px;
   font-size: 11px;
   color: var(--t3);
   font-family: var(--font-mono);
@@ -416,7 +416,7 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 10px;
+  gap: 8px;
 }
 
 .latency-block .latency-label {
@@ -451,7 +451,7 @@
   background: var(--green-soft);
   border: 1px solid var(--green-soft-strong);
   border-radius: var(--radius-m);
-  padding: 5px 12px;
+  padding: 4px 10px;
   color: var(--green-bright);
   font-size: 11px;
   font-weight: 400;
@@ -479,7 +479,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
-  padding: 5px 10px;
+  padding: 4px 8px;
   color: var(--text3);
   font-size: 11px;
   font-weight: 400;

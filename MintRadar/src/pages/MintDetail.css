@@ -79,19 +79,6 @@
 .md-name { font-size: 31px; font-weight: 600; color: var(--text); line-height: 1.15; }
 .md-url  { font-size: 13px; color: var(--text3); font-family: var(--font-mono); margin-top: 3px; }
 
-.md-online-badge {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-family: var(--font-mono);
-  color: var(--accent);
-  flex-shrink: 0;
-  letter-spacing: 0.04em;
-}
-
-.md-online-badge.offline { color: var(--red); }
-
 .status-dot {
   width: 7px;
   height: 7px;
@@ -102,9 +89,22 @@
 
 .status-dot.offline { background: var(--red); }
 
-/* Inline Online/Offline pill shown next to the mint name on mobile only. On
-   desktop the status lives in .md-hdr-center as .md-online-badge. */
-.md-status-inline { display: none; }
+/* Inline Online/Offline status shown next to the mint name on both desktop and
+   mobile. (The standalone badge that used to sit in the .md-hdr-center action
+   row was removed — the action row is now just Mint QR / Cashu.me / Watch /
+   Compare.) */
+.md-status-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.md-status-inline.offline { color: var(--red); }
 
 /* Compact Trust Score tile — only shown inside .md-summary at ≤640px.
    Needs .md-sc.md-sc-trust (not bare .md-sc-trust) to outrank the later
@@ -580,14 +580,17 @@
   max-width: 62ch;
 }
 
+/* Primary action of the Reviews tab — deliberately larger and more prominent
+   than the header-row buttons (Watch/Compare/Mint QR): filled tonal background
+   + heavier weight, ~+18% font / ~+40% padding over the old outline style. */
 .reviews-write-btn {
-  background: transparent;
-  border: 1px solid var(--green-soft-strong);
+  background: var(--green-soft);
+  border: 1px solid var(--green);
   border-radius: var(--radius-m);
-  padding: 6px 12px;
+  padding: 9px 18px;
   color: var(--green-bright);
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   font-family: var(--font-mono);
   transition: all var(--transition);
@@ -595,7 +598,7 @@
   flex-shrink: 0;
 }
 
-.reviews-write-btn:hover { background: var(--green-soft); border-color: var(--green); }
+.reviews-write-btn:hover { background: var(--green-soft-strong); border-color: var(--green); }
 
 .review-card {
   background: var(--bg3);
@@ -845,44 +848,31 @@
 }
 
 /* ── Compact mobile hero (≤640px) ──────────────────────────────
-   1. Online status moves inline next to the mint name (.md-status-inline);
-      the standalone .md-online-badge in .md-hdr-center is hidden.
-   2. The four header actions (Mint QR, Open in Cashu.me, Watch, Compare) drop
-      from two full-width rows into a 2×2 grid. .md-hdr-center and .md-hdr-right
-      are stacked and share identical column tracks + gap, so the two 1×2 rows
-      read as one 2×2 block. Desktop layout is untouched. */
+   1. Online status sits inline next to the mint name (.md-status-inline) —
+      identical to desktop, styled by the base rule above.
+   2. The four header actions (Mint QR, Cashu.me, Watch, Compare) become
+      compact, content-width buttons that wrap left-aligned with a visible
+      gap, instead of stretching to fill the column. .md-hdr-center and
+      .md-hdr-right stay stacked, so it reads as two left-aligned rows of two.
+      Desktop layout is untouched. */
 @media (max-width: 640px) {
   .md-header { gap: 8px; }
 
-  .md-status-inline {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    font-family: var(--font-mono);
-    font-weight: 500;
-    color: var(--accent);
-    letter-spacing: 0.04em;
-    flex-shrink: 0;
-  }
-  .md-status-inline.offline { color: var(--red); }
-
-  .md-hdr-center > .md-online-badge { display: none; }
-
   .md-hdr-center,
   .md-hdr-right {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     width: 100%;
+    justify-content: flex-start;
   }
-  .md-hdr-error { grid-column: 1 / -1; }
+  .md-hdr-error { flex: 1 1 100%; }
 
   .md-hdr-center > .md-quick-btn,
   .md-hdr-right > .md-watch-btn,
   .md-hdr-right > .md-compare-btn {
-    flex: none;
-    width: 100%;
+    flex: 0 0 auto;
+    width: auto;
     box-sizing: border-box;
     justify-content: center;
     text-align: center;
