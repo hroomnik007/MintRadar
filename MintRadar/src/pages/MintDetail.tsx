@@ -62,6 +62,42 @@ function reviewPageList(current: number, total: number): (number | '…')[] {
   return out
 }
 
+// ⓘ next to the "Audit stats" heading — same hover/tap tooltip pattern as the
+// per-metric icons (useTapTooltip + .audit-tooltip). Local component so its
+// tooltip state doesn't leak into MintDetail, and so the identical icon can be
+// dropped into both the desktop header and the mobile collapse toggle. Opens
+// downward (top: 100%+6px) since the heading sits at the panel's top edge.
+function AuditSourceInfoIcon({ align = 'left' }: { align?: 'left' | 'right' }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const tip = useTapTooltip(ref)
+  // `align` decides which way the (downward) tooltip extends so it doesn't clip:
+  // 'left' for the desktop heading (icon near the panel's left edge), 'right'
+  // for the mobile collapse toggle (icon sits near the right edge).
+  const anchor = align === 'right'
+    ? { right: 0, left: 'auto' as const }
+    : { left: 0, right: 'auto' as const }
+  return (
+    <span
+      ref={ref}
+      className="md-audit-info"
+      style={{ position: 'relative', display: 'inline-flex' }}
+      onPointerEnter={tip.onPointerEnter}
+      onPointerLeave={tip.onPointerLeave}
+      onClick={tip.onClick}
+    >
+      <Info size={11} color="#6b7280" style={{ cursor: 'help' }} />
+      {tip.open && (
+        <div
+          className="audit-tooltip"
+          style={{ width: 230, maxWidth: 'calc(100vw - 40px)', transform: 'none', bottom: 'auto', top: 'calc(100% + 6px)', ...anchor }}
+        >
+          These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.
+        </div>
+      )}
+    </span>
+  )
+}
+
 interface NutMethod {
   method: string
   unit: string
@@ -1392,6 +1428,12 @@ function MintDetailContent({ url }: { url: string }) {
           {activeTab === 'audit' && (
             knownMint !== null && knownMint.auditNMints !== null ? (
               <div className="md-panel md-audit-collapsible" style={{background:'var(--bg)'}}>
+                {/* Desktop heading (the mobile collapse toggle below is display:none here). */}
+                <div className="md-audit-header md-audit-header-main">
+                  <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
+                  <span className="md-audit-via">· via audit.8333.space</span>
+                  <AuditSourceInfoIcon />
+                </div>
                 <button
                   className="md-audit-toggle"
                   onClick={() => setAuditExpanded(v => !v)}
@@ -1400,6 +1442,7 @@ function MintDetailContent({ url }: { url: string }) {
                   <div style={{display:'flex',alignItems:'baseline',gap:6}}>
                     <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
                     <span style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>· via audit.8333.space</span>
+                    <AuditSourceInfoIcon align="right" />
                   </div>
                   <span className="md-audit-chevron">
                     {auditExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -1503,7 +1546,11 @@ function MintDetailContent({ url }: { url: string }) {
               </div>
             ) : (
               <div className="md-panel">
-                <div className="md-panel-title">Audit stats</div>
+                <div className="md-audit-header">
+                  <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
+                  <span className="md-audit-via">· via audit.8333.space</span>
+                  <AuditSourceInfoIcon />
+                </div>
                 <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>No audit data available for this mint.</div>
               </div>
             )
