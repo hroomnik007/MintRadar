@@ -92,9 +92,12 @@
 
 .search-input {
   width: 100%;
-  /* Same surface recipe as .stat-card above it, so the control row reads as one
-     family: --surface background, 1px --border, --radius-m corners. */
-  background: var(--surface);
+  /* Fill must be one step lighter than the .dashboard-controls bar it sits in
+     (--bg2), or the border (a faint --border hairline) is the only thing
+     drawing the shape and the --radius-m corners read as square. --bg3 matches
+     the .filter-btn / .sort-segment in the same row. (--surface, tried here in
+     944f346 to echo .stat-card, is byte-equal to --bg2 → no contrast.) */
+  background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
   padding: 8.5px 12px 8.5px 32px;
