@@ -102,7 +102,9 @@
 
 .status-dot.offline { background: var(--red); }
 
-.md-status-dot-mobile { display: none; }
+/* Inline Online/Offline pill shown next to the mint name on mobile only. On
+   desktop the status lives in .md-hdr-center as .md-online-badge. */
+.md-status-inline { display: none; }
 
 .md-watch-btn {
   display: flex;
@@ -168,6 +170,10 @@
 }
 
 .md-quick-btn:hover { background: var(--green-soft-strong); border-color: var(--green); }
+
+/* Full label on desktop; the shorter "Cashu.me" is swapped in at ≤640px so the
+   button fits one line in the 2-column mobile action grid. */
+.md-qb-short { display: none; }
 
 .latency-test-btn {
   background: var(--green-soft);
@@ -824,6 +830,55 @@
 
   .md-contact-grid { grid-template-columns: 1fr; }
   .nut-grid        { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── Compact mobile hero (≤640px) ──────────────────────────────
+   1. Online status moves inline next to the mint name (.md-status-inline);
+      the standalone .md-online-badge in .md-hdr-center is hidden.
+   2. The four header actions (Mint QR, Open in Cashu.me, Watch, Compare) drop
+      from two full-width rows into a 2×2 grid. .md-hdr-center and .md-hdr-right
+      are stacked and share identical column tracks + gap, so the two 1×2 rows
+      read as one 2×2 block. Desktop layout is untouched. */
+@media (max-width: 640px) {
+  .md-header { gap: 8px; }
+
+  .md-status-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  .md-status-inline.offline { color: var(--red); }
+
+  .md-hdr-center > .md-online-badge { display: none; }
+
+  .md-hdr-center,
+  .md-hdr-right {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+  .md-hdr-error { grid-column: 1 / -1; }
+
+  .md-hdr-center > .md-quick-btn,
+  .md-hdr-right > .md-watch-btn,
+  .md-hdr-right > .md-compare-btn {
+    flex: none;
+    width: 100%;
+    box-sizing: border-box;
+    justify-content: center;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .md-qb-full { display: none; }
+  .md-qb-short { display: inline; }
 }
 
 /* Match the navbar + Dashboard content gutter, which drops to 14px at ≤600px. */

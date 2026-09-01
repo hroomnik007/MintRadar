@@ -631,8 +631,11 @@ function MintDetailContent({ url }: { url: string }) {
             <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={52} radius={12} className="md-hdr-favicon" />
             <div className="md-namebox">
               <div className="md-name" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                <span className={`status-dot md-status-dot-mobile ${isOnline ? '' : 'offline'}`} />
                 <span>{displayName}</span>
+                <span className={`md-status-inline ${isOnline ? '' : 'offline'}`}>
+                  <span className={`status-dot ${isOnline ? '' : 'offline'}`} />
+                  <span>{isOnline ? 'Online' : 'Offline'}</span>
+                </span>
                 {ageBadge && (
                   <span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:ageBadge.color,background:ageBadge.bg,border:`0.5px solid ${ageBadge.border}`,borderRadius:5,padding:'3px 9px',flexShrink:0}}>{ageBadge.label}</span>
                 )}
@@ -647,7 +650,7 @@ function MintDetailContent({ url }: { url: string }) {
             {isOnline ? 'Online' : 'Offline'}
           </div>
           {!isOnline && knownMint?.lastError && (
-            <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
+            <span className="md-hdr-error" style={{display:'inline-flex',alignItems:'center',gap:4}}>
               <span
                 className="md-error-badge"
                 style={{fontSize:11,color:'#ff4d4d',fontFamily:'var(--font-mono)',background:'rgba(255,77,77,0.08)',border:'0.5px solid rgba(255,77,77,0.25)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap'}}
@@ -679,7 +682,9 @@ function MintDetailContent({ url }: { url: string }) {
             target="_blank"
             rel="noopener noreferrer"
           >
-            ↗ Open in Cashu.me
+            <span aria-hidden="true">↗</span>
+            <span className="md-qb-full">Open in Cashu.me</span>
+            <span className="md-qb-short">Cashu.me</span>
           </a>
         </div>
         <div className="md-hdr-right">
