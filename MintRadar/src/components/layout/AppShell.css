@@ -215,15 +215,43 @@
        rows that fit the viewport instead of letting the strip scroll
        horizontally (which also dragged the whole page into overflow). */
     flex-wrap: wrap;
-    justify-content: center;
-    row-gap: 3px;
+    /* Plain-text link list on mobile: drop the segmented-control box (bg +
+       border + padding) and left-align, so an uneven last row reads as a
+       natural text wrap rather than a broken grid. */
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    justify-content: flex-start;
+    column-gap: 16px;
+    row-gap: 4px;
   }
   .nav-tab {
     flex: 0 1 auto;
-    justify-content: center;
-    padding: 5px 11px;
+    justify-content: flex-start;
+    padding: 3px 0;
+    border: none;
+    background: transparent;
   }
-  .navbar-auth { margin-left: auto; }
+  .nav-tab:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .nav-tab.active {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  /* Profile chip + Disconnect (or the Login CTA) share the same left-aligned
+     block, on their own row directly under the links. */
+  .navbar-auth {
+    order: 4;
+    flex: 0 0 100%;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
 }
 
 @media (max-width: 600px) {
