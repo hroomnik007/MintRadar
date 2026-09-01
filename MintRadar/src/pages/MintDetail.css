@@ -675,6 +675,197 @@
   font-family: var(--font-mono);
 }
 
+/* ── Write-a-review modal (two-phase: rating → form) ────────── */
+.rv-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.rv-modal {
+  background: var(--bg2);
+  border: 0.5px solid var(--border2);
+  border-radius: 14px;
+  padding: 24px;
+  max-width: 420px;
+  width: 100%;
+}
+.rv-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.rv-modal-title { font-size: 16px; font-weight: 600; color: var(--text); }
+.rv-modal-close {
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  transition: color var(--transition);
+}
+.rv-modal-close:hover { color: var(--text); }
+
+.rv-rate { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rv-stars { display: flex; gap: 2px; }
+.rv-star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 26px;
+  line-height: 1;
+  padding: 0 2px;
+  color: var(--border2);
+  transition: color var(--transition), transform var(--transition);
+}
+.rv-star[data-filled="true"] { color: var(--yellow); }
+.rv-star:hover { transform: scale(1.12); }
+.rv-star:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; border-radius: 4px; }
+.rv-rate-label {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--text3);
+}
+.rv-rate-label[data-chosen="true"] { color: var(--text2); }
+
+.rv-signer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 10px 12px;
+  background: var(--bg3);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+}
+.rv-signer-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border2);
+}
+.rv-signer-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0d0d0d;
+}
+.rv-signer-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rv-signer-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text3);
+}
+.rv-signer-id { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.rv-signer-name {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rv-signer-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-family: var(--font-body);
+  color: var(--green-bright);
+  background: var(--green-soft);
+  border: 1px solid var(--green-soft-strong);
+  border-radius: 4px;
+  padding: 1px 5px;
+  line-height: 1.4;
+}
+
+.rv-field { margin-top: 14px; }
+.rv-textarea {
+  width: 100%;
+  background: var(--bg3);
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+  font-family: var(--font-body);
+  resize: vertical;
+  box-sizing: border-box;
+}
+.rv-textarea:focus { border-color: var(--green); }
+.rv-charcount {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text3);
+  text-align: right;
+  margin-top: 4px;
+}
+
+.rv-msg { font-size: 11px; margin-top: 10px; }
+.rv-msg-error { color: var(--red); }
+.rv-msg-success { color: var(--accent); }
+
+.rv-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+.rv-btn-cancel {
+  background: transparent;
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 16px;
+  color: var(--text3);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: all var(--transition);
+}
+.rv-btn-cancel:hover { border-color: var(--border2); color: var(--text2); }
+.rv-btn-submit {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: opacity var(--transition);
+}
+.rv-btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.rv-permanence-note {
+  font-size: 10px;
+  color: var(--text3);
+  text-align: right;
+  margin: 8px 0 0 0;
+}
+
+@media (max-width: 480px) {
+  .rv-modal { padding: 18px; }
+  .rv-actions { flex-direction: column-reverse; }
+  .rv-btn-cancel, .rv-btn-submit { width: 100%; }
+  .rv-permanence-note { text-align: center; }
+}
+
 /* ── Units & Methods ────────────────────────────────────────── */
 /* Font sizes: 11px for body text and 10px for the small uppercase mono label
    (matching .md-panel-title). .method-chip was already at 11px and is left as-is. */

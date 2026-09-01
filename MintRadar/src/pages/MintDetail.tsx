@@ -1,6 +1,6 @@
 import { nip19 } from 'nostr-tools'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useEffect, useState, useMemo, useRef, type JSX } from 'react'
+import { useEffect, useState, useMemo, useRef, useCallback, type JSX } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import {
@@ -40,6 +40,21 @@ function reviewAvatarColor(pubkey: string): string {
 }
 function shortNpub(npub: string): string {
   return npub.slice(0, 10) + '...' + npub.slice(-4)
+}
+// Short label for the "Signing with" row — mirrors AppShell's navbar profile
+// METHOD_BADGE so the two read identically (Extension / nsec / Remote signer).
+const METHOD_BADGE: Record<'nip07' | 'nsec' | 'remote-signer', string> = {
+  nip07: 'Extension',
+  nsec: 'nsec',
+  'remote-signer': 'Remote signer',
+}
+// One-word gloss for each star value, shown next to the chosen rating ("5: works great").
+const RATING_LABELS: Record<1 | 2 | 3 | 4 | 5, string> = {
+  1: 'steer clear',
+  2: 'rough',
+  3: 'does the job',
+  4: 'solid',
+  5: 'works great',
 }
 function formatReviewDate(ts: number): string {
   return new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
@@ -323,6 +338,7 @@ function MintDetailContent({ url }: { url: string }) {
   const removeMint = useWatchlistStore(state => state.removeMint)
   const loadFromDb = useWatchlistStore(state => state.loadFromDb)
   const profile = useAuthStore(state => state.profile)
+  const authMethod = useAuthStore(state => state.method)
   const isLoggedIn = profile !== null
   const { reviews, loading: reviewsLoading } = useMintReviews(url)
   const { data: nostrReviewsData } = useQuery({
@@ -366,7 +382,9 @@ function MintDetailContent({ url }: { url: string }) {
   const [showTrustBreakdown, setShowTrustBreakdown] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [reviewsPageState, setReviewsPageState] = useState<{ key: string; page: number }>({ key: '', page: 1 })
-  const [reviewRating, setReviewRating] = useState(5)
+  // 0 = phase 1 (rating not chosen yet); 1-5 = phase 2 (form revealed).
+  const [reviewRating, setReviewRating] = useState(0)
+  const [reviewHoverRating, setReviewHoverRating] = useState(0)
   const [reviewComment, setReviewComment] = useState('')
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
   const [reviewError, setReviewError] = useState<string | null>(null)
@@ -437,12 +455,24 @@ function MintDetailContent({ url }: { url: string }) {
     return () => window.removeEventListener('keydown', handler)
   }, [selectedNut])
 
+  // Single close path (overlay / × / Cancel / Escape / post-success) — resets
+  // every field so the modal always reopens in phase 1. Same pattern as
+  // AppShell's closeLoginModal; deliberately NOT an effect.
+  const closeReviewModal = useCallback(() => {
+    setShowReviewModal(false)
+    setReviewRating(0)
+    setReviewHoverRating(0)
+    setReviewComment('')
+    setReviewError(null)
+    setReviewSuccess(false)
+  }, [])
+
   useEffect(() => {
     if (!showReviewModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowReviewModal(false) }
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeReviewModal() }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
-  }, [showReviewModal])
+  }, [showReviewModal, closeReviewModal])
 
   useEffect(() => {
     if (!showQr) return
@@ -1802,71 +1832,103 @@ function MintDetailContent({ url }: { url: string }) {
       )}
 
       {showReviewModal && (
-        <div style={{position:'fixed',inset:0,zIndex:100,background:'rgba(0,0,0,0.7)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}
-          onClick={() => setShowReviewModal(false)}>
-          <div style={{background:'var(--bg2)',border:'0.5px solid var(--border2)',borderRadius:14,padding:'24px',maxWidth:400,width:'100%'}}
-            onClick={e => e.stopPropagation()}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-              <div style={{fontSize:16,fontWeight:600,color:'var(--text)'}}>Write a review</div>
-              <button onClick={() => setShowReviewModal(false)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:18,cursor:'pointer'}}>×</button>
+        <div className="rv-modal-overlay" onClick={closeReviewModal}>
+          <div className="rv-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Write a review">
+            <div className="rv-modal-head">
+              <div className="rv-modal-title">Write a review</div>
+              <button className="rv-modal-close" onClick={closeReviewModal} aria-label="Close">×</button>
             </div>
 
-            <div style={{marginBottom:14}}>
-              <div style={{fontSize:10,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:8}}>Rating</div>
-              <div style={{display:'flex',gap:6}}>
-                {[1,2,3,4,5].map(star => (
-                  <button key={star} onClick={() => setReviewRating(star)}
-                    style={{background:'none',border:'none',cursor:'pointer',fontSize:24,color: star <= reviewRating ? 'var(--yellow)' : 'var(--border2)',padding:'0 2px'}}>
+            {/* Phase 1 + 2 share the star row. Hover/focus previews up to the
+                pointer; once a star is clicked the form below unfolds. */}
+            <div className="rv-rate">
+              <div className="rv-stars" onMouseLeave={() => setReviewHoverRating(0)}>
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button
+                    key={star}
+                    type="button"
+                    className="rv-star"
+                    data-filled={star <= (reviewHoverRating || reviewRating)}
+                    aria-label={`${star} star${star > 1 ? 's' : ''}${RATING_LABELS[star as 1 | 2 | 3 | 4 | 5] ? ` — ${RATING_LABELS[star as 1 | 2 | 3 | 4 | 5]}` : ''}`}
+                    aria-pressed={reviewRating === star}
+                    onMouseEnter={() => setReviewHoverRating(star)}
+                    onFocus={() => setReviewHoverRating(star)}
+                    onBlur={() => setReviewHoverRating(0)}
+                    onClick={() => setReviewRating(star)}
+                  >
                     ★
                   </button>
                 ))}
               </div>
+              <span className="rv-rate-label" data-chosen={reviewRating > 0}>
+                {reviewRating > 0
+                  ? `${reviewRating}: ${RATING_LABELS[reviewRating as 1 | 2 | 3 | 4 | 5]}`
+                  : 'Choose a rating'}
+              </span>
             </div>
 
-            <div style={{marginBottom:16}}>
-              <div style={{fontSize:10,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:8}}>Comment (optional)</div>
-              <textarea
-                value={reviewComment}
-                onChange={e => setReviewComment(e.target.value)}
-                placeholder="Share your experience with this mint..."
-                maxLength={500}
-                rows={3}
-                style={{width:'100%',background:'var(--bg3)',border:'0.5px solid var(--border)',borderRadius:8,padding:'8px 12px',color:'var(--text)',fontSize:12,outline:'none',fontFamily:'var(--font-body)',resize:'vertical',boxSizing:'border-box'}}
-              />
-              <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',textAlign:'right',marginTop:4}}>
-                {reviewComment.length} / 500 characters
-              </div>
-            </div>
+            {reviewRating > 0 && (
+              <>
+                <div className="rv-signer">
+                  {profile?.picture?.startsWith('https://')
+                    ? <img src={profile.picture} alt="" className="rv-signer-avatar" onError={e => { e.currentTarget.style.display = 'none' }} />
+                    : <div className="rv-signer-avatar rv-signer-avatar-fallback" style={{ background: reviewAvatarColor(profile?.pubkey ?? '0') }}>
+                        {(profile?.name ?? profile?.npub ?? '?').slice(0, 1).toUpperCase()}
+                      </div>}
+                  <div className="rv-signer-text">
+                    <span className="rv-signer-label">Signing with</span>
+                    <span className="rv-signer-id">
+                      <span className="rv-signer-name">{profile?.name ?? (profile ? shortNpub(profile.npub) : 'Nostr account')}</span>
+                      {authMethod !== null && <span className="rv-signer-badge">{METHOD_BADGE[authMethod]}</span>}
+                    </span>
+                  </div>
+                </div>
 
-            {reviewError !== null && <div style={{fontSize:11,color:'var(--red)',marginBottom:10}}>{reviewError}</div>}
-            {reviewSuccess && <div style={{fontSize:11,color:'var(--accent)',marginBottom:10}}>✓ Review published!</div>}
+                <div className="rv-field">
+                  <textarea
+                    className="rv-textarea"
+                    value={reviewComment}
+                    onChange={e => setReviewComment(e.target.value)}
+                    placeholder="What should other people know?"
+                    maxLength={500}
+                    rows={3}
+                  />
+                  <div className="rv-charcount">{reviewComment.length} / 500 characters</div>
+                </div>
 
-            <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
-              <button onClick={() => setShowReviewModal(false)}
-                style={{background:'transparent',border:'0.5px solid var(--border)',borderRadius:8,padding:'8px 16px',color:'var(--text3)',fontSize:13,cursor:'pointer',fontFamily:'var(--font-body)'}}>
-                Cancel
-              </button>
-              <button
-                disabled={reviewSubmitting}
-                onClick={() => {
-                  void (async () => {
-                    setReviewSubmitting(true)
-                    setReviewError(null)
-                    try {
-                      await submitMintReview(url, reviewRating, reviewComment)
-                      setReviewSuccess(true)
-                      setTimeout(() => { setShowReviewModal(false); setReviewSuccess(false); setReviewComment(''); setReviewRating(5) }, 1500)
-                    } catch (err) {
-                      setReviewError(err instanceof Error ? err.message : 'Failed to publish review')
-                    } finally {
-                      setReviewSubmitting(false)
-                    }
-                  })()
-                }}
-                style={{background:'var(--accent)',color:'var(--bg)',border:'none',borderRadius:8,padding:'8px 18px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'var(--font-body)',opacity:reviewSubmitting ? 0.6 : 1}}>
-                {reviewSubmitting ? 'Publishing...' : 'Publish review'}
-              </button>
-            </div>
+                {reviewError !== null && <div className="rv-msg rv-msg-error">{reviewError}</div>}
+                {reviewSuccess && <div className="rv-msg rv-msg-success">✓ Review published!</div>}
+
+                <div className="rv-actions">
+                  <button type="button" className="rv-btn-cancel" onClick={closeReviewModal}>
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="rv-btn-submit"
+                    disabled={reviewSubmitting}
+                    onClick={() => {
+                      void (async () => {
+                        setReviewSubmitting(true)
+                        setReviewError(null)
+                        try {
+                          await submitMintReview(url, reviewRating, reviewComment)
+                          setReviewSuccess(true)
+                          setTimeout(() => { closeReviewModal() }, 1500)
+                        } catch (err) {
+                          setReviewError(err instanceof Error ? err.message : 'Failed to publish review')
+                        } finally {
+                          setReviewSubmitting(false)
+                        }
+                      })()
+                    }}
+                  >
+                    {reviewSubmitting ? 'Publishing...' : 'Sign and publish'}
+                  </button>
+                </div>
+                <p className="rv-permanence-note">Published permanently to public Nostr relays.</p>
+              </>
+            )}
           </div>
         </div>
       )}

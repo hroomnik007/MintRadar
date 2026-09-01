@@ -7,7 +7,12 @@ export async function submitMintReview(
   rating: number,
   comment: string
 ): Promise<void> {
-  if (!window.nostr) throw new Error('Nostr extension not found')
+  // All three login methods (NIP-07 extension, nsec, NIP-46 remote signer)
+  // expose signing through a window.nostr shim — so a missing/!invalid one
+  // means the session's signer is gone, not that "an extension" is absent.
+  if (!window.nostr || typeof window.nostr.signEvent !== 'function') {
+    throw new Error('Unable to sign — please reconnect your Nostr account')
+  }
 
   const event = {
     kind: 38000,
