@@ -52,11 +52,13 @@
   color: #000;
   border: none;
   border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
   cursor: pointer;
   transition: opacity 150ms ease;
-  font-family: var(--font-sans);
+  /* Match the app's prevailing primary-button type (.submit-btn): 12px / 500,
+     body font. Was 13px/600 on an undefined var(--font-sans). */
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-body);
 }
 
 .tool-btn-primary:disabled {
@@ -130,10 +132,13 @@
 }
 
 .trc-value {
-  font-size: 14px;
-  font-weight: 600;
+  /* Same value-figure recipe as .stat-value / .smc-value / .md-sc-value. */
+  font-size: 20px;
+  font-weight: 700;
   color: var(--text);
-  letter-spacing: -0.01em;
+  font-family: var(--font-mono-data);
+  line-height: 1;
+  letter-spacing: -0.02em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -341,7 +346,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
 }
 
 .wizard-options-row .wizard-opt {
@@ -502,7 +507,7 @@
   border-radius: 8px;
   padding: 10px 14px;
   color: var(--text);
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;

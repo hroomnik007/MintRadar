@@ -134,7 +134,7 @@
   cursor: pointer;
   text-align: left;
   transition: border-color 150ms ease;
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
 }
 
 .learn-nav-btn:hover {
