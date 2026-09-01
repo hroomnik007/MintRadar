@@ -8,6 +8,11 @@ updates:
       all-dependencies:
         patterns:
           - "*"
+    ignore:
+      # TypeScript 7.x is a breaking major (baseUrl removed, stricter globals) and
+      # outpaces @typescript-eslint peer ranges — bump it deliberately, not via the group.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "npm"
     directory: "/MintRadar/backend"
     schedule:
@@ -16,3 +21,6 @@ updates:
       all-dependencies:
         patterns:
           - "*"
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
