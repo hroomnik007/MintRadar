@@ -326,7 +326,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .card-name-row {
@@ -350,7 +350,7 @@
 .card-host {
   font-size: 11px;
   color: var(--t3);
-  margin-top: 2px;
+  margin-top: 1px;
   font-family: var(--font-mono);
   white-space: nowrap;
   overflow: hidden;
@@ -390,16 +390,16 @@
 .card-pills {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   flex-wrap: wrap;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .card-pill {
   background: var(--elevated);
   border: 1px solid var(--brd);
   border-radius: 4px;
-  padding: 2px 6px;
+  padding: 1px 6px;
   font-size: 11px;
   color: var(--t3);
   font-family: var(--font-mono);
@@ -416,7 +416,7 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
+  gap: 6px;
 }
 
 .latency-block .latency-label {
@@ -428,7 +428,7 @@
 }
 
 .latency-value {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--t1);
   line-height: 1;
@@ -442,7 +442,7 @@
   margin-left: 3px;
 }
 
-.latency-value.muted { color: var(--t3); font-size: 20px; }
+.latency-value.muted { color: var(--t3); font-size: 17px; }
 
 .watch-btn {
   display: flex;

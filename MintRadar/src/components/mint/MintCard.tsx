@@ -115,7 +115,7 @@ export function MintCard({
     >
       <div className="card-top">
         <div className="card-name-row">
-          <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={32} radius={7} />
+          <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={28} radius={6} />
           <div style={{ minWidth: 0 }}>
             <div className="card-name">{displayName}</div>
             {mint.name && <div className="card-host">{hostname}</div>}
