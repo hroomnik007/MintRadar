@@ -351,6 +351,8 @@ function MintDetailContent({ url }: { url: string }) {
   const auditMeltsTooltip = useTapTooltip(auditMeltsRef)
   const auditErrorsRef = useRef<HTMLSpanElement>(null)
   const auditErrorsTooltip = useTapTooltip(auditErrorsRef)
+  const auditRecentRef = useRef<HTMLSpanElement>(null)
+  const auditRecentTooltip = useTapTooltip(auditRecentRef)
   const breakdownUptimeRef = useRef<HTMLSpanElement>(null)
   const breakdownUptimeTooltip = useTapTooltip(breakdownUptimeRef)
   const breakdownNutRef = useRef<HTMLSpanElement>(null)
@@ -557,6 +559,20 @@ function MintDetailContent({ url }: { url: string }) {
     : isAuditUnknown(breakdownAuditRecentTotal)
       ? 'Unknown'
       : `${((breakdownAuditRecentErrors ?? 0) / breakdownAuditRecentTotal * 100).toFixed(1)}% err`
+  // "Recent reliability" card in the Audit tab — same rolling window
+  // (audit_recent_total / audit_recent_errors, up to AUDIT_SWAPS_WINDOW = 100
+  // swaps) that feeds the Trust Score's Audit reliability component. Reuses the
+  // exact values above (breakdownAuditRecent*) and colours by breakdownAScore so
+  // the card can never disagree with the sidebar breakdown.
+  const recentReliabilityErrors = breakdownAuditRecentErrors ?? 0
+  const recentReliabilityDisplay = breakdownAuditRecentTotal === null
+    ? 'No recent swap data'
+    : isAuditUnknown(breakdownAuditRecentTotal)
+      ? `${recentReliabilityErrors} / ${breakdownAuditRecentTotal} · too few to score`
+      : `${recentReliabilityErrors} / ${breakdownAuditRecentTotal} · ${Math.round((1 - recentReliabilityErrors / breakdownAuditRecentTotal) * 100)}%`
+  const recentReliabilityColor = breakdownAuditRecentTotal === null || isAuditUnknown(breakdownAuditRecentTotal)
+    ? 'var(--text3)'
+    : breakdownAScore >= 4 ? '#4ade80' : breakdownAScore >= 3 ? '#ffa500' : '#ff4d4d'
   const trustBreakdownRows = [
     { label: 'Uptime (45%)', display: `${uptimePct}%`, score: breakdownUScore, max: 45, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.', tooltipRef: breakdownUptimeRef, tooltipHook: breakdownUptimeTooltip },
     { label: 'NUT Support (30%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 30, color: supportedNuts.length >= 12 ? '#4ade80' : supportedNuts.length >= 8 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.', tooltipRef: breakdownNutRef, tooltipHook: breakdownNutTooltip },
@@ -1455,9 +1471,32 @@ function MintDetailContent({ url }: { url: string }) {
                     <div className="audit-stat-sub">{auditErrorPct !== null ? `${auditErrorPct.toFixed(1)}% of ops` : '—'}</div>
                   </div>
                 </div>
+                <div className="audit-recent-card">
+                  <div className="audit-recent-text">
+                    <div className="audit-recent-label">
+                      Recent reliability
+                      <span
+                        ref={auditRecentRef}
+                        style={{position:'relative',display:'inline-flex',marginLeft:3}}
+                        onPointerEnter={auditRecentTooltip.onPointerEnter}
+                        onPointerLeave={auditRecentTooltip.onPointerLeave}
+                        onClick={auditRecentTooltip.onClick}
+                      >
+                        <Info size={11} color="#6b7280" style={{cursor:'help'}} />
+                        {auditRecentTooltip.open && (
+                          <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
+                            Failed swaps out of the mint's last ~100 audited operations — the exact rolling window the Trust Score's Audit reliability component scores on, not the all-time totals above. Shows "too few to score" with fewer than 3 recent swaps.
+                          </div>
+                        )}
+                      </span>
+                    </div>
+                    <div className="audit-recent-sub">last ~100 swaps · feeds Trust Score</div>
+                  </div>
+                  <div className="audit-recent-value" style={{color: recentReliabilityColor}}>{recentReliabilityDisplay}</div>
+                </div>
                 {knownMint.auditCheckedAt ? (
                   <div style={{fontSize:12,color:'var(--text3)',marginTop:10,fontFamily:'var(--font-mono)',lineHeight:1.5}}>
-                    Last checked {new Date(knownMint.auditCheckedAt).toLocaleDateString()} · all-time totals from audit.8333.space (not the rolling-window score used in Trust Score)
+                    Last checked {new Date(knownMint.auditCheckedAt).toLocaleDateString()} · Mint / Melt / Errors are all-time totals from audit.8333.space; Recent reliability is the rolling ~100-swap window used in Trust Score
                   </div>
                 ) : null}
                 </div>
@@ -1480,6 +1519,9 @@ function MintDetailContent({ url }: { url: string }) {
                   </button>
                 )}
               </div>
+              <p className="reviews-nip87-note">
+                Reviews are signed Nostr events (NIP-87) collected from public relays. The count can differ a little from other sites — each one queries its own set of relays.
+              </p>
               {reviewsLoading ? (
                 <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>Loading reviews...</div>
               ) : mergedReviews.length > 0 ? (
