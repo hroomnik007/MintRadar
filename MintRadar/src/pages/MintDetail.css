@@ -548,13 +548,6 @@
 
 /* ── Reviews ────────────────────────────────────────────────── */
 .reviews-header  { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.reviews-nip87-note {
-  font-size: 12px;
-  color: var(--text3);
-  line-height: 1.5;
-  margin: -2px 0 4px;
-  max-width: 62ch;
-}
 
 /* Primary action of the Reviews tab — deliberately larger and more prominent
    than the header-row buttons (Watch/Compare/Mint QR): filled tonal background

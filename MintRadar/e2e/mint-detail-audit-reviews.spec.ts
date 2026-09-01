@@ -40,14 +40,3 @@ test('Audit tab: Recent reliability card matches the Trust Score breakdown', asy
   await expect(page.getByText('3.0% err')).toBeVisible() // 3/100 → same source as the card's 97%
   await page.screenshot({ path: 'test-results/audit-breakdown-crosscheck.png' })
 })
-
-test('Reviews tab: NIP-87 relay-variance note is shown', async ({ page }) => {
-  await page.locator('.md-tab', { hasText: 'Reviews' }).click()
-
-  const note = page.locator('.reviews-nip87-note')
-  await expect(note).toBeVisible()
-  await expect(note).toContainText('NIP-87')
-  await expect(note).toContainText(/relays/i)
-
-  await page.locator('.md-panel', { has: note }).screenshot({ path: 'test-results/reviews-nip87-note.png' })
-})

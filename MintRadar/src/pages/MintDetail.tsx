@@ -1561,9 +1561,6 @@ function MintDetailContent({ url }: { url: string }) {
                   </button>
                 )}
               </div>
-              <p className="reviews-nip87-note">
-                Reviews are signed Nostr events (NIP-87) collected from public relays. The count can differ a little from other sites — each one queries its own set of relays.
-              </p>
               {reviewsLoading ? (
                 <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>Loading reviews...</div>
               ) : mergedReviews.length > 0 ? (
