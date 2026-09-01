@@ -235,13 +235,23 @@ export function AppShell() {
     setBunkerError('')
   }, [])
 
-  // Pick a method from the list: collapse to its focused view. Choosing Remote
-  // signer auto-starts pairing (the modal-close and unmount teardown paths are
-  // covered by closeLoginModal / the effect above).
+  // NIP-07 needs no further input from the user — window.nostr is either there or
+  // it isn't — so picking it fires the connect straight away. On success the
+  // modal closes; on failure the focused view stays up with the error + an
+  // install link to recover from.
+  const connectNip07 = useCallback(async () => {
+    await login()
+    if (useAuthStore.getState().profile !== null) closeLoginModal()
+  }, [login, closeLoginModal])
+
+  // Pick a method from the list: collapse to its focused view. Remote signer
+  // auto-starts QR pairing; Nostr extension auto-fires the connect (see above).
+  // Nostr key is the only one that then waits for a Connect click.
   function selectMethod(id: 'nip07' | 'nsec' | 'remote-signer') {
     setLoginMethod(id)
     setMethodPicked(true)
     if (id === 'remote-signer') startPairing()
+    else if (id === 'nip07' && nip07Available) void connectNip07()
   }
 
   // "Back" from a focused view to the three-method picker.
@@ -448,6 +458,10 @@ export function AppShell() {
                   </div>
                 )}
 
+                {loginMethod === 'nip07' && nip07Available && !authError && (
+                  <div className="nostr-warn">Connecting to your Nostr extension…</div>
+                )}
+
                 {loginMethod === 'remote-signer' && (
                   <div className="nostr-remote-wrap">
                     {qrUri && (
@@ -522,7 +536,11 @@ export function AppShell() {
                       ? <>Your key stays on your remote signer (e.g. Amber, nsec.app). Only a temporary session key is stored in this browser to relay requests — it can&apos;t sign anything on its own.</>
                       : <>Your key stays only in this browser&apos;s memory for this session — used to sign on your behalf, never sent anywhere, never saved to disk.</>}
                   </div>
-                  {loginMethod !== 'remote-signer' && (
+                  {/* nsec always needs a Connect click. nip07 shows the actions only
+                      to recover — no extension, or a failed/rejected attempt. On the
+                      happy path it auto-connects with no buttons. remote-signer has
+                      its own inline Connect in the paste row. */}
+                  {(loginMethod === 'nsec' || (loginMethod === 'nip07' && (!nip07Available || authError !== null))) && (
                     <div className="nostr-modal-actions">
                       <button type="button" className="nostr-cancel-btn" onClick={closeLoginModal}>
                         Cancel
@@ -533,7 +551,7 @@ export function AppShell() {
                         disabled={isLoading || (loginMethod === 'nip07' && !nip07Available)}
                         onClick={() => { void handleModalConnect() }}
                       >
-                        {isLoading ? 'Connecting…' : <>⚡ Connect</>}
+                        {isLoading ? 'Connecting…' : (loginMethod === 'nip07' && authError !== null) ? <>⚡ Retry</> : <>⚡ Connect</>}
                       </button>
                     </div>
                   )}
