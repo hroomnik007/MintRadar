@@ -821,6 +821,39 @@ function MintDetailContent({ url }: { url: string }) {
             )}
           </div>
         </div>
+        {/* Compact Trust Score — mobile only (≤640px). Fills the empty cell next
+            to Community rating; the full breakdown card in .md-right is hidden
+            on mobile since its Uptime/NUTs/Latency rows duplicate the tiles
+            above. Same target as the full card's "Details ›". */}
+        <div
+          className="md-sc md-sc-trust"
+          role="button"
+          tabIndex={0}
+          onClick={() => setShowTrustBreakdown(true)}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowTrustBreakdown(true) } }}
+        >
+          <div className="md-sc-trust-donut">
+            <svg viewBox="0 0 72 72" aria-hidden="true">
+              <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="8" />
+              <circle cx="36" cy="36" r="27" fill="none" stroke="var(--green-bright)" strokeWidth="8"
+                strokeDasharray={`${(trustScore * 1.696).toFixed(1)} 169.6`}
+                strokeDashoffset="42.4"
+                strokeLinecap="round"
+                transform="rotate(-90 36 36)" />
+            </svg>
+            <span className="md-sc-trust-num">{trustScore}%</span>
+          </div>
+          <div className="md-sc-trust-meta">
+            <div className="md-sc-label">Trust Score</div>
+            <span
+              className="md-sc-trust-badge"
+              style={{ color: tsInfo.color, background: tsInfo.bg, border: `0.5px solid ${tsInfo.border}` }}
+            >
+              {tsInfo.label}
+            </span>
+            <span className="md-sc-trust-link">Details ›</span>
+          </div>
+        </div>
       </div>
 
       <div className="md-tabs">
@@ -1521,7 +1554,7 @@ function MintDetailContent({ url }: { url: string }) {
 
         <div className="md-right">
 
-          <div className="md-panel">
+          <div className="md-panel md-trust-panel">
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:11}}>
               <div className="md-panel-title" style={{marginBottom:0}}>Trust Score</div>
               <button onClick={() => setShowTrustBreakdown(true)} style={{background:'none',border:'none',color:'var(--accent)',fontSize:10,cursor:'pointer',fontFamily:'var(--font-mono)',padding:0}}>Details ›</button>
