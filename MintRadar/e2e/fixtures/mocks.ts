@@ -211,7 +211,7 @@ export async function mockRelays(page: Page): Promise<void> {
   })
 }
 
-const TEST_PUBKEY_HEX = '1'.repeat(64)
+export const TEST_PUBKEY_HEX = '1'.repeat(64)
 
 /**
  * Simulate a logged-in Nostr (NIP-07) session.
@@ -222,10 +222,14 @@ const TEST_PUBKEY_HEX = '1'.repeat(64)
  *  2. The persisted auth-store session in sessionStorage, so the app boots
  *     already authenticated without driving the modal/relay login flow.
  */
-export async function loginAs(page: Page, name = 'E2E Tester'): Promise<void> {
+export async function loginAs(
+  page: Page,
+  name = 'E2E Tester',
+  method: 'nip07' | 'nsec' | 'remote-signer' = 'nip07',
+): Promise<void> {
   const npub = nip19.npubEncode(TEST_PUBKEY_HEX)
   await page.addInitScript(
-    ({ pubkey, npub, name }) => {
+    ({ pubkey, npub, name, method }) => {
       // 1) NIP-07 extension mock
       ;(window as unknown as { nostr: unknown }).nostr = {
         getPublicKey: async () => pubkey,
@@ -247,10 +251,10 @@ export async function loginAs(page: Page, name = 'E2E Tester'): Promise<void> {
       // 2) Persisted auth session (zustand persist → sessionStorage)
       sessionStorage.setItem(
         'mintradar_session',
-        JSON.stringify({ state: { profile: { pubkey, npub, name } }, version: 0 }),
+        JSON.stringify({ state: { profile: { pubkey, npub, name }, method }, version: 0 }),
       )
     },
-    { pubkey: TEST_PUBKEY_HEX, npub, name },
+    { pubkey: TEST_PUBKEY_HEX, npub, name, method },
   )
 }
 

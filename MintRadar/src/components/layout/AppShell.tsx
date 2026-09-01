@@ -93,6 +93,19 @@ const FOCUS_COPY = {
   },
 } as const
 
+// Short label for the navbar profile badge.
+const METHOD_BADGE: Record<'nip07' | 'nsec' | 'remote-signer', string> = {
+  nip07: 'Extension',
+  nsec: 'nsec',
+  'remote-signer': 'Remote signer',
+}
+
+// npub1abc…xyz789 — same head/tail truncation idiom used for keys elsewhere.
+function shortNpub(npub: string): string {
+  if (npub.length <= 20) return npub
+  return `${npub.slice(0, 12)}…${npub.slice(-6)}`
+}
+
 export function AppShell() {
   const { pathname } = useLocation()
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
@@ -116,6 +129,7 @@ export function AppShell() {
 
   useWatchlistSync()
   const profile = useAuthStore(state => state.profile)
+  const authMethod = useAuthStore(state => state.method)
   useFollowRecommendations(profile?.pubkey ?? null)
   const login = useAuthStore(state => state.login)
   const loginNsec = useAuthStore(state => state.loginNsec)
@@ -125,6 +139,7 @@ export function AppShell() {
   const authError = useAuthStore(state => state.error)
   const watchlistCount = useWatchlistStore(state => state.mints.length)
 
+  const [copiedNpub, setCopiedNpub] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [loginMethod, setLoginMethod] = useState<'nip07' | 'nsec' | 'remote-signer'>('nip07')
   // false → the three-method picker is shown; true → collapsed to the focused
@@ -196,7 +211,7 @@ export function AppShell() {
       .then(p => {
         if (qrCancelRef.current !== cancel) return
         qrCancelRef.current = null
-        useAuthStore.setState({ profile: p, isLoading: false, error: null })
+        useAuthStore.setState({ profile: p, method: 'remote-signer', isLoading: false, error: null })
         closeLoginModal()
       })
       .catch((err: unknown) => {
@@ -310,9 +325,28 @@ export function AppShell() {
                     onError={(e) => { e.currentTarget.style.display = 'none' }}
                   />
                 )}
-                <span className="navbar-username">
-                  {profile.name ?? `${profile.pubkey.slice(0,8)}...`}
-                </span>
+                <div className="navbar-profile-text">
+                  <div className="navbar-profile-name-row">
+                    <span className="navbar-username">
+                      {profile.name ?? `${profile.pubkey.slice(0,8)}...`}
+                    </span>
+                    {authMethod !== null && (
+                      <span className="navbar-method-badge">{METHOD_BADGE[authMethod]}</span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className="navbar-npub"
+                    title="Copy full npub"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(profile.npub)
+                      setCopiedNpub(true)
+                      setTimeout(() => setCopiedNpub(false), 2000)
+                    }}
+                  >
+                    {copiedNpub ? 'Copied' : shortNpub(profile.npub)}
+                  </button>
+                </div>
               </div>
               <button type="button" className="navbar-disconnect-btn" onClick={handleLogout} aria-label="Disconnect">
                 <IcLogout />

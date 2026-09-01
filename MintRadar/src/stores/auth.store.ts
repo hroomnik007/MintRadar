@@ -7,8 +7,13 @@ export interface Nip65Relays {
   write: string[]
 }
 
+// How the current session authenticated. Persisted alongside the profile so the
+// navbar badge survives a reload. `null` when logged out.
+export type LoginMethod = 'nip07' | 'nsec' | 'remote-signer' | null
+
 interface AuthState {
   profile: NostrProfile | null
+  method: LoginMethod
   nip65Relays: Nip65Relays | null
   isLoading: boolean
   error: string | null
@@ -25,6 +30,7 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       profile: null,
+      method: null,
       nip65Relays: null,
       isLoading: false,
       error: null,
@@ -33,7 +39,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null })
         try {
           const profile = await loginWithNip07()
-          set({ profile, isLoading: false })
+          set({ profile, method: 'nip07', isLoading: false })
         } catch (err) {
           set({
             error: err instanceof Error ? err.message : 'Login failed',
@@ -46,7 +52,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null })
         try {
           const profile = await loginWithNsec(input)
-          set({ profile, isLoading: false })
+          set({ profile, method: 'nsec', isLoading: false })
         } catch (err) {
           set({
             error: err instanceof Error ? err.message : 'Login failed',
@@ -59,7 +65,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null })
         try {
           const profile = await loginWithBunker(input)
-          set({ profile, isLoading: false })
+          set({ profile, method: 'remote-signer', isLoading: false })
         } catch (err) {
           set({
             error: err instanceof Error ? err.message : 'Connection failed',
@@ -71,7 +77,7 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         removeBunkerShim()
         removeNsecShim()
-        set({ profile: null, nip65Relays: null, error: null })
+        set({ profile: null, method: null, nip65Relays: null, error: null })
       },
 
       isLoggedIn: () => get().profile !== null,
@@ -89,7 +95,7 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'mintradar_session',
       storage: createJSONStorage(() => sessionStorage),
-      partialize: (state) => ({ profile: state.profile }),
+      partialize: (state) => ({ profile: state.profile, method: state.method }),
     }
   )
 )
