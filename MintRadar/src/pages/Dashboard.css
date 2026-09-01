@@ -92,9 +92,11 @@
 
 .search-input {
   width: 100%;
-  background: var(--bg3);
+  /* Same surface recipe as .stat-card above it, so the control row reads as one
+     family: --surface background, 1px --border, --radius-m corners. */
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-m);
   padding: 8.5px 12px 8.5px 32px;
   color: var(--text);
   font-size: 12.5px;
