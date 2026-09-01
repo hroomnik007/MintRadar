@@ -19,7 +19,7 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
 
-    "baseUrl": ".",
+    "types": ["node"],
     "paths": {
       "@/*": ["./src/*"],
       "@core/*": ["./src/core/*"],

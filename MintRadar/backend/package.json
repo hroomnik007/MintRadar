@@ -37,7 +37,18 @@
     "eslint": "^10.8.1",
     "supertest": "^7.2.2",
     "tsx": "^4.23.12",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "@typescript-eslint/eslint-plugin": {
+      "typescript": "$typescript"
+    },
+    "@typescript-eslint/parser": {
+      "typescript": "$typescript"
+    },
+    "typescript-eslint": {
+      "typescript": "$typescript"
+    }
   }
 }
