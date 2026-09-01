@@ -46,8 +46,8 @@ test('remote-signer: QR appears automatically on selection (no extra click)', as
   const fills = await page.$$eval('.nostr-qr-wrap svg path', ps => ps.map(p => p.getAttribute('fill')))
   expect(fills).toEqual(expect.arrayContaining(['#17251f', '#f2f7f4']))
   await expect(page.locator('.nostr-qr-caption')).toContainText(/signer app/i)
-  await expect(page.locator('.nostr-warn')).toContainText(/waiting for your signer to connect/i)
-  await expect(page.locator('.nostr-remote-divider')).toContainText(/paste a connection string/i)
+  await expect(page.locator('.nostr-remote-status')).toContainText(/waiting for your signer/i)
+  await expect(page.locator('.nostr-remote-divider')).toContainText(/paste the connection link/i)
 
   // Copy connection link puts the nostrconnect:// pairing URI on the clipboard
   // with brief "Copied" feedback.
@@ -64,7 +64,7 @@ test('remote-signer: bunker:// paste stays available alongside the QR', async ({
   await setup(page)
   await remoteCard(page).click()
   await page.waitForSelector('.nostr-qr-wrap svg')
-  const connect = page.getByRole('button', { name: /Connect/i })
+  const connect = page.getByRole('button', { name: 'Connect', exact: true })
   await expect(connect).toBeDisabled()
   await page.locator('.nostr-nsec-input').fill('bunker://abc?relay=wss://x')
   await expect(connect).toBeEnabled() // QR present AND paste usable
@@ -77,6 +77,8 @@ test('switching away from Remote signer closes every pairing socket', async ({ p
   await expect.poll(() => ws.opened).toBeGreaterThan(0)
   const openedWhilePairing = ws.opened
 
+  // Collapse-to-selected: return to the picker before choosing another method.
+  await page.getByRole('button', { name: /Back/i }).click()
   await page.locator('.nostr-method-card', { hasText: 'Nostr extension' }).click()
   await expect(page.locator('.nostr-qr-wrap')).toHaveCount(0)
   await expect.poll(() => ws.closed, { timeout: 5000 }).toBe(openedWhilePairing)

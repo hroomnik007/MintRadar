@@ -58,6 +58,40 @@ const IcQrcode = () => (
     <path d="M14 20l6 0" /><path d="M20 14l0 6" />
   </svg>
 )
+const IcCopy = () => (
+  <svg {...svgProps}>
+    <path d="M8 8m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z" />
+    <path d="M16 8v-2a2 2 0 0 0 -2 -2h-8a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h2" />
+  </svg>
+)
+const IcBack = () => (
+  <svg {...svgProps} width="14" height="14">
+    <path d="M5 12l14 0" /><path d="M5 12l6 6" /><path d="M5 12l6 -6" />
+  </svg>
+)
+
+// nostrconnect:// URIs are long; show a head…tail preview in the copy field.
+function shortenPairingUri(uri: string): string {
+  if (uri.length <= 44) return uri
+  return `${uri.slice(0, 26)}…${uri.slice(-12)}`
+}
+
+// Method-specific heading + subheading shown once a method is picked and the
+// three-way list collapses to the focused view.
+const FOCUS_COPY = {
+  nip07: {
+    title: 'Nostr extension',
+    subtitle: 'Sign in with Alby, nos2x or any NIP-07 signer — your key never leaves the extension.',
+  },
+  nsec: {
+    title: 'Nostr key (nsec)',
+    subtitle: 'Your key is held only in this browser, in memory for this session.',
+  },
+  'remote-signer': {
+    title: 'Connect a remote signer',
+    subtitle: 'Your key stays in your signer. This site can never see it.',
+  },
+} as const
 
 export function AppShell() {
   const { pathname } = useLocation()
@@ -93,6 +127,9 @@ export function AppShell() {
 
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [loginMethod, setLoginMethod] = useState<'nip07' | 'nsec' | 'remote-signer'>('nip07')
+  // false → the three-method picker is shown; true → collapsed to the focused
+  // view for `loginMethod`, with a "Back" link to return to the picker.
+  const [methodPicked, setMethodPicked] = useState(false)
   const [nsecInput, setNsecInput] = useState('')
   const [nsecError, setNsecError] = useState('')
   const [bunkerInput, setBunkerInput] = useState('')
@@ -116,6 +153,7 @@ export function AppShell() {
     setNsecInput('')
     setNsecError('')
     setLoginMethod('nip07')
+    setMethodPicked(false)
     setBunkerInput('')
     setBunkerError('')
     setQrUri('')
@@ -172,20 +210,31 @@ export function AppShell() {
   // Abort a live pairing if the component ever unmounts.
   useEffect(() => () => { qrCancelRef.current?.() }, [])
 
-  // Method selection. Switching TO Remote signer auto-starts pairing; switching
-  // away tears the websockets down (the modal-close and unmount paths are
+  // Tear down a live Remote-signer pairing (websockets + QR state). Shared by the
+  // "Back" link and any other path that leaves the focused Remote-signer view.
+  const teardownPairing = useCallback(() => {
+    qrCancelRef.current?.()
+    qrCancelRef.current = null
+    setQrUri('')
+    setCopiedUri(false)
+    setBunkerError('')
+  }, [])
+
+  // Pick a method from the list: collapse to its focused view. Choosing Remote
+  // signer auto-starts pairing (the modal-close and unmount teardown paths are
   // covered by closeLoginModal / the effect above).
   function selectMethod(id: 'nip07' | 'nsec' | 'remote-signer') {
-    if (id === loginMethod) return
-    if (loginMethod === 'remote-signer') {
-      qrCancelRef.current?.()
-      qrCancelRef.current = null
-      setQrUri('')
-      setCopiedUri(false)
-      setBunkerError('')
-    }
     setLoginMethod(id)
+    setMethodPicked(true)
     if (id === 'remote-signer') startPairing()
+  }
+
+  // "Back" from a focused view to the three-method picker.
+  function backToPicker() {
+    if (loginMethod === 'remote-signer') teardownPairing()
+    setNsecError('')
+    setBunkerError('')
+    setMethodPicked(false)
   }
 
   async function handleModalConnect() {
@@ -279,143 +328,184 @@ export function AppShell() {
       {showLoginModal && (
         <div className="nostr-modal-overlay" onClick={closeLoginModal}>
           <div className="nostr-modal" onClick={e => e.stopPropagation()}>
-            <div className="nostr-modal-header">
-              <div className="nostr-modal-icon">⚡</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="nostr-modal-title">Connect with Nostr</div>
-                <div className="nostr-modal-subtitle">MintRadar uses your Nostr identity to save watchlists and post reviews. No email, no password.</div>
-              </div>
-              <button type="button" className="nostr-modal-close" onClick={closeLoginModal}>
-                <IcClose />
-              </button>
-            </div>
-
-            <div className="nostr-modal-methods">
-              {([
-                { id: 'nip07', title: 'Nostr extension', desc: 'Sign in with Alby, nos2x or any NIP-07 signer', icon: <IcPuzzle /> },
-                { id: 'nsec', title: 'Nostr key (nsec)', desc: 'Paste a private key — stored only in this browser', icon: <IcKey /> },
-                { id: 'remote-signer', title: 'Remote signer', desc: 'Sign in with Amber, Primal or any NIP-46 signer — your key stays on your phone', icon: <IcQrcode /> },
-              ] as const).map(m => (
-                <div
-                  key={m.id}
-                  className={`nostr-method-card${loginMethod === m.id ? ' selected' : ''}`}
-                  onClick={() => selectMethod(m.id)}
-                >
-                  <div className="nostr-method-radio">
-                    <div className={`nostr-radio-dot${loginMethod === m.id ? ' active' : ''}`} />
+            {!methodPicked ? (
+              <>
+                <div className="nostr-modal-header">
+                  <div className="nostr-modal-icon">⚡</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="nostr-modal-title">Connect with Nostr</div>
+                    <div className="nostr-modal-subtitle">MintRadar uses your Nostr identity to save watchlists and post reviews. No email, no password.</div>
                   </div>
-                  <div className="nostr-method-icon">{m.icon}</div>
-                  <div>
-                    <div className="nostr-method-title">{m.title}</div>
-                    <div className="nostr-method-desc">{m.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {loginMethod === 'nsec' && (
-              <div className="nostr-nsec-wrap">
-                <div className="nostr-nsec-security-warn">
-                  <p style={{ margin: 0 }}>
-                    ⚠️ Security notice: Entering your nsec key in a browser is inherently risky. On desktop, we recommend using a NIP-07 extension (Alby, nos2x) instead — your key never leaves the extension. On mobile, only use nsec login on a trusted personal device with no suspicious apps installed.
-                  </p>
-                </div>
-                <input
-                  className="nostr-nsec-input"
-                  type="password"
-                  placeholder="nsec1... or 64-char hex private key"
-                  value={nsecInput}
-                  onChange={e => { setNsecInput(e.target.value); setNsecError('') }}
-                  autoFocus
-                />
-                {nsecError && <div className="nostr-nsec-error">{nsecError}</div>}
-              </div>
-            )}
-
-            {loginMethod === 'nip07' && !nip07Available && (
-              <div className="nostr-warn">
-                No Nostr extension detected.{' '}
-                <a href="https://getalby.com" target="_blank" rel="noreferrer">Install Alby</a> or nos2x to continue.
-              </div>
-            )}
-
-            {loginMethod === 'remote-signer' && (
-              <div className="nostr-remote-wrap">
-                {qrUri && (
-                  <div className="nostr-qr-wrap">
-                    {/* #17251f === var(--surface); qrcode.react renders bgColor as an
-                        SVG fill attribute, where CSS custom properties don't resolve */}
-                    <QRCodeSVG value={qrUri} size={192} bgColor="#17251f" fgColor="#f2f7f4" />
-                  </div>
-                )}
-                <div className="nostr-qr-caption">
-                  <span>Scan this QR with your signer app.</span>
-                  <button type="button" className="nostr-qr-refresh" onClick={startPairing}>
-                    New QR
+                  <button type="button" className="nostr-modal-close" onClick={closeLoginModal}>
+                    <IcClose />
                   </button>
                 </div>
-                {qrUri && (
-                  <button
-                    type="button"
-                    className="nostr-qr-copy"
-                    onClick={() => {
-                      void navigator.clipboard.writeText(qrUri)
-                      setCopiedUri(true)
-                      setTimeout(() => setCopiedUri(false), 2000)
-                    }}
-                  >
-                    {copiedUri ? 'Copied' : 'Copy pairing link'}
+
+                <div className="nostr-modal-methods">
+                  {([
+                    { id: 'nip07', title: 'Nostr extension', desc: 'Sign in with Alby, nos2x or any NIP-07 signer', icon: <IcPuzzle /> },
+                    { id: 'nsec', title: 'Nostr key (nsec)', desc: 'Paste a private key — stored only in this browser', icon: <IcKey /> },
+                    { id: 'remote-signer', title: 'Remote signer', desc: 'Sign in with Amber, Primal or any NIP-46 signer — your key stays on your phone', icon: <IcQrcode /> },
+                  ] as const).map(m => (
+                    <div
+                      key={m.id}
+                      className="nostr-method-card"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => selectMethod(m.id)}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectMethod(m.id) } }}
+                    >
+                      <div className="nostr-method-icon">{m.icon}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="nostr-method-title">{m.title}</div>
+                        <div className="nostr-method-desc">{m.desc}</div>
+                      </div>
+                      <div className="nostr-method-chevron" aria-hidden="true">›</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="nostr-modal-footer">
+                  <div className="nostr-privacy-note">
+                    <IcShield /> Your keys stay yours. MintRadar only ever requests signatures — it can&apos;t read or store your private key.
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="nostr-focus-top">
+                  <button type="button" className="nostr-back-btn" onClick={backToPicker}>
+                    <IcBack /> Back
                   </button>
+                  <button type="button" className="nostr-modal-close" onClick={closeLoginModal}>
+                    <IcClose />
+                  </button>
+                </div>
+                <div className="nostr-modal-header nostr-modal-header--focus">
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="nostr-modal-title">{FOCUS_COPY[loginMethod].title}</div>
+                    <div className="nostr-modal-subtitle">{FOCUS_COPY[loginMethod].subtitle}</div>
+                  </div>
+                </div>
+
+                {loginMethod === 'nsec' && (
+                  <div className="nostr-nsec-wrap">
+                    <div className="nostr-nsec-security-warn">
+                      <p style={{ margin: 0 }}>
+                        ⚠️ Security notice: Entering your nsec key in a browser is inherently risky. On desktop, we recommend using a NIP-07 extension (Alby, nos2x) instead — your key never leaves the extension. On mobile, only use nsec login on a trusted personal device with no suspicious apps installed.
+                      </p>
+                    </div>
+                    <input
+                      className="nostr-nsec-input"
+                      type="password"
+                      placeholder="nsec1... or 64-char hex private key"
+                      value={nsecInput}
+                      onChange={e => { setNsecInput(e.target.value); setNsecError('') }}
+                      autoFocus
+                    />
+                    {nsecError && <div className="nostr-nsec-error">{nsecError}</div>}
+                  </div>
                 )}
-                {qrUri && !bunkerError && (
-                  <div className="nostr-warn">Waiting for your signer to connect… (up to 2 min)</div>
+
+                {loginMethod === 'nip07' && !nip07Available && (
+                  <div className="nostr-warn">
+                    No Nostr extension detected.{' '}
+                    <a href="https://getalby.com" target="_blank" rel="noreferrer">Install Alby</a> or nos2x to continue.
+                  </div>
                 )}
-                {bunkerError && <div className="nostr-nsec-error">{bunkerError}</div>}
 
-                <p className="nostr-remote-hint">
-                  QR or copy link connects this device to your signer. Pasting a string is the reverse — your signer connects to this device.
-                </p>
-                <div className="nostr-remote-divider"><span>or paste a connection string from your signer</span></div>
-                <input
-                  className="nostr-nsec-input"
-                  type="text"
-                  placeholder="bunker://... or user@domain.com"
-                  value={bunkerInput}
-                  onChange={e => { setBunkerInput(e.target.value); setBunkerError('') }}
-                />
-              </div>
+                {loginMethod === 'remote-signer' && (
+                  <div className="nostr-remote-wrap">
+                    {qrUri && (
+                      <div className="nostr-qr-wrap">
+                        {/* #17251f === var(--surface); qrcode.react renders bgColor as an
+                            SVG fill attribute, where CSS custom properties don't resolve */}
+                        <QRCodeSVG value={qrUri} size={192} bgColor="#17251f" fgColor="#f2f7f4" />
+                      </div>
+                    )}
+                    <div className="nostr-qr-caption">
+                      <span>Scan this with your signer app, or copy the link and paste it there.</span>
+                      <button type="button" className="nostr-qr-refresh" onClick={startPairing}>
+                        New QR
+                      </button>
+                    </div>
+                    {qrUri && (
+                      <button
+                        type="button"
+                        className="nostr-qr-copy"
+                        title="Copy pairing link"
+                        onClick={() => {
+                          void navigator.clipboard.writeText(qrUri)
+                          setCopiedUri(true)
+                          setTimeout(() => setCopiedUri(false), 2000)
+                        }}
+                      >
+                        {copiedUri
+                          ? <span className="nostr-qr-copy-uri">Copied</span>
+                          : <><span className="nostr-qr-copy-uri">{shortenPairingUri(qrUri)}</span><IcCopy /></>}
+                      </button>
+                    )}
+                    <p className="nostr-remote-hint">
+                      Works with any NIP-46 signer: nsec.app, Amber, your own bunker.
+                    </p>
+                    <div className="nostr-remote-divider"><span>Or paste the connection link your signer gave you</span></div>
+                    <div className="nostr-remote-paste-row">
+                      <input
+                        className="nostr-nsec-input"
+                        type="text"
+                        placeholder="bunker://..."
+                        value={bunkerInput}
+                        onChange={e => { setBunkerInput(e.target.value); setBunkerError('') }}
+                      />
+                      <button
+                        type="button"
+                        className="nostr-connect-btn nostr-remote-connect"
+                        disabled={isLoading || !bunkerInput.trim()}
+                        onClick={() => { void handleModalConnect() }}
+                      >
+                        {isLoading ? '…' : 'Connect'}
+                      </button>
+                    </div>
+                    {qrUri && !bunkerError && (
+                      <div className="nostr-remote-status">
+                        Waiting for your signer
+                        <span className="nostr-remote-status-sub">This can take up to 2 minutes.</span>
+                      </div>
+                    )}
+                    {bunkerError && <div className="nostr-nsec-error">{bunkerError}</div>}
+                  </div>
+                )}
+
+                {authError && loginMethod === 'nip07' && (
+                  <div className="nostr-auth-error">{authError}</div>
+                )}
+
+                <div className="nostr-modal-footer">
+                  <div className="nostr-privacy-note">
+                    <IcShield /> {loginMethod === 'nip07'
+                      ? <>Your key never leaves your extension. MintRadar only requests signatures — it can&apos;t read your private key.</>
+                      : loginMethod === 'remote-signer'
+                      ? <>Your key stays on your remote signer (e.g. Amber, nsec.app). Only a temporary session key is stored in this browser to relay requests — it can&apos;t sign anything on its own.</>
+                      : <>Your key stays only in this browser&apos;s memory for this session — used to sign on your behalf, never sent anywhere, never saved to disk.</>}
+                  </div>
+                  {loginMethod !== 'remote-signer' && (
+                    <div className="nostr-modal-actions">
+                      <button type="button" className="nostr-cancel-btn" onClick={closeLoginModal}>
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="nostr-connect-btn"
+                        disabled={isLoading || (loginMethod === 'nip07' && !nip07Available)}
+                        onClick={() => { void handleModalConnect() }}
+                      >
+                        {isLoading ? 'Connecting…' : <>⚡ Connect</>}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
-
-            {authError && loginMethod !== 'nsec' && loginMethod !== 'remote-signer' && (
-              <div className="nostr-auth-error">{authError}</div>
-            )}
-
-            <div className="nostr-modal-footer">
-              <div className="nostr-privacy-note">
-                <IcShield /> {loginMethod === 'nip07'
-                  ? <>Your key never leaves your extension. MintRadar only requests signatures — it can&apos;t read your private key.</>
-                  : loginMethod === 'remote-signer'
-                  ? <>Your key stays on your remote signer (e.g. Amber, nsec.app). Only a temporary session key is stored in this browser to relay requests — it can&apos;t sign anything on its own.</>
-                  : <>Your key stays only in this browser&apos;s memory for this session — used to sign on your behalf, never sent anywhere, never saved to disk.</>}
-              </div>
-              <div className="nostr-modal-actions">
-                <button type="button" className="nostr-cancel-btn" onClick={closeLoginModal}>
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="nostr-connect-btn"
-                  disabled={
-                    isLoading ||
-                    (loginMethod === 'nip07' && !nip07Available) ||
-                    (loginMethod === 'remote-signer' && !bunkerInput.trim())
-                  }
-                  onClick={() => { void handleModalConnect() }}
-                >
-                  {isLoading ? 'Connecting…' : <>⚡ Connect</>}
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}
