@@ -5,7 +5,7 @@ for Cashu ecash mints, used by the Bitcoin/Cashu/Nostr community where trust and
 correctness matter. This document explains how to get set up and what we expect
 from a contribution.
 
-By participating you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md).
+Be respectful and constructive in issues, pull requests, and discussions.
 
 ---
 
