@@ -3,6 +3,7 @@ import pLimit from 'p-limit'
 import { getKnownMints, probeMintToDb, pruneOldHistory, pruneUnvalidatedMints, backfillServerLocations } from './prober.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
 import { refreshAllMintReviews } from './reviewsSync.js'
+import { refreshTrustMoversRollup } from './trustMoversRollup.js'
 import { pruneOldNotificationSubscriptions } from './db.js'
 import { publishServiceProfile } from './nostrService.js'
 import { fetchLatestUpstreamVersions } from './versionCatalog.js'
@@ -41,6 +42,9 @@ export function startCron(): void {
       const mints = await getKnownMints()
       const limit = pLimit(10)
       await Promise.allSettled(mints.map(url => limit(() => probeMintToDb(url))))
+      // Refresh the Trust Score Movers snapshots right after probes, so
+      // mints.last_trust_score and the newest history rows are already current.
+      await refreshTrustMoversRollup()
     } catch (err) {
       if (process.env['NODE_ENV'] !== 'production') {
         console.error('[cron] probe error:', err)
@@ -118,6 +122,10 @@ export function startCron(): void {
 
   // Backfill server_location for mints that were never resolved (one-time catch-up)
   setTimeout(() => { void backfillServerLocations() }, 30_000)
+
+  // Prime the Trust Score Movers rollup shortly after boot so a fresh
+  // deploy/restart serves real data before the first 5-minute probe tick.
+  setTimeout(() => { void refreshTrustMoversRollup() }, 15_000)
   setInterval(async () => {
     console.log('[cron] running scheduled discovery...')
     await discoverMintsFromNostr()

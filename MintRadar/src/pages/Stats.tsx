@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Info } from 'lucide-react'
@@ -703,7 +703,7 @@ export default function Stats() {
   interface TrustMover { url: string; name: string | null; delta: number }
   interface TrustMoversResponse { period: '7d' | '30d'; risers: TrustMover[]; fallers: TrustMover[] }
 
-  const { data: moversData } = useQuery({
+  const { data: moversData, isPending: moversPending, isFetching: moversFetching } = useQuery({
     queryKey: ['stats-trust-movers', moversPeriod],
     queryFn: async (): Promise<TrustMoversResponse> => {
       const res = await fetch(`/api/stats/trust-movers?period=${moversPeriod}`)
@@ -711,7 +711,14 @@ export default function Stats() {
       return res.json() as Promise<TrustMoversResponse>
     },
     staleTime: 60 * 1000,
+    // Keep the previous period's rows on screen while the other period loads, so
+    // toggling 7d↔30d dims the existing data instead of flashing a skeleton.
+    placeholderData: keepPreviousData,
   })
+  // isPending is true only with no data at all (first load); once keepPreviousData
+  // has something to show it flips false and isFetching carries the refresh state.
+  const moversLoading = moversPending
+  const moversRefreshing = moversFetching && !moversPending
 
   const versionDist = useMemo(() => {
     if (!knownMintsData) return []
@@ -1160,6 +1167,8 @@ export default function Stats() {
           period={moversPeriod}
           onPeriodChange={setMoversPeriod}
           data={moversData}
+          loading={moversLoading}
+          refreshing={moversRefreshing}
           onMintClick={url => navigate(`/mint/${encodeURIComponent(url)}`)}
           getDisplayName={m => m.name ?? getHostname(m.url)}
           getIconUrl={m => knownMintsData?.find(km => km.url === m.url)?.iconUrl ?? null}

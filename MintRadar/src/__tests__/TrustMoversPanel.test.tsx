@@ -10,18 +10,19 @@ const sample: TrustMoversData = {
 function renderPanel(overrides: Partial<React.ComponentProps<typeof TrustMoversPanel>> = {}) {
   const onPeriodChange = vi.fn()
   const onMintClick = vi.fn()
-  render(
+  const utils = render(
     <TrustMoversPanel
       period="7d"
       onPeriodChange={onPeriodChange}
       data={sample}
+      loading={false}
       onMintClick={onMintClick}
       getDisplayName={m => m.name ?? m.url}
       getIconUrl={() => null}
       {...overrides}
     />
   )
-  return { onPeriodChange, onMintClick }
+  return { onPeriodChange, onMintClick, ...utils }
 }
 
 describe('TrustMoversPanel', () => {
@@ -63,10 +64,26 @@ describe('TrustMoversPanel', () => {
       expect(screen.getAllByText('No significant changes this period')).toHaveLength(2)
     })
 
-    it('shows "No data yet" (not the empty-network message) while data is still loading', () => {
-      renderPanel({ data: undefined })
-      expect(screen.getAllByText('No data yet')).toHaveLength(2)
+    it('shows a skeleton (not "No data yet") while the request is still in flight', () => {
+      const { container } = renderPanel({ data: undefined, loading: true })
+      expect(container.querySelectorAll('.stats-movers-skeleton')).toHaveLength(2)
+      expect(screen.queryByText('No data yet')).not.toBeInTheDocument()
       expect(screen.queryByText('No significant changes this period')).not.toBeInTheDocument()
+    })
+
+    it('shows "No data yet" only once the query has settled with no data (e.g. a failed fetch)', () => {
+      const { container } = renderPanel({ data: undefined, loading: false })
+      expect(screen.getAllByText('No data yet')).toHaveLength(2)
+      expect(container.querySelectorAll('.stats-movers-skeleton')).toHaveLength(0)
+      expect(screen.queryByText('No significant changes this period')).not.toBeInTheDocument()
+    })
+
+    it('keeps the previous rows visible (dimmed) while refreshing, never a skeleton', () => {
+      const { container } = renderPanel({ data: sample, loading: false, refreshing: true })
+      expect(screen.getByText('Riser Mint')).toBeInTheDocument()
+      expect(screen.getByText('Faller Mint')).toBeInTheDocument()
+      expect(container.querySelectorAll('.stats-movers-skeleton')).toHaveLength(0)
+      expect(screen.queryByText('No data yet')).not.toBeInTheDocument()
     })
   })
 

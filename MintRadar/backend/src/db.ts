@@ -101,6 +101,19 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS melt_methods JSONB',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS contact_count INTEGER',
     'ALTER TABLE mint_history ADD COLUMN IF NOT EXISTS trust_score INTEGER',
+    // Trust Score Movers rollup — mints.last_trust_score already holds the "latest"
+    // snapshot (written by every probe); these two hold the point-in-time score
+    // 7d / 30d ago, refreshed by refreshTrustMoversRollup() on the probe cron so
+    // GET /api/stats/trust-movers is a plain read of `mints` instead of two
+    // DISTINCT ON passes over all of mint_history. Same pattern as review_count.
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS trust_score_7d_ago INTEGER',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS trust_score_30d_ago INTEGER',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS trust_movers_checked_at TIMESTAMPTZ',
+    // Partial index covering the `trust_score IS NOT NULL` filter that the rollup's
+    // per-mint "score at-or-before cutoff" lookups use — without it those lookups
+    // fall back to scanning idx_mint_history_url_checked + heap-fetching every row.
+    `CREATE INDEX IF NOT EXISTS idx_mint_history_score_checked
+       ON mint_history(url, checked_at DESC) WHERE trust_score IS NOT NULL`,
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS review_count INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS review_avg_rating REAL',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS reviews_checked_at TIMESTAMPTZ',

@@ -15,6 +15,10 @@ let knownMintsCache: { data: unknown; expiresAt: number } | null = null
 const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
 
 const trustMoversCache = new Map<string, { data: unknown; expiresAt: number }>()
+// Longer than KNOWN_MINTS_CACHE_TTL: the underlying snapshots only move once per
+// probe cycle (5 min, refreshTrustMoversRollup on the probe cron), and a 7d/30d
+// delta barely shifts between cycles — no reason to recompute per-minute.
+const TRUST_MOVERS_CACHE_TTL = 10 * 60_000 // 10 minutes
 
 // Re-exported for backend/src/__tests__/nostrReviewsRelays.test.ts (a drift
 // tripwire that pins the exact array). The list itself now lives in
@@ -739,42 +743,33 @@ app.get('/api/stats/trust-trend', (req: Request, res: Response): void => {
     })
 })
 
-// Trust Score risers/fallers over the last 7 or 30 days. "old" resolves each
-// mint's most recent trust_score at-or-before the N-day cutoff — a point-in-
-// time snapshot, never an average — via the same LATERAL/DISTINCT ON pattern
-// used elsewhere in this file; the INNER JOIN against "latest" naturally
-// excludes any mint with no history reaching that far back (no special
-// exclusion flag needed, it just isn't in the result set). The +/-3 threshold
-// and top-3 ranking live in trustMovers.ts (computeTrustMovers), unit-tested
-// independently of this query.
+// Trust Score risers/fallers over the last 7 or 30 days. Reads entirely from
+// `mints`: last_trust_score is the "latest" snapshot (written by every probe),
+// and trust_score_{7,30}d_ago are the point-in-time snapshots rolled up by
+// refreshTrustMoversRollup() (trustMoversRollup.ts) on the probe cron — this
+// used to be two DISTINCT ON passes over all of mint_history (~2.5s cold) run
+// on every cache miss. A mint with no old-enough scored history has a NULL
+// snapshot and is filtered out here (same effect as the old INNER JOIN). The
+// +/-3 threshold and top-3 ranking live in trustMovers.ts (computeTrustMovers),
+// unit-tested independently of this query.
 app.get('/api/stats/trust-movers', (req: Request, res: Response): void => {
   const period: '7d' | '30d' = req.query['period'] === '30d' ? '30d' : '7d'
   const days = period === '30d' ? 30 : 7
 
   const cached = trustMoversCache.get(period)
   if (cached && Date.now() < cached.expiresAt) {
-    res.setHeader('Cache-Control', `max-age=${Math.floor(KNOWN_MINTS_CACHE_TTL / 1000)}`)
+    res.setHeader('Cache-Control', `max-age=${Math.floor(TRUST_MOVERS_CACHE_TTL / 1000)}`)
     res.json(cached.data)
     return
   }
 
   pool.query(
-    `WITH latest AS (
-       SELECT DISTINCT ON (url) url, trust_score
-       FROM mint_history
-       WHERE trust_score IS NOT NULL
-       ORDER BY url, checked_at DESC
-     ),
-     old AS (
-       SELECT DISTINCT ON (url) url, trust_score
-       FROM mint_history
-       WHERE trust_score IS NOT NULL AND checked_at <= NOW() - INTERVAL '1 day' * $1
-       ORDER BY url, checked_at DESC
-     )
-     SELECT m.url, m.name, latest.trust_score AS latest_score, old.trust_score AS old_score
-     FROM latest
-     JOIN old ON old.url = latest.url
-     JOIN mints m ON m.url = latest.url`,
+    `SELECT url, name,
+       last_trust_score AS latest_score,
+       CASE WHEN $1 = 30 THEN trust_score_30d_ago ELSE trust_score_7d_ago END AS old_score
+     FROM mints
+     WHERE last_trust_score IS NOT NULL
+       AND CASE WHEN $1 = 30 THEN trust_score_30d_ago ELSE trust_score_7d_ago END IS NOT NULL`,
     [days]
   )
     .then(result => {
@@ -785,8 +780,8 @@ app.get('/api/stats/trust-movers', (req: Request, res: Response): void => {
         oldScore: Number(r.old_score),
       }))
       const data = { period, ...computeTrustMovers(snapshots) }
-      trustMoversCache.set(period, { data, expiresAt: Date.now() + KNOWN_MINTS_CACHE_TTL })
-      res.setHeader('Cache-Control', `max-age=${Math.floor(KNOWN_MINTS_CACHE_TTL / 1000)}`)
+      trustMoversCache.set(period, { data, expiresAt: Date.now() + TRUST_MOVERS_CACHE_TTL })
+      res.setHeader('Cache-Control', `max-age=${Math.floor(TRUST_MOVERS_CACHE_TTL / 1000)}`)
       res.json(data)
     })
     .catch((err: unknown) => {

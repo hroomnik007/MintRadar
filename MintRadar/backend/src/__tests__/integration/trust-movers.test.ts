@@ -5,10 +5,11 @@ import type { Express } from 'express'
 // GET /api/stats/trust-movers — same mocking approach as mints-known.test.ts /
 // og-mint.test.ts: mock the pg-backed pool at the db.js boundary so the real
 // route handler + response-shaping run end-to-end without a database. The
-// mocked rows represent what the SQL's "latest"/"old" CTEs + INNER JOINs have
-// already resolved (a mint absent from these rows is exactly how the real
-// query represents "insufficient history" — there is no separate exclusion
-// flag to test at this layer).
+// mocked rows represent what the query over `mints` returns — last_trust_score
+// as latest_score and the rolled-up trust_score_{7,30}d_ago as old_score. A
+// mint absent from these rows is how the real query represents "insufficient
+// history" (its snapshot column is NULL and the WHERE clause filters it out) —
+// there is no separate exclusion flag to test at this layer.
 
 vi.mock('../../db.js', () => ({
   pool: { query: vi.fn() },
