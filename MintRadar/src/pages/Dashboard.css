@@ -402,10 +402,18 @@
   font-family: var(--font-mono);
 }
 
+/* Latency on its own row, the action buttons in one row below it — a fixed
+   structure so the layout can't shift between cards when the latency value has
+   a different digit count. (Previously .latency-block + the action cluster sat
+   side-by-side via justify-content: space-between, so a wider latency value —
+   "10450 ms" vs "88 ms", a ~35px spread — pushed the action cluster's wrap
+   point around, wrapping the buttons on some cards and not others in the same
+   grid.) */
 .card-bottom {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
 }
 
 .latency-block .latency-label {
