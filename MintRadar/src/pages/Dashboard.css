@@ -318,6 +318,8 @@
   position: relative;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
   animation: fadein 0.22s ease both;
+  display: flex;
+  flex-direction: column;
 }
 
 .mint-card.offline { opacity: 0.7; }
@@ -410,18 +412,43 @@
   font-family: var(--font-mono);
 }
 
-/* Latency on its own row, the action buttons in one row below it — a fixed
-   structure so the layout can't shift between cards when the latency value has
-   a different digit count. (Previously .latency-block + the action cluster sat
-   side-by-side via justify-content: space-between, so a wider latency value —
-   "10450 ms" vs "88 ms", a ~35px spread — pushed the action cluster's wrap
-   point around, wrapping the buttons on some cards and not others in the same
-   grid.) */
+/* Latency block on the left, action buttons on the right, in a single row.
+   `margin-top: auto` pins this row to the bottom edge of the (flex-column)
+   card, so the buttons stay put regardless of how much content — pills,
+   a present-or-absent latency value — sits above them and regardless of
+   grid row-stretch making one card taller than its neighbours.
+   `.latency-block` has a min-width so a wider latency value ("10450 ms"
+   vs "88 ms") can't shove the action cluster around between cards. */
 .card-bottom {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.latency-block {
+  flex-shrink: 0;
+  min-width: 64px;
+}
+
+.card-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
   gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Narrow phones: the action cluster (up to 3 buttons on the Watchlist) can't
+   fit beside the latency value, so let it wrap onto its own line, still
+   right-aligned and still at the bottom of the card. */
+@media (max-width: 480px) {
+  .card-bottom { flex-wrap: wrap; }
+  .card-actions { width: 100%; }
 }
 
 .latency-block .latency-label {

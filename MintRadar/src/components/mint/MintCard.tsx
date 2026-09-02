@@ -175,7 +175,7 @@ export function MintCard({
             <div className="latency-value muted">—</div>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div className="card-actions">
           {onCompare && isOnline && (
             <button
               type="button"
