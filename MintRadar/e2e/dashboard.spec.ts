@@ -41,6 +41,31 @@ test.describe('Dashboard', () => {
     await expect(page.locator('.filter-panel')).toHaveCount(0)
   })
 
+  test('status filter narrows the list to offline / online mints', async ({ page }) => {
+    const filterBtn = page.locator('.filter-btn')
+    const apply = page.getByRole('button', { name: 'Apply filter' })
+
+    // Offline → only Charlie Mint (the single offline mock mint).
+    await filterBtn.click()
+    await page.getByRole('radio', { name: 'Offline' }).check()
+    await apply.click()
+    await expect(page.locator('.mint-card')).toHaveCount(1)
+    await expect(page.locator('.card-name', { hasText: 'Charlie Mint' })).toBeVisible()
+
+    // Online → the remaining three, Charlie gone.
+    await filterBtn.click()
+    await page.getByRole('radio', { name: 'Online' }).check()
+    await apply.click()
+    await expect(page.locator('.mint-card')).toHaveCount(3)
+    await expect(page.locator('.card-name', { hasText: 'Charlie Mint' })).toHaveCount(0)
+
+    // Back to All → full list restored.
+    await filterBtn.click()
+    await page.getByRole('radio', { name: 'All' }).check()
+    await apply.click()
+    await expect(page.locator('.mint-card')).toHaveCount(4)
+  })
+
   test('sorting reorders the mints', async ({ page }) => {
     const names = page.locator('.mint-grid .card-name')
     // The active sort button appends an arrow (e.g. "Name ↑"), so target by class + substring.

@@ -750,10 +750,8 @@
 
 /* ── Filter Panel ────────────────────────────────────────────── */
 .filter-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-m);
-  padding: 12px 14px;
+  background: transparent;
+  padding: 0;
   margin-inline: var(--page-pad);
   margin-top: 8px;
 }
@@ -791,10 +789,20 @@
 
 .filter-row {
   display: flex;
-  gap: 24px;
+  gap: 12px;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: stretch;
   margin-bottom: 10px;
+}
+
+/* Each filter group is its own card ("chlievik"), echoing the hero stat cards. */
+.filter-box {
+  flex: 1 1 180px;
+  min-width: 180px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  padding: 12px 14px;
 }
 
 .filter-group-nuts {
@@ -833,6 +841,7 @@
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .filter-radio {
@@ -896,6 +905,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid var(--border);
 }

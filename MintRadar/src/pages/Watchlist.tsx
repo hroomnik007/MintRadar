@@ -455,7 +455,19 @@ export default function Watchlist() {
           )}
 
           <div className="filter-row">
-            <div className="filter-group">
+            <div className="filter-group filter-box">
+              <div className="filter-group-label">Status</div>
+              <div className="filter-radio-group">
+                {(['all', 'online', 'offline'] as const).map(s => (
+                  <label key={s} className="filter-radio">
+                    <input type="radio" name="wl-filter-status" checked={pendingFilters.status === s} onChange={() => setPendingFilters(p => ({ ...p, status: s }))} />
+                    {s === 'all' ? 'All' : s === 'online' ? 'Online' : 'Offline'}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="filter-group filter-box">
               <div className="filter-group-label">Min. Trust Score: <strong>{pendingFilters.minTrustScore}%</strong></div>
               <input
                 type="range" min={0} max={100} step={5}
@@ -465,7 +477,7 @@ export default function Watchlist() {
               />
             </div>
 
-            <div className="filter-group">
+            <div className="filter-group filter-box">
               <div className="filter-group-label">Mint age</div>
               <div className="filter-pills">
                 {AGE_LABELS.map(age => (
