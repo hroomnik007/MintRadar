@@ -70,10 +70,12 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 10px 0;
+  padding: 10px 12px;
   margin-inline: var(--page-pad);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg2);
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface);
 }
 
 .search-wrap {
@@ -748,10 +750,12 @@
 
 /* ── Filter Panel ────────────────────────────────────────────── */
 .filter-panel {
-  background: var(--bg2);
-  border-bottom: 1px solid var(--border);
-  padding: 12px 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  padding: 12px 14px;
   margin-inline: var(--page-pad);
+  margin-top: 8px;
 }
 
 .filter-active-tags {

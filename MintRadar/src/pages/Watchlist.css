@@ -10,10 +10,12 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px 0;
+  padding: 10px 12px;
   margin-inline: var(--page-pad);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg2);
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface);
 }
 
 .wl-controls-top {

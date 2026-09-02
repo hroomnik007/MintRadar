@@ -70,9 +70,8 @@ function SkeletonCard() {
   )
 }
 
-const DEFAULT_SORT_DIRS: Record<'name' | 'latency' | 'status' | 'trust', 'asc' | 'desc'> = { status: 'desc', latency: 'asc', trust: 'desc', name: 'asc' }
+const DEFAULT_SORT_DIRS: Record<'name' | 'latency' | 'rating' | 'trust', 'asc' | 'desc'> = { rating: 'desc', latency: 'asc', trust: 'desc', name: 'asc' }
 
-const NUT_FILTER_KEYS = ['4','5','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
 const AGE_LABELS = ['Fresh', 'Established', 'Veteran', 'OG']
 
 interface FilterState {
@@ -247,7 +246,7 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
 }
 
 export default function Watchlist() {
-  const [sortBy, setSortBy] = useState<'name' | 'latency' | 'trust' | 'status'>('name')
+  const [sortBy, setSortBy] = useState<'name' | 'latency' | 'trust' | 'rating'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   // Filter state
@@ -369,8 +368,10 @@ export default function Watchlist() {
     const ma = knownMintsMap.get(a) ?? null
     const mb = knownMintsMap.get(b) ?? null
     let result: number
-    if (sortBy === 'status') {
-      result = (mb?.online === true ? 1 : 0) - (ma?.online === true ? 1 : 0)
+    if (sortBy === 'rating') {
+      const ra = ma?.reviewAvgRating ?? -1
+      const rb = mb?.reviewAvgRating ?? -1
+      result = rb - ra
     } else if (sortBy === 'latency') {
       const la = ma?.online === true && ma.latencyMs != null ? ma.latencyMs : Infinity
       const lb = mb?.online === true && mb.latencyMs != null ? mb.latencyMs : Infinity
@@ -407,7 +408,7 @@ export default function Watchlist() {
             {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
           </button>
           <div className="sort-segment">
-            {(['status', 'latency', 'name', 'trust'] as const).map(s => (
+            {(['rating', 'latency', 'name', 'trust'] as const).map(s => (
               <button
                 key={s}
                 type="button"
@@ -454,19 +455,6 @@ export default function Watchlist() {
           )}
 
           <div className="filter-row">
-            <div className="filter-group-row-top">
-            <div className="filter-group">
-              <div className="filter-group-label">Status</div>
-              <div className="filter-radio-group">
-                {(['all', 'online', 'offline'] as const).map(s => (
-                  <label key={s} className="filter-radio">
-                    <input type="radio" name="wl-filter-status" checked={pendingFilters.status === s} onChange={() => setPendingFilters(p => ({ ...p, status: s }))} />
-                    {s === 'all' ? 'All' : s === 'online' ? 'Online' : 'Offline'}
-                  </label>
-                ))}
-              </div>
-            </div>
-
             <div className="filter-group">
               <div className="filter-group-label">Min. Trust Score: <strong>{pendingFilters.minTrustScore}%</strong></div>
               <input
@@ -475,7 +463,6 @@ export default function Watchlist() {
                 onChange={e => setPendingFilters(p => ({ ...p, minTrustScore: parseInt(e.target.value) }))}
                 className="filter-slider"
               />
-            </div>
             </div>
 
             <div className="filter-group">
@@ -489,16 +476,6 @@ export default function Watchlist() {
               </div>
             </div>
 
-            <div className="filter-group filter-group-nuts">
-              <div className="filter-group-label">NUT support</div>
-              <div className="filter-nut-grid filter-nut-grid-nowrap">
-                {NUT_FILTER_KEYS.map(key => (
-                  <button key={key} type="button" className={`filter-nut-chip${pendingFilters.requiredNuts.includes(key) ? ' active' : ''}`}
-                    onClick={() => setPendingFilters(p => ({ ...p, requiredNuts: p.requiredNuts.includes(key) ? p.requiredNuts.filter(n => n !== key) : [...p.requiredNuts, key] }))}
-                  >NUT-{key.padStart(2, '0')}</button>
-                ))}
-              </div>
-            </div>
           </div>
 
           <div className="filter-footer">
