@@ -20,6 +20,9 @@ export interface MockMint {
   discoveredAt: string
   /** Units this mint issues, as persisted by prober.ts's parseMintMethods(). */
   units: string[] | null
+  /** NIP-87 review rollup (backend 6h reviews sync). */
+  reviewCount?: number | null
+  reviewAvgRating?: number | null
 }
 
 const now = Date.now()
@@ -30,10 +33,10 @@ const daysAgo = (d: number) => new Date(now - d * 86_400_000).toISOString()
 //   latency ↑  → Alpha(50), Delta(120), Bravo(300), Charlie(offline)
 //   trust  ↓   → Alpha(92), Delta(78), Bravo(55), Charlie(0)
 export const MOCK_MINTS: MockMint[] = [
-  { url: 'https://alpha.mint.example',   name: 'Alpha Mint',   online: true,  latencyMs: 50,   trustScore: 92, version: 'Nutshell/0.16.0', nutCount: 12, uptimePct24h: 99, discoveredAt: daysAgo(400), units: ['sat'] },
-  { url: 'https://bravo.mint.example',   name: 'Bravo Mint',   online: true,  latencyMs: 300,  trustScore: 55, version: 'Nutshell/0.15.0', nutCount: 8,  uptimePct24h: 80, discoveredAt: daysAgo(10),  units: ['sat', 'usd'] },
-  { url: 'https://charlie.mint.example', name: 'Charlie Mint', online: false, latencyMs: null, trustScore: null, version: null,            nutCount: 0,  uptimePct24h: 12, discoveredAt: daysAgo(120), units: null },
-  { url: 'https://delta.mint.example',   name: 'Delta Mint',   online: true,  latencyMs: 120,  trustScore: 78, version: 'Nutshell/0.20.0', nutCount: 14, uptimePct24h: 95, discoveredAt: daysAgo(200), units: ['sat'] },
+  { url: 'https://alpha.mint.example',   name: 'Alpha Mint',   online: true,  latencyMs: 50,   trustScore: 92, version: 'Nutshell/0.16.0', nutCount: 12, uptimePct24h: 99, discoveredAt: daysAgo(400), units: ['sat'], reviewCount: 12, reviewAvgRating: 4.2 },
+  { url: 'https://bravo.mint.example',   name: 'Bravo Mint',   online: true,  latencyMs: 300,  trustScore: 55, version: 'Nutshell/0.15.0', nutCount: 8,  uptimePct24h: 80, discoveredAt: daysAgo(10),  units: ['sat', 'usd'], reviewCount: 0, reviewAvgRating: null },
+  { url: 'https://charlie.mint.example', name: 'Charlie Mint', online: false, latencyMs: null, trustScore: null, version: null,            nutCount: 0,  uptimePct24h: 12, discoveredAt: daysAgo(120), units: null, reviewCount: 4, reviewAvgRating: 3 },
+  { url: 'https://delta.mint.example',   name: 'Delta Mint',   online: true,  latencyMs: 120,  trustScore: 78, version: 'Nutshell/0.20.0', nutCount: 14, uptimePct24h: 95, discoveredAt: daysAgo(200), units: ['sat'], reviewCount: 3, reviewAvgRating: 4.8 },
 ]
 
 const NUT_POOL = ['4', '5', '7', '8', '9', '10', '11', '12', '13', '14', '15', '17', '19', '20']
@@ -79,6 +82,8 @@ function knownMintPayload(m: MockMint) {
     uptimePct24h: m.uptimePct24h,
     serverLocation: 'Germany',
     lastCheckedAt: new Date(now - 60_000).toISOString(),
+    reviewCount: m.reviewCount ?? null,
+    reviewAvgRating: m.reviewAvgRating ?? null,
   }
 }
 

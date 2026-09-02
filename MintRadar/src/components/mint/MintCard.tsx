@@ -29,6 +29,11 @@ const IcBellDown = () => (
     <path d="M6 7.3V10.3M6 10.3L4.7 9M6 10.3L7.3 9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
+const IcShield = () => (
+  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+    <path d="M7 1.2 1.9 3.1v4c0 3 2.1 4.9 5.1 5.7 3-.8 5.1-2.7 5.1-5.7v-4L7 1.2Z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+  </svg>
+)
 const IcBellUp = () => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
     <path d="M6 4.7C4.6 4.7 3.5 5.9 3.5 7.4V9.1C3.5 9.8 3.2 10.4 2.8 10.8H9.2C8.8 10.4 8.5 9.8 8.5 9.1V7.4C8.5 5.9 7.4 4.7 6 4.7Z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/>
@@ -155,7 +160,13 @@ export function MintCard({
         )}
         {mint.online === true && mint.trustScore != null && (
           <span className="card-pill" style={{ color: mint.trustScore >= 70 ? 'var(--green-bright)' : mint.trustScore >= 40 ? 'var(--amber)' : 'var(--red)', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-mono-data)' }}>
-            <span style={{ fontSize: 15, lineHeight: 1 }}>★</span><span>{mint.trustScore}%</span>
+            <IcShield /><span>{mint.trustScore}%</span>
+          </span>
+        )}
+        {(mint.reviewCount ?? 0) > 0 && mint.reviewAvgRating != null && (
+          <span className="card-pill" style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-mono-data)' }}>
+            <span style={{ fontSize: 15, lineHeight: 1, color: 'var(--amber)' }}>★</span>
+            <span>{mint.reviewAvgRating.toFixed(1)} ({mint.reviewCount})</span>
           </span>
         )}
       </div>
