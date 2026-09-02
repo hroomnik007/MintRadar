@@ -1835,7 +1835,12 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="rv-modal-overlay" onClick={closeReviewModal}>
           <div className="rv-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Write a review">
             <div className="rv-modal-head">
-              <div className="rv-modal-title">Write a review</div>
+              <div className="rv-modal-heading">
+                <div className="rv-modal-title">Write a review for {displayName}</div>
+                {reviewRating > 0 && (
+                  <div className="rv-modal-sub">Share your experience with this mint.</div>
+                )}
+              </div>
               <button className="rv-modal-close" onClick={closeReviewModal} aria-label="Close">×</button>
             </div>
 
@@ -1879,9 +1884,9 @@ function MintDetailContent({ url }: { url: string }) {
                     <span className="rv-signer-label">Signing with</span>
                     <span className="rv-signer-id">
                       <span className="rv-signer-name">{profile?.name ?? (profile ? shortNpub(profile.npub) : 'Nostr account')}</span>
-                      {authMethod !== null && <span className="rv-signer-badge">{METHOD_BADGE[authMethod]}</span>}
                     </span>
                   </div>
+                  {authMethod !== null && <span className="rv-signer-badge">{METHOD_BADGE[authMethod]}</span>}
                 </div>
 
                 <div className="rv-field">
