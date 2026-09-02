@@ -4,7 +4,6 @@ import { QRCodeSVG } from 'qrcode.react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useWatchlistSync } from '@/hooks/useWatchlistSync'
-import { useFollowRecommendations } from '@/hooks/useFollowRecommendations'
 import { initBunkerQR } from '@/core/nostr/client'
 import { NavLogo } from './NavLogo'
 import './AppShell.css'
@@ -130,7 +129,10 @@ export function AppShell() {
   useWatchlistSync()
   const profile = useAuthStore(state => state.profile)
   const authMethod = useAuthStore(state => state.method)
-  useFollowRecommendations(profile?.pubkey ?? null)
+  // Follow recommendations (kind:3 + kind:38000 over up to 500 authors — the
+  // heaviest Nostr query in the app) are no longer prefetched on login here.
+  // They load lazily from the Watchlist page's own useFollowRecommendations()
+  // so they don't contend for relay sockets with the login profile bootstrap.
   const login = useAuthStore(state => state.login)
   const loginNsec = useAuthStore(state => state.loginNsec)
   const loginBunker = useAuthStore(state => state.loginBunker)

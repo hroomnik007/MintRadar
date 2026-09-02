@@ -164,6 +164,17 @@ own explicit `nostr.bitcoiner.social` entry was removed since it's now inherited
 `wss://relay.8333.space` was added to every discovery/review relay list in the project —
 same operator as `audit.8333.space`, likely higher density of Cashu-specific NIP-87 events.
 
+**2026-09-02 — `META_RELAYS` (`client.ts`) is now a deliberate exception to the
+"every relay array" rule above.** It is the post-login bootstrap set (kind:0 profile +
+kind:10002 relay list, fetched in one `subscribeMany` by `bootstrapUserData()`) and was
+cut to a 4-relay fast path — `purplepag.es`, `relay.primal.net`, `relay.damus.io`,
+`nos.lol` — for login latency (name/avatar was taking ~4s; the slow/unreachable relays
+each cost up to ~3s of dead wait on that path for no extra yield). Do NOT re-add the
+broad set here. `useUserRelays.ts`'s old `BOOTSTRAP_RELAYS` array is gone — that fetch is
+now the same `bootstrapUserData()` call. `useFollowRecommendations` is no longer
+prefetched from `AppShell` on login (it loads lazily from the Watchlist page only).
+`nip65Relays` is persisted in `auth.store` `partialize` so a reload skips the fetch.
+
 **2026-08-15 — `relay.nostr.band` replaced, 3 relays added (all 4 relay-list locations):**
 User noticed devtools showing `relay.nostr.band` (`NS_ERROR_UNKNOWN_HOST`/timeout) and
 `relay.8333.space` (`NS_ERROR_CONNECTION_REFUSED`) failing, plus `relay.damus.io`

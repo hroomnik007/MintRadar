@@ -95,7 +95,9 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'mintradar_session',
       storage: createJSONStorage(() => sessionStorage),
-      partialize: (state) => ({ profile: state.profile, method: state.method }),
+      // nip65Relays is persisted alongside profile/method so a page reload
+      // doesn't re-run the kind:10002 bootstrap fetch from scratch.
+      partialize: (state) => ({ profile: state.profile, method: state.method, nip65Relays: state.nip65Relays }),
     }
   )
 )
