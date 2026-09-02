@@ -14,6 +14,7 @@ import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import type { MintStatus } from '@core/mint/api'
 import { MintCard } from '@/components/mint/MintCard'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { mintAgeBadge, latencyColor, trustColor, uptimeColor } from '@/utils/mintFormatting'
 import './Dashboard.css'
 
@@ -439,6 +440,7 @@ export default function Dashboard() {
   // browser back/forward navigation changed activeFilters while closed.
   const [showFilters, setShowFilters] = useState(false)
   const [pendingFilters, setPendingFilters] = useState<FilterState>(DEFAULT_FILTERS)
+  const isMobile = useIsMobile()
 
   // Comparison state
   const [compareBaseUrl, setCompareBaseUrl] = useState<string | null>(null)
@@ -831,32 +833,37 @@ export default function Dashboard() {
       </div>
 
       <div className="dashboard-controls">
-        <div className="search-wrap">
-          <span className="search-icon"><IcSearch /></span>
-          <input
-            ref={searchInputRef}
-            className="search-input"
-            type="text"
-            placeholder="Search mints by name, URL or version…  ( / )"
-            value={search}
-            onChange={e => commitFilters({ search: e.target.value }, { replace: true })}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-            data-search-input
-          />
-          {!searchFocused && search === '' && (
-            <span className="search-shortcut">/</span>
-          )}
+        {/* Wrapper is `display: contents` on desktop (transparent to the flex
+            row) and a real flex row on mobile, where the Filters button sits
+            beside the search input instead of wrapping to its own line. */}
+        <div className="controls-search-line">
+          <div className="search-wrap">
+            <span className="search-icon"><IcSearch /></span>
+            <input
+              ref={searchInputRef}
+              className="search-input"
+              type="text"
+              placeholder={isMobile ? 'Search mints…  ( / )' : 'Search mints by name, URL or version…  ( / )'}
+              value={search}
+              onChange={e => commitFilters({ search: e.target.value }, { replace: true })}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+              data-search-input
+            />
+            {!searchFocused && search === '' && (
+              <span className="search-shortcut">/</span>
+            )}
+          </div>
+          <button
+            type="button"
+            className={`filter-btn${showFilters ? ' active' : ''}`}
+            onClick={() => { if (!showFilters) setPendingFilters(activeFilters); setShowFilters(v => !v) }}
+          >
+            <IcFilter />
+            Filters
+            {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
+          </button>
         </div>
-        <button
-          type="button"
-          className={`filter-btn${showFilters ? ' active' : ''}`}
-          onClick={() => { if (!showFilters) setPendingFilters(activeFilters); setShowFilters(v => !v) }}
-        >
-          <IcFilter />
-          Filters
-          {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
-        </button>
         <div className="sort-segment">
           {(['rating', 'latency', 'name', 'trust'] as const).map(s => (
             <button

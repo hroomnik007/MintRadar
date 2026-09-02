@@ -446,6 +446,10 @@
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .filter-row { flex-direction: column; gap: 14px; }
+  /* Column layout: the desktop `flex: 1 1 180px` basis now sizes height, and
+     flex-grow stretches each box vertically — the huge empty space under each
+     box. Reset to content height. */
+  .filter-box { flex: 0 0 auto; width: 100%; min-width: 0; }
   .filter-group-row-top { display: flex; flex-direction: row; gap: 16px; width: 100%; }
   .filter-group-row-top .filter-group { flex: 1; min-width: 0; }
   .filter-group-row-top .filter-slider { width: 100%; }

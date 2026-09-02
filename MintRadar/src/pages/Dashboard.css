@@ -78,6 +78,11 @@
   background: var(--surface);
 }
 
+/* Desktop: transparent to the .dashboard-controls flex row (search + Filters
+   behave as direct children, exactly as before). Mobile: see the responsive
+   block near the end of this file. */
+.controls-search-line { display: contents; }
+
 .search-wrap {
   position: relative;
   flex: 1 1 240px;
@@ -443,12 +448,15 @@
   flex-shrink: 0;
 }
 
-/* Narrow phones: the action cluster (up to 3 buttons on the Watchlist) can't
-   fit beside the latency value, so let it wrap onto its own line, still
-   right-aligned and still at the bottom of the card. */
+/* Narrow phones: let the action cluster wrap onto its own line ONLY when it
+   genuinely doesn't fit beside the latency value (e.g. the 3-button
+   Down/Up/Unwatch row on a watched Watchlist card). `flex: 1 1 auto` keeps it
+   filling the row and right-aligned (via its own justify-content) when it does
+   fit — a 1-2 button Dashboard card then stays on a single row, same as
+   desktop — and full-width right-aligned once `.card-bottom` wraps it. */
 @media (max-width: 480px) {
   .card-bottom { flex-wrap: wrap; }
-  .card-actions { width: 100%; }
+  .card-actions { flex: 1 1 auto; flex-wrap: wrap; }
 }
 
 .latency-block .latency-label {
@@ -1196,11 +1204,26 @@
   .mint-list-name { max-width: 120px; }
   .mint-list-table td.trust-col { min-width: 48px; }
   .filter-row { flex-direction: column; gap: 14px; }
+  /* Column layout: `flex-basis: 180px` from the desktop `flex: 1 1 180px` now
+     applies to the MAIN axis = height, and `flex-grow` stretches each box
+     vertically — that was the huge empty space under each box's content.
+     Reset to content height. */
+  .filter-box { flex: 0 0 auto; width: 100%; min-width: 0; }
   .filter-group-row-top { display: flex; flex-direction: row; gap: 16px; width: 100%; }
   .filter-group-row-top .filter-group { flex: 1; min-width: 0; }
   .filter-group-row-top .filter-slider { width: 100%; }
   .filter-group-nuts { width: 100%; }
   .filter-nut-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+
+  /* Filters button rides on the same row as the search input. */
+  .controls-search-line {
+    display: flex;
+    flex: 1 1 100%;
+    gap: 7px;
+    align-items: stretch;
+  }
+  .controls-search-line .search-wrap { flex: 1 1 auto; min-width: 0; }
+  .controls-search-line .filter-btn { flex-shrink: 0; }
 }
 
 @media (max-width: 600px) {
