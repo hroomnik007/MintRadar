@@ -13,6 +13,7 @@ import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 
 import type { MintStatus } from '@core/mint/api'
 import { MintCard } from '@/components/mint/MintCard'
+import { MintComparePicker } from '@/components/MintComparePicker'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { mintAgeBadge, latencyColor, trustColor, uptimeColor } from '@/utils/mintFormatting'
@@ -446,13 +447,10 @@ export default function Dashboard() {
   const [compareBaseUrl, setCompareBaseUrl] = useState<string | null>(null)
   const [showComparePicker, setShowComparePicker] = useState(false)
   const [showComparisonModal, setShowComparisonModal] = useState(false)
-  const [comparePickerSelected, setComparePickerSelected] = useState<Set<string>>(new Set())
-  const [comparePickerSearch, setComparePickerSearch] = useState('')
+  const [compareSelectedUrls, setCompareSelectedUrls] = useState<Set<string>>(new Set())
 
   function openComparePicker(url: string) {
     setCompareBaseUrl(url)
-    setComparePickerSelected(new Set())
-    setComparePickerSearch('')
     setShowComparePicker(true)
   }
 
@@ -558,8 +556,8 @@ export default function Dashboard() {
     if (!compareBaseUrl) return []
     const base = allMints.find(m => m.url === compareBaseUrl)
     if (!base) return []
-    return [base, ...allMints.filter(m => comparePickerSelected.has(m.url))]
-  }, [allMints, compareBaseUrl, comparePickerSelected])
+    return [base, ...allMints.filter(m => compareSelectedUrls.has(m.url))]
+  }, [allMints, compareBaseUrl, compareSelectedUrls])
 
   const lastCheckTime = useMemo(() => {
     if (!knownMintsData) return null
@@ -1027,77 +1025,20 @@ export default function Dashboard() {
       )}
 
       {/* Compare picker */}
-      {showComparePicker && (() => {
-        const q = comparePickerSearch.toLowerCase()
-        const otherMints = allMints.filter(m =>
-          m.url !== compareBaseUrl &&
-          m.online === true &&
-          (q === '' || (m.name ?? m.url).toLowerCase().includes(q) || m.url.toLowerCase().includes(q))
-        )
+      {showComparePicker && compareBaseUrl && (() => {
+        const baseMint = allMints.find(m => m.url === compareBaseUrl)
+        const candidates = allMints.filter(m => m.url !== compareBaseUrl && m.online === true)
         return (
-          <div className="cmp-overlay" onClick={() => setShowComparePicker(false)}>
-            <div className="md-picker-modal" onClick={e => e.stopPropagation()}>
-              <div className="md-picker-header">
-                <div style={{fontSize:14,fontWeight:700,color:'var(--text)'}}>Compare with...</div>
-                <button onClick={() => setShowComparePicker(false)} style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:18}}>×</button>
-              </div>
-              <div style={{padding:'8px 16px 0'}}>
-                <div style={{fontSize:11,color:'var(--text3)',marginBottom:8}}>
-                  Select 1–3 mints to compare with <strong style={{color:'var(--text)'}}>{allMints.find(m => m.url === compareBaseUrl)?.name ?? compareBaseUrl}</strong>
-                </div>
-                <input
-                  className="md-picker-search"
-                  type="text"
-                  placeholder="Search mints..."
-                  value={comparePickerSearch}
-                  onChange={e => setComparePickerSearch(e.target.value)}
-                  autoFocus
-                />
-              </div>
-              <div className="md-picker-list">
-                {otherMints.slice(0, 50).map(m => {
-                  const isChecked = comparePickerSelected.has(m.url)
-                  const disabled = !isChecked && comparePickerSelected.size >= 3
-                  return (
-                    <div
-                      key={m.url}
-                      className={`md-picker-item${isChecked ? ' checked' : ''}${disabled ? ' disabled' : ''}`}
-                      onClick={() => {
-                        if (disabled) return
-                        setComparePickerSelected(prev => {
-                          const next = new Set(prev)
-                          if (next.has(m.url)) next.delete(m.url); else next.add(m.url)
-                          return next
-                        })
-                      }}
-                    >
-                      <div className={`card-checkbox${isChecked ? ' checked' : ''}`} style={{width:14,height:14,borderRadius:3,flexShrink:0}}>
-                        {isChecked && <span style={{fontSize:10,lineHeight:1}}>✓</span>}
-                      </div>
-                      <span style={{width:7,height:7,borderRadius:'50%',background:m.online===true?'var(--accent)':'#ff4d4d',display:'inline-block',flexShrink:0}} />
-                      <div style={{minWidth:0}}>
-                        <div style={{fontSize:12,fontWeight:500,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.name ?? getHostname(m.url)}</div>
-                        <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{getHostname(m.url)}</div>
-                      </div>
-                    </div>
-                  )
-                })}
-                {otherMints.length === 0 && (
-                  <div style={{padding:'16px',fontSize:12,color:'var(--text3)',textAlign:'center'}}>No mints found</div>
-                )}
-              </div>
-              <div className="md-picker-footer">
-                <span style={{fontSize:11,color:'var(--text3)'}}>{comparePickerSelected.size} / 3 selected</span>
-                <button
-                  className="md-picker-confirm"
-                  disabled={comparePickerSelected.size === 0}
-                  onClick={() => { setShowComparePicker(false); setShowComparisonModal(true) }}
-                >
-                  Compare ({comparedMints.length})
-                </button>
-              </div>
-            </div>
-          </div>
+          <MintComparePicker
+            candidates={candidates}
+            baseLabel={baseMint?.name ?? compareBaseUrl}
+            onClose={() => setShowComparePicker(false)}
+            onConfirm={urls => {
+              setCompareSelectedUrls(new Set(urls))
+              setShowComparePicker(false)
+              setShowComparisonModal(true)
+            }}
+          />
         )
       })()}
 
