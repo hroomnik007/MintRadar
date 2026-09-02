@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Stats layout — option 2</title>
+<style>
+  :root {
+    --bg: #0b120e; --panel: #0f1a15; --border: rgba(255,255,255,0.08);
+    --t1: #eef2ef; --t2: #9fb0a6; --t3: #6c7d73; --green: #4fd28a; --amber: #e0a458;
+    --mono: "JetBrains Mono", ui-monospace, monospace; --sans: "DM Sans", -apple-system, sans-serif;
+  }
+  body { background: var(--bg); color: var(--t1); font-family: var(--sans); padding: 32px; margin: 0; }
+  .note { color: var(--t3); font-size: 12.5px; margin-bottom: 20px; font-family: var(--mono); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .panel-title { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; color: var(--t2); text-transform: uppercase; margin-bottom: 14px; }
+  .placeholder-line { height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; margin-bottom: 10px; }
+  .w80 { width: 80%; } .w60 { width: 60%; }
+</style>
+</head>
+<body>
+  <div class="note">Row 2 (bottom): NUT Coverage (span 3) + Network Health Index (span 1, small — number+badge only, fits fine narrow).<br>Row 3 (new, full width): Trust Score Trend alone — SAME chart height as today, just full page width instead of 1/4 width. Not taller, not stretched — just wider, so the date labels have room.</div>
+
+  <div class="grid">
+    <div class="panel"><div class="panel-title">Software in Use</div><div class="placeholder-line w80"></div></div>
+    <div class="panel"><div class="panel-title">Geographic Distribution</div><div class="placeholder-line w80"></div></div>
+    <div class="panel"><div class="panel-title">Most Reliable · 24H</div><div class="placeholder-line w80"></div></div>
+    <div class="panel"><div class="panel-title">Trust Score Movers</div><div class="placeholder-line w80"></div></div>
+
+    <div class="panel" style="grid-column: span 3;">
+      <div class="panel-title">NUT Coverage Across the Network</div>
+      <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+        <div><div class="placeholder-line w80"></div><div class="placeholder-line w60"></div></div>
+        <div><div class="placeholder-line w60"></div><div class="placeholder-line w80"></div></div>
+        <div><div class="placeholder-line w80"></div><div class="placeholder-line w60"></div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Network Health Index</div>
+      <div style="font-family:var(--mono); font-size:32px; color:var(--amber);">59</div>
+      <div style="font-family:var(--mono); font-size:10px; color:var(--amber);">Moderate</div>
+    </div>
+
+    <div class="panel" style="grid-column: span 4;">
+      <div class="panel-title">Trust Score Trend</div>
+      <svg width="100%" height="70" viewBox="0 0 800 70" preserveAspectRatio="none">
+        <polyline points="0,50 60,40 120,42 180,20 240,25 300,15 360,18 420,22 480,17 540,19 600,14 660,16 720,15 780,18" fill="none" stroke="#4fd28a" stroke-width="2"/>
+      </svg>
+      <div style="display:flex; justify-content:space-between; font-family:var(--mono); font-size:10px; color:var(--t3); margin-top:6px;">
+        <span>07-30</span><span>08-01</span><span>08-03</span><span>08-05</span><span>08-07</span><span>08-09</span><span>08-11</span><span>08-13</span><span>08-15</span><span>08-17</span><span>08-19</span><span>08-21</span><span>08-23</span><span>08-25</span><span>08-27</span><span>08-29</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

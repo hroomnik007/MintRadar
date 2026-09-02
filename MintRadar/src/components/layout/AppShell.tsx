@@ -329,11 +329,16 @@ export function AppShell() {
           ) : (
             <>
               <div className="navbar-profile">
-                {profile.picture !== undefined && (
+                {profile.picture !== undefined ? (
                   <img src={profile.picture} alt=""
                     className="navbar-avatar"
                     onError={(e) => { e.currentTarget.style.display = 'none' }}
                   />
+                ) : (
+                  // Reserve the avatar slot while the kind:0 metadata is still
+                  // loading in the background — prevents a layout shift when the
+                  // real avatar pops in a second or two after login.
+                  <span className="navbar-avatar navbar-avatar--placeholder" aria-hidden="true" />
                 )}
                 <div className="navbar-profile-text">
                   <div className="navbar-profile-name-row">

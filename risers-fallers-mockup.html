@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Stats row — Risers/Fallers mockup</title>
+<style>
+  :root {
+    --bg: #0b120e;
+    --panel: #0f1a15;
+    --border: rgba(255,255,255,0.08);
+    --t1: #eef2ef;
+    --t2: #9fb0a6;
+    --t3: #6c7d73;
+    --green: #4fd28a;
+    --green-dim: rgba(79, 210, 138, 0.12);
+    --amber: #e0a458;
+    --red: #e0685c;
+    --red-dim: rgba(224, 104, 92, 0.12);
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --sans: "DM Sans", -apple-system, sans-serif;
+  }
+  body { background: var(--bg); color: var(--t1); font-family: var(--sans); padding: 32px; margin: 0; }
+  .note { color: var(--t3); font-size: 12.5px; margin-bottom: 20px; font-family: var(--mono); }
+  .row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    align-items: start;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .panel-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--t2);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  /* --- Software in use (condensed) --- */
+  .sw-total { font-family: var(--mono); font-size: 11px; color: var(--amber); text-align: right; margin-bottom: 4px; }
+  .sw-bar-bg { height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
+  .sw-bar-fill { height: 100%; background: var(--amber); width: 62%; }
+  .sw-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12.5px; }
+  .sw-row-bar-bg { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; margin: 0 8px; overflow: hidden; }
+  .sw-row-bar-fill { height: 100%; background: var(--green); }
+  .sw-count { font-family: var(--mono); font-size: 11px; color: var(--t3); width: 20px; text-align: right; }
+
+  /* --- Geo (condensed) --- */
+  .geo-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; font-size: 12.5px; }
+  .geo-name { color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90px; }
+  .geo-bar-bg { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; margin: 0 8px; overflow: hidden; }
+  .geo-bar-fill { height: 100%; background: var(--green); }
+  .geo-count { font-family: var(--mono); font-size: 11px; color: var(--t3); width: 16px; text-align: right; }
+
+  /* --- Most Reliable (condensed) --- */
+  .rel-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+  .rel-tab { font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 5px; color: var(--t3); }
+  .rel-tab.active { background: rgba(255,255,255,0.08); color: var(--t1); }
+  .rel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .rel-rank { font-family: var(--mono); font-size: 11px; color: var(--t3); width: 16px; }
+  .rel-avatar { width: 22px; height: 22px; border-radius: 6px; background: rgba(255,255,255,0.08); flex-shrink: 0; }
+  .rel-name { font-size: 12px; color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .rel-score { font-family: var(--mono); font-size: 12px; color: var(--green); }
+
+  /* --- NEW: Risers / Fallers panel --- */
+  .rf-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+  .rf-tab { font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 5px; color: var(--t3); }
+  .rf-tab.active { background: rgba(255,255,255,0.08); color: var(--t1); }
+  .rf-section-label { font-family: var(--mono); font-size: 10px; color: var(--t3); margin: 10px 0 6px; letter-spacing: 0.04em; }
+  .rf-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .rf-name { font-size: 12px; color: var(--t1); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rf-delta { font-family: var(--mono); font-size: 11.5px; padding: 2px 6px; border-radius: 5px; white-space: nowrap; }
+  .rf-delta.up { color: var(--green); background: var(--green-dim); }
+  .rf-delta.down { color: var(--red); background: var(--red-dim); }
+  .rf-arrow { font-size: 10px; }
+</style>
+</head>
+<body>
+  <div class="note">Mockup — existing 3 panels condensed to fit a 4th "Risers / Fallers" panel in the same row. Palette approximated from screenshot, exact tokens should come from src/index.css.</div>
+
+  <div class="row">
+
+    <!-- Software in Use (condensed) -->
+    <div class="panel">
+      <div class="panel-title">Software in Use</div>
+      <div class="sw-total">62%</div>
+      <div class="sw-bar-bg"><div class="sw-bar-fill"></div></div>
+      <div class="sw-row"><span>Nutshell</span><div class="sw-row-bar-bg"><div class="sw-row-bar-fill" style="width:70%"></div></div><span class="sw-count">39</span></div>
+      <div class="sw-row"><span>cdk-mintd</span><div class="sw-row-bar-bg"><div class="sw-row-bar-fill" style="width:24%"></div></div><span class="sw-count">13</span></div>
+      <div class="sw-row"><span>Nutshell-CF</span><div class="sw-row-bar-bg"><div class="sw-row-bar-fill" style="width:4%"></div></div><span class="sw-count">2</span></div>
+      <div class="sw-row"><span>LekMint</span><div class="sw-row-bar-bg"><div class="sw-row-bar-fill" style="width:2%"></div></div><span class="sw-count">1</span></div>
+    </div>
+
+    <!-- Geographic Distribution (condensed) -->
+    <div class="panel">
+      <div class="panel-title">Geographic Distribution</div>
+      <div class="geo-row"><span class="geo-name">San Francisco</span><div class="geo-bar-bg"><div class="geo-bar-fill" style="width:90%"></div></div><span class="geo-count">18</span></div>
+      <div class="geo-row"><span class="geo-name">Frankfurt</span><div class="geo-bar-bg"><div class="geo-bar-fill" style="width:35%"></div></div><span class="geo-count">7</span></div>
+      <div class="geo-row"><span class="geo-name">Nuremberg</span><div class="geo-bar-bg"><div class="geo-bar-fill" style="width:20%"></div></div><span class="geo-count">4</span></div>
+      <div class="geo-row"><span class="geo-name">Munich</span><div class="geo-bar-bg"><div class="geo-bar-fill" style="width:15%"></div></div><span class="geo-count">3</span></div>
+      <div class="geo-row"><span class="geo-name">Toronto</span><div class="geo-bar-bg"><div class="geo-bar-fill" style="width:10%"></div></div><span class="geo-count">2</span></div>
+    </div>
+
+    <!-- Most Reliable (condensed) -->
+    <div class="panel">
+      <div class="panel-title">Most Reliable · 24H</div>
+      <div class="rel-tabs"><div class="rel-tab active">Reliable</div><div class="rel-tab">Trust</div></div>
+      <div class="rel-row"><span class="rel-rank">#1</span><div class="rel-avatar"></div><span class="rel-name">21Mint</span><span class="rel-score">100%</span></div>
+      <div class="rel-row"><span class="rel-rank">#2</span><div class="rel-avatar"></div><span class="rel-name">Cashu test mint</span><span class="rel-score">100%</span></div>
+      <div class="rel-row"><span class="rel-rank">#3</span><div class="rel-avatar"></div><span class="rel-name">antifiat mint</span><span class="rel-score">100%</span></div>
+      <div class="rel-row"><span class="rel-rank">#4</span><div class="rel-avatar"></div><span class="rel-name">cashu.21m.lol</span><span class="rel-score">100%</span></div>
+    </div>
+
+    <!-- NEW: Risers / Fallers -->
+    <div class="panel">
+      <div class="panel-title">Trust Score Movers</div>
+      <div class="rf-tabs"><div class="rf-tab active">7d</div><div class="rf-tab">30d</div></div>
+
+      <div class="rf-section-label">📈 RISERS</div>
+      <div class="rf-row"><span class="rf-name">Mint fredix</span><span class="rf-delta up">+12%</span></div>
+      <div class="rf-row"><span class="rf-name">cashu.chat</span><span class="rf-delta up">+7%</span></div>
+      <div class="rf-row"><span class="rf-name">Instant Mint</span><span class="rf-delta up">+5%</span></div>
+
+      <div class="rf-section-label">📉 FALLERS</div>
+      <div class="rf-row"><span class="rf-name">Mountainlake M5</span><span class="rf-delta down">−9%</span></div>
+      <div class="rf-row"><span class="rf-name">Odin's mint</span><span class="rf-delta down">−6%</span></div>
+      <div class="rf-row"><span class="rf-name">Boston Node</span><span class="rf-delta down">−4%</span></div>
+    </div>
+
+  </div>
+</body>
+</html>

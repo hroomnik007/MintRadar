@@ -46,6 +46,21 @@ export async function fetchNostrProfile(pubkey: string, extraRelays?: string[]):
   } catch { return {} }
 }
 
+// Fire-and-forget kind:0 profile lookup. Login now returns as soon as the
+// pubkey is known (fast: extension/local key), so name+avatar are filled in
+// afterwards via updateProfileMeta() once the relays answer. updateProfileMeta
+// is a no-op if the user logged out or switched identity in the meantime, so
+// this is safe to leave running unawaited.
+export function refreshProfileMetaInBackground(pubkey: string, extraRelays?: string[]): void {
+  void fetchNostrProfile(pubkey, extraRelays)
+    .then(meta => {
+      if (meta.name !== undefined || meta.picture !== undefined) {
+        useAuthStore.getState().updateProfileMeta(pubkey, meta)
+      }
+    })
+    .catch(() => { /* relay error/timeout — minimal profile (npub fallback) stays */ })
+}
+
 export function isNip07Available(): boolean {
   return typeof window !== 'undefined' && window.nostr !== undefined
 }
@@ -66,11 +81,10 @@ export async function loginWithNip07(): Promise<NostrProfile> {
   }
   const pubkey = await window.nostr!.getPublicKey()
   const npub = nip19.npubEncode(pubkey)
-  const meta = await fetchNostrProfile(pubkey)
-  const profile: NostrProfile = { pubkey, npub }
-  if (meta.name !== undefined) profile.name = meta.name
-  if (meta.picture !== undefined) profile.picture = meta.picture
-  return profile
+  // Return the moment we have the pubkey — the navbar shows the logged-in state
+  // immediately (short npub as the name fallback). Name + avatar arrive later.
+  refreshProfileMetaInBackground(pubkey)
+  return { pubkey, npub }
 }
 
 export async function loginWithNsec(input: string): Promise<NostrProfile> {
@@ -87,11 +101,8 @@ export async function loginWithNsec(input: string): Promise<NostrProfile> {
   const pubkeyHex = bytesToHex(secp.getPublicKey(privkeyBytes, true).slice(1))
   installNsecShim(privkeyBytes, pubkeyHex)
   const npub = nip19.npubEncode(pubkeyHex)
-  const meta = await fetchNostrProfile(pubkeyHex)
-  const profile: NostrProfile = { pubkey: pubkeyHex, npub }
-  if (meta.name !== undefined) profile.name = meta.name
-  if (meta.picture !== undefined) profile.picture = meta.picture
-  return profile
+  refreshProfileMetaInBackground(pubkeyHex)
+  return { pubkey: pubkeyHex, npub }
 }
 
 // ── nsec session (in-memory signing) ────────────────────────────
@@ -265,11 +276,8 @@ export async function loginWithBunker(bunkerInput: string): Promise<NostrProfile
   sessionStorage.setItem(BUNKER_SECRET_KEY, bytesToHex(clientSecretKey))
   sessionStorage.setItem(BUNKER_PUBKEY_KEY, pubkeyHex)
   const npub = nip19.npubEncode(pubkeyHex)
-  const meta = await fetchNostrProfile(pubkeyHex)
-  const profile: NostrProfile = { pubkey: pubkeyHex, npub }
-  if (meta.name !== undefined) profile.name = meta.name
-  if (meta.picture !== undefined) profile.picture = meta.picture
-  return profile
+  refreshProfileMetaInBackground(pubkeyHex)
+  return { pubkey: pubkeyHex, npub }
 }
 
 // Builds a fresh client-initiated nostrconnect:// URI plus its ephemeral client
@@ -331,11 +339,8 @@ export function initBunkerQR(): {
     sessionStorage.setItem(BUNKER_SECRET_KEY, bytesToHex(clientSecretKey))
     sessionStorage.setItem(BUNKER_PUBKEY_KEY, pubkeyHex)
     const npub = nip19.npubEncode(pubkeyHex)
-    const meta = await fetchNostrProfile(pubkeyHex)
-    const profile: NostrProfile = { pubkey: pubkeyHex, npub }
-    if (meta.name !== undefined) profile.name = meta.name
-    if (meta.picture !== undefined) profile.picture = meta.picture
-    return profile
+    refreshProfileMetaInBackground(pubkeyHex)
+    return { pubkey: pubkeyHex, npub }
   }).finally(() => {
     if (timeoutId !== undefined) clearTimeout(timeoutId)
     disposePool()

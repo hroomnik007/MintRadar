@@ -143,6 +143,14 @@
   flex-shrink: 0;
 }
 
+/* Placeholder shown while the kind:0 metadata (name + avatar) loads in the
+   background after login — keeps the same 22px footprint so the profile chip
+   doesn't reflow when the real avatar arrives. */
+.navbar-avatar--placeholder {
+  display: inline-block;
+  background: var(--surface-3);
+}
+
 .navbar-profile-text {
   display: flex;
   flex-direction: column;
@@ -317,6 +325,10 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* On mobile the row is already tight at 375px (see .navbar-username clamp
+     above) — don't reserve the avatar slot for the brief pre-metadata window;
+     a real avatar still renders once it loads. */
+  .navbar-avatar--placeholder { display: none; }
   /* Drop the uppercasing/tracking on mobile so "Remote signer" stays compact. */
   .navbar-method-badge {
     text-transform: none;
