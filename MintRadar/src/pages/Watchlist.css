@@ -11,7 +11,7 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px 0;
-  margin-inline: 18px;
+  margin-inline: var(--page-pad);
   border-bottom: 1px solid var(--border);
   background: var(--bg2);
 }
@@ -62,7 +62,8 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
   gap: 16px;
-  padding: 16px 18px;
+  padding: 16px 0;
+  margin-inline: var(--page-pad);
   align-content: start;
 }
 
@@ -309,7 +310,8 @@
   text-align: center;
   font-size: 10px;
   color: var(--text3);
-  padding: 12px 24px 20px;
+  padding: 12px 0 20px;
+  margin-inline: var(--page-pad);
   border-top: 1px solid var(--border);
   font-family: var(--font-mono);
   letter-spacing: 0.02em;
@@ -441,17 +443,14 @@
 
 @media (max-width: 600px) {
   .wl-controls {
-    padding: 10px 0;
-    margin-inline: 14px;
     gap: 6px;
   }
-  .filter-panel { margin-inline: 14px; }
   .wl-controls-top { width: 100%; }
   .sort-segment  { flex: 1; }
   .sort-btn      { flex: 1; justify-content: center; }
   .wl-grid {
     grid-template-columns: 1fr;
-    padding: 12px 14px;
+    padding: 12px 0;
     gap: 8px;
   }
 }
@@ -478,7 +477,7 @@
 .wl-side-col {
   width: 380px;
   flex-shrink: 0;
-  padding: 14px 14px 14px 0;
+  padding: 14px var(--page-pad) 14px 0;
   position: sticky;
   top: 56px;
   max-height: calc(100vh - 56px);
@@ -730,7 +729,7 @@
 
   .wl-side-col {
     width: 100%;
-    padding: 0 14px 14px;
+    padding: 0 var(--page-pad) var(--page-pad);
     position: static;
     max-height: none;
   }

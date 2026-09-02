@@ -13,7 +13,8 @@
 .stats-bar {
   display: flex;
   gap: 12px;
-  padding: 14px 18px;
+  padding: 14px 0;
+  margin-inline: var(--page-pad);
   border-bottom: 1px solid var(--border);
 }
 
@@ -70,7 +71,7 @@
   align-items: center;
   gap: 7px;
   padding: 10px 0;
-  margin-inline: 18px;
+  margin-inline: var(--page-pad);
   border-bottom: 1px solid var(--border);
   background: var(--bg2);
 }
@@ -228,7 +229,7 @@
 
 /* ── Mint List View ─────────────────────────────────────────── */
 .mint-list-table-wrap {
-  padding: 0 18px;
+  margin-inline: var(--page-pad);
   overflow-x: auto;
   min-width: 0;
 }
@@ -300,7 +301,8 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
   gap: 16px;
-  padding: 16px 18px;
+  padding: 16px 0;
+  margin-inline: var(--page-pad);
 }
 
 /* ── Mint Card ──────────────────────────────────────────────── */
@@ -572,7 +574,7 @@
   font-size: 12.5px;
   color: var(--t3);
   padding: 12px;
-  margin: 8px 24px 20px;
+  margin: 8px var(--page-pad) 20px;
   background: var(--surface);
   border: 1px solid var(--brd);
   border-radius: var(--radius-m);
@@ -591,7 +593,8 @@
   text-align: center;
   font-size: 10px;
   color: var(--text3);
-  padding: 12px 20px 20px;
+  padding: 12px 0 20px;
+  margin-inline: var(--page-pad);
   border-top: 1px solid var(--border);
   font-family: var(--font-mono);
   letter-spacing: 0.03em;
@@ -748,7 +751,7 @@
   background: var(--bg2);
   border-bottom: 1px solid var(--border);
   padding: 12px 0;
-  margin-inline: 18px;
+  margin-inline: var(--page-pad);
 }
 
 .filter-active-tags {
@@ -1148,7 +1151,6 @@
 @media (max-width: 768px) {
   .col-hide-mobile { display: none; }
   .status-text-mobile-hide { display: none; }
-  .mint-list-table-wrap { padding: 0 14px; }
   .mint-list-td-name { min-width: 0; max-width: none; }
   .mint-list-name { max-width: 120px; }
   .mint-list-table td.trust-col { min-width: 48px; }
@@ -1161,7 +1163,7 @@
 }
 
 @media (max-width: 600px) {
-  .stats-bar { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+  .stats-bar { flex-wrap: wrap; gap: 8px; padding: 10px 0; }
   .stat-card {
     flex: 1 1 calc(50% - 4px);
     padding: 10px 14px;
@@ -1169,19 +1171,14 @@
 
   .dashboard-controls {
     flex-wrap: wrap;
-    padding: 10px 0;
-    margin-inline: 14px;
     gap: 6px;
-  }
-  .filter-panel {
-    margin-inline: 14px;
   }
   .search-wrap { flex: 1 1 100%; }
   .sort-segment { flex: 1; }
   .sort-btn { flex: 1; justify-content: center; }
   .mint-grid {
     grid-template-columns: 1fr;
-    padding: 12px 14px;
+    padding: 12px 0;
     gap: 8px;
   }
 }

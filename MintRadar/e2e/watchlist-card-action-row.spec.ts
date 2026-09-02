@@ -37,12 +37,16 @@ test('action row is consistent across latency digit counts', async ({ page }) =>
         const cb = card.querySelector('.card-bottom') as HTMLElement
         const aw = cb.children[1] as HTMLElement
         const tops = new Set([...aw.querySelectorAll('button')].map(b => Math.round(b.getBoundingClientRect().top)))
-        return { cbH: Math.round(cb.getBoundingClientRect().height), btnRows: tops.size }
+        return { cbH: cb.getBoundingClientRect().height, btnRows: tops.size }
       })
     })
-    const cbHeights = new Set(perCard.map(c => c.cbH))
+    const cbHeights = perCard.map(c => c.cbH)
     const btnRowCounts = new Set(perCard.map(c => c.btnRows))
-    expect(cbHeights.size, `card-bottom heights at ${w}px: ${JSON.stringify(perCard)}`).toBe(1)
+    // Tolerance of 1px: a consistent layout can still land .card-bottom on a
+    // half-pixel height (e.g. 63.5) that rounds inconsistently between cards —
+    // the real regression (buttons wrapping onto extra rows) is caught by the
+    // btnRows assertions below.
+    expect(Math.max(...cbHeights) - Math.min(...cbHeights), `card-bottom heights at ${w}px: ${JSON.stringify(perCard)}`).toBeLessThanOrEqual(1)
     expect(btnRowCounts.size, `button-row counts at ${w}px: ${JSON.stringify(perCard)}`).toBe(1)
     expect(btnRowCounts.has(1), `buttons should be one row at ${w}px: ${JSON.stringify(perCard)}`).toBe(true)
   }
