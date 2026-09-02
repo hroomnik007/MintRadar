@@ -31,7 +31,7 @@
 .navbar-brand {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 15.5px;
+  font-size: 17px;
   color: var(--text);
   text-decoration: none;
   letter-spacing: -0.4px;
@@ -57,7 +57,7 @@
 /* Tab segment group */
 .navbar-tabs {
   display: flex;
-  gap: 2px;
+  gap: 4px;
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -69,8 +69,8 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
-  padding: 5px 13px;
-  font-size: 12.5px;
+  padding: 6px 16px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text2);
   text-decoration: none;
