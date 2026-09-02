@@ -164,8 +164,8 @@ export function MintCard({
           </span>
         )}
         {(mint.reviewCount ?? 0) > 0 && mint.reviewAvgRating != null && (
-          <span className="card-pill" style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-mono-data)' }}>
-            <span style={{ fontSize: 15, lineHeight: 1, color: 'var(--green-bright)' }}>★</span>
+          <span className="card-pill" style={{ color: 'var(--green-bright)', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-mono-data)' }}>
+            <span style={{ fontSize: 15, lineHeight: 1 }}>★</span>
             <span>{mint.reviewAvgRating.toFixed(1)} ({mint.reviewCount})</span>
           </span>
         )}
