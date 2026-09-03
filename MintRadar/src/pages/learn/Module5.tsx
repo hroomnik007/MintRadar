@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { KeyTakeaway } from '@/components/learn/KeyTakeaway'
 
 export default function Module5() {
@@ -37,6 +38,12 @@ export default function Module5() {
       <KeyTakeaway>
         <strong>If you only do one thing from this list: keep your seed backup current.</strong> Every other habit here reduces risk — a missing backup guarantees permanent loss the moment your device is gone.
       </KeyTakeaway>
+
+      <h3>Keep an eye on your mints</h3>
+      <p>
+        Your watchlist tracks the mints you actually use and notifies you if one goes down — so "check before you commit" and "pay attention to mint health" happen on their own.
+      </p>
+      <Link to="/watchlist" className="learn-cta-btn">Set up your watchlist →</Link>
     </div>
   )
 }

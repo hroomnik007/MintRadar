@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { KeyTakeaway } from '@/components/learn/KeyTakeaway'
 
 export default function Module4() {
@@ -47,6 +48,12 @@ export default function Module4() {
       <KeyTakeaway>
         <strong>Seed phrase + NUT-09 support = recoverable. No seed backup = permanent loss on device failure, no matter how trustworthy the mint is.</strong>
       </KeyTakeaway>
+
+      <h3>Pick a wallet</h3>
+      <p>
+        MintRadar keeps a plain list of Cashu-compatible wallets — no ranking, no reviews, just the current options so you can pick one and get started.
+      </p>
+      <Link to="/wallets" className="learn-cta-btn">Browse Cashu wallets →</Link>
     </div>
   )
 }
