@@ -32,7 +32,7 @@ import {
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
   Clock, GitBranch, Plug, Database, Award, Layers, Zap, Plus, X, QrCode,
   Receipt, UserCheck, EyeOff, CreditCard, Send, Code, Cloud,
-  Fingerprint, Bitcoin, Star, Mail, AtSign,
+  Fingerprint, Bitcoin, Star, Mail, AtSign, Link as LinkIcon,
 } from 'lucide-react'
 
 const REVIEW_AVATAR_COLORS = ['#17E87F','#8b5cf6','#F5A623','#3b82f6','#ef4444','#ec4899']
@@ -379,6 +379,7 @@ function MintDetailContent({ url }: { url: string }) {
   const [selectedNut, setSelectedNut] = useState<string | null>(null)
   const [copiedContact, setCopiedContact] = useState<string | null>(null)
   const [copiedUrl, setCopiedUrl] = useState(false)
+  const [copiedLink, setCopiedLink] = useState(false)
   const [showQr, setShowQr] = useState(false)
   const [showTrustBreakdown, setShowTrustBreakdown] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
@@ -771,6 +772,18 @@ function MintDetailContent({ url }: { url: string }) {
             <span className="md-qb-full">Open in Cashu.me</span>
             <span className="md-qb-short">Cashu.me</span>
           </a>
+          <button
+            className={`md-quick-btn md-copylink-btn ${copiedLink ? 'copied' : ''}`}
+            onClick={() => {
+              void navigator.clipboard.writeText(window.location.href)
+              setCopiedLink(true)
+              setTimeout(() => setCopiedLink(false), 2000)
+            }}
+            title="Copy a direct link to this mint"
+          >
+            {copiedLink ? <Check size={12} /> : <LinkIcon size={12} />}
+            <span>{copiedLink ? 'Copied' : 'Copy link'}</span>
+          </button>
         </div>
         <div className="md-hdr-right">
           {isLoggedIn
