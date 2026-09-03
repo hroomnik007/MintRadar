@@ -89,6 +89,12 @@
   font-weight: 500;
 }
 
+.smc-label-info {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
 .smc-value {
   font-size: 20px;
   font-weight: 700;
@@ -225,6 +231,13 @@
   font-weight: 400;
   text-transform: none;
   letter-spacing: normal;
+}
+
+/* Metric-row cards sit flush against the top of the page, so their tooltip
+   opens downward instead of the default upward (which the viewport clips). */
+.audit-tooltip.audit-tooltip-down {
+  bottom: auto;
+  top: calc(100% + 6px);
 }
 
 /* ── 3-column card grid ──────────────────────────────────────── */

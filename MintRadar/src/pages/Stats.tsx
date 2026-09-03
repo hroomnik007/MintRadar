@@ -601,6 +601,8 @@ export default function Stats() {
   const [showHealthBreakdown, setShowHealthBreakdown] = useState(false)
   const nhiInfoRef = useRef<HTMLSpanElement>(null)
   const nhiInfoTooltip = useTapTooltip(nhiInfoRef)
+  const uptimeInfoRef = useRef<HTMLSpanElement>(null)
+  const uptimeInfoTooltip = useTapTooltip(uptimeInfoRef)
   // Same 768px breakpoint as the rest of the app's mobile/desktop split (see
   // useIsMobile.ts). Desktop shows the breakdown inline in the panel itself
   // (no reason to click through to a modal that would show the exact same
@@ -853,7 +855,7 @@ export default function Stats() {
           </div>
           <div>
             <div className="smc-label">Online Now</div>
-            <div className="smc-value">{data.onlineMints}</div>
+            <div className="smc-value">{data.onlineMints} / {data.totalMints}</div>
           </div>
         </div>
         <div className="stats-metric-card">
@@ -861,7 +863,23 @@ export default function Stats() {
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v5l3 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="8" cy="9" r="6" stroke="currentColor" strokeWidth="1.2"/><path d="M6 1.5h4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
           </div>
           <div>
-            <div className="smc-label">Network Uptime</div>
+            <div className="smc-label smc-label-info">
+              Avg mint uptime · 24h
+              <span
+                ref={uptimeInfoRef}
+                style={{ position: 'relative', display: 'inline-flex' }}
+                onPointerEnter={uptimeInfoTooltip.onPointerEnter}
+                onPointerLeave={uptimeInfoTooltip.onPointerLeave}
+                onClick={uptimeInfoTooltip.onClick}
+              >
+                <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
+                {uptimeInfoTooltip.open && (
+                  <div className="audit-tooltip audit-tooltip-down" style={{ width: isMobile ? 200 : 240, left: 0 }}>
+                    Average 24-hour uptime across all tracked mints (probed every 5 min). Mints offline 24h+ count as 0%.
+                  </div>
+                )}
+              </span>
+            </div>
             <div className="smc-value" style={{color: avgUptime24h != null ? uptimeColor(avgUptime24h) : undefined}}>
               {avgUptime24h != null ? `${avgUptime24h}%` : '—'}
             </div>
