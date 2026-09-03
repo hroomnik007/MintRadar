@@ -262,8 +262,11 @@ function MintListView({
     return [...filtered].sort((a, b) => {
       let result: number
       if (sortBy === 'rating') {
-        const ra = a.reviewAvgRating ?? -1
-        const rb = b.reviewAvgRating ?? -1
+        // Sort by the backend's weighted/Bayesian rating (falls back to the raw
+        // average if the backend hasn't sent one), NOT the displayed average —
+        // see KnownMint.reviewWeightedRating.
+        const ra = a.reviewWeightedRating ?? a.reviewAvgRating ?? -1
+        const rb = b.reviewWeightedRating ?? b.reviewAvgRating ?? -1
         result = rb - ra
       } else if (sortBy === 'latency') {
         const la = a.online === true && a.latencyMs != null ? a.latencyMs : Infinity
@@ -371,8 +374,11 @@ function MintGrid({
     return [...filtered].sort((a, b) => {
       let result: number
       if (sortBy === 'rating') {
-        const ra = a.reviewAvgRating ?? -1
-        const rb = b.reviewAvgRating ?? -1
+        // Sort by the backend's weighted/Bayesian rating (falls back to the raw
+        // average if the backend hasn't sent one), NOT the displayed average —
+        // see KnownMint.reviewWeightedRating.
+        const ra = a.reviewWeightedRating ?? a.reviewAvgRating ?? -1
+        const rb = b.reviewWeightedRating ?? b.reviewAvgRating ?? -1
         result = rb - ra
       } else if (sortBy === 'latency') {
         const la = a.online === true && a.latencyMs != null ? a.latencyMs : Infinity

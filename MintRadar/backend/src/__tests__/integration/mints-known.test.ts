@@ -94,6 +94,31 @@ describe('GET /api/mints/known', () => {
     expect(mint).toHaveProperty('lastCheckedAt')
   })
 
+  it('adds a weighted rating for the Rating sort that dampens tiny samples', async () => {
+    // Global mean C over all 5 rated mints = (5.0+4.7+4.3+4.4+4.5)/5 = 4.58, m = 8.
+    query.mockResolvedValueOnce({
+      rows: [
+        sampleRow({ url: 'https://lonely.example', review_count: 1, review_avg_rating: 5.0 }),
+        sampleRow({ url: 'https://established.example', review_count: 99, review_avg_rating: 4.7 }),
+        sampleRow({ url: 'https://c.example', review_count: 20, review_avg_rating: 4.3 }),
+        sampleRow({ url: 'https://d.example', review_count: 15, review_avg_rating: 4.4 }),
+        sampleRow({ url: 'https://e.example', review_count: 30, review_avg_rating: 4.5 }),
+      ],
+    })
+
+    const res = await request(app).get('/api/mints/known')
+    const lonely = res.body.find((m: { url: string }) => m.url === 'https://lonely.example')
+    const established = res.body.find((m: { url: string }) => m.url === 'https://established.example')
+
+    // Displayed values are untouched.
+    expect(lonely.reviewAvgRating).toBe(5.0)
+    expect(established.reviewAvgRating).toBe(4.7)
+    // …but the weighted value flips the sort order.
+    expect(established.reviewWeightedRating).toBeGreaterThan(lonely.reviewWeightedRating)
+    expect(lonely.reviewWeightedRating).toBeCloseTo((1 / 9) * 5.0 + (8 / 9) * 4.58, 4)
+    expect(established.reviewWeightedRating).toBeCloseTo((99 / 107) * 4.7 + (8 / 107) * 4.58, 4)
+  })
+
   it('marks a long-offline mint as degraded', async () => {
     // last state offline, last probe >24h old → isStaleOffline → degraded
     query.mockResolvedValueOnce({

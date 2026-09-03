@@ -31,6 +31,11 @@ export interface KnownMint {
   // (backend/src/reviewsSync.ts). Null until that sync has run for the mint.
   reviewCount?: number | null
   reviewAvgRating?: number | null
+  // IMDB-style weighted/Bayesian rating computed by the backend
+  // (backend/src/weightedRating.ts). Used ONLY for the Rating sort so a mint
+  // with one 5.0 review doesn't outrank a mint with many reviews at 4.7 — never
+  // shown in the UI (the Community Rating badge uses reviewAvgRating/reviewCount).
+  reviewWeightedRating?: number | null
 }
 
 async function fetchKnownMints(): Promise<KnownMint[]> {

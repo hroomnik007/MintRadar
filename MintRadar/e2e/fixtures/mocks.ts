@@ -25,6 +25,19 @@ export interface MockMint {
   reviewAvgRating?: number | null
 }
 
+// Mirror of backend/src/weightedRating.ts for the Rating-sort fixture payload.
+const RATING_SORT_M = 8
+function mockGlobalMeanRating(mints: MockMint[]): number | null {
+  const rated = mints.filter(m => (m.reviewCount ?? 0) >= 1 && m.reviewAvgRating != null)
+  if (rated.length === 0) return null
+  return rated.reduce((s, m) => s + (m.reviewAvgRating as number), 0) / rated.length
+}
+function mockWeightedRating(m: MockMint, globalMean: number | null): number | null {
+  if (m.reviewAvgRating == null || globalMean == null) return null
+  const v = Math.max(0, m.reviewCount ?? 0)
+  return (v / (v + RATING_SORT_M)) * m.reviewAvgRating + (RATING_SORT_M / (v + RATING_SORT_M)) * globalMean
+}
+
 const now = Date.now()
 const daysAgo = (d: number) => new Date(now - d * 86_400_000).toISOString()
 
@@ -56,6 +69,8 @@ function buildMethods(units: string[] | null, min: number, max: number) {
   return units.map(unit => ({ method: 'bolt11', unit, min_amount: min, max_amount: max }))
 }
 
+const MOCK_GLOBAL_MEAN_RATING = mockGlobalMeanRating(MOCK_MINTS)
+
 function knownMintPayload(m: MockMint) {
   return {
     url: m.url,
@@ -84,6 +99,7 @@ function knownMintPayload(m: MockMint) {
     lastCheckedAt: new Date(now - 60_000).toISOString(),
     reviewCount: m.reviewCount ?? null,
     reviewAvgRating: m.reviewAvgRating ?? null,
+    reviewWeightedRating: mockWeightedRating(m, MOCK_GLOBAL_MEAN_RATING),
   }
 }
 

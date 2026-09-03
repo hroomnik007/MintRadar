@@ -565,6 +565,19 @@ Backend `REVIEW_SYNC_RELAYS` (`backend/src/reviewsSync.ts`, re-exported from `in
 - **Community-rating stat tile** reads `knownMint.reviewCount` / `reviewAvgRating` (the `mints` rollup, in `/api/mints/known`) while the live fetch is still running — `tileReviewCount` / `tileAvgRating` in `MintDetail.tsx`. This replaced a ~4s window where the empty live array made the tile flash a wrong "No reviews yet". `null` on both the rollup and the live side renders a "…" skeleton (same idea as the existing "Loading live mint data" placeholder).
 - Do not remove either mechanism without re-confirming with the maintainer — see the review-fetch investigation report for the full reasoning.
 
+**Rating sort uses a weighted/Bayesian rating, not the raw average (2026-09-03).**
+`/api/mints/known` also returns `reviewWeightedRating` per mint — the IMDB formula
+`WR = (v/(v+m))·R + (m/(v+m))·C` (`backend/src/weightedRating.ts`): `R` = `reviewAvgRating`,
+`v` = `reviewCount`, `m = 8` (≈ p75 / mean of review counts among the 51 rated mints — median 3,
+mean 8.73, max 102; a mint must reach the top quartile of review volume before its own average
+outweighs the crowd), `C` = mean `reviewAvgRating` over all mints with ≥1 review and a non-null
+average. `C` is computed in the `/api/mints/known` handler (which already loads every mint in one
+query) — NOT in `reviewsSync`'s per-mint rollup, which would need a full-table scan per mint to
+get `C`. **Display is unchanged** — the Community Rating badge still shows `reviewAvgRating` /
+`reviewCount`. Frontend Rating sort (`Dashboard.tsx` ×2, `Watchlist.tsx`) orders by
+`reviewWeightedRating ?? reviewAvgRating ?? -1`. Tests: `backend/src/__tests__/weightedRating.test.ts`
++ a case in `integration/mints-known.test.ts` (1×5.0 review ranks below 99×4.7).
+
 Key implementation details:
 - Rating parsed from `content` via regex `/\[(\d)\/5\]/` — the `rating` tag does not exist in practice
 - **REQ `limit` is 500** (`useMintReviews.ts` + backend `/api/mints/nostr-reviews`), raised from 50 on 2026-08-30 — with limit 50 the dominant relays all returned the same newest 50 events, so the pool union barely exceeded 50 and undercounted mints like `mint.minibits.cash/Bitcoin` (~85 real reviews, cashumints.space shows 82) by ~40%.

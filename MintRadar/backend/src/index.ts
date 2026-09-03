@@ -10,6 +10,7 @@ import { computeDegraded } from './degraded.js'
 import { authenticateNip98 } from './nip98Auth.js'
 import { fetchOgMintData, renderMintOgHtml } from './og.js'
 import { computeTrustMovers, type MintScoreSnapshot } from './trustMovers.js'
+import { globalMeanRating, weightedRating } from './weightedRating.js'
 
 let knownMintsCache: { data: unknown; expiresAt: number } | null = null
 const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
@@ -825,6 +826,15 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         latest.online, latest.latency_ms, latest.checked_at
     `)
     .then(result => {
+      // C for the IMDB-style weighted Rating sort (see below) — computed from
+      // the raw rollup columns before the row map so each mint's WR can be set
+      // inline in the literal.
+      const globalMean = globalMeanRating(
+        result.rows.map(r => ({
+          reviewCount: (r.review_count as number | null) ?? null,
+          reviewAvgRating: r.review_avg_rating != null ? Number(r.review_avg_rating) : null,
+        })),
+      )
       const data = result.rows.map(r => {
         const total = Number(r.total)
         const onlineCount = Number(r.online_count)
@@ -859,6 +869,15 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           lastCheckedAt: (r.latest_checked_at as string | null) ?? null,
           reviewCount: (r.review_count as number | null) ?? null,
           reviewAvgRating: r.review_avg_rating != null ? Number(r.review_avg_rating) : null,
+          // IMDB-style weighted rating — used ONLY to order the Rating sort,
+          // never displayed (the card badge keeps showing reviewAvgRating /
+          // reviewCount). Kept out of reviewsSync's per-mint rollup because C is
+          // a global mean over all mints; this endpoint already loads them all.
+          reviewWeightedRating: weightedRating(
+            (r.review_count as number | null) ?? null,
+            r.review_avg_rating != null ? Number(r.review_avg_rating) : null,
+            globalMean,
+          ),
         }
       })
       knownMintsCache = { data, expiresAt: Date.now() + KNOWN_MINTS_CACHE_TTL }

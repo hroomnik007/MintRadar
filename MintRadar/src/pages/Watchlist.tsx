@@ -369,8 +369,10 @@ export default function Watchlist() {
     const mb = knownMintsMap.get(b) ?? null
     let result: number
     if (sortBy === 'rating') {
-      const ra = ma?.reviewAvgRating ?? -1
-      const rb = mb?.reviewAvgRating ?? -1
+      // Weighted/Bayesian rating, not the displayed average — see
+      // KnownMint.reviewWeightedRating.
+      const ra = ma?.reviewWeightedRating ?? ma?.reviewAvgRating ?? -1
+      const rb = mb?.reviewWeightedRating ?? mb?.reviewAvgRating ?? -1
       result = rb - ra
     } else if (sortBy === 'latency') {
       const la = ma?.online === true && ma.latencyMs != null ? ma.latencyMs : Infinity
