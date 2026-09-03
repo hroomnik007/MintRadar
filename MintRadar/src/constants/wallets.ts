@@ -40,22 +40,40 @@ export const WALLETS: WalletInfo[] = [
     url: 'https://www.enuts.cash',
   },
   {
+    name: 'Macadamia',
+    platforms: ['iOS'],
+    blurb: 'The first fully native iOS wallet for Cashu, built in Swift around a privacy-focused, cash-like payment flow.',
+    url: 'https://macadamia.cash',
+  },
+  {
+    name: 'Sovran',
+    platforms: ['iOS'],
+    blurb: 'Free and open-source iOS wallet for Cashu and Lightning with multi-mint management, NFC payments and built-in Nostr.',
+    url: 'https://sovran.money',
+  },
+  {
     name: 'Cashu.me',
     platforms: ['Web'],
     blurb: 'The reference browser wallet — no install, good for trying Cashu and testing a new mint quickly.',
     url: 'https://cashu.me',
   },
   {
-    name: 'Boardwalk Cash',
+    name: 'Agicash',
     platforms: ['Web'],
-    blurb: 'Installable web app focused on fast Lightning-address payments and a simple send/receive flow.',
-    url: 'https://boardwalkcash.com',
+    blurb: 'Self-custodial web wallet for dollar-denominated ecash, built on the Open Secret platform for quick onboarding with no install (formerly Boardwalk Cash).',
+    url: 'https://agi.cash',
   },
   {
     name: 'Coinos',
     platforms: ['Web', 'Android', 'iOS'],
     blurb: 'Hosted wallet that speaks Cashu alongside Lightning and on-chain, convenient if you want one account for everything.',
     url: 'https://coinos.io',
+  },
+  {
+    name: 'Zeus',
+    platforms: ['Android', 'iOS'],
+    blurb: 'Self-custodial Lightning wallet that also speaks Cashu via the Cashu Development Kit, handy if you want ecash inside a full-featured Bitcoin wallet.',
+    url: 'https://zeusln.com',
   },
   {
     name: 'Nutshell',
