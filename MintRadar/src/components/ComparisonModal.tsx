@@ -282,8 +282,33 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             const d = allData[i]!
             return (
               <div key={mint.url} className="cmp-val">
-                <span style={{ fontSize: 10, color: d.tsInfo.color, background: d.tsInfo.bg, border: `0.5px solid ${d.tsInfo.border}`, borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-mono)' }}>{d.tsInfo.label}</span>
-                <span style={{ marginLeft: 5, fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: d.tsInfo.color }}>{d.trustScore}%</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: d.tsInfo.color }}>
+                  <IcShield />
+                  <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? `${d.trustScore}%` : '—'}</span>
+                </span>
+                {d.isOnline && (
+                  <span style={{ marginLeft: 6, fontSize: 10, color: d.tsInfo.color, background: d.tsInfo.bg, border: `0.5px solid ${d.tsInfo.border}`, borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-mono)' }}>{d.tsInfo.label}</span>
+                )}
+              </div>
+            )
+          })}
+
+          {/* ── Community Rating (NIP-87 reviews, matches the ★ badge on mint cards) ── */}
+          <div className="cmp-lbl">Community Rating</div>
+          {mints.map(mint => {
+            const count = mint.reviewCount ?? 0
+            const avg = mint.reviewAvgRating
+            return (
+              <div key={mint.url} className="cmp-val">
+                {count > 0 && avg != null ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#4ade80', fontFamily: 'var(--font-mono)' }}>
+                    <span style={{ fontSize: 14, lineHeight: 1 }}>★</span>
+                    <span style={{ fontSize: 12, fontWeight: 700 }}>{avg.toFixed(1)}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text3)' }}>({count})</span>
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 13, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>—</span>
+                )}
               </div>
             )
           })}

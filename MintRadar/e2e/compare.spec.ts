@@ -33,6 +33,23 @@ test.describe('Compare (Mint Diff Tool)', () => {
     await expect(page.getByText(/does not track over time/)).toBeVisible()
   })
 
+  test('shows Trust Score and Community Rating rows, with a fallback for mints without reviews', async ({ page }) => {
+    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
+    await page.locator('.md-picker-item', { hasText: 'Bravo Mint' }).click()
+    await page.locator('.md-picker-confirm').click()
+
+    await expect(page.getByText('Mint Comparison')).toBeVisible()
+
+    const grid = page.locator('.cmp-grid')
+    await expect(grid.locator('.cmp-lbl', { hasText: 'Trust Score' })).toBeVisible()
+    await expect(grid.locator('.cmp-lbl', { hasText: 'Community Rating' })).toBeVisible()
+
+    // Alpha has 12 reviews averaging 4.2 → star badge; Bravo has none → "—".
+    await expect(grid.getByText('4.2')).toBeVisible()
+    await expect(grid.getByText('(12)')).toBeVisible()
+    await expect(grid.locator('.cmp-val', { hasText: '—' }).first()).toBeVisible()
+  })
+
   test('stacks charts vertically instead of overlaying on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 800 })
     await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
