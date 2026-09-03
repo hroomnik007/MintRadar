@@ -107,4 +107,37 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
     const itemDisplay = await firstItem.evaluate(el => getComputedStyle(el).display)
     expect(itemDisplay).toBe('flex')
   })
+
+  test('MintDetail picker only lists online mints, matching Dashboard', async ({ page }) => {
+    // Charlie Mint is offline in the fixtures — must never appear as a
+    // candidate from either call site.
+    await mockRelays(page)
+    await installApiMocks(page)
+    await page.goto(`/mint/${encodeURIComponent('https://alpha.mint.example')}`)
+    await page.locator('button', { hasText: 'Compare' }).click()
+    await expect(page.locator('.md-picker-modal')).toBeVisible()
+    await expect(page.locator('.md-picker-item', { hasText: 'Charlie Mint' })).toHaveCount(0)
+    await expect(page.locator('.md-picker-item', { hasText: 'Delta Mint' })).toHaveCount(1)
+  })
+
+  test('Escape closes the MintDetail compare picker', async ({ page }) => {
+    await mockRelays(page)
+    await installApiMocks(page)
+    await page.goto(`/mint/${encodeURIComponent('https://alpha.mint.example')}`)
+    await page.locator('button', { hasText: 'Compare' }).click()
+    await expect(page.locator('.md-picker-modal')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.md-picker-modal')).toHaveCount(0)
+  })
+
+  test('Escape closes the Dashboard compare picker', async ({ page }) => {
+    await mockRelays(page)
+    await installApiMocks(page)
+    await page.goto('/')
+    await expect(page.locator('.mint-card')).toHaveCount(4)
+    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
+    await expect(page.locator('.md-picker-modal')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.md-picker-modal')).toHaveCount(0)
+  })
 })
