@@ -90,6 +90,10 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_n_melts INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_n_errors INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_checked_at TIMESTAMPTZ',
+    // audit_checked_at mirrors audit.8333.space's own `updated_at`; audit_synced_at
+    // is when OUR 6h discovery cron last wrote these columns, so the Mint Detail
+    // "Last checked X ago" strip can be truthful about our refresh cadence.
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_synced_at TIMESTAMPTZ',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_id INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_recent_total INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_recent_errors INTEGER',

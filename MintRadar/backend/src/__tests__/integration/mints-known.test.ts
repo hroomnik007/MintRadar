@@ -42,6 +42,7 @@ function sampleRow(overrides: Record<string, unknown> = {}) {
     audit_n_melts: 50,
     audit_n_errors: 0,
     audit_checked_at: '2026-06-30T00:00:00.000Z',
+    audit_synced_at: '2026-06-30T06:00:00.000Z',
     audit_recent_total: 100,
     audit_recent_errors: 0,
     discovered_at: '2026-01-01T00:00:00.000Z',
@@ -92,6 +93,10 @@ describe('GET /api/mints/known', () => {
     expect(mint).toHaveProperty('degraded')
     expect(mint).toHaveProperty('trustScore')
     expect(mint).toHaveProperty('lastCheckedAt')
+    // audit_synced_at (our cron's write time) is distinct from audit_checked_at
+    // (audit.8333.space's own updated_at) and both are exposed.
+    expect(mint.auditSyncedAt).toBe('2026-06-30T06:00:00.000Z')
+    expect(mint.auditCheckedAt).toBe('2026-06-30T00:00:00.000Z')
   })
 
   it('adds a weighted rating for the Rating sort that dampens tiny samples', async () => {

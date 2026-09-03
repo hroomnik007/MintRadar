@@ -57,7 +57,7 @@ test.describe('Audit stats heading — with data', () => {
       // (useTapTooltip.onClick calls stopPropagation).
       await info.tap()
       await expect(page.getByText(TOOLTIP_RE)).toBeVisible()
-      await expect(page.locator('.audit-stats-grid')).toBeVisible()
+      await expect(page.locator('.audit-alltime-line')).toBeVisible()
 
       await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-header-mobile.png' })
 

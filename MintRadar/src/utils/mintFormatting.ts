@@ -71,9 +71,21 @@ export function uptimeColor(pct: number | null | undefined): string {
 }
 
 // ── Relative time (e.g. "3 min ago", "2d ago") ─────────────────
-export function formatTimeAgo(date: Date | null): string {
+// "<errors> / <total>" for the Audit summary strip's Recent errors cell.
+// `total === null` (mint audited but no rolling-window swap sample yet) renders
+// as an em dash; a null error count is treated as zero. Sample-size adequacy
+// ("too few to score") is a separate concern — see isAuditUnknown().
+export function formatAuditErrorRatio(
+  recentTotal: number | null | undefined,
+  recentErrors: number | null | undefined,
+): string {
+  if (recentTotal === null || recentTotal === undefined) return '—'
+  return `${recentErrors ?? 0} / ${recentTotal}`
+}
+
+export function formatTimeAgo(date: Date | null, now: number = Date.now()): string {
   if (!date) return '—'
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
+  const seconds = Math.floor((now - date.getTime()) / 1000)
   if (seconds < 60) return `${seconds}s ago`
   const minutes = Math.floor(seconds / 60)
   if (minutes < 60) return `${minutes} min ago`

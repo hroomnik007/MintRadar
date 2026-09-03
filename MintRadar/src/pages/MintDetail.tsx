@@ -16,7 +16,7 @@ import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { ComparisonModal } from '@/components/ComparisonModal'
 import { MintComparePicker } from '@/components/MintComparePicker'
-import { mintAgeBadge, trustScoreColor, trustScoreInfo } from '@/utils/mintFormatting'
+import { mintAgeBadge, trustScoreColor, trustScoreInfo, formatTimeAgo, formatAuditErrorRatio } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
@@ -633,17 +633,12 @@ function MintDetailContent({ url }: { url: string }) {
     : isAuditUnknown(breakdownAuditRecentTotal)
       ? 'Unknown'
       : `${((breakdownAuditRecentErrors ?? 0) / breakdownAuditRecentTotal * 100).toFixed(1)}% err`
-  // "Recent reliability" card in the Audit tab — same rolling window
+  // Audit summary strip's "Recent errors" cell — same rolling window
   // (audit_recent_total / audit_recent_errors, up to AUDIT_SWAPS_WINDOW = 100
   // swaps) that feeds the Trust Score's Audit reliability component. Reuses the
   // exact values above (breakdownAuditRecent*) and colours by breakdownAScore so
-  // the card can never disagree with the sidebar breakdown.
+  // the strip can never disagree with the sidebar Trust Score breakdown.
   const recentReliabilityErrors = breakdownAuditRecentErrors ?? 0
-  const recentReliabilityDisplay = breakdownAuditRecentTotal === null
-    ? 'No recent swap data'
-    : isAuditUnknown(breakdownAuditRecentTotal)
-      ? `${recentReliabilityErrors} / ${breakdownAuditRecentTotal} · too few to score`
-      : `${recentReliabilityErrors} / ${breakdownAuditRecentTotal} · ${Math.round((1 - recentReliabilityErrors / breakdownAuditRecentTotal) * 100)}%`
   const recentReliabilityColor = breakdownAuditRecentTotal === null || isAuditUnknown(breakdownAuditRecentTotal)
     ? 'var(--text3)'
     : breakdownAScore >= 4 ? '#4ade80' : breakdownAScore >= 3 ? '#ffa500' : '#ff4d4d'
@@ -665,6 +660,20 @@ function MintDetailContent({ url }: { url: string }) {
   const auditNErrors = knownMint?.auditNErrors ?? 0
   const auditTotalOps = auditNMints + auditNMelts + auditNErrors
   const auditErrorPct = auditTotalOps > 0 ? (auditNErrors / auditTotalOps) * 100 : null
+
+  // ── Audit summary strip (top of the Audit tab) — a 5-second overview.
+  // Mints / Melts are audit.8333.space lifetime counters; Recent errors is the
+  // rolling ~100-swap window (same numbers as the Recent reliability card and the
+  // Trust Score's Audit component); Last checked is OUR 6h cron's write time
+  // (auditSyncedAt), NOT auditCheckedAt (that's the auditor's own clock).
+  const auditSyncedAt = knownMint?.auditSyncedAt ?? null
+  const auditLastCheckedDisplay = formatTimeAgo(auditSyncedAt ? new Date(auditSyncedAt) : null)
+  const stripRecentErrorsDisplay = formatAuditErrorRatio(breakdownAuditRecentTotal, breakdownAuditRecentErrors)
+  const stripRecentErrorsSub = breakdownAuditRecentTotal === null
+    ? 'no recent swaps'
+    : isAuditUnknown(breakdownAuditRecentTotal)
+      ? 'too few to score'
+      : `${Math.round((1 - recentReliabilityErrors / breakdownAuditRecentTotal) * 100)}% ok`
 
   // Average rating is computed only over events that actually carry a numeric
   // rating — rating-less endorsement events are counted in the review total but
@@ -1493,12 +1502,16 @@ function MintDetailContent({ url }: { url: string }) {
                     {auditExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                   </span>
                 </button>
-                <div className={`md-audit-content${auditExpanded ? ' expanded' : ''}`}>
-                <div className="audit-stats-grid">
-                  <div className="audit-stat-card">
-                    <div className="audit-stat-value" style={{color:'#4ade80'}}>{auditNMints.toLocaleString()}</div>
-                    <div className="audit-stat-label">
-                      Mint ops
+
+                {/* 5-second overview — always visible, never inside the mobile
+                    collapse. Mints/Melts are audit.8333.space lifetime counts;
+                    Recent errors is the rolling ~100-swap window; Last checked is
+                    OUR 6h cron's write time (auditSyncedAt). */}
+                <div className="audit-summary-strip">
+                  <div className="audit-summary-cell">
+                    <div className="audit-summary-value" style={{color:'#4ade80'}}>{auditNMints.toLocaleString()}</div>
+                    <div className="audit-summary-label">
+                      Mints
                       <span
                         ref={auditMintsRef}
                         style={{position:'relative',display:'inline-flex',marginLeft:3}}
@@ -1509,17 +1522,16 @@ function MintDetailContent({ url }: { url: string }) {
                         <Info size={11} color="#6b7280" style={{cursor:'help'}} />
                         {auditMintsTooltip.open && (
                           <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
-                            Number of successful ecash minting operations. The auditor actively creates ecash tokens to verify the mint works correctly.
+                            All-time successful ecash minting operations the auditor has run against this mint.
                           </div>
                         )}
                       </span>
                     </div>
-                    <div className="audit-stat-sub">succeeded</div>
                   </div>
-                  <div className="audit-stat-card">
-                    <div className="audit-stat-value" style={{color:'#4ade80'}}>{auditNMelts.toLocaleString()}</div>
-                    <div className="audit-stat-label">
-                      Melt ops
+                  <div className="audit-summary-cell">
+                    <div className="audit-summary-value" style={{color:'#4ade80'}}>{auditNMelts.toLocaleString()}</div>
+                    <div className="audit-summary-label">
+                      Melts
                       <span
                         ref={auditMeltsRef}
                         style={{position:'relative',display:'inline-flex',marginLeft:3}}
@@ -1530,17 +1542,16 @@ function MintDetailContent({ url }: { url: string }) {
                         <Info size={11} color="#6b7280" style={{cursor:'help'}} />
                         {auditMeltsTooltip.open && (
                           <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
-                            Number of successful ecash melting operations. The auditor redeems ecash back to Lightning to verify withdrawals work.
+                            All-time successful ecash melting operations (redeeming ecash back to Lightning).
                           </div>
                         )}
                       </span>
                     </div>
-                    <div className="audit-stat-sub">succeeded</div>
                   </div>
-                  <div className="audit-stat-card">
-                    <div className="audit-stat-value" style={{color: auditNErrors > 0 ? '#ff4d4d' : '#4ade80'}}>{auditNErrors.toLocaleString()}</div>
-                    <div className="audit-stat-label">
-                      Errors
+                  <div className="audit-summary-cell">
+                    <div className="audit-summary-value" style={{color: recentReliabilityColor}}>{stripRecentErrorsDisplay}</div>
+                    <div className="audit-summary-label">
+                      Recent errors
                       <span
                         ref={auditErrorsRef}
                         style={{position:'relative',display:'inline-flex',marginLeft:3}}
@@ -1551,18 +1562,17 @@ function MintDetailContent({ url }: { url: string }) {
                         <Info size={11} color="#6b7280" style={{cursor:'help'}} />
                         {auditErrorsTooltip.open && (
                           <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
-                            Number of failed mint or melt operations detected by the auditor. Higher error count indicates reliability issues.
+                            Failed swaps out of the mint's last ~100 audited operations — the same rolling window the Trust Score's Audit component scores on. Shows "too few to score" below 3 recent swaps.
                           </div>
                         )}
                       </span>
                     </div>
-                    <div className="audit-stat-sub">{auditErrorPct !== null ? `${auditErrorPct.toFixed(1)}% of ops` : '—'}</div>
+                    <div className="audit-summary-sub">{stripRecentErrorsSub}</div>
                   </div>
-                </div>
-                <div className="audit-recent-card">
-                  <div className="audit-recent-text">
-                    <div className="audit-recent-label">
-                      Recent reliability
+                  <div className="audit-summary-cell">
+                    <div className="audit-summary-value" style={{fontSize:15}}>{auditLastCheckedDisplay}</div>
+                    <div className="audit-summary-label">
+                      Last checked
                       <span
                         ref={auditRecentRef}
                         style={{position:'relative',display:'inline-flex',marginLeft:3}}
@@ -1573,20 +1583,24 @@ function MintDetailContent({ url }: { url: string }) {
                         <Info size={11} color="#6b7280" style={{cursor:'help'}} />
                         {auditRecentTooltip.open && (
                           <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
-                            Failed swaps out of the mint's last ~100 audited operations — the exact rolling window the Trust Score's Audit reliability component scores on, not the all-time totals above. Shows "too few to score" with fewer than 3 recent swaps.
+                            When MintRadar's own 6-hour discovery job last refreshed this mint's audit figures.
                           </div>
                         )}
                       </span>
                     </div>
-                    <div className="audit-recent-sub">last ~100 swaps · feeds Trust Score</div>
                   </div>
-                  <div className="audit-recent-value" style={{color: recentReliabilityColor}}>{recentReliabilityDisplay}</div>
                 </div>
-                {knownMint.auditCheckedAt ? (
-                  <div style={{fontSize:12,color:'var(--text3)',marginTop:10,fontFamily:'var(--font-mono)',lineHeight:1.5}}>
-                    Last checked {new Date(knownMint.auditCheckedAt).toLocaleDateString()} · Mint / Melt / Errors are all-time totals from audit.8333.space; Recent reliability is the rolling ~100-swap window used in Trust Score
+
+                <div className={`md-audit-content${auditExpanded ? ' expanded' : ''}`}>
+                  <div className="audit-alltime-line">
+                    All-time via audit.8333.space: {auditNMints.toLocaleString()} mints · {auditNMelts.toLocaleString()} melts · {auditNErrors.toLocaleString()} errors
+                    {auditErrorPct !== null ? ` (${auditErrorPct.toFixed(1)}% of ops)` : ''}.
+                    {' '}<strong style={{color:'var(--text2)',fontWeight:500}}>Recent errors</strong> is the rolling ~100-swap window that feeds the Trust Score's Audit reliability component
+                    {isAuditUnknown(breakdownAuditRecentTotal) ? ' (shown as "too few to score" below 3 swaps)' : ''}.
+                    {!auditSyncedAt && knownMint.auditCheckedAt
+                      ? ` Auditor's own last update: ${new Date(knownMint.auditCheckedAt).toLocaleDateString()}.`
+                      : ''}
                   </div>
-                ) : null}
                 </div>
               </div>
             ) : (

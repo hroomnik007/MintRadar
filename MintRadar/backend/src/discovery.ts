@@ -354,7 +354,8 @@ export async function discoverMintsFromApi(): Promise<number> {
         audit_n_mints = $2,
         audit_n_melts = $3,
         audit_n_errors = $4,
-        audit_checked_at = $5
+        audit_checked_at = $5,
+        audit_synced_at = NOW()
        WHERE url = $6`,
       [rec.id, rec.n_mints, rec.n_melts, rec.n_errors, rec.updated_at, rec.url]
     )

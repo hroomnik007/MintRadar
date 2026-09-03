@@ -18,7 +18,12 @@ export interface KnownMint {
   auditNMints?: number | null
   auditNMelts?: number | null
   auditNErrors?: number | null
+  // audit.8333.space's own `updated_at` for this mint's audit record.
   auditCheckedAt?: string | null
+  // When OUR 6h discovery cron last refreshed the audit_* columns — the honest
+  // "Last checked X ago" value for the Audit tab (auditCheckedAt is the auditor's
+  // clock, not ours). Null until that cron has run since the column was added.
+  auditSyncedAt?: string | null
   auditRecentTotal?: number | null
   auditRecentErrors?: number | null
   discoveredAt?: string | null

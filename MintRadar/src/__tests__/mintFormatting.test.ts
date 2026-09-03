@@ -5,6 +5,8 @@ import {
   trustScoreInfo,
   trustColor,
   latencyColor,
+  formatTimeAgo,
+  formatAuditErrorRatio,
 } from '../utils/mintFormatting'
 
 // Inject a fixed `now` so tests are deterministic regardless of when they run.
@@ -221,5 +223,60 @@ describe('latencyColor', () => {
 
   it('returns slow colour for very high latency', () => {
     expect(latencyColor(30000)).toBe('var(--slow)')
+  })
+})
+
+// ── formatTimeAgo (Audit strip "Last checked") ─────────────────
+describe('formatTimeAgo', () => {
+  const REF = Date.parse('2026-09-03T12:00:00.000Z')
+  const ago = (ms: number) => new Date(REF - ms)
+
+  it('renders an em dash for null', () => {
+    expect(formatTimeAgo(null, REF)).toBe('—')
+  })
+
+  it('renders seconds under a minute', () => {
+    expect(formatTimeAgo(ago(5_000), REF)).toBe('5s ago')
+  })
+
+  it('renders minutes under an hour', () => {
+    expect(formatTimeAgo(ago(5 * 60_000), REF)).toBe('5 min ago')
+  })
+
+  it('renders hours under a day', () => {
+    expect(formatTimeAgo(ago(6 * 3_600_000), REF)).toBe('6h ago')
+  })
+
+  it('renders days past 24h (typical 6h-cron staleness lands here)', () => {
+    expect(formatTimeAgo(ago(2 * 86_400_000), REF)).toBe('2d ago')
+  })
+
+  it('floors partial units', () => {
+    expect(formatTimeAgo(ago(119 * 60_000), REF)).toBe('1h ago')
+  })
+})
+
+// ── formatAuditErrorRatio (Audit strip "Recent errors") ────────
+describe('formatAuditErrorRatio', () => {
+  it('renders an em dash when there is no rolling-window sample', () => {
+    expect(formatAuditErrorRatio(null, null)).toBe('—')
+    expect(formatAuditErrorRatio(undefined, 3)).toBe('—')
+  })
+
+  it('renders "<errors> / <total>"', () => {
+    expect(formatAuditErrorRatio(100, 3)).toBe('3 / 100')
+  })
+
+  it('treats a null/undefined error count as zero', () => {
+    expect(formatAuditErrorRatio(100, null)).toBe('0 / 100')
+    expect(formatAuditErrorRatio(100, undefined)).toBe('0 / 100')
+  })
+
+  it('still renders a below-threshold sample (adequacy is a separate concern)', () => {
+    expect(formatAuditErrorRatio(2, 0)).toBe('0 / 2')
+  })
+
+  it('renders a zero-swap total literally', () => {
+    expect(formatAuditErrorRatio(0, 0)).toBe('0 / 0')
   })
 })

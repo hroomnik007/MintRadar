@@ -17,26 +17,25 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('.md-tabs')).toBeVisible()
 })
 
-test('Audit tab: Recent reliability card matches the Trust Score breakdown', async ({ page }) => {
+test('Audit tab: summary strip "Recent errors" matches the Trust Score breakdown', async ({ page }) => {
   await page.locator('.md-tab', { hasText: 'Audit' }).click()
 
-  const card = page.locator('.audit-recent-card')
-  await expect(card).toBeVisible()
-  await expect(card).toContainText('Recent reliability')
-  await expect(card).toContainText('last ~100 swaps')
-  await expect(card.locator('.audit-recent-value')).toHaveText('3 / 100 · 97%')
+  const strip = page.locator('.audit-summary-strip')
+  await expect(strip).toBeVisible()
 
-  // It must sit apart from the all-time cards, and the footer must name the split.
-  await expect(page.locator('.audit-stats-grid .audit-stat-card')).toHaveCount(3)
-  await expect(page.locator('.md-audit-content')).toContainText('all-time totals from audit.8333.space')
+  const recentCell = strip.locator('.audit-summary-cell', { hasText: 'Recent errors' })
+  await expect(recentCell.locator('.audit-summary-value')).toHaveText('3 / 100')
+  await expect(recentCell.locator('.audit-summary-sub')).toHaveText('97% ok')
 
-  await page.locator('.audit-recent-card').scrollIntoViewIfNeeded()
-  await page.locator('.md-audit-content').screenshot({ path: 'test-results/audit-recent-card.png' })
+  // The all-time line carries the lifetime totals without duplicating them as cards.
+  await expect(page.locator('.audit-alltime-line')).toContainText('100 mints · 50 melts · 0 errors')
+
+  await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-summary-strip.png' })
 
   // Cross-check against the sidebar Trust Score breakdown — same 3/100 window.
   await page.locator('.md-trust-panel').getByText('Details ›').click()
   await expect(page.getByText('Trust Score Breakdown')).toBeVisible()
   await expect(page.getByText('Audit reliability (5%)')).toBeVisible()
-  await expect(page.getByText('3.0% err')).toBeVisible() // 3/100 → same source as the card's 97%
+  await expect(page.getByText('3.0% err')).toBeVisible() // 3/100 → same source as the strip's 97% ok
   await page.screenshot({ path: 'test-results/audit-breakdown-crosscheck.png' })
 })

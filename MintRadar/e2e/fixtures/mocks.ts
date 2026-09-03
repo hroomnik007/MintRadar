@@ -91,6 +91,12 @@ function knownMintPayload(m: MockMint) {
     auditNMelts: 50,
     auditNErrors: 0,
     auditCheckedAt: daysAgo(1),
+    // Our own 6h discovery cron's last write time (drives "Last checked X ago").
+    auditSyncedAt: new Date(now - 3 * 3_600_000).toISOString(),
+    // Rolling ~100-swap window (audit.8333.space /swaps/mint/{id}); individual
+    // specs override this for the <3-sample and no-audit cases.
+    auditRecentTotal: 100,
+    auditRecentErrors: 0,
     discoveredAt: m.discoveredAt,
     trustScore: m.trustScore,
     lastError: null,
