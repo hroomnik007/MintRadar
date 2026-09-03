@@ -19,6 +19,13 @@ const IcClose = () => (
   </svg>
 )
 
+// Same shield mark used by the Trust Score badge on the mint cards (MintCard.tsx).
+const IcShield = () => (
+  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+    <path d="M7 1.2 1.9 3.1v4c0 3 2.1 4.9 5.1 5.7 3-.8 5.1-2.7 5.1-5.7v-4L7 1.2Z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+  </svg>
+)
+
 function trustScoreInfo(score: number) {
   if (score >= 70) return { label: 'High Trust', color: '#4ade80', bg: 'rgba(74,222,128,0.1)', border: 'rgba(74,222,128,0.25)' }
   if (score >= 40) return { label: 'Moderate Trust', color: '#ffa500', bg: 'rgba(255,165,0,0.1)', border: 'rgba(255,165,0,0.25)' }
