@@ -488,6 +488,13 @@ function MintDetailContent({ url }: { url: string }) {
     return () => window.removeEventListener('keydown', h)
   }, [showTrustBreakdown])
 
+  useEffect(() => {
+    if (!showComparePicker) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowComparePicker(false) }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [showComparePicker])
+
   const histLineData = useMemo(() => {
     const segs = chartHistoryData?.segments ?? []
     const nutCount = knownMint?.nutCount ?? 0
@@ -2056,7 +2063,7 @@ function MintDetailContent({ url }: { url: string }) {
 
       {showComparePicker && (() => {
         const baseMint = knownMintsData?.find(m => m.url === url)
-        const candidates = (knownMintsData ?? []).filter(m => m.url !== url)
+        const candidates = (knownMintsData ?? []).filter(m => m.url !== url && m.online === true)
         return (
           <MintComparePicker
             candidates={candidates}
