@@ -10,7 +10,6 @@ import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { MintCard } from '@/components/mint/MintCard'
-import { mintAgeBadge } from '@/utils/mintFormatting'
 import './Watchlist.css'
 
 const IcRadar = () => (
@@ -22,25 +21,6 @@ const IcRadar = () => (
     <line x1="11" y1="11" x2="17" y2="5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
   </svg>
 )
-const IcFilter = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <line x1="1.5" y1="3" x2="11.5" y2="3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-    <line x1="3" y1="6.5" x2="10" y2="6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-    <line x1="4.5" y1="10" x2="8.5" y2="10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-  </svg>
-)
-const IcClose = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-    <line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-    <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-  </svg>
-)
-
-function listTrustScore(mint: KnownMint | null): number {
-  if (!mint || mint.online !== true) return 0
-  return mint.trustScore ?? 0
-}
-
 
 function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
@@ -68,41 +48,6 @@ function SkeletonCard() {
       </div>
     </div>
   )
-}
-
-const DEFAULT_SORT_DIRS: Record<'name' | 'latency' | 'rating' | 'trust', 'asc' | 'desc'> = { rating: 'desc', latency: 'asc', trust: 'desc', name: 'asc' }
-
-const AGE_LABELS = ['Fresh', 'Established', 'Veteran', 'OG']
-
-interface FilterState {
-  status: 'all' | 'online' | 'offline'
-  minTrustScore: number
-  mintAges: string[]
-  requiredNuts: string[]
-}
-const DEFAULT_FILTERS: FilterState = { status: 'all', minTrustScore: 0, mintAges: [], requiredNuts: [] }
-
-function countActiveFilters(f: FilterState): number {
-  return [f.status !== 'all' ? 1 : 0, f.minTrustScore > 0 ? 1 : 0, f.mintAges.length > 0 ? 1 : 0, f.requiredNuts.length > 0 ? 1 : 0].reduce((a, b) => a + b, 0)
-}
-
-function applyFilters(urls: string[], knownMintsMap: Map<string, KnownMint>, filters: FilterState): string[] {
-  return urls.filter(url => {
-    const mint = knownMintsMap.get(url) ?? null
-    if (filters.status === 'online' && mint?.online !== true) return false
-    if (filters.status === 'offline' && mint?.online !== false) return false
-    if (listTrustScore(mint) < filters.minTrustScore) return false
-    if (filters.mintAges.length > 0) {
-      const badge = mintAgeBadge(mint?.discoveredAt)
-      if (!badge || !filters.mintAges.includes(badge.label)) return false
-    }
-    if (filters.requiredNuts.length > 0) {
-      const nuts = mint?.nutsLimits as Record<string, unknown> | null | undefined
-      if (!nuts) return false
-      if (!filters.requiredNuts.every(nut => nuts[nut] != null)) return false
-    }
-    return true
-  })
 }
 
 interface ProfileInfo { name: string | undefined; picture: string | undefined }
@@ -246,23 +191,6 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
 }
 
 export default function Watchlist() {
-  const [sortBy, setSortBy] = useState<'name' | 'latency' | 'trust' | 'rating'>('name')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
-
-  // Filter state
-  const [showFilters, setShowFilters] = useState(false)
-  const [pendingFilters, setPendingFilters] = useState<FilterState>(DEFAULT_FILTERS)
-  const [activeFilters, setActiveFilters] = useState<FilterState>(DEFAULT_FILTERS)
-
-  function handleSortClick(s: typeof sortBy) {
-    if (s === sortBy) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortBy(s)
-      setSortDir(DEFAULT_SORT_DIRS[s])
-    }
-  }
-
   const mints = useWatchlistStore(state => state.mints)
   const loadFromDb = useWatchlistStore(state => state.loadFromDb)
 
@@ -271,16 +199,18 @@ export default function Watchlist() {
   const { data: knownMintsData, isLoading: knownLoading } = useKnownMints()
   const knownMintsMap = useMemo(() => new Map(knownMintsData?.map(m => [m.url, m]) ?? []), [knownMintsData])
 
-  const activeFilterCount = countActiveFilters(activeFilters)
-  const filteredMints = useMemo(() => {
-    return applyFilters(mints, knownMintsMap, activeFilters)
-  }, [mints, knownMintsMap, activeFilters])
+  // Watchlists are small and personal — no filter/sort controls. Show every
+  // watched mint, ordered alphabetically by hostname for a stable layout.
+  const orderedMints = useMemo(
+    () => [...mints].sort((a, b) => getHostname(a).localeCompare(getHostname(b))),
+    [mints],
+  )
 
   const sentinelRef = useRef<HTMLDivElement>(null)
-  // Pagination extra is keyed by the current list content + sort, so it
-  // resets automatically when the visible list changes — no reset effect needed.
+  // Pagination extra is keyed by the current list content, so it resets
+  // automatically when the visible list changes — no reset effect needed.
   const [extraVisible, setExtraVisible] = useState<{ key: string; n: number }>({ key: '', n: 0 })
-  const listKey = `${sortBy}|${sortDir}|${filteredMints.join('\n')}`
+  const listKey = orderedMints.join('\n')
   const visibleCount = 20 + (extraVisible.key === listKey ? extraVisible.n : 0)
 
   useEffect(() => {
@@ -298,16 +228,6 @@ export default function Watchlist() {
     observer.observe(el)
     return () => observer.disconnect()
   }, [listKey])
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      if ((e as CustomEvent).type === 'mintradar:escape') {
-        setShowFilters(false)
-      }
-    }
-    window.addEventListener('mintradar:escape', handler)
-    return () => window.removeEventListener('mintradar:escape', handler)
-  }, [])
 
   function handleExport() {
     const payload = JSON.stringify({ exportedAt: new Date().toISOString(), mints }, null, 2)
@@ -364,28 +284,6 @@ export default function Watchlist() {
     )
   }
 
-  const sortedFiltered = [...filteredMints].sort((a, b) => {
-    const ma = knownMintsMap.get(a) ?? null
-    const mb = knownMintsMap.get(b) ?? null
-    let result: number
-    if (sortBy === 'rating') {
-      // Weighted/Bayesian rating, not the displayed average — see
-      // KnownMint.reviewWeightedRating.
-      const ra = ma?.reviewWeightedRating ?? ma?.reviewAvgRating ?? -1
-      const rb = mb?.reviewWeightedRating ?? mb?.reviewAvgRating ?? -1
-      result = rb - ra
-    } else if (sortBy === 'latency') {
-      const la = ma?.online === true && ma.latencyMs != null ? ma.latencyMs : Infinity
-      const lb = mb?.online === true && mb.latencyMs != null ? mb.latencyMs : Infinity
-      result = la - lb
-    } else if (sortBy === 'trust') {
-      result = listTrustScore(mb) - listTrustScore(ma)
-    } else {
-      result = getHostname(a).localeCompare(getHostname(b))
-    }
-    return sortDir === DEFAULT_SORT_DIRS[sortBy] ? result : -result
-  })
-
   return (
     <div className="watchlist-page">
       <div className="wl-controls">
@@ -399,108 +297,7 @@ export default function Watchlist() {
             </div>
           )}
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap'}}>
-          <button
-            type="button"
-            className={`filter-btn${showFilters ? ' active' : ''}`}
-            onClick={() => setShowFilters(v => !v)}
-          >
-            <IcFilter />
-            Filters
-            {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
-          </button>
-          <div className="sort-segment">
-            {(['rating', 'latency', 'name', 'trust'] as const).map(s => (
-              <button
-                key={s}
-                type="button"
-                className={`sort-btn${sortBy === s ? ' active' : ''}`}
-                onClick={() => handleSortClick(s)}
-              >
-                {s === 'trust' ? 'Trust Score' : s.charAt(0).toUpperCase() + s.slice(1)}
-                {sortBy === s && <span style={{marginLeft: 3, fontSize: 10, opacity: 0.7}}>{sortDir === 'asc' ? '↑' : '↓'}</span>}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
-
-      {showFilters && (
-        <div className="filter-panel">
-          {activeFilterCount > 0 && (
-            <div className="filter-active-tags">
-              {activeFilters.status !== 'all' && (
-                <span className="filter-tag">
-                  {activeFilters.status === 'online' ? 'Online' : 'Offline'}
-                  <button type="button" onClick={() => { const f = { ...activeFilters, status: 'all' as const }; setActiveFilters(f); setPendingFilters(f) }}><IcClose /></button>
-                </span>
-              )}
-              {activeFilters.minTrustScore > 0 && (
-                <span className="filter-tag">
-                  Trust ≥ {activeFilters.minTrustScore}%
-                  <button type="button" onClick={() => { const f = { ...activeFilters, minTrustScore: 0 }; setActiveFilters(f); setPendingFilters(f) }}><IcClose /></button>
-                </span>
-              )}
-              {activeFilters.mintAges.map(age => (
-                <span key={age} className="filter-tag">
-                  {age}
-                  <button type="button" onClick={() => { const f = { ...activeFilters, mintAges: activeFilters.mintAges.filter(a => a !== age) }; setActiveFilters(f); setPendingFilters(f) }}><IcClose /></button>
-                </span>
-              ))}
-              {activeFilters.requiredNuts.map(nut => (
-                <span key={nut} className="filter-tag">
-                  NUT-{nut.padStart(2, '0')}
-                  <button type="button" onClick={() => { const f = { ...activeFilters, requiredNuts: activeFilters.requiredNuts.filter(n => n !== nut) }; setActiveFilters(f); setPendingFilters(f) }}><IcClose /></button>
-                </span>
-              ))}
-            </div>
-          )}
-
-          <div className="filter-row">
-            <div className="filter-group filter-box">
-              <div className="filter-group-label">Status</div>
-              <div className="filter-radio-group">
-                {(['all', 'online', 'offline'] as const).map(s => (
-                  <label key={s} className="filter-radio">
-                    <input type="radio" name="wl-filter-status" checked={pendingFilters.status === s} onChange={() => setPendingFilters(p => ({ ...p, status: s }))} />
-                    {s === 'all' ? 'All' : s === 'online' ? 'Online' : 'Offline'}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="filter-group filter-box">
-              <div className="filter-group-label">Min. Trust Score: <strong>{pendingFilters.minTrustScore}%</strong></div>
-              <input
-                type="range" min={0} max={100} step={5}
-                value={pendingFilters.minTrustScore}
-                onChange={e => setPendingFilters(p => ({ ...p, minTrustScore: parseInt(e.target.value) }))}
-                className="filter-slider"
-              />
-            </div>
-
-            <div className="filter-group filter-box">
-              <div className="filter-group-label">Mint age</div>
-              <div className="filter-pills">
-                {AGE_LABELS.map(age => (
-                  <button key={age} type="button" className={`filter-pill${pendingFilters.mintAges.includes(age) ? ' active' : ''}`}
-                    onClick={() => setPendingFilters(p => ({ ...p, mintAges: p.mintAges.includes(age) ? p.mintAges.filter(a => a !== age) : [...p.mintAges, age] }))}
-                  >{age}</button>
-                ))}
-              </div>
-            </div>
-
-          </div>
-
-          <div className="filter-footer">
-            <div className="filter-count">Showing <strong>{filteredMints.length}</strong> of <strong>{mints.length}</strong> mints</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" className="filter-reset-btn" onClick={() => { setPendingFilters(DEFAULT_FILTERS); setActiveFilters(DEFAULT_FILTERS) }}>Reset filters</button>
-              <button type="button" className="filter-apply-btn" onClick={() => { setActiveFilters(pendingFilters); setShowFilters(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Apply filter</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="wl-body wl-body-two-col">
         <div className="wl-main-col">
@@ -517,7 +314,7 @@ export default function Watchlist() {
           ) : (
             <>
               <div className="wl-grid">
-                {sortedFiltered.slice(0, visibleCount).map(url => (
+                {orderedMints.slice(0, visibleCount).map(url => (
                   <MintCard
                     key={url}
                     mint={knownMintsMap.get(url) ?? {
@@ -529,7 +326,7 @@ export default function Watchlist() {
                   />
                 ))}
               </div>
-              {visibleCount < sortedFiltered.length && (
+              {visibleCount < orderedMints.length && (
                 <div ref={sentinelRef} style={{height:1}} />
               )}
             </>
@@ -543,7 +340,7 @@ export default function Watchlist() {
 
       {mints.length > 0 && (
         <div className="wl-showing">
-          Showing {Math.min(visibleCount, sortedFiltered.length)} of {sortedFiltered.length}
+          Showing {Math.min(visibleCount, orderedMints.length)} of {orderedMints.length}
         </div>
       )}
 

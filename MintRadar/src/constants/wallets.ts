@@ -34,12 +34,6 @@ export const WALLETS: WalletInfo[] = [
     url: 'https://nutstash.app',
   },
   {
-    name: 'eNuts',
-    platforms: ['Android', 'iOS'],
-    blurb: 'Native mobile wallet for Android and iOS with multi-mint support and Lightning top-ups.',
-    url: 'https://www.enuts.cash',
-  },
-  {
     name: 'Macadamia',
     platforms: ['iOS'],
     blurb: 'The first fully native iOS wallet for Cashu, built in Swift around a privacy-focused, cash-like payment flow.',
