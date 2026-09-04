@@ -572,6 +572,55 @@ button.md-url-copy.copied > svg { opacity: 1; }
 /* ── Reviews ────────────────────────────────────────────────── */
 .reviews-header  { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 
+.reviews-disclaimer {
+  font-size: 12px;
+  color: var(--text3);
+  line-height: 1.5;
+  margin: -2px 0 4px;
+}
+
+.reviews-filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.reviews-filter-group {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.reviews-filter-chip {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text3);
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.reviews-filter-chip:hover { border-color: var(--border2); color: var(--text2); }
+.reviews-filter-chip.active {
+  background: var(--green-soft);
+  border-color: var(--green-soft-strong);
+  color: var(--green-bright);
+}
+/* The "Hide anon" toggle is visually distinguished from the exclusive
+   All/5★/Critical group by a left border separator, since it combines with
+   whichever of those is active rather than replacing it. */
+.reviews-filter-chip.toggle {
+  border-left: 2px solid var(--border2);
+  margin-left: 3px;
+  padding-left: 10px;
+}
+
 /* Primary action of the Reviews tab — deliberately larger and more prominent
    than the header-row buttons (Watch/Compare/Mint QR): filled tonal background
    + heavier weight, ~+18% font / ~+40% padding over the old outline style. */

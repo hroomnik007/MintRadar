@@ -46,7 +46,11 @@ test.describe('Mint Detail', () => {
   test('reviews tab shows an empty state when there are no reviews', async ({ page }) => {
     await page.locator('.md-tab', { hasText: 'Reviews' }).click()
     // Relays are stubbed empty and /api/mints/nostr-reviews returns [] → empty state.
-    await expect(page.getByText(/No reviews yet/).first()).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText('No Nostr reviews found for this mint yet.')).toBeVisible({ timeout: 15_000 })
+    // The disclaimer is shown even with zero reviews (it sits above the loading/empty branch).
+    await expect(page.getByText('Reviews are Nostr events. Counts may differ from other sites.')).toBeVisible()
+    // No filter chips when there is nothing to filter.
+    await expect(page.locator('.reviews-filter-chip')).toHaveCount(0)
   })
 
   test('Trust Score details modal opens', async ({ page }) => {

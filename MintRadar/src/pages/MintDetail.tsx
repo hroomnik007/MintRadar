@@ -416,6 +416,8 @@ function MintDetailContent({ url }: { url: string }) {
   const [showTrustBreakdown, setShowTrustBreakdown] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [reviewsPageState, setReviewsPageState] = useState<{ key: string; page: number }>({ key: '', page: 1 })
+  const [reviewFilterState, setReviewFilterState] = useState<{ key: string; type: 'all' | '5star' | 'critical' }>({ key: '', type: 'all' })
+  const [reviewHideAnonState, setReviewHideAnonState] = useState<{ key: string; on: boolean }>({ key: '', on: false })
   // 0 = phase 1 (rating not chosen yet); 1-5 = phase 2 (form revealed).
   const [reviewRating, setReviewRating] = useState(0)
   const [reviewHoverRating, setReviewHoverRating] = useState(0)
@@ -729,15 +731,41 @@ function MintDetailContent({ url }: { url: string }) {
   const tileReviewCount = reviewsLoading ? (knownMint?.reviewCount ?? null) : mergedReviews.length
   const tileAvgRating = reviewsLoading ? (knownMint?.reviewAvgRating ?? null) : avgRating
 
-  // Numbered pagination for the Reviews tab. Page is keyed by mint URL so it
-  // resets to 1 when navigating to a different mint (no reset effect needed).
+  // Reviews-tab filter chips. "all" / "5star" / "critical" are mutually exclusive
+  // (one active at a time); "hideAnon" is an independent toggle combined on top of
+  // whichever exclusive filter is active. Both are keyed by mint URL, same pattern
+  // as reviewsPageState, so switching mints resets them without a reset effect.
+  const activeReviewFilter = reviewFilterState.key === url ? reviewFilterState.type : 'all'
+  const hideAnonActive = reviewHideAnonState.key === url && reviewHideAnonState.on
+  const reviewFilterFiveStarCount = mergedReviews.filter(r => r.rating === 5).length
+  // Critical excludes rating === null explicitly — a rating-less endorsement event
+  // is not a bad review, and JS's `null <= 2` (coerces null to 0) would otherwise
+  // wrongly include it here.
+  const reviewFilterCriticalCount = mergedReviews.filter(r => r.rating !== null && r.rating <= 2).length
+  const reviewFilterNamedCount = mergedReviews.filter(r => !!r.profile?.name).length
+  let filteredReviews = mergedReviews
+  if (activeReviewFilter === '5star') filteredReviews = filteredReviews.filter(r => r.rating === 5)
+  else if (activeReviewFilter === 'critical') filteredReviews = filteredReviews.filter(r => r.rating !== null && r.rating <= 2)
+  if (hideAnonActive) filteredReviews = filteredReviews.filter(r => !!r.profile?.name)
+  const setReviewFilter = (type: 'all' | '5star' | 'critical') => {
+    setReviewFilterState({ key: url, type })
+    setReviewsPageState({ key: url, page: 1 })
+  }
+  const toggleReviewHideAnon = () => {
+    setReviewHideAnonState({ key: url, on: !hideAnonActive })
+    setReviewsPageState({ key: url, page: 1 })
+  }
+
+  // Numbered pagination for the Reviews tab, applied to the filtered list. Page is
+  // keyed by mint URL so it resets to 1 when navigating to a different mint (no
+  // reset effect needed); changing a filter above also resets it to 1.
   const REVIEWS_PER_PAGE = 5
-  const reviewsTotalPages = Math.max(1, Math.ceil(mergedReviews.length / REVIEWS_PER_PAGE))
+  const reviewsTotalPages = Math.max(1, Math.ceil(filteredReviews.length / REVIEWS_PER_PAGE))
   const reviewsPage = Math.min(
     reviewsPageState.key === url ? reviewsPageState.page : 1,
     reviewsTotalPages,
   )
-  const pagedReviews = mergedReviews.slice((reviewsPage - 1) * REVIEWS_PER_PAGE, reviewsPage * REVIEWS_PER_PAGE)
+  const pagedReviews = filteredReviews.slice((reviewsPage - 1) * REVIEWS_PER_PAGE, reviewsPage * REVIEWS_PER_PAGE)
   const goToReviewsPage = (p: number) => setReviewsPageState({ key: url, page: Math.max(1, Math.min(p, reviewsTotalPages)) })
 
   const chartAvgLatency = chartHistoryData?.avgLatencyMs ?? null
@@ -1675,10 +1703,45 @@ function MintDetailContent({ url }: { url: string }) {
                   </button>
                 )}
               </div>
+              <p className="reviews-disclaimer">Reviews are Nostr events. Counts may differ from other sites.</p>
               {reviewsLoading ? (
                 <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>Loading reviews...</div>
-              ) : mergedReviews.length > 0 ? (
+              ) : mergedReviews.length === 0 ? (
+                <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>No Nostr reviews found for this mint yet.</div>
+              ) : (
                 <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:8}}>
+                  <div className="reviews-filter-row">
+                    <div className="reviews-filter-group" role="group" aria-label="Filter reviews by rating">
+                      <button
+                        type="button"
+                        className={`reviews-filter-chip${activeReviewFilter === 'all' ? ' active' : ''}`}
+                        aria-pressed={activeReviewFilter === 'all'}
+                        onClick={() => setReviewFilter('all')}
+                      >All · {mergedReviews.length}</button>
+                      <button
+                        type="button"
+                        className={`reviews-filter-chip${activeReviewFilter === '5star' ? ' active' : ''}`}
+                        aria-pressed={activeReviewFilter === '5star'}
+                        onClick={() => setReviewFilter('5star')}
+                      >5★ · {reviewFilterFiveStarCount}</button>
+                      <button
+                        type="button"
+                        className={`reviews-filter-chip${activeReviewFilter === 'critical' ? ' active' : ''}`}
+                        aria-pressed={activeReviewFilter === 'critical'}
+                        onClick={() => setReviewFilter('critical')}
+                      >Critical · {reviewFilterCriticalCount}</button>
+                    </div>
+                    <button
+                      type="button"
+                      className={`reviews-filter-chip toggle${hideAnonActive ? ' active' : ''}`}
+                      aria-pressed={hideAnonActive}
+                      onClick={toggleReviewHideAnon}
+                    >Hide anon · {reviewFilterNamedCount}</button>
+                  </div>
+                  {filteredReviews.length === 0 ? (
+                    <div style={{fontSize:13,color:'var(--text3)'}}>No reviews match this filter.</div>
+                  ) : (
+                    <>
                   {pagedReviews.map(r => {
                     const npub = nip19.npubEncode(r.pubkey)
                     const profile = r.profile
@@ -1736,10 +1799,8 @@ function MintDetailContent({ url }: { url: string }) {
                       >›</button>
                     </nav>
                   )}
-                </div>
-              ) : (
-                <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>
-                  {isLoggedIn ? 'No reviews yet. Be the first to write one!' : 'No reviews yet. Login with Nostr to write one.'}
+                    </>
+                  )}
                 </div>
               )}
             </div>
