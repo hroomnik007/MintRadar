@@ -5,11 +5,16 @@ import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 // "Nu" / "since 6/" because its grid had no overflow handling and forced
 // nowrap. Each entry is now a two-line stack (version, then "since <date>"
 // below it) that grows the column taller instead of wider, so it no longer
-// needs its own scroll wrapper for a normal entry count. .cmp-vh-grid keeps
-// `overflow-x: auto` directly (same pattern as .cmp-grid) for the
-// column-count case — e.g. 4 mints on mobile still doesn't fit side by side.
+// needs its own scroll wrapper for a normal entry count.
+//
+// Desktop keeps the side-by-side .cmp-vh-grid (mint = column, `overflow-x:
+// auto` for the column-count case). Mobile (≤768px) no longer renders that
+// grid at all — a side-by-side table never fit a phone viewport regardless
+// of scroll handling. Instead it shows one mint's version history at a time
+// (.cmp-mobile-vh), switched via the same tabs as the main comparison table.
 // These pin: entries render un-clipped at 2/3/4 mints on both desktop and
-// mobile, and the section scrolls when it genuinely overflows.
+// mobile, the desktop section scrolls when it genuinely overflows, and the
+// mobile section never causes horizontal page overflow.
 
 const LONG_VH = {
   history: [
@@ -59,12 +64,21 @@ for (const n of [2, 3, 4]) {
         const clipped = await el.evaluate(n => n.scrollWidth > n.clientWidth + 1)
         expect(clipped, `entry ${i} clipped`).toBe(false)
       }
-      // The section is horizontally scrollable (not dead-clipped) when it overflows.
-      const scroll = page.locator('.cmp-vh-grid')
-      const overflow = await scroll.evaluate(n => ({ sw: n.scrollWidth, cw: n.clientWidth }))
-      if (overflow.sw > overflow.cw) {
-        await scroll.evaluate(n => { n.scrollLeft = n.scrollWidth })
-        expect(await scroll.evaluate(n => n.scrollLeft)).toBeGreaterThan(0)
+      if (vp.label === 'desktop') {
+        // The section is horizontally scrollable (not dead-clipped) when it overflows.
+        const scroll = page.locator('.cmp-vh-grid')
+        const overflow = await scroll.evaluate(n => ({ sw: n.scrollWidth, cw: n.clientWidth }))
+        if (overflow.sw > overflow.cw) {
+          await scroll.evaluate(n => { n.scrollLeft = n.scrollWidth })
+          expect(await scroll.evaluate(n => n.scrollLeft)).toBeGreaterThan(0)
+        }
+      } else {
+        // Mobile: no side-by-side grid at all — one mint's history at a time,
+        // and the page never scrolls sideways regardless of mint count.
+        await expect(page.locator('.cmp-vh-grid')).toHaveCount(0)
+        await expect(page.locator('.cmp-mobile-vh')).toBeVisible()
+        const canScrollX = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
+        expect(canScrollX).toBe(false)
       }
 
       // At least one full "since M/D/YYYY" string is rendered intact.

@@ -151,6 +151,10 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
   const backupInfoTooltip = useTapTooltip(backupInfoRef)
   const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('7d')
   const [metric, setMetric] = useState<HistoryMetric>('latency')
+  // Mobile only: which mint's single-column stack is shown (see .cmp-mobile-*
+  // layout below). The desktop side-by-side .cmp-grid ignores this entirely.
+  const [activeIdx, setActiveIdx] = useState(0)
+  const activeMintIdx = Math.min(activeIdx, mints.length - 1)
 
   const historyQueries = useQueries({
     queries: mints.map(m => ({
@@ -240,6 +244,168 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', padding: 4 }}><IcClose /></button>
         </div>
 
+        {isMobile ? (
+          <>
+            <div className="cmp-mobile-tabs" role="tablist" aria-label="Select mint to view">
+              {mints.map((mint, i) => {
+                const d = allData[i]!
+                return (
+                  <button
+                    key={mint.url}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeMintIdx === i}
+                    className={`cmp-mobile-tab${activeMintIdx === i ? ' active' : ''}`}
+                    onClick={() => setActiveIdx(i)}
+                  >
+                    <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={14} />
+                    <span>{d.displayName}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {(() => {
+              const mint = mints[activeMintIdx]!
+              const d = allData[activeMintIdx]!
+              const badge = d.ageBadge
+              const uptimePct = uptime24hQueries[activeMintIdx]?.data?.uptimePct ?? null
+              const count = mint.reviewCount ?? 0
+              const avg = mint.reviewAvgRating
+              return (
+                <div className="cmp-mobile-stack">
+                  <div className="cmp-mobile-header-row">
+                    <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={28} />
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div className="cmp-mobile-name">{d.displayName}</div>
+                      <div className="cmp-mobile-host">{d.hostname}</div>
+                    </div>
+                    {!d.isNew && badge && (
+                      <span className="cmp-mobile-badge" style={{ color: badge.color, background: badge.bg, borderColor: badge.border }}>{badge.label}</span>
+                    )}
+                    {d.isNew && <span className="cmp-mobile-badge" style={{ color: '#4ade80', background: 'rgba(74,222,128,0.1)', borderColor: 'rgba(74,222,128,0.3)' }}>New</span>}
+                  </div>
+
+                  <div className="cmp-mobile-row">
+                    <span className="cmp-mobile-lbl">Status</span>
+                    <span className="cmp-mobile-val">
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, fontFamily: 'var(--font-mono)' }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: d.isOnline ? 'var(--accent)' : '#ff4d4d', display: 'inline-block', flexShrink: 0 }} />
+                        {d.isOnline ? 'Online' : 'Offline'}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="cmp-mobile-row">
+                    <span className="cmp-mobile-lbl">Trust Score</span>
+                    <span className="cmp-mobile-val">
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: d.tsInfo.color }}>
+                        <IcShield />
+                        <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? `${d.trustScore}%` : '—'}</span>
+                      </span>
+                      {d.isOnline && (
+                        <span style={{ fontSize: 11, color: d.tsInfo.color, background: d.tsInfo.bg, border: `0.5px solid ${d.tsInfo.border}`, borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-mono)' }}>{d.tsInfo.label}</span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="cmp-mobile-row">
+                    <span className="cmp-mobile-lbl">Community Rating</span>
+                    <span className="cmp-mobile-val">
+                      {count > 0 && avg != null ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#4ade80', fontFamily: 'var(--font-mono)' }}>
+                          <span style={{ fontSize: 16, lineHeight: 1 }}>★</span>
+                          <span style={{ fontSize: 15, fontWeight: 700 }}>{avg.toFixed(1)}</span>
+                          <span style={{ fontSize: 12, color: 'var(--text3)' }}>({count})</span>
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 14, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>—</span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="cmp-mobile-row">
+                    <span className="cmp-mobile-lbl">Uptime</span>
+                    <span className="cmp-mobile-val" style={{ color: uptimeColor(uptimePct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
+                      {uptimePct !== null ? `${uptimePct}%` : '—'}
+                    </span>
+                  </div>
+
+                  <div className="cmp-mobile-row">
+                    <span className="cmp-mobile-lbl">Latency</span>
+                    <span className="cmp-mobile-val" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
+                      {d.isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
+                    </span>
+                  </div>
+
+                  <div className="cmp-mobile-row">
+                    <span className="cmp-mobile-lbl">NUT Count</span>
+                    <span className="cmp-mobile-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
+                      {mint.nutCount ?? 0} / 14
+                    </span>
+                  </div>
+
+                  <div className="cmp-mobile-row cmp-mobile-row-wrap">
+                    <span className="cmp-mobile-lbl">NUT Support</span>
+                    <span className="cmp-mobile-val">
+                      {TRACKED_NUT_KEYS.map(key => {
+                        const supported = d.nutsLimits[key] != null
+                        return (
+                          <span key={key} style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', padding: '1px 5px', borderRadius: 3, background: supported ? 'rgba(74,222,128,0.1)' : 'var(--bg3)', color: supported ? '#4ade80' : 'var(--text3)', border: `0.5px solid ${supported ? 'rgba(74,222,128,0.3)' : 'var(--border)'}` }}>
+                            {key.padStart(2, '0')}
+                          </span>
+                        )
+                      })}
+                    </span>
+                  </div>
+
+                  <div className="cmp-mobile-row">
+                    <span className="cmp-mobile-lbl">Version</span>
+                    <span className="cmp-mobile-val">
+                      <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text)', whiteSpace: 'nowrap' }}>{mint.version ?? '—'}</span>
+                      {d.isOutdated && (
+                        <span style={{ fontSize: 10, color: '#ff4d4d', background: 'rgba(255,77,77,0.1)', border: '0.5px solid rgba(255,77,77,0.3)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>Outdated</span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="cmp-mobile-row cmp-mobile-row-last">
+                    <span className="cmp-mobile-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      Backup
+                      <span
+                        ref={backupInfoRef}
+                        style={{ position: 'relative', display: 'inline-flex' }}
+                        onPointerEnter={backupInfoTooltip.onPointerEnter}
+                        onPointerLeave={backupInfoTooltip.onPointerLeave}
+                        onClick={backupInfoTooltip.onClick}
+                      >
+                        <Info size={11} color="#6b7280" style={{ cursor: 'help', flexShrink: 0 }} />
+                        {backupInfoTooltip.open && (
+                          <div style={{
+                            position: 'absolute', bottom: 'calc(100% + 6px)', left: 0,
+                            background: 'var(--bg)', border: '0.5px solid var(--border2)', borderRadius: 8,
+                            padding: '8px 10px', fontSize: 10, color: 'var(--text2)', lineHeight: 1.5,
+                            width: 200, zIndex: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                            pointerEvents: 'none', whiteSpace: 'normal', textAlign: 'left',
+                            fontFamily: 'var(--font-body)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400,
+                          }}>
+                            Whether this mint supports NUT-09, letting wallets restore proofs after data loss.
+                          </div>
+                        )}
+                      </span>
+                    </span>
+                    <span className="cmp-mobile-val">
+                      {d.supportsBackupRestore
+                        ? <span style={{ fontSize: 11.5, color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.3)', borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>✓ Supported</span>
+                        : <span style={{ fontSize: 11.5, color: 'var(--text3)', background: 'var(--bg3)', border: '0.5px solid var(--border)', borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>No backup</span>
+                      }
+                    </span>
+                  </div>
+                </div>
+              )
+            })()}
+          </>
+        ) : (
         <div className="cmp-grid" style={{ gridTemplateColumns: gridCols }}>
 
           {/* ── Mint ── */}
@@ -415,6 +581,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           })}
 
         </div>
+        )}
 
         <div style={{ padding: '4px 20px 20px', borderTop: '1px solid var(--border)' }}>
           <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', margin: '12px 0 18px', lineHeight: 1.5 }}>
@@ -475,7 +642,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {mints.map((mint, i) => (
                   <div key={mint.url}>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: MINT_COLORS[i]!, fontFamily: 'var(--font-mono)', marginBottom: 2 }}>
+                    <div className="cmp-mobile-chart-name" style={{ fontSize: 10, fontWeight: 600, color: MINT_COLORS[i]!, fontFamily: 'var(--font-mono)', marginBottom: 2 }}>
                       {allData[i]!.displayName}
                     </div>
                     <ResponsiveContainer width="100%" height={90}>
@@ -549,25 +716,43 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
 
           {/* ── Software Version History ── */}
           <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>Software Version History</div>
-            <div className="cmp-vh-grid" style={{ gridTemplateColumns: gridCols }}>
-              <div className="cmp-lbl cmp-last">Versions</div>
-              {mints.map((mint, i) => {
-                const versionHistory = versionQueries[i]?.data?.history ?? []
-                return (
-                  <div key={mint.url} className="cmp-val cmp-last" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8, maxHeight: 140, overflowY: 'auto' }}>
-                    {versionHistory.length === 0 ? (
-                      <span className="cmp-vh-entry" style={{ color: 'var(--text3)' }}>No data</span>
-                    ) : versionHistory.map((vh, j) => (
-                      <div key={j} className="cmp-vh-entry">
-                        <div className="cmp-vh-version" style={{ fontWeight: j === 0 ? 700 : 500 }}>{vh.version}</div>
-                        <div className="cmp-vh-since">since {new Date(vh.firstSeenAt).toLocaleDateString()}</div>
-                      </div>
-                    ))}
-                  </div>
-                )
-              })}
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
+              Software Version History{isMobile ? ` — ${allData[activeMintIdx]!.displayName}` : ''}
             </div>
+            {isMobile ? (
+              <div className="cmp-mobile-vh">
+                {(() => {
+                  const versionHistory = versionQueries[activeMintIdx]?.data?.history ?? []
+                  return versionHistory.length === 0 ? (
+                    <span className="cmp-vh-entry" style={{ color: 'var(--text3)' }}>No data</span>
+                  ) : versionHistory.map((vh, j) => (
+                    <div key={j} className="cmp-vh-entry">
+                      <div className="cmp-vh-version" style={{ fontWeight: j === 0 ? 700 : 500 }}>{vh.version}</div>
+                      <div className="cmp-vh-since">since {new Date(vh.firstSeenAt).toLocaleDateString()}</div>
+                    </div>
+                  ))
+                })()}
+              </div>
+            ) : (
+              <div className="cmp-vh-grid" style={{ gridTemplateColumns: gridCols }}>
+                <div className="cmp-lbl cmp-last">Versions</div>
+                {mints.map((mint, i) => {
+                  const versionHistory = versionQueries[i]?.data?.history ?? []
+                  return (
+                    <div key={mint.url} className="cmp-val cmp-last" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8, maxHeight: 140, overflowY: 'auto' }}>
+                      {versionHistory.length === 0 ? (
+                        <span className="cmp-vh-entry" style={{ color: 'var(--text3)' }}>No data</span>
+                      ) : versionHistory.map((vh, j) => (
+                        <div key={j} className="cmp-vh-entry">
+                          <div className="cmp-vh-version" style={{ fontWeight: j === 0 ? 700 : 500 }}>{vh.version}</div>
+                          <div className="cmp-vh-since">since {new Date(vh.firstSeenAt).toLocaleDateString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
 
