@@ -7,7 +7,7 @@ import { TrustMoversPanel } from '@/components/stats/TrustMoversPanel'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
-import { trustColor, trustScoreInfo } from '@/utils/mintFormatting'
+import { trustColor, trustScoreInfo, trustDonutArc } from '@/utils/mintFormatting'
 import { computeGeoDistribution } from '@/utils/geoDistribution'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -1068,6 +1068,7 @@ export default function Stats() {
             below — see the comment on that panel's new spot in row 2. */}
         {networkHealth && (() => {
           const info = trustScoreInfo(networkHealth.score)
+          const gaugeArc = trustDonutArc(networkHealth.score)
           return (
             <div className="stats-panel stats-nhi-panel">
               <div className="stats-card-header">
@@ -1111,8 +1112,8 @@ export default function Stats() {
                     <svg viewBox="0 0 72 72" style={isMobile ? undefined : { width: 84, height: 84 }}>
                       <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
                       <circle cx="36" cy="36" r="27" fill="none" stroke={info.color} strokeWidth="7"
-                        strokeDasharray={`${(networkHealth.score * 1.696).toFixed(1)} 169.6`}
-                        strokeDashoffset="42.4"
+                        strokeDasharray={gaugeArc.dashArray}
+                        strokeDashoffset={gaugeArc.dashOffset}
                         strokeLinecap="round"
                         transform="rotate(-90 36 36)" />
                     </svg>
