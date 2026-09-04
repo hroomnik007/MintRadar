@@ -36,6 +36,7 @@ jobs:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
+          command_timeout: 30m
           script: |
             set -euo pipefail
             cd /var/www/mintradar-repo
@@ -54,6 +55,7 @@ jobs:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
+          command_timeout: 30m
           script: |
             set -euo pipefail
             cd /var/www/mintradar-repo
