@@ -1152,6 +1152,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 3px;
   min-width: 0;
   text-align: center;
@@ -1163,6 +1164,10 @@ button.md-url-copy.copied > svg { opacity: 1; }
   font-family: var(--font-mono);
   line-height: 1.1;
   white-space: nowrap;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
 }
 
 .audit-summary-label {
@@ -1171,12 +1176,19 @@ button.md-url-copy.copied > svg { opacity: 1; }
   letter-spacing: 0.02em;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 3px;
 }
 
+/* "Recent errors" cell only — the reliability sub-text ("97% ok" /
+   "too few to score" / "no recent swaps") now sits on the same line as the
+   "N / 100" ratio instead of a small line below it. It inherits the cell's
+   colour (recentReliabilityColor) so the green/amber/grey coding is kept. */
+.audit-summary-dot { color: var(--text-faint); font-weight: 400; }
+
 .audit-summary-sub {
-  font-size: 11px;
-  color: var(--text-faint);
+  font-size: 13px;
+  font-weight: 500;
   font-family: var(--font-mono);
   letter-spacing: 0.02em;
 }

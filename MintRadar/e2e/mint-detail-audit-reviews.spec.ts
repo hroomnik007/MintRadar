@@ -24,7 +24,7 @@ test('Audit tab: summary strip "Recent errors" matches the Trust Score breakdown
   await expect(strip).toBeVisible()
 
   const recentCell = strip.locator('.audit-summary-cell', { hasText: 'Recent errors' })
-  await expect(recentCell.locator('.audit-summary-value')).toHaveText('3 / 100')
+  await expect(recentCell.locator('.audit-summary-main')).toHaveText('3 / 100')
   await expect(recentCell.locator('.audit-summary-sub')).toHaveText('97% ok')
 
   // The all-time line carries the lifetime totals without duplicating them as cards.

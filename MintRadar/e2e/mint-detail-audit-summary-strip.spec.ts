@@ -33,8 +33,11 @@ test('fully audited: strip shows Mints / Melts / Recent errors / Last checked', 
   const cell = (label: string) => strip.locator('.audit-summary-cell', { hasText: label })
   await expect(cell('Mints').locator('.audit-summary-value')).toHaveText('1,234')
   await expect(cell('Melts').locator('.audit-summary-value')).toHaveText('567')
-  await expect(cell('Recent errors').locator('.audit-summary-value')).toHaveText('2 / 100')
+  // Ratio and reliability sub-text now share one line inside .audit-summary-value.
+  await expect(cell('Recent errors').locator('.audit-summary-main')).toHaveText('2 / 100')
   await expect(cell('Recent errors').locator('.audit-summary-sub')).toHaveText('98% ok')
+  // 2/100 errors → <5% err bucket → audit score 3 → amber (matches the sidebar breakdown).
+  await expect(cell('Recent errors').locator('.audit-summary-value')).toHaveCSS('color', 'rgb(255, 165, 0)')
   await expect(cell('Last checked').locator('.audit-summary-value')).toHaveText('3h ago')
 
   await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-strip-full.png' })
@@ -49,8 +52,10 @@ test('too few recent swaps: Recent errors cell says "too few to score"', async (
   })
 
   const recent = page.locator('.audit-summary-strip .audit-summary-cell', { hasText: 'Recent errors' })
-  await expect(recent.locator('.audit-summary-value')).toHaveText('0 / 2')
+  await expect(recent.locator('.audit-summary-main')).toHaveText('0 / 2')
   await expect(recent.locator('.audit-summary-sub')).toHaveText('too few to score')
+  // Unknown / too-few state stays grey (var(--text3)).
+  await expect(recent.locator('.audit-summary-value')).toHaveCSS('color', 'rgb(134, 152, 143)')
 
   // Last checked still renders from our own sync time.
   const last = page.locator('.audit-summary-strip .audit-summary-cell', { hasText: 'Last checked' })
@@ -60,12 +65,15 @@ test('too few recent swaps: Recent errors cell says "too few to score"', async (
 })
 
 // ── No recent swap window at all (audited, but /swaps returned nothing) ─
-test('no rolling-window sample: Recent errors cell falls back to an em dash', async ({ page }) => {
+test('no rolling-window sample: Recent errors cell shows only the sub-text', async ({ page }) => {
   await gotoAudit(page, { auditRecentTotal: null, auditRecentErrors: null })
 
   const recent = page.locator('.audit-summary-strip .audit-summary-cell', { hasText: 'Recent errors' })
-  await expect(recent.locator('.audit-summary-value')).toHaveText('—')
+  // No ratio to show → the "N / 100" main span is omitted entirely.
+  await expect(recent.locator('.audit-summary-main')).toHaveCount(0)
+  await expect(recent.locator('.audit-summary-value')).toHaveText('no recent swaps')
   await expect(recent.locator('.audit-summary-sub')).toHaveText('no recent swaps')
+  await expect(recent.locator('.audit-summary-value')).toHaveCSS('color', 'rgb(134, 152, 143)')
 })
 
 // ── Mint not in audit.8333.space at all ───────────────────────

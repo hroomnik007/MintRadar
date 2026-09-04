@@ -1549,7 +1549,15 @@ function MintDetailContent({ url }: { url: string }) {
                     </div>
                   </div>
                   <div className="audit-summary-cell">
-                    <div className="audit-summary-value" style={{color: recentReliabilityColor}}>{stripRecentErrorsDisplay}</div>
+                    <div className="audit-summary-value" style={{color: recentReliabilityColor}}>
+                      {stripRecentErrorsDisplay !== '—' && (
+                        <>
+                          <span className="audit-summary-main">{stripRecentErrorsDisplay}</span>
+                          <span className="audit-summary-dot">·</span>
+                        </>
+                      )}
+                      <span className="audit-summary-sub">{stripRecentErrorsSub}</span>
+                    </div>
                     <div className="audit-summary-label">
                       Recent errors
                       <span
@@ -1567,7 +1575,6 @@ function MintDetailContent({ url }: { url: string }) {
                         )}
                       </span>
                     </div>
-                    <div className="audit-summary-sub">{stripRecentErrorsSub}</div>
                   </div>
                   <div className="audit-summary-cell">
                     <div className="audit-summary-value" style={{fontSize:15}}>{auditLastCheckedDisplay}</div>
