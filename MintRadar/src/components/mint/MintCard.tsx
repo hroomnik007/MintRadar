@@ -143,11 +143,6 @@ export function MintCard({
       </div>
 
       <div className="card-pills">
-        {isTestMint(mint.url) && (
-          <span className="card-pill" style={{ color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)' }} title="Not for real funds — for testing and development only">
-            🧪 Test mint
-          </span>
-        )}
         {mint.version && (
           <span className="card-pill">{mint.version}</span>
         )}
@@ -173,6 +168,11 @@ export function MintCard({
           <span className="card-pill" style={{ color: 'var(--green-bright)', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-mono-data)' }}>
             <span style={{ fontSize: 15, lineHeight: 1 }}>★</span>
             <span>{mint.reviewAvgRating.toFixed(1)} ({mint.reviewCount})</span>
+          </span>
+        )}
+        {isTestMint(mint.url) && (
+          <span className="card-pill" style={{ color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)' }} title="Not for real funds — for testing and development only">
+            🧪 Test mint
           </span>
         )}
       </div>
