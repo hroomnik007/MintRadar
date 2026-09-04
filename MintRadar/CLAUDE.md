@@ -410,7 +410,7 @@ Self-hosted font weights (unchanged by the 2026-07-24 color redesign — see "Vi
 
 **Mint Info value rows** (MintDetail) — all value `<span>` elements use `.md-info-value` class only, with no inline color/weight/family overrides. Inline `color: var(--text2)` previously made bold text look dim. Full description keeps `style={{textAlign:'left', maxWidth:'none', lineHeight:1.5}}` for layout only.
 
-**Text colors (as of 2026-07-24 redesign)** — `--text` (`#f2f7f4`) for primary/bold values, `--text2`/`--text-dim` (`#b7c8c0`) for secondary/muted, `--text3`/`--t3`/`--text-faint` (`#86988f`) for tertiary labels. These replace the old DM Sans v2 values (`#F0F2F7`/`#8B90A0`/`#AAB4C7`) — verified at ~5.5:1 contrast (WCAG AA) on the new `--bg` for the weakest pair (`--text-faint` on `--bg`).
+**Text colors (as of 2026-07-24 redesign)** — `--text` (`#f2f7f4`) for primary/bold values, `--text2`/`--text-dim` (`#b7c8c0`) for secondary/muted, `--text3`/`--t3`/`--text-faint` (`#9aada4`) for tertiary labels. These replace the old DM Sans v2 values (`#F0F2F7`/`#8B90A0`/`#AAB4C7`). **2026-09-04:** `--t3` was `#86988f`, which measured only **4.03:1** on `--surface-card` (`#223a2f`, the mint-card background) — below the WCAG 2.1 AA 4.5:1 threshold for normal text, and `.card-host` / `.latency-label` / `.latency-value.muted` on every Dashboard/Watchlist mint card use it. Bumped to `#9aada4`: now 5.18:1 on `--surface-card`, 7.14:1 on `--bg`, 6.73:1 on `--surface`, 6.26:1 on `--elevated` — AA-clean on every real background. Still clearly the muted tier (L\* 0.39 vs `--t2` 0.55 / `--t1` 0.92).
 
 ## Visual Redesign — "Patina/Copper" Palette (2026-07-24)
 

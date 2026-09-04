@@ -67,14 +67,14 @@
   /* Text — new names */
   --t1:           #f2f7f4;
   --t2:           #b7c8c0;
-  --t3:           #86988f;
+  --t3:           #9aada4;
 
   /* Text — legacy aliases */
   --text:         #f2f7f4;
   --text2:        #b7c8c0;
-  --text3:        #86988f;
+  --text3:        #9aada4;
   --text-dim:     #b7c8c0;
-  --text-faint:   #86988f;
+  --text-faint:   #9aada4;
 
   /* Accent (patina green) */
   --accent:       #5cc9a3;
