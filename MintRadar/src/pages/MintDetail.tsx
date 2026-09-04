@@ -16,7 +16,7 @@ import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { ComparisonModal } from '@/components/ComparisonModal'
 import { MintComparePicker } from '@/components/MintComparePicker'
-import { mintAgeBadge, trustScoreColor, trustScoreInfo, formatTimeAgo, formatAuditErrorRatio } from '@/utils/mintFormatting'
+import { mintAgeBadge, trustScoreColor, trustScoreInfo, formatTimeAgo, formatAuditErrorRatio, trustDonutArc } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
@@ -615,6 +615,7 @@ function MintDetailContent({ url }: { url: string }) {
 
   const trustScore = knownMint?.trustScore ?? computeTrustScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, knownMint?.auditRecentTotal ?? null, knownMint?.auditRecentErrors ?? null)
   const tsInfo = trustScoreInfo(trustScore)
+  const trustDonut = trustDonutArc(trustScore)
 
   // Trust Score Breakdown modal rows — hoisted out of the modal's JSX (was a
   // nested IIFE) because the react-compiler ESLint rules disallow reading a
@@ -943,8 +944,8 @@ function MintDetailContent({ url }: { url: string }) {
             <svg viewBox="0 0 72 72" aria-hidden="true">
               <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="8" />
               <circle cx="36" cy="36" r="27" fill="none" stroke="var(--green-bright)" strokeWidth="8"
-                strokeDasharray={`${(trustScore * 1.696).toFixed(1)} 169.6`}
-                strokeDashoffset="42.4"
+                strokeDasharray={trustDonut.dashArray}
+                strokeDashoffset={trustDonut.dashOffset}
                 strokeLinecap="round"
                 transform="rotate(-90 36 36)" />
             </svg>
@@ -1716,8 +1717,8 @@ function MintDetailContent({ url }: { url: string }) {
                 <svg viewBox="0 0 72 72">
                   <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
                   <circle cx="36" cy="36" r="27" fill="none" stroke="var(--green-bright)" strokeWidth="7"
-                    strokeDasharray={`${(trustScore * 1.696).toFixed(1)} 169.6`}
-                    strokeDashoffset="42.4"
+                    strokeDasharray={trustDonut.dashArray}
+                    strokeDashoffset={trustDonut.dashOffset}
                     strokeLinecap="round"
                     transform="rotate(-90 36 36)" />
                 </svg>

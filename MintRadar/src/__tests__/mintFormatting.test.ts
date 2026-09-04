@@ -7,6 +7,8 @@ import {
   latencyColor,
   formatTimeAgo,
   formatAuditErrorRatio,
+  trustDonutArc,
+  TRUST_DONUT_CIRCUMFERENCE,
 } from '../utils/mintFormatting'
 
 // Inject a fixed `now` so tests are deterministic regardless of when they run.
@@ -278,5 +280,44 @@ describe('formatAuditErrorRatio', () => {
 
   it('renders a zero-swap total literally', () => {
     expect(formatAuditErrorRatio(0, 0)).toBe('0 / 0')
+  })
+})
+
+// ── trustDonutArc (Trust Score gauge SVG geometry) ────────────
+describe('trustDonutArc', () => {
+  const total = (dashArray: string) =>
+    dashArray.split(' ').reduce((s, n) => s + Number(n), 0)
+  const filledLen = (dashArray: string) => Number(dashArray.split(' ')[0])
+
+  it('circumference is 2·π·27 for the r=27 gauge circle', () => {
+    expect(TRUST_DONUT_CIRCUMFERENCE).toBeCloseTo(169.646, 2)
+  })
+
+  it('never applies a dash offset — the arc starts at 12 o\'clock via rotate(-90)', () => {
+    for (const pct of [0, 20, 50, 80, 100]) {
+      expect(trustDonutArc(pct).dashOffset).toBe(0)
+    }
+  })
+
+  it('filled + gap always sum to the full circumference', () => {
+    for (const pct of [0, 12.5, 20, 50, 80, 99, 100]) {
+      expect(total(trustDonutArc(pct).dashArray)).toBeCloseTo(TRUST_DONUT_CIRCUMFERENCE, 1)
+    }
+  })
+
+  it('fills exactly pct% of the circumference', () => {
+    expect(filledLen(trustDonutArc(0).dashArray)).toBeCloseTo(0, 2)
+    expect(filledLen(trustDonutArc(20).dashArray)).toBeCloseTo(0.20 * TRUST_DONUT_CIRCUMFERENCE, 1)
+    expect(filledLen(trustDonutArc(50).dashArray)).toBeCloseTo(0.50 * TRUST_DONUT_CIRCUMFERENCE, 1)
+    // regression: 80% must be 80% of the ring (~135.7), not the old ~93 (~55%)
+    expect(filledLen(trustDonutArc(80).dashArray)).toBeCloseTo(135.72, 1)
+    expect(filledLen(trustDonutArc(80).dashArray) / TRUST_DONUT_CIRCUMFERENCE).toBeCloseTo(0.8, 3)
+    expect(filledLen(trustDonutArc(100).dashArray)).toBeCloseTo(TRUST_DONUT_CIRCUMFERENCE, 1)
+  })
+
+  it('clamps out-of-range and non-finite input', () => {
+    expect(filledLen(trustDonutArc(-10).dashArray)).toBeCloseTo(0, 2)
+    expect(filledLen(trustDonutArc(150).dashArray)).toBeCloseTo(TRUST_DONUT_CIRCUMFERENCE, 1)
+    expect(filledLen(trustDonutArc(NaN).dashArray)).toBeCloseTo(0, 2)
   })
 })
