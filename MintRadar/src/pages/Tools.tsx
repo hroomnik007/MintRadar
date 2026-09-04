@@ -4,6 +4,7 @@ import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useNow } from '@/hooks/useNow'
 import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, type TokenInfo } from '@/utils/cashuToken'
+import { isTestMint } from '@/constants/testMints'
 import './Tools.css'
 
 function getHostname(url: string): string {
@@ -357,6 +358,10 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
 
     const candidates = knownMints
       .filter(m => m.online === true && m.trustScore != null)
+      // Dev/test-only mints (fake sats, "do not use as default", etc.) are
+      // real and findable via Dashboard/Watchlist/Search, but the wizard is
+      // an active recommendation — never suggest one as someone's mint.
+      .filter(m => !isTestMint(m.url))
       // A mint that doesn't issue this unit can't serve the user at all, so it
       // is dropped before scoring rather than ranked and then explained away.
       .filter(m => (m.units ?? []).includes(selectedUnit))

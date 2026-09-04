@@ -18,6 +18,7 @@ import { ComparisonModal } from '@/components/ComparisonModal'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { mintAgeBadge, trustScoreColor, trustScoreInfo, formatTimeAgo, formatAuditErrorRatio, trustDonutArc } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
+import { isTestMint } from '@/constants/testMints'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import {
@@ -738,6 +739,11 @@ function MintDetailContent({ url }: { url: string }) {
                 </span>
                 {ageBadge && (
                   <span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:ageBadge.color,background:ageBadge.bg,border:`0.5px solid ${ageBadge.border}`,borderRadius:5,padding:'3px 9px',flexShrink:0}}>{ageBadge.label}</span>
+                )}
+                {isTestMint(url) && (
+                  <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}} title="Not for real funds — for testing and development only">
+                    🧪 Test mint
+                  </span>
                 )}
               </div>
               <button

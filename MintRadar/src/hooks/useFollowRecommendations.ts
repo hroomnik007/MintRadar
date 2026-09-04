@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { verifyEvent } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
+import { isTestMint } from '@/constants/testMints'
 
 export const FOLLOW_RELAYS = [
   'wss://relay.damus.io',
@@ -53,6 +54,8 @@ export async function fetchFollowRecs(pubkey: string): Promise<{ recs: FollowRec
   }
 
   const recs: FollowRec[] = [...urlMap.entries()]
+    // A follow reviewing a dev/test mint doesn't mean it's a real recommendation.
+    .filter(([url]) => !isTestMint(url))
     .map(([url, pubkeys]) => ({ url, count: pubkeys.size, recommenders: [...pubkeys].slice(0, 5) }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 20)

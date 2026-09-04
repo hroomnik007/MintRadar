@@ -65,6 +65,22 @@ describe('GET /api/stats', () => {
     expect(res.body.top5ByTrustScore.map((m: { trustScore: number }) => m.trustScore)).toEqual([80, 50])
   })
 
+  it('excludes known dev/test-only mints from top5ByTrustScore even with a top score', async () => {
+    query
+      .mockResolvedValueOnce({
+        rows: [
+          mintRow({ url: 'https://testnut.cashu.space', name: 'Testnut mint', last_trust_score: 99, online: true }),
+          mintRow({ url: 'https://a.example', last_trust_score: 80, online: true }),
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ avg_latency: 150 }] })
+
+    const res = await request(app).get('/api/stats')
+
+    expect(res.status).toBe(200)
+    expect(res.body.top5ByTrustScore.map((m: { url: string }) => m.url)).toEqual(['https://a.example'])
+  })
+
   it('returns zeroed/empty stats for an empty database (no crash)', async () => {
     query
       .mockResolvedValueOnce({ rows: [] })

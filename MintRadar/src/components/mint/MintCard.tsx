@@ -8,6 +8,7 @@ import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUserRelays } from '@/hooks/useUserRelays'
 import { mintAgeBadge, uptimeColor, formatTimeAgo } from '@/utils/mintFormatting'
+import { isTestMint } from '@/constants/testMints'
 import { db } from '@/db'
 import { resolveNotificationRelays, syncSubscribeToServer, syncUnsubscribeFromServer } from '@/core/nostr/notificationSubscription'
 
@@ -142,6 +143,11 @@ export function MintCard({
       </div>
 
       <div className="card-pills">
+        {isTestMint(mint.url) && (
+          <span className="card-pill" style={{ color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)' }} title="Not for real funds — for testing and development only">
+            🧪 Test mint
+          </span>
+        )}
         {mint.version && (
           <span className="card-pill">{mint.version}</span>
         )}

@@ -11,6 +11,7 @@ import { authenticateNip98 } from './nip98Auth.js'
 import { fetchOgMintData, renderMintOgHtml } from './og.js'
 import { computeTrustMovers, type MintScoreSnapshot } from './trustMovers.js'
 import { globalMeanRating, weightedRating } from './weightedRating.js'
+import { isTestMint } from './testMints.js'
 
 let knownMintsCache: { data: unknown; expiresAt: number } | null = null
 const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
@@ -691,6 +692,9 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
       }))
       const top5 = [...rows]
         .filter(r => r.last_trust_score != null)
+        // Known dev/test-only mints are excluded from this "best of" list —
+        // still fully visible/probed elsewhere, just not proactively recommended.
+        .filter(r => !isTestMint(r.url as string))
         .sort((a, b) => (b.last_trust_score as number) - (a.last_trust_score as number))
         .slice(0, 5)
         .map(r => ({ url: r.url, name: r.name, trustScore: r.last_trust_score as number }))
