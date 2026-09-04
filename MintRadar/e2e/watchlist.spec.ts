@@ -13,7 +13,9 @@ test.describe('Watchlist', () => {
     // Without a Nostr session the watchlist is gated behind login.
     const gate = page.locator('.wl-login-gate')
     await expect(gate.getByRole('heading', { name: 'My Watchlist' })).toBeVisible()
+    await expect(gate.getByText(/sync your watchlist across devices/)).toBeVisible()
     await expect(gate.getByRole('button', { name: /Login via Nostr/ })).toBeVisible()
+    await expect(gate.getByText(/Your list is stored on Nostr/)).toBeVisible()
     // No watchlist grid is rendered.
     await expect(page.locator('.wl-grid')).toHaveCount(0)
   })
@@ -49,7 +51,8 @@ test.describe('Watchlist', () => {
     await loginAs(page)
     await page.goto('/watchlist')
 
-    // Logged in but nothing watched yet → the empty-state radar message.
-    await expect(page.getByText('Nothing on radar')).toBeVisible()
+    // Logged in but nothing watched yet → the empty-state message + CTA.
+    await expect(page.getByText('No mints watched yet')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Go to Dashboard' })).toBeVisible()
   })
 })

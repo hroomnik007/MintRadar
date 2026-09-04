@@ -191,6 +191,7 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
 }
 
 export default function Watchlist() {
+  const navigate = useNavigate()
   const mints = useWatchlistStore(state => state.mints)
   const loadFromDb = useWatchlistStore(state => state.loadFromDb)
 
@@ -271,7 +272,7 @@ export default function Watchlist() {
       <div className="watchlist-page">
         <div className="wl-login-gate">
           <h2>My Watchlist</h2>
-          <p>Login via Nostr to track your personal mints. Your data stays in your browser.</p>
+          <p>Log in with Nostr to sync your watchlist across devices and get a message when a mint goes offline or comes back online.</p>
           <button
             type="button"
             className="wl-add-btn"
@@ -279,6 +280,7 @@ export default function Watchlist() {
           >
             ⚡ Login via Nostr
           </button>
+          <div className="wl-login-hint">Your list is stored on Nostr. Alerts go to your Nostr identity.</div>
         </div>
       </div>
     )
@@ -308,8 +310,11 @@ export default function Watchlist() {
           ) : mints.length === 0 ? (
             <div className="wl-empty">
               <div className="wl-empty-icon"><IcRadar /></div>
-              <div className="wl-empty-title">Nothing on radar</div>
-              <div className="wl-empty-sub">Watch mints from the Dashboard to track them here</div>
+              <div className="wl-empty-title">No mints watched yet</div>
+              <div className="wl-empty-sub">Add mints from the Dashboard with + Watch. Your list syncs over Nostr - you'll get alerts if status changes.</div>
+              <button type="button" className="wl-add-btn" onClick={() => navigate('/dashboard')}>
+                Go to Dashboard
+              </button>
             </div>
           ) : (
             <>

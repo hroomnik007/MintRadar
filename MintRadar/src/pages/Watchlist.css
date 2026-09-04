@@ -339,6 +339,12 @@
   font-family: var(--font-mono);
 }
 
+.wl-login-hint {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 12px;
+}
+
 /* The Watchlist has no filter/sort controls (small personal lists) — all the
    .filter-* / .sort-* rules it used to duplicate live in Dashboard.css. */
 
