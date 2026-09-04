@@ -342,6 +342,37 @@ function MintDetailContent({ url }: { url: string }) {
   const profile = useAuthStore(state => state.profile)
   const authMethod = useAuthStore(state => state.method)
   const isLoggedIn = profile !== null
+
+  // "+ Watch" while logged out opens a modal instead of a silent no-op/redirect.
+  // pendingAutoWatchRef is consumed exactly once — set when the user confirms
+  // login from that modal, cleared as soon as it fires (success or not) so a
+  // later, unrelated login never triggers a surprise auto-add.
+  const [showWatchLoginModal, setShowWatchLoginModal] = useState(false)
+  const pendingAutoWatchRef = useRef(false)
+  const wasLoggedInRef = useRef(isLoggedIn)
+  useEffect(() => {
+    if (!wasLoggedInRef.current && isLoggedIn && pendingAutoWatchRef.current) {
+      pendingAutoWatchRef.current = false
+      if (!useWatchlistStore.getState().mints.includes(url)) void addMint(url)
+    }
+    wasLoggedInRef.current = isLoggedIn
+  }, [isLoggedIn, url, addMint])
+  const closeWatchLoginModal = useCallback(() => {
+    setShowWatchLoginModal(false)
+    pendingAutoWatchRef.current = false
+  }, [setShowWatchLoginModal])
+  const confirmWatchLogin = useCallback(() => {
+    pendingAutoWatchRef.current = true
+    setShowWatchLoginModal(false)
+    window.dispatchEvent(new CustomEvent('mintradar:open-login'))
+  }, [setShowWatchLoginModal])
+  useEffect(() => {
+    if (!showWatchLoginModal) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeWatchLoginModal() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [showWatchLoginModal, closeWatchLoginModal])
+
   const { reviews, loading: reviewsLoading } = useMintReviews(url)
   const { data: nostrReviewsData } = useQuery({
     queryKey: ['mint', 'nostr-reviews', url],
@@ -812,8 +843,7 @@ function MintDetailContent({ url }: { url: string }) {
             ) : (
               <button
                 className="md-watch-btn"
-                style={{ color: 'var(--text3)', cursor: 'default' }}
-                onClick={e => e.preventDefault()}
+                onClick={() => setShowWatchLoginModal(true)}
                 title="Login with Nostr to add to watchlist"
               >
                 <Plus size={11} /><span>Watch</span>
@@ -1830,6 +1860,26 @@ function MintDetailContent({ url }: { url: string }) {
               >
                 {copiedUrl ? 'Copied!' : 'Copy'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showWatchLoginModal && (
+        <div className="rv-modal-overlay" onClick={closeWatchLoginModal}>
+          <div className="rv-modal" onClick={e => e.stopPropagation()}>
+            <div className="rv-modal-head">
+              <div className="rv-modal-heading">
+                <div className="rv-modal-title">Watch this mint</div>
+                <div className="rv-modal-sub">
+                  Log in with Nostr to add it to your watchlist. Your list syncs over Nostr and you&apos;ll get a message if this mint goes offline or comes back online.
+                </div>
+              </div>
+              <button type="button" className="rv-modal-close" onClick={closeWatchLoginModal} aria-label="Close">×</button>
+            </div>
+            <div className="rv-actions">
+              <button type="button" className="rv-btn-cancel" onClick={closeWatchLoginModal}>Cancel</button>
+              <button type="button" className="rv-btn-submit" onClick={confirmWatchLogin}>⚡ Login via Nostr</button>
             </div>
           </div>
         </div>
