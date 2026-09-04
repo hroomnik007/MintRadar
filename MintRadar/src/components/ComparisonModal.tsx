@@ -144,7 +144,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
   const d3 = useMintCompareData(mints[3] ?? EMPTY_MINT, latestVersion)
   const allData = [d0, d1, d2, d3].slice(0, mints.length)
 
-  const gridCols = `140px ${mints.map(() => 'minmax(160px, 1fr)').join(' ')}`
+  const gridCols = `132px ${mints.map(() => 'minmax(150px, 1fr)').join(' ')}`
 
   const isMobile = useIsMobile()
   const backupInfoRef = useRef<HTMLSpanElement>(null)
@@ -251,8 +251,8 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               <div key={mint.url} className="cmp-val cmp-row-mint" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
                 <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={20} />
                 <div style={{ minWidth: 0, width: '100%' }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.displayName}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.hostname}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.displayName}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.hostname}</div>
                   {!d.isNew && badge && (
                     <span style={{ fontSize: 9, color: badge.color, background: badge.bg, border: `0.5px solid ${badge.border}`, borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>{badge.label}</span>
                   )}
@@ -268,8 +268,8 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             const d = allData[i]!
             return (
               <div key={mint.url} className="cmp-val">
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontFamily: 'var(--font-mono)' }}>
-                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: d.isOnline ? 'var(--accent)' : '#ff4d4d', display: 'inline-block', flexShrink: 0 }} />
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, fontFamily: 'var(--font-mono)' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: d.isOnline ? 'var(--accent)' : '#ff4d4d', display: 'inline-block', flexShrink: 0 }} />
                   {d.isOnline ? 'Online' : 'Offline'}
                 </span>
               </div>
@@ -284,10 +284,10 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               <div key={mint.url} className="cmp-val">
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: d.tsInfo.color }}>
                   <IcShield />
-                  <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? `${d.trustScore}%` : '—'}</span>
+                  <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? `${d.trustScore}%` : '—'}</span>
                 </span>
                 {d.isOnline && (
-                  <span style={{ marginLeft: 6, fontSize: 10, color: d.tsInfo.color, background: d.tsInfo.bg, border: `0.5px solid ${d.tsInfo.border}`, borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-mono)' }}>{d.tsInfo.label}</span>
+                  <span style={{ marginLeft: 6, fontSize: 11, color: d.tsInfo.color, background: d.tsInfo.bg, border: `0.5px solid ${d.tsInfo.border}`, borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-mono)' }}>{d.tsInfo.label}</span>
                 )}
               </div>
             )
@@ -302,12 +302,12 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               <div key={mint.url} className="cmp-val">
                 {count > 0 && avg != null ? (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#4ade80', fontFamily: 'var(--font-mono)' }}>
-                    <span style={{ fontSize: 14, lineHeight: 1 }}>★</span>
-                    <span style={{ fontSize: 12, fontWeight: 700 }}>{avg.toFixed(1)}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text3)' }}>({count})</span>
+                    <span style={{ fontSize: 16, lineHeight: 1 }}>★</span>
+                    <span style={{ fontSize: 15, fontWeight: 700 }}>{avg.toFixed(1)}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text3)' }}>({count})</span>
                   </span>
                 ) : (
-                  <span style={{ fontSize: 13, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>—</span>
+                  <span style={{ fontSize: 14, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>—</span>
                 )}
               </div>
             )
@@ -318,7 +318,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           {mints.map((mint, i) => {
             const uptimePct = uptime24hQueries[i]?.data?.uptimePct ?? null
             return (
-              <div key={mint.url} className="cmp-val" style={{ color: uptimeColor(uptimePct), fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600 }}>
+              <div key={mint.url} className="cmp-val" style={{ color: uptimeColor(uptimePct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
                 {uptimePct !== null ? `${uptimePct}%` : '—'}
               </div>
             )
@@ -329,7 +329,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           {mints.map((mint, i) => {
             const d = allData[i]!
             return (
-              <div key={mint.url} className="cmp-val" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+              <div key={mint.url} className="cmp-val" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
                 {d.isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
               </div>
             )
@@ -338,7 +338,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           {/* ── NUT Count ── */}
           <div className="cmp-lbl">NUT Count</div>
           {mints.map(mint => (
-            <div key={mint.url} className="cmp-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+            <div key={mint.url} className="cmp-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
               {mint.nutCount ?? 0} / 14
             </div>
           ))}
@@ -353,7 +353,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                   {TRACKED_NUT_KEYS.map(key => {
                     const supported = d.nutsLimits[key] != null
                     return (
-                      <span key={key} style={{ fontSize: 9, fontFamily: 'var(--font-mono)', padding: '1px 4px', borderRadius: 3, background: supported ? 'rgba(74,222,128,0.1)' : 'var(--bg3)', color: supported ? '#4ade80' : 'var(--text3)', border: `0.5px solid ${supported ? 'rgba(74,222,128,0.3)' : 'var(--border)'}` }}>
+                      <span key={key} style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', padding: '1px 5px', borderRadius: 3, background: supported ? 'rgba(74,222,128,0.1)' : 'var(--bg3)', color: supported ? '#4ade80' : 'var(--text3)', border: `0.5px solid ${supported ? 'rgba(74,222,128,0.3)' : 'var(--border)'}` }}>
                         {key.padStart(2, '0')}
                       </span>
                     )
@@ -369,9 +369,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             const d = allData[i]!
             return (
               <div key={mint.url} className="cmp-val">
-                <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>{mint.version ?? '—'}</span>
+                <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text)', whiteSpace: 'nowrap' }}>{mint.version ?? '—'}</span>
                 {d.isOutdated && (
-                  <span style={{ marginLeft: 5, fontSize: 9, color: '#ff4d4d', background: 'rgba(255,77,77,0.1)', border: '0.5px solid rgba(255,77,77,0.3)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>Outdated</span>
+                  <span style={{ marginLeft: 5, fontSize: 10, color: '#ff4d4d', background: 'rgba(255,77,77,0.1)', border: '0.5px solid rgba(255,77,77,0.3)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>Outdated</span>
                 )}
               </div>
             )
@@ -407,8 +407,8 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             return (
               <div key={mint.url} className="cmp-val cmp-last">
                 {d.supportsBackupRestore
-                  ? <span style={{ fontSize: 10, color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.3)', borderRadius: 4, padding: '1px 6px', fontFamily: 'var(--font-mono)' }}>✓ Supported</span>
-                  : <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--bg3)', border: '0.5px solid var(--border)', borderRadius: 4, padding: '1px 6px', fontFamily: 'var(--font-mono)' }}>No backup</span>
+                  ? <span style={{ fontSize: 11.5, color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.3)', borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>✓ Supported</span>
+                  : <span style={{ fontSize: 11.5, color: 'var(--text3)', background: 'var(--bg3)', border: '0.5px solid var(--border)', borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>No backup</span>
                 }
               </div>
             )
@@ -550,23 +550,25 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           {/* ── Software Version History ── */}
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>Software Version History</div>
-            <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: '0 16px' }}>
-              <div className="cmp-lbl cmp-last">Versions</div>
-              {mints.map((mint, i) => {
-                const versionHistory = versionQueries[i]?.data?.history ?? []
-                return (
-                  <div key={mint.url} className="cmp-val cmp-last" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 5, maxHeight: 140, overflowY: 'auto' }}>
-                    {versionHistory.length === 0 ? (
-                      <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>No data</span>
-                    ) : versionHistory.map((vh, j) => (
-                      <div key={j} style={{ fontSize: 10, fontFamily: 'var(--font-mono)', lineHeight: 1.4 }}>
-                        <span style={{ color: 'var(--text)', fontWeight: j === 0 ? 700 : 400 }}>{vh.version}</span>
-                        <span style={{ color: 'var(--text3)' }}> since {new Date(vh.firstSeenAt).toLocaleDateString()}</span>
-                      </div>
-                    ))}
-                  </div>
-                )
-              })}
+            <div className="cmp-vh-scroll">
+              <div className="cmp-vh-grid" style={{ gridTemplateColumns: gridCols }}>
+                <div className="cmp-lbl cmp-last">Versions</div>
+                {mints.map((mint, i) => {
+                  const versionHistory = versionQueries[i]?.data?.history ?? []
+                  return (
+                    <div key={mint.url} className="cmp-val cmp-last" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 5, maxHeight: 140, overflowY: 'auto' }}>
+                      {versionHistory.length === 0 ? (
+                        <span className="cmp-vh-entry" style={{ color: 'var(--text3)' }}>No data</span>
+                      ) : versionHistory.map((vh, j) => (
+                        <div key={j} className="cmp-vh-entry">
+                          <span style={{ color: 'var(--text)', fontWeight: j === 0 ? 700 : 400 }}>{vh.version}</span>
+                          <span style={{ color: 'var(--text3)' }}> since {new Date(vh.firstSeenAt).toLocaleDateString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
         </div>

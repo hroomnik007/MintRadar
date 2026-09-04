@@ -1086,9 +1086,9 @@
 }
 
 .cmp-lbl {
-  padding: 12px 16px 12px 0;
+  padding: 12px 14px 12px 0;
   border-bottom: 0.5px solid var(--border2);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text3);
   text-transform: uppercase;
@@ -1099,9 +1099,9 @@
 }
 
 .cmp-val {
-  padding: 12px 16px 12px 0;
+  padding: 12px 14px 12px 0;
   border-bottom: 0.5px solid var(--border2);
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text);
   align-self: center;
   display: flex;
@@ -1109,6 +1109,25 @@
   flex-wrap: wrap;
   gap: 4px;
   min-width: 0;
+}
+
+/* Software Version History — its own horizontal-scroll container so the
+   version + date entries are never clipped (they were being cut to "Nu" /
+   "since 6/"). Mirrors the .cmp-grid `overflow-x: auto` pattern; min-width:
+   max-content lets each column grow to its widest single-line entry. */
+.cmp-vh-scroll { overflow-x: auto; }
+
+.cmp-vh-grid {
+  display: grid;
+  gap: 0 16px;
+  min-width: max-content;
+}
+
+.cmp-vh-entry {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  line-height: 1.5;
+  white-space: nowrap;
 }
 
 .cmp-row-mint {
