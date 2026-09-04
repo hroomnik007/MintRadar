@@ -639,7 +639,7 @@ function MintDetailContent({ url }: { url: string }) {
   // (audit_recent_total / audit_recent_errors, up to AUDIT_SWAPS_WINDOW = 100
   // swaps) that feeds the Trust Score's Audit reliability component. Reuses the
   // exact values above (breakdownAuditRecent*). Colour comes from
-  // auditReliabilityColor() (error-rate based: <=5% green/15% amber/else red) —
+  // auditReliabilityColor() (error-rate based: <=5% green/25% amber/else red) —
   // NOT from breakdownAScore's 1-5 scoring buckets, which are stricter than
   // what reads as "OK" at a glance (see mintFormatting.ts). This only changes
   // the displayed colour; the Trust Score's numeric Audit component

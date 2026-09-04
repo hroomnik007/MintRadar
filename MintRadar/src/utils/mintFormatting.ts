@@ -121,7 +121,7 @@ export function auditReliabilityColor(
   if (recentTotal === null || recentTotal === undefined || recentTotal < 3) return 'var(--t3)'
   const errorRate = (recentErrors ?? 0) / recentTotal
   if (errorRate <= 0.05) return 'var(--fast)'
-  if (errorRate <= 0.15) return 'var(--med)'
+  if (errorRate <= 0.25) return 'var(--med)'
   return 'var(--slow)'
 }
 
