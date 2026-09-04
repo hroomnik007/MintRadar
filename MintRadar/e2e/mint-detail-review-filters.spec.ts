@@ -33,6 +33,7 @@ const TOTAL = REVIEW_PLAN.length // 105
 const FIVE_STAR_COUNT = REVIEW_PLAN.filter(r => r.rating === 5).length // 40
 const CRITICAL_COUNT = REVIEW_PLAN.filter(r => r.rating !== null && r.rating <= 2).length // 6
 const NAMED_COUNT = REVIEW_PLAN.filter(r => !!r.named).length // 72
+const ANON_COUNT = REVIEW_PLAN.filter(r => !r.named).length // 33
 const FIVE_STAR_NAMED_COUNT = REVIEW_PLAN.filter(r => r.rating === 5 && r.named).length // 25
 const CRITICAL_NAMED_COUNT = REVIEW_PLAN.filter(r => r.rating !== null && r.rating <= 2 && r.named).length // 0 — by design
 
@@ -128,7 +129,7 @@ test.describe('Mint Detail — Reviews filters (large corpus)', () => {
     await expect(page.locator('.reviews-filter-chip', { hasText: 'All' })).toHaveText(`All · ${TOTAL}`)
     await expect(page.locator('.reviews-filter-chip', { hasText: '5★' })).toHaveText(`5★ · ${FIVE_STAR_COUNT}`)
     await expect(page.locator('.reviews-filter-chip', { hasText: 'Critical' })).toHaveText(`Critical · ${CRITICAL_COUNT}`)
-    await expect(page.locator('.reviews-filter-chip', { hasText: 'Hide anon' })).toHaveText(`Hide anon · ${NAMED_COUNT}`)
+    await expect(page.locator('.reviews-filter-chip', { hasText: 'Hide anon' })).toHaveText(`Hide anon · ${ANON_COUNT}`)
   })
 
   test('All is active by default and shows the full paginated list', async ({ page }) => {

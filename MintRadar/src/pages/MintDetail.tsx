@@ -742,7 +742,7 @@ function MintDetailContent({ url }: { url: string }) {
   // is not a bad review, and JS's `null <= 2` (coerces null to 0) would otherwise
   // wrongly include it here.
   const reviewFilterCriticalCount = mergedReviews.filter(r => r.rating !== null && r.rating <= 2).length
-  const reviewFilterNamedCount = mergedReviews.filter(r => !!r.profile?.name).length
+  const reviewFilterAnonCount = mergedReviews.filter(r => !r.profile?.name).length
   let filteredReviews = mergedReviews
   if (activeReviewFilter === '5star') filteredReviews = filteredReviews.filter(r => r.rating === 5)
   else if (activeReviewFilter === 'critical') filteredReviews = filteredReviews.filter(r => r.rating !== null && r.rating <= 2)
@@ -1736,7 +1736,7 @@ function MintDetailContent({ url }: { url: string }) {
                       className={`reviews-filter-chip toggle${hideAnonActive ? ' active' : ''}`}
                       aria-pressed={hideAnonActive}
                       onClick={toggleReviewHideAnon}
-                    >Hide anon · {reviewFilterNamedCount}</button>
+                    >Hide anon · {reviewFilterAnonCount}</button>
                   </div>
                   {filteredReviews.length === 0 ? (
                     <div style={{fontSize:13,color:'var(--text3)'}}>No reviews match this filter.</div>
