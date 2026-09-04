@@ -2,10 +2,14 @@ import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 
 // ComparisonModal → "Software Version History" once clipped its entries to
-// "Nu" / "since 6/" because its grid had no overflow handling. It now lives in
-// a .cmp-vh-scroll horizontal-scroll container (same pattern as .cmp-grid) with
-// nowrap entries. These pin: entries render un-clipped at 2/3/4 mints on both
-// desktop and mobile, and the section scrolls when it overflows.
+// "Nu" / "since 6/" because its grid had no overflow handling and forced
+// nowrap. Each entry is now a two-line stack (version, then "since <date>"
+// below it) that grows the column taller instead of wider, so it no longer
+// needs its own scroll wrapper for a normal entry count. .cmp-vh-grid keeps
+// `overflow-x: auto` directly (same pattern as .cmp-grid) for the
+// column-count case — e.g. 4 mints on mobile still doesn't fit side by side.
+// These pin: entries render un-clipped at 2/3/4 mints on both desktop and
+// mobile, and the section scrolls when it genuinely overflows.
 
 const LONG_VH = {
   history: [
@@ -56,7 +60,7 @@ for (const n of [2, 3, 4]) {
         expect(clipped, `entry ${i} clipped`).toBe(false)
       }
       // The section is horizontally scrollable (not dead-clipped) when it overflows.
-      const scroll = page.locator('.cmp-vh-scroll')
+      const scroll = page.locator('.cmp-vh-grid')
       const overflow = await scroll.evaluate(n => ({ sw: n.scrollWidth, cw: n.clientWidth }))
       if (overflow.sw > overflow.cw) {
         await scroll.evaluate(n => { n.scrollLeft = n.scrollWidth })

@@ -1116,23 +1116,31 @@
   min-width: 0;
 }
 
-/* Software Version History — its own horizontal-scroll container so the
-   version + date entries are never clipped (they were being cut to "Nu" /
-   "since 6/"). Mirrors the .cmp-grid `overflow-x: auto` pattern; min-width:
-   max-content lets each column grow to its widest single-line entry. */
-.cmp-vh-scroll { overflow-x: auto; }
-
+/* Software Version History — each entry is version + "since <date>" stacked
+   on two lines (grows the column taller, not wider), so text is never
+   clipped and no dedicated nowrap/scroll wrapper is needed for it. Mirrors
+   the .cmp-grid `overflow-x: auto` pattern directly on the grid itself —
+   still needed for the column-count case (e.g. 4 mints on mobile), same as
+   the main table. */
 .cmp-vh-grid {
   display: grid;
   gap: 0 16px;
-  min-width: max-content;
+  overflow-x: auto;
 }
 
 .cmp-vh-entry {
-  font-size: 11px;
   font-family: var(--font-mono);
-  line-height: 1.5;
-  white-space: nowrap;
+}
+
+.cmp-vh-version {
+  font-size: 11.5px;
+  color: var(--text);
+}
+
+.cmp-vh-since {
+  font-size: 9.5px;
+  color: var(--text3);
+  margin-top: 1px;
 }
 
 .cmp-row-mint {

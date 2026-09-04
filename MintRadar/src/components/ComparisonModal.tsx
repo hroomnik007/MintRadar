@@ -550,25 +550,23 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           {/* ── Software Version History ── */}
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>Software Version History</div>
-            <div className="cmp-vh-scroll">
-              <div className="cmp-vh-grid" style={{ gridTemplateColumns: gridCols }}>
-                <div className="cmp-lbl cmp-last">Versions</div>
-                {mints.map((mint, i) => {
-                  const versionHistory = versionQueries[i]?.data?.history ?? []
-                  return (
-                    <div key={mint.url} className="cmp-val cmp-last" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 5, maxHeight: 140, overflowY: 'auto' }}>
-                      {versionHistory.length === 0 ? (
-                        <span className="cmp-vh-entry" style={{ color: 'var(--text3)' }}>No data</span>
-                      ) : versionHistory.map((vh, j) => (
-                        <div key={j} className="cmp-vh-entry">
-                          <span style={{ color: 'var(--text)', fontWeight: j === 0 ? 700 : 400 }}>{vh.version}</span>
-                          <span style={{ color: 'var(--text3)' }}> since {new Date(vh.firstSeenAt).toLocaleDateString()}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })}
-              </div>
+            <div className="cmp-vh-grid" style={{ gridTemplateColumns: gridCols }}>
+              <div className="cmp-lbl cmp-last">Versions</div>
+              {mints.map((mint, i) => {
+                const versionHistory = versionQueries[i]?.data?.history ?? []
+                return (
+                  <div key={mint.url} className="cmp-val cmp-last" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8, maxHeight: 140, overflowY: 'auto' }}>
+                    {versionHistory.length === 0 ? (
+                      <span className="cmp-vh-entry" style={{ color: 'var(--text3)' }}>No data</span>
+                    ) : versionHistory.map((vh, j) => (
+                      <div key={j} className="cmp-vh-entry">
+                        <div className="cmp-vh-version" style={{ fontWeight: j === 0 ? 700 : 500 }}>{vh.version}</div>
+                        <div className="cmp-vh-since">since {new Date(vh.firstSeenAt).toLocaleDateString()}</div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
