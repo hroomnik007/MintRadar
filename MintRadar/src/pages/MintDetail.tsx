@@ -1512,6 +1512,10 @@ function MintDetailContent({ url }: { url: string }) {
                   </span>
                 </button>
 
+                <div className="audit-tab-explainer">
+                  Independent payment probes — successful and failed mint/melt ops, plus how recent the sample is. Not a proof of reserves.
+                </div>
+
                 {/* 5-second overview — always visible, never inside the mobile
                     collapse. Mints/Melts are audit.8333.space lifetime counts;
                     Recent errors is the rolling ~100-swap window; Last checked is

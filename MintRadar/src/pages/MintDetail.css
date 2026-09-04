@@ -1136,6 +1136,13 @@ button.md-url-copy.copied > svg { opacity: 1; }
    Mints · Melts · Recent errors · Last checked, always visible (sits outside
    the mobile collapse). Replaced the old 3-card all-time grid + separate
    "Recent reliability" band, which duplicated these numbers. */
+.audit-tab-explainer {
+  font-size: 12.5px;
+  color: var(--text2);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
 .audit-summary-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
