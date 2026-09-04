@@ -58,27 +58,27 @@ test.describe('Mint Detail', () => {
     { label: 'desktop', size: { width: 1280, height: 900 } },
     { label: 'mobile', size: { width: 390, height: 844 } },
   ]) {
-    test(`Copy link button copies the deep link and shows feedback (${viewport.label})`, async ({ page, context }) => {
+    test(`clicking the mint URL copies the deep link and shows feedback (${viewport.label})`, async ({ page, context }) => {
       await context.grantPermissions(['clipboard-read', 'clipboard-write'])
       await page.setViewportSize(viewport.size)
 
-      const btn = page.locator('.md-copylink-btn')
-      await expect(btn).toBeVisible()
-      await expect(btn).toHaveText(/Copy link/)
+      const urlBtn = page.locator('button.md-url-copy')
+      await expect(urlBtn).toBeVisible()
+      await expect(urlBtn).toContainText(ALPHA)
+      await expect(urlBtn).not.toHaveClass(/copied/)
 
-      await btn.click()
+      await urlBtn.click()
 
-      // Visual feedback: label + .copied class flip for ~2s.
-      await expect(btn).toHaveText(/Copied/)
-      await expect(btn).toHaveClass(/copied/)
+      // Visual feedback: .copied class + checkmark icon flip for ~2s.
+      await expect(urlBtn).toHaveClass(/copied/)
 
-      // Clipboard holds the current mint deep link.
+      // Clipboard holds the current mint deep link (window.location.href).
       const clip = await page.evaluate(() => navigator.clipboard.readText())
       expect(clip).toContain(encodeURIComponent(ALPHA))
       expect(clip).toBe(page.url())
 
       // Feedback reverts.
-      await expect(btn).toHaveText(/Copy link/, { timeout: 4000 })
+      await expect(urlBtn).not.toHaveClass(/copied/, { timeout: 4000 })
     })
   }
 })

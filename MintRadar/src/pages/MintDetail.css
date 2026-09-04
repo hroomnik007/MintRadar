@@ -79,6 +79,29 @@
 .md-name { font-size: 31px; font-weight: 600; color: var(--text); line-height: 1.15; }
 .md-url  { font-size: 13px; color: var(--text3); font-family: var(--font-mono); margin-top: 3px; }
 
+/* The mint URL under the name doubles as a "copy deep link" affordance — click
+   the text or the trailing icon to copy window.location.href. The icon flips to
+   a checkmark and the text turns green for 2s (setCopiedLink in MintDetail.tsx).
+   Reset the <button> UA styling; keep it visually identical to the old div. */
+button.md-url-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  line-height: 1.3;
+  cursor: pointer;
+  transition: color var(--transition);
+}
+button.md-url-copy > span { word-break: break-all; }
+button.md-url-copy > svg { flex-shrink: 0; opacity: 0.6; }
+button.md-url-copy:hover { color: var(--text2); }
+button.md-url-copy:hover > svg { opacity: 1; }
+button.md-url-copy.copied { color: var(--green-bright); }
+button.md-url-copy.copied > svg { opacity: 1; }
+
 .status-dot {
   width: 7px;
   height: 7px;
@@ -111,7 +134,7 @@
    `.md-sc { display: flex }` rule. */
 .md-sc.md-sc-trust { display: none; }
 
-/* The header-row buttons (Mint QR, Open in Cashu.me, Copy link, Watch, Compare)
+/* The header-row buttons (Mint QR, Open in Cashu.me, Watch, Compare)
    share ONE recipe — identical size, padding, weight and tonal-outline style. They are
    peer actions; the only deliberately "bigger" action on any Mint Detail tab is
    Write a review (filled + 13px + heavier), which still outranks these. This size
@@ -151,15 +174,6 @@
 }
 
 .md-watch-btn.watching:hover { border-color: rgba(219, 106, 93, 0.65); }
-
-/* "Copy link" — copies the current deep-link URL; the icon/label flip to a
-   checkmark + "Copied" for 2s (setCopiedLink in MintDetail.tsx). The .copied
-   state also intensifies the tonal fill so the feedback reads at a glance. */
-.md-copylink-btn.copied {
-  background: var(--green-soft-strong);
-  border-color: var(--green);
-  color: var(--green-bright);
-}
 
 /* Full label on desktop; the shorter "Cashu.me" is swapped in at ≤640px so the
    button fits one line in the 2-column mobile action grid. */
@@ -1023,12 +1037,11 @@
    1. Online status sits inline next to the mint name (.md-status-inline) —
       identical to desktop, styled by the base rule above.
    2. The header becomes a 2-column grid. .md-hdr-center / .md-hdr-right are
-      unwrapped (display: contents) so all five action buttons are direct grid
+      unwrapped (display: contents) so all four action buttons are direct grid
       items and can be paired with `order` regardless of the desktop grouping:
         row 1  →  Mint QR (left)    ·  Watch (right)
         row 2  →  Cashu.me (left)   ·  Compare (right)
-        row 3  →  Copy link (left)  ·  —
-      All five share the same recipe/size as on desktop (see base rules above);
+      All four share the same recipe/size as on desktop (see base rules above);
       nothing is stretched to fill its column. Desktop layout is untouched. */
 @media (max-width: 640px) {
   .md-header {
@@ -1056,9 +1069,6 @@
   .md-hdr-right  > .md-watch-btn         { order: 2; justify-self: end; }
   .md-hdr-center > a.md-quick-btn        { order: 3; justify-self: start; }
   .md-hdr-right  > .md-compare-btn       { order: 4; justify-self: end; }
-  /* Copy link drops to its own row (left cell of row 3). Same specificity as the
-     generic button.md-quick-btn rule above, so it must stay later in source. */
-  .md-hdr-center > button.md-copylink-btn { order: 5; justify-self: start; }
 
   .md-qb-full { display: none; }
   .md-qb-short { display: inline; }

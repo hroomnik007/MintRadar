@@ -32,7 +32,7 @@ import {
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
   Clock, GitBranch, Plug, Database, Award, Layers, Zap, Plus, X, QrCode,
   Receipt, UserCheck, EyeOff, CreditCard, Send, Code, Cloud,
-  Fingerprint, Bitcoin, Star, Mail, AtSign, Link as LinkIcon,
+  Fingerprint, Bitcoin, Star, Mail, AtSign,
 } from 'lucide-react'
 
 const REVIEW_AVATAR_COLORS = ['#17E87F','#8b5cf6','#F5A623','#3b82f6','#ef4444','#ec4899']
@@ -739,7 +739,19 @@ function MintDetailContent({ url }: { url: string }) {
                   <span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:ageBadge.color,background:ageBadge.bg,border:`0.5px solid ${ageBadge.border}`,borderRadius:5,padding:'3px 9px',flexShrink:0}}>{ageBadge.label}</span>
                 )}
               </div>
-              <div className="md-url">{url}</div>
+              <button
+                type="button"
+                className={`md-url md-url-copy ${copiedLink ? 'copied' : ''}`}
+                onClick={() => {
+                  void navigator.clipboard.writeText(window.location.href)
+                  setCopiedLink(true)
+                  setTimeout(() => setCopiedLink(false), 2000)
+                }}
+                title="Copy a direct link to this mint"
+              >
+                <span>{url}</span>
+                {copiedLink ? <Check size={12} /> : <Copy size={12} />}
+              </button>
             </div>
           </div>
         </div>
@@ -781,18 +793,6 @@ function MintDetailContent({ url }: { url: string }) {
             <span className="md-qb-full">Open in Cashu.me</span>
             <span className="md-qb-short">Cashu.me</span>
           </a>
-          <button
-            className={`md-quick-btn md-copylink-btn ${copiedLink ? 'copied' : ''}`}
-            onClick={() => {
-              void navigator.clipboard.writeText(window.location.href)
-              setCopiedLink(true)
-              setTimeout(() => setCopiedLink(false), 2000)
-            }}
-            title="Copy a direct link to this mint"
-          >
-            {copiedLink ? <Check size={12} /> : <LinkIcon size={12} />}
-            <span>{copiedLink ? 'Copied' : 'Copy link'}</span>
-          </button>
         </div>
         <div className="md-hdr-right">
           {isLoggedIn
