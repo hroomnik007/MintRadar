@@ -104,6 +104,27 @@ export function uptimeColor(pct: number | null | undefined): string {
   return 'var(--slow)'
 }
 
+// ── Audit reliability colour (Audit summary strip + Trust Score Breakdown
+// "Audit reliability" row) ──────────────────────────────────────
+// UI-only presentation of the rolling-window error rate — deliberately NOT the
+// same thresholds as auditReliabilityScore()'s 1-5 scoring buckets in
+// auditScore.ts (that function feeds the actual Trust Score number and must
+// not change). Those buckets are stricter than what reads as "OK" at a
+// glance — e.g. a 5% error rate (95% success) already drops two tiers below
+// the top and painted red. This colours directly off the error rate instead,
+// so a mint succeeding ~95%+ of the time reads as green regardless of which
+// scoring bucket it happens to fall into.
+export function auditReliabilityColor(
+  recentTotal: number | null | undefined,
+  recentErrors: number | null | undefined,
+): string {
+  if (recentTotal === null || recentTotal === undefined || recentTotal < 3) return 'var(--t3)'
+  const errorRate = (recentErrors ?? 0) / recentTotal
+  if (errorRate <= 0.05) return 'var(--fast)'
+  if (errorRate <= 0.15) return 'var(--med)'
+  return 'var(--slow)'
+}
+
 // ── Relative time (e.g. "3 min ago", "2d ago") ─────────────────
 // "<errors> / <total>" for the Audit summary strip's Recent errors cell.
 // `total === null` (mint audited but no rolling-window swap sample yet) renders

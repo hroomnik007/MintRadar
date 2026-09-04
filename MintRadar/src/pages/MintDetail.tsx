@@ -16,7 +16,7 @@ import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { ComparisonModal } from '@/components/ComparisonModal'
 import { MintComparePicker } from '@/components/MintComparePicker'
-import { mintAgeBadge, trustScoreColor, trustScoreInfo, formatTimeAgo, formatAuditErrorRatio, trustDonutArc } from '@/utils/mintFormatting'
+import { mintAgeBadge, trustScoreColor, trustScoreInfo, formatTimeAgo, formatAuditErrorRatio, trustDonutArc, auditReliabilityColor } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
@@ -638,18 +638,20 @@ function MintDetailContent({ url }: { url: string }) {
   // Audit summary strip's "Recent errors" cell — same rolling window
   // (audit_recent_total / audit_recent_errors, up to AUDIT_SWAPS_WINDOW = 100
   // swaps) that feeds the Trust Score's Audit reliability component. Reuses the
-  // exact values above (breakdownAuditRecent*) and colours by breakdownAScore so
-  // the strip can never disagree with the sidebar Trust Score breakdown.
+  // exact values above (breakdownAuditRecent*). Colour comes from
+  // auditReliabilityColor() (error-rate based: <=5% green/15% amber/else red) —
+  // NOT from breakdownAScore's 1-5 scoring buckets, which are stricter than
+  // what reads as "OK" at a glance (see mintFormatting.ts). This only changes
+  // the displayed colour; the Trust Score's numeric Audit component
+  // (breakdownAScore) is unaffected.
   const recentReliabilityErrors = breakdownAuditRecentErrors ?? 0
-  const recentReliabilityColor = breakdownAuditRecentTotal === null || isAuditUnknown(breakdownAuditRecentTotal)
-    ? 'var(--text3)'
-    : breakdownAScore >= 4 ? '#4ade80' : breakdownAScore >= 3 ? '#ffa500' : '#ff4d4d'
+  const recentReliabilityColor = auditReliabilityColor(breakdownAuditRecentTotal, breakdownAuditRecentErrors)
   const trustBreakdownRows = [
     { label: 'Uptime (45%)', display: `${uptimePct}%`, score: breakdownUScore, max: 45, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.', tooltipRef: breakdownUptimeRef, tooltipHook: breakdownUptimeTooltip },
     { label: 'NUT Support (30%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 30, color: supportedNuts.length >= 12 ? '#4ade80' : supportedNuts.length >= 8 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.', tooltipRef: breakdownNutRef, tooltipHook: breakdownNutTooltip },
     { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? '#4ade80' : breakdownVScore >= 6 ? '#ffa500' : '#ff4d4d', tooltip: "How recent the mint's software version is compared to the latest known Nutshell releases. Newer = higher score.", tooltipRef: breakdownVersionRef, tooltipHook: breakdownVersionTooltip },
     { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? '#4ade80' : breakdownCScore >= 2 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.', tooltipRef: breakdownContactRef, tooltipHook: breakdownContactTooltip },
-    { label: 'Audit reliability (5%)', display: breakdownAuditDisplay, score: breakdownAScore, max: 5, color: breakdownAScore >= 4 ? '#4ade80' : breakdownAScore >= 3 ? '#ffa500' : '#ff4d4d', tooltip: "Based on error rate from audit.8333.space — the percentage of failed swaps out of the mint's last ~100 tested operations. Lower error rate = higher score. Shows \"Unknown\" when fewer than 3 recent swaps are available.", tooltipRef: breakdownAuditRef, tooltipHook: breakdownAuditTooltip },
+    { label: 'Audit reliability (5%)', display: breakdownAuditDisplay, score: breakdownAScore, max: 5, color: recentReliabilityColor, tooltip: "Based on error rate from audit.8333.space — the percentage of failed swaps out of the mint's last ~100 tested operations. Lower error rate = higher score. Shows \"Unknown\" when fewer than 3 recent swaps are available.", tooltipRef: breakdownAuditRef, tooltipHook: breakdownAuditTooltip },
   ]
   const ageBadge = mintAgeBadge(discoveredAt)
   const isOutdated = version !== null && latestGlobalVersion !== null
