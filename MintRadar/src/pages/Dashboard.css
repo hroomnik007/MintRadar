@@ -1085,6 +1085,11 @@
   overflow-x: auto;
 }
 
+/* Cells stretch to fill the row track (default align-self) and center their
+   content via flexbox instead. Using `align-self: center` here made each cell
+   only as tall as its own content, so on a tall row (Mint: favicon + name +
+   host + age badge) the short label cell's `border-bottom` painted ~30px above
+   the value cells' — a ragged divider that crowded the age badge. */
 .cmp-lbl {
   padding: 12px 14px 12px 0;
   border-bottom: 0.5px solid var(--border2);
@@ -1094,7 +1099,8 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-family: var(--font-mono);
-  align-self: center;
+  display: flex;
+  align-items: center;
   white-space: nowrap;
 }
 
@@ -1103,7 +1109,6 @@
   border-bottom: 0.5px solid var(--border2);
   font-size: 13px;
   color: var(--text);
-  align-self: center;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -1132,7 +1137,7 @@
 
 .cmp-row-mint {
   padding-top: 16px;
-  padding-bottom: 16px;
+  padding-bottom: 12px; /* match the other rows' gap to the divider */
 }
 
 .cmp-last {
