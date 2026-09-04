@@ -17,6 +17,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            MintRadar/backend/package-lock.json
+            MintRadar/package-lock.json
       - name: Run backend tests
         run: cd MintRadar/backend && npm ci && npm test
       - name: Run frontend tests
@@ -32,17 +36,17 @@ jobs:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
+          command_timeout: 30m
           script: |
             set -euo pipefail
             cd /var/www/mintradar-repo
             git fetch origin main
             git reset --hard origin/main
             cd MintRadar/backend
-            rm -rf node_modules
             npm ci
             npm run build
             cd /var/www/mintradar-repo/MintRadar
-            docker compose build --no-cache backend
+            docker compose build --pull backend
             docker compose up -d
 
       - name: Deploy frontend via SSH
@@ -51,6 +55,7 @@ jobs:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
+          command_timeout: 30m
           script: |
             set -euo pipefail
             cd /var/www/mintradar-repo
