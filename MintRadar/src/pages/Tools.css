@@ -276,10 +276,48 @@
   border: 1px solid var(--copper-soft-strong);
 }
 
-.token-verify-note {
+/* Small label + ⓘ row used above the DLEQ result and next to the "Check if
+   spent" button — replaces the always-visible explainer paragraphs that used
+   to sit here (moved into InfoTooltip, same hover/tap pattern as Stats.tsx). */
+.token-section-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 11px;
-  line-height: 1.5;
+  font-weight: 600;
   color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.token-info-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Same tooltip styling as Stats.tsx's/MintDetail.tsx's ⓘ tooltips
+   (.audit-tooltip) — duplicated here since each page's CSS is standalone. */
+.audit-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  background: var(--bg);
+  border: 0.5px solid var(--border2);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 10px;
+  color: var(--text2);
+  line-height: 1.5;
+  z-index: 20;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  white-space: normal;
+  text-align: left;
+  font-family: var(--font-body);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 /* ── Token Inspector: NUT-07 "Check if spent" ─────────────────── */
@@ -287,6 +325,12 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.token-spent-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .token-spent .token-action-btn {

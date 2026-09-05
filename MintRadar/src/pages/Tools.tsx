@@ -1,9 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Info } from 'lucide-react'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcShield } from '@/components/mint/IcShield'
 import { useNow } from '@/hooks/useNow'
+import { useTapTooltip } from '@/hooks/useTapTooltip'
 import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, type TokenInfo, type TokenSpentCheck } from '@/utils/cashuToken'
 import { normalizeMintUrl, trustColor, trustScoreInfo, mintRiskLevel } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
@@ -11,6 +13,28 @@ import './Tools.css'
 
 function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
+}
+
+// Same hover-on-desktop/tap-on-mobile pattern as Stats.tsx's header ⓘ tooltips
+// (useTapTooltip + the shared .audit-tooltip styling) — reused here so the DLEQ
+// and NUT-07 explanations don't have to sit in the main view as permanent text.
+function InfoTooltip({ text, width = 220 }: { text: string; width?: number }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const tooltip = useTapTooltip(ref)
+  return (
+    <span
+      ref={ref}
+      className="token-info-icon"
+      onPointerEnter={tooltip.onPointerEnter}
+      onPointerLeave={tooltip.onPointerLeave}
+      onClick={tooltip.onClick}
+    >
+      <Info size={12} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
+      {tooltip.open && (
+        <div className="audit-tooltip" style={{ width }}>{text}</div>
+      )}
+    </span>
+  )
 }
 
 // DLEQ verification's outcome, once it has run. "unreachable" is deliberately distinct
@@ -115,15 +139,28 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     if (!token || checkingSpent) return
     setCheckingSpent(true)
     setSpentResult(null)
+    const startedAt = Date.now()
+
+    let outcome: SpentCheckResult
     try {
       const data = await checkTokenSpentState(token)
-      setSpentResult({ status: 'ok', data })
+      outcome = { status: 'ok', data }
     } catch (err) {
       // Mint offline/unreachable, or the token itself couldn't be resolved —
       // either way this must not take down the rest of the inspector UI.
       const detail = err instanceof Error && err.message ? err.message : 'Could not reach the mint.'
-      setSpentResult({ status: 'error', message: detail })
+      outcome = { status: 'error', message: detail }
     }
+
+    // A local/cached mint response can resolve in well under 100ms, which made the
+    // "Checking with mint…" label flash and vanish — read as a glitch rather than a
+    // deliberate loading state. Holding the button on screen for at least 300ms total
+    // (same floor used by the Inspect & Verify flow above) makes it read as an actual
+    // network round trip regardless of how fast the real one was.
+    const elapsed = Date.now() - startedAt
+    if (elapsed < 300) await new Promise<void>(resolve => setTimeout(resolve, 300 - elapsed))
+
+    setSpentResult(outcome)
     setCheckingSpent(false)
   }
 
@@ -222,6 +259,10 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
           )}
 
           <div className="token-verify">
+            <div className="token-section-label">
+              <span>Signature check</span>
+              <InfoTooltip text="This confirms the token is real and genuinely came from this mint — a cryptographic check, separate from the mint's reputation shown above." />
+            </div>
             {phase === 'verifying' && (
               <div className="token-verify-result tv-loading">
                 🔐 Verifying with mint… checking this token's signatures against its NUT-12 DLEQ proof.
@@ -249,25 +290,20 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
                 ⚠️ Could not reach mint to verify (try again later). This says nothing about the token itself.
               </div>
             )}
-
-            <div className="token-verify-note">
-              DLEQ verification asks the mint for its public keys and checks this specific token's
-              signatures cryptographically — a different question from Mint Status and Trust Score above,
-              which describe the mint's reputation and uptime from MintRadar's database rather than
-              whether these particular proofs were really issued by that mint. "Inspect & Verify Token"
-              runs both automatically: the local read first, then this live check against the mint.
-            </div>
           </div>
 
           <div className="token-spent">
-            <button
-              type="button"
-              className="token-action-btn"
-              onClick={() => void handleCheckSpent()}
-              disabled={checkingSpent}
-            >
-              {checkingSpent ? '🔍 Checking with mint…' : '🔍 Check if spent'}
-            </button>
+            <div className="token-spent-row">
+              <button
+                type="button"
+                className="token-action-btn"
+                onClick={() => void handleCheckSpent()}
+                disabled={checkingSpent}
+              >
+                {checkingSpent ? '🔍 Checking with mint…' : '🔍 Check if spent'}
+              </button>
+              <InfoTooltip text="This asks the mint directly whether the token has already been used. Doing so lets the mint know someone is checking it right now." />
+            </div>
 
             {spentResult?.status === 'ok' && (() => {
               const { total, unspent, spent, pending } = spentResult.data
@@ -296,12 +332,6 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
                 ⚠️ Could not check spent status — {spentResult.message} This says nothing about the token itself.
               </div>
             )}
-
-            <div className="token-verify-note">
-              NUT-07 asks the mint whether each proof has already been redeemed — a live network call
-              that, unlike the automatic checks above, only ever runs when you click this button. Doing
-              so tells the mint operator that someone is looking at this specific token right now.
-            </div>
           </div>
 
           <div className="token-actions">
