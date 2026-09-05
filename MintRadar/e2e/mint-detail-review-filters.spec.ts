@@ -132,6 +132,45 @@ test.describe('Mint Detail — Reviews filters (large corpus)', () => {
     await expect(page.locator('.reviews-filter-chip', { hasText: 'Hide anon' })).toHaveText(`Hide anon · ${ANON_COUNT}`)
   })
 
+  test('Hide anon recomputes the All/5★/Critical chip counts to the named-only subset', async ({ page }) => {
+    // Baseline (Hide anon off) — full-corpus counts, same as the previous test.
+    await expect(page.locator('.reviews-filter-chip', { hasText: 'All' })).toHaveText(`All · ${TOTAL}`)
+    await expect(page.locator('.reviews-filter-chip', { hasText: '5★' })).toHaveText(`5★ · ${FIVE_STAR_COUNT}`)
+    await expect(page.locator('.reviews-filter-chip', { hasText: 'Critical' })).toHaveText(`Critical · ${CRITICAL_COUNT}`)
+
+    await page.locator('.reviews-filter-chip.toggle', { hasText: 'Hide anon' }).click()
+
+    // All three exclusive chips must now reflect the named-only subset, matching
+    // exactly what the list below renders for each filter — not the stale
+    // full-corpus counts.
+    await expect(page.locator('.reviews-filter-chip', { hasText: 'All' })).toHaveText(`All · ${NAMED_COUNT}`)
+    await expect(page.locator('.reviews-filter-chip', { hasText: '5★' })).toHaveText(`5★ · ${FIVE_STAR_NAMED_COUNT}`)
+    await expect(page.locator('.reviews-filter-chip', { hasText: 'Critical' })).toHaveText(`Critical · ${CRITICAL_NAMED_COUNT}`)
+
+    // Cross-check each chip's number against the actual rendered list count for
+    // that combination (All+Hide anon, 5★+Hide anon, Critical+Hide anon).
+    const totalPagesAll = Math.ceil(NAMED_COUNT / 5)
+    await expect(page.locator('.reviews-page-btn', { hasText: String(totalPagesAll) })).toBeVisible()
+    await expect(page.locator('.review-card')).toHaveCount(Math.min(NAMED_COUNT, 5))
+
+    await page.locator('.reviews-filter-chip', { hasText: '5★' }).click()
+    await expect(page.locator('.review-card')).toHaveCount(Math.min(FIVE_STAR_NAMED_COUNT, 5))
+    const totalPagesFive = Math.max(1, Math.ceil(FIVE_STAR_NAMED_COUNT / 5))
+    if (totalPagesFive > 1) {
+      await expect(page.locator('.reviews-page-btn', { hasText: String(totalPagesFive) })).toBeVisible()
+    }
+
+    await page.locator('.reviews-filter-chip', { hasText: 'Critical' }).click()
+    await expect(page.locator('.review-card')).toHaveCount(CRITICAL_NAMED_COUNT) // 0, by fixture design
+    await expect(page.getByText('No reviews match this filter.')).toBeVisible()
+
+    // Turning Hide anon back off restores the original full-corpus counts.
+    await page.locator('.reviews-filter-chip.toggle', { hasText: 'Hide anon' }).click()
+    await expect(page.locator('.reviews-filter-chip', { hasText: 'All' })).toHaveText(`All · ${TOTAL}`)
+    await expect(page.locator('.reviews-filter-chip', { hasText: '5★' })).toHaveText(`5★ · ${FIVE_STAR_COUNT}`)
+    await expect(page.locator('.reviews-filter-chip', { hasText: 'Critical' })).toHaveText(`Critical · ${CRITICAL_COUNT}`)
+  })
+
   test('All is active by default and shows the full paginated list', async ({ page }) => {
     await expect(page.locator('.reviews-filter-chip', { hasText: 'All' })).toHaveClass(/active/)
     const totalPages = Math.ceil(TOTAL / 5)

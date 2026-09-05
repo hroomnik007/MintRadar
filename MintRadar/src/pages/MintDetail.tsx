@@ -737,11 +737,15 @@ function MintDetailContent({ url }: { url: string }) {
   // as reviewsPageState, so switching mints resets them without a reset effect.
   const activeReviewFilter = reviewFilterState.key === url ? reviewFilterState.type : 'all'
   const hideAnonActive = reviewHideAnonState.key === url && reviewHideAnonState.on
-  const reviewFilterFiveStarCount = mergedReviews.filter(r => r.rating === 5).length
+  // The All/5★/Critical chip counts must match what "Hide anon" actually leaves in
+  // the list below — when it's on, count from the anon-filtered set, not the full
+  // mergedReviews, or the chip numbers would disagree with what the user sees.
+  const reviewCountBase = hideAnonActive ? mergedReviews.filter(r => !!r.profile?.name) : mergedReviews
+  const reviewFilterFiveStarCount = reviewCountBase.filter(r => r.rating === 5).length
   // Critical excludes rating === null explicitly — a rating-less endorsement event
   // is not a bad review, and JS's `null <= 2` (coerces null to 0) would otherwise
   // wrongly include it here.
-  const reviewFilterCriticalCount = mergedReviews.filter(r => r.rating !== null && r.rating <= 2).length
+  const reviewFilterCriticalCount = reviewCountBase.filter(r => r.rating !== null && r.rating <= 2).length
   const reviewFilterAnonCount = mergedReviews.filter(r => !r.profile?.name).length
   let filteredReviews = mergedReviews
   if (activeReviewFilter === '5star') filteredReviews = filteredReviews.filter(r => r.rating === 5)
@@ -1717,7 +1721,7 @@ function MintDetailContent({ url }: { url: string }) {
                         className={`reviews-filter-chip${activeReviewFilter === 'all' ? ' active' : ''}`}
                         aria-pressed={activeReviewFilter === 'all'}
                         onClick={() => setReviewFilter('all')}
-                      >All · {mergedReviews.length}</button>
+                      >All · {reviewCountBase.length}</button>
                       <button
                         type="button"
                         className={`reviews-filter-chip${activeReviewFilter === '5star' ? ' active' : ''}`}
