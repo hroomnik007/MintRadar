@@ -66,16 +66,18 @@
 .stat-value.muted  { font-size: 13px; color: var(--text-faint); font-weight: 400; }
 
 /* ── Controls Bar ───────────────────────────────────────────── */
+/* Deliberately NO shared outer border/background here (previous look was one
+   big boxed bar around search + Filters + sort + view toggle + Submit mint).
+   Each control group below (.search-input, .filter-btn, .sort-segment,
+   .view-toggle, .submit-btn, .refresh-btn) carries its own background/border
+   and floats independently in this row, same visual principle as the
+   .stat-card row above. */
 .dashboard-controls {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 10px 12px;
+  gap: 10px;
   margin-inline: var(--page-pad);
   margin-top: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-m);
-  background: var(--surface);
 }
 
 /* Desktop: transparent to the .dashboard-controls flex row (search + Filters
@@ -1329,6 +1331,20 @@
 .bulk-row.status-pending .bulk-status { color: var(--text3); }
 
 /* ── Responsive ─────────────────────────────────────────────── */
+/* Deliberately its own breakpoint, wider than the general 768px content
+   breakpoint below: adding the 5th ("Most reviewed") sort button means
+   search + Filters + sort + view toggle + refresh + Submit mint no longer
+   all fit one line as far up as ~900px — above 768px the search+Filters
+   pairing (.controls-search-line) is still desktop-style (display: contents),
+   so this only needs to wrap the row and shrink the sort buttons, not
+   restructure the search/Filters relationship the way the 768px block does. */
+@media (max-width: 900px) {
+  .dashboard-controls { flex-wrap: wrap; gap: 6px; }
+  .search-wrap { flex: 1 1 100%; }
+  .sort-segment { flex: 1 1 100%; }
+  .sort-btn { flex: 1; justify-content: center; padding: 5.5px 6px; font-size: 10.5px; }
+}
+
 @media (max-width: 768px) {
   .col-hide-mobile { display: none; }
   .status-text-mobile-hide { display: none; }
@@ -1376,13 +1392,6 @@
     padding: 10px 14px;
   }
 
-  .dashboard-controls {
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .search-wrap { flex: 1 1 100%; }
-  .sort-segment { flex: 1; }
-  .sort-btn { flex: 1; justify-content: center; }
   .mint-grid {
     grid-template-columns: 1fr;
     padding: 12px 0;

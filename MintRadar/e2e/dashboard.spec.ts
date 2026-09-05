@@ -85,6 +85,16 @@ test.describe('Dashboard', () => {
     await expect(names).toHaveText(['Delta Mint', 'Charlie Mint', 'Bravo Mint', 'Alpha Mint'])
   })
 
+  test('"Most reviewed" sorts by reviewCount desc, with 0/null last', async ({ page }) => {
+    const names = page.locator('.mint-grid .card-name')
+    const sortBtn = (label: string) => page.locator('.sort-btn', { hasText: label })
+
+    // Fixture reviewCount: Alpha 12, Charlie 4, Delta 3, Bravo 0 — Bravo must
+    // sort last regardless of its (null) average rating.
+    await sortBtn('Most reviewed').click()
+    await expect(names).toHaveText(['Alpha Mint', 'Charlie Mint', 'Delta Mint', 'Bravo Mint'])
+  })
+
   test('clicking a mint card opens its detail page', async ({ page }) => {
     await page.locator('.card-name', { hasText: 'Alpha Mint' }).click()
 

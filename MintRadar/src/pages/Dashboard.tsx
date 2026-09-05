@@ -128,7 +128,7 @@ const NOSTR_LOOKUP_RELAYS = [
   'wss://offchain.pub',
   'wss://nostr-pub.wellorder.net',
 ]
-const DEFAULT_SORT_DIRS: Record<'name' | 'latency' | 'rating' | 'trust', 'asc' | 'desc'> = { rating: 'desc', latency: 'asc', trust: 'desc', name: 'asc' }
+const DEFAULT_SORT_DIRS: Record<'name' | 'latency' | 'rating' | 'trust' | 'reviewCount', 'asc' | 'desc'> = { rating: 'desc', latency: 'asc', trust: 'desc', name: 'asc', reviewCount: 'desc' }
 
 const NUT_FILTER_KEYS = ['4','5','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
 const AGE_LABELS = ['Fresh', 'Established', 'Veteran', 'OG']
@@ -169,8 +169,8 @@ function countActiveFilters(f: FilterState): number {
 // navigable via browser back/forward. Keys are omitted when at their
 // default value, keeping the URL clean (e.g. "/" for the default view).
 
-type SortByValue = 'name' | 'latency' | 'rating' | 'trust'
-const SORT_KEYS: readonly SortByValue[] = ['name', 'latency', 'rating', 'trust']
+type SortByValue = 'name' | 'latency' | 'rating' | 'trust' | 'reviewCount'
+const SORT_KEYS: readonly SortByValue[] = ['name', 'latency', 'rating', 'trust', 'reviewCount']
 
 function parseFilterParams(params: URLSearchParams): {
   search: string
@@ -246,7 +246,7 @@ function MintListView({
 }: {
   mints: KnownMint[]
   search: string
-  sortBy: 'name' | 'latency' | 'rating' | 'trust'
+  sortBy: 'name' | 'latency' | 'rating' | 'trust' | 'reviewCount'
   sortDir: 'asc' | 'desc'
   totalAll?: number
 }) {
@@ -274,6 +274,11 @@ function MintListView({
         result = la - lb
       } else if (sortBy === 'trust') {
         result = listTrustScore(b) - listTrustScore(a)
+      } else if (sortBy === 'reviewCount') {
+        // Mints with reviewCount === 0 or null sort to the end, regardless of direction toggle.
+        const ca = a.reviewCount && a.reviewCount > 0 ? a.reviewCount : -1
+        const cb = b.reviewCount && b.reviewCount > 0 ? b.reviewCount : -1
+        result = cb - ca
       } else {
         result = (a.name ?? getHostname(a.url)).localeCompare(b.name ?? getHostname(b.url))
       }
@@ -358,7 +363,7 @@ function MintGrid({
 }: {
   mints: KnownMint[]
   search: string
-  sortBy: 'name' | 'latency' | 'rating' | 'trust'
+  sortBy: 'name' | 'latency' | 'rating' | 'trust' | 'reviewCount'
   sortDir: 'asc' | 'desc'
   onCompare?: (url: string) => void
   totalAll?: number
@@ -386,6 +391,11 @@ function MintGrid({
         result = la - lb
       } else if (sortBy === 'trust') {
         result = listTrustScore(b) - listTrustScore(a)
+      } else if (sortBy === 'reviewCount') {
+        // Mints with reviewCount === 0 or null sort to the end, regardless of direction toggle.
+        const ca = a.reviewCount && a.reviewCount > 0 ? a.reviewCount : -1
+        const cb = b.reviewCount && b.reviewCount > 0 ? b.reviewCount : -1
+        result = cb - ca
       } else {
         result = (a.name ?? getHostname(a.url)).localeCompare(b.name ?? getHostname(b.url))
       }
@@ -869,14 +879,14 @@ export default function Dashboard() {
           </button>
         </div>
         <div className="sort-segment">
-          {(['rating', 'latency', 'name', 'trust'] as const).map(s => (
+          {(['reviewCount', 'rating', 'latency', 'name', 'trust'] as const).map(s => (
             <button
               key={s}
               type="button"
               className={`sort-btn${sortBy === s ? ' active' : ''}`}
               onClick={() => handleSortClick(s)}
             >
-              {s === 'trust' ? 'Trust Score' : s.charAt(0).toUpperCase() + s.slice(1)}
+              {s === 'trust' ? 'Trust Score' : s === 'reviewCount' ? 'Most reviewed' : s.charAt(0).toUpperCase() + s.slice(1)}
               {sortBy === s && <span style={{marginLeft: 3, fontSize: 10, opacity: 0.7}}>{sortDir === 'asc' ? '↑' : '↓'}</span>}
             </button>
           ))}
