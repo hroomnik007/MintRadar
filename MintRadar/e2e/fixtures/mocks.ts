@@ -307,10 +307,11 @@ export function makeCashuTokenV4(mint: string, amounts: number[], unit = 'sat'):
 }
 
 /** v3 (cashuA, base64url JSON) token — the legacy encoding, built by hand. */
-export function makeCashuToken(mint: string, amounts: number[], unit = 'sat'): string {
+export function makeCashuToken(mint: string, amounts: number[], unit = 'sat', memo?: string): string {
   const payload = {
     token: [{ mint, proofs: amounts.map(amount => ({ amount, secret: 'x', C: '02abc' })) }],
     unit,
+    ...(memo ? { memo } : {}),
   }
   const base64 = Buffer.from(JSON.stringify(payload), 'utf-8').toString('base64')
   const base64url = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')

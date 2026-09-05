@@ -9,6 +9,8 @@ import {
   formatAuditErrorRatio,
   trustDonutArc,
   TRUST_DONUT_CIRCUMFERENCE,
+  normalizeMintUrl,
+  mintRiskLevel,
 } from '../utils/mintFormatting'
 
 // Inject a fixed `now` so tests are deterministic regardless of when they run.
@@ -319,5 +321,63 @@ describe('trustDonutArc', () => {
     expect(filledLen(trustDonutArc(-10).dashArray)).toBeCloseTo(0, 2)
     expect(filledLen(trustDonutArc(150).dashArray)).toBeCloseTo(TRUST_DONUT_CIRCUMFERENCE, 1)
     expect(filledLen(trustDonutArc(NaN).dashArray)).toBeCloseTo(0, 2)
+  })
+})
+
+// ── normalizeMintUrl (Token Inspector mint matching) ────────────
+// Mirrors backend/src/discovery.ts normalizeUrl() — kept in sync manually,
+// same as trustScore.ts/auditScore.ts (see backend/src/__tests__/normalizeUrl.test.ts
+// for the backend's own equivalent test suite).
+describe('normalizeMintUrl', () => {
+  it('lowercases the hostname', () => {
+    expect(normalizeMintUrl('https://Mint.Example.com')).toBe('https://mint.example.com')
+  })
+
+  it('forces https regardless of the input scheme', () => {
+    expect(normalizeMintUrl('http://mint.example.com')).toBe('https://mint.example.com')
+  })
+
+  it('strips a trailing slash on the root path', () => {
+    expect(normalizeMintUrl('https://mint.example.com/')).toBe('https://mint.example.com')
+  })
+
+  it('leaves a non-root path untouched', () => {
+    expect(normalizeMintUrl('https://mint.example.com/cashu')).toBe('https://mint.example.com/cashu')
+  })
+
+  it('falls back to the trimmed raw string for an unparsable URL', () => {
+    expect(normalizeMintUrl('  not a url  ')).toBe('not a url')
+  })
+})
+
+// ── mintRiskLevel (Token Inspector risk badge) ──────────────────
+// Single-mint risk, not a multi-mint aggregation. Thresholds deliberately
+// match trustScoreInfo()'s 70/40 bands so "Low Trust" and "Medium risk"
+// never disagree about the same trustScore.
+describe('mintRiskLevel', () => {
+  it('is Unknown when the mint is not in /api/mints/known at all', () => {
+    expect(mintRiskLevel(null).label).toBe('Unknown')
+  })
+
+  it('is High risk when the mint is offline', () => {
+    expect(mintRiskLevel({ online: false, degraded: false, trustScore: 92 }).label).toBe('High risk')
+  })
+
+  it('is High risk when the mint is degraded, even if the last known online flag is true', () => {
+    expect(mintRiskLevel({ online: true, degraded: true, trustScore: 92 }).label).toBe('High risk')
+  })
+
+  it('is Medium risk when online with a trust score below 40', () => {
+    expect(mintRiskLevel({ online: true, degraded: false, trustScore: 39 }).label).toBe('Medium risk')
+  })
+
+  it('is Low risk when online with a trust score of 40 or above', () => {
+    expect(mintRiskLevel({ online: true, degraded: false, trustScore: 40 }).label).toBe('Low risk')
+    expect(mintRiskLevel({ online: true, degraded: false, trustScore: 92 }).label).toBe('Low risk')
+  })
+
+  it('treats a missing trust score as 0 for an online mint (Medium, not a crash)', () => {
+    expect(mintRiskLevel({ online: true, degraded: false, trustScore: null }).label).toBe('Medium risk')
+    expect(mintRiskLevel({ online: true, degraded: false, trustScore: undefined }).label).toBe('Medium risk')
   })
 })

@@ -6,6 +6,7 @@ import {
   Tooltip, ResponsiveContainer, LineChart, Line,
 } from 'recharts'
 import { MintFavicon } from '@/components/mint/MintFavicon'
+import { IcShield } from '@/components/mint/IcShield'
 import { type KnownMint } from '@/hooks/useKnownMints'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { useNow } from '@/hooks/useNow'
@@ -16,13 +17,6 @@ const IcClose = () => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
     <line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
     <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-  </svg>
-)
-
-// Same shield mark used by the Trust Score badge on the mint cards (MintCard.tsx).
-const IcShield = () => (
-  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
-    <path d="M7 1.2 1.9 3.1v4c0 3 2.1 4.9 5.1 5.7 3-.8 5.1-2.7 5.1-5.7v-4L7 1.2Z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
   </svg>
 )
 
@@ -300,7 +294,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                     <span className="cmp-mobile-lbl">Trust Score</span>
                     <span className="cmp-mobile-val">
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: d.tsInfo.color }}>
-                        <IcShield />
+                        <IcShield size={12} />
                         <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? `${d.trustScore}%` : '—'}</span>
                       </span>
                       {d.isOnline && (
@@ -449,7 +443,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             return (
               <div key={mint.url} className="cmp-val">
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: d.tsInfo.color }}>
-                  <IcShield />
+                  <IcShield size={12} />
                   <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? `${d.trustScore}%` : '—'}</span>
                 </span>
                 {d.isOnline && (

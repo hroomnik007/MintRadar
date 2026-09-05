@@ -24,6 +24,27 @@ export function mintAgeBadge(
   return              { label: 'OG',          color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' }
 }
 
+// ── Mint URL normalization ──────────────────────────────────────
+// Mirrors the backend's normalizeUrl() (backend/src/discovery.ts) so a mint
+// URL parsed off of a Cashu token (arbitrary case/trailing-slash) matches the
+// same key the backend used when it inserted the mint into /api/mints/known.
+// The two copies can't share code (separate npm packages, no workspace), so
+// keep them in sync if the normalization logic ever changes.
+export function normalizeMintUrl(raw: string): string {
+  try {
+    const parsed = new URL(raw.trim())
+    parsed.protocol = 'https:'
+    parsed.hostname = parsed.hostname.toLowerCase()
+    let result = parsed.toString()
+    if (parsed.pathname === '/') {
+      result = result.replace(/\/$/, '')
+    }
+    return result
+  } catch {
+    return raw.trim()
+  }
+}
+
 // ── Trust score (MintDetail gauge/badge) ───────────────────────
 // trustScoreColor: raw colour for the score number
 export function trustScoreColor(score: number): string {
@@ -51,6 +72,35 @@ export function trustColor(score: number): string {
   if (score >= 70) return '#4ade80'
   if (score >= 40) return '#ffa500'
   return '#ff4d4d'
+}
+
+// ── Mint risk level (Token Inspector) ───────────────────────────
+// Risk for a SINGLE mint a token is bound to — not a multi-mint aggregation.
+// Reuses the exact same 70/40 trust-score thresholds as trustScoreInfo() above
+// so "Low Trust" and "risk: medium" never disagree about the same score.
+export interface MintRiskInfo {
+  label: 'High risk' | 'Medium risk' | 'Low risk' | 'Unknown'
+  color: string
+  bg: string
+  border: string
+}
+
+const RISK_HIGH: MintRiskInfo = { label: 'High risk',   color: '#ff4d4d', bg: 'rgba(255,77,77,0.1)',  border: 'rgba(255,77,77,0.25)' }
+const RISK_MEDIUM: MintRiskInfo = { label: 'Medium risk', color: '#ffa500', bg: 'rgba(255,165,0,0.1)',  border: 'rgba(255,165,0,0.25)' }
+const RISK_LOW: MintRiskInfo = { label: 'Low risk',    color: '#4ade80', bg: 'rgba(74,222,128,0.1)', border: 'rgba(74,222,128,0.25)' }
+const RISK_UNKNOWN: MintRiskInfo = { label: 'Unknown',    color: 'var(--t3)', bg: 'var(--bg3)',          border: 'var(--border)' }
+
+/**
+ * `mint` is null when the token's mint URL doesn't match any row in
+ * /api/mints/known — deliberately its own "Unknown" state rather than a
+ * silent fallback into one of the three known-mint tiers, since "not tracked"
+ * and "tracked but risky" are different findings.
+ */
+export function mintRiskLevel(mint: { online: boolean | null; degraded: boolean; trustScore: number | null | undefined } | null): MintRiskInfo {
+  if (!mint) return RISK_UNKNOWN
+  if (mint.online === false || mint.degraded === true) return RISK_HIGH
+  if ((mint.trustScore ?? 0) < 40) return RISK_MEDIUM
+  return RISK_LOW
 }
 
 // ── Trust Score donut geometry ────────────────────────────────

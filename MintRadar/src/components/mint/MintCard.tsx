@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { MintFavicon } from '@/components/mint/MintFavicon'
+import { IcShield } from '@/components/mint/IcShield'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
@@ -28,11 +29,6 @@ const IcBellDown = () => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
     <path d="M6 1.2C4.6 1.2 3.5 2.4 3.5 3.9V5.6C3.5 6.3 3.2 6.9 2.8 7.3H9.2C8.8 6.9 8.5 6.3 8.5 5.6V3.9C8.5 2.4 7.4 1.2 6 1.2Z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/>
     <path d="M6 7.3V10.3M6 10.3L4.7 9M6 10.3L7.3 9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-)
-const IcShield = () => (
-  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
-    <path d="M7 1.2 1.9 3.1v4c0 3 2.1 4.9 5.1 5.7 3-.8 5.1-2.7 5.1-5.7v-4L7 1.2Z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
   </svg>
 )
 const IcBellUp = () => (

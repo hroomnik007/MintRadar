@@ -159,6 +159,27 @@
   font-family: var(--font-mono);
 }
 
+.token-risk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  border-radius: 5px;
+  padding: 2px 7px;
+}
+
+.token-memo-row {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text2);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
 .token-details-row {
   display: flex;
   align-items: center;
@@ -259,6 +280,18 @@
   font-size: 11px;
   line-height: 1.5;
   color: var(--text3);
+}
+
+/* ── Token Inspector: NUT-07 "Check if spent" ─────────────────── */
+.token-spent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.token-spent .token-action-btn {
+  align-self: flex-start;
+  flex: 0 0 auto;
 }
 
 /* ── Best Mint Wizard ─────────────────────────────────────────── */

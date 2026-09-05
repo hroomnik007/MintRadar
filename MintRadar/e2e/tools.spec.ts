@@ -167,6 +167,101 @@ test.describe('Tools', () => {
     expect(overflowing).toEqual([])
   })
 
+  test('Token Inspector shows the memo when the token carries one', async ({ page }) => {
+    const token = makeCashuToken(MOCK_MINTS[0]!.url, [21], 'sat', 'thanks for lunch')
+
+    await page.locator('.token-input').fill(token)
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+
+    await expect(page.locator('.token-result-grid')).toBeVisible()
+    await expect(page.locator('.token-memo-row')).toContainText('thanks for lunch')
+  })
+
+  test('Token Inspector hides the memo row for a token with no memo', async ({ page }) => {
+    const token = makeCashuToken(MOCK_MINTS[0]!.url, [21])
+
+    await page.locator('.token-input').fill(token)
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+
+    await expect(page.locator('.token-result-grid')).toBeVisible()
+    await expect(page.locator('.token-memo-row')).toHaveCount(0)
+  })
+
+  test('Risk badge is Low risk for an online, high-trust mint', async ({ page }) => {
+    const token = makeCashuToken(MOCK_MINTS[0]!.url, [21]) // Alpha: online, trustScore 92
+
+    await page.locator('.token-input').fill(token)
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+
+    await expect(page.locator('.token-risk-badge')).toContainText('Low risk')
+  })
+
+  test('Risk badge is High risk for an offline mint', async ({ page }) => {
+    const token = makeCashuToken(MOCK_MINTS[2]!.url, [21]) // Charlie: offline
+
+    await page.locator('.token-input').fill(token)
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+
+    await expect(page.locator('.token-risk-badge')).toContainText('High risk')
+  })
+
+  test('Risk badge is Unknown for a mint MintRadar has never seen', async ({ page }) => {
+    const token = makeCashuToken('https://never-seen.mint.example', [21])
+
+    await page.locator('.token-input').fill(token)
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+
+    await expect(page.locator('.token-result-cell', { hasText: 'Mint Status' })).toContainText('Not in database')
+    await expect(page.locator('.token-risk-badge')).toContainText('Unknown')
+  })
+
+  test('Check if spent is a separate, user-initiated action — never runs automatically', async ({ page }) => {
+    const token = makeCashuToken(MOCK_MINTS[0]!.url, [21])
+
+    await page.locator('.token-input').fill(token)
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+    await expect(page.locator('.token-result-grid')).toBeVisible()
+
+    // Give the automatic DLEQ step (which does fire on its own) a chance to
+    // settle, then confirm the spent-check result box is still absent —
+    // only a click on its own button may produce it.
+    await expect(page.locator('.token-verify-result')).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('.token-spent .token-verify-result')).toHaveCount(0)
+
+    const spentBtn = page.getByRole('button', { name: /Check if spent/ })
+    await expect(spentBtn).toBeVisible()
+    await expect(spentBtn).toBeEnabled()
+  })
+
+  test('Check if spent surfaces a clear error without breaking the rest of the UI when the mint is unreachable', async ({ page }) => {
+    // /v1/keysets and /v1/keys aren't mocked (same setup as the DLEQ
+    // unreachable test above), so wallet.loadMint() fails — must be reported
+    // as a checkstate-specific error, not a crash, and must not clear the
+    // token summary already on screen.
+    const token = makeCashuToken(MOCK_MINTS[0]!.url, [21])
+
+    await page.locator('.token-input').fill(token)
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+    await expect(page.locator('.token-result-grid')).toBeVisible()
+
+    // CSP blocks the mint fetch before it ever reaches the network layer (same as
+    // the DLEQ "Could not reach mint" test above), so the failure can resolve too
+    // fast to reliably observe the "Checking…" transient — assert the settled
+    // state instead, same tradeoff the existing DLEQ unreachable test makes.
+    const spentBtn = page.getByRole('button', { name: /Check if spent|Checking with mint/ })
+    await spentBtn.click()
+
+    const spentResult = page.locator('.token-spent .token-verify-result')
+    await expect(spentResult).toBeVisible({ timeout: 15_000 })
+    await expect(spentResult).toContainText(/Could not check spent status/)
+    await expect(spentResult).toHaveClass(/tv-unknown/)
+
+    // Rest of the inspector stays intact.
+    await expect(page.locator('.token-result-grid')).toBeVisible()
+    await expect(spentBtn).toBeEnabled()
+    await expect(spentBtn).toHaveText('🔍 Check if spent')
+  })
+
   test('Token Inspector shows an error for an invalid token (no crash)', async ({ page }) => {
     await page.locator('.token-input').fill('this-is-not-a-cashu-token')
     await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()

@@ -2,24 +2,15 @@ import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { MintFavicon } from '@/components/mint/MintFavicon'
+import { IcShield } from '@/components/mint/IcShield'
 import { useNow } from '@/hooks/useNow'
-import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, type TokenInfo } from '@/utils/cashuToken'
+import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, type TokenInfo, type TokenSpentCheck } from '@/utils/cashuToken'
+import { normalizeMintUrl, trustColor, trustScoreInfo, mintRiskLevel } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
 import './Tools.css'
 
 function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
-}
-
-function normUrl(raw: string): string {
-  try {
-    const p = new URL(raw.trim())
-    p.protocol = 'https:'
-    p.hostname = p.hostname.toLowerCase()
-    let r = p.toString()
-    if (p.pathname === '/') r = r.replace(/\/$/, '')
-    return r
-  } catch { return raw.trim() }
 }
 
 // DLEQ verification's outcome, once it has run. "unreachable" is deliberately distinct
@@ -37,6 +28,15 @@ type VerifyResult =
 // network" instead of collapsing both into one generic spinner.
 type Phase = 'idle' | 'inspecting' | 'verifying'
 
+// The "Check if spent" NUT-07 check is a separate, user-initiated action from
+// the Inspect & Verify flow above — it asks the mint a different question
+// (has this proof already been redeemed?) and, unlike DLEQ, tells the mint
+// operator that someone is looking at this specific token right now. Kept on
+// its own state machine so it never fires automatically alongside inspection.
+type SpentCheckResult =
+  | { status: 'ok'; data: TokenSpentCheck }
+  | { status: 'error'; message: string }
+
 function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   const navigate = useNavigate()
   const now = useNow()
@@ -46,6 +46,8 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   const [inspected, setInspected] = useState(false)
   const [phase, setPhase] = useState<Phase>('idle')
   const [verify, setVerify] = useState<VerifyResult | null>(null)
+  const [checkingSpent, setCheckingSpent] = useState(false)
+  const [spentResult, setSpentResult] = useState<SpentCheckResult | null>(null)
 
   const knownMap = useMemo(() => {
     const m = new Map<string, KnownMint>()
@@ -55,15 +57,18 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
 
   const mintInfo = useMemo(() => {
     if (!result) return null
-    const normalized = normUrl(result.mint)
+    const normalized = normalizeMintUrl(result.mint)
     return knownMap.get(normalized) ?? knownMap.get(result.mint) ?? null
   }, [result, knownMap])
+
+  const riskInfo = mintRiskLevel(mintInfo ? { online: mintInfo.online, degraded: mintInfo.degraded, trustScore: mintInfo.trustScore } : null)
 
   const handleInspectAndVerify = async () => {
     const token = input.trim()
     if (!token) return
     setInspected(true)
     setVerify(null)
+    setSpentResult(null)
     setPhase('inspecting')
 
     // The local parse below is synchronous and effectively instant, so without a
@@ -105,7 +110,22 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     setPhase('idle')
   }
 
-  const scoreColor = (s: number) => s >= 70 ? '#4ade80' : s >= 40 ? '#f59e0b' : '#E24B4A'
+  const handleCheckSpent = async () => {
+    const token = input.trim()
+    if (!token || checkingSpent) return
+    setCheckingSpent(true)
+    setSpentResult(null)
+    try {
+      const data = await checkTokenSpentState(token)
+      setSpentResult({ status: 'ok', data })
+    } catch (err) {
+      // Mint offline/unreachable, or the token itself couldn't be resolved —
+      // either way this must not take down the rest of the inspector UI.
+      const detail = err instanceof Error && err.message ? err.message : 'Could not reach the mint.'
+      setSpentResult({ status: 'error', message: detail })
+    }
+    setCheckingSpent(false)
+  }
 
   return (
     <div className="tool-card">
@@ -118,7 +138,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
         className="token-input"
         placeholder="cashuB… (v4) or cashuA… (v3)"
         value={input}
-        onChange={e => { setInput(e.target.value); setInspected(false); setResult(null); setParseError(null); setVerify(null); setPhase('idle') }}
+        onChange={e => { setInput(e.target.value); setInspected(false); setResult(null); setParseError(null); setVerify(null); setPhase('idle'); setSpentResult(null); setCheckingSpent(false) }}
         rows={3}
         spellCheck={false}
       />
@@ -143,6 +163,12 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
               <div className="trc-label">Mint</div>
               <div className="trc-value">{mintInfo?.name ?? getHostname(result.mint)}</div>
               <div className="trc-sub">{getHostname(result.mint)}</div>
+              <span
+                className="token-risk-badge"
+                style={{ color: riskInfo.color, background: riskInfo.bg, border: `1px solid ${riskInfo.border}` }}
+              >
+                <IcShield size={11} /><span>{riskInfo.label}</span>
+              </span>
             </div>
             <div className="token-result-cell">
               <div className="trc-label">Amount</div>
@@ -170,9 +196,9 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
               <div className="trc-label">Trust Score</div>
               {mintInfo?.trustScore != null ? (
                 <>
-                  <div className="trc-value" style={{ color: scoreColor(mintInfo.trustScore) }}>{mintInfo.trustScore}%</div>
-                  <div className="trc-sub" style={{ color: scoreColor(mintInfo.trustScore) }}>
-                    {mintInfo.trustScore >= 70 ? 'High Trust' : mintInfo.trustScore >= 40 ? 'Moderate Trust' : 'Low Trust'}
+                  <div className="trc-value" style={{ color: trustColor(mintInfo.trustScore) }}>{mintInfo.trustScore}%</div>
+                  <div className="trc-sub" style={{ color: trustColor(mintInfo.trustScore) }}>
+                    {trustScoreInfo(mintInfo.trustScore).label}
                   </div>
                 </>
               ) : (
@@ -190,6 +216,10 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             </>)}
             <span className="tdr-item"><span className="tdr-label">Unit</span>{result.unit}</span>
           </div>
+
+          {result.memo && (
+            <div className="token-memo-row"><span className="tdr-label">Memo</span> {result.memo}</div>
+          )}
 
           <div className="token-verify">
             {phase === 'verifying' && (
@@ -226,6 +256,51 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
               which describe the mint's reputation and uptime from MintRadar's database rather than
               whether these particular proofs were really issued by that mint. "Inspect & Verify Token"
               runs both automatically: the local read first, then this live check against the mint.
+            </div>
+          </div>
+
+          <div className="token-spent">
+            <button
+              type="button"
+              className="token-action-btn"
+              onClick={() => void handleCheckSpent()}
+              disabled={checkingSpent}
+            >
+              {checkingSpent ? '🔍 Checking with mint…' : '🔍 Check if spent'}
+            </button>
+
+            {spentResult?.status === 'ok' && (() => {
+              const { total, unspent, spent, pending } = spentResult.data
+              if (spent === total) {
+                return (
+                  <div className="token-verify-result tv-bad">
+                    ❌ All {total} proof{total === 1 ? '' : 's'} already spent — this token has already been redeemed elsewhere.
+                  </div>
+                )
+              }
+              if (unspent === total) {
+                return (
+                  <div className="token-verify-result tv-ok">
+                    ✅ All {total} proof{total === 1 ? '' : 's'} unspent — this token has not been redeemed yet.
+                  </div>
+                )
+              }
+              return (
+                <div className="token-verify-result tv-unknown">
+                  ⚠️ {unspent}/{total} proofs unspent, {spent} already spent{pending > 0 ? `, ${pending} pending` : ''} — this token is only partially usable.
+                </div>
+              )
+            })()}
+            {spentResult?.status === 'error' && (
+              <div className="token-verify-result tv-unknown">
+                ⚠️ Could not check spent status — {spentResult.message} This says nothing about the token itself.
+              </div>
+            )}
+
+            <div className="token-verify-note">
+              NUT-07 asks the mint whether each proof has already been redeemed — a live network call
+              that, unlike the automatic checks above, only ever runs when you click this button. Doing
+              so tells the mint operator that someone is looking at this specific token right now.
             </div>
           </div>
 

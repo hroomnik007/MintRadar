@@ -5,7 +5,7 @@
 // needed — which is exactly what the Token Inspector wants for a paste-and-look
 // tool. The heavier full decode (proofs + DLEQ) lives in decodeTokenWithMint()
 // below and needs the mint online.
-import { getTokenMetadata, hasValidDleq, Wallet, type Proof } from '@cashu/cashu-ts'
+import { CheckStateEnum, getTokenMetadata, hasValidDleq, Wallet, type Proof } from '@cashu/cashu-ts'
 
 export interface TokenInfo {
   mint: string
@@ -174,4 +174,46 @@ export async function decodeTokenWithMint(raw: string): Promise<FullTokenDecode>
     proofsWithDleq,
     allDleqValid: proofs.length > 0 && proofs.every(p => p.hasDleq && p.dleqValid === true),
   }
+}
+
+export interface TokenSpentCheck {
+  total: number
+  unspent: number
+  spent: number
+  pending: number
+}
+
+/**
+ * NUT-07 live spent-state check: asks the token's own mint whether each proof
+ * has already been redeemed. Same mint-reachability requirement (and the same
+ * decoded proofs) as decodeTokenWithMint() above — this is a second, separate
+ * question about the same proofs, not a replacement for the DLEQ check.
+ *
+ * Deliberately user-initiated only (never called automatically on paste): a
+ * checkstate request tells the mint that someone is looking at this specific
+ * token right now, which is a privacy leak to the mint operator even though
+ * no third party is involved.
+ *
+ * @throws if the mint is unreachable or the token can't be resolved.
+ */
+export async function checkTokenSpentState(raw: string): Promise<TokenSpentCheck> {
+  const token = raw.trim()
+  const { info, error } = parseCashuToken(token)
+  if (!info) throw new Error(error ?? 'Invalid token')
+
+  const wallet = new Wallet(info.mint, { unit: info.unit })
+  await wallet.loadMint()
+
+  const decoded = wallet.decodeToken(token)
+  const states = await wallet.checkProofsStates(decoded.proofs)
+
+  let unspent = 0
+  let spent = 0
+  let pending = 0
+  for (const s of states) {
+    if (s.state === CheckStateEnum.SPENT) spent++
+    else if (s.state === CheckStateEnum.PENDING) pending++
+    else unspent++
+  }
+  return { total: states.length, unspent, spent, pending }
 }

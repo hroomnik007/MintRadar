@@ -1,6 +1,25 @@
-import { describe, it, expect } from 'vitest'
-import { Amount, getEncodedToken } from '@cashu/cashu-ts'
-import { parseCashuToken, formatTokenAmount } from '../utils/cashuToken'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { Amount, getEncodedToken, CheckStateEnum } from '@cashu/cashu-ts'
+import { parseCashuToken, formatTokenAmount, checkTokenSpentState } from '../utils/cashuToken'
+
+// checkTokenSpentState() needs a live mint (Wallet.loadMint/checkProofsStates), so the
+// mint-reachability half is mocked here — same approach the DLEQ code path would need,
+// but that one is exercised via e2e (Playwright network routing) instead. Only `Wallet`
+// is faked; everything else (getTokenMetadata, CheckStateEnum, …) stays real.
+const mockLoadMint = vi.fn()
+const mockDecodeToken = vi.fn()
+const mockCheckProofsStates = vi.fn()
+vi.mock('@cashu/cashu-ts', async importOriginal => {
+  const actual = await importOriginal<typeof import('@cashu/cashu-ts')>()
+  return {
+    ...actual,
+    Wallet: vi.fn().mockImplementation(function MockWallet(this: Record<string, unknown>) {
+      this.loadMint = mockLoadMint
+      this.decodeToken = mockDecodeToken
+      this.checkProofsStates = mockCheckProofsStates
+    }),
+  }
+})
 
 const MINT = 'https://testnut.cashu.space'
 const PROOFS = [
@@ -99,5 +118,53 @@ describe('formatTokenAmount', () => {
 
   it('handles zero without producing a malformed fraction', () => {
     expect(formatTokenAmount(0, 'usd')).toBe('$0.00')
+  })
+})
+
+describe('checkTokenSpentState', () => {
+  beforeEach(() => {
+    mockLoadMint.mockReset().mockResolvedValue(undefined)
+    mockDecodeToken.mockReset().mockReturnValue({ proofs: PROOFS })
+    mockCheckProofsStates.mockReset()
+  })
+
+  it('reports all proofs unspent', async () => {
+    mockCheckProofsStates.mockResolvedValue(PROOFS.map(() => ({ state: CheckStateEnum.UNSPENT })))
+    const result = await checkTokenSpentState(V4_TOKEN)
+    expect(result).toEqual({ total: 2, unspent: 2, spent: 0, pending: 0 })
+  })
+
+  it('reports all proofs spent', async () => {
+    mockCheckProofsStates.mockResolvedValue(PROOFS.map(() => ({ state: CheckStateEnum.SPENT })))
+    const result = await checkTokenSpentState(V4_TOKEN)
+    expect(result).toEqual({ total: 2, unspent: 0, spent: 2, pending: 0 })
+  })
+
+  it('reports a mix of spent and unspent proofs', async () => {
+    mockCheckProofsStates.mockResolvedValue([
+      { state: CheckStateEnum.UNSPENT },
+      { state: CheckStateEnum.SPENT },
+    ])
+    const result = await checkTokenSpentState(V4_TOKEN)
+    expect(result).toEqual({ total: 2, unspent: 1, spent: 1, pending: 0 })
+  })
+
+  it('counts a pending proof separately from spent/unspent', async () => {
+    mockCheckProofsStates.mockResolvedValue([
+      { state: CheckStateEnum.PENDING },
+      { state: CheckStateEnum.UNSPENT },
+    ])
+    const result = await checkTokenSpentState(V4_TOKEN)
+    expect(result).toEqual({ total: 2, unspent: 1, spent: 0, pending: 1 })
+  })
+
+  it('throws for an undecodable token without ever reaching the mint', async () => {
+    await expect(checkTokenSpentState('not-a-cashu-token')).rejects.toThrow()
+    expect(mockLoadMint).not.toHaveBeenCalled()
+  })
+
+  it('propagates a mint-unreachable error to the caller', async () => {
+    mockLoadMint.mockRejectedValue(new Error('fetch failed'))
+    await expect(checkTokenSpentState(V4_TOKEN)).rejects.toThrow('fetch failed')
   })
 })
