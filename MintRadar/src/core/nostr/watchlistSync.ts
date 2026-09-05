@@ -23,13 +23,27 @@ export const WATCHLIST_RELAYS = [
 
 const WATCHLIST_KIND = 10003
 
-export async function fetchRemoteWatchlist(pubkey: string, userWriteRelays?: string[] | null): Promise<string[]> {
+export interface RemoteWatchlistResult {
+  urls: string[]
+  /**
+   * true when the fetch could not be completed (relay timeout, decrypt/parse
+   * failure, or every relay rejecting for a reason other than "no matching
+   * event") — as opposed to a genuinely empty remote list. Lets the caller
+   * show an error fallback instead of silently treating "couldn't sync" the
+   * same as "user has nothing watched".
+   */
+  failed: boolean
+}
+
+const NO_EVENT_ERROR = 'no event'
+
+export async function fetchRemoteWatchlist(pubkey: string, userWriteRelays?: string[] | null): Promise<RemoteWatchlistResult> {
   const pk = pubkey.slice(0, 8)
   const method = detectLoginMethod()
 
   if (!window.nostr?.nip44) {
     console.warn(`[watchlist-sync] no nip44 support on signer, skipping remote fetch (pubkey=${pk}, method=${method})`)
-    return []
+    return { urls: [], failed: false }
   }
 
   const relays = userWriteRelays && userWriteRelays.length > 0
@@ -60,7 +74,7 @@ export async function fetchRemoteWatchlist(pubkey: string, userWriteRelays?: str
       decrypted = await window.nostr.nip44.decrypt(pubkey, event.content)
     } catch (decryptErr) {
       console.warn(`[watchlist-sync] decryption failed for event ${event.id} (pubkey=${pk}, method=${method})`, decryptErr)
-      return []
+      return { urls: [], failed: true }
     }
 
     let parsed: unknown
@@ -68,25 +82,37 @@ export async function fetchRemoteWatchlist(pubkey: string, userWriteRelays?: str
       parsed = JSON.parse(decrypted)
     } catch (parseErr) {
       console.warn(`[watchlist-sync] decryption failed for event ${event.id} (pubkey=${pk}, method=${method}) — malformed JSON payload`, parseErr)
-      return []
+      return { urls: [], failed: true }
     }
 
     if (!Array.isArray(parsed)) {
       console.warn(`[watchlist-sync] remote list genuinely empty (kind:10003 not found or empty content) (pubkey=${pk}, method=${method})`)
-      return []
+      return { urls: [], failed: false }
     }
     const urls = parsed.filter((u): u is string => typeof u === 'string')
     if (urls.length === 0) {
       console.warn(`[watchlist-sync] remote list genuinely empty (kind:10003 not found or empty content) (pubkey=${pk}, method=${method})`)
     }
-    return urls
+    return { urls, failed: false }
   } catch (err) {
     if (err instanceof Error && err.message === 'timeout') {
       console.warn(`[watchlist-sync] relay timeout after 3s, ${responded}/${total} relays responded (pubkey=${pk}, method=${method})`)
-    } else {
-      console.warn(`[watchlist-sync] remote list genuinely empty (kind:10003 not found or empty content) — no relay returned a valid event (pubkey=${pk}, method=${method}, ${responded}/${total} relays responded)`, err)
+      return { urls: [], failed: true }
     }
-    return []
+    // Promise.any rejected before the timeout — every relay query settled.
+    // If every rejection is our own deliberate "no event" (relay reached,
+    // just nothing matching), the remote list is genuinely empty rather than
+    // unreachable. Any other rejection reason (connection/protocol error)
+    // means at least one relay could not actually be queried — surface that
+    // as a failure instead of silently treating it as "nothing to sync".
+    const reasons = err instanceof AggregateError ? err.errors : [err]
+    const allGenuinelyEmpty = reasons.every(r => r instanceof Error && r.message === NO_EVENT_ERROR)
+    if (allGenuinelyEmpty) {
+      console.warn(`[watchlist-sync] remote list genuinely empty (kind:10003 not found or empty content) — no relay returned a valid event (pubkey=${pk}, method=${method}, ${responded}/${total} relays responded)`)
+      return { urls: [], failed: false }
+    }
+    console.warn(`[watchlist-sync] relay fetch failed (pubkey=${pk}, method=${method}, ${responded}/${total} relays responded)`, err)
+    return { urls: [], failed: true }
   }
 }
 

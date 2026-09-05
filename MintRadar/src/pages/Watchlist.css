@@ -345,6 +345,16 @@
   margin-top: 12px;
 }
 
+.wl-sync-error-banner {
+  font-size: 12px;
+  color: var(--amber);
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-soft-strong);
+  border-radius: var(--radius-m);
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+
 /* The Watchlist has no filter/sort controls (small personal lists) — all the
    .filter-* / .sort-* rules it used to duplicate live in Dashboard.css. */
 

@@ -12,6 +12,7 @@ export function useWatchlistSync() {
   const profile = useAuthStore(s => s.profile)
   const mints = useWatchlistStore(s => s.mints)
   const loadFromDb = useWatchlistStore(s => s.loadFromDb)
+  const setSyncStatus = useWatchlistStore(s => s.setSyncStatus)
   const { read: userReadRelays, write: userWriteRelays } = useUserRelays()
   // Ref so Phase 1/2 always use the current relay list without re-triggering on relay changes.
   // Written in an effect (not during render) — this effect is declared first, so it runs
@@ -36,8 +37,9 @@ export function useWatchlistSync() {
       console.log('sync: logout detected — resetting all sync state')
       syncedForPubkey.current = null
       isSyncing.current = false
+      setSyncStatus('pending')
     }
-  }, [profile?.pubkey])
+  }, [profile?.pubkey, setSyncStatus])
 
   // Phase 1: on login, fetch remote → replace Dexie → load into store
   useEffect(() => {
@@ -47,6 +49,7 @@ export function useWatchlistSync() {
     // Set isSyncing IMMEDIATELY (synchronously) before any async work
     // so Phase 2 is blocked from the moment this effect fires
     isSyncing.current = true
+    setSyncStatus('pending')
     console.log('sync: starting for pubkey', pubkey.slice(0, 8))
 
     const doSync = async () => {
@@ -66,7 +69,7 @@ export function useWatchlistSync() {
         }
 
         console.log('sync: fetching kind:10003 from relays')
-        const remote = await fetchRemoteWatchlist(pubkey, userWriteRelaysRef.current)
+        const { urls: remote, failed: remoteFetchFailed } = await fetchRemoteWatchlist(pubkey, userWriteRelaysRef.current)
         if (import.meta.env.DEV) { console.log(`sync: decrypted ${remote.length} mints`, remote) }
 
         if (remote.length > 0) {
@@ -99,6 +102,7 @@ export function useWatchlistSync() {
 
         await loadFromDb()
         syncedForPubkey.current = pubkey
+        setSyncStatus(remoteFetchFailed ? 'error' : 'done')
         console.log('sync: complete —', useWatchlistStore.getState().mints.length, 'mints in store')
 
         // Best-effort: refresh server-side notification_subscriptions rows
@@ -110,13 +114,14 @@ export function useWatchlistSync() {
         console.warn('sync: error during Phase 1:', err)
         // Mark complete even on error to avoid getting stuck; Phase 2 can resume
         syncedForPubkey.current = pubkey
+        setSyncStatus('error')
       } finally {
         isSyncing.current = false
       }
     }
 
     void doSync()
-  }, [profile?.pubkey, loadFromDb])
+  }, [profile?.pubkey, loadFromDb, setSyncStatus])
 
   // Phase 2: publish current state to relays on any mint change,
   // but ONLY after sync has completed and is not currently running.

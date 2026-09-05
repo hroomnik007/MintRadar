@@ -194,6 +194,7 @@ export default function Watchlist() {
   const navigate = useNavigate()
   const mints = useWatchlistStore(state => state.mints)
   const loadFromDb = useWatchlistStore(state => state.loadFromDb)
+  const syncStatus = useWatchlistStore(state => state.syncStatus)
 
   const profile = useAuthStore(state => state.profile)
 
@@ -303,7 +304,14 @@ export default function Watchlist() {
 
       <div className="wl-body wl-body-two-col">
         <div className="wl-main-col">
-          {knownLoading ? (
+          {syncStatus === 'error' && (
+            <div className="wl-sync-error-banner" role="status">
+              {mints.length > 0
+                ? "Couldn't sync with Nostr relays — showing local data."
+                : "Couldn't sync with Nostr relays — your watchlist may be out of date on this device."}
+            </div>
+          )}
+          {knownLoading || syncStatus === 'pending' ? (
             <div className="wl-grid">
               {Array.from({ length: 9 }, (_, i) => <SkeletonCard key={i} />)}
             </div>

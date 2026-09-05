@@ -2,9 +2,22 @@ import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { db } from '@/db'
 
+/**
+ * 'pending' — Phase 1 sync (relay fetch + Dexie load) hasn't finished yet for
+ * the current pubkey. Gates the Watchlist empty-state so it can't flash
+ * before real data has had a chance to load — see useWatchlistSync.ts.
+ * 'done' — sync finished (with or without remote data).
+ * 'error' — sync finished but the remote relay fetch failed outright
+ * (timeout / decrypt / connection errors), as opposed to genuinely finding
+ * no kind:10003 event.
+ */
+export type WatchlistSyncStatus = 'pending' | 'done' | 'error'
+
 interface WatchlistState {
   mints: string[]
   isLoaded: boolean
+  syncStatus: WatchlistSyncStatus
+  setSyncStatus: (status: WatchlistSyncStatus) => void
   loadFromDb: () => Promise<void>
   addMint: (url: string) => Promise<void>
   removeMint: (url: string) => Promise<void>
@@ -17,6 +30,13 @@ export const useWatchlistStore = create<WatchlistState>()(
   immer((set, get) => ({
     mints: [],
     isLoaded: false,
+    syncStatus: 'pending',
+
+    setSyncStatus: (status: WatchlistSyncStatus) => {
+      set(state => {
+        state.syncStatus = status
+      })
+    },
 
     loadFromDb: async () => {
       const entries = await db.watchlist.toArray()
@@ -62,6 +82,7 @@ export const useWatchlistStore = create<WatchlistState>()(
       set(state => {
         state.mints = []
         state.isLoaded = false
+        state.syncStatus = 'pending'
       })
     },
 
