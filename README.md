@@ -21,7 +21,7 @@
 
 ### 🛡️ Trust Score System
 
-Composite score (0–100) calculated server-side after every probe:
+Composite score (0–100) calculated server-side after every probe. Shown alongside a separate **Community Rating** (average of Nostr reviews), so an operator-independent signal sits next to the objective one:
 
 | Component | Weight | Basis |
 |-----------|--------|-------|
@@ -38,15 +38,18 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 - Search by name or URL
 - Advanced filter panel: Status, Trust Score minimum, Mint Age, NUT support
 - Active filters shown as dismissible tags
-- Sort by Status / Latency / Name / Trust Score (asc/desc)
+- Sort by Latency / Name / Trust Score / **Community Rating** / **Most reviewed** (asc/desc) — Community Rating uses a weighted (Bayesian) average so a mint with two 5★ reviews doesn't outrank one with fifty
+- Controls row stays docked at the top of the list while you scroll
 - Compact and expanded card view toggle
 - Single URL or bulk mint submission (paste multiple URLs at once)
+- Known dev/test mints are badged as such and kept out of recommendations
 
 ### 📈 Historical Data
 
 - Charts for **Latency**, **Uptime**, and **Trust Score** over 24 h / 7 d / 30 d / 90 d
 - Per-period averages with delta vs. previous period
 - Full Mint History panel with per-probe results
+- **Audit tab** on each mint — a summary strip (mints / melts / recent errors / honest "Last checked" time) backed by real swap data from audit.8333.space, with an amber/red reliability signal based on the rolling error rate
 
 ### 🌐 Global Stats
 
@@ -61,15 +64,15 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 
 ### ⚖️ Mint Comparison Tool
 
-Select 2–4 mints and compare side-by-side: Status, Trust Score, Uptime, Latency, NUT support grid, Software version, Backup support (NUT-13).
+Select 2–4 mints and compare side-by-side: Status, Trust Score, Community Rating, Uptime, Latency, NUT support grid, Software version, Backup support (NUT-13). On narrow screens the side-by-side table becomes a stacked/tabbed layout — one mint at a time, no horizontal scrolling.
 
 ### 👁️ Watchlist with Nostr Login
 
 - Login via **NIP-07 browser extension**, **nsec private key**, or **NIP-46 bunker / Amber**
+- Adding a mint to your watchlist requires a Nostr login (you're prompted to sign in first) — this keeps the list portable across devices
 - Watchlist stored locally in IndexedDB — never sent to the server
 - Optionally synced across devices as **NIP-44 encrypted kind:10003** events on Nostr relays
 - Export as **JSON** or **CSV**
-- Sort by Status, Latency, Name, or Trust Score
 - DM notifications on mint downtime/recovery, sent directly from your browser via NIP-07
 
 ### 📡 Nostr NIP-87 Discovery
@@ -78,7 +81,7 @@ Automatic mint discovery running every 6 hours from 17 Nostr relays (damus.io, n
 
 ### 🔧 Tools
 
-- **Token Inspector** — paste a Cashu token (cashuA / v3 format) to instantly see its mint, amount, unit, proof count, mint status, and Trust Score — with a direct link to the Mint Detail page or Cashu.me for redeeming
+- **Token Inspector** — paste a Cashu token (cashuA / v3 format) to instantly see its mint, amount, unit, proof count, memo, mint status, and Trust Score, plus a risk badge for the issuing mint — with a direct link to the Mint Detail page or Cashu.me for redeeming. An optional **Check if spent** action queries the mint (NUT-07) to tell you whether the proofs are still unspent, already redeemed, or only partially usable
 - **Best Mint for Me** — a 3-step wizard: pick your storage size, what matters most (speed / trust / NUT features), and software preference; latency to each candidate is measured live from your browser, and the top 3 matches are ranked with a weighted score
 
 ### 📚 Learn
@@ -91,9 +94,17 @@ A 5-module "Cashu 101" course, written as plain-language text with custom illust
 4. **Getting Started with a Wallet** — choosing a wallet, adding your first mint, making a deposit, sending tokens, and why backing up your seed phrase is non-negotiable
 5. **Safe Habits** — day-to-day habits (diversifying mints, redeeming regularly, checking Trust Score first) that meaningfully reduce your risk
 
+### 👛 Wallet Directory
+
+A plain, hand-maintained list of **9 Cashu-compatible wallets** (Minibits, Nutstash, Macadamia, Sovran, Cashu.me, Agicash, Coinos, Zeus, Nutshell) — each with its supported platforms, a one-sentence description, and a link to the wallet's own site. No ranking, reviews, or affiliate links; purely informational.
+
 ### ⭐ Nostr-Based Reviews
 
-Mint Detail page shows community reviews fetched from 18 relays as **kind:38000** events. Ratings are parsed from review text (`[N/5]` format). Author profiles (name + avatar) are resolved from Nostr and displayed alongside each review. Images are only loaded over HTTPS.
+Mint Detail page shows community reviews as **kind:38000** events. On page load they're fetched live from a fast **7-relay** read set; a server-side sync every 6 hours additionally aggregates reviews from a broader **18-relay** set so the counts and averages stay complete. Ratings are parsed from review text (`[N/5]` format). Author profiles (name + avatar) are resolved from Nostr and displayed alongside each review. Images are only loaded over HTTPS.
+
+- Filter chips: **All**, **5★**, **Critical** (≤ 2★), and a separate **Hide anon** toggle — chip counts update to match what's actually shown
+- A short disclaimer notes these are unverified NIP-87 events from the open Nostr network, not vetted testimonials
+- Write your own review from the page (rating → form), with a "Signing with …" indicator for the active login method
 
 ### 🔗 Social Link Previews
 
