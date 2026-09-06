@@ -123,6 +123,13 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS reviews_checked_at TIMESTAMPTZ',
     'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_down_at TIMESTAMPTZ',
     'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_up_at TIMESTAMPTZ',
+    // Version freshness grace period (see versionCatalog.ts's effectiveLatestVersions()):
+    // released_at is GitHub's own published_at for latest_version, so grace periods are
+    // measured from the real upstream release date, not from whenever our daily cron
+    // happened to notice it. previous_version is the latest_version this row held right
+    // before the current one — the rung a mint compares against while still in grace.
+    'ALTER TABLE software_versions ADD COLUMN IF NOT EXISTS released_at TIMESTAMPTZ',
+    'ALTER TABLE software_versions ADD COLUMN IF NOT EXISTS previous_version TEXT',
   ]
 
   for (const sql of migrations) {
