@@ -3,6 +3,8 @@ import cors from 'cors'
 import { pool, initDb } from './db.js'
 import { isSafeUrl, checkWsUrlSafety, safeFetch } from './ssrf.js'
 import { upsertMint, probeMintToDb, isValidCashuMint, parseMintMethods, type MintMethodEntry } from './prober.js'
+import { getLatestVersionsMap } from './versionCatalog.js'
+import { splitVersionString, canonicalSoftwareName } from './shared/trustScore.js'
 import { seedKnownMints, startCron } from './cron.js'
 import { publishServiceProfile } from './nostrService.js'
 import { normalizeUrl } from './discovery.js'
@@ -548,19 +550,6 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
     })
 })
 
-function parseVerParts(v: string): [number, number, number] {
-  const m = v.match(/(\d+)\.(\d+)(?:\.(\d+))?/)
-  if (!m) return [0, 0, 0]
-  return [parseInt(m[1] ?? '0', 10), parseInt(m[2] ?? '0', 10), parseInt(m[3] ?? '0', 10)]
-}
-function versionGt(a: string, b: string): boolean {
-  const [a0, a1, a2] = parseVerParts(a)
-  const [b0, b1, b2] = parseVerParts(b)
-  if (a0 !== b0) return a0 > b0
-  if (a1 !== b1) return a1 > b1
-  return a2 > b2
-}
-
 app.get('/api/mints/version-history', (req: Request, res: Response): void => {
   const url = req.query['url']
 
@@ -585,19 +574,33 @@ app.get('/api/mints/version-history', (req: Request, res: Response): void => {
         res.status(400).json({ error: 'Invalid url' })
         return
       }
+      // latestGlobalVersion must be scoped to THIS mint's own software family —
+      // comparing a cdk-mintd mint's version against, say, Nutshell's highest
+      // known version (previously a plain `SELECT DISTINCT version FROM
+      // mint_version_history` + versionGt() across every software in the DB)
+      // is meaningless, since the two projects have independent numbering.
+      // The GitHub-backed software_versions cache (versionCatalog.ts, also
+      // the source for the Trust Score's version component) is used here
+      // instead of scanning mint_version_history for the network-wide max:
+      // it reflects the real current upstream release rather than "the
+      // highest version any tracked mint happens to have already adopted"
+      // (which can only ever lag behind, understating how outdated a mint
+      // really is), and it comes with the same 14-day grace period already
+      // applied — so this badge and the Trust Score version component never
+      // disagree about what counts as "latest" for a given software.
       return Promise.all([
         pool.query(
           `SELECT version, first_seen_at FROM mint_version_history
            WHERE url = $1 ORDER BY first_seen_at DESC LIMIT 50`,
           [url]
         ),
-        pool.query('SELECT DISTINCT version FROM mint_version_history'),
-      ]).then(([result, globalResult]) => {
-        const globalVersions = (globalResult.rows as { version: string }[]).map(r => r.version)
-        let latestGlobalVersion: string | null = null
-        for (const v of globalVersions) {
-          if (!latestGlobalVersion || versionGt(v, latestGlobalVersion)) latestGlobalVersion = v
-        }
+        pool.query<{ version: string | null }>('SELECT version FROM mints WHERE url = $1', [url]),
+        getLatestVersionsMap(),
+      ]).then(([result, mintResult, latestVersions]) => {
+        const mintVersion = mintResult.rows[0]?.version ?? null
+        const canonical = mintVersion != null ? canonicalSoftwareName(splitVersionString(mintVersion).software) : null
+        const latest = canonical != null ? latestVersions[canonical] : undefined
+        const latestGlobalVersion = latest ? `${canonical}/${latest.major}.${latest.minor}` : null
         res.json({
           url,
           history: result.rows.map(r => ({

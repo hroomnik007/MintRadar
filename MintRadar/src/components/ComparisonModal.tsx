@@ -8,6 +8,7 @@ import {
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcShield } from '@/components/mint/IcShield'
 import { type KnownMint } from '@/hooks/useKnownMints'
+import { splitVersionString, canonicalSoftwareName, parseMajorMinorPatch } from '@/utils/trustScore'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { useNow } from '@/hooks/useNow'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -57,6 +58,35 @@ function parseMinorVer(v: string | null | undefined): number {
   return m ? parseInt(m[1] ?? '0', 10) : 0
 }
 
+// Groups the mints currently being compared by canonical software (same
+// parsing rules as versionFreshnessScore() in trustScore.ts — split off the
+// "Software/" prefix, match case-insensitively) and finds the newest version
+// within each group. Comparing raw minor-version numbers across DIFFERENT
+// software (e.g. Nutshell vs cdk-mintd) is meaningless — they're independent
+// projects with independent release cadences and numbering, so a cdk-mintd
+// mint must never be flagged "Outdated" just because a Nutshell mint in the
+// same comparison happens to carry a higher number. Software this app
+// doesn't recognize has no ladder to compare against and is skipped, same
+// neutral treatment as the Trust Score's version component.
+function latestVersionsBySoftware(mints: KnownMint[]): Record<string, string> {
+  const bestParsed: Record<string, { major: number; minor: number }> = {}
+  const bestVersion: Record<string, string> = {}
+  for (const mint of mints) {
+    if (!mint.version) continue
+    const { software, versionNumber } = splitVersionString(mint.version)
+    const canonical = canonicalSoftwareName(software)
+    if (!canonical) continue
+    const parsed = parseMajorMinorPatch(versionNumber)
+    if (!parsed) continue
+    const current = bestParsed[canonical]
+    if (!current || parsed.major > current.major || (parsed.major === current.major && parsed.minor > current.minor)) {
+      bestParsed[canonical] = { major: parsed.major, minor: parsed.minor }
+      bestVersion[canonical] = mint.version
+    }
+  }
+  return bestVersion
+}
+
 // Per-mint line colors for the historical trend overlay — reuses hues already
 // established elsewhere in the app (Trust Trend green, copper accent, the
 // Fresh/OG badge blue and purple) rather than inventing new ones.
@@ -99,7 +129,7 @@ const EMPTY_MINT: KnownMint = {
   descriptionLong: null, nutsLimits: null,
 }
 
-function useMintCompareData(mint: KnownMint, latestVersion: string | null) {
+function useMintCompareData(mint: KnownMint, latestBySoftware: Record<string, string>) {
   const now = useNow()
   const isOnline = mint.online === true
   const displayName = mint.name ?? getHostname(mint.url)
@@ -113,17 +143,15 @@ function useMintCompareData(mint: KnownMint, latestVersion: string | null) {
   // it in /v1/info. NUT-09 (restore signatures) is the mint-side capability
   // that actually gates backup/restore — matches MintDetail's supportsBackupRestore.
   const supportsBackupRestore = nutsLimits['9'] != null
-  const isOutdated = mint.version != null && latestVersion != null
-    && (parseMinorVer(latestVersion) - parseMinorVer(mint.version)) > 2
+  const mintSoftware = mint.version != null ? canonicalSoftwareName(splitVersionString(mint.version).software) : null
+  const latestForSoftware = mintSoftware != null ? latestBySoftware[mintSoftware] ?? null : null
+  const isOutdated = mint.version != null && latestForSoftware != null
+    && (parseMinorVer(latestForSoftware) - parseMinorVer(mint.version)) > 2
   return { isOnline, displayName, hostname, trustScore, tsInfo, ageBadge, isNew, nutsLimits, supportsBackupRestore, isOutdated }
 }
 
 export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClose: () => void }) {
-  const versions = mints.map(m => m.version).filter(Boolean) as string[]
-  const latestVersion = versions.reduce<string | null>((best, v) => {
-    if (!best) return v
-    return parseMinorVer(v) > parseMinorVer(best) ? v : best
-  }, null)
+  const latestBySoftware = latestVersionsBySoftware(mints)
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -132,10 +160,10 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
   }, [onClose])
 
   // Unconditional hook calls for up to 4 mint slots
-  const d0 = useMintCompareData(mints[0] ?? EMPTY_MINT, latestVersion)
-  const d1 = useMintCompareData(mints[1] ?? EMPTY_MINT, latestVersion)
-  const d2 = useMintCompareData(mints[2] ?? EMPTY_MINT, latestVersion)
-  const d3 = useMintCompareData(mints[3] ?? EMPTY_MINT, latestVersion)
+  const d0 = useMintCompareData(mints[0] ?? EMPTY_MINT, latestBySoftware)
+  const d1 = useMintCompareData(mints[1] ?? EMPTY_MINT, latestBySoftware)
+  const d2 = useMintCompareData(mints[2] ?? EMPTY_MINT, latestBySoftware)
+  const d3 = useMintCompareData(mints[3] ?? EMPTY_MINT, latestBySoftware)
   const allData = [d0, d1, d2, d3].slice(0, mints.length)
 
   const gridCols = `132px ${mints.map(() => 'minmax(150px, 1fr)').join(' ')}`
