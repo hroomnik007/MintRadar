@@ -193,11 +193,19 @@ export function cardTrustLabel(score: number | null | undefined): string {
 //   'LN out' — melt only
 type CardMethodEntry = { method?: string | null; [key: string]: unknown }
 
+// Single method-array walk reused by the LN chip and the Dashboard Bolt12/LN
+// filters — `name` is matched case-insensitively against each entry's `method`.
+// A missing / empty / non-array `methods` is "no" (same as the LN chip's null
+// handling).
+export function methodsHaveMethod(methods: CardMethodEntry[] | null | undefined, name: string): boolean {
+  const target = name.toLowerCase()
+  return Array.isArray(methods) && methods.some(e =>
+    (typeof e.method === 'string' ? e.method.toLowerCase() : '') === target,
+  )
+}
+
 function methodsHaveLightning(methods: CardMethodEntry[] | null | undefined): boolean {
-  return Array.isArray(methods) && methods.some(e => {
-    const m = typeof e.method === 'string' ? e.method.toLowerCase() : ''
-    return m === 'bolt11' || m === 'bolt12'
-  })
+  return methodsHaveMethod(methods, 'bolt11') || methodsHaveMethod(methods, 'bolt12')
 }
 
 export function cardLightningLabel(mint: {
