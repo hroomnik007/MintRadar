@@ -10,7 +10,7 @@ test.describe('Dashboard newcomer action strip', () => {
   test('desktop: three chips and the explainer share one row above the search bar', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 })
     await page.goto('/')
-    await expect(page.locator('.mint-card')).toHaveCount(4)
+    await expect(page.locator('.mint-card').first()).toBeVisible()
 
     const strip = page.locator('.dash-actions')
     await expect(strip.locator('.dash-action')).toHaveCount(3)
@@ -43,7 +43,7 @@ test.describe('Dashboard newcomer action strip', () => {
   test('mobile: no Browse mints; explainer sits full-width below the two chips', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/')
-    await expect(page.locator('.mint-card')).toHaveCount(4)
+    await expect(page.locator('.mint-card').first()).toBeVisible()
 
     await expect(page.getByRole('button', { name: 'Browse mints' })).toBeHidden()
     const pick = page.getByRole('button', { name: 'Help me pick' })
@@ -69,7 +69,7 @@ test.describe('Dashboard newcomer action strip', () => {
   test('Help me pick lands on /tools#pick with the wizard in view', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 })
     await page.goto('/')
-    await expect(page.locator('.mint-card')).toHaveCount(4)
+    await expect(page.locator('.mint-card').first()).toBeVisible()
 
     await page.getByRole('button', { name: 'Help me pick' }).click()
     await expect(page).toHaveURL(/\/tools#pick$/)
@@ -80,7 +80,7 @@ test.describe('Dashboard newcomer action strip', () => {
   test('I have a token lands on /tools#token with the inspector in view', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 })
     await page.goto('/')
-    await expect(page.locator('.mint-card')).toHaveCount(4)
+    await expect(page.locator('.mint-card').first()).toBeVisible()
 
     await page.getByRole('button', { name: 'I have a token' }).click()
     await expect(page).toHaveURL(/\/tools#token$/)

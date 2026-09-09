@@ -4,7 +4,7 @@ import { installApiMocks, mockRelays } from './fixtures/mocks'
 test.beforeEach(async ({ page }) => {
   await mockRelays(page)
   await installApiMocks(page)
-  await page.goto('/')
+  await page.goto('/?status=all')
   await expect(page.locator('.mint-card')).toHaveCount(4)
 })
 

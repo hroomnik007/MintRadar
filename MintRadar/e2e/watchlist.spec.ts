@@ -25,7 +25,7 @@ test.describe('Watchlist', () => {
     // logged-in user, so this flow requires a (mocked NIP-07) session — see the
     // report. Watchlist data itself is stored locally in IndexedDB.
     await loginAs(page)
-    await page.goto('/')
+    await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
     // The Alpha card now exposes a Watch button (logged in).

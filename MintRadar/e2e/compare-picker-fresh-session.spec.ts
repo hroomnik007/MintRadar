@@ -10,7 +10,7 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
   test('picker is fully styled on desktop', async ({ page }) => {
     await mockRelays(page)
     await installApiMocks(page)
-    await page.goto('/')
+    await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
     await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
@@ -66,7 +66,7 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
     await page.setViewportSize({ width: 390, height: 844 })
     await mockRelays(page)
     await installApiMocks(page)
-    await page.goto('/')
+    await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
     await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
@@ -133,7 +133,7 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
   test('Escape closes the Dashboard compare picker', async ({ page }) => {
     await mockRelays(page)
     await installApiMocks(page)
-    await page.goto('/')
+    await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
     await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
     await expect(page.locator('.md-picker-modal')).toBeVisible()

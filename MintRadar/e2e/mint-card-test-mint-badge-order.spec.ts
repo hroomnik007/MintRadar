@@ -14,7 +14,7 @@ async function gotoWithAlphaAsTestMint(page: Page, overrides: Record<string, unk
   await installApiMocks(page)
   const rows = MOCK_KNOWN_MINTS.map((m, i) => (i === 0 ? { ...m, url: TEST_MINT_URL, ...overrides } : m))
   await page.route('**/api/mints/known', route => route.fulfill({ json: rows }))
-  await page.goto('/')
+  await page.goto('/?testmints=show')
 }
 
 // The 🧪 Test mint badge lives in the card header slot (top-right, next to the
@@ -81,7 +81,7 @@ test('New + Test mint sit side by side in the header slot when both apply', asyn
     i === 0 ? { ...m, url: TEST_MINT_URL, discoveredAt: new Date().toISOString() } : m,
   )
   await page.route('**/api/mints/known', route => route.fulfill({ json: rows }))
-  await page.goto('/')
+  await page.goto('/?testmints=show')
 
   const slot = page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('.card-name-row .card-hdr-badges')
   await expect(slot).toBeVisible()
@@ -92,7 +92,7 @@ test('New + Test mint sit side by side in the header slot when both apply', asyn
 test('non-test mints never show the Test mint badge', async ({ page }) => {
   await mockRelays(page)
   await installApiMocks(page)
-  await page.goto('/')
+  await page.goto('/?testmints=show')
   const card = page.locator('.mint-card', { hasText: MOCK_MINTS[0]!.name })
   await expect(card.getByText('Test mint')).toHaveCount(0)
 })

@@ -4,7 +4,11 @@ import { installApiMocks, mockRelays } from './fixtures/mocks'
 test.beforeEach(async ({ page }) => {
   await mockRelays(page)
   await installApiMocks(page)
-  await page.goto('/')
+  // ?status=all opts out of the new online-only default view so these
+  // long-standing assertions still see the full 4-mint fixture set
+  // (incl. the offline Charlie Mint). The default view itself is covered
+  // by dashboard-default-view.spec.ts.
+  await page.goto('/?status=all')
   // Wait for the mocked mint list to render.
   await expect(page.locator('.mint-card')).toHaveCount(4)
 })
@@ -71,11 +75,7 @@ test.describe('Dashboard', () => {
     // The active sort button appends an arrow (e.g. "Name ↑"), so target by class + substring.
     const sortBtn = (label: string) => page.locator('.sort-btn', { hasText: label })
 
-    // Default sort is Name ascending.
-    await expect(names).toHaveText(['Alpha Mint', 'Bravo Mint', 'Charlie Mint', 'Delta Mint'])
-
-    // Trust Score (desc): Alpha 92, Delta 78, Bravo 55, Charlie offline → 0.
-    await sortBtn('Trust Score').click()
+    // Default sort is now Trust Score desc: Alpha 92, Delta 78, Bravo 55, Charlie offline → 0.
     await expect(names).toHaveText(['Alpha Mint', 'Delta Mint', 'Bravo Mint', 'Charlie Mint'])
 
     // Switching to Name resets to ascending; clicking it again toggles to descending.

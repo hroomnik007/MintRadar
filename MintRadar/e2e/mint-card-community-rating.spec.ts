@@ -17,7 +17,7 @@ test.describe('MintCard — Community Rating badge', () => {
     page.locator('.mint-card', { hasText: name })
 
   test('Community Rating badge shows only when the mint has reviews', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
     await expect(card(page, 'Alpha Mint').locator('.card-pill', { hasText: '4.2 (12)' })).toBeVisible()
@@ -29,7 +29,7 @@ test.describe('MintCard — Community Rating badge', () => {
   })
 
   test('Trust Score badge uses a shield icon, not a star', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?status=all')
     const trustPill = card(page, 'Alpha Mint').locator('.card-pill', { hasText: 'Trust 92' })
     await expect(trustPill).toBeVisible()
     await expect(trustPill.locator('svg')).toHaveCount(1)
@@ -39,7 +39,7 @@ test.describe('MintCard — Community Rating badge', () => {
 
   test('badge is shared with the Watchlist card', async ({ page }) => {
     await loginAs(page)
-    await page.goto('/')
+    await page.goto('/?status=all')
     await card(page, 'Alpha Mint').getByRole('button', { name: 'Watch', exact: true }).click()
     await page.getByRole('link', { name: 'Watchlist' }).click()
 

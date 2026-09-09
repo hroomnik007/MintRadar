@@ -15,6 +15,7 @@ import { MintCard } from '@/components/mint/MintCard'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { mintAgeBadge, latencyColor, trustColor, uptimeColor, displayName as mintDisplayName } from '@/utils/mintFormatting'
+import { isTestMint } from '@/constants/testMints'
 import './Dashboard.css'
 
 // Historical trend charts pull in Recharts (~380 kB chunk) — lazy-load so
@@ -134,12 +135,27 @@ interface FilterState {
   status: 'all' | 'online' | 'offline'
   minTrustScore: number
   requiredNuts: string[]
+  hideTestMints: boolean
 }
-const DEFAULT_FILTERS: FilterState = { status: 'all', minTrustScore: 0, requiredNuts: [] }
+// New default Dashboard view (2026-09-09): online-only, test mints hidden,
+// sorted by Trust Score desc. The Name-sort freeze from earlier passes is
+// deliberately lifted for this — see the "Trust Score default" note.
+const DEFAULT_FILTERS: FilterState = { status: 'online', minTrustScore: 0, requiredNuts: [], hideTestMints: true }
 
-function applyFilters(mints: KnownMint[], filters: FilterState): KnownMint[] {
+function applyFilters(
+  mints: KnownMint[],
+  filters: FilterState,
+  opts: { showDegraded?: boolean; searching?: boolean } = {},
+): KnownMint[] {
   return mints.filter(mint => {
-    if (filters.status === 'online' && mint.online !== true) return false
+    // A name/url search reaches every mint — test mints and the online-only
+    // default are both bypassed so a searched-for mint is always findable.
+    if (!opts.searching) {
+      if (filters.hideTestMints && isTestMint(mint.url)) return false
+      // "Show" (showDegraded) still only ever reveals the 24h+ (degraded) set,
+      // never the <24h-offline mints — 24h+ Show behaviour is unchanged.
+      if (filters.status === 'online' && mint.online !== true && !(opts.showDegraded && mint.degraded)) return false
+    }
     if (filters.status === 'offline' && mint.online !== false) return false
     if (listTrustScore(mint) < filters.minTrustScore) return false
     if (filters.requiredNuts.length > 0) {
@@ -152,7 +168,14 @@ function applyFilters(mints: KnownMint[], filters: FilterState): KnownMint[] {
 }
 
 function countActiveFilters(f: FilterState): number {
-  return [f.status !== 'all' ? 1 : 0, f.minTrustScore > 0 ? 1 : 0, f.requiredNuts.length > 0 ? 1 : 0].reduce((a, b) => a + b, 0)
+  return [
+    // 'all' widens the view (no status filter) so it isn't "active"; only an
+    // explicit Offline filter counts.
+    f.status === 'offline' ? 1 : 0,
+    f.minTrustScore > 0 ? 1 : 0,
+    f.requiredNuts.length > 0 ? 1 : 0,
+    f.hideTestMints !== DEFAULT_FILTERS.hideTestMints ? 1 : 0,
+  ].reduce((a, b) => a + b, 0)
 }
 
 // ── URL persistence (search/sort/filters) ────────────────────────
@@ -171,32 +194,34 @@ function parseFilterParams(params: URLSearchParams): {
   filters: FilterState
 } {
   const sortByRaw = params.get('sort')
-  const sortBy: SortByValue = (SORT_KEYS as readonly string[]).includes(sortByRaw ?? '') ? (sortByRaw as SortByValue) : 'name'
+  const sortBy: SortByValue = (SORT_KEYS as readonly string[]).includes(sortByRaw ?? '') ? (sortByRaw as SortByValue) : 'trust'
   const dirRaw = params.get('dir')
   const sortDir: 'asc' | 'desc' = dirRaw === 'asc' || dirRaw === 'desc' ? dirRaw : DEFAULT_SORT_DIRS[sortBy]
   const statusRaw = params.get('status')
-  const status: FilterState['status'] = statusRaw === 'online' || statusRaw === 'offline' ? statusRaw : 'all'
+  const status: FilterState['status'] = statusRaw === 'all' || statusRaw === 'offline' ? statusRaw : 'online'
   const trustRaw = params.get('trust')
   const trustParsed = trustRaw !== null ? Number(trustRaw) : 0
   const minTrustScore = Number.isFinite(trustParsed) ? Math.min(100, Math.max(0, trustParsed)) : 0
   const nutsRaw = params.get('nuts')
   const requiredNuts = nutsRaw ? nutsRaw.split(',').filter(n => NUT_FILTER_KEYS.includes(n)) : []
+  const hideTestMints = params.get('testmints') !== 'show'
   return {
     search: params.get('q') ?? '',
     sortBy,
     sortDir,
-    filters: { status, minTrustScore, requiredNuts },
+    filters: { status, minTrustScore, requiredNuts, hideTestMints },
   }
 }
 
 function buildFilterParams(search: string, sortBy: SortByValue, sortDir: 'asc' | 'desc', filters: FilterState): URLSearchParams {
   const params = new URLSearchParams()
   if (search) params.set('q', search)
-  if (sortBy !== 'name') params.set('sort', sortBy)
+  if (sortBy !== 'trust') params.set('sort', sortBy)
   if (sortDir !== DEFAULT_SORT_DIRS[sortBy]) params.set('dir', sortDir)
-  if (filters.status !== 'all') params.set('status', filters.status)
+  if (filters.status !== 'online') params.set('status', filters.status)
   if (filters.minTrustScore > 0) params.set('trust', String(filters.minTrustScore))
   if (filters.requiredNuts.length > 0) params.set('nuts', filters.requiredNuts.join(','))
+  if (!filters.hideTestMints) params.set('testmints', 'show')
   return params
 }
 
@@ -262,7 +287,9 @@ function MintListView({
         const lb = b.online === true && b.latencyMs != null ? b.latencyMs : Infinity
         result = la - lb
       } else if (sortBy === 'trust') {
+        // Trust Score desc, tie-break on displayName asc.
         result = listTrustScore(b) - listTrustScore(a)
+        if (result === 0) result = mintDisplayName(a).localeCompare(mintDisplayName(b))
       } else if (sortBy === 'reviewCount') {
         // Mints with reviewCount === 0 or null sort to the end, regardless of direction toggle.
         const ca = a.reviewCount && a.reviewCount > 0 ? a.reviewCount : -1
@@ -379,7 +406,9 @@ function MintGrid({
         const lb = b.online === true && b.latencyMs != null ? b.latencyMs : Infinity
         result = la - lb
       } else if (sortBy === 'trust') {
+        // Trust Score desc, tie-break on displayName asc.
         result = listTrustScore(b) - listTrustScore(a)
+        if (result === 0) result = mintDisplayName(a).localeCompare(mintDisplayName(b))
       } else if (sortBy === 'reviewCount') {
         // Mints with reviewCount === 0 or null sort to the end, regardless of direction toggle.
         const ca = a.reviewCount && a.reviewCount > 0 ? a.reviewCount : -1
@@ -540,8 +569,11 @@ export default function Dashboard() {
   }, [knownMintsData, effectiveShowDegraded])
 
   const filteredMints = useMemo(() => {
-    return applyFilters(allMints, activeFilters)
-  }, [allMints, activeFilters])
+    return applyFilters(allMints, activeFilters, {
+      showDegraded,
+      searching: search.trim().length > 0,
+    })
+  }, [allMints, activeFilters, showDegraded, search])
   const activeFilterCount = countActiveFilters(activeFilters)
 
   const { data: statsData } = useQuery({
@@ -925,7 +957,7 @@ export default function Dashboard() {
           className="refresh-btn"
           title="Reset filters & refresh"
           onClick={() => {
-            commitFilters({ search: '', sortBy: 'name', sortDir: 'asc', filters: DEFAULT_FILTERS })
+            commitFilters({ search: '', sortBy: 'trust', sortDir: DEFAULT_SORT_DIRS.trust, filters: DEFAULT_FILTERS })
             setPendingFilters(DEFAULT_FILTERS)
             setShowFilters(false)
             setShowDegraded(false)
@@ -944,10 +976,16 @@ export default function Dashboard() {
           {/* Active filter tags */}
           {activeFilterCount > 0 && (
             <div className="filter-active-tags">
-              {activeFilters.status !== 'all' && (
+              {activeFilters.status === 'offline' && (
                 <span className="filter-tag">
-                  {activeFilters.status === 'online' ? 'Online' : 'Offline'}
-                  <button type="button" onClick={() => { const f = { ...activeFilters, status: 'all' as const }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
+                  Offline
+                  <button type="button" onClick={() => { const f = { ...activeFilters, status: 'online' as const }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
+                </span>
+              )}
+              {!activeFilters.hideTestMints && (
+                <span className="filter-tag">
+                  Test mints shown
+                  <button type="button" onClick={() => { const f = { ...activeFilters, hideTestMints: true }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
               {activeFilters.minTrustScore > 0 && (
@@ -986,6 +1024,18 @@ export default function Dashboard() {
                 onChange={e => setPendingFilters(p => ({ ...p, minTrustScore: parseInt(e.target.value) }))}
                 className="filter-slider"
               />
+            </div>
+
+            <div className="filter-group filter-box">
+              <div className="filter-group-label">Test mints</div>
+              <label className="filter-radio">
+                <input
+                  type="checkbox"
+                  checked={pendingFilters.hideTestMints}
+                  onChange={e => setPendingFilters(p => ({ ...p, hideTestMints: e.target.checked }))}
+                />
+                Hide test mints
+              </label>
             </div>
           </div>
 

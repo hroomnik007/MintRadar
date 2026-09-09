@@ -13,7 +13,7 @@ test.describe('MintCard — copy & reduced badge set', () => {
   })
 
   test('"New" badge shows only for a mint discovered < 30 days ago', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
     await expect(card(page, 'Bravo Mint').getByText('New', { exact: true })).toBeVisible()
     await expect(card(page, 'Alpha Mint').getByText('New', { exact: true })).toHaveCount(0)
@@ -21,7 +21,7 @@ test.describe('MintCard — copy & reduced badge set', () => {
   })
 
   test('Established / Veteran / OG badges are gone from cards', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
     for (const label of ['Established', 'Veteran', 'OG']) {
       await expect(page.locator('.mint-card').getByText(label, { exact: true })).toHaveCount(0)
@@ -29,14 +29,14 @@ test.describe('MintCard — copy & reduced badge set', () => {
   })
 
   test('Trust badge is always "Trust <n>" — word + number, never a bare %', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?status=all')
     await expect(card(page, 'Alpha Mint').locator('.card-pill', { hasText: 'Trust 92' })).toBeVisible()
     // Offline mint with a null score still shows the badge, as "Trust n/a".
     await expect(card(page, 'Charlie Mint').locator('.card-pill', { hasText: 'Trust n/a' })).toBeVisible()
   })
 
   test('uptime chip reads "<n>% up 24h"', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?status=all')
     await expect(card(page, 'Alpha Mint').locator('.card-pill', { hasText: '99% up 24h' })).toBeVisible()
   })
 
@@ -48,7 +48,7 @@ test.describe('MintCard — copy & reduced badge set', () => {
       return m
     })
     await page.route('**/api/mints/known', route => route.fulfill({ json: rows }))
-    await page.goto('/')
+    await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
     await expect(card(page, 'Alpha Mint').locator('.card-ln')).toHaveText('LN')
@@ -67,7 +67,7 @@ test.describe('MintCard — copy & reduced badge set', () => {
       return m
     })
     await page.route('**/api/mints/known', route => route.fulfill({ json: rows }))
-    await page.goto('/')
+    await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
     await expect(card(page, 'Alpha Mint').locator('.latency-value')).toHaveText('50ms')
@@ -76,7 +76,7 @@ test.describe('MintCard — copy & reduced badge set', () => {
   })
 
   test('dashboard tiles carry the new labels + subtitles', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?status=all')
     const bar = page.locator('.stats-bar')
     await expect(bar.getByText('Online Mints')).toBeVisible()
     // The Online tile shows the live fraction only — the "of N listed" subtitle
@@ -94,7 +94,7 @@ test.describe('MintCard — copy & reduced badge set', () => {
   })
 
   test('grid carries the Trust-vs-Stars explainer sentence once, above the cards', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?status=all')
     const explainer = page.locator('.grid-score-explainer')
     await expect(explainer).toHaveCount(1)
     await expect(explainer).toHaveText('We score how it runs. They score how it went. You pick.')
@@ -104,7 +104,7 @@ test.describe('MintCard — copy & reduced badge set', () => {
   })
 
   test('known-count is consistent: All Known tile === grid footer "of N"', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
     const bar = page.locator('.stats-bar')
     const tile = (await bar.locator('.stat-card', { hasText: 'All Known' }).locator('.stat-value').textContent())?.trim()

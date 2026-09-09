@@ -27,7 +27,7 @@ async function overrideKnownMints(page: import('@playwright/test').Page, overrid
 }
 
 async function openCompareFor(page: import('@playwright/test').Page, names: string[]) {
-  await page.goto('/')
+  await page.goto('/?status=all')
   await expect(page.locator('.mint-card')).toHaveCount(4)
   const [first, ...rest] = names
   await page.locator('.mint-card', { hasText: first! }).locator('button', { hasText: 'Compare' }).click()

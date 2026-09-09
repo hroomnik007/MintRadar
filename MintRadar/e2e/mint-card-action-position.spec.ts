@@ -10,7 +10,7 @@ test('card action row stays pinned to the bottom regardless of latency presence'
   await mockRelays(page)
   await installApiMocks(page)
   await loginAs(page)
-  await page.goto('/')
+  await page.goto('/?status=all')
   await expect(page.locator('.mint-card')).toHaveCount(4)
   // Logged in → every card (incl. offline Charlie) shows a Watch button.
   await expect(page.getByRole('button', { name: 'Watch', exact: true })).toHaveCount(4)
