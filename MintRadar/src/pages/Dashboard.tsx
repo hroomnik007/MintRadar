@@ -869,7 +869,7 @@ export default function Dashboard() {
           <div className="stat-icon green"><IcSignal /></div>
           <div>
             <div className="stat-label">Online Mints</div>
-            <div className="stat-value green">{onlineCount} / {totalCount}</div>
+            <div className="stat-value green">{onlineCount} <span className="stat-value-sub">/ {totalCount}</span></div>
           </div>
         </button>
         <div className="stat-card">
