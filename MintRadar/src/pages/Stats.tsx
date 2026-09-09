@@ -31,10 +31,6 @@ function uptimeColor(pct: number): string {
   return '#E24B4A'
 }
 
-function getHostname(url: string): string {
-  try { return new URL(url).hostname } catch { return url }
-}
-
 
 // "Advanced" features: security/privacy capabilities that go beyond the
 // baseline mint/melt/state-check/restore lifecycle every mint needs just to
@@ -65,78 +61,6 @@ function geoLabel(loc: string): { display: string; flag: string; color?: string 
   const cc = loc.slice(commaIdx + 2)
   const city = loc.slice(0, commaIdx)
   return { display: shortenCity(city), flag: cc.length === 2 ? countryFlag(cc) : '' }
-}
-
-function NutMintsModal({ nutId, nutMeta, mints, onClose }: {
-  nutId: string
-  nutMeta: { short: string; desc: string; specNum: string }
-  mints: KnownMint[]
-  onClose: () => void
-}) {
-  const [search, setSearch] = useState('')
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return mints
-    const q = search.toLowerCase()
-    return mints.filter(m => {
-      const name = displayName(m).toLowerCase()
-      return name.includes(q) || m.url.toLowerCase().includes(q)
-    })
-  }, [mints, search])
-
-  const total = mints.length
-  const online = mints.filter(m => m.online === true).length
-  const offline = mints.filter(m => m.online === false).length
-
-  return (
-    <div className="nut-modal-overlay" onClick={onClose}>
-      <div className="nut-modal" onClick={e => e.stopPropagation()}>
-        <button type="button" className="nut-modal-close" onClick={onClose}>✕</button>
-        <div className="nut-modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span className="snc-nut-tag">{nutId}</span>
-            <span className="nut-modal-title">{nutMeta.short}</span>
-          </div>
-          <div className="nut-modal-subtitle">{total} mint{total !== 1 ? 's' : ''} support this NUT</div>
-        </div>
-        <input
-          className="nut-modal-search"
-          type="text"
-          placeholder="Filter by mint name or URL…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          autoFocus
-        />
-        <div className="nut-modal-list">
-          {filtered.map(m => (
-            <div key={m.url} className="nut-modal-row">
-              <MintFavicon url={m.url} iconUrl={m.iconUrl} size={22} />
-              <div className="nut-modal-row-info">
-                <span className="nut-modal-row-name">{displayName(m)}</span>
-                <span className="nut-modal-row-url">{getHostname(m.url)}</span>
-              </div>
-              <span
-                className="nut-modal-row-dot"
-                style={{ background: m.online === true ? '#17E87F' : '#E24B4A' }}
-              />
-            </div>
-          ))}
-          {filtered.length === 0 && (
-            <div className="nut-modal-empty">No mints match</div>
-          )}
-        </div>
-        <div className="nut-modal-footer">
-          {total} total · {online} online · {offline} offline
-        </div>
-      </div>
-    </div>
-  )
 }
 
 function mintAgeBadge(discoveredAt: string | null | undefined): { label: string; color: string; bg: string; border: string } | null {
@@ -592,7 +516,6 @@ function semverCmp(a: string, b: string): number {
 
 export default function Stats() {
   const navigate = useNavigate()
-  const [modalNut, setModalNut] = useState<string | null>(null)
   const [cityModal, setCityModal] = useState<string | null>(null)
   const [showMoreLocations, setShowMoreLocations] = useState(false)
   const [softwareModal, setSoftwareModal] = useState<string | null>(null)
@@ -624,17 +547,6 @@ export default function Stats() {
   })
 
   const { data: knownMintsData } = useKnownMints()
-
-  const nutSupportingMints = useMemo(() => {
-    if (!knownMintsData) return {} as Record<string, KnownMint[]>
-    const NUT_KEYS = ['4','5','7','8','9','10','11','12','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
-    const result: Record<string, KnownMint[]> = {}
-    for (const key of NUT_KEYS) {
-      const nutId = `NUT-${key.padStart(2, '0')}`
-      result[nutId] = knownMintsData.filter(m => m.nutsLimits?.[key] != null)
-    }
-    return result
-  }, [knownMintsData])
 
   const avgUptime24h = useMemo(() => {
     if (!knownMintsData || knownMintsData.length === 0) return null
@@ -848,8 +760,6 @@ export default function Stats() {
 
   const nutAdoptionMap = Object.fromEntries(data.nutAdoption.map(n => [n.nut, n]))
 
-  const modalNutMints = modalNut ? (nutSupportingMints[modalNut] ?? []) : []
-  const modalNutMeta = modalNut ? NUT_META[modalNut] : null
 
   return (
     <div className="stats-page">
@@ -1184,7 +1094,7 @@ export default function Stats() {
             remaining col 4) instead of Movers grabbing col 1 first. */}
         <div className="stats-panel stats-nut-panel">
           <div className="stats-panel-title">NUT Coverage Across the Network</div>
-          <div className="stats-section-sublabel" style={{marginBottom:10}}>Protocol adoption across {data.onlineMints} online mints · click any NUT to see supporting mints</div>
+          <div className="stats-section-sublabel" style={{marginBottom:10}}>Protocol adoption across {data.onlineMints} online mints · click any NUT to filter the Dashboard</div>
           <div className="stats-nut-rows-grid">
             {TRACKED_NUTS.map(nut => {
               const adoption = nutAdoptionMap[nut] ?? { count: 0, percent: 0 }
@@ -1193,7 +1103,7 @@ export default function Stats() {
               if (!meta) return null
               const barColor = percent >= 80 ? '#17E87F' : percent >= 40 ? '#f59e0b' : '#E24B4A'
               return (
-                <div key={nut} className="stats-nut-row" onClick={() => setModalNut(nut)}>
+                <div key={nut} className="stats-nut-row" onClick={() => navigate(`/?nut=${nut.slice(4)}`)}>
                   <span className="snr-nut-tag">{nut}</span>
                   <span className="snr-nut-name">{meta.short}</span>
                   <div className="snr-bar-track">
@@ -1280,14 +1190,6 @@ export default function Stats() {
         </div>
       </div>
 
-      {modalNut !== null && modalNutMeta !== null && modalNutMeta !== undefined && (
-        <NutMintsModal
-          nutId={modalNut}
-          nutMeta={modalNutMeta}
-          mints={modalNutMints}
-          onClose={() => setModalNut(null)}
-        />
-      )}
       {cityModal !== null && (
         <CityMintsModal
           loc={cityModal}

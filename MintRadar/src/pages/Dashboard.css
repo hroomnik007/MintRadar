@@ -884,6 +884,13 @@
   margin-bottom: 10px;
 }
 
+.active-nut-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 var(--page-pad) 12px;
+}
+
 .filter-tag {
   display: inline-flex;
   align-items: center;

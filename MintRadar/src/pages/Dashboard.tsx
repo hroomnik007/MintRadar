@@ -204,6 +204,16 @@ function parseFilterParams(params: URLSearchParams): {
   const minTrustScore = Number.isFinite(trustParsed) ? Math.min(100, Math.max(0, trustParsed)) : 0
   const nutsRaw = params.get('nuts')
   const requiredNuts = nutsRaw ? nutsRaw.split(',').filter(n => NUT_FILTER_KEYS.includes(n)) : []
+  // Stats' NUT-coverage rows link here as ?nut=NN (zero-padded, e.g. ?nut=09).
+  // Fold that single NUT into requiredNuts so the existing filter/chip/clear
+  // machinery handles it. Invalid/unknown values are simply dropped — never
+  // an empty grid. Once the user changes anything, buildFilterParams re-emits
+  // it in the canonical ?nuts= form.
+  const nutRaw = params.get('nut')
+  if (nutRaw !== null) {
+    const key = String(parseInt(nutRaw, 10))
+    if (NUT_FILTER_KEYS.includes(key) && !requiredNuts.includes(key)) requiredNuts.push(key)
+  }
   const hideTestMints = params.get('testmints') !== 'show'
   return {
     search: params.get('q') ?? '',
@@ -1046,6 +1056,27 @@ export default function Dashboard() {
               <button type="button" className="filter-apply-btn" onClick={() => { commitFilters({ filters: pendingFilters }); setShowFilters(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Apply filter</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {!showFilters && activeFilters.requiredNuts.length > 0 && (
+        <div className="active-nut-chips">
+          {activeFilters.requiredNuts.map(nut => (
+            <span key={nut} className="filter-tag">
+              NUT-{nut.padStart(2, '0')}
+              <button
+                type="button"
+                aria-label={`Clear NUT-${nut.padStart(2, '0')} filter`}
+                onClick={() => {
+                  const f = { ...activeFilters, requiredNuts: activeFilters.requiredNuts.filter(n => n !== nut) }
+                  commitFilters({ filters: f })
+                  setPendingFilters(f)
+                }}
+              >
+                <IcClose />
+              </button>
+            </span>
+          ))}
         </div>
       )}
 
