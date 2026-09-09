@@ -27,8 +27,10 @@ test('Audit tab: summary strip "Recent errors" matches the Trust Score breakdown
   await expect(recentCell.locator('.audit-summary-main')).toHaveText('3 / 100')
   await expect(recentCell.locator('.audit-summary-sub')).toHaveText('97% ok')
 
-  // The all-time line carries the lifetime totals without duplicating them as cards.
-  await expect(page.locator('.audit-alltime-line')).toContainText('100 mints · 50 melts · 0 errors')
+  // The all-time body paragraphs were removed — only the heading, the four stat
+  // tiles and their ⓘ tooltips remain.
+  await expect(page.locator('.audit-alltime-line')).toHaveCount(0)
+  await expect(page.locator('.audit-tab-explainer')).toHaveCount(0)
 
   await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-summary-strip.png' })
 

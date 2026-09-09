@@ -871,7 +871,7 @@ export default function Stats() {
           </div>
           <div>
             <div className="smc-label">Online Now</div>
-            <div className="smc-value">{data.onlineMints} / {data.totalMints}</div>
+            <div className="smc-value">{data.onlineMints}</div>
             <div className="smc-sub">of all known</div>
           </div>
         </div>
@@ -1058,16 +1058,12 @@ export default function Stats() {
               ) : top5ByUptime.map((mint, idx) => {
                 const uptime = mint.uptimePct24h ?? 0
                 const color = uptimeColor(uptime)
-                const hostname = getHostname(mint.url)
                 return (
                   <div key={mint.url} onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} className="stats-top5-row">
                     <span className="stats-top5-rank">#{idx+1}</span>
                     <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName(mint)}</div>
-                      {displayName(mint) !== hostname && (
-                        <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{hostname}</div>
-                      )}
                     </div>
                     <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:700,color,flexShrink:0}}>{uptime}%</span>
                   </div>
@@ -1079,16 +1075,12 @@ export default function Stats() {
               ) : top5ByTrust.map((mint, idx) => {
                 const score = mint.trustScore ?? 0
                 const color = score >= 70 ? '#4ade80' : score >= 40 ? '#ffa500' : '#ff4d4d'
-                const hostname = getHostname(mint.url)
                 return (
                   <div key={mint.url} onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} className="stats-top5-row">
                     <span className="stats-top5-rank">#{idx+1}</span>
                     <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName(mint)}</div>
-                      {displayName(mint) !== hostname && (
-                        <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{hostname}</div>
-                      )}
                     </div>
                     {isTestMint(mint.url) && (
                       <span style={{fontSize:9,fontFamily:'var(--font-mono)',color:'var(--amber)',background:'var(--amber-soft)',border:'1px solid var(--amber-soft-strong)',borderRadius:4,padding:'1px 5px',flexShrink:0}} title="Not for real funds — for testing and development only">🧪 Test</span>

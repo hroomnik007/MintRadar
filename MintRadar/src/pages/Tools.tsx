@@ -528,7 +528,6 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
     <div className="tool-card">
       <div className="tool-header">
         <div className="tool-title">Best Mint for Me</div>
-        <div className="wizard-disclaimer">Suggestions from our measurements, not an endorsement.</div>
         <div className="tool-subtitle">Answer a few quick questions and we'll recommend the best mints for your needs · latency measured from your browser</div>
       </div>
 

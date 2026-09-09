@@ -272,8 +272,10 @@ test.describe('Tools', () => {
     await expect(page.locator('.token-result-grid')).toHaveCount(0)
   })
 
-  test('Best Mint Wizard carries the "not an endorsement" disclaimer under the heading', async ({ page }) => {
-    await expect(page.locator('.wizard-disclaimer')).toHaveText('Suggestions from our measurements, not an endorsement.')
+  test('Best Mint Wizard shows the helper line and no endorsement disclaimer', async ({ page }) => {
+    await expect(page.locator('.wizard-disclaimer')).toHaveCount(0)
+    await expect(page.locator('.tool-card', { hasText: 'Best Mint for Me' }).locator('.tool-subtitle'))
+      .toContainText('latency measured from your browser')
   })
 
   test('Best Mint Wizard result rows use the card Trust formatting (shield + "Trust N")', async ({ page }) => {

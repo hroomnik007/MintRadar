@@ -47,9 +47,13 @@ test.describe('Mint Detail', () => {
     await page.locator('.md-tab', { hasText: 'Reviews' }).click()
     // Relays are stubbed empty and /api/mints/nostr-reviews returns [] → empty state.
     await expect(page.getByText('No Nostr reviews found for this mint yet.')).toBeVisible({ timeout: 15_000 })
-    // The disclaimer is shown even with zero reviews (it sits above the loading/empty branch).
-    await expect(page.locator('.reviews-disclaimer')).toContainText(
-      /self-published Nostr events \(NIP-87\).*artificially inflated.*directional signal, not proof/i
+    // The short "Reviews · NIP-87" label is shown even with zero reviews (it sits
+    // above the loading/empty branch); the full sybil-inflation caveat now lives in
+    // its InfoTooltip.
+    await expect(page.locator('.reviews-disclaimer')).toContainText('Reviews · NIP-87')
+    await page.locator('.reviews-disclaimer .info-tooltip').hover()
+    await expect(page.locator('.reviews-disclaimer .info-tooltip-pop')).toContainText(
+      /artificially inflated.*directional signal, not proof.*Counts may also differ/i
     )
     // No filter chips when there is nothing to filter.
     await expect(page.locator('.reviews-filter-chip')).toHaveCount(0)

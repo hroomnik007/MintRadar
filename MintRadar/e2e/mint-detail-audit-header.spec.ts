@@ -40,7 +40,7 @@ test.describe('Audit stats heading — with data', () => {
   test.describe('mobile', () => {
     test.use({ viewport: { width: 393, height: 851 }, hasTouch: true, isMobile: true })
 
-    test('collapse toggle carries the heading + ⓘ, still collapses', async ({ page }) => {
+    test('mobile heading carries the heading text + ⓘ', async ({ page }) => {
       await gotoAudit(page)
 
       await expect(page.locator('.md-audit-header-main')).toBeHidden()
@@ -49,21 +49,16 @@ test.describe('Audit stats heading — with data', () => {
       await expect(toggle).toContainText('Audit stats')
       await expect(toggle).toContainText('via audit.8333.space')
 
-      // The ⓘ is present in the toggle row and its tooltip text is in the DOM.
+      // The ⓘ is present in the heading row and its tooltip text is in the DOM.
       const info = toggle.locator('.md-audit-info')
       await expect(info).toBeVisible()
-
-      // Tapping the ⓘ opens its tooltip and does NOT collapse the panel
-      // (useTapTooltip.onClick calls stopPropagation).
       await info.tap()
       await expect(page.getByText(TOOLTIP_RE)).toBeVisible()
-      await expect(page.locator('.audit-alltime-line')).toBeVisible()
+
+      // Summary strip is always visible; there is no longer a collapsible body.
+      await expect(page.locator('.audit-summary-strip')).toBeVisible()
 
       await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-header-mobile.png' })
-
-      // Collapse still works: tapping the chevron hides the grid.
-      await page.locator('.md-audit-chevron').tap()
-      await expect(page.locator('.md-audit-content')).toBeHidden()
     })
   })
 })

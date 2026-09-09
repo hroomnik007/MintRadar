@@ -31,7 +31,7 @@ import { useNow } from '@/hooks/useNow'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import './MintDetail.css'
 import {
-  Copy, Check, Info, ShieldCheck, ShieldOff, ChevronDown, ChevronUp, AlertTriangle,
+  Copy, Check, Info, ShieldCheck, ShieldOff, AlertTriangle,
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
   Clock, GitBranch, Plug, Database, Award, Layers, Zap, Plus, X, QrCode,
   Receipt, UserCheck, EyeOff, CreditCard, Send, Code, Cloud,
@@ -451,7 +451,6 @@ function MintDetailContent({ url }: { url: string }) {
   const breakdownAuditRef = useRef<HTMLSpanElement>(null)
   const breakdownAuditTooltip = useTapTooltip(breakdownAuditRef)
   const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'nuts' | 'audit' | 'reviews'>('overview')
-  const [auditExpanded, setAuditExpanded] = useState(true)
   const [showComparePicker, setShowComparePicker] = useState(false)
   const [compareSelectedUrls, setCompareSelectedUrls] = useState<Set<string>>(new Set())
   const [showComparisonModal, setShowComparisonModal] = useState(false)
@@ -699,9 +698,6 @@ function MintDetailContent({ url }: { url: string }) {
   // rolling-window figures that feed Trust Score are auditRecent* / breakdownAudit* above.
   const auditNMints = knownMint?.auditNMints ?? 0
   const auditNMelts = knownMint?.auditNMelts ?? 0
-  const auditNErrors = knownMint?.auditNErrors ?? 0
-  const auditTotalOps = auditNMints + auditNMelts + auditNErrors
-  const auditErrorPct = auditTotalOps > 0 ? (auditNErrors / auditTotalOps) * 100 : null
 
   // ── Audit summary strip (top of the Audit tab) — a 5-second overview.
   // Mints / Melts are audit.8333.space lifetime counters; Recent errors is the
@@ -1590,23 +1586,12 @@ function MintDetailContent({ url }: { url: string }) {
                   <span className="md-audit-via">· via audit.8333.space</span>
                   <AuditSourceInfoIcon />
                 </div>
-                <button
-                  className="md-audit-toggle"
-                  onClick={() => setAuditExpanded(v => !v)}
-                  aria-expanded={auditExpanded}
-                >
-                  <div style={{display:'flex',alignItems:'baseline',gap:6}}>
-                    <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
-                    <span style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>· via audit.8333.space</span>
-                    <AuditSourceInfoIcon align="right" />
-                  </div>
-                  <span className="md-audit-chevron">
-                    {auditExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </span>
-                </button>
-
-                <div className="audit-tab-explainer">
-                  Independent payment probes — successful and failed mint/melt ops, plus how recent the sample is. Not a proof of reserves.
+                {/* Mobile heading (mirrors the desktop one above; the collapse
+                    toggle was removed once the Audit tab lost its collapsible body). */}
+                <div className="md-audit-toggle">
+                  <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
+                  <span style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>· via audit.8333.space</span>
+                  <AuditSourceInfoIcon align="right" />
                 </div>
 
                 {/* 5-second overview — always visible, never inside the mobile
@@ -1703,18 +1688,6 @@ function MintDetailContent({ url }: { url: string }) {
                     </div>
                   </div>
                 </div>
-
-                <div className={`md-audit-content${auditExpanded ? ' expanded' : ''}`}>
-                  <div className="audit-alltime-line">
-                    All-time via audit.8333.space: {auditNMints.toLocaleString()} mints · {auditNMelts.toLocaleString()} melts · {auditNErrors.toLocaleString()} errors
-                    {auditErrorPct !== null ? ` (${auditErrorPct.toFixed(1)}% of ops)` : ''}.
-                    {' '}<strong style={{color:'var(--text2)',fontWeight:500}}>Recent errors</strong> is the rolling ~100-swap window that feeds the Trust Score's Audit reliability component
-                    {isAuditUnknown(breakdownAuditRecentTotal) ? ' (shown as "too few to score" below 3 swaps)' : ''}.
-                    {!auditSyncedAt && knownMint.auditCheckedAt
-                      ? ` Auditor's own last update: ${new Date(knownMint.auditCheckedAt).toLocaleDateString()}.`
-                      : ''}
-                  </div>
-                </div>
               </div>
             ) : (
               <div className="md-panel">
@@ -1738,7 +1711,14 @@ function MintDetailContent({ url }: { url: string }) {
                   </button>
                 )}
               </div>
-              <p className="reviews-disclaimer">Reviews are self-published Nostr events (NIP-87). Anyone can create a new key, so a rating can be artificially inflated — treat it as a directional signal, not proof. Counts may also differ from other sites.</p>
+              <div className="reviews-disclaimer" style={{display:'flex',alignItems:'center',gap:5}}>
+                <span>Reviews · NIP-87</span>
+                <InfoTooltip
+                  width={260}
+                  label="About NIP-87 reviews"
+                  text="Anyone can create a new key, so a rating can be artificially inflated — treat it as a directional signal, not proof. Counts may also differ from other sites."
+                />
+              </div>
               {reviewsLoading ? (
                 <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>Loading reviews...</div>
               ) : mergedReviews.length === 0 ? (

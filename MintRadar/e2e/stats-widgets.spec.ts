@@ -35,18 +35,20 @@ test('Most Reliable list excludes test mints; Trust tab is untouched', async ({ 
   await expect(widget.locator('.stats-top5-row', { hasText: 'Testnut' })).toHaveCount(1)
 })
 
-test('Most Reliable / Movers rows omit the hostname subtitle when it equals the name', async ({ page }) => {
+test('Most Reliable rows never show a hostname/URL subtitle under the name', async ({ page }) => {
   const base = MOCK_KNOWN_MINTS[0]!
   await knownMints(page, [
-    { ...base, url: 'https://plainmint.example', name: 'plainmint.example', online: true, uptimePct24h: 98, trustScore: 80 },
+    // name differs from the hostname — the subtitle used to render here.
+    { ...base, url: 'https://alpha.example', name: 'Alpha Mint', online: true, uptimePct24h: 98, trustScore: 80 },
   ])
   await page.goto('/stats')
 
   const row = page.locator('.stats-panel').filter({ has: page.getByRole('button', { name: 'Reliable', exact: true }) }).locator('.stats-top5-row').first()
   await expect(row).toBeVisible()
   const text = (await row.textContent()) ?? ''
-  // "plainmint.example" appears once (the name), not twice (name + subtitle).
-  expect(text.match(/plainmint\.example/g)?.length).toBe(1)
+  expect(text).toContain('Alpha Mint')
+  // The hostname is not rendered anywhere in the row.
+  expect(text).not.toContain('alpha.example')
 })
 
 test('Geographic Distribution buckets CDN / cloud / anycast labels into one row', async ({ page }) => {

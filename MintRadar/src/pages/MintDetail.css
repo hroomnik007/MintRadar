@@ -1199,13 +1199,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
    Mints · Melts · Recent errors · Last checked, always visible (sits outside
    the mobile collapse). Replaced the old 3-card all-time grid + separate
    "Recent reliability" band, which duplicated these numbers. */
-.audit-tab-explainer {
-  font-size: 12.5px;
-  color: var(--text2);
-  line-height: 1.5;
-  margin-bottom: 10px;
-}
-
 .audit-summary-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1261,13 +1254,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
   font-weight: 500;
   font-family: var(--font-mono);
   letter-spacing: 0.02em;
-}
-
-.audit-alltime-line {
-  font-size: 12px;
-  color: var(--text3);
-  font-family: var(--font-mono);
-  line-height: 1.5;
 }
 
 @media (max-width: 520px) {
@@ -1340,34 +1326,21 @@ button.md-url-copy.copied > svg { opacity: 1; }
   .md-audit-header-main { display: none; }
 }
 
-/* ── Audit Collapsible (mobile) ─────────────────────────────── */
+/* ── Audit stats heading (mobile) ───────────────────────────── */
+/* Mirrors `.md-audit-header-main` but shown only at ≤767px (where that one is
+   hidden). The Audit tab no longer has a collapsible body, so this is a plain
+   heading, not a toggle. */
 .md-audit-toggle {
   display: none;
-  width: 100%;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  align-items: center;
-  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
   margin-bottom: 12px;
   color: var(--text);
 }
 
-.md-audit-chevron {
-  color: var(--text3);
-  display: flex;
-  align-items: center;
-}
-
-.md-audit-content {
-  display: block;
-}
-
 @media (max-width: 767px) {
   .md-audit-collapsible .md-audit-toggle { display: flex; }
-  .md-audit-content { display: none; }
-  .md-audit-content.expanded { display: block; }
 }
 
 /* ── QR Code Modal ───────────────────────────────────────────── */
