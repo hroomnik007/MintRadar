@@ -690,16 +690,56 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
   )
 }
 
+// Just an entry point into the canonical Mint Detail page — no mint-info UI of
+// its own. MintDetail's default export already canonicalizes a bare host,
+// prefers the tracked row, and renders "Not a tracked mint" for unknown hosts
+// (resolveMintDetailUrl), so this only has to hand it the raw input.
+function MintLookup() {
+  const navigate = useNavigate()
+  const [input, setInput] = useState('')
+
+  const submit = () => {
+    const trimmed = input.trim()
+    if (!trimmed) return
+    navigate(`/mint/${encodeURIComponent(trimmed)}`)
+  }
+
+  return (
+    <div className="tool-card">
+      <div className="tool-header">
+        <div className="tool-title">Look up a mint</div>
+        <div className="tool-subtitle">Open a tracked mint by URL or hostname.</div>
+      </div>
+      <form
+        className="mint-lookup-form"
+        onSubmit={e => { e.preventDefault(); submit() }}
+      >
+        <input
+          className="mint-lookup-input"
+          type="text"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          placeholder="mint URL or hostname"
+          autoComplete="off"
+          autoCapitalize="off"
+          spellCheck={false}
+        />
+        <button type="submit" className="tool-btn-primary">View mint</button>
+      </form>
+    </div>
+  )
+}
+
 export default function Tools() {
   const { data: knownMintsData } = useKnownMints()
   const mints = knownMintsData ?? []
 
-  // Deep links from the Dashboard action strip: #pick focuses the wizard,
-  // #token focuses the inspector. Honoured on first load and on hashchange.
+  // Deep links: #pick focuses the wizard, #token the inspector, #lookup the
+  // mint-lookup card. Honoured on first load and on hashchange.
   useEffect(() => {
     const applyHash = () => {
       const target = window.location.hash.replace('#', '')
-      if (target !== 'pick' && target !== 'token') return
+      if (target !== 'pick' && target !== 'token' && target !== 'lookup') return
       const el = document.getElementById(target)
       if (!el) return
       el.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -718,6 +758,9 @@ export default function Tools() {
         </div>
         <div id="pick" tabIndex={-1} className="tool-anchor">
           <BestMintWizard knownMints={mints} />
+        </div>
+        <div id="lookup" tabIndex={-1} className="tool-anchor">
+          <MintLookup />
         </div>
       </div>
     </div>
