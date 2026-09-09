@@ -845,6 +845,28 @@ export default function Dashboard() {
         </p>
       )}
 
+      <div className="dash-intro">
+        <div className="dash-actions" role="group" aria-label="Get started">
+          <button
+            type="button"
+            className="dash-action dash-action-browse"
+            title="Jump to the mint list"
+            onClick={() => gridAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          >
+            Browse mints
+          </button>
+          <button type="button" className="dash-action" onClick={() => navigate('/tools#pick')}>
+            Help me pick
+          </button>
+          <button type="button" className="dash-action" onClick={() => navigate('/tools#token')}>
+            I have a token
+          </button>
+        </div>
+        <p className="grid-score-explainer">
+          We score how it runs. They score how it went. You pick.
+        </p>
+      </div>
+
       <div className="dashboard-controls">
         {/* Wrapper is `display: contents` on desktop (transparent to the flex
             row) and a real flex row on mobile, where the Filters button sits
@@ -916,27 +938,6 @@ export default function Dashboard() {
           <IcPlus /> Submit mint
         </button>
       </div>
-
-      <div className="dash-actions" role="group" aria-label="Get started">
-        <button
-          type="button"
-          className="dash-action dash-action-browse"
-          title="Jump to the mint list"
-          onClick={() => gridAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-        >
-          Browse mints
-        </button>
-        <button type="button" className="dash-action" onClick={() => navigate('/tools#pick')}>
-          Help me pick
-        </button>
-        <button type="button" className="dash-action" onClick={() => navigate('/tools#token')}>
-          I have a token
-        </button>
-      </div>
-
-      <p className="grid-score-explainer">
-        We score how it runs. They score how it went. You pick.
-      </p>
 
       {showFilters && (
         <div className="filter-panel">

@@ -53,15 +53,32 @@
 }
 .stat-count-note strong { color: var(--text); font-weight: 600; }
 
+/* Newcomer strip: chips on the left, the score explainer on the right,
+   sharing one row above the search bar on desktop. On mobile the row wraps —
+   the two chips on top, the full explainer sentence below them. */
+.dash-intro {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin: 14px var(--page-pad) 0;
+}
+@media (max-width: 900px) {
+  .dash-intro { flex-wrap: wrap; }
+}
+
 .grid-score-explainer {
-  margin: 12px var(--page-pad) 0;
+  margin: 0;
   font-size: 13.5px;
   line-height: 1.45;
   font-weight: 500;
   color: var(--t2);
 }
+@media (min-width: 901px) {
+  /* Keep the whole sentence visible — no wrap, no ellipsis. */
+  .grid-score-explainer { white-space: nowrap; }
+}
 @media (max-width: 600px) {
-  .grid-score-explainer { font-size: 13px; }
+  .grid-score-explainer { flex-basis: 100%; font-size: 13px; }
 }
 
 .mint-grid-anchor {
@@ -71,8 +88,7 @@
 .dash-actions {
   display: flex;
   gap: 8px;
-  margin: 14px var(--page-pad) 0;
-  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 .dash-action {
   background: var(--bg3);
@@ -93,6 +109,7 @@
 }
 @media (max-width: 600px) {
   .dash-action-browse { display: none; }
+  .dash-actions { width: 100%; }
   .dash-action { flex: 1; text-align: center; }
 }
 
