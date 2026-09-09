@@ -64,6 +64,38 @@
   .grid-score-explainer { font-size: 13px; }
 }
 
+.mint-grid-anchor {
+  scroll-margin-top: 72px;
+}
+
+.dash-actions {
+  display: flex;
+  gap: 8px;
+  margin: 14px var(--page-pad) 0;
+  flex-wrap: wrap;
+}
+.dash-action {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 13px;
+  color: var(--text2);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.dash-action:hover {
+  color: var(--text);
+  border-color: var(--border2);
+}
+@media (max-width: 600px) {
+  .dash-action-browse { display: none; }
+  .dash-action { flex: 1; text-align: center; }
+}
+
 .stat-icon {
   width: 32px;
   height: 32px;

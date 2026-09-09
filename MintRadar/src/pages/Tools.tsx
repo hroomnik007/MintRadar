@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { MintFavicon } from '@/components/mint/MintFavicon'
@@ -694,11 +694,31 @@ export default function Tools() {
   const { data: knownMintsData } = useKnownMints()
   const mints = knownMintsData ?? []
 
+  // Deep links from the Dashboard action strip: #pick focuses the wizard,
+  // #token focuses the inspector. Honoured on first load and on hashchange.
+  useEffect(() => {
+    const applyHash = () => {
+      const target = window.location.hash.replace('#', '')
+      if (target !== 'pick' && target !== 'token') return
+      const el = document.getElementById(target)
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      el.focus({ preventScroll: true })
+    }
+    applyHash()
+    window.addEventListener('hashchange', applyHash)
+    return () => window.removeEventListener('hashchange', applyHash)
+  }, [])
+
   return (
     <div className="tools-page">
       <div className="tools-grid">
-        <TokenInspector knownMints={mints} />
-        <BestMintWizard knownMints={mints} />
+        <div id="token" tabIndex={-1} className="tool-anchor">
+          <TokenInspector knownMints={mints} />
+        </div>
+        <div id="pick" tabIndex={-1} className="tool-anchor">
+          <BestMintWizard knownMints={mints} />
+        </div>
       </div>
     </div>
   )

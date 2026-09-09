@@ -11,6 +11,15 @@
   align-items: start;
 }
 
+.tool-anchor {
+  scroll-margin-top: 72px;
+  border-radius: 12px;
+}
+.tool-anchor:focus-visible {
+  outline: 2px solid var(--accent, var(--border2));
+  outline-offset: 3px;
+}
+
 /* ── Shared tool card ─────────────────────────────────────────── */
 .tool-card {
   background: var(--bg2);

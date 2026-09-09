@@ -417,6 +417,8 @@ export default function Dashboard() {
   // useState) so they survive a refresh and are navigable via browser
   // back/forward — see parseFilterParams/buildFilterParams above.
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const gridAnchorRef = useRef<HTMLDivElement>(null)
   const { search, sortBy, sortDir, filters: activeFilters } = useMemo(
     () => parseFilterParams(searchParams),
     [searchParams]
@@ -915,6 +917,23 @@ export default function Dashboard() {
         </button>
       </div>
 
+      <div className="dash-actions" role="group" aria-label="Get started">
+        <button
+          type="button"
+          className="dash-action dash-action-browse"
+          title="Jump to the mint list"
+          onClick={() => gridAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        >
+          Browse mints
+        </button>
+        <button type="button" className="dash-action" onClick={() => navigate('/tools#pick')}>
+          Help me pick
+        </button>
+        <button type="button" className="dash-action" onClick={() => navigate('/tools#token')}>
+          I have a token
+        </button>
+      </div>
+
       <p className="grid-score-explainer">
         We score how it runs. They score how it went. You pick.
       </p>
@@ -978,6 +997,8 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      <div ref={gridAnchorRef} className="mint-grid-anchor" aria-hidden="true" />
 
       {knownError ? (
         <p className="error-msg">Failed to load mints</p>
