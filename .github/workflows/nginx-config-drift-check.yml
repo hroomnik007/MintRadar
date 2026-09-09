@@ -38,6 +38,14 @@ jobs:
 
           printf '%s' "$LIVE_CONF_CONTENT" > "$LIVE_CONF"
 
+          # appleboy/ssh-action's capture_stdout strips the file's trailing
+          # newline; the repo copy keeps one. Re-add it here so an otherwise
+          # byte-identical config doesn't surface as spurious "\ No newline at
+          # end of file" drift.
+          if [ -n "$(tail -c1 "$LIVE_CONF" 2>/dev/null)" ]; then
+            printf '\n' >> "$LIVE_CONF"
+          fi
+
           {
             echo "## Nginx Config Drift Check"
             echo ""
