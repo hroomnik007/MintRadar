@@ -79,9 +79,11 @@ test.describe('MintCard — copy & reduced badge set', () => {
     await page.goto('/?status=all')
     const bar = page.locator('.stats-bar')
     await expect(bar.getByText('Online Mints')).toBeVisible()
-    // The Online tile shows the live fraction only — the "of N listed" subtitle
-    // was removed (it just repeated the denominator).
-    await expect(bar.locator('.stat-card', { hasText: 'Online Mints' }).locator('.stat-value')).toHaveText('3 / 4')
+    // The Online tile shows the count as the primary value; "/ N" is the
+    // subtitle contrast, not a second 25px number.
+    const onlineTile = bar.locator('.stat-card', { hasText: 'Online Mints' })
+    await expect(onlineTile.locator('.stat-value')).toHaveText('3')
+    await expect(onlineTile.locator('.stat-sub')).toHaveText('/ 4')
     await expect(bar.getByText(/of \d+ listed/)).toHaveCount(0)
     await expect(bar.getByText('All Known')).toBeVisible()
     await expect(bar.getByText('incl. offline')).toBeVisible()

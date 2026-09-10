@@ -25,8 +25,19 @@
   border-radius: var(--radius-m);
   padding: 14px 20px;
   display: flex;
-  align-items: center;
+  /* flex-start so a card with a longer value/subtitle (Median Latency) doesn't
+     sit vertically centred and higher than Online / All Known. */
+  align-items: flex-start;
   gap: 12px;
+}
+
+/* Shared inner grid for every hero tile: fixed icon column + flexible text
+   column (label / value / subtitle stacked). */
+.stat-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Two of the stat cards double as a toggle for the Listed/Known explainer. */
@@ -148,17 +159,9 @@
   letter-spacing: -0.02em;
 }
 
-/* The "/ N" half of the Online fraction — kept, just quieter and smaller. */
-.stat-value-sub {
-  font-size: 0.62em;
-  font-weight: 500;
-  color: var(--t2);
-  letter-spacing: 0;
-}
-
-.stat-value.green  { color: var(--green-bright); }
-.stat-value.orange { color: var(--amber); }
-.stat-value.muted  { font-size: 15px; color: var(--text-faint); font-weight: 400; }
+/* One system: every tile's primary value is the same size and colour. The
+   "/ N", "from Frankfurt", "incl. offline" and cadence lines are all .stat-sub
+   contrast — no per-tile .stat-value colour or size modifiers. */
 
 /* ── Controls Bar ───────────────────────────────────────────── */
 /* Deliberately NO shared outer border/background here (previous look was one
@@ -882,8 +885,10 @@
 
 /* ── Filter Panel ────────────────────────────────────────────── */
 .filter-panel {
-  background: transparent;
-  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  padding: 12px 14px;
   margin-inline: var(--page-pad);
   margin-top: 8px;
 }
@@ -928,20 +933,16 @@
 
 .filter-row {
   display: flex;
-  gap: 12px;
+  gap: 10px 24px;
   flex-wrap: wrap;
-  align-items: stretch;
+  align-items: center;
   margin-bottom: 10px;
 }
 
-/* Each filter group is its own card ("chlievik"), echoing the hero stat cards. */
-.filter-box {
-  flex: 1 1 180px;
-  min-width: 180px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-m);
-  padding: 12px 14px;
+/* Inline group inside the one compact filter bar (no card chrome). */
+.filter-group-inline {
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .filter-group-nuts {
@@ -992,7 +993,9 @@
   cursor: pointer;
   font-family: var(--font-body);
 }
-.filter-radio input[type="radio"] { accent-color: var(--accent); cursor: pointer; }
+/* Same themed control language for radios and checkboxes — no native blue. */
+.filter-radio input[type="radio"],
+.filter-radio input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
 
 .filter-slider {
   width: 160px;
@@ -1453,10 +1456,9 @@
   .mint-list-td-name { min-width: 0; max-width: none; }
   .mint-list-name { max-width: 120px; }
   .mint-list-table td.trust-col { min-width: 48px; }
-  /* Two filter groups (Status + Min. Trust) stay side by side on mobile so the
-     sheet is short — two equal columns rather than a tall stack. */
-  .filter-row { flex-direction: row; flex-wrap: nowrap; gap: 10px; }
-  .filter-box { flex: 1 1 0; width: auto; min-width: 0; padding: 10px 12px; }
+  /* Full-width stack on mobile — not mini-cards in a row. */
+  .filter-row { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 14px; }
+  .filter-group-inline { width: 100%; }
   .filter-group-row-top { display: flex; flex-direction: row; gap: 16px; width: 100%; }
   .filter-group-row-top .filter-group { flex: 1; min-width: 0; }
   .filter-group-row-top .filter-slider { width: 100%; }
@@ -1492,7 +1494,6 @@
     padding: 10px 14px;
   }
   .stat-value { font-size: 21px; }
-  .stat-value.muted { font-size: 14px; }
 
   .mint-grid {
     grid-template-columns: 1fr;

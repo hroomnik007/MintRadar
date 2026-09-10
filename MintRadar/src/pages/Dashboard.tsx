@@ -145,7 +145,11 @@ interface FilterState {
 // deliberately lifted for this — see the "Trust Score default" note.
 // restore/bolt12/ln are opt-in capability filters — all OFF by default so the
 // default view isn't narrowed further.
-const DEFAULT_FILTERS: FilterState = { status: 'online', minTrustScore: 0, requiredNuts: [], hideTestMints: true, restore: false, bolt12: false, ln: false }
+// hideTestMints defaults to false (2026-09-10): a fresh Dashboard SHOWS test
+// mints (they still carry a "Test mint" badge). An earlier pass defaulted this
+// ON — that is deliberately lifted here. ?testmints=hide is emitted only when
+// the user turns the checkbox on; the default never emits a param.
+const DEFAULT_FILTERS: FilterState = { status: 'online', minTrustScore: 0, requiredNuts: [], hideTestMints: false, restore: false, bolt12: false, ln: false }
 
 function applyFilters(
   mints: KnownMint[],
@@ -226,7 +230,7 @@ function parseFilterParams(params: URLSearchParams): {
     const key = String(parseInt(nutRaw, 10))
     if (NUT_FILTER_KEYS.includes(key) && !requiredNuts.includes(key)) requiredNuts.push(key)
   }
-  const hideTestMints = params.get('testmints') !== 'show'
+  const hideTestMints = params.get('testmints') === 'hide'
   const restore = params.get('restore') === '1'
   const bolt12 = params.get('bolt12') === '1'
   const ln = params.get('ln') === '1'
@@ -246,7 +250,7 @@ function buildFilterParams(search: string, sortBy: SortByValue, sortDir: 'asc' |
   if (filters.status !== 'online') params.set('status', filters.status)
   if (filters.minTrustScore > 0) params.set('trust', String(filters.minTrustScore))
   if (filters.requiredNuts.length > 0) params.set('nuts', filters.requiredNuts.join(','))
-  if (!filters.hideTestMints) params.set('testmints', 'show')
+  if (filters.hideTestMints) params.set('testmints', 'hide')
   if (filters.restore) params.set('restore', '1')
   if (filters.bolt12) params.set('bolt12', '1')
   if (filters.ln) params.set('ln', '1')
@@ -867,14 +871,15 @@ export default function Dashboard() {
       <div className="stats-bar">
         <button type="button" className="stat-card stat-card-btn" onClick={() => setShowCountNote(v => !v)} aria-expanded={showCountNote}>
           <div className="stat-icon green"><IcSignal /></div>
-          <div>
+          <div className="stat-text">
             <div className="stat-label">Online Mints</div>
-            <div className="stat-value green">{onlineCount} <span className="stat-value-sub">/ {totalCount}</span></div>
+            <div className="stat-value">{onlineCount}</div>
+            <div className="stat-sub">/ {totalCount}</div>
           </div>
         </button>
         <div className="stat-card">
           <div className="stat-icon orange"><IcTimer /></div>
-          <div>
+          <div className="stat-text">
             <div className="stat-label">Median Latency</div>
             <div className="stat-value">
               {avgLatency24h !== null ? `${avgLatency24h} ms` : '—'}
@@ -884,7 +889,7 @@ export default function Dashboard() {
         </div>
         <button type="button" className="stat-card stat-card-btn" onClick={() => setShowCountNote(v => !v)} aria-expanded={showCountNote}>
           <div className="stat-icon gray"><IcGrid /></div>
-          <div>
+          <div className="stat-text">
             <div className="stat-label">All Known</div>
             <div className="stat-value">{knownTotal}</div>
             <div className="stat-sub">incl. offline</div>
@@ -892,9 +897,10 @@ export default function Dashboard() {
         </button>
         <div className="stat-card">
           <div className="stat-icon gray"><IcSuccess /></div>
-          <div>
+          <div className="stat-text">
             <div className="stat-label">Last Check</div>
-            <div className="stat-value muted">{formatTimeAgo(lastCheckTime)}</div>
+            <div className="stat-value">{formatTimeAgo(lastCheckTime)}</div>
+            <div className="stat-sub">{lastCheckTime ? 'auto every 5 min' : 'no data yet'}</div>
           </div>
         </div>
       </div>
@@ -1010,10 +1016,10 @@ export default function Dashboard() {
                   <button type="button" onClick={() => { const f = { ...activeFilters, status: 'online' as const }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
-              {!activeFilters.hideTestMints && (
+              {activeFilters.hideTestMints && (
                 <span className="filter-tag">
-                  Test mints shown
-                  <button type="button" onClick={() => { const f = { ...activeFilters, hideTestMints: true }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
+                  Test mints hidden
+                  <button type="button" onClick={() => { const f = { ...activeFilters, hideTestMints: false }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
               {([
@@ -1041,8 +1047,11 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* Compact single-bar layout (2026-09-10) — the four card-style
+              ".filter-box" groups were replaced by inline groups that wrap
+              within one bar on desktop and stack full-width on mobile. */}
           <div className="filter-row">
-            <div className="filter-group filter-box">
+            <div className="filter-group filter-group-inline">
               <div className="filter-group-label">Status</div>
               <div className="filter-radio-group">
                 {(['all', 'online', 'offline'] as const).map(s => (
@@ -1054,7 +1063,35 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="filter-group filter-box">
+            <div className="filter-group filter-group-inline">
+              <div className="filter-group-label">Show</div>
+              <div className="filter-radio-group">
+                <label className="filter-radio">
+                  <input
+                    type="checkbox"
+                    checked={pendingFilters.hideTestMints}
+                    onChange={e => setPendingFilters(p => ({ ...p, hideTestMints: e.target.checked }))}
+                  />
+                  Hide test mints
+                </label>
+                {([
+                  ['restore', 'Restore (NUT-09)'],
+                  ['bolt12', 'Bolt12'],
+                  ['ln', 'Lightning (in & out)'],
+                ] as const).map(([k, label]) => (
+                  <label key={k} className="filter-radio">
+                    <input
+                      type="checkbox"
+                      checked={pendingFilters[k]}
+                      onChange={e => setPendingFilters(p => ({ ...p, [k]: e.target.checked }))}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="filter-group filter-group-inline">
               <div className="filter-group-label">Min. Trust Score: <strong>{pendingFilters.minTrustScore}%</strong></div>
               <input
                 type="range" min={0} max={100} step={5}
@@ -1062,36 +1099,6 @@ export default function Dashboard() {
                 onChange={e => setPendingFilters(p => ({ ...p, minTrustScore: parseInt(e.target.value) }))}
                 className="filter-slider"
               />
-            </div>
-
-            <div className="filter-group filter-box">
-              <div className="filter-group-label">Test mints</div>
-              <label className="filter-radio">
-                <input
-                  type="checkbox"
-                  checked={pendingFilters.hideTestMints}
-                  onChange={e => setPendingFilters(p => ({ ...p, hideTestMints: e.target.checked }))}
-                />
-                Hide test mints
-              </label>
-            </div>
-
-            <div className="filter-group filter-box">
-              <div className="filter-group-label">Capabilities</div>
-              {([
-                ['restore', 'Restore (NUT-09)'],
-                ['bolt12', 'Bolt12'],
-                ['ln', 'Lightning (in & out)'],
-              ] as const).map(([k, label]) => (
-                <label key={k} className="filter-radio">
-                  <input
-                    type="checkbox"
-                    checked={pendingFilters[k]}
-                    onChange={e => setPendingFilters(p => ({ ...p, [k]: e.target.checked }))}
-                  />
-                  {label}
-                </label>
-              ))}
             </div>
           </div>
 
