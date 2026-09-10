@@ -85,32 +85,6 @@
   opacity: 0.85;
 }
 
-/* ── Look up a mint ───────────────────────────────────────────── */
-.mint-lookup-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.mint-lookup-input {
-  width: 100%;
-  box-sizing: border-box;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 13px;
-  font-family: var(--font-body);
-  color: var(--text);
-  outline: none;
-  transition: border-color 150ms ease;
-}
-.mint-lookup-input:focus {
-  border-color: var(--accent);
-}
-.mint-lookup-input::placeholder {
-  color: var(--text3);
-}
-
 /* ── Token Inspector ──────────────────────────────────────────── */
 .token-input {
   width: 100%;
