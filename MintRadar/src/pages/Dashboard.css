@@ -543,34 +543,39 @@
    grid row-stretch making one card taller than its neighbours.
    `.latency-block` has a min-width so a wider latency value ("10450 ms"
    vs "88 ms") can't shove the action cluster around between cards. */
-/* Wraps the Trust block (right) and the latency + actions row (left). Pinned to
-   the bottom edge of the flex-column card via `margin-top: auto`. */
+/* Bottom of the card: a reserved right-hand Trust column and a flexible main
+   area (latency + action buttons) that wraps entirely within itself so it can
+   never ride over the Trust number / stars. Pinned to the card's bottom edge
+   via `margin-top: auto`. */
 .card-lower {
   display: flex;
   flex-direction: row-reverse;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 12px;
   margin-top: auto;
   padding-top: 6px;
 }
 
-.card-bottom {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+/* Latency + Compare/Watch/Unwatch/Down/Up. `min-width: 0` + wrap keep every
+   button inside this column's box — the Trust column beside it is flex-shrink:0
+   so this area gives up width first and wraps to a second line instead. */
+.card-bottom-main {
   flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  flex-flow: row wrap;
+  align-items: flex-end;
+  gap: 8px 10px;
 }
 
-/* ── Right-hand Trust block ─────────────────────────────────── */
+/* ── Reserved right-hand Trust column ──────────────────────── */
 .card-trust {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 2px;
   flex-shrink: 0;
+  min-width: 72px;
   text-align: right;
 }
 
@@ -623,24 +628,17 @@
   min-width: 64px;
 }
 
+/* Right-aligned and greedy: fills the rest of the main area's first line, then
+   wraps its own buttons (and, when tight, drops below the latency block) — all
+   still inside `.card-bottom-main`, clear of the Trust column. */
 .card-actions {
   display: flex;
-  flex-direction: row;
+  flex-flow: row wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
-  flex-shrink: 0;
-}
-
-/* Narrow phones: let the action cluster wrap onto its own line ONLY when it
-   genuinely doesn't fit beside the latency value (e.g. the 3-button
-   Down/Up/Unwatch row on a watched Watchlist card). `flex: 1 1 auto` keeps it
-   filling the row and right-aligned (via its own justify-content) when it does
-   fit — a 1-2 button Dashboard card then stays on a single row, same as
-   desktop — and full-width right-aligned once `.card-bottom` wraps it. */
-@media (max-width: 480px) {
-  .card-bottom { flex-wrap: wrap; }
-  .card-actions { flex: 1 1 auto; flex-wrap: wrap; }
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .latency-block .latency-label {

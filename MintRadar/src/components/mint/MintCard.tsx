@@ -209,7 +209,7 @@ export function MintCard({
           )}
         </div>
 
-        <div className="card-bottom">
+        <div className="card-bottom-main">
         <div className="latency-block">
           <div className="latency-label">{isOfflineDegraded ? 'LAST SEEN' : 'LATENCY'}</div>
           {isOfflineDegraded ? (
