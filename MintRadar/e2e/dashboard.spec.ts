@@ -18,10 +18,10 @@ test.describe('Dashboard', () => {
     await expect(page.locator('.card-name', { hasText: 'Alpha Mint' })).toBeVisible()
     await expect(page.locator('.card-name', { hasText: 'Delta Mint' })).toBeVisible()
     // Stat bar reflects the mocked data: 3 of 4 mints online (value "3",
-    // "/ 4" now rendered as the subtitle, not a second number).
+    // "/ 4" rendered as the muted unit beside it, not a second big number).
     const onlineTile = page.locator('.stat-card', { hasText: 'Online Mints' })
     await expect(onlineTile.locator('.stat-value')).toHaveText('3')
-    await expect(onlineTile.locator('.stat-sub')).toHaveText('/ 4')
+    await expect(onlineTile.locator('.stat-unit')).toHaveText('/ 4')
   })
 
   test('search filters the mint list', async ({ page }) => {

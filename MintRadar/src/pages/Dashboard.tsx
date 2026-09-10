@@ -843,38 +843,45 @@ export default function Dashboard() {
     <div className="dashboard">
       <div className="stats-bar">
         <button type="button" className="stat-card stat-card-btn" onClick={() => setShowCountNote(v => !v)} aria-expanded={showCountNote}>
-          <div className="stat-icon green"><IcSignal /></div>
-          <div className="stat-text">
-            <div className="stat-label">Online Mints</div>
-            <div className="stat-value">{onlineCount}</div>
-            <div className="stat-sub">/ {totalCount}</div>
+          <div className="stat-label">Online Mints</div>
+          <div className="stat-row">
+            <div className="stat-icon green"><IcSignal /></div>
+            <div className="stat-figure">
+              <span className="stat-value">{onlineCount}</span>
+              <span className="stat-unit">/ {totalCount}</span>
+            </div>
           </div>
         </button>
         <div className="stat-card">
-          <div className="stat-icon orange"><IcTimer /></div>
-          <div className="stat-text">
-            <div className="stat-label">Median Latency</div>
-            <div className="stat-value">
-              {avgLatency24h !== null ? `${avgLatency24h} ms` : '—'}
+          <div className="stat-label">Median Latency</div>
+          <div className="stat-row">
+            <div className="stat-icon orange"><IcTimer /></div>
+            <div className="stat-figure">
+              <span className="stat-value">{avgLatency24h !== null ? avgLatency24h : '—'}</span>
+              {avgLatency24h !== null && <span className="stat-unit">ms</span>}
             </div>
-            <div className="stat-sub">from Frankfurt</div>
           </div>
+          <div className="stat-sub">from Frankfurt</div>
         </div>
         <button type="button" className="stat-card stat-card-btn" onClick={() => setShowCountNote(v => !v)} aria-expanded={showCountNote}>
-          <div className="stat-icon gray"><IcGrid /></div>
-          <div className="stat-text">
-            <div className="stat-label">All Known</div>
-            <div className="stat-value">{knownTotal}</div>
-            <div className="stat-sub">incl. offline</div>
+          <div className="stat-label">All Known</div>
+          <div className="stat-row">
+            <div className="stat-icon gray"><IcGrid /></div>
+            <div className="stat-figure">
+              <span className="stat-value">{knownTotal}</span>
+            </div>
           </div>
+          <div className="stat-sub">incl. offline</div>
         </button>
         <div className="stat-card">
-          <div className="stat-icon gray"><IcSuccess /></div>
-          <div className="stat-text">
-            <div className="stat-label">Last Check</div>
-            <div className="stat-value">{formatTimeAgo(lastCheckTime)}</div>
-            <div className="stat-sub">{lastCheckTime ? 'auto every 5 min' : 'no data yet'}</div>
+          <div className="stat-label">Last Check</div>
+          <div className="stat-row">
+            <div className="stat-icon gray"><IcSuccess /></div>
+            <div className="stat-figure">
+              <span className="stat-value">{formatTimeAgo(lastCheckTime)}</span>
+            </div>
           </div>
+          <div className="stat-sub">{lastCheckTime ? 'auto every 5 min' : 'no data yet'}</div>
         </div>
       </div>
       {showCountNote && (

@@ -18,26 +18,42 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* Compact hero tile: uppercase label on top, then an icon + value row, then an
+   optional subtitle. Shorter than the old label/value/sub stack. */
 .stat-card {
   flex: 1;
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
-  padding: 14px 20px;
-  display: flex;
-  /* flex-start so a card with a longer value/subtitle (Median Latency) doesn't
-     sit vertically centred and higher than Online / All Known. */
-  align-items: flex-start;
-  gap: 12px;
-}
-
-/* Shared inner grid for every hero tile: fixed icon column + flexible text
-   column (label / value / subtitle stacked). */
-.stat-text {
-  flex: 1;
-  min-width: 0;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
+  gap: 6px;
+}
+
+/* icon + primary value, side by side */
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* value + muted unit on one baseline */
+.stat-figure {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
+.stat-unit {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-faint);
+  font-family: var(--font-mono-data);
+  white-space: nowrap;
 }
 
 /* Two of the stat cards double as a toggle for the Listed/Known explainer. */
@@ -52,7 +68,7 @@
 .stat-sub {
   font-size: 10px;
   color: var(--text-faint);
-  margin-top: 3px;
+  margin-top: 0;
   letter-spacing: 0.01em;
 }
 
@@ -126,9 +142,9 @@
 }
 
 .stat-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -151,12 +167,15 @@
 }
 
 .stat-value {
-  font-size: 25px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--text);
   font-family: var(--font-mono-data);
   line-height: 1;
   letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* One system: every tile's primary value is the same size and colour. The
@@ -1556,9 +1575,10 @@
   .stats-bar { flex-wrap: wrap; gap: 8px; padding: 10px 0; }
   .stat-card {
     flex: 1 1 calc(50% - 4px);
-    padding: 10px 14px;
+    padding: 9px 12px;
   }
-  .stat-value { font-size: 21px; }
+  .stat-value { font-size: 20px; }
+  .stat-icon { width: 34px; height: 34px; }
 
   .mint-grid {
     grid-template-columns: 1fr;
