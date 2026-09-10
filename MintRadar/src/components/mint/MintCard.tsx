@@ -15,16 +15,9 @@ import { isTestMint } from '@/constants/testMints'
 import { db } from '@/db'
 import { resolveNotificationRelays, syncSubscribeToServer, syncUnsubscribeFromServer } from '@/core/nostr/notificationSubscription'
 
-const IcPlus = () => (
-  <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-    <line x1="6" y1="1.5" x2="6" y2="10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-    <line x1="1.5" y1="6" x2="10.5" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-  </svg>
-)
-const IcClose = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-    <line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-    <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+const IcStar = ({ filled }: { filled: boolean }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round">
+    <path d="M12 2.6l2.85 5.78 6.38.93-4.62 4.5 1.09 6.35L12 17.56 6.3 20.56l1.09-6.35L2.77 9.7l6.38-.93z"/>
   </svg>
 )
 const IcBellDown = () => (
@@ -123,11 +116,19 @@ export function MintCard({
         <div className="card-name-row">
           <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={28} radius={6} />
           <div style={{ minWidth: 0 }}>
-            <div className="card-name">{displayName}</div>
+            <div className="card-name-line">
+              <span className="card-name">{displayName}</span>
+              <span
+                className={`status-dot${isOnline ? ' online' : ''}`}
+                style={{ background: isOnline ? 'var(--green-bright)' : 'var(--red)' }}
+                title={isOnline ? 'Online' : 'Offline'}
+              />
+            </div>
             {showHost && <div className="card-host">{hostname}</div>}
           </div>
+          <div className="card-hdr-right">
           {(isOfflineDegraded || isNew || isTestMint(mint.url)) && (
-            <span className="card-hdr-badges" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, marginLeft: 'auto', marginRight: 12 }}>
+            <span className="card-hdr-badges" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
               {isOfflineDegraded ? (
                 <span className="card-hdr-badge" style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--red)', background: 'var(--red-soft)', border: '1px solid rgba(219,106,93,0.3)', borderRadius: 5, padding: '2px 7px' }}>
                   Offline 24h+
@@ -144,11 +145,20 @@ export function MintCard({
               )}
             </span>
           )}
+          {isLoggedIn && (
+            <button
+              type="button"
+              className={`card-star${isWatched ? ' on' : ''}`}
+              aria-label={isWatched ? 'Unwatch' : 'Watch'}
+              aria-pressed={isWatched}
+              title={isWatched ? 'Unwatch' : 'Watch'}
+              onClick={e => { e.stopPropagation(); void (isWatched ? removeMint(mint.url) : addMint(mint.url)) }}
+            >
+              <IcStar filled={isWatched} />
+            </button>
+          )}
+          </div>
         </div>
-        <div
-          className={`status-dot${isOnline ? ' online' : ''}`}
-          style={{ background: isOnline ? 'var(--green-bright)' : 'var(--red)' }}
-        />
       </div>
 
       <div className="card-pills">
@@ -174,6 +184,52 @@ export function MintCard({
       </div>
 
       <div className="card-lower">
+        <div className="card-bottom-main">
+          <div className="latency-block">
+            <div className="latency-label">{isOfflineDegraded ? 'LAST SEEN' : 'LATENCY'}</div>
+            {isOfflineDegraded ? (
+              <div className="latency-value muted" style={{ fontSize: 15 }}>
+                {formatTimeAgo(mint.lastCheckedAt ? new Date(mint.lastCheckedAt) : null)}
+              </div>
+            ) : isOnline && mint.latencyMs !== null ? (
+              <div className="latency-value" style={{ color: 'var(--text)' }}>
+                {mint.latencyMs}<span className="latency-unit">ms</span>
+              </div>
+            ) : (
+              <div className="latency-value muted">{cardLatencyLabel(mint)}</div>
+            )}
+          </div>
+          <div className="card-actions">
+            {onCompare && isOnline && (
+              <button
+                type="button"
+                className="card-compare-btn"
+                onClick={e => { e.stopPropagation(); onCompare(mint.url) }}
+              >
+                ⇄ Compare
+              </button>
+            )}
+            {showNotifyToggles && notifyEntry && (
+              <>
+                <button
+                  type="button"
+                  className={`notify-toggle-btn${notifyEntry.notifyOnDown ? ' on' : ''}`}
+                  onClick={toggleNotify('notifyOnDown')}
+                >
+                  <IcBellDown /><span>Down</span>
+                </button>
+                <button
+                  type="button"
+                  className={`notify-toggle-btn${notifyEntry.notifyOnUp ? ' on' : ''}`}
+                  onClick={toggleNotify('notifyOnUp')}
+                >
+                  <IcBellUp /><span>Up</span>
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
         <div className="card-trust">
           {mint.trustScore == null ? (
             <div className="card-trust-na"><IcShield /><span>Trust n/a</span></div>
@@ -207,73 +263,6 @@ export function MintCard({
               )}
             </span>
           )}
-        </div>
-
-        <div className="card-bottom-main">
-        <div className="latency-block">
-          <div className="latency-label">{isOfflineDegraded ? 'LAST SEEN' : 'LATENCY'}</div>
-          {isOfflineDegraded ? (
-            <div className="latency-value muted" style={{ fontSize: 15 }}>
-              {formatTimeAgo(mint.lastCheckedAt ? new Date(mint.lastCheckedAt) : null)}
-            </div>
-          ) : isOnline && mint.latencyMs !== null ? (
-            <div className="latency-value" style={{ color: 'var(--text)' }}>
-              {mint.latencyMs}<span className="latency-unit">ms</span>
-            </div>
-          ) : (
-            <div className="latency-value muted">{cardLatencyLabel(mint)}</div>
-          )}
-        </div>
-        <div className="card-actions">
-          {onCompare && isOnline && (
-            <button
-              type="button"
-              style={{
-                background: 'transparent',
-                color: 'var(--green-bright)',
-                border: '1px solid var(--green-soft-strong)',
-                borderRadius: 'var(--radius-m)',
-                padding: '5px 10px',
-                fontSize: 11,
-                fontWeight: 500,
-                cursor: 'pointer',
-                fontFamily: 'var(--font-mono)',
-                flexShrink: 0,
-                transition: 'all 150ms ease',
-              }}
-              onClick={e => { e.stopPropagation(); onCompare(mint.url) }}
-            >
-              ⇄ Compare
-            </button>
-          )}
-          {showNotifyToggles && notifyEntry && (
-            <>
-              <button
-                type="button"
-                className={`notify-toggle-btn${notifyEntry.notifyOnDown ? ' on' : ''}`}
-                onClick={toggleNotify('notifyOnDown')}
-              >
-                <IcBellDown /><span>Down</span>
-              </button>
-              <button
-                type="button"
-                className={`notify-toggle-btn${notifyEntry.notifyOnUp ? ' on' : ''}`}
-                onClick={toggleNotify('notifyOnUp')}
-              >
-                <IcBellUp /><span>Up</span>
-              </button>
-            </>
-          )}
-          {isLoggedIn && (
-            <button
-              type="button"
-              className={`watch-btn${isWatched ? ' watching' : ''}`}
-              onClick={e => { e.stopPropagation(); void (isWatched ? removeMint(mint.url) : addMint(mint.url)) }}
-            >
-              {isWatched ? <><IcClose /><span>Unwatch</span></> : <><IcPlus /><span>Watch</span></>}
-            </button>
-          )}
-        </div>
         </div>
       </div>
     </div>

@@ -1,14 +1,15 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, loginAs, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 
-// Regression 1: the Latency + Down/Up/Unwatch row on a Watchlist card must lay
-// out identically no matter how many digits the latency value has — a wider
+// Regression 1: the Latency + Down/Up cluster on a Watchlist card must
+// lay out identically no matter how many digits the latency value has — a wider
 // value ("10450 ms" vs "88 ms") must not shift the buttons' wrap point so that
 // some cards wrap onto more lines than others.
 //
-// Regression 2: the action buttons live in `.card-bottom-main` and must wrap
-// *within* that column. They must never ride over the reserved right-hand
-// `.card-trust` column (the Trust number / stars).
+// Regression 2: those buttons live in `.card-bottom-main` and must wrap *within*
+// that column. They must never ride over the right-hand `.card-trust` column
+// (the Trust number / stars). There is no Unwatch button on the card — the
+// watch star lives in the header.
 
 const LAT = [88, 411, 2336, 10450] // 2..5 digits
 const KNOWN = MOCK_KNOWN_MINTS.slice(0, 4).map((m, i) => ({

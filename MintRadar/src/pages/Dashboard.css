@@ -142,8 +142,8 @@
 }
 
 .stat-icon {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -167,7 +167,7 @@
 }
 
 .stat-value {
-  font-size: 22px;
+  font-size: 29px;
   font-weight: 700;
   color: var(--text);
   font-family: var(--font-mono-data);
@@ -457,6 +457,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 6px;
 }
 
@@ -468,9 +469,27 @@
   flex: 1;
 }
 
+/* Name + online dot on one line (dot sits immediately after the name). */
+.card-name-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Header badges + the watch star, pinned to the card's top-right. */
+.card-hdr-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-left: 8px;
+}
+
 .card-name {
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 17px;
+  font-weight: 600;
   color: var(--t1);
   line-height: 1.2;
   white-space: nowrap;
@@ -488,13 +507,32 @@
   text-overflow: ellipsis;
 }
 
+/* Watch star — the only watchlist control on the card (empty = not watched,
+   filled = watched). Ghost button; colour comes up on watch/hover. */
+.card-star {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  color: var(--t3);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color var(--transition), background var(--transition);
+}
+.card-star:hover { color: var(--amber); background: var(--elevated); }
+.card-star.on { color: var(--amber); }
+
 /* Status dot */
 .status-dot {
   width: 9px;
   height: 9px;
   border-radius: 50%;
   flex-shrink: 0;
-  margin-top: 3px;
   background: #E24B4A;
   position: relative;
 }
@@ -543,32 +581,30 @@
    grid row-stretch making one card taller than its neighbours.
    `.latency-block` has a min-width so a wider latency value ("10450 ms"
    vs "88 ms") can't shove the action cluster around between cards. */
-/* Bottom of the card: a reserved right-hand Trust column and a flexible main
-   area (latency + action buttons) that wraps entirely within itself so it can
-   never ride over the Trust number / stars. Pinned to the card's bottom edge
-   via `margin-top: auto`. */
+/* Bottom of the card: a flexible main column (LATENCY on top, Compare +
+   Watchlist Down/Up under it) on the left, and the Trust column flush to the
+   card's right edge. Pinned to the card's bottom edge via `margin-top: auto`.
+   The main column has `min-width: 0` and its buttons wrap within it, so they
+   can never ride over the Trust number / stars (Trust is flex-shrink: 0). */
 .card-lower {
   display: flex;
-  flex-direction: row-reverse;
+  flex-direction: row;
   align-items: stretch;
   gap: 12px;
   margin-top: auto;
   padding-top: 6px;
 }
 
-/* Latency + Compare/Watch/Unwatch/Down/Up. `min-width: 0` + wrap keep every
-   button inside this column's box — the Trust column beside it is flex-shrink:0
-   so this area gives up width first and wraps to a second line instead. */
 .card-bottom-main {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
-  flex-flow: row wrap;
-  align-items: flex-end;
-  gap: 8px 10px;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
-/* ── Reserved right-hand Trust column ──────────────────────── */
+/* ── Trust column, flush right ─────────────────────────────── */
 .card-trust {
   display: flex;
   flex-direction: column;
@@ -576,6 +612,7 @@
   gap: 2px;
   flex-shrink: 0;
   min-width: 72px;
+  margin-left: auto;
   text-align: right;
 }
 
@@ -593,7 +630,7 @@
 .card-trust-na { color: var(--t3); }
 
 .card-trust-score {
-  font-size: 24px;
+  font-size: 25px;
   font-weight: 700;
   line-height: 1;
   font-family: var(--font-mono-data);
@@ -603,21 +640,23 @@
   display: flex;
   align-items: center;
   gap: 3px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--green-bright);
   font-family: var(--font-mono-data);
 }
 
 .card-trust-star { font-size: 13px; line-height: 1; }
 
-/* Mobile: Trust block goes full-width ABOVE the latency + Compare row. */
+/* Mobile: Trust block goes full-width ABOVE the latency row. */
 @media (max-width: 600px) {
   .card-lower { flex-direction: column; align-items: stretch; gap: 8px; }
   .card-trust {
+    order: -1;
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
     gap: 8px;
+    margin-left: 0;
     text-align: left;
     width: 100%;
   }
@@ -628,18 +667,31 @@
   min-width: 64px;
 }
 
-/* Right-aligned and greedy: fills the rest of the main area's first line, then
-   wraps its own buttons (and, when tight, drops below the latency block) — all
-   still inside `.card-bottom-main`, clear of the Trust column. */
+/* Compare + (Watchlist) Down/Up. Wrap ONLY within .card-bottom-main — never
+   into the Trust column. Left-aligned, sitting under the LATENCY block. */
 .card-actions {
   display: flex;
   flex-flow: row wrap;
   align-items: center;
-  justify-content: flex-end;
   gap: 6px;
-  flex: 1 1 auto;
   min-width: 0;
 }
+.card-actions:empty { display: none; }
+
+.card-compare-btn {
+  background: transparent;
+  color: var(--green-bright);
+  border: 1px solid var(--green-soft-strong);
+  border-radius: var(--radius-m);
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+  transition: all 150ms ease;
+}
+.card-compare-btn:hover { border-color: var(--green); }
 
 .latency-block .latency-label {
   font-size: 9px;
@@ -666,34 +718,8 @@
 
 .latency-value.muted { color: var(--t3); font-size: 17px; }
 
-.watch-btn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: var(--green-soft);
-  border: 1px solid var(--green-soft-strong);
-  border-radius: var(--radius-m);
-  padding: 4px 10px;
-  color: var(--green-bright);
-  font-size: 11px;
-  font-weight: 400;
-  cursor: pointer;
-  font-family: var(--font-body);
-  transition: all var(--transition);
-}
-
-.watch-btn:hover { background: var(--green-soft-strong); border-color: var(--green); }
-.watch-btn.watching {
-  background: var(--red-soft);
-  border-color: rgba(219, 106, 93, 0.45);
-  color: var(--red);
-}
-
-.watch-btn.watching:hover {
-  border-color: rgba(219, 106, 93, 0.65);
-  color: var(--red);
-}
-
+/* Watchlist-only Down/Up toggles — compact so they can sit under Compare on a
+   Watchlist card without ballooning it past a Dashboard card's height. */
 .notify-toggle-btn {
   display: flex;
   align-items: center;
@@ -701,9 +727,9 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
-  padding: 4px 8px;
+  padding: 3px 7px;
   color: var(--text3);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 400;
   cursor: pointer;
   font-family: var(--font-body);
@@ -1013,18 +1039,37 @@
 }
 .filter-tag button:hover { opacity: 1; }
 
-.filter-row {
+/* One horizontal bar: Status · Hide test mints · Trust slider · Showing · Reset
+   · Apply — a single baseline, no footer band / spacer. Wraps only on narrow
+   desktop; a dedicated mobile block below stacks it. */
+.filter-bar {
   display: flex;
-  gap: 10px 24px;
-  flex-wrap: wrap;
   align-items: center;
-  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 10px 18px;
 }
 
-/* Inline group inside the one compact filter bar (no card chrome). */
+/* label + its control, side by side on one baseline */
 .filter-group-inline {
-  flex: 0 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
+}
+
+/* "Showing X of Y" — pushed to the right, buttons trail it */
+.filter-count {
+  margin-left: auto;
+}
+
+/* Mobile: stack Status, Hide test, slider, then Apply full-width. */
+@media (max-width: 600px) {
+  .filter-bar { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 12px; }
+  .filter-group-inline { width: 100%; justify-content: flex-start; }
+  .filter-slider { flex: 1; }
+  .filter-count { margin-left: 0; }
+  .filter-reset-btn { align-self: flex-start; }
+  .filter-apply-btn { width: 100%; }
 }
 
 .filter-group-nuts {
@@ -1080,7 +1125,7 @@
 .filter-radio input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
 
 .filter-slider {
-  width: 160px;
+  width: 140px;
   accent-color: var(--accent);
   cursor: pointer;
 }
@@ -1125,19 +1170,11 @@
 .filter-nut-chip:hover { border-color: var(--border2); color: var(--text2); }
 .filter-nut-chip.active { background: rgba(74,222,128,0.1); border-color: rgba(74,222,128,0.4); color: #4ade80; }
 
-.filter-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-}
-
 .filter-count {
   font-size: 11px;
   color: var(--text3);
   font-family: var(--font-mono);
+  white-space: nowrap;
 }
 .filter-count strong { color: var(--text2); }
 
@@ -1538,13 +1575,6 @@
   .mint-list-td-name { min-width: 0; max-width: none; }
   .mint-list-name { max-width: 120px; }
   .mint-list-table td.trust-col { min-width: 48px; }
-  /* Full-width stack on mobile — not mini-cards in a row. */
-  .filter-row { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 14px; }
-  .filter-group-inline { width: 100%; }
-  .filter-group-row-top { display: flex; flex-direction: row; gap: 16px; width: 100%; }
-  .filter-group-row-top .filter-group { flex: 1; min-width: 0; }
-  .filter-group-row-top .filter-slider { width: 100%; }
-  .filter-group-nuts { width: 100%; }
   .filter-nut-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
 
   /* Filters button rides on the same row as the search input. */
@@ -1575,8 +1605,8 @@
     flex: 1 1 calc(50% - 4px);
     padding: 9px 12px;
   }
-  .stat-value { font-size: 20px; }
-  .stat-icon { width: 34px; height: 34px; }
+  .stat-value { font-size: 24px; }
+  .stat-icon { width: 36px; height: 36px; }
 
   .mint-grid {
     grid-template-columns: 1fr;

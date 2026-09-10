@@ -1017,12 +1017,12 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Compact single-bar layout (2026-09-10) — the four card-style
-              ".filter-box" groups were replaced by inline groups that wrap
-              within one bar on desktop and stack full-width on mobile. */}
-          <div className="filter-row">
-            <div className="filter-group filter-group-inline">
-              <div className="filter-group-label">Status</div>
+          {/* Single horizontal bar (2026-09-10): Status · Hide test mints ·
+              Trust slider · Showing X of Y · Reset · Apply — one baseline,
+              stacks full-width on mobile. */}
+          <div className="filter-bar">
+            <div className="filter-group-inline">
+              <span className="filter-group-label">Status</span>
               <div className="filter-radio-group">
                 {(['all', 'online', 'offline'] as const).map(s => (
                   <label key={s} className="filter-radio">
@@ -1033,22 +1033,17 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="filter-group filter-group-inline">
-              <div className="filter-group-label">Show</div>
-              <div className="filter-radio-group">
-                <label className="filter-radio">
-                  <input
-                    type="checkbox"
-                    checked={pendingFilters.hideTestMints}
-                    onChange={e => setPendingFilters(p => ({ ...p, hideTestMints: e.target.checked }))}
-                  />
-                  Hide test mints
-                </label>
-              </div>
-            </div>
+            <label className="filter-radio filter-group-inline">
+              <input
+                type="checkbox"
+                checked={pendingFilters.hideTestMints}
+                onChange={e => setPendingFilters(p => ({ ...p, hideTestMints: e.target.checked }))}
+              />
+              Hide test mints
+            </label>
 
-            <div className="filter-group filter-group-inline">
-              <div className="filter-group-label">Min. Trust Score: <strong>{pendingFilters.minTrustScore}%</strong></div>
+            <div className="filter-group-inline">
+              <span className="filter-group-label">Trust ≥ <strong>{pendingFilters.minTrustScore}%</strong></span>
               <input
                 type="range" min={0} max={100} step={5}
                 value={pendingFilters.minTrustScore}
@@ -1056,14 +1051,10 @@ export default function Dashboard() {
                 className="filter-slider"
               />
             </div>
-          </div>
 
-          <div className="filter-footer">
-            <div className="filter-count">Showing <strong>{filteredMints.length}</strong> of <strong>{totalCount}</strong> mints</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" className="filter-reset-btn" onClick={() => { setPendingFilters(DEFAULT_FILTERS); commitFilters({ filters: DEFAULT_FILTERS }) }}>Reset filters</button>
-              <button type="button" className="filter-apply-btn" onClick={() => { commitFilters({ filters: pendingFilters }); setShowFilters(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Apply filter</button>
-            </div>
+            <div className="filter-count">Showing <strong>{filteredMints.length}</strong> of <strong>{totalCount}</strong></div>
+            <button type="button" className="filter-reset-btn" onClick={() => { setPendingFilters(DEFAULT_FILTERS); commitFilters({ filters: DEFAULT_FILTERS }) }}>Reset</button>
+            <button type="button" className="filter-apply-btn" onClick={() => { commitFilters({ filters: pendingFilters }); setShowFilters(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Apply filter</button>
           </div>
         </div>
       )}
