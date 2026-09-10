@@ -793,6 +793,55 @@ function MintDetailContent({ url }: { url: string }) {
     return `${diff >= 0 ? '+' : ''}${diff.toFixed(0)}${unit} vs prev period`
   }
 
+  // Keysets panel — same data (data.keysets from the existing probe: id/unit/
+  // active), no extra fetch. Rendered on the Overview sidebar on desktop
+  // (≥901px) and on the NUTs tab on mobile (<901px); the two wrappers below
+  // hide the copy that doesn't belong to the current breakpoint.
+  const KEYSET_TOOLTIP = 'A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.'
+  const keysetsPanel = (() => {
+    const keysets = data?.keysets ?? null
+    return (
+      <div className="md-panel">
+        <div className="md-panel-title" title={KEYSET_TOOLTIP}>Keysets</div>
+        {!keysets || keysets.length === 0 ? (
+          <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Keyset data not available.</div>
+        ) : (
+          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            {keysets.map(ks => (
+              <div key={ks.id} className="md-keyset-row" style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                <span style={{fontSize:13,color:'var(--text)',fontFamily:'var(--font-mono)'}}>{ks.id.slice(0, 8)}…{ks.id.slice(-8)}</span>
+                <button
+                  onClick={() => {
+                    void navigator.clipboard.writeText(ks.id)
+                    setCopiedContact(`keyset-${ks.id}`)
+                    setTimeout(() => setCopiedContact(null), 2000)
+                  }}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: copiedContact === `keyset-${ks.id}` ? 'var(--accent)' : 'var(--text3)',
+                    padding: '2px 4px', display: 'flex', flexShrink: 0,
+                  }}
+                  title="Copy full keyset ID"
+                >
+                  {copiedContact === `keyset-${ks.id}` ? <Check size={13} /> : <Copy size={13} />}
+                </button>
+                <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.06em',marginLeft:'auto'}}>{ks.unit}</span>
+                <span style={{
+                  fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,borderRadius:5,padding:'2px 7px',
+                  color: ks.active ? '#4ade80' : 'var(--text3)',
+                  background: ks.active ? 'rgba(74,222,128,0.1)' : 'var(--bg4)',
+                  border: `0.5px solid ${ks.active ? 'rgba(74,222,128,0.3)' : 'var(--border)'}`,
+                }}>
+                  {ks.active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  })()
+
   return (
     <div className="mint-detail">
       <div className="md-header">
@@ -1375,51 +1424,9 @@ function MintDetailContent({ url }: { url: string }) {
             )
           })()}
 
-          {(() => {
-            // From the existing probe only (MintStatus.keysets: id/unit/active).
-            // No /v1/keys call, and never synthesised from nutsLimits.
-            const keysets = data?.keysets ?? null
-            return (
-              <div className="md-panel">
-                <div className="md-panel-title">Keysets</div>
-                {!keysets || keysets.length === 0 ? (
-                  <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Keyset data not available.</div>
-                ) : (
-                  <div style={{display:'flex',flexDirection:'column',gap:6}}>
-                    {keysets.map(ks => (
-                      <div key={ks.id} className="md-keyset-row" style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
-                        <span style={{fontSize:13,color:'var(--text)',fontFamily:'var(--font-mono)'}}>{ks.id.slice(0, 8)}…{ks.id.slice(-8)}</span>
-                        <button
-                          onClick={() => {
-                            void navigator.clipboard.writeText(ks.id)
-                            setCopiedContact(`keyset-${ks.id}`)
-                            setTimeout(() => setCopiedContact(null), 2000)
-                          }}
-                          style={{
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            color: copiedContact === `keyset-${ks.id}` ? 'var(--accent)' : 'var(--text3)',
-                            padding: '2px 4px', display: 'flex', flexShrink: 0,
-                          }}
-                          title="Copy full keyset ID"
-                        >
-                          {copiedContact === `keyset-${ks.id}` ? <Check size={13} /> : <Copy size={13} />}
-                        </button>
-                        <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.06em',marginLeft:'auto'}}>{ks.unit}</span>
-                        <span style={{
-                          fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,borderRadius:5,padding:'2px 7px',
-                          color: ks.active ? '#4ade80' : 'var(--text3)',
-                          background: ks.active ? 'rgba(74,222,128,0.1)' : 'var(--bg4)',
-                          border: `0.5px solid ${ks.active ? 'rgba(74,222,128,0.3)' : 'var(--border)'}`,
-                        }}>
-                          {ks.active ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })()}
+          {/* Mobile (<901px) only — on desktop the Keysets panel moves to the
+              Overview sidebar next to "Units & Methods". */}
+          <div className="md-keysets-at-nuts">{keysetsPanel}</div>
 
             <div className="md-panel">
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:11}}>
@@ -1948,6 +1955,13 @@ function MintDetailContent({ url }: { url: string }) {
                 )
               })}
             </div>
+          )}
+
+          {/* Desktop (≥901px) only, Overview tab only — directly under
+              "Units & Methods". On mobile the Keysets panel stays on the
+              NUTs tab instead (see .md-keysets-at-nuts). */}
+          {activeTab === 'overview' && (
+            <div className="md-keysets-at-overview">{keysetsPanel}</div>
           )}
 
         </div>

@@ -312,6 +312,14 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .md-left  { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .md-right { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 
+/* Keysets panel placement: NUTs tab on mobile, Overview sidebar on desktop.
+   Same DOM in both spots — only the breakpoint-appropriate copy is shown. */
+.md-keysets-at-overview { display: none; }
+@media (min-width: 901px) {
+  .md-keysets-at-overview { display: block; }
+  .md-keysets-at-nuts { display: none; }
+}
+
 /* ── Panels ─────────────────────────────────────────────────── */
 .md-panel {
   background: var(--surface);
