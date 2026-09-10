@@ -63,6 +63,10 @@ const RATING_LABELS: Record<1 | 2 | 3 | 4 | 5, string> = {
 function formatReviewDate(ts: number): string {
   return new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
+/** "7 Sep 2026" — no dotted numeric date. */
+function formatVhDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+}
 /** A five-character ★/☆ string for a rating, rounded to whole stars. */
 function starString(rating: number): string {
   const full = Math.max(0, Math.min(5, Math.round(rating)))
@@ -1595,31 +1599,29 @@ function MintDetailContent({ url }: { url: string }) {
             {!versionHistory || versionHistory.length === 0 ? (
               <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>No version history available.</div>
             ) : (
-              <div>
-                <div style={{display:'grid',gridTemplateColumns:'auto 1fr 1fr',gap:'0 16px',marginBottom:4}}>
-                  <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Date</span>
-                  <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>From</span>
-                  <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>To</span>
-                </div>
-                {versionHistory.map((vh, i) => (
-                  <div key={i} style={{
-                    display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: '0 16px',
-                    padding: '5px 0',
-                    borderBottom: i < versionHistory.length - 1 ? '0.5px solid var(--border)' : 'none',
-                    alignItems: 'center',
-                  }}>
-                    <span style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap'}}>
-                      {new Date(vh.firstSeenAt).toLocaleDateString()}
-                    </span>
-                    <span style={{fontSize:13,color:'var(--text2)',fontFamily:'var(--font-mono)'}}>
-                      {versionHistory[i + 1]?.version ?? '—'}
-                    </span>
-                    <span style={{fontSize:13,color:'var(--text)',fontFamily:'var(--font-mono)',fontWeight:500}}>
-                      {vh.version}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <table className="md-vh-table">
+                <colgroup>
+                  <col style={{width:'96px'}} />
+                  <col />
+                  <col />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>From</th>
+                    <th>To</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {versionHistory.map((vh, i) => (
+                    <tr key={i}>
+                      <td className="md-vh-date">{formatVhDate(vh.firstSeenAt)}</td>
+                      <td className="md-vh-ver md-vh-from">{versionHistory[i + 1]?.version ?? '—'}</td>
+                      <td className="md-vh-ver md-vh-to">{vh.version}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
           </>)}
