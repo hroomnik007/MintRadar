@@ -14,7 +14,7 @@ import type { MintStatus } from '@core/mint/api'
 import { MintCard } from '@/components/mint/MintCard'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
-import { mintAgeBadge, latencyColor, trustColor, uptimeColor, displayName as mintDisplayName } from '@/utils/mintFormatting'
+import { latencyColor, trustColor, uptimeColor, displayName as mintDisplayName } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
 import './Dashboard.css'
 
@@ -328,14 +328,12 @@ function MintListView({
               <th className="col-hide-mobile">Latency</th>
               <th className="col-hide-mobile">Trust</th>
               <th className="col-hide-mobile">NUTs</th>
-              <th className="col-hide-mobile">Age</th>
             </tr>
           </thead>
           <tbody>
             {sortedFiltered.map(mint => {
               const isOnline = mint.online === true
               const displayName = mintDisplayName(mint)
-              const ageBadge = mintAgeBadge(mint.discoveredAt ?? null)
               const score = mint.trustScore ?? null
               return (
                 <tr key={mint.url} className="mint-list-row" onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} onPointerEnter={() => onMintPointerEnter(mint.url)} onPointerLeave={onMintPointerLeave}>
@@ -358,17 +356,10 @@ function MintListView({
                     {isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
                   </td>
                   <td className="trust-col col-hide-mobile" style={{ color: score != null ? trustColor(score) : 'var(--text3)', fontFamily: 'var(--font-mono-data)', fontSize: 12, fontWeight: 600 }}>
-                    {score != null ? `${score}%` : '—'}
+                    {score != null ? `${score}` : '—'}
                   </td>
                   <td className="col-hide-mobile" style={{ fontFamily: 'var(--font-mono-data)', fontSize: 12, color: 'var(--text2)' }}>
                     {mint.nutCount != null ? `${mint.nutCount}/14` : '—'}
-                  </td>
-                  <td className="col-hide-mobile">
-                    {ageBadge && (
-                      <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: ageBadge.color, background: ageBadge.bg, border: `1px solid ${ageBadge.border}`, borderRadius: 5, padding: '2px 6px', whiteSpace: 'nowrap' }}>
-                        {ageBadge.label}
-                      </span>
-                    )}
                   </td>
                 </tr>
               )

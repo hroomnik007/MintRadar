@@ -28,11 +28,21 @@ test.describe('MintCard — copy & reduced badge set', () => {
     }
   })
 
-  test('Trust badge is always "Trust <n>" — word + number, never a bare %', async ({ page }) => {
+  test('version + "N NUTs" pills are gone from the card', async ({ page }) => {
     await page.goto('/?status=all')
-    await expect(card(page, 'Alpha Mint').locator('.card-pill', { hasText: 'Trust 92' })).toBeVisible()
-    // Offline mint with a null score still shows the badge, as "Trust n/a".
-    await expect(card(page, 'Charlie Mint').locator('.card-pill', { hasText: 'Trust n/a' })).toBeVisible()
+    await expect(page.locator('.mint-card')).toHaveCount(4)
+    await expect(page.locator('.mint-card .card-pill', { hasText: /NUTs/ })).toHaveCount(0)
+    await expect(page.locator('.mint-card .card-pill', { hasText: /Nutshell|cdk-mintd/ })).toHaveCount(0)
+  })
+
+  test('Trust block shows a bare number (no %), or "Trust n/a" when missing', async ({ page }) => {
+    await page.goto('/?status=all')
+    const alphaTrust = card(page, 'Alpha Mint').locator('.card-trust')
+    await expect(alphaTrust).toBeVisible()
+    await expect(alphaTrust.locator('.card-trust-score')).toHaveText('92')
+    await expect(alphaTrust).not.toContainText('%')
+    // Offline mint with a null score still shows the block, as "Trust n/a".
+    await expect(card(page, 'Charlie Mint').locator('.card-trust-na')).toHaveText('Trust n/a')
   })
 
   test('uptime chip reads "<n>% up 24h"', async ({ page }) => {
@@ -115,5 +125,33 @@ test.describe('MintCard — copy & reduced badge set', () => {
     expect(footerN).toBe(tile)
     // 4 mock mints, none degraded → "Showing 4 of 4", tile "4".
     expect(footerN).toBe('4')
+  })
+})
+
+test.describe('Dashboard list view — reduced columns', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockRelays(page)
+    await installApiMocks(page)
+  })
+
+  test('no Age column / Established–Veteran–OG badges, Trust cell has no %', async ({ page }) => {
+    await page.goto('/?status=all')
+    await page.locator('.view-toggle-btn[title="List view"]').click()
+    await expect(page.locator('.mint-list-table')).toBeVisible()
+
+    // Age column header + age badges are gone.
+    await expect(page.locator('.mint-list-table th', { hasText: 'Age' })).toHaveCount(0)
+    for (const label of ['Established', 'Veteran', 'OG']) {
+      await expect(page.locator('.mint-list-table').getByText(label, { exact: true })).toHaveCount(0)
+    }
+
+    // Kept columns.
+    for (const label of ['Status', 'Uptime 24h', 'Latency', 'Trust', 'NUTs']) {
+      await expect(page.locator('.mint-list-table th', { hasText: label })).toHaveCount(1)
+    }
+
+    // Trust cell is an integer, no "%".
+    const trustCell = page.locator('.mint-list-row', { hasText: 'Alpha Mint' }).locator('.trust-col')
+    await expect(trustCell).toHaveText('92')
   })
 })

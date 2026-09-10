@@ -10,7 +10,7 @@ import type { KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUserRelays } from '@/hooks/useUserRelays'
-import { displayName as mintDisplayName, isNewMint, cardTrustLabel, cardLatencyLabel, cardLightningLabel, uptimeColor, formatTimeAgo, MIN_MEANINGFUL_REVIEWS } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, isNewMint, cardLatencyLabel, cardLightningLabel, uptimeColor, formatTimeAgo, MIN_MEANINGFUL_REVIEWS } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
 import { db } from '@/db'
 import { resolveNotificationRelays, syncSubscribeToServer, syncUnsubscribeFromServer } from '@/core/nostr/notificationSubscription'
@@ -152,12 +152,6 @@ export function MintCard({
       </div>
 
       <div className="card-pills">
-        {mint.version && (
-          <span className="card-pill">{mint.version}</span>
-        )}
-        {mint.nutCount !== null && mint.nutCount !== undefined && (
-          <span className="card-pill" style={{ fontFamily: 'var(--font-mono-data)' }}>{mint.nutCount} NUTs</span>
-        )}
         {mint.units && mint.units.length > 0 && (
           <span className="card-pill" style={{ fontFamily: 'var(--font-mono-data)' }}>
             {mint.units.map(u => u.toUpperCase()).join(' / ')}
@@ -177,31 +171,45 @@ export function MintCard({
             {uptimePct24h}% up 24h
           </span>
         )}
-        <span className="card-pill" style={{ color: mint.trustScore == null ? 'var(--t3)' : mint.trustScore >= 70 ? 'var(--green-bright)' : mint.trustScore >= 40 ? 'var(--amber)' : 'var(--red)', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-mono-data)' }}>
-          <IcShield /><span>{cardTrustLabel(mint.trustScore)}</span>
-        </span>
-        {(mint.reviewCount ?? 0) > 0 && mint.reviewAvgRating != null && (
-          <span
-            className="card-pill"
-            style={{ color: 'var(--green-bright)', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-mono-data)', opacity: (mint.reviewCount ?? 0) < MIN_MEANINGFUL_REVIEWS ? 0.6 : 1 }}
-          >
-            <span style={{ fontSize: 15, lineHeight: 1 }}>★</span>
-            <span>{mint.reviewAvgRating.toFixed(1)} ({mint.reviewCount})</span>
-            {mint.reviewSurge && (
-              <InfoTooltip
-                className="card-review-surge-flag"
-                tone="warn"
-                width={200}
-                iconSize={10}
-                label="Recent review surge"
-                text="This mint's review count grew unusually fast recently — worth a closer look before trusting the rating."
-              />
-            )}
-          </span>
-        )}
       </div>
 
-      <div className="card-bottom">
+      <div className="card-lower">
+        <div className="card-trust">
+          {mint.trustScore == null ? (
+            <div className="card-trust-na"><IcShield /><span>Trust n/a</span></div>
+          ) : (
+            <>
+              <div className="card-trust-label"><IcShield /><span>Trust</span></div>
+              <div
+                className="card-trust-score"
+                style={{ color: mint.trustScore >= 70 ? 'var(--green-bright)' : mint.trustScore >= 40 ? 'var(--amber)' : 'var(--red)' }}
+              >
+                {mint.trustScore}
+              </div>
+            </>
+          )}
+          {(mint.reviewCount ?? 0) > 0 && mint.reviewAvgRating != null && (
+            <span
+              className="card-trust-rating"
+              style={{ opacity: (mint.reviewCount ?? 0) < MIN_MEANINGFUL_REVIEWS ? 0.6 : 1 }}
+            >
+              <span className="card-trust-star">★</span>
+              <span>{mint.reviewAvgRating.toFixed(1)} ({mint.reviewCount})</span>
+              {mint.reviewSurge && (
+                <InfoTooltip
+                  className="card-review-surge-flag"
+                  tone="warn"
+                  width={200}
+                  iconSize={10}
+                  label="Recent review surge"
+                  text="This mint's review count grew unusually fast recently — worth a closer look before trusting the rating."
+                />
+              )}
+            </span>
+          )}
+        </div>
+
+        <div className="card-bottom">
         <div className="latency-block">
           <div className="latency-label">{isOfflineDegraded ? 'LAST SEEN' : 'LATENCY'}</div>
           {isOfflineDegraded ? (
@@ -265,6 +273,7 @@ export function MintCard({
               {isWatched ? <><IcClose /><span>Unwatch</span></> : <><IcPlus /><span>Watch</span></>}
             </button>
           )}
+        </div>
         </div>
       </div>
     </div>

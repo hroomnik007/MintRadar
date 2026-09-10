@@ -524,14 +524,79 @@
    grid row-stretch making one card taller than its neighbours.
    `.latency-block` has a min-width so a wider latency value ("10450 ms"
    vs "88 ms") can't shove the action cluster around between cards. */
+/* Wraps the Trust block (right) and the latency + actions row (left). Pinned to
+   the bottom edge of the flex-column card via `margin-top: auto`. */
+.card-lower {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
 .card-bottom {
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: auto;
-  padding-top: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ── Right-hand Trust block ─────────────────────────────────── */
+.card-trust {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.card-trust-label,
+.card-trust-na {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--t3);
+}
+
+.card-trust-na { color: var(--t3); }
+
+.card-trust-score {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  font-family: var(--font-mono-data);
+}
+
+.card-trust-rating {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--green-bright);
+  font-family: var(--font-mono-data);
+}
+
+.card-trust-star { font-size: 13px; line-height: 1; }
+
+/* Mobile: Trust block goes full-width ABOVE the latency + Compare row. */
+@media (max-width: 600px) {
+  .card-lower { flex-direction: column; align-items: stretch; gap: 8px; }
+  .card-trust {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    text-align: left;
+    width: 100%;
+  }
 }
 
 .latency-block {

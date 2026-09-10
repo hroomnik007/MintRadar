@@ -25,7 +25,7 @@ test.describe('Community Rating — no ⓘ caveat tooltip on card / detail tile'
     await page.goto('/')
 
     const ratingPill = page.locator('.mint-card', { hasText: 'Alpha Mint' })
-      .locator('.card-pill', { hasText: '4.2 (12)' })
+      .locator('.card-trust-rating', { hasText: '4.2 (12)' })
     await expect(ratingPill).toBeVisible()
     await expect(ratingPill.locator('.card-rating-info')).toHaveCount(0)
   })
@@ -52,7 +52,7 @@ test.describe('Community Rating — thin-sample de-emphasis (reviewCount < 3)', 
     await page.goto('/')
 
     const pill = page.locator('.mint-card', { hasText: 'Alpha Mint' })
-      .locator('.card-pill', { hasText: '4.9 (2)' })
+      .locator('.card-trust-rating', { hasText: '4.9 (2)' })
     await expect(pill).toBeVisible()
     // opacity is dropped to 0.6 for a thin sample.
     await expect(pill).toHaveCSS('opacity', '0.6')
@@ -62,7 +62,7 @@ test.describe('Community Rating — thin-sample de-emphasis (reviewCount < 3)', 
     await setup(page)
     await page.goto('/')
     const pill = page.locator('.mint-card', { hasText: 'Delta Mint' })
-      .locator('.card-pill', { hasText: '4.8 (3)' })
+      .locator('.card-trust-rating', { hasText: '4.8 (3)' })
     await expect(pill).toHaveCSS('opacity', '1')
   })
 })
