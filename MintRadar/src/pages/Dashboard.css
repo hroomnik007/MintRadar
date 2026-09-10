@@ -7,6 +7,12 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  /* Shared width for the mint grid and the mid-chrome above it (intro strip,
+     controls row, filter panel) so search / sort / filters never stick out
+     wider than the card row. = 4 cards at their 300px max + gaps + gutters
+     (border-box, so it includes the horizontal padding). Well above any phone
+     width, so mobile controls stay full-bleed. */
+  --dash-chrome-max: calc(300px * 4 + 16px * 3 + var(--page-pad) * 2);
 }
 
 /* ── Stats Bar ──────────────────────────────────────────────── */
@@ -89,7 +95,10 @@
   display: flex;
   align-items: baseline;
   gap: 16px;
-  margin: 14px var(--page-pad) 0;
+  margin: 14px auto 0;
+  max-width: var(--dash-chrome-max);
+  padding-inline: var(--page-pad);
+  width: 100%;
 }
 @media (max-width: 900px) {
   .dash-intro { flex-wrap: wrap; }
@@ -195,8 +204,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-inline: var(--page-pad);
-  margin-top: 12px;
+  margin: 12px auto 0;
+  max-width: var(--dash-chrome-max);
+  padding-inline: var(--page-pad);
+  width: 100%;
 }
 
 /* Desktop: transparent to the .dashboard-controls flex row (search + Filters
@@ -430,8 +441,10 @@
   grid-template-columns: repeat(auto-fill, minmax(260px, 300px));
   justify-content: center;
   gap: 16px;
-  padding: 16px 0;
-  margin-inline: var(--page-pad);
+  padding: 16px var(--page-pad);
+  margin-inline: auto;
+  max-width: var(--dash-chrome-max);
+  width: 100%;
 }
 
 /* ── Mint Card ──────────────────────────────────────────────── */
@@ -991,12 +1004,16 @@
 }
 
 /* ── Filter Panel ────────────────────────────────────────────── */
+/* Constrained + centered to the same width as .mint-grid so the filter bar
+   inside it lines up with the card row. */
 .filter-panel {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
   padding: 12px 14px;
-  margin-inline: var(--page-pad);
+  margin-inline: auto;
+  max-width: var(--dash-chrome-max);
+  width: 100%;
   margin-top: 8px;
 }
 
@@ -1628,7 +1645,7 @@
 
   .mint-grid {
     grid-template-columns: 1fr;
-    padding: 12px 0;
+    padding: 12px var(--page-pad);
     gap: 8px;
   }
   .mint-card { max-width: none; }
