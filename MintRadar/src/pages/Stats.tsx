@@ -117,7 +117,6 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose }: {
         {displayed.map(m => {
             const score = m.trustScore ?? null
             const scoreColor = score != null ? (score >= 70 ? '#4ade80' : score >= 40 ? '#ffa500' : '#ff4d4d') : 'var(--text3)'
-            const badge = mintAgeBadge(m.discoveredAt ?? null)
             return (
               <div
                 key={m.url}
@@ -128,9 +127,6 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose }: {
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? '#17E87F' : '#E24B4A', display: 'inline-block', flexShrink: 0 }} />
                 <div className="nut-modal-row-info" style={{ flex: 1 }}>
                   <span className="nut-modal-row-name" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{displayName(m)}</span>
-                  {badge && (
-                    <span className="nut-modal-row-badge" style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: badge.color, background: badge.bg, border: `1px solid ${badge.border}`, borderRadius: 4, padding: '1px 5px', marginLeft: 6 }}>{badge.label}</span>
-                  )}
                 </div>
                 <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
                   {score != null ? `${score}%` : '—'}
@@ -296,7 +292,6 @@ function CityMintsModal({ loc, mints, onClose }: {
           {displayed.map(m => {
             const score = m.trustScore ?? null
             const scoreColor = score != null ? (score >= 70 ? 'var(--green-bright)' : score >= 40 ? 'var(--amber)' : 'var(--red)') : 'var(--text3)'
-            const badge = mintAgeBadge(m.discoveredAt ?? null)
             return (
               <div
                 key={m.url}
@@ -308,10 +303,85 @@ function CityMintsModal({ loc, mints, onClose }: {
                   style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? 'var(--green-bright)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }}
                 />
                 <div className="nut-modal-row-info" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <span className="nut-modal-row-name">{displayName(m)}</span>
-                  {badge && (
-                    <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: badge.color, background: badge.bg, border: `1px solid ${badge.border}`, borderRadius: 4, padding: '1px 5px' }}>{badge.label}</span>
-                  )}
+                  <span className="nut-modal-row-name" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{displayName(m)}</span>
+                </div>
+                <span style={{ fontSize: 12, fontFamily: 'var(--font-mono-data)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
+                  {score != null ? `${score}%` : '—'}
+                </span>
+              </div>
+            )
+          })}
+          {!showAll && sorted.length > 10 && (
+            <button
+              type="button"
+              onClick={() => setShowAll(true)}
+              style={{ width: '100%', background: 'none', border: 'none', color: 'var(--accent)', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer', padding: '8px 0' }}
+            >
+              Show all {sorted.length} mints
+            </button>
+          )}
+          {sorted.length === 0 && <div className="nut-modal-empty">No mints</div>}
+        </div>
+        <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span>{onlineCount} online · {offlineCount} offline</span>
+          <span>Sorted by Trust Score</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Mints supporting one NUT — opened from the "NUT Coverage Across the Network"
+// panel. Same overlay/row/footer vocabulary as SoftwareModal / CityMintsModal;
+// a plain mint list (displayName link + Trust %), no age badges, no
+// "Show on Dashboard" — the row is the only action and it goes to Mint Detail.
+function NutMintsModal({ nut, mints, onClose }: {
+  nut: string
+  mints: KnownMint[]
+  onClose: () => void
+}) {
+  const navigate = useNavigate()
+  const [showAll, setShowAll] = useState(false)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const sorted = useMemo(() =>
+    [...mints].sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
+  , [mints])
+
+  const meta = NUT_META[nut]
+  const displayed = showAll ? sorted : sorted.slice(0, 10)
+  const onlineCount = mints.filter(m => m.online === true).length
+  const offlineCount = mints.filter(m => m.online === false).length
+
+  return (
+    <div className="nut-modal-overlay" onClick={onClose}>
+      <div className="nut-modal" onClick={e => e.stopPropagation()}>
+        <button type="button" className="nut-modal-close" onClick={onClose}>✕</button>
+        <div className="nut-modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <span className="nut-modal-title">{nut}{meta ? ` · ${meta.short}` : ''}</span>
+            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{mints.length} mint{mints.length !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+        <div className="nut-modal-list">
+          {displayed.map(m => {
+            const score = m.trustScore ?? null
+            const scoreColor = score != null ? (score >= 70 ? 'var(--green-bright)' : score >= 40 ? 'var(--amber)' : 'var(--red)') : 'var(--text3)'
+            return (
+              <div
+                key={m.url}
+                className="nut-modal-row"
+                style={{ cursor: 'pointer' }}
+                onClick={() => { onClose(); navigate(`/mint/${encodeURIComponent(m.url)}`) }}
+              >
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? 'var(--green-bright)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
+                <div className="nut-modal-row-info" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <span className="nut-modal-row-name" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{displayName(m)}</span>
                 </div>
                 <span style={{ fontSize: 12, fontFamily: 'var(--font-mono-data)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
                   {score != null ? `${score}%` : '—'}
@@ -519,6 +589,7 @@ export default function Stats() {
   const [cityModal, setCityModal] = useState<string | null>(null)
   const [showMoreLocations, setShowMoreLocations] = useState(false)
   const [softwareModal, setSoftwareModal] = useState<string | null>(null)
+  const [nutModal, setNutModal] = useState<string | null>(null)
   const [reliableTab, setReliableTab] = useState<'reliable' | 'trust'>('reliable')
   const [moversPeriod, setMoversPeriod] = useState<'7d' | '30d'>('7d')
   const [trendDays, setTrendDays] = useState<30 | 90>(30)
@@ -588,6 +659,15 @@ export default function Stats() {
     if (!cityModal || !knownMintsData) return []
     return knownMintsData.filter(m => normalizeGeoLoc(m.serverLocation) === cityModal)
   }, [cityModal, knownMintsData])
+
+  const nutModalMints = useMemo(() => {
+    if (!nutModal || !knownMintsData) return []
+    // NUT support = the mint's /v1/info advertised the NUT (same test the
+    // Dashboard ?nuts= filter uses). nutModal is "NUT-09"; the nuts object is
+    // keyed by the unpadded number.
+    const key = String(parseInt(nutModal.slice(4), 10))
+    return knownMintsData.filter(m => (m.nutsLimits as Record<string, unknown> | null)?.[key] != null)
+  }, [nutModal, knownMintsData])
 
   interface TrustTrendResponse {
     trend: Array<{ date: string; avgTrust: number }>
@@ -1094,7 +1174,7 @@ export default function Stats() {
             remaining col 4) instead of Movers grabbing col 1 first. */}
         <div className="stats-panel stats-nut-panel">
           <div className="stats-panel-title">NUT Coverage Across the Network</div>
-          <div className="stats-section-sublabel" style={{marginBottom:10}}>Protocol adoption across {data.onlineMints} online mints · click any NUT to filter the Dashboard</div>
+          <div className="stats-section-sublabel" style={{marginBottom:10}}>Protocol adoption across {data.onlineMints} online mints · click any NUT to see which mints support it</div>
           <div className="stats-nut-rows-grid">
             {TRACKED_NUTS.map(nut => {
               const adoption = nutAdoptionMap[nut] ?? { count: 0, percent: 0 }
@@ -1103,7 +1183,7 @@ export default function Stats() {
               if (!meta) return null
               const barColor = percent >= 80 ? '#17E87F' : percent >= 40 ? '#f59e0b' : '#E24B4A'
               return (
-                <div key={nut} className="stats-nut-row" onClick={() => navigate(`/?nut=${nut.slice(4)}`)}>
+                <div key={nut} className="stats-nut-row" onClick={() => setNutModal(nut)}>
                   <span className="snr-nut-tag">{nut}</span>
                   <span className="snr-nut-name">{meta.short}</span>
                   <div className="snr-bar-track">
@@ -1195,6 +1275,13 @@ export default function Stats() {
           loc={cityModal}
           mints={cityMints}
           onClose={() => setCityModal(null)}
+        />
+      )}
+      {nutModal !== null && (
+        <NutMintsModal
+          nut={nutModal}
+          mints={nutModalMints}
+          onClose={() => setNutModal(null)}
         />
       )}
       {showMoreLocations && (

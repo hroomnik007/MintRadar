@@ -14,7 +14,7 @@ import type { MintStatus } from '@core/mint/api'
 import { MintCard } from '@/components/mint/MintCard'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
-import { mintAgeBadge, latencyColor, trustColor, uptimeColor, displayName as mintDisplayName, cardLightningLabel, methodsHaveMethod } from '@/utils/mintFormatting'
+import { mintAgeBadge, latencyColor, trustColor, uptimeColor, displayName as mintDisplayName } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
 import './Dashboard.css'
 
@@ -136,20 +136,15 @@ interface FilterState {
   minTrustScore: number
   requiredNuts: string[]
   hideTestMints: boolean
-  restore: boolean
-  bolt12: boolean
-  ln: boolean
 }
 // New default Dashboard view (2026-09-09): online-only, test mints hidden,
 // sorted by Trust Score desc. The Name-sort freeze from earlier passes is
 // deliberately lifted for this — see the "Trust Score default" note.
-// restore/bolt12/ln are opt-in capability filters — all OFF by default so the
-// default view isn't narrowed further.
 // hideTestMints defaults to false (2026-09-10): a fresh Dashboard SHOWS test
 // mints (they still carry a "Test mint" badge). An earlier pass defaulted this
 // ON — that is deliberately lifted here. ?testmints=hide is emitted only when
 // the user turns the checkbox on; the default never emits a param.
-const DEFAULT_FILTERS: FilterState = { status: 'online', minTrustScore: 0, requiredNuts: [], hideTestMints: false, restore: false, bolt12: false, ln: false }
+const DEFAULT_FILTERS: FilterState = { status: 'online', minTrustScore: 0, requiredNuts: [], hideTestMints: false }
 
 function applyFilters(
   mints: KnownMint[],
@@ -172,10 +167,6 @@ function applyFilters(
       if (!nuts) return false
       if (!filters.requiredNuts.every(nut => nuts[nut] != null)) return false
     }
-    // Opt-in capability filters. Missing methods/nuts count as "no".
-    if (filters.restore && (mint.nutsLimits as Record<string, unknown> | null)?.['9'] == null) return false
-    if (filters.bolt12 && !(methodsHaveMethod(mint.mintMethods, 'bolt12') || methodsHaveMethod(mint.meltMethods, 'bolt12'))) return false
-    if (filters.ln && cardLightningLabel(mint) !== 'LN') return false
     return true
   })
 }
@@ -188,9 +179,6 @@ function countActiveFilters(f: FilterState): number {
     f.minTrustScore > 0 ? 1 : 0,
     f.requiredNuts.length > 0 ? 1 : 0,
     f.hideTestMints !== DEFAULT_FILTERS.hideTestMints ? 1 : 0,
-    f.restore ? 1 : 0,
-    f.bolt12 ? 1 : 0,
-    f.ln ? 1 : 0,
   ].reduce((a, b) => a + b, 0)
 }
 
@@ -231,14 +219,11 @@ function parseFilterParams(params: URLSearchParams): {
     if (NUT_FILTER_KEYS.includes(key) && !requiredNuts.includes(key)) requiredNuts.push(key)
   }
   const hideTestMints = params.get('testmints') === 'hide'
-  const restore = params.get('restore') === '1'
-  const bolt12 = params.get('bolt12') === '1'
-  const ln = params.get('ln') === '1'
   return {
     search: params.get('q') ?? '',
     sortBy,
     sortDir,
-    filters: { status, minTrustScore, requiredNuts, hideTestMints, restore, bolt12, ln },
+    filters: { status, minTrustScore, requiredNuts, hideTestMints },
   }
 }
 
@@ -251,9 +236,6 @@ function buildFilterParams(search: string, sortBy: SortByValue, sortDir: 'asc' |
   if (filters.minTrustScore > 0) params.set('trust', String(filters.minTrustScore))
   if (filters.requiredNuts.length > 0) params.set('nuts', filters.requiredNuts.join(','))
   if (filters.hideTestMints) params.set('testmints', 'hide')
-  if (filters.restore) params.set('restore', '1')
-  if (filters.bolt12) params.set('bolt12', '1')
-  if (filters.ln) params.set('ln', '1')
   return params
 }
 
@@ -1022,16 +1004,6 @@ export default function Dashboard() {
                   <button type="button" onClick={() => { const f = { ...activeFilters, hideTestMints: false }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
-              {([
-                ['restore', 'Restore'],
-                ['bolt12', 'Bolt12'],
-                ['ln', 'LN'],
-              ] as const).filter(([k]) => activeFilters[k]).map(([k, label]) => (
-                <span key={k} className="filter-tag">
-                  {label}
-                  <button type="button" aria-label={`Clear ${label} filter`} onClick={() => { const f = { ...activeFilters, [k]: false }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
-                </span>
-              ))}
               {activeFilters.minTrustScore > 0 && (
                 <span className="filter-tag">
                   Trust ≥ {activeFilters.minTrustScore}%
@@ -1074,20 +1046,6 @@ export default function Dashboard() {
                   />
                   Hide test mints
                 </label>
-                {([
-                  ['restore', 'Restore (NUT-09)'],
-                  ['bolt12', 'Bolt12'],
-                  ['ln', 'Lightning (in & out)'],
-                ] as const).map(([k, label]) => (
-                  <label key={k} className="filter-radio">
-                    <input
-                      type="checkbox"
-                      checked={pendingFilters[k]}
-                      onChange={e => setPendingFilters(p => ({ ...p, [k]: e.target.checked }))}
-                    />
-                    {label}
-                  </label>
-                ))}
               </div>
             </div>
 
