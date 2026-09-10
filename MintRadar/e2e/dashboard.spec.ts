@@ -19,7 +19,7 @@ test.describe('Dashboard', () => {
     await expect(page.locator('.card-name', { hasText: 'Delta Mint' })).toBeVisible()
     // Stat bar reflects the mocked data: 3 of 4 mints online (value "3",
     // "/ 4" rendered as the muted unit beside it, not a second big number).
-    const onlineTile = page.locator('.stat-card', { hasText: 'Online Mints' })
+    const onlineTile = page.locator('.stat-card', { hasText: 'Online now' })
     await expect(onlineTile.locator('.stat-value')).toHaveText('3')
     await expect(onlineTile.locator('.stat-unit')).toHaveText('/ 4')
   })

@@ -843,7 +843,7 @@ export default function Dashboard() {
     <div className="dashboard">
       <div className="stats-bar">
         <button type="button" className="stat-card stat-card-btn" onClick={() => setShowCountNote(v => !v)} aria-expanded={showCountNote}>
-          <div className="stat-label">Online Mints</div>
+          <div className="stat-label">Online now</div>
           <div className="stat-row">
             <div className="stat-icon green"><IcSignal /></div>
             <div className="stat-figure">
@@ -864,7 +864,7 @@ export default function Dashboard() {
           <div className="stat-sub">from Frankfurt</div>
         </div>
         <button type="button" className="stat-card stat-card-btn" onClick={() => setShowCountNote(v => !v)} aria-expanded={showCountNote}>
-          <div className="stat-label">All Known</div>
+          <div className="stat-label">Mints tracked</div>
           <div className="stat-row">
             <div className="stat-icon gray"><IcGrid /></div>
             <div className="stat-figure">

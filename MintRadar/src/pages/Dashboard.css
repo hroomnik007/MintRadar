@@ -651,25 +651,20 @@
 
 .card-trust-star { font-size: 13px; line-height: 1; }
 
-/* Mobile: Trust block goes full-width ABOVE the latency row. */
+/* Mobile keeps the desktop bottom-row layout: LATENCY (+ Compare under it) on
+   the left, the Trust column flush right. No stacking of Trust above latency. */
 @media (max-width: 600px) {
-  .card-lower { flex-direction: column; align-items: stretch; gap: 8px; }
-  .card-trust {
-    order: -1;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 8px;
-    margin-left: 0;
-    text-align: left;
-    width: 100%;
-  }
+  .card-trust { min-width: 64px; }
 }
 
 .latency-block {
   flex-shrink: 0;
   min-width: 64px;
 }
+
+/* A 4-digit latency ("10450 ms") stays on one line and can't wrap toward the
+   Trust column. */
+.latency-value { white-space: nowrap; }
 
 /* Compare + (Watchlist) Down/Up. Wrap ONLY within .card-bottom-main — never
    into the Trust column. Left-aligned, sitting under the LATENCY block. */
@@ -1068,14 +1063,23 @@
   margin-left: 0;
 }
 
-/* Mobile: stack Status, Hide test, slider, then Apply full-width. */
+/* Mobile: Status, Hide test, slider each on their own full-width row (all
+   left-aligned), then "Showing X of Y" + Reset share one row, and Apply gets
+   its own row below. Explicitly NOT space-between — that left a hole with a
+   floating checkbox mid-row. */
 @media (max-width: 600px) {
-  .filter-bar { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 12px; }
-  .filter-group-inline { width: 100%; justify-content: flex-start; }
+  .filter-bar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px 10px;
+  }
+  .filter-group-inline { flex: 1 1 100%; width: 100%; justify-content: flex-start; }
   .filter-slider { flex: 1; }
-  .filter-count { margin-left: 0; }
-  .filter-reset-btn { align-self: flex-start; }
-  .filter-apply-btn { width: 100%; }
+  .filter-count { flex: 1 1 auto; margin-left: 0; }
+  .filter-reset-btn { flex: 0 0 auto; margin-left: auto; align-self: center; }
+  .filter-apply-btn { flex: 1 1 100%; width: 100%; }
 }
 
 .filter-group-nuts {
@@ -1611,7 +1615,15 @@
     flex: 1 1 calc(50% - 4px);
     padding: 9px 12px;
   }
-  .stat-value { font-size: 24px; }
+  /* Match the Stats page hero (.smc-value): smaller value, and no
+     nowrap/ellipsis so a string like "6 min ago" shows in full. */
+  .stat-value {
+    font-size: 19px;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.15;
+  }
   .stat-icon { width: 36px; height: 36px; }
 
   .mint-grid {

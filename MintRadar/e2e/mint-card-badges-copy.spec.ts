@@ -88,20 +88,20 @@ test.describe('MintCard — copy & reduced badge set', () => {
   test('dashboard tiles carry the new labels + subtitles', async ({ page }) => {
     await page.goto('/?status=all')
     const bar = page.locator('.stats-bar')
-    await expect(bar.getByText('Online Mints')).toBeVisible()
+    await expect(bar.getByText('Online now')).toBeVisible()
     // The Online tile shows the count as the primary value; "/ N" is the
     // muted unit beside it, not a second big number.
-    const onlineTile = bar.locator('.stat-card', { hasText: 'Online Mints' })
+    const onlineTile = bar.locator('.stat-card', { hasText: 'Online now' })
     await expect(onlineTile.locator('.stat-value')).toHaveText('3')
     await expect(onlineTile.locator('.stat-unit')).toHaveText('/ 4')
     await expect(bar.getByText(/of \d+ listed/)).toHaveCount(0)
-    await expect(bar.getByText('All Known')).toBeVisible()
+    await expect(bar.getByText('Mints tracked')).toBeVisible()
     await expect(bar.getByText('incl. offline')).toBeVisible()
     await expect(bar.getByText('from Frankfurt')).toBeVisible()
 
     // Tapping a count tile reveals the Listed/Known explainer.
     await expect(page.locator('.stat-count-note')).toHaveCount(0)
-    await bar.getByText('All Known').click()
+    await bar.getByText('Mints tracked').click()
     await expect(page.locator('.stat-count-note')).toContainText(/Listed.*in the grid.*Known.*every mint we indexed/s)
   })
 
@@ -119,7 +119,7 @@ test.describe('MintCard — copy & reduced badge set', () => {
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
     const bar = page.locator('.stats-bar')
-    const tile = (await bar.locator('.stat-card', { hasText: 'All Known' }).locator('.stat-value').textContent())?.trim()
+    const tile = (await bar.locator('.stat-card', { hasText: 'Mints tracked' }).locator('.stat-value').textContent())?.trim()
     const footer = await page.locator('.grid-showing-note').textContent()
     const footerN = footer?.match(/of (\d+)/)?.[1]
     expect(footerN).toBe(tile)
