@@ -283,13 +283,16 @@
    in place any more: the old accordion stretched this panel and left the
    neighbouring fixed-height panels in the same grid row with dead space.
    The panel is now a constant height regardless of interaction. */
+/* Same radius/border recipe as .stats-top5-row (Most Reliable / Movers) —
+   one shared list-row chrome across the page instead of a third style. */
 .sw-row {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 7px 10px;
   background: var(--bg3);
-  border-radius: 6px;
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
   cursor: pointer;
   transition: background 120ms ease;
 }
@@ -454,21 +457,28 @@
 }
 
 /* ── Panel ───────────────────────────────────────────────────── */
+/* Same chrome as Dashboard's .mint-card / .stat-card: --surface background
+   (var(--bg2) is the same token, kept here as the literal shared value),
+   var(--border) hairline, var(--r) radius — no separate Stats-only card
+   recipe. */
 .stats-panel {
-  background: var(--bg2);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r);
   padding: 14px 16px;
 }
 
+/* Same recipe as Dashboard's .stat-label ("SAT" pill): 10px uppercase,
+   0.1em letter-spacing, var(--text-dim) (--t2) — not a separate, larger
+   Stats-only heading style. */
 .stats-panel-title {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 500;
-  color: var(--text2);
+  color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   margin-bottom: 14px;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
 }
 
 .stats-card-header {
@@ -605,6 +615,19 @@
   transition: width 400ms ease;
 }
 
+/* Software in Use's per-implementation bars (.sw-row) and Geographic
+   Distribution's bars (.dist-row) alternated decorative green/copper per
+   row — no warning meaning, unlike the NUT Coverage / "Behind current
+   release" bars elsewhere on this page, which stay amber/red for real
+   adoption/freshness warnings. Forced to one mint-green fill here so
+   "coverage bar" reads as one system; !important is required because the
+   color is set inline (Stats.tsx computes it per row) and this rule must
+   win over that without touching the component logic. */
+.sw-row .dist-fill,
+.dist-row .dist-fill {
+  background: var(--green) !important;
+}
+
 .dist-count {
   font-size: 11px;
   font-family: var(--font-mono-data);
@@ -632,9 +655,9 @@
   grid-template-columns: 1fr 1fr 1fr;
   row-gap: var(--stats-row-gap);
   column-gap: 32px;
-  background: var(--bg2);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r);
   overflow: hidden;
 }
 
