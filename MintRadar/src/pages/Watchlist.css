@@ -3,6 +3,9 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  /* Same chrome-width formula as Dashboard.css (.dashboard) so the Watchlist
+     grid's side margins match the Dashboard's, instead of stretching full-width. */
+  --dash-chrome-max: calc(300px * 4 + 16px * 3 + var(--page-pad) * 2);
 }
 
 /* ── Controls Bar ───────────────────────────────────────────── */
@@ -62,10 +65,13 @@
 .wl-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 300px));
+  justify-content: center;
   gap: 16px;
-  padding: 16px 0;
-  margin-inline: var(--page-pad);
+  padding: 16px var(--page-pad);
+  margin-inline: auto;
+  max-width: var(--dash-chrome-max);
+  width: 100%;
   align-content: start;
 }
 
