@@ -231,43 +231,6 @@ export default function Watchlist() {
     return () => observer.disconnect()
   }, [listKey])
 
-  function handleExport() {
-    const payload = JSON.stringify({ exportedAt: new Date().toISOString(), mints }, null, 2)
-    const blob = new Blob([payload], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'mintradar-watchlist.json'
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  function handleExportCsv() {
-    const header = ['Name', 'URL', 'Latency (ms)', 'Uptime (%)', 'Version', 'NUT Count', 'Online']
-    const rows = mints.map(url => {
-      const m = knownMintsMap.get(url)
-      return [
-        m?.name ?? getHostname(url),
-        url,
-        m?.latencyMs !== null && m?.latencyMs !== undefined ? String(m.latencyMs) : '',
-        '',
-        m?.version ?? '',
-        m?.nutCount !== null && m?.nutCount !== undefined ? String(m.nutCount) : '',
-        m?.online === true ? 'true' : m?.online === false ? 'false' : '',
-      ]
-    })
-    const csv = [header, ...rows]
-      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      .join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const objectUrl = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = objectUrl
-    a.download = 'mintradar-watchlist.csv'
-    a.click()
-    URL.revokeObjectURL(objectUrl)
-  }
-
   if (profile === null) {
     return (
       <div className="watchlist-page">
@@ -289,19 +252,6 @@ export default function Watchlist() {
 
   return (
     <div className="watchlist-page">
-      <div className="wl-controls">
-        <div className="wl-controls-top">
-          <div className="wl-page-title">My Watchlist</div>
-          {mints.length > 0 && (
-            <div className="wl-export-links">
-              <span className="wl-export-link" onClick={handleExport}>↓ JSON</span>
-              <span className="wl-export-sep">·</span>
-              <span className="wl-export-link" onClick={handleExportCsv}>↓ CSV</span>
-            </div>
-          )}
-        </div>
-      </div>
-
       <div className="wl-body wl-body-two-col">
         <div className="wl-main-col">
           {syncStatus === 'error' && (

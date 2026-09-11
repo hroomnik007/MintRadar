@@ -8,60 +8,6 @@
   --dash-chrome-max: calc(300px * 4 + 16px * 3 + var(--page-pad) * 2);
 }
 
-/* ── Controls Bar ───────────────────────────────────────────── */
-.wl-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px var(--page-pad);
-  margin: 12px auto 0;
-  max-width: var(--dash-chrome-max);
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-m);
-  background: var(--surface);
-}
-
-.wl-controls-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.wl-page-title {
-  flex: 1;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text2);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-family: var(--font-mono);
-  white-space: nowrap;
-}
-
-.wl-export-links {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-}
-
-.wl-export-link {
-  font-size: 11px;
-  font-family: var(--font-mono);
-  color: var(--accent);
-  cursor: pointer;
-  letter-spacing: 0.01em;
-  transition: opacity var(--transition);
-}
-
-.wl-export-link:hover { opacity: 0.75; }
-
-.wl-export-sep {
-  font-size: 11px;
-  color: var(--text3);
-}
-
 /* ── Card grid ──────────────────────────────────────────────── */
 .wl-grid {
   flex: 1;
@@ -393,10 +339,6 @@
 
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 600px) {
-  .wl-controls {
-    gap: 6px;
-  }
-  .wl-controls-top { width: 100%; }
   .wl-grid {
     grid-template-columns: 1fr;
     padding: 12px 0;
