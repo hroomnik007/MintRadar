@@ -91,16 +91,45 @@ describe('POST /api/mints/discover', () => {
     })
   })
 
-  it('rate-limits a single IP after 10 requests/hour (11th → 429)', async () => {
+  it('rate-limits a single IP after 10 bulk requests/hour (11th → 429)', async () => {
     // Empty batch keeps each request cheap; the rate check runs before the body
     // is processed, so no DNS/DB work is needed to exercise the limiter.
+    // `source: 'bulk'` is what Dashboard.tsx's explicit Bulk submit sends.
     for (let i = 0; i < 10; i++) {
-      const ok = await post({ urls: [] })
+      const ok = await post({ urls: [], source: 'bulk' })
       expect(ok.status).toBe(200)
     }
-    const limited = await post({ urls: [] })
+    const limited = await post({ urls: [], source: 'bulk' })
     expect(limited.status).toBe(429)
     expect(limited.body).toEqual({ error: 'Too many requests. Try again later.' })
+    // Retry-After tells the frontend how long to wait, in seconds.
+    expect(Number(limited.headers['retry-after'])).toBeGreaterThan(0)
+  })
+
+  it('rate-limits automatic discovery separately, at a lower 3/hour budget', async () => {
+    // `source: 'auto'` is what useNostrDiscovery.ts's background NIP-87 scan
+    // sends — a smaller, independent budget from the user-facing bulk one.
+    for (let i = 0; i < 3; i++) {
+      const ok = await post({ urls: [], source: 'auto' })
+      expect(ok.status).toBe(200)
+    }
+    const limited = await post({ urls: [], source: 'auto' })
+    expect(limited.status).toBe(429)
+  })
+
+  it('does not let an exhausted auto discovery budget block a Bulk submit from the same IP', async () => {
+    for (let i = 0; i < 3; i++) {
+      expect((await post({ urls: [], source: 'auto' })).status).toBe(200)
+    }
+    expect((await post({ urls: [], source: 'auto' })).status).toBe(429)
+
+    // Same IP, different source — draws from the separate 'bulk' budget.
+    resolvesTo({ address: '1.2.3.4', family: 4 })
+    mintReachable()
+    query.mockResolvedValueOnce({ rowCount: 1 })
+    const bulk = await post({ urls: ['https://mint.example.com'], source: 'bulk' })
+    expect(bulk.status).toBe(200)
+    expect(bulk.body.added).toBe(1)
   })
 
   it('rejects a loopback URL (SSRF) without inserting it', async () => {

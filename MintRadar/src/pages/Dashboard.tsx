@@ -107,6 +107,20 @@ function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
 }
 
+// One clear banner for a 429 from /api/mints/discover, instead of repeating
+// "Too many requests" on every row of the Bulk submit list. Uses the
+// backend's Retry-After header (seconds) for an exact wait time when
+// present; falls back to a generic "try again later" otherwise.
+function rateLimitMessage(retryAfterHeader: string | null): string {
+  const seconds = retryAfterHeader !== null ? Number(retryAfterHeader) : NaN
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return 'Rate limit reached — try again later.'
+  }
+  const minutes = Math.ceil(seconds / 60)
+  const wait = minutes <= 1 ? 'a minute' : `${minutes} minutes`
+  return `Rate limit reached — try again in ${wait}.`
+}
+
 function formatTimeAgo(date: Date | null): string {
   if (!date) return '—'
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
@@ -528,6 +542,10 @@ export default function Dashboard() {
   const [bulkProgress, setBulkProgress] = useState<Array<{ url: string; status: 'pending' | 'probing' | 'added' | 'duplicate' | 'failed'; error?: string }>>([])
   const [bulkRunning, setBulkRunning] = useState(false)
   const [bulkDone, setBulkDone] = useState(false)
+  // Set only on a 429 from /api/mints/discover — a single banner shown above
+  // the row list instead of repeating "Too many requests" on every row (see
+  // handleBulkSubmit below).
+  const [bulkRateLimitMsg, setBulkRateLimitMsg] = useState<string | null>(null)
 
   const queryClient = useQueryClient()
   // Client-side NIP-87 discovery POSTs newly-announced mint URLs to
@@ -788,6 +806,7 @@ export default function Dashboard() {
     setBulkProgress(initial)
     setBulkRunning(true)
     setBulkDone(false)
+    setBulkRateLimitMsg(null)
 
     const validIndices: number[] = []
     const validUrls: string[] = []
@@ -803,16 +822,25 @@ export default function Dashboard() {
     if (validUrls.length > 0) {
       setBulkProgress(prev => prev.map((p, j) => validIndices.includes(j) ? { ...p, status: 'probing' } : p))
       try {
+        // `source: 'bulk'` — an explicit user action, drawing from its own
+        // rate-limit budget separate from the background NIP-87 discovery
+        // scan (see useNostrDiscovery.ts / DISCOVER_BULK_RATE_LIMIT_MAX).
         const res = await fetch('/api/mints/discover', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ urls: validUrls }),
+          body: JSON.stringify({ urls: validUrls, source: 'bulk' }),
         })
         const data = await res.json() as {
           error?: string
           results?: Array<{ url: string; success: boolean; isNew: boolean; error?: string }>
         }
-        if (res.ok && data.results) {
+        if (res.status === 429) {
+          // Nothing in this batch was actually processed — rows go back to
+          // "pending" (not "failed") and one banner explains why, instead of
+          // repeating the same "Too many requests" on every row.
+          setBulkRateLimitMsg(rateLimitMessage(res.headers.get('Retry-After')))
+          setBulkProgress(prev => prev.map((p, j) => validIndices.includes(j) ? { ...p, status: 'pending' } : p))
+        } else if (res.ok && data.results) {
           const results = data.results
           setBulkProgress(prev => prev.map((p, j) => {
             const k = validIndices.indexOf(j)
@@ -971,7 +999,7 @@ export default function Dashboard() {
         >
           <IcRefresh />
         </button>
-        <button type="button" className="submit-btn" onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setSubmitUrl(''); setProbe({ url: '', state: 'error', result: null }); setNostrLookup({ input: '', state: 'idle', msg: '' }); setBulkInput(''); setBulkProgress([]); setBulkRunning(false); setBulkDone(false) }}>
+        <button type="button" className="submit-btn" onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setSubmitUrl(''); setProbe({ url: '', state: 'error', result: null }); setNostrLookup({ input: '', state: 'idle', msg: '' }); setBulkInput(''); setBulkProgress([]); setBulkRunning(false); setBulkDone(false); setBulkRateLimitMsg(null) }}>
           <IcPlus /> Submit mint
         </button>
       </div>
@@ -1205,6 +1233,12 @@ export default function Dashboard() {
                 <div className="submit-modal-desc">
                   Paste one mint URL per line. Each must start with <code>https://</code>.
                 </div>
+                {/* Static limits note — mirrors the backend's MAX_DISCOVER_BATCH
+                    (100) and DISCOVER_BULK_RATE_LIMIT_MAX (10) constants in
+                    backend/src/index.ts (no shared workspace between the two
+                    packages, so this is a manually-synced number like
+                    testMints.ts/auditScore.ts — update both if either changes). */}
+                <div className="submit-input-hint">Up to 100 mints per submission, max 10 submissions per hour.</div>
                 {!bulkRunning && !bulkDone && (
                   <>
                     <textarea
@@ -1225,6 +1259,13 @@ export default function Dashboard() {
                     </div>
                   </>
                 )}
+                {/* One banner for a 429 instead of repeating "Too many requests"
+                    on every row below — the rows themselves fall back to
+                    "pending" (see handleBulkSubmit), since nothing in the
+                    batch was actually processed. */}
+                {bulkRateLimitMsg && (
+                  <div className="submit-result error" role="alert">{bulkRateLimitMsg}</div>
+                )}
                 {(bulkRunning || bulkProgress.length > 0) && (
                   <div className="bulk-progress">
                     {bulkProgress.map((p, i) => (
@@ -1243,9 +1284,11 @@ export default function Dashboard() {
                 )}
                 {bulkDone && (
                   <div style={{ marginTop: 10 }}>
-                    <div className={`submit-result ${bulkFailed === 0 ? 'success' : 'error'}`}>
-                      {bulkAdded} added, {bulkDuplicate} already tracked, {bulkFailed} failed
-                    </div>
+                    {!bulkRateLimitMsg && (
+                      <div className={`submit-result ${bulkFailed === 0 ? 'success' : 'error'}`}>
+                        {bulkAdded} added, {bulkDuplicate} already tracked, {bulkFailed} failed
+                      </div>
+                    )}
                     <div className="submit-modal-actions">
                       <button className="submit-ok-btn" onClick={() => setShowSubmit(false)}>Close</button>
                     </div>

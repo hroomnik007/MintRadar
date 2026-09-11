@@ -248,9 +248,27 @@ const HOUR_MS = 60 * 60 * 1000
 const submitRateLimitStore = new Map<string, RateLimitEntry>()
 const SUBMIT_RATE_LIMIT_MAX = 20
 
-// Discover: 10 req/IP/hour (each accepts a batch of up to MAX_DISCOVER_BATCH).
-const discoverRateLimitStore = new Map<string, RateLimitEntry>()
-const DISCOVER_RATE_LIMIT_MAX = 10
+// Discover: two INDEPENDENT budgets, keyed by a `source` field in the request
+// body, so the automatic background NIP-87 scan (useNostrDiscovery.ts — fires
+// once per login/page-load, no fresh human intent behind it) can't starve a
+// user's deliberate Dashboard "Bulk submit" of the shared budget, or vice
+// versa. Before this split both callers shared one 10/hr/IP counter, so a
+// user who logged in a few times in an hour (each reload re-runs the
+// client-side discovery scan) could exhaust the same budget their own Bulk
+// submit needed a minute later. Same endpoint, same validation/SSRF/probe
+// logic either way — only which counter gets checked differs.
+const discoverAutoRateLimitStore = new Map<string, RateLimitEntry>()
+const discoverBulkRateLimitStore = new Map<string, RateLimitEntry>()
+// Auto: background discovery, lower budget — a handful of logins/reloads per
+// hour is normal; anything beyond that is not a human waiting on it.
+const DISCOVER_AUTO_RATE_LIMIT_MAX = 3
+// Bulk: explicit "Submit All" click — unchanged from the limit both callers
+// used to share.
+const DISCOVER_BULK_RATE_LIMIT_MAX = 10
+type DiscoverSource = 'auto' | 'bulk'
+function discoverRateLimitStoreFor(source: DiscoverSource): Map<string, RateLimitEntry> {
+  return source === 'bulk' ? discoverBulkRateLimitStore : discoverAutoRateLimitStore
+}
 
 // Notifications subscribe/unsubscribe: 30 req/pubkey/hour each. Keyed on the
 // NIP-98-authenticated pubkey rather than IP — these routes require auth, so
@@ -277,8 +295,9 @@ function checkSubmitRateLimit(ip: string): boolean {
   return checkWindowedLimit(submitRateLimitStore, SUBMIT_RATE_LIMIT_MAX, ip)
 }
 
-function checkDiscoverRateLimit(ip: string): boolean {
-  return checkWindowedLimit(discoverRateLimitStore, DISCOVER_RATE_LIMIT_MAX, ip)
+function checkDiscoverRateLimit(ip: string, source: DiscoverSource): boolean {
+  const max = source === 'bulk' ? DISCOVER_BULK_RATE_LIMIT_MAX : DISCOVER_AUTO_RATE_LIMIT_MAX
+  return checkWindowedLimit(discoverRateLimitStoreFor(source), max, ip)
 }
 
 function checkNotifySubscribeRateLimit(pubkey: string): boolean {
@@ -291,7 +310,7 @@ function checkNotifyUnsubscribeRateLimit(pubkey: string): boolean {
 
 setInterval(() => {
   const now = Date.now()
-  for (const store of [submitRateLimitStore, discoverRateLimitStore, notifySubscribeRateLimitStore, notifyUnsubscribeRateLimitStore]) {
+  for (const store of [submitRateLimitStore, discoverAutoRateLimitStore, discoverBulkRateLimitStore, notifySubscribeRateLimitStore, notifyUnsubscribeRateLimitStore]) {
     for (const [key, entry] of store) {
       if (now >= entry.resetAt) store.delete(key)
     }
@@ -1133,12 +1152,21 @@ const MAX_DISCOVER_BATCH = 100
 
 app.post('/api/mints/discover', async (req: Request, res: Response): Promise<void> => {
   const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown'
-  if (!checkDiscoverRateLimit(ip)) {
+  const body = req.body as { urls?: unknown; source?: unknown }
+  // Default to 'auto' — the smaller budget — when the field is missing or
+  // unrecognized, so an unspecified/older caller can't silently claim the
+  // larger 'bulk' budget meant for an explicit user action.
+  const source: DiscoverSource = body.source === 'bulk' ? 'bulk' : 'auto'
+
+  if (!checkDiscoverRateLimit(ip, source)) {
+    const resetAt = discoverRateLimitStoreFor(source).get(ip)?.resetAt
+    if (resetAt !== undefined) {
+      res.setHeader('Retry-After', String(Math.max(1, Math.ceil((resetAt - Date.now()) / 1000))))
+    }
     res.status(429).json({ error: 'Too many requests. Try again later.' })
     return
   }
 
-  const body = req.body as { urls?: unknown }
   if (!Array.isArray(body.urls)) {
     res.status(400).json({ error: 'urls must be array' })
     return

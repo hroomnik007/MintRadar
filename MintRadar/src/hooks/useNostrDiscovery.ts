@@ -58,10 +58,14 @@ export function useNostrDiscovery() {
       console.log(`[nostr-discovery] found ${urlArray.length} valid mints, sending to backend...`)
 
       try {
+        // `source: 'auto'` — this is the background client-side scan, not a
+        // user-initiated submit. The backend gives it its own (smaller)
+        // rate-limit budget so it can't exhaust the one Dashboard's Bulk
+        // submit needs (see DISCOVER_AUTO_RATE_LIMIT_MAX in backend/src/index.ts).
         const res = await fetch('/api/mints/discover', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ urls: urlArray }),
+          body: JSON.stringify({ urls: urlArray, source: 'auto' }),
         })
         const data = await res.json() as { added: number; total: number }
         console.log(`[nostr-discovery] added ${data.added} new mints`)
