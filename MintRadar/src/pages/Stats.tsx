@@ -814,12 +814,6 @@ export default function Stats() {
     }
   }, [data, knownMintsData, versionDist])
 
-  const healthLabel = (score: number): string => {
-    if (score >= 70) return 'Healthy'
-    if (score >= 40) return 'Moderate'
-    return 'At Risk'
-  }
-
   if (isLoading) return (
     <div className="stats-page">
       <div className="stats-header">
@@ -931,17 +925,11 @@ export default function Stats() {
         {/* Left block (cols 1-2): Software in Use + Geographic Distribution */}
         <div className="stats-left-col">
 
-          {/* Card 1: Software in Use — the only row-1 panel with no natural
-              way to grow closer to Network Health Index's 319px (only 4
-              distinct software implementations actually exist among online
-              mints today, no artificial cutoff to lift; see the row-1
-              height investigation). Stretched via align-self:stretch +
-              flex-fill, same mechanism as .stats-nhi-panel: the freshness
-              bar + version list sit in a "top group" at the top, and the
-              existing footnote is pinned to the panel's bottom edge by
-              .stats-sw-fill's justify-content:space-between, filling
-              whatever extra height align-self:stretch grants this panel
-              instead of leaving it as dead space below the footnote. */}
+          {/* Card 1: Software in Use — stretched to match row 1's tallest
+              panel via .stats-left-col's align-items:stretch, same
+              mechanism as .stats-nhi-panel. .stats-sw-fill's flex:1 absorbs
+              the resulting surplus height so it lands below the version
+              list instead of stretching the rows themselves. */}
           <div className="stats-panel stats-sw-panel">
             <div className="stats-panel-title">Software in Use</div>
             <div className="stats-sw-fill">
@@ -993,48 +981,51 @@ export default function Stats() {
                   })}
                 </div>
               </div>
-              {versionDist.length > 0 && (
-                <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
-                  Implementation reported by each mint's info document.
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Card 2: Geographic Distribution */}
-          <div className="stats-panel">
+          {/* Card 2: Geographic Distribution. Wrapped in .stats-geo-fill (same
+              flex:1 + space-between mechanism as .stats-sw-fill/.nhi-fill) so
+              that once .stats-left-col stretches this panel to match Most
+              Reliable / Network Health Index's height, any surplus space
+              lands between the row list and "View others" — which stays
+              anchored to the panel's own bottom edge rather than floating
+              partway down a taller box. */}
+          <div className="stats-panel stats-geo-panel">
             <div className="stats-panel-title">Geographic Distribution</div>
-            <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:'var(--stats-row-gap)'}}>
-              {geoDist.top.length === 0 ? (
-                <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
-              ) : geoDist.top.map(({loc, count, pct}, idx) => {
-                const {display, flag, color: geoColor} = geoLabel(loc)
-                const barColor = geoColor ?? (idx % 2 === 0 ? 'var(--green)' : 'var(--copper)')
-                return (
-                  <div key={loc} className="dist-row dist-row-clickable" onClick={() => setCityModal(loc)}>
-                    <span className="dist-label dist-label-city" style={geoColor ? {color:geoColor} : undefined}>
-                      {flag ? `${flag} ${display}` : display}
-                    </span>
-                    <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:barColor}} /></div>
-                    <span className="dist-count">{count}</span>
-                  </div>
-                )
-              })}
-            </div>
-            {(geoDist.moreCount > 0 || (geoDist.unknownCount > 0 && !geoDist.unknownShownInTop)) && (
-              <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
-                {geoDist.moreCount > 0 && (
-                  <div className="dist-more-row" onClick={() => setShowMoreLocations(true)}>
-                    View others →
-                  </div>
-                )}
-                {geoDist.unknownCount > 0 && !geoDist.unknownShownInTop && (
-                  <div className="dist-more-row" onClick={() => setCityModal('Unknown')}>
-                    Geolocation unavailable: {geoDist.unknownCount} mint{geoDist.unknownCount === 1 ? '' : 's'} →
-                  </div>
-                )}
+            <div className="stats-geo-fill">
+              <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:'var(--stats-row-gap)'}}>
+                {geoDist.top.length === 0 ? (
+                  <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
+                ) : geoDist.top.map(({loc, count, pct}, idx) => {
+                  const {display, flag, color: geoColor} = geoLabel(loc)
+                  const barColor = geoColor ?? (idx % 2 === 0 ? 'var(--green)' : 'var(--copper)')
+                  return (
+                    <div key={loc} className="dist-row dist-row-clickable" onClick={() => setCityModal(loc)}>
+                      <span className="dist-label dist-label-city" style={geoColor ? {color:geoColor} : undefined}>
+                        {flag ? `${flag} ${display}` : display}
+                      </span>
+                      <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:barColor}} /></div>
+                      <span className="dist-count">{count}</span>
+                    </div>
+                  )
+                })}
               </div>
-            )}
+              {(geoDist.moreCount > 0 || (geoDist.unknownCount > 0 && !geoDist.unknownShownInTop)) && (
+                <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
+                  {geoDist.moreCount > 0 && (
+                    <div className="dist-more-row" onClick={() => setShowMoreLocations(true)}>
+                      View others →
+                    </div>
+                  )}
+                  {geoDist.unknownCount > 0 && !geoDist.unknownShownInTop && (
+                    <div className="dist-more-row" onClick={() => setCityModal('Unknown')}>
+                      Geolocation unavailable: {geoDist.unknownCount} mint{geoDist.unknownCount === 1 ? '' : 's'} →
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
         </div>{/* /stats-left-col */}
@@ -1155,9 +1146,17 @@ export default function Stats() {
                     </svg>
                     <div className="nhi-gauge-num" style={{ color: info.color, ...(isMobile ? {} : { fontSize: 20 }) }}>{networkHealth.score}</div>
                   </div>
-                  <span className="nhi-badge" style={{ color: info.color, background: info.bg, border: `0.5px solid ${info.border}` }}>
-                    {healthLabel(networkHealth.score)}
-                  </span>
+                  <div className="nhi-legend">
+                    <div className={`nhi-legend-row${networkHealth.score >= 70 ? ' active' : ''}`}>
+                      <span className="nhi-legend-dot" style={{ background: '#4ade80' }} />Healthy · 70+
+                    </div>
+                    <div className={`nhi-legend-row${networkHealth.score >= 40 && networkHealth.score < 70 ? ' active' : ''}`}>
+                      <span className="nhi-legend-dot" style={{ background: '#ffa500' }} />Moderate · 40-69
+                    </div>
+                    <div className={`nhi-legend-row${networkHealth.score < 40 ? ' active' : ''}`}>
+                      <span className="nhi-legend-dot" style={{ background: '#ff4d4d' }} />At Risk · &lt;40
+                    </div>
+                  </div>
                 </div>
                 {/* Desktop only: same breakdown the mobile modal shows, inline
                     instead of behind a click. The formula footer is NOT

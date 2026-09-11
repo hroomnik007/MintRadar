@@ -94,11 +94,12 @@
    among row 1's other three comparatively fixed-height panels; see the
    Stats.tsx comments on both panels' new spots for the full reasoning.
 
-   .stats-nhi-panel is a flex column with align-self:stretch, opting this one
-   panel out of the grid's own align-items:start — at ≥1300px it shares a row
-   with Software in Use/Geographic Distribution/Most Reliable, so this lets
-   it grow to match whichever of those is tallest instead of staying pinned
-   to its own content height. .nhi-fill (wrapping .nhi-wrap + the breakdown
+   .stats-nhi-panel is a flex column with align-self:stretch — now the same
+   as the outer grid's own align-items:stretch default, kept explicit here
+   for clarity. At ≥1300px this panel shares a row with Software in
+   Use/Geographic Distribution/Most Reliable, all four now stretching to
+   match whichever is tallest instead of top-aligning. .nhi-fill (wrapping
+   .nhi-wrap + the breakdown
    block) is the flex:1 region that absorbs that surplus height and
    redistributes it via justify-content: space-between, so the breakdown
    block ends up flush with the panel's bottom edge instead of leaving dead
@@ -168,14 +169,40 @@
   white-space: nowrap;
 }
 
-.nhi-badge {
-  display: inline-block;
-  font-size: 9px;
+/* Compact score-band legend — replaces the old single dynamic "Healthy" /
+   "Moderate" / "At Risk" badge with all three bands at once, so the gauge's
+   colour/number can be read against a key instead of a one-word label. The
+   band matching the current score is highlighted (opacity 1 + bold); the
+   other two stay muted. Same three thresholds/colours as healthLabel() /
+   trustScoreInfo() — no new formula, purely a legend for the existing one. */
+.nhi-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
   font-family: var(--font-mono);
+}
+
+.nhi-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text3);
+  opacity: 0.55;
+  transition: opacity 150ms ease;
+}
+
+.nhi-legend-row.active {
+  opacity: 1;
   font-weight: 600;
-  border-radius: 4px;
-  padding: 1px 6px;
-  text-align: center;
+  color: var(--text);
+}
+
+.nhi-legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .audit-tooltip {
@@ -208,7 +235,13 @@
 
 /* ── 3-column card grid ──────────────────────────────────────── */
 /* Same chrome-width alignment as .stats-metrics above, so every panel below
-   the hero tiles also left-aligns with the Dashboard mint grid. */
+   the hero tiles also left-aligns with the Dashboard mint grid.
+   align-items: stretch (was start) — row 1's four cells (the Software/Geo
+   column, Most Reliable, Network Health Index) now share one height, the
+   tallest of the four, instead of top-aligning and leaving a gap under
+   whichever is naturally shortest. Grid row sizing itself is unaffected —
+   stretch only changes whether shorter items in a row fill it or float at
+   the top, never which row's items influence the row's own height. */
 .stats-cards-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;
@@ -217,7 +250,7 @@
   max-width: var(--dash-chrome-max);
   margin-inline: auto;
   width: 100%;
-  align-items: start;
+  align-items: stretch;
   min-width: 0;
 }
 
@@ -236,41 +269,36 @@
    columns they have always occupied. Keeping the wrapper (rather than letting
    the two panels sit in the outer grid directly) means row 1 stays a clean
    4-across layout regardless of how NUT Coverage/NHI/Trend are spanned below.
-   align-items:start here is deliberately untouched — Geographic Distribution
-   doesn't get a stretch treatment (its own height comes from real data via
-   Stats.tsx's topN=10, see .stats-sw-panel below for why only Software in
-   Use needs the flex-fill mechanism). */
+   align-items: stretch (was start) — this column, as one cell of the outer
+   .stats-cards-grid, now stretches to that row's full height (see the grid
+   comment above), and this in turn stretches ITS two children (Software,
+   Geographic Distribution) to fill it — closing the gap that used to sit
+   below both panels whenever Most Reliable / Network Health Index were
+   taller. */
 .stats-left-col {
   grid-column: span 2;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
   min-width: 0;
 }
 
-/* Software in Use is the one row-1 panel with no real-data lever to grow
-   closer to Network Health Index's 319px — only 4 distinct software
-   implementations exist among online mints today (no artificial cutoff to
-   lift, unlike Geographic Distribution's topN or Most Reliable's slice
-   count; see the row-1 height investigation). align-self:stretch here
-   mirrors .stats-nhi-panel, but relative to .stats-left-col's own
-   align-items:start (above) rather than the outer .stats-cards-grid — once
-   Geographic Distribution grows via topN=10, it's usually the taller of
-   the two .stats-left-col children, so this stretches Software in Use to
-   match ITS height rather than needing its own outer-grid override.
-   .stats-sw-fill (wrapping the freshness-bar/version-list group and the
-   existing "Implementation reported by..." footnote) is the flex:1 region
-   that distributes any resulting surplus height via justify-content:
-   space-between, pinning the footnote to the panel's bottom edge — same
-   pattern as .nhi-fill. */
-.stats-sw-panel {
+/* Software in Use and Geographic Distribution both need the same flex-fill
+   mechanism as .nhi-fill now that .stats-left-col stretches them: a flex
+   column whose content wrapper (.stats-sw-fill / .stats-geo-fill) uses
+   flex:1 + justify-content:space-between, so any surplus height from
+   matching the row's tallest panel lands between the row list and the
+   trailing footer/note — instead of stretching the rows themselves or (for
+   Geographic Distribution) pushing "View others" outside the panel. */
+.stats-sw-panel,
+.stats-geo-panel {
   display: flex;
   flex-direction: column;
-  align-self: stretch;
 }
 
-.stats-sw-fill {
+.stats-sw-fill,
+.stats-geo-fill {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
