@@ -618,19 +618,24 @@
   text-underline-offset: 2px;
 }
 
+/* Name now takes the row's flexible space (was a fixed 110px, forcing an
+   early ellipsis) and .dist-track a short fixed track instead of flex:1 —
+   the name gets whatever the bar used to claim. Still single-line: overflow/
+   ellipsis/nowrap unchanged, so a name that's still too long truncates
+   rather than wrapping. */
 .dist-label {
-  width: 110px;
+  flex: 1 1 0;
+  min-width: 0;
   font-size: 11px;
   font-family: var(--font-mono);
   color: var(--text);
-  flex-shrink: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .dist-track {
-  flex: 1;
+  flex: 0 0 50px;
   height: 5px;
   background: var(--bg4);
   border-radius: 99px;
@@ -705,9 +710,11 @@
    the deliberate divider it's been documented as since that same earlier
    fix — `gap: 8px` below is unrelated, this row's own internal grid gap
    between the tag/name/bar/count cells. */
+/* Bar column shortened 80px -> 40px (name's 1fr column absorbs the freed
+   space) so the NUT name gets more of the row before it would ellipsis. */
 .stats-nut-row {
   display: grid;
-  grid-template-columns: 62px 1fr 80px 42px;
+  grid-template-columns: 62px 1fr 40px 42px;
   align-items: center;
   gap: 8px;
   padding: 4px 10px;
@@ -999,5 +1006,5 @@
   .stats-metrics { flex-wrap: wrap; gap: 8px; padding: 10px var(--page-pad); }
   .stats-metrics .stat-card { flex: 1 1 calc(50% - 4px); }
   .stats-nut-rows-grid { grid-template-columns: 1fr; }
-  .stats-nut-row { grid-template-columns: 55px 1fr 60px 38px; gap: 6px; padding: 4px 8px; }
+  .stats-nut-row { grid-template-columns: 55px 1fr 30px 38px; gap: 6px; padding: 4px 8px; }
 }
