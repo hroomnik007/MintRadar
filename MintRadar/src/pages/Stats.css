@@ -47,10 +47,16 @@
 }
 
 /* ── Flat metric bar ─────────────────────────────────────────── */
+/* Constrained + centered to the same width/inset as .mint-grid (Dashboard)
+   so the hero tile row's left edge lines up with the first Dashboard mint
+   card. .stats-header above stays full-bleed (unchanged). */
 .stats-metrics {
   display: flex;
   gap: 12px;
-  padding: 12px 18px;
+  padding: 12px var(--page-pad);
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  width: 100%;
   border-bottom: 1px solid var(--border);
 }
 
@@ -249,11 +255,16 @@
 }
 
 /* ── 3-column card grid ──────────────────────────────────────── */
+/* Same chrome-width alignment as .stats-metrics above, so every panel below
+   the hero tiles also left-aligns with the Dashboard mint grid. */
 .stats-cards-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;
   gap: 14px;
-  padding: 14px 18px 14px;
+  padding: 14px var(--page-pad) 14px;
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  width: 100%;
   align-items: start;
   min-width: 0;
 }
@@ -981,8 +992,8 @@
 }
 
 @media (max-width: 700px) {
-  .stats-cards-grid { grid-template-columns: 1fr; padding: 10px 14px 0; gap: 10px; }
-  .stats-metrics { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+  .stats-cards-grid { grid-template-columns: 1fr; padding: 10px var(--page-pad) 0; gap: 10px; }
+  .stats-metrics { flex-wrap: wrap; gap: 8px; padding: 10px var(--page-pad); }
   .stats-metric-card { flex: 1 1 calc(50% - 4px); padding: 10px 14px; }
   .stats-nut-rows-grid { grid-template-columns: 1fr; }
   .stats-nut-row { grid-template-columns: 55px 1fr 60px 38px; gap: 6px; padding: 4px 8px; }

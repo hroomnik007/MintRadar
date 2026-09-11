@@ -3,11 +3,16 @@
   background: transparent;
 }
 
+/* Constrained + centered to the same width/inset as .mint-grid (Dashboard)
+   so the tool cards' left edge lines up with the first Dashboard mint card. */
 .tools-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
-  padding: 18px;
+  padding: 18px var(--page-pad);
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  width: 100%;
   align-items: start;
 }
 
@@ -578,7 +583,7 @@
 
 @media (max-width: 700px) {
   .tools-grid {
-    padding: 12px;
+    padding: 12px var(--page-pad);
     gap: 12px;
   }
 
