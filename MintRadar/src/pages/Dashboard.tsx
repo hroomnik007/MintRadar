@@ -1044,8 +1044,10 @@ export default function Dashboard() {
             </div>
 
             <div className="filter-count">Showing <strong>{filteredMints.length}</strong> of <strong>{totalCount}</strong></div>
-            <button type="button" className="filter-reset-btn" onClick={() => { setPendingFilters(DEFAULT_FILTERS); commitFilters({ filters: DEFAULT_FILTERS }) }}>Reset</button>
-            <button type="button" className="filter-apply-btn" onClick={() => { commitFilters({ filters: pendingFilters }); setShowFilters(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Apply filter</button>
+            <div className="filter-actions-row">
+              <button type="button" className="filter-reset-btn" onClick={() => { setPendingFilters(DEFAULT_FILTERS); commitFilters({ filters: DEFAULT_FILTERS }) }}>Reset</button>
+              <button type="button" className="filter-apply-btn" onClick={() => { commitFilters({ filters: pendingFilters }); setShowFilters(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Apply filter</button>
+            </div>
           </div>
         </div>
       )}

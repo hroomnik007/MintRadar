@@ -1109,23 +1109,41 @@
   margin-left: 0;
 }
 
-/* Mobile: Status, Hide test, slider each on their own full-width row (all
-   left-aligned), then "Showing X of Y" + Reset share one row, and Apply gets
-   its own row below. Explicitly NOT space-between — that left a hole with a
-   floating checkbox mid-row. */
+/* Reset + Apply, grouped so the mobile block below can lay them out on one
+   shared row. On desktop this is just two adjacent flex items, same as
+   before the wrapper existed. */
+.filter-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Mobile: Status, Hide test mints, and the Trust slider each get their own
+   full-width, left-aligned row; "Showing X of Y" gets its own row below them;
+   Reset + Apply share one final row at equal height (Reset sized to its
+   label, Apply filling the rest — not a tiny ghost next to a full-width bar).
+   Explicitly NOT space-between on .filter-bar itself — that left a hole with
+   a floating checkbox mid-row. */
 @media (max-width: 600px) {
   .filter-bar {
     flex-direction: row;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-start;
     justify-content: flex-start;
     gap: 12px 10px;
   }
   .filter-group-inline { flex: 1 1 100%; width: 100%; justify-content: flex-start; }
   .filter-slider { flex: 1; }
-  .filter-count { flex: 1 1 auto; margin-left: 0; }
-  .filter-reset-btn { flex: 0 0 auto; margin-left: auto; align-self: center; }
-  .filter-apply-btn { flex: 1 1 100%; width: 100%; }
+  .filter-count { flex: 1 1 100%; width: 100%; margin-left: 0; }
+  .filter-actions-row {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .filter-reset-btn { flex: 0 0 auto; }
+  .filter-apply-btn { flex: 1 1 auto; }
 }
 
 .filter-group-nuts {
@@ -1178,7 +1196,16 @@
 }
 /* Same themed control language for radios and checkboxes — no native blue. */
 .filter-radio input[type="radio"],
-.filter-radio input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+.filter-radio input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+  /* Override the global `input { width: 100% }` base rule (src/index.css) — inside
+     a flex label (.filter-group-inline) that width is read as a flex-basis hint,
+     stretching the checkbox itself to fill most of the row and stranding its label
+     text far to the right. */
+  width: auto;
+  flex: 0 0 auto;
+}
 
 .filter-slider {
   width: 140px;
