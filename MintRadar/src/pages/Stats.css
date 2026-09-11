@@ -652,7 +652,7 @@
 .dist-label {
   flex: 1 1 0;
   min-width: 0;
-  font-size: 11px;
+  font-size: 13px;
   font-family: var(--font-mono);
   color: var(--text);
   overflow: hidden;
@@ -788,7 +788,7 @@
 }
 
 .snr-nut-name {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text);
   font-family: var(--font-mono);
   overflow: hidden;

@@ -1079,7 +1079,7 @@ export default function Stats() {
                     <span className="stats-top5-rank">#{idx+1}</span>
                     <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName(mint)}</div>
+                      <div style={{fontSize:13,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName(mint)}</div>
                     </div>
                     <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:700,color,flexShrink:0}}>{uptime}%</span>
                   </div>
@@ -1096,7 +1096,7 @@ export default function Stats() {
                     <span className="stats-top5-rank">#{idx+1}</span>
                     <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName(mint)}</div>
+                      <div style={{fontSize:13,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName(mint)}</div>
                     </div>
                     {isTestMint(mint.url) && (
                       <span style={{fontSize:9,fontFamily:'var(--font-mono)',color:'var(--amber)',background:'var(--amber-soft)',border:'1px solid var(--amber-soft-strong)',borderRadius:4,padding:'1px 5px',flexShrink:0}} title="Not for real funds — for testing and development only">🧪 Test</span>
