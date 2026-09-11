@@ -587,6 +587,14 @@
   align-items: center;
   gap: 8px;
   padding: 0;
+  /* Grid items get an implicit min-width:auto (content-based) unless
+     overridden — inside .stats-geo-cols' `1fr 1fr` columns, a long,
+     space-free city name would otherwise blow out its column to its full
+     unwrapped width instead of wrapping (.dist-label-city's overflow-wrap
+     can't help if the grid track itself refuses to shrink below the text's
+     intrinsic width). Harmless for .dist-row's other use (Software in Use,
+     a flex column, not a grid). */
+  min-width: 0;
 }
 
 /* Geographic Distribution's two-column layout: geoDist.top (already sorted
@@ -650,6 +658,23 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Geographic Distribution's city names — never ellipsis-cut ("San
+   Francisco", "Kansas City", "Kuala Lumpur" must show in full). Overrides
+   .dist-label's nowrap/ellipsis for this one combination only; Software in
+   Use (plain .dist-label, no .dist-label-city) keeps the single-line
+   truncated behavior above. A long name gets one wrap onto a second line —
+   .dist-row's own align-items:center still centers that two-line block, and
+   the grid's `auto` row sizing (set inline in Stats.tsx) already
+   accommodates a taller row with no further layout change. Two-column
+   layout and counts are unaffected — .dist-count keeps its own fixed width
+   + flex-shrink:0. */
+.dist-label-city {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .dist-track {

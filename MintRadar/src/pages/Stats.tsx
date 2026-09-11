@@ -49,8 +49,12 @@ const CITY_SHORT: Record<string, string> = {
   'Saint Petersburg': 'St. Petersburg',
 }
 
+// Named substitutions only (e.g. spelling out a shorter, still-full name for
+// a specific city) — no length-based "…" cut. Geographic labels always show
+// the full city name; the panel's own CSS (.dist-label-city) allows a single
+// wrap instead of truncating.
 function shortenCity(city: string): string {
-  return CITY_SHORT[city] ?? (city.length > 12 ? city.slice(0, 11) + '…' : city)
+  return CITY_SHORT[city] ?? city
 }
 
 function geoLabel(loc: string): { display: string; flag: string; color?: string } {
