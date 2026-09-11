@@ -99,6 +99,8 @@
   flex-wrap: wrap;
 }
 
+/* Same muted fill/radius language as Dashboard's .stat-icon.gray — no more
+   copper/orange icon well. */
 .wallet-icon {
   width: 32px;
   height: 32px;
@@ -106,10 +108,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  background: var(--copper-soft);
-  border: 1px solid var(--copper-soft-strong);
-  color: var(--copper);
+  border-radius: 10px;
+  background: rgba(139, 148, 158, 0.1);
+  color: var(--text-faint);
 }
 
 .wallet-icon svg {
