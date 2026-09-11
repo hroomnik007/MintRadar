@@ -575,17 +575,35 @@
 }
 
 /* ── Distribution bars ───────────────────────────────────────── */
-/* No vertical padding here — inter-row spacing for Geographic Distribution
-   comes entirely from the wrapping flex column's --stats-row-gap (Stats.tsx),
-   not from stacked row padding (previously 5px top+bottom summed to ~10px
-   between rows; see the spacing-consistency fix). The `gap: 8px` below is
-   unrelated — it's this row's own internal flex gap between the label/bar/
-   count children, not the between-rows spacing. */
+/* No vertical padding here — inter-row spacing comes entirely from the
+   wrapping container's own row-gap (Software in Use: the flex column's
+   --stats-row-gap set inline in Stats.tsx; Geographic Distribution:
+   .stats-geo-cols' row-gap below), not from stacked row padding (previously
+   5px top+bottom summed to ~10px between rows; see the spacing-consistency
+   fix). The `gap: 8px` below is unrelated — it's this row's own internal
+   flex gap between the label/count children, not the between-rows spacing. */
 .dist-row {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 0;
+}
+
+/* Geographic Distribution's two-column layout: geoDist.top (already sorted
+   by count, "Unknown"/CDN bucket included as ordinary entries) renders as
+   flag+name+count cells, column 1 filling top-to-bottom before column 2
+   (grid-auto-flow:column) — same read order as the old single column, just
+   split in half. Stats.tsx sets grid-template-rows inline to
+   ceil(top.length/2) so both columns balance evenly. Row height is
+   unchanged from the old list (no bars, same .dist-row/.dist-label/
+   .dist-count), so two columns of half as many rows keeps this panel at
+   the same height as before — never taller than Most Reliable / NHI. */
+.stats-geo-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-flow: column;
+  column-gap: 16px;
+  row-gap: var(--stats-row-gap);
 }
 
 .dist-row-clickable {
@@ -995,4 +1013,13 @@
   .stats-metrics .stat-card { flex: 1 1 calc(50% - 4px); }
   .stats-nut-rows-grid { grid-template-columns: 1fr; }
   .stats-nut-row { grid-template-columns: 55px 1fr 38px; gap: 6px; padding: 4px 8px; }
+}
+
+/* Narrow phones: two columns of city name + count get cramped once the
+   panel is down to full-viewport-minus-padding width. Single column here,
+   same as before this change — the height budget only needs to hold at
+   ≥1300px anyway, where this panel shares a grid row with Most Reliable /
+   NHI (see .stats-left-col's own 768px reset). */
+@media (max-width: 480px) {
+  .stats-geo-cols { grid-template-columns: 1fr; grid-auto-flow: row; }
 }

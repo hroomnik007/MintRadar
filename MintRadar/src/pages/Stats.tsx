@@ -648,12 +648,16 @@ export default function Stats() {
       .slice(0, 5)
   }, [knownMintsData])
 
-  // topN=10 (not the util's own default of 8) — closes most of the height
-  // gap to Network Health Index (319px) in row 1 using real distinct
-  // locations rather than an artificial cutoff; see the row-1 height
-  // investigation. computeGeoDistribution's own default stays 8 for other
-  // callers/tests — only this page's usage needs the taller panel.
-  const geoDist = useMemo(() => computeGeoDistribution(knownMintsData ?? [], 10), [knownMintsData])
+  // topN=20 (not the util's own default of 8) — rendered as two columns of
+  // up to 10 rows each (see .stats-geo-cols below), so the panel's height
+  // stays the same as the old single-column topN=10 list while showing
+  // twice as many locations. In practice this covers every distinct
+  // location the network currently has, so "View others" (gated on
+  // geoDist.moreCount > 0) drops out on its own instead of needing a
+  // separate "does it fit" check. computeGeoDistribution's own default
+  // stays 8 for other callers/tests — only this page's usage needs this.
+  const geoDist = useMemo(() => computeGeoDistribution(knownMintsData ?? [], 20), [knownMintsData])
+  const geoRows = Math.max(1, Math.ceil(geoDist.top.length / 2))
 
   const cityMints = useMemo(() => {
     if (!cityModal || !knownMintsData) return []
@@ -988,13 +992,22 @@ export default function Stats() {
               flex:1 + space-between mechanism as .stats-sw-fill/.nhi-fill) so
               that once .stats-left-col stretches this panel to match Most
               Reliable / Network Health Index's height, any surplus space
-              lands between the row list and "View others" — which stays
+              lands between the row grid and "View others" — which stays
               anchored to the panel's own bottom edge rather than floating
-              partway down a taller box. */}
+              partway down a taller box.
+
+              .stats-geo-cols renders geoDist.top as two columns (flag+name+
+              count per cell, grid-auto-flow:column so column 1 fills top to
+              bottom before column 2 — same sort order as before), with
+              geoRows (ceil(top.length/2)) as the explicit row count so both
+              columns balance evenly instead of overloading column 1. Same
+              row height as the old single-column list, so two columns of
+              geoRows rows takes no more vertical space than one column of
+              topN=10 did — never taller than Most Reliable / NHI. */}
           <div className="stats-panel stats-geo-panel">
             <div className="stats-panel-title">Geographic Distribution</div>
             <div className="stats-geo-fill">
-              <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:'var(--stats-row-gap)'}}>
+              <div className="stats-geo-cols" style={{marginTop:10,gridTemplateRows:`repeat(${geoRows}, auto)`}}>
                 {geoDist.top.length === 0 ? (
                   <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
                 ) : geoDist.top.map(({loc, count}) => {
