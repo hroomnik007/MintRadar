@@ -18,7 +18,7 @@ async function gotoAudit(page: Page, alphaOverrides: Record<string, unknown>) {
 }
 
 // ── Fully audited, enough recent swaps ─────────────────────────
-test('fully audited: strip shows Mints / Melts / Recent errors / Last checked', async ({ page }) => {
+test('fully audited: strip shows Mints / Melts / Recent success rate / Last checked', async ({ page }) => {
   await gotoAudit(page, {
     auditNMints: 1234,
     auditNMelts: 567,
@@ -33,26 +33,49 @@ test('fully audited: strip shows Mints / Melts / Recent errors / Last checked', 
   const cell = (label: string) => strip.locator('.audit-summary-cell', { hasText: label })
   await expect(cell('Mints').locator('.audit-summary-value')).toHaveText('1,234')
   await expect(cell('Melts').locator('.audit-summary-value')).toHaveText('567')
-  // Ratio and reliability sub-text now share one line inside .audit-summary-value.
-  await expect(cell('Recent errors').locator('.audit-summary-main')).toHaveText('2 / 100')
-  await expect(cell('Recent errors').locator('.audit-summary-sub')).toHaveText('98% ok')
+  // The main number is framed as successes (total - errors), not the error
+  // count, so it reads in the same higher-is-better direction as every
+  // other "X/Y" ratio in the app (e.g. Online Mints "55/56").
+  await expect(cell('Recent success rate').locator('.audit-summary-main')).toHaveText('98 / 100')
+  await expect(cell('Recent success rate').locator('.audit-summary-sub')).toHaveText('ok')
   // 2/100 errors = 2% error rate → auditReliabilityColor()'s <=5% bucket → var(--fast) green.
-  await expect(cell('Recent errors').locator('.audit-summary-value')).toHaveCSS('color', 'rgb(92, 201, 163)')
+  await expect(cell('Recent success rate').locator('.audit-summary-value')).toHaveCSS('color', 'rgb(92, 201, 163)')
   await expect(cell('Last checked').locator('.audit-summary-value')).toHaveText('3h ago')
 
   await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-strip-full.png' })
 })
 
+// ── High error rate → red, main number still reads as successes ────
+test('high error rate: low success count, red', async ({ page }) => {
+  await gotoAudit(page, {
+    auditNMints: 1234,
+    auditNMelts: 567,
+    auditRecentTotal: 100,
+    auditRecentErrors: 97,
+    auditSyncedAt: new Date(Date.now() - 3 * 3_600_000).toISOString(),
+  })
+
+  const recent = page.locator('.audit-summary-strip .audit-summary-cell', { hasText: 'Recent success rate' })
+  // 97 errors / 100 → 3 successes / 100, not "97 / 100" — the number always
+  // means "how many went right", so a bad mint shows a small number here.
+  await expect(recent.locator('.audit-summary-main')).toHaveText('3 / 100')
+  await expect(recent.locator('.audit-summary-sub')).toHaveText('ok')
+  // 97/100 errors = 97% error rate → auditReliabilityColor()'s >25% bucket → var(--slow) red.
+  await expect(recent.locator('.audit-summary-value')).toHaveCSS('color', 'rgb(219, 106, 93)')
+
+  await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-strip-higherror.png' })
+})
+
 // ── Audited but < 3 recent swaps ──────────────────────────────
-test('too few recent swaps: Recent errors cell says "too few to score"', async ({ page }) => {
+test('too few recent swaps: Recent success rate cell says "too few to score"', async ({ page }) => {
   await gotoAudit(page, {
     auditRecentTotal: 2,
     auditRecentErrors: 0,
     auditSyncedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
   })
 
-  const recent = page.locator('.audit-summary-strip .audit-summary-cell', { hasText: 'Recent errors' })
-  await expect(recent.locator('.audit-summary-main')).toHaveText('0 / 2')
+  const recent = page.locator('.audit-summary-strip .audit-summary-cell', { hasText: 'Recent success rate' })
+  await expect(recent.locator('.audit-summary-main')).toHaveText('2 / 2')
   await expect(recent.locator('.audit-summary-sub')).toHaveText('too few to score')
   // Unknown / too-few state stays grey (var(--text3)).
   await expect(recent.locator('.audit-summary-value')).toHaveCSS('color', 'rgb(154, 173, 164)')
@@ -65,10 +88,10 @@ test('too few recent swaps: Recent errors cell says "too few to score"', async (
 })
 
 // ── No recent swap window at all (audited, but /swaps returned nothing) ─
-test('no rolling-window sample: Recent errors cell shows only the sub-text', async ({ page }) => {
+test('no rolling-window sample: Recent success rate cell shows only the sub-text', async ({ page }) => {
   await gotoAudit(page, { auditRecentTotal: null, auditRecentErrors: null })
 
-  const recent = page.locator('.audit-summary-strip .audit-summary-cell', { hasText: 'Recent errors' })
+  const recent = page.locator('.audit-summary-strip .audit-summary-cell', { hasText: 'Recent success rate' })
   // No ratio to show → the "N / 100" main span is omitted entirely.
   await expect(recent.locator('.audit-summary-main')).toHaveCount(0)
   await expect(recent.locator('.audit-summary-value')).toHaveText('no recent swaps')

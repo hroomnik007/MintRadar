@@ -6,7 +6,7 @@ import {
   trustColor,
   latencyColor,
   formatTimeAgo,
-  formatAuditErrorRatio,
+  formatAuditSuccessRatio,
   trustDonutArc,
   TRUST_DONUT_CIRCUMFERENCE,
   normalizeMintUrl,
@@ -485,28 +485,32 @@ describe('formatTimeAgo', () => {
   })
 })
 
-// ── formatAuditErrorRatio (Audit strip "Recent errors") ────────
-describe('formatAuditErrorRatio', () => {
+// ── formatAuditSuccessRatio (Audit strip "Recent success rate") ────────
+describe('formatAuditSuccessRatio', () => {
   it('renders an em dash when there is no rolling-window sample', () => {
-    expect(formatAuditErrorRatio(null, null)).toBe('—')
-    expect(formatAuditErrorRatio(undefined, 3)).toBe('—')
+    expect(formatAuditSuccessRatio(null, null)).toBe('—')
+    expect(formatAuditSuccessRatio(undefined, 3)).toBe('—')
   })
 
-  it('renders "<errors> / <total>"', () => {
-    expect(formatAuditErrorRatio(100, 3)).toBe('3 / 100')
+  it('renders "<successes> / <total>" (successes = total - errors)', () => {
+    expect(formatAuditSuccessRatio(100, 3)).toBe('97 / 100')
   })
 
-  it('treats a null/undefined error count as zero', () => {
-    expect(formatAuditErrorRatio(100, null)).toBe('0 / 100')
-    expect(formatAuditErrorRatio(100, undefined)).toBe('0 / 100')
+  it('treats a null/undefined error count as zero errors (all successes)', () => {
+    expect(formatAuditSuccessRatio(100, null)).toBe('100 / 100')
+    expect(formatAuditSuccessRatio(100, undefined)).toBe('100 / 100')
   })
 
   it('still renders a below-threshold sample (adequacy is a separate concern)', () => {
-    expect(formatAuditErrorRatio(2, 0)).toBe('0 / 2')
+    expect(formatAuditSuccessRatio(2, 0)).toBe('2 / 2')
   })
 
   it('renders a zero-swap total literally', () => {
-    expect(formatAuditErrorRatio(0, 0)).toBe('0 / 0')
+    expect(formatAuditSuccessRatio(0, 0)).toBe('0 / 0')
+  })
+
+  it('high error rate reads as a low success count, not a big scary number', () => {
+    expect(formatAuditSuccessRatio(100, 97)).toBe('3 / 100')
   })
 })
 

@@ -17,15 +17,16 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('.md-tabs')).toBeVisible()
 })
 
-test('Audit tab: summary strip "Recent errors" matches the Trust Score breakdown', async ({ page }) => {
+test('Audit tab: summary strip "Recent success rate" matches the Trust Score breakdown', async ({ page }) => {
   await page.locator('.md-tab', { hasText: 'Audit' }).click()
 
   const strip = page.locator('.audit-summary-strip')
   await expect(strip).toBeVisible()
 
-  const recentCell = strip.locator('.audit-summary-cell', { hasText: 'Recent errors' })
-  await expect(recentCell.locator('.audit-summary-main')).toHaveText('3 / 100')
-  await expect(recentCell.locator('.audit-summary-sub')).toHaveText('97% ok')
+  const recentCell = strip.locator('.audit-summary-cell', { hasText: 'Recent success rate' })
+  // 3 errors / 100 swaps → the strip's main number is successes, not errors.
+  await expect(recentCell.locator('.audit-summary-main')).toHaveText('97 / 100')
+  await expect(recentCell.locator('.audit-summary-sub')).toHaveText('ok')
 
   // The all-time body paragraphs were removed — only the heading, the four stat
   // tiles and their ⓘ tooltips remain.
@@ -38,6 +39,6 @@ test('Audit tab: summary strip "Recent errors" matches the Trust Score breakdown
   await page.locator('.md-trust-panel').getByText('Details ›').click()
   await expect(page.getByText('Trust Score Breakdown')).toBeVisible()
   await expect(page.getByText('Audit reliability (5%)')).toBeVisible()
-  await expect(page.getByText('3.0% err')).toBeVisible() // 3/100 → same source as the strip's 97% ok
+  await expect(page.getByText('3.0% err')).toBeVisible() // 3/100 errors → same source as the strip's 97/100 successes
   await page.screenshot({ path: 'test-results/audit-breakdown-crosscheck.png' })
 })

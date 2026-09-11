@@ -408,16 +408,21 @@ export function auditReliabilityColor(
 }
 
 // ── Relative time (e.g. "3 min ago", "2d ago") ─────────────────
-// "<errors> / <total>" for the Audit summary strip's Recent errors cell.
-// `total === null` (mint audited but no rolling-window swap sample yet) renders
-// as an em dash; a null error count is treated as zero. Sample-size adequacy
-// ("too few to score") is a separate concern — see isAuditUnknown().
-export function formatAuditErrorRatio(
+// "<successes> / <total>" for the Audit summary strip's Recent success rate
+// cell. Success-framed (successes = total - errors) so the number reads in
+// the same direction as every other "X/Y" ratio in the app — higher is
+// better, e.g. Online Mints "55/56" — instead of an error count where a
+// bigger number would misleadingly look "more". `total === null` (mint
+// audited but no rolling-window swap sample yet) renders as an em dash; a
+// null error count is treated as zero. Sample-size adequacy ("too few to
+// score") is a separate concern — see isAuditUnknown().
+export function formatAuditSuccessRatio(
   recentTotal: number | null | undefined,
   recentErrors: number | null | undefined,
 ): string {
   if (recentTotal === null || recentTotal === undefined) return '—'
-  return `${recentErrors ?? 0} / ${recentTotal}`
+  const successes = recentTotal - (recentErrors ?? 0)
+  return `${successes} / ${recentTotal}`
 }
 
 export function formatTimeAgo(date: Date | null, now: number = Date.now()): string {
