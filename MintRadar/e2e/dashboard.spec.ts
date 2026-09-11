@@ -17,11 +17,12 @@ test.describe('Dashboard', () => {
   test('loads and lists the known mints', async ({ page }) => {
     await expect(page.locator('.card-name', { hasText: 'Alpha Mint' })).toBeVisible()
     await expect(page.locator('.card-name', { hasText: 'Delta Mint' })).toBeVisible()
-    // Stat bar reflects the mocked data: 3 of 4 mints online (value "3",
-    // "/ 4" rendered as the muted unit beside it, not a second big number).
+    // Stat bar reflects the mocked data: 3 mints online (value "3",
+    // "of all known" rendered as the muted note beside it, not a second
+    // big number).
     const onlineTile = page.locator('.stat-card', { hasText: 'Online now' })
     await expect(onlineTile.locator('.stat-value')).toHaveText('3')
-    await expect(onlineTile.locator('.stat-unit')).toHaveText('/ 4')
+    await expect(onlineTile.locator('.stat-note')).toHaveText('of all known')
   })
 
   test('search filters the mint list', async ({ page }) => {

@@ -89,14 +89,14 @@ test.describe('MintCard — copy & reduced badge set', () => {
     await page.goto('/?status=all')
     const bar = page.locator('.stats-bar')
     await expect(bar.getByText('Online now')).toBeVisible()
-    // The Online tile shows the count as the primary value; "/ N" is the
-    // muted unit beside it, not a second big number.
+    // The Online tile shows the count as the primary value; "of all known"
+    // is the muted note beside it, not a second big number.
     const onlineTile = bar.locator('.stat-card', { hasText: 'Online now' })
     await expect(onlineTile.locator('.stat-value')).toHaveText('3')
-    await expect(onlineTile.locator('.stat-unit')).toHaveText('/ 4')
+    await expect(onlineTile.locator('.stat-note')).toHaveText('of all known')
     await expect(bar.getByText(/of \d+ listed/)).toHaveCount(0)
     await expect(bar.getByText('Mints tracked')).toBeVisible()
-    await expect(bar.getByText('incl. offline')).toBeVisible()
+    await expect(bar.getByText('incl. offline')).toHaveCount(0)
     await expect(bar.getByText('from Frankfurt')).toBeVisible()
 
     // Tapping a count tile reveals the Listed/Known explainer.

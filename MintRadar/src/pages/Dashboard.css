@@ -52,9 +52,11 @@
 .stat-figure {
   display: flex;
   align-items: baseline;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 2px 5px;
   min-width: 0;
 }
+.stat-figure .stat-note { flex-shrink: 0; }
 
 .stat-unit {
   font-size: 13px;
@@ -147,7 +149,6 @@
   border-color: var(--border2);
 }
 @media (max-width: 600px) {
-  .dash-action-browse { display: none; }
   .dash-actions { width: 100%; }
   .dash-action { flex: 1; text-align: center; }
 }
@@ -178,7 +179,7 @@
 }
 
 .stat-value {
-  font-size: 29px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text);
   font-family: var(--font-mono-data);
@@ -189,9 +190,26 @@
   text-overflow: ellipsis;
 }
 
-/* One system: every tile's primary value is the same size and colour. The
-   "/ N", "from Frankfurt", "incl. offline" and cadence lines are all .stat-sub
-   contrast — no per-tile .stat-value colour or size modifiers. */
+/* Last Check carries a time-ago string, not a figure — smaller so it reads as
+   a timestamp, not a headline number. */
+.stat-value-sm {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* Muted note on the value line (matches the Stats hero's density): "of all
+   known", "from Frankfurt". Sits after the value / unit inside .stat-figure. */
+.stat-note {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+/* One system: every figure tile's primary value is the same size and colour.
+   The same-line muted notes are all .stat-note — no per-tile .stat-value
+   colour modifiers. */
 
 /* ── Controls Bar ───────────────────────────────────────────── */
 /* Deliberately NO shared outer border/background here (previous look was one
@@ -1012,7 +1030,12 @@
   border-radius: var(--radius-m);
   padding: 12px 14px;
   margin-inline: auto;
-  max-width: var(--dash-chrome-max);
+  /* Unlike .dashboard-controls / .dash-intro (which inset their children by
+     var(--page-pad) inside a --dash-chrome-max box), this panel's own border
+     IS the visible edge — so its border-box must equal the card row's content
+     width directly (--dash-chrome-max minus the two page-pad gutters), or it
+     overhangs the mint row by var(--page-pad) on each side. */
+  max-width: calc(var(--dash-chrome-max) - var(--page-pad) * 2);
   width: 100%;
   margin-top: 8px;
 }

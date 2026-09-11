@@ -848,7 +848,7 @@ export default function Dashboard() {
             <div className="stat-icon green"><IcSignal /></div>
             <div className="stat-figure">
               <span className="stat-value">{onlineCount}</span>
-              <span className="stat-unit">/ {totalCount}</span>
+              <span className="stat-note">of all known</span>
             </div>
           </div>
         </button>
@@ -859,9 +859,9 @@ export default function Dashboard() {
             <div className="stat-figure">
               <span className="stat-value">{avgLatency24h !== null ? avgLatency24h : '—'}</span>
               {avgLatency24h !== null && <span className="stat-unit">ms</span>}
+              <span className="stat-note">from Frankfurt</span>
             </div>
           </div>
-          <div className="stat-sub">from Frankfurt</div>
         </div>
         <button type="button" className="stat-card stat-card-btn" onClick={() => setShowCountNote(v => !v)} aria-expanded={showCountNote}>
           <div className="stat-label">Mints tracked</div>
@@ -869,19 +869,18 @@ export default function Dashboard() {
             <div className="stat-icon gray"><IcGrid /></div>
             <div className="stat-figure">
               <span className="stat-value">{knownTotal}</span>
+              <span className="stat-note">of all known</span>
             </div>
           </div>
-          <div className="stat-sub">incl. offline</div>
         </button>
         <div className="stat-card">
           <div className="stat-label">Last Check</div>
           <div className="stat-row">
             <div className="stat-icon gray"><IcSuccess /></div>
             <div className="stat-figure">
-              <span className="stat-value">{formatTimeAgo(lastCheckTime)}</span>
+              <span className="stat-value stat-value-sm">{formatTimeAgo(lastCheckTime)}</span>
             </div>
           </div>
-          <div className="stat-sub">{lastCheckTime ? 'auto every 5 min' : 'no data yet'}</div>
         </div>
       </div>
       {showCountNote && (
@@ -893,14 +892,6 @@ export default function Dashboard() {
 
       <div className="dash-intro">
         <div className="dash-actions" role="group" aria-label="Get started">
-          <button
-            type="button"
-            className="dash-action dash-action-browse"
-            title="Jump to the mint list"
-            onClick={() => gridAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-          >
-            Browse mints
-          </button>
           <button type="button" className="dash-action" onClick={() => navigate('/tools#pick')}>
             Help me pick
           </button>

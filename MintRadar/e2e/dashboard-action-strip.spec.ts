@@ -7,14 +7,13 @@ test.beforeEach(async ({ page }) => {
 })
 
 test.describe('Dashboard newcomer action strip', () => {
-  test('desktop: three chips and the explainer share one row above the search bar', async ({ page }) => {
+  test('desktop: two chips and the explainer share one row above the search bar', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 })
     await page.goto('/')
     await expect(page.locator('.mint-card').first()).toBeVisible()
 
     const strip = page.locator('.dash-actions')
-    await expect(strip.locator('.dash-action')).toHaveCount(3)
-    await expect(strip.getByRole('button', { name: 'Browse mints' })).toBeVisible()
+    await expect(strip.locator('.dash-action')).toHaveCount(2)
     await expect(strip.getByRole('button', { name: 'Help me pick' })).toBeVisible()
     await expect(strip.getByRole('button', { name: 'I have a token' })).toBeVisible()
 
@@ -40,12 +39,11 @@ test.describe('Dashboard newcomer action strip', () => {
     expect(overflow).toBeLessThanOrEqual(1)
   })
 
-  test('mobile: no Browse mints; explainer sits full-width below the two chips', async ({ page }) => {
+  test('mobile: explainer sits full-width below the two chips', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/')
     await expect(page.locator('.mint-card').first()).toBeVisible()
 
-    await expect(page.getByRole('button', { name: 'Browse mints' })).toBeHidden()
     const pick = page.getByRole('button', { name: 'Help me pick' })
     const token = page.getByRole('button', { name: 'I have a token' })
     await expect(pick).toBeVisible()
