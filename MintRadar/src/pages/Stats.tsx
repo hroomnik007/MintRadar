@@ -845,71 +845,82 @@ export default function Stats() {
     <div className="stats-page">
       {/* ── 5 flat stat boxes ── */}
       <div className="stats-metrics">
-        <div className="stats-metric-card">
-          <div className="smc-icon smc-gray">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.1"/></svg>
-          </div>
-          <div>
-            <div className="smc-label">Mints Tracked</div>
-            <div className="smc-value">{data.totalMints}</div>
-            <div className="smc-sub">all known</div>
-          </div>
-        </div>
-        <div className="stats-metric-card">
-          <div className="smc-icon smc-green">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M1 11C3 8 5 7 8 7s5 1 7-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M3 14C5 11.5 6.5 10 8 10s3 1.5 5-1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><circle cx="8" cy="4" r="2" stroke="currentColor" strokeWidth="1.2"/></svg>
-          </div>
-          <div>
-            <div className="smc-label">Online Now</div>
-            <div className="smc-value">{data.onlineMints}</div>
-            <div className="smc-sub">of all known</div>
+        <div className="stat-card">
+          <div className="stat-label">Mints Tracked</div>
+          <div className="stat-row">
+            <div className="stat-icon gray">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.1"/></svg>
+            </div>
+            <div className="stat-figure">
+              <span className="stat-value">{data.totalMints}</span>
+              <span className="stat-note">all known</span>
+            </div>
           </div>
         </div>
-        <div className="stats-metric-card">
-          <div className="smc-icon smc-orange">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v5l3 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="8" cy="9" r="6" stroke="currentColor" strokeWidth="1.2"/><path d="M6 1.5h4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
+        <div className="stat-card">
+          <div className="stat-label">Online Now</div>
+          <div className="stat-row">
+            <div className="stat-icon green">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M1 11C3 8 5 7 8 7s5 1 7-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M3 14C5 11.5 6.5 10 8 10s3 1.5 5-1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><circle cx="8" cy="4" r="2" stroke="currentColor" strokeWidth="1.2"/></svg>
+            </div>
+            <div className="stat-figure">
+              <span className="stat-value">{data.onlineMints}</span>
+              <span className="stat-note">of all known</span>
+            </div>
           </div>
-          <div>
-            <div className="smc-label smc-label-info">
-              Avg mint uptime · 24h
-              <span
-                ref={uptimeInfoRef}
-                style={{ position: 'relative', display: 'inline-flex' }}
-                onPointerEnter={uptimeInfoTooltip.onPointerEnter}
-                onPointerLeave={uptimeInfoTooltip.onPointerLeave}
-                onClick={uptimeInfoTooltip.onClick}
-              >
-                <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
-                {uptimeInfoTooltip.open && (
-                  <div className="audit-tooltip audit-tooltip-down" style={{ width: isMobile ? 200 : 240, left: 0 }}>
-                    Average 24-hour uptime across all tracked mints (probed every 5 min). Mints offline 24h+ count as 0%.
-                  </div>
-                )}
+        </div>
+        <div className="stat-card">
+          <div className="stat-label smc-label-info">
+            Avg mint uptime · 24h
+            <span
+              ref={uptimeInfoRef}
+              style={{ position: 'relative', display: 'inline-flex' }}
+              onPointerEnter={uptimeInfoTooltip.onPointerEnter}
+              onPointerLeave={uptimeInfoTooltip.onPointerLeave}
+              onClick={uptimeInfoTooltip.onClick}
+            >
+              <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
+              {uptimeInfoTooltip.open && (
+                <div className="audit-tooltip audit-tooltip-down" style={{ width: isMobile ? 200 : 240, left: 0 }}>
+                  Average 24-hour uptime across all tracked mints (probed every 5 min). Mints offline 24h+ count as 0%.
+                </div>
+              )}
+            </span>
+          </div>
+          <div className="stat-row">
+            <div className="stat-icon orange">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v5l3 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="8" cy="9" r="6" stroke="currentColor" strokeWidth="1.2"/><path d="M6 1.5h4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
+            </div>
+            <div className="stat-figure">
+              <span className="stat-value" style={{color: avgUptime24h != null ? uptimeColor(avgUptime24h) : undefined}}>
+                {avgUptime24h != null ? `${avgUptime24h}%` : '—'}
               </span>
+              <span className="stat-note">across all known</span>
             </div>
-            <div className="smc-value" style={{color: avgUptime24h != null ? uptimeColor(avgUptime24h) : undefined}}>
-              {avgUptime24h != null ? `${avgUptime24h}%` : '—'}
-            </div>
-            <div className="smc-sub">across all known</div>
           </div>
         </div>
-        <div className="stats-metric-card">
-          <div className="smc-icon smc-orange">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.1"/><path d="M8 6v3.5l2 1" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/><path d="M5.5 1h5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
-          </div>
-          <div>
-            <div className="smc-label">Median Latency</div>
-            <div className="smc-value">{data.avgLatency24h != null ? `${data.avgLatency24h} ms` : '—'}</div>
-            <div className="smc-sub">from Frankfurt</div>
+        <div className="stat-card">
+          <div className="stat-label">Median Latency</div>
+          <div className="stat-row">
+            <div className="stat-icon orange">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.1"/><path d="M8 6v3.5l2 1" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/><path d="M5.5 1h5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
+            </div>
+            <div className="stat-figure">
+              <span className="stat-value">{data.avgLatency24h != null ? data.avgLatency24h : '—'}</span>
+              {data.avgLatency24h != null && <span className="stat-unit">ms</span>}
+              <span className="stat-note">from Frankfurt</span>
+            </div>
           </div>
         </div>
-        <div className="stats-metric-card">
-          <div className="smc-icon smc-green">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="10" width="12" height="3" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="2" y="6" width="12" height="3" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="2" y="2" width="12" height="3" rx="1" stroke="currentColor" strokeWidth="1.1"/></svg>
-          </div>
-          <div>
-            <div className="smc-label">NUTs in Spec</div>
-            <div className="smc-value">{TRACKED_NUTS.length}</div>
+        <div className="stat-card">
+          <div className="stat-label">NUTs in Spec</div>
+          <div className="stat-row">
+            <div className="stat-icon green">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="10" width="12" height="3" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="2" y="6" width="12" height="3" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="2" y="2" width="12" height="3" rx="1" stroke="currentColor" strokeWidth="1.1"/></svg>
+            </div>
+            <div className="stat-figure">
+              <span className="stat-value">{TRACKED_NUTS.length}</span>
+            </div>
           </div>
         </div>
       </div>
