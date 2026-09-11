@@ -130,7 +130,7 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose }: {
               >
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? '#17E87F' : '#E24B4A', display: 'inline-block', flexShrink: 0 }} />
                 <div className="nut-modal-row-info" style={{ flex: 1 }}>
-                  <span className="nut-modal-row-name" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{displayName(m)}</span>
+                  <span className="nut-modal-row-name mint-link">{displayName(m)}</span>
                 </div>
                 <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
                   {score != null ? `${score}%` : '—'}
@@ -307,7 +307,7 @@ function CityMintsModal({ loc, mints, onClose }: {
                   style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? 'var(--green-bright)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }}
                 />
                 <div className="nut-modal-row-info" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <span className="nut-modal-row-name" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{displayName(m)}</span>
+                  <span className="nut-modal-row-name mint-link">{displayName(m)}</span>
                 </div>
                 <span style={{ fontSize: 12, fontFamily: 'var(--font-mono-data)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
                   {score != null ? `${score}%` : '—'}
@@ -385,7 +385,7 @@ function NutMintsModal({ nut, mints, onClose }: {
               >
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? 'var(--green-bright)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
                 <div className="nut-modal-row-info" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <span className="nut-modal-row-name" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{displayName(m)}</span>
+                  <span className="nut-modal-row-name mint-link">{displayName(m)}</span>
                 </div>
                 <span style={{ fontSize: 12, fontFamily: 'var(--font-mono-data)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
                   {score != null ? `${score}%` : '—'}

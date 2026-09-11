@@ -945,6 +945,18 @@
   text-overflow: ellipsis;
 }
 
+/* Mint-name links inside the city/NUT/software-version → mint-list modals
+   (CityMintsModal, NutMintsModal, VersionMintsView) — same color as
+   .nut-modal-row-name's own default body text (matches the version labels
+   in the Nutshell versions modal, SoftwareVersionsView), no underline by
+   default. Accent shows only on hover of the row, same trigger as the
+   row's existing border-color hover. Scoped to .mint-link specifically so
+   MoreLocationsModal's location-name rows (plain .nut-modal-row-name, own
+   geo color) are unaffected. */
+.nut-modal-row:hover .nut-modal-row-name.mint-link {
+  color: var(--accent);
+}
+
 .nut-modal-row-url {
   font-size: 10px;
   color: var(--text3);
