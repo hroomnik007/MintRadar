@@ -13,9 +13,10 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px 12px;
-  margin-inline: var(--page-pad);
-  margin-top: 12px;
+  padding: 10px var(--page-pad);
+  margin: 12px auto 0;
+  max-width: var(--dash-chrome-max);
+  width: 100%;
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
   background: var(--surface);
@@ -66,12 +67,9 @@
   flex: 1;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 300px));
-  justify-content: center;
+  justify-content: start;
   gap: 16px;
-  padding: 16px var(--page-pad);
-  margin-inline: auto;
-  max-width: var(--dash-chrome-max);
-  width: 100%;
+  padding: 16px 0;
   align-content: start;
 }
 
@@ -417,7 +415,11 @@
 .wl-body-two-col {
   flex-direction: row;
   align-items: flex-start;
-  padding: 0;
+  gap: var(--page-pad);
+  margin-inline: auto;
+  max-width: var(--dash-chrome-max);
+  width: 100%;
+  padding-inline: var(--page-pad);
 }
 
 .wl-main-col {
@@ -428,7 +430,7 @@
 .wl-side-col {
   width: 380px;
   flex-shrink: 0;
-  padding: 14px var(--page-pad) 14px 0;
+  padding: 14px 0;
   position: sticky;
   top: 56px;
   max-height: calc(100vh - 56px);
@@ -680,7 +682,7 @@
 
   .wl-side-col {
     width: 100%;
-    padding: 0 var(--page-pad) var(--page-pad);
+    padding: 0 0 var(--page-pad);
     position: static;
     max-height: none;
   }
