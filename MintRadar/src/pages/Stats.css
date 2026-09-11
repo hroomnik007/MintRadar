@@ -1015,11 +1015,13 @@
   .stats-nut-row { grid-template-columns: 55px 1fr 38px; gap: 6px; padding: 4px 8px; }
 }
 
-/* Narrow phones: two columns of city name + count get cramped once the
-   panel is down to full-viewport-minus-padding width. Single column here,
-   same as before this change — the height budget only needs to hold at
-   ≥1300px anyway, where this panel shares a grid row with Most Reliable /
-   NHI (see .stats-left-col's own 768px reset). */
-@media (max-width: 480px) {
+/* Mobile (≤700px, same breakpoint Stats.tsx uses to cut geoDist down to
+   topN=5 for this panel): single column, plain top-to-bottom order. Two
+   columns of city name + count get cramped once the panel is down to
+   full-viewport-minus-padding width, and stacking 10-20 rows on a phone
+   (the desktop topN=20 cut) would turn the panel into a scroll-fest — hence
+   both the JS topN drop and this layout switch happen at the same
+   breakpoint. Desktop (>700px) keeps the two-column layout untouched. */
+@media (max-width: 700px) {
   .stats-geo-cols { grid-template-columns: 1fr; grid-auto-flow: row; }
 }

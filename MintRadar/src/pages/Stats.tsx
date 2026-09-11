@@ -11,7 +11,7 @@ import { trustColor, trustScoreInfo, trustDonutArc, displayName } from '@/utils/
 import { isTestMint } from '@/constants/testMints'
 import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
-import { useIsMobile } from '@/hooks/useIsMobile'
+import { useIsMobile, useMediaQuery } from '@/hooks/useIsMobile'
 import './Stats.css'
 
 interface StatsData {
@@ -648,16 +648,25 @@ export default function Stats() {
       .slice(0, 5)
   }, [knownMintsData])
 
-  // topN=20 (not the util's own default of 8) — rendered as two columns of
-  // up to 10 rows each (see .stats-geo-cols below), so the panel's height
-  // stays the same as the old single-column topN=10 list while showing
-  // twice as many locations. In practice this covers every distinct
+  // Desktop: topN=20 (not the util's own default of 8) — rendered as two
+  // columns of up to 10 rows each (see .stats-geo-cols below), so the panel's
+  // height stays the same as the old single-column topN=10 list while
+  // showing twice as many locations. In practice this covers every distinct
   // location the network currently has, so "View others" (gated on
   // geoDist.moreCount > 0) drops out on its own instead of needing a
   // separate "does it fit" check. computeGeoDistribution's own default
   // stays 8 for other callers/tests — only this page's usage needs this.
-  const geoDist = useMemo(() => computeGeoDistribution(knownMintsData ?? [], 20), [knownMintsData])
-  const geoRows = Math.max(1, Math.ceil(geoDist.top.length / 2))
+  //
+  // Mobile (≤700px, same breakpoint as the rest of this page's single-column
+  // stacking — see Stats.css): a phone screen can't show 10-20 stacked rows
+  // without turning the panel into a scroll-fest, so it gets topN=5 and
+  // relies on the existing "View others" modal for the rest — same
+  // computeGeoDistribution grouping and the same MoreLocationsModal, just a
+  // smaller cut line. Grouping/aggregation itself is untouched either way.
+  const isNarrowGeo = useMediaQuery('(max-width: 700px)')
+  const geoTopN = isNarrowGeo ? 5 : 20
+  const geoDist = useMemo(() => computeGeoDistribution(knownMintsData ?? [], geoTopN), [knownMintsData, geoTopN])
+  const geoRows = isNarrowGeo ? geoDist.top.length : Math.max(1, Math.ceil(geoDist.top.length / 2))
 
   const cityMints = useMemo(() => {
     if (!cityModal || !knownMintsData) return []
