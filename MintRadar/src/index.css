@@ -136,6 +136,14 @@
      grids, list wrap, sidebar) insets its content by exactly this much,
      so their left/right edges line up to the pixel. */
   --page-pad:     18px;
+
+  /* Single source of truth for the page-content shell width used by every
+     "dashboard-chrome" page (Dashboard, Watchlist, Learn, Wallets): 4 cards
+     at 300px + 3x 16px gaps + the two --page-pad gutters. Any page whose
+     card grid should left-align with Dashboard's .mint-grid must use this
+     exact max-width (with margin-inline: auto + padding-inline: var(--page-pad)
+     or equivalent) so the first card's left edge lines up across pages. */
+  --dash-chrome-max: calc(300px * 4 + 16px * 3 + var(--page-pad) * 2);
 }
 
 @media (max-width: 600px) {

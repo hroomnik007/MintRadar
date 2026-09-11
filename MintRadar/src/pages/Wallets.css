@@ -4,9 +4,15 @@
 }
 
 /* Header recipe unified with /learn (.learn-page-header) so the two sibling
-   pages read as one set: no divider bar, larger sans title, sans subtitle. */
+   pages read as one set: no divider bar, larger sans title, sans subtitle.
+   Constrained + centered to the same width/inset as .mint-grid (Dashboard)
+   so the title/subtitle left-align with the first Dashboard mint card. The
+   decorative .wallets-hero band below stays full-bleed (unchanged). */
 .wallets-header {
-  padding: 24px 24px 4px;
+  padding: 24px var(--page-pad) 4px;
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  width: 100%;
 }
 
 .wallets-title {
@@ -44,9 +50,10 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 16px 24px;
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  padding: 16px var(--page-pad);
+  width: 100%;
 }
 
 /* ── Card ────────────────────────────────────────────────────── */
@@ -162,9 +169,10 @@
 
 /* ── "Run your own mint" — self-host section below the wallet grid ── */
 .wallets-selfhost {
-  max-width: 1600px;
+  max-width: var(--dash-chrome-max);
   margin: 8px auto 0;
-  padding: 8px 24px 4px;
+  padding: 8px var(--page-pad) 4px;
+  width: 100%;
 }
 .wallets-selfhost-title {
   font-size: 15px;
@@ -187,7 +195,7 @@
 /* Breakpoint + single-column collapse matched to .learn-grid's @media(700px). */
 @media (max-width: 700px) {
   .wallets-header {
-    padding: 18px 16px 4px;
+    padding: 18px var(--page-pad) 4px;
   }
   .wallets-hero {
     padding: 4px 16px 0;
@@ -197,10 +205,10 @@
   }
   .wallets-grid {
     grid-template-columns: 1fr;
-    padding: 12px 16px;
+    padding: 12px var(--page-pad);
     gap: 12px;
   }
-  .wallets-selfhost { padding-left: 16px; padding-right: 16px; }
+  .wallets-selfhost { padding-left: var(--page-pad); padding-right: var(--page-pad); }
   .wallets-grid-selfhost { padding-left: 0; padding-right: 0; }
   .wallets-footnote {
     padding-left: 16px;

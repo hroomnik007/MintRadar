@@ -2,8 +2,15 @@
   min-height: 100vh;
 }
 
+/* Constrained + centered to the same width/inset as .mint-grid (Dashboard)
+   so the title/subtitle — and the card grid below — left-align with the
+   first Dashboard mint card. The decorative .learn-hero band below stays
+   full-bleed (unchanged) — only this text block and the grid are aligned. */
 .learn-page-header {
-  padding: 24px 24px 4px;
+  padding: 24px var(--page-pad) 4px;
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  width: 100%;
 }
 
 .learn-page-title {
@@ -38,9 +45,10 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 16px 24px;
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  padding: 16px var(--page-pad);
+  width: 100%;
 }
 
 .learn-card {
@@ -123,7 +131,7 @@
 
 @media (max-width: 700px) {
   .learn-page-header {
-    padding: 18px 16px 4px;
+    padding: 18px var(--page-pad) 4px;
   }
 
   .learn-hero {
@@ -136,7 +144,7 @@
 
   .learn-grid {
     grid-template-columns: 1fr;
-    padding: 12px 16px;
+    padding: 12px var(--page-pad);
     gap: 12px;
   }
 }

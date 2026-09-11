@@ -1,8 +1,12 @@
+/* Same max-width/inset as the Learn index (.learn-page-header/.learn-grid)
+   so navigating index → module never shifts the content's left edge or
+   width. */
 .learn-module-page {
   min-height: 100vh;
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 20px 24px 48px;
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  padding: 20px var(--page-pad) 48px;
+  width: 100%;
 }
 
 .learn-back-link {
@@ -162,7 +166,7 @@
 
 @media (max-width: 700px) {
   .learn-module-page {
-    padding: 16px 16px 36px;
+    padding: 16px var(--page-pad) 36px;
   }
 
   .learn-content h1 {

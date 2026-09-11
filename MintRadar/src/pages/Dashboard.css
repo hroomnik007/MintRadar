@@ -11,8 +11,10 @@
      controls row, filter panel) so search / sort / filters never stick out
      wider than the card row. = 4 cards at their 300px max + gaps + gutters
      (border-box, so it includes the horizontal padding). Well above any phone
-     width, so mobile controls stay full-bleed. */
-  --dash-chrome-max: calc(300px * 4 + 16px * 3 + var(--page-pad) * 2);
+     width, so mobile controls stay full-bleed.
+     --dash-chrome-max itself now lives on :root (src/index.css) — every
+     dashboard-chrome page (Dashboard, Watchlist, Learn, Wallets) shares the
+     one definition, so their card grids' left edges always line up. */
 }
 
 /* ── Stats Bar ──────────────────────────────────────────────── */
