@@ -997,15 +997,13 @@ export default function Stats() {
               <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:'var(--stats-row-gap)'}}>
                 {geoDist.top.length === 0 ? (
                   <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
-                ) : geoDist.top.map(({loc, count, pct}, idx) => {
+                ) : geoDist.top.map(({loc, count}) => {
                   const {display, flag, color: geoColor} = geoLabel(loc)
-                  const barColor = geoColor ?? (idx % 2 === 0 ? 'var(--green)' : 'var(--copper)')
                   return (
                     <div key={loc} className="dist-row dist-row-clickable" onClick={() => setCityModal(loc)}>
                       <span className="dist-label dist-label-city" style={geoColor ? {color:geoColor} : undefined}>
                         {flag ? `${flag} ${display}` : display}
                       </span>
-                      <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:barColor}} /></div>
                       <span className="dist-count">{count}</span>
                     </div>
                   )
@@ -1196,9 +1194,6 @@ export default function Stats() {
                 <div key={nut} className="stats-nut-row" onClick={() => setNutModal(nut)}>
                   <span className="snr-nut-tag">{nut}</span>
                   <span className="snr-nut-name">{meta.short}</span>
-                  <div className="snr-bar-track">
-                    <div className="snr-bar-fill" style={{width:`${percent}%`,background:barColor}} />
-                  </div>
                   <span className="snr-nut-count" style={{color:barColor}}>{count}/{data.onlineMints}</span>
                 </div>
               )

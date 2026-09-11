@@ -709,12 +709,13 @@
    by five other panels, out of scope for this fix. border-bottom stays, as
    the deliberate divider it's been documented as since that same earlier
    fix — `gap: 8px` below is unrelated, this row's own internal grid gap
-   between the tag/name/bar/count cells. */
-/* Bar column shortened 80px -> 40px (name's 1fr column absorbs the freed
-   space) so the NUT name gets more of the row before it would ellipsis. */
+   between the tag/name/count cells (the adoption bar column was removed —
+   see the comment on .stats-nut-row below). */
+/* Adoption bar column removed (tag, name, count only now) — the name's 1fr
+   column absorbs the freed space so it gets even more of the row. */
 .stats-nut-row {
   display: grid;
-  grid-template-columns: 62px 1fr 40px 42px;
+  grid-template-columns: 62px 1fr 42px;
   align-items: center;
   gap: 8px;
   padding: 4px 10px;
@@ -750,19 +751,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.snr-bar-track {
-  height: 3px;
-  background: var(--bg3);
-  border-radius: 99px;
-  overflow: hidden;
-}
-
-.snr-bar-fill {
-  height: 100%;
-  border-radius: 99px;
-  transition: width 400ms ease;
 }
 
 .snr-nut-count {
@@ -1006,5 +994,5 @@
   .stats-metrics { flex-wrap: wrap; gap: 8px; padding: 10px var(--page-pad); }
   .stats-metrics .stat-card { flex: 1 1 calc(50% - 4px); }
   .stats-nut-rows-grid { grid-template-columns: 1fr; }
-  .stats-nut-row { grid-template-columns: 55px 1fr 30px 38px; gap: 6px; padding: 4px 8px; }
+  .stats-nut-row { grid-template-columns: 55px 1fr 38px; gap: 6px; padding: 4px 8px; }
 }
