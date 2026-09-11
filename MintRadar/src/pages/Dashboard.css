@@ -665,7 +665,7 @@
 .card-trust-na { color: var(--t2); }
 
 .card-trust-score {
-  font-size: 25px;
+  font-size: 27px;
   font-weight: 700;
   line-height: 1;
   font-family: var(--font-mono-data);
@@ -675,7 +675,8 @@
   display: flex;
   align-items: center;
   gap: 3px;
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 500;
   color: var(--t2);
   font-family: var(--font-mono-data);
 }
@@ -686,6 +687,7 @@
    the left, the Trust column flush right. No stacking of Trust above latency. */
 @media (max-width: 600px) {
   .card-trust { min-width: 64px; }
+  .card-trust-score { font-size: 26px; }
 }
 
 .latency-block {
