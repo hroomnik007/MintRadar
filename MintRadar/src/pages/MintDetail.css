@@ -155,7 +155,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
    sits roughly midway between the old 6px/12px·11px and Write a review's
    9px/18px·13px so the two don't read as different design systems. */
 .md-quick-btn,
-.md-watch-btn,
 .md-compare-btn {
   display: inline-flex;
   align-items: center;
@@ -178,16 +177,29 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 
 .md-quick-btn:hover,
-.md-watch-btn:hover,
 .md-compare-btn:hover { background: var(--green-soft-strong); border-color: var(--green); }
 
-.md-watch-btn.watching {
-  background: var(--red-soft);
-  border-color: rgba(219, 106, 93, 0.45);
-  color: var(--red);
+/* Watch toggle — same star icon/interaction as the Dashboard/Watchlist mint
+   card's .card-star (empty = not watched, filled amber = watched), sized to
+   sit level with the other header action buttons instead of the card's
+   smaller 26px footprint. Replaces the old text "+ Watch"/"Unwatch" pill. */
+.md-watch-star {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius-m);
+  color: var(--t3);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color var(--transition), background var(--transition), border-color var(--transition);
 }
-
-.md-watch-btn.watching:hover { border-color: rgba(219, 106, 93, 0.65); }
+.md-watch-star:hover { color: var(--amber); border-color: var(--border2); }
+.md-watch-star.on { color: var(--amber); }
 
 /* Full label on desktop; the shorter "Cashu.me" is swapped in at ≤640px so the
    button fits one line in the 2-column mobile action grid. */
@@ -1169,7 +1181,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
   .md-hdr-error { grid-column: 1 / -1; order: -1; }
 
   .md-quick-btn,
-  .md-watch-btn,
   .md-compare-btn {
     width: max-content;
     max-width: 100%;
@@ -1177,7 +1188,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
     white-space: nowrap;
   }
   .md-hdr-center > button.md-quick-btn   { order: 1; justify-self: start; }
-  .md-hdr-right  > .md-watch-btn         { order: 2; justify-self: end; }
+  .md-hdr-right  > .md-watch-star        { order: 2; justify-self: end; }
   .md-hdr-center > a.md-quick-btn        { order: 3; justify-self: start; }
   .md-hdr-right  > .md-compare-btn       { order: 4; justify-self: end; }
 

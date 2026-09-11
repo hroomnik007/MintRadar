@@ -5,6 +5,7 @@ import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { Zap } from 'lucide-react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcShield } from '@/components/mint/IcShield'
+import { IcStar } from '@/components/mint/IcStar'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
@@ -15,11 +16,6 @@ import { isTestMint } from '@/constants/testMints'
 import { db } from '@/db'
 import { resolveNotificationRelays, syncSubscribeToServer, syncUnsubscribeFromServer } from '@/core/nostr/notificationSubscription'
 
-const IcStar = ({ filled }: { filled: boolean }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round">
-    <path d="M12 2.6l2.85 5.78 6.38.93-4.62 4.5 1.09 6.35L12 17.56 6.3 20.56l1.09-6.35L2.77 9.7l6.38-.93z"/>
-  </svg>
-)
 const IcBellDown = () => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
     <path d="M6 1.2C4.6 1.2 3.5 2.4 3.5 3.9V5.6C3.5 6.3 3.2 6.9 2.8 7.3H9.2C8.8 6.9 8.5 6.3 8.5 5.6V3.9C8.5 2.4 7.4 1.2 6 1.2Z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/>

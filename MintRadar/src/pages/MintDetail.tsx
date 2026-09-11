@@ -3,6 +3,7 @@ import { useParams, useNavigate, Navigate } from 'react-router-dom'
 import { useEffect, useState, useMemo, useRef, useCallback, type JSX } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { MintFavicon } from '@/components/mint/MintFavicon'
+import { IcStar } from '@/components/mint/IcStar'
 import {
   XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, LineChart, Line,
@@ -33,7 +34,7 @@ import './MintDetail.css'
 import {
   Copy, Check, Info, ShieldCheck, ShieldOff, AlertTriangle,
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
-  Clock, GitBranch, Plug, Database, Award, Layers, Zap, Plus, X, QrCode,
+  Clock, GitBranch, Plug, Database, Award, Layers, Zap, QrCode,
   Receipt, UserCheck, EyeOff, CreditCard, Send, Code, Cloud,
   Fingerprint, Bitcoin, Star, Mail, AtSign,
 } from 'lucide-react'
@@ -931,16 +932,26 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-hdr-right">
           {isLoggedIn
             ? (
-              <button className={`md-watch-btn ${isWatching ? 'watching' : ''}`} onClick={toggleWatch}>
-                {isWatching ? <><X size={12} /><span>Unwatch</span></> : <><Plus size={11} /><span>Watch</span></>}
+              <button
+                type="button"
+                className={`md-watch-star${isWatching ? ' on' : ''}`}
+                aria-label={isWatching ? 'Unwatch' : 'Watch'}
+                aria-pressed={isWatching}
+                title={isWatching ? 'Unwatch' : 'Watch'}
+                onClick={toggleWatch}
+              >
+                <IcStar filled={isWatching} />
               </button>
             ) : (
               <button
-                className="md-watch-btn"
-                onClick={() => setShowWatchLoginModal(true)}
+                type="button"
+                className="md-watch-star"
+                aria-label="Watch"
+                aria-pressed={false}
                 title="Login with Nostr to add to watchlist"
+                onClick={() => setShowWatchLoginModal(true)}
               >
-                <Plus size={11} /><span>Watch</span>
+                <IcStar filled={false} />
               </button>
             )
           }
@@ -1193,7 +1204,7 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="md-info-grid">
               <div className="md-info-row">
                 <span className="md-info-label">Name</span>
-                <span className="md-info-value green">{name ?? '—'}</span>
+                <span className="md-info-value">{name ?? '—'}</span>
               </div>
               <div className="md-info-row">
                 <span className="md-info-label">Version</span>
@@ -1588,7 +1599,7 @@ function MintDetailContent({ url }: { url: string }) {
                   <Line
                     type="monotone"
                     dataKey={chartMetric}
-                    stroke={chartMetric === 'latency' ? '#B4B2A9' : chartMetric === 'uptime' ? '#4ade80' : '#ffa500'}
+                    stroke="var(--accent)"
                     dot={false}
                     strokeWidth={2}
                     connectNulls
