@@ -20,8 +20,10 @@
   display: flex;
   justify-content: center;
   gap: 12px;
-  padding: 14px 0;
-  margin-inline: var(--page-pad);
+  padding: 14px var(--page-pad);
+  margin-inline: auto;
+  max-width: var(--dash-chrome-max);
+  width: 100%;
   border-bottom: 1px solid var(--border);
 }
 
@@ -1652,7 +1654,7 @@
 }
 
 @media (max-width: 600px) {
-  .stats-bar { flex-wrap: wrap; gap: 8px; padding: 10px 0; }
+  .stats-bar { flex-wrap: wrap; gap: 8px; padding: 10px var(--page-pad); }
   .stat-card {
     flex: 1 1 calc(50% - 4px);
     padding: 9px 12px;
