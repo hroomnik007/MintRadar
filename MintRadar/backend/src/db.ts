@@ -76,6 +76,27 @@ export async function initDb(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_mint_reviews_url_created
       ON mint_reviews(url, created_at DESC);
+
+    -- Per-swap rows for the audit.8333.space rolling window (see discovery.ts's
+    -- fetchRecentSwaps/persistMintAuditSwaps). Fully replaced (DELETE + INSERT,
+    -- same atomic-per-mint-replace pattern as mint_reviews) every 6h discovery
+    -- cycle, so this table only ever holds each mint's current ~100-swap window,
+    -- not history across cycles. swap_id is audit.8333.space's own per-swap id.
+    CREATE TABLE IF NOT EXISTS mint_audit_swaps (
+      url TEXT NOT NULL REFERENCES mints(url) ON DELETE CASCADE,
+      swap_id BIGINT NOT NULL,
+      to_url TEXT,
+      amount INTEGER,
+      fee INTEGER,
+      created_at TIMESTAMPTZ,
+      time_taken_ms DOUBLE PRECISION,
+      state TEXT NOT NULL,
+      error TEXT,
+      PRIMARY KEY (url, swap_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_mint_audit_swaps_url_created
+      ON mint_audit_swaps(url, created_at DESC);
   `)
 
   // Column migrations — each in its own query so a failure in one doesn't block others
@@ -97,6 +118,10 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_id INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_recent_total INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_recent_errors INTEGER',
+    // Mean time_taken (ms) across the OK swaps in the same rolling window as
+    // audit_recent_total/errors — see mint_audit_swaps + computeSwapStats() in
+    // discovery.ts. Null when the window has zero OK swaps with a known time.
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_avg_time_ms DOUBLE PRECISION',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS last_trust_score INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS last_error TEXT',
     // Recurring-revalidation markers (prober.ts revalidateMints()): `invalid_since`

@@ -875,7 +875,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         m.tos_url, m.description_long, m.nuts_limits,
         m.units, m.mint_methods, m.melt_methods,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
-        m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors,
+        m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
         m.discovered_at, m.last_trust_score, m.last_error, m.server_location,
         m.review_count, m.review_avg_rating, m.review_count_7d_ago, m.review_count_7d_ago_at,
         COUNT(h.online) AS total,
@@ -893,7 +893,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         m.tos_url, m.description_long, m.nuts_limits,
         m.units, m.mint_methods, m.melt_methods,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
-        m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors,
+        m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
         m.discovered_at, m.last_trust_score, m.last_error, m.server_location,
         m.review_count, m.review_avg_rating, m.review_count_7d_ago, m.review_count_7d_ago_at,
         latest.online, latest.latency_ms, latest.checked_at
@@ -935,6 +935,10 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           auditSyncedAt: (r.audit_synced_at as string | null) ?? null,
           auditRecentTotal: (r.audit_recent_total as number | null) ?? null,
           auditRecentErrors: (r.audit_recent_errors as number | null) ?? null,
+          // Mean time_taken (ms) over the OK swaps in the same rolling window
+          // as auditRecentTotal/Errors — see mint_audit_swaps / computeSwapStats()
+          // in discovery.ts. Null when the window has no OK swap with a known time.
+          auditAvgTimeMs: r.audit_avg_time_ms != null ? Number(r.audit_avg_time_ms) : null,
           discoveredAt: (r.discovered_at as string | null) ?? null,
           trustScore: (r.last_trust_score as number | null) ?? null,
           lastError: (r.last_error as string | null) ?? null,
@@ -1086,6 +1090,71 @@ app.get('/api/mints/daily-uptime', (req: Request, res: Response): void => {
     })
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/mints/daily-uptime]', err)
+      res.status(500).json({ error: 'Internal server error' })
+    })
+})
+
+// GET /api/mints/swaps?url= — the audit.8333.space rolling-window swap detail
+// (mint_audit_swaps) for one mint, kept OUT of /api/mints/known: that endpoint
+// is fetched on every Dashboard load for every mint, and embedding up to 100
+// swap rows per mint there would multiply its payload size ~65x for a feature
+// only the (currently unbuilt) Mint Detail Audit tab would use. /api/mints/known
+// keeps only the small scalar auditAvgTimeMs; this endpoint serves the full list
+// on demand, same shape as /api/mints/history|version-history|daily-uptime.
+app.get('/api/mints/swaps', (req: Request, res: Response): void => {
+  const url = req.query['url']
+
+  if (typeof url !== 'string' || url.length === 0) {
+    res.status(400).json({ error: 'Missing required query parameter: url' })
+    return
+  }
+
+  if (!url.startsWith('https://')) {
+    res.status(400).json({ error: 'url must start with https://' })
+    return
+  }
+
+  if (url.length > MAX_URL_LENGTH) {
+    res.status(400).json({ error: `url exceeds maximum length of ${MAX_URL_LENGTH} characters` })
+    return
+  }
+
+  isSafeUrl(url)
+    .then(safe => {
+      if (!safe) {
+        res.status(400).json({ error: 'Invalid url' })
+        return
+      }
+      return pool
+        .query(
+          `SELECT swap_id, to_url, amount, fee, created_at, time_taken_ms, state, error
+           FROM mint_audit_swaps
+           WHERE url = $1
+           ORDER BY created_at DESC NULLS LAST
+           LIMIT 100`,
+          [url]
+        )
+        .then(result => {
+          const swaps = result.rows.map(r => ({
+            swapId: Number(r.swap_id),
+            toUrl: (r.to_url as string | null) ?? null,
+            amount: (r.amount as number | null) ?? null,
+            fee: (r.fee as number | null) ?? null,
+            createdAt: r.created_at != null ? (r.created_at as Date).toISOString() : null,
+            timeTakenMs: r.time_taken_ms != null ? Number(r.time_taken_ms) : null,
+            state: r.state as string,
+            error: (r.error as string | null) ?? null,
+          }))
+          const okTimes = swaps
+            .filter(s => s.state === 'OK' && s.timeTakenMs !== null)
+            .map(s => s.timeTakenMs as number)
+          const avgTimeMs = okTimes.length > 0 ? okTimes.reduce((a, b) => a + b, 0) / okTimes.length : null
+          res.setHeader('Cache-Control', 'max-age=300')
+          res.json({ url, avgTimeMs, swaps })
+        })
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[/api/mints/swaps]', err)
       res.status(500).json({ error: 'Internal server error' })
     })
 })

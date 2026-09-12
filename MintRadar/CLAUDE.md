@@ -50,6 +50,7 @@ audit_n_melts INTEGER
 audit_n_errors INTEGER
 audit_checked_at TIMESTAMPTZ    -- audit.8333.space's own `updated_at` for this mint
 audit_synced_at TIMESTAMPTZ     -- when OUR 6h discovery cron last wrote the audit_* cols (drives Audit tab "Last checked X ago")
+audit_avg_time_ms DOUBLE PRECISION  -- mean time_taken (ms) over OK swaps in the same rolling window as audit_recent_total/errors — see mint_audit_swaps below. Backend-only as of 2026-09-12 (not yet surfaced in the Audit tab UI).
 last_trust_score INTEGER
 last_error TEXT
 trust_score_7d_ago INTEGER      -- Trust Score Movers rollup (see Cron jobs)
@@ -90,12 +91,45 @@ Index: (url, created_at DESC). Populated by the 6h reviews sync (`backend/src/re
 Rollup columns on `mints`: `review_count INTEGER`, `review_avg_rating REAL`, `reviews_checked_at TIMESTAMPTZ`.
 `review_count_7d_ago INTEGER` + `review_count_7d_ago_at TIMESTAMPTZ` — rolling ~1-week-ago `review_count` snapshot, advanced once a day (`reviewSurgeRollup.ts`); feeds the informational "recent review surge" sybil flag (see Reviews Feature below).
 
+### mint_audit_swaps (added 2026-09-12 — per-swap audit.8333.space detail)
+```
+url TEXT REFERENCES mints(url) ON DELETE CASCADE
+swap_id BIGINT NOT NULL           -- audit.8333.space's own per-swap id
+to_url TEXT
+amount INTEGER
+fee INTEGER
+created_at TIMESTAMPTZ
+time_taken_ms DOUBLE PRECISION
+state TEXT NOT NULL
+error TEXT                        -- nullable
+PRIMARY KEY (url, swap_id)
+```
+Index: (url, created_at DESC). Populated by the same 6h discovery cron that already fetched
+`GET /swaps/mint/{id}` for the rolling `audit_recent_total`/`audit_recent_errors` counters
+(`discovery.ts`'s `fetchRecentSwaps`/`persistMintAuditSwaps`) — that call previously read only
+the `state` field and discarded everything else; it now parses the full item (confirmed live
+shape: `id, from_id, to_id, from_url, to_url, amount, fee, created_at, time_taken, state, error`)
+via `parseAuditSwapItem()` and stores the last ≤100 swaps per mint. **Fully replaced** (DELETE +
+batched multi-VALUES INSERT + the `mints` summary-column UPDATE, all in one transaction — same
+atomic-per-mint-replace pattern as `mint_reviews`/`persistMintReviews`) every cycle, so this table
+only ever holds each mint's *current* window, not swap history across cycles. `computeSwapStats()`
+derives `total`/`errors` (unchanged from before) plus the new `avgTimeMs` (mean `time_taken` over
+`state === 'OK'` swaps with a known time; `null` if none). Parsing is defensive — only `id`/`state`
+are required, a missing/wrong-typed `time_taken`/`to_url`/etc. degrades that field to `null`
+instead of dropping the swap or failing the cron. **Backend-only as of this addition** — no Mint
+Detail UI reads this table or `auditAvgTimeMs` yet; the frontend still never calls audit.8333.space
+directly (SSRF surface unchanged). Tests: `backend/src/__tests__/discoveryAuditSwaps.test.ts`
+(parser + `computeSwapStats` + `persistMintAuditSwaps` transaction shape, using two real
+anonymized sample payloads captured from a live diagnostic GET against the Minibits mint id) +
+`integration/mints-swaps.test.ts`.
+
 ## Backend API
 - GET /health — health check
 - GET /api/mints/known — all mints with online status, latency, trust score, degraded flag (TTL cached 60s)
 - GET /api/mints/history?url=&period={24h|7d|30d|90d} — bucketed uptime/latency segments + prev period trend
 - GET /api/mints/version-history?url= — per-mint software version timeline + latest global version
 - GET /api/mints/daily-uptime?url= — daily uptime counts for last 30 days
+- GET /api/mints/swaps?url= — the audit.8333.space rolling-window swap detail (`mint_audit_swaps`, ≤100 rows) for one mint plus `avgTimeMs`. Added 2026-09-12, deliberately kept OUT of `/api/mints/known` (which is fetched on every Dashboard load for every mint — embedding the full per-mint swap list there would multiply that payload ~65x for a feature only a not-yet-built Mint Detail view would use); `/api/mints/known` gains only the small scalar `auditAvgTimeMs`. Same url validation (`https://`, `MAX_URL_LENGTH`, `isSafeUrl`) as `/api/mints/history`\|`version-history`\|`daily-uptime`. `Cache-Control: max-age=300`. No frontend UI reads this endpoint yet.
 - GET /api/stats — network-wide stats: totalMints, onlineMints, offlineMints, avgTrustScore, avgLatency24h, trustDistribution, nutAdoption, top5ByTrustScore
 - GET /api/stats/trust-movers?period={7d|30d} — Trust Score risers/fallers (Stats page). As of 2026-09-01 a plain read of `mints` (`last_trust_score` + `trust_score_{7,30}d_ago` rollup columns), NOT the old two `DISTINCT ON` passes over all of `mint_history` (~2.5s cold — the "old" CTE had no time bound and `trust_score IS NOT NULL` was unindexed). Rollup is refreshed by `refreshTrustMoversRollup()` (`backend/src/trustMoversRollup.ts`) on the 5-min probe cron + ~15s after boot; partial index `idx_mint_history_score_checked ON mint_history(url, checked_at DESC) WHERE trust_score IS NOT NULL` backs its point-in-time lookups. In-memory cache TTL 10min (own `TRUST_MOVERS_CACHE_TTL`, not `KNOWN_MINTS_CACHE_TTL`). +/-3 threshold + top-3 ranking in `trustMovers.ts` (`computeTrustMovers`). Frontend panel (`src/components/stats/TrustMoversPanel.tsx`) takes `loading`/`refreshing` props — skeleton while pending, `keepPreviousData` across the 7d/30d toggle; "No data yet" shows only for a settled-but-empty result.
 - GET /api/mint/probe?url= — on-demand probe of a single mint URL (unauthenticated, SSRF-guarded). **Response scope (2026-09-07 audit L5):** for a mint already in `mints` the full live `/v1/info` + keysets are returned (Mint Detail needs it; the cron already probes those hosts continuously). For any OTHER url only `online` / `latencyMs` / `checkedAt` + a stripped `info` (`name`, `version`, `nuts` with keys only — enough for the Dashboard submit preview) are returned, and `keysets: null` — so it can't be used as a general "fetch and echo the JSON body of arbitrary public host X" oracle.
@@ -218,7 +252,7 @@ across components.
 `discoverMintsFromNostr()` in `backend/src/discovery.ts` runs 3 sources in parallel via `Promise.allSettled`:
 - **kind:38172** — NIP-87 mint announcements (direct `u` tag)
 - **kind:38000** — reviews; `#u` tag mining extracts reviewed mint URLs
-- **audit.8333.space** — external audit API. `discoverMintsFromApi()` does 2 passes over the ~65 mints audit.8333.space knows about: (1) one paginated `GET /mints/` call (100/page) for discovery + cumulative lifetime counts (`audit_n_mints`/`audit_n_melts`/`audit_n_errors`, display-only, feeds the Audit tab's all-time line) and each mint's audit refresh time (`audit_synced_at = NOW()`) and to capture each mint's audit.8333.space `id` (stored as `audit_id`); (2) a sequential per-mint `GET /swaps/mint/{id}?limit=100` pass (~65 extra requests, 150ms apart) for the rolling-window reliability score (`audit_recent_total`/`audit_recent_errors`, feeds Trust Score — see above). Runs once per 6h discovery cycle, so ~65 extra requests/6h — not throttled further, well within reasonable API use.
+- **audit.8333.space** — external audit API. `discoverMintsFromApi()` does 2 passes over the ~65 mints audit.8333.space knows about: (1) one paginated `GET /mints/` call (100/page) for discovery + cumulative lifetime counts (`audit_n_mints`/`audit_n_melts`/`audit_n_errors`, display-only, feeds the Audit tab's all-time line) and each mint's audit refresh time (`audit_synced_at = NOW()`) and to capture each mint's audit.8333.space `id` (stored as `audit_id`); (2) a sequential per-mint `GET /swaps/mint/{id}?limit=100` pass (~65 extra requests, 150ms apart) for the rolling-window reliability score (`audit_recent_total`/`audit_recent_errors`, feeds Trust Score — see above) — as of 2026-09-12 this same pass also parses and persists the full per-swap detail into `mint_audit_swaps` and computes `audit_avg_time_ms` (see the "mint_audit_swaps" DB Tables entry above). Runs once per 6h discovery cycle, so ~65 extra requests/6h — not throttled further, well within reasonable API use.
 
 **`safeFetch` for outbound API calls (2026-09-07 audit, commit `11c30f1`):** `discovery.ts` (audit.8333.space `/mints/` + `/swaps/mint/{id}`) and `versionCatalog.ts` (`api.github.com/.../releases/latest`) used plain `fetch()` — no connect-time DNS pinning, and undici auto-follows up to 20 redirect hops. Both now call `safeFetch()` (`isSafeUrl()` pre-check + `safeAgent` DNS pinning rejecting private/loopback/link-local/CGNAT at connect + manual redirect following, max 3, each hop re-validated + `credentials: 'omit'`). `SafeFetchOptions` gained an optional `headers` (GitHub Accept header). `safeFetch` returns `Response | null` and never throws, so the "keep last known value" behaviour is preserved. Defence-in-depth — the hostnames are hardcoded constants. **Note:** the root `nostr-tools` `SimplePool` used by `discovery.ts` / `reviewsSync.ts` is NOT the DNS-pinned pool `nostrService.ts` uses — it is only safe because its relay lists are hardcoded; a future dynamic relay list must switch to `DnsPinnedWebSocket` or it becomes SSRF (commented at both sites, `3c8867f`).
 

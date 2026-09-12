@@ -278,14 +278,67 @@ interface AuditRecord {
   updated_at?: string | null
 }
 
-interface RecentSwapStats {
-  total: number
-  errors: number
+// One parsed row from audit.8333.space's GET /swaps/mint/{id}. Confirmed live
+// shape (2026-09-12 diagnostic GET against mint id 2 / Minibits):
+//   { id, from_id, to_id, from_url, to_url, amount, fee, created_at,
+//     time_taken (ms), state, error }
+// Only `swapId`/`state` are treated as required — everything else is parsed
+// defensively (wrong type or missing → null) so a future upstream field
+// rename/removal degrades a single column instead of failing the whole cron.
+export interface ParsedAuditSwap {
+  swapId: number
+  toUrl: string | null
+  amount: number | null
+  fee: number | null
+  createdAt: string | null
+  timeTakenMs: number | null
+  state: string
+  error: string | null
 }
 
-// Fetches the mint's last ~100 swaps (as either source or destination) from
-// audit.8333.space and counts how many failed, for the rolling-window reliability score.
-async function fetchRecentSwapStats(auditId: number): Promise<RecentSwapStats | null> {
+export interface AuditSwapStats {
+  total: number
+  errors: number
+  avgTimeMs: number | null
+}
+
+// Defensive parse of one raw swap item. Returns null (skip, don't throw) when
+// the two load-bearing fields (id, state) are missing or the wrong type —
+// everything else degrades to null instead of rejecting the whole item, per
+// "parse defensively, missing fields skip that field, never fail the cron".
+export function parseAuditSwapItem(raw: unknown): ParsedAuditSwap | null {
+  if (typeof raw !== 'object' || raw === null) return null
+  const item = raw as Record<string, unknown>
+  const swapId = item['id']
+  const state = item['state']
+  if (typeof swapId !== 'number' || typeof state !== 'string') return null
+  return {
+    swapId,
+    toUrl: typeof item['to_url'] === 'string' ? item['to_url'] : null,
+    amount: typeof item['amount'] === 'number' ? item['amount'] : null,
+    fee: typeof item['fee'] === 'number' ? item['fee'] : null,
+    createdAt: typeof item['created_at'] === 'string' ? item['created_at'] : null,
+    timeTakenMs: typeof item['time_taken'] === 'number' ? item['time_taken'] : null,
+    state,
+    error: typeof item['error'] === 'string' ? item['error'] : null,
+  }
+}
+
+// total/errors feed the existing Trust Score audit-reliability component + the
+// Audit tab's "Recent errors" cell (unchanged behavior — errors is still
+// "state !== 'OK'"); avgTimeMs is new, over OK swaps with a known time only.
+export function computeSwapStats(swaps: ParsedAuditSwap[]): AuditSwapStats {
+  const total = swaps.length
+  const errors = swaps.filter(s => s.state !== 'OK').length
+  const okTimes = swaps
+    .filter((s): s is ParsedAuditSwap & { timeTakenMs: number } => s.state === 'OK' && s.timeTakenMs !== null)
+    .map(s => s.timeTakenMs)
+  const avgTimeMs = okTimes.length > 0 ? okTimes.reduce((a, b) => a + b, 0) / okTimes.length : null
+  return { total, errors, avgTimeMs }
+}
+
+// Fetches the mint's last ~100 swaps (as either source or destination) from audit.8333.space.
+async function fetchRecentSwaps(auditId: number): Promise<ParsedAuditSwap[] | null> {
   try {
     const url = `${AUDIT_SWAPS_BASE}${auditId}?limit=${AUDIT_SWAPS_WINDOW}`
     // safeFetch (not plain fetch): connect-time DNS pinning + each redirect hop
@@ -295,15 +348,62 @@ async function fetchRecentSwapStats(auditId: number): Promise<RecentSwapStats | 
     if (!res || !res.ok) return null
     const data: unknown = await res.json()
     if (!Array.isArray(data)) return null
-    let errors = 0
+    const parsed: ParsedAuditSwap[] = []
     for (const item of data) {
-      if (typeof item !== 'object' || item === null) continue
-      if ((item as Record<string, unknown>)['state'] !== 'OK') errors++
+      const p = parseAuditSwapItem(item)
+      if (p) parsed.push(p)
     }
-    return { total: data.length, errors }
+    return parsed
   } catch (err) {
     console.error(`[discovery] audit.8333.space swaps fetch error (mint ${auditId}):`, err)
     return null
+  }
+}
+
+// Max rows per multi-VALUES INSERT (same reasoning as reviewsSync.ts's
+// REVIEW_INSERT_BATCH — keeps the bind-parameter count under Postgres' 65535
+// ceiling: 9 cols * 500 = 4500). The window is capped at AUDIT_SWAPS_WINDOW
+// (100), so this never actually splits into more than one batch today.
+const AUDIT_SWAPS_INSERT_BATCH = 500
+
+// Atomic per-mint replace of this mint's swap window + the summary columns
+// that feed Trust Score / the Audit tab. Same DELETE+INSERT+UPDATE-in-one-
+// transaction pattern as reviewsSync.ts's persistMintReviews — readers under
+// READ COMMITTED see the complete old set or the complete new set, never a
+// half-deleted window.
+export async function persistMintAuditSwaps(
+  url: string,
+  swaps: ParsedAuditSwap[],
+  stats: AuditSwapStats,
+): Promise<void> {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    await client.query('DELETE FROM mint_audit_swaps WHERE url = $1', [url])
+    for (let i = 0; i < swaps.length; i += AUDIT_SWAPS_INSERT_BATCH) {
+      const batch = swaps.slice(i, i + AUDIT_SWAPS_INSERT_BATCH)
+      const values: unknown[] = []
+      const tuples = batch.map((s, j) => {
+        const b = j * 9
+        values.push(url, s.swapId, s.toUrl, s.amount, s.fee, s.createdAt, s.timeTakenMs, s.state, s.error)
+        return `($${b + 1}, $${b + 2}, $${b + 3}, $${b + 4}, $${b + 5}, $${b + 6}, $${b + 7}, $${b + 8}, $${b + 9})`
+      })
+      await client.query(
+        `INSERT INTO mint_audit_swaps (url, swap_id, to_url, amount, fee, created_at, time_taken_ms, state, error)
+         VALUES ${tuples.join(', ')}`,
+        values,
+      )
+    }
+    await client.query(
+      `UPDATE mints SET audit_recent_total = $1, audit_recent_errors = $2, audit_avg_time_ms = $3 WHERE url = $4`,
+      [stats.total, stats.errors, stats.avgTimeMs, url],
+    )
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw err
+  } finally {
+    client.release()
   }
 }
 
@@ -385,13 +485,16 @@ export async function discoverMintsFromApi(): Promise<number> {
   // insert work above.
   let swapsUpdated = 0
   for (const rec of records) {
-    const stats = await fetchRecentSwapStats(rec.id)
-    if (stats) {
-      await pool.query(
-        `UPDATE mints SET audit_recent_total = $1, audit_recent_errors = $2 WHERE url = $3`,
-        [stats.total, stats.errors, rec.url]
-      )
-      swapsUpdated++
+    const swaps = await fetchRecentSwaps(rec.id)
+    if (swaps) {
+      try {
+        await persistMintAuditSwaps(rec.url, swaps, computeSwapStats(swaps))
+        swapsUpdated++
+      } catch (err) {
+        // Never let a single mint's persist failure abort the cron — the next
+        // 6h cycle retries; this mint's summary columns simply stay stale.
+        console.error(`[discovery] audit.8333.space swaps persist error (mint ${rec.url}):`, err)
+      }
     }
     await new Promise<void>(resolve => setTimeout(resolve, AUDIT_SWAPS_DELAY_MS))
   }
