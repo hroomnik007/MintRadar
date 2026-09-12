@@ -5,6 +5,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { Info } from 'lucide-react'
 import { TrustMoversPanel } from '@/components/stats/TrustMoversPanel'
 import { MintFavicon } from '@/components/mint/MintFavicon'
+import { IcShield } from '@/components/mint/IcShield'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
 import { trustColor, trustScoreInfo, trustDonutArc, displayName } from '@/utils/mintFormatting'
@@ -24,6 +25,22 @@ interface StatsData {
   nutAdoption: Array<{ nut: string; count: number; percent: number }>
   top5ByTrustScore: Array<{ url: string; name: string | null; trustScore: number }>
 }
+
+// ── Panel title icon wells (2×2 hero grid visual pass) ──────────
+// Same markup already used elsewhere on this page / Dashboard.tsx (Software
+// in Use panel below reuses the "NUTs in Spec" stacked-bars shape, Network
+// Health Index reuses the "Online Now" pulse shape, Geographic Distribution
+// reuses Dashboard's IcSignal radar-dot shape) — duplicated locally rather
+// than imported since none of the originals are exported, not new artwork.
+const IcSwLayers = () => (
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="10" width="12" height="3" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="2" y="6" width="12" height="3" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="2" y="2" width="12" height="3" rx="1" stroke="currentColor" strokeWidth="1.1"/></svg>
+)
+const IcGeoGlobe = () => (
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.8" stroke="currentColor" strokeWidth="1.1"/><circle cx="8" cy="8" r="4" stroke="currentColor" strokeWidth="1" strokeDasharray="2 1.5" opacity="0.6"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/></svg>
+)
+const IcHealthPulse = () => (
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M1 11C3 8 5 7 8 7s5 1 7-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M3 14C5 11.5 6.5 10 8 10s3 1.5 5-1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><circle cx="8" cy="4" r="2" stroke="currentColor" strokeWidth="1.2"/></svg>
+)
 
 function uptimeColor(pct: number): string {
   if (pct >= 80) return '#17E87F'
@@ -936,19 +953,23 @@ export default function Stats() {
         </div>
       </div>
 
-      {/* ── 3-column card grid ── */}
-      <div className="stats-cards-grid">
+      {/* ── 2×2 hero grid: Software in Use | Most Reliable, Geographic
+          Distribution | Network Health Index — visual pass to mirror the
+          reference mockup's layout, DOM order doubling as the mobile stack
+          order. NUT Coverage / Trust Score Movers / Trust Score Trend stay
+          in the separate .stats-cards-grid below, unchanged. */}
+      <div className="stats-hero-grid">
 
-        {/* Left block (cols 1-2): Software in Use + Geographic Distribution */}
-        <div className="stats-left-col">
-
-          {/* Card 1: Software in Use — stretched to match row 1's tallest
-              panel via .stats-left-col's align-items:stretch, same
+        {/* Card 1: Software in Use — stretched to match its row's tallest
+              panel via .stats-hero-grid's align-items:stretch, same
               mechanism as .stats-nhi-panel. .stats-sw-fill's flex:1 absorbs
               the resulting surplus height so it lands below the version
               list instead of stretching the rows themselves. */}
           <div className="stats-panel stats-sw-panel">
-            <div className="stats-panel-title">Software in Use</div>
+            <div className="stats-panel-title-row">
+              <div className="stats-panel-icon gray"><IcSwLayers /></div>
+              <div className="stats-panel-title" style={{marginBottom:0}}>Software in Use</div>
+            </div>
             <div className="stats-sw-fill">
               <div>
                 {swFreshnessSummary.total > 0 && (
@@ -1001,66 +1022,19 @@ export default function Stats() {
             </div>
           </div>
 
-          {/* Card 2: Geographic Distribution. Wrapped in .stats-geo-fill (same
-              flex:1 + space-between mechanism as .stats-sw-fill/.nhi-fill) so
-              that once .stats-left-col stretches this panel to match Most
-              Reliable / Network Health Index's height, any surplus space
-              lands between the row grid and "View others" — which stays
-              anchored to the panel's own bottom edge rather than floating
-              partway down a taller box.
-
-              .stats-geo-cols renders geoDist.top as two columns (flag+name+
-              count per cell, grid-auto-flow:column so column 1 fills top to
-              bottom before column 2 — same sort order as before), with
-              geoRows (ceil(top.length/2)) as the explicit row count so both
-              columns balance evenly instead of overloading column 1. Same
-              row height as the old single-column list, so two columns of
-              geoRows rows takes no more vertical space than one column of
-              topN=10 did — never taller than Most Reliable / NHI. */}
-          <div className="stats-panel stats-geo-panel">
-            <div className="stats-panel-title">Geographic Distribution</div>
-            <div className="stats-geo-fill">
-              <div className="stats-geo-cols" style={{marginTop:10,gridTemplateRows:`repeat(${geoRows}, auto)`}}>
-                {geoDist.top.length === 0 ? (
-                  <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
-                ) : geoDist.top.map(({loc, count}) => {
-                  const {display, flag, color: geoColor} = geoLabel(loc)
-                  return (
-                    <div key={loc} className="dist-row dist-row-clickable" onClick={() => setCityModal(loc)}>
-                      <span className="dist-label dist-label-city" style={geoColor ? {color:geoColor} : undefined}>
-                        {flag ? `${flag} ${display}` : display}
-                      </span>
-                      <span className="dist-count">{count}</span>
-                    </div>
-                  )
-                })}
-              </div>
-              {(geoDist.moreCount > 0 || (geoDist.unknownCount > 0 && !geoDist.unknownShownInTop)) && (
-                <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
-                  {geoDist.moreCount > 0 && (
-                    <div className="dist-more-row" onClick={() => setShowMoreLocations(true)}>
-                      View others →
-                    </div>
-                  )}
-                  {geoDist.unknownCount > 0 && !geoDist.unknownShownInTop && (
-                    <div className="dist-more-row" onClick={() => setCityModal('Unknown')}>
-                      Geolocation unavailable: {geoDist.unknownCount} mint{geoDist.unknownCount === 1 ? '' : 's'} →
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-        </div>{/* /stats-left-col */}
-
-        {/* Row 1, 3rd panel: Most Reliable — standalone now (used to be the
-            first panel of a stacked .stats-right-col along with NHI/Trend;
-            those two moved down into rows 2-3, see below). */}
+        {/* Row 1, 2nd panel: Most Reliable. Mockup order is Software | Most
+            Reliable on row 1, Geographic Distribution | Network Health Index
+            on row 2 — see .stats-hero-grid below. City subtitle added under
+            each row's name (2026-09-12) using the existing serverLocation
+            field already carried on KnownMint / used by Geographic
+            Distribution — omitted when a mint has none. */}
         <div className="stats-panel">
           <div className="stats-card-header">
-            <div className="stats-panel-title" style={{marginBottom:0}}>
-              {reliableTab === 'reliable' ? 'Most Reliable · 24H' : 'Top Trust Score'}
+            <div className="stats-panel-title-row" style={{marginBottom:0}}>
+              <div className="stats-panel-icon green"><IcShield size={12} /></div>
+              <div className="stats-panel-title" style={{marginBottom:0}}>
+                {reliableTab === 'reliable' ? 'Most Reliable · 24H' : 'Top Trust Score'}
+              </div>
             </div>
             <div className="stats-tab-toggle">
               <button type="button" className={`stats-tab-btn${reliableTab === 'reliable' ? ' active' : ''}`} onClick={() => setReliableTab('reliable')}>Reliable</button>
@@ -1074,12 +1048,17 @@ export default function Stats() {
               ) : top5ByUptime.map((mint, idx) => {
                 const uptime = mint.uptimePct24h ?? 0
                 const color = uptimeColor(uptime)
+                const loc = normalizeGeoLoc(mint.serverLocation)
+                const cityInfo = loc !== 'Unknown' ? geoLabel(loc) : null
                 return (
                   <div key={mint.url} onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} className="stats-top5-row">
                     <span className="stats-top5-rank">#{idx+1}</span>
                     <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:13,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName(mint)}</div>
+                      {cityInfo && (
+                        <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{cityInfo.flag ? `${cityInfo.flag} ${cityInfo.display}` : cityInfo.display}</div>
+                      )}
                     </div>
                     <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:700,color,flexShrink:0}}>{uptime}%</span>
                   </div>
@@ -1091,12 +1070,17 @@ export default function Stats() {
               ) : top5ByTrust.map((mint, idx) => {
                 const score = mint.trustScore ?? 0
                 const color = score >= 70 ? '#4ade80' : score >= 40 ? '#ffa500' : '#ff4d4d'
+                const loc = normalizeGeoLoc(mint.serverLocation)
+                const cityInfo = loc !== 'Unknown' ? geoLabel(loc) : null
                 return (
                   <div key={mint.url} onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} className="stats-top5-row">
                     <span className="stats-top5-rank">#{idx+1}</span>
                     <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:13,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName(mint)}</div>
+                      {cityInfo && (
+                        <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{cityInfo.flag ? `${cityInfo.flag} ${cityInfo.display}` : cityInfo.display}</div>
+                      )}
                     </div>
                     {isTestMint(mint.url) && (
                       <span style={{fontSize:9,fontFamily:'var(--font-mono)',color:'var(--amber)',background:'var(--amber-soft)',border:'1px solid var(--amber-soft-strong)',borderRadius:4,padding:'1px 5px',flexShrink:0}} title="Not for real funds — for testing and development only">🧪 Test</span>
@@ -1109,14 +1093,58 @@ export default function Stats() {
           </div>
         </div>
 
-        {/* Row 1, 4th panel: Network Health Index. Moved here from row 2 (was
-            paired with NUT Coverage) — Trust Score Movers, which used to sit
-            here, has a variable row count (2-6+, depending on how many
-            mints moved this period) that stood out against this row's other
-            three panels' comparatively stable heights. NHI's height is far
-            more consistent (fixed gauge + fixed 5-row breakdown), a better
-            fit for 4 equal-width columns. Swapped with Trust Score Movers
-            below — see the comment on that panel's new spot in row 2. */}
+        {/* Row 2, 1st panel: Geographic Distribution. Wrapped in .stats-geo-fill
+            (same flex:1 + space-between mechanism as .stats-sw-fill/.nhi-fill)
+            so that once .stats-hero-grid stretches this panel to match
+            Network Health Index's height, any surplus space lands between
+            the row grid and "View others" — which stays anchored to the
+            panel's own bottom edge rather than floating partway down a
+            taller box.
+
+            .stats-geo-cols renders geoDist.top as two columns (flag+name+
+            count per cell, grid-auto-flow:column so column 1 fills top to
+            bottom before column 2 — same sort order as before), with
+            geoRows (ceil(top.length/2)) as the explicit row count so both
+            columns balance evenly instead of overloading column 1. */}
+        <div className="stats-panel stats-geo-panel">
+          <div className="stats-panel-title-row">
+            <div className="stats-panel-icon gray"><IcGeoGlobe /></div>
+            <div className="stats-panel-title" style={{marginBottom:0}}>Geographic Distribution</div>
+          </div>
+          <div className="stats-geo-fill">
+            <div className="stats-geo-cols" style={{marginTop:10,gridTemplateRows:`repeat(${geoRows}, auto)`}}>
+              {geoDist.top.length === 0 ? (
+                <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
+              ) : geoDist.top.map(({loc, count}) => {
+                const {display, flag, color: geoColor} = geoLabel(loc)
+                return (
+                  <div key={loc} className="dist-row dist-row-clickable" onClick={() => setCityModal(loc)}>
+                    <span className="dist-label dist-label-city" style={geoColor ? {color:geoColor} : undefined}>
+                      {flag ? `${flag} ${display}` : display}
+                    </span>
+                    <span className="dist-count">{count}</span>
+                  </div>
+                )
+              })}
+            </div>
+            {(geoDist.moreCount > 0 || (geoDist.unknownCount > 0 && !geoDist.unknownShownInTop)) && (
+              <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
+                {geoDist.moreCount > 0 && (
+                  <div className="dist-more-row" onClick={() => setShowMoreLocations(true)}>
+                    View others →
+                  </div>
+                )}
+                {geoDist.unknownCount > 0 && !geoDist.unknownShownInTop && (
+                  <div className="dist-more-row" onClick={() => setCityModal('Unknown')}>
+                    Geolocation unavailable: {geoDist.unknownCount} mint{geoDist.unknownCount === 1 ? '' : 's'} →
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Row 2, 2nd panel: Network Health Index. */}
         {networkHealth && (() => {
           const info = trustScoreInfo(networkHealth.score)
           const gaugeArc = trustDonutArc(networkHealth.score)
@@ -1124,6 +1152,7 @@ export default function Stats() {
             <div className="stats-panel stats-nhi-panel">
               <div className="stats-card-header">
                 <div className="stats-panel-title nhi-title-row" style={{ marginBottom: 0 }}>
+                  <div className="stats-panel-icon orange"><IcHealthPulse /></div>
                   Network Health Index
                   <span
                     ref={nhiInfoRef}
@@ -1144,10 +1173,10 @@ export default function Stats() {
                   <button onClick={() => setShowHealthBreakdown(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', padding: 0 }}>Details ›</button>
                 )}
               </div>
-              {/* .nhi-fill is the flex:1 region below the header — at ≥1300px
-                  this panel shares its grid row with three other panels
-                  (Software in Use, Geographic Distribution, Most Reliable)
-                  and stretches to match whichever is tallest (align-self:
+              {/* .nhi-fill is the flex:1 region below the header — this panel
+                  shares its .stats-hero-grid row with Geographic
+                  Distribution and stretches to match whichever is taller
+                  (align-self:
                   stretch on .stats-nhi-panel, opting out of the grid's own
                   align-items:start just for this one panel), so there can be
                   real surplus height here to distribute. justify-content:
@@ -1198,6 +1227,12 @@ export default function Stats() {
             </div>
           )
         })()}
+
+      </div>{/* /stats-hero-grid */}
+
+      {/* ── existing NUT Coverage / Trust Score Movers / Trust Score Trend
+          grid — layout/behavior unchanged by this visual pass. ── */}
+      <div className="stats-cards-grid">
 
         {/* Row 2, cols 1-3: NUT Coverage — span 3 so its 25 rows split into 3
             inner columns instead of 2 (shorter, less vertical scrolling) now

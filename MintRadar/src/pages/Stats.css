@@ -73,33 +73,28 @@
   gap: 5px;
 }
 
-/* ── Network Health Index (standalone panel, row 1 col 4 — .stats-nhi-panel) ──
-   Container is the plain .stats-panel background/border used by every other
-   card on this page — no custom color. Horizontal layout: title row on top
-   (mobile-only "Details ›" opens the breakdown modal), then the ring and
-   badge side by side on one line. Desktop (>768px) renders the breakdown
-   inline below the ring instead of behind a click — see NetworkHealthComponentRow
-   usage in Stats.tsx — so the gauge isn't clickable there and "Details ›" is
-   hidden (nothing new the click would reveal). The formula explanation text
-   lives only in the header ⓘ tooltip on desktop (widened to 260px there) and
-   in the mobile modal's footer — never as a permanent block under the
-   breakdown. Desktop also renders a larger 84px gauge (mobile stays 60px,
-   via .nhi-gauge-wrap/.nhi-gauge-wrap svg below) — set with an inline style
-   override in Stats.tsx rather than a CSS media query, since the panel's
-   desktop/mobile split is already driven by the useIsMobile() JS check, not
-   a breakpoint this stylesheet owns.
-
-   Moved here from row 2 (col 4, next to NUT Coverage) — swapped with Trust
-   Score Movers, whose row count varies too much (2-6+ rows) to sit well
-   among row 1's other three comparatively fixed-height panels; see the
-   Stats.tsx comments on both panels' new spots for the full reasoning.
+/* ── Network Health Index (standalone panel, .stats-hero-grid row 2 col 2 —
+   .stats-nhi-panel) ── Container is the plain .stats-panel background/border
+   used by every other card on this page — no custom color. Horizontal
+   layout: title row on top (mobile-only "Details ›" opens the breakdown
+   modal), then the ring and badge side by side on one line. Desktop
+   (>768px) renders the breakdown inline below the ring instead of behind a
+   click — see NetworkHealthComponentRow usage in Stats.tsx — so the gauge
+   isn't clickable there and "Details ›" is hidden (nothing new the click
+   would reveal). The formula explanation text lives only in the header ⓘ
+   tooltip on desktop (widened to 260px there) and in the mobile modal's
+   footer — never as a permanent block under the breakdown. Desktop also
+   renders a larger 84px gauge (mobile stays 60px, via .nhi-gauge-wrap/
+   .nhi-gauge-wrap svg below) — set with an inline style override in
+   Stats.tsx rather than a CSS media query, since the panel's desktop/mobile
+   split is already driven by the useIsMobile() JS check, not a breakpoint
+   this stylesheet owns.
 
    .stats-nhi-panel is a flex column with align-self:stretch — now the same
    as the outer grid's own align-items:stretch default, kept explicit here
-   for clarity. At ≥1300px this panel shares a row with Software in
-   Use/Geographic Distribution/Most Reliable, all four now stretching to
-   match whichever is tallest instead of top-aligning. .nhi-fill (wrapping
-   .nhi-wrap + the breakdown
+   for clarity. It shares its row with Geographic Distribution, both
+   stretching to match whichever is tallest instead of top-aligning.
+   .nhi-fill (wrapping .nhi-wrap + the breakdown
    block) is the flex:1 region that absorbs that surplus height and
    redistributes it via justify-content: space-between, so the breakdown
    block ends up flush with the panel's bottom edge instead of leaving dead
@@ -233,15 +228,66 @@
   top: calc(100% + 6px);
 }
 
-/* ── 3-column card grid ──────────────────────────────────────── */
+/* ── 2×2 hero grid: Software in Use | Most Reliable, Geographic
+   Distribution | Network Health Index ──────────────────────────
+   2026-09-12 visual pass to match a reference mockup's layout. Fixed 2
+   columns at every width down to the 768px breakpoint (unlike
+   .stats-cards-grid below, which only collapses to 2 columns under 1300px) —
+   this grid only ever holds these 4 panels, so there's no wider 4-across
+   state to preserve. DOM order is Software, Most Reliable, Geo, NHI, which
+   doubles as the single-column mobile stack order (see the 768px override
+   below) — reordering the JSX reorders both without a separate mobile-only
+   rule. align-items: stretch matches each row's two panels to the taller
+   one's height, same mechanism .stats-cards-grid already used. */
+.stats-hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 14px var(--page-pad) 0;
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  width: 100%;
+  align-items: stretch;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .stats-hero-grid { grid-template-columns: 1fr; }
+}
+
+/* Small icon well in a panel's title row — same muted-fill/color-by-band
+   recipe as Dashboard's 40px .stat-icon (green/orange/gray), just sized for
+   an inline title instead of a hero tile. */
+.stats-panel-title-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.stats-panel-title-row .stats-panel-title {
+  margin-bottom: 0;
+}
+
+.stats-panel-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stats-panel-icon.green  { background: var(--green-soft);  color: var(--green-bright); }
+.stats-panel-icon.orange { background: var(--amber-soft);  color: var(--amber); }
+.stats-panel-icon.gray   { background: rgba(139, 148, 158, 0.1); color: var(--text-faint); }
+
+/* ── NUT Coverage / Trust Score Movers / Trust Score Trend grid ─── */
 /* Same chrome-width alignment as .stats-metrics above, so every panel below
    the hero tiles also left-aligns with the Dashboard mint grid.
-   align-items: stretch (was start) — row 1's four cells (the Software/Geo
-   column, Most Reliable, Network Health Index) now share one height, the
-   tallest of the four, instead of top-aligning and leaving a gap under
-   whichever is naturally shortest. Grid row sizing itself is unaffected —
-   stretch only changes whether shorter items in a row fill it or float at
-   the top, never which row's items influence the row's own height. */
+   align-items: stretch — NUT Coverage / Trust Score Movers share one row
+   height, the taller of the two. */
 .stats-cards-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;
@@ -254,9 +300,9 @@
   min-width: 0;
 }
 
-/* Row 2: NUT Coverage (span 3) + Network Health Index (1 col, no override
-   needed — auto-placement drops it into the remaining column). Row 3: Trust
-   Score Trend, full width (.stats-trend-panel below). */
+/* NUT Coverage (span 3) + Trust Score Movers (1 col, no override needed —
+   auto-placement drops it into the remaining column). Trust Score Trend,
+   full width (.stats-trend-panel below). */
 .stats-nut-panel {
   grid-column: span 3;
 }
@@ -265,30 +311,11 @@
   grid-column: 1 / -1;
 }
 
-/* Left block: Software in Use + Geographic Distribution, splitting the two
-   columns they have always occupied. Keeping the wrapper (rather than letting
-   the two panels sit in the outer grid directly) means row 1 stays a clean
-   4-across layout regardless of how NUT Coverage/NHI/Trend are spanned below.
-   align-items: stretch (was start) — this column, as one cell of the outer
-   .stats-cards-grid, now stretches to that row's full height (see the grid
-   comment above), and this in turn stretches ITS two children (Software,
-   Geographic Distribution) to fill it — closing the gap that used to sit
-   below both panels whenever Most Reliable / Network Health Index were
-   taller. */
-.stats-left-col {
-  grid-column: span 2;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  align-items: stretch;
-  min-width: 0;
-}
-
 /* Software in Use and Geographic Distribution both need the same flex-fill
-   mechanism as .nhi-fill now that .stats-left-col stretches them: a flex
+   mechanism as .nhi-fill now that .stats-hero-grid stretches them: a flex
    column whose content wrapper (.stats-sw-fill / .stats-geo-fill) uses
    flex:1 + justify-content:space-between, so any surplus height from
-   matching the row's tallest panel lands between the row list and the
+   matching the row's taller panel lands between the row list and the
    trailing footer/note — instead of stretching the rows themselves or (for
    Geographic Distribution) pushing "View others" outside the panel. */
 .stats-sw-panel,
@@ -1004,24 +1031,16 @@
 }
 
 /* ── Responsive ─────────────────────────────────────────────── */
-/* Threshold raised from 1100px to 1300px when the top row grew from 3 to 4
-   equal columns (Network Health Index) — each column is narrower than
-   before, so the 2-column fallback needs to kick in earlier to avoid the
-   4-across row cramping mint names/version rows before the columns get too
-   tight. At this width row 1's items settle into a 2x2-ish flow: [Software
-   in Use | Geo] full row (via left-col's own internal split), then [Most
-   Reliable | Network Health Index] side by side — same DOM-order auto-flow
-   Trust Score Movers used before the two panels swapped positions.
-   NUT Coverage and Trust Score Movers are reset to full-width (1 / -1) here
-   rather than left at span 3 / span 1 — a span larger than the grid's
-   actual column count doesn't clamp, it grows extra implicit columns, which
-   would silently break this 2-column layout. (Movers needs this now that
-   it's the one sitting next to NUT Coverage's span-3 override — without it,
-   it would auto-flow into its own half-empty row below NUT Coverage instead
-   of taking the full width. Network Health Index doesn't need this any
-   more, now that it naturally pairs with Most Reliable per the paragraph
-   above instead of sitting beside NUT Coverage.) Trust Score Trend needs no
-   override: .stats-trend-panel is always 1 / -1 regardless of column count. */
+/* .stats-cards-grid now holds only NUT Coverage (span 3) + Trust Score
+   Movers (span 1) + Trust Score Trend (full width) — the 2×2 hero panels
+   moved to their own always-2-column .stats-hero-grid above, which handles
+   its own mobile stacking independently (see its 768px rule). Below 1300px
+   NUT Coverage's span-3 no longer fits comfortably next to Movers' span-1,
+   so both reset to full-width (1 / -1) and stack — a span larger than the
+   grid's actual column count doesn't clamp, it grows extra implicit
+   columns, which would silently break a 2-column layout if left at their
+   4-column spans. Trust Score Trend needs no override: .stats-trend-panel
+   is always 1 / -1 regardless of column count. */
 @media (max-width: 1300px) {
   .stats-cards-grid { grid-template-columns: 1fr 1fr; }
   .stats-nut-panel { grid-column: 1 / -1; }
@@ -1030,21 +1049,12 @@
 
 @media (max-width: 768px) {
   .stats-cards-grid { grid-template-columns: 1fr; }
-  /* .stats-left-col's base `grid-column: span 2` was never reset at this
-     breakpoint — with the outer grid down to 1 explicit column, a leftover
-     span 2 doesn't clamp, it grows an implicit 2nd column, which silently
-     paired up whichever two single-span panels came right after it in DOM
-     order (originally Most Reliable + Trust Score Movers, now Most Reliable
-     + Network Health Index after the two panels swapped positions — the bug
-     and its fix are about DOM order, not which specific panels those are)
-     into that phantom column instead of stacking them, causing horizontal
-     overflow on mobile. */
-  .stats-left-col { grid-column: 1 / -1; grid-template-columns: 1fr; }
   .stats-nut-rows-grid { grid-template-columns: 1fr; overflow: hidden; }
   .stats-nut-panel { grid-column: 1 / -1; }
 }
 
 @media (max-width: 700px) {
+  .stats-hero-grid { padding: 10px var(--page-pad) 0; gap: 10px; }
   .stats-cards-grid { grid-template-columns: 1fr; padding: 10px var(--page-pad) 0; gap: 10px; }
   .stats-metrics { flex-wrap: wrap; gap: 8px; padding: 10px var(--page-pad); }
   .stats-metrics .stat-card { flex: 1 1 calc(50% - 4px); }
