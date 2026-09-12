@@ -36,13 +36,13 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 ### 🔍 Dashboard & Discovery
 
 - Search by name or URL
-- Advanced filter panel: Status, Trust Score minimum, Mint Age, NUT support
+- Advanced filter panel: Status, Trust Score minimum, NUT support
 - Active filters shown as dismissible tags
 - Sort by Latency / Name / Trust Score / **Community Rating** / **Most reviewed** (asc/desc) — Community Rating uses a weighted (Bayesian) average so a mint with two 5★ reviews doesn't outrank one with fifty
 - Controls row stays docked at the top of the list while you scroll
 - Compact and expanded card view toggle
 - Single URL or bulk mint submission (paste multiple URLs at once)
-- Known dev/test mints are badged as such and kept out of recommendations
+- Recently discovered mints get a **New** badge (first 30 days); known dev/test mints are badged separately and kept out of recommendations
 
 ### 📈 Historical Data
 
@@ -111,15 +111,6 @@ Mint Detail page shows community reviews as **kind:38000** events. On page load 
 ### 🔗 Social Link Previews
 
 Sharing a mint page link on Twitter/X, Discord, Telegram, Slack, or WhatsApp shows a preview card with that mint's name, Trust Score, and online status — server-rendered for link-preview crawlers that don't run JavaScript.
-
-### 🏷️ Mint Age Badges
-
-| Badge | Age |
-|-------|-----|
-| 🌱 Fresh | < 1 month |
-| ✅ Established | 1 – 6 months |
-| 🏛️ Veteran | 6 – 12 months |
-| 👑 OG | ≥ 12 months |
 
 ### 🔒 Privacy-First
 
