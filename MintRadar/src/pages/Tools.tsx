@@ -408,10 +408,22 @@ function limitsForUnit(methods: KnownMint['mintMethods'], unit: string): UnitLim
   }
 }
 
+function formatCompactAmount(n: number): string {
+  if (n >= 1_000_000) {
+    const m = n / 1_000_000
+    return `${Number.isInteger(m) ? m.toFixed(0) : m.toFixed(1)}M`
+  }
+  if (n >= 1_000) {
+    const k = n / 1_000
+    return `${Number.isInteger(k) ? k.toFixed(0) : k.toFixed(1)}k`
+  }
+  return String(n)
+}
+
 function formatLimits(limits: UnitLimits | null, unit: string): string | null {
   if (!limits) return null
-  const min = limits.min !== null ? limits.min.toLocaleString() : '—'
-  const max = limits.max !== null ? limits.max.toLocaleString() : '∞'
+  const min = limits.min !== null ? formatCompactAmount(limits.min) : '—'
+  const max = limits.max !== null ? formatCompactAmount(limits.max) : '∞'
   return `${min}–${max} ${unit}`
 }
 
@@ -643,9 +655,8 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
                   <div className="wizard-rec-info">
                     <div className="wizard-rec-name">{mintDisplayName(rec.mint)}</div>
                     <div className="wizard-rec-meta">
-                      {rec.latencyMs != null && <span>{rec.latencyMs}ms from your location</span>}
-                      {rec.mint.uptimePct24h != null && <span>· {rec.mint.uptimePct24h}% uptime</span>}
-                      {rec.mint.nutCount != null && <span>· {rec.mint.nutCount} NUTs</span>}
+                      {rec.latencyMs != null && <span>{rec.latencyMs}ms</span>}
+                      {rec.mint.uptimePct24h != null && <span> · {rec.mint.uptimePct24h}%</span>}
                     </div>
                     <div className="wizard-rec-limits">
                       {(mintRange ?? meltRange) !== null ? (
