@@ -21,15 +21,17 @@
 
 ### 🛡️ Trust Score System
 
-Composite score (0–100) calculated server-side after every probe. Shown alongside a separate **Community Rating** (average of Nostr reviews), so an operator-independent signal sits next to the objective one:
+Composite score (0–100) calculated server-side after every probe. Shown alongside a separate **Community Rating** (average of Nostr reviews), so an operator-independent signal sits next to the objective one. This is a health / transparency score — it does not measure solvency or whether a mint can pay out.
 
 | Component | Weight | Basis |
 |-----------|--------|-------|
 | Uptime | 40% | 24 h availability |
 | NUT Support | 15% | Supported NUT specs (out of the tracked mint-side set) |
 | Version Freshness | 15% | Recency of the mint's software release (Nutshell or cdk) vs. latest known version |
-| Contact Info | 5% | Contact methods provided (email, Twitter, Nostr, website) |
-| Audit Reliability | 25% | Rolling-window error rate (last ~100 real swaps) from audit.8333.space; new mints (<30 days) are capped at 75 |
+| Contact Info | 5% | Contact methods provided (email, Twitter, Nostr); capped at 3 channels |
+| Audit Reliability | 25% | Rolling-window error rate on the last ~100 real swaps from audit.8333.space. Fewer than 3 samples scores a neutral 12.5, not zero |
+
+Mints discovered less than **30 days** ago are **capped at 75**, even if every component is maxed.
 
 Interactive breakdown modal on each mint — hover any row for a tooltip explaining the scoring logic.
 
@@ -92,7 +94,7 @@ A 5-module "Cashu 101" course, written as plain-language text with custom illust
 
 1. **Cashu Basics** — what Cashu actually is: the mint holds your Bitcoin, you hold a bearer token, and blind signatures keep person-to-person transfers private
 2. **Understanding the Risks** — why a mint can disappear or refuse to pay, why nobody can currently verify a mint has real backing, and how to limit what you stand to lose
-3. **How to Choose a Mint** — what to check before trusting a mint (uptime, NUT support, operator transparency) and how MintRadar's Trust Score combines those signals
+3. **How to Choose a Mint** — what to check before trusting a mint (uptime, audit reliability, software version, operator transparency) and how MintRadar's Trust Score combines those signals
 4. **Getting Started with a Wallet** — choosing a wallet, adding your first mint, making a deposit, sending tokens, and why backing up your seed phrase is non-negotiable
 5. **Safe Habits** — day-to-day habits (diversifying mints, redeeming regularly, checking Trust Score first) that meaningfully reduce your risk
 
