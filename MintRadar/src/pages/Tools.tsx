@@ -655,8 +655,8 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
                   <div className="wizard-rec-info">
                     <div className="wizard-rec-name">{mintDisplayName(rec.mint)}</div>
                     <div className="wizard-rec-meta">
-                      {rec.latencyMs != null && <span>{rec.latencyMs}ms</span>}
-                      {rec.mint.uptimePct24h != null && <span> · {rec.mint.uptimePct24h}%</span>}
+                      {rec.latencyMs != null && <span>{rec.latencyMs}ms latency</span>}
+                      {rec.mint.uptimePct24h != null && <span> · {rec.mint.uptimePct24h}% uptime</span>}
                     </div>
                     <div className="wizard-rec-limits">
                       {(mintRange ?? meltRange) !== null ? (
