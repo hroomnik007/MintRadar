@@ -1,11 +1,17 @@
-/* Same max-width/inset as the Learn index (.learn-page-header/.learn-grid)
-   so navigating index → module never shifts the content's left edge or
-   width. */
+/* Page chrome stays at dashboard width so the Learn index → module
+   transition does not jump the viewport inset. The article itself is
+   narrower for readable line length. */
 .learn-module-page {
   min-height: 100vh;
   max-width: var(--dash-chrome-max);
   margin-inline: auto;
   padding: 20px var(--page-pad) 48px;
+  width: 100%;
+}
+
+.learn-module {
+  max-width: 720px;
+  margin-inline: auto;
   width: 100%;
 }
 
@@ -33,7 +39,7 @@
   color: var(--accent);
 }
 
-/* ── Module content typography ──────────────────────────────── */
+/* ── Module content typography ──────────────────────────── */
 .learn-content h1 {
   font-size: 24px;
   font-weight: 600;
