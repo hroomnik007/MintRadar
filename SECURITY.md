@@ -41,9 +41,10 @@ Expected response time: best effort, typically within 7 days.
 |------|-----------|
 | nsec in browser memory | Key is used only to derive the public key, then explicitly zeroed (`privkeyBytes.fill(0)`); never stored in localStorage, sessionStorage, or sent to the server |
 | NIP-44 encrypted watchlist | Encrypted with the user's own Nostr key; server never sees plaintext; decryption happens entirely in the browser |
-| Backend SSRF | All outbound probe URLs validated by `isSafeUrl()` (ipaddr.js + DNS resolution); private IP ranges, loopback, link-local, and CGNAT ranges are blocked |
-| XSS | No `dangerouslySetInnerHTML`; all user-controlled URLs validated before rendering; CSP header enforced via Nginx |
-| Dependency supply chain | Regular `npm audit`; full dependency scan documented in AUDIT.md |
+| Backend SSRF | Outbound probe URLs go through `checkUrlSafety()` / `safeFetch()` (`backend/src/ssrf.ts`): HTTPS only, private/loopback/link-local/CGNAT/IPv4-in-IPv6 blocked, DNS re-checked at connect time, redirects re-validated |
+| XSS | No `dangerouslySetInnerHTML`; user-controlled URLs validated before rendering; CSP via Nginx |
+| Rate limits | 60 req/min/IP on reads; tighter hourly caps on `/api/mint/submit` and `/api/mints/discover` |
+| Backend bind | Docker publishes the API as `127.0.0.1:3002` only — not on the public interface. Nginx on the host reverse-proxies `/api/` |
 
 ---
 
@@ -53,31 +54,26 @@ Expected response time: best effort, typically within 7 days.
 - All probes originate from a single Frankfurt IP — mints can detect and block this IP
 - nsec login leaves the derived public key in JS memory for the duration of the session; the raw private key bytes are zeroed immediately after derivation
 - Watchlist sync uses NIP-44 single-key encryption — no multi-sig or threshold encryption
-
----
-
-See [AUDIT.md](MintRadar/AUDIT.md) for the full security and privacy audit.
+- Trust Score is a health/transparency signal, not a measure of solvency
 
 ---
 
 ## Automated Security Testing
 
-MintRadar maintains a suite of **275 automated tests**, including **40 dedicated security tests** located in `backend/src/__tests__/security/`.
+GitHub Actions `deploy` runs the full frontend and backend test suites before deploy (`needs: test`). Dedicated security tests live in `backend/src/__tests__/security/` (CORS, headers, input validation, rate limiting, error leakage) plus `ssrfGuard.test.ts`.
+
+Exact test counts change as the suite grows — CI on `main` is the source of truth, not a number frozen in this file.
 
 ### Coverage
 
 | Area | What is tested |
 |------|---------------|
-| SSRF protection | `isSafeUrl()` blocks private IPv4/IPv6 ranges, loopback, link-local, CGNAT, and DNS rebinding attempts |
-| SQL injection | All DB queries use parameterized `pg` queries; injection payloads in `url`, `period`, and filter fields are verified safe |
-| Rate limiting | Per-IP limits on `/api/mint/submit` (20/hr) and `/api/mints/discover` (10/hr) return 429 on excess |
-| CORS allow-list | Only allowed origins receive `Access-Control-Allow-Origin`; arbitrary origins are rejected |
-| HTTP security headers | `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Content-Security-Policy` presence verified |
-| Input validation | XSS payloads, null bytes, oversized payloads (>10 kB URL), mass assignment fields, and prototype pollution keys are all rejected |
-| Error message leakage | 4xx/5xx responses are verified NOT to expose stack traces, internal paths, or DB schema details |
+| SSRF protection | `isSafeUrl()` / `safeFetch()` block private IPv4/IPv6 ranges, loopback, link-local, CGNAT, and DNS-rebinding-style resolutions |
+| SQL injection | DB access uses parameterized `pg` queries |
+| Rate limiting | Per-IP limits on `/api/mint/submit` and `/api/mints/discover` return 429 on excess |
+| CORS allow-list | Only allowed origins receive `Access-Control-Allow-Origin` |
+| HTTP security headers | HSTS, X-Content-Type-Options, X-Frame-Options, CSP presence |
+| Input validation | Oversized URLs, null bytes, and unexpected fields are rejected |
+| Error message leakage | 4xx/5xx responses must not expose stack traces, internal paths, or DB schema |
 
-### CI enforcement
-
-The GitHub Actions `deploy` workflow includes a `test` job that runs all 275 tests. The `deploy` job declares `needs: test` and is blocked if any test fails. Security regressions cannot reach production undetected.
-
-Last security test review: **2026-06-30** — no defects found.
+Last documentation review: **2026-09-12**.
