@@ -3,8 +3,6 @@
   background: transparent;
 }
 
-/* Constrained + centered to the same width/inset as .mint-grid (Dashboard)
-   so the tool cards' left edge lines up with the first Dashboard mint card. */
 .tools-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -25,7 +23,6 @@
   outline-offset: 3px;
 }
 
-/* ── Shared tool card ─────────────────────────────────────────── */
 .tool-card {
   background: var(--bg2);
   border: 1px solid var(--border);
@@ -45,18 +42,24 @@
 
 .tool-title {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-family: var(--font-mono);
+  letter-spacing: -0.01em;
+  font-family: var(--font-body);
 }
 
 .tool-subtitle {
   font-size: 13px;
-  color: var(--text2);
-  font-family: var(--font-mono);
+  color: var(--t2, var(--text2));
+  font-family: var(--font-body);
   line-height: 1.5;
+}
+
+.tool-hint {
+  font-size: 12px;
+  color: var(--t3, var(--text3));
+  font-family: var(--font-body);
+  line-height: 1.4;
 }
 
 .wizard-disclaimer {
@@ -74,8 +77,6 @@
   border-radius: 8px;
   cursor: pointer;
   transition: opacity 150ms ease;
-  /* Match the app's prevailing primary-button type (.submit-btn): 12px / 500,
-     body font. Was 13px/600 on an undefined var(--font-sans). */
   font-size: 12px;
   font-weight: 500;
   font-family: var(--font-body);
@@ -90,7 +91,6 @@
   opacity: 0.85;
 }
 
-/* ── Token Inspector ──────────────────────────────────────────── */
 .token-input {
   width: 100%;
   box-sizing: border-box;
@@ -98,7 +98,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px 12px;
-  font-size: 11px;
+  font-size: 14px;
   font-family: var(--font-mono);
   color: var(--text);
   resize: vertical;
@@ -152,7 +152,6 @@
 }
 
 .trc-value {
-  /* Same value-figure recipe as .stat-value / .smc-value / .md-sc-value. */
   font-size: 20px;
   font-weight: 700;
   color: var(--text);
@@ -232,11 +231,6 @@
 }
 
 .token-action-btn {
-  /* A basis of 0 (plain "flex: 1") lets flexbox shrink each button past its label's
-     natural width instead of wrapping to a new line — that's what was clipping "View
-     Mint Detail"/"Open in wallet"/"Redeem to Lightning" on narrow screens. A real
-     basis makes the row wrap onto two lines once three buttons don't fit, instead of
-     squeezing all three onto one. */
   flex: 1 1 140px;
   padding: 7px 12px;
   background: var(--bg3);
@@ -257,7 +251,6 @@
   color: var(--accent);
 }
 
-/* ── Token Inspector: DLEQ verification ───────────────────────── */
 .token-verify {
   display: flex;
   flex-direction: column;
@@ -296,9 +289,6 @@
   border: 1px solid var(--copper-soft-strong);
 }
 
-/* Small label + ⓘ row used above the DLEQ result and next to the "Check if
-   spent" button — replaces the always-visible explainer paragraphs that used
-   to sit here (moved into InfoTooltip, same hover/tap pattern as Stats.tsx). */
 .token-section-label {
   display: flex;
   align-items: center;
@@ -310,12 +300,6 @@
   letter-spacing: 0.02em;
 }
 
-/* Tools' ⓘ tooltips (DLEQ / NUT-07 / risk badge) now use the shared
-   <InfoTooltip> component (src/components/InfoTooltip.tsx) with its own
-   co-located CSS — the old page-local .token-info-icon / .audit-tooltip
-   rules were removed 2026-09-08. */
-
-/* ── Token Inspector: NUT-07 "Check if spent" ─────────────────── */
 .token-spent {
   display: flex;
   flex-direction: column;
@@ -333,7 +317,6 @@
   flex: 0 0 auto;
 }
 
-/* ── Best Mint Wizard ─────────────────────────────────────────── */
 .wizard-steps {
   display: flex;
   align-items: center;
@@ -394,6 +377,7 @@
   font-weight: 400;
   color: var(--text);
   letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
 }
 
 .wizard-options {
@@ -480,6 +464,7 @@
 .wizard-rec-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 10px 12px;
   background: var(--bg3);
@@ -487,6 +472,7 @@
   border-radius: 8px;
   cursor: pointer;
   transition: border-color 150ms ease, background 150ms ease;
+  min-width: 0;
 }
 
 .wizard-rec-row:hover {
@@ -524,9 +510,8 @@
   font-size: 10px;
   color: var(--text3);
   font-family: var(--font-mono);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .wizard-rec-score {
@@ -536,13 +521,12 @@
   flex-shrink: 0;
 }
 
-/* Result-row badges — same visual language as the Dashboard mint card's
-   Trust pill (shield + "Trust N") and LN chip. */
 .wizard-rec-badges {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
-  flex-shrink: 0;
+  min-width: 0;
 }
 .wizard-rec-trust,
 .wizard-rec-ln {
@@ -566,7 +550,6 @@
   flex-shrink: 0;
 }
 
-/* ── Desktop: keep Inspect Token from stretching full panel width ─ */
 @media (min-width: 901px) {
   .inspect-token-btn {
     max-width: 280px;
@@ -574,7 +557,6 @@
   }
 }
 
-/* ── Responsive ───────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .tools-grid {
     grid-template-columns: 1fr;
@@ -592,7 +574,16 @@
   }
 
   .wizard-options-row {
-    flex-wrap: wrap;
+    flex-direction: column;
+  }
+
+  .wizard-options-row .wizard-opt {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .wizard-rec-view {
+    margin-left: auto;
   }
 }
 
@@ -620,9 +611,8 @@
   font-size: 10px;
   color: var(--text3);
   font-family: var(--font-mono);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
   margin-top: 2px;
 }
 
