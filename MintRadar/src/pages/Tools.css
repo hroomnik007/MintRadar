@@ -262,7 +262,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -274,39 +274,39 @@
   background: rgba(23, 232, 127, 0.04);
 }
 .wizard-rank {
-  font-size: 11px; font-family: var(--font-mono); color: var(--text3);
-  width: 20px; flex-shrink: 0; text-align: right;
+  font-size: 13px; font-family: var(--font-mono); color: var(--text3);
+  width: 22px; flex-shrink: 0; text-align: right;
 }
 .wizard-rec-info {
   flex: 1; min-width: 0;
-  display: flex; flex-direction: column; gap: 2px;
+  display: flex; flex-direction: column; gap: 3px;
 }
 .wizard-rec-name {
-  font-size: 13px; font-weight: 600; color: var(--text);
+  font-size: 16px; font-weight: 600; color: var(--text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .wizard-rec-meta {
-  font-size: 10px; color: var(--text3); font-family: var(--font-mono); line-height: 1.45;
+  font-size: 13px; color: var(--text2); font-family: var(--font-body); line-height: 1.45;
 }
 .wizard-rec-score { font-size: 14px; font-weight: 700; font-family: var(--font-mono); flex-shrink: 0; }
 .wizard-rec-badges { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .wizard-rec-trust,
 .wizard-rec-ln {
   display: inline-flex; align-items: center; gap: 3px;
-  font-size: 11px; font-family: var(--font-mono-data);
+  font-size: 12px; font-family: var(--font-mono-data);
   background: var(--elevated); border: 1px solid var(--brd);
-  border-radius: 4px; padding: 1px 6px; white-space: nowrap;
+  border-radius: 4px; padding: 3px 8px; white-space: nowrap;
 }
 .wizard-rec-ln { color: var(--t3); }
 .wizard-rec-view {
-  font-size: 11px; color: var(--text3); font-family: var(--font-mono); flex-shrink: 0;
+  font-size: 13px; color: var(--text2); font-family: var(--font-body); flex-shrink: 0;
 }
 .wizard-rec-limits {
-  font-size: 10px; color: var(--text3); font-family: var(--font-mono);
+  font-size: 13px; color: var(--text2); font-family: var(--font-body);
   line-height: 1.45; margin-top: 1px;
 }
 .wizard-rec-note {
-  margin-top: 10px; font-size: 11px; line-height: 1.5; color: var(--text3);
+  margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--text3);
 }
 
 @media (min-width: 901px) {
@@ -331,7 +331,7 @@
     row-gap: 8px;
     align-items: start;
   }
-  .wizard-rank { grid-area: rank; width: auto; text-align: left; padding-top: 6px; }
+  .wizard-rank { grid-area: rank; width: auto; text-align: left; padding-top: 8px; }
   .wizard-rec-row > :nth-child(2) { grid-area: icon; }
   .wizard-rec-info { grid-area: info; }
   .wizard-rec-badges { grid-area: badges; }
