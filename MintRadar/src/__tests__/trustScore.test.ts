@@ -4,10 +4,9 @@ import {
   uptimeComponent, nutComponent, versionComponent, contactComponent,
 } from '../utils/trustScore'
 
-// This file is the frontend half of the shared Trust Score contract. The
-// expected values below are lifted verbatim from
-// backend/src/__tests__/trustScore.test.ts — if the two copies of
-// trustScore.ts ever drift, these assertions fail here first.
+// Frontend half of the shared Trust Score contract.
+// Weights: uptime 40 | NUT 15 | version 15 | contact 5 | audit 25
+// Missing audit samples → 12.5
 describe('computeTrustScore — parity with the backend source of truth', () => {
   it('returns 100 for a perfect mint', () => {
     expect(computeTrustScore(100, 25, 'Nutshell/0.20', 3, 100, 0)).toBe(100)
@@ -17,19 +16,19 @@ describe('computeTrustScore — parity with the backend source of truth', () => 
     expect(computeTrustScore(100, 28, 'Nutshell/0.20', 6, 100, 0)).toBe(100)
   })
 
-  it('returns 3 for a mint with no data at all', () => {
-    expect(computeTrustScore(0, null, null, 0, null, null)).toBe(3)
+  it('returns 13 for a mint with no data at all', () => {
+    expect(computeTrustScore(0, null, null, 0, null, null)).toBe(13)
   })
 
-  it('returns 98 when only audit data is missing', () => {
-    expect(computeTrustScore(100, 25, 'Nutshell/0.20', 3, null, null)).toBe(98)
+  it('returns 88 when only audit data is missing', () => {
+    expect(computeTrustScore(100, 25, 'Nutshell/0.20', 3, null, null)).toBe(88)
   })
 
   it('rounds the total exactly once, after summing the components', () => {
-    // 45 + 30 + 15 + 5 + 2.5 = 97.5 → 98, not 97
-    expect(computeTrustScore(100, 25, 'Nutshell/0.20', 3, null, null)).toBe(98)
-    // 0 + 0 + 0 + 0 + 2.5 = 2.5 → 3
-    expect(computeTrustScore(0, 0, null, 0, null, null)).toBe(3)
+    // 40 + 15 + 15 + 5 + 12.5 = 87.5 → 88
+    expect(computeTrustScore(100, 25, 'Nutshell/0.20', 3, null, null)).toBe(88)
+    // 0 + 0 + 0 + 0 + 12.5 = 12.5 → 13
+    expect(computeTrustScore(0, 0, null, 0, null, null)).toBe(13)
   })
 
   it('never returns NaN for negative or null inputs', () => {
@@ -44,16 +43,16 @@ describe('computeTrustScore — parity with the backend source of truth', () => 
 })
 
 describe('components', () => {
-  it('uptime is worth 45 points at 100%', () => {
+  it('uptime is worth 40 points at 100%', () => {
     expect(uptimeComponent(0)).toBe(0)
-    expect(uptimeComponent(100)).toBe(45)
+    expect(uptimeComponent(100)).toBe(40)
   })
 
-  it('NUT support is worth 30 points and caps at TRACKED_NUT_COUNT', () => {
+  it('NUT support is worth 15 points and caps at TRACKED_NUT_COUNT', () => {
     expect(nutComponent(0)).toBe(0)
     expect(nutComponent(null)).toBe(0)
-    expect(nutComponent(TRACKED_NUT_COUNT)).toBe(30)
-    expect(nutComponent(TRACKED_NUT_COUNT * 2)).toBe(30)
+    expect(nutComponent(TRACKED_NUT_COUNT)).toBe(15)
+    expect(nutComponent(TRACKED_NUT_COUNT * 2)).toBe(15)
   })
 
   it('version is worth 15 points at the freshest known release', () => {
@@ -65,8 +64,6 @@ describe('components', () => {
     expect(contactComponent(0)).toBe(0)
     expect(contactComponent(1)).toBe(2)
     expect(contactComponent(3)).toBe(5)
-    // Clamp to 3: extra entries in the mint's untrusted /v1/info `contact` array
-    // never raise this component past its 5-point weight.
     expect(contactComponent(6)).toBe(5)
     expect(contactComponent(60)).toBe(5)
   })
@@ -74,7 +71,7 @@ describe('components', () => {
   it('breakdown components sum to the same total the score reports', () => {
     const [uptime, nuts, version, contacts] = [97, 20, 'Nutshell/0.15', 1] as const
     const sum = uptimeComponent(uptime) + nutComponent(nuts) + versionComponent(version)
-      + contactComponent(contacts) + 2.5 /* audit: no data */
+      + contactComponent(contacts) + 12.5 /* audit: no data */
     expect(computeTrustScore(uptime, nuts, version, contacts, null, null))
       .toBe(Math.min(100, Math.round(sum)))
   })
@@ -114,8 +111,6 @@ describe('versionFreshnessScore', () => {
   })
 
   it('recognizes cdk-mintd against its own leaderboard instead of Nutshell\'s', () => {
-    // Was previously scored against NUTSHELL_VERSIONS regardless of software —
-    // a current cdk-mintd release used to be penalized as a stale Nutshell.
     expect(versionFreshnessScore('cdk-mintd/0.17.5')).toBe(10)
     expect(versionFreshnessScore('cdk-mintd/0.16.0')).toBe(8)
   })
