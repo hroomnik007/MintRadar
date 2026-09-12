@@ -445,6 +445,8 @@ function MintDetailContent({ url }: { url: string }) {
   const auditErrorsTooltip = useTapTooltip(auditErrorsRef)
   const auditRecentRef = useRef<HTMLSpanElement>(null)
   const auditRecentTooltip = useTapTooltip(auditRecentRef)
+  const auditAvgTimeRef = useRef<HTMLSpanElement>(null)
+  const auditAvgTimeTooltip = useTapTooltip(auditAvgTimeRef)
   const breakdownUptimeRef = useRef<HTMLSpanElement>(null)
   const breakdownUptimeTooltip = useTapTooltip(breakdownUptimeRef)
   const breakdownNutRef = useRef<HTMLSpanElement>(null)
@@ -456,6 +458,33 @@ function MintDetailContent({ url }: { url: string }) {
   const breakdownAuditRef = useRef<HTMLSpanElement>(null)
   const breakdownAuditTooltip = useTapTooltip(breakdownAuditRef)
   const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'nuts' | 'audit' | 'reviews'>('overview')
+  // Last ≤100 audit.8333.space swaps for this mint (backend/src/discovery.ts's
+  // mint_audit_swaps, served via GET /api/mints/swaps — never audit.8333.space
+  // directly). Lazily fetched only once the Audit tab is actually opened, and
+  // cached from then on for the rest of the session.
+  const { data: auditSwapsData, isLoading: auditSwapsLoading } = useQuery({
+    queryKey: ['mint', 'audit-swaps', url],
+    queryFn: async () => {
+      const res = await fetch(`/api/mints/swaps?url=${encodeURIComponent(url)}`)
+      if (!res.ok) throw new Error('Failed to fetch audit swaps')
+      return await res.json() as {
+        url: string
+        avgTimeMs: number | null
+        swaps: Array<{
+          swapId: number
+          toUrl: string | null
+          amount: number | null
+          fee: number | null
+          createdAt: string | null
+          timeTakenMs: number | null
+          state: string
+          error: string | null
+        }>
+      }
+    },
+    enabled: activeTab === 'audit',
+    staleTime: 5 * 60 * 1000,
+  })
   const [showComparePicker, setShowComparePicker] = useState(false)
   const [compareSelectedUrls, setCompareSelectedUrls] = useState<Set<string>>(new Set())
   const [showComparisonModal, setShowComparisonModal] = useState(false)
@@ -718,11 +747,27 @@ function MintDetailContent({ url }: { url: string }) {
   const auditSyncedAt = knownMint?.auditSyncedAt ?? null
   const auditLastCheckedDisplay = formatTimeAgo(auditSyncedAt ? new Date(auditSyncedAt) : null)
   const stripRecentSuccessDisplay = formatAuditSuccessRatio(breakdownAuditRecentTotal, breakdownAuditRecentErrors)
+  const stripRecentSuccessPct = breakdownAuditRecentTotal !== null && breakdownAuditRecentTotal > 0
+    ? Math.round(((breakdownAuditRecentTotal - (breakdownAuditRecentErrors ?? 0)) / breakdownAuditRecentTotal) * 100)
+    : null
   const stripRecentSuccessSub = breakdownAuditRecentTotal === null
     ? 'no recent swaps'
     : isAuditUnknown(breakdownAuditRecentTotal)
       ? 'too few to score'
-      : 'ok'
+      : `${stripRecentSuccessPct}% ok`
+
+  // Average duration of the successful swaps in the same rolling window
+  // (backend/src/discovery.ts's computeSwapStats() → mints.audit_avg_time_ms).
+  const auditAvgTimeMs = knownMint?.auditAvgTimeMs ?? null
+  const auditAvgTimeDisplay = auditAvgTimeMs !== null ? `${Math.round(auditAvgTimeMs)} ms` : 'n/a'
+
+  // Last ≤100 swaps, newest first (the backend already orders by created_at
+  // DESC) — the outcome bar and the "Recent swaps" table below both read from
+  // this same array so they can never disagree.
+  const auditSwaps = auditSwapsData?.swaps ?? []
+  const AUDIT_SWAP_BAR_MAX = 44
+  const auditSwapBarItems = auditSwaps.slice(0, AUDIT_SWAP_BAR_MAX)
+  const auditRecentSwapRows = auditSwaps.slice(0, 8)
 
   // Average rating is computed only over events that actually carry a numeric
   // rating — rating-less endorsement events are counted in the review total but
@@ -1741,6 +1786,26 @@ function MintDetailContent({ url }: { url: string }) {
                     </div>
                   </div>
                   <div className="audit-summary-cell">
+                    <div className="audit-summary-value" style={{fontSize:15}}>{auditAvgTimeDisplay}</div>
+                    <div className="audit-summary-label">
+                      Avg swap time
+                      <span
+                        ref={auditAvgTimeRef}
+                        style={{position:'relative',display:'inline-flex',marginLeft:3}}
+                        onPointerEnter={auditAvgTimeTooltip.onPointerEnter}
+                        onPointerLeave={auditAvgTimeTooltip.onPointerLeave}
+                        onClick={auditAvgTimeTooltip.onClick}
+                      >
+                        <Info size={11} color="#6b7280" style={{cursor:'help'}} />
+                        {auditAvgTimeTooltip.open && (
+                          <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
+                            Average duration of the successful swaps in the same rolling window as Recent success rate.
+                          </div>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="audit-summary-cell">
                     <div className="audit-summary-value" style={{fontSize:15}}>{auditLastCheckedDisplay}</div>
                     <div className="audit-summary-label">
                       Last checked
@@ -1761,6 +1826,65 @@ function MintDetailContent({ url }: { url: string }) {
                     </div>
                   </div>
                 </div>
+
+                {/* Outcome bar — last ≤44 swaps, newest left (the backend
+                    already orders by created_at DESC, so no client-side
+                    reverse is needed). Nothing renders here until the swap
+                    fetch actually resolves with data — never a fake/empty bar. */}
+                {auditSwapBarItems.length > 0 && (
+                  <div className="audit-swap-bar" title="Last swaps, newest first">
+                    {auditSwapBarItems.map(s => (
+                      <div
+                        key={s.swapId}
+                        className={`audit-swap-bar-mark ${s.state === 'OK' ? 'audit-swap-bar-ok' : 'audit-swap-bar-fail'}`}
+                        title={`${s.state}${s.createdAt ? ` · ${s.createdAt}` : ''}`}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Recent swaps — last 8, newest first. Failed rows are muted red. */}
+                {auditRecentSwapRows.length > 0 && (
+                  <div className="audit-recent-swaps">
+                    <div className="audit-recent-swaps-title">Recent swaps</div>
+                    <div className="audit-swaps-table-wrap">
+                      <table className="audit-swaps-table">
+                        <thead>
+                          <tr>
+                            <th>To</th>
+                            <th>Amount</th>
+                            <th>Fee</th>
+                            <th>Duration</th>
+                            <th>State</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {auditRecentSwapRows.map(s => (
+                            <tr key={s.swapId} className={s.state !== 'OK' ? 'audit-swap-row-fail' : ''}>
+                              <td>{s.toUrl ? mintHostname(s.toUrl) : '—'}</td>
+                              <td>{s.amount !== null ? `${s.amount} sat` : '—'}</td>
+                              <td>{s.fee !== null ? s.fee : '—'}</td>
+                              <td>{s.timeTakenMs !== null ? `${Math.round(s.timeTakenMs)} ms` : '—'}</td>
+                              <td>{s.state}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+                {auditSwapsLoading && auditSwaps.length === 0 && (
+                  <div style={{fontSize:12.5,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:4}}>Loading recent swaps…</div>
+                )}
+
+                <a
+                  href="https://audit.8333.space/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="audit-external-link"
+                >
+                  Open on audit.8333.space →
+                </a>
               </div>
             ) : (
               <div className="md-panel">

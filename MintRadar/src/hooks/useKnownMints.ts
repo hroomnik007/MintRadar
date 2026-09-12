@@ -26,6 +26,10 @@ export interface KnownMint {
   auditSyncedAt?: string | null
   auditRecentTotal?: number | null
   auditRecentErrors?: number | null
+  // Mean time_taken (ms) over the OK swaps in the same rolling window as
+  // auditRecentTotal/Errors (backend/src/discovery.ts's computeSwapStats()).
+  // Null when the window has no OK swap with a known time.
+  auditAvgTimeMs?: number | null
   discoveredAt?: string | null
   trustScore?: number | null
   lastError?: string | null
