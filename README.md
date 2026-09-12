@@ -26,7 +26,7 @@ Composite score (0–100) calculated server-side after every probe. Shown alongs
 | Component | Weight | Basis |
 |-----------|--------|-------|
 | Uptime | 45% | 24 h availability |
-| NUT Support | 30% | Supported NUT specs (out of 25 tracked) |
+| NUT Support | 30% | Supported NUT specs (out of the tracked mint-side set) |
 | Version Freshness | 15% | Recency of the mint's software release (Nutshell or cdk) vs. latest known version |
 | Contact Info | 5% | Contact methods provided (email, Twitter, Nostr, website) |
 | Audit Reliability | 5% | Rolling-window error rate (last ~100 real swaps) from audit.8333.space |
@@ -54,17 +54,19 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 ### 🌐 Global Stats
 
 - Network-wide totals: online/offline counts, average trust score, average latency
-- Trust Score distribution donut chart
-- Top 5 mints by Trust Score
-- NUT adoption rates across the full network
+- Trust Score distribution
+- Top mints by Trust Score
+- NUT adoption across the network
+- Software in use across known mints
+- Trust movers — recent risers and fallers
 
 ### 🧩 NUT Explorer
 
-25 tracked NUT cards (NUT-04, 05, 07–30, excluding NUT-13 — a wallet-side spec no mint ever advertises) — each showing adoption %, supporting mint count, and a link to the specification. Expandable "+N more" modal with a searchable list of all supporting mints.
+Tracked mint-side NUT cards (NUT-04, 05, 07–30; NUT-13 is a wallet-side spec and is not advertised by mints) — each showing adoption %, supporting mint count, and a link to the specification. Expandable list of supporting mints.
 
 ### ⚖️ Mint Comparison Tool
 
-Select 2–4 mints and compare side-by-side: Status, Trust Score, Community Rating, Uptime, Latency, NUT support grid, Software version, Backup support (NUT-13). On narrow screens the side-by-side table becomes a stacked/tabbed layout — one mint at a time, no horizontal scrolling.
+Select 2–4 mints and compare side-by-side: Status, Trust Score, Community Rating, Uptime, Latency, NUT support grid, software version. On narrow screens the table becomes a stacked/tabbed layout — one mint at a time, no horizontal scrolling.
 
 ### 👁️ Watchlist with Nostr Login
 
@@ -77,12 +79,12 @@ Select 2–4 mints and compare side-by-side: Status, Trust Score, Community Rati
 
 ### 📡 Nostr NIP-87 Discovery
 
-Automatic mint discovery running every 6 hours from 17 Nostr relays (damus.io, nos.lol, purplepag.es, snort.social, primal.net, cashumints.space, azzamo.net, eden.nostr.land, nostr.wine, nostr-pub.wellorder.net, offchain.pub, relay.8333.space, oxtr.dev, nostr.net, nostr21.com, nostr.bitcoiner.social, nostr.cypherpunk.today) using **kind:38172** mint announcements and **kind:38000** review events (URL mining), plus the **audit.8333.space** API — 3 sources running in parallel.
+Automatic mint discovery on a schedule from a set of public Nostr relays, using **kind:38172** mint announcements and **kind:38000** review events (URL mining), plus the **audit.8333.space** API — sources running in parallel.
 
 ### 🔧 Tools
 
-- **Token Inspector** — paste a Cashu token (cashuA / v3 format) to instantly see its mint, amount, unit, proof count, memo, mint status, and Trust Score, plus a risk badge for the issuing mint — with a direct link to the Mint Detail page or Cashu.me for redeeming. An optional **Check if spent** action queries the mint (NUT-07) to tell you whether the proofs are still unspent, already redeemed, or only partially usable
-- **Best Mint for Me** — a 3-step wizard: pick your storage size, what matters most (speed / trust / NUT features), and software preference; latency to each candidate is measured live from your browser, and the top 3 matches are ranked with a weighted score
+- **Token Inspector** — paste a Cashu token (`cashuA` / `cashuB`) to see its mint, amount, unit, proof count, memo, mint status, and Trust Score, plus a risk badge for the issuing mint — with a link to Mint Detail or Cashu.me. Optional **Check if spent** queries the mint (NUT-07) for unspent / spent / partial proofs
+- **Best Mint for Me** — short wizard (unit, what matters most, whether you need seed-phrase restore). Latency is measured live from your browser; the top matches show latency, uptime, Trust Score, LN support, and mint/melt limits for the chosen unit
 
 ### 📚 Learn
 
@@ -96,19 +98,19 @@ A 5-module "Cashu 101" course, written as plain-language text with custom illust
 
 ### 👛 Wallet Directory
 
-A plain, hand-maintained list of **9 Cashu-compatible wallets** (Minibits, Nutstash, Macadamia, Sovran, Cashu.me, Agicash, Coinos, Zeus, Nutshell) — each with its supported platforms, a one-sentence description, and a link to the wallet's own site. No ranking, reviews, or affiliate links; purely informational.
+A hand-maintained list of Cashu-compatible wallets — each with supported platforms, a short description, and a link to the wallet's own site. No ranking, reviews, or affiliate links.
 
 ### ⭐ Nostr-Based Reviews
 
-Mint Detail page shows community reviews as **kind:38000** events. On page load they're fetched live from a fast **7-relay** read set; a server-side sync every 6 hours additionally aggregates reviews from a broader **18-relay** set so the counts and averages stay complete. Ratings are parsed from review text (`[N/5]` format). Author profiles (name + avatar) are resolved from Nostr and displayed alongside each review. Images are only loaded over HTTPS.
+Mint Detail page shows community reviews as **kind:38000** events. On page load they're fetched live from a small fast relay set; a server-side sync additionally aggregates reviews from a broader relay set so counts and averages stay complete. Ratings are parsed from review text (`[N/5]` format). Author profiles (name + avatar) are resolved from Nostr. Images are only loaded over HTTPS.
 
-- Filter chips: **All**, **5★**, **Critical** (≤ 2★), and a separate **Hide anon** toggle — chip counts update to match what's actually shown
+- Filter chips: **All**, **5★**, **Critical** (≤ 2★), and a separate **Hide anon** toggle
 - A short disclaimer notes these are unverified NIP-87 events from the open Nostr network, not vetted testimonials
-- Write your own review from the page (rating → form), with a "Signing with …" indicator for the active login method
+- Write your own review from the page, with a "Signing with …" indicator for the active login method
 
 ### 🔗 Social Link Previews
 
-Sharing a mint page link on Twitter/X, Discord, Telegram, Slack, or WhatsApp shows a live preview card with that mint's actual name, Trust Score, and online status — server-rendered specifically for the sharing platform's link-preview crawler, since it doesn't run JavaScript.
+Sharing a mint page link on Twitter/X, Discord, Telegram, Slack, or WhatsApp shows a preview card with that mint's name, Trust Score, and online status — server-rendered for link-preview crawlers that don't run JavaScript.
 
 ### 🏷️ Mint Age Badges
 
@@ -123,14 +125,17 @@ Sharing a mint page link on Twitter/X, Discord, Telegram, Slack, or WhatsApp sho
 
 - **No analytics, no tracking, no telemetry, no third-party scripts**
 - **No cookies**
-- Fonts are self-hosted (DM Sans, JetBrains Mono) — no requests to Google Fonts or any external font CDN
+- Fonts are self-hosted — no requests to Google Fonts or any external font CDN
 - Nostr private keys **never leave your browser** and are never stored or transmitted to the backend
 - Watchlist data lives only in your browser (IndexedDB) or encrypted on Nostr relays under your own key
-- Full security and privacy audit documented in [AUDIT.md](MintRadar/AUDIT.md)
 
 ### 🔁 Automatic Backups
 
 PostgreSQL database backed up every 6 hours via server cron.
+
+### 📎 Public API
+
+Read-only JSON under `https://mintradar.org/api/` (for example `GET /api/mints/known`). Unofficial, rate-limited, may change. See [MintRadar/docs/API.md](MintRadar/docs/API.md).
 
 ---
 
@@ -141,7 +146,7 @@ PostgreSQL database backed up every 6 hours via server cron.
 - TanStack Query v5, Zustand, Dexie (IndexedDB)
 - Recharts, vite-plugin-pwa (PWA / offline support)
 - nostr-tools (NIP-07, NIP-44, NIP-46), @noble/secp256k1
-- Self-hosted fonts: DM Sans (variable) for body text, JetBrains Mono for general monospace UI — numeric/data values (latency, %, NUT counts) use a system `ui-monospace` stack instead, not a webfont
+- Self-hosted open-source fonts: **DM Sans** and **JetBrains Mono** (both SIL Open Font License 1.1), plus the system `ui-monospace` stack for numeric/data values — no Google Fonts, no CDN
 
 **Backend**
 - Node.js 22 + Express 5 + TypeScript
@@ -224,13 +229,12 @@ Serve the `dist/` directory with Nginx. See `MintRadar/deploy/nginx.conf` for th
 
 ## 🔐 Security
 
-MintRadar handles Nostr private keys and is used by the Bitcoin/Cashu community where trust matters. To report a vulnerability, see **[SECURITY.md](SECURITY.md)**. A full security and privacy audit is documented in **[AUDIT.md](MintRadar/AUDIT.md)**, covering:
+MintRadar handles Nostr private keys and is used by the Bitcoin/Cashu community where trust matters. To report a vulnerability, see **[SECURITY.md](SECURITY.md)**.
 
-- No tracking or telemetry (verified by code review)
-- Nostr private key handling — keys never stored or sent to the server; raw key bytes explicitly zeroed in memory after use
-- Dependency vulnerability scan and fixes
-- XSS/injection prevention — no `dangerouslySetInnerHTML`, all user-controlled URLs validated before rendering
-- Backend SSRF protection (DNS pinning + blocked IP ranges), rate limiting, and parameterized SQL queries
+- No tracking or telemetry
+- Nostr private keys never stored or sent to the server; raw nsec bytes are zeroed in memory after use
+- No `dangerouslySetInnerHTML`; user-controlled URLs are validated before rendering
+- Backend SSRF protection (DNS pinning + blocked IP ranges), rate limiting, parameterized SQL
 - Docker non-root containers and internal-only port binding
 - HTTP security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy)
 
@@ -245,6 +249,7 @@ Issues and pull requests are welcome. Please open an issue to discuss significan
 ## 🔗 Links
 
 - [MintRadar](https://mintradar.org)
+- [Public API](MintRadar/docs/API.md)
 - [Cashu Protocol](https://cashu.space)
 - [Nostr Protocol](https://nostr.com)
 - [NIP-87 — Mint Discovery](https://github.com/nostr-protocol/nips/blob/master/87.md)
@@ -254,6 +259,8 @@ Issues and pull requests are welcome. Please open an issue to discuss significan
 ## 📄 License
 
 [MIT](LICENSE)
+
+App code is MIT. Bundled webfonts are **SIL Open Font License 1.1** (DM Sans, JetBrains Mono) — both OSI-approved / libre licenses, self-hosted under `MintRadar/public/fonts/`.
 
 ---
 
