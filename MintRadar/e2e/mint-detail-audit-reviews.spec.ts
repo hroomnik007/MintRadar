@@ -38,7 +38,7 @@ test('Audit tab: summary strip "Recent success rate" matches the Trust Score bre
   // Cross-check against the sidebar Trust Score breakdown — same 3/100 window.
   await page.locator('.md-trust-panel').getByText('Details ›').click()
   await expect(page.getByText('Trust Score Breakdown')).toBeVisible()
-  await expect(page.getByText('Audit reliability (5%)')).toBeVisible()
+  await expect(page.getByText('Audit reliability (25%)')).toBeVisible()
   await expect(page.getByText('3.0% err')).toBeVisible() // 3/100 errors → same source as the strip's 97/100 successes
   await page.screenshot({ path: 'test-results/audit-breakdown-crosscheck.png' })
 })

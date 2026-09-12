@@ -22,7 +22,7 @@ const SEGMENTS: Segment[] = [
   { label: 'NUT Support', weight: 15, color: 'var(--copper)' },
   { label: 'Version freshness', weight: 15, color: 'var(--green)' },
   { label: 'Contact info', weight: 5, color: 'var(--amber)' },
-  { label: 'Audit reliability', weight: 5, color: 'var(--t3)' },
+  { label: 'Audit reliability', weight: 25, color: 'var(--t3)' },
 ]
 
 const RADIUS = 44
@@ -50,7 +50,7 @@ export function TrustScoreDonut() {
     <div
       className="learn-diagram donut-diagram"
       role="img"
-      aria-label="Trust Score weights: uptime 45%, NUT support 30%, version freshness 15%, contact info 5%, audit reliability 5%."
+      aria-label="Trust Score weights: uptime 40%, NUT support 15%, version freshness 15%, contact info 5%, audit reliability 25%."
     >
       <div className="donut-chart-wrap">
         <svg viewBox="0 0 120 120" fill="none">
