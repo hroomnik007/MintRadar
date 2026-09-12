@@ -2209,7 +2209,7 @@ function MintDetailContent({ url }: { url: string }) {
                 </div>
               ))}
             <div style={{borderTop:'0.5px solid var(--border)',paddingTop:12,marginTop:4,fontSize:10,color:'var(--text3)',lineHeight:1.6}}>
-              Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (<30 days) are capped at 75.
+              Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.
             </div>
           </div>
         </div>
