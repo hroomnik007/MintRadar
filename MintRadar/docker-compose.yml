@@ -8,6 +8,8 @@ services:
       - ./backend/.env
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    # Host bind is loopback only. Do not change this to "3002:3002" — that
+    # would expose Express on the public NIC and skip Nginx rate-limit/IP headers.
     ports:
       - "127.0.0.1:3002:3002"
     depends_on:
@@ -22,6 +24,7 @@ services:
       POSTGRES_DB: mintradar
       POSTGRES_USER: mintradar
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # No `ports:` — Postgres stays on the compose network only.
     volumes:
       - mintradar_pgdata:/var/lib/postgresql/data
     networks:
