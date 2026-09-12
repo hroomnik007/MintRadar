@@ -18,8 +18,8 @@ interface Segment {
 }
 
 const SEGMENTS: Segment[] = [
-  { label: 'Uptime', weight: 45, color: 'var(--green-bright)' },
-  { label: 'NUT Support', weight: 30, color: 'var(--copper)' },
+  { label: 'Uptime', weight: 40, color: 'var(--green-bright)' },
+  { label: 'NUT Support', weight: 15, color: 'var(--copper)' },
   { label: 'Version freshness', weight: 15, color: 'var(--green)' },
   { label: 'Contact info', weight: 5, color: 'var(--amber)' },
   { label: 'Audit reliability', weight: 5, color: 'var(--t3)' },

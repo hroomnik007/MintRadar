@@ -502,13 +502,14 @@ export async function probeMintToDb(url: string): Promise<void> {
       `SELECT
         m.nut_count, m.version, m.contact_count,
         m.audit_recent_total, m.audit_recent_errors,
+        m.discovered_at,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count
        FROM mints m
        LEFT JOIN mint_history h
          ON h.url = m.url AND h.checked_at > NOW() - INTERVAL '24 hours'
        WHERE m.url = $1
-       GROUP BY m.nut_count, m.version, m.contact_count, m.audit_recent_total, m.audit_recent_errors`,
+       GROUP BY m.nut_count, m.version, m.contact_count, m.audit_recent_total, m.audit_recent_errors, m.discovered_at`,
       [url]
     )
     const row = statsRes.rows[0]
@@ -532,7 +533,8 @@ export async function probeMintToDb(url: string): Promise<void> {
         effectiveContactCount,
         row.audit_recent_total as number | null,
         row.audit_recent_errors as number | null,
-        latestVersions
+        latestVersions,
+        row.discovered_at as string | null,
       )
       await pool.query(
         `UPDATE mints SET last_trust_score = $1, last_error = $2 WHERE url = $3`,

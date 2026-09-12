@@ -41,8 +41,8 @@ export default function Module3() {
       <TrustScoreDonut />
 
       <ul>
-        <li><strong>Uptime (45%)</strong> — how reliably the mint has responded over the last 24 hours</li>
-        <li><strong>NUT Support (30%)</strong> — how many of the tracked NUTs the mint supports</li>
+        <li><strong>Uptime (40%)</strong> — how reliably the mint has responded over the last 24 hours</li>
+        <li><strong>NUT Support (15%)</strong> — how many of the tracked NUTs the mint supports</li>
         <li><strong>Version freshness (15%)</strong> — how close the mint's software is to the latest release</li>
         <li><strong>Contact info (5%)</strong> — whether the operator has published a way to reach them</li>
         <li><strong>Audit reliability (5%)</strong> — real transaction success data from an independent auditor</li>

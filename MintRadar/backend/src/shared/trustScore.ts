@@ -131,7 +131,8 @@ function versionLadder(latest: { major: number; minor: number }, steps = 10): [n
  */
 export function versionFreshnessScore(
   v: string | null | undefined,
-  latestVersions?: Record<string, { major: number; minor: number }>
+  latestVersions?: Record<string, { major: number; minor: number }>,
+  discoveredAt?: string | null
 ): number {
   if (!v) return 0
   const { software, versionNumber } = splitVersionString(v)
@@ -153,14 +154,14 @@ export function versionFreshnessScore(
 // Exported separately so the Trust Score Breakdown UI shows exactly the numbers
 // that went into the total, rather than re-deriving them.
 
-/** Uptime over the last 24h — 45 points. */
+/** Uptime over the last 24h — 40 points. */
 export function uptimeComponent(uptimePct: number): number {
-  return Math.round(uptimePct * 0.45)
+  return Math.round(uptimePct * 0.40)
 }
 
-/** NUT support — 30 points, capped at TRACKED_NUT_COUNT NUTs. */
+/** NUT support — 15 points, capped at TRACKED_NUT_COUNT NUTs. */
 export function nutComponent(nutCount: number | null | undefined): number {
-  return Math.round(Math.min((nutCount ?? 0) / TRACKED_NUT_COUNT, 1) * 30)
+  return Math.round(Math.min((nutCount ?? 0) / TRACKED_NUT_COUNT, 1) * 15)
 }
 
 /** Software version freshness — 15 points. */
@@ -200,6 +201,19 @@ export function contactComponent(contactCount: number): number {
  * the same inputs, otherwise a mint's displayed breakdown won't add up to the
  * stored score.
  */
+
+export const NEW_MINT_MAX_DAYS = 30
+export const NEW_MINT_TRUST_CAP = 75
+
+export function applyNewMintCap(score: number, discoveredAt?: string | null, now = Date.now()): number {
+  if (!discoveredAt) return score
+  const t = new Date(discoveredAt).getTime()
+  if (!Number.isFinite(t)) return score
+  const days = (now - t) / 86_400_000
+  if (days >= 0 && days < NEW_MINT_MAX_DAYS) return Math.min(score, NEW_MINT_TRUST_CAP)
+  return score
+}
+
 export function computeTrustScore(
   uptimePct: number,
   nutCount: number | null,
@@ -207,12 +221,14 @@ export function computeTrustScore(
   contactCount: number,
   auditRecentTotal: number | null,
   auditRecentErrors: number | null,
-  latestVersions?: Record<string, { major: number; minor: number }>
+  latestVersions?: Record<string, { major: number; minor: number }>,
+  discoveredAt?: string | null,
 ): number {
   const uScore = uptimeComponent(uptimePct)
   const nScore = nutComponent(nutCount)
   const vScore = versionComponent(version, latestVersions)
   const cScore = contactComponent(contactCount)
   const aScore = auditReliabilityScore(auditRecentTotal, auditRecentErrors)
-  return Math.min(100, Math.round(uScore + nScore + vScore + cScore + aScore))
+  const total = Math.min(100, Math.round(uScore + nScore + vScore + cScore + aScore))
+  return applyNewMintCap(total, discoveredAt)
 }

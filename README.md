@@ -25,11 +25,11 @@ Composite score (0–100) calculated server-side after every probe. Shown alongs
 
 | Component | Weight | Basis |
 |-----------|--------|-------|
-| Uptime | 45% | 24 h availability |
-| NUT Support | 30% | Supported NUT specs (out of the tracked mint-side set) |
+| Uptime | 40% | 24 h availability |
+| NUT Support | 15% | Supported NUT specs (out of the tracked mint-side set) |
 | Version Freshness | 15% | Recency of the mint's software release (Nutshell or cdk) vs. latest known version |
 | Contact Info | 5% | Contact methods provided (email, Twitter, Nostr, website) |
-| Audit Reliability | 5% | Rolling-window error rate (last ~100 real swaps) from audit.8333.space |
+| Audit Reliability | 25% | Rolling-window error rate (last ~100 real swaps) from audit.8333.space; new mints (<30 days) are capped at 75 |
 
 Interactive breakdown modal on each mint — hover any row for a tooltip explaining the scoring logic.
 

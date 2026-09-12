@@ -18,15 +18,13 @@ export function auditReliabilityScore(
   recentTotal: number | null,
   recentErrors: number | null
 ): number {
-  // No data yet, or too few recent swaps to say anything meaningful — same neutral
-  // default as "no data at all" (the pre-existing null → 2.5 behavior).
-  if (recentTotal === null || recentTotal < AUDIT_MIN_SAMPLES) return 2.5
+  if (recentTotal === null || recentTotal < AUDIT_MIN_SAMPLES) return 12.5
   const errorRate = (recentErrors ?? 0) / recentTotal
-  if (errorRate === 0) return 5
-  if (errorRate < 0.01) return 4
-  if (errorRate < 0.05) return 3
-  if (errorRate < 0.15) return 2
-  return 1
+  if (errorRate === 0) return 25
+  if (errorRate < 0.01) return 20
+  if (errorRate < 0.05) return 15
+  if (errorRate < 0.15) return 10
+  return 5
 }
 
 // True when there's some audit history but not enough of it (< AUDIT_MIN_SAMPLES) to score

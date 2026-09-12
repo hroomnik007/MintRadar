@@ -160,8 +160,7 @@ anonymized sample payloads captured from a live diagnostic GET against the Minib
 - Uptime 45%: uptimePct * 0.45 (from 24h mint_history)
 - NUT Support 30%: min(nutCount/25, 1) * 30 — 25 is the number of NUTs actually tracked (`TRACKED_NUTS` in `src/constants/nuts.ts`, mirrored as `TRACKED_NUT_COUNT` in `backend/src/shared/trustScore.ts`); the "/26" written here previously was never what the code did
 - Version freshness 15%: software-aware version recency (fixed 2026-08-19 — previously every mint was compared against `NUTSHELL_VERSIONS` regardless of software, so a current `cdk-mintd` mint was penalized as a stale Nutshell, and unrecognized software with a higher major version — e.g. `LekMint/1.1.1` — got an automatic full score with zero verification). `versionFreshnessScore()` (`backend/src/shared/trustScore.ts`, mirrored in `src/utils/trustScore.ts`) first splits the raw `"Software/X.Y.Z"` version string (`splitVersionString()`) and identifies the software (`canonicalSoftwareName()` — case-insensitive, exact match only, so `Nutshell-CF` does NOT match `nutshell`). Recognized software (`nutshell`, `cdk`/`cdk-mintd`) is scored against its own version ladder; software with no ladder at all scores a neutral **2.5** (same neutral default as audit reliability's "Unknown" state — not 0, not 10). `normalizeVersionNumber()` strips a leading `v` (GitHub tag convention) and any `-rc.N`/prerelease suffix before comparing (patch number is extracted but not yet used by the scoring granularity). The version ladder itself prefers the `software_versions` DB table (`software`, `latest_version`, `fetched_at`, `source_url` — updated daily from the GitHub Releases API by `fetchLatestUpstreamVersions()` in `backend/src/versionCatalog.ts`, read via `getLatestVersionsMap()` and passed into `computeServerTrustScore()` in `prober.ts`) and falls back to the static `NUTSHELL_VERSIONS`/`CDK_VERSIONS` lists in `trustScore.ts` when the DB has no row yet for that software (fresh deploy, before the first cron run — `db.ts`'s `initDb()` seeds both rows so this never actually happens in practice). The frontend copy has no DB access and always uses the static fallback.
-- Audit reliability 5%: based on error rate from a **rolling window of the mint's last ~100 swaps** (`audit_recent_errors`/`audit_recent_total`, fetched per-mint from `GET /swaps/mint/{id}` on audit.8333.space — see Discovery pipeline below), not audit.8333.space's cumulative lifetime counters — bucket logic (0%→5, <1%→4, <5%→3, <15%→2, ≥15%→1, null or <3 samples ("Unknown")→2.5) lives in `backend/src/shared/auditScore.ts` (`auditReliabilityScore()`/`isAuditUnknown()`), the source of truth shared with the frontend's Trust Score Breakdown. `src/utils/auditScore.ts` is a manually-synced copy (the two packages have no workspace set up between them) — edit both if the logic ever changes. `audit_n_mints`/`audit_n_melts`/`audit_n_errors` (cumulative lifetime counts) are kept separately for the Audit tab's all-time context — they no longer feed the score. **Audit tab layout (2026-09-03):** the tab leads with a compact **`.audit-summary-strip`** — a 4-cell 5-second overview: **Mints** (`auditNMints`) · **Melts** (`auditNMelts`) · **Recent errors** (`formatAuditErrorRatio(auditRecentTotal, auditRecentErrors)` → `"<errors> / <total>"`, coloured by `auditReliabilityColor()` so it can't disagree at a glance with the sidebar Trust Score Breakdown; sub-line is `"<n>% ok"` / `"too few to score"` (via `isAuditUnknown()`) / `"no recent swaps"`) · **Last checked** (`formatTimeAgo(auditSyncedAt)` — **our** cron's write time, NOT `auditCheckedAt`). The strip sits *outside* the mobile collapse (always visible). Below it, inside the collapse, a single **`.audit-alltime-line`** carries the lifetime totals + `%` and the "Recent errors feeds Trust Score" note, plus a short explainer sentence (added 2026-09-04) clarifying that the recent-errors figure — not the all-time one — drives the Trust Score. This **replaced** the old 3-card all-time `.audit-stats-grid` + separate green "Recent reliability" `.audit-recent-card` band (both duplicated the same numbers). `formatTimeAgo`/`formatAuditErrorRatio` live in `src/utils/mintFormatting.ts` (unit-tested); e2e in `e2e/mint-detail-audit-summary-strip.spec.ts`. Window size = `AUDIT_SWAPS_WINDOW` (100) in `backend/src/discovery.ts`. **Note:** the strip's ratio helper is actually `formatAuditSuccessRatio` (successes/total) as of some point after this paragraph was written — the "Recent errors"/`formatAuditErrorRatio` wording above is stale; `MintDetail.tsx` is the source of truth.
-  - **2026-09-12 additions (frontend, consuming the `mint_audit_swaps`/`audit_avg_time_ms` backend work above):** the strip's "Recent success rate" sub-line now shows the actual percentage (`"<n>% ok"`, computed client-side from `auditRecentTotal`/`auditRecentErrors`) instead of the bare word "ok". A 5th strip cell, **Avg swap time**, renders `knownMint.auditAvgTimeMs` as `"<n> ms"` or `"n/a"`. Below the strip: an **outcome bar** (`.audit-swap-bar`, ≤44 marks, newest left — mint-green `.audit-swap-bar-ok` / red `.audit-swap-bar-fail`) and a **Recent swaps table** (`.audit-recent-swaps`, last 8 rows — To host via `mintHostname()`, Amount `sat`, Fee, Duration `ms`, State; failed rows muted red via `.audit-swap-row-fail`), both fed by a new `useQuery(['mint','audit-swaps',url])` against `GET /api/mints/swaps?url=` — lazily fetched only once the Audit tab is opened (`enabled: activeTab === 'audit'`), still never audit.8333.space directly from the browser. Neither the bar nor the table renders anything (no fake/placeholder marks) until that fetch actually resolves with a non-empty `swaps` array. A text link **"Open on audit.8333.space →"** (`.audit-external-link`, new tab, `rel="noopener noreferrer"`) points at the auditor's homepage, not a per-mint deep link — its own SPA bundle was checked and has no `/mint/:id`-style route (only `"/"` and a catch-all), so a guessed deep link would 404; `audit_id` itself is still not exposed by any API and wasn't added for this. Trust Score math, other tabs, and probes are unchanged.
+- Audit reliability 5%: based on error rate from a **rolling window of the mint's last ~100 swaps** (`audit_recent_errors`/`audit_recent_total`, fetched per-mint from `GET /swaps/mint/{id}` on audit.8333.space — see Discovery pipeline below), not audit.8333.space's cumulative lifetime counters — bucket logic (0%→5, <1%→4, <5%→3, <15%→2, ≥15%→1, null or <3 samples ("Unknown")→2.5) lives in `backend/src/shared/auditScore.ts` (`auditReliabilityScore()`/`isAuditUnknown()`), the source of truth shared with the frontend's Trust Score Breakdown. `src/utils/auditScore.ts` is a manually-synced copy (the two packages have no workspace set up between them) — edit both if the logic ever changes. `audit_n_mints`/`audit_n_melts`/`audit_n_errors` (cumulative lifetime counts) are kept separately for the Audit tab's all-time context — they no longer feed the score. **Audit tab layout (2026-09-03):** the tab leads with a compact **`.audit-summary-strip`** — a 4-cell 5-second overview: **Mints** (`auditNMints`) · **Melts** (`auditNMelts`) · **Recent success rate** (`formatAuditSuccessRatio(auditRecentTotal, auditRecentErrors)` → `"<successes> / <total>"` — **fixed 2026-09-11/12: renamed from "Recent errors"/`formatAuditErrorRatio`, which showed the error count as the headline number; the cell now leads with successes**, coloured by `auditReliabilityColor()` so it can't disagree at a glance with the sidebar Trust Score Breakdown; sub-line is `"<n>% ok"` / `"too few to score"` (via `isAuditUnknown()`) / `"no recent swaps"`) · **Last checked** (`formatTimeAgo(auditSyncedAt)` — **our** cron's write time, NOT `auditCheckedAt`). The strip sits *outside* the mobile collapse (always visible). Below it, inside the collapse, a single **`.audit-alltime-line`** carries the lifetime totals + `%` and the "Recent errors feeds Trust Score" note, plus a short explainer sentence (added 2026-09-04) clarifying that the recent-errors figure — not the all-time one — drives the Trust Score. This **replaced** the old 3-card all-time `.audit-stats-grid` + separate green "Recent reliability" `.audit-recent-card` band (both duplicated the same numbers). `formatTimeAgo`/`formatAuditErrorRatio` live in `src/utils/mintFormatting.ts` (unit-tested); e2e in `e2e/mint-detail-audit-summary-strip.spec.ts`. Window size = `AUDIT_SWAPS_WINDOW` (100) in `backend/src/discovery.ts`.  - **2026-09-12 additions (frontend, consuming the `mint_audit_swaps`/`audit_avg_time_ms` backend work above):** the strip's "Recent success rate" sub-line now shows the actual percentage (`"<n>% ok"`, computed client-side from `auditRecentTotal`/`auditRecentErrors`) instead of the bare word "ok". A 5th strip cell, **Avg swap time**, renders `knownMint.auditAvgTimeMs` as `"<n> ms"` or `"n/a"`. Below the strip: an **outcome bar** (`.audit-swap-bar`, ≤44 marks, newest left — mint-green `.audit-swap-bar-ok` / red `.audit-swap-bar-fail`) and a **Recent swaps table** (`.audit-recent-swaps`, last 8 rows — To host via `mintHostname()`, Amount `sat`, Fee, Duration `ms`, State; failed rows muted red via `.audit-swap-row-fail`), both fed by a new `useQuery(['mint','audit-swaps',url])` against `GET /api/mints/swaps?url=` — lazily fetched only once the Audit tab is opened (`enabled: activeTab === 'audit'`), still never audit.8333.space directly from the browser. Neither the bar nor the table renders anything (no fake/placeholder marks) until that fetch actually resolves with a non-empty `swaps` array. A text link **"Open on audit.8333.space →"** (`.audit-external-link`, new tab, `rel="noopener noreferrer"`) points at the auditor's homepage, not a per-mint deep link — its own SPA bundle was checked and has no `/mint/:id`-style route (only `"/"` and a catch-all), so a guessed deep link would 404; `audit_id` itself is still not exposed by any API and wasn't added for this. Trust Score math, other tabs, and probes are unchanged.
   - **`auditReliabilityColor()` (`src/utils/mintFormatting.ts`, 2026-09-04) is a separate, UI-only coloring function — deliberately NOT the same thresholds as `auditReliabilityScore()`'s 1-5 scoring buckets above**, and it does not feed the Trust Score number. It colors directly off the raw error rate: `var(--fast)` (green) at ≤5% errors, `var(--med)` (amber) at ≤25%, `var(--slow)` (red) above that — `< 3` samples renders muted (`var(--t3)`). The 1-5 score buckets are much stricter (e.g. a 5% error rate already scores 3/5, two tiers down), which read as misleadingly alarming at a glance for what's actually a 95%-success mint; the amber cutoff was widened from an initial 15% to 25% the same day after review. Used by both the Audit summary strip's "Recent errors" cell and the Trust Score Breakdown's "Audit reliability" row.
 - Stored in mints.last_trust_score after each probe
 - **The whole computation lives in `backend/src/shared/trustScore.ts`** (`computeTrustScore()` plus the per-component `uptimeComponent`/`nutComponent`/`versionComponent`/`contactComponent` helpers). `prober.ts` re-exports it as `computeServerTrustScore`/`serverVersionFreshnessScore` for its existing call sites and tests. `src/utils/trustScore.ts` is the manually-synced frontend copy (same no-workspace caveat as `auditScore.ts`) — edit both if the logic changes. The frontend used to carry a second, silently divergent implementation in `MintDetail.tsx` (its own `NUTSHELL_VERSIONS` list topped out at 0.21 vs. the backend's 0.16, so the Trust Score Breakdown's Version row could disagree with the total it was breaking down); that duplicate is gone.
@@ -390,8 +389,8 @@ batch pattern (`querySync` + race against a timeout, or `subscribeMany` resolved
   and a shield-badge Trust Score (see "Trust Score vs Community Rating" above) — added 2026-09-03.
 
 ## Key features
-- Dashboard: compact/expanded card view, filter panel (**Status + Min. Trust Score only** — the "Mint age" Fresh/Established/Veteran/OG block was removed 2026-09-08, see "Card badges" below; `requiredNuts` state still exists but URL-only, no panel UI), search, sort ("Most reviewed" before Rating; see "Dashboard controls row" below), mint comparison tool (up to 4, see "Compare feature" above), stats bar, submit form (single + bulk). One-line explainer above the grid (`.grid-score-explainer`): **"We score how it runs. They score how it went. You pick."** (13.5px / `--t2`).
-- Mint Detail: MOTD, NUT compatibility grid with modal, NUT limits (NUT-04/05), historical charts (24h/7d/30d/90d, Latency/Uptime/Trust), Mint History panel, version history, Trust Score gauge with breakdown, Audit stats, Add to Wallet + QR, NIP-87 reviews, backup checker (NUT-13). Header carries an inline **Online/Offline** pill next to the name, a **New** badge (< 30d), **First seen `<Mon YYYY>`** on the URL row (`firstSeenLabel()`), and a **`Tor`** label prefixing any `.onion` URL. Route param is canonicalized — see "Mint Detail route param canonicalization" below.
+- Dashboard: compact/expanded card view, filter panel (**Status + Min. Trust Score + Hide test mints** — the "Mint age" Fresh/Established/Veteran/OG block was removed 2026-09-08, and the Capabilities Restore/Bolt12/LN group was removed 2026-09-10, see "Dashboard default view + Capabilities filters removed" below; `requiredNuts` state still exists but URL-only, no panel UI), search, sort (default **Trust Score desc**, "Most reviewed" before Rating; see "Dashboard controls row" and "Dashboard default view" below), mint comparison tool (up to 4, see "Compare feature" above), stats bar, submit form (single + bulk). One-line explainer above the grid (`.grid-score-explainer`): **"We score how it runs. They score how it went. You pick."** (13.5px / `--t2`).
+- Mint Detail: MOTD, NUT compatibility grid with modal, NUT limits (NUT-04/05), a **Keysets panel** (desktop: Overview sidebar; mobile: NUTs tab — see "Mint Detail Keysets panel" below), historical charts (24h/7d/30d/90d, Latency/Uptime/Trust), Mint History panel, version history (real 3-column table — see below), Trust Score gauge with breakdown, Audit stats, Add to Wallet + QR, NIP-87 reviews, backup checker (NUT-13). Header carries an inline **Online/Offline** pill next to the name, a **New** badge (< 30d), **First seen `<Mon YYYY>`** on the URL row (`firstSeenLabel()`), and a **`Tor`** label prefixing any `.onion` URL. Route param is canonicalized — see "Mint Detail route param canonicalization" below.
 - Stats page: totalMints/onlineMints/offlineMints/avgTrustScore/avgLatency cards, NUT adoption horizontal bars, Trust Score donut chart, Most Reliable / Top Trust widget, Trust Score Movers, Network Health Index, Geographic Distribution, Software in Use. See "Stats widgets (2026-09-08)" below for the recent changes (test-mint exclusion, CDN bucket, software copy, subtitle omission).
 - Watchlist: IndexedDB only, Nostr login required, export JSON/CSV, DM notifications (NIP-07)
 - Wallets: curated list, `src/constants/wallets.ts`. Main grid = 8 end-user wallets (Minibits, Nutstash, Macadamia, Sovran, Cashu.me, Agicash, Coinos, Zeus). **Nutshell** carries `selfHost: true` and renders in a separate **"Run your own mint"** subsection below the grid (2026-09-08 — it's the reference implementation, not a consumer wallet). Card head: platform icon on the left + `.wallet-platform-tag` chips on the right only (the duplicate standalone platform word was removed). `Agicash` was renamed from `Boardwalk Cash`; `eNuts` was removed. No documented inclusion criteria beyond maintainer judgment.
@@ -577,8 +576,19 @@ The `.card-pills` row (lower body of `MintCard.tsx`) no longer carries age or id
   `.card-hdr-test-mint`, `.card-hdr-badge`. When a mint is both fresh and a known test mint the
   two render side by side. Neither is in `.card-pills` anymore. (`isTestMint()` detection and
   the Stats "Most Reliable" / Best Mint wizard exclusions are unchanged.)
-- **Trust pill** stays in `.card-pills`: `IcShield` + `cardTrustLabel()` ("Trust N" / "Trust
-  n/a"), colored by band. Unified across desktop/mobile.
+- **Trust pill moved out of `.card-pills` (2026-09-10, commit `ed672d7`, "right-hand Trust
+  block").** It's now its own `.card-trust` column at the right edge of `.card-lower` (stacked
+  with the Community Rating `★` below it), not a pill in the row above — `.card-pills` is
+  unaffected shape-wise, just missing this entry now. `.card-trust` still uses `IcShield` +
+  the same score/color logic (`--green-bright` ≥70 / `--amber` ≥40 / `--red` else / `IcShield` +
+  `"Trust n/a"` when null); `2054bd8` (same day) fixed the bottom row so the action buttons
+  (`Compare`, notify toggles) can no longer overlap this column on narrow cards.
+- **Version and NUT-count pills removed from the card entirely** (same `ed672d7` pass) —
+  neither `mint.version` nor `mint.nutCount` render on `MintCard.tsx` anymore, on any card view.
+  NUT count is still visible in the Dashboard's compact **list view** table (a `"NUTs"` column,
+  desktop-only via `col-hide-mobile`) and on **Mint Detail** (NUT compatibility grid, Trust Score
+  breakdown). Version is visible only on **Mint Detail** now (header, version history table, Trust
+  Score breakdown's Version Freshness row) — there is no card or list-view column for it.
 - **Community Rating ★ badge** stays, but its `.card-rating-info` **(i) caveat tooltip was
   removed** 2026-09-08 (the caveat now lives only in the Reviews-tab `.reviews-disclaimer`).
   The `reviewSurge` **⚠** flag (`.card-review-surge-flag`) is unchanged.
@@ -607,6 +617,28 @@ export **before** rendering `MintDetailContent`. Fixes the "ghost mint" bug wher
   now only ever receives a URL that is in `known`, so `knownMint` is always non-null there.
 - The in-code "Show my latency" SSRF guard stays as defense-in-depth, but an attacker route
   param now hits the not-tracked state first (no probe-driven detail, no latency button).
+
+### Mint Detail Keysets panel (2026-09-09/10, commits `313061c`/`5e64dc7`)
+
+New panel showing the mint's keysets from the existing probe data (`data.keysets` — `id` / `unit`
+/ `active`, already fetched by the live `/v1/info`+keysets probe used elsewhere on Mint Detail, no
+new API call). Each row: keyset id (with a copy-id control) + unit + an Active/Inactive badge;
+empty state when no keysets are known. **Rendered once, shown per breakpoint** (`5e64dc7`, same
+data — a layout-only follow-up the next day): **desktop (≥901px)** it sits in the Overview sidebar,
+directly under "Units & Methods" (same card chrome), and is hidden on the NUTs tab; **mobile
+(<901px)** it stays on the **NUTs tab**, under NUT Limits, and is hidden on Overview. The panel
+heading has a short title-tooltip explaining keysets / Active vs Inactive. Tests:
+`e2e/mint-detail-keysets.spec.ts` (desktop/Overview and mobile/NUTs-tab describe blocks).
+
+### Mint Detail Version History — real 3-column table (2026-09-10, commit `9fa6cdd`)
+
+The Version History panel on Mint Detail (distinct from `ComparisonModal`'s own version-history
+rows, documented separately under "Compare feature" above) went from loose Date/From/To grid rows
+to an actual `<table className="md-vh-table" style="table-layout: fixed">` with **DATE | FROM |
+TO** columns. Dates render as `"7 Sep 2026"` (no dotted numeric form); FROM/TO cells are
+`font-mono`, single-line, ellipsis on overflow. A first-seen row with no prior version shows `"—"`
+in FROM, with TO still column-aligned to every other row. Version-event storage/detection and the
+`.md-panel` chrome are unchanged — this was a rendering-layer change only.
 
 ### Mint Detail hover-prefetch (2026-08-30)
 
@@ -708,23 +740,45 @@ notes / AUDIT.md's body is stale, see its UPDATE banner).
 - @typescript-eslint/eslint-plugin: 8.62.0
 - @types/node: 26.0.1
 
-## Stats Page Layout (as of 2026-06-29)
+## Stats Page Layout (as of 2026-09-12, commits `f4e92ec`/`c3523db` — supersedes the old 3-column `.stats-cards-grid`-only layout below)
 
-3-column grid (`.stats-cards-grid`) with `align-items: start` — cards shrink to content height:
-- **Row 1, col 1:** Software in Use (accordion — click SW row to expand versions)
-- **Row 1, col 2:** Geographic Distribution
-- **Col 3, rows 1–2:** `.stats-right-col` with `grid-row: span 2` (desktop only; resets at ≤1100px) — contains Most Reliable (Top 5) + Trust Score Trend stacked
-- **Row 2, col 1–2:** NUT Coverage with `gridColumn: 'span 2'` and `column-gap: 48px` between the two NUT columns
+**`.stats-hero-grid`** — an always-2-column grid (`grid-template-columns: 1fr 1fr`, 1 column at
+≤768px), holding exactly 4 panels in DOM order **Software in Use → Most Reliable → Geographic
+Distribution → Network Health Index** (this order is also the mobile single-column stack order —
+reordering the JSX reorders both, there's no separate mobile-only rule). `align-items: stretch` so
+each row's two panels match the taller one's height. Each panel title carries a small muted
+**icon well** (`.stats-panel-icon`, green/orange/gray — same recipe as Dashboard's `.stat-icon`):
+`IcSwLayers` (gray) for Software in Use, `IcShield` (green) for Most Reliable, `IcGeoGlobe` (gray)
+for Geographic Distribution, `IcHealthPulse` (orange) for Network Health Index. Most Reliable rows
+also show the mint's city when `serverLocation` is already known (no new data source). This
+replaced the older `.stats-left-col` (Software + Geo, 2 cols) / `.stats-right-col` (Most Reliable +
+Trust Score Trend stacked, `grid-row: span 2`) split described lower in this section, which was a
+4-across row at the top of the page — the "Network Health Index — final layout" history below is
+now itself superseded (NHI moved out of `.stats-right-col` into this hero grid).
 
-At ≤1100px: `stats-right-col` gets `grid-row: auto`. At ≤700px: single column.
+- **`.stats-cards-grid`** (below the hero grid, unchanged in kind but now holds fewer panels) —
+  4-column grid (2 cols ≤1300px, 1 col ≤768px) holding **only** NUT Coverage Across the Network
+  (`grid-column: span 3`, 2 cols ≤1300px), Trust Score Movers (`span 1`), and Trust Score Trend
+  (always full width `1 / -1`). The 2×2 hero panels moved out of this grid entirely into
+  `.stats-hero-grid` above.
+- **Software in Use subtitle (`c3523db`):** "Behind current release" → **"% of tracked mints
+  behind latest release"**, shown under the panel title. The 75% `swFreshnessSummary.pct`
+  bar/value and the methodology (i) tooltip text are unchanged (see "Stats widgets — 2026-09-08
+  changes" below for that tooltip's own history).
+- **Network Health Index donut (`c3523db`):** desktop gauge enlarged **84px → 112px** (~1.33x,
+  filling empty space the panel already had next to the legend); number font scaled to match.
+  Legend position, breakdown-bar placement, mobile gauge size, and the score formula are
+  unchanged. Uses the shared `trustDonutArc()` geometry helper — see that section above.
 
-### Network Health Index — final layout (commit 92c28d8, several iterations)
+### Network Health Index — pre-hero-grid layout history (commit 92c28d8, several iterations; superseded 2026-09-12 by the `.stats-hero-grid` restructure above)
 
-Went through multiple repositioning attempts before landing on the final placement:
-- **Final:** own panel in the right column (`.stats-right-col`), stacked between "Most Reliable" and "Trust Score Trend" — not merged with either.
-- **Rejected earlier attempt:** living inside the left 3-column block alongside Software in Use + Geographic Distribution. Reverted — the left block is back to its original 2 columns (Software in Use + Geographic Distribution only).
-- **NUT Coverage Across the Network** was never touched during any of these iterations — its CSS/position is exactly as in the original "Stats Page Layout" section above.
-- Card format: horizontal — 60px ring on the left, badge on the right. `align-items: start` on the outer grid so panels don't stretch/merge into each other.
+Before the 2×2 hero grid, NHI went through multiple repositioning attempts:
+- Landed in its own panel in `.stats-right-col`, stacked between "Most Reliable" and "Trust Score
+  Trend" — not merged with either.
+- **Rejected earlier attempt:** living inside the left 3-column block alongside Software in Use +
+  Geographic Distribution. Reverted.
+- Card format (horizontal — ring on the left, badge on the right) and `align-items: start`/
+  `stretch` reasoning carried forward into the current hero-grid panel.
 
 **Lesson learned:** when a layout "looks different" or "looks empty" mid-iteration, ask immediately for a `getComputedStyle`/pixel probe instead of judging from a screenshot — visual estimation on this task burned several unnecessary rounds before the probe was requested.
 
@@ -755,9 +809,11 @@ Went through multiple repositioning attempts before landing on the final placeme
 - **Movers + Most Reliable rows** (`781617d`) — the hostname subtitle `<div>` is omitted when
   `displayName === hostname` (same rule as the mint cards).
 - **Software in Use panel** (`781617d`) — "Running outdated or older versions" →
-  **"Behind current release"** + a `.stats-sw-behind-info` (i): "we compare the version each
+  "Behind current release" + a `.stats-sw-behind-info` (i): "we compare the version each
   mint reports to the latest known release for that implementation — not a CVE or security
-  score." **The 75% `swFreshnessSummary.pct` formula is unchanged.**
+  score." **Superseded 2026-09-12 (`c3523db`):** the subtitle text itself was changed again, to
+  **"% of tracked mints behind latest release"** — see "Stats Page Layout" above. The (i)
+  tooltip content and **the 75% `swFreshnessSummary.pct` formula are unchanged.**
 - Tests: `e2e/stats-widgets.spec.ts`, `e2e/stats-nhi-gauge.spec.ts`,
   `src/__tests__/geoDistribution.test.ts` (`normalizeGeoLoc`).
 
@@ -784,6 +840,133 @@ number behind the "All Known" tile *and* the grid footer's "of N" — and it alr
 `integration/known-count-consistency.test.ts`). The footer now always reads "Showing `<shown>`
 of `<knownTotal>`" regardless of filters/hiding. `useNostrMints.ts` / `mintDiscovery.ts` are now
 a dead chain (left in place, not deleted).
+
+## Cross-page chrome width unification — `--dash-chrome-max` (2026-09-11)
+
+A same-day wave of CSS-only refactors made every "dashboard-chrome" page (Stats, Watchlist,
+Tools, Learn, Wallets) share Dashboard's content column width, so a card grid's left edge lines
+up across pages instead of each page picking its own width independently.
+
+**1) What `--dash-chrome-max` is and where it's defined**
+
+`src/index.css` (`:root`, alongside `--page-pad`):
+```css
+--dash-chrome-max: calc(300px * 4 + 16px * 3 + var(--page-pad) * 2);
+```
+i.e. 4 cards at their 300px max width + 3× 16px inter-card gaps + the two `--page-pad` side
+gutters (border-box, so the gutters are included in the cap, not added on top). It's the single
+source of truth for "the page-content shell width used by every dashboard-chrome page" — any page
+whose card grid should left-align with Dashboard's `.mint-grid` uses this exact `max-width`
+(with `margin-inline: auto` + `padding-inline: var(--page-pad)`, or the equivalent) so the first
+card's left edge lines up across pages. It moved here from being locally duplicated on
+`.dashboard` and `.watchlist-page` (commit `6222f29`) specifically so Learn/Wallets could adopt
+the identical value without a second copy drifting out of sync.
+
+**2) Which pages/components use it now**
+
+`Dashboard.css` (`.stats-bar`, `.dashboard-controls`-adjacent chrome, `.mint-grid`, plus a
+`calc(var(--dash-chrome-max) - var(--page-pad) * 2)` variant for one inner panel that needs the
+box width *without* re-adding the gutters), `Watchlist.css` (`.wl-body-two-col`/`.wl-controls`/
+`.wl-grid`), `Stats.css` (`.stats-metrics` hero row, `.stats-hero-grid`, `.stats-cards-grid`),
+`Tools.css` (`.tools-grid`), `Learn.css` (index header + card grid) and `LearnModule.css`
+(article pages, so index → module navigation doesn't shift content width), and `Wallets.css`
+(header, card grid, "Run your own mint" block) — three separate `max-width: var(--dash-chrome-max)`
+declarations there for its three content blocks. Decorative full-bleed bands (`.learn-hero`,
+`.wallets-hero`, `.stats-header`, the site nav) are deliberately **not** capped — only content
+columns that hold card grids or controls are.
+
+**3) State before this wave**
+
+Each page defined its own width independently, so first-card left edges did not line up across
+pages: `.dashboard`/`.watchlist-page` each hardcoded their own copy of the same 4-card formula
+(already identical in value, just duplicated); Stats' hero tile row and panel grids, Tools'
+`.tools-grid`, Learn's index/module pages, and Wallets had no shared cap at all — some were wider/
+full-bleed with more empty space around fewer cards (explicitly called out for Watchlist's old
+grid in `20275db`), and Watchlist's card grid additionally centered itself independently inside
+its flex column rather than sharing one width-capped box with the rest of the page (`18482fc`).
+Landing order: `20275db` (Watchlist grid width/gap only) → `18482fc` (Watchlist's whole content
+column, not just the grid) → `6222f29` (lifts the token onto `:root`, applies to Learn/Wallets/
+Watchlist) → `32bbe47` (Tools + Stats) → `a688aee` (caps the Stats-page-style `.stats-bar` hero
+row specifically, matching `.mint-grid`/`.dashboard-controls`) → `fcea79e`/`1dd9cba` (Stats panels
+reuse Dashboard's actual card classes/tokens, not just the same outer width — see below).
+
+- **`fcea79e`** — Stats' 5 hero tiles (Mints Tracked / Online Now / Avg mint uptime 24h / Median
+  Latency / NUTs in Spec — no tile added/removed) switched from Stats' own `.stats-metric-card`/
+  `.smc-*` rules to Dashboard's actual `.stat-card`/`.stat-label`/`.stat-row`/`.stat-icon`/
+  `.stat-figure`/`.stat-value`/`.stat-note`/`.stat-unit` classes, so they match Dashboard's stat
+  cards pixel-for-pixel (height, padding, radius, border, icon-well fills). The uptime tile keeps
+  its own dynamic `uptimeColor()` value and its (i) tooltip trigger (`.smc-label-info`) as the one
+  Stats-only addition on top of the shared classes.
+- **`1dd9cba`** — Stats' panel chrome (`.stats-panel`, `.stats-nut-rows-grid`) switched from a
+  hardcoded 10px-radius recipe to the same literal tokens `.mint-card`/`.stat-card` use
+  (`var(--surface)`, `var(--border)`, `var(--r)`); `.stats-panel-title` now matches Dashboard's
+  `.stat-label` typography (10px uppercase, 0.1em tracking, `var(--text-dim)`/`--t2`, body font)
+  instead of its own 12px/mono heading style; the Software-in-Use row chrome (`.sw-row`) now
+  shares Most Reliable/Movers' `.stats-top5-row` border+radius recipe, unifying all 3 inner
+  list-row types onto one chrome. Also **dropped the green/copper alternating decorative bar
+  colors** on Software in Use and Geographic Distribution (forced to one mint-green fill,
+  `!important` over the per-row inline color `Stats.tsx` computes) — NUT Coverage's adoption
+  bars, the "Behind current release" freshness bar, and Trust Score Movers' up/down deltas are
+  untouched since those colors are real signal, not decoration. No formula/NHI/modal changes.
+
+**4) Geographic Distribution refactors (`6812cf9` / `d87e462` / `360f285` / `59a3984`)**
+
+Four passes, same day, landing in this order:
+- **`6812cf9` — two-column layout, show all current locations.** `geoDist.top` now renders as
+  two `.stats-geo-cols` CSS-grid columns (`grid-auto-flow: column`, column 1 fills top-to-bottom
+  before column 2, same sort order as before); `Stats.tsx` computes `geoRows = ceil(top.length/2)`
+  as the explicit `grid-template-rows` so both columns balance evenly. `computeGeoDistribution`'s
+  `topN` argument went **10 → 20** — two 10-row columns keep the panel at its old single-column
+  height while covering essentially every distinct location the network currently has, so "View
+  others" drops out on its own once everything fits (its gating condition is unchanged). New
+  480px breakpoint reverts to one column on narrow phones. `geoLabel()`/`CDN_BUCKET` grouping and
+  `computeGeoDistribution`'s own default/unit tests are untouched — only this call site's `topN`.
+- **`d87e462` — adoption/coverage bars removed.** Geographic Distribution rows dropped their
+  `.dist-track`/`.dist-fill` progress bar entirely, keeping just the city/label and count (the
+  per-row `barColor`/`pct`/`idx` that only fed the bar are gone from the row map). `geoColor`
+  (used for the label's own text color) is unchanged. The same commit also removed NUT Coverage's
+  adoption bar (`.snr-bar-track`/`.snr-bar-fill`) — kept the chip/name/`"N/N"` count, whose color
+  still tracks the adoption ratio (`barColor` logic unchanged, just no bar to paint); the row grid
+  columns collapse accordingly. Software in Use's own bars (and the "Behind current release" bar)
+  are untouched — those classes are still used there, just no longer by Geographic Distribution.
+- **`360f285` — city-label ellipsis-cut fix.** Two-layer bug: (1) JS — `shortenCity()` in
+  `Stats.tsx` was slicing any city name over 12 chars to 11 chars + `…` **before** it reached the
+  DOM, so no amount of CSS could undo the already-truncated string; the length-based cut was
+  removed (the deliberate `CITY_SHORT` renames — `"Frankfurt am Main"` → `"Frankfurt"`, `"Saint
+  Petersburg"` → `"St. Petersburg"` — are kept, those aren't truncation). (2) CSS —
+  `.dist-label-city` now overrides the base `.dist-label`'s nowrap/ellipsis with
+  `white-space: normal` + `overflow-wrap: break-word` so a full name can wrap onto a second line;
+  scoped to `.dist-label-city` only, Software in Use's plain `.dist-label` keeps single-line
+  truncation. `.dist-row` also gained `min-width: 0` — inside `.stats-geo-cols`' grid columns, a
+  grid item's implicit `min-width: auto` otherwise lets an unbroken long word blow out the column
+  regardless of `overflow-wrap`.
+- **`59a3984` — responsive row cap.** Desktop (>700px) unchanged (`topN=20`, two columns).
+  Mobile (≤700px) is now capped to the **top 5** locations in a single column (same
+  `computeGeoDistribution` `topN` param, no aggregation change) — previously mobile inherited the
+  desktop `topN=20` list, producing 10–20 stacked rows on a phone; "View others" now opens the
+  same `MoreLocationsModal` with whatever didn't make the cut. New `useMediaQuery(query)` in
+  `useIsMobile.ts` (`useIsMobile` is now a thin wrapper over it) lets this panel use its own
+  **700px** breakpoint instead of the app's standard 768px; `.stats-geo-cols`' single-column
+  media query was widened from 480px to the same 700px to match.
+
+**5) Typographic passes (`2f7eb8e` / `afca9f5`)**
+
+- **`2f7eb8e` — mint card Trust Score / rating type sizes.** `.card-trust-score`: 25px → 27px
+  desktop, 26px at the existing ≤600px breakpoint. `.card-trust-rating`: 12px → 14px, and gained
+  `font-weight: 500` (was unset/400). Latency block, card name, and `.card-pills` untouched — see
+  "MintCard Trust block" above for where `.card-trust` itself lives on the card.
+- **`afca9f5` — Tools/Stats "larger, more legible list rows" pass.** Tools page: `.tool-title`
+  (card titles — "Token Inspector" / "Best Mint for Me") 12px `var(--text2)` → **16px**
+  `var(--text)` (uppercase/letter-spacing/mono kept, only size+color changed); `.tool-subtitle`
+  11px `var(--text3)` → 13px `var(--text2)`; `.wizard-q` (wizard step questions) 14px → 16px.
+  Stats list rows, 11–12px → **13px**: `.dist-label` (Geographic Distribution city names —
+  Software in Use's own name span keeps its separate 13px inline override, so only the geo panel
+  visibly changed here), `.snr-nut-name` (NUT Coverage row titles), the Most Reliable name div
+  (both Reliable/Trust tabs), Trust Score Movers' name div (its hostname subtitle stays 10px).
+  `.stats-panel-title` (section titles like "GEOGRAPHIC DISTRIBUTION") was already 10px uppercase
+  and confirmed unchanged. Dashboard hero/explainer/mint cards untouched — no Dashboard files in
+  this diff. Geographic names' wrap-not-truncate behavior (`360f285`, above) was verified to still
+  hold at the new 13px size.
 
 ## Typography & Design System Notes
 
@@ -891,7 +1074,7 @@ Applied automatically everywhere via the shared `MintCard.tsx` component (Dashbo
 
 ### Dashboard filter bugs (fixed)
 
-- **Reset button (↻):** previously only did `queryClient.invalidateQueries` (refetched data) without resetting search/sort/filters/`showDegraded`. Fixed — now resets everything to default (search cleared, sort `name`/`asc`, `activeFilters`/`pendingFilters` → `DEFAULT_FILTERS`, `showDegraded=false`, closes filter panel) and only then refetches.
+- **Reset button (↻):** previously only did `queryClient.invalidateQueries` (refetched data) without resetting search/sort/filters/`showDegraded`. Fixed — now resets everything to default (search cleared, sort **`trust`/`desc`** — updated 2026-09-09 from the original `name`/`asc`, see "Dashboard default view" below — `activeFilters`/`pendingFilters` → `DEFAULT_FILTERS`, `showDegraded=false`, closes filter panel) and only then refetches.
 - **Status=Offline filter returning empty results:** root cause — `allMints` was computed by hiding degraded mints via `showDegraded` *before* `applyFilters()` ran, so Status=Offline and the default `showDegraded=false` behaved like an AND and cancelled each other out. Fix: `effectiveShowDegraded = showDegraded || activeFilters.status === 'offline'` — explicitly picking the Offline filter now overrides the default hiding. The "N mints hidden" message only shows when the Status filter isn't "Offline" (otherwise it would be misleading).
 - File: `Dashboard.tsx`
 
@@ -920,11 +1103,49 @@ Verified: typecheck ✅, build ✅, 70/70 unit tests ✅, Playwright confirmed b
 The **"Mint age" (Fresh/Established/Veteran/OG) filter block is gone** — the whole state chain
 was removed: `FilterState.mintAges`, `AGE_LABELS`, the `applyFilters` branch,
 `countActiveFilters` term, the `?age=` URL param + its filter-tag chip, and the panel group.
-The panel is now just **Status** + **Min. Trust Score**. Rationale: those four labels stopped
-being a product concept once the card badge set shrank (see "Card badges" above). No
-replacement third filter was added (no LN filter, no unit filter). On mobile the two remaining
-groups sit side by side (`.filter-row` → `row / nowrap`) so the sheet is shorter.
+At the time, the panel became just **Status** + **Min. Trust Score**. Rationale: those four labels
+stopped being a product concept once the card badge set shrank (see "Card badges" above). On
+mobile the two remaining groups sit side by side (`.filter-row` → `row / nowrap`) so the sheet is
+shorter. **Superseded 2026-09-10 (`26c4111`):** the separate Capabilities (Restore/Bolt12/LN)
+group was also dropped and a **"Hide test mints"** checkbox was added — see "Dashboard default
+view + Capabilities filters removed" above for the panel's current, up-to-date contents.
 `requiredNuts` filter state is left in place but is URL-only (`?nuts=`), no panel UI.
+
+### Dashboard default view + Capabilities filters removed (2026-09-09/10, commits `6bd10ce`/`091231e`/`26c4111`)
+
+**Current defaults** (`DEFAULT_FILTERS` in `Dashboard.tsx`): `status: 'online'`, `minTrustScore: 0`,
+`requiredNuts: []`, **`hideTestMints: false`** — plus sort **`trust`/`desc`** (not part of
+`FilterState`, held as separate `sortBy`/`sortDir` state). A fresh Dashboard load therefore shows
+online mints only, sorted by Trust Score descending, **with test mints visible** (they still carry
+a "Test mint" badge; `?testmints=hide` only appears once the user turns the checkbox on).
+
+This landed in two passes that briefly disagreed with each other — worth knowing if an older note
+or commit message says otherwise:
+- `6bd10ce` (2026-09-09) set the new online-only + Trust-sort default **and** defaulted
+  `hideTestMints` to `true` ("no test mints"). This is the change that lifted the original
+  Name-sort freeze from earlier design passes.
+- `091231e` (2026-09-10) flipped `hideTestMints` back to `false` ("show test mints by default")
+  as part of a hero-tile/filter-bar pass — this is the value in the code today. Only the
+  test-mint-visibility default was reverted; online-only status and Trust-desc sort from `6bd10ce`
+  are unchanged.
+- `26c4111` (2026-09-10) separately **removed the Capabilities filter group** (Restore / Bolt12 /
+  LN checkboxes) — `FilterState` never had a `capabilities` field distinct from `requiredNuts`;
+  this removed a different, since-deleted filter block. The panel is now **Status + Min. Trust
+  Score + a "Hide test mints" checkbox** (Mint age was already gone, see the section below). Same
+  commit also made a NUT row on the Stats "NUT Coverage Across the Network" panel open a
+  `NutMintsModal` listing the mints supporting that NUT, instead of (or in addition to) any
+  Dashboard filter deep-link.
+
+### "Look up a mint" card — added then removed (2026-09-09 → 2026-09-10, commits `af595c4`/`efb19ec`)
+
+A third Tools card (`MintLookup` component) briefly existed as an entry point into Mint Detail:
+took a mint URL/hostname and navigated to `/mint/{encodeURIComponent(trimmed)}`, relying on
+`resolveMintDetailUrl`'s existing bare-host canonicalization — no mint-info UI of its own. Removed
+the next day: the component, its `.mint-lookup-*` CSS, the `#lookup` deep-link hash branch/anchor,
+and the `tools-mint-lookup` e2e spec are all deleted. **Tools currently has just the Wizard +
+Inspector row** — no third card. `resolveMintDetailUrl` and the `/mint/:slug` route themselves are
+untouched, so pasting a bare host into the address bar still resolves correctly; only the Tools-page
+entry point for doing that was removed.
 
 ### Tools page layout — iterations and final state
 
@@ -934,6 +1155,16 @@ Two desktop-layout attempts for the Tools page (`Tools.css`/`Tools.tsx`) were tr
 - **Final state:** layout reverted to full width everywhere — panels, the token textarea, and the Small/Medium/Large option rows are all 100% width again, matching the pre-iteration baseline. The only surviving change is the "Inspect Token" button: it got its own `inspect-token-btn` class (kept separate from the shared `.tool-btn-primary` specifically so the wizard's "Find my mints" button, which also uses `.tool-btn-primary`, is unaffected), with `max-width: 280px` and centered, desktop-only.
 - Mobile layout was never touched across any of these iterations — confirmed correct throughout.
 - The "Tools desktop fix" and "Tools v2" tabs documenting the two rejected attempts lived in `mintradar_redesign_mockup.html`, which has since been deleted (see "Visual Redesign" above) — this list is now the only record of what was tried and why it didn't work.
+
+### Best Mint Wizard result cards — mobile compaction pass (2026-09-12, commits `d7055b8`→`ccf5ba8`)
+
+Four iterative CSS/markup rounds on `Tools.css`/`Tools.tsx` fixing mobile overflow/wrap in the
+wizard's result cards: stacked layout on mobile, then progressively compacted and re-enlarged type
+sizes on both mobile and desktop. Final state also **dropped the `<n> NUTs` meta chip** (latency +
+uptime % only now) and **compacted large limit numbers** — `formatCompactAmount()` renders
+`1_000_000` as `"1M"` / `1_500` as `"1.5k"` instead of `.toLocaleString()`'s `"1,000,000"`, so
+`formatLimits()` output fits the narrower card. Score/trust formatting (`cardTrustLabel()` +
+`cardLightningLabel()`) from the `781617d` pass below is unchanged.
 
 ### Best Mint Wizard (`Tools.tsx` `BestMintWizard`) — 2026-09-08 (commit `781617d`)
 
