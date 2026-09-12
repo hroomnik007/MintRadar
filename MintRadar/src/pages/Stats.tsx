@@ -976,7 +976,7 @@ export default function Stats() {
                   <div>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:4}}>
                       <span style={{fontSize:12,color:'var(--text2)',display:'inline-flex',alignItems:'center',gap:4}}>
-                        Behind current release
+                        % of tracked mints behind latest release
                         <span
                           ref={swBehindInfoRef}
                           className="stats-sw-behind-info"
@@ -1188,8 +1188,8 @@ export default function Stats() {
                   no-op — the gauge just sits at its natural position. */}
               <div className="nhi-fill">
                 <div className="nhi-wrap" onClick={isMobile ? () => setShowHealthBreakdown(true) : undefined} style={isMobile ? undefined : { cursor: 'default' }}>
-                  <div className="nhi-gauge-wrap" style={isMobile ? undefined : { width: 84, height: 84 }}>
-                    <svg viewBox="0 0 72 72" style={isMobile ? undefined : { width: 84, height: 84 }}>
+                  <div className="nhi-gauge-wrap" style={isMobile ? undefined : { width: 112, height: 112 }}>
+                    <svg viewBox="0 0 72 72" style={isMobile ? undefined : { width: 112, height: 112 }}>
                       <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
                       <circle cx="36" cy="36" r="27" fill="none" stroke={info.color} strokeWidth="7"
                         strokeDasharray={gaugeArc.dashArray}
@@ -1197,7 +1197,7 @@ export default function Stats() {
                         strokeLinecap="round"
                         transform="rotate(-90 36 36)" />
                     </svg>
-                    <div className="nhi-gauge-num" style={{ color: info.color, ...(isMobile ? {} : { fontSize: 20 }) }}>{networkHealth.score}</div>
+                    <div className="nhi-gauge-num" style={{ color: info.color, ...(isMobile ? {} : { fontSize: 27 }) }}>{networkHealth.score}</div>
                   </div>
                   <div className="nhi-legend">
                     <div className={`nhi-legend-row${networkHealth.score >= 70 ? ' active' : ''}`}>

@@ -84,11 +84,12 @@
    would reveal). The formula explanation text lives only in the header ⓘ
    tooltip on desktop (widened to 260px there) and in the mobile modal's
    footer — never as a permanent block under the breakdown. Desktop also
-   renders a larger 84px gauge (mobile stays 60px, via .nhi-gauge-wrap/
-   .nhi-gauge-wrap svg below) — set with an inline style override in
-   Stats.tsx rather than a CSS media query, since the panel's desktop/mobile
-   split is already driven by the useIsMobile() JS check, not a breakpoint
-   this stylesheet owns.
+   renders a larger 112px gauge (~1.33× the base 84px, 2026-09-12 — fills
+   the empty space the panel already had next to the legend; mobile stays
+   60px, via .nhi-gauge-wrap/.nhi-gauge-wrap svg below) — set with an
+   inline style override in Stats.tsx rather than a CSS media query, since
+   the panel's desktop/mobile split is already driven by the useIsMobile()
+   JS check, not a breakpoint this stylesheet owns.
 
    .stats-nhi-panel is a flex column with align-self:stretch — now the same
    as the outer grid's own align-items:stretch default, kept explicit here

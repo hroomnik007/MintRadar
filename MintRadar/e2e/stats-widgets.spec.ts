@@ -69,7 +69,7 @@ test('Geographic Distribution buckets CDN / cloud / anycast labels into one row'
   await expect(geo.locator('.dist-row', { hasText: 'Cloudflare' })).toHaveCount(0)
 })
 
-test('Software panel: "Behind current release" + explanatory (i)', async ({ page }) => {
+test('Software panel: "% of tracked mints behind latest release" + explanatory (i)', async ({ page }) => {
   await knownMints(page, [
     { ...MOCK_KNOWN_MINTS[0], online: true, version: 'Nutshell/0.14.0' },
     { ...MOCK_KNOWN_MINTS[1], online: true, version: 'Nutshell/0.16.0' },
@@ -77,7 +77,8 @@ test('Software panel: "Behind current release" + explanatory (i)', async ({ page
   await page.goto('/stats')
 
   const sw = page.locator('.stats-sw-panel')
-  await expect(sw.getByText('Behind current release')).toBeVisible()
+  await expect(sw.getByText('% of tracked mints behind latest release')).toBeVisible()
+  await expect(sw.getByText('Behind current release')).toHaveCount(0)
   await expect(sw.getByText('Running outdated or older versions')).toHaveCount(0)
 
   await sw.locator('.stats-sw-behind-info').hover()
