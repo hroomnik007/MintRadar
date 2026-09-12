@@ -900,7 +900,7 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-hdr-left">
           <button className="md-back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
           <div className="md-avatar-id">
-            <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={52} radius={12} className="md-hdr-favicon" />
+            <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? knownMint?.iconUrl ?? null} size={52} radius={12} className="md-hdr-favicon" />
             <div className="md-namebox">
               <div className="md-name" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                 <span>{displayName}</span>
