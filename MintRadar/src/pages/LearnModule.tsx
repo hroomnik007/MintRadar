@@ -4,9 +4,6 @@ import { useParams, useNavigate, Link, Navigate } from 'react-router-dom'
 import { LEARN_MODULES } from '@/constants/learnModules'
 import './LearnModule.css'
 
-// Same lazy-loading pattern as Stats/MintDetail/Tools in App.tsx — each
-// module is its own chunk, fetched only when that module is actually
-// visited, looked up dynamically by module id rather than a big if/else.
 const MODULE_COMPONENTS: Record<string, LazyExoticComponent<ComponentType>> = {
   'cashu-basics': lazy(() => import('@/pages/learn/Module1')),
   'understanding-the-risks': lazy(() => import('@/pages/learn/Module2')),
@@ -25,9 +22,6 @@ export default function LearnModule() {
 
   const sorted = [...LEARN_MODULES].sort((a, b) => a.order - b.order)
 
-  // Legacy / shareable numeric deep links: /learn/1 … /learn/5 → the slug.
-  // Any other number (0, 6, 99) or unknown slug still falls through to
-  // "Module not found" below.
   if (moduleId && /^[1-9][0-9]*$/.test(moduleId)) {
     const n = Number(moduleId)
     const byOrder = sorted.find(m => m.order === n)
@@ -41,9 +35,11 @@ export default function LearnModule() {
   if (!mod || !ModuleComponent) {
     return (
       <div className="learn-module-page">
-        <div className="learn-not-found">
-          Module not found. <Link to="/learn">Back to Learn</Link>
-        </div>
+        <article className="learn-module">
+          <div className="learn-not-found">
+            Module not found. <Link to="/learn">Back to Learn</Link>
+          </div>
+        </article>
       </div>
     )
   }
@@ -53,6 +49,7 @@ export default function LearnModule() {
 
   return (
     <div className="learn-module-page">
+      <article className="learn-module">
       <Link to="/learn" className="learn-back-link">← Back to Learn</Link>
 
       <Suspense fallback={lazyFallback}>
@@ -78,6 +75,7 @@ export default function LearnModule() {
           </button>
         )}
       </div>
+      </article>
     </div>
   )
 }
