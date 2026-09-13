@@ -22,6 +22,7 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, trustScoreColor, trustScoreInfo, formatTimeAgo, formatAuditSuccessRatio, trustDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
+import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion } from '@/utils/mintProbeDisplay'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import {
@@ -648,6 +649,9 @@ function MintDetailContent({ url }: { url: string }) {
   const twitter = data?.info?.contact?.find(c => c.method === 'twitter')?.info
   const nostr = data?.info?.contact?.find(c => c.method === 'nostr')?.info
   const urls = data?.info?.urls
+  const hasOnionAlias = listHasOnion(urls)
+  const trackedIsOnion = urlIsOnion(url)
+  const showTor = trackedIsOnion || hasOnionAlias
 
   const uptimePct = uptime24hData?.uptimePct ?? 0
 
@@ -928,8 +932,8 @@ function MintDetailContent({ url }: { url: string }) {
                 title="Copy a direct link to this mint"
               >
                 <span>
-                  {mintHostname(url).toLowerCase().endsWith('.onion') && (
-                    <span className="md-url-tor" title="Tor hidden service — reachable only over the Tor network">Tor</span>
+                  {showTor && (
+                    <span className="md-url-tor" title={trackedIsOnion ? 'Tor hidden service — reachable only over the Tor network' : 'Mint also advertises a .onion URL'}>Tor</span>
                   )}
                   {url}
                 </span>
@@ -1268,7 +1272,10 @@ function MintDetailContent({ url }: { url: string }) {
               {mintTime && (
                 <div className="md-info-row">
                   <span className="md-info-label">Server time</span>
-                  <span className="md-info-value">{formatTime(new Date(mintTime * 1000))}</span>
+                  <span className="md-info-value" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                    {formatTime(new Date(mintTime * 1000))}
+                    {(() => { const d = clockDriftLabel(mintTime); return <span style={{fontSize:11,fontFamily:'var(--font-mono)',color:d.color}} title="Mint clock vs this browser">{d.label}</span> })()}
+                  </span>
                 </div>
               )}
               {pubkey && (
