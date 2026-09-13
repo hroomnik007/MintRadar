@@ -1,7 +1,10 @@
 import type { MouseEvent } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
+import { usePendingAutoWatch } from '@/hooks/usePendingAutoWatch'
+import './WatchLoginModal.css'
 import { Zap } from 'lucide-react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcShield } from '@/components/mint/IcShield'
@@ -51,6 +54,26 @@ export function MintCard({
   const isWatched = mints.includes(mint.url)
   const profile = useAuthStore(state => state.profile)
   const isLoggedIn = profile !== null
+  const [showWatchLoginModal, setShowWatchLoginModal] = useState(false)
+  const autoWatch = useCallback((u: string) => {
+    if (!useWatchlistStore.getState().mints.includes(u)) void addMint(u)
+  }, [addMint])
+  const { arm: armAutoWatch, disarm: disarmAutoWatch } = usePendingAutoWatch(mint.url, isLoggedIn, autoWatch)
+  const closeWatchLoginModal = useCallback(() => {
+    setShowWatchLoginModal(false)
+    disarmAutoWatch()
+  }, [disarmAutoWatch])
+  const confirmWatchLogin = useCallback(() => {
+    armAutoWatch()
+    setShowWatchLoginModal(false)
+    window.dispatchEvent(new CustomEvent('mintradar:open-login'))
+  }, [armAutoWatch])
+  useEffect(() => {
+    if (!showWatchLoginModal) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeWatchLoginModal() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [showWatchLoginModal, closeWatchLoginModal])
   const { read: userReadRelays } = useUserRelays()
   const hostname = getHostname(mint.url)
   const notifyEntry = useLiveQuery(
@@ -61,25 +84,13 @@ export function MintCard({
     e.stopPropagation()
     if (!notifyEntry) return
     const nextValue = !notifyEntry[field]
-    // Local Dexie write is the source of truth for the UI. It's awaited
-    // inside the async IIFE below (not fired separately) so the server
-    // mirror's follow-up read can't race ahead of it.
     const writeAndSync = async () => {
       await db.watchlist.update(mint.url, { [field]: nextValue })
 
       if (!isLoggedIn) return
 
-      // Best-effort server mirror. Re-read from Dexie (not the `notifyEntry`
-      // React closure) for the flag that ISN'T being toggled here: if the
-      // user (or an automated test) fires the Down and Up toggles in rapid
-      // succession, the second click's render closure can still reflect the
-      // pre-first-click state, which would send a stale combination to the
-      // server. Awaiting the write above, then reading Dexie fresh, makes
-      // this immune to that ordering regardless of click speed.
       const current = await db.watchlist.get(mint.url)
       if (!current) return
-      // Both flags off → no preference left → remove the server row
-      // entirely rather than upserting an all-false one.
       if (current.notifyOnDown || current.notifyOnUp) {
         await syncSubscribeToServer({
           mintUrl: mint.url,
@@ -102,6 +113,7 @@ export function MintCard({
   const lightningLabel = cardLightningLabel(mint)
 
   return (
+    <>
     <div
       className={`mint-card${isOfflineDegraded ? ' offline' : ''}`}
       onClick={() => { navigate(`/mint/${encodeURIComponent(mint.url)}`) }}
@@ -141,18 +153,23 @@ export function MintCard({
               )}
             </span>
           )}
-          {isLoggedIn && (
-            <button
-              type="button"
-              className={`card-star${isWatched ? ' on' : ''}`}
-              aria-label={isWatched ? 'Unwatch' : 'Watch'}
-              aria-pressed={isWatched}
-              title={isWatched ? 'Unwatch' : 'Watch'}
-              onClick={e => { e.stopPropagation(); void (isWatched ? removeMint(mint.url) : addMint(mint.url)) }}
-            >
-              <IcStar filled={isWatched} />
-            </button>
-          )}
+          <button
+            type="button"
+            className={`card-star${isLoggedIn && isWatched ? ' on' : ''}`}
+            aria-label={isLoggedIn ? (isWatched ? 'Unwatch' : 'Watch') : 'Watch'}
+            aria-pressed={isLoggedIn && isWatched}
+            title={isLoggedIn ? (isWatched ? 'Unwatch' : 'Watch') : 'Login with Nostr to add to watchlist'}
+            onClick={e => {
+              e.stopPropagation()
+              if (!isLoggedIn) {
+                setShowWatchLoginModal(true)
+                return
+              }
+              void (isWatched ? removeMint(mint.url) : addMint(mint.url))
+            }}
+          >
+            <IcStar filled={isLoggedIn && isWatched} />
+          </button>
           </div>
         </div>
       </div>
@@ -262,5 +279,28 @@ export function MintCard({
         </div>
       </div>
     </div>
+      {showWatchLoginModal && (
+        <div
+          className="rv-modal-overlay"
+          onClick={e => { e.stopPropagation(); closeWatchLoginModal() }}
+        >
+          <div className="rv-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Watch this mint">
+            <div className="rv-modal-head">
+              <div className="rv-modal-heading">
+                <div className="rv-modal-title">Watch this mint</div>
+                <div className="rv-modal-sub">
+                  Log in with Nostr to add it to your watchlist. Your list syncs over Nostr and you&apos;ll get a message if this mint goes offline or comes back online.
+                </div>
+              </div>
+              <button type="button" className="rv-modal-close" onClick={e => { e.stopPropagation(); closeWatchLoginModal() }} aria-label="Close">×</button>
+            </div>
+            <div className="rv-actions">
+              <button type="button" className="rv-btn-cancel" onClick={e => { e.stopPropagation(); closeWatchLoginModal() }}>Cancel</button>
+              <button type="button" className="rv-btn-submit" onClick={e => { e.stopPropagation(); confirmWatchLogin() }}>⚡ Login via Nostr</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
