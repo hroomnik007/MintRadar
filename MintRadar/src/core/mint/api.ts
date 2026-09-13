@@ -17,6 +17,7 @@ export interface MintKeyset {
   id: string
   unit: string
   active: boolean
+  input_fee_ppk?: number
 }
 
 export interface MintStatus {

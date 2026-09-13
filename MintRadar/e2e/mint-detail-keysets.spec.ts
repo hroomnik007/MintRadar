@@ -4,9 +4,9 @@ import { installApiMocks, mockRelays } from './fixtures/mocks'
 const ALPHA = 'https://alpha.mint.example'
 
 const KS = [
-  { id: '00ad268c4d1f5826', unit: 'sat', active: true },
-  { id: '00c074b96c7e2b0e', unit: 'sat', active: false },
-  { id: '00ffee11aa22bb33', unit: 'usd', active: true },
+  { id: '00ad268c4d1f5826', unit: 'sat', active: true, input_fee_ppk: 100 },
+  { id: '00c074b96c7e2b0e', unit: 'sat', active: false, input_fee_ppk: 0 },
+  { id: '00ffee11aa22bb33', unit: 'usd', active: true, input_fee_ppk: 250 },
 ]
 
 function probeWith(keysets: unknown, online = true) {
@@ -23,7 +23,6 @@ test.beforeEach(async ({ page }) => {
   await installApiMocks(page)
 })
 
-// ── Desktop (≥901px): Keysets lives on the Overview sidebar, not the NUTs tab ──
 test.describe('Mint Detail — Keysets panel placement (desktop)', () => {
   test('renders on Overview and NOT on the NUTs tab', async ({ page }) => {
     await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(KS) }))
@@ -34,7 +33,9 @@ test.describe('Mint Detail — Keysets panel placement (desktop)', () => {
     await expect(overviewPanel).toBeVisible()
     await expect(overviewPanel.locator('.md-panel-title', { hasText: 'Keysets' })).toBeVisible()
     await expect(overviewPanel.locator('.md-keyset-row')).toHaveCount(3)
-    // the NUTs-tab copy exists in the DOM but is hidden at this breakpoint
+    await expect(overviewPanel.getByText('100 ppk')).toBeVisible()
+    await expect(overviewPanel.getByText('free')).toBeVisible()
+    await expect(overviewPanel.getByText('250 ppk')).toBeVisible()
     await expect(page.locator('.md-keysets-at-nuts')).toBeHidden()
 
     await page.locator('.md-tab', { hasText: 'NUTs' }).click()
@@ -73,7 +74,6 @@ test.describe('Mint Detail — Keysets panel placement (desktop)', () => {
   })
 })
 
-// ── Mobile (<901px): Keysets stays on the NUTs tab, not on Overview ──
 test.describe('Mint Detail — Keysets panel placement (mobile)', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
@@ -87,10 +87,7 @@ test.describe('Mint Detail — Keysets panel placement (mobile)', () => {
     await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(KS) }))
     await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
     await expect(page.locator('.md-tabs')).toBeVisible()
-
-    // Overview: the desktop-only sidebar copy is hidden at this breakpoint
     await expect(page.locator('.md-keysets-at-overview')).toBeHidden()
-
     await page.locator('.md-tab', { hasText: 'NUTs' }).click()
     const panel = page.locator('.md-keysets-at-nuts')
     await expect(panel).toBeVisible()
@@ -101,13 +98,11 @@ test.describe('Mint Detail — Keysets panel placement (mobile)', () => {
   test('heading tooltip + active/inactive badges + copy still work', async ({ page }) => {
     await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(KS) }))
     await openNutsTab(page)
-
     const panel = page.locator('.md-keysets-at-nuts')
     await expect(panel.locator('.md-panel-title', { hasText: 'Keysets' }))
       .toHaveAttribute('title', /existing tokens may still melt/)
     await expect(panel.getByText('Active', { exact: true })).toHaveCount(2)
     await expect(panel.getByText('Inactive', { exact: true })).toHaveCount(1)
-
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
     await panel.locator('.md-keyset-row').first().getByRole('button', { name: 'Copy full keyset ID' }).click()
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('00ad268c4d1f5826')
@@ -116,7 +111,6 @@ test.describe('Mint Detail — Keysets panel placement (mobile)', () => {
   test('empty state unchanged when the probe returns no keysets', async ({ page }) => {
     await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(null, false) }))
     await openNutsTab(page)
-
     const panel = page.locator('.md-keysets-at-nuts')
     await expect(panel).toBeVisible()
     await expect(panel.getByText('Keyset data not available.')).toBeVisible()
