@@ -10,6 +10,7 @@ import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
 import { trustColor, trustScoreInfo, trustDonutArc, displayName } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
+import { compareMintVersionNumbers } from '@/utils/trustScore'
 import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import { useIsMobile, useMediaQuery } from '@/hooks/useIsMobile'
@@ -596,13 +597,7 @@ function NetworkHealthModal({ score, components, onClose }: {
 }
 
 function semverCmp(a: string, b: string): number {
-  const parse = (s: string) => s.split('.').map(n => parseInt(n) || 0)
-  const pa = parse(a), pb = parse(b)
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const diff = (pb[i] ?? 0) - (pa[i] ?? 0)
-    if (diff !== 0) return diff
-  }
-  return 0
+  return compareMintVersionNumbers(b, a)
 }
 
 export default function Stats() {

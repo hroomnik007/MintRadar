@@ -71,6 +71,60 @@ export function parseMajorMinorPatch(
   return { major: parseInt(m[1], 10), minor: parseInt(m[2], 10), patch: m[3] ? parseInt(m[3], 10) : 0 }
 }
 
+/**
+ * Compare two mint version numbers (the part after "Software/").
+ * Returns >0 if `a` is newer than `b`, <0 if older, 0 if equal.
+ * Semver: 0.18.0 is newer than 0.18.0-rc.1.
+ */
+export function compareMintVersionNumbers(a: string, b: string): number {
+  const pa = parseVersionForCompare(a)
+  const pb = parseVersionForCompare(b)
+  if (pa.major !== pb.major) return pa.major - pb.major
+  if (pa.minor !== pb.minor) return pa.minor - pb.minor
+  if (pa.patch !== pb.patch) return pa.patch - pb.patch
+  if (pa.prerelease === null && pb.prerelease === null) return 0
+  if (pa.prerelease === null) return 1
+  if (pb.prerelease === null) return -1
+  return comparePrerelease(pa.prerelease, pb.prerelease)
+}
+
+function parseVersionForCompare(raw: string): {
+  major: number; minor: number; patch: number; prerelease: string | null
+} {
+  const s = raw.trim().replace(/^v/i, '')
+  const m = s.match(/^(\d+)\.(\d+)(?:\.(\d+))?(?:-([0-9A-Za-z.-]+))?/)
+  if (!m || !m[1] || !m[2]) {
+    return { major: 0, minor: 0, patch: 0, prerelease: s || null }
+  }
+  return {
+    major: parseInt(m[1], 10),
+    minor: parseInt(m[2], 10),
+    patch: m[3] ? parseInt(m[3], 10) : 0,
+    prerelease: m[4] ?? null,
+  }
+}
+
+function comparePrerelease(a: string, b: string): number {
+  const as = a.split('.'), bs = b.split('.')
+  const n = Math.max(as.length, bs.length)
+  for (let i = 0; i < n; i++) {
+    const ai = as[i], bi = bs[i]
+    if (ai === undefined) return -1
+    if (bi === undefined) return 1
+    const an = /^\d+$/.test(ai) ? parseInt(ai, 10) : NaN
+    const bn = /^\d+$/.test(bi) ? parseInt(bi, 10) : NaN
+    if (!Number.isNaN(an) && !Number.isNaN(bn)) {
+      if (an !== bn) return an - bn
+      continue
+    }
+    if (!Number.isNaN(an) && Number.isNaN(bn)) return -1
+    if (Number.isNaN(an) && !Number.isNaN(bn)) return 1
+    if (ai !== bi) return ai < bi ? -1 : 1
+  }
+  return 0
+}
+
+
 // ── Software recognition ────────────────────────────────────────────────────
 // Reported software names are matched case-insensitively but NOT by prefix —
 // "Nutshell-CF" must not match "nutshell". Anything not listed here (including
