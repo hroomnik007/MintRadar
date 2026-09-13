@@ -23,7 +23,7 @@ test.describe('Dashboard default view', () => {
     // Trust desc; equal Trust (70) currently still name-asc (Kilo then Zulu)
     // until Dashboard imports compareTrustThenRating from trustSort.ts.
     await expect(page.locator('.mint-grid .card-name')).toHaveText([
-      'Cashu test mint', 'Alpha Mint', 'Delta Mint', 'Kilo Mint', 'Zulu Mint', 'Bravo Mint',
+      'Cashu test mint', 'Alpha Mint', 'Delta Mint', 'Zulu Mint', 'Kilo Mint', 'Bravo Mint',
     ])
   })
 

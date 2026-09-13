@@ -15,6 +15,7 @@ import { MintCard } from '@/components/mint/MintCard'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { latencyColor, trustColor, uptimeColor, displayName as mintDisplayName } from '@/utils/mintFormatting'
+import { listTrustScore, compareTrustThenRating } from '@/utils/trustSort'
 import { isTestMint } from '@/constants/testMints'
 import './Dashboard.css'
 
@@ -97,11 +98,6 @@ const IcList = () => (
 )
 
 // ── Helpers ────────────────────────────────────────────────────
-
-function listTrustScore(mint: KnownMint): number {
-  if (mint.online !== true) return 0
-  return mint.trustScore ?? 0
-}
 
 function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
@@ -315,9 +311,7 @@ function MintListView({
         const lb = b.online === true && b.latencyMs != null ? b.latencyMs : Infinity
         result = la - lb
       } else if (sortBy === 'trust') {
-        // Trust Score desc, tie-break on displayName asc.
-        result = listTrustScore(b) - listTrustScore(a)
-        if (result === 0) result = mintDisplayName(a).localeCompare(mintDisplayName(b))
+        result = compareTrustThenRating(a, b)
       } else if (sortBy === 'reviewCount') {
         // Mints with reviewCount === 0 or null sort to the end, regardless of direction toggle.
         const ca = a.reviewCount && a.reviewCount > 0 ? a.reviewCount : -1
@@ -425,9 +419,7 @@ function MintGrid({
         const lb = b.online === true && b.latencyMs != null ? b.latencyMs : Infinity
         result = la - lb
       } else if (sortBy === 'trust') {
-        // Trust Score desc, tie-break on displayName asc.
-        result = listTrustScore(b) - listTrustScore(a)
-        if (result === 0) result = mintDisplayName(a).localeCompare(mintDisplayName(b))
+        result = compareTrustThenRating(a, b)
       } else if (sortBy === 'reviewCount') {
         // Mints with reviewCount === 0 or null sort to the end, regardless of direction toggle.
         const ca = a.reviewCount && a.reviewCount > 0 ? a.reviewCount : -1
