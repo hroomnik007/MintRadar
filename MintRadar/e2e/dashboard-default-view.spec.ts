@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 
 // New Dashboard default (2026-09-09): online-only, sorted by Trust Score desc
-// with community rating desc then displayName asc as tie-break. As of 2026-09-10 test mints are SHOWN by
-// default (they still carry a "Test mint" badge) — "Hide test mints" is opt-in.
+// with community rating desc then displayName asc as tie-break (comparator in
+// src/utils/trustSort.ts). As of 2026-09-10 test mints are SHOWN by default.
 
 test.beforeEach(async ({ page }) => {
   await mockRelays(page)
