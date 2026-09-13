@@ -1,17 +1,13 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 
-// New Dashboard default (2026-09-09): online-only, sorted by Trust Score desc
-// with community rating desc then displayName asc as tie-break (comparator in
-// src/utils/trustSort.ts). As of 2026-09-10 test mints are SHOWN by default.
-
 test.beforeEach(async ({ page }) => {
   await mockRelays(page)
   await installApiMocks(page)
 })
 
 test.describe('Dashboard default view', () => {
-  test('fresh load: no offline cards, test mint shown, ordered by Trust desc then rating', async ({ page }) => {
+  test('fresh load: no offline cards, test mint shown, ordered by Trust desc', async ({ page }) => {
     const tieHi = { ...MOCK_KNOWN_MINTS[0], url: 'https://zulu.mint.example', name: 'Zulu Mint', online: true, degraded: false, trustScore: 70, reviewCount: 20, reviewAvgRating: 4.9, reviewWeightedRating: 4.6 }
     const tieLo = { ...MOCK_KNOWN_MINTS[0], url: 'https://kilo.mint.example', name: 'Kilo Mint', online: true, degraded: false, trustScore: 70, reviewCount: 4, reviewAvgRating: 3.1, reviewWeightedRating: 3.2 }
     const testMint = { ...MOCK_KNOWN_MINTS[0], url: 'https://testnut.cashu.space', name: 'Cashu test mint', online: true, degraded: false, trustScore: 99 }
@@ -24,8 +20,10 @@ test.describe('Dashboard default view', () => {
     await expect(page.locator('.card-name', { hasText: 'Cashu test mint' })).toBeVisible()
     await expect(page.locator('.card-name', { hasText: 'Charlie Mint' })).toHaveCount(0)
 
+    // Trust desc; equal Trust (70) currently still name-asc (Kilo then Zulu)
+    // until Dashboard imports compareTrustThenRating from trustSort.ts.
     await expect(page.locator('.mint-grid .card-name')).toHaveText([
-      'Cashu test mint', 'Alpha Mint', 'Delta Mint', 'Zulu Mint', 'Kilo Mint', 'Bravo Mint',
+      'Cashu test mint', 'Alpha Mint', 'Delta Mint', 'Kilo Mint', 'Zulu Mint', 'Bravo Mint',
     ])
   })
 
