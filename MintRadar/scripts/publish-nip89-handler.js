@@ -105,7 +105,7 @@ async function main() {
     tags: [
       ['d', 'mintradar-handler-38172'],
       ['k', '38172'],
-      ['web', 'https://mintradar.org/mint/<bech32>', 'naddr'],
+      ['web', 'https://mintradar.org/mint/nostr/<bech32>', 'naddr'],
     ],
   }, privkey)
 
