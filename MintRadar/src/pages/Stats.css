@@ -1078,7 +1078,7 @@
 /* 2026-09-14 board: SW+NUT | Reliable+NHI | Geo+Movers | Trend full */
 .stats-board-grid {
   display: grid;
-  grid-template-columns: 5fr 7fr;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 14px;
   padding: 14px var(--page-pad) 14px;
   max-width: var(--dash-chrome-max);
@@ -1091,15 +1091,15 @@
 .stats-board-grid > .stats-cards-grid {
   display: contents;
 }
-.stats-sw-panel { grid-column: 1; grid-row: 1; }
-.stats-geo-panel { grid-column: 1; grid-row: 3; }
+.stats-sw-panel { grid-column: 1 / 6; grid-row: 1; }
+.stats-nut-panel { grid-column: 6 / -1; grid-row: 1; }
 .stats-board-grid > .stats-panel:not(.stats-sw-panel):not(.stats-geo-panel):not(.stats-nut-panel):not(.stats-nhi-panel):not(.stats-movers-panel):not(.stats-trend-panel) {
-  grid-column: 1;
+  grid-column: 1 / 7;
   grid-row: 2;
 }
-.stats-nut-panel { grid-column: 2; grid-row: 1; }
-.stats-nhi-panel { grid-column: 2; grid-row: 2; }
-.stats-movers-panel { grid-column: 2; grid-row: 3; }
+.stats-nhi-panel { grid-column: 7 / -1; grid-row: 2; }
+.stats-geo-panel { grid-column: 1 / 8; grid-row: 3; }
+.stats-movers-panel { grid-column: 8 / -1; grid-row: 3; }
 .stats-trend-panel { grid-column: 1 / -1; grid-row: 4; }
 @media (max-width: 768px) {
   .stats-board-grid { grid-template-columns: 1fr; }
