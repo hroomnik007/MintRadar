@@ -75,6 +75,13 @@
   min-width: 0;
 }
 
+.md-hdr-favicon {
+  width: 80px !important;
+  height: 80px !important;
+  min-width: 80px !important;
+  flex-shrink: 0;
+}
+
 .md-namebox { flex: 1; min-width: 0; }
 .md-name { font-size: 31px; font-weight: 600; color: var(--text); line-height: 1.15; }
 .md-url  { font-size: 13px; color: var(--text3); font-family: var(--font-mono); margin-top: 3px; }
