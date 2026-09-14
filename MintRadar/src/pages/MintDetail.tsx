@@ -39,6 +39,8 @@ import {
   Clock, GitBranch, Plug, Database, Award, Layers, Zap, QrCode,
   Receipt, UserCheck, EyeOff, CreditCard, Send, Code, Cloud,
   Fingerprint, Bitcoin, Star, Mail, AtSign,
+  ExternalLink,
+  Link2,
 } from 'lucide-react'
 
 const REVIEW_AVATAR_COLORS = ['#17E87F','#8b5cf6','#F5A623','#3b82f6','#ef4444','#ec4899']
