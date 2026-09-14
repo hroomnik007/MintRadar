@@ -27,3 +27,22 @@ export function urlIsOnion(u: string): boolean {
 export function listHasOnion(urls: string[] | null | undefined): boolean {
   return (urls ?? []).some(urlIsOnion)
 }
+
+/** Operator-notice MOTD (maintenance / move / pause). Not generic disclaimers. */
+const MOTD_ALERT_NEEDLES = [
+  'migrat',
+  'offline',
+  'mainten',
+  'paused',
+  'shut',
+  'deprecated',
+  'moved to',
+  'new url',
+]
+
+export function isMotdAlert(motd: string | null | undefined): boolean {
+  if (!motd) return false
+  const s = motd.trim().toLowerCase()
+  if (!s) return false
+  return MOTD_ALERT_NEEDLES.some(n => s.includes(n))
+}
