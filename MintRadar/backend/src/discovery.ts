@@ -141,7 +141,7 @@ export async function discoverMintsFromNostr(): Promise<number> {
   const failedRelays = new Set<string>()
   nostrPool.onRelayConnectionFailure = (url: string) => { failedRelays.add(url) }
 
-  const discovered38172: Set<string> = new Set()
+  const discovered38172 = new Map<string, { id: string; createdAt: number }>()
   const discovered38000: Set<string> = new Set()
   // Relay URLs (normalized) that delivered at least one event this cycle, across either
   // kind — fed by relayUrlsThatResponded() below, feeds computeSilentRelays() in `finally`.
@@ -178,7 +178,11 @@ export async function discoverMintsFromNostr(): Promise<number> {
           const parsed = new URL(raw)
           const h = parsed.hostname.toLowerCase().replace(/\.$/, '')
           if (isObviouslyPrivate(h)) continue
-          discovered38172.add(normalizeUrl(raw))
+          const nurl = normalizeUrl(raw)
+          const prev = discovered38172.get(nurl)
+          if (!prev || event.created_at > prev.createdAt) {
+            discovered38172.set(nurl, { id: event.id, createdAt: event.created_at })
+          }
         } catch { continue }
       }
     } else {
@@ -233,11 +237,19 @@ export async function discoverMintsFromNostr(): Promise<number> {
   }
 
   let added38172 = 0
-  for (const url of discovered38172) {
+  for (const [url, meta] of discovered38172) {
     if (!(await isValidCashuMint(url))) continue
     const r = await pool.query(
-      'INSERT INTO mints (url, is_known) VALUES ($1, true) ON CONFLICT (url) DO NOTHING',
-      [url]
+      `INSERT INTO mints (url, is_known, nostr_announced_at, nostr_announce_id)
+       VALUES ($1, true, to_timestamp($2), $3)
+       ON CONFLICT (url) DO UPDATE SET
+         nostr_announced_at = CASE
+           WHEN mints.nostr_announced_at IS NULL OR EXCLUDED.nostr_announced_at > mints.nostr_announced_at
+           THEN EXCLUDED.nostr_announced_at ELSE mints.nostr_announced_at END,
+         nostr_announce_id = CASE
+           WHEN mints.nostr_announced_at IS NULL OR EXCLUDED.nostr_announced_at > mints.nostr_announced_at
+           THEN EXCLUDED.nostr_announce_id ELSE mints.nostr_announce_id END`,
+      [url, meta.createdAt, meta.id],
     )
     if ((r.rowCount ?? 0) > 0) added38172++
   }

@@ -35,6 +35,8 @@ export interface KnownMint {
   // Null when the window has no OK swap with a known time.
   auditAvgTimeMs?: number | null
   discoveredAt?: string | null
+  nostrAnnouncedAt?: string | null
+  nostrAnnounceId?: string | null
   trustScore?: number | null
   lastError?: string | null
   uptimePct24h?: number | null

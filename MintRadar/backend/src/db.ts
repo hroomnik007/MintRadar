@@ -173,6 +173,8 @@ export async function initDb(): Promise<void> {
     // already-tracked mint" without ever merging rows. See mintPubkey.ts. URL stays
     // the only identity for history/watchlist/reviews/notifications.
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS pubkey TEXT',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS nostr_announced_at TIMESTAMPTZ',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS nostr_announce_id TEXT',
     `CREATE INDEX IF NOT EXISTS idx_mints_pubkey ON mints (pubkey) WHERE pubkey IS NOT NULL`,
   ]
 

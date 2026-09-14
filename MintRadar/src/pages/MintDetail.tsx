@@ -729,6 +729,8 @@ function MintDetailContent({ url }: { url: string }) {
     { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, score: breakdownAScore, max: 25, color: recentReliabilityColor, tooltip: "Based on error rate from audit.8333.space — the percentage of failed swaps out of the mint's last ~100 tested operations. Lower error rate = higher score. Shows \"Unknown\" when fewer than 3 recent swaps are available.", tooltipRef: breakdownAuditRef, tooltipHook: breakdownAuditTooltip },
   ]
   const firstSeen = firstSeenLabel(discoveredAt)
+  const nostrAnnouncedAt = knownMint?.nostrAnnouncedAt ?? null
+  const nostrAnnounceHref = njumpEventUrl(knownMint?.nostrAnnounceId)
   const isNew = isNewMint(discoveredAt)
   const isOutdated = version !== null && latestGlobalVersion !== null
     && (parseMinorVer(latestGlobalVersion) - parseMinorVer(version)) > 2
@@ -963,6 +965,15 @@ function MintDetailContent({ url }: { url: string }) {
               </button>
               {firstSeen && (
                 <div className="md-first-seen" style={{fontSize:12,fontFamily:'var(--font-mono)',color:'var(--text-faint)',marginTop:4}}>{firstSeen}</div>
+              {nostrAnnouncedAt && (
+                <div className="md-first-seen" style={{fontSize:12,fontFamily:'var(--font-mono)',color:'var(--text-faint)',marginTop:4}}>
+                  {nostrAnnounceHref ? (
+                    <a href={nostrAnnounceHref} target="_blank" rel="noopener noreferrer">Announced on Nostr</a>
+                  ) : 'Announced on Nostr'}
+                  {' · '}
+                  {new Date(nostrAnnouncedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                </div>
+              )}
               )}
             </div>
           </div>

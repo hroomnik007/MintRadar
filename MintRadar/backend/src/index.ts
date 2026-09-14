@@ -879,7 +879,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         m.units, m.mint_methods, m.melt_methods, m.pubkey,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
-        m.discovered_at, m.last_trust_score, m.last_error, m.server_location,
+        m.discovered_at, m.nostr_announced_at, m.nostr_announce_id, m.last_trust_score, m.last_error, m.server_location,
         m.review_count, m.review_avg_rating, m.review_count_7d_ago, m.review_count_7d_ago_at,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
@@ -947,6 +947,8 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           // in discovery.ts. Null when the window has no OK swap with a known time.
           auditAvgTimeMs: r.audit_avg_time_ms != null ? Number(r.audit_avg_time_ms) : null,
           discoveredAt: (r.discovered_at as string | null) ?? null,
+          nostrAnnouncedAt: (r.nostr_announced_at as string | null) ?? null,
+          nostrAnnounceId: (r.nostr_announce_id as string | null) ?? null,
           trustScore: (r.last_trust_score as number | null) ?? null,
           lastError: (r.last_error as string | null) ?? null,
           uptimePct24h: total === 0 ? null : Math.round(onlineCount / total * 100),
