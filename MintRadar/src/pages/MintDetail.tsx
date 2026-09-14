@@ -1,5 +1,5 @@
 import { nip19 } from 'nostr-tools'
-import { njumpProfileUrl, njumpEventUrl } from '@/utils/nostrLinks'
+import { njumpProfileUrl, njumpEventUrl, npubFromPubkey } from '@/utils/nostrLinks'
 import { useParams, useNavigate, Navigate } from 'react-router-dom'
 import { useEffect, useState, useMemo, useRef, useCallback, type JSX } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -411,6 +411,23 @@ function MintDetailContent({ url }: { url: string }) {
   const [copiedContact, setCopiedContact] = useState<string | null>(null)
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
+  const [copiedReviewAction, setCopiedReviewAction] = useState<string | null>(null)
+  const [highlightedReview, setHighlightedReview] = useState<string | null>(null)
+
+  useEffect(() => {
+    // hash review highlight
+    const raw = window.location.hash
+    const m = raw.match(/^#review-([0-9a-f]{64})$/i)
+    if (!m?.[1]) return
+    const id = m[1].toLowerCase()
+    setHighlightedReview(id)
+    const t = window.setTimeout(() => {
+      document.getElementById(`review-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 80)
+    const t2 = window.setTimeout(() => setHighlightedReview(null), 2500)
+    return () => { window.clearTimeout(t); window.clearTimeout(t2) }
+  }, [url])
+
   const [showQr, setShowQr] = useState(false)
   const [showTrustBreakdown, setShowTrustBreakdown] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
@@ -1975,7 +1992,7 @@ function MintDetailContent({ url }: { url: string }) {
                     const displayName = profile?.name ?? shortNpub(npub)
                     const initial = (profile?.name ?? npub).slice(0, 1).toUpperCase()
                     return (
-                      <div key={r.id} className="review-card">
+                      <div key={r.id} id={`review-${r.id}`} className={`review-card${highlightedReview === r.id ? ' review-card-hl' : ''}`}>
                         <div className="review-card-header">
                           <div className="review-avatar">
                             {profile?.picture?.startsWith('https://')
@@ -1992,15 +2009,44 @@ function MintDetailContent({ url }: { url: string }) {
                               <span className="review-stars">{starString(r.rating)}</span>
                             )}
                             <span className="review-date">{formatReviewDate(r.createdAt)}</span>
-                            {njumpEventUrl(r.id) && (
-                              <a
-                                href={njumpEventUrl(r.id)!}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="review-date"
-                                title="Open this review on Nostr"
-                              >Nostr</a>
-                            )}
+                            <span className="review-actions">
+                              <button
+                                type="button"
+                                className="review-action-btn"
+                                title="Copy reviewer npub"
+                                onClick={e => {
+                                  e.preventDefault()
+                                  const np = npubFromPubkey(r.pubkey)
+                                  if (!np) return
+                                  void navigator.clipboard.writeText(np).then(() => {
+                                    setCopiedReviewAction(r.id + '-npub')
+                                    window.setTimeout(() => setCopiedReviewAction(null), 1500)
+                                  })
+                                }}
+                              >{copiedReviewAction === r.id + '-npub' ? <Check size={13} /> : <Copy size={13} />}</button>
+                              {njumpEventUrl(r.id) && (
+                                <a
+                                  href={njumpEventUrl(r.id)!}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="review-action-btn"
+                                  title="Open this review on Nostr"
+                                ><ExternalLink size={13} /></a>
+                              )}
+                              <button
+                                type="button"
+                                className="review-action-btn"
+                                title="Copy link to this review"
+                                onClick={e => {
+                                  e.preventDefault()
+                                  const permalink = `${window.location.origin}/mint/${encodeURIComponent(url)}#review-${r.id}`
+                                  void navigator.clipboard.writeText(permalink).then(() => {
+                                    setCopiedReviewAction(r.id + '-link')
+                                    window.setTimeout(() => setCopiedReviewAction(null), 1500)
+                                  })
+                                }}
+                              >{copiedReviewAction === r.id + '-link' ? <Check size={13} /> : <Link2 size={13} />}</button>
+                            </span>
                           </div>
                         </div>
                         {r.comment && <p className="review-comment">{r.comment}</p>}
