@@ -69,7 +69,7 @@
 
 .md-avatar-id {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
   flex: 1;
   min-width: 0;
