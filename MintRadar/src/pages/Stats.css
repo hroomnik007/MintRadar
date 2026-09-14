@@ -1,3 +1,1115 @@
 .stats-page {
   background: transparent;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  /* Single source of truth for the two spacing values unified across this
+     page's panels (see the spacing-consistency investigation/fix session) —
+     --stats-row-gap for spacing between list rows inside a panel (Software
+     in Use, Most Reliable, Geographic Distribution, Trust Score Movers, NUT
+     Coverage), --stats-header-gap for the panel header → content gap
+     (Most Reliable, Trust Score Movers, Trust Score Trend, Network Health
+     Index desktop breakdown — the panels using .stats-card-header). NOT
+     used by Software in Use / Geographic Distribution's title-to-content
+     spacing (those use .stats-panel-title's own 14px default, out of scope
+     for this unification) or by the Network Health Index modal's footer
+     (overlay context, not part of the main panel grid). */
+  --stats-row-gap: 8px;
+  --stats-header-gap: 10px;
+}
+
+.stats-header {
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.stats-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.stats-subtitle {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  margin-top: 2px;
+}
+
+.stats-loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* ── Flat metric bar ─────────────────────────────────────────── */
+/* Constrained + centered to the same width/inset as .mint-grid (Dashboard)
+   so the hero tile row's left edge lines up with the first Dashboard mint
+   card. .stats-header above stays full-bleed (unchanged). */
+.stats-metrics {
+  display: flex;
+  gap: 12px;
+  padding: 12px var(--page-pad);
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  width: 100%;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Hero tiles reuse Dashboard's .stat-card / .stat-row / .stat-icon /
+   .stat-figure / .stat-value / .stat-note (defined in Dashboard.css, which
+   is always in the main bundle since Dashboard isn't lazy-loaded) instead of
+   duplicating card/icon/value rules here — same min-height, padding, radius,
+   border, ~40px/10px-radius icon wrapper, and muted green/amber/gray fills
+   as the Dashboard stat row. .smc-label-info is the one Stats-only addition
+   (the ⓘ tooltip trigger on the uptime tile's label). */
+.smc-label-info {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── Network Health Index (standalone panel, .stats-hero-grid row 2 col 2 —
+   .stats-nhi-panel) ── Container is the plain .stats-panel background/border
+   used by every other card on this page — no custom color. Horizontal
+   layout: title row on top (mobile-only "Details ›" opens the breakdown
+   modal), then the ring and badge side by side on one line. Desktop
+   (>768px) renders the breakdown inline below the ring instead of behind a
+   click — see NetworkHealthComponentRow usage in Stats.tsx — so the gauge
+   isn't clickable there and "Details ›" is hidden (nothing new the click
+   would reveal). The formula explanation text lives only in the header ⓘ
+   tooltip on desktop (widened to 260px there) and in the mobile modal's
+   footer — never as a permanent block under the breakdown. Desktop also
+   renders a larger 112px gauge (~1.33× the base 84px, 2026-09-12 — fills
+   the empty space the panel already had next to the legend; mobile stays
+   60px, via .nhi-gauge-wrap/.nhi-gauge-wrap svg below) — set with an
+   inline style override in Stats.tsx rather than a CSS media query, since
+   the panel's desktop/mobile split is already driven by the useIsMobile()
+   JS check, not a breakpoint this stylesheet owns.
+
+   .stats-nhi-panel is a flex column with align-self:stretch — now the same
+   as the outer grid's own align-items:stretch default, kept explicit here
+   for clarity. It shares its row with Geographic Distribution, both
+   stretching to match whichever is tallest instead of top-aligning.
+   .nhi-fill (wrapping .nhi-wrap + the breakdown
+   block) is the flex:1 region that absorbs that surplus height and
+   redistributes it via justify-content: space-between, so the breakdown
+   block ends up flush with the panel's bottom edge instead of leaving dead
+   space below it. Its margin-top is --stats-header-gap (10px) — same
+   header→content mechanism as Most Reliable/Trust Score Movers
+   (.stats-card-header's own 2px margin-bottom collapses with this, settling
+   on the larger value); this lives on .nhi-fill rather than .nhi-wrap
+   specifically so the collapse still reaches .stats-card-header directly (a
+   flex container's children never collapse margins with anything outside
+   it). The header no longer carries its own marginBottom override in
+   Stats.tsx for this reason. On mobile, .nhi-fill only ever has one child
+   (no breakdown block) and nothing stretches the panel taller than its
+   content, so space-between has nothing to do — no visual change there. */
+.stats-nhi-panel {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
+
+.nhi-fill {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  margin-top: var(--stats-header-gap);
+}
+
+.nhi-wrap {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.nhi-gauge-wrap {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+}
+
+.nhi-gauge-wrap svg { width: 60px; height: 60px; }
+
+.nhi-gauge-num {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  font-family: var(--font-mono-data);
+  letter-spacing: -0.02em;
+}
+
+/* Typography comes from .stats-panel-title itself (applied as a second class
+   in the markup), so this heading is byte-identical to "SOFTWARE IN USE" /
+   "GEOGRAPHIC DISTRIBUTION" / "MOST RELIABLE" by construction. Only layout is
+   adjusted here: the title holds an inline info icon, so the class's 14px
+   margin-bottom is overridden inline (matches Trust Score panel's header,
+   which zeroes .md-panel-title's own margin-bottom the same way). */
+.nhi-title-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+/* Compact score-band legend — replaces the old single dynamic "Healthy" /
+   "Moderate" / "At Risk" badge with all three bands at once, so the gauge's
+   colour/number can be read against a key instead of a one-word label. The
+   band matching the current score is highlighted (opacity 1 + bold); the
+   other two stay muted. Same three thresholds/colours as healthLabel() /
+   trustScoreInfo() — no new formula, purely a legend for the existing one. */
+.nhi-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.nhi-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text3);
+  opacity: 0.55;
+  transition: opacity 150ms ease;
+}
+
+.nhi-legend-row.active {
+  opacity: 1;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.nhi-legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.audit-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  background: var(--bg);
+  border: 0.5px solid var(--border2);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 10px;
+  color: var(--text2);
+  line-height: 1.5;
+  z-index: 20;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  white-space: normal;
+  text-align: left;
+  font-family: var(--font-body);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Metric-row cards sit flush against the top of the page, so their tooltip
+   opens downward instead of the default upward (which the viewport clips). */
+.audit-tooltip.audit-tooltip-down {
+  bottom: auto;
+  top: calc(100% + 6px);
+}
+
+/* ── 2×2 hero grid: Software in Use | Most Reliable, Geographic
+   Distribution | Network Health Index ──────────────────────────
+   2026-09-12 visual pass to match a reference mockup's layout. Fixed 2
+   columns at every width down to the 768px breakpoint (unlike
+   .stats-cards-grid below, which only collapses to 2 columns under 1300px) —
+   this grid only ever holds these 4 panels, so there's no wider 4-across
+   state to preserve. DOM order is Software, Most Reliable, Geo, NHI, which
+   doubles as the single-column mobile stack order (see the 768px override
+   below) — reordering the JSX reorders both without a separate mobile-only
+   rule. align-items: stretch matches each row's two panels to the taller
+   one's height, same mechanism .stats-cards-grid already used. */
+.stats-hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 14px var(--page-pad) 0;
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  width: 100%;
+  align-items: stretch;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .stats-hero-grid { grid-template-columns: 1fr; }
+}
+
+/* Small icon well in a panel's title row — same muted-fill/color-by-band
+   recipe as Dashboard's 40px .stat-icon (green/orange/gray), just sized for
+   an inline title instead of a hero tile. */
+.stats-panel-title-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.stats-panel-title-row .stats-panel-title {
+  margin-bottom: 0;
+}
+
+.stats-panel-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stats-panel-icon.green  { background: var(--green-soft);  color: var(--green-bright); }
+.stats-panel-icon.orange { background: var(--amber-soft);  color: var(--amber); }
+.stats-panel-icon.gray   { background: rgba(139, 148, 158, 0.1); color: var(--text-faint); }
+
+/* ── NUT Coverage / Trust Score Movers / Trust Score Trend grid ─── */
+/* Same chrome-width alignment as .stats-metrics above, so every panel below
+   the hero tiles also left-aligns with the Dashboard mint grid.
+   align-items: stretch — NUT Coverage / Trust Score Movers share one row
+   height, the taller of the two. */
+.stats-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 14px;
+  padding: 14px var(--page-pad) 14px;
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  width: 100%;
+  align-items: stretch;
+  min-width: 0;
+}
+
+/* NUT Coverage (span 3) + Trust Score Movers (1 col, no override needed —
+   auto-placement drops it into the remaining column). Trust Score Trend,
+   full width (.stats-trend-panel below). */
+.stats-nut-panel {
+  grid-column: auto;
+}
+
+.stats-trend-panel {
+  grid-column: 1 / -1;
+}
+
+/* Software in Use and Geographic Distribution both need the same flex-fill
+   mechanism as .nhi-fill now that .stats-hero-grid stretches them: a flex
+   column whose content wrapper (.stats-sw-fill / .stats-geo-fill) uses
+   flex:1 + justify-content:space-between, so any surplus height from
+   matching the row's taller panel lands between the row list and the
+   trailing footer/note — instead of stretching the rows themselves or (for
+   Geographic Distribution) pushing "View others" outside the panel. */
+.stats-sw-panel,
+.stats-geo-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-sw-fill,
+.stats-geo-fill {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+}
+
+/* ── Software accordion ──────────────────────────────────────── */
+/* One software row in the Software in Use panel. Opens SoftwareModal
+   (version list → mint list drill-down) — it deliberately does NOT expand
+   in place any more: the old accordion stretched this panel and left the
+   neighbouring fixed-height panels in the same grid row with dead space.
+   The panel is now a constant height regardless of interaction. */
+/* Same radius/border recipe as .stats-top5-row (Most Reliable / Movers) —
+   one shared list-row chrome across the page instead of a third style. */
+.sw-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--bg3);
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.sw-row:hover {
+  background: var(--surface-2);
+}
+
+.sw-chevron {
+  font-size: 13px;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: color 150ms ease;
+}
+
+.sw-badge {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  border: 1px solid;
+  border-radius: 4px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ── Trust Score Movers (risers/fallers) ──────────────────────── */
+/* Top margin uses --stats-row-gap (8px) for both the "Risers" and "Fallers"
+   labels — previously Fallers had its own inline marginTop:12 override
+   while Risers used this class's then-10px default, an inconsistency
+   within the same component (see the spacing-consistency fix). Both now
+   read this one declaration; TrustMoversPanel.tsx no longer overrides it. */
+.stats-movers-section-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin: var(--stats-row-gap) 0 6px;
+}
+
+/* Row container is .stats-top5-row (shared with Most Reliable) — rows here
+   no longer have their own container class. Only the right-hand value (this
+   delta badge) and the section labels above stay Movers-specific. */
+.stats-movers-delta {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.stats-movers-delta.up {
+  color: var(--green-bright);
+  background: var(--green-soft);
+}
+
+.stats-movers-delta.down {
+  color: var(--red);
+  background: var(--red-soft);
+}
+
+.stats-movers-empty {
+  font-size: 11.5px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  padding: 3px 0;
+}
+
+/* Loading skeleton — mirrors the .stats-top5-row layout (favicon, two text
+   lines, right-hand badge) so the panel doesn't reflow when real rows arrive.
+   Distinct from .stats-movers-empty / "No data yet": this shows only while the
+   request is in flight. */
+@keyframes stats-movers-shimmer {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+.stats-movers-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stats-row-gap);
+}
+
+.stats-movers-sk-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.stats-movers-sk-avatar,
+.stats-movers-sk-line,
+.stats-movers-sk-badge {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%);
+  background-size: 400% 100%;
+  animation: stats-movers-shimmer 1.4s ease infinite;
+  border-radius: 4px;
+}
+
+.stats-movers-sk-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.stats-movers-sk-lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.stats-movers-sk-line { height: 9px; }
+
+.stats-movers-sk-badge {
+  width: 38px;
+  height: 16px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stats-movers-sk-avatar,
+  .stats-movers-sk-line,
+  .stats-movers-sk-badge { animation: none; }
+}
+
+/* ── Trust trend summary ─────────────────────────────────────── */
+.trend-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.trend-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.trend-summary-label {
+  color: var(--text3);
+  font-size: 10px;
+}
+
+.trend-summary-sep {
+  color: var(--text3);
+  font-size: 10px;
+}
+
+/* ── Panel ───────────────────────────────────────────────────── */
+/* Same chrome as Dashboard's .mint-card / .stat-card: --surface background
+   (var(--bg2) is the same token, kept here as the literal shared value),
+   var(--border) hairline, var(--r) radius — no separate Stats-only card
+   recipe. */
+.stats-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 16px;
+}
+
+/* Same recipe as Dashboard's .stat-label ("SAT" pill): 10px uppercase,
+   0.1em letter-spacing, var(--text-dim) (--t2) — not a separate, larger
+   Stats-only heading style. */
+.stats-panel-title {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 14px;
+  font-family: var(--font-body);
+}
+
+.stats-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+/* ── Toggle tabs ─────────────────────────────────────────────── */
+.stats-tab-toggle {
+  display: flex;
+  background: var(--bg2);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.stats-tab-btn {
+  background: none;
+  border: none;
+  border-radius: 5px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text3);
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+  white-space: nowrap;
+}
+
+.stats-tab-btn.active {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.stats-tab-btn:hover:not(.active) {
+  color: var(--text2);
+}
+
+/* ── Top rows (Most Reliable / Fastest) ──────────────────────── */
+.stats-top5-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  background: var(--bg3);
+  border-radius: 8px;
+  border: 0.5px solid var(--border);
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.stats-top5-row:hover {
+  background: var(--surface-2);
+  border-color: var(--border2);
+}
+
+.stats-top5-rank {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text3);
+  width: 20px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Distribution bars ───────────────────────────────────────── */
+/* No vertical padding here — inter-row spacing comes entirely from the
+   wrapping container's own row-gap (Software in Use: the flex column's
+   --stats-row-gap set inline in Stats.tsx; Geographic Distribution:
+   .stats-geo-cols' row-gap below), not from stacked row padding (previously
+   5px top+bottom summed to ~10px between rows; see the spacing-consistency
+   fix). The `gap: 8px` below is unrelated — it's this row's own internal
+   flex gap between the label/count children, not the between-rows spacing. */
+.dist-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  /* Grid items get an implicit min-width:auto (content-based) unless
+     overridden — inside .stats-geo-cols' `1fr 1fr` columns, a long,
+     space-free city name would otherwise blow out its column to its full
+     unwrapped width instead of wrapping (.dist-label-city's overflow-wrap
+     can't help if the grid track itself refuses to shrink below the text's
+     intrinsic width). Harmless for .dist-row's other use (Software in Use,
+     a flex column, not a grid). */
+  min-width: 0;
+}
+
+/* Geographic Distribution's two-column layout: geoDist.top (already sorted
+   by count, "Unknown"/CDN bucket included as ordinary entries) renders as
+   flag+name+count cells, column 1 filling top-to-bottom before column 2
+   (grid-auto-flow:column) — same read order as the old single column, just
+   split in half. Stats.tsx sets grid-template-rows inline to
+   ceil(top.length/2) so both columns balance evenly. Row height is
+   unchanged from the old list (no bars, same .dist-row/.dist-label/
+   .dist-count), so two columns of half as many rows keeps this panel at
+   the same height as before — never taller than Most Reliable / NHI. */
+.stats-geo-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-flow: column;
+  column-gap: 16px;
+  row-gap: var(--stats-row-gap);
+}
+
+.dist-row-clickable {
+  cursor: pointer;
+  border-radius: 5px;
+  padding: 0 4px;
+  margin: 0 -4px;
+  transition: background 120ms ease;
+}
+
+.dist-row-clickable:hover {
+  background: var(--bg3);
+}
+
+.dist-more-row {
+  cursor: pointer;
+  border-radius: 5px;
+  padding: 3px 4px;
+  margin: 0 -4px;
+  transition: background 120ms ease;
+}
+
+.dist-more-row:hover {
+  background: var(--bg3);
+}
+
+.dist-label-city {
+  text-decoration: underline;
+  text-decoration-color: currentColor;
+  text-underline-offset: 2px;
+}
+
+/* Name now takes the row's flexible space (was a fixed 110px, forcing an
+   early ellipsis) and .dist-track a short fixed track instead of flex:1 —
+   the name gets whatever the bar used to claim. Still single-line: overflow/
+   ellipsis/nowrap unchanged, so a name that's still too long truncates
+   rather than wrapping. */
+.dist-label {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Geographic Distribution's city names — never ellipsis-cut ("San
+   Francisco", "Kansas City", "Kuala Lumpur" must show in full). Overrides
+   .dist-label's nowrap/ellipsis for this one combination only; Software in
+   Use (plain .dist-label, no .dist-label-city) keeps the single-line
+   truncated behavior above. A long name gets one wrap onto a second line —
+   .dist-row's own align-items:center still centers that two-line block, and
+   the grid's `auto` row sizing (set inline in Stats.tsx) already
+   accommodates a taller row with no further layout change. Two-column
+   layout and counts are unaffected — .dist-count keeps its own fixed width
+   + flex-shrink:0. */
+.dist-label-city {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.dist-track {
+  flex: 0 0 50px;
+  height: 5px;
+  background: var(--bg4);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.dist-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 400ms ease;
+}
+
+/* Software in Use's per-implementation bars (.sw-row) and Geographic
+   Distribution's bars (.dist-row) alternated decorative green/copper per
+   row — no warning meaning, unlike the NUT Coverage / "Behind current
+   release" bars elsewhere on this page, which stay amber/red for real
+   adoption/freshness warnings. Forced to one mint-green fill here so
+   "coverage bar" reads as one system; !important is required because the
+   color is set inline (Stats.tsx computes it per row) and this rule must
+   win over that without touching the component logic. */
+.sw-row .dist-fill,
+.dist-row .dist-fill {
+  background: var(--green) !important;
+}
+
+.dist-count {
+  font-size: 11px;
+  font-family: var(--font-mono-data);
+  color: var(--text3);
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── NUT Coverage section ────────────────────────────────────── */
+.stats-section-sublabel {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  margin-bottom: 12px;
+}
+
+/* row-gap is --stats-row-gap (8px) — the inter-row spacing mechanism,
+   replacing the old row-gap:0 + stacked .stats-nut-row padding (6px top+bottom
+   + the row's own border-bottom summed to ~12.5px; see the spacing-
+   consistency fix). column-gap (32px, between the 3 inner columns) is
+   untouched — a separate, deliberate value not part of that unification. */
+.stats-nut-rows-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: var(--stats-row-gap);
+  column-gap: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+/* 4px vertical padding (was 0, per the earlier spacing-consistency fix,
+   which relied on .stats-nut-rows-grid's row-gap alone) — that fix
+   pre-dates the row text growing from 8-10px to 9-11px (see the NUT
+   Coverage font-size fix above), and with zero padding around the larger
+   text the rows read as cramped. Deliberately a bespoke value here rather
+   than --stats-row-gap: this row's border-bottom divider already occupies
+   part of the boundary between rows, so combined with row-gap (8px) the
+   total space between two rows' text is 4+0.5(border)+8+4 ≈ 16.5px — in
+   the same ballpark as .stats-top5-row's 6px padding + 8px row-gap ≈ 14px
+   "airy" feel (Most Reliable/Trust Score Movers) without stacking a second
+   full --stats-row-gap on top of the divider and making this the loosest
+   list on the page. row-gap itself is untouched — it's a shared token used
+   by five other panels, out of scope for this fix. border-bottom stays, as
+   the deliberate divider it's been documented as since that same earlier
+   fix — `gap: 8px` below is unrelated, this row's own internal grid gap
+   between the tag/name/count cells (the adoption bar column was removed —
+   see the comment on .stats-nut-row below). */
+/* Adoption bar column removed (tag, name, count only now) — the name's 1fr
+   column absorbs the freed space so it gets even more of the row. */
+.stats-nut-row {
+  display: grid;
+  grid-template-columns: 62px 1fr 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-bottom: 0.5px solid var(--border);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.stats-nut-row:hover { background: var(--surface-2); }
+
+/* Font sizes here follow this page's existing vocabulary rather than their
+   own smaller scale (measured in-browser, same approach as the Units &
+   Methods font fix): 9px to match .snc-nut-tag (the identical NUT badge
+   pill used elsewhere, e.g. in NutMintsModal) and 11px to match
+   .dist-label/.dist-count (Geographic Distribution's row text) below. */
+.snr-nut-tag {
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: rgba(23, 232, 127, 0.1);
+  border: 0.5px solid rgba(23, 232, 127, 0.2);
+  border-radius: 4px;
+  padding: 1px 5px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.snr-nut-name {
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.snr-nut-count {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── NUT modal ───────────────────────────────────────────────── */
+.nut-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nut-modal {
+  background: var(--bg2);
+  border: 1px solid var(--border-hi);
+  border-radius: 12px;
+  padding: 20px;
+  width: 480px;
+  max-width: calc(100vw - 40px);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: calc(100vh - 80px);
+  overflow: hidden;
+}
+
+.nut-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.nut-modal-close:hover { background: var(--bg3); color: var(--text); }
+
+/* Drill-down "back" affordance in SoftwareModal's mint-list level. Inline in
+   the header row (not absolutely positioned like .nut-modal-close), so it
+   never overlaps the ✕ in the corner — the two are separate actions: this one
+   steps back up to the version list, ✕ closes the whole modal. */
+.nut-modal-back {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 8px 4px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+.nut-modal-back:hover { background: var(--bg3); color: var(--text); border-color: var(--border-hi); }
+
+.nut-modal-header { padding-right: 24px; }
+
+.nut-modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.nut-modal-subtitle {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+}
+
+.nut-modal-search {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.nut-modal-search:focus { border-color: var(--accent); }
+.nut-modal-search::placeholder { color: var(--text3); }
+
+.nut-modal-list {
+  overflow-y: auto;
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+
+.nut-modal-list::-webkit-scrollbar { width: 4px; }
+.nut-modal-list::-webkit-scrollbar-track { background: transparent; }
+.nut-modal-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+.nut-modal-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  background: var(--bg3);
+  border-radius: 7px;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+}
+.nut-modal-row:hover { border-color: var(--border); }
+
+.nut-modal-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* .nut-modal-row-info is flex-direction: column, so its default cross-axis
+   (align-items: stretch) makes any child span the container's full width —
+   fine for the name/url text rows, but an age badge (e.g. "Veteran") is
+   meant to be a compact pill, not stretched into a wide bar. Used in
+   VersionMintsView's mint-list row (Software modal); align-self overrides
+   only this child, no effect on the row/column layout variants that
+   already pass their own flexDirection: 'row' + alignItems: 'center'. */
+.nut-modal-row-badge {
+  align-self: flex-start;
+}
+
+.nut-modal-row-name {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Mint-name links inside the city/NUT/software-version → mint-list modals
+   (CityMintsModal, NutMintsModal, VersionMintsView) — same color as
+   .nut-modal-row-name's own default body text (matches the version labels
+   in the Nutshell versions modal, SoftwareVersionsView), no underline by
+   default. Accent shows only on hover of the row, same trigger as the
+   row's existing border-color hover. Scoped to .mint-link specifically so
+   MoreLocationsModal's location-name rows (plain .nut-modal-row-name, own
+   geo color) are unaffected. */
+.nut-modal-row:hover .nut-modal-row-name.mint-link {
+  color: var(--accent);
+}
+
+.nut-modal-row-url {
+  font-size: 10px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nut-modal-row-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.nut-modal-empty {
+  text-align: center;
+  padding: 24px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.nut-modal-footer {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ── snc-nut-tag used in modal ───────────────────────────────── */
+.snc-nut-tag {
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: rgba(23, 232, 127, 0.1);
+  border: 0.5px solid rgba(23, 232, 127, 0.2);
+  border-radius: 4px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+/* .stats-cards-grid now holds only NUT Coverage (span 3) + Trust Score
+   Movers (span 1) + Trust Score Trend (full width) — the 2×2 hero panels
+   moved to their own always-2-column .stats-hero-grid above, which handles
+   its own mobile stacking independently (see its 768px rule). Below 1300px
+   NUT Coverage's span-3 no longer fits comfortably next to Movers' span-1,
+   so both reset to full-width (1 / -1) and stack — a span larger than the
+   grid's actual column count doesn't clamp, it grows extra implicit
+   columns, which would silently break a 2-column layout if left at their
+   4-column spans. Trust Score Trend needs no override: .stats-trend-panel
+   is always 1 / -1 regardless of column count. */
+@media (max-width: 1300px) {
+  .stats-cards-grid { grid-template-columns: 1fr 1fr; }
+  .stats-nut-panel { grid-column: 1 / -1; }
+  .stats-movers-panel { grid-column: 1 / -1; }
+}
+
+@media (max-width: 768px) {
+  .stats-cards-grid { grid-template-columns: 1fr; }
+  .stats-nut-rows-grid { grid-template-columns: 1fr; overflow: hidden; }
+  .stats-nut-panel { grid-column: 1 / -1; }
+}
+
+@media (max-width: 700px) {
+  .stats-hero-grid { padding: 10px var(--page-pad) 0; gap: 10px; }
+  .stats-cards-grid { grid-template-columns: 1fr; padding: 10px var(--page-pad) 0; gap: 10px; }
+  .stats-metrics { flex-wrap: wrap; gap: 8px; padding: 10px var(--page-pad); }
+  .stats-metrics .stat-card { flex: 1 1 calc(50% - 4px); }
+  .stats-nut-rows-grid { grid-template-columns: 1fr; }
+  .stats-nut-row { grid-template-columns: 55px 1fr 38px; gap: 6px; padding: 4px 8px; }
+}
+
+/* Mobile (≤700px, same breakpoint Stats.tsx uses to cut geoDist down to
+   topN=5 for this panel): single column, plain top-to-bottom order. Two
+   columns of city name + count get cramped once the panel is down to
+   full-viewport-minus-padding width, and stacking 10-20 rows on a phone
+   (the desktop topN=20 cut) would turn the panel into a scroll-fest — hence
+   both the JS topN drop and this layout switch happen at the same
+   breakpoint. Desktop (>700px) keeps the two-column layout untouched. */
+@media (max-width: 700px) {
+  .stats-geo-cols { grid-template-columns: 1fr; grid-auto-flow: row; }
+}
+
+
+/* 2026-09-14 board: SW+NUT | Reliable+NHI | Geo+Movers | Trend full */
+.stats-board-grid {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: 12px;
+  align-items: stretch;
+}
+.stats-board-grid > .stats-hero-grid,
+.stats-board-grid > .stats-cards-grid {
+  display: contents;
+}
+.stats-sw-panel { grid-column: 1; grid-row: 1; }
+.stats-geo-panel { grid-column: 1; grid-row: 3; }
+.stats-board-grid > .stats-panel:not(.stats-sw-panel):not(.stats-geo-panel):not(.stats-nut-panel):not(.stats-nhi-panel):not(.stats-movers-panel):not(.stats-trend-panel) {
+  grid-column: 1;
+  grid-row: 2;
+}
+.stats-nut-panel { grid-column: 2; grid-row: 1; }
+.stats-nhi-panel { grid-column: 2; grid-row: 2; }
+.stats-movers-panel { grid-column: 2; grid-row: 3; }
+.stats-trend-panel { grid-column: 1 / -1; grid-row: 4; }
+@media (max-width: 768px) {
+  .stats-board-grid { grid-template-columns: 1fr; }
+  .stats-nut-panel,
+  .stats-nhi-panel,
+  .stats-movers-panel,
+  .stats-trend-panel,
+  .stats-sw-panel,
+  .stats-geo-panel { grid-column: auto; grid-row: auto; }
+
+  .stats-sw-panel { order: 1; }
+  .stats-nut-panel { order: 2; }
+  .stats-board-grid > .stats-panel:not(.stats-sw-panel):not(.stats-geo-panel):not(.stats-nut-panel):not(.stats-nhi-panel):not(.stats-movers-panel):not(.stats-trend-panel) { order: 3; }
+  .stats-nhi-panel { order: 4; }
+  .stats-geo-panel { order: 5; }
+  .stats-movers-panel { order: 6; }
+  .stats-trend-panel { order: 7; }
 }
