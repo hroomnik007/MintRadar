@@ -72,7 +72,7 @@ describe('POST /api/mints/discover', () => {
     expect(res.body).toEqual({
       added: 1,
       total: 1,
-      results: [{ url: 'https://mint.example.com', success: true, isNew: true }],
+      results: [{ url: 'https://mint.example.com', success: true, isNew: true, aliasOf: [] }],
     })
   })
 
@@ -87,7 +87,33 @@ describe('POST /api/mints/discover', () => {
     expect(res.body).toEqual({
       added: 0,
       total: 1,
-      results: [{ url: 'https://mint.example.com', success: true, isNew: false }],
+      results: [{ url: 'https://mint.example.com', success: true, isNew: false, aliasOf: [] }],
+    })
+  })
+
+  it('returns aliasOf when a new URL shares a pubkey with an already-tracked mint', async () => {
+    resolvesTo({ address: '1.2.3.4', family: 4 })
+    const pubkey = '03' + 'ef'.repeat(32)
+    mintReachable({ nuts: { '4': {} }, pubkey })
+    query.mockResolvedValueOnce({ rowCount: 1 }) // INSERT (new row)
+    query.mockResolvedValueOnce({ rows: [{ pubkey: null }] }) // persistMintPubkeyIfChanged: SELECT stored pubkey
+    query.mockResolvedValueOnce({ rowCount: 1 }) // persistMintPubkeyIfChanged: UPDATE pubkey
+    query.mockResolvedValueOnce({
+      rows: [{ url: 'https://original.example.com', name: 'Original Mint' }],
+    }) // alias SELECT
+
+    const res = await post({ urls: ['https://mirror.example.com'] })
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      added: 1,
+      total: 1,
+      results: [{
+        url: 'https://mirror.example.com',
+        success: true,
+        isNew: true,
+        aliasOf: [{ url: 'https://original.example.com', name: 'Original Mint' }],
+      }],
     })
   })
 

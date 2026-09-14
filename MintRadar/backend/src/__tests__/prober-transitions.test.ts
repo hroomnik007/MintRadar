@@ -64,8 +64,8 @@ beforeEach(async () => {
     if (/INSERT INTO mint_history/.test(sql)) {
       return { rows: [{ id: 1 }] }
     }
-    if (/SELECT version FROM mints WHERE url = \$1/.test(sql)) {
-      return { rows: [{ version: '1.0.0' }] }
+    if (/SELECT version, pubkey FROM mints WHERE url = \$1/.test(sql)) {
+      return { rows: [{ version: '1.0.0', pubkey: null }] }
     }
     if (/UPDATE mints SET\n\s*name/.test(sql)) {
       return { rowCount: 1 }
@@ -236,5 +236,74 @@ describe('probeMintToDb — invalid_since reap-clock maintenance', () => {
     await probeMintToDb(MINT)
 
     expect(invalidSinceUpdates()).toEqual([])
+  })
+})
+
+// mints.pubkey — see mintPubkey.ts / db.ts migration. Written on every
+// successful /v1/info persist alongside name/version/etc, via the same
+// combined UPDATE mints SET query — never a separate round-trip.
+describe('probeMintToDb — pubkey persistence', () => {
+  const VALID_PUBKEY = '02' + 'ab'.repeat(32)
+
+  function mintOnlineWithInfo(info: Record<string, unknown>): void {
+    safeFetch.mockImplementation(async (url: string) => {
+      if (url.endsWith('/v1/info')) return { ok: true, json: async () => info }
+      return null
+    })
+  }
+
+  const updateMintsCall = () =>
+    query.mock.calls.find(c => /UPDATE mints SET\n\s*name/.test(String(c[0])))
+
+  it('writes a valid pubkey from the probe', async () => {
+    previousRows = []
+    mintOnlineWithInfo({ name: 'Test Mint', nuts: { '4': {} }, pubkey: VALID_PUBKEY })
+
+    await probeMintToDb(MINT)
+
+    const call = updateMintsCall()
+    expect(call).toBeDefined()
+    // Params: [name, iconUrl, version, nutCount, tosUrl, descriptionLong, nutsJson,
+    //          url, unitsJson, mintMethodsJson, meltMethodsJson, contactCount, pubkey]
+    expect(call![1][12]).toBe(VALID_PUBKEY)
+  })
+
+  it('keeps the previously stored pubkey when a probe omits it (COALESCE, never wiped)', async () => {
+    previousRows = []
+    query.mockImplementation(async (sql: string) => {
+      if (/SELECT online FROM mint_history WHERE url = \$1/.test(sql)) return { rows: previousRows }
+      if (/INSERT INTO mint_history/.test(sql)) return { rows: [{ id: 1 }] }
+      if (/SELECT version, pubkey FROM mints WHERE url = \$1/.test(sql)) {
+        return { rows: [{ version: '1.0.0', pubkey: VALID_PUBKEY }] } // already has a stored key
+      }
+      if (/UPDATE mints SET\n\s*name/.test(sql)) return { rowCount: 1 }
+      if (/INSERT INTO mint_version_history/.test(sql)) return { rowCount: 1 }
+      if (/SELECT server_location FROM mints WHERE url = \$1/.test(sql)) return { rows: [{ server_location: null }] }
+      if (/FROM mints m\s*\n\s*LEFT JOIN mint_history h/.test(sql)) {
+        return { rows: [{ nut_count: 1, version: '1.0.0', audit_recent_total: null, audit_recent_errors: null, total: '4', online_count: '2' }] }
+      }
+      if (/UPDATE mints SET last_trust_score/.test(sql)) return { rowCount: 1 }
+      if (/UPDATE mint_history SET trust_score/.test(sql)) return { rowCount: 1 }
+      return { rows: [], rowCount: 0 }
+    })
+    // This probe's /v1/info has no `pubkey` field at all.
+    mintOnlineWithInfo({ name: 'Test Mint', version: '1.0.0', nuts: { '4': {} } })
+
+    await probeMintToDb(MINT)
+
+    const call = updateMintsCall()
+    expect(call).toBeDefined()
+    // COALESCE($13, pubkey) with a null $13 param keeps the DB's existing value.
+    expect(call![1][12]).toBeNull()
+  })
+
+  it('ignores a malformed pubkey (never writes garbage, never wipes a good stored value)', async () => {
+    previousRows = []
+    mintOnlineWithInfo({ name: 'Test Mint', nuts: { '4': {} }, pubkey: 'not-a-real-pubkey' })
+
+    await probeMintToDb(MINT)
+
+    const call = updateMintsCall()
+    expect(call![1][12]).toBeNull()
   })
 })

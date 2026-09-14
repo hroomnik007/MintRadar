@@ -6,6 +6,7 @@ import { checkUrlSafety, safeFetch } from './ssrf.js'
 import { computeTrustScore, versionFreshnessScore } from './shared/trustScore.js'
 import { notifySubscribers, isNotificationServiceEnabled } from './nostrService.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
+import { normalizeMintPubkey } from './mintPubkey.js'
 
 function isCloudflareIP(address: string): boolean {
   const parts = address.split('.').map(Number)
@@ -157,13 +158,24 @@ function classifyFetchError(err: unknown): string {
 // insertion path requires the same proof of being a real Cashu mint rather
 // than relying on isObviouslyPrivate()/isSafeUrl() (SSRF/reachability only).
 export async function isValidCashuMint(url: string): Promise<boolean> {
+  const { valid } = await validateCashuMintProbe(url)
+  return valid
+}
+
+// Same single /v1/info fetch as isValidCashuMint(), but also hands back the
+// raw `pubkey` field so a caller that already needs to do this fetch (the
+// discover endpoint's first-insert path) can persist it without a second
+// outbound request. isValidCashuMint() itself keeps its original boolean-only
+// signature for its existing callers.
+export async function validateCashuMintProbe(url: string): Promise<{ valid: boolean; pubkey: string | null }> {
   try {
     const res = await safeFetch(`${url}/v1/info`, { timeoutMs: PROBE_TIMEOUT_MS })
-    if (!res || !res.ok) return false
+    if (!res || !res.ok) return { valid: false, pubkey: null }
     const raw = await res.json() as Record<string, unknown>
-    return raw['nuts'] !== null && typeof raw['nuts'] === 'object'
+    const valid = raw['nuts'] !== null && typeof raw['nuts'] === 'object'
+    return { valid, pubkey: valid ? normalizeMintPubkey(raw['pubkey']) : null }
   } catch {
-    return false
+    return { valid: false, pubkey: null }
   }
 }
 
@@ -358,8 +370,19 @@ export async function probeMintToDb(url: string): Promise<void> {
           const contactArr = Array.isArray(raw['contact']) ? raw['contact'] as Array<{ method: string }> : []
           contactCount = contactArr.filter(c => c.method === 'email' || c.method === 'twitter' || c.method === 'nostr').length
 
-          const storedVersionRes = await pool.query('SELECT version FROM mints WHERE url = $1', [url])
-          const storedVersion = storedVersionRes.rows[0]?.version as string | null
+          const storedRes = await pool.query('SELECT version, pubkey FROM mints WHERE url = $1', [url])
+          const storedVersion = storedRes.rows[0]?.version as string | null
+          const storedPubkey = (storedRes.rows[0]?.pubkey as string | null) ?? null
+
+          // NUT-06 mint identity pubkey — see mintPubkey.ts. A probe with no
+          // pubkey (or an invalid one) must not wipe a previously-good stored
+          // value, hence COALESCE below like every other metadata column. A
+          // genuine change (mint rotated its key) is overwritten and logged
+          // once — never treated as "this is now an alias of the old key".
+          const pubkey = normalizeMintPubkey(raw['pubkey'])
+          if (pubkey !== null && storedPubkey !== null && pubkey !== storedPubkey) {
+            console.log(`[probe] pubkey changed for ${url}`)
+          }
 
           const { units, mintMethods, meltMethods } = parseMintMethods(nuts)
 
@@ -375,6 +398,7 @@ export async function probeMintToDb(url: string): Promise<void> {
               units            = COALESCE($9::jsonb, units),
               mint_methods     = COALESCE($10::jsonb, mint_methods),
               melt_methods     = COALESCE($11::jsonb, melt_methods),
+              pubkey           = COALESCE($13, pubkey),
               -- not COALESCE'd: 0 is a meaningful value here (mint publishes no
               -- contact methods), and this line only runs on a successful probe
               contact_count    = $12
@@ -385,6 +409,7 @@ export async function probeMintToDb(url: string): Promise<void> {
               mintMethods !== null ? JSON.stringify(mintMethods) : null,
               meltMethods !== null ? JSON.stringify(meltMethods) : null,
               contactCount,
+              pubkey,
             ]
           )
 

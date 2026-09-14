@@ -168,6 +168,12 @@ export async function initDb(): Promise<void> {
     // before the current one — the rung a mint compares against while still in grace.
     'ALTER TABLE software_versions ADD COLUMN IF NOT EXISTS released_at TIMESTAMPTZ',
     'ALTER TABLE software_versions ADD COLUMN IF NOT EXISTS previous_version TEXT',
+    // Mint identity pubkey (NUT-06 `/v1/info.pubkey`, a 33-byte compressed secp256k1
+    // hex string) — lets submit/discover suggest "this looks like an alias of an
+    // already-tracked mint" without ever merging rows. See mintPubkey.ts. URL stays
+    // the only identity for history/watchlist/reviews/notifications.
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS pubkey TEXT',
+    `CREATE INDEX IF NOT EXISTS idx_mints_pubkey ON mints (pubkey) WHERE pubkey IS NOT NULL`,
   ]
 
   for (const sql of migrations) {

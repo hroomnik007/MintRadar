@@ -15,6 +15,10 @@ export interface KnownMint {
   units?: string[] | null
   mintMethods?: { method: string; unit: string; [key: string]: unknown }[] | null
   meltMethods?: { method: string; unit: string; [key: string]: unknown }[] | null
+  // NUT-06 mint identity pubkey (33-byte compressed secp256k1 hex), written
+  // from the live probe (backend/src/mintPubkey.ts). Not on every mint yet.
+  // Used only to suggest alias hints at submit time — never to merge cards.
+  pubkey?: string | null
   auditNMints?: number | null
   auditNMelts?: number | null
   auditNErrors?: number | null

@@ -2,7 +2,8 @@ import express, { type Request, type Response, type NextFunction } from 'express
 import cors from 'cors'
 import { pool, initDb } from './db.js'
 import { isSafeUrl, checkWsUrlSafety, safeFetch } from './ssrf.js'
-import { upsertMint, probeMintToDb, isValidCashuMint, parseMintMethods, type MintMethodEntry } from './prober.js'
+import { upsertMint, probeMintToDb, validateCashuMintProbe, parseMintMethods, type MintMethodEntry } from './prober.js'
+import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } from './mintPubkey.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { splitVersionString, canonicalSoftwareName } from './shared/trustScore.js'
 import { seedKnownMints, startCron } from './cron.js'
@@ -84,6 +85,7 @@ interface MintInfo {
   description_long?: string
   tos_url?: string
   nuts: Record<string, unknown>
+  pubkey?: string
 }
 
 interface MintKeyset {
@@ -873,7 +875,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
     .query(`
       SELECT m.url, m.name, m.icon_url, m.version, m.nut_count,
         m.tos_url, m.description_long, m.nuts_limits,
-        m.units, m.mint_methods, m.melt_methods,
+        m.units, m.mint_methods, m.melt_methods, m.pubkey,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
         m.discovered_at, m.last_trust_score, m.last_error, m.server_location,
@@ -891,7 +893,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
       ) latest ON true
       GROUP BY m.url, m.name, m.icon_url, m.version, m.nut_count,
         m.tos_url, m.description_long, m.nuts_limits,
-        m.units, m.mint_methods, m.melt_methods,
+        m.units, m.mint_methods, m.melt_methods, m.pubkey,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
         m.discovered_at, m.last_trust_score, m.last_error, m.server_location,
@@ -928,6 +930,10 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           units: (r.units as string[] | null) ?? null,
           mintMethods: (r.mint_methods as Record<string, unknown>[] | null) ?? null,
           meltMethods: (r.melt_methods as Record<string, unknown>[] | null) ?? null,
+          // NUT-06 mint identity pubkey — see mintPubkey.ts. Not on every
+          // mint yet (populated by the probe cycle); used to suggest alias
+          // hints at submit time, never to merge cards.
+          pubkey: (r.pubkey as string | null) ?? null,
           auditNMints: (r.audit_n_mints as number | null) ?? null,
           auditNMelts: (r.audit_n_melts as number | null) ?? null,
           auditNErrors: (r.audit_n_errors as number | null) ?? null,
@@ -1208,7 +1214,30 @@ app.post('/api/mint/submit', (req: Request, res: Response): void => {
           if (IS_DEV) console.error('[submit] post-insert probe failed:', probeErr)
         }
         knownMintsCache = null
-        res.json({ success: true, isNew, name: status.info?.name ?? null })
+
+        // Alias hint — never merges cards, URL stays the only identity. Only
+        // meaningful for a genuinely new row; a re-submit of an already-tracked
+        // URL doesn't need "is this an alias of itself" noise.
+        let aliasOf: { url: string; name: string | null }[] = []
+        if (isNew) {
+          const pubkey = normalizeMintPubkey(status.info?.pubkey)
+          if (pubkey !== null) {
+            try {
+              aliasOf = await findMintsByPubkey(pubkey, normalized)
+            } catch (aliasErr) {
+              if (IS_DEV) console.error('[submit] alias lookup failed:', aliasErr)
+            }
+          }
+        }
+
+        res.json({
+          success: true,
+          isNew,
+          added: isNew,
+          alreadyTracked: !isNew,
+          name: status.info?.name ?? null,
+          aliasOf,
+        })
       })
     })
     .catch((err: unknown) => {
@@ -1247,7 +1276,7 @@ app.post('/api/mints/discover', async (req: Request, res: Response): Promise<voi
   }
 
   let added = 0
-  const results: Array<{ url: string; success: boolean; isNew: boolean; error?: string }> = []
+  const results: Array<{ url: string; success: boolean; isNew: boolean; error?: string; aliasOf?: { url: string; name: string | null }[] }> = []
   for (const url of body.urls) {
     if (typeof url !== 'string') continue
     if (url.length > MAX_URL_LENGTH) {
@@ -1264,7 +1293,12 @@ app.post('/api/mints/discover', async (req: Request, res: Response): Promise<voi
         results.push({ url: normalized, success: false, isNew: false, error: 'Invalid url' })
         continue
       }
-      if (!(await isValidCashuMint(normalized))) {
+      // validateCashuMintProbe() does the same single /v1/info fetch
+      // isValidCashuMint() used to do, plus hands back the raw pubkey so it
+      // can be persisted on first insert (see mintPubkey.ts) without a
+      // second outbound request.
+      const { valid, pubkey } = await validateCashuMintProbe(normalized)
+      if (!valid) {
         results.push({ url: normalized, success: false, isNew: false, error: 'URL does not appear to be a valid Cashu mint' })
         continue
       }
@@ -1274,7 +1308,20 @@ app.post('/api/mints/discover', async (req: Request, res: Response): Promise<voi
       )
       const isNew = result.rowCount !== null && result.rowCount > 0
       if (isNew) added++
-      results.push({ url: normalized, success: true, isNew })
+
+      // Alias hint — see the same rationale in POST /api/mint/submit above.
+      // Only meaningful for a genuinely new row.
+      let aliasOf: { url: string; name: string | null }[] = []
+      if (isNew && pubkey !== null) {
+        try {
+          await persistMintPubkeyIfChanged(normalized, pubkey)
+          aliasOf = await findMintsByPubkey(pubkey, normalized)
+        } catch (aliasErr) {
+          if (IS_DEV) console.error('[discover] alias lookup/persist failed:', aliasErr)
+        }
+      }
+
+      results.push({ url: normalized, success: true, isNew, aliasOf })
     } catch {
       results.push({ url: normalized, success: false, isNew: false, error: 'Internal error' })
     }

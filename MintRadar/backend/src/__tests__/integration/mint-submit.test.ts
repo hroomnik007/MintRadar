@@ -79,10 +79,17 @@ describe('POST /api/mint/submit', () => {
     const res = await post({ url: 'https://mint.example.com' })
 
     expect(res.status).toBe(200)
-    expect(res.body).toEqual({ success: true, isNew: true, name: 'Test Mint' })
+    expect(res.body).toEqual({
+      success: true,
+      isNew: true,
+      added: true,
+      alreadyTracked: false,
+      name: 'Test Mint',
+      aliasOf: [],
+    })
   })
 
-  it('reports isNew: false when the mint already exists', async () => {
+  it('reports isNew: false / alreadyTracked: true when the mint already exists', async () => {
     resolvesTo({ address: '1.2.3.4', family: 4 })
     mintReachable({ name: 'Test Mint', nuts: {} })
     query.mockResolvedValueOnce({ rowCount: 0 }) // ON CONFLICT DO NOTHING
@@ -90,7 +97,53 @@ describe('POST /api/mint/submit', () => {
     const res = await post({ url: 'https://mint.example.com' })
 
     expect(res.status).toBe(200)
-    expect(res.body).toMatchObject({ success: true, isNew: false })
+    expect(res.body).toMatchObject({ success: true, isNew: false, alreadyTracked: true, aliasOf: [] })
+  })
+
+  it('does not check for aliases on an already-tracked URL (no extra query)', async () => {
+    resolvesTo({ address: '1.2.3.4', family: 4 })
+    mintReachable({ name: 'Test Mint', nuts: {}, pubkey: '02' + 'ab'.repeat(32) })
+    query.mockResolvedValueOnce({ rowCount: 0 }) // ON CONFLICT DO NOTHING
+
+    const res = await post({ url: 'https://mint.example.com' })
+
+    expect(res.body).toMatchObject({ isNew: false, aliasOf: [] })
+    // Only the INSERT ran — no alias SELECT for a re-submitted, already-tracked URL.
+    expect(query).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns aliasOf when a new URL shares a pubkey with an already-tracked mint', async () => {
+    resolvesTo({ address: '1.2.3.4', family: 4 })
+    const pubkey = '02' + 'cd'.repeat(32)
+    mintReachable({ name: 'Second Location', nuts: { '4': {} }, pubkey })
+    query.mockResolvedValueOnce({ rowCount: 1 }) // INSERT (new row)
+    query.mockResolvedValueOnce({
+      rows: [{ url: 'https://original.example.com', name: 'Original Mint' }],
+    }) // alias SELECT
+
+    const res = await post({ url: 'https://mirror.example.com' })
+
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({
+      success: true,
+      isNew: true,
+      aliasOf: [{ url: 'https://original.example.com', name: 'Original Mint' }],
+    })
+    const [aliasSql, aliasParams] = query.mock.calls[1]
+    expect(aliasSql).toContain('WHERE pubkey = $1 AND url <> $2')
+    expect(aliasParams).toEqual([pubkey, 'https://mirror.example.com'])
+  })
+
+  it('returns aliasOf: [] when the new mint publishes no pubkey', async () => {
+    resolvesTo({ address: '1.2.3.4', family: 4 })
+    mintReachable({ name: 'No Pubkey Mint', nuts: { '4': {} } })
+    query.mockResolvedValueOnce({ rowCount: 1 }) // INSERT
+
+    const res = await post({ url: 'https://mint.example.com' })
+
+    expect(res.body).toMatchObject({ isNew: true, aliasOf: [] })
+    // No alias SELECT was needed — only the INSERT ran.
+    expect(query).toHaveBeenCalledTimes(1)
   })
 
   it('rejects an unreachable / non-mint URL without inserting', async () => {

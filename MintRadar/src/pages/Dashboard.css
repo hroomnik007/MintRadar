@@ -956,6 +956,14 @@
   border: 1px solid rgba(255, 61, 107, 0.2);
 }
 
+.submit-alias-hint {
+  font-size: 11px; margin: -6px 0 12px; padding: 8px 12px;
+  border-radius: 7px; font-family: var(--font-mono);
+  background: var(--copper-soft); color: var(--copper);
+  border: 1px solid var(--copper-soft-strong);
+}
+.submit-alias-hint a { color: inherit; text-decoration: underline; }
+
 .submit-probe-loading {
   font-size: 11px; color: var(--text3);
   font-family: var(--font-mono);
@@ -1634,6 +1642,16 @@
 .bulk-row.status-added .bulk-status { color: #4ade80; }
 .bulk-row.status-duplicate .bulk-status { color: var(--copper); }
 .bulk-row.status-failed .bulk-status { color: #ff4d4d; }
+
+.bulk-row-alias { flex-wrap: wrap; padding-bottom: 6px; }
+.bulk-row-subtitle {
+  flex-basis: 100%;
+  font-size: 10px;
+  color: var(--copper);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .bulk-row.status-probing .bulk-status { color: var(--accent); }
 .bulk-row.status-pending .bulk-status { color: var(--text3); }
 

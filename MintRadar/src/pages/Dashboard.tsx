@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { nip19 } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
@@ -509,6 +509,10 @@ export default function Dashboard() {
   const [submitUrl, setSubmitUrl] = useState('')
   const [submitState, setSubmitState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [submitMsg, setSubmitMsg] = useState('')
+  // Populated when a newly-submitted URL shares a mint pubkey with an
+  // already-tracked mint (backend/src/mintPubkey.ts). Informational only —
+  // both URLs stay tracked as separate rows, nothing is merged.
+  const [submitAliasOf, setSubmitAliasOf] = useState<{ url: string; name: string | null }[]>([])
   // Probe/lookup results are keyed by the input they were produced for —
   // 'loading' and 'idle' are derived below instead of set synchronously in effects.
   const [probe, setProbe] = useState<{ url: string; state: 'success' | 'error'; result: { name: string | null; version: string | null; nutCount: number; latencyMs: number | null } | null }>({ url: '', state: 'error', result: null })
@@ -531,7 +535,7 @@ export default function Dashboard() {
 
   // Bulk submit state
   const [bulkInput, setBulkInput] = useState('')
-  const [bulkProgress, setBulkProgress] = useState<Array<{ url: string; status: 'pending' | 'probing' | 'added' | 'duplicate' | 'failed'; error?: string }>>([])
+  const [bulkProgress, setBulkProgress] = useState<Array<{ url: string; status: 'pending' | 'probing' | 'added' | 'duplicate' | 'failed'; error?: string; aliasOf?: { url: string; name: string | null }[] }>>([])
   const [bulkRunning, setBulkRunning] = useState(false)
   const [bulkDone, setBulkDone] = useState(false)
   // Set only on a 429 from /api/mints/discover — a single banner shown above
@@ -766,13 +770,23 @@ export default function Dashboard() {
       return
     }
     setSubmitState('loading')
+    setSubmitAliasOf([])
     fetch('/api/mint/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: submitUrl }),
     })
       .then(res => res.json().then(data => ({ ok: res.ok, data })))
-      .then(({ ok, data }: { ok: boolean; data: { success?: boolean; isNew?: boolean; error?: string; name?: string | null } }) => {
+      .then(({ ok, data }: {
+        ok: boolean
+        data: {
+          success?: boolean
+          isNew?: boolean
+          error?: string
+          name?: string | null
+          aliasOf?: { url: string; name: string | null }[]
+        }
+      }) => {
         if (!ok) {
           setSubmitState('error')
           setSubmitMsg((data.error) ?? 'Submission failed')
@@ -783,6 +797,7 @@ export default function Dashboard() {
               ? 'Already tracked — this mint is already known to MintRadar.'
               : 'Mint submitted! It will appear on the dashboard after the next probe cycle (~5 min).'
           )
+          setSubmitAliasOf(data.aliasOf ?? [])
           void queryClient.invalidateQueries({ queryKey: ['mints-known'] })
         }
       })
@@ -824,7 +839,7 @@ export default function Dashboard() {
         })
         const data = await res.json() as {
           error?: string
-          results?: Array<{ url: string; success: boolean; isNew: boolean; error?: string }>
+          results?: Array<{ url: string; success: boolean; isNew: boolean; error?: string; aliasOf?: { url: string; name: string | null }[] }>
         }
         if (res.status === 429) {
           // Nothing in this batch was actually processed — rows go back to
@@ -839,7 +854,7 @@ export default function Dashboard() {
             if (k === -1) return p
             const r = results[k]
             if (!r || !r.success) return { ...p, status: 'failed', error: r?.error ?? 'Failed' }
-            return { ...p, status: r.isNew ? 'added' : 'duplicate' }
+            return { ...p, status: r.isNew ? 'added' : 'duplicate', aliasOf: r.aliasOf ?? [] }
           }))
         } else {
           const err = data.error ?? 'Failed'
@@ -1212,6 +1227,20 @@ export default function Dashboard() {
                 {submitState === 'success' && (
                   <>
                     <div className="submit-result success">{submitMsg}</div>
+                    {submitAliasOf.length > 0 && (
+                      <div className="submit-alias-hint">
+                        Same mint pubkey as:{' '}
+                        {submitAliasOf.map((a, i) => (
+                          <span key={a.url}>
+                            {i > 0 && ', '}
+                            <Link to={`/mint/${encodeURIComponent(a.url)}`} onClick={() => setShowSubmit(false)}>
+                              {a.name ?? getHostname(a.url)}
+                            </Link>
+                          </span>
+                        ))}
+                        . Not merged — tracked as its own URL.
+                      </div>
+                    )}
                     <div className="submit-modal-actions">
                       <button className="submit-ok-btn" onClick={() => setShowSubmit(false)}>Close</button>
                     </div>
@@ -1261,7 +1290,7 @@ export default function Dashboard() {
                 {(bulkRunning || bulkProgress.length > 0) && (
                   <div className="bulk-progress">
                     {bulkProgress.map((p, i) => (
-                      <div key={i} className={`bulk-row status-${p.status}`}>
+                      <div key={i} className={`bulk-row status-${p.status}${p.status === 'added' && (p.aliasOf?.length ?? 0) > 0 ? ' bulk-row-alias' : ''}`}>
                         <span className="bulk-url">{getHostname(p.url)}</span>
                         <span className="bulk-status">
                           {p.status === 'pending' && '…'}
@@ -1270,6 +1299,11 @@ export default function Dashboard() {
                           {p.status === 'duplicate' && '• Already tracked'}
                           {p.status === 'failed' && `✗ ${p.error ?? 'Failed'}`}
                         </span>
+                        {p.status === 'added' && (p.aliasOf?.length ?? 0) > 0 && (
+                          <span className="bulk-row-subtitle">
+                            Same pubkey as {p.aliasOf!.map(a => a.name ?? getHostname(a.url)).join(', ')} — not merged
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>
