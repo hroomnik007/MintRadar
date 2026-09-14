@@ -1333,6 +1333,7 @@ export default function Stats() {
         </div>
       </div>
 
+      </div>
       {cityModal !== null && (
         <CityMintsModal
           loc={cityModal}
