@@ -1,4 +1,5 @@
 import { nip19 } from 'nostr-tools'
+import { njumpProfileUrl, njumpEventUrl } from '@/utils/nostrLinks'
 import { useParams, useNavigate, Navigate } from 'react-router-dom'
 import { useEffect, useState, useMemo, useRef, useCallback, type JSX } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -1418,7 +1419,11 @@ function MintDetailContent({ url }: { url: string }) {
                     <div className="md-contact-icon"><Zap size={14} /></div>
                     <div style={{minWidth:0}}>
                       <div className="md-contact-type">Nostr</div>
-                      <div className="md-contact-val" style={{wordBreak:'break-all'}}>{nostr}</div>
+                      <div className="md-contact-val" style={{wordBreak:'break-all'}}>
+                        {njumpProfileUrl(nostr) ? (
+                          <a href={njumpProfileUrl(nostr)!} target="_blank" rel="noopener noreferrer">{nostr}</a>
+                        ) : nostr}
+                      </div>
                     </div>
                     <button
                       onClick={(e) => {
@@ -1987,6 +1992,15 @@ function MintDetailContent({ url }: { url: string }) {
                               <span className="review-stars">{starString(r.rating)}</span>
                             )}
                             <span className="review-date">{formatReviewDate(r.createdAt)}</span>
+                            {njumpEventUrl(r.id) && (
+                              <a
+                                href={njumpEventUrl(r.id)!}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="review-date"
+                                title="Open this review on Nostr"
+                              >Nostr</a>
+                            )}
                           </div>
                         </div>
                         {r.comment && <p className="review-comment">{r.comment}</p>}
