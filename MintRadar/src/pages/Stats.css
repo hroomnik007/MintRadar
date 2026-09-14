@@ -1108,7 +1108,8 @@
   .stats-movers-panel,
   .stats-trend-panel,
   .stats-sw-panel,
-  .stats-geo-panel { grid-column: auto; grid-row: auto; }
+  .stats-geo-panel,
+  .stats-reliable-panel { grid-column: 1 / -1; grid-row: auto; }
 
   .stats-sw-panel { order: 1; }
   .stats-nut-panel { order: 2; }
