@@ -965,6 +965,7 @@ function MintDetailContent({ url }: { url: string }) {
               </button>
               {firstSeen && (
                 <div className="md-first-seen" style={{fontSize:12,fontFamily:'var(--font-mono)',color:'var(--text-faint)',marginTop:4}}>{firstSeen}</div>
+              )}
               {nostrAnnouncedAt && (
                 <div className="md-first-seen" style={{fontSize:12,fontFamily:'var(--font-mono)',color:'var(--text-faint)',marginTop:4}}>
                   {nostrAnnounceHref ? (
@@ -973,7 +974,6 @@ function MintDetailContent({ url }: { url: string }) {
                   {' · '}
                   {new Date(nostrAnnouncedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                 </div>
-              )}
               )}
             </div>
           </div>
