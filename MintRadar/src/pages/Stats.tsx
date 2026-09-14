@@ -272,7 +272,6 @@ function SoftwareModal({ sw, versions, total, accentColor, allMints, onClose }: 
           />
         )}
       </div>
-      </div>
     </div>
   )
 }

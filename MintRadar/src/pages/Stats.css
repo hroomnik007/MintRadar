@@ -757,7 +757,6 @@
 .stats-nut-rows-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-columns: 1fr 1fr 1fr;
   row-gap: var(--stats-row-gap);
   column-gap: 32px;
   background: var(--surface);
@@ -1087,7 +1086,12 @@
 .stats-board-grid > .stats-cards-grid {
   display: contents;
 }
-.stats-sw-panel { grid-area: auto; }
+.stats-sw-panel { grid-column: 1; grid-row: 1; }
+.stats-geo-panel { grid-column: 1; grid-row: 3; }
+.stats-board-grid > .stats-panel:not(.stats-sw-panel):not(.stats-geo-panel):not(.stats-nut-panel):not(.stats-nhi-panel):not(.stats-movers-panel):not(.stats-trend-panel) {
+  grid-column: 1;
+  grid-row: 2;
+}
 .stats-nut-panel { grid-column: 2; grid-row: 1; }
 .stats-nhi-panel { grid-column: 2; grid-row: 2; }
 .stats-movers-panel { grid-column: 2; grid-row: 3; }
