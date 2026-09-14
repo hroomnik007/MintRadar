@@ -638,9 +638,10 @@ export default function Stats() {
 
   const avgUptime24h = useMemo(() => {
     if (!knownMintsData || knownMintsData.length === 0) return null
-    const total = knownMintsData.length
-    const sum = knownMintsData.reduce((acc, m) => acc + (m.uptimePct24h ?? 0), 0)
-    return Math.round(sum / total)
+    const active = knownMintsData.filter(m => m.degraded !== true && m.uptimePct24h != null)
+    if (active.length === 0) return null
+    const sum = active.reduce((acc, m) => acc + (m.uptimePct24h as number), 0)
+    return Math.round(sum / active.length)
   }, [knownMintsData])
 
   // Back to top 5 (was briefly top 4, matching row-1 siblings before those
@@ -909,7 +910,7 @@ export default function Stats() {
               <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
               {uptimeInfoTooltip.open && (
                 <div className="audit-tooltip audit-tooltip-down" style={{ width: isMobile ? 200 : 240, left: 0 }}>
-                  Average 24-hour uptime across all tracked mints (probed every 5 min). Mints offline 24h+ count as 0%.
+                  Average 24-hour uptime of active mints (same set as the Dashboard default grid). 24h+ offline mints are excluded; missing samples are skipped, not counted as 0%.
                 </div>
               )}
             </span>
@@ -922,7 +923,7 @@ export default function Stats() {
               <span className="stat-value" style={{color: avgUptime24h != null ? uptimeColor(avgUptime24h) : undefined}}>
                 {avgUptime24h != null ? `${avgUptime24h}%` : '—'}
               </span>
-              <span className="stat-note">across all known</span>
+              <span className="stat-note">active mints</span>
             </div>
           </div>
         </div>
