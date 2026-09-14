@@ -14,7 +14,7 @@ import type { KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUserRelays } from '@/hooks/useUserRelays'
-import { displayName as mintDisplayName, isNewMint, cardLatencyLabel, cardLightningLabel, uptimeColor, formatTimeAgo, MIN_MEANINGFUL_REVIEWS } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, isNewMint, cardLatencyLabel, cardLightningLabel, uptimeColor, formatTimeAgo } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
 import { db } from '@/db'
 import { resolveNotificationRelays, syncSubscribeToServer, syncUnsubscribeFromServer } from '@/core/nostr/notificationSubscription'
@@ -258,12 +258,10 @@ export function MintCard({
             </>
           )}
           {(mint.reviewCount ?? 0) > 0 && mint.reviewAvgRating != null && (
-            <span
-              className="card-trust-rating"
-              style={{ opacity: (mint.reviewCount ?? 0) < MIN_MEANINGFUL_REVIEWS ? 0.6 : 1 }}
-            >
+            <span className="card-trust-rating">
               <span className="card-trust-star">★</span>
-              <span>{mint.reviewAvgRating.toFixed(1)} ({mint.reviewCount})</span>
+              <span className="card-trust-rating-val">{mint.reviewAvgRating.toFixed(1)}</span>
+              <span className="card-trust-rating-n">({mint.reviewCount})</span>
               {mint.reviewSurge && (
                 <InfoTooltip
                   className="card-review-surge-flag"

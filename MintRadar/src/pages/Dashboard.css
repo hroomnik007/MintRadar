@@ -1724,3 +1724,22 @@
   }
   .mint-card { max-width: none; }
 }
+
+
+.card-trust-rating-val {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-mono-data);
+  color: var(--text2);
+}
+.card-trust-rating-n {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text3);
+  font-family: var(--font-mono);
+}
+.card-trust-star {
+  font-size: 13px;
+  color: var(--yellow);
+  line-height: 1;
+}
