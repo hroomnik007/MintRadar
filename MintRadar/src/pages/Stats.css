@@ -1079,8 +1079,13 @@
 .stats-board-grid {
   display: grid;
   grid-template-columns: 5fr 7fr;
-  gap: 12px;
+  gap: 14px;
+  padding: 14px var(--page-pad) 14px;
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  width: 100%;
   align-items: stretch;
+  min-width: 0;
 }
 .stats-board-grid > .stats-hero-grid,
 .stats-board-grid > .stats-cards-grid {
