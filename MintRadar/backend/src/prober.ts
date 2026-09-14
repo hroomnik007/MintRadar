@@ -3,7 +3,7 @@ import { fetch as undiciFetch } from 'undici'
 import pLimit from 'p-limit'
 import { pool } from './db.js'
 import { checkUrlSafety, safeFetch } from './ssrf.js'
-import { computeTrustScore, versionFreshnessScore } from './shared/trustScore.js'
+import { computeTrustScore, versionFreshnessScore, TRACKED_NUT_KEYS } from './shared/trustScore.js'
 import { notifySubscribers, isNotificationServiceEnabled } from './nostrService.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { normalizeMintPubkey } from './mintPubkey.js'
@@ -363,7 +363,12 @@ export async function probeMintToDb(url: string): Promise<void> {
           const version = typeof raw['version'] === 'string' ? raw['version'] : null
           const tosUrl = typeof raw['tos_url'] === 'string' ? raw['tos_url'] : null
           const descriptionLong = typeof raw['description_long'] === 'string' ? raw['description_long'] : null
-          const nutCount = Object.keys(nuts).length
+          // Trust Score denominator — only mint-side NUTs in TRACKED_NUT_KEYS
+          // count. A mint's own nuts object can also carry auth (21/22) and
+          // payment-method (23/25/30) keys, which are real features but not
+          // part of the NUT-support score; counting all of Object.keys(nuts)
+          // previously let those inflate this component.
+          const nutCount = TRACKED_NUT_KEYS.filter(key => nuts[key] != null).length
           const nameRaw = typeof raw['name'] === 'string' ? raw['name'].trim().slice(0, 100) : null
           const name = nameRaw && nameRaw.length > 0 ? nameRaw : null
 

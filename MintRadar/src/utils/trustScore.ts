@@ -20,7 +20,7 @@ import { auditReliabilityScore } from './auditScore'
  * component. Must stay equal to the length of the frontend's TRACKED_NUTS
  * list (src/constants/nuts.ts) — a test asserts this.
  */
-export const TRACKED_NUT_COUNT = 25
+export const TRACKED_NUT_COUNT = 14
 
 // [major, minor] descending — newest first.
 export const NUTSHELL_VERSIONS: [number, number][] = [

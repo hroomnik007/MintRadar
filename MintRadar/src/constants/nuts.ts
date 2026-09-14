@@ -16,21 +16,34 @@ export interface NutMeta {
 }
 
 /**
- * Every optional NUT the app tracks, in canonical order.
+ * Every mint-side NUT the app tracks for the Trust Score / NUT-support
+ * denominator, in canonical (ascending) order.
  *
  * Mandatory NUTs (00-03, 06) are deliberately excluded — every mint implements
- * them, so tracking them carries zero information. NUT-13 (deterministic
- * secrets) is excluded too: it is a wallet-side spec that a mint never
- * advertises in /v1/info, so it would be structurally stuck at 0% forever.
+ * them, so tracking them carries zero information.
+ *
+ * Wallet-only NUTs are excluded — a mint never advertises these in /v1/info,
+ * so they'd be structurally stuck at 0% forever: NUT-13 (deterministic
+ * secrets), NUT-16 (animated QR), NUT-18 (payment requests), NUT-24 (HTTP 402
+ * Payment Required — a generic HTTP layer, not a cashu-mint capability),
+ * NUT-26 (Bech32m payment request encoding), NUT-27 (Nostr mint backup),
+ * NUT-28 (Pay-to-Blinded-Key — the mint "remains unaware of the blinding").
+ *
+ * Also excluded from this list (but NOT hidden from the app — they're real
+ * mint-side features, just not part of the NUT-support score):
+ * - NUT-21/22 (clear/blind authentication) — an access-control mechanism, not
+ *   a token capability; shown as an auth badge where present.
+ * - NUT-23/25/30 (BOLT11/BOLT12/onchain payment methods) — these extend
+ *   NUT-04/05 rather than being standalone features; shown in the Units &
+ *   Methods panel instead.
  *
  * This list's length is the denominator of the Trust Score's NUT-support
- * component — keep it equal to TRACKED_NUT_COUNT in src/utils/trustScore.ts.
+ * component — keep it equal to TRACKED_NUT_COUNT in src/utils/trustScore.ts
+ * (and its backend twin, backend/src/shared/trustScore.ts).
  */
 export const TRACKED_NUTS: string[] = [
   'NUT-04', 'NUT-05', 'NUT-07', 'NUT-08', 'NUT-09', 'NUT-10', 'NUT-11',
-  'NUT-12', 'NUT-14', 'NUT-15', 'NUT-16', 'NUT-17', 'NUT-18', 'NUT-19',
-  'NUT-20', 'NUT-21', 'NUT-22', 'NUT-23', 'NUT-24', 'NUT-25', 'NUT-26',
-  'NUT-27', 'NUT-28', 'NUT-29', 'NUT-30',
+  'NUT-12', 'NUT-14', 'NUT-15', 'NUT-17', 'NUT-19', 'NUT-20', 'NUT-29',
 ]
 
 /**
@@ -53,21 +66,10 @@ export const NUT_META: Record<string, NutMeta> = {
   'NUT-12': { short: 'DLEQ proofs', desc: 'Discrete Log Equality proofs for verifiable blind signatures.', specNum: '12' },
   'NUT-14': { short: 'HTLCs', desc: 'Hash Time Locked Contracts for atomic swaps.', specNum: '14' },
   'NUT-15': { short: 'Multi-mint MPP', desc: 'Split a single Lightning payment across multiple mints simultaneously.', specNum: '15' },
-  'NUT-16': { short: 'Animated QR', desc: 'Animated QR codes for transferring large tokens between devices.', specNum: '16' },
   'NUT-17': { short: 'WebSocket', desc: 'Real-time mint updates via WebSocket subscription.', specNum: '17' },
-  'NUT-18': { short: 'Payment req.', desc: 'Structured payment requests so wallets can pay a requested amount.', specNum: '18' },
   'NUT-19': { short: 'Cached responses', desc: 'Mints cache successful responses so wallets can replay after a network error.', specNum: '19' },
   'NUT-20': { short: 'Mint quote sig', desc: 'Mint signs quote requests for authenticity.', specNum: '20' },
-  'NUT-21': { short: 'Clear auth', desc: 'Clear-text (OAuth/OpenID) authentication for protected mint endpoints.', specNum: '21' },
-  'NUT-22': { short: 'Blind auth', desc: 'Blind authentication tokens for privacy-preserving mint access.', specNum: '22' },
-  'NUT-23': { short: 'BOLT11', desc: 'BOLT11 Lightning invoices as a payment method for mint and melt.', specNum: '23' },
-  'NUT-24': { short: 'HTTP 402', desc: 'HTTP 402 Payment Required flow for paywalled resources using Cashu.', specNum: '24' },
-  'NUT-25': { short: 'BOLT12', desc: 'BOLT12 offers as a payment method for mint and melt.', specNum: '25' },
-  'NUT-26': { short: 'Bech32m req.', desc: 'Bech32m encoding for Cashu payment requests.', specNum: '26' },
-  'NUT-27': { short: 'Nostr backup', desc: 'Backing up wallet state to Nostr relays for cross-device recovery.', specNum: '27' },
-  'NUT-28': { short: 'Pay-to-BK', desc: 'Lock tokens to a blinded public key for enhanced recipient privacy.', specNum: '28' },
   'NUT-29': { short: 'Batched minting', desc: 'Wallets can mint tokens for multiple quotes in a single atomic request.', specNum: '29' },
-  'NUT-30': { short: 'Onchain', desc: 'On-chain Bitcoin as a payment method for mint and melt.', specNum: '30' },
 }
 
 /** cashubtc/nuts spec URL for a tracked NUT, or null if it isn't tracked. */

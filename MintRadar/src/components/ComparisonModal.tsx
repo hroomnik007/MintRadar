@@ -363,7 +363,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                   <div className="cmp-mobile-row">
                     <span className="cmp-mobile-lbl">NUT Count</span>
                     <span className="cmp-mobile-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-                      {mint.nutCount ?? 0} / 14
+                      {mint.nutCount ?? 0} / {TRACKED_NUT_KEYS.length}
                     </span>
                   </div>
 
@@ -527,7 +527,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           <div className="cmp-lbl">NUT Count</div>
           {mints.map(mint => (
             <div key={mint.url} className="cmp-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-              {mint.nutCount ?? 0} / 14
+              {mint.nutCount ?? 0} / {TRACKED_NUT_KEYS.length}
             </div>
           ))}
 

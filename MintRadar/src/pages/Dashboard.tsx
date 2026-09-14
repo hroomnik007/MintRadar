@@ -17,6 +17,7 @@ import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { latencyColor, trustColor, uptimeColor, displayName as mintDisplayName } from '@/utils/mintFormatting'
 import { listTrustScore, compareTrustThenRating } from '@/utils/trustSort'
 import { isTestMint } from '@/constants/testMints'
+import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import './Dashboard.css'
 
 // Historical trend charts pull in Recharts (~380 kB chunk) — lazy-load so
@@ -139,7 +140,10 @@ const NOSTR_LOOKUP_RELAYS = [
 ]
 const DEFAULT_SORT_DIRS: Record<'name' | 'latency' | 'rating' | 'trust' | 'reviewCount', 'asc' | 'desc'> = { rating: 'desc', latency: 'asc', trust: 'desc', name: 'asc', reviewCount: 'desc' }
 
-const NUT_FILTER_KEYS = ['4','5','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
+// Wallet-only/auth/method NUTs are deliberately not filterable here — a mint
+// never advertises the wallet-only ones, and this should stay in step with
+// the same tracked list the Trust Score/grid/adoption bars use.
+const NUT_FILTER_KEYS = TRACKED_NUT_KEYS
 
 interface FilterState {
   status: 'all' | 'online' | 'offline'
@@ -367,7 +371,7 @@ function MintListView({
                     {score != null ? `${score}` : '—'}
                   </td>
                   <td className="col-hide-mobile" style={{ fontFamily: 'var(--font-mono-data)', fontSize: 12, color: 'var(--text2)' }}>
-                    {mint.nutCount != null ? `${mint.nutCount}/14` : '—'}
+                    {mint.nutCount != null ? `${mint.nutCount}/${TRACKED_NUT_KEYS.length}` : '—'}
                   </td>
                 </tr>
               )

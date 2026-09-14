@@ -9,7 +9,7 @@ import {
 // Missing audit samples → 12.5
 describe('computeTrustScore — parity with the backend source of truth', () => {
   it('returns 100 for a perfect mint', () => {
-    expect(computeTrustScore(100, 25, 'Nutshell/0.20', 3, 100, 0)).toBe(100)
+    expect(computeTrustScore(100, 14, 'Nutshell/0.20', 3, 100, 0)).toBe(100)
   })
 
   it('caps the total at 100', () => {
@@ -21,12 +21,12 @@ describe('computeTrustScore — parity with the backend source of truth', () => 
   })
 
   it('returns 88 when only audit data is missing', () => {
-    expect(computeTrustScore(100, 25, 'Nutshell/0.20', 3, null, null)).toBe(88)
+    expect(computeTrustScore(100, 14, 'Nutshell/0.20', 3, null, null)).toBe(88)
   })
 
   it('rounds the total exactly once, after summing the components', () => {
     // 40 + 15 + 15 + 5 + 12.5 = 87.5 → 88
-    expect(computeTrustScore(100, 25, 'Nutshell/0.20', 3, null, null)).toBe(88)
+    expect(computeTrustScore(100, 14, 'Nutshell/0.20', 3, null, null)).toBe(88)
     // 0 + 0 + 0 + 0 + 12.5 = 12.5 → 13
     expect(computeTrustScore(0, 0, null, 0, null, null)).toBe(13)
   })

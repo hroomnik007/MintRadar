@@ -5,7 +5,7 @@ import { isSafeUrl, checkWsUrlSafety, safeFetch } from './ssrf.js'
 import { upsertMint, probeMintToDb, validateCashuMintProbe, parseMintMethods, type MintMethodEntry } from './prober.js'
 import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } from './mintPubkey.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
-import { splitVersionString, canonicalSoftwareName } from './shared/trustScore.js'
+import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS } from './shared/trustScore.js'
 import { seedKnownMints, startCron } from './cron.js'
 import { publishServiceProfile } from './nostrService.js'
 import { normalizeUrl } from './discovery.js'
@@ -698,9 +698,8 @@ app.get('/api/nuts', (_req: Request, res: Response): void => {
     .then(result => {
       type Row = { url: string; name: string | null; nuts_limits: Record<string, unknown> }
       const rows = result.rows as Row[]
-      const NUT_KEYS = ['4','5','7','8','9','10','11','12','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
       const total = rows.length
-      const nuts = NUT_KEYS.map(key => ({
+      const nuts = TRACKED_NUT_KEYS.map(key => ({
         nut: `NUT-${key.padStart(2, '0')}`,
         percent: total > 0
           ? Math.round(rows.filter(r => r.nuts_limits[key] != null).length / total * 100)
@@ -749,12 +748,14 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
       const low = onlineTrustScores.filter(s => s < 40).length
       const moderate = onlineTrustScores.filter(s => s >= 40 && s < 70).length
       const high = onlineTrustScores.filter(s => s >= 70).length
-      // Matches ALL_NUTS in MintDetail — mandatory baseline NUTs (1,2,3,6) are never
-      // returned in /v1/info nuts object, so they cannot be tracked here.
-      const NUT_KEYS = ['4','5','7','8','9','10','11','12','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30']
+      // MINT_ADVERTISED_NUT_KEYS, not TRACKED_NUT_KEYS — Stats.tsx's NUT
+      // Coverage panel only ever iterates the frontend's TRACKED_NUTS (14) so
+      // extra entries here are simply ignored there, but the Network Health
+      // Index's "advanced adoption" component also reads this array directly
+      // for a few auth/payment-method NUTs (21/22/25) outside the 14.
       const onlineWithNuts = online.filter(r => r.nuts_limits != null)
       const totalForAdoption = onlineWithNuts.length
-      const nutAdoption = NUT_KEYS.map(key => ({
+      const nutAdoption = MINT_ADVERTISED_NUT_KEYS.map(key => ({
         nut: `NUT-${key.padStart(2, '0')}`,
         count: onlineWithNuts.filter(r => r.nuts_limits && r.nuts_limits[key] != null).length,
         percent: totalForAdoption > 0

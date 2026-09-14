@@ -15,11 +15,37 @@
 import { auditReliabilityScore } from './auditScore.js'
 
 /**
+ * Numeric keys ('4', '5', …) of the mint-side NUTs this app tracks for the
+ * NUT-support component — the backend twin of TRACKED_NUT_KEYS in the
+ * frontend's src/constants/nuts.ts (that file documents which NUTs are
+ * excluded and why: mandatory NUTs, wallet-only NUTs, and auth/payment-method
+ * NUTs that are real mint-side features but not part of this score). Keep
+ * both lists identical — a test asserts this.
+ */
+export const TRACKED_NUT_KEYS: string[] = [
+  '4', '5', '7', '8', '9', '10', '11', '12', '14', '15', '17', '19', '20', '29',
+]
+
+/**
  * Number of NUTs the app tracks, i.e. the denominator of the NUT-support
  * component. Must stay equal to the length of the frontend's TRACKED_NUTS
  * list (src/constants/nuts.ts) — a test asserts this.
  */
-export const TRACKED_NUT_COUNT = 25
+export const TRACKED_NUT_COUNT = TRACKED_NUT_KEYS.length
+
+/**
+ * The wider universe of NUT keys a mint can actually advertise in `/v1/info`
+ * — TRACKED_NUT_KEYS plus the auth (21/22) and payment-method (23/25/30) NUTs
+ * that are real mint-side features but deliberately excluded from the NUT-
+ * support score (see TRACKED_NUT_KEYS above). Used only for adoption-stats
+ * endpoints that other, non-Trust-Score widgets read from (e.g. Stats.tsx's
+ * Network Health Index "advanced adoption" component, which looks at 21/22/25
+ * alongside a few TRACKED_NUT_KEYS entries) — NOT for anything that should be
+ * capped at the 14 tracked NUTs.
+ */
+export const MINT_ADVERTISED_NUT_KEYS: string[] = [
+  ...TRACKED_NUT_KEYS, '21', '22', '23', '25', '30',
+]
 
 // [major, minor] descending — newest first.
 export const NUTSHELL_VERSIONS: [number, number][] = [

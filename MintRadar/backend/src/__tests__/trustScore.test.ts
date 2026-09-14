@@ -1,11 +1,27 @@
 import { describe, it, expect } from 'vitest'
 import { computeServerTrustScore, serverVersionFreshnessScore } from '../prober.js'
+import { TRACKED_NUT_COUNT, TRACKED_NUT_KEYS } from '../shared/trustScore.js'
+
+describe('TRACKED_NUT_KEYS', () => {
+  it('has exactly 14 entries and matches TRACKED_NUT_COUNT', () => {
+    expect(TRACKED_NUT_KEYS.length).toBe(14)
+    expect(TRACKED_NUT_KEYS.length).toBe(TRACKED_NUT_COUNT)
+  })
+
+  it('excludes wallet-only, auth, and payment-method NUT keys', () => {
+    for (const excluded of ['13', '16', '18', '21', '22', '23', '24', '25', '26', '27', '28', '30']) {
+      expect(TRACKED_NUT_KEYS).not.toContain(excluded)
+    }
+  })
+})
 
 // uptime 40 | NUT 15 | version 15 | contact 5 | audit 25
 // null/<3 audit samples → 12.5; new mint cap is optional last arg
+// NUT support denominator is TRACKED_NUT_COUNT = 14 (src/shared/trustScore.ts) — passing
+// a nutCount at or above 14 always maxes this component out.
 describe('computeServerTrustScore', () => {
   it('returns 100 for a perfect mint', () => {
-    expect(computeServerTrustScore(100, 25, 'Nutshell/0.20', 3, 100, 0)).toBe(100)
+    expect(computeServerTrustScore(100, 14, 'Nutshell/0.20', 3, 100, 0)).toBe(100)
   })
 
   it('a mint maxed on every component scores exactly 100', () => {
@@ -20,18 +36,18 @@ describe('computeServerTrustScore', () => {
 
   it('computes from remaining components when audit data is missing', () => {
     // 40+15+15+5+12.5 = 87.5 → 88
-    expect(computeServerTrustScore(100, 25, 'Nutshell/0.20', 3, null, null)).toBe(88)
+    expect(computeServerTrustScore(100, 14, 'Nutshell/0.20', 3, null, null)).toBe(88)
   })
 
   it('caps a brand-new mint at 75 even if components max out', () => {
     const now = new Date()
     const young = new Date(now.getTime() - 5 * 86_400_000).toISOString()
-    expect(computeServerTrustScore(100, 25, 'Nutshell/0.20', 3, 100, 0, undefined, young)).toBe(75)
+    expect(computeServerTrustScore(100, 14, 'Nutshell/0.20', 3, 100, 0, undefined, young)).toBe(75)
   })
 
   it('does not cap a mint older than 30 days', () => {
     const old = new Date(Date.now() - 40 * 86_400_000).toISOString()
-    expect(computeServerTrustScore(100, 25, 'Nutshell/0.20', 3, 100, 0, undefined, old)).toBe(100)
+    expect(computeServerTrustScore(100, 14, 'Nutshell/0.20', 3, 100, 0, undefined, old)).toBe(100)
   })
 
   describe('uptime component (40%)', () => {
@@ -48,11 +64,11 @@ describe('computeServerTrustScore', () => {
     it('contributes 0 with 0 nuts', () => {
       expect(computeServerTrustScore(0, 0, null, 0, null, null)).toBe(13)
     })
-    it('contributes 15 at 25 nuts', () => {
+    it('contributes 15 at 14 nuts (the full tracked count)', () => {
       // 15 + 12.5 = 27.5 → 28
-      expect(computeServerTrustScore(0, 25, null, 0, null, null)).toBe(28)
+      expect(computeServerTrustScore(0, 14, null, 0, null, null)).toBe(28)
     })
-    it('caps NUT support at 25 nuts', () => {
+    it('caps NUT support at 14 nuts — a higher count scores no higher', () => {
       expect(computeServerTrustScore(0, 50, null, 0, null, null)).toBe(28)
     })
   })

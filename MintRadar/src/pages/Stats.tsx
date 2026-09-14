@@ -1229,7 +1229,8 @@ export default function Stats() {
           grid — layout/behavior unchanged by this visual pass. ── */}
       <div className="stats-cards-grid">
 
-        {/* Row 2, cols 1-3: NUT Coverage — span 3 so its 25 rows split into 3
+        {/* Row 2, cols 1-3: NUT Coverage — span 3 so its rows (14, after the
+            2026-09-14 mint-side-only cut) split into 3
             inner columns instead of 2 (shorter, less vertical scrolling) now
             that Trust Score Movers shares this row as a standalone
             1-column panel. DOM order matters here: this must come before
@@ -1265,7 +1266,7 @@ export default function Stats() {
             row's other panels' comparatively stable heights. Here, next to
             the naturally taller NUT Coverage panel, a shorter/variable
             height reads as normal rather than as a mismatch — nothing else
-            in row 2 is uniform height either (NUT Coverage's 25 rows vs. a
+            in row 2 is uniform height either (NUT Coverage's rows vs. a
             single narrow column). Swapped with Network Health Index, which
             took this panel's old spot in row 1. */}
         <TrustMoversPanel

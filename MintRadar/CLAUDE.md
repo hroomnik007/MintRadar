@@ -158,7 +158,7 @@ anonymized sample payloads captured from a live diagnostic GET against the Minib
 
 ## Trust Score calculation (server-side, in prober.ts)
 - Uptime 45%: uptimePct * 0.45 (from 24h mint_history)
-- NUT Support 30%: min(nutCount/25, 1) * 30 — 25 is the number of NUTs actually tracked (`TRACKED_NUTS` in `src/constants/nuts.ts`, mirrored as `TRACKED_NUT_COUNT` in `backend/src/shared/trustScore.ts`); the "/26" written here previously was never what the code did
+- NUT Support 30%: min(nutCount/14, 1) * 30 — 14 is the number of mint-side NUTs actually tracked (`TRACKED_NUTS` in `src/constants/nuts.ts`, mirrored as `TRACKED_NUT_COUNT`/`TRACKED_NUT_KEYS` in `backend/src/shared/trustScore.ts`). Shrunk from 25 to 14 on 2026-09-14 — see "NUT tracking scope: mint-side vs. wallet-only" below. `nutCount` itself (the `mints.nut_count` column, written by `prober.ts`) now counts only the intersection of a mint's `/v1/info` `nuts` keys with `TRACKED_NUT_KEYS` — previously it was `Object.keys(nuts).length`, which let auth (21/22) and payment-method (23/25/30) keys inflate this component even though they were never part of the denominator's intent.
 - Version freshness 15%: software-aware version recency (fixed 2026-08-19 — previously every mint was compared against `NUTSHELL_VERSIONS` regardless of software, so a current `cdk-mintd` mint was penalized as a stale Nutshell, and unrecognized software with a higher major version — e.g. `LekMint/1.1.1` — got an automatic full score with zero verification). `versionFreshnessScore()` (`backend/src/shared/trustScore.ts`, mirrored in `src/utils/trustScore.ts`) first splits the raw `"Software/X.Y.Z"` version string (`splitVersionString()`) and identifies the software (`canonicalSoftwareName()` — case-insensitive, exact match only, so `Nutshell-CF` does NOT match `nutshell`). Recognized software (`nutshell`, `cdk`/`cdk-mintd`) is scored against its own version ladder; software with no ladder at all scores a neutral **2.5** (same neutral default as audit reliability's "Unknown" state — not 0, not 10). `normalizeVersionNumber()` strips a leading `v` (GitHub tag convention) and any `-rc.N`/prerelease suffix before comparing (patch number is extracted but not yet used by the scoring granularity). The version ladder itself prefers the `software_versions` DB table (`software`, `latest_version`, `fetched_at`, `source_url` — updated daily from the GitHub Releases API by `fetchLatestUpstreamVersions()` in `backend/src/versionCatalog.ts`, read via `getLatestVersionsMap()` and passed into `computeServerTrustScore()` in `prober.ts`) and falls back to the static `NUTSHELL_VERSIONS`/`CDK_VERSIONS` lists in `trustScore.ts` when the DB has no row yet for that software (fresh deploy, before the first cron run — `db.ts`'s `initDb()` seeds both rows so this never actually happens in practice). The frontend copy has no DB access and always uses the static fallback.
 - Audit reliability 5%: based on error rate from a **rolling window of the mint's last ~100 swaps** (`audit_recent_errors`/`audit_recent_total`, fetched per-mint from `GET /swaps/mint/{id}` on audit.8333.space — see Discovery pipeline below), not audit.8333.space's cumulative lifetime counters — bucket logic (0%→5, <1%→4, <5%→3, <15%→2, ≥15%→1, null or <3 samples ("Unknown")→2.5) lives in `backend/src/shared/auditScore.ts` (`auditReliabilityScore()`/`isAuditUnknown()`), the source of truth shared with the frontend's Trust Score Breakdown. `src/utils/auditScore.ts` is a manually-synced copy (the two packages have no workspace set up between them) — edit both if the logic ever changes. `audit_n_mints`/`audit_n_melts`/`audit_n_errors` (cumulative lifetime counts) are kept separately for the Audit tab's all-time context — they no longer feed the score. **Audit tab layout (2026-09-03):** the tab leads with a compact **`.audit-summary-strip`** — a 4-cell 5-second overview: **Mints** (`auditNMints`) · **Melts** (`auditNMelts`) · **Recent success rate** (`formatAuditSuccessRatio(auditRecentTotal, auditRecentErrors)` → `"<successes> / <total>"` — **fixed 2026-09-11/12: renamed from "Recent errors"/`formatAuditErrorRatio`, which showed the error count as the headline number; the cell now leads with successes**, coloured by `auditReliabilityColor()` so it can't disagree at a glance with the sidebar Trust Score Breakdown; sub-line is `"<n>% ok"` / `"too few to score"` (via `isAuditUnknown()`) / `"no recent swaps"`) · **Last checked** (`formatTimeAgo(auditSyncedAt)` — **our** cron's write time, NOT `auditCheckedAt`). The strip sits *outside* the mobile collapse (always visible). Below it, inside the collapse, a single **`.audit-alltime-line`** carries the lifetime totals + `%` and the "Recent errors feeds Trust Score" note, plus a short explainer sentence (added 2026-09-04) clarifying that the recent-errors figure — not the all-time one — drives the Trust Score. This **replaced** the old 3-card all-time `.audit-stats-grid` + separate green "Recent reliability" `.audit-recent-card` band (both duplicated the same numbers). `formatTimeAgo`/`formatAuditErrorRatio` live in `src/utils/mintFormatting.ts` (unit-tested); e2e in `e2e/mint-detail-audit-summary-strip.spec.ts`. Window size = `AUDIT_SWAPS_WINDOW` (100) in `backend/src/discovery.ts`.  - **2026-09-12 additions (frontend, consuming the `mint_audit_swaps`/`audit_avg_time_ms` backend work above):** the strip's "Recent success rate" sub-line now shows the actual percentage (`"<n>% ok"`, computed client-side from `auditRecentTotal`/`auditRecentErrors`) instead of the bare word "ok". A 5th strip cell, **Avg swap time**, renders `knownMint.auditAvgTimeMs` as `"<n> ms"` or `"n/a"`. Below the strip: an **outcome bar** (`.audit-swap-bar`, ≤44 marks, newest left — mint-green `.audit-swap-bar-ok` / red `.audit-swap-bar-fail`) and a **Recent swaps table** (`.audit-recent-swaps`, last 8 rows — To host via `mintHostname()`, Amount `sat`, Fee, Duration `ms`, State; failed rows muted red via `.audit-swap-row-fail`), both fed by a new `useQuery(['mint','audit-swaps',url])` against `GET /api/mints/swaps?url=` — lazily fetched only once the Audit tab is opened (`enabled: activeTab === 'audit'`), still never audit.8333.space directly from the browser. Neither the bar nor the table renders anything (no fake/placeholder marks) until that fetch actually resolves with a non-empty `swaps` array. A text link **"Open on audit.8333.space →"** (`.audit-external-link`, new tab, `rel="noopener noreferrer"`) points at the auditor's homepage, not a per-mint deep link — its own SPA bundle was checked and has no `/mint/:id`-style route (only `"/"` and a catch-all), so a guessed deep link would 404; `audit_id` itself is still not exposed by any API and wasn't added for this. Trust Score math, other tabs, and probes are unchanged.
   - **`auditReliabilityColor()` (`src/utils/mintFormatting.ts`, 2026-09-04) is a separate, UI-only coloring function — deliberately NOT the same thresholds as `auditReliabilityScore()`'s 1-5 scoring buckets above**, and it does not feed the Trust Score number. It colors directly off the raw error rate: `var(--fast)` (green) at ≤5% errors, `var(--med)` (amber) at ≤25%, `var(--slow)` (red) above that — `< 3` samples renders muted (`var(--t3)`). The 1-5 score buckets are much stricter (e.g. a 5% error rate already scores 3/5, two tiers down), which read as misleadingly alarming at a glance for what's actually a 95%-success mint; the amber cutoff was widened from an initial 15% to 25% the same day after review. Used by both the Audit summary strip's "Recent errors" cell and the Trust Score Breakdown's "Audit reliability" row.
@@ -1218,7 +1218,7 @@ uptime % only now) and **compacted large limit numbers** — `formatCompactAmoun
 ## NUT list — single source of truth (2026-08-19)
 
 `src/constants/nuts.ts` is the only place the tracked-NUT list and its display metadata
-live: `TRACKED_NUTS` (25 entries, ascending), `TRACKED_NUT_KEYS` (the unpadded `'4'`/`'5'`…
+live: `TRACKED_NUTS` (14 entries, ascending), `TRACKED_NUT_KEYS` (the unpadded `'4'`/`'5'`…
 form used by `/v1/info`'s `nuts` object and the `nuts_limits` column), `NUT_META`
 (short label / description / `specNum`) and `nutSpecUrl()`.
 
@@ -1227,10 +1227,12 @@ It replaced four drifting copies: `MintDetail.tsx`'s `ALL_NUTS`, `Stats.tsx`'s `
 `NutExplorer.tsx`'s `NUT_META`. `src/__tests__/nuts.test.ts` pins the invariants, including
 `TRACKED_NUTS.length === TRACKED_NUT_COUNT` (the Trust Score's NUT divisor).
 
-**Deliberately NOT folded in** — these are different lists, not copies:
-- `NUT_FILTER_KEYS` in `Dashboard.tsx` — filter chips that intentionally include `'13'`,
-  which `TRACKED_NUTS` excludes. Merging them would silently drop a filter. (Watchlist no
-  longer has a filter panel at all as of 2026-09-04 — see "Watchlist changes" below.)
+**`Dashboard.tsx`'s `NUT_FILTER_KEYS`** is now just `TRACKED_NUT_KEYS` re-exported under the
+old local name (2026-09-14) — it used to be its own hardcoded 25-entry list that deliberately
+included `'13'` (which `TRACKED_NUTS` excludes); that divergence was removed as part of the
+mint-side-vs-wallet-only scope cut, see "NUT tracking scope: mint-side vs. wallet-only" below.
+
+**Still deliberately NOT folded in** — a different list, not a copy:
 - `NUT_DESCRIPTIONS` in `MintDetail.tsx` — a richer structure (`features`, `useCase`) that
   also covers the mandatory NUTs 00-03/06 for the NUT detail modal.
 
@@ -1453,13 +1455,42 @@ The `+ Watch` button on Dashboard mint cards only renders when `isLoggedIn === t
 
 `test` job in `.github/workflows/deploy.yml` runs the full suite (backend + frontend unit; e2e is separate). `deploy` job declares `needs: test` — a failing test blocks deployment.
 
-## NUT tracking expansion (2026-07-02)
+## NUT tracking scope: mint-side vs. wallet-only (2026-09-14)
+
+The 25-NUT list from the 2026-07-02 expansion below was audited against the current
+cashubtc/nuts spec (NUT-00 through NUT-30) and cut back to **14** — the NUTs a mint
+actually implements and advertises in `/v1/info`, which is the only thing the Trust
+Score's NUT-support component and the Detail/Stats/Compare NUT UI can verify.
+
+- **Trust denominator now 14:** NUT-04, 05, 07, 08, 09, 10, 11, 12, 14, 15, 17, 19, 20, 29.
+  `TRACKED_NUTS`/`TRACKED_NUT_COUNT` in `src/constants/nuts.ts` + `src/utils/trustScore.ts`,
+  mirrored by `TRACKED_NUT_KEYS`/`TRACKED_NUT_COUNT` in `backend/src/shared/trustScore.ts`.
+- **Removed as wallet-only** (a mint never advertises these — they'd be structurally stuck
+  at 0% forever): NUT-13 (already excluded pre-2026-09-14), 16 (animated QR), 18 (payment
+  requests), 24 (HTTP 402 — a generic HTTP layer, not a cashu-mint capability), 26 (Bech32m
+  payment-request encoding), 27 (Nostr mint backup), 28 (Pay-to-Blinded-Key).
+- **Removed from the trust denominator but still real mint-side features, shown
+  elsewhere:** NUT-21/22 (clear/blind auth — an access-control mechanism, would be an auth
+  badge if/when built) and NUT-23/25/30 (BOLT11/BOLT12/onchain — these extend NUT-04/05 as
+  payment methods and already render in the "Units & Methods" panel, independent of the
+  NUT grid/`TRACKED_NUTS`).
+- **`prober.ts`'s `nut_count` fixed to match:** it was `Object.keys(nuts).length` (every key
+  the mint's `/v1/info` reported), which let the excluded auth/method keys inflate the
+  NUT-support score. Now `TRACKED_NUT_KEYS.filter(key => nuts[key] != null).length`.
+  `/api/nuts` and `/api/stats`'s `nutAdoption` also switched their own hardcoded 25-key
+  arrays to import `TRACKED_NUT_KEYS` instead of duplicating it.
+- Detail NUT grid/modal, Stats adoption bars, and Compare's NUT rows all already derived
+  their NUT list from `TRACKED_NUTS`/`TRACKED_NUT_KEYS`, so shrinking that one export was
+  enough to hide the wallet-only NUTs everywhere at once — no per-page filtering added.
+
+### NUT tracking expansion (2026-07-02) — superseded by the cut above
 
 - Tracking 26 NUTs now (was 14) — added: 13, 16, 18, 21, 22, 23, 24, 25, 26, 27, 28, 30
 - Mandatory NUTs (00-03, 06) are deliberately never tracked — implicitly 100% supported, zero information value
 - Trust Score NUT divisor changed from /14 to /26 in `prober.ts` — existing mints get a lower/more accurate score at their next probe cycle
   - **Correction (2026-08-19):** the divisor that actually shipped is **/25**, not /26, and NUT-13 is not tracked — it is a wallet-side spec a mint never advertises, so the list above ("added: 13, 16, …") overcounts by one. The live list is `TRACKED_NUTS` in `src/constants/nuts.ts` (25 entries); the divisor is `TRACKED_NUT_COUNT` in `backend/src/shared/trustScore.ts`.
-- NUT-24 (HTTP 402) has 0% adoption across the ecosystem — expected, no implementation exists yet anywhere
+  - **Superseded 2026-09-14:** the divisor is back down to /14 — see "NUT tracking scope: mint-side vs. wallet-only" above.
+- NUT-24 (HTTP 402) has 0% adoption across the ecosystem — expected, no implementation exists yet anywhere, and it's no longer tracked at all as of 2026-09-14 (wallet-only)
 
 ## Probe fixes — HTTP status handling
 

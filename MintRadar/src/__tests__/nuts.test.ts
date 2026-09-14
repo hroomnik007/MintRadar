@@ -14,10 +14,23 @@ describe('TRACKED_NUTS', () => {
     expect(new Set(TRACKED_NUTS).size).toBe(TRACKED_NUTS.length)
   })
 
-  it('excludes the mandatory NUTs (00-03, 06) and the wallet-side NUT-13', () => {
-    for (const excluded of ['NUT-00', 'NUT-01', 'NUT-02', 'NUT-03', 'NUT-06', 'NUT-13']) {
+  it('excludes the mandatory NUTs (00-03, 06) and the wallet-only NUTs', () => {
+    for (const excluded of [
+      'NUT-00', 'NUT-01', 'NUT-02', 'NUT-03', 'NUT-06',
+      'NUT-13', 'NUT-16', 'NUT-18', 'NUT-24', 'NUT-26', 'NUT-27', 'NUT-28',
+    ]) {
       expect(TRACKED_NUTS).not.toContain(excluded)
     }
+  })
+
+  it('excludes auth (21/22) and payment-method (23/25/30) NUTs — real mint features, shown elsewhere, not part of the NUT-support score', () => {
+    for (const excluded of ['NUT-21', 'NUT-22', 'NUT-23', 'NUT-25', 'NUT-30']) {
+      expect(TRACKED_NUTS).not.toContain(excluded)
+    }
+  })
+
+  it('has exactly 14 entries', () => {
+    expect(TRACKED_NUTS.length).toBe(14)
   })
 
   it('is in ascending spec order', () => {
