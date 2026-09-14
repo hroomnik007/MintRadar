@@ -305,7 +305,7 @@
    auto-placement drops it into the remaining column). Trust Score Trend,
    full width (.stats-trend-panel below). */
 .stats-nut-panel {
-  grid-column: span 3;
+  grid-column: auto;
 }
 
 .stats-trend-panel {
@@ -756,7 +756,7 @@
    untouched — a separate, deliberate value not part of that unification. */
 .stats-nut-rows-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   row-gap: var(--stats-row-gap);
   column-gap: 32px;
   background: var(--surface);
@@ -1072,4 +1072,34 @@
    breakpoint. Desktop (>700px) keeps the two-column layout untouched. */
 @media (max-width: 700px) {
   .stats-geo-cols { grid-template-columns: 1fr; grid-auto-flow: row; }
+}
+
+
+/* 2026-09-14 board: SW+NUT | Reliable+NHI | Geo+Movers | Trend full */
+.stats-board-grid {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: 12px;
+  align-items: stretch;
+}
+.stats-board-grid > .stats-hero-grid,
+.stats-board-grid > .stats-cards-grid {
+  display: contents;
+}
+.stats-sw-panel { grid-column: 1; grid-row: 1; }
+.stats-geo-panel { grid-column: 1; grid-row: 3; }
+.stats-board-grid > .stats-panel:not(.stats-sw-panel):not(.stats-geo-panel):not(.stats-nut-panel):not(.stats-nhi-panel):not(.stats-movers-panel):not(.stats-trend-panel) {
+  grid-column: 1;
+  grid-row: 2;
+}
+.stats-nut-panel { grid-column: 2; grid-row: 1; }
+.stats-nhi-panel { grid-column: 2; grid-row: 2; }
+.stats-movers-panel { grid-column: 2; grid-row: 3; }
+.stats-trend-panel { grid-column: 1 / -1; grid-row: 4; }
+@media (max-width: 768px) {
+  .stats-board-grid { grid-template-columns: 1fr; }
+  .stats-nut-panel,
+  .stats-nhi-panel,
+  .stats-movers-panel,
+  .stats-trend-panel { grid-column: auto; grid-row: auto; }
 }

@@ -953,6 +953,7 @@ export default function Stats() {
           reference mockup's layout, DOM order doubling as the mobile stack
           order. NUT Coverage / Trust Score Movers / Trust Score Trend stay
           in the separate .stats-cards-grid below, unchanged. */}
+      <div className="stats-board-grid">
       <div className="stats-hero-grid">
 
         {/* Card 1: Software in Use — stretched to match its row's tallest
@@ -1332,6 +1333,7 @@ export default function Stats() {
         </div>
       </div>
 
+      </div>
       {cityModal !== null && (
         <CityMintsModal
           loc={cityModal}
