@@ -803,7 +803,10 @@ export default function Stats() {
   const networkHealth = useMemo(() => {
     if (!data || !knownMintsData || knownMintsData.length === 0) return null
 
-    const onlinePct = data.totalMints > 0 ? data.onlineMints / data.totalMints * 100 : 0
+    const active = knownMintsData.filter(m => m.degraded !== true)
+    const onlinePct = active.length > 0
+      ? active.filter(m => m.online === true).length / active.length * 100
+      : 0
     const avgTrust = data.avgTrustScore ?? 0
 
     const swTotal = versionDist.reduce((s, d) => s + d.total, 0)
@@ -833,7 +836,7 @@ export default function Stats() {
           label: 'Online mints',
           value: onlinePct,
           weight: 30,
-          tooltip: `${onlinePts}/30 are NHI points (this row is 30% of the index), not ${onlinePts} mints online. Dashboard listed/online counts are a different set.`,
+          tooltip: `${onlinePts}/30 are NHI points (this row is 30% of the index), not ${onlinePts} mints online. Denominator is non-degraded mints (same set as the Dashboard default grid).`,
         },
         { label: 'Avg. Trust Score', value: avgTrust, weight: 25, tooltip: 'Average Trust Score across all currently online mints.' },
         { label: 'Software diversity', value: diversity, weight: 15, tooltip: 'How spread out mint software versions are across the network (Herfindahl-Hirschman based) — a network dominated by one version scores lower.' },
