@@ -22,7 +22,7 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, trustScoreColor, trustScoreInfo, formatTimeAgo, formatAuditSuccessRatio, trustDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
-import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion } from '@/utils/mintProbeDisplay'
+import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import {
@@ -246,11 +246,6 @@ function computeTrustScore(
 // CLAUDE.md's "Reviews Feature" section) — keep both in sync by hand.
 const NOSTR_REVIEWS_STALE_TIME_MS = 2 * 60 * 1000 // 2 minutes
 
-const WARNING_KEYWORDS = ['rug', 'shutdown', 'warning', 'beware', 'risk', 'danger', 'caution', 'maintenance']
-function isWarningMotd(text: string): boolean {
-  const lower = text.toLowerCase()
-  return WARNING_KEYWORDS.some(kw => lower.includes(kw))
-}
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -1199,8 +1194,16 @@ function MintDetailContent({ url }: { url: string }) {
             {(motd || description || descriptionLong) && (
               <div className="md-panel">
                 <div className="md-panel-title">About</div>
-                {motd && (
-                  <div className={`md-motd${isWarningMotd(motd) ? ' warning' : ''}`}>
+                {motd && isMotdAlert(motd) && (
+                  <div className="md-mint-alert" role="status">
+                    <div className="md-mint-alert-body">
+                      <div className="md-mint-alert-title">Operator notice</div>
+                      <div className="md-mint-alert-text">{motd}</div>
+                    </div>
+                  </div>
+                )}
+                {motd && !isMotdAlert(motd) && (
+                  <div className="md-motd">
                     <div className="md-motd-label">Message of the Day</div>
                     <div className="md-motd-text">{motd}</div>
                   </div>
