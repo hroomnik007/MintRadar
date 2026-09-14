@@ -680,7 +680,7 @@ export default function Stats() {
   // computeGeoDistribution grouping and the same MoreLocationsModal, just a
   // smaller cut line. Grouping/aggregation itself is untouched either way.
   const isNarrowGeo = useMediaQuery('(max-width: 700px)')
-  const geoTopN = isNarrowGeo ? 5 : 20
+  const geoTopN = isNarrowGeo ? 5 : 24
   const geoDist = useMemo(() => computeGeoDistribution(knownMintsData ?? [], geoTopN), [knownMintsData, geoTopN])
   const geoRows = isNarrowGeo ? geoDist.top.length : Math.max(1, Math.ceil(geoDist.top.length / 2))
 
@@ -1024,7 +1024,7 @@ export default function Stats() {
             each row's name (2026-09-12) using the existing serverLocation
             field already carried on KnownMint / used by Geographic
             Distribution — omitted when a mint has none. */}
-        <div className="stats-panel">
+        <div className="stats-panel stats-reliable-panel">
           <div className="stats-card-header">
             <div className="stats-panel-title-row" style={{marginBottom:0}}>
               <div className="stats-panel-icon green"><IcShield size={12} /></div>

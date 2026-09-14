@@ -1093,7 +1093,7 @@
 }
 .stats-sw-panel { grid-column: 1 / 6; grid-row: 1; }
 .stats-nut-panel { grid-column: 6 / -1; grid-row: 1; }
-.stats-board-grid > .stats-panel:not(.stats-sw-panel):not(.stats-geo-panel):not(.stats-nut-panel):not(.stats-nhi-panel):not(.stats-movers-panel):not(.stats-trend-panel) {
+.stats-reliable-panel {
   grid-column: 1 / 7;
   grid-row: 2;
 }
@@ -1112,7 +1112,7 @@
 
   .stats-sw-panel { order: 1; }
   .stats-nut-panel { order: 2; }
-  .stats-board-grid > .stats-panel:not(.stats-sw-panel):not(.stats-geo-panel):not(.stats-nut-panel):not(.stats-nhi-panel):not(.stats-movers-panel):not(.stats-trend-panel) { order: 3; }
+  .stats-reliable-panel { order: 3; }
   .stats-nhi-panel { order: 4; }
   .stats-geo-panel { order: 5; }
   .stats-movers-panel { order: 6; }
