@@ -545,6 +545,7 @@ function NetworkHealthComponentRow({ component: c, index, total, compact }: {
 // inline footer under the desktop breakdown).
 const NETWORK_HEALTH_FORMULA_TEXT =
   'Score = Online%×30 + Trust×25 + SW Diversity×15 + Advanced NUTs×15 + Stability×15. ' +
+  'Online% uses the same set as the Dashboard default grid (24h+ offline mints excluded). ' +
   'Network Stability (share of mints tracked 1 month+) stands in for churn rate — churn ' +
   'isn\'t reliably measurable yet, since mints are never marked "removed" in the database.'
 
