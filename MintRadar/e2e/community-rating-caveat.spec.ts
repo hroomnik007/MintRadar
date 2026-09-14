@@ -40,29 +40,18 @@ test.describe('Community Rating — no ⓘ caveat tooltip on card / detail tile'
   })
 })
 
-test.describe('Community Rating — thin-sample de-emphasis (reviewCount < 3)', () => {
-  test('a mint with 2 reviews shows a de-emphasised card badge', async ({ page }) => {
+test.describe('Community Rating — card badge always full weight', () => {
+  test('a mint with 2 reviews is the same opacity as a thick sample', async ({ page }) => {
     await mockRelays(page)
     await installApiMocks(page)
-    // Override: give Alpha only 2 reviews. Registered after installApiMocks so it wins.
     const thin = MOCK_KNOWN_MINTS.map(m =>
       m.url === ALPHA ? { ...m, reviewCount: 2, reviewAvgRating: 4.9 } : m,
     )
     await page.route('**/api/mints/known', route => route.fulfill({ json: thin }))
     await page.goto('/')
-
     const pill = page.locator('.mint-card', { hasText: 'Alpha Mint' })
       .locator('.card-trust-rating', { hasText: '4.9 (2)' })
     await expect(pill).toBeVisible()
-    // opacity is dropped to 0.6 for a thin sample.
-    await expect(pill).toHaveCSS('opacity', '0.6')
-  })
-
-  test('Delta (exactly 3 reviews) is NOT de-emphasised', async ({ page }) => {
-    await setup(page)
-    await page.goto('/')
-    const pill = page.locator('.mint-card', { hasText: 'Delta Mint' })
-      .locator('.card-trust-rating', { hasText: '4.8 (3)' })
     await expect(pill).toHaveCSS('opacity', '1')
   })
 })
