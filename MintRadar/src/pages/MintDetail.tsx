@@ -416,19 +416,6 @@ function MintDetailContent({ url }: { url: string }) {
   const [copiedReviewAction, setCopiedReviewAction] = useState<string | null>(null)
   const [highlightedReview, setHighlightedReview] = useState<string | null>(null)
 
-  useEffect(() => {
-    // hash review highlight
-    const raw = window.location.hash
-    const m = raw.match(/^#review-([0-9a-f]{64})$/i)
-    if (!m?.[1]) return
-    const id = m[1].toLowerCase()
-    setHighlightedReview(id)
-    const t = window.setTimeout(() => {
-      document.getElementById(`review-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }, 80)
-    const t2 = window.setTimeout(() => setHighlightedReview(null), 2500)
-    return () => { window.clearTimeout(t); window.clearTimeout(t2) }
-  }, [url])
 
   const [showQr, setShowQr] = useState(false)
   const [showTrustBreakdown, setShowTrustBreakdown] = useState(false)
@@ -846,6 +833,26 @@ function MintDetailContent({ url }: { url: string }) {
     reviewsTotalPages,
   )
   const pagedReviews = filteredReviews.slice((reviewsPage - 1) * REVIEWS_PER_PAGE, reviewsPage * REVIEWS_PER_PAGE)
+
+  useEffect(() => {
+    const raw = window.location.hash
+    const m = raw.match(/^#review-([0-9a-f]{64})$/i)
+    if (!m?.[1]) return
+    const id = m[1].toLowerCase()
+    setActiveTab('reviews')
+    setReviewFilterState({ key: url, type: 'all' })
+    setReviewHideAnonState({ key: url, on: false })
+    const idx = filteredReviews.findIndex(r => r.id.toLowerCase() === id)
+    if (idx >= 0) {
+      setReviewsPageState({ key: url, page: Math.floor(idx / REVIEWS_PER_PAGE) + 1 })
+    }
+    setHighlightedReview(id)
+    const t = window.setTimeout(() => {
+      document.getElementById(`review-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 250)
+    const t2 = window.setTimeout(() => setHighlightedReview(null), 2800)
+    return () => { window.clearTimeout(t); window.clearTimeout(t2) }
+  }, [url, filteredReviews])
   const goToReviewsPage = (p: number) => setReviewsPageState({ key: url, page: Math.max(1, Math.min(p, reviewsTotalPages)) })
 
   const chartAvgLatency = chartHistoryData?.avgLatencyMs ?? null
