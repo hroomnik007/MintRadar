@@ -195,7 +195,7 @@ describe('probeMintToDb — invalid_since reap-clock maintenance', () => {
 
     await probeMintToDb(MINT)
 
-    expect(invalidSinceUpdates()).toEqual(['UPDATE mints SET invalid_since = NULL WHERE url = $1'])
+    expect(invalidSinceUpdates()).toEqual(['UPDATE mints SET invalid_since = NULL, last_online_at = NOW() WHERE url = $1'])
   })
 
   it('starts the reap clock when the host answers 404 (mint API no longer there)', async () => {
