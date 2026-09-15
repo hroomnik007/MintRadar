@@ -880,6 +880,7 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
+      <h1 className="sr-only">MintRadar — Cashu Mints Trust Score & Uptime Monitor</h1>
       <div className="stats-bar">
         <button type="button" className="stat-card stat-card-btn" onClick={() => setShowCountNote(v => !v)} aria-expanded={showCountNote}>
           <div className="stat-label">Online now</div>

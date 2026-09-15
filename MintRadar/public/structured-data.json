@@ -1,0 +1,10 @@
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "MintRadar",
+  "url": "https://mintradar.org",
+  "description": "Privacy-first, real-time directory and monitor for Cashu mints: Trust Score, uptime, latency and NUT compatibility.",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
