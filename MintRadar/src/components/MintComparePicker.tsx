@@ -88,7 +88,7 @@ export function MintComparePicker({
             disabled={selected.size === 0}
             onClick={() => onConfirm([...selected])}
           >
-            Compare ({selected.size + 1})
+            Compare ({selected.size})
           </button>
         </div>
       </div>

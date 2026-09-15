@@ -404,6 +404,9 @@ button.md-url-copy.copied > svg { opacity: 1; }
   border-radius: 0 8px 8px 0;
   padding: 9px 12px;
   margin-bottom: 12px;
+  display: inline-block;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .md-motd-label {

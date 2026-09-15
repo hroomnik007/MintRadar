@@ -1684,7 +1684,7 @@ function MintDetailContent({ url }: { url: string }) {
               }</p>
             ) : (
               <ResponsiveContainer width="100%" height={140}>
-                <LineChart data={histLineData} margin={{ top: 4, right: 4, left: 10, bottom: 0 }}>
+                <LineChart data={histLineData} margin={{ top: 4, right: 16, left: 10, bottom: 4 }}>
                   <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
                   <XAxis
                     dataKey="label"
