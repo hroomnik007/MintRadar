@@ -341,6 +341,54 @@ app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
+// Static routes here must stay in sync with LEARN_MODULES (src/constants/learnModules.ts)
+// and App.tsx's route list — there is no shared workspace between frontend/backend to
+// import that from, same caveat as testMints.ts/trustScore.ts.
+const SITEMAP_STATIC_PATHS: Array<{ loc: string; changefreq: string; priority: string }> = [
+  { loc: '/', changefreq: 'hourly', priority: '1.0' },
+  { loc: '/stats', changefreq: 'daily', priority: '0.8' },
+  { loc: '/tools', changefreq: 'weekly', priority: '0.7' },
+  { loc: '/wallets', changefreq: 'weekly', priority: '0.6' },
+  { loc: '/learn', changefreq: 'monthly', priority: '0.6' },
+  { loc: '/learn/cashu-basics', changefreq: 'monthly', priority: '0.5' },
+  { loc: '/learn/understanding-the-risks', changefreq: 'monthly', priority: '0.5' },
+  { loc: '/learn/how-to-choose-a-mint', changefreq: 'monthly', priority: '0.5' },
+  { loc: '/learn/getting-started-with-a-wallet', changefreq: 'monthly', priority: '0.5' },
+  { loc: '/learn/safe-habits', changefreq: 'monthly', priority: '0.5' },
+]
+
+// Dynamically includes every tracked mint's /mint/:url page (excluding test mints) —
+// a static file can't, since the mint list changes as mints are discovered/removed.
+// See CLAUDE.md "Deploy Pipeline Notes" — nginx routes /sitemap.xml here instead of
+// serving a static frontend file, mirroring the /health proxy above.
+app.get('/sitemap.xml', (_req: Request, res: Response): void => {
+  pool.query('SELECT url FROM mints ORDER BY url')
+    .then(result => {
+      const mintUrls = (result.rows as { url: string }[])
+        .map(r => r.url)
+        .filter(url => !isTestMint(url))
+
+      const urlEntry = (loc: string, changefreq: string, priority: string): string =>
+        `  <url>\n    <loc>${loc}</loc>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`
+
+      const staticXml = SITEMAP_STATIC_PATHS
+        .map(p => urlEntry(`https://mintradar.org${p.loc}`, p.changefreq, p.priority))
+        .join('\n')
+      const mintXml = mintUrls
+        .map(u => urlEntry(`https://mintradar.org/mint/${encodeURIComponent(u)}`, 'daily', '0.4'))
+        .join('\n')
+
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${staticXml}\n${mintXml}\n</urlset>\n`
+      res.set('Content-Type', 'application/xml; charset=utf-8')
+      res.set('Cache-Control', 'public, max-age=3600')
+      res.send(xml)
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[/sitemap.xml]', err)
+      res.status(500).type('text/plain').send('Failed to generate sitemap')
+    })
+})
+
 app.get('/api/mint/probe', (req: Request, res: Response): void => {
   const url = req.query['url']
 

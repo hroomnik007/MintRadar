@@ -234,7 +234,8 @@ export default function Watchlist() {
 
   useDocumentMeta(
     'My Watchlist — MintRadar',
-    'Track your favorite Cashu mints and get notified the moment one goes offline or comes back online.'
+    'Track your favorite Cashu mints and get notified the moment one goes offline or comes back online.',
+    { noindex: true }
   )
 
   if (profile === null) {
