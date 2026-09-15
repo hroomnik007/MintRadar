@@ -31,6 +31,7 @@ import {
   uptimeComponent, nutComponent, versionComponent, contactComponent,
 } from '@/utils/trustScore'
 import { useNow } from '@/hooks/useNow'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import './MintDetail.css'
 import {
@@ -289,6 +290,15 @@ function MintDetailContent({ url }: { url: string }) {
   useMintHistory(url)
   const { data: knownMintsData } = useKnownMints()
   const knownMint = knownMintsData?.find(m => m.url === url) ?? null
+
+  const metaDisplayName = mintDisplayName({ name: data?.info?.name ?? knownMint?.name, url })
+  useDocumentMeta(
+    `${metaDisplayName} — Cashu Mint Trust Score & Uptime | MintRadar`,
+    knownMint
+      ? `${metaDisplayName} (${mintHostname(url)}) is ${knownMint.online ? 'online' : 'offline'} with a Trust Score of ${knownMint.trustScore ?? '—'}%. See live uptime, latency, NUT support and reviews on MintRadar.`
+      : `Live Trust Score, uptime, latency and NUT support for the Cashu mint ${mintHostname(url)} on MintRadar.`
+  )
+
   const [chartInterval, setChartInterval] = useState<'24h' | '7d' | '30d' | '90d'>('7d')
   const [chartMetric, setChartMetric] = useState<'latency' | 'uptime' | 'trust'>('latency')
   const { data: chartHistoryData } = useQuery({

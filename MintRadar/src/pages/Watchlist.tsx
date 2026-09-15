@@ -10,6 +10,7 @@ import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { MintCard } from '@/components/mint/MintCard'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import './Watchlist.css'
 
 const IcRadar = () => (
@@ -231,6 +232,11 @@ export default function Watchlist() {
     return () => observer.disconnect()
   }, [listKey])
 
+  useDocumentMeta(
+    'My Watchlist — MintRadar',
+    'Track your favorite Cashu mints and get notified the moment one goes offline or comes back online.'
+  )
+
   if (profile === null) {
     return (
       <div className="watchlist-page">
@@ -252,6 +258,7 @@ export default function Watchlist() {
 
   return (
     <div className="watchlist-page">
+      <h1 className="sr-only">Your Cashu Mints Watchlist</h1>
       <div className="wl-body wl-body-two-col">
         <div className="wl-main-col">
           {syncStatus === 'error' && (

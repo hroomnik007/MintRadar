@@ -9,6 +9,7 @@ import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpen
 import { normalizeMintUrl, trustColor, trustScoreInfo, mintRiskLevel, displayName as mintDisplayName, cardTrustLabel, cardLightningLabel } from '@/utils/mintFormatting'
 import { Zap } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import './Tools.css'
 
 function getHostname(url: string): string {
@@ -721,8 +722,14 @@ export default function Tools() {
     return () => window.removeEventListener('hashchange', applyHash)
   }, [])
 
+  useDocumentMeta(
+    'Cashu Mint Tools — Token Inspector & Best Mint Finder | MintRadar',
+    'Inspect a Cashu token before redeeming it, or find the best Cashu mint for you with the Best Mint wizard.'
+  )
+
   return (
     <div className="tools-page">
+      <h1 className="sr-only">Cashu Mint Tools — Token Inspector & Best Mint Finder</h1>
       <div className="tools-grid">
         <div id="token" tabIndex={-1} className="tool-anchor">
           <TokenInspector knownMints={mints} />

@@ -5,7 +5,7 @@ import { KeyTakeaway } from '@/components/learn/KeyTakeaway'
 export default function Module3() {
   return (
     <div className="learn-content">
-      <h1>How to Choose a Mint</h1>
+      <h1>How to Choose a Cashu Mint</h1>
 
       <p>
         Now that you understand the risks, let's talk about how to actually pick a mint to use — and how MintRadar can help.

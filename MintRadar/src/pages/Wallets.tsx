@@ -2,6 +2,7 @@ import { WALLETS } from '@/constants/wallets'
 import type { WalletInfo } from '@/constants/wallets'
 import { WalletPlatformIcon } from '@/components/wallets/WalletIcons'
 import { LearnHero } from '@/components/learn/LearnIcons'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import './Wallets.css'
 
 function hostname(url: string): string {
@@ -39,11 +40,16 @@ export default function Wallets() {
   const wallets = WALLETS.filter(w => !w.selfHost)
   const selfHost = WALLETS.filter(w => w.selfHost)
 
+  useDocumentMeta(
+    'Cashu Wallets — MintRadar',
+    'Wallets that work with Cashu mints, plus how to run your own mint. A plain list, no ranking or reviews.'
+  )
+
   return (
     <div className="wallets-page">
       <div className="wallets-header">
-        <div className="wallets-title">Wallets</div>
-        <div className="wallets-subtitle">Cashu-compatible wallets — a plain list, no ranking or reviews</div>
+        <h1 className="wallets-title">Wallets</h1>
+        <div className="wallets-subtitle">Wallets that work with Cashu mints — a plain list, no ranking or reviews</div>
       </div>
 
       <div className="wallets-hero" aria-hidden="true">

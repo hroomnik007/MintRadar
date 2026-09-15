@@ -9,6 +9,7 @@ import { useWatchlistNotifications } from '@/hooks/useWatchlistNotifications'
 import { useUserRelays } from '@/hooks/useUserRelays'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 
 import type { MintStatus } from '@core/mint/api'
 import { MintCard } from '@/components/mint/MintCard'
@@ -877,6 +878,11 @@ export default function Dashboard() {
   const bulkAdded = bulkProgress.filter(p => p.status === 'added').length
   const bulkDuplicate = bulkProgress.filter(p => p.status === 'duplicate').length
   const bulkFailed = bulkProgress.filter(p => p.status === 'failed').length
+
+  useDocumentMeta(
+    'MintRadar - Cashu Mints Directory & Trust Score Monitor',
+    'Find trusted Cashu mints. Privacy-first, real-time directory with Trust Score, uptime, latency and NUT compatibility for every Cashu mint.'
+  )
 
   return (
     <div className="dashboard">

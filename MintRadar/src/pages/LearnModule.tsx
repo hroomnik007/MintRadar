@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import type { ComponentType, LazyExoticComponent } from 'react'
 import { useParams, useNavigate, Link, Navigate } from 'react-router-dom'
 import { LEARN_MODULES } from '@/constants/learnModules'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import './LearnModule.css'
 
 const MODULE_COMPONENTS: Record<string, LazyExoticComponent<ComponentType>> = {
@@ -21,16 +22,20 @@ export default function LearnModule() {
   const navigate = useNavigate()
 
   const sorted = [...LEARN_MODULES].sort((a, b) => a.order - b.order)
-
-  if (moduleId && /^[1-9][0-9]*$/.test(moduleId)) {
-    const n = Number(moduleId)
-    const byOrder = sorted.find(m => m.order === n)
-    if (byOrder) return <Navigate to={`/learn/${byOrder.id}`} replace />
-  }
+  const numericRedirectTarget = moduleId && /^[1-9][0-9]*$/.test(moduleId)
+    ? sorted.find(m => m.order === Number(moduleId))
+    : undefined
 
   const index = sorted.findIndex(m => m.id === moduleId)
   const mod = index >= 0 ? sorted[index] : null
   const ModuleComponent = mod ? MODULE_COMPONENTS[mod.id] : null
+
+  useDocumentMeta(
+    mod ? `${mod.title} — MintRadar Learn` : 'Module not found — MintRadar Learn',
+    mod ? mod.summary : undefined
+  )
+
+  if (numericRedirectTarget) return <Navigate to={`/learn/${numericRedirectTarget.id}`} replace />
 
   if (!mod || !ModuleComponent) {
     return (

@@ -1,17 +1,23 @@
 import { useNavigate } from 'react-router-dom'
 import { LEARN_MODULES } from '@/constants/learnModules'
 import { LearnModuleIcon, LearnHero } from '@/components/learn/LearnIcons'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import './Learn.css'
 
 export default function Learn() {
   const navigate = useNavigate()
   const modules = [...LEARN_MODULES].sort((a, b) => a.order - b.order)
 
+  useDocumentMeta(
+    'Learn Cashu — MintRadar',
+    'A short course on how Cashu works, what can go wrong, and how to choose a safe Cashu mint.'
+  )
+
   return (
     <div className="learn-page">
       <div className="learn-page-header">
-        <div className="learn-page-title">Learn</div>
-        <div className="learn-page-subtitle">A short course on how Cashu works, what can go wrong, and how to use it safely.</div>
+        <h1 className="learn-page-title">Learn</h1>
+        <div className="learn-page-subtitle">A short course on how Cashu works, what can go wrong, and how to choose a safe Cashu mint.</div>
       </div>
 
       <div className="learn-hero" aria-hidden="true">

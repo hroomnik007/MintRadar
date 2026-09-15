@@ -14,6 +14,7 @@ import { compareMintVersionNumbers } from '@/utils/trustScore'
 import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import { useIsMobile, useMediaQuery } from '@/hooks/useIsMobile'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import './Stats.css'
 
 interface StatsData {
@@ -848,6 +849,11 @@ export default function Stats() {
     }
   }, [data, knownMintsData, versionDist])
 
+  useDocumentMeta(
+    'Cashu Mints Network Stats — MintRadar',
+    'Live network-wide stats for Cashu mints: uptime, average Trust Score, latency, NUT adoption and the Network Health Index.'
+  )
+
   if (isLoading) return (
     <div className="stats-page">
       <div className="stats-header">
@@ -871,6 +877,7 @@ export default function Stats() {
 
   return (
     <div className="stats-page">
+      <h1 className="sr-only">Cashu Mints Network Stats — Uptime, Trust Score & NUT Adoption</h1>
       {/* ── 5 flat stat boxes ── */}
       <div className="stats-metrics">
         <div className="stat-card">
