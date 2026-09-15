@@ -175,10 +175,11 @@ export async function refreshAllMintReviews(): Promise<number> {
   }
   reviewSyncRunning = true
 
-  if (!globalThis.WebSocket) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(globalThis as any).WebSocket = WebSocket
-  }
+  // Always install 'ws' as globalThis.WebSocket — see nostrService.ts for why
+  // this must not be guarded by `if (!globalThis.WebSocket)`: Node 22's native
+  // WebSocket crashes the process on a failed relay connection.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(globalThis as any).WebSocket = WebSocket
 
   // Root nostr-tools SimplePool — connects via the plain `globalThis.WebSocket`
   // above, NOT the connect-time DNS-pinned `DnsPinnedWebSocket` that

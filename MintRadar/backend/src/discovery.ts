@@ -116,11 +116,11 @@ export function computeSilentRelays(
 }
 
 export async function discoverMintsFromNostr(): Promise<number> {
-  // Node.js 20 has no native WebSocket — inject ws polyfill for nostr-tools
-  if (!globalThis.WebSocket) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(globalThis as any).WebSocket = WebSocket
-  }
+  // Always install 'ws' as globalThis.WebSocket — see nostrService.ts for why
+  // this must not be guarded by `if (!globalThis.WebSocket)`: Node 22's native
+  // WebSocket crashes the process on a failed relay connection.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(globalThis as any).WebSocket = WebSocket
   // NOTE: this SimplePool is the ROOT nostr-tools one — it connects via the
   // plain `globalThis.WebSocket` above, NOT the connect-time DNS-pinned
   // `DnsPinnedWebSocket` that nostrService.ts installs for the notification

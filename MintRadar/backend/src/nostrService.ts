@@ -17,12 +17,18 @@ import type { ClientRequestArgs } from 'http'
 import { pool } from './db.js'
 import { safeLookup } from './ssrf.js'
 
-// Node.js 20 has no native WebSocket — inject ws polyfill for nostr-tools
+// Always install the 'ws' package as globalThis.WebSocket, even on Node
+// versions (22+) that ship a native undici WebSocket. The root 'nostr-tools'
+// SimplePool used by discovery.ts / reviewsSync.ts reads globalThis.WebSocket
+// directly, and undici's native implementation has a known bug where a failed
+// relay connection recurses through its close/error handling and crashes the
+// process with "RangeError: Maximum call stack size exceeded" — 'ws' does not
+// have this bug. Previously guarded by `if (!globalThis.WebSocket)`, which was
+// only true on Node 20; the guard silently stopped firing once the Dockerfile
+// moved to node:22-alpine, leaving the buggy native implementation in place.
 // (same pattern as discovery.ts / index.ts's nostr-reviews endpoint).
-if (!globalThis.WebSocket) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(globalThis as any).WebSocket = WebSocket
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+;(globalThis as any).WebSocket = WebSocket
 
 // DNS-rebinding TOCTOU fix: relay URLs stored on subscribe are SSRF-checked
 // once (checkWsUrlSafety in index.ts), but nostr-tools' SimplePool otherwise

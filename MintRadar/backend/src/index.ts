@@ -1,3 +1,4 @@
+import './wsPolyfill.js'
 import express, { type Request, type Response, type NextFunction } from 'express'
 import cors from 'cors'
 import { pool, initDb } from './db.js'
@@ -17,6 +18,23 @@ import { computeTrustMovers, type MintScoreSnapshot } from './trustMovers.js'
 import { globalMeanRating, weightedRating } from './weightedRating.js'
 import { hasRecentReviewSurge } from './reviewSurge.js'
 import { isTestMint } from './testMints.js'
+
+// Safety net against a nostr-tools bug: AbstractRelay.connect()'s
+// connection-timeout path calls `this.ws.close()` on a socket that hasn't
+// finished connecting, which the 'ws' package (installed via wsPolyfill.ts,
+// see there for why) surfaces as an EventEmitter 'error' event race — it can
+// fire before nostr-tools' own onerror handler is attached. An unhandled
+// EventEmitter 'error' event throws, which without this handler kills the
+// whole API process over a single flaky background relay connection
+// (discovery.ts / reviewsSync.ts / nostrService.ts all open relay sockets on
+// hardcoded, non-attacker-controlled relay lists — this is not swallowing
+// arbitrary/unexpected errors, just a known third-party timing bug).
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err)
+})
+process.on('unhandledRejection', (err) => {
+  console.error('[unhandledRejection]', err)
+})
 
 let knownMintsCache: { data: unknown; expiresAt: number } | null = null
 const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
