@@ -401,7 +401,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .md-motd {
   border-left: 2px solid var(--accent);
   background: rgba(74, 222, 128, 0.06);
-  border-radius: 0 8px 8px 0;
+  border-radius: 8px;
   padding: 9px 12px;
   margin-bottom: 12px;
   display: inline-block;
