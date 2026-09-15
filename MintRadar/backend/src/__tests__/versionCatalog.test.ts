@@ -125,8 +125,8 @@ describe('getLatestVersionsMap', () => {
   it('reads software_versions and applies the grace period to the returned map', async () => {
     queryMock.mockResolvedValueOnce({
       rows: [
-        { software: 'cdk', latest_version: '0.17.5', previous_version: '0.16.2', released_at: daysAgo(5) },
-        { software: 'nutshell', latest_version: '0.20.3', previous_version: '0.19.1', released_at: daysAgo(30) },
+        { software: 'cdk', latest_version: '0.17.5', previous_version: '0.16.2', released_at: new Date(Date.now() - 5 * DAY_MS).toISOString() },
+        { software: 'nutshell', latest_version: '0.20.3', previous_version: '0.19.1', released_at: new Date(Date.now() - 30 * DAY_MS).toISOString() },
       ],
     })
     const map = await getLatestVersionsMap()
