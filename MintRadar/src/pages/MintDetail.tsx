@@ -1675,7 +1675,13 @@ function MintDetailContent({ url }: { url: string }) {
             {histLineData.length === 0 ? (
               <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>No historical data for this period.</p>
             ) : histLineData.filter(d => d[chartMetric] !== null).length < 2 ? (
-              <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>Not enough data for this period</p>
+              <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>{
+                chartMetric === 'latency'
+                  ? (histLineData.filter(d => d.latency !== null).length === 0
+                      ? 'No latency samples — mint was offline this period.'
+                      : 'Only one online day in this period.')
+                  : 'Not enough data for this period'
+              }</p>
             ) : (
               <ResponsiveContainer width="100%" height={140}>
                 <LineChart data={histLineData} margin={{ top: 4, right: 4, left: 10, bottom: 0 }}>
