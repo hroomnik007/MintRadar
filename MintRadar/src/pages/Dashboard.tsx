@@ -582,7 +582,7 @@ export default function Dashboard() {
 
   // The full set of mints we track — matches the "All Known" tile and
   // /api/stats `totalMints` (all three read the same unfiltered mints table).
-  const knownTotal = knownMintsData?.length ?? 0
+  const knownTotal = (knownMintsData ?? []).filter(m => !m.archived).length
 
   const { degradedCount, allMints } = useMemo(() => {
     const degradedUrls = knownMintsData?.filter(m => m.degraded).map(m => m.url) ?? []

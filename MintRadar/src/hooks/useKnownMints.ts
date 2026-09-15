@@ -5,6 +5,8 @@ export interface KnownMint {
   name: string | null
   iconUrl: string | null
   degraded: boolean
+  archived?: boolean
+  lastOnlineAt?: string | null
   online: boolean | null
   latencyMs: number | null
   version: string | null

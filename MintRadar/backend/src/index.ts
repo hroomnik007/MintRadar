@@ -885,7 +885,8 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
         latest.online AS latest_online,
         latest.latency_ms AS latest_latency_ms,
-        latest.checked_at AS latest_checked_at
+        latest.checked_at AS latest_checked_at,
+        m.last_online_at
       FROM mints m
       LEFT JOIN mint_history h ON h.url = m.url AND h.checked_at > NOW() - INTERVAL '24 hours'
       LEFT JOIN LATERAL (
@@ -921,6 +922,14 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           name: r.name as string | null,
           iconUrl: (r.icon_url as string | null) ?? null,
           degraded: computeDegraded(total, onlineCount, latestOnline, latestCheckedAt),
+          lastOnlineAt: (r.last_online_at as Date | string | null)
+            ? new Date(r.last_online_at as Date | string).toISOString()
+            : null,
+          archived: (() => {
+            const lo = r.last_online_at as Date | string | null
+            if (!lo || r.latest_online === true) return false
+            return Date.now() - new Date(lo).getTime() > 30 * 86_400_000
+          })(),
           online: r.latest_online as boolean | null,
           latencyMs: r.latest_latency_ms as number | null,
           version: r.version as string | null,

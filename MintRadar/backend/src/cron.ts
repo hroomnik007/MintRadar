@@ -1,6 +1,6 @@
 import cron from 'node-cron'
 import pLimit from 'p-limit'
-import { getKnownMints, probeMintToDb, pruneOldHistory, pruneUnvalidatedMints, revalidateMints, backfillServerLocations } from './prober.js'
+import { getKnownMints, probeMintToDb, pruneOldHistory, pruneUnvalidatedMints, pruneAbandonedMints, revalidateMints, backfillServerLocations } from './prober.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
 import { refreshAllMintReviews } from './reviewsSync.js'
 import { refreshTrustMoversRollup } from './trustMoversRollup.js'
@@ -69,6 +69,8 @@ export function startCron(): void {
     try {
       const deleted = await pruneUnvalidatedMints()
       console.log(`[cron] pruned ${deleted} unvalidated mint candidate(s)`)
+      const abandoned = await pruneAbandonedMints()
+      console.log(`[cron] pruned ${abandoned} abandoned mint(s) (90d offline)`)
     } catch (err) {
       if (process.env['NODE_ENV'] !== 'production') {
         console.error('[cron] unvalidated mint prune error:', err)

@@ -185,7 +185,7 @@ export async function validateCashuMintProbe(url: string): Promise<{ valid: bool
 // that isn't (or stops being) gated by isValidCashuMint() — e.g. a future
 // bug or a new discovery source — since there is otherwise no DELETE FROM
 // mints anywhere in the app and an unvalidated row would be probed forever.
-const UNVALIDATED_CANDIDATE_TTL_HOURS = 24
+const UNVALIDATED_CANDIDATE_TTL_HOURS = 168
 
 export async function pruneUnvalidatedMints(): Promise<number> {
   const res = await pool.query(
@@ -194,6 +194,18 @@ export async function pruneUnvalidatedMints(): Promise<number> {
        AND NOT EXISTS (
          SELECT 1 FROM mint_history h WHERE h.url = mints.url AND h.online = true
        )`
+  )
+  return res.rowCount ?? 0
+}
+
+/** Once-online mint with no successful probe for 90d. History retention is also 90d. */
+const ABANDONED_REAP_DAYS = 90
+
+export async function pruneAbandonedMints(): Promise<number> {
+  const res = await pool.query(
+    `DELETE FROM mints
+     WHERE last_online_at IS NOT NULL
+       AND last_online_at < NOW() - INTERVAL '${ABANDONED_REAP_DAYS} days'`
   )
   return res.rowCount ?? 0
 }
@@ -505,7 +517,7 @@ export async function probeMintToDb(url: string): Promise<void> {
   // repointed to a non-mint host after it first passed validation. Network
   // errors / 5xx / timeouts are transient and must NOT advance the reap clock.
   if (online) {
-    await pool.query('UPDATE mints SET invalid_since = NULL WHERE url = $1', [url])
+    await pool.query('UPDATE mints SET invalid_since = NULL, last_online_at = NOW() WHERE url = $1', [url])
   } else if (
     lastError === 'Invalid Cashu response' ||
     lastError === 'Invalid JSON response' ||
