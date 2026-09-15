@@ -41,7 +41,7 @@ test.describe('Tools', () => {
     await page.locator('.token-input').fill(token)
     await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
 
-    const wallet = page.getByRole('link', { name: /Open in wallet/ })
+    const wallet = page.getByRole('link', { name: /Open in cashu.me/ })
     await expect(wallet).toHaveAttribute('href', new RegExp(`^https://wallet\\.cashu\\.me/\\?token=${token}$`))
     const redeem = page.getByRole('link', { name: /Redeem to Lightning/ })
     await expect(redeem).toHaveAttribute('href', new RegExp(`^https://redeem\\.cashu\\.me/\\?token=${token}$`))

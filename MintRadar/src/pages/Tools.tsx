@@ -356,13 +356,14 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
               target="_blank"
               rel="noreferrer"
             >
-              ↗ Open in wallet
+              ↗ Open in cashu.me
             </a>
             <a
               className="token-action-btn"
               href={`https://redeem.cashu.me/?token=${encodeURIComponent(input.trim())}`}
               target="_blank"
               rel="noreferrer"
+              title="Opens cashu.me melt flow"
             >
               ⚡ Redeem to Lightning
             </a>

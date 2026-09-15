@@ -188,6 +188,11 @@
   white-space: nowrap;
 }
 .token-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+a.token-action-btn,
+a.token-action-btn:hover,
+a.token-action-btn:focus {
+  text-decoration: none;
+}
 
 .token-verify { display: flex; flex-direction: column; gap: 8px; }
 .token-verify-result {
