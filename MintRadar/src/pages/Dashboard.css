@@ -49,7 +49,7 @@
 .stat-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 28px;
   min-width: 0;
 }
 
@@ -1789,3 +1789,10 @@
   color: var(--yellow);
   line-height: 1;
 }
+
+.dash-status-btn { gap: 28px; }
+.dash-action {
+  font-size: 13px;
+  padding: 8px 14px;
+}
+.grid-score-explainer { font-size: 14px; }

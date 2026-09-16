@@ -897,10 +897,10 @@ export default function Dashboard() {
       <div className="dash-intro">
         <div className="dash-actions" role="group" aria-label="Get started">
           <button type="button" className="dash-action" onClick={() => navigate('/tools#pick')}>
-            Help me pick
+            Find a mint
           </button>
           <button type="button" className="dash-action" onClick={() => navigate('/tools#token')}>
-            I have a token
+            Inspect a token
           </button>
         </div>
         <p className="grid-score-explainer">
@@ -912,11 +912,11 @@ export default function Dashboard() {
         <div className="dash-status">
           <button type="button" className="dash-status-btn" onClick={() => setShowCountNote(v => !v)} aria-expanded={showCountNote}>
             <span className="dash-status-live" aria-hidden="true" />
-            <span className="dash-status-item"><b>{onlineCount}</b> online</span>
+            <span className="dash-status-item"><b>{onlineCount}</b> online mints</span>
             <span className="dash-status-sep" aria-hidden="true" />
-            <span className="dash-status-item"><b>{knownTotal}</b> tracked</span>
+            <span className="dash-status-item"><b>{knownTotal}</b> tracked mints</span>
             <span className="dash-status-sep" aria-hidden="true" />
-            <span className="dash-status-item">checked {formatTimeAgo(lastCheckTime)}</span>
+            <span className="dash-status-item">last checked {formatTimeAgo(lastCheckTime)}</span>
           </button>
         </div>
       )}
