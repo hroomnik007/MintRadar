@@ -887,48 +887,17 @@ export default function Dashboard() {
   return (
     <div className="dashboard">
       <h1 className="sr-only">MintRadar — Cashu Mints Trust Score & Uptime Monitor</h1>
-      <div className="stats-bar">
-        <button type="button" className="stat-card stat-card-btn" onClick={() => setShowCountNote(v => !v)} aria-expanded={showCountNote}>
-          <div className="stat-label">Online now</div>
-          <div className="stat-row">
-            <div className="stat-icon green"><IcSignal /></div>
-            <div className="stat-figure">
-              <span className="stat-value">{onlineCount}</span>
-              <span className="stat-note">of all known</span>
-            </div>
-          </div>
+      {!search && (
+      <div className="dash-status">
+        <button type="button" className="dash-status-btn" onClick={() => setShowCountNote(v => !v)} aria-expanded={showCountNote}>
+          <span className="dash-status-item"><b>{onlineCount}</b> online</span>
+          <span className="dash-status-sep" aria-hidden="true">·</span>
+          <span className="dash-status-item"><b>{knownTotal}</b> tracked</span>
+          <span className="dash-status-sep" aria-hidden="true">·</span>
+          <span className="dash-status-item">checked {formatTimeAgo(lastCheckTime)}</span>
         </button>
-        <div className="stat-card">
-          <div className="stat-label">Median Latency</div>
-          <div className="stat-row">
-            <div className="stat-icon orange"><IcTimer /></div>
-            <div className="stat-figure">
-              <span className="stat-value">{avgLatency24h !== null ? avgLatency24h : '—'}</span>
-              {avgLatency24h !== null && <span className="stat-unit">ms</span>}
-              <span className="stat-note">from Frankfurt</span>
-            </div>
-          </div>
-        </div>
-        <button type="button" className="stat-card stat-card-btn" onClick={() => setShowCountNote(v => !v)} aria-expanded={showCountNote}>
-          <div className="stat-label">Mints tracked</div>
-          <div className="stat-row">
-            <div className="stat-icon gray"><IcGrid /></div>
-            <div className="stat-figure">
-              <span className="stat-value">{knownTotal}</span>
-              <span className="stat-note">of all known</span>
-            </div>
-          </div>
-        </button>
-        <div className="stat-card">
-          <div className="stat-label">Last Check</div>
-          <div className="stat-row">
-            <div className="stat-icon gray"><IcSuccess /></div>
-            <div className="stat-figure">
-              <span className="stat-value stat-value-sm">{formatTimeAgo(lastCheckTime)}</span>
-            </div>
-          </div>
-        </div>
       </div>
+      )}
       {showCountNote && (
         <p className="stat-count-note">
           <strong>Listed</strong> = in the grid (not hidden after 24h offline).{' '}
