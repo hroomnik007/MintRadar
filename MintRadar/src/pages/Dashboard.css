@@ -18,32 +18,6 @@
 }
 
 /* ── Stats Bar ──────────────────────────────────────────────── */
-.dash-status {
-  display: flex;
-  justify-content: center;
-  padding: 8px var(--page-pad) 2px;
-}
-.dash-status-btn {
-  font: inherit;
-  background: none;
-  border: none;
-  color: var(--text-dim);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
-  font-size: 12px;
-  padding: 4px 0;
-}
-.dash-status-btn:hover { color: var(--text); }
-.dash-status-item b {
-  font-family: var(--font-mono-data);
-  font-weight: 650;
-  color: var(--text);
-}
-.dash-status-sep { color: var(--text-faint); }
 
 .stats-bar {
   display: flex;
@@ -124,6 +98,51 @@
 /* Newcomer strip: chips on the left, the score explainer on the right,
    sharing one row above the search bar on desktop. On mobile the row wraps —
    the two chips on top, the full explainer sentence below them. */
+
+.dash-status {
+  max-width: var(--dash-chrome-max);
+  width: 100%;
+  margin: 10px auto 0;
+  padding-inline: var(--page-pad);
+}
+.dash-status-btn {
+  font: inherit;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 8px 14px;
+  font-size: 13px;
+  text-align: left;
+}
+.dash-status-btn:hover { border-color: var(--border-strong); color: var(--text2); }
+.dash-status-live {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green-bright);
+  flex: 0 0 auto;
+}
+.dash-status-item b {
+  font-family: var(--font-mono-data);
+  font-weight: 650;
+  font-size: 14px;
+  color: var(--text);
+  margin-right: 4px;
+}
+.dash-status-sep {
+  width: 1px;
+  height: 12px;
+  background: var(--border);
+  flex: 0 0 auto;
+}
+
 .dash-intro {
   display: flex;
   align-items: baseline;

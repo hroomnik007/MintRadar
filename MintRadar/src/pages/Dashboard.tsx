@@ -887,18 +887,7 @@ export default function Dashboard() {
   return (
     <div className="dashboard">
       <h1 className="sr-only">MintRadar — Cashu Mints Trust Score & Uptime Monitor</h1>
-      {!search && (
-      <div className="dash-status">
-        <button type="button" className="dash-status-btn" onClick={() => setShowCountNote(v => !v)} aria-expanded={showCountNote}>
-          <span className="dash-status-item"><b>{onlineCount}</b> online</span>
-          <span className="dash-status-sep" aria-hidden="true">·</span>
-          <span className="dash-status-item"><b>{knownTotal}</b> tracked</span>
-          <span className="dash-status-sep" aria-hidden="true">·</span>
-          <span className="dash-status-item">checked {formatTimeAgo(lastCheckTime)}</span>
-        </button>
-      </div>
-      )}
-      {showCountNote && (
+{showCountNote && (
         <p className="stat-count-note">
           <strong>Listed</strong> = in the grid (not hidden after 24h offline).{' '}
           <strong>Known</strong> = every mint we indexed.
@@ -918,6 +907,19 @@ export default function Dashboard() {
           We score how it runs. They score how it went. You pick.
         </p>
       </div>
+
+      {!search && (
+        <div className="dash-status">
+          <button type="button" className="dash-status-btn" onClick={() => setShowCountNote(v => !v)} aria-expanded={showCountNote}>
+            <span className="dash-status-live" aria-hidden="true" />
+            <span className="dash-status-item"><b>{onlineCount}</b> online</span>
+            <span className="dash-status-sep" aria-hidden="true" />
+            <span className="dash-status-item"><b>{knownTotal}</b> tracked</span>
+            <span className="dash-status-sep" aria-hidden="true" />
+            <span className="dash-status-item">checked {formatTimeAgo(lastCheckTime)}</span>
+          </button>
+        </div>
+      )}
 
       <div className="dashboard-controls">
         {/* Wrapper is `display: contents` on desktop (transparent to the flex
