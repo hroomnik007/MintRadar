@@ -22,6 +22,11 @@
   outline: 2px solid var(--accent, var(--border2));
   outline-offset: 3px;
 }
+.tool-anchor-hl .tool-card {
+  border-color: var(--green-bright);
+  box-shadow: 0 0 0 3px rgba(23, 232, 127, 0.18);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
 
 .tool-card {
   background: var(--bg2);

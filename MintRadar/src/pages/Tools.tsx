@@ -717,8 +717,11 @@ export default function Tools() {
       if (!el) return
       el.scrollIntoView({ behavior: 'smooth', block: 'start' })
       el.focus({ preventScroll: true })
+      document.querySelectorAll('.tool-anchor-hl').forEach(n => n.classList.remove('tool-anchor-hl'))
+      el.classList.add('tool-anchor-hl')
+      window.setTimeout(() => el.classList.remove('tool-anchor-hl'), 2800)
     }
-    applyHash()
+    requestAnimationFrame(applyHash)
     window.addEventListener('hashchange', applyHash)
     return () => window.removeEventListener('hashchange', applyHash)
   }, [])
