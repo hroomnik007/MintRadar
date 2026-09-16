@@ -122,6 +122,7 @@ function rateLimitMessage(retryAfterHeader: string | null): string {
 function formatTimeAgo(date: Date | null): string {
   if (!date) return '—'
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (seconds < 10) return 'just now'
   if (seconds < 60) return `${seconds}s ago`
   const minutes = Math.floor(seconds / 60)
   if (minutes < 60) return `${minutes} min ago`
@@ -915,8 +916,7 @@ export default function Dashboard() {
             <span className="dash-status-item"><b>{onlineCount}</b> online mints</span>
             <span className="dash-status-sep" aria-hidden="true" />
             <span className="dash-status-item"><b>{knownTotal}</b> tracked mints</span>
-            <span className="dash-status-sep" aria-hidden="true" />
-            <span className="dash-status-item">last checked {formatTimeAgo(lastCheckTime)}</span>
+            <span className="dash-status-item dash-status-end">last checked {formatTimeAgo(lastCheckTime)}</span>
           </button>
         </div>
       )}

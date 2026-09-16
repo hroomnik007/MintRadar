@@ -1796,3 +1796,8 @@
   padding: 8px 14px;
 }
 .grid-score-explainer { font-size: 14px; }
+
+.dash-status-end {
+  margin-left: auto;
+  color: var(--text-dim);
+}
