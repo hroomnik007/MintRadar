@@ -116,12 +116,11 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
   color: var(--text-dim);
-  cursor: pointer;
+  cursor: default;
   padding: 8px 14px;
   font-size: 13px;
   text-align: left;
 }
-.dash-status-btn:hover { border-color: var(--border-strong); color: var(--text2); }
 .dash-status-live {
   width: 7px;
   height: 7px;
