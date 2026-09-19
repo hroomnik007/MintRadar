@@ -732,6 +732,12 @@
 
 .card-trust-star { font-size: 13px; line-height: 1; }
 
+.card-trust-no-reviews {
+  font-size: 11px;
+  color: var(--t3);
+  line-height: 1;
+}
+
 /* Mobile keeps the desktop bottom-row layout: LATENCY (+ Compare under it) on
    the left, the Trust column flush right. No stacking of Trust above latency. */
 @media (max-width: 600px) {

@@ -265,7 +265,7 @@ export function MintCard({
               </div>
             </>
           )}
-          {(mint.reviewCount ?? 0) > 0 && mint.reviewAvgRating != null && (
+          {(mint.reviewCount ?? 0) > 0 && mint.reviewAvgRating != null ? (
             <span className="card-trust-rating">
               <span className="card-trust-star">★</span>
               <span className="card-trust-rating-val">{mint.reviewAvgRating.toFixed(1)}</span>
@@ -281,6 +281,8 @@ export function MintCard({
                 />
               )}
             </span>
+          ) : (
+            <span className="card-trust-no-reviews">No reviews yet</span>
           )}
         </div>
       </div>

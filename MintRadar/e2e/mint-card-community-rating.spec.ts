@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, loginAs } from './fixtures/mocks'
 
 // Mock review rollup (see e2e/fixtures/mocks.ts):
-//   Alpha   → 12 reviews @ 4.2   Bravo   → 0 reviews (no badge)
+//   Alpha   → 12 reviews @ 4.2   Bravo   → 0 reviews ("No reviews yet")
 //   Charlie → 4 reviews @ 3.0    Delta   → 3 reviews @ 4.8
 // Charlie is offline: it has no Trust Score badge but still shows a
 // Community Rating badge.
@@ -24,8 +24,9 @@ test.describe('MintCard — Community Rating badge', () => {
     await expect(card(page, 'Delta Mint').locator('.card-trust-rating', { hasText: '4.8 (3)' })).toBeVisible()
     // Offline mint — Trust Score number absent ("Trust n/a"), Community Rating still shown.
     await expect(card(page, 'Charlie Mint').locator('.card-trust-rating', { hasText: '3.0 (4)' })).toBeVisible()
-    // 0 reviews → no rating at all.
+    // 0 reviews → no rating pill, but a muted "No reviews yet" note instead.
     await expect(card(page, 'Bravo Mint').locator('.card-trust-rating')).toHaveCount(0)
+    await expect(card(page, 'Bravo Mint').locator('.card-trust-no-reviews')).toHaveText('No reviews yet')
   })
 
   test('Trust block uses a shield icon, not a star, and no %', async ({ page }) => {
