@@ -14,7 +14,7 @@ import type { KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUserRelays } from '@/hooks/useUserRelays'
-import { displayName as mintDisplayName, isNewMint, cardLatencyLabel, cardLightningLabel, uptimeColor, formatTimeAgo } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, isNewMint, cardLatencyLabel, cardLatencyLocationSuffix, cardLightningLabel, uptimeColor, formatTimeAgo } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
 import { db } from '@/db'
 import { resolveNotificationRelays, syncSubscribeToServer, syncUnsubscribeFromServer } from '@/core/nostr/notificationSubscription'
@@ -207,9 +207,17 @@ export function MintCard({
             ) : isOnline && mint.latencyMs !== null ? (
               <div className="latency-value" style={{ color: 'var(--text)' }}>
                 {mint.latencyMs}<span className="latency-unit">ms</span>
+                {cardLatencyLocationSuffix(mint) && (
+                  <span className="latency-source"> {cardLatencyLocationSuffix(mint)}</span>
+                )}
               </div>
             ) : (
-              <div className="latency-value muted">{cardLatencyLabel(mint)}</div>
+              <div className="latency-value muted">
+                {cardLatencyLabel(mint)}
+                {cardLatencyLocationSuffix(mint) && (
+                  <span className="latency-source"> {cardLatencyLocationSuffix(mint)}</span>
+                )}
+              </div>
             )}
           </div>
           <div className="card-actions">

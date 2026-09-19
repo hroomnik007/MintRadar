@@ -799,6 +799,16 @@
 
 .latency-value.muted { color: var(--t3); font-size: 17px; }
 
+/* "· Frankfurt" — makes clear the value is a measurement from our probe
+   server, not a property of the mint itself (same framing as the Stats
+   page's Median Latency tile). Always more muted than the value it follows,
+   even inside an already-muted (offline/stale) latency-value. */
+.latency-source {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--t3);
+}
+
 /* Watchlist-only Down/Up toggles — compact so they can sit under Compare on a
    Watchlist card without ballooning it past a Dashboard card's height. */
 .notify-toggle-btn {

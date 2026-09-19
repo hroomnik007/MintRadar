@@ -17,6 +17,7 @@ import {
   firstSeenLabel,
   cardTrustLabel,
   cardLatencyLabel,
+  cardLatencyLocationSuffix,
   cardLightningLabel,
   resolveMintDetailUrl,
 } from '../utils/mintFormatting'
@@ -275,6 +276,19 @@ describe('cardLatencyLabel', () => {
 
   it('prefers a real sample even if an error is also present', () => {
     expect(cardLatencyLabel({ latencyMs: 88, lastError: 'Connection timeout' })).toBe('88 ms')
+  })
+})
+
+// ── cardLatencyLocationSuffix ("· Frankfurt" — sampled ms only) ──
+describe('cardLatencyLocationSuffix', () => {
+  it('renders "· Frankfurt" when a sample exists', () => {
+    expect(cardLatencyLocationSuffix({ latencyMs: 270 })).toBe('· Frankfurt')
+    expect(cardLatencyLocationSuffix({ latencyMs: 0 })).toBe('· Frankfurt')
+  })
+
+  it('is null when there is no sample (timeout, n/a, missing field)', () => {
+    expect(cardLatencyLocationSuffix({ latencyMs: null })).toBeNull()
+    expect(cardLatencyLocationSuffix({})).toBeNull()
   })
 })
 

@@ -234,6 +234,17 @@ export function cardLatencyLabel(mint: {
   return 'n/a'
 }
 
+// The latency value is a measurement from OUR probe server, not a property of
+// the mint itself — this suffix makes that explicit next to a real sample
+// (same "from Frankfurt" framing as the Stats page's Median Latency tile).
+// Only meaningful when an actual sample exists: "timeout"/"n/a" carry no
+// measurement to attribute to a location.
+export function cardLatencyLocationSuffix(mint: {
+  latencyMs?: number | null
+}): string | null {
+  return typeof mint.latencyMs === 'number' && mint.latencyMs >= 0 ? '· Frankfurt' : null
+}
+
 // ── Mint age badge ─────────────────────────────────────────────
 // Thresholds: < 1 month → Fresh, < 6 months → Established,
 //             < 12 months → Veteran, ≥ 12 months → OG
