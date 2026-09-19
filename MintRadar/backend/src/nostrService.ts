@@ -70,6 +70,7 @@ const META_RELAYS = [
 // Mirrors the frontend's NOTIFICATION_RELAYS (src/hooks/useWatchlistNotifications.ts)
 // — same no-workspace caveat as above. Used as the fallback/redundancy set unioned
 // with each subscriber's own stored relays when delivering a DM.
+// `relay.nostr.band` removed 2026-09-20 — see the frontend array's comment.
 const NOTIFICATION_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
@@ -78,7 +79,6 @@ const NOTIFICATION_RELAYS = [
   'wss://relay.snort.social',
   'wss://offchain.pub',
   'wss://nostr-pub.wellorder.net',
-  'wss://relay.nostr.band',
   'wss://nostr.bitcoiner.social',
   'wss://nostr.mom',
   'wss://nostr.oxtr.dev',

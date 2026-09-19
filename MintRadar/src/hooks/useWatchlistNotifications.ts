@@ -9,6 +9,11 @@ import { nip44, generateSecretKey, finalizeEvent, getEventHash } from 'nostr-too
 // Exported so the server subscribe/unsubscribe client (notificationSubscription.ts)
 // can reuse it as a fallback when the user has no NIP-65 read relays — the task
 // explicitly requires not inventing a second default list.
+// `relay.nostr.band` removed 2026-09-20 — confirmed dead from two independent
+// networks (a sandbox and the production VPS) in the 2026-09-19 relay audit,
+// matching the earlier 2026-08-15 finding. No replacement needed:
+// `resolveNotificationRelays` already caps at 10, and `nostr-pub.wellorder.net`
+// (also re-verified live in that same audit) is already in this list.
 export const NOTIFICATION_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
@@ -17,7 +22,6 @@ export const NOTIFICATION_RELAYS = [
   'wss://relay.snort.social',
   'wss://offchain.pub',
   'wss://nostr-pub.wellorder.net',
-  'wss://relay.nostr.band',
   'wss://nostr.bitcoiner.social',
   'wss://nostr.mom',
   'wss://nostr.oxtr.dev',
