@@ -261,7 +261,7 @@ across components.
 
 ## Cron jobs
 - Every 5min: probe all mints in DB → write to mint_history, update mints metadata + last_trust_score, **then `refreshTrustMoversRollup()`** (`backend/src/trustMoversRollup.ts`): one `UPDATE mints` recomputing `trust_score_{7,30}d_ago` from `mint_history` (index-backed per-mint `LIMIT 1` lookups). Single-flight, never throws. Also primed ~15s after boot. Feeds `GET /api/stats/trust-movers`.
-- Every 6h: NIP-87 discovery from 7 relays + audit.8333.space API → INSERT new mints, **then `refreshAllMintReviews()`** (`backend/src/reviewsSync.ts`): per-mint kind:38000 fetch (broad `REVIEW_SYNC_RELAYS`, 8s timeout, concurrency 3) → atomic per-mint replace of `mint_reviews` + `mints.review_count`/`review_avg_rating` rollup inside one transaction (READ COMMITTED: readers see old-complete or new-complete, never partial). Single-flight (`isReviewSyncRunning`).
+- Every 6h: NIP-87 discovery from `DISCOVERY_RELAYS` (10 relays as of the 2026-09-19 audit, see "Discovery relays" below) + audit.8333.space API → INSERT new mints, **then `refreshAllMintReviews()`** (`backend/src/reviewsSync.ts`): per-mint kind:38000 fetch (broad `REVIEW_SYNC_RELAYS`, 8s timeout, concurrency 3) → atomic per-mint replace of `mint_reviews` + `mints.review_count`/`review_avg_rating` rollup inside one transaction (READ COMMITTED: readers see old-complete or new-complete, never partial). Single-flight (`isReviewSyncRunning`).
 - Daily 3:15am: `pruneUnvalidatedMints()` — deletes rows discovered >24h ago that NEVER had a successful probe (covers any insert path that skips `isValidCashuMint()`).
 - Daily 3:45am: refresh `software_versions` cache from the GitHub Releases API (`cashubtc/nutshell`, `cashubtc/cdk`) — see Trust Score calculation above
 - Daily 4:45am: `refreshReviewSurgeBaseline()` (`backend/src/reviewSurgeRollup.ts`) — advances the rolling `review_count_7d_ago` snapshot for any mint whose snapshot is missing or ≥7 days old (skips mints whose `review_count` is still NULL, so the first reviews-sync never looks like a surge). Also primed 60s after boot. Single-flight, never throws. Feeds the `reviewSurge` field on `/api/mints/known`.
@@ -379,6 +379,10 @@ Frontend source of truth: `src/core/nostr/relays.ts` (`DISCOVERY_RELAYS`), impor
 this (separate npm package, no workspace set up) — `backend/src/discovery.ts` keeps its own
 `DISCOVERY_RELAYS` constant manually in sync; mirror any change to both.
 
+**Superseded 2026-09-19 by a live audit — see below for the current 10-relay list and why.**
+The 17-relay list below is left as historical context for the additions/removals documented
+in this section; do not treat it as the current `DISCOVERY_RELAYS` contents.
+
 wss://relay.damus.io, wss://nos.lol, wss://purplepag.es, wss://relay.snort.social,
 wss://relay.primal.net, wss://relay.cashumints.space, wss://relay.azzamo.net,
 wss://eden.nostr.land, wss://nostr.wine, wss://nostr-pub.wellorder.net,
@@ -452,6 +456,76 @@ the background with no live UI to update, so a streaming subscription (increment
 per-event handling) wouldn't produce any visible benefit over the current EOSE/timeout
 batch pattern (`querySync` + race against a timeout, or `subscribeMany` resolved on
 `oneose`). Do not "improve" this to streaming without a concrete reason.
+
+### 2026-09-19/20 — live relay audit (NIP-11 + WS REQ, replaces the "verified reachable via
+TCP handshake" spot-checks above with an actual read-yield measurement)
+
+Ran a live audit against every relay in `DISCOVERY_RELAYS`/`REVIEW_SYNC_RELAYS`/
+`REVIEW_READ_RELAYS`/`REVIEW_PUBLISH_RELAYS`/`PROFILE_RELAYS`/`NOTIFICATION_RELAYS`: NIP-11
+`GET` + a WS `REQ` for `kind:38172` and `kind:38000` (`limit: 5`), 3 measurement cycles for
+the "soft cut" candidates, plus a write test for the one new candidate proposed
+(`relay.nostr.band`, kind:38000, throwaway key). Full measured table (host, NIP-11 status,
+EOSE time, event counts) is in the session transcript, not reproduced here — this section
+records the resulting constant changes and why.
+
+**Current `DISCOVERY_RELAYS` (10, both `src/core/nostr/relays.ts` and backend
+`discovery.ts`):**
+
+```
+wss://relay.damus.io, wss://nos.lol, wss://relay.primal.net, wss://relay.cashumints.space,
+wss://relay.azzamo.net, wss://nostr.oxtr.dev, wss://offchain.pub,
+wss://nostr.bitcoiner.social, wss://nostr.cypherpunk.today, wss://nostr-pub.wellorder.net
+```
+
+- **Dropped, confirmed dead/broken:** `relay.8333.space` (still `EHOSTUNREACH`),
+  `relay.nostr.net` (NIP-11 still HTTP 500 — same finding as 2026-08-15, never recovered),
+  `nostr.wine` (403 on anon REQ, all 3 cycles).
+- **Dropped, thin/zero measured yield across 3 cycles:** `purplepag.es` (0/5 events either
+  kind — it's a kind:0/10002/51 directory, not a NIP-87/38000 host; stays in
+  `PROFILE_RELAYS`), `relay.snort.social` (only 1/5 kind:38172, 0/5 kind:38000).
+- **Moved out of general discovery into backend-only `REVIEW_SYNC_RELAYS`:**
+  `eden.nostr.land` and `nostr21.com` — both paid/restricted-write, but both measured strong
+  kind:38000 yield (5/5 each); fine for a read-only cron, not fine for `DISCOVERY_RELAYS` or
+  `REVIEW_PUBLISH_RELAYS` (write cost) or `PROFILE_RELAYS`.
+- **Revived:** `nostr-pub.wellorder.net` — the 2026-08-15 entry above replaced it as
+  "genuinely down"; re-measured now as consistently healthy (0/5 kind:38172 but **5/5
+  kind:38000, all 3 cycles**). Whatever caused the 2026-08-15 TCP hang no longer reproduces.
+- **`nostr.oxtr.dev` — sandbox-vs-production discrepancy, not a relay problem:** the auditing
+  sandbox could not open a raw TCP connection to its IP at all (confirmed with a bare
+  `/dev/tcp` test, independent of any Nostr/WS code) — re-verified live from the production
+  VPS instead: 37ms connect, 5/5 + 5/5 events, EOSE <60ms. Kept; this was an environment
+  artifact of the audit, not evidence against the relay.
+- **`relay.nostr.band` (the one new candidate this audit evaluated) — confirmed dead from
+  BOTH the sandbox and the production VPS** (NIP-11 fetch failed, WS handshake timed out).
+  Matches the 2026-08-15 finding (`95.216.33.150` still doesn't respond). **Not added
+  anywhere** — and since it was already confirmed dead, it was also removed 2026-09-20 from
+  `NOTIFICATION_RELAYS` (frontend `useWatchlistNotifications.ts` + backend
+  `nostrService.ts`), the one place it still lived. No replacement needed there —
+  `resolveNotificationRelays` already caps at 10, and `nostr-pub.wellorder.net` (revived
+  above) was already present in that list.
+
+**`REVIEW_SYNC_RELAYS` (backend `reviewsSync.ts`) is no longer a straight mirror of
+`DISCOVERY_RELAYS`/the old `REVIEW_RELAYS`** — it's now `DISCOVERY_RELAYS` (10) +
+`relay.minibits.cash` + `nostr.mom` + `eden.nostr.land` + `nostr21.com` (14 total). See its
+own file comment. `backend/src/__tests__/nostrReviewsRelays.test.ts` was extended in the same
+pass to cross-check `DISCOVERY_RELAYS` directly against the frontend's own array (not just a
+hand-copied snapshot) — backend `discovery.ts`'s `DISCOVERY_RELAYS` is now `export`ed for
+this; the two npm packages still share no workspace, but `relays.ts` has zero runtime
+dependencies so importing it directly from a backend test file works fine.
+
+**`REVIEW_PUBLISH_RELAYS`** dropped `pyramid.fiatjaf.com` (NIP-11 `restricted_writes: true`)
+and `nostr.lopp.social` (0/5 events either kind, all 3 cycles — no revival); everything else
+in it (the new `REVIEW_RELAYS` base + `nostr.mom`/`relay.mostr.pub`/`relay.noswhere.com`)
+measured real yield.
+
+**`REVIEW_READ_RELAYS`** and **`PROFILE_RELAYS`** each just lost `relay.nostr.net` (still
+500) — no other changes; this audit measured kind:38172/38000 yield, not kind:0, so there was
+no evidence to justify touching the rest of `PROFILE_RELAYS`.
+
+**Out of scope for this audit, deliberately untouched:** `META_RELAYS` and `NIP46_RELAYS`
+(`client.ts` + backend `nostrService.ts`'s own separate `META_RELAYS` copy) — the audit and
+its two follow-up commits were scoped to `relays.ts` + its backend mirrors +
+`NOTIFICATION_RELAYS` only.
 
 ## Compare feature — shared picker + mobile layout
 
@@ -1409,7 +1483,7 @@ All review-related relay lists live in `src/core/nostr/relays.ts`:
 - **REVIEW_PUBLISH_RELAYS** (= REVIEW_RELAYS + 7 extra relays: bitcoiner.social, nostr.mom, oxtr.dev, mostr.pub, noswhere.com, pyramid.fiatjaf.com, lopp.social) — wider net used only by `src/hooks/useSubmitReview.ts` when publishing, for propagation reach
 - **PROFILE_RELAYS** — unchanged, used for kind:0 profile lookups only
 
-Backend `REVIEW_SYNC_RELAYS` (`backend/src/reviewsSync.ts`, re-exported from `index.ts` as `NOSTR_REVIEWS_RELAYS`) is the broad list used by the 6h background sync — it has a generous time budget so it favours coverage over latency (opposite trade-off from REVIEW_READ_RELAYS). It's a manual mirror of the old REVIEW_RELAYS; `backend/src/__tests__/nostrReviewsRelays.test.ts` pins the exact array as a drift tripwire. The frontend fast-path list is deliberately NOT mirrored.
+Backend `REVIEW_SYNC_RELAYS` (`backend/src/reviewsSync.ts`, re-exported from `index.ts` as `NOSTR_REVIEWS_RELAYS`) is the broad list used by the 6h background sync — it has a generous time budget so it favours coverage over latency (opposite trade-off from REVIEW_READ_RELAYS). **As of the 2026-09-19 audit it is no longer a straight mirror of the old REVIEW_RELAYS** — see "Discovery relays" above for its current composition (`DISCOVERY_RELAYS` + minibits.cash + mom + eden.nostr.land + nostr21.com). `backend/src/__tests__/nostrReviewsRelays.test.ts` pins the exact array as a drift tripwire, and now also cross-checks `DISCOVERY_RELAYS` directly against the frontend's own array. The frontend fast-path list is deliberately NOT mirrored.
 
 **Two independent review-fetch mechanisms, by design (documented 2026-08-29; reworked 2026-08-30 for load perf):**
 - **Primary — `useMintReviews.ts`**: live, client-side, no cache, fetched fresh on every Mint Detail visit via REVIEW_READ_RELAYS + maxWait 2000ms. Still what lets a user see their own review immediately after posting one (`useSubmitReview.ts`). It's now the *background refresh*, not the gate for first paint.
