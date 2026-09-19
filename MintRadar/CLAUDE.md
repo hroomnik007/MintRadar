@@ -324,8 +324,46 @@ everything else online. `isEligibleForRecommendation(discoveredAt)` /
 - **Frontend `top5ByTrust`** (`Stats.tsx` Trust tab) — same filter, using `KnownMint.discoveredAt`.
 
 **Deliberately NOT applied to `top5ByUptime`** ("Most Reliable" tab, same page) — that panel
-reports a measured 24h uptime fact, not a recommendation, and a mint with 24h of 100% uptime
-is telling the truth about that 24h regardless of how old the mint is.
+reports a measured uptime fact, not a recommendation, and a mint with high uptime over its
+measurement window is telling the truth about that window regardless of how old the mint is.
+(The window itself moved from 24h to 7d the same day — see "Most Reliable panel — 7-day
+default window" below; that's an unrelated change about window *length*, not mint age.)
+
+### Most Reliable panel — 7-day default window (2026-09-19)
+
+`top5ByUptime` (`Stats.tsx`) now ranks by **`uptimePct7d`**, not `uptimePct24h` — on a 24h
+window most of the network sits at 100% uptime, so the ranking barely differentiated a mint
+that's been reliable for a while from one that just got lucky on the last few 5-minute probe
+cycles. The panel label changed from **"Most Reliable · 24H"** to **"Most Reliable · 7D"**.
+This is unrelated to the age gate above: `isEligibleForRecommendation()` is about how old the
+*mint* is (`discovered_at`), this is about how long the *uptime measurement window* is —
+`top5ByUptime` still deliberately has no age gate, only test-mint exclusion.
+
+- **Backend:** `/api/mints/known` (`backend/src/index.ts`) gained a second bulk uptime
+  aggregate alongside the existing 24h one — a `LEFT JOIN` subquery over `mint_history`
+  grouped by `url` with a `WHERE checked_at > NOW() - INTERVAL '7 days'` filter (computed as
+  its own pre-aggregated subquery, not a second raw `LEFT JOIN mint_history` alias like the
+  24h one, to avoid a Cartesian blow-up between two independently-filtered joins on the same
+  table), exposed as **`uptimePct7d`** using the same `total === 0 ? null : Math.round(...)`
+  pattern as `uptimePct24h`. `uptimePct24h` itself is unchanged and still used everywhere
+  else (mint cards, the Stats "avg uptime 24h" hero tile, `computeDegraded()`).
+- **Frontend:** `KnownMint` (`src/hooks/useKnownMints.ts`) gained `uptimePct7d?: number |
+  null`. Only `top5ByUptime`'s filter/sort and its row display (`mint.uptimePct7d`) switched
+  fields — no other `uptimePct24h` call site in the app was touched.
+- **No new UI element** — there was no existing 24h/7d/30d/90d period selector on this panel
+  (unlike Mint Detail's chart), so per the request this landed as a plain default-source
+  change, not a new toggle. The panel keeps its existing Reliable/Trust tab toggle
+  (`reliableTab` state) unchanged.
+- Tests: `backend/src/__tests__/integration/mints-known.test.ts` (uptimePct7d computed
+  independently of uptimePct24h; null when the mint has no 7-day history) and
+  `e2e/stats-widgets.spec.ts` ("Most Reliable panel is labeled 7D and ranks by uptimePct7d,
+  not uptimePct24h" — uses deliberately opposite 24h/7d values per mint to prove the panel
+  reads the right field). `e2e/fixtures/mocks.ts`'s `MockMint`/`knownMintPayload()` gained an
+  optional `uptimePct7d` that defaults to `uptimePct24h` when a spec doesn't set it, so
+  pre-existing specs didn't need per-row changes. The pre-existing "Trust tab still shows it"
+  half of the test-mint-exclusion test was also fixed in the same pass — it had gone stale
+  independently, from the `isEligibleForRecommendation()`/test-mint work above landing in
+  `top5ByTrust` without this test being updated (see that section).
 
 **`useFollowRecommendations.ts` ("Recommended by Follows", Watchlist page) is a genuinely
 independent third mechanism, not a shared copy of this logic** — it ranks by how many of the

@@ -42,6 +42,10 @@ export interface KnownMint {
   trustScore?: number | null
   lastError?: string | null
   uptimePct24h?: number | null
+  /** Same computation as uptimePct24h, over a 7-day window. Feeds the Stats
+   *  "Most Reliable" panel only — uptimePct24h remains the field used
+   *  everywhere else (mint cards, avg-uptime hero tile, degraded detection). */
+  uptimePct7d?: number | null
   serverLocation?: string | null
   lastCheckedAt?: string | null
   // NIP-87 review rollup, refreshed by the backend's 6h reviews sync

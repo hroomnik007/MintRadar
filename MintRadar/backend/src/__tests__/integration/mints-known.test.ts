@@ -51,6 +51,8 @@ function sampleRow(overrides: Record<string, unknown> = {}) {
     server_location: 'US',
     total: 12,
     online_count: 12,
+    total_7d: 84,
+    online_count_7d: 84,
     latest_online: true,
     latest_latency_ms: 142,
     latest_checked_at: '2026-06-30T11:55:00.000Z',
@@ -86,6 +88,7 @@ describe('GET /api/mints/known', () => {
       trustScore: 88,
       degraded: false,
       uptimePct24h: 100,
+      uptimePct7d: 100,
       serverLocation: 'US',
     })
     // The contract advertised in CLAUDE.md: url, degraded, online, trustScore.
@@ -146,6 +149,28 @@ describe('GET /api/mints/known', () => {
     query.mockResolvedValueOnce({ rows: [sampleRow()] })
     const res = await request(app).get('/api/mints/known')
     expect(res.body[0].reviewSurge).toBe(false)
+  })
+
+  it('computes uptimePct7d independently from uptimePct24h', async () => {
+    // 24h window: 12/12 = 100%. 7d window: a rougher stretch, 63/84 = 75%.
+    query.mockResolvedValueOnce({
+      rows: [sampleRow({ total: 12, online_count: 12, total_7d: 84, online_count_7d: 63 })],
+    })
+
+    const res = await request(app).get('/api/mints/known')
+
+    expect(res.body[0].uptimePct24h).toBe(100)
+    expect(res.body[0].uptimePct7d).toBe(75)
+  })
+
+  it('uptimePct7d is null when the mint has no history in the 7-day window', async () => {
+    query.mockResolvedValueOnce({
+      rows: [sampleRow({ total_7d: 0, online_count_7d: 0 })],
+    })
+
+    const res = await request(app).get('/api/mints/known')
+
+    expect(res.body[0].uptimePct7d).toBeNull()
   })
 
   it('marks a long-offline mint as degraded', async () => {

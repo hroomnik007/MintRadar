@@ -648,14 +648,23 @@ export default function Stats() {
   // Back to top 5 (was briefly top 4, matching row-1 siblings before those
   // siblings got their own height fixes — see the row-1 height
   // investigation) — top 5 now lands close to Network Health Index's 319px.
+  //
+  // Ranks by uptimePct7d, not uptimePct24h (2026-09-19) — on a 24h window most
+  // of the network sits at 100% uptime, so the ranking barely differentiated
+  // mints that have been reliable for a while from ones that just got lucky
+  // on the last few probe cycles. This is unrelated to isEligibleForRecommendation()
+  // (the 14-day mint-age gate on Trust Score top-5, see "Recommendation-surface
+  // minimum age gate") — that's about the mint's age, this is about the length
+  // of the uptime measurement window, and top5ByUptime deliberately still has
+  // no age gate (see that section for why).
   const top5ByUptime = useMemo(() => {
     if (!knownMintsData) return []
     return [...knownMintsData]
       // Test/dev mints are excluded from this "best of" list (same as the
-      // Best Mint wizard and the backend's top5ByTrustScore) — they're still
-      // tracked and visible everywhere else. Trust tab is left untouched.
-      .filter(m => m.online === true && m.uptimePct24h != null && !isTestMint(m.url))
-      .sort((a, b) => (b.uptimePct24h ?? 0) - (a.uptimePct24h ?? 0))
+      // Best Mint wizard and the backend's top5ByTrustScore); the Trust tab
+      // just below has its own, separate isTestMint()/age-gate filtering.
+      .filter(m => m.online === true && m.uptimePct7d != null && !isTestMint(m.url))
+      .sort((a, b) => (b.uptimePct7d ?? 0) - (a.uptimePct7d ?? 0))
       .slice(0, 5)
   }, [knownMintsData])
 
@@ -1050,7 +1059,7 @@ export default function Stats() {
             <div className="stats-panel-title-row" style={{marginBottom:0}}>
               <div className="stats-panel-icon green"><IcShield size={12} /></div>
               <div className="stats-panel-title" style={{marginBottom:0}}>
-                {reliableTab === 'reliable' ? 'Most Reliable · 24H' : 'Top Trust Score'}
+                {reliableTab === 'reliable' ? 'Most Reliable · 7D' : 'Top Trust Score'}
               </div>
             </div>
             <div className="stats-tab-toggle">
@@ -1063,7 +1072,7 @@ export default function Stats() {
               top5ByUptime.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data yet</div>
               ) : top5ByUptime.map((mint, idx) => {
-                const uptime = mint.uptimePct24h ?? 0
+                const uptime = mint.uptimePct7d ?? 0
                 const color = uptimeColor(uptime)
                 const loc = normalizeGeoLoc(mint.serverLocation)
                 const cityInfo = loc !== 'Unknown' ? geoLabel(loc) : null

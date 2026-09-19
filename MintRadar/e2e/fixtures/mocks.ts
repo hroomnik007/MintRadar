@@ -17,6 +17,9 @@ export interface MockMint {
   version: string | null
   nutCount: number
   uptimePct24h: number | null
+  /** Same computation as uptimePct24h, over a 7-day window — feeds the Stats
+   *  "Most Reliable" panel. Defaults to uptimePct24h when omitted. */
+  uptimePct7d?: number | null
   discoveredAt: string
   /** Units this mint issues, as persisted by prober.ts's parseMintMethods(). */
   units: string[] | null
@@ -103,6 +106,7 @@ function knownMintPayload(m: MockMint) {
     trustScore: m.trustScore,
     lastError: null,
     uptimePct24h: m.uptimePct24h,
+    uptimePct7d: m.uptimePct7d ?? m.uptimePct24h,
     serverLocation: 'Germany',
     lastCheckedAt: new Date(now - 60_000).toISOString(),
     reviewCount: m.reviewCount ?? null,

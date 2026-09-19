@@ -973,12 +973,21 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         m.review_count, m.review_avg_rating, m.review_count_7d_ago, m.review_count_7d_ago_at,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
+        h7.total_7d,
+        h7.online_count_7d,
         latest.online AS latest_online,
         latest.latency_ms AS latest_latency_ms,
         latest.checked_at AS latest_checked_at,
         m.last_online_at
       FROM mints m
       LEFT JOIN mint_history h ON h.url = m.url AND h.checked_at > NOW() - INTERVAL '24 hours'
+      LEFT JOIN (
+        SELECT url, COUNT(*) AS total_7d,
+          COALESCE(SUM(CASE WHEN online THEN 1 ELSE 0 END), 0) AS online_count_7d
+        FROM mint_history
+        WHERE checked_at > NOW() - INTERVAL '7 days'
+        GROUP BY url
+      ) h7 ON h7.url = m.url
       LEFT JOIN LATERAL (
         SELECT online, latency_ms, checked_at FROM mint_history
         WHERE url = m.url ORDER BY checked_at DESC, id DESC LIMIT 1
@@ -990,6 +999,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
         m.discovered_at, m.last_trust_score, m.last_error, m.server_location,
         m.review_count, m.review_avg_rating, m.review_count_7d_ago, m.review_count_7d_ago_at,
+        h7.total_7d, h7.online_count_7d,
         latest.online, latest.latency_ms, latest.checked_at
     `)
     .then(result => {
@@ -1005,6 +1015,8 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
       const data = result.rows.map(r => {
         const total = Number(r.total)
         const onlineCount = Number(r.online_count)
+        const total7d = Number(r.total_7d ?? 0)
+        const onlineCount7d = Number(r.online_count_7d ?? 0)
         const latestOnline = r.latest_online as boolean | null
         const latestCheckedAt = r.latest_checked_at as string | null
         return {
@@ -1051,6 +1063,13 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           trustScore: (r.last_trust_score as number | null) ?? null,
           lastError: (r.last_error as string | null) ?? null,
           uptimePct24h: total === 0 ? null : Math.round(onlineCount / total * 100),
+          // Same computation as uptimePct24h, over a 7-day window — feeds the
+          // Stats "Most Reliable" panel (see CLAUDE.md), which switched to a
+          // 7d default because most of the network sits at 100% on a 24h
+          // window and can't be meaningfully ranked. uptimePct24h itself is
+          // unchanged and still used everywhere else (mint cards, avg-uptime
+          // hero tile, degraded detection).
+          uptimePct7d: total7d === 0 ? null : Math.round(onlineCount7d / total7d * 100),
           serverLocation: (r.server_location as string | null) ?? null,
           lastCheckedAt: (r.latest_checked_at as string | null) ?? null,
           reviewCount: (r.review_count as number | null) ?? null,
