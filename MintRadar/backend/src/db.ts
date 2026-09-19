@@ -177,6 +177,22 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS nostr_announced_at TIMESTAMPTZ',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS nostr_announce_id TEXT',
     `CREATE INDEX IF NOT EXISTS idx_mints_pubkey ON mints (pubkey) WHERE pubkey IS NOT NULL`,
+    // Defense-in-depth for the rating range bug in reviews.ts/reviewUtils.ts's
+    // content-fallback "[X/5]" parser (fixed alongside this constraint) — an
+    // out-of-range parsed rating should never reach the DB, but this guarantees
+    // it even if a future code path forgets the clamp. Verified 0 existing rows
+    // violate this before adding it (checked live prod DB, 2026-09-19). Postgres
+    // has no `ADD CONSTRAINT IF NOT EXISTS`, so this is wrapped in a DO block
+    // that checks pg_constraint first — the migrations array runs on every boot.
+    `DO $$
+     BEGIN
+       IF NOT EXISTS (
+         SELECT 1 FROM pg_constraint WHERE conname = 'mint_reviews_rating_range'
+       ) THEN
+         ALTER TABLE mint_reviews ADD CONSTRAINT mint_reviews_rating_range
+           CHECK (rating IS NULL OR rating BETWEEN 1 AND 5);
+       END IF;
+     END $$`,
   ]
 
   for (const sql of migrations) {

@@ -88,6 +88,21 @@ describe('parseReviewEvent', () => {
       expect(parseReviewEvent(e)).toMatchObject({ rating: null, comment: '[10/5] ten' })
     })
 
+    it('clamps "[9/5] great" — rating null, not 9', () => {
+      const e = makeEvent({ pubkey: 'p', content: '[9/5] great' })
+      expect(parseReviewEvent(e)).toMatchObject({ rating: null, comment: 'great' })
+    })
+
+    it('clamps "[0/5]" from the content marker — rating null, not 0', () => {
+      const e = makeEvent({ pubkey: 'p', content: '[0/5] zero' })
+      expect(parseReviewEvent(e)).toMatchObject({ rating: null, comment: 'zero' })
+    })
+
+    it('still parses "[3/5] good" → rating 3 (in-range, unchanged)', () => {
+      const e = makeEvent({ pubkey: 'p', content: '[3/5] good' })
+      expect(parseReviewEvent(e)).toMatchObject({ rating: 3, comment: 'good' })
+    })
+
     it('does NOT match a mid-string marker', () => {
       const e = makeEvent({ pubkey: 'p', content: 'text [3/5] here' })
       expect(parseReviewEvent(e)).toMatchObject({ rating: null, comment: 'text [3/5] here' })

@@ -30,7 +30,8 @@ export function deduplicateByPubkey(events: ReviewEvent[]): ReviewEvent[] {
 }
 
 // Extract rating + comment from a single event.
-// Rating precedence: valid `rating` tag (1-5) > "[X/5]" content marker.
+// Rating precedence: valid `rating` tag (1-5) > "[X/5]" content marker (also
+// clamped to 1-5 — an out-of-range marker like "[9/5]" yields rating null).
 // Events with neither rating nor non-empty comment are excluded downstream.
 export function parseReviewEvent(e: ReviewEvent): ParsedReview {
   const ratingTag = e.tags.find(t => t[0] === 'rating')
@@ -39,7 +40,10 @@ export function parseReviewEvent(e: ReviewEvent): ParsedReview {
   if (rating !== null && (rating < 1 || rating > 5)) rating = null
   // Fallback: extract rating from content "[X/5] ..." format
   const contentMatch = !rating ? /^\[(\d)\/5\]/.exec(e.content ?? '') : null
-  if (contentMatch?.[1]) rating = parseInt(contentMatch[1], 10)
+  if (contentMatch?.[1]) {
+    rating = parseInt(contentMatch[1], 10)
+    if (rating < 1 || rating > 5) rating = null
+  }
   const rawComment = commentTag ? (commentTag[1] ?? '') : (e.content ?? '')
   const comment = rawComment.replace(/^\[\d\/5\]\s*/, '').trim()
   return { id: e.id, pubkey: e.pubkey, rating, comment, createdAt: e.created_at }

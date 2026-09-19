@@ -4,9 +4,9 @@
 // Precedence:
 //   1. A `rating` tag wins if present AND in range 1-5; out-of-range tag
 //      ratings are discarded (treated as no rating).
-//   2. Otherwise fall back to a leading "[X/5]" marker in the content. NOTE:
-//      the content fallback is NOT range-checked, so "[6/5]" yields rating 6
-//      and "[0/5]" yields rating 0 — only single digits 0-9 match the regex.
+//   2. Otherwise fall back to a leading "[X/5]" marker in the content;
+//      out-of-range content ratings are discarded the same way as the tag
+//      path (e.g. "[9/5]" yields rating null, not 9).
 //   3. The comment is the `comment` tag value if present, else the content,
 //      with any leading "[X/5] " marker stripped.
 //
@@ -27,7 +27,10 @@ export function parseReviewRatingAndComment(
   if (rating !== null && (rating < 1 || rating > 5)) rating = null
   // Fallback: extract rating from content "[X/5] ..." format
   const contentMatch = !rating ? /^\[(\d)\/5\]/.exec(content ?? '') : null
-  if (contentMatch) rating = parseInt(contentMatch[1]!, 10)
+  if (contentMatch) {
+    rating = parseInt(contentMatch[1]!, 10)
+    if (rating < 1 || rating > 5) rating = null
+  }
   const rawComment = commentTag ? (commentTag[1] ?? '') : (content ?? '')
   const comment = rawComment.replace(/^\[\d\/5\]\s*/, '').trim()
   return { rating, comment }

@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { parseReviewRatingAndComment } from '../reviews.js'
 
 // Rating precedence: valid `rating` tag (1-5) > "[X/5]" content marker.
-// The content fallback is NOT range-checked and uses an anchored regex.
+// The content fallback is now range-checked (clamped to 1-5, same as the
+// tag path) and uses an anchored regex.
 describe('parseReviewRatingAndComment', () => {
   describe('content "[X/5]" fallback (no rating tag)', () => {
     it('parses "[3/5] Great mint" → rating 3, comment "Great mint"', () => {
@@ -43,18 +44,32 @@ describe('parseReviewRatingAndComment', () => {
   })
 
   describe('out-of-range and malformed markers (documented behavior)', () => {
-    it('does NOT clamp "[6/5]" — content fallback yields rating 6', () => {
-      // The 1-5 range check applies ONLY to the `rating` tag, not the content marker.
+    it('clamps "[6/5]" — content fallback yields rating null, not 6', () => {
+      // The 1-5 range check applies to both the `rating` tag AND the content marker.
       expect(parseReviewRatingAndComment([], '[6/5] Out of range')).toEqual({
-        rating: 6,
+        rating: null,
         comment: 'Out of range',
       })
     })
 
-    it('accepts "[0/5]" from the content marker → rating 0', () => {
+    it('clamps "[9/5]" — content fallback yields rating null, not 9', () => {
+      expect(parseReviewRatingAndComment([], '[9/5] great')).toEqual({
+        rating: null,
+        comment: 'great',
+      })
+    })
+
+    it('clamps "[0/5]" from the content marker → rating null, not 0', () => {
       expect(parseReviewRatingAndComment([], '[0/5] zero')).toEqual({
-        rating: 0,
+        rating: null,
         comment: 'zero',
+      })
+    })
+
+    it('still parses "[3/5] good" → rating 3 (in-range, unchanged)', () => {
+      expect(parseReviewRatingAndComment([], '[3/5] good')).toEqual({
+        rating: 3,
+        comment: 'good',
       })
     })
 
@@ -92,6 +107,13 @@ describe('parseReviewRatingAndComment', () => {
       expect(parseReviewRatingAndComment([['rating', '6']], '[3/5] fallback')).toEqual({
         rating: 3,
         comment: 'fallback',
+      })
+    })
+
+    it('discards an out-of-range rating tag AND an out-of-range content marker → null', () => {
+      expect(parseReviewRatingAndComment([['rating', '6']], '[9/5] both bad')).toEqual({
+        rating: null,
+        comment: 'both bad',
       })
     })
 
