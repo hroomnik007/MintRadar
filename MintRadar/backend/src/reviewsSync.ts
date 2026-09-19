@@ -20,32 +20,36 @@ import { parseReviewRatingAndComment } from './reviews.js'
 
 // Broad relay set for the BACKGROUND sync — this runs on a cron with a generous
 // time budget, so it favours coverage over latency (the opposite trade-off from
-// the frontend's curated REVIEW_READ_RELAYS fast-path list). Kept as a
-// manually-maintained mirror of what the frontend historically called
-// REVIEW_RELAYS; `backend/src/__tests__/nostrReviewsRelays.test.ts` pins this
-// exact array as a drift tripwire. `relay.8333.space` is currently unreachable
-// (EHOSTUNREACH, confirmed 2026-08) but kept in the list for when it recovers —
-// a dead relay only costs this pass one wasted connection attempt, capped by
-// REVIEW_FETCH_TIMEOUT_MS.
+// the frontend's curated REVIEW_READ_RELAYS fast-path list). No longer a straight
+// mirror of the frontend's old REVIEW_RELAYS — as of the 2026-09-19 relay audit
+// (live NIP-11 + WS REQ measurement, 3 cycles) this is DISCOVERY_RELAYS (see the
+// export above) + relay.minibits.cash + 3 relays that measured strong kind:38000
+// yield but were kept OUT of general discovery for other reasons: nostr.mom
+// (5/5 events, unrestricted), eden.nostr.land and nostr21.com (paid relays —
+// 5/5 and 5/5 kind:38000 events respectively; fine here since this is a
+// read-only cron with no write/discovery cost, unlike DISCOVERY_RELAYS or
+// REVIEW_PUBLISH_RELAYS which do exclude them). Dropped vs. the pre-audit list:
+// purplepag.es (0/5 both kinds — directory relay, not NIP-87/38000), relay.snort.social
+// (only 1/5 kind:38172, 0/5 kind:38000 across 3 cycles), nostr.wine (403 on anon REQ,
+// all 3 cycles), relay.8333.space (still EHOSTUNREACH), relay.nostr.net (NIP-11 still
+// HTTP 500, confirmed live). `backend/src/__tests__/nostrReviewsRelays.test.ts` pins
+// this exact array as a drift tripwire, and now also cross-checks DISCOVERY_RELAYS
+// against the frontend's own array.
 export const REVIEW_SYNC_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
-  'wss://purplepag.es',
-  'wss://relay.snort.social',
   'wss://relay.primal.net',
   'wss://relay.cashumints.space',
   'wss://relay.azzamo.net',
-  'wss://eden.nostr.land',
-  'wss://nostr.wine',
-  'wss://nostr-pub.wellorder.net',
-  'wss://offchain.pub',
-  'wss://relay.8333.space',
-  'wss://relay.minibits.cash',
   'wss://nostr.oxtr.dev',
-  'wss://relay.nostr.net',
-  'wss://nostr21.com',
+  'wss://offchain.pub',
   'wss://nostr.bitcoiner.social',
   'wss://nostr.cypherpunk.today',
+  'wss://nostr-pub.wellorder.net',
+  'wss://relay.minibits.cash',
+  'wss://nostr.mom',
+  'wss://eden.nostr.land',
+  'wss://nostr21.com',
 ]
 
 const REVIEW_FETCH_TIMEOUT_MS = 8_000

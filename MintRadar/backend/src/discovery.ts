@@ -38,25 +38,21 @@ export function normalizeUrl(raw: string): string {
 
 // Mirrors the frontend's DISCOVERY_RELAYS (src/core/nostr/relays.ts) — the two packages
 // can't share a module directly (separate npm packages, no workspace set up), so keep
-// these two arrays in sync manually when editing either one.
-const DISCOVERY_RELAYS = [
+// these two arrays in sync manually when editing either one. Exported (not just a local
+// const) so `discoveryRelaysDrift.test.ts` can pin it against the frontend's own array —
+// see that file and the frontend's DISCOVERY_RELAYS comment for the 2026-09-19 audit that
+// produced this exact list.
+export const DISCOVERY_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
-  'wss://purplepag.es',
-  'wss://relay.snort.social',
   'wss://relay.primal.net',
   'wss://relay.cashumints.space',
   'wss://relay.azzamo.net',
-  'wss://eden.nostr.land',
-  'wss://nostr.wine',
-  'wss://nostr-pub.wellorder.net',
-  'wss://offchain.pub',
-  'wss://relay.8333.space',
   'wss://nostr.oxtr.dev',
-  'wss://relay.nostr.net',
-  'wss://nostr21.com',
+  'wss://offchain.pub',
   'wss://nostr.bitcoiner.social',
   'wss://nostr.cypherpunk.today',
+  'wss://nostr-pub.wellorder.net',
 ]
 
 const DISCOVERY_TIMEOUT_MS = 15_000

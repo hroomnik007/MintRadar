@@ -1,15 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+// Frontend's relays.ts has zero runtime dependencies (plain exported string arrays), so it's
+// safe to import directly across the package boundary in a test even though the two packages
+// share no workspace — this is what makes the DISCOVERY_RELAYS cross-check below a real drift
+// tripwire instead of a second hand-copied snapshot that could silently diverge from it.
+import { DISCOVERY_RELAYS as FRONTEND_DISCOVERY_RELAYS } from '../../../src/core/nostr/relays.ts'
 
-// Drift tripwire, not a cross-package sync mechanism. The relay list now lives
-// in backend/src/reviewsSync.ts as REVIEW_SYNC_RELAYS (the 6h background review
-// sync uses it); backend/src/index.ts re-exports it as NOSTR_REVIEWS_RELAYS for
-// this test. It is a manually-maintained mirror of what the frontend historically
-// called REVIEW_RELAYS (src/core/nostr/relays.ts). The two npm packages have no
-// shared workspace, so nothing here catches a frontend-only edit — but pinning
-// the exact array forces a deliberate edit to this test on any future change,
-// rather than silent drift. NOTE: the frontend's CLIENT-SIDE read path uses a
-// deliberately smaller, curated REVIEW_READ_RELAYS (fast-path) that is NOT
-// mirrored here on purpose — see the comment on REVIEW_READ_RELAYS.
+// Drift tripwires, not a cross-package sync mechanism. Both relay lists below are
+// manually-maintained backend mirrors of frontend arrays in src/core/nostr/relays.ts
+// (no shared workspace between the two npm packages, so nothing catches a
+// frontend-only edit automatically at the TYPE level) — but DISCOVERY_RELAYS itself
+// is now cross-checked directly against the frontend's own array (import above),
+// so an edit to one side without the other fails this test immediately instead of
+// only being caught by pinning a hand-copied snapshot. REVIEW_SYNC_RELAYS is NOT a
+// straight mirror of DISCOVERY_RELAYS (it deliberately adds minibits.cash/mom/eden/
+// nostr21 on top — see reviewsSync.ts's comment), so it still uses the snapshot-pin
+// approach. NOTE: the frontend's CLIENT-SIDE read path uses a deliberately smaller,
+// curated REVIEW_READ_RELAYS (fast-path) that is NOT mirrored here on purpose — see
+// the comment on REVIEW_READ_RELAYS.
 
 vi.mock('../db.js', () => ({
   pool: { query: vi.fn() },
@@ -17,33 +24,52 @@ vi.mock('../db.js', () => ({
 }))
 
 let NOSTR_REVIEWS_RELAYS: string[]
+let BACKEND_DISCOVERY_RELAYS: string[]
 
 beforeEach(async () => {
   vi.resetModules()
   ;({ NOSTR_REVIEWS_RELAYS } = await import('../index.js'))
+  ;({ DISCOVERY_RELAYS: BACKEND_DISCOVERY_RELAYS } = await import('../discovery.js'))
 })
 
-describe('NOSTR_REVIEWS_RELAYS (= reviewsSync REVIEW_SYNC_RELAYS, backend mirror of frontend REVIEW_RELAYS)', () => {
-  it('matches the exact, currently-expected relay list', () => {
-    expect(NOSTR_REVIEWS_RELAYS).toEqual([
+describe('DISCOVERY_RELAYS (frontend src/core/nostr/relays.ts vs. backend discovery.ts)', () => {
+  it('the two manually-synced mirrors are byte-for-byte identical', () => {
+    expect(BACKEND_DISCOVERY_RELAYS).toEqual(FRONTEND_DISCOVERY_RELAYS)
+  })
+
+  it('matches the exact, currently-expected relay list (2026-09-19 live-audit result)', () => {
+    expect(BACKEND_DISCOVERY_RELAYS).toEqual([
       'wss://relay.damus.io',
       'wss://nos.lol',
-      'wss://purplepag.es',
-      'wss://relay.snort.social',
       'wss://relay.primal.net',
       'wss://relay.cashumints.space',
       'wss://relay.azzamo.net',
-      'wss://eden.nostr.land',
-      'wss://nostr.wine',
-      'wss://nostr-pub.wellorder.net',
-      'wss://offchain.pub',
-      'wss://relay.8333.space',
-      'wss://relay.minibits.cash',
       'wss://nostr.oxtr.dev',
-      'wss://relay.nostr.net',
-      'wss://nostr21.com',
+      'wss://offchain.pub',
       'wss://nostr.bitcoiner.social',
       'wss://nostr.cypherpunk.today',
+      'wss://nostr-pub.wellorder.net',
+    ])
+  })
+})
+
+describe('NOSTR_REVIEWS_RELAYS (= reviewsSync REVIEW_SYNC_RELAYS, backend-only broad review-sync set)', () => {
+  it('matches the exact, currently-expected relay list (2026-09-19 live-audit result)', () => {
+    expect(NOSTR_REVIEWS_RELAYS).toEqual([
+      'wss://relay.damus.io',
+      'wss://nos.lol',
+      'wss://relay.primal.net',
+      'wss://relay.cashumints.space',
+      'wss://relay.azzamo.net',
+      'wss://nostr.oxtr.dev',
+      'wss://offchain.pub',
+      'wss://nostr.bitcoiner.social',
+      'wss://nostr.cypherpunk.today',
+      'wss://nostr-pub.wellorder.net',
+      'wss://relay.minibits.cash',
+      'wss://nostr.mom',
+      'wss://eden.nostr.land',
+      'wss://nostr21.com',
     ])
   })
 
