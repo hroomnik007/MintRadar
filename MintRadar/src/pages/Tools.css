@@ -318,6 +318,9 @@ a.token-action-btn:focus {
 .wizard-rec-note {
   margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--text3);
 }
+.wizard-rec-count-note {
+  margin-bottom: 10px; font-size: 13px; line-height: 1.5; color: var(--text2);
+}
 
 @media (min-width: 901px) {
   .inspect-token-btn { max-width: 280px; margin: 0 auto; }

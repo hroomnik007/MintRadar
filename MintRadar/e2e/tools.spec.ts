@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { installApiMocks, mockRelays, makeCashuToken, makeCashuTokenV4, MOCK_MINTS } from './fixtures/mocks'
+import { installApiMocks, mockRelays, makeCashuToken, makeCashuTokenV4, MOCK_MINTS, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 
 test.beforeEach(async ({ page }) => {
   await mockRelays(page)
@@ -330,8 +330,8 @@ test.describe('Tools', () => {
     await expect(page.locator('.wizard-rec-row')).not.toHaveCount(0)
 
     // Per-unit NUT-04/05 limits come from the selected unit's method entries.
-    await expect(page.locator('.wizard-rec-limits').first()).toContainText('1–1,000,000 sat')
-    await expect(page.locator('.wizard-rec-limits').first()).toContainText('1–500,000 sat')
+    await expect(page.locator('.wizard-rec-limits').first()).toContainText('1–1M sat')
+    await expect(page.locator('.wizard-rec-limits').first()).toContainText('1–500k sat')
     // ...and the whole-mint caveat is spelled out next to them.
     await expect(page.locator('.wizard-rec-note')).toContainText('reflects the whole mint')
   })
@@ -343,7 +343,19 @@ test.describe('Tools', () => {
   })
 
   test('Best Mint Wizard excludes mints that do not issue the chosen unit', async ({ page }) => {
-    // Only Bravo advertises usd, so it must be the sole recommendation.
+    // Only Bravo advertises usd. The shared fixture keeps Bravo's discoveredAt at
+    // 10 days ago (needed elsewhere for the "New" badge test), which would now trip
+    // the wizard's 14-day recommendation age gate — override it here so this test
+    // still isolates unit-filtering behavior, not the age gate.
+    await page.route('**/api/mints/known', route => {
+      const mints = MOCK_KNOWN_MINTS.map(m =>
+        m.name === 'Bravo Mint' ? { ...m, discoveredAt: new Date(Date.now() - 30 * 86_400_000).toISOString() } : m
+      )
+      route.fulfill({ json: mints })
+    })
+    await page.reload()
+    await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
+
     await page.locator('.wizard-unit-select').selectOption('usd')
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
     await page.locator('.wizard-opt', { hasText: 'Speed' }).click()
@@ -352,5 +364,33 @@ test.describe('Tools', () => {
 
     await expect(page.locator('.wizard-rec-row')).toHaveCount(1)
     await expect(page.locator('.wizard-rec-row')).toContainText('Bravo Mint')
+  })
+
+  test('Best Mint Wizard excludes mints younger than 14 days (recommendation age gate)', async ({ page }) => {
+    // Bravo is 10 days old in the shared fixture — below MIN_RECOMMENDATION_AGE_DAYS — so
+    // for sat (Alpha/Bravo/Delta all advertise it) it must never appear as a recommendation,
+    // and since only 2 of the 3 sat mints are old enough, a "fewer than 3" note shows.
+    await page.locator('.wizard-unit-select').selectOption('sat')
+    await page.locator('.wizard-opt', { hasText: 'Small' }).click()
+    await page.locator('.wizard-opt', { hasText: 'Speed' }).click()
+    await page.locator('.wizard-opt', { hasText: 'Not sure' }).click()
+    await page.getByRole('button', { name: /Find my mints/ }).click()
+
+    await expect(page.locator('.wizard-rec-row').first()).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('.wizard-rec-row')).toHaveCount(2)
+    await expect(page.locator('.wizard-rec-row', { hasText: 'Bravo Mint' })).toHaveCount(0)
+    await expect(page.locator('.wizard-rec-count-note')).toContainText('Only 2 matching mints found')
+  })
+
+  test('Best Mint Wizard shows a clear empty state when zero candidates match', async ({ page }) => {
+    // usd is only advertised by Bravo, which is too young (10d) for the age gate.
+    await page.locator('.wizard-unit-select').selectOption('usd')
+    await page.locator('.wizard-opt', { hasText: 'Small' }).click()
+    await page.locator('.wizard-opt', { hasText: 'Speed' }).click()
+    await page.locator('.wizard-opt', { hasText: 'Not sure' }).click()
+    await page.getByRole('button', { name: /Find my mints/ }).click()
+
+    await expect(page.locator('.wizard-no-results')).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('.wizard-rec-row')).toHaveCount(0)
   })
 })

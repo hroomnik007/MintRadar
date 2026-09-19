@@ -9,6 +9,7 @@ import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpen
 import { normalizeMintUrl, trustColor, trustScoreInfo, mintRiskLevel, displayName as mintDisplayName, cardTrustLabel, cardLightningLabel } from '@/utils/mintFormatting'
 import { Zap } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
+import { isEligibleForRecommendation } from '@/utils/trustScore'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import './Tools.css'
 
@@ -496,6 +497,10 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       // real and findable via Dashboard/Watchlist/Search, but the wizard is
       // an active recommendation — never suggest one as someone's mint.
       .filter(m => !isTestMint(m.url))
+      // Same 14-day minimum-age gate as the Trust Score top-5 surfaces (Stats,
+      // /api/stats) — a brand-new mint shouldn't be actively recommended here
+      // just because it hasn't accumulated enough history to be penalized yet.
+      .filter(m => isEligibleForRecommendation(m.discoveredAt))
       // A mint that doesn't issue this unit can't serve the user at all, so it
       // is dropped before scoring rather than ranked and then explained away.
       .filter(m => (m.units ?? []).includes(selectedUnit))
@@ -654,7 +659,13 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
           {recs.length === 0 ? (
             <div className="wizard-no-results">No online mint supports {recsUnit} with the options you picked. Try another currency or change your answers.</div>
           ) : (
-            recs.map((rec, idx) => {
+            <>
+            {recs.length < 3 && (
+              <div className="wizard-rec-count-note">
+                Only {recs.length} matching {recs.length === 1 ? 'mint' : 'mints'} found for {recsUnit} with these options — showing what's available.
+              </div>
+            )}
+            {recs.map((rec, idx) => {
               const trustNum = rec.mint.trustScore ?? null
               const trustCol = trustNum == null ? 'var(--t3)' : trustNum >= 70 ? 'var(--green-bright)' : trustNum >= 40 ? 'var(--amber)' : 'var(--red)'
               const lnLabel = cardLightningLabel(rec.mint)
@@ -696,7 +707,8 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
                   <span className="wizard-rec-view">View →</span>
                 </div>
               )
-            })
+            })}
+            </>
           )}
           {recs.length > 0 && (
             <div className="wizard-rec-note">
