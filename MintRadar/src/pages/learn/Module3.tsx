@@ -50,6 +50,28 @@ export default function Module3() {
       <p>
         That audit signal comes from <strong><a href="https://audit.8333.space" target="_blank" rel="noreferrer">audit.8333.space</a></strong>, an independent third party that continuously runs real mint/melt transactions against known Cashu mints and publishes how often they actually succeed. MintRadar's own 5-minute checks only confirm a mint is reachable — they can't tell you whether its token operations are working correctly. The audit reliability score looks at the mint's last ~100 real swaps and reflects how many of those transactions actually went through.
       </p>
+
+      <h3>What each component actually measures</h3>
+      <p>
+        The five percentages above aren't arbitrary — each one reflects how much that signal tells you about whether a mint will actually work when you need it.
+      </p>
+      <ul>
+        <li>
+          <strong>Uptime — 40%.</strong> The share of MintRadar's 5-minute checks over the last 24 hours where the mint responded correctly. This carries the most weight because it's the most basic failure mode: a mint that's unreachable is unusable, full stop, regardless of how good its software or feature support otherwise is. No other signal matters if you can't reach the mint when you want to spend or redeem funds.
+        </li>
+        <li>
+          <strong>Audit reliability — 25%.</strong> The success rate of the mint's last ~100 real mint/melt transactions, as measured independently by audit.8333.space. This is weighted second-highest because it tests something uptime can't: whether the mint's actual token operations complete correctly, not just whether the server answers a ping. A mint can be "online" by MintRadar's own check and still fail real swaps. Mints with fewer than 3 recorded swaps are scored as "Unknown" (a neutral middle value) rather than penalized for lack of data.
+        </li>
+        <li>
+          <strong>NUT Support — 15%.</strong> The share of the tracked NUTs (the individual pieces of the Cashu spec — see the list above for the security-relevant ones) that the mint's <code>/v1/info</code> reports supporting. This is weighted lower than uptime and audit reliability because missing NUTs is a feature gap, not necessarily a sign the mint is broken or untrustworthy — but it does mean fewer safety nets (like NUT-09 restore or NUT-12 DLEQ proofs) are available to you.
+        </li>
+        <li>
+          <strong>Version freshness — 15%.</strong> How close the mint's reported software version is to the latest known release for that software (Nutshell or cdk-mintd). Recent versions carry security patches and bug fixes, but a slightly outdated version doesn't necessarily mean the mint is unsafe today — which is why this sits at the same modest weight as NUT support rather than higher.
+        </li>
+        <li>
+          <strong>Contact info — 5%.</strong> Whether the operator has published a reachable channel (email, X/Twitter, or Nostr) in the mint's own <code>/v1/info</code>. This gets the smallest weight deliberately: it's operator-supplied information, not independently verified, so it's treated as a weak, easily-gamed signal rather than a strong indicator of trustworthiness on its own.
+        </li>
+      </ul>
       <p>
         No single number can tell you everything, so we also show a full breakdown — click on any mint's Trust Score to see exactly what's contributing to it.
       </p>
