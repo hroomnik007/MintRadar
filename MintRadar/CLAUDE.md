@@ -280,10 +280,40 @@ These mints are **not hidden from the app** — they still appear in `/api/mints
 still probed/tracked normally, and get a "Test mint" badge (`MintCard.tsx`, `MintDetail.tsx`,
 always rendered last among a card's badges). They ARE excluded from anything that implies a
 recommendation: the Best Mint Wizard (`Tools.tsx`), "Recommended by Follows"
-(`useFollowRecommendations.ts`), and the backend's `top5ByTrustScore` (`backend/src/index.ts`,
-`GET /api/stats`). Update `TEST_MINT_URLS` manually (both copies) if a new dev/test mint
+(`useFollowRecommendations.ts`), the backend's `top5ByTrustScore` (`backend/src/index.ts`,
+`GET /api/stats`), and (as of 2026-09-19, closing a real gap — see below) the Stats page's own
+**`top5ByTrust`** (`Stats.tsx`), which previously had no test-mint exclusion at all despite
+this section's claim. Update `TEST_MINT_URLS` manually (both copies) if a new dev/test mint
 surfaces — grep fresh `/v1/info` responses for phrases like "for testing and development
 purposes" or "fakewallet", but confirm it isn't a real mint with a mere risk disclaimer first.
+
+### Recommendation-surface minimum age gate (2026-09-19, audit run-3 MEDIUM finding)
+
+A brand-new mint (hours-to-days of track record) could reach a "recommendation" surface's
+top-5 purely on a high Trust Score — `NEW_MINT_TRUST_CAP` (see "Trust Score calculation"
+above) only discounts a new mint's *score* (capped at 75 for its first `NEW_MINT_MAX_DAYS` =
+30 days), which doesn't by itself stop a well-configured new mint from still out-ranking
+everything else online. `isEligibleForRecommendation(discoveredAt)` /
+`MIN_RECOMMENDATION_AGE_DAYS` (14) — in `backend/src/shared/trustScore.ts`, mirrored in
+`src/utils/trustScore.ts` (same no-workspace caveat as the rest of that file) — is an
+*additive* gate on `discovered_at` alone (there's no `probe_count` column to check instead;
+`discovered_at` is `NOT NULL` on every `mints` row). Wired into:
+
+- **Backend `top5ByTrustScore`** (`GET /api/stats`) — `discovered_at` added to that query's
+  `SELECT`, filtered alongside the existing `!isTestMint()` check.
+- **Frontend `top5ByTrust`** (`Stats.tsx` Trust tab) — same filter, using `KnownMint.discoveredAt`.
+
+**Deliberately NOT applied to `top5ByUptime`** ("Most Reliable" tab, same page) — that panel
+reports a measured 24h uptime fact, not a recommendation, and a mint with 24h of 100% uptime
+is telling the truth about that 24h regardless of how old the mint is.
+
+**`useFollowRecommendations.ts` ("Recommended by Follows", Watchlist page) is a genuinely
+independent third mechanism, not a shared copy of this logic** — it ranks by how many of the
+viewing user's own Nostr follows have reviewed/mentioned a mint (`kind:38000` `#u` tag count),
+not by Trust Score, and was checked but deliberately left without this age gate: the ranking
+signal there is real distinct humans (the user's follows) recommending a URL, which isn't the
+"score gamed by a brand-new mint" vulnerability class this gate addresses. It already has its
+own `isTestMint()` filter (`fetchFollowRecs`), unchanged.
 
 ## Discovery relays (backend + frontend) — unified 2026-07-24
 Frontend source of truth: `src/core/nostr/relays.ts` (`DISCOVERY_RELAYS`), imported by
@@ -796,10 +826,15 @@ Before the 2×2 hero grid, NHI went through multiple repositioning attempts:
   (this row is 30% of the index), not <n> mints online. Dashboard listed/online counts are a
   different set."` so it can't be confused with the Dashboard's online headcount. The
   panel-level ⓘ makes the same point.
-- **Most Reliable list excludes `isTestMint()`** (`781617d`) — `top5ByUptime` filters them out;
-  the **Trust tab (`top5ByTrust`) is deliberately untouched** and still shows a 🧪 Test badge.
+- **Most Reliable list excludes `isTestMint()`** (`781617d`) — `top5ByUptime` filters them out.
   (An earlier pass, `f2b25ff`, only *badged* them here; `781617d` actually excludes them from
-  the Reliable list.)
+  the Reliable list.) **Superseded 2026-09-19 (audit run-3 MEDIUM finding):** the Trust tab
+  (`top5ByTrust`) previously had **no test-mint exclusion at all** — a gap versus both
+  `top5ByUptime` above and the backend's own `top5ByTrustScore` (`backend/src/index.ts`, which
+  always had `!isTestMint()`). `top5ByTrust` now filters `!isTestMint(m.url)` too, and the
+  🧪 Test badge that used to render in its row markup was removed as dead code (it can never
+  fire once test mints are filtered out of the list feeding it). See "Recommendation-surface
+  minimum age gate" below for the companion fix landed in the same pass.
 - **Geographic Distribution — "CDN / anycast" bucket** (`781617d`) — `normalizeGeoLoc()` +
   `CDN_BUCKET` in `src/utils/geoDistribution.ts`: a `serverLocation` matching
   `cloudflare|cdn|aws|amazon|anycast|akamai|fastly|gcp|google cloud|azure|edgecast|bunny|stackpath|cloudfront`

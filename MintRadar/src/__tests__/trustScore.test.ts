@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   computeTrustScore, versionFreshnessScore, TRACKED_NUT_COUNT,
   uptimeComponent, nutComponent, versionComponent, contactComponent,
+  isEligibleForRecommendation, MIN_RECOMMENDATION_AGE_DAYS,
 } from '../utils/trustScore'
 
 // Frontend half of the shared Trust Score contract.
@@ -123,5 +124,27 @@ describe('versionFreshnessScore', () => {
   it('scores unrecognized software neutrally instead of 0 or an automatic 10 (the bug this fixes)', () => {
     expect(versionFreshnessScore('LekMint/1.1.1')).toBe(2.5)
     expect(versionFreshnessScore('Nutshell-CF/1.0.0')).toBe(2.5)
+  })
+})
+
+describe('isEligibleForRecommendation', () => {
+  const NOW = new Date('2026-09-19T00:00:00Z').getTime()
+  const daysAgo = (n: number) => new Date(NOW - n * 86_400_000).toISOString()
+
+  it('rejects a mint discovered 5 days ago', () => {
+    expect(isEligibleForRecommendation(daysAgo(5), NOW)).toBe(false)
+  })
+
+  it('accepts a mint discovered exactly MIN_RECOMMENDATION_AGE_DAYS ago', () => {
+    expect(isEligibleForRecommendation(daysAgo(MIN_RECOMMENDATION_AGE_DAYS), NOW)).toBe(true)
+  })
+
+  it('accepts a mint discovered 20 days ago', () => {
+    expect(isEligibleForRecommendation(daysAgo(20), NOW)).toBe(true)
+  })
+
+  it('rejects null/undefined discoveredAt (unknown age is never eligible)', () => {
+    expect(isEligibleForRecommendation(null, NOW)).toBe(false)
+    expect(isEligibleForRecommendation(undefined, NOW)).toBe(false)
   })
 })

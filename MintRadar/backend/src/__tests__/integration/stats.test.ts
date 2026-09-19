@@ -22,12 +22,19 @@ beforeEach(async () => {
   ;({ app } = await import('../../index.js'))
 })
 
+function daysAgo(n: number): string {
+  return new Date(Date.now() - n * 86_400_000).toISOString()
+}
+
 function mintRow(overrides: Record<string, unknown> = {}) {
   return {
     url: 'https://mint.example.com',
     name: 'Example',
     last_trust_score: 80,
     nuts_limits: { '4': {}, '5': {} },
+    // Old enough to clear the top5ByTrustScore MIN_RECOMMENDATION_AGE_DAYS (14)
+    // gate by default — tests that specifically exercise that gate override this.
+    discovered_at: daysAgo(365),
     online: true,
     latency_ms: 100,
     ...overrides,
@@ -152,6 +159,55 @@ describe('GET /api/stats', () => {
     const cached = await request(app).get('/api/stats')
     expect(cached.headers['cache-control']).toMatch(/max-age=\d+/)
     expect(query).toHaveBeenCalledTimes(2) // unchanged — second response was cached
+  })
+
+  it('excludes a mint from top5ByTrustScore when discovered fewer than 14 days ago', async () => {
+    query
+      .mockResolvedValueOnce({
+        rows: [
+          mintRow({ url: 'https://brand-new.example', last_trust_score: 95, discovered_at: daysAgo(5) }),
+          mintRow({ url: 'https://established.example', last_trust_score: 60, discovered_at: daysAgo(365) }),
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ avg_latency: 100 }] })
+
+    const res = await request(app).get('/api/stats')
+
+    expect(res.status).toBe(200)
+    const urls = res.body.top5ByTrustScore.map((m: { url: string }) => m.url)
+    expect(urls).not.toContain('https://brand-new.example')
+    expect(urls).toContain('https://established.example')
+  })
+
+  it('includes a mint in top5ByTrustScore once discovered at least 14 days ago', async () => {
+    query
+      .mockResolvedValueOnce({
+        rows: [
+          mintRow({ url: 'https://twenty-days.example', last_trust_score: 90, discovered_at: daysAgo(20) }),
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ avg_latency: 100 }] })
+
+    const res = await request(app).get('/api/stats')
+
+    expect(res.status).toBe(200)
+    expect(res.body.top5ByTrustScore.map((m: { url: string }) => m.url)).toContain('https://twenty-days.example')
+  })
+
+  it('excludes a test mint from top5ByTrustScore regardless of age or score', async () => {
+    query
+      .mockResolvedValueOnce({
+        rows: [
+          mintRow({ url: 'https://testnut.cashu.space', name: 'Testnut mint', last_trust_score: 99, discovered_at: daysAgo(365) }),
+          mintRow({ url: 'https://established.example', last_trust_score: 60, discovered_at: daysAgo(365) }),
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ avg_latency: 100 }] })
+
+    const res = await request(app).get('/api/stats')
+
+    expect(res.status).toBe(200)
+    expect(res.body.top5ByTrustScore.map((m: { url: string }) => m.url)).toEqual(['https://established.example'])
   })
 
   it('returns 500 with a generic message when the DB query fails', async () => {

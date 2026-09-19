@@ -10,7 +10,7 @@ import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
 import { trustColor, trustScoreInfo, trustDonutArc, displayName } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
-import { compareMintVersionNumbers } from '@/utils/trustScore'
+import { compareMintVersionNumbers, isEligibleForRecommendation } from '@/utils/trustScore'
 import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import { useIsMobile, useMediaQuery } from '@/hooks/useIsMobile'
@@ -663,6 +663,15 @@ export default function Stats() {
     if (!knownMintsData) return []
     return [...knownMintsData]
       .filter(m => m.online === true && m.trustScore != null)
+      // Known dev/test-only mints are excluded from this recommendation list —
+      // this mirror previously had NO test-mint exclusion at all, unlike the
+      // backend's top5ByTrustScore and this page's own top5ByUptime just above
+      // (2026-09-19 audit run-3 finding).
+      .filter(m => !isTestMint(m.url))
+      // Minimum observation window before a mint can be recommended — additive
+      // to NEW_MINT_TRUST_CAP (which only discounts score, not eligibility).
+      // Same gate as the backend's top5ByTrustScore (isEligibleForRecommendation).
+      .filter(m => isEligibleForRecommendation(m.discoveredAt))
       .sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
       .slice(0, 5)
   }, [knownMintsData])
@@ -1090,9 +1099,6 @@ export default function Stats() {
                         <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{cityInfo.flag ? `${cityInfo.flag} ${cityInfo.display}` : cityInfo.display}</div>
                       )}
                     </div>
-                    {isTestMint(mint.url) && (
-                      <span style={{fontSize:9,fontFamily:'var(--font-mono)',color:'var(--amber)',background:'var(--amber-soft)',border:'1px solid var(--amber-soft-strong)',borderRadius:4,padding:'1px 5px',flexShrink:0}} title="Not for real funds — for testing and development only">🧪 Test</span>
-                    )}
                     <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:700,color,flexShrink:0}}>{score}%</span>
                   </div>
                 )

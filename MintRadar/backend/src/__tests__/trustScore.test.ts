@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { computeServerTrustScore, serverVersionFreshnessScore } from '../prober.js'
-import { TRACKED_NUT_COUNT, TRACKED_NUT_KEYS } from '../shared/trustScore.js'
+import { TRACKED_NUT_COUNT, TRACKED_NUT_KEYS, isEligibleForRecommendation, MIN_RECOMMENDATION_AGE_DAYS } from '../shared/trustScore.js'
 
 describe('TRACKED_NUT_KEYS', () => {
   it('has exactly 14 entries and matches TRACKED_NUT_COUNT', () => {
@@ -12,6 +12,36 @@ describe('TRACKED_NUT_KEYS', () => {
     for (const excluded of ['13', '16', '18', '21', '22', '23', '24', '25', '26', '27', '28', '30']) {
       expect(TRACKED_NUT_KEYS).not.toContain(excluded)
     }
+  })
+})
+
+describe('isEligibleForRecommendation', () => {
+  const NOW = new Date('2026-09-19T00:00:00Z').getTime()
+  const daysAgo = (n: number) => new Date(NOW - n * 86_400_000).toISOString()
+
+  it('rejects a mint discovered 5 days ago', () => {
+    expect(isEligibleForRecommendation(daysAgo(5), NOW)).toBe(false)
+  })
+
+  it('rejects a mint discovered exactly at the threshold minus a moment', () => {
+    expect(isEligibleForRecommendation(daysAgo(MIN_RECOMMENDATION_AGE_DAYS - 0.001), NOW)).toBe(false)
+  })
+
+  it('accepts a mint discovered exactly MIN_RECOMMENDATION_AGE_DAYS ago', () => {
+    expect(isEligibleForRecommendation(daysAgo(MIN_RECOMMENDATION_AGE_DAYS), NOW)).toBe(true)
+  })
+
+  it('accepts a mint discovered 20 days ago', () => {
+    expect(isEligibleForRecommendation(daysAgo(20), NOW)).toBe(true)
+  })
+
+  it('rejects null/undefined discoveredAt (unknown age is never eligible)', () => {
+    expect(isEligibleForRecommendation(null, NOW)).toBe(false)
+    expect(isEligibleForRecommendation(undefined, NOW)).toBe(false)
+  })
+
+  it('rejects an unparsable date string', () => {
+    expect(isEligibleForRecommendation('not-a-date', NOW)).toBe(false)
   })
 })
 

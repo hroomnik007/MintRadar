@@ -6,7 +6,7 @@ import { isSafeUrl, checkWsUrlSafety, safeFetch } from './ssrf.js'
 import { upsertMint, probeMintToDb, validateCashuMintProbe, parseMintMethods, type MintMethodEntry } from './prober.js'
 import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } from './mintPubkey.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
-import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS } from './shared/trustScore.js'
+import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/trustScore.js'
 import { seedKnownMints, startCron } from './cron.js'
 import { publishServiceProfile } from './nostrService.js'
 import { normalizeUrl } from './discovery.js'
@@ -799,7 +799,7 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
   }
   Promise.all([
     pool.query(`
-      SELECT m.url, m.name, m.last_trust_score, m.nuts_limits,
+      SELECT m.url, m.name, m.last_trust_score, m.nuts_limits, m.discovered_at,
         latest.online AS online, latest.latency_ms
       FROM mints m
       LEFT JOIN LATERAL (
@@ -818,7 +818,7 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
     `),
   ])
     .then(([mintsResult, latencyResult]) => {
-      type MintRow = { url: string; name: string | null; last_trust_score: number | null; nuts_limits: Record<string, unknown> | null; online: boolean | null; latency_ms: number | null }
+      type MintRow = { url: string; name: string | null; last_trust_score: number | null; nuts_limits: Record<string, unknown> | null; discovered_at: string | Date | null; online: boolean | null; latency_ms: number | null }
       const rows = mintsResult.rows as MintRow[]
       const online = rows.filter(r => r.online === true)
       const offline = rows.filter(r => r.online === false)
@@ -849,6 +849,11 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
         // Known dev/test-only mints are excluded from this "best of" list —
         // still fully visible/probed elsewhere, just not proactively recommended.
         .filter(r => !isTestMint(r.url as string))
+        // Minimum observation window before a mint can be recommended — see
+        // isEligibleForRecommendation (2026-09-19 audit run-3 MEDIUM finding).
+        // Additive to NEW_MINT_TRUST_CAP (score-side discount); this is the
+        // ranking-eligibility side.
+        .filter(r => isEligibleForRecommendation(r.discovered_at))
         .sort((a, b) => (b.last_trust_score as number) - (a.last_trust_score as number))
         .slice(0, 5)
         .map(r => ({ url: r.url, name: r.name, trustScore: r.last_trust_score as number }))

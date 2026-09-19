@@ -294,6 +294,28 @@ export function applyNewMintCap(score: number, discoveredAt?: string | null, now
   return score
 }
 
+// Minimum age (days) a mint must have before it's eligible to appear on a
+// "recommendation" surface (Trust Score top-5, Best Mint wizard-adjacent
+// lists) — 2026-09-19 security audit run-3 MEDIUM finding. NEW_MINT_TRUST_CAP
+// above only discounts a new mint's SCORE (capped at 75 for its first 30
+// days); on its own that still leaves room for a mint with only hours/days of
+// track record to rank in a top-5 if its capped score still beats everything
+// else online. This is a separate, additive gate on discovered_at alone — the
+// simplest reliable proxy for "the network has actually observed this mint
+// for a while" (there is no probe_count column to check instead; discovered_at
+// is NOT NULL on every mints row, set at insert time).
+export const MIN_RECOMMENDATION_AGE_DAYS = 14
+
+export function isEligibleForRecommendation(
+  discoveredAt: string | Date | null | undefined,
+  now = Date.now()
+): boolean {
+  if (!discoveredAt) return false
+  const t = new Date(discoveredAt).getTime()
+  if (!Number.isFinite(t)) return false
+  return now - t >= MIN_RECOMMENDATION_AGE_DAYS * 86_400_000
+}
+
 export function computeTrustScore(
   uptimePct: number,
   nutCount: number | null,
