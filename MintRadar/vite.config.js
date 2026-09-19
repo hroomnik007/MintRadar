@@ -53,8 +53,13 @@ export default defineConfig({
         sourcemap: false,
         rollupOptions: {
             output: {
+                // Rolldown-native chunk grouping (Vite 8). The legacy manualChunks
+                // compat layer silently ignored group changes. First matching group wins.
                 advancedChunks: {
                     groups: [
+                        // immer is shared by the watchlist store (eager) and recharts (lazy) —
+                        // without its own group it lands inside vendor-charts and forces the
+                        // whole 380 kB chart bundle to preload on every page.
                         { name: 'vendor-immer', test: /\/immer\// },
                         { name: 'vendor-react', test: /\/react\/|\/react-dom\/|\/react-router-dom\// },
                         { name: 'vendor-nostr', test: /\/nostr-tools\// },

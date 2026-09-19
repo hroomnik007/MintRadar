@@ -193,7 +193,18 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
           <div className="token-result-grid">
             <div className="token-result-cell">
               <div className="trc-label">Mint</div>
-              <div className="trc-value">{mintInfo?.name ?? getHostname(result.mint)}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <div className="trc-value">{mintInfo?.name ?? getHostname(result.mint)}</div>
+                {isTestMint(mintInfo?.url ?? result.mint) && (
+                  <span
+                    className="token-test-mint-badge"
+                    style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)', borderRadius: 5, padding: '2px 7px' }}
+                    title="Not for real funds — for testing and development only"
+                  >
+                    🧪 Test mint
+                  </span>
+                )}
+              </div>
               <div className="trc-sub">{getHostname(result.mint)}</div>
               <span
                 className="token-risk-badge"

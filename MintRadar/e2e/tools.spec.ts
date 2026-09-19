@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
   await mockRelays(page)
   await installApiMocks(page)
   await page.goto('/tools')
-  await expect(page.getByText('Token Inspector')).toBeVisible()
+  await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
 })
 
 test.describe('Tools', () => {
@@ -117,7 +117,7 @@ test.describe('Tools', () => {
     // page before this test body ran, so reload to pick it up (mocked routes persist
     // across the reload; the token box just needs refilling).
     await page.reload()
-    await expect(page.getByText('Token Inspector')).toBeVisible()
+    await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
 
     const token = makeCashuToken(MOCK_MINTS[0]!.url, [21])
     await page.locator('.token-input').fill(token)
@@ -213,6 +213,27 @@ test.describe('Tools', () => {
 
     await expect(page.locator('.token-result-cell', { hasText: 'Mint Status' })).toContainText('Not in database')
     await expect(page.locator('.token-risk-badge')).toContainText('Unknown')
+  })
+
+  test('Test mint chip shows for a token from a known test/dev mint', async ({ page }) => {
+    const token = makeCashuToken('https://testnut.cashu.space', [21])
+
+    await page.locator('.token-input').fill(token)
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+
+    const mintCell = page.locator('.token-result-cell', { hasText: 'Mint' }).first()
+    await expect(mintCell).toBeVisible()
+    await expect(mintCell.locator('.token-test-mint-badge')).toContainText('Test mint')
+  })
+
+  test('Test mint chip is absent for a token from a regular production mint', async ({ page }) => {
+    const token = makeCashuToken(MOCK_MINTS[0]!.url, [21]) // Alpha Mint — not a test mint
+
+    await page.locator('.token-input').fill(token)
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+
+    await expect(page.locator('.token-result-grid')).toBeVisible()
+    await expect(page.locator('.token-test-mint-badge')).toHaveCount(0)
   })
 
   test('Check if spent is a separate, user-initiated action — never runs automatically', async ({ page }) => {
