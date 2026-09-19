@@ -39,6 +39,17 @@ process.on('unhandledRejection', (err) => {
 let knownMintsCache: { data: unknown; expiresAt: number } | null = null
 const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
 
+// /api/stats is in RATE_LIMIT_EXEMPT (see below) but, unlike the other three
+// exempt endpoints, ran two live pool.query() calls via Promise.all on every
+// single request with no cache — against the shared `pool` (max: 5), that let
+// ordinary traffic (Stats page open + Dashboard's own periodic refetch, no
+// attack needed) exhaust the connection pool. Same in-process TTL cache shape
+// as knownMintsCache above; the underlying data only moves once per 5-min
+// probe cycle, so a 60s cache is well within tolerance and needs no
+// invalidation beyond the TTL expiring.
+let statsCache: { data: unknown; expiresAt: number } | null = null
+const STATS_CACHE_TTL = 60_000 // 60 seconds
+
 const trustMoversCache = new Map<string, { data: unknown; expiresAt: number }>()
 // Longer than KNOWN_MINTS_CACHE_TTL: the underlying snapshots only move once per
 // probe cycle (5 min, refreshTrustMoversRollup on the probe cron), and a 7d/30d
@@ -781,6 +792,11 @@ app.get('/api/nuts', (_req: Request, res: Response): void => {
 })
 
 app.get('/api/stats', (_req: Request, res: Response): void => {
+  if (statsCache && Date.now() < statsCache.expiresAt) {
+    res.setHeader('Cache-Control', `max-age=${Math.floor(STATS_CACHE_TTL / 1000)}`)
+    res.json(statsCache.data)
+    return
+  }
   Promise.all([
     pool.query(`
       SELECT m.url, m.name, m.last_trust_score, m.nuts_limits,
@@ -836,7 +852,10 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
         .sort((a, b) => (b.last_trust_score as number) - (a.last_trust_score as number))
         .slice(0, 5)
         .map(r => ({ url: r.url, name: r.name, trustScore: r.last_trust_score as number }))
-      res.json({ totalMints: rows.length, onlineMints: online.length, offlineMints: offline.length, avgTrustScore, avgLatency24h, trustDistribution: { low, moderate, high }, nutAdoption, top5ByTrustScore: top5 })
+      const data = { totalMints: rows.length, onlineMints: online.length, offlineMints: offline.length, avgTrustScore, avgLatency24h, trustDistribution: { low, moderate, high }, nutAdoption, top5ByTrustScore: top5 }
+      statsCache = { data, expiresAt: Date.now() + STATS_CACHE_TTL }
+      res.setHeader('Cache-Control', `max-age=${Math.floor(STATS_CACHE_TTL / 1000)}`)
+      res.json(data)
     })
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/stats]', err)

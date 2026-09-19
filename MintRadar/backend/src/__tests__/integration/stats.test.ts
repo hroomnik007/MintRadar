@@ -117,6 +117,43 @@ describe('GET /api/stats', () => {
     expect(res.body.offlineMints).toBe(0) // null online is NOT counted as offline
   })
 
+  it('caches the response — a second request within the TTL runs no new DB query', async () => {
+    query
+      .mockResolvedValueOnce({
+        rows: [mintRow({ url: 'https://a.example', last_trust_score: 80, online: true })],
+      })
+      .mockResolvedValueOnce({ rows: [{ avg_latency: 150 }] })
+
+    const first = await request(app).get('/api/stats')
+    expect(first.status).toBe(200)
+    expect(query).toHaveBeenCalledTimes(2) // the two Promise.all queries
+
+    // Several more requests in quick succession, still within the TTL window —
+    // /api/stats is RATE_LIMIT_EXEMPT, so nothing here throttles the requests
+    // themselves; the cache is what must stop them from hitting the DB.
+    for (let i = 0; i < 5; i++) {
+      const res = await request(app).get('/api/stats')
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual(first.body)
+    }
+
+    // Still exactly 2 — no new pool.query() calls were made for the cached hits.
+    expect(query).toHaveBeenCalledTimes(2)
+  })
+
+  it('sets a Cache-Control max-age header on both the fresh and cached response', async () => {
+    query
+      .mockResolvedValueOnce({ rows: [mintRow()] })
+      .mockResolvedValueOnce({ rows: [{ avg_latency: 100 }] })
+
+    const fresh = await request(app).get('/api/stats')
+    expect(fresh.headers['cache-control']).toMatch(/max-age=\d+/)
+
+    const cached = await request(app).get('/api/stats')
+    expect(cached.headers['cache-control']).toMatch(/max-age=\d+/)
+    expect(query).toHaveBeenCalledTimes(2) // unchanged — second response was cached
+  })
+
   it('returns 500 with a generic message when the DB query fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     query.mockRejectedValueOnce(new Error('pool exhausted'))
