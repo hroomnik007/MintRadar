@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { verifyEvent, nip19 } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
@@ -10,8 +10,15 @@ import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { MintCard } from '@/components/mint/MintCard'
+import { MintComparePicker } from '@/components/MintComparePicker'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { displayName as mintDisplayName } from '@/utils/mintFormatting'
+import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import './Watchlist.css'
+
+// Same lazy-loading rationale as Dashboard.tsx — Recharts only loads once a
+// user actually opens Compare.
+const ComparisonModal = lazy(() => import('@/components/ComparisonModal').then(m => ({ default: m.ComparisonModal })))
 
 const IcRadar = () => (
   <svg width="48" height="48" viewBox="0 0 22 22" fill="none">
@@ -202,6 +209,44 @@ export default function Watchlist() {
   const { data: knownMintsData, isLoading: knownLoading } = useKnownMints()
   const knownMintsMap = useMemo(() => new Map(knownMintsData?.map(m => [m.url, m]) ?? []), [knownMintsData])
 
+  // Compare feature — same ?compare=url1,url2[,url3,url4] URL persistence as
+  // Dashboard.tsx (see "Compare feature" in CLAUDE.md); compareBaseUrl/
+  // showComparePicker are transient in-progress picker UI state only.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const compareUrls = useMemo(() => parseCompareParam(searchParams.get('compare')), [searchParams])
+  const comparedMints = useMemo(
+    () => resolveComparedMints(compareUrls, knownMintsData ?? []),
+    [knownMintsData, compareUrls]
+  )
+  const [compareBaseUrl, setCompareBaseUrl] = useState<string | null>(null)
+  const [showComparePicker, setShowComparePicker] = useState(false)
+
+  function openComparePicker(url: string) {
+    setCompareBaseUrl(url)
+    setShowComparePicker(true)
+  }
+
+  // Functional setSearchParams form so this stays correct even if called
+  // from a handler whose closure predates a later URL change (same
+  // rationale as Dashboard.tsx's closeComparisonModal).
+  const closeComparisonModal = useCallback(() => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      next.delete('compare')
+      return next
+    }, { replace: true })
+  }, [setSearchParams])
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if ((e as CustomEvent).type !== 'mintradar:escape') return
+      setShowComparePicker(false)
+      closeComparisonModal()
+    }
+    window.addEventListener('mintradar:escape', handler)
+    return () => window.removeEventListener('mintradar:escape', handler)
+  }, [closeComparisonModal])
+
   // Watchlists are small and personal — no filter/sort controls. Show every
   // watched mint, ordered alphabetically by hostname for a stable layout.
   const orderedMints = useMemo(
@@ -294,6 +339,7 @@ export default function Watchlist() {
                       descriptionLong: null, nutsLimits: null,
                     }}
                     showNotifyToggles
+                    onCompare={openComparePicker}
                   />
                 ))}
               </div>
@@ -307,6 +353,34 @@ export default function Watchlist() {
         <div className="wl-side-col">
           <FollowRecommendations pubkey={profile.pubkey} watchlistUrls={mints} knownMintsData={knownMintsData} />
         </div>
+
+        {/* Compare picker */}
+        {showComparePicker && compareBaseUrl && (() => {
+          const baseMint = knownMintsMap.get(compareBaseUrl)
+          const candidates = (knownMintsData ?? []).filter(m => m.url !== compareBaseUrl && m.online === true)
+          return (
+            <MintComparePicker
+              candidates={candidates}
+              baseLabel={baseMint ? mintDisplayName(baseMint) : compareBaseUrl}
+              onClose={() => setShowComparePicker(false)}
+              onConfirm={urls => {
+                setSearchParams(prev => {
+                  const next = new URLSearchParams(prev)
+                  next.set('compare', buildCompareParam([compareBaseUrl, ...urls]))
+                  return next
+                })
+                setShowComparePicker(false)
+              }}
+            />
+          )
+        })()}
+
+        {/* Comparison modal — driven by ?compare= in the URL so a result can be shared via link */}
+        {comparedMints.length >= 2 && (
+          <Suspense fallback={null}>
+            <ComparisonModal mints={comparedMints} onClose={closeComparisonModal} />
+          </Suspense>
+        )}
       </div>
 
       {mints.length > 0 && (

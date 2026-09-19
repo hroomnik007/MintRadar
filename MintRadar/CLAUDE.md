@@ -415,6 +415,25 @@ batch pattern (`querySync` + race against a timeout, or `subscribeMany` resolved
 - **Version History rows** are two-line (`.cmp-mobile-vh` / the desktop `.cmp-vh-scroll`
   variant) rather than the original single-line `nowrap` layout, so a long version string no
   longer clips or forces horizontal scroll.
+- **`?compare=` URL persistence (2026-09-19, Dashboard + Watchlist only — not MintDetail)** —
+  `src/utils/compareUrlParam.ts` (`parseCompareParam`/`buildCompareParam`/`resolveComparedMints`,
+  `MAX_COMPARE_MINTS` = 4). The confirmed selection from `MintComparePicker` is written to
+  `?compare=` (comma-joined mint URLs) via each page's `useSearchParams` — Dashboard folds it
+  into the existing `parseFilterParams`/`buildFilterParams` URL-state pattern (so it survives
+  search/sort/filter changes); Watchlist (which had no Compare entry point before this) got its
+  own `MintComparePicker`/`ComparisonModal` wiring plus `onCompare` on its `MintCard` calls,
+  using the same helper. `ComparisonModal` itself renders whenever `resolveComparedMints(...)`
+  yields ≥2 currently-tracked mints — an untracked/stale URL in the param is silently dropped
+  (never a crash), and a resolved list of exactly 1 simply doesn't open the modal. **Values are
+  written as raw, un-encoded URLs** — `URLSearchParams.set()` percent-encodes the whole value
+  automatically (colons/slashes AND the `,` separator), so pre-encoding each URL with
+  `encodeURIComponent()` first (the pattern used for the one-off `/mint/${encodeURIComponent(url)}`
+  route link) would double-encode here; reading back via `searchParams.get('compare')` already
+  reverses it, no manual decode needed. Closing the modal clears `?compare=` via a
+  `useCallback`-wrapped functional `setSearchParams(prev => …)` update (not a full
+  `buildFilterParams` rebuild) specifically so the shared `mintradar:escape` window-event handler
+  can't act on a stale closure of the other filter state. Tests:
+  `e2e/compare-url-persistence.spec.ts`.
 - `ComparisonModal` also renders a Community Rating row (★ badge, "—" fallback when no reviews)
   and a shield-badge Trust Score (see "Trust Score vs Community Rating" above) — added 2026-09-03.
 

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { nip19 } from 'nostr-tools'
@@ -16,6 +16,7 @@ import { MintCard } from '@/components/mint/MintCard'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { latencyColor, trustColor, uptimeColor, displayName as mintDisplayName } from '@/utils/mintFormatting'
+import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import { listTrustScore, compareTrustThenRating } from '@/utils/trustSort'
 import { isTestMint } from '@/constants/testMints'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
@@ -212,6 +213,7 @@ function parseFilterParams(params: URLSearchParams): {
   sortBy: SortByValue
   sortDir: 'asc' | 'desc'
   filters: FilterState
+  compareUrls: string[]
 } {
   const sortByRaw = params.get('sort')
   const sortBy: SortByValue = (SORT_KEYS as readonly string[]).includes(sortByRaw ?? '') ? (sortByRaw as SortByValue) : 'trust'
@@ -235,15 +237,17 @@ function parseFilterParams(params: URLSearchParams): {
     if (NUT_FILTER_KEYS.includes(key) && !requiredNuts.includes(key)) requiredNuts.push(key)
   }
   const hideTestMints = params.get('testmints') === 'hide'
+  const compareUrls = parseCompareParam(params.get('compare'))
   return {
     search: params.get('q') ?? '',
     sortBy,
     sortDir,
     filters: { status, minTrustScore, requiredNuts, hideTestMints },
+    compareUrls,
   }
 }
 
-function buildFilterParams(search: string, sortBy: SortByValue, sortDir: 'asc' | 'desc', filters: FilterState): URLSearchParams {
+function buildFilterParams(search: string, sortBy: SortByValue, sortDir: 'asc' | 'desc', filters: FilterState, compareUrls: string[]): URLSearchParams {
   const params = new URLSearchParams()
   if (search) params.set('q', search)
   if (sortBy !== 'trust') params.set('sort', sortBy)
@@ -252,6 +256,7 @@ function buildFilterParams(search: string, sortBy: SortByValue, sortDir: 'asc' |
   if (filters.minTrustScore > 0) params.set('trust', String(filters.minTrustScore))
   if (filters.requiredNuts.length > 0) params.set('nuts', filters.requiredNuts.join(','))
   if (filters.hideTestMints) params.set('testmints', 'hide')
+  if (compareUrls.length > 0) params.set('compare', buildCompareParam(compareUrls))
   return params
 }
 
@@ -465,13 +470,13 @@ export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const gridAnchorRef = useRef<HTMLDivElement>(null)
-  const { search, sortBy, sortDir, filters: activeFilters } = useMemo(
+  const { search, sortBy, sortDir, filters: activeFilters, compareUrls } = useMemo(
     () => parseFilterParams(searchParams),
     [searchParams]
   )
 
   function commitFilters(
-    next: { search?: string; sortBy?: SortByValue; sortDir?: 'asc' | 'desc'; filters?: FilterState },
+    next: { search?: string; sortBy?: SortByValue; sortDir?: 'asc' | 'desc'; filters?: FilterState; compareUrls?: string[] },
     opts?: { replace?: boolean }
   ) {
     const merged = {
@@ -479,8 +484,9 @@ export default function Dashboard() {
       sortBy: next.sortBy ?? sortBy,
       sortDir: next.sortDir ?? sortDir,
       filters: next.filters ?? activeFilters,
+      compareUrls: next.compareUrls ?? compareUrls,
     }
-    setSearchParams(buildFilterParams(merged.search, merged.sortBy, merged.sortDir, merged.filters), opts)
+    setSearchParams(buildFilterParams(merged.search, merged.sortBy, merged.sortDir, merged.filters, merged.compareUrls), opts)
   }
 
   const [viewMode, setViewMode] = useState<'cards' | 'list'>(() => {
@@ -495,16 +501,30 @@ export default function Dashboard() {
   const [showFilters, setShowFilters] = useState(false)
   const [pendingFilters, setPendingFilters] = useState<FilterState>(DEFAULT_FILTERS)
 
-  // Comparison state
+  // Comparison state — the confirmed selection (compareUrls) is persisted in
+  // the URL via commitFilters/buildFilterParams so a Compare result can be
+  // shared by link; compareBaseUrl/showComparePicker are transient
+  // in-progress picker UI state only, not persisted.
   const [compareBaseUrl, setCompareBaseUrl] = useState<string | null>(null)
   const [showComparePicker, setShowComparePicker] = useState(false)
-  const [showComparisonModal, setShowComparisonModal] = useState(false)
-  const [compareSelectedUrls, setCompareSelectedUrls] = useState<Set<string>>(new Set())
 
   function openComparePicker(url: string) {
     setCompareBaseUrl(url)
     setShowComparePicker(true)
   }
+
+  // Uses the functional setSearchParams form (patches whatever `compare` is
+  // present in the URL *at call time*) rather than commitFilters' full
+  // rebuild — this is also called from the mintradar:escape effect below,
+  // whose handler closure can otherwise go stale relative to other filter
+  // state (search/sort/etc.) between effect re-subscriptions.
+  const closeComparisonModal = useCallback(() => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      next.delete('compare')
+      return next
+    }, { replace: true })
+  }, [setSearchParams])
 
   const [, setTick] = useState(0)
   const [showCountNote, setShowCountNote] = useState(false)
@@ -616,12 +636,14 @@ export default function Dashboard() {
   const totalCount = allMints.length
   const onlineCount = allMints.filter(m => m.online === true).length
 
-  const comparedMints = useMemo(() => {
-    if (!compareBaseUrl) return []
-    const base = allMints.find(m => m.url === compareBaseUrl)
-    if (!base) return []
-    return [base, ...allMints.filter(m => compareSelectedUrls.has(m.url))]
-  }, [allMints, compareBaseUrl, compareSelectedUrls])
+  // Resolved against the full known-mints set (not the filtered/degraded-hidden
+  // allMints) so a shared compare link still works for an offline/degraded
+  // mint that's simply hidden from the grid right now. An untracked/invalid
+  // URL in the ?compare= param is silently skipped, never crashes the modal.
+  const comparedMints = useMemo(
+    () => resolveComparedMints(compareUrls, knownMintsData ?? []),
+    [knownMintsData, compareUrls]
+  )
 
   const lastCheckTime = useMemo(() => {
     if (!knownMintsData) return null
@@ -652,13 +674,13 @@ export default function Dashboard() {
       if ((e as CustomEvent).type === 'mintradar:escape') {
         setShowFilters(false)
         setShowComparePicker(false)
-        setShowComparisonModal(false)
+        closeComparisonModal()
         setShowSubmit(false)
       }
     }
     window.addEventListener('mintradar:escape', handler)
     return () => window.removeEventListener('mintradar:escape', handler)
-  }, [])
+  }, [closeComparisonModal])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -1140,18 +1162,17 @@ export default function Dashboard() {
             baseLabel={baseMint ? mintDisplayName(baseMint) : compareBaseUrl}
             onClose={() => setShowComparePicker(false)}
             onConfirm={urls => {
-              setCompareSelectedUrls(new Set(urls))
+              commitFilters({ compareUrls: [compareBaseUrl, ...urls] })
               setShowComparePicker(false)
-              setShowComparisonModal(true)
             }}
           />
         )
       })()}
 
-      {/* Comparison modal */}
-      {showComparisonModal && comparedMints.length >= 2 && (
+      {/* Comparison modal — driven by ?compare= in the URL so a result can be shared via link */}
+      {comparedMints.length >= 2 && (
         <Suspense fallback={null}>
-          <ComparisonModal mints={comparedMints} onClose={() => setShowComparisonModal(false)} />
+          <ComparisonModal mints={comparedMints} onClose={closeComparisonModal} />
         </Suspense>
       )}
 
