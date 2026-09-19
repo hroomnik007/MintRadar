@@ -1071,6 +1071,9 @@ Four passes, same day, landing in this order:
   desktop, 26px at the existing ≤600px breakpoint. `.card-trust-rating`: 12px → 14px, and gained
   `font-weight: 500` (was unset/400). Latency block, card name, and `.card-pills` untouched — see
   "MintCard Trust block" above for where `.card-trust` itself lives on the card.
+  **2026-09-19 follow-up:** `.card-trust-star` (the ★ glyph itself, next to `.card-trust-rating`'s
+  number) was still 13px — small enough on desktop to read as an afterthought next to the bumped
+  rating number beside it — bumped to 16px.
 - **`afca9f5` — Tools/Stats "larger, more legible list rows" pass.** Tools page: `.tool-title`
   (card titles — "Token Inspector" / "Best Mint for Me") 12px `var(--text2)` → **16px**
   `var(--text)` (uppercase/letter-spacing/mono kept, only size+color changed); `.tool-subtitle`
@@ -1164,7 +1167,7 @@ Verified: typecheck, ESLint, 70/70 unit tests, production build all pass; visual
 - Shared utilities moved into `mintFormatting.ts`: `mintAgeBadge`, `uptimeColor`, `formatTimeAgo` — Watchlist no longer has its own duplicate version.
 - New design token `--surface-card` (slightly lighter than `--surface`) + `inset` top highlight on `.mint-card` — visually distinguishes mint cards from other panels.
 - Watchlist CTA (empty state) — `.wl-add-btn` is a solid primary button (`var(--green)` fill), deliberately distinct from the smaller outline nav button (secondary vs. primary action).
-- Offline/degraded mint cards — opacity 0.7, "Offline 24h+" badge, "Last seen" (from `lastCheckedAt`) instead of latency.
+- Offline/degraded mint cards — opacity 0.7, "Offline 24h+" badge, "Last seen" instead of latency. **Fixed 2026-09-19:** was reading `lastCheckedAt` (the last *probe* time — always recent, since the 5-min cron never stops probing an offline mint), which made a mint that's been down for days claim it was "seen" minutes ago. Now reads `lastOnlineAt` (`mints.last_online_at`, updated only on a successful probe — see `prober.ts`) — the genuine last-seen-online time — and falls back to **"Never seen online"** when that column is `null`. `lastCheckedAt` is unaffected everywhere else it's used (online cards, Audit tab).
 - Mint Detail mobile header — compact version on the mobile breakpoint only (icon back button, online pill on the same row, Watch/Compare 50/50); desktop layout unchanged.
 - "Show my latency" button unified with the others (tonal outline).
 - "NIP-87" badge on Watchlist: purple → copper (`--copper`).

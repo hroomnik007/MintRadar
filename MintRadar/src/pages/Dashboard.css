@@ -730,7 +730,7 @@
   font-family: var(--font-mono-data);
 }
 
-.card-trust-star { font-size: 13px; line-height: 1; }
+.card-trust-star { font-size: 16px; line-height: 1; }
 
 .card-trust-no-reviews {
   font-size: 11px;

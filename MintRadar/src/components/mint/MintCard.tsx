@@ -201,8 +201,13 @@ export function MintCard({
           <div className="latency-block">
             <div className="latency-label">{isOfflineDegraded ? 'LAST SEEN' : 'LATENCY'}</div>
             {isOfflineDegraded ? (
-              <div className="latency-value muted" style={{ fontSize: 15 }}>
-                {formatTimeAgo(mint.lastCheckedAt ? new Date(mint.lastCheckedAt) : null)}
+              <div
+                className="latency-value muted"
+                style={mint.lastOnlineAt ? { fontSize: 15 } : { fontSize: 13, whiteSpace: 'normal', lineHeight: 1.25 }}
+              >
+                {mint.lastOnlineAt
+                  ? formatTimeAgo(new Date(mint.lastOnlineAt))
+                  : 'Never seen online'}
               </div>
             ) : isOnline && mint.latencyMs !== null ? (
               <div className="latency-value" style={{ color: 'var(--text)' }}>
