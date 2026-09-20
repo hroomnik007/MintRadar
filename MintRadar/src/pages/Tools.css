@@ -262,6 +262,24 @@ a.token-action-btn:focus {
 }
 .wizard-back-btn:hover { color: var(--text2); }
 
+.wizard-start-over-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: 10px;
+  background: var(--green-soft);
+  border: 1px solid var(--green-soft-strong);
+  color: var(--green-bright);
+  border-radius: var(--radius-m);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+.wizard-start-over-btn:hover { background: var(--green-soft-strong); border-color: var(--green); }
+
 .wizard-results { display: flex; flex-direction: column; gap: 6px; }
 .wizard-no-results {
   text-align: center; padding: 24px; color: var(--text3);
@@ -323,7 +341,8 @@ a.token-action-btn:focus {
 }
 
 @media (min-width: 901px) {
-  .inspect-token-btn { max-width: 280px; margin: 0 auto; }
+  .inspect-token-btn,
+  .find-my-mint-btn { max-width: 280px; margin: 0 auto; }
 }
 @media (max-width: 900px) {
   .tools-grid { grid-template-columns: 1fr; }

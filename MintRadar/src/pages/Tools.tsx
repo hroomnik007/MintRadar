@@ -643,8 +643,8 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       )}
 
       {step === 3 && (
-        <button type="button" className="tool-btn-primary" disabled={!ready || finding} onClick={() => void handleFind()}>
-          {finding ? 'Measuring latency…' : 'Find my mints →'}
+        <button type="button" className="tool-btn-primary find-my-mint-btn" disabled={!ready || finding} onClick={() => void handleFind()}>
+          {finding ? 'Measuring latency…' : 'Find my mint →'}
         </button>
       )}
 
@@ -716,7 +716,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
               version freshness are measured per mint. Only the limits above are {recsUnit}-specific.
             </div>
           )}
-          <button type="button" className="wizard-back-btn" style={{ marginTop: 8 }}
+          <button type="button" className="wizard-start-over-btn"
             onClick={() => { setStep(1); setSize(null); setPreference(null); setBackupPref(null); setRecs(null); setRecsUnit(null) }}>
             ← Start over
           </button>

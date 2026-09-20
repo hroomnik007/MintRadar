@@ -304,7 +304,7 @@ test.describe('Tools', () => {
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
     await page.locator('.wizard-opt', { hasText: 'Speed' }).click()
     await page.locator('.wizard-opt', { hasText: 'Not sure' }).click()
-    await page.getByRole('button', { name: /Find my mints/ }).click()
+    await page.getByRole('button', { name: /Find my mint/ }).click()
 
     const firstRow = page.locator('.wizard-rec-row').first()
     await expect(firstRow).toBeVisible({ timeout: 15_000 })
@@ -323,7 +323,7 @@ test.describe('Tools', () => {
     // Step 3 — backup/restore preference (does not auto-advance).
     await page.locator('.wizard-opt', { hasText: 'Not sure' }).click()
 
-    await page.getByRole('button', { name: /Find my mints/ }).click()
+    await page.getByRole('button', { name: /Find my mint/ }).click()
 
     // Recommendations are computed from the mocked known mints.
     await expect(page.locator('.wizard-rec-row').first()).toBeVisible({ timeout: 15_000 })
@@ -360,7 +360,7 @@ test.describe('Tools', () => {
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
     await page.locator('.wizard-opt', { hasText: 'Speed' }).click()
     await page.locator('.wizard-opt', { hasText: 'Not sure' }).click()
-    await page.getByRole('button', { name: /Find my mints/ }).click()
+    await page.getByRole('button', { name: /Find my mint/ }).click()
 
     await expect(page.locator('.wizard-rec-row')).toHaveCount(1)
     await expect(page.locator('.wizard-rec-row')).toContainText('Bravo Mint')
@@ -374,7 +374,7 @@ test.describe('Tools', () => {
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
     await page.locator('.wizard-opt', { hasText: 'Speed' }).click()
     await page.locator('.wizard-opt', { hasText: 'Not sure' }).click()
-    await page.getByRole('button', { name: /Find my mints/ }).click()
+    await page.getByRole('button', { name: /Find my mint/ }).click()
 
     await expect(page.locator('.wizard-rec-row').first()).toBeVisible({ timeout: 15_000 })
     await expect(page.locator('.wizard-rec-row')).toHaveCount(2)
@@ -388,7 +388,7 @@ test.describe('Tools', () => {
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
     await page.locator('.wizard-opt', { hasText: 'Speed' }).click()
     await page.locator('.wizard-opt', { hasText: 'Not sure' }).click()
-    await page.getByRole('button', { name: /Find my mints/ }).click()
+    await page.getByRole('button', { name: /Find my mint/ }).click()
 
     await expect(page.locator('.wizard-no-results')).toBeVisible({ timeout: 15_000 })
     await expect(page.locator('.wizard-rec-row')).toHaveCount(0)
