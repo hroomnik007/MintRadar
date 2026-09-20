@@ -2209,31 +2209,54 @@ function MintDetailContent({ url }: { url: string }) {
                 {knownMint.units.map(unit => {
                   const mintChips = (knownMint.mintMethods ?? []).filter(m => m.unit === unit)
                   const meltChips = (knownMint.meltMethods ?? []).filter(m => m.unit === unit)
+                  // Same set of payment methods for both directions (e.g. bolt11 +
+                  // bolt12 + onchain + venmo, mint AND melt) is common and, shown as
+                  // two separate rows, just repeats the same chip list twice. Collapse
+                  // into one "Mint & Melt" row when neither side is disabled and the
+                  // method sets are identical (order-independent) — see the reported
+                  // "doesn't look nice" case with several methods per direction.
+                  const methodKey = (arr: { method: string }[]) => arr.map(m => m.method).slice().sort().join('|')
+                  const methodsUnified = !nut4Disabled && !nut5Disabled
+                    && mintChips.length > 0 && meltChips.length > 0
+                    && methodKey(mintChips) === methodKey(meltChips)
                   return (
                     <div className="unit-block" key={unit}>
                       <div className="unit-header"><span className="unit-badge">{unit.toUpperCase()}</span></div>
                       <div className="method-rows">
-                        {(mintChips.length > 0 || nut4Disabled) && (
-                          <div className={`method-row${nut4Disabled ? ' method-row-off' : ''}`}>
-                            <span className="method-label">Mint</span>
+                        {methodsUnified ? (
+                          <div className="method-row">
+                            <span className="method-label">Mint & Melt</span>
                             <div className="method-chips">
                               {mintChips.map((m, i) => (
-                                <span className="method-chip mint" key={i}>{m.method}</span>
+                                <span className="method-chip" key={i}>{m.method}</span>
                               ))}
-                              {nut4Disabled && <span className="method-chip-off"><AlertTriangle size={10} /> disabled</span>}
                             </div>
                           </div>
-                        )}
-                        {(meltChips.length > 0 || nut5Disabled) && (
-                          <div className={`method-row${nut5Disabled ? ' method-row-off' : ''}`}>
-                            <span className="method-label">Melt</span>
-                            <div className="method-chips">
-                              {meltChips.map((m, i) => (
-                                <span className="method-chip melt" key={i}>{m.method}</span>
-                              ))}
-                              {nut5Disabled && <span className="method-chip-off"><AlertTriangle size={10} /> disabled</span>}
-                            </div>
-                          </div>
+                        ) : (
+                          <>
+                            {(mintChips.length > 0 || nut4Disabled) && (
+                              <div className={`method-row${nut4Disabled ? ' method-row-off' : ''}`}>
+                                <span className="method-label">Mint</span>
+                                <div className="method-chips">
+                                  {mintChips.map((m, i) => (
+                                    <span className="method-chip mint" key={i}>{m.method}</span>
+                                  ))}
+                                  {nut4Disabled && <span className="method-chip-off"><AlertTriangle size={10} /> disabled</span>}
+                                </div>
+                              </div>
+                            )}
+                            {(meltChips.length > 0 || nut5Disabled) && (
+                              <div className={`method-row${nut5Disabled ? ' method-row-off' : ''}`}>
+                                <span className="method-label">Melt</span>
+                                <div className="method-chips">
+                                  {meltChips.map((m, i) => (
+                                    <span className="method-chip melt" key={i}>{m.method}</span>
+                                  ))}
+                                  {nut5Disabled && <span className="method-chip-off"><AlertTriangle size={10} /> disabled</span>}
+                                </div>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
