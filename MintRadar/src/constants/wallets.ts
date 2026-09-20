@@ -72,6 +72,12 @@ export const WALLETS: WalletInfo[] = [
     url: 'https://zeusln.com',
   },
   {
+    name: 'Linky',
+    platforms: ['Web'],
+    blurb: 'Contact and messaging PWA (Nostr + Lightning) with a built-in Cashu wallet — receive ecash to a <npub>@linky.fit address, send tokens directly in chat, and manage held/spent proofs.',
+    url: 'https://linky.fit',
+  },
+  {
     name: 'Nutshell',
     platforms: ['CLI'],
     blurb: 'The reference Python implementation, including a command-line wallet handy for scripting and running your own mint.',
