@@ -1067,6 +1067,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
    chip per line and the panel grew very tall (2026-09-20). */
 .method-row { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 14px; }
 .method-label {
+  display: inline-flex; align-items: center; gap: 6px;
   color: var(--text3); font-size: 13px;
   text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-mono);
 }
@@ -1089,19 +1090,24 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .method-chip.mint { color: var(--green-bright); border-color: var(--green-soft-strong); background: var(--green-soft); }
 .method-chip.melt { color: var(--copper); border-color: var(--copper-soft-strong); background: var(--copper-soft); }
 
-/* A method the operator has switched off — struck through, with an amber tag. */
+/* A direction the operator has switched off entirely (NUT-04/05 disabled) —
+   its chips are struck through, and a single amber badge sits next to the
+   MINT/MELT label (not one repeated per chip — disabled is a per-direction
+   flag, not per-method, and a second badge chip in the list below wrapped
+   onto its own line on a narrow sidebar, 2026-09-20). */
 .method-row-off .method-chip { text-decoration: line-through; opacity: 0.5; }
-.method-chip-off {
+.method-off-badge {
   display: inline-flex;
   align-items: center;
   gap: 3px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 10px;
+  font-weight: 600;
   color: var(--amber);
   background: var(--amber-soft);
   border: 1px solid var(--amber-soft-strong);
-  padding: 3px 7px;
-  border-radius: 7px;
+  padding: 1px 6px;
+  border-radius: 5px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }

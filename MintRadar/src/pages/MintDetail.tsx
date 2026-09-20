@@ -2241,24 +2241,38 @@ function MintDetailContent({ url }: { url: string }) {
                           <>
                             {(mintChips.length > 0 || nut4Disabled) && (
                               <div className={`method-row${nut4Disabled ? ' method-row-off' : ''}`}>
-                                <span className="method-label">Mint</span>
-                                <div className={chipsClassName(mintChips.length)}>
-                                  {mintChips.map((m, i) => (
-                                    <span className="method-chip mint" key={i}>{m.method}</span>
-                                  ))}
-                                  {nut4Disabled && <span className="method-chip-off"><AlertTriangle size={10} /> disabled</span>}
-                                </div>
+                                <span className="method-label">
+                                  Mint
+                                  {/* Disabled is a per-direction flag, not per-chip — a
+                                      separate "⚠ DISABLED" chip alongside the (also
+                                      struck-through) method chips duplicated the same
+                                      information and, on a narrow sidebar, wrapped onto
+                                      its own line under a single chip. One badge next to
+                                      the row label instead. */}
+                                  {nut4Disabled && <span className="method-off-badge"><AlertTriangle size={10} /> Disabled</span>}
+                                </span>
+                                {mintChips.length > 0 && (
+                                  <div className={chipsClassName(mintChips.length)}>
+                                    {mintChips.map((m, i) => (
+                                      <span className="method-chip mint" key={i}>{m.method}</span>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             )}
                             {(meltChips.length > 0 || nut5Disabled) && (
                               <div className={`method-row${nut5Disabled ? ' method-row-off' : ''}`}>
-                                <span className="method-label">Melt</span>
-                                <div className={chipsClassName(meltChips.length)}>
-                                  {meltChips.map((m, i) => (
-                                    <span className="method-chip melt" key={i}>{m.method}</span>
-                                  ))}
-                                  {nut5Disabled && <span className="method-chip-off"><AlertTriangle size={10} /> disabled</span>}
-                                </div>
+                                <span className="method-label">
+                                  Melt
+                                  {nut5Disabled && <span className="method-off-badge"><AlertTriangle size={10} /> Disabled</span>}
+                                </span>
+                                {meltChips.length > 0 && (
+                                  <div className={chipsClassName(meltChips.length)}>
+                                    {meltChips.map((m, i) => (
+                                      <span className="method-chip melt" key={i}>{m.method}</span>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             )}
                           </>
