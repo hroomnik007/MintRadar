@@ -188,6 +188,13 @@
   font-family: var(--font-mono);
 }
 .wallets-grid-selfhost {
+  /* auto-fill (not auto-fit): with a single self-host card, auto-fit
+     collapses every other track to 0fr and lets that one card's 1fr max
+     stretch across the whole row — visibly wider than the same-width cards
+     in the grid above. auto-fill keeps the other tracks in the layout (just
+     empty), so the card is sized like any other column in the row instead
+     of stretching to fill it. */
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   padding-left: 0;
   padding-right: 0;
   margin-top: 12px;
