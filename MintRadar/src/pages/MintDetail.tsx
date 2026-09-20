@@ -1548,15 +1548,18 @@ function MintDetailContent({ url }: { url: string }) {
             const renderLimits = (cfg: NutConfig | null | undefined) => {
               const groups = groupNutLimits(cfg?.methods)
               if (!groups.length) return <span style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>—</span>
-              return groups.map((g, i) => (
-                <span key={i} style={{fontSize:13,color:'var(--text)',fontFamily:'var(--font-mono)'}}>
-                  {formatNutLimitRange(g)}
-                  {g.methods.length > 0 && (
-                    <span style={{color:'var(--text3)'}}> ({g.methods.join(', ')})</span>
-                  )}
-                  {i < groups.length - 1 ? ', ' : ''}
-                </span>
-              ))
+              return (
+                <div style={{display:'flex',flexDirection:'column',gap:2}}>
+                  {groups.map((g, i) => (
+                    <span key={i} style={{fontSize:13,color:'var(--text)',fontFamily:'var(--font-mono)'}}>
+                      {formatNutLimitRange(g)}
+                      {g.methods.length > 0 && (
+                        <span style={{color:'var(--text3)'}}> ({g.methods.join(', ')})</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              )
             }
             return (
               <div className="md-panel">
