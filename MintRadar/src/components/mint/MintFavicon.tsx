@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { mintFaviconInitials, mintHostname } from '@/utils/mintFormatting'
+import { hasIconFailedRecently, markIconFailed } from '@/utils/mintIconFailureCache'
 
 interface Props {
   url: string
@@ -11,7 +12,10 @@ interface Props {
 
 export function MintFavicon({ url, iconUrl, size = 22, radius = 5, className = '' }: Props) {
   const hostname = mintHostname(url)
-  const [imgFailed, setImgFailed] = useState(false)
+  // Seeded from the failure cache so a mint whose icon recently 404'd/failed
+  // renders straight to the monogram on this mount — no repeat request. See
+  // mintIconFailureCache.ts.
+  const [imgFailed, setImgFailed] = useState(() => hasIconFailedRecently(url))
 
   // `iconUrl` is treated as a boolean hint ("this mint has an icon") ONLY — the
   // bytes are always fetched through the backend's SSRF-guarded proxy, never
@@ -35,7 +39,7 @@ export function MintFavicon({ url, iconUrl, size = 22, radius = 5, className = '
           borderRadius: radius, objectFit: 'contain',
           background: 'var(--bg3)', border: '0.5px solid var(--border)',
         }}
-        onError={() => setImgFailed(true)}
+        onError={() => { markIconFailed(url); setImgFailed(true) }}
       />
     )
   }

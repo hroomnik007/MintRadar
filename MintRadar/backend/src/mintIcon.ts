@@ -20,7 +20,13 @@ import { normalizeUrl } from './discovery.js'
 // bundled SVG placeholder.
 
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000   // 6h for a resolved icon
-const NEGATIVE_TTL_MS = 30 * 60 * 1000    // 30min for "no icon / unfetchable" — self-heals
+// 24h for "no icon / unfetchable" (was 30min) — raised 2026-09-20 so a mint
+// with a genuinely dead/missing icon_url doesn't cost an upstream request on
+// every 30-min window across the whole Dashboard's request volume. A mint
+// whose icon comes back (new icon_url written by the prober, or a transient
+// outage resolves) self-heals within a day, same as the client-side failure
+// cache (src/utils/mintIconFailureCache.ts) it pairs with.
+const NEGATIVE_TTL_MS = 24 * 60 * 60 * 1000
 // 512 KB. Raised from 256 KB (2026-09-08): a diagnostic run showed 5 of 65
 // favicon failures were legitimate operator logos rejected purely for size.
 // 512 KB comfortably covers a high-res PNG logo while still bounding worst-case

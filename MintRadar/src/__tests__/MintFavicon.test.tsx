@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
+import { _resetMintIconFailureCache } from '@/utils/mintIconFailureCache'
 
 // Regression coverage for the 2026-09-07 audit finding: a mint-controlled
 // icon_url used to be rendered as <img src={iconUrl}> directly, so a hostile
@@ -8,6 +9,10 @@ import { MintFavicon } from '@/components/mint/MintFavicon'
 // The favicon now always loads through the backend's SSRF-guarded proxy.
 
 describe('MintFavicon', () => {
+  afterEach(() => {
+    _resetMintIconFailureCache()
+  })
+
   it('loads the icon through the backend proxy, never from the mint-supplied URL', () => {
     const { container } = render(
       <MintFavicon
@@ -61,5 +66,36 @@ describe('MintFavicon', () => {
     fireEvent.error(img!)
     expect(screen.getByLabelText(/mint icon placeholder/)).toBeInTheDocument()
     expect(container.querySelector('img')).toBeNull()
+  })
+
+  it('remembers a failed load across remounts and skips the request entirely', () => {
+    const first = render(
+      <MintFavicon url="https://flaky.example" iconUrl="https://flaky.example/i.png" />,
+    )
+    const img = first.container.querySelector('img')
+    expect(img).not.toBeNull()
+    fireEvent.error(img!)
+    first.unmount()
+
+    // A fresh mount for the same mint url (e.g. the grid re-rendering after a
+    // sort/filter change) must go straight to the monogram, no <img> at all.
+    const second = render(
+      <MintFavicon url="https://flaky.example" iconUrl="https://flaky.example/i.png" />,
+    )
+    expect(second.container.querySelector('img')).toBeNull()
+    expect(screen.getAllByLabelText(/mint icon placeholder/).length).toBeGreaterThan(0)
+  })
+
+  it('does not carry a failure over to a different mint url', () => {
+    const first = render(
+      <MintFavicon url="https://flaky2.example" iconUrl="https://flaky2.example/i.png" />,
+    )
+    fireEvent.error(first.container.querySelector('img')!)
+    first.unmount()
+
+    const second = render(
+      <MintFavicon url="https://healthy2.example" iconUrl="https://healthy2.example/i.png" />,
+    )
+    expect(second.container.querySelector('img')).not.toBeNull()
   })
 })
