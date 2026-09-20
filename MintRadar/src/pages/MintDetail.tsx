@@ -2219,6 +2219,11 @@ function MintDetailContent({ url }: { url: string }) {
                   const methodsUnified = !nut4Disabled && !nut5Disabled
                     && mintChips.length > 0 && meltChips.length > 0
                     && methodKey(mintChips) === methodKey(meltChips)
+                  // 2 chips per line once there's more than one method — one per
+                  // line (the flex-wrap default) got very tall for a mint offering
+                  // several methods per direction. A single method stays exactly
+                  // as it was (no grid, no extra classes).
+                  const chipsClassName = (count: number) => `method-chips${count > 1 ? ' method-chips-grid' : ''}`
                   return (
                     <div className="unit-block" key={unit}>
                       <div className="unit-header"><span className="unit-badge">{unit.toUpperCase()}</span></div>
@@ -2226,7 +2231,7 @@ function MintDetailContent({ url }: { url: string }) {
                         {methodsUnified ? (
                           <div className="method-row">
                             <span className="method-label">Mint & Melt</span>
-                            <div className="method-chips">
+                            <div className={chipsClassName(mintChips.length)}>
                               {mintChips.map((m, i) => (
                                 <span className="method-chip" key={i}>{m.method}</span>
                               ))}
@@ -2237,7 +2242,7 @@ function MintDetailContent({ url }: { url: string }) {
                             {(mintChips.length > 0 || nut4Disabled) && (
                               <div className={`method-row${nut4Disabled ? ' method-row-off' : ''}`}>
                                 <span className="method-label">Mint</span>
-                                <div className="method-chips">
+                                <div className={chipsClassName(mintChips.length)}>
                                   {mintChips.map((m, i) => (
                                     <span className="method-chip mint" key={i}>{m.method}</span>
                                   ))}
@@ -2248,7 +2253,7 @@ function MintDetailContent({ url }: { url: string }) {
                             {(meltChips.length > 0 || nut5Disabled) && (
                               <div className={`method-row${nut5Disabled ? ' method-row-off' : ''}`}>
                                 <span className="method-label">Melt</span>
-                                <div className="method-chips">
+                                <div className={chipsClassName(meltChips.length)}>
                                   {meltChips.map((m, i) => (
                                     <span className="method-chip melt" key={i}>{m.method}</span>
                                   ))}
