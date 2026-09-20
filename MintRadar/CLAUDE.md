@@ -839,6 +839,10 @@ tile instead, which still opens the modal via tap, unchanged). Desktop no longer
 that opens the modal, but nothing prevents it from existing/rendering if `showTrustBreakdown`
 is ever set true from elsewhere.
 
+**Superseded same day (commit `73e6c3e`) — the "Score = Uptime×40% + …" line is no longer always
+visible as text.** It moved into an (i) tooltip beside the panel title, and the gauge/badge
+layout changed too — see "Mint Detail sidebar rework" below for the full follow-up session.
+
 ### Mint Detail Keysets panel (2026-09-09/10, commits `313061c`/`5e64dc7`)
 
 New panel showing the mint's keysets from the existing probe data (`data.keysets` — `id` / `unit`
@@ -850,6 +854,106 @@ directly under "Units & Methods" (same card chrome), and is hidden on the NUTs t
 (<901px)** it stays on the **NUTs tab**, under NUT Limits, and is hidden on Overview. The panel
 heading has a short title-tooltip explaining keysets / Active vs Inactive. Tests:
 `e2e/mint-detail-keysets.spec.ts` (desktop/Overview and mobile/NUTs-tab describe blocks).
+
+**Superseded 2026-09-20 (commit `c68d98d`) — desktop placement is now "always visible", not
+"Overview tab only".** See "Mint Detail sidebar rework" below: the `activeTab === 'overview'`
+gate around the desktop copy was a bug (it made Keysets vanish from the sidebar on every other
+tab even though the sidebar itself — Trust Score, Units & Methods — persists across all tabs).
+It's also no longer "directly under Units & Methods" but side by side with it
+(`.md-um-keysets-row`). The `e2e/mint-detail-keysets.spec.ts` "renders on Overview and NOT on
+the NUTs tab" test still has one pre-existing unrelated failure (a stale `"100 ppk"` fee-display
+assertion, not caused by this rework — see that section).
+
+### Mint Detail sidebar rework + Watchlist button row (2026-09-20, commits `d802279`→`24187c5`)
+
+Same-day follow-up session to the "Trust Score breakdown always visible on Overview" change
+above — that change made the `.md-right` sidebar taller than the `.md-left` column and kicked
+off several rounds of user-reported layout fixes, in landing order:
+
+- **`.md-body` column ratio, tried three times.** Started as a fixed `1fr 250px` (too narrow once
+  all 5 breakdown rows were always-visible → right column taller than left, `d802279`). Widened
+  to a 60/40 `fr` split (`minmax(0,3fr) minmax(260px,2fr)`) — but `fr` tracks scale with the full
+  body width, so on a 1920px monitor the sidebar ballooned to ~650px for content that never
+  needed it ("Trust score je za mňa zbytočne široký", `c68d98d`). Final value is a **bounded,
+  non-scaling range**: `grid-template-columns: minmax(0, 1fr) minmax(280px, 380px)` — the right
+  column stays 280–380px regardless of viewport width, only shrinking below 380px on a narrower
+  desktop. This is the value still live today.
+- **Keysets was gated to the Overview tab only** (`activeTab === 'overview'` around
+  `.md-keysets-at-overview`) even though the rest of the sidebar (Trust Score, Units & Methods)
+  renders on every tab — switching to Audit made Keysets disappear entirely. Fixed by dropping
+  the gate (`c68d98d`); see the superseded note on the Keysets section above.
+- **Units & Methods + Keysets sit side by side** (`.md-um-keysets-row`, flex row ≥901px, stacked
+  below that) instead of stacked full-width — split asymmetrically **38/62 → 46/54** in
+  `.md-um-panel-methods`/`.md-um-panel-keysets` (38% was too narrow once 2-per-line chips
+  landed, see below; 46/54 is the current value, `c68d98d`→`79c64fe`).
+- **Units & Methods method-row layout flipped from label-beside-chips to label-above-chips**
+  (`.method-row` `flex-direction: column`) — beside them, a fixed-width label ate room from an
+  already-narrow sidebar column and a mint advertising several methods per direction
+  (bolt11/bolt12/onchain/venmo) could fit only one chip per line, growing very tall (`c68d98d`).
+- **Chips render 2-per-line once there's more than one method** — `chipsClassName()` in
+  `MintDetail.tsx` adds `.method-chips-grid` (a `1fr 1fr` CSS grid, denser font/padding than a
+  lone chip) only when a direction has >1 method; a single method (just `bolt11`) is untouched,
+  no grid applied (`79c64fe`).
+- **Mint & Melt collapse into one row when their method sets are identical** — common (e.g.
+  bolt11+bolt12+onchain+venmo on both mint and melt) and, shown as two separate rows, just
+  repeated the same chip list twice. `methodsUnified` in the units-map body compares
+  `mintChips`/`meltChips` method-name sets (order-independent, via a sorted `join('|')` key);
+  when neither NUT-04 nor NUT-05 is disabled and the sets match, renders a single **"Mint &
+  Melt"** row instead of separate Mint/Melt rows (`67ac2b9`).
+- **All method chips are the same neutral color** (`.method-chip`, no green/copper variant) —
+  `.method-chip.mint`/`.method-chip.melt` were removed entirely; the earlier mint=green/melt=copper
+  coloring was inconsistent with the "Mint & Melt" unified row's neutral chips, and the user
+  flagged the mismatch comparing two real mints side by side. The amber "Disabled" badge is
+  unchanged (`1e7c329`).
+- **Disabled state (`NUT-04`/`NUT-05` `disabled: true`) is a per-direction flag, not per-chip** —
+  it used to render as a *second* `.method-chip-off` badge appended after the (already
+  struck-through) method chips, which wrapped onto its own line on the narrower sidebar column
+  and made a single disabled method take 2–3 lines (worse with both directions disabled — the
+  reported "Cashu test mint" case). The badge (renamed `.method-off-badge`, font-size 10 vs. the
+  old chip's 12, `padding: 1px 6px` vs. `3px 7px`) now sits once next to the `MINT`/`MELT` label
+  itself (`.method-label` became `display: inline-flex`); the chip list below only ever holds the
+  real, struck-through method chips (`5f47de3`).
+- **Trust Score panel: formula moved into a tooltip, gauge enlarged, badge repositioned.** The
+  "Score = Uptime×40% + …" line used to always render as a text block under the breakdown rows —
+  moved into an (i) tooltip beside the "Trust Score" panel title instead, reclaiming that
+  vertical space. Reused `AuditSourceInfoIcon` (previously hardcoded to the audit.8333.space
+  blurb) generalized with an optional `text` prop. **Gotcha found and fixed same commit:** the
+  icon was first nested *inside* `.md-panel-title`, so the tooltip text inherited that element's
+  `text-transform: uppercase` / `letter-spacing: 0.1em` / `font-family: var(--font-mono)` —
+  `.audit-tooltip` only resets `font-family`, not the other two, so the tooltip visibly looked
+  like a different font from every other tooltip in the app. Fixed by making the icon a sibling
+  of the title `<span>`, matching the layout the Audit tab heading's own `AuditSourceInfoIcon`
+  already uses (`73e6c3e` landed it broken, `1e7c329` fixed the nesting same day after the user
+  flagged it). Gauge `.gauge-wrap`/svg: `72px → 96px` (viewBox/geometry unchanged — `trustDonutArc()`'s
+  `r=27` math is untouched, this is a pure CSS container-size scale-up). `.trust-wrap` flipped
+  from `flex-direction: column` (badge stacked below the gauge) to `row` (badge beside the gauge,
+  vertically centered) (`73e6c3e`).
+- **Audit tab "Recent success rate" cell overflow.** `.audit-summary-value` forced
+  `white-space: nowrap` on its combined `"N / 100 · N% ok"` text, which overflowed the fixed
+  5-column strip cell at normal desktop widths (reported as literally spilling outside the
+  bordered box). Allowed this one cell to `flexWrap: wrap` so it drops to a second line instead
+  of overflowing (`c68d98d`).
+- **NUT Limits panel — one payment method per line.** `renderLimits()` used to join each
+  method's min–max range with a comma into one wrapping inline block
+  (`"1 - 1,000,000 sat (bolt11), 10,000 - 5,000,000 sat (onchain)"`), which wrapped mid-range on
+  narrower cards. Each method group now renders in its own row (`575bb4e`).
+- **Watchlist card: Compare/Down/Up now fit on one line.** `.card-actions` (shared with
+  Dashboard's Compare-only case) is `flex-flow: row wrap` inside `.card-bottom-main`, which on a
+  Watchlist card is only ~187px wide (the Trust column takes the rest) — the 3 buttons' combined
+  width ran ~18px over that, wrapping Up onto its own second row on every card. Trimmed
+  `.card-compare-btn` (padding `5px 10px → 4px 6px`, font `11px → 10.5px`) and
+  `.notify-toggle-btn` (padding `3px 7px → 3px 6px`, font `10px → 9.5px`, icon gap `4px → 3px`),
+  and `.card-actions` gap `6px → 4px` — cosmetic sizing only, verified against the existing
+  `e2e/watchlist-card-action-row.spec.ts` consistency sweep (700–1390px) which still passes
+  (`24187c5`).
+
+All of the above is desktop-sidebar-scoped (≥901px); mobile keeps its own separate compact tile
+(Trust Score) and NUTs-tab placement (Keysets, NUT Limits) untouched. Verified each step with a
+throwaway Playwright screenshot spec (mocked `/api/mints/known` + `/api/mint/probe`, deleted
+after use — see the session transcript, not committed) rather than eyeballing production; typecheck/
+build/lint clean throughout (the same 3 pre-existing `MintDetail.tsx` lint errors —
+`formatKeysetFee` unused import, a conditional `useEffect`, a `setState`-in-effect — were present
+before this session and are unrelated to it, confirmed via `git stash` diffing).
 
 ### Mint Detail Version History — real 3-column table (2026-09-10, commit `9fa6cdd`)
 
