@@ -66,6 +66,9 @@ test.describe('Mint Detail', () => {
     await expect(panel.getByText('NUT Support (15%)')).toBeVisible()
     await expect(panel.getByText('Version (15%)')).toBeVisible()
     await expect(panel.getByText('Contact (5%)')).toBeVisible()
+    // The score formula moved into the panel title's (i) tooltip (2026-09-20,
+    // to reclaim vertical space) instead of always being visible as text.
+    await panel.locator('.md-panel-title .md-audit-info').hover()
     await expect(panel.getByText(/Score = Uptime×40%/)).toBeVisible()
   })
 

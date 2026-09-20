@@ -96,7 +96,7 @@ function reviewPageList(current: number, total: number): (number | '…')[] {
 // tooltip state doesn't leak into MintDetail, and so the identical icon can be
 // dropped into both the desktop header and the mobile collapse toggle. Opens
 // downward (top: 100%+6px) since the heading sits at the panel's top edge.
-function AuditSourceInfoIcon({ align = 'left' }: { align?: 'left' | 'right' }) {
+function AuditSourceInfoIcon({ align = 'left', text }: { align?: 'left' | 'right'; text?: string }) {
   const ref = useRef<HTMLSpanElement>(null)
   const tip = useTapTooltip(ref)
   // `align` decides which way the (downward) tooltip extends so it doesn't clip:
@@ -120,7 +120,7 @@ function AuditSourceInfoIcon({ align = 'left' }: { align?: 'left' | 'right' }) {
           className="audit-tooltip"
           style={{ width: 230, maxWidth: 'calc(100vw - 40px)', transform: 'none', bottom: 'auto', top: 'calc(100% + 6px)', ...anchor }}
         >
-          These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.
+          {text ?? 'These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.'}
         </div>
       )}
     </span>
@@ -2166,7 +2166,10 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-right">
 
           <div className="md-panel md-trust-panel">
-            <div className="md-panel-title">Trust Score</div>
+            <div className="md-panel-title" style={{display:'flex',alignItems:'center',gap:4,marginBottom:0}}>
+              Trust Score
+              <AuditSourceInfoIcon text="Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75." />
+            </div>
             <div className="trust-wrap">
               <div className="gauge-wrap">
                 <svg viewBox="0 0 72 72">
@@ -2179,18 +2182,15 @@ function MintDetailContent({ url }: { url: string }) {
                 </svg>
                 <div className="gauge-num" style={{ color: 'var(--green-bright)', fontFamily: 'var(--font-mono-data)' }}>{trustScore}%</div>
               </div>
-              <span style={{fontSize:9,fontFamily:'var(--font-mono)',fontWeight:600,color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:4,padding:'1px 6px',textAlign:'center'}}>{tsInfo.label}</span>
+              <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:5,padding:'4px 10px',textAlign:'center'}}>{tsInfo.label}</span>
             </div>
             {/* All 5 components always visible here (no "Details" click / donut
                 tap needed) — the modal below (opened only from the mobile
                 compact tile, where this panel is hidden) shows the same rows. */}
-            <div style={{marginTop:14,width:'100%'}}>
+            <div style={{marginTop:16,width:'100%'}}>
               {trustBreakdownRows.map(row => (
                 <TrustBreakdownRow key={row.label} {...row} />
               ))}
-              <div style={{borderTop:'0.5px solid var(--border)',paddingTop:12,marginTop:4,fontSize:10,color:'var(--text3)',lineHeight:1.6}}>
-                Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.
-              </div>
             </div>
           </div>
 
@@ -2204,7 +2204,7 @@ function MintDetailContent({ url }: { url: string }) {
               copy (.md-keysets-at-nuts) is shown instead. */}
           <div className="md-um-keysets-row">
             {knownMint?.units && knownMint.units.length > 0 && (
-              <div className="md-panel md-um-panel">
+              <div className="md-panel md-um-panel md-um-panel-methods">
                 <div className="md-panel-title">Units & Methods</div>
                 {knownMint.units.map(unit => {
                   const mintChips = (knownMint.mintMethods ?? []).filter(m => m.unit === unit)
@@ -2242,7 +2242,7 @@ function MintDetailContent({ url }: { url: string }) {
               </div>
             )}
 
-            <div className="md-keysets-at-overview md-um-panel">{keysetsPanel}</div>
+            <div className="md-keysets-at-overview md-um-panel md-um-panel-keysets">{keysetsPanel}</div>
           </div>
 
         </div>

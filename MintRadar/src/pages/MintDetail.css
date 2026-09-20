@@ -354,6 +354,13 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .md-um-panel { flex: 1; min-width: 0; margin: 0; }
 @media (min-width: 901px) {
   .md-um-keysets-row { flex-direction: row; align-items: flex-start; }
+  /* Asymmetric split, not 50/50 — Units & Methods only ever needs to show a
+     unit badge + a couple of short method chips, while Keysets rows (id +
+     copy + unit + status badge) read better with more room. 38/62 keeps
+     the methods panel from stretching wide for no reason and gives the
+     freed-up width to Keysets instead (2026-09-20). */
+  .md-um-panel-methods { flex: 0 1 38%; }
+  .md-um-panel-keysets { flex: 1 1 62%; }
 }
 
 /* ── Panels ─────────────────────────────────────────────────── */
@@ -649,14 +656,17 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .mh-badge.yellow { background: rgba(255, 184, 32, 0.1); color: var(--yellow); }
 
 /* ── Trust score ────────────────────────────────────────────── */
-.trust-wrap  { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.gauge-wrap  { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
-.gauge-wrap svg { width: 72px; height: 72px; }
+/* Row layout, not stacked — the gauge sits on the left, the High/Moderate/
+   Low Trust badge to its right, vertically centered against it (was
+   stacked with the badge centered below, 2026-09-20). */
+.trust-wrap  { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 16px; margin-top: 6px; }
+.gauge-wrap  { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
+.gauge-wrap svg { width: 96px; height: 96px; }
 .gauge-num {
   position: absolute;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--accent);
   text-align: center;
@@ -1050,13 +1060,17 @@ button.md-url-copy.copied > svg { opacity: 1; }
   border: 1px solid var(--green-soft-strong);
   padding: 3px 10px; border-radius: 100px;
 }
-.method-rows { display: flex; flex-direction: column; gap: 6px; padding-left: 2px; }
-.method-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.method-rows { display: flex; flex-direction: column; gap: 8px; padding-left: 2px; }
+/* Label sits above the chips (not beside them) — beside them ate a fixed
+   44px out of an already-narrow sidebar column, so a mint advertising
+   several methods (bolt11/bolt12/onchain/venmo/paypal) could only fit one
+   chip per line and the panel grew very tall (2026-09-20). */
+.method-row { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 14px; }
 .method-label {
-  width: 44px; flex-shrink: 0; color: var(--text3); font-size: 13px;
+  color: var(--text3); font-size: 13px;
   text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-mono);
 }
-.method-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.method-chips { display: flex; gap: 6px; flex-wrap: wrap; width: 100%; }
 .method-chip {
   font-family: var(--font-mono); font-size: 13px; color: var(--text2);
   background: var(--bg3); border: 1px solid var(--border);
