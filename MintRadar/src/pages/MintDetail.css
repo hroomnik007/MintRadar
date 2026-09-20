@@ -323,7 +323,10 @@ button.md-url-copy.copied > svg { opacity: 1; }
 /* ── Body Layout ────────────────────────────────────────────── */
 .md-body {
   display: grid;
-  grid-template-columns: 1fr 250px;
+  /* 60/40 split (was a fixed 250px right column) — the always-visible 5-row
+     Trust Score breakdown (added 2026-09-20) needs more width than the old
+     donut-only sidebar did, so .md-right gets a bigger share on desktop. */
+  grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr);
   gap: 12px;
   padding: 14px 18px;
 }

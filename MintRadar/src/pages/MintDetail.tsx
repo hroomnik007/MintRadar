@@ -217,8 +217,8 @@ function TrustBreakdownRow({ label, display, score, max, color, tooltip }: {
   const ref = useRef<HTMLSpanElement>(null)
   const tip = useTapTooltip(ref)
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', rowGap: 4, marginBottom: 4 }}>
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', rowGap: 3, marginBottom: 3 }}>
         <span style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 4 }}>
           {label}
           <span
@@ -239,7 +239,7 @@ function TrustBreakdownRow({ label, display, score, max, color, tooltip }: {
           <span style={{ fontSize: 13, fontWeight: 600, color }}>{score}/{max}</span>
         </div>
       </div>
-      <div style={{ height: 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden' }}>
+      <div style={{ height: 3, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${(score / max) * 100}%`, background: color, borderRadius: 2, transition: 'width 0.3s ease' }} />
       </div>
     </div>
