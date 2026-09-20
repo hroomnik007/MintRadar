@@ -231,9 +231,9 @@ describe('isNewMint', () => {
 
 // ── firstSeenLabel ────────────────────────────────────────────
 describe('firstSeenLabel', () => {
-  it('formats as "First seen <Mon YYYY>"', () => {
-    expect(firstSeenLabel('2026-06-18T09:00:00.000Z')).toBe('First seen Jun 2026')
-    expect(firstSeenLabel('2025-01-02T00:00:00.000Z')).toBe('First seen Jan 2025')
+  it('formats as "First seen by MintRadar <Mon YYYY>"', () => {
+    expect(firstSeenLabel('2026-06-18T09:00:00.000Z')).toBe('First seen by MintRadar Jun 2026')
+    expect(firstSeenLabel('2025-01-02T00:00:00.000Z')).toBe('First seen by MintRadar Jan 2025')
   })
 
   it('returns null for a missing / unparsable value', () => {

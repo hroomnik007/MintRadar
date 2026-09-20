@@ -200,6 +200,52 @@ const NUT_ICONS: Record<string, JSX.Element> = {
   'NUT-30': <Bitcoin size={13} />,
 }
 
+// One row of the Trust Score breakdown (label + info tooltip + measured
+// value + score bar). Rendered both inline on the Overview sidebar panel and
+// inside the "Trust Score Breakdown" modal — each usage gets its own
+// ref/tooltip state (a shared ref across two simultaneously-mounted rows
+// would fight over which DOM node it points at), so this owns its own
+// useTapTooltip rather than taking one as a prop.
+function TrustBreakdownRow({ label, display, score, max, color, tooltip }: {
+  label: string
+  display: string
+  score: number
+  max: number
+  color: string
+  tooltip: string
+}) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const tip = useTapTooltip(ref)
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', rowGap: 4, marginBottom: 4 }}>
+        <span style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 4 }}>
+          {label}
+          <span
+            ref={ref}
+            style={{ position: 'relative', display: 'inline-flex' }}
+            onPointerEnter={tip.onPointerEnter}
+            onPointerLeave={tip.onPointerLeave}
+            onClick={tip.onClick}
+          >
+            <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
+            {tip.open && (
+              <div className="audit-tooltip" style={{ width: 220, left: '50%', transform: 'translateX(-50%)' }}>{tooltip}</div>
+            )}
+          </span>
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{display}</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color }}>{score}/{max}</span>
+        </div>
+      </div>
+      <div style={{ height: 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${(score / max) * 100}%`, background: color, borderRadius: 2, transition: 'width 0.3s ease' }} />
+      </div>
+    </div>
+  )
+}
+
 function uptimeColor(pct: number | null | undefined): string {
   if (pct === null || pct === undefined) return 'var(--text3)'
   if (pct >= 80) return '#4ade80'
@@ -460,16 +506,6 @@ function MintDetailContent({ url }: { url: string }) {
   const auditRecentTooltip = useTapTooltip(auditRecentRef)
   const auditAvgTimeRef = useRef<HTMLSpanElement>(null)
   const auditAvgTimeTooltip = useTapTooltip(auditAvgTimeRef)
-  const breakdownUptimeRef = useRef<HTMLSpanElement>(null)
-  const breakdownUptimeTooltip = useTapTooltip(breakdownUptimeRef)
-  const breakdownNutRef = useRef<HTMLSpanElement>(null)
-  const breakdownNutTooltip = useTapTooltip(breakdownNutRef)
-  const breakdownVersionRef = useRef<HTMLSpanElement>(null)
-  const breakdownVersionTooltip = useTapTooltip(breakdownVersionRef)
-  const breakdownContactRef = useRef<HTMLSpanElement>(null)
-  const breakdownContactTooltip = useTapTooltip(breakdownContactRef)
-  const breakdownAuditRef = useRef<HTMLSpanElement>(null)
-  const breakdownAuditTooltip = useTapTooltip(breakdownAuditRef)
   const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'nuts' | 'audit' | 'reviews'>('overview')
   // Last ≤100 audit.8333.space swaps for this mint (backend/src/discovery.ts's
   // mint_audit_swaps, served via GET /api/mints/swaps — never audit.8333.space
@@ -732,11 +768,11 @@ function MintDetailContent({ url }: { url: string }) {
   // (breakdownAScore) is unaffected.
   const recentReliabilityColor = auditReliabilityColor(breakdownAuditRecentTotal, breakdownAuditRecentErrors)
   const trustBreakdownRows = [
-    { label: 'Uptime (40%)', display: `${uptimePct}%`, score: breakdownUScore, max: 40, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.', tooltipRef: breakdownUptimeRef, tooltipHook: breakdownUptimeTooltip },
-    { label: 'NUT Support (15%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 15, color: supportedNuts.length >= 12 ? '#4ade80' : supportedNuts.length >= 8 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.', tooltipRef: breakdownNutRef, tooltipHook: breakdownNutTooltip },
-    { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? '#4ade80' : breakdownVScore >= 6 ? '#ffa500' : '#ff4d4d', tooltip: "How recent the mint's software version is compared to the latest known Nutshell releases. Newer = higher score.", tooltipRef: breakdownVersionRef, tooltipHook: breakdownVersionTooltip },
-    { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? '#4ade80' : breakdownCScore >= 2 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.', tooltipRef: breakdownContactRef, tooltipHook: breakdownContactTooltip },
-    { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, score: breakdownAScore, max: 25, color: recentReliabilityColor, tooltip: "Based on error rate from audit.8333.space — the percentage of failed swaps out of the mint's last ~100 tested operations. Lower error rate = higher score. Shows \"Unknown\" when fewer than 3 recent swaps are available.", tooltipRef: breakdownAuditRef, tooltipHook: breakdownAuditTooltip },
+    { label: 'Uptime (40%)', display: `${uptimePct}%`, score: breakdownUScore, max: 40, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.' },
+    { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, score: breakdownAScore, max: 25, color: recentReliabilityColor, tooltip: "Based on error rate from audit.8333.space — the percentage of failed swaps out of the mint's last ~100 tested operations. Lower error rate = higher score. Shows \"Unknown\" when fewer than 3 recent swaps are available." },
+    { label: 'NUT Support (15%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 15, color: supportedNuts.length >= 12 ? '#4ade80' : supportedNuts.length >= 8 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.' },
+    { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? '#4ade80' : breakdownVScore >= 6 ? '#ffa500' : '#ff4d4d', tooltip: "How recent the mint's software version is compared to the latest known Nutshell releases. Newer = higher score." },
+    { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? '#4ade80' : breakdownCScore >= 2 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.' },
   ]
   const firstSeen = firstSeenLabel(discoveredAt)
   const nostrAnnouncedAt = knownMint?.nostrAnnouncedAt ?? null
@@ -2125,11 +2161,8 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-right">
 
           <div className="md-panel md-trust-panel">
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:11}}>
-              <div className="md-panel-title" style={{marginBottom:0}}>Trust Score</div>
-              <button onClick={() => setShowTrustBreakdown(true)} style={{background:'none',border:'none',color:'var(--accent)',fontSize:10,cursor:'pointer',fontFamily:'var(--font-mono)',padding:0}}>Details ›</button>
-            </div>
-            <div className="trust-wrap" style={{cursor:'pointer'}} onClick={() => setShowTrustBreakdown(true)}>
+            <div className="md-panel-title">Trust Score</div>
+            <div className="trust-wrap">
               <div className="gauge-wrap">
                 <svg viewBox="0 0 72 72">
                   <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
@@ -2142,21 +2175,16 @@ function MintDetailContent({ url }: { url: string }) {
                 <div className="gauge-num" style={{ color: 'var(--green-bright)', fontFamily: 'var(--font-mono-data)' }}>{trustScore}%</div>
               </div>
               <span style={{fontSize:9,fontFamily:'var(--font-mono)',fontWeight:600,color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:4,padding:'1px 6px',textAlign:'center'}}>{tsInfo.label}</span>
-              <div className="trust-info">
-                <div className="trust-row">
-                  <span className="trust-label">Uptime</span>
-                  <span className="trust-value" style={{ color: uptimeColor(uptimePct) }}>{uptimePct}%</span>
-                </div>
-                <div className="trust-row">
-                  <span className="trust-label">NUTs</span>
-                  <span className="trust-value">{supportedNuts.length}/{TRACKED_NUTS.length}</span>
-                </div>
-                <div className="trust-row">
-                  <span className="trust-label">Latency</span>
-                  <span className="trust-value" style={{color: 'var(--text)'}}>
-                    {latency !== null ? `${latency} ms` : '—'}
-                  </span>
-                </div>
+            </div>
+            {/* All 5 components always visible here (no "Details" click / donut
+                tap needed) — the modal below (opened only from the mobile
+                compact tile, where this panel is hidden) shows the same rows. */}
+            <div style={{marginTop:14,width:'100%'}}>
+              {trustBreakdownRows.map(row => (
+                <TrustBreakdownRow key={row.label} {...row} />
+              ))}
+              <div style={{borderTop:'0.5px solid var(--border)',paddingTop:12,marginTop:4,fontSize:10,color:'var(--text3)',lineHeight:1.6}}>
+                Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.
               </div>
             </div>
           </div>
@@ -2283,33 +2311,8 @@ function MintDetailContent({ url }: { url: string }) {
               </div>
             </div>
             {trustBreakdownRows.map(row => (
-                <div key={row.label} style={{marginBottom:14}}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
-                    <span style={{fontSize:12,color:'var(--text2)',display:'flex',alignItems:'center',gap:4}}>
-                      {row.label}
-                      <span
-                        ref={row.tooltipRef}
-                        style={{position:'relative',display:'inline-flex'}}
-                        onPointerEnter={row.tooltipHook.onPointerEnter}
-                        onPointerLeave={row.tooltipHook.onPointerLeave}
-                        onClick={row.tooltipHook.onClick}
-                      >
-                        <Info size={11} color="#6b7280" style={{flexShrink:0,cursor:'help'}} />
-                        {row.tooltipHook.open && (
-                          <div className="audit-tooltip" style={{width:220,left:'50%',transform:'translateX(-50%)'}}>{row.tooltip}</div>
-                        )}
-                      </span>
-                    </span>
-                    <div style={{display:'flex',alignItems:'center',gap:8}}>
-                      <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{row.display}</span>
-                      <span style={{fontSize:13,fontWeight:600,color:row.color}}>{row.score}/{row.max}</span>
-                    </div>
-                  </div>
-                  <div style={{height:4,background:'var(--bg3)',borderRadius:2,overflow:'hidden'}}>
-                    <div style={{height:'100%',width:`${(row.score/row.max)*100}%`,background:row.color,borderRadius:2,transition:'width 0.3s ease'}}/>
-                  </div>
-                </div>
-              ))}
+              <TrustBreakdownRow key={row.label} {...row} />
+            ))}
             <div style={{borderTop:'0.5px solid var(--border)',paddingTop:12,marginTop:4,fontSize:10,color:'var(--text3)',lineHeight:1.6}}>
               Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.
             </div>

@@ -59,8 +59,19 @@ test.describe('Mint Detail', () => {
     await expect(page.locator('.reviews-filter-chip')).toHaveCount(0)
   })
 
-  test('Trust Score details modal opens', async ({ page }) => {
-    await page.getByRole('button', { name: /Details/ }).click()
+  test('Trust Score breakdown shows all 5 components inline on Overview, no click needed', async ({ page }) => {
+    const panel = page.locator('.md-trust-panel')
+    await expect(panel.getByText('Uptime (40%)')).toBeVisible()
+    await expect(panel.getByText('Audit reliability (25%)')).toBeVisible()
+    await expect(panel.getByText('NUT Support (15%)')).toBeVisible()
+    await expect(panel.getByText('Version (15%)')).toBeVisible()
+    await expect(panel.getByText('Contact (5%)')).toBeVisible()
+    await expect(panel.getByText(/Score = Uptime×40%/)).toBeVisible()
+  })
+
+  test('Trust Score details modal still opens from the mobile compact tile', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.locator('.md-sc.md-sc-trust').click()
     await expect(page.getByText('Trust Score Breakdown')).toBeVisible()
   })
 

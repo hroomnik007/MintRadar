@@ -195,14 +195,17 @@ export function isNewMint(
   return (now - ts) < NEW_MINT_MAX_DAYS * 24 * 60 * 60 * 1000
 }
 
-// "First seen <Mon YYYY>" for the Mint Detail header — derived from
-// discovered_at (when MintRadar first indexed the mint, not its true birth).
+// "First seen by MintRadar <Mon YYYY>" for the Mint Detail header — derived
+// from discovered_at (when MintRadar first indexed/probed the mint, not its
+// true birth). The "by MintRadar" wording (added 2026-09-20) disambiguates
+// this from the adjacent "Announced on Nostr" date, which is a different
+// timestamp (the mint's own NIP-87 announcement, when one exists).
 export function firstSeenLabel(discoveredAt: string | null | undefined): string | null {
   if (!discoveredAt) return null
   const d = new Date(discoveredAt)
   if (!Number.isFinite(d.getTime())) return null
   const month = d.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' })
-  return `First seen ${month} ${d.getUTCFullYear()}`
+  return `First seen by MintRadar ${month} ${d.getUTCFullYear()}`
 }
 
 // ── Card trust display ────────────────────────────────────────

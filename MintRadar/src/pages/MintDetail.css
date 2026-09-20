@@ -647,12 +647,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
   letter-spacing: -0.02em;
 }
 
-.trust-info  { width: 100%; }
-.trust-row   { display: flex; justify-content: space-between; margin-bottom: 4px; }
-.trust-label { font-size: 14px; color: var(--text2); font-family: var(--font-mono); }
-.trust-value { font-size: 14px; color: var(--text); font-family: var(--font-mono-data); }
-.trust-value.green { color: var(--accent); }
-
 /* ── Reviews ────────────────────────────────────────────────── */
 .reviews-header  { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 

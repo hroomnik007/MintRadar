@@ -250,8 +250,11 @@ across components.
   (mostly offline / older Nutshell) → they render no chip.
 - **`isNewMint(discoveredAt)` / `NEW_MINT_MAX_DAYS` (30)** — the card/header **"New"** badge.
   Replaced the Fresh/Established/Veteran/OG age badges on the card (see "Card badges" below).
-- **`firstSeenLabel(discoveredAt)`** → `"First seen <Mon YYYY>"` (UTC), or `null`. Mint Detail
-  header only.
+- **`firstSeenLabel(discoveredAt)`** → `"First seen by MintRadar <Mon YYYY>"` (UTC), or `null`.
+  Mint Detail header only. The "by MintRadar" wording (added 2026-09-20) disambiguates this from
+  the adjacent "Announced on Nostr" date — this one is `discovered_at` (when MintRadar's own
+  probe/discovery first indexed the mint), the other is the mint's own NIP-87 announcement date,
+  and the two can differ substantially.
 - **`resolveMintDetailUrl(slug, known)`** (2026-09-08, commit `bbf3eab`) — canonicalizes the
   `/mint/:url` route param. See "Mint Detail route param canonicalization" below.
 - Also here (own sections / mentions elsewhere): `trustDonutArc`, `auditReliabilityColor`,
@@ -571,7 +574,7 @@ its two follow-up commits were scoped to `relays.ts` + its backend mirrors +
 
 ## Key features
 - Dashboard: compact/expanded card view, filter panel (**Status + Min. Trust Score + Hide test mints** — the "Mint age" Fresh/Established/Veteran/OG block was removed 2026-09-08, and the Capabilities Restore/Bolt12/LN group was removed 2026-09-10, see "Dashboard default view + Capabilities filters removed" below; `requiredNuts` state still exists but URL-only, no panel UI), search, sort (default **Trust Score desc**, "Most reviewed" before Rating; see "Dashboard controls row" and "Dashboard default view" below), mint comparison tool (up to 4, see "Compare feature" above), stats bar, submit form (single + bulk). One-line explainer above the grid (`.grid-score-explainer`): **"We score how it runs. They score how it went. You pick."** (13.5px / `--t2`).
-- Mint Detail: MOTD, NUT compatibility grid with modal, NUT limits (NUT-04/05), a **Keysets panel** (desktop: Overview sidebar; mobile: NUTs tab — see "Mint Detail Keysets panel" below), historical charts (24h/7d/30d/90d, Latency/Uptime/Trust), Mint History panel, version history (real 3-column table — see below), Trust Score gauge with breakdown, Audit stats, Add to Wallet + QR, NIP-87 reviews, backup checker (NUT-13). Header carries an inline **Online/Offline** pill next to the name, a **New** badge (< 30d), **First seen `<Mon YYYY>`** on the URL row (`firstSeenLabel()`), and a **`Tor`** label prefixing any `.onion` URL. Route param is canonicalized — see "Mint Detail route param canonicalization" below.
+- Mint Detail: MOTD, NUT compatibility grid with modal, NUT limits (NUT-04/05), a **Keysets panel** (desktop: Overview sidebar; mobile: NUTs tab — see "Mint Detail Keysets panel" below), historical charts (24h/7d/30d/90d, Latency/Uptime/Trust), Mint History panel, version history (real 3-column table — see below), Trust Score gauge with breakdown, Audit stats, Add to Wallet + QR, NIP-87 reviews, backup checker (NUT-13). Header carries an inline **Online/Offline** pill next to the name, a **New** badge (< 30d), **First seen by MintRadar `<Mon YYYY>`** on the URL row (`firstSeenLabel()`), and a **`Tor`** label prefixing any `.onion` URL. Route param is canonicalized — see "Mint Detail route param canonicalization" below.
 - Stats page: totalMints/onlineMints/offlineMints/avgTrustScore/avgLatency cards, NUT adoption horizontal bars, Trust Score donut chart, Most Reliable / Top Trust widget, Trust Score Movers, Network Health Index, Geographic Distribution, Software in Use. See "Stats widgets (2026-09-08)" below for the recent changes (test-mint exclusion, CDN bucket, software copy, subtitle omission).
 - Watchlist: IndexedDB only, Nostr login required, export JSON/CSV, DM notifications (NIP-07), mint comparison tool (added 2026-09-19 — see "Compare feature" above, `?compare=` URL persistence)
 - Wallets: curated list, `src/constants/wallets.ts`. Main grid = 8 end-user wallets (Minibits, Nutstash, Macadamia, Sovran, Cashu.me, Agicash, Coinos, Zeus). **Nutshell** carries `selfHost: true` and renders in a separate **"Run your own mint"** subsection below the grid (2026-09-08 — it's the reference implementation, not a consumer wallet). Card head: platform icon on the left + `.wallet-platform-tag` chips on the right only (the duplicate standalone platform word was removed). `Agicash` was renamed from `Boardwalk Cash`; `eNuts` was removed. No documented inclusion criteria beyond maintainer judgment.
@@ -814,6 +817,27 @@ export **before** rendering `MintDetailContent`. Fixes the "ghost mint" bug wher
   now only ever receives a URL that is in `known`, so `knownMint` is always non-null there.
 - The in-code "Show my latency" SSRF guard stays as defense-in-depth, but an attacker route
   param now hits the not-tracked state first (no probe-driven detail, no latency button).
+
+### Trust Score breakdown always visible on Overview (2026-09-20)
+
+The desktop `.md-trust-panel` sidebar (Overview tab, ≥901px) now renders all 5 Trust Score
+components (Uptime 40% · Audit reliability 25% · NUT Support 15% · Version 15% · Contact 5%)
+and the "Score = Uptime×40% + …" explanatory line directly under the donut/badge — no click on
+a "Details ›" link or the donut itself needed anymore (both removed from the desktop panel).
+`TrustBreakdownRow` (`MintDetail.tsx`, a top-level component alongside `AuditSourceInfoIcon`)
+renders one row (label + ⓘ tooltip + measured value + score bar); it owns its own
+`useRef`/`useTapTooltip` internally rather than taking one as a prop, specifically so the same
+row data (`trustBreakdownRows`) can be rendered in two places at once (the always-visible panel
+list AND the "Trust Score Breakdown" modal) without two DOM nodes fighting over one shared ref.
+The Uptime/NUTs/Latency 3-line mini-summary that used to sit in this panel (`.trust-info`,
+CSS now removed as dead) is gone — those numbers were already duplicated in their own stat
+tiles higher on Overview (`.md-sc` Latency/Uptime 24h/NUTs tiles), so nothing was lost.
+
+**The modal itself still exists** — it's the only way to see the breakdown on **mobile** (<901px,
+where `.md-trust-panel` stays `display: none` and the page shows a compact `.md-sc.md-sc-trust`
+tile instead, which still opens the modal via tap, unchanged). Desktop no longer has any UI
+that opens the modal, but nothing prevents it from existing/rendering if `showTrustBreakdown`
+is ever set true from elsewhere.
 
 ### Mint Detail Keysets panel (2026-09-09/10, commits `313061c`/`5e64dc7`)
 
