@@ -983,7 +983,7 @@ function MintDetailContent({ url }: { url: string }) {
                   <span>{isOnline ? 'Online' : 'Offline'}</span>
                 </span>
                 {isNew && (
-                  <span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'#d3a446',background:'rgba(211,164,70,.14)',border:'0.5px solid rgba(211,164,70,.3)',borderRadius:5,padding:'3px 9px',flexShrink:0}}>New</span>
+                  <span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'#d3a446',background:'rgba(211,164,70,.14)',border:'0.5px solid rgba(211,164,70,.3)',borderRadius:5,padding:'3px 9px',flexShrink:0}} title="New mint (< 30 days) — Trust Score is capped at 75 until it builds a track record">New</span>
                 )}
                 {isTestMint(url) && (
                   <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}} title="Not for real funds — for testing and development only">
