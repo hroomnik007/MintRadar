@@ -1087,9 +1087,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
 /* Slightly denser than a lone chip so two of them fit per line in the
    narrower sidebar column ("onchain" is the longest method name). */
 .method-chips-grid .method-chip { font-size: 11.5px; padding: 3px 4px; }
-.method-chip.mint { color: var(--green-bright); border-color: var(--green-soft-strong); background: var(--green-soft); }
-.method-chip.melt { color: var(--copper); border-color: var(--copper-soft-strong); background: var(--copper-soft); }
-
 /* A direction the operator has switched off entirely (NUT-04/05 disabled) —
    its chips are struck through, and a single amber badge sits next to the
    MINT/MELT label (not one repeated per chip — disabled is a per-direction

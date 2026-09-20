@@ -2166,8 +2166,13 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-right">
 
           <div className="md-panel md-trust-panel">
-            <div className="md-panel-title" style={{display:'flex',alignItems:'center',gap:4,marginBottom:0}}>
-              Trust Score
+            {/* The (i) icon sits beside .md-panel-title, not inside it — .audit-tooltip
+                only resets font-family, so nesting it inside the uppercase/letter-spaced
+                title made the tooltip text inherit that styling too (looked like a
+                different font from every other tooltip in the app). Same sibling
+                layout as the Audit tab heading's own AuditSourceInfoIcon usage. */}
+            <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:11}}>
+              <span className="md-panel-title" style={{marginBottom:0}}>Trust Score</span>
               <AuditSourceInfoIcon text="Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75." />
             </div>
             <div className="trust-wrap">
@@ -2254,7 +2259,7 @@ function MintDetailContent({ url }: { url: string }) {
                                 {mintChips.length > 0 && (
                                   <div className={chipsClassName(mintChips.length)}>
                                     {mintChips.map((m, i) => (
-                                      <span className="method-chip mint" key={i}>{m.method}</span>
+                                      <span className="method-chip" key={i}>{m.method}</span>
                                     ))}
                                   </div>
                                 )}
@@ -2269,7 +2274,7 @@ function MintDetailContent({ url }: { url: string }) {
                                 {meltChips.length > 0 && (
                                   <div className={chipsClassName(meltChips.length)}>
                                     {meltChips.map((m, i) => (
-                                      <span className="method-chip melt" key={i}>{m.method}</span>
+                                      <span className="method-chip" key={i}>{m.method}</span>
                                     ))}
                                   </div>
                                 )}
