@@ -860,7 +860,7 @@ export default function Stats() {
           tooltip: `${onlinePts}/30 are NHI points (this row is 30% of the index), not ${onlinePts} mints online. Denominator is non-degraded mints (same set as the Dashboard default grid).`,
         },
         { label: 'Avg. Trust Score', value: avgTrust, weight: 25, tooltip: 'Average Trust Score across all currently online mints.' },
-        { label: 'Software diversity', value: diversity, weight: 15, tooltip: 'How spread out mint software versions are across the network (Herfindahl-Hirschman based) — a network dominated by one version scores lower.' },
+        { label: 'Software diversity', value: diversity, weight: 15, tooltip: 'How evenly mints are spread across different software - heavy reliance on one implementation scores lower.' },
         { label: 'Advanced feature adoption', value: advancedAdoption, weight: 15, tooltip: 'Average adoption rate of optional, security/privacy-oriented NUTs (P2PK, DLEQ, HTLCs, WebSocket, auth, BOLT12, Nostr backup, Pay-to-BK, on-chain) beyond the baseline mint/melt/state-check/restore lifecycle.' },
         { label: 'Network stability', value: stability, weight: 15, tooltip: 'Share of mints that have been tracked for 1 month or more. Used as a stand-in for churn rate, since mints are never marked "removed" in the database so actual churn isn\'t reliably measurable yet.' },
       ],
