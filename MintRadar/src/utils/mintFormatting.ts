@@ -15,6 +15,38 @@ export function mintHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
 }
 
+// ── Same-operator (shared NUT-06 pubkey) grouping ──────────────
+// Groups known mints by their /v1/info pubkey so cards can flag "Same
+// operator" siblings — cards are never merged, only labeled (see mintPubkey.ts
+// on the backend for the equivalent submit-time aliasOf detection). Mints with
+// no pubkey, or the sole mint for a given pubkey, are excluded from the result.
+export function groupMintsByPubkey(
+  mints: { url: string; pubkey?: string | null }[]
+): Map<string, string[]> {
+  const byPubkey = new Map<string, string[]>()
+  for (const m of mints) {
+    if (!m.pubkey) continue
+    const urls = byPubkey.get(m.pubkey)
+    if (urls) urls.push(m.url)
+    else byPubkey.set(m.pubkey, [m.url])
+  }
+  for (const [pubkey, urls] of byPubkey) {
+    if (urls.length < 2) byPubkey.delete(pubkey)
+  }
+  return byPubkey
+}
+
+// Other mints (excluding `mint` itself) sharing `mint`'s pubkey, or [] if none.
+export function sameOperatorUrls(
+  mint: { url: string; pubkey?: string | null },
+  pubkeyGroups: Map<string, string[]>
+): string[] {
+  if (!mint.pubkey) return []
+  const urls = pubkeyGroups.get(mint.pubkey)
+  if (!urls) return []
+  return urls.filter(u => u !== mint.url)
+}
+
 // ── Mint-detail route param → tracked mint ─────────────────────
 // The /mint/:url route param can be a bare host ("21mint.me") pasted by a user,
 // not just the percent-encoded canonical URL the app links to

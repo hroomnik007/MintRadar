@@ -781,6 +781,18 @@ The `.card-pills` row (lower body of `MintCard.tsx`) no longer carries age or id
 - Mint Detail header equivalent: an inline **Online/Offline** pill next to the name, **First
   seen `<Mon YYYY>`** moved onto the URL row (was colliding with the status pill), and a **`Tor`**
   label (`.md-url-tor`) prefixing any `.onion` URL.
+- **"Same operator" badge (2026-09-20)** — a 5th `.card-hdr-badges` entry (`.card-hdr-same-operator`,
+  copper `--copper`/`--copper-soft` tonal pair, matching the header slot's badge recipe). Flags
+  cards whose `/v1/info` `pubkey` matches another tracked mint's — a copper-toned badge to stay
+  visually distinct from the amber Test-mint / gold New badges. `groupMintsByPubkey()` /
+  `sameOperatorUrls()` (`src/utils/mintFormatting.ts`) group **every known mint** (not just the
+  currently filtered/visible set) by non-null `pubkey`; Dashboard and Watchlist each compute this
+  once from their own `useKnownMints()` result and pass the sibling URLs into `MintCard` as
+  `sameOperatorUrls`. No backend change — `pubkey` was already on `KnownMint`/`/api/mints/known`
+  (see `mintPubkey.ts`, previously used only for the submit-time `aliasOf` hint — see "Discovery
+  pipeline" above for that mechanism). Cards are never merged or hidden, only labeled; the badge's
+  `title` tooltip lists the sibling hostnames and says "Not merged — tracked as separate mints,"
+  mirroring the submit-flow's existing "Same mint pubkey as… not merged" copy.
 
 ### Mint Detail route param canonicalization (2026-09-08, commit `bbf3eab`)
 

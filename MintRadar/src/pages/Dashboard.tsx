@@ -15,7 +15,7 @@ import type { MintStatus } from '@core/mint/api'
 import { MintCard } from '@/components/mint/MintCard'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
-import { latencyColor, trustColor, uptimeColor, displayName as mintDisplayName } from '@/utils/mintFormatting'
+import { latencyColor, trustColor, uptimeColor, displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls } from '@/utils/mintFormatting'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import { listTrustScore, compareTrustThenRating } from '@/utils/trustSort'
 import { isTestMint } from '@/constants/testMints'
@@ -393,6 +393,8 @@ function MintListView({
   )
 }
 
+const EMPTY_PUBKEY_GROUPS: Map<string, string[]> = new Map()
+
 function MintGrid({
   mints,
   search,
@@ -400,6 +402,7 @@ function MintGrid({
   sortDir,
   onCompare,
   totalAll,
+  pubkeyGroups = EMPTY_PUBKEY_GROUPS,
 }: {
   mints: KnownMint[]
   search: string
@@ -407,6 +410,7 @@ function MintGrid({
   sortDir: 'asc' | 'desc'
   onCompare?: (url: string) => void
   totalAll?: number
+  pubkeyGroups?: Map<string, string[]>
 }) {
   const sortedFiltered = useMemo(() => {
     const q = search.toLowerCase()
@@ -451,6 +455,7 @@ function MintGrid({
             key={mint.url}
             mint={mint}
             {...(onCompare ? { onCompare } : {})}
+            sameOperatorUrls={sameOperatorUrls(mint, pubkeyGroups)}
           />
         ))}
       </div>
@@ -592,6 +597,11 @@ export default function Dashboard() {
     if (!knownMintsData) return {}
     return Object.fromEntries(knownMintsData.map(m => [m.url, m.trustScore ?? null]))
   }, [knownMintsData])
+
+  // Grouped once over every known mint (not just the currently filtered/shown
+  // set) so a "Same operator" badge still reflects the full network, not just
+  // whichever mints happen to be visible after the active filters.
+  const pubkeyGroups = useMemo(() => groupMintsByPubkey(knownMintsData ?? []), [knownMintsData])
 
   const { read: userReadRelays } = useUserRelays()
   useWatchlistNotifications(statusRecord, trustScoreRecord, userReadRelays)
@@ -1138,6 +1148,7 @@ export default function Dashboard() {
               sortDir={sortDir}
               onCompare={openComparePicker}
               totalAll={knownTotal}
+              pubkeyGroups={pubkeyGroups}
             />
           )}
           {degradedCount > 0 && activeFilters.status !== 'offline' && (

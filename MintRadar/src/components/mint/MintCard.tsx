@@ -41,10 +41,15 @@ export function MintCard({
   mint,
   onCompare,
   showNotifyToggles,
+  sameOperatorUrls,
 }: {
   mint: KnownMint
   onCompare?: (url: string) => void
   showNotifyToggles?: boolean
+  // Other tracked mint URLs sharing this mint's /v1/info pubkey — see
+  // groupMintsByPubkey() in mintFormatting.ts. Renders a "Same operator" badge;
+  // cards are never merged, only labeled.
+  sameOperatorUrls?: string[]
 }) {
   const navigate = useNavigate()
   const { onMintPointerEnter, onMintPointerLeave } = useMintHoverPrefetch()
@@ -135,7 +140,7 @@ export function MintCard({
             {showHost && <div className="card-host">{hostname}</div>}
           </div>
           <div className="card-hdr-right">
-          {(isOfflineDegraded || isNew || isTestMint(mint.url)) && (
+          {(isOfflineDegraded || isNew || isTestMint(mint.url) || (sameOperatorUrls && sameOperatorUrls.length > 0)) && (
             <span className="card-hdr-badges" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
               {isOfflineDegraded ? (
                 <span className="card-hdr-badge" style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--red)', background: 'var(--red-soft)', border: '1px solid rgba(219,106,93,0.3)', borderRadius: 5, padding: '2px 7px' }}>
@@ -149,6 +154,15 @@ export function MintCard({
               {isTestMint(mint.url) && (
                 <span className="card-hdr-badge card-hdr-test-mint" style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)', borderRadius: 5, padding: '2px 7px' }} title="Not for real funds — for testing and development only">
                   🧪 Test mint
+                </span>
+              )}
+              {sameOperatorUrls && sameOperatorUrls.length > 0 && (
+                <span
+                  className="card-hdr-badge card-hdr-same-operator"
+                  style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--copper)', background: 'var(--copper-soft)', border: '1px solid var(--copper-soft-strong)', borderRadius: 5, padding: '2px 7px' }}
+                  title={`Same operator (pubkey) as: ${sameOperatorUrls.map(getHostname).join(', ')}. Not merged — tracked as separate mints.`}
+                >
+                  Same operator
                 </span>
               )}
             </span>
