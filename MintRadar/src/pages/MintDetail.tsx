@@ -934,26 +934,28 @@ function MintDetailContent({ url }: { url: string }) {
         ) : (
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
             {keysets.map(ks => (
-              <div key={ks.id} className="md-keyset-row" style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
-                <span style={{fontSize:13,color:'var(--text)',fontFamily:'var(--font-mono)'}}>{ks.id.slice(0, 8)}…{ks.id.slice(-8)}</span>
-                <button
-                  onClick={() => {
-                    void navigator.clipboard.writeText(ks.id)
-                    setCopiedContact(`keyset-${ks.id}`)
-                    setTimeout(() => setCopiedContact(null), 2000)
-                  }}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: copiedContact === `keyset-${ks.id}` ? 'var(--accent)' : 'var(--text3)',
-                    padding: '2px 4px', display: 'flex', flexShrink: 0,
-                  }}
-                  title="Copy full keyset ID"
-                >
-                  {copiedContact === `keyset-${ks.id}` ? <Check size={13} /> : <Copy size={13} />}
-                </button>
-                <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.06em',marginLeft:'auto'}}>{ks.unit}</span>
+              <div key={ks.id} className="md-keyset-row" style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                <div style={{display:'flex',alignItems:'center',gap:6,minWidth:0,flex:'1 1 100%'}}>
+                  <span style={{fontSize:13,color:'var(--text)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0}}>{ks.id.slice(0, 8)}…{ks.id.slice(-8)}</span>
+                  <button
+                    onClick={() => {
+                      void navigator.clipboard.writeText(ks.id)
+                      setCopiedContact(`keyset-${ks.id}`)
+                      setTimeout(() => setCopiedContact(null), 2000)
+                    }}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      color: copiedContact === `keyset-${ks.id}` ? 'var(--accent)' : 'var(--text3)',
+                      padding: '2px 4px', display: 'flex', flexShrink: 0,
+                    }}
+                    title="Copy full keyset ID"
+                  >
+                    {copiedContact === `keyset-${ks.id}` ? <Check size={13} /> : <Copy size={13} />}
+                  </button>
+                </div>
+                <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.06em'}}>{ks.unit}</span>
                 <span style={{
-                  fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,borderRadius:5,padding:'2px 7px',
+                  fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,borderRadius:5,padding:'2px 7px',marginLeft:'auto',
                   color: ks.active ? '#4ade80' : 'var(--text3)',
                   background: ks.active ? 'rgba(74,222,128,0.1)' : 'var(--bg4)',
                   border: `0.5px solid ${ks.active ? 'rgba(74,222,128,0.3)' : 'var(--border)'}`,
@@ -1861,7 +1863,7 @@ function MintDetailContent({ url }: { url: string }) {
                     </div>
                   </div>
                   <div className="audit-summary-cell">
-                    <div className="audit-summary-value" style={{color: recentReliabilityColor}}>
+                    <div className="audit-summary-value" style={{color: recentReliabilityColor, whiteSpace: 'normal', flexWrap: 'wrap', rowGap: 2}}>
                       {stripRecentSuccessDisplay !== '—' && (
                         <>
                           <span className="audit-summary-main">{stripRecentSuccessDisplay}</span>
@@ -2192,51 +2194,56 @@ function MintDetailContent({ url }: { url: string }) {
             </div>
           </div>
 
-          {knownMint?.units && knownMint.units.length > 0 && (
-            <div className="md-panel">
-              <div className="md-panel-title">Units & Methods</div>
-              {knownMint.units.map(unit => {
-                const mintChips = (knownMint.mintMethods ?? []).filter(m => m.unit === unit)
-                const meltChips = (knownMint.meltMethods ?? []).filter(m => m.unit === unit)
-                return (
-                  <div className="unit-block" key={unit}>
-                    <div className="unit-header"><span className="unit-badge">{unit.toUpperCase()}</span></div>
-                    <div className="method-rows">
-                      {(mintChips.length > 0 || nut4Disabled) && (
-                        <div className={`method-row${nut4Disabled ? ' method-row-off' : ''}`}>
-                          <span className="method-label">Mint</span>
-                          <div className="method-chips">
-                            {mintChips.map((m, i) => (
-                              <span className="method-chip mint" key={i}>{m.method}</span>
-                            ))}
-                            {nut4Disabled && <span className="method-chip-off"><AlertTriangle size={10} /> disabled</span>}
+          {/* Units & Methods + Keysets sit side by side on desktop (≥901px,
+              see .md-um-keysets-row) so both stay visible without stacking
+              the sidebar too tall. Unlike the old Overview-tab-only gate,
+              the sidebar itself persists across every tab (see .md-right
+              above) — Keysets must too, or switching to e.g. Audit made it
+              disappear entirely instead of just changing tab content. On
+              mobile the Keysets copy here stays hidden and the NUTs-tab
+              copy (.md-keysets-at-nuts) is shown instead. */}
+          <div className="md-um-keysets-row">
+            {knownMint?.units && knownMint.units.length > 0 && (
+              <div className="md-panel md-um-panel">
+                <div className="md-panel-title">Units & Methods</div>
+                {knownMint.units.map(unit => {
+                  const mintChips = (knownMint.mintMethods ?? []).filter(m => m.unit === unit)
+                  const meltChips = (knownMint.meltMethods ?? []).filter(m => m.unit === unit)
+                  return (
+                    <div className="unit-block" key={unit}>
+                      <div className="unit-header"><span className="unit-badge">{unit.toUpperCase()}</span></div>
+                      <div className="method-rows">
+                        {(mintChips.length > 0 || nut4Disabled) && (
+                          <div className={`method-row${nut4Disabled ? ' method-row-off' : ''}`}>
+                            <span className="method-label">Mint</span>
+                            <div className="method-chips">
+                              {mintChips.map((m, i) => (
+                                <span className="method-chip mint" key={i}>{m.method}</span>
+                              ))}
+                              {nut4Disabled && <span className="method-chip-off"><AlertTriangle size={10} /> disabled</span>}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      {(meltChips.length > 0 || nut5Disabled) && (
-                        <div className={`method-row${nut5Disabled ? ' method-row-off' : ''}`}>
-                          <span className="method-label">Melt</span>
-                          <div className="method-chips">
-                            {meltChips.map((m, i) => (
-                              <span className="method-chip melt" key={i}>{m.method}</span>
-                            ))}
-                            {nut5Disabled && <span className="method-chip-off"><AlertTriangle size={10} /> disabled</span>}
+                        )}
+                        {(meltChips.length > 0 || nut5Disabled) && (
+                          <div className={`method-row${nut5Disabled ? ' method-row-off' : ''}`}>
+                            <span className="method-label">Melt</span>
+                            <div className="method-chips">
+                              {meltChips.map((m, i) => (
+                                <span className="method-chip melt" key={i}>{m.method}</span>
+                              ))}
+                              {nut5Disabled && <span className="method-chip-off"><AlertTriangle size={10} /> disabled</span>}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+                  )
+                })}
+              </div>
+            )}
 
-          {/* Desktop (≥901px) only, Overview tab only — directly under
-              "Units & Methods". On mobile the Keysets panel stays on the
-              NUTs tab instead (see .md-keysets-at-nuts). */}
-          {activeTab === 'overview' && (
-            <div className="md-keysets-at-overview">{keysetsPanel}</div>
-          )}
+            <div className="md-keysets-at-overview md-um-panel">{keysetsPanel}</div>
+          </div>
 
         </div>
       </div>

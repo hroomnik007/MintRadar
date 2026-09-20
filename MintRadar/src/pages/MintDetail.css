@@ -323,10 +323,13 @@ button.md-url-copy.copied > svg { opacity: 1; }
 /* ── Body Layout ────────────────────────────────────────────── */
 .md-body {
   display: grid;
-  /* 60/40 split (was a fixed 250px right column) — the always-visible 5-row
-     Trust Score breakdown (added 2026-09-20) needs more width than the old
-     donut-only sidebar did, so .md-right gets a bigger share on desktop. */
-  grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr);
+  /* Right column is a bounded fixed range, not a viewport fraction — a
+     60/40 fr split (tried 2026-09-20) grew to ~650px on a 1920px screen,
+     far wider than the sidebar's own content (gauge, breakdown rows,
+     Units & Methods, Keysets) needs. 380px cap keeps it reasonably sized
+     on any monitor; 280px floor is what the breakdown rows need before
+     wrapping badly on a narrower desktop width. */
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
   gap: 12px;
   padding: 14px 18px;
 }
@@ -340,6 +343,17 @@ button.md-url-copy.copied > svg { opacity: 1; }
 @media (min-width: 901px) {
   .md-keysets-at-overview { display: block; }
   .md-keysets-at-nuts { display: none; }
+}
+
+/* Units & Methods + Keysets sit side by side on desktop so the now-fixed
+   380px-wide sidebar (see .md-body above) doesn't stack them into an
+   overly tall column. Stacked (default) on mobile/narrow desktop, where
+   .md-keysets-at-overview is hidden anyway and the row collapses to just
+   the Units & Methods panel. */
+.md-um-keysets-row { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.md-um-panel { flex: 1; min-width: 0; margin: 0; }
+@media (min-width: 901px) {
+  .md-um-keysets-row { flex-direction: row; align-items: flex-start; }
 }
 
 /* ── Panels ─────────────────────────────────────────────────── */
