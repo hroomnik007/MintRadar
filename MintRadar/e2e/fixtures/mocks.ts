@@ -28,6 +28,11 @@ export interface MockMint {
   reviewAvgRating?: number | null
   /** "Recent review surge" sybil flag (backend/src/reviewSurge.ts). */
   reviewSurge?: boolean
+  /** Author pubkey (64-char hex) + `d` tag of the mint's own kind:38172 NIP-87
+   *  announcement — when both are set, the frontend can build a naddr share
+   *  link. Omitted/undefined mirrors a mint with no announcement on record. */
+  nostrAnnouncePubkey?: string | null
+  nostrAnnounceD?: string | null
 }
 
 // Mirror of backend/src/weightedRating.ts for the Rating-sort fixture payload.
@@ -113,6 +118,8 @@ function knownMintPayload(m: MockMint) {
     reviewAvgRating: m.reviewAvgRating ?? null,
     reviewWeightedRating: mockWeightedRating(m, MOCK_GLOBAL_MEAN_RATING),
     reviewSurge: m.reviewSurge ?? false,
+    nostrAnnouncePubkey: m.nostrAnnouncePubkey ?? null,
+    nostrAnnounceD: m.nostrAnnounceD ?? null,
   }
 }
 

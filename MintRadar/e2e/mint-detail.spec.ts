@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { nip19 } from 'nostr-tools'
 import { installApiMocks, mockRelays, MOCK_MINTS } from './fixtures/mocks'
 
 const ALPHA = MOCK_MINTS[0]!.url // https://alpha.mint.example
@@ -83,7 +84,7 @@ test.describe('Mint Detail', () => {
     { label: 'desktop', size: { width: 1280, height: 900 } },
     { label: 'mobile', size: { width: 390, height: 844 } },
   ]) {
-    test(`clicking the mint URL copies the deep link and shows feedback (${viewport.label})`, async ({ page, context }) => {
+    test(`clicking the mint URL shares a link and shows "Link copied" feedback, no naddr available (${viewport.label})`, async ({ page, context }) => {
       await context.grantPermissions(['clipboard-read', 'clipboard-write'])
       await page.setViewportSize(viewport.size)
 
@@ -91,21 +92,47 @@ test.describe('Mint Detail', () => {
       await expect(urlBtn).toBeVisible()
       await expect(urlBtn).toContainText(ALPHA)
       await expect(urlBtn).not.toHaveClass(/copied/)
+      await expect(urlBtn).not.toContainText('Link copied')
 
       await urlBtn.click()
 
-      // Visual feedback: .copied class + checkmark icon flip for ~2s.
+      // Visual feedback: .copied class + a "Link copied" text label for ~2s
+      // (not just an icon swap, so it reads on tap/mobile too).
       await expect(urlBtn).toHaveClass(/copied/)
+      await expect(urlBtn).toContainText('Link copied')
 
-      // Clipboard holds the current mint deep link (window.location.href).
+      // ALPHA has no recorded Nostr announcement in the fixture, so the
+      // share link falls back to the encoded-URL route (current page URL).
       const clip = await page.evaluate(() => navigator.clipboard.readText())
       expect(clip).toContain(encodeURIComponent(ALPHA))
       expect(clip).toBe(page.url())
 
       // Feedback reverts.
       await expect(urlBtn).not.toHaveClass(/copied/, { timeout: 4000 })
+      await expect(urlBtn).not.toContainText('Link copied', { timeout: 4000 })
     })
   }
+
+  test('when the mint has a Nostr announcement, the shared link is a naddr deep link', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    const { MOCK_KNOWN_MINTS } = await import('./fixtures/mocks')
+    const pubkey = 'a'.repeat(64)
+    const dTag = 'alpha-announce'
+    const naddr = nip19.naddrEncode({ kind: 38172, pubkey, identifier: dTag })
+    await page.route('**/api/mints/known', r => r.fulfill({
+      json: MOCK_KNOWN_MINTS.map(m =>
+        m.url === ALPHA ? { ...m, nostrAnnouncePubkey: pubkey, nostrAnnounceD: dTag } : m),
+    }))
+    await page.goto(detailPath)
+    await expect(page.locator('.md-tabs')).toBeVisible()
+
+    const urlBtn = page.locator('button.md-url-copy')
+    await urlBtn.click()
+    await expect(urlBtn).toContainText('Link copied')
+
+    const clip = await page.evaluate(() => navigator.clipboard.readText())
+    expect(clip).toBe(`${new URL(page.url()).origin}/mint/nostr/${naddr}`)
+  })
 })
 
 test.describe('Mint Detail — /mint/:url canonicalisation (bare-host collision fix)', () => {

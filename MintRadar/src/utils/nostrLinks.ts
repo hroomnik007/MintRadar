@@ -32,3 +32,20 @@ export function npubFromPubkey(hexOrNpub: string | null | undefined): string | n
   }
   return null
 }
+
+const MINT_ANNOUNCE_KIND = 38172
+
+/** naddr for a mint's own kind:38172 NIP-87 announcement, or null when the
+ *  mint has no known pubkey/d-tag yet (not announced, or discovered before
+ *  the backend started capturing them — see nostr_announce_pubkey/_d). */
+export function mintAnnounceNaddr(
+  pubkey: string | null | undefined,
+  dTag: string | null | undefined,
+): string | null {
+  if (!pubkey || !dTag) return null
+  const p = pubkey.trim()
+  if (!/^[0-9a-f]{64}$/i.test(p)) return null
+  try {
+    return nip19.naddrEncode({ kind: MINT_ANNOUNCE_KIND, pubkey: p.toLowerCase(), identifier: dTag })
+  } catch { return null }
+}

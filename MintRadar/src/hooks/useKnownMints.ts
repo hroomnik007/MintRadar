@@ -40,6 +40,12 @@ export interface KnownMint {
   discoveredAt?: string | null
   nostrAnnouncedAt?: string | null
   nostrAnnounceId?: string | null
+  // Author pubkey + `d` tag of the same kind:38172 announcement — lets the
+  // frontend build a NIP-19 naddr deep link to it (see mintAnnounceNaddr()
+  // in nostrLinks.ts). Null until the discovery cron re-processes the mint's
+  // still-live announcement (nostrAnnounceId alone isn't enough for naddr).
+  nostrAnnouncePubkey?: string | null
+  nostrAnnounceD?: string | null
   trustScore?: number | null
   lastError?: string | null
   uptimePct24h?: number | null

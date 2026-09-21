@@ -1,5 +1,5 @@
 import { nip19 } from 'nostr-tools'
-import { njumpProfileUrl, njumpEventUrl, npubFromPubkey } from '@/utils/nostrLinks'
+import { njumpProfileUrl, njumpEventUrl, npubFromPubkey, mintAnnounceNaddr } from '@/utils/nostrLinks'
 import { useParams, useNavigate, Navigate } from 'react-router-dom'
 import { useEffect, useState, useMemo, useRef, useCallback, type JSX } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -42,6 +42,7 @@ import {
   Fingerprint, Bitcoin, Star, Mail, AtSign,
   ExternalLink,
   Link2,
+  ArrowUpRight,
 } from 'lucide-react'
 
 const REVIEW_AVATAR_COLORS = ['#17E87F','#8b5cf6','#F5A623','#3b82f6','#ef4444','#ec4899']
@@ -997,11 +998,14 @@ function MintDetailContent({ url }: { url: string }) {
                 type="button"
                 className={`md-url md-url-copy ${copiedLink ? 'copied' : ''}`}
                 onClick={() => {
-                  void navigator.clipboard.writeText(window.location.href)
+                  const naddr = mintAnnounceNaddr(knownMint?.nostrAnnouncePubkey, knownMint?.nostrAnnounceD)
+                  const shareLink = naddr
+                    ? `${window.location.origin}/mint/nostr/${naddr}`
+                    : window.location.href
+                  void navigator.clipboard.writeText(shareLink)
                   setCopiedLink(true)
                   setTimeout(() => setCopiedLink(false), 2000)
                 }}
-                title="Copy a direct link to this mint"
               >
                 <span>
                   {showTor && (
@@ -1009,7 +1013,7 @@ function MintDetailContent({ url }: { url: string }) {
                   )}
                   {url}
                 </span>
-                {copiedLink ? <Check size={12} /> : <Copy size={12} />}
+                {copiedLink ? <span className="md-url-copied-label">Link copied</span> : <ArrowUpRight size={12} />}
               </button>
               {firstSeen && (
                 <div className="md-first-seen" style={{fontSize:12,fontFamily:'var(--font-mono)',color:'var(--text-faint)',marginTop:4}}>{firstSeen}</div>

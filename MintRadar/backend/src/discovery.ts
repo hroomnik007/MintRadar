@@ -137,7 +137,7 @@ export async function discoverMintsFromNostr(): Promise<number> {
   const failedRelays = new Set<string>()
   nostrPool.onRelayConnectionFailure = (url: string) => { failedRelays.add(url) }
 
-  const discovered38172 = new Map<string, { id: string; createdAt: number }>()
+  const discovered38172 = new Map<string, { id: string; createdAt: number; pubkey: string; dTag: string | null }>()
   const discovered38000: Set<string> = new Set()
   // Relay URLs (normalized) that delivered at least one event this cycle, across either
   // kind — fed by relayUrlsThatResponded() below, feeds computeSilentRelays() in `finally`.
@@ -177,7 +177,13 @@ export async function discoverMintsFromNostr(): Promise<number> {
           const nurl = normalizeUrl(raw)
           const prev = discovered38172.get(nurl)
           if (!prev || event.created_at > prev.createdAt) {
-            discovered38172.set(nurl, { id: event.id, createdAt: event.created_at })
+            const dTag = event.tags.find((t: string[]) => t[0] === 'd')
+            discovered38172.set(nurl, {
+              id: event.id,
+              createdAt: event.created_at,
+              pubkey: event.pubkey,
+              dTag: dTag && dTag[1] ? dTag[1] : null,
+            })
           }
         } catch { continue }
       }
@@ -236,16 +242,22 @@ export async function discoverMintsFromNostr(): Promise<number> {
   for (const [url, meta] of discovered38172) {
     if (!(await isValidCashuMint(url))) continue
     const r = await pool.query(
-      `INSERT INTO mints (url, is_known, nostr_announced_at, nostr_announce_id)
-       VALUES ($1, true, to_timestamp($2), $3)
+      `INSERT INTO mints (url, is_known, nostr_announced_at, nostr_announce_id, nostr_announce_pubkey, nostr_announce_d)
+       VALUES ($1, true, to_timestamp($2), $3, $4, $5)
        ON CONFLICT (url) DO UPDATE SET
          nostr_announced_at = CASE
            WHEN mints.nostr_announced_at IS NULL OR EXCLUDED.nostr_announced_at > mints.nostr_announced_at
            THEN EXCLUDED.nostr_announced_at ELSE mints.nostr_announced_at END,
          nostr_announce_id = CASE
            WHEN mints.nostr_announced_at IS NULL OR EXCLUDED.nostr_announced_at > mints.nostr_announced_at
-           THEN EXCLUDED.nostr_announce_id ELSE mints.nostr_announce_id END`,
-      [url, meta.createdAt, meta.id],
+           THEN EXCLUDED.nostr_announce_id ELSE mints.nostr_announce_id END,
+         nostr_announce_pubkey = CASE
+           WHEN mints.nostr_announced_at IS NULL OR EXCLUDED.nostr_announced_at > mints.nostr_announced_at
+           THEN EXCLUDED.nostr_announce_pubkey ELSE mints.nostr_announce_pubkey END,
+         nostr_announce_d = CASE
+           WHEN mints.nostr_announced_at IS NULL OR EXCLUDED.nostr_announced_at > mints.nostr_announced_at
+           THEN EXCLUDED.nostr_announce_d ELSE mints.nostr_announce_d END`,
+      [url, meta.createdAt, meta.id, meta.pubkey, meta.dTag],
     )
     if ((r.rowCount ?? 0) > 0) added38172++
   }

@@ -86,9 +86,12 @@
 .md-name { font-size: 31px; font-weight: 600; color: var(--text); line-height: 1.15; }
 .md-url  { font-size: 13px; color: var(--text3); font-family: var(--font-mono); margin-top: 3px; }
 
-/* The mint URL under the name doubles as a "copy deep link" affordance — click
-   the text or the trailing icon to copy window.location.href. The icon flips to
-   a checkmark and the text turns green for 2s (setCopiedLink in MintDetail.tsx).
+/* The mint URL under the name doubles as a "share this mint" affordance —
+   click the text or the trailing icon to copy a MintRadar link (naddr-based
+   when the mint has a Nostr announcement, else the encoded-URL route). The
+   icon swaps for a "Link copied" label and the text turns green for 2s
+   (setCopiedLink in MintDetail.tsx) — text feedback rather than an icon-only
+   state so it reads on tap (mobile) as well as on desktop, not hover-gated.
    Reset the <button> UA styling; keep it visually identical to the old div. */
 button.md-url-copy {
   display: inline-flex;
@@ -122,6 +125,14 @@ button.md-url-copy:hover { color: var(--text2); }
 button.md-url-copy:hover > svg { opacity: 1; }
 button.md-url-copy.copied { color: var(--green-bright); }
 button.md-url-copy.copied > svg { opacity: 1; }
+.md-url-copied-label {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  color: var(--green-bright);
+  white-space: nowrap;
+}
 
 .status-dot {
   width: 7px;

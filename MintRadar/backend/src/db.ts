@@ -176,6 +176,13 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS pubkey TEXT',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS nostr_announced_at TIMESTAMPTZ',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS nostr_announce_id TEXT',
+    // Author pubkey + `d` tag identifier of the mint's own kind:38172 NIP-87
+    // announcement event — needed (together with the kind) to build a NIP-19
+    // `naddr` deep link to that event. nostr_announce_id alone (the event id)
+    // isn't enough for an addressable-event coordinate. Null until the next
+    // 6h discovery cycle re-processes a still-live announcement.
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS nostr_announce_pubkey TEXT',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS nostr_announce_d TEXT',
     `CREATE INDEX IF NOT EXISTS idx_mints_pubkey ON mints (pubkey) WHERE pubkey IS NOT NULL`,
     // Defense-in-depth for the rating range bug in reviews.ts/reviewUtils.ts's
     // content-fallback "[X/5]" parser (fixed alongside this constraint) — an
