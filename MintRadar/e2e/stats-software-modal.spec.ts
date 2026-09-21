@@ -42,7 +42,7 @@ test('clicking a version drills down to the mint list in the same modal', async 
   await expect(modal(page).locator('.nut-modal-title')).toHaveText('Nutshell 0.20.0')
   await expect(modal(page).getByText('1 mint', { exact: true })).toBeVisible()
   await expect(modal(page).getByText('Delta Mint')).toBeVisible()
-  await expect(modal(page).getByText('Sorted by Trust Score')).toBeVisible()
+  await expect(modal(page).getByText('Sorted by Reliability Score')).toBeVisible()
   await expect(modal(page).getByText('1 online · 0 offline')).toBeVisible()
 })
 

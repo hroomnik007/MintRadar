@@ -8,7 +8,7 @@
 // / review_count_7d_ago_at — see reviewSurgeRollup.ts). An attacker can flood a
 // mint with fake reviews, but they cannot hide the fact that the count jumped.
 //
-// This flag is INFORMATIONAL ONLY. It never feeds computeTrustScore() or the
+// This flag is INFORMATIONAL ONLY. It never feeds computeReliabilityScore() or the
 // weighted Rating sort — same footing as the Audit disclaimer and the other
 // transparency cues. The frontend shows a quiet ⚠ next to the rating.
 

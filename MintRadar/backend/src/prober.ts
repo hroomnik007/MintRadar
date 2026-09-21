@@ -3,7 +3,7 @@ import { fetch as undiciFetch } from 'undici'
 import pLimit from 'p-limit'
 import { pool } from './db.js'
 import { checkUrlSafety, safeFetch } from './ssrf.js'
-import { computeTrustScore, versionFreshnessScore, TRACKED_NUT_KEYS } from './shared/trustScore.js'
+import { computeReliabilityScore, versionFreshnessScore, TRACKED_NUT_KEYS } from './shared/reliabilityScore.js'
 import { notifySubscribers, isNotificationServiceEnabled } from './nostrService.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { normalizeMintPubkey } from './mintPubkey.js'
@@ -78,11 +78,11 @@ export async function backfillServerLocations(): Promise<void> {
 const PROBE_TIMEOUT_MS = 10000
 const RETENTION_DAYS = 90
 
-// Trust Score maths now lives in shared/trustScore.ts, shared (via a synced copy)
-// with the frontend's Trust Score Breakdown. These re-exports keep prober.ts the
+// Reliability Score maths now lives in shared/reliabilityScore.ts, shared (via a synced copy)
+// with the frontend's Reliability Score Breakdown. These re-exports keep prober.ts the
 // import site the rest of the backend and its tests already use.
 export const serverVersionFreshnessScore = versionFreshnessScore
-export const computeServerTrustScore = computeTrustScore
+export const computeServerReliabilityScore = computeReliabilityScore
 
 export interface MintMethodEntry {
   method: string
@@ -375,7 +375,7 @@ export async function probeMintToDb(url: string): Promise<void> {
           const version = typeof raw['version'] === 'string' ? raw['version'] : null
           const tosUrl = typeof raw['tos_url'] === 'string' ? raw['tos_url'] : null
           const descriptionLong = typeof raw['description_long'] === 'string' ? raw['description_long'] : null
-          // Trust Score denominator — only mint-side NUTs in TRACKED_NUT_KEYS
+          // Reliability Score denominator — only mint-side NUTs in TRACKED_NUT_KEYS
           // count. A mint's own nuts object can also carry auth (21/22) and
           // payment-method (23/25/30) keys, which are real features but not
           // part of the NUT-support score; counting all of Object.keys(nuts)
@@ -568,7 +568,7 @@ export async function probeMintToDb(url: string): Promise<void> {
       // only our ability to read it did.
       const effectiveContactCount = contactCount ?? Number(row.contact_count ?? 0)
       const latestVersions = await getLatestVersionsMap()
-      const trustScore = computeServerTrustScore(
+      const reliabilityScore = computeServerReliabilityScore(
         uptimePct,
         row.nut_count as number | null,
         row.version as string | null,
@@ -579,17 +579,17 @@ export async function probeMintToDb(url: string): Promise<void> {
         row.discovered_at as string | null,
       )
       await pool.query(
-        `UPDATE mints SET last_trust_score = $1, last_error = $2 WHERE url = $3`,
-        [trustScore, lastError, url]
+        `UPDATE mints SET last_reliability_score = $1, last_error = $2 WHERE url = $3`,
+        [reliabilityScore, lastError, url]
       )
       if (histId !== undefined) {
         await pool.query(
-          `UPDATE mint_history SET trust_score = $1 WHERE id = $2`,
-          [trustScore, histId]
+          `UPDATE mint_history SET reliability_score = $1 WHERE id = $2`,
+          [reliabilityScore, histId]
         )
       }
     }
-  } catch { /* ignore trust score errors */ }
+  } catch { /* ignore reliability score errors */ }
 }
 
 export async function pruneOldHistory(): Promise<void> {

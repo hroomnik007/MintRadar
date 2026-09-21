@@ -52,13 +52,13 @@ export function sameOperatorUrls(
 // not just the percent-encoded canonical URL the app links to
 // ("https%3A%2F%2F21mint.me"). Without canonicalisation a bare host never
 // matches a tracked row, so the page used to fall through to a hollow live-probe
-// stub (0 NUTs, ~3% Trust) instead of the real, tracked mint.
+// stub (0 NUTs, ~3% Reliability) instead of the real, tracked mint.
 export type MintDetailResolution =
   | { kind: 'ok'; url: string }
   | { kind: 'redirect'; url: string }
   | { kind: 'not-tracked'; slug: string; suggestion: string | null }
 
-interface KnownMintLike { url: string; online?: boolean | null; trustScore?: number | null }
+interface KnownMintLike { url: string; online?: boolean | null; reliabilityScore?: number | null }
 
 function stripHostPrefix(host: string): string {
   return host.replace(/^(?:www\.|mint\.)+/, '')
@@ -67,7 +67,7 @@ function stripHostPrefix(host: string): string {
 // Among several tracked rows on the same host, pick the one the Dashboard treats
 // as *the* mint: a row that has actually been probed (online !== null) beats a
 // never-probed NIP-87-only stub; then a bare-root https://host; then the higher
-// Trust Score; then the shorter (path-less) URL.
+// Reliability Score; then the shorter (path-less) URL.
 function pickDashboardRow(rows: KnownMintLike[], host: string): KnownMintLike {
   return [...rows].sort((a, b) => {
     const aProbed = a.online != null ? 0 : 1
@@ -76,8 +76,8 @@ function pickDashboardRow(rows: KnownMintLike[], host: string): KnownMintLike {
     const aRoot = a.url === `https://${host}` ? 0 : 1
     const bRoot = b.url === `https://${host}` ? 0 : 1
     if (aRoot !== bRoot) return aRoot - bRoot
-    const at = a.trustScore ?? -1
-    const bt = b.trustScore ?? -1
+    const at = a.reliabilityScore ?? -1
+    const bt = b.reliabilityScore ?? -1
     if (at !== bt) return bt - at
     return a.url.length - b.url.length
   })[0]!
@@ -208,10 +208,10 @@ export function firstSeenLabel(discoveredAt: string | null | undefined): string 
   return `First seen by MintRadar ${month} ${d.getUTCFullYear()}`
 }
 
-// ── Card trust display ────────────────────────────────────────
-// Always "Trust <n>" (word + number), never a bare "68%". Missing → "Trust n/a".
-export function cardTrustLabel(score: number | null | undefined): string {
-  return score === null || score === undefined ? 'Trust n/a' : `Trust ${score}`
+// ── Card reliability display ────────────────────────────────────────
+// Always "Reliability <n>" (word + number), never a bare "68%". Missing → "Reliability n/a".
+export function cardReliabilityLabel(score: number | null | undefined): string {
+  return score === null || score === undefined ? 'Reliability n/a' : `Reliability ${score}`
 }
 
 // ── Card Lightning chip ───────────────────────────────────────
@@ -323,30 +323,30 @@ export function normalizeMintUrl(raw: string): string {
   }
 }
 
-// ── Trust score (MintDetail gauge/badge) ───────────────────────
-// trustScoreColor: raw colour for the score number
-export function trustScoreColor(score: number): string {
+// ── Reliability score (MintDetail gauge/badge) ───────────────────────
+// reliabilityScoreColor: raw colour for the score number
+export function reliabilityScoreColor(score: number): string {
   if (score >= 75) return '#4ade80'
   if (score >= 50) return '#ffa500'
   return '#ff4d4d'
 }
 
-export interface TrustScoreInfo {
-  label: 'High Trust' | 'Moderate Trust' | 'Low Trust'
+export interface ReliabilityScoreInfo {
+  label: 'High Reliability' | 'Moderate Reliability' | 'Low Reliability'
   color: string
   bg: string
   border: string
 }
 
-// trustScoreInfo: full badge object for the MintDetail panel
-export function trustScoreInfo(score: number): TrustScoreInfo {
-  if (score >= 70) return { label: 'High Trust',     color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.25)'  }
-  if (score >= 40) return { label: 'Moderate Trust', color: '#ffa500', bg: 'rgba(255,165,0,0.1)',   border: 'rgba(255,165,0,0.25)'   }
-  return                  { label: 'Low Trust',      color: '#ff4d4d', bg: 'rgba(255,77,77,0.1)',   border: 'rgba(255,77,77,0.25)'   }
+// reliabilityScoreInfo: full badge object for the MintDetail panel
+export function reliabilityScoreInfo(score: number): ReliabilityScoreInfo {
+  if (score >= 70) return { label: 'High Reliability',     color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.25)'  }
+  if (score >= 40) return { label: 'Moderate Reliability', color: '#ffa500', bg: 'rgba(255,165,0,0.1)',   border: 'rgba(255,165,0,0.25)'   }
+  return                  { label: 'Low Reliability',      color: '#ff4d4d', bg: 'rgba(255,77,77,0.1)',   border: 'rgba(255,77,77,0.25)'   }
 }
 
-// trustColor: used in Dashboard list view (same thresholds as trustScoreInfo)
-export function trustColor(score: number): string {
+// reliabilityColor: used in Dashboard list view (same thresholds as reliabilityScoreInfo)
+export function reliabilityColor(score: number): string {
   if (score >= 70) return '#4ade80'
   if (score >= 40) return '#ffa500'
   return '#ff4d4d'
@@ -354,8 +354,8 @@ export function trustColor(score: number): string {
 
 // ── Mint risk level (Token Inspector) ───────────────────────────
 // Risk for a SINGLE mint a token is bound to — not a multi-mint aggregation.
-// Reuses the exact same 70/40 trust-score thresholds as trustScoreInfo() above
-// so "Low Trust" and "risk: medium" never disagree about the same score.
+// Reuses the exact same 70/40 reliability-score thresholds as reliabilityScoreInfo() above
+// so "Low Reliability" and "risk: medium" never disagree about the same score.
 export interface MintRiskInfo {
   label: 'High risk' | 'Medium risk' | 'Low risk' | 'Unknown'
   color: string
@@ -374,14 +374,14 @@ const RISK_UNKNOWN: MintRiskInfo = { label: 'Unknown',    color: 'var(--t3)', bg
  * silent fallback into one of the three known-mint tiers, since "not tracked"
  * and "tracked but risky" are different findings.
  */
-export function mintRiskLevel(mint: { online: boolean | null; degraded: boolean; trustScore: number | null | undefined } | null): MintRiskInfo {
+export function mintRiskLevel(mint: { online: boolean | null; degraded: boolean; reliabilityScore: number | null | undefined } | null): MintRiskInfo {
   if (!mint) return RISK_UNKNOWN
   if (mint.online === false || mint.degraded === true) return RISK_HIGH
-  if ((mint.trustScore ?? 0) < 40) return RISK_MEDIUM
+  if ((mint.reliabilityScore ?? 0) < 40) return RISK_MEDIUM
   return RISK_LOW
 }
 
-// ── Trust Score donut geometry ────────────────────────────────
+// ── Reliability Score donut geometry ────────────────────────────────
 // The Mint Detail / Stats gauges draw the arc as a stroke-dasharray on an
 // r=27 SVG <circle>, so the drawable circumference is 2·π·27 ≈ 169.646.
 // The SVG is rotated with transform="rotate(-90 36 36)" so the circle's
@@ -392,8 +392,8 @@ export function mintRiskLevel(mint: { online: boolean | null; degraded: boolean;
 //
 // (The old code also set strokeDashoffset to a quarter-circle, which split
 // the arc in two around the 9-o'clock mark and made e.g. 80% look like ~55%.)
-export const TRUST_DONUT_RADIUS = 27
-export const TRUST_DONUT_CIRCUMFERENCE = 2 * Math.PI * TRUST_DONUT_RADIUS
+export const RELIABILITY_DONUT_RADIUS = 27
+export const RELIABILITY_DONUT_CIRCUMFERENCE = 2 * Math.PI * RELIABILITY_DONUT_RADIUS
 
 export interface DonutArc {
   /** value for strokeDasharray: "<filled> <gap>" */
@@ -404,10 +404,10 @@ export interface DonutArc {
   filled: number
 }
 
-export function trustDonutArc(pct: number): DonutArc {
+export function reliabilityDonutArc(pct: number): DonutArc {
   const clamped = Math.max(0, Math.min(100, Number.isFinite(pct) ? pct : 0))
-  const filled = (clamped / 100) * TRUST_DONUT_CIRCUMFERENCE
-  const gap = TRUST_DONUT_CIRCUMFERENCE - filled
+  const filled = (clamped / 100) * RELIABILITY_DONUT_CIRCUMFERENCE
+  const gap = RELIABILITY_DONUT_CIRCUMFERENCE - filled
   return {
     dashArray: `${filled.toFixed(2)} ${gap.toFixed(2)}`,
     dashOffset: 0,
@@ -432,11 +432,11 @@ export function uptimeColor(pct: number | null | undefined): string {
   return 'var(--slow)'
 }
 
-// ── Audit reliability colour (Audit summary strip + Trust Score Breakdown
+// ── Audit reliability colour (Audit summary strip + Reliability Score Breakdown
 // "Audit reliability" row) ──────────────────────────────────────
 // UI-only presentation of the rolling-window error rate — deliberately NOT the
 // same thresholds as auditReliabilityScore()'s 1-5 scoring buckets in
-// auditScore.ts (that function feeds the actual Trust Score number and must
+// auditScore.ts (that function feeds the actual Reliability Score number and must
 // not change). Those buckets are stricter than what reads as "OK" at a
 // glance — e.g. a 5% error rate (95% success) already drops two tiers below
 // the top and painted red. This colours directly off the error rate instead,

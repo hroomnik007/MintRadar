@@ -46,7 +46,7 @@ export interface KnownMint {
   // still-live announcement (nostrAnnounceId alone isn't enough for naddr).
   nostrAnnouncePubkey?: string | null
   nostrAnnounceD?: string | null
-  trustScore?: number | null
+  reliabilityScore?: number | null
   lastError?: string | null
   uptimePct24h?: number | null
   /** Same computation as uptimePct24h, over a 7-day window. Feeds the Stats
@@ -61,7 +61,7 @@ export interface KnownMint {
   reviewAvgRating?: number | null
   // Forgery-resistant sybil signal: the backend saw this mint's review_count
   // jump sharply vs. its own ~1-week-ago snapshot (backend/src/reviewSurge.ts).
-  // Informational only — never affects Trust Score or the Rating sort; the UI
+  // Informational only — never affects Reliability Score or the Rating sort; the UI
   // shows a quiet ⚠ next to the Community Rating.
   reviewSurge?: boolean
   // IMDB-style weighted/Bayesian rating computed by the backend

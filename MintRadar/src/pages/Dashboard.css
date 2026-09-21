@@ -666,10 +666,10 @@
    `.latency-block` has a min-width so a wider latency value ("10450 ms"
    vs "88 ms") can't shove the action cluster around between cards. */
 /* Bottom of the card: a flexible main column (LATENCY on top, Compare +
-   Watchlist Down/Up under it) on the left, and the Trust column flush to the
+   Watchlist Down/Up under it) on the left, and the Reliability column flush to the
    card's right edge. Pinned to the card's bottom edge via `margin-top: auto`.
    The main column has `min-width: 0` and its buttons wrap within it, so they
-   can never ride over the Trust number / stars (Trust is flex-shrink: 0). */
+   can never ride over the Reliability number / stars (Reliability is flex-shrink: 0). */
 .card-lower {
   display: flex;
   flex-direction: row;
@@ -688,8 +688,8 @@
   gap: 8px;
 }
 
-/* ── Trust column, flush right ─────────────────────────────── */
-.card-trust {
+/* ── Reliability column, flush right ─────────────────────────────── */
+.card-reliability {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -700,8 +700,8 @@
   text-align: right;
 }
 
-.card-trust-label,
-.card-trust-na {
+.card-reliability-label,
+.card-reliability-na {
   display: flex;
   align-items: center;
   gap: 3px;
@@ -711,16 +711,16 @@
   color: var(--t2);
 }
 
-.card-trust-na { color: var(--t2); }
+.card-reliability-na { color: var(--t2); }
 
-.card-trust-score {
+.card-reliability-score {
   font-size: 27px;
   font-weight: 700;
   line-height: 1;
   font-family: var(--font-mono-data);
 }
 
-.card-trust-rating {
+.card-reliability-rating {
   display: flex;
   align-items: center;
   gap: 3px;
@@ -730,19 +730,19 @@
   font-family: var(--font-mono-data);
 }
 
-.card-trust-star { font-size: 16px; line-height: 1; }
+.card-reliability-star { font-size: 16px; line-height: 1; }
 
-.card-trust-no-reviews {
+.card-reliability-no-reviews {
   font-size: 11px;
   color: var(--t3);
   line-height: 1;
 }
 
 /* Mobile keeps the desktop bottom-row layout: LATENCY (+ Compare under it) on
-   the left, the Trust column flush right. No stacking of Trust above latency. */
+   the left, the Reliability column flush right. No stacking of Reliability above latency. */
 @media (max-width: 600px) {
-  .card-trust { min-width: 64px; }
-  .card-trust-score { font-size: 26px; }
+  .card-reliability { min-width: 64px; }
+  .card-reliability-score { font-size: 26px; }
 }
 
 .latency-block {
@@ -751,11 +751,11 @@
 }
 
 /* A 4-digit latency ("10450 ms") stays on one line and can't wrap toward the
-   Trust column. */
+   Reliability column. */
 .latency-value { white-space: nowrap; }
 
 /* Compare + (Watchlist) Down/Up. Wrap ONLY within .card-bottom-main — never
-   into the Trust column. Left-aligned, sitting under the LATENCY block. */
+   into the Reliability column. Left-aligned, sitting under the LATENCY block. */
 .card-actions {
   display: flex;
   flex-flow: row wrap;
@@ -1153,7 +1153,7 @@
 }
 .filter-tag button:hover { opacity: 1; }
 
-/* One horizontal bar: Status · Hide test mints · Trust slider · Showing · Reset
+/* One horizontal bar: Status · Hide test mints · Reliability slider · Showing · Reset
    · Apply — a single baseline, no footer band / spacer. Wraps only on narrow
    desktop; a dedicated mobile block below stacks it. */
 .filter-bar {
@@ -1187,7 +1187,7 @@
   gap: 10px;
 }
 
-/* Mobile: Status, Hide test mints, and the Trust slider each get their own
+/* Mobile: Status, Hide test mints, and the Reliability slider each get their own
    full-width, left-aligned row; "Showing X of Y" gets its own row below them;
    Reset + Apply share one final row at equal height (Reset sized to its
    label, Apply filling the rest — not a tiny ghost next to a full-width bar).
@@ -1736,7 +1736,7 @@
   .status-text-mobile-hide { display: none; }
   .mint-list-td-name { min-width: 0; max-width: none; }
   .mint-list-name { max-width: 120px; }
-  .mint-list-table td.trust-col { min-width: 48px; }
+  .mint-list-table td.reliability-col { min-width: 48px; }
   .filter-nut-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
 
   /* Filters button rides on the same row as the search input. */
@@ -1787,19 +1787,19 @@
 }
 
 
-.card-trust-rating-val {
+.card-reliability-rating-val {
   font-size: 14px;
   font-weight: 600;
   font-family: var(--font-mono-data);
   color: var(--text2);
 }
-.card-trust-rating-n {
+.card-reliability-rating-n {
   font-size: 12px;
   font-weight: 500;
   color: var(--text3);
   font-family: var(--font-mono);
 }
-.card-trust-star {
+.card-reliability-star {
   font-size: 13px;
   color: var(--yellow);
   line-height: 1;

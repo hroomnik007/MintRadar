@@ -44,7 +44,7 @@ export default function Module2() {
         <li><strong>Never hold more in Cashu than you're willing to lose.</strong> Treat it like the cash in your physical wallet, not your savings account.</li>
         <li><strong>Spread funds across multiple mints</strong> instead of concentrating everything in one place. If one mint fails, you only lose what was there.</li>
         <li><strong>Redeem back to Lightning regularly</strong> instead of letting balances build up in a mint over time.</li>
-        <li><strong>Pay attention to signals of mint health</strong> — this is where tools like MintRadar's Trust Score come in, which we'll cover in the next module.</li>
+        <li><strong>Pay attention to signals of mint health</strong> — this is where tools like MintRadar's Reliability Score come in, which we'll cover in the next module.</li>
       </ul>
       <p>
         None of this makes Cashu "safe" in the way a bank account is safe. It makes it usable in a way that respects what it actually is: a privacy-focused, cash-like system with real trade-offs.

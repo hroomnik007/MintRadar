@@ -1,17 +1,17 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { TrustMoversPanel, type TrustMoversData } from '../components/stats/TrustMoversPanel'
+import { ReliabilityMoversPanel, type ReliabilityMoversData } from '../components/stats/ReliabilityMoversPanel'
 
-const sample: TrustMoversData = {
+const sample: ReliabilityMoversData = {
   risers: [{ url: 'https://riser.example.com', name: 'Riser Mint', delta: 12 }],
   fallers: [{ url: 'https://faller.example.com', name: 'Faller Mint', delta: -9 }],
 }
 
-function renderPanel(overrides: Partial<React.ComponentProps<typeof TrustMoversPanel>> = {}) {
+function renderPanel(overrides: Partial<React.ComponentProps<typeof ReliabilityMoversPanel>> = {}) {
   const onPeriodChange = vi.fn()
   const onMintClick = vi.fn()
   const utils = render(
-    <TrustMoversPanel
+    <ReliabilityMoversPanel
       period="7d"
       onPeriodChange={onPeriodChange}
       data={sample}
@@ -25,7 +25,7 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof TrustMoversP
   return { onPeriodChange, onMintClick, ...utils }
 }
 
-describe('TrustMoversPanel', () => {
+describe('ReliabilityMoversPanel', () => {
   describe('7d/30d toggle', () => {
     it('marks the current period button active', () => {
       renderPanel({ period: '30d' })

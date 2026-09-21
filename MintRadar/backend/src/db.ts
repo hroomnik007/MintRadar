@@ -41,9 +41,6 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_mint_version_history_url_date
       ON mint_version_history(url, first_seen_at DESC);
 
-    CREATE INDEX IF NOT EXISTS idx_mints_trust_score
-      ON mints(last_trust_score DESC NULLS LAST);
-
     CREATE TABLE IF NOT EXISTS software_versions (
       software TEXT PRIMARY KEY,
       latest_version TEXT,
@@ -101,6 +98,52 @@ export async function initDb(): Promise<void> {
 
   // Column migrations — each in its own query so a failure in one doesn't block others
   const migrations = [
+    // Reliability Score rename (was "Trust Score") — atomic, metadata-only column
+    // and index renames, guarded so they're a no-op once already applied (fresh
+    // installs never have the old names, so these guards also make the migration
+    // safe to run against a brand-new database).
+    `DO $$
+     BEGIN
+       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'mints' AND column_name = 'last_trust_score')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'mints' AND column_name = 'last_reliability_score') THEN
+         ALTER TABLE mints RENAME COLUMN last_trust_score TO last_reliability_score;
+       END IF;
+     END $$`,
+    `DO $$
+     BEGIN
+       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'mints' AND column_name = 'trust_score_7d_ago')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'mints' AND column_name = 'reliability_score_7d_ago') THEN
+         ALTER TABLE mints RENAME COLUMN trust_score_7d_ago TO reliability_score_7d_ago;
+       END IF;
+     END $$`,
+    `DO $$
+     BEGIN
+       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'mints' AND column_name = 'trust_score_30d_ago')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'mints' AND column_name = 'reliability_score_30d_ago') THEN
+         ALTER TABLE mints RENAME COLUMN trust_score_30d_ago TO reliability_score_30d_ago;
+       END IF;
+     END $$`,
+    `DO $$
+     BEGIN
+       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'mints' AND column_name = 'trust_movers_checked_at')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'mints' AND column_name = 'reliability_movers_checked_at') THEN
+         ALTER TABLE mints RENAME COLUMN trust_movers_checked_at TO reliability_movers_checked_at;
+       END IF;
+     END $$`,
+    `DO $$
+     BEGIN
+       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'mint_history' AND column_name = 'trust_score')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'mint_history' AND column_name = 'reliability_score') THEN
+         ALTER TABLE mint_history RENAME COLUMN trust_score TO reliability_score;
+       END IF;
+     END $$`,
+    `DO $$
+     BEGIN
+       IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_mints_trust_score')
+          AND NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_mints_reliability_score') THEN
+         ALTER INDEX idx_mints_trust_score RENAME TO idx_mints_reliability_score;
+       END IF;
+     END $$`,
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS icon_url TEXT',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS version TEXT',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS nut_count INTEGER',
@@ -122,7 +165,8 @@ export async function initDb(): Promise<void> {
     // audit_recent_total/errors — see mint_audit_swaps + computeSwapStats() in
     // discovery.ts. Null when the window has zero OK swaps with a known time.
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_avg_time_ms DOUBLE PRECISION',
-    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS last_trust_score INTEGER',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS last_reliability_score INTEGER',
+    'CREATE INDEX IF NOT EXISTS idx_mints_reliability_score ON mints(last_reliability_score DESC NULLS LAST)',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS last_error TEXT',
     // Recurring-revalidation markers (prober.ts revalidateMints()): `invalid_since`
     // is set the first time a mint is found REACHABLE-but-not-a-Cashu-mint (a URL
@@ -139,20 +183,20 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS melt_methods JSONB',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS last_online_at TIMESTAMPTZ',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS contact_count INTEGER',
-    'ALTER TABLE mint_history ADD COLUMN IF NOT EXISTS trust_score INTEGER',
-    // Trust Score Movers rollup — mints.last_trust_score already holds the "latest"
+    'ALTER TABLE mint_history ADD COLUMN IF NOT EXISTS reliability_score INTEGER',
+    // Reliability Score Movers rollup — mints.last_reliability_score already holds the "latest"
     // snapshot (written by every probe); these two hold the point-in-time score
-    // 7d / 30d ago, refreshed by refreshTrustMoversRollup() on the probe cron so
-    // GET /api/stats/trust-movers is a plain read of `mints` instead of two
+    // 7d / 30d ago, refreshed by refreshReliabilityMoversRollup() on the probe cron so
+    // GET /api/stats/reliability-movers is a plain read of `mints` instead of two
     // DISTINCT ON passes over all of mint_history. Same pattern as review_count.
-    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS trust_score_7d_ago INTEGER',
-    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS trust_score_30d_ago INTEGER',
-    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS trust_movers_checked_at TIMESTAMPTZ',
-    // Partial index covering the `trust_score IS NOT NULL` filter that the rollup's
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS reliability_score_7d_ago INTEGER',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS reliability_score_30d_ago INTEGER',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS reliability_movers_checked_at TIMESTAMPTZ',
+    // Partial index covering the `reliability_score IS NOT NULL` filter that the rollup's
     // per-mint "score at-or-before cutoff" lookups use — without it those lookups
     // fall back to scanning idx_mint_history_url_checked + heap-fetching every row.
     `CREATE INDEX IF NOT EXISTS idx_mint_history_score_checked
-       ON mint_history(url, checked_at DESC) WHERE trust_score IS NOT NULL`,
+       ON mint_history(url, checked_at DESC) WHERE reliability_score IS NOT NULL`,
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS review_count INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS review_avg_rating REAL',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS reviews_checked_at TIMESTAMPTZ',
@@ -208,7 +252,7 @@ export async function initDb(): Promise<void> {
 
   // Seed software_versions so scoring works identically right after deploy, even
   // before fetchLatestUpstreamVersions' daily cron job has run for the first time.
-  // Values mirror STATIC_LATEST_VERSIONS in shared/trustScore.ts (major.minor must
+  // Values mirror STATIC_LATEST_VERSIONS in shared/reliabilityScore.ts (major.minor must
   // stay in sync — the exact patch here doesn't affect scoring). ON CONFLICT DO
   // NOTHING makes this a no-op after the first run, once the cron job owns the row.
   await pool.query(`

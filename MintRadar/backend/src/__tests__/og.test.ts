@@ -33,38 +33,38 @@ describe('mintStatusLabel', () => {
 describe('renderMintOgHtml', () => {
   const mintUrl = 'https://mint.example.com'
 
-  it('renders name, trust score and status into title/description for a known mint', () => {
-    const mint: OgMintData = { name: 'Example Mint', trustScore: 87, online: true, degraded: false }
+  it('renders name, reliability score and status into title/description for a known mint', () => {
+    const mint: OgMintData = { name: 'Example Mint', reliabilityScore: 87, online: true, degraded: false }
     const html = renderMintOgHtml(mint, mintUrl)
 
     expect(html).toContain('<title>Example Mint — MintRadar</title>')
     expect(html).toContain('property="og:title" content="Example Mint — MintRadar"')
-    expect(html).toContain('content="Trust Score: 87% · Online"')
+    expect(html).toContain('content="Reliability Score: 87% · Online"')
     expect(html).toContain(`property="og:url" content="https://mintradar.org/mint/${encodeURIComponent(mintUrl)}"`)
     expect(html).toContain('name="twitter:card" content="summary_large_image"')
     expect(html).toContain('property="og:image" content="https://mintradar.org/og-image.png"')
   })
 
   it('falls back to the mint URL as the display name when name is null', () => {
-    const mint: OgMintData = { name: null, trustScore: 50, online: false, degraded: false }
+    const mint: OgMintData = { name: null, reliabilityScore: 50, online: false, degraded: false }
     const html = renderMintOgHtml(mint, mintUrl)
     expect(html).toContain(`<title>${mintUrl} — MintRadar</title>`)
   })
 
   it('falls back to the mint URL when name is an empty/whitespace string', () => {
-    const mint: OgMintData = { name: '   ', trustScore: 50, online: false, degraded: false }
+    const mint: OgMintData = { name: '   ', reliabilityScore: 50, online: false, degraded: false }
     const html = renderMintOgHtml(mint, mintUrl)
     expect(html).toContain(`<title>${mintUrl} — MintRadar</title>`)
   })
 
-  it('shows N/A when trustScore is null', () => {
-    const mint: OgMintData = { name: 'Example Mint', trustScore: null, online: true, degraded: false }
+  it('shows N/A when reliabilityScore is null', () => {
+    const mint: OgMintData = { name: 'Example Mint', reliabilityScore: null, online: true, degraded: false }
     const html = renderMintOgHtml(mint, mintUrl)
-    expect(html).toContain('content="Trust Score: N/A · Online"')
+    expect(html).toContain('content="Reliability Score: N/A · Online"')
   })
 
   it('escapes a malicious mint name instead of injecting it raw', () => {
-    const mint: OgMintData = { name: '<img src=x onerror=alert(1)>', trustScore: 10, online: true, degraded: false }
+    const mint: OgMintData = { name: '<img src=x onerror=alert(1)>', reliabilityScore: 10, online: true, degraded: false }
     const html = renderMintOgHtml(mint, mintUrl)
     expect(html).not.toContain('<img src=x onerror=alert(1)>')
     expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;')
@@ -73,7 +73,7 @@ describe('renderMintOgHtml', () => {
   it('renders a generic MintRadar fallback when mint is null (unknown URL)', () => {
     const html = renderMintOgHtml(null, mintUrl)
     expect(html).toContain('<title>MintRadar - Cashu Mint Monitor</title>')
-    expect(html).toContain('Real-time Trust Score, latency &amp; NUT monitoring for Cashu mints.')
+    expect(html).toContain('Real-time Reliability Score, latency &amp; NUT monitoring for Cashu mints.')
     expect(html).toContain(`property="og:url" content="https://mintradar.org/mint/${encodeURIComponent(mintUrl)}"`)
   })
 

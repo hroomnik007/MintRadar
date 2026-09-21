@@ -79,7 +79,7 @@ test.describe('Dashboard', () => {
     // The active sort button appends an arrow (e.g. "Name ↑"), so target by class + substring.
     const sortBtn = (label: string) => page.locator('.sort-btn', { hasText: label })
 
-    // Default sort is now Trust Score desc: Alpha 92, Delta 78, Bravo 55, Charlie offline → 0.
+    // Default sort is now Reliability Score desc: Alpha 92, Delta 78, Bravo 55, Charlie offline → 0.
     await expect(names).toHaveText(['Alpha Mint', 'Delta Mint', 'Bravo Mint', 'Charlie Mint'])
 
     // Switching to Name resets to ascending; clicking it again toggles to descending.

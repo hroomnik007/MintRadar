@@ -46,7 +46,7 @@ function sampleRow(overrides: Record<string, unknown> = {}) {
     audit_recent_total: 100,
     audit_recent_errors: 0,
     discovered_at: '2026-01-01T00:00:00.000Z',
-    last_trust_score: 88,
+    last_reliability_score: 88,
     last_error: null,
     server_location: 'US',
     total: 12,
@@ -85,16 +85,16 @@ describe('GET /api/mints/known', () => {
       latencyMs: 142,
       version: 'Nutshell/0.16.0',
       nutCount: 12,
-      trustScore: 88,
+      reliabilityScore: 88,
       degraded: false,
       uptimePct24h: 100,
       uptimePct7d: 100,
       serverLocation: 'US',
     })
-    // The contract advertised in CLAUDE.md: url, degraded, online, trustScore.
+    // The contract advertised in CLAUDE.md: url, degraded, online, reliabilityScore.
     expect(mint).toHaveProperty('url')
     expect(mint).toHaveProperty('degraded')
-    expect(mint).toHaveProperty('trustScore')
+    expect(mint).toHaveProperty('reliabilityScore')
     expect(mint).toHaveProperty('lastCheckedAt')
     // audit_synced_at (our cron's write time) is distinct from audit_checked_at
     // (audit.8333.space's own updated_at) and both are exposed.

@@ -26,7 +26,7 @@ export const LEARN_MODULES: LearnModuleMeta[] = [
   {
     id: 'how-to-choose-a-mint',
     title: 'How to Choose a Cashu Mint',
-    summary: 'What to check before trusting a mint — uptime, NUT support, operator transparency — and how MintRadar\'s Trust Score combines those signals.',
+    summary: 'What to check before trusting a mint — uptime, NUT support, operator transparency — and how MintRadar\'s Reliability Score combines those signals.',
     order: 3,
   },
   {
@@ -38,7 +38,7 @@ export const LEARN_MODULES: LearnModuleMeta[] = [
   {
     id: 'safe-habits',
     title: 'Safe Habits',
-    summary: 'Five day-to-day habits — diversifying mints, redeeming regularly, checking Trust Score first — that meaningfully reduce your risk.',
+    summary: 'Five day-to-day habits — diversifying mints, redeeming regularly, checking Reliability Score first — that meaningfully reduce your risk.',
     order: 5,
   },
 ]

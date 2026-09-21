@@ -318,7 +318,7 @@ a.token-action-btn:focus {
 }
 .wizard-rec-score { font-size: 14px; font-weight: 700; font-family: var(--font-mono); flex-shrink: 0; }
 .wizard-rec-badges { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-.wizard-rec-trust,
+.wizard-rec-reliability,
 .wizard-rec-ln {
   display: inline-flex; align-items: center; gap: 3px;
   font-size: 12px; font-family: var(--font-mono-data);

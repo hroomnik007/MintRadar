@@ -60,8 +60,8 @@ test.describe('Mint Detail', () => {
     await expect(page.locator('.reviews-filter-chip')).toHaveCount(0)
   })
 
-  test('Trust Score breakdown shows all 5 components inline on Overview, no click needed', async ({ page }) => {
-    const panel = page.locator('.md-trust-panel')
+  test('Reliability Score breakdown shows all 5 components inline on Overview, no click needed', async ({ page }) => {
+    const panel = page.locator('.md-reliability-panel')
     await expect(panel.getByText('Uptime (40%)')).toBeVisible()
     await expect(panel.getByText('Audit reliability (25%)')).toBeVisible()
     await expect(panel.getByText('NUT Support (15%)')).toBeVisible()
@@ -74,10 +74,10 @@ test.describe('Mint Detail', () => {
     await expect(panel.getByText(/Score = Uptime×40%/)).toBeVisible()
   })
 
-  test('Trust Score details modal still opens from the mobile compact tile', async ({ page }) => {
+  test('Reliability Score details modal still opens from the mobile compact tile', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
-    await page.locator('.md-sc.md-sc-trust').click()
-    await expect(page.getByText('Trust Score Breakdown')).toBeVisible()
+    await page.locator('.md-sc.md-sc-reliability').click()
+    await expect(page.getByText('Reliability Score Breakdown')).toBeVisible()
   })
 
   for (const viewport of [
@@ -187,9 +187,9 @@ test.describe('Mint Detail — /mint/:url canonicalisation (bare-host collision 
     await page.goto('/mint/definitely-not-a-real-mint.example')
     await expect(page.locator('.md-not-tracked')).toBeVisible()
     await expect(page.getByText('Not a tracked mint')).toBeVisible()
-    // No fake full detail: no tabs, no Trust gauge/score.
+    // No fake full detail: no tabs, no Reliability gauge/score.
     await expect(page.locator('.md-tabs')).toHaveCount(0)
-    await expect(page.locator('.md-sc-trust-num')).toHaveCount(0)
+    await expect(page.locator('.md-sc-reliability-num')).toHaveCount(0)
     await expect(page.locator('.gauge-num')).toHaveCount(0)
   })
 })

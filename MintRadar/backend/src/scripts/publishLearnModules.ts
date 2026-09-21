@@ -56,7 +56,7 @@ const MODULE_META = [
     order: 3,
     file: 'Module3.tsx',
     title: 'How to Choose a Mint',
-    summary: "What to check before trusting a mint — uptime, NUT support, operator transparency — and how MintRadar's Trust Score combines those signals.",
+    summary: "What to check before trusting a mint — uptime, NUT support, operator transparency — and how MintRadar's Reliability Score combines those signals.",
   },
   {
     order: 4,
@@ -68,7 +68,7 @@ const MODULE_META = [
     order: 5,
     file: 'Module5.tsx',
     title: 'Safe Habits',
-    summary: "Five day-to-day habits — diversifying mints, redeeming regularly, checking Trust Score first — that meaningfully reduce your risk.",
+    summary: "Five day-to-day habits — diversifying mints, redeeming regularly, checking Reliability Score first — that meaningfully reduce your risk.",
   },
 ] as const
 

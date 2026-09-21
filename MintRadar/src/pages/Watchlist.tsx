@@ -151,7 +151,7 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
             const mint = knownMap.get(url)
             const hostname = (() => { try { return new URL(url).hostname } catch { return url } })()
             const name = mint?.name ?? hostname
-            const score = mint?.trustScore ?? null
+            const score = mint?.reliabilityScore ?? null
             const scoreColor = score == null ? 'var(--text3)' : score >= 70 ? '#4ade80' : score >= 40 ? '#f59e0b' : '#E24B4A'
             const followerNames = recommenders.slice(0, 3).map(pk => getDisplayName(pk)).join(', ')
             return (
@@ -180,7 +180,7 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
                 </div>
                 <div className="wl-rec-right">
                   {score != null && (
-                    <span className="wl-rec-trust" style={{ color: scoreColor, borderColor: scoreColor + '44', background: scoreColor + '11' }}>{score}%</span>
+                    <span className="wl-rec-reliability" style={{ color: scoreColor, borderColor: scoreColor + '44', background: scoreColor + '11' }}>{score}%</span>
                   )}
                   <span className="wl-rec-online-dot">●</span>
                   <button

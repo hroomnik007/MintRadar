@@ -344,7 +344,7 @@ export function parseAuditSwapItem(raw: unknown): ParsedAuditSwap | null {
   }
 }
 
-// total/errors feed the existing Trust Score audit-reliability component + the
+// total/errors feed the existing Reliability Score audit-reliability component + the
 // Audit tab's "Recent errors" cell (unchanged behavior — errors is still
 // "state !== 'OK'"); avgTimeMs is new, over OK swaps with a known time only.
 export function computeSwapStats(swaps: ParsedAuditSwap[]): AuditSwapStats {
@@ -387,7 +387,7 @@ async function fetchRecentSwaps(auditId: number): Promise<ParsedAuditSwap[] | nu
 const AUDIT_SWAPS_INSERT_BATCH = 500
 
 // Atomic per-mint replace of this mint's swap window + the summary columns
-// that feed Trust Score / the Audit tab. Same DELETE+INSERT+UPDATE-in-one-
+// that feed Reliability Score / the Audit tab. Same DELETE+INSERT+UPDATE-in-one-
 // transaction pattern as reviewsSync.ts's persistMintReviews — readers under
 // READ COMMITTED see the complete old set or the complete new set, never a
 // half-deleted window.

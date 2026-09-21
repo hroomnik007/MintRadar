@@ -18,7 +18,7 @@ async function addExtraOnlineMint(page: Page) {
     ...MOCK_KNOWN_MINTS[0],
     url: 'https://echo.mint.example',
     name: 'Echo Mint',
-    trustScore: 66,
+    reliabilityScore: 66,
     reviewCount: 0,
     reviewAvgRating: null,
     reviewWeightedRating: null,
@@ -107,8 +107,8 @@ for (const vp of viewports) {
         await expect(tabs.nth(i)).toHaveClass(/active/)
         const stack = page.locator('.cmp-mobile-stack')
         await expect(stack).toBeVisible()
-        // Trust Score row (or Community Rating fallback) is always present.
-        await expect(stack.locator('.cmp-mobile-lbl', { hasText: 'Trust Score' })).toBeVisible()
+        // Reliability Score row (or Community Rating fallback) is always present.
+        await expect(stack.locator('.cmp-mobile-lbl', { hasText: 'Reliability Score' })).toBeVisible()
 
         const stackScrollWidth = await stack.evaluate(el => el.scrollWidth)
         const stackClientWidth = await stack.evaluate(el => el.clientWidth)

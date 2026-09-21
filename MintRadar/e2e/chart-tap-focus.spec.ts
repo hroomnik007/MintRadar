@@ -21,11 +21,11 @@ test('tapping a chart paints no focus outline on any element under the finger', 
   await installApiMocks(page)
 
   const now = Date.now()
-  await page.route('**/api/stats/trust-trend**', route => route.fulfill({
+  await page.route('**/api/stats/reliability-trend**', route => route.fulfill({
     json: {
       trend: Array.from({ length: 30 }, (_, i) => ({
         date: new Date(now - (29 - i) * 86_400_000).toISOString().slice(0, 10),
-        avgTrust: 60 + (i % 20),
+        avgReliability: 60 + (i % 20),
       })),
       periodDays: 30,
       daysOfDataAvailable: 30,
@@ -67,9 +67,9 @@ test('tapping a chart paints no focus outline on any element under the finger', 
 test('keyboard focus on the chart still shows the accent ring', async ({ page }) => {
   await mockRelays(page)
   await installApiMocks(page)
-  await page.route('**/api/stats/trust-trend**', route => route.fulfill({
+  await page.route('**/api/stats/reliability-trend**', route => route.fulfill({
     json: {
-      trend: [{ date: '2026-01-01', avgTrust: 70 }, { date: '2026-01-02', avgTrust: 80 }],
+      trend: [{ date: '2026-01-01', avgReliability: 70 }, { date: '2026-01-02', avgReliability: 80 }],
       periodDays: 30, daysOfDataAvailable: 30, earliestCheckedAt: '2026-01-01T00:00:00.000Z',
     },
   }))

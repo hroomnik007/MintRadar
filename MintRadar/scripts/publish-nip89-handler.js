@@ -99,7 +99,7 @@ async function main() {
     created_at: Math.floor(Date.now() / 1000),
     content: JSON.stringify({
       name: 'MintRadar',
-      about: 'Real-time Cashu mint monitoring dashboard with Trust Score, NUT compatibility, uptime tracking and community reviews.',
+      about: 'Real-time Cashu mint monitoring dashboard with Reliability Score, NUT compatibility, uptime tracking and community reviews.',
       website: 'https://mintradar.org',
     }),
     tags: [

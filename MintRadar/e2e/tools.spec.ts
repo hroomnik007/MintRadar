@@ -187,8 +187,8 @@ test.describe('Tools', () => {
     await expect(page.locator('.token-memo-row')).toHaveCount(0)
   })
 
-  test('Risk badge is Low risk for an online, high-trust mint', async ({ page }) => {
-    const token = makeCashuToken(MOCK_MINTS[0]!.url, [21]) // Alpha: online, trustScore 92
+  test('Risk badge is Low risk for an online, high-reliability mint', async ({ page }) => {
+    const token = makeCashuToken(MOCK_MINTS[0]!.url, [21]) // Alpha: online, reliabilityScore 92
 
     await page.locator('.token-input').fill(token)
     await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
@@ -299,7 +299,7 @@ test.describe('Tools', () => {
       .toContainText('latency measured from your browser')
   })
 
-  test('Best Mint Wizard result rows use the card Trust formatting (shield + "Trust N")', async ({ page }) => {
+  test('Best Mint Wizard result rows use the card Reliability formatting (shield + "Reliability N")', async ({ page }) => {
     await page.locator('.wizard-unit-select').selectOption('sat')
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
     await page.locator('.wizard-opt', { hasText: 'Speed' }).click()
@@ -308,8 +308,8 @@ test.describe('Tools', () => {
 
     const firstRow = page.locator('.wizard-rec-row').first()
     await expect(firstRow).toBeVisible({ timeout: 15_000 })
-    await expect(firstRow.locator('.wizard-rec-trust')).toContainText(/^Trust \d+$/)
-    await expect(firstRow.locator('.wizard-rec-trust svg')).toBeVisible() // the shield
+    await expect(firstRow.locator('.wizard-rec-reliability')).toContainText(/^Reliability \d+$/)
+    await expect(firstRow.locator('.wizard-rec-reliability svg')).toBeVisible() // the shield
     await expect(firstRow.locator('.wizard-rec-score')).toHaveCount(0)    // no bare "NN%"
   })
 

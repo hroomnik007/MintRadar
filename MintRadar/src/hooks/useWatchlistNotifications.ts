@@ -32,13 +32,13 @@ export const NOTIFICATION_RELAYS = [
   'wss://nostr.cypherpunk.today',
 ]
 
-// Track previous online states and trust scores to detect transitions
+// Track previous online states and reliability scores to detect transitions
 const prevStates = new Map<string, boolean>()
-const prevTrustScores = new Map<string, number>()
+const prevReliabilityScores = new Map<string, number>()
 
 export function useWatchlistNotifications(
   probeData: Record<string, { online: boolean; latencyMs: number | null } | undefined>,
-  trustScoreData?: Record<string, number | null | undefined>,
+  reliabilityScoreData?: Record<string, number | null | undefined>,
   userReadRelays?: string[] | null
 ) {
   const profile = useAuthStore(s => s.profile)
@@ -86,27 +86,27 @@ export function useWatchlistNotifications(
 
         prevStates.set(url, isOnline)
 
-        // Detect trust score changes ≥ 10 points
-        if (trustScoreData) {
-          const currentScore = trustScoreData[url]
+        // Detect reliability score changes ≥ 10 points
+        if (reliabilityScoreData) {
+          const currentScore = reliabilityScoreData[url]
           if (currentScore != null) {
-            const prevScore = prevTrustScores.get(url)
+            const prevScore = prevReliabilityScores.get(url)
             if (prevScore !== undefined && Math.abs(currentScore - prevScore) >= 10) {
               const mintId = encodeURIComponent(url)
               await sendNostrDM(
                 profile.pubkey,
-                `⚡ MintRadar Alert\n\nTrust Score for ${url} changed from ${prevScore}% to ${currentScore}%.\n\nCheck details: https://mintradar.org/mint/${mintId}`,
+                `⚡ MintRadar Alert\n\nReliability Score for ${url} changed from ${prevScore}% to ${currentScore}%.\n\nCheck details: https://mintradar.org/mint/${mintId}`,
                 dmRelays
               )
             }
-            prevTrustScores.set(url, currentScore)
+            prevReliabilityScores.set(url, currentScore)
           }
         }
       }
     }
 
     checkTransitions()
-  }, [probeData, trustScoreData, userReadRelays, watchlist, profile])
+  }, [probeData, reliabilityScoreData, userReadRelays, watchlist, profile])
 }
 
 // NIP-59 recommends randomizing seal/wrap timestamps (up to 2 days in the

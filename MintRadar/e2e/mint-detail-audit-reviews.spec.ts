@@ -17,7 +17,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('.md-tabs')).toBeVisible()
 })
 
-test('Audit tab: summary strip "Recent success rate" matches the Trust Score breakdown', async ({ page }) => {
+test('Audit tab: summary strip "Recent success rate" matches the Reliability Score breakdown', async ({ page }) => {
   await page.locator('.md-tab', { hasText: 'Audit' }).click()
 
   const strip = page.locator('.audit-summary-strip')
@@ -35,11 +35,11 @@ test('Audit tab: summary strip "Recent success rate" matches the Trust Score bre
 
   await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-summary-strip.png' })
 
-  // Cross-check against the sidebar Trust Score breakdown — same 3/100 window.
+  // Cross-check against the sidebar Reliability Score breakdown — same 3/100 window.
   // The breakdown is always visible inline on the Overview sidebar panel now
   // (no "Details ›" click needed).
-  const trustPanel = page.locator('.md-trust-panel')
-  await expect(trustPanel.getByText('Audit reliability (25%)')).toBeVisible()
-  await expect(trustPanel.getByText('3.0% err')).toBeVisible() // 3/100 errors → same source as the strip's 97/100 successes
+  const reliabilityPanel = page.locator('.md-reliability-panel')
+  await expect(reliabilityPanel.getByText('Audit reliability (25%)')).toBeVisible()
+  await expect(reliabilityPanel.getByText('3.0% err')).toBeVisible() // 3/100 errors → same source as the strip's 97/100 successes
   await page.screenshot({ path: 'test-results/audit-breakdown-crosscheck.png' })
 })

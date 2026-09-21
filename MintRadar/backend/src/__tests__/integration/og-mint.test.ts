@@ -27,7 +27,7 @@ beforeEach(async () => {
 function sampleRow(overrides: Record<string, unknown> = {}) {
   return {
     name: 'Example Mint',
-    last_trust_score: 87,
+    last_reliability_score: 87,
     total: 12,
     online_count: 12,
     latest_online: true,
@@ -37,7 +37,7 @@ function sampleRow(overrides: Record<string, unknown> = {}) {
 }
 
 describe('GET /api/og/mint', () => {
-  it('returns a 200 HTML fragment with the mint name, trust score and status for a known mint', async () => {
+  it('returns a 200 HTML fragment with the mint name, reliability score and status for a known mint', async () => {
     query.mockResolvedValueOnce({ rows: [sampleRow()] })
 
     const res = await request(app).get('/api/og/mint').query({ url: 'https://mint.example.com' })
@@ -45,7 +45,7 @@ describe('GET /api/og/mint', () => {
     expect(res.status).toBe(200)
     expect(res.headers['content-type']).toContain('text/html')
     expect(res.text).toContain('<title>Example Mint — MintRadar</title>')
-    expect(res.text).toContain('Trust Score: 87% · Online')
+    expect(res.text).toContain('Reliability Score: 87% · Online')
     expect(res.text).toContain('og:url" content="https://mintradar.org/mint/https%3A%2F%2Fmint.example.com"')
   })
 

@@ -26,7 +26,7 @@ test.describe('Stats NUT coverage modal', () => {
     await expect(modal(page)).toBeVisible()
     await expect(modal(page).locator('.nut-modal-title')).toContainText('NUT-09')
 
-    // supporting mints, sorted by Trust desc: Alpha 92, Delta 78, Bravo 55
+    // supporting mints, sorted by Reliability desc: Alpha 92, Delta 78, Bravo 55
     const rows = modal(page).locator('.nut-modal-row')
     await expect(rows).toHaveCount(3)
     await expect(rows.nth(0)).toContainText('Alpha Mint')
@@ -36,7 +36,7 @@ test.describe('Stats NUT coverage modal', () => {
 
     // footer online/offline + sort note
     await expect(modal(page).locator('.nut-modal-footer')).toContainText('3 online · 0 offline')
-    await expect(modal(page).locator('.nut-modal-footer')).toContainText('Sorted by Trust Score')
+    await expect(modal(page).locator('.nut-modal-footer')).toContainText('Sorted by Reliability Score')
   })
 
   test('no leftover age badges and no "Show on Dashboard" button in the modal', async ({ page }) => {

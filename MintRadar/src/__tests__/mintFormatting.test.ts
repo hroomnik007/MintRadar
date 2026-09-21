@@ -1,21 +1,21 @@
 import { describe, it, expect } from 'vitest'
 import {
   mintAgeBadge,
-  trustScoreColor,
-  trustScoreInfo,
-  trustColor,
+  reliabilityScoreColor,
+  reliabilityScoreInfo,
+  reliabilityColor,
   latencyColor,
   formatTimeAgo,
   formatAuditSuccessRatio,
-  trustDonutArc,
-  TRUST_DONUT_CIRCUMFERENCE,
+  reliabilityDonutArc,
+  RELIABILITY_DONUT_CIRCUMFERENCE,
   normalizeMintUrl,
   mintRiskLevel,
   displayName,
   mintFaviconInitials,
   isNewMint,
   firstSeenLabel,
-  cardTrustLabel,
+  cardReliabilityLabel,
   cardLatencyLabel,
   cardLatencyLocationSuffix,
   cardLightningLabel,
@@ -243,17 +243,17 @@ describe('firstSeenLabel', () => {
   })
 })
 
-// ── cardTrustLabel ───────────────────────────────────────────
-describe('cardTrustLabel', () => {
-  it('is "Trust <n>" for a number, never a bare percentage', () => {
-    expect(cardTrustLabel(68)).toBe('Trust 68')
-    expect(cardTrustLabel(0)).toBe('Trust 0')
-    expect(cardTrustLabel(100)).toBe('Trust 100')
+// ── cardReliabilityLabel ───────────────────────────────────────────
+describe('cardReliabilityLabel', () => {
+  it('is "Reliability <n>" for a number, never a bare percentage', () => {
+    expect(cardReliabilityLabel(68)).toBe('Reliability 68')
+    expect(cardReliabilityLabel(0)).toBe('Reliability 0')
+    expect(cardReliabilityLabel(100)).toBe('Reliability 100')
   })
 
-  it('is "Trust n/a" for null / undefined', () => {
-    expect(cardTrustLabel(null)).toBe('Trust n/a')
-    expect(cardTrustLabel(undefined)).toBe('Trust n/a')
+  it('is "Reliability n/a" for null / undefined', () => {
+    expect(cardReliabilityLabel(null)).toBe('Reliability n/a')
+    expect(cardReliabilityLabel(undefined)).toBe('Reliability n/a')
   })
 })
 
@@ -341,86 +341,86 @@ describe('cardLightningLabel', () => {
   })
 })
 
-// ── trustScoreColor (MintDetail raw colour) ────────────────────
+// ── reliabilityScoreColor (MintDetail raw colour) ────────────────────
 // Thresholds: ≥ 75 → green, ≥ 50 → orange, < 50 → red
-describe('trustScoreColor', () => {
+describe('reliabilityScoreColor', () => {
   it('returns green for score 75', () => {
-    expect(trustScoreColor(75)).toBe('#4ade80')
+    expect(reliabilityScoreColor(75)).toBe('#4ade80')
   })
 
   it('returns green for score 100', () => {
-    expect(trustScoreColor(100)).toBe('#4ade80')
+    expect(reliabilityScoreColor(100)).toBe('#4ade80')
   })
 
   it('returns orange for score 74 (just below green)', () => {
-    expect(trustScoreColor(74)).toBe('#ffa500')
+    expect(reliabilityScoreColor(74)).toBe('#ffa500')
   })
 
   it('returns orange for score 50', () => {
-    expect(trustScoreColor(50)).toBe('#ffa500')
+    expect(reliabilityScoreColor(50)).toBe('#ffa500')
   })
 
   it('returns red for score 49 (just below orange)', () => {
-    expect(trustScoreColor(49)).toBe('#ff4d4d')
+    expect(reliabilityScoreColor(49)).toBe('#ff4d4d')
   })
 
   it('returns red for score 0', () => {
-    expect(trustScoreColor(0)).toBe('#ff4d4d')
+    expect(reliabilityScoreColor(0)).toBe('#ff4d4d')
   })
 })
 
-// ── trustScoreInfo (MintDetail badge) ─────────────────────────
-// Thresholds: ≥ 70 → High Trust, ≥ 40 → Moderate Trust, < 40 → Low Trust
-describe('trustScoreInfo', () => {
-  it('returns High Trust for score 70', () => {
-    expect(trustScoreInfo(70).label).toBe('High Trust')
+// ── reliabilityScoreInfo (MintDetail badge) ─────────────────────────
+// Thresholds: ≥ 70 → High Reliability, ≥ 40 → Moderate Reliability, < 40 → Low Reliability
+describe('reliabilityScoreInfo', () => {
+  it('returns High Reliability for score 70', () => {
+    expect(reliabilityScoreInfo(70).label).toBe('High Reliability')
   })
 
-  it('returns High Trust for score 100', () => {
-    expect(trustScoreInfo(100).label).toBe('High Trust')
+  it('returns High Reliability for score 100', () => {
+    expect(reliabilityScoreInfo(100).label).toBe('High Reliability')
   })
 
-  it('returns Moderate Trust for score 69 (just below High Trust)', () => {
-    expect(trustScoreInfo(69).label).toBe('Moderate Trust')
+  it('returns Moderate Reliability for score 69 (just below High Reliability)', () => {
+    expect(reliabilityScoreInfo(69).label).toBe('Moderate Reliability')
   })
 
-  it('returns Moderate Trust for score 40', () => {
-    expect(trustScoreInfo(40).label).toBe('Moderate Trust')
+  it('returns Moderate Reliability for score 40', () => {
+    expect(reliabilityScoreInfo(40).label).toBe('Moderate Reliability')
   })
 
-  it('returns Low Trust for score 39 (just below Moderate Trust)', () => {
-    expect(trustScoreInfo(39).label).toBe('Low Trust')
+  it('returns Low Reliability for score 39 (just below Moderate Reliability)', () => {
+    expect(reliabilityScoreInfo(39).label).toBe('Low Reliability')
   })
 
-  it('returns Low Trust for score 0', () => {
-    expect(trustScoreInfo(0).label).toBe('Low Trust')
+  it('returns Low Reliability for score 0', () => {
+    expect(reliabilityScoreInfo(0).label).toBe('Low Reliability')
   })
 
-  it('High Trust badge has a green color', () => {
-    expect(trustScoreInfo(90).color).toBe('#4ade80')
+  it('High Reliability badge has a green color', () => {
+    expect(reliabilityScoreInfo(90).color).toBe('#4ade80')
   })
 
-  it('Low Trust badge has a red color', () => {
-    expect(trustScoreInfo(20).color).toBe('#ff4d4d')
+  it('Low Reliability badge has a red color', () => {
+    expect(reliabilityScoreInfo(20).color).toBe('#ff4d4d')
   })
 })
 
-// ── trustColor (Dashboard list view) ──────────────────────────
-// Same thresholds as trustScoreInfo (≥ 70 / ≥ 40 / else)
-describe('trustColor', () => {
+// ── reliabilityColor (Dashboard list view) ──────────────────────────
+// Same thresholds as reliabilityScoreInfo (≥ 70 / ≥ 40 / else)
+describe('reliabilityColor', () => {
   it('returns green for score ≥ 70', () => {
-    expect(trustColor(70)).toBe('#4ade80')
-    expect(trustColor(100)).toBe('#4ade80')
+    expect(reliabilityColor(70)).toBe('#4ade80')
+    expect(reliabilityColor(100)).toBe('#4ade80')
   })
 
   it('returns orange for 40 ≤ score < 70', () => {
-    expect(trustColor(69)).toBe('#ffa500')
-    expect(trustColor(40)).toBe('#ffa500')
+    expect(reliabilityColor(69)).toBe('#ffa500')
+    expect(reliabilityColor(40)).toBe('#ffa500')
   })
 
   it('returns red for score < 40', () => {
-    expect(trustColor(39)).toBe('#ff4d4d')
-    expect(trustColor(0)).toBe('#ff4d4d')
+    expect(reliabilityColor(39)).toBe('#ff4d4d')
+    expect(reliabilityColor(0)).toBe('#ff4d4d')
   })
 })
 
@@ -528,48 +528,48 @@ describe('formatAuditSuccessRatio', () => {
   })
 })
 
-// ── trustDonutArc (Trust Score gauge SVG geometry) ────────────
-describe('trustDonutArc', () => {
+// ── reliabilityDonutArc (Reliability Score gauge SVG geometry) ────────────
+describe('reliabilityDonutArc', () => {
   const total = (dashArray: string) =>
     dashArray.split(' ').reduce((s, n) => s + Number(n), 0)
   const filledLen = (dashArray: string) => Number(dashArray.split(' ')[0])
 
   it('circumference is 2·π·27 for the r=27 gauge circle', () => {
-    expect(TRUST_DONUT_CIRCUMFERENCE).toBeCloseTo(169.646, 2)
+    expect(RELIABILITY_DONUT_CIRCUMFERENCE).toBeCloseTo(169.646, 2)
   })
 
   it('never applies a dash offset — the arc starts at 12 o\'clock via rotate(-90)', () => {
     for (const pct of [0, 20, 50, 80, 100]) {
-      expect(trustDonutArc(pct).dashOffset).toBe(0)
+      expect(reliabilityDonutArc(pct).dashOffset).toBe(0)
     }
   })
 
   it('filled + gap always sum to the full circumference', () => {
     for (const pct of [0, 12.5, 20, 50, 80, 99, 100]) {
-      expect(total(trustDonutArc(pct).dashArray)).toBeCloseTo(TRUST_DONUT_CIRCUMFERENCE, 1)
+      expect(total(reliabilityDonutArc(pct).dashArray)).toBeCloseTo(RELIABILITY_DONUT_CIRCUMFERENCE, 1)
     }
   })
 
   it('fills exactly pct% of the circumference', () => {
-    expect(filledLen(trustDonutArc(0).dashArray)).toBeCloseTo(0, 2)
-    expect(filledLen(trustDonutArc(20).dashArray)).toBeCloseTo(0.20 * TRUST_DONUT_CIRCUMFERENCE, 1)
-    expect(filledLen(trustDonutArc(50).dashArray)).toBeCloseTo(0.50 * TRUST_DONUT_CIRCUMFERENCE, 1)
+    expect(filledLen(reliabilityDonutArc(0).dashArray)).toBeCloseTo(0, 2)
+    expect(filledLen(reliabilityDonutArc(20).dashArray)).toBeCloseTo(0.20 * RELIABILITY_DONUT_CIRCUMFERENCE, 1)
+    expect(filledLen(reliabilityDonutArc(50).dashArray)).toBeCloseTo(0.50 * RELIABILITY_DONUT_CIRCUMFERENCE, 1)
     // regression: 80% must be 80% of the ring (~135.7), not the old ~93 (~55%)
-    expect(filledLen(trustDonutArc(80).dashArray)).toBeCloseTo(135.72, 1)
-    expect(filledLen(trustDonutArc(80).dashArray) / TRUST_DONUT_CIRCUMFERENCE).toBeCloseTo(0.8, 3)
-    expect(filledLen(trustDonutArc(100).dashArray)).toBeCloseTo(TRUST_DONUT_CIRCUMFERENCE, 1)
+    expect(filledLen(reliabilityDonutArc(80).dashArray)).toBeCloseTo(135.72, 1)
+    expect(filledLen(reliabilityDonutArc(80).dashArray) / RELIABILITY_DONUT_CIRCUMFERENCE).toBeCloseTo(0.8, 3)
+    expect(filledLen(reliabilityDonutArc(100).dashArray)).toBeCloseTo(RELIABILITY_DONUT_CIRCUMFERENCE, 1)
   })
 
   it('clamps out-of-range and non-finite input', () => {
-    expect(filledLen(trustDonutArc(-10).dashArray)).toBeCloseTo(0, 2)
-    expect(filledLen(trustDonutArc(150).dashArray)).toBeCloseTo(TRUST_DONUT_CIRCUMFERENCE, 1)
-    expect(filledLen(trustDonutArc(NaN).dashArray)).toBeCloseTo(0, 2)
+    expect(filledLen(reliabilityDonutArc(-10).dashArray)).toBeCloseTo(0, 2)
+    expect(filledLen(reliabilityDonutArc(150).dashArray)).toBeCloseTo(RELIABILITY_DONUT_CIRCUMFERENCE, 1)
+    expect(filledLen(reliabilityDonutArc(NaN).dashArray)).toBeCloseTo(0, 2)
   })
 })
 
 // ── normalizeMintUrl (Token Inspector mint matching) ────────────
 // Mirrors backend/src/discovery.ts normalizeUrl() — kept in sync manually,
-// same as trustScore.ts/auditScore.ts (see backend/src/__tests__/normalizeUrl.test.ts
+// same as reliabilityScore.ts/auditScore.ts (see backend/src/__tests__/normalizeUrl.test.ts
 // for the backend's own equivalent test suite).
 describe('normalizeMintUrl', () => {
   it('lowercases the hostname', () => {
@@ -595,43 +595,43 @@ describe('normalizeMintUrl', () => {
 
 // ── mintRiskLevel (Token Inspector risk badge) ──────────────────
 // Single-mint risk, not a multi-mint aggregation. Thresholds deliberately
-// match trustScoreInfo()'s 70/40 bands so "Low Trust" and "Medium risk"
-// never disagree about the same trustScore.
+// match reliabilityScoreInfo()'s 70/40 bands so "Low Reliability" and "Medium risk"
+// never disagree about the same reliabilityScore.
 describe('mintRiskLevel', () => {
   it('is Unknown when the mint is not in /api/mints/known at all', () => {
     expect(mintRiskLevel(null).label).toBe('Unknown')
   })
 
   it('is High risk when the mint is offline', () => {
-    expect(mintRiskLevel({ online: false, degraded: false, trustScore: 92 }).label).toBe('High risk')
+    expect(mintRiskLevel({ online: false, degraded: false, reliabilityScore: 92 }).label).toBe('High risk')
   })
 
   it('is High risk when the mint is degraded, even if the last known online flag is true', () => {
-    expect(mintRiskLevel({ online: true, degraded: true, trustScore: 92 }).label).toBe('High risk')
+    expect(mintRiskLevel({ online: true, degraded: true, reliabilityScore: 92 }).label).toBe('High risk')
   })
 
-  it('is Medium risk when online with a trust score below 40', () => {
-    expect(mintRiskLevel({ online: true, degraded: false, trustScore: 39 }).label).toBe('Medium risk')
+  it('is Medium risk when online with a reliability score below 40', () => {
+    expect(mintRiskLevel({ online: true, degraded: false, reliabilityScore: 39 }).label).toBe('Medium risk')
   })
 
-  it('is Low risk when online with a trust score of 40 or above', () => {
-    expect(mintRiskLevel({ online: true, degraded: false, trustScore: 40 }).label).toBe('Low risk')
-    expect(mintRiskLevel({ online: true, degraded: false, trustScore: 92 }).label).toBe('Low risk')
+  it('is Low risk when online with a reliability score of 40 or above', () => {
+    expect(mintRiskLevel({ online: true, degraded: false, reliabilityScore: 40 }).label).toBe('Low risk')
+    expect(mintRiskLevel({ online: true, degraded: false, reliabilityScore: 92 }).label).toBe('Low risk')
   })
 
-  it('treats a missing trust score as 0 for an online mint (Medium, not a crash)', () => {
-    expect(mintRiskLevel({ online: true, degraded: false, trustScore: null }).label).toBe('Medium risk')
-    expect(mintRiskLevel({ online: true, degraded: false, trustScore: undefined }).label).toBe('Medium risk')
+  it('treats a missing reliability score as 0 for an online mint (Medium, not a crash)', () => {
+    expect(mintRiskLevel({ online: true, degraded: false, reliabilityScore: null }).label).toBe('Medium risk')
+    expect(mintRiskLevel({ online: true, degraded: false, reliabilityScore: undefined }).label).toBe('Medium risk')
   })
 })
 
 // ── resolveMintDetailUrl (bare-host /mint/:url collision fix) ──
 describe('resolveMintDetailUrl', () => {
   const known = [
-    { url: 'https://21mint.me', online: true, trustScore: 70 },
-    { url: 'https://alpha.mint.example', online: true, trustScore: 92 },
-    { url: 'https://bitcoin.aleafnd.org/cashu', online: true, trustScore: 60 },
-    { url: 'https://btc.aleafnd.org/cashu', online: true, trustScore: 55 },
+    { url: 'https://21mint.me', online: true, reliabilityScore: 70 },
+    { url: 'https://alpha.mint.example', online: true, reliabilityScore: 92 },
+    { url: 'https://bitcoin.aleafnd.org/cashu', online: true, reliabilityScore: 60 },
+    { url: 'https://btc.aleafnd.org/cashu', online: true, reliabilityScore: 55 },
   ]
 
   it('passes an already-canonical tracked URL through untouched', () => {
@@ -659,16 +659,16 @@ describe('resolveMintDetailUrl', () => {
 
   it('prefers a probed row over a never-probed NIP-87 stub on the same host', () => {
     const withStub = [
-      { url: 'https://ghost.example', online: null, trustScore: null },   // NIP-87-only stub
-      { url: 'https://ghost.example/Bitcoin', online: true, trustScore: 68 }, // real tracked mint
+      { url: 'https://ghost.example', online: null, reliabilityScore: null },   // NIP-87-only stub
+      { url: 'https://ghost.example/Bitcoin', online: true, reliabilityScore: 68 }, // real tracked mint
     ]
     expect(resolveMintDetailUrl('ghost.example', withStub)).toEqual({ kind: 'redirect', url: 'https://ghost.example/Bitcoin' })
   })
 
   it('prefers the bare-root https://host row when it is probed', () => {
     const rows = [
-      { url: 'https://h.example/Bitcoin', online: true, trustScore: 80 },
-      { url: 'https://h.example', online: true, trustScore: 50 },
+      { url: 'https://h.example/Bitcoin', online: true, reliabilityScore: 80 },
+      { url: 'https://h.example', online: true, reliabilityScore: 50 },
     ]
     expect(resolveMintDetailUrl('h.example', rows)).toEqual({ kind: 'redirect', url: 'https://h.example' })
   })

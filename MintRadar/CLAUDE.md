@@ -51,11 +51,11 @@ audit_n_errors INTEGER
 audit_checked_at TIMESTAMPTZ    -- audit.8333.space's own `updated_at` for this mint
 audit_synced_at TIMESTAMPTZ     -- when OUR 6h discovery cron last wrote the audit_* cols (drives Audit tab "Last checked X ago")
 audit_avg_time_ms DOUBLE PRECISION  -- mean time_taken (ms) over OK swaps in the same rolling window as audit_recent_total/errors — see mint_audit_swaps below. Backend-only as of 2026-09-12 (not yet surfaced in the Audit tab UI).
-last_trust_score INTEGER
+last_reliability_score INTEGER
 last_error TEXT
-trust_score_7d_ago INTEGER      -- Trust Score Movers rollup (see Cron jobs)
-trust_score_30d_ago INTEGER
-trust_movers_checked_at TIMESTAMPTZ
+reliability_score_7d_ago INTEGER      -- Reliability Score Movers rollup (see Cron jobs)
+reliability_score_30d_ago INTEGER
+reliability_movers_checked_at TIMESTAMPTZ
 ```
 
 ### mint_history
@@ -125,13 +125,13 @@ anonymized sample payloads captured from a live diagnostic GET against the Minib
 
 ## Backend API
 - GET /health — health check
-- GET /api/mints/known — all mints with online status, latency, trust score, degraded flag (TTL cached 60s)
+- GET /api/mints/known — all mints with online status, latency, reliability score, degraded flag (TTL cached 60s)
 - GET /api/mints/history?url=&period={24h|7d|30d|90d} — bucketed uptime/latency segments + prev period trend
 - GET /api/mints/version-history?url= — per-mint software version timeline + latest global version
 - GET /api/mints/daily-uptime?url= — daily uptime counts for last 30 days
 - GET /api/mints/swaps?url= — the audit.8333.space rolling-window swap detail (`mint_audit_swaps`, ≤100 rows) for one mint plus `avgTimeMs`. Added 2026-09-12, deliberately kept OUT of `/api/mints/known` (which is fetched on every Dashboard load for every mint — embedding the full per-mint swap list there would multiply that payload ~65x for a feature only a not-yet-built Mint Detail view would use); `/api/mints/known` gains only the small scalar `auditAvgTimeMs`. Same url validation (`https://`, `MAX_URL_LENGTH`, `isSafeUrl`) as `/api/mints/history`\|`version-history`\|`daily-uptime`. `Cache-Control: max-age=300`. No frontend UI reads this endpoint yet.
-- GET /api/stats — network-wide stats: totalMints, onlineMints, offlineMints, avgTrustScore, avgLatency24h, trustDistribution, nutAdoption, top5ByTrustScore
-- GET /api/stats/trust-movers?period={7d|30d} — Trust Score risers/fallers (Stats page). As of 2026-09-01 a plain read of `mints` (`last_trust_score` + `trust_score_{7,30}d_ago` rollup columns), NOT the old two `DISTINCT ON` passes over all of `mint_history` (~2.5s cold — the "old" CTE had no time bound and `trust_score IS NOT NULL` was unindexed). Rollup is refreshed by `refreshTrustMoversRollup()` (`backend/src/trustMoversRollup.ts`) on the 5-min probe cron + ~15s after boot; partial index `idx_mint_history_score_checked ON mint_history(url, checked_at DESC) WHERE trust_score IS NOT NULL` backs its point-in-time lookups. In-memory cache TTL 10min (own `TRUST_MOVERS_CACHE_TTL`, not `KNOWN_MINTS_CACHE_TTL`). +/-3 threshold + top-3 ranking in `trustMovers.ts` (`computeTrustMovers`). Frontend panel (`src/components/stats/TrustMoversPanel.tsx`) takes `loading`/`refreshing` props — skeleton while pending, `keepPreviousData` across the 7d/30d toggle; "No data yet" shows only for a settled-but-empty result.
+- GET /api/stats — network-wide stats: totalMints, onlineMints, offlineMints, avgReliabilityScore, avgLatency24h, reliabilityDistribution, nutAdoption, top5ByReliabilityScore
+- GET /api/stats/reliability-movers?period={7d|30d} — Reliability Score risers/fallers (Stats page). As of 2026-09-01 a plain read of `mints` (`last_reliability_score` + `reliability_score_{7,30}d_ago` rollup columns), NOT the old two `DISTINCT ON` passes over all of `mint_history` (~2.5s cold — the "old" CTE had no time bound and `reliability_score IS NOT NULL` was unindexed). Rollup is refreshed by `refreshReliabilityMoversRollup()` (`backend/src/reliabilityMoversRollup.ts`) on the 5-min probe cron + ~15s after boot; partial index `idx_mint_history_score_checked ON mint_history(url, checked_at DESC) WHERE reliability_score IS NOT NULL` backs its point-in-time lookups. In-memory cache TTL 10min (own `RELIABILITY_MOVERS_CACHE_TTL`, not `KNOWN_MINTS_CACHE_TTL`). +/-3 threshold + top-3 ranking in `reliabilityMovers.ts` (`computeReliabilityMovers`). Frontend panel (`src/components/stats/ReliabilityMoversPanel.tsx`) takes `loading`/`refreshing` props — skeleton while pending, `keepPreviousData` across the 7d/30d toggle; "No data yet" shows only for a settled-but-empty result.
 - GET /api/mint/probe?url= — on-demand probe of a single mint URL (unauthenticated, SSRF-guarded). **Response scope (2026-09-07 audit L5):** for a mint already in `mints` the full live `/v1/info` + keysets are returned (Mint Detail needs it; the cron already probes those hosts continuously). For any OTHER url only `online` / `latencyMs` / `checkedAt` + a stripped `info` (`name`, `version`, `nuts` with keys only — enough for the Dashboard submit preview) are returned, and `keysets: null` — so it can't be used as a general "fetch and echo the JSON body of arbitrary public host X" oracle.
 - GET /api/mint/icon?url= — SSRF-safe favicon proxy (`backend/src/mintIcon.ts`). `MintFavicon` points every mint `<img>` here instead of fetching the mint-supplied `icon_url` directly — a hostile `icon_url` in a mint's `/v1/info` would otherwise turn every page view into an IP/User-Agent tracking beacon to a host the operator picks (2026-09-07 security audit). Resolves `icon_url` from the DB for a **known mint only** (never proxies an arbitrary caller URL), fetches it via `safeFetch` (SSRF guard + DNS pinning), re-serves the bytes from our origin. Raster + `.ico` only, `Content-Type` allow-list, in-process cache (6h positive / **24h negative**, raised 2026-09-20 from 30min — upstream hit ≤ once/mint/TTL). Anything unsafe/unfetchable → 404 + the client shows its bundled SVG placeholder. `Cache-Control: public, max-age=86400`; `CSP: default-src 'none'; sandbox` + `Cross-Origin-Resource-Policy: same-origin` on the response. Exempt from the per-IP rate limit. **Client-side failure memoization (2026-09-20):** `MintFavicon.tsx` also consults `src/utils/mintIconFailureCache.ts` (localStorage-backed, 24h TTL, keyed by mint url) before rendering `<img>` — a mint whose icon recently `onError`'d skips straight to the monogram placeholder on the next mount (e.g. the grid remounting cards on a sort/filter change) instead of re-requesting the proxy every time. Complements, doesn't replace, the server-side negative cache above.
   - **2026-09-08 (commit `23fd95e`), driven by a temporary diagnostic-logging run** (65/94 favicons were 404-ing → frontend monogram; 54 = NULL `icon_url` in DB, 5 = a 1–2 MB logo, 2 = a real image served as `application/octet-stream`, rest = upstream 429/404):
@@ -152,13 +152,13 @@ anonymized sample payloads captured from a live diagnostic GET against the Minib
 - totalMints: **every row in `mints`** — the handler's query 1 is a plain `SELECT … FROM mints m` with **no `WHERE`**, and `totalMints = rows.length`. This is the same full set `/api/mints/known` returns (also unfiltered), so **`/api/stats.totalMints === /api/mints/known.length`** by construction. Integration test `backend/src/__tests__/integration/known-count-consistency.test.ts` locks that invariant (added 2026-09-08 — see "Dashboard Mint Count Distinction" below). Do NOT add a `WHERE is_known` / `.filter()` to one endpoint's count without the other.
 - onlineMints: mints where latest online = true
 - offlineMints: mints where latest online = false (NOT `total - online` — never-probed `online = null` rows count toward neither)
-- avgTrustScore: average of (last_trust_score ?? 0) for online mints only
-- trustDistribution: low/moderate/high counts from online mints only (same filter as avgTrustScore)
-- top5ByTrustScore: excludes `isTestMint()` URLs (backend copy in `backend/src/testMints.ts`)
+- avgReliabilityScore: average of (last_reliability_score ?? 0) for online mints only
+- reliabilityDistribution: low/moderate/high counts from online mints only (same filter as avgReliabilityScore)
+- top5ByReliabilityScore: excludes `isTestMint()` URLs (backend copy in `backend/src/testMints.ts`)
 
-## Trust Score calculation (server-side, in prober.ts)
+## Reliability Score calculation (server-side, in prober.ts)
 
-**Current weights (verified against `backend/src/shared/trustScore.ts`/`auditScore.ts`,
+**Current weights (verified against `backend/src/shared/reliabilityScore.ts`/`auditScore.ts`,
 2026-09-19): Uptime 40% · Audit reliability 25% · NUT Support 15% · Version freshness 15% ·
 Contact info 5%.** These were reweighted 2026-09-12 (commit `6ae582b`, "reweight toward
 audit") from an earlier 45/5/30/15/5 split — **Uptime 45%→40%, Audit reliability 5%→25% (its
@@ -170,30 +170,30 @@ not this document**. Same source list used by Learn Module 3's breakdown
 (`src/pages/learn/Module3.tsx`).
 
 - Uptime 40%: uptimePct * 0.40 (from 24h mint_history)
-- Audit reliability 25%: based on error rate from a **rolling window of the mint's last ~100 swaps** (`audit_recent_errors`/`audit_recent_total`, fetched per-mint from `GET /swaps/mint/{id}` on audit.8333.space — see Discovery pipeline below), not audit.8333.space's cumulative lifetime counters — bucket logic (0%→25, <1%→20, <5%→15, <15%→10, ≥15%→5, null or <3 samples ("Unknown")→12.5) lives in `backend/src/shared/auditScore.ts` (`auditReliabilityScore()`/`isAuditUnknown()`), the source of truth shared with the frontend's Trust Score Breakdown. **The 2026-09-12 reweight also rescaled this function's own return range from 1–5 points to 5–25 points** (and its neutral/unknown default from 2.5 to 12.5) so the component still tops out at its new 25% weight — the bucket boundaries themselves (0%/1%/5%/15% error rate) are unchanged, only the point values at each bucket. `src/utils/auditScore.ts` is a manually-synced copy (the two packages have no workspace set up between them) — edit both if the logic ever changes. `audit_n_mints`/`audit_n_melts`/`audit_n_errors` (cumulative lifetime counts) are kept separately for the Audit tab's all-time context — they no longer feed the score. **Audit tab layout (2026-09-03):** the tab leads with a compact **`.audit-summary-strip`** — a 4-cell 5-second overview: **Mints** (`auditNMints`) · **Melts** (`auditNMelts`) · **Recent success rate** (`formatAuditSuccessRatio(auditRecentTotal, auditRecentErrors)` → `"<successes> / <total>"` — **fixed 2026-09-11/12: renamed from "Recent errors"/`formatAuditErrorRatio`, which showed the error count as the headline number; the cell now leads with successes**, coloured by `auditReliabilityColor()` so it can't disagree at a glance with the sidebar Trust Score Breakdown; sub-line is `"<n>% ok"` / `"too few to score"` (via `isAuditUnknown()`) / `"no recent swaps"`) · **Last checked** (`formatTimeAgo(auditSyncedAt)` — **our** cron's write time, NOT `auditCheckedAt`). The strip sits *outside* the mobile collapse (always visible). Below it, inside the collapse, a single **`.audit-alltime-line`** carries the lifetime totals + `%` and the "Recent errors feeds Trust Score" note, plus a short explainer sentence (added 2026-09-04) clarifying that the recent-errors figure — not the all-time one — drives the Trust Score. This **replaced** the old 3-card all-time `.audit-stats-grid` + separate green "Recent reliability" `.audit-recent-card` band (both duplicated the same numbers). `formatTimeAgo`/`formatAuditErrorRatio` live in `src/utils/mintFormatting.ts` (unit-tested); e2e in `e2e/mint-detail-audit-summary-strip.spec.ts`. Window size = `AUDIT_SWAPS_WINDOW` (100) in `backend/src/discovery.ts`.  - **2026-09-12 additions (frontend, consuming the `mint_audit_swaps`/`audit_avg_time_ms` backend work above):** the strip's "Recent success rate" sub-line now shows the actual percentage (`"<n>% ok"`, computed client-side from `auditRecentTotal`/`auditRecentErrors`) instead of the bare word "ok". A 5th strip cell, **Avg swap time**, renders `knownMint.auditAvgTimeMs` as `"<n> ms"` or `"n/a"`. Below the strip: an **outcome bar** (`.audit-swap-bar`, ≤44 marks, newest left — mint-green `.audit-swap-bar-ok` / red `.audit-swap-bar-fail`) and a **Recent swaps table** (`.audit-recent-swaps`, last 8 rows — To host via `mintHostname()`, Amount `sat`, Fee, Duration `ms`, State; failed rows muted red via `.audit-swap-row-fail`), both fed by a new `useQuery(['mint','audit-swaps',url])` against `GET /api/mints/swaps?url=` — lazily fetched only once the Audit tab is opened (`enabled: activeTab === 'audit'`), still never audit.8333.space directly from the browser. Neither the bar nor the table renders anything (no fake/placeholder marks) until that fetch actually resolves with a non-empty `swaps` array. A text link **"Open on audit.8333.space →"** (`.audit-external-link`, new tab, `rel="noopener noreferrer"`) points at the auditor's homepage, not a per-mint deep link — its own SPA bundle was checked and has no `/mint/:id`-style route (only `"/"` and a catch-all), so a guessed deep link would 404; `audit_id` itself is still not exposed by any API and wasn't added for this. Trust Score math, other tabs, and probes are unchanged.
-  - **`auditReliabilityColor()` (`src/utils/mintFormatting.ts`, 2026-09-04) is a separate, UI-only coloring function — deliberately NOT the same thresholds as `auditReliabilityScore()`'s 5–25 scoring buckets above**, and it does not feed the Trust Score number. It colors directly off the raw error rate: `var(--fast)` (green) at ≤5% errors, `var(--med)` (amber) at ≤25%, `var(--slow)` (red) above that — `< 3` samples renders muted (`var(--t3)`). The bucket scoring is much stricter (e.g. a 5% error rate already scores 15/25, two tiers down from the max), which read as misleadingly alarming at a glance for what's actually a 95%-success mint; the amber cutoff was widened from an initial 15% to 25% the same day after review. Used by both the Audit summary strip's "Recent errors" cell and the Trust Score Breakdown's "Audit reliability" row.
-- NUT Support 15%: min(nutCount/14, 1) * 15 — 14 is the number of mint-side NUTs actually tracked (`TRACKED_NUTS` in `src/constants/nuts.ts`, mirrored as `TRACKED_NUT_COUNT`/`TRACKED_NUT_KEYS` in `backend/src/shared/trustScore.ts`). Shrunk from 25 to 14 on 2026-09-14 — see "NUT tracking scope: mint-side vs. wallet-only" below. `nutCount` itself (the `mints.nut_count` column, written by `prober.ts`) now counts only the intersection of a mint's `/v1/info` `nuts` keys with `TRACKED_NUT_KEYS` — previously it was `Object.keys(nuts).length`, which let auth (21/22) and payment-method (23/25/30) keys inflate this component even though they were never part of the denominator's intent.
-- Version freshness 15%: software-aware version recency (fixed 2026-08-19 — previously every mint was compared against `NUTSHELL_VERSIONS` regardless of software, so a current `cdk-mintd` mint was penalized as a stale Nutshell, and unrecognized software with a higher major version — e.g. `LekMint/1.1.1` — got an automatic full score with zero verification). `versionFreshnessScore()` (`backend/src/shared/trustScore.ts`, mirrored in `src/utils/trustScore.ts`) first splits the raw `"Software/X.Y.Z"` version string (`splitVersionString()`) and identifies the software (`canonicalSoftwareName()` — case-insensitive, exact match only, so `Nutshell-CF` does NOT match `nutshell`). Recognized software (`nutshell`, `cdk`/`cdk-mintd`) is scored against its own version ladder; software with no ladder at all scores a neutral **2.5** (same neutral default as audit reliability's pre-reweight "Unknown" state — not 0, not 10; this function's own internal 0-10 scale was not touched by the 2026-09-12 reweight, only `versionComponent()`'s existing */10*15 conversion applies it to the 15% weight). `normalizeVersionNumber()` strips a leading `v` (GitHub tag convention) and any `-rc.N`/prerelease suffix before comparing (patch number is extracted but not yet used by the scoring granularity). The version ladder itself prefers the `software_versions` DB table (`software`, `latest_version`, `fetched_at`, `source_url` — updated daily from the GitHub Releases API by `fetchLatestUpstreamVersions()` in `backend/src/versionCatalog.ts`, read via `getLatestVersionsMap()` and passed into `computeServerTrustScore()` in `prober.ts`) and falls back to the static `NUTSHELL_VERSIONS`/`CDK_VERSIONS` lists in `trustScore.ts` when the DB has no row yet for that software (fresh deploy, before the first cron run — `db.ts`'s `initDb()` seeds both rows so this never actually happens in practice). The frontend copy has no DB access and always uses the static fallback.
-- Contact info 5%: `mints.contact_count` stores the last successfully observed count. A probe that can't reach `/v1/info` learns nothing about contacts, so it falls back to the stored value instead of scoring the mint as having none (previously a failed probe silently zeroed this component). `contactComponent()` clamps the count to **3** before scoring (`Math.min(contactCount, 3) / 3 * 5`) — 3+ contacts award the full 5 points and never more. This clamp is an explicit anti-inflation guard: `contact_count` is the raw length of the mint's own `/v1/info` `contact` array (untrusted operator input), and without it a mint advertising e.g. 60 contact entries scored 100 on this component alone, saturating its whole Trust Score (2026-09-07 security audit, finding H1). The frontend's `contactCountOf()` already passes at most 3 (it only looks at email/twitter/nostr fields); the clamp closes the backend path. Unchanged by the 2026-09-12 reweight.
-- **New-mint score cap (added in the same 2026-09-12 `6ae582b` reweight):** `NEW_MINT_TRUST_CAP`
-  (75) / `NEW_MINT_MAX_DAYS` (30), `applyNewMintCap()` in `backend/src/shared/trustScore.ts` —
-  `computeTrustScore()`'s final step caps the summed total at 75 for a mint's first 30 days
+- Audit reliability 25%: based on error rate from a **rolling window of the mint's last ~100 swaps** (`audit_recent_errors`/`audit_recent_total`, fetched per-mint from `GET /swaps/mint/{id}` on audit.8333.space — see Discovery pipeline below), not audit.8333.space's cumulative lifetime counters — bucket logic (0%→25, <1%→20, <5%→15, <15%→10, ≥15%→5, null or <3 samples ("Unknown")→12.5) lives in `backend/src/shared/auditScore.ts` (`auditReliabilityScore()`/`isAuditUnknown()`), the source of truth shared with the frontend's Reliability Score Breakdown. **The 2026-09-12 reweight also rescaled this function's own return range from 1–5 points to 5–25 points** (and its neutral/unknown default from 2.5 to 12.5) so the component still tops out at its new 25% weight — the bucket boundaries themselves (0%/1%/5%/15% error rate) are unchanged, only the point values at each bucket. `src/utils/auditScore.ts` is a manually-synced copy (the two packages have no workspace set up between them) — edit both if the logic ever changes. `audit_n_mints`/`audit_n_melts`/`audit_n_errors` (cumulative lifetime counts) are kept separately for the Audit tab's all-time context — they no longer feed the score. **Audit tab layout (2026-09-03):** the tab leads with a compact **`.audit-summary-strip`** — a 4-cell 5-second overview: **Mints** (`auditNMints`) · **Melts** (`auditNMelts`) · **Recent success rate** (`formatAuditSuccessRatio(auditRecentTotal, auditRecentErrors)` → `"<successes> / <total>"` — **fixed 2026-09-11/12: renamed from "Recent errors"/`formatAuditErrorRatio`, which showed the error count as the headline number; the cell now leads with successes**, coloured by `auditReliabilityColor()` so it can't disagree at a glance with the sidebar Reliability Score Breakdown; sub-line is `"<n>% ok"` / `"too few to score"` (via `isAuditUnknown()`) / `"no recent swaps"`) · **Last checked** (`formatTimeAgo(auditSyncedAt)` — **our** cron's write time, NOT `auditCheckedAt`). The strip sits *outside* the mobile collapse (always visible). Below it, inside the collapse, a single **`.audit-alltime-line`** carries the lifetime totals + `%` and the "Recent errors feeds Reliability Score" note, plus a short explainer sentence (added 2026-09-04) clarifying that the recent-errors figure — not the all-time one — drives the Reliability Score. This **replaced** the old 3-card all-time `.audit-stats-grid` + separate green "Recent reliability" `.audit-recent-card` band (both duplicated the same numbers). `formatTimeAgo`/`formatAuditErrorRatio` live in `src/utils/mintFormatting.ts` (unit-tested); e2e in `e2e/mint-detail-audit-summary-strip.spec.ts`. Window size = `AUDIT_SWAPS_WINDOW` (100) in `backend/src/discovery.ts`.  - **2026-09-12 additions (frontend, consuming the `mint_audit_swaps`/`audit_avg_time_ms` backend work above):** the strip's "Recent success rate" sub-line now shows the actual percentage (`"<n>% ok"`, computed client-side from `auditRecentTotal`/`auditRecentErrors`) instead of the bare word "ok". A 5th strip cell, **Avg swap time**, renders `knownMint.auditAvgTimeMs` as `"<n> ms"` or `"n/a"`. Below the strip: an **outcome bar** (`.audit-swap-bar`, ≤44 marks, newest left — mint-green `.audit-swap-bar-ok` / red `.audit-swap-bar-fail`) and a **Recent swaps table** (`.audit-recent-swaps`, last 8 rows — To host via `mintHostname()`, Amount `sat`, Fee, Duration `ms`, State; failed rows muted red via `.audit-swap-row-fail`), both fed by a new `useQuery(['mint','audit-swaps',url])` against `GET /api/mints/swaps?url=` — lazily fetched only once the Audit tab is opened (`enabled: activeTab === 'audit'`), still never audit.8333.space directly from the browser. Neither the bar nor the table renders anything (no fake/placeholder marks) until that fetch actually resolves with a non-empty `swaps` array. A text link **"Open on audit.8333.space →"** (`.audit-external-link`, new tab, `rel="noopener noreferrer"`) points at the auditor's homepage, not a per-mint deep link — its own SPA bundle was checked and has no `/mint/:id`-style route (only `"/"` and a catch-all), so a guessed deep link would 404; `audit_id` itself is still not exposed by any API and wasn't added for this. Reliability Score math, other tabs, and probes are unchanged.
+  - **`auditReliabilityColor()` (`src/utils/mintFormatting.ts`, 2026-09-04) is a separate, UI-only coloring function — deliberately NOT the same thresholds as `auditReliabilityScore()`'s 5–25 scoring buckets above**, and it does not feed the Reliability Score number. It colors directly off the raw error rate: `var(--fast)` (green) at ≤5% errors, `var(--med)` (amber) at ≤25%, `var(--slow)` (red) above that — `< 3` samples renders muted (`var(--t3)`). The bucket scoring is much stricter (e.g. a 5% error rate already scores 15/25, two tiers down from the max), which read as misleadingly alarming at a glance for what's actually a 95%-success mint; the amber cutoff was widened from an initial 15% to 25% the same day after review. Used by both the Audit summary strip's "Recent errors" cell and the Reliability Score Breakdown's "Audit reliability" row.
+- NUT Support 15%: min(nutCount/14, 1) * 15 — 14 is the number of mint-side NUTs actually tracked (`TRACKED_NUTS` in `src/constants/nuts.ts`, mirrored as `TRACKED_NUT_COUNT`/`TRACKED_NUT_KEYS` in `backend/src/shared/reliabilityScore.ts`). Shrunk from 25 to 14 on 2026-09-14 — see "NUT tracking scope: mint-side vs. wallet-only" below. `nutCount` itself (the `mints.nut_count` column, written by `prober.ts`) now counts only the intersection of a mint's `/v1/info` `nuts` keys with `TRACKED_NUT_KEYS` — previously it was `Object.keys(nuts).length`, which let auth (21/22) and payment-method (23/25/30) keys inflate this component even though they were never part of the denominator's intent.
+- Version freshness 15%: software-aware version recency (fixed 2026-08-19 — previously every mint was compared against `NUTSHELL_VERSIONS` regardless of software, so a current `cdk-mintd` mint was penalized as a stale Nutshell, and unrecognized software with a higher major version — e.g. `LekMint/1.1.1` — got an automatic full score with zero verification). `versionFreshnessScore()` (`backend/src/shared/reliabilityScore.ts`, mirrored in `src/utils/reliabilityScore.ts`) first splits the raw `"Software/X.Y.Z"` version string (`splitVersionString()`) and identifies the software (`canonicalSoftwareName()` — case-insensitive, exact match only, so `Nutshell-CF` does NOT match `nutshell`). Recognized software (`nutshell`, `cdk`/`cdk-mintd`) is scored against its own version ladder; software with no ladder at all scores a neutral **2.5** (same neutral default as audit reliability's pre-reweight "Unknown" state — not 0, not 10; this function's own internal 0-10 scale was not touched by the 2026-09-12 reweight, only `versionComponent()`'s existing */10*15 conversion applies it to the 15% weight). `normalizeVersionNumber()` strips a leading `v` (GitHub tag convention) and any `-rc.N`/prerelease suffix before comparing (patch number is extracted but not yet used by the scoring granularity). The version ladder itself prefers the `software_versions` DB table (`software`, `latest_version`, `fetched_at`, `source_url` — updated daily from the GitHub Releases API by `fetchLatestUpstreamVersions()` in `backend/src/versionCatalog.ts`, read via `getLatestVersionsMap()` and passed into `computeServerReliabilityScore()` in `prober.ts`) and falls back to the static `NUTSHELL_VERSIONS`/`CDK_VERSIONS` lists in `reliabilityScore.ts` when the DB has no row yet for that software (fresh deploy, before the first cron run — `db.ts`'s `initDb()` seeds both rows so this never actually happens in practice). The frontend copy has no DB access and always uses the static fallback.
+- Contact info 5%: `mints.contact_count` stores the last successfully observed count. A probe that can't reach `/v1/info` learns nothing about contacts, so it falls back to the stored value instead of scoring the mint as having none (previously a failed probe silently zeroed this component). `contactComponent()` clamps the count to **3** before scoring (`Math.min(contactCount, 3) / 3 * 5`) — 3+ contacts award the full 5 points and never more. This clamp is an explicit anti-inflation guard: `contact_count` is the raw length of the mint's own `/v1/info` `contact` array (untrusted operator input), and without it a mint advertising e.g. 60 contact entries scored 100 on this component alone, saturating its whole Reliability Score (2026-09-07 security audit, finding H1). The frontend's `contactCountOf()` already passes at most 3 (it only looks at email/twitter/nostr fields); the clamp closes the backend path. Unchanged by the 2026-09-12 reweight.
+- **New-mint score cap (added in the same 2026-09-12 `6ae582b` reweight):** `NEW_MINT_RELIABILITY_CAP`
+  (75) / `NEW_MINT_MAX_DAYS` (30), `applyNewMintCap()` in `backend/src/shared/reliabilityScore.ts` —
+  `computeReliabilityScore()`'s final step caps the summed total at 75 for a mint's first 30 days
   after `discovered_at`, regardless of how high its five components would otherwise sum. This
   discounts a brand-new mint's *score* but does not by itself remove it from a top-5 ranking —
   see "Recommendation-surface minimum age gate" below for the separate, newer (2026-09-19)
   `isEligibleForRecommendation()` gate that additionally excludes anything younger than 14 days
   from recommendation surfaces outright, regardless of its (capped or uncapped) score.
-- Stored in mints.last_trust_score after each probe
-- **The whole computation lives in `backend/src/shared/trustScore.ts`** (`computeTrustScore()` plus the per-component `uptimeComponent`/`nutComponent`/`versionComponent`/`contactComponent` helpers). `prober.ts` re-exports it as `computeServerTrustScore`/`serverVersionFreshnessScore` for its existing call sites and tests. `src/utils/trustScore.ts` is the manually-synced frontend copy (same no-workspace caveat as `auditScore.ts`) — edit both if the logic changes. The frontend used to carry a second, silently divergent implementation in `MintDetail.tsx` (its own `NUTSHELL_VERSIONS` list topped out at 0.21 vs. the backend's 0.16, so the Trust Score Breakdown's Version row could disagree with the total it was breaking down); that duplicate is gone.
-- The stored server-side score is authoritative. `MintDetail.tsx` computes a score itself only as a fallback — when `knownMint.trustScore` is missing, or for a historical chart bucket with no stored `trust_score`.
+- Stored in mints.last_reliability_score after each probe
+- **The whole computation lives in `backend/src/shared/reliabilityScore.ts`** (`computeReliabilityScore()` plus the per-component `uptimeComponent`/`nutComponent`/`versionComponent`/`contactComponent` helpers). `prober.ts` re-exports it as `computeServerReliabilityScore`/`serverVersionFreshnessScore` for its existing call sites and tests. `src/utils/reliabilityScore.ts` is the manually-synced frontend copy (same no-workspace caveat as `auditScore.ts`) — edit both if the logic changes. The frontend used to carry a second, silently divergent implementation in `MintDetail.tsx` (its own `NUTSHELL_VERSIONS` list topped out at 0.21 vs. the backend's 0.16, so the Reliability Score Breakdown's Version row could disagree with the total it was breaking down); that duplicate is gone.
+- The stored server-side score is authoritative. `MintDetail.tsx` computes a score itself only as a fallback — when `knownMint.reliabilityScore` is missing, or for a historical chart bucket with no stored `reliability_score`.
 - Rounding: each component rounds individually, then the total gets exactly one outer `Math.round` before the cap — `Math.min(100, Math.round(sum))`, followed by `applyNewMintCap()`. Both copies must keep this ordering or a mint's breakdown rows won't add up to its stored total.
 
-## Trust Score donut arc — shared geometry helper (2026-09-04)
+## Reliability Score donut arc — shared geometry helper (2026-09-04)
 
-`trustDonutArc(pct)` in `src/utils/mintFormatting.ts` is the single source of truth for the
-Trust Score gauge's SVG stroke-dasharray geometry, used by both the Mint Detail donut
+`reliabilityDonutArc(pct)` in `src/utils/mintFormatting.ts` is the single source of truth for the
+Reliability Score gauge's SVG stroke-dasharray geometry, used by both the Mint Detail donut
 (`MintDetail.tsx`) and the Stats page's Network Health Index gauge (`Stats.tsx`). It clamps
-the input to 0-100, computes `filled = (pct/100) * TRUST_DONUT_CIRCUMFERENCE` against the
+the input to 0-100, computes `filled = (pct/100) * RELIABILITY_DONUT_CIRCUMFERENCE` against the
 gauge's `r=27` SVG circle (circumference ≈ 169.646), and returns `{ dashArray: "filled gap",
 dashOffset: 0, filled }`. **Fixed bug:** both call sites previously also applied a spurious,
 independently-computed `strokeDashoffset` (42.4-ish) on top of the dasharray split — the two
@@ -202,11 +202,11 @@ text next to it. `dashOffset` is now hardcoded to `0` inside the shared helper (
 `transform="rotate(-90 36 36)"` already handles the 12-o'clock start point), so there is
 nothing left for a caller to double-apply. Unit-tested in `src/__tests__/mintFormatting.test.ts`.
 
-## Trust Score vs Community Rating — visual separation
+## Reliability Score vs Community Rating — visual separation
 
-Trust Score (server-computed, 0-100) and Community Rating (crowd-sourced NIP-87 average, 1-5★)
+Reliability Score (server-computed, 0-100) and Community Rating (crowd-sourced NIP-87 average, 1-5★)
 are deliberately distinguished by icon, not just by label, everywhere they appear side by side
-(`MintCard.tsx`, `ComparisonModal.tsx`, `MintDetail.tsx`): Trust Score carries a shield icon,
+(`MintCard.tsx`, `ComparisonModal.tsx`, `MintDetail.tsx`): Reliability Score carries a shield icon,
 Community Rating a green star. The shield is `IcShield` (`src/components/mint/IcShield.tsx`) —
 a small shared SVG component (`size` prop, default 13px, `currentColor` stroke) — also reused
 by the Token Inspector's mint risk badge (`Tools.tsx`, see "Token Inspector" below) and
@@ -220,7 +220,7 @@ across components.
 
 - **`mintHostname(url)`** — `new URL(url).hostname`, or the raw string if unparsable.
 - **`displayName({ name, url })`** — the title shown on cards, in the Name sort, the Compare
-  picker, and (as of `f2b25ff`) on the Stats page (Most Reliable, Trust Score Movers, software
+  picker, and (as of `f2b25ff`) on the Stats page (Most Reliable, Reliability Score Movers, software
   drilldown, geo modal, NUT-support modal). Steps: trim → strip **one** pair of wrapping
   `"`/`'` quotes → if the result is empty or in `GENERIC_NAME_DENYLIST` (`cashu`, `cashu mint`,
   `mint`, case-insensitive) return the hostname → **suffix-collision guard (2026-09-08):** if
@@ -231,7 +231,7 @@ across components.
 - **`mintFaviconInitials(url)`** — 2-letter monogram fallback for a mint with no icon. Strips a
   leading `www.` and/or `mint.` (case-insensitive, both if stacked — `6987e27`) before taking
   the first two hostname chars, so `mint.example.com` and `example.com` don't both render `MI`.
-- **`cardTrustLabel(score)`** → `"Trust <n>"` (word + number, never a bare `NN%`), `"Trust n/a"`
+- **`cardReliabilityLabel(score)`** → `"Reliability <n>"` (word + number, never a bare `NN%`), `"Reliability n/a"`
   for null/undefined. Rendered on the card as `IcShield` + this label, colored by band
   (`--green-bright` ≥ 70 / `--amber` ≥ 40 / `--red` else / `--t3` when null). Same formatting is
   reused by the Best Mint wizard result rows (2026-09-08).
@@ -257,16 +257,16 @@ across components.
   and the two can differ substantially.
 - **`resolveMintDetailUrl(slug, known)`** (2026-09-08, commit `bbf3eab`) — canonicalizes the
   `/mint/:url` route param. See "Mint Detail route param canonicalization" below.
-- Also here (own sections / mentions elsewhere): `trustDonutArc`, `auditReliabilityColor`,
+- Also here (own sections / mentions elsewhere): `reliabilityDonutArc`, `auditReliabilityColor`,
   `formatAuditErrorRatio`, `formatTimeAgo`, `mintRiskLevel`, `normalizeMintUrl`,
-  `trustScoreColor`/`trustScoreInfo`/`trustColor`, `uptimeColor`/`latencyColor`,
+  `reliabilityScoreColor`/`reliabilityScoreInfo`/`reliabilityColor`, `uptimeColor`/`latencyColor`,
   `MIN_MEANINGFUL_REVIEWS`.
 
 ## Cron jobs
-- Every 5min: probe all mints in DB → write to mint_history, update mints metadata + last_trust_score, **then `refreshTrustMoversRollup()`** (`backend/src/trustMoversRollup.ts`): one `UPDATE mints` recomputing `trust_score_{7,30}d_ago` from `mint_history` (index-backed per-mint `LIMIT 1` lookups). Single-flight, never throws. Also primed ~15s after boot. Feeds `GET /api/stats/trust-movers`.
+- Every 5min: probe all mints in DB → write to mint_history, update mints metadata + last_reliability_score, **then `refreshReliabilityMoversRollup()`** (`backend/src/reliabilityMoversRollup.ts`): one `UPDATE mints` recomputing `reliability_score_{7,30}d_ago` from `mint_history` (index-backed per-mint `LIMIT 1` lookups). Single-flight, never throws. Also primed ~15s after boot. Feeds `GET /api/stats/reliability-movers`.
 - Every 6h: NIP-87 discovery from `DISCOVERY_RELAYS` (10 relays as of the 2026-09-19 audit, see "Discovery relays" below) + audit.8333.space API → INSERT new mints, **then `refreshAllMintReviews()`** (`backend/src/reviewsSync.ts`): per-mint kind:38000 fetch (broad `REVIEW_SYNC_RELAYS`, 8s timeout, concurrency 3) → atomic per-mint replace of `mint_reviews` + `mints.review_count`/`review_avg_rating` rollup inside one transaction (READ COMMITTED: readers see old-complete or new-complete, never partial). Single-flight (`isReviewSyncRunning`).
 - Daily 3:15am: `pruneUnvalidatedMints()` — deletes rows discovered >24h ago that NEVER had a successful probe (covers any insert path that skips `isValidCashuMint()`).
-- Daily 3:45am: refresh `software_versions` cache from the GitHub Releases API (`cashubtc/nutshell`, `cashubtc/cdk`) — see Trust Score calculation above
+- Daily 3:45am: refresh `software_versions` cache from the GitHub Releases API (`cashubtc/nutshell`, `cashubtc/cdk`) — see Reliability Score calculation above
 - Daily 4:45am: `refreshReviewSurgeBaseline()` (`backend/src/reviewSurgeRollup.ts`) — advances the rolling `review_count_7d_ago` snapshot for any mint whose snapshot is missing or ≥7 days old (skips mints whose `review_count` is still NULL, so the first reviews-sync never looks like a surge). Also primed 60s after boot. Single-flight, never throws. Feeds the `reviewSurge` field on `/api/mints/known`.
 - Daily 4:15am: `revalidateMints()` (`backend/src/prober.ts`) — **recurring Cashu-content revalidation** (fix for the "validate once at submit, then DNS/redirect-repoint anywhere" confused-deputy finding). Per mint, a STRONGER check than the 5-min probe: `/v1/info` must have a **non-empty** `nuts` object AND `/v1/keys` must return ≥1 keyset. Tri-state result — `ok` / `not-a-mint` / `unreachable`. `not-a-mint` (a repoint target: HTML page, redirect, `{"nuts":{}}` stub, 4xx) sets `mints.invalid_since = COALESCE(invalid_since, NOW())`; `ok` clears it; `unreachable` (5xx / timeout / DNS) leaves it untouched so a genuine multi-day outage never counts. The 5-min probe (`probeMintToDb`) also maintains `invalid_since` for the reachable-but-not-a-mint case (`lastError` ∈ {`Invalid Cashu response`, `Invalid JSON response`, `HTTP 4xx`}). Any mint with `invalid_since` older than **`REVALIDATION_REAP_DAYS` (7)** is `DELETE`d — removed from the probe rotation entirely, bounding the confused-deputy window from "forever" to ≤7 days. The 5-min probe already flips such a mint offline within minutes (dropping it from recommendations / marking it degraded); this job is what eventually removes it. **The lenient `isValidCashuMint()` submit/discovery gate is deliberately NOT tightened** — only this new sweep uses the stronger criteria, so an unusual-but-real mint is never rejected at submit time.
 
@@ -275,7 +275,7 @@ across components.
 `discoverMintsFromNostr()` in `backend/src/discovery.ts` runs 3 sources in parallel via `Promise.allSettled`:
 - **kind:38172** — NIP-87 mint announcements (direct `u` tag)
 - **kind:38000** — reviews; `#u` tag mining extracts reviewed mint URLs
-- **audit.8333.space** — external audit API. `discoverMintsFromApi()` does 2 passes over the ~65 mints audit.8333.space knows about: (1) one paginated `GET /mints/` call (100/page) for discovery + cumulative lifetime counts (`audit_n_mints`/`audit_n_melts`/`audit_n_errors`, display-only, feeds the Audit tab's all-time line) and each mint's audit refresh time (`audit_synced_at = NOW()`) and to capture each mint's audit.8333.space `id` (stored as `audit_id`); (2) a sequential per-mint `GET /swaps/mint/{id}?limit=100` pass (~65 extra requests, 150ms apart) for the rolling-window reliability score (`audit_recent_total`/`audit_recent_errors`, feeds Trust Score — see above) — as of 2026-09-12 this same pass also parses and persists the full per-swap detail into `mint_audit_swaps` and computes `audit_avg_time_ms` (see the "mint_audit_swaps" DB Tables entry above). Runs once per 6h discovery cycle, so ~65 extra requests/6h — not throttled further, well within reasonable API use.
+- **audit.8333.space** — external audit API. `discoverMintsFromApi()` does 2 passes over the ~65 mints audit.8333.space knows about: (1) one paginated `GET /mints/` call (100/page) for discovery + cumulative lifetime counts (`audit_n_mints`/`audit_n_melts`/`audit_n_errors`, display-only, feeds the Audit tab's all-time line) and each mint's audit refresh time (`audit_synced_at = NOW()`) and to capture each mint's audit.8333.space `id` (stored as `audit_id`); (2) a sequential per-mint `GET /swaps/mint/{id}?limit=100` pass (~65 extra requests, 150ms apart) for the rolling-window reliability score (`audit_recent_total`/`audit_recent_errors`, feeds Reliability Score — see above) — as of 2026-09-12 this same pass also parses and persists the full per-swap detail into `mint_audit_swaps` and computes `audit_avg_time_ms` (see the "mint_audit_swaps" DB Tables entry above). Runs once per 6h discovery cycle, so ~65 extra requests/6h — not throttled further, well within reasonable API use.
 
 **`safeFetch` for outbound API calls (2026-09-07 audit, commit `11c30f1`):** `discovery.ts` (audit.8333.space `/mints/` + `/swaps/mint/{id}`) and `versionCatalog.ts` (`api.github.com/.../releases/latest`) used plain `fetch()` — no connect-time DNS pinning, and undici auto-follows up to 20 redirect hops. Both now call `safeFetch()` (`isSafeUrl()` pre-check + `safeAgent` DNS pinning rejecting private/loopback/link-local/CGNAT at connect + manual redirect following, max 3, each hop re-validated + `credentials: 'omit'`). `SafeFetchOptions` gained an optional `headers` (GitHub Accept header). `safeFetch` returns `Response | null` and never throws, so the "keep last known value" behaviour is preserved. Defence-in-depth — the hostnames are hardcoded constants. **Note:** the root `nostr-tools` `SimplePool` used by `discovery.ts` / `reviewsSync.ts` is NOT the DNS-pinned pool `nostrService.ts` uses — it is only safe because its relay lists are hardcoded; a future dynamic relay list must switch to `DnsPinnedWebSocket` or it becomes SSRF (commented at both sites, `3c8867f`).
 
@@ -286,7 +286,7 @@ Approximate yields (as of 2026-06-29): kind:38172 ~33 mints, kind:38000 ~37 mint
 ## Test mint detection (2026-09-04)
 
 `src/constants/testMints.ts` (frontend) + `backend/src/testMints.ts` (manually-synced mirror,
-same no-workspace caveat as `auditScore.ts`/`trustScore.ts`) hold `TEST_MINT_URLS` — a
+same no-workspace caveat as `auditScore.ts`/`reliabilityScore.ts`) hold `TEST_MINT_URLS` — a
 **manually curated set of 6 known dev/test-only mint URLs** (`8333.space:3338`,
 `testnut.cashu.space`, `nofee.testnut.cashu.space`, `rugs.cashu.exchange`,
 `rugs01.cashu.exchange`, `cashu.centurymetadata.org`) — and `isTestMint(url)`.
@@ -303,9 +303,9 @@ These mints are **not hidden from the app** — they still appear in `/api/mints
 still probed/tracked normally, and get a "Test mint" badge (`MintCard.tsx`, `MintDetail.tsx`,
 always rendered last among a card's badges). They ARE excluded from anything that implies a
 recommendation: the Best Mint Wizard (`Tools.tsx`), "Recommended by Follows"
-(`useFollowRecommendations.ts`), the backend's `top5ByTrustScore` (`backend/src/index.ts`,
+(`useFollowRecommendations.ts`), the backend's `top5ByReliabilityScore` (`backend/src/index.ts`,
 `GET /api/stats`), and (as of 2026-09-19, closing a real gap — see below) the Stats page's own
-**`top5ByTrust`** (`Stats.tsx`), which previously had no test-mint exclusion at all despite
+**`top5ByReliability`** (`Stats.tsx`), which previously had no test-mint exclusion at all despite
 this section's claim. Update `TEST_MINT_URLS` manually (both copies) if a new dev/test mint
 surfaces — grep fresh `/v1/info` responses for phrases like "for testing and development
 purposes" or "fakewallet", but confirm it isn't a real mint with a mere risk disclaimer first.
@@ -313,18 +313,18 @@ purposes" or "fakewallet", but confirm it isn't a real mint with a mere risk dis
 ### Recommendation-surface minimum age gate (2026-09-19, audit run-3 MEDIUM finding)
 
 A brand-new mint (hours-to-days of track record) could reach a "recommendation" surface's
-top-5 purely on a high Trust Score — `NEW_MINT_TRUST_CAP` (see "Trust Score calculation"
+top-5 purely on a high Reliability Score — `NEW_MINT_RELIABILITY_CAP` (see "Reliability Score calculation"
 above) only discounts a new mint's *score* (capped at 75 for its first `NEW_MINT_MAX_DAYS` =
 30 days), which doesn't by itself stop a well-configured new mint from still out-ranking
 everything else online. `isEligibleForRecommendation(discoveredAt)` /
-`MIN_RECOMMENDATION_AGE_DAYS` (14) — in `backend/src/shared/trustScore.ts`, mirrored in
-`src/utils/trustScore.ts` (same no-workspace caveat as the rest of that file) — is an
+`MIN_RECOMMENDATION_AGE_DAYS` (14) — in `backend/src/shared/reliabilityScore.ts`, mirrored in
+`src/utils/reliabilityScore.ts` (same no-workspace caveat as the rest of that file) — is an
 *additive* gate on `discovered_at` alone (there's no `probe_count` column to check instead;
 `discovered_at` is `NOT NULL` on every `mints` row). Wired into:
 
-- **Backend `top5ByTrustScore`** (`GET /api/stats`) — `discovered_at` added to that query's
+- **Backend `top5ByReliabilityScore`** (`GET /api/stats`) — `discovered_at` added to that query's
   `SELECT`, filtered alongside the existing `!isTestMint()` check.
-- **Frontend `top5ByTrust`** (`Stats.tsx` Trust tab) — same filter, using `KnownMint.discoveredAt`.
+- **Frontend `top5ByReliability`** (`Stats.tsx` Reliability tab) — same filter, using `KnownMint.discoveredAt`.
 
 **Deliberately NOT applied to `top5ByUptime`** ("Most Reliable" tab, same page) — that panel
 reports a measured uptime fact, not a recommendation, and a mint with high uptime over its
@@ -355,7 +355,7 @@ This is unrelated to the age gate above: `isEligibleForRecommendation()` is abou
   fields — no other `uptimePct24h` call site in the app was touched.
 - **No new UI element** — there was no existing 24h/7d/30d/90d period selector on this panel
   (unlike Mint Detail's chart), so per the request this landed as a plain default-source
-  change, not a new toggle. The panel keeps its existing Reliable/Trust tab toggle
+  change, not a new toggle. The panel keeps its existing Reliable/Reliability tab toggle
   (`reliableTab` state) unchanged.
 - Tests: `backend/src/__tests__/integration/mints-known.test.ts` (uptimePct7d computed
   independently of uptimePct24h; null when the mint has no 7-day history) and
@@ -363,15 +363,15 @@ This is unrelated to the age gate above: `isEligibleForRecommendation()` is abou
   not uptimePct24h" — uses deliberately opposite 24h/7d values per mint to prove the panel
   reads the right field). `e2e/fixtures/mocks.ts`'s `MockMint`/`knownMintPayload()` gained an
   optional `uptimePct7d` that defaults to `uptimePct24h` when a spec doesn't set it, so
-  pre-existing specs didn't need per-row changes. The pre-existing "Trust tab still shows it"
+  pre-existing specs didn't need per-row changes. The pre-existing "Reliability tab still shows it"
   half of the test-mint-exclusion test was also fixed in the same pass — it had gone stale
   independently, from the `isEligibleForRecommendation()`/test-mint work above landing in
-  `top5ByTrust` without this test being updated (see that section).
+  `top5ByReliability` without this test being updated (see that section).
 
 **`useFollowRecommendations.ts` ("Recommended by Follows", Watchlist page) is a genuinely
 independent third mechanism, not a shared copy of this logic** — it ranks by how many of the
 viewing user's own Nostr follows have reviewed/mentioned a mint (`kind:38000` `#u` tag count),
-not by Trust Score, and was checked but deliberately left without this age gate: the ranking
+not by Reliability Score, and was checked but deliberately left without this age gate: the ranking
 signal there is real distinct humans (the user's follows) recommending a URL, which isn't the
 "score gamed by a brand-new mint" vulnerability class this gate addresses. It already has its
 own `isTestMint()` filter (`fetchFollowRecs`), unchanged.
@@ -570,12 +570,12 @@ its two follow-up commits were scoped to `relays.ts` + its backend mirrors +
   can't act on a stale closure of the other filter state. Tests:
   `e2e/compare-url-persistence.spec.ts`.
 - `ComparisonModal` also renders a Community Rating row (★ badge, "—" fallback when no reviews)
-  and a shield-badge Trust Score (see "Trust Score vs Community Rating" above) — added 2026-09-03.
+  and a shield-badge Reliability Score (see "Reliability Score vs Community Rating" above) — added 2026-09-03.
 
 ## Key features
-- Dashboard: compact/expanded card view, filter panel (**Status + Min. Trust Score + Hide test mints** — the "Mint age" Fresh/Established/Veteran/OG block was removed 2026-09-08, and the Capabilities Restore/Bolt12/LN group was removed 2026-09-10, see "Dashboard default view + Capabilities filters removed" below; `requiredNuts` state still exists but URL-only, no panel UI), search, sort (default **Trust Score desc**, "Most reviewed" before Rating; see "Dashboard controls row" and "Dashboard default view" below), mint comparison tool (up to 4, see "Compare feature" above), stats bar, submit form (single + bulk). One-line explainer above the grid (`.grid-score-explainer`): **"We score how it runs. They score how it went. You pick."** (13.5px / `--t2`).
-- Mint Detail: MOTD, NUT compatibility grid with modal, NUT limits (NUT-04/05), a **Keysets panel** (desktop: Overview sidebar; mobile: NUTs tab — see "Mint Detail Keysets panel" below), historical charts (24h/7d/30d/90d, Latency/Uptime/Trust), Mint History panel, version history (real 3-column table — see below), Trust Score gauge with breakdown, Audit stats, Add to Wallet + QR, NIP-87 reviews, backup checker (NUT-13). Header carries an inline **Online/Offline** pill next to the name, a **New** badge (< 30d), **First seen by MintRadar `<Mon YYYY>`** on the URL row (`firstSeenLabel()`), and a **`Tor`** label prefixing any `.onion` URL. Route param is canonicalized — see "Mint Detail route param canonicalization" below.
-- Stats page: totalMints/onlineMints/offlineMints/avgTrustScore/avgLatency cards, NUT adoption horizontal bars, Trust Score donut chart, Most Reliable / Top Trust widget, Trust Score Movers, Network Health Index, Geographic Distribution, Software in Use. See "Stats widgets (2026-09-08)" below for the recent changes (test-mint exclusion, CDN bucket, software copy, subtitle omission).
+- Dashboard: compact/expanded card view, filter panel (**Status + Min. Reliability Score + Hide test mints** — the "Mint age" Fresh/Established/Veteran/OG block was removed 2026-09-08, and the Capabilities Restore/Bolt12/LN group was removed 2026-09-10, see "Dashboard default view + Capabilities filters removed" below; `requiredNuts` state still exists but URL-only, no panel UI), search, sort (default **Reliability Score desc**, "Most reviewed" before Rating; see "Dashboard controls row" and "Dashboard default view" below), mint comparison tool (up to 4, see "Compare feature" above), stats bar, submit form (single + bulk). One-line explainer above the grid (`.grid-score-explainer`): **"We score how it runs. They score how it went. You pick."** (13.5px / `--t2`).
+- Mint Detail: MOTD, NUT compatibility grid with modal, NUT limits (NUT-04/05), a **Keysets panel** (desktop: Overview sidebar; mobile: NUTs tab — see "Mint Detail Keysets panel" below), historical charts (24h/7d/30d/90d, Latency/Uptime/Reliability), Mint History panel, version history (real 3-column table — see below), Reliability Score gauge with breakdown, Audit stats, Add to Wallet + QR, NIP-87 reviews, backup checker (NUT-13). Header carries an inline **Online/Offline** pill next to the name, a **New** badge (< 30d), **First seen by MintRadar `<Mon YYYY>`** on the URL row (`firstSeenLabel()`), and a **`Tor`** label prefixing any `.onion` URL. Route param is canonicalized — see "Mint Detail route param canonicalization" below.
+- Stats page: totalMints/onlineMints/offlineMints/avgReliabilityScore/avgLatency cards, NUT adoption horizontal bars, Reliability Score donut chart, Most Reliable / Top Reliability widget, Reliability Score Movers, Network Health Index, Geographic Distribution, Software in Use. See "Stats widgets (2026-09-08)" below for the recent changes (test-mint exclusion, CDN bucket, software copy, subtitle omission).
 - Watchlist: IndexedDB only, Nostr login required, export JSON/CSV, DM notifications (NIP-07), mint comparison tool (added 2026-09-19 — see "Compare feature" above, `?compare=` URL persistence)
 - Wallets: curated list, `src/constants/wallets.ts`. Main grid = 8 end-user wallets (Minibits, Nutstash, Macadamia, Sovran, Cashu.me, Agicash, Coinos, Zeus). **Nutshell** carries `selfHost: true` and renders in a separate **"Run your own mint"** subsection below the grid (2026-09-08 — it's the reference implementation, not a consumer wallet). Card head: platform icon on the left + `.wallet-platform-tag` chips on the right only (the duplicate standalone platform word was removed). `Agicash` was renamed from `Boardwalk Cash`; `eNuts` was removed. No documented inclusion criteria beyond maintainer judgment.
 - Nostr: NIP-07 login, profile fetch (kind:0), reviews (kind:38000), DM notifications (kind:4), watchlist sync (NIP-44 kind:10003)
@@ -647,7 +647,7 @@ Login modal (`src/components/layout/AppShell.tsx`) supports three methods select
 ## Watchlist changes (2026-09-04/05)
 
 - **Filters + sort row removed entirely.** Watchlist previously had its own local
-  filter/sort UI (duplicating the Dashboard's NUT/status/trust filter panel); that logic was
+  filter/sort UI (duplicating the Dashboard's NUT/status/reliability filter panel); that logic was
   local-only (no relay/DB dependency) and was deleted outright, not hidden — `Watchlist.tsx`
   no longer imports `NUT_FILTER_KEYS` or renders a filter panel. Dashboard's own filter/sort
   is unaffected.
@@ -710,7 +710,7 @@ Social crawlers (Twitterbot, Discordbot, TelegramBot, facebookexternalhit, Slack
 
 - **Backend:** `backend/src/og.ts` — pure, unit-tested HTML fragment renderer (`renderMintOgHtml()`, `escapeHtml()`, `mintStatusLabel()`) plus `fetchOgMintData()`, a single-mint-scoped version of the `/api/mints/known` aggregate query (same `mint_history` 24h-window join + `computeDegraded()` reuse, just filtered to one `url` instead of pulling the full known-mints payload). Wired up as `GET /api/og/mint?url=` in `index.ts`. **Always returns HTTP 200 with a valid HTML fragment** — unknown mint, missing `url` param, or a DB error all fall back to a generic MintRadar-branded fragment rather than a 404/500, since a crawler getting no body means no link preview at all. `Cache-Control: max-age=60`, matching `KNOWN_MINTS_CACHE_TTL`. Mint `name` is escaped before interpolation (`escapeHtml()`) — it originates from the mint's own untrusted `/v1/info` response.
 - **Nginx (`deploy/nginx.conf`):** a `map $http_user_agent $is_social_bot` block (the 6 crawler UAs above) and a `map $request_uri $mint_og_lookup_url` block extract the mint URL path segment. **Deliberately sourced from `$request_uri` (the raw, client-sent request line) and never `$uri`** (nginx's internally-normalized URI variable, which decodes `%XX` escapes before location matching) — the frontend links to mint pages via `/mint/${encodeURIComponent(mint.url)}`, so the path segment is fully percent-encoded (e.g. `https%3A%2F%2Ftestnut.cashu.space`); reading it from `$request_uri` keeps those escapes intact all the way to Express, which decodes them exactly once via its own query-string parser. A `location /mint/ { if ($is_social_bot) { rewrite ^ /api/og/mint?url=$mint_og_lookup_url last; } try_files $uri $uri/ /index.html; }` block does the routing — the `if`+`rewrite ... last` combination is one of the two documented safe uses of `if` inside an nginx `location` (per the "if is evil" wiki page).
-- **Verified live in production (2026-08-29)** via `curl -A "Twitterbot" "https://mintradar.pedani.eu/mint/https%3A%2F%2Ftestnut.cashu.space"` — correctly returned `Testnut mint — MintRadar` / `Trust Score: 80% · Online`, confirming the `%2F`/`%3A` round-trip through `$request_uri` works exactly as designed (this was the one part of the implementation that couldn't be verified locally, no nginx binary available in the dev sandbox). A literal, non-percent-encoded test URL (`/mint/testnut.cashu.space`, i.e. not what the frontend actually generates) correctly falls through to the generic fallback fragment rather than erroring — expected behavior for an unknown-URL lookup, not a bug.
+- **Verified live in production (2026-08-29)** via `curl -A "Twitterbot" "https://mintradar.pedani.eu/mint/https%3A%2F%2Ftestnut.cashu.space"` — correctly returned `Testnut mint — MintRadar` / `Reliability Score: 80% · Online`, confirming the `%2F`/`%3A` round-trip through `$request_uri` works exactly as designed (this was the one part of the implementation that couldn't be verified locally, no nginx binary available in the dev sandbox). A literal, non-percent-encoded test URL (`/mint/testnut.cashu.space`, i.e. not what the frontend actually generates) correctly falls through to the generic fallback fragment rather than erroring — expected behavior for an unknown-URL lookup, not a bug.
 - Tests: `backend/src/__tests__/og.test.ts` (14 unit tests — escaping, status label, title/description formatting, all fallback branches) + `backend/src/__tests__/integration/og-mint.test.ts` (6 tests, `supertest` against the real Express `app` with a mocked `pg` pool — known mint, unknown mint, DB-throws, missing `url` param, Cache-Control header, XSS-in-name escaping). Same mocking pattern as `integration/mints-known.test.ts`.
 
 ### Service Worker / PWA auto-update
@@ -760,25 +760,25 @@ The `.card-pills` row (lower body of `MintCard.tsx`) no longer carries age or id
   `.card-hdr-test-mint`, `.card-hdr-badge`. When a mint is both fresh and a known test mint the
   two render side by side. Neither is in `.card-pills` anymore. (`isTestMint()` detection and
   the Stats "Most Reliable" / Best Mint wizard exclusions are unchanged.)
-- **Trust pill moved out of `.card-pills` (2026-09-10, commit `ed672d7`, "right-hand Trust
-  block").** It's now its own `.card-trust` column at the right edge of `.card-lower` (stacked
+- **Reliability pill moved out of `.card-pills` (2026-09-10, commit `ed672d7`, "right-hand Reliability
+  block").** It's now its own `.card-reliability` column at the right edge of `.card-lower` (stacked
   with the Community Rating `★` below it), not a pill in the row above — `.card-pills` is
-  unaffected shape-wise, just missing this entry now. `.card-trust` still uses `IcShield` +
+  unaffected shape-wise, just missing this entry now. `.card-reliability` still uses `IcShield` +
   the same score/color logic (`--green-bright` ≥70 / `--amber` ≥40 / `--red` else / `IcShield` +
-  `"Trust n/a"` when null); `2054bd8` (same day) fixed the bottom row so the action buttons
+  `"Reliability n/a"` when null); `2054bd8` (same day) fixed the bottom row so the action buttons
   (`Compare`, notify toggles) can no longer overlap this column on narrow cards.
 - **Version and NUT-count pills removed from the card entirely** (same `ed672d7` pass) —
   neither `mint.version` nor `mint.nutCount` render on `MintCard.tsx` anymore, on any card view.
   NUT count is still visible in the Dashboard's compact **list view** table (a `"NUTs"` column,
-  desktop-only via `col-hide-mobile`) and on **Mint Detail** (NUT compatibility grid, Trust Score
-  breakdown). Version is visible only on **Mint Detail** now (header, version history table, Trust
+  desktop-only via `col-hide-mobile`) and on **Mint Detail** (NUT compatibility grid, Reliability Score
+  breakdown). Version is visible only on **Mint Detail** now (header, version history table, Reliability
   Score breakdown's Version Freshness row) — there is no card or list-view column for it.
 - **Community Rating ★ badge** stays, but its `.card-rating-info` **(i) caveat tooltip was
   removed** 2026-09-08 (the caveat now lives only in the Reviews-tab `.reviews-disclaimer`).
   The `reviewSurge` **⚠** flag (`.card-review-surge-flag`) is unchanged. **"No reviews yet"
   empty state (2026-09-19)** — a mint with `reviewCount === 0` (or a `null` average) used to
   render nothing where the ★ rating pill would go; `MintCard.tsx` now renders a
-  `.card-trust-no-reviews` span ("No reviews yet", 11px `--t3`) in that slot instead, so the
+  `.card-reliability-no-reviews` span ("No reviews yet", 11px `--t3`) in that slot instead, so the
   gap is never silent. e2e: `e2e/mint-card-community-rating.spec.ts`.
 - **LN chip** (`.card-ln`) — optional, right after the unit chip. See `cardLightningLabel()` above.
 - Mint Detail header equivalent: an inline **Online/Offline** pill next to the name, **First
@@ -802,14 +802,14 @@ The `.card-pills` row (lower body of `MintCard.tsx`) no longer carries age or id
 `resolveMintDetailUrl(slug, known)` in `mintFormatting.ts`, called by the `MintDetail` default
 export **before** rendering `MintDetailContent`. Fixes the "ghost mint" bug where
 `/mint/21mint.me` (a bare host pasted by a user) never matched the tracked row
-`https://21mint.me` and fell through to a hollow live-probe stub (0 NUTs, ~3% Trust,
+`https://21mint.me` and fell through to a hollow live-probe stub (0 NUTs, ~3% Reliability,
 "Discovered NIP-87", offline) — making 21Mint look dead.
 
 - **exact tracked match** → render as-is (`{kind:'ok'}`).
 - else canonicalize a bare host → `https://{host}` (path kept, **no invented trailing slash**)
   and resolve **by hostname**. `pickDashboardRow()` picks among same-host rows: a **probed** row
   (`online != null`) always beats a never-probed NIP-87-only stub, then bare-root `https://host`,
-  then higher `trustScore`, then shorter URL → `<Navigate replace>` to the canonical encoded URL.
+  then higher `reliabilityScore`, then shorter URL → `<Navigate replace>` to the canonical encoded URL.
 - **nothing tracked on that host** → a short **`<MintNotTracked>`** state (`.md-not-tracked`,
   "Not a tracked mint" + a "Did you mean `<host>`?" link via `closestKnownHostUrl`) — never a
   fabricated full detail.
@@ -818,25 +818,25 @@ export **before** rendering `MintDetailContent`. Fixes the "ghost mint" bug wher
 - The in-code "Show my latency" SSRF guard stays as defense-in-depth, but an attacker route
   param now hits the not-tracked state first (no probe-driven detail, no latency button).
 
-### Trust Score breakdown always visible on Overview (2026-09-20)
+### Reliability Score breakdown always visible on Overview (2026-09-20)
 
-The desktop `.md-trust-panel` sidebar (Overview tab, ≥901px) now renders all 5 Trust Score
+The desktop `.md-reliability-panel` sidebar (Overview tab, ≥901px) now renders all 5 Reliability Score
 components (Uptime 40% · Audit reliability 25% · NUT Support 15% · Version 15% · Contact 5%)
 and the "Score = Uptime×40% + …" explanatory line directly under the donut/badge — no click on
 a "Details ›" link or the donut itself needed anymore (both removed from the desktop panel).
-`TrustBreakdownRow` (`MintDetail.tsx`, a top-level component alongside `AuditSourceInfoIcon`)
+`ReliabilityBreakdownRow` (`MintDetail.tsx`, a top-level component alongside `AuditSourceInfoIcon`)
 renders one row (label + ⓘ tooltip + measured value + score bar); it owns its own
 `useRef`/`useTapTooltip` internally rather than taking one as a prop, specifically so the same
-row data (`trustBreakdownRows`) can be rendered in two places at once (the always-visible panel
-list AND the "Trust Score Breakdown" modal) without two DOM nodes fighting over one shared ref.
-The Uptime/NUTs/Latency 3-line mini-summary that used to sit in this panel (`.trust-info`,
+row data (`reliabilityBreakdownRows`) can be rendered in two places at once (the always-visible panel
+list AND the "Reliability Score Breakdown" modal) without two DOM nodes fighting over one shared ref.
+The Uptime/NUTs/Latency 3-line mini-summary that used to sit in this panel (`.reliability-info`,
 CSS now removed as dead) is gone — those numbers were already duplicated in their own stat
 tiles higher on Overview (`.md-sc` Latency/Uptime 24h/NUTs tiles), so nothing was lost.
 
 **The modal itself still exists** — it's the only way to see the breakdown on **mobile** (<901px,
-where `.md-trust-panel` stays `display: none` and the page shows a compact `.md-sc.md-sc-trust`
+where `.md-reliability-panel` stays `display: none` and the page shows a compact `.md-sc.md-sc-reliability`
 tile instead, which still opens the modal via tap, unchanged). Desktop no longer has any UI
-that opens the modal, but nothing prevents it from existing/rendering if `showTrustBreakdown`
+that opens the modal, but nothing prevents it from existing/rendering if `showReliabilityBreakdown`
 is ever set true from elsewhere.
 
 **Superseded same day (commit `73e6c3e`) — the "Score = Uptime×40% + …" line is no longer always
@@ -858,7 +858,7 @@ heading has a short title-tooltip explaining keysets / Active vs Inactive. Tests
 **Superseded 2026-09-20 (commit `c68d98d`) — desktop placement is now "always visible", not
 "Overview tab only".** See "Mint Detail sidebar rework" below: the `activeTab === 'overview'`
 gate around the desktop copy was a bug (it made Keysets vanish from the sidebar on every other
-tab even though the sidebar itself — Trust Score, Units & Methods — persists across all tabs).
+tab even though the sidebar itself — Reliability Score, Units & Methods — persists across all tabs).
 It's also no longer "directly under Units & Methods" but side by side with it
 (`.md-um-keysets-row`). The `e2e/mint-detail-keysets.spec.ts` "renders on Overview and NOT on
 the NUTs tab" test still has one pre-existing unrelated failure (a stale `"100 ppk"` fee-display
@@ -866,7 +866,7 @@ assertion, not caused by this rework — see that section).
 
 ### Mint Detail sidebar rework + Watchlist button row (2026-09-20, commits `d802279`→`24187c5`)
 
-Same-day follow-up session to the "Trust Score breakdown always visible on Overview" change
+Same-day follow-up session to the "Reliability Score breakdown always visible on Overview" change
 above — that change made the `.md-right` sidebar taller than the `.md-left` column and kicked
 off several rounds of user-reported layout fixes, in landing order:
 
@@ -879,7 +879,7 @@ off several rounds of user-reported layout fixes, in landing order:
   column stays 280–380px regardless of viewport width, only shrinking below 380px on a narrower
   desktop. This is the value still live today.
 - **Keysets was gated to the Overview tab only** (`activeTab === 'overview'` around
-  `.md-keysets-at-overview`) even though the rest of the sidebar (Trust Score, Units & Methods)
+  `.md-keysets-at-overview`) even though the rest of the sidebar (Reliability Score, Units & Methods)
   renders on every tab — switching to Audit made Keysets disappear entirely. Fixed by dropping
   the gate (`c68d98d`); see the superseded note on the Keysets section above.
 - **Units & Methods + Keysets sit side by side** (`.md-um-keysets-row`, flex row ≥901px, stacked
@@ -913,9 +913,9 @@ off several rounds of user-reported layout fixes, in landing order:
   old chip's 12, `padding: 1px 6px` vs. `3px 7px`) now sits once next to the `MINT`/`MELT` label
   itself (`.method-label` became `display: inline-flex`); the chip list below only ever holds the
   real, struck-through method chips (`5f47de3`).
-- **Trust Score panel: formula moved into a tooltip, gauge enlarged, badge repositioned.** The
+- **Reliability Score panel: formula moved into a tooltip, gauge enlarged, badge repositioned.** The
   "Score = Uptime×40% + …" line used to always render as a text block under the breakdown rows —
-  moved into an (i) tooltip beside the "Trust Score" panel title instead, reclaiming that
+  moved into an (i) tooltip beside the "Reliability Score" panel title instead, reclaiming that
   vertical space. Reused `AuditSourceInfoIcon` (previously hardcoded to the audit.8333.space
   blurb) generalized with an optional `text` prop. **Gotcha found and fixed same commit:** the
   icon was first nested *inside* `.md-panel-title`, so the tooltip text inherited that element's
@@ -924,8 +924,8 @@ off several rounds of user-reported layout fixes, in landing order:
   like a different font from every other tooltip in the app. Fixed by making the icon a sibling
   of the title `<span>`, matching the layout the Audit tab heading's own `AuditSourceInfoIcon`
   already uses (`73e6c3e` landed it broken, `1e7c329` fixed the nesting same day after the user
-  flagged it). Gauge `.gauge-wrap`/svg: `72px → 96px` (viewBox/geometry unchanged — `trustDonutArc()`'s
-  `r=27` math is untouched, this is a pure CSS container-size scale-up). `.trust-wrap` flipped
+  flagged it). Gauge `.gauge-wrap`/svg: `72px → 96px` (viewBox/geometry unchanged — `reliabilityDonutArc()`'s
+  `r=27` math is untouched, this is a pure CSS container-size scale-up). `.reliability-wrap` flipped
   from `flex-direction: column` (badge stacked below the gauge) to `row` (badge beside the gauge,
   vertically centered) (`73e6c3e`).
 - **Audit tab "Recent success rate" cell overflow.** `.audit-summary-value` forced
@@ -939,7 +939,7 @@ off several rounds of user-reported layout fixes, in landing order:
   narrower cards. Each method group now renders in its own row (`575bb4e`).
 - **Watchlist card: Compare/Down/Up now fit on one line.** `.card-actions` (shared with
   Dashboard's Compare-only case) is `flex-flow: row wrap` inside `.card-bottom-main`, which on a
-  Watchlist card is only ~187px wide (the Trust column takes the rest) — the 3 buttons' combined
+  Watchlist card is only ~187px wide (the Reliability column takes the rest) — the 3 buttons' combined
   width ran ~18px over that, wrapping Up onto its own second row on every card. Trimmed
   `.card-compare-btn` (padding `5px 10px → 4px 6px`, font `11px → 10.5px`) and
   `.notify-toggle-btn` (padding `3px 7px → 3px 6px`, font `10px → 9.5px`, icon gap `4px → 3px`),
@@ -948,7 +948,7 @@ off several rounds of user-reported layout fixes, in landing order:
   (`24187c5`).
 
 All of the above is desktop-sidebar-scoped (≥901px); mobile keeps its own separate compact tile
-(Trust Score) and NUTs-tab placement (Keysets, NUT Limits) untouched. Verified each step with a
+(Reliability Score) and NUTs-tab placement (Keysets, NUT Limits) untouched. Verified each step with a
 throwaway Playwright screenshot spec (mocked `/api/mints/known` + `/api/mint/probe`, deleted
 after use — see the session transcript, not committed) rather than eyeballing production; typecheck/
 build/lint clean throughout (the same 3 pre-existing `MintDetail.tsx` lint errors —
@@ -988,10 +988,10 @@ notes / AUDIT.md's body is stale, see its UPDATE banner).
 - **Run-2 (2026-09-07, full 8-agent `security-audit` skill run).** Output in
   `~/security-audit-skill/MintRadar/run-2/` (REPORT.md, FINDINGS-DETAIL.md, findings.json —
   validator PASS). **1 HIGH + 6 MEDIUM + 7 LOW — all remediated + deployed by 2026-09-08.**
-  - **HIGH H1** — a malicious mint self-inflated its Trust Score to 100 (→ #1 "Most
+  - **HIGH H1** — a malicious mint self-inflated its Reliability Score to 100 (→ #1 "Most
     Reliable" / Best Mint Wizard) via 60 fake `/v1/info` `contact` entries.
     `contactComponent()` now clamps `Math.min(contactCount, 3)` before the ratio — commit
-    `e599749`, see "Trust Score calculation → Contact component" above.
+    `e599749`, see "Reliability Score calculation → Contact component" above.
   - **MEDIUM** — M1 `icon_url` favicon deanonymization beacon → SSRF-guarded
     `GET /api/mint/icon` proxy (`b0c3dd8`, see Backend API). M2 "validate once, then
     DNS/redirect-repoint anywhere" confused-deputy → daily `revalidateMints()` +
@@ -1077,13 +1077,13 @@ each row's two panels match the taller one's height. Each panel title carries a 
 for Geographic Distribution, `IcHealthPulse` (orange) for Network Health Index. Most Reliable rows
 also show the mint's city when `serverLocation` is already known (no new data source). This
 replaced the older `.stats-left-col` (Software + Geo, 2 cols) / `.stats-right-col` (Most Reliable +
-Trust Score Trend stacked, `grid-row: span 2`) split described lower in this section, which was a
+Reliability Score Trend stacked, `grid-row: span 2`) split described lower in this section, which was a
 4-across row at the top of the page — the "Network Health Index — final layout" history below is
 now itself superseded (NHI moved out of `.stats-right-col` into this hero grid).
 
 - **`.stats-cards-grid`** (below the hero grid, unchanged in kind but now holds fewer panels) —
   4-column grid (2 cols ≤1300px, 1 col ≤768px) holding **only** NUT Coverage Across the Network
-  (`grid-column: span 3`, 2 cols ≤1300px), Trust Score Movers (`span 1`), and Trust Score Trend
+  (`grid-column: span 3`, 2 cols ≤1300px), Reliability Score Movers (`span 1`), and Reliability Score Trend
   (always full width `1 / -1`). The 2×2 hero panels moved out of this grid entirely into
   `.stats-hero-grid` above.
 - **Software in Use subtitle (`c3523db`):** "Behind current release" → **"% of tracked mints
@@ -1093,12 +1093,12 @@ now itself superseded (NHI moved out of `.stats-right-col` into this hero grid).
 - **Network Health Index donut (`c3523db`):** desktop gauge enlarged **84px → 112px** (~1.33x,
   filling empty space the panel already had next to the legend); number font scaled to match.
   Legend position, breakdown-bar placement, mobile gauge size, and the score formula are
-  unchanged. Uses the shared `trustDonutArc()` geometry helper — see that section above.
+  unchanged. Uses the shared `reliabilityDonutArc()` geometry helper — see that section above.
 
 ### Network Health Index — pre-hero-grid layout history (commit 92c28d8, several iterations; superseded 2026-09-12 by the `.stats-hero-grid` restructure above)
 
 Before the 2×2 hero grid, NHI went through multiple repositioning attempts:
-- Landed in its own panel in `.stats-right-col`, stacked between "Most Reliable" and "Trust Score
+- Landed in its own panel in `.stats-right-col`, stacked between "Most Reliable" and "Reliability Score
   Trend" — not merged with either.
 - **Rejected earlier attempt:** living inside the left 3-column block alongside Software in Use +
   Geographic Distribution. Reverted.
@@ -1109,7 +1109,7 @@ Before the 2×2 hero grid, NHI went through multiple repositioning attempts:
 
 ### Stats widgets — 2026-09-08 changes (commits `f2b25ff` / `781617d`)
 
-- **`displayName()` everywhere** (`f2b25ff`) — Most Reliable, Trust Score Movers, software
+- **`displayName()` everywhere** (`f2b25ff`) — Most Reliable, Reliability Score Movers, software
   drilldown, geo modal and NUT-support modal now render mint titles via the shared
   `displayName()` denylist fallback instead of raw `info.name`, so `"Cashu mint"` etc. fall
   back to the hostname (matches the Dashboard cards).
@@ -1123,10 +1123,10 @@ Before the 2×2 hero grid, NHI went through multiple repositioning attempts:
   panel-level ⓘ makes the same point.
 - **Most Reliable list excludes `isTestMint()`** (`781617d`) — `top5ByUptime` filters them out.
   (An earlier pass, `f2b25ff`, only *badged* them here; `781617d` actually excludes them from
-  the Reliable list.) **Superseded 2026-09-19 (audit run-3 MEDIUM finding):** the Trust tab
-  (`top5ByTrust`) previously had **no test-mint exclusion at all** — a gap versus both
-  `top5ByUptime` above and the backend's own `top5ByTrustScore` (`backend/src/index.ts`, which
-  always had `!isTestMint()`). `top5ByTrust` now filters `!isTestMint(m.url)` too, and the
+  the Reliable list.) **Superseded 2026-09-19 (audit run-3 MEDIUM finding):** the Reliability tab
+  (`top5ByReliability`) previously had **no test-mint exclusion at all** — a gap versus both
+  `top5ByUptime` above and the backend's own `top5ByReliabilityScore` (`backend/src/index.ts`, which
+  always had `!isTestMint()`). `top5ByReliability` now filters `!isTestMint(m.url)` too, and the
   🧪 Test badge that used to render in its row markup was removed as dead code (it can never
   fire once test mints are filtered out of the list feeding it). See "Recommendation-surface
   minimum age gate" below for the companion fix landed in the same pass.
@@ -1236,7 +1236,7 @@ reuse Dashboard's actual card classes/tokens, not just the same outer width — 
   list-row types onto one chrome. Also **dropped the green/copper alternating decorative bar
   colors** on Software in Use and Geographic Distribution (forced to one mint-green fill,
   `!important` over the per-row inline color `Stats.tsx` computes) — NUT Coverage's adoption
-  bars, the "Behind current release" freshness bar, and Trust Score Movers' up/down deltas are
+  bars, the "Behind current release" freshness bar, and Reliability Score Movers' up/down deltas are
   untouched since those colors are real signal, not decoration. No formula/NHI/modal changes.
 
 **4) Geographic Distribution refactors (`6812cf9` / `d87e462` / `360f285` / `59a3984`)**
@@ -1281,11 +1281,11 @@ Four passes, same day, landing in this order:
 
 **5) Typographic passes (`2f7eb8e` / `afca9f5`)**
 
-- **`2f7eb8e` — mint card Trust Score / rating type sizes.** `.card-trust-score`: 25px → 27px
-  desktop, 26px at the existing ≤600px breakpoint. `.card-trust-rating`: 12px → 14px, and gained
+- **`2f7eb8e` — mint card Reliability Score / rating type sizes.** `.card-reliability-score`: 25px → 27px
+  desktop, 26px at the existing ≤600px breakpoint. `.card-reliability-rating`: 12px → 14px, and gained
   `font-weight: 500` (was unset/400). Latency block, card name, and `.card-pills` untouched — see
-  "MintCard Trust block" above for where `.card-trust` itself lives on the card.
-  **2026-09-19 follow-up:** `.card-trust-star` (the ★ glyph itself, next to `.card-trust-rating`'s
+  "MintCard Reliability block" above for where `.card-reliability` itself lives on the card.
+  **2026-09-19 follow-up:** `.card-reliability-star` (the ★ glyph itself, next to `.card-reliability-rating`'s
   number) was still 13px — small enough on desktop to read as an afterthought next to the bumped
   rating number beside it — bumped to 16px.
 - **`afca9f5` — Tools/Stats "larger, more legible list rows" pass.** Tools page: `.tool-title`
@@ -1295,7 +1295,7 @@ Four passes, same day, landing in this order:
   Stats list rows, 11–12px → **13px**: `.dist-label` (Geographic Distribution city names —
   Software in Use's own name span keeps its separate 13px inline override, so only the geo panel
   visibly changed here), `.snr-nut-name` (NUT Coverage row titles), the Most Reliable name div
-  (both Reliable/Trust tabs), Trust Score Movers' name div (its hostname subtitle stays 10px).
+  (both Reliable/Reliability tabs), Reliability Score Movers' name div (its hostname subtitle stays 10px).
   `.stats-panel-title` (section titles like "GEOGRAPHIC DISTRIBUTION") was already 10px uppercase
   and confirmed unchanged. Dashboard hero/explainer/mint cards untouched — no Dashboard files in
   this diff. Geographic names' wrap-not-truncate behavior (`360f285`, above) was verified to still
@@ -1342,17 +1342,17 @@ recreate it or reference it as if it still exists.)
 
 **Component changes:**
 - Buttons (`Login via Nostr`, `Connect`, `+Submit mint`, `+Watch`, `Compare`) — solid neon fill → tonal outline style
-- Dashboard mint cards — removed the per-status colored border/gradient (previously every card had a green-tinted border/background regardless of online/offline state); now a neutral border, with color reserved for the status dot and the trust-score chip only
+- Dashboard mint cards — removed the per-status colored border/gradient (previously every card had a green-tinted border/background regardless of online/offline state); now a neutral border, with color reserved for the status dot and the reliability-score chip only
 - Login modal — option cards (Nostr extension/nsec/Amber) get a green tonal border+background only when selected; the nsec security notice box changed from yellow to copper
-- Trust Score ring (Mint Detail) — fixed `--green-bright` ring color (no longer colored by score band), track `--surface-3` — the ring is now purely visual, the score band ("High/Moderate/Low Trust") is still conveyed by the badge text below it
+- Reliability Score ring (Mint Detail) — fixed `--green-bright` ring color (no longer colored by score band), track `--surface-3` — the ring is now purely visual, the score band ("High/Moderate/Low Reliability") is still conveyed by the badge text below it
 - `mintAgeBadge()` (`src/utils/mintFormatting.ts`) — Established badge → new tonal green, Fresh badge → copper/amber (was blue); Veteran/OG badges intentionally unchanged (out of scope). **Superseded 2026-09-08: the card no longer shows these badges at all — see "Card badges" below.**
 - Stats page — progress bars alternate green/copper by row index instead of one fixed color for all
 
-**Audit reliability score:** see the shared-module note under "Trust Score calculation" above.
+**Audit reliability score:** see the shared-module note under "Reliability Score calculation" above.
 
 **Audit data source (resolved 2026-08-06):** `audit.8333.space`'s `GET /mints/` API (paginated,
 100/page) returns cumulative lifetime counts for `n_mints`/`n_melts`/`n_errors` — these are kept
-(as `audit_n_*`) purely for the display-only all-time line on the Audit tab. The Trust Score's audit
+(as `audit_n_*`) purely for the display-only all-time line on the Audit tab. The Reliability Score's audit
 component now matches the reference `pablof7z/cashu-mint-audit` project's approach: it uses a
 rolling window of each mint's last ~100 swaps, fetched per-mint from `GET /swaps/mint/{id}`
 (`audit_recent_total`/`audit_recent_errors`) — see "Discovery pipeline" above. A mint with fewer
@@ -1367,7 +1367,7 @@ and was missing from the DB; added manually.
 Follow-up fix commit addressing regressions/missed spots from the original redesign above:
 - Nav bar (`AppShell.css`) — background changed from hardcoded `rgba(15,17,21,.92)` to `var(--bg)`, removing a visible "seam" against the page body
 - Stats — Software in Use expand panel (`Stats.css`, `.sw-ver-panel`) — hardcoded `#0d1117` → `var(--surface-2)`
-- Stats — Geographic Distribution modal (`Stats.tsx`, `CityMintsModal`) — rebuilt to match the Trust Score/NUT modal pattern (flag+name+count chip+close header, status dot/name/badge/trust % rows, footer summary); status dot and trust colors moved to the new tokens, percentage uses `--font-mono-data`; functionality (click-through to detail, sorting) unchanged
+- Stats — Geographic Distribution modal (`Stats.tsx`, `CityMintsModal`) — rebuilt to match the Reliability Score/NUT modal pattern (flag+name+count chip+close header, status dot/name/badge/reliability % rows, footer summary); status dot and reliability colors moved to the new tokens, percentage uses `--font-mono-data`; functionality (click-through to detail, sorting) unchanged
 - Mint Detail — "Show QR code" and "Copy" buttons (`MintDetail.tsx`) — solid neon fill → tonal outline, matching "Compare"/"+ Watch"
 - Watchlist — Login button (`Watchlist.tsx`) — added ⚡ icon, now identical to the nav button
 
@@ -1407,7 +1407,7 @@ Applied automatically everywhere via the shared `MintCard.tsx` component (Dashbo
 
 ### Dashboard filter bugs (fixed)
 
-- **Reset button (↻):** previously only did `queryClient.invalidateQueries` (refetched data) without resetting search/sort/filters/`showDegraded`. Fixed — now resets everything to default (search cleared, sort **`trust`/`desc`** — updated 2026-09-09 from the original `name`/`asc`, see "Dashboard default view" below — `activeFilters`/`pendingFilters` → `DEFAULT_FILTERS`, `showDegraded=false`, closes filter panel) and only then refetches.
+- **Reset button (↻):** previously only did `queryClient.invalidateQueries` (refetched data) without resetting search/sort/filters/`showDegraded`. Fixed — now resets everything to default (search cleared, sort **`reliability`/`desc`** — updated 2026-09-09 from the original `name`/`asc`, see "Dashboard default view" below — `activeFilters`/`pendingFilters` → `DEFAULT_FILTERS`, `showDegraded=false`, closes filter panel) and only then refetches.
 - **Status=Offline filter returning empty results:** root cause — `allMints` was computed by hiding degraded mints via `showDegraded` *before* `applyFilters()` ran, so Status=Offline and the default `showDegraded=false` behaved like an AND and cancelled each other out. Fix: `effectiveShowDegraded = showDegraded || activeFilters.status === 'offline'` — explicitly picking the Offline filter now overrides the default hiding. The "N mints hidden" message only shows when the Status filter isn't "Offline" (otherwise it would be misleading).
 - File: `Dashboard.tsx`
 
@@ -1436,7 +1436,7 @@ Verified: typecheck ✅, build ✅, 70/70 unit tests ✅, Playwright confirmed b
 The **"Mint age" (Fresh/Established/Veteran/OG) filter block is gone** — the whole state chain
 was removed: `FilterState.mintAges`, `AGE_LABELS`, the `applyFilters` branch,
 `countActiveFilters` term, the `?age=` URL param + its filter-tag chip, and the panel group.
-At the time, the panel became just **Status** + **Min. Trust Score**. Rationale: those four labels
+At the time, the panel became just **Status** + **Min. Reliability Score**. Rationale: those four labels
 stopped being a product concept once the card badge set shrank (see "Card badges" above). On
 mobile the two remaining groups sit side by side (`.filter-row` → `row / nowrap`) so the sheet is
 shorter. **Superseded 2026-09-10 (`26c4111`):** the separate Capabilities (Restore/Bolt12/LN)
@@ -1446,24 +1446,24 @@ view + Capabilities filters removed" above for the panel's current, up-to-date c
 
 ### Dashboard default view + Capabilities filters removed (2026-09-09/10, commits `6bd10ce`/`091231e`/`26c4111`)
 
-**Current defaults** (`DEFAULT_FILTERS` in `Dashboard.tsx`): `status: 'online'`, `minTrustScore: 0`,
-`requiredNuts: []`, **`hideTestMints: false`** — plus sort **`trust`/`desc`** (not part of
+**Current defaults** (`DEFAULT_FILTERS` in `Dashboard.tsx`): `status: 'online'`, `minReliabilityScore: 0`,
+`requiredNuts: []`, **`hideTestMints: false`** — plus sort **`reliability`/`desc`** (not part of
 `FilterState`, held as separate `sortBy`/`sortDir` state). A fresh Dashboard load therefore shows
-online mints only, sorted by Trust Score descending, **with test mints visible** (they still carry
+online mints only, sorted by Reliability Score descending, **with test mints visible** (they still carry
 a "Test mint" badge; `?testmints=hide` only appears once the user turns the checkbox on).
 
 This landed in two passes that briefly disagreed with each other — worth knowing if an older note
 or commit message says otherwise:
-- `6bd10ce` (2026-09-09) set the new online-only + Trust-sort default **and** defaulted
+- `6bd10ce` (2026-09-09) set the new online-only + Reliability-sort default **and** defaulted
   `hideTestMints` to `true` ("no test mints"). This is the change that lifted the original
   Name-sort freeze from earlier design passes.
 - `091231e` (2026-09-10) flipped `hideTestMints` back to `false` ("show test mints by default")
   as part of a hero-tile/filter-bar pass — this is the value in the code today. Only the
-  test-mint-visibility default was reverted; online-only status and Trust-desc sort from `6bd10ce`
+  test-mint-visibility default was reverted; online-only status and Reliability-desc sort from `6bd10ce`
   are unchanged.
 - `26c4111` (2026-09-10) separately **removed the Capabilities filter group** (Restore / Bolt12 /
   LN checkboxes) — `FilterState` never had a `capabilities` field distinct from `requiredNuts`;
-  this removed a different, since-deleted filter block. The panel is now **Status + Min. Trust
+  this removed a different, since-deleted filter block. The panel is now **Status + Min. Reliability
   Score + a "Hide test mints" checkbox** (Mint age was already gone, see the section below). Same
   commit also made a NUT row on the Stats "NUT Coverage Across the Network" panel open a
   `NutMintsModal` listing the mints supporting that NUT, instead of (or in addition to) any
@@ -1497,7 +1497,7 @@ wizard's result cards: stacked layout on mobile, then progressively compacted an
 sizes on both mobile and desktop. Final state also **dropped the `<n> NUTs` meta chip** (latency +
 uptime % only now) and **compacted large limit numbers** — `formatCompactAmount()` renders
 `1_000_000` as `"1M"` / `1_500` as `"1.5k"` instead of `.toLocaleString()`'s `"1,000,000"`, so
-`formatLimits()` output fits the narrower card. Score/trust formatting (`cardTrustLabel()` +
+`formatLimits()` output fits the narrower card. Score/reliability formatting (`cardReliabilityLabel()` +
 `cardLightningLabel()`) from the `781617d` pass below is unchanged.
 
 ### Best Mint Wizard (`Tools.tsx` `BestMintWizard`) — 2026-09-08 (commit `781617d`)
@@ -1509,7 +1509,7 @@ uptime % only now) and **compacted large limit numbers** — `formatCompactAmoun
   `isEligibleForRecommendation()` filter right after it); unchanged, but now explicitly a
   requirement.
 - **Result rows** — use `displayName(rec.mint)` for the name, and the **card formatting** for
-  the score: `IcShield` + `cardTrustLabel()` colored by band (`.wizard-rec-trust`) plus a
+  the score: `IcShield` + `cardReliabilityLabel()` colored by band (`.wizard-rec-reliability`) plus a
   `cardLightningLabel()` `<Zap>` chip (`.wizard-rec-ln`) — replacing the old bare `NN%`
   `.wizard-rec-score`. Per-unit NUT-04/05 limits and the whole-mint caveat note are unchanged.
 - Token Inspector is untouched by this pass.
@@ -1518,14 +1518,14 @@ uptime % only now) and **compacted large limit numbers** — `formatCompactAmoun
 
 **Clarification, since this was re-investigated from scratch before the gap below was found:**
 the wizard's result rows (`.wizard-rec-row`, see the two sections above) already rendered as
-real, clickable mint cards — favicon, Trust badge, LN chip, latency/uptime, per-unit
+real, clickable mint cards — favicon, Reliability badge, LN chip, latency/uptime, per-unit
 NUT-04/05 limits, click-through to `/mint/:url` — as far back as `781617d` (2026-09-08). It
 was never a plain-text recommendation; that was a wrong assumption going into this pass, not
 an actual prior state of the code.
 
 The real gap: `candidates` filtered `online`, `!isTestMint()`, and unit support, but was
 **missing `isEligibleForRecommendation()`** — the same 14-day minimum-age gate wired into the
-backend `top5ByTrustScore` and frontend `top5ByTrust` (see "Recommendation-surface minimum age
+backend `top5ByReliabilityScore` and frontend `top5ByReliability` (see "Recommendation-surface minimum age
 gate" above), added 2026-09-19 but never applied here even though the wizard is exactly the
 kind of "recommendation surface" that gate exists for. Fixed by adding the same
 `.filter(m => isEligibleForRecommendation(m.discoveredAt))` call to the wizard's candidate
@@ -1552,8 +1552,8 @@ and the test was never updated to match.
   (`.token-memo-row`) in the inspection result.
 - **Mint risk badge** — `mintRiskLevel()` (`src/utils/mintFormatting.ts`) classifies the
   token's mint as high/medium/low/unknown risk from its known-mints data (`online`,
-  `degraded`, `trustScore`): offline or degraded → high, `trustScore < 40` → medium,
-  otherwise low, `null` mint → unknown. Rendered with the shared `IcShield` icon (see "Trust
+  `degraded`, `reliabilityScore`): offline or degraded → high, `reliabilityScore < 40` → medium,
+  otherwise low, `null` mint → unknown. Rendered with the shared `IcShield` icon (see "Reliability
   Score vs Community Rating" above).
 - **"Check if spent" (NUT-07)** — `checkTokenSpentState()` (`src/utils/cashuToken.ts`) asks
   the token's own mint directly whether its proofs have already been redeemed, returning a
@@ -1593,7 +1593,7 @@ form used by `/v1/info`'s `nuts` object and the `nuts_limits` column), `NUT_META
 It replaced four drifting copies: `MintDetail.tsx`'s `ALL_NUTS`, `Stats.tsx`'s `NUT_ORDER`
 (plus its own near-identical `NUT_META`), `ComparisonModal.tsx`'s `NUT_FILTER_KEYS`, and
 `NutExplorer.tsx`'s `NUT_META`. `src/__tests__/nuts.test.ts` pins the invariants, including
-`TRACKED_NUTS.length === TRACKED_NUT_COUNT` (the Trust Score's NUT divisor).
+`TRACKED_NUTS.length === TRACKED_NUT_COUNT` (the Reliability Score's NUT divisor).
 
 **`Dashboard.tsx`'s `NUT_FILTER_KEYS`** is now just `TRACKED_NUT_KEYS` re-exported under the
 old local name (2026-09-14) — it used to be its own hardcoded 25-entry list that deliberately
@@ -1687,8 +1687,8 @@ only from what MintRadar's own backend observed: the stored `review_count` now v
 (5); false-safe on null / >14-day-stale snapshot. Tuned so ordinary organic growth (a few
 reviews a week) never trips it, only a sharp jump (e.g. 3→28 between sync cycles). Approach
 (b) from the analysis — one sliding snapshot column, not a history table — mirroring the
-`trust_score_7d_ago` rollup; rationale in `reviewSurgeRollup.ts`. **Informational only —
-never feeds Trust Score or `reviewWeightedRating`.** Frontend: `InfoTooltip` gained a
+`reliability_score_7d_ago` rollup; rationale in `reviewSurgeRollup.ts`. **Informational only —
+never feeds Reliability Score or `reviewWeightedRating`.** Frontend: `InfoTooltip` gained a
 `tone="warn"` variant (quiet amber ⚠ instead of ⓘ); rendered next to the Community Rating on
 the Mint Detail tile (`.review-surge-flag`) and mint card ★ badge (`.card-review-surge-flag`)
 with the text "This mint's review count grew unusually fast recently — worth a closer look
@@ -1711,7 +1711,7 @@ Frontend hides degraded mints by default (`showDegraded=false`); footer shows "N
 
 ## Mobile Responsive Fixes (as of 2026-06-30)
 
-- **Filter panel (Dashboard only as of 2026-09-04 — see "Watchlist changes" below):** NUT SUPPORT — 7 chips per row via `grid-template-columns: repeat(7, 1fr)`; STATUS + MIN TRUST SCORE side by side (50/50) using `filter-group-row-top` wrapper with `display: contents` on desktop (transparent to flex layout) and `display: flex; flex-direction: row` at ≤768px
+- **Filter panel (Dashboard only as of 2026-09-04 — see "Watchlist changes" below):** NUT SUPPORT — 7 chips per row via `grid-template-columns: repeat(7, 1fr)`; STATUS + MIN RELIABILITY SCORE side by side (50/50) using `filter-group-row-top` wrapper with `display: contents` on desktop (transparent to flex layout) and `display: flex; flex-direction: row` at ≤768px
 - **Stats page:** Sections stack vertically on mobile; NUT Coverage bars don't overflow (`overflow: hidden`, shorter progress bar max-width)
 - **Mint Detail:** Public key truncated on mobile (first+last 8 chars), full hex on desktop
 
@@ -1793,8 +1793,8 @@ across the app.
 
 ### Key tested modules
 
-- **Backend:** `normalizeUrl`, Trust Score calculation (prober.ts), degraded/offline detection logic, review parsing (kind:38000 regex), SSRF guard (`backend/src/ssrf.ts`) — DNS rebinding, private ranges, link-local
-- **Frontend:** `mintFormatting` and `reviewUtils` (extracted from components into `src/utils/` for testability), Trust Score display helpers. `mintFormatting.test.ts`'s `mintAgeBadge` Fresh/Established color assertions were updated 2026-07-24 to the new redesign hex values (`#d3a446`/`#5cc9a3`) — see "Visual Redesign" section.
+- **Backend:** `normalizeUrl`, Reliability Score calculation (prober.ts), degraded/offline detection logic, review parsing (kind:38000 regex), SSRF guard (`backend/src/ssrf.ts`) — DNS rebinding, private ranges, link-local
+- **Frontend:** `mintFormatting` and `reviewUtils` (extracted from components into `src/utils/` for testability), Reliability Score display helpers. `mintFormatting.test.ts`'s `mintAgeBadge` Fresh/Established color assertions were updated 2026-07-24 to the new redesign hex values (`#d3a446`/`#5cc9a3`) — see "Visual Redesign" section.
 
 ### Run commands
 
@@ -1827,17 +1827,17 @@ The `+ Watch` button on Dashboard mint cards only renders when `isLoggedIn === t
 
 The 25-NUT list from the 2026-07-02 expansion below was audited against the current
 cashubtc/nuts spec (NUT-00 through NUT-30) and cut back to **14** — the NUTs a mint
-actually implements and advertises in `/v1/info`, which is the only thing the Trust
+actually implements and advertises in `/v1/info`, which is the only thing the Reliability
 Score's NUT-support component and the Detail/Stats/Compare NUT UI can verify.
 
-- **Trust denominator now 14:** NUT-04, 05, 07, 08, 09, 10, 11, 12, 14, 15, 17, 19, 20, 29.
-  `TRACKED_NUTS`/`TRACKED_NUT_COUNT` in `src/constants/nuts.ts` + `src/utils/trustScore.ts`,
-  mirrored by `TRACKED_NUT_KEYS`/`TRACKED_NUT_COUNT` in `backend/src/shared/trustScore.ts`.
+- **Reliability denominator now 14:** NUT-04, 05, 07, 08, 09, 10, 11, 12, 14, 15, 17, 19, 20, 29.
+  `TRACKED_NUTS`/`TRACKED_NUT_COUNT` in `src/constants/nuts.ts` + `src/utils/reliabilityScore.ts`,
+  mirrored by `TRACKED_NUT_KEYS`/`TRACKED_NUT_COUNT` in `backend/src/shared/reliabilityScore.ts`.
 - **Removed as wallet-only** (a mint never advertises these — they'd be structurally stuck
   at 0% forever): NUT-13 (already excluded pre-2026-09-14), 16 (animated QR), 18 (payment
   requests), 24 (HTTP 402 — a generic HTTP layer, not a cashu-mint capability), 26 (Bech32m
   payment-request encoding), 27 (Nostr mint backup), 28 (Pay-to-Blinded-Key).
-- **Removed from the trust denominator but still real mint-side features, shown
+- **Removed from the reliability denominator but still real mint-side features, shown
   elsewhere:** NUT-21/22 (clear/blind auth — an access-control mechanism, would be an auth
   badge if/when built) and NUT-23/25/30 (BOLT11/BOLT12/onchain — these extend NUT-04/05 as
   payment methods and already render in the "Units & Methods" panel, independent of the
@@ -1855,8 +1855,8 @@ Score's NUT-support component and the Detail/Stats/Compare NUT UI can verify.
 
 - Tracking 26 NUTs now (was 14) — added: 13, 16, 18, 21, 22, 23, 24, 25, 26, 27, 28, 30
 - Mandatory NUTs (00-03, 06) are deliberately never tracked — implicitly 100% supported, zero information value
-- Trust Score NUT divisor changed from /14 to /26 in `prober.ts` — existing mints get a lower/more accurate score at their next probe cycle
-  - **Correction (2026-08-19):** the divisor that actually shipped is **/25**, not /26, and NUT-13 is not tracked — it is a wallet-side spec a mint never advertises, so the list above ("added: 13, 16, …") overcounts by one. The live list is `TRACKED_NUTS` in `src/constants/nuts.ts` (25 entries); the divisor is `TRACKED_NUT_COUNT` in `backend/src/shared/trustScore.ts`.
+- Reliability Score NUT divisor changed from /14 to /26 in `prober.ts` — existing mints get a lower/more accurate score at their next probe cycle
+  - **Correction (2026-08-19):** the divisor that actually shipped is **/25**, not /26, and NUT-13 is not tracked — it is a wallet-side spec a mint never advertises, so the list above ("added: 13, 16, …") overcounts by one. The live list is `TRACKED_NUTS` in `src/constants/nuts.ts` (25 entries); the divisor is `TRACKED_NUT_COUNT` in `backend/src/shared/reliabilityScore.ts`.
   - **Superseded 2026-09-14:** the divisor is back down to /14 — see "NUT tracking scope: mint-side vs. wallet-only" above.
 - NUT-24 (HTTP 402) has 0% adoption across the ecosystem — expected, no implementation exists yet anywhere, and it's no longer tracked at all as of 2026-09-14 (wallet-only)
 
@@ -1887,7 +1887,7 @@ Score's NUT-support component and the Detail/Stats/Compare NUT UI can verify.
 - Other recommendations were either already implemented, or knowingly rejected (see decisions below).
 - Rejected: reserve audit verification (no standardized NUT for it), dark/light mode toggle, watchlist share link (conflicts with privacy-first design), historical NUT snapshots, comparison tool for more than 4 mints, search by operator pubkey (no data linkage exists), multi-region probe infrastructure.
 - NUT security warning badge (NUT-09/11/12) — verified against live data: currently 0 of 55 online mints are missing these NUTs, so the badge would be dead code. Rejected.
-- Multi-unit criterion in Best Mint Wizard — **IMPLEMENTED (2026-08-19)**. The original 2026-07-02 note here said units were "never persisted... requires parsing `/v1/keysets`" — that has been obsolete since the `units`/`mint_methods`/`melt_methods` columns landed. Units are parsed by `parseMintMethods()` in `prober.ts` from the NUT-04/NUT-05 `methods` arrays of `/v1/info` (no `/v1/keysets` call is involved), persisted on every probe cycle, and served by `/api/mints/known` on the `KnownMint` type. The wizard now has a unit dropdown built from the distinct units of online mints, filters candidates to mints advertising that unit, and shows the per-unit NUT-04/05 min/max limits on each recommendation. Trust Score / latency / nutCount remain whole-mint metrics — the results panel says so explicitly.
+- Multi-unit criterion in Best Mint Wizard — **IMPLEMENTED (2026-08-19)**. The original 2026-07-02 note here said units were "never persisted... requires parsing `/v1/keysets`" — that has been obsolete since the `units`/`mint_methods`/`melt_methods` columns landed. Units are parsed by `parseMintMethods()` in `prober.ts` from the NUT-04/NUT-05 `methods` arrays of `/v1/info` (no `/v1/keysets` call is involved), persisted on every probe cycle, and served by `/api/mints/known` on the `KnownMint` type. The wizard now has a unit dropdown built from the distinct units of online mints, filters candidates to mints advertising that unit, and shows the per-unit NUT-04/05 min/max limits on each recommendation. Reliability Score / latency / nutCount remain whole-mint metrics — the results panel says so explicitly.
 
 ## ESLint zero-errors cleanup (2026-07-05)
 

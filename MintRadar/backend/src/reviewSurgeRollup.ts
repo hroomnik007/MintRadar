@@ -8,8 +8,8 @@ import { pool } from './db.js'
 // not a full mint_review_count_history table. The flag only needs to answer
 // "did the count jump sharply in roughly the last week", not reconstruct a time
 // series — one integer comparison does that. It also mirrors the existing
-// trust_score_7d_ago rollup exactly (same "N-days-ago snapshot on mints" shape,
-// same daily cron slot, refreshTrustMoversRollup), so there's no new table,
+// reliability_score_7d_ago rollup exactly (same "N-days-ago snapshot on mints" shape,
+// same daily cron slot, refreshReliabilityMoversRollup), so there's no new table,
 // retention/pruning logic, or extra cost on the hot /api/mints/known path — just
 // one more column already loaded by that query.
 //

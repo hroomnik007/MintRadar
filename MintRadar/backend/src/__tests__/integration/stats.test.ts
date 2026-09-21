@@ -30,9 +30,9 @@ function mintRow(overrides: Record<string, unknown> = {}) {
   return {
     url: 'https://mint.example.com',
     name: 'Example',
-    last_trust_score: 80,
+    last_reliability_score: 80,
     nuts_limits: { '4': {}, '5': {} },
-    // Old enough to clear the top5ByTrustScore MIN_RECOMMENDATION_AGE_DAYS (14)
+    // Old enough to clear the top5ByReliabilityScore MIN_RECOMMENDATION_AGE_DAYS (14)
     // gate by default — tests that specifically exercise that gate override this.
     discovered_at: daysAgo(365),
     online: true,
@@ -47,9 +47,9 @@ describe('GET /api/stats', () => {
       // Query 1: per-mint rows + latest online status
       .mockResolvedValueOnce({
         rows: [
-          mintRow({ url: 'https://a.example', last_trust_score: 80, online: true }),
-          mintRow({ url: 'https://b.example', last_trust_score: 50, online: true }),
-          mintRow({ url: 'https://c.example', last_trust_score: null, online: false, nuts_limits: null }),
+          mintRow({ url: 'https://a.example', last_reliability_score: 80, online: true }),
+          mintRow({ url: 'https://b.example', last_reliability_score: 50, online: true }),
+          mintRow({ url: 'https://c.example', last_reliability_score: null, online: false, nuts_limits: null }),
         ],
       })
       // Query 2: median latency over the last 24h
@@ -62,22 +62,22 @@ describe('GET /api/stats', () => {
       totalMints: 3,
       onlineMints: 2,
       offlineMints: 1,
-      avgTrustScore: 65, // round((80 + 50) / 2)
+      avgReliabilityScore: 65, // round((80 + 50) / 2)
       avgLatency24h: 150,
-      trustDistribution: { low: 0, moderate: 1, high: 1 },
+      reliabilityDistribution: { low: 0, moderate: 1, high: 1 },
     })
     expect(Array.isArray(res.body.nutAdoption)).toBe(true)
-    expect(Array.isArray(res.body.top5ByTrustScore)).toBe(true)
-    // top5 is sorted descending by trust score, nulls excluded.
-    expect(res.body.top5ByTrustScore.map((m: { trustScore: number }) => m.trustScore)).toEqual([80, 50])
+    expect(Array.isArray(res.body.top5ByReliabilityScore)).toBe(true)
+    // top5 is sorted descending by reliability score, nulls excluded.
+    expect(res.body.top5ByReliabilityScore.map((m: { reliabilityScore: number }) => m.reliabilityScore)).toEqual([80, 50])
   })
 
-  it('excludes known dev/test-only mints from top5ByTrustScore even with a top score', async () => {
+  it('excludes known dev/test-only mints from top5ByReliabilityScore even with a top score', async () => {
     query
       .mockResolvedValueOnce({
         rows: [
-          mintRow({ url: 'https://testnut.cashu.space', name: 'Testnut mint', last_trust_score: 99, online: true }),
-          mintRow({ url: 'https://a.example', last_trust_score: 80, online: true }),
+          mintRow({ url: 'https://testnut.cashu.space', name: 'Testnut mint', last_reliability_score: 99, online: true }),
+          mintRow({ url: 'https://a.example', last_reliability_score: 80, online: true }),
         ],
       })
       .mockResolvedValueOnce({ rows: [{ avg_latency: 150 }] })
@@ -85,7 +85,7 @@ describe('GET /api/stats', () => {
     const res = await request(app).get('/api/stats')
 
     expect(res.status).toBe(200)
-    expect(res.body.top5ByTrustScore.map((m: { url: string }) => m.url)).toEqual(['https://a.example'])
+    expect(res.body.top5ByReliabilityScore.map((m: { url: string }) => m.url)).toEqual(['https://a.example'])
   })
 
   it('returns zeroed/empty stats for an empty database (no crash)', async () => {
@@ -99,9 +99,9 @@ describe('GET /api/stats', () => {
     expect(res.body.totalMints).toBe(0)
     expect(res.body.onlineMints).toBe(0)
     expect(res.body.offlineMints).toBe(0)
-    expect(res.body.avgTrustScore).toBeNull()
-    expect(res.body.trustDistribution).toEqual({ low: 0, moderate: 0, high: 0 })
-    expect(res.body.top5ByTrustScore).toEqual([])
+    expect(res.body.avgReliabilityScore).toBeNull()
+    expect(res.body.reliabilityDistribution).toEqual({ low: 0, moderate: 0, high: 0 })
+    expect(res.body.top5ByReliabilityScore).toEqual([])
     // nutAdoption still enumerates every tracked NUT, all at count 0.
     expect(res.body.nutAdoption.every((n: { count: number }) => n.count === 0)).toBe(true)
   })
@@ -127,7 +127,7 @@ describe('GET /api/stats', () => {
   it('caches the response — a second request within the TTL runs no new DB query', async () => {
     query
       .mockResolvedValueOnce({
-        rows: [mintRow({ url: 'https://a.example', last_trust_score: 80, online: true })],
+        rows: [mintRow({ url: 'https://a.example', last_reliability_score: 80, online: true })],
       })
       .mockResolvedValueOnce({ rows: [{ avg_latency: 150 }] })
 
@@ -161,12 +161,12 @@ describe('GET /api/stats', () => {
     expect(query).toHaveBeenCalledTimes(2) // unchanged — second response was cached
   })
 
-  it('excludes a mint from top5ByTrustScore when discovered fewer than 14 days ago', async () => {
+  it('excludes a mint from top5ByReliabilityScore when discovered fewer than 14 days ago', async () => {
     query
       .mockResolvedValueOnce({
         rows: [
-          mintRow({ url: 'https://brand-new.example', last_trust_score: 95, discovered_at: daysAgo(5) }),
-          mintRow({ url: 'https://established.example', last_trust_score: 60, discovered_at: daysAgo(365) }),
+          mintRow({ url: 'https://brand-new.example', last_reliability_score: 95, discovered_at: daysAgo(5) }),
+          mintRow({ url: 'https://established.example', last_reliability_score: 60, discovered_at: daysAgo(365) }),
         ],
       })
       .mockResolvedValueOnce({ rows: [{ avg_latency: 100 }] })
@@ -174,16 +174,16 @@ describe('GET /api/stats', () => {
     const res = await request(app).get('/api/stats')
 
     expect(res.status).toBe(200)
-    const urls = res.body.top5ByTrustScore.map((m: { url: string }) => m.url)
+    const urls = res.body.top5ByReliabilityScore.map((m: { url: string }) => m.url)
     expect(urls).not.toContain('https://brand-new.example')
     expect(urls).toContain('https://established.example')
   })
 
-  it('includes a mint in top5ByTrustScore once discovered at least 14 days ago', async () => {
+  it('includes a mint in top5ByReliabilityScore once discovered at least 14 days ago', async () => {
     query
       .mockResolvedValueOnce({
         rows: [
-          mintRow({ url: 'https://twenty-days.example', last_trust_score: 90, discovered_at: daysAgo(20) }),
+          mintRow({ url: 'https://twenty-days.example', last_reliability_score: 90, discovered_at: daysAgo(20) }),
         ],
       })
       .mockResolvedValueOnce({ rows: [{ avg_latency: 100 }] })
@@ -191,15 +191,15 @@ describe('GET /api/stats', () => {
     const res = await request(app).get('/api/stats')
 
     expect(res.status).toBe(200)
-    expect(res.body.top5ByTrustScore.map((m: { url: string }) => m.url)).toContain('https://twenty-days.example')
+    expect(res.body.top5ByReliabilityScore.map((m: { url: string }) => m.url)).toContain('https://twenty-days.example')
   })
 
-  it('excludes a test mint from top5ByTrustScore regardless of age or score', async () => {
+  it('excludes a test mint from top5ByReliabilityScore regardless of age or score', async () => {
     query
       .mockResolvedValueOnce({
         rows: [
-          mintRow({ url: 'https://testnut.cashu.space', name: 'Testnut mint', last_trust_score: 99, discovered_at: daysAgo(365) }),
-          mintRow({ url: 'https://established.example', last_trust_score: 60, discovered_at: daysAgo(365) }),
+          mintRow({ url: 'https://testnut.cashu.space', name: 'Testnut mint', last_reliability_score: 99, discovered_at: daysAgo(365) }),
+          mintRow({ url: 'https://established.example', last_reliability_score: 60, discovered_at: daysAgo(365) }),
         ],
       })
       .mockResolvedValueOnce({ rows: [{ avg_latency: 100 }] })
@@ -207,7 +207,7 @@ describe('GET /api/stats', () => {
     const res = await request(app).get('/api/stats')
 
     expect(res.status).toBe(200)
-    expect(res.body.top5ByTrustScore.map((m: { url: string }) => m.url)).toEqual(['https://established.example'])
+    expect(res.body.top5ByReliabilityScore.map((m: { url: string }) => m.url)).toEqual(['https://established.example'])
   })
 
   it('returns 500 with a generic message when the DB query fails', async () => {

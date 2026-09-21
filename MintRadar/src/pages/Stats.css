@@ -6,9 +6,9 @@
   /* Single source of truth for the two spacing values unified across this
      page's panels (see the spacing-consistency investigation/fix session) —
      --stats-row-gap for spacing between list rows inside a panel (Software
-     in Use, Most Reliable, Geographic Distribution, Trust Score Movers, NUT
+     in Use, Most Reliable, Geographic Distribution, Reliability Score Movers, NUT
      Coverage), --stats-header-gap for the panel header → content gap
-     (Most Reliable, Trust Score Movers, Trust Score Trend, Network Health
+     (Most Reliable, Reliability Score Movers, Reliability Score Trend, Network Health
      Index desktop breakdown — the panels using .stats-card-header). NOT
      used by Software in Use / Geographic Distribution's title-to-content
      spacing (those use .stats-panel-title's own 14px default, out of scope
@@ -100,7 +100,7 @@
    redistributes it via justify-content: space-between, so the breakdown
    block ends up flush with the panel's bottom edge instead of leaving dead
    space below it. Its margin-top is --stats-header-gap (10px) — same
-   header→content mechanism as Most Reliable/Trust Score Movers
+   header→content mechanism as Most Reliable/Reliability Score Movers
    (.stats-card-header's own 2px margin-bottom collapses with this, settling
    on the larger value); this lives on .nhi-fill rather than .nhi-wrap
    specifically so the collapse still reaches .stats-card-header directly (a
@@ -156,7 +156,7 @@
    in the markup), so this heading is byte-identical to "SOFTWARE IN USE" /
    "GEOGRAPHIC DISTRIBUTION" / "MOST RELIABLE" by construction. Only layout is
    adjusted here: the title holds an inline info icon, so the class's 14px
-   margin-bottom is overridden inline (matches Trust Score panel's header,
+   margin-bottom is overridden inline (matches Reliability Score panel's header,
    which zeroes .md-panel-title's own margin-bottom the same way). */
 .nhi-title-row {
   display: flex;
@@ -170,7 +170,7 @@
    colour/number can be read against a key instead of a one-word label. The
    band matching the current score is highlighted (opacity 1 + bold); the
    other two stay muted. Same three thresholds/colours as healthLabel() /
-   trustScoreInfo() — no new formula, purely a legend for the existing one. */
+   reliabilityScoreInfo() — no new formula, purely a legend for the existing one. */
 .nhi-legend {
   display: flex;
   flex-direction: column;
@@ -284,10 +284,10 @@
 .stats-panel-icon.orange { background: var(--amber-soft);  color: var(--amber); }
 .stats-panel-icon.gray   { background: rgba(139, 148, 158, 0.1); color: var(--text-faint); }
 
-/* ── NUT Coverage / Trust Score Movers / Trust Score Trend grid ─── */
+/* ── NUT Coverage / Reliability Score Movers / Reliability Score Trend grid ─── */
 /* Same chrome-width alignment as .stats-metrics above, so every panel below
    the hero tiles also left-aligns with the Dashboard mint grid.
-   align-items: stretch — NUT Coverage / Trust Score Movers share one row
+   align-items: stretch — NUT Coverage / Reliability Score Movers share one row
    height, the taller of the two. */
 .stats-cards-grid {
   display: grid;
@@ -301,8 +301,8 @@
   min-width: 0;
 }
 
-/* NUT Coverage (span 3) + Trust Score Movers (1 col, no override needed —
-   auto-placement drops it into the remaining column). Trust Score Trend,
+/* NUT Coverage (span 3) + Reliability Score Movers (1 col, no override needed —
+   auto-placement drops it into the remaining column). Reliability Score Trend,
    full width (.stats-trend-panel below). */
 .stats-nut-panel {
   grid-column: auto;
@@ -374,12 +374,12 @@
   white-space: nowrap;
 }
 
-/* ── Trust Score Movers (risers/fallers) ──────────────────────── */
+/* ── Reliability Score Movers (risers/fallers) ──────────────────────── */
 /* Top margin uses --stats-row-gap (8px) for both the "Risers" and "Fallers"
    labels — previously Fallers had its own inline marginTop:12 override
    while Risers used this class's then-10px default, an inconsistency
    within the same component (see the spacing-consistency fix). Both now
-   read this one declaration; TrustMoversPanel.tsx no longer overrides it. */
+   read this one declaration; ReliabilityMoversPanel.tsx no longer overrides it. */
 .stats-movers-section-label {
   display: flex;
   align-items: center;
@@ -483,7 +483,7 @@
   .stats-movers-sk-badge { animation: none; }
 }
 
-/* ── Trust trend summary ─────────────────────────────────────── */
+/* ── Reliability trend summary ─────────────────────────────────────── */
 .trend-summary-row {
   display: flex;
   align-items: center;
@@ -774,7 +774,7 @@
    part of the boundary between rows, so combined with row-gap (8px) the
    total space between two rows' text is 4+0.5(border)+8+4 ≈ 16.5px — in
    the same ballpark as .stats-top5-row's 6px padding + 8px row-gap ≈ 14px
-   "airy" feel (Most Reliable/Trust Score Movers) without stacking a second
+   "airy" feel (Most Reliable/Reliability Score Movers) without stacking a second
    full --stats-row-gap on top of the divider and making this the loosest
    list on the page. row-gap itself is untouched — it's a shared token used
    by five other panels, out of scope for this fix. border-bottom stays, as
@@ -1032,15 +1032,15 @@
 }
 
 /* ── Responsive ─────────────────────────────────────────────── */
-/* .stats-cards-grid now holds only NUT Coverage (span 3) + Trust Score
-   Movers (span 1) + Trust Score Trend (full width) — the 2×2 hero panels
+/* .stats-cards-grid now holds only NUT Coverage (span 3) + Reliability Score
+   Movers (span 1) + Reliability Score Trend (full width) — the 2×2 hero panels
    moved to their own always-2-column .stats-hero-grid above, which handles
    its own mobile stacking independently (see its 768px rule). Below 1300px
    NUT Coverage's span-3 no longer fits comfortably next to Movers' span-1,
    so both reset to full-width (1 / -1) and stack — a span larger than the
    grid's actual column count doesn't clamp, it grows extra implicit
    columns, which would silently break a 2-column layout if left at their
-   4-column spans. Trust Score Trend needs no override: .stats-trend-panel
+   4-column spans. Reliability Score Trend needs no override: .stats-trend-panel
    is always 1 / -1 regardless of column count. */
 @media (max-width: 1300px) {
   .stats-cards-grid { grid-template-columns: 1fr 1fr; }

@@ -1,6 +1,6 @@
 # MintRadar ⚡
 
-> Privacy-first monitoring for Cashu ecash mints — real-time status, trust scoring, and decentralized discovery via Nostr.
+> Privacy-first monitoring for Cashu ecash mints — real-time status, reliability scoring, and decentralized discovery via Nostr.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Self-Hostable](https://img.shields.io/badge/self--hostable-yes-green.svg)](#-getting-started--self-hosting)
@@ -19,7 +19,7 @@
 - Server-side latency measured from Frankfurt, DE
 - "Show my latency" button for a client-side test directly from your browser
 
-### 🛡️ Trust Score System
+### 🛡️ Reliability Score System
 
 Composite score (0–100) calculated server-side after every probe. Shown alongside a separate **Community Rating** (average of Nostr reviews), so an operator-independent signal sits next to the objective one. This is a health / transparency score — it does not measure solvency or whether a mint can pay out.
 
@@ -38,9 +38,9 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 ### 🔍 Dashboard & Discovery
 
 - Search by name or URL
-- Advanced filter panel: Status, Trust Score minimum, NUT support
+- Advanced filter panel: Status, Reliability Score minimum, NUT support
 - Active filters shown as dismissible tags
-- Sort by Latency / Name / Trust Score / **Community Rating** / **Most reviewed** (asc/desc) — Community Rating uses a weighted (Bayesian) average so a mint with two 5★ reviews doesn't outrank one with fifty
+- Sort by Latency / Name / Reliability Score / **Community Rating** / **Most reviewed** (asc/desc) — Community Rating uses a weighted (Bayesian) average so a mint with two 5★ reviews doesn't outrank one with fifty
 - Controls row stays docked at the top of the list while you scroll
 - Compact and expanded card view toggle
 - Single URL or bulk mint submission (paste multiple URLs at once)
@@ -48,19 +48,19 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 
 ### 📈 Historical Data
 
-- Charts for **Latency**, **Uptime**, and **Trust Score** over 24 h / 7 d / 30 d / 90 d
+- Charts for **Latency**, **Uptime**, and **Reliability Score** over 24 h / 7 d / 30 d / 90 d
 - Per-period averages with delta vs. previous period
 - Full Mint History panel with per-probe results
 - **Audit tab** on each mint — a summary strip (mints / melts / recent errors / honest "Last checked" time) backed by real swap data from audit.8333.space, with an amber/red reliability signal based on the rolling error rate
 
 ### 🌐 Global Stats
 
-- Network-wide totals: online/offline counts, average trust score, average latency
-- Trust Score distribution
-- Top mints by Trust Score
+- Network-wide totals: online/offline counts, average reliability score, average latency
+- Reliability Score distribution
+- Top mints by Reliability Score
 - NUT adoption across the network
 - Software in use across known mints
-- Trust movers — recent risers and fallers
+- Reliability movers — recent risers and fallers
 
 ### 🧩 NUT Explorer
 
@@ -68,7 +68,7 @@ Tracked mint-side NUT cards (NUT-04, 05, 07–30; NUT-13 is a wallet-side spec a
 
 ### ⚖️ Mint Comparison Tool
 
-Select 2–4 mints and compare side-by-side: Status, Trust Score, Community Rating, Uptime, Latency, NUT support grid, software version. On narrow screens the table becomes a stacked/tabbed layout — one mint at a time, no horizontal scrolling.
+Select 2–4 mints and compare side-by-side: Status, Reliability Score, Community Rating, Uptime, Latency, NUT support grid, software version. On narrow screens the table becomes a stacked/tabbed layout — one mint at a time, no horizontal scrolling.
 
 ### 👁️ Watchlist with Nostr Login
 
@@ -85,8 +85,8 @@ Automatic mint discovery on a schedule from a set of public Nostr relays, using 
 
 ### 🔧 Tools
 
-- **Token Inspector** — paste a Cashu token (`cashuA` / `cashuB`) to see its mint, amount, unit, proof count, memo, mint status, and Trust Score, plus a risk badge for the issuing mint — with a link to Mint Detail or Cashu.me. Optional **Check if spent** queries the mint (NUT-07) for unspent / spent / partial proofs
-- **Best Mint for Me** — short wizard (unit, what matters most, whether you need seed-phrase restore). Latency is measured live from your browser; the top matches show latency, uptime, Trust Score, LN support, and mint/melt limits for the chosen unit
+- **Token Inspector** — paste a Cashu token (`cashuA` / `cashuB`) to see its mint, amount, unit, proof count, memo, mint status, and Reliability Score, plus a risk badge for the issuing mint — with a link to Mint Detail or Cashu.me. Optional **Check if spent** queries the mint (NUT-07) for unspent / spent / partial proofs
+- **Best Mint for Me** — short wizard (unit, what matters most, whether you need seed-phrase restore). Latency is measured live from your browser; the top matches show latency, uptime, Reliability Score, LN support, and mint/melt limits for the chosen unit
 
 ### 📚 Learn
 
@@ -94,9 +94,9 @@ A 5-module "Cashu 101" course, written as plain-language text with custom illust
 
 1. **Cashu Basics** — what Cashu actually is: the mint holds your Bitcoin, you hold a bearer token, and blind signatures keep person-to-person transfers private
 2. **Understanding the Risks** — why a mint can disappear or refuse to pay, why nobody can currently verify a mint has real backing, and how to limit what you stand to lose
-3. **How to Choose a Mint** — what to check before trusting a mint (uptime, audit reliability, software version, operator transparency) and how MintRadar's Trust Score combines those signals
+3. **How to Choose a Mint** — what to check before trusting a mint (uptime, audit reliability, software version, operator transparency) and how MintRadar's Reliability Score combines those signals
 4. **Getting Started with a Wallet** — choosing a wallet, adding your first mint, making a deposit, sending tokens, and why backing up your seed phrase is non-negotiable
-5. **Safe Habits** — day-to-day habits (diversifying mints, redeeming regularly, checking Trust Score first) that meaningfully reduce your risk
+5. **Safe Habits** — day-to-day habits (diversifying mints, redeeming regularly, checking Reliability Score first) that meaningfully reduce your risk
 
 ### 👛 Wallet Directory
 
@@ -112,7 +112,7 @@ Mint Detail page shows community reviews as **kind:38000** events. On page load 
 
 ### 🔗 Social Link Previews
 
-Sharing a mint page link on Twitter/X, Discord, Telegram, Slack, or WhatsApp shows a preview card with that mint's name, Trust Score, and online status — server-rendered for link-preview crawlers that don't run JavaScript.
+Sharing a mint page link on Twitter/X, Discord, Telegram, Slack, or WhatsApp shows a preview card with that mint's name, Reliability Score, and online status — server-rendered for link-preview crawlers that don't run JavaScript.
 
 ### 🔒 Privacy-First
 

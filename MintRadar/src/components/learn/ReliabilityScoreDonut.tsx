@@ -1,8 +1,8 @@
 import './LearnDiagrams.css'
 
-// Module 3 — the Trust Score weights as a donut. Drawn with the same
+// Module 3 — the Reliability Score weights as a donut. Drawn with the same
 // stroke-dasharray-on-a-circle technique as the Network Health gauge on the
-// Stats page, and weighted/ordered to match the Trust Score Breakdown modal
+// Stats page, and weighted/ordered to match the Reliability Score Breakdown modal
 // in MintDetail.tsx so the reader recognises it when they meet it in the app.
 //
 // The breakdown modal colours each row by how well a given mint scored, which
@@ -31,7 +31,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 // background-coloured separator stroke.
 const GAP = 2.4
 
-export function TrustScoreDonut() {
+export function ReliabilityScoreDonut() {
   // Each slice starts where the preceding weights end. Derived per segment
   // via a prefix sum rather than a running accumulator — the react-hooks
   // immutability rule (compiler-grade, enforced project-wide) forbids
@@ -50,7 +50,7 @@ export function TrustScoreDonut() {
     <div
       className="learn-diagram donut-diagram"
       role="img"
-      aria-label="Trust Score weights: uptime 40%, NUT support 15%, version freshness 15%, contact info 5%, audit reliability 25%."
+      aria-label="Reliability Score weights: uptime 40%, NUT support 15%, version freshness 15%, contact info 5%, audit reliability 25%."
     >
       <div className="donut-chart-wrap">
         <svg viewBox="0 0 120 120" fill="none">

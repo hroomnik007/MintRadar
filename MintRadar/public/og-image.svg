@@ -26,7 +26,7 @@
 
   <!-- Feature pills row 1 -->
   <rect x="90" y="338" width="260" height="68" fill="#161B22" rx="10" stroke="#1E2229" stroke-width="1.5"/>
-  <text x="220" y="380" font-family="monospace" font-size="24" fill="#00E676" text-anchor="middle">✓ Trust Score</text>
+  <text x="220" y="380" font-family="monospace" font-size="24" fill="#00E676" text-anchor="middle">✓ Reliability Score</text>
 
   <rect x="370" y="338" width="260" height="68" fill="#161B22" rx="10" stroke="#1E2229" stroke-width="1.5"/>
   <text x="500" y="380" font-family="monospace" font-size="24" fill="#00E676" text-anchor="middle">✓ NUT Coverage</text>

@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_STATS } from './fixtures/mocks'
 
-// The Network Health Index gauge draws its arc with trustDonutArc() (shared with
-// the Mint Detail Trust Score gauge). It once carried a spurious
+// The Network Health Index gauge draws its arc with reliabilityDonutArc() (shared with
+// the Mint Detail Reliability Score gauge). It once carried a spurious
 // strokeDashoffset="42.4" that split the arc and made it read ~25% short. These
 // tests pin the arc geometry against the number shown in the middle.
 
@@ -17,9 +17,9 @@ test.beforeEach(async ({ page }) => {
 })
 
 for (const v of [
-  { label: 'low', patch: { avgTrustScore: 5, onlineMints: 0, offlineMints: 4 } },
-  { label: 'mid', patch: { avgTrustScore: 40, onlineMints: 2, offlineMints: 2 } },
-  { label: 'high', patch: { avgTrustScore: 100, onlineMints: 4, offlineMints: 0 } },
+  { label: 'low', patch: { avgReliabilityScore: 5, onlineMints: 0, offlineMints: 4 } },
+  { label: 'mid', patch: { avgReliabilityScore: 40, onlineMints: 2, offlineMints: 2 } },
+  { label: 'high', patch: { avgReliabilityScore: 100, onlineMints: 4, offlineMints: 0 } },
 ]) {
   test(`NHI gauge arc fills the shown percent (${v.label})`, async ({ page }) => {
     await page.route('**/api/stats', r => r.fulfill({ json: { ...MOCK_STATS, ...v.patch } }))

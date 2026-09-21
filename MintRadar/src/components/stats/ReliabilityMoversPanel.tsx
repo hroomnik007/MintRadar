@@ -1,21 +1,21 @@
 import { TrendingUp, TrendingDown } from 'lucide-react'
 import { MintFavicon } from '../mint/MintFavicon'
 
-export interface TrustMover {
+export interface ReliabilityMover {
   url: string
   name: string | null
   delta: number
 }
 
-export interface TrustMoversData {
-  risers: TrustMover[]
-  fallers: TrustMover[]
+export interface ReliabilityMoversData {
+  risers: ReliabilityMover[]
+  fallers: ReliabilityMover[]
 }
 
-interface TrustMoversPanelProps {
+interface ReliabilityMoversPanelProps {
   period: '7d' | '30d'
   onPeriodChange: (period: '7d' | '30d') => void
-  data: TrustMoversData | undefined
+  data: ReliabilityMoversData | undefined
   // True only on the very first load, when there is no data (not even stale
   // previous-period data) to show — renders a skeleton, never "No data yet".
   loading: boolean
@@ -24,8 +24,8 @@ interface TrustMoversPanelProps {
   // existing rows slightly instead of blanking them.
   refreshing?: boolean
   onMintClick: (url: string) => void
-  getDisplayName: (mover: TrustMover) => string
-  getIconUrl: (mover: TrustMover) => string | null
+  getDisplayName: (mover: ReliabilityMover) => string
+  getIconUrl: (mover: ReliabilityMover) => string | null
 }
 
 function SkeletonRows() {
@@ -52,16 +52,16 @@ function getHostname(url: string): string {
 // Extracted from Stats.tsx (rather than kept inline like its sibling modals)
 // specifically so the toggle/empty-state/color-differentiation behavior can
 // be unit-tested without mounting the whole Stats page — see
-// TrustMoversPanel.test.tsx. No `@/...`-aliased imports: vitest.config.ts has
+// ReliabilityMoversPanel.test.tsx. No `@/...`-aliased imports: vitest.config.ts has
 // no path-alias resolution (unlike vite.config.ts), so this component takes
 // all data via props instead of reaching into hooks/utils itself, and imports
 // MintFavicon by relative path.
-export function TrustMoversPanel({ period, onPeriodChange, data, loading, refreshing = false, onMintClick, getDisplayName, getIconUrl }: TrustMoversPanelProps) {
+export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, refreshing = false, onMintClick, getDisplayName, getIconUrl }: ReliabilityMoversPanelProps) {
   // Row markup mirrors .stats-top5-row (Most Reliable, in Stats.tsx) — favicon,
   // name on top with its hostname underneath, value flush right — so the two
   // panels in the same grid row read as one visual family. Only the right-hand
   // value differs: a colored delta badge instead of a plain percentage.
-  const renderRows = (movers: TrustMover[], direction: 'up' | 'down') => {
+  const renderRows = (movers: ReliabilityMover[], direction: 'up' | 'down') => {
     if (!data) {
       // Skeleton while the request is still in flight; "No data yet" only once
       // the query has settled without ever producing data (e.g. a failed fetch).
@@ -92,7 +92,7 @@ export function TrustMoversPanel({ period, onPeriodChange, data, loading, refres
   return (
     <div className="stats-panel stats-movers-panel">
       <div className="stats-card-header">
-        <div className="stats-panel-title" style={{ marginBottom: 0 }}>Trust Score Movers</div>
+        <div className="stats-panel-title" style={{ marginBottom: 0 }}>Reliability Score Movers</div>
         <div className="stats-tab-toggle">
           <button type="button" className={`stats-tab-btn${period === '7d' ? ' active' : ''}`} onClick={() => onPeriodChange('7d')}>7d</button>
           <button type="button" className={`stats-tab-btn${period === '30d' ? ' active' : ''}`} onClick={() => onPeriodChange('30d')}>30d</button>

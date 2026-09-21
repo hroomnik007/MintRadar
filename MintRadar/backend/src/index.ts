@@ -6,7 +6,7 @@ import { isSafeUrl, checkWsUrlSafety, safeFetch } from './ssrf.js'
 import { upsertMint, probeMintToDb, validateCashuMintProbe, parseMintMethods, type MintMethodEntry } from './prober.js'
 import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } from './mintPubkey.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
-import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/trustScore.js'
+import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
 import { seedKnownMints, startCron } from './cron.js'
 import { publishServiceProfile } from './nostrService.js'
 import { normalizeUrl } from './discovery.js'
@@ -14,7 +14,7 @@ import { computeDegraded } from './degraded.js'
 import { authenticateNip98 } from './nip98Auth.js'
 import { fetchOgMintData, renderMintOgHtml } from './og.js'
 import { getMintIcon } from './mintIcon.js'
-import { computeTrustMovers, type MintScoreSnapshot } from './trustMovers.js'
+import { computeReliabilityMovers, type MintScoreSnapshot } from './reliabilityMovers.js'
 import { globalMeanRating, weightedRating } from './weightedRating.js'
 import { hasRecentReviewSurge } from './reviewSurge.js'
 import { isTestMint } from './testMints.js'
@@ -50,11 +50,11 @@ const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
 let statsCache: { data: unknown; expiresAt: number } | null = null
 const STATS_CACHE_TTL = 60_000 // 60 seconds
 
-const trustMoversCache = new Map<string, { data: unknown; expiresAt: number }>()
+const reliabilityMoversCache = new Map<string, { data: unknown; expiresAt: number }>()
 // Longer than KNOWN_MINTS_CACHE_TTL: the underlying snapshots only move once per
-// probe cycle (5 min, refreshTrustMoversRollup on the probe cron), and a 7d/30d
+// probe cycle (5 min, refreshReliabilityMoversRollup on the probe cron), and a 7d/30d
 // delta barely shifts between cycles — no reason to recompute per-minute.
-const TRUST_MOVERS_CACHE_TTL = 10 * 60_000 // 10 minutes
+const RELIABILITY_MOVERS_CACHE_TTL = 10 * 60_000 // 10 minutes
 
 // Re-exported for backend/src/__tests__/nostrReviewsRelays.test.ts (a drift
 // tripwire that pins the exact array). The list itself now lives in
@@ -372,7 +372,7 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // Static routes here must stay in sync with LEARN_MODULES (src/constants/learnModules.ts)
 // and App.tsx's route list — there is no shared workspace between frontend/backend to
-// import that from, same caveat as testMints.ts/trustScore.ts.
+// import that from, same caveat as testMints.ts/reliabilityScore.ts.
 const SITEMAP_STATIC_PATHS: Array<{ loc: string; changefreq: string; priority: string }> = [
   { loc: '/', changefreq: 'hourly', priority: '1.0' },
   { loc: '/stats', changefreq: 'daily', priority: '0.8' },
@@ -541,7 +541,7 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
             ROUND(AVG(CASE WHEN online THEN latency_ms END))::int AS latency_ms,
             COUNT(*) AS total,
             SUM(CASE WHEN online THEN 1 ELSE 0 END) AS online_count,
-            ROUND(AVG(trust_score))::int AS trust_score
+            ROUND(AVG(reliability_score))::int AS reliability_score
           FROM mint_history
           WHERE url = $1
             AND checked_at >= NOW() - INTERVAL '24 hours'
@@ -564,7 +564,7 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
             ROUND(AVG(CASE WHEN online THEN latency_ms END))::int AS latency_ms,
             COUNT(*) AS total,
             SUM(CASE WHEN online THEN 1 ELSE 0 END) AS online_count,
-            ROUND(AVG(trust_score))::int AS trust_score
+            ROUND(AVG(reliability_score))::int AS reliability_score
           FROM mint_history
           WHERE url = $1
             AND checked_at >= NOW() - INTERVAL '7 days'
@@ -587,7 +587,7 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
             ROUND(AVG(CASE WHEN online THEN latency_ms END))::int AS latency_ms,
             COUNT(*) AS total,
             SUM(CASE WHEN online THEN 1 ELSE 0 END) AS online_count,
-            ROUND(AVG(trust_score))::int AS trust_score
+            ROUND(AVG(reliability_score))::int AS reliability_score
           FROM mint_history
           WHERE url = $1
             AND checked_at >= NOW() - INTERVAL '30 days'
@@ -611,7 +611,7 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
             ROUND(AVG(CASE WHEN online THEN latency_ms END))::int AS latency_ms,
             COUNT(*) AS total,
             SUM(CASE WHEN online THEN 1 ELSE 0 END) AS online_count,
-            ROUND(AVG(trust_score))::int AS trust_score
+            ROUND(AVG(reliability_score))::int AS reliability_score
           FROM mint_history
           WHERE url = $1
             AND checked_at >= NOW() - INTERVAL '90 days'
@@ -641,7 +641,7 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
           onlineCount: Number(r.online_count),
           uptimePct: Number(r.total) === 0 ? null
             : Math.round(Number(r.online_count) / Number(r.total) * 100),
-          trustScore: r.trust_score != null ? Number(r.trust_score) : null,
+          reliabilityScore: r.reliability_score != null ? Number(r.reliability_score) : null,
         }))
         const prevRow = prevResult.rows[0]
         const prevUptimePct = prevRow?.uptime_ratio != null
@@ -725,13 +725,13 @@ app.get('/api/mints/version-history', (req: Request, res: Response): void => {
       // mint_version_history` + versionGt() across every software in the DB)
       // is meaningless, since the two projects have independent numbering.
       // The GitHub-backed software_versions cache (versionCatalog.ts, also
-      // the source for the Trust Score's version component) is used here
+      // the source for the Reliability Score's version component) is used here
       // instead of scanning mint_version_history for the network-wide max:
       // it reflects the real current upstream release rather than "the
       // highest version any tracked mint happens to have already adopted"
       // (which can only ever lag behind, understating how outdated a mint
       // really is), and it comes with the same 14-day grace period already
-      // applied — so this badge and the Trust Score version component never
+      // applied — so this badge and the Reliability Score version component never
       // disagree about what counts as "latest" for a given software.
       return Promise.all([
         pool.query(
@@ -799,7 +799,7 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
   }
   Promise.all([
     pool.query(`
-      SELECT m.url, m.name, m.last_trust_score, m.nuts_limits, m.discovered_at,
+      SELECT m.url, m.name, m.last_reliability_score, m.nuts_limits, m.discovered_at,
         latest.online AS online, latest.latency_ms
       FROM mints m
       LEFT JOIN LATERAL (
@@ -818,18 +818,18 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
     `),
   ])
     .then(([mintsResult, latencyResult]) => {
-      type MintRow = { url: string; name: string | null; last_trust_score: number | null; nuts_limits: Record<string, unknown> | null; discovered_at: string | Date | null; online: boolean | null; latency_ms: number | null }
+      type MintRow = { url: string; name: string | null; last_reliability_score: number | null; nuts_limits: Record<string, unknown> | null; discovered_at: string | Date | null; online: boolean | null; latency_ms: number | null }
       const rows = mintsResult.rows as MintRow[]
       const online = rows.filter(r => r.online === true)
       const offline = rows.filter(r => r.online === false)
-      const onlineTrustScores = online.map(r => r.last_trust_score ?? 0)
-      const avgTrustScore = onlineTrustScores.length > 0
-        ? Math.round(onlineTrustScores.reduce((a, b) => a + b) / onlineTrustScores.length)
+      const onlineReliabilityScores = online.map(r => r.last_reliability_score ?? 0)
+      const avgReliabilityScore = onlineReliabilityScores.length > 0
+        ? Math.round(onlineReliabilityScores.reduce((a, b) => a + b) / onlineReliabilityScores.length)
         : null
       const avgLatency24h = latencyResult.rows[0]?.avg_latency as number | null ?? null
-      const low = onlineTrustScores.filter(s => s < 40).length
-      const moderate = onlineTrustScores.filter(s => s >= 40 && s < 70).length
-      const high = onlineTrustScores.filter(s => s >= 70).length
+      const low = onlineReliabilityScores.filter(s => s < 40).length
+      const moderate = onlineReliabilityScores.filter(s => s >= 40 && s < 70).length
+      const high = onlineReliabilityScores.filter(s => s >= 70).length
       // MINT_ADVERTISED_NUT_KEYS, not TRACKED_NUT_KEYS — Stats.tsx's NUT
       // Coverage panel only ever iterates the frontend's TRACKED_NUTS (14) so
       // extra entries here are simply ignored there, but the Network Health
@@ -845,19 +845,19 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
           : 0,
       }))
       const top5 = [...rows]
-        .filter(r => r.last_trust_score != null)
+        .filter(r => r.last_reliability_score != null)
         // Known dev/test-only mints are excluded from this "best of" list —
         // still fully visible/probed elsewhere, just not proactively recommended.
         .filter(r => !isTestMint(r.url as string))
         // Minimum observation window before a mint can be recommended — see
         // isEligibleForRecommendation (2026-09-19 audit run-3 MEDIUM finding).
-        // Additive to NEW_MINT_TRUST_CAP (score-side discount); this is the
+        // Additive to NEW_MINT_RELIABILITY_CAP (score-side discount); this is the
         // ranking-eligibility side.
         .filter(r => isEligibleForRecommendation(r.discovered_at))
-        .sort((a, b) => (b.last_trust_score as number) - (a.last_trust_score as number))
+        .sort((a, b) => (b.last_reliability_score as number) - (a.last_reliability_score as number))
         .slice(0, 5)
-        .map(r => ({ url: r.url, name: r.name, trustScore: r.last_trust_score as number }))
-      const data = { totalMints: rows.length, onlineMints: online.length, offlineMints: offline.length, avgTrustScore, avgLatency24h, trustDistribution: { low, moderate, high }, nutAdoption, top5ByTrustScore: top5 }
+        .map(r => ({ url: r.url, name: r.name, reliabilityScore: r.last_reliability_score as number }))
+      const data = { totalMints: rows.length, onlineMints: online.length, offlineMints: offline.length, avgReliabilityScore, avgLatency24h, reliabilityDistribution: { low, moderate, high }, nutAdoption, top5ByReliabilityScore: top5 }
       statsCache = { data, expiresAt: Date.now() + STATS_CACHE_TTL }
       res.setHeader('Cache-Control', `max-age=${Math.floor(STATS_CACHE_TTL / 1000)}`)
       res.json(data)
@@ -868,16 +868,16 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
     })
 })
 
-app.get('/api/stats/trust-trend', (req: Request, res: Response): void => {
+app.get('/api/stats/reliability-trend', (req: Request, res: Response): void => {
   const daysParam = parseInt(String(req.query['days'] ?? '30'), 10)
   const days = [30, 90].includes(daysParam) ? daysParam : 30
   Promise.all([
     pool.query(
       `SELECT
          (DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')::date AS date,
-         ROUND(AVG(trust_score))::int AS avg_trust
+         ROUND(AVG(reliability_score))::int AS avg_reliability
        FROM mint_history
-       WHERE trust_score IS NOT NULL
+       WHERE reliability_score IS NOT NULL
          AND online = true
          AND checked_at > NOW() - INTERVAL '1 day' * $1
        GROUP BY DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC')
@@ -897,7 +897,7 @@ app.get('/api/stats/trust-trend', (req: Request, res: Response): void => {
       res.json({
         trend: result.rows.map(r => ({
           date: (r.date as Date).toISOString().slice(0, 10),
-          avgTrust: r.avg_trust as number,
+          avgReliability: r.avg_reliability as number,
         })),
         periodDays: days,
         earliestCheckedAt,
@@ -905,38 +905,38 @@ app.get('/api/stats/trust-trend', (req: Request, res: Response): void => {
       })
     })
     .catch((err: unknown) => {
-      if (IS_DEV) console.error('[/api/stats/trust-trend]', err)
+      if (IS_DEV) console.error('[/api/stats/reliability-trend]', err)
       res.status(500).json({ error: 'Internal server error' })
     })
 })
 
-// Trust Score risers/fallers over the last 7 or 30 days. Reads entirely from
-// `mints`: last_trust_score is the "latest" snapshot (written by every probe),
-// and trust_score_{7,30}d_ago are the point-in-time snapshots rolled up by
-// refreshTrustMoversRollup() (trustMoversRollup.ts) on the probe cron — this
+// Reliability Score risers/fallers over the last 7 or 30 days. Reads entirely from
+// `mints`: last_reliability_score is the "latest" snapshot (written by every probe),
+// and reliability_score_{7,30}d_ago are the point-in-time snapshots rolled up by
+// refreshReliabilityMoversRollup() (reliabilityMoversRollup.ts) on the probe cron — this
 // used to be two DISTINCT ON passes over all of mint_history (~2.5s cold) run
 // on every cache miss. A mint with no old-enough scored history has a NULL
 // snapshot and is filtered out here (same effect as the old INNER JOIN). The
-// +/-3 threshold and top-3 ranking live in trustMovers.ts (computeTrustMovers),
+// +/-3 threshold and top-3 ranking live in reliabilityMovers.ts (computeReliabilityMovers),
 // unit-tested independently of this query.
-app.get('/api/stats/trust-movers', (req: Request, res: Response): void => {
+app.get('/api/stats/reliability-movers', (req: Request, res: Response): void => {
   const period: '7d' | '30d' = req.query['period'] === '30d' ? '30d' : '7d'
   const days = period === '30d' ? 30 : 7
 
-  const cached = trustMoversCache.get(period)
+  const cached = reliabilityMoversCache.get(period)
   if (cached && Date.now() < cached.expiresAt) {
-    res.setHeader('Cache-Control', `max-age=${Math.floor(TRUST_MOVERS_CACHE_TTL / 1000)}`)
+    res.setHeader('Cache-Control', `max-age=${Math.floor(RELIABILITY_MOVERS_CACHE_TTL / 1000)}`)
     res.json(cached.data)
     return
   }
 
   pool.query(
     `SELECT url, name,
-       last_trust_score AS latest_score,
-       CASE WHEN $1 = 30 THEN trust_score_30d_ago ELSE trust_score_7d_ago END AS old_score
+       last_reliability_score AS latest_score,
+       CASE WHEN $1 = 30 THEN reliability_score_30d_ago ELSE reliability_score_7d_ago END AS old_score
      FROM mints
-     WHERE last_trust_score IS NOT NULL
-       AND CASE WHEN $1 = 30 THEN trust_score_30d_ago ELSE trust_score_7d_ago END IS NOT NULL`,
+     WHERE last_reliability_score IS NOT NULL
+       AND CASE WHEN $1 = 30 THEN reliability_score_30d_ago ELSE reliability_score_7d_ago END IS NOT NULL`,
     [days]
   )
     .then(result => {
@@ -946,13 +946,13 @@ app.get('/api/stats/trust-movers', (req: Request, res: Response): void => {
         latestScore: Number(r.latest_score),
         oldScore: Number(r.old_score),
       }))
-      const data = { period, ...computeTrustMovers(snapshots) }
-      trustMoversCache.set(period, { data, expiresAt: Date.now() + TRUST_MOVERS_CACHE_TTL })
-      res.setHeader('Cache-Control', `max-age=${Math.floor(TRUST_MOVERS_CACHE_TTL / 1000)}`)
+      const data = { period, ...computeReliabilityMovers(snapshots) }
+      reliabilityMoversCache.set(period, { data, expiresAt: Date.now() + RELIABILITY_MOVERS_CACHE_TTL })
+      res.setHeader('Cache-Control', `max-age=${Math.floor(RELIABILITY_MOVERS_CACHE_TTL / 1000)}`)
       res.json(data)
     })
     .catch((err: unknown) => {
-      if (IS_DEV) console.error('[/api/stats/trust-movers]', err)
+      if (IS_DEV) console.error('[/api/stats/reliability-movers]', err)
       res.status(500).json({ error: 'Internal server error' })
     })
 })
@@ -969,7 +969,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         m.units, m.mint_methods, m.melt_methods, m.pubkey,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
-        m.discovered_at, m.nostr_announced_at, m.nostr_announce_id, m.nostr_announce_pubkey, m.nostr_announce_d, m.last_trust_score, m.last_error, m.server_location,
+        m.discovered_at, m.nostr_announced_at, m.nostr_announce_id, m.nostr_announce_pubkey, m.nostr_announce_d, m.last_reliability_score, m.last_error, m.server_location,
         m.review_count, m.review_avg_rating, m.review_count_7d_ago, m.review_count_7d_ago_at,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
@@ -997,7 +997,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         m.units, m.mint_methods, m.melt_methods, m.pubkey,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
-        m.discovered_at, m.last_trust_score, m.last_error, m.server_location,
+        m.discovered_at, m.last_reliability_score, m.last_error, m.server_location,
         m.review_count, m.review_avg_rating, m.review_count_7d_ago, m.review_count_7d_ago_at,
         h7.total_7d, h7.online_count_7d,
         latest.online, latest.latency_ms, latest.checked_at
@@ -1062,7 +1062,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           nostrAnnounceId: (r.nostr_announce_id as string | null) ?? null,
           nostrAnnouncePubkey: (r.nostr_announce_pubkey as string | null) ?? null,
           nostrAnnounceD: (r.nostr_announce_d as string | null) ?? null,
-          trustScore: (r.last_trust_score as number | null) ?? null,
+          reliabilityScore: (r.last_reliability_score as number | null) ?? null,
           lastError: (r.last_error as string | null) ?? null,
           uptimePct24h: total === 0 ? null : Math.round(onlineCount / total * 100),
           // Same computation as uptimePct24h, over a 7-day window — feeds the
@@ -1078,7 +1078,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           reviewAvgRating: r.review_avg_rating != null ? Number(r.review_avg_rating) : null,
           // Forgery-resistant sybil signal: the mint's review_count jumped
           // sharply vs. the daily rollup's ~1-week-ago snapshot. Informational
-          // only — never feeds Trust Score or reviewWeightedRating.
+          // only — never feeds Reliability Score or reviewWeightedRating.
           reviewSurge: hasRecentReviewSurge({
             reviewCount: (r.review_count as number | null) ?? null,
             reviewCount7dAgo: (r.review_count_7d_ago as number | null) ?? null,

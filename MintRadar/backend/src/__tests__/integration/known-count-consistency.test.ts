@@ -44,7 +44,7 @@ function knownRow(m: { url: string; online: boolean | null; name: string | null 
     units: null, mint_methods: null, melt_methods: null,
     audit_n_mints: null, audit_n_melts: null, audit_n_errors: null, audit_checked_at: null,
     audit_synced_at: null, audit_recent_total: null, audit_recent_errors: null,
-    discovered_at: '2026-01-01T00:00:00.000Z', last_trust_score: m.online ? 70 : null, last_error: null,
+    discovered_at: '2026-01-01T00:00:00.000Z', last_reliability_score: m.online ? 70 : null, last_error: null,
     server_location: null, review_count: null, review_avg_rating: null,
     review_count_7d_ago: null, review_count_7d_ago_at: null,
     total: 0, online_count: 0,
@@ -53,7 +53,7 @@ function knownRow(m: { url: string; online: boolean | null; name: string | null 
 }
 
 function statsRow(m: { url: string; online: boolean | null }) {
-  return { url: m.url, name: null, last_trust_score: m.online ? 70 : null, nuts_limits: null, online: m.online, latency_ms: null }
+  return { url: m.url, name: null, last_reliability_score: m.online ? 70 : null, nuts_limits: null, online: m.online, latency_ms: null }
 }
 
 describe('Dashboard known total === Stats mints-tracked', () => {

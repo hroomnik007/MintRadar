@@ -76,7 +76,7 @@ const GET_ENDPOINTS: { name: string; req: () => request.Test }[] = [
   { name: 'GET /api/mints/known', req: () => request(app).get('/api/mints/known') },
   { name: 'GET /api/stats', req: () => request(app).get('/api/stats') },
   { name: 'GET /api/nuts', req: () => request(app).get('/api/nuts') },
-  { name: 'GET /api/stats/trust-trend', req: () => request(app).get('/api/stats/trust-trend') },
+  { name: 'GET /api/stats/reliability-trend', req: () => request(app).get('/api/stats/reliability-trend') },
   {
     name: 'GET /api/mints/history',
     req: () => request(app).get('/api/mints/history').query({ url: 'https://mint.example.com', period: '24h' }),

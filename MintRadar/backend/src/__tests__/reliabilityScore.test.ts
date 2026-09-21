@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { computeServerTrustScore, serverVersionFreshnessScore } from '../prober.js'
-import { TRACKED_NUT_COUNT, TRACKED_NUT_KEYS, isEligibleForRecommendation, MIN_RECOMMENDATION_AGE_DAYS } from '../shared/trustScore.js'
+import { computeServerReliabilityScore, serverVersionFreshnessScore } from '../prober.js'
+import { TRACKED_NUT_COUNT, TRACKED_NUT_KEYS, isEligibleForRecommendation, MIN_RECOMMENDATION_AGE_DAYS } from '../shared/reliabilityScore.js'
 
 describe('TRACKED_NUT_KEYS', () => {
   it('has exactly 14 entries and matches TRACKED_NUT_COUNT', () => {
@@ -47,83 +47,83 @@ describe('isEligibleForRecommendation', () => {
 
 // uptime 40 | NUT 15 | version 15 | contact 5 | audit 25
 // null/<3 audit samples → 12.5; new mint cap is optional last arg
-// NUT support denominator is TRACKED_NUT_COUNT = 14 (src/shared/trustScore.ts) — passing
+// NUT support denominator is TRACKED_NUT_COUNT = 14 (src/shared/reliabilityScore.ts) — passing
 // a nutCount at or above 14 always maxes this component out.
-describe('computeServerTrustScore', () => {
+describe('computeServerReliabilityScore', () => {
   it('returns 100 for a perfect mint', () => {
-    expect(computeServerTrustScore(100, 14, 'Nutshell/0.20', 3, 100, 0)).toBe(100)
+    expect(computeServerReliabilityScore(100, 14, 'Nutshell/0.20', 3, 100, 0)).toBe(100)
   })
 
   it('a mint maxed on every component scores exactly 100', () => {
-    expect(computeServerTrustScore(100, 28, 'Nutshell/0.20', 6, 100, 0)).toBe(100)
+    expect(computeServerReliabilityScore(100, 28, 'Nutshell/0.20', 6, 100, 0)).toBe(100)
   })
 
   it('returns a low, finite score for a mint with no data', () => {
-    const score = computeServerTrustScore(0, null, null, 0, null, null)
+    const score = computeServerReliabilityScore(0, null, null, 0, null, null)
     expect(score).toBe(13) // 12.5 → 13
     expect(Number.isFinite(score)).toBe(true)
   })
 
   it('computes from remaining components when audit data is missing', () => {
     // 40+15+15+5+12.5 = 87.5 → 88
-    expect(computeServerTrustScore(100, 14, 'Nutshell/0.20', 3, null, null)).toBe(88)
+    expect(computeServerReliabilityScore(100, 14, 'Nutshell/0.20', 3, null, null)).toBe(88)
   })
 
   it('caps a brand-new mint at 75 even if components max out', () => {
     const now = new Date()
     const young = new Date(now.getTime() - 5 * 86_400_000).toISOString()
-    expect(computeServerTrustScore(100, 14, 'Nutshell/0.20', 3, 100, 0, undefined, young)).toBe(75)
+    expect(computeServerReliabilityScore(100, 14, 'Nutshell/0.20', 3, 100, 0, undefined, young)).toBe(75)
   })
 
   it('does not cap a mint older than 30 days', () => {
     const old = new Date(Date.now() - 40 * 86_400_000).toISOString()
-    expect(computeServerTrustScore(100, 14, 'Nutshell/0.20', 3, 100, 0, undefined, old)).toBe(100)
+    expect(computeServerReliabilityScore(100, 14, 'Nutshell/0.20', 3, 100, 0, undefined, old)).toBe(100)
   })
 
   describe('uptime component (40%)', () => {
     it('contributes 0 at 0% uptime', () => {
-      expect(computeServerTrustScore(0, null, null, 0, null, null)).toBe(13)
+      expect(computeServerReliabilityScore(0, null, null, 0, null, null)).toBe(13)
     })
     it('contributes 40 at 100% uptime', () => {
       // 40 + 12.5 = 52.5 → 53
-      expect(computeServerTrustScore(100, null, null, 0, null, null)).toBe(53)
+      expect(computeServerReliabilityScore(100, null, null, 0, null, null)).toBe(53)
     })
   })
 
   describe('NUT support component (15%)', () => {
     it('contributes 0 with 0 nuts', () => {
-      expect(computeServerTrustScore(0, 0, null, 0, null, null)).toBe(13)
+      expect(computeServerReliabilityScore(0, 0, null, 0, null, null)).toBe(13)
     })
     it('contributes 15 at 14 nuts (the full tracked count)', () => {
       // 15 + 12.5 = 27.5 → 28
-      expect(computeServerTrustScore(0, 14, null, 0, null, null)).toBe(28)
+      expect(computeServerReliabilityScore(0, 14, null, 0, null, null)).toBe(28)
     })
     it('caps NUT support at 14 nuts — a higher count scores no higher', () => {
-      expect(computeServerTrustScore(0, 50, null, 0, null, null)).toBe(28)
+      expect(computeServerReliabilityScore(0, 50, null, 0, null, null)).toBe(28)
     })
   })
 
   describe('contact component (5%)', () => {
     it('contributes 0 with no contacts', () => {
-      expect(computeServerTrustScore(0, null, null, 0, null, null)).toBe(13)
+      expect(computeServerReliabilityScore(0, null, null, 0, null, null)).toBe(13)
     })
     it('contributes 5 with 3 contacts', () => {
       // 5 + 12.5 = 17.5 → 18
-      expect(computeServerTrustScore(0, null, null, 3, null, null)).toBe(18)
+      expect(computeServerReliabilityScore(0, null, null, 3, null, null)).toBe(18)
     })
     it('3, 6 and 60 contacts score identically', () => {
-      expect(computeServerTrustScore(0, null, null, 3, null, null)).toBe(18)
-      expect(computeServerTrustScore(0, null, null, 6, null, null)).toBe(18)
-      expect(computeServerTrustScore(0, null, null, 60, null, null)).toBe(18)
+      expect(computeServerReliabilityScore(0, null, null, 3, null, null)).toBe(18)
+      expect(computeServerReliabilityScore(0, null, null, 6, null, null)).toBe(18)
+      expect(computeServerReliabilityScore(0, null, null, 60, null, null)).toBe(18)
     })
-    it('cannot inflate Trust Score via contact count', () => {
-      expect(computeServerTrustScore(0, null, null, 60, null, null)).toBe(18)
+    it('cannot inflate Reliability Score via contact count', () => {
+      expect(computeServerReliabilityScore(0, null, null, 60, null, null)).toBe(18)
     })
   })
 
   describe('audit reliability component (25%)', () => {
     const base = (total: number | null, errors: number) =>
-      computeServerTrustScore(0, null, null, 0, total, errors)
+      computeServerReliabilityScore(0, null, null, 0, total, errors)
     it('neutral 12.5 when audit data is missing', () => {
       expect(base(null, 0)).toBe(13)
     })
@@ -151,13 +151,13 @@ describe('computeServerTrustScore', () => {
 
   describe('negative / null inputs never crash or return NaN', () => {
     it('handles negative uptime without NaN', () => {
-      expect(Number.isFinite(computeServerTrustScore(-50, null, null, 0, null, null))).toBe(true)
+      expect(Number.isFinite(computeServerReliabilityScore(-50, null, null, 0, null, null))).toBe(true)
     })
     it('handles negative nutCount without NaN', () => {
-      expect(Number.isFinite(computeServerTrustScore(0, -5, null, 0, null, null))).toBe(true)
+      expect(Number.isFinite(computeServerReliabilityScore(0, -5, null, 0, null, null))).toBe(true)
     })
     it('handles all-null inputs without NaN', () => {
-      expect(Number.isNaN(computeServerTrustScore(0, null, null, 0, null, null))).toBe(false)
+      expect(Number.isNaN(computeServerReliabilityScore(0, null, null, 0, null, null))).toBe(false)
     })
   })
 })

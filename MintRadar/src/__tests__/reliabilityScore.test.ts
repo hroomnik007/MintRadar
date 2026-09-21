@@ -1,41 +1,41 @@
 import { describe, it, expect } from 'vitest'
 import {
-  computeTrustScore, versionFreshnessScore, TRACKED_NUT_COUNT,
+  computeReliabilityScore, versionFreshnessScore, TRACKED_NUT_COUNT,
   uptimeComponent, nutComponent, versionComponent, contactComponent,
   isEligibleForRecommendation, MIN_RECOMMENDATION_AGE_DAYS,
-} from '../utils/trustScore'
+} from '../utils/reliabilityScore'
 
-// Frontend half of the shared Trust Score contract.
+// Frontend half of the shared Reliability Score contract.
 // Weights: uptime 40 | NUT 15 | version 15 | contact 5 | audit 25
 // Missing audit samples → 12.5
-describe('computeTrustScore — parity with the backend source of truth', () => {
+describe('computeReliabilityScore — parity with the backend source of truth', () => {
   it('returns 100 for a perfect mint', () => {
-    expect(computeTrustScore(100, 14, 'Nutshell/0.20', 3, 100, 0)).toBe(100)
+    expect(computeReliabilityScore(100, 14, 'Nutshell/0.20', 3, 100, 0)).toBe(100)
   })
 
   it('caps the total at 100', () => {
-    expect(computeTrustScore(100, 28, 'Nutshell/0.20', 6, 100, 0)).toBe(100)
+    expect(computeReliabilityScore(100, 28, 'Nutshell/0.20', 6, 100, 0)).toBe(100)
   })
 
   it('returns 13 for a mint with no data at all', () => {
-    expect(computeTrustScore(0, null, null, 0, null, null)).toBe(13)
+    expect(computeReliabilityScore(0, null, null, 0, null, null)).toBe(13)
   })
 
   it('returns 88 when only audit data is missing', () => {
-    expect(computeTrustScore(100, 14, 'Nutshell/0.20', 3, null, null)).toBe(88)
+    expect(computeReliabilityScore(100, 14, 'Nutshell/0.20', 3, null, null)).toBe(88)
   })
 
   it('rounds the total exactly once, after summing the components', () => {
     // 40 + 15 + 15 + 5 + 12.5 = 87.5 → 88
-    expect(computeTrustScore(100, 14, 'Nutshell/0.20', 3, null, null)).toBe(88)
+    expect(computeReliabilityScore(100, 14, 'Nutshell/0.20', 3, null, null)).toBe(88)
     // 0 + 0 + 0 + 0 + 12.5 = 12.5 → 13
-    expect(computeTrustScore(0, 0, null, 0, null, null)).toBe(13)
+    expect(computeReliabilityScore(0, 0, null, 0, null, null)).toBe(13)
   })
 
   it('never returns NaN for negative or null inputs', () => {
     for (const score of [
-      computeTrustScore(-50, null, null, 0, null, null),
-      computeTrustScore(0, -5, null, 0, null, null),
+      computeReliabilityScore(-50, null, null, 0, null, null),
+      computeReliabilityScore(0, -5, null, 0, null, null),
     ]) {
       expect(Number.isFinite(score)).toBe(true)
       expect(Number.isNaN(score)).toBe(false)
@@ -73,7 +73,7 @@ describe('components', () => {
     const [uptime, nuts, version, contacts] = [97, 20, 'Nutshell/0.15', 1] as const
     const sum = uptimeComponent(uptime) + nutComponent(nuts) + versionComponent(version)
       + contactComponent(contacts) + 12.5 /* audit: no data */
-    expect(computeTrustScore(uptime, nuts, version, contacts, null, null))
+    expect(computeReliabilityScore(uptime, nuts, version, contacts, null, null))
       .toBe(Math.min(100, Math.round(sum)))
   })
 })

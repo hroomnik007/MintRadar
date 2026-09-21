@@ -8,7 +8,7 @@ import { computeDegraded } from './degraded.js'
 
 export interface OgMintData {
   name: string | null
-  trustScore: number | null
+  reliabilityScore: number | null
   online: boolean | null
   degraded: boolean
 }
@@ -43,14 +43,14 @@ export function renderMintOgHtml(mint: OgMintData | null, mintUrl: string): stri
 
   if (mint === null) {
     const title = 'MintRadar - Cashu Mint Monitor'
-    const description = 'Real-time Trust Score, latency & NUT monitoring for Cashu mints. Open source & privacy first.'
+    const description = 'Real-time Reliability Score, latency & NUT monitoring for Cashu mints. Open source & privacy first.'
     return renderHtml(title, description, pageUrl)
   }
 
   const displayName = mint.name && mint.name.trim().length > 0 ? mint.name.trim() : mintUrl
   const title = `${displayName} — MintRadar`
-  const trustScoreText = mint.trustScore !== null ? `${mint.trustScore}%` : 'N/A'
-  const description = `Trust Score: ${trustScoreText} · ${mintStatusLabel(mint)}`
+  const reliabilityScoreText = mint.reliabilityScore !== null ? `${mint.reliabilityScore}%` : 'N/A'
+  const description = `Reliability Score: ${reliabilityScoreText} · ${mintStatusLabel(mint)}`
 
   return renderHtml(title, description, pageUrl)
 }
@@ -90,7 +90,7 @@ function renderHtml(title: string, description: string, pageUrl: string): string
 // known-mints payload (icon/NUTs/audit/etc.) that this fragment doesn't need.
 export async function fetchOgMintData(url: string): Promise<OgMintData | null> {
   const result = await pool.query(
-    `SELECT m.name, m.last_trust_score,
+    `SELECT m.name, m.last_reliability_score,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
         latest.online AS latest_online,
@@ -102,7 +102,7 @@ export async function fetchOgMintData(url: string): Promise<OgMintData | null> {
         WHERE url = m.url ORDER BY checked_at DESC, id DESC LIMIT 1
       ) latest ON true
       WHERE m.url = $1
-      GROUP BY m.name, m.last_trust_score, latest.online, latest.checked_at`,
+      GROUP BY m.name, m.last_reliability_score, latest.online, latest.checked_at`,
     [url]
   )
 
@@ -116,7 +116,7 @@ export async function fetchOgMintData(url: string): Promise<OgMintData | null> {
 
   return {
     name: row['name'] as string | null,
-    trustScore: (row['last_trust_score'] as number | null) ?? null,
+    reliabilityScore: (row['last_reliability_score'] as number | null) ?? null,
     online: latestOnline,
     degraded: computeDegraded(total, onlineCount, latestOnline, latestCheckedAt),
   }

@@ -35,14 +35,14 @@ test.describe('MintCard — copy & reduced badge set', () => {
     await expect(page.locator('.mint-card .card-pill', { hasText: /Nutshell|cdk-mintd/ })).toHaveCount(0)
   })
 
-  test('Trust block shows a bare number (no %), or "Trust n/a" when missing', async ({ page }) => {
+  test('Reliability block shows a bare number (no %), or "Reliability n/a" when missing', async ({ page }) => {
     await page.goto('/?status=all')
-    const alphaTrust = card(page, 'Alpha Mint').locator('.card-trust')
-    await expect(alphaTrust).toBeVisible()
-    await expect(alphaTrust.locator('.card-trust-score')).toHaveText('92')
-    await expect(alphaTrust).not.toContainText('%')
-    // Offline mint with a null score still shows the block, as "Trust n/a".
-    await expect(card(page, 'Charlie Mint').locator('.card-trust-na')).toHaveText('Trust n/a')
+    const alphaReliability = card(page, 'Alpha Mint').locator('.card-reliability')
+    await expect(alphaReliability).toBeVisible()
+    await expect(alphaReliability.locator('.card-reliability-score')).toHaveText('92')
+    await expect(alphaReliability).not.toContainText('%')
+    // Offline mint with a null score still shows the block, as "Reliability n/a".
+    await expect(card(page, 'Charlie Mint').locator('.card-reliability-na')).toHaveText('Reliability n/a')
   })
 
   test('uptime chip reads "<n>% up 24h"', async ({ page }) => {
@@ -147,7 +147,7 @@ test.describe('MintCard — copy & reduced badge set', () => {
     await expect(page.locator('.stat-count-note')).toContainText(/Listed.*in the grid.*Known.*every mint we indexed/s)
   })
 
-  test('grid carries the Trust-vs-Stars explainer sentence once, above the cards', async ({ page }) => {
+  test('grid carries the Reliability-vs-Stars explainer sentence once, above the cards', async ({ page }) => {
     await page.goto('/?status=all')
     const explainer = page.locator('.grid-score-explainer')
     await expect(explainer).toHaveCount(1)
@@ -176,7 +176,7 @@ test.describe('Dashboard list view — reduced columns', () => {
     await installApiMocks(page)
   })
 
-  test('no Age column / Established–Veteran–OG badges, Trust cell has no %', async ({ page }) => {
+  test('no Age column / Established–Veteran–OG badges, Reliability cell has no %', async ({ page }) => {
     await page.goto('/?status=all')
     await page.locator('.view-toggle-btn[title="List view"]').click()
     await expect(page.locator('.mint-list-table')).toBeVisible()
@@ -188,12 +188,12 @@ test.describe('Dashboard list view — reduced columns', () => {
     }
 
     // Kept columns.
-    for (const label of ['Status', 'Uptime 24h', 'Latency', 'Trust', 'NUTs']) {
+    for (const label of ['Status', 'Uptime 24h', 'Latency', 'Reliability', 'NUTs']) {
       await expect(page.locator('.mint-list-table th', { hasText: label })).toHaveCount(1)
     }
 
-    // Trust cell is an integer, no "%".
-    const trustCell = page.locator('.mint-list-row', { hasText: 'Alpha Mint' }).locator('.trust-col')
-    await expect(trustCell).toHaveText('92')
+    // Reliability cell is an integer, no "%".
+    const reliabilityCell = page.locator('.mint-list-row', { hasText: 'Alpha Mint' }).locator('.reliability-col')
+    await expect(reliabilityCell).toHaveText('92')
   })
 })

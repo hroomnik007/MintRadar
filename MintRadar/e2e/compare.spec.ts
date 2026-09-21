@@ -18,7 +18,7 @@ test.describe('Compare (Mint Diff Tool)', () => {
 
     // Existing current-state comparison (unchanged behavior).
     await expect(page.getByText('Mint Comparison')).toBeVisible()
-    await expect(page.locator('.cmp-lbl', { hasText: 'Trust Score' })).toBeVisible()
+    await expect(page.locator('.cmp-lbl', { hasText: 'Reliability Score' })).toBeVisible()
 
     // New: Historical Trends section with chart controls.
     await expect(page.getByText('Historical Trends')).toBeVisible()
@@ -33,7 +33,7 @@ test.describe('Compare (Mint Diff Tool)', () => {
     await expect(page.getByText(/does not track over time/)).toBeVisible()
   })
 
-  test('shows Trust Score and Community Rating rows, with a fallback for mints without reviews', async ({ page }) => {
+  test('shows Reliability Score and Community Rating rows, with a fallback for mints without reviews', async ({ page }) => {
     await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
     await page.locator('.md-picker-item', { hasText: 'Bravo Mint' }).click()
     await page.locator('.md-picker-confirm').click()
@@ -41,7 +41,7 @@ test.describe('Compare (Mint Diff Tool)', () => {
     await expect(page.getByText('Mint Comparison')).toBeVisible()
 
     const grid = page.locator('.cmp-grid')
-    await expect(grid.locator('.cmp-lbl', { hasText: 'Trust Score' })).toBeVisible()
+    await expect(grid.locator('.cmp-lbl', { hasText: 'Reliability Score' })).toBeVisible()
     await expect(grid.locator('.cmp-lbl', { hasText: 'Community Rating' })).toBeVisible()
 
     // Alpha has 12 reviews averaging 4.2 → star badge; Bravo has none → "—".
@@ -60,8 +60,8 @@ test.describe('Compare (Mint Diff Tool)', () => {
       json: {
         period: '7d',
         segments: [
-          { bucket: '2026-08-28T00:00:00Z', online: true, latencyMs: 50, total: 12, onlineCount: 12, uptimePct: 100, trustScore: 92 },
-          { bucket: '2026-08-29T00:00:00Z', online: true, latencyMs: 55, total: 12, onlineCount: 12, uptimePct: 100, trustScore: 92 },
+          { bucket: '2026-08-28T00:00:00Z', online: true, latencyMs: 50, total: 12, onlineCount: 12, uptimePct: 100, reliabilityScore: 92 },
+          { bucket: '2026-08-29T00:00:00Z', online: true, latencyMs: 55, total: 12, onlineCount: 12, uptimePct: 100, reliabilityScore: 92 },
         ],
         uptimePct: 99, avgLatencyMs: 52, prevUptimePct: 98, prevAvgLatencyMs: 60,
         earliestCheckedAt: '2026-08-01T00:00:00Z', daysOfDataAvailable: 7, periodDays: 7,

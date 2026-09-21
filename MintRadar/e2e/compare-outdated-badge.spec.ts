@@ -8,7 +8,7 @@ import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 // (two unrelated projects with independent numbering; the real-world trigger
 // was a cdk-mintd/0.15.1 mint compared against a 0.20.x Nutshell mint). The
 // fix groups compared mints by canonical software (same parsing as
-// versionFreshnessScore() in trustScore.ts) and only flags a mint against the
+// versionFreshnessScore() in reliabilityScore.ts) and only flags a mint against the
 // newest version of its OWN software among the mints being compared.
 
 async function overrideKnownMints(page: import('@playwright/test').Page, overrides: Record<string, string | null>) {

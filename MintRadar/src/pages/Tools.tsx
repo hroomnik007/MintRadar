@@ -6,10 +6,10 @@ import { IcShield } from '@/components/mint/IcShield'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { useNow } from '@/hooks/useNow'
 import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, InvalidMintUrlError, type TokenInfo, type TokenSpentCheck } from '@/utils/cashuToken'
-import { normalizeMintUrl, trustColor, trustScoreInfo, mintRiskLevel, displayName as mintDisplayName, cardTrustLabel, cardLightningLabel } from '@/utils/mintFormatting'
+import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, mintRiskLevel, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel } from '@/utils/mintFormatting'
 import { Zap } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
-import { isEligibleForRecommendation } from '@/utils/trustScore'
+import { isEligibleForRecommendation } from '@/utils/reliabilityScore'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import './Tools.css'
 
@@ -68,7 +68,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     return knownMap.get(normalized) ?? knownMap.get(result.mint) ?? null
   }, [result, knownMap])
 
-  const riskInfo = mintRiskLevel(mintInfo ? { online: mintInfo.online, degraded: mintInfo.degraded, trustScore: mintInfo.trustScore } : null)
+  const riskInfo = mintRiskLevel(mintInfo ? { online: mintInfo.online, degraded: mintInfo.degraded, reliabilityScore: mintInfo.reliabilityScore } : null)
 
   const handleInspectAndVerify = async () => {
     const token = input.trim()
@@ -164,7 +164,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     <div className="tool-card">
       <div className="tool-header">
         <div className="tool-title">Token Inspector</div>
-        <div className="tool-subtitle">Paste a Cashu token (v3 or v4) to inspect its mint, amount, and trust status before redeeming</div>
+        <div className="tool-subtitle">Paste a Cashu token (v3 or v4) to inspect its mint, amount, and reliability status before redeeming</div>
       </div>
 
       <textarea
@@ -237,12 +237,12 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
               )}
             </div>
             <div className="token-result-cell">
-              <div className="trc-label">Trust Score</div>
-              {mintInfo?.trustScore != null ? (
+              <div className="trc-label">Reliability Score</div>
+              {mintInfo?.reliabilityScore != null ? (
                 <>
-                  <div className="trc-value" style={{ color: trustColor(mintInfo.trustScore) }}>{mintInfo.trustScore}%</div>
-                  <div className="trc-sub" style={{ color: trustColor(mintInfo.trustScore) }}>
-                    {trustScoreInfo(mintInfo.trustScore).label}
+                  <div className="trc-value" style={{ color: reliabilityColor(mintInfo.reliabilityScore) }}>{mintInfo.reliabilityScore}%</div>
+                  <div className="trc-sub" style={{ color: reliabilityColor(mintInfo.reliabilityScore) }}>
+                    {reliabilityScoreInfo(mintInfo.reliabilityScore).label}
                   </div>
                 </>
               ) : (
@@ -386,7 +386,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   )
 }
 
-type Preference = 'speed' | 'trust' | 'features'
+type Preference = 'speed' | 'reliability' | 'features'
 type BackupPref = 'yes' | 'no' | 'unsure'
 type SizeOption = 'small' | 'medium' | 'large'
 
@@ -441,22 +441,22 @@ function formatLimits(limits: UnitLimits | null, unit: string): string | null {
   return `${min}–${max} ${unit}`
 }
 
-const BASE_WEIGHTS: Record<Preference, { latency: number; trust: number; nuts: number }> = {
-  speed:    { latency: 0.6, trust: 0.3, nuts: 0.1 },
-  trust:    { latency: 0.2, trust: 0.7, nuts: 0.1 },
-  features: { latency: 0.2, trust: 0.3, nuts: 0.5 },
+const BASE_WEIGHTS: Record<Preference, { latency: number; reliability: number; nuts: number }> = {
+  speed:    { latency: 0.6, reliability: 0.3, nuts: 0.1 },
+  reliability:    { latency: 0.2, reliability: 0.7, nuts: 0.1 },
+  features: { latency: 0.2, reliability: 0.3, nuts: 0.5 },
 }
 
 // Larger stored balances carry more risk if the mint turns out unreliable, so
-// shift weight toward trust — proportionally reducing latency/nuts so the
+// shift weight toward reliability — proportionally reducing latency/nuts so the
 // three weights still sum to 1.
-const LARGE_TRUST_BOOST = 0.15
+const LARGE_RELIABILITY_BOOST = 0.15
 
-function weightsFor(preference: Preference, size: SizeOption): { latency: number; trust: number; nuts: number } {
+function weightsFor(preference: Preference, size: SizeOption): { latency: number; reliability: number; nuts: number } {
   const base = BASE_WEIGHTS[preference]
   if (size !== 'large') return base
-  const scale = (1 - base.trust - LARGE_TRUST_BOOST) / (1 - base.trust)
-  return { latency: base.latency * scale, trust: base.trust + LARGE_TRUST_BOOST, nuts: base.nuts * scale }
+  const scale = (1 - base.reliability - LARGE_RELIABILITY_BOOST) / (1 - base.reliability)
+  return { latency: base.latency * scale, reliability: base.reliability + LARGE_RELIABILITY_BOOST, nuts: base.nuts * scale }
 }
 
 function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
@@ -492,12 +492,12 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
     setRecs(null)
 
     const candidates = knownMints
-      .filter(m => m.online === true && m.trustScore != null)
+      .filter(m => m.online === true && m.reliabilityScore != null)
       // Dev/test-only mints (fake sats, "do not use as default", etc.) are
       // real and findable via Dashboard/Watchlist/Search, but the wizard is
       // an active recommendation — never suggest one as someone's mint.
       .filter(m => !isTestMint(m.url))
-      // Same 14-day minimum-age gate as the Trust Score top-5 surfaces (Stats,
+      // Same 14-day minimum-age gate as the Reliability Score top-5 surfaces (Stats,
       // /api/stats) — a brand-new mint shouldn't be actively recommended here
       // just because it hasn't accumulated enough history to be penalized yet.
       .filter(m => isEligibleForRecommendation(m.discoveredAt))
@@ -510,7 +510,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
         // gates seed-phrase backup/restore — see the note in MintDetail.tsx.
         return m.nutsLimits?.['9'] != null
       })
-      .sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
+      .sort((a, b) => (b.reliabilityScore ?? 0) - (a.reliabilityScore ?? 0))
       .slice(0, 20)
 
     const w = weightsFor(preference, size)
@@ -537,12 +537,12 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
     const scored: WizardRec[] = candidates.map(m => {
       const latMs = latencyMap.get(m.url) ?? null
       const latScore = latMs !== null ? 1 - latMs / maxLatency : 0
-      const trustScore = (m.trustScore ?? 0) / 100
+      const reliabilityScore = (m.reliabilityScore ?? 0) / 100
       const nutsScore = (m.nutCount ?? 0) / maxNuts
       return {
         url: m.url,
         mint: m,
-        score: w.latency * latScore + w.trust * trustScore + w.nuts * nutsScore,
+        score: w.latency * latScore + w.reliability * reliabilityScore + w.nuts * nutsScore,
         latencyMs: latMs,
         mintLimits: limitsForUnit(m.mintMethods ?? null, selectedUnit),
         meltLimits: limitsForUnit(m.meltMethods ?? null, selectedUnit),
@@ -611,7 +611,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
           <div className="wizard-options">
             {[
               { id: 'speed' as Preference, label: '⚡ Speed', sub: 'I want the fastest mint from my location' },
-              { id: 'trust' as Preference, label: '🛡 Trust', sub: 'I want the most reliable and audited mint' },
+              { id: 'reliability' as Preference, label: '🛡 Reliability', sub: 'I want the most reliable and audited mint' },
               { id: 'features' as Preference, label: '🧩 Features', sub: 'I have specific security/backup needs' },
             ].map(opt => (
               <button key={opt.id} type="button" className={`wizard-opt${preference === opt.id ? ' active' : ''}`}
@@ -666,8 +666,8 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
               </div>
             )}
             {recs.map((rec, idx) => {
-              const trustNum = rec.mint.trustScore ?? null
-              const trustCol = trustNum == null ? 'var(--t3)' : trustNum >= 70 ? 'var(--green-bright)' : trustNum >= 40 ? 'var(--amber)' : 'var(--red)'
+              const reliabilityNum = rec.mint.reliabilityScore ?? null
+              const reliabilityCol = reliabilityNum == null ? 'var(--t3)' : reliabilityNum >= 70 ? 'var(--green-bright)' : reliabilityNum >= 40 ? 'var(--amber)' : 'var(--red)'
               const lnLabel = cardLightningLabel(rec.mint)
               const unitLabel = recsUnit ?? ''
               const mintRange = formatLimits(rec.mintLimits, unitLabel)
@@ -695,8 +695,8 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
                     </div>
                   </div>
                   <span className="wizard-rec-badges">
-                    <span className="wizard-rec-trust" style={{ color: trustCol }}>
-                      <IcShield size={11} /><span>{cardTrustLabel(trustNum)}</span>
+                    <span className="wizard-rec-reliability" style={{ color: reliabilityCol }}>
+                      <IcShield size={11} /><span>{cardReliabilityLabel(reliabilityNum)}</span>
                     </span>
                     {lnLabel && (
                       <span className="wizard-rec-ln">
@@ -712,7 +712,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
           )}
           {recs.length > 0 && (
             <div className="wizard-rec-note">
-              Trust Score reflects the whole mint, not this specific currency — uptime, NUT support and
+              Reliability Score reflects the whole mint, not this specific currency — uptime, NUT support and
               version freshness are measured per mint. Only the limits above are {recsUnit}-specific.
             </div>
           )}

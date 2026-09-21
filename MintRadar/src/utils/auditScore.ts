@@ -1,11 +1,11 @@
-// Audit reliability score (the 5%-weight "audit" component of Trust Score).
+// Audit reliability score (the 5%-weight "audit" component of Reliability Score).
 //
 // SOURCE OF TRUTH is backend/src/shared/auditScore.ts — this frontend package can't import
 // it directly (separate npm package, no workspace set up between backend/ and the frontend),
 // so this is a manually-synced copy. Do not change the logic here without also updating the
 // backend copy (and vice versa) — both must always agree on the same mint's audit component,
-// since this feeds both the server-side Trust Score (prober.ts) and this app's client-side
-// Trust Score Breakdown (MintDetail.tsx).
+// since this feeds both the server-side Reliability Score (prober.ts) and this app's client-side
+// Reliability Score Breakdown (MintDetail.tsx).
 //
 // Error rate is computed over a rolling window of the mint's last ~100 swaps, not
 // audit.8333.space's cumulative lifetime counters — a mint that had problems long ago but

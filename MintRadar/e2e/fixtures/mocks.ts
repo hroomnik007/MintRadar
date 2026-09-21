@@ -13,7 +13,7 @@ export interface MockMint {
   name: string
   online: boolean
   latencyMs: number | null
-  trustScore: number | null
+  reliabilityScore: number | null
   version: string | null
   nutCount: number
   uptimePct24h: number | null
@@ -54,12 +54,12 @@ const daysAgo = (d: number) => new Date(now - d * 86_400_000).toISOString()
 // Ordering matters for the sort assertions:
 //   name asc   → Alpha, Bravo, Charlie, Delta
 //   latency ↑  → Alpha(50), Delta(120), Bravo(300), Charlie(offline)
-//   trust  ↓   → Alpha(92), Delta(78), Bravo(55), Charlie(0)
+//   reliability  ↓   → Alpha(92), Delta(78), Bravo(55), Charlie(0)
 export const MOCK_MINTS: MockMint[] = [
-  { url: 'https://alpha.mint.example',   name: 'Alpha Mint',   online: true,  latencyMs: 50,   trustScore: 92, version: 'Nutshell/0.16.0', nutCount: 12, uptimePct24h: 99, discoveredAt: daysAgo(400), units: ['sat'], reviewCount: 12, reviewAvgRating: 4.2 },
-  { url: 'https://bravo.mint.example',   name: 'Bravo Mint',   online: true,  latencyMs: 300,  trustScore: 55, version: 'Nutshell/0.15.0', nutCount: 8,  uptimePct24h: 80, discoveredAt: daysAgo(10),  units: ['sat', 'usd'], reviewCount: 0, reviewAvgRating: null },
-  { url: 'https://charlie.mint.example', name: 'Charlie Mint', online: false, latencyMs: null, trustScore: null, version: null,            nutCount: 0,  uptimePct24h: 12, discoveredAt: daysAgo(120), units: null, reviewCount: 4, reviewAvgRating: 3 },
-  { url: 'https://delta.mint.example',   name: 'Delta Mint',   online: true,  latencyMs: 120,  trustScore: 78, version: 'Nutshell/0.20.0', nutCount: 14, uptimePct24h: 95, discoveredAt: daysAgo(200), units: ['sat'], reviewCount: 3, reviewAvgRating: 4.8 },
+  { url: 'https://alpha.mint.example',   name: 'Alpha Mint',   online: true,  latencyMs: 50,   reliabilityScore: 92, version: 'Nutshell/0.16.0', nutCount: 12, uptimePct24h: 99, discoveredAt: daysAgo(400), units: ['sat'], reviewCount: 12, reviewAvgRating: 4.2 },
+  { url: 'https://bravo.mint.example',   name: 'Bravo Mint',   online: true,  latencyMs: 300,  reliabilityScore: 55, version: 'Nutshell/0.15.0', nutCount: 8,  uptimePct24h: 80, discoveredAt: daysAgo(10),  units: ['sat', 'usd'], reviewCount: 0, reviewAvgRating: null },
+  { url: 'https://charlie.mint.example', name: 'Charlie Mint', online: false, latencyMs: null, reliabilityScore: null, version: null,            nutCount: 0,  uptimePct24h: 12, discoveredAt: daysAgo(120), units: null, reviewCount: 4, reviewAvgRating: 3 },
+  { url: 'https://delta.mint.example',   name: 'Delta Mint',   online: true,  latencyMs: 120,  reliabilityScore: 78, version: 'Nutshell/0.20.0', nutCount: 14, uptimePct24h: 95, discoveredAt: daysAgo(200), units: ['sat'], reviewCount: 3, reviewAvgRating: 4.8 },
 ]
 
 const NUT_POOL = ['4', '5', '7', '8', '9', '10', '11', '12', '13', '14', '15', '17', '19', '20']
@@ -108,7 +108,7 @@ function knownMintPayload(m: MockMint) {
     auditRecentTotal: 100,
     auditRecentErrors: 0,
     discoveredAt: m.discoveredAt,
-    trustScore: m.trustScore,
+    reliabilityScore: m.reliabilityScore,
     lastError: null,
     uptimePct24h: m.uptimePct24h,
     uptimePct7d: m.uptimePct7d ?? m.uptimePct24h,
@@ -129,16 +129,16 @@ export const MOCK_STATS = {
   totalMints: MOCK_MINTS.length,
   onlineMints: MOCK_MINTS.filter(m => m.online).length,
   offlineMints: MOCK_MINTS.filter(m => !m.online).length,
-  avgTrustScore: 75,
+  avgReliabilityScore: 75,
   avgLatency24h: 110,
-  trustDistribution: { low: 1, moderate: 1, high: 2 },
+  reliabilityDistribution: { low: 1, moderate: 1, high: 2 },
   nutAdoption: NUT_POOL.map((nut, i) => ({ nut: `NUT-${nut.padStart(2, '0')}`, count: 4 - (i % 3), percent: 80 - i * 3 })),
-  top5ByTrustScore: MOCK_MINTS.filter(m => m.online && m.trustScore != null)
-    .sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
-    .map(m => ({ url: m.url, name: m.name, trustScore: m.trustScore as number })),
+  top5ByReliabilityScore: MOCK_MINTS.filter(m => m.online && m.reliabilityScore != null)
+    .sort((a, b) => (b.reliabilityScore ?? 0) - (a.reliabilityScore ?? 0))
+    .map(m => ({ url: m.url, name: m.name, reliabilityScore: m.reliabilityScore as number })),
 }
 
-export const MOCK_TRUST_MOVERS = {
+export const MOCK_RELIABILITY_MOVERS = {
   risers: [
     { url: 'https://alpha.mint.example', name: 'Alpha Mint', delta: 12 },
     { url: 'https://echo.mint.example', name: 'Echo Mint', delta: 7 },
@@ -176,7 +176,7 @@ function historyPayload() {
   return {
     period: '24h',
     segments: [
-      { bucket, online: true, latencyMs: 50, total: 12, onlineCount: 12, uptimePct: 100, trustScore: 92 },
+      { bucket, online: true, latencyMs: 50, total: 12, onlineCount: 12, uptimePct: 100, reliabilityScore: 92 },
     ],
     uptimePct: 99,
     avgLatencyMs: 55,
@@ -201,11 +201,11 @@ export async function installApiMocks(page: Page): Promise<void> {
     route.fulfill({ json: MOCK_KNOWN_MINTS }),
   )
   await page.route('**/api/stats', route => route.fulfill({ json: MOCK_STATS }))
-  await page.route('**/api/stats/trust-trend**', route => route.fulfill({ json: { trend: [], periodDays: 30, earliestCheckedAt: null, daysOfDataAvailable: 0 } }))
-  await page.route('**/api/stats/trust-movers**', route => {
+  await page.route('**/api/stats/reliability-trend**', route => route.fulfill({ json: { trend: [], periodDays: 30, earliestCheckedAt: null, daysOfDataAvailable: 0 } }))
+  await page.route('**/api/stats/reliability-movers**', route => {
     const u = new URL(route.request().url())
     const period = u.searchParams.get('period') === '30d' ? '30d' : '7d'
-    route.fulfill({ json: { period, ...MOCK_TRUST_MOVERS } })
+    route.fulfill({ json: { period, ...MOCK_RELIABILITY_MOVERS } })
   })
   await page.route('**/api/mints/history**', route => route.fulfill({ json: historyPayload() }))
   await page.route('**/api/mints/version-history**', route =>

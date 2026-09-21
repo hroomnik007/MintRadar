@@ -1,8 +1,8 @@
-// Audit reliability score (the 5%-weight "audit" component of Trust Score).
+// Audit reliability score (the 5%-weight "audit" component of Reliability Score).
 //
-// This is the shared source of truth for both the server-side Trust Score computation
-// (prober.ts's computeServerTrustScore, run on every probe cycle) and the frontend's
-// client-side Trust Score Breakdown display (MintDetail.tsx) — the two must always agree
+// This is the shared source of truth for both the server-side Reliability Score computation
+// (prober.ts's computeServerReliabilityScore, run on every probe cycle) and the frontend's
+// client-side Reliability Score Breakdown display (MintDetail.tsx) — the two must always agree
 // on the same mint's audit component. The frontend cannot import this file directly
 // (separate npm package, no workspace set up between backend/ and the frontend), so
 // src/utils/auditScore.ts is a manually-synced copy — if you change the logic here, mirror

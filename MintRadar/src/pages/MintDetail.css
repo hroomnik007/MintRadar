@@ -161,10 +161,10 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 .md-status-inline.offline { color: var(--red); }
 
-/* Compact Trust Score tile — only shown inside .md-summary at ≤640px.
-   Needs .md-sc.md-sc-trust (not bare .md-sc-trust) to outrank the later
+/* Compact Reliability Score tile — only shown inside .md-summary at ≤640px.
+   Needs .md-sc.md-sc-reliability (not bare .md-sc-reliability) to outrank the later
    `.md-sc { display: flex }` rule. */
-.md-sc.md-sc-trust { display: none; }
+.md-sc.md-sc-reliability { display: none; }
 
 /* The header-row buttons (Mint QR, Open in Cashu.me, Watch, Compare)
    share ONE recipe — identical size, padding, weight and tonal-outline style. They are
@@ -666,11 +666,11 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .mh-badge.green  { background: rgba(74, 222, 128, 0.08);  color: var(--accent); }
 .mh-badge.yellow { background: rgba(255, 184, 32, 0.1); color: var(--yellow); }
 
-/* ── Trust score ────────────────────────────────────────────── */
+/* ── Reliability score ────────────────────────────────────────────── */
 /* Row layout, not stacked — the gauge sits on the left, the High/Moderate/
-   Low Trust badge to its right, vertically centered against it (was
+   Low Reliability badge to its right, vertically centered against it (was
    stacked with the badge centered below, 2026-09-20). */
-.trust-wrap  { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 16px; margin-top: 6px; }
+.reliability-wrap  { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 16px; margin-top: 6px; }
 .gauge-wrap  { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
 .gauge-wrap svg { width: 96px; height: 96px; }
 .gauge-num {
@@ -1254,24 +1254,24 @@ button.md-url-copy.copied > svg { opacity: 1; }
   .md-qb-full { display: none; }
   .md-qb-short { display: inline; }
 
-  /* Compact Trust Score fills the empty grid cell next to Community rating;
+  /* Compact Reliability Score fills the empty grid cell next to Community rating;
      the full breakdown card in .md-right is redundant on mobile (its
      Uptime/NUTs/Latency rows repeat the metric tiles above). */
-  .md-trust-panel { display: none; }
-  .md-sc.md-sc-trust {
+  .md-reliability-panel { display: none; }
+  .md-sc.md-sc-reliability {
     display: flex;
     align-items: center;
     gap: 10px;
     cursor: pointer;
   }
-  .md-sc-trust-donut {
+  .md-sc-reliability-donut {
     position: relative;
     width: 44px;
     height: 44px;
     flex-shrink: 0;
   }
-  .md-sc-trust-donut svg { width: 100%; height: 100%; display: block; }
-  .md-sc-trust-num {
+  .md-sc-reliability-donut svg { width: 100%; height: 100%; display: block; }
+  .md-sc-reliability-num {
     position: absolute;
     inset: 0;
     display: flex;
@@ -1283,13 +1283,13 @@ button.md-url-copy.copied > svg { opacity: 1; }
     font-family: var(--font-mono-data);
     letter-spacing: -0.02em;
   }
-  .md-sc-trust-meta {
+  .md-sc-reliability-meta {
     display: flex;
     flex-direction: column;
     gap: 3px;
     min-width: 0;
   }
-  .md-sc-trust-badge {
+  .md-sc-reliability-badge {
     align-self: flex-start;
     font-size: 9px;
     font-family: var(--font-mono);
@@ -1297,7 +1297,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
     border-radius: 4px;
     padding: 1px 6px;
   }
-  .md-sc-trust-link {
+  .md-sc-reliability-link {
     font-size: 10px;
     font-family: var(--font-mono);
     color: var(--accent);

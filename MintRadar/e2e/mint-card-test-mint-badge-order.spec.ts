@@ -33,13 +33,13 @@ async function expectTestMintBadgeInHeader(page: Page) {
 }
 
 test.describe('MintCard — Test mint badge lives in the header slot', () => {
-  test('with all other badges present (version, NUTs, unit, uptime, trust, rating)', async ({ page }) => {
+  test('with all other badges present (version, NUTs, unit, uptime, reliability, rating)', async ({ page }) => {
     await gotoWithAlphaAsTestMint(page, {
       version: 'Nutshell/0.16.0',
       nutCount: 12,
       units: ['sat'],
       uptimePct24h: 99,
-      trustScore: 92,
+      reliabilityScore: 92,
       reviewCount: 12,
       reviewAvgRating: 4.2,
     })
@@ -52,7 +52,7 @@ test.describe('MintCard — Test mint badge lives in the header slot', () => {
       nutCount: 12,
       units: ['sat'],
       uptimePct24h: 99,
-      trustScore: 92,
+      reliabilityScore: 92,
       reviewCount: 0,
       reviewAvgRating: null,
     })
@@ -65,7 +65,7 @@ test.describe('MintCard — Test mint badge lives in the header slot', () => {
       nutCount: 12,
       units: null,
       uptimePct24h: null,
-      trustScore: null,
+      reliabilityScore: null,
       reviewCount: 0,
       reviewAvgRating: null,
     })

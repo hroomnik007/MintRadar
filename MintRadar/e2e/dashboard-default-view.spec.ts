@@ -7,10 +7,10 @@ test.beforeEach(async ({ page }) => {
 })
 
 test.describe('Dashboard default view', () => {
-  test('fresh load: no offline cards, test mint shown, ordered by Trust desc', async ({ page }) => {
-    const tieHi = { ...MOCK_KNOWN_MINTS[0], url: 'https://zulu.mint.example', name: 'Zulu Mint', online: true, degraded: false, trustScore: 70, reviewCount: 20, reviewAvgRating: 4.9, reviewWeightedRating: 4.6 }
-    const tieLo = { ...MOCK_KNOWN_MINTS[0], url: 'https://kilo.mint.example', name: 'Kilo Mint', online: true, degraded: false, trustScore: 70, reviewCount: 4, reviewAvgRating: 3.1, reviewWeightedRating: 3.2 }
-    const testMint = { ...MOCK_KNOWN_MINTS[0], url: 'https://testnut.cashu.space', name: 'Cashu test mint', online: true, degraded: false, trustScore: 99 }
+  test('fresh load: no offline cards, test mint shown, ordered by Reliability desc', async ({ page }) => {
+    const tieHi = { ...MOCK_KNOWN_MINTS[0], url: 'https://zulu.mint.example', name: 'Zulu Mint', online: true, degraded: false, reliabilityScore: 70, reviewCount: 20, reviewAvgRating: 4.9, reviewWeightedRating: 4.6 }
+    const tieLo = { ...MOCK_KNOWN_MINTS[0], url: 'https://kilo.mint.example', name: 'Kilo Mint', online: true, degraded: false, reliabilityScore: 70, reviewCount: 4, reviewAvgRating: 3.1, reviewWeightedRating: 3.2 }
+    const testMint = { ...MOCK_KNOWN_MINTS[0], url: 'https://testnut.cashu.space', name: 'Cashu test mint', online: true, degraded: false, reliabilityScore: 99 }
     await page.route('**/api/mints/known', r =>
       r.fulfill({ json: [...MOCK_KNOWN_MINTS, tieHi, tieLo, testMint] }))
 
@@ -20,15 +20,15 @@ test.describe('Dashboard default view', () => {
     await expect(page.locator('.card-name', { hasText: 'Cashu test mint' })).toBeVisible()
     await expect(page.locator('.card-name', { hasText: 'Charlie Mint' })).toHaveCount(0)
 
-    // Trust desc; equal Trust (70) currently still name-asc (Kilo then Zulu)
-    // until Dashboard imports compareTrustThenRating from trustSort.ts.
+    // Reliability desc; equal Reliability (70) currently still name-asc (Kilo then Zulu)
+    // until Dashboard imports compareReliabilityThenRating from reliabilitySort.ts.
     await expect(page.locator('.mint-grid .card-name')).toHaveText([
       'Cashu test mint', 'Alpha Mint', 'Delta Mint', 'Zulu Mint', 'Kilo Mint', 'Bravo Mint',
     ])
   })
 
   test('checking "Hide test mints" removes the test mint from the grid', async ({ page }) => {
-    const testMint = { ...MOCK_KNOWN_MINTS[0], url: 'https://testnut.cashu.space', name: 'Cashu test mint', online: true, degraded: false, trustScore: 50 }
+    const testMint = { ...MOCK_KNOWN_MINTS[0], url: 'https://testnut.cashu.space', name: 'Cashu test mint', online: true, degraded: false, reliabilityScore: 50 }
     await page.route('**/api/mints/known', r =>
       r.fulfill({ json: [...MOCK_KNOWN_MINTS, testMint] }))
 
@@ -55,7 +55,7 @@ test.describe('Dashboard default view', () => {
   })
 
   test('24h+ "Show" path still reveals only the degraded mint', async ({ page }) => {
-    const degraded = { ...MOCK_KNOWN_MINTS[0], url: 'https://golf.mint.example', name: 'Golf Mint', online: false, degraded: true, trustScore: 20 }
+    const degraded = { ...MOCK_KNOWN_MINTS[0], url: 'https://golf.mint.example', name: 'Golf Mint', online: false, degraded: true, reliabilityScore: 20 }
     await page.route('**/api/mints/known', r =>
       r.fulfill({ json: [...MOCK_KNOWN_MINTS, degraded] }))
 

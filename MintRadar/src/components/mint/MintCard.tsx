@@ -270,25 +270,25 @@ export function MintCard({
           </div>
         </div>
 
-        <div className="card-trust">
-          {mint.trustScore == null ? (
-            <div className="card-trust-na"><IcShield /><span>Trust n/a</span></div>
+        <div className="card-reliability">
+          {mint.reliabilityScore == null ? (
+            <div className="card-reliability-na"><IcShield /><span>Reliability n/a</span></div>
           ) : (
             <>
-              <div className="card-trust-label"><IcShield /><span>Trust</span></div>
+              <div className="card-reliability-label"><IcShield /><span>Reliability</span></div>
               <div
-                className="card-trust-score"
-                style={{ color: mint.trustScore >= 70 ? 'var(--green-bright)' : mint.trustScore >= 40 ? 'var(--amber)' : 'var(--red)' }}
+                className="card-reliability-score"
+                style={{ color: mint.reliabilityScore >= 70 ? 'var(--green-bright)' : mint.reliabilityScore >= 40 ? 'var(--amber)' : 'var(--red)' }}
               >
-                {mint.trustScore}
+                {mint.reliabilityScore}
               </div>
             </>
           )}
           {(mint.reviewCount ?? 0) > 0 && mint.reviewAvgRating != null ? (
-            <span className="card-trust-rating">
-              <span className="card-trust-star">★</span>
-              <span className="card-trust-rating-val">{mint.reviewAvgRating.toFixed(1)}</span>
-              <span className="card-trust-rating-n">({mint.reviewCount})</span>
+            <span className="card-reliability-rating">
+              <span className="card-reliability-star">★</span>
+              <span className="card-reliability-rating-val">{mint.reviewAvgRating.toFixed(1)}</span>
+              <span className="card-reliability-rating-n">({mint.reviewCount})</span>
               {mint.reviewSurge && (
                 <InfoTooltip
                   className="card-review-surge-flag"
@@ -301,7 +301,7 @@ export function MintCard({
               )}
             </span>
           ) : (
-            <span className="card-trust-no-reviews">No reviews yet</span>
+            <span className="card-reliability-no-reviews">No reviews yet</span>
           )}
         </div>
       </div>

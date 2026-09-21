@@ -44,7 +44,7 @@ Health check. No rate limiting.
 
 ### `GET /api/mints/known`
 
-All known mints with current online status, latency, trust score, and metadata.
+All known mints with current online status, latency, reliability score, and metadata.
 
 **Response:** Array of mint objects.
 
@@ -66,7 +66,7 @@ All known mints with current online status, latency, trust score, and metadata.
     "auditNMelts": 950,
     "auditNErrors": 3,
     "auditCheckedAt": "2026-06-24T08:00:00.000Z",
-    "trustScore": 88,
+    "reliabilityScore": 88,
     "uptimePct24h": 100,
     "discoveredAt": "2025-11-01T12:00:00.000Z",
     "serverLocation": "Frankfurt am Main, DE",
@@ -89,14 +89,14 @@ Network-wide statistics.
   "totalMints": 97,
   "onlineMints": 72,
   "offlineMints": 25,
-  "avgTrustScore": 71,
+  "avgReliabilityScore": 71,
   "avgLatency24h": 210,
-  "trustDistribution": { "low": 12, "moderate": 28, "high": 32 },
+  "reliabilityDistribution": { "low": 12, "moderate": 28, "high": 32 },
   "nutAdoption": [
     { "nut": "NUT-04", "count": 68, "percent": 94 }
   ],
-  "top5ByTrustScore": [
-    { "url": "https://mint.example.com", "name": "Example Mint", "trustScore": 93 }
+  "top5ByReliabilityScore": [
+    { "url": "https://mint.example.com", "name": "Example Mint", "reliabilityScore": 93 }
   ]
 }
 ```
@@ -105,7 +105,7 @@ Network-wide statistics.
 
 ### `GET /api/mints/history`
 
-Bucketed uptime/latency/trust history for a single mint.
+Bucketed uptime/latency/reliability history for a single mint.
 
 **Query parameters:**
 
@@ -127,7 +127,7 @@ Bucketed uptime/latency/trust history for a single mint.
       "total": 288,
       "onlineCount": 288,
       "uptimePct": 100,
-      "trustScore": 91
+      "reliabilityScore": 91
     }
   ],
   "uptimePct": 99,
@@ -137,7 +137,7 @@ Bucketed uptime/latency/trust history for a single mint.
 }
 ```
 
-`trustScore` in segments is `null` for records before trust score history was introduced (historical backfill not available).
+`reliabilityScore` in segments is `null` for records before reliability score history was introduced (historical backfill not available).
 
 ---
 

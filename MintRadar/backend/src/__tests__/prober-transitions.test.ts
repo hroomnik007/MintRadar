@@ -79,10 +79,10 @@ beforeEach(async () => {
     if (/FROM mints m\s*\n\s*LEFT JOIN mint_history h/.test(sql)) {
       return { rows: [{ nut_count: 1, version: '1.0.0', audit_recent_total: null, audit_recent_errors: null, total: '4', online_count: '2' }] }
     }
-    if (/UPDATE mints SET last_trust_score/.test(sql)) {
+    if (/UPDATE mints SET last_reliability_score/.test(sql)) {
       return { rowCount: 1 }
     }
-    if (/UPDATE mint_history SET trust_score/.test(sql)) {
+    if (/UPDATE mint_history SET reliability_score/.test(sql)) {
       return { rowCount: 1 }
     }
     return { rows: [], rowCount: 0 }
@@ -282,8 +282,8 @@ describe('probeMintToDb — pubkey persistence', () => {
       if (/FROM mints m\s*\n\s*LEFT JOIN mint_history h/.test(sql)) {
         return { rows: [{ nut_count: 1, version: '1.0.0', audit_recent_total: null, audit_recent_errors: null, total: '4', online_count: '2' }] }
       }
-      if (/UPDATE mints SET last_trust_score/.test(sql)) return { rowCount: 1 }
-      if (/UPDATE mint_history SET trust_score/.test(sql)) return { rowCount: 1 }
+      if (/UPDATE mints SET last_reliability_score/.test(sql)) return { rowCount: 1 }
+      if (/UPDATE mint_history SET reliability_score/.test(sql)) return { rowCount: 1 }
       return { rows: [], rowCount: 0 }
     })
     // This probe's /v1/info has no `pubkey` field at all.

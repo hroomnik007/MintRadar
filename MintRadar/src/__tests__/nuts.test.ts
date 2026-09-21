@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { TRACKED_NUTS, TRACKED_NUT_KEYS, NUT_META, nutSpecUrl } from '../constants/nuts'
-import { TRACKED_NUT_COUNT } from '../utils/trustScore'
+import { TRACKED_NUT_COUNT } from '../utils/reliabilityScore'
 
 describe('TRACKED_NUTS', () => {
-  it('is the denominator the Trust Score actually divides by', () => {
-    // If a NUT is ever added or removed, TRACKED_NUT_COUNT in trustScore.ts (and
+  it('is the denominator the Reliability Score actually divides by', () => {
+    // If a NUT is ever added or removed, TRACKED_NUT_COUNT in reliabilityScore.ts (and
     // its backend twin) must move with it, or every mint's NUT-support component
     // silently changes meaning.
     expect(TRACKED_NUTS.length).toBe(TRACKED_NUT_COUNT)

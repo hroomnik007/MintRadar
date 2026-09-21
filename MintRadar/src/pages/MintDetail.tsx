@@ -20,16 +20,16 @@ import { useAuthStore } from '@/stores/auth.store'
 import { ComparisonModal } from '@/components/ComparisonModal'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { InfoTooltip } from '@/components/InfoTooltip'
-import { displayName as mintDisplayName, isNewMint, firstSeenLabel, trustScoreColor, trustScoreInfo, formatTimeAgo, formatAuditSuccessRatio, trustDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
 import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import {
-  computeTrustScore as sharedComputeTrustScore,
+  computeReliabilityScore as sharedComputeReliabilityScore,
   uptimeComponent, nutComponent, versionComponent, contactComponent,
-} from '@/utils/trustScore'
+} from '@/utils/reliabilityScore'
 import { useNow } from '@/hooks/useNow'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
@@ -201,13 +201,13 @@ const NUT_ICONS: Record<string, JSX.Element> = {
   'NUT-30': <Bitcoin size={13} />,
 }
 
-// One row of the Trust Score breakdown (label + info tooltip + measured
+// One row of the Reliability Score breakdown (label + info tooltip + measured
 // value + score bar). Rendered both inline on the Overview sidebar panel and
-// inside the "Trust Score Breakdown" modal — each usage gets its own
+// inside the "Reliability Score Breakdown" modal — each usage gets its own
 // ref/tooltip state (a shared ref across two simultaneously-mounted rows
 // would fight over which DOM node it points at), so this owns its own
 // useTapTooltip rather than taking one as a prop.
-function TrustBreakdownRow({ label, display, score, max, color, tooltip }: {
+function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip }: {
   label: string
   display: string
   score: number
@@ -267,8 +267,8 @@ function contactCountOf(email?: string, twitter?: string, nostr?: string): numbe
 
 // Thin adapter over the shared computation so the call sites can keep passing the
 // three contact fields they already have. Only ever used as a fallback — the
-// server-side score in KnownMint.trustScore wins whenever it exists.
-function computeTrustScore(
+// server-side score in KnownMint.reliabilityScore wins whenever it exists.
+function computeReliabilityScore(
   uptimePct: number,
   nutCount: number,
   versionStr: string | null | undefined,
@@ -278,7 +278,7 @@ function computeTrustScore(
   auditRecentTotal?: number | null,
   auditRecentErrors?: number | null,
 ): number {
-  return sharedComputeTrustScore(
+  return sharedComputeReliabilityScore(
     uptimePct,
     nutCount,
     versionStr ?? null,
@@ -340,14 +340,14 @@ function MintDetailContent({ url }: { url: string }) {
 
   const metaDisplayName = mintDisplayName({ name: data?.info?.name ?? knownMint?.name, url })
   useDocumentMeta(
-    `${metaDisplayName} — Cashu Mint Trust Score & Uptime | MintRadar`,
+    `${metaDisplayName} — Cashu Mint Reliability Score & Uptime | MintRadar`,
     knownMint
-      ? `${metaDisplayName} (${mintHostname(url)}) is ${knownMint.online ? 'online' : 'offline'} with a Trust Score of ${knownMint.trustScore ?? '—'}%. See live uptime, latency, NUT support and reviews on MintRadar.`
-      : `Live Trust Score, uptime, latency and NUT support for the Cashu mint ${mintHostname(url)} on MintRadar.`
+      ? `${metaDisplayName} (${mintHostname(url)}) is ${knownMint.online ? 'online' : 'offline'} with a Reliability Score of ${knownMint.reliabilityScore ?? '—'}%. See live uptime, latency, NUT support and reviews on MintRadar.`
+      : `Live Reliability Score, uptime, latency and NUT support for the Cashu mint ${mintHostname(url)} on MintRadar.`
   )
 
   const [chartInterval, setChartInterval] = useState<'24h' | '7d' | '30d' | '90d'>('7d')
-  const [chartMetric, setChartMetric] = useState<'latency' | 'uptime' | 'trust'>('latency')
+  const [chartMetric, setChartMetric] = useState<'latency' | 'uptime' | 'reliability'>('latency')
   const { data: chartHistoryData } = useQuery({
     queryKey: ['mint', 'chart-history', url, chartInterval],
     queryFn: async () => {
@@ -355,7 +355,7 @@ function MintDetailContent({ url }: { url: string }) {
       if (!res.ok) throw new Error('Failed to fetch chart history')
       return res.json() as Promise<{
         period: string
-        segments: Array<{ bucket: string; online: boolean; latencyMs: number | null; total: number; onlineCount: number; uptimePct: number | null; trustScore: number | null }>
+        segments: Array<{ bucket: string; online: boolean; latencyMs: number | null; total: number; onlineCount: number; uptimePct: number | null; reliabilityScore: number | null }>
         uptimePct: number | null
         avgLatencyMs: number | null
         prevUptimePct: number | null
@@ -376,7 +376,7 @@ function MintDetailContent({ url }: { url: string }) {
       if (!res.ok) throw new Error('Failed to fetch history')
       return res.json() as Promise<{
         period: string
-        segments: Array<{ bucket: string; online: boolean; latencyMs: number | null; total: number; onlineCount: number; uptimePct: number | null; trustScore: number | null }>
+        segments: Array<{ bucket: string; online: boolean; latencyMs: number | null; total: number; onlineCount: number; uptimePct: number | null; reliabilityScore: number | null }>
         uptimePct: number | null
         avgLatencyMs: number | null
         prevUptimePct: number | null
@@ -475,7 +475,7 @@ function MintDetailContent({ url }: { url: string }) {
 
 
   const [showQr, setShowQr] = useState(false)
-  const [showTrustBreakdown, setShowTrustBreakdown] = useState(false)
+  const [showReliabilityBreakdown, setShowReliabilityBreakdown] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [reviewsPageState, setReviewsPageState] = useState<{ key: string; page: number }>({ key: '', page: 1 })
   const [reviewFilterState, setReviewFilterState] = useState<{ key: string; type: 'all' | '5star' | 'critical' }>({ key: '', type: 'all' })
@@ -605,11 +605,11 @@ function MintDetailContent({ url }: { url: string }) {
   }, [showQr])
 
   useEffect(() => {
-    if (!showTrustBreakdown) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowTrustBreakdown(false) }
+    if (!showReliabilityBreakdown) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowReliabilityBreakdown(false) }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
-  }, [showTrustBreakdown])
+  }, [showReliabilityBreakdown])
 
   useEffect(() => {
     if (!showComparePicker) return
@@ -633,13 +633,13 @@ function MintDetailContent({ url }: { url: string }) {
       return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
     }
     function makePoint(seg: typeof segs[0] | null, label: string) {
-      if (!seg) return { label, latency: null as number | null, uptime: null as number | null, trust: null as number | null }
-      const trustVal = seg.trustScore !== null && seg.trustScore !== undefined
-        ? seg.trustScore
+      if (!seg) return { label, latency: null as number | null, uptime: null as number | null, reliability: null as number | null }
+      const reliabilityVal = seg.reliabilityScore !== null && seg.reliabilityScore !== undefined
+        ? seg.reliabilityScore
         : seg.uptimePct !== null
-          ? computeTrustScore(seg.uptimePct, nutCount, versionStr, emailVal, twitterVal, nostrVal, auditRecentTotal, auditRecentErrors)
+          ? computeReliabilityScore(seg.uptimePct, nutCount, versionStr, emailVal, twitterVal, nostrVal, auditRecentTotal, auditRecentErrors)
           : null
-      return { label, latency: seg.latencyMs, uptime: seg.uptimePct, trust: trustVal }
+      return { label, latency: seg.latencyMs, uptime: seg.uptimePct, reliability: reliabilityVal }
     }
     // For empty data or 90d (weekly buckets), use segments as-is
     if (segs.length === 0 || chartInterval === '90d') {
@@ -737,11 +737,11 @@ function MintDetailContent({ url }: { url: string }) {
   // (restore signatures) — check that instead.
   const supportsBackupRestore = supportedNutNumbers.has('9')
 
-  const trustScore = knownMint?.trustScore ?? computeTrustScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, knownMint?.auditRecentTotal ?? null, knownMint?.auditRecentErrors ?? null)
-  const tsInfo = trustScoreInfo(trustScore)
-  const trustDonut = trustDonutArc(trustScore)
+  const reliabilityScore = knownMint?.reliabilityScore ?? computeReliabilityScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, knownMint?.auditRecentTotal ?? null, knownMint?.auditRecentErrors ?? null)
+  const tsInfo = reliabilityScoreInfo(reliabilityScore)
+  const reliabilityDonut = reliabilityDonutArc(reliabilityScore)
 
-  // Trust Score Breakdown modal rows — hoisted out of the modal's JSX (was a
+  // Reliability Score Breakdown modal rows — hoisted out of the modal's JSX (was a
   // nested IIFE) because the react-compiler ESLint rules disallow reading a
   // ref from inside a hand-rolled nested function during render.
   const breakdownUScore = uptimeComponent(uptimePct)
@@ -760,15 +760,15 @@ function MintDetailContent({ url }: { url: string }) {
       : `${((breakdownAuditRecentErrors ?? 0) / breakdownAuditRecentTotal * 100).toFixed(1)}% err`
   // Audit summary strip's "Recent success rate" cell — same rolling window
   // (audit_recent_total / audit_recent_errors, up to AUDIT_SWAPS_WINDOW = 100
-  // swaps) that feeds the Trust Score's Audit reliability component. Reuses the
+  // swaps) that feeds the Reliability Score's Audit reliability component. Reuses the
   // exact values above (breakdownAuditRecent*). Colour comes from
   // auditReliabilityColor() (error-rate based: <=5% green/25% amber/else red) —
   // NOT from breakdownAScore's 1-5 scoring buckets, which are stricter than
   // what reads as "OK" at a glance (see mintFormatting.ts). This only changes
-  // the displayed colour; the Trust Score's numeric Audit component
+  // the displayed colour; the Reliability Score's numeric Audit component
   // (breakdownAScore) is unaffected.
   const recentReliabilityColor = auditReliabilityColor(breakdownAuditRecentTotal, breakdownAuditRecentErrors)
-  const trustBreakdownRows = [
+  const reliabilityBreakdownRows = [
     { label: 'Uptime (40%)', display: `${uptimePct}%`, score: breakdownUScore, max: 40, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.' },
     { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, score: breakdownAScore, max: 25, color: recentReliabilityColor, tooltip: "Based on error rate from audit.8333.space — the percentage of failed swaps out of the mint's last ~100 tested operations. Lower error rate = higher score. Shows \"Unknown\" when fewer than 3 recent swaps are available." },
     { label: 'NUT Support (15%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 15, color: supportedNuts.length >= 12 ? '#4ade80' : supportedNuts.length >= 8 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.' },
@@ -783,14 +783,14 @@ function MintDetailContent({ url }: { url: string }) {
     && (parseMinorVer(latestGlobalVersion) - parseMinorVer(version)) > 2
 
   // audit.8333.space lifetime counters (display-only "Audit stats" panel) — the
-  // rolling-window figures that feed Trust Score are auditRecent* / breakdownAudit* above.
+  // rolling-window figures that feed Reliability Score are auditRecent* / breakdownAudit* above.
   const auditNMints = knownMint?.auditNMints ?? 0
   const auditNMelts = knownMint?.auditNMelts ?? 0
 
   // ── Audit summary strip (top of the Audit tab) — a 5-second overview.
   // Mints / Melts are audit.8333.space lifetime counters; Recent success rate
   // is the rolling ~100-swap window (same numbers as the Recent reliability
-  // card and the Trust Score's Audit component); Last checked is OUR 6h
+  // card and the Reliability Score's Audit component); Last checked is OUR 6h
   // cron's write time (auditSyncedAt), NOT auditCheckedAt (that's the
   // auditor's own clock).
   //
@@ -986,7 +986,7 @@ function MintDetailContent({ url }: { url: string }) {
                   <span>{isOnline ? 'Online' : 'Offline'}</span>
                 </span>
                 {isNew && (
-                  <span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'#d3a446',background:'rgba(211,164,70,.14)',border:'0.5px solid rgba(211,164,70,.3)',borderRadius:5,padding:'3px 9px',flexShrink:0}} title="New mint (< 30 days) — Trust Score is capped at 75 until it builds a track record">New</span>
+                  <span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'#d3a446',background:'rgba(211,164,70,.14)',border:'0.5px solid rgba(211,164,70,.3)',borderRadius:5,padding:'3px 9px',flexShrink:0}} title="New mint (< 30 days) — Reliability Score is capped at 75 until it builds a track record">New</span>
                 )}
                 {isTestMint(url) && (
                   <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}} title="Not for real funds — for testing and development only">
@@ -1230,37 +1230,37 @@ function MintDetailContent({ url }: { url: string }) {
             )}
           </div>
         </div>
-        {/* Compact Trust Score — mobile only (≤640px). Fills the empty cell next
+        {/* Compact Reliability Score — mobile only (≤640px). Fills the empty cell next
             to Community rating; the full breakdown card in .md-right is hidden
             on mobile since its Uptime/NUTs/Latency rows duplicate the tiles
             above. Same target as the full card's "Details ›". */}
         <div
-          className="md-sc md-sc-trust"
+          className="md-sc md-sc-reliability"
           role="button"
           tabIndex={0}
-          onClick={() => setShowTrustBreakdown(true)}
-          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowTrustBreakdown(true) } }}
+          onClick={() => setShowReliabilityBreakdown(true)}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowReliabilityBreakdown(true) } }}
         >
-          <div className="md-sc-trust-donut">
+          <div className="md-sc-reliability-donut">
             <svg viewBox="0 0 72 72" aria-hidden="true">
               <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="8" />
               <circle cx="36" cy="36" r="27" fill="none" stroke="var(--green-bright)" strokeWidth="8"
-                strokeDasharray={trustDonut.dashArray}
-                strokeDashoffset={trustDonut.dashOffset}
+                strokeDasharray={reliabilityDonut.dashArray}
+                strokeDashoffset={reliabilityDonut.dashOffset}
                 strokeLinecap="round"
                 transform="rotate(-90 36 36)" />
             </svg>
-            <span className="md-sc-trust-num">{trustScore}%</span>
+            <span className="md-sc-reliability-num">{reliabilityScore}%</span>
           </div>
-          <div className="md-sc-trust-meta">
-            <div className="md-sc-label">Trust Score</div>
+          <div className="md-sc-reliability-meta">
+            <div className="md-sc-label">Reliability Score</div>
             <span
-              className="md-sc-trust-badge"
+              className="md-sc-reliability-badge"
               style={{ color: tsInfo.color, background: tsInfo.bg, border: `0.5px solid ${tsInfo.border}` }}
             >
               {tsInfo.label}
             </span>
-            <span className="md-sc-trust-link">Details ›</span>
+            <span className="md-sc-reliability-link">Details ›</span>
           </div>
         </div>
       </div>
@@ -1698,7 +1698,7 @@ function MintDetailContent({ url }: { url: string }) {
               {[
                 { label: 'Avg Latency', value: chartAvgLatency !== null ? `${chartAvgLatency}ms` : '—', delta: deltaStr(chartAvgLatency, chartPrevLatency, 'ms', chartPrevInsufficientHistory), color: 'var(--text)' },
                 { label: 'Avg Uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%', chartPrevInsufficientHistory), color: '#4ade80' },
-                { label: 'Avg Trust', value: `${trustScore}%`, delta: null, color: tsInfo.color },
+                { label: 'Avg Reliability', value: `${reliabilityScore}%`, delta: null, color: tsInfo.color },
               ].map(({ label, value, delta, color }) => (
                 <div key={label} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 11px' }}>
                   <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4, fontFamily: 'var(--font-mono)' }}>{label}</div>
@@ -1710,7 +1710,7 @@ function MintDetailContent({ url }: { url: string }) {
 
             {/* Tab switcher */}
             <div style={{ display: 'flex', gap: 2, marginBottom: 10, background: 'var(--bg3)', borderRadius: 6, padding: 2, width: 'fit-content' }}>
-              {([['latency', 'Latency'], ['uptime', 'Uptime'], ['trust', 'Trust Score']] as const).map(([m, label]) => (
+              {([['latency', 'Latency'], ['uptime', 'Uptime'], ['reliability', 'Reliability Score']] as const).map(([m, label]) => (
                 <button
                   key={m}
                   onClick={() => setChartMetric(m)}
@@ -1754,7 +1754,7 @@ function MintDetailContent({ url }: { url: string }) {
                   />
                   <Tooltip
                     contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 11 }}
-                    formatter={(value) => [chartMetric === 'latency' ? `${String(value)}ms` : `${String(value)}%`, chartMetric === 'latency' ? 'Latency' : chartMetric === 'uptime' ? 'Uptime' : 'Trust Score']}
+                    formatter={(value) => [chartMetric === 'latency' ? `${String(value)}ms` : `${String(value)}%`, chartMetric === 'latency' ? 'Latency' : chartMetric === 'uptime' ? 'Uptime' : 'Reliability Score']}
                   />
                   <Line
                     type="monotone"
@@ -1888,7 +1888,7 @@ function MintDetailContent({ url }: { url: string }) {
                         <Info size={11} color="#6b7280" style={{cursor:'help'}} />
                         {auditErrorsTooltip.open && (
                           <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
-                            Successful swaps out of the mint's last ~100 audited operations — the same rolling window the Trust Score's Audit component scores on. Shows "too few to score" below 3 recent swaps.
+                            Successful swaps out of the mint's last ~100 audited operations — the same rolling window the Reliability Score's Audit component scores on. Shows "too few to score" below 3 recent swaps.
                           </div>
                         )}
                       </span>
@@ -2169,27 +2169,27 @@ function MintDetailContent({ url }: { url: string }) {
 
         <div className="md-right">
 
-          <div className="md-panel md-trust-panel">
+          <div className="md-panel md-reliability-panel">
             {/* The (i) icon sits beside .md-panel-title, not inside it — .audit-tooltip
                 only resets font-family, so nesting it inside the uppercase/letter-spaced
                 title made the tooltip text inherit that styling too (looked like a
                 different font from every other tooltip in the app). Same sibling
                 layout as the Audit tab heading's own AuditSourceInfoIcon usage. */}
             <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:11}}>
-              <span className="md-panel-title" style={{marginBottom:0}}>Trust Score</span>
+              <span className="md-panel-title" style={{marginBottom:0}}>Reliability Score</span>
               <AuditSourceInfoIcon text="Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75." />
             </div>
-            <div className="trust-wrap">
+            <div className="reliability-wrap">
               <div className="gauge-wrap">
                 <svg viewBox="0 0 72 72">
                   <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
                   <circle cx="36" cy="36" r="27" fill="none" stroke="var(--green-bright)" strokeWidth="7"
-                    strokeDasharray={trustDonut.dashArray}
-                    strokeDashoffset={trustDonut.dashOffset}
+                    strokeDasharray={reliabilityDonut.dashArray}
+                    strokeDashoffset={reliabilityDonut.dashOffset}
                     strokeLinecap="round"
                     transform="rotate(-90 36 36)" />
                 </svg>
-                <div className="gauge-num" style={{ color: 'var(--green-bright)', fontFamily: 'var(--font-mono-data)' }}>{trustScore}%</div>
+                <div className="gauge-num" style={{ color: 'var(--green-bright)', fontFamily: 'var(--font-mono-data)' }}>{reliabilityScore}%</div>
               </div>
               <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:5,padding:'4px 10px',textAlign:'center'}}>{tsInfo.label}</span>
             </div>
@@ -2197,8 +2197,8 @@ function MintDetailContent({ url }: { url: string }) {
                 tap needed) — the modal below (opened only from the mobile
                 compact tile, where this panel is hidden) shows the same rows. */}
             <div style={{marginTop:16,width:'100%'}}>
-              {trustBreakdownRows.map(row => (
-                <TrustBreakdownRow key={row.label} {...row} />
+              {reliabilityBreakdownRows.map(row => (
+                <ReliabilityBreakdownRow key={row.label} {...row} />
               ))}
             </div>
           </div>
@@ -2356,23 +2356,23 @@ function MintDetailContent({ url }: { url: string }) {
         </div>
       )}
 
-      {showTrustBreakdown && (
+      {showReliabilityBreakdown && (
         <div style={{position:'fixed',inset:0,zIndex:100,background:'rgba(0,0,0,0.7)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}
-          onClick={() => setShowTrustBreakdown(false)}>
+          onClick={() => setShowReliabilityBreakdown(false)}>
           <div style={{background:'var(--bg2)',border:'0.5px solid var(--border2)',borderRadius:14,padding:'24px',maxWidth:380,width:'100%'}}
             onClick={e => e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-              <div style={{fontSize:16,fontWeight:600,color:'var(--text)'}}>Trust Score Breakdown</div>
-              <button onClick={() => setShowTrustBreakdown(false)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:18,cursor:'pointer'}}>×</button>
+              <div style={{fontSize:16,fontWeight:600,color:'var(--text)'}}>Reliability Score Breakdown</div>
+              <button onClick={() => setShowReliabilityBreakdown(false)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:18,cursor:'pointer'}}>×</button>
             </div>
             <div style={{textAlign:'center',marginBottom:20}}>
-              <div style={{fontSize:48,fontWeight:700,color:trustScoreColor(trustScore),lineHeight:1}}>{trustScore}%</div>
+              <div style={{fontSize:48,fontWeight:700,color:reliabilityScoreColor(reliabilityScore),lineHeight:1}}>{reliabilityScore}%</div>
               <div style={{marginTop:8,display:'flex',justifyContent:'center'}}>
                 <span style={{fontSize:11,fontFamily:'var(--font-mono)',fontWeight:600,color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:5,padding:'2px 8px'}}>{tsInfo.label}</span>
               </div>
             </div>
-            {trustBreakdownRows.map(row => (
-              <TrustBreakdownRow key={row.label} {...row} />
+            {reliabilityBreakdownRows.map(row => (
+              <ReliabilityBreakdownRow key={row.label} {...row} />
             ))}
             <div style={{borderTop:'0.5px solid var(--border)',paddingTop:12,marginTop:4,fontSize:10,color:'var(--text3)',lineHeight:1.6}}>
               Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.

@@ -3,14 +3,14 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Info } from 'lucide-react'
-import { TrustMoversPanel } from '@/components/stats/TrustMoversPanel'
+import { ReliabilityMoversPanel } from '@/components/stats/ReliabilityMoversPanel'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcShield } from '@/components/mint/IcShield'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
-import { trustColor, trustScoreInfo, trustDonutArc, displayName } from '@/utils/mintFormatting'
+import { reliabilityColor, reliabilityScoreInfo, reliabilityDonutArc, displayName } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
-import { compareMintVersionNumbers, isEligibleForRecommendation } from '@/utils/trustScore'
+import { compareMintVersionNumbers, isEligibleForRecommendation } from '@/utils/reliabilityScore'
 import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import { useIsMobile, useMediaQuery } from '@/hooks/useIsMobile'
@@ -21,11 +21,11 @@ interface StatsData {
   totalMints: number
   onlineMints: number
   offlineMints: number
-  avgTrustScore: number | null
+  avgReliabilityScore: number | null
   avgLatency24h: number | null
-  trustDistribution: { low: number; moderate: number; high: number }
+  reliabilityDistribution: { low: number; moderate: number; high: number }
   nutAdoption: Array<{ nut: string; count: number; percent: number }>
-  top5ByTrustScore: Array<{ url: string; name: string | null; trustScore: number }>
+  top5ByReliabilityScore: Array<{ url: string; name: string | null; reliabilityScore: number }>
 }
 
 // ── Panel title icon wells (2×2 hero grid visual pass) ──────────
@@ -104,8 +104,8 @@ interface SoftwareVersionEntry {
 }
 
 // Mint-list drill-down level of SoftwareModal — this is the body the
-// standalone per-version modal used to render, unchanged (rows, Trust Score,
-// age badge, "Show all", "X online · Y offline", "Sorted by Trust Score").
+// standalone per-version modal used to render, unchanged (rows, Reliability Score,
+// age badge, "Show all", "X online · Y offline", "Sorted by Reliability Score").
 // Kept as its own component so the call site can `key` it by version, which
 // resets `showAll` when the user backs out and drills into a different one.
 function VersionMintsView({ sw, ver, mints, onBack, onClose }: {
@@ -119,7 +119,7 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose }: {
   const [showAll, setShowAll] = useState(false)
 
   const sorted = useMemo(() =>
-    [...mints].sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
+    [...mints].sort((a, b) => (b.reliabilityScore ?? 0) - (a.reliabilityScore ?? 0))
   , [mints])
 
   const title = ver ? `${sw} ${ver}` : sw
@@ -138,7 +138,7 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose }: {
       </div>
       <div className="nut-modal-list">
         {displayed.map(m => {
-            const score = m.trustScore ?? null
+            const score = m.reliabilityScore ?? null
             const scoreColor = score != null ? (score >= 70 ? '#4ade80' : score >= 40 ? '#ffa500' : '#ff4d4d') : 'var(--text3)'
             return (
               <div
@@ -170,7 +170,7 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose }: {
       </div>
       <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
         <span>{onlineCount} online · {offlineCount} offline</span>
-        <span>Sorted by Trust Score</span>
+        <span>Sorted by Reliability Score</span>
       </div>
     </>
   )
@@ -292,7 +292,7 @@ function CityMintsModal({ loc, mints, onClose }: {
   }, [onClose])
 
   const sorted = useMemo(() =>
-    [...mints].sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
+    [...mints].sort((a, b) => (b.reliabilityScore ?? 0) - (a.reliabilityScore ?? 0))
   , [mints])
 
   const { display, flag } = geoLabel(loc)
@@ -313,7 +313,7 @@ function CityMintsModal({ loc, mints, onClose }: {
         </div>
         <div className="nut-modal-list">
           {displayed.map(m => {
-            const score = m.trustScore ?? null
+            const score = m.reliabilityScore ?? null
             const scoreColor = score != null ? (score >= 70 ? 'var(--green-bright)' : score >= 40 ? 'var(--amber)' : 'var(--red)') : 'var(--text3)'
             return (
               <div
@@ -347,7 +347,7 @@ function CityMintsModal({ loc, mints, onClose }: {
         </div>
         <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span>{onlineCount} online · {offlineCount} offline</span>
-          <span>Sorted by Trust Score</span>
+          <span>Sorted by Reliability Score</span>
         </div>
       </div>
     </div>
@@ -356,7 +356,7 @@ function CityMintsModal({ loc, mints, onClose }: {
 
 // Mints supporting one NUT — opened from the "NUT Coverage Across the Network"
 // panel. Same overlay/row/footer vocabulary as SoftwareModal / CityMintsModal;
-// a plain mint list (displayName link + Trust %), no age badges, no
+// a plain mint list (displayName link + Reliability %), no age badges, no
 // "Show on Dashboard" — the row is the only action and it goes to Mint Detail.
 function NutMintsModal({ nut, mints, onClose }: {
   nut: string
@@ -373,7 +373,7 @@ function NutMintsModal({ nut, mints, onClose }: {
   }, [onClose])
 
   const sorted = useMemo(() =>
-    [...mints].sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
+    [...mints].sort((a, b) => (b.reliabilityScore ?? 0) - (a.reliabilityScore ?? 0))
   , [mints])
 
   const meta = NUT_META[nut]
@@ -393,7 +393,7 @@ function NutMintsModal({ nut, mints, onClose }: {
         </div>
         <div className="nut-modal-list">
           {displayed.map(m => {
-            const score = m.trustScore ?? null
+            const score = m.reliabilityScore ?? null
             const scoreColor = score != null ? (score >= 70 ? 'var(--green-bright)' : score >= 40 ? 'var(--amber)' : 'var(--red)') : 'var(--text3)'
             return (
               <div
@@ -425,7 +425,7 @@ function NutMintsModal({ nut, mints, onClose }: {
         </div>
         <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span>{onlineCount} online · {offlineCount} offline</span>
-          <span>Sorted by Trust Score</span>
+          <span>Sorted by Reliability Score</span>
         </div>
       </div>
     </div>
@@ -502,7 +502,7 @@ function NetworkHealthComponentRow({ component: c, index, total, compact }: {
   const tooltipRef = useRef<HTMLSpanElement>(null)
   const tooltip = useTapTooltip(tooltipRef)
   const points = Math.round(c.value * c.weight / 100)
-  const color = trustColor(c.value)
+  const color = reliabilityColor(c.value)
 
   return (
     <div style={{ marginBottom: compact ? 8 : 12 }}>
@@ -545,7 +545,7 @@ function NetworkHealthComponentRow({ component: c, index, total, compact }: {
 // desktop header's ⓘ tooltip (Stats() below, replacing the old always-visible
 // inline footer under the desktop breakdown).
 const NETWORK_HEALTH_FORMULA_TEXT =
-  'Score = Online%×30 + Trust×25 + SW Diversity×15 + Advanced NUTs×15 + Stability×15. ' +
+  'Score = Online%×30 + Reliability×25 + SW Diversity×15 + Advanced NUTs×15 + Stability×15. ' +
   'Online% uses the same set as the Dashboard default grid (24h+ offline mints excluded). ' +
   'Network Stability (share of mints tracked 1 month+) stands in for churn rate — churn ' +
   'isn\'t reliably measurable yet, since mints are never marked "removed" in the database.'
@@ -571,7 +571,7 @@ function NetworkHealthModal({ score, components, onClose }: {
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
-  const info = trustScoreInfo(score)
+  const info = reliabilityScoreInfo(score)
   const label = score >= 70 ? 'Healthy' : score >= 40 ? 'Moderate' : 'At Risk'
 
   return (
@@ -608,7 +608,7 @@ export default function Stats() {
   const [showMoreLocations, setShowMoreLocations] = useState(false)
   const [softwareModal, setSoftwareModal] = useState<string | null>(null)
   const [nutModal, setNutModal] = useState<string | null>(null)
-  const [reliableTab, setReliableTab] = useState<'reliable' | 'trust'>('reliable')
+  const [reliableTab, setReliableTab] = useState<'reliable' | 'reliability'>('reliable')
   const [moversPeriod, setMoversPeriod] = useState<'7d' | '30d'>('7d')
   const [trendDays, setTrendDays] = useState<30 | 90>(30)
   const [showHealthBreakdown, setShowHealthBreakdown] = useState(false)
@@ -653,7 +653,7 @@ export default function Stats() {
   // of the network sits at 100% uptime, so the ranking barely differentiated
   // mints that have been reliable for a while from ones that just got lucky
   // on the last few probe cycles. This is unrelated to isEligibleForRecommendation()
-  // (the 14-day mint-age gate on Trust Score top-5, see "Recommendation-surface
+  // (the 14-day mint-age gate on Reliability Score top-5, see "Recommendation-surface
   // minimum age gate") — that's about the mint's age, this is about the length
   // of the uptime measurement window, and top5ByUptime deliberately still has
   // no age gate (see that section for why).
@@ -661,27 +661,27 @@ export default function Stats() {
     if (!knownMintsData) return []
     return [...knownMintsData]
       // Test/dev mints are excluded from this "best of" list (same as the
-      // Best Mint wizard and the backend's top5ByTrustScore); the Trust tab
+      // Best Mint wizard and the backend's top5ByReliabilityScore); the Reliability tab
       // just below has its own, separate isTestMint()/age-gate filtering.
       .filter(m => m.online === true && m.uptimePct7d != null && !isTestMint(m.url))
       .sort((a, b) => (b.uptimePct7d ?? 0) - (a.uptimePct7d ?? 0))
       .slice(0, 5)
   }, [knownMintsData])
 
-  const top5ByTrust = useMemo(() => {
+  const top5ByReliability = useMemo(() => {
     if (!knownMintsData) return []
     return [...knownMintsData]
-      .filter(m => m.online === true && m.trustScore != null)
+      .filter(m => m.online === true && m.reliabilityScore != null)
       // Known dev/test-only mints are excluded from this recommendation list —
       // this mirror previously had NO test-mint exclusion at all, unlike the
-      // backend's top5ByTrustScore and this page's own top5ByUptime just above
+      // backend's top5ByReliabilityScore and this page's own top5ByUptime just above
       // (2026-09-19 audit run-3 finding).
       .filter(m => !isTestMint(m.url))
       // Minimum observation window before a mint can be recommended — additive
-      // to NEW_MINT_TRUST_CAP (which only discounts score, not eligibility).
-      // Same gate as the backend's top5ByTrustScore (isEligibleForRecommendation).
+      // to NEW_MINT_RELIABILITY_CAP (which only discounts score, not eligibility).
+      // Same gate as the backend's top5ByReliabilityScore (isEligibleForRecommendation).
       .filter(m => isEligibleForRecommendation(m.discoveredAt))
-      .sort((a, b) => (b.trustScore ?? 0) - (a.trustScore ?? 0))
+      .sort((a, b) => (b.reliabilityScore ?? 0) - (a.reliabilityScore ?? 0))
       .slice(0, 5)
   }, [knownMintsData])
 
@@ -719,19 +719,19 @@ export default function Stats() {
     return knownMintsData.filter(m => (m.nutsLimits as Record<string, unknown> | null)?.[key] != null)
   }, [nutModal, knownMintsData])
 
-  interface TrustTrendResponse {
-    trend: Array<{ date: string; avgTrust: number }>
+  interface ReliabilityTrendResponse {
+    trend: Array<{ date: string; avgReliability: number }>
     periodDays: number
     earliestCheckedAt: string | null
     daysOfDataAvailable: number
   }
 
   const { data: trendResponse } = useQuery({
-    queryKey: ['stats-trust-trend', trendDays],
-    queryFn: async (): Promise<TrustTrendResponse> => {
-      const res = await fetch(`/api/stats/trust-trend?days=${trendDays}`)
-      if (!res.ok) throw new Error('trust-trend fetch failed')
-      return res.json() as Promise<TrustTrendResponse>
+    queryKey: ['stats-reliability-trend', trendDays],
+    queryFn: async (): Promise<ReliabilityTrendResponse> => {
+      const res = await fetch(`/api/stats/reliability-trend?days=${trendDays}`)
+      if (!res.ok) throw new Error('reliability-trend fetch failed')
+      return res.json() as Promise<ReliabilityTrendResponse>
     },
     staleTime: 10 * 60 * 1000,
   })
@@ -743,22 +743,22 @@ export default function Stats() {
 
   const trendSummary = useMemo(() => {
     if (!trendData || trendData.length === 0) return null
-    const vals = trendData.map(d => d.avgTrust)
+    const vals = trendData.map(d => d.avgReliability)
     const current = vals[vals.length - 1] ?? null
     const high90 = Math.max(...vals)
     const low90 = Math.min(...vals)
     return { current, high: high90, low: low90 }
   }, [trendData])
 
-  interface TrustMover { url: string; name: string | null; delta: number }
-  interface TrustMoversResponse { period: '7d' | '30d'; risers: TrustMover[]; fallers: TrustMover[] }
+  interface ReliabilityMover { url: string; name: string | null; delta: number }
+  interface ReliabilityMoversResponse { period: '7d' | '30d'; risers: ReliabilityMover[]; fallers: ReliabilityMover[] }
 
   const { data: moversData, isPending: moversPending, isFetching: moversFetching } = useQuery({
-    queryKey: ['stats-trust-movers', moversPeriod],
-    queryFn: async (): Promise<TrustMoversResponse> => {
-      const res = await fetch(`/api/stats/trust-movers?period=${moversPeriod}`)
-      if (!res.ok) throw new Error('trust-movers fetch failed')
-      return res.json() as Promise<TrustMoversResponse>
+    queryKey: ['stats-reliability-movers', moversPeriod],
+    queryFn: async (): Promise<ReliabilityMoversResponse> => {
+      const res = await fetch(`/api/stats/reliability-movers?period=${moversPeriod}`)
+      if (!res.ok) throw new Error('reliability-movers fetch failed')
+      return res.json() as Promise<ReliabilityMoversResponse>
     },
     staleTime: 60 * 1000,
     // Keep the previous period's rows on screen while the other period loads, so
@@ -828,7 +828,7 @@ export default function Stats() {
     const onlinePct = active.length > 0
       ? active.filter(m => m.online === true).length / active.length * 100
       : 0
-    const avgTrust = data.avgTrustScore ?? 0
+    const avgReliability = data.avgReliabilityScore ?? 0
 
     const swTotal = versionDist.reduce((s, d) => s + d.total, 0)
     const hhi = swTotal > 0 ? versionDist.reduce((s, d) => s + (d.total / swTotal) ** 2, 0) : 1
@@ -843,7 +843,7 @@ export default function Stats() {
     const stability = notFresh / knownMintsData.length * 100
 
     const score = Math.round(
-      onlinePct * 0.30 + avgTrust * 0.25 + diversity * 0.15 + advancedAdoption * 0.15 + stability * 0.15
+      onlinePct * 0.30 + avgReliability * 0.25 + diversity * 0.15 + advancedAdoption * 0.15 + stability * 0.15
     )
 
     // Matches NetworkHealthComponentRow's own points formula so the tooltip's
@@ -859,7 +859,7 @@ export default function Stats() {
           weight: 30,
           tooltip: `${onlinePts}/30 are NHI points (this row is 30% of the index), not ${onlinePts} mints online. Denominator is non-degraded mints (same set as the Dashboard default grid).`,
         },
-        { label: 'Avg. Trust Score', value: avgTrust, weight: 25, tooltip: 'Average Trust Score across all currently online mints.' },
+        { label: 'Avg. Reliability Score', value: avgReliability, weight: 25, tooltip: 'Average Reliability Score across all currently online mints.' },
         { label: 'Software diversity', value: diversity, weight: 15, tooltip: 'How evenly mints are spread across different software - heavy reliance on one implementation scores lower.' },
         { label: 'Advanced feature adoption', value: advancedAdoption, weight: 15, tooltip: 'Average adoption rate of optional, security/privacy-oriented NUTs (P2PK, DLEQ, HTLCs, WebSocket, auth, BOLT12, Nostr backup, Pay-to-BK, on-chain) beyond the baseline mint/melt/state-check/restore lifecycle.' },
         { label: 'Network stability', value: stability, weight: 15, tooltip: 'Share of mints that have been tracked for 1 month or more. Used as a stand-in for churn rate, since mints are never marked "removed" in the database so actual churn isn\'t reliably measurable yet.' },
@@ -869,7 +869,7 @@ export default function Stats() {
 
   useDocumentMeta(
     'Cashu Mints Network Stats — MintRadar',
-    'Live network-wide stats for Cashu mints: uptime, average Trust Score, latency, NUT adoption and the Network Health Index.'
+    'Live network-wide stats for Cashu mints: uptime, average Reliability Score, latency, NUT adoption and the Network Health Index.'
   )
 
   if (isLoading) return (
@@ -895,7 +895,7 @@ export default function Stats() {
 
   return (
     <div className="stats-page">
-      <h1 className="sr-only">Cashu Mints Network Stats — Uptime, Trust Score & NUT Adoption</h1>
+      <h1 className="sr-only">Cashu Mints Network Stats — Uptime, Reliability Score & NUT Adoption</h1>
       {/* ── 5 flat stat boxes ── */}
       <div className="stats-metrics">
         <div className="stat-card">
@@ -981,7 +981,7 @@ export default function Stats() {
       {/* ── 2×2 hero grid: Software in Use | Most Reliable, Geographic
           Distribution | Network Health Index — visual pass to mirror the
           reference mockup's layout, DOM order doubling as the mobile stack
-          order. NUT Coverage / Trust Score Movers / Trust Score Trend stay
+          order. NUT Coverage / Reliability Score Movers / Reliability Score Trend stay
           in the separate .stats-cards-grid below, unchanged. */}
       <div className="stats-board-grid">
       <div className="stats-hero-grid">
@@ -1059,12 +1059,12 @@ export default function Stats() {
             <div className="stats-panel-title-row" style={{marginBottom:0}}>
               <div className="stats-panel-icon green"><IcShield size={12} /></div>
               <div className="stats-panel-title" style={{marginBottom:0}}>
-                {reliableTab === 'reliable' ? 'Most Reliable · 7D' : 'Top Trust Score'}
+                {reliableTab === 'reliable' ? 'Most Reliable · 7D' : 'Top Reliability Score'}
               </div>
             </div>
             <div className="stats-tab-toggle">
               <button type="button" className={`stats-tab-btn${reliableTab === 'reliable' ? ' active' : ''}`} onClick={() => setReliableTab('reliable')}>Reliable</button>
-              <button type="button" className={`stats-tab-btn${reliableTab === 'trust' ? ' active' : ''}`} onClick={() => setReliableTab('trust')}>Trust</button>
+              <button type="button" className={`stats-tab-btn${reliableTab === 'reliability' ? ' active' : ''}`} onClick={() => setReliableTab('reliability')}>Reliability</button>
             </div>
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:'var(--stats-row-gap)',marginTop:10}}>
@@ -1091,10 +1091,10 @@ export default function Stats() {
                 )
               })
             ) : (
-              top5ByTrust.length === 0 ? (
+              top5ByReliability.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data yet</div>
-              ) : top5ByTrust.map((mint, idx) => {
-                const score = mint.trustScore ?? 0
+              ) : top5ByReliability.map((mint, idx) => {
+                const score = mint.reliabilityScore ?? 0
                 const color = score >= 70 ? '#4ade80' : score >= 40 ? '#ffa500' : '#ff4d4d'
                 const loc = normalizeGeoLoc(mint.serverLocation)
                 const cityInfo = loc !== 'Unknown' ? geoLabel(loc) : null
@@ -1169,8 +1169,8 @@ export default function Stats() {
 
         {/* Row 2, 2nd panel: Network Health Index. */}
         {networkHealth && (() => {
-          const info = trustScoreInfo(networkHealth.score)
-          const gaugeArc = trustDonutArc(networkHealth.score)
+          const info = reliabilityScoreInfo(networkHealth.score)
+          const gaugeArc = reliabilityDonutArc(networkHealth.score)
           return (
             <div className="stats-panel stats-nhi-panel">
               <div className="stats-card-header">
@@ -1187,7 +1187,7 @@ export default function Stats() {
                     <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
                     {nhiInfoTooltip.open && (
                       <div className="audit-tooltip" style={isMobile ? { width: 220, left: 0 } : { width: 260, right: 0 }}>
-                        Composite 0-100 score across uptime, average Trust Score, software diversity, advanced feature adoption &amp; network stability. Each row below shows index points, not a mint count.{isMobile ? ' Tap the gauge for the full breakdown.' : ` ${NETWORK_HEALTH_FORMULA_TEXT}`}
+                        Composite 0-100 score across uptime, average Reliability Score, software diversity, advanced feature adoption &amp; network stability. Each row below shows index points, not a mint count.{isMobile ? ' Tap the gauge for the full breakdown.' : ` ${NETWORK_HEALTH_FORMULA_TEXT}`}
                       </div>
                     )}
                   </span>
@@ -1253,16 +1253,16 @@ export default function Stats() {
 
       </div>{/* /stats-hero-grid */}
 
-      {/* ── existing NUT Coverage / Trust Score Movers / Trust Score Trend
+      {/* ── existing NUT Coverage / Reliability Score Movers / Reliability Score Trend
           grid — layout/behavior unchanged by this visual pass. ── */}
       <div className="stats-cards-grid">
 
         {/* Row 2, cols 1-3: NUT Coverage — span 3 so its rows (14, after the
             2026-09-14 mint-side-only cut) split into 3
             inner columns instead of 2 (shorter, less vertical scrolling) now
-            that Trust Score Movers shares this row as a standalone
+            that Reliability Score Movers shares this row as a standalone
             1-column panel. DOM order matters here: this must come before
-            Trust Score Movers below so CSS Grid's auto-placement fills row 2
+            Reliability Score Movers below so CSS Grid's auto-placement fills row 2
             left-to-right (NUT Coverage cols 1-3, then Movers falls into the
             remaining col 4) instead of Movers grabbing col 1 first. */}
         <div className="stats-panel stats-nut-panel">
@@ -1286,7 +1286,7 @@ export default function Stats() {
           </div>
         </div>
 
-        {/* Row 2, col 4: Trust Score Movers. Moved here from row 1 (was the
+        {/* Row 2, col 4: Reliability Score Movers. Moved here from row 1 (was the
             4th equal column alongside Software in Use/Geographic
             Distribution/Most Reliable) — its row count varies with how many
             mints actually moved this period (2 empty-state lines up to
@@ -1297,7 +1297,7 @@ export default function Stats() {
             in row 2 is uniform height either (NUT Coverage's rows vs. a
             single narrow column). Swapped with Network Health Index, which
             took this panel's old spot in row 1. */}
-        <TrustMoversPanel
+        <ReliabilityMoversPanel
           period={moversPeriod}
           onPeriodChange={setMoversPeriod}
           data={moversData}
@@ -1308,14 +1308,14 @@ export default function Stats() {
           getIconUrl={m => knownMintsData?.find(km => km.url === m.url)?.iconUrl ?? null}
         />
 
-        {/* Row 3, full width: Trust Score Trend. Chart height is unchanged
+        {/* Row 3, full width: Reliability Score Trend. Chart height is unchanged
             (height:120 below, same as before) — only the panel's width grows,
             so the x-axis can fit more date labels instead of skipping most of
             them (interval="preserveStartEnd" already reacts to available
             width; it was never hardcoded to a fixed tick count). */}
         <div className="stats-panel stats-trend-panel">
           <div className="stats-card-header">
-            <div className="stats-panel-title" style={{marginBottom:0}}>Trust Score Trend</div>
+            <div className="stats-panel-title" style={{marginBottom:0}}>Reliability Score Trend</div>
             <div className="stats-tab-toggle">
               <button type="button" className={`stats-tab-btn${trendDays === 30 ? ' active' : ''}`} onClick={() => setTrendDays(30)}>30d</button>
               <button type="button" className={`stats-tab-btn${trendDays === 90 ? ' active' : ''}`} onClick={() => setTrendDays(90)}>90d</button>
@@ -1328,7 +1328,7 @@ export default function Stats() {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData} margin={{top:4,right:4,left:-28,bottom:0}}>
                   <defs>
-                    <linearGradient id="trustGrad" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id="reliabilityGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#17E87F" stopOpacity={0.25}/>
                       <stop offset="95%" stopColor="#17E87F" stopOpacity={0}/>
                     </linearGradient>
@@ -1338,9 +1338,9 @@ export default function Stats() {
                   <Tooltip
                     contentStyle={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:6,fontSize:11,fontFamily:'var(--font-mono)'}}
                     labelStyle={{color:'var(--text3)'}}
-                    formatter={(v) => [`${v ?? '—'}%`, 'Avg Trust']}
+                    formatter={(v) => [`${v ?? '—'}%`, 'Avg Reliability']}
                   />
-                  <Area type="monotone" dataKey="avgTrust" stroke="#17E87F" strokeWidth={1.5} fill="url(#trustGrad)" dot={false} />
+                  <Area type="monotone" dataKey="avgReliability" stroke="#17E87F" strokeWidth={1.5} fill="url(#reliabilityGrad)" dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             )}

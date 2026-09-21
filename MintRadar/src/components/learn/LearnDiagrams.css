@@ -1,5 +1,5 @@
 /* Shared layout for the Learn module diagrams (token flow, risk asymmetry,
-   Trust Score donut). All colour comes from the existing patina/copper
+   Reliability Score donut). All colour comes from the existing patina/copper
    tokens — no diagram introduces a colour of its own. */
 
 .learn-diagram {
@@ -159,7 +159,7 @@
   text-align: center;
 }
 
-/* ── Module 3 — Trust Score weights donut ───────────────────── */
+/* ── Module 3 — Reliability Score weights donut ───────────────────── */
 .donut-diagram {
   display: flex;
   align-items: center;

@@ -8,7 +8,7 @@ import {
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcShield } from '@/components/mint/IcShield'
 import { type KnownMint } from '@/hooks/useKnownMints'
-import { splitVersionString, canonicalSoftwareName, parseMajorMinorPatch } from '@/utils/trustScore'
+import { splitVersionString, canonicalSoftwareName, parseMajorMinorPatch } from '@/utils/reliabilityScore'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { useNow } from '@/hooks/useNow'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -21,10 +21,10 @@ const IcClose = () => (
   </svg>
 )
 
-function trustScoreInfo(score: number) {
-  if (score >= 70) return { label: 'High Trust', color: '#4ade80', bg: 'rgba(74,222,128,0.1)', border: 'rgba(74,222,128,0.25)' }
-  if (score >= 40) return { label: 'Moderate Trust', color: '#ffa500', bg: 'rgba(255,165,0,0.1)', border: 'rgba(255,165,0,0.25)' }
-  return { label: 'Low Trust', color: '#ff4d4d', bg: 'rgba(255,77,77,0.1)', border: 'rgba(255,77,77,0.25)' }
+function reliabilityScoreInfo(score: number) {
+  if (score >= 70) return { label: 'High Reliability', color: '#4ade80', bg: 'rgba(74,222,128,0.1)', border: 'rgba(74,222,128,0.25)' }
+  if (score >= 40) return { label: 'Moderate Reliability', color: '#ffa500', bg: 'rgba(255,165,0,0.1)', border: 'rgba(255,165,0,0.25)' }
+  return { label: 'Low Reliability', color: '#ff4d4d', bg: 'rgba(255,77,77,0.1)', border: 'rgba(255,77,77,0.25)' }
 }
 
 function mintAgeBadge(discoveredAt: string | null | undefined) {
@@ -43,9 +43,9 @@ function uptimeColor(pct: number | null | undefined): string {
   return '#ff4d4d'
 }
 
-function listTrustScore(mint: KnownMint): number {
+function listReliabilityScore(mint: KnownMint): number {
   if (mint.online !== true) return 0
-  return mint.trustScore ?? 0
+  return mint.reliabilityScore ?? 0
 }
 
 function getHostname(url: string): string {
@@ -59,7 +59,7 @@ function parseMinorVer(v: string | null | undefined): number {
 }
 
 // Groups the mints currently being compared by canonical software (same
-// parsing rules as versionFreshnessScore() in trustScore.ts — split off the
+// parsing rules as versionFreshnessScore() in reliabilityScore.ts — split off the
 // "Software/" prefix, match case-insensitively) and finds the newest version
 // within each group. Comparing raw minor-version numbers across DIFFERENT
 // software (e.g. Nutshell vs cdk-mintd) is meaningless — they're independent
@@ -67,7 +67,7 @@ function parseMinorVer(v: string | null | undefined): number {
 // mint must never be flagged "Outdated" just because a Nutshell mint in the
 // same comparison happens to carry a higher number. Software this app
 // doesn't recognize has no ladder to compare against and is skipped, same
-// neutral treatment as the Trust Score's version component.
+// neutral treatment as the Reliability Score's version component.
 function latestVersionsBySoftware(mints: KnownMint[]): Record<string, string> {
   const bestParsed: Record<string, { major: number; minor: number }> = {}
   const bestVersion: Record<string, string> = {}
@@ -88,12 +88,12 @@ function latestVersionsBySoftware(mints: KnownMint[]): Record<string, string> {
 }
 
 // Per-mint line colors for the historical trend overlay — reuses hues already
-// established elsewhere in the app (Trust Trend green, copper accent, the
+// established elsewhere in the app (Reliability Trend green, copper accent, the
 // Fresh/OG badge blue and purple) rather than inventing new ones.
 const MINT_COLORS = ['#17E87F', '#c98058', '#60a5fa', '#a78bfa']
 
 type HistoryPeriod = '24h' | '7d' | '30d' | '90d'
-type HistoryMetric = 'latency' | 'uptime' | 'trust'
+type HistoryMetric = 'latency' | 'uptime' | 'reliability'
 
 interface HistorySegment {
   bucket: string
@@ -102,7 +102,7 @@ interface HistorySegment {
   total: number
   onlineCount: number
   uptimePct: number | null
-  trustScore: number | null
+  reliabilityScore: number | null
 }
 
 interface HistoryResponse {
@@ -134,8 +134,8 @@ function useMintCompareData(mint: KnownMint, latestBySoftware: Record<string, st
   const isOnline = mint.online === true
   const displayName = mint.name ?? getHostname(mint.url)
   const hostname = getHostname(mint.url)
-  const trustScore = listTrustScore(mint)
-  const tsInfo = trustScoreInfo(trustScore)
+  const reliabilityScore = listReliabilityScore(mint)
+  const tsInfo = reliabilityScoreInfo(reliabilityScore)
   const ageBadge = mintAgeBadge(mint.discoveredAt)
   const isNew = mint.discoveredAt != null && (now - new Date(mint.discoveredAt).getTime()) < 48 * 3600 * 1000
   const nutsLimits = (mint.nutsLimits ?? {}) as Record<string, unknown>
@@ -147,7 +147,7 @@ function useMintCompareData(mint: KnownMint, latestBySoftware: Record<string, st
   const latestForSoftware = mintSoftware != null ? latestBySoftware[mintSoftware] ?? null : null
   const isOutdated = mint.version != null && latestForSoftware != null
     && (parseMinorVer(latestForSoftware) - parseMinorVer(mint.version)) > 2
-  return { isOnline, displayName, hostname, trustScore, tsInfo, ageBadge, isNew, nutsLimits, supportsBackupRestore, isOutdated }
+  return { isOnline, displayName, hostname, reliabilityScore, tsInfo, ageBadge, isNew, nutsLimits, supportsBackupRestore, isOutdated }
 }
 
 export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClose: () => void }) {
@@ -247,7 +247,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
         const value = !seg ? null
           : metric === 'latency' ? seg.latencyMs
           : metric === 'uptime' ? seg.uptimePct
-          : seg.trustScore
+          : seg.reliabilityScore
         row[`m${i}`] = value
       })
       return row
@@ -319,11 +319,11 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                   </div>
 
                   <div className="cmp-mobile-row">
-                    <span className="cmp-mobile-lbl">Trust Score</span>
+                    <span className="cmp-mobile-lbl">Reliability Score</span>
                     <span className="cmp-mobile-val">
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: d.tsInfo.color }}>
                         <IcShield size={12} />
-                        <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? `${d.trustScore}%` : '—'}</span>
+                        <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? `${d.reliabilityScore}%` : '—'}</span>
                       </span>
                       {d.isOnline && (
                         <span style={{ fontSize: 11, color: d.tsInfo.color, background: d.tsInfo.bg, border: `0.5px solid ${d.tsInfo.border}`, borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-mono)' }}>{d.tsInfo.label}</span>
@@ -464,15 +464,15 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             )
           })}
 
-          {/* ── Trust Score ── */}
-          <div className="cmp-lbl">Trust Score</div>
+          {/* ── Reliability Score ── */}
+          <div className="cmp-lbl">Reliability Score</div>
           {mints.map((mint, i) => {
             const d = allData[i]!
             return (
               <div key={mint.url} className="cmp-val">
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: d.tsInfo.color }}>
                   <IcShield size={12} />
-                  <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? `${d.trustScore}%` : '—'}</span>
+                  <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? `${d.reliabilityScore}%` : '—'}</span>
                 </span>
                 {d.isOnline && (
                   <span style={{ marginLeft: 6, fontSize: 11, color: d.tsInfo.color, background: d.tsInfo.bg, border: `0.5px solid ${d.tsInfo.border}`, borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-mono)' }}>{d.tsInfo.label}</span>
@@ -617,7 +617,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>Historical Trends</div>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', gap: 2, background: 'var(--bg3)', borderRadius: 6, padding: 2 }}>
-                  {(['latency', 'uptime', 'trust'] as const).map(m => (
+                  {(['latency', 'uptime', 'reliability'] as const).map(m => (
                     <button
                       key={m}
                       onClick={() => setMetric(m)}
@@ -629,7 +629,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                         color: metric === m ? 'var(--text)' : 'var(--text3)',
                         cursor: 'pointer',
                       }}
-                    >{m === 'latency' ? 'Latency' : m === 'uptime' ? 'Uptime' : 'Trust Score'}</button>
+                    >{m === 'latency' ? 'Latency' : m === 'uptime' ? 'Uptime' : 'Reliability Score'}</button>
                   ))}
                 </div>
                 <div style={{ display: 'flex', background: 'var(--bg3)', borderRadius: 6, padding: 2, gap: 1 }}>

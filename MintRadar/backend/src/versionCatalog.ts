@@ -1,10 +1,10 @@
 // Keeps the software_versions DB cache (see db.ts) up to date with each tracked
 // mint implementation's latest upstream release, so versionFreshnessScore
-// (shared/trustScore.ts) can score freshness against the real current version
+// (shared/reliabilityScore.ts) can score freshness against the real current version
 // instead of a hand-maintained static list.
 import { pool } from './db.js'
 import { safeFetch } from './ssrf.js'
-import { parseMajorMinorPatch } from './shared/trustScore.js'
+import { parseMajorMinorPatch } from './shared/reliabilityScore.js'
 
 interface UpstreamRepo {
   software: string
@@ -40,7 +40,7 @@ interface SoftwareVersionRow {
 // For each software row: if the current `latest_version` was released (per GitHub's
 // own `published_at`, stored as `released_at`) less than VERSION_GRACE_PERIOD_MS ago,
 // AND a `previous_version` exists to fall back to, score mints against that previous
-// version instead — i.e. the new release doesn't start affecting anyone's Trust Score
+// version instead — i.e. the new release doesn't start affecting anyone's Reliability Score
 // until the grace period has elapsed. `released_at` null (row predates this migration,
 // or was seeded at deploy with no known release date) or no `previous_version` (first
 // version ever recorded for that software) both skip the grace period and use
@@ -125,7 +125,7 @@ export async function fetchLatestUpstreamVersions(): Promise<void> {
 }
 
 // Reads the software_versions cache and applies the grace period into the
-// { major, minor } map that versionFreshnessScore/computeServerTrustScore expect.
+// { major, minor } map that versionFreshnessScore/computeServerReliabilityScore expect.
 // Never throws — a DB hiccup here just means the caller falls back to the static
 // ladders (versionFreshnessScore's own fallback when a software key is missing).
 export async function getLatestVersionsMap(): Promise<Record<string, { major: number; minor: number }>> {

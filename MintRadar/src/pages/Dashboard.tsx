@@ -15,9 +15,9 @@ import type { MintStatus } from '@core/mint/api'
 import { MintCard } from '@/components/mint/MintCard'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
-import { latencyColor, trustColor, uptimeColor, displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls } from '@/utils/mintFormatting'
+import { latencyColor, reliabilityColor, uptimeColor, displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls } from '@/utils/mintFormatting'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
-import { listTrustScore, compareTrustThenRating } from '@/utils/trustSort'
+import { listReliabilityScore, compareReliabilityThenRating } from '@/utils/reliabilitySort'
 import { isTestMint } from '@/constants/testMints'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import './Dashboard.css'
@@ -141,27 +141,27 @@ const NOSTR_LOOKUP_RELAYS = [
   'wss://offchain.pub',
   'wss://nostr-pub.wellorder.net',
 ]
-const DEFAULT_SORT_DIRS: Record<'name' | 'latency' | 'rating' | 'trust' | 'reviewCount', 'asc' | 'desc'> = { rating: 'desc', latency: 'asc', trust: 'desc', name: 'asc', reviewCount: 'desc' }
+const DEFAULT_SORT_DIRS: Record<'name' | 'latency' | 'rating' | 'reliability' | 'reviewCount', 'asc' | 'desc'> = { rating: 'desc', latency: 'asc', reliability: 'desc', name: 'asc', reviewCount: 'desc' }
 
 // Wallet-only/auth/method NUTs are deliberately not filterable here — a mint
 // never advertises the wallet-only ones, and this should stay in step with
-// the same tracked list the Trust Score/grid/adoption bars use.
+// the same tracked list the Reliability Score/grid/adoption bars use.
 const NUT_FILTER_KEYS = TRACKED_NUT_KEYS
 
 interface FilterState {
   status: 'all' | 'online' | 'offline'
-  minTrustScore: number
+  minReliabilityScore: number
   requiredNuts: string[]
   hideTestMints: boolean
 }
 // New default Dashboard view (2026-09-09): online-only, test mints hidden,
-// sorted by Trust Score desc. The Name-sort freeze from earlier passes is
-// deliberately lifted for this — see the "Trust Score default" note.
+// sorted by Reliability Score desc. The Name-sort freeze from earlier passes is
+// deliberately lifted for this — see the "Reliability Score default" note.
 // hideTestMints defaults to false (2026-09-10): a fresh Dashboard SHOWS test
 // mints (they still carry a "Test mint" badge). An earlier pass defaulted this
 // ON — that is deliberately lifted here. ?testmints=hide is emitted only when
 // the user turns the checkbox on; the default never emits a param.
-const DEFAULT_FILTERS: FilterState = { status: 'online', minTrustScore: 0, requiredNuts: [], hideTestMints: false }
+const DEFAULT_FILTERS: FilterState = { status: 'online', minReliabilityScore: 0, requiredNuts: [], hideTestMints: false }
 
 function applyFilters(
   mints: KnownMint[],
@@ -178,7 +178,7 @@ function applyFilters(
       if (filters.status === 'online' && mint.online !== true && !(opts.showDegraded && mint.degraded)) return false
     }
     if (filters.status === 'offline' && mint.online !== false) return false
-    if (listTrustScore(mint) < filters.minTrustScore) return false
+    if (listReliabilityScore(mint) < filters.minReliabilityScore) return false
     if (filters.requiredNuts.length > 0) {
       const nuts = mint.nutsLimits as Record<string, unknown> | null
       if (!nuts) return false
@@ -193,7 +193,7 @@ function countActiveFilters(f: FilterState): number {
     // 'all' widens the view (no status filter) so it isn't "active"; only an
     // explicit Offline filter counts.
     f.status === 'offline' ? 1 : 0,
-    f.minTrustScore > 0 ? 1 : 0,
+    f.minReliabilityScore > 0 ? 1 : 0,
     f.requiredNuts.length > 0 ? 1 : 0,
     f.hideTestMints !== DEFAULT_FILTERS.hideTestMints ? 1 : 0,
   ].reduce((a, b) => a + b, 0)
@@ -205,8 +205,8 @@ function countActiveFilters(f: FilterState): number {
 // navigable via browser back/forward. Keys are omitted when at their
 // default value, keeping the URL clean (e.g. "/" for the default view).
 
-type SortByValue = 'name' | 'latency' | 'rating' | 'trust' | 'reviewCount'
-const SORT_KEYS: readonly SortByValue[] = ['name', 'latency', 'rating', 'trust', 'reviewCount']
+type SortByValue = 'name' | 'latency' | 'rating' | 'reliability' | 'reviewCount'
+const SORT_KEYS: readonly SortByValue[] = ['name', 'latency', 'rating', 'reliability', 'reviewCount']
 
 function parseFilterParams(params: URLSearchParams): {
   search: string
@@ -216,14 +216,14 @@ function parseFilterParams(params: URLSearchParams): {
   compareUrls: string[]
 } {
   const sortByRaw = params.get('sort')
-  const sortBy: SortByValue = (SORT_KEYS as readonly string[]).includes(sortByRaw ?? '') ? (sortByRaw as SortByValue) : 'trust'
+  const sortBy: SortByValue = (SORT_KEYS as readonly string[]).includes(sortByRaw ?? '') ? (sortByRaw as SortByValue) : 'reliability'
   const dirRaw = params.get('dir')
   const sortDir: 'asc' | 'desc' = dirRaw === 'asc' || dirRaw === 'desc' ? dirRaw : DEFAULT_SORT_DIRS[sortBy]
   const statusRaw = params.get('status')
   const status: FilterState['status'] = statusRaw === 'all' || statusRaw === 'offline' ? statusRaw : 'online'
-  const trustRaw = params.get('trust')
-  const trustParsed = trustRaw !== null ? Number(trustRaw) : 0
-  const minTrustScore = Number.isFinite(trustParsed) ? Math.min(100, Math.max(0, trustParsed)) : 0
+  const reliabilityRaw = params.get('reliability')
+  const reliabilityParsed = reliabilityRaw !== null ? Number(reliabilityRaw) : 0
+  const minReliabilityScore = Number.isFinite(reliabilityParsed) ? Math.min(100, Math.max(0, reliabilityParsed)) : 0
   const nutsRaw = params.get('nuts')
   const requiredNuts = nutsRaw ? nutsRaw.split(',').filter(n => NUT_FILTER_KEYS.includes(n)) : []
   // Stats' NUT-coverage rows link here as ?nut=NN (zero-padded, e.g. ?nut=09).
@@ -242,7 +242,7 @@ function parseFilterParams(params: URLSearchParams): {
     search: params.get('q') ?? '',
     sortBy,
     sortDir,
-    filters: { status, minTrustScore, requiredNuts, hideTestMints },
+    filters: { status, minReliabilityScore, requiredNuts, hideTestMints },
     compareUrls,
   }
 }
@@ -250,10 +250,10 @@ function parseFilterParams(params: URLSearchParams): {
 function buildFilterParams(search: string, sortBy: SortByValue, sortDir: 'asc' | 'desc', filters: FilterState, compareUrls: string[]): URLSearchParams {
   const params = new URLSearchParams()
   if (search) params.set('q', search)
-  if (sortBy !== 'trust') params.set('sort', sortBy)
+  if (sortBy !== 'reliability') params.set('sort', sortBy)
   if (sortDir !== DEFAULT_SORT_DIRS[sortBy]) params.set('dir', sortDir)
   if (filters.status !== 'online') params.set('status', filters.status)
-  if (filters.minTrustScore > 0) params.set('trust', String(filters.minTrustScore))
+  if (filters.minReliabilityScore > 0) params.set('reliability', String(filters.minReliabilityScore))
   if (filters.requiredNuts.length > 0) params.set('nuts', filters.requiredNuts.join(','))
   if (filters.hideTestMints) params.set('testmints', 'hide')
   if (compareUrls.length > 0) params.set('compare', buildCompareParam(compareUrls))
@@ -295,7 +295,7 @@ function MintListView({
 }: {
   mints: KnownMint[]
   search: string
-  sortBy: 'name' | 'latency' | 'rating' | 'trust' | 'reviewCount'
+  sortBy: 'name' | 'latency' | 'rating' | 'reliability' | 'reviewCount'
   sortDir: 'asc' | 'desc'
   totalAll?: number
 }) {
@@ -321,8 +321,8 @@ function MintListView({
         const la = a.online === true && a.latencyMs != null ? a.latencyMs : Infinity
         const lb = b.online === true && b.latencyMs != null ? b.latencyMs : Infinity
         result = la - lb
-      } else if (sortBy === 'trust') {
-        result = compareTrustThenRating(a, b)
+      } else if (sortBy === 'reliability') {
+        result = compareReliabilityThenRating(a, b)
       } else if (sortBy === 'reviewCount') {
         // Mints with reviewCount === 0 or null sort to the end, regardless of direction toggle.
         const ca = a.reviewCount && a.reviewCount > 0 ? a.reviewCount : -1
@@ -345,7 +345,7 @@ function MintListView({
               <th>Status</th>
               <th>Uptime 24h</th>
               <th className="col-hide-mobile">Latency</th>
-              <th className="col-hide-mobile">Trust</th>
+              <th className="col-hide-mobile">Reliability</th>
               <th className="col-hide-mobile">NUTs</th>
             </tr>
           </thead>
@@ -353,7 +353,7 @@ function MintListView({
             {sortedFiltered.map(mint => {
               const isOnline = mint.online === true
               const displayName = mintDisplayName(mint)
-              const score = mint.trustScore ?? null
+              const score = mint.reliabilityScore ?? null
               return (
                 <tr key={mint.url} className="mint-list-row" onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} onPointerEnter={() => onMintPointerEnter(mint.url)} onPointerLeave={onMintPointerLeave}>
                   <td className="mint-list-td-name">
@@ -374,7 +374,7 @@ function MintListView({
                   <td className="col-hide-mobile" style={{ color: latencyColor(mint.latencyMs), fontFamily: 'var(--font-mono-data)', fontSize: 12 }}>
                     {isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
                   </td>
-                  <td className="trust-col col-hide-mobile" style={{ color: score != null ? trustColor(score) : 'var(--text3)', fontFamily: 'var(--font-mono-data)', fontSize: 12, fontWeight: 600 }}>
+                  <td className="reliability-col col-hide-mobile" style={{ color: score != null ? reliabilityColor(score) : 'var(--text3)', fontFamily: 'var(--font-mono-data)', fontSize: 12, fontWeight: 600 }}>
                     {score != null ? `${score}` : '—'}
                   </td>
                   <td className="col-hide-mobile" style={{ fontFamily: 'var(--font-mono-data)', fontSize: 12, color: 'var(--text2)' }}>
@@ -406,7 +406,7 @@ function MintGrid({
 }: {
   mints: KnownMint[]
   search: string
-  sortBy: 'name' | 'latency' | 'rating' | 'trust' | 'reviewCount'
+  sortBy: 'name' | 'latency' | 'rating' | 'reliability' | 'reviewCount'
   sortDir: 'asc' | 'desc'
   onCompare?: (url: string) => void
   totalAll?: number
@@ -433,8 +433,8 @@ function MintGrid({
         const la = a.online === true && a.latencyMs != null ? a.latencyMs : Infinity
         const lb = b.online === true && b.latencyMs != null ? b.latencyMs : Infinity
         result = la - lb
-      } else if (sortBy === 'trust') {
-        result = compareTrustThenRating(a, b)
+      } else if (sortBy === 'reliability') {
+        result = compareReliabilityThenRating(a, b)
       } else if (sortBy === 'reviewCount') {
         // Mints with reviewCount === 0 or null sort to the end, regardless of direction toggle.
         const ca = a.reviewCount && a.reviewCount > 0 ? a.reviewCount : -1
@@ -593,9 +593,9 @@ export default function Dashboard() {
     )
   }, [knownMintsData])
 
-  const trustScoreRecord = useMemo(() => {
+  const reliabilityScoreRecord = useMemo(() => {
     if (!knownMintsData) return {}
-    return Object.fromEntries(knownMintsData.map(m => [m.url, m.trustScore ?? null]))
+    return Object.fromEntries(knownMintsData.map(m => [m.url, m.reliabilityScore ?? null]))
   }, [knownMintsData])
 
   // Grouped once over every known mint (not just the currently filtered/shown
@@ -604,7 +604,7 @@ export default function Dashboard() {
   const pubkeyGroups = useMemo(() => groupMintsByPubkey(knownMintsData ?? []), [knownMintsData])
 
   const { read: userReadRelays } = useUserRelays()
-  useWatchlistNotifications(statusRecord, trustScoreRecord, userReadRelays)
+  useWatchlistNotifications(statusRecord, reliabilityScoreRecord, userReadRelays)
 
   // Explicit "Offline" status filter must surface degraded (offline 24h+) mints
   // even when the default hidden-mints toggle is off — otherwise the filter
@@ -913,13 +913,13 @@ export default function Dashboard() {
   const bulkFailed = bulkProgress.filter(p => p.status === 'failed').length
 
   useDocumentMeta(
-    'MintRadar - Cashu Mints Directory & Trust Score Monitor',
-    'Find trusted Cashu mints. Privacy-first, real-time directory with Trust Score, uptime, latency and NUT compatibility for every Cashu mint.'
+    'MintRadar - Cashu Mints Directory & Reliability Score Monitor',
+    'Find trusted Cashu mints. Privacy-first, real-time directory with Reliability Score, uptime, latency and NUT compatibility for every Cashu mint.'
   )
 
   return (
     <div className="dashboard">
-      <h1 className="sr-only">MintRadar — Cashu Mints Trust Score & Uptime Monitor</h1>
+      <h1 className="sr-only">MintRadar — Cashu Mints Reliability Score & Uptime Monitor</h1>
 {showCountNote && (
         <p className="stat-count-note">
           <strong>Listed</strong> = in the grid (not hidden after 24h offline).{' '}
@@ -986,14 +986,14 @@ export default function Dashboard() {
           </button>
         </div>
         <div className="sort-segment">
-          {(['reviewCount', 'rating', 'latency', 'name', 'trust'] as const).map(s => (
+          {(['reviewCount', 'rating', 'latency', 'name', 'reliability'] as const).map(s => (
             <button
               key={s}
               type="button"
               className={`sort-btn${sortBy === s ? ' active' : ''}`}
               onClick={() => handleSortClick(s)}
             >
-              {s === 'trust' ? 'Trust Score' : s === 'reviewCount' ? 'Most reviewed' : s.charAt(0).toUpperCase() + s.slice(1)}
+              {s === 'reliability' ? 'Reliability Score' : s === 'reviewCount' ? 'Most reviewed' : s.charAt(0).toUpperCase() + s.slice(1)}
               {sortBy === s && <span style={{marginLeft: 3, fontSize: 10, opacity: 0.7}}>{sortDir === 'asc' ? '↑' : '↓'}</span>}
             </button>
           ))}
@@ -1011,7 +1011,7 @@ export default function Dashboard() {
           className="refresh-btn"
           title="Reset filters & refresh"
           onClick={() => {
-            commitFilters({ search: '', sortBy: 'trust', sortDir: DEFAULT_SORT_DIRS.trust, filters: DEFAULT_FILTERS })
+            commitFilters({ search: '', sortBy: 'reliability', sortDir: DEFAULT_SORT_DIRS.reliability, filters: DEFAULT_FILTERS })
             setPendingFilters(DEFAULT_FILTERS)
             setShowFilters(false)
             setShowDegraded(false)
@@ -1042,10 +1042,10 @@ export default function Dashboard() {
                   <button type="button" onClick={() => { const f = { ...activeFilters, hideTestMints: false }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
-              {activeFilters.minTrustScore > 0 && (
+              {activeFilters.minReliabilityScore > 0 && (
                 <span className="filter-tag">
-                  Trust ≥ {activeFilters.minTrustScore}%
-                  <button type="button" onClick={() => { const f = { ...activeFilters, minTrustScore: 0 }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
+                  Reliability ≥ {activeFilters.minReliabilityScore}%
+                  <button type="button" onClick={() => { const f = { ...activeFilters, minReliabilityScore: 0 }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
               {activeFilters.requiredNuts.map(nut => (
@@ -1058,7 +1058,7 @@ export default function Dashboard() {
           )}
 
           {/* Single horizontal bar (2026-09-10): Status · Hide test mints ·
-              Trust slider · Showing X of Y · Reset · Apply — one baseline,
+              Reliability slider · Showing X of Y · Reset · Apply — one baseline,
               stacks full-width on mobile. */}
           <div className="filter-bar">
             <div className="filter-group-inline">
@@ -1083,11 +1083,11 @@ export default function Dashboard() {
             </label>
 
             <div className="filter-group-inline">
-              <span className="filter-group-label">Trust ≥ <strong>{pendingFilters.minTrustScore}%</strong></span>
+              <span className="filter-group-label">Reliability ≥ <strong>{pendingFilters.minReliabilityScore}%</strong></span>
               <input
                 type="range" min={0} max={100} step={5}
-                value={pendingFilters.minTrustScore}
-                onChange={e => setPendingFilters(p => ({ ...p, minTrustScore: parseInt(e.target.value) }))}
+                value={pendingFilters.minReliabilityScore}
+                onChange={e => setPendingFilters(p => ({ ...p, minReliabilityScore: parseInt(e.target.value) }))}
                 className="filter-slider"
               />
             </div>

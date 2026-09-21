@@ -17,12 +17,12 @@ export default function Module5() {
 
       <h3>Diversify across mints</h3>
       <p>
-        This is your main defense against a mint disappearing or refusing to pay (Risk #1 from Module 2). Don't keep all your ecash in a single mint. If you regularly hold funds in Cashu, spreading them across two or three mints with good Trust Scores means a single mint failure doesn't wipe you out.
+        This is your main defense against a mint disappearing or refusing to pay (Risk #1 from Module 2). Don't keep all your ecash in a single mint. If you regularly hold funds in Cashu, spreading them across two or three mints with good Reliability Scores means a single mint failure doesn't wipe you out.
       </p>
 
       <h3>Check before you commit</h3>
       <p>
-        Before sending a meaningful amount to a new mint, take thirty seconds to check its Trust Score and status on MintRadar. If it's offline, brand new with no history, or missing key security NUTs, that's useful information <em>before</em> you deposit — not after.
+        Before sending a meaningful amount to a new mint, take thirty seconds to check its Reliability Score and status on MintRadar. If it's offline, brand new with no history, or missing key security NUTs, that's useful information <em>before</em> you deposit — not after.
       </p>
 
       <h3>Redeem regularly</h3>

@@ -4,7 +4,7 @@ import { installApiMocks, mockRelays, loginAs } from './fixtures/mocks'
 // Mock review rollup (see e2e/fixtures/mocks.ts):
 //   Alpha   → 12 reviews @ 4.2   Bravo   → 0 reviews ("No reviews yet")
 //   Charlie → 4 reviews @ 3.0    Delta   → 3 reviews @ 4.8
-// Charlie is offline: it has no Trust Score badge but still shows a
+// Charlie is offline: it has no Reliability Score badge but still shows a
 // Community Rating badge.
 
 test.describe('MintCard — Community Rating badge', () => {
@@ -20,22 +20,22 @@ test.describe('MintCard — Community Rating badge', () => {
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
-    await expect(card(page, 'Alpha Mint').locator('.card-trust-rating', { hasText: '4.2 (12)' })).toBeVisible()
-    await expect(card(page, 'Delta Mint').locator('.card-trust-rating', { hasText: '4.8 (3)' })).toBeVisible()
-    // Offline mint — Trust Score number absent ("Trust n/a"), Community Rating still shown.
-    await expect(card(page, 'Charlie Mint').locator('.card-trust-rating', { hasText: '3.0 (4)' })).toBeVisible()
+    await expect(card(page, 'Alpha Mint').locator('.card-reliability-rating', { hasText: '4.2 (12)' })).toBeVisible()
+    await expect(card(page, 'Delta Mint').locator('.card-reliability-rating', { hasText: '4.8 (3)' })).toBeVisible()
+    // Offline mint — Reliability Score number absent ("Reliability n/a"), Community Rating still shown.
+    await expect(card(page, 'Charlie Mint').locator('.card-reliability-rating', { hasText: '3.0 (4)' })).toBeVisible()
     // 0 reviews → no rating pill, but a muted "No reviews yet" note instead.
-    await expect(card(page, 'Bravo Mint').locator('.card-trust-rating')).toHaveCount(0)
-    await expect(card(page, 'Bravo Mint').locator('.card-trust-no-reviews')).toHaveText('No reviews yet')
+    await expect(card(page, 'Bravo Mint').locator('.card-reliability-rating')).toHaveCount(0)
+    await expect(card(page, 'Bravo Mint').locator('.card-reliability-no-reviews')).toHaveText('No reviews yet')
   })
 
-  test('Trust block uses a shield icon, not a star, and no %', async ({ page }) => {
+  test('Reliability block uses a shield icon, not a star, and no %', async ({ page }) => {
     await page.goto('/?status=all')
-    const trust = card(page, 'Alpha Mint').locator('.card-trust')
-    await expect(trust).toBeVisible()
-    await expect(trust.locator('.card-trust-label svg')).toHaveCount(1)
-    await expect(trust.locator('.card-trust-label')).not.toContainText('★')
-    await expect(trust.locator('.card-trust-score')).toHaveText('92')
+    const reliability = card(page, 'Alpha Mint').locator('.card-reliability')
+    await expect(reliability).toBeVisible()
+    await expect(reliability.locator('.card-reliability-label svg')).toHaveCount(1)
+    await expect(reliability.locator('.card-reliability-label')).not.toContainText('★')
+    await expect(reliability.locator('.card-reliability-score')).toHaveText('92')
   })
 
   test('badge is shared with the Watchlist card', async ({ page }) => {
@@ -46,7 +46,7 @@ test.describe('MintCard — Community Rating badge', () => {
 
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(1)
     await expect(
-      page.locator('.wl-grid .mint-card').locator('.card-trust-rating', { hasText: '4.2 (12)' })
+      page.locator('.wl-grid .mint-card').locator('.card-reliability-rating', { hasText: '4.2 (12)' })
     ).toBeVisible()
   })
 })

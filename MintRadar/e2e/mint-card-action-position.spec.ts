@@ -37,13 +37,13 @@ test.describe('MintCard — watch star + bottom row', () => {
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(0)
   })
 
-  test('a button in .card-bottom-main never overlaps the Trust figure', async ({ page }) => {
+  test('a button in .card-bottom-main never overlaps the Reliability figure', async ({ page }) => {
     const overlaps = await page.evaluate(() => {
       const hit = (a: DOMRect, b: DOMRect) =>
         a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top
       return [...document.querySelectorAll('.mint-grid .mint-card')].map(cardEl => {
-        const fig = (cardEl.querySelector('.card-trust-score') ??
-          cardEl.querySelector('.card-trust-na')) as HTMLElement
+        const fig = (cardEl.querySelector('.card-reliability-score') ??
+          cardEl.querySelector('.card-reliability-na')) as HTMLElement
         const fr = fig.getBoundingClientRect()
         return [...cardEl.querySelectorAll('.card-bottom-main button')]
           .some(b => hit(b.getBoundingClientRect(), fr))

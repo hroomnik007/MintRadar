@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays } from './fixtures/mocks'
 
-// Trust Score Movers panel loading UX (Stats page). Regression guard for the
+// Reliability Score Movers panel loading UX (Stats page). Regression guard for the
 // bug where the panel showed "No data yet" (the genuinely-empty state) for the
 // full ~2.5s the request was in flight, and again on every 7d↔30d toggle —
 // same bug-pattern the Community rating tile had. Expected now: a skeleton
@@ -15,9 +15,9 @@ test.beforeEach(async ({ page }) => {
 
 test('shows a skeleton while loading and never flashes "No data yet" on load or toggle', async ({ page }) => {
   let delayMs = 1500
-  // Override the default (instant) trust-movers mock with a controllable delay
+  // Override the default (instant) reliability-movers mock with a controllable delay
   // and distinct data per period. Registered after installApiMocks so it wins.
-  await page.route('**/api/stats/trust-movers**', async route => {
+  await page.route('**/api/stats/reliability-movers**', async route => {
     const period = new URL(route.request().url()).searchParams.get('period') === '30d' ? '30d' : '7d'
     await new Promise(r => setTimeout(r, delayMs))
     const body = period === '30d'

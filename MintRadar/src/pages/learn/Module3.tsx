@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { TrustScoreDonut } from '@/components/learn/TrustScoreDonut'
+import { ReliabilityScoreDonut } from '@/components/learn/ReliabilityScoreDonut'
 import { KeyTakeaway } from '@/components/learn/KeyTakeaway'
 
 export default function Module3() {
@@ -33,12 +33,12 @@ export default function Module3() {
         <strong>4. Operator transparency.</strong> Does the mint publish contact information? Is there a real person or team behind it who can be reached? Anonymous mints aren't automatically untrustworthy, but a mint with no way to reach the operator is one you're trusting on faith alone.
       </p>
 
-      <h3>How MintRadar's Trust Score works</h3>
+      <h3>How MintRadar's Reliability Score works</h3>
       <p>
-        MintRadar combines several of these signals into a single Trust Score out of 100:
+        MintRadar combines several of these signals into a single Reliability Score out of 100:
       </p>
 
-      <TrustScoreDonut />
+      <ReliabilityScoreDonut />
 
       <ul>
         <li><strong>Uptime (40%)</strong> — how reliably the mint has responded over the last 24 hours</li>
@@ -73,16 +73,16 @@ export default function Module3() {
         </li>
       </ul>
       <p>
-        No single number can tell you everything, so we also show a full breakdown — click on any mint's Trust Score to see exactly what's contributing to it.
+        No single number can tell you everything, so we also show a full breakdown — click on any mint's Reliability Score to see exactly what's contributing to it.
       </p>
 
       <KeyTakeaway>
-        <strong>A high Trust Score reduces risk — it doesn't eliminate it.</strong> The right mint is the one that fits what you actually need, not just whichever number is highest.
+        <strong>A high Reliability Score reduces risk — it doesn't eliminate it.</strong> The right mint is the one that fits what you actually need, not just whichever number is highest.
       </KeyTakeaway>
 
       <h3>Try it yourself</h3>
       <p>
-        The fastest way to find a mint that fits what you need is the <strong>Best Mint Wizard</strong> in the Tools section. Tell it what matters most to you — speed, trust, or feature support — and it'll recommend mints based on live data, not guesswork.
+        The fastest way to find a mint that fits what you need is the <strong>Best Mint Wizard</strong> in the Tools section. Tell it what matters most to you — speed, reliability, or feature support — and it'll recommend mints based on live data, not guesswork.
       </p>
       <Link to="/tools" className="learn-cta-btn">Try the Best Mint Wizard →</Link>
     </div>

@@ -32,7 +32,7 @@ async function openCompare(page: import('@playwright/test').Page, n: number) {
   await installApiMocks(page)
   // Force all 4 mock mints online so the picker offers 3 candidates → 4-way compare.
   await page.route('**/api/mints/known', r =>
-    r.fulfill({ json: MOCK_KNOWN_MINTS.map(m => ({ ...m, online: true, degraded: false, latencyMs: m.latencyMs ?? 120, trustScore: m.trustScore ?? 60 })) }))
+    r.fulfill({ json: MOCK_KNOWN_MINTS.map(m => ({ ...m, online: true, degraded: false, latencyMs: m.latencyMs ?? 120, reliabilityScore: m.reliabilityScore ?? 60 })) }))
   await page.route('**/api/mints/version-history**', r => r.fulfill({ json: LONG_VH }))
   await page.goto('/?status=all')
   await expect(page.locator('.mint-card')).toHaveCount(4)

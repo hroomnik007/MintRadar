@@ -1,4 +1,4 @@
-// Shared shield mark used by the Trust Score badge (MintCard, ComparisonModal)
+// Shared shield mark used by the Reliability Score badge (MintCard, ComparisonModal)
 // and the Token Inspector's mint risk badge (Tools.tsx).
 export function IcShield({ size = 13 }: { size?: number }) {
   return (

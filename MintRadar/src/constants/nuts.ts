@@ -16,7 +16,7 @@ export interface NutMeta {
 }
 
 /**
- * Every mint-side NUT the app tracks for the Trust Score / NUT-support
+ * Every mint-side NUT the app tracks for the Reliability Score / NUT-support
  * denominator, in canonical (ascending) order.
  *
  * Mandatory NUTs (00-03, 06) are deliberately excluded — every mint implements
@@ -37,9 +37,9 @@ export interface NutMeta {
  *   NUT-04/05 rather than being standalone features; shown in the Units &
  *   Methods panel instead.
  *
- * This list's length is the denominator of the Trust Score's NUT-support
- * component — keep it equal to TRACKED_NUT_COUNT in src/utils/trustScore.ts
- * (and its backend twin, backend/src/shared/trustScore.ts).
+ * This list's length is the denominator of the Reliability Score's NUT-support
+ * component — keep it equal to TRACKED_NUT_COUNT in src/utils/reliabilityScore.ts
+ * (and its backend twin, backend/src/shared/reliabilityScore.ts).
  */
 export const TRACKED_NUTS: string[] = [
   'NUT-04', 'NUT-05', 'NUT-07', 'NUT-08', 'NUT-09', 'NUT-10', 'NUT-11',

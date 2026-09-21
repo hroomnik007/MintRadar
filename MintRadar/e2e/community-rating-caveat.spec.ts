@@ -25,7 +25,7 @@ test.describe('Community Rating — no ⓘ caveat tooltip on card / detail tile'
     await page.goto('/')
 
     const ratingPill = page.locator('.mint-card', { hasText: 'Alpha Mint' })
-      .locator('.card-trust-rating', { hasText: '4.2 (12)' })
+      .locator('.card-reliability-rating', { hasText: '4.2 (12)' })
     await expect(ratingPill).toBeVisible()
     await expect(ratingPill.locator('.card-rating-info')).toHaveCount(0)
   })
@@ -50,7 +50,7 @@ test.describe('Community Rating — card badge always full weight', () => {
     await page.route('**/api/mints/known', route => route.fulfill({ json: thin }))
     await page.goto('/')
     const pill = page.locator('.mint-card', { hasText: 'Alpha Mint' })
-      .locator('.card-trust-rating', { hasText: '4.9 (2)' })
+      .locator('.card-reliability-rating', { hasText: '4.9 (2)' })
     await expect(pill).toBeVisible()
     await expect(pill).toHaveCSS('opacity', '1')
   })

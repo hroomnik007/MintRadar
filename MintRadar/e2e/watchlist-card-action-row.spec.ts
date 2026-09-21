@@ -7,16 +7,16 @@ import { installApiMocks, mockRelays, loginAs, MOCK_KNOWN_MINTS } from './fixtur
 // some cards wrap onto more lines than others.
 //
 // Regression 2: those buttons live in `.card-bottom-main` and must wrap *within*
-// that column. They must never ride over the right-hand `.card-trust` column
-// (the Trust number / stars). There is no Unwatch button on the card — the
+// that column. They must never ride over the right-hand `.card-reliability` column
+// (the Reliability number / stars). There is no Unwatch button on the card — the
 // watch star lives in the header.
 
 const LAT = [88, 411, 2336, 10450] // 2..5 digits
 const KNOWN = MOCK_KNOWN_MINTS.slice(0, 4).map((m, i) => ({
-  ...m, online: true, degraded: false, latencyMs: LAT[i], trustScore: 80, uptimePct24h: 97,
+  ...m, online: true, degraded: false, latencyMs: LAT[i], reliabilityScore: 80, uptimePct24h: 97,
 }))
 
-test('action row is consistent across latency digit counts and never covers Trust', async ({ page }) => {
+test('action row is consistent across latency digit counts and never covers Reliability', async ({ page }) => {
   await mockRelays(page)
   await installApiMocks(page)
   await page.route('**/api/mints/known', r => r.fulfill({ json: KNOWN }))
@@ -41,16 +41,16 @@ test('action row is consistent across latency digit counts and never covers Trus
         a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top
       return [...document.querySelectorAll('.wl-grid .mint-card')].map(card => {
         const main = card.querySelector('.card-bottom-main') as HTMLElement
-        const trust = card.querySelector('.card-trust') as HTMLElement
-        const trustFig = (card.querySelector('.card-trust-score') ??
-          card.querySelector('.card-trust-na')) as HTMLElement
+        const reliability = card.querySelector('.card-reliability') as HTMLElement
+        const reliabilityFig = (card.querySelector('.card-reliability-score') ??
+          card.querySelector('.card-reliability-na')) as HTMLElement
         const btns = [...main.querySelectorAll('button')]
         const tops = new Set(btns.map(b => Math.round(b.getBoundingClientRect().top)))
-        const tr = trustFig.getBoundingClientRect()
+        const tr = reliabilityFig.getBoundingClientRect()
         return {
           btnRows: tops.size,
-          coversTrust: btns.some(b => intersects(b.getBoundingClientRect(), tr)),
-          mainClearsTrust: main.getBoundingClientRect().right <= Math.ceil(trust.getBoundingClientRect().left) + 1,
+          coversReliability: btns.some(b => intersects(b.getBoundingClientRect(), tr)),
+          mainClearsReliability: main.getBoundingClientRect().right <= Math.ceil(reliability.getBoundingClientRect().left) + 1,
         }
       })
     })
@@ -59,11 +59,11 @@ test('action row is consistent across latency digit counts and never covers Trus
     // Consistency: every card wraps its buttons onto the same number of rows,
     // regardless of its latency-value digit count.
     expect(btnRowCounts.size, `button-row counts at ${w}px: ${JSON.stringify(perCard)}`).toBe(1)
-    // No button's box overlaps the Trust number, and the main area stays left
-    // of the Trust column entirely.
+    // No button's box overlaps the Reliability number, and the main area stays left
+    // of the Reliability column entirely.
     for (const c of perCard) {
-      expect(c.coversTrust, `a button covers Trust at ${w}px: ${JSON.stringify(perCard)}`).toBe(false)
-      expect(c.mainClearsTrust, `main area overruns Trust column at ${w}px: ${JSON.stringify(perCard)}`).toBe(true)
+      expect(c.coversReliability, `a button covers Reliability at ${w}px: ${JSON.stringify(perCard)}`).toBe(false)
+      expect(c.mainClearsReliability, `main area overruns Reliability column at ${w}px: ${JSON.stringify(perCard)}`).toBe(true)
     }
   }
 })

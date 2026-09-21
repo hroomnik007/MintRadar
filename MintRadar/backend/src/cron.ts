@@ -3,7 +3,7 @@ import pLimit from 'p-limit'
 import { getKnownMints, probeMintToDb, pruneOldHistory, pruneUnvalidatedMints, pruneAbandonedMints, revalidateMints, backfillServerLocations } from './prober.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
 import { refreshAllMintReviews } from './reviewsSync.js'
-import { refreshTrustMoversRollup } from './trustMoversRollup.js'
+import { refreshReliabilityMoversRollup } from './reliabilityMoversRollup.js'
 import { refreshReviewSurgeBaseline } from './reviewSurgeRollup.js'
 import { pruneOldNotificationSubscriptions } from './db.js'
 import { publishServiceProfile } from './nostrService.js'
@@ -43,9 +43,9 @@ export function startCron(): void {
       const mints = await getKnownMints()
       const limit = pLimit(10)
       await Promise.allSettled(mints.map(url => limit(() => probeMintToDb(url))))
-      // Refresh the Trust Score Movers snapshots right after probes, so
-      // mints.last_trust_score and the newest history rows are already current.
-      await refreshTrustMoversRollup()
+      // Refresh the Reliability Score Movers snapshots right after probes, so
+      // mints.last_reliability_score and the newest history rows are already current.
+      await refreshReliabilityMoversRollup()
     } catch (err) {
       if (process.env['NODE_ENV'] !== 'production') {
         console.error('[cron] probe error:', err)
@@ -126,7 +126,7 @@ export function startCron(): void {
   })
 
   // Refresh the software_versions cache (latest Nutshell/cdk releases from GitHub)
-  // every day at 3:45am — feeds versionFreshnessScore (shared/trustScore.ts).
+  // every day at 3:45am — feeds versionFreshnessScore (shared/reliabilityScore.ts).
   cron.schedule('45 3 * * *', async () => {
     try {
       await fetchLatestUpstreamVersions()
@@ -158,9 +158,9 @@ export function startCron(): void {
   // Backfill server_location for mints that were never resolved (one-time catch-up)
   setTimeout(() => { void backfillServerLocations() }, 30_000)
 
-  // Prime the Trust Score Movers rollup shortly after boot so a fresh
+  // Prime the Reliability Score Movers rollup shortly after boot so a fresh
   // deploy/restart serves real data before the first 5-minute probe tick.
-  setTimeout(() => { void refreshTrustMoversRollup() }, 15_000)
+  setTimeout(() => { void refreshReliabilityMoversRollup() }, 15_000)
   // Seed / advance the review-count baseline shortly after boot too. review_count
   // persists across restarts, so on a normal redeploy most mints already have a
   // value and get their baseline set without waiting for the 4:45am slot.
