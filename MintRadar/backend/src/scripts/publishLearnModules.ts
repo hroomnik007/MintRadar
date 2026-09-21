@@ -55,7 +55,7 @@ const MODULE_META = [
   {
     order: 3,
     file: 'Module3.tsx',
-    title: 'How to Choose a Mint',
+    title: 'How to Choose a Cashu Mint',
     summary: "What to check before trusting a mint — uptime, NUT support, operator transparency — and how MintRadar's Reliability Score combines those signals.",
   },
   {
