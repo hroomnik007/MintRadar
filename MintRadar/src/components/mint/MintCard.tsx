@@ -116,6 +116,26 @@ export function MintCard({
   const uptimePct24h = mint.uptimePct24h ?? null
   const isNew = isNewMint(mint.discoveredAt ?? null)
   const lightningLabel = cardLightningLabel(mint)
+  const reliabilityBadges = (
+    <>
+      {isTestMint(mint.url) && (
+        <span
+          className="card-reliability-badge card-reliability-badge-test-mint"
+          title="Not for real funds — for testing and development only"
+        >
+          Test mint
+        </span>
+      )}
+      {sameOperatorUrls && sameOperatorUrls.length > 0 && (
+        <span
+          className="card-reliability-badge card-reliability-badge-same-op"
+          title={`Same operator (pubkey) as: ${sameOperatorUrls.map(getHostname).join(', ')}. Not merged — tracked as separate mints.`}
+        >
+          Same op
+        </span>
+      )}
+    </>
+  )
 
   return (
     <>
@@ -201,20 +221,6 @@ export function MintCard({
             New
           </span>
         )}
-        {isTestMint(mint.url) && (
-          <span className="card-pill card-hdr-badge card-hdr-test-mint" style={{ fontWeight: 600, color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)' }} title="Not for real funds — for testing and development only">
-            🧪 Test mint
-          </span>
-        )}
-        {sameOperatorUrls && sameOperatorUrls.length > 0 && (
-          <span
-            className="card-pill card-hdr-badge card-hdr-same-operator"
-            style={{ fontWeight: 600, color: 'var(--copper)', background: 'var(--copper-soft)', border: '1px solid var(--copper-soft-strong)' }}
-            title={`Same operator (pubkey) as: ${sameOperatorUrls.map(getHostname).join(', ')}. Not merged — tracked as separate mints.`}
-          >
-            Same operator
-          </span>
-        )}
       </div>
 
       <div className="card-lower">
@@ -270,10 +276,10 @@ export function MintCard({
 
         <div className="card-reliability">
           {mint.reliabilityScore == null ? (
-            <div className="card-reliability-na"><IcShield /><span>Reliability n/a</span></div>
+            <div className="card-reliability-na"><IcShield /><span>Reliability n/a</span>{reliabilityBadges}</div>
           ) : (
             <>
-              <div className="card-reliability-label"><IcShield /><span>Reliability</span></div>
+              <div className="card-reliability-label"><IcShield /><span>Reliability</span>{reliabilityBadges}</div>
               <div
                 className="card-reliability-score"
                 style={{ color: mint.reliabilityScore >= 70 ? 'var(--green-bright)' : mint.reliabilityScore >= 40 ? 'var(--amber)' : 'var(--red)' }}

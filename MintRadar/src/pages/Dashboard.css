@@ -696,6 +696,8 @@
 .card-reliability-na {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 3px;
   font-size: 9px;
   text-transform: uppercase;
@@ -704,6 +706,33 @@
 }
 
 .card-reliability-na { color: var(--t2); }
+
+/* Compact status badges (Test mint / Same op) — inline with the RELIABILITY
+   label instead of their own full-width row, so cards carrying them don't
+   need extra height vs. cards without any. */
+.card-reliability-badge {
+  text-transform: none;
+  letter-spacing: normal;
+  font-family: var(--font-body, inherit);
+  font-weight: 600;
+  font-size: 9px;
+  line-height: 1.3;
+  white-space: nowrap;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.card-reliability-badge-test-mint {
+  color: var(--amber);
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-soft-strong);
+}
+
+.card-reliability-badge-same-op {
+  color: var(--copper);
+  background: var(--copper-soft);
+  border: 1px solid var(--copper-soft-strong);
+}
 
 .card-reliability-score {
   font-size: 27px;

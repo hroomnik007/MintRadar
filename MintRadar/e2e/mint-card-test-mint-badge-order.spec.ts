@@ -17,21 +17,23 @@ async function gotoWithAlphaAsTestMint(page: Page, overrides: Record<string, unk
   await page.goto('/?testmints=show')
 }
 
-// Status badges live in the pill row so they never clip the name/URL.
-// Header right is compare + watch star only.
-async function expectTestMintBadgeInPills(page: Page) {
+// The Test mint badge lives inline with the RELIABILITY label (either the
+// scored or n/a variant) so it never adds its own full-width row, and never
+// appears in the pill row or the name-row header slot.
+async function expectTestMintBadgeInReliabilityRow(page: Page) {
   const card = page.locator('.mint-card', { hasText: 'Alpha Mint' })
   await expect(card).toBeVisible()
 
-  const pillBadge = card.locator('.card-pills .card-hdr-test-mint')
-  await expect(pillBadge).toBeVisible()
-  await expect(pillBadge).toContainText('Test mint')
+  const badge = card.locator('.card-reliability-badge-test-mint')
+  await expect(badge).toBeVisible()
+  await expect(badge).toContainText('Test mint')
 
+  await expect(card.locator('.card-pills .card-hdr-test-mint')).toHaveCount(0)
   await expect(card.locator('.card-name-row .card-hdr-test-mint')).toHaveCount(0)
   await expect(card.locator('.card-name-row .card-hdr-badges')).toHaveCount(0)
 }
 
-test.describe('MintCard — Test mint badge lives in the pill row', () => {
+test.describe('MintCard — Test mint badge lives in the RELIABILITY row', () => {
   test('with all other badges present (version, NUTs, unit, uptime, reliability, rating)', async ({ page }) => {
     await gotoWithAlphaAsTestMint(page, {
       version: 'Nutshell/0.16.0',
@@ -42,7 +44,7 @@ test.describe('MintCard — Test mint badge lives in the pill row', () => {
       reviewCount: 12,
       reviewAvgRating: 4.2,
     })
-    await expectTestMintBadgeInPills(page)
+    await expectTestMintBadgeInReliabilityRow(page)
   })
 
   test('without Community Rating badge', async ({ page }) => {
@@ -55,10 +57,10 @@ test.describe('MintCard — Test mint badge lives in the pill row', () => {
       reviewCount: 0,
       reviewAvgRating: null,
     })
-    await expectTestMintBadgeInPills(page)
+    await expectTestMintBadgeInReliabilityRow(page)
   })
 
-  test('with only version and NUT count badges', async ({ page }) => {
+  test('with only version and NUT count badges (Reliability n/a)', async ({ page }) => {
     await gotoWithAlphaAsTestMint(page, {
       version: 'Nutshell/0.16.0',
       nutCount: 12,
@@ -68,11 +70,11 @@ test.describe('MintCard — Test mint badge lives in the pill row', () => {
       reviewCount: 0,
       reviewAvgRating: null,
     })
-    await expectTestMintBadgeInPills(page)
+    await expectTestMintBadgeInReliabilityRow(page)
   })
 })
 
-test('New + Test mint sit side by side in the pill row when both apply', async ({ page }) => {
+test('New badge stays in the pill row; Test mint badge sits in the RELIABILITY row when both apply', async ({ page }) => {
   await mockRelays(page)
   await installApiMocks(page)
   const rows = MOCK_KNOWN_MINTS.map((m, i) =>
@@ -81,10 +83,10 @@ test('New + Test mint sit side by side in the pill row when both apply', async (
   await page.route('**/api/mints/known', route => route.fulfill({ json: rows }))
   await page.goto('/?testmints=show')
 
-  const slot = page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('.card-pills')
-  await expect(slot).toBeVisible()
-  await expect(slot.locator('.card-hdr-new')).toHaveText('New')
-  await expect(slot.locator('.card-hdr-test-mint')).toContainText('Test mint')
+  const card = page.locator('.mint-card', { hasText: 'Alpha Mint' })
+  await expect(card.locator('.card-pills .card-hdr-new')).toHaveText('New')
+  await expect(card.locator('.card-pills .card-hdr-test-mint')).toHaveCount(0)
+  await expect(card.locator('.card-reliability-badge-test-mint')).toContainText('Test mint')
 })
 
 test('non-test mints never show the Test mint badge', async ({ page }) => {
