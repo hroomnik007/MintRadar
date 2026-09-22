@@ -1,0 +1,26 @@
+title = "MintRadar gitleaks config"
+
+# Extends (not replaces) gitleaks' built-in ruleset — detection stays at full
+# strength everywhere except the specific known false positives below.
+[extend]
+useDefault = true
+
+# backend/.env.example is a template documenting expected env vars with
+# placeholder values (e.g. a literal "user:password" DB connection string,
+# a commented-out "nsec1..." example) — never real credentials.
+[[allowlists]]
+paths = [
+    '''^MintRadar/backend/\.env\.example$''',
+]
+
+# cashuToken.test.ts hardcodes two Cashu ecash proof `secret` fields as fixed
+# test fixtures (so token-parsing assertions are deterministic) — these are
+# Cashu protocol data, not credentials, but their hex shape/entropy trips the
+# generic-api-key rule. Scoped to that one rule/file, not a blanket allow.
+[[rules]]
+id = "generic-api-key"
+
+    [[rules.allowlists]]
+    paths = [
+        '''^MintRadar/src/__tests__/cashuToken\.test\.ts$''',
+    ]

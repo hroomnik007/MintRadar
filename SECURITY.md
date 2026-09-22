@@ -61,7 +61,7 @@ Expected response time: best effort, typically within 7 days.
 
 ## Automated Security Testing
 
-GitHub Actions `deploy` runs the full frontend and backend test suites before deploy (`needs: test`). Dedicated security tests live in `backend/src/__tests__/security/` (CORS, headers, input validation, rate limiting, error leakage) plus `ssrfGuard.test.ts`.
+GitHub Actions `deploy` runs the full frontend and backend test suites before deploy (`needs: test`). Dedicated security tests live in `backend/src/__tests__/security/` (CORS, headers, input validation, rate limiting, error leakage) plus `ssrfGuard.test.ts`. A separate `security` workflow (`.github/workflows/security.yml`) runs on every push and pull request and scans the full repo history with [gitleaks](https://github.com/gitleaks/gitleaks) for leaked secrets, failing the job if any are found; `.gitleaks.toml` (repo root) extends gitleaks' default ruleset with a narrow allowlist for two known false positives (`backend/.env.example`'s placeholder values, and the fixed Cashu proof-secret fixtures in `cashuToken.test.ts`) — detection is otherwise unweakened.
 
 Exact test counts change as the suite grows — CI on `main` is the source of truth, not a number frozen in this file.
 
