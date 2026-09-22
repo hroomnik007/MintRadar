@@ -253,9 +253,11 @@ export async function discoverMintsFromNostr(): Promise<number> {
            THEN EXCLUDED.nostr_announce_id ELSE mints.nostr_announce_id END,
          nostr_announce_pubkey = CASE
            WHEN mints.nostr_announced_at IS NULL OR EXCLUDED.nostr_announced_at > mints.nostr_announced_at
+             OR mints.nostr_announce_pubkey IS NULL
            THEN EXCLUDED.nostr_announce_pubkey ELSE mints.nostr_announce_pubkey END,
          nostr_announce_d = CASE
            WHEN mints.nostr_announced_at IS NULL OR EXCLUDED.nostr_announced_at > mints.nostr_announced_at
+             OR mints.nostr_announce_d IS NULL
            THEN EXCLUDED.nostr_announce_d ELSE mints.nostr_announce_d END`,
       [url, meta.createdAt, meta.id, meta.pubkey, meta.dTag],
     )
