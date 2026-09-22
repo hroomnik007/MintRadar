@@ -167,6 +167,17 @@ export function MintCard({
               )}
             </span>
           )}
+          {onCompare && isOnline && (
+            <button
+              type="button"
+              className="card-compare-btn"
+              aria-label="Compare"
+              title="Compare"
+              onClick={e => { e.stopPropagation(); onCompare(mint.url) }}
+            >
+              ⇄
+            </button>
+          )}
           <button
             type="button"
             className={`card-star${isLoggedIn && isWatched ? ' on' : ''}`}
@@ -240,17 +251,6 @@ export function MintCard({
             )}
           </div>
           <div className="card-actions">
-            {onCompare && isOnline && (
-              <button
-                type="button"
-                className="card-compare-btn"
-                aria-label="Compare"
-                title="Compare"
-                onClick={e => { e.stopPropagation(); onCompare(mint.url) }}
-              >
-                ⇄
-              </button>
-            )}
             {showNotifyToggles && notifyEntry && (
               <>
                 <button
