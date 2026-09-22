@@ -47,8 +47,8 @@ export function MintCard({
   onCompare?: (url: string) => void
   showNotifyToggles?: boolean
   // Other tracked mint URLs sharing this mint's /v1/info pubkey — see
-  // groupMintsByPubkey() in mintFormatting.ts. Renders a "Same operator" badge;
-  // cards are never merged, only labeled.
+  // groupMintsByPubkey() in mintFormatting.ts. Renders a "Same operator" badge
+  // in the pill row; cards are never merged, only labeled.
   sameOperatorUrls?: string[]
 }) {
   const navigate = useNavigate()
@@ -140,33 +140,6 @@ export function MintCard({
             {showHost && <div className="card-host">{hostname}</div>}
           </div>
           <div className="card-hdr-right">
-          {(isOfflineDegraded || isNew || isTestMint(mint.url) || (sameOperatorUrls && sameOperatorUrls.length > 0)) && (
-            <span className="card-hdr-badges" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-              {isOfflineDegraded ? (
-                <span className="card-hdr-badge" style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--red)', background: 'var(--red-soft)', border: '1px solid rgba(219,106,93,0.3)', borderRadius: 5, padding: '2px 7px' }}>
-                  Offline 24h+
-                </span>
-              ) : isNew && (
-                <span className="card-hdr-badge card-hdr-new" style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#d3a446', background: 'rgba(211,164,70,.14)', border: '1px solid rgba(211,164,70,.3)', borderRadius: 5, padding: '2px 7px' }}>
-                  New
-                </span>
-              )}
-              {isTestMint(mint.url) && (
-                <span className="card-hdr-badge card-hdr-test-mint" style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)', borderRadius: 5, padding: '2px 7px' }} title="Not for real funds — for testing and development only">
-                  🧪 Test mint
-                </span>
-              )}
-              {sameOperatorUrls && sameOperatorUrls.length > 0 && (
-                <span
-                  className="card-hdr-badge card-hdr-same-operator"
-                  style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--copper)', background: 'var(--copper-soft)', border: '1px solid var(--copper-soft-strong)', borderRadius: 5, padding: '2px 7px' }}
-                  title={`Same operator (pubkey) as: ${sameOperatorUrls.map(getHostname).join(', ')}. Not merged — tracked as separate mints.`}
-                >
-                  Same operator
-                </span>
-              )}
-            </span>
-          )}
           {onCompare && isOnline && (
             <button
               type="button"
@@ -217,6 +190,29 @@ export function MintCard({
         {uptimePct24h !== null && (
           <span className="card-pill" style={{ color: uptimeColor(uptimePct24h), fontFamily: 'var(--font-mono-data)' }}>
             {uptimePct24h}% up 24h
+          </span>
+        )}
+        {isOfflineDegraded ? (
+          <span className="card-pill card-hdr-badge" style={{ fontWeight: 600, color: 'var(--red)', background: 'var(--red-soft)', border: '1px solid rgba(219,106,93,0.3)' }}>
+            Offline 24h+
+          </span>
+        ) : isNew && (
+          <span className="card-pill card-hdr-badge card-hdr-new" style={{ fontWeight: 600, color: '#d3a446', background: 'rgba(211,164,70,.14)', border: '1px solid rgba(211,164,70,.3)' }}>
+            New
+          </span>
+        )}
+        {isTestMint(mint.url) && (
+          <span className="card-pill card-hdr-badge card-hdr-test-mint" style={{ fontWeight: 600, color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)' }} title="Not for real funds — for testing and development only">
+            🧪 Test mint
+          </span>
+        )}
+        {sameOperatorUrls && sameOperatorUrls.length > 0 && (
+          <span
+            className="card-pill card-hdr-badge card-hdr-same-operator"
+            style={{ fontWeight: 600, color: 'var(--copper)', background: 'var(--copper-soft)', border: '1px solid var(--copper-soft-strong)' }}
+            title={`Same operator (pubkey) as: ${sameOperatorUrls.map(getHostname).join(', ')}. Not merged — tracked as separate mints.`}
+          >
+            Same operator
           </span>
         )}
       </div>
@@ -318,7 +314,7 @@ export function MintCard({
               <div className="rv-modal-heading">
                 <div className="rv-modal-title">Watch this mint</div>
                 <div className="rv-modal-sub">
-                  Log in with Nostr to add it to your watchlist. Your list syncs over Nostr and you&apos;ll get a message if this mint goes offline or comes back online.
+                  Log in with Nostr to add it to your watchlist. Your list syncs over Nostr and you'll get a message if this mint goes offline or comes back online.
                 </div>
               </div>
               <button type="button" className="rv-modal-close" onClick={e => { e.stopPropagation(); closeWatchLoginModal() }} aria-label="Close">×</button>

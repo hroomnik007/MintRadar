@@ -4,7 +4,7 @@ import { installApiMocks, mockRelays, MOCK_MINTS, MOCK_KNOWN_MINTS } from './fix
 type Page = import('@playwright/test').Page
 
 // Alpha Mint's URL is swapped for a real TEST_MINT_URLS entry (see
-// src/constants/testMints.ts) so isTestMint() fires and the 🧪 Test mint
+// src/constants/testMints.ts) so isTestMint() fires and the Test mint
 // badge renders. Other fields are overridden per-scenario to exercise
 // different combinations of the remaining badges.
 const TEST_MINT_URL = 'https://testnut.cashu.space'
@@ -17,22 +17,21 @@ async function gotoWithAlphaAsTestMint(page: Page, overrides: Record<string, unk
   await page.goto('/?testmints=show')
 }
 
-// The 🧪 Test mint badge lives in the card header slot (top-right, next to the
-// online dot) — NOT in the lower chip row.
-async function expectTestMintBadgeInHeader(page: Page) {
+// Status badges live in the pill row so they never clip the name/URL.
+// Header right is compare + watch star only.
+async function expectTestMintBadgeInPills(page: Page) {
   const card = page.locator('.mint-card', { hasText: 'Alpha Mint' })
   await expect(card).toBeVisible()
 
-  // In the header badge slot…
-  const headerBadge = card.locator('.card-name-row .card-hdr-test-mint')
-  await expect(headerBadge).toBeVisible()
-  await expect(headerBadge).toContainText('Test mint')
+  const pillBadge = card.locator('.card-pills .card-hdr-test-mint')
+  await expect(pillBadge).toBeVisible()
+  await expect(pillBadge).toContainText('Test mint')
 
-  // …and NOT among the lower chip row.
-  await expect(card.locator('.card-pills .card-pill', { hasText: 'Test mint' })).toHaveCount(0)
+  await expect(card.locator('.card-name-row .card-hdr-test-mint')).toHaveCount(0)
+  await expect(card.locator('.card-name-row .card-hdr-badges')).toHaveCount(0)
 }
 
-test.describe('MintCard — Test mint badge lives in the header slot', () => {
+test.describe('MintCard — Test mint badge lives in the pill row', () => {
   test('with all other badges present (version, NUTs, unit, uptime, reliability, rating)', async ({ page }) => {
     await gotoWithAlphaAsTestMint(page, {
       version: 'Nutshell/0.16.0',
@@ -43,7 +42,7 @@ test.describe('MintCard — Test mint badge lives in the header slot', () => {
       reviewCount: 12,
       reviewAvgRating: 4.2,
     })
-    await expectTestMintBadgeInHeader(page)
+    await expectTestMintBadgeInPills(page)
   })
 
   test('without Community Rating badge', async ({ page }) => {
@@ -56,7 +55,7 @@ test.describe('MintCard — Test mint badge lives in the header slot', () => {
       reviewCount: 0,
       reviewAvgRating: null,
     })
-    await expectTestMintBadgeInHeader(page)
+    await expectTestMintBadgeInPills(page)
   })
 
   test('with only version and NUT count badges', async ({ page }) => {
@@ -69,21 +68,20 @@ test.describe('MintCard — Test mint badge lives in the header slot', () => {
       reviewCount: 0,
       reviewAvgRating: null,
     })
-    await expectTestMintBadgeInHeader(page)
+    await expectTestMintBadgeInPills(page)
   })
 })
 
-test('New + Test mint sit side by side in the header slot when both apply', async ({ page }) => {
+test('New + Test mint sit side by side in the pill row when both apply', async ({ page }) => {
   await mockRelays(page)
   await installApiMocks(page)
-  // Alpha: test-mint URL + freshly discovered → both header badges.
   const rows = MOCK_KNOWN_MINTS.map((m, i) =>
     i === 0 ? { ...m, url: TEST_MINT_URL, discoveredAt: new Date().toISOString() } : m,
   )
   await page.route('**/api/mints/known', route => route.fulfill({ json: rows }))
   await page.goto('/?testmints=show')
 
-  const slot = page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('.card-name-row .card-hdr-badges')
+  const slot = page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('.card-pills')
   await expect(slot).toBeVisible()
   await expect(slot.locator('.card-hdr-new')).toHaveText('New')
   await expect(slot.locator('.card-hdr-test-mint')).toContainText('Test mint')
