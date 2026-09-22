@@ -1018,7 +1018,7 @@ function MintDetailContent({ url }: { url: string }) {
           )
         }
         <div className="md-hdr-left">
-          <button className="md-back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
+          <button className="md-back md-back-compact" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
           <div className="md-avatar-id">
             <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? knownMint?.iconUrl ?? null} size={80} radius={16} className="md-hdr-favicon" />
             <div className="md-namebox">
@@ -1073,6 +1073,7 @@ function MintDetailContent({ url }: { url: string }) {
             </div>
           </div>
         </div>
+        <div className="md-hdr-actions">
         <div className="md-hdr-center">
           {!isOnline && knownMint?.lastError && (
             <span className="md-hdr-error" style={{display:'inline-flex',alignItems:'center',gap:4}}>
@@ -1120,6 +1121,7 @@ function MintDetailContent({ url }: { url: string }) {
             <span aria-hidden="true">⇆</span>
             <span className="md-compare-label">Compare</span>
           </button>
+        </div>
         </div>
       </div>
 

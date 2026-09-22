@@ -13,7 +13,7 @@
   background: var(--bg2);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 16px;
 }
@@ -49,10 +49,21 @@
 
 .md-back-label { display: inline; }
 
+/* Compact desktop-only variant for the hero Back button — sits on its own row
+   above the avatar/name block (see .md-hdr-left below) instead of beside it,
+   so it stays the same pill style just smaller. Mobile's own .md-back rule
+   (icon-only circle) overrides this fully, since it's declared later in the
+   file at the same specificity. */
+.md-back-compact {
+  padding: 4px 10px;
+  font-size: 10px;
+}
+
 .md-hdr-left {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -79,12 +90,29 @@
   flex-shrink: 0;
 }
 
+/* Wraps .md-hdr-center + .md-hdr-right into one flex item so the button row
+   moves as a single group. margin-left: auto pushes it to the header's right
+   edge (like the old space-between); margin-right pulls it back toward the
+   text block by a percentage of the header's own width, so the shift scales
+   proportionally at any desktop viewport instead of a fixed pixel amount. */
+.md-hdr-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  margin-right: 11%;
+}
+
 .md-avatar-id {
   display: flex;
   align-items: flex-start;
   gap: 16px;
   flex: 1;
   min-width: 0;
+  /* Keeps the avatar/name block at its original horizontal position now that
+     Back moved onto its own row above (desktop only) — this offset matches
+     the space Back + its old row gap used to occupy beside it. */
+  margin-left: 80px;
 }
 
 .md-hdr-favicon {
@@ -1200,6 +1228,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   }
   .md-hdr-center { flex-wrap: wrap; justify-content: flex-start; }
   .md-hdr-right { flex-wrap: wrap; }
+  .md-hdr-actions { margin-left: 0; margin-right: 0; }
   .md-watch-star-hero { top: 14px; right: 14px; }
   .md-back {
     width: 30px;
@@ -1213,7 +1242,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
     flex-shrink: 0;
   }
   .md-back-label { display: none; }
-  .md-avatar-id { flex: 1 1 auto; min-width: 0; gap: 10px; }
+  .md-avatar-id { flex: 1 1 auto; min-width: 0; gap: 10px; margin-left: 0; }
   .md-error-badge { flex: 1 1 100%; }
   .md-name { font-size: 19px; }
   .md-url  { font-size: 11px; }
@@ -1250,6 +1279,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   }
   .md-hdr-left { grid-column: 1 / -1; }
 
+  .md-hdr-actions,
   .md-hdr-center,
   .md-hdr-right { display: contents; }
 
