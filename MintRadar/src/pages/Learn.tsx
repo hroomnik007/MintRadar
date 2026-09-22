@@ -9,7 +9,7 @@ export default function Learn() {
   const modules = [...LEARN_MODULES].sort((a, b) => a.order - b.order)
 
   useDocumentMeta(
-    'Learn Cashu — MintRadar',
+    'Learn Cashu - MintRadar',
     'A short course on how Cashu works, what can go wrong, and how to choose a safe Cashu mint.'
   )
 

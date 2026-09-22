@@ -279,7 +279,7 @@ export default function Watchlist() {
   }, [listKey])
 
   useDocumentMeta(
-    'My Watchlist — MintRadar',
+    'My Watchlist - MintRadar',
     'Track your favorite Cashu mints and get notified the moment one goes offline or comes back online.',
     { noindex: true }
   )

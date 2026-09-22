@@ -340,7 +340,7 @@ function MintDetailContent({ url }: { url: string }) {
 
   const metaDisplayName = mintDisplayName({ name: data?.info?.name ?? knownMint?.name, url })
   useDocumentMeta(
-    `${metaDisplayName} — Cashu Mint Reliability Score & Uptime | MintRadar`,
+    `${metaDisplayName} - Cashu Mint Reliability Score & Uptime | MintRadar`,
     knownMint
       ? `${metaDisplayName} (${mintHostname(url)}) is ${knownMint.online ? 'online' : 'offline'} with a Reliability Score of ${knownMint.reliabilityScore ?? '—'}%. See live uptime, latency, NUT support and reviews on MintRadar.`
       : `Live Reliability Score, uptime, latency and NUT support for the Cashu mint ${mintHostname(url)} on MintRadar.`

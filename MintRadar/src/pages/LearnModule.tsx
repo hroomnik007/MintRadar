@@ -31,7 +31,7 @@ export default function LearnModule() {
   const ModuleComponent = mod ? MODULE_COMPONENTS[mod.id] : null
 
   useDocumentMeta(
-    mod ? `${mod.title} — MintRadar Learn` : 'Module not found — MintRadar Learn',
+    mod ? `${mod.title} - MintRadar Learn` : 'Module not found - MintRadar Learn',
     mod ? mod.summary : undefined
   )
 

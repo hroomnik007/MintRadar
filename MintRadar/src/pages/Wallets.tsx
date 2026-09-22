@@ -41,7 +41,7 @@ export default function Wallets() {
   const selfHost = WALLETS.filter(w => w.selfHost)
 
   useDocumentMeta(
-    'Cashu Wallets — MintRadar',
+    'Cashu Wallets - MintRadar',
     'Wallets that work with Cashu mints, plus how to run your own mint. A plain list, no ranking or reviews.'
   )
 

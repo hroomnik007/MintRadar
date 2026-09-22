@@ -750,7 +750,7 @@ export default function Tools() {
   }, [])
 
   useDocumentMeta(
-    'Cashu Mint Tools — Token Inspector & Best Mint Finder | MintRadar',
+    'Cashu Mint Tools - Token Inspector & Best Mint Finder | MintRadar',
     'Inspect a Cashu token before redeeming it, or find the best Cashu mint for you with the Best Mint wizard.'
   )
 

@@ -868,7 +868,7 @@ export default function Stats() {
   }, [data, knownMintsData, versionDist])
 
   useDocumentMeta(
-    'Cashu Mints Network Stats — MintRadar',
+    'Cashu Mints Network Stats - MintRadar',
     'Live network-wide stats for Cashu mints: uptime, average Reliability Score, latency, NUT adoption and the Network Health Index.'
   )
 
