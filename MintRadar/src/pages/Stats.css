@@ -1057,8 +1057,19 @@
 @media (max-width: 700px) {
   .stats-hero-grid { padding: 10px var(--page-pad) 0; gap: 10px; }
   .stats-cards-grid { grid-template-columns: 1fr; padding: 10px var(--page-pad) 0; gap: 10px; }
-  .stats-metrics { flex-wrap: wrap; gap: 8px; padding: 10px var(--page-pad); }
-  .stats-metrics .stat-card { flex: 1 1 calc(50% - 4px); }
+  /* 3-column grid (was flex-wrap 50%, which left the 5th "NUTs in Spec"
+     card alone on its own row and stretched it to full width via
+     flex-grow — a single small number in an oversized card). 5 cards now
+     land as 3+2, no lone full-width row, and the whole hero section is
+     shorter. */
+  .stats-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 10px var(--page-pad); }
+  .stats-metrics .stat-card { flex: unset; max-width: none; min-width: 0; padding: 8px; gap: 4px; }
+  .stats-metrics .stat-row { gap: 8px; }
+  .stats-metrics .stat-icon { width: 26px; height: 26px; border-radius: 8px; }
+  .stats-metrics .stat-label { font-size: 8.5px; margin-bottom: 2px; }
+  .stats-metrics .stat-value { font-size: 15px; }
+  .stats-metrics .stat-note { font-size: 8.5px; }
+  .stats-metrics .stat-unit { font-size: 11px; }
   .stats-nut-rows-grid { grid-template-columns: 1fr; }
   .stats-nut-row { grid-template-columns: 55px 1fr 38px; gap: 6px; padding: 4px 8px; }
 }

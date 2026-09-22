@@ -1253,7 +1253,7 @@ function MintDetailContent({ url }: { url: string }) {
             <span className="md-sc-reliability-num">{reliabilityScore}%</span>
           </div>
           <div className="md-sc-reliability-meta">
-            <div className="md-sc-label">Reliability Score</div>
+            <div className="md-sc-label">Reliability</div>
             <span
               className="md-sc-reliability-badge"
               style={{ color: tsInfo.color, background: tsInfo.bg, border: `0.5px solid ${tsInfo.border}` }}
