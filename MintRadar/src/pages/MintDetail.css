@@ -1217,11 +1217,21 @@ button.md-url-copy.copied > svg { opacity: 1; }
     flex-direction: column;
     align-items: stretch;
   }
+  /* Back moves onto its own compact row above the avatar (mobile mirror of
+     the desktop Prompt-17 layout) instead of sitting inline, vertically
+     centered, beside it — that inline placement forced .md-hdr-left's
+     flex-direction:column (inherited from the desktop base rule below 768px,
+     since this block never overrode it) to also apply align-items:center,
+     which centered the whole column horizontally: the small Back button
+     floated near mid-width instead of hugging the left edge. flex-start +
+     a small gap fixes that and shrinks the freed vertical space, so the
+     avatar/name block sits closer to the top of the card. */
   .md-hdr-left {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     flex-wrap: nowrap;
-    gap: 8px;
+    gap: 6px;
     /* Reserve room so the name/status row never runs under the star, which is
        absolutely positioned in the header's top-right corner on mobile too. */
     padding-right: 44px;
@@ -1230,18 +1240,20 @@ button.md-url-copy.copied > svg { opacity: 1; }
   .md-hdr-right { flex-wrap: wrap; }
   .md-hdr-actions { margin-left: 0; margin-right: 0; }
   .md-watch-star-hero { top: 14px; right: 14px; }
+  /* Small pill, consistent with the desktop .md-back-compact recipe — no
+     longer the large standalone circle. */
   .md-back {
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    border-radius: 50%;
-    display: flex;
+    width: auto;
+    height: auto;
+    padding: 4px 10px;
+    border-radius: 999px;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    font-size: 14px;
+    gap: 3px;
+    font-size: 10px;
     flex-shrink: 0;
   }
-  .md-back-label { display: none; }
+  .md-back-label { display: inline; }
   .md-avatar-id { flex: 1 1 auto; min-width: 0; gap: 10px; margin-left: 0; }
   .md-error-badge { flex: 1 1 100%; }
   .md-name { font-size: 19px; }
@@ -1263,13 +1275,15 @@ button.md-url-copy.copied > svg { opacity: 1; }
 /* ── Compact mobile hero (≤640px) ──────────────────────────────
    1. Online status sits inline next to the mint name (.md-status-inline) —
       identical to desktop, styled by the base rule above.
-   2. The header becomes a 2-column grid. .md-hdr-center / .md-hdr-right are
-      unwrapped (display: contents) so all four action buttons are direct grid
-      items and can be paired with `order` regardless of the desktop grouping:
-        row 1  →  Mint QR (left)    ·  Watch (right)
-        row 2  →  Cashu.me (left)   ·  Compare (right)
-      All four share the same recipe/size as on desktop (see base rules above);
-      nothing is stretched to fill its column. Desktop layout is untouched. */
+   2. The header becomes a 2-column grid for .md-hdr-left (Back+avatar, full
+      width) vs. the action row below it. .md-hdr-actions is unwrapped from
+      the grid via grid-column:1/-1 and is itself a single-row flex — Mint QR,
+      Open in Cashu.me and Compare all sit on ONE line (previously two: Mint
+      QR + Cashu.me on top, Compare alone below, from an order/justify-self
+      2-column grid placement — replaced outright, not layered on top of).
+      .md-hdr-center / .md-hdr-right stay display:contents so their buttons
+      become direct flex children of .md-hdr-actions, in DOM order (Mint QR,
+      Cashu.me, Compare) — no `order` overrides needed anymore. */
 @media (max-width: 640px) {
   .md-header {
     display: grid;
@@ -1279,28 +1293,44 @@ button.md-url-copy.copied > svg { opacity: 1; }
   }
   .md-hdr-left { grid-column: 1 / -1; }
 
-  .md-hdr-actions,
+  .md-hdr-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
   .md-hdr-center,
   .md-hdr-right { display: contents; }
 
-  .md-hdr-error { grid-column: 1 / -1; order: -1; }
+  /* Forces a line of its own above the button row when present (offline
+     mint with a lastError badge), same as the old grid-column:1/-1 did. */
+  .md-hdr-error { flex: 1 1 100%; order: -1; }
 
+  /* Each button can shrink and ellipsize rather than overflow the row —
+     verified fitting on one line at 375/390/414px; see the <360px fallback
+     below for anything narrower. */
   .md-quick-btn,
   .md-compare-btn {
-    width: max-content;
-    max-width: 100%;
-    box-sizing: border-box;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 7px 8px;
+    font-size: 11px;
+    gap: 4px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .md-hdr-center > button.md-quick-btn   { order: 1; justify-self: start; }
-  .md-hdr-center > a.md-quick-btn        { order: 2; justify-self: start; }
-  .md-hdr-right  > .md-compare-btn       { order: 3; justify-self: start; }
 
   .md-qb-full { display: none; }
   .md-qb-short { display: inline; }
 
-  /* Icon-only Compare on mobile — desktop keeps the icon + "Compare" label. */
-  .md-compare-label { display: none; }
+  /* Compare regains its icon + "Compare" text label here — it now sits in a
+     single row next to two other text-labelled buttons, unlike the Dashboard
+     mint card's icon-only Compare button (a different component/class,
+     .card-compare-btn, deliberately left icon-only). */
+  .md-compare-label { display: inline; }
 
   /* Compact Reliability Score fills the empty grid cell next to Community rating;
      the full breakdown card in .md-right is redundant on mobile (its
@@ -1350,6 +1380,17 @@ button.md-url-copy.copied > svg { opacity: 1; }
     font-family: var(--font-mono);
     color: var(--accent);
   }
+}
+
+/* Fallback for extremely narrow screens where the 3-button hero action row
+   (Mint QR / Cashu.me / Compare, see the ≤640px block above) would clip even
+   at its shrunk padding/font: drop back to a 2-column wrap instead of
+   visually overflowing. Verified unnecessary at 375/390/414px — this only
+   engages below that. */
+@media (max-width: 359px) {
+  .md-hdr-actions { flex-wrap: wrap; }
+  .md-quick-btn,
+  .md-compare-btn { flex: 1 1 45%; }
 }
 
 /* Match the navbar + Dashboard content gutter, which drops to 14px at ≤600px. */
