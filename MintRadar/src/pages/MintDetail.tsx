@@ -33,6 +33,8 @@ import {
 import { useNow } from '@/hooks/useNow'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
+import { useElementHeight } from '@/hooks/useElementHeight'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import './MintDetail.css'
 import {
   Copy, Check, Info, ShieldCheck, ShieldOff, AlertTriangle,
@@ -473,6 +475,37 @@ function MintDetailContent({ url }: { url: string }) {
   const [copiedReviewAction, setCopiedReviewAction] = useState<string | null>(null)
   const [highlightedReview, setHighlightedReview] = useState<string | null>(null)
 
+
+  // Avatar height tracks .md-namebox's actual rendered height (name/URL/First
+  // seen/Announced-on-Nostr lines) so a 3-line mint (no Nostr announcement)
+  // doesn't leave empty space below a still-4-line-tall avatar, and a 4-line
+  // one doesn't overflow past a still-3-line-tall avatar. Falls back to the
+  // old fixed 80/40px until the first ResizeObserver measurement lands.
+  // Clamped to the same fixed column width .md-avatar-id's CSS grid reserves
+  // for the avatar (--md-avatar-col) — that column is deliberately NOT sized
+  // from the avatar's own rendered width, precisely so this clamp can't feed
+  // back into .md-namebox's available width and self-amplify (verified this
+  // was a real runaway-growth bug before the grid+clamp fix: on a 390px
+  // mobile viewport, a 4-line mint with a Nostr announcement spiralled the
+  // avatar past 300px, since a taller avatar narrowed namebox, which wrapped
+  // more, which grew the measured height further). Keep in sync with
+  // .md-avatar-id's --md-avatar-col value (112px) and its mobile override.
+  //
+  // Mobile's cap is 40 — i.e. unchanged from the old fixed size, growth
+  // disabled entirely. Verified empirically (not a guess): even the 3-line
+  // baseline's natural, unwrapped height is ~66px on a 390px phone, already
+  // taller than 40, and mobile text already sits right at its own wrap
+  // threshold (confirmed this wraps identically on the pre-this-feature
+  // code at 375px — a pre-existing, unrelated condition). Any cap above 40
+  // (tried up to 56) measurably wrapped "First seen by MintRadar <Mon YYYY>"
+  // onto a second line at common widths (375–414px) that fit on one line
+  // today. So there is no cap value that both (a) lets the avatar grow past
+  // 40 and (b) doesn't risk new wrapping on real mobile widths — 40 is the
+  // only safe choice, and it reproduces the original mobile layout exactly.
+  const isMobile = useIsMobile()
+  const AVATAR_COL_CAP = isMobile ? 40 : 112
+  const [nameboxRef, nameboxHeight] = useElementHeight<HTMLDivElement>()
+  const avatarSize = Math.min(nameboxHeight ?? (isMobile ? 40 : 80), AVATAR_COL_CAP)
 
   const [showQr, setShowQr] = useState(false)
   const [showReliabilityBreakdown, setShowReliabilityBreakdown] = useState(false)
@@ -1020,8 +1053,8 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-hdr-left">
           <button className="md-back md-back-compact" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
           <div className="md-avatar-id">
-            <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? knownMint?.iconUrl ?? null} size={80} radius={16} className="md-hdr-favicon" />
-            <div className="md-namebox">
+            <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? knownMint?.iconUrl ?? null} size={avatarSize} radius={16} className="md-hdr-favicon" />
+            <div className="md-namebox" ref={nameboxRef}>
               <div className="md-name" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                 <span>{displayName}</span>
                 <span className={`md-status-inline ${isOnline ? '' : 'offline'}`}>

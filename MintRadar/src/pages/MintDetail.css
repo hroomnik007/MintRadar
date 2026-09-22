@@ -103,9 +103,26 @@
   margin-right: 11%;
 }
 
+/* A CSS grid, not flex, for exactly one reason: the avatar column width
+   (--md-avatar-col) must stay FIXED regardless of the avatar's own actual
+   rendered size, so .md-namebox's available width — and therefore its own
+   wrap/height — never depends on the avatar. Avatar height is computed in
+   MintDetail.tsx from .md-namebox's rendered height (useElementHeight), so
+   if avatar width fed back into namebox's width, a taller measurement would
+   narrow namebox, which can wrap its text onto extra lines, which grows the
+   measured height further, growing the avatar more — an unbounded feedback
+   loop (verified: on a 390px mobile viewport, a 4-line mint with a Nostr
+   announcement spiralled the avatar to over 300px). The fixed grid column
+   (sized generously above the tallest realistic 4-line content, see
+   --md-avatar-col below and its mobile override) breaks that loop: avatar
+   can freely grow/shrink inside its cell without ever changing namebox's
+   width. MintDetail.tsx additionally clamps its computed size to the same
+   --md-avatar-col value so the (square) avatar never overflows its cell. */
 .md-avatar-id {
-  display: flex;
-  align-items: flex-start;
+  --md-avatar-col: 112px;
+  display: grid;
+  grid-template-columns: var(--md-avatar-col) 1fr;
+  align-items: start;
   gap: 16px;
   flex: 1;
   min-width: 0;
@@ -115,11 +132,19 @@
   margin-left: 80px;
 }
 
+/* Square avatar sized off .md-namebox's actual rendered height (via
+   useElementHeight + MintFavicon's `size` prop in MintDetail.tsx, clamped to
+   --md-avatar-col — see .md-avatar-id above), not a fixed 80px — a mint with
+   no "Announced on Nostr" line (3 text rows instead of 4) used to leave
+   empty space below a still-80px avatar, and conversely a 4-line mint could
+   overflow past its bottom edge. justify-self/align-self: start stop the
+   grid from stretching the avatar to fill its (deliberately oversized) cell
+   — its own inline width/height (from MintFavicon's `size` prop) stay
+   authoritative. */
 .md-hdr-favicon {
-  width: 80px !important;
-  height: 80px !important;
-  min-width: 80px !important;
   flex-shrink: 0;
+  justify-self: start;
+  align-self: start;
 }
 
 .md-namebox { flex: 1; min-width: 0; }
@@ -1254,18 +1279,20 @@ button.md-url-copy.copied > svg { opacity: 1; }
     flex-shrink: 0;
   }
   .md-back-label { display: inline; }
-  .md-avatar-id { flex: 1 1 auto; min-width: 0; gap: 10px; margin-left: 0; }
+  /* Mobile keeps the original fixed 40px avatar column — deliberately no
+     growth headroom here. Verified empirically: even a few px more (tried up
+     to 56) measurably wraps "First seen by MintRadar <Mon YYYY>" onto a
+     second line on common phone widths that fit it on one line today. See
+     the long comment on AVATAR_COL_CAP in MintDetail.tsx for the full
+     reasoning; keep this value in sync with it. */
+  .md-avatar-id { --md-avatar-col: 40px; flex: 1 1 auto; min-width: 0; gap: 10px; margin-left: 0; }
   .md-error-badge { flex: 1 1 100%; }
   .md-name { font-size: 19px; }
   .md-url  { font-size: 11px; }
-  /* Override MintFavicon's inline width/height (set via its `size` prop, 52 on
-     desktop) — the compact mobile header wants a smaller mark next to the
-     30px round back button. */
-  .md-hdr-favicon {
-    width: 40px !important;
-    height: 40px !important;
-    min-width: 40px !important;
-  }
+  /* No fixed-px .md-hdr-favicon override here anymore — the avatar's `size`
+     prop is computed in MintDetail.tsx from .md-namebox's own (smaller,
+     mobile-font) rendered height via useElementHeight, clamped to
+     --md-avatar-col. */
   .md-age-badge-inline { font-size: 11px !important; padding: 2px 7px !important; }
 
   .md-contact-grid { grid-template-columns: 1fr; }
