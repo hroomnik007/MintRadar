@@ -766,10 +766,18 @@
   font-family: var(--font-mono-data);
 }
 
+/* Fixed min-height, shared with .card-reliability-no-reviews below — this
+   line's content (a rating vs. "No reviews yet") must not change the
+   overall height of `.card-lower`, or its bottom-pinned `margin-top: auto`
+   block shifts vertically between mints with/without reviews, dragging the
+   RELIABILITY row (and its Test mint / Same op badges) out of alignment
+   with neighbouring cards that don't share the same review state. */
 .card-reliability-rating {
   display: flex;
   align-items: center;
   gap: 3px;
+  min-height: 17px;
+  line-height: 1;
   font-size: 14px;
   font-weight: 500;
   color: var(--t2);
@@ -779,6 +787,9 @@
 .card-reliability-star { font-size: 16px; line-height: 1; }
 
 .card-reliability-no-reviews {
+  display: flex;
+  align-items: center;
+  min-height: 17px;
   font-size: 11px;
   color: var(--t3);
   line-height: 1;
