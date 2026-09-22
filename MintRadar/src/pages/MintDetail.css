@@ -5,6 +5,7 @@
 
 /* ── Header ─────────────────────────────────────────────────── */
 .md-header {
+  position: relative;
   margin: 14px 18px 0;
   padding: 22px 20px;
   border: 1px solid var(--border);
@@ -15,6 +16,16 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 16px;
+}
+
+/* Watch star, relocated to the top-right corner of the hero section — level
+   with the mint name / Online status row. Absolutely positioned against
+   .md-header so it stays put regardless of the header's flex (desktop) or
+   grid (mobile) layout mode. */
+.md-watch-star-hero {
+  position: absolute;
+  top: 22px;
+  right: 20px;
 }
 
 .md-back {
@@ -47,8 +58,9 @@
 }
 
 /* No outer frame: Online status + Mint QR + Open in Cashu.me sit loose in the
-   row, the same way Watch/Compare (.md-hdr-right) do. The buttons keep their own
-   tonal style; there is deliberately no box grouping them. */
+   row, the same way Compare (.md-hdr-right) does. The buttons keep their own
+   tonal style; there is deliberately no box grouping them. Watch moved out to
+   .md-watch-star-hero (top-right corner of the header) — see below. */
 .md-hdr-center {
   display: flex;
   align-items: center;
@@ -56,7 +68,7 @@
   flex-shrink: 0;
 }
 
-/* All five header-row buttons (Mint QR, Open in Cashu.me, Watch, Compare) share
+/* All four header-row buttons (Mint QR, Open in Cashu.me, Watch, Compare) share
    one tonal recipe — soft tint + border, never a saturated fill. Keep them
    visually equal; there is no single "primary" action in this row. */
 
@@ -1182,9 +1194,13 @@ button.md-url-copy.copied > svg { opacity: 1; }
     align-items: center;
     flex-wrap: nowrap;
     gap: 8px;
+    /* Reserve room so the name/status row never runs under the star, which is
+       absolutely positioned in the header's top-right corner on mobile too. */
+    padding-right: 44px;
   }
   .md-hdr-center { flex-wrap: wrap; justify-content: flex-start; }
   .md-hdr-right { flex-wrap: wrap; }
+  .md-watch-star-hero { top: 14px; right: 14px; }
   .md-back {
     width: 30px;
     height: 30px;
@@ -1247,12 +1263,14 @@ button.md-url-copy.copied > svg { opacity: 1; }
     white-space: nowrap;
   }
   .md-hdr-center > button.md-quick-btn   { order: 1; justify-self: start; }
-  .md-hdr-right  > .md-watch-star        { order: 2; justify-self: end; }
-  .md-hdr-center > a.md-quick-btn        { order: 3; justify-self: start; }
-  .md-hdr-right  > .md-compare-btn       { order: 4; justify-self: end; }
+  .md-hdr-center > a.md-quick-btn        { order: 2; justify-self: start; }
+  .md-hdr-right  > .md-compare-btn       { order: 3; justify-self: start; }
 
   .md-qb-full { display: none; }
   .md-qb-short { display: inline; }
+
+  /* Icon-only Compare on mobile — desktop keeps the icon + "Compare" label. */
+  .md-compare-label { display: none; }
 
   /* Compact Reliability Score fills the empty grid cell next to Community rating;
      the full breakdown card in .md-right is redundant on mobile (its

@@ -992,6 +992,31 @@ function MintDetailContent({ url }: { url: string }) {
   return (
     <div className="mint-detail">
       <div className="md-header">
+        {isLoggedIn
+          ? (
+            <button
+              type="button"
+              className={`md-watch-star md-watch-star-hero${isWatching ? ' on' : ''}`}
+              aria-label={isWatching ? 'Unwatch' : 'Watch'}
+              aria-pressed={isWatching}
+              title={isWatching ? 'Unwatch' : 'Watch'}
+              onClick={toggleWatch}
+            >
+              <IcStar filled={isWatching} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="md-watch-star md-watch-star-hero"
+              aria-label="Watch"
+              aria-pressed={false}
+              title="Login with Nostr to add to watchlist"
+              onClick={() => setShowWatchLoginModal(true)}
+            >
+              <IcStar filled={false} />
+            </button>
+          )
+        }
         <div className="md-hdr-left">
           <button className="md-back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
           <div className="md-avatar-id">
@@ -1088,36 +1113,12 @@ function MintDetailContent({ url }: { url: string }) {
           </a>
         </div>
         <div className="md-hdr-right">
-          {isLoggedIn
-            ? (
-              <button
-                type="button"
-                className={`md-watch-star${isWatching ? ' on' : ''}`}
-                aria-label={isWatching ? 'Unwatch' : 'Watch'}
-                aria-pressed={isWatching}
-                title={isWatching ? 'Unwatch' : 'Watch'}
-                onClick={toggleWatch}
-              >
-                <IcStar filled={isWatching} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="md-watch-star"
-                aria-label="Watch"
-                aria-pressed={false}
-                title="Login with Nostr to add to watchlist"
-                onClick={() => setShowWatchLoginModal(true)}
-              >
-                <IcStar filled={false} />
-              </button>
-            )
-          }
           <button
             className="md-compare-btn"
             onClick={() => setShowComparePicker(true)}
           >
-            ⇆ Compare
+            <span aria-hidden="true">⇆</span>
+            <span className="md-compare-label">Compare</span>
           </button>
         </div>
       </div>
