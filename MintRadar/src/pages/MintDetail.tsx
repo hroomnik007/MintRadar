@@ -23,7 +23,7 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
-import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
+import { clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import {
@@ -618,6 +618,49 @@ function MintDetailContent({ url }: { url: string }) {
     return () => window.removeEventListener('keydown', h)
   }, [showComparePicker])
 
+  // Review deep-link (#review-<id>). This used to live further down, after
+  // `filteredReviews` was computed — but that placement was after the loading
+  // early-return below, so the effect was skipped on the loading render and
+  // then called on every render once data arrived: a Rules-of-Hooks violation
+  // (inconsistent hook count across renders of the same mount). Nothing this
+  // effect (or `filteredReviews`) needs actually depends on `data`/
+  // `knownMintsData` — only on already-resolved review state (`mergedReviews`,
+  // `reviewFilterState`, `reviewHideAnonState`) and the route `url` — so both
+  // can run unconditionally up here instead.
+  const activeReviewFilter = reviewFilterState.key === url ? reviewFilterState.type : 'all'
+  const hideAnonActive = reviewHideAnonState.key === url && reviewHideAnonState.on
+  let filteredReviews = mergedReviews
+  if (activeReviewFilter === '5star') filteredReviews = filteredReviews.filter(r => r.rating === 5)
+  else if (activeReviewFilter === 'critical') filteredReviews = filteredReviews.filter(r => r.rating !== null && r.rating <= 2)
+  if (hideAnonActive) filteredReviews = filteredReviews.filter(r => !!r.profile?.name)
+  const REVIEWS_PER_PAGE = 5
+
+  useEffect(() => {
+    const raw = window.location.hash
+    const m = raw.match(/^#review-([0-9a-f]{64})$/i)
+    if (!m?.[1]) return
+    const id = m[1].toLowerCase()
+    // This is a one-time reaction to the browser's location hash at mount/hash-change
+    // (an external system), not state derived from props/other state — the documented
+    // exemption for this rule — but the linter's static check only recognizes that
+    // pattern inside an event-listener callback, which a plain hash read on mount has
+    // no natural one for.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveTab('reviews')
+    setReviewFilterState({ key: url, type: 'all' })
+    setReviewHideAnonState({ key: url, on: false })
+    const idx = filteredReviews.findIndex(r => r.id.toLowerCase() === id)
+    if (idx >= 0) {
+      setReviewsPageState({ key: url, page: Math.floor(idx / REVIEWS_PER_PAGE) + 1 })
+    }
+    setHighlightedReview(id)
+    const t = window.setTimeout(() => {
+      document.getElementById(`review-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 250)
+    const t2 = window.setTimeout(() => setHighlightedReview(null), 2800)
+    return () => { window.clearTimeout(t); window.clearTimeout(t2) }
+  }, [url, filteredReviews])
+
   const histLineData = useMemo(() => {
     const segs = chartHistoryData?.segments ?? []
     const nutCount = knownMint?.nutCount ?? 0
@@ -847,8 +890,8 @@ function MintDetailContent({ url }: { url: string }) {
   // (one active at a time); "hideAnon" is an independent toggle combined on top of
   // whichever exclusive filter is active. Both are keyed by mint URL, same pattern
   // as reviewsPageState, so switching mints resets them without a reset effect.
-  const activeReviewFilter = reviewFilterState.key === url ? reviewFilterState.type : 'all'
-  const hideAnonActive = reviewHideAnonState.key === url && reviewHideAnonState.on
+  // (activeReviewFilter/hideAnonActive/filteredReviews are computed earlier in
+  // this component now — see the review deep-link effect above.)
   // The All/5★/Critical chip counts must match what "Hide anon" actually leaves in
   // the list below — when it's on, count from the anon-filtered set, not the full
   // mergedReviews, or the chip numbers would disagree with what the user sees.
@@ -859,10 +902,6 @@ function MintDetailContent({ url }: { url: string }) {
   // wrongly include it here.
   const reviewFilterCriticalCount = reviewCountBase.filter(r => r.rating !== null && r.rating <= 2).length
   const reviewFilterAnonCount = mergedReviews.filter(r => !r.profile?.name).length
-  let filteredReviews = mergedReviews
-  if (activeReviewFilter === '5star') filteredReviews = filteredReviews.filter(r => r.rating === 5)
-  else if (activeReviewFilter === 'critical') filteredReviews = filteredReviews.filter(r => r.rating !== null && r.rating <= 2)
-  if (hideAnonActive) filteredReviews = filteredReviews.filter(r => !!r.profile?.name)
   const setReviewFilter = (type: 'all' | '5star' | 'critical') => {
     setReviewFilterState({ key: url, type })
     setReviewsPageState({ key: url, page: 1 })
@@ -875,33 +914,12 @@ function MintDetailContent({ url }: { url: string }) {
   // Numbered pagination for the Reviews tab, applied to the filtered list. Page is
   // keyed by mint URL so it resets to 1 when navigating to a different mint (no
   // reset effect needed); changing a filter above also resets it to 1.
-  const REVIEWS_PER_PAGE = 5
   const reviewsTotalPages = Math.max(1, Math.ceil(filteredReviews.length / REVIEWS_PER_PAGE))
   const reviewsPage = Math.min(
     reviewsPageState.key === url ? reviewsPageState.page : 1,
     reviewsTotalPages,
   )
   const pagedReviews = filteredReviews.slice((reviewsPage - 1) * REVIEWS_PER_PAGE, reviewsPage * REVIEWS_PER_PAGE)
-
-  useEffect(() => {
-    const raw = window.location.hash
-    const m = raw.match(/^#review-([0-9a-f]{64})$/i)
-    if (!m?.[1]) return
-    const id = m[1].toLowerCase()
-    setActiveTab('reviews')
-    setReviewFilterState({ key: url, type: 'all' })
-    setReviewHideAnonState({ key: url, on: false })
-    const idx = filteredReviews.findIndex(r => r.id.toLowerCase() === id)
-    if (idx >= 0) {
-      setReviewsPageState({ key: url, page: Math.floor(idx / REVIEWS_PER_PAGE) + 1 })
-    }
-    setHighlightedReview(id)
-    const t = window.setTimeout(() => {
-      document.getElementById(`review-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }, 250)
-    const t2 = window.setTimeout(() => setHighlightedReview(null), 2800)
-    return () => { window.clearTimeout(t); window.clearTimeout(t2) }
-  }, [url, filteredReviews])
   const goToReviewsPage = (p: number) => setReviewsPageState({ key: url, page: Math.max(1, Math.min(p, reviewsTotalPages)) })
 
   const chartAvgLatency = chartHistoryData?.avgLatencyMs ?? null

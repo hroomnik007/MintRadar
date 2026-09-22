@@ -211,8 +211,7 @@ function versionLadder(latest: { major: number; minor: number }, steps = 10): [n
  */
 export function versionFreshnessScore(
   v: string | null | undefined,
-  latestVersions?: Record<string, { major: number; minor: number }>,
-  discoveredAt?: string | null
+  latestVersions?: Record<string, { major: number; minor: number }>
 ): number {
   if (!v) return 0
   const { software, versionNumber } = splitVersionString(v)

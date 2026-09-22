@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useQueryClient, useQuery } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { nip19 } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
@@ -29,26 +29,12 @@ const ComparisonModal = lazy(() => import('@/components/ComparisonModal').then(m
 
 // ── SVG Icons ──────────────────────────────────────────────────
 
-const IcSignal = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <circle cx="8" cy="8" r="6.8" stroke="currentColor" strokeWidth="1.1"/>
-    <circle cx="8" cy="8" r="4" stroke="currentColor" strokeWidth="1" strokeDasharray="2 1.5" opacity="0.6"/>
-    <circle cx="8" cy="8" r="1.2" fill="currentColor"/>
-  </svg>
-)
-
 const IcGrid = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
     <rect x="2" y="2" width="5.5" height="5.5" rx="1.2" stroke="currentColor" strokeWidth="1.1"/>
     <rect x="8.5" y="2" width="5.5" height="5.5" rx="1.2" stroke="currentColor" strokeWidth="1.1"/>
     <rect x="2" y="8.5" width="5.5" height="5.5" rx="1.2" stroke="currentColor" strokeWidth="1.1"/>
     <rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1.2" stroke="currentColor" strokeWidth="1.1"/>
-  </svg>
-)
-const IcSuccess = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <circle cx="8" cy="8" r="6.8" stroke="currentColor" strokeWidth="1.1"/>
-    <polyline points="5,8 7,10 11,6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
 const IcSearch = () => (
@@ -67,13 +53,6 @@ const IcRefresh = () => (
   <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
     <path d="M2 7a5 5 0 1 1 1.4 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
     <polyline points="2,4.5 2,7 4.5,7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-)
-const IcTimer = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <circle cx="8" cy="9.5" r="5" stroke="currentColor" strokeWidth="1.1"/>
-    <path d="M8 7v2.5l1.5 1" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M6 1.5h4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
   </svg>
 )
 const IcFilter = () => (
@@ -532,7 +511,6 @@ export default function Dashboard() {
   }, [setSearchParams])
 
   const [, setTick] = useState(0)
-  const [showCountNote, setShowCountNote] = useState(false)
   const [showDegraded, setShowDegraded] = useState(false)
   const [showSubmit, setShowSubmit] = useState(false)
   const [submitTab, setSubmitTab] = useState<'single' | 'bulk'>('single')
@@ -630,18 +608,6 @@ export default function Dashboard() {
     })
   }, [allMints, activeFilters, showDegraded, search])
   const activeFilterCount = countActiveFilters(activeFilters)
-
-  const { data: statsData } = useQuery({
-    queryKey: ['stats'],
-    queryFn: async () => {
-      const res = await fetch('/api/stats')
-      if (!res.ok) throw new Error('stats fetch failed')
-      return res.json() as Promise<{ avgLatency24h: number | null }>
-    },
-    staleTime: 2 * 60 * 1000,
-    refetchInterval: 2 * 60 * 1000,
-  })
-  const avgLatency24h = statsData?.avgLatency24h ?? null
 
   const totalCount = allMints.length
   const onlineCount = allMints.filter(m => m.online === true).length
@@ -920,12 +886,6 @@ export default function Dashboard() {
   return (
     <div className="dashboard">
       <h1 className="sr-only">MintRadar — Cashu Mints Reliability Score & Uptime Monitor</h1>
-{showCountNote && (
-        <p className="stat-count-note">
-          <strong>Listed</strong> = in the grid (not hidden after 24h offline).{' '}
-          <strong>Known</strong> = every mint we indexed.
-        </p>
-      )}
 
       <div className="dash-intro">
         <div className="dash-actions" role="group" aria-label="Get started">

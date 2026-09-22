@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
 import { createBrowserRouter } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import Dashboard from '@/pages/Dashboard'
@@ -8,14 +8,10 @@ import MintNaddr from '@/pages/MintNaddr'
 import Learn from '@/pages/Learn'
 import LearnModule from '@/pages/LearnModule'
 import Wallets from '@/pages/Wallets'
-
-// Stats and MintDetail are the only pages that pull in Recharts (~380 kB chunk),
-// so they load lazily — the chart vendor bundle is fetched only when first visited.
-const Stats = lazy(() => import('@/pages/Stats'))
-const MintDetail = lazy(() => import('@/pages/MintDetail'))
-// Tools is the only page that pulls in @cashu/cashu-ts (~13 kB gzip, Token
-// Inspector) — same reasoning, it must not sit in the initial payload.
-const Tools = lazy(() => import('@/pages/Tools'))
+// Moved into their own module (routerLazy.tsx) so this file's only export is
+// `router` — a file mixing component exports with a non-component export
+// breaks react-refresh's fast-refresh detection (react-refresh/only-export-components).
+import { Stats, MintDetail, Tools } from '@/routerLazy'
 
 const lazyFallback = (
   <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text2)' }}>Loading…</div>
