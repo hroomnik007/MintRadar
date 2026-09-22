@@ -13,11 +13,11 @@ test.beforeEach(async ({ page }) => {
   await installApiMocks(page)
 })
 
-test('Most Reliable list excludes test mints; Reliability tab also excludes them (audit run-3)', async ({ page }) => {
+test('Uptime tab list excludes test mints; Reliability tab also excludes them (audit run-3)', async ({ page }) => {
   const base = MOCK_KNOWN_MINTS[0]!
-  // Most Reliable ranks by uptimePct7d (2026-09-19), not uptimePct24h — see
-  // CLAUDE.md's "Most Reliable" note. uptimePct24h is still set here too since
-  // other parts of the page (avg-uptime hero tile) read it.
+  // Uptime tab ranks by uptimePct7d (2026-09-19), not uptimePct24h — see
+  // CLAUDE.md's "Most Reliable panel — 7-day default window" note. uptimePct24h is
+  // still set here too since other parts of the page (avg-uptime hero tile) read it.
   const rows: Json[] = [
     { ...base, url: 'https://testnut.cashu.space', name: 'Testnut', online: true, uptimePct24h: 100, uptimePct7d: 100, reliabilityScore: 99 },
     { ...MOCK_KNOWN_MINTS[1], online: true, uptimePct24h: 97, uptimePct7d: 97, reliabilityScore: 70 },
@@ -26,11 +26,11 @@ test('Most Reliable list excludes test mints; Reliability tab also excludes them
   await knownMints(page, rows)
   await page.goto('/stats')
 
-  // The Reliable/Reliability widget (its title changes with the tab, so locate it by
+  // The Uptime/Reliability widget (its title changes with the tab, so locate it by
   // the toggle instead).
-  const widget = page.locator('.stats-panel').filter({ has: page.getByRole('button', { name: 'Reliable', exact: true }) })
+  const widget = page.locator('.stats-panel').filter({ has: page.getByRole('button', { name: 'Uptime', exact: true }) })
   await expect(widget.locator('.stats-top5-row').first()).toBeVisible()
-  // Reliable tab: the 100%-uptime test mint is filtered out.
+  // Uptime tab: the 100%-uptime test mint is filtered out.
   await expect(widget.locator('.stats-top5-row', { hasText: 'Testnut' })).toHaveCount(0)
 
   // Reliability tab: also excludes it, as of the 2026-09-19 audit run-3 fix that
@@ -40,7 +40,7 @@ test('Most Reliable list excludes test mints; Reliability tab also excludes them
   await expect(widget.locator('.stats-top5-row', { hasText: 'Testnut' })).toHaveCount(0)
 })
 
-test('Most Reliable rows never show a hostname/URL subtitle under the name', async ({ page }) => {
+test('Uptime tab rows never show a hostname/URL subtitle under the name', async ({ page }) => {
   const base = MOCK_KNOWN_MINTS[0]!
   await knownMints(page, [
     // name differs from the hostname — the subtitle used to render here.
@@ -48,7 +48,7 @@ test('Most Reliable rows never show a hostname/URL subtitle under the name', asy
   ])
   await page.goto('/stats')
 
-  const row = page.locator('.stats-panel').filter({ has: page.getByRole('button', { name: 'Reliable', exact: true }) }).locator('.stats-top5-row').first()
+  const row = page.locator('.stats-panel').filter({ has: page.getByRole('button', { name: 'Uptime', exact: true }) }).locator('.stats-top5-row').first()
   await expect(row).toBeVisible()
   const text = (await row.textContent()) ?? ''
   expect(text).toContain('Alpha Mint')
@@ -56,7 +56,7 @@ test('Most Reliable rows never show a hostname/URL subtitle under the name', asy
   expect(text).not.toContain('alpha.example')
 })
 
-test('Most Reliable panel is labeled 7D and ranks by uptimePct7d, not uptimePct24h', async ({ page }) => {
+test('Uptime tab panel is labeled 7D and ranks by uptimePct7d, not uptimePct24h', async ({ page }) => {
   const base = MOCK_KNOWN_MINTS[0]!
   // Deliberately opposite orderings on the two fields — Bravo has the higher
   // 24h uptime but the lower 7d uptime; if the panel were still reading
@@ -67,9 +67,9 @@ test('Most Reliable panel is labeled 7D and ranks by uptimePct7d, not uptimePct2
   ])
   await page.goto('/stats')
 
-  const widget = page.locator('.stats-panel').filter({ has: page.getByRole('button', { name: 'Reliable', exact: true }) })
-  await expect(widget).toContainText('Most Reliable · 7D')
-  await expect(widget).not.toContainText('Most Reliable · 24H')
+  const widget = page.locator('.stats-panel').filter({ has: page.getByRole('button', { name: 'Uptime', exact: true }) })
+  await expect(widget).toContainText('Top Uptime · 7D')
+  await expect(widget).not.toContainText('Top Uptime · 24H')
 
   const firstRow = widget.locator('.stats-top5-row').first()
   await expect(firstRow).toContainText('Alpha Mint')

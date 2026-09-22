@@ -1059,11 +1059,15 @@ export default function Stats() {
             <div className="stats-panel-title-row" style={{marginBottom:0}}>
               <div className="stats-panel-icon green"><IcShield size={12} /></div>
               <div className="stats-panel-title" style={{marginBottom:0}}>
-                {reliableTab === 'reliable' ? 'Most Reliable · 7D' : 'Top Reliability Score'}
+                {reliableTab === 'reliable' ? 'Top Uptime · 7D' : 'Top Reliability Score'}
               </div>
             </div>
             <div className="stats-tab-toggle">
-              <button type="button" className={`stats-tab-btn${reliableTab === 'reliable' ? ' active' : ''}`} onClick={() => setReliableTab('reliable')}>Reliable</button>
+              {/* "Uptime" (was "Reliable") — this tab ranks by raw 7-day uptime %,
+                  not Reliability Score, and sitting next to a "Reliability" tab the old
+                  "Reliable"/"Reliability" pair read as near-duplicates rather than two
+                  distinct metrics. */}
+              <button type="button" className={`stats-tab-btn${reliableTab === 'reliable' ? ' active' : ''}`} onClick={() => setReliableTab('reliable')}>Uptime</button>
               <button type="button" className={`stats-tab-btn${reliableTab === 'reliability' ? ' active' : ''}`} onClick={() => setReliableTab('reliability')}>Reliability</button>
             </div>
           </div>
