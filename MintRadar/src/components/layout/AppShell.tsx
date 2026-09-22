@@ -576,6 +576,22 @@ export function AppShell() {
       <main className="app-content">
         <Outlet />
       </main>
+
+      <footer className="app-footer">
+        <div className="app-footer-inner">
+          <div className="app-footer-links">
+            <a href="https://github.com/hroomnik007/MintRadar" target="_blank" rel="noopener noreferrer">MintRadar · open source</a>
+            <a href="https://njump.me/npub1zatej55x47xzhnw06yarqr5ugz7y5el8vygcckek24e5qmrtx77qnmd6rg" target="_blank" rel="noopener noreferrer">Nostr DM for vuln reports</a>
+            <a href="https://github.com/hroomnik007/MintRadar/blob/main/docs/API.md" target="_blank" rel="noopener noreferrer">API</a>
+            <NavLink to="/learn">Learn</NavLink>
+          </div>
+          <div className="app-footer-note">
+            <span>Reliability is a health signal, not solvency.</span>
+            <span className="app-footer-dot">·</span>
+            <span>No cookies. No analytics.</span>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
