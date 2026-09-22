@@ -31,10 +31,14 @@ test.describe('MintCard — Community Rating badge', () => {
 
   test('Reliability block uses a shield icon, not a star, and no %', async ({ page }) => {
     await page.goto('/?status=all')
-    const reliability = card(page, 'Alpha Mint').locator('.card-reliability')
+    const alpha = card(page, 'Alpha Mint')
+    const reliability = alpha.locator('.card-reliability')
     await expect(reliability).toBeVisible()
-    await expect(reliability.locator('.card-reliability-label svg')).toHaveCount(1)
-    await expect(reliability.locator('.card-reliability-label')).not.toContainText('★')
+    // The RELIABILITY label sits in its own top row (above LATENCY), not
+    // nested inside `.card-reliability` — see "card-reliability-toprow" in
+    // MintCard.tsx/Dashboard.css.
+    await expect(alpha.locator('.card-reliability-label svg')).toHaveCount(1)
+    await expect(alpha.locator('.card-reliability-label')).not.toContainText('★')
     await expect(reliability.locator('.card-reliability-score')).toHaveText('92')
   })
 

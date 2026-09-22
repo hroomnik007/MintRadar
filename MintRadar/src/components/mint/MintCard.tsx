@@ -224,6 +224,14 @@ export function MintCard({
       </div>
 
       <div className="card-lower">
+        <div className="card-reliability-toprow">
+          <div className="card-reliability-badges">{reliabilityBadges}</div>
+          <div className={mint.reliabilityScore == null ? 'card-reliability-na' : 'card-reliability-label'}>
+            <IcShield /><span>{mint.reliabilityScore == null ? 'Reliability n/a' : 'Reliability'}</span>
+          </div>
+        </div>
+
+        <div className="card-lower-row">
         <div className="card-bottom-main">
           <div className="latency-block">
             <div className="latency-label">{isOfflineDegraded ? 'LAST SEEN' : 'LATENCY'}</div>
@@ -275,18 +283,13 @@ export function MintCard({
         </div>
 
         <div className="card-reliability">
-          {mint.reliabilityScore == null ? (
-            <div className="card-reliability-na">{reliabilityBadges}<IcShield /><span>Reliability n/a</span></div>
-          ) : (
-            <>
-              <div className="card-reliability-label">{reliabilityBadges}<IcShield /><span>Reliability</span></div>
-              <div
-                className="card-reliability-score"
-                style={{ color: mint.reliabilityScore >= 70 ? 'var(--green-bright)' : mint.reliabilityScore >= 40 ? 'var(--amber)' : 'var(--red)' }}
-              >
-                {mint.reliabilityScore}
-              </div>
-            </>
+          {mint.reliabilityScore != null && (
+            <div
+              className="card-reliability-score"
+              style={{ color: mint.reliabilityScore >= 70 ? 'var(--green-bright)' : mint.reliabilityScore >= 40 ? 'var(--amber)' : 'var(--red)' }}
+            >
+              {mint.reliabilityScore}
+            </div>
           )}
           {(mint.reviewCount ?? 0) > 0 && mint.reviewAvgRating != null ? (
             <span className="card-reliability-rating">
@@ -307,6 +310,7 @@ export function MintCard({
           ) : (
             <span className="card-reliability-no-reviews">No reviews yet</span>
           )}
+        </div>
         </div>
       </div>
     </div>

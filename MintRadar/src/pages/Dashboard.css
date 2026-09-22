@@ -664,11 +664,36 @@
    can never ride over the Reliability number / stars (Reliability is flex-shrink: 0). */
 .card-lower {
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.card-lower-row {
+  display: flex;
   flex-direction: row;
   align-items: stretch;
   gap: 12px;
-  margin-top: auto;
-  padding-top: 6px;
+}
+
+/* Full-width row above LATENCY/Reliability carrying the status badges
+   (Test mint / Same op) flush left and the RELIABILITY label flush right —
+   same right edge as the score below it. Empty/no-op when there are no
+   badges, so cards without any look identical to before. */
+.card-reliability-toprow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-reliability-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
 }
 
 .card-bottom-main {
@@ -696,13 +721,13 @@
 .card-reliability-na {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
   gap: 3px;
   font-size: 9px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--t2);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .card-reliability-na { color: var(--t2); }
