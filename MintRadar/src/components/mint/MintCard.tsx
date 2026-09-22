@@ -276,10 +276,10 @@ export function MintCard({
 
         <div className="card-reliability">
           {mint.reliabilityScore == null ? (
-            <div className="card-reliability-na"><IcShield /><span>Reliability n/a</span>{reliabilityBadges}</div>
+            <div className="card-reliability-na">{reliabilityBadges}<IcShield /><span>Reliability n/a</span></div>
           ) : (
             <>
-              <div className="card-reliability-label"><IcShield /><span>Reliability</span>{reliabilityBadges}</div>
+              <div className="card-reliability-label">{reliabilityBadges}<IcShield /><span>Reliability</span></div>
               <div
                 className="card-reliability-score"
                 style={{ color: mint.reliabilityScore >= 70 ? 'var(--green-bright)' : mint.reliabilityScore >= 40 ? 'var(--amber)' : 'var(--red)' }}
