@@ -36,7 +36,7 @@ async function openCompare(page: import('@playwright/test').Page, n: number) {
   await page.route('**/api/mints/version-history**', r => r.fulfill({ json: LONG_VH }))
   await page.goto('/?status=all')
   await expect(page.locator('.mint-card')).toHaveCount(4)
-  await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
+  await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
   for (const name of OTHERS.slice(0, n - 1)) {
     await page.locator('.md-picker-item', { hasText: name }).click()
   }

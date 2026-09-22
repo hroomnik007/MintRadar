@@ -11,7 +11,7 @@ test.describe('Compare — URL persistence (?compare=)', () => {
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
-    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
+    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
     await page.locator('.md-picker-item', { hasText: 'Delta Mint' }).click()
     await page.locator('.md-picker-confirm').click()
 
@@ -23,7 +23,7 @@ test.describe('Compare — URL persistence (?compare=)', () => {
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
-    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
+    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
     await page.locator('.md-picker-item', { hasText: 'Delta Mint' }).click()
     await page.locator('.md-picker-confirm').click()
     await expect(page.getByText('Mint Comparison')).toBeVisible()
@@ -87,7 +87,7 @@ test.describe('Compare — URL persistence (?compare=)', () => {
     await expect(page).toHaveURL(/\/watchlist$/)
     await expect(page.locator('.wl-grid .card-name', { hasText: 'Alpha Mint' })).toBeVisible()
 
-    await page.locator('.wl-grid .mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
+    await page.locator('.wl-grid .mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
     await page.locator('.md-picker-item', { hasText: 'Delta Mint' }).click()
     await page.locator('.md-picker-confirm').click()
 

@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
 
 test.describe('Compare (Mint Diff Tool)', () => {
   test('opens the comparison modal with historical trends and version history', async ({ page }) => {
-    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
+    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
 
     await expect(page.getByText('Compare with...')).toBeVisible()
     await page.locator('.md-picker-item', { hasText: 'Delta Mint' }).click()
@@ -34,7 +34,7 @@ test.describe('Compare (Mint Diff Tool)', () => {
   })
 
   test('shows Reliability Score and Community Rating rows, with a fallback for mints without reviews', async ({ page }) => {
-    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
+    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
     await page.locator('.md-picker-item', { hasText: 'Bravo Mint' }).click()
     await page.locator('.md-picker-confirm').click()
 
@@ -68,7 +68,7 @@ test.describe('Compare (Mint Diff Tool)', () => {
         prevPeriodInsufficientHistory: false,
       },
     }))
-    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
+    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
     await page.locator('.md-picker-item', { hasText: 'Delta Mint' }).click()
     await page.locator('.md-picker-confirm').click()
 

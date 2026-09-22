@@ -13,7 +13,7 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
-    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
+    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
 
     const modal = page.locator('.md-picker-modal')
     await expect(modal).toBeVisible()
@@ -69,7 +69,7 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
-    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
+    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
 
     const modal = page.locator('.md-picker-modal')
     await expect(modal).toBeVisible()
@@ -96,7 +96,7 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
     await mockRelays(page)
     await installApiMocks(page)
     await page.goto(`/mint/${encodeURIComponent('https://alpha.mint.example')}`)
-    await page.locator('button', { hasText: 'Compare' }).click()
+    await page.locator('button.md-compare-btn').click()
 
     const modal = page.locator('.md-picker-modal')
     await expect(modal).toBeVisible()
@@ -114,7 +114,7 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
     await mockRelays(page)
     await installApiMocks(page)
     await page.goto(`/mint/${encodeURIComponent('https://alpha.mint.example')}`)
-    await page.locator('button', { hasText: 'Compare' }).click()
+    await page.locator('button.md-compare-btn').click()
     await expect(page.locator('.md-picker-modal')).toBeVisible()
     await expect(page.locator('.md-picker-item', { hasText: 'Charlie Mint' })).toHaveCount(0)
     await expect(page.locator('.md-picker-item', { hasText: 'Delta Mint' })).toHaveCount(1)
@@ -124,7 +124,7 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
     await mockRelays(page)
     await installApiMocks(page)
     await page.goto(`/mint/${encodeURIComponent('https://alpha.mint.example')}`)
-    await page.locator('button', { hasText: 'Compare' }).click()
+    await page.locator('button.md-compare-btn').click()
     await expect(page.locator('.md-picker-modal')).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(page.locator('.md-picker-modal')).toHaveCount(0)
@@ -135,7 +135,7 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
     await installApiMocks(page)
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
-    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
+    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
     await expect(page.locator('.md-picker-modal')).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(page.locator('.md-picker-modal')).toHaveCount(0)

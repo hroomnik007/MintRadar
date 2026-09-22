@@ -30,7 +30,7 @@ async function openCompareFor(page: import('@playwright/test').Page, names: stri
   await page.goto('/?status=all')
   await expect(page.locator('.mint-card')).toHaveCount(4)
   const [first, ...rest] = names
-  await page.locator('.mint-card', { hasText: first! }).locator('button', { hasText: 'Compare' }).click()
+  await page.locator('.mint-card', { hasText: first! }).locator('button.card-compare-btn').click()
   for (const name of rest) {
     await page.locator('.md-picker-item', { hasText: name }).click()
   }

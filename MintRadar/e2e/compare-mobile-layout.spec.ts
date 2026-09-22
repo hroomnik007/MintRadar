@@ -29,7 +29,7 @@ async function addExtraOnlineMint(page: Page) {
 }
 
 async function openCompare(page: Page, otherMintNames: string[]) {
-  await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button', { hasText: 'Compare' }).click()
+  await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
   await expect(page.getByText('Compare with...')).toBeVisible()
   for (const name of otherMintNames) {
     await page.locator('.md-picker-item', { hasText: name }).click()

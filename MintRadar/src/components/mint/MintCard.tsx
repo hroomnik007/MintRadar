@@ -244,9 +244,11 @@ export function MintCard({
               <button
                 type="button"
                 className="card-compare-btn"
+                aria-label="Compare"
+                title="Compare"
                 onClick={e => { e.stopPropagation(); onCompare(mint.url) }}
               >
-                ⇄ Compare
+                ⇄
               </button>
             )}
             {showNotifyToggles && notifyEntry && (
