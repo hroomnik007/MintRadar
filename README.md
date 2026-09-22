@@ -178,7 +178,7 @@ git clone https://github.com/hroomnik007/MintRadar.git
 cd MintRadar/MintRadar
 ```
 
-The frontend and backend source live in the `MintRadar/` subdirectory.
+The frontend and backend source live in the `MintRadar/` subdirectory. The working directory for app code, Docker, and CI is `MintRadar/MintRadar`. The repository root only holds README, LICENSE, and SECURITY.md.
 
 ### 2. Configure the backend
 
