@@ -979,7 +979,7 @@
   color: var(--t3);
   padding: 12px;
   margin: 8px auto 20px;
-  max-width: var(--dash-chrome-max);
+  max-width: calc(var(--dash-chrome-max) - var(--page-pad) * 2);
   width: calc(100% - var(--page-pad) * 2);
   background: var(--surface);
   border: 1px solid var(--brd);
