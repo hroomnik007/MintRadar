@@ -14,19 +14,24 @@ export function MintComparePicker({
   maxSelect = 3,
   onClose,
   onConfirm,
+  duplicateDisplayNames,
 }: {
   candidates: KnownMint[]
   baseLabel: string
   maxSelect?: number
   onClose: () => void
   onConfirm: (selectedUrls: string[]) => void
+  // From computeDuplicateMintNames() over the full known-mints list (not just
+  // `candidates`, which is already filtered to online mints) — see MintCard's
+  // own duplicateDisplayNames prop for why this matters.
+  duplicateDisplayNames?: ReadonlySet<string> | undefined
 }) {
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const q = search.toLowerCase()
   const filtered = candidates.filter(m =>
-    q === '' || mintDisplayName(m).toLowerCase().includes(q) || m.url.toLowerCase().includes(q)
+    q === '' || mintDisplayName(m, duplicateDisplayNames).toLowerCase().includes(q) || m.url.toLowerCase().includes(q)
   )
 
   return (
@@ -71,7 +76,7 @@ export function MintComparePicker({
                 </div>
                 <span style={{ width: 7, height: 7, borderRadius: '50%', background: m.online === true ? 'var(--accent)' : '#ff4d4d', display: 'inline-block', flexShrink: 0 }} />
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mintDisplayName(m)}</div>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mintDisplayName(m, duplicateDisplayNames)}</div>
                   <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getHostname(m.url)}</div>
                 </div>
               </div>

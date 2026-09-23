@@ -8,7 +8,7 @@ import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcShield } from '@/components/mint/IcShield'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
-import { reliabilityColor, reliabilityScoreInfo, reliabilityDonutArc, displayName } from '@/utils/mintFormatting'
+import { reliabilityColor, reliabilityScoreInfo, reliabilityDonutArc, displayName, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
 import { compareMintVersionNumbers, isEligibleForRecommendation } from '@/utils/reliabilityScore'
 import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
@@ -108,12 +108,13 @@ interface SoftwareVersionEntry {
 // age badge, "Show all", "X online · Y offline", "Sorted by Reliability Score").
 // Kept as its own component so the call site can `key` it by version, which
 // resets `showAll` when the user backs out and drills into a different one.
-function VersionMintsView({ sw, ver, mints, onBack, onClose }: {
+function VersionMintsView({ sw, ver, mints, onBack, onClose, duplicateDisplayNames }: {
   sw: string
   ver: string
   mints: KnownMint[]
   onBack: () => void
   onClose: () => void
+  duplicateDisplayNames?: ReadonlySet<string> | undefined
 }) {
   const navigate = useNavigate()
   const [showAll, setShowAll] = useState(false)
@@ -149,7 +150,7 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose }: {
               >
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? '#17E87F' : '#E24B4A', display: 'inline-block', flexShrink: 0 }} />
                 <div className="nut-modal-row-info" style={{ flex: 1 }}>
-                  <span className="nut-modal-row-name mint-link">{displayName(m)}</span>
+                  <span className="nut-modal-row-name mint-link">{displayName(m, duplicateDisplayNames)}</span>
                 </div>
                 <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
                   {score != null ? `${score}%` : '—'}
@@ -229,13 +230,14 @@ function SoftwareVersionsView({ sw, versions, total, accentColor, onSelectVersio
 // and one close button. Close (✕ / overlay click / Escape) always tears down
 // the whole modal regardless of the level; only the mint-list level's "‹"
 // steps back up, and it never closes the modal.
-function SoftwareModal({ sw, versions, total, accentColor, allMints, onClose }: {
+function SoftwareModal({ sw, versions, total, accentColor, allMints, onClose, duplicateDisplayNames }: {
   sw: string
   versions: SoftwareVersionEntry[]
   total: number
   accentColor: string
   allMints: KnownMint[]
   onClose: () => void
+  duplicateDisplayNames?: ReadonlySet<string> | undefined
 }) {
   const [drilled, setDrilled] = useState<SoftwareVersionEntry | null>(null)
 
@@ -262,6 +264,7 @@ function SoftwareModal({ sw, versions, total, accentColor, allMints, onClose }: 
             mints={drilledMints}
             onBack={() => setDrilled(null)}
             onClose={onClose}
+            duplicateDisplayNames={duplicateDisplayNames}
           />
         ) : (
           <SoftwareVersionsView
@@ -277,10 +280,11 @@ function SoftwareModal({ sw, versions, total, accentColor, allMints, onClose }: 
   )
 }
 
-function CityMintsModal({ loc, mints, onClose }: {
+function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
   loc: string
   mints: KnownMint[]
   onClose: () => void
+  duplicateDisplayNames?: ReadonlySet<string> | undefined
 }) {
   const navigate = useNavigate()
   const [showAll, setShowAll] = useState(false)
@@ -326,7 +330,7 @@ function CityMintsModal({ loc, mints, onClose }: {
                   style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? 'var(--green-bright)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }}
                 />
                 <div className="nut-modal-row-info" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <span className="nut-modal-row-name mint-link">{displayName(m)}</span>
+                  <span className="nut-modal-row-name mint-link">{displayName(m, duplicateDisplayNames)}</span>
                 </div>
                 <span style={{ fontSize: 12, fontFamily: 'var(--font-mono-data)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
                   {score != null ? `${score}%` : '—'}
@@ -358,10 +362,11 @@ function CityMintsModal({ loc, mints, onClose }: {
 // panel. Same overlay/row/footer vocabulary as SoftwareModal / CityMintsModal;
 // a plain mint list (displayName link + Reliability %), no age badges, no
 // "Show on Dashboard" — the row is the only action and it goes to Mint Detail.
-function NutMintsModal({ nut, mints, onClose }: {
+function NutMintsModal({ nut, mints, onClose, duplicateDisplayNames }: {
   nut: string
   mints: KnownMint[]
   onClose: () => void
+  duplicateDisplayNames?: ReadonlySet<string> | undefined
 }) {
   const navigate = useNavigate()
   const [showAll, setShowAll] = useState(false)
@@ -404,7 +409,7 @@ function NutMintsModal({ nut, mints, onClose }: {
               >
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? 'var(--green-bright)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
                 <div className="nut-modal-row-info" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <span className="nut-modal-row-name mint-link">{displayName(m)}</span>
+                  <span className="nut-modal-row-name mint-link">{displayName(m, duplicateDisplayNames)}</span>
                 </div>
                 <span style={{ fontSize: 12, fontFamily: 'var(--font-mono-data)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
                   {score != null ? `${score}%` : '—'}
@@ -636,6 +641,11 @@ export default function Stats() {
   })
 
   const { data: knownMintsData } = useKnownMints()
+
+  // Computed once over the full known-mints list — see Dashboard.tsx's own
+  // duplicateDisplayNames for the full rationale (parent-domain suffix guard
+  // should only collapse a title when a real sibling-name collision exists).
+  const duplicateDisplayNames = useMemo(() => computeDuplicateMintNames(knownMintsData ?? []), [knownMintsData])
 
   const avgUptime24h = useMemo(() => {
     if (!knownMintsData || knownMintsData.length === 0) return null
@@ -1085,7 +1095,7 @@ export default function Stats() {
                     <span className="stats-top5-rank">#{idx+1}</span>
                     <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName(mint)}</div>
+                      <div style={{fontSize:13,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName(mint, duplicateDisplayNames)}</div>
                       {cityInfo && (
                         <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{cityInfo.flag ? `${cityInfo.flag} ${cityInfo.display}` : cityInfo.display}</div>
                       )}
@@ -1107,7 +1117,7 @@ export default function Stats() {
                     <span className="stats-top5-rank">#{idx+1}</span>
                     <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName(mint)}</div>
+                      <div style={{fontSize:13,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName(mint, duplicateDisplayNames)}</div>
                       {cityInfo && (
                         <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{cityInfo.flag ? `${cityInfo.flag} ${cityInfo.display}` : cityInfo.display}</div>
                       )}
@@ -1308,7 +1318,7 @@ export default function Stats() {
           loading={moversLoading}
           refreshing={moversRefreshing}
           onMintClick={url => navigate(`/mint/${encodeURIComponent(url)}`)}
-          getDisplayName={m => displayName(m)}
+          getDisplayName={m => displayName(m, duplicateDisplayNames)}
           getIconUrl={m => knownMintsData?.find(km => km.url === m.url)?.iconUrl ?? null}
         />
 
@@ -1370,6 +1380,7 @@ export default function Stats() {
           loc={cityModal}
           mints={cityMints}
           onClose={() => setCityModal(null)}
+          duplicateDisplayNames={duplicateDisplayNames}
         />
       )}
       {nutModal !== null && (
@@ -1377,6 +1388,7 @@ export default function Stats() {
           nut={nutModal}
           mints={nutModalMints}
           onClose={() => setNutModal(null)}
+          duplicateDisplayNames={duplicateDisplayNames}
         />
       )}
       {showMoreLocations && (
@@ -1397,6 +1409,7 @@ export default function Stats() {
             accentColor={entry.accentColor}
             allMints={knownMintsData ?? []}
             onClose={() => setSoftwareModal(null)}
+            duplicateDisplayNames={duplicateDisplayNames}
           />
         )
       })()}

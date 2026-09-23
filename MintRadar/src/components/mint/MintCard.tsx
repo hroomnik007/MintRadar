@@ -42,6 +42,7 @@ export function MintCard({
   onCompare,
   showNotifyToggles,
   sameOperatorUrls,
+  duplicateDisplayNames,
 }: {
   mint: KnownMint
   onCompare?: (url: string) => void
@@ -50,6 +51,13 @@ export function MintCard({
   // groupMintsByPubkey() in mintFormatting.ts. Renders a "Same operator" badge
   // in the pill row; cards are never merged, only labeled.
   sameOperatorUrls?: string[]
+  // From computeDuplicateMintNames() over the full known-mints list — lets
+  // displayName()/shouldShowHostLine() tell a genuine sibling name collision
+  // (e.g. two "aleafnd.org" mints) apart from a mint whose own name simply
+  // happens to be a domain-suffix of its hostname with no real collision
+  // (e.g. name="cashu.chat", url="https://mint.cashu.chat"). Omitted →
+  // callers without the full list (rare) get the safe default: no fallback.
+  duplicateDisplayNames?: ReadonlySet<string> | undefined
 }) {
   const navigate = useNavigate()
   const { onMintPointerEnter, onMintPointerLeave } = useMintHoverPrefetch()
@@ -111,8 +119,8 @@ export function MintCard({
   }
   const isOnline = mint.online === true
   const isOfflineDegraded = mint.degraded === true
-  const displayName = mintDisplayName(mint)
-  const showHost = shouldShowHostLine(mint)
+  const displayName = mintDisplayName(mint, duplicateDisplayNames)
+  const showHost = shouldShowHostLine(mint, duplicateDisplayNames)
   const uptimePct24h = mint.uptimePct24h ?? null
   const isNew = isNewMint(mint.discoveredAt ?? null)
   const lightningLabel = cardLightningLabel(mint)

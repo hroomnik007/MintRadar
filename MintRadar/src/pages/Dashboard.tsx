@@ -15,7 +15,7 @@ import type { MintStatus } from '@core/mint/api'
 import { MintCard } from '@/components/mint/MintCard'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
-import { latencyColor, reliabilityColor, uptimeColor, displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls } from '@/utils/mintFormatting'
+import { latencyColor, reliabilityColor, uptimeColor, displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import { listReliabilityScore, compareReliabilityThenRating } from '@/utils/reliabilitySort'
 import { isTestMint } from '@/constants/testMints'
@@ -271,12 +271,14 @@ function MintListView({
   sortBy,
   sortDir,
   totalAll,
+  duplicateDisplayNames = EMPTY_DUPLICATE_NAMES,
 }: {
   mints: KnownMint[]
   search: string
   sortBy: 'name' | 'latency' | 'rating' | 'reliability' | 'reviewCount'
   sortDir: 'asc' | 'desc'
   totalAll?: number
+  duplicateDisplayNames?: ReadonlySet<string> | undefined
 }) {
   const navigate = useNavigate()
   const { onMintPointerEnter, onMintPointerLeave } = useMintHoverPrefetch()
@@ -308,11 +310,11 @@ function MintListView({
         const cb = b.reviewCount && b.reviewCount > 0 ? b.reviewCount : -1
         result = cb - ca
       } else {
-        result = mintDisplayName(a).localeCompare(mintDisplayName(b))
+        result = mintDisplayName(a, duplicateDisplayNames).localeCompare(mintDisplayName(b, duplicateDisplayNames))
       }
       return sortDir === DEFAULT_SORT_DIRS[sortBy] ? result : -result
     })
-  }, [mints, search, sortBy, sortDir])
+  }, [mints, search, sortBy, sortDir, duplicateDisplayNames])
 
   return (
     <>
@@ -331,7 +333,7 @@ function MintListView({
           <tbody>
             {sortedFiltered.map(mint => {
               const isOnline = mint.online === true
-              const displayName = mintDisplayName(mint)
+              const displayName = mintDisplayName(mint, duplicateDisplayNames)
               const score = mint.reliabilityScore ?? null
               return (
                 <tr key={mint.url} className="mint-list-row" onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} onPointerEnter={() => onMintPointerEnter(mint.url)} onPointerLeave={onMintPointerLeave}>
@@ -373,6 +375,7 @@ function MintListView({
 }
 
 const EMPTY_PUBKEY_GROUPS: Map<string, string[]> = new Map()
+const EMPTY_DUPLICATE_NAMES: ReadonlySet<string> = new Set()
 
 function MintGrid({
   mints,
@@ -382,6 +385,7 @@ function MintGrid({
   onCompare,
   totalAll,
   pubkeyGroups = EMPTY_PUBKEY_GROUPS,
+  duplicateDisplayNames = EMPTY_DUPLICATE_NAMES,
 }: {
   mints: KnownMint[]
   search: string
@@ -390,6 +394,7 @@ function MintGrid({
   onCompare?: (url: string) => void
   totalAll?: number
   pubkeyGroups?: Map<string, string[]>
+  duplicateDisplayNames?: ReadonlySet<string> | undefined
 }) {
   const sortedFiltered = useMemo(() => {
     const q = search.toLowerCase()
@@ -420,11 +425,11 @@ function MintGrid({
         const cb = b.reviewCount && b.reviewCount > 0 ? b.reviewCount : -1
         result = cb - ca
       } else {
-        result = mintDisplayName(a).localeCompare(mintDisplayName(b))
+        result = mintDisplayName(a, duplicateDisplayNames).localeCompare(mintDisplayName(b, duplicateDisplayNames))
       }
       return sortDir === DEFAULT_SORT_DIRS[sortBy] ? result : -result
     })
-  }, [mints, search, sortBy, sortDir])
+  }, [mints, search, sortBy, sortDir, duplicateDisplayNames])
 
   return (
     <>
@@ -435,6 +440,7 @@ function MintGrid({
             mint={mint}
             {...(onCompare ? { onCompare } : {})}
             sameOperatorUrls={sameOperatorUrls(mint, pubkeyGroups)}
+            duplicateDisplayNames={duplicateDisplayNames}
           />
         ))}
       </div>
@@ -580,6 +586,13 @@ export default function Dashboard() {
   // set) so a "Same operator" badge still reflects the full network, not just
   // whichever mints happen to be visible after the active filters.
   const pubkeyGroups = useMemo(() => groupMintsByPubkey(knownMintsData ?? []), [knownMintsData])
+
+  // Same reasoning as pubkeyGroups above — computed over the full known-mints
+  // list so displayName()'s parent-domain suffix guard only fires for a real
+  // sibling-name collision (e.g. two "aleafnd.org" mints), not for a mint
+  // whose own name merely happens to be a domain suffix of its own hostname
+  // with no actual collision (e.g. name="cashu.chat").
+  const duplicateDisplayNames = useMemo(() => computeDuplicateMintNames(knownMintsData ?? []), [knownMintsData])
 
   const { read: userReadRelays } = useUserRelays()
   useWatchlistNotifications(statusRecord, reliabilityScoreRecord, userReadRelays)
@@ -1099,6 +1112,7 @@ export default function Dashboard() {
               sortBy={sortBy}
               sortDir={sortDir}
               totalAll={knownTotal}
+              duplicateDisplayNames={duplicateDisplayNames}
             />
           ) : (
             <MintGrid
@@ -1109,6 +1123,7 @@ export default function Dashboard() {
               onCompare={openComparePicker}
               totalAll={knownTotal}
               pubkeyGroups={pubkeyGroups}
+              duplicateDisplayNames={duplicateDisplayNames}
             />
           )}
           {degradedCount > 0 && activeFilters.status !== 'offline' && (
@@ -1130,7 +1145,8 @@ export default function Dashboard() {
         return (
           <MintComparePicker
             candidates={candidates}
-            baseLabel={baseMint ? mintDisplayName(baseMint) : compareBaseUrl}
+            baseLabel={baseMint ? mintDisplayName(baseMint, duplicateDisplayNames) : compareBaseUrl}
+            duplicateDisplayNames={duplicateDisplayNames}
             onClose={() => setShowComparePicker(false)}
             onConfirm={urls => {
               commitFilters({ compareUrls: [compareBaseUrl, ...urls] })

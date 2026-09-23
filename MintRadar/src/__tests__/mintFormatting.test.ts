@@ -13,6 +13,7 @@ import {
   mintRiskLevel,
   displayName,
   shouldShowHostLine,
+  computeDuplicateMintNames,
   mintFaviconInitials,
   isNewMint,
   firstSeenLabel,
@@ -156,19 +157,31 @@ describe('displayName', () => {
     expect(displayName({ name: '', url: 'not-a-url' })).toBe('not-a-url')
   })
 
-  it('falls back to the full hostname when the name is a parent-domain suffix of the host', () => {
+  it('falls back to the full hostname when the name is a parent-domain suffix of the host AND a real sibling collision exists', () => {
     // Two sibling mints whose /v1/info name is the shared parent domain must
-    // not both title as "aleafnd.org".
-    expect(displayName({ name: 'aleafnd.org', url: 'https://bitcoin.aleafnd.org/cashu' }))
+    // not both title as "aleafnd.org". The guard only fires when told (via
+    // duplicateNames) that a real sibling shares that name — see
+    // computeDuplicateMintNames() below.
+    const duplicateNames = new Set(['aleafnd.org'])
+    expect(displayName({ name: 'aleafnd.org', url: 'https://bitcoin.aleafnd.org/cashu' }, duplicateNames))
       .toBe('bitcoin.aleafnd.org')
-    expect(displayName({ name: 'aleafnd.org', url: 'https://btc.aleafnd.org/cashu' }))
+    expect(displayName({ name: 'aleafnd.org', url: 'https://btc.aleafnd.org/cashu' }, duplicateNames))
       .toBe('btc.aleafnd.org')
   })
 
-  it('two hosts sharing a parent label get distinct titles', () => {
-    const a = displayName({ name: 'aleafnd.org', url: 'https://bitcoin.aleafnd.org/cashu' })
-    const b = displayName({ name: 'aleafnd.org', url: 'https://btc.aleafnd.org/cashu' })
+  it('two hosts sharing a parent label get distinct titles (with duplicateNames provided)', () => {
+    const duplicateNames = new Set(['aleafnd.org'])
+    const a = displayName({ name: 'aleafnd.org', url: 'https://bitcoin.aleafnd.org/cashu' }, duplicateNames)
+    const b = displayName({ name: 'aleafnd.org', url: 'https://btc.aleafnd.org/cashu' }, duplicateNames)
     expect(a).not.toBe(b)
+  })
+
+  it('keeps the real name (no fallback) when the name is a parent-domain suffix but NO sibling collision exists', () => {
+    // Regression case: name="cashu.chat" for host="mint.cashu.chat" is the
+    // ONLY cashu.chat mint tracked — there's no other mint to collide with,
+    // so unlike the aleafnd.org case above, the real name should be kept.
+    expect(displayName({ name: 'cashu.chat', url: 'https://mint.cashu.chat' })).toBe('cashu.chat')
+    expect(displayName({ name: 'cashu.chat', url: 'https://mint.cashu.chat' }, new Set())).toBe('cashu.chat')
   })
 
   it('keeps a name that merely shares a substring (not a label boundary) with the host', () => {
@@ -197,14 +210,69 @@ describe('shouldShowHostLine', () => {
     expect(displayName({ name: 'cashu.cz', url: 'https://cashu.cz' })).toBe('cashu.cz')
   })
 
-  it('hides the host line for the parent-domain suffix-collision case (unchanged)', () => {
-    expect(shouldShowHostLine({ name: 'aleafnd.org', url: 'https://bitcoin.aleafnd.org/cashu' })).toBe(false)
-    expect(shouldShowHostLine({ name: 'aleafnd.org', url: 'https://btc.aleafnd.org/cashu' })).toBe(false)
+  it('hides the host line for a genuine parent-domain sibling collision (duplicateNames provided)', () => {
+    const duplicateNames = new Set(['aleafnd.org'])
+    expect(shouldShowHostLine({ name: 'aleafnd.org', url: 'https://bitcoin.aleafnd.org/cashu' }, duplicateNames)).toBe(false)
+    expect(shouldShowHostLine({ name: 'aleafnd.org', url: 'https://btc.aleafnd.org/cashu' }, duplicateNames)).toBe(false)
+  })
+
+  it('shows the host line for a parent-domain suffix name with NO sibling collision (cashu.chat case)', () => {
+    // The real follow-up bug report: mint.cashu.chat is the only cashu.chat
+    // mint tracked, so the suffix guard must not hide its host line.
+    expect(shouldShowHostLine({ name: 'cashu.chat', url: 'https://mint.cashu.chat' })).toBe(true)
   })
 
   it('hides the host line for an empty/denylisted name (falls back to hostname)', () => {
     expect(shouldShowHostLine({ name: '', url: host })).toBe(false)
     expect(shouldShowHostLine({ name: 'cashu', url: host })).toBe(false)
+  })
+})
+
+// ── computeDuplicateMintNames ───────────────────────────────────
+describe('computeDuplicateMintNames', () => {
+  it('flags a name that appears on 2+ mints', () => {
+    const dup = computeDuplicateMintNames([
+      { name: 'aleafnd.org' },
+      { name: 'aleafnd.org' },
+      { name: 'Minibits' },
+    ])
+    expect(dup.has('aleafnd.org')).toBe(true)
+    expect(dup.has('minibits')).toBe(false)
+  })
+
+  it('does not flag a name that appears only once (the cashu.chat case)', () => {
+    const dup = computeDuplicateMintNames([
+      { name: 'cashu.chat' },
+      { name: 'Minibits' },
+    ])
+    expect(dup.has('cashu.chat')).toBe(false)
+  })
+
+  it('is case-insensitive and applies the same quote-strip/trim cleanup as displayName', () => {
+    const dup = computeDuplicateMintNames([
+      { name: '  "Aleafnd.org"  ' },
+      { name: 'aleafnd.org' },
+    ])
+    expect(dup.has('aleafnd.org')).toBe(true)
+  })
+
+  it('ignores empty/missing names', () => {
+    const dup = computeDuplicateMintNames([{ name: '' }, { name: null }, { name: undefined }])
+    expect(dup.size).toBe(0)
+  })
+
+  it('feeds directly into displayName()/shouldShowHostLine() end to end', () => {
+    const mints = [
+      { name: 'aleafnd.org', url: 'https://bitcoin.aleafnd.org/cashu' },
+      { name: 'aleafnd.org', url: 'https://btc.aleafnd.org/cashu' },
+      { name: 'cashu.chat', url: 'https://mint.cashu.chat' },
+    ]
+    const dup = computeDuplicateMintNames(mints)
+    expect(displayName(mints[0]!, dup)).toBe('bitcoin.aleafnd.org')
+    expect(displayName(mints[1]!, dup)).toBe('btc.aleafnd.org')
+    expect(shouldShowHostLine(mints[0]!, dup)).toBe(false)
+    expect(displayName(mints[2]!, dup)).toBe('cashu.chat')
+    expect(shouldShowHostLine(mints[2]!, dup)).toBe(true)
   })
 })
 

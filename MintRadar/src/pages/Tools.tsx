@@ -6,7 +6,7 @@ import { IcShield } from '@/components/mint/IcShield'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { useNow } from '@/hooks/useNow'
 import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, InvalidMintUrlError, type TokenInfo, type TokenSpentCheck } from '@/utils/cashuToken'
-import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, mintRiskLevel, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel } from '@/utils/mintFormatting'
+import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, mintRiskLevel, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { Zap } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
 import { isEligibleForRecommendation } from '@/utils/reliabilityScore'
@@ -461,6 +461,9 @@ function weightsFor(preference: Preference, size: SizeOption): { latency: number
 
 function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
   const navigate = useNavigate()
+  // Computed over the full known-mints list — see Dashboard.tsx's own
+  // duplicateDisplayNames for the rationale.
+  const duplicateDisplayNames = useMemo(() => computeDuplicateMintNames(knownMints), [knownMints])
   const [step, setStep] = useState(1)
   const [unit, setUnit] = useState<string | null>(null)
   const [size, setSize] = useState<SizeOption | null>(null)
@@ -677,7 +680,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
                   <span className="wizard-rank">#{idx + 1}</span>
                   <MintFavicon url={rec.url} iconUrl={rec.mint.iconUrl ?? null} size={28} radius={6} />
                   <div className="wizard-rec-info">
-                    <div className="wizard-rec-name">{mintDisplayName(rec.mint)}</div>
+                    <div className="wizard-rec-name">{mintDisplayName(rec.mint, duplicateDisplayNames)}</div>
                     <div className="wizard-rec-meta">
                       {rec.latencyMs != null && <span>{rec.latencyMs}ms latency</span>}
                       {rec.mint.uptimePct24h != null && <span> · {rec.mint.uptimePct24h}% uptime</span>}

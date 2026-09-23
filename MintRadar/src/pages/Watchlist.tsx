@@ -12,7 +12,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { MintCard } from '@/components/mint/MintCard'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
-import { displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import './Watchlist.css'
 
@@ -209,6 +209,7 @@ export default function Watchlist() {
   const { data: knownMintsData, isLoading: knownLoading } = useKnownMints()
   const knownMintsMap = useMemo(() => new Map(knownMintsData?.map(m => [m.url, m]) ?? []), [knownMintsData])
   const pubkeyGroups = useMemo(() => groupMintsByPubkey(knownMintsData ?? []), [knownMintsData])
+  const duplicateDisplayNames = useMemo(() => computeDuplicateMintNames(knownMintsData ?? []), [knownMintsData])
 
   // Compare feature — same ?compare=url1,url2[,url3,url4] URL persistence as
   // Dashboard.tsx (see "Compare feature" in CLAUDE.md); compareBaseUrl/
@@ -344,6 +345,7 @@ export default function Watchlist() {
                     showNotifyToggles
                     onCompare={openComparePicker}
                     sameOperatorUrls={sameOperatorUrls(mint, pubkeyGroups)}
+                    duplicateDisplayNames={duplicateDisplayNames}
                   />
                   )
                 })}
@@ -366,7 +368,8 @@ export default function Watchlist() {
           return (
             <MintComparePicker
               candidates={candidates}
-              baseLabel={baseMint ? mintDisplayName(baseMint) : compareBaseUrl}
+              baseLabel={baseMint ? mintDisplayName(baseMint, duplicateDisplayNames) : compareBaseUrl}
+              duplicateDisplayNames={duplicateDisplayNames}
               onClose={() => setShowComparePicker(false)}
               onConfirm={urls => {
                 setSearchParams(prev => {

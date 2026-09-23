@@ -21,7 +21,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { ComparisonModal } from '@/components/ComparisonModal'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { InfoTooltip } from '@/components/InfoTooltip'
-import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
 import { clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
@@ -342,7 +342,11 @@ function MintDetailContent({ url }: { url: string }) {
   const knownMint = knownMintsData?.find(m => m.url === url) ?? null
   const operatorNip05 = useMintOperatorNip05(knownMint?.nostrAnnouncePubkey ?? null)
 
-  const metaDisplayName = mintDisplayName({ name: data?.info?.name ?? knownMint?.name, url })
+  // Computed over the full known-mints list — see Dashboard.tsx's own
+  // duplicateDisplayNames for the rationale.
+  const duplicateDisplayNames = useMemo(() => computeDuplicateMintNames(knownMintsData ?? []), [knownMintsData])
+
+  const metaDisplayName = mintDisplayName({ name: data?.info?.name ?? knownMint?.name, url }, duplicateDisplayNames)
   useDocumentMeta(
     `${metaDisplayName} - Cashu Mint Reliability Score & Uptime | MintRadar`,
     knownMint
@@ -758,7 +762,7 @@ function MintDetailContent({ url }: { url: string }) {
 
   const probeLoading = isLoading || data === undefined
 
-  const displayName = mintDisplayName({ name: data?.info?.name ?? knownMint?.name, url })
+  const displayName = mintDisplayName({ name: data?.info?.name ?? knownMint?.name, url }, duplicateDisplayNames)
   const isOnline = data?.online ?? knownMint?.online ?? false
   const latency = knownMint?.latencyMs ?? null
   const version = data?.info?.version ?? knownMint?.version ?? undefined
@@ -2692,7 +2696,8 @@ function MintDetailContent({ url }: { url: string }) {
         return (
           <MintComparePicker
             candidates={candidates}
-            baseLabel={baseMint ? mintDisplayName(baseMint) : displayName}
+            baseLabel={baseMint ? mintDisplayName(baseMint, duplicateDisplayNames) : displayName}
+            duplicateDisplayNames={duplicateDisplayNames}
             onClose={() => setShowComparePicker(false)}
             onConfirm={urls => {
               setCompareSelectedUrls(new Set(urls))
