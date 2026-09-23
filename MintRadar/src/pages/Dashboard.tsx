@@ -111,10 +111,11 @@ function formatTimeAgo(date: Date | null): string {
 }
 
 
+// `relay.nostr.band` removed 2026-09-23 — confirmed dead (WS connect timeout), same finding
+// as the 2026-09-19 relay audit that already dropped it from DISCOVERY_RELAYS etc.
 const NOSTR_LOOKUP_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
-  'wss://relay.nostr.band',
   'wss://relay.primal.net',
   'wss://relay.snort.social',
   'wss://offchain.pub',

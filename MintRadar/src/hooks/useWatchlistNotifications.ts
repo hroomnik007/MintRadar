@@ -14,6 +14,11 @@ import { nip44, generateSecretKey, finalizeEvent, getEventHash } from 'nostr-too
 // matching the earlier 2026-08-15 finding. No replacement needed:
 // `resolveNotificationRelays` already caps at 10, and `nostr-pub.wellorder.net`
 // (also re-verified live in that same audit) is already in this list.
+// `pyramid.fiatjaf.com` (restricted_writes: true) and `nostr.lopp.social` (0 events on
+// live probe) removed 2026-09-23 — same measured reasons that already excluded them from
+// REVIEW_PUBLISH_RELAYS; a DM's whole point is delivery, so a relay that connects but never
+// actually carries anything is dead weight here too. Mirror this change in the backend copy
+// (backend/src/nostrService.ts's own NOTIFICATION_RELAYS).
 export const NOTIFICATION_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
@@ -27,8 +32,6 @@ export const NOTIFICATION_RELAYS = [
   'wss://nostr.oxtr.dev',
   'wss://relay.mostr.pub',
   'wss://relay.noswhere.com',
-  'wss://pyramid.fiatjaf.com',
-  'wss://nostr.lopp.social',
   'wss://nostr.cypherpunk.today',
 ]
 

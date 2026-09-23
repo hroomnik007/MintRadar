@@ -3,16 +3,14 @@ import { verifyEvent } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
 import { isTestMint } from '@/constants/testMints'
+import { REVIEW_RELAYS } from '@/core/nostr/relays'
 
-export const FOLLOW_RELAYS = [
-  'wss://relay.damus.io',
-  'wss://nos.lol',
-  'wss://relay.nostr.band',
-  'wss://relay.primal.net',
-  'wss://relay.snort.social',
-  'wss://nostr.bitcoiner.social',
-  'wss://nostr.cypherpunk.today',
-]
+// Was its own hand-copied 7-relay list (still carrying wss://relay.nostr.band, confirmed
+// dead by the 2026-09-19 relay audit — see relays.ts). Switched 2026-09-23 to reuse
+// REVIEW_RELAYS (DISCOVERY_RELAYS + relay.minibits.cash) since this hook queries the exact
+// same kind:38000 review events that list was tuned for, instead of drifting out of sync
+// with it.
+export const FOLLOW_RELAYS = REVIEW_RELAYS
 
 export interface FollowRec {
   url: string

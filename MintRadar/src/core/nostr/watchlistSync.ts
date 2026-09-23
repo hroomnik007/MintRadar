@@ -3,6 +3,11 @@ import { verifyEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
 import { detectLoginMethod } from '@/core/nostr/client'
 
+// `relay.nostr.band` (confirmed dead — TIMEOUT on both WS connect and NIP-11, 2026-09-19
+// audit + re-verified 2026-09-23), `pyramid.fiatjaf.com` (restricted_writes: true, connects
+// but never yields events) and `nostr.lopp.social` (connects but 0 events) were removed
+// 2026-09-23 — same three relays already dropped from REVIEW_PUBLISH_RELAYS for the same
+// measured reasons (see relays.ts).
 export const WATCHLIST_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
@@ -10,14 +15,11 @@ export const WATCHLIST_RELAYS = [
   'wss://relay.snort.social',
   'wss://offchain.pub',
   'wss://nostr-pub.wellorder.net',
-  'wss://relay.nostr.band',
   'wss://nostr.bitcoiner.social',
   'wss://nostr.mom',
   'wss://nostr.oxtr.dev',
   'wss://relay.mostr.pub',
   'wss://relay.noswhere.com',
-  'wss://pyramid.fiatjaf.com',
-  'wss://nostr.lopp.social',
   'wss://nostr.cypherpunk.today',
 ]
 

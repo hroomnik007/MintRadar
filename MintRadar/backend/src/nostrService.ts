@@ -71,6 +71,8 @@ const META_RELAYS = [
 // — same no-workspace caveat as above. Used as the fallback/redundancy set unioned
 // with each subscriber's own stored relays when delivering a DM.
 // `relay.nostr.band` removed 2026-09-20 — see the frontend array's comment.
+// `pyramid.fiatjaf.com` / `nostr.lopp.social` removed 2026-09-23 — see the frontend array's
+// comment (same measured 0-yield/restricted-write findings).
 const NOTIFICATION_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
@@ -84,8 +86,6 @@ const NOTIFICATION_RELAYS = [
   'wss://nostr.oxtr.dev',
   'wss://relay.mostr.pub',
   'wss://relay.noswhere.com',
-  'wss://pyramid.fiatjaf.com',
-  'wss://nostr.lopp.social',
   'wss://nostr.cypherpunk.today',
 ]
 
