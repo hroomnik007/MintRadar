@@ -12,6 +12,7 @@ import {
   normalizeMintUrl,
   mintRiskLevel,
   displayName,
+  shouldShowHostLine,
   mintFaviconInitials,
   isNewMint,
   firstSeenLabel,
@@ -177,6 +178,33 @@ describe('displayName', () => {
 
   it('returns the hostname (not a crash) when name equals the hostname exactly', () => {
     expect(displayName({ name: 'mint.example.com', url: host })).toBe('mint.example.com')
+  })
+})
+
+// ── shouldShowHostLine ────────────────────────────────────────
+describe('shouldShowHostLine', () => {
+  const host = 'https://mint.example.com'
+
+  it('shows the host line for a normal distinct name (e.g. Minibits)', () => {
+    expect(shouldShowHostLine({ name: 'Minibits', url: host })).toBe(true)
+  })
+
+  it('shows the host line when name equals the hostname exactly (cashu.cz case)', () => {
+    // This is the real bug report: name="cashu.cz", url="https://cashu.cz" — an
+    // exact match is the mint's genuine name, not a suffix-collision fallback,
+    // so the URL line must still render.
+    expect(shouldShowHostLine({ name: 'cashu.cz', url: 'https://cashu.cz' })).toBe(true)
+    expect(displayName({ name: 'cashu.cz', url: 'https://cashu.cz' })).toBe('cashu.cz')
+  })
+
+  it('hides the host line for the parent-domain suffix-collision case (unchanged)', () => {
+    expect(shouldShowHostLine({ name: 'aleafnd.org', url: 'https://bitcoin.aleafnd.org/cashu' })).toBe(false)
+    expect(shouldShowHostLine({ name: 'aleafnd.org', url: 'https://btc.aleafnd.org/cashu' })).toBe(false)
+  })
+
+  it('hides the host line for an empty/denylisted name (falls back to hostname)', () => {
+    expect(shouldShowHostLine({ name: '', url: host })).toBe(false)
+    expect(shouldShowHostLine({ name: 'cashu', url: host })).toBe(false)
   })
 })
 

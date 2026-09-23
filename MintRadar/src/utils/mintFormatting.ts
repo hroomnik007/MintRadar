@@ -141,7 +141,13 @@ export function resolveMintDetailUrl(slug: string, known: KnownMintLike[]): Mint
 // test mint that carries its own "Test mint" badge, so its name is kept.
 const GENERIC_NAME_DENYLIST = new Set(['cashu', 'cashu mint', 'mint'])
 
-export function displayName(mint: { name?: string | null | undefined; url: string }): string {
+// Shared by displayName() and shouldShowHostLine() so the two stay in sync —
+// `isFallback` marks the cases where the title had to fall back to the raw
+// hostname (empty/denylisted name, or the parent-domain suffix-collision
+// guard below) as opposed to a mint whose real name simply happens to equal
+// its hostname verbatim (e.g. name="cashu.cz", url="https://cashu.cz") —
+// that one is NOT a fallback, it's the mint's genuine, deliberate name.
+function resolveMintName(mint: { name?: string | null | undefined; url: string }): { text: string; isFallback: boolean } {
   const host = mintHostname(mint.url)
   let name = (mint.name ?? '').trim()
   // Strip a single pair of wrapping quotes (" or ').
@@ -152,15 +158,33 @@ export function displayName(mint: { name?: string | null | undefined; url: strin
       name = name.slice(1, -1).trim()
     }
   }
-  if (name === '' || GENERIC_NAME_DENYLIST.has(name.toLowerCase())) return host
+  if (name === '' || GENERIC_NAME_DENYLIST.has(name.toLowerCase())) return { text: host, isFallback: true }
   // If the resolved name is just a parent-domain suffix of the hostname
   // (e.g. name "aleafnd.org" for host "bitcoin.aleafnd.org"), two sibling
   // mints under the same parent domain would collapse to an identical title.
-  // Fall back to the full hostname so they stay distinguishable.
+  // Fall back to the full hostname so they stay distinguishable. An EXACT
+  // match (name === hostname) is deliberately excluded from this guard — see
+  // the comment above.
   const nl = name.toLowerCase()
   const hl = host.toLowerCase()
-  if (hl === nl || hl.endsWith('.' + nl)) return host
-  return name
+  if (hl !== nl && hl.endsWith('.' + nl)) return { text: host, isFallback: true }
+  return { text: name, isFallback: false }
+}
+
+export function displayName(mint: { name?: string | null | undefined; url: string }): string {
+  return resolveMintName(mint).text
+}
+
+// Whether the mint card's separate hostname/URL line under the title adds
+// information beyond the title itself. False when the title already fell
+// back to the hostname (empty/denylisted name, or the suffix-collision
+// guard) — showing the identical fallback string twice would be pure
+// duplication. True otherwise, INCLUDING when the mint's real name happens to
+// be textually identical to its hostname (e.g. "cashu.cz") — that's still the
+// mint's own deliberate identity, not a collapsed fallback, so the URL line
+// carries the same legitimate confirmatory info it does on every other card.
+export function shouldShowHostLine(mint: { name?: string | null | undefined; url: string }): boolean {
+  return !resolveMintName(mint).isFallback
 }
 
 // ── Favicon fallback initials ──────────────────────────────────
