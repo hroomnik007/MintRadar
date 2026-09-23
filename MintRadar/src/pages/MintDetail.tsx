@@ -13,6 +13,7 @@ import { useMintProbe } from '@/hooks/useMintProbe'
 import { useMintHistory } from '@/hooks/useMintHistory'
 import { useKnownMints } from '@/hooks/useKnownMints'
 import { useMintReviews } from '@/hooks/useMintReviews'
+import { useMintOperatorNip05 } from '@/hooks/useMintOperatorNip05'
 import { usePendingAutoWatch } from '@/hooks/usePendingAutoWatch'
 import { submitMintReview } from '@/hooks/useSubmitReview'
 import { useWatchlistStore } from '@/stores/watchlist.store'
@@ -41,7 +42,7 @@ import {
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
   Clock, GitBranch, Plug, Database, Award, Layers, Zap, QrCode,
   Receipt, UserCheck, EyeOff, CreditCard, Send, Code, Cloud,
-  Fingerprint, Bitcoin, Star, Mail, AtSign,
+  Fingerprint, Bitcoin, Star, Mail, AtSign, Globe,
   ExternalLink,
   Link2,
   ArrowUpRight,
@@ -339,6 +340,7 @@ function MintDetailContent({ url }: { url: string }) {
   useMintHistory(url)
   const { data: knownMintsData } = useKnownMints()
   const knownMint = knownMintsData?.find(m => m.url === url) ?? null
+  const operatorNip05 = useMintOperatorNip05(knownMint?.nostrAnnouncePubkey ?? null)
 
   const metaDisplayName = mintDisplayName({ name: data?.info?.name ?? knownMint?.name, url })
   useDocumentMeta(
@@ -1501,7 +1503,7 @@ function MintDetailContent({ url }: { url: string }) {
             )}
           </div>
 
-          {(email || twitter || nostr) && (
+          {(email || twitter || nostr || operatorNip05) && (
             <div className="md-panel">
               <div className="md-panel-title">Get in Touch</div>
               <div className="md-contact-grid">
@@ -1584,6 +1586,32 @@ function MintDetailContent({ url }: { url: string }) {
                       title="Copy"
                     >
                       {copiedContact === 'nostr' ? <Check size={13} /> : <Copy size={13} />}
+                    </button>
+                  </div>
+                )}
+                {operatorNip05 && (
+                  <div className="md-contact-card">
+                    <div className="md-contact-icon"><Globe size={14} /></div>
+                    <div style={{minWidth:0}}>
+                      <div className="md-contact-type" title="Unverified — read from the operator's Nostr profile, not checked against the domain's nostr.json">NIP-05 (unverified)</div>
+                      <div className="md-contact-val">{operatorNip05}</div>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void navigator.clipboard.writeText(operatorNip05)
+                        setCopiedContact('nip05')
+                        setTimeout(() => setCopiedContact(null), 2000)
+                      }}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: copiedContact === 'nip05' ? 'var(--accent)' : 'var(--text3)',
+                        padding: '2px 4px', marginLeft: 'auto',
+                        flexShrink: 0, display: 'flex',
+                      }}
+                      title="Copy"
+                    >
+                      {copiedContact === 'nip05' ? <Check size={13} /> : <Copy size={13} />}
                     </button>
                   </div>
                 )}
