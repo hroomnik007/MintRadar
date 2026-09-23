@@ -202,7 +202,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
                     style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)', borderRadius: 5, padding: '2px 7px' }}
                     title="Not for real funds — for testing and development only"
                   >
-                    🧪 Test mint
+                    Test mint
                   </span>
                 )}
               </div>
