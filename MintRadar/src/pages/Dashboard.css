@@ -978,11 +978,14 @@
   font-size: 12.5px;
   color: var(--t3);
   padding: 12px;
-  margin: 8px var(--page-pad) 20px;
+  margin: 8px auto 20px;
+  max-width: var(--dash-chrome-max);
+  width: calc(100% - var(--page-pad) * 2);
   background: var(--surface);
   border: 1px solid var(--brd);
   border-radius: var(--radius-m);
   font-family: var(--font-mono);
+  box-sizing: border-box;
 }
 
 .error-msg {
@@ -997,8 +1000,11 @@
   text-align: center;
   font-size: 10px;
   color: var(--text3);
-  padding: 12px 0 20px;
-  margin-inline: var(--page-pad);
+  padding: 12px var(--page-pad) 20px;
+  margin-inline: auto;
+  max-width: var(--dash-chrome-max);
+  width: 100%;
+  box-sizing: border-box;
   border-top: 1px solid var(--border);
   font-family: var(--font-mono);
   letter-spacing: 0.03em;
