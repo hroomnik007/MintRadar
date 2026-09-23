@@ -178,10 +178,19 @@ async function probeMint(url: string): Promise<MintStatus> {
 
   // safeFetch validates the URL and every redirect hop against isSafeUrl()
   // and pins DNS at connect time (SSRF + rebinding protection).
-  const [infoRes, keysetsRes] = await Promise.all([
+  const [infoResFirst, keysetsRes] = await Promise.all([
     safeFetch(`${url}/v1/info`, { timeoutMs: ON_DEMAND_PROBE_TIMEOUT_MS }),
     safeFetch(`${url}/v1/keysets`, { timeoutMs: ON_DEMAND_PROBE_TIMEOUT_MS }),
   ])
+
+  // Retry once on network/DNS failure (res === null) — mirrors probeMintToDb's
+  // retry in prober.ts, so a transient blip doesn't disagree with the cron's
+  // last-known status shown on the Dashboard card (see mint.macadamia.cash report).
+  let infoRes = infoResFirst
+  if (infoRes === null) {
+    await new Promise<void>(r => setTimeout(r, 1000))
+    infoRes = await safeFetch(`${url}/v1/info`, { timeoutMs: ON_DEMAND_PROBE_TIMEOUT_MS })
+  }
 
   const latencyMs = Date.now() - start
 

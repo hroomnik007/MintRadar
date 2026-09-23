@@ -1597,7 +1597,7 @@ function MintDetailContent({ url }: { url: string }) {
                   <div className="md-contact-card">
                     <div className="md-contact-icon"><Globe size={14} /></div>
                     <div style={{minWidth:0}}>
-                      <div className="md-contact-type" title="Unverified — read from the operator's Nostr profile, not checked against the domain's nostr.json">NIP-05 (unverified)</div>
+                      <div className="md-contact-type" title="Unverified — read from the Nostr profile that announced this mint (NIP-87), which may be a different identity than the Nostr contact above. Not checked against the domain's nostr.json, and not cross-verified against that contact.">NIP-05 (unverified)</div>
                       <div className="md-contact-val">{operatorNip05}</div>
                     </div>
                     <button
