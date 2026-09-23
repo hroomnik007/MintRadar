@@ -1072,7 +1072,7 @@ function MintDetailContent({ url }: { url: string }) {
                 )}
                 {isTestMint(url) && (
                   <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}} title="Not for real funds — for testing and development only">
-                    🧪 Test mint
+                    Test mint
                   </span>
                 )}
               </div>
