@@ -75,12 +75,12 @@ test.describe('Dashboard default view', () => {
     await page.goto('/')
     await expect(page.locator('.mint-card').first()).toBeVisible()
 
-    await page.getByRole('button', { name: 'Help me pick' }).click()
+    await page.getByRole('button', { name: 'Find a mint' }).click()
     await expect(page).toHaveURL(/\/tools#pick$/)
     await expect(page.locator('#pick').getByText('Best Mint for Me')).toBeInViewport()
 
     await page.goBack()
-    await page.getByRole('button', { name: 'I have a token' }).click()
+    await page.getByRole('button', { name: 'Inspect a token' }).click()
     await expect(page).toHaveURL(/\/tools#token$/)
     await expect(page.locator('#token').getByText('Token Inspector')).toBeInViewport()
   })

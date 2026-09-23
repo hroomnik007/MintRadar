@@ -127,24 +127,17 @@ test.describe('MintCard — copy & reduced badge set', () => {
     await expect(card(page, 'Charlie Mint').locator('.latency-source')).toHaveCount(0)
   })
 
-  test('dashboard tiles carry the new labels + subtitles', async ({ page }) => {
+  test('dash-status line carries the online/tracked counts', async ({ page }) => {
+    // The old multi-tile ".stats-bar" (Online now / Mints tracked / median
+    // latency stat cards, with a click-to-expand Listed/Known explainer) was
+    // replaced by a single compact ".dash-status" line — see Dashboard.tsx.
+    // 3 of the 4 mocked mints are online (Alpha, Bravo, Delta; Charlie is
+    // offline); all 4 are tracked.
     await page.goto('/?status=all')
-    const bar = page.locator('.stats-bar')
-    await expect(bar.getByText('Online now')).toBeVisible()
-    // The Online tile shows the count as the primary value; "of all known"
-    // is the muted note beside it, not a second big number.
-    const onlineTile = bar.locator('.stat-card', { hasText: 'Online now' })
-    await expect(onlineTile.locator('.stat-value')).toHaveText('3')
-    await expect(onlineTile.locator('.stat-note')).toHaveText('of all known')
-    await expect(bar.getByText(/of \d+ listed/)).toHaveCount(0)
-    await expect(bar.getByText('Mints tracked')).toBeVisible()
-    await expect(bar.getByText('incl. offline')).toHaveCount(0)
-    await expect(bar.getByText('from Frankfurt')).toBeVisible()
-
-    // Tapping a count tile reveals the Listed/Known explainer.
-    await expect(page.locator('.stat-count-note')).toHaveCount(0)
-    await bar.getByText('Mints tracked').click()
-    await expect(page.locator('.stat-count-note')).toContainText(/Listed.*in the grid.*Known.*every mint we indexed/s)
+    const status = page.locator('.dash-status')
+    await expect(status.locator('.dash-status-item').first()).toContainText('3 online mints')
+    await expect(status.locator('.dash-status-item').nth(1)).toContainText('4 tracked mints')
+    await expect(status.getByText(/last checked/)).toBeVisible()
   })
 
   test('grid carries the Reliability-vs-Stars explainer sentence once, above the cards', async ({ page }) => {
@@ -157,11 +150,11 @@ test.describe('MintCard — copy & reduced badge set', () => {
     expect(fontSize).toBeGreaterThanOrEqual(13)
   })
 
-  test('known-count is consistent: All Known tile === grid footer "of N"', async ({ page }) => {
+  test('known-count is consistent: dash-status "tracked mints" === grid footer "of N"', async ({ page }) => {
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
-    const bar = page.locator('.stats-bar')
-    const tile = (await bar.locator('.stat-card', { hasText: 'Mints tracked' }).locator('.stat-value').textContent())?.trim()
+    const trackedText = await page.locator('.dash-status-item').nth(1).textContent()
+    const tile = trackedText?.match(/(\d+)\s+tracked mints/)?.[1]
     const footer = await page.locator('.grid-showing-note').textContent()
     const footerN = footer?.match(/of (\d+)/)?.[1]
     expect(footerN).toBe(tile)

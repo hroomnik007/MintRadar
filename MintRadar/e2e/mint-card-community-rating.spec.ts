@@ -20,10 +20,13 @@ test.describe('MintCard — Community Rating badge', () => {
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
-    await expect(card(page, 'Alpha Mint').locator('.card-reliability-rating', { hasText: '4.2 (12)' })).toBeVisible()
-    await expect(card(page, 'Delta Mint').locator('.card-reliability-rating', { hasText: '4.8 (3)' })).toBeVisible()
+    // The rating badge is 3 adjacent spans (★ / value / (count)) with no
+    // whitespace between them in JSX, so the rendered textContent has no
+    // space before the parenthesized count — e.g. "4.2(12)", not "4.2 (12)".
+    await expect(card(page, 'Alpha Mint').locator('.card-reliability-rating', { hasText: '4.2(12)' })).toBeVisible()
+    await expect(card(page, 'Delta Mint').locator('.card-reliability-rating', { hasText: '4.8(3)' })).toBeVisible()
     // Offline mint — Reliability Score number absent ("Reliability n/a"), Community Rating still shown.
-    await expect(card(page, 'Charlie Mint').locator('.card-reliability-rating', { hasText: '3.0 (4)' })).toBeVisible()
+    await expect(card(page, 'Charlie Mint').locator('.card-reliability-rating', { hasText: '3.0(4)' })).toBeVisible()
     // 0 reviews → no rating pill, but a muted "No reviews yet" note instead.
     await expect(card(page, 'Bravo Mint').locator('.card-reliability-rating')).toHaveCount(0)
     await expect(card(page, 'Bravo Mint').locator('.card-reliability-no-reviews')).toHaveText('No reviews yet')
@@ -50,7 +53,7 @@ test.describe('MintCard — Community Rating badge', () => {
 
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(1)
     await expect(
-      page.locator('.wl-grid .mint-card').locator('.card-reliability-rating', { hasText: '4.2 (12)' })
+      page.locator('.wl-grid .mint-card').locator('.card-reliability-rating', { hasText: '4.2(12)' })
     ).toBeVisible()
   })
 })

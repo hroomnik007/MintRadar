@@ -17,12 +17,11 @@ test.describe('Dashboard', () => {
   test('loads and lists the known mints', async ({ page }) => {
     await expect(page.locator('.card-name', { hasText: 'Alpha Mint' })).toBeVisible()
     await expect(page.locator('.card-name', { hasText: 'Delta Mint' })).toBeVisible()
-    // Stat bar reflects the mocked data: 3 mints online (value "3",
-    // "of all known" rendered as the muted note beside it, not a second
-    // big number).
-    const onlineTile = page.locator('.stat-card', { hasText: 'Online now' })
-    await expect(onlineTile.locator('.stat-value')).toHaveText('3')
-    await expect(onlineTile.locator('.stat-note')).toHaveText('of all known')
+    // The compact ".dash-status" line reflects the mocked data: 3 of the 4
+    // mocked mints are online (Alpha, Bravo, Delta; Charlie is offline).
+    const status = page.locator('.dash-status')
+    await expect(status.locator('.dash-status-item').first()).toContainText('3 online mints')
+    await expect(status.locator('.dash-status-item').nth(1)).toContainText('4 tracked mints')
   })
 
   test('search filters the mint list', async ({ page }) => {
