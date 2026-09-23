@@ -30,6 +30,7 @@ test.describe('Site footer', () => {
 
     await expect(footer.getByText('Reliability is a health signal, not solvency.')).toBeVisible()
     await expect(footer.getByText('Powered by Cashu and NIP-87')).toBeVisible()
+    await expect(footer.getByText('© 2026 MintRadar.org')).toBeVisible()
   })
 
   // Regression test for a 2026-09-23 bug: at <=640px .app-footer-note kept its default flex
@@ -70,6 +71,9 @@ test.describe('Site footer', () => {
         expect(secondBox!.y).toBeGreaterThanOrEqual(firstBox!.y + firstBox!.height - 1)
 
         await expect(footer.locator('.app-footer-dot')).toBeHidden()
+
+        // Copyright line (added 2026-09-23) must render on mobile too.
+        await expect(footer.getByText('© 2026 MintRadar.org')).toBeVisible()
       })
     }
   })

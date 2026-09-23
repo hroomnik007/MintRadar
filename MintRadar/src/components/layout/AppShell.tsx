@@ -588,6 +588,7 @@ export function AppShell() {
             <span className="app-footer-dot">·</span>
             <span>Powered by Cashu and NIP-87</span>
           </div>
+          <div className="app-footer-copyright">© 2026 MintRadar.org</div>
         </div>
       </footer>
     </div>
