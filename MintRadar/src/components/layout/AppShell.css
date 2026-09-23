@@ -9,16 +9,16 @@
   margin-top: auto;
 }
 
-/* Centered, stacked layout (2026-09-23) — was a left-aligned space-between row; content and
-   links are unchanged, only the alignment + a new copyright line. Column direction + centered
-   text apply at every width now, so the mobile media query below only needs to handle the
-   note-row wrapping fix, not a separate desktop/mobile structure. */
+/* Desktop layout (reverted 2026-09-23 to the original left-aligned space-between row — the
+   brief centered-column redesign was scoped to mobile only, not desktop). The "MintRadar.org"
+   link text is now "© 2026 MintRadar.org" (still linking to the repo) instead of a separate
+   copyright line. */
 .app-footer-inner {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  text-align: center;
-  gap: 6px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 20px;
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
@@ -31,7 +31,6 @@
 .app-footer-links {
   display: flex;
   align-items: center;
-  justify-content: center;
   flex-wrap: wrap;
   gap: 4px 14px;
 }
@@ -49,37 +48,47 @@
 .app-footer-note {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
   gap: 6px;
   color: var(--text3);
+  white-space: nowrap;
 }
 
 .app-footer-dot {
   opacity: 0.6;
 }
 
-.app-footer-copyright {
-  color: var(--text3);
-}
-
 @media (max-width: 640px) {
+  /* Mobile only: stack the two rows and center them — row 1 (links, now reading
+     "© 2026 MintRadar.org · API") centered, row 2 rendered as one continuous flowing
+     sentence (not the desktop's rigid single-line flex row, and not stacked into two
+     separate lines either — see .app-footer-note below). */
   .app-footer-inner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
     gap: 8px;
     padding: 10px 14px 14px;
   }
 
-  /* Stack the two note sentences instead of the default flex row — at this width the row
-     wrapped into two side-by-side columns with the "·" separator stranded alone at the
-     wrap point (found 2026-09-23, e2e/site-footer.spec.ts mobile case). */
+  .app-footer-links {
+    justify-content: center;
+  }
+
+  /* Switching from flex row to a plain block lets the 3 spans (sentence, ·, sentence) flow
+     as ordinary inline text instead of behaving as independent flex items — that flex-row
+     behavior was the root cause of the earlier "orphaned ·" bug: when the first sentence
+     span wrapped onto 2 lines, the flex row still kept the dot + second sentence pinned
+     beside it as a second column instead of letting them flow below. */
   .app-footer-note {
-    flex-direction: column;
-    gap: 2px;
+    display: block;
     white-space: normal;
   }
 
+  /* In block/inline flow (no flex gap) the dot glyph is only ~2px wide and sits flush
+     against the adjacent words — give it a little breathing room so it reads as a
+     separator instead of disappearing between "solvency." and "Powered". */
   .app-footer-dot {
-    display: none;
+    margin: 0 4px;
   }
 }
 

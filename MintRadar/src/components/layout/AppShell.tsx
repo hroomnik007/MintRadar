@@ -580,7 +580,7 @@ export function AppShell() {
       <footer className="app-footer">
         <div className="app-footer-inner">
           <div className="app-footer-links">
-            <a href="https://github.com/hroomnik007/MintRadar" target="_blank" rel="noopener noreferrer">MintRadar.org</a>
+            <a href="https://github.com/hroomnik007/MintRadar" target="_blank" rel="noopener noreferrer">© 2026 MintRadar.org</a>
             <a href="https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/API.md" target="_blank" rel="noopener noreferrer">API</a>
           </div>
           <div className="app-footer-note">
@@ -588,7 +588,6 @@ export function AppShell() {
             <span className="app-footer-dot">·</span>
             <span>Powered by Cashu and NIP-87</span>
           </div>
-          <div className="app-footer-copyright">© 2026 MintRadar.org</div>
         </div>
       </footer>
     </div>
