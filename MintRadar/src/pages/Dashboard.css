@@ -4,7 +4,6 @@
 
 .dashboard {
   background: transparent;
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
   /* Shared width for the mint grid and the mid-chrome above it (intro strip,

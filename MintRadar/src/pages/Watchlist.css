@@ -1,6 +1,5 @@
 .watchlist-page {
   background: transparent;
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
   /* --dash-chrome-max now lives on :root (src/index.css) — shared with
