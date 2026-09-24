@@ -1,6 +1,5 @@
 .stats-page {
   background: transparent;
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
   /* Single source of truth for the two spacing values unified across this

@@ -1,12 +1,13 @@
 .app-shell {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
 
 .app-footer {
   border-top: 1px solid var(--border);
-  margin-top: auto;
+  flex-shrink: 0;
 }
 
 /* Desktop layout (reverted 2026-09-23 to the original left-aligned space-between row — the
@@ -192,7 +193,7 @@
 }
 
 .app-content {
-  flex: 1;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   width: 100%;
