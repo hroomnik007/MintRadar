@@ -302,8 +302,7 @@ test.describe('Tools', () => {
   test('Best Mint Wizard result rows use the card Reliability formatting (shield + "Reliability N")', async ({ page }) => {
     await page.locator('.wizard-unit-select').selectOption('sat')
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
-    await page.locator('.wizard-opt', { hasText: 'Speed' }).click()
-    await page.locator('.wizard-opt', { hasText: 'Not sure' }).click()
+    await page.locator('.wizard-opt', { hasText: 'Fast from here' }).click()
     await page.getByRole('button', { name: /Find my mint/ }).click()
 
     const firstRow = page.locator('.wizard-rec-row').first()
@@ -318,10 +317,8 @@ test.describe('Tools', () => {
     await expect(page.locator('.wizard-unit-select')).toBeVisible()
     await page.locator('.wizard-unit-select').selectOption('sat')
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
-    // Step 2 — what matters most (auto-advances to step 3).
-    await page.locator('.wizard-opt', { hasText: 'Speed' }).click()
-    // Step 3 — backup/restore preference (does not auto-advance).
-    await page.locator('.wizard-opt', { hasText: 'Not sure' }).click()
+    // Step 2 — what matters (multi-select, does not auto-advance).
+    await page.locator('.wizard-opt', { hasText: 'Fast from here' }).click()
 
     await page.getByRole('button', { name: /Find my mint/ }).click()
 
@@ -358,8 +355,7 @@ test.describe('Tools', () => {
 
     await page.locator('.wizard-unit-select').selectOption('usd')
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
-    await page.locator('.wizard-opt', { hasText: 'Speed' }).click()
-    await page.locator('.wizard-opt', { hasText: 'Not sure' }).click()
+    await page.locator('.wizard-opt', { hasText: 'Fast from here' }).click()
     await page.getByRole('button', { name: /Find my mint/ }).click()
 
     await expect(page.locator('.wizard-rec-row')).toHaveCount(1)
@@ -372,8 +368,7 @@ test.describe('Tools', () => {
     // and since only 2 of the 3 sat mints are old enough, a "fewer than 3" note shows.
     await page.locator('.wizard-unit-select').selectOption('sat')
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
-    await page.locator('.wizard-opt', { hasText: 'Speed' }).click()
-    await page.locator('.wizard-opt', { hasText: 'Not sure' }).click()
+    await page.locator('.wizard-opt', { hasText: 'Fast from here' }).click()
     await page.getByRole('button', { name: /Find my mint/ }).click()
 
     await expect(page.locator('.wizard-rec-row').first()).toBeVisible({ timeout: 15_000 })
@@ -386,11 +381,57 @@ test.describe('Tools', () => {
     // usd is only advertised by Bravo, which is too young (10d) for the age gate.
     await page.locator('.wizard-unit-select').selectOption('usd')
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
-    await page.locator('.wizard-opt', { hasText: 'Speed' }).click()
-    await page.locator('.wizard-opt', { hasText: 'Not sure' }).click()
+    await page.locator('.wizard-opt', { hasText: 'Fast from here' }).click()
     await page.getByRole('button', { name: /Find my mint/ }).click()
 
     await expect(page.locator('.wizard-no-results')).toBeVisible({ timeout: 15_000 })
     await expect(page.locator('.wizard-rec-row')).toHaveCount(0)
+  })
+
+  test('Best Mint Wizard "What matters" step is multi-select and disables Find until something is checked', async ({ page }) => {
+    await page.locator('.wizard-unit-select').selectOption('sat')
+    await page.locator('.wizard-opt', { hasText: 'Small' }).click()
+
+    const findBtn = page.getByRole('button', { name: /Find my mint/ })
+    await expect(findBtn).toBeDisabled()
+
+    const fastOpt = page.locator('.wizard-opt', { hasText: 'Fast from here' })
+    const reliableOpt = page.locator('.wizard-opt', { hasText: 'Reliable' })
+    await fastOpt.click()
+    await expect(findBtn).toBeEnabled()
+    await expect(fastOpt).toHaveClass(/active/)
+
+    // Both stay checked at once — this is a multi-select, not the old single-select preference.
+    await reliableOpt.click()
+    await expect(fastOpt).toHaveClass(/active/)
+    await expect(reliableOpt).toHaveClass(/active/)
+
+    // Unchecking everything disables Find again.
+    await fastOpt.click()
+    await reliableOpt.click()
+    await expect(findBtn).toBeDisabled()
+  })
+
+  test('Best Mint Wizard "Live updates (WebSocket)" filter excludes mints without NUT-17', async ({ page }) => {
+    // Fixture: Alpha (nutCount 12) and Delta (14) advertise NUT-17; Bravo (8) does not.
+    await page.locator('.wizard-unit-select').selectOption('sat')
+    await page.locator('.wizard-opt', { hasText: 'Small' }).click()
+    await page.locator('.wizard-opt', { hasText: 'Live updates (WebSocket)' }).click()
+    await page.getByRole('button', { name: /Find my mint/ }).click()
+
+    await expect(page.locator('.wizard-rec-row').first()).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('.wizard-rec-row', { hasText: 'Bravo Mint' })).toHaveCount(0)
+  })
+
+  test('Best Mint Wizard "Reliable" checkbox weights results toward Reliability Score', async ({ page }) => {
+    await page.locator('.wizard-unit-select').selectOption('sat')
+    await page.locator('.wizard-opt', { hasText: 'Small' }).click()
+    await page.locator('.wizard-opt', { hasText: 'Reliable' }).click()
+    await page.getByRole('button', { name: /Find my mint/ }).click()
+
+    // Alpha has the highest Reliability Score (92) among sat mints old enough for the
+    // age gate (Alpha 92, Delta 78) — weighting toward reliability alone should rank it first.
+    await expect(page.locator('.wizard-rec-row').first()).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('.wizard-rec-row').first()).toContainText('Alpha Mint')
   })
 })

@@ -386,8 +386,14 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   )
 }
 
-type Preference = 'speed' | 'reliability' | 'features'
-type BackupPref = 'yes' | 'no' | 'unsure'
+// "Fast"/"Reliable" drive the scoring weights below; the other four are pure
+// filters (a mint either qualifies or it doesn't). There is deliberately no
+// generic "Features" option — every check here maps to one specific,
+// reliably-tracked capability (P2PK/NUT-11 and WebSocket/NUT-17 are both at
+// ~94-100% adoption across tracked mints per /api/stats' nutAdoption, so a
+// checkbox against them isn't filtering against mostly-null data — unlike
+// e.g. MPP/NUT-15 at ~63%, deliberately left out).
+type WizardCheck = 'fast' | 'reliable' | 'ln' | 'seed' | 'p2pk' | 'ws'
 type SizeOption = 'small' | 'medium' | 'large'
 
 interface UnitLimits { min: number | null; max: number | null }
@@ -441,10 +447,27 @@ function formatLimits(limits: UnitLimits | null, unit: string): string | null {
   return `${min}–${max} ${unit}`
 }
 
-const BASE_WEIGHTS: Record<Preference, { latency: number; reliability: number; nuts: number }> = {
-  speed:    { latency: 0.6, reliability: 0.3, nuts: 0.1 },
-  reliability:    { latency: 0.2, reliability: 0.7, nuts: 0.1 },
-  features: { latency: 0.2, reliability: 0.3, nuts: 0.5 },
+type Weights = { latency: number; reliability: number; nuts: number }
+
+const FAST_WEIGHTS: Weights = { latency: 0.6, reliability: 0.3, nuts: 0.1 }
+const RELIABLE_WEIGHTS: Weights = { latency: 0.2, reliability: 0.7, nuts: 0.1 }
+
+// Fast+Reliable both checked → average the two vectors (each already sums to
+// 1, so the average does too — no separate re-normalization step needed).
+// Neither checked (only filter-type checks selected) → falls back to the
+// Reliable weights, per spec.
+function baseWeightsFor(checks: Set<WizardCheck>): Weights {
+  const fast = checks.has('fast')
+  const reliable = checks.has('reliable')
+  if (fast && reliable) {
+    return {
+      latency: (FAST_WEIGHTS.latency + RELIABLE_WEIGHTS.latency) / 2,
+      reliability: (FAST_WEIGHTS.reliability + RELIABLE_WEIGHTS.reliability) / 2,
+      nuts: (FAST_WEIGHTS.nuts + RELIABLE_WEIGHTS.nuts) / 2,
+    }
+  }
+  if (fast) return FAST_WEIGHTS
+  return RELIABLE_WEIGHTS
 }
 
 // Larger stored balances carry more risk if the mint turns out unreliable, so
@@ -452,8 +475,8 @@ const BASE_WEIGHTS: Record<Preference, { latency: number; reliability: number; n
 // three weights still sum to 1.
 const LARGE_RELIABILITY_BOOST = 0.15
 
-function weightsFor(preference: Preference, size: SizeOption): { latency: number; reliability: number; nuts: number } {
-  const base = BASE_WEIGHTS[preference]
+function weightsFor(checks: Set<WizardCheck>, size: SizeOption): Weights {
+  const base = baseWeightsFor(checks)
   if (size !== 'large') return base
   const scale = (1 - base.reliability - LARGE_RELIABILITY_BOOST) / (1 - base.reliability)
   return { latency: base.latency * scale, reliability: base.reliability + LARGE_RELIABILITY_BOOST, nuts: base.nuts * scale }
@@ -467,8 +490,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
   const [step, setStep] = useState(1)
   const [unit, setUnit] = useState<string | null>(null)
   const [size, setSize] = useState<SizeOption | null>(null)
-  const [preference, setPreference] = useState<Preference | null>(null)
-  const [backupPref, setBackupPref] = useState<BackupPref | null>(null)
+  const [checks, setChecks] = useState<Set<WizardCheck>>(new Set())
   const [finding, setFinding] = useState(false)
   const [recs, setRecs] = useState<WizardRec[] | null>(null)
   const [recsUnit, setRecsUnit] = useState<string | null>(null)
@@ -487,10 +509,10 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
 
   const selectedUnit = unit ?? availableUnits[0] ?? null
 
-  const ready = selectedUnit !== null && size !== null && preference !== null && backupPref !== null
+  const ready = selectedUnit !== null && size !== null && checks.size > 0
 
   const handleFind = async () => {
-    if (!preference || !size || !selectedUnit) return
+    if (checks.size === 0 || !size || !selectedUnit) return
     setFinding(true)
     setRecs(null)
 
@@ -507,16 +529,20 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       // A mint that doesn't issue this unit can't serve the user at all, so it
       // is dropped before scoring rather than ranked and then explained away.
       .filter(m => (m.units ?? []).includes(selectedUnit))
-      .filter(m => {
-        if (backupPref !== 'yes') return true
-        // NUT-9 (restore signatures) is the mint-side capability that actually
-        // gates seed-phrase backup/restore — see the note in MintDetail.tsx.
-        return m.nutsLimits?.['9'] != null
-      })
+      // NUT-9 (restore signatures) is the mint-side capability that actually
+      // gates seed-phrase backup/restore — see the note in MintDetail.tsx.
+      .filter(m => !checks.has('seed') || m.nutsLimits?.['9'] != null)
+      // P2PK (NUT-11) — locking ecash to a public key.
+      .filter(m => !checks.has('p2pk') || m.nutsLimits?.['11'] != null)
+      // WebSocket (NUT-17) — live balance/payment update subscriptions.
+      .filter(m => !checks.has('ws') || m.nutsLimits?.['17'] != null)
+      // Lightning in + out means both mint (deposit) and melt (withdraw) support
+      // bolt11/bolt12 — cardLightningLabel() only returns 'LN' when both sides do.
+      .filter(m => !checks.has('ln') || cardLightningLabel(m) === 'LN')
       .sort((a, b) => (b.reliabilityScore ?? 0) - (a.reliabilityScore ?? 0))
       .slice(0, 20)
 
-    const w = weightsFor(preference, size)
+    const w = weightsFor(checks, size)
 
     const latencyResults = await Promise.allSettled(
       candidates.map(async m => {
@@ -565,7 +591,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       </div>
 
       <div className="wizard-steps">
-        {[1, 2, 3].map(n => (
+        {[1, 2].map(n => (
           <div key={n} className={`wizard-step-dot${step >= n ? ' active' : ''}${step > n ? ' done' : ''}`}>
             {step > n ? '✓' : n}
           </div>
@@ -610,42 +636,35 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
 
       {step === 2 && (
         <div className="wizard-step-body">
-          <div className="wizard-q">What matters most to you?</div>
+          <div className="wizard-q">What matters to you? (pick any)</div>
           <div className="wizard-options">
             {[
-              { id: 'speed' as Preference, label: '⚡ Speed', sub: 'I want the fastest mint from my location' },
-              { id: 'reliability' as Preference, label: '🛡 Reliability', sub: 'I want the most reliable and audited mint' },
-              { id: 'features' as Preference, label: '🧩 Features', sub: 'I have specific security/backup needs' },
-            ].map(opt => (
-              <button key={opt.id} type="button" className={`wizard-opt${preference === opt.id ? ' active' : ''}`}
-                onClick={() => { setPreference(opt.id); setStep(3) }}>
-                <div className="wizard-opt-label">{opt.label}</div>
-                <div className="wizard-opt-sub">{opt.sub}</div>
-              </button>
-            ))}
+              { id: 'fast' as WizardCheck, label: '⚡ Fast from here', sub: 'Weight latency measured from your browser' },
+              { id: 'reliable' as WizardCheck, label: '🛡 Reliable', sub: 'Weight the Reliability Score' },
+              { id: 'ln' as WizardCheck, label: '⚡ Lightning in + out', sub: 'Must support both minting and melting over Lightning' },
+              { id: 'seed' as WizardCheck, label: '🔑 Restore from seed', sub: 'Must support wallet recovery from a backup phrase (NUT-09)' },
+              { id: 'p2pk' as WizardCheck, label: '🔒 Locked payments (P2PK)', sub: 'Must support locking ecash to a public key (NUT-11)' },
+              { id: 'ws' as WizardCheck, label: '📡 Live updates (WebSocket)', sub: 'Must support real-time balance/payment updates (NUT-17)' },
+            ].map(opt => {
+              const active = checks.has(opt.id)
+              return (
+                <button key={opt.id} type="button" className={`wizard-opt${active ? ' active' : ''}`}
+                  aria-pressed={active}
+                  onClick={() => setChecks(prev => {
+                    const next = new Set(prev)
+                    if (next.has(opt.id)) next.delete(opt.id); else next.add(opt.id)
+                    return next
+                  })}>
+                  <div className="wizard-opt-label">{opt.label}</div>
+                  <div className="wizard-opt-sub">{opt.sub}</div>
+                </button>
+              )
+            })}
           </div>
         </div>
       )}
 
-      {step === 3 && (
-        <div className="wizard-step-body">
-          <div className="wizard-q">Do you want to be able to restore your wallet from a backup phrase if you lose your device?</div>
-          <div className="wizard-options wizard-options-row">
-            {[
-              { id: 'yes' as BackupPref, label: 'Yes' },
-              { id: 'no' as BackupPref, label: 'No' },
-              { id: 'unsure' as BackupPref, label: 'Not sure' },
-            ].map(opt => (
-              <button key={opt.id} type="button" className={`wizard-opt${backupPref === opt.id ? ' active' : ''}`}
-                onClick={() => setBackupPref(opt.id)}>
-                <div className="wizard-opt-label">{opt.label}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {step === 3 && (
+      {step === 2 && (
         <button type="button" className="tool-btn-primary find-my-mint-btn" disabled={!ready || finding} onClick={() => void handleFind()}>
           {finding ? 'Measuring latency…' : 'Find my mint →'}
         </button>
@@ -720,7 +739,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
             </div>
           )}
           <button type="button" className="wizard-start-over-btn"
-            onClick={() => { setStep(1); setSize(null); setPreference(null); setBackupPref(null); setRecs(null); setRecsUnit(null) }}>
+            onClick={() => { setStep(1); setSize(null); setChecks(new Set()); setRecs(null); setRecsUnit(null) }}>
             ← Start over
           </button>
         </div>
