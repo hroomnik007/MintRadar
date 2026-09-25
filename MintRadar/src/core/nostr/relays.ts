@@ -22,6 +22,12 @@
 // 37ms connect, 5/5 + 5/5 events, EOSE <60ms — genuinely healthy, kept. wss://relay.nostr.band
 // (the one new candidate proposed for this audit) failed NIP-11 and WS connect from BOTH the
 // sandbox and the production VPS — confirmed down, not added anywhere.
+//
+// wss://nostr.mintradar.org (2026-09-25) — MintRadar's own strfry backup relay, additive
+// alongside every relay above (nothing removed/deprioritized). Whitelist-only write policy
+// (kind 38172/38000 from the public, any kind from one privileged operator key), so it never
+// competes on discovery breadth — it's a durable, MintRadar-operated store for exactly the
+// two kinds this array exists to discover. See MintRadar/deploy/strfry/ for the relay setup.
 export const DISCOVERY_RELAYS: string[] = [
   'wss://relay.damus.io',
   'wss://nos.lol',
@@ -33,6 +39,7 @@ export const DISCOVERY_RELAYS: string[] = [
   'wss://nostr.bitcoiner.social',
   'wss://nostr.cypherpunk.today',
   'wss://nostr-pub.wellorder.net',
+  'wss://nostr.mintradar.org',
 ]
 
 // Discovery relays plus relay.minibits.cash (a Cashu-wallet-specific relay that tends to

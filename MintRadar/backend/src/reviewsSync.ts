@@ -46,6 +46,7 @@ export const REVIEW_SYNC_RELAYS = [
   'wss://nostr.bitcoiner.social',
   'wss://nostr.cypherpunk.today',
   'wss://nostr-pub.wellorder.net',
+  'wss://nostr.mintradar.org',
   'wss://relay.minibits.cash',
   'wss://nostr.mom',
   'wss://eden.nostr.land',

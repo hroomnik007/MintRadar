@@ -1,0 +1,28 @@
+# Standalone compose file for the strfry backup relay — deliberately separate
+# from the main MintRadar docker-compose.yml so this addition never touches
+# the existing backend/postgres services. Deploy with:
+#   docker compose -f docker-compose.strfry.yml up -d --build
+services:
+  strfry:
+    build: .
+    container_name: mintradar-strfry
+    restart: unless-stopped
+    volumes:
+      - ./strfry.conf:/etc/strfry.conf:ro
+      - ./writePolicy.sh:/app/plugins/writePolicy.sh:ro
+      - strfry-db:/app/strfry-db
+    ports:
+      # Loopback-only — nginx is the only thing that talks to this port.
+      - "127.0.0.1:7777:7777"
+    # Conservative caps: this box has no swap configured.
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  strfry-db:

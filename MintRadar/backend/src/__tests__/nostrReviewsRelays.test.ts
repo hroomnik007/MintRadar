@@ -49,6 +49,7 @@ describe('DISCOVERY_RELAYS (frontend src/core/nostr/relays.ts vs. backend discov
       'wss://nostr.bitcoiner.social',
       'wss://nostr.cypherpunk.today',
       'wss://nostr-pub.wellorder.net',
+      'wss://nostr.mintradar.org',
     ])
   })
 })
@@ -66,6 +67,7 @@ describe('NOSTR_REVIEWS_RELAYS (= reviewsSync REVIEW_SYNC_RELAYS, backend-only b
       'wss://nostr.bitcoiner.social',
       'wss://nostr.cypherpunk.today',
       'wss://nostr-pub.wellorder.net',
+      'wss://nostr.mintradar.org',
       'wss://relay.minibits.cash',
       'wss://nostr.mom',
       'wss://eden.nostr.land',
