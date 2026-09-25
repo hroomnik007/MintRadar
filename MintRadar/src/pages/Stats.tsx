@@ -8,7 +8,7 @@ import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcShield } from '@/components/mint/IcShield'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
-import { reliabilityColor, reliabilityScoreInfo, reliabilityDonutArc, displayName, computeDuplicateMintNames } from '@/utils/mintFormatting'
+import { reliabilityColor, reliabilityScoreInfo, reliabilityDonutArc, displayName, computeDuplicateMintNames, mintAgeBadge } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
 import { compareMintVersionNumbers, isEligibleForRecommendation } from '@/utils/reliabilityScore'
 import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
@@ -84,15 +84,6 @@ function geoLabel(loc: string): { display: string; flag: string; color?: string 
   const cc = loc.slice(commaIdx + 2)
   const city = loc.slice(0, commaIdx)
   return { display: shortenCity(city), flag: cc.length === 2 ? countryFlag(cc) : '' }
-}
-
-function mintAgeBadge(discoveredAt: string | null | undefined): { label: string; color: string; bg: string; border: string } | null {
-  if (!discoveredAt) return null
-  const months = (Date.now() - new Date(discoveredAt).getTime()) / (1000 * 60 * 60 * 24 * 30.44)
-  if (months < 1) return { label: 'Fresh', color: '#60a5fa', bg: 'rgba(96,165,250,0.1)', border: 'rgba(96,165,250,0.25)' }
-  if (months < 6) return { label: 'Established', color: '#4ade80', bg: 'rgba(74,222,128,0.1)', border: 'rgba(74,222,128,0.25)' }
-  if (months < 12) return { label: 'Veteran', color: '#ffa500', bg: 'rgba(255,165,0,0.1)', border: 'rgba(255,165,0,0.25)' }
-  return { label: 'OG', color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' }
 }
 
 interface SoftwareVersionEntry {

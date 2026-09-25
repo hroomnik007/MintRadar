@@ -27,15 +27,6 @@ function reliabilityScoreInfo(score: number) {
   return { label: 'Low Reliability', color: '#ff4d4d', bg: 'rgba(255,77,77,0.1)', border: 'rgba(255,77,77,0.25)' }
 }
 
-function mintAgeBadge(discoveredAt: string | null | undefined) {
-  if (!discoveredAt) return null
-  const months = (Date.now() - new Date(discoveredAt).getTime()) / (1000 * 60 * 60 * 24 * 30.44)
-  if (months < 1) return { label: 'Fresh', color: '#60a5fa', bg: 'rgba(96,165,250,0.1)', border: 'rgba(96,165,250,0.25)' }
-  if (months < 6) return { label: 'Established', color: '#4ade80', bg: 'rgba(74,222,128,0.1)', border: 'rgba(74,222,128,0.25)' }
-  if (months < 12) return { label: 'Veteran', color: '#ffa500', bg: 'rgba(255,165,0,0.1)', border: 'rgba(255,165,0,0.25)' }
-  return { label: 'OG', color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' }
-}
-
 function uptimeColor(pct: number | null | undefined): string {
   if (pct === null || pct === undefined) return 'var(--text3)'
   if (pct >= 80) return '#4ade80'
@@ -136,7 +127,6 @@ function useMintCompareData(mint: KnownMint, latestBySoftware: Record<string, st
   const hostname = getHostname(mint.url)
   const reliabilityScore = listReliabilityScore(mint)
   const tsInfo = reliabilityScoreInfo(reliabilityScore)
-  const ageBadge = mintAgeBadge(mint.discoveredAt)
   const isNew = mint.discoveredAt != null && (now - new Date(mint.discoveredAt).getTime()) < 48 * 3600 * 1000
   const nutsLimits = (mint.nutsLimits ?? {}) as Record<string, unknown>
   // NUT-13 (deterministic secrets) is wallet-side only — mints never advertise
@@ -147,7 +137,7 @@ function useMintCompareData(mint: KnownMint, latestBySoftware: Record<string, st
   const latestForSoftware = mintSoftware != null ? latestBySoftware[mintSoftware] ?? null : null
   const isOutdated = mint.version != null && latestForSoftware != null
     && (parseMinorVer(latestForSoftware) - parseMinorVer(mint.version)) > 2
-  return { isOnline, displayName, hostname, reliabilityScore, tsInfo, ageBadge, isNew, nutsLimits, supportsBackupRestore, isOutdated }
+  return { isOnline, displayName, hostname, reliabilityScore, tsInfo, isNew, nutsLimits, supportsBackupRestore, isOutdated }
 }
 
 export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClose: () => void }) {
@@ -290,7 +280,6 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             {(() => {
               const mint = mints[activeMintIdx]!
               const d = allData[activeMintIdx]!
-              const badge = d.ageBadge
               const uptimePct = uptime24hQueries[activeMintIdx]?.data?.uptimePct ?? null
               const count = mint.reviewCount ?? 0
               const avg = mint.reviewAvgRating
@@ -302,9 +291,6 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                       <div className="cmp-mobile-name">{d.displayName}</div>
                       <div className="cmp-mobile-host">{d.hostname}</div>
                     </div>
-                    {!d.isNew && badge && (
-                      <span className="cmp-mobile-badge" style={{ color: badge.color, background: badge.bg, borderColor: badge.border }}>{badge.label}</span>
-                    )}
                     {d.isNew && <span className="cmp-mobile-badge" style={{ color: '#4ade80', background: 'rgba(74,222,128,0.1)', borderColor: 'rgba(74,222,128,0.3)' }}>New</span>}
                   </div>
 
@@ -434,16 +420,12 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           <div className="cmp-lbl cmp-row-mint">Mint</div>
           {mints.map((mint, i) => {
             const d = allData[i]!
-            const badge = d.ageBadge
             return (
               <div key={mint.url} className="cmp-val cmp-row-mint" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
                 <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={20} />
                 <div style={{ minWidth: 0, width: '100%' }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.displayName}</div>
                   <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.hostname}</div>
-                  {!d.isNew && badge && (
-                    <span style={{ fontSize: 9, color: badge.color, background: badge.bg, border: `0.5px solid ${badge.border}`, borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>{badge.label}</span>
-                  )}
                   {d.isNew && <span style={{ fontSize: 9, color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.3)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>New</span>}
                 </div>
               </div>
