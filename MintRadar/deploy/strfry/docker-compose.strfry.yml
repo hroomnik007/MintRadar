@@ -10,6 +10,7 @@ services:
     volumes:
       - ./strfry.conf:/etc/strfry.conf:ro
       - ./writePolicy.sh:/app/plugins/writePolicy.sh:ro
+      - ./privileged-pubkeys.txt:/app/plugins/privileged-pubkeys.txt:ro
       - strfry-db:/app/strfry-db
     ports:
       # Loopback-only — nginx is the only thing that talks to this port.

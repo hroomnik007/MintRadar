@@ -1,0 +1,15 @@
+# Single source of truth for MintRadar's privileged Nostr pubkeys — hex
+# format, one per line, blank lines and lines starting with # ignored.
+# Read by both writePolicy.sh (write-policy enforcement, inside the strfry
+# container) and backup-own-events.sh (the own-relay backup cron, on the
+# host) so the two never drift apart.
+#
+# These are public keys, not secrets — safe to commit.
+
+# Wildcitizen7 — personal maintainer identity
+1757995286af8c2bcdcfd13a300e9c40bc4a67e761118c5b365573406c6b37bc
+
+# MintRadar app/service identity (backend NOTIFICATION_SERVICE_NSEC —
+# signs the "MintRadar Alerts" kind:0 profile, Learn module kind:30023
+# articles, and NIP-17 notification DMs)
+d03c080f3f3871f8a9ce741ecda4ff0f3b16d96f507a42f34d3c5d51146f4e03
