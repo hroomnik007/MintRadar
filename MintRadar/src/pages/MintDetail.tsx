@@ -561,11 +561,12 @@ function MintDetailContent({ url }: { url: string }) {
   const auditAvgTimeRef = useRef<HTMLSpanElement>(null)
   const auditAvgTimeTooltip = useTapTooltip(auditAvgTimeRef)
   const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'nuts' | 'audit' | 'reviews'>('overview')
+  const [showAllAuditSwaps, setShowAllAuditSwaps] = useState(false)
   // Last ≤100 audit.8333.space swaps for this mint (backend/src/discovery.ts's
   // mint_audit_swaps, served via GET /api/mints/swaps — never audit.8333.space
   // directly). Lazily fetched only once the Audit tab is actually opened, and
   // cached from then on for the rest of the session.
-  const { data: auditSwapsData, isLoading: auditSwapsLoading } = useQuery({
+  const { data: auditSwapsData, isLoading: auditSwapsLoading, isError: auditSwapsError, refetch: refetchAuditSwaps } = useQuery({
     queryKey: ['mint', 'audit-swaps', url],
     queryFn: async () => {
       const res = await fetch(`/api/mints/swaps?url=${encodeURIComponent(url)}`)
@@ -713,6 +714,19 @@ function MintDetailContent({ url }: { url: string }) {
     const t2 = window.setTimeout(() => setHighlightedReview(null), 2800)
     return () => { window.clearTimeout(t); window.clearTimeout(t2) }
   }, [url, filteredReviews])
+
+  // Plain-tab deep link (#audit | #history | #nuts | #reviews | #overview) on
+  // load. Distinct from #review-<id> above — that pattern is "review-"
+  // (singular + id), this one is "reviews" (plural, no id), so the two never
+  // collide and #review-<id> already wins for opening the Reviews tab.
+  // Unrecognized/missing hash falls through to the default 'overview' tab.
+  useEffect(() => {
+    const raw = window.location.hash
+    const m = raw.match(/^#(overview|history|nuts|audit|reviews)$/)
+    if (!m?.[1]) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveTab(m[1] as 'overview' | 'history' | 'nuts' | 'audit' | 'reviews')
+  }, [url])
 
   const histLineData = useMemo(() => {
     const segs = chartHistoryData?.segments ?? []
@@ -917,8 +931,9 @@ function MintDetailContent({ url }: { url: string }) {
   // this same array so they can never disagree.
   const auditSwaps = auditSwapsData?.swaps ?? []
   const AUDIT_SWAP_BAR_MAX = 44
+  const AUDIT_SWAP_ROWS_DEFAULT = 8
   const auditSwapBarItems = auditSwaps.slice(0, AUDIT_SWAP_BAR_MAX)
-  const auditRecentSwapRows = auditSwaps.slice(0, 8)
+  const auditRecentSwapRows = showAllAuditSwaps ? auditSwaps : auditSwaps.slice(0, AUDIT_SWAP_ROWS_DEFAULT)
 
   // Average rating is computed only over events that actually carry a numeric
   // rating — rating-less endorsement events are counted in the review total but
@@ -1354,7 +1369,13 @@ function MintDetailContent({ url }: { url: string }) {
           <button
             key={tab}
             className={`md-tab${activeTab === tab ? ' active' : ''}`}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => {
+              setActiveTab(tab)
+              const newHash = `#${tab}`
+              if (window.location.hash !== newHash) {
+                window.history.replaceState(null, '', newHash)
+              }
+            }}
           >
             {{ overview: 'Overview', history: 'History', nuts: 'NUTs', audit: 'Audit', reviews: 'Reviews' }[tab]}
           </button>
@@ -2090,10 +2111,27 @@ function MintDetailContent({ url }: { url: string }) {
                         </tbody>
                       </table>
                     </div>
+                    {auditSwaps.length > AUDIT_SWAP_ROWS_DEFAULT && (
+                      <button
+                        type="button"
+                        className="audit-swaps-show-all-btn"
+                        onClick={() => setShowAllAuditSwaps(v => !v)}
+                      >
+                        {showAllAuditSwaps ? 'Show fewer' : `Show all (${auditSwaps.length})`}
+                      </button>
+                    )}
                   </div>
                 )}
                 {auditSwapsLoading && auditSwaps.length === 0 && (
                   <div style={{fontSize:12.5,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:4}}>Loading recent swaps…</div>
+                )}
+                {auditSwapsError && (
+                  <div className="audit-swaps-error-banner" role="status">
+                    Couldn't load recent swaps
+                    <button type="button" className="audit-swaps-retry-btn" onClick={() => void refetchAuditSwaps()}>
+                      Retry
+                    </button>
+                  </div>
                 )}
 
                 <a
