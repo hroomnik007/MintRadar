@@ -529,6 +529,19 @@ export default function Dashboard() {
   // already-tracked mint (backend/src/mintPubkey.ts). Informational only —
   // both URLs stay tracked as separate rows, nothing is merged.
   const [submitAliasOf, setSubmitAliasOf] = useState<{ url: string; name: string | null }[]>([])
+  // Persistent post-submit banner — survives the submit modal closing.
+  // `watchUrls` are the newly-added URL(s) the banner waits to see appear in
+  // /api/mints/known before auto-dismissing (single-submit only; a bulk
+  // banner with nothing newly added has no URL to watch for and stays until
+  // manually dismissed). `attempts` bounds the re-invalidate retries below —
+  // never an unbounded/unthrottled poll.
+  const [queuedBanner, setQueuedBanner] = useState<{
+    id: number
+    message: string
+    tone: 'success' | 'info'
+    watchUrls: string[]
+    attempts: number
+  } | null>(null)
   // Probe/lookup results are keyed by the input they were produced for —
   // 'loading' and 'idle' are derived below instead of set synchronously in effects.
   const [probe, setProbe] = useState<{ url: string; state: 'success' | 'error'; result: { name: string | null; version: string | null; nutCount: number; latencyMs: number | null } | null }>({ url: '', state: 'error', result: null })
@@ -697,6 +710,29 @@ export default function Dashboard() {
     return () => clearTimeout(timer)
   }, [submitState])
 
+  // Derived, not set-in-effect: true once every watched URL from the last
+  // submit is visible in /api/mints/known, so the banner (rendered below via
+  // `visibleQueuedBanner`) disappears on its own without an effect calling
+  // setState synchronously off current render state.
+  const queuedBannerResolved = queuedBanner !== null && queuedBanner.watchUrls.length > 0 &&
+    queuedBanner.watchUrls.every(u => (knownMintsData ?? []).some(m => m.url === u))
+  const visibleQueuedBanner = queuedBanner && !queuedBannerResolved ? queuedBanner : null
+
+  // While unresolved, re-invalidates the query at the backend's own
+  // known-mints cache cadence (60s, KNOWN_MINTS_CACHE_TTL) instead of adding
+  // a separate polling interval — bounded to 3 attempts (3 min) so a mint
+  // that never becomes visible doesn't retry forever.
+  useEffect(() => {
+    if (!queuedBanner || queuedBanner.watchUrls.length === 0) return
+    if (queuedBannerResolved) return
+    if (queuedBanner.attempts >= 3) return
+    const t = setTimeout(() => {
+      setQueuedBanner(b => b ? { ...b, attempts: b.attempts + 1 } : b)
+      void queryClient.invalidateQueries({ queryKey: ['mints-known'] })
+    }, 60_000)
+    return () => clearTimeout(t)
+  }, [queuedBanner, queuedBannerResolved, queryClient])
+
   function handleViewMode(mode: 'cards' | 'list') {
     setViewMode(mode)
     localStorage.setItem('mintRadar_viewMode', mode)
@@ -820,10 +856,21 @@ export default function Dashboard() {
           setSubmitMsg(
             data.isNew === false
               ? 'Already tracked — this mint is already known to MintRadar.'
-              : 'Mint submitted! It will appear on the dashboard after the next probe cycle (~5 min).'
+              : 'Tracked. List refresh in ~1 min.'
           )
           setSubmitAliasOf(data.aliasOf ?? [])
           void queryClient.invalidateQueries({ queryKey: ['mints-known'] })
+          // Already-tracked URLs keep the modal message only — no persistent
+          // banner (nothing new for the dashboard to wait on).
+          if (data.isNew !== false) {
+            setQueuedBanner({
+              id: Date.now(),
+              message: 'Tracked. List refresh in ~1 min.',
+              tone: 'success',
+              watchUrls: [submitUrl],
+              attempts: 0,
+            })
+          }
         }
       })
       .catch(() => {
@@ -851,6 +898,15 @@ export default function Dashboard() {
       }
     })
 
+    // Tracked alongside the setBulkProgress calls below (that state updates
+    // asynchronously, so it can't be read back synchronously here) — used
+    // only to build the one post-submit banner summary once the batch settles.
+    let addedUrls: string[] = []
+    let duplicateCount = 0
+    // Line-level rejects (didn't start with https://) count as failed too.
+    let failedCount = lines.length - validUrls.length
+    let rateLimited = false
+
     if (validUrls.length > 0) {
       setBulkProgress(prev => prev.map((p, j) => validIndices.includes(j) ? { ...p, status: 'probing' } : p))
       try {
@@ -872,8 +928,12 @@ export default function Dashboard() {
           // repeating the same "Too many requests" on every row.
           setBulkRateLimitMsg(rateLimitMessage(res.headers.get('Retry-After')))
           setBulkProgress(prev => prev.map((p, j) => validIndices.includes(j) ? { ...p, status: 'pending' } : p))
+          rateLimited = true
         } else if (res.ok && data.results) {
           const results = data.results
+          addedUrls = results.filter(r => r.success && r.isNew).map(r => r.url)
+          duplicateCount = results.filter(r => r.success && !r.isNew).length
+          failedCount += results.filter(r => !r.success).length
           setBulkProgress(prev => prev.map((p, j) => {
             const k = validIndices.indexOf(j)
             if (k === -1) return p
@@ -882,10 +942,12 @@ export default function Dashboard() {
             return { ...p, status: r.isNew ? 'added' : 'duplicate', aliasOf: r.aliasOf ?? [] }
           }))
         } else {
+          failedCount += validUrls.length
           const err = data.error ?? 'Failed'
           setBulkProgress(prev => prev.map((p, j) => validIndices.includes(j) ? { ...p, status: 'failed', error: err } : p))
         }
       } catch {
+        failedCount += validUrls.length
         setBulkProgress(prev => prev.map((p, j) => validIndices.includes(j) ? { ...p, status: 'failed', error: 'Network error' } : p))
       }
     }
@@ -893,6 +955,19 @@ export default function Dashboard() {
     setBulkRunning(false)
     setBulkDone(true)
     void queryClient.invalidateQueries({ queryKey: ['mints-known'] })
+
+    // One banner summarizing the whole batch, not one per URL. Skipped on a
+    // 429 (bulkRateLimitMsg already covers that case inside the modal) and
+    // when nothing was actually submitted.
+    if (!rateLimited && lines.length > 0) {
+      setQueuedBanner({
+        id: Date.now(),
+        message: `${addedUrls.length} added, ${duplicateCount} duplicate, ${failedCount} failed`,
+        tone: 'success',
+        watchUrls: addedUrls,
+        attempts: 0,
+      })
+    }
   }
 
   const bulkAdded = bulkProgress.filter(p => p.status === 'added').length
@@ -931,6 +1006,20 @@ export default function Dashboard() {
             <span className="dash-status-item"><b>{knownTotal}</b> tracked mints</span>
             <span className="dash-status-item dash-status-end">last checked {formatTimeAgo(lastCheckTime)}</span>
           </div>
+        </div>
+      )}
+
+      {visibleQueuedBanner && (
+        <div className={`queued-banner queued-banner-${visibleQueuedBanner.tone}`} role="status">
+          <span>{visibleQueuedBanner.message}</span>
+          <button
+            type="button"
+            className="queued-banner-dismiss"
+            aria-label="Dismiss"
+            onClick={() => setQueuedBanner(null)}
+          >
+            ×
+          </button>
         </div>
       )}
 
