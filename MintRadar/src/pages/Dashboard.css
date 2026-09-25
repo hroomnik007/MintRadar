@@ -980,9 +980,14 @@
   text-align: center;
   font-size: 12.5px;
   color: var(--t3);
-  padding: 10px 12px;
+  padding: 10px 16px;
   margin: 8px auto 20px;
   max-width: calc(var(--dash-chrome-max) - var(--page-pad) * 2);
+  /* Mobile keeps the full-width banner convention (matches .wl-sync-error-banner
+     and every other Dashboard/Watchlist banner — no shrink-to-content there).
+     Desktop shrinks to its actual content width instead of stretching a single
+     line of text across the whole grid; the 44px min-height touch target is
+     unaffected either way. */
   width: calc(100% - var(--page-pad) * 2);
   background: var(--surface);
   border: 1px solid var(--brd);
@@ -990,6 +995,12 @@
   font-family: var(--font-mono);
   box-sizing: border-box;
   cursor: pointer;
+}
+
+@media (min-width: 601px) {
+  .degraded-note {
+    width: fit-content;
+  }
 }
 
 .degraded-note:hover {

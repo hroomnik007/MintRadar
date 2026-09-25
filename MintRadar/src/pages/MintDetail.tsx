@@ -530,6 +530,20 @@ function MintDetailContent({ url }: { url: string }) {
   const [testingLatency, setTestingLatency] = useState(false)
   const errorBadgeRef = useRef<HTMLSpanElement>(null)
   const errorBadgeTooltip = useTapTooltip(errorBadgeRef)
+  // The error badge's horizontal position varies with the error string's length
+  // (unlike AuditSourceInfoIcon's `align` prop, which is a static per-callsite
+  // choice — there's no fixed "near the left edge" or "near the right edge"
+  // here). Measured on open, in the event handler (not render, to stay
+  // purity-rule-clean) via the trigger's own rect vs. window width, so the
+  // popup grows away from whichever edge is actually tight instead of always
+  // centering (the old behavior — see the audit-tooltip style below).
+  const [errorTooltipAlign, setErrorTooltipAlign] = useState<'left' | 'right'>('left')
+  const measureErrorTooltipAlign = useCallback(() => {
+    const el = errorBadgeRef.current
+    if (!el) return
+    const spaceRight = window.innerWidth - el.getBoundingClientRect().right
+    setErrorTooltipAlign(spaceRight >= 200 ? 'left' : 'right')
+  }, [])
   const backupBadgeRef = useRef<HTMLSpanElement>(null)
   const backupBadgeTooltip = useTapTooltip(backupBadgeRef)
   const latencyInfoRef = useRef<HTMLSpanElement>(null)
@@ -1125,13 +1139,23 @@ function MintDetailContent({ url }: { url: string }) {
               <span
                 ref={errorBadgeRef}
                 style={{position:'relative',display:'inline-flex'}}
-                onPointerEnter={errorBadgeTooltip.onPointerEnter}
+                onPointerEnter={e => { measureErrorTooltipAlign(); errorBadgeTooltip.onPointerEnter(e) }}
                 onPointerLeave={errorBadgeTooltip.onPointerLeave}
-                onClick={errorBadgeTooltip.onClick}
+                onClick={e => { measureErrorTooltipAlign(); errorBadgeTooltip.onClick(e) }}
               >
                 <Info size={11} color="#6b7280" style={{cursor:'help'}} />
                 {errorBadgeTooltip.open && httpErrorTooltip(knownMint.lastError) && (
-                  <div className="audit-tooltip" style={{width:200,left:'50%',transform:'translateX(-50%)',bottom:'auto',top:'calc(100% + 6px)'}}>
+                  <div
+                    className="audit-tooltip"
+                    style={{
+                      width: 200,
+                      maxWidth: 'calc(100vw - 40px)',
+                      transform: 'none',
+                      bottom: 'auto',
+                      top: 'calc(100% + 6px)',
+                      ...(errorTooltipAlign === 'right' ? { right: 0, left: 'auto' } : { left: 0, right: 'auto' }),
+                    }}
+                  >
                     {httpErrorTooltip(knownMint.lastError)}
                   </div>
                 )}
