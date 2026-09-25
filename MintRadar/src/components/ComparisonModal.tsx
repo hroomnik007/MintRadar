@@ -10,6 +10,8 @@ import { IcShield } from '@/components/mint/IcShield'
 import { type KnownMint } from '@/hooks/useKnownMints'
 import { splitVersionString, canonicalSoftwareName, parseMajorMinorPatch } from '@/utils/reliabilityScore'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
+import { AUDIT_MIN_SAMPLES } from '@/utils/auditScore'
+import { formatAuditSuccessRatio, auditReliabilityColor } from '@/utils/mintFormatting'
 import { useNow } from '@/hooks/useNow'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
@@ -32,6 +34,22 @@ function uptimeColor(pct: number | null | undefined): string {
   if (pct >= 80) return '#4ade80'
   if (pct >= 50) return '#ffa500'
   return '#ff4d4d'
+}
+
+// "Audit success" row — reuses the same rolling-window fields, minimum-sample
+// floor, and colour logic as the Mint Detail Audit tab's success-rate cell
+// (auditRecentTotal/auditRecentErrors, AUDIT_MIN_SAMPLES, auditReliabilityColor()),
+// so this never disagrees with the numbers shown there. Deliberately not the
+// lifetime auditNMints/auditNErrors counters, which have no sample-size floor.
+function auditSuccessDisplay(mint: KnownMint): { text: string; color: string } {
+  const total = mint.auditRecentTotal ?? null
+  if (total === null || total < AUDIT_MIN_SAMPLES) {
+    return { text: 'n/a', color: 'var(--text3)' }
+  }
+  return {
+    text: formatAuditSuccessRatio(total, mint.auditRecentErrors ?? null),
+    color: auditReliabilityColor(total, mint.auditRecentErrors ?? null),
+  }
 }
 
 function listReliabilityScore(mint: KnownMint): number {
@@ -161,6 +179,8 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
   const isMobile = useIsMobile()
   const backupInfoRef = useRef<HTMLSpanElement>(null)
   const backupInfoTooltip = useTapTooltip(backupInfoRef)
+  const auditInfoRef = useRef<HTMLSpanElement>(null)
+  const auditInfoTooltip = useTapTooltip(auditInfoRef)
   const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('7d')
   const [metric, setMetric] = useState<HistoryMetric>('latency')
   // Mobile only: which mint's single-column stack is shown (see .cmp-mobile-*
@@ -377,6 +397,35 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                     </span>
                   </div>
 
+                  <div className="cmp-mobile-row">
+                    <span className="cmp-mobile-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      Audit success
+                      <span
+                        style={{ position: 'relative', display: 'inline-flex' }}
+                        onPointerEnter={auditInfoTooltip.onPointerEnter}
+                        onPointerLeave={auditInfoTooltip.onPointerLeave}
+                        onClick={auditInfoTooltip.onClick}
+                      >
+                        <Info size={11} color="#6b7280" style={{ cursor: 'help', flexShrink: 0 }} />
+                        {auditInfoTooltip.open && (
+                          <div style={{
+                            position: 'absolute', bottom: 'calc(100% + 6px)', left: 0,
+                            background: 'var(--bg)', border: '0.5px solid var(--border2)', borderRadius: 8,
+                            padding: '8px 10px', fontSize: 10, color: 'var(--text2)', lineHeight: 1.5,
+                            width: 200, zIndex: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                            pointerEvents: 'none', whiteSpace: 'normal', textAlign: 'left',
+                            fontFamily: 'var(--font-body)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400,
+                          }}>
+                            Rolling window from audit.8333.space. Not a solvency or reserves signal — only whether recent swaps succeeded.
+                          </div>
+                        )}
+                      </span>
+                    </span>
+                    <span className="cmp-mobile-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: auditSuccessDisplay(mint).color }}>
+                      {auditSuccessDisplay(mint).text}
+                    </span>
+                  </div>
+
                   <div className="cmp-mobile-row cmp-mobile-row-last">
                     <span className="cmp-mobile-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       Backup
@@ -543,6 +592,40 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                 {d.isOutdated && (
                   <span style={{ marginLeft: 5, fontSize: 10, color: '#ff4d4d', background: 'rgba(255,77,77,0.1)', border: '0.5px solid rgba(255,77,77,0.3)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>Outdated</span>
                 )}
+              </div>
+            )
+          })}
+
+          {/* ── Audit success (rolling window from audit.8333.space, same fields/threshold/colour as the Mint Detail Audit tab) ── */}
+          <div className="cmp-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            Audit success
+            <span
+              ref={auditInfoRef}
+              style={{ position: 'relative', display: 'inline-flex' }}
+              onPointerEnter={auditInfoTooltip.onPointerEnter}
+              onPointerLeave={auditInfoTooltip.onPointerLeave}
+              onClick={auditInfoTooltip.onClick}
+            >
+              <Info size={11} color="#6b7280" style={{ cursor: 'help', flexShrink: 0 }} />
+              {auditInfoTooltip.open && (
+                <div style={{
+                  position: 'absolute', bottom: 'calc(100% + 6px)', left: 0,
+                  background: 'var(--bg)', border: '0.5px solid var(--border2)', borderRadius: 8,
+                  padding: '8px 10px', fontSize: 10, color: 'var(--text2)', lineHeight: 1.5,
+                  width: 200, zIndex: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                  pointerEvents: 'none', whiteSpace: 'normal', textAlign: 'left',
+                  fontFamily: 'var(--font-body)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400,
+                }}>
+                  Rolling window from audit.8333.space. Not a solvency or reserves signal — only whether recent swaps succeeded.
+                </div>
+              )}
+            </span>
+          </div>
+          {mints.map(mint => {
+            const audit = auditSuccessDisplay(mint)
+            return (
+              <div key={mint.url} className="cmp-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: audit.color }}>
+                {audit.text}
               </div>
             )
           })}
