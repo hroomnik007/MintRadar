@@ -76,8 +76,7 @@ Select 2–4 mints and compare side-by-side: Status, Reliability Score, Communit
 - Adding a mint to your watchlist requires a Nostr login (you're prompted to sign in first) — this keeps the list portable across devices
 - Watchlist stored locally in IndexedDB — never sent to the server
 - Optionally synced across devices as **NIP-44 encrypted kind:10003** events on Nostr relays
-- Export as **JSON** or **CSV**
-- DM notifications on mint downtime/recovery, sent directly from your browser via NIP-07
+- Downtime/recovery DMs via Nostr (NIP-17 gift wrap). Delivered by the MintRadar notification service while you're offline; the browser path is extra when a signer is present.
 
 ### 📡 Nostr NIP-87 Discovery
 
