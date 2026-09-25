@@ -9,6 +9,17 @@ import { pruneOldNotificationSubscriptions } from './db.js'
 import { publishServiceProfile } from './nostrService.js'
 import { fetchLatestUpstreamVersions } from './versionCatalog.js'
 
+// When the 5-min probe cycle last finished sweeping every mint — the "actual
+// last completed probe cycle" /health.lastProbeAt reports, as opposed to mere
+// process-alive status. Set after Promise.allSettled resolves (individual
+// per-mint probe failures don't reject it, so a cycle with some flaky mints
+// still counts as completed); null until the first cycle after boot finishes.
+let lastProbeCompletedAt: string | null = null
+
+export function getLastProbeCompletedAt(): string | null {
+  return lastProbeCompletedAt
+}
+
 const KNOWN_MINTS = [
   'https://mint.minibits.cash/Bitcoin',
   'https://stablenut.umint.cash',
@@ -43,6 +54,7 @@ export function startCron(): void {
       const mints = await getKnownMints()
       const limit = pLimit(10)
       await Promise.allSettled(mints.map(url => limit(() => probeMintToDb(url))))
+      lastProbeCompletedAt = new Date().toISOString()
       // Refresh the Reliability Score Movers snapshots right after probes, so
       // mints.last_reliability_score and the newest history rows are already current.
       await refreshReliabilityMoversRollup()

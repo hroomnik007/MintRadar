@@ -37,8 +37,10 @@ Health check. No rate limiting.
 
 **Response:**
 ```json
-{ "status": "ok", "timestamp": "2026-06-25T10:00:00.000Z" }
+{ "status": "ok", "timestamp": "2026-06-25T10:00:00.000Z", "lastProbeAt": "2026-06-25T09:58:12.000Z" }
 ```
+
+`lastProbeAt` is when the 5-minute probe cycle last finished sweeping every mint (not merely "process is alive") — `null` until the first cycle completes after a restart.
 
 ---
 

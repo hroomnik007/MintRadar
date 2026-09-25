@@ -7,7 +7,7 @@ import { upsertMint, probeMintToDb, validateCashuMintProbe, parseMintMethods, ty
 import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } from './mintPubkey.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
-import { seedKnownMints, startCron } from './cron.js'
+import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
 import { publishServiceProfile } from './nostrService.js'
 import { normalizeUrl } from './discovery.js'
 import { computeDegraded } from './degraded.js'
@@ -388,7 +388,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // ── Routes ─────────────────────────────────────────────────────
 
 app.get('/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), lastProbeAt: getLastProbeCompletedAt() })
 })
 
 // Static routes here must stay in sync with LEARN_MODULES (src/constants/learnModules.ts)
