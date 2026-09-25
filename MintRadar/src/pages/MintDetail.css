@@ -1324,7 +1324,13 @@ button.md-url-copy.copied > svg { opacity: 1; }
     display: flex;
     align-items: center;
     gap: 6px;
-    flex-wrap: nowrap;
+    /* flex-wrap must be wrap, not nowrap — .md-hdr-error's flex:1 1 100%
+       below can only force itself onto its own row if the container is
+       actually allowed to wrap. With nowrap the error badge and the two
+       buttons were forced onto one line together, squeezing the buttons'
+       min-width:0/ellipsis rule down to a sliver (visible as mid-word
+       truncation like "Mi-nt QR"). */
+    flex-wrap: wrap;
     min-width: 0;
   }
   .md-hdr-center,

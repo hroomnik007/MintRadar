@@ -604,16 +604,23 @@ export default function Dashboard() {
   const effectiveShowDegraded = showDegraded || activeFilters.status === 'offline'
 
   // The full set of mints we track — matches the "All Known" tile and
-  // /api/stats `totalMints` (all three read the same unfiltered mints table).
-  const knownTotal = (knownMintsData ?? []).filter(m => !m.archived).length
+  // /api/stats `totalMints` (all three read the same unfiltered mints table),
+  // minus archived (offline 30d+) mints. `activeMints` below MUST derive from
+  // this same !archived-filtered array — degradedCount and allMints previously
+  // filtered raw knownMintsData with no archived check at all, so an
+  // archived+degraded mint got double-counted (present in degradedCount's
+  // "hidden" bucket but already excluded from knownTotal), breaking the
+  // shown+hidden===knownTotal invariant the footer text implies.
+  const activeMints = useMemo(() => (knownMintsData ?? []).filter(m => !m.archived), [knownMintsData])
+  const knownTotal = activeMints.length
 
   const { degradedCount, allMints } = useMemo(() => {
-    const degradedUrls = knownMintsData?.filter(m => m.degraded).map(m => m.url) ?? []
+    const degradedUrls = activeMints.filter(m => m.degraded).map(m => m.url)
     return {
       degradedCount: degradedUrls.length,
-      allMints: (knownMintsData?.filter(m => effectiveShowDegraded ? true : !m.degraded) ?? []) as KnownMint[],
+      allMints: activeMints.filter(m => effectiveShowDegraded ? true : !m.degraded) as KnownMint[],
     }
-  }, [knownMintsData, effectiveShowDegraded])
+  }, [activeMints, effectiveShowDegraded])
 
   const filteredMints = useMemo(() => {
     return applyFilters(allMints, activeFilters, {
@@ -1128,13 +1135,15 @@ export default function Dashboard() {
             />
           )}
           {degradedCount > 0 && activeFilters.status !== 'offline' && (
-            <p className="degraded-note">
+            <button
+              type="button"
+              className="degraded-note"
+              onClick={() => setShowDegraded(v => !v)}
+              aria-expanded={showDegraded}
+            >
               {!showDegraded && <>{degradedCount} mints hidden (offline 24h+){' '}</>}
-              <button onClick={() => setShowDegraded(v => !v)}
-                style={{background:'none',border:'none',color:'var(--green-bright)',fontSize:11,fontWeight:600,cursor:'pointer'}}>
-                {showDegraded ? 'Hide' : 'Show'}
-              </button>
-            </p>
+              <span className="degraded-note-action">{showDegraded ? 'Hide' : 'Show'}</span>
+            </button>
           )}
         </>
       )}
