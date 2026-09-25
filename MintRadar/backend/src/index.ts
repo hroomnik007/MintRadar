@@ -275,6 +275,18 @@ app.use(cors({
 
 app.use(express.json())
 
+// /api/v1/* alias — rewritten to its /api/* equivalent before any routing,
+// rate-limit, or exemption check below runs, so it shares every one of those
+// mechanisms (and their per-IP/per-pubkey counters) with the unversioned path
+// instead of getting its own copy. /api/v1 is preferred going forward; the
+// unversioned /api/* is kept as a legacy alias (see docs/API.md).
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  if (req.url === '/api/v1' || req.url.startsWith('/api/v1/') || req.url.startsWith('/api/v1?')) {
+    req.url = '/api' + req.url.slice('/api/v1'.length)
+  }
+  next()
+})
+
 // Rate limiting — exempt public read-only endpoints that sit behind Cache-Control
 const RATE_LIMIT_EXEMPT = new Set(['/health', '/api/mints/known', '/api/stats', '/api/mint/icon'])
 

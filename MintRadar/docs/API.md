@@ -2,6 +2,8 @@
 
 MintRadar provides a public read-only API for querying Cashu mint data. All endpoints are served under the same origin as the web app (`https://mintradar.org/api/`).
 
+**Versioning:** every endpoint below is also reachable under `/api/v1/` (e.g. `/api/v1/mints/known`) — same response shape, same rate limits, no behavior differences. `/api/v1` is the preferred path going forward; the unversioned `/api/*` shown below is kept as a legacy alias and may be removed in a future release.
+
 ---
 
 ## Rate Limits
