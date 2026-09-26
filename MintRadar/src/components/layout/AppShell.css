@@ -619,6 +619,28 @@
   margin-bottom: 2px;
 }
 
+/* "Advanced: sign in with an nsec key" disclosure — collapsed by default so
+   the nsec path (not recommended — see the security notice on the focus view)
+   doesn't compete visually with the extension/remote-signer cards above it. */
+.nostr-advanced-disclosure {
+  margin-top: 2px;
+}
+.nostr-advanced-summary {
+  font-size: 12px; color: var(--text2);
+  cursor: pointer;
+  padding: 8px 2px;
+  list-style: none;
+}
+.nostr-advanced-summary::-webkit-details-marker { display: none; }
+.nostr-advanced-summary:hover { color: var(--text); }
+.nostr-advanced-disclosure .nostr-method-card { margin-top: 6px; }
+.nostr-advanced-warn {
+  font-size: 10.5px; color: var(--text3);
+  margin-top: 6px;
+  padding: 0 2px;
+  line-height: 1.5;
+}
+
 .nostr-method-desc {
   font-size: 11px; color: var(--text-faint); font-family: var(--font-body);
 }

@@ -28,11 +28,20 @@ async function setup(page: Page) {
 
 const remoteCard = (page: Page) => page.locator('.nostr-method-card', { hasText: 'Remote signer' })
 
-test('method cards carry icon badges', async ({ page }) => {
+test('method cards carry icon badges, nsec tucked behind an Advanced disclosure', async ({ page }) => {
   await setup(page)
+  // Extension and Remote signer lead; nsec is not a top-level card (D4 —
+  // deprioritized as the non-recommended path) but still present in the DOM,
+  // collapsed inside the "Advanced" <details>.
   expect(await page.locator('.nostr-method-title').allTextContents())
-    .toEqual(['Nostr extension', 'Nostr key (nsec)', 'Remote signer'])
+    .toEqual(['Nostr extension', 'Remote signer', 'Nostr key (nsec)'])
   await expect(page.locator('.nostr-method-icon svg')).toHaveCount(3)
+  await expect(page.locator('.nostr-advanced-disclosure')).not.toHaveAttribute('open', '')
+
+  await page.locator('.nostr-advanced-summary').click()
+  await expect(page.locator('.nostr-advanced-disclosure')).toHaveAttribute('open', '')
+  await page.locator('.nostr-method-card', { hasText: 'Nostr key (nsec)' }).click()
+  await expect(page.locator('.nostr-nsec-security-warn')).toBeVisible()
 })
 
 test('remote-signer: QR appears automatically on selection (no extra click)', async ({ page }) => {

@@ -399,7 +399,6 @@ export function AppShell() {
                 <div className="nostr-modal-methods">
                   {([
                     { id: 'nip07', title: 'Nostr extension', desc: 'Sign in with Alby, nos2x or any NIP-07 signer', icon: <IcPuzzle /> },
-                    { id: 'nsec', title: 'Nostr key (nsec)', desc: 'Paste a private key — stored only in this browser', icon: <IcKey /> },
                     { id: 'remote-signer', title: 'Remote signer', desc: 'Sign in with Amber, Primal or any NIP-46 signer — your key stays on your phone', icon: <IcQrcode /> },
                   ] as const).map(m => (
                     <div
@@ -418,6 +417,27 @@ export function AppShell() {
                       <div className="nostr-method-chevron" aria-hidden="true">›</div>
                     </div>
                   ))}
+
+                  <details className="nostr-advanced-disclosure">
+                    <summary className="nostr-advanced-summary">Advanced: sign in with an nsec key</summary>
+                    <div
+                      className="nostr-method-card"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => selectMethod('nsec')}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectMethod('nsec') } }}
+                    >
+                      <div className="nostr-method-icon"><IcKey /></div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="nostr-method-title">Nostr key (nsec)</div>
+                        <div className="nostr-method-desc">Paste a private key — stored only in this browser</div>
+                      </div>
+                      <div className="nostr-method-chevron" aria-hidden="true">›</div>
+                    </div>
+                    <div className="nostr-advanced-warn">
+                      ⚠️ Your key is held in memory for this session and cleared on logout — never written to disk. Not the recommended path; prefer an extension or remote signer above.
+                    </div>
+                  </details>
                 </div>
 
                 <div className="nostr-modal-footer">
