@@ -74,9 +74,8 @@ Select 2–4 mints and compare side-by-side: Status, Reliability Score, Communit
 
 - Login via **NIP-07 browser extension**, **nsec private key**, or **NIP-46 bunker / Amber**
 - Adding a mint to your watchlist requires a Nostr login (you're prompted to sign in first) — this keeps the list portable across devices
-- Watchlist stored locally in IndexedDB — never sent to the server
-- Optionally synced across devices as **NIP-44 encrypted kind:10003** events on Nostr relays
-- Downtime/recovery DMs via Nostr (NIP-17 gift wrap). Delivered by the MintRadar notification service while you're offline; the browser path is extra when a signer is present.
+- Watchlist itself is stored locally (IndexedDB) and optionally synced across devices as **NIP-44 encrypted kind:10003** events on Nostr relays
+- Downtime/recovery DMs via Nostr (NIP-17 gift wrap). Delivered by the MintRadar notification service while you're offline; the browser path is extra when a signer is present. Since the server has to know what to monitor to send these, a mint's URL is sent to MintRadar's backend (NIP-98 authenticated, tied to your pubkey) only while notifications are on for that mint — turn notifications off for a mint and its URL isn't shared with the server
 
 ### 📡 Nostr NIP-87 Discovery
 
@@ -119,7 +118,7 @@ Sharing a mint page link on Twitter/X, Discord, Telegram, Slack, or WhatsApp sho
 - **No cookies**
 - Fonts are self-hosted — no requests to Google Fonts or any external font CDN
 - Nostr private keys **never leave your browser** and are never stored or transmitted to the backend
-- Watchlist data lives only in your browser (IndexedDB) or encrypted on Nostr relays under your own key
+- Watchlist data lives in your browser (IndexedDB) and optionally encrypted on Nostr relays under your own key; a mint's URL is additionally sent to MintRadar's backend only while you have notifications on for that mint, so it knows what to monitor for your downtime/recovery DMs
 
 ### 🔁 Automatic Backups
 
