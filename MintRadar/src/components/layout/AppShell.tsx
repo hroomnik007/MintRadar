@@ -432,9 +432,6 @@ export function AppShell() {
                     </div>
                     <div className="nostr-method-chevron" aria-hidden="true">›</div>
                   </div>
-                  <div className="nostr-advanced-warn">
-                    ⚠️ Entering your nsec key in a browser is inherently risky. On desktop, prefer a NIP-07 extension (Alby, nos2x) instead — your key never leaves the extension. On mobile, only use this on a trusted personal device with no suspicious apps installed. Your key is held in memory for this session only and cleared on logout — never written to disk.
-                  </div>
                 </div>
 
                 <div className="nostr-modal-footer">
@@ -462,6 +459,9 @@ export function AppShell() {
 
                 {loginMethod === 'nsec' && (
                   <div className="nostr-nsec-wrap">
+                    <div className="nostr-advanced-warn">
+                      ⚠️ Entering your nsec key in a browser is inherently risky. On desktop, prefer a NIP-07 extension (Alby, nos2x) instead — your key never leaves the extension. On mobile, only use this on a trusted personal device with no suspicious apps installed. Your key is held in memory for this session only and cleared on logout — never written to disk.
+                    </div>
                     <input
                       className="nostr-nsec-input"
                       type="password"
