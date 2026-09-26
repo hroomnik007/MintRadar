@@ -418,26 +418,23 @@ export function AppShell() {
                     </div>
                   ))}
 
-                  <details className="nostr-advanced-disclosure">
-                    <summary className="nostr-advanced-summary">Advanced: sign in with an nsec key</summary>
-                    <div
-                      className="nostr-method-card"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => selectMethod('nsec')}
-                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectMethod('nsec') } }}
-                    >
-                      <div className="nostr-method-icon"><IcKey /></div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="nostr-method-title">Nostr key (nsec)</div>
-                        <div className="nostr-method-desc">Paste a private key — stored only in this browser</div>
-                      </div>
-                      <div className="nostr-method-chevron" aria-hidden="true">›</div>
+                  <div
+                    className="nostr-method-card nostr-method-card--muted"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => selectMethod('nsec')}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectMethod('nsec') } }}
+                  >
+                    <div className="nostr-method-icon"><IcKey /></div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="nostr-method-title">Nostr key (nsec)</div>
+                      <div className="nostr-method-desc">Paste a private key — stored only in this browser</div>
                     </div>
-                    <div className="nostr-advanced-warn">
-                      ⚠️ Entering your nsec key in a browser is inherently risky. On desktop, prefer a NIP-07 extension (Alby, nos2x) instead — your key never leaves the extension. On mobile, only use this on a trusted personal device with no suspicious apps installed. Your key is held in memory for this session only and cleared on logout — never written to disk.
-                    </div>
-                  </details>
+                    <div className="nostr-method-chevron" aria-hidden="true">›</div>
+                  </div>
+                  <div className="nostr-advanced-warn">
+                    ⚠️ Entering your nsec key in a browser is inherently risky. On desktop, prefer a NIP-07 extension (Alby, nos2x) instead — your key never leaves the extension. On mobile, only use this on a trusted personal device with no suspicious apps installed. Your key is held in memory for this session only and cleared on logout — never written to disk.
+                  </div>
                 </div>
 
                 <div className="nostr-modal-footer">

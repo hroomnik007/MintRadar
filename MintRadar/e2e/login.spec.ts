@@ -28,20 +28,16 @@ async function setup(page: Page) {
 
 const remoteCard = (page: Page) => page.locator('.nostr-method-card', { hasText: 'Remote signer' })
 
-test('method cards carry icon badges, nsec tucked behind an Advanced disclosure', async ({ page }) => {
+test('method cards carry icon badges, nsec reachable in one click with its warning visible upfront', async ({ page }) => {
   await setup(page)
-  // Extension and Remote signer lead; nsec is not a top-level card (D4 —
-  // deprioritized as the non-recommended path) but still present in the DOM,
-  // collapsed inside the "Advanced" <details>.
+  // Extension, Remote signer, then nsec — all three are top-level cards, no
+  // disclosure toggle. nsec is visually de-emphasized (muted icon badge) but
+  // reachable in one click.
   expect(await page.locator('.nostr-method-title').allTextContents())
     .toEqual(['Nostr extension', 'Remote signer', 'Nostr key (nsec)'])
   await expect(page.locator('.nostr-method-icon svg')).toHaveCount(3)
-  await expect(page.locator('.nostr-advanced-disclosure')).not.toHaveAttribute('open', '')
-
-  await page.locator('.nostr-advanced-summary').click()
-  await expect(page.locator('.nostr-advanced-disclosure')).toHaveAttribute('open', '')
-  // The one nsec security warning shows here, under Advanced, before the
-  // user even picks the card — not a second time once they're in the flow.
+  // The one nsec security warning is visible immediately, before the user
+  // even picks the card — not a second time once they're in the flow.
   await expect(page.locator('.nostr-advanced-warn')).toBeVisible()
   await page.locator('.nostr-method-card', { hasText: 'Nostr key (nsec)' }).click()
   await expect(page.locator('.nostr-advanced-warn')).toHaveCount(0)

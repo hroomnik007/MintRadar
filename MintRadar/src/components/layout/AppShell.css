@@ -619,31 +619,23 @@
   margin-bottom: 2px;
 }
 
-/* "Advanced: sign in with an nsec key" disclosure — collapsed by default so
-   the nsec path (not recommended) doesn't compete visually with the
-   extension/remote-signer cards above it. The one security warning for this
-   path (platform-specific guidance + session/memory handling, merged from
-   what used to be two separate warnings shown at consecutive steps) lives
-   here, so the user sees it before picking the card, not after. */
-.nostr-advanced-disclosure {
-  margin-top: 2px;
+/* nsec — one click away like Extension/Remote signer, but visually
+   de-emphasized as the least-recommended option (muted icon badge, no
+   copper accent). The one security warning for this path (platform-specific
+   guidance + session/memory handling, merged from what used to be two
+   separate warnings shown at consecutive steps) sits directly under it, so
+   the user sees it before picking the card, not after. */
+.nostr-method-card--muted .nostr-method-icon {
+  background: var(--bg2);
+  border-color: var(--border);
+  color: var(--text3);
 }
-.nostr-advanced-summary {
-  font-size: 12px; color: var(--text2);
-  cursor: pointer;
-  padding: 8px 2px;
-  list-style: none;
-}
-.nostr-advanced-summary::-webkit-details-marker { display: none; }
-.nostr-advanced-summary:hover { color: var(--text); }
-.nostr-advanced-disclosure .nostr-method-card { margin-top: 6px; }
 .nostr-advanced-warn {
   font-size: 11px; color: var(--copper);
   background: var(--copper-soft);
   border: 1px solid var(--copper-soft-strong);
   border-radius: var(--radius-m);
   padding: 8px 12px;
-  margin-top: 8px;
   font-family: var(--font-mono);
   line-height: 1.5;
 }
