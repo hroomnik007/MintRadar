@@ -433,12 +433,6 @@ export function AppShell() {
                     <div className="nostr-method-chevron" aria-hidden="true">›</div>
                   </div>
                 </div>
-
-                <div className="nostr-modal-footer">
-                  <div className="nostr-privacy-note">
-                    <IcShield /> Your keys stay yours. MintRadar only ever requests signatures — it can&apos;t read or store your private key.
-                  </div>
-                </div>
               </>
             ) : (
               <>
@@ -552,13 +546,11 @@ export function AppShell() {
                 )}
 
                 <div className="nostr-modal-footer">
-                  <div className="nostr-privacy-note">
-                    <IcShield /> {loginMethod === 'nip07'
-                      ? <>Your key never leaves your extension. MintRadar only requests signatures — it can&apos;t read your private key.</>
-                      : loginMethod === 'remote-signer'
-                      ? <>Your key stays on your remote signer (e.g. Amber, nsec.app). Only a temporary session key is stored in this browser to relay requests — it can&apos;t sign anything on its own.</>
-                      : <>Your key stays only in this browser&apos;s memory for this session — used to sign on your behalf, never sent anywhere, never saved to disk.</>}
-                  </div>
+                  {loginMethod === 'nip07' && (
+                    <div className="nostr-privacy-note">
+                      <IcShield /> Your key never leaves your extension. MintRadar only requests signatures — it can&apos;t read your private key.
+                    </div>
+                  )}
                   {/* nsec always needs a Connect click. nip07 shows the actions only
                       to recover — no extension, or a failed/rejected attempt. On the
                       happy path it auto-connects with no buttons. remote-signer has
