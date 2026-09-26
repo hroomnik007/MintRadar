@@ -620,8 +620,11 @@
 }
 
 /* "Advanced: sign in with an nsec key" disclosure — collapsed by default so
-   the nsec path (not recommended — see the security notice on the focus view)
-   doesn't compete visually with the extension/remote-signer cards above it. */
+   the nsec path (not recommended) doesn't compete visually with the
+   extension/remote-signer cards above it. The one security warning for this
+   path (platform-specific guidance + session/memory handling, merged from
+   what used to be two separate warnings shown at consecutive steps) lives
+   here, so the user sees it before picking the card, not after. */
 .nostr-advanced-disclosure {
   margin-top: 2px;
 }
@@ -635,9 +638,13 @@
 .nostr-advanced-summary:hover { color: var(--text); }
 .nostr-advanced-disclosure .nostr-method-card { margin-top: 6px; }
 .nostr-advanced-warn {
-  font-size: 10.5px; color: var(--text3);
-  margin-top: 6px;
-  padding: 0 2px;
+  font-size: 11px; color: var(--copper);
+  background: var(--copper-soft);
+  border: 1px solid var(--copper-soft-strong);
+  border-radius: var(--radius-m);
+  padding: 8px 12px;
+  margin-top: 8px;
+  font-family: var(--font-mono);
   line-height: 1.5;
 }
 
@@ -767,16 +774,6 @@
   line-height: 1.5;
 }
 
-.nostr-nsec-security-warn {
-  font-size: 11px; color: var(--copper);
-  background: var(--copper-soft);
-  border: 1px solid var(--copper-soft-strong);
-  border-radius: var(--radius-m);
-  padding: 8px 12px;
-  margin-bottom: 10px;
-  font-family: var(--font-mono);
-  line-height: 1.5;
-}
 .nostr-warn a { color: var(--green-bright); text-decoration: none; }
 .nostr-warn a:hover { text-decoration: underline; }
 

@@ -40,8 +40,12 @@ test('method cards carry icon badges, nsec tucked behind an Advanced disclosure'
 
   await page.locator('.nostr-advanced-summary').click()
   await expect(page.locator('.nostr-advanced-disclosure')).toHaveAttribute('open', '')
+  // The one nsec security warning shows here, under Advanced, before the
+  // user even picks the card — not a second time once they're in the flow.
+  await expect(page.locator('.nostr-advanced-warn')).toBeVisible()
   await page.locator('.nostr-method-card', { hasText: 'Nostr key (nsec)' }).click()
-  await expect(page.locator('.nostr-nsec-security-warn')).toBeVisible()
+  await expect(page.locator('.nostr-advanced-warn')).toHaveCount(0)
+  await expect(page.locator('.nostr-nsec-input')).toBeVisible()
 })
 
 test('remote-signer: QR appears automatically on selection (no extra click)', async ({ page }) => {
