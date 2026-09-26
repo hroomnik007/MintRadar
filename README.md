@@ -85,7 +85,7 @@ Automatic mint discovery on a schedule from a set of public Nostr relays, using 
 ### 🔧 Tools
 
 - **Token Inspector** — paste a Cashu token (`cashuA` / `cashuB`) to see its mint, amount, unit, proof count, memo, mint status, and Reliability Score, plus a risk badge for the issuing mint — with a link to Mint Detail or Cashu.me. Optional **Check if spent** queries the mint (NUT-07) for unspent / spent / partial proofs
-- **Best Mint for Me** — short wizard (unit, what matters most, whether you need seed-phrase restore). Latency is measured live from your browser; the top matches show latency, uptime, Reliability Score, LN support, and mint/melt limits for the chosen unit
+- **Best Mint for Me** — 2-step wizard: pick your currency unit and how much you plan to store, then multi-select what matters (fast latency measured from your browser, Reliability Score, Lightning in + out, seed-phrase restore/NUT-09, locked payments (P2PK)/NUT-11, live WebSocket updates/NUT-17). The top matches show latency, uptime, Reliability Score, LN support, and mint/melt limits for the chosen unit
 
 ### 📚 Learn
 
