@@ -71,7 +71,12 @@ export function useMintReviews(mintUrl: string, extraPubkeys: string[] = []) {
       .then(profileEvents => {
         if (cancelled) return
         const profileMap: ProfileMap = {}
-        for (const e of profileEvents) {
+        // querySync returns events in relay-arrival order, not by created_at — sort
+        // newest-first (same idiom nostr-tools' own SimplePool.get() uses internally)
+        // so a slower relay serving a stale cached kind:0 can't clobber a newer one.
+        const sorted = [...profileEvents].sort((a, b) => b.created_at - a.created_at)
+        for (const e of sorted) {
+          if (profileMap[e.pubkey]) continue
           try {
             const meta = JSON.parse(e.content) as { name?: string; picture?: string }
             const p: { name?: string; picture?: string } = {}
