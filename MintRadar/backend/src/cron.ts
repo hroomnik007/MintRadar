@@ -8,6 +8,7 @@ import { refreshReviewSurgeBaseline } from './reviewSurgeRollup.js'
 import { pruneOldNotificationSubscriptions } from './db.js'
 import { publishServiceProfile } from './nostrService.js'
 import { fetchLatestUpstreamVersions } from './versionCatalog.js'
+import { isAllowlistMode, getAllowlistUrls } from './allowlist.js'
 
 // When the 5-min probe cycle last finished sweeping every mint — the "actual
 // last completed probe cycle" /health.lastProbeAt reports, as opposed to mere
@@ -42,7 +43,8 @@ const KNOWN_MINTS = [
 ]
 
 export async function seedKnownMints(upsertMint: (url: string, name: undefined, isKnown: boolean) => Promise<void>): Promise<void> {
-  for (const url of KNOWN_MINTS) {
+  const urls = getAllowlistUrls() ?? KNOWN_MINTS
+  for (const url of urls) {
     await upsertMint(url, undefined, true)
   }
 }
@@ -121,7 +123,7 @@ export function startCron(): void {
     }
     // Cheap, idempotent replaceable event — safe to repeat daily, keeps the
     // service profile fresh on relays with short retention.
-    await publishServiceProfile()
+    if (!isAllowlistMode()) await publishServiceProfile()
   })
 
   // Advance the rolling ~1-week-ago review_count snapshot every day at 4:45am —
@@ -155,6 +157,10 @@ export function startCron(): void {
   // review count / avg rating / list from the DB instead of a live relay query
   // on every page open. It's single-flight internally and logs its own summary.
   setTimeout(async () => {
+    if (isAllowlistMode()) {
+      console.log('[cron] allowlist mode: skipping nostr/api discovery and reviews sync')
+      return
+    }
     console.log('[cron] running initial discovery...')
     await discoverMintsFromNostr()
     await discoverMintsFromApi()
@@ -178,6 +184,7 @@ export function startCron(): void {
   // value and get their baseline set without waiting for the 4:45am slot.
   setTimeout(() => { void refreshReviewSurgeBaseline() }, 60_000)
   setInterval(async () => {
+    if (isAllowlistMode()) return
     console.log('[cron] running scheduled discovery...')
     await discoverMintsFromNostr()
     await discoverMintsFromApi()
