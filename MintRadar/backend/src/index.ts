@@ -18,6 +18,7 @@ import { computeReliabilityMovers, type MintScoreSnapshot } from './reliabilityM
 import { globalMeanRating, weightedRating } from './weightedRating.js'
 import { hasRecentReviewSurge } from './reviewSurge.js'
 import { isTestMint } from './testMints.js'
+import { verifyNip05 } from './nip05Verify.js'
 
 // Safety net against a nostr-tools bug: AbstractRelay.connect()'s
 // connection-timeout path calls `this.ws.close()` on a socket that hasn't
@@ -1165,6 +1166,33 @@ app.get('/api/mint/icon', (req: Request, res: Response): void => {
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/mint/icon]', err)
       res.status(404).end()
+    })
+})
+
+// SSRF-safe NIP-05 verification proxy for reviewer identifiers (Reviews tab).
+// See nip05Verify.ts for why this must be server-side: the domain in a
+// reviewer's claimed nip05 is unauthenticated author-supplied input, so a
+// direct browser fetch would leak every viewer's IP to a domain the review's
+// author (a potential attacker) controls. Subject to the general per-IP rate
+// limit (not exempt) — unlike mint icons this isn't hit on every page view at
+// site-wide scale, only for the handful of named reviewers on one Reviews page.
+app.get('/api/nip05/verify', (req: Request, res: Response): void => {
+  const domain = req.query['domain']
+  const name = req.query['name']
+  const pubkey = req.query['pubkey']
+  if (typeof domain !== 'string' || typeof name !== 'string' || typeof pubkey !== 'string') {
+    res.status(400).json({ error: 'domain, name and pubkey are required' })
+    return
+  }
+
+  verifyNip05(domain, name, pubkey)
+    .then(verified => {
+      res.setHeader('Cache-Control', 'public, max-age=1800')
+      res.json({ verified })
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[/api/nip05/verify]', err)
+      res.json({ verified: false })
     })
 })
 

@@ -876,6 +876,12 @@ button.md-url-copy.copied > svg { opacity: 1; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.review-author-nip05 {
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--copper);
+}
 .review-author-npub {
   font-size: 11px;
   font-family: var(--font-mono);

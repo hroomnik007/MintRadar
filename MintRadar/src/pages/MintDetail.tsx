@@ -14,6 +14,7 @@ import { useMintHistory } from '@/hooks/useMintHistory'
 import { useKnownMints } from '@/hooks/useKnownMints'
 import { useMintReviews } from '@/hooks/useMintReviews'
 import { useMintOperatorNip05 } from '@/hooks/useMintOperatorNip05'
+import { useVerifiedNip05 } from '@/hooks/useVerifiedNip05'
 import { usePendingAutoWatch } from '@/hooks/usePendingAutoWatch'
 import { submitMintReview } from '@/hooks/useSubmitReview'
 import { useWatchlistStore } from '@/stores/watchlist.store'
@@ -476,7 +477,7 @@ function MintDetailContent({ url }: { url: string }) {
     const mintradarIds = new Set(reviews.map(r => r.id))
     const nostrOnly = (nostrReviewsData ?? [])
       .filter(r => !mintradarIds.has(r.id))
-    const all: Array<{ id: string; pubkey: string; rating: number | null; comment: string; createdAt: number; source: 'mintradar' | 'nostr'; profile?: { name?: string; picture?: string } }> = [
+    const all: Array<{ id: string; pubkey: string; rating: number | null; comment: string; createdAt: number; source: 'mintradar' | 'nostr'; profile?: { name?: string; picture?: string; nip05?: string } }> = [
       ...reviews.map(r => ({ ...r, source: 'mintradar' as const })),
       ...nostrOnly.map(r => {
         const profile = nostrProfiles[r.pubkey]
@@ -728,6 +729,24 @@ function MintDetailContent({ url }: { url: string }) {
     const t2 = window.setTimeout(() => setHighlightedReview(null), 2800)
     return () => { window.clearTimeout(t); window.clearTimeout(t2) }
   }, [url, filteredReviews])
+
+  // Numbered pagination for the Reviews tab, applied to the filtered list. Page is
+  // keyed by mint URL so it resets to 1 when navigating to a different mint (no
+  // reset effect needed); changing a filter above also resets it to 1.
+  const reviewsTotalPages = Math.max(1, Math.ceil(filteredReviews.length / REVIEWS_PER_PAGE))
+  const reviewsPage = Math.min(
+    reviewsPageState.key === url ? reviewsPageState.page : 1,
+    reviewsTotalPages,
+  )
+  const pagedReviews = filteredReviews.slice((reviewsPage - 1) * REVIEWS_PER_PAGE, reviewsPage * REVIEWS_PER_PAGE)
+  // Only the page actually on screen gets its NIP-05 claim verified — see
+  // useVerifiedNip05.ts for why this bounds external requests without needing
+  // a separate cap. Computed up here (not lower with the rest of the pagination
+  // derived state) because it calls a hook, and this component has an early
+  // loading-state return further down — hooks can't follow that conditionally.
+  const verifiedNip05ByPubkey = useVerifiedNip05(
+    useMemo(() => pagedReviews.map(r => ({ pubkey: r.pubkey, nip05: r.profile?.nip05 })), [pagedReviews])
+  )
 
   // Plain-tab deep link (#audit | #history | #nuts | #reviews | #overview) on
   // load. Distinct from #review-<id> above — that pattern is "review-"
@@ -999,15 +1018,6 @@ function MintDetailContent({ url }: { url: string }) {
     setReviewsPageState({ key: url, page: 1 })
   }
 
-  // Numbered pagination for the Reviews tab, applied to the filtered list. Page is
-  // keyed by mint URL so it resets to 1 when navigating to a different mint (no
-  // reset effect needed); changing a filter above also resets it to 1.
-  const reviewsTotalPages = Math.max(1, Math.ceil(filteredReviews.length / REVIEWS_PER_PAGE))
-  const reviewsPage = Math.min(
-    reviewsPageState.key === url ? reviewsPageState.page : 1,
-    reviewsTotalPages,
-  )
-  const pagedReviews = filteredReviews.slice((reviewsPage - 1) * REVIEWS_PER_PAGE, reviewsPage * REVIEWS_PER_PAGE)
   const goToReviewsPage = (p: number) => setReviewsPageState({ key: url, page: Math.max(1, Math.min(p, reviewsTotalPages)) })
 
   const chartAvgLatency = chartHistoryData?.avgLatencyMs ?? null
@@ -2246,7 +2256,12 @@ function MintDetailContent({ url }: { url: string }) {
                             }
                           </div>
                           <div className="review-author">
-                            <span className="review-author-name">{displayName}</span>
+                            <span className="review-author-name">
+                              {displayName}
+                              {profile?.name && verifiedNip05ByPubkey[r.pubkey] && (
+                                <span className="review-author-nip05">{verifiedNip05ByPubkey[r.pubkey]}</span>
+                              )}
+                            </span>
                             <span className="review-author-npub">{shortNpub(npub)}</span>
                           </div>
                           <div className="review-meta">
