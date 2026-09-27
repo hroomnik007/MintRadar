@@ -14,18 +14,15 @@
 .md-header {
   position: relative;
   margin: 14px 18px 0;
-  /* Top padding trimmed 22px -> 14px -> 8px (2026-09-27, two passes). The
-     first pass (14px) was a real, live, verified change but too small to
-     read as a visible difference: the Back button sits on its own row
-     above the avatar/name row (see .md-back-compact + .md-hdr-left below),
-     so the *visible* gap above "Minibits mint" is padding-top + border +
-     the Back row's own height + the row gap, not padding-top alone — an
-     8px trim there was a small fraction of that total. This second pass
-     also trims the .md-hdr-left row-gap below (6px -> 4px) and
-     .md-back-compact's padding, attacking all three contributors together
-     so the reduction is actually visible. Right/bottom padding left at
-     20/22px — unrelated to the top-gap complaint this fixes. */
-  padding: 8px 20px 22px;
+  /* Top padding trimmed 22px -> 14px -> 8px -> 4px (2026-09-27, three
+     passes). The Back button sits on its own row above the avatar/name row
+     (see .md-back-compact + .md-hdr-left below), so the *visible* gap above
+     "Minibits mint" is padding-top + border + the Back row's own height +
+     the row gap, not padding-top alone — the first couple of trims here were
+     real but individually too small to read as a visible difference. This
+     pass also trims the .md-hdr-left row-gap below (4px -> 3px). Right/bottom
+     padding left at 20/22px — unrelated to the top-gap complaint this fixes. */
+  padding: 4px 20px 22px;
   border: 1px solid var(--border);
   border-radius: var(--r);
   background: var(--bg2);
@@ -42,7 +39,7 @@
    grid (mobile) layout mode. */
 .md-watch-star-hero {
   position: absolute;
-  top: 8px;
+  top: 4px;
   right: 20px;
 }
 
@@ -81,11 +78,11 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  /* 6px -> 4px (2026-09-27) — same pass as the .md-header padding-top trim
-     above: this is the gap between the Back row and the avatar/name row,
-     part of the same "space above the title" the padding-top change alone
-     wasn't enough to fix. */
-  gap: 4px;
+  /* 6px -> 4px -> 3px (2026-09-27) — same passes as the .md-header
+     padding-top trim above: this is the gap between the Back row and the
+     avatar/name row, part of the same "space above the title" the
+     padding-top change alone wasn't enough to fix. */
+  gap: 3px;
   flex: 1 1 auto;
   min-width: 0;
 }
