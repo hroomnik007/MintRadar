@@ -12,6 +12,7 @@ import {
 import { useMintProbe } from '@/hooks/useMintProbe'
 import { useMintHistory } from '@/hooks/useMintHistory'
 import { useKnownMints } from '@/hooks/useKnownMints'
+import { useMintReviews } from '@/hooks/useMintReviews'
 import { mergeStoredAndLiveReviews } from '@/utils/reviewUtils'
 import { useMintOperatorNip05 } from '@/hooks/useMintOperatorNip05'
 import { useVerifiedNip05 } from '@/hooks/useVerifiedNip05'
@@ -142,6 +143,16 @@ interface NutMethod {
 interface NutConfig {
   disabled?: boolean
   methods?: NutMethod[]
+}
+
+interface MergedReviewCandidate {
+  id: string
+  pubkey: string
+  rating: number | null
+  comment: string
+  createdAt: number
+  source: 'mintradar' | 'nostr'
+  profile?: { name?: string; picture?: string; nip05?: string }
 }
 
 const NUT_DESCRIPTIONS: Record<string, { short: string; desc: string; features: string[]; useCase: string }> = {
@@ -463,13 +474,17 @@ function MintDetailContent({ url }: { url: string }) {
     [nostrReviewsData],
   )
   const { reviews, loading: reviewsLoading, profiles: nostrProfiles } = useMintReviews(url, nostrReviewsPubkeys)
+  // Shared shape for mergeStoredAndLiveReviews' two input arrays — `source` has
+  // to be the same literal-union type on both sides, not narrowed to a single
+  // literal on each ('nostr' / 'mintradar'), or TS unifies the generic to
+  // whichever array is inferred first and rejects the other as incompatible.
   // The card shows mints.review_count: one stored review per pubkey. This list
   // is that same set. A live event may replace a stored one when it is newer,
   // and the signed-in user's own just-published review is added so they see it
   // before the next sync. Other live-only events are not added — counting them
   // made this page say 5 while the card said 4.
   const mergedReviews = useMemo(() => {
-    const stored = (nostrReviewsData ?? []).map(r => {
+    const stored: MergedReviewCandidate[] = (nostrReviewsData ?? []).map(r => {
       const profileForReview = nostrProfiles[r.pubkey]
       return {
         id: r.id,
@@ -477,11 +492,11 @@ function MintDetailContent({ url }: { url: string }) {
         rating: r.rating,
         comment: r.content,
         createdAt: r.createdAt,
-        source: 'nostr' as const,
+        source: 'nostr',
         ...(profileForReview ? { profile: profileForReview } : {}),
       }
     })
-    const live = reviews.map(r => ({ ...r, source: 'mintradar' as const }))
+    const live: MergedReviewCandidate[] = reviews.map(r => ({ ...r, source: 'mintradar' }))
     return mergeStoredAndLiveReviews(stored, live, profile?.pubkey ?? null)
   }, [reviews, nostrReviewsData, nostrProfiles, profile?.pubkey])
   const [selectedNut, setSelectedNut] = useState<string | null>(null)
