@@ -14,15 +14,18 @@
 .md-header {
   position: relative;
   margin: 14px 18px 0;
-  /* Top padding trimmed from 22px to 14px (2026-09-27) — the old value was
-     roughly double every other bordered card's padding in the app (.stat-card
-     10px, .mint-card 11px) and produced more empty space above the Back
-     button than Dashboard has above its first row (.dash-intro, no block
-     padding beyond its own 14px margin-top). 14px matches both that margin
-     and the mobile ≤768px override of this same rule, which already used
-     14px. Right/bottom padding left at 20/22px — unrelated to the top-gap
-     complaint this fixes. */
-  padding: 14px 20px 22px;
+  /* Top padding trimmed 22px -> 14px -> 8px (2026-09-27, two passes). The
+     first pass (14px) was a real, live, verified change but too small to
+     read as a visible difference: the Back button sits on its own row
+     above the avatar/name row (see .md-back-compact + .md-hdr-left below),
+     so the *visible* gap above "Minibits mint" is padding-top + border +
+     the Back row's own height + the row gap, not padding-top alone — an
+     8px trim there was a small fraction of that total. This second pass
+     also trims the .md-hdr-left row-gap below (6px -> 4px) and
+     .md-back-compact's padding, attacking all three contributors together
+     so the reduction is actually visible. Right/bottom padding left at
+     20/22px — unrelated to the top-gap complaint this fixes. */
+  padding: 8px 20px 22px;
   border: 1px solid var(--border);
   border-radius: var(--r);
   background: var(--bg2);
@@ -39,7 +42,7 @@
    grid (mobile) layout mode. */
 .md-watch-star-hero {
   position: absolute;
-  top: 14px;
+  top: 8px;
   right: 20px;
 }
 
@@ -70,7 +73,7 @@
    (icon-only circle) overrides this fully, since it's declared later in the
    file at the same specificity. */
 .md-back-compact {
-  padding: 4px 10px;
+  padding: 3px 10px;
   font-size: 10px;
 }
 
@@ -78,7 +81,11 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  /* 6px -> 4px (2026-09-27) — same pass as the .md-header padding-top trim
+     above: this is the gap between the Back row and the avatar/name row,
+     part of the same "space above the title" the padding-top change alone
+     wasn't enough to fix. */
+  gap: 4px;
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -1258,7 +1265,11 @@ button.md-url-copy.copied > svg { opacity: 1; }
   .md-tab { padding: 10px 10px; font-size: 13px; }
   .md-header {
     margin: 10px 18px 0;
-    padding: 14px 14px;
+    /* Top trimmed 14px -> 8px (2026-09-27, second pass) — see the desktop
+       .md-header comment above: the first pass alone barely moved the
+       visible gap above the title because the icon Back button (below) and
+       the row gap dominate it. */
+    padding: 8px 14px 14px;
     gap: 10px;
     flex-direction: column;
     align-items: stretch;
@@ -1277,7 +1288,9 @@ button.md-url-copy.copied > svg { opacity: 1; }
     flex-direction: column;
     align-items: flex-start;
     flex-wrap: nowrap;
-    gap: 6px;
+    /* 6px -> 4px (2026-09-27) — same whitespace-reduction pass as the
+       .md-header padding-top trim above. */
+    gap: 4px;
     /* Reserve room so the name/status row never runs under the star, which is
        absolutely positioned in the header's top-right corner on mobile too. */
     padding-right: 44px;
@@ -1285,25 +1298,39 @@ button.md-url-copy.copied > svg { opacity: 1; }
   .md-hdr-center { flex-wrap: wrap; justify-content: flex-start; }
   .md-hdr-right { flex-wrap: wrap; }
   .md-hdr-actions { margin-left: 0; margin-right: 0; }
-  .md-watch-star-hero { top: 14px; right: 14px; }
-  /* Icon-only circle button (2026-09-27) — the text pill was already near
-     the minimum comfortable chrome size, so shrinking its padding/font
-     further wasn't the right direction. Dropping the visible "Back" label
-     shrinks the button's footprint on its own; width/height are pinned to
-     44px so the tappable area stays at the accessibility minimum even
-     though it now reads as a compact circle. The accessible name moves to
-     an aria-label on the <button> (see MintDetail.tsx) since there's no
-     visible text left for it to come from. */
+  .md-watch-star-hero { top: 8px; right: 14px; }
+  /* Icon-only circle button (2026-09-27, revised same day) — the text pill
+     was already near the minimum comfortable chrome size, so shrinking its
+     padding/font further wasn't the right direction; dropping the visible
+     "Back" label shrinks the button on its own. First attempt pinned the
+     BUTTON's own box to 44x44px for the tap target, but since Back sits on
+     its own row above the avatar (same as desktop's .md-back-compact row),
+     that made the button taller than the original text pill and pushed the
+     title down further — the opposite of the goal. Fixed by keeping the
+     visible circle small (28px, smaller than the original text pill was)
+     and expanding only the *tappable* area to 44x44 via the ::before below,
+     which is positioned absolutely and doesn't add to layout height. The
+     accessible name moves to an aria-label on the <button> (see
+     MintDetail.tsx) since there's no visible text left for it to come from. */
   .md-back {
-    width: 44px;
-    height: 44px;
+    position: relative;
+    width: 28px;
+    height: 28px;
     padding: 0;
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 15px;
+    font-size: 13px;
     flex-shrink: 0;
+  }
+  /* Invisible hit-area expansion: (44-28)/2 = 8px on each side, so the
+     tappable box is 44x44 even though the visible circle stays 28px.
+     Absolutely positioned, so it doesn't participate in layout/flow. */
+  .md-back::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
   }
   .md-back-label { display: none; }
   /* Mobile keeps the original fixed 40px avatar column — deliberately no
