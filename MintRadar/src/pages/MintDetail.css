@@ -1,5 +1,13 @@
 .mint-detail {
   background: transparent;
+  /* Share Dashboard's content width so card edges line up across pages —
+     see --dash-chrome-max's definition in src/index.css. Well above any
+     phone width, so mobile stays full-bleed with no extra media query
+     needed here. Children (.md-header/.md-summary/.md-tabs/.md-body) keep
+     their own 18px margin/padding, which already equals --page-pad. */
+  width: 100%;
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
 }
 
 /* ── Header ─────────────────────────────────────────────────── */
