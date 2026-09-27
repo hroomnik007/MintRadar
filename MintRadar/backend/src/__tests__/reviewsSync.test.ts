@@ -16,7 +16,6 @@ import {
   dedupeAndParseReviewEvents,
   computeAvgRating,
   persistMintReviews,
-  resolveReviewCountRollup,
   type SyncedReview,
 } from '../reviewsSync.js'
 
@@ -75,45 +74,12 @@ describe('computeAvgRating', () => {
   })
 })
 
-describe('resolveReviewCountRollup — floor-guard against a single flaky sync cycle', () => {
-  it('applies immediately when there is no prior count (first-ever sync)', () => {
-    const r = resolveReviewCountRollup({ reviewCount: null, pendingLowStreak: 0 }, 31)
-    expect(r).toEqual({ appliedCount: 31, pendingLow: null, pendingLowStreak: 0, outcome: 'applied' })
-  })
-
-  it('applies immediately on an increase', () => {
-    const r = resolveReviewCountRollup({ reviewCount: 96, pendingLowStreak: 0 }, 120)
-    expect(r).toEqual({ appliedCount: 120, pendingLow: null, pendingLowStreak: 0, outcome: 'applied' })
-  })
-
-  it('applies immediately on a decrease that is not sharp (within the floor ratio)', () => {
-    // 80/96 ≈ 0.83, above the 0.75 floor — ordinary fluctuation, not "sharp".
-    const r = resolveReviewCountRollup({ reviewCount: 96, pendingLowStreak: 0 }, 80)
-    expect(r).toEqual({ appliedCount: 80, pendingLow: null, pendingLowStreak: 0, outcome: 'applied' })
-  })
-
-  it('dampens a sharp single-cycle drop instead of applying it', () => {
-    const r = resolveReviewCountRollup({ reviewCount: 96, pendingLowStreak: 0 }, 31)
-    expect(r).toEqual({ appliedCount: 96, pendingLow: 31, pendingLowStreak: 1, outcome: 'dampened' })
-  })
-
-  it('confirms and applies a sharp drop once it recurs on a 2nd consecutive cycle', () => {
-    const r = resolveReviewCountRollup({ reviewCount: 96, pendingLowStreak: 1 }, 33)
-    expect(r).toEqual({ appliedCount: 33, pendingLow: null, pendingLowStreak: 0, outcome: 'confirmed-after-dampening' })
-  })
-
-  it('resets the streak the moment a cycle is no longer a sharp drop', () => {
-    // Was mid-streak (1), but this cycle recovered — treated as a normal
-    // increase/non-sharp value and applied immediately, streak cleared.
-    const r = resolveReviewCountRollup({ reviewCount: 96, pendingLowStreak: 1 }, 95)
-    expect(r).toEqual({ appliedCount: 95, pendingLow: null, pendingLowStreak: 0, outcome: 'applied' })
-  })
-})
-
 describe('persistMintReviews', () => {
-  it('replaces rows and updates the rollup inside one transaction', async () => {
+  it('upserts rows and sets the rollup from the stored table, inside one transaction', async () => {
     clientQueryMock.mockImplementation((sql: string) => {
-      if (String(sql).startsWith('SELECT')) return Promise.resolve({ rows: [] })
+      if (String(sql).includes('COUNT(*)')) {
+        return Promise.resolve({ rows: [{ review_count: 2, review_avg_rating: 5 }] })
+      }
       return Promise.resolve({ rows: [] })
     })
     const reviews: SyncedReview[] = [
@@ -122,62 +88,55 @@ describe('persistMintReviews', () => {
     ]
     await persistMintReviews('https://m.example', reviews)
 
-    const sqls = clientQueryMock.mock.calls.map(c => String(c[0]).trim().split(/\s+/).slice(0, 2).join(' '))
-    expect(sqls[0]).toBe('BEGIN')
-    expect(sqls[1]).toBe('SELECT review_count,')
-    expect(sqls[2]).toBe('DELETE FROM')
-    // Both reviews go in one batched multi-VALUES INSERT.
-    expect(sqls.filter(s => s === 'INSERT INTO')).toHaveLength(1)
-    expect(sqls.at(-2)).toBe('UPDATE mints')
-    expect(sqls.at(-1)).toBe('COMMIT')
+    const sqls = clientQueryMock.mock.calls.map(c => String(c[0]))
+    expect(sqls.some(s => s.includes('DELETE'))).toBe(false)
+    expect(sqls[0]!.trim().startsWith('BEGIN')).toBe(true)
+    expect(sqls.at(-1)!.trim()).toBe('COMMIT')
+    expect(sqls.filter(s => s.includes('INSERT INTO mint_reviews'))).toHaveLength(1)
 
     const insertCall = clientQueryMock.mock.calls.find(c => String(c[0]).includes('INSERT INTO mint_reviews'))!
-    expect(String(insertCall[0])).toMatch(/\$7/) // second row's params present → really batched
-    expect(insertCall[1]).toHaveLength(12) // 2 rows * 6 cols
+    expect(String(insertCall[0])).toMatch(/mint_reviews\.created_at < EXCLUDED\.created_at/)
+    expect(String(insertCall[0])).toMatch(/\$7/)
+    expect(insertCall[1]).toHaveLength(12)
 
     const updateCall = clientQueryMock.mock.calls.find(c => String(c[0]).includes('UPDATE mints'))!
-    // count=2, avg=5 (only e1 rated) — no prior row, so applied immediately, no pending state.
-    expect(updateCall[1]).toEqual([2, 5, null, 0, 'https://m.example'])
+    expect(updateCall[1]).toEqual([2, 5, 'https://m.example'])
+    expect(String(updateCall[0])).not.toMatch(/pending_low/)
     expect(clientReleaseMock).toHaveBeenCalledOnce()
   })
 
-  it('holds back a sharp single-cycle drop, keeping the previously-applied count', async () => {
+  it('does not delete stored reviews when this cycle found fewer, and the count comes from the table', async () => {
     clientQueryMock.mockImplementation((sql: string) => {
-      if (String(sql).startsWith('SELECT')) {
-        return Promise.resolve({ rows: [{ review_count: 96, review_avg_rating: 4.8, review_count_pending_low_streak: 0 }] })
+      if (String(sql).includes('COUNT(*)')) {
+        return Promise.resolve({ rows: [{ review_count: 96, review_avg_rating: 4.8 }] })
       }
       return Promise.resolve({ rows: [] })
     })
-    // This cycle's live relay query only found 31 of the mint's 96 known reviews.
     const reviews: SyncedReview[] = Array.from({ length: 31 }, (_, i) => (
       { eventId: `e${i}`, pubkey: `p${i}`, rating: 5, comment: '', createdAt: i }
     ))
     await persistMintReviews('https://m.example', reviews)
 
-    // The rows themselves are still fully replaced with this cycle's findings...
+    const sqls = clientQueryMock.mock.calls.map(c => String(c[0]))
+    expect(sqls.some(s => s.includes('DELETE'))).toBe(false)
     const insertCall = clientQueryMock.mock.calls.find(c => String(c[0]).includes('INSERT INTO mint_reviews'))!
     expect(insertCall[1]).toHaveLength(31 * 6)
-    // ...but the rollup keeps serving the previous, higher count/avg, with the
-    // held-back candidate + streak recorded for the next cycle to see.
     const updateCall = clientQueryMock.mock.calls.find(c => String(c[0]).includes('UPDATE mints'))!
-    expect(updateCall[1]).toEqual([96, 4.8, 31, 1, 'https://m.example'])
+    expect(updateCall[1]).toEqual([96, 4.8, 'https://m.example'])
   })
 
-  it('applies a sharp drop once it has recurred for 2 consecutive cycles', async () => {
+  it('writes a null average when the stored rows have no ratings', async () => {
     clientQueryMock.mockImplementation((sql: string) => {
-      if (String(sql).startsWith('SELECT')) {
-        return Promise.resolve({ rows: [{ review_count: 96, review_avg_rating: 4.8, review_count_pending_low_streak: 1 }] })
+      if (String(sql).includes('COUNT(*)')) {
+        return Promise.resolve({ rows: [{ review_count: 2, review_avg_rating: null }] })
       }
       return Promise.resolve({ rows: [] })
     })
-    const reviews: SyncedReview[] = Array.from({ length: 33 }, (_, i) => (
-      { eventId: `e${i}`, pubkey: `p${i}`, rating: 5, comment: '', createdAt: i }
-    ))
-    await persistMintReviews('https://m.example', reviews)
-
+    await persistMintReviews('https://m.example', [
+      { eventId: 'e', pubkey: 'p', rating: null, comment: '', createdAt: 1 },
+    ])
     const updateCall = clientQueryMock.mock.calls.find(c => String(c[0]).includes('UPDATE mints'))!
-    // Now applied: count/avg reflect this cycle's (still low) findings, pending state cleared.
-    expect(updateCall[1]).toEqual([33, 5, null, 0, 'https://m.example'])
+    expect(updateCall[1]).toEqual([2, null, 'https://m.example'])
   })
 
   it('rolls back and rethrows if an insert fails, still releasing the client', async () => {

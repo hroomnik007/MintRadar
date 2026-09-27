@@ -54,6 +54,7 @@ export const DISCOVERY_RELAYS = [
   'wss://nostr.cypherpunk.today',
   'wss://nostr-pub.wellorder.net',
   'wss://nostr.mintradar.org',
+  'wss://relay.nostr.net',
 ]
 
 const DISCOVERY_TIMEOUT_MS = 15_000

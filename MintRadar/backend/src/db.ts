@@ -204,14 +204,10 @@ export async function initDb(): Promise<void> {
     // sybil flag (reviewSurge.ts / reviewSurgeRollup.ts). Advanced once a day.
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS review_count_7d_ago INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS review_count_7d_ago_at TIMESTAMPTZ',
-    // Floor-guard state for review_count against transient relay-coverage flakiness
-    // in a single reviews-sync cycle (see resolveReviewCountRollup() in
-    // reviewsSync.ts) — a sharp single-cycle drop is held back instead of
-    // immediately overwriting review_count; review_count_pending_low is the
-    // most recent held-back candidate (for observability only, not read back
-    // into the decision) and review_count_pending_low_streak counts how many
-    // consecutive cycles have now reported a sharp drop. Both reset to
-    // NULL/0 the moment a cycle reports a count that isn't a sharp drop.
+    // Unused since 2026-09-27. A drop-floor wrote these while still deleting
+    // mint_reviews rows a thin cycle didn't see, which confirmed the loss.
+    // Sync now upserts and never shrinks the stored set, so nothing reads them.
+    // Left in place; do not drop the columns just to tidy this.
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS review_count_pending_low INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS review_count_pending_low_streak INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_down_at TIMESTAMPTZ',

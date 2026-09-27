@@ -9,12 +9,13 @@
 // the full measured table. Dropped: purplepag.es (0/5 events both kinds — it's a kind:0/
 // 10002/51 directory, not a NIP-87/38000 host; stays in PROFILE_RELAYS), relay.snort.social
 // (only 1/5 kind:38172 events across 3 cycles, 0/5 kind:38000 — too thin to justify), nostr.wine
-// (403 on anon REQ, confirmed all 3 cycles), relay.8333.space (still EHOSTUNREACH), relay.nostr.net
-// (NIP-11 still HTTP 500, confirmed live — was already excluded from REVIEW_READ_RELAYS for this;
-// now dropped from discovery entirely while it stays broken), eden.nostr.land and nostr21.com
-// (paid relays with real yield — 3/5+5/5 and 0/5+5/5 respectively — moved to
-// backend REVIEW_SYNC_RELAYS instead, since that's a read-only cron and doesn't need general
-// discovery/write access). Added back: nostr-pub.wellorder.net — measured 0/5 kind:38172 but a
+// (403 on anon REQ, confirmed all 3 cycles), relay.8333.space (still EHOSTUNREACH).
+// relay.nostr.net was dropped in this audit (NIP-11 HTTP 500) and re-added
+// 2026-09-27 after a live recheck: NIP-11 up, and a kind:38000 REQ returned real
+// events other relays in this set no longer have. It stays off REVIEW_READ_RELAYS.
+// eden.nostr.land and nostr21.com (paid relays with real yield — 3/5+5/5 and 0/5+5/5
+// respectively — moved to backend REVIEW_SYNC_RELAYS instead, since that's a read-only
+// cron and doesn't need general discovery/write access). Added back: nostr-pub.wellorder.net — measured 0/5 kind:38172 but a
 // consistent 5/5 kind:38000 across all 3 cycles, a genuine revival per the "soft cuts return on
 // breakdown > 0" rule (it was previously dropped 2026-08-15 for being unreachable, which no
 // longer reproduces). nostr.oxtr.dev could not be reached from the auditing sandbox (TCP-level
@@ -40,6 +41,7 @@ export const DISCOVERY_RELAYS: string[] = [
   'wss://nostr.cypherpunk.today',
   'wss://nostr-pub.wellorder.net',
   'wss://nostr.mintradar.org',
+  'wss://relay.nostr.net',
 ]
 
 // Discovery relays plus relay.minibits.cash (a Cashu-wallet-specific relay that tends to

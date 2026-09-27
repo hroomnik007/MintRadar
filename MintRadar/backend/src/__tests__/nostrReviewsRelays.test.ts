@@ -37,7 +37,7 @@ describe('DISCOVERY_RELAYS (frontend src/core/nostr/relays.ts vs. backend discov
     expect(BACKEND_DISCOVERY_RELAYS).toEqual(FRONTEND_DISCOVERY_RELAYS)
   })
 
-  it('matches the exact, currently-expected relay list (2026-09-19 live-audit result)', () => {
+  it('matches the exact, currently-expected relay list', () => {
     expect(BACKEND_DISCOVERY_RELAYS).toEqual([
       'wss://relay.damus.io',
       'wss://nos.lol',
@@ -50,12 +50,13 @@ describe('DISCOVERY_RELAYS (frontend src/core/nostr/relays.ts vs. backend discov
       'wss://nostr.cypherpunk.today',
       'wss://nostr-pub.wellorder.net',
       'wss://nostr.mintradar.org',
+      'wss://relay.nostr.net',
     ])
   })
 })
 
 describe('NOSTR_REVIEWS_RELAYS (= reviewsSync REVIEW_SYNC_RELAYS, backend-only broad review-sync set)', () => {
-  it('matches the exact, currently-expected relay list (2026-09-19 live-audit result)', () => {
+  it('matches the exact, currently-expected relay list', () => {
     expect(NOSTR_REVIEWS_RELAYS).toEqual([
       'wss://relay.damus.io',
       'wss://nos.lol',
@@ -68,6 +69,7 @@ describe('NOSTR_REVIEWS_RELAYS (= reviewsSync REVIEW_SYNC_RELAYS, backend-only b
       'wss://nostr.cypherpunk.today',
       'wss://nostr-pub.wellorder.net',
       'wss://nostr.mintradar.org',
+      'wss://relay.nostr.net',
       'wss://relay.minibits.cash',
       'wss://nostr.mom',
       'wss://eden.nostr.land',
