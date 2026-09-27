@@ -825,7 +825,7 @@ function MintDetailContent({ url }: { url: string }) {
     return (
       <div className="mint-detail">
         <div className="md-header">
-          <button className="md-back" onClick={() => navigate(-1)}>← Back</button>
+          <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
         </div>
       </div>
     )
@@ -1119,7 +1119,7 @@ function MintDetailContent({ url }: { url: string }) {
           )
         }
         <div className="md-hdr-left">
-          <button className="md-back md-back-compact" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
+          <button className="md-back md-back-compact" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
           <div className="md-avatar-id">
             <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? knownMint?.iconUrl ?? null} size={avatarSize} radius={16} className="md-hdr-favicon" />
             <div className="md-namebox" ref={nameboxRef}>
@@ -2830,7 +2830,7 @@ function MintNotTracked({ slug, suggestion }: { slug: string; suggestion: string
   return (
     <div className="mint-detail">
       <div className="md-header">
-        <button className="md-back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
+        <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
       </div>
       <div className="md-not-tracked">
         <div className="md-not-tracked-title">Not a tracked mint</div>
@@ -2870,7 +2870,7 @@ export default function MintDetail() {
     return (
       <div className="mint-detail">
         <div className="md-header">
-          <button className="md-back" onClick={() => navigate(-1)}>← Back</button>
+          <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
         </div>
         <p style={{ color: 'var(--red)', padding: '24px', fontSize: '14px' }}>Invalid mint URL.</p>
       </div>
@@ -2883,7 +2883,7 @@ export default function MintDetail() {
     return (
       <div className="mint-detail">
         <div className="md-header">
-          <button className="md-back" onClick={() => navigate(-1)}>← Back</button>
+          <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
         </div>
       </div>
     )

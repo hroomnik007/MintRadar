@@ -14,7 +14,15 @@
 .md-header {
   position: relative;
   margin: 14px 18px 0;
-  padding: 22px 20px;
+  /* Top padding trimmed from 22px to 14px (2026-09-27) — the old value was
+     roughly double every other bordered card's padding in the app (.stat-card
+     10px, .mint-card 11px) and produced more empty space above the Back
+     button than Dashboard has above its first row (.dash-intro, no block
+     padding beyond its own 14px margin-top). 14px matches both that margin
+     and the mobile ≤768px override of this same rule, which already used
+     14px. Right/bottom padding left at 20/22px — unrelated to the top-gap
+     complaint this fixes. */
+  padding: 14px 20px 22px;
   border: 1px solid var(--border);
   border-radius: var(--r);
   background: var(--bg2);
@@ -31,7 +39,7 @@
    grid (mobile) layout mode. */
 .md-watch-star-hero {
   position: absolute;
-  top: 22px;
+  top: 14px;
   right: 20px;
 }
 
@@ -1278,20 +1286,26 @@ button.md-url-copy.copied > svg { opacity: 1; }
   .md-hdr-right { flex-wrap: wrap; }
   .md-hdr-actions { margin-left: 0; margin-right: 0; }
   .md-watch-star-hero { top: 14px; right: 14px; }
-  /* Small pill, consistent with the desktop .md-back-compact recipe — no
-     longer the large standalone circle. */
+  /* Icon-only circle button (2026-09-27) — the text pill was already near
+     the minimum comfortable chrome size, so shrinking its padding/font
+     further wasn't the right direction. Dropping the visible "Back" label
+     shrinks the button's footprint on its own; width/height are pinned to
+     44px so the tappable area stays at the accessibility minimum even
+     though it now reads as a compact circle. The accessible name moves to
+     an aria-label on the <button> (see MintDetail.tsx) since there's no
+     visible text left for it to come from. */
   .md-back {
-    width: auto;
-    height: auto;
-    padding: 4px 10px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
-    gap: 3px;
-    font-size: 10px;
+    justify-content: center;
+    font-size: 15px;
     flex-shrink: 0;
   }
-  .md-back-label { display: inline; }
+  .md-back-label { display: none; }
   /* Mobile keeps the original fixed 40px avatar column — deliberately no
      growth headroom here. Verified empirically: even a few px more (tried up
      to 56) measurably wraps "First seen by MintRadar <Mon YYYY>" onto a
