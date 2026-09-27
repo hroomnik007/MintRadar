@@ -439,7 +439,6 @@ function MintDetailContent({ url }: { url: string }) {
     return () => window.removeEventListener('keydown', h)
   }, [showWatchLoginModal, closeWatchLoginModal])
 
-  const { reviews, loading: reviewsLoading } = useMintReviews(url)
   const { data: nostrReviewsData } = useQuery({
     queryKey: ['mint', 'nostr-reviews', url],
     queryFn: async () => {
@@ -454,6 +453,15 @@ function MintDetailContent({ url }: { url: string }) {
     staleTime: NOSTR_REVIEWS_STALE_TIME_MS,
     retry: false,
   })
+  // Pubkeys from the DB-backed secondary source, so useMintReviews' kind:0
+  // profile lookup also covers reviewers who only show up via that path
+  // (nostrOnly below) — otherwise they'd only ever get the generic anon
+  // avatar even when their Nostr profile is perfectly current.
+  const nostrReviewsPubkeys = useMemo(
+    () => [...new Set((nostrReviewsData ?? []).map(r => r.pubkey))],
+    [nostrReviewsData],
+  )
+  const { reviews, loading: reviewsLoading, profiles: nostrProfiles } = useMintReviews(url, nostrReviewsPubkeys)
   // Deliberate two-mechanism review fetch, not redundant duplication: `reviews`
   // (useMintReviews, live client-side via sharedPool) is the PRIMARY source — it's
   // what lets a user see their own review immediately after submitting one (see
@@ -470,10 +478,16 @@ function MintDetailContent({ url }: { url: string }) {
       .filter(r => !mintradarIds.has(r.id))
     const all: Array<{ id: string; pubkey: string; rating: number | null; comment: string; createdAt: number; source: 'mintradar' | 'nostr'; profile?: { name?: string; picture?: string } }> = [
       ...reviews.map(r => ({ ...r, source: 'mintradar' as const })),
-      ...nostrOnly.map(r => ({ id: r.id, pubkey: r.pubkey, rating: r.rating, comment: r.content, createdAt: r.createdAt, source: 'nostr' as const })),
+      ...nostrOnly.map(r => {
+        const profile = nostrProfiles[r.pubkey]
+        return {
+          id: r.id, pubkey: r.pubkey, rating: r.rating, comment: r.content, createdAt: r.createdAt,
+          source: 'nostr' as const, ...(profile ? { profile } : {}),
+        }
+      }),
     ]
     return all.sort((a, b) => b.createdAt - a.createdAt)
-  }, [reviews, nostrReviewsData])
+  }, [reviews, nostrReviewsData, nostrProfiles])
   const [selectedNut, setSelectedNut] = useState<string | null>(null)
   const [copiedContact, setCopiedContact] = useState<string | null>(null)
   const [copiedUrl, setCopiedUrl] = useState(false)
@@ -948,10 +962,16 @@ function MintDetailContent({ url }: { url: string }) {
   // (knownMint.reviewCount / reviewAvgRating, kept fresh by the backend's 6h
   // reviews sync) — that's real data available immediately, rather than the
   // wrong "No reviews yet" the empty live array used to flash for ~4s. Once the
-  // live fetch resolves its count/rating take over (they'd include a review the
-  // user just published, which the rollup wouldn't have yet). `null` on both
-  // sides (rollup not yet computed AND live fetch pending) renders a skeleton.
-  const tileReviewCount = reviewsLoading ? (knownMint?.reviewCount ?? null) : mergedReviews.length
+  // live fetch resolves, its count/rating take over (they'd include a review the
+  // user just published, which the rollup wouldn't have yet) — but the live
+  // count (narrower REVIEW_READ_RELAYS + pubkey dedup) can legitimately come out
+  // lower than the rollup for the same mint. Taking the max means the number can
+  // only stay the same or grow as more sources resolve, never visibly drop out
+  // from under the user. `null` on both sides (rollup not yet computed AND live
+  // fetch pending) renders a skeleton.
+  const tileReviewCount = reviewsLoading
+    ? (knownMint?.reviewCount ?? null)
+    : (knownMint?.reviewCount != null ? Math.max(knownMint.reviewCount, mergedReviews.length) : mergedReviews.length)
   const tileAvgRating = reviewsLoading ? (knownMint?.reviewAvgRating ?? null) : avgRating
 
   // Reviews-tab filter chips. "all" / "5star" / "critical" are mutually exclusive

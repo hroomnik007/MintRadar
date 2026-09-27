@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { verifyEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
 import { REVIEW_READ_RELAYS, PROFILE_RELAYS } from '@/core/nostr/relays'
@@ -13,10 +13,17 @@ export interface MintReview {
   profile?: { name?: string; picture?: string }
 }
 
-export function useMintReviews(mintUrl: string) {
+type ProfileMap = Record<string, { name?: string; picture?: string }>
+
+// extraPubkeys lets a caller fold in pubkeys it knows about from another
+// review source (e.g. MintDetail's DB-backed nostrOnly reviews) so they get
+// the same kind:0 profile lookup as the live-fetched reviews, instead of
+// only ever enriching pubkeys this hook found itself.
+export function useMintReviews(mintUrl: string, extraPubkeys: string[] = []) {
   // Reviews are keyed by the URL they were fetched for, so switching mints
   // never shows stale data and loading state is derived instead of set in the effect.
   const [result, setResult] = useState<{ url: string; reviews: MintReview[] }>({ url: '', reviews: [] })
+  const [profilesState, setProfilesState] = useState<{ url: string; profiles: ProfileMap }>({ url: '', profiles: {} })
 
   useEffect(() => {
     if (!mintUrl) return
@@ -40,35 +47,6 @@ export function useMintReviews(mintUrl: string) {
       )
       // Show reviews immediately without waiting for profiles
       setResult({ url: mintUrl, reviews: parsed })
-
-      if (parsed.length === 0) return
-
-      // Fetch profiles non-blocking — update reviews when profiles arrive
-      const pubkeys = [...new Set(parsed.map(r => r.pubkey))]
-      sharedPool.querySync(PROFILE_RELAYS, { kinds: [0], authors: pubkeys }, { maxWait: 2000 })
-        .then(profileEvents => {
-          if (cancelled) return
-          const profileMap: Record<string, { name?: string; picture?: string }> = {}
-          for (const e of profileEvents) {
-            try {
-              const meta = JSON.parse(e.content) as { name?: string; picture?: string }
-              const p: { name?: string; picture?: string } = {}
-              if (meta.name) p.name = meta.name
-              if (meta.picture) p.picture = meta.picture
-              if (p.name || p.picture) profileMap[e.pubkey] = p
-            } catch { /* invalid profile JSON — skip */ }
-          }
-          if (Object.keys(profileMap).length > 0) {
-            setResult(prev => prev.url !== mintUrl ? prev : {
-              url: prev.url,
-              reviews: prev.reviews.map(r => {
-                const p = profileMap[r.pubkey]
-                return p ? { ...r, profile: p } : r
-              }),
-            })
-          }
-        })
-        .catch(() => {})
     }).catch(() => {
       if (!cancelled) setResult({ url: mintUrl, reviews: [] })
     })
@@ -76,6 +54,53 @@ export function useMintReviews(mintUrl: string) {
     return () => { cancelled = true }
   }, [mintUrl])
 
+  // extraPubkeys can be a fresh array reference on every render (e.g. derived
+  // from a react-query result), so key the effect below off its actual content
+  // rather than its identity.
+  const extraKey = useMemo(() => [...new Set(extraPubkeys)].sort().join(','), [extraPubkeys])
+
+  useEffect(() => {
+    if (!mintUrl || result.url !== mintUrl) return
+    const pubkeys = [...new Set([...result.reviews.map(r => r.pubkey), ...extraPubkeys])]
+    if (pubkeys.length === 0) return
+    let cancelled = false
+
+    // Fetch profiles non-blocking, for the union of this hook's own live
+    // reviews AND any extra pubkeys the caller passed in — update once they arrive.
+    sharedPool.querySync(PROFILE_RELAYS, { kinds: [0], authors: pubkeys }, { maxWait: 2000 })
+      .then(profileEvents => {
+        if (cancelled) return
+        const profileMap: ProfileMap = {}
+        for (const e of profileEvents) {
+          try {
+            const meta = JSON.parse(e.content) as { name?: string; picture?: string }
+            const p: { name?: string; picture?: string } = {}
+            if (meta.name) p.name = meta.name
+            if (meta.picture) p.picture = meta.picture
+            if (p.name || p.picture) profileMap[e.pubkey] = p
+          } catch { /* invalid profile JSON — skip */ }
+        }
+        if (Object.keys(profileMap).length > 0) setProfilesState({ url: mintUrl, profiles: profileMap })
+      })
+      .catch(() => {})
+
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- extraKey is the stable proxy for extraPubkeys' content
+  }, [mintUrl, result.url, result.reviews, extraKey])
+
+  const profiles = useMemo(
+    () => (profilesState.url === mintUrl ? profilesState.profiles : {}),
+    [profilesState, mintUrl],
+  )
+
+  const reviewsWithProfiles = useMemo(
+    () => result.reviews.map(r => {
+      const profile = profiles[r.pubkey]
+      return profile ? { ...r, profile } : r
+    }),
+    [result.reviews, profiles],
+  )
+
   const isCurrent = result.url === mintUrl
-  return { reviews: isCurrent ? result.reviews : [], loading: !isCurrent }
+  return { reviews: isCurrent ? reviewsWithProfiles : [], loading: !isCurrent, profiles }
 }
