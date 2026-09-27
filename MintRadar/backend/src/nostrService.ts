@@ -52,9 +52,15 @@ class DnsPinnedWebSocket extends WebSocket {
 // eslint-disable-next-line react-hooks/rules-of-hooks
 useWebSocketImplementation(DnsPinnedWebSocket)
 
-// Mirrors the frontend's META_RELAYS (src/core/nostr/client.ts) — the two
-// packages can't share a module directly (no workspace set up), so keep
-// these two arrays in sync manually when editing either one.
+// Broader relay set for BROADCASTING kind:0/30023 identity + article events
+// (publishServiceProfile/publishLongFormArticle below) — deliberately wider
+// than the frontend's 4-relay fast-bootstrap META_RELAYS (client.ts), not
+// meant to mirror it. That list was trimmed 2026-09-02 (commit dc43304) for
+// login-path latency (a *read*, gated by the slowest relay's connect+EOSE);
+// this one runs infrequently (startup + once/day, or on-demand) and cares
+// about propagation reach, not latency, so it was deliberately left alone —
+// see dc43304's own commit message, which scoped that change to the frontend
+// only and documented it as an exception, not a rename of a shared list.
 const META_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
