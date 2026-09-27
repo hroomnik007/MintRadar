@@ -53,6 +53,60 @@ export const REVIEW_SYNC_RELAYS = [
   'wss://nostr21.com',
 ]
 
+// Floor-guard against a single sync cycle's live-relay query having poor
+// coverage (a documented volatility pattern — see REVIEW_SYNC_RELAYS above and
+// the frontend's own Math.max floor on the display side). Without this, one
+// cycle where several relays didn't respond within REVIEW_FETCH_TIMEOUT_MS
+// could visibly regress a mint's review_count for up to 6h (until the next
+// cycle happens to get better coverage), and the frontend's own floor can't
+// help — it floors against this same rollup value.
+//
+// A single cycle reporting fewer than REVIEW_COUNT_DROP_FLOOR_RATIO of the
+// currently-stored review_count is held back rather than applied immediately.
+// It only takes effect once REVIEW_COUNT_DROP_CONFIRMATIONS consecutive cycles
+// in a row report a sharp drop — a real moderation/removal event is sustained
+// across cycles, a bad-coverage blip isn't. An increase (or a decrease that
+// isn't sharp) always applies immediately and resets the streak, matching the
+// existing frontend Math.max intent of "never miss a step up."
+const REVIEW_COUNT_DROP_FLOOR_RATIO = 0.75 // >25% single-cycle drop is "sharp"
+const REVIEW_COUNT_DROP_CONFIRMATIONS = 2
+
+export type ReviewCountRollupOutcome = 'applied' | 'dampened' | 'confirmed-after-dampening'
+
+export interface ReviewCountRollupResult {
+  appliedCount: number
+  pendingLow: number | null
+  pendingLowStreak: number
+  outcome: ReviewCountRollupOutcome
+}
+
+// Pure decision function — no I/O, unit-tested directly. `current.reviewCount`
+// is the value presently stored in mints.review_count (null if this mint has
+// never synced before); `current.pendingLowStreak` is the persisted
+// review_count_pending_low_streak.
+export function resolveReviewCountRollup(
+  current: { reviewCount: number | null; pendingLowStreak: number },
+  newCount: number,
+): ReviewCountRollupResult {
+  const { reviewCount: prevCount, pendingLowStreak } = current
+  const isSharpDrop = prevCount !== null && newCount < prevCount * REVIEW_COUNT_DROP_FLOOR_RATIO
+
+  if (!isSharpDrop) {
+    return { appliedCount: newCount, pendingLow: null, pendingLowStreak: 0, outcome: 'applied' }
+  }
+
+  const streak = pendingLowStreak + 1
+  if (streak >= REVIEW_COUNT_DROP_CONFIRMATIONS) {
+    // Same low-ish count (or another sharp drop, not necessarily identical)
+    // has now shown up on REVIEW_COUNT_DROP_CONFIRMATIONS cycles in a row —
+    // treat it as real and apply it.
+    return { appliedCount: newCount, pendingLow: null, pendingLowStreak: 0, outcome: 'confirmed-after-dampening' }
+  }
+
+  // Held back: keep serving the last-applied count, remember this candidate.
+  return { appliedCount: prevCount as number, pendingLow: newCount, pendingLowStreak: streak, outcome: 'dampened' }
+}
+
 const REVIEW_FETCH_TIMEOUT_MS = 8_000
 const REVIEW_REQ_LIMIT = 500
 // How many mints to fetch reviews for concurrently. Kept at 3 so that, even if
@@ -133,6 +187,43 @@ export async function persistMintReviews(url: string, reviews: SyncedReview[]): 
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
+
+    // Row-lock this mint's current rollup state before deciding what to write —
+    // refreshAllMintReviews() never runs two syncs for the same url concurrently
+    // (single-flight + one cursor-based worker pool), so FOR UPDATE is just
+    // defence in depth, not a real contention point.
+    const { rows: currentRows } = await client.query<{
+      review_count: number | null
+      review_avg_rating: number | null
+      review_count_pending_low_streak: number
+    }>(
+      `SELECT review_count, review_avg_rating, review_count_pending_low_streak
+         FROM mints WHERE url = $1 FOR UPDATE`,
+      [url],
+    )
+    const current = currentRows[0]
+    const rollup = resolveReviewCountRollup(
+      { reviewCount: current?.review_count ?? null, pendingLowStreak: current?.review_count_pending_low_streak ?? 0 },
+      reviews.length,
+    )
+
+    if (rollup.outcome === 'dampened') {
+      console.log(
+        `[reviews-sync] review_count drop dampened for ${url}: kept ${rollup.appliedCount} ` +
+        `(this cycle found ${reviews.length}, streak ${rollup.pendingLowStreak}/${REVIEW_COUNT_DROP_CONFIRMATIONS})`
+      )
+    } else if (rollup.outcome === 'confirmed-after-dampening') {
+      console.log(
+        `[reviews-sync] review_count drop confirmed for ${url}: ${current?.review_count ?? 'null'} -> ${rollup.appliedCount} ` +
+        `after ${REVIEW_COUNT_DROP_CONFIRMATIONS} consecutive low cycles`
+      )
+    }
+
+    // The actual review rows are always fully replaced with what this cycle
+    // found, regardless of the rollup decision above — the floor-guard applies
+    // only to mints.review_count/review_avg_rating, never to suppressing a
+    // legitimate row-level change (a user's own just-published/edited review
+    // must still show up in the list immediately).
     await client.query('DELETE FROM mint_reviews WHERE url = $1', [url])
     for (let i = 0; i < reviews.length; i += REVIEW_INSERT_BATCH) {
       const batch = reviews.slice(i, i + REVIEW_INSERT_BATCH)
@@ -153,9 +244,20 @@ export async function persistMintReviews(url: string, reviews: SyncedReview[]): 
         values,
       )
     }
+    // review_avg_rating is dampened in lockstep with review_count — while a
+    // drop is held back, the average stays whatever it was for the
+    // still-displayed (higher) count too, rather than being recomputed from
+    // the smaller, possibly-incomplete set this cycle actually fetched.
+    const avgRatingToWrite = rollup.outcome === 'dampened' ? (current?.review_avg_rating ?? null) : computeAvgRating(reviews)
     await client.query(
-      `UPDATE mints SET review_count = $1, review_avg_rating = $2, reviews_checked_at = NOW() WHERE url = $3`,
-      [reviews.length, computeAvgRating(reviews), url],
+      `UPDATE mints
+         SET review_count = $1,
+             review_avg_rating = $2,
+             reviews_checked_at = NOW(),
+             review_count_pending_low = $3,
+             review_count_pending_low_streak = $4
+       WHERE url = $5`,
+      [rollup.appliedCount, avgRatingToWrite, rollup.pendingLow, rollup.pendingLowStreak, url],
     )
     await client.query('COMMIT')
   } catch (err) {
