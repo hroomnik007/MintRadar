@@ -57,6 +57,32 @@ export function sortReviewsByNewest(parsed: ParsedReview[]): ParsedReview[] {
   return [...parsed].sort((a, b) => b.createdAt - a.createdAt)
 }
 
+// The mint card's number is the stored set: one row per pubkey. The detail
+// page must use that same set. A live event updates a stored reviewer only
+// when it is newer. A live event from anyone else is not added — that is what
+// made the detail say 5 while the card said 4. The one exception is the
+// viewer who just published, so their own review shows before the next sync.
+export function mergeStoredAndLiveReviews<T extends { pubkey: string; createdAt: number }>(
+  stored: T[],
+  live: T[],
+  viewerPubkey: string | null,
+): T[] {
+  const byPubkey = new Map<string, T>()
+  for (const review of stored) {
+    const prev = byPubkey.get(review.pubkey)
+    if (!prev || review.createdAt > prev.createdAt) byPubkey.set(review.pubkey, review)
+  }
+  for (const review of live) {
+    const prev = byPubkey.get(review.pubkey)
+    if (prev) {
+      if (review.createdAt > prev.createdAt) byPubkey.set(review.pubkey, review)
+    } else if (viewerPubkey !== null && review.pubkey === viewerPubkey) {
+      byPubkey.set(review.pubkey, review)
+    }
+  }
+  return [...byPubkey.values()].sort((a, b) => b.createdAt - a.createdAt)
+}
+
 // Convenience: run the full dedup → parse → sort pipeline.
 export function processReviewEvents(events: ReviewEvent[]): ParsedReview[] {
   const deduped = deduplicateByPubkey(events)

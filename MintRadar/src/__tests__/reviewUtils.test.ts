@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   deduplicateByPubkey,
+  mergeStoredAndLiveReviews,
   parseReviewEvent,
   sortReviewsByNewest,
   processReviewEvents,
@@ -216,5 +217,40 @@ describe('processReviewEvents', () => {
       makeEvent({ pubkey: `user${i}`, created_at: i * 100, content: `[${i + 1}/5] comment ${i}` })
     )
     expect(processReviewEvents(events)).toHaveLength(5)
+  })
+})
+
+describe('mergeStoredAndLiveReviews', () => {
+  const row = (pubkey: string, createdAt: number, id = pubkey + createdAt) => ({
+    id, pubkey, createdAt, rating: 5 as number | null, comment: '',
+  })
+
+  it('does not add a live review from someone who is not in the stored set', () => {
+    const stored = [row('a', 1), row('b', 2), row('c', 3), row('d', 4)]
+    const live = [row('e', 9)]
+    const merged = mergeStoredAndLiveReviews(stored, live, null)
+    expect(merged.map(r => r.pubkey).sort()).toEqual(['a', 'b', 'c', 'd'])
+  })
+
+  it('keeps one row when the same pubkey has a different event id live and stored', () => {
+    const stored = [row('a', 1, 'old'), row('b', 2), row('c', 3), row('d', 4)]
+    const live = [row('a', 5, 'new')]
+    const merged = mergeStoredAndLiveReviews(stored, live, null)
+    expect(merged).toHaveLength(4)
+    expect(merged.find(r => r.pubkey === 'a')!.id).toBe('new')
+  })
+
+  it('adds the viewer\'s own review when the sync has not stored it yet', () => {
+    const stored = [row('a', 1)]
+    const live = [row('me', 9)]
+    const merged = mergeStoredAndLiveReviews(stored, live, 'me')
+    expect(merged.map(r => r.pubkey)).toEqual(['me', 'a'])
+  })
+
+  it('does not let an older live event replace the stored one', () => {
+    const stored = [row('a', 10, 'stored')]
+    const live = [row('a', 2, 'stale')]
+    const merged = mergeStoredAndLiveReviews(stored, live, null)
+    expect(merged[0]!.id).toBe('stored')
   })
 })

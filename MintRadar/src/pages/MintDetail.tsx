@@ -12,7 +12,7 @@ import {
 import { useMintProbe } from '@/hooks/useMintProbe'
 import { useMintHistory } from '@/hooks/useMintHistory'
 import { useKnownMints } from '@/hooks/useKnownMints'
-import { useMintReviews } from '@/hooks/useMintReviews'
+import { mergeStoredAndLiveReviews } from '@/utils/reviewUtils'
 import { useMintOperatorNip05 } from '@/hooks/useMintOperatorNip05'
 import { useVerifiedNip05 } from '@/hooks/useVerifiedNip05'
 import { usePendingAutoWatch } from '@/hooks/usePendingAutoWatch'
@@ -463,32 +463,27 @@ function MintDetailContent({ url }: { url: string }) {
     [nostrReviewsData],
   )
   const { reviews, loading: reviewsLoading, profiles: nostrProfiles } = useMintReviews(url, nostrReviewsPubkeys)
-  // Deliberate two-mechanism review fetch, not redundant duplication: `reviews`
-  // (useMintReviews, live client-side via sharedPool) is the PRIMARY source — it's
-  // what lets a user see their own review immediately after submitting one (see
-  // useSubmitReview.ts), since it re-fetches on every visit with no cache.
-  // `nostrReviewsData` (GET /api/mints/nostr-reviews, backend-cached) is a
-  // fallback/secondary source: a second, independent network vantage point (the
-  // server may reach relays the user's own connection can't, or vice versa).
-  // Only reviews the live fetch missed are added in (`nostrOnly` below) — never
-  // shown twice. Do not remove either side without re-confirming with the
-  // maintainer first.
+  // The card shows mints.review_count: one stored review per pubkey. This list
+  // is that same set. A live event may replace a stored one when it is newer,
+  // and the signed-in user's own just-published review is added so they see it
+  // before the next sync. Other live-only events are not added — counting them
+  // made this page say 5 while the card said 4.
   const mergedReviews = useMemo(() => {
-    const mintradarIds = new Set(reviews.map(r => r.id))
-    const nostrOnly = (nostrReviewsData ?? [])
-      .filter(r => !mintradarIds.has(r.id))
-    const all: Array<{ id: string; pubkey: string; rating: number | null; comment: string; createdAt: number; source: 'mintradar' | 'nostr'; profile?: { name?: string; picture?: string; nip05?: string } }> = [
-      ...reviews.map(r => ({ ...r, source: 'mintradar' as const })),
-      ...nostrOnly.map(r => {
-        const profile = nostrProfiles[r.pubkey]
-        return {
-          id: r.id, pubkey: r.pubkey, rating: r.rating, comment: r.content, createdAt: r.createdAt,
-          source: 'nostr' as const, ...(profile ? { profile } : {}),
-        }
-      }),
-    ]
-    return all.sort((a, b) => b.createdAt - a.createdAt)
-  }, [reviews, nostrReviewsData, nostrProfiles])
+    const stored = (nostrReviewsData ?? []).map(r => {
+      const profileForReview = nostrProfiles[r.pubkey]
+      return {
+        id: r.id,
+        pubkey: r.pubkey,
+        rating: r.rating,
+        comment: r.content,
+        createdAt: r.createdAt,
+        source: 'nostr' as const,
+        ...(profileForReview ? { profile: profileForReview } : {}),
+      }
+    })
+    const live = reviews.map(r => ({ ...r, source: 'mintradar' as const }))
+    return mergeStoredAndLiveReviews(stored, live, profile?.pubkey ?? null)
+  }, [reviews, nostrReviewsData, nostrProfiles, profile?.pubkey])
   const [selectedNut, setSelectedNut] = useState<string | null>(null)
   const [copiedContact, setCopiedContact] = useState<string | null>(null)
   const [copiedUrl, setCopiedUrl] = useState(false)
@@ -976,22 +971,15 @@ function MintDetailContent({ url }: { url: string }) {
     ? Math.round(ratedReviews.reduce((s, r) => s + (r.rating as number), 0) / ratedReviews.length * 10) / 10
     : null
 
-  // Community-rating stat tile: while the live client-side review fetch
-  // (useMintReviews) is still running, show the server-side rollup instead
-  // (knownMint.reviewCount / reviewAvgRating, kept fresh by the backend's 6h
-  // reviews sync) — that's real data available immediately, rather than the
-  // wrong "No reviews yet" the empty live array used to flash for ~4s. Once the
-  // live fetch resolves, its count/rating take over (they'd include a review the
-  // user just published, which the rollup wouldn't have yet) — but the live
-  // count (narrower REVIEW_READ_RELAYS + pubkey dedup) can legitimately come out
-  // lower than the rollup for the same mint. Taking the max means the number can
-  // only stay the same or grow as more sources resolve, never visibly drop out
-  // from under the user. `null` on both sides (rollup not yet computed AND live
-  // fetch pending) renders a skeleton.
-  const tileReviewCount = reviewsLoading
+  // Same number as the mint card (mints.review_count, one per pubkey). Until
+  // the stored list has loaded, show that rollup directly. After it has, the
+  // list is the stored set, so its length is the card's number — plus one only
+  // when the viewer just published a review the sync has not stored yet.
+  const storedReviewsReady = nostrReviewsData !== undefined
+  const tileReviewCount = !storedReviewsReady
     ? (knownMint?.reviewCount ?? null)
-    : (knownMint?.reviewCount != null ? Math.max(knownMint.reviewCount, mergedReviews.length) : mergedReviews.length)
-  const tileAvgRating = reviewsLoading ? (knownMint?.reviewAvgRating ?? null) : avgRating
+    : mergedReviews.length
+  const tileAvgRating = !storedReviewsReady ? (knownMint?.reviewAvgRating ?? null) : avgRating
 
   // Reviews-tab filter chips. "all" / "5star" / "critical" are mutually exclusive
   // (one active at a time); "hideAnon" is an independent toggle combined on top of
