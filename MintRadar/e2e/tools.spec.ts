@@ -296,11 +296,11 @@ test.describe('Tools', () => {
   test('Best Mint Wizard shows the helper line and no endorsement disclaimer', async ({ page }) => {
     await expect(page.locator('.wizard-disclaimer')).toHaveCount(0)
     await expect(page.locator('.tool-card', { hasText: 'Best Mint for Me' }).locator('.tool-subtitle'))
-      .toContainText('latency measured from your browser')
+      .toContainText("we'll recommend the best mints for your needs")
   })
 
   test('Best Mint Wizard result rows use the card Reliability formatting (shield + "Reliability N")', async ({ page }) => {
-    await page.locator('.wizard-unit-select').selectOption('sat')
+    await page.getByRole('radio', { name: 'SAT', exact: true }).click()
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
     await page.locator('.wizard-opt', { hasText: 'Fast from here' }).click()
     await page.getByRole('button', { name: /Find my mint/ }).click()
@@ -314,8 +314,8 @@ test.describe('Tools', () => {
 
   test('Best Mint Wizard walks through its questions and recommends mints', async ({ page }) => {
     // Step 1 — currency, then how much to store (the latter auto-advances to step 2).
-    await expect(page.locator('.wizard-unit-select')).toBeVisible()
-    await page.locator('.wizard-unit-select').selectOption('sat')
+    await expect(page.getByRole('radiogroup', { name: 'Currency unit' })).toBeVisible()
+    await page.getByRole('radio', { name: 'SAT', exact: true }).click()
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
     // Step 2 — what matters (multi-select, does not auto-advance).
     await page.locator('.wizard-opt', { hasText: 'Fast from here' }).click()
@@ -335,7 +335,7 @@ test.describe('Tools', () => {
 
   test('Best Mint Wizard offers only the units online mints actually advertise', async ({ page }) => {
     // Alpha/Bravo/Delta are online and advertise sat + usd; offline Charlie has none.
-    const options = page.locator('.wizard-unit-select option')
+    const options = page.getByRole('radiogroup', { name: 'Currency unit' }).getByRole('radio')
     await expect(options).toHaveText(['SAT', 'USD'])
   })
 
@@ -353,7 +353,7 @@ test.describe('Tools', () => {
     await page.reload()
     await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
 
-    await page.locator('.wizard-unit-select').selectOption('usd')
+    await page.getByRole('radio', { name: 'USD', exact: true }).click()
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
     await page.locator('.wizard-opt', { hasText: 'Fast from here' }).click()
     await page.getByRole('button', { name: /Find my mint/ }).click()
@@ -366,7 +366,7 @@ test.describe('Tools', () => {
     // Bravo is 10 days old in the shared fixture — below MIN_RECOMMENDATION_AGE_DAYS — so
     // for sat (Alpha/Bravo/Delta all advertise it) it must never appear as a recommendation,
     // and since only 2 of the 3 sat mints are old enough, a "fewer than 3" note shows.
-    await page.locator('.wizard-unit-select').selectOption('sat')
+    await page.getByRole('radio', { name: 'SAT', exact: true }).click()
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
     await page.locator('.wizard-opt', { hasText: 'Fast from here' }).click()
     await page.getByRole('button', { name: /Find my mint/ }).click()
@@ -379,7 +379,7 @@ test.describe('Tools', () => {
 
   test('Best Mint Wizard shows a clear empty state when zero candidates match', async ({ page }) => {
     // usd is only advertised by Bravo, which is too young (10d) for the age gate.
-    await page.locator('.wizard-unit-select').selectOption('usd')
+    await page.getByRole('radio', { name: 'USD', exact: true }).click()
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
     await page.locator('.wizard-opt', { hasText: 'Fast from here' }).click()
     await page.getByRole('button', { name: /Find my mint/ }).click()
@@ -389,7 +389,7 @@ test.describe('Tools', () => {
   })
 
   test('Best Mint Wizard "What matters" step is multi-select and disables Find until something is checked', async ({ page }) => {
-    await page.locator('.wizard-unit-select').selectOption('sat')
+    await page.getByRole('radio', { name: 'SAT', exact: true }).click()
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
 
     const findBtn = page.getByRole('button', { name: /Find my mint/ })
@@ -412,11 +412,46 @@ test.describe('Tools', () => {
     await expect(findBtn).toBeDisabled()
   })
 
-  test('Best Mint Wizard "Live updates (WebSocket)" filter excludes mints without NUT-17', async ({ page }) => {
-    // Fixture: Alpha (nutCount 12) and Delta (14) advertise NUT-17; Bravo (8) does not.
-    await page.locator('.wizard-unit-select').selectOption('sat')
+  test('Best Mint Wizard "What matters" step hides advanced options behind a disclosure', async ({ page }) => {
+    await page.getByRole('radio', { name: 'SAT', exact: true }).click()
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
-    await page.locator('.wizard-opt', { hasText: 'Live updates (WebSocket)' }).click()
+
+    for (const name of ['Fast from here', 'Reliable', 'Lightning in and out'])
+      await expect(page.locator('.wizard-opt', { hasText: name })).toBeVisible()
+    const toggle = page.getByRole('button', { name: 'Advanced options' })
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(page.locator('.wizard-opt', { hasText: 'Restore from seed' })).toHaveCount(0)
+
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    for (const name of ['Restore from seed', 'Locked payments', 'Live updates'])
+      await expect(page.locator('.wizard-opt', { hasText: name })).toBeVisible()
+  })
+
+  test('Best Mint Wizard shows "· N selected" on the Advanced toggle and a "Pick at least one" hint', async ({ page }) => {
+    await page.getByRole('radio', { name: 'SAT', exact: true }).click()
+    await page.locator('.wizard-opt', { hasText: 'Small' }).click()
+    await expect(page.locator('.wizard-hint')).toHaveText('Pick at least one')
+
+    await page.getByRole('button', { name: 'Advanced options' }).click()
+    await page.locator('.wizard-opt', { hasText: 'Restore from seed' }).click()
+    await expect(page.locator('.wizard-hint')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Advanced options · 1 selected' })).toBeVisible()
+
+    await page.locator('.wizard-opt', { hasText: 'Locked payments' }).click()
+    await expect(page.getByRole('button', { name: 'Advanced options · 2 selected' })).toBeVisible()
+
+    // Collapsing keeps the count, so a selected filter is never silently hidden.
+    await page.getByRole('button', { name: /Advanced options/ }).click()
+    await expect(page.getByRole('button', { name: 'Advanced options · 2 selected' })).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  test('Best Mint Wizard "Live updates" (WebSocket) filter excludes mints without NUT-17', async ({ page }) => {
+    // Fixture: Alpha (nutCount 12) and Delta (14) advertise NUT-17; Bravo (8) does not.
+    await page.getByRole('radio', { name: 'SAT', exact: true }).click()
+    await page.locator('.wizard-opt', { hasText: 'Small' }).click()
+    await page.getByRole('button', { name: /Advanced options/ }).click()
+    await page.locator('.wizard-opt', { hasText: 'Live updates' }).click()
     await page.getByRole('button', { name: /Find my mint/ }).click()
 
     await expect(page.locator('.wizard-rec-row').first()).toBeVisible({ timeout: 15_000 })
@@ -424,7 +459,7 @@ test.describe('Tools', () => {
   })
 
   test('Best Mint Wizard "Reliable" checkbox weights results toward Reliability Score', async ({ page }) => {
-    await page.locator('.wizard-unit-select').selectOption('sat')
+    await page.getByRole('radio', { name: 'SAT', exact: true }).click()
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
     await page.locator('.wizard-opt', { hasText: 'Reliable' }).click()
     await page.getByRole('button', { name: /Find my mint/ }).click()

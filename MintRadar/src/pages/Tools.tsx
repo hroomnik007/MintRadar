@@ -7,7 +7,7 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { useNow } from '@/hooks/useNow'
 import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, InvalidMintUrlError, type TokenInfo, type TokenSpentCheck } from '@/utils/cashuToken'
 import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, mintRiskLevel, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel, computeDuplicateMintNames } from '@/utils/mintFormatting'
-import { Zap } from 'lucide-react'
+import { Zap, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, type LucideIcon } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
 import { isEligibleForRecommendation } from '@/utils/reliabilityScore'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
@@ -482,6 +482,24 @@ function weightsFor(checks: Set<WizardCheck>, size: SizeOption): Weights {
   return { latency: base.latency * scale, reliability: base.reliability + LARGE_RELIABILITY_BOOST, nuts: base.nuts * scale }
 }
 
+// Display order of the currency segmented control. Units not listed here
+// (a mint advertising something new) sort after these, alphabetically.
+const UNIT_ORDER = ['sat', 'msat', 'eur', 'usd']
+const unitRank = (u: string) => { const i = UNIT_ORDER.indexOf(u); return i === -1 ? UNIT_ORDER.length : i }
+
+// Basic checks are always shown; advanced ones sit behind a disclosure. Purely
+// presentational — all six are still plain WizardCheck booleans.
+const BASIC_CHECKS: { id: WizardCheck; label: string; sub: string; Icon: LucideIcon }[] = [
+  { id: 'fast', label: 'Fast from here', sub: 'Ranks mints by real latency from your browser', Icon: Zap },
+  { id: 'reliable', label: 'Reliable', sub: 'Ranks mints by track record and uptime', Icon: ShieldCheck },
+  { id: 'ln', label: 'Lightning in and out', sub: 'Only show mints that support both deposits and withdrawals', Icon: PlugZap },
+]
+const ADVANCED_CHECKS: { id: WizardCheck; label: string; sub: string; Icon: LucideIcon }[] = [
+  { id: 'seed', label: 'Restore from seed', sub: 'Can recover your funds from a backup phrase', Icon: KeyRound },
+  { id: 'p2pk', label: 'Locked payments', sub: 'For apps that lock funds to a specific key, like escrow', Icon: Lock },
+  { id: 'ws', label: 'Live updates', sub: 'Balance updates instantly, no manual refresh', Icon: Satellite },
+]
+
 function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
   const navigate = useNavigate()
   // Computed over the full known-mints list — see Dashboard.tsx's own
@@ -494,6 +512,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
   const [finding, setFinding] = useState(false)
   const [recs, setRecs] = useState<WizardRec[] | null>(null)
   const [recsUnit, setRecsUnit] = useState<string | null>(null)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
 
   // Built from the distinct units the online mints actually advertise, never a
   // hardcoded sat/usd/eur list — a mint offering a new unit shows up here on its
@@ -504,10 +523,18 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       if (m.online !== true) continue
       for (const u of m.units ?? []) set.add(u)
     }
-    return [...set].sort((a, b) => a === 'sat' ? -1 : b === 'sat' ? 1 : a.localeCompare(b))
+    return [...set].sort((a, b) => unitRank(a) - unitRank(b) || a.localeCompare(b))
   }, [knownMints])
 
   const selectedUnit = unit ?? availableUnits[0] ?? null
+
+  const advancedSelected = ADVANCED_CHECKS.filter(o => checks.has(o.id)).length
+
+  const toggleCheck = (id: WizardCheck) => setChecks(prev => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    return next
+  })
 
   const ready = selectedUnit !== null && size !== null && checks.size > 0
 
@@ -583,11 +610,25 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
     setFinding(false)
   }
 
+  const renderCheck = ({ id, label, sub, Icon }: typeof BASIC_CHECKS[number]) => {
+    const active = checks.has(id)
+    return (
+      <button key={id} type="button" className={`wizard-opt wizard-opt-check${active ? ' active' : ''}`}
+        aria-pressed={active} onClick={() => toggleCheck(id)}>
+        <Icon size={18} aria-hidden="true" className="wizard-opt-icon" />
+        <div className="wizard-opt-text">
+          <div className="wizard-opt-label">{label}</div>
+          <div className="wizard-opt-sub">{sub}</div>
+        </div>
+      </button>
+    )
+  }
+
   return (
     <div className="tool-card">
       <div className="tool-header">
         <div className="tool-title">Best Mint for Me</div>
-        <div className="tool-subtitle">Answer a few quick questions and we'll recommend the best mints for your needs · latency measured from your browser</div>
+        <div className="tool-subtitle">Answer a few quick questions and we'll recommend the best mints for your needs</div>
       </div>
 
       <div className="wizard-steps">
@@ -605,16 +646,15 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
           {availableUnits.length === 0 ? (
             <div className="wizard-no-results">No unit data available yet — mints report their units on the next probe cycle.</div>
           ) : (
-            <select
-              className="wizard-unit-select"
-              value={selectedUnit ?? ''}
-              onChange={e => { setUnit(e.target.value); setRecs(null) }}
-              aria-label="Currency unit"
-            >
+            <div className="wizard-unit-seg" role="radiogroup" aria-label="Currency unit">
               {availableUnits.map(u => (
-                <option key={u} value={u}>{u.toUpperCase()}</option>
+                <button key={u} type="button" role="radio" aria-checked={u === selectedUnit}
+                  className={`wizard-unit-opt${u === selectedUnit ? ' active' : ''}`}
+                  onClick={() => { setUnit(u); setRecs(null) }}>
+                  {u.toUpperCase()}
+                </button>
               ))}
-            </select>
+            </div>
           )}
 
           <div className="wizard-q">How much do you plan to store?</div>
@@ -638,29 +678,19 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
         <div className="wizard-step-body">
           <div className="wizard-q">What matters to you? (pick any)</div>
           <div className="wizard-options">
-            {[
-              { id: 'fast' as WizardCheck, label: '⚡ Fast from here', sub: 'Weight latency measured from your browser' },
-              { id: 'reliable' as WizardCheck, label: '🛡 Reliable', sub: 'Weight the Reliability Score' },
-              { id: 'ln' as WizardCheck, label: '⚡ Lightning in + out', sub: 'Must support both minting and melting over Lightning' },
-              { id: 'seed' as WizardCheck, label: '🔑 Restore from seed', sub: 'Must support wallet recovery from a backup phrase (NUT-09)' },
-              { id: 'p2pk' as WizardCheck, label: '🔒 Locked payments (P2PK)', sub: 'Must support locking ecash to a public key (NUT-11)' },
-              { id: 'ws' as WizardCheck, label: '📡 Live updates (WebSocket)', sub: 'Must support real-time balance/payment updates (NUT-17)' },
-            ].map(opt => {
-              const active = checks.has(opt.id)
-              return (
-                <button key={opt.id} type="button" className={`wizard-opt${active ? ' active' : ''}`}
-                  aria-pressed={active}
-                  onClick={() => setChecks(prev => {
-                    const next = new Set(prev)
-                    if (next.has(opt.id)) next.delete(opt.id); else next.add(opt.id)
-                    return next
-                  })}>
-                  <div className="wizard-opt-label">{opt.label}</div>
-                  <div className="wizard-opt-sub">{opt.sub}</div>
-                </button>
-              )
-            })}
+            {BASIC_CHECKS.map(renderCheck)}
           </div>
+          <button type="button" className="wizard-adv-toggle" aria-expanded={advancedOpen}
+            aria-controls={advancedOpen ? 'wizard-advanced' : undefined}
+            onClick={() => setAdvancedOpen(o => !o)}>
+            <span>Advanced options{advancedSelected > 0 ? ` · ${advancedSelected} selected` : ''}</span>
+            <ChevronDown size={16} aria-hidden="true" className="wizard-adv-chevron" />
+          </button>
+          {advancedOpen && (
+            <div id="wizard-advanced" className="wizard-options">
+              {ADVANCED_CHECKS.map(renderCheck)}
+            </div>
+          )}
         </div>
       )}
 
@@ -669,6 +699,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
           {finding ? 'Measuring latency…' : 'Find my mint →'}
         </button>
       )}
+      {step === 2 && checks.size === 0 && <div className="wizard-hint">Pick at least one</div>}
 
       {step > 1 && !recs && (
         <button type="button" className="wizard-back-btn" onClick={() => { setStep(s => s - 1); setRecs(null) }}>
