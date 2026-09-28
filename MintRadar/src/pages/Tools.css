@@ -250,7 +250,6 @@ a.token-action-btn:focus {
   display: flex; flex-direction: column; gap: 2px; font-family: var(--font-body);
 }
 .wizard-options-row .wizard-opt { flex: 1; min-width: 80px; }
-.wizard-opt:hover { border-color: var(--accent); }
 .wizard-opt.active { border-color: var(--accent); background: rgba(23, 232, 127, 0.06); }
 .wizard-opt-label { font-size: 13px; color: var(--text); }
 .wizard-opt-sub { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
@@ -376,7 +375,6 @@ a.token-action-btn:focus {
   color: var(--text3); font-family: var(--font-body); font-size: 13px; font-weight: 600;
   cursor: pointer;
 }
-.wizard-unit-opt:hover { border-color: var(--accent); }
 .wizard-unit-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .wizard-unit-opt.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
 
@@ -393,8 +391,15 @@ a.token-action-btn:focus {
   color: var(--text2); font-family: var(--font-body); font-size: 13px; font-weight: 600;
   cursor: pointer; text-align: left;
 }
-.wizard-adv-toggle:hover { color: var(--text); }
 .wizard-adv-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
 .wizard-adv-chevron { transition: transform 150ms ease; }
 .wizard-adv-toggle[aria-expanded="true"] .wizard-adv-chevron { transform: rotate(180deg); }
 .wizard-hint { font-size: 12px; color: var(--text3); text-align: center; margin-top: -4px; }
+
+/* Hover only where a pointer can really hover — on touch, :hover sticks after a tap and
+   the accent border reads as "selected" on a card that was just deselected. */
+@media (hover: hover) {
+  .wizard-opt:hover { border-color: var(--accent); }
+  .wizard-unit-opt:hover { border-color: var(--accent); }
+  .wizard-adv-toggle:hover { color: var(--text); }
+}

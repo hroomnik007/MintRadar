@@ -1522,9 +1522,17 @@ options are unchanged.
   (`.wizard-unit-seg` / `.wizard-unit-opt`, accent-dim tint on the selected segment). Units still
   come from what online mints advertise; display order is SAT, MSAT, EUR, USD (`UNIT_ORDER`),
   unknown units last.
-- **Known mismatch (not fixed):** the Small/Medium/Large sub-labels are hardcoded in **sats**
-  ("< 10k sats") whatever unit is selected, so with EUR/USD (minor units) they don't apply.
-  Fixing needs an FX rate or per-unit thresholds — a product decision.
+- **Size labels follow the unit (2026-09-28):** Small/Medium/Large sub-labels come from the static
+  `SIZE_HINTS` table in `Tools.tsx` (sat: < 10k / 10k–100k / > 100k sats; msat, EUR, USD: the same
+  tiers as ~10M/100M msat, ~€10/100, ~$10/100). **The MSAT/EUR/USD thresholds are approximate on
+  purpose** (hence the `~`) — no FX rate is fetched. A unit not in the table shows no hint. `size`
+  is only a bucket key (`'large'` adds +0.15 reliability weight in `weightsFor`, and gates
+  `ready`); it is never compared with an amount, converted or sent to the backend.
+- **Touch hover (2026-09-28):** the wizard's `.wizard-opt`, `.wizard-unit-opt` and
+  `.wizard-adv-toggle` `:hover` rules live in `@media (hover: hover)` — on touch, `:hover` sticks
+  after a tap and the accent border looked "selected" on a deselected card. Selected state is
+  driven only by `.active` / `aria-checked`; keyboard focus rings (`:focus-visible`) are untouched.
+  This is the first `@media (hover: hover)` in the codebase; other `:hover` rules are unchanged.
 - **Step 2** — Fast / Reliable / Lightning in and out always visible; Restore from seed / Locked
   payments / Live updates sit behind an "Advanced options" disclosure (`aria-expanded`, unmounted
   when collapsed, toggle reads "· N selected" so filters are never hidden). Line icons come from

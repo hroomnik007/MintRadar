@@ -487,6 +487,17 @@ function weightsFor(checks: Set<WizardCheck>, size: SizeOption): Weights {
 const UNIT_ORDER = ['sat', 'msat', 'eur', 'usd']
 const unitRank = (u: string) => { const i = UNIT_ORDER.indexOf(u); return i === -1 ? UNIT_ORDER.length : i }
 
+// Rough balance-size thresholds per unit, shown as labels only — `size` is a bucket
+// key, never compared against an amount. Deliberately static and approximate (no FX
+// rate); sat is the reference, the rest are ballpark equivalents. A unit not listed
+// here gets no threshold hint rather than a wrong one.
+const SIZE_HINTS: Record<string, [string, string, string]> = {
+  sat: ['< 10k sats', '10k–100k sats', '> 100k sats'],
+  msat: ['< ~10M msat', '~10M–100M msat', '> ~100M msat'],
+  eur: ['< ~€10', '~€10–100', '> ~€100'],
+  usd: ['< ~$10', '~$10–100', '> ~$100'],
+}
+
 // Basic checks are always shown; advanced ones sit behind a disclosure. Purely
 // presentational — all six are still plain WizardCheck booleans.
 const BASIC_CHECKS: { id: WizardCheck; label: string; sub: string; Icon: LucideIcon }[] = [
@@ -527,6 +538,8 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
   }, [knownMints])
 
   const selectedUnit = unit ?? availableUnits[0] ?? null
+
+  const sizeHints = selectedUnit ? SIZE_HINTS[selectedUnit] : undefined
 
   const advancedSelected = ADVANCED_CHECKS.filter(o => checks.has(o.id)).length
 
@@ -660,14 +673,14 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
           <div className="wizard-q">How much do you plan to store?</div>
           <div className="wizard-options">
             {[
-              { id: 'small' as SizeOption, label: 'Small', sub: '< 10k sats' },
-              { id: 'medium' as SizeOption, label: 'Medium', sub: '10k–100k sats' },
-              { id: 'large' as SizeOption, label: 'Large', sub: '> 100k sats' },
+              { id: 'small' as SizeOption, label: 'Small', sub: sizeHints?.[0] },
+              { id: 'medium' as SizeOption, label: 'Medium', sub: sizeHints?.[1] },
+              { id: 'large' as SizeOption, label: 'Large', sub: sizeHints?.[2] },
             ].map(opt => (
               <button key={opt.id} type="button" className={`wizard-opt${size === opt.id ? ' active' : ''}`}
                 onClick={() => { setSize(opt.id); setStep(2) }}>
                 <div className="wizard-opt-label">{opt.label}</div>
-                <div className="wizard-opt-sub">{opt.sub}</div>
+                {opt.sub && <div className="wizard-opt-sub">{opt.sub}</div>}
               </button>
             ))}
           </div>
