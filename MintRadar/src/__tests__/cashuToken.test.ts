@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Amount, getEncodedToken, CheckStateEnum, Wallet } from '@cashu/cashu-ts'
 import {
   parseCashuToken, formatTokenAmount, checkTokenSpentState, decodeTokenWithMint,
+  classifySignatureCheck, classifySpentCheck, stripTokenWhitespace,
   assertProbeableMintUrl, InvalidMintUrlError,
 } from '../utils/cashuToken'
 
@@ -55,6 +56,12 @@ describe('parseCashuToken', () => {
 
   it('tolerates surrounding whitespace', () => {
     expect(parseCashuToken(`  ${V4_TOKEN}\n`).info?.mint).toBe(MINT)
+  })
+
+  it('tolerates whitespace and line breaks inside the token', () => {
+    const wrapped = `${V4_TOKEN.slice(0, 20)}\n${V4_TOKEN.slice(20, 40)} \t${V4_TOKEN.slice(40)}`
+    expect(stripTokenWhitespace(wrapped)).toBe(V4_TOKEN)
+    expect(parseCashuToken(wrapped).info?.mint).toBe(MINT)
   })
 
   it('rejects an empty input without throwing', () => {
@@ -254,5 +261,44 @@ describe('token network paths refuse an unsafe mint URL (audit finding L4)', () 
     const res = await checkTokenSpentState(v3TokenWithMint('https://testnut.cashu.space'))
     expect(mockLoadMint).toHaveBeenCalledTimes(1)
     expect(res.total).toBe(2)
+  })
+})
+
+describe('classifySignatureCheck', () => {
+  const ok = { hasDleq: true, dleqValid: true as boolean | null }
+  const bad = { hasDleq: true, dleqValid: false as boolean | null }
+  const unresolved = { hasDleq: true, dleqValid: null as boolean | null }
+  const none = { hasDleq: false, dleqValid: true as boolean | null } // require:false reports true for "nothing to check"
+
+  it('is valid only when every proof carries a DLEQ and all verify', () => {
+    expect(classifySignatureCheck([ok, ok])).toEqual({ status: 'valid', count: 2 })
+  })
+  it('is no-dleq when no proof carries a DLEQ', () => {
+    expect(classifySignatureCheck([none, none])).toEqual({ status: 'no-dleq' })
+    expect(classifySignatureCheck([])).toEqual({ status: 'no-dleq' })
+  })
+  it('is partial (not invalid) when only some proofs carry a DLEQ and those verify', () => {
+    expect(classifySignatureCheck([ok, none, ok])).toEqual({ status: 'partial', checked: 2, total: 3 })
+  })
+  it('is invalid only when a present DLEQ actually failed', () => {
+    expect(classifySignatureCheck([ok, bad])).toEqual({ status: 'invalid' })
+    expect(classifySignatureCheck([bad, none])).toEqual({ status: 'invalid' })
+  })
+  it('is unresolved (not invalid) when a keyset could not be resolved', () => {
+    expect(classifySignatureCheck([ok, unresolved])).toEqual({ status: 'unresolved' })
+    expect(classifySignatureCheck([unresolved, none])).toEqual({ status: 'unresolved' })
+  })
+  it('a real failure wins over an unresolved keyset', () => {
+    expect(classifySignatureCheck([bad, unresolved])).toEqual({ status: 'invalid' })
+  })
+})
+
+describe('classifySpentCheck', () => {
+  it('maps each outcome', () => {
+    expect(classifySpentCheck({ total: 3, unspent: 0, spent: 3, pending: 0 })).toBe('all-spent')
+    expect(classifySpentCheck({ total: 3, unspent: 3, spent: 0, pending: 0 })).toBe('all-unspent')
+    expect(classifySpentCheck({ total: 3, unspent: 0, spent: 0, pending: 3 })).toBe('all-pending')
+    expect(classifySpentCheck({ total: 3, unspent: 1, spent: 1, pending: 1 })).toBe('partial')
+    expect(classifySpentCheck({ total: 3, unspent: 2, spent: 0, pending: 1 })).toBe('partial')
   })
 })

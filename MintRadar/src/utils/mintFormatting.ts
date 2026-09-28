@@ -427,35 +427,6 @@ export function reliabilityColor(score: number): string {
   return '#ff4d4d'
 }
 
-// ── Mint risk level (Token Inspector) ───────────────────────────
-// Risk for a SINGLE mint a token is bound to — not a multi-mint aggregation.
-// Reuses the exact same 70/40 reliability-score thresholds as reliabilityScoreInfo() above
-// so "Low Reliability" and "risk: medium" never disagree about the same score.
-export interface MintRiskInfo {
-  label: 'High risk' | 'Medium risk' | 'Low risk' | 'Unknown'
-  color: string
-  bg: string
-  border: string
-}
-
-const RISK_HIGH: MintRiskInfo = { label: 'High risk',   color: '#ff4d4d', bg: 'rgba(255,77,77,0.1)',  border: 'rgba(255,77,77,0.25)' }
-const RISK_MEDIUM: MintRiskInfo = { label: 'Medium risk', color: '#ffa500', bg: 'rgba(255,165,0,0.1)',  border: 'rgba(255,165,0,0.25)' }
-const RISK_LOW: MintRiskInfo = { label: 'Low risk',    color: '#4ade80', bg: 'rgba(74,222,128,0.1)', border: 'rgba(74,222,128,0.25)' }
-const RISK_UNKNOWN: MintRiskInfo = { label: 'Unknown',    color: 'var(--t3)', bg: 'var(--bg3)',          border: 'var(--border)' }
-
-/**
- * `mint` is null when the token's mint URL doesn't match any row in
- * /api/mints/known — deliberately its own "Unknown" state rather than a
- * silent fallback into one of the three known-mint tiers, since "not tracked"
- * and "tracked but risky" are different findings.
- */
-export function mintRiskLevel(mint: { online: boolean | null; degraded: boolean; reliabilityScore: number | null | undefined } | null): MintRiskInfo {
-  if (!mint) return RISK_UNKNOWN
-  if (mint.online === false || mint.degraded === true) return RISK_HIGH
-  if ((mint.reliabilityScore ?? 0) < 40) return RISK_MEDIUM
-  return RISK_LOW
-}
-
 // ── Reliability Score donut geometry ────────────────────────────────
 // The Mint Detail / Stats gauges draw the arc as a stroke-dasharray on an
 // r=27 SVG <circle>, so the drawable circumference is 2·π·27 ≈ 169.646.

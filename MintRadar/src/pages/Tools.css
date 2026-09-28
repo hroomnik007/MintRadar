@@ -53,16 +53,6 @@
   font-family: var(--font-body);
   line-height: 1.5;
 }
-#token .tool-subtitle::after {
-  content: "Supports cashuA / cashuB";
-  display: block;
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--t3, var(--text3));
-  font-family: var(--font-body);
-  line-height: 1.4;
-}
-
 .wizard-disclaimer { font-size: 12px; color: var(--text2); line-height: 1.45; }
 
 .tool-btn-primary {
@@ -77,6 +67,7 @@
   font-weight: 500;
   font-family: var(--font-body);
 }
+.inspect-token-btn { display: flex; align-items: center; justify-content: center; gap: 6px; }
 .tool-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 .tool-btn-primary:not(:disabled):hover { opacity: 0.85; }
 
@@ -95,12 +86,13 @@
   line-height: 1.5;
 }
 .token-input:focus { border-color: var(--accent); }
+@media (max-width: 768px) { .token-input { resize: none; } }
 .token-input::placeholder { color: var(--text3); }
 
 .token-error {
   font-size: 12px;
   color: #E24B4A;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   padding: 8px 12px;
   background: rgba(226, 75, 74, 0.08);
   border: 1px solid rgba(226, 75, 74, 0.2);
@@ -145,18 +137,6 @@
 .trc-value.trc-muted { color: var(--text3); font-weight: 400; }
 .trc-sub { font-size: 10px; color: var(--text3); font-family: var(--font-mono); }
 
-.token-risk-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  align-self: flex-start;
-  margin-top: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  font-family: var(--font-mono);
-  border-radius: 5px;
-  padding: 2px 7px;
-}
 .token-memo-row {
   font-size: 11px;
   font-family: var(--font-mono);
@@ -190,6 +170,7 @@
   text-align: center;
   text-decoration: none;
   white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
 }
 .token-action-btn:hover { border-color: var(--accent); color: var(--accent); }
 a.token-action-btn,
@@ -200,16 +181,21 @@ a.token-action-btn:focus {
 
 .token-verify { display: flex; flex-direction: column; gap: 8px; }
 .token-verify-result {
-  font-size: 12px;
-  font-family: var(--font-mono);
+  font-size: 13px;
+  font-family: var(--font-body);
   line-height: 1.5;
   padding: 8px 12px;
   border-radius: 7px;
+  display: flex; align-items: flex-start; gap: 8px;
 }
-.tv-loading { color: var(--text2); background: var(--bg3); border: 1px solid var(--border); }
+.token-verify-result .tv-icon { flex-shrink: 0; margin-top: 3px; }
+.tv-loading, .tv-neutral { color: var(--text2); background: var(--bg3); border: 1px solid var(--border); }
 .tv-ok { color: var(--green-bright); background: var(--green-soft); border: 1px solid var(--green-soft-strong); }
 .tv-bad { color: #E24B4A; background: rgba(226, 75, 74, 0.08); border: 1px solid rgba(226, 75, 74, 0.2); }
 .tv-unknown { color: var(--copper); background: var(--copper-soft); border: 1px solid var(--copper-soft-strong); }
+.tv-spin { animation: tv-spin 1s linear infinite; }
+@keyframes tv-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .tv-spin { animation: none; } }
 .token-section-label {
   display: flex; align-items: center; gap: 5px;
   font-size: 11px; font-weight: 600; color: var(--text3);
@@ -217,7 +203,24 @@ a.token-action-btn:focus {
 }
 .token-spent { display: flex; flex-direction: column; gap: 8px; }
 .token-spent-row { display: flex; align-items: center; gap: 6px; }
-.token-spent .token-action-btn { align-self: flex-start; flex: 0 0 auto; }
+.token-spent-row .token-action-btn { flex: 1 1 auto; }
+
+/* Muted helper lines (privacy, spent check, wallet links) and the empty-input hint. */
+.token-note { font-size: 12px; line-height: 1.45; color: var(--text3); font-family: var(--font-body); }
+.token-hint { font-size: 12px; color: var(--text3); text-align: center; font-family: var(--font-body); }
+
+/* Actions: Redeem to Lightning leads (accent border, not a second filled primary);
+   View Mint Detail / Open in cashu.me are quiet links. */
+.token-action-lead { flex: 1 1 100%; border-color: var(--accent); color: var(--accent); }
+.token-links { display: flex; flex: 1 1 100%; gap: 16px; flex-wrap: wrap; }
+.token-link-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: none; border: none; padding: 4px 0;
+  font-size: 12px; font-family: var(--font-body); color: var(--text2);
+  cursor: pointer; text-decoration: none;
+}
+.token-link-btn:hover { color: var(--accent); }
+.token-link-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 
 .wizard-steps {
   display: flex; align-items: center; gap: 8px;

@@ -1,5 +1,5 @@
 // Shared shield mark used by the Reliability Score badge (MintCard, ComparisonModal)
-// and the Token Inspector's mint risk badge (Tools.tsx).
+// and the Best Mint wizard's result rows (Tools.tsx).
 export function IcShield({ size = 13 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>

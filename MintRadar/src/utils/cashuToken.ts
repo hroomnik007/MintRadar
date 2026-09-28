@@ -18,6 +18,16 @@ export interface TokenInfo {
   memo: string | null
 }
 
+/**
+ * Pasted tokens often arrive with a line break or stray spaces in the middle (mail
+ * clients, chat apps, terminal wrapping). A Cashu token never contains whitespace, so
+ * ALL of it is stripped — not just the ends — before parsing and before the token is
+ * put into any wallet link.
+ */
+export function stripTokenWhitespace(raw: string): string {
+  return raw.replace(/\s+/g, '')
+}
+
 function tokenVersionLabel(token: string): string {
   if (token.startsWith('cashuB')) return 'v4 (cashuB)'
   if (token.startsWith('cashuA')) return 'v3 (cashuA)'
@@ -89,7 +99,7 @@ export function formatTokenAmount(amount: number, unit: string): string {
  * instead of crashing.
  */
 export function parseCashuToken(raw: string): TokenParseResult {
-  const token = raw.trim()
+  const token = stripTokenWhitespace(raw)
   if (!token) return { info: null, error: 'Paste a Cashu token first.' }
   if (!token.startsWith('cashuA') && !token.startsWith('cashuB')) {
     return { info: null, error: 'Not a Cashu token — expected a string starting with cashuA (v3) or cashuB (v4).' }
@@ -197,13 +207,13 @@ export interface FullTokenDecode {
  * each proof's NUT-12 DLEQ signature.
  *
  * Unlike parseCashuToken() this needs the mint to be reachable (Wallet.loadMint
- * fetches /v1/info + /v1/keysets + /v1/keys). Not wired into the UI yet — it is
- * the groundwork for showing DLEQ validity in the Token Inspector.
+ * fetches /v1/info + /v1/keysets + /v1/keys). Drives the Token Inspector's
+ * "Signature check" panel — map its result to a UI state with classifySignatureCheck().
  *
  * @throws if the mint is unreachable or the token can't be resolved.
  */
 export async function decodeTokenWithMint(raw: string): Promise<FullTokenDecode> {
-  const token = raw.trim()
+  const token = stripTokenWhitespace(raw)
   const { info, error } = parseCashuToken(token)
   if (!info) throw new Error(error ?? 'Invalid token')
   assertProbeableMintUrl(info.mint)
@@ -237,6 +247,29 @@ export async function decodeTokenWithMint(raw: string): Promise<FullTokenDecode>
   }
 }
 
+/** Where a token's signature check landed — one UI state each (see Tools.tsx). */
+export type SignatureCheck =
+  | { status: 'valid'; count: number }
+  | { status: 'invalid' }
+  | { status: 'partial'; checked: number; total: number }
+  | { status: 'unresolved' }
+  | { status: 'no-dleq' }
+
+/**
+ * Maps per-proof DLEQ results to a single UI state. "Invalid" is reserved for a proof
+ * whose DLEQ was actually present AND checked AND failed; a proof whose keyset couldn't
+ * be resolved (dleqValid === null) or a proof with no DLEQ at all is never evidence
+ * against the token.
+ */
+export function classifySignatureCheck(proofs: Pick<DecodedProof, 'hasDleq' | 'dleqValid'>[]): SignatureCheck {
+  const withDleq = proofs.filter(p => p.hasDleq)
+  if (withDleq.length === 0) return { status: 'no-dleq' }
+  if (withDleq.some(p => p.dleqValid === false)) return { status: 'invalid' }
+  if (withDleq.some(p => p.dleqValid === null)) return { status: 'unresolved' }
+  if (withDleq.length < proofs.length) return { status: 'partial', checked: withDleq.length, total: proofs.length }
+  return { status: 'valid', count: proofs.length }
+}
+
 export interface TokenSpentCheck {
   total: number
   unspent: number
@@ -258,7 +291,7 @@ export interface TokenSpentCheck {
  * @throws if the mint is unreachable or the token can't be resolved.
  */
 export async function checkTokenSpentState(raw: string): Promise<TokenSpentCheck> {
-  const token = raw.trim()
+  const token = stripTokenWhitespace(raw)
   const { info, error } = parseCashuToken(token)
   if (!info) throw new Error(error ?? 'Invalid token')
   assertProbeableMintUrl(info.mint)
@@ -278,4 +311,15 @@ export async function checkTokenSpentState(raw: string): Promise<TokenSpentCheck
     else unspent++
   }
   return { total: states.length, unspent, spent, pending }
+}
+
+export type SpentOutcome = 'all-spent' | 'all-unspent' | 'all-pending' | 'partial'
+
+/** Which result copy a spent check gets. All-pending is its own case: the proofs are
+ *  neither usable nor redeemed yet, so "partially usable" would be wrong. */
+export function classifySpentCheck({ total, unspent, spent, pending }: TokenSpentCheck): SpentOutcome {
+  if (spent === total) return 'all-spent'
+  if (unspent === total) return 'all-unspent'
+  if (pending === total) return 'all-pending'
+  return 'partial'
 }

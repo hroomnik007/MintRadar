@@ -1,6 +1,9 @@
 import type { Page } from '@playwright/test'
 import { nip19 } from 'nostr-tools'
-import { Amount, getEncodedToken } from '@cashu/cashu-ts'
+import {
+  Amount, getEncodedToken, createNewMintKeys, blindMessage, createBlindSignature, createDLEQProof,
+  unblindSignature, pointFromHex,
+} from '@cashu/cashu-ts'
 
 // ── Mock mint data ─────────────────────────────────────────────
 // Deterministic fixtures used by every E2E test so flows never depend on the
@@ -330,4 +333,92 @@ export function makeCashuToken(mint: string, amounts: number[], unit = 'sat', me
   const base64 = Buffer.from(JSON.stringify(payload), 'utf-8').toString('base64')
   const base64url = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
   return 'cashuA' + base64url
+}
+
+// ── Fake mint with real DLEQ proofs (Token Inspector "Signature check" states) ─────────
+//
+// The proofs are genuinely blind-signed with freshly generated mint keys, so cashu-ts's
+// hasValidDleq() runs real crypto against them in the browser — nothing about the result
+// is stubbed. 'none' omits the DLEQ payload; 'tampered' corrupts it so the check fails.
+
+export type DleqKind = 'valid' | 'none' | 'tampered'
+
+export interface DleqMintFixture {
+  mint: string
+  token: string
+  routes: { info: unknown; keysets: unknown; keys: unknown }
+}
+
+const toHex = (b: Uint8Array) => Buffer.from(b).toString('hex')
+
+/** `hideKeys` serves the keyset without its keys, i.e. a keyset that can't be resolved. */
+export function makeDleqMint(
+  mint: string,
+  proofSpecs: { amount: number; dleq: DleqKind }[],
+  opts: { hideKeys?: boolean } = {},
+): DleqMintFixture {
+  const keys = createNewMintKeys(4, undefined, { unit: 'sat', input_fee_ppk: 0 })
+  const id = keys.keysetId
+  const proofs = proofSpecs.map(({ amount, dleq: kind }, i) => {
+    const secret = `dleq-fixture-secret-${i}-${amount}`
+    const { B_, r } = blindMessage(new TextEncoder().encode(secret))
+    const priv = keys.privKeys[String(amount)]!
+    const sig = createBlindSignature(B_, priv, id)
+    const dleq = createDLEQProof(B_, priv)
+    const C = unblindSignature(sig.C_, r, pointFromHex(toHex(keys.pubKeys[String(amount)]!)))
+    const proof: Record<string, unknown> = { id, amount: Amount.from(amount), secret, C: C.toHex(true) }
+    if (kind !== 'none') {
+      const s = toHex(dleq.s)
+      proof.dleq = {
+        e: toHex(dleq.e),
+        s: kind === 'tampered' ? s.slice(0, -1) + (s.endsWith('0') ? '1' : '0') : s,
+        r: r.toString(16).padStart(64, '0'),
+      }
+    }
+    return proof
+  })
+  return {
+    mint,
+    token: getEncodedToken({ mint, unit: 'sat', proofs } as Parameters<typeof getEncodedToken>[0]),
+    routes: {
+      info: { name: 'Fixture mint', nuts: { 4: { methods: [], disabled: false }, 5: { methods: [], disabled: false } } },
+      keysets: { keysets: [{ id, unit: 'sat', active: true, input_fee_ppk: 0 }] },
+      keys: {
+        keysets: [{
+          id, unit: 'sat',
+          keys: opts.hideKeys ? {} : Object.fromEntries(Object.entries(keys.pubKeys).map(([k, v]) => [k, toHex(v)])),
+        }],
+      },
+    },
+  }
+}
+
+/**
+ * Serves the fixture mint from inside the page. The dev server's CSP blocks a real fetch to
+ * an external mint before page.route() can see it (see the two-phase loading test), so the
+ * page's fetch is patched instead. `checkstate` answers POST /v1/checkstate with that state
+ * for every Y it is sent. Call before page.reload() — init scripts apply to new navigations.
+ */
+export async function serveMintInPage(
+  page: Page,
+  fx: DleqMintFixture,
+  opts: { checkstate?: 'UNSPENT' | 'SPENT' | 'PENDING' } = {},
+): Promise<void> {
+  await page.addInitScript(({ mint, routes, checkstate }) => {
+    const realFetch = window.fetch.bind(window)
+    const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : (input as Request).url ?? String(input)
+      if (!url.startsWith(mint + '/v1/')) return realFetch(input, init)
+      const path = url.slice(mint.length)
+      if (path === '/v1/info') return Promise.resolve(json(routes.info))
+      if (path === '/v1/keysets') return Promise.resolve(json(routes.keysets))
+      if (path.startsWith('/v1/keys')) return Promise.resolve(json(routes.keys))
+      if (path === '/v1/checkstate' && checkstate) {
+        const ys: string[] = JSON.parse(String(init?.body ?? '{}')).Ys ?? []
+        return Promise.resolve(json({ states: ys.map(Y => ({ Y, state: checkstate, witness: null })) }))
+      }
+      return Promise.resolve(new Response('not found', { status: 404 }))
+    }
+  }, { mint: fx.mint, routes: fx.routes, checkstate: opts.checkstate ?? null })
 }
