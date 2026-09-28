@@ -470,3 +470,34 @@ test.describe('Tools', () => {
     await expect(page.locator('.wizard-rec-row').first()).toContainText('Alpha Mint')
   })
 })
+
+test.describe('Tools wizard on touch', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } })
+
+  test('Best Mint Wizard: a tapped-then-deselected card does not keep a sticky hover border', async ({ page }) => {
+    await page.getByRole('radio', { name: 'SAT', exact: true }).tap()
+    await page.locator('.wizard-opt', { hasText: 'Small' }).tap()
+
+    const card = page.locator('.wizard-opt', { hasText: 'Lightning in and out' })
+    const untouched = page.locator('.wizard-opt', { hasText: 'Reliable' })
+    const border = (l: typeof card) => l.evaluate(el => getComputedStyle(el).borderTopColor)
+    const unselected = await border(untouched)
+
+    await card.tap()
+    await expect(card).toHaveClass(/active/)
+    expect(await border(card)).not.toBe(unselected)
+
+    await card.tap()
+    await expect(card).not.toHaveClass(/active/)
+    expect(await border(card)).toBe(unselected)
+  })
+
+  test('Best Mint Wizard: size labels follow the selected currency', async ({ page }) => {
+    const small = page.locator('.wizard-opt', { hasText: 'Small' })
+    await expect(small).toContainText('< 10k sats')
+    await page.getByRole('radio', { name: 'USD', exact: true }).tap()
+    await expect(small).toContainText('< ~$10')
+    await expect(page.locator('.wizard-opt', { hasText: 'Large' })).toContainText('> ~$100')
+    await expect(page.locator('.wizard-opt', { hasText: 'Large' })).not.toContainText('sats')
+  })
+})
