@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { installApiMocks, mockRelays, makeCashuToken, makeCashuTokenV4, MOCK_MINTS, MOCK_KNOWN_MINTS } from './fixtures/mocks'
+import { installApiMocks, mockRelays, makeCashuToken, makeCashuTokenV4, makeDleqMint, serveMintInPage, MOCK_MINTS, MOCK_KNOWN_MINTS, type DleqKind } from './fixtures/mocks'
 
 test.beforeEach(async ({ page }) => {
   await mockRelays(page)
@@ -161,7 +161,7 @@ test.describe('Tools', () => {
 
     // A clipped label has scrollWidth > clientWidth (overflow hidden behind the button's
     // own edge) — that was the bug: flex:1 + min-width:0 let these shrink past their text.
-    const overflowing = await page.locator('.token-action-btn').evaluateAll(
+    const overflowing = await page.locator('.token-action-btn, .token-link-btn').evaluateAll(
       els => els.filter(el => el.scrollWidth > el.clientWidth + 1).map(el => el.textContent)
     )
     expect(overflowing).toEqual([])
@@ -187,32 +187,27 @@ test.describe('Tools', () => {
     await expect(page.locator('.token-memo-row')).toHaveCount(0)
   })
 
-  test('Risk badge is Low risk for an online, high-reliability mint', async ({ page }) => {
+  test('No risk badge is rendered — only the Reliability Score and Online/Offline cells', async ({ page }) => {
     const token = makeCashuToken(MOCK_MINTS[0]!.url, [21]) // Alpha: online, reliabilityScore 92
 
     await page.locator('.token-input').fill(token)
     await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
 
-    await expect(page.locator('.token-risk-badge')).toContainText('Low risk')
+    await expect(page.locator('.token-result-grid')).toBeVisible()
+    await expect(page.locator('.token-risk-badge')).toHaveCount(0)
+    await expect(page.locator('.token-result-grid')).not.toContainText(/risk/i)
+    await expect(page.locator('.token-result-cell', { hasText: 'Reliability Score' })).toContainText('92%')
   })
 
-  test('Risk badge is High risk for an offline mint', async ({ page }) => {
-    const token = makeCashuToken(MOCK_MINTS[2]!.url, [21]) // Charlie: offline
-
-    await page.locator('.token-input').fill(token)
-    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
-
-    await expect(page.locator('.token-risk-badge')).toContainText('High risk')
-  })
-
-  test('Risk badge is Unknown for a mint MintRadar has never seen', async ({ page }) => {
+  test('A mint MintRadar has never seen shows "Not in database" and no risk badge', async ({ page }) => {
     const token = makeCashuToken('https://never-seen.mint.example', [21])
 
     await page.locator('.token-input').fill(token)
     await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
 
     await expect(page.locator('.token-result-cell', { hasText: 'Mint Status' })).toContainText('Not in database')
-    await expect(page.locator('.token-risk-badge')).toContainText('Unknown')
+    await expect(page.locator('.token-risk-badge')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /View Mint Detail/ })).toHaveCount(0)
   })
 
   test('Test mint chip shows for a token from a known test/dev mint', async ({ page }) => {
@@ -280,7 +275,7 @@ test.describe('Tools', () => {
     // Rest of the inspector stays intact.
     await expect(page.locator('.token-result-grid')).toBeVisible()
     await expect(spentBtn).toBeEnabled()
-    await expect(spentBtn).toHaveText('🔍 Check if spent')
+    await expect(spentBtn).toHaveText('Check if spent')
   })
 
   test('Token Inspector shows an error for an invalid token (no crash)', async ({ page }) => {
@@ -291,6 +286,97 @@ test.describe('Tools', () => {
     await expect(page.locator('.token-error')).toContainText(/Not a Cashu token/)
     // No result grid is rendered for an invalid token.
     await expect(page.locator('.token-result-grid')).toHaveCount(0)
+  })
+
+  test('Token Inspector states exactly what stays local and what contacts the mint', async ({ page }) => {
+    await expect(page.locator('.token-note').first()).toHaveText(
+      "Decoded in your browser. MintRadar's servers never see your token. Checking contacts the mint named in the token."
+    )
+    await expect(page.getByPlaceholder('cashuB… or cashuA…')).toBeVisible()
+    await expect(page.locator('.tool-subtitle', { hasText: 'Paste a Cashu token (cashuA or cashuB)' })).toBeVisible()
+  })
+
+  test('Empty input: Inspect is disabled with a "Paste a token first" hint', async ({ page }) => {
+    const btn = page.getByRole('button', { name: 'Inspect & Verify Token' })
+    await expect(btn).toBeDisabled()
+    await expect(page.locator('.token-hint')).toHaveText('Paste a token first')
+
+    await page.locator('.token-input').fill(makeCashuToken(MOCK_MINTS[0]!.url, [21]))
+    await expect(btn).toBeEnabled()
+    await expect(page.locator('.token-hint')).toHaveCount(0)
+  })
+
+  test('Whitespace and line breaks inside the token are stripped before parsing and in the wallet links', async ({ page }) => {
+    const token = makeCashuToken(MOCK_MINTS[0]!.url, [21])
+    const wrapped = `  ${token.slice(0, 30)}\n${token.slice(30, 60)} \t${token.slice(60)}\n`
+
+    await page.locator('.token-input').fill(wrapped)
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+
+    await expect(page.locator('.token-result-grid')).toContainText('Alpha Mint')
+    await expect(page.getByRole('link', { name: /Open in cashu.me/ }))
+      .toHaveAttribute('href', `https://wallet.cashu.me/?token=${encodeURIComponent(token)}`)
+    await expect(page.getByRole('link', { name: /Redeem to Lightning/ }))
+      .toHaveAttribute('href', `https://redeem.cashu.me/?token=${encodeURIComponent(token)}`)
+    await expect(page.getByText('These open cashu.me with your full token in the link.')).toBeVisible()
+  })
+
+  test('Check if spent explains itself; Redeem leads and the other links are quiet', async ({ page }) => {
+    await page.locator('.token-input').fill(makeCashuToken(MOCK_MINTS[0]!.url, [21]))
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+    await expect(page.locator('.token-result-grid')).toBeVisible()
+
+    await expect(page.getByText('Asks the mint whether this token was already redeemed.')).toBeVisible()
+    await expect(page.getByRole('link', { name: /Redeem to Lightning/ })).toHaveClass(/token-action-lead/)
+    await expect(page.getByRole('link', { name: /Open in cashu.me/ })).toHaveClass(/token-link-btn/)
+    await expect(page.getByRole('button', { name: /View Mint Detail/ })).toHaveClass(/token-link-btn/)
+  })
+
+  test.describe('Signature check states (real DLEQ proofs against an in-page fake mint)', () => {
+    const MINT = MOCK_MINTS[0]!.url
+    const v: DleqKind = 'valid'
+    const none: DleqKind = 'none'
+    const bad: DleqKind = 'tampered'
+    const cases: { name: string; proofs: DleqKind[]; hideKeys?: boolean; text: RegExp; cls: RegExp; notText?: RegExp }[] = [
+      { name: 'every proof verifies → green "Verified"', proofs: [v, v], text: /Verified\. Every proof is signed by this mint\. This doesn't show whether it's spent\./, cls: /tv-ok/ },
+      { name: 'only some proofs carry DLEQ → neutral "Partly verified", never red', proofs: [v, none], text: /Partly verified\. 1 of 2 proofs carry signature proofs and those check out\. The rest can't be checked\./, cls: /tv-neutral/, notText: /Invalid signature/ },
+      { name: 'no proof carries DLEQ → neutral "can\'t be checked"', proofs: [none, none], text: /Signatures can't be checked\. This token has no signature proofs attached\. That's common and doesn't mean it's bad\./, cls: /tv-neutral/, notText: /issuing mint/ },
+      { name: 'a present DLEQ that fails → red "Invalid signature"', proofs: [v, bad], text: /Invalid signature/, cls: /tv-bad/ },
+      { name: 'keyset without keys → copper "Couldn\'t check", never red', proofs: [v], hideKeys: true, text: /Couldn't check signatures\. Says nothing about the token itself\./, cls: /tv-unknown/, notText: /Invalid signature/ },
+    ]
+    for (const c of cases) {
+      test(c.name, async ({ page }) => {
+        const fx = makeDleqMint(MINT, c.proofs.map((dleq, i) => ({ amount: 2 ** i, dleq })), { hideKeys: c.hideKeys })
+        await serveMintInPage(page, fx)
+        await page.reload()
+        await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
+
+        await page.locator('.token-input').fill(fx.token)
+        await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+
+        const result = page.locator('.token-verify .token-verify-result')
+        await expect(result).toContainText(c.text, { timeout: 15_000 })
+        await expect(result).toHaveClass(c.cls)
+        if (c.notText) await expect(result).not.toContainText(c.notText)
+      })
+    }
+
+    test('spent check where every proof is pending says so, not "partially usable"', async ({ page }) => {
+      const fx = makeDleqMint(MINT, [{ amount: 1, dleq: v }, { amount: 2, dleq: v }])
+      await serveMintInPage(page, fx, { checkstate: 'PENDING' })
+      await page.reload()
+      await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
+
+      await page.locator('.token-input').fill(fx.token)
+      await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+      await expect(page.locator('.token-result-grid')).toBeVisible()
+      await page.getByRole('button', { name: /Check if spent/ }).click()
+
+      const spent = page.locator('.token-spent .token-verify-result')
+      await expect(spent).toContainText(/All 2 proofs pending — the mint is still processing them/, { timeout: 15_000 })
+      await expect(spent).not.toContainText(/partially usable/)
+      await expect(spent).toHaveClass(/tv-neutral/)
+    })
   })
 
   test('Best Mint Wizard shows the helper line and no endorsement disclaimer', async ({ page }) => {

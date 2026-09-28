@@ -83,7 +83,7 @@ Automatic mint discovery on a schedule from a set of public Nostr relays, using 
 
 ### 🔧 Tools
 
-- **Token Inspector** — paste a Cashu token (`cashuA` / `cashuB`) to see its mint, amount, unit, proof count, memo, mint status, and Reliability Score, plus a risk badge for the issuing mint — with a link to Mint Detail or Cashu.me. Optional **Check if spent** queries the mint (NUT-07) for unspent / spent / partial proofs
+- **Token Inspector** — paste a Cashu token (`cashuA` / `cashuB`) to see its mint, amount, unit, proof count, memo, mint status, and Reliability Score, plus a signature check (NUT-12) — with a link to Mint Detail or Cashu.me. Optional **Check if spent** queries the mint (NUT-07) for unspent / spent / pending / partial proofs
 - **Best Mint for Me** — 2-step wizard: pick your currency unit and how much you plan to store, then multi-select what matters (fast latency measured from your browser, Reliability Score, Lightning in + out, seed-phrase restore/NUT-09, locked payments (P2PK)/NUT-11, live WebSocket updates/NUT-17). The top matches show latency, uptime, Reliability Score, LN support, and mint/melt limits for the chosen unit
 
 ### 📚 Learn
@@ -118,6 +118,7 @@ Sharing a mint page link on Twitter/X, Discord, Telegram, Slack, or WhatsApp sho
 - **No cookies**
 - Fonts are self-hosted — no requests to Google Fonts or any external font CDN
 - Nostr private keys **never leave your browser** and are never stored or transmitted to the backend
+- Token Inspector: a pasted token is decoded in your browser and never sent to MintRadar's servers. Verifying and "Check if spent" contact the mint named in the token; the "Open in cashu.me" and "Redeem to Lightning" links carry the full token to cashu.me
 - Watchlist data lives in your browser (IndexedDB) and optionally encrypted on Nostr relays under your own key; a mint's URL is additionally sent to MintRadar's backend only while you have notifications on for that mint, so it knows what to monitor for your downtime/recovery DMs
 
 ### 🔁 Automatic Backups

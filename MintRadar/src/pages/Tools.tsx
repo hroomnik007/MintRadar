@@ -5,9 +5,9 @@ import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcShield } from '@/components/mint/IcShield'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { useNow } from '@/hooks/useNow'
-import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, InvalidMintUrlError, type TokenInfo, type TokenSpentCheck } from '@/utils/cashuToken'
-import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, mintRiskLevel, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel, computeDuplicateMintNames } from '@/utils/mintFormatting'
-import { Zap, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, type LucideIcon } from 'lucide-react'
+import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, classifySignatureCheck, classifySpentCheck, stripTokenWhitespace, InvalidMintUrlError, type SignatureCheck, type TokenInfo, type TokenSpentCheck } from '@/utils/cashuToken'
+import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel, computeDuplicateMintNames } from '@/utils/mintFormatting'
+import { Zap, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Hourglass, ExternalLink, ArrowRight, type LucideIcon } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
 import { isEligibleForRecommendation } from '@/utils/reliabilityScore'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
@@ -22,9 +22,7 @@ function getHostname(url: string): string {
 // from "invalid": failing to reach the mint tells us nothing about the token, while
 // "invalid" is a positive finding that the signature does not check out.
 type VerifyResult =
-  | { status: 'valid'; count: number }
-  | { status: 'invalid' }
-  | { status: 'no-dleq' }
+  | SignatureCheck
   | { status: 'unreachable' }
   | { status: 'bad-mint-url'; message: string }
 
@@ -43,6 +41,20 @@ type SpentCheckResult =
   | { status: 'ok'; data: TokenSpentCheck }
   | { status: 'error'; message: string }
   | { status: 'bad-mint-url'; message: string }
+
+// One result line in the Signature check / spent check panels. The tone is the whole
+// visual ladder: ok = green, bad = red (a real finding against the token), unknown =
+// copper (we couldn't find out — says nothing about the token), neutral = grey (nothing
+// to report either way), loading = grey while a request is in flight.
+type ResultTone = 'ok' | 'bad' | 'unknown' | 'neutral' | 'loading'
+function ResultNote({ tone, Icon, children }: { tone: ResultTone; Icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    <div role="status" className={`token-verify-result tv-${tone}`}>
+      <Icon size={14} aria-hidden="true" className={`tv-icon${tone === 'loading' ? ' tv-spin' : ''}`} />
+      <span>{children}</span>
+    </div>
+  )
+}
 
 function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   const navigate = useNavigate()
@@ -68,10 +80,12 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     return knownMap.get(normalized) ?? knownMap.get(result.mint) ?? null
   }, [result, knownMap])
 
-  const riskInfo = mintRiskLevel(mintInfo ? { online: mintInfo.online, degraded: mintInfo.degraded, reliabilityScore: mintInfo.reliabilityScore } : null)
+  // Pasted tokens often carry line breaks or stray spaces; a Cashu token never contains
+  // whitespace, so all of it is stripped before parsing and before building the wallet links.
+  const cleanToken = useMemo(() => stripTokenWhitespace(input), [input])
 
   const handleInspectAndVerify = async () => {
-    const token = input.trim()
+    const token = cleanToken
     if (!token) return
     setInspected(true)
     setVerify(null)
@@ -99,15 +113,9 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     setPhase('verifying')
     try {
       const decoded = await decodeTokenWithMint(token)
-      if (decoded.proofsWithDleq === 0) {
-        // The mint issued these proofs without DLEQ data, so there is simply nothing
-        // to check — not a pass, not a failure.
-        setVerify({ status: 'no-dleq' })
-      } else if (decoded.allDleqValid) {
-        setVerify({ status: 'valid', count: decoded.proofs.length })
-      } else {
-        setVerify({ status: 'invalid' })
-      }
+      // Only a DLEQ that was present AND checked AND failed is "invalid"; a missing DLEQ
+      // or an unresolved keyset is never evidence against the token (see classifySignatureCheck).
+      setVerify(classifySignatureCheck(decoded.proofs))
     } catch (err) {
       if (err instanceof InvalidMintUrlError) {
         // The token names a mint URL we refuse to contact (not https://, or a
@@ -125,7 +133,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   }
 
   const handleCheckSpent = async () => {
-    const token = input.trim()
+    const token = cleanToken
     if (!token || checkingSpent) return
     setCheckingSpent(true)
     setSpentResult(null)
@@ -164,26 +172,30 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     <div className="tool-card">
       <div className="tool-header">
         <div className="tool-title">Token Inspector</div>
-        <div className="tool-subtitle">Paste a Cashu token (v3 or v4) to inspect its mint, amount, and reliability status before redeeming</div>
+        <div className="tool-subtitle">Paste a Cashu token (cashuA or cashuB) to check its mint, amount and reliability before redeeming.</div>
       </div>
 
       <textarea
         className="token-input"
-        placeholder="cashuB… (v4) or cashuA… (v3)"
+        placeholder="cashuB… or cashuA…"
         value={input}
         onChange={e => { setInput(e.target.value); setInspected(false); setResult(null); setParseError(null); setVerify(null); setPhase('idle'); setSpentResult(null); setCheckingSpent(false) }}
         rows={3}
         spellCheck={false}
       />
+      <div className="token-note">Decoded in your browser. MintRadar's servers never see your token. Checking contacts the mint named in the token.</div>
 
       <button
         type="button"
         className="tool-btn-primary inspect-token-btn"
         onClick={() => void handleInspectAndVerify()}
-        disabled={!input.trim() || phase !== 'idle'}
+        disabled={!cleanToken || phase !== 'idle'}
       >
-        {phase === 'inspecting' ? '🔎 Inspecting…' : phase === 'verifying' ? '🔐 Verifying with mint…' : 'Inspect & Verify Token'}
+        {phase === 'inspecting' ? <><Search size={14} aria-hidden="true" /> Inspecting…</>
+          : phase === 'verifying' ? <><ShieldCheck size={14} aria-hidden="true" /> Verifying with mint…</>
+          : 'Inspect & Verify Token'}
       </button>
+      {!cleanToken && <div className="token-hint">Paste a token first</div>}
 
       {parseError && inspected && (
         <div className="token-error">{parseError}</div>
@@ -207,12 +219,6 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
                 )}
               </div>
               <div className="trc-sub">{getHostname(result.mint)}</div>
-              <span
-                className="token-risk-badge"
-                style={{ color: riskInfo.color, background: riskInfo.bg, border: `1px solid ${riskInfo.border}` }}
-              >
-                <IcShield size={11} /><span>{riskInfo.label}</span>
-              </span>
             </div>
             <div className="token-result-cell">
               <div className="trc-label">Amount</div>
@@ -268,39 +274,35 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
           <div className="token-verify">
             <div className="token-section-label">
               <span>Signature check</span>
-              <InfoTooltip text="This confirms the token is real and genuinely came from this mint — a cryptographic check, separate from the mint's reputation shown above." />
+              <InfoTooltip text="Each proof in a token can carry a mint signature proof (NUT-12 DLEQ). When it's there, we check it against the mint's public keys. A pass shows the proofs were signed by this mint. It doesn't show whether they're spent (use Check if spent) or how reliable the mint is (see the score above)." />
             </div>
             {phase === 'verifying' && (
-              <div className="token-verify-result tv-loading">
-                🔐 Verifying with mint… checking this token's signatures against its NUT-12 DLEQ proof.
-              </div>
+              <ResultNote tone="loading" Icon={LoaderCircle}>Verifying with mint… checking this token's signatures.</ResultNote>
             )}
             {verify?.status === 'valid' && (
-              <div className="token-verify-result tv-ok">
-                ✅ Cryptographically verified — all {verify.count} proof{verify.count === 1 ? '' : 's'} carry a
-                valid mint signature (NUT-12 DLEQ).
-              </div>
+              <ResultNote tone="ok" Icon={CircleCheck}>Verified. Every proof is signed by this mint. This doesn't show whether it's spent.</ResultNote>
             )}
             {verify?.status === 'invalid' && (
-              <div className="token-verify-result tv-bad">
-                ❌ Invalid signature — do not trust this token. At least one proof failed its DLEQ check.
-              </div>
+              <ResultNote tone="bad" Icon={CircleX}>Invalid signature — do not trust this token. At least one signature proof failed its check.</ResultNote>
+            )}
+            {verify?.status === 'partial' && (
+              <ResultNote tone="neutral" Icon={CircleMinus}>
+                Partly verified. {verify.checked} of {verify.total} proofs carry signature proofs and those check out. The rest can't be checked.
+              </ResultNote>
+            )}
+            {verify?.status === 'unresolved' && (
+              <ResultNote tone="unknown" Icon={TriangleAlert}>Couldn't check signatures. Says nothing about the token itself.</ResultNote>
             )}
             {verify?.status === 'no-dleq' && (
-              <div className="token-verify-result tv-unknown">
-                ➖ Nothing to verify — this token carries no DLEQ data, so its signatures can't be checked
-                offline. That is a property of the issuing mint, not a sign the token is bad.
-              </div>
+              <ResultNote tone="neutral" Icon={CircleMinus}>
+                Signatures can't be checked. This token has no signature proofs attached. That's common and doesn't mean it's bad.
+              </ResultNote>
             )}
             {verify?.status === 'unreachable' && (
-              <div className="token-verify-result tv-unknown">
-                ⚠️ Could not reach mint to verify (try again later). This says nothing about the token itself.
-              </div>
+              <ResultNote tone="unknown" Icon={TriangleAlert}>Could not reach mint to verify (try again later). This says nothing about the token itself.</ResultNote>
             )}
             {verify?.status === 'bad-mint-url' && (
-              <div className="token-verify-result tv-bad">
-                ❌ {verify.message} A legitimate Cashu token points at a public https:// mint.
-              </div>
+              <ResultNote tone="bad" Icon={CircleX}>{verify.message} A legitimate Cashu token points at a public https:// mint.</ResultNote>
             )}
           </div>
 
@@ -312,74 +314,73 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
                 onClick={() => void handleCheckSpent()}
                 disabled={checkingSpent}
               >
-                {checkingSpent ? '🔍 Checking with mint…' : '🔍 Check if spent'}
+                {checkingSpent
+                  ? <><LoaderCircle size={13} aria-hidden="true" className="tv-spin" /> Checking with mint…</>
+                  : <><Search size={13} aria-hidden="true" /> Check if spent</>}
               </button>
-              <InfoTooltip text="This asks the mint directly whether the token has already been used. Doing so lets the mint know someone is checking it right now." />
+              <InfoTooltip text="This asks the token's mint whether it has already been used. It tells that mint you're looking at this token right now." />
             </div>
+            <div className="token-note">Asks the mint whether this token was already redeemed.</div>
 
             {spentResult?.status === 'ok' && (() => {
               const { total, unspent, spent, pending } = spentResult.data
-              if (spent === total) {
-                return (
-                  <div className="token-verify-result tv-bad">
-                    ❌ All {total} proof{total === 1 ? '' : 's'} already spent — this token has already been redeemed elsewhere.
-                  </div>
-                )
+              const plural = total === 1 ? '' : 's'
+              switch (classifySpentCheck(spentResult.data)) {
+                case 'all-spent':
+                  return <ResultNote tone="bad" Icon={CircleX}>All {total} proof{plural} already spent — this token has already been redeemed elsewhere.</ResultNote>
+                case 'all-unspent':
+                  return <ResultNote tone="ok" Icon={CircleCheck}>All {total} proof{plural} unspent — this token has not been redeemed yet.</ResultNote>
+                case 'all-pending':
+                  return <ResultNote tone="neutral" Icon={Hourglass}>All {total} proof{plural} pending — the mint is still processing {total === 1 ? 'it' : 'them'}. Check again shortly.</ResultNote>
+                default:
+                  return (
+                    <ResultNote tone="unknown" Icon={TriangleAlert}>
+                      {unspent}/{total} proofs unspent, {spent} already spent{pending > 0 ? `, ${pending} pending` : ''} — this token is only partially usable.
+                    </ResultNote>
+                  )
               }
-              if (unspent === total) {
-                return (
-                  <div className="token-verify-result tv-ok">
-                    ✅ All {total} proof{total === 1 ? '' : 's'} unspent — this token has not been redeemed yet.
-                  </div>
-                )
-              }
-              return (
-                <div className="token-verify-result tv-unknown">
-                  ⚠️ {unspent}/{total} proofs unspent, {spent} already spent{pending > 0 ? `, ${pending} pending` : ''} — this token is only partially usable.
-                </div>
-              )
             })()}
             {spentResult?.status === 'error' && (
-              <div className="token-verify-result tv-unknown">
-                ⚠️ Could not check spent status — {spentResult.message} This says nothing about the token itself.
-              </div>
+              <ResultNote tone="unknown" Icon={TriangleAlert}>Could not check spent status — {spentResult.message} This says nothing about the token itself.</ResultNote>
             )}
             {spentResult?.status === 'bad-mint-url' && (
-              <div className="token-verify-result tv-bad">
-                ❌ {spentResult.message} A legitimate Cashu token points at a public https:// mint.
-              </div>
+              <ResultNote tone="bad" Icon={CircleX}>{spentResult.message} A legitimate Cashu token points at a public https:// mint.</ResultNote>
             )}
           </div>
 
           <div className="token-actions">
-            {mintInfo && (
-              <button type="button" className="token-action-btn" onClick={() => navigate(`/mint/${encodeURIComponent(result.mint)}`)}>
-                → View Mint Detail
-              </button>
-            )}
             {/* Both deep links were verified against the tools' own sources, not guessed:
                 wallet.cashu.me reads `?token=` in WalletPage.vue's created() hook
                 (cashubtc/cashu.me @ b51fee3), and redeem.cashu.me reads the same `?token=`
                 param in its client bundle. rel="noreferrer" keeps the token out of the
-                Referer header on the way there. */}
+                Referer header on the way there. The token itself IS in the link, so it
+                reaches cashu.me's servers — the note below says so. */}
             <a
-              className="token-action-btn"
-              href={`https://wallet.cashu.me/?token=${encodeURIComponent(input.trim())}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              ↗ Open in cashu.me
-            </a>
-            <a
-              className="token-action-btn"
-              href={`https://redeem.cashu.me/?token=${encodeURIComponent(input.trim())}`}
+              className="token-action-btn token-action-lead"
+              href={`https://redeem.cashu.me/?token=${encodeURIComponent(cleanToken)}`}
               target="_blank"
               rel="noreferrer"
               title="Opens cashu.me melt flow"
             >
-              ⚡ Redeem to Lightning
+              <Zap size={13} aria-hidden="true" /> Redeem to Lightning
             </a>
+            <div className="token-links">
+              {mintInfo && (
+                <button type="button" className="token-link-btn" onClick={() => navigate(`/mint/${encodeURIComponent(result.mint)}`)}>
+                  View Mint Detail <ArrowRight size={12} aria-hidden="true" />
+                </button>
+              )}
+              <a
+                className="token-link-btn"
+                href={`https://wallet.cashu.me/?token=${encodeURIComponent(cleanToken)}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open in cashu.me <ExternalLink size={12} aria-hidden="true" />
+              </a>
+            </div>
           </div>
+          <div className="token-note">These open cashu.me with your full token in the link.</div>
         </>
       )}
     </div>

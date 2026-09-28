@@ -209,7 +209,7 @@ are deliberately distinguished by icon, not just by label, everywhere they appea
 (`MintCard.tsx`, `ComparisonModal.tsx`, `MintDetail.tsx`): Reliability Score carries a shield icon,
 Community Rating a green star. The shield is `IcShield` (`src/components/mint/IcShield.tsx`) —
 a small shared SVG component (`size` prop, default 13px, `currentColor` stroke) — also reused
-by the Token Inspector's mint risk badge (`Tools.tsx`, see "Token Inspector" below) and
+by the Best Mint wizard's result rows (`Tools.tsx`) and
 `LearnIcons.tsx`. Do not duplicate this shield inline in a new component; import `IcShield`.
 
 ## Shared mint-formatting helpers (`src/utils/mintFormatting.ts`)
@@ -258,7 +258,7 @@ across components.
 - **`resolveMintDetailUrl(slug, known)`** (2026-09-08, commit `bbf3eab`) — canonicalizes the
   `/mint/:url` route param. See "Mint Detail route param canonicalization" below.
 - Also here (own sections / mentions elsewhere): `reliabilityDonutArc`, `auditReliabilityColor`,
-  `formatAuditErrorRatio`, `formatTimeAgo`, `mintRiskLevel`, `normalizeMintUrl`,
+  `formatAuditErrorRatio`, `formatTimeAgo`, `normalizeMintUrl`,
   `reliabilityScoreColor`/`reliabilityScoreInfo`/`reliabilityColor`, `uptimeColor`/`latencyColor`,
   `MIN_MEANINGFUL_REVIEWS`.
 
@@ -1575,11 +1575,10 @@ and the test was never updated to match.
 
 - **Memo display** — a decoded token's `memo` field (when present) renders as its own row
   (`.token-memo-row`) in the inspection result.
-- **Mint risk badge** — `mintRiskLevel()` (`src/utils/mintFormatting.ts`) classifies the
-  token's mint as high/medium/low/unknown risk from its known-mints data (`online`,
-  `degraded`, `reliabilityScore`): offline or degraded → high, `reliabilityScore < 40` → medium,
-  otherwise low, `null` mint → unknown. Rendered with the shared `IcShield` icon (see "Reliability
-  Score vs Community Rating" above).
+- **Mint risk badge — REMOVED 2026-09-28.** `mintRiskLevel()` and its `Low/Medium/High risk` /
+  `Unknown` badge were deleted (it was only a relabeling of `online`/`degraded`/the Reliability
+  Score, and "Low risk" next to an amount read as a safety claim the score doesn't make — it is a
+  health signal, not solvency). The Reliability Score and Online/Offline cells are unchanged.
 - **"Check if spent" (NUT-07)** — `checkTokenSpentState()` (`src/utils/cashuToken.ts`) asks
   the token's own mint directly whether its proofs have already been redeemed, returning a
   `TokenSpentCheck`. A button in the inspector result triggers this on demand (not automatic
@@ -1607,6 +1606,38 @@ and the test was never updated to match.
 - **`normalizeMintUrl()` moved to `src/utils/mintFormatting.ts`** (was previously local to
   `Tools.tsx`) — lowercases the hostname, forces `https:`, strips a trailing `/` on a bare
   root path. Import it from there if another page needs the same normalization.
+
+### Token Inspector redesign (2026-09-28)
+
+**Privacy, exactly (this is what the UI line under the textarea says and what the code does):**
+the token is decoded in the browser and never sent to MintRadar's servers — it lives only in React
+state (no storage API, no query cache, no logging; cashu-ts runs with its NullLogger). Two things
+do leave the browser, and the copy must not be softened past them: (1) **Inspect & Verify**
+contacts the mint named in the token — `GET /v1/info`, `/v1/keysets`, `/v1/keys`, none carrying
+token data — and **Check if spent** repeats those and adds `POST /v1/checkstate` with each proof's
+`Y = hashToCurve(secret)` (never the secret); (2) **Open in cashu.me / Redeem to Lightning** are
+plain links to `wallet.cashu.me/?token=…` / `redeem.cashu.me/?token=…`, so the **full token goes to
+cashu.me's servers** in the request URL (`rel="noreferrer"` + nginx `Referrer-Policy: no-referrer`
+only keep it out of the Referer header). A pasted token can also name any public https host, so
+verifying can make the browser contact a host the token's creator chose (`assertProbeableMintUrl`
+blocks only non-public hosts).
+
+- **Signature check states** — `classifySignatureCheck()` (`cashuToken.ts`) maps per-proof DLEQ
+  results to one state: `valid` (every proof carries a DLEQ and all verify — green), `invalid`
+  (a present DLEQ was checked and failed — red), `partial` (only some proofs carry a DLEQ, those
+  verify — neutral), `unresolved` (a keyset couldn't be resolved — copper), `no-dleq` (no proof
+  carries one — neutral). Plus `unreachable` (copper) and `bad-mint-url` (red) from `Tools.tsx`.
+  **Fixed on purpose:** partial DLEQ and unresolved keysets used to fall into the red "At least one
+  proof failed its DLEQ check". "Valid" says nothing about spent-ness (a spent token still verifies).
+- **Spent check** — `classifySpentCheck()`: all-spent (red), all-unspent (green), **all-pending
+  (neutral, "the mint is still processing")**, else partial (copper).
+- **Input** — `stripTokenWhitespace()` removes ALL whitespace (not just the ends) before parsing
+  and before the two `?token=` links are built (link format unchanged).
+- **UI** — emoji replaced by lucide icons; result copy in the sans font; "Redeem to Lightning" is
+  the accent-bordered lead action, "View Mint Detail" / "Open in cashu.me" are quiet links, "These
+  open cashu.me with your full token in the link." sits under them; empty input shows "Paste a
+  token first". E2E for the signature states runs real DLEQ proofs against an in-page fake mint
+  (`makeDleqMint` / `serveMintInPage` in `e2e/fixtures/mocks.ts`).
 
 ## NUT list — single source of truth (2026-08-19)
 

@@ -10,7 +10,6 @@ import {
   reliabilityDonutArc,
   RELIABILITY_DONUT_CIRCUMFERENCE,
   normalizeMintUrl,
-  mintRiskLevel,
   displayName,
   shouldShowHostLine,
   computeDuplicateMintNames,
@@ -686,38 +685,6 @@ describe('normalizeMintUrl', () => {
 
   it('falls back to the trimmed raw string for an unparsable URL', () => {
     expect(normalizeMintUrl('  not a url  ')).toBe('not a url')
-  })
-})
-
-// ── mintRiskLevel (Token Inspector risk badge) ──────────────────
-// Single-mint risk, not a multi-mint aggregation. Thresholds deliberately
-// match reliabilityScoreInfo()'s 70/40 bands so "Low Reliability" and "Medium risk"
-// never disagree about the same reliabilityScore.
-describe('mintRiskLevel', () => {
-  it('is Unknown when the mint is not in /api/mints/known at all', () => {
-    expect(mintRiskLevel(null).label).toBe('Unknown')
-  })
-
-  it('is High risk when the mint is offline', () => {
-    expect(mintRiskLevel({ online: false, degraded: false, reliabilityScore: 92 }).label).toBe('High risk')
-  })
-
-  it('is High risk when the mint is degraded, even if the last known online flag is true', () => {
-    expect(mintRiskLevel({ online: true, degraded: true, reliabilityScore: 92 }).label).toBe('High risk')
-  })
-
-  it('is Medium risk when online with a reliability score below 40', () => {
-    expect(mintRiskLevel({ online: true, degraded: false, reliabilityScore: 39 }).label).toBe('Medium risk')
-  })
-
-  it('is Low risk when online with a reliability score of 40 or above', () => {
-    expect(mintRiskLevel({ online: true, degraded: false, reliabilityScore: 40 }).label).toBe('Low risk')
-    expect(mintRiskLevel({ online: true, degraded: false, reliabilityScore: 92 }).label).toBe('Low risk')
-  })
-
-  it('treats a missing reliability score as 0 for an online mint (Medium, not a crash)', () => {
-    expect(mintRiskLevel({ online: true, degraded: false, reliabilityScore: null }).label).toBe('Medium risk')
-    expect(mintRiskLevel({ online: true, degraded: false, reliabilityScore: undefined }).label).toBe('Medium risk')
   })
 })
 
