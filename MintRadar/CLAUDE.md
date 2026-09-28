@@ -1514,6 +1514,23 @@ uptime % only now) and **compacted large limit numbers** — `formatCompactAmoun
   `.wizard-rec-score`. Per-unit NUT-04/05 limits and the whole-mint caveat note are unchanged.
 - Token Inspector is untouched by this pass.
 
+### Best Mint Wizard steps 1–2 redesign (2026-09-28)
+
+Presentation-only; scoring/filters, results, the six `WizardCheck` booleans and the step-1 size
+options are unchanged.
+- **Step 1 currency** — the native `<select>` is now a `role="radiogroup"` segmented control
+  (`.wizard-unit-seg` / `.wizard-unit-opt`, accent-dim tint on the selected segment). Units still
+  come from what online mints advertise; display order is SAT, MSAT, EUR, USD (`UNIT_ORDER`),
+  unknown units last.
+- **Known mismatch (not fixed):** the Small/Medium/Large sub-labels are hardcoded in **sats**
+  ("< 10k sats") whatever unit is selected, so with EUR/USD (minor units) they don't apply.
+  Fixing needs an FX rate or per-unit thresholds — a product decision.
+- **Step 2** — Fast / Reliable / Lightning in and out always visible; Restore from seed / Locked
+  payments / Live updates sit behind an "Advanced options" disclosure (`aria-expanded`, unmounted
+  when collapsed, toggle reads "· N selected" so filters are never hidden). Line icons come from
+  `lucide-react` (`Zap`, `ShieldCheck`, `PlugZap`, `KeyRound`, `Lock`, `Satellite`); NUT numbers no
+  longer appear in visible text. "Pick at least one" hint shows while nothing is selected.
+
 ### Best Mint Wizard recommendation age gate (2026-09-19, audit run-3 follow-up)
 
 **Clarification, since this was re-investigated from scratch before the gap below was found:**

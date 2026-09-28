@@ -369,10 +369,32 @@ a.token-action-btn:focus {
   .wizard-rec-view { display: none; }
 }
 
-.wizard-unit-select {
+.wizard-unit-seg { display: flex; gap: 7px; }
+.wizard-unit-opt {
+  flex: 1; min-width: 0; min-height: 44px; padding: 10px 6px;
   background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
-  padding: 10px 14px; color: var(--text); font-family: var(--font-body);
-  font-size: 13px; font-weight: 600; cursor: pointer; width: 100%;
+  color: var(--text3); font-family: var(--font-body); font-size: 13px; font-weight: 600;
+  cursor: pointer;
 }
-.wizard-unit-select:hover,
-.wizard-unit-select:focus { border-color: var(--accent); outline: none; }
+.wizard-unit-opt:hover { border-color: var(--accent); }
+.wizard-unit-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wizard-unit-opt.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+
+/* Step 2 checks: line icon + text, descriptions in the sans font (like Learn cards). */
+.wizard-opt-check { flex-direction: row; align-items: flex-start; gap: 12px; }
+.wizard-opt-icon { flex-shrink: 0; margin-top: 1px; color: var(--text-faint); }
+.wizard-opt-check.active .wizard-opt-icon { color: var(--accent); }
+.wizard-opt-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wizard-opt-check .wizard-opt-sub { font-family: var(--font-body); font-size: 12px; line-height: 1.4; }
+
+.wizard-adv-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 44px; padding: 8px 2px; background: none; border: none;
+  color: var(--text2); font-family: var(--font-body); font-size: 13px; font-weight: 600;
+  cursor: pointer; text-align: left;
+}
+.wizard-adv-toggle:hover { color: var(--text); }
+.wizard-adv-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.wizard-adv-chevron { transition: transform 150ms ease; }
+.wizard-adv-toggle[aria-expanded="true"] .wizard-adv-chevron { transform: rotate(180deg); }
+.wizard-hint { font-size: 12px; color: var(--text3); text-align: center; margin-top: -4px; }
