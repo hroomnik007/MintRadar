@@ -5,7 +5,7 @@ import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcShield } from '@/components/mint/IcShield'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { useNow } from '@/hooks/useNow'
-import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, classifySignatureCheck, classifySpentCheck, stripTokenWhitespace, InvalidMintUrlError, type SignatureCheck, type TokenInfo, type TokenSpentCheck } from '@/utils/cashuToken'
+import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, classifySignatureCheck, classifySpentCheck, tokenActionState, amountCarriesCurrencySymbol, stripTokenWhitespace, InvalidMintUrlError, type SignatureCheck, type TokenInfo, type TokenSpentCheck } from '@/utils/cashuToken'
 import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { Zap, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Hourglass, ExternalLink, ArrowRight, type LucideIcon } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
@@ -83,6 +83,9 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   // Pasted tokens often carry line breaks or stray spaces; a Cashu token never contains
   // whitespace, so all of it is stripped before parsing and before building the wallet links.
   const cleanToken = useMemo(() => stripTokenWhitespace(input), [input])
+
+  const actions = tokenActionState(spentResult?.status === 'ok' ? spentResult.data : null)
+  const mintOffline = mintInfo != null && mintInfo.online === false
 
   const handleInspectAndVerify = async () => {
     const token = cleanToken
@@ -223,7 +226,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             <div className="token-result-cell">
               <div className="trc-label">Amount</div>
               <div className="trc-value trc-accent">{formatTokenAmount(result.amount, result.unit)}</div>
-              <div className="trc-sub">{result.unit}</div>
+              {!amountCarriesCurrencySymbol(result.unit) && <div className="trc-sub">{result.unit}</div>}
             </div>
             <div className="token-result-cell">
               <div className="trc-label">Mint Status</div>
@@ -295,7 +298,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             )}
             {verify?.status === 'no-dleq' && (
               <ResultNote tone="neutral" Icon={CircleMinus}>
-                Signatures can't be checked. This token has no signature proofs attached. That's common and doesn't mean it's bad.
+                Signatures can't be checked. This token has no signature proofs attached. That doesn't mean it's bad.
               </ResultNote>
             )}
             {verify?.status === 'unreachable' && (
@@ -306,20 +309,24 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             )}
           </div>
 
+          {mintOffline && (
+            <div className="token-note">This mint didn't answer its last check, so checking or redeeming may not work.</div>
+          )}
+
           <div className="token-spent">
-            <div className="token-spent-row">
-              <button
-                type="button"
-                className="token-action-btn"
-                onClick={() => void handleCheckSpent()}
-                disabled={checkingSpent}
-              >
-                {checkingSpent
-                  ? <><LoaderCircle size={13} aria-hidden="true" className="tv-spin" /> Checking with mint…</>
-                  : <><Search size={13} aria-hidden="true" /> Check if spent</>}
-              </button>
-              <span className="token-spent-caption">Asks the mint if this token was already redeemed. The mint sees that you checked.</span>
-            </div>
+            <button
+              type="button"
+              className={`token-action-btn${actions.accent === 'check' ? ' token-action-accent' : ''}`}
+              onClick={() => void handleCheckSpent()}
+              disabled={checkingSpent}
+            >
+              {checkingSpent
+                ? <><LoaderCircle size={13} aria-hidden="true" className="tv-spin" /> Checking with mint…</>
+                : <><Search size={13} aria-hidden="true" /> Check if spent</>}
+            </button>
+            {!spentResult && (
+              <span className="token-spent-caption">Asks the mint. It will see that you checked.</span>
+            )}
 
             {spentResult?.status === 'ok' && (() => {
               const { total, unspent, spent, pending } = spentResult.data
@@ -354,32 +361,38 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
                 param in its client bundle. rel="noreferrer" keeps the token out of the
                 Referer header on the way there. The token itself IS in the link, so it
                 reaches cashu.me's servers — the note below says so. */}
-            <a
-              className="token-action-btn token-action-lead"
-              href={`https://redeem.cashu.me/?token=${encodeURIComponent(cleanToken)}`}
-              target="_blank"
-              rel="noreferrer"
-              title="Opens cashu.me melt flow"
-            >
-              <Zap size={13} aria-hidden="true" /> Redeem to Lightning
-            </a>
-            <div className="token-links">
-              {mintInfo && (
-                <button type="button" className="token-link-btn" onClick={() => navigate(`/mint/${encodeURIComponent(result.mint)}`)}>
-                  View Mint Detail <ArrowRight size={12} aria-hidden="true" />
-                </button>
-              )}
+            {actions.redeemDisabled ? (
+              <span className="token-action-btn" aria-disabled="true">
+                <Zap size={13} aria-hidden="true" /> Redeem to Lightning
+              </span>
+            ) : (
               <a
-                className="token-link-btn"
+                className={`token-action-btn${actions.accent === 'redeem' ? ' token-action-accent' : ''}`}
+                href={`https://redeem.cashu.me/?token=${encodeURIComponent(cleanToken)}`}
+                target="_blank"
+                rel="noreferrer"
+                title="Opens cashu.me melt flow"
+              >
+                <Zap size={13} aria-hidden="true" /> Redeem to Lightning
+              </a>
+            )}
+            {mintInfo && (
+              <button type="button" className="token-action-btn" onClick={() => navigate(`/mint/${encodeURIComponent(result.mint)}`)}>
+                View Mint Detail <ArrowRight size={12} aria-hidden="true" />
+              </button>
+            )}
+            {actions.showOpenInWallet && (
+              <a
+                className="token-action-btn"
                 href={`https://wallet.cashu.me/?token=${encodeURIComponent(cleanToken)}`}
                 target="_blank"
                 rel="noreferrer"
               >
                 Open in cashu.me <ExternalLink size={12} aria-hidden="true" />
               </a>
-            </div>
+            )}
           </div>
-          <div className="token-note">These open cashu.me with your full token in the link.</div>
+          <div className="token-note">{actions.note === 'nothing-left' ? 'Nothing left to redeem.' : 'These open cashu.me with your full token in the link.'}</div>
         </>
       )}
     </div>

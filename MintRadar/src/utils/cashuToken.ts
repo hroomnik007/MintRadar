@@ -93,6 +93,14 @@ export function formatTokenAmount(amount: number, unit: string): string {
   return `${negative ? '-' : ''}${symbol}${body}`
 }
 
+/** True when `formatTokenAmount` already prefixes the amount with a currency symbol, so a
+ *  separate unit label under it would only repeat it. Units without a symbol (sat, msat,
+ *  unknown units) render a bare number and keep the label. */
+export function amountCarriesCurrencySymbol(unit: string): boolean {
+  const key = unit.trim().toLowerCase()
+  return MINOR_UNIT_EXPONENT[key] !== undefined && (CURRENCY_SYMBOL[key] ?? '') !== ''
+}
+
 /**
  * Decode a Cashu token to its metadata. Never throws — an undecodable token
  * comes back as `{ info: null, error }` so the caller can render a message
@@ -322,4 +330,24 @@ export function classifySpentCheck({ total, unspent, spent, pending }: TokenSpen
   if (unspent === total) return 'all-unspent'
   if (pending === total) return 'all-pending'
   return 'partial'
+}
+
+/** Which action the Token Inspector highlights, and what the actions may do, as a function of
+ *  the spent check. `null` = no usable result yet (before a check, or after an error /
+ *  unreachable / bad-mint-url result): the user's next step is the check itself. */
+export interface TokenActionState {
+  accent: 'check' | 'redeem' | 'none'
+  redeemDisabled: boolean
+  showOpenInWallet: boolean
+  note: 'sends-token' | 'nothing-left'
+}
+
+export function tokenActionState(spent: TokenSpentCheck | null): TokenActionState {
+  const open: Omit<TokenActionState, 'accent'> = { redeemDisabled: false, showOpenInWallet: true, note: 'sends-token' }
+  if (!spent) return { accent: 'check', ...open }
+  switch (classifySpentCheck(spent)) {
+    case 'all-unspent': return { accent: 'redeem', ...open }
+    case 'all-spent': return { accent: 'none', redeemDisabled: true, showOpenInWallet: false, note: 'nothing-left' }
+    default: return { accent: 'none', ...open }
+  }
 }

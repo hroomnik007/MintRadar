@@ -321,18 +321,98 @@ test.describe('Tools', () => {
     await expect(page.getByText('These open cashu.me with your full token in the link.')).toBeVisible()
   })
 
-  test('Check if spent explains itself; Redeem leads and the other links are quiet', async ({ page }) => {
+  test('Check if spent explains itself under the button and is accented; the other actions are quiet', async ({ page }) => {
     await page.locator('.token-input').fill(makeCashuToken(MOCK_MINTS[0]!.url, [21]))
     await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
     await expect(page.locator('.token-result-grid')).toBeVisible()
 
     const caption = page.locator('.token-spent-caption')
-    await expect(caption).toHaveText('Asks the mint if this token was already redeemed. The mint sees that you checked.')
-    // No (i) tooltip next to the button any more (the Signature check heading keeps its own).
-    await expect(page.locator('.token-spent-row .info-tooltip')).toHaveCount(0)
-    await expect(page.getByRole('link', { name: /Redeem to Lightning/ })).toHaveClass(/token-action-lead/)
-    await expect(page.getByRole('link', { name: /Open in cashu.me/ })).toHaveClass(/token-link-btn/)
-    await expect(page.getByRole('button', { name: /View Mint Detail/ })).toHaveClass(/token-link-btn/)
+    await expect(caption).toHaveText('Asks the mint. It will see that you checked.')
+    const spentBox = (await page.getByRole('button', { name: /Check if spent/ }).boundingBox())!
+    const capBox = (await caption.boundingBox())!
+    expect(capBox.y).toBeGreaterThanOrEqual(spentBox.y + spentBox.height)
+    await expect(page.getByRole('button', { name: /Check if spent/ })).toHaveClass(/token-action-accent/)
+    await expect(page.getByRole('link', { name: /Redeem to Lightning/ })).not.toHaveClass(/token-action-accent/)
+    await expect(page.getByRole('link', { name: /Open in cashu.me/ })).toHaveClass(/token-action-btn/)
+    await expect(page.getByRole('link', { name: /Open in cashu.me/ })).not.toHaveClass(/token-action-accent/)
+    await expect(page.getByRole('button', { name: /View Mint Detail/ })).toHaveClass(/token-action-btn/)
+  })
+
+  test.describe('Action flow follows the spent check', () => {
+    const MINT = MOCK_MINTS[0]!.url
+    const inspect = async (page: import('@playwright/test').Page, checkstate: 'UNSPENT' | 'SPENT') => {
+      const fx = makeDleqMint(MINT, [{ amount: 1, dleq: 'valid' }, { amount: 2, dleq: 'valid' }])
+      await serveMintInPage(page, fx, { checkstate })
+      await page.reload()
+      await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
+      await page.locator('.token-input').fill(fx.token)
+      await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+      await expect(page.locator('.token-result-grid')).toBeVisible()
+    }
+
+    test('accent moves from Check to Redeem after an unspent result; caption gives way to the result', async ({ page }) => {
+      await inspect(page, 'UNSPENT')
+      const check = page.getByRole('button', { name: /Check if spent/ })
+      const redeem = page.getByRole('link', { name: /Redeem to Lightning/ })
+      await expect(check).toHaveClass(/token-action-accent/)
+      await expect(redeem).not.toHaveClass(/token-action-accent/)
+      await expect(page.locator('.token-spent-caption')).toBeVisible()
+
+      await check.click()
+      await expect(page.locator('.token-spent .token-verify-result')).toContainText(/unspent/, { timeout: 15_000 })
+      await expect(check).not.toHaveClass(/token-action-accent/)
+      await expect(redeem).toHaveClass(/token-action-accent/)
+      await expect(page.locator('.token-spent-caption')).toHaveCount(0)
+    })
+
+    test('all-spent: Redeem is a disabled non-link, Open in cashu.me is hidden, note says nothing left', async ({ page }) => {
+      await inspect(page, 'SPENT')
+      await page.getByRole('button', { name: /Check if spent/ }).click()
+      await expect(page.locator('.token-spent .token-verify-result')).toContainText(/already spent/, { timeout: 15_000 })
+
+      await expect(page.getByRole('link', { name: /Redeem to Lightning/ })).toHaveCount(0)
+      const redeem = page.locator('.token-actions [aria-disabled="true"]', { hasText: 'Redeem to Lightning' })
+      await expect(redeem).toBeVisible()
+      expect(await redeem.getAttribute('href')).toBeNull()
+      await expect(page.getByRole('link', { name: /Open in cashu.me/ })).toHaveCount(0)
+      await expect(page.getByRole('button', { name: /View Mint Detail/ })).toBeVisible()
+      await expect(page.getByText('Nothing left to redeem.')).toBeVisible()
+      await expect(page.getByText('These open cashu.me with your full token in the link.')).toHaveCount(0)
+      await expect(page.locator('.token-action-accent')).toHaveCount(0)
+    })
+  })
+
+  test('the offline line shows only for an offline tracked mint', async ({ page }) => {
+    const line = page.getByText("This mint didn't answer its last check, so checking or redeeming may not work.")
+    const input = page.locator('.token-input')
+    const go = page.getByRole('button', { name: 'Inspect & Verify Token' })
+
+    await input.fill(makeCashuToken(MOCK_MINTS[2]!.url, [21])) // Charlie Mint: tracked, offline
+    await go.click()
+    await expect(page.locator('.token-result-grid')).toContainText('Offline')
+    await expect(line).toBeVisible()
+
+    await input.fill(makeCashuToken(MOCK_MINTS[0]!.url, [21])) // Alpha Mint: tracked, online
+    await go.click()
+    await expect(page.locator('.token-result-grid')).toContainText('Online')
+    await expect(line).toHaveCount(0)
+
+    await input.fill(makeCashuToken('https://untracked.mint.example', [21])) // not in the database
+    await go.click()
+    await expect(page.locator('.token-result-grid')).toContainText('Not in database')
+    await expect(line).toHaveCount(0)
+  })
+
+  test('a currency-symbol amount does not repeat the unit label; sat keeps it', async ({ page }) => {
+    const amount = page.locator('.token-result-cell', { hasText: 'Amount' })
+    await page.locator('.token-input').fill(makeCashuToken(MOCK_MINTS[0]!.url, [1], 'usd'))
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+    await expect(amount).toContainText('$0.01')
+    await expect(amount.locator('.trc-sub')).toHaveCount(0)
+
+    await page.locator('.token-input').fill(makeCashuToken(MOCK_MINTS[0]!.url, [21]))
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+    await expect(amount.locator('.trc-sub')).toHaveText('sat')
   })
 
   test('Token Inspector action buttons are content-sized on desktop; Check if spent is full width at 390px', async ({ page }) => {
@@ -349,6 +429,10 @@ test.describe('Tools', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     const cardW = (await card.boundingBox())!.width
     for (const b of [inspect, spent, redeem]) expect(await width(b)).toBeLessThan(cardW * 0.6)
+    // Primary button is centered in the card on desktop (like "Find my mint").
+    const cb = (await card.boundingBox())!
+    const ib = (await inspect.boundingBox())!
+    expect(Math.abs(ib.x + ib.width / 2 - (cb.x + cb.width / 2))).toBeLessThan(2)
 
     await page.setViewportSize({ width: 390, height: 844 })
     const mobileCardW = (await card.boundingBox())!.width
@@ -363,7 +447,7 @@ test.describe('Tools', () => {
     const cases: { name: string; proofs: DleqKind[]; hideKeys?: boolean; text: RegExp; cls: RegExp; notText?: RegExp }[] = [
       { name: 'every proof verifies → green "Verified"', proofs: [v, v], text: /Verified\. Every proof is signed by this mint\. This doesn't show whether it's spent\./, cls: /tv-ok/ },
       { name: 'only some proofs carry DLEQ → neutral "Partly verified", never red', proofs: [v, none], text: /Partly verified\. 1 of 2 proofs carry signature proofs and those check out\. The rest can't be checked\./, cls: /tv-neutral/, notText: /Invalid signature/ },
-      { name: 'no proof carries DLEQ → neutral "can\'t be checked"', proofs: [none, none], text: /Signatures can't be checked\. This token has no signature proofs attached\. That's common and doesn't mean it's bad\./, cls: /tv-neutral/, notText: /issuing mint/ },
+      { name: 'no proof carries DLEQ → neutral "can\'t be checked"', proofs: [none, none], text: /Signatures can't be checked\. This token has no signature proofs attached\. That doesn't mean it's bad\./, cls: /tv-neutral/, notText: /issuing mint/ },
       { name: 'a present DLEQ that fails → red "Invalid signature"', proofs: [v, bad], text: /Invalid signature/, cls: /tv-bad/ },
       { name: 'keyset without keys → copper "Couldn\'t check", never red', proofs: [v], hideKeys: true, text: /Couldn't check signatures\. Says nothing about the token itself\./, cls: /tv-unknown/, notText: /Invalid signature/ },
     ]

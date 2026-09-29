@@ -157,14 +157,16 @@
 .tdr-label { color: var(--text3); font-size: 10px; }
 .tdr-sep { color: var(--border); }
 .token-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+/* Quiet by default (neutral hairline, secondary text); .token-action-accent marks the one
+   action the flow currently points at. Used by buttons and <a> links alike. */
 .token-action-btn {
-  flex: 1 1 140px;
-  padding: 7px 12px;
+  box-sizing: border-box;
+  padding: 9px 16px;
   background: var(--bg3);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: 7px;
-  font-size: 11px;
-  font-family: var(--font-mono);
+  font-size: 12px;
+  font-family: var(--font-body);
   color: var(--text2);
   cursor: pointer;
   text-align: center;
@@ -172,11 +174,16 @@
   white-space: nowrap;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
 }
-.token-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+.token-action-btn.token-action-accent { border-color: var(--accent); color: var(--accent); }
+.token-action-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.token-action-btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
 a.token-action-btn,
 a.token-action-btn:hover,
 a.token-action-btn:focus {
   text-decoration: none;
+}
+@media (hover: hover) {
+  .token-action-btn:not([aria-disabled="true"]):hover { border-color: var(--accent); color: var(--accent); }
 }
 
 .token-verify { display: flex; flex-direction: column; gap: 8px; }
@@ -201,27 +208,14 @@ a.token-action-btn:focus {
   font-size: 11px; font-weight: 600; color: var(--text3);
   text-transform: uppercase; letter-spacing: 0.02em;
 }
-.token-spent { display: flex; flex-direction: column; gap: 8px; }
-.token-spent-row { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
-.token-spent-row .token-action-btn { flex: 1 1 auto; }
+.token-spent { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
 .token-spent-caption { font-size: 12px; line-height: 1.45; color: var(--text3); font-family: var(--font-body); }
 
 /* Muted helper lines (privacy, spent check, wallet links) and the empty-input hint. */
 .token-note { font-size: 12px; line-height: 1.45; color: var(--text3); font-family: var(--font-body); }
 .token-hint { font-size: 12px; color: var(--text3); text-align: center; font-family: var(--font-body); }
 
-/* Actions: Redeem to Lightning leads (accent border, not a second filled primary);
-   View Mint Detail / Open in cashu.me are quiet links. */
-.token-action-lead { flex: 1 1 100%; border-color: var(--accent); color: var(--accent); }
-.token-links { display: flex; flex: 1 1 100%; gap: 16px; flex-wrap: wrap; }
-.token-link-btn {
-  display: inline-flex; align-items: center; gap: 4px;
-  background: none; border: none; padding: 4px 0;
-  font-size: 12px; font-family: var(--font-body); color: var(--text2);
-  cursor: pointer; text-decoration: none;
-}
-.token-link-btn:hover { color: var(--accent); }
-.token-link-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+/* Actions: Redeem to Lightning, View Mint Detail and Open in cashu.me share one row. */
 
 .wizard-steps {
   display: flex; align-items: center; gap: 8px;
@@ -348,18 +342,18 @@ a.token-action-btn:focus {
 @media (max-width: 900px) {
   .tools-grid { grid-template-columns: 1fr; }
 }
-/* Token Inspector actions above the 700px mobile breakpoint: content-sized, left-aligned.
-   At or below 700px the buttons stay full width and the caption sits below. */
+/* Token Inspector, above the 700px mobile breakpoint: the primary button is centered like
+   the wizard's "Find my mint", "Check if spent" is content-sized and left-aligned, and the
+   action buttons sit content-sized on one wrapping row. Below it everything is full width. */
 @media (min-width: 701px) {
-  .inspect-token-btn { width: auto; align-self: flex-start; padding: 10px 24px; }
-  .token-spent-row { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
-  .token-spent-row .token-action-btn { flex: 0 0 auto; padding: 7px 14px; }
-  .token-spent-caption { flex: 1 1 320px; min-width: 0; }
-  .token-actions { align-items: center; gap: 8px 20px; }
-  .token-action-lead { flex: 0 0 auto; padding: 8px 16px; }
-  .token-links { flex: 0 1 auto; }
+  .inspect-token-btn { width: auto; align-self: center; padding: 10px 24px; }
+  .token-spent .token-action-btn { align-self: flex-start; }
+  .token-actions { align-items: center; }
 }
 @media (max-width: 700px) {
+  .token-actions { flex-direction: column; }
+  .token-actions .token-action-btn { width: 100%; }
+  .token-action-btn { min-height: 44px; }
   .tools-grid { padding: 12px var(--page-pad); gap: 12px; }
   .tool-card { padding: 16px; }
   .wizard-options-row { flex-direction: column; }

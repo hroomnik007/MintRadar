@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Amount, getEncodedToken, CheckStateEnum, Wallet } from '@cashu/cashu-ts'
 import {
   parseCashuToken, formatTokenAmount, checkTokenSpentState, decodeTokenWithMint,
-  classifySignatureCheck, classifySpentCheck, stripTokenWhitespace,
+  classifySignatureCheck, classifySpentCheck, tokenActionState, amountCarriesCurrencySymbol, stripTokenWhitespace,
   assertProbeableMintUrl, InvalidMintUrlError,
 } from '../utils/cashuToken'
 
@@ -300,5 +300,35 @@ describe('classifySpentCheck', () => {
     expect(classifySpentCheck({ total: 3, unspent: 0, spent: 0, pending: 3 })).toBe('all-pending')
     expect(classifySpentCheck({ total: 3, unspent: 1, spent: 1, pending: 1 })).toBe('partial')
     expect(classifySpentCheck({ total: 3, unspent: 2, spent: 0, pending: 1 })).toBe('partial')
+  })
+})
+
+describe('tokenActionState', () => {
+  const quiet = { redeemDisabled: false, showOpenInWallet: true, note: 'sends-token' }
+  it('points at the check before any result, and after an error/unreachable result (null)', () => {
+    expect(tokenActionState(null)).toEqual({ accent: 'check', ...quiet })
+  })
+  it('all unspent → Redeem is the accented action', () => {
+    expect(tokenActionState({ total: 2, unspent: 2, spent: 0, pending: 0 })).toEqual({ accent: 'redeem', ...quiet })
+  })
+  it('all spent → nothing accented, Redeem disabled, Open in cashu.me hidden, "nothing left" note', () => {
+    expect(tokenActionState({ total: 2, unspent: 0, spent: 2, pending: 0 }))
+      .toEqual({ accent: 'none', redeemDisabled: true, showOpenInWallet: false, note: 'nothing-left' })
+  })
+  it('partial and all-pending → nobody accented, Redeem stays enabled', () => {
+    expect(tokenActionState({ total: 3, unspent: 1, spent: 1, pending: 1 })).toEqual({ accent: 'none', ...quiet })
+    expect(tokenActionState({ total: 2, unspent: 0, spent: 0, pending: 2 })).toEqual({ accent: 'none', ...quiet })
+  })
+})
+
+describe('amountCarriesCurrencySymbol', () => {
+  it('is true only for units whose formatted amount has a symbol', () => {
+    expect(amountCarriesCurrencySymbol('usd')).toBe(true)
+    expect(amountCarriesCurrencySymbol('EUR')).toBe(true)
+    expect(amountCarriesCurrencySymbol('sat')).toBe(false)
+    expect(amountCarriesCurrencySymbol('msat')).toBe(false)
+    expect(amountCarriesCurrencySymbol('zzz')).toBe(false)
+    // exponent known but no symbol mapped → formatted amount is a bare number, keep the label
+    expect(amountCarriesCurrencySymbol('chf')).toBe(false)
   })
 })

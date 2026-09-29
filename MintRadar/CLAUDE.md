@@ -1633,11 +1633,30 @@ blocks only non-public hosts).
   (neutral, "the mint is still processing")**, else partial (copper).
 - **Input** — `stripTokenWhitespace()` removes ALL whitespace (not just the ends) before parsing
   and before the two `?token=` links are built (link format unchanged).
-- **UI** — emoji replaced by lucide icons; result copy in the sans font; "Redeem to Lightning" is
-  the accent-bordered lead action, "View Mint Detail" / "Open in cashu.me" are quiet links, "These
-  open cashu.me with your full token in the link." sits under them; empty input shows "Paste a
-  token first". E2E for the signature states runs real DLEQ proofs against an in-page fake mint
-  (`makeDleqMint` / `serveMintInPage` in `e2e/fixtures/mocks.ts`).
+- **UI** — emoji replaced by lucide icons; result copy in the sans font; empty input shows
+  "Paste a token first". E2E for the signature states runs real DLEQ proofs against an in-page
+  fake mint (`makeDleqMint` / `serveMintInPage` in `e2e/fixtures/mocks.ts`).
+- **Guided action flow (2026-09-29)** — order: Check row → its caption or result → action row
+  (Redeem to Lightning, View Mint Detail, Open in cashu.me) → cashu.me note. Exactly one action
+  carries `.token-action-accent` at a time, decided by the pure `tokenActionState(spent)`
+  (`cashuToken.ts`, unit-tested per state): no usable result yet / error / unreachable →
+  **Check if spent**; all unspent → **Redeem**; partial and all-pending → nobody accented, Redeem
+  enabled; all spent → Redeem becomes a non-navigating `<span aria-disabled="true">` (no href,
+  opacity .45), **Open in cashu.me is hidden** (don't hand a spent token to a third party) and the
+  note reads "Nothing left to redeem." Editing the textarea resets to the initial state.
+  All actions share `.token-action-btn` (quiet: 0.5px neutral border, `--text2`); the two links
+  stay `<a>` with unchanged href/target/rel/`?token=`. Desktop: one wrapping row; ≤700px: full
+  width, stacked, Redeem first, 44px min height. The caption "Asks the mint. It will see that you
+  checked." sits UNDER the Check button and only while no spent result is shown (the result takes
+  its place).
+- **Centering** — on desktop (≥701px) "Inspect & Verify Token" and its "Paste a token first"
+  hint are centered like the wizard's "Find my mint"; privacy line, result grid and action rows
+  stay left/full width.
+- **Display rules** — offline line "This mint didn't answer its last check, so checking or
+  redeeming may not work." shows above the Check row only for a tracked mint with `online ===
+  false` (not unknown, not untracked). The Amount cell hides its unit label when
+  `amountCarriesCurrencySymbol(unit)` (usd/eur/… — formatted text already has the symbol); sat,
+  msat and raw-integer fallbacks keep it. No-DLEQ copy no longer says "common".
 
 ## NUT list — single source of truth (2026-08-19)
 
