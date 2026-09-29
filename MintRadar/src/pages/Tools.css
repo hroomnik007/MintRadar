@@ -373,10 +373,14 @@ a.token-action-btn:focus {
 
 .wizard-unit-seg { display: flex; gap: 7px; }
 .wizard-unit-opt {
-  flex: 1; min-width: 0; min-height: 44px; padding: 10px 6px;
+  flex: 1; min-width: 0; min-height: 40px; padding: 8px 6px;
   background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
   color: var(--text3); font-family: var(--font-body); font-size: 13px; font-weight: 600;
   cursor: pointer;
+}
+/* Desktop: compact chips sized to their label instead of stretching across the card. */
+@media (min-width: 701px) {
+  .wizard-unit-opt { flex: 0 0 auto; min-width: 72px; min-height: 34px; padding: 6px 16px; font-size: 12px; }
 }
 .wizard-unit-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .wizard-unit-opt.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
