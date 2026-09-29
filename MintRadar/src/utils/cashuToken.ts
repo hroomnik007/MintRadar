@@ -5,7 +5,9 @@
 // needed — which is exactly what the Token Inspector wants for a paste-and-look
 // tool. The heavier full decode (proofs + DLEQ) lives in decodeTokenWithMint()
 // below and needs the mint online.
-import { CheckStateEnum, getTokenMetadata, hasValidDleq, Wallet, type Proof } from '@cashu/cashu-ts'
+import { CheckStateEnum, getTokenMetadata, hasValidDleq, type Proof } from '@cashu/cashu-ts'
+import { createMintWallet } from '@/utils/mintRequest'
+import type { TokenRun } from '@/utils/tokenRun'
 
 export interface TokenInfo {
   mint: string
@@ -218,15 +220,17 @@ export interface FullTokenDecode {
  * fetches /v1/info + /v1/keysets + /v1/keys). Drives the Token Inspector's
  * "Signature check" panel — map its result to a UI state with classifySignatureCheck().
  *
+ * With `opts.run`, every mint request is cancellable and time-limited (see mintRequest.ts).
+ *
  * @throws if the mint is unreachable or the token can't be resolved.
  */
-export async function decodeTokenWithMint(raw: string): Promise<FullTokenDecode> {
+export async function decodeTokenWithMint(raw: string, opts: { run?: TokenRun } = {}): Promise<FullTokenDecode> {
   const token = stripTokenWhitespace(raw)
   const { info, error } = parseCashuToken(token)
   if (!info) throw new Error(error ?? 'Invalid token')
   assertProbeableMintUrl(info.mint)
 
-  const wallet = new Wallet(info.mint, { unit: info.unit })
+  const wallet = createMintWallet(info.mint, info.unit, opts.run)
   await wallet.loadMint()
 
   const decoded = wallet.decodeToken(token)
@@ -298,13 +302,13 @@ export interface TokenSpentCheck {
  *
  * @throws if the mint is unreachable or the token can't be resolved.
  */
-export async function checkTokenSpentState(raw: string): Promise<TokenSpentCheck> {
+export async function checkTokenSpentState(raw: string, opts: { run?: TokenRun } = {}): Promise<TokenSpentCheck> {
   const token = stripTokenWhitespace(raw)
   const { info, error } = parseCashuToken(token)
   if (!info) throw new Error(error ?? 'Invalid token')
   assertProbeableMintUrl(info.mint)
 
-  const wallet = new Wallet(info.mint, { unit: info.unit })
+  const wallet = createMintWallet(info.mint, info.unit, opts.run)
   await wallet.loadMint()
 
   const decoded = wallet.decodeToken(token)

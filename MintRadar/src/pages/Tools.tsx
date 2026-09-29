@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { MintFavicon } from '@/components/mint/MintFavicon'
@@ -6,6 +6,7 @@ import { IcShield } from '@/components/mint/IcShield'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { useNow } from '@/hooks/useNow'
 import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, classifySignatureCheck, classifySpentCheck, tokenActionState, amountCarriesCurrencySymbol, stripTokenWhitespace, InvalidMintUrlError, type SignatureCheck, type TokenInfo, type TokenSpentCheck } from '@/utils/cashuToken'
+import { startTokenRun, classifyRunError, createRunGuard, type TokenRun } from '@/utils/tokenRun'
 import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { Zap, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Hourglass, ExternalLink, ArrowRight, type LucideIcon } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
@@ -68,6 +69,23 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   const [checkingSpent, setCheckingSpent] = useState(false)
   const [spentResult, setSpentResult] = useState<SpentCheckResult | null>(null)
 
+  // Cancellation: one AbortController-backed run per Inspect and per Check, plus a run-id guard
+  // per kind as belt and braces (each async path discards its result if its id has moved on).
+  // Both are advanced on every textarea edit and on unmount; a new run of a kind advances its own.
+  const inspectGuard = useRef(createRunGuard())
+  const checkGuard = useRef(createRunGuard())
+  const inspectRun = useRef<TokenRun | null>(null)
+  const checkRun = useRef<TokenRun | null>(null)
+  const invalidateRuns = () => {
+    inspectGuard.current.next()
+    checkGuard.current.next()
+    inspectRun.current?.cancel()
+    checkRun.current?.cancel()
+    inspectRun.current = null
+    checkRun.current = null
+  }
+  useEffect(() => invalidateRuns, [])
+
   const knownMap = useMemo(() => {
     const m = new Map<string, KnownMint>()
     for (const mint of knownMints) m.set(mint.url, mint)
@@ -90,6 +108,9 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   const handleInspectAndVerify = async () => {
     const token = cleanToken
     if (!token) return
+    const id = inspectGuard.current.next()
+    inspectRun.current?.cancel()
+    inspectRun.current = null
     setInspected(true)
     setVerify(null)
     setSpentResult(null)
@@ -100,6 +121,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     // be replaced by "Verifying…" before a human eye could register it. This holds the
     // first phase on screen long enough to actually read, not just technically paint.
     await new Promise<void>(resolve => setTimeout(resolve, 300))
+    if (!inspectGuard.current.isCurrent(id)) return
 
     const { info, error } = parseCashuToken(token)
     if (!info) {
@@ -114,37 +136,51 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     // DLEQ needs the mint reachable, so a malformed token above never reaches this —
     // no wasted network call for input that was never going to verify anyway.
     setPhase('verifying')
+    const run = startTokenRun()
+    inspectRun.current = run
+    let outcome: VerifyResult | null
     try {
-      const decoded = await decodeTokenWithMint(token)
+      const decoded = await run.race(decodeTokenWithMint(token, { run }))
       // Only a DLEQ that was present AND checked AND failed is "invalid"; a missing DLEQ
       // or an unresolved keyset is never evidence against the token (see classifySignatureCheck).
-      setVerify(classifySignatureCheck(decoded.proofs))
+      outcome = classifySignatureCheck(decoded.proofs)
     } catch (err) {
       if (err instanceof InvalidMintUrlError) {
         // The token names a mint URL we refuse to contact (not https://, or a
         // non-public host) — a positive finding about the token, not a transport
         // problem. No network request was made.
-        setVerify({ status: 'bad-mint-url', message: err.message })
+        outcome = { status: 'bad-mint-url', message: err.message }
+      } else if (classifyRunError(err, run) === 'ignore') {
+        outcome = null // edit / new run / unmount: silent, no state writes
       } else {
-        // Any other throw is a transport/mint problem (loadMint failed, timeout,
+        // Our timeout, or any other throw: a transport/mint problem (loadMint failed, timeout,
         // keyset missing) — never evidence that the token itself is bad. The
         // parse result set above stays on screen regardless.
-        setVerify({ status: 'unreachable' })
+        outcome = { status: 'unreachable' }
       }
+    } finally {
+      run.finish()
+      if (inspectRun.current === run) inspectRun.current = null
     }
+    if (outcome === null || !inspectGuard.current.isCurrent(id)) return
+    setVerify(outcome)
     setPhase('idle')
   }
 
   const handleCheckSpent = async () => {
     const token = cleanToken
     if (!token || checkingSpent) return
+    const id = checkGuard.current.next()
+    checkRun.current?.cancel()
+    const run = startTokenRun()
+    checkRun.current = run
     setCheckingSpent(true)
     setSpentResult(null)
     const startedAt = Date.now()
 
-    let outcome: SpentCheckResult
+    let outcome: SpentCheckResult | null
     try {
-      const data = await checkTokenSpentState(token)
+      const data = await run.race(checkTokenSpentState(token, { run }))
       outcome = { status: 'ok', data }
     } catch (err) {
       if (err instanceof InvalidMintUrlError) {
@@ -152,12 +188,26 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
         // contact. This IS a finding about the token.
         outcome = { status: 'bad-mint-url', message: err.message }
       } else {
-        // Mint offline/unreachable, or the token itself couldn't be resolved —
-        // either way this must not take down the rest of the inspector UI.
-        const detail = err instanceof Error && err.message ? err.message : 'Could not reach the mint.'
-        outcome = { status: 'error', message: detail }
+        switch (classifyRunError(err, run)) {
+          case 'ignore':
+            outcome = null // edit / new run / unmount: silent, no state writes
+            break
+          case 'timeout':
+            outcome = { status: 'error', message: "The mint didn't answer in time." }
+            break
+          default: {
+            // Mint offline/unreachable, or the token itself couldn't be resolved —
+            // either way this must not take down the rest of the inspector UI.
+            const detail = err instanceof Error && err.message ? err.message : 'Could not reach the mint.'
+            outcome = { status: 'error', message: detail }
+          }
+        }
       }
+    } finally {
+      run.finish()
+      if (checkRun.current === run) checkRun.current = null
     }
+    if (outcome === null || !checkGuard.current.isCurrent(id)) return
 
     // A local/cached mint response can resolve in well under 100ms, which made the
     // "Checking with mint…" label flash and vanish — read as a glitch rather than a
@@ -166,6 +216,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     // network round trip regardless of how fast the real one was.
     const elapsed = Date.now() - startedAt
     if (elapsed < 300) await new Promise<void>(resolve => setTimeout(resolve, 300 - elapsed))
+    if (!checkGuard.current.isCurrent(id)) return
 
     setSpentResult(outcome)
     setCheckingSpent(false)
@@ -182,7 +233,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
         className="token-input"
         placeholder="cashuB… or cashuA…"
         value={input}
-        onChange={e => { setInput(e.target.value); setInspected(false); setResult(null); setParseError(null); setVerify(null); setPhase('idle'); setSpentResult(null); setCheckingSpent(false) }}
+        onChange={e => { invalidateRuns(); setInput(e.target.value); setInspected(false); setResult(null); setParseError(null); setVerify(null); setPhase('idle'); setSpentResult(null); setCheckingSpent(false) }}
         rows={3}
         spellCheck={false}
       />

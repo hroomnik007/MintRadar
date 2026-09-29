@@ -1682,6 +1682,52 @@ blocks only non-public hosts).
   `amountCarriesCurrencySymbol(unit)` (usd/eur/… — formatted text already has the symbol); sat,
   msat and raw-integer fallbacks keep it. No-DLEQ copy no longer says "common".
 
+### Token Inspector: request cancellation + timeouts (2026-09-29)
+
+Both network paths (Inspect & Verify: `loadMint` = GET `/v1/info`, `/v1/keysets`, `/v1/keys`; Check if
+spent: `loadMint` then POST `/v1/checkstate`, chunked) are cancellable and time-limited. Before this, editing
+the textarea only reset the panels: the old request kept running and its result was later written into state
+under the new text, and a dead mint left the UI stuck for cashu-ts's default 300 s.
+
+- **Design:** cashu-ts 4.11.0 has no public signal option (`loadMint(forceRefresh?)`, `checkProofsStates(proofs)`
+  take none). The only way in is `new Wallet(new Mint(url, { customRequest }), { unit })`, where `customRequest`
+  wraps the library's own default request function and adds an `AbortSignal`. That default is not exported; it
+  is reachable only through the **private field `mint._request`**. `src/utils/mintRequest.ts` (`createMintWallet`)
+  is the ONLY place that touches it. Rejected: our own fetch inside `customRequest` (loses big-integer JSON
+  parsing and the library's error mapping) and `setGlobalRequestOptions({ signal })` (one process-wide signal
+  would abort unrelated runs).
+- **Private-field dependency + guard:** verified against `@cashu/cashu-ts` 4.11.0 (`package.json` has `^4.11.0`,
+  the lockfile pins 4.11.0). If `_request` is not a function at runtime the adapter silently falls back to a plain
+  `Wallet` (nothing cancellable; the run-id guard and the timers below still recover the UI). Because that would
+  hide a broken upgrade, `src/__tests__/mintRequest.contract.test.ts` runs the REAL cashu-ts with a mocked
+  `fetch` that never resolves and asserts `_request` is a function and that aborting `loadMint()` /
+  `checkProofsStates()` rejects with `name === "CallerAbortError"`. It must fail loudly on an upgrade that removes or
+  renames the field: re-verify against the new source, then update `mintRequest.ts`.
+- **Runs:** `src/utils/tokenRun.ts`. `startTokenRun()` gives one `AbortController`-backed `TokenRun` per Inspect
+  and per Check; `Tools.tsx` aborts it on textarea edit, on a new run of the same kind and on unmount (Inspect and
+  Check are guarded separately, so starting one never discards the other).
+- **Timeouts:** `REQUEST_TIMEOUT_MS = 10_000` per request and `OPERATION_TIMEOUT_MS = 30_000` per operation
+  (Inspect and Check each), both in `tokenRun.ts`. Manual timers, not `AbortSignal.any`: they set `timedOut` first
+  and then `abort()`, so a timeout is distinguishable from an edit-abort. A request timeout aborts the whole run,
+  so the sibling requests of `loadMint` (`Promise.all`) stop too. The abort covers a stall after the response
+  headers as well (verified: the connection closes).
+- **Error classification** (`classifyRunError`, pure): test `CallerAbortError` FIRST and by `e.name` (it and
+  `UncancellableReadError` are subclasses of `NetworkError` in cashu-ts, so `instanceof NetworkError` would swallow
+  an abort). Abort with our `timedOut` flag → `timeout`; any other abort (edit / new run / unmount) → `ignore`
+  (silent, no state writes, never "unreachable"); everything else → the existing handling. `TokenRun.race()` also
+  rejects with our own `RunAbortError` when the run aborts, so a path the library cannot cancel still settles.
+- **UI on timeout (existing states only):** Inspect → the `unreachable` signature-check state; Check → the error
+  panel with "The mint didn't answer in time." (never raw library text). The button returns to idle and "Check if
+  spent" stays accented; nothing else changed.
+- **Run-id guard** (`createRunGuard`): belt and braces. Every async path captures an id and discards its result
+  if the id moved on (also after the 300 ms minimum display waits).
+- **Tests:** `tokenRun.test.ts`, `mintRequest.test.ts`, `mintRequest.contract.test.ts`; e2e in `tools.spec.ts`
+  ("Token Inspector cancellation and timeouts"). Those e2e tests use REAL network requests to a fixture mint via
+  `page.route()`, with the document's CSP header stripped (test-only; the dev CSP would otherwise block them) so
+  Chromium can report `net::ERR_ABORTED`; timeouts use `page.clock.fastForward()`. CI does not run e2e.
+- **Not done:** mint responses have no size limit (cashu-ts reads the body with `res.text()`); only the time limits
+  above bound a hostile mint now.
+
 ## NUT list — single source of truth (2026-08-19)
 
 `src/constants/nuts.ts` is the only place the tracked-NUT list and its display metadata

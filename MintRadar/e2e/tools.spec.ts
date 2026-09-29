@@ -908,3 +908,182 @@ test.describe('Best Mint wizard currency control', () => {
     expect(h).toBeLessThan(44)
   })
 })
+
+// ── Token Inspector: cancelling in-flight mint requests, and timeouts ─────────────────
+//
+// Unlike the specs above, these need the mint requests to be REAL network requests, so the
+// browser itself can report them as aborted. The dev server's CSP (connect-src 'self' wss: ws:)
+// would block them before page.route() sees them, so the document's CSP header is stripped
+// (test-only; production CSP is untouched) and the fixture mint is served through page.route().
+test.describe('Token Inspector cancellation and timeouts', () => {
+  const MINT = 'https://fixture-mint.example'
+  type Mode = 'ok' | 'hold' | 'hang'
+
+  async function serveRealMint(page: import('@playwright/test').Page, opts: { clock?: boolean } = {}) {
+    const fx = makeDleqMint(MINT, [{ amount: 1, dleq: 'valid' }, { amount: 2, dleq: 'valid' }])
+    const modes: Record<string, Mode> = {}                 // path → behaviour, changeable mid-test
+    const hits: string[] = []
+    const releases: (() => void)[] = []
+    const failed: { url: string; error: string }[] = []
+    page.on('requestfailed', r => failed.push({ url: r.url(), error: r.failure()?.errorText ?? '' }))
+
+    await page.route(u => u.pathname === '/tools', async route => {
+      const res = await route.fetch()
+      const headers = { ...res.headers() }
+      delete headers['content-security-policy']
+      await route.fulfill({ response: res, headers })
+    })
+    await page.route(`${MINT}/**`, async route => {
+      const path = new URL(route.request().url()).pathname
+      const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' }
+      if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
+      hits.push(path)
+      const mode = modes[path] ?? 'ok'
+      if (mode === 'hang') return new Promise<void>(() => undefined)
+      if (mode === 'hold') await new Promise<void>(resolve => releases.push(resolve))
+      const body =
+        path === '/v1/info' ? fx.routes.info
+        : path === '/v1/keysets' ? fx.routes.keysets
+        : path === '/v1/keys' ? fx.routes.keys
+        : path === '/v1/checkstate'
+          ? { states: (JSON.parse(route.request().postData() ?? '{}').Ys as string[]).map(Y => ({ Y, state: 'UNSPENT', witness: null })) }
+          : null
+      // The browser may already have aborted a held request; fulfilling it then throws.
+      await route.fulfill({ status: body ? 200 : 404, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify(body ?? {}) }).catch(() => undefined)
+    })
+    if (opts.clock) await page.clock.install()
+    await page.reload()
+    await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
+    return {
+      token: fx.token,
+      modes,
+      hits,
+      failed,
+      releaseAll: () => { releases.splice(0).forEach(r => r()) },
+      releaseOldest: () => { releases.shift()?.() },
+    }
+  }
+
+  const inspectBtn = (page: import('@playwright/test').Page) => page.getByRole('button', { name: /Inspect & Verify Token|Inspecting|Verifying with mint/ })
+  const startInspect = async (page: import('@playwright/test').Page, token: string) => {
+    await page.locator('.token-input').fill(token)
+    await inspectBtn(page).click()
+  }
+
+  test('editing the textarea while Check if spent is pending: no stale result under the new text', async ({ page }) => {
+    const mint = await serveRealMint(page)
+    mint.modes['/v1/checkstate'] = 'hold'
+    await startInspect(page, mint.token)
+    await expect(page.locator('.token-verify-result.tv-ok')).toBeVisible({ timeout: 15_000 })
+
+    await page.getByRole('button', { name: /Check if spent/ }).click()
+    await expect(page.getByRole('button', { name: /Checking with mint/ })).toBeVisible()
+    await expect.poll(() => mint.hits.includes('/v1/checkstate')).toBe(true)
+
+    // Edit while the request is pending (a trailing newline: a different textarea value, the same token).
+    await page.locator('.token-input').fill(mint.token + '\n')
+    await expect(page.locator('.token-spent')).toHaveCount(0)      // initial state for the new text
+    await expect(page.locator('.token-result-grid')).toHaveCount(0)
+
+    // Inspect the new text so the spent panel exists again, THEN let the old request finish:
+    // a stale write would now appear under the new text.
+    await inspectBtn(page).click()
+    await expect(page.locator('.token-verify-result.tv-ok')).toBeVisible({ timeout: 15_000 })
+    mint.releaseAll()
+    await page.waitForTimeout(800)
+
+    await expect(page.locator('.token-spent .token-verify-result')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Check if spent' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Check again' })).toHaveCount(0)
+  })
+
+  test('editing the textarea while Inspect is pending (/v1/keys): no stale result, button usable at once', async ({ page }) => {
+    const mint = await serveRealMint(page)
+    mint.modes['/v1/keys'] = 'hold'
+    await startInspect(page, mint.token)
+    await expect(inspectBtn(page)).toHaveText(/Verifying with mint/)
+    await expect.poll(() => mint.hits.includes('/v1/keys')).toBe(true)
+
+    await page.locator('.token-input').fill(mint.token + '\n')
+    // No leftover "Verifying…" / disabled state from the discarded run, and the initial state is back.
+    await expect(inspectBtn(page)).toHaveText('Inspect & Verify Token')
+    await expect(inspectBtn(page)).toBeEnabled()
+    await expect(page.locator('.token-result-grid')).toHaveCount(0)
+
+    // Start a second run for the new text (its /v1/keys is held too), then release ONLY the old
+    // request: a stale write would flip this run to idle with a result while it is still pending.
+    await inspectBtn(page).click()
+    await expect(inspectBtn(page)).toHaveText(/Verifying with mint/)
+    await expect.poll(() => mint.hits.filter(h => h === '/v1/keys').length).toBe(2)
+    mint.releaseOldest()
+    await page.waitForTimeout(800)
+    await expect(inspectBtn(page)).toHaveText(/Verifying with mint/)
+    await expect(page.locator('.token-verify-result.tv-ok')).toHaveCount(0)
+
+    mint.releaseAll()                                              // the new run completes normally
+    await expect(page.locator('.token-verify-result.tv-ok')).toBeVisible({ timeout: 15_000 })
+    await expect(inspectBtn(page)).toHaveText('Inspect & Verify Token')
+  })
+
+  test('editing the textarea really aborts the in-flight requests (browser reports ERR_ABORTED)', async ({ page }) => {
+    const mint = await serveRealMint(page)
+    mint.modes['/v1/checkstate'] = 'hold'
+    mint.modes['/v1/keys'] = 'hold'
+    await startInspect(page, mint.token)
+    await expect.poll(() => mint.hits.includes('/v1/keys')).toBe(true)
+    await page.locator('.token-input').fill('')
+    await expect.poll(() => mint.failed.some(f => f.url.endsWith('/v1/keys') && f.error === 'net::ERR_ABORTED')).toBe(true)
+
+    // Same for the Check request.
+    mint.modes['/v1/keys'] = 'ok'
+    await startInspect(page, mint.token)
+    await expect(page.locator('.token-verify-result.tv-ok')).toBeVisible({ timeout: 15_000 })
+    await page.getByRole('button', { name: /Check if spent/ }).click()
+    await expect.poll(() => mint.hits.includes('/v1/checkstate')).toBe(true)
+    await page.locator('.token-input').fill('')
+    await expect.poll(() => mint.failed.some(f => f.url.endsWith('/v1/checkstate') && f.error === 'net::ERR_ABORTED')).toBe(true)
+  })
+
+  test('a mint that never answers: Inspect shows the timeout state, the button is idle, a retry succeeds', async ({ page }) => {
+    const mint = await serveRealMint(page, { clock: true })
+    mint.modes['/v1/keys'] = 'hang'
+    await startInspect(page, mint.token)
+    await expect.poll(() => mint.hits.includes('/v1/keys')).toBe(true)
+
+    await page.clock.fastForward(11_000)                          // past the 10 s per-request limit
+    const result = page.locator('.token-verify-result')
+    await expect(result).toContainText(/Could not reach mint to verify/)
+    await expect(result).toHaveClass(/tv-unknown/)
+    await expect(inspectBtn(page)).toHaveText('Inspect & Verify Token')
+    await expect(inspectBtn(page)).toBeEnabled()
+    await expect.poll(() => mint.failed.some(f => f.url.endsWith('/v1/keys') && f.error === 'net::ERR_ABORTED')).toBe(true)
+
+    mint.modes['/v1/keys'] = 'ok'                                 // retry against a working mint
+    await inspectBtn(page).click()
+    await expect(page.locator('.token-verify-result.tv-ok')).toBeVisible({ timeout: 15_000 })
+  })
+
+  test('a mint that never answers /v1/checkstate: Check shows "didn\'t answer in time", stays accented, retry succeeds', async ({ page }) => {
+    const mint = await serveRealMint(page, { clock: true })
+    mint.modes['/v1/checkstate'] = 'hang'
+    await startInspect(page, mint.token)
+    await expect(page.locator('.token-verify-result.tv-ok')).toBeVisible({ timeout: 15_000 })
+
+    await page.getByRole('button', { name: /Check if spent/ }).click()
+    await expect.poll(() => mint.hits.includes('/v1/checkstate')).toBe(true)
+    await page.clock.fastForward(11_000)
+
+    const spent = page.locator('.token-spent .token-verify-result')
+    await expect(spent).toContainText("The mint didn't answer in time.")
+    await expect(spent).not.toContainText(/aborted|timed out after/i)
+    const again = page.getByRole('button', { name: 'Check again' })
+    await expect(again).toBeEnabled()
+    // tokenActionState: after an error or timeout "Check if spent" stays the accented action.
+    await expect(again).toHaveClass(/token-action-accent/)
+    await expect(page.getByRole('link', { name: /Redeem to Lightning/ })).not.toHaveClass(/token-action-accent/)
+
+    mint.modes['/v1/checkstate'] = 'ok'
+    await again.click()
+    await expect(page.locator('.token-spent .token-verify-result')).toContainText(/unspent/, { timeout: 15_000 })
+  })
+})
