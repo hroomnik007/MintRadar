@@ -326,10 +326,33 @@ test.describe('Tools', () => {
     await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
     await expect(page.locator('.token-result-grid')).toBeVisible()
 
-    await expect(page.getByText('Asks the mint whether this token was already redeemed.')).toBeVisible()
+    const caption = page.locator('.token-spent-caption')
+    await expect(caption).toHaveText('Asks the mint if this token was already redeemed. The mint sees that you checked.')
+    // No (i) tooltip next to the button any more (the Signature check heading keeps its own).
+    await expect(page.locator('.token-spent-row .info-tooltip')).toHaveCount(0)
     await expect(page.getByRole('link', { name: /Redeem to Lightning/ })).toHaveClass(/token-action-lead/)
     await expect(page.getByRole('link', { name: /Open in cashu.me/ })).toHaveClass(/token-link-btn/)
     await expect(page.getByRole('button', { name: /View Mint Detail/ })).toHaveClass(/token-link-btn/)
+  })
+
+  test('Token Inspector action buttons are content-sized on desktop; Check if spent is full width at 390px', async ({ page }) => {
+    await page.locator('.token-input').fill(makeCashuToken(MOCK_MINTS[0]!.url, [21]))
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+    await expect(page.locator('.token-result-grid')).toBeVisible()
+
+    const card = page.locator('.tool-card').filter({ has: page.locator('.token-input') })
+    const inspect = page.getByRole('button', { name: 'Inspect & Verify Token' })
+    const spent = page.getByRole('button', { name: /Check if spent/ })
+    const redeem = page.getByRole('link', { name: /Redeem to Lightning/ })
+    const width = async (l: typeof inspect) => (await l.boundingBox())!.width
+
+    await page.setViewportSize({ width: 1440, height: 900 })
+    const cardW = (await card.boundingBox())!.width
+    for (const b of [inspect, spent, redeem]) expect(await width(b)).toBeLessThan(cardW * 0.6)
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    const mobileCardW = (await card.boundingBox())!.width
+    expect(await width(spent)).toBeGreaterThan(mobileCardW * 0.85)
   })
 
   test.describe('Signature check states (real DLEQ proofs against an in-page fake mint)', () => {
