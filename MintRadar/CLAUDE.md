@@ -1703,6 +1703,13 @@ under the new text, and a dead mint left the UI stuck for cashu-ts's default 300
   `fetch` that never resolves and asserts `_request` is a function and that aborting `loadMint()` /
   `checkProofsStates()` rejects with `name === "CallerAbortError"`. It must fail loudly on an upgrade that removes or
   renames the field: re-verify against the new source, then update `mintRequest.ts`.
+- **Version policy: the range stays `^4.11.0` (no pinning) — cashu-ts is updated often and we stay current.** The
+  guards are the lockfile (CI and both deploy steps use `npm ci`, which honours it) plus the contract test (part of
+  `npm test`, which the deploy workflow's `test` job runs before `deploy`, so a failure blocks the deploy).
+- **Upgrade procedure when bumping `@cashu/cashu-ts`:** (1) `npm test` — the contract test
+  (`mintRequest.contract.test.ts`) must pass; (2) read the library's changelog for changes to requests, `Mint` or
+  `Wallet` (a renamed/removed `_request`, changed `customRequest` args, changed abort/error classes); (3) run
+  `npx playwright test e2e/tools.spec.ts` (CI does not run e2e); (4) only then commit the new `package-lock.json`.
 - **Runs:** `src/utils/tokenRun.ts`. `startTokenRun()` gives one `AbortController`-backed `TokenRun` per Inspect
   and per Check; `Tools.tsx` aborts it on textarea edit, on a new run of the same kind and on unmount (Inspect and
   Check are guarded separately, so starting one never discards the other).
