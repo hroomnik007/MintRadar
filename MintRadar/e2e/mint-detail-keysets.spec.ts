@@ -33,6 +33,9 @@ test.describe('Mint Detail — Keysets panel placement (desktop)', () => {
     await expect(overviewPanel).toBeVisible()
     await expect(overviewPanel.locator('.md-panel-title', { hasText: 'Keysets' })).toBeVisible()
     await expect(overviewPanel.locator('.md-keyset-row')).toHaveCount(3)
+    await expect(overviewPanel.getByText('100 ppk')).toBeVisible()
+    await expect(overviewPanel.getByText('free')).toBeVisible()
+    await expect(overviewPanel.getByText('250 ppk')).toBeVisible()
     // Each row shows id / unit / Active-Inactive only — the panel does not
     // render a per-input fee ("N ppk"/"free") value.
     await expect(overviewPanel.getByText('sat', { exact: true })).toHaveCount(2)
