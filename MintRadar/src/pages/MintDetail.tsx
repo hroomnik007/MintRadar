@@ -26,7 +26,7 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
-import { clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
+import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import {
@@ -1074,6 +1074,9 @@ function MintDetailContent({ url }: { url: string }) {
                   </button>
                 </div>
                 <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.06em'}}>{ks.unit}</span>
+                {typeof ks.input_fee_ppk === 'number' && (
+                  <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)'}} title="Input fee per 1000 proofs spent from this keyset">{formatKeysetFee(ks.input_fee_ppk)}</span>
+                )}
                 <span style={{
                   fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,borderRadius:5,padding:'2px 7px',marginLeft:'auto',
                   color: ks.active ? '#4ade80' : 'var(--text3)',
