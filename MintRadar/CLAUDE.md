@@ -1909,6 +1909,33 @@ has NOT been verified — WebKit handles focus on `tabindex="-1"` differently fr
 so if the white ring reappears on iOS this needs its own targeted diagnostic pass, not an
 assumption that the same fix covers it.
 
+### Navbar — one row between 641px and where it fits (2026-09-29, `AppShell.css`)
+
+The 640px two-row breakpoint is unchanged. Above it, the single-row navbar used to overflow every
+page (140px at 700, 72px at 768, 40px at 800; logged-in up to ~980px) because the Login button /
+profile chip is `flex-shrink: 0` + `nowrap`. Natural widths (measured with transitions off — `.nav-tab`
+has `transition: all`, which makes live-resize measurements lie): logo 124 (icon only 28), tabs 520
+(tightened 426), Login 144 (short 75), profile chip + Disconnect 281 (135 without name/badge/npub);
+the row needs those + 72px (36 padding + 3×12 gaps). Each step starts at the width where it is first
+needed; wider viewports look as before. `.navbar-inner` gets `.is-authed` when logged in.
+
+| Step | Logged out | Logged in |
+|---|---|---|
+| tabs `padding 6px 9px`, `gap 2px` | ≤ 840px | ≤ 996px |
+| "Login via Nostr" → "Login" (`.navbar-login-extra` visually hidden, name unchanged) | ≤ 765px | — |
+| wordmark hidden (`.navbar-wordmark` visually hidden; home link has `title="MintRadar"`) | ≤ 696px | ≤ 902px |
+| profile name + badge + npub hidden (`.navbar-profile-text`; name is the chip's `title`) | — | ≤ 806px |
+| Disconnect label hidden (glyph only, like ≤640px) | — | ≤ 660px |
+
+Logged-out fits untouched from 840px, logged-in from 997px. Not done on purpose: making the auth
+area shrinkable (no effect — nowrap contents just clip) and a separate "hide npub only" step (the
+npub sits under the name row, so hiding it saves height, not width). Long display names are still
+unclamped above 640px (pre-existing). Between 841 and 858px the logged-out row already has less
+than its 18px right padding (content fits, but a slower font swap can push it over — the e2e test
+waits for `document.fonts.ready`). Tests: `e2e/navbar-tablet-layout.spec.ts`. Known unrelated
+overflows seen while measuring, NOT fixed here: Dashboard `.submit-btn` at ~901–990px and Dashboard
+`.sort-segment` at 360px (5px).
+
 ## Tooltip positioning in scrollable/small containers
 
 **Pattern:** in a small or scrollable container (e.g. the Network Health Index Breakdown

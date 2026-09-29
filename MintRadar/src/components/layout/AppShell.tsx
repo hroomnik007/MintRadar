@@ -292,10 +292,10 @@ export function AppShell() {
   return (
     <div className="app-shell">
       <nav className="navbar">
-       <div className="navbar-inner">
-        <NavLink to="/" className="navbar-brand nav-logo">
+       <div className={`navbar-inner${profile !== null ? ' is-authed' : ''}`}>
+        <NavLink to="/" className="navbar-brand nav-logo" title="MintRadar">
           <NavLogo />
-          <span>Mint<span style={{color:'var(--accent)'}}>Radar</span></span>
+          <span className="navbar-wordmark">Mint<span style={{color:'var(--accent)'}}>Radar</span></span>
         </NavLink>
 
         <div className="navbar-spacer" style={{flex:1}}/>
@@ -326,11 +326,11 @@ export function AppShell() {
         <div className="navbar-auth">
           {profile === null ? (
             <button type="button" className="navbar-login-btn" onClick={() => setShowLoginModal(true)}>
-              ⚡ Login via Nostr
+              ⚡ Login<span className="navbar-login-extra"> via Nostr</span>
             </button>
           ) : (
             <>
-              <div className="navbar-profile">
+              <div className="navbar-profile" title={profile.name ?? undefined}>
                 {/* https:// only — same guard as the other two profile.picture
                     call sites (review list, "Signing with" row). This one is
                     the logged-in user's own kind:0 so the risk is minimal, but
