@@ -1936,6 +1936,13 @@ waits for `document.fonts.ready`). Tests: `e2e/navbar-tablet-layout.spec.ts`. Kn
 overflows seen while measuring, NOT fixed here: Dashboard `.submit-btn` at ~901–990px and Dashboard
 `.sort-segment` at 360px (5px).
 
+**Phones ≤430px — tab links on one row (2026-09-29):** the six labels are ≈296px of text in a 324px row at
+360px, so the 16px column gap plus the inline Watchlist count badge (rendered only when logged in with
+watched mints) pushed "Learn" onto a second row. `@media (max-width: 430px)`: `justify-content:
+space-between; column-gap: 6px`, and `.nav-tab-badge` is absolutely positioned on the label's top-right
+corner (takes no width). One row from 360px up; below ~350px the labels still wrap (`flex-wrap` kept).
+Test: `navbar-mobile-layout.spec.ts` ("tab links stay on one row…", badge injected into the DOM).
+
 ## Tooltip positioning in scrollable/small containers
 
 **Pattern:** in a small or scrollable container (e.g. the Network Health Index Breakdown

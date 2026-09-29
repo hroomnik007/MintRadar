@@ -473,6 +473,17 @@
   .navbar-inner.is-authed .navbar-disconnect-btn { padding: 6px; }
 }
 
+/* Phones ≤430px: the six tab labels only just fit one row (≈296px of text in a 324px row at 360px),
+   so the 16px column gap and the inline Watchlist count badge pushed "Learn" onto a second row —
+   worst when logged in (the badge only renders then). Spread the labels over the row with a small
+   minimum gap and lift the badge onto the label's corner so it takes no width. Below ~350px the
+   labels still wrap (flex-wrap stays), as before. */
+@media (max-width: 430px) {
+  .navbar-tabs { justify-content: space-between; column-gap: 6px; }
+  .nav-tab { position: relative; }
+  .nav-tab-badge { position: absolute; top: -7px; right: -6px; }
+}
+
 @media (max-width: 600px) {
   /* Page content drops to a 14px gutter at this width — keep the nav in step. */
   .navbar-inner { padding-left: 14px; padding-right: 14px; }

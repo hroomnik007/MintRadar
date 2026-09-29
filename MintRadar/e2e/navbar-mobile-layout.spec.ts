@@ -79,3 +79,28 @@ test.describe('desktop unchanged', () => {
     await expect(page.locator('.navbar-disconnect-btn svg')).toBeHidden()
   })
 })
+
+// All six links stay on ONE row on phones (no lone "Learn" on a second row), also logged in with
+// the Watchlist count badge (which only renders for a logged-in user with watched mints). The badge
+// is injected into the DOM with a 3-digit count as the worst case.
+for (const width of [360, 375, 390, 412, 430]) {
+  test(`tab links stay on one row at ${width}px, logged in with a Watchlist badge`, async ({ page }) => {
+    await mockRelays(page)
+    await installApiMocks(page)
+    await loginAs(page)
+    await page.setViewportSize({ width, height: 780 })
+    await page.goto('/')
+    await page.waitForSelector('.navbar-profile')
+    await page.evaluate(() => document.fonts.ready)
+    await page.evaluate(() => {
+      const a = document.querySelector('a[href="/watchlist"]')!
+      const s = document.createElement('span')
+      s.className = 'nav-tab-badge'
+      s.textContent = '123'
+      a.appendChild(s)
+    })
+    const tops = await page.locator('.navbar-tabs a').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)))
+    expect(tops).toHaveLength(6)
+    expect(new Set(tops).size).toBe(1)
+  })
+}
