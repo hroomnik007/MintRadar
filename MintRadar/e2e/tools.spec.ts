@@ -792,6 +792,58 @@ test.describe('Token Inspector result grid, labels and mobile actions', () => {
   })
 })
 
+test.describe('Token Inspector mint icon (tracked mints only)', () => {
+  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64')
+  const inspect = async (page: import('@playwright/test').Page, mintUrl: string) => {
+    const fx = makeDleqMint(mintUrl, [{ amount: 1, dleq: 'valid' }])
+    await serveMintInPage(page, fx)
+    await page.reload()
+    await page.locator('.token-input').fill(fx.token)
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+    await expect(page.locator('.token-result-grid')).toBeVisible()
+  }
+
+  test('untracked mint: no icon element and no icon request of any kind', async ({ page }) => {
+    const requests: string[] = []
+    page.on('request', r => requests.push(r.url()))
+    const host = 'https://untracked-mint.example'
+    await inspect(page, host)
+    await expect(page.locator('.token-result-grid .trc-mint-icon')).toHaveCount(0)
+    await expect(page.locator('.trc-name')).toHaveText('untracked-mint.example')
+    await page.waitForTimeout(500)
+    expect(requests.filter(u => u.includes('/api/mint/icon') || u.startsWith(host))).toEqual([])
+    expect(requests.filter(u => /\.(png|jpe?g|gif|webp|svg|ico)(\?|$)/i.test(u) && !u.startsWith(new URL(page.url()).origin))).toEqual([])
+  })
+
+  test('tracked mint with an icon: tile loads through our own icon proxy', async ({ page }) => {
+    const tracked = MOCK_KNOWN_MINTS[0]!
+    await page.route('**/api/mints/known', route => route.fulfill({ json: MOCK_KNOWN_MINTS.map((m, i) => i === 0 ? { ...m, iconUrl: 'https://x.example/i.png' } : m) }))
+    const iconReqs: string[] = []
+    await page.route('**/api/mint/icon**', route => { iconReqs.push(route.request().url()); return route.fulfill({ body: PNG, contentType: 'image/png' }) })
+    await page.reload()
+    await inspect(page, tracked.url)
+    const img = page.locator('.token-result-grid img.trc-mint-icon')
+    await expect(img).toBeVisible()
+    await expect.poll(() => iconReqs.length).toBeGreaterThan(0)
+    expect(iconReqs.every(u => u.includes('/api/mint/icon?url='))).toBe(true)
+  })
+
+  test('tracked mint without an icon: initials tile; 36px desktop, 32px mobile, no overflow', async ({ page }) => {
+    const tracked = MOCK_KNOWN_MINTS[0]!
+    await inspect(page, tracked.url)
+    const tile = page.locator('.token-result-grid div.trc-mint-icon')
+    await expect(tile).toBeVisible()
+    await expect(tile).toHaveText(/^[A-Z0-9]{2}$/i)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    expect(Math.round((await tile.boundingBox())!.width)).toBe(36)
+    for (const w of [360, 390, 1440]) {
+      await page.setViewportSize({ width: w, height: 900 })
+      if (w < 701) expect(Math.round((await tile.boundingBox())!.width)).toBe(32)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0)
+    }
+  })
+})
+
 test.describe('Best Mint wizard currency control', () => {
   test('is one joined control: segments touch, share an outer border, selection still works', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })

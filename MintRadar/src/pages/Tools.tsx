@@ -209,6 +209,11 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
           <div className="token-result-grid">
             <div className="token-result-cell">
               <div className="trc-label">Mint</div>
+              <div className="trc-mint">
+                {/* Icon only for a mint we track, via the same proxied MintFavicon as the Dashboard.
+                    An untracked token's mint URL is attacker-chosen, so nothing is requested for it. */}
+                {mintInfo && <MintFavicon url={mintInfo.url} iconUrl={mintInfo.iconUrl} size={36} radius={9} className="trc-mint-icon" />}
+                <div className="trc-mint-text">
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <div className="trc-name">{mintInfo?.name ?? getHostname(result.mint)}</div>
                 {isTestMint(mintInfo?.url ?? result.mint) && (
@@ -222,6 +227,8 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
                 )}
               </div>
               <div className="trc-sub">{getHostname(result.mint)}</div>
+                </div>
+              </div>
             </div>
             <div className="token-result-cell">
               <div className="trc-label">Amount</div>

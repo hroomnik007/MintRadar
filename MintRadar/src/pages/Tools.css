@@ -101,13 +101,14 @@
 
 .token-result-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 1px;
   background: var(--border);
   border-radius: 8px;
   overflow: hidden;
 }
 .token-result-cell {
+  min-width: 0;
   background: var(--bg3);
   padding: 12px 14px;
   display: flex;
@@ -146,7 +147,16 @@
   text-overflow: ellipsis;
   min-width: 0;
 }
-.trc-value.trc-muted { color: var(--text3); font-weight: 400; }
+.trc-value.trc-muted { color: var(--text3); font-weight: 400; white-space: normal; line-height: 1.2; }
+/* Mint cell: icon tile (tracked mints only) left of name + hostname; the text column may shrink so
+   long names/hosts ellipsize instead of widening the grid. */
+.trc-mint { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.trc-mint-icon { flex-shrink: 0; }
+.trc-mint-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.trc-mint-text .trc-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 700px) {
+  .trc-mint-icon { width: 32px !important; height: 32px !important; min-width: 32px !important; }
+}
 .trc-sub { font-size: 10px; color: var(--text3); font-family: var(--font-mono); }
 
 .token-memo-row {
