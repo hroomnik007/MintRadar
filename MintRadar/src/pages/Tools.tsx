@@ -318,9 +318,8 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
                   ? <><LoaderCircle size={13} aria-hidden="true" className="tv-spin" /> Checking with mint…</>
                   : <><Search size={13} aria-hidden="true" /> Check if spent</>}
               </button>
-              <InfoTooltip text="This asks the token's mint whether it has already been used. It tells that mint you're looking at this token right now." />
+              <span className="token-spent-caption">Asks the mint if this token was already redeemed. The mint sees that you checked.</span>
             </div>
-            <div className="token-note">Asks the mint whether this token was already redeemed.</div>
 
             {spentResult?.status === 'ok' && (() => {
               const { total, unspent, spent, pending } = spentResult.data

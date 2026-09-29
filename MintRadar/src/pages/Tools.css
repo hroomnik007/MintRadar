@@ -202,8 +202,9 @@ a.token-action-btn:focus {
   text-transform: uppercase; letter-spacing: 0.02em;
 }
 .token-spent { display: flex; flex-direction: column; gap: 8px; }
-.token-spent-row { display: flex; align-items: center; gap: 6px; }
+.token-spent-row { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
 .token-spent-row .token-action-btn { flex: 1 1 auto; }
+.token-spent-caption { font-size: 12px; line-height: 1.45; color: var(--text3); font-family: var(--font-body); }
 
 /* Muted helper lines (privacy, spent check, wallet links) and the empty-input hint. */
 .token-note { font-size: 12px; line-height: 1.45; color: var(--text3); font-family: var(--font-body); }
@@ -342,11 +343,21 @@ a.token-action-btn:focus {
 }
 
 @media (min-width: 901px) {
-  .inspect-token-btn,
   .find-my-mint-btn { max-width: 280px; margin: 0 auto; }
 }
 @media (max-width: 900px) {
   .tools-grid { grid-template-columns: 1fr; }
+}
+/* Token Inspector actions above the 700px mobile breakpoint: content-sized, left-aligned.
+   At or below 700px the buttons stay full width and the caption sits below. */
+@media (min-width: 701px) {
+  .inspect-token-btn { width: auto; align-self: flex-start; padding: 10px 24px; }
+  .token-spent-row { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+  .token-spent-row .token-action-btn { flex: 0 0 auto; padding: 7px 14px; }
+  .token-spent-caption { flex: 1 1 320px; min-width: 0; }
+  .token-actions { align-items: center; gap: 8px 20px; }
+  .token-action-lead { flex: 0 0 auto; padding: 8px 16px; }
+  .token-links { flex: 0 1 auto; }
 }
 @media (max-width: 700px) {
   .tools-grid { padding: 12px var(--page-pad); gap: 12px; }
