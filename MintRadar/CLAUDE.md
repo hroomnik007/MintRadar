@@ -1522,7 +1522,10 @@ options are unchanged.
   (`.wizard-unit-seg` / `.wizard-unit-opt`, accent-dim tint on the selected segment). As of
   2026-09-29 it is ONE joined control: single 1px outer border + radius, 1px dividers between
   segments, no gaps, selected = accent-dim background + accent text with no border of its own; full
-  width / 44px tall on mobile, content-sized / 36px on desktop (≥701px). Units still
+  width on mobile, content-sized on desktop (≥701px); visible height is 36px everywhere. On mobile each
+  segment has an invisible `::before` (4px above/below only, no sideways reach) for a 44px tap
+  target, so `.wizard-unit-seg` must NOT have `overflow:hidden` (first/last segment carry the
+  corner radius instead). Units still
   come from what online mints advertise; display order is SAT, MSAT, EUR, USD (`UNIT_ORDER`),
   unknown units last.
 - **Size labels follow the unit (2026-09-28):** Small/Medium/Large sub-labels come from the static
@@ -1662,6 +1665,10 @@ blocks only non-public hosts).
 - **Result grid typography (2026-09-29)** — mint name (`.trc-name`) is the UI font
   (`--font-body`), 16px/500, hostname under it stays mono; Amount keeps the large mono number but in
   `--text` (no accent green — green in this grid only means healthy/positive: Online, score band).
+  Amount, status and Reliability Score (`.trc-value`) are weight 500, not 700, so the mint name
+  isn't outweighed. They use `--font-mono-data` (a *system* mono stack, not the self-hosted
+  JetBrains Mono), so 500 renders as Medium only where the OS mono font has it and otherwise as 400;
+  the computed weight is 500 either way. No font files added.
 - **Display rules** — offline line "This mint didn't answer its last check, so checking or
   redeeming may not work." shows above the Check row only for a tracked mint with `online ===
   false` (not unknown, not untracked). The Amount cell hides its unit label when

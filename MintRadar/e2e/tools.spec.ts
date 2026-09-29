@@ -765,6 +765,14 @@ test.describe('Token Inspector result grid, labels and mobile actions', () => {
     expect(colours.amountFont).not.toBe(colours.nameFont)
   })
 
+  test('amount, mint status and Reliability Score are lighter than bold (weight < 600)', async ({ page }) => {
+    await run(page)
+    const weights = await page.locator('.token-result-grid .trc-value:not(.trc-muted)').evaluateAll(els =>
+      els.map(e => Number(getComputedStyle(e).fontWeight)))
+    expect(weights.length).toBeGreaterThanOrEqual(2)
+    for (const w of weights) expect(w).toBeLessThan(600)
+  })
+
   test('390px: Redeem is full width; View Mint Detail and Open in cashu.me sit side by side, 44px tall', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await run(page)
@@ -793,7 +801,7 @@ test.describe('Best Mint wizard currency control', () => {
 
     const boxes = await opts.evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, right: r.right, h: r.height } }))
     for (let i = 1; i < boxes.length; i++) expect(Math.abs(boxes[i]!.x - boxes[i - 1]!.right)).toBeLessThan(1.5)
-    for (const b of boxes) expect(b.h).toBeGreaterThanOrEqual(44)
+    for (const b of boxes) expect(Math.abs(b.h - 36)).toBeLessThanOrEqual(1)
     // Full width on mobile: the segments fill the group.
     const g = (await group.boundingBox())!
     expect(boxes[boxes.length - 1]!.right).toBeGreaterThan(g.x + g.width - 3)
@@ -813,6 +821,33 @@ test.describe('Best Mint wizard currency control', () => {
     await expect(opts.nth(0)).toHaveAttribute('aria-checked', 'false')
     // Selected = tint + text colour, no separate accent border around the segment.
     expect(await opts.nth(1).evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('0px')
+  })
+
+  test('390px: a click 3px above / below the visible segment still selects it, and the extension overlaps nothing interactive', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const group = page.getByRole('radiogroup', { name: 'Currency unit' })
+    const opts = group.getByRole('radio')
+    // Re-measure before each click: selecting a unit can change the content below and shift the control.
+    const clickOffset = async (dy: 'above' | 'below') => {
+      const b = (await opts.nth(1).boundingBox())!
+      await page.mouse.click(b.x + b.width / 2, dy === 'above' ? b.y - 3 : b.y + b.height + 3)
+    }
+    for (const dy of ['above', 'below'] as const) {
+      await opts.nth(0).click()
+      await expect(opts.nth(0)).toHaveAttribute('aria-checked', 'true')
+      await clickOffset(dy)
+      await expect(opts.nth(1)).toHaveAttribute('aria-checked', 'true')
+    }
+    // Nothing else interactive within 4px above or below the control.
+    const clash = await group.evaluate(el => {
+      const r = el.getBoundingClientRect(); const hits: string[] = []
+      for (const y of [r.top - 4, r.bottom + 4]) for (let x = r.left; x < r.right; x += 6) {
+        const t = document.elementFromPoint(x, y)?.closest('button,a,input,[role=radio]')
+        if (t) hits.push(t.className || t.tagName)
+      }
+      return hits
+    })
+    expect(clash).toEqual([])
   })
 
   test('desktop control is compact (about 36px tall)', async ({ page }) => {
