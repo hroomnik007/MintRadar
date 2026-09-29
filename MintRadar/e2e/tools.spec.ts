@@ -274,8 +274,10 @@ test.describe('Tools', () => {
 
     // Rest of the inspector stays intact.
     await expect(page.locator('.token-result-grid')).toBeVisible()
-    await expect(spentBtn).toBeEnabled()
-    await expect(spentBtn).toHaveText('Check if spent')
+    // Any settled result (errors included) flips the label.
+    const again = page.getByRole('button', { name: 'Check again' })
+    await expect(again).toBeEnabled()
+    await expect(again).toHaveText('Check again')
   })
 
   test('Token Inspector shows an error for an invalid token (no crash)', async ({ page }) => {
@@ -290,8 +292,10 @@ test.describe('Tools', () => {
 
   test('Token Inspector states exactly what stays local and what contacts the mint', async ({ page }) => {
     await expect(page.locator('.token-note').first()).toHaveText(
-      "Decoded in your browser. MintRadar's servers never see your token. Checking contacts the mint named in the token."
+      "Decoded in your browser. MintRadar's servers never see your token. Checking contacts the mint named in the token, and the cashu.me buttons send the full token to cashu.me."
     )
+    // The separate line under the action buttons is gone — its content lives in the line above.
+    await expect(page.getByText('These open cashu.me with your full token in the link.')).toHaveCount(0)
     await expect(page.getByPlaceholder('cashuB… or cashuA…')).toBeVisible()
     await expect(page.locator('.tool-subtitle', { hasText: 'Paste a Cashu token (cashuA or cashuB)' })).toBeVisible()
   })
@@ -318,7 +322,6 @@ test.describe('Tools', () => {
       .toHaveAttribute('href', `https://wallet.cashu.me/?token=${encodeURIComponent(token)}`)
     await expect(page.getByRole('link', { name: /Redeem to Lightning/ }))
       .toHaveAttribute('href', `https://redeem.cashu.me/?token=${encodeURIComponent(token)}`)
-    await expect(page.getByText('These open cashu.me with your full token in the link.')).toBeVisible()
   })
 
   test('Check if spent explains itself under the button and is accented; the other actions are quiet', async ({ page }) => {
@@ -360,7 +363,8 @@ test.describe('Tools', () => {
 
       await check.click()
       await expect(page.locator('.token-spent .token-verify-result')).toContainText(/unspent/, { timeout: 15_000 })
-      await expect(check).not.toHaveClass(/token-action-accent/)
+      const again = page.getByRole('button', { name: 'Check again' })
+      await expect(again).not.toHaveClass(/token-action-accent/)
       await expect(redeem).toHaveClass(/token-action-accent/)
       await expect(page.locator('.token-spent-caption')).toHaveCount(0)
     })
@@ -379,6 +383,13 @@ test.describe('Tools', () => {
       await expect(page.getByText('Nothing left to redeem.')).toBeVisible()
       await expect(page.getByText('These open cashu.me with your full token in the link.')).toHaveCount(0)
       await expect(page.locator('.token-action-accent')).toHaveCount(0)
+      // View Mint Detail is the only action left and takes the full row.
+      const cardW = (await page.locator('.token-actions').boundingBox())!.width
+      const detailW = (await page.getByRole('button', { name: /View Mint Detail/ }).boundingBox())!.width
+      await page.setViewportSize({ width: 390, height: 844 })
+      const rowW = (await page.locator('.token-actions').boundingBox())!.width
+      expect((await page.getByRole('button', { name: /View Mint Detail/ }).boundingBox())!.width).toBeGreaterThan(rowW - 2)
+      expect(detailW).toBeLessThan(cardW)
     })
   })
 
@@ -692,5 +703,121 @@ test.describe('Tools wizard on touch', () => {
     await expect(small).toContainText('< ~$10')
     await expect(page.locator('.wizard-opt', { hasText: 'Large' })).toContainText('> ~$100')
     await expect(page.locator('.wizard-opt', { hasText: 'Large' })).not.toContainText('sats')
+  })
+})
+
+test.describe('Token Inspector result grid, labels and mobile actions', () => {
+  const MINT = MOCK_MINTS[0]!.url
+  const run = async (page: import('@playwright/test').Page, checkstate: 'UNSPENT' | 'SPENT' = 'UNSPENT') => {
+    const fx = makeDleqMint(MINT, [{ amount: 1, dleq: 'valid' }, { amount: 2, dleq: 'valid' }])
+    await serveMintInPage(page, fx, { checkstate })
+    await page.reload()
+    await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
+    await page.locator('.token-input').fill(fx.token)
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+    await expect(page.locator('.token-result-grid')).toBeVisible()
+    return fx
+  }
+
+  test('check button reads "Check again" after any spent check and resets when the token is edited', async ({ page }) => {
+    const fx = await run(page)
+    await expect(page.getByRole('button', { name: 'Check if spent' })).toBeVisible()
+    await page.getByRole('button', { name: 'Check if spent' }).click()
+    await expect(page.locator('.token-spent .token-verify-result')).toContainText(/unspent/, { timeout: 15_000 })
+    await expect(page.getByRole('button', { name: 'Check again' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Check if spent' })).toHaveCount(0)
+
+    // Checking again keeps the label after it settles.
+    await page.getByRole('button', { name: 'Check again' }).click()
+    await expect(page.getByRole('button', { name: 'Check again' })).toBeEnabled({ timeout: 15_000 })
+
+    await page.locator('.token-input').fill(fx.token + ' ')
+    await page.locator('.token-input').fill(fx.token)
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+    await expect(page.locator('.token-result-grid')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Check if spent' })).toBeVisible()
+  })
+
+  test('amount uses the normal text colour, not the accent; the mint name is the UI font at weight 500', async ({ page }) => {
+    await run(page)
+    const colours = await page.evaluate(() => {
+      const probe = (v: string) => {
+        const el = document.createElement('span'); el.style.color = v; document.body.appendChild(el)
+        const c = getComputedStyle(el).color; el.remove(); return c
+      }
+      const amount = document.querySelector('.token-result-cell:nth-child(2) .trc-value') as HTMLElement
+      const name = document.querySelector('.trc-name') as HTMLElement
+      const sub = document.querySelector('.token-result-cell:nth-child(1) .trc-sub') as HTMLElement
+      const nameCS = getComputedStyle(name)
+      return {
+        amount: getComputedStyle(amount).color, accent: probe('var(--accent)'), text: probe('var(--text)'),
+        nameFont: nameCS.fontFamily, nameWeight: nameCS.fontWeight, nameSize: nameCS.fontSize,
+        subFont: getComputedStyle(sub).fontFamily, amountFont: getComputedStyle(amount).fontFamily,
+        bodyFont: getComputedStyle(document.body).fontFamily,
+      }
+    })
+    expect(colours.amount).not.toBe(colours.accent)
+    expect(colours.amount).toBe(colours.text)
+    expect(colours.nameWeight).toBe('500')
+    expect(colours.nameSize).toBe('16px')
+    expect(colours.nameFont).toBe(colours.bodyFont)
+    expect(colours.subFont).toMatch(/JetBrains Mono/)
+    expect(colours.amountFont).not.toBe(colours.nameFont)
+  })
+
+  test('390px: Redeem is full width; View Mint Detail and Open in cashu.me sit side by side, 44px tall', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await run(page)
+    const box = async (name: RegExp, role: 'link' | 'button') => (await page.getByRole(role, { name }).boundingBox())!
+    const row = (await page.locator('.token-actions').boundingBox())!
+    const redeem = await box(/Redeem to Lightning/, 'link')
+    const detail = await box(/View Mint Detail/, 'button')
+    const wallet = await box(/Open in cashu.me/, 'link')
+
+    expect(redeem.width).toBeGreaterThan(row.width - 2)
+    expect(Math.abs(detail.y - wallet.y)).toBeLessThan(1)
+    expect(detail.y).toBeGreaterThan(redeem.y + redeem.height - 1)
+    expect(Math.abs(detail.width - wallet.width)).toBeLessThan(2)
+    expect(detail.width + wallet.width).toBeGreaterThan(row.width - 12)
+    expect(detail.height).toBeGreaterThanOrEqual(44)
+    expect(wallet.height).toBeGreaterThanOrEqual(44)
+  })
+})
+
+test.describe('Best Mint wizard currency control', () => {
+  test('is one joined control: segments touch, share an outer border, selection still works', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const group = page.getByRole('radiogroup', { name: 'Currency unit' })
+    const opts = group.getByRole('radio')
+    await expect(opts).toHaveText(['SAT', 'USD'])
+
+    const boxes = await opts.evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, right: r.right, h: r.height } }))
+    for (let i = 1; i < boxes.length; i++) expect(Math.abs(boxes[i]!.x - boxes[i - 1]!.right)).toBeLessThan(1.5)
+    for (const b of boxes) expect(b.h).toBeGreaterThanOrEqual(44)
+    // Full width on mobile: the segments fill the group.
+    const g = (await group.boundingBox())!
+    expect(boxes[boxes.length - 1]!.right).toBeGreaterThan(g.x + g.width - 3)
+
+    const styles = await group.evaluate(el => {
+      const cs = getComputedStyle(el); const seg = el.querySelectorAll('button')
+      return { outer: cs.borderTopWidth, gap: cs.columnGap, first: getComputedStyle(seg[0]!).borderLeftWidth, second: getComputedStyle(seg[1]!).borderLeftWidth }
+    })
+    expect(styles.outer).toBe('1px')
+    expect(['normal', '0px']).toContain(styles.gap)
+    expect(styles.first).toBe('0px')
+    expect(styles.second).toBe('1px') // the 1px divider
+
+    await expect(opts.nth(0)).toHaveAttribute('aria-checked', 'true')
+    await opts.nth(1).click()
+    await expect(opts.nth(1)).toHaveAttribute('aria-checked', 'true')
+    await expect(opts.nth(0)).toHaveAttribute('aria-checked', 'false')
+    // Selected = tint + text colour, no separate accent border around the segment.
+    expect(await opts.nth(1).evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('0px')
+  })
+
+  test('desktop control is compact (about 36px tall)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    const h = (await page.getByRole('radiogroup', { name: 'Currency unit' }).getByRole('radio').first().boundingBox())!.height
+    expect(h).toBeLessThan(44)
   })
 })

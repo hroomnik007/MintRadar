@@ -1519,7 +1519,10 @@ uptime % only now) and **compacted large limit numbers** — `formatCompactAmoun
 Presentation-only; scoring/filters, results, the six `WizardCheck` booleans and the step-1 size
 options are unchanged.
 - **Step 1 currency** — the native `<select>` is now a `role="radiogroup"` segmented control
-  (`.wizard-unit-seg` / `.wizard-unit-opt`, accent-dim tint on the selected segment). Units still
+  (`.wizard-unit-seg` / `.wizard-unit-opt`, accent-dim tint on the selected segment). As of
+  2026-09-29 it is ONE joined control: single 1px outer border + radius, 1px dividers between
+  segments, no gaps, selected = accent-dim background + accent text with no border of its own; full
+  width / 44px tall on mobile, content-sized / 36px on desktop (≥701px). Units still
   come from what online mints advertise; display order is SAT, MSAT, EUR, USD (`UNIT_ORDER`),
   unknown units last.
 - **Size labels follow the unit (2026-09-28):** Small/Medium/Large sub-labels come from the static
@@ -1637,21 +1640,28 @@ blocks only non-public hosts).
   "Paste a token first". E2E for the signature states runs real DLEQ proofs against an in-page
   fake mint (`makeDleqMint` / `serveMintInPage` in `e2e/fixtures/mocks.ts`).
 - **Guided action flow (2026-09-29)** — order: Check row → its caption or result → action row
-  (Redeem to Lightning, View Mint Detail, Open in cashu.me) → cashu.me note. Exactly one action
+  (Redeem to Lightning, View Mint Detail, Open in cashu.me). The old line under the actions ("These open cashu.me with your full token in the link.") was removed 2026-09-29; the privacy line under the textarea now reads "Decoded in your browser. MintRadar's servers never see your token. Checking contacts the mint named in the token, and the cashu.me buttons send the full token to cashu.me." Exactly one action
   carries `.token-action-accent` at a time, decided by the pure `tokenActionState(spent)`
   (`cashuToken.ts`, unit-tested per state): no usable result yet / error / unreachable →
   **Check if spent**; all unspent → **Redeem**; partial and all-pending → nobody accented, Redeem
   enabled; all spent → Redeem becomes a non-navigating `<span aria-disabled="true">` (no href,
   opacity .45), **Open in cashu.me is hidden** (don't hand a spent token to a third party) and the
-  note reads "Nothing left to redeem." Editing the textarea resets to the initial state.
+  note reads "Nothing left to redeem." (the only state-specific note left). After a spent check has
+  settled (any result, errors included) the check button reads **"Check again"**; before the first
+  check, and after editing the textarea, it reads "Check if spent". Editing the textarea resets to the initial state.
   All actions share `.token-action-btn` (quiet: 0.5px neutral border, `--text2`); the two links
-  stay `<a>` with unchanged href/target/rel/`?token=`. Desktop: one wrapping row; ≤700px: full
-  width, stacked, Redeem first, 44px min height. The caption "Asks the mint. It will see that you
+  stay `<a>` with unchanged href/target/rel/`?token=`. Desktop: one wrapping row; ≤700px: Redeem
+  full width on its own row, View Mint Detail + Open in cashu.me side by side in two equal columns
+  below it (labels may wrap inside the button; at 360px both fit on one line), 44px min height. A
+  lone second-row button (all-spent, or untracked mint) takes the full width. The caption "Asks the mint. It will see that you
   checked." sits UNDER the Check button and only while no spent result is shown (the result takes
   its place).
 - **Centering** — on desktop (≥701px) "Inspect & Verify Token" and its "Paste a token first"
   hint are centered like the wizard's "Find my mint"; privacy line, result grid and action rows
   stay left/full width.
+- **Result grid typography (2026-09-29)** — mint name (`.trc-name`) is the UI font
+  (`--font-body`), 16px/500, hostname under it stays mono; Amount keeps the large mono number but in
+  `--text` (no accent green — green in this grid only means healthy/positive: Online, score band).
 - **Display rules** — offline line "This mint didn't answer its last check, so checking or
   redeeming may not work." shows above the Check row only for a tracked mint with `online ===
   false` (not unknown, not untracked). The Amount cell hides its unit label when

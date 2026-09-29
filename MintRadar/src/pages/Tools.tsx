@@ -186,7 +186,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
         rows={3}
         spellCheck={false}
       />
-      <div className="token-note">Decoded in your browser. MintRadar's servers never see your token. Checking contacts the mint named in the token.</div>
+      <div className="token-note">Decoded in your browser. MintRadar's servers never see your token. Checking contacts the mint named in the token, and the cashu.me buttons send the full token to cashu.me.</div>
 
       <button
         type="button"
@@ -210,7 +210,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             <div className="token-result-cell">
               <div className="trc-label">Mint</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <div className="trc-value">{mintInfo?.name ?? getHostname(result.mint)}</div>
+                <div className="trc-name">{mintInfo?.name ?? getHostname(result.mint)}</div>
                 {isTestMint(mintInfo?.url ?? result.mint) && (
                   <span
                     className="token-test-mint-badge"
@@ -225,7 +225,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             </div>
             <div className="token-result-cell">
               <div className="trc-label">Amount</div>
-              <div className="trc-value trc-accent">{formatTokenAmount(result.amount, result.unit)}</div>
+              <div className="trc-value">{formatTokenAmount(result.amount, result.unit)}</div>
               {!amountCarriesCurrencySymbol(result.unit) && <div className="trc-sub">{result.unit}</div>}
             </div>
             <div className="token-result-cell">
@@ -322,7 +322,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             >
               {checkingSpent
                 ? <><LoaderCircle size={13} aria-hidden="true" className="tv-spin" /> Checking with mint…</>
-                : <><Search size={13} aria-hidden="true" /> Check if spent</>}
+                : <><Search size={13} aria-hidden="true" /> {spentResult ? 'Check again' : 'Check if spent'}</>}
             </button>
             {!spentResult && (
               <span className="token-spent-caption">Asks the mint. It will see that you checked.</span>
@@ -360,7 +360,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
                 (cashubtc/cashu.me @ b51fee3), and redeem.cashu.me reads the same `?token=`
                 param in its client bundle. rel="noreferrer" keeps the token out of the
                 Referer header on the way there. The token itself IS in the link, so it
-                reaches cashu.me's servers — the note below says so. */}
+                reaches cashu.me's servers — the privacy line under the textarea says so. */}
             {actions.redeemDisabled ? (
               <span className="token-action-btn" aria-disabled="true">
                 <Zap size={13} aria-hidden="true" /> Redeem to Lightning
@@ -392,7 +392,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
               </a>
             )}
           </div>
-          <div className="token-note">{actions.note === 'nothing-left' ? 'Nothing left to redeem.' : 'These open cashu.me with your full token in the link.'}</div>
+          {actions.note === 'nothing-left' && <div className="token-note">Nothing left to redeem.</div>}
         </>
       )}
     </div>

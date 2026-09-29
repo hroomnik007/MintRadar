@@ -133,7 +133,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.trc-value.trc-accent { color: var(--accent); }
+/* Mint name: the app's UI font (like the Mint Detail / Dashboard card name), not the mono
+   data face; the hostname under it (.trc-sub) stays mono. */
+.trc-name {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
 .trc-value.trc-muted { color: var(--text3); font-weight: 400; }
 .trc-sub { font-size: 10px; color: var(--text3); font-family: var(--font-mono); }
 
@@ -351,9 +363,14 @@ a.token-action-btn:focus {
   .token-actions { align-items: center; }
 }
 @media (max-width: 700px) {
-  .token-actions { flex-direction: column; }
-  .token-actions .token-action-btn { width: 100%; }
+  /* Redeem takes the full first row; View Mint Detail and Open in cashu.me share the next in
+     two equal columns (a lone one — all-spent, or an untracked mint — takes the full width).
+     Labels wrap inside the button instead of overflowing at 360px. */
+  .token-actions { flex-wrap: wrap; }
+  .token-actions > .token-action-btn { flex: 1 1 0; min-width: 0; white-space: normal; padding-inline: 10px; }
+  .token-actions > .token-action-btn:first-child { flex-basis: 100%; }
   .token-action-btn { min-height: 44px; }
+  .token-spent .token-action-btn { width: 100%; }
   .tools-grid { padding: 12px var(--page-pad); gap: 12px; }
   .tool-card { padding: 16px; }
   .wizard-options-row { flex-direction: column; }
@@ -376,19 +393,25 @@ a.token-action-btn:focus {
   .wizard-rec-view { display: none; }
 }
 
-.wizard-unit-seg { display: flex; gap: 7px; }
+.wizard-unit-seg {
+  display: flex;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg3); overflow: hidden;
+}
 .wizard-unit-opt {
-  flex: 1; min-width: 0; min-height: 40px; padding: 8px 6px;
-  background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+  flex: 1 1 0; min-width: 0; min-height: 44px; padding: 8px 6px;
+  background: transparent; border: none; border-radius: 0;
   color: var(--text3); font-family: var(--font-body); font-size: 13px; font-weight: 600;
   cursor: pointer;
 }
-/* Desktop: compact chips sized to their label instead of stretching across the card. */
+.wizard-unit-opt + .wizard-unit-opt { border-left: 1px solid var(--border); }
+/* Desktop: a compact joined control sized to its labels instead of stretching across the card. */
 @media (min-width: 701px) {
-  .wizard-unit-opt { flex: 0 0 auto; min-width: 72px; min-height: 34px; padding: 6px 16px; font-size: 12px; }
+  .wizard-unit-seg { align-self: flex-start; }
+  .wizard-unit-opt { flex: 0 0 auto; min-width: 72px; min-height: 36px; padding: 6px 16px; font-size: 12px; }
 }
-.wizard-unit-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.wizard-unit-opt.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+.wizard-unit-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.wizard-unit-opt.active { background: var(--accent-dim); color: var(--accent); }
 
 /* Step 2 checks: line icon + text, descriptions in the sans font (like Learn cards). */
 .wizard-opt-check { flex-direction: row; align-items: flex-start; gap: 12px; }
@@ -412,6 +435,6 @@ a.token-action-btn:focus {
    the accent border reads as "selected" on a card that was just deselected. */
 @media (hover: hover) {
   .wizard-opt:hover { border-color: var(--accent); }
-  .wizard-unit-opt:hover { border-color: var(--accent); }
+  .wizard-unit-opt:not(.active):hover { color: var(--text); }
   .wizard-adv-toggle:hover { color: var(--text); }
 }
