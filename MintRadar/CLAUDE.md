@@ -1669,6 +1669,13 @@ blocks only non-public hosts).
   isn't outweighed. They use `--font-mono-data` (a *system* mono stack, not the self-hosted
   JetBrains Mono), so 500 renders as Medium only where the OS mono font has it and otherwise as 400;
   the computed weight is 500 either way. No font files added.
+- **Mint icon (icon only for tracked mints, no third-party icon fetch)** — the MINT cell shows a
+  `MintFavicon` tile (36px desktop / 32px mobile, `.trc-mint-icon`) left of name + hostname, ONLY when
+  the token's mint is in the known-mints list (`mintInfo`); it uses the same component and
+  `/api/mint/icon` backend proxy as the Dashboard, with the initials tile when the mint has no icon.
+  For an untracked mint the token's mint URL is chosen by whoever made the token, so NO icon element
+  is rendered and nothing is requested for it — never build an icon URL from the token. Covered by
+  the "Token Inspector mint icon" e2e tests.
 - **Display rules** — offline line "This mint didn't answer its last check, so checking or
   redeeming may not work." shows above the Check row only for a tracked mint with `online ===
   false` (not unknown, not untracked). The Amount cell hides its unit label when
@@ -2000,6 +2007,13 @@ The codebase is at **0 ESLint errors** (frontend + backend). Keep it that way �
 - **GOTCHA — `manualChunks` is dead in Vite 8 (rolldown):** the compat layer silently ignores group changes (builds byte-identical output). Chunking lives in `rollupOptions.output.advancedChunks.groups` — first matching group wins, order matters.
 - **`vendor-immer` group must stay:** immer is shared by the watchlist store (eager, via zustand middleware) and recharts (lazy, via @reduxjs/toolkit — a second nested copy exists). Without its own group it lands inside `vendor-charts` and drags the whole chart bundle back into the initial modulepreload set. If a new eager module ever shares a dep with recharts, give that dep its own group too — verify with: `grep vendor-charts dist/index.html` (must NOT appear in modulepreload).
 - **GOTCHA — `vite.config.js` is a compiled artifact:** `tsc -b` emits it from `vite.config.ts` (tsconfig.node.json has no `noEmit`), and Vite resolves `.js` BEFORE `.ts`. Always edit `vite.config.ts`, then run `npm run build` to regenerate the `.js` — editing only the `.ts` without a build means Vite still uses the stale `.js`.
+
+## Stale-build chunk-load recovery (2026-09-29)
+
+After a deploy the previous build's hashed lazy chunks (`Stats-<hash>.js`, …) are gone (`rm -rf dist/assets/*` in `deploy.yml`, nginx returns 404 for a missing `.js`), so a tab still running the old build fails on `import()` with "Failed to fetch dynamically imported module".
+- `src/utils/chunkReload.ts` — `isChunkLoadError()` (message regex) + `claimAutoReload()` (sessionStorage timestamp `mintradar_chunk_reload_at`, max ONE automatic reload per 60s, try/catch → refuses if storage unavailable) + `reloadOnChunkError()`.
+- `src/components/RouteError.tsx` is the root route's `errorElement` (App.tsx): friendly message + Reload button, no stack/"Hey developer" text. On a chunk error it auto-reloads once; a second failure inside 60s (or any non-chunk error) just shows the screen. `main.tsx` also handles Vite's `vite:preloadError` the same way.
+- Tests: `src/__tests__/chunkReload.test.ts`, `e2e/chunk-load-recovery.spec.ts` (aborts the dev `/src/pages/Stats.tsx` request). Client-side only — deploy-side (keeping old assets, SW) is unchanged.
 
 ## Key rules
 - **Before starting ANY new task, check `git branch --show-current`.** If it isn't `main`, find out why (an in-progress PR still awaiting merge vs. a forgotten checkout left over from a prior session) before committing anything. A 2026-08-05 session left a feature branch checked out after its PR had already merged; two unrelated follow-up fixes got committed there instead of on `main` and had to be recovered via a second PR (#54).

@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { createBrowserRouter } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
+import RouteError from '@/components/RouteError'
 import Dashboard from '@/pages/Dashboard'
 import Watchlist from '@/pages/Watchlist'
 import NutExplorer from '@/pages/NutExplorer'
@@ -20,6 +21,7 @@ const lazyFallback = (
 export const router = createBrowserRouter([
   {
     element: <AppShell />,
+    errorElement: <RouteError />,
     children: [
       { index: true, element: <Dashboard /> },
       { path: 'watchlist', element: <Watchlist /> },
