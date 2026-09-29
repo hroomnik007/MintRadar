@@ -6,7 +6,7 @@ import { installApiMocks, mockRelays } from './fixtures/mocks'
 // (var(--surface) is byte-equal to --bg2, as shipped briefly in 944f346) the
 // only thing drawing the shape is a faint --border hairline and the corners
 // read as square. Its fill must contrast with the bar, like .filter-btn /
-// .sort-segment beside it, and its radius must match the stat cards.
+// .sort-segment beside it, and its radius must be the shared --radius-m token (same as the stat cards).
 test('search input is a visibly-bounded rounded control', async ({ page }) => {
   await mockRelays(page)
   await installApiMocks(page)
@@ -19,17 +19,22 @@ test('search input is a visibly-bounded rounded control', async ({ page }) => {
     const input = getComputedStyle(document.querySelector('.search-input')!)
     const bar = getComputedStyle(document.querySelector('.dashboard-controls')!)
     const filterBtn = getComputedStyle(document.querySelector('.dashboard-controls .filter-btn')!)
-    const statCard = getComputedStyle(document.querySelector('.stat-card')!)
+    // .stat-card is only rendered on Stats now; probe the shared radius token directly.
+    const probe = document.createElement('div')
+    probe.style.borderRadius = 'var(--radius-m)'
+    document.body.appendChild(probe)
+    const tokenRadius = getComputedStyle(probe).borderTopLeftRadius
+    probe.remove()
     return {
       inputBg: norm(input.backgroundColor),
       barBg: norm(bar.backgroundColor),
       filterBtnBg: norm(filterBtn.backgroundColor),
       inputRadius: input.borderTopLeftRadius,
-      statCardRadius: statCard.borderTopLeftRadius,
+      tokenRadius,
     }
   })
 
   expect(r.inputBg).not.toBe(r.barBg)          // must contrast with the bar
   expect(r.inputBg).toBe(r.filterBtnBg)         // same fill as its row neighbours
-  expect(r.inputRadius).toBe(r.statCardRadius)  // corner radius matches stat cards
+  expect(r.inputRadius).toBe(r.tokenRadius)     // corner radius is the shared --radius-m
 })

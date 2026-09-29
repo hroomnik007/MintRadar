@@ -100,7 +100,7 @@ test.describe('MintCard — copy & reduced badge set', () => {
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card').first()).toBeVisible()
     // Degraded (offline 24h+) mints are hidden by default — reveal them first.
-    await page.locator('.degraded-note').getByRole('button', { name: 'Show' }).click()
+    await page.locator('.degraded-note').click()
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
     await expect(card(page, 'Charlie Mint').locator('.latency-label')).toHaveText('LAST SEEN')

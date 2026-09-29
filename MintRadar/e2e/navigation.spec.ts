@@ -28,7 +28,7 @@ test.describe('Primary navigation', () => {
     // Tools
     await page.getByRole('link', { name: 'Tools' }).click()
     await expect(page).toHaveURL(/\/tools$/)
-    await expect(page.getByText('Token Inspector')).toBeVisible()
+    await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
 
     // Back to Dashboard
     await page.getByRole('link', { name: 'Dashboard' }).click()
@@ -43,7 +43,7 @@ test.describe('Primary navigation', () => {
     await expect(page.getByRole('link', { name: 'Tools' })).toBeVisible()
     await page.getByRole('link', { name: 'Tools' }).click()
     await expect(page).toHaveURL(/\/tools$/)
-    await expect(page.getByText('Token Inspector')).toBeVisible()
+    await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
 
     await page.getByRole('link', { name: 'Stats' }).click()
     await expect(page).toHaveURL(/\/stats$/)

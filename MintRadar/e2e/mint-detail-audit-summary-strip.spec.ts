@@ -37,7 +37,7 @@ test('fully audited: strip shows Mints / Melts / Recent success rate / Last chec
   // count, so it reads in the same higher-is-better direction as every
   // other "X/Y" ratio in the app (e.g. Online Mints "55/56").
   await expect(cell('Recent success rate').locator('.audit-summary-main')).toHaveText('98 / 100')
-  await expect(cell('Recent success rate').locator('.audit-summary-sub')).toHaveText('ok')
+  await expect(cell('Recent success rate').locator('.audit-summary-sub')).toHaveText('98% ok')
   // 2/100 errors = 2% error rate → auditReliabilityColor()'s <=5% bucket → var(--fast) green.
   await expect(cell('Recent success rate').locator('.audit-summary-value')).toHaveCSS('color', 'rgb(92, 201, 163)')
   await expect(cell('Last checked').locator('.audit-summary-value')).toHaveText('3h ago')
@@ -59,7 +59,7 @@ test('high error rate: low success count, red', async ({ page }) => {
   // 97 errors / 100 → 3 successes / 100, not "97 / 100" — the number always
   // means "how many went right", so a bad mint shows a small number here.
   await expect(recent.locator('.audit-summary-main')).toHaveText('3 / 100')
-  await expect(recent.locator('.audit-summary-sub')).toHaveText('ok')
+  await expect(recent.locator('.audit-summary-sub')).toHaveText('3% ok')
   // 97/100 errors = 97% error rate → auditReliabilityColor()'s >25% bucket → var(--slow) red.
   await expect(recent.locator('.audit-summary-value')).toHaveCSS('color', 'rgb(219, 106, 93)')
 
