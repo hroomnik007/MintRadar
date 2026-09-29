@@ -66,7 +66,7 @@ test.describe('Dashboard default view', () => {
     const note = page.locator('.degraded-note')
     await expect(note).toContainText('1 mints hidden (offline 24h+)')
 
-    await note.getByRole('button', { name: 'Show' }).click()
+    await note.click()
     await expect(page.locator('.card-name', { hasText: 'Golf Mint' })).toBeVisible()
     await expect(page.locator('.card-name', { hasText: 'Charlie Mint' })).toHaveCount(0)
   })

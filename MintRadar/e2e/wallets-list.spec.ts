@@ -20,9 +20,9 @@ test('Nutshell lives in a "Run your own mint" subsection, not the main wallet gr
   await page.goto('/wallets')
   await page.waitForSelector('.wallet-card')
 
-  // Main grid: 8 consumer wallets, no Nutshell.
+  // Main grid: 9 consumer wallets, no Nutshell.
   const mainGrid = page.locator('.wallets-grid').first()
-  await expect(mainGrid.locator('.wallet-card')).toHaveCount(8)
+  await expect(mainGrid.locator('.wallet-card')).toHaveCount(9)
   await expect(mainGrid.locator('.wallet-card', { hasText: 'Nutshell' })).toHaveCount(0)
 
   // Self-host section below the grid carries Nutshell (same card style).

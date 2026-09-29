@@ -114,6 +114,22 @@ async function mockReviewRelays(page: Page): Promise<void> {
 test.beforeEach(async ({ page }) => {
   await mockReviewRelays(page)
   await installApiMocks(page)
+  // The Reviews list is built from the DB-backed endpoint (live relay-only events
+  // are no longer added, so the page count matches the card). Serve the same corpus
+  // there; the relay stub above still supplies the kind:0 profiles for named actors.
+  await page.route('**/api/mints/nostr-reviews**', route => route.fulfill({
+    json: ACTORS.map(a => {
+      const rating = a.reviewEvent.tags.find(t => t[0] === 'rating')?.[1]
+      return {
+        id: a.reviewEvent.id,
+        pubkey: a.pubkey,
+        content: a.reviewEvent.content,
+        rating: rating !== undefined ? Number(rating) : null,
+        createdAt: a.reviewEvent.created_at,
+        source: 'nostr',
+      }
+    }),
+  }))
   await page.goto(detailPath)
   await expect(page.locator('.md-tabs')).toBeVisible()
   await page.locator('.md-tab', { hasText: 'Reviews' }).click()

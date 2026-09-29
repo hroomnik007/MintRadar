@@ -26,7 +26,7 @@ test('Audit tab: summary strip "Recent success rate" matches the Reliability Sco
   const recentCell = strip.locator('.audit-summary-cell', { hasText: 'Recent success rate' })
   // 3 errors / 100 swaps → the strip's main number is successes, not errors.
   await expect(recentCell.locator('.audit-summary-main')).toHaveText('97 / 100')
-  await expect(recentCell.locator('.audit-summary-sub')).toHaveText('ok')
+  await expect(recentCell.locator('.audit-summary-sub')).toHaveText('97% ok')
 
   // The all-time body paragraphs were removed — only the heading, the four stat
   // tiles and their ⓘ tooltips remain.

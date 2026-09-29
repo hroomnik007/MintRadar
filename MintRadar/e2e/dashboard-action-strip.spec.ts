@@ -14,8 +14,8 @@ test.describe('Dashboard newcomer action strip', () => {
 
     const strip = page.locator('.dash-actions')
     await expect(strip.locator('.dash-action')).toHaveCount(2)
-    await expect(strip.getByRole('button', { name: 'Help me pick' })).toBeVisible()
-    await expect(strip.getByRole('button', { name: 'I have a token' })).toBeVisible()
+    await expect(strip.getByRole('button', { name: 'Find a mint' })).toBeVisible()
+    await expect(strip.getByRole('button', { name: 'Inspect a token' })).toBeVisible()
 
     const explainer = page.locator('.grid-score-explainer')
     await expect(explainer).toHaveText('We score how it runs. They score how it went. You pick.')
@@ -44,8 +44,8 @@ test.describe('Dashboard newcomer action strip', () => {
     await page.goto('/')
     await expect(page.locator('.mint-card').first()).toBeVisible()
 
-    const pick = page.getByRole('button', { name: 'Help me pick' })
-    const token = page.getByRole('button', { name: 'I have a token' })
+    const pick = page.getByRole('button', { name: 'Find a mint' })
+    const token = page.getByRole('button', { name: 'Inspect a token' })
     await expect(pick).toBeVisible()
     await expect(token).toBeVisible()
 
@@ -64,23 +64,23 @@ test.describe('Dashboard newcomer action strip', () => {
     expect(explBox.y).toBeLessThan(searchBox.y)
   })
 
-  test('Help me pick lands on /tools#pick with the wizard in view', async ({ page }) => {
+  test('Find a mint lands on /tools#pick with the wizard in view', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 })
     await page.goto('/')
     await expect(page.locator('.mint-card').first()).toBeVisible()
 
-    await page.getByRole('button', { name: 'Help me pick' }).click()
+    await page.getByRole('button', { name: 'Find a mint' }).click()
     await expect(page).toHaveURL(/\/tools#pick$/)
 
     await expect(page.locator('#pick').getByText('Best Mint for Me')).toBeInViewport()
   })
 
-  test('I have a token lands on /tools#token with the inspector in view', async ({ page }) => {
+  test('Inspect a token lands on /tools#token with the inspector in view', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 })
     await page.goto('/')
     await expect(page.locator('.mint-card').first()).toBeVisible()
 
-    await page.getByRole('button', { name: 'I have a token' }).click()
+    await page.getByRole('button', { name: 'Inspect a token' }).click()
     await expect(page).toHaveURL(/\/tools#token$/)
 
     await expect(page.locator('#token').getByText('Token Inspector')).toBeInViewport()
