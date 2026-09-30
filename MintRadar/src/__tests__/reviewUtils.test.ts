@@ -187,31 +187,23 @@ describe('processReviewEvents', () => {
     expect(processReviewEvents([])).toEqual([])
   })
 
-  it('deduplicates, parses, and sorts in one call (rating-less events kept)', () => {
+  it('deduplicates, parses, sorts, and drops empty events', () => {
     const events: ReviewEvent[] = [
-      // Two events from same pubkey — only the newest (created_at 300) should survive
       makeEvent({ pubkey: 'alice', created_at: 100, content: '[3/5] old alice' }),
       makeEvent({ pubkey: 'alice', created_at: 300, content: '[5/5] new alice' }),
-      // Rating-less, comment-less endorsement — kept, counted as a review
       makeEvent({ pubkey: 'bob', created_at: 200, content: '' }),
-      // Valid event from carol
       makeEvent({ pubkey: 'carol', created_at: 150, content: 'Just text, no rating' }),
     ]
 
     const result = processReviewEvents(events)
 
-    // alice deduplicated (newest kept); bob + carol kept
-    expect(result).toHaveLength(3)
-    // sorted newest-first: alice (300), bob (200), carol (150)
+    expect(result).toHaveLength(2)
     expect(result[0]!.pubkey).toBe('alice')
     expect(result[0]!.rating).toBe(5)
     expect(result[0]!.comment).toBe('new alice')
-    expect(result[1]!.pubkey).toBe('bob')
+    expect(result[1]!.pubkey).toBe('carol')
     expect(result[1]!.rating).toBeNull()
-    expect(result[1]!.comment).toBe('')
-    expect(result[2]!.pubkey).toBe('carol')
-    expect(result[2]!.rating).toBeNull()
-    expect(result[2]!.comment).toBe('Just text, no rating')
+    expect(result[1]!.comment).toBe('Just text, no rating')
   })
 
   it('keeps reviews from many distinct pubkeys', () => {
