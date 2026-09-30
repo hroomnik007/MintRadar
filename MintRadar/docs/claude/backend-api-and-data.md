@@ -1,0 +1,135 @@
+# MintRadar — Backend API, DB schema, stats rules, cron jobs (split from CLAUDE.md)
+> Note: references like "see X below" in this file may point into another docs/claude file; the map is the index in CLAUDE.md.
+## DB Tables
+
+### mints
+```
+url TEXT PRIMARY KEY
+name TEXT
+discovered_at TIMESTAMPTZ DEFAULT NOW()
+is_known BOOLEAN DEFAULT FALSE
+icon_url TEXT
+version TEXT
+nut_count INTEGER
+tos_url TEXT
+description_long TEXT
+nuts_limits JSONB
+audit_n_mints INTEGER
+audit_n_melts INTEGER
+audit_n_errors INTEGER
+audit_checked_at TIMESTAMPTZ    -- audit.8333.space's own `updated_at` for this mint
+audit_synced_at TIMESTAMPTZ     -- when OUR 6h discovery cron last wrote the audit_* cols (drives Audit tab "Last checked X ago")
+audit_avg_time_ms DOUBLE PRECISION  -- mean time_taken (ms) over OK swaps in the same rolling window as audit_recent_total/errors — see mint_audit_swaps below. Backend-only as of 2026-09-12 (not yet surfaced in the Audit tab UI).
+last_reliability_score INTEGER
+last_error TEXT
+reliability_score_7d_ago INTEGER      -- Reliability Score Movers rollup (see Cron jobs)
+reliability_score_30d_ago INTEGER
+reliability_movers_checked_at TIMESTAMPTZ
+```
+
+### mint_history
+```
+id BIGSERIAL PRIMARY KEY
+url TEXT REFERENCES mints(url) ON DELETE CASCADE
+online BOOLEAN NOT NULL
+latency_ms INTEGER
+checked_at TIMESTAMPTZ DEFAULT NOW()
+```
+Index: (url, checked_at DESC)
+
+### mint_version_history
+```
+id BIGSERIAL PRIMARY KEY
+url TEXT REFERENCES mints(url) ON DELETE CASCADE
+version TEXT NOT NULL
+first_seen_at TIMESTAMPTZ DEFAULT NOW()
+UNIQUE (url, version)
+```
+
+### mint_reviews (added 2026-08-30 — review-load perf work)
+```
+url TEXT REFERENCES mints(url) ON DELETE CASCADE
+pubkey TEXT NOT NULL
+event_id TEXT NOT NULL
+rating INTEGER            -- null for rating-less endorsement events
+comment TEXT NOT NULL DEFAULT ''   -- capped at 2000 chars on write
+created_at BIGINT NOT NULL         -- nostr event created_at (unix seconds)
+PRIMARY KEY (url, pubkey)          -- one row per author per mint, newest wins
+```
+Index: (url, created_at DESC). Populated by the 6h reviews sync (`backend/src/reviewsSync.ts`).
+Rollup columns on `mints`: `review_count INTEGER`, `review_avg_rating REAL`, `reviews_checked_at TIMESTAMPTZ`.
+`review_count_7d_ago INTEGER` + `review_count_7d_ago_at TIMESTAMPTZ` — rolling ~1-week-ago `review_count` snapshot, advanced once a day (`reviewSurgeRollup.ts`); feeds the informational "recent review surge" sybil flag (see Reviews Feature below).
+
+### mint_audit_swaps (added 2026-09-12 — per-swap audit.8333.space detail)
+```
+url TEXT REFERENCES mints(url) ON DELETE CASCADE
+swap_id BIGINT NOT NULL           -- audit.8333.space's own per-swap id
+to_url TEXT
+amount INTEGER
+fee INTEGER
+created_at TIMESTAMPTZ
+time_taken_ms DOUBLE PRECISION
+state TEXT NOT NULL
+error TEXT                        -- nullable
+PRIMARY KEY (url, swap_id)
+```
+Index: (url, created_at DESC). Populated by the same 6h discovery cron that already fetched
+`GET /swaps/mint/{id}` for the rolling `audit_recent_total`/`audit_recent_errors` counters
+(`discovery.ts`'s `fetchRecentSwaps`/`persistMintAuditSwaps`) — that call previously read only
+the `state` field and discarded everything else; it now parses the full item (confirmed live
+shape: `id, from_id, to_id, from_url, to_url, amount, fee, created_at, time_taken, state, error`)
+via `parseAuditSwapItem()` and stores the last ≤100 swaps per mint. **Fully replaced** (DELETE +
+batched multi-VALUES INSERT + the `mints` summary-column UPDATE, all in one transaction — same
+atomic-per-mint-replace pattern as `mint_reviews`/`persistMintReviews`) every cycle, so this table
+only ever holds each mint's *current* window, not swap history across cycles. `computeSwapStats()`
+derives `total`/`errors` (unchanged from before) plus the new `avgTimeMs` (mean `time_taken` over
+`state === 'OK'` swaps with a known time; `null` if none). Parsing is defensive — only `id`/`state`
+are required, a missing/wrong-typed `time_taken`/`to_url`/etc. degrades that field to `null`
+instead of dropping the swap or failing the cron. **Backend-only as of this addition** — no Mint
+Detail UI reads this table or `auditAvgTimeMs` yet; the frontend still never calls audit.8333.space
+directly (SSRF surface unchanged). Tests: `backend/src/__tests__/discoveryAuditSwaps.test.ts`
+(parser + `computeSwapStats` + `persistMintAuditSwaps` transaction shape, using two real
+anonymized sample payloads captured from a live diagnostic GET against the Minibits mint id) +
+`integration/mints-swaps.test.ts`.
+
+## Backend API
+- GET /health — health check
+- GET /api/mints/known — all mints with online status, latency, reliability score, degraded flag (TTL cached 60s)
+- GET /api/mints/history?url=&period={24h|7d|30d|90d} — bucketed uptime/latency segments + prev period trend
+- GET /api/mints/version-history?url= — per-mint software version timeline + latest global version
+- GET /api/mints/daily-uptime?url= — daily uptime counts for last 30 days
+- GET /api/mints/swaps?url= — the audit.8333.space rolling-window swap detail (`mint_audit_swaps`, ≤100 rows) for one mint plus `avgTimeMs`. Added 2026-09-12, deliberately kept OUT of `/api/mints/known` (which is fetched on every Dashboard load for every mint — embedding the full per-mint swap list there would multiply that payload ~65x for a feature only a not-yet-built Mint Detail view would use); `/api/mints/known` gains only the small scalar `auditAvgTimeMs`. Same url validation (`https://`, `MAX_URL_LENGTH`, `isSafeUrl`) as `/api/mints/history`\|`version-history`\|`daily-uptime`. `Cache-Control: max-age=300`. No frontend UI reads this endpoint yet.
+- GET /api/stats — network-wide stats: totalMints, onlineMints, offlineMints, avgReliabilityScore, avgLatency24h, reliabilityDistribution, nutAdoption, top5ByReliabilityScore
+- GET /api/stats/reliability-movers?period={7d|30d} — Reliability Score risers/fallers (Stats page). As of 2026-09-01 a plain read of `mints` (`last_reliability_score` + `reliability_score_{7,30}d_ago` rollup columns), NOT the old two `DISTINCT ON` passes over all of `mint_history` (~2.5s cold — the "old" CTE had no time bound and `reliability_score IS NOT NULL` was unindexed). Rollup is refreshed by `refreshReliabilityMoversRollup()` (`backend/src/reliabilityMoversRollup.ts`) on the 5-min probe cron + ~15s after boot; partial index `idx_mint_history_score_checked ON mint_history(url, checked_at DESC) WHERE reliability_score IS NOT NULL` backs its point-in-time lookups. In-memory cache TTL 10min (own `RELIABILITY_MOVERS_CACHE_TTL`, not `KNOWN_MINTS_CACHE_TTL`). +/-3 threshold + top-3 ranking in `reliabilityMovers.ts` (`computeReliabilityMovers`). Frontend panel (`src/components/stats/ReliabilityMoversPanel.tsx`) takes `loading`/`refreshing` props — skeleton while pending, `keepPreviousData` across the 7d/30d toggle; "No data yet" shows only for a settled-but-empty result.
+- GET /api/mint/probe?url= — on-demand probe of a single mint URL (unauthenticated, SSRF-guarded). **Response scope (2026-09-07 audit L5):** for a mint already in `mints` the full live `/v1/info` + keysets are returned (Mint Detail needs it; the cron already probes those hosts continuously). For any OTHER url only `online` / `latencyMs` / `checkedAt` + a stripped `info` (`name`, `version`, `nuts` with keys only — enough for the Dashboard submit preview) are returned, and `keysets: null` — so it can't be used as a general "fetch and echo the JSON body of arbitrary public host X" oracle.
+<!-- moved to CLAUDE.md, Hard invariants -->
+  - **2026-09-08 (commit `23fd95e`), driven by a temporary diagnostic-logging run** (65/94 favicons were 404-ing → frontend monogram; 54 = NULL `icon_url` in DB, 5 = a 1–2 MB logo, 2 = a real image served as `application/octet-stream`, rest = upstream 429/404):
+    - **Magic-bytes fallback** — `sniffRasterImageType(buf)` (exported): when the declared `Content-Type` is **not** in `ALLOWED_CONTENT_TYPES`, sniff the leading bytes for PNG (`89 50 4E 47 0D 0A 1A 0A`), JPEG (`FF D8 FF`), GIF (`GIF8`), WebP (`RIFF…WEBP`) and accept with the sniffed type. **SVG stays explicitly rejected on this path** — an `<?xml` / `<svg` guard runs before the signature checks (the M1 stored-XSS decision: a direct nav to the proxy would render SVG as a document on our origin).
+    - **`MAX_ICON_BYTES` 256 KB → 512 KB.** The 1–2 MB outliers still fall back to the monogram; no native image dependency (`sharp`) was added.
+  - Verified live: `cashu.cz` → 200 `image/webp`, `mint.chorus.community` → 200 `image/jpeg`. Tests in `backend/src/__tests__/mintIcon.test.ts`.
+- POST /api/mint/submit — submit new mint URL { url: string }, rate limited 20/IP/hr
+- POST /api/mints/discover — batch insert discovered URLs `{ urls: string[], source?: 'auto' | 'bulk' }`. **Two independent rate-limit budgets as of 2026-09-11**, split by the `source` field so the automatic background NIP-87 scan (`useNostrDiscovery.ts`, fires once per login/page-load) can't exhaust the same 10/hr/IP budget a user's explicit Dashboard "Bulk submit" needs — before this split both shared one counter. `source: 'auto'` (default when the field is missing/unrecognized — the smaller, safer default) → `DISCOVER_AUTO_RATE_LIMIT_MAX` 3/IP/hr; `source: 'bulk'` (sent by `Dashboard.tsx`'s `handleBulkSubmit`) → `DISCOVER_BULK_RATE_LIMIT_MAX` 10/IP/hr, unchanged from the old shared limit. A 429 sets `Retry-After` (seconds until the exhausted budget's window resets). Frontend: the Bulk submit tab shows a static "Up to 100 mints per submission, max 10 submissions per hour" hint (manually kept in sync with `MAX_DISCOVER_BATCH`/`DISCOVER_BULK_RATE_LIMIT_MAX` — no shared workspace, same caveat as `testMints.ts`/`auditScore.ts`), and a 429 renders one banner ("Rate limit reached — try again in \<n\> minutes" from `Retry-After`, or a generic "try again later" without it) instead of repeating the raw error per row; the batch's rows fall back to "pending" (not "failed") since nothing was actually processed. Tests: `backend/src/__tests__/security/rate-limiting.test.ts` + `integration/mints-discover.test.ts` (both budgets independent, default-source safety, Retry-After present); `e2e/dashboard-bulk-submit.spec.ts` (hint text, success path, 429 banner ± Retry-After, banner clears on modal reopen) + `e2e/nostr-discovery-source.spec.ts` (auto scan tags its request `source: 'auto'`).
+- GET /api/og/mint?url= — bot-only OG HTML fragment for /mint/:url, routed here by nginx UA-sniffing (see "OG tags for /mint/:url" under Security & Infrastructure Gotchas); always 200, never 404/500
+- GET /api/mints/nostr-reviews?url= — **DB read from `mint_reviews`** (as of 2026-08-30; previously a live per-request kind:38000 relay query, ~3s — the biggest Mint Detail load cost). Serves the rows the 6h reviews sync populates; `Cache-Control: max-age=120`. Still the secondary source alongside the frontend's own live fetch — see "Reviews Feature" below.
+- `/api/mints/known` also now carries `reviewCount` / `reviewAvgRating` (from the `mints` rollup columns) so Mint Detail's Community-rating tile renders immediately without waiting on any relay.
+- POST /api/notifications/subscribe — NIP-98-authed. Body `{ mintUrl, notifyOnDown, notifyOnUp, relays: string[1..10] }`. All writes hard-scoped to the signature-verified `event.pubkey` (no IDOR). Rate limit **30/hr/pubkey**. **Per-pubkey caps** (`index.ts`, added 2026-09-07): `MAX_SUBSCRIPTIONS_PER_PUBKEY = 50` (new mint rows past this → **409** with an actionable message; updating an existing row is always allowed) and `MAX_DISTINCT_RELAYS_PER_PUBKEY = 25` (union of stored `relays` across all the pubkey's rows; over → **400**). Both are far above legit use (a user watches single-/low-double-digit mints and reuses one relay list) and exist because `notifySubscribers` fans a gift-wrap signed by `NOTIFICATION_SERVICE_NSEC` out to `row.relays ∪ NOTIFICATION_RELAYS` on every mint transition — without a total cap one free pubkey could turn a flapping mint into amplified traffic and get the service key relay-banned. Residual (not closed by per-pubkey caps): a **sybil-key** attacker (N free pubkeys, one flapping mint) — needs per-mint subscriber caps or per-IP creation accounting; tracked, not yet done. **Log-injection (2026-09-07 audit L1, commit `ac7c174`):** every relay URL from `relays[]` interpolated into `validateRelays()`'s `console.warn` lines is now run through `sanitizeLogValue()` (control chars → U+FFFD, length-capped) — run-1 #5 had fixed only the `/unsubscribe` path.
+- POST /api/notifications/unsubscribe — NIP-98-authed. Body `{ mintUrl }`, normalised via `new URL()` + `normalizeUrl()` before the DELETE + log line. 30/hr/pubkey.
+- **NIP-98 replay guard (`nip98Auth.ts`, 2026-09-07 audit defence-in-depth):** `authenticateNip98` keeps an in-process `Map` of accepted event ids (TTL 120s, > NIP-98's ±60s `created_at` window) and rejects the second sighting of an id with **401 `NIP-98 token already used`**. Closes the "capture a token, resend within 60s with a swapped body to overwrite the victim's own subscription" window (the `payload` body-hash tag is optional and the client doesn't send it, so nothing else binds a token to its request body). Same shape as the IP rate limiter's Map+sweep; process-local, so a multi-instance backend would need this in Redis. A token id is the hash of `[pubkey, created_at, kind, tags, content]` (signature-independent), so a genuine client sending N requests/second must vary `created_at` — real clients mint a fresh token per request anyway. `_resetNip98NonceCache()` test hook.
+- **`NOTIFICATION_SERVICE_NSEC` IS set and active in production** (verified 2026-09-07: container env has it, backend logs `[notify-service] service identity loaded (pubkey d03c080f…)` + publishes the "MintRadar Alerts" kind:0). So server-side DM notifications (`notifySubscribers` in `nostrService.ts`, fired on up/down transitions from `probeMintToDb`, 60-min per-direction cooldown) are LIVE, not dormant. **Atomic cooldown (2026-09-07 audit, commit `dc4d993`):** the old SELECT-check → send DM → UPDATE `last_notified` sequence let two overlapping probe cycles both pass the check and both send a duplicate DM. Replaced with a single conditional `UPDATE notification_subscriptions SET last_notified_<dir>_at = now() WHERE mint_url = $1 AND notify_on_<dir> = true AND (last_notified_<dir>_at IS NULL OR last_notified_<dir>_at < now() - INTERVAL '<COOLDOWN_MINUTES> minutes') RETURNING pubkey, relays, …` that **claims** the slot in the DB — DMs go only to the rows it returns, the loser of a race gets zero rows. A claim whose DM never goes out (all relays failed / `wrapEvent` threw) is released (`last_notified_<dir>_at` → NULL, guarded on the exact timestamp set so a concurrent successful claim is never clobbered) so the next cycle retries. `COOLDOWN_MS` (JS) → `COOLDOWN_MINUTES` (one source, used in the SQL interval).
+
+## /api/stats calculation rules
+- totalMints: **every row in `mints`** — the handler's query 1 is a plain `SELECT … FROM mints m` with **no `WHERE`**, and `totalMints = rows.length`. This is the same full set `/api/mints/known` returns (also unfiltered), so **`/api/stats.totalMints === /api/mints/known.length`** by construction. Integration test `backend/src/__tests__/integration/known-count-consistency.test.ts` locks that invariant (added 2026-09-08 — see "Dashboard Mint Count Distinction" below). Do NOT add a `WHERE is_known` / `.filter()` to one endpoint's count without the other.
+- onlineMints: mints where latest online = true
+- offlineMints: mints where latest online = false (NOT `total - online` — never-probed `online = null` rows count toward neither)
+- avgReliabilityScore: average of (last_reliability_score ?? 0) for online mints only
+- reliabilityDistribution: low/moderate/high counts from online mints only (same filter as avgReliabilityScore)
+- top5ByReliabilityScore: excludes `isTestMint()` URLs (backend copy in `backend/src/testMints.ts`)
+
+## Cron jobs
+- Every 5min: probe all mints in DB → write to mint_history, update mints metadata + last_reliability_score, **then `refreshReliabilityMoversRollup()`** (`backend/src/reliabilityMoversRollup.ts`): one `UPDATE mints` recomputing `reliability_score_{7,30}d_ago` from `mint_history` (index-backed per-mint `LIMIT 1` lookups). Single-flight, never throws. Also primed ~15s after boot. Feeds `GET /api/stats/reliability-movers`.
+- Every 6h: NIP-87 discovery from `DISCOVERY_RELAYS` + audit.8333.space API → INSERT new mints, **then `refreshAllMintReviews()`** (`backend/src/reviewsSync.ts`): per-mint kind:38000 fetch (broad `REVIEW_SYNC_RELAYS`, 8s timeout, concurrency 3) → upsert into `mint_reviews` (newest event per pubkey only; a cycle that did not see a row does not delete it) and set `mints.review_count`/`review_avg_rating` from the stored rows, not from this cycle's length. Single-flight (`isReviewSyncRunning`). `wss://relay.nostr.net` is back on `DISCOVERY_RELAYS` and `REVIEW_SYNC_RELAYS` as of 2026-09-27; it stays off `REVIEW_READ_RELAYS`.
+- Daily 3:15am: `pruneUnvalidatedMints()` — deletes rows discovered >24h ago that NEVER had a successful probe (covers any insert path that skips `isValidCashuMint()`).
+- Daily 3:45am: refresh `software_versions` cache from the GitHub Releases API (`cashubtc/nutshell`, `cashubtc/cdk`) — see Reliability Score calculation above
+- Daily 4:45am: `refreshReviewSurgeBaseline()` (`backend/src/reviewSurgeRollup.ts`) — advances the rolling `review_count_7d_ago` snapshot for any mint whose snapshot is missing or ≥7 days old (skips mints whose `review_count` is still NULL, so the first reviews-sync never looks like a surge). Also primed 60s after boot. Single-flight, never throws. Feeds the `reviewSurge` field on `/api/mints/known`.
+- Daily 4:15am: `revalidateMints()` (`backend/src/prober.ts`) — **recurring Cashu-content revalidation** (fix for the "validate once at submit, then DNS/redirect-repoint anywhere" confused-deputy finding). Per mint, a STRONGER check than the 5-min probe: `/v1/info` must have a **non-empty** `nuts` object AND `/v1/keys` must return ≥1 keyset. Tri-state result — `ok` / `not-a-mint` / `unreachable`. `not-a-mint` (a repoint target: HTML page, redirect, `{"nuts":{}}` stub, 4xx) sets `mints.invalid_since = COALESCE(invalid_since, NOW())`; `ok` clears it; `unreachable` (5xx / timeout / DNS) leaves it untouched so a genuine multi-day outage never counts. The 5-min probe (`probeMintToDb`) also maintains `invalid_since` for the reachable-but-not-a-mint case (`lastError` ∈ {`Invalid Cashu response`, `Invalid JSON response`, `HTTP 4xx`}). Any mint with `invalid_since` older than **`REVALIDATION_REAP_DAYS` (7)** is `DELETE`d — removed from the probe rotation entirely, bounding the confused-deputy window from "forever" to ≤7 days. The 5-min probe already flips such a mint offline within minutes (dropping it from recommendations / marking it degraded); this job is what eventually removes it. **The lenient `isValidCashuMint()` submit/discovery gate is deliberately NOT tightened** — only this new sweep uses the stronger criteria, so an unusual-but-real mint is never rejected at submit time.
+

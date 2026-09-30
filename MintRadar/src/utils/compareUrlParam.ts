@@ -1,7 +1,7 @@
 import type { KnownMint } from '@/hooks/useKnownMints'
 
 // Shared `?compare=url1,url2[,url3,url4]` URL persistence for the Compare
-// feature (Dashboard + Watchlist) — see "Compare feature" in CLAUDE.md.
+// feature (Dashboard + Watchlist) — see "Compare feature" in docs/claude/stats-dashboard-watchlist-ui.md.
 // Max 4 mints, matching MintComparePicker's existing cap.
 //
 // The value is written via URLSearchParams.set() (same as every other

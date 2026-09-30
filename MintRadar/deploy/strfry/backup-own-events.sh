@@ -22,8 +22,8 @@
 #
 # Source relays: read live from the frontend's DISCOVERY_RELAYS
 # (src/core/nostr/relays.ts) in the CI-deployed repo checkout, not a second
-# hardcoded copy — see MintRadar/CLAUDE.md's existing "keep these two arrays
-# in sync manually" note for why a second copy would be a real drift risk.
+# hardcoded copy — see the "Hard invariants" section of MintRadar/CLAUDE.md (relay lists are
+# kept in sync manually) for why a second copy would be a real drift risk.
 #
 # State: last successful run's start time, persisted in STATE_FILE (outside
 # the git checkout — /var/www/mintradar-repo gets `git reset --hard` on every

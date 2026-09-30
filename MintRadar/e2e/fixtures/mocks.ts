@@ -9,7 +9,7 @@ import {
 // Deterministic fixtures used by every E2E test so flows never depend on the
 // real backend, the live database, or Nostr relays. Shapes mirror the API
 // contracts the frontend consumes (see src/hooks/useKnownMints.ts and the
-// /api/* endpoints documented in CLAUDE.md).
+// /api/* endpoints documented in docs/claude/backend-api-and-data.md).
 
 export interface MockMint {
   url: string

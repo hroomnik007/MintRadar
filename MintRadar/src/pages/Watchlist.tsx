@@ -212,7 +212,7 @@ export default function Watchlist() {
   const duplicateDisplayNames = useMemo(() => computeDuplicateMintNames(knownMintsData ?? []), [knownMintsData])
 
   // Compare feature — same ?compare=url1,url2[,url3,url4] URL persistence as
-  // Dashboard.tsx (see "Compare feature" in CLAUDE.md); compareBaseUrl/
+  // Dashboard.tsx (see "Compare feature" in docs/claude/stats-dashboard-watchlist-ui.md); compareBaseUrl/
   // showComparePicker are transient in-progress picker UI state only.
   const [searchParams, setSearchParams] = useSearchParams()
   const compareUrls = useMemo(() => parseCompareParam(searchParams.get('compare')), [searchParams])

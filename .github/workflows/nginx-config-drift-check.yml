@@ -1,7 +1,7 @@
 name: Nginx Config Drift Check
 
 # Read-only, informational check: compares the repo's deploy/nginx.conf against
-# the live nginx config on the VPS (which is deployed manually — see CLAUDE.md
+# the live nginx config on the VPS (which is deployed manually — see MintRadar/docs/claude/deploy-and-infra.md
 # "deploy/nginx.conf is reference/documentation only"). Runs independently of
 # the deploy workflow: no `needs:` link to it, and never fails the run on drift
 # — it only surfaces the diff in the Job Summary so it doesn't get missed.
@@ -64,7 +64,7 @@ jobs:
               cat "$RUNNER_TEMP/diff.txt"
               echo '```'
               echo ""
-              echo "Reminder: \`deploy/nginx.conf\` is not auto-deployed (see CLAUDE.md,"
+              echo "Reminder: \`deploy/nginx.conf\` is not auto-deployed (see MintRadar/docs/claude/deploy-and-infra.md,"
               echo "\"deploy/nginx.conf is reference/documentation only\"). If this drift is"
               echo "intentional (a manual server-side change), update the repo file to match."
               echo "If it isn't, the server is running an unreviewed config."

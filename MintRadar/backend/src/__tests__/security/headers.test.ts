@@ -4,7 +4,7 @@ import type { Express } from 'express'
 
 // HTTP security headers are set by an Express middleware in index.ts that runs
 // before routing, so EVERY response (2xx/4xx/404) must carry them. CSP and HSTS
-// are deliberately NOT set here — they live at the nginx layer (see CLAUDE.md
+// are deliberately NOT set here — they live at the nginx layer (see docs/claude/deploy-and-infra.md
 // "nginx CSP" / "add_header non-inheritance" notes), so this suite asserts only
 // the headers Express owns.
 //

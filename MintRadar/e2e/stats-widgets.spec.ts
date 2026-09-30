@@ -16,7 +16,7 @@ test.beforeEach(async ({ page }) => {
 test('Uptime tab list excludes test mints; Reliability tab also excludes them (audit run-3)', async ({ page }) => {
   const base = MOCK_KNOWN_MINTS[0]!
   // Uptime tab ranks by uptimePct7d (2026-09-19), not uptimePct24h — see
-  // CLAUDE.md's "Most Reliable panel — 7-day default window" note. uptimePct24h is
+  // docs/claude/discovery-and-relays.md's "Most Reliable panel — 7-day default window" note. uptimePct24h is
   // still set here too since other parts of the page (avg-uptime hero tile) read it.
   const rows: Json[] = [
     { ...base, url: 'https://testnut.cashu.space', name: 'Testnut', online: true, uptimePct24h: 100, uptimePct7d: 100, reliabilityScore: 99 },

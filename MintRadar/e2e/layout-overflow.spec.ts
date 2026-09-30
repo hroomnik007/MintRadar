@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, loginAs, MOCK_MINTS } from './fixtures/mocks'
 
-// Three layout fixes (CLAUDE.md, "Layout overflow fixes (2026-09-30)"):
+// Three layout fixes (docs/claude/mobile-and-tooltips.md, "Layout overflow fixes (2026-09-30)"):
 //  1. Dashboard toolbar: .submit-btn pushed the page sideways at 901–990px (row needs 991px on one line).
 //  2. Dashboard .sort-segment: 351px minimum width overflowed at ≤360px.
 //  3. Navbar: a long display name is clamped with an ellipsis from 641px up.
@@ -113,7 +113,7 @@ test('Navbar: a normal display name is not truncated at 1280px', async ({ page }
 
 // Mint Detail .md-summary: a tile row that could not shrink below ~845-865px (rated Community-rating tile) pushed
 // the page sideways at 769-864px. Transient (known-mints rollup shows the stars before the stored reviews arrive)
-// and permanent (a mint with a rated review) — both must fit. See CLAUDE.md, "Layout overflow fixes".
+// and permanent (a mint with a rated review) — both must fit. See docs/claude/mobile-and-tooltips.md, "Layout overflow fixes".
 const ALPHA_DETAIL = `/mint/${encodeURIComponent(MOCK_MINTS[0]!.url)}`
 const oneRatedReview = [{ id: 'a'.repeat(64), pubkey: 'b'.repeat(64), content: 'nice', rating: 4, createdAt: 1_700_000_000, source: 'nostr' }]
 

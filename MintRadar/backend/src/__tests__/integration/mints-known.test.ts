@@ -91,7 +91,7 @@ describe('GET /api/mints/known', () => {
       uptimePct7d: 100,
       serverLocation: 'US',
     })
-    // The contract advertised in CLAUDE.md: url, degraded, online, reliabilityScore.
+    // The contract advertised in docs/claude/backend-api-and-data.md: url, degraded, online, reliabilityScore.
     expect(mint).toHaveProperty('url')
     expect(mint).toHaveProperty('degraded')
     expect(mint).toHaveProperty('reliabilityScore')

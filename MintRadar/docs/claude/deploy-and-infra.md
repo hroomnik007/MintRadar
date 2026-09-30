@@ -1,0 +1,140 @@
+# MintRadar — Deploy pipeline, nginx/CSP, PWA, dependencies, bundle layout (split from CLAUDE.md)
+> Note: references like "see X below" in this file may point into another docs/claude file; the map is the index in CLAUDE.md.
+## Deploy Pipeline Notes
+
+- The ONLY active GitHub Actions workflow is `/.github/workflows/deploy.yml` at the **repo root**. A dead duplicate previously existed at `MintRadar/.github/workflows/deploy.yml` inside the project subdirectory — GitHub Actions never ran it, but it caused confusion during debugging. It has been deleted. When editing CI/CD config, always confirm you're editing the root-level file.
+- The deploy sequence runs `sudo rm -rf /var/www/mintradar/dist/assets/*` before copying the new build. This is intentional: `rsync --delete` was silently failing to remove old `root:root`-owned asset files left over from a prior deploy mechanism while still reporting success, causing stale content-hashed files to accumulate alongside new ones.
+- The GH Actions workflow SSHes into the VPS, pulls latest code, builds on the server (`npm ci && npm run build`), then copies dist to the nginx root. The `rsync dist/` step documented in the deploy workflow above reflects the original mechanism — the active workflow in `.github/workflows/deploy.yml` is authoritative.
+- **GOTCHA — Dependabot PRs:** Never merge multiple Dependabot PRs in rapid succession. Each merge triggers a GH Actions deploy that runs `rm -rf node_modules && npm ci` on the VPS. Concurrent runs race on the same node_modules directory, corrupting TypeScript's lib files and causing `Cannot find global type 'Boolean'` / `lib.es2022.d.ts not found` errors. Merge one, wait for the run to complete, then merge the next.
+  - **Two layers of automated protection now in place (2026-08-15, following the lucide-react/stray-node_modules incident below):** (1) `.github/workflows/deploy.yml` has a workflow-level `concurrency: group: deploy-${{ github.ref }}, cancel-in-progress: false` guard — overlapping pushes to `main` now queue and run sequentially instead of racing on the VPS path (`cancel-in-progress: false` deliberately, since the deploy does `git reset --hard origin/main`+`npm ci` and a cancelled mid-deploy could leave the VPS in a worse state than a queued one). (2) `.github/dependabot.yml` now groups all npm updates per directory into a single PR (`groups: all-dependencies: patterns: ["*"]`) instead of one PR per bump, so a Dependabot run produces one merge/one deploy instead of ~10. The manual "merge one, wait for the run to complete" discipline below is now a backstop, not the only defense — but still follow it for any PRs that arrive outside Dependabot's own grouping (e.g. manually opened PRs, or if grouping is ever reverted).
+  - Confirmed working (2026-07-24, commit 9abda76 session): 10/10 open Dependabot PRs (patch/minor bumps + one ESLint 9→10 major) merged sequentially, each followed by `gh run watch` on the deploy workflow before starting the next. Zero failures, zero VPS races.
+  - **ESLint major-version bumps:** before writing/changing any `eslint.config.js`, check whether the package actually has its own config file. `MintRadar/backend` has none — its `npm run lint` resolves ESLint's flat config by walking up to `MintRadar/eslint.config.js` (this works because ESM imports inside that config file resolve relative to the config file's own path, not the invoking CWD). Verify this kind of resolution still works after a major bump with `eslint src/ --debug 2>&1 | grep -i "config"` (look for `Using config file ... and base path ...` plus a nonzero linted-file count) *before* assuming a config rewrite is needed.
+  - **`npm install`/`npm ci` working directory:** this is a monorepo with THREE `package.json` locations if you're not careful — `MintRadar/` (frontend), `MintRadar/backend/`, and (accidentally, if you run `npm install` from the repo root) a stray root-level one. Always run `pwd` immediately before `npm install`/`npm ci` here. A 2026-07-24 session created a stray root `package.json`/`package-lock.json`/`node_modules` this way mid-Dependabot-batch (caught via `git status` before committing, deleted, redone in the right directory) — the same class of mistake previously happened in the separate Finvu project too.
+    - **This stray root `node_modules` can outlive the session that created it and cause real prod failures much later.** On 2026-08-15, a stray `/var/www/mintradar-repo/node_modules` (no `package.json` alongside it — pure orphaned directory, dated back to that 2026-07-24 incident and never cleaned up on the VPS itself, only fixed locally/in git) sat there for three weeks. Two deploys fired ~11s apart (two rapid-succession `main` pushes), racing on `MintRadar/node_modules` during `npm ci`; while `MintRadar/node_modules` was transiently incomplete, Node's module resolution walked up the directory tree and resolved `vite`/`rollup` from that ancient orphaned root `node_modules` (`vite@5.4.21`, no `lucide-react` at all) instead of the correct `MintRadar/node_modules` (`vite@8.1.0`), producing a red herring error — `[vite-plugin-pwa:build] Failed to resolve entry for package "lucide-react". The package may have incorrect main/module/exports specified in its package.json` — that looked exactly like a bad Dependabot version bump but had nothing to do with lucide-react's actual version (unchanged since 2026-07-24) or any PR merged that day. **Diagnostic tell:** the build log's stack trace paths (`file:///var/www/mintradar-repo/node_modules/...` vs `.../MintRadar/node_modules/...`) reveal which `node_modules` actually got used — check this before suspecting a dependency itself. **Fix:** `rm -rf /var/www/mintradar-repo/node_modules` (verify no `package.json` sits next to it first — if one exists, investigate before deleting) in addition to the normal `rm -rf MintRadar/node_modules && npm ci` clean-reinstall. Consider checking for this stray directory as a periodic VPS health check, not just after an incident.
+  - **Batch 3 (2026-08-15, first grouped PRs #67/#68 after the grouping fix above):** Dependabot's grouping produced exactly 2 PRs (backend 9 updates, frontend 23 updates) instead of ~30 individual ones — grouping confirmed working. Both PRs bundled `typescript` 6.0.3/5.9.3 → **7.0.2**, the same version that broke `npm ci` earlier that day (still incompatible — `@typescript-eslint/eslint-plugin`'s peer range is `<6.1.0` even at its own latest 8.67.0). Fixed by checking out each PR branch locally, reverting just the `typescript` line in `package.json`, regenerating the lockfile (`npm install typescript@<pinned> --save-dev`), verifying `npm ci`+`tsc --noEmit`+tests+build, then pushing that commit onto the PR branch before merging — grouping means you can't cherry-pick individual bumps out of the GitHub UI, so this local-branch-surgery pattern is the way to exclude one bad bump from an otherwise-good group.
+    - The frontend PR (#68) also bundled `immer` 10.2.0→11.1.16 (previously held back, see `immer` entry below) and `@noble/hashes` 1.8.0→2.3.0 — both excluded the same way pending separate verification (done shortly after, see below), plus a genuine mistake caught mid-fix: `npm install <pkg> --save-dev` moved `immer` from `dependencies` into `devDependencies` even though only `typescript` needed `--save-dev` — always install multiple packages with different target sections in separate commands, or fix the section placement manually afterward and verify against `main`'s existing placement.
+    - **Follow-up same-day: `immer` 11.1.16 and `@noble/hashes` 2.3.0 verified and applied** (commit `06357dd`). `@noble/hashes` v2's only breaking change is its `exports` map requiring explicit `.js` subpath extensions — fixed the one import site (`src/core/nostr/client.ts`: `'@noble/hashes/utils'` → `'@noble/hashes/utils.js'`), verified `bytesToHex`/`hexToBytes` round-trip at runtime. `immer` v11 needed no source changes; since `watchlist.store.ts` (the one real usage of the `zustand/middleware/immer` integration) has no dedicated unit tests and `vitest.config.ts` has no path-alias resolution (unlike `vite.config.ts` — the two configs are NOT merged, so any `@/...`-importing module can't be tested without a temporary local alias addition to `vitest.config.ts`), a throwaway smoke-test file was written against the store directly (mocking `@/db`) to confirm draft mutations (`push`/`filter`) and state-reference immutability still work, then deleted after confirming — this pattern (temporary vitest.config.ts alias + throwaway test file, both discarded) is worth reusing for verifying any other `@/`-importing module in isolation. Bonus: `vendor-immer` bundle shrank 26.6kB→9.16kB gzip on the v11 upgrade.
+  - **Batch 2 (2026-08-01, PRs #32-#41):** 10/10 merged sequentially, same one-at-a-time + `gh run watch` discipline as batch 1. Zero failures.
+    - Patch/minor: `@types/supertest`, `@vitest/coverage-v8`, `@tanstack/react-query`, `ws` (frontend only — backend still declares `ws@^8.21.0`; Dependabot hasn't opened a matching backend PR yet), `eslint` (backend, 10.6.0→10.8.0), `tsx`, `@playwright/test`, `nostr-tools` (backend, 2.23.5→2.24.1).
+    - Major bumps (extra scrutiny, both verified safe with no source changes needed):
+      - `react-router-dom` 6→7 — the app has no loaders/actions/fetchers/`json()`/`defer()`, so v7's main breaking surface (the data APIs) doesn't apply. Side effect: `react-router` no longer lands in the `vendor-react` chunk (+~9 kB gzip in the initial payload) — documented, not addressed; revisit only as part of a dedicated chunking pass.
+      - `@noble/secp256k1` 2→3 — the app calls it in exactly one place (`getPublicKey` for nsec login) and never signs with it, so v3's breaking surface (the signing API) doesn't apply. Verified byte-identical output against an independent oracle, confirmed the `privkeyBytes.fill(0)` zeroing guarantee still holds, and manually exercised all three login flows (nsec/NIP-07/NIP-46) in a real browser.
+    - `nostr-tools` and `@noble/secp256k1` are completely independent — `nostr-tools` depends on `@noble/curves`, not the standalone `@noble/secp256k1` package, which is physically absent from the backend's dependency tree.
+    - PRs #22-31 from batch 1 closed themselves in the meantime (Dependabot detected the bumps were already applied directly to `main` and auto-closed the stale PRs) — no manual cleanup needed; expect the same on future batches.
+  - **VPS maintenance (2026-08-07):** `docker builder prune -f` freed 10.81 GB of build cache, taking free disk from 17GB to 28GB — worth running periodically if disk pressure shows up again. A one-off deploy race ("removal of container is already in progress") was caused by two deploys firing back-to-back and colliding on `node_modules` during the backend `tsc` build — not a recurring problem, no fix needed unless it repeats. If it does repeat, consider adding `docker compose down --timeout 10` before `up` in the deploy script (not yet implemented).
+  - **Batch 4 (2026-08-29, PRs #71/#72):** Same `typescript` landmine as Batch 3 recurred — the backend PR (#71) bundled `typescript` 6.0.3→**7.0.2** again (still outside `@typescript-eslint/eslint-plugin@8.67.0`'s `<6.1.0` peer range, confirmed live via `npm view @typescript-eslint/eslint-plugin@8.67.0 peerDependencies`). Fixed with the exact Batch 3 pattern: checked out the PR branch, reverted just the `typescript` line to `^6.0.3`, ran `npm install typescript@6.0.3 --save-dev` to regenerate the lockfile (this pulled in a large `package-lock.json` diff — installing TS 7 apparently drags in extra transitive packages that get removed on revert, not a red flag), verified `npm ci` + `tsc --noEmit` + `npm run lint` + `npm test` (285/285) + `npm run build` all clean, then pushed that fix commit onto the PR branch before merging. The frontend PR (#72, 7 patch/minor bumps — immer/lucide-react/nostr-tools/@vitejs/plugin-react/@vitest/coverage-v8/vite/vitest) did NOT touch `typescript` (frontend pins `^5.9.3`, outside this landmine) and merged directly with no fix needed. Both merges followed the one-at-a-time + `gh run watch` discipline; zero deploy failures. **This is now a recurring pattern, not a one-off** — expect Dependabot to keep proposing `typescript` 7.x for the backend until `@typescript-eslint/eslint-plugin` ships support for it; check the peer range with `npm view` before merging any future backend Dependabot PR that touches `typescript`.
+
+## Security & Infrastructure Gotchas
+
+### nginx CSP: `wss:` must be explicit in connect-src
+
+**GOTCHA — do not regress this.** `connect-src 'self' https:` does NOT cover `wss://` connections in practice. This was a real production incident: Nostr relay WebSocket connections (`wss://relay.damus.io/`, `wss://nos.lol/`, etc.) were blocked by the browser until `wss:` was added explicitly.
+
+Current correct value: `connect-src 'self' https: wss:;`
+
+### nginx CSP: `script-src 'self'` — no `'unsafe-inline'`
+
+**GOTCHA — do not re-add `'unsafe-inline'` to `script-src`.** Removed 2026-09-08 (security
+audit run-2 hardening). The Vite 8 (rolldown) production build emits **only external
+content-hashed `<script src>` files** — the app entry plus `vite-plugin-pwa`'s injected
+`<script src="/registerSW.js">`. There are no inline `<script>` blocks in `dist/index.html`,
+no `eval`/`new Function`/`document.write` in the bundle, and `registerSW.js` is a standalone
+file. So `'unsafe-inline'` covered nothing. If a future change needs an inline bootstrap
+script (e.g. flipping `vite-plugin-pwa`'s `injectRegister` to `'inline'`, or an inline theme
+probe), externalise it or move to a nonce/hash — do **not** bring `'unsafe-inline'` back.
+`style-src 'unsafe-inline'` stays (React `style={{}}` + Recharts inject inline styles).
+Full CSP value: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self' https: wss:;` — repeated in all 5 spots (server + 4 locations, per the non-inheritance rule below).
+
+### nginx add_header non-inheritance
+
+**GOTCHA.** When a `location {}` block defines ANY `add_header` directive, it does NOT inherit the parent `server {}` block's `add_header` directives. Security headers (CSP, HSTS, X-Frame-Options, etc.) MUST be repeated verbatim in every `location` block that defines its own `add_header`.
+
+Affected blocks in `deploy/nginx.conf`: `location ~* \.(js|css|png|svg|ico|woff2|webmanifest)$` and `location = /sw.js`.
+
+### deploy/nginx.conf is reference/documentation only
+
+The file `deploy/nginx.conf` in the repo documents the intended production config but is NOT automatically deployed. The app is served from `/etc/nginx/sites-available/mintradar.org.conf` on the VPS (since the 2026-09-09 domain migration; `deploy/nginx.conf` mirrors that file). The legacy `mintradar.pedani.eu.conf` is now a redirect-only stub (301 → `https://mintradar.org$request_uri`) and is not drift-checked. The `.conf` suffix is real; `deploy/setup-server.sh` was previously missing it in its own `NGINX_CONF` variable and has been corrected to match, see below. Keep `deploy/nginx.conf` manually in sync with the live `mintradar.org.conf`. After updating `deploy/nginx.conf`, copy the relevant changes to the VPS manually and run `sudo systemctl reload nginx`.
+
+**`deploy/setup-server.sh` cleanup (2026-08-29):** the script had leftover references to an earlier, unrelated project — `DOMAIN="privyzap.pedani.eu"`, `WEB_ROOT="/var/www/privyzap"`, plus matching comments — despite being the MintRadar server-bootstrap script. All steps in the script (mkdir web root, install nginx config, `nginx -t`, reload, certbot) were already generic and correct; only the variable values were wrong. Fixed to `DOMAIN="mintradar.pedani.eu"`, `WEB_ROOT="/var/www/mintradar/dist"` (matches `root` in `deploy/nginx.conf`), and `NGINX_CONF="/etc/nginx/sites-available/${DOMAIN}.conf"` (the missing `.conf` suffix bug above). `grep -ri privyzap` across the repo is now clean except for a historical note in `AUDIT.md` documenting a past, already-fixed `nginx.conf` domain bug — that's a legitimate audit log entry, not a leftover.
+
+### Nginx config drift check (CI, 2026-08-29)
+
+`.github/workflows/nginx-config-drift-check.yml` — a separate, read-only, informational workflow (no `needs:` link to `deploy.yml`, so it can never block or slow down deploys) that runs daily at 06:00 UTC (`cron: '0 6 * * *'`, plus `workflow_dispatch` for manual runs). It SSHes in (reusing the same `HETZNER_HOST`/`HETZNER_USER`/`HETZNER_SSH_KEY` secrets as `deploy.yml`, via `appleboy/ssh-action` with `capture_stdout: true`), `sudo cat`s the live `/etc/nginx/sites-available/mintradar.org.conf` (never writes anything to the server — no `nginx -t`, no reload), diffs it against the checked-out `deploy/nginx.conf`, and writes the result (match or full diff) to the GitHub Actions Job Summary. It always exits 0 — drift is surfaced for a human to notice, never treated as a CI failure. Exists specifically because `deploy/nginx.conf` is manual-deploy-only (see above) and had already drifted silently once before (the `setup-server.sh` privyzap issue was found the same way — a targeted investigation, not this automated check, since the check didn't exist yet at the time).
+
+### OG tags for /mint/:url — bot-only fragment (2026-08-29)
+
+Social crawlers (Twitterbot, Discordbot, TelegramBot, facebookexternalhit, Slackbot, WhatsApp) don't run JS, so they never see the SPA's client-rendered `<title>`/OG meta tags on `/mint/:url` — they'd only ever see the generic homepage preview from `index.html`. Fixed via **User-Agent sniffing at the nginx layer** (chosen over an SSR rewrite or a prerendering service — MVP scope): regular browsers are completely unaffected and still get the normal SPA.
+
+- **Backend:** `backend/src/og.ts` — pure, unit-tested HTML fragment renderer (`renderMintOgHtml()`, `escapeHtml()`, `mintStatusLabel()`) plus `fetchOgMintData()`, a single-mint-scoped version of the `/api/mints/known` aggregate query (same `mint_history` 24h-window join + `computeDegraded()` reuse, just filtered to one `url` instead of pulling the full known-mints payload). Wired up as `GET /api/og/mint?url=` in `index.ts`. **Always returns HTTP 200 with a valid HTML fragment** — unknown mint, missing `url` param, or a DB error all fall back to a generic MintRadar-branded fragment rather than a 404/500, since a crawler getting no body means no link preview at all. `Cache-Control: max-age=60`, matching `KNOWN_MINTS_CACHE_TTL`. Mint `name` is escaped before interpolation (`escapeHtml()`) — it originates from the mint's own untrusted `/v1/info` response.
+- **Nginx (`deploy/nginx.conf`):** a `map $http_user_agent $is_social_bot` block (the 6 crawler UAs above) and a `map $request_uri $mint_og_lookup_url` block extract the mint URL path segment. **Deliberately sourced from `$request_uri` (the raw, client-sent request line) and never `$uri`** (nginx's internally-normalized URI variable, which decodes `%XX` escapes before location matching) — the frontend links to mint pages via `/mint/${encodeURIComponent(mint.url)}`, so the path segment is fully percent-encoded (e.g. `https%3A%2F%2Ftestnut.cashu.space`); reading it from `$request_uri` keeps those escapes intact all the way to Express, which decodes them exactly once via its own query-string parser. A `location /mint/ { if ($is_social_bot) { rewrite ^ /api/og/mint?url=$mint_og_lookup_url last; } try_files $uri $uri/ /index.html; }` block does the routing — the `if`+`rewrite ... last` combination is one of the two documented safe uses of `if` inside an nginx `location` (per the "if is evil" wiki page).
+- **Verified live in production (2026-08-29)** via `curl -A "Twitterbot" "https://mintradar.pedani.eu/mint/https%3A%2F%2Ftestnut.cashu.space"` — correctly returned `Testnut mint — MintRadar` / `Reliability Score: 80% · Online`, confirming the `%2F`/`%3A` round-trip through `$request_uri` works exactly as designed (this was the one part of the implementation that couldn't be verified locally, no nginx binary available in the dev sandbox). A literal, non-percent-encoded test URL (`/mint/testnut.cashu.space`, i.e. not what the frontend actually generates) correctly falls through to the generic fallback fragment rather than erroring — expected behavior for an unknown-URL lookup, not a bug.
+- Tests: `backend/src/__tests__/og.test.ts` (14 unit tests — escaping, status label, title/description formatting, all fallback branches) + `backend/src/__tests__/integration/og-mint.test.ts` (6 tests, `supertest` against the real Express `app` with a mocked `pg` pool — known mint, unknown mint, DB-throws, missing `url` param, Cache-Control header, XSS-in-name escaping). Same mocking pattern as `integration/mints-known.test.ts`.
+
+### Service Worker / PWA auto-update
+
+`vite-plugin-pwa` (`registerType: 'autoUpdate'`) only reliably delivers deploys to users when ALL THREE of the following are correct simultaneously:
+
+1. **`public/registerSW.js` listens for `controllerchange` and calls `window.location.reload()` exactly once** — guarded by `let refreshing = false` to prevent reload loops. This file intentionally overrides the library-generated registration script.
+2. **`register()` uses `updateViaCache: 'none'`** — without it, the browser may HTTP-cache the workbox chunk (`workbox-xxxxx.js`) that `sw.js` imports, causing update detection to silently fail even though `sw.js` itself is fetched fresh via nginx `no-store`.
+3. **nginx serves `sw.js`, `registerSW.js`, and `manifest.webmanifest` with `no-store`** — these files must NOT be caught by the long-lived `immutable` caching rule for content-hashed assets. The explicit `location = /sw.js` and `location = /registerSW.js` blocks in `deploy/nginx.conf` take priority over the wildcard `location ~*` block; do not remove them.
+
+`setInterval(() => registration.update(), 3600000)` in `public/registerSW.js` ensures long-open tabs detect new deploys without requiring a navigation event.
+
+**One-time bootstrap issue:** A user with a very old SW (from before the `controllerchange` listener existed) must manually unregister once via DevTools → Application → Service Workers → Unregister. All subsequent deploys auto-update from that point forward.
+
+### Debugging stale-looking deploys
+
+When a deployed change doesn't appear to users, verify in this order before assuming a code bug:
+
+1. Commit is pushed to `origin/main` and the GH Actions run completed successfully
+2. `curl` the exact asset filename referenced by the live `index.html` — confirm the response body contains the expected change (don't trust local build state or git log alone)
+3. Only then suspect the service worker / browser cache as the culprit
+
+**Color can mask font-weight:** If a computed property looks "correct" in DevTools but still LOOKS wrong visually, inspect all related computed properties. Example: `font-weight:700` on `var(--text2)` (`#8B90A0`, muted gray) looks visually weaker than non-bold `var(--text)` (`#F0F2F7`, near-white) — this led to a false diagnosis of "bold not working" when the real issue was a color override. Always check the full computed style.
+
+**Synthetic (faux) bold:** JetBrains Mono (`var(--font-mono)`) was only self-hosted at weights 400 and 500. Using `font-weight:700` on any mono element triggered browser-synthesized bold, which renders very weakly. `public/fonts/JetBrainsMono-Bold.woff2` was added with a matching `@font-face` at weight 700 to fix this.
+
+### vault.ts removed (dead code)
+
+`src/core/crypto/vault.ts` was deleted. It had zero imports across the codebase and contained a broken nsec bech32 decode (`.slice(5)` instead of `nip19.decode`). The entire `src/core/crypto/` directory no longer exists — do not recreate it.
+
+## Dependency versions (as of 2026-06-29)
+
+### Frontend
+- eslint: 10.6.0 (upgraded from 9.x)
+- eslint-plugin-react-hooks: 7.1.1 (upgraded from 5.2.0 — v7 adds ESLint v10 support)
+- lucide-react: 1.22.0
+- globals: 17.7.0
+- @types/node: 26.0.1
+- immer: 11.1.16 (upgraded 2026-08-15 — was held at v10 pending verification with Zustand, now confirmed compatible, see the "GOTCHA — Dependabot PRs" Batch 3 note above)
+- @noble/hashes: 2.3.0 (upgraded 2026-08-15 — v2's `exports` map requires explicit `.js` subpath extensions; see Batch 3 note above)
+
+### Backend
+- undici: 8.5.0 (security fix — 8 CVE patched)
+- pg: 8.22.0
+- node-cron: 4.5.0
+- @typescript-eslint/eslint-plugin: 8.62.0
+- @types/node: 26.0.1
+
+## Backup cron
+
+Runs every 6h: `0 */6 * * *` → `scripts/backup-db.sh`
+- Output: `/var/backups/mintradar/mintradar_YYYYMMDD_HHMMSS.sql.gz` (rotates to 7 days)
+- Log: `/var/log/mintradar-backup.log`
+- Format: `pg_dump | gzip` — plain SQL, suitable for `zcat | psql` restore
+- NOTE: `/var/backups/mintradar/` and `/var/log/mintradar-backup.log` must be owned by `deploy` user (created with `sudo`, `mkdir -p` in script cannot create them itself)
+
+## Code splitting & bundle layout (2026-07-05)
+
+- `/stats` and `/mint/:url` routes are `React.lazy` + `Suspense` in `App.tsx` — the only Recharts consumers. Initial load dropped ~1124 → ~671 kB raw (~130 kB gzip saved); `vendor-charts` (350 kB) loads on first chart-page visit.
+- **GOTCHA — `manualChunks` is dead in Vite 8 (rolldown):** the compat layer silently ignores group changes (builds byte-identical output). Chunking lives in `rollupOptions.output.advancedChunks.groups` — first matching group wins, order matters.
+- **`vendor-immer` group must stay:** immer is shared by the watchlist store (eager, via zustand middleware) and recharts (lazy, via @reduxjs/toolkit — a second nested copy exists). Without its own group it lands inside `vendor-charts` and drags the whole chart bundle back into the initial modulepreload set. If a new eager module ever shares a dep with recharts, give that dep its own group too — verify with: `grep vendor-charts dist/index.html` (must NOT appear in modulepreload).
+- **GOTCHA — `vite.config.js` is a compiled artifact:** `tsc -b` emits it from `vite.config.ts` (tsconfig.node.json has no `noEmit`), and Vite resolves `.js` BEFORE `.ts`. Always edit `vite.config.ts`, then run `npm run build` to regenerate the `.js` — editing only the `.ts` without a build means Vite still uses the stale `.js`.
+
+## Stale-build chunk-load recovery (2026-09-29)
+
+After a deploy the previous build's hashed lazy chunks (`Stats-<hash>.js`, …) are gone (`rm -rf dist/assets/*` in `deploy.yml`, nginx returns 404 for a missing `.js`), so a tab still running the old build fails on `import()` with "Failed to fetch dynamically imported module".
+- `src/utils/chunkReload.ts` — `isChunkLoadError()` (message regex) + `claimAutoReload()` (sessionStorage timestamp `mintradar_chunk_reload_at`, max ONE automatic reload per 60s, try/catch → refuses if storage unavailable) + `reloadOnChunkError()`.
+- `src/components/RouteError.tsx` is the root route's `errorElement` (App.tsx): friendly message + Reload button, no stack/"Hey developer" text. On a chunk error it auto-reloads once; a second failure inside 60s (or any non-chunk error) just shows the screen. `main.tsx` also handles Vite's `vite:preloadError` the same way.
+- Tests: `src/__tests__/chunkReload.test.ts`, `e2e/chunk-load-recovery.spec.ts` (aborts the dev `/src/pages/Stats.tsx` request). Client-side only — deploy-side (keeping old assets, SW) is unchanged.
+

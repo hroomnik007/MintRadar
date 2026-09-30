@@ -309,7 +309,7 @@ function computeReliabilityScore(
 // shortening (this happened once already: backend TTL was cut from 10min to
 // 2min while this stayed at 10min, so nothing changed for users). No shared
 // workspace between the two packages (same caveat as NOSTR_REVIEWS_RELAYS in
-// CLAUDE.md's "Reviews Feature" section) — keep both in sync by hand.
+// docs/claude/reviews-and-nostr.md's "Reviews Feature" section) — keep both in sync by hand.
 const NOSTR_REVIEWS_STALE_TIME_MS = 2 * 60 * 1000 // 2 minutes
 
 
