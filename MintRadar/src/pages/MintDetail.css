@@ -1270,8 +1270,17 @@ button.md-url-copy.copied > svg { opacity: 1; }
     padding: 6px 8px;
     gap: 6px;
     min-width: 0;
+    overflow: hidden;
   }
-  .md-sc-icon { width: 24px; height: 24px; }
+  .md-sc > div { min-width: 0; overflow: hidden; }
+  .md-sc-icon { display: none; }
+  .md-sc-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .md-sc-value { font-size: 16px; min-width: 0; flex-wrap: wrap; }
+  .md-sc-stars { letter-spacing: 0; font-size: 13px; }
 }
 
 @media (max-width: 768px) {
