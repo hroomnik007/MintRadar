@@ -37,10 +37,12 @@ Health check. No rate limiting.
 
 **Response:**
 ```json
-{ "status": "ok", "timestamp": "2026-06-25T10:00:00.000Z", "lastProbeAt": "2026-06-25T09:58:12.000Z" }
+{ "status": "ok", "timestamp": "2026-06-25T10:00:00.000Z", "lastProbeAt": "2026-06-25T09:58:12.000Z", "lastAuditSyncAt": "2026-06-25T06:00:03.000Z" }
 ```
 
 `lastProbeAt` is when the 5-minute probe cycle last finished sweeping every mint (not merely "process is alive") — `null` until the first cycle completes after a restart.
+
+`lastAuditSyncAt` is when the 6-hourly audit.8333.space sync last reached the database. `null` until one succeeds after a restart; if it stays old or `null`, audit-derived data (Recent reliability, the Audit component of the Reliability Score) is stale.
 
 ---
 

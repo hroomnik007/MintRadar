@@ -431,6 +431,15 @@ export async function persistMintAuditSwaps(
   }
 }
 
+// In-memory time of the last audit sync that actually reached the DB (list fetch
+// returned records). Surfaced via /health so an upstream outage is visible
+// from outside instead of only as silently-aging audit_synced_at rows.
+let lastAuditSyncAt: string | null = null
+
+export function getLastAuditSyncAt(): string | null {
+  return lastAuditSyncAt
+}
+
 export async function discoverMintsFromApi(): Promise<number> {
   const records: AuditRecord[] = []
 
@@ -438,7 +447,10 @@ export async function discoverMintsFromApi(): Promise<number> {
     try {
       const url = `${AUDIT_API_BASE}?skip=${skip}&limit=${AUDIT_PAGE_SIZE}`
       const res = await safeFetch(url, { timeoutMs: 10_000 }) // SSRF-guarded (see fetchRecentSwapStats)
-      if (!res || !res.ok) break
+      if (!res || !res.ok) {
+        console.error(`[discovery] audit.8333.space list fetch failed: ${res ? `HTTP ${res.status}` : 'no response'} (skip=${skip}) — audit data not refreshed this cycle`)
+        break
+      }
       const data: unknown = await res.json()
       if (!Array.isArray(data) || data.length === 0) break
       for (const record of data) {
@@ -470,7 +482,11 @@ export async function discoverMintsFromApi(): Promise<number> {
     }
   }
 
-  if (records.length === 0) return 0
+  if (records.length === 0) {
+    console.error('[discovery] audit.8333.space returned 0 usable records — audit_synced_at and rolling-window stats left unchanged (stale)')
+    return 0
+  }
+  lastAuditSyncAt = new Date().toISOString()
 
   let added = 0
   const toProbe: string[] = []

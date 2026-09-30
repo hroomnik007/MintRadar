@@ -9,7 +9,7 @@ import { getLatestVersionsMap } from './versionCatalog.js'
 import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
 import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
 import { publishServiceProfile } from './nostrService.js'
-import { normalizeUrl } from './discovery.js'
+import { normalizeUrl, getLastAuditSyncAt } from './discovery.js'
 import { computeDegraded } from './degraded.js'
 import { authenticateNip98 } from './nip98Auth.js'
 import { fetchOgMintData, renderMintOgHtml } from './og.js'
@@ -390,7 +390,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // ── Routes ─────────────────────────────────────────────────────
 
 app.get('/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), lastProbeAt: getLastProbeCompletedAt() })
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), lastProbeAt: getLastProbeCompletedAt(), lastAuditSyncAt: getLastAuditSyncAt() })
 })
 
 // Static routes here must stay in sync with LEARN_MODULES (src/constants/learnModules.ts)
@@ -411,7 +411,7 @@ const SITEMAP_STATIC_PATHS: Array<{ loc: string; changefreq: string; priority: s
 
 // Dynamically includes every tracked mint's /mint/:url page (excluding test mints) —
 // a static file can't, since the mint list changes as mints are discovered/removed.
-// See CLAUDE.md "Deploy Pipeline Notes" — nginx routes /sitemap.xml here instead of
+// See docs/claude/deploy-and-infra.md "Deploy Pipeline Notes" — nginx routes /sitemap.xml here instead of
 // serving a static frontend file, mirroring the /health proxy above.
 app.get('/sitemap.xml', (_req: Request, res: Response): void => {
   pool.query('SELECT url FROM mints ORDER BY url')
@@ -1094,7 +1094,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           lastError: (r.last_error as string | null) ?? null,
           uptimePct24h: total === 0 ? null : Math.round(onlineCount / total * 100),
           // Same computation as uptimePct24h, over a 7-day window — feeds the
-          // Stats "Most Reliable" panel (see CLAUDE.md), which switched to a
+          // Stats "Most Reliable" panel (see docs/claude/discovery-and-relays.md), which switched to a
           // 7d default because most of the network sits at 100% on a 24h
           // window and can't be meaningfully ranked. uptimePct24h itself is
           // unchanged and still used everywhere else (mint cards, avg-uptime
