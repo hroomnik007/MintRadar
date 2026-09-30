@@ -18,7 +18,7 @@ audit_n_mints INTEGER
 audit_n_melts INTEGER
 audit_n_errors INTEGER
 audit_checked_at TIMESTAMPTZ    -- audit.8333.space's own `updated_at` for this mint
-audit_synced_at TIMESTAMPTZ     -- when OUR 6h discovery cron last wrote the audit_* cols (drives the Audit tab's "MintRadar last synced" cell and the >24h sync-stale notice; `/health` `lastAuditSyncAt` = `MAX(audit_synced_at)`, 30s cache, restart-proof)
+audit_synced_at TIMESTAMPTZ     -- when OUR 6h discovery cron last wrote the audit_* cols (drives the Audit tab's "Last checked" cell and the breakdown-row sync-age note; `/health` `lastAuditSyncAt` = `MAX(audit_synced_at)`, 30s cache, restart-proof)
 audit_avg_time_ms DOUBLE PRECISION  -- mean time_taken (ms) over OK swaps in the same rolling window as audit_recent_total/errors — see mint_audit_swaps below. Backend-only as of 2026-09-12 (not yet surfaced in the Audit tab UI).
 last_reliability_score INTEGER
 last_error TEXT

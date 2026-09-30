@@ -42,6 +42,8 @@ Key implementation details:
 - Author Nostr profiles (name + avatar) are fetched inline inside `useMintReviews.ts` via **PROFILE_RELAYS** — a separate `useNostrProfiles` hook was removed due to a React state sync bug
 - Security: `profile.picture` is rendered only if it starts with `https://`
 
+**Hide anon chip alignment (2026-09-30):** at ≤430px `.reviews-filter-row` is `flex-start` so a wrapped "Hide anon" lines up with All; desktop still `space-between`. Behaviour and counts unchanged.
+
 **Reviews tab filter chips + Hide anon (2026-09-04, `MintDetail.tsx`):** the Reviews tab has
 an All/5★/Critical filter chip group (`reviews-filter-chip`, one active at a time,
 `reviewFilterState` keyed by mint `url`) plus an independent "Hide anon" toggle chip

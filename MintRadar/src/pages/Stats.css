@@ -58,6 +58,8 @@
   width: 100%;
   border-bottom: 1px solid var(--border);
 }
+.stats-metrics .stat-figure { min-width: 0; }
+.stats-metrics .stat-figure .stat-note { flex-shrink: 1; white-space: normal; }
 
 /* Hero tiles reuse Dashboard's .stat-card / .stat-row / .stat-icon /
    .stat-figure / .stat-value / .stat-note (defined in Dashboard.css, which

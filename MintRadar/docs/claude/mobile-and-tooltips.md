@@ -64,7 +64,7 @@ needed; wider viewports look as before. `.navbar-inner` gets `.is-authed` when l
 | Step | Logged out | Logged in |
 |---|---|---|
 | tabs `padding 6px 9px`, `gap 2px` | ≤ 840px | ≤ 996px |
-| "Login via Nostr" → "Login" (`.navbar-login-extra` visually hidden, name unchanged) | ≤ 765px | — |
+| "Login via Nostr" → "Login" (`.navbar-login-extra` visually hidden, `aria-label` / name unchanged). Visible text is one space ("Login via Nostr") from 766px up. | ≤ 765px | — |
 | wordmark hidden (`.navbar-wordmark` visually hidden; home link has `title="MintRadar"`) | ≤ 696px | ≤ 902px |
 | profile name + badge + npub hidden (`.navbar-profile-text`; name is the chip's `title`) | — | ≤ 806px |
 | Disconnect label hidden (glyph only, like ≤640px) | — | ≤ 660px |

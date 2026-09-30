@@ -825,6 +825,11 @@ button.md-url-copy.copied > svg { opacity: 1; }
   padding-left: 10px;
 }
 
+@media (max-width: 430px) {
+  .reviews-filter-row { justify-content: flex-start; }
+  .reviews-filter-chip.toggle { margin-left: 0; }
+}
+
 /* Primary action of the Reviews tab — deliberately larger and more prominent
    than the header-row buttons (Watch/Compare/Mint QR): filled tonal background
    + heavier weight, ~+18% font / ~+40% padding over the old outline style. */
@@ -1500,7 +1505,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
    "Recent reliability" band, which duplicated these numbers. */
 .audit-summary-strip {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 5px;
   min-width: 0;
   margin-bottom: 10px;
@@ -1863,16 +1868,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 a.review-action-btn { color: var(--text3); }
 .review-card-hl { outline: 1px solid var(--accent); box-shadow: 0 0 0 3px rgba(23,232,127,0.12); }
 
-/* Audit data age notices (Audit tab) + muted note on the score-breakdown row. */
-.audit-stale-notices { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
-.audit-stale-notice {
-  font-size: 12px;
-  color: var(--copper);
-  background: var(--copper-soft);
-  border: 1px solid var(--copper-soft-strong);
-  border-radius: var(--radius-m);
-  padding: 8px 12px;
-}
+/* Muted age note on the Reliability Score breakdown's Audit row. */
 .rb-row-note { font-size: 10px; color: var(--text3); white-space: nowrap; }
 
 /* Collapsed line for reviews with neither rating nor comment. */

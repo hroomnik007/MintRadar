@@ -38,3 +38,22 @@ test('search input is a visibly-bounded rounded control', async ({ page }) => {
   expect(r.inputBg).toBe(r.filterBtnBg)         // same fill as its row neighbours
   expect(r.inputRadius).toBe(r.tokenRadius)     // corner radius is the shared --radius-m
 })
+
+for (const width of [320, 360, 390, 430]) {
+  test(`search and Filters share one row at ${width}px`, async ({ page }) => {
+    await mockRelays(page)
+    await installApiMocks(page)
+    await page.setViewportSize({ width, height: 800 })
+    await page.goto('/')
+    const search = page.locator('.controls-search-line .search-input')
+    const filters = page.locator('.controls-search-line .filter-btn')
+    await expect(search).toBeVisible()
+    await expect(filters).toBeVisible()
+    await expect(filters).toContainText('Filters')
+    const a = await search.evaluate(e => e.getBoundingClientRect())
+    const b = await filters.evaluate(e => e.getBoundingClientRect())
+    expect(Math.abs((a.top + a.height / 2) - (b.top + b.height / 2))).toBeLessThan(8)
+    const de = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }))
+    expect(de.sw).toBeLessThanOrEqual(de.cw + 1)
+  })
+}

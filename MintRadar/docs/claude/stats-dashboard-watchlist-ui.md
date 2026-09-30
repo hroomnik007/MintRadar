@@ -214,6 +214,8 @@ Verified: typecheck ✅, build ✅, 70/70 unit tests ✅, Playwright confirmed b
   button meant the row no longer fit on one line as far up as ~900px; above 768px the
   search+Filters pairing is still desktop-style, so this breakpoint only wraps the row and
   shrinks the sort buttons rather than restructuring search/Filters like the 768px block does.
+- **Search + Filters one row on phones (2026-09-30):** at ≤768px `.controls-search-line` is a nowrap flex row; search takes leftover width (`min-width: 140px`), Filters stays content-sized with its label. Applies at 320px too. Watchlist does not share this toolbar. 901–1000px rule unchanged.
+- **Stats hero notes (2026-09-30):** `.stats-metrics .stat-note` may wrap so "of all known" / "active mints" / "from Frankfurt" stay inside the tile when the five-up row shrinks (~1140px). Labels and counts unchanged.
 
 ### Dashboard filter panel — Mint age removed (2026-09-08, commit `c02bdac`)
 

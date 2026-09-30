@@ -109,3 +109,22 @@ test('Software panel: "% of tracked mints behind latest release" + explanatory (
   await sw.locator('.stats-sw-behind-info').hover()
   await expect(page.locator('.audit-tooltip', { hasText: /latest known release/i })).toBeVisible()
 })
+
+for (const width of [901, 1024, 1140, 1280, 1440, 1920, 390]) {
+  test(`Stats hero tile notes stay inside their tiles at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/stats')
+    await expect(page.locator('.stats-metrics .stat-card').first()).toBeVisible()
+    const overflow = await page.evaluate(() => {
+      const tiles = [...document.querySelectorAll('.stats-metrics .stat-card')]
+      return tiles.some(tile => {
+        const tr = tile.getBoundingClientRect()
+        return [...tile.querySelectorAll('.stat-note, .stat-value, .stat-unit')].some(el => {
+          const r = el.getBoundingClientRect()
+          return r.right > tr.right + 1
+        })
+      })
+    })
+    expect(overflow).toBe(false)
+  })
+}

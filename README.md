@@ -53,7 +53,7 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 - Charts for **Latency**, **Uptime**, and **Reliability Score** over 24 h / 7 d / 30 d / 90 d
 - Per-period averages with delta vs. previous period
 - Full Mint History panel with per-probe results
-- **Audit tab** on each mint — a summary strip (mints / melts / recent errors / two separate times — the auditor's last check and MintRadar's last sync — with a notice when the data is older than 7 days or MintRadar hasn't synced for 24 h) backed by real swap data from audit.8333.space, with an amber/red reliability signal based on the rolling error rate
+- **Audit tab** on each mint — a summary strip (mints / melts / recent errors / Last checked) backed by real swap data from audit.8333.space, with an amber/red reliability signal based on the rolling error rate. When the audit data is stale, a muted note on the Reliability Score breakdown row shows the age; the score itself is not adjusted.
 
 ### 🌐 Global Stats
 

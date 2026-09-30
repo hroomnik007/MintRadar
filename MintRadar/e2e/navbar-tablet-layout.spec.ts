@@ -33,6 +33,16 @@ for (const loggedIn of [false, true]) {
   }
 }
 
+test('login button visible text is "Login via Nostr" at 1280px', async ({ page }) => {
+  await mockRelays(page)
+  await installApiMocks(page)
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto('/')
+  const text = await page.locator('.navbar-login-btn').innerText()
+  expect(text.replace(/\s+/g, ' ').trim()).toMatch(/Login via Nostr/)
+  expect(text).not.toMatch(/Login {2}via/)
+})
+
 test('login button keeps the accessible name "Login via Nostr" at 768px', async ({ page }) => {
   await mockRelays(page)
   await installApiMocks(page)

@@ -451,7 +451,8 @@
   .navbar-inner.is-authed .navbar-tabs { gap: 2px; }
   .navbar-inner.is-authed .nav-tab { padding: 6px 9px; }
 }
-@media (min-width: 641px) and (max-width: 765px) {
+.navbar-login-extra::before { content: " "; }
+@media (max-width: 765px) {
   .navbar-login-btn { position: relative; padding-inline: 12px; }
   .navbar-login-extra {
     position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;

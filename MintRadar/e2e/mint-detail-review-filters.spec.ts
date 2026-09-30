@@ -145,6 +145,17 @@ test.describe('Mint Detail — Reviews filters (large corpus)', () => {
     )
   })
 
+  test('Hide anon chip is flush left with All at 390px', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 800 })
+    const all = page.locator('.reviews-filter-chip', { hasText: 'All' })
+    const hide = page.locator('.reviews-filter-chip.toggle', { hasText: 'Hide anon' })
+    await expect(all).toBeVisible()
+    await expect(hide).toBeVisible()
+    const leftAll = await all.evaluate(e => e.getBoundingClientRect().left)
+    const leftHide = await hide.evaluate(e => e.getBoundingClientRect().left)
+    expect(Math.abs(leftHide - leftAll)).toBeLessThanOrEqual(1)
+  })
+
   test('chip counts match the underlying dataset', async ({ page }) => {
     await expect(page.locator('.reviews-filter-chip', { hasText: 'All' })).toHaveText(`All · ${TOTAL}`)
     await expect(page.locator('.reviews-filter-chip', { hasText: '5★' })).toHaveText(`5★ · ${FIVE_STAR_COUNT}`)

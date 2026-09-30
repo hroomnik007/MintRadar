@@ -28,7 +28,7 @@ import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
 import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
-import { auditFreshness, formatAuditSyncDate } from '@/utils/auditFreshness'
+import { auditFreshness } from '@/utils/auditFreshness'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import {
   computeReliabilityScore as sharedComputeReliabilityScore,
@@ -585,8 +585,6 @@ function MintDetailContent({ url }: { url: string }) {
   const auditMeltsTooltip = useTapTooltip(auditMeltsRef)
   const auditErrorsRef = useRef<HTMLSpanElement>(null)
   const auditErrorsTooltip = useTapTooltip(auditErrorsRef)
-  const auditorCheckRef = useRef<HTMLSpanElement>(null)
-  const auditorCheckTooltip = useTapTooltip(auditorCheckRef)
   const auditRecentRef = useRef<HTMLSpanElement>(null)
   const auditRecentTooltip = useTapTooltip(auditRecentRef)
   const auditAvgTimeRef = useRef<HTMLSpanElement>(null)
@@ -946,7 +944,6 @@ function MintDetailContent({ url }: { url: string }) {
   const freshness = auditFreshness(auditCheckedAt, auditSyncedAt)
   // "still counts toward the score" is only true when the rolling window is usable.
   const auditDataCounts = breakdownAuditRecentTotal !== null && !isAuditUnknown(breakdownAuditRecentTotal)
-  const showAuditorOldNotice = freshness.auditorDataOld && auditDataCounts
   const auditStaleNote = freshness.auditorDataOld && auditDataCounts
     ? `data ${freshness.auditorAgeDays} days old`
     : freshness.syncStale && auditDataCounts ? `sync ${freshness.syncAgeHours}h old` : undefined
@@ -2112,29 +2109,9 @@ function MintDetailContent({ url }: { url: string }) {
                     </div>
                   </div>
                   <div className="audit-summary-cell">
-                    <div className="audit-summary-value" style={{fontSize:15}}>{auditorLastCheckDisplay}</div>
-                    <div className="audit-summary-label">
-                      Auditor's last check
-                      <span
-                        ref={auditorCheckRef}
-                        style={{position:'relative',display:'inline-flex',marginLeft:3}}
-                        onPointerEnter={auditorCheckTooltip.onPointerEnter}
-                        onPointerLeave={auditorCheckTooltip.onPointerLeave}
-                        onClick={auditorCheckTooltip.onClick}
-                      >
-                        <Info size={11} color="#6b7280" style={{cursor:'help'}} />
-                        {auditorCheckTooltip.open && (
-                          <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
-                            When audit.8333.space itself last updated its record for this mint. Can be older than MintRadar's sync if the auditor has not re-tested the mint.
-                          </div>
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="audit-summary-cell">
                     <div className="audit-summary-value" style={{fontSize:15}}>{auditLastCheckedDisplay}</div>
                     <div className="audit-summary-label">
-                      MintRadar last synced
+                      Last checked
                       <span
                         ref={auditRecentRef}
                         style={{position:'relative',display:'inline-flex',marginLeft:3}}
@@ -2152,21 +2129,6 @@ function MintDetailContent({ url }: { url: string }) {
                     </div>
                   </div>
                 </div>
-
-                {(showAuditorOldNotice || freshness.syncStale) && (
-                  <div className="audit-stale-notices">
-                    {showAuditorOldNotice && (
-                      <div className="audit-stale-notice" role="status">
-                        This audit data is {freshness.auditorAgeDays} days old and still counts toward the Reliability Score.
-                      </div>
-                    )}
-                    {freshness.syncStale && auditSyncedAt && (
-                      <div className="audit-stale-notice" role="status">
-                        MintRadar has not refreshed audit data since {formatAuditSyncDate(auditSyncedAt)}.
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* Outcome bar — last ≤44 swaps, newest left (the backend
                     already orders by created_at DESC, so no client-side

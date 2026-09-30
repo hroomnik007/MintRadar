@@ -27,37 +27,32 @@ const shot = async (page: Page, name: string) => {
 const cell = (page: Page, label: string) => page.locator('.audit-summary-strip .audit-summary-cell', { hasText: label })
 const base = { auditNMints: 1000, auditNMelts: 500, auditRecentTotal: 100, auditRecentErrors: 2 }
 
-// AUDIT_W (optional) only exists for taking screenshots at a given width.
 if (process.env.AUDIT_W) test.use({ viewport: { width: Number(process.env.AUDIT_W), height: 900 } })
 
 test.describe('Audit data freshness', () => {
-  test('fresh data: two labelled times, no notice, no breakdown note', async ({ page }) => {
+  test('fresh data: original Last checked tile, no copper notice, no breakdown note', async ({ page }) => {
     await gotoAudit(page, { ...base, auditCheckedAt: ago(3 * H), auditSyncedAt: ago(2 * H) })
-    await expect(cell(page, "Auditor's last check").locator('.audit-summary-value')).toHaveText('3h ago')
-    await expect(cell(page, 'MintRadar last synced').locator('.audit-summary-value')).toHaveText('2h ago')
+    await expect(cell(page, 'Last checked').locator('.audit-summary-value')).toHaveText('2h ago')
+    await expect(page.locator('.audit-summary-cell', { hasText: "Auditor's last check" })).toHaveCount(0)
+    await expect(page.locator('.audit-summary-cell', { hasText: 'MintRadar last synced' })).toHaveCount(0)
     await expect(page.locator('.audit-stale-notice')).toHaveCount(0)
     await expect(page.locator('.rb-row-note')).toHaveCount(0)
     await shot(page, 'fresh')
   })
 
-  test('auditor data 10 days old: notice (a) and breakdown note', async ({ page }) => {
+  test('auditor data 10 days old: breakdown note only, no copper notice', async ({ page }) => {
     await gotoAudit(page, { ...base, auditCheckedAt: ago(10 * D + H), auditSyncedAt: ago(2 * H) })
-    await expect(cell(page, "Auditor's last check").locator('.audit-summary-value')).toHaveText('10d ago')
-    const notices = page.locator('.audit-stale-notice')
-    await expect(notices).toHaveCount(1)
-    await expect(notices.first()).toHaveText('This audit data is 10 days old and still counts toward the Reliability Score.')
+    await expect(cell(page, 'Last checked').locator('.audit-summary-value')).toHaveText('2h ago')
+    await expect(page.locator('.audit-stale-notice')).toHaveCount(0)
     await expect(page.locator('.rb-row-note').first()).toHaveText('data 10 days old')
     await expect(page.locator('.rb-row-note').first()).toHaveAttribute('title', /Two times apply/)
     await shot(page, 'auditor-old')
   })
 
-  test('MintRadar sync 2 days old: notice (b) only', async ({ page }) => {
+  test('MintRadar sync 2 days old: breakdown note only, no copper notice', async ({ page }) => {
     const synced = ago(2 * D)
     await gotoAudit(page, { ...base, auditCheckedAt: ago(3 * H), auditSyncedAt: synced })
-    const notices = page.locator('.audit-stale-notice')
-    await expect(notices).toHaveCount(1)
-    await expect(notices.first()).toHaveText(/^MintRadar has not refreshed audit data since \d{1,2} \w{3} \d{4}, \d{2}:\d{2} UTC\.$/)
-    await expect(notices.first()).not.toContainText(/outage|down/i)
+    await expect(page.locator('.audit-stale-notice')).toHaveCount(0)
     await expect(page.locator('.rb-row-note').first()).toHaveText('sync 48h old')
     await shot(page, 'sync-stale')
   })

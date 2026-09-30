@@ -325,8 +325,8 @@ export function AppShell() {
 
         <div className="navbar-auth">
           {profile === null ? (
-            <button type="button" className="navbar-login-btn" onClick={() => setShowLoginModal(true)}>
-              ⚡ Login<span className="navbar-login-extra"> via Nostr</span>
+            <button type="button" className="navbar-login-btn" aria-label="Login via Nostr" onClick={() => setShowLoginModal(true)}>
+              ⚡ Login<span className="navbar-login-extra">via Nostr</span>
             </button>
           ) : (
             <>
