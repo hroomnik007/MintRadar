@@ -235,7 +235,7 @@ MintRadar handles Nostr private keys and is used by the Bitcoin/Cashu community 
 
 ## 🤝 Contributing
 
-Issues and pull requests are welcome. Please open an issue to discuss significant changes before submitting a PR. Look for issues labeled **good first issue**.
+Issues and pull requests are welcome. Please open an issue to discuss significant changes before submitting a PR. See [CONTRIBUTING.md](CONTRIBUTING.md). Look for issues labeled **good first issue**
 
 ---
 
