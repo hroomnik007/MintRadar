@@ -1754,7 +1754,11 @@ mint-side-vs-wallet-only scope cut, see "NUT tracking scope: mint-side vs. walle
 
 **Still deliberately NOT folded in** — a different list, not a copy:
 - `NUT_DESCRIPTIONS` in `MintDetail.tsx` — a richer structure (`features`, `useCase`) that
-  also covers the mandatory NUTs 00-03/06 for the NUT detail modal.
+  also covers the mandatory NUTs 00-03/06 for the NUT detail modal. **Its `short`/`desc` for the 14 tracked
+  NUTs are still a partial copy of `NUT_META` and differ in 4 places (checked 2026-09-30, left as is because it
+  is not clear which wording is intended):** NUT-08 desc ("change back" vs "change tokens back"), NUT-10 short
+  ("Spending cond." vs "Spending conditions"), NUT-15 and NUT-19 desc (MintDetail's are longer). Pick one
+  wording before merging them; the other consumers (`Stats.tsx`, `NutExplorer.tsx`) read only `NUT_META`.
 
 ## Nostr pool singleton
 
@@ -1914,7 +1918,10 @@ assumption that the same fix covers it.
 The 640px two-row breakpoint is unchanged. Above it, the single-row navbar used to overflow every
 page (140px at 700, 72px at 768, 40px at 800; logged-in up to ~980px) because the Login button /
 profile chip is `flex-shrink: 0` + `nowrap`. Natural widths (measured with transitions off — `.nav-tab`
-has `transition: all`, which makes live-resize measurements lie): logo 124 (icon only 28), tabs 520
+used to have `transition: all`, which made live-resize measurements lie; since 2026-09-30 it only transitions
+`color`/`background-color`/`border-color`, hover and active look identical. Still `transition: all` in
+`AppShell.css`, deliberately untouched: `.navbar-login-btn`, `.navbar-disconnect-btn`, `.nostr-cancel-btn`,
+`.nostr-connect-btn` — the first two change padding at the ≤765/≤660px steps and so can still animate it): logo 124 (icon only 28), tabs 520
 (tightened 426), Login 144 (short 75), profile chip + Disconnect 281 (135 without name/badge/npub);
 the row needs those + 72px (36 padding + 3×12 gaps). Each step starts at the width where it is first
 needed; wider viewports look as before. `.navbar-inner` gets `.is-authed` when logged in.

@@ -164,7 +164,9 @@
   color: var(--text2);
   text-decoration: none;
   cursor: pointer;
-  transition: all var(--transition);
+  /* Only what hover/active change. `all` also animated padding/width whenever a media query
+     changed them (navbar shrink steps) and made live-resize measurements lie. */
+  transition: color var(--transition), background-color var(--transition), border-color var(--transition);
   display: inline-flex;
   align-items: center;
   gap: 5px;
