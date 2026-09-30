@@ -117,17 +117,19 @@
 .md-announce-row {
   display: flex;
   align-items: center;
-  flex-wrap: nowrap;
-  gap: 8px 10px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   margin-top: 4px;
   width: 100%;
   min-width: 0;
 }
 .md-announce-label {
   margin-top: 0 !important;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-width: 0;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .md-hdr-actions {
@@ -135,7 +137,7 @@
   align-items: center;
   gap: 8px;
   margin-left: auto;
-  flex-shrink: 0;
+  flex: 0 1 auto;
 }
 
 /* A CSS grid, not flex, for exactly one reason: the avatar column width
@@ -1595,21 +1597,12 @@ button.md-url-copy.copied > svg { opacity: 1; }
   letter-spacing: 0.02em;
 }
 
+/* Don't shrink the tiles. Below ~900px four columns collide — use 2×2
+   at the original cell size so "98 / 100 · 98% ok" fits inside its box. */
 @media (max-width: 900px) {
-  .audit-summary-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
-  .audit-summary-cell { padding: 6px 4px; }
-  .audit-summary-value { font-size: 14px; flex-wrap: nowrap; }
-  .audit-summary-label { font-size: 10px; white-space: nowrap; }
-  .audit-summary-sub { font-size: 11px; }
-}
-
-@media (max-width: 520px) {
-  .audit-summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .audit-summary-label { white-space: normal; }
-}
-
-@media (max-width: 640px) {
-  .md-announce-row { flex-wrap: wrap; }
+  .audit-summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .md-qb-full { display: none; }
+  .md-qb-short { display: inline; }
 }
 
 /* ── Audit swap outcome bar + Recent swaps table (2026-09-12) ──────────── */
