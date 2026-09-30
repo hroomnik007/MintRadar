@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { installApiMocks, mockRelays, loginAs } from './fixtures/mocks'
+import { installApiMocks, mockRelays, loginAs, MOCK_MINTS } from './fixtures/mocks'
 
 // Three layout fixes (CLAUDE.md, "Layout overflow fixes (2026-09-30)"):
 //  1. Dashboard toolbar: .submit-btn pushed the page sideways at 901–990px (row needs 991px on one line).
@@ -110,3 +110,40 @@ test('Navbar: a normal display name is not truncated at 1280px', async ({ page }
   const m = await name.evaluate(e => ({ sw: e.scrollWidth, cw: e.clientWidth }))
   expect(m.sw).toBeLessThanOrEqual(m.cw)
 })
+
+// Mint Detail .md-summary: a tile row that could not shrink below ~845-865px (rated Community-rating tile) pushed
+// the page sideways at 769-864px. Transient (known-mints rollup shows the stars before the stored reviews arrive)
+// and permanent (a mint with a rated review) — both must fit. See CLAUDE.md, "Layout overflow fixes".
+const ALPHA_DETAIL = `/mint/${encodeURIComponent(MOCK_MINTS[0]!.url)}`
+const oneRatedReview = [{ id: 'a'.repeat(64), pubkey: 'b'.repeat(64), content: 'nice', rating: 4, createdAt: 1_700_000_000, source: 'nostr' }]
+
+for (const width of [769, 800, 860]) {
+  for (const late of [true, false]) {
+    test(`Mint Detail: logged in, ${width}px, delayed fonts, ${late ? 'late' : 'stored'} reviews — no horizontal overflow`, async ({ page }) => {
+      await mockRelays(page)
+      await installApiMocks(page)
+      await loginAs(page)
+      await page.route('**/fonts/*.woff2', async route => { await new Promise(r => setTimeout(r, 1500)); await route.continue() })
+      await page.route('**/api/mints/nostr-reviews**', async route => {
+        if (late) await new Promise(r => setTimeout(r, 1500))
+        await route.fulfill({ json: late ? [] : oneRatedReview })
+      })
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto(ALPHA_DETAIL, { waitUntil: 'commit' })
+      await expect(page.locator('.md-summary')).toBeVisible()
+      const measure = () => page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }))
+      // (a) as soon as the header renders — the tile shows the rollup's stars while the stored list is still loading
+      const a = await measure()
+      expect(a.sw).toBeLessThanOrEqual(a.cw)
+      // (b) network idle
+      await page.waitForLoadState('networkidle')
+      const b = await measure()
+      expect(b.sw).toBeLessThanOrEqual(b.cw)
+      // (c) 3 seconds later
+      await page.waitForTimeout(3000)
+      const c = await measure()
+      expect(c.sw).toBeLessThanOrEqual(c.cw)
+      if (!late) await expect(page.locator('.md-sc-stars')).toBeVisible()
+    })
+  }
+}

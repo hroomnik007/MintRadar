@@ -1980,10 +1980,26 @@ the Dashboard toolbar (its Filters/sort row was removed 2026-09-04) and never ov
    Navbar steps and breakpoints untouched.
 
 **Rule applied:** wrap or shrink the smallest thing inside the toolbar that overflows, in a media query that
-covers only the overflowing range; never hide or move a control. **Unrelated, pre-existing, NOT fixed** (also
-on `origin/main` before this change): Mint Detail logged in — `.md-sc` / `.md-tab` overflow 4px at 320px and
-`.md-sc` 63px at 800px (appears only in some page loads). Everything else in the matrix
+covers only the overflowing range; never hide or move a control. Everything else in the matrix
 (320…1440px, all pages, logged out/in) has `scrollWidth <= clientWidth`. Tests: `e2e/layout-overflow.spec.ts`.
+
+4. **Mint Detail `.md-summary` at 769–864px (2026-09-30, the "intermittent" `.md-sc` overflow).** Not timing and
+   not login: it depends on the Community-rating tile. A *rated* tile (`★★★★☆ 4.2` + "N reviews") has an
+   unshrinkable min-content (~224px card), and the five `.md-sc` flex items (`flex: 1`, implicit
+   `min-width: auto`) together need ~845px ("1 review") to ~865px ("12 reviews"). Above 768px `.md-summary` is a
+   non-wrapping flex row (≤768px it is a 2-col grid), so 769–864px pushed the page sideways (html is
+   `overflow-x: visible`, only body clips — the page really scrolled: 73px at 769, 42 at 800; logged in and out
+   alike). It looked intermittent only because the tile flips between states: until the stored reviews load it
+   shows the `/api/mints/known` rollup (`reviewCount`/`reviewAvgRating` → stars), then "No reviews yet" when the
+   stored list is empty (the e2e mocks: rollup says 12 reviews, stored list is empty → overflow at first paint
+   only, gone at network idle). Real mints with ≥1 rated review overflowed permanently. Fix (`MintDetail.css`):
+   `.md-summary { flex-wrap: wrap }` — tiles wrap to a second row only where the row would not fit (769–860px
+   with a rated tile), one row from ~861px and unchanged when the tile is "No reviews yet"/"Unrated".
+   **Rule: a `display: flex` row of tiles with `min-width: auto` items needs `flex-wrap: wrap` (or `min-width: 0`
+   plus wrapping content) — a tile whose content can change after load (rating, badges) will widen the row.**
+   Tests (fonts delayed 1.5s, late and stored reviews, moments a/b/c): `e2e/layout-overflow.spec.ts` "Mint Detail".
+   The 4px `.md-sc`/`.md-tab` overflow at 320px noted earlier did not reproduce (321px, rated tile: 0px) and was
+   not touched; a `.md-tab` overflow was not re-investigated.
 
 ## Tooltip positioning in scrollable/small containers
 
