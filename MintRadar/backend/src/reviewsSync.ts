@@ -146,6 +146,32 @@ export async function persistMintReviews(url: string, reviews: SyncedReview[]): 
   }
 }
 
+/** Recount mints.review_count / review_avg_rating from stored mint_reviews
+ *  without hitting relays. Empty events (no rating and no comment) are
+ *  excluded — same rule as persistMintReviews. */
+export async function recomputeReviewCountRollups(): Promise<number> {
+  const { rowCount } = await pool.query(`
+    UPDATE mints m
+       SET review_count = s.cnt,
+           review_avg_rating = s.avg
+      FROM (
+        SELECT url,
+               COUNT(*) FILTER (
+                 WHERE rating IS NOT NULL OR BTRIM(COALESCE(comment, '')) <> ''
+               )::int AS cnt,
+               CASE WHEN COUNT(rating) FILTER (WHERE rating IS NOT NULL) = 0 THEN NULL
+                    ELSE ROUND(AVG(rating) FILTER (WHERE rating IS NOT NULL)::numeric, 1)
+               END AS avg
+          FROM mint_reviews
+         GROUP BY url
+      ) s
+     WHERE m.url = s.url
+  `)
+  const n = rowCount ?? 0
+  console.log(`[reviews-sync] recomputed review_count rollup for ${n} mint(s)`)
+  return n
+}
+
 let reviewSyncRunning = false
 export function isReviewSyncRunning(): boolean {
   return reviewSyncRunning
