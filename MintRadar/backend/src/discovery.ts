@@ -440,6 +440,27 @@ export function getLastAuditSyncAt(): string | null {
   return lastAuditSyncAt
 }
 
+// Restart-proof variant for /health: the newest audit_synced_at in the DB, so a
+// deploy/restart does not reset it to null. /health is rate-limit exempt, hence
+// a short in-process TTL cache (same reasoning as /api/stats' cache). Falls back
+// to the in-memory value if the query fails, and is null only when no mint has
+// ever synced.
+const AUDIT_SYNC_DB_TTL_MS = 30_000
+let auditSyncDbCache: { value: string | null; expiresAt: number } | null = null
+
+export async function getLastAuditSyncAtFromDb(): Promise<string | null> {
+  if (auditSyncDbCache && auditSyncDbCache.expiresAt > Date.now()) return auditSyncDbCache.value
+  try {
+    const res = await pool.query('SELECT MAX(audit_synced_at) AS last_sync FROM mints')
+    const raw = res?.rows?.[0]?.last_sync as Date | string | null | undefined
+    const value = raw ? new Date(raw).toISOString() : null
+    auditSyncDbCache = { value, expiresAt: Date.now() + AUDIT_SYNC_DB_TTL_MS }
+    return value
+  } catch {
+    return lastAuditSyncAt
+  }
+}
+
 export async function discoverMintsFromApi(): Promise<number> {
   const records: AuditRecord[] = []
 

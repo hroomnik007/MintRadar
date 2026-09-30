@@ -28,6 +28,7 @@ import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
 import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
+import { auditFreshness, formatAuditSyncDate } from '@/utils/auditFreshness'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import {
   computeReliabilityScore as sharedComputeReliabilityScore,
@@ -222,9 +223,10 @@ const NUT_ICONS: Record<string, JSX.Element> = {
 // ref/tooltip state (a shared ref across two simultaneously-mounted rows
 // would fight over which DOM node it points at), so this owns its own
 // useTapTooltip rather than taking one as a prop.
-function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip }: {
+function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, note }: {
   label: string
   display: string
+  note?: string
   score: number
   max: number
   color: string
@@ -251,6 +253,7 @@ function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip }:
           </span>
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {note && <span className="rb-row-note" title={tooltip}>{note}</span>}
           <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{display}</span>
           <span style={{ fontSize: 13, fontWeight: 600, color }}>{score}/{max}</span>
         </div>
@@ -581,6 +584,8 @@ function MintDetailContent({ url }: { url: string }) {
   const auditMeltsTooltip = useTapTooltip(auditMeltsRef)
   const auditErrorsRef = useRef<HTMLSpanElement>(null)
   const auditErrorsTooltip = useTapTooltip(auditErrorsRef)
+  const auditorCheckRef = useRef<HTMLSpanElement>(null)
+  const auditorCheckTooltip = useTapTooltip(auditorCheckRef)
   const auditRecentRef = useRef<HTMLSpanElement>(null)
   const auditRecentTooltip = useTapTooltip(auditRecentRef)
   const auditAvgTimeRef = useRef<HTMLSpanElement>(null)
@@ -921,9 +926,23 @@ function MintDetailContent({ url }: { url: string }) {
   // the displayed colour; the Reliability Score's numeric Audit component
   // (breakdownAScore) is unaffected.
   const recentReliabilityColor = auditReliabilityColor(breakdownAuditRecentTotal, breakdownAuditRecentErrors)
+  const auditSyncedAt = knownMint?.auditSyncedAt ?? null
+  const auditLastCheckedDisplay = formatTimeAgo(auditSyncedAt ? new Date(auditSyncedAt) : null)
+  const auditCheckedAt = knownMint?.auditCheckedAt ?? null
+  const auditorLastCheckDisplay = formatTimeAgo(auditCheckedAt ? new Date(auditCheckedAt) : null)
+  const freshness = auditFreshness(auditCheckedAt, auditSyncedAt)
+  // "still counts toward the score" is only true when the rolling window is usable.
+  const auditDataCounts = breakdownAuditRecentTotal !== null && !isAuditUnknown(breakdownAuditRecentTotal)
+  const showAuditorOldNotice = freshness.auditorDataOld && auditDataCounts
+  const auditStaleNote = freshness.auditorDataOld && auditDataCounts
+    ? `data ${freshness.auditorAgeDays} days old`
+    : freshness.syncStale && auditDataCounts ? `sync ${freshness.syncAgeHours}h old` : undefined
+  const auditStaleTooltipExtra = auditStaleNote
+    ? ` Two times apply: the auditor's own last check (${auditorLastCheckDisplay}) and when MintRadar last synced this data (${auditLastCheckedDisplay}). The score is not adjusted for age.`
+    : ''
   const reliabilityBreakdownRows = [
     { label: 'Uptime (40%)', display: `${uptimePct}%`, score: breakdownUScore, max: 40, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.' },
-    { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, score: breakdownAScore, max: 25, color: recentReliabilityColor, tooltip: "Based on error rate from audit.8333.space — the percentage of failed swaps out of the mint's last ~100 tested operations. Lower error rate = higher score. Shows \"Unknown\" when fewer than 3 recent swaps are available." },
+    { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, score: breakdownAScore, max: 25, color: recentReliabilityColor, tooltip: "Based on error rate from audit.8333.space — the percentage of failed swaps out of the mint's last ~100 tested operations. Lower error rate = higher score. Shows \"Unknown\" when fewer than 3 recent swaps are available." + auditStaleTooltipExtra, ...(auditStaleNote ? { note: auditStaleNote } : {}) },
     { label: 'NUT Support (15%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 15, color: supportedNuts.length >= 12 ? '#4ade80' : supportedNuts.length >= 8 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.' },
     { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? '#4ade80' : breakdownVScore >= 6 ? '#ffa500' : '#ff4d4d', tooltip: "How recent the mint's software version is compared to the latest known Nutshell releases. Newer = higher score." },
     { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? '#4ade80' : breakdownCScore >= 2 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.' },
@@ -952,8 +971,6 @@ function MintDetailContent({ url }: { url: string }) {
   // Online Mints "55/56"), and an error count read the opposite way at a
   // glance. formatAuditSuccessRatio() does the total-minus-errors math; the
   // sub-line no longer repeats a percentage of the same fraction.
-  const auditSyncedAt = knownMint?.auditSyncedAt ?? null
-  const auditLastCheckedDisplay = formatTimeAgo(auditSyncedAt ? new Date(auditSyncedAt) : null)
   const stripRecentSuccessDisplay = formatAuditSuccessRatio(breakdownAuditRecentTotal, breakdownAuditRecentErrors)
   const stripRecentSuccessPct = breakdownAuditRecentTotal !== null && breakdownAuditRecentTotal > 0
     ? Math.round(((breakdownAuditRecentTotal - (breakdownAuditRecentErrors ?? 0)) / breakdownAuditRecentTotal) * 100)
@@ -2082,9 +2099,29 @@ function MintDetailContent({ url }: { url: string }) {
                     </div>
                   </div>
                   <div className="audit-summary-cell">
+                    <div className="audit-summary-value" style={{fontSize:15}}>{auditorLastCheckDisplay}</div>
+                    <div className="audit-summary-label">
+                      Auditor's last check
+                      <span
+                        ref={auditorCheckRef}
+                        style={{position:'relative',display:'inline-flex',marginLeft:3}}
+                        onPointerEnter={auditorCheckTooltip.onPointerEnter}
+                        onPointerLeave={auditorCheckTooltip.onPointerLeave}
+                        onClick={auditorCheckTooltip.onClick}
+                      >
+                        <Info size={11} color="#6b7280" style={{cursor:'help'}} />
+                        {auditorCheckTooltip.open && (
+                          <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
+                            When audit.8333.space itself last updated its record for this mint. Can be older than MintRadar's sync if the auditor has not re-tested the mint.
+                          </div>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="audit-summary-cell">
                     <div className="audit-summary-value" style={{fontSize:15}}>{auditLastCheckedDisplay}</div>
                     <div className="audit-summary-label">
-                      Last checked
+                      MintRadar last synced
                       <span
                         ref={auditRecentRef}
                         style={{position:'relative',display:'inline-flex',marginLeft:3}}
@@ -2102,6 +2139,21 @@ function MintDetailContent({ url }: { url: string }) {
                     </div>
                   </div>
                 </div>
+
+                {(showAuditorOldNotice || freshness.syncStale) && (
+                  <div className="audit-stale-notices">
+                    {showAuditorOldNotice && (
+                      <div className="audit-stale-notice" role="status">
+                        This audit data is {freshness.auditorAgeDays} days old and still counts toward the Reliability Score.
+                      </div>
+                    )}
+                    {freshness.syncStale && auditSyncedAt && (
+                      <div className="audit-stale-notice" role="status">
+                        MintRadar has not refreshed audit data since {formatAuditSyncDate(auditSyncedAt)}.
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Outcome bar — last ≤44 swaps, newest left (the backend
                     already orders by created_at DESC, so no client-side

@@ -9,7 +9,7 @@ import { getLatestVersionsMap } from './versionCatalog.js'
 import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
 import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
 import { publishServiceProfile } from './nostrService.js'
-import { normalizeUrl, getLastAuditSyncAt } from './discovery.js'
+import { normalizeUrl, getLastAuditSyncAtFromDb } from './discovery.js'
 import { computeDegraded } from './degraded.js'
 import { authenticateNip98 } from './nip98Auth.js'
 import { fetchOgMintData, renderMintOgHtml } from './og.js'
@@ -395,8 +395,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // ── Routes ─────────────────────────────────────────────────────
 
-app.get('/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), lastProbeAt: getLastProbeCompletedAt(), lastAuditSyncAt: getLastAuditSyncAt() })
+app.get('/health', async (_req: Request, res: Response) => {
+  const lastAuditSyncAt = await getLastAuditSyncAtFromDb()
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), lastProbeAt: getLastProbeCompletedAt(), lastAuditSyncAt })
 })
 
 // Static routes here must stay in sync with LEARN_MODULES (src/constants/learnModules.ts)

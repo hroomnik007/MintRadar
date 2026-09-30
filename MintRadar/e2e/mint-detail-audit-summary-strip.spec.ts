@@ -40,7 +40,7 @@ test('fully audited: strip shows Mints / Melts / Recent success rate / Last chec
   await expect(cell('Recent success rate').locator('.audit-summary-sub')).toHaveText('98% ok')
   // 2/100 errors = 2% error rate → auditReliabilityColor()'s <=5% bucket → var(--fast) green.
   await expect(cell('Recent success rate').locator('.audit-summary-value')).toHaveCSS('color', 'rgb(92, 201, 163)')
-  await expect(cell('Last checked').locator('.audit-summary-value')).toHaveText('3h ago')
+  await expect(cell('MintRadar last synced').locator('.audit-summary-value')).toHaveText('3h ago')
 
   await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-strip-full.png' })
 })
@@ -81,7 +81,7 @@ test('too few recent swaps: Recent success rate cell says "too few to score"', a
   await expect(recent.locator('.audit-summary-value')).toHaveCSS('color', 'rgb(154, 173, 164)')
 
   // Last checked still renders from our own sync time.
-  const last = page.locator('.audit-summary-strip .audit-summary-cell', { hasText: 'Last checked' })
+  const last = page.locator('.audit-summary-strip .audit-summary-cell', { hasText: 'MintRadar last synced' })
   await expect(last.locator('.audit-summary-value')).toHaveText('5 min ago')
 
   await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-strip-fewswaps.png' })
@@ -111,6 +111,6 @@ test('not audited: no strip, existing "No audit data" fallback shown', async ({ 
 test('missing auditSyncedAt: Last checked shows an em dash, not a wrong time', async ({ page }) => {
   await gotoAudit(page, { auditSyncedAt: null })
 
-  const last = page.locator('.audit-summary-strip .audit-summary-cell', { hasText: 'Last checked' })
+  const last = page.locator('.audit-summary-strip .audit-summary-cell', { hasText: 'MintRadar last synced' })
   await expect(last.locator('.audit-summary-value')).toHaveText('—')
 })

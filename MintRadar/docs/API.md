@@ -42,7 +42,7 @@ Health check. Available at `/health` and `/api/v1/health` (identical payload). T
 
 `lastProbeAt` is when the 5-minute probe cycle last finished sweeping every mint (not merely "process is alive") — `null` until the first cycle completes after a restart.
 
-`lastAuditSyncAt` is when the 6-hourly audit.8333.space sync last reached the database. `null` until one succeeds after a restart; if it stays old or `null`, audit-derived data (Recent reliability, the Audit component of the Reliability Score) is stale.
+`lastAuditSyncAt` is the newest `audit_synced_at` in the database (`MAX(audit_synced_at)` over all mints, cached in-process for 30s), so it **survives restarts and deploys**. It is `null` only if no mint has ever synced. If it stays old, audit-derived data (Recent reliability, the Audit component of the Reliability Score) is stale.
 
 ---
 
@@ -70,6 +70,9 @@ All known mints with current online status, latency, reliability score, and meta
     "auditNMelts": 950,
     "auditNErrors": 3,
     "auditCheckedAt": "2026-06-24T08:00:00.000Z",
+    "auditSyncedAt": "2026-06-25T06:00:03.000Z",
+    "auditRecentTotal": 100,
+    "auditRecentErrors": 2,
     "reliabilityScore": 88,
     "uptimePct24h": 100,
     "discoveredAt": "2025-11-01T12:00:00.000Z",
@@ -82,6 +85,8 @@ All known mints with current online status, latency, reliability score, and meta
 `degraded` = mint has been offline for 24h+. `nutsLimits` keys are NUT numbers as strings.
 
 ---
+
+**Audit timestamps (per mint, both ISO 8601 UTC):** `auditCheckedAt` is the auditor's own last check (audit.8333.space `updated_at`); `auditSyncedAt` is when MintRadar's 6-hourly job last wrote that mint's audit data. They can differ a lot — `auditCheckedAt` may be days or months old while `auditSyncedAt` is recent, or both may age together while the upstream is unreachable. `auditRecentTotal`/`auditRecentErrors` are the rolling-window figures the Audit score component uses (`auditRecentTotal` below 3 or `null` scores a neutral 12.5/25). The score is not adjusted for the age of this data.
 
 ### `GET /api/stats`
 

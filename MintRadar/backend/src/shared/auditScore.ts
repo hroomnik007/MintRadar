@@ -1,4 +1,4 @@
-// Audit reliability score (the 5%-weight "audit" component of Reliability Score).
+// Audit reliability score (the 25%-weight "audit" component of Reliability Score).
 //
 // This is the shared source of truth for both the server-side Reliability Score computation
 // (prober.ts's computeServerReliabilityScore, run on every probe cycle) and the frontend's

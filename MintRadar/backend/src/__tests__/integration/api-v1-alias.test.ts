@@ -67,6 +67,22 @@ describe('GET /api/v1/* alias', () => {
     expect(bare.status).toBe(404)
   })
 
+  it('/health and /api/v1/health lastAuditSyncAt comes from the DB (MAX(audit_synced_at)), not memory', async () => {
+    // Fresh module instance = in-memory lastAuditSyncAt is null, like right after a restart.
+    query.mockResolvedValue({ rows: [{ last_sync: new Date('2026-09-27T12:13:41.466Z') }] })
+    const [root, aliased] = await Promise.all([request(app).get('/health'), request(app).get('/api/v1/health')])
+    expect(root.body.lastAuditSyncAt).toBe('2026-09-27T12:13:41.466Z')
+    expect(aliased.body.lastAuditSyncAt).toBe('2026-09-27T12:13:41.466Z')
+    expect(query.mock.calls.some(c => String(c[0]).includes('MAX(audit_synced_at)'))).toBe(true)
+  })
+
+  it('lastAuditSyncAt is null only when no mint has ever synced', async () => {
+    query.mockResolvedValue({ rows: [{ last_sync: null }] })
+    const res = await request(app).get('/health')
+    expect(res.body.lastAuditSyncAt).toBeNull()
+    expect(res.body.status).toBe('ok')
+  })
+
   it('/api/v1/nonexistent-route still 404s (alias does not swallow unknown paths)', async () => {
     const res = await request(app).get('/api/v1/nonexistent-route')
     expect(res.status).toBe(404)

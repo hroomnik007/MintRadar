@@ -29,7 +29,7 @@ Composite score (0–100) calculated server-side after every probe. Shown alongs
 | NUT Support | 15% | Supported NUT specs (out of the tracked mint-side set) |
 | Version Freshness | 15% | Recency of the mint's software release (Nutshell or cdk) vs. latest known version |
 | Contact Info | 5% | Contact methods provided (email, Twitter, Nostr); capped at 3 channels |
-| Audit Reliability | 25% | Rolling-window error rate on the last ~100 real swaps from audit.8333.space. Fewer than 3 samples scores a neutral 12.5, not zero |
+| Audit Reliability | 25% | Rolling-window error rate on the last ~100 real swaps from audit.8333.space. Fewer than 3 samples scores a neutral 12.5, not zero; the score is not adjusted for how old the audit data is |
 
 Mints discovered less than **30 days** ago are **capped at 75**, even if every component is maxed.
 
@@ -53,7 +53,7 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 - Charts for **Latency**, **Uptime**, and **Reliability Score** over 24 h / 7 d / 30 d / 90 d
 - Per-period averages with delta vs. previous period
 - Full Mint History panel with per-probe results
-- **Audit tab** on each mint — a summary strip (mints / melts / recent errors / honest "Last checked" time) backed by real swap data from audit.8333.space, with an amber/red reliability signal based on the rolling error rate
+- **Audit tab** on each mint — a summary strip (mints / melts / recent errors / two separate times — the auditor's last check and MintRadar's last sync — with a notice when the data is older than 7 days or MintRadar hasn't synced for 24 h) backed by real swap data from audit.8333.space, with an amber/red reliability signal based on the rolling error rate
 
 ### 🌐 Global Stats
 

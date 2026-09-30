@@ -1,4 +1,4 @@
-// Audit reliability score (the 5%-weight "audit" component of Reliability Score).
+// Audit reliability score (the 25%-weight "audit" component of Reliability Score).
 //
 // SOURCE OF TRUTH is backend/src/shared/auditScore.ts — this frontend package can't import
 // it directly (separate npm package, no workspace set up between backend/ and the frontend),
