@@ -1862,7 +1862,6 @@
    restructure the search/Filters relationship the way the 768px block does. */
 @media (max-width: 900px) {
   .dashboard-controls { flex-wrap: wrap; gap: 6px; }
-  .search-wrap { flex: 1 1 100%; }
   .sort-segment { flex: 1 1 100%; }
   .sort-btn { flex: 1; justify-content: center; padding: 5.5px 6px; font-size: 10.5px; }
 }
@@ -1873,7 +1872,6 @@
    controls keep their desktop size, unlike the ≤900px block. */
 @media (min-width: 901px) and (max-width: 1000px) {
   .dashboard-controls { flex-wrap: wrap; }
-  .search-wrap { flex: 1 1 100%; }
 }
 
 /* Phones ≤370px: the sort segment's five buttons need 351px, the row has 332px at 360px (5px over)
@@ -1883,6 +1881,20 @@
   .sort-segment { min-width: 0; overflow-x: auto; scrollbar-width: none; }
   .sort-segment::-webkit-scrollbar { display: none; }
   .sort-btn { padding-inline: 3px; }
+}
+
+/* Search + Filters stay one row on landscape phones (~800–1000px) too. */
+@media (max-width: 1000px) {
+  .controls-search-line {
+    display: flex;
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    gap: 7px;
+    align-items: stretch;
+    min-width: 0;
+  }
+  .controls-search-line .search-wrap { flex: 1 1 auto; min-width: 0; }
+  .controls-search-line .filter-btn { flex: 0 0 auto; flex-shrink: 0; }
 }
 
 @media (max-width: 768px) {

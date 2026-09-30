@@ -1190,8 +1190,9 @@ function MintDetailContent({ url }: { url: string }) {
               {firstSeen && (
                 <div className="md-first-seen" style={{fontSize:12,fontFamily:'var(--font-mono)',color:'var(--text-faint)',marginTop:4}}>{firstSeen}</div>
               )}
+              <div className="md-announce-row">
               {nostrAnnouncedAt && (
-                <div className="md-first-seen" style={{fontSize:12,fontFamily:'var(--font-mono)',color:'var(--text-faint)',marginTop:4}}>
+                <div className="md-first-seen md-announce-label">
                   {nostrAnnounceHref ? (
                     <a href={nostrAnnounceHref} target="_blank" rel="noopener noreferrer">Announced on Nostr</a>
                   ) : 'Announced on Nostr'}
@@ -1199,9 +1200,6 @@ function MintDetailContent({ url }: { url: string }) {
                   {new Date(nostrAnnouncedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                 </div>
               )}
-            </div>
-          </div>
-        </div>
         <div className="md-hdr-actions">
         <div className="md-hdr-center">
           {!isOnline && knownMint?.lastError && (
@@ -1261,6 +1259,10 @@ function MintDetailContent({ url }: { url: string }) {
             <span className="md-compare-label">Compare</span>
           </button>
         </div>
+        </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2059,7 +2061,7 @@ function MintDetailContent({ url }: { url: string }) {
                     </div>
                   </div>
                   <div className="audit-summary-cell">
-                    <div className="audit-summary-value" style={{color: recentReliabilityColor, whiteSpace: 'normal', flexWrap: 'wrap', rowGap: 2}}>
+                    <div className="audit-summary-value" style={{color: recentReliabilityColor}}>
                       {stripRecentSuccessDisplay !== '—' && (
                         <>
                           <span className="audit-summary-main">{stripRecentSuccessDisplay}</span>

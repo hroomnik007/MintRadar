@@ -114,12 +114,28 @@
    edge (like the old space-between); margin-right pulls it back toward the
    text block by a percentage of the header's own width, so the shift scales
    proportionally at any desktop viewport instead of a fixed pixel amount. */
+.md-announce-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px 10px;
+  margin-top: 4px;
+  width: 100%;
+  min-width: 0;
+}
+.md-announce-label {
+  margin-top: 0 !important;
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+
 .md-hdr-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-left: auto;
-  margin-right: 11%;
+  flex-shrink: 0;
 }
 
 /* A CSS grid, not flex, for exactly one reason: the avatar column width
@@ -1240,6 +1256,22 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .chart-tooltip-value { font-family: var(--font-mono); font-size: 13px; color: var(--text); letter-spacing: -0.02em; }
 
 /* ── Responsive ─────────────────────────────────────────────── */
+/* Landscape phones / small tablets: keep compact tiles, not desktop-sized cards. */
+@media (max-width: 1024px) {
+  .md-summary {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px 12px;
+  }
+  .md-sc {
+    padding: 6px 8px;
+    gap: 6px;
+    min-width: 0;
+  }
+  .md-sc-icon { width: 24px; height: 24px; }
+}
+
 @media (max-width: 768px) {
   .md-info-grid { grid-template-columns: 1fr; gap: 0; }
   .md-summary {
@@ -1563,12 +1595,21 @@ button.md-url-copy.copied > svg { opacity: 1; }
   letter-spacing: 0.02em;
 }
 
-@media (max-width: 700px) {
-  .audit-summary-strip { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 900px) {
+  .audit-summary-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .audit-summary-cell { padding: 6px 4px; }
+  .audit-summary-value { font-size: 14px; flex-wrap: nowrap; }
+  .audit-summary-label { font-size: 10px; white-space: nowrap; }
+  .audit-summary-sub { font-size: 11px; }
 }
 
 @media (max-width: 520px) {
-  .audit-summary-strip { grid-template-columns: repeat(2, 1fr); }
+  .audit-summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .audit-summary-label { white-space: normal; }
+}
+
+@media (max-width: 640px) {
+  .md-announce-row { flex-wrap: wrap; }
 }
 
 /* ── Audit swap outcome bar + Recent swaps table (2026-09-12) ──────────── */
