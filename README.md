@@ -38,8 +38,10 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 ### 🔍 Dashboard & Discovery
 
 - Search by name or URL
-- Advanced filter panel: Status, Reliability Score minimum, NUT support
+- Filter panel: Status (All / Online / Offline), Reliability Score minimum, Hide test mints
 - Active filters shown as dismissible tags
+- The Dashboard also reads `?status=` (`all`/`offline`), `?reliability=`, `?testmints=hide`, and `?nut=` / `?nuts=` (require specific NUTs) from the URL, so filtered views can be shared as links — there is no NUT control in the panel itself
+- Counts: the header shows online and tracked mints; "tracked" is every mint in the database (archived ones included), and the grid footer reads "Showing X of <tracked>". Mints the default view hides (offline, degraded, archived) sit behind a "N mints hidden (offline 24h+)" toggle; **Show** reveals all of them
 - Sort by Latency / Name / Reliability Score / **Community Rating** / **Most reviewed** (asc/desc) — Community Rating uses a weighted (Bayesian) average so a mint with two 5★ reviews doesn't outrank one with fifty
 - Controls row stays docked at the top of the list while you scroll
 - Compact and expanded card view toggle
@@ -61,10 +63,6 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 - NUT adoption across the network
 - Software in use across known mints
 - Reliability movers — recent risers and fallers
-
-### 🧩 NUT Explorer
-
-Tracked mint-side NUT cards (NUT-04, 05, 07–30; NUT-13 is a wallet-side spec and is not advertised by mints) — each showing adoption %, supporting mint count, and a link to the specification. Expandable list of supporting mints.
 
 ### ⚖️ Mint Comparison Tool
 

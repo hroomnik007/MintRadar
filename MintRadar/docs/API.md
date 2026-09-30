@@ -31,9 +31,9 @@ Exceeding the limit returns HTTP `429 Too Many Requests`:
 
 ## Endpoints
 
-### `GET /health`
+### `GET /health` and `GET /api/v1/health`
 
-Health check. No rate limiting.
+Health check. Available at `/health` and `/api/v1/health` (identical payload). There is no `/api/health`. No rate limiting on either path.
 
 **Response:**
 ```json
@@ -48,7 +48,7 @@ Health check. No rate limiting.
 
 ### `GET /api/mints/known`
 
-All known mints with current online status, latency, reliability score, and metadata.
+All known mints with current online status, latency, reliability score, and metadata. Returns **every row** the server knows, including archived mints (offline 30+ days) — nothing is filtered out; use the `archived` and `degraded` flags on each object to tell them apart.
 
 **Response:** Array of mint objects.
 
@@ -85,7 +85,7 @@ All known mints with current online status, latency, reliability score, and meta
 
 ### `GET /api/stats`
 
-Network-wide statistics.
+Network-wide statistics. `totalMints` counts **all mints known to the server, archived ones included** — it equals the length of the `/api/mints/known` array.
 
 **Response:**
 ```json

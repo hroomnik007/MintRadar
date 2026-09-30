@@ -54,7 +54,7 @@ test.describe('Dashboard default view', () => {
     ])
   })
 
-  test('24h+ "Show" path still reveals only the degraded mint', async ({ page }) => {
+  test('"Show" reveals every hidden mint: the 24h+ degraded one and the <24h offline one', async ({ page }) => {
     const degraded = { ...MOCK_KNOWN_MINTS[0], url: 'https://golf.mint.example', name: 'Golf Mint', online: false, degraded: true, reliabilityScore: 20 }
     await page.route('**/api/mints/known', r =>
       r.fulfill({ json: [...MOCK_KNOWN_MINTS, degraded] }))
@@ -64,11 +64,11 @@ test.describe('Dashboard default view', () => {
 
     await expect(page.locator('.card-name', { hasText: 'Golf Mint' })).toHaveCount(0)
     const note = page.locator('.degraded-note')
-    await expect(note).toContainText('1 mints hidden (offline 24h+)')
+    await expect(note).toContainText('2 mints hidden (offline 24h+)')
 
     await note.click()
     await expect(page.locator('.card-name', { hasText: 'Golf Mint' })).toBeVisible()
-    await expect(page.locator('.card-name', { hasText: 'Charlie Mint' })).toHaveCount(0)
+    await expect(page.locator('.card-name', { hasText: 'Charlie Mint' })).toBeVisible()
   })
 
   test('action strip deep links still reach /tools#pick and #token', async ({ page }) => {

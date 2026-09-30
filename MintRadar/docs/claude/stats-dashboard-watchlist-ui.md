@@ -147,7 +147,24 @@ Before the 2×2 hero grid, NHI went through multiple repositioning attempts:
 - Tests: `e2e/stats-widgets.spec.ts`, `e2e/stats-nhi-gauge.spec.ts`,
   `src/__tests__/geoDistribution.test.ts` (`normalizeGeoLoc`).
 
-## Dashboard Mint Count Distinction (deliberate product decision — 2026-06-20)
+## Mint counts — single helper, archived included (2026-09-30)
+
+**Supersedes the "archived excluded" rule and the "Online X/Y (Y = non-degraded)" wording below.**
+`src/utils/mintCounts.ts` (`trackedCount`, `onlineCount`, `isPoolHidden`, `hiddenByDefaultCount`;
+tests `src/__tests__/mintCounts.test.ts`, `e2e/mint-counts.spec.ts`) is the one definition used by
+Dashboard and Stats. **"Tracked" = every mint in the DB, archived included** (= `/api/stats` `totalMints`
+= `/api/mints/known` length; the public API is unchanged and the UI says what it says).
+- Dashboard header: `<online> online mints` · `<tracked> tracked mints`; grid footer and Filters panel
+  "Showing X of <tracked>"; Stats "Mints Tracked" / "Online Now" use the same helper.
+- Banner "N mints hidden (offline 24h+)": N = mints the default view hides, computed from the Status radio
+  only (online → every non-online mint: degraded + archived + <24h offline; all → degraded + archived;
+  offline → banner hidden). The wording "(offline 24h+)" is deliberately kept although the set also holds
+  <24h-offline mints; the degraded rule is untouched. Reliability slider / Hide test mints / search never change N.
+- **Show now reveals ALL hidden mints** (was: degraded only), so the footer reads "Showing <tracked> of <tracked>".
+  Archived cards then appear in the grid with no "Archived" label. Status=Offline also includes archived mints.
+- Compare candidates and Watchlist recommendations filter `online === true`, so archived mints never enter them.
+
+## Dashboard Mint Count Distinction (deliberate product decision — 2026-06-20; partly superseded, see above)
 
 The Dashboard stat bar intentionally shows TWO different denominators that represent TWO different concepts:
 

@@ -19,6 +19,7 @@ import { latencyColor, reliabilityColor, uptimeColor, displayName as mintDisplay
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import { listReliabilityScore, compareReliabilityThenRating } from '@/utils/reliabilitySort'
 import { isTestMint } from '@/constants/testMints'
+import { trackedCount, onlineCount as countOnline, isPoolHidden, hiddenByDefaultCount } from '@/utils/mintCounts'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import './Dashboard.css'
 
@@ -153,9 +154,9 @@ function applyFilters(
     // default are both bypassed so a searched-for mint is always findable.
     if (!opts.searching) {
       if (filters.hideTestMints && isTestMint(mint.url)) return false
-      // "Show" (showDegraded) still only ever reveals the 24h+ (degraded) set,
-      // never the <24h-offline mints — 24h+ Show behaviour is unchanged.
-      if (filters.status === 'online' && mint.online !== true && !(opts.showDegraded && mint.degraded)) return false
+      // "Show" (showDegraded) reveals every mint the default view hides:
+      // 24h+ offline, archived and the <24h-offline ones.
+      if (filters.status === 'online' && mint.online !== true && !opts.showDegraded) return false
     }
     if (filters.status === 'offline' && mint.online !== false) return false
     if (listReliabilityScore(mint) < filters.minReliabilityScore) return false
@@ -616,24 +617,17 @@ export default function Dashboard() {
   // would AND against the hidden set and return nothing.
   const effectiveShowDegraded = showDegraded || activeFilters.status === 'offline'
 
-  // The full set of mints we track — matches the "All Known" tile and
-  // /api/stats `totalMints` (all three read the same unfiltered mints table),
-  // minus archived (offline 30d+) mints. `activeMints` below MUST derive from
-  // this same !archived-filtered array — degradedCount and allMints previously
-  // filtered raw knownMintsData with no archived check at all, so an
-  // archived+degraded mint got double-counted (present in degradedCount's
-  // "hidden" bucket but already excluded from knownTotal), breaking the
-  // shown+hidden===knownTotal invariant the footer text implies.
-  const activeMints = useMemo(() => (knownMintsData ?? []).filter(m => !m.archived), [knownMintsData])
-  const knownTotal = activeMints.length
+  // The full set of mints we track — every row of the mints table, archived
+  // included: same number as "All Known", Stats "Mints Tracked" and
+  // /api/stats `totalMints` (see utils/mintCounts.ts).
+  const trackedMints = useMemo(() => knownMintsData ?? [], [knownMintsData])
+  const knownTotal = trackedCount(trackedMints)
 
-  const { degradedCount, allMints } = useMemo(() => {
-    const degradedUrls = activeMints.filter(m => m.degraded).map(m => m.url)
-    return {
-      degradedCount: degradedUrls.length,
-      allMints: activeMints.filter(m => effectiveShowDegraded ? true : !m.degraded) as KnownMint[],
-    }
-  }, [activeMints, effectiveShowDegraded])
+  const allMints = useMemo(
+    () => trackedMints.filter(m => effectiveShowDegraded ? true : !isPoolHidden(m)) as KnownMint[],
+    [trackedMints, effectiveShowDegraded],
+  )
+  const hiddenCount = hiddenByDefaultCount(trackedMints, activeFilters.status)
 
   const filteredMints = useMemo(() => {
     return applyFilters(allMints, activeFilters, {
@@ -643,8 +637,7 @@ export default function Dashboard() {
   }, [allMints, activeFilters, showDegraded, search])
   const activeFilterCount = countActiveFilters(activeFilters)
 
-  const totalCount = allMints.length
-  const onlineCount = allMints.filter(m => m.online === true).length
+  const onlineCount = countOnline(trackedMints)
 
   // Resolved against the full known-mints set (not the filtered/degraded-hidden
   // allMints) so a shared compare link still works for an offline/degraded
@@ -1173,7 +1166,7 @@ export default function Dashboard() {
               />
             </div>
 
-            <div className="filter-count">Showing <strong>{filteredMints.length}</strong> of <strong>{totalCount}</strong></div>
+            <div className="filter-count">Showing <strong>{filteredMints.length}</strong> of <strong>{knownTotal}</strong></div>
             <div className="filter-actions-row">
               <button type="button" className="filter-reset-btn" onClick={() => { setPendingFilters(DEFAULT_FILTERS); commitFilters({ filters: DEFAULT_FILTERS }) }}>Reset</button>
               <button type="button" className="filter-apply-btn" onClick={() => { commitFilters({ filters: pendingFilters }); setShowFilters(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Apply filter</button>
@@ -1234,14 +1227,14 @@ export default function Dashboard() {
               duplicateDisplayNames={duplicateDisplayNames}
             />
           )}
-          {degradedCount > 0 && activeFilters.status !== 'offline' && (
+          {hiddenCount > 0 && activeFilters.status !== 'offline' && (
             <button
               type="button"
               className="degraded-note"
               onClick={() => setShowDegraded(v => !v)}
               aria-expanded={showDegraded}
             >
-              {!showDegraded && <>{degradedCount} mints hidden (offline 24h+){' '}</>}
+              {!showDegraded && <>{hiddenCount} mints hidden (offline 24h+){' '}</>}
               <span className="degraded-note-action">{showDegraded ? 'Hide' : 'Show'}</span>
             </button>
           )}

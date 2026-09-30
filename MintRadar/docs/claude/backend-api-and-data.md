@@ -93,7 +93,7 @@ anonymized sample payloads captured from a live diagnostic GET against the Minib
 `integration/mints-swaps.test.ts`.
 
 ## Backend API
-- GET /health — health check
+- GET /health and GET /api/v1/health — health check (same payload, both rate-limit exempt; the `/api/v1` prefix rewrite has a special case mapping it to `/health`; there is deliberately NO `/api/health`)
 - GET /api/mints/known — all mints with online status, latency, reliability score, degraded flag (TTL cached 60s)
 - GET /api/mints/history?url=&period={24h|7d|30d|90d} — bucketed uptime/latency segments + prev period trend
 - GET /api/mints/version-history?url= — per-mint software version timeline + latest global version

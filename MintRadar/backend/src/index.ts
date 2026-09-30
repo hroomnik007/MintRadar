@@ -283,6 +283,12 @@ app.use(express.json())
 // instead of getting its own copy. /api/v1 is preferred going forward; the
 // unversioned /api/* is kept as a legacy alias (see docs/API.md).
 app.use((req: Request, _res: Response, next: NextFunction) => {
+  // /api/v1/health maps to the root /health (there is deliberately no /api/health).
+  if (req.url === '/api/v1/health' || req.url.startsWith('/api/v1/health?')) {
+    req.url = '/health' + req.url.slice('/api/v1/health'.length)
+    next()
+    return
+  }
   if (req.url === '/api/v1' || req.url.startsWith('/api/v1/') || req.url.startsWith('/api/v1?')) {
     req.url = '/api' + req.url.slice('/api/v1'.length)
   }

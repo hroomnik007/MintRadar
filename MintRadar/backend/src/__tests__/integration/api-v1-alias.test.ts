@@ -53,6 +53,20 @@ describe('GET /api/v1/* alias', () => {
     expect(res.status).not.toBe(404)
   })
 
+  it('/api/v1/health returns the same payload as /health, rate-limit exempt; /api/health stays 404', async () => {
+    const [root, aliased, bare] = await Promise.all([
+      request(app).get('/health'),
+      request(app).get('/api/v1/health'),
+      request(app).get('/api/health'),
+    ])
+    expect(aliased.status).toBe(200)
+    expect(Object.keys(aliased.body).sort()).toEqual(Object.keys(root.body).sort())
+    expect(aliased.body).toHaveProperty('lastProbeAt')
+    expect(aliased.body.status).toBe('ok')
+    expect(aliased.headers['x-ratelimit-limit']).toBeUndefined()
+    expect(bare.status).toBe(404)
+  })
+
   it('/api/v1/nonexistent-route still 404s (alias does not swallow unknown paths)', async () => {
     const res = await request(app).get('/api/v1/nonexistent-route')
     expect(res.status).toBe(404)

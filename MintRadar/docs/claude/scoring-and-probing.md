@@ -91,7 +91,7 @@ degraded = (total24h >= 4 && onlineCount === 0) || isStaleOffline
 isStaleOffline = last known state is offline AND older than 24h
 ```
 
-Frontend hides degraded mints by default (`showDegraded=false`); footer shows "N mints hidden (offline 24h+) — Show".
+Frontend hides degraded mints by default (`showDegraded=false`); footer shows "N mints hidden (offline 24h+) — Show" (N = every tracked mint the default view hides, see `src/utils/mintCounts.ts`; the degraded rule itself is unchanged).
 
 **Known edge case:** After the first DNS-failure write, a mint may briefly show `degraded=false` for ~20 min until 4 probe records accumulate. Self-correcting, no intervention needed.
 

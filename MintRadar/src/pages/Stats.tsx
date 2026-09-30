@@ -7,6 +7,7 @@ import { ReliabilityMoversPanel } from '@/components/stats/ReliabilityMoversPane
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcShield } from '@/components/mint/IcShield'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
+import { trackedCount, onlineCount as countOnline } from '@/utils/mintCounts'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
 import { reliabilityColor, reliabilityScoreInfo, reliabilityDonutArc, displayName, computeDuplicateMintNames, mintAgeBadge } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
@@ -906,7 +907,7 @@ export default function Stats() {
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.1"/></svg>
             </div>
             <div className="stat-figure">
-              <span className="stat-value">{(knownMintsData ?? []).filter(m => !m.archived).length || data.totalMints}</span>
+              <span className="stat-value">{trackedCount(knownMintsData ?? []) || data.totalMints}</span>
               <span className="stat-note">all known</span>
             </div>
           </div>
@@ -918,7 +919,7 @@ export default function Stats() {
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M1 11C3 8 5 7 8 7s5 1 7-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M3 14C5 11.5 6.5 10 8 10s3 1.5 5-1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><circle cx="8" cy="4" r="2" stroke="currentColor" strokeWidth="1.2"/></svg>
             </div>
             <div className="stat-figure">
-              <span className="stat-value">{data.onlineMints}</span>
+              <span className="stat-value">{knownMintsData ? countOnline(knownMintsData) : data.onlineMints}</span>
               <span className="stat-note">of all known</span>
             </div>
           </div>
