@@ -89,3 +89,19 @@ export function processReviewEvents(events: ReviewEvent[]): ParsedReview[] {
   const parsed = deduped.map(parseReviewEvent)
   return sortReviewsByNewest(parsed)
 }
+
+// A review with neither a rating nor any (non-whitespace) text. The Reviews tab
+// collapses these into one line; the same predicate feeds the list and the count.
+export function isEmptyReview(r: { rating: number | null; comment?: string | null }): boolean {
+  return r.rating === null && (r.comment ?? '').trim() === ''
+}
+
+// Order-preserving split into reviews to show and "empty" ones to collapse.
+export function splitEmptyReviews<T extends { rating: number | null; comment?: string | null }>(
+  reviews: T[],
+): { visible: T[]; empty: T[] } {
+  const visible: T[] = []
+  const empty: T[] = []
+  for (const r of reviews) (isEmptyReview(r) ? empty : visible).push(r)
+  return { visible, empty }
+}

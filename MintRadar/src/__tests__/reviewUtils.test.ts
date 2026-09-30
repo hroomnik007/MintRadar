@@ -5,6 +5,8 @@ import {
   parseReviewEvent,
   sortReviewsByNewest,
   processReviewEvents,
+  isEmptyReview,
+  splitEmptyReviews,
   type ReviewEvent,
 } from '../utils/reviewUtils'
 
@@ -252,5 +254,27 @@ describe('mergeStoredAndLiveReviews', () => {
     const live = [row('a', 2, 'stale')]
     const merged = mergeStoredAndLiveReviews(stored, live, null)
     expect(merged[0]!.id).toBe('stored')
+  })
+})
+
+describe('isEmptyReview / splitEmptyReviews', () => {
+  const rated = { id: 'a', rating: 4, comment: 'good' }
+  const ratedOnly = { id: 'b', rating: 5, comment: '' }
+  const textOnly = { id: 'c', rating: null, comment: 'nice' }
+  const neither = { id: 'd', rating: null, comment: '' }
+  const blank = { id: 'e', rating: null, comment: '  \n\t ' }
+  const missing = { id: 'f', rating: null }
+
+  it('empty only when rating is null AND text is empty/whitespace', () => {
+    expect([rated, ratedOnly, textOnly].some(r => isEmptyReview(r))).toBe(false)
+    expect([neither, blank, missing].every(r => isEmptyReview(r))).toBe(true)
+  })
+  it('splits preserving order', () => {
+    const { visible, empty } = splitEmptyReviews([neither, rated, blank, textOnly, ratedOnly, missing])
+    expect(visible.map(r => r.id)).toEqual(['a', 'c', 'b'])
+    expect(empty.map(r => r.id)).toEqual(['d', 'e', 'f'])
+  })
+  it('handles empty input', () => {
+    expect(splitEmptyReviews([])).toEqual({ visible: [], empty: [] })
   })
 })

@@ -13,7 +13,7 @@ import { useMintProbe } from '@/hooks/useMintProbe'
 import { useMintHistory } from '@/hooks/useMintHistory'
 import { useKnownMints } from '@/hooks/useKnownMints'
 import { useMintReviews } from '@/hooks/useMintReviews'
-import { mergeStoredAndLiveReviews } from '@/utils/reviewUtils'
+import { mergeStoredAndLiveReviews, isEmptyReview, splitEmptyReviews } from '@/utils/reviewUtils'
 import { useMintOperatorNip05 } from '@/hooks/useMintOperatorNip05'
 import { useVerifiedNip05 } from '@/hooks/useVerifiedNip05'
 import { usePendingAutoWatch } from '@/hooks/usePendingAutoWatch'
@@ -254,7 +254,7 @@ function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, n
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {note && <span className="rb-row-note" title={tooltip}>{note}</span>}
-          <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{display}</span>
+          <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)', maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{display}</span>
           <span style={{ fontSize: 13, fontWeight: 600, color }}>{score}/{max}</span>
         </div>
       </div>
@@ -547,6 +547,7 @@ function MintDetailContent({ url }: { url: string }) {
   const [reviewsPageState, setReviewsPageState] = useState<{ key: string; page: number }>({ key: '', page: 1 })
   const [reviewFilterState, setReviewFilterState] = useState<{ key: string; type: 'all' | '5star' | 'critical' }>({ key: '', type: 'all' })
   const [reviewHideAnonState, setReviewHideAnonState] = useState<{ key: string; on: boolean }>({ key: '', on: false })
+  const [emptyReviewsState, setEmptyReviewsState] = useState<{ key: string; open: boolean }>({ key: '', open: false })
   // 0 = phase 1 (rating not chosen yet); 1-5 = phase 2 (form revealed).
   const [reviewRating, setReviewRating] = useState(0)
   const [reviewHoverRating, setReviewHoverRating] = useState(0)
@@ -718,6 +719,13 @@ function MintDetailContent({ url }: { url: string }) {
   else if (activeReviewFilter === 'critical') filteredReviews = filteredReviews.filter(r => r.rating !== null && r.rating <= 2)
   if (hideAnonActive) filteredReviews = filteredReviews.filter(r => !!r.profile?.name)
   const REVIEWS_PER_PAGE = 5
+  // Reviews with neither rating nor text collapse into one line above the list.
+  // k counts them inside the currently filtered set (so it follows Hide anon;
+  // the 5★/Critical chips never match them, so k is 0 there and no line shows).
+  // The chip counts are untouched — they still include these reviews.
+  const { visible: filteredNonEmpty, empty: filteredEmpty } = splitEmptyReviews(filteredReviews)
+  const emptyReviewsOpen = emptyReviewsState.key === url && emptyReviewsState.open
+  const listReviews = emptyReviewsOpen ? filteredReviews : filteredNonEmpty
 
   useEffect(() => {
     const raw = window.location.hash
@@ -733,7 +741,12 @@ function MintDetailContent({ url }: { url: string }) {
     setActiveTab('reviews')
     setReviewFilterState({ key: url, type: 'all' })
     setReviewHideAnonState({ key: url, on: false })
-    const idx = filteredReviews.findIndex(r => r.id.toLowerCase() === id)
+    // A deep link to a collapsed (empty) review must expand the line first.
+    const target = filteredReviews.find(r => r.id.toLowerCase() === id)
+    const targetIsEmpty = target !== undefined && isEmptyReview(target)
+    if (targetIsEmpty) setEmptyReviewsState({ key: url, open: true })
+    const idx = (targetIsEmpty ? filteredReviews : splitEmptyReviews(filteredReviews).visible)
+      .findIndex(r => r.id.toLowerCase() === id)
     if (idx >= 0) {
       setReviewsPageState({ key: url, page: Math.floor(idx / REVIEWS_PER_PAGE) + 1 })
     }
@@ -748,12 +761,12 @@ function MintDetailContent({ url }: { url: string }) {
   // Numbered pagination for the Reviews tab, applied to the filtered list. Page is
   // keyed by mint URL so it resets to 1 when navigating to a different mint (no
   // reset effect needed); changing a filter above also resets it to 1.
-  const reviewsTotalPages = Math.max(1, Math.ceil(filteredReviews.length / REVIEWS_PER_PAGE))
+  const reviewsTotalPages = Math.max(1, Math.ceil(listReviews.length / REVIEWS_PER_PAGE))
   const reviewsPage = Math.min(
     reviewsPageState.key === url ? reviewsPageState.page : 1,
     reviewsTotalPages,
   )
-  const pagedReviews = filteredReviews.slice((reviewsPage - 1) * REVIEWS_PER_PAGE, reviewsPage * REVIEWS_PER_PAGE)
+  const pagedReviews = listReviews.slice((reviewsPage - 1) * REVIEWS_PER_PAGE, reviewsPage * REVIEWS_PER_PAGE)
   // Only the page actually on screen gets its NIP-05 claim verified — see
   // useVerifiedNip05.ts for why this bounds external requests without needing
   // a separate cap. Computed up here (not lower with the rest of the pagination
@@ -912,7 +925,7 @@ function MintDetailContent({ url }: { url: string }) {
   const breakdownAuditRecentErrors = knownMint?.auditRecentErrors ?? null
   const breakdownAScore = auditReliabilityScore(breakdownAuditRecentTotal, breakdownAuditRecentErrors)
   const breakdownAuditDisplay = breakdownAuditRecentTotal === null
-    ? '—'
+    ? 'No audit data available'
     : isAuditUnknown(breakdownAuditRecentTotal)
       ? 'Unknown'
       : `${((breakdownAuditRecentErrors ?? 0) / breakdownAuditRecentTotal * 100).toFixed(1)}% err`
@@ -2295,8 +2308,20 @@ function MintDetailContent({ url }: { url: string }) {
                       onClick={toggleReviewHideAnon}
                     >Hide anon · {reviewFilterAnonCount}</button>
                   </div>
+                  {filteredEmpty.length > 0 && (
+                    <button
+                      type="button"
+                      className="reviews-empty-line"
+                      aria-expanded={emptyReviewsOpen}
+                      onClick={() => { setEmptyReviewsState({ key: url, open: !emptyReviewsOpen }); setReviewsPageState({ key: url, page: 1 }) }}
+                    >
+                      {filteredEmpty.length} review{filteredEmpty.length === 1 ? '' : 's'} without a rating or comment · <span className="reviews-empty-line-action">{emptyReviewsOpen ? 'Hide' : 'Show'}</span>
+                    </button>
+                  )}
                   {filteredReviews.length === 0 ? (
                     <div style={{fontSize:13,color:'var(--text3)'}}>No reviews match this filter.</div>
+                  ) : listReviews.length === 0 ? (
+                    <div className="reviews-all-empty-note" style={{fontSize:13,color:'var(--text3)'}}>None of these reviews include a rating or a comment.</div>
                   ) : (
                     <>
                   {pagedReviews.map(r => {
