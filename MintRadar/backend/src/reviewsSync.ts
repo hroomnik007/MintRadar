@@ -72,6 +72,8 @@ export function dedupeAndParseReviewEvents(
   return out.sort((a, b) => b.createdAt - a.createdAt)
 }
 
+// Average over rated reviews only. review_count excludes empty events
+// (no rating and no comment).
 export function computeAvgRating(reviews: SyncedReview[]): number | null {
   const rated = reviews.filter(r => r.rating !== null)
   if (rated.length === 0) return null
@@ -99,14 +101,13 @@ export async function persistMintReviews(url: string, reviews: SyncedReview[]): 
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-
     for (let i = 0; i < reviews.length; i += REVIEW_INSERT_BATCH) {
       const batch = reviews.slice(i, i + REVIEW_INSERT_BATCH)
       const values: unknown[] = []
       const tuples = batch.map((r, j) => {
         const b = j * 6
         values.push(url, r.pubkey, r.eventId, r.rating, r.comment, r.createdAt)
-        return `($` + (b + 1) + `, $` + (b + 2) + `, $` + (b + 3) + `, $` + (b + 4) + `, $` + (b + 5) + `, $` + (b + 6) + `)`
+        return `($${b + 1}, $${b + 2}, $${b + 3}, $${b + 4}, $${b + 5}, $${b + 6})`
       })
       await client.query(
         `INSERT INTO mint_reviews (url, pubkey, event_id, rating, comment, created_at)
@@ -120,7 +121,6 @@ export async function persistMintReviews(url: string, reviews: SyncedReview[]): 
         values,
       )
     }
-
     const { rows } = await client.query(
       `SELECT COUNT(*)::int AS review_count,
               AVG(rating) FILTER (WHERE rating IS NOT NULL) AS review_avg_rating
@@ -134,11 +134,7 @@ export async function persistMintReviews(url: string, reviews: SyncedReview[]): 
       ? null
       : Math.round(Number(stored.review_avg_rating) * 10) / 10
     await client.query(
-      `UPDATE mints
-         SET review_count = $1,
-             review_avg_rating = $2,
-             reviews_checked_at = NOW()
-       WHERE url = $3`,
+      `UPDATE mints SET review_count = $1, review_avg_rating = $2, reviews_checked_at = NOW() WHERE url = $3`,
       [stored?.review_count ?? 0, avg, url],
     )
     await client.query('COMMIT')
@@ -161,8 +157,8 @@ export async function refreshAllMintReviews(): Promise<number> {
     return -1
   }
   reviewSyncRunning = true
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(globalThis as any).WebSocket = WebSocket
-
   const nostrPool = new SimplePool()
   let updated = 0
   let failed = 0
