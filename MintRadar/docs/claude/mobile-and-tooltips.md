@@ -155,3 +155,6 @@ error badge) must be a separate sibling element placed next to the badge — nev
 inside the same pill-shaped container as the badge. This convention is used consistently
 across the app.
 
+
+## Mobile navbar row 1 (2026-09-30)
+Logo + auth stay on one row at ≤640px. Npub line is hidden; display name ellipsizes (72px, 56px at ≤360px); method badge hides at ≤360px. Tabs still wrap to row 2.

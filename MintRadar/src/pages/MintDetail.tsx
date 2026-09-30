@@ -585,8 +585,6 @@ function MintDetailContent({ url }: { url: string }) {
   const auditMeltsTooltip = useTapTooltip(auditMeltsRef)
   const auditErrorsRef = useRef<HTMLSpanElement>(null)
   const auditErrorsTooltip = useTapTooltip(auditErrorsRef)
-  const auditRecentRef = useRef<HTMLSpanElement>(null)
-  const auditRecentTooltip = useTapTooltip(auditRecentRef)
   const auditAvgTimeRef = useRef<HTMLSpanElement>(null)
   const auditAvgTimeTooltip = useTapTooltip(auditAvgTimeRef)
   const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'nuts' | 'audit' | 'reviews'>('overview')
@@ -2103,26 +2101,6 @@ function MintDetailContent({ url }: { url: string }) {
                         {auditAvgTimeTooltip.open && (
                           <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
                             Average duration of the successful swaps in the same rolling window as Recent success rate.
-                          </div>
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="audit-summary-cell">
-                    <div className="audit-summary-value" style={{fontSize:15}}>{auditLastCheckedDisplay}</div>
-                    <div className="audit-summary-label">
-                      Last checked
-                      <span
-                        ref={auditRecentRef}
-                        style={{position:'relative',display:'inline-flex',marginLeft:3}}
-                        onPointerEnter={auditRecentTooltip.onPointerEnter}
-                        onPointerLeave={auditRecentTooltip.onPointerLeave}
-                        onClick={auditRecentTooltip.onClick}
-                      >
-                        <Info size={11} color="#6b7280" style={{cursor:'help'}} />
-                        {auditRecentTooltip.open && (
-                          <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
-                            When MintRadar's own 6-hour discovery job last refreshed this mint's audit figures.
                           </div>
                         )}
                       </span>

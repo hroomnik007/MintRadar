@@ -1245,10 +1245,13 @@ button.md-url-copy.copied > svg { opacity: 1; }
   .md-summary {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: 6px;
+    padding: 8px 14px;
   }
   .md-sc {
-    padding: 10px 12px;
+    padding: 7px 8px;
+    gap: 6px;
+    min-width: 0;
   }
   .md-sc-icon { display: none; }
   .md-sc-value { font-size: 15px; font-weight: 600; }
@@ -1493,19 +1496,19 @@ button.md-url-copy.copied > svg { opacity: 1; }
 /* Match the navbar + Dashboard content gutter, which drops to 14px at ≤600px. */
 @media (max-width: 600px) {
   .md-header { margin: 10px 14px 0; }
-  .md-summary { padding: 12px 14px; }
+  .md-summary { padding: 8px 14px; }
   .md-tabs { padding: 0 14px; }
   .md-body { padding: 12px 14px; }
 }
 
 /* ── Audit stats ─────────────────────────────────────────────── */
 /* Audit summary strip — the 5-second overview at the top of the Audit tab.
-   Mints · Melts · Recent errors · Last checked, always visible (sits outside
+   Mints · Melts · Recent success rate · Avg swap time, always visible (sits outside
    the mobile collapse). Replaced the old 3-card all-time grid + separate
    "Recent reliability" band, which duplicated these numbers. */
 .audit-summary-strip {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 5px;
   min-width: 0;
   margin-bottom: 10px;

@@ -30,9 +30,9 @@ const base = { auditNMints: 1000, auditNMelts: 500, auditRecentTotal: 100, audit
 if (process.env.AUDIT_W) test.use({ viewport: { width: Number(process.env.AUDIT_W), height: 900 } })
 
 test.describe('Audit data freshness', () => {
-  test('fresh data: original Last checked tile, no copper notice, no breakdown note', async ({ page }) => {
+  test('fresh data: no Last checked tile, no copper notice, no breakdown note', async ({ page }) => {
     await gotoAudit(page, { ...base, auditCheckedAt: ago(3 * H), auditSyncedAt: ago(2 * H) })
-    await expect(cell(page, 'Last checked').locator('.audit-summary-value')).toHaveText('2h ago')
+    await expect(page.locator('.audit-summary-cell', { hasText: 'Last checked' })).toHaveCount(0)
     await expect(page.locator('.audit-summary-cell', { hasText: "Auditor's last check" })).toHaveCount(0)
     await expect(page.locator('.audit-summary-cell', { hasText: 'MintRadar last synced' })).toHaveCount(0)
     await expect(page.locator('.audit-stale-notice')).toHaveCount(0)
@@ -42,7 +42,7 @@ test.describe('Audit data freshness', () => {
 
   test('auditor data 10 days old: breakdown note only, no copper notice', async ({ page }) => {
     await gotoAudit(page, { ...base, auditCheckedAt: ago(10 * D + H), auditSyncedAt: ago(2 * H) })
-    await expect(cell(page, 'Last checked').locator('.audit-summary-value')).toHaveText('2h ago')
+    await expect(page.locator('.audit-summary-cell', { hasText: 'Last checked' })).toHaveCount(0)
     await expect(page.locator('.audit-stale-notice')).toHaveCount(0)
     await expect(page.locator('.rb-row-note').first()).toHaveText('data 10 days old')
     await expect(page.locator('.rb-row-note').first()).toHaveAttribute('title', /Two times apply/)

@@ -18,7 +18,7 @@ async function gotoAudit(page: Page, alphaOverrides: Record<string, unknown>) {
 }
 
 // ── Fully audited, enough recent swaps ─────────────────────────
-test('fully audited: strip shows Mints / Melts / Recent success rate / Last checked', async ({ page }) => {
+test('fully audited: strip shows Mints / Melts / Recent success rate / Avg swap time', async ({ page }) => {
   await gotoAudit(page, {
     auditNMints: 1234,
     auditNMelts: 567,
@@ -40,7 +40,7 @@ test('fully audited: strip shows Mints / Melts / Recent success rate / Last chec
   await expect(cell('Recent success rate').locator('.audit-summary-sub')).toHaveText('98% ok')
   // 2/100 errors = 2% error rate → auditReliabilityColor()'s <=5% bucket → var(--fast) green.
   await expect(cell('Recent success rate').locator('.audit-summary-value')).toHaveCSS('color', 'rgb(92, 201, 163)')
-  await expect(cell('Last checked').locator('.audit-summary-value')).toHaveText('3h ago')
+  await expect(cell('Last checked')).toHaveCount(0)
 
   await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-strip-full.png' })
 })
@@ -80,9 +80,7 @@ test('too few recent swaps: Recent success rate cell says "too few to score"', a
   // Unknown / too-few state stays grey (var(--text3)).
   await expect(recent.locator('.audit-summary-value')).toHaveCSS('color', 'rgb(154, 173, 164)')
 
-  // Last checked still renders from our own sync time.
-  const last = page.locator('.audit-summary-strip .audit-summary-cell', { hasText: 'Last checked' })
-  await expect(last.locator('.audit-summary-value')).toHaveText('5 min ago')
+  await expect(page.locator('.audit-summary-strip .audit-summary-cell', { hasText: 'Last checked' })).toHaveCount(0)
 
   await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-strip-fewswaps.png' })
 })
@@ -107,10 +105,7 @@ test('not audited: no strip, existing "No audit data" fallback shown', async ({ 
   await expect(page.getByText('No audit data available for this mint.')).toBeVisible()
 })
 
-// ── auditSyncedAt not yet backfilled → "Last checked" degrades to em dash ─
-test('missing auditSyncedAt: Last checked shows an em dash, not a wrong time', async ({ page }) => {
+test('Last checked tile is gone even when auditSyncedAt is missing', async ({ page }) => {
   await gotoAudit(page, { auditSyncedAt: null })
-
-  const last = page.locator('.audit-summary-strip .audit-summary-cell', { hasText: 'Last checked' })
-  await expect(last.locator('.audit-summary-value')).toHaveText('—')
+  await expect(page.locator('.audit-summary-strip .audit-summary-cell', { hasText: 'Last checked' })).toHaveCount(0)
 })

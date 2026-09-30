@@ -399,19 +399,28 @@
   /* Row 1: logo left, auth (Login CTA, or profile chip + logout) right —
      same row, pushed apart. Nav links wrap to row 2+ (order 3). */
   .navbar-spacer { display: none; }
+  .nav-logo { flex: 0 0 auto; }
   .navbar-auth {
     order: 2;
-    flex: 0 1 auto;
+    flex: 1 1 0;
     min-width: 0;
+    max-width: calc(100% - 120px);
     margin-left: auto;
     justify-content: flex-end;
+    flex-wrap: nowrap;
   }
-  /* Keep a long display name from pushing the row past the viewport. Tighter
-     here than desktop because the method badge now shares the name row. */
+  .navbar-profile {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .navbar-profile-text { min-width: 0; overflow: hidden; }
+  .navbar-npub { display: none; }
+  /* Keep a long display name from wrapping the chip onto row 2. */
   .navbar-username {
     display: block;
     min-width: 0;
-    max-width: 92px;
+    max-width: 72px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -915,3 +924,8 @@
 }
 .nostr-connect-btn:hover:not(:disabled) { background: var(--green-soft-strong); border-color: var(--green); }
 .nostr-connect-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+@media (max-width: 360px) {
+  .navbar-method-badge { display: none; }
+  .navbar-username { max-width: 56px; }
+}
