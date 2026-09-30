@@ -18,24 +18,6 @@ import { pool } from './db.js'
 import { getKnownMints } from './prober.js'
 import { parseReviewRatingAndComment } from './reviews.js'
 
-// Broad relay set for the BACKGROUND sync — this runs on a cron with a generous
-// time budget, so it favours coverage over latency (the opposite trade-off from
-// the frontend's curated REVIEW_READ_RELAYS fast-path list). No longer a straight
-// mirror of the frontend's old REVIEW_RELAYS — as of the 2026-09-19 relay audit
-// (live NIP-11 + WS REQ measurement, 3 cycles) this is DISCOVERY_RELAYS (see the
-// export above) + relay.minibits.cash + 3 relays that measured strong kind:38000
-// yield but were kept OUT of general discovery for other reasons: nostr.mom
-// (5/5 events, unrestricted), eden.nostr.land and nostr21.com (paid relays —
-// 5/5 and 5/5 kind:38000 events respectively; fine here since this is a
-// read-only cron with no write/discovery cost, unlike DISCOVERY_RELAYS or
-// REVIEW_PUBLISH_RELAYS which do exclude them). Dropped vs. the pre-audit list:
-// purplepag.es (0/5 both kinds — directory relay, not NIP-87/38000), relay.snort.social
-// (only 1/5 kind:38172, 0/5 kind:38000 across 3 cycles), nostr.wine (403 on anon REQ,
-// all 3 cycles), relay.8333.space (still EHOSTUNREACH). relay.nostr.net was
-// dropped here on 2026-09-19 for NIP-11 HTTP 500 and re-added 2026-09-27 — see
-// the entry below. `backend/src/__tests__/nostrReviewsRelays.test.ts` pins
-// this exact array as a drift tripwire, and now also cross-checks DISCOVERY_RELAYS
-// against the frontend's own array.
 export const REVIEW_SYNC_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
@@ -48,10 +30,6 @@ export const REVIEW_SYNC_RELAYS = [
   'wss://nostr.cypherpunk.today',
   'wss://nostr-pub.wellorder.net',
   'wss://nostr.mintradar.org',
-  // Re-added 2026-09-27. The 2026-09-19 audit dropped it because NIP-11 returned
-  // HTTP 500. Rechecked live: NIP-11 is up (strfry) and a kind:38000 #u REQ for
-  // https://mint.minibits.cash/Bitcoin returned EOSE with 44 events, 15 of which
-  // no other relay in this list had. Stays off REVIEW_READ_RELAYS (fast path).
   'wss://relay.nostr.net',
   'wss://relay.minibits.cash',
   'wss://nostr.mom',
@@ -59,22 +37,9 @@ export const REVIEW_SYNC_RELAYS = [
   'wss://nostr21.com',
 ]
 
-// A cycle that sees fewer reviews than we already stored must not delete them.
-// Nostr does not forget an event just because this pass's relays didn't return
-// it. Rows are upserted (newest event per pubkey wins) and the rollup is
-// counted from the table afterwards, never from this cycle's array length.
-// review_count_pending_low / _streak remain in the schema but are no longer
-// read or written — the drop-floor that used them confirmed a thin fetch as
-// a real deletion.
-
 const REVIEW_FETCH_TIMEOUT_MS = 8_000
 const REVIEW_REQ_LIMIT = 500
-// How many mints to fetch reviews for concurrently. Kept at 3 so that, even if
-// all workers hit persistMintReviews() at the same instant, at most 3 of the
-// pg pool's 5 connections are taken by the sync — the API always keeps 2.
 const REVIEW_SYNC_CONCURRENCY = 3
-// Max rows per multi-VALUES INSERT (keeps the parameter count well under
-// Postgres' 65535 bind-parameter ceiling: 6 cols * 1000 = 6000).
 const REVIEW_INSERT_BATCH = 1000
 
 export interface SyncedReview {
@@ -85,7 +50,6 @@ export interface SyncedReview {
   createdAt: number
 }
 
-// One review per pubkey (newest wins), signature-verified, rating/comment parsed.
 export function dedupeAndParseReviewEvents(
   events: { id: string; pubkey: string; content?: string; tags: string[][]; created_at: number }[],
 ): SyncedReview[] {
@@ -97,9 +61,6 @@ export function dedupeAndParseReviewEvents(
   const out: SyncedReview[] = []
   for (const e of byPubkey.values()) {
     const { rating, comment } = parseReviewRatingAndComment(e.tags, e.content ?? '')
-    // Cap stored comment length — a relay could serve arbitrarily large event
-    // content and this goes straight into a TEXT column. 2000 chars is well
-    // above any real review; the frontend already truncates visually.
     out.push({
       eventId: e.id,
       pubkey: e.pubkey,
@@ -111,9 +72,6 @@ export function dedupeAndParseReviewEvents(
   return out.sort((a, b) => b.createdAt - a.createdAt)
 }
 
-// Average over rated reviews only — rating-less endorsement events are counted
-// in review_count but never dilute the star average (mirrors MintDetail.tsx's
-// `ratedReviews` filter).
 export function computeAvgRating(reviews: SyncedReview[]): number | null {
   const rated = reviews.filter(r => r.rating !== null)
   if (rated.length === 0) return null
@@ -137,12 +95,6 @@ async function fetchReviewsForMint(nostrPool: SimplePool, url: string): Promise<
   }
 }
 
-// Upsert this cycle's reviews, then set the rollup from the rows actually
-// stored. Nothing already in mint_reviews is deleted just because this pass
-// didn't see it. A newer event for the same pubkey replaces the older row;
-// an older event does not. Readers under READ COMMITTED see the upserts and
-// the rollup update commit together. A concurrent pass for the same url can't
-// overlap (single-flight — see isReviewSyncRunning).
 export async function persistMintReviews(url: string, reviews: SyncedReview[]): Promise<void> {
   const client = await pool.connect()
   try {
@@ -154,7 +106,7 @@ export async function persistMintReviews(url: string, reviews: SyncedReview[]): 
       const tuples = batch.map((r, j) => {
         const b = j * 6
         values.push(url, r.pubkey, r.eventId, r.rating, r.comment, r.createdAt)
-        return `($${b + 1}, $${b + 2}, $${b + 3}, $${b + 4}, $${b + 5}, $${b + 6})`
+        return `($` + (b + 1) + `, $` + (b + 2) + `, $` + (b + 3) + `, $` + (b + 4) + `, $` + (b + 5) + `, $` + (b + 6) + `)`
       })
       await client.query(
         `INSERT INTO mint_reviews (url, pubkey, event_id, rating, comment, created_at)
@@ -169,11 +121,12 @@ export async function persistMintReviews(url: string, reviews: SyncedReview[]): 
       )
     }
 
-    const { rows } = await client.query<{ review_count: number; review_avg_rating: number | null }>(
+    const { rows } = await client.query(
       `SELECT COUNT(*)::int AS review_count,
               AVG(rating) FILTER (WHERE rating IS NOT NULL) AS review_avg_rating
          FROM mint_reviews
-        WHERE url = $1`,
+        WHERE url = $1
+          AND (rating IS NOT NULL OR BTRIM(comment) <> '')`,
       [url],
     )
     const stored = rows[0]
@@ -202,28 +155,14 @@ export function isReviewSyncRunning(): boolean {
   return reviewSyncRunning
 }
 
-// Fetches reviews for every known mint and persists them. Single-flight: a
-// second call while one is in progress is a no-op (returns -1).
 export async function refreshAllMintReviews(): Promise<number> {
   if (reviewSyncRunning) {
     console.warn('[reviews-sync] already running — skipping overlapping run')
     return -1
   }
   reviewSyncRunning = true
-
-  // Always install 'ws' as globalThis.WebSocket — see nostrService.ts for why
-  // this must not be guarded by `if (!globalThis.WebSocket)`: Node 22's native
-  // WebSocket crashes the process on a failed relay connection.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(globalThis as any).WebSocket = WebSocket
 
-  // Root nostr-tools SimplePool — connects via the plain `globalThis.WebSocket`
-  // above, NOT the connect-time DNS-pinned `DnsPinnedWebSocket` that
-  // nostrService.ts uses for the notification path. Safe ONLY because
-  // REVIEW_SYNC_RELAYS is a hardcoded constant with no attacker-controlled host.
-  // If a dynamic/user-supplied relay list is ever added here, move to the pinned
-  // pool ('nostr-tools/pool' SimplePool + useWebSocketImplementation) or this
-  // becomes an SSRF vector. See the matching note in discovery.ts.
   const nostrPool = new SimplePool()
   let updated = 0
   let failed = 0
