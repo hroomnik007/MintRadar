@@ -14,6 +14,8 @@ import { AUDIT_MIN_SAMPLES } from '@/utils/auditScore'
 import { formatAuditSuccessRatio, auditReliabilityColor } from '@/utils/mintFormatting'
 import { useNow } from '@/hooks/useNow'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { probeMint } from '@core/mint/api'
+import { pickInputFee } from '@/utils/mintProbeDisplay'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 
 const IcClose = () => (
@@ -179,6 +181,8 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
   const isMobile = useIsMobile()
   const backupInfoRef = useRef<HTMLSpanElement>(null)
   const backupInfoTooltip = useTapTooltip(backupInfoRef)
+  const feeInfoRef = useRef<HTMLSpanElement>(null)
+  const feeInfoTooltip = useTapTooltip(feeInfoRef)
   const auditInfoRef = useRef<HTMLSpanElement>(null)
   const auditInfoTooltip = useTapTooltip(auditInfoRef)
   const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('7d')
@@ -187,6 +191,53 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
   // layout below). The desktop side-by-side .cmp-grid ignores this entirely.
   const [activeIdx, setActiveIdx] = useState(0)
   const activeMintIdx = Math.min(activeIdx, mints.length - 1)
+
+  // Input fee comes from the existing on-demand probe (/api/mint/probe → live
+  // /v1/keysets), the same source Mint Detail's Keysets panel uses. Own query key
+  // and no IndexedDB history write (unlike useMintProbe).
+  const probeQueries = useQueries({
+    queries: mints.map(m => ({
+      queryKey: ['mint', 'compare-probe', m.url],
+      queryFn: () => probeMint(m.url),
+      staleTime: 2 * 60 * 1000,
+      retry: 1,
+    })),
+  })
+  const feeCell = (i: number) => {
+    const q = probeQueries[i]
+    if (!q || q.isLoading) return <span style={{ color: 'var(--text3)' }}>…</span>
+    const fee = pickInputFee(q.data?.keysets)
+    if (!fee) return <span style={{ color: 'var(--text3)' }}>n/a</span>
+    return (
+      <>
+        <span>{fee.label}</span>
+        <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{fee.unit}</span>
+      </>
+    )
+  }
+  const feeTooltipText = 'Input fee per 1000 proofs spent from the mint’s active keyset (NUT-02 input_fee_ppk), for its main unit. “free” = no fee. Lower is cheaper. n/a = the mint did not report it.'
+  const feeTooltipBox = (
+    <div style={{
+      position: 'absolute', bottom: 'calc(100% + 6px)', left: 0,
+      background: 'var(--bg)', border: '0.5px solid var(--border2)', borderRadius: 8,
+      padding: '8px 10px', fontSize: 10, color: 'var(--text2)', lineHeight: 1.5,
+      width: 200, zIndex: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+      pointerEvents: 'none', whiteSpace: 'normal', textAlign: 'left',
+      fontFamily: 'var(--font-body)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400,
+    }}>{feeTooltipText}</div>
+  )
+  const feeLabelInfo = (
+    <span
+      ref={feeInfoRef}
+      style={{ position: 'relative', display: 'inline-flex' }}
+      onPointerEnter={feeInfoTooltip.onPointerEnter}
+      onPointerLeave={feeInfoTooltip.onPointerLeave}
+      onClick={feeInfoTooltip.onClick}
+    >
+      <Info size={11} color="#6b7280" style={{ cursor: 'help', flexShrink: 0 }} />
+      {feeInfoTooltip.open && feeTooltipBox}
+    </span>
+  )
 
   const historyQueries = useQueries({
     queries: mints.map(m => ({
@@ -363,6 +414,13 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                     <span className="cmp-mobile-lbl">Latency</span>
                     <span className="cmp-mobile-val" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
                       {d.isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
+                    </span>
+                  </div>
+
+                  <div className="cmp-mobile-row">
+                    <span className="cmp-mobile-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>Input fee{feeLabelInfo}</span>
+                    <span className="cmp-mobile-val cmp-input-fee" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
+                      {feeCell(activeMintIdx)}
                     </span>
                   </div>
 
@@ -553,6 +611,14 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               </div>
             )
           })}
+
+          {/* ── Input fee ── */}
+          <div className="cmp-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>Input fee{feeLabelInfo}</div>
+          {mints.map((mint, i) => (
+            <div key={mint.url} className="cmp-val cmp-input-fee" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
+              {feeCell(i)}
+            </div>
+          ))}
 
           {/* ── NUT Count ── */}
           <div className="cmp-lbl">NUT Count</div>

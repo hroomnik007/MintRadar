@@ -39,6 +39,7 @@
   `buildFilterParams` rebuild) specifically so the shared `mintradar:escape` window-event handler
   can't act on a stale closure of the other filter state. Tests:
   `e2e/compare-url-persistence.spec.ts`.
+- **Input fee row (2026-10-01):** `ComparisonModal` shows "Input fee" right after Latency (desktop `.cmp-grid` + mobile `.cmp-mobile-stack`, ⓘ tooltip in the Audit-success pattern). The fee is NOT in the DB or `/api/mints/known`; it comes from the existing on-demand probe (`GET /api/mint/probe` → live `/v1/keysets`, the same `data.keysets` Mint Detail's Keysets panel reads) via a dedicated `useQueries` entry (`['mint','compare-probe',url]`, `probeMint`, no IndexedDB history write — unlike `useMintProbe`). `pickInputFee()` (`utils/mintProbeDisplay.ts`) takes the ACTIVE keyset(s) of the primary unit (`sat` if present, else the first active keyset's unit); if several active keysets of that unit disagree the range is shown ("0–100 ppk"); formatting reuses `formatKeysetFee` (`free` / `N ppk`) + a muted unit suffix; "n/a" when keysets are unknown/no active keyset reports `input_fee_ppk` (incl. offline mints), "…" while loading. Cost: one extra probe per compared mint (≤4) when the modal opens. Tests: `pickInputFee.test.ts`, `e2e/compare-input-fee.spec.ts`.
 - `ComparisonModal` also renders a Community Rating row (★ badge, "—" fallback when no reviews)
   and a shield-badge Reliability Score (see "Reliability Score vs Community Rating" above) — added 2026-09-03.
 
