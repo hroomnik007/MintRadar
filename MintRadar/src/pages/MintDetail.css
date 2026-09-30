@@ -140,6 +140,25 @@
   flex: 0 1 auto;
 }
 
+/* Desktop: actions sit at the right of the hero card again, not on the
+   Announced line. Mobile keeps the shared row. */
+@media (min-width: 769px) {
+  .md-announce-row {
+    display: block;
+    width: auto;
+  }
+  .md-announce-label {
+    overflow: visible;
+    text-overflow: unset;
+  }
+  .md-header .md-hdr-actions {
+    position: absolute;
+    right: 20px;
+    bottom: 22px;
+    margin: 0;
+  }
+}
+
 /* A CSS grid, not flex, for exactly one reason: the avatar column width
    (--md-avatar-col) must stay FIXED regardless of the avatar's own actual
    rendered size, so .md-namebox's available width — and therefore its own
