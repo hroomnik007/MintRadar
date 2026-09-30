@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { connectMock, clientQueryMock, clientReleaseMock } = vi.hoisted(() => ({
+const { connectMock, clientQueryMock, clientReleaseMock, poolQueryMock } = vi.hoisted(() => ({
   connectMock: vi.fn(),
   clientQueryMock: vi.fn(),
   clientReleaseMock: vi.fn(),
+  poolQueryMock: vi.fn(),
 }))
 
 vi.mock('../db.js', () => ({
-  pool: { connect: connectMock, query: vi.fn() },
+  pool: { connect: connectMock, query: poolQueryMock },
   initDb: vi.fn(),
 }))
 vi.mock('../prober.js', () => ({ getKnownMints: vi.fn() }))
@@ -16,6 +17,7 @@ import {
   dedupeAndParseReviewEvents,
   computeAvgRating,
   persistMintReviews,
+  recomputeReviewCountRollups,
   type SyncedReview,
 } from '../reviewsSync.js'
 
@@ -23,6 +25,7 @@ beforeEach(() => {
   connectMock.mockReset()
   clientQueryMock.mockReset()
   clientReleaseMock.mockReset()
+  poolQueryMock.mockReset()
   clientQueryMock.mockResolvedValue({ rows: [] })
   connectMock.mockResolvedValue({ query: clientQueryMock, release: clientReleaseMock })
 })
@@ -151,5 +154,22 @@ describe('persistMintReviews', () => {
     const sqls = clientQueryMock.mock.calls.map(c => String(c[0]).trim().split(/\s+/)[0])
     expect(sqls).toContain('ROLLBACK')
     expect(clientReleaseMock).toHaveBeenCalledOnce()
+  })
+})
+
+describe('recomputeReviewCountRollups', () => {
+  it('updates rollup from stored rows and excludes empty reviews', async () => {
+    poolQueryMock.mockResolvedValue({ rowCount: 12, rows: [] })
+    await expect(recomputeReviewCountRollups()).resolves.toBe(12)
+    expect(poolQueryMock).toHaveBeenCalledOnce()
+    const sql = String(poolQueryMock.mock.calls[0]![0])
+    expect(sql).toMatch(/UPDATE mints/)
+    expect(sql).toMatch(/rating IS NOT NULL OR BTRIM/)
+    expect(sql).toMatch(/FROM mint_reviews/)
+  })
+
+  it('returns 0 when the driver reports no rowCount', async () => {
+    poolQueryMock.mockResolvedValue({ rows: [] })
+    await expect(recomputeReviewCountRollups()).resolves.toBe(0)
   })
 })
