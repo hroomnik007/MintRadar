@@ -738,6 +738,17 @@ export default function Dashboard() {
     localStorage.setItem('mintRadar_viewMode', mode)
   }
 
+  // Where the sort segment scrolls inside itself (≤370px, see Dashboard.css) keep the active option in view.
+  const sortSegmentRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const seg = sortSegmentRef.current
+    const active = seg?.querySelector<HTMLElement>('.sort-btn.active')
+    if (!seg || !active || seg.scrollWidth <= seg.clientWidth) return
+    const a = active.getBoundingClientRect()
+    const b = seg.getBoundingClientRect()
+    seg.scrollLeft += a.left - b.left - (b.width - a.width) / 2
+  }, [sortBy])
+
   function handleSortClick(s: typeof sortBy) {
     if (s === sortBy) {
       commitFilters({ sortDir: sortDir === 'asc' ? 'desc' : 'asc' })
@@ -1055,7 +1066,7 @@ export default function Dashboard() {
             {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
           </button>
         </div>
-        <div className="sort-segment">
+        <div className="sort-segment" ref={sortSegmentRef}>
           {(['reviewCount', 'rating', 'latency', 'name', 'reliability'] as const).map(s => (
             <button
               key={s}

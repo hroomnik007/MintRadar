@@ -1929,12 +1929,11 @@ needed; wider viewports look as before. `.navbar-inner` gets `.is-authed` when l
 
 Logged-out fits untouched from 840px, logged-in from 997px. Not done on purpose: making the auth
 area shrinkable (no effect — nowrap contents just clip) and a separate "hide npub only" step (the
-npub sits under the name row, so hiding it saves height, not width). Long display names are still
-unclamped above 640px (pre-existing). Between 841 and 858px the logged-out row already has less
+npub sits under the name row, so hiding it saves height, not width). Long display names are clamped from
+641px (2026-09-30, see "Layout overflow fixes" below). Between 841 and 858px the logged-out row already has less
 than its 18px right padding (content fits, but a slower font swap can push it over — the e2e test
-waits for `document.fonts.ready`). Tests: `e2e/navbar-tablet-layout.spec.ts`. Known unrelated
-overflows seen while measuring, NOT fixed here: Dashboard `.submit-btn` at ~901–990px and Dashboard
-`.sort-segment` at 360px (5px).
+waits for `document.fonts.ready`). Tests: `e2e/navbar-tablet-layout.spec.ts`. The two Dashboard overflows seen while measuring (`.submit-btn` at
+~901–990px, `.sort-segment` at 360px) were fixed 2026-09-30, see below.
 
 **Phones ≤430px — tab links on one row (2026-09-29):** the six labels are ≈296px of text in a 324px row at
 360px, so the 16px column gap plus the inline Watchlist count badge (rendered only when logged in with
@@ -1942,6 +1941,42 @@ watched mints) pushed "Learn" onto a second row. `@media (max-width: 430px)`: `j
 space-between; column-gap: 6px`, and `.nav-tab-badge` is absolutely positioned on the label's top-right
 corner (takes no width). One row from 360px up; below ~350px the labels still wrap (`flex-wrap` kept).
 Test: `navbar-mobile-layout.spec.ts` ("tab links stay on one row…", badge injected into the DOM).
+
+### Layout overflow fixes (2026-09-30)
+
+Measured with `scrollWidth` vs `clientWidth` at 320–1440px on Dashboard (cards/list, Filters open/closed,
+logged out/in), Watchlist, Stats, Tools, Wallets, Learn and a tracked Mint Detail. Watchlist does NOT share
+the Dashboard toolbar (its Filters/sort row was removed 2026-09-04) and never overflowed.
+
+1. **Dashboard `.submit-btn` at 901–990px.** Overflow 90px at 901, 41 at 950, 1 at 990, 0 from 991; identical in
+   every state. Cause: `.dashboard-controls` (non-wrapping flex row; search + Filters + sort segment + view
+   toggle + refresh + Submit) needs 991px, and `.submit-btn` is `flex-shrink: 0` with its right edge at 991px.
+   The ≤900px block (`flex-wrap`) did not cover 901+. Fix (`Dashboard.css`): `@media (min-width: 901px) and
+   (max-width: 1000px)` wraps the row and gives only `.search-wrap` its own line (Filters joins the sort row);
+   controls keep desktop size, Submit stays in the toolbar, 9px slack above the 991px limit.
+2. **Dashboard `.sort-segment` at ≤360px.** Its five buttons have a 351px minimum (`flex: 1 1 100%`, implicit
+   `min-width: auto`); the row has 332px at 360px (5px over), 312 at 340 (25), 292 at 320 (45). 375px and up fit.
+   Fix: `@media (max-width: 370px)` — `.sort-btn` horizontal padding 3px (fits 340–370px, no scrolling) and
+   `.sort-segment { min-width: 0; overflow-x: auto }` (scrollbar hidden) so 320px scrolls inside the segment
+   only. `Dashboard.tsx` keeps the active option centred in view via `sortSegmentRef` when the segment overflows
+   (the default "Reliability Score" is the last button).
+3. **Navbar long display name above 640px.** `.navbar-username` (≥641px) is single-line, `overflow: hidden`,
+   `text-overflow: ellipsis`; the full name is the `title` of both the chip and the name span. **A fixed
+   max-width cannot work:** at the start of each navbar step the row has no slack (807px: a 10-char name already
+   uses it all; a 19-char name overflowed 45px at 807/903/997 and 2px at 850 before), so the name gets
+   what is left of the row: `max-width: min(240px, calc(100cqw − Npx))`, with N = fixed row width − 36px padding
+   + 2px safety per step (807–902: 685, 903–996: 781, 997+: 875; fixed part measured 719/815/909px page width).
+   `.navbar-inner` is a size container (`container-type: inline-size`, ≥641px) because `cqw`, unlike `vw`,
+   excludes a classic scrollbar. **If a navbar step's width changes (new element, different padding), re-measure
+   and update these three numbers.** Consequence: a normal-length name can now be cut at 807–~850, 903–~950 and
+   997–~1050px where it used to overflow the page; elsewhere it is unchanged (10-char name never truncated).
+   Navbar steps and breakpoints untouched.
+
+**Rule applied:** wrap or shrink the smallest thing inside the toolbar that overflows, in a media query that
+covers only the overflowing range; never hide or move a control. **Unrelated, pre-existing, NOT fixed** (also
+on `origin/main` before this change): Mint Detail logged in — `.md-sc` / `.md-tab` overflow 4px at 320px and
+`.md-sc` 63px at 800px (appears only in some page loads). Everything else in the matrix
+(320…1440px, all pages, logged out/in) has `scrollWidth <= clientWidth`. Tests: `e2e/layout-overflow.spec.ts`.
 
 ## Tooltip positioning in scrollable/small containers
 

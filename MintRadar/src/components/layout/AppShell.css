@@ -473,6 +473,31 @@
   .navbar-inner.is-authed .navbar-disconnect-btn { padding: 6px; }
 }
 
+/* Long display names (2026-09-30): from 641px the name is clamped to one line with an ellipsis (full name in
+   the span's `title`). The row has no slack at the start of each step (a 10-char name already uses it all
+   at 807px), so a fixed max-width cannot keep 80 characters on one row; instead the name gets whatever
+   the row has left: 100cqw (the .navbar-inner content width — unlike 100vw it excludes a classic
+   scrollbar) minus the measured width of everything else, per step (the same three step widths as the
+   tabs/wordmark rules above: fixed part = 719/815/909px page width − 36px padding, +2px safety), and
+   never more than 240px. */
+@media (min-width: 641px) {
+  .navbar-inner { container-type: inline-size; }
+  .navbar-username {
+    display: block;
+    min-width: 0;
+    max-width: min(240px, calc(100cqw - 875px));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+@media (min-width: 807px) and (max-width: 902px) {
+  .navbar-username { max-width: min(240px, calc(100cqw - 685px)); }
+}
+@media (min-width: 903px) and (max-width: 996px) {
+  .navbar-username { max-width: min(240px, calc(100cqw - 781px)); }
+}
+
 /* Phones ≤430px: the six tab labels only just fit one row (≈296px of text in a 324px row at 360px),
    so the 16px column gap and the inline Watchlist count badge pushed "Learn" onto a second row —
    worst when logged in (the badge only renders then). Spread the labels over the row with a small

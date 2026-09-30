@@ -1867,6 +1867,24 @@
   .sort-btn { flex: 1; justify-content: center; padding: 5.5px 6px; font-size: 10.5px; }
 }
 
+/* 901–1000px: search + Filters + sort + view toggle + refresh + Submit mint need 991px on one row
+   (the Submit button overflowed the viewport by 90px at 901, 41 at 950, 1 at 990). Only the search
+   input moves onto its own row (Filters joins the sort row), 9px of slack above the 991px limit; the
+   controls keep their desktop size, unlike the ≤900px block. */
+@media (min-width: 901px) and (max-width: 1000px) {
+  .dashboard-controls { flex-wrap: wrap; }
+  .search-wrap { flex: 1 1 100%; }
+}
+
+/* Phones ≤370px: the sort segment's five buttons need 351px, the row has 332px at 360px (5px over)
+   and 292px at 320px. Tighter button padding fits 340–370px; below that the segment scrolls inside
+   itself (min-width: 0 lets the flex item shrink) — the page never scrolls sideways. */
+@media (max-width: 370px) {
+  .sort-segment { min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .sort-segment::-webkit-scrollbar { display: none; }
+  .sort-btn { padding-inline: 3px; }
+}
+
 @media (max-width: 768px) {
   .col-hide-mobile { display: none; }
   .status-text-mobile-hide { display: none; }

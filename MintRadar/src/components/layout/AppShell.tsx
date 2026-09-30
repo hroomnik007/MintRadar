@@ -348,7 +348,7 @@ export function AppShell() {
                 )}
                 <div className="navbar-profile-text">
                   <div className="navbar-profile-name-row">
-                    <span className="navbar-username">
+                    <span className="navbar-username" title={profile.name ?? undefined}>
                       {profile.name ?? `${profile.pubkey.slice(0,8)}...`}
                     </span>
                     {authMethod !== null && (
