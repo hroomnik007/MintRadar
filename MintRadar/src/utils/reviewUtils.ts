@@ -38,7 +38,6 @@ export function parseReviewEvent(e: ReviewEvent): ParsedReview {
   const commentTag = e.tags.find(t => t[0] === 'comment')
   let rating: number | null = ratingTag ? parseInt(ratingTag[1] ?? '', 10) : null
   if (rating !== null && (rating < 1 || rating > 5)) rating = null
-  // Fallback: extract rating from content "[X/5] ..." format
   const contentMatch = !rating ? /^\[(\d)\/5\]/.exec(e.content ?? '') : null
   if (contentMatch?.[1]) {
     rating = parseInt(contentMatch[1], 10)
@@ -49,10 +48,8 @@ export function parseReviewEvent(e: ReviewEvent): ParsedReview {
   return { id: e.id, pubkey: e.pubkey, rating, comment, createdAt: e.created_at }
 }
 
-// Sort newest-first. Rating-less / comment-less events are kept: a bare kind:38000
-// event pointing at a mint is still an endorsement and is counted as a review
-// (matches how cashumints.space counts). The average-rating calculation excludes
-// them separately (see MintDetail.tsx) — they never carried a score to begin with.
+// Sort newest-first. Empty events (no rating and no comment) are dropped by
+// processReviewEvents / visibleReviews — they are not reviews.
 export function sortReviewsByNewest(parsed: ParsedReview[]): ParsedReview[] {
   return [...parsed].sort((a, b) => b.createdAt - a.createdAt)
 }
@@ -87,13 +84,17 @@ export function mergeStoredAndLiveReviews<T extends { pubkey: string; createdAt:
 export function processReviewEvents(events: ReviewEvent[]): ParsedReview[] {
   const deduped = deduplicateByPubkey(events)
   const parsed = deduped.map(parseReviewEvent)
-  return sortReviewsByNewest(parsed)
+  return sortReviewsByNewest(visibleReviews(parsed))
 }
 
-// A review with neither a rating nor any (non-whitespace) text. The Reviews tab
-// collapses these into one line; the same predicate feeds the list and the count.
+// True when there is no rating and no (non-whitespace) text.
 export function isEmptyReview(r: { rating: number | null; comment?: string | null }): boolean {
   return r.rating === null && (r.comment ?? '').trim() === ''
+}
+
+// Reviews shown in the tab / counted on the card: rating or non-empty comment.
+export function visibleReviews<T extends { rating: number | null; comment?: string | null }>(reviews: T[]): T[] {
+  return reviews.filter(r => !isEmptyReview(r))
 }
 
 // Order-preserving split into reviews to show and "empty" ones to collapse.
