@@ -37,12 +37,18 @@ Health check. Available at `/health` and `/api/v1/health` (identical payload). T
 
 **Response:**
 ```json
-{ "status": "ok", "timestamp": "2026-06-25T10:00:00.000Z", "lastProbeAt": "2026-06-25T09:58:12.000Z", "lastAuditSyncAt": "2026-06-25T06:00:03.000Z" }
+{ "status": "ok", "timestamp": "2026-06-25T10:00:00.000Z", "lastProbeAt": "2026-06-25T09:58:12.000Z", "lastAuditSyncAt": "2026-06-25T06:00:03.000Z", "lastReviewsSyncAt": "2026-06-25T07:12:44.000Z", "auditUpstream": "ok", "auditUpstreamCheckedAt": "2026-06-25T06:00:01.000Z" }
 ```
 
 `lastProbeAt` is when the 5-minute probe cycle last finished sweeping every mint (not merely "process is alive") — `null` until the first cycle completes after a restart.
 
 `lastAuditSyncAt` is the newest `audit_synced_at` in the database (`MAX(audit_synced_at)` over all mints, cached in-process for 30s), so it **survives restarts and deploys**. It is `null` only if no mint has ever synced. If it stays old, audit-derived data (Recent reliability, the Audit component of the Reliability Score) is stale.
+
+`lastReviewsSyncAt` is the newest `reviews_checked_at` in the database (`MAX(reviews_checked_at)`, read in the same query and the same 30s cache as `lastAuditSyncAt`), so it also **survives restarts**. It is `null` only if no mint has ever been reviews-synced. It is stamped for every mint whose relay query and DB write completed in the 6h reviews sync, even when nothing changed. Caveat: a relay query that returns no events (including every relay being unreachable) still counts as a completed pass, so this proves the sync job is running, not that relays were reachable.
+
+`auditUpstream` is `"ok"`, `"down"` or `"unknown"` and `auditUpstreamCheckedAt` is an ISO timestamp or `null`. They report the outcome of the **last audit sync attempt** (the 6h discovery cron against api.audit.8333.space), **not a live check**: `/health` never calls the upstream. A successful list fetch is `ok`; a non-OK HTTP response, timeout, network error or malformed body is `down`. The state is in-memory only, so after a restart or deploy it is `"unknown"` (with `auditUpstreamCheckedAt: null`) until the next sync, up to 6h later.
+
+Only timestamps and this three-value enum are exposed — no error messages, upstream URL or status codes.
 
 ---
 

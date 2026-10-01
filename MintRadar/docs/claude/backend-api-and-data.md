@@ -18,7 +18,7 @@ audit_n_mints INTEGER
 audit_n_melts INTEGER
 audit_n_errors INTEGER
 audit_checked_at TIMESTAMPTZ    -- audit.8333.space's own `updated_at` for this mint
-audit_synced_at TIMESTAMPTZ     -- when OUR 6h discovery cron last wrote the audit_* cols (drives the breakdown-row sync-age note; `/health` `lastAuditSyncAt` = `MAX(audit_synced_at)`, 30s cache, restart-proof)
+audit_synced_at TIMESTAMPTZ     -- when OUR 6h discovery cron last wrote the audit_* cols (drives the breakdown-row sync-age note; `/health` `lastAuditSyncAt` = `MAX(audit_synced_at)`, 30s cache shared with `lastReviewsSyncAt` = `MAX(reviews_checked_at)` in one query, restart-proof)
 audit_avg_time_ms DOUBLE PRECISION  -- mean time_taken (ms) over OK swaps in the same rolling window as audit_recent_total/errors — see mint_audit_swaps below. Backend-only as of 2026-09-12 (not yet surfaced in the Audit tab UI).
 last_reliability_score INTEGER
 last_error TEXT
@@ -93,7 +93,7 @@ anonymized sample payloads captured from a live diagnostic GET against the Minib
 `integration/mints-swaps.test.ts`.
 
 ## Backend API
-- GET /health and GET /api/v1/health — health check (same payload, both rate-limit exempt; the `/api/v1` prefix rewrite has a special case mapping it to `/health`; there is deliberately NO `/api/health`)
+- GET /health and GET /api/v1/health — health check (same payload, both rate-limit exempt; the `/api/v1` prefix rewrite has a special case mapping it to `/health`; there is deliberately NO `/api/health`). Payload: `status, timestamp, lastProbeAt, lastAuditSyncAt, lastReviewsSyncAt, auditUpstream, auditUpstreamCheckedAt`. `auditUpstream` (`ok|down|unknown`) is module-level in-memory state in `discovery.ts` set by `discoverMintsFromApi()` (last sync attempt, not a live check; `unknown` after restart until the next 6h sync); `/health` makes no outbound request. `getSyncTimesFromDb()` dedupes concurrent queries on cache expiry
 - GET /api/mints/known — all mints with online status, latency, reliability score, degraded flag (TTL cached 60s)
 - GET /api/mints/history?url=&period={24h|7d|30d|90d} — bucketed uptime/latency segments + prev period trend
 - GET /api/mints/version-history?url= — per-mint software version timeline + latest global version

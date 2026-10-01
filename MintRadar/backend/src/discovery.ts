@@ -440,29 +440,68 @@ export function getLastAuditSyncAt(): string | null {
   return lastAuditSyncAt
 }
 
-// Restart-proof variant for /health: the newest audit_synced_at in the DB, so a
-// deploy/restart does not reset it to null. /health is rate-limit exempt, hence
-// a short in-process TTL cache (same reasoning as /api/stats' cache). Falls back
-// to the in-memory value if the query fails, and is null only when no mint has
-// ever synced.
+// Outcome of the most recent audit.8333.space list fetch attempt, for /health.
+// In-memory only (no DB column): "unknown" after a restart until the next sync
+// (cron every 6h). Reflects the last attempt, not a live check — /health never
+// calls the upstream itself.
+export type AuditUpstreamStatus = 'ok' | 'down' | 'unknown'
+let auditUpstream: { status: AuditUpstreamStatus; checkedAt: string | null } = { status: 'unknown', checkedAt: null }
+
+export function getAuditUpstreamStatus(): { auditUpstream: AuditUpstreamStatus; auditUpstreamCheckedAt: string | null } {
+  return { auditUpstream: auditUpstream.status, auditUpstreamCheckedAt: auditUpstream.checkedAt }
+}
+
+function setAuditUpstream(status: 'ok' | 'down'): void {
+  auditUpstream = { status, checkedAt: new Date().toISOString() }
+}
+
+// Restart-proof timestamps for /health: the newest audit_synced_at and
+// reviews_checked_at in the DB, so a deploy/restart does not reset them to null.
+// /health is rate-limit exempt, hence a short in-process TTL cache (same reasoning
+// as /api/stats' cache) shared by both values (one query), with concurrent
+// callers on an expired cache sharing a single in-flight query. On query failure
+// falls back to the in-memory audit value / null for reviews. Each is null only
+// when no mint has ever synced.
 const AUDIT_SYNC_DB_TTL_MS = 30_000
-let auditSyncDbCache: { value: string | null; expiresAt: number } | null = null
+interface SyncTimes { lastAuditSyncAt: string | null; lastReviewsSyncAt: string | null }
+let syncTimesCache: { value: SyncTimes; expiresAt: number } | null = null
+let syncTimesInflight: Promise<SyncTimes> | null = null
+
+function toIso(raw: Date | string | null | undefined): string | null {
+  return raw ? new Date(raw).toISOString() : null
+}
+
+export async function getSyncTimesFromDb(): Promise<SyncTimes> {
+  if (syncTimesCache && syncTimesCache.expiresAt > Date.now()) return syncTimesCache.value
+  if (syncTimesInflight) return syncTimesInflight
+  syncTimesInflight = (async (): Promise<SyncTimes> => {
+    try {
+      const res = await pool.query(
+        'SELECT MAX(audit_synced_at) AS last_sync, MAX(reviews_checked_at) AS last_reviews_sync FROM mints'
+      )
+      const row = res?.rows?.[0]
+      const value: SyncTimes = {
+        lastAuditSyncAt: toIso(row?.last_sync),
+        lastReviewsSyncAt: toIso(row?.last_reviews_sync),
+      }
+      syncTimesCache = { value, expiresAt: Date.now() + AUDIT_SYNC_DB_TTL_MS }
+      return value
+    } catch {
+      return { lastAuditSyncAt, lastReviewsSyncAt: null }
+    } finally {
+      syncTimesInflight = null
+    }
+  })()
+  return syncTimesInflight
+}
 
 export async function getLastAuditSyncAtFromDb(): Promise<string | null> {
-  if (auditSyncDbCache && auditSyncDbCache.expiresAt > Date.now()) return auditSyncDbCache.value
-  try {
-    const res = await pool.query('SELECT MAX(audit_synced_at) AS last_sync FROM mints')
-    const raw = res?.rows?.[0]?.last_sync as Date | string | null | undefined
-    const value = raw ? new Date(raw).toISOString() : null
-    auditSyncDbCache = { value, expiresAt: Date.now() + AUDIT_SYNC_DB_TTL_MS }
-    return value
-  } catch {
-    return lastAuditSyncAt
-  }
+  return (await getSyncTimesFromDb()).lastAuditSyncAt
 }
 
 export async function discoverMintsFromApi(): Promise<number> {
   const records: AuditRecord[] = []
+  let upstreamFailed = false
 
   for (let skip = 0; skip < AUDIT_MAX_RECORDS; skip += AUDIT_PAGE_SIZE) {
     try {
@@ -470,10 +509,12 @@ export async function discoverMintsFromApi(): Promise<number> {
       const res = await safeFetch(url, { timeoutMs: 10_000 }) // SSRF-guarded (see fetchRecentSwapStats)
       if (!res || !res.ok) {
         console.error(`[discovery] audit.8333.space list fetch failed: ${res ? `HTTP ${res.status}` : 'no response'} (skip=${skip}) — audit data not refreshed this cycle`)
+        upstreamFailed = true
         break
       }
       const data: unknown = await res.json()
-      if (!Array.isArray(data) || data.length === 0) break
+      if (!Array.isArray(data)) { upstreamFailed = true; break }
+      if (data.length === 0) break
       for (const record of data) {
         if (typeof record !== 'object' || record === null) continue
         const r = record as Record<string, unknown>
@@ -499,9 +540,11 @@ export async function discoverMintsFromApi(): Promise<number> {
       if (data.length < AUDIT_PAGE_SIZE) break
     } catch (err) {
       console.error('[discovery] audit.8333.space fetch error:', err)
+      upstreamFailed = true
       break
     }
   }
+  setAuditUpstream(upstreamFailed ? 'down' : 'ok')
 
   if (records.length === 0) {
     console.error('[discovery] audit.8333.space returned 0 usable records — audit_synced_at and rolling-window stats left unchanged (stale)')
