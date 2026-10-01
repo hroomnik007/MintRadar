@@ -74,6 +74,8 @@ test('remote-signer: bunker:// paste stays available alongside the QR', async ({
   await page.waitForSelector('.nostr-qr-wrap svg')
   const connect = page.getByRole('button', { name: 'Connect', exact: true })
   await expect(connect).toBeDisabled()
+  await expect(connect.locator('svg')).toHaveCount(1)
+  expect(await connect.textContent()).not.toContain('⚡')
   await page.locator('.nostr-nsec-input').fill('bunker://abc?relay=wss://x')
   await expect(connect).toBeEnabled() // QR present AND paste usable
 })

@@ -465,7 +465,7 @@ export function AppShell() {
                         disabled={isLoading || !bunkerInput.trim()}
                         onClick={() => { void handleModalConnect() }}
                       >
-                        {isLoading ? '…' : 'Connect'}
+                        <Zap size={13} strokeWidth={2.4} aria-hidden="true" /> {isLoading ? '…' : 'Connect'}
                       </button>
                     </div>
                     {qrUri && !bunkerError && (
