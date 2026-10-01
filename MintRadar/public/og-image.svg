@@ -25,14 +25,14 @@
   <line x1="90" y1="310" x2="1110" y2="310" stroke="#414c47" stroke-width="2"/>
 
   <!-- Feature pills row 1 -->
-  <rect x="90" y="338" width="260" height="68" fill="#223a2f" rx="10" stroke="#414c47" stroke-width="1.5"/>
-  <text x="220" y="380" font-family="monospace" font-size="24" fill="#5cc9a3" text-anchor="middle">✓ Reliability Score</text>
+  <rect x="90" y="338" width="333" height="68" fill="#223a2f" rx="10" stroke="#414c47" stroke-width="1.5"/>
+  <text x="256.5" y="380" font-family="monospace" font-size="24" fill="#5cc9a3" text-anchor="middle">✓ Reliability Score</text>
 
-  <rect x="370" y="338" width="260" height="68" fill="#223a2f" rx="10" stroke="#414c47" stroke-width="1.5"/>
-  <text x="500" y="380" font-family="monospace" font-size="24" fill="#5cc9a3" text-anchor="middle">✓ NUT Coverage</text>
+  <rect x="443" y="338" width="260" height="68" fill="#223a2f" rx="10" stroke="#414c47" stroke-width="1.5"/>
+  <text x="573" y="380" font-family="monospace" font-size="24" fill="#5cc9a3" text-anchor="middle">✓ NUT Coverage</text>
 
-  <rect x="650" y="338" width="260" height="68" fill="#223a2f" rx="10" stroke="#414c47" stroke-width="1.5"/>
-  <text x="780" y="380" font-family="monospace" font-size="24" fill="#5cc9a3" text-anchor="middle">✓ Uptime 24h</text>
+  <rect x="723" y="338" width="260" height="68" fill="#223a2f" rx="10" stroke="#414c47" stroke-width="1.5"/>
+  <text x="853" y="380" font-family="monospace" font-size="24" fill="#5cc9a3" text-anchor="middle">✓ Uptime 24h</text>
 
   <!-- Feature pills row 2 -->
   <rect x="230" y="422" width="260" height="68" fill="#223a2f" rx="10" stroke="#414c47" stroke-width="1.5"/>

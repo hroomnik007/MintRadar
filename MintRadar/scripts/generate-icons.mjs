@@ -44,9 +44,5 @@ writeFileSync('public/favicon.ico', Buffer.concat([ico, favicon32]))
 // apple-touch-icon: the same artwork on an opaque --bg square (iOS applies its own corner mask).
 await renderFavicon(180).flatten({ background: BG }).png().toFile('public/apple-touch-icon.png')
 
-// og-image.svg says "Reliability Score", but at the SVG's 24px mono that label is ~275px wide inside a 260px pill and
-// spills over its edge. The published PNG has always shown the old "Trust Score" label (it fits), so the PNG keeps it
-// until the pill/label layout is fixed in the SVG; drop this replacement together with that fix.
-const ogSvg = readFileSync('public/og-image.svg', 'utf8').replace('Reliability Score', 'Trust Score')
-await sharp(Buffer.from(ogSvg)).resize(1200, 630).png().toFile('public/og-image.png')
+await sharp(readFileSync('public/og-image.svg')).resize(1200, 630).png().toFile('public/og-image.png')
 console.log('Done.')

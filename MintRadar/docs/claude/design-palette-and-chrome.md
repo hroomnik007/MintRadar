@@ -302,9 +302,7 @@ and `<alias><family>monospace</family><prefer><family>DejaVu Sans Mono</family><
 monospace gives different glyphs). Not covered: `public/icons/icon-N.png` (no `xN`; 8 files, not referenced by the manifest,
 index.html or any code — leftovers from `logo-original.png`, left untouched) and `logo-original.png`.
 
-**OG label caveat:** `og-image.svg` says "Reliability Score", but at 24px mono that label (~275px) is wider than its 260px pill
-and spills over the edge. The PNG therefore still shows the old "Trust Score" label (`generate-icons.mjs` substitutes it);
-fix the pill/label in the SVG, then delete that substitution.
+**OG pills:** the first pill ("✓ Reliability Score", 19 mono chars ≈ 275px at 24px) is 333px wide (the others are 260px) so it keeps the same ~29px inner padding; the other two pills of row 1 are shifted right by 73px. Row 2 was left where it was (so it is no longer centred under row 1). The PNG is rendered straight from the SVG text.
 
 **Caching:** `deploy/nginx.conf` serves every `.png/.svg/.ico` with `expires 1y` + `Cache-Control: public, immutable`
 (no content hashes for `public/` files), so browsers — and social platforms that re-use their cached card — keep the old
