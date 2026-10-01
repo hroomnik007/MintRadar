@@ -891,7 +891,7 @@
 .nostr-auth-error {
   font-size: 11px; color: var(--red);
   background: var(--red-soft);
-  border: 1px solid rgba(219,106,93,.3);
+  border: 1px solid var(--red-soft-strong);
   border-radius: 7px;
   padding: 7px 12px;
   margin-bottom: 12px;

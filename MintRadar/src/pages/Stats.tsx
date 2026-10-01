@@ -46,9 +46,9 @@ const IcHealthPulse = () => (
 )
 
 function uptimeColor(pct: number): string {
-  if (pct >= 80) return '#17E87F'
-  if (pct >= 50) return '#f59e0b'
-  return '#E24B4A'
+  if (pct >= 80) return 'var(--accent)'
+  if (pct >= 50) return 'var(--amber)'
+  return 'var(--red)'
 }
 
 
@@ -78,7 +78,7 @@ function shortenCity(city: string): string {
 }
 
 function geoLabel(loc: string): { display: string; flag: string; color?: string } {
-  if (loc === CDN_BUCKET || loc === 'Cloudflare CDN') return { display: CDN_BUCKET, flag: '🌐', color: '#f59e0b' }
+  if (loc === CDN_BUCKET || loc === 'Cloudflare CDN') return { display: CDN_BUCKET, flag: '🌐', color: 'var(--amber)' }
   if (loc === 'Unknown') return { display: 'Geolocation unavailable', flag: '' }
   const commaIdx = loc.lastIndexOf(', ')
   if (commaIdx === -1) return { display: shortenCity(loc), flag: '' }
@@ -93,6 +93,8 @@ interface SoftwareVersionEntry {
   fullVersion: string
   badge: string
   badgeColor: string
+  badgeBg: string
+  badgeBorder: string
 }
 
 // Mint-list drill-down level of SoftwareModal — this is the body the
@@ -132,7 +134,7 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose, duplicateDisplayNam
       <div className="nut-modal-list">
         {displayed.map(m => {
             const score = m.reliabilityScore ?? null
-            const scoreColor = score != null ? (score >= 70 ? '#4ade80' : score >= 40 ? '#ffa500' : '#ff4d4d') : 'var(--text3)'
+            const scoreColor = score != null ? (score >= 70 ? 'var(--accent)' : score >= 40 ? 'var(--amber)' : 'var(--red)') : 'var(--text3)'
             return (
               <div
                 key={m.url}
@@ -140,7 +142,7 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose, duplicateDisplayNam
                 style={{ cursor: 'pointer' }}
                 onClick={() => { onClose(); navigate(`/mint/${encodeURIComponent(m.url)}`) }}
               >
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? '#17E87F' : '#E24B4A', display: 'inline-block', flexShrink: 0 }} />
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? 'var(--accent)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
                 <div className="nut-modal-row-info" style={{ flex: 1 }}>
                   <span className="nut-modal-row-name mint-link">{displayName(m, duplicateDisplayNames)}</span>
                 </div>
@@ -204,7 +206,7 @@ function SoftwareVersionsView({ sw, versions, total, accentColor, onSelectVersio
                 <div className="dist-fill" style={{ width: `${vPct}%`, background: accentColor, opacity: 0.55 }} />
               </div>
               <span style={{ fontSize: 11, fontFamily: 'var(--font-mono-data)', color: 'var(--text2)', flexShrink: 0 }}>{v.count}</span>
-              <span className="sw-badge" style={{ color: v.badgeColor, borderColor: v.badgeColor + '44', background: v.badgeColor + '11' }}>{v.badge}</span>
+              <span className="sw-badge" style={{ color: v.badgeColor, borderColor: v.badgeBorder, background: v.badgeBg }}>{v.badge}</span>
             </div>
           )
         })}
@@ -798,7 +800,9 @@ export default function Stats() {
             count,
             fullVersion: ver ? `${sw}/${ver}` : sw,
             badge: idx === 0 ? 'latest' : idx === 1 ? 'outdated' : 'old',
-            badgeColor: idx === 0 ? '#17E87F' : idx === 1 ? '#f59e0b' : '#E24B4A',
+            badgeColor: idx === 0 ? 'var(--accent)' : idx === 1 ? 'var(--amber)' : 'var(--red)',
+            badgeBg: idx === 0 ? 'var(--green-soft)' : idx === 1 ? 'var(--amber-soft)' : 'var(--red-soft)',
+            badgeBorder: idx === 0 ? 'var(--green-soft-strong)' : idx === 1 ? 'var(--amber-soft-strong)' : 'var(--red-soft-strong)',
           }))
         const total = versions.reduce((s, v) => s + v.count, 0)
         const accentColor = swIdx % 2 === 0 ? 'var(--green)' : 'var(--copper)'
@@ -1101,7 +1105,7 @@ export default function Stats() {
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data yet</div>
               ) : top5ByReliability.map((mint, idx) => {
                 const score = mint.reliabilityScore ?? 0
-                const color = score >= 70 ? '#4ade80' : score >= 40 ? '#ffa500' : '#ff4d4d'
+                const color = score >= 70 ? 'var(--accent)' : score >= 40 ? 'var(--amber)' : 'var(--red)'
                 const loc = normalizeGeoLoc(mint.serverLocation)
                 const cityInfo = loc !== 'Unknown' ? geoLabel(loc) : null
                 return (
@@ -1230,13 +1234,13 @@ export default function Stats() {
                   </div>
                   <div className="nhi-legend">
                     <div className={`nhi-legend-row${networkHealth.score >= 70 ? ' active' : ''}`}>
-                      <span className="nhi-legend-dot" style={{ background: '#4ade80' }} />Healthy · 70+
+                      <span className="nhi-legend-dot" style={{ background: 'var(--accent)' }} />Healthy · 70+
                     </div>
                     <div className={`nhi-legend-row${networkHealth.score >= 40 && networkHealth.score < 70 ? ' active' : ''}`}>
-                      <span className="nhi-legend-dot" style={{ background: '#ffa500' }} />Moderate · 40-69
+                      <span className="nhi-legend-dot" style={{ background: 'var(--amber)' }} />Moderate · 40-69
                     </div>
                     <div className={`nhi-legend-row${networkHealth.score < 40 ? ' active' : ''}`}>
-                      <span className="nhi-legend-dot" style={{ background: '#ff4d4d' }} />At Risk · &lt;40
+                      <span className="nhi-legend-dot" style={{ background: 'var(--red)' }} />At Risk · &lt;40
                     </div>
                   </div>
                 </div>
@@ -1280,7 +1284,7 @@ export default function Stats() {
               const { count, percent } = adoption
               const meta = NUT_META[nut]
               if (!meta) return null
-              const barColor = percent >= 80 ? '#17E87F' : percent >= 40 ? '#f59e0b' : '#E24B4A'
+              const barColor = percent >= 80 ? 'var(--accent)' : percent >= 40 ? 'var(--amber)' : 'var(--red)'
               return (
                 <div key={nut} className="stats-nut-row" onClick={() => setNutModal(nut)}>
                   <span className="snr-nut-tag">{nut}</span>
@@ -1335,8 +1339,8 @@ export default function Stats() {
                 <AreaChart data={trendData} margin={{top:4,right:4,left:-28,bottom:0}}>
                   <defs>
                     <linearGradient id="reliabilityGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#17E87F" stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor="#17E87F" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.25}/>
+                      <stop offset="95%" stopColor="var(--accent)" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
                   <XAxis dataKey="date" tick={{fontSize:9,fill:'var(--text3)',fontFamily:'var(--font-mono)'}} tickFormatter={d => d.slice(5)} interval="preserveStartEnd" axisLine={false} tickLine={false} />
@@ -1346,16 +1350,16 @@ export default function Stats() {
                     labelStyle={{color:'var(--text3)'}}
                     formatter={(v) => [`${v ?? '—'}%`, 'Avg Reliability']}
                   />
-                  <Area type="monotone" dataKey="avgReliability" stroke="#17E87F" strokeWidth={1.5} fill="url(#reliabilityGrad)" dot={false} />
+                  <Area type="monotone" dataKey="avgReliability" stroke="var(--accent)" strokeWidth={1.5} fill="url(#reliabilityGrad)" dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             )}
           </div>
           {trendSummary && (
             <div className="trend-summary-row">
-              <span className="trend-summary-item"><span className="trend-summary-label">Current</span><span style={{color:'#17E87F',fontWeight:700}}>{trendSummary.current}%</span></span>
+              <span className="trend-summary-item"><span className="trend-summary-label">Current</span><span style={{color:'var(--accent)',fontWeight:700}}>{trendSummary.current}%</span></span>
               <span className="trend-summary-sep">·</span>
-              <span className="trend-summary-item"><span className="trend-summary-label">{trendDays}d High</span><span style={{color:'#4ade80'}}>{trendSummary.high}%</span></span>
+              <span className="trend-summary-item"><span className="trend-summary-label">{trendDays}d High</span><span style={{color:'var(--accent)'}}>{trendSummary.high}%</span></span>
               <span className="trend-summary-sep">·</span>
               <span className="trend-summary-item"><span className="trend-summary-label">{trendDays}d Low</span><span style={{color:'var(--text2)'}}>{trendSummary.low}%</span></span>
             </div>

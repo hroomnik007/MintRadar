@@ -164,7 +164,7 @@ recreate it or reference it as if it still exists.)
 - `--green` / `--green-bright` — muted "patina" green instead of neon (reference: patina on coins)
 - `--copper` — new secondary accent (reference: coin minting); alternates with green on the Stats page's Software-in-Use and Geographic-Distribution bars
 - `--amber`, `--red` — semantic colors (fresh/warning, offline/error)
-- every color has a `-soft` and `-soft-strong` variant, used for tonal backgrounds/borders instead of solid fills
+- every color has a `-soft` and `-soft-strong` variant, used for tonal backgrounds/borders instead of solid fills (`--red-soft-strong` rgba(219,106,93,.3) added 2026-10-01 so red has the same trio as green/amber/copper)
 - `--font-mono-data` — system `ui-monospace` stack for numeric values only (see Typography section)
 - `--radius-m` (10px) — smaller radius for buttons, replacing the old large pill shape
 - fonts remain 100% system/self-hosted — no Google Fonts, no external CDN, zero tracking
@@ -234,3 +234,49 @@ Applied automatically everywhere via the shared `MintCard.tsx` component (Dashbo
 - Mint Detail mobile header — finally implemented (it was prepared in an earlier prompt round but never actually shipped by mistake): back arrow (30px circle) on the same row as avatar/name/URL, status dot instead of a separate "Online" pill, age badge on the right. Desktop layout unchanged (new elements hidden outside `@media (max-width: 768px)`)
 - Mobile stat tiles (Latency/Uptime/Version/NUTs) — at ≤768px the large icon is hidden, padding narrowed, value 15px/600 on `--font-mono-data`
 
+## Token aliases + "semantic colours must be tokens" (2026-10-01)
+
+**Alias map.** `src/index.css` keeps legacy names so old usages keep working, but since this change they are
+`var(<canonical>)` references, not separate literals — edit the canonical token and every alias follows.
+Do not add new usages of an alias; prefer the canonical name.
+
+| Alias | → Canonical token |
+|---|---|
+| `--bg2` | `--surface` |
+| `--bg3`, `--surface-2` | `--elevated` |
+| `--bg4`, `--surface-3` | `--raised` |
+| `--brd` | `--border` |
+| `--brd-md` | `--border2` |
+| `--brd-hi`, `--border-hi` | `--border-strong` |
+| `--t1`, `--t2`, `--t3` | `--text`, `--text2`, `--text3` |
+| `--text-dim`, `--text-faint` | `--text2`, `--text3` |
+| `--green-bright`, `--fast` | `--accent` |
+| `--accent-dim`, `--accent-brd` | `--green-soft`, `--green-soft-strong` |
+| `--med`, `--yellow` | `--amber` |
+| `--slow` | `--red` |
+
+Canonical tokens: `--bg`, `--surface`, `--surface-card`, `--elevated`, `--raised`, `--border`, `--border2`,
+`--border-strong`, `--text`, `--text2`, `--text3`, `--accent`, `--green`, `--green-soft`, `--green-soft-strong`,
+`--copper*`, `--amber*`, `--red*`. Unused today: `--brd-md`, `--brd-hi`, `--raised` (canonical, kept),
+`--accent-glow-lg`, `--mono`, `--mono-data`, `--sans`, `--header-h`, `--radius-lg`. `--incognito-glow` is referenced by the
+unused `@keyframes pulse-incognito` but never defined (dead code).
+
+**Rule.** Semantic colours (online/good/success, offline/error/failed, warning) are **never** hard-coded:
+- green → `var(--accent)`, `var(--green-soft)` (tonal bg), `var(--green-soft-strong)` (border), `var(--accent-glow)` (glow/pulse)
+- red → `var(--red)`, `var(--red-soft)`, `var(--red-soft-strong)`
+- amber → `var(--amber)`, `var(--amber-soft)`, `var(--amber-soft-strong)`
+- `mintFormatting.ts` / `mintProbeDisplay.ts` return these tokens as strings (`'var(--accent)'` …) — fine for inline
+  `style` and SVG presentation attributes. **Never append a hex alpha** (`color + '44'`) to such a value; return a
+  `{color, bg, border}` triple of tokens instead (see the Watchlist recommendation chip and Stats software badges).
+- Literal colours that remain on purpose: categorical series/identity colours (ComparisonModal `MINT_COLORS`, review
+  avatar palette, OG purple), grey tints, overlays/shadows, QR colours, `public/mint-coin-placeholder.svg`
+  (an `<img>`, `var()` does not work there — keep it equal to `--copper`), favicon/manifest/OG image (separate task).
+- `src/__tests__/retiredColours.test.ts` fails when a retired literal (`#17E87F`, `#4ade80`, `#00E676`, `#E24B4A`,
+  `#ff4d4d`, `#ffa500`, `#f59e0b`, `#c98058`, `rgba(74,222,128,`, `rgba(23,232,127,`, `rgba(255,61,107,`) reappears
+  in non-test source; its explicit allowlist (file + reason) covers the two categorical `#17E87F` uses.
+
+**Copper changed 2026-10-01:** `--copper` `#c98058` → `#d98a5a`, `--copper-soft` rgba(217,138,90,.15),
+`--copper-soft-strong` rgba(217,138,90,.3). Contrast of copper text: on `--surface-card` 3.92 → 4.51, `--surface` 5.08 → 5.85,
+`--bg` 5.39 → 6.21, `--elevated` 4.73 → 5.44 (copper on its own `-soft` chip over `--surface-card`: 3.25 → 3.64).
+**Also on 2026-10-01:** every online/good green is now the single `--accent` `#5cc9a3` (online dot was `#17E87F`,
+score greens `#4ade80`); Fresh and Veteran age badges are both `--amber` now (they were amber vs orange).

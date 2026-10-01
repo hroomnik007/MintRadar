@@ -290,7 +290,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
               <div className="trc-label">Mint Status</div>
               {mintInfo ? (
                 <>
-                  <div className="trc-value" style={{ color: mintInfo.online === true ? '#17E87F' : '#E24B4A' }}>
+                  <div className="trc-value" style={{ color: mintInfo.online === true ? 'var(--accent)' : 'var(--red)' }}>
                     {mintInfo.online === true ? '● Online' : mintInfo.online === false ? '● Offline' : '○ Unknown'}
                   </div>
                   {mintInfo.lastCheckedAt && (

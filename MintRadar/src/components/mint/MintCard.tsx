@@ -221,11 +221,11 @@ export function MintCard({
           </span>
         )}
         {isOfflineDegraded ? (
-          <span className="card-pill card-hdr-badge" style={{ fontWeight: 600, color: 'var(--red)', background: 'var(--red-soft)', border: '1px solid rgba(219,106,93,0.3)' }}>
+          <span className="card-pill card-hdr-badge" style={{ fontWeight: 600, color: 'var(--red)', background: 'var(--red-soft)', border: '1px solid var(--red-soft-strong)' }}>
             Offline 24h+
           </span>
         ) : isNew && (
-          <span className="card-pill card-hdr-badge card-hdr-new" style={{ fontWeight: 600, color: '#d3a446', background: 'rgba(211,164,70,.14)', border: '1px solid rgba(211,164,70,.3)' }}>
+          <span className="card-pill card-hdr-badge card-hdr-new" style={{ fontWeight: 600, color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)' }}>
             New
           </span>
         )}

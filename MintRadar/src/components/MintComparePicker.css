@@ -51,7 +51,7 @@
 }
 
 .md-picker-item:hover:not(.disabled) { background: var(--bg3); }
-.md-picker-item.checked { background: rgba(23,232,127,0.06); }
+.md-picker-item.checked { background: var(--green-soft); }
 .md-picker-item.disabled { opacity: 0.4; cursor: not-allowed; }
 
 .md-picker-footer {

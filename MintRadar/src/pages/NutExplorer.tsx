@@ -50,7 +50,7 @@ export default function NutExplorer() {
           {nutsData.map(({ nut, percent, mints }) => {
             const meta = NUT_META[nut]
             if (!meta) return null
-            const barColor = percent >= 70 ? '#639922' : percent >= 40 ? '#EF9F27' : '#E24B4A'
+            const barColor = percent >= 70 ? 'var(--accent)' : percent >= 40 ? 'var(--amber)' : 'var(--red)'
             const specUrl = nutSpecUrl(nut) ?? '#'
             const shown = mints.slice(0, 5)
             const remaining = mints.length - shown.length
@@ -97,7 +97,7 @@ export default function NutExplorer() {
                           <span className="nec-mint-name">{name}</span>
                           <span
                             className="nec-mint-dot"
-                            style={{ background: m?.online === true ? 'var(--accent)' : '#ff4d4d' }}
+                            style={{ background: m?.online === true ? 'var(--accent)' : 'var(--red)' }}
                           />
                         </div>
                       )

@@ -51,6 +51,7 @@ import {
   ArrowUpRight,
 } from 'lucide-react'
 
+// Categorical avatar-fallback palette (identity, not status) — literal on purpose.
 const REVIEW_AVATAR_COLORS = ['#17E87F','#8b5cf6','#F5A623','#3b82f6','#ef4444','#ec4899']
 function reviewAvatarColor(pubkey: string): string {
   return REVIEW_AVATAR_COLORS[parseInt(pubkey.slice(0, 8), 16) % REVIEW_AVATAR_COLORS.length] ?? '#17E87F'
@@ -267,9 +268,9 @@ function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, n
 
 function uptimeColor(pct: number | null | undefined): string {
   if (pct === null || pct === undefined) return 'var(--text3)'
-  if (pct >= 80) return '#4ade80'
-  if (pct >= 50) return '#ffa500'
-  return '#ff4d4d'
+  if (pct >= 80) return 'var(--accent)'
+  if (pct >= 50) return 'var(--amber)'
+  return 'var(--red)'
 }
 
 
@@ -946,9 +947,9 @@ function MintDetailContent({ url }: { url: string }) {
   const reliabilityBreakdownRows = [
     { label: 'Uptime (40%)', display: `${uptimePct}%`, score: breakdownUScore, max: 40, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.' },
     { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, score: breakdownAScore, max: 25, color: recentReliabilityColor, tooltip: "Based on error rate from audit.8333.space — the percentage of failed swaps out of the mint's last ~100 tested operations. Lower error rate = higher score. Shows \"Unknown\" when fewer than 3 recent swaps are available." + auditStaleTooltipExtra, ...(auditStaleNote ? { note: auditStaleNote } : {}) },
-    { label: 'NUT Support (15%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 15, color: supportedNuts.length >= 12 ? '#4ade80' : supportedNuts.length >= 8 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.' },
-    { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? '#4ade80' : breakdownVScore >= 6 ? '#ffa500' : '#ff4d4d', tooltip: "How recent the mint's software version is compared to the latest known Nutshell releases. Newer = higher score." },
-    { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? '#4ade80' : breakdownCScore >= 2 ? '#ffa500' : '#ff4d4d', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.' },
+    { label: 'NUT Support (15%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 15, color: supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.' },
+    { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? 'var(--accent)' : breakdownVScore >= 6 ? 'var(--amber)' : 'var(--red)', tooltip: "How recent the mint's software version is compared to the latest known Nutshell releases. Newer = higher score." },
+    { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? 'var(--accent)' : breakdownCScore >= 2 ? 'var(--amber)' : 'var(--red)', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.' },
   ]
   const firstSeen = firstSeenLabel(discoveredAt)
   const nostrAnnouncedAt = knownMint?.nostrAnnouncedAt ?? null
@@ -1099,9 +1100,9 @@ function MintDetailContent({ url }: { url: string }) {
                 )}
                 <span style={{
                   fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,borderRadius:5,padding:'2px 7px',marginLeft:'auto',
-                  color: ks.active ? '#4ade80' : 'var(--text3)',
-                  background: ks.active ? 'rgba(74,222,128,0.1)' : 'var(--bg4)',
-                  border: `0.5px solid ${ks.active ? 'rgba(74,222,128,0.3)' : 'var(--border)'}`,
+                  color: ks.active ? 'var(--accent)' : 'var(--text3)',
+                  background: ks.active ? 'var(--green-soft)' : 'var(--bg4)',
+                  border: `0.5px solid ${ks.active ? 'var(--green-soft-strong)' : 'var(--border)'}`,
                 }}>
                   {ks.active ? 'Active' : 'Inactive'}
                 </span>
@@ -1153,7 +1154,7 @@ function MintDetailContent({ url }: { url: string }) {
                   <span>{isOnline ? 'Online' : 'Offline'}</span>
                 </span>
                 {isNew && (
-                  <span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'#d3a446',background:'rgba(211,164,70,.14)',border:'0.5px solid rgba(211,164,70,.3)',borderRadius:5,padding:'3px 9px',flexShrink:0}} title="New mint (< 30 days) — Reliability Score is capped at 75 until it builds a track record">New</span>
+                  <span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}} title="New mint (< 30 days) — Reliability Score is capped at 75 until it builds a track record">New</span>
                 )}
                 {isTestMint(url) && (
                   <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}} title="Not for real funds — for testing and development only">
@@ -1201,7 +1202,7 @@ function MintDetailContent({ url }: { url: string }) {
             <span className="md-hdr-error" style={{display:'inline-flex',alignItems:'center',gap:4}}>
               <span
                 className="md-error-badge"
-                style={{fontSize:11,color:'#ff4d4d',fontFamily:'var(--font-mono)',background:'rgba(255,77,77,0.08)',border:'0.5px solid rgba(255,77,77,0.25)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap'}}
+                style={{fontSize:11,color:'var(--red)',fontFamily:'var(--font-mono)',background:'var(--red-soft)',border:'0.5px solid var(--red-soft-strong)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap'}}
               >
                 {knownMint.lastError}
               </span>
@@ -1332,7 +1333,7 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="md-sc-value sm" style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
               <span>{version ?? '—'}</span>
               {isOutdated && (
-                <span style={{fontSize:9,fontFamily:'var(--font-mono)',fontWeight:600,color:'#ff4d4d',background:'rgba(255,77,77,0.1)',border:'0.5px solid rgba(255,77,77,0.3)',borderRadius:4,padding:'1px 5px'}}>Outdated</span>
+                <span style={{fontSize:9,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--red)',background:'var(--red-soft)',border:'0.5px solid var(--red-soft-strong)',borderRadius:4,padding:'1px 5px'}}>Outdated</span>
               )}
             </div>
             <div className="md-sc-sub">software</div>
@@ -1780,7 +1781,7 @@ function MintDetailContent({ url }: { url: string }) {
                 <div className="md-panel-title" style={{marginBottom:0}}>NUT Compatibility</div>
               {supportsBackupRestore ? (
                 <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
-                  <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'#4ade80',background:'rgba(74,222,128,0.1)',border:'0.5px solid rgba(74,222,128,0.3)',borderRadius:5,padding:'2px 7px'}}>
+                  <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--accent)',background:'var(--green-soft)',border:'0.5px solid var(--green-soft-strong)',borderRadius:5,padding:'2px 7px'}}>
                     <ShieldCheck size={11} /> Backup supported
                   </span>
                   <span
@@ -1840,7 +1841,7 @@ function MintDetailContent({ url }: { url: string }) {
                       <div className="nut-name">{nut}</div>
                       <div className="nut-desc">{isDisabled ? 'Disabled by operator' : meta?.short ?? ''}</div>
                     </div>
-                    <span className="nut-check" style={{ color: isDisabled ? '#ffa500' : supported ? 'var(--accent)' : 'var(--text3)' }}>
+                    <span className="nut-check" style={{ color: isDisabled ? 'var(--amber)' : supported ? 'var(--accent)' : 'var(--text3)' }}>
                       {isDisabled ? '!' : supported ? '✓' : '–'}
                     </span>
                   </div>
@@ -1875,7 +1876,7 @@ function MintDetailContent({ url }: { url: string }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 14 }}>
               {[
                 { label: 'Avg Latency', value: chartAvgLatency !== null ? `${chartAvgLatency}ms` : '—', delta: deltaStr(chartAvgLatency, chartPrevLatency, 'ms', chartPrevInsufficientHistory), color: 'var(--text)' },
-                { label: 'Avg Uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%', chartPrevInsufficientHistory), color: '#4ade80' },
+                { label: 'Avg Uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%', chartPrevInsufficientHistory), color: 'var(--accent)' },
                 { label: 'Avg Reliability', value: `${reliabilityScore}%`, delta: null, color: tsInfo.color },
               ].map(({ label, value, delta, color }) => (
                 <div key={label} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 11px' }}>
@@ -2005,7 +2006,7 @@ function MintDetailContent({ url }: { url: string }) {
                     checked is OUR 6h cron's write time (auditSyncedAt). */}
                 <div className="audit-summary-strip">
                   <div className="audit-summary-cell">
-                    <div className="audit-summary-value" style={{color:'#4ade80'}}>{auditNMints.toLocaleString()}</div>
+                    <div className="audit-summary-value" style={{color:'var(--accent)'}}>{auditNMints.toLocaleString()}</div>
                     <div className="audit-summary-label">
                       Mints
                       <span
@@ -2025,7 +2026,7 @@ function MintDetailContent({ url }: { url: string }) {
                     </div>
                   </div>
                   <div className="audit-summary-cell">
-                    <div className="audit-summary-value" style={{color:'#4ade80'}}>{auditNMelts.toLocaleString()}</div>
+                    <div className="audit-summary-value" style={{color:'var(--accent)'}}>{auditNMelts.toLocaleString()}</div>
                     <div className="audit-summary-label">
                       Melts
                       <span
@@ -2491,7 +2492,7 @@ function MintDetailContent({ url }: { url: string }) {
               <button onClick={() => setShowQr(false)} style={{background:'none',border:'none',color:'var(--text-faint)',fontSize:20,cursor:'pointer',lineHeight:1,padding:'2px 6px',flexShrink:0}}>×</button>
             </div>
             <div style={{display:'flex',justifyContent:'center',margin:'16px 0'}}>
-              <div style={{background:'#ffffff',borderRadius:12,padding:12,border:'2px solid rgba(23,232,127,0.35)'}}>
+              <div style={{background:'#ffffff',borderRadius:12,padding:12,border:'2px solid var(--green-soft-strong)'}}>
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=184x184&data=${encodeURIComponent(url)}&bgcolor=ffffff&color=000000&qzone=1`}
                   alt="QR Code"
@@ -2705,9 +2706,9 @@ function MintDetailContent({ url }: { url: string }) {
                 <div style={{display:'flex', alignItems:'center', gap: 8}}>
                   <span style={{
                     fontSize: 11, padding: '3px 10px', borderRadius: 6,
-                    background: isNutDisabled ? 'rgba(255,165,0,0.1)' : supported ? '#0d2018' : 'var(--bg3)',
-                    color: isNutDisabled ? '#ffa500' : supported ? 'var(--accent)' : 'var(--text3)',
-                    border: `0.5px solid ${isNutDisabled ? 'rgba(255,165,0,0.3)' : supported ? '#1a3a28' : 'var(--border)'}`,
+                    background: isNutDisabled ? 'var(--amber-soft)' : supported ? 'var(--green-soft)' : 'var(--bg3)',
+                    color: isNutDisabled ? 'var(--amber)' : supported ? 'var(--accent)' : 'var(--text3)',
+                    border: `0.5px solid ${isNutDisabled ? 'var(--amber-soft-strong)' : supported ? 'var(--green-soft-strong)' : 'var(--border)'}`,
                     fontFamily: 'var(--font-mono)',
                   }}>
                     {isNutDisabled ? '⊘ Disabled by operator' : supported ? '✓ Supported' : '– Not supported'}

@@ -101,9 +101,9 @@
   --green-soft-strong:  rgba(69,173,140,.28);
 
   /* Copper (secondary accent) */
-  --copper:             #c98058;
-  --copper-soft:        rgba(201,128,88,.15);
-  --copper-soft-strong: rgba(201,128,88,.3);
+  --copper:             #d98a5a;
+  --copper-soft:        rgba(217,138,90,.15);
+  --copper-soft-strong: rgba(217,138,90,.3);
 
   /* Amber */
   --amber:              #d3a446;
@@ -118,6 +118,7 @@
   /* Status — legacy aliases */
   --red:          #db6a5d;
   --red-soft:     rgba(219,106,93,.14);
+  --red-soft-strong: rgba(219,106,93,.3);
   --yellow:       var(--amber);
 
   /* Typography — new names */

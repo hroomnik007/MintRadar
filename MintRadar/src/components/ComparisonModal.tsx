@@ -26,16 +26,16 @@ const IcClose = () => (
 )
 
 function reliabilityScoreInfo(score: number) {
-  if (score >= 70) return { label: 'High Reliability', color: '#4ade80', bg: 'rgba(74,222,128,0.1)', border: 'rgba(74,222,128,0.25)' }
-  if (score >= 40) return { label: 'Moderate Reliability', color: '#ffa500', bg: 'rgba(255,165,0,0.1)', border: 'rgba(255,165,0,0.25)' }
-  return { label: 'Low Reliability', color: '#ff4d4d', bg: 'rgba(255,77,77,0.1)', border: 'rgba(255,77,77,0.25)' }
+  if (score >= 70) return { label: 'High Reliability', color: 'var(--accent)', bg: 'var(--green-soft)', border: 'var(--green-soft-strong)' }
+  if (score >= 40) return { label: 'Moderate Reliability', color: 'var(--amber)', bg: 'var(--amber-soft)', border: 'var(--amber-soft-strong)' }
+  return { label: 'Low Reliability', color: 'var(--red)', bg: 'var(--red-soft)', border: 'var(--red-soft-strong)' }
 }
 
 function uptimeColor(pct: number | null | undefined): string {
   if (pct === null || pct === undefined) return 'var(--text3)'
-  if (pct >= 80) return '#4ade80'
-  if (pct >= 50) return '#ffa500'
-  return '#ff4d4d'
+  if (pct >= 80) return 'var(--accent)'
+  if (pct >= 50) return 'var(--amber)'
+  return 'var(--red)'
 }
 
 // "Audit success" row — reuses the same rolling-window fields, minimum-sample
@@ -101,7 +101,10 @@ function latestVersionsBySoftware(mints: KnownMint[]): Record<string, string> {
 // Per-mint line colors for the historical trend overlay — reuses hues already
 // established elsewhere in the app (Reliability Trend green, copper accent, the
 // Fresh/OG badge blue and purple) rather than inventing new ones.
-const MINT_COLORS = ['#17E87F', '#c98058', '#60a5fa', '#a78bfa']
+// Categorical series identity, not semantic status: these stay literal on purpose.
+// [0] is the A-series green (deliberately not --accent); [1] is a real-value copy of
+// var(--copper) and must be kept equal to it.
+const MINT_COLORS = ['#17E87F', '#d98a5a', '#60a5fa', '#a78bfa']
 
 type HistoryPeriod = '24h' | '7d' | '30d' | '90d'
 type HistoryMetric = 'latency' | 'uptime' | 'reliability'
@@ -362,14 +365,14 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                       <div className="cmp-mobile-name">{d.displayName}</div>
                       <div className="cmp-mobile-host">{d.hostname}</div>
                     </div>
-                    {d.isNew && <span className="cmp-mobile-badge" style={{ color: '#4ade80', background: 'rgba(74,222,128,0.1)', borderColor: 'rgba(74,222,128,0.3)' }}>New</span>}
+                    {d.isNew && <span className="cmp-mobile-badge" style={{ color: 'var(--accent)', background: 'var(--green-soft)', borderColor: 'var(--green-soft-strong)' }}>New</span>}
                   </div>
 
                   <div className="cmp-mobile-row">
                     <span className="cmp-mobile-lbl">Status</span>
                     <span className="cmp-mobile-val">
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, fontFamily: 'var(--font-mono)' }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: d.isOnline ? 'var(--accent)' : '#ff4d4d', display: 'inline-block', flexShrink: 0 }} />
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: d.isOnline ? 'var(--accent)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
                         {d.isOnline ? 'Online' : 'Offline'}
                       </span>
                     </span>
@@ -392,7 +395,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                     <span className="cmp-mobile-lbl">Community Rating</span>
                     <span className="cmp-mobile-val">
                       {count > 0 && avg != null ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#4ade80', fontFamily: 'var(--font-mono)' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
                           <span style={{ fontSize: 16, lineHeight: 1 }}>★</span>
                           <span style={{ fontSize: 15, fontWeight: 700 }}>{avg.toFixed(1)}</span>
                           <span style={{ fontSize: 12, color: 'var(--text3)' }}>({count})</span>
@@ -437,7 +440,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                       {TRACKED_NUT_KEYS.map(key => {
                         const supported = d.nutsLimits[key] != null
                         return (
-                          <span key={key} style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', padding: '1px 5px', borderRadius: 3, background: supported ? 'rgba(74,222,128,0.1)' : 'var(--bg3)', color: supported ? '#4ade80' : 'var(--text3)', border: `0.5px solid ${supported ? 'rgba(74,222,128,0.3)' : 'var(--border)'}` }}>
+                          <span key={key} style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', padding: '1px 5px', borderRadius: 3, background: supported ? 'var(--green-soft)' : 'var(--bg3)', color: supported ? 'var(--accent)' : 'var(--text3)', border: `0.5px solid ${supported ? 'var(--green-soft-strong)' : 'var(--border)'}` }}>
                             {key.padStart(2, '0')}
                           </span>
                         )
@@ -450,7 +453,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                     <span className="cmp-mobile-val">
                       <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text)', whiteSpace: 'nowrap' }}>{mint.version ?? '—'}</span>
                       {d.isOutdated && (
-                        <span style={{ fontSize: 10, color: '#ff4d4d', background: 'rgba(255,77,77,0.1)', border: '0.5px solid rgba(255,77,77,0.3)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>Outdated</span>
+                        <span style={{ fontSize: 10, color: 'var(--red)', background: 'var(--red-soft)', border: '0.5px solid var(--red-soft-strong)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>Outdated</span>
                       )}
                     </span>
                   </div>
@@ -511,7 +514,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                     </span>
                     <span className="cmp-mobile-val">
                       {d.supportsBackupRestore
-                        ? <span style={{ fontSize: 11.5, color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.3)', borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>✓ Supported</span>
+                        ? <span style={{ fontSize: 11.5, color: 'var(--accent)', background: 'var(--green-soft)', border: '0.5px solid var(--green-soft-strong)', borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>✓ Supported</span>
                         : <span style={{ fontSize: 11.5, color: 'var(--text3)', background: 'var(--bg3)', border: '0.5px solid var(--border)', borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>No backup</span>
                       }
                     </span>
@@ -533,7 +536,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                 <div style={{ minWidth: 0, width: '100%' }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.displayName}</div>
                   <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.hostname}</div>
-                  {d.isNew && <span style={{ fontSize: 9, color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.3)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>New</span>}
+                  {d.isNew && <span style={{ fontSize: 9, color: 'var(--accent)', background: 'var(--green-soft)', border: '0.5px solid var(--green-soft-strong)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>New</span>}
                 </div>
               </div>
             )
@@ -546,7 +549,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             return (
               <div key={mint.url} className="cmp-val">
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, fontFamily: 'var(--font-mono)' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: d.isOnline ? 'var(--accent)' : '#ff4d4d', display: 'inline-block', flexShrink: 0 }} />
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: d.isOnline ? 'var(--accent)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
                   {d.isOnline ? 'Online' : 'Offline'}
                 </span>
               </div>
@@ -578,7 +581,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             return (
               <div key={mint.url} className="cmp-val">
                 {count > 0 && avg != null ? (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#4ade80', fontFamily: 'var(--font-mono)' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
                     <span style={{ fontSize: 16, lineHeight: 1 }}>★</span>
                     <span style={{ fontSize: 15, fontWeight: 700 }}>{avg.toFixed(1)}</span>
                     <span style={{ fontSize: 12, color: 'var(--text3)' }}>({count})</span>
@@ -638,7 +641,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                   {TRACKED_NUT_KEYS.map(key => {
                     const supported = d.nutsLimits[key] != null
                     return (
-                      <span key={key} style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', padding: '1px 5px', borderRadius: 3, background: supported ? 'rgba(74,222,128,0.1)' : 'var(--bg3)', color: supported ? '#4ade80' : 'var(--text3)', border: `0.5px solid ${supported ? 'rgba(74,222,128,0.3)' : 'var(--border)'}` }}>
+                      <span key={key} style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', padding: '1px 5px', borderRadius: 3, background: supported ? 'var(--green-soft)' : 'var(--bg3)', color: supported ? 'var(--accent)' : 'var(--text3)', border: `0.5px solid ${supported ? 'var(--green-soft-strong)' : 'var(--border)'}` }}>
                         {key.padStart(2, '0')}
                       </span>
                     )
@@ -656,7 +659,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               <div key={mint.url} className="cmp-val">
                 <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text)', whiteSpace: 'nowrap' }}>{mint.version ?? '—'}</span>
                 {d.isOutdated && (
-                  <span style={{ marginLeft: 5, fontSize: 10, color: '#ff4d4d', background: 'rgba(255,77,77,0.1)', border: '0.5px solid rgba(255,77,77,0.3)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>Outdated</span>
+                  <span style={{ marginLeft: 5, fontSize: 10, color: 'var(--red)', background: 'var(--red-soft)', border: '0.5px solid var(--red-soft-strong)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>Outdated</span>
                 )}
               </div>
             )
@@ -726,7 +729,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             return (
               <div key={mint.url} className="cmp-val cmp-last">
                 {d.supportsBackupRestore
-                  ? <span style={{ fontSize: 11.5, color: '#4ade80', background: 'rgba(74,222,128,0.1)', border: '0.5px solid rgba(74,222,128,0.3)', borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>✓ Supported</span>
+                  ? <span style={{ fontSize: 11.5, color: 'var(--accent)', background: 'var(--green-soft)', border: '0.5px solid var(--green-soft-strong)', borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>✓ Supported</span>
                   : <span style={{ fontSize: 11.5, color: 'var(--text3)', background: 'var(--bg3)', border: '0.5px solid var(--border)', borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>No backup</span>
                 }
               </div>

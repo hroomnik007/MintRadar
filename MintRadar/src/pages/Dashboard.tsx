@@ -354,7 +354,7 @@ function MintListView({
                     </div>
                   </td>
                   <td>
-                    <span style={{ fontSize: 10, color: isOnline ? '#17E87F' : '#E24B4A' }}>
+                    <span style={{ fontSize: 10, color: isOnline ? 'var(--accent)' : 'var(--red)' }}>
                       ●<span className="status-text-mobile-hide">{isOnline ? ' Online' : ' Offline'}</span>
                     </span>
                   </td>

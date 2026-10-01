@@ -74,7 +74,7 @@ export function MintComparePicker({
                 <div className={`card-checkbox${isChecked ? ' checked' : ''}`} style={{ width: 14, height: 14, borderRadius: 3, flexShrink: 0 }}>
                   {isChecked && <span style={{ fontSize: 10, lineHeight: 1 }}>✓</span>}
                 </div>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: m.online === true ? 'var(--accent)' : '#ff4d4d', display: 'inline-block', flexShrink: 0 }} />
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: m.online === true ? 'var(--accent)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mintDisplayName(m, duplicateDisplayNames)}</div>
                   <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getHostname(m.url)}</div>

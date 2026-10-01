@@ -53,7 +53,7 @@ describe('mintAgeBadge', () => {
     })
 
     it('Fresh has the correct amber colour', () => {
-      expect(mintAgeBadge(daysAgo(1), NOW)?.color).toBe('#d3a446')
+      expect(mintAgeBadge(daysAgo(1), NOW)?.color).toBe('var(--amber)')
     })
   })
 
@@ -73,7 +73,7 @@ describe('mintAgeBadge', () => {
     })
 
     it('Established has the correct green colour', () => {
-      expect(mintAgeBadge(monthsAgo(3), NOW)?.color).toBe('#5cc9a3')
+      expect(mintAgeBadge(monthsAgo(3), NOW)?.color).toBe('var(--accent)')
     })
   })
 
@@ -91,7 +91,7 @@ describe('mintAgeBadge', () => {
     })
 
     it('Veteran has the correct orange colour', () => {
-      expect(mintAgeBadge(monthsAgo(9), NOW)?.color).toBe('#ffa500')
+      expect(mintAgeBadge(monthsAgo(9), NOW)?.color).toBe('var(--amber)')
     })
   })
 
@@ -440,27 +440,27 @@ describe('cardLightningLabel', () => {
 // Thresholds: ≥ 75 → green, ≥ 50 → orange, < 50 → red
 describe('reliabilityScoreColor', () => {
   it('returns green for score 75', () => {
-    expect(reliabilityScoreColor(75)).toBe('#4ade80')
+    expect(reliabilityScoreColor(75)).toBe('var(--accent)')
   })
 
   it('returns green for score 100', () => {
-    expect(reliabilityScoreColor(100)).toBe('#4ade80')
+    expect(reliabilityScoreColor(100)).toBe('var(--accent)')
   })
 
   it('returns orange for score 74 (just below green)', () => {
-    expect(reliabilityScoreColor(74)).toBe('#ffa500')
+    expect(reliabilityScoreColor(74)).toBe('var(--amber)')
   })
 
   it('returns orange for score 50', () => {
-    expect(reliabilityScoreColor(50)).toBe('#ffa500')
+    expect(reliabilityScoreColor(50)).toBe('var(--amber)')
   })
 
   it('returns red for score 49 (just below orange)', () => {
-    expect(reliabilityScoreColor(49)).toBe('#ff4d4d')
+    expect(reliabilityScoreColor(49)).toBe('var(--red)')
   })
 
   it('returns red for score 0', () => {
-    expect(reliabilityScoreColor(0)).toBe('#ff4d4d')
+    expect(reliabilityScoreColor(0)).toBe('var(--red)')
   })
 })
 
@@ -492,11 +492,17 @@ describe('reliabilityScoreInfo', () => {
   })
 
   it('High Reliability badge has a green color', () => {
-    expect(reliabilityScoreInfo(90).color).toBe('#4ade80')
+    expect(reliabilityScoreInfo(90).color).toBe('var(--accent)')
+  })
+
+  it('badge bg/border use the matching soft tokens', () => {
+    expect(reliabilityScoreInfo(90)).toMatchObject({ bg: 'var(--green-soft)', border: 'var(--green-soft-strong)' })
+    expect(reliabilityScoreInfo(50)).toMatchObject({ color: 'var(--amber)', bg: 'var(--amber-soft)', border: 'var(--amber-soft-strong)' })
+    expect(reliabilityScoreInfo(20)).toMatchObject({ bg: 'var(--red-soft)', border: 'var(--red-soft-strong)' })
   })
 
   it('Low Reliability badge has a red color', () => {
-    expect(reliabilityScoreInfo(20).color).toBe('#ff4d4d')
+    expect(reliabilityScoreInfo(20).color).toBe('var(--red)')
   })
 })
 
@@ -504,18 +510,18 @@ describe('reliabilityScoreInfo', () => {
 // Same thresholds as reliabilityScoreInfo (≥ 70 / ≥ 40 / else)
 describe('reliabilityColor', () => {
   it('returns green for score ≥ 70', () => {
-    expect(reliabilityColor(70)).toBe('#4ade80')
-    expect(reliabilityColor(100)).toBe('#4ade80')
+    expect(reliabilityColor(70)).toBe('var(--accent)')
+    expect(reliabilityColor(100)).toBe('var(--accent)')
   })
 
   it('returns orange for 40 ≤ score < 70', () => {
-    expect(reliabilityColor(69)).toBe('#ffa500')
-    expect(reliabilityColor(40)).toBe('#ffa500')
+    expect(reliabilityColor(69)).toBe('var(--amber)')
+    expect(reliabilityColor(40)).toBe('var(--amber)')
   })
 
   it('returns red for score < 40', () => {
-    expect(reliabilityColor(39)).toBe('#ff4d4d')
-    expect(reliabilityColor(0)).toBe('#ff4d4d')
+    expect(reliabilityColor(39)).toBe('var(--red)')
+    expect(reliabilityColor(0)).toBe('var(--red)')
   })
 })
 

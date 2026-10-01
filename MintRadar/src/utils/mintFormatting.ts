@@ -371,9 +371,9 @@ export function mintAgeBadge(
 ): AgeBadge | null {
   if (!discoveredAt) return null
   const months = (now - new Date(discoveredAt).getTime()) / (1000 * 60 * 60 * 24 * 30.44)
-  if (months < 1)  return { label: 'Fresh',       color: '#d3a446', bg: 'rgba(211,164,70,.14)',  border: 'rgba(211,164,70,.3)'  }
-  if (months < 6)  return { label: 'Established', color: '#5cc9a3', bg: 'rgba(69,173,140,.14)',  border: 'rgba(69,173,140,.28)'  }
-  if (months < 12) return { label: 'Veteran',     color: '#ffa500', bg: 'rgba(255,165,0,0.1)',   border: 'rgba(255,165,0,0.25)'   }
+  if (months < 1)  return { label: 'Fresh',       color: 'var(--amber)', bg: 'var(--amber-soft)',  border: 'var(--amber-soft-strong)'  }
+  if (months < 6)  return { label: 'Established', color: 'var(--accent)', bg: 'var(--green-soft)',  border: 'var(--green-soft-strong)'  }
+  if (months < 12) return { label: 'Veteran',     color: 'var(--amber)', bg: 'var(--amber-soft)',   border: 'var(--amber-soft-strong)'   }
   return              { label: 'OG',          color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' }
 }
 
@@ -401,9 +401,9 @@ export function normalizeMintUrl(raw: string): string {
 // ── Reliability score (MintDetail gauge/badge) ───────────────────────
 // reliabilityScoreColor: raw colour for the score number
 export function reliabilityScoreColor(score: number): string {
-  if (score >= 75) return '#4ade80'
-  if (score >= 50) return '#ffa500'
-  return '#ff4d4d'
+  if (score >= 75) return 'var(--accent)'
+  if (score >= 50) return 'var(--amber)'
+  return 'var(--red)'
 }
 
 export interface ReliabilityScoreInfo {
@@ -415,16 +415,16 @@ export interface ReliabilityScoreInfo {
 
 // reliabilityScoreInfo: full badge object for the MintDetail panel
 export function reliabilityScoreInfo(score: number): ReliabilityScoreInfo {
-  if (score >= 70) return { label: 'High Reliability',     color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.25)'  }
-  if (score >= 40) return { label: 'Moderate Reliability', color: '#ffa500', bg: 'rgba(255,165,0,0.1)',   border: 'rgba(255,165,0,0.25)'   }
-  return                  { label: 'Low Reliability',      color: '#ff4d4d', bg: 'rgba(255,77,77,0.1)',   border: 'rgba(255,77,77,0.25)'   }
+  if (score >= 70) return { label: 'High Reliability',     color: 'var(--accent)', bg: 'var(--green-soft)',  border: 'var(--green-soft-strong)'  }
+  if (score >= 40) return { label: 'Moderate Reliability', color: 'var(--amber)', bg: 'var(--amber-soft)',   border: 'var(--amber-soft-strong)'   }
+  return                  { label: 'Low Reliability',      color: 'var(--red)', bg: 'var(--red-soft)',   border: 'var(--red-soft-strong)'   }
 }
 
 // reliabilityColor: used in Dashboard list view (same thresholds as reliabilityScoreInfo)
 export function reliabilityColor(score: number): string {
-  if (score >= 70) return '#4ade80'
-  if (score >= 40) return '#ffa500'
-  return '#ff4d4d'
+  if (score >= 70) return 'var(--accent)'
+  if (score >= 40) return 'var(--amber)'
+  return 'var(--red)'
 }
 
 // ── Reliability Score donut geometry ────────────────────────────────

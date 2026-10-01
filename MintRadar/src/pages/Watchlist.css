@@ -44,8 +44,8 @@
 .sk-btn { width: 80px; height: 28px; border-radius: 6px; background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
 
 @keyframes pulse-green {
-  0%,100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.55); }
-  60%     { box-shadow: 0 0 0 5px rgba(74,222,128,0); }
+  0%,100% { box-shadow: 0 0 0 0 var(--green-soft-strong); }
+  60%     { box-shadow: 0 0 0 5px transparent; }
 }
 
 /* ── Watchlist Card ─────────────────────────────────────────── */
@@ -181,10 +181,10 @@
 
 .wl-card-remove {
   background: transparent;
-  border: 1px solid rgba(248,113,113,0.3);
+  border: 1px solid var(--red-soft-strong);
   border-radius: 5px;
   padding: 3px 8px;
-  color: #f87171;
+  color: var(--red);
   font-size: 10px;
   cursor: pointer;
   font-family: var(--font-body);
@@ -192,9 +192,9 @@
 }
 
 .wl-card-remove:hover {
-  color: #f87171;
-  border-color: rgba(248,113,113,0.5);
-  background: rgba(248,113,113,0.1);
+  color: var(--red);
+  border-color: var(--red-soft-strong);
+  background: var(--red-soft);
 }
 
 .wl-watching-badge {
@@ -319,8 +319,8 @@
 .cmp-bar-btn:hover { border-color: var(--border2); color: var(--text); }
 .cmp-bar-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 700; }
 .cmp-bar-btn.primary:hover { opacity: 0.9; }
-.cmp-bar-btn.danger { background: rgba(255,77,77,0.12); border-color: rgba(255,77,77,0.4); color: #ff6b6b; font-weight: 600; }
-.cmp-bar-btn.danger:hover { background: rgba(255,77,77,0.2); border-color: rgba(255,77,77,0.6); color: #ff4d4d; }
+.cmp-bar-btn.danger { background: var(--red-soft); border-color: var(--red-soft-strong); color: var(--red); font-weight: 600; }
+.cmp-bar-btn.danger:hover { background: var(--red-soft-strong); border-color: var(--red-soft-strong); color: var(--red); }
 
 /* comparison modal */
 .cmp-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.78); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; padding: 20px; overflow: auto; }
@@ -595,7 +595,7 @@
 
 .wl-rec-online-dot {
   font-size: 8px;
-  color: #17E87F;
+  color: var(--accent);
 }
 
 .wl-rec-watch-btn {
