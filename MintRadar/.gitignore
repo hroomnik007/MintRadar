@@ -38,3 +38,7 @@ playwright/.cache/
 
 # Local Claude config (sensitive)
 CLAUDE.local.md
+
+# Compiled output of vite.config.ts (tsconfig.node.json is noEmit; Vite must load the .ts)
+/vite.config.js
+/vite.config.d.ts
