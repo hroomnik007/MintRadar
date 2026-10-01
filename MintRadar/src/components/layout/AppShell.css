@@ -95,7 +95,7 @@
 
 .navbar {
   /* Full-bleed sticky background; the CONTENT is constrained to the same
-     centred 1400px shell as .app-content via .navbar-inner. */
+     centred --dash-chrome-max shell as the page content via .navbar-inner. */
   background: var(--bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -111,9 +111,11 @@
   gap: 12px;
   height: var(--nav-h);
   width: 100%;
-  max-width: 1400px;
+  /* Same width + gutter as the page content (--dash-chrome-max / --page-pad), so the
+     inner row's edges line up with the content edges at every width. */
+  max-width: var(--dash-chrome-max);
   margin: 0 auto;
-  padding: 0 18px;
+  padding: 0 var(--page-pad);
   box-sizing: border-box;
 }
 
@@ -447,8 +449,7 @@
    Login button 144 (short 75), profile chip + Disconnect 281 (135 without name/badge/npub); the
    row needs those + 72px of padding and gaps. Every step starts at the width where it is first
    needed, so wider viewports look as before (logged-out fits untouched from 840px, logged-in
-   from 997px — the chip is wider, hence `.is-authed`). Order: tighter tabs → "Login via Nostr"
-   becomes "Login" → wordmark hidden (icon stays) → profile chip trimmed → Disconnect label
+   from 997px — the chip is wider, hence `.is-authed`). Order: tighter tabs → wordmark hidden (icon stays) → profile chip trimmed → Disconnect label
    hidden. Hidden text stays available to assistive tech (visually hidden, or a title).
    The auth area is deliberately NOT made shrinkable: the Login button and chip are nowrap, so
    shrinking the box would only clip its contents. */
@@ -460,13 +461,8 @@
   .navbar-inner.is-authed .navbar-tabs { gap: 2px; }
   .navbar-inner.is-authed .nav-tab { padding: 6px 9px; }
 }
-.navbar-login-extra::before { content: " "; }
 @media (max-width: 765px) {
-  .navbar-login-btn { position: relative; padding-inline: 12px; }
-  .navbar-login-extra {
-    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
-  }
+  .navbar-login-btn { padding-inline: 12px; }
 }
 @media (min-width: 641px) and (max-width: 696px) {
   .navbar-inner:not(.is-authed) .navbar-wordmark { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

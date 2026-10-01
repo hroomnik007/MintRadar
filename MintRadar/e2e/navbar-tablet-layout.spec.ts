@@ -33,34 +33,46 @@ for (const loggedIn of [false, true]) {
   }
 }
 
-test('login button visible text is "Login via Nostr" at 1280px', async ({ page }) => {
-  await mockRelays(page)
-  await installApiMocks(page)
-  await page.setViewportSize({ width: 1280, height: 800 })
-  await page.goto('/')
-  const text = await page.locator('.navbar-login-btn').innerText()
-  expect(text.replace(/\s+/g, ' ').trim()).toMatch(/Login via Nostr/)
-  expect(text).not.toMatch(/Login {2}via/)
-})
+for (const width of [1280, 768, 700]) {
+  test(`login button shows just "Login" (no bolt) and keeps the name "Login via Nostr" at ${width}px`, async ({ page }) => {
+    await mockRelays(page)
+    await installApiMocks(page)
+    await page.setViewportSize({ width, height: 800 })
+    await page.goto('/')
+    const btn = page.locator('.navbar-login-btn')
+    await expect(page.getByRole('button', { name: /Login via Nostr/ })).toBeVisible()
+    await expect(btn).toHaveAccessibleName('Login via Nostr')
+    expect((await btn.innerText()).trim()).toBe('Login')
+    await expect(btn.locator('svg')).toHaveCount(1)
+    expect(await btn.textContent()).not.toContain('⚡')
+    const w = await btn.evaluate(e => e.getBoundingClientRect().width)
+    expect(w).toBeLessThan(100)
+  })
+}
 
-test('login button keeps the accessible name "Login via Nostr" at 768px', async ({ page }) => {
-  await mockRelays(page)
-  await installApiMocks(page)
-  await page.setViewportSize({ width: 768, height: 800 })
-  await page.goto('/')
-  await expect(page.getByRole('button', { name: /Login via Nostr/ })).toBeVisible()
-  await expect(page.locator('.navbar-login-btn')).toHaveAccessibleName(/Login via Nostr/)
-})
-
-test('login button shows just "Login" at 700px but keeps the name "Login via Nostr"', async ({ page }) => {
-  await mockRelays(page)
-  await installApiMocks(page)
-  await page.setViewportSize({ width: 700, height: 800 })
-  await page.goto('/')
-  await expect(page.locator('.navbar-login-btn')).toHaveAccessibleName(/Login via Nostr/)
-  const w = await page.locator('.navbar-login-btn').evaluate(e => e.getBoundingClientRect().width)
-  expect(w).toBeLessThan(100) // short form; the full button is ~144px
-})
+// The navbar's inner row must share the page content's left/right edges (same
+// --dash-chrome-max width and --page-pad gutter), not just stay inside the viewport.
+for (const width of [1920, 1440, 1100]) {
+  test(`navbar inner row edges equal the content edges at ${width}px`, async ({ page }) => {
+    await mockRelays(page)
+    await installApiMocks(page)
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/')
+    await expect(page.locator('.navbar-inner')).toBeVisible()
+    await expect(page.locator('.mint-grid')).toBeVisible()
+    const edges = await page.evaluate(() => {
+      const inner = (sel: string) => {
+        const el = document.querySelector(sel)!
+        const r = el.getBoundingClientRect()
+        const cs = getComputedStyle(el)
+        return { left: r.left + parseFloat(cs.paddingLeft), right: r.right - parseFloat(cs.paddingRight) }
+      }
+      return { nav: inner('.navbar-inner'), content: inner('.mint-grid') }
+    })
+    expect(edges.nav.left).toBeCloseTo(edges.content.left, 0)
+    expect(edges.nav.right).toBeCloseTo(edges.content.right, 0)
+  })
+}
 
 test('home link keeps its name and title when the wordmark is hidden (680px)', async ({ page }) => {
   await mockRelays(page)

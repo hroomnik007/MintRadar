@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
+import { LogIn } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useWatchlistSync } from '@/hooks/useWatchlistSync'
@@ -326,7 +327,7 @@ export function AppShell() {
         <div className="navbar-auth">
           {profile === null ? (
             <button type="button" className="navbar-login-btn" aria-label="Login via Nostr" onClick={() => setShowLoginModal(true)}>
-              ⚡ Login<span className="navbar-login-extra">via Nostr</span>
+              <LogIn size={13} strokeWidth={2.4} aria-hidden="true" /> Login
             </button>
           ) : (
             <>
@@ -386,7 +387,7 @@ export function AppShell() {
             {!methodPicked ? (
               <>
                 <div className="nostr-modal-header">
-                  <div className="nostr-modal-icon">⚡</div>
+                  <div className="nostr-modal-icon"><LogIn size={18} strokeWidth={1.75} aria-hidden="true" /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="nostr-modal-title">Connect with Nostr</div>
                     <div className="nostr-modal-subtitle">MintRadar uses your Nostr identity to save watchlists and post reviews. No email, no password.</div>

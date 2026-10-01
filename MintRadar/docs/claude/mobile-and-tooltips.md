@@ -61,10 +61,11 @@ used to have `transition: all`, which made live-resize measurements lie; since 2
 the row needs those + 72px (36 padding + 3×12 gaps). Each step starts at the width where it is first
 needed; wider viewports look as before. `.navbar-inner` gets `.is-authed` when logged in.
 
+**Navbar width + Login button (2026-10-01):** `.navbar-inner` uses `max-width: var(--dash-chrome-max)` and `padding: 0 var(--page-pad)` — the same variables as the page content — so its edges equal the content edges at every width (was a fixed 1400px, 58px wider per side at 1920). The `.navbar` background/border stays full-bleed. The Login button is always just "Login" (lucide `LogIn` icon, `aria-label="Login via Nostr"`); the old ≤765px label switch and `.navbar-login-extra` span are gone, so "Login 144" above is now ≈ 90 (short 75). Login modal header badge uses the same `LogIn` icon instead of ⚡. Test: `navbar inner row edges equal the content edges` in `e2e/navbar-tablet-layout.spec.ts`. LN pills on mint cards, Watchlist/MintCard/MintDetail login prompts (`⚡ Login via Nostr`) and the modal's `⚡ Connect/Retry` button were deliberately left unchanged.
+
 | Step | Logged out | Logged in |
 |---|---|---|
 | tabs `padding 6px 9px`, `gap 2px` | ≤ 840px | ≤ 996px |
-| "Login via Nostr" → "Login" (`.navbar-login-extra` visually hidden, `aria-label` / name unchanged). Visible text is one space ("Login via Nostr") from 766px up. | ≤ 765px | — |
 | wordmark hidden (`.navbar-wordmark` visually hidden; home link has `title="MintRadar"`) | ≤ 696px | ≤ 902px |
 | profile name + badge + npub hidden (`.navbar-profile-text`; name is the chip's `title`) | — | ≤ 806px |
 | Disconnect label hidden (glyph only, like ≤640px) | — | ≤ 660px |
