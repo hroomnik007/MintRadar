@@ -364,7 +364,7 @@ export function AppShell() {
                     <div className="nostr-method-icon"><IcKey /></div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="nostr-method-title">Nostr key (nsec)</div>
-                      <div className="nostr-method-desc">Paste a private key — stored only in this browser</div>
+                      <div className="nostr-method-desc">Paste a private key — held in memory for this session only</div>
                     </div>
                     <div className="nostr-method-chevron" aria-hidden="true">›</div>
                   </div>

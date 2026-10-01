@@ -36,6 +36,8 @@ test('method cards carry icon badges, nsec reachable in one click, its warning s
   expect(await page.locator('.nostr-method-title').allTextContents())
     .toEqual(['Nostr extension', 'Remote signer', 'Nostr key (nsec)'])
   await expect(page.locator('.nostr-method-icon svg')).toHaveCount(3)
+  await expect(page.locator('.nostr-method-card', { hasText: 'Nostr key (nsec)' }).locator('.nostr-method-desc'))
+    .toHaveText('Paste a private key — held in memory for this session only')
   // The single nsec security warning appears only once the nsec card is picked.
   await expect(page.locator('.nostr-advanced-warn')).toHaveCount(0)
   await page.locator('.nostr-method-card', { hasText: 'Nostr key (nsec)' }).click()
