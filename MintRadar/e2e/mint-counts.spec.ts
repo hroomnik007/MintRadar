@@ -42,7 +42,7 @@ test.describe('Mint counts agree everywhere', () => {
     await expect(banner(page)).toContainText('41 mints hidden (offline 24h+)')
 
     await page.getByRole('button', { name: 'Filters', exact: true }).click()
-    await expect(page.locator('.filter-count')).toHaveText('Showing 49 of 90')
+    await expect(page.getByRole('button', { name: 'Show 49 of 90 mints' })).toBeVisible()
 
     await banner(page).click()
     await expect(footer(page)).toHaveText('Showing 90 of 90')

@@ -50,7 +50,7 @@ test.describe('Dashboard', () => {
 
   test('status filter narrows the list to offline / online mints', async ({ page }) => {
     const filterBtn = page.locator('.filter-btn')
-    const apply = page.getByRole('button', { name: 'Apply filter' })
+    const apply = page.getByRole('button', { name: /^Show \d+ of \d+ mints$/ })
 
     // Offline → only Charlie Mint (the single offline mock mint).
     await filterBtn.click()

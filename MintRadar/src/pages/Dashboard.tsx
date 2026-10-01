@@ -644,6 +644,16 @@ export default function Dashboard() {
   }, [allMints, activeFilters, showDegraded, search])
   const activeFilterCount = countActiveFilters(activeFilters)
 
+  // Live count for the filter panel's "Show N of M" button: the same pure
+  // applyFilters/pool chain as filteredMints above, but over the *draft*
+  // (pendingFilters). Only computed while the panel is open.
+  const draftCount = useMemo(() => {
+    if (!showFilters) return 0
+    const showDeg = showDegraded || pendingFilters.status === 'offline'
+    const pool = trackedMints.filter(m => showDeg ? true : !isPoolHidden(m)) as KnownMint[]
+    return applyFilters(pool, pendingFilters, { showDegraded, searching: search.trim().length > 0 }).length
+  }, [showFilters, trackedMints, pendingFilters, showDegraded, search])
+
   const onlineCount = countOnline(trackedMints)
 
   // Resolved against the full known-mints set (not the filtered/degraded-hidden
@@ -1144,53 +1154,40 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Single horizontal bar (2026-09-10): Status · Hide test mints ·
-              Reliability slider · Showing X of Y · Reset · Apply — one baseline,
-              stacks full-width on mobile. */}
+          {/* One layout for every width (2026-10-01): Status + Unit segmented controls,
+              Reliability slider, then the footer (Hide test mints · Reset · Show N of M).
+              flex-wrap decides the rows — see .filter-bar in Dashboard.css. */}
           <div className="filter-bar">
-            <div className="filter-group-inline">
-              <span className="filter-group-label">Status</span>
-              <div className="filter-radio-group">
-                {(['all', 'online', 'offline'] as const).map(s => (
-                  <label key={s} className="filter-radio">
-                    <input type="radio" name="filter-status" checked={pendingFilters.status === s} onChange={() => setPendingFilters(p => ({ ...p, status: s }))} />
-                    {s === 'all' ? 'All' : s === 'online' ? 'Online' : 'Offline'}
-                  </label>
-                ))}
-              </div>
+            <div className="filter-seg" role="radiogroup" aria-label="Status">
+              <span className="filter-seg-label" aria-hidden="true">Status</span>
+              {(['all', 'online', 'offline'] as const).map(s => (
+                <label key={s} className={`filter-seg-opt${pendingFilters.status === s ? ' active' : ''}`}>
+                  <input type="radio" name="filter-status" checked={pendingFilters.status === s} onChange={() => setPendingFilters(p => ({ ...p, status: s }))} />
+                  <span>{s === 'all' ? 'All' : s === 'online' ? 'Online' : 'Offline'}</span>
+                </label>
+              ))}
             </div>
 
-            <label className="filter-radio filter-group-inline">
-              <input
-                type="checkbox"
-                checked={pendingFilters.hideTestMints}
-                onChange={e => setPendingFilters(p => ({ ...p, hideTestMints: e.target.checked }))}
-              />
-              Hide test mints
-            </label>
-
-            <div className="filter-group-inline" role="group" aria-label="Unit">
-              <span className="filter-group-label">Unit</span>
-              <div className="filter-unit-group">
-                {UNIT_FILTER_OPTIONS.map(u => {
-                  const on = pendingFilters.units.includes(u)
-                  return (
-                    <button
-                      key={u}
-                      type="button"
-                      className={`filter-unit-chip${on ? ' active' : ''}`}
-                      aria-pressed={on}
-                      data-unit={u}
-                      onClick={() => setPendingFilters(p => ({ ...p, units: UNIT_FILTER_OPTIONS.filter(x => x === u ? !on : p.units.includes(x)) }))}
-                    >
-                      {u.toUpperCase()}
-                    </button>
-                  )
-                })}
-              </div>
+            <div className="filter-seg" role="group" aria-label="Unit">
+              <span className="filter-seg-label" aria-hidden="true">Unit</span>
+              {UNIT_FILTER_OPTIONS.map(u => {
+                const on = pendingFilters.units.includes(u)
+                return (
+                  <button
+                    key={u}
+                    type="button"
+                    className={`filter-seg-opt filter-unit-chip${on ? ' active' : ''}`}
+                    aria-pressed={on}
+                    data-unit={u}
+                    onClick={() => setPendingFilters(p => ({ ...p, units: UNIT_FILTER_OPTIONS.filter(x => x === u ? !on : p.units.includes(x)) }))}
+                  >
+                    {u.toUpperCase()}
+                  </button>
+                )
+              })}
             </div>
 
-            <div className="filter-group-inline">
+            <div className="filter-rel">
               <span className="filter-group-label">Reliability ≥ <strong>{pendingFilters.minReliabilityScore}%</strong></span>
               <input
                 type="range" min={0} max={100} step={5}
@@ -1200,10 +1197,26 @@ export default function Dashboard() {
               />
             </div>
 
-            <div className="filter-count">Showing <strong>{filteredMints.length}</strong> of <strong>{knownTotal}</strong></div>
-            <div className="filter-actions-row">
-              <button type="button" className="filter-reset-btn" onClick={() => { setPendingFilters(DEFAULT_FILTERS); commitFilters({ filters: DEFAULT_FILTERS }) }}>Reset</button>
-              <button type="button" className="filter-apply-btn" onClick={() => { commitFilters({ filters: pendingFilters }); setShowFilters(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Apply filter</button>
+            <div className="filter-footer">
+              <label className="filter-check">
+                <input
+                  type="checkbox"
+                  checked={pendingFilters.hideTestMints}
+                  onChange={e => setPendingFilters(p => ({ ...p, hideTestMints: e.target.checked }))}
+                />
+                Hide test mints
+              </label>
+              <div className="filter-actions-row">
+                <button type="button" className="filter-reset-btn" onClick={() => { setPendingFilters(DEFAULT_FILTERS); commitFilters({ filters: DEFAULT_FILTERS }) }}>Reset</button>
+                <button
+                  type="button"
+                  className="filter-apply-btn"
+                  aria-label={`Show ${draftCount} of ${knownTotal} mints`}
+                  onClick={() => { commitFilters({ filters: pendingFilters }); setShowFilters(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                >
+                  Show {draftCount} of {knownTotal}
+                </button>
+              </div>
             </div>
           </div>
         </div>

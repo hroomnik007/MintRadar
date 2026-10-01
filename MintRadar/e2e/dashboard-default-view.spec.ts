@@ -38,7 +38,7 @@ test.describe('Dashboard default view', () => {
 
     await page.getByRole('button', { name: 'Filters', exact: true }).click()
     await page.getByLabel('Hide test mints').check()
-    await page.getByRole('button', { name: 'Apply filter' }).click()
+    await page.getByRole('button', { name: /^Show \d+ of \d+ mints$/ }).click()
 
     await expect(page.locator('.card-name', { hasText: 'Cashu test mint' })).toHaveCount(0)
     await expect(page).toHaveURL(/[?&]testmints=hide/)

@@ -47,7 +47,7 @@ test.describe('Dashboard unit filter', () => {
     // Draft until Apply: nothing changed yet.
     await expect(cards(page)).toHaveCount(8)
     expect(page.url()).not.toContain('unit=')
-    await page.getByRole('button', { name: 'Apply filter' }).click()
+    await page.getByRole('button', { name: /^Show \d+ of \d+ mints$/ }).click()
     await expect(cards(page)).toHaveCount(3)
     await expect(cards(page).filter({ hasText: 'Bravo Mint' })).toHaveCount(1)
     await expect(cards(page).filter({ hasText: 'Echo Mint' })).toHaveCount(1)
@@ -61,21 +61,21 @@ test.describe('Dashboard unit filter', () => {
     await page.goto('/')
     await openPanel(page)
     for (const u of ['sat', 'usd', 'eur']) await chip(page, u).click()
-    await page.getByRole('button', { name: 'Apply filter' }).click()
+    await page.getByRole('button', { name: /^Show \d+ of \d+ mints$/ }).click()
     await expect(cards(page)).toHaveCount(6)
     await expect(cards(page).filter({ hasText: 'Golf Mint' })).toHaveCount(0)
     await expect(cards(page).filter({ hasText: 'India Mint' })).toHaveCount(0)
     await expect.poll(() => new URL(page.url()).searchParams.get('unit')).toBe('sat,usd,eur')
   })
 
-  test('?unit=usd preselects the control and filters; "Showing N of M" follows', async ({ page }) => {
+  test('?unit=usd preselects the control and filters; "Show N of M" follows', async ({ page }) => {
     await setup(page)
     await page.goto('/?unit=usd')
     await expect(cards(page)).toHaveCount(3)
     await openPanel(page)
     await expect(chip(page, 'usd')).toHaveAttribute('aria-pressed', 'true')
     await expect(chip(page, 'sat')).toHaveAttribute('aria-pressed', 'false')
-    await expect(page.locator('.filter-count')).toHaveText('Showing 3 of 8')
+    await expect(page.getByRole('button', { name: 'Show 3 of 8 mints' })).toBeVisible()
   })
 
   test('invalid ?unit= values are ignored (no filtering)', async ({ page }) => {
@@ -110,7 +110,7 @@ test.describe('Dashboard unit filter', () => {
     await expect(cards(page)).toHaveCount(2)
     await openPanel(page)
     await chip(page, 'usd').click()
-    await page.getByRole('button', { name: 'Apply filter' }).click()
+    await page.getByRole('button', { name: /^Show \d+ of \d+ mints$/ }).click()
     // sat|usd, >=60: Alpha, Delta, Echo 85
     await expect(cards(page)).toHaveCount(3)
     const sp = new URL(page.url()).searchParams
@@ -145,7 +145,7 @@ test.describe('Dashboard unit filter', () => {
     })
   }
 
-  test('chips are 44px tall on touch devices', async ({ browser }) => {
+  test('chips have a 44px hit area on touch devices (visible height stays 36px)', async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
     const page = await ctx.newPage()
     await setup(page)
@@ -154,8 +154,18 @@ test.describe('Dashboard unit filter', () => {
     await openPanel(page)
     for (const u of ['sat', 'usd', 'eur']) {
       const b = (await chip(page, u).boundingBox())!
-      expect(b.height).toBeGreaterThanOrEqual(44)
-      expect(b.width).toBeGreaterThanOrEqual(44)
+      expect(b.height).toBe(36)
+      // 4px invisible ::before above and below → 44px hit area; 3px outside the box still lands on the chip.
+      const hit = await chip(page, u).evaluate((el, dy) => {
+        const r = el.getBoundingClientRect()
+        const x = r.left + r.width / 2
+        return {
+          pseudoH: parseFloat(getComputedStyle(el, '::before').height),
+          hit: [document.elementFromPoint(x, r.top - dy), document.elementFromPoint(x, r.bottom + dy)].map(e => el.contains(e)),
+        }
+      }, 3)
+      expect(hit.pseudoH).toBeGreaterThanOrEqual(44)
+      expect(hit.hit).toEqual([true, true])
     }
     await ctx.close()
   })

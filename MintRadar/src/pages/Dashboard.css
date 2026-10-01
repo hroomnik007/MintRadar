@@ -1239,7 +1239,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
-  padding: 12px 14px;
+  padding: 9px 12px;
   margin-inline: auto;
   /* Unlike .dashboard-controls / .dash-intro (which inset their children by
      var(--page-pad) inside a --dash-chrome-max box), this panel's own border
@@ -1247,7 +1247,9 @@
      width directly (--dash-chrome-max minus the two page-pad gutters), or it
      overhangs the mint row by var(--page-pad) on each side. */
   max-width: calc(var(--dash-chrome-max) - var(--page-pad) * 2);
-  width: 100%;
+  /* Below the chrome max the panel is inset by the same --page-pad gutters as the
+     Search row and the cards (it used to run edge to edge). */
+  width: calc(100% - var(--page-pad) * 2);
   margin-top: 8px;
 }
 
@@ -1289,65 +1291,149 @@
 }
 .filter-tag button:hover { opacity: 1; }
 
-/* One horizontal bar: Status · Hide test mints · Reliability slider · Showing · Reset
-   · Apply — a single baseline, no footer band / spacer. Wraps only on narrow
-   desktop; a dedicated mobile block below stacks it. */
+/* One layout for every width (2026-10-01). Wide: Status · Unit · Reliability · [Hide test
+   mints … Reset · Show N of M] on one 36px row; narrower: flex-wrap moves the footer
+   (checkbox + buttons) to the last line. Mobile block below stacks the selection controls. */
 .filter-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 10px 18px;
+  gap: 8px 12px;
 }
 
-/* label + its control, side by side on one baseline */
-.filter-group-inline {
+/* Labelled segmented control — same visual language as .wizard-unit-seg (Tools):
+   36px visible, 44px touch target through an invisible ::before. */
+.filter-seg {
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  height: 36px;
+  min-width: 0;
+  border-radius: 8px;
+  background: var(--bg3);
+}
+/* The 1px frame is drawn as an overlay (not a real border) so the segments inside are the full 36px. */
+.filter-seg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  pointer-events: none;
+}
+.filter-seg-label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-width: 0;
+  padding: 0 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  border-right: 1px solid var(--border);
+  border-radius: 8px 0 0 8px;
+  white-space: nowrap;
+}
+.filter-seg-opt {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 52px;
+  padding: 0 10px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: var(--text2);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.filter-seg-opt + .filter-seg-opt { border-left: 1px solid var(--border); }
+.filter-seg-label + .filter-seg-opt { border-radius: 0; }
+.filter-seg-opt:last-child { border-radius: 0 8px 8px 0; }
+.filter-seg-opt.active { background: var(--accent-dim); color: var(--accent); }
+/* Native radio stays in the DOM and focusable (arrow keys work); it just covers its segment. */
+.filter-seg-opt input[type="radio"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.filter-seg-opt:focus-visible,
+.filter-seg-opt:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+@media (hover: hover) {
+  .filter-seg-opt:not(.active):hover { color: var(--text); }
+}
+/* Touch: visible height stays 36px; an invisible extension (4px above/below only, never
+   sideways) brings the target to 44px. Same technique as .wizard-unit-opt / .md-back. */
+@media (pointer: coarse), (max-width: 600px) {
+  .filter-seg-opt::before { content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
 }
 
-/* "Showing X of Y" — sits in the distributed flow of .filter-bar (space-between),
-   not pinned right, so there's no dead gap in the middle of the bar. */
-.filter-count {
-  margin-left: 0;
-}
-
-/* Reset + Apply, grouped so the mobile block below can lay them out on one
-   shared row. On desktop this is just two adjacent flex items, same as
-   before the wrapper existed. */
-.filter-actions-row {
+.filter-rel {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
-/* Mobile: Status, Hide test mints, and the Reliability slider each get their own
-   full-width, left-aligned row; "Showing X of Y" gets its own row below them;
-   Reset + Apply share one final row at equal height (Reset sized to its
-   label, Apply filling the rest — not a tiny ghost next to a full-width bar).
-   Explicitly NOT space-between on .filter-bar itself — that left a hole with
-   a floating checkbox mid-row. */
+.filter-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  gap: 8px 12px;
+}
+.filter-check {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  font-size: 11.5px;
+  color: var(--text2);
+  cursor: pointer;
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+.filter-check input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+  /* Override the global `input { width: 100% }` base rule (src/index.css). */
+  width: auto;
+  flex: 0 0 auto;
+}
+@media (pointer: coarse), (max-width: 600px) {
+  .filter-check::before { content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
+}
+
+.filter-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Mobile: Status, Unit and Reliability each take a full-width row; the footer row holds the
+   checkbox + Reset + Show N of M (it wraps itself: checkbox on its own line when the three
+   no longer fit, buttons then share the next line). */
 @media (max-width: 600px) {
-  .filter-bar {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    justify-content: flex-start;
-    gap: 12px 10px;
-  }
-  .filter-group-inline { flex: 1 1 100%; width: 100%; justify-content: flex-start; }
-  .filter-slider { flex: 1; }
-  .filter-count { flex: 1 1 100%; width: 100%; margin-left: 0; }
-  .filter-actions-row {
-    display: flex;
-    align-items: stretch;
-    gap: 10px;
-    flex: 1 1 100%;
-    width: 100%;
-  }
-  .filter-reset-btn { flex: 0 0 auto; }
+  .filter-panel { padding-block: 7px; }
+  /* 8px between rows = the two 4px ::before touch extensions meet without overlapping */
+  .filter-bar { gap: 8px; }
+  .filter-seg { flex: 1 1 100%; }
+  .filter-seg-opt { min-width: 0; }
+  .filter-rel { flex: 1 1 100%; }
+  .filter-rel .filter-slider { flex: 1 1 auto; width: auto; min-width: 0; }
+  .filter-footer { flex: 1 1 100%; gap: 8px 6px; }
+  .filter-check { flex: 1 1 auto; }
+  .filter-actions-row { flex: 1 1 auto; margin-left: 0; gap: 6px; }
   .filter-apply-btn { flex: 1 1 auto; }
 }
 
@@ -1381,70 +1467,17 @@
   letter-spacing: 0.07em;
   font-family: var(--font-mono);
 }
-.filter-group-label strong { color: var(--text); }
-
-.filter-radio-group {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.filter-radio {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11.5px;
-  color: var(--text2);
-  cursor: pointer;
-  font-family: var(--font-body);
-}
-/* Same themed control language for radios and checkboxes — no native blue. */
-.filter-radio input[type="radio"],
-.filter-radio input[type="checkbox"] {
-  accent-color: var(--accent);
-  cursor: pointer;
-  /* Override the global `input { width: 100% }` base rule (src/index.css) — inside
-     a flex label (.filter-group-inline) that width is read as a flex-basis hint,
-     stretching the checkbox itself to fill most of the row and stranding its label
-     text far to the right. */
-  width: auto;
-  flex: 0 0 auto;
-}
-
-.filter-unit-group {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-.filter-unit-chip {
-  min-height: 28px;
-  min-width: 44px;
-  padding: 0 10px;
-  background: var(--surface-2);
-  border: 0.5px solid var(--border);
-  border-radius: 6px;
-  color: var(--text2);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-}
-.filter-unit-chip:hover { color: var(--text); }
-.filter-unit-chip.active {
-  background: var(--accent-dim);
-  border-color: var(--accent-brd);
-  color: var(--accent);
-}
-/* 44px tap targets on touch devices */
-@media (pointer: coarse) {
-  .filter-unit-chip { min-height: 44px; min-width: 56px; }
+.filter-group-label strong {
+  color: var(--text);
+  display: inline-block;
+  min-width: 4ch; /* "100%" — the label doesn't change width while the slider moves */
+  font-variant-numeric: tabular-nums;
 }
 
 .filter-slider {
   width: 140px;
+  height: 28px;
+  padding: 0;
   accent-color: var(--accent);
   cursor: pointer;
 }
@@ -1489,40 +1522,43 @@
 .filter-nut-chip:hover { border-color: var(--border2); color: var(--text2); }
 .filter-nut-chip.active { background: rgba(74,222,128,0.1); border-color: rgba(74,222,128,0.4); color: #4ade80; }
 
-.filter-count {
-  font-size: 11px;
-  color: var(--text3);
-  font-family: var(--font-mono);
-  white-space: nowrap;
-}
-.filter-count strong { color: var(--text2); }
-
-.filter-reset-btn {
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 5px 12px;
-  color: var(--text3);
+.filter-reset-btn,
+.filter-apply-btn {
+  position: relative;
+  height: 36px;
+  border-radius: 8px;
   font-size: 11px;
   cursor: pointer;
   font-family: var(--font-mono);
   transition: all var(--transition);
+}
+.filter-reset-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 0 12px;
+  color: var(--text3);
 }
 .filter-reset-btn:hover { border-color: var(--border2); color: var(--text2); }
 
 .filter-apply-btn {
   background: var(--accent);
   border: none;
-  border-radius: 6px;
-  padding: 5px 14px;
+  padding: 0 12px;
   color: var(--bg);
-  font-size: 11px;
   font-weight: 700;
-  cursor: pointer;
-  font-family: var(--font-mono);
-  transition: opacity var(--transition);
+  font-variant-numeric: tabular-nums;
+  /* "Show 100 of 100" is 15 characters of the mono font — the button never resizes with the count */
+  min-width: calc(15ch + 24px);
 }
 .filter-apply-btn:hover { opacity: 0.9; }
+.filter-reset-btn:focus-visible,
+.filter-apply-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (pointer: coarse), (max-width: 600px) {
+  .filter-reset-btn::before,
+  .filter-apply-btn::before { content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
+  /* Reset has a 1px border and ::before is positioned against the padding box → 1px more each side */
+  .filter-reset-btn::before { top: -5px; bottom: -5px; }
+}
 
 /* ── Card checkbox (comparison) ─────────────────────────────── */
 .card-select-box {
