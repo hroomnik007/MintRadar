@@ -1412,6 +1412,37 @@
   flex: 0 0 auto;
 }
 
+.filter-unit-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.filter-unit-chip {
+  min-height: 28px;
+  min-width: 44px;
+  padding: 0 10px;
+  background: var(--surface-2);
+  border: 0.5px solid var(--border);
+  border-radius: 6px;
+  color: var(--text2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.filter-unit-chip:hover { color: var(--text); }
+.filter-unit-chip.active {
+  background: var(--accent-dim);
+  border-color: var(--accent-brd);
+  color: var(--accent);
+}
+/* 44px tap targets on touch devices */
+@media (pointer: coarse) {
+  .filter-unit-chip { min-height: 44px; min-width: 56px; }
+}
+
 .filter-slider {
   width: 140px;
   accent-color: var(--accent);

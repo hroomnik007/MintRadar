@@ -230,6 +230,10 @@ group was also dropped and a **"Hide test mints"** checkbox was added — see "D
 view + Capabilities filters removed" above for the panel's current, up-to-date contents.
 `requiredNuts` filter state is left in place but is URL-only (`?nuts=`), no panel UI.
 
+### Dashboard unit filter (2026-10-01)
+
+Filters panel has a multi-select **Unit** chip group (SAT / USD / EUR, `.filter-unit-chip`, `aria-pressed`; 44px tall on `pointer: coarse`). `FilterState.units` (default `[]`) follows the same draft → Apply / Reset / filter-badge (+1 when non-empty) / dismissible "Unit: …" tag / "Showing N of M" pattern as Reliability; the hidden-mints banner stays Status-only. Helpers are pure and live in `src/utils/unitFilter.ts`: `mintMatchesUnits` (empty = no filtering; a mint passes if it advertises ≥1 selected unit, case-insensitive on `KnownMint.units`; `null`/other units like `msat` never match an active filter), `parseUnitParam`/`buildUnitParam`. URL: `?unit=sat,usd` — whitelist `sat|usd|eur`, case-insensitive on read, canonical order + de-duplicated on write, param omitted when empty. Live data 2026-10-01 (76 mints): sat 60, usd 7, eur 1, msat 1, `units: null` 16 (units not yet probed); no `auth`. Best Mint wizard (`Tools.tsx`) derives its unit list independently from online mints' raw units and is unchanged. Tests: `src/__tests__/unitFilter.test.ts`, `e2e/dashboard-unit-filter.spec.ts`.
+
 ### Dashboard default view + Capabilities filters removed (2026-09-09/10, commits `6bd10ce`/`091231e`/`26c4111`)
 
 **Current defaults** (`DEFAULT_FILTERS` in `Dashboard.tsx`): `status: 'online'`, `minReliabilityScore: 0`,

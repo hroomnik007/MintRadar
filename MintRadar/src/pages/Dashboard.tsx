@@ -21,6 +21,7 @@ import { listReliabilityScore, compareReliabilityThenRating } from '@/utils/reli
 import { isTestMint } from '@/constants/testMints'
 import { trackedCount, onlineCount as countOnline, isPoolHidden, hiddenByDefaultCount } from '@/utils/mintCounts'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
+import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, type UnitFilterValue } from '@/utils/unitFilter'
 import './Dashboard.css'
 
 // Historical trend charts pull in Recharts (~380 kB chunk) — lazy-load so
@@ -134,6 +135,7 @@ interface FilterState {
   minReliabilityScore: number
   requiredNuts: string[]
   hideTestMints: boolean
+  units: UnitFilterValue[]
 }
 // New default Dashboard view (2026-09-09): online-only, test mints hidden,
 // sorted by Reliability Score desc. The Name-sort freeze from earlier passes is
@@ -142,7 +144,7 @@ interface FilterState {
 // mints (they still carry a "Test mint" badge). An earlier pass defaulted this
 // ON — that is deliberately lifted here. ?testmints=hide is emitted only when
 // the user turns the checkbox on; the default never emits a param.
-const DEFAULT_FILTERS: FilterState = { status: 'online', minReliabilityScore: 0, requiredNuts: [], hideTestMints: false }
+const DEFAULT_FILTERS: FilterState = { status: 'online', minReliabilityScore: 0, requiredNuts: [], hideTestMints: false, units: [] }
 
 function applyFilters(
   mints: KnownMint[],
@@ -160,6 +162,7 @@ function applyFilters(
     }
     if (filters.status === 'offline' && mint.online !== false) return false
     if (listReliabilityScore(mint) < filters.minReliabilityScore) return false
+    if (!mintMatchesUnits(mint, filters.units)) return false
     if (filters.requiredNuts.length > 0) {
       const nuts = mint.nutsLimits as Record<string, unknown> | null
       if (!nuts) return false
@@ -177,6 +180,7 @@ function countActiveFilters(f: FilterState): number {
     f.minReliabilityScore > 0 ? 1 : 0,
     f.requiredNuts.length > 0 ? 1 : 0,
     f.hideTestMints !== DEFAULT_FILTERS.hideTestMints ? 1 : 0,
+    f.units.length > 0 ? 1 : 0,
   ].reduce((a, b) => a + b, 0)
 }
 
@@ -218,12 +222,13 @@ function parseFilterParams(params: URLSearchParams): {
     if (NUT_FILTER_KEYS.includes(key) && !requiredNuts.includes(key)) requiredNuts.push(key)
   }
   const hideTestMints = params.get('testmints') === 'hide'
+  const units = parseUnitParam(params.get('unit'))
   const compareUrls = parseCompareParam(params.get('compare'))
   return {
     search: params.get('q') ?? '',
     sortBy,
     sortDir,
-    filters: { status, minReliabilityScore, requiredNuts, hideTestMints },
+    filters: { status, minReliabilityScore, requiredNuts, hideTestMints, units },
     compareUrls,
   }
 }
@@ -237,6 +242,8 @@ function buildFilterParams(search: string, sortBy: SortByValue, sortDir: 'asc' |
   if (filters.minReliabilityScore > 0) params.set('reliability', String(filters.minReliabilityScore))
   if (filters.requiredNuts.length > 0) params.set('nuts', filters.requiredNuts.join(','))
   if (filters.hideTestMints) params.set('testmints', 'hide')
+  const unitParam = buildUnitParam(filters.units)
+  if (unitParam) params.set('unit', unitParam)
   if (compareUrls.length > 0) params.set('compare', buildCompareParam(compareUrls))
   return params
 }
@@ -1122,6 +1129,12 @@ export default function Dashboard() {
                   <button type="button" onClick={() => { const f = { ...activeFilters, minReliabilityScore: 0 }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
+              {activeFilters.units.length > 0 && (
+                <span className="filter-tag">
+                  Unit: {activeFilters.units.map(u => u.toUpperCase()).join(', ')}
+                  <button type="button" aria-label="Clear unit filter" onClick={() => { const f = { ...activeFilters, units: [] }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
+                </span>
+              )}
               {activeFilters.requiredNuts.map(nut => (
                 <span key={nut} className="filter-tag">
                   NUT-{nut.padStart(2, '0')}
@@ -1155,6 +1168,27 @@ export default function Dashboard() {
               />
               Hide test mints
             </label>
+
+            <div className="filter-group-inline" role="group" aria-label="Unit">
+              <span className="filter-group-label">Unit</span>
+              <div className="filter-unit-group">
+                {UNIT_FILTER_OPTIONS.map(u => {
+                  const on = pendingFilters.units.includes(u)
+                  return (
+                    <button
+                      key={u}
+                      type="button"
+                      className={`filter-unit-chip${on ? ' active' : ''}`}
+                      aria-pressed={on}
+                      data-unit={u}
+                      onClick={() => setPendingFilters(p => ({ ...p, units: UNIT_FILTER_OPTIONS.filter(x => x === u ? !on : p.units.includes(x)) }))}
+                    >
+                      {u.toUpperCase()}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
 
             <div className="filter-group-inline">
               <span className="filter-group-label">Reliability ≥ <strong>{pendingFilters.minReliabilityScore}%</strong></span>
