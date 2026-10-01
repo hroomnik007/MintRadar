@@ -158,7 +158,7 @@ Read-only JSON under `https://mintradar.org/api/` (for example `GET /api/mints/k
 Three login methods are supported:
 
 - **NIP-07 extension** — [Alby](https://getalby.com/alby-extension) (recommended), [nos2x](https://chromewebstore.google.com/detail/nos2x/kpgefcfmnafjgpblomihpgmejjdanjjp) (Chrome/Edge), [nos2x-fox](https://addons.mozilla.org/en-US/firefox/addon/nos2x-fox/) (Firefox)
-- **nsec** — paste your private key; it's used only to derive the public key and then immediately zeroed in memory, never stored
+- **nsec** — paste your private key; it is held only in JavaScript memory for the session, never written to localStorage, sessionStorage or IndexedDB, and zeroed on logout
 - **Amber / NIP-46 bunker** — connect via `bunker://` URI or NIP-05 identifier; also supports QR pairing with the Amber mobile app
 
 ---
@@ -225,7 +225,7 @@ Serve the `dist/` directory with Nginx. See `MintRadar/deploy/nginx.conf` for th
 MintRadar handles Nostr private keys and is used by the Bitcoin/Cashu community where trust matters. To report a vulnerability, see **[SECURITY.md](SECURITY.md)**.
 
 - No tracking or telemetry
-- Nostr private keys never stored or sent to the server; raw nsec bytes are zeroed in memory after use
+- Nostr private keys are never sent to the server or written to browser storage; an nsec is held in memory for the session and zeroed on logout
 - No `dangerouslySetInnerHTML`; user-controlled URLs are validated before rendering
 - Backend SSRF protection (DNS pinning + blocked IP ranges), rate limiting, parameterized SQL
 - Docker non-root containers and internal-only port binding
