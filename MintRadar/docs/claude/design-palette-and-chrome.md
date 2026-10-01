@@ -290,7 +290,7 @@ Browser chrome and brand rasters use the settled palette: `--bg` `#10201c`, `--a
 |---|---|---|
 | `index.html` `<meta name="theme-color">`, `vite.config.ts` manifest `theme_color` + `background_color` | `#10201c` (`--bg`) | hand-edited |
 | `public/favicon.svg` | NavLogo shapes (`fill="none"` like NavLogo, so the ring interiors are transparent), `#5cc9a3` on a `#10201c` rx=6 tile | hand-edited |
-| `public/favicon-16x16.png`, `favicon-32x32.png`, `favicon.ico` (one 32x32 PNG inside an ICO), `icons/icon-{72,96,128,152,192,384,512}x*.png` | rounded tile with transparent corners (192/512 are declared `maskable` in the manifest, unchanged) | rendered from `favicon.svg` |
+| `public/favicon-16x16.png`, `favicon-32x32.png`, `favicon.ico` (one 32x32 PNG inside an ICO), `icons/icon-{72,96,128,144,152,192,384,512}x*.png` | rounded tile with transparent corners (192/512 are declared `maskable` in the manifest, unchanged) | rendered from `favicon.svg` |
 | `public/apple-touch-icon.png` | 180x180, opaque `--bg`, same artwork (iOS masks the corners itself) | rendered from `favicon.svg` |
 | `public/og-image.svg` / `og-image.png` | 1200x630. bg `--bg`, panel `--surface`, pills `--surface-card`, dividers/pill borders = `--border-strong` composited over `--surface` (`#414c47`), text `--text` / `--text2` / footer `--text3`, accent `--accent` | SVG hand-edited, PNG rendered from it |
 | `public/mint-coin-placeholder.svg` | copper `#d98a5a` (already current) | hand-edited |
@@ -299,8 +299,7 @@ Browser chrome and brand rasters use the settled palette: `--bg` `#10201c`, `--a
 `FONTCONFIG_FILE=<fonts.conf> node scripts/generate-icons.mjs`. The OG text is `font-family: monospace`; the committed PNG was
 rasterised with **DejaVu Sans Mono**, so point `FONTCONFIG_FILE` at a fontconfig that has a `<dir>` with `DejaVuSansMono*.ttf`
 and `<alias><family>monospace</family><prefer><family>DejaVu Sans Mono</family></prefer></alias>` (any machine default
-monospace gives different glyphs). Not covered: `public/icons/icon-N.png` (no `xN`; 8 files, not referenced by the manifest,
-index.html or any code — leftovers from `logo-original.png`, left untouched) and `logo-original.png`.
+monospace gives different glyphs). The 8 legacy `public/icons/icon-N.png` files (PrivyZap logo, unreferenced) were removed 2026-10-02; `public/icons/` now holds only the generated `icon-<N>x<N>.png` files (pinned by `brandAssets.test.ts`). `logo-original.png` (the PrivyZap source image) is no longer used by any script and was left in place.
 
 **OG pills:** the first pill ("✓ Reliability Score", 19 mono chars ≈ 275px at 24px) is 333px wide (the others are 260px) so it keeps the same ~29px inner padding; the other two pills of row 1 are shifted right by 73px. Row 2 was left where it was (so it is no longer centred under row 1). The PNG is rendered straight from the SVG text.
 

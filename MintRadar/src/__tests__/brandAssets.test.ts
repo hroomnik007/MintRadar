@@ -47,7 +47,32 @@ describe('brand assets', () => {
     expect(pngSize('public/favicon-32x32.png')).toEqual([32, 32])
     expect(pngSize('public/apple-touch-icon.png')).toEqual([180, 180])
     expect(pngSize('public/og-image.png')).toEqual([1200, 630])
-    for (const s of [72, 96, 128, 152, 192, 384, 512]) expect(pngSize(`public/icons/icon-${s}x${s}.png`)).toEqual([s, s])
+    for (const s of [72, 96, 128, 144, 152, 192, 384, 512]) expect(pngSize(`public/icons/icon-${s}x${s}.png`)).toEqual([s, s])
+  })
+
+  describe('icons directory', () => {
+    const generatorSizes = (/const ICON_SIZES = \[([\d,\s]+)\]/.exec(read('scripts/generate-icons.mjs'))?.[1] ?? '')
+      .split(',').map(n => Number(n.trim())).filter(Boolean)
+    const files = fs.readdirSync(path.join(ROOT, 'public/icons'))
+
+    it('every file is icon-<N>x<N>.png, listed in the generator, with matching dimensions', () => {
+      expect(generatorSizes.length).toBeGreaterThan(0)
+      for (const f of files) {
+        const m = /^icon-(\d+)x(\d+)\.png$/.exec(f)
+        expect(m, `${f} does not match icon-<N>x<N>.png`).not.toBeNull()
+        const n = Number(m?.[1])
+        expect(m?.[2]).toBe(m?.[1])
+        expect(generatorSizes, f).toContain(n)
+        expect(pngSize(`public/icons/${f}`), f).toEqual([n, n])
+      }
+    })
+
+    it('the generator produces every file present and everything the manifest references', () => {
+      expect(files.map(f => Number(/^icon-(\d+)x/.exec(f)?.[1])).sort((a, b) => a - b)).toEqual([...generatorSizes].sort((a, b) => a - b))
+      const manifest = [...read('vite.config.ts').matchAll(/icon\(command, '\/icons\/icon-(\d+)x\d+\.png'\)/g)].map(m => Number(m[1]))
+      expect(manifest.length).toBeGreaterThan(0)
+      for (const n of manifest) expect(generatorSizes).toContain(n)
+    })
   })
 
   it('favicon.ico is a single 32x32 image', () => {

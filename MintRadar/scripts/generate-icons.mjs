@@ -1,7 +1,7 @@
 // Regenerates every raster brand asset from the two SVG sources (run from the MintRadar/ app folder):
 //   node scripts/generate-icons.mjs
 //   public/favicon.svg    -> public/favicon-16x16.png, favicon-32x32.png, favicon.ico (32x32 PNG in an ICO),
-//                            icons/icon-{72,96,128,152,192,384,512}x*.png (rounded tile, transparent corners),
+//                            icons/icon-{72,96,128,144,152,192,384,512}x*.png (rounded tile, transparent corners),
 //                            apple-touch-icon.png (180x180, opaque --bg, no corner rounding: iOS masks it itself)
 //   public/og-image.svg   -> public/og-image.png (1200x630)
 // The OG text uses `font-family: monospace`; the committed PNG was rasterised with DejaVu Sans Mono. Point
@@ -19,7 +19,9 @@ const renderFavicon = (size) =>
 
 mkdirSync('public/icons', { recursive: true })
 
-for (const size of [72, 96, 128, 152, 192, 384, 512]) {
+// Every size the manifest references must be listed here (pinned by src/__tests__/brandAssets.test.ts).
+const ICON_SIZES = [72, 96, 128, 144, 152, 192, 384, 512]
+for (const size of ICON_SIZES) {
   await renderFavicon(size).toFile(`public/icons/icon-${size}x${size}.png`)
   console.log(`Generated icon-${size}x${size}.png`)
 }
