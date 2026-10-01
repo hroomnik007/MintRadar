@@ -753,7 +753,11 @@
   margin-bottom: 12px;
   font-family: var(--font-mono);
   line-height: 1.5;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
 }
+.nostr-advanced-warn > svg { flex-shrink: 0; margin-top: 2px; }
 
 .nostr-method-desc {
   font-size: 11px; color: var(--text-faint); font-family: var(--font-body);

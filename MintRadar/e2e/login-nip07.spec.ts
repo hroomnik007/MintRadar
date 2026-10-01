@@ -61,5 +61,23 @@ test('extension rejects the request: focused view surfaces the error with a Retr
   await extCard(page).click()
   await expect(page.locator('.nostr-auth-error')).toBeVisible({ timeout: 5000 })
   await expect(page.locator('.nostr-modal')).toBeVisible()
-  await expect(page.getByRole('button', { name: /Retry/i })).toBeVisible()
+  const retry = page.getByRole('button', { name: /Retry/i })
+  await expect(retry).toBeVisible()
+  await expect(retry.locator('svg')).toHaveCount(1)
+  expect(await retry.textContent()).not.toContain('⚡')
+})
+
+test('nsec screen: Connect has a Zap svg (no ⚡), shortened warning has a TriangleAlert svg (no ⚠️)', async ({ page }) => {
+  await openModal(page)
+  await page.locator('.nostr-method-card', { hasText: 'Nostr key (nsec)' }).click()
+  await expect(page.locator('.nostr-modal-subtitle')).toHaveText(
+    "Your key is held in this browser's memory for this session, cleared on logout.")
+  const warn = page.locator('.nostr-advanced-warn')
+  await expect(warn).toContainText(
+    'Pasting a private key into a browser is risky. Prefer a NIP-07 extension or a remote signer, and only use this on a device you trust.')
+  await expect(warn.locator('svg')).toHaveCount(1)
+  expect(await warn.textContent()).not.toContain('⚠')
+  const connect = page.getByRole('button', { name: 'Connect' })
+  await expect(connect.locator('svg')).toHaveCount(1)
+  expect(await connect.textContent()).not.toContain('⚡')
 })
