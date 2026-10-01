@@ -273,7 +273,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 11.5px;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-weight: 500;
 }
 .navbar-chevron { flex-shrink: 0; color: var(--text3); }
@@ -328,6 +328,7 @@
 }
 .navbar-account-name {
   min-width: 0;
+  font-family: var(--font-body);
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
@@ -501,6 +502,30 @@
 @media (min-width: 641px) and (max-width: 902px) {
   .navbar-inner.is-authed .navbar-wordmark { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 }
+/* One-row controls (≥641px): the Login button and the account chip have exactly the tab group's outer
+   height (one variable, 43px = the group's measured height: 3+3 padding, 2 border, 35 tab), the same 8px
+   radius and a 1px border, and are centred on the same axis (.navbar-inner is align-items: center, so
+   the top/bottom edges line up). The navbar's own height (--nav-h) is untouched. Below 641px nothing here
+   applies (two-row layout, 44px touch heights kept). */
+@media (min-width: 641px) {
+  .navbar-inner { --navbar-control-h: 43px; }
+  .navbar-tabs { height: var(--navbar-control-h); }
+  .navbar-login-btn {
+    height: var(--navbar-control-h);
+    padding-block: 0;
+    border-radius: 8px;
+  }
+  .navbar-profile {
+    height: var(--navbar-control-h);
+    min-height: var(--navbar-control-h); /* also on touch (pointer: coarse): equal height wins over 44px here */
+    padding-block: 0;
+    border-radius: 8px;
+  }
+  .navbar-profile .navbar-avatar { width: 30px; height: 30px; }
+  .navbar-profile .navbar-avatar--placeholder { font-size: 14px; }
+  .navbar-profile .navbar-avatar--placeholder svg { width: 17px; height: 17px; }
+}
+
 /* One-row chip (≥641px): the auth area and the chip may shrink, so the name (avatar + name +
    chevron) is ellipsized to whatever room the row has left instead of using per-step width
    constants. Logged-out is unaffected (the Login button is flex-shrink: 0). */

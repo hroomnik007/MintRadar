@@ -6,7 +6,7 @@ import { installApiMocks, mockRelays, TEST_PUBKEY_HEX } from './fixtures/mocks'
 // remote avatars could never load here — bypass CSP for this file; requests are mocked via page.route.
 test.use({ bypassCSP: true })
 
-// Account chip avatar: fixed 22px round slot; image when https + loads, otherwise a tinted
+// Account chip avatar: fixed round slot; image when https + loads, otherwise a tinted
 // placeholder with the first grapheme of the name (or a User icon for empty / npub-like names).
 
 const OK_URL = 'https://img.example/ok.png'
@@ -37,6 +37,8 @@ async function routes(page: Page) {
 }
 
 const avatar = (page: Page) => page.locator('.navbar-profile .navbar-avatar')
+// 30px from 641px (controls match the tab group height), 22px on the two-row mobile layout.
+const boxFor = (width: number) => (width > 640 ? [30, 30] : [22, 22])
 const size = async (page: Page) => { const b = (await avatar(page).boundingBox())!; return [Math.round(b.width), Math.round(b.height)] }
 
 async function expectOneRow(page: Page) {
@@ -52,7 +54,7 @@ async function expectOneRow(page: Page) {
     expect(m.sameRow, `${width}px logo/auth on one row`).toBe(true)
     expect(m.sw, `${width}px overflow`).toBeLessThanOrEqual(0)
     if (width > 640) expect(m.h, `${width}px height`).toBeLessThanOrEqual(56)
-    expect(await size(page), `${width}px avatar size`).toEqual([22, 22])
+    expect(await size(page), `${width}px avatar size`).toEqual(boxFor(width))
   }
 }
 
@@ -80,7 +82,7 @@ for (const [label, name] of [['empty name', ''], ['npub-like name', nip19.npubEn
     await page.goto('/')
     await expect(avatar(page).locator('svg')).toHaveCount(1)
     expect((await avatar(page).textContent())?.trim()).toBe('')
-    expect(await size(page)).toEqual([22, 22])
+    expect(await size(page)).toEqual(boxFor(1280))
     await page.setViewportSize({ width: 390, height: 800 })
     await expect(page.locator('.navbar-profile')).toHaveAttribute('aria-label', /^Account: .+/)
   })
@@ -104,7 +106,7 @@ test('(b) picture request aborted → onError → placeholder, same size, no ext
   await page.goto('/')
   await expect(avatar(page)).toHaveText('P')
   await expect(page.locator('.navbar-profile img')).toHaveCount(0)
-  expect(await size(page)).toEqual([22, 22])
+  expect(await size(page)).toEqual(boxFor(1280))
   expect(hits).toBe(1)
   await expectOneRow(page)
 })
@@ -115,7 +117,7 @@ test('(c) valid picture: image shown, same size', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('.navbar-profile img.navbar-avatar')).toHaveCount(1)
   await expect.poll(() => page.locator('.navbar-profile img').evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0)).toBe(true)
-  expect(await size(page)).toEqual([22, 22])
+  expect(await size(page)).toEqual(boxFor(1280))
   await expectOneRow(page)
 })
 
