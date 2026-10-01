@@ -234,3 +234,108 @@ test.describe('Filters panel — layout', () => {
     await ctx.close()
   })
 })
+
+// Status "All" must mean every tracked mint (2026-10-01 fix): 51 online + 10 offline <24h +
+// 12 offline 24h+ (degraded) + 3 archived = 76. Real pointer input at the segment centre — no
+// force/dispatchEvent/check() — so an overlay or a wrong draft count cannot hide behind them.
+const big = Array.from({ length: 76 }, (_, i) => mk(`M${i}`, ['sat'], 50 + (i % 40), {
+  online: i < 51,
+  degraded: i >= 61 && i < 73,
+  archived: i >= 73,
+}))
+const segCentre = async (page: Page, label: string) => {
+  const bb = (await page.locator('.filter-seg-opt', { hasText: new RegExp(`^${label}$`) }).boundingBox())!
+  return { x: bb.x + bb.width / 2, y: bb.y + bb.height / 2 }
+}
+
+for (const vp of [{ width: 1440, height: 900, name: 'desktop one-row' }, { width: 390, height: 844, name: '390px' }]) {
+  test.describe(`Filters panel — Status by real pointer click (${vp.name})`, () => {
+    test.beforeEach(async ({ page }) => {
+      await page.setViewportSize({ width: vp.width, height: vp.height })
+      await mockRelays(page)
+      await installApiMocks(page)
+      await page.route('**/api/mints/known', r => r.fulfill({ json: big }))
+      await page.goto('/')
+      await expect(page.locator('.mint-card').first()).toBeVisible()
+      await page.locator('.filter-btn').click()
+      await expect(page.locator('.filter-panel')).toBeVisible()
+      await page.evaluate(() => document.fonts.ready)
+    })
+    const clickSeg = async (page: Page, label: string) => {
+      const { x, y } = await segCentre(page, label)
+      const hit = await page.evaluate(([px, py]) => {
+        const e = document.elementFromPoint(px, py) as HTMLInputElement
+        return { tag: e.tagName, inSeg: !!e.closest('.filter-seg-opt'), name: e.getAttribute('name') }
+      }, [x, y])
+      expect(hit).toEqual({ tag: 'INPUT', inSeg: true, name: 'filter-status' })
+      await page.mouse.click(x, y)
+    }
+
+    test('All → "Show 76 of 76", ?status=all, all 76 cards, no hidden-mints banner', async ({ page }) => {
+      await expect(showBtn(page)).toHaveText('Show 51 of 76')
+      await clickSeg(page, 'All')
+      await expect(page.getByRole('radio', { name: 'All' })).toBeChecked()
+      await expect(page.locator('.filter-seg-opt.active')).toHaveText('All')
+      await expect(showBtn(page)).toHaveText('Show 76 of 76')
+      await showBtn(page).click()
+      await expect.poll(() => new URL(page.url()).searchParams.get('status')).toBe('all')
+      await expect(page.locator('.mint-card')).toHaveCount(76)
+      await expect(page.locator('.degraded-note')).toHaveCount(0)
+    })
+
+    test('Online → 51 / default URL / banner counts the 25 hidden; Offline → 25 / ?status=offline', async ({ page }) => {
+      await clickSeg(page, 'Offline')
+      await expect(showBtn(page)).toHaveText('Show 25 of 76')
+      await clickSeg(page, 'Online')
+      await expect(page.locator('.filter-seg-opt.active')).toHaveText('Online')
+      await expect(showBtn(page)).toHaveText('Show 51 of 76')
+      await showBtn(page).click()
+      await expect(page.locator('.mint-card')).toHaveCount(51)
+      expect(new URL(page.url()).searchParams.has('status')).toBe(false)
+      await expect(page.locator('.degraded-note')).toContainText('25 mints hidden')
+
+      await page.locator('.filter-btn').click()
+      await clickSeg(page, 'Offline')
+      await expect(showBtn(page)).toHaveText('Show 25 of 76')
+      await showBtn(page).click()
+      await expect.poll(() => new URL(page.url()).searchParams.get('status')).toBe('offline')
+      await expect(page.locator('.mint-card')).toHaveCount(25)
+      await expect(page.locator('.degraded-note')).toHaveCount(0)
+    })
+
+    test('live count follows every draft change: All, Unit, Reliability, Hide test mints', async ({ page }) => {
+      await clickSeg(page, 'All')
+      await expect(showBtn(page)).toHaveText('Show 76 of 76')
+      await chip(page, 'usd').click()
+      await expect(showBtn(page)).toHaveText('Show 0 of 76')
+      await chip(page, 'usd').click()
+      await page.getByRole('slider').fill('85')
+      // offline mints score 0 in the list, so only the online ones can pass the slider
+      const above = big.filter(m => m.online && (m.reliabilityScore as number) >= 85).length
+      await expect(showBtn(page)).toHaveText(`Show ${above} of 76`)
+      await page.getByRole('slider').fill('0')
+      await page.locator('.filter-check').click() // label: at 390px its touch-target ::before sits over the checkbox
+      await expect(showBtn(page)).toHaveText('Show 76 of 76') // none of these are test mints
+      await clickSeg(page, 'Online')
+      await expect(showBtn(page)).toHaveText('Show 51 of 76')
+    })
+
+    test('All after Unit change and after Reset still reaches 76', async ({ page }) => {
+      await chip(page, 'sat').click()
+      await clickSeg(page, 'All')
+      await expect(showBtn(page)).toHaveText('Show 76 of 76')
+      await page.locator('.filter-reset-btn').click()
+      await clickSeg(page, 'All')
+      await expect(showBtn(page)).toHaveText('Show 76 of 76')
+    })
+
+    test('keyboard (arrow keys) and ?status=all URL reach the same All view', async ({ page }) => {
+      await page.getByRole('radio', { name: 'Online' }).focus()
+      await page.keyboard.press('ArrowLeft')
+      await expect(showBtn(page)).toHaveText('Show 76 of 76')
+      await page.goto('/?status=all')
+      await expect(page.locator('.mint-card')).toHaveCount(76)
+      await expect(page.locator('.degraded-note')).toHaveCount(0)
+    })
+  })
+}

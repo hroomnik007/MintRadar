@@ -19,7 +19,7 @@ import { latencyColor, reliabilityColor, uptimeColor, displayName as mintDisplay
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import { listReliabilityScore, compareReliabilityThenRating } from '@/utils/reliabilitySort'
 import { isTestMint } from '@/constants/testMints'
-import { trackedCount, onlineCount as countOnline, isPoolHidden, hiddenByDefaultCount } from '@/utils/mintCounts'
+import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolForStatus } from '@/utils/mintCounts'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, type UnitFilterValue } from '@/utils/unitFilter'
 import './Dashboard.css'
@@ -619,20 +619,19 @@ export default function Dashboard() {
   const { read: userReadRelays } = useUserRelays()
   useWatchlistNotifications(statusRecord, reliabilityScoreRecord, userReadRelays)
 
-  // Explicit "Offline" status filter must surface degraded (offline 24h+) mints
-  // even when the default hidden-mints toggle is off — otherwise the filter
-  // would AND against the hidden set and return nothing.
-  const effectiveShowDegraded = showDegraded || activeFilters.status === 'offline'
-
   // The full set of mints we track — every row of the mints table, archived
   // included: same number as "All Known", Stats "Mints Tracked" and
   // /api/stats `totalMints` (see utils/mintCounts.ts).
   const trackedMints = useMemo(() => knownMintsData ?? [], [knownMintsData])
   const knownTotal = trackedCount(trackedMints)
 
+  // An explicit "Offline" or "All" status must surface degraded (offline 24h+) and
+  // archived mints even when the default hidden-mints toggle is off — otherwise
+  // Offline would AND against the hidden set and return nothing, and All would
+  // not mean all.
   const allMints = useMemo(
-    () => trackedMints.filter(m => effectiveShowDegraded ? true : !isPoolHidden(m)) as KnownMint[],
-    [trackedMints, effectiveShowDegraded],
+    () => poolForStatus(trackedMints, activeFilters.status, showDegraded) as KnownMint[],
+    [trackedMints, activeFilters.status, showDegraded],
   )
   const hiddenCount = hiddenByDefaultCount(trackedMints, activeFilters.status)
 
@@ -649,8 +648,7 @@ export default function Dashboard() {
   // (pendingFilters). Only computed while the panel is open.
   const draftCount = useMemo(() => {
     if (!showFilters) return 0
-    const showDeg = showDegraded || pendingFilters.status === 'offline'
-    const pool = trackedMints.filter(m => showDeg ? true : !isPoolHidden(m)) as KnownMint[]
+    const pool = poolForStatus(trackedMints, pendingFilters.status, showDegraded) as KnownMint[]
     return applyFilters(pool, pendingFilters, { showDegraded, searching: search.trim().length > 0 }).length
   }, [showFilters, trackedMints, pendingFilters, showDegraded, search])
 
@@ -1274,7 +1272,7 @@ export default function Dashboard() {
               duplicateDisplayNames={duplicateDisplayNames}
             />
           )}
-          {hiddenCount > 0 && activeFilters.status !== 'offline' && (
+          {hiddenCount > 0 && (
             <button
               type="button"
               className="degraded-note"

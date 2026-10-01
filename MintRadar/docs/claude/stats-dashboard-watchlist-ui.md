@@ -158,7 +158,7 @@ Dashboard and Stats. **"Tracked" = every mint in the DB, archived included** (= 
 - Dashboard header: `<online> online mints` · `<tracked> tracked mints`; grid footer
   "Showing X of <tracked>" (the Filters panel shows the same numbers on its "Show X of <tracked>" button, for the draft); Stats "Mints Tracked" / "Online Now" use the same helper.
 - Banner "N mints hidden (offline 24h+)": N = mints the default view hides, computed from the Status radio
-  only (online → every non-online mint: degraded + archived + <24h offline; all → degraded + archived;
+  only (online → every non-online mint: degraded + archived + <24h offline; all → nothing (2026-10-01: All = every tracked mint, "Show 76 of 76", no banner);
   offline → banner hidden). The wording "(offline 24h+)" is deliberately kept although the set also holds
   <24h-offline mints; the degraded rule is untouched. Reliability slider / Hide test mints / search never change N.
 - **Show now reveals ALL hidden mints** (was: degraded only), so the footer reads "Showing <tracked> of <tracked>".
@@ -194,6 +194,7 @@ a dead chain (left in place, not deleted).
 - **Reset button (↻):** previously only did `queryClient.invalidateQueries` (refetched data) without resetting search/sort/filters/`showDegraded`. Fixed — now resets everything to default (search cleared, sort **`reliability`/`desc`** — updated 2026-09-09 from the original `name`/`asc`, see "Dashboard default view" below — `activeFilters`/`pendingFilters` → `DEFAULT_FILTERS`, `showDegraded=false`, closes filter panel) and only then refetches.
 - **Status=Offline filter returning empty results:** root cause — `allMints` was computed by hiding degraded mints via `showDegraded` *before* `applyFilters()` ran, so Status=Offline and the default `showDegraded=false` behaved like an AND and cancelled each other out. Fix: `effectiveShowDegraded = showDegraded || activeFilters.status === 'offline'` — explicitly picking the Offline filter now overrides the default hiding. The "N mints hidden" message only shows when the Status filter isn't "Offline" (otherwise it would be misleading).
 - File: `Dashboard.tsx`
+- **Status "All" showed only the online-pool (2026-10-01):** clicking All in the Filters panel left "Show 51 of 76" and the "25 mints hidden" banner, because the pool still stripped degraded (24h+ offline) + archived mints for every status except Offline. Pointer/overlay was NOT the cause (the radio under the pointer is the real input; same behaviour before the panel redesign). Fix: `poolForStatus()` / `revealsHiddenMints()` in `src/utils/mintCounts.ts` — All and Offline both reveal the whole tracked set, only Online (with "Show" off) strips it; used by both the grid pool and the panel's `draftCount`. All = every tracked mint (incl. test mints unless Hide test mints is ticked), `?status=all`.
 
 Verified: typecheck ✅, build ✅, 70/70 unit tests ✅, Playwright confirmed both scenarios (Status=Offline shows offline mints including 24h+; Reset restores default state).
 
