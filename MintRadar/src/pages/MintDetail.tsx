@@ -45,7 +45,7 @@ import {
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
   Clock, GitBranch, Plug, Database, Award, Layers, Zap, QrCode,
   Receipt, UserCheck, EyeOff, CreditCard, Send, Code, Cloud,
-  Fingerprint, Bitcoin, Star, Mail, AtSign, Globe,
+  Fingerprint, Bitcoin, Star, Mail, AtSign,
   ExternalLink,
   Link2,
   ArrowUpRight,
@@ -347,6 +347,9 @@ function httpErrorTooltip(lastError: string): string | undefined {
   if (m && m[1]) return HTTP_ERROR_EXPLANATIONS[m[1]] ?? `The mint returned HTTP ${m[1]} — an unexpected error status`
   return NON_HTTP_ERROR_EXPLANATIONS[lastError]
 }
+
+// Tooltip for the muted "Profile NIP-05 · not verified" line under Get in Touch.
+const NIP05_TOOLTIP = 'Taken from the Nostr profile of the account that announced this mint. MintRadar has not checked it.'
 
 function MintDetailContent({ url }: { url: string }) {
   const navigate = useNavigate()
@@ -1693,33 +1696,22 @@ function MintDetailContent({ url }: { url: string }) {
                     </button>
                   </div>
                 )}
-                {operatorNip05 && (
-                  <div className="md-contact-card">
-                    <div className="md-contact-icon"><Globe size={14} /></div>
-                    <div style={{minWidth:0}}>
-                      <div className="md-contact-type" title="Unverified — read from the Nostr profile that announced this mint (NIP-87), which may be a different identity than the Nostr contact above. Not checked against the domain's nostr.json, and not cross-verified against that contact.">NIP-05 (unverified)</div>
-                      <div className="md-contact-val">{operatorNip05}</div>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        void navigator.clipboard.writeText(operatorNip05)
-                        setCopiedContact('nip05')
-                        setTimeout(() => setCopiedContact(null), 2000)
-                      }}
-                      style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: copiedContact === 'nip05' ? 'var(--accent)' : 'var(--text3)',
-                        padding: '2px 4px', marginLeft: 'auto',
-                        flexShrink: 0, display: 'flex',
-                      }}
-                      title="Copy"
-                    >
-                      {copiedContact === 'nip05' ? <Check size={13} /> : <Copy size={13} />}
-                    </button>
-                  </div>
-                )}
               </div>
+              {operatorNip05 && (
+                <div className="md-nip05-line">
+                  <InfoTooltip
+                    className="md-nip05-tip"
+                    iconSize={13}
+                    width={240}
+                    openOnFocus
+                    label={NIP05_TOOLTIP}
+                    text={NIP05_TOOLTIP}
+                  />
+                  <span className="md-nip05-text">
+                    Profile NIP-05 · not verified: <span className="md-nip05-val">{operatorNip05}</span>
+                  </span>
+                </div>
+              )}
             </div>
           )}
           </>)}

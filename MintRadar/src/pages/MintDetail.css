@@ -708,6 +708,28 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .md-contact-type { font-size: 10px; font-weight: 600; color: var(--text2); margin-bottom: 2px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
 .md-contact-val  { font-size: 12px; color: var(--text); font-family: var(--font-mono); word-break: break-all; }
 
+/* Unverified NIP-05 from the announcing profile: plain muted text under the grid — not a card,
+   not a link, no copy button, no hover/press state. Only the ⓘ is interactive. */
+.md-nip05-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text3);
+}
+.md-nip05-text { min-width: 0; user-select: text; }
+.md-nip05-val { font-family: var(--font-mono); color: var(--text2); word-break: break-all; }
+.md-nip05-tip { flex: 0 0 auto; margin-top: 3px; }
+.md-nip05-tip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.md-nip05-tip .info-tooltip-pop { left: 0; transform: none; }
+/* Touch: 44px hit area through an invisible ::before (the icon itself stays 13px). */
+@media (pointer: coarse), (max-width: 700px) {
+  .md-nip05-tip::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
+}
+
 /* ── NUT grid ───────────────────────────────────────────────── */
 .nut-summary-line {
   font-size: 12px;

@@ -151,7 +151,7 @@ export const MOCK_RELIABILITY_MOVERS = {
   ],
 }
 
-function probePayload(url: string) {
+export function probePayload(url: string) {
   const m = MOCK_MINTS.find(x => x.url === url)
   const name = m?.name ?? 'Unknown Mint'
   const version = m?.version ?? 'Nutshell/0.16.0'

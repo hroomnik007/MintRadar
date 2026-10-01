@@ -48,5 +48,5 @@ export function useTapTooltip<T extends HTMLElement = HTMLElement>(ref: RefObjec
     setOpen(v => !v)
   }, [])
 
-  return { open, onPointerEnter, onPointerLeave, onClick }
+  return { open, setOpen, onPointerEnter, onPointerLeave, onClick }
 }

@@ -16,6 +16,7 @@ export function InfoTooltip({
   className,
   tone = 'info',
   label,
+  openOnFocus = false,
 }: {
   text: string
   width?: number
@@ -25,6 +26,10 @@ export function InfoTooltip({
   // (e.g. the recent-review-surge flag) that shouldn't read as neutral help.
   tone?: 'info' | 'warn'
   label?: string
+  // Opt-in: keyboard focus (not mouse/tap focus) also opens the tooltip, Escape closes it.
+  // Needs `label` (that is what makes the icon focusable). Off by default so existing
+  // usages behave exactly as before.
+  openOnFocus?: boolean
 }) {
   const ref = useRef<HTMLSpanElement>(null)
   const tooltip = useTapTooltip(ref)
@@ -36,6 +41,9 @@ export function InfoTooltip({
       onPointerEnter={tooltip.onPointerEnter}
       onPointerLeave={tooltip.onPointerLeave}
       onClick={tooltip.onClick}
+      onFocus={openOnFocus ? e => { if (e.currentTarget.matches(':focus-visible')) tooltip.setOpen(true) } : undefined}
+      onBlur={openOnFocus ? () => tooltip.setOpen(false) : undefined}
+      onKeyDown={openOnFocus ? e => { if (e.key === 'Escape') tooltip.setOpen(false) } : undefined}
       aria-label={label}
       role={label ? 'button' : undefined}
       tabIndex={label ? 0 : undefined}
