@@ -1156,33 +1156,37 @@ export default function Dashboard() {
               Reliability slider, then the footer (Hide test mints · Reset · Show N of M).
               flex-wrap decides the rows — see .filter-bar in Dashboard.css. */}
           <div className="filter-bar">
-            <div className="filter-seg" role="radiogroup" aria-label="Status">
-              <span className="filter-seg-label" aria-hidden="true">Status</span>
-              {(['all', 'online', 'offline'] as const).map(s => (
-                <label key={s} className={`filter-seg-opt${pendingFilters.status === s ? ' active' : ''}`}>
-                  <input type="radio" name="filter-status" checked={pendingFilters.status === s} onChange={() => setPendingFilters(p => ({ ...p, status: s }))} />
-                  <span>{s === 'all' ? 'All' : s === 'online' ? 'Online' : 'Offline'}</span>
-                </label>
-              ))}
+            <div className="filter-field">
+              <span className="filter-field-label" id="filter-status-label">Status</span>
+              <div className="filter-seg" role="radiogroup" aria-labelledby="filter-status-label">
+                {(['all', 'online', 'offline'] as const).map(s => (
+                  <label key={s} className={`filter-seg-opt${pendingFilters.status === s ? ' active' : ''}`}>
+                    <input type="radio" name="filter-status" checked={pendingFilters.status === s} onChange={() => setPendingFilters(p => ({ ...p, status: s }))} />
+                    <span>{s === 'all' ? 'All' : s === 'online' ? 'Online' : 'Offline'}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
-            <div className="filter-seg" role="group" aria-label="Unit">
-              <span className="filter-seg-label" aria-hidden="true">Unit</span>
-              {UNIT_FILTER_OPTIONS.map(u => {
-                const on = pendingFilters.units.includes(u)
-                return (
-                  <button
-                    key={u}
-                    type="button"
-                    className={`filter-seg-opt filter-unit-chip${on ? ' active' : ''}`}
-                    aria-pressed={on}
-                    data-unit={u}
-                    onClick={() => setPendingFilters(p => ({ ...p, units: UNIT_FILTER_OPTIONS.filter(x => x === u ? !on : p.units.includes(x)) }))}
-                  >
-                    {u.toUpperCase()}
-                  </button>
-                )
-              })}
+            <div className="filter-field">
+              <span className="filter-field-label" id="filter-unit-label">Unit</span>
+              <div className="filter-seg" role="group" aria-labelledby="filter-unit-label">
+                {UNIT_FILTER_OPTIONS.map(u => {
+                  const on = pendingFilters.units.includes(u)
+                  return (
+                    <button
+                      key={u}
+                      type="button"
+                      className={`filter-seg-opt filter-unit-chip${on ? ' active' : ''}`}
+                      aria-pressed={on}
+                      data-unit={u}
+                      onClick={() => setPendingFilters(p => ({ ...p, units: UNIT_FILTER_OPTIONS.filter(x => x === u ? !on : p.units.includes(x)) }))}
+                    >
+                      {u.toUpperCase()}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             <div className="filter-rel">

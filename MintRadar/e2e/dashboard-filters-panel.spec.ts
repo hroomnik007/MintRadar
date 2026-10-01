@@ -339,3 +339,93 @@ for (const vp of [{ width: 1440, height: 900, name: 'desktop one-row' }, { width
     })
   })
 }
+
+// Plain labels vs button-like options (2026-10-01): the Status/Unit labels sit OUTSIDE the segmented
+// control, styled like the "RELIABILITY ≥ N%" label; the options look and behave like buttons.
+test.describe('Filters panel — labels versus options', () => {
+  const style = (loc: import('@playwright/test').Locator, props: string[]) =>
+    loc.evaluate((el, ps) => { const cs = getComputedStyle(el); return Object.fromEntries(ps.map(p => [p, cs.getPropertyValue(p)])) }, props)
+  const label = (page: Page, name: string) => page.locator('.filter-field-label', { hasText: new RegExp(`^${name}$`) })
+
+  test('labels are plain text outside the control: transparent, borderless, default cursor, not focusable', async ({ page }) => {
+    await openPanel(page)
+    for (const name of ['Status', 'Unit']) {
+      const l = label(page, name)
+      await expect(l).toHaveCount(1)
+      expect(await l.evaluate(el => !!el.closest('.filter-seg'))).toBe(false)
+      const st = await style(l, ['background-color', 'border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width', 'cursor', 'text-transform', 'font-family', 'color'])
+      expect(st['background-color']).toBe('rgba(0, 0, 0, 0)')
+      for (const side of ['top', 'right', 'bottom', 'left']) expect(st[`border-${side}-width`]).toBe('0px')
+      expect(st.cursor).toBe('default')
+      expect(st['text-transform']).toBe('uppercase')
+      expect(await l.getAttribute('tabindex')).toBeNull()
+    }
+    // Same type treatment as the existing "RELIABILITY ≥ N%" label.
+    const ref = await style(page.locator('.filter-group-label'), ['font-family', 'font-size', 'letter-spacing', 'text-transform', 'color'])
+    expect(await style(label(page, 'Status'), ['font-family', 'font-size', 'letter-spacing', 'text-transform', 'color'])).toEqual(ref)
+    // The label text is the group's accessible name.
+    await expect(page.getByRole('radiogroup', { name: 'Status' })).toHaveCount(1)
+    await expect(page.getByRole('group', { name: 'Unit' })).toHaveCount(1)
+  })
+
+  test('clicking a label changes nothing', async ({ page }) => {
+    await openPanel(page)
+    const before = await showBtn(page).textContent()
+    for (const name of ['Status', 'Unit']) await label(page, name).click()
+    await expect(page.getByRole('radio', { name: 'Online' })).toBeChecked()
+    for (const u of ['sat', 'usd', 'eur']) await expect(chip(page, u)).toHaveAttribute('aria-pressed', 'false')
+    expect(await showBtn(page).textContent()).toBe(before)
+    expect(await page.evaluate(() => document.activeElement?.closest('.filter-field-label') ?? null)).toBeNull()
+  })
+
+  test('options look like buttons; the selected one differs by computed style', async ({ page }) => {
+    await openPanel(page)
+    const props = ['cursor', 'background-color', 'background-image', 'box-shadow', 'color']
+    for (const opt of await page.locator('.filter-seg-opt').all()) {
+      const st = await style(opt, props)
+      expect(st.cursor).toBe('pointer')
+      expect(st['background-color']).not.toBe('rgba(0, 0, 0, 0)')
+    }
+    await chip(page, 'usd').click()
+    const on = await style(chip(page, 'usd'), props)
+    const off = await style(chip(page, 'eur'), props)
+    expect(on.color).not.toBe(off.color)
+    expect(on['box-shadow']).not.toBe(off['box-shadow'])
+    expect(on['background-image']).not.toBe(off['background-image'])
+    const frame = await page.locator('.filter-seg').first().evaluate(el => getComputedStyle(el, '::after').borderTopWidth)
+    expect(frame).toBe('1px')
+    expect((await style(page.locator('.filter-seg-opt').nth(1), ['border-left-width']))['border-left-width']).toBe('1px')
+  })
+
+  test('hover lightens an unselected option and strengthens its border (hover-capable pointer)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await openPanel(page)
+    const opt = chip(page, 'eur')
+    const rest = await style(opt, ['background-image', 'box-shadow'])
+    await opt.hover()
+    const hov = await style(opt, ['background-image', 'box-shadow'])
+    expect(hov['background-image']).not.toBe(rest['background-image'])
+    expect(hov['box-shadow']).not.toBe(rest['box-shadow'])
+  })
+
+  test('keyboard focus ring: 2px accent outline with an offset', async ({ page }) => {
+    await openPanel(page)
+    await page.getByRole('radio', { name: 'Online' }).focus()
+    await page.keyboard.press('ArrowRight')
+    const o = await style(page.locator('.filter-seg-opt:has(input:focus-visible)'), ['outline-width', 'outline-style', 'outline-offset', 'outline-color'])
+    expect(o).toMatchObject({ 'outline-width': '2px', 'outline-style': 'solid', 'outline-offset': '2px' })
+    await chip(page, 'sat').focus()
+    await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab')
+    expect((await style(chip(page, 'sat'), ['outline-style']))['outline-style']).toBe('solid')
+  })
+
+  test('Status and Unit controls start at the same left edge at 390px', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await openPanel(page)
+    const lefts = await page.locator('.filter-seg').evaluateAll(els => els.map(e => e.getBoundingClientRect().left))
+    expect(lefts).toHaveLength(2)
+    expect(lefts[0]).toBeCloseTo(lefts[1], 1)
+    const labels = await page.locator('.filter-field-label').evaluateAll(els => els.map(e => e.getBoundingClientRect().width))
+    expect(labels[0]).toBeCloseTo(labels[1], 1)
+  })
+})

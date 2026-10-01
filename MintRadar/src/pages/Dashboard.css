@@ -1301,7 +1301,30 @@
   gap: 8px 12px;
 }
 
-/* Labelled segmented control — same visual language as .wizard-unit-seg (Tools):
+/* Field = plain text label in front of a segmented control. The label is not part of the
+   control: no fill, no border, default cursor, not focusable. Both labels get the same width so
+   the Status and Unit controls start at the same left edge whenever they sit on their own rows. */
+.filter-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.filter-field-label {
+  flex: 0 0 auto;
+  /* "STATUS" = 6 mono characters + their letter-spacing; "UNIT" is padded to the same width */
+  width: calc(6 * (1ch + 0.07em));
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text3);
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+}
+
+/* Segmented control — a row of buttons, same visual language as .wizard-unit-seg (Tools):
    36px visible, 44px touch target through an invisible ::before. */
 .filter-seg {
   display: flex;
@@ -1310,29 +1333,15 @@
   height: 36px;
   min-width: 0;
   border-radius: 8px;
-  background: var(--bg3);
 }
-/* The 1px frame is drawn as an overlay (not a real border) so the segments inside are the full 36px. */
+/* The 1px outer frame is drawn as an overlay (not a real border) so the options inside are the full 36px. */
 .filter-seg::after {
   content: '';
   position: absolute;
   inset: 0;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
   pointer-events: none;
-}
-.filter-seg-label {
-  display: flex;
-  align-items: center;
-  padding: 0 10px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-  border-right: 1px solid var(--border);
-  border-radius: 8px 0 0 8px;
-  white-space: nowrap;
 }
 .filter-seg-opt {
   position: relative;
@@ -1342,19 +1351,26 @@
   flex: 1 1 0;
   min-width: 52px;
   padding: 0 10px;
-  background: transparent;
+  background-color: var(--surface-3);
+  background-image: none;
   border: none;
   border-radius: 0;
+  box-shadow: none;
   color: var(--text2);
   font-family: var(--font-mono);
   font-size: 11.5px;
   letter-spacing: 0.04em;
   cursor: pointer;
 }
-.filter-seg-opt + .filter-seg-opt { border-left: 1px solid var(--border); }
-.filter-seg-label + .filter-seg-opt { border-radius: 0; }
+.filter-seg-opt + .filter-seg-opt { border-left: 1px solid var(--border2); }
+.filter-seg-opt:first-child { border-radius: 8px 0 0 8px; }
 .filter-seg-opt:last-child { border-radius: 0 8px 8px 0; }
-.filter-seg-opt.active { background: var(--accent-dim); color: var(--accent); }
+/* Selected: accent tint over the raised fill, accent text, subtle accent border (inset, so no size change). */
+.filter-seg-opt.active {
+  background-image: linear-gradient(var(--accent-dim), var(--accent-dim));
+  box-shadow: inset 0 0 0 1px var(--accent-brd);
+  color: var(--accent);
+}
 /* Native radio stays in the DOM and focusable (arrow keys work); it just covers its segment. */
 .filter-seg-opt input[type="radio"] {
   position: absolute;
@@ -1365,10 +1381,16 @@
   opacity: 0;
   cursor: pointer;
 }
+.filter-seg-opt:active:not(.active) { background-color: var(--surface-2); }
 .filter-seg-opt:focus-visible,
-.filter-seg-opt:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+.filter-seg-opt:has(input:focus-visible) { z-index: 1; outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (hover: hover) {
-  .filter-seg-opt:not(.active):hover { color: var(--text); }
+  .filter-seg-opt:not(.active):hover {
+    background-image: linear-gradient(var(--border), var(--border));
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    color: var(--text);
+  }
+  .filter-seg-opt:not(.active):active { background-image: none; }
 }
 /* Touch: visible height stays 36px; an invisible extension (4px above/below only, never
    sideways) brings the target to 44px. Same technique as .wizard-unit-opt / .md-back. */
@@ -1427,7 +1449,8 @@
   .filter-panel { padding-block: 7px; }
   /* 8px between rows = the two 4px ::before touch extensions meet without overlapping */
   .filter-bar { gap: 8px; }
-  .filter-seg { flex: 1 1 100%; }
+  .filter-field { flex: 1 1 100%; }
+  .filter-field .filter-seg { flex: 1 1 auto; }
   .filter-seg-opt { min-width: 0; }
   .filter-rel { flex: 1 1 100%; }
   .filter-rel .filter-slider { flex: 1 1 auto; width: auto; min-width: 0; }
