@@ -304,8 +304,35 @@ index.html or any code — leftovers from `logo-original.png`, left untouched) a
 
 **OG pills:** the first pill ("✓ Reliability Score", 19 mono chars ≈ 275px at 24px) is 333px wide (the others are 260px) so it keeps the same ~29px inner padding; the other two pills of row 1 are shifted right by 73px. Row 2 was left where it was (so it is no longer centred under row 1). The PNG is rendered straight from the SVG text.
 
-**Caching:** `deploy/nginx.conf` serves every `.png/.svg/.ico` with `expires 1y` + `Cache-Control: public, immutable`
-(no content hashes for `public/` files), so browsers — and social platforms that re-use their cached card — keep the old
-favicon / `og-image.png` until the entry expires. Suggested fix (not applied): an exact-match block for
-`og-image.png`, `favicon*`, `apple-touch-icon.png` and `/icons/` with `Cache-Control: public, max-age=86400`, and/or a version
-query on the `og:image` / `twitter:image` URLs in `index.html`; then re-scrape the card in the platforms' debuggers.
+**Cache-busting (2026-10-02):** `public/` brand files are not content-hashed by Vite, and the live nginx serves every
+`.png/.svg/.ico` with `expires 1y` + `Cache-Control: public, immutable`. So `vite-brand-assets.ts` (no dependency) appends
+`?v=<first 8 hex of sha256(file bytes)>` at **build time only** (dev leaves URLs untouched): a `transformIndexHtml` (order `post`)
+step rewrites `og:image`, `twitter:image`, `apple-touch-icon`, `favicon.ico`, `favicon-32x32.png`, `favicon-16x16.png`
+in `index.html`, and `vite.config.ts` wraps the 7 manifest icons in `icon(command, …)`. File names/paths are unchanged (nginx
+ignores the query). The workbox precache is keyed by URL without query + a revision hash; `ignoreURLParametersMatching` now
+includes `/^v$/` so `?v=` requests still hit it. Pinned by `src/__tests__/brandAssetCacheBust.test.ts`.
+- **When an asset changes:** replace the file (e.g. `node scripts/generate-icons.mjs`), commit, deploy — the hash, and with it the
+  URL, changes by itself. Nothing to bump by hand.
+- **Not covered:** `backend/src/og.ts` (`OG_IMAGE_URL`, the per-mint bot HTML) and `backend/src/nostrService.ts` (profile picture)
+  still use plain `/og-image.png` / `/icons/icon-512x512.png` — separate package, no build hash available.
+- **Social platforms** keep their own copy of a card image per URL: after a deploy that changes `og-image.png`, re-scrape
+  `https://mintradar.org/` in each platform's sharing debugger (Facebook/LinkedIn/X card validators etc.); the new `?v=` makes
+  the og:image URL new, but the page itself still has to be re-fetched.
+- **nginx (manual, not applied):** `deploy/nginx.conf` is reference-only; the live file is
+  `/etc/nginx/sites-available/mintradar.org.conf`. Hashed `/assets/*` files currently share the one 1-year-immutable rule. To give
+  the un-hashed brand files a short revalidating cache, add this block **above** the `location ~* \.(js|css|png|svg|ico|woff2|webmanifest)$`
+  block (regex locations: first match wins):
+  ```nginx
+  location ~* ^/(?:og-image\.(?:png|svg)|favicon[^/]*|apple-touch-icon\.png|icons/.+|logo-original\.png|mint-coin-placeholder\.svg)$ {
+      add_header Cache-Control "public, max-age=86400, must-revalidate";
+      add_header X-Frame-Options "DENY" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header Referrer-Policy "no-referrer" always;
+      add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+      add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+      add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self' https: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';" always;
+  }
+  ```
+  (no `expires` here — it would add a second `Cache-Control`). Steps: `sudo nano /etc/nginx/sites-available/mintradar.org.conf`,
+  `sudo nginx -t`, `sudo systemctl reload nginx`, then `curl -sI https://mintradar.org/og-image.png | grep -i cache-control`;
+  mirror the block in `deploy/nginx.conf` (the daily drift check compares the two).
