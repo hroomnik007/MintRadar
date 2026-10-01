@@ -257,6 +257,12 @@ function installNsecShim(privkeyBytes: Uint8Array, pubkeyHex: string): void {
   }
 }
 
+// True while an nsec key is held in memory. False after a page reload (the key
+// is never persisted) — used by the auth store to drop a stale nsec session.
+export function hasActiveNsecKey(): boolean {
+  return activeNsecPrivkey !== null
+}
+
 export function removeNsecShim(): void {
   if (activeNsecPrivkey === null) return
   activeNsecPrivkey.fill(0)

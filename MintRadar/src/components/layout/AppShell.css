@@ -952,3 +952,5 @@
 }
 .nostr-connect-btn:hover:not(:disabled) { background: var(--green-soft-strong); border-color: var(--green); }
 .nostr-connect-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.session-notice { margin-top: 12px; }

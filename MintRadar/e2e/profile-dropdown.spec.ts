@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { nip19 } from 'nostr-tools'
-import { installApiMocks, mockRelays, loginAs, TEST_PUBKEY_HEX } from './fixtures/mocks'
+import { installApiMocks, mockRelays, loginAs, loginAsNsecLive, TEST_PUBKEY_HEX } from './fixtures/mocks'
 
 const EXPECTED_NPUB = nip19.npubEncode(TEST_PUBKEY_HEX)
 
@@ -13,8 +13,14 @@ const cases = [
 async function setup(page: Page, method: 'nip07' | 'nsec' | 'remote-signer' = 'nip07', name = 'peter.bliznak') {
   await mockRelays(page)
   await installApiMocks(page)
-  await loginAs(page, name, method)
-  await page.goto('/')
+  if (method === 'nsec') {
+    // nsec keys live only in memory — log in after load (a seeded session would be cleared as stale)
+    await page.goto('/')
+    await loginAsNsecLive(page, name)
+  } else {
+    await loginAs(page, name, method)
+    await page.goto('/')
+  }
   await page.waitForSelector('.navbar-profile')
 }
 const chip = (page: Page) => page.locator('.navbar-profile')

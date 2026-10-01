@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { installApiMocks, mockRelays, loginAs, MOCK_MINTS } from './fixtures/mocks'
+import { installApiMocks, mockRelays, loginAs, loginAsNsecLive, MOCK_MINTS } from './fixtures/mocks'
 
 const ALPHA = MOCK_MINTS[0]!.url
 const detailPath = `/mint/${encodeURIComponent(ALPHA)}`
@@ -16,8 +16,14 @@ test.beforeEach(async ({ page }) => {
 })
 
 async function openModal(page: Page, method: (typeof METHODS)[number]['method']): Promise<void> {
-  await loginAs(page, 'peter.bliznak', method)
-  await page.goto(detailPath)
+  if (method === 'nsec') {
+    // nsec keys live only in memory — log in after load (a seeded session would be cleared as stale)
+    await page.goto(detailPath)
+    await loginAsNsecLive(page, 'peter.bliznak')
+  } else {
+    await loginAs(page, 'peter.bliznak', method)
+    await page.goto(detailPath)
+  }
   await expect(page.locator('.md-tabs')).toBeVisible()
   await page.locator('.md-tab', { hasText: 'Reviews' }).click()
   await page.locator('.reviews-write-btn').click()

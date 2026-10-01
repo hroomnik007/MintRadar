@@ -54,6 +54,7 @@ Expected response time: best effort, typically within 7 days.
 - The server sees every mint URL submitted for monitoring — this is necessary for server-side probing
 - All probes originate from a single Frankfurt IP — mints can detect and block this IP
 - nsec login holds the private key in JS memory for the duration of the session, so the app can sign; it is zeroed on logout, not earlier
+- After a page reload an nsec session ends (the key is never persisted): the app signs the user out and asks them to log in again
 - Watchlist sync uses NIP-44 single-key encryption — no multi-sig or threshold encryption
 - Reliability Score is a health/transparency signal, not a measure of solvency
 

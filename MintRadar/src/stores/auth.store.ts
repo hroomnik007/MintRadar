@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { loginWithNip07, loginWithNsec, loginWithBunker, removeBunkerShim, removeNsecShim, type NostrProfile } from '@/core/nostr/client'
+import { loginWithNip07, loginWithNsec, loginWithBunker, removeBunkerShim, removeNsecShim, hasActiveNsecKey, type NostrProfile } from '@/core/nostr/client'
 
 export interface Nip65Relays {
   read: string[]
@@ -17,6 +17,9 @@ interface AuthState {
   nip65Relays: Nip65Relays | null
   isLoading: boolean
   error: string | null
+  // One-off notice shown by the app shell. In-memory only (not in partialize).
+  sessionNotice: string | null
+  dismissSessionNotice: () => void
   login: () => Promise<void>
   loginNsec: (input: string) => Promise<void>
   loginBunker: (input: string) => Promise<void>
@@ -34,6 +37,8 @@ export const useAuthStore = create<AuthState>()(
       nip65Relays: null,
       isLoading: false,
       error: null,
+      sessionNotice: null,
+      dismissSessionNotice: () => set({ sessionNotice: null }),
 
       login: async () => {
         set({ isLoading: true, error: null })
@@ -101,3 +106,19 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 )
+
+export const STALE_NSEC_NOTICE = 'Your key was cleared when the page reloaded. Log in again to sign.'
+
+// The persisted session survives a reload but the nsec key (module memory only)
+// does not, so a persisted nsec session with no key held is stale: it would look
+// logged in while nothing can sign. Run ONCE at startup, before the first render
+// (sessionStorage hydration is synchronous), so it cannot race a fresh login and
+// nothing that starts on login (notifications, remote watchlist sync) ever sees
+// the stale profile. Same state as a normal logout; no network, no local-data wipe.
+// nip07 (window.nostr may be injected late) and remote-signer (restored by
+// restoreBunkerSession) are deliberately left alone.
+export function clearStaleNsecSession(): void {
+  if (useAuthStore.getState().method !== 'nsec' || hasActiveNsecKey()) return
+  useAuthStore.getState().logout()
+  useAuthStore.setState({ sessionNotice: STALE_NSEC_NOTICE })
+}

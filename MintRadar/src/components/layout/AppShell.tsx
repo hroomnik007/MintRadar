@@ -120,6 +120,8 @@ export function AppShell() {
   const logout = useAuthStore(state => state.logout)
   const isLoading = useAuthStore(state => state.isLoading)
   const authError = useAuthStore(state => state.error)
+  const sessionNotice = useAuthStore(state => state.sessionNotice)
+  const dismissSessionNotice = useAuthStore(state => state.dismissSessionNotice)
   const watchlistCount = useWatchlistStore(state => state.mints.length)
 
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -511,6 +513,15 @@ export function AppShell() {
               </>
             )}
           </div>
+        </div>
+      )}
+
+      {sessionNotice !== null && (
+        <div className="queued-banner queued-banner-info session-notice" role="status">
+          <span>{sessionNotice}</span>
+          <button type="button" className="queued-banner-dismiss" aria-label="Dismiss" onClick={dismissSessionNotice}>
+            ×
+          </button>
         </div>
       )}
 

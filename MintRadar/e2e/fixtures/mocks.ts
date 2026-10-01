@@ -258,6 +258,25 @@ export async function mockRelays(page: Page): Promise<void> {
 export const TEST_PUBKEY_HEX = '1'.repeat(64)
 
 /**
+ * Simulate a logged-in nsec session. Must be called AFTER page.goto(): the nsec
+ * key lives only in JS memory, so a session seeded before load (loginAs) is
+ * treated as stale and cleared at startup. This installs a real key through the
+ * app's own client module (same module instance as the app, served by Vite) and
+ * then sets the profile the test expects. The key is a throwaway test value.
+ */
+export async function loginAsNsecLive(page: Page, name = 'E2E Tester'): Promise<void> {
+  const npub = nip19.npubEncode(TEST_PUBKEY_HEX)
+  await page.evaluate(async ({ pubkey, npub, name }) => {
+    const clientPath = '/src/core/nostr/client.ts'
+    const storePath = '/src/stores/auth.store.ts'
+    const client = await import(/* @vite-ignore */ clientPath)
+    const store = await import(/* @vite-ignore */ storePath)
+    await client.loginWithNsec('0'.repeat(63) + '1')
+    store.useAuthStore.setState({ profile: { pubkey, npub, name }, method: 'nsec' })
+  }, { pubkey: TEST_PUBKEY_HEX, npub, name })
+}
+
+/**
  * Simulate a logged-in Nostr (NIP-07) session.
  *
  * Two things are injected before any app code runs:
