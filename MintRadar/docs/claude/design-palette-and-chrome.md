@@ -270,7 +270,7 @@ unused `@keyframes pulse-incognito` but never defined (dead code).
   `{color, bg, border}` triple of tokens instead (see the Watchlist recommendation chip and Stats software badges).
 - Literal colours that remain on purpose: categorical series/identity colours (ComparisonModal `MINT_COLORS`, review
   avatar palette, OG purple), grey tints, overlays/shadows, QR colours, `public/mint-coin-placeholder.svg`
-  (an `<img>`, `var()` does not work there — keep it equal to `--copper`), favicon/manifest/OG image (separate task).
+  (an `<img>`, `var()` does not work there — keep it equal to `--copper`), favicon/manifest/OG image (moved to the current palette 2026-10-01 — see "Brand assets" below).
 - `src/__tests__/retiredColours.test.ts` fails when a retired literal (`#17E87F`, `#4ade80`, `#00E676`, `#E24B4A`,
   `#ff4d4d`, `#ffa500`, `#f59e0b`, `#c98058`, `rgba(74,222,128,`, `rgba(23,232,127,`, `rgba(255,61,107,`) reappears
   in non-test source; its explicit allowlist (file + reason) covers the two categorical `#17E87F` uses.
@@ -280,3 +280,34 @@ unused `@keyframes pulse-incognito` but never defined (dead code).
 `--bg` 5.39 → 6.21, `--elevated` 4.73 → 5.44 (copper on its own `-soft` chip over `--surface-card`: 3.25 → 3.64).
 **Also on 2026-10-01:** every online/good green is now the single `--accent` `#5cc9a3` (online dot was `#17E87F`,
 score greens `#4ade80`); Fresh and Veteran age badges are both `--amber` now (they were amber vs orange).
+
+## Brand assets (2026-10-01)
+
+Browser chrome and brand rasters use the settled palette: `--bg` `#10201c`, `--accent` `#5cc9a3` (they are plain files, so
+`var()` cannot be used — keep them equal to the tokens; `src/__tests__/brandAssets.test.ts` pins this).
+
+| File | What | Source |
+|---|---|---|
+| `index.html` `<meta name="theme-color">`, `vite.config.ts` manifest `theme_color` + `background_color` | `#10201c` (`--bg`) | hand-edited |
+| `public/favicon.svg` | NavLogo shapes (`fill="none"` like NavLogo, so the ring interiors are transparent), `#5cc9a3` on a `#10201c` rx=6 tile | hand-edited |
+| `public/favicon-16x16.png`, `favicon-32x32.png`, `favicon.ico` (one 32x32 PNG inside an ICO), `icons/icon-{72,96,128,152,192,384,512}x*.png` | rounded tile with transparent corners (192/512 are declared `maskable` in the manifest, unchanged) | rendered from `favicon.svg` |
+| `public/apple-touch-icon.png` | 180x180, opaque `--bg`, same artwork (iOS masks the corners itself) | rendered from `favicon.svg` |
+| `public/og-image.svg` / `og-image.png` | 1200x630. bg `--bg`, panel `--surface`, pills `--surface-card`, dividers/pill borders = `--border-strong` composited over `--surface` (`#414c47`), text `--text` / `--text2` / footer `--text3`, accent `--accent` | SVG hand-edited, PNG rendered from it |
+| `public/mint-coin-placeholder.svg` | copper `#d98a5a` (already current) | hand-edited |
+
+**Regenerate** (from `MintRadar/`, uses the existing `sharp` dev dependency — nothing is added to `package.json`):
+`FONTCONFIG_FILE=<fonts.conf> node scripts/generate-icons.mjs`. The OG text is `font-family: monospace`; the committed PNG was
+rasterised with **DejaVu Sans Mono**, so point `FONTCONFIG_FILE` at a fontconfig that has a `<dir>` with `DejaVuSansMono*.ttf`
+and `<alias><family>monospace</family><prefer><family>DejaVu Sans Mono</family></prefer></alias>` (any machine default
+monospace gives different glyphs). Not covered: `public/icons/icon-N.png` (no `xN`; 8 files, not referenced by the manifest,
+index.html or any code — leftovers from `logo-original.png`, left untouched) and `logo-original.png`.
+
+**OG label caveat:** `og-image.svg` says "Reliability Score", but at 24px mono that label (~275px) is wider than its 260px pill
+and spills over the edge. The PNG therefore still shows the old "Trust Score" label (`generate-icons.mjs` substitutes it);
+fix the pill/label in the SVG, then delete that substitution.
+
+**Caching:** `deploy/nginx.conf` serves every `.png/.svg/.ico` with `expires 1y` + `Cache-Control: public, immutable`
+(no content hashes for `public/` files), so browsers — and social platforms that re-use their cached card — keep the old
+favicon / `og-image.png` until the entry expires. Suggested fix (not applied): an exact-match block for
+`og-image.png`, `favicon*`, `apple-touch-icon.png` and `/icons/` with `Cache-Control: public, max-age=86400`, and/or a version
+query on the `og:image` / `twitter:image` URLs in `index.html`; then re-scrape the card in the platforms' debuggers.
