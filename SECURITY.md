@@ -39,7 +39,7 @@ Expected response time: best effort, typically within 7 days.
 
 | Risk | Mitigation |
 |------|-----------|
-| nsec in browser memory | Key is used only to derive the public key, then explicitly zeroed (`privkeyBytes.fill(0)`); never stored in localStorage, sessionStorage, or sent to the server |
+| nsec in browser memory | Key is held only in JavaScript memory for the session (needed to sign) and zeroed on logout (`privkeyBytes.fill(0)`); never written to localStorage, sessionStorage or IndexedDB, and never sent to the server |
 | NIP-44 encrypted watchlist | Encrypted with the user's own Nostr key; server never sees plaintext; decryption happens entirely in the browser |
 | Backend SSRF | Outbound probe URLs go through `checkUrlSafety()` / `safeFetch()` (`backend/src/ssrf.ts`): HTTPS only, private/loopback/link-local/CGNAT/IPv4-in-IPv6 blocked, DNS re-checked at connect time, redirects re-validated |
 | XSS | No `dangerouslySetInnerHTML`; user-controlled URLs validated before rendering; CSP via Nginx — `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'` alongside `default-src`/`script-src 'self'` (no `'unsafe-inline'` on scripts) |
@@ -53,7 +53,7 @@ Expected response time: best effort, typically within 7 days.
 
 - The server sees every mint URL submitted for monitoring — this is necessary for server-side probing
 - All probes originate from a single Frankfurt IP — mints can detect and block this IP
-- nsec login leaves the derived public key in JS memory for the duration of the session; the raw private key bytes are zeroed immediately after derivation
+- nsec login holds the private key in JS memory for the duration of the session, so the app can sign; it is zeroed on logout, not earlier
 - Watchlist sync uses NIP-44 single-key encryption — no multi-sig or threshold encryption
 - Reliability Score is a health/transparency signal, not a measure of solvency
 
