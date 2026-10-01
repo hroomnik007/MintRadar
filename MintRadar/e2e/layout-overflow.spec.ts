@@ -86,16 +86,14 @@ for (const width of [641, 700, 806, 807, 850, 902, 903, 950, 996, 997, 1100, 128
     expect(de.sw).toBeLessThanOrEqual(de.cw)
     const h = await page.locator('.navbar-inner').evaluate(e => e.getBoundingClientRect().height)
     expect(h).toBeLessThanOrEqual(56)
-    // Full name stays available: on the chip everywhere, on the name element itself once it is shown (≥807px).
+    // Full name stays available on the chip (title) and the name is ellipsized, never wrapped.
     await expect(page.locator('.navbar-profile')).toHaveAttribute('title', LONG_NAME)
-    if (width >= 807) {
-      const name = page.locator('.navbar-username')
-      await expect(name).toHaveAttribute('title', LONG_NAME)
-      const m = await name.evaluate(e => ({ sw: e.scrollWidth, cw: e.clientWidth, ov: getComputedStyle(e).textOverflow, ws: getComputedStyle(e).whiteSpace }))
-      expect(m.sw).toBeGreaterThan(m.cw) // truncated
-      expect(m.ov).toBe('ellipsis')
-      expect(m.ws).toBe('nowrap')
-    }
+    const name = page.locator('.navbar-username')
+    await expect(name).toHaveAttribute('title', LONG_NAME)
+    const m = await name.evaluate(e => ({ sw: e.scrollWidth, cw: e.clientWidth, ov: getComputedStyle(e).textOverflow, ws: getComputedStyle(e).whiteSpace }))
+    expect(m.sw).toBeGreaterThan(m.cw) // truncated
+    expect(m.ov).toBe('ellipsis')
+    expect(m.ws).toBe('nowrap')
   })
 }
 

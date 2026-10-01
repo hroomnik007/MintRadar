@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { LogIn } from 'lucide-react'
+import { Zap } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useWatchlistSync } from '@/hooks/useWatchlistSync'
 import { initBunkerQR } from '@/core/nostr/client'
 import { NavLogo } from './NavLogo'
+import { AccountMenu } from './AccountMenu'
 import './AppShell.css'
 
 const IcClose = () => (
@@ -21,14 +22,6 @@ const IcShield = () => (
     <polyline points="4.5,7 6.2,8.7 9.5,5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
-// Logout glyph — only rendered on the mobile navbar, where the "Disconnect"
-// label is dropped so the profile chip + button fit on the logo's row.
-const IcLogout = () => (
-  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-    <path d="M5.5 1.5H2.5v11h3M8.5 4l3.5 3-3.5 3M12 7H5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-)
-
 // Method badges — Tabler icon paths (MIT), stroke-only to match the project's
 // hand-drawn icon set (see LearnIcons.tsx / WalletIcons.tsx).
 const svgProps = {
@@ -93,19 +86,6 @@ const FOCUS_COPY = {
   },
 } as const
 
-// Short label for the navbar profile badge.
-const METHOD_BADGE: Record<'nip07' | 'nsec' | 'remote-signer', string> = {
-  nip07: 'Extension',
-  nsec: 'nsec',
-  'remote-signer': 'Remote signer',
-}
-
-// npub1abc…xyz789 — same head/tail truncation idiom used for keys elsewhere.
-function shortNpub(npub: string): string {
-  if (npub.length <= 20) return npub
-  return `${npub.slice(0, 12)}…${npub.slice(-6)}`
-}
-
 export function AppShell() {
   const { pathname } = useLocation()
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
@@ -142,7 +122,6 @@ export function AppShell() {
   const authError = useAuthStore(state => state.error)
   const watchlistCount = useWatchlistStore(state => state.mints.length)
 
-  const [copiedNpub, setCopiedNpub] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [loginMethod, setLoginMethod] = useState<'nip07' | 'nsec' | 'remote-signer'>('nip07')
   // false → the three-method picker is shown; true → collapsed to the focused
@@ -327,54 +306,10 @@ export function AppShell() {
         <div className="navbar-auth">
           {profile === null ? (
             <button type="button" className="navbar-login-btn" aria-label="Login via Nostr" onClick={() => setShowLoginModal(true)}>
-              <LogIn size={13} strokeWidth={2.4} aria-hidden="true" /> Login
+              <Zap size={13} strokeWidth={2.4} aria-hidden="true" /> Login
             </button>
           ) : (
-            <>
-              <div className="navbar-profile" title={profile.name ?? undefined}>
-                {/* https:// only — same guard as the other two profile.picture
-                    call sites (review list, "Signing with" row). This one is
-                    the logged-in user's own kind:0 so the risk is minimal, but
-                    keep it consistent (2026-09-07 audit hardening). */}
-                {profile.picture?.startsWith('https://') ? (
-                  <img src={profile.picture} alt=""
-                    className="navbar-avatar"
-                    onError={(e) => { e.currentTarget.style.display = 'none' }}
-                  />
-                ) : (
-                  // Reserve the avatar slot while the kind:0 metadata is still
-                  // loading in the background — prevents a layout shift when the
-                  // real avatar pops in a second or two after login.
-                  <span className="navbar-avatar navbar-avatar--placeholder" aria-hidden="true" />
-                )}
-                <div className="navbar-profile-text">
-                  <div className="navbar-profile-name-row">
-                    <span className="navbar-username" title={profile.name ?? undefined}>
-                      {profile.name ?? `${profile.pubkey.slice(0,8)}...`}
-                    </span>
-                    {authMethod !== null && (
-                      <span className="navbar-method-badge">{METHOD_BADGE[authMethod]}</span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    className="navbar-npub"
-                    title="Copy full npub"
-                    onClick={() => {
-                      void navigator.clipboard.writeText(profile.npub)
-                      setCopiedNpub(true)
-                      setTimeout(() => setCopiedNpub(false), 2000)
-                    }}
-                  >
-                    {copiedNpub ? 'Copied' : shortNpub(profile.npub)}
-                  </button>
-                </div>
-              </div>
-              <button type="button" className="navbar-disconnect-btn" onClick={handleLogout} aria-label="Disconnect">
-                <IcLogout />
-                <span className="navbar-disconnect-label">Disconnect</span>
-              </button>
-            </>
+            <AccountMenu profile={profile} method={authMethod} onLogout={handleLogout} />
           )}
         </div>
        </div>
@@ -387,7 +322,7 @@ export function AppShell() {
             {!methodPicked ? (
               <>
                 <div className="nostr-modal-header">
-                  <div className="nostr-modal-icon"><LogIn size={18} strokeWidth={1.75} aria-hidden="true" /></div>
+                  <div className="nostr-modal-icon"><Zap size={18} strokeWidth={1.75} aria-hidden="true" /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="nostr-modal-title">Connect with Nostr</div>
                     <div className="nostr-modal-subtitle">MintRadar uses your Nostr identity to save watchlists and post reviews. No email, no password.</div>

@@ -38,6 +38,7 @@ test('extension available: clicking the card logs in with no Connect click', asy
   // no focused view with a Connect button — it just connects
   await expect(page.locator('.nostr-modal')).toHaveCount(0, { timeout: 5000 })
   await expect(page.locator('.navbar-profile')).toBeVisible()
+  await page.locator('.navbar-profile').click()
   await expect(page.locator('.navbar-method-badge')).toHaveText('Extension')
 })
 

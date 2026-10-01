@@ -55,20 +55,18 @@ page (140px at 700, 72px at 768, 40px at 800; logged-in up to ~980px) because th
 profile chip is `flex-shrink: 0` + `nowrap`. Natural widths (measured with transitions off — `.nav-tab`
 used to have `transition: all`, which made live-resize measurements lie; since 2026-09-30 it only transitions
 `color`/`background-color`/`border-color`, hover and active look identical. Still `transition: all` in
-`AppShell.css`, deliberately untouched: `.navbar-login-btn`, `.navbar-disconnect-btn`, `.nostr-cancel-btn`,
+`AppShell.css`, deliberately untouched: `.navbar-login-btn`, `.nostr-cancel-btn`,
 `.nostr-connect-btn` — the first two change padding at the ≤765/≤660px steps and so can still animate it): logo 124 (icon only 28), tabs 520
-(tightened 426), Login 144 (short 75), profile chip + Disconnect 281 (135 without name/badge/npub);
+(tightened 426), Login 144 (short 75), profile chip + Disconnect 281 (135 without name/badge/npub) — superseded 2026-10-01, see "Account chip + panel";
 the row needs those + 72px (36 padding + 3×12 gaps). Each step starts at the width where it is first
 needed; wider viewports look as before. `.navbar-inner` gets `.is-authed` when logged in.
 
-**Navbar width + Login button (2026-10-01):** `.navbar-inner` uses `max-width: var(--dash-chrome-max)` and `padding: 0 var(--page-pad)` — the same variables as the page content — so its edges equal the content edges at every width (was a fixed 1400px, 58px wider per side at 1920). The `.navbar` background/border stays full-bleed. The Login button is always just "Login" (lucide `LogIn` icon, `aria-label="Login via Nostr"`); the old ≤765px label switch and `.navbar-login-extra` span are gone, so "Login 144" above is now ≈ 90 (short 75). Login modal header badge uses the same `LogIn` icon instead of ⚡. Test: `navbar inner row edges equal the content edges` in `e2e/navbar-tablet-layout.spec.ts`. LN pills on mint cards, Watchlist/MintCard/MintDetail login prompts (`⚡ Login via Nostr`) and the modal's `⚡ Connect/Retry` button were deliberately left unchanged.
+**Navbar width + Login button (2026-10-01):** `.navbar-inner` uses `max-width: var(--dash-chrome-max)` and `padding: 0 var(--page-pad)` — the same variables as the page content — so its edges equal the content edges at every width (was a fixed 1400px, 58px wider per side at 1920). The `.navbar` background/border stays full-bleed. The Login button is always just "Login" (lucide `Zap` line icon — outline, no fill, no ⚡ character — `aria-label="Login via Nostr"`); the old ≤765px label switch and `.navbar-login-extra` span are gone, so "Login 144" above is now ≈ 90 (short 75). Login modal header badge uses the same `Zap` line icon (18px, stroke 1.75) instead of ⚡ (it was `LogIn` for one commit, swapped back to the bolt on 2026-10-01). Test: `navbar inner row edges equal the content edges` in `e2e/navbar-tablet-layout.spec.ts`. LN pills on mint cards, Watchlist/MintCard/MintDetail login prompts (`⚡ Login via Nostr`) and the modal's `⚡ Connect/Retry` button were deliberately left unchanged.
 
 | Step | Logged out | Logged in |
 |---|---|---|
 | tabs `padding 6px 9px`, `gap 2px` | ≤ 840px | ≤ 996px |
 | wordmark hidden (`.navbar-wordmark` visually hidden; home link has `title="MintRadar"`) | ≤ 696px | ≤ 902px |
-| profile name + badge + npub hidden (`.navbar-profile-text`; name is the chip's `title`) | — | ≤ 806px |
-| Disconnect label hidden (glyph only, like ≤640px) | — | ≤ 660px |
 
 Logged-out fits untouched from 840px, logged-in from 997px. Not done on purpose: making the auth
 area shrinkable (no effect — nowrap contents just clip) and a separate "hide npub only" step (the
@@ -103,17 +101,7 @@ the Dashboard toolbar (its Filters/sort row was removed 2026-09-04) and never ov
    `.sort-segment { min-width: 0; overflow-x: auto }` (scrollbar hidden) so 320px scrolls inside the segment
    only. `Dashboard.tsx` keeps the active option centred in view via `sortSegmentRef` when the segment overflows
    (the default "Reliability Score" is the last button).
-3. **Navbar long display name above 640px.** `.navbar-username` (≥641px) is single-line, `overflow: hidden`,
-   `text-overflow: ellipsis`; the full name is the `title` of both the chip and the name span. **A fixed
-   max-width cannot work:** at the start of each navbar step the row has no slack (807px: a 10-char name already
-   uses it all; a 19-char name overflowed 45px at 807/903/997 and 2px at 850 before), so the name gets
-   what is left of the row: `max-width: min(240px, calc(100cqw − Npx))`, with N = fixed row width − 36px padding
-   + 2px safety per step (807–902: 685, 903–996: 781, 997+: 875; fixed part measured 719/815/909px page width).
-   `.navbar-inner` is a size container (`container-type: inline-size`, ≥641px) because `cqw`, unlike `vw`,
-   excludes a classic scrollbar. **If a navbar step's width changes (new element, different padding), re-measure
-   and update these three numbers.** Consequence: a normal-length name can now be cut at 807–~850, 903–~950 and
-   997–~1050px where it used to overflow the page; elsewhere it is unchanged (10-char name never truncated).
-   Navbar steps and breakpoints untouched.
+3. **Navbar long display name above 640px.** Superseded 2026-10-01: the `100cqw − N` constants (685/781/875) and `container-type` on `.navbar-inner` are gone — the chip and `.navbar-auth` (logged in) are shrinkable flex items and `.navbar-username` is `flex: 0 1 auto; max-width: 200px` with an ellipsis, so the name takes whatever room the row has left. Measured min name width 50px at 641px (80-char name), so the name never has to be dropped in the one-row layout.
 
 **Rule applied:** wrap or shrink the smallest thing inside the toolbar that overflows, in a media query that
 covers only the overflowing range; never hide or move a control. Everything else in the matrix
@@ -159,3 +147,10 @@ across the app.
 
 ## Mobile navbar row 1 (2026-09-30)
 Logo + auth stay on one row at ≤640px. Npub line is hidden; display name ellipsizes (72px, 56px at ≤360px); method badge hides at ≤360px. Tabs still wrap to row 2.
+
+
+## Account chip + panel (2026-10-01)
+
+`src/components/layout/AccountMenu.tsx` (used by `AppShell.tsx`). The logged-in chip is a `<button class="navbar-profile">` — avatar (`.navbar-avatar`, https-only `<img>` with the `--placeholder` span fallback, loaded exactly as before: direct URL, no proxy/cache, `onError` just hides the img) + name + chevron (up while open) — and a disclosure (`aria-expanded`, `aria-controls="navbar-account-panel"`, no `role="menu"`). Badge, npub and Disconnect are no longer in the chip. ≤640px (two-row layout) the name is hidden: chip = avatar + chevron, accessible name `Account: <name>`.
+
+Panel `#navbar-account-panel` (always rendered, `hidden` when closed): name (wraps) + method badge (`nsec` has the copper `--nsec` variant + title "key held in this browser"), the shortened npub as one full-width button (click → `navigator.clipboard.writeText(full npub)` in try/catch → "Copied" / "Copy failed" for 1.5s, `aria-live="polite"` sr-only region, timer cleared on close/unmount), and **Log out** (min-height 44px; same `handleLogout` as the old Disconnect — `logout()` + `resetInMemory()`). Closes on Escape (focus → chip), outside `pointerdown`, Log out, route change, and Tab leaving the widget (`focusout` with a non-null `relatedTarget`; null = pointer, handled by pointerdown — Safari doesn't focus buttons on click). Desktop: 264px, right-aligned under the chip; ≤640px: 244px, `max-width: calc(100vw - 24px)`, right edge 12px from the screen (`right: calc(12px - var(--page-pad))`). `position: absolute` inside `.navbar-account` (relative) — it overlays, never shifts layout; it lives in the sticky `.navbar` stacking context (z-index 100), above the page chrome (verified with `elementFromPoint` on 7 pages). `.navbar-inner` is no longer a size container, so nothing clips it. `(pointer: coarse)`: chip and npub row get 44px min-height. Tests: `e2e/profile-dropdown.spec.ts`. The 3 old mobile failures there (`.navbar-npub` was `display: none` ≤640px, test clicked it) were stale-test failures, fixed by the rework.

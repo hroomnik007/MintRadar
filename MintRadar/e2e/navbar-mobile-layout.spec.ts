@@ -39,7 +39,7 @@ for (const width of [375, 390]) {
       await page.locator('.navbar-inner').screenshot({ path: `test-results/navbar-out-${width}.png` })
     })
 
-    test('logged in: logo + profile chip + icon logout on one row, links below', async ({ page }) => {
+    test('logged in: logo + account chip on one row, links below', async ({ page }) => {
       await mockRelays(page)
       await installApiMocks(page)
       await loginAs(page, 'satoshinakamoto_longhandle_2009') // worst case for width
@@ -47,10 +47,10 @@ for (const width of [375, 390]) {
       await page.waitForSelector('.navbar-profile')
 
       await sameRow(page, '.nav-logo', '.navbar-auth')
-      // "Disconnect" word is dropped on mobile, the glyph shows, button still named
-      await expect(page.locator('.navbar-disconnect-label')).toBeHidden()
-      await expect(page.locator('.navbar-disconnect-btn svg')).toBeVisible()
-      await expect(page.locator('.navbar-disconnect-btn')).toHaveAttribute('aria-label', 'Disconnect')
+      // Two-row layout: the chip is avatar + chevron only (name lives in the account panel)
+      await expect(page.locator('.navbar-username')).toBeHidden()
+      await expect(page.locator('.navbar-profile .navbar-chevron')).toBeVisible()
+      await expect(page.locator('.navbar-profile')).toHaveAttribute('aria-label', /^Account: /)
       // long display name is clipped, not overflowing
       await noHorizontalOverflow(page, width)
 
@@ -66,7 +66,7 @@ for (const width of [375, 390]) {
 test.describe('desktop unchanged', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
 
-  test('single row, "Disconnect" text kept, no logout glyph', async ({ page }) => {
+  test('single row, chip shows avatar + name + chevron', async ({ page }) => {
     await mockRelays(page)
     await installApiMocks(page)
     await loginAs(page, 'peter.bliznak')
@@ -75,8 +75,8 @@ test.describe('desktop unchanged', () => {
 
     await sameRow(page, '.nav-logo', '.navbar-tabs', 10)
     await sameRow(page, '.nav-logo', '.navbar-auth', 10)
-    await expect(page.locator('.navbar-disconnect-label')).toBeVisible()
-    await expect(page.locator('.navbar-disconnect-btn svg')).toBeHidden()
+    await expect(page.locator('.navbar-username')).toBeVisible()
+    await expect(page.locator('.navbar-profile .navbar-chevron')).toBeVisible()
   })
 })
 

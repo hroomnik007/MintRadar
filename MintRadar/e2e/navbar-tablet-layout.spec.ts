@@ -44,7 +44,7 @@ for (const width of [1280, 768, 700]) {
     await expect(btn).toHaveAccessibleName('Login via Nostr')
     expect((await btn.innerText()).trim()).toBe('Login')
     await expect(btn.locator('svg')).toHaveCount(1)
-    expect(await btn.textContent()).not.toContain('⚡')
+    expect(await btn.textContent()).not.toContain('⚡') // line icon (svg), not the emoji
     const w = await btn.evaluate(e => e.getBoundingClientRect().width)
     expect(w).toBeLessThan(100)
   })
@@ -83,4 +83,20 @@ test('home link keeps its name and title when the wordmark is hidden (680px)', a
   await expect(page.locator('.nav-logo')).toHaveAttribute('title', 'MintRadar')
   const w = await page.locator('.nav-logo').evaluate(e => e.getBoundingClientRect().width)
   expect(w).toBeLessThan(40) // icon only
+})
+
+test('Login button and login modal header use a line icon (svg), no ⚡ character', async ({ page }) => {
+  await mockRelays(page)
+  await installApiMocks(page)
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto('/')
+  const btn = page.locator('.navbar-login-btn')
+  await expect(btn.locator('svg')).toHaveCount(1)
+  expect(await btn.textContent()).not.toContain('⚡')
+  await expect(btn).toHaveAccessibleName('Login via Nostr')
+  await btn.click()
+  const badge = page.locator('.nostr-modal-icon')
+  await expect(badge.locator('svg')).toHaveCount(1)
+  expect(await badge.textContent()).not.toContain('⚡')
+  expect(await badge.locator('svg').evaluate(e => e.getAttribute('fill'))).toBe('none')
 })
