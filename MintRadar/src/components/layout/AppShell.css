@@ -248,16 +248,22 @@
   flex-shrink: 0;
 }
 
-/* Placeholder shown while the kind:0 metadata (name + avatar) loads in the
-   background after login — keeps the same 22px footprint so the profile chip
-   doesn't reflow when the real avatar arrives. */
+/* Placeholder (no picture / non-https / load error): same 22px round slot as the image, tinted like
+   the other round badges (.nostr-modal-icon), first letter of the name or a User icon. */
 .navbar-avatar--placeholder {
-  display: inline-block;
-  background: var(--surface-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--green-soft);
+  border-color: var(--green-soft-strong);
+  color: var(--green-bright);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  user-select: none;
 }
 
-/* One line, ellipsis. The chip/auth area are shrinkable (see the one-row block below), so the
-   name gets whatever room the row has left — no per-step width constants. */
 .navbar-username {
   display: block;
   flex: 0 1 auto;

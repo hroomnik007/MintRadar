@@ -23,12 +23,16 @@ async function loginWithPicture(page: import('@playwright/test').Page, picture: 
   }, { pubkey: TEST_PUBKEY_HEX, npub, picture })
 }
 
+// Dev-server CSP blocks remote images (prod allows https:) — bypass it so the mocked image can load.
+test.use({ bypassCSP: true })
+
 test.beforeEach(async ({ page }) => {
   await mockRelays(page)
   await installApiMocks(page)
 })
 
 test('navbar renders a real <img> avatar for an https:// picture', async ({ page }) => {
+  await page.route('https://example.com/me.png', r => r.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64') }))
   await loginWithPicture(page, 'https://example.com/me.png')
   await page.goto('/')
   await page.waitForSelector('.navbar-profile')

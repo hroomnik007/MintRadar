@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, User } from 'lucide-react'
 import type { NostrProfile } from '@/core/nostr/client'
 
 type LoginMethod = 'nip07' | 'nsec' | 'remote-signer'
@@ -25,6 +25,16 @@ const IcLogout = () => (
   </svg>
 )
 
+// First character by grapheme (not by UTF-16 unit / byte), uppercased. null → no usable name
+// (empty, or an npub), the placeholder then shows a User icon instead of a letter.
+const graphemes = typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null
+function avatarInitial(name: string | null | undefined): string | null {
+  const t = name?.trim() ?? ''
+  if (t === '' || /^npub1[0-9a-z]{20,}$/i.test(t)) return null
+  const first = graphemes ? graphemes.segment(t)[Symbol.iterator]().next().value?.segment : Array.from(t)[0]
+  return first ? first.toLocaleUpperCase() : null
+}
+
 type CopyState = 'idle' | 'copied' | 'failed'
 const COPY_FEEDBACK_MS = 1500
 
@@ -43,6 +53,8 @@ export function AccountMenu({ profile, method, onLogout }: Props) {
   const [copyState, setCopyState] = useState<CopyState>('idle')
   const wrapRef = useRef<HTMLDivElement>(null)
   const chipRef = useRef<HTMLButtonElement>(null)
+  // URL that failed to load; a different URL (derived comparison) shows the image again.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clearTimer = useCallback(() => {
@@ -99,8 +111,10 @@ export function AccountMenu({ profile, method, onLogout }: Props) {
     timerRef.current = setTimeout(() => { timerRef.current = null; setCopyState('idle') }, COPY_FEEDBACK_MS)
   }
 
-  const displayName = profile.name ?? `${profile.pubkey.slice(0, 8)}...`
+  const displayName = profile.name?.trim() ? profile.name : `${profile.pubkey.slice(0, 8)}...`
   const copyLabel = copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : shortNpub(profile.npub)
+  const showImg = !!profile.picture?.startsWith('https://') && failedSrc !== profile.picture
+  const initial = avatarInitial(profile.name)
   const Chevron = open ? ChevronUp : ChevronDown
 
   return (
@@ -115,20 +129,18 @@ export function AccountMenu({ profile, method, onLogout }: Props) {
         aria-controls="navbar-account-panel"
         onClick={() => { if (open) close(); else setOpen(true) }}
       >
-        {/* https:// only — same guard as the other two profile.picture
-            call sites (review list, "Signing with" row). This one is
-            the logged-in user's own kind:0 so the risk is minimal, but
-            keep it consistent (2026-09-07 audit hardening). */}
-        {profile.picture?.startsWith('https://') ? (
+        {/* Fixed 22px round slot: image (https:// only — same guard as the other two
+            profile.picture call sites, 2026-09-07 audit hardening) or, when there is no usable
+            picture / it failed to load, a tinted placeholder of the same size. */}
+        {showImg ? (
           <img src={profile.picture} alt=""
             className="navbar-avatar"
-            onError={(e) => { e.currentTarget.style.display = 'none' }}
+            onError={() => setFailedSrc(profile.picture ?? null)}
           />
         ) : (
-          // Reserve the avatar slot while the kind:0 metadata is still
-          // loading in the background — prevents a layout shift when the
-          // real avatar pops in a second or two after login.
-          <span className="navbar-avatar navbar-avatar--placeholder" aria-hidden="true" />
+          <span className="navbar-avatar navbar-avatar--placeholder" aria-hidden="true">
+            {initial ?? <User size={13} strokeWidth={2.4} />}
+          </span>
         )}
         <span className="navbar-username" title={profile.name ?? undefined}>{displayName}</span>
         <Chevron className="navbar-chevron" size={14} strokeWidth={2} aria-hidden="true" />
