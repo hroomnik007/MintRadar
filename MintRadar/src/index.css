@@ -56,47 +56,47 @@
   --surface:      #17251f;
   --elevated:     #1c2b24;
   --raised:       #24352c;
-  --surface-2:    #1c2b24;
-  --surface-3:    #24352c;
+  --surface-2:    var(--elevated);
+  --surface-3:    var(--raised);
   --surface-card: #223a2f;
 
   /* Backgrounds — legacy aliases (used by components) */
-  --bg2:          #17251f;
-  --bg3:          #1c2b24;
-  --bg4:          #24352c;
+  --bg2:          var(--surface);
+  --bg3:          var(--elevated);
+  --bg4:          var(--raised);
 
   /* Borders — new names */
-  --brd:          rgba(255,255,255,.09);
-  --brd-md:       rgba(255,255,255,.13);
-  --brd-hi:       rgba(255,255,255,.18);
+  --brd:          var(--border);
+  --brd-md:       var(--border2);
+  --brd-hi:       var(--border-strong);
 
   /* Borders — legacy aliases */
   --border:       rgba(255,255,255,.09);
   --border2:      rgba(255,255,255,.13);
-  --border-hi:    rgba(255,255,255,.18);
+  --border-hi:    var(--border-strong);
   --border-strong: rgba(255,255,255,.18);
 
   /* Text — new names */
-  --t1:           #f2f7f4;
-  --t2:           #b7c8c0;
-  --t3:           #9aada4;
+  --t1:           var(--text);
+  --t2:           var(--text2);
+  --t3:           var(--text3);
 
   /* Text — legacy aliases */
   --text:         #f2f7f4;
   --text2:        #b7c8c0;
   --text3:        #9aada4;
-  --text-dim:     #b7c8c0;
-  --text-faint:   #9aada4;
+  --text-dim:     var(--text2);
+  --text-faint:   var(--text3);
 
   /* Accent (patina green) */
   --accent:       #5cc9a3;
-  --accent-dim:   rgba(69,173,140,.14);
-  --accent-brd:   rgba(69,173,140,.28);
+  --accent-dim:   var(--green-soft);
+  --accent-brd:   var(--green-soft-strong);
   --accent-glow:  0 0 16px rgba(92, 201, 163, 0.25);
   --accent-glow-lg: 0 0 32px rgba(92, 201, 163, 0.15);
 
   --green:              #45ad8c;
-  --green-bright:       #5cc9a3;
+  --green-bright:       var(--accent);
   --green-soft:         rgba(69,173,140,.14);
   --green-soft-strong:  rgba(69,173,140,.28);
 
@@ -111,14 +111,14 @@
   --amber-soft-strong:  rgba(211,164,70,.3);
 
   /* Status colors */
-  --fast:         #5cc9a3;
-  --med:          #d3a446;
-  --slow:         #db6a5d;
+  --fast:         var(--accent);
+  --med:          var(--amber);
+  --slow:         var(--red);
 
   /* Status — legacy aliases */
   --red:          #db6a5d;
   --red-soft:     rgba(219,106,93,.14);
-  --yellow:       #d3a446;
+  --yellow:       var(--amber);
 
   /* Typography — new names */
   --sans:         'DM Sans', system-ui, sans-serif;
