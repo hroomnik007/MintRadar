@@ -40,6 +40,7 @@ Expected response time: best effort, typically within 7 days.
 | Risk | Mitigation |
 |------|-----------|
 | nsec in browser memory | Key is held only in JavaScript memory for the session (needed to sign) and zeroed on logout (`privkeyBytes.fill(0)`); never written to localStorage, sessionStorage or IndexedDB, and never sent to the server |
+| Remote signer (NIP-46) session data | The ephemeral NIP-46 client key, the `bunker://` URI (it carries the pairing secret, if one was used) and the signer's public key are kept in sessionStorage for the tab session (`bunkerClientSecretKey`, `bunkerURI`, `bunkerPubkey`) and removed on logout; this is not the user's Nostr private key, which stays on the signer and is never seen by the app |
 | NIP-44 encrypted watchlist | Encrypted with the user's own Nostr key; server never sees plaintext; decryption happens entirely in the browser |
 | Backend SSRF | Outbound probe URLs go through `checkUrlSafety()` / `safeFetch()` (`backend/src/ssrf.ts`): HTTPS only, private/loopback/link-local/CGNAT/IPv4-in-IPv6 blocked, DNS re-checked at connect time, redirects re-validated |
 | XSS | No `dangerouslySetInnerHTML`; user-controlled URLs validated before rendering; CSP via Nginx — `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'` alongside `default-src`/`script-src 'self'` (no `'unsafe-inline'` on scripts) |
@@ -55,6 +56,7 @@ Expected response time: best effort, typically within 7 days.
 - All probes originate from a single Frankfurt IP — mints can detect and block this IP
 - nsec login holds the private key in JS memory for the duration of the session, so the app can sign; it is zeroed on logout, not earlier
 - After a page reload an nsec session ends (the key is never persisted): the app signs the user out and asks them to log in again
+- Remote signer (NIP-46) logins survive a page reload, so the NIP-46 client key and connection data stay readable in sessionStorage until logout or tab close; a script running on the page (e.g. via XSS) could use them to send signing requests to the signer as this client — whether each request needs approval is the signer's policy, which the app does not control
 - Watchlist sync uses NIP-44 single-key encryption — no multi-sig or threshold encryption
 - Reliability Score is a health/transparency signal, not a measure of solvency
 
