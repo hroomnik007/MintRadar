@@ -1999,3 +1999,19 @@ a.review-action-btn { color: var(--text3); }
 @media (max-width: 768px) {
   .reviews-empty-line { min-height: 44px; }
 }
+
+/* A very long lastError (offline mint) used to run ~2000px past the header: the badge is nowrap and its
+   flex parents could not shrink. Cap it at the row and ellipsize; short errors are unchanged. */
+.md-hdr-error { min-width: 0; max-width: 100%; }
+/* Desktop: .md-hdr-center never shrinks (flex-shrink: 0), so a percentage cap would be circular — cap by viewport. */
+@media (min-width: 641px) { .md-hdr-error { max-width: 60vw; } }
+.md-error-badge { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* History tab summary cards (Avg Latency / Uptime / Reliability): inline `repeat(3,1fr)` tracks cannot
+   shrink below the widest label word, so at 320px (258px of content) the third card stuck out by 19px.
+   Inline styles need !important here; only below 341px. */
+@media (max-width: 340px) {
+  .md-hist-summary { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .md-hist-summary > div { min-width: 0; padding-inline: 6px !important; overflow-wrap: anywhere; }
+  .md-hist-summary > div > div:first-child { font-size: 9px !important; letter-spacing: 0.02em !important; }
+}

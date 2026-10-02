@@ -2031,6 +2031,14 @@
   .sort-btn { padding-inline: 3px; }
 }
 
+/* ≤349px: even with 3px padding the five sort buttons need 319px (the row has 290px at 320px), so the
+   last ones were scrolled out of the segment. 10px type, 1px side padding and a 1px gap bring them to
+   ~285px; 350–370px keep the 3px padding above. The scroll fallback stays for anything narrower. */
+@media (max-width: 349px) {
+  .sort-segment { gap: 1px; }
+  .sort-btn { padding-inline: 1px; font-size: 10px; }
+}
+
 /* Search + Filters stay one row on landscape phones (~800–1000px) too. */
 @media (max-width: 1000px) {
   .controls-search-line {

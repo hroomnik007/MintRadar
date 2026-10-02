@@ -1134,3 +1134,15 @@
   .stats-movers-panel { order: 6; }
   .stats-trend-panel { order: 7; }
 }
+
+/* Hero tiles with a narrow text column (icon + figure share a ~140px card at 720–880px, ~100px at 320px):
+   an unbreakable note word such as "Frankfurt" stuck out of its tile by up to 24px. Let the note shrink
+   and break inside the word only where it cannot fit; text that fits is untouched. */
+@media (max-width: 335px), (min-width: 700px) and (max-width: 900px) {
+  .stats-metrics .stat-note { min-width: 0; overflow-wrap: anywhere; }
+}
+/* 700–900px only: 10px keeps "active" / "known" whole (11px made "active" 42px in a 39px column and the
+   anywhere-break split it as "activ|e"); just the long city word still breaks. */
+@media (min-width: 700px) and (max-width: 900px) {
+  .stats-metrics .stat-note { font-size: 10px; }
+}

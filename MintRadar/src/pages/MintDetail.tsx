@@ -1874,7 +1874,7 @@ function MintDetailContent({ url }: { url: string }) {
             </div>
 
             {/* Summary metric cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 14 }}>
+            <div className="md-hist-summary" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 14 }}>
               {[
                 { label: 'Avg Latency', value: chartAvgLatency !== null ? `${chartAvgLatency}ms` : '—', delta: deltaStr(chartAvgLatency, chartPrevLatency, 'ms', chartPrevInsufficientHistory), color: 'var(--text)' },
                 { label: 'Avg Uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%', chartPrevInsufficientHistory), color: 'var(--accent)' },

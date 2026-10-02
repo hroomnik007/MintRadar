@@ -283,3 +283,64 @@ for (const width of WIDTHS) {
     })
   })
 }
+
+// ── Small container overflows (2026-10-02) ───────────────────────────────────────────────────────
+// Elements that did not widen the page but stuck out of (or were scrolled out of) their own container.
+// Known and deliberately NOT asserted: the Mint Detail header buttons at 352–376px (Cashu.me clipped by
+// ≤3.3px, Mint QR icon squeezed to 0 — fixing it changes the buttons at normal phone widths), the 1.6px
+// Unit info icon in its fixed-width label cell, and the Stats Geography rows' intentional -4px hover bleed.
+
+/** Selector matches whose box leaves their nearest non-`display:contents` parent's box by more than 1px. */
+async function leavingParent(page: Page, selector: string): Promise<string[]> {
+  await page.waitForTimeout(250)
+  return page.evaluate(sel => [...document.querySelectorAll(sel)].flatMap(el => {
+    let p = el.parentElement
+    while (p && getComputedStyle(p).display === 'contents') p = p.parentElement
+    const r = el.getBoundingClientRect()
+    if (!p || r.width === 0) return []
+    const pr = p.getBoundingClientRect()
+    const out = Math.max(r.right - pr.right, pr.left - r.left)
+    return out > 1 ? [`${el.className} "${(el.textContent ?? '').trim().slice(0, 24)}" leaves ${p.className} by ${out.toFixed(1)}px`] : []
+  }), selector)
+}
+
+for (const width of WIDTHS) {
+  test.describe(`container overflows @ ${width}px`, () => {
+    test('Dashboard: sort buttons fit inside the sort segment (no inner scrolling)', async ({ page }) => {
+      await mount(page, {}, { width })
+      await page.goto('/')
+      await expect(page.locator('.sort-segment')).toBeVisible()
+      await page.waitForTimeout(250)
+      const seg = await page.locator('.sort-segment').evaluate(el => ({ sw: el.scrollWidth, cw: el.clientWidth }))
+      expect(seg.sw, `sort-segment scrollWidth ${seg.sw} > clientWidth ${seg.cw}`).toBeLessThanOrEqual(seg.cw + 1)
+      expect(await leavingParent(page, '.sort-btn')).toEqual([])
+    })
+
+    test('Stats: hero notes stay inside their tile', async ({ page }) => {
+      await mount(page, {}, { width })
+      await page.goto('/stats')
+      await expect(page.locator('.stats-metrics .stat-note').first()).toBeVisible()
+      expect(await leavingParent(page, '.stats-metrics .stat-note')).toEqual([])
+    })
+
+    test('Mint Detail: History summary cards stay inside their grid', async ({ page }) => {
+      const { url } = await mount(page, {}, { width })
+      await page.goto(`/mint/${encodeURIComponent(url)}`)
+      await expect(page.locator('.md-tabs')).toBeVisible()
+      await page.locator('.md-tab', { hasText: 'History' }).click()
+      await expect(page.locator('.md-hist-summary')).toBeVisible()
+      expect(await leavingParent(page, '.md-hist-summary > div')).toEqual([])
+    })
+
+    test('Mint Detail: a very long lastError badge stays inside the header', async ({ page }) => {
+      const { url } = await mount(page, CASES['lastError']!, { width })
+      await page.route('**/api/mint/probe**', r => r.fulfill({ status: 502, json: { error: 'down' } }))
+      await page.goto(`/mint/${encodeURIComponent(url)}`)
+      await expect(page.locator('.md-error-badge')).toBeVisible()
+      expect(await leavingParent(page, '.md-error-badge')).toEqual([])
+      const vw = await page.evaluate(() => document.documentElement.clientWidth)
+      const right = await page.locator('.md-error-badge').evaluate(el => el.getBoundingClientRect().right)
+      expect(right).toBeLessThanOrEqual(vw)
+    })
+  })
+}
