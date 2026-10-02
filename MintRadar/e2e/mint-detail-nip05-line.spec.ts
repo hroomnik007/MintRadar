@@ -33,7 +33,8 @@ async function open(page: Page, opts: { contacts?: { method: string; info: strin
   if (width) await page.setViewportSize({ width, height: 1000 })
   await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
   await expect(page.locator('.md-tabs')).toBeVisible()
-  const panel = page.locator('.md-panel', { has: page.locator('.md-panel-title', { hasText: 'Get in Touch' }) })
+  // The block is found by its content, not its heading: with only a NIP-05 value there is no heading.
+  const panel = page.locator('.md-panel', { has: page.locator('.md-contact-grid, .md-nip05-line') })
   return { panel, line: panel.locator('.md-nip05-line'), icon: panel.locator('.md-nip05-tip') }
 }
 
@@ -143,18 +144,68 @@ test.describe('Mint Detail — unverified NIP-05 line', () => {
     await expect(panel).not.toContainText('NIP-05')
   })
 
-  test('only a NIP-05 value (no email/Nostr/Twitter): block still renders — heading + the line, no cards', async ({ page }) => {
-    // Unchanged visibility rule: the block shows when email || twitter || nostr || operatorNip05.
-    const { panel, line } = await open(page, { contacts: [] })
-    await expect(line).toBeVisible()
-    await expect(panel.locator('.md-panel-title')).toHaveText('Get in Touch')
-    await expect(panel.locator('.md-contact-card')).toHaveCount(0)
-  })
-
   test('only email + the NIP-05 line keeps the Email card as it was', async ({ page }) => {
     const { panel, line } = await open(page, { contacts: [EMAIL] })
     await expect(line).toBeVisible()
     await expect(panel.locator('.md-contact-card')).toHaveCount(1)
     await expect(panel.locator('.md-contact-type')).toHaveText(['Email'])
+  })
+})
+
+// The block keeps its visibility rule (email || twitter || nostr || NIP-05) but the heading and
+// the card grid only render when at least one of email / twitter / nostr exists.
+const TWITTER = { method: 'twitter', info: '@alpha_mint' }
+const noHeading = (page: Page) => page.locator('.md-panel-title', { hasText: 'Get in Touch' })
+
+test.describe('Mint Detail — "Get in Touch" heading', () => {
+  test('all values: heading, three cards and the NIP-05 line', async ({ page }) => {
+    const { panel, line } = await open(page, { contacts: [EMAIL, TWITTER, NOSTR] })
+    await expect(panel.locator('.md-panel-title')).toHaveText('Get in Touch')
+    await expect(panel.locator('.md-contact-type')).toHaveText(['Email', 'Twitter', 'Nostr'])
+    await expect(line).toBeVisible()
+  })
+
+  test('email only: heading and one card, no NIP-05 line', async ({ page }) => {
+    const { panel, line } = await open(page, { contacts: [EMAIL], nip05: null })
+    await expect(panel.locator('.md-panel-title')).toHaveText('Get in Touch')
+    await expect(panel.locator('.md-contact-card')).toHaveCount(1)
+    await page.waitForTimeout(1500) // let the (empty) profile lookup settle
+    await expect(line).toHaveCount(0)
+  })
+
+  test('NIP-05 only: no heading, no empty grid — just the muted line with its ⓘ, same top spacing', async ({ page }) => {
+    const { panel, line, icon } = await open(page, { contacts: [] })
+    await expect(line).toBeVisible()
+    await expect(noHeading(page)).toHaveCount(0)
+    await expect(page.getByText('Get in Touch')).toHaveCount(0)
+    await expect(page.locator('.md-contact-grid')).toHaveCount(0)
+    await expect(panel.locator('.md-contact-card')).toHaveCount(0)
+    await expect(line).toContainText('Profile NIP-05 · not verified: alice@example.com')
+    // Same block, and the line starts where the heading would: panel border + padding, no extra margin.
+    const lead = await panel.evaluate((el, ln) => {
+      const cs = getComputedStyle(el)
+      return ln!.getBoundingClientRect().top - el.getBoundingClientRect().top - parseFloat(cs.paddingTop) - parseFloat(cs.borderTopWidth)
+    }, await line.elementHandle())
+    expect(Math.abs(lead)).toBeLessThan(1)
+    // The ⓘ still works (keyboard focus opens the tooltip).
+    await page.keyboard.press('Tab')
+    await icon.focus()
+    await expect(line.getByRole('tooltip')).toHaveText(TOOLTIP)
+  })
+
+  test('with a card, the line keeps its 10px gap under the grid', async ({ page }) => {
+    const { panel, line } = await open(page, { contacts: [EMAIL] })
+    await expect(line).toBeVisible()
+    const l = (await line.boundingBox())!
+    const g = (await panel.locator('.md-contact-grid').boundingBox())!
+    expect(Math.round(l.y - (g.y + g.height))).toBe(10)
+  })
+
+  test('nothing at all: the block is not rendered', async ({ page }) => {
+    const { panel } = await open(page, { contacts: [], nip05: null })
+    await page.waitForTimeout(1500) // let the (empty) profile lookup settle
+    await expect(panel).toHaveCount(0)
+    await expect(page.getByText('Get in Touch')).toHaveCount(0)
+    await expect(page.locator('.md-contact-grid, .md-nip05-line')).toHaveCount(0)
   })
 })

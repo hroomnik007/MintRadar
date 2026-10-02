@@ -723,6 +723,8 @@ button.md-url-copy.copied > svg { opacity: 1; }
   line-height: 1.5;
   color: var(--text3);
 }
+/* Alone in the block (no heading / cards above): the panel padding already sets the top spacing. */
+.md-panel > .md-nip05-line:first-child { margin-top: 0; }
 .md-nip05-text { min-width: 0; user-select: text; }
 .md-nip05-val { font-family: var(--font-mono); color: var(--text2); word-break: break-all; }
 .md-nip05-tip { flex: 0 0 auto; margin-top: 3px; }

@@ -1614,91 +1614,95 @@ function MintDetailContent({ url }: { url: string }) {
 
           {(email || twitter || nostr || operatorNip05) && (
             <div className="md-panel">
-              <div className="md-panel-title">Get in Touch</div>
-              <div className="md-contact-grid">
-                {email && (
-                  <div className="md-contact-card">
-                    <div className="md-contact-icon"><Mail size={14} /></div>
-                    <div style={{minWidth:0}}>
-                      <div className="md-contact-type">Email</div>
-                      <div className="md-contact-val">{email}</div>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        void navigator.clipboard.writeText(email)
-                        setCopiedContact('email')
-                        setTimeout(() => setCopiedContact(null), 2000)
-                      }}
-                      style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: copiedContact === 'email' ? 'var(--accent)' : 'var(--text3)',
-                        padding: '2px 4px', marginLeft: 'auto',
-                        flexShrink: 0, display: 'flex',
-                      }}
-                      title="Copy"
-                    >
-                      {copiedContact === 'email' ? <Check size={13} /> : <Copy size={13} />}
-                    </button>
-                  </div>
-                )}
-                {twitter && (
-                  <div className="md-contact-card">
-                    <div className="md-contact-icon"><AtSign size={14} /></div>
-                    <div style={{minWidth:0}}>
-                      <div className="md-contact-type">Twitter</div>
-                      <div className="md-contact-val">{twitter}</div>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        void navigator.clipboard.writeText(twitter)
-                        setCopiedContact('twitter')
-                        setTimeout(() => setCopiedContact(null), 2000)
-                      }}
-                      style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: copiedContact === 'twitter' ? 'var(--accent)' : 'var(--text3)',
-                        padding: '2px 4px', marginLeft: 'auto',
-                        flexShrink: 0, display: 'flex',
-                      }}
-                      title="Copy"
-                    >
-                      {copiedContact === 'twitter' ? <Check size={13} /> : <Copy size={13} />}
-                    </button>
-                  </div>
-                )}
-                {nostr && (
-                  <div className="md-contact-card">
-                    <div className="md-contact-icon"><Zap size={14} /></div>
-                    <div style={{minWidth:0}}>
-                      <div className="md-contact-type">Nostr</div>
-                      <div className="md-contact-val" style={{wordBreak:'break-all'}}>
-                        {njumpProfileUrl(nostr) ? (
-                          <a href={njumpProfileUrl(nostr)!} target="_blank" rel="noopener noreferrer">{nostr}</a>
-                        ) : nostr}
+              {(email || twitter || nostr) && (
+                <>
+                  <div className="md-panel-title">Get in Touch</div>
+                  <div className="md-contact-grid">
+                    {email && (
+                      <div className="md-contact-card">
+                        <div className="md-contact-icon"><Mail size={14} /></div>
+                        <div style={{minWidth:0}}>
+                          <div className="md-contact-type">Email</div>
+                          <div className="md-contact-val">{email}</div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void navigator.clipboard.writeText(email)
+                            setCopiedContact('email')
+                            setTimeout(() => setCopiedContact(null), 2000)
+                          }}
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: copiedContact === 'email' ? 'var(--accent)' : 'var(--text3)',
+                            padding: '2px 4px', marginLeft: 'auto',
+                            flexShrink: 0, display: 'flex',
+                          }}
+                          title="Copy"
+                        >
+                          {copiedContact === 'email' ? <Check size={13} /> : <Copy size={13} />}
+                        </button>
                       </div>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        void navigator.clipboard.writeText(nostr)
-                        setCopiedContact('nostr')
-                        setTimeout(() => setCopiedContact(null), 2000)
-                      }}
-                      style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: copiedContact === 'nostr' ? 'var(--accent)' : 'var(--text3)',
-                        padding: '2px 4px', marginLeft: 'auto',
-                        flexShrink: 0, display: 'flex',
-                      }}
-                      title="Copy"
-                    >
-                      {copiedContact === 'nostr' ? <Check size={13} /> : <Copy size={13} />}
-                    </button>
+                    )}
+                    {twitter && (
+                      <div className="md-contact-card">
+                        <div className="md-contact-icon"><AtSign size={14} /></div>
+                        <div style={{minWidth:0}}>
+                          <div className="md-contact-type">Twitter</div>
+                          <div className="md-contact-val">{twitter}</div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void navigator.clipboard.writeText(twitter)
+                            setCopiedContact('twitter')
+                            setTimeout(() => setCopiedContact(null), 2000)
+                          }}
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: copiedContact === 'twitter' ? 'var(--accent)' : 'var(--text3)',
+                            padding: '2px 4px', marginLeft: 'auto',
+                            flexShrink: 0, display: 'flex',
+                          }}
+                          title="Copy"
+                        >
+                          {copiedContact === 'twitter' ? <Check size={13} /> : <Copy size={13} />}
+                        </button>
+                      </div>
+                    )}
+                    {nostr && (
+                      <div className="md-contact-card">
+                        <div className="md-contact-icon"><Zap size={14} /></div>
+                        <div style={{minWidth:0}}>
+                          <div className="md-contact-type">Nostr</div>
+                          <div className="md-contact-val" style={{wordBreak:'break-all'}}>
+                            {njumpProfileUrl(nostr) ? (
+                              <a href={njumpProfileUrl(nostr)!} target="_blank" rel="noopener noreferrer">{nostr}</a>
+                            ) : nostr}
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void navigator.clipboard.writeText(nostr)
+                            setCopiedContact('nostr')
+                            setTimeout(() => setCopiedContact(null), 2000)
+                          }}
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: copiedContact === 'nostr' ? 'var(--accent)' : 'var(--text3)',
+                            padding: '2px 4px', marginLeft: 'auto',
+                            flexShrink: 0, display: 'flex',
+                          }}
+                          title="Copy"
+                        >
+                          {copiedContact === 'nostr' ? <Check size={13} /> : <Copy size={13} />}
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </>
+              )}
               {operatorNip05 && (
                 <div className="md-nip05-line">
                   <InfoTooltip
