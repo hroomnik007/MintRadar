@@ -14,16 +14,46 @@ test.beforeEach(async ({ page }) => {
   await installApiMocks(page)
 })
 
+type Rect = { y: number; height: number }
+
+// Waits for the real "layout is final" condition instead of a timeout: web fonts are loaded
+// (font-display: swap re-wraps text when they arrive, which moves everything below) and the
+// geometry of every element matching the selectors (in order) plus the document height is identical across two consecutive
+// animation frames. Returns those rects from that same frame, so values that are compared with
+// each other can never come from two different layouts.
+async function measureSettled(page: Page, selectors: string[]): Promise<{ rects: Rect[]; scrollH: number }> {
+  return page.evaluate(async (sels) => {
+    await document.fonts.ready
+    const frame = () => new Promise<void>(r => requestAnimationFrame(() => r()))
+    const read = () => ({
+      rects: sels.flatMap(sel => {
+        const els = Array.from(document.querySelectorAll(sel))
+        if (els.length === 0) throw new Error(`measureSettled: ${sel} not found`)
+        return els.map(el => {
+          const b = el.getBoundingClientRect()
+          return { y: b.y, height: b.height }
+        })
+      }),
+      scrollH: document.documentElement.scrollHeight,
+    })
+    let prev = JSON.stringify(read())
+    for (let i = 0; i < 300; i++) {
+      await frame()
+      const cur = read()
+      if (JSON.stringify(cur) === prev) return cur
+      prev = JSON.stringify(cur)
+    }
+    throw new Error('measureSettled: layout did not settle within 300 frames')
+  }, selectors)
+}
+
 async function expectFooterInFirstViewport(page: Page, viewportHeight: number) {
-  const footer = page.locator('footer.app-footer')
-  await expect(footer).toBeVisible()
-  const box = await footer.boundingBox()
-  expect(box).not.toBeNull()
+  await expect(page.locator('footer.app-footer')).toBeVisible()
+  const { rects: [box], scrollH } = await measureSettled(page, ['footer.app-footer'])
   // Fully inside the first viewport and pinned to its bottom edge.
   expect(box!.y + box!.height).toBeLessThanOrEqual(viewportHeight + 1)
   expect(box!.y + box!.height).toBeGreaterThanOrEqual(viewportHeight - 1)
   // No vertical scroll needed.
-  const scrollH = await page.evaluate(() => document.documentElement.scrollHeight)
   expect(scrollH).toBeLessThanOrEqual(viewportHeight)
   return box!
 }
@@ -36,14 +66,9 @@ test.describe('Sticky footer on short routes', () => {
       await page.waitForSelector('.learn-card')
 
       const footerBox = await expectFooterInFirstViewport(page, vp.height)
-      const cards = page.locator('.learn-card')
-      const count = await cards.count()
-      expect(count).toBeGreaterThan(0)
-      for (let i = 0; i < count; i++) {
-        const b = await cards.nth(i).boundingBox()
-        expect(b).not.toBeNull()
-        expect(b!.y + b!.height).toBeLessThanOrEqual(footerBox.y)
-      }
+      const { rects } = await measureSettled(page, ['.learn-card'])
+      expect(rects.length).toBeGreaterThan(0)
+      for (const b of rects) expect(b.y + b.height).toBeLessThanOrEqual(footerBox.y)
     })
   }
 
@@ -54,16 +79,12 @@ test.describe('Sticky footer on short routes', () => {
     await page.setViewportSize({ width: 1920, height: 1080 })
     await page.goto('/wallets')
     await page.waitForSelector('.wallets-footnote')
-    const pageBox = await page.locator('.wallets-page').boundingBox()
-    const footerBox = await page.locator('footer.app-footer').boundingBox()
-    expect(pageBox).not.toBeNull()
-    expect(footerBox).not.toBeNull()
+    const { rects: [pageBox, footerBox], scrollH } = await measureSettled(page, ['.wallets-page', 'footer.app-footer'])
     const footerBottom = footerBox!.y + footerBox!.height
     if (pageBox!.y + pageBox!.height + footerBox!.height <= 1080) {
       await expectFooterInFirstViewport(page, 1080)
     } else {
       expect(Math.abs(footerBox!.y - (pageBox!.y + pageBox!.height))).toBeLessThanOrEqual(1)
-      const scrollH = await page.evaluate(() => document.documentElement.scrollHeight)
       expect(Math.abs(scrollH - footerBottom)).toBeLessThanOrEqual(1)
     }
   })
@@ -87,13 +108,8 @@ test('Dashboard with many cards: page scrolls and footer stays below the list', 
   await page.goto('/?status=all')
   await expect(page.locator('.mint-card')).toHaveCount(40)
 
-  const scrollH = await page.evaluate(() => document.documentElement.scrollHeight)
+  const { rects: [gridBox, footerBox], scrollH } = await measureSettled(page, ['.mint-grid', 'footer.app-footer'])
   expect(scrollH).toBeGreaterThan(900)
-
-  const gridBox = await page.locator('.mint-grid').boundingBox()
-  const footerBox = await page.locator('footer.app-footer').boundingBox()
-  expect(gridBox).not.toBeNull()
-  expect(footerBox).not.toBeNull()
   expect(footerBox!.y).toBeGreaterThanOrEqual(gridBox!.y + gridBox!.height)
   expect(footerBox!.y).toBeGreaterThan(900)
 })
