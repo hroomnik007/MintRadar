@@ -40,6 +40,7 @@ import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { reviewAvatarColor, avatarTextColor } from '@/utils/avatarColors'
 import './MintDetail.css'
 import {
   Copy, Check, Info, ShieldCheck, ShieldOff, AlertTriangle,
@@ -52,11 +53,6 @@ import {
   ArrowUpRight,
 } from 'lucide-react'
 
-// Categorical avatar-fallback palette (identity, not status) — literal on purpose.
-const REVIEW_AVATAR_COLORS = ['#17E87F','#8b5cf6','#F5A623','#3b82f6','#ef4444','#ec4899']
-function reviewAvatarColor(pubkey: string): string {
-  return REVIEW_AVATAR_COLORS[parseInt(pubkey.slice(0, 8), 16) % REVIEW_AVATAR_COLORS.length] ?? '#17E87F'
-}
 function shortNpub(npub: string): string {
   return npub.slice(0, 10) + '...' + npub.slice(-4)
 }
@@ -2255,7 +2251,7 @@ function MintDetailContent({ url }: { url: string }) {
                           <div className="review-avatar">
                             {profile?.picture?.startsWith('https://')
                               ? <img src={profile.picture} alt="" className="review-avatar-img" />
-                              : <div className="review-avatar-fallback" style={{background: reviewAvatarColor(r.pubkey)}}>{initial}</div>
+                              : <div className="review-avatar-fallback" style={{ background: reviewAvatarColor(r.pubkey), color: avatarTextColor(reviewAvatarColor(r.pubkey)) }}>{initial}</div>
                             }
                           </div>
                           <div className="review-author">
@@ -2613,7 +2609,7 @@ function MintDetailContent({ url }: { url: string }) {
                 <div className="rv-signer">
                   {profile?.picture?.startsWith('https://')
                     ? <img src={profile.picture} alt="" className="rv-signer-avatar" onError={e => { e.currentTarget.style.display = 'none' }} />
-                    : <div className="rv-signer-avatar rv-signer-avatar-fallback" style={{ background: reviewAvatarColor(profile?.pubkey ?? '0') }}>
+                    : <div className="rv-signer-avatar rv-signer-avatar-fallback" style={{ background: reviewAvatarColor(profile?.pubkey ?? '0'), color: avatarTextColor(reviewAvatarColor(profile?.pubkey ?? '0')) }}>
                         {(profile?.name ?? profile?.npub ?? '?').slice(0, 1).toUpperCase()}
                       </div>}
                   <div className="rv-signer-text">

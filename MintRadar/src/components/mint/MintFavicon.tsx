@@ -60,7 +60,9 @@ export function MintFavicon({ url, iconUrl, size = 22, radius = 5, className = '
         border: '0.5px solid var(--copper)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexShrink: 0,
-        color: 'var(--copper)',
+        // Copper lifted towards --text: plain --copper on the 15% copper tile was 3.6–4.3:1 on the
+        // card / raised surfaces; this mix is >= 5.3:1 on every surface token and keeps the copper tint.
+        color: 'color-mix(in srgb, var(--copper) 60%, var(--text))',
         fontFamily: 'var(--font-mono)',
         fontWeight: 700,
         fontSize: Math.round(size * 0.42),
