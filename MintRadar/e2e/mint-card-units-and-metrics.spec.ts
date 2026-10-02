@@ -79,3 +79,32 @@ for (const [w, h] of [[1440, 900], [390, 844]] as const) {
     }
   })
 }
+
+// A Test mint / Same op badge (18.6px) is taller than the 13.5px RELIABILITY label row it sits in.
+// It must not grow its card: every card of the mixed row keeps the normal card height.
+for (const w of [320, 360, 390, 640, 768, 900, 1440]) {
+  test(`every card variant has the normal card height (${w}px)`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: 900 })
+    await gotoMixedRow(page)
+    await expect(page.locator('.mint-card')).toHaveCount(MIXED_ROW_MINTS.length)
+    await page.evaluate(() => document.fonts.ready)
+    const cards = await page.evaluate(() =>
+      [...document.querySelectorAll('.mint-card')].map(c => {
+        const top = (sel: string) => c.querySelector(sel)!.getBoundingClientRect().top - c.getBoundingClientRect().top
+        return {
+          name: c.querySelector('.card-name')!.textContent,
+          h: c.getBoundingClientRect().height,
+          label: top('.card-reliability-label, .card-reliability-na'),
+          score: top('.card-reliability-score'),
+          rating: top('.card-reliability-rating, .card-reliability-no-reviews'),
+        }
+      }),
+    )
+    // Grid rows stretch cards to the tallest neighbour, so compare the whole set, not just one row.
+    for (const c of cards) expect(Math.abs(c.h - cards[0]!.h), `height of ${c.name}`).toBeLessThanOrEqual(0.5)
+    // Label / score / rating tops (relative to the card) are identical too.
+    for (const part of ['label', 'score', 'rating'] as const) {
+      for (const c of cards) expect(Math.abs(c[part] - cards[0]![part]), `${part} of ${c.name}`).toBeLessThanOrEqual(0.5)
+    }
+  })
+}

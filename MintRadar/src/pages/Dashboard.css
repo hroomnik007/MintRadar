@@ -712,6 +712,12 @@
   flex-wrap: wrap;
   gap: 4px;
   min-width: 0;
+  /* Zero layout height: the badge (18.6px with padding + border) is taller than the
+     13.5px RELIABILITY label row and used to grow the whole card by ~5px. With height 0
+     the row keeps the label's height and the badge, centred (align-items + align-content, the container wraps),
+     overflows evenly into the 6px card-lower padding above and the 4px gap below. */
+  height: 0;
+  align-content: center;
 }
 
 .card-bottom-main {
