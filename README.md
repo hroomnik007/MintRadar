@@ -38,10 +38,10 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 ### 🔍 Dashboard & Discovery
 
 - Search by name or URL
-- Filter panel: Status (All / Online / Offline), Reliability Score minimum, Hide test mints
-- There is **no NUT filter** in the panel and no `?nut=` / `?nuts=` query support
-- Active filters shown as dismissible tags
-- The Dashboard also reads `?status=` (`all`/`offline`), `?reliability=`, and `?testmints=hide` from the URL, so those views can be shared as links
+- Filter panel: Status (All / Online / Offline), Unit (SAT / USD / EUR, any of the selected), Reliability Score minimum, Hide test mints
+- There is **no NUT filter** in the panel; the only way to filter by NUT is a `?nuts=` link (comma-separated NUT numbers, e.g. `?nuts=9,12`; a mint must support all of them), shown as dismissible `NUT-NN` tags
+- Active filters shown as dismissible tags at the top of the open panel
+- Dashboard state lives in the URL, so views can be shared as links: `?q=` (search), `?sort=` (`name`/`latency`/`rating`/`reliability`/`reviewCount`) with `?dir=` (`asc`/`desc`), `?status=` (`all`/`offline`), `?reliability=` (0–100), `?testmints=hide`, `?unit=` (`sat`, `usd`, `eur`, comma-separated, e.g. `?unit=sat,usd`) and `?compare=` (2–4 comma-separated mint URLs, also on the Watchlist page); default values are omitted
 - Counts: the header shows online and tracked mints; "tracked" is every mint in the database (archived ones included), and the grid footer reads "Showing X of <tracked>". Mints the default view hides (offline, degraded, archived) sit behind a "N mints hidden (offline 24h+)" toggle; **Show** reveals all of them
 - Sort by Latency / Name / Reliability Score / **Community Rating** / **Most reviewed** (asc/desc) — Community Rating uses a weighted (Bayesian) average so a mint with two 5★ reviews doesn't outrank one with fifty
 - Controls row stays docked at the top of the list while you scroll
