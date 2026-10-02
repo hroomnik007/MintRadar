@@ -453,7 +453,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                     <span className="cmp-mobile-val">
                       <span title={mint.version ?? undefined} style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text)', whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{mint.version ?? '—'}</span>
                       {d.isOutdated && (
-                        <span style={{ fontSize: 10, color: 'var(--red)', background: 'var(--red-soft)', border: '0.5px solid var(--red-soft-strong)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>Outdated</span>
+                        <span style={{ fontSize: 10, color: 'color-mix(in srgb, var(--red) 75%, var(--text))', background: 'var(--red-soft)', border: '0.5px solid var(--red-soft-strong)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>Outdated</span>
                       )}
                     </span>
                   </div>
@@ -659,7 +659,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               <div key={mint.url} className="cmp-val">
                 <span title={mint.version ?? undefined} style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text)', whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{mint.version ?? '—'}</span>
                 {d.isOutdated && (
-                  <span style={{ marginLeft: 5, fontSize: 10, color: 'var(--red)', background: 'var(--red-soft)', border: '0.5px solid var(--red-soft-strong)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>Outdated</span>
+                  <span style={{ marginLeft: 5, fontSize: 10, color: 'color-mix(in srgb, var(--red) 75%, var(--text))', background: 'var(--red-soft)', border: '0.5px solid var(--red-soft-strong)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>Outdated</span>
                 )}
               </div>
             )

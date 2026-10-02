@@ -412,7 +412,7 @@
 }
 
 .stats-movers-delta.down {
-  color: var(--red);
+  color: color-mix(in srgb, var(--red) 75%, var(--text));
   background: var(--red-soft);
 }
 

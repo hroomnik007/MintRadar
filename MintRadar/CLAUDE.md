@@ -13,7 +13,7 @@
 | Deploy pipeline, GitHub Actions, nginx/CSP/headers, service worker/PWA, OG tags, bundle/chunk-load recovery, dependency versions, backups | `docs/claude/deploy-and-infra.md` |
 | `MintCard`, card badges, Mint Detail (sidebar, Keysets, Version History, route canonicalization), `mintFormatting.ts` helpers | `docs/claude/card-and-mint-detail-ui.md` |
 | Dashboard filters/default view, Watchlist UI, Compare feature, Stats page layout | `docs/claude/stats-dashboard-watchlist-ui.md` |
-| Colors and tokens (`--copper`, `--bg`, palette), typography, `--dash-chrome-max` page width | `docs/claude/design-palette-and-chrome.md` |
+| Colors and tokens (`--copper`, `--bg`, palette), typography, `--dash-chrome-max` page width, **badge/chip text must reach 4.5:1 (derive tones with color-mix from tokens)** | `docs/claude/design-palette-and-chrome.md` |
 | Tools page, Best Mint Wizard, Token Inspector | `docs/claude/tools-page.md` |
 | Reviews (kind:38000), `mint_reviews` sync, `sharedPool` | `docs/claude/reviews-and-nostr.md` |
 | Mobile layout, navbar, overflow fixes, tooltips, chart focus ring | `docs/claude/mobile-and-tooltips.md` |

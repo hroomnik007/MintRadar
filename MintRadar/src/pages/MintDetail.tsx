@@ -1203,7 +1203,7 @@ function MintDetailContent({ url }: { url: string }) {
             <span className="md-hdr-error" style={{display:'inline-flex',alignItems:'center',gap:4}}>
               <span
                 className="md-error-badge"
-                style={{fontSize:11,color:'var(--red)',fontFamily:'var(--font-mono)',background:'var(--red-soft)',border:'0.5px solid var(--red-soft-strong)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap'}}
+                style={{fontSize:11,color:'color-mix(in srgb, var(--red) 75%, var(--text))',fontFamily:'var(--font-mono)',background:'var(--red-soft)',border:'0.5px solid var(--red-soft-strong)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap'}}
               >
                 {knownMint.lastError}
               </span>
@@ -1334,7 +1334,7 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="md-sc-value sm" style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
               <span>{version ?? '—'}</span>
               {isOutdated && (
-                <span style={{fontSize:9,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--red)',background:'var(--red-soft)',border:'0.5px solid var(--red-soft-strong)',borderRadius:4,padding:'1px 5px'}}>Outdated</span>
+                <span style={{fontSize:9,fontFamily:'var(--font-mono)',fontWeight:600,color:'color-mix(in srgb, var(--red) 75%, var(--text))',background:'var(--red-soft)',border:'0.5px solid var(--red-soft-strong)',borderRadius:4,padding:'1px 5px'}}>Outdated</span>
               )}
             </div>
             <div className="md-sc-sub">software</div>

@@ -123,6 +123,12 @@ export function MintCard({
   // Offline (24h+) cards are not dimmed with opacity; status colours are muted towards a text token instead.
   const offlineTone = (color: string, base: string) =>
     isOfflineDegraded ? `color-mix(in srgb, ${color} 50%, ${base})` : color
+  // The red (<80%) "up 24h" chip text is lifted towards --text so it reaches 4.5:1 on the card surface.
+  const upChipColor = (pct: number) => {
+    const c = uptimeColor(pct)
+    if (isOfflineDegraded) return offlineTone(c, 'var(--text2)')
+    return c === 'var(--slow)' ? 'color-mix(in srgb, var(--red) 85%, var(--text))' : c
+  }
   const displayName = mintDisplayName(mint, duplicateDisplayNames)
   const showHost = shouldShowHostLine(mint, duplicateDisplayNames)
   const uptimePct24h = mint.uptimePct24h ?? null
@@ -220,7 +226,7 @@ export function MintCard({
           </span>
         )}
         {uptimePct24h !== null && (
-          <span className="card-pill" style={{ color: offlineTone(uptimeColor(uptimePct24h), 'var(--text2)'), fontFamily: 'var(--font-mono-data)' }}>
+          <span className="card-pill" style={{ color: upChipColor(uptimePct24h), fontFamily: 'var(--font-mono-data)' }}>
             {uptimePct24h}% up 24h
           </span>
         )}
@@ -229,7 +235,7 @@ export function MintCard({
             Offline 24h+
           </span>
         ) : isNew && (
-          <span className="card-pill card-hdr-badge card-hdr-new" style={{ fontWeight: 600, color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)' }}>
+          <span className="card-pill card-hdr-badge card-hdr-new" style={{ fontWeight: 600, color: 'color-mix(in srgb, var(--amber) 80%, var(--text))', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)' }}>
             New
           </span>
         )}

@@ -135,7 +135,7 @@
 .wallet-platform-tag {
   font-size: 10px;
   font-family: var(--font-mono);
-  color: var(--copper);
+  color: color-mix(in srgb, var(--copper) 70%, var(--text));
   background: var(--copper-soft);
   border: 1px solid var(--copper-soft-strong);
   border-radius: var(--radius-sm);

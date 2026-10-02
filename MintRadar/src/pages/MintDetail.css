@@ -1265,7 +1265,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
    MINT/MELT label (not one repeated per chip — disabled is a per-direction
    flag, not per-method, and a second badge chip in the list below wrapped
    onto its own line on a narrow sidebar, 2026-09-20). */
-.method-row-off .method-chip { text-decoration: line-through; opacity: 0.5; }
+.method-row-off .method-chip { text-decoration: line-through; opacity: 0.5; color: var(--text); }
 .method-off-badge {
   display: inline-flex;
   align-items: center;
@@ -1778,6 +1778,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 
 .audit-swaps-retry-btn:hover {
+  color: color-mix(in srgb, var(--amber) 60%, var(--text));
   background: var(--amber-soft-strong);
 }
 

@@ -359,3 +359,24 @@ element, so the previous `.mint-card.offline { opacity: .7 }` never rendered in 
 Test with `animation: none` if you ever need to see a static opacity rule. Not dimmed, by design: list-view rows, plain offline
 (not yet degraded) cards, archived (same `degraded` rule), Compare picker rows (`.md-picker-item.disabled` is the selection-limit
 state, opacity .4, unrelated to offline).
+
+## Badge / chip text contrast rule (2026-10-02)
+
+**Rule:** the text of every badge, chip, pill, tag and notice must reach **4.5:1** (WCAG AA) as an *effective*
+colour — translucent `--*-soft` backgrounds and any opacity composited over the real backdrop (card surface,
+`--elevated`, banner tint). Icon glyphs / non-text UI need 3:1; disabled controls are exempt.
+
+**How to fix a failing badge:** change the *text colour only*, derive it from tokens with `color-mix`, never a new
+hex literal and never a changed token value: `color: color-mix(in srgb, var(--amber) 80%, var(--text))`. Keep the
+background, border, size and layout; pick the highest tone share that still reaches ≥4.7:1 so the badge stays
+recognisable (amber stays amber). Shares used: amber 80% (Test mint / New on cards), copper 70% (Same op,
+wallet platform tags), red 75–85% (up-24h chip <80%, Outdated, md-error-badge, movers delta, bulk "Failed"),
+`--text3` 85% (search `/` hint), amber 60% on the Retry button hover, `--text` for struck-through disabled
+method chips (kept at `opacity: .5`, 4.55:1). Surfaces differ: the same amber measured 4.20:1 on a card badge but
+5.38:1 on the Mint Detail header, so those inline Mint Detail badges were deliberately left alone.
+
+**Guard:** `e2e/badge-contrast.spec.ts` (scanner in `e2e/fixtures/badgeContrast.ts`) walks cards, Mint Detail,
+Stats, Wallets, Compare, Token Inspector and the banners at 1440 and 390px, default + hover, and asserts the
+thresholds; it also asserts it *reached* the known problem badges so it cannot pass vacuously. Left out on
+purpose: MintFavicon initials tiles (avatar placeholders, not badges — copper initials on the tile measure
+3.6–4.3:1) and the muted offline avatar (`.card-avatar-offline`, 2.2:1) — report before touching them.
