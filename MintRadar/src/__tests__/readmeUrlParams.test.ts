@@ -36,3 +36,22 @@ describe('README URL parameters', () => {
     })
   }
 })
+
+// Every relative markdown link must resolve from the README's own directory, so a link
+// that is right in the repo-root copy can't silently break in the inner copy (or vice versa).
+describe('README relative links', () => {
+  for (const file of ['README.md', '../README.md']) {
+    it(`${file}: every relative link points to an existing file or folder`, () => {
+      const abs = path.resolve(ROOT, file)
+      const text = fs.readFileSync(abs, 'utf8').replace(/```[\s\S]*?```/g, '').replace(/`[^`\n]*`/g, '')
+      const targets = [...text.matchAll(/\]\(([^)\s]+)\)/g)]
+        .map(m => m[1] as string)
+        .filter(t => !/^(https?:|mailto:|#)/i.test(t))
+        .map(t => t.split('#')[0] as string)
+      expect(targets.length, `no relative links found in ${file}`).toBeGreaterThan(0)
+      for (const t of targets) {
+        expect(fs.existsSync(path.resolve(path.dirname(abs), t)), `${file}: link "${t}" does not exist relative to ${path.dirname(abs)}`).toBe(true)
+      }
+    })
+  }
+})

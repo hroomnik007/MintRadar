@@ -42,8 +42,9 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 - There is **no NUT filter** in the panel; the only way to filter by NUT is a `?nuts=` link (comma-separated NUT numbers, e.g. `?nuts=9,12`; a mint must support all of them), shown as dismissible `NUT-NN` tags
 - Active filters shown as dismissible tags at the top of the open panel
 - Dashboard state lives in the URL, so views can be shared as links: `?q=` (search), `?sort=` (`name`/`latency`/`rating`/`reliability`/`reviewCount`) with `?dir=` (`asc`/`desc`), `?status=` (`all`/`offline`), `?reliability=` (0–100), `?testmints=hide`, `?unit=` (`sat`, `usd`, `eur`, comma-separated, e.g. `?unit=sat,usd`) and `?compare=` (2–4 comma-separated mint URLs, also on the Watchlist page); default values are omitted
+- Deep links: Mint Detail tabs open from the URL hash (`#overview`, `#history`, `#nuts`, `#audit`, `#reviews`, `#review-<id>`), and Tools from `/tools#pick` and `/tools#token`
 - Counts: the header shows online and tracked mints; "tracked" is every mint in the database (archived ones included), and the grid footer reads "Showing X of <tracked>". Mints the default view hides (offline, degraded, archived) sit behind a "N mints hidden (offline 24h+)" toggle; **Show** reveals all of them
-- Sort by Latency / Name / Reliability Score / **Community Rating** / **Most reviewed** (asc/desc) — Community Rating uses a weighted (Bayesian) average so a mint with two 5★ reviews doesn't outrank one with fifty
+- Sort by Latency / Name / Reliability Score / **Rating** / **Most reviewed** (asc/desc) — Rating uses a weighted (Bayesian) average so a mint with two 5★ reviews doesn't outrank one with fifty
 - Controls row stays docked at the top of the list while you scroll
 - Compact and expanded card view toggle
 - Single URL or bulk mint submission (paste multiple URLs at once)
@@ -128,7 +129,7 @@ PostgreSQL database backed up every 6 hours via server cron.
 
 ### 📎 Public API
 
-Read-only JSON under `https://mintradar.org/api/` (for example `GET /api/mints/known`). Unofficial, rate-limited, may change. See [MintRadar/docs/API.md](MintRadar/docs/API.md).
+Read-only JSON under `https://mintradar.org/api/` (for example `GET /api/mints/known`). Unofficial, rate-limited, may change. See [docs/API.md](docs/API.md).
 
 ---
 
@@ -178,7 +179,7 @@ git clone https://github.com/hroomnik007/MintRadar.git
 cd MintRadar/MintRadar
 ```
 
-The frontend and backend source live in the `MintRadar/` subdirectory. The working directory for app code, Docker, and CI is `MintRadar/MintRadar`. The repository root only holds README, LICENSE, and SECURITY.md.
+The frontend and backend source live in the `MintRadar/` subdirectory. The working directory for app code, Docker, and CI is `MintRadar/MintRadar`. The repository root holds only README, LICENSE, SECURITY.md, CONTRIBUTING.md, and repository config (`.github/`, `.gitignore`, `.gitleaks.toml`).
 
 ### 2. Configure the backend
 
@@ -222,7 +223,7 @@ Serve the `dist/` directory with Nginx. See `MintRadar/deploy/nginx.conf` for th
 
 ## 🔐 Security
 
-MintRadar handles Nostr private keys and is used by the Bitcoin/Cashu community where trust matters. To report a vulnerability, see **[SECURITY.md](SECURITY.md)**.
+MintRadar handles Nostr private keys and is used by the Bitcoin/Cashu community where trust matters. To report a vulnerability, see **[SECURITY.md](../SECURITY.md)**.
 
 - No tracking or telemetry
 - Nostr private keys are never sent to the server or written to browser storage; an nsec is held in memory for the session and zeroed on logout
@@ -242,7 +243,7 @@ Issues and pull requests are welcome. Please open an issue to discuss significan
 ## 🔗 Links
 
 - [MintRadar](https://mintradar.org)
-- [Public API](MintRadar/docs/API.md)
+- [Public API](docs/API.md)
 - [Cashu Protocol](https://cashu.space)
 - [Nostr Protocol](https://nostr.com)
 - [NIP-87 — Mint Discovery](https://github.com/nostr-protocol/nips/blob/master/87.md)
