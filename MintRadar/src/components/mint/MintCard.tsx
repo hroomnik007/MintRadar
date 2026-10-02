@@ -18,6 +18,7 @@ import { displayName as mintDisplayName, shouldShowHostLine, isNewMint, cardLate
 import { isTestMint } from '@/constants/testMints'
 import { db } from '@/db'
 import { resolveNotificationRelays, syncSubscribeToServer, syncUnsubscribeFromServer } from '@/core/nostr/notificationSubscription'
+import { sortUnits } from '@/utils/sortUnits'
 
 const IcBellDown = () => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -203,7 +204,7 @@ export function MintCard({
       <div className="card-pills">
         {mint.units && mint.units.length > 0 && (
           <span className="card-pill" style={{ fontFamily: 'var(--font-mono-data)' }}>
-            {mint.units.map(u => u.toUpperCase()).join(' / ')}
+            {sortUnits(mint.units).map(u => u.toUpperCase()).join(' / ')}
           </span>
         )}
         {lightningLabel && (

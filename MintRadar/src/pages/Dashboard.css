@@ -727,6 +727,10 @@
   color: var(--t2);
   white-space: nowrap;
   flex-shrink: 0;
+  /* Bottom-align inside .card-reliability-toprow: a Test mint / Same op badge
+     makes that row taller than the label, and the default centring would lift
+     the label above the one on neighbouring cards. */
+  align-self: flex-end;
 }
 
 .card-reliability-na { color: var(--t2); }

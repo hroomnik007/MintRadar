@@ -30,6 +30,7 @@ import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { auditFreshness } from '@/utils/auditFreshness'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
+import { sortUnits } from '@/utils/sortUnits'
 import {
   computeReliabilityScore as sharedComputeReliabilityScore,
   uptimeComponent, nutComponent, versionComponent, contactComponent,
@@ -2396,7 +2397,7 @@ function MintDetailContent({ url }: { url: string }) {
             {knownMint?.units && knownMint.units.length > 0 && (
               <div className="md-panel md-um-panel md-um-panel-methods">
                 <div className="md-panel-title">Units & Methods</div>
-                {knownMint.units.map(unit => {
+                {sortUnits(knownMint.units).map(unit => {
                   const mintChips = (knownMint.mintMethods ?? []).filter(m => m.unit === unit)
                   const meltChips = (knownMint.meltMethods ?? []).filter(m => m.unit === unit)
                   // Same set of payment methods for both directions (e.g. bolt11 +
