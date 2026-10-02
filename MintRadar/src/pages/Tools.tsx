@@ -416,7 +416,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             {/* Both deep links were verified against the tools' own sources, not guessed:
                 wallet.cashu.me reads `?token=` in WalletPage.vue's created() hook
                 (cashubtc/cashu.me @ b51fee3), and redeem.cashu.me reads the same `?token=`
-                param in its client bundle. rel="noreferrer" keeps the token out of the
+                param in its client bundle. rel="noopener noreferrer" keeps the token out of the
                 Referer header on the way there. The token itself IS in the link, so it
                 reaches cashu.me's servers — the privacy line under the textarea says so. */}
             {actions.redeemDisabled ? (
@@ -428,7 +428,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
                 className={`token-action-btn${actions.accent === 'redeem' ? ' token-action-accent' : ''}`}
                 href={`https://redeem.cashu.me/?token=${encodeURIComponent(cleanToken)}`}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 title="Opens cashu.me melt flow"
               >
                 <Zap size={13} aria-hidden="true" /> Redeem to Lightning
@@ -444,7 +444,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
                 className="token-action-btn"
                 href={`https://wallet.cashu.me/?token=${encodeURIComponent(cleanToken)}`}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
               >
                 Open in cashu.me <ExternalLink size={12} aria-hidden="true" />
               </a>

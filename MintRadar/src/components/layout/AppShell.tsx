@@ -410,7 +410,7 @@ export function AppShell() {
                 {loginMethod === 'nip07' && !nip07Available && (
                   <div className="nostr-warn">
                     No Nostr extension detected.{' '}
-                    <a href="https://getalby.com" target="_blank" rel="noreferrer">Install Alby</a> or nos2x to continue.
+                    <a href="https://getalby.com" target="_blank" rel="noopener noreferrer">Install Alby</a> or nos2x to continue.
                   </div>
                 )}
 

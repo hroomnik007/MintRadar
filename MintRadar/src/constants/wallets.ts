@@ -25,9 +25,9 @@ export interface WalletInfo {
 export const WALLETS: WalletInfo[] = [
   {
     name: 'Minibits',
-    platforms: ['Android'],
+    platforms: ['Android', 'iOS'],
     blurb: 'Mobile-first ecash wallet with a built-in Lightning address and named contacts, aimed at everyday spending.',
-    url: 'https://www.minibits.cash',
+    url: 'https://minibits.cash',
   },
   {
     name: 'Nutstash',

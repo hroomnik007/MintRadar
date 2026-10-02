@@ -40,7 +40,7 @@ test('platform label is not duplicated (icon on the left, chips on the right onl
   // The old standalone caps label next to the icon is gone.
   await expect(page.locator('.wallet-platform-label')).toHaveCount(0)
 
-  // Minibits (Android only) shows "Android" exactly once on its card.
+  // Minibits (Android + iOS) shows "Android" exactly once on its card.
   const card = page.locator('.wallet-card', { hasText: 'Minibits' })
   const androidCount = await card.getByText('Android', { exact: true }).count()
   expect(androidCount).toBe(1)

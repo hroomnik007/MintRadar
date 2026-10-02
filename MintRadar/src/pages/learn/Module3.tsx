@@ -48,7 +48,7 @@ export default function Module3() {
         <li><strong>Audit reliability (25%)</strong> — real transaction success data from an independent auditor</li>
       </ul>
       <p>
-        That audit signal comes from <strong><a href="https://audit.8333.space" target="_blank" rel="noreferrer">audit.8333.space</a></strong>, an independent third party that continuously runs real mint/melt transactions against known Cashu mints and publishes how often they actually succeed. MintRadar's own 5-minute checks only confirm a mint is reachable — they can't tell you whether its token operations are working correctly. The audit reliability score looks at the mint's last ~100 real swaps and reflects how many of those transactions actually went through.
+        That audit signal comes from <strong><a href="https://audit.8333.space" target="_blank" rel="noopener noreferrer">audit.8333.space</a></strong>, an independent third party that continuously runs real mint/melt transactions against known Cashu mints and publishes how often they actually succeed. MintRadar's own 5-minute checks only confirm a mint is reachable — they can't tell you whether its token operations are working correctly. The audit reliability score looks at the mint's last ~100 real swaps and reflects how many of those transactions actually went through.
       </p>
 
       <h3>What each component actually measures</h3>
