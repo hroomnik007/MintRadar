@@ -57,8 +57,8 @@ options are unchanged.
   segment has an invisible `::before` (4px above/below only, no sideways reach) for a 44px tap
   target, so `.wizard-unit-seg` must NOT have `overflow:hidden` (first/last segment carry the
   corner radius instead). Units still
-  come from what online mints advertise; display order is SAT, MSAT, EUR, USD (`UNIT_ORDER`),
-  unknown units last.
+  come from what online mints advertise; display order is the canonical card/filter order from `sortUnits()` (SAT, USD, EUR,
+  then other units such as MSAT; changed from SAT, MSAT, EUR, USD on 2026-10-02), default selection = first = SAT.
 - **Size labels follow the unit (2026-09-28):** Small/Medium/Large sub-labels come from the static
   `SIZE_HINTS` table in `Tools.tsx` (sat: < 10k / 10k–100k / > 100k sats; msat, EUR, USD: the same
   tiers as ~10M/100M msat, ~€10/100, ~$10/100). **The MSAT/EUR/USD thresholds are approximate on

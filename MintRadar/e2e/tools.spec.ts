@@ -881,6 +881,16 @@ test.describe('Token Inspector mint icon (tracked mints only)', () => {
 })
 
 test.describe('Best Mint wizard currency control', () => {
+  test('lists units in the canonical card/filter order: SAT, USD, EUR, then MSAT', async ({ page }) => {
+    // API order is deliberately scrambled; the wizard must not echo it.
+    const mints = MOCK_KNOWN_MINTS.map((m, i) => ({ ...m, online: true, units: i === 0 ? ['msat', 'eur', 'usd', 'sat'] : ['eur', 'sat'] }))
+    await page.route('**/api/mints/known', r => r.fulfill({ json: mints }))
+    await page.reload()
+    const opts = page.getByRole('radiogroup', { name: 'Currency unit' }).getByRole('radio')
+    await expect(opts).toHaveText(['SAT', 'USD', 'EUR', 'MSAT'])
+    await expect(opts.first()).toHaveAttribute('aria-checked', 'true') // default selection stays SAT
+  })
+
   test('is one joined control: segments touch, share an outer border, selection still works', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     const group = page.getByRole('radiogroup', { name: 'Currency unit' })

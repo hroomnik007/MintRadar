@@ -11,6 +11,7 @@ import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, displayName a
 import { Zap, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Hourglass, ExternalLink, ArrowRight, type LucideIcon } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
 import { isEligibleForRecommendation } from '@/utils/reliabilityScore'
+import { sortUnits } from '@/utils/sortUnits'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import './Tools.css'
 
@@ -555,11 +556,6 @@ function weightsFor(checks: Set<WizardCheck>, size: SizeOption): Weights {
   return { latency: base.latency * scale, reliability: base.reliability + LARGE_RELIABILITY_BOOST, nuts: base.nuts * scale }
 }
 
-// Display order of the currency segmented control. Units not listed here
-// (a mint advertising something new) sort after these, alphabetically.
-const UNIT_ORDER = ['sat', 'msat', 'eur', 'usd']
-const unitRank = (u: string) => { const i = UNIT_ORDER.indexOf(u); return i === -1 ? UNIT_ORDER.length : i }
-
 // Rough balance-size thresholds per unit, shown as labels only — `size` is a bucket
 // key, never compared against an amount. Deliberately static and approximate (no FX
 // rate); sat is the reference, the rest are ballpark equivalents. A unit not listed
@@ -600,14 +596,14 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
 
   // Built from the distinct units the online mints actually advertise, never a
   // hardcoded sat/usd/eur list — a mint offering a new unit shows up here on its
-  // own. 'sat' is pinned first because it is the ecosystem default.
+  // own. Ordered like the cards and the filter (sortUnits: SAT, USD, EUR, then others).
   const availableUnits = useMemo(() => {
     const set = new Set<string>()
     for (const m of knownMints) {
       if (m.online !== true) continue
       for (const u of m.units ?? []) set.add(u)
     }
-    return [...set].sort((a, b) => unitRank(a) - unitRank(b) || a.localeCompare(b))
+    return sortUnits([...set])
   }, [knownMints])
 
   const selectedUnit = unit ?? availableUnits[0] ?? null
