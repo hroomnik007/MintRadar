@@ -120,6 +120,9 @@ export function MintCard({
   }
   const isOnline = mint.online === true
   const isOfflineDegraded = mint.degraded === true
+  // Offline (24h+) cards are not dimmed with opacity; status colours are muted towards a text token instead.
+  const offlineTone = (color: string, base: string) =>
+    isOfflineDegraded ? `color-mix(in srgb, ${color} 50%, ${base})` : color
   const displayName = mintDisplayName(mint, duplicateDisplayNames)
   const showHost = shouldShowHostLine(mint, duplicateDisplayNames)
   const uptimePct24h = mint.uptimePct24h ?? null
@@ -156,7 +159,7 @@ export function MintCard({
     >
       <div className="card-top">
         <div className="card-name-row">
-          <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={28} radius={6} />
+          <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={28} radius={6} className={isOfflineDegraded ? 'card-avatar-offline' : ''} />
           <div style={{ minWidth: 0 }}>
             <div className="card-name-line">
               <span className="card-name" title={displayName}>{displayName}</span>
@@ -217,12 +220,12 @@ export function MintCard({
           </span>
         )}
         {uptimePct24h !== null && (
-          <span className="card-pill" style={{ color: uptimeColor(uptimePct24h), fontFamily: 'var(--font-mono-data)' }}>
+          <span className="card-pill" style={{ color: offlineTone(uptimeColor(uptimePct24h), 'var(--text2)'), fontFamily: 'var(--font-mono-data)' }}>
             {uptimePct24h}% up 24h
           </span>
         )}
         {isOfflineDegraded ? (
-          <span className="card-pill card-hdr-badge" style={{ fontWeight: 600, color: 'var(--red)', background: 'var(--red-soft)', border: '1px solid var(--red-soft-strong)' }}>
+          <span className="card-pill card-hdr-badge" style={{ fontWeight: 600, color: 'color-mix(in srgb, var(--red) 65%, var(--text))', background: 'var(--red-soft)', border: '1px solid var(--red-soft-strong)' }}>
             Offline 24h+
           </span>
         ) : isNew && (
@@ -295,7 +298,7 @@ export function MintCard({
           {mint.reliabilityScore != null && (
             <div
               className="card-reliability-score"
-              style={{ color: mint.reliabilityScore >= 70 ? 'var(--green-bright)' : mint.reliabilityScore >= 40 ? 'var(--amber)' : 'var(--red)' }}
+              style={{ color: offlineTone(mint.reliabilityScore >= 70 ? 'var(--green-bright)' : mint.reliabilityScore >= 40 ? 'var(--amber)' : 'var(--red)', 'var(--text3)') }}
             >
               {mint.reliabilityScore}
             </div>

@@ -337,3 +337,25 @@ includes `/^v$/` so `?v=` requests still hit it. Pinned by `src/__tests__/brandA
   (no `expires` here — it would add a second `Cache-Control`). Steps: `sudo nano /etc/nginx/sites-available/mintradar.org.conf`,
   `sudo nginx -t`, `sudo systemctl reload nginx`, then `curl -sI https://mintradar.org/og-image.png | grep -i cache-control`;
   mirror the block in `deploy/nginx.conf` (the daily drift check compares the two).
+
+## Dimmed states (offline cards) — no whole-card opacity (2026-10-02)
+
+**Rule:** never express a "muted" state with `opacity` (or `filter`) on a container that holds text. Opacity composites the text
+over the page and silently drops contrast (`--text3` at .7 is ~3.4:1; the red status dot ~2.5:1). Instead set explicit colours that
+are derived from tokens with `color-mix(in srgb, …)` so they follow any palette change, keep text at full opacity, and mute only
+decorative parts (avatar `opacity .55` + `grayscale(.6)`, chip fill/border).
+
+`.mint-card.offline` (class set when `mint.degraded === true`, i.e. offline 24h+; shared by Dashboard grid and Watchlist cards via
+`MintCard`): card fill `color-mix(--surface-card 72%, --bg)`, border `color-mix(--text 10%, transparent)`, name `--text2`, chips
+`color-mix(--elevated 70%, --bg)` fill / `--text 7%` border / `--text3` text, avatar `.card-avatar-offline`. Status colours that are
+inline in `MintCard.tsx` (score, uptime chip) go through `offlineTone(color, base)` = `color-mix(color 50%, base)`; the
+"Offline 24h+" badge text is `color-mix(--red 65%, --text)`. The status dot stays full `--red`.
+
+Thresholds (checked as *effective* colours by `e2e/offline-card-contrast.spec.ts` via `e2e/fixtures/contrast.ts`): text 4.5:1,
+large text (score) 3:1, icons/dot/controls 3:1, card vs page >= 1.31:1.
+
+**Gotcha:** `.mint-card` runs `animation: fadein … both`, whose `to { opacity: 1 }` fill *overrides* a static `opacity` on the same
+element, so the previous `.mint-card.offline { opacity: .7 }` never rendered in browsers (offline cards looked like online ones).
+Test with `animation: none` if you ever need to see a static opacity rule. Not dimmed, by design: list-view rows, plain offline
+(not yet degraded) cards, archived (same `degraded` rule), Compare picker rows (`.md-picker-item.disabled` is the selection-limit
+state, opacity .4, unrelated to offline).
