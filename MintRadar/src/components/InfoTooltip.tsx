@@ -9,6 +9,8 @@ import './InfoTooltip.css'
 // there, the Audit "what is this" icon, and the Community-Rating caveat all want
 // exactly this. The popup carries its own co-located CSS so it renders the same
 // wherever it's mounted, independent of which page stylesheet is loaded.
+// While open (hover, tap or focus), Escape closes only the tooltip — the surrounding
+// dialog / panel / menu stays until a second Escape.
 export function InfoTooltip({
   text,
   width = 220,
@@ -26,7 +28,7 @@ export function InfoTooltip({
   // (e.g. the recent-review-surge flag) that shouldn't read as neutral help.
   tone?: 'info' | 'warn'
   label?: string
-  // Opt-in: keyboard focus (not mouse/tap focus) also opens the tooltip, Escape closes it.
+  // Opt-in: keyboard focus (not mouse/tap focus) also opens the tooltip.
   // Needs `label` (that is what makes the icon focusable). Off by default so existing
   // usages behave exactly as before.
   openOnFocus?: boolean
@@ -43,7 +45,6 @@ export function InfoTooltip({
       onClick={tooltip.onClick}
       onFocus={openOnFocus ? e => { if (e.currentTarget.matches(':focus-visible')) tooltip.setOpen(true) } : undefined}
       onBlur={openOnFocus ? () => tooltip.setOpen(false) : undefined}
-      onKeyDown={openOnFocus ? e => { if (e.key === 'Escape') tooltip.setOpen(false) } : undefined}
       aria-label={label}
       role={label ? 'button' : undefined}
       tabIndex={label ? 0 : undefined}

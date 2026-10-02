@@ -154,6 +154,17 @@ error badge) must be a separate sibling element placed next to the badge — nev
 inside the same pill-shaped container as the badge. This convention is used consistently
 across the app.
 
+**Escape closes an open tooltip first (2026-10-02, `useTapTooltip.ts`):** while any ⓘ tooltip
+is open (hover, tap or keyboard focus), Escape closes only that tooltip — a capture-phase
+`keydown` listener on `window` calls `stopPropagation()` before the surrounding container sees
+it, and focus is not moved. A second Escape then closes the container as before. This works
+because every container (Filters panel via `mintradar:escape` from `AppShell.tsx`, the account
+menu's `document` listener, every modal's `window` listener) listens in the **bubble** phase —
+**a new Escape handler for a dialog/panel must not use the capture phase**, or it would bypass
+this. Applies to every `useTapTooltip` consumer (`InfoTooltip`, the Reliability breakdown rows,
+Comparison/Stats modals), not only `InfoTooltip`. `InfoTooltip`'s old own `onKeyDown` Escape
+handler was removed (redundant). e2e: `e2e/tooltip-escape.spec.ts`.
+
 
 ## Mobile navbar row 1 (2026-09-30)
 Logo + auth stay on one row at ≤640px. Npub line is hidden; display name ellipsizes (72px, 56px at ≤360px); method badge hides at ≤360px. Tabs still wrap to row 2.

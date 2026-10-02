@@ -192,8 +192,8 @@ test.describe('Dashboard unit filter', () => {
     await expect(page.getByRole('tooltip')).toHaveText(TIP)
     await page.keyboard.press('Escape')
     await expect(page.getByRole('tooltip')).toHaveCount(0)
-    // Escape also closes the filter panel (existing behaviour); reopen for the hover check.
-    if (!(await page.locator('.filter-panel').isVisible())) await openPanel(page)
+    // The first Escape closes only the tooltip; the panel stays (see tooltip-escape.spec.ts).
+    await expect(page.locator('.filter-panel')).toBeVisible()
     await tip(page).hover()
     await expect(page.getByRole('tooltip')).toHaveText(TIP)
   })

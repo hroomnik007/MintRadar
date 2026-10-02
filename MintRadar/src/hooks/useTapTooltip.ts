@@ -21,6 +21,21 @@ import { useCallback, useEffect, useState, type RefObject } from 'react'
 export function useTapTooltip<T extends HTMLElement = HTMLElement>(ref: RefObject<T | null>) {
   const [open, setOpen] = useState(false)
 
+  // While open, Escape closes only this tooltip and is stopped before any surrounding
+  // dialog / panel / menu sees it; focus stays put, so a second Escape closes the
+  // container as usual. Capture phase on window: every container listens for Escape
+  // in the bubble phase (window / document), so this runs first.
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.stopPropagation()
+      setOpen(false)
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [open])
+
   useEffect(() => {
     if (!open) return
     const handleOutside = (e: Event) => {
