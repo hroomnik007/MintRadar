@@ -112,7 +112,7 @@ test.describe('Filters panel — "Show N of M"', () => {
     await showBtn(page).click()
     await expect(page.locator('.filter-panel')).toHaveCount(0)
     await expect(page.locator('.mint-card')).toHaveCount(1)
-    await expect(page.locator('.grid-showing-note')).toHaveText('Showing 1 of 8')
+    await expect(page.locator('.grid-showing-note')).toHaveText(/^Showing 1 of 8( · \d+ hidden: .+)?$/)
     const sp = new URL(page.url()).searchParams
     expect(sp.get('unit')).toBe('usd')
     expect(sp.get('reliability')).toBe('60')

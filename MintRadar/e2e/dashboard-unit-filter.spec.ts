@@ -169,4 +169,107 @@ test.describe('Dashboard unit filter', () => {
     }
     await ctx.close()
   })
+
+  const TIP = 'While a unit is selected, mints whose units are not known yet, or are not SAT, USD or EUR, are hidden.'
+  const tip = (page: Page) => page.locator('.filter-unit-tip')
+  const note = (page: Page) => page.getByTestId('unit-hidden-note')
+
+  test('Unit info icon is focusable and shows the tooltip on keyboard focus and on hover', async ({ page }) => {
+    await setup(page)
+    await page.goto('/')
+    await openPanel(page)
+    await expect(tip(page)).toHaveAttribute('aria-label', TIP)
+    await expect(tip(page)).toHaveAttribute('tabindex', '0')
+    // The label itself stays plain text.
+    expect(await page.locator('#filter-unit-label').evaluate(el => el.tagName)).toBe('SPAN')
+    await page.locator('.filter-btn').focus()
+    await page.keyboard.press('Tab')
+    for (let i = 0; i < 12; i++) {
+      if (await tip(page).evaluate(el => el === document.activeElement)) break
+      await page.keyboard.press('Tab')
+    }
+    await expect(tip(page)).toBeFocused()
+    await expect(page.getByRole('tooltip')).toHaveText(TIP)
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('tooltip')).toHaveCount(0)
+    // Escape also closes the filter panel (existing behaviour); reopen for the hover check.
+    if (!(await page.locator('.filter-panel').isVisible())) await openPanel(page)
+    await tip(page).hover()
+    await expect(page.getByRole('tooltip')).toHaveText(TIP)
+  })
+
+  test('Unit info icon does not move the controls: panel height and Status/Unit left edges unchanged', async ({ page }) => {
+    await setup(page)
+    // Baseline measured before the change (no unit selected): panel height / status x / unit x.
+    const baseline: Record<number, [number, number, number]> = {
+      1440: [56, 157.19, 408.38], 900: [100, 79.19, 330.38], 390: [176, 75.19, 75.19], 360: [176, 75.19, 75.19], 320: [220, 75.19, 75.19],
+    }
+    for (const [w, [h, sx, ux]] of Object.entries(baseline)) {
+      await page.setViewportSize({ width: Number(w), height: 900 })
+      await page.goto('/')
+      await openPanel(page)
+      const r = await page.evaluate(() => {
+        const seg = document.querySelectorAll('.filter-seg')
+        return [document.querySelector('.filter-panel')!.getBoundingClientRect().height, seg[0].getBoundingClientRect().x, seg[1].getBoundingClientRect().x]
+      })
+      expect(r[0]).toBe(h)
+      expect(r[1]).toBeCloseTo(sx, 1)
+      expect(r[2]).toBeCloseTo(ux, 1)
+    }
+  })
+
+  test('footer note: only with a unit selected and a non-zero count, with the right number and wording', async ({ page }) => {
+    await setup(page)
+    // No unit: no note.
+    await page.goto('/')
+    await expect(cards(page)).toHaveCount(8)
+    await expect(note(page)).toHaveCount(0)
+    // sat: India (null) + Golf (msat) = 2; USD-only/EUR-only mints are ordinary filtering, not counted.
+    await page.goto('/?unit=sat')
+    await expect(cards(page)).toHaveCount(3)
+    await expect(note(page)).toHaveText('· 2 hidden: units unknown or other')
+    await expect(page.locator('.grid-showing-note')).toContainText('Showing 3 of 8')
+    // Only unknown-unit mints hidden.
+    await page.route('**/api/mints/known', r => r.fulfill({ json: mints.filter(x => x.name !== 'Golf Mint') }))
+    await page.goto('/?unit=sat,usd,eur')
+    await expect(note(page)).toHaveText('· 1 hidden: units unknown')
+    // Only other-unit mints hidden.
+    await page.route('**/api/mints/known', r => r.fulfill({ json: mints.filter(x => x.name !== 'India Mint') }))
+    await page.goto('/?unit=sat,usd,eur')
+    await expect(note(page)).toHaveText('· 1 hidden: other units')
+    // Nothing excluded for this reason: no note.
+    await page.route('**/api/mints/known', r => r.fulfill({ json: mints.filter(x => x.name !== 'India Mint' && x.name !== 'Golf Mint') }))
+    await page.goto('/?unit=sat')
+    await expect(cards(page)).toHaveCount(3)
+    await expect(note(page)).toHaveCount(0)
+  })
+
+  test('footer note ignores mints hidden by Status / Reliability and by hide-test-mints', async ({ page }) => {
+    await setup(page)
+    await page.route('**/api/mints/known', r => r.fulfill({ json: [
+      ...mints,
+      mk('Offl', null, 50, { online: false }),   // unknown units but offline → already hidden by Status
+      mk('Lowrel', ['msat'], 5),                 // other units but under the Reliability threshold
+    ] }))
+    await page.goto('/?unit=sat&reliability=60')
+    await expect(note(page)).toHaveText('· 2 hidden: units unknown or other')
+  })
+
+  for (const width of [320, 360, 390, 768, 900, 1100, 1440, 1920]) {
+    test(`panel and footer note have no horizontal overflow at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 })
+      await setup(page)
+      await page.goto('/?unit=sat')
+      await expect(note(page)).toBeVisible()
+      await openPanel(page)
+      await page.locator('.filter-btn').focus()
+      for (let i = 0; i < 12 && !(await tip(page).evaluate(el => el === document.activeElement)); i++) await page.keyboard.press('Tab')
+      await expect(page.getByRole('tooltip')).toBeVisible()
+      const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }))
+      expect(o.sw).toBeLessThanOrEqual(o.cw)
+      const pop = (await page.getByRole('tooltip').boundingBox())!
+      expect(pop.x).toBeGreaterThanOrEqual(0)
+      expect(pop.x + pop.width).toBeLessThanOrEqual(width)
+    })
+  }
 })

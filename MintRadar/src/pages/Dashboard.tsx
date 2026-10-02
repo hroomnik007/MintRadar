@@ -21,7 +21,8 @@ import { listReliabilityScore, compareReliabilityThenRating } from '@/utils/reli
 import { isTestMint } from '@/constants/testMints'
 import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolForStatus } from '@/utils/mintCounts'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
-import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, type UnitFilterValue } from '@/utils/unitFilter'
+import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
+import { InfoTooltip } from '@/components/InfoTooltip'
 import './Dashboard.css'
 
 // Historical trend charts pull in Recharts (~380 kB chunk) — lazy-load so
@@ -172,6 +173,8 @@ function applyFilters(
   })
 }
 
+const UNIT_FILTER_TOOLTIP = 'While a unit is selected, mints whose units are not known yet, or are not SAT, USD or EUR, are hidden.'
+
 function countActiveFilters(f: FilterState): number {
   return [
     // 'all' widens the view (no status filter) so it isn't "active"; only an
@@ -274,12 +277,29 @@ function SkeletonCard() {
   )
 }
 
+// Muted suffix on the "Showing X of Y" line: how many mints the active Unit filter hides because
+// their units are unknown / not SAT, USD or EUR. Counts only mints the other filters let through and
+// that match the same text search as the grid, so it never contradicts "Showing X".
+function UnitHiddenNote({ excluded, selected, search }: { excluded: KnownMint[]; selected: UnitFilterValue[]; search: string }) {
+  const note = useMemo(() => {
+    if (selected.length === 0) return null
+    const q = search.toLowerCase()
+    const pool = q
+      ? excluded.filter(m => getHostname(m.url).toLowerCase().includes(q) || (m.name ?? getHostname(m.url)).toLowerCase().includes(q))
+      : excluded
+    return unitHiddenNote(countUnitHidden(pool, selected))
+  }, [excluded, selected, search])
+  return note ? <span className="grid-unit-hidden-note" data-testid="unit-hidden-note"> · {note}</span> : null
+}
+
 function MintListView({
   mints,
   search,
   sortBy,
   sortDir,
   totalAll,
+  unitExcluded = EMPTY_MINTS,
+  unitSelected = EMPTY_UNITS,
   duplicateDisplayNames = EMPTY_DUPLICATE_NAMES,
 }: {
   mints: KnownMint[]
@@ -287,6 +307,8 @@ function MintListView({
   sortBy: 'name' | 'latency' | 'rating' | 'reliability' | 'reviewCount'
   sortDir: 'asc' | 'desc'
   totalAll?: number
+  unitExcluded?: KnownMint[]
+  unitSelected?: UnitFilterValue[]
   duplicateDisplayNames?: ReadonlySet<string> | undefined
 }) {
   const navigate = useNavigate()
@@ -378,12 +400,15 @@ function MintListView({
       </div>
       <div className="grid-showing-note" style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center', marginTop: 16, fontFamily: 'var(--font-mono)' }}>
         Showing {sortedFiltered.length} of {totalAll || sortedFiltered.length}
+        <UnitHiddenNote excluded={unitExcluded} selected={unitSelected} search={search} />
       </div>
     </>
   )
 }
 
 const EMPTY_PUBKEY_GROUPS: Map<string, string[]> = new Map()
+const EMPTY_MINTS: KnownMint[] = []
+const EMPTY_UNITS: UnitFilterValue[] = []
 const EMPTY_DUPLICATE_NAMES: ReadonlySet<string> = new Set()
 
 function MintGrid({
@@ -393,6 +418,8 @@ function MintGrid({
   sortDir,
   onCompare,
   totalAll,
+  unitExcluded = EMPTY_MINTS,
+  unitSelected = EMPTY_UNITS,
   pubkeyGroups = EMPTY_PUBKEY_GROUPS,
   duplicateDisplayNames = EMPTY_DUPLICATE_NAMES,
 }: {
@@ -402,6 +429,8 @@ function MintGrid({
   sortDir: 'asc' | 'desc'
   onCompare?: (url: string) => void
   totalAll?: number
+  unitExcluded?: KnownMint[]
+  unitSelected?: UnitFilterValue[]
   pubkeyGroups?: Map<string, string[]>
   duplicateDisplayNames?: ReadonlySet<string> | undefined
 }) {
@@ -455,6 +484,7 @@ function MintGrid({
       </div>
       <div className="grid-showing-note" style={{fontSize:13,color:'var(--text3)',textAlign:'center',marginTop:16,fontFamily:'var(--font-mono)'}}>
         Showing {sortedFiltered.length} of {totalAll || sortedFiltered.length}
+        <UnitHiddenNote excluded={unitExcluded} selected={unitSelected} search={search} />
       </div>
     </>
   )
@@ -640,6 +670,12 @@ export default function Dashboard() {
       showDegraded,
       searching: search.trim().length > 0,
     })
+  }, [allMints, activeFilters, showDegraded, search])
+  // Mints that pass every filter except Unit (only needed for the footer note while a unit is selected).
+  const unitExcluded = useMemo(() => {
+    if (activeFilters.units.length === 0) return EMPTY_MINTS
+    const rest = applyFilters(allMints, { ...activeFilters, units: [] }, { showDegraded, searching: search.trim().length > 0 })
+    return rest.filter(m => !mintMatchesUnits(m, activeFilters.units))
   }, [allMints, activeFilters, showDegraded, search])
   const activeFilterCount = countActiveFilters(activeFilters)
 
@@ -1169,7 +1205,17 @@ export default function Dashboard() {
             </div>
 
             <div className="filter-field">
-              <span className="filter-field-label" id="filter-unit-label">Unit</span>
+              <span className="filter-field-labelcell">
+                <span className="filter-field-label" id="filter-unit-label">Unit</span>
+                <InfoTooltip
+                  className="filter-unit-tip"
+                  iconSize={12}
+                  width={240}
+                  openOnFocus
+                  label={UNIT_FILTER_TOOLTIP}
+                  text={UNIT_FILTER_TOOLTIP}
+                />
+              </span>
               <div className="filter-seg" role="group" aria-labelledby="filter-unit-label">
                 {UNIT_FILTER_OPTIONS.map(u => {
                   const on = pendingFilters.units.includes(u)
@@ -1262,6 +1308,8 @@ export default function Dashboard() {
               sortBy={sortBy}
               sortDir={sortDir}
               totalAll={knownTotal}
+              unitExcluded={unitExcluded}
+              unitSelected={activeFilters.units}
               duplicateDisplayNames={duplicateDisplayNames}
             />
           ) : (
@@ -1272,6 +1320,8 @@ export default function Dashboard() {
               sortDir={sortDir}
               onCompare={openComparePicker}
               totalAll={knownTotal}
+              unitExcluded={unitExcluded}
+              unitSelected={activeFilters.units}
               pubkeyGroups={pubkeyGroups}
               duplicateDisplayNames={duplicateDisplayNames}
             />

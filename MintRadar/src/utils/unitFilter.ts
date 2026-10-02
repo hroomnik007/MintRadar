@@ -38,3 +38,30 @@ export function mintMatchesUnits(mint: { units?: string[] | null }, selected: re
   }
   return false
 }
+
+export type UnitHiddenCounts = { unknown: number; other: number }
+
+/**
+ * Of mints that already passed every other filter, how many does the unit filter drop?
+ * "unknown" = units null/empty (not probed yet); "other" = units known but none of them is
+ * SAT/USD/EUR (e.g. msat), so no choice in the control could ever show that mint. A mint that is
+ * merely on another of the three (USD while only SAT is selected) is ordinary filtering, not counted.
+ * Zero for an empty selection.
+ */
+export function countUnitHidden(mints: readonly { units?: string[] | null }[], selected: readonly UnitFilterValue[]): UnitHiddenCounts {
+  const counts: UnitHiddenCounts = { unknown: 0, other: 0 }
+  if (selected.length === 0) return counts
+  for (const m of mints) {
+    if (mintMatchesUnits(m, selected)) continue
+    if (!m.units || m.units.length === 0) counts.unknown++
+    else if (!m.units.some(u => typeof u === 'string' && isUnitFilterValue(u.trim().toLowerCase()))) counts.other++
+  }
+  return counts
+}
+
+/** Footer note text, or null when nothing is hidden for this reason. */
+export function unitHiddenNote({ unknown, other }: UnitHiddenCounts): string | null {
+  const n = unknown + other
+  if (n === 0) return null
+  return `${n} hidden: ${other === 0 ? 'units unknown' : unknown === 0 ? 'other units' : 'units unknown or other'}`
+}

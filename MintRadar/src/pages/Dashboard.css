@@ -1347,6 +1347,28 @@
   user-select: none;
 }
 
+/* Unit label + info icon share one cell of the same fixed width as the Status label, so the icon
+   (in the spare ~2 characters after "UNIT") never moves the segmented control. */
+.filter-field-labelcell {
+  flex: 0 0 auto;
+  width: calc(6 * (1ch + 0.07em));
+  display: flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.filter-field-labelcell .filter-field-label { flex: 0 0 auto; }
+/* Pull the icon back into the label's empty tail ("UNIT" is 4 of the 6 characters of width). */
+.filter-unit-tip { flex: 0 0 auto; margin-left: calc(3px - 2 * (1ch + 0.07em)); }
+.filter-unit-tip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+/* Anchor the popup to the icon's left side (centred, it would run off a 320px screen). */
+.filter-unit-tip .info-tooltip-pop { left: -27px; transform: none; max-width: calc(100vw - 32px); }
+/* Touch: 44px hit area through an invisible ::before (the icon itself stays 12px). */
+@media (pointer: coarse), (max-width: 600px) {
+  .filter-unit-tip::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
+}
+.grid-unit-hidden-note { opacity: 0.85; }
+
 /* Segmented control — a row of buttons, same visual language as .wizard-unit-seg (Tools):
    36px visible, 44px touch target through an invisible ::before. */
 .filter-seg {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mintMatchesUnits, parseUnitParam, buildUnitParam, normalizeUnitSelection } from '@/utils/unitFilter'
+import { mintMatchesUnits, parseUnitParam, buildUnitParam, normalizeUnitSelection, countUnitHidden, unitHiddenNote } from '@/utils/unitFilter'
 
 const m = (units: string[] | null) => ({ units })
 
@@ -60,5 +60,22 @@ describe('parseUnitParam / buildUnitParam', () => {
   it('builds a lowercase comma-separated value', () => {
     expect(buildUnitParam(['sat', 'usd'])).toBe('sat,usd')
     expect(buildUnitParam(['eur', 'sat'])).toBe('sat,eur')
+  })
+})
+
+describe('countUnitHidden / unitHiddenNote', () => {
+  const pool = [m(['sat']), m(['usd']), m(['msat']), m(['MSAT', 'auth']), m(null), m([]), m(['sat', 'msat'])]
+  it('counts unknown (null/empty) and other (no SAT/USD/EUR at all); other-of-three is plain filtering', () => {
+    expect(countUnitHidden(pool, ['sat'])).toEqual({ unknown: 2, other: 2 })
+    expect(countUnitHidden(pool, ['sat', 'usd', 'eur'])).toEqual({ unknown: 2, other: 2 })
+  })
+  it('is zero with no unit selected', () => {
+    expect(countUnitHidden(pool, [])).toEqual({ unknown: 0, other: 0 })
+  })
+  it('wording follows the real cause', () => {
+    expect(unitHiddenNote({ unknown: 16, other: 0 })).toBe('16 hidden: units unknown')
+    expect(unitHiddenNote({ unknown: 0, other: 3 })).toBe('3 hidden: other units')
+    expect(unitHiddenNote({ unknown: 2, other: 1 })).toBe('3 hidden: units unknown or other')
+    expect(unitHiddenNote({ unknown: 0, other: 0 })).toBeNull()
   })
 })
