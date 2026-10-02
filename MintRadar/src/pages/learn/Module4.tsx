@@ -8,7 +8,7 @@ export default function Module4() {
 
       <h3>Choosing your first wallet</h3>
       <p>
-        Cashu has several solid wallet options — which one to start with mostly comes down to browser vs. native app, not one being "better." If you're new to Cashu, <strong><a href="https://cashu.me" target="_blank" rel="noopener noreferrer">cashu.me</a></strong> is a good first stop: it runs in any browser with no installation, and can be saved to your phone's home screen like an app (a "Progressive Web App").
+        Cashu has several solid wallet options — which one to start with mostly comes down to browser vs. native app, not one being "better." If you're new to Cashu, <strong><a href="https://wallet.cashu.me" target="_blank" rel="noopener noreferrer">cashu.me</a></strong> is a good first stop: it runs in any browser with no installation, and can be saved to your phone's home screen like an app (a "Progressive Web App").
       </p>
       <p>
         If you'd rather have a native mobile app from the start, <strong><a href="https://minibits.cash" target="_blank" rel="noopener noreferrer">Minibits</a></strong> (Android/iOS) is an established, actively maintained wallet — a genuine starting point, not just a fallback if cashu.me doesn't suit you.

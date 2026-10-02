@@ -51,7 +51,7 @@ export const WALLETS: WalletInfo[] = [
     name: 'Cashu.me',
     platforms: ['Web'],
     blurb: 'The reference browser wallet — no install, good for trying Cashu and testing a new mint quickly.',
-    url: 'https://cashu.me',
+    url: 'https://wallet.cashu.me',
   },
   {
     name: 'Agicash',

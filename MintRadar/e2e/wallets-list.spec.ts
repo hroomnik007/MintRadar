@@ -46,3 +46,21 @@ test('platform label is not duplicated (icon on the left, chips on the right onl
   expect(androidCount).toBe(1)
   await expect(card.locator('.wallet-platform-tag', { hasText: 'Android' })).toHaveCount(1)
 })
+
+// cashu.me itself is only the landing page of the native app; the browser wallet is wallet.cashu.me.
+test('the Cashu.me wallet card and Learn Module 4 link to the web wallet, wallet.cashu.me', async ({ page }) => {
+  await mockRelays(page)
+  await installApiMocks(page)
+  await page.goto('/wallets')
+  await page.waitForSelector('.wallet-card')
+
+  const card = page.locator('.wallet-card', { hasText: 'Cashu.me' })
+  await expect(card).toHaveCount(1)
+  await expect(card).toHaveAttribute('href', 'https://wallet.cashu.me')
+  await expect(card.locator('.wallet-platform-tag')).toHaveText(['Web'])
+
+  await page.goto('/learn/getting-started-with-a-wallet')
+  const link = page.locator('.learn-content a[href*="cashu.me"]')
+  await expect(link).toHaveCount(1)
+  await expect(link).toHaveAttribute('href', 'https://wallet.cashu.me')
+})

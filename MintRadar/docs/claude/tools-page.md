@@ -149,13 +149,21 @@ and the test was never updated to match.
 **Privacy, exactly (this is what the UI line under the textarea says and what the code does):**
 the token is decoded in the browser and never sent to MintRadar's servers — it lives only in React
 state (no storage API, no query cache, no logging; cashu-ts runs with its NullLogger). Two things
-do leave the browser, and the copy must not be softened past them: (1) **Inspect & Verify**
+do leave the browser or are handed on, and the copy must not be softened past them: (1) **Inspect & Verify**
 contacts the mint named in the token — `GET /v1/info`, `/v1/keysets`, `/v1/keys`, none carrying
 token data — and **Check if spent** repeats those and adds `POST /v1/checkstate` with each proof's
-`Y = hashToCurve(secret)` (never the secret); (2) **Open in cashu.me / Redeem to Lightning** are
-plain links to `wallet.cashu.me/?token=…` / `redeem.cashu.me/?token=…`, so the **full token goes to
-cashu.me's servers** in the request URL (`rel="noreferrer"` + nginx `Referrer-Policy: no-referrer`
-only keep it out of the Referer header). A pasted token can also name any public https host, so
+`Y = hashToCurve(secret)` (never the secret); (2) **Open in cashu.me** links to
+`https://wallet.cashu.me/#token=<raw token>` — the token is in the URL **fragment**, which browsers
+never send to a server, so it is not in any query string; but the wallet leaves it in the address bar
+(it does not clear it) and so in browser history. wallet.cashu.me reads the fragment verbatim
+(`hash.split("token=")[1]` in WalletPage.vue, no URL-decoding), hence the raw token, not
+`encodeURIComponent`. **Redeem to Lightning** links to the bare `https://redeem.cashu.me/` — no token,
+no query: redeem.cashu.me only pre-fills the token when `lightning`/`ln`/`to` is also present, so a
+`?token=` was sent for nothing; the user pastes the token there (hint "Paste your token on the redeem
+page." under the action row, hidden when Redeem is disabled). `rel="noopener noreferrer"` + nginx
+`Referrer-Policy: no-referrer` keep the page URL out of the Referer header. Verified live 2026-10-02
+with a fake token: `/#token=…` opens "Receive Ecash" with the token in the field, `redeem.cashu.me/`
+loads with empty fields. A pasted token can also name any public https host, so
 verifying can make the browser contact a host the token's creator chose (`assertProbeableMintUrl`
 blocks only non-public hosts).
 
@@ -169,12 +177,12 @@ blocks only non-public hosts).
 - **Spent check** — `classifySpentCheck()`: all-spent (red), all-unspent (green), **all-pending
   (neutral, "the mint is still processing")**, else partial (copper).
 - **Input** — `stripTokenWhitespace()` removes ALL whitespace (not just the ends) before parsing
-  and before the two `?token=` links are built (link format unchanged).
+  and before the "Open in cashu.me" `#token=` link is built.
 - **UI** — emoji replaced by lucide icons; result copy in the sans font; empty input shows
   "Paste a token first". E2E for the signature states runs real DLEQ proofs against an in-page
   fake mint (`makeDleqMint` / `serveMintInPage` in `e2e/fixtures/mocks.ts`).
 - **Guided action flow (2026-09-29)** — order: Check row → its caption or result → action row
-  (Redeem to Lightning, View Mint Detail, Open in cashu.me). The old line under the actions ("These open cashu.me with your full token in the link.") was removed 2026-09-29; the privacy line under the textarea now reads "Decoded in your browser. MintRadar's servers never see your token. Checking contacts the mint named in the token, and the cashu.me buttons send the full token to cashu.me." Exactly one action
+  (Redeem to Lightning, View Mint Detail, Open in cashu.me). The old line under the actions ("These open cashu.me with your full token in the link.") was removed 2026-09-29; the privacy line under the textarea was last reworded 2026-10-02 to the `#fragment` / bare-redeem-link wording above ("Decoded in your browser, so MintRadar's servers never see your token; checking contacts the mint named in it. "Open in cashu.me" puts the token in the link's #fragment, … "Redeem to Lightning" opens the redeem page without the token, so you paste it there.") Exactly one action
   carries `.token-action-accent` at a time, decided by the pure `tokenActionState(spent)`
   (`cashuToken.ts`, unit-tested per state): no usable result yet / error / unreachable →
   **Check if spent**; all unspent → **Redeem**; partial and all-pending → nobody accented, Redeem
@@ -184,7 +192,7 @@ blocks only non-public hosts).
   settled (any result, errors included) the check button reads **"Check again"**; before the first
   check, and after editing the textarea, it reads "Check if spent". Editing the textarea resets to the initial state.
   All actions share `.token-action-btn` (quiet: 0.5px neutral border, `--text2`); the two links
-  stay `<a>` with unchanged href/target/rel/`?token=`. Desktop: one wrapping row; ≤700px: Redeem
+  stay `<a>` with unchanged target/rel (hrefs: see the privacy paragraph above). Desktop: one wrapping row; ≤700px: Redeem
   full width on its own row, View Mint Detail + Open in cashu.me side by side in two equal columns
   below it (labels may wrap inside the button; at 360px both fit on one line), 44px min height. A
   lone second-row button (all-spent, or untracked mint) takes the full width. The caption "Asks the mint. It will see that you

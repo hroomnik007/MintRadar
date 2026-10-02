@@ -41,10 +41,38 @@ test.describe('Tools', () => {
     await page.locator('.token-input').fill(token)
     await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
 
+    // The wallet gets the raw token in the #fragment (it reads it verbatim, no URL-decoding);
+    // the redeem page is opened bare, the user pastes the token there.
     const wallet = page.getByRole('link', { name: /Open in cashu.me/ })
-    await expect(wallet).toHaveAttribute('href', new RegExp(`^https://wallet\\.cashu\\.me/\\?token=${token}$`))
+    await expect(wallet).toHaveAttribute('href', `https://wallet.cashu.me/#token=${token}`)
+    expect(new URL((await wallet.getAttribute('href'))!).search).toBe('')
     const redeem = page.getByRole('link', { name: /Redeem to Lightning/ })
-    await expect(redeem).toHaveAttribute('href', new RegExp(`^https://redeem\\.cashu\\.me/\\?token=${token}$`))
+    await expect(redeem).toHaveAttribute('href', 'https://redeem.cashu.me/')
+    await expect(redeem).toHaveAttribute('title', 'Opens the Cashu redeem page. Paste your token there.')
+    await expect(page.getByText('Paste your token on the redeem page.')).toBeVisible()
+  })
+
+  test('the decoded token appears in the #fragment of exactly one link and in no query string', async ({ page }) => {
+    const token = makeCashuTokenV4(MOCK_MINTS[0]!.url, [21, 8])
+
+    await page.locator('.token-input').fill(token)
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+    await expect(page.locator('.token-result-grid')).toBeVisible()
+
+    const hrefs = await page.locator('a[href]').evaluateAll(els => els.map(e => e.getAttribute('href') ?? ''))
+    const parsed = hrefs.map(h => new URL(h, 'https://mintradar.test'))
+    // No link carries the token in its query string or path ...
+    for (const u of parsed) {
+      expect(u.search).not.toContain(token)
+      expect(decodeURIComponent(u.search)).not.toContain(token)
+      expect(u.pathname).not.toContain(token)
+    }
+    // ... and exactly one link carries it in its hash: Open in cashu.me.
+    const withToken = parsed.filter(u => u.hash.includes(token))
+    expect(withToken).toHaveLength(1)
+    expect(withToken[0]!.origin + withToken[0]!.pathname + withToken[0]!.hash).toBe(`https://wallet.cashu.me/#token=${token}`)
+    // The only redeem link is the bare one.
+    expect(hrefs.filter(h => h.includes('redeem.cashu.me'))).toEqual(['https://redeem.cashu.me/'])
   })
 
   test('Token Inspector renders a fiat amount in its minor unit, not as whole currency', async ({ page }) => {
@@ -291,9 +319,17 @@ test.describe('Tools', () => {
   })
 
   test('Token Inspector states exactly what stays local and what contacts the mint', async ({ page }) => {
-    await expect(page.locator('.token-note').first()).toHaveText(
-      "Decoded in your browser. MintRadar's servers never see your token. Checking contacts the mint named in the token, and the cashu.me buttons send the full token to cashu.me."
+    const note = page.locator('.token-note').first()
+    await expect(note).toHaveText(
+      `Decoded in your browser, so MintRadar's servers never see your token; checking contacts the mint named in it. "Open in cashu.me" puts the token in the link's #fragment, which browsers don't send to servers, though the wallet may leave it in the address bar and browser history. "Redeem to Lightning" opens the redeem page without the token, so you paste it there.`
     )
+    // The four facts, pinned individually so a rewrite cannot quietly drop one.
+    await expect(note).toContainText("MintRadar's servers never see your token")
+    await expect(note).toContainText('contacts the mint named in it')
+    await expect(note).toContainText("#fragment, which browsers don't send to servers")
+    await expect(note).toContainText('address bar and browser history')
+    await expect(note).toContainText('opens the redeem page without the token, so you paste it there')
+    await expect(note).not.toContainText('send the full token to cashu.me')
     // The separate line under the action buttons is gone — its content lives in the line above.
     await expect(page.getByText('These open cashu.me with your full token in the link.')).toHaveCount(0)
     await expect(page.getByPlaceholder('cashuB… or cashuA…')).toBeVisible()
@@ -319,9 +355,9 @@ test.describe('Tools', () => {
 
     await expect(page.locator('.token-result-grid')).toContainText('Alpha Mint')
     await expect(page.getByRole('link', { name: /Open in cashu.me/ }))
-      .toHaveAttribute('href', `https://wallet.cashu.me/?token=${encodeURIComponent(token)}`)
+      .toHaveAttribute('href', `https://wallet.cashu.me/#token=${token}`)
     await expect(page.getByRole('link', { name: /Redeem to Lightning/ }))
-      .toHaveAttribute('href', `https://redeem.cashu.me/?token=${encodeURIComponent(token)}`)
+      .toHaveAttribute('href', 'https://redeem.cashu.me/')
   })
 
   test('Check if spent explains itself under the button and is accented; the other actions are quiet', async ({ page }) => {

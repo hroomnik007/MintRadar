@@ -237,7 +237,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
         rows={3}
         spellCheck={false}
       />
-      <div className="token-note">Decoded in your browser. MintRadar's servers never see your token. Checking contacts the mint named in the token, and the cashu.me buttons send the full token to cashu.me.</div>
+      <div className="token-note">Decoded in your browser, so MintRadar's servers never see your token; checking contacts the mint named in it. "Open in cashu.me" puts the token in the link's #fragment, which browsers don't send to servers, though the wallet may leave it in the address bar and browser history. "Redeem to Lightning" opens the redeem page without the token, so you paste it there.</div>
 
       <button
         type="button"
@@ -413,12 +413,13 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
           </div>
 
           <div className="token-actions">
-            {/* Both deep links were verified against the tools' own sources, not guessed:
-                wallet.cashu.me reads `?token=` in WalletPage.vue's created() hook
-                (cashubtc/cashu.me @ b51fee3), and redeem.cashu.me reads the same `?token=`
-                param in its client bundle. rel="noopener noreferrer" keeps the token out of the
-                Referer header on the way there. The token itself IS in the link, so it
-                reaches cashu.me's servers — the privacy line under the textarea says so. */}
+            {/* Verified against the tools' own sources, not guessed. wallet.cashu.me reads
+                `#token=` in WalletPage.vue's created() hook (cashubtc/cashu.me) and takes
+                everything after it verbatim — no URL-decoding — so the raw token goes in the
+                fragment, which browsers never send to a server (it never appears in a query
+                string). redeem.cashu.me only pre-fills the token when `lightning`, `ln` or `to`
+                is also present (cashubtc/cashu-redeem), so that link carries nothing and the
+                user pastes the token there. The privacy line under the textarea says so. */}
             {actions.redeemDisabled ? (
               <span className="token-action-btn" aria-disabled="true">
                 <Zap size={13} aria-hidden="true" /> Redeem to Lightning
@@ -426,10 +427,10 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             ) : (
               <a
                 className={`token-action-btn${actions.accent === 'redeem' ? ' token-action-accent' : ''}`}
-                href={`https://redeem.cashu.me/?token=${encodeURIComponent(cleanToken)}`}
+                href="https://redeem.cashu.me/"
                 target="_blank"
                 rel="noopener noreferrer"
-                title="Opens cashu.me melt flow"
+                title="Opens the Cashu redeem page. Paste your token there."
               >
                 <Zap size={13} aria-hidden="true" /> Redeem to Lightning
               </a>
@@ -442,7 +443,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             {actions.showOpenInWallet && (
               <a
                 className="token-action-btn"
-                href={`https://wallet.cashu.me/?token=${encodeURIComponent(cleanToken)}`}
+                href={`https://wallet.cashu.me/#token=${cleanToken}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -450,6 +451,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
               </a>
             )}
           </div>
+          {!actions.redeemDisabled && <div className="token-note">Paste your token on the redeem page.</div>}
           {actions.note === 'nothing-left' && <div className="token-note">Nothing left to redeem.</div>}
         </>
       )}

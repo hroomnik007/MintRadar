@@ -119,7 +119,7 @@ Sharing a mint page link on Twitter/X, Discord, Telegram, Slack, or WhatsApp sho
 - **No cookies**
 - Fonts are self-hosted — no requests to Google Fonts or any external font CDN
 - Nostr private keys **never leave your browser** and are never stored or transmitted to the backend
-- Token Inspector: a pasted token is decoded in your browser and never sent to MintRadar's servers. Verifying and "Check if spent" contact the mint named in the token; the "Open in cashu.me" and "Redeem to Lightning" links carry the full token to cashu.me
+- Token Inspector: a pasted token is decoded in your browser and never sent to MintRadar's servers. Verifying and "Check if spent" contact the mint named in the token; "Open in cashu.me" puts the token in the link's #fragment, which browsers do not send to servers, and "Redeem to Lightning" opens the redeem page without the token
 - Watchlist data lives in your browser (IndexedDB) and optionally encrypted on Nostr relays under your own key; a mint's URL is additionally sent to MintRadar's backend only while you have notifications on for that mint, so it knows what to monitor for your downtime/recovery DMs
 
 ### 🔁 Automatic Backups
