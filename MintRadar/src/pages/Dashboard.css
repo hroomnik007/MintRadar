@@ -1555,6 +1555,13 @@
   accent-color: var(--accent);
   cursor: pointer;
 }
+/* Touch: 44px hit area. A range input can't take a ::before, so the input itself grows to 44px
+   and an equal negative margin keeps its layout box at 28px (row/panel heights unchanged); the
+   native track and thumb stay centred, so nothing visible moves. z-index lifts the extra 8px above
+   the neighbouring rows' own 4px ::before touch bands (the slider wins that overlap). */
+@media (pointer: coarse) {
+  .filter-slider { height: 44px; margin-block: -8px; position: relative; z-index: 1; }
+}
 
 .filter-pills {
   display: flex;

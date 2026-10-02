@@ -159,9 +159,15 @@ test.describe('Dashboard unit filter', () => {
       const hit = await chip(page, u).evaluate((el, dy) => {
         const r = el.getBoundingClientRect()
         const x = r.left + r.width / 2
+        // The Reliability slider (44px touch hit area) wins the gap below the Unit row: a point inside its box is its own.
+        const slider = document.querySelector('.filter-slider')!
+        const owns = (e: Element | null, y: number) => {
+          if (e === slider) { const sb = slider.getBoundingClientRect(); return y >= sb.top && y <= sb.bottom }
+          return el.contains(e)
+        }
         return {
           pseudoH: parseFloat(getComputedStyle(el, '::before').height),
-          hit: [document.elementFromPoint(x, r.top - dy), document.elementFromPoint(x, r.bottom + dy)].map(e => el.contains(e)),
+          hit: [r.top - dy, r.bottom + dy].map(y => owns(document.elementFromPoint(x, y), y)),
         }
       }, 3)
       expect(hit.pseudoH).toBeGreaterThanOrEqual(44)

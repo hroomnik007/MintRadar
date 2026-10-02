@@ -216,6 +216,14 @@ test.describe('Filters panel — layout', () => {
     expect(targets).toHaveLength(9)
     for (const t of targets) {
       const r = await t.evaluate(el => {
+        // The Reliability slider (44px hit area, z-index above the neighbouring rows' 4px bands) wins the
+        // gap between itself and the row above/below: a point inside its box counts as theirs to own.
+        const slider = document.querySelector('.filter-slider')!
+        const ownsPoint = (target: Element, px: number, py: number) => {
+          const hit = document.elementFromPoint(px, py)
+          if (hit === slider) { const sb = slider.getBoundingClientRect(); return py >= sb.top && py <= sb.bottom && px >= sb.left && px <= sb.right }
+          return target.contains(hit)
+        }
         const b = el.getBoundingClientRect(), x = b.left + b.width / 2
         const pseudo = getComputedStyle(el, '::before')
         // The invisible ::before is exactly what extends the target: it must be ≥ 44px tall and live
@@ -223,7 +231,7 @@ test.describe('Filters panel — layout', () => {
         // within sub-pixel rounding of the neighbouring row's extension, so it isn't probed).
         return {
           h: b.height, pseudoH: parseFloat(pseudo.height), pseudoContent: pseudo.content,
-          up: el.contains(document.elementFromPoint(x, b.top - 3)), down: el.contains(document.elementFromPoint(x, b.bottom + 3)),
+          up: ownsPoint(el, x, b.top - 3), down: ownsPoint(el, x, b.bottom + 3),
         }
       })
       expect(r.h).toBe(36)
@@ -428,4 +436,83 @@ test.describe('Filters panel — labels versus options', () => {
     const labels = await page.locator('.filter-field-label').evaluateAll(els => els.map(e => e.getBoundingClientRect().width))
     expect(labels[0]).toBeCloseTo(labels[1], 1)
   })
+})
+
+// Reliability slider touch target (2026-10-02): with a coarse pointer the input grows to 44px
+// (equal negative margin keeps its 28px layout box), so panel and row heights stay the same.
+test.describe('Filters panel — Reliability slider touch target', () => {
+  const widths = [1440, 900, 390, 360, 320]
+
+  async function panelMetrics(page: Page) {
+    return page.evaluate(() => {
+      const h = (s: string) => document.querySelector(s)!.getBoundingClientRect().height
+      return { panel: h('.filter-panel'), bar: h('.filter-bar'), rel: h('.filter-rel'), footer: h('.filter-footer') }
+    })
+  }
+
+  for (const w of widths) {
+    test.describe(`touch ${w}px`, () => {
+      test.use({ viewport: { width: w, height: 900 }, hasTouch: true, isMobile: true })
+
+      test('hit area is at least 44px, layout identical to a mouse context', async ({ page, browser }) => {
+        await openPanel(page)
+        expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
+        const slider = page.locator('.filter-slider')
+        const hits = await page.evaluate(() => {
+          const s = document.querySelector('.filter-slider')!
+          const b = s.getBoundingClientRect()
+          const cx = b.left + b.width / 2
+          const cy = b.top + b.height / 2
+          const at = (dy: number) => document.elementFromPoint(cx, cy + dy) === s
+          return { up: at(-20), down: at(20), height: b.height }
+        })
+        expect(hits.up).toBe(true)
+        expect(hits.down).toBe(true)
+        expect(hits.height).toBeGreaterThanOrEqual(44)
+        // The row keeps its 28px layout box
+        expect((await slider.evaluate(e => e.parentElement!.getBoundingClientRect().height))).toBe(28)
+
+        const touchMetrics = await panelMetrics(page)
+        const mouse = await browser.newContext({ viewport: { width: w, height: 900 }, hasTouch: false, isMobile: false })
+        const mousePage = await mouse.newPage()
+        await openPanel(mousePage)
+        expect(await mousePage.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(false)
+        const mouseMetrics = await panelMetrics(mousePage)
+        await mouse.close()
+        expect(touchMetrics).toEqual(mouseMetrics)
+      })
+
+      test('touch drag and tap change the value and the Show N of M count live', async ({ page, context }) => {
+        await openPanel(page)
+        const slider = page.locator('.filter-slider')
+        const box = (await slider.boundingBox())!
+        const cy = box.y + box.height / 2
+        const xAt = (pct: number) => box.x + 8 + (box.width - 16) * (pct / 100)
+        const expected = (min: number) => mints.filter(m => m.reliabilityScore >= min).length
+        const countText = async () => (await showBtn(page).getAttribute('aria-label'))!
+        expect(await countText()).toMatch(/^Show \d+ of \d+ mints$/)
+
+        const cdp = await context.newCDPSession(page)
+        const touch = (type: string, x: number, y: number) =>
+          cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] })
+        // Drag the thumb from 0 to ~80 along the track — the finger starts 18px below the centre line,
+        // i.e. in the extended hit area, outside the 28px layout box.
+        await touch('touchStart', xAt(0), cy + 18)
+        for (let p = 0; p <= 80; p += 10) await touch('touchMove', xAt(p), cy + 18)
+        const live = Number(await slider.inputValue())
+        await touch('touchEnd', 0, 0)
+        expect(live).toBeGreaterThanOrEqual(70)
+        expect(live).toBeLessThanOrEqual(90)
+        await expect(page.locator('.filter-rel strong')).toHaveText(`${live}%`)
+        expect(await countText()).toBe(`Show ${expected(live)} of ${mints.length} mints`)
+
+        // Tap on the track, 18px above the centre line, moves the value back
+        await page.touchscreen.tap(xAt(30), cy - 18)
+        const tapped = Number(await slider.inputValue())
+        expect(tapped).toBeGreaterThanOrEqual(25)
+        expect(tapped).toBeLessThanOrEqual(35)
+        expect(await countText()).toBe(`Show ${expected(tapped)} of ${mints.length} mints`)
+      })
+    })
+  }
 })
