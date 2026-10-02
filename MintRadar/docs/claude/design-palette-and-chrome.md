@@ -25,7 +25,7 @@ the identical value without a second copy drifting out of sync.
 
 `Dashboard.css` (`.stats-bar`, `.dashboard-controls`-adjacent chrome, `.mint-grid`, plus a
 `calc(var(--dash-chrome-max) - var(--page-pad) * 2)` variant for one inner panel that needs the
-box width *without* re-adding the gutters), `Watchlist.css` (`.wl-body-two-col`/`.wl-controls`/
+box width *without* re-adding the gutters), `Watchlist.css` (`.wl-body`/`.wl-controls`/
 `.wl-grid`), `Stats.css` (`.stats-metrics` hero row, `.stats-hero-grid`, `.stats-cards-grid`),
 `Tools.css` (`.tools-grid`), `Learn.css` (index header + card grid) and `LearnModule.css`
 (article pages, so index → module navigation doesn't shift content width), and `Wallets.css`

@@ -345,17 +345,11 @@
 }
 
 
-/* ── Two-column layout ───────────────────────────────────────── */
+/* ── Page body: one full-width column (card grid, then the recommendations section) ── */
 .wl-body {
   display: flex;
   flex-direction: column;
   flex: 1;
-}
-
-.wl-body-two-col {
-  flex-direction: row;
-  align-items: flex-start;
-  gap: var(--page-pad);
   margin-inline: auto;
   max-width: var(--dash-chrome-max);
   width: 100%;
@@ -366,22 +360,6 @@
   flex: 1;
   min-width: 0;
 }
-
-.wl-side-col {
-  width: 380px;
-  flex-shrink: 0;
-  padding: 14px 0;
-  position: sticky;
-  top: 56px;
-  max-height: calc(100vh - 56px);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border2) transparent;
-}
-
-.wl-side-col::-webkit-scrollbar { width: 4px; }
-.wl-side-col::-webkit-scrollbar-track { background: transparent; }
-.wl-side-col::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
 
 .wl-showing {
   font-size: 12px;
@@ -397,6 +375,28 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 16px;
+  margin: 8px 0 16px;
+}
+
+/* Empty state: one slim line (label · NIP-87 badge · text), 44px high. Wraps
+   (and grows) only when the three parts cannot share a line on a narrow phone. */
+.wl-rec-slim {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 6px 16px;
+}
+.wl-rec-slim .wl-rec-panel-header {
+  margin-bottom: 0;
+  gap: 10px;
+}
+.wl-rec-slim-text {
+  font-size: 11.5px;
+  color: var(--text3);
+  font-family: var(--font-mono);
 }
 
 .wl-rec-panel-header {
@@ -434,51 +434,11 @@
   margin-bottom: 14px;
 }
 
-.wl-recs-loading {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.wl-rec-skeleton {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px;
-  background: var(--bg3);
-  border-radius: 8px;
-}
-
-.wl-rec-sk-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: var(--border);
-  flex-shrink: 0;
-  animation: sk-pulse 1.4s ease-in-out infinite;
-}
-
-.wl-rec-sk-lines { flex: 1; }
-.wl-rec-sk-line {
-  height: 9px;
-  background: var(--border);
-  border-radius: 4px;
-  animation: sk-pulse 1.4s ease-in-out infinite;
-}
-
-.wl-recs-empty {
-  font-size: 11px;
-  color: var(--text3);
-  font-family: var(--font-mono);
-  padding: 20px 0;
-  text-align: center;
-}
-
 .wl-recs-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 300px));
+  justify-content: start;
+  gap: 16px;
   margin-top: 10px;
 }
 
@@ -614,16 +574,9 @@
 .wl-rec-watch-btn:hover { background: var(--accent-dim); }
 
 /* ── Responsive ─────────────────────────────────────────────── */
-@media (max-width: 900px) {
-  .wl-body-two-col {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .wl-side-col {
-    width: 100%;
-    padding: 0 0 var(--page-pad);
-    position: static;
-    max-height: none;
+@media (max-width: 600px) {
+  .wl-recs-list {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 }

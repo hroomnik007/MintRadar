@@ -67,7 +67,7 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
 }) {
   const navigate = useNavigate()
   const addMint = useWatchlistStore(s => s.addMint)
-  const { data, isLoading } = useFollowRecommendations(pubkey)
+  const { data, isLoading, isError } = useFollowRecommendations(pubkey)
 
   const knownMap = useMemo(() => {
     const m = new Map<string, KnownMint>()
@@ -121,30 +121,25 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
 
   const followCount = data?.followCount ?? 0
 
+  // Loading and load errors render nothing (no flash of the empty line, no
+  // error chrome). The section always sits below the card grid, so the grid
+  // never moves with this data.
+  if (isLoading || isError) return null
+
+  const isEmpty = filteredRecs.length === 0
+
   return (
-    <div className="wl-rec-panel">
+    <section className={`wl-rec-panel${isEmpty ? ' wl-rec-slim' : ''}`} aria-label="Recommended by follows">
       <div className="wl-rec-panel-header">
-        <span className="wl-rec-panel-title">Recommended by Follows</span>
+        <span className="wl-rec-panel-title">Recommended by follows</span>
         <span className="wl-rec-panel-badge">NIP-87</span>
       </div>
-      {!isLoading && filteredRecs.length > 0 && (
+      {!isEmpty && (
         <div className="wl-rec-panel-subheader">{filteredRecs.length} mints · from {followCount} follows</div>
       )}
 
-      {isLoading ? (
-        <div className="wl-recs-loading">
-          {Array.from({ length: 3 }, (_, i) => (
-            <div key={i} className="wl-rec-skeleton">
-              <div className="wl-rec-sk-avatar" />
-              <div className="wl-rec-sk-lines">
-                <div className="wl-rec-sk-line" style={{ width: '55%' }} />
-                <div className="wl-rec-sk-line" style={{ width: '35%', marginTop: 5 }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : filteredRecs.length === 0 ? (
-        <div className="wl-recs-empty">No recommendations from your follows yet</div>
+      {isEmpty ? (
+        <span className="wl-rec-slim-text">None from your follows yet</span>
       ) : (
         <div className="wl-recs-list">
           {filteredRecs.map(({ url, recommenders }) => {
@@ -195,7 +190,7 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
           })}
         </div>
       )}
-    </div>
+    </section>
   )
 }
 
@@ -308,7 +303,7 @@ export default function Watchlist() {
   return (
     <div className="watchlist-page">
       <h1 className="sr-only">Your Cashu Mints Watchlist</h1>
-      <div className="wl-body wl-body-two-col">
+      <div className="wl-body">
         <div className="wl-main-col">
           {syncStatus === 'error' && (
             <div className="wl-sync-error-banner" role="status">
@@ -356,9 +351,6 @@ export default function Watchlist() {
               )}
             </>
           )}
-        </div>
-
-        <div className="wl-side-col">
           <FollowRecommendations pubkey={profile.pubkey} watchlistUrls={mints} knownMintsData={knownMintsData} />
         </div>
 
