@@ -451,7 +451,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                   <div className="cmp-mobile-row">
                     <span className="cmp-mobile-lbl">Version</span>
                     <span className="cmp-mobile-val">
-                      <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text)', whiteSpace: 'nowrap' }}>{mint.version ?? '—'}</span>
+                      <span title={mint.version ?? undefined} style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text)', whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{mint.version ?? '—'}</span>
                       {d.isOutdated && (
                         <span style={{ fontSize: 10, color: 'var(--red)', background: 'var(--red-soft)', border: '0.5px solid var(--red-soft-strong)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>Outdated</span>
                       )}
@@ -657,7 +657,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             const d = allData[i]!
             return (
               <div key={mint.url} className="cmp-val">
-                <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text)', whiteSpace: 'nowrap' }}>{mint.version ?? '—'}</span>
+                <span title={mint.version ?? undefined} style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text)', whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{mint.version ?? '—'}</span>
                 {d.isOutdated && (
                   <span style={{ marginLeft: 5, fontSize: 10, color: 'var(--red)', background: 'var(--red-soft)', border: '0.5px solid var(--red-soft-strong)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>Outdated</span>
                 )}

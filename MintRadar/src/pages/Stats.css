@@ -523,6 +523,9 @@
   border: 1px solid var(--border);
   border-radius: var(--r);
   padding: 14px 16px;
+  /* Grid item: lets the panel shrink to its track so long software / mint names
+     truncate inside it instead of widening the page. */
+  min-width: 0;
 }
 
 /* Same recipe as Dashboard's .stat-label ("SAT" pill): 10px uppercase,

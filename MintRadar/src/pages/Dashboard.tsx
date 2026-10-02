@@ -349,8 +349,8 @@ function MintListView({
                   <td className="mint-list-td-name">
                     <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={24} radius={5} />
                     <div style={{ minWidth: 0 }}>
-                      <div className="mint-list-name">{displayName}</div>
-                      {displayName !== getHostname(mint.url) && <div className="mint-list-url">{getHostname(mint.url)}</div>}
+                      <div className="mint-list-name" title={displayName}>{displayName}</div>
+                      {displayName !== getHostname(mint.url) && <div className="mint-list-url" title={getHostname(mint.url)}>{getHostname(mint.url)}</div>}
                     </div>
                   </td>
                   <td>

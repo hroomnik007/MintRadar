@@ -16,6 +16,8 @@
 .tool-anchor {
   scroll-margin-top: 72px;
   border-radius: 12px;
+  /* Grid item: long mint names in the results must not widen the column. */
+  min-width: 0;
 }
 .tool-anchor:focus-visible {
   outline: 2px solid var(--accent, var(--border2));

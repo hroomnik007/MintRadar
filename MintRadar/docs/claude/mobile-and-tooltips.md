@@ -6,6 +6,16 @@
 - **Stats page:** Sections stack vertically on mobile; NUT Coverage bars don't overflow (`overflow: hidden`, shorter progress bar max-width)
 - **Mint Detail:** Public key truncated on mobile (first+last 8 chars), full hex on desktop
 
+## Rule: data-driven text must never widen the page (2026-10-02)
+
+Mint names, hostnames, URLs, operator notices (MOTD / description), NIP-05 values, reviewer names, version strings and review texts come from third parties, so any length of them must fit at every width from 320px up — no horizontal page scroll, no card / tile / chip pushed off screen.
+
+- **Grid and flex items need `min-width: 0`.** A `nowrap` + `text-overflow: ellipsis` title only truncates when its grid/flex ancestors can shrink; otherwise the item's min-content width is the full text and a `1fr` track grows past the viewport (the 2026-10 bug: a mint name over ~31 characters pushed the whole mobile grid off the left edge). Already applied to `.mint-card`, `.stats-panel`, `.tool-anchor`.
+- **Single-line titles** (card name / host, list rows, compare version): keep `nowrap` + ellipsis and put the full text in a `title` attribute. **Free text** (`.md-name`, `.md-sc-value`, `.md-motd-text`, `.md-mint-alert-text`, `.review-comment`): `overflow-wrap: anywhere` so a 60-character word with no spaces wraps.
+- Render the data as plain React text; fix it with CSS, not by slicing the string.
+- `e2e/long-text-overflow.spec.ts` checks `scrollWidth <= clientWidth` and that cards / tiles / chips stay inside the viewport at 320 / 360 / 390 / 768px for extreme names, hostnames, notices, NIP-05 values, reviewer names and versions on Dashboard (grid + list), Watchlist, Compare, Stats, Tools and every Mint Detail tab. Add a case there when a new surface shows third-party text.
+- Audit tab "Recent success rate" tile: below a 445px strip width the `N / 100` and `NN% ok` sit on two lines (container query on `.audit-summary-strip`).
+
 ### White focus ring on chart tap (2026-08-07) — the element is the `<g>`, not the `<svg>`
 
 **GOTCHA — two earlier fixes targeted the wrong element and shipped without effect.**

@@ -159,14 +159,14 @@ export function MintCard({
           <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={28} radius={6} />
           <div style={{ minWidth: 0 }}>
             <div className="card-name-line">
-              <span className="card-name">{displayName}</span>
+              <span className="card-name" title={displayName}>{displayName}</span>
               <span
                 className={`status-dot${isOnline ? ' online' : ''}`}
                 style={{ background: isOnline ? 'var(--green-bright)' : 'var(--red)' }}
                 title={isOnline ? 'Online' : 'Offline'}
               />
             </div>
-            {showHost && <div className="card-host">{hostname}</div>}
+            {showHost && <div className="card-host" title={hostname}>{hostname}</div>}
           </div>
           <div className="card-hdr-right">
           {onCompare && isOnline && (

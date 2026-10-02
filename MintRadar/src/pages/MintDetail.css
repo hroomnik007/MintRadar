@@ -204,7 +204,7 @@
 }
 
 .md-namebox { flex: 1; min-width: 0; }
-.md-name { font-size: 31px; font-weight: 600; color: var(--text); line-height: 1.15; }
+.md-name { font-size: 31px; font-weight: 600; color: var(--text); line-height: 1.15; overflow-wrap: anywhere; }
 .md-url  { font-size: 13px; color: var(--text3); font-family: var(--font-mono); margin-top: 3px; }
 
 /* The mint URL under the name doubles as a "share this mint" affordance —
@@ -415,6 +415,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   line-height: 1;
   font-family: var(--font-mono-data);
   letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
 }
 
 .md-sc-value.orange { color: var(--amber); }
@@ -583,6 +584,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   color: var(--text2);
   font-style: italic;
   font-family: var(--font-mono);
+  overflow-wrap: anywhere;
 }
 
 .md-motd:last-child { margin-bottom: 0; }
@@ -614,6 +616,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   font-size: 12px;
   color: var(--text2);
   line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 /* second block (both minting AND melting disabled) gets a divider above it */
 .md-mint-alert-title:not(:first-child) {
@@ -981,6 +984,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   color: var(--text2);
   line-height: 1.5;
   margin: 10px 0 0 0;
+  overflow-wrap: anywhere;
 }
 .reviews-pagination {
   display: flex;
@@ -1596,6 +1600,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   gap: 5px;
   min-width: 0;
   margin-bottom: 10px;
+  container: audit-strip / inline-size;
 }
 
 .audit-summary-cell {
@@ -1621,6 +1626,9 @@ button.md-url-copy.copied > svg { opacity: 1; }
   display: flex;
   align-items: baseline;
   justify-content: center;
+  /* Wrap "N / 100 · NN% ok" onto two lines when the tile is too narrow for it
+     (2-column strip below 900px) instead of spilling past the tile's edge. */
+  flex-wrap: wrap;
   gap: 4px;
 }
 
@@ -1645,6 +1653,13 @@ button.md-url-copy.copied > svg { opacity: 1; }
   font-weight: 500;
   font-family: var(--font-mono);
   letter-spacing: 0.02em;
+}
+
+/* Two-column strip narrower than ~445px (cells < ~220px): "N / 100 · NN% ok" no longer fits on one
+   line, so the success-rate text goes on its own line and the separator dot is dropped. */
+@container audit-strip (max-width: 445px) {
+  .audit-summary-dot { display: none; }
+  .audit-summary-sub { flex-basis: 100%; text-align: center; }
 }
 
 /* Don't shrink the tiles. Below ~900px four columns collide — use 2×2
