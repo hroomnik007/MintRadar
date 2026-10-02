@@ -13,7 +13,6 @@ export default defineConfig(({ command }) => ({
     brandAssetsPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'favicon-32x32.png', 'favicon-16x16.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'MintRadar',
         short_name: 'MintRadar',
@@ -32,6 +31,8 @@ export default defineConfig(({ command }) => ({
         ],
       },
       workbox: {
+        // Single source of the precache list: includeAssets is deliberately unused — the plugin adds it to
+        // globPatterns, so the favicons (already matched by ico/png here) were precached twice.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // Workbox's default ignores only utm_*/fbclid; "v" is the brand-asset content hash (?v=…).
         ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^v$/],

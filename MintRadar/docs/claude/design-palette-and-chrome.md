@@ -311,7 +311,9 @@ monospace gives different glyphs). The 8 legacy `public/icons/icon-N.png` files 
 step rewrites `og:image`, `twitter:image`, `apple-touch-icon`, `favicon.ico`, `favicon-32x32.png`, `favicon-16x16.png`
 in `index.html`, and `vite.config.ts` wraps the 7 manifest icons in `icon(command, …)`. File names/paths are unchanged (nginx
 ignores the query). The workbox precache is keyed by URL without query + a revision hash; `ignoreURLParametersMatching` now
-includes `/^v$/` so `?v=` requests still hit it. Pinned by `src/__tests__/brandAssetCacheBust.test.ts`.
+includes `/^v$/` so `?v=` requests still hit it. The precache list comes from `workbox.globPatterns` alone — `VitePWA({ includeAssets })`
+is deliberately not set, because the plugin appends it to the glob patterns and the 4 favicon/apple-touch files (already matched by
+`ico`/`png`) were listed twice (59 → 55 entries). Pinned by `src/__tests__/brandAssetCacheBust.test.ts`.
 - **When an asset changes:** replace the file (e.g. `node scripts/generate-icons.mjs`), commit, deploy — the hash, and with it the
   URL, changes by itself. Nothing to bump by hand.
 - **Not covered:** `backend/src/og.ts` (`OG_IMAGE_URL`, the per-mint bot HTML) and `backend/src/nostrService.ts` (profile picture)

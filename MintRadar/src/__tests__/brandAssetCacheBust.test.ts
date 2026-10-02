@@ -65,4 +65,10 @@ describe('brand asset cache-busting', () => {
   it('workbox ignores the v parameter so a ?v= request still matches its precache entry', () => {
     expect(fs.readFileSync(path.join(ROOT, 'vite.config.ts'), 'utf8')).toContain('/^v$/')
   })
+
+  it('precache list has one source: no includeAssets next to workbox.globPatterns (it duplicated the favicons)', () => {
+    const cfg = fs.readFileSync(path.join(ROOT, 'vite.config.ts'), 'utf8')
+    expect(cfg).toContain("globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']")
+    expect(cfg).not.toMatch(/^\s*includeAssets\s*:/m)
+  })
 })
