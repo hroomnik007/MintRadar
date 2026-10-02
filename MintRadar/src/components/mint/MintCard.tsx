@@ -130,6 +130,7 @@ export function MintCard({
     return c === 'var(--slow)' ? 'color-mix(in srgb, var(--red) 85%, var(--text))' : c
   }
   const displayName = mintDisplayName(mint, duplicateDisplayNames)
+  const starLabel = isLoggedIn && isWatched ? `Remove ${displayName} from watchlist` : `Add ${displayName} to watchlist`
   const showHost = shouldShowHostLine(mint, duplicateDisplayNames)
   const uptimePct24h = mint.uptimePct24h ?? null
   const isNew = isNewMint(mint.discoveredAt ?? null)
@@ -182,8 +183,8 @@ export function MintCard({
             <button
               type="button"
               className="card-compare-btn"
-              aria-label="Compare"
-              title="Compare"
+              aria-label={`Compare ${displayName}`}
+              title={`Compare ${displayName}`}
               onClick={e => { e.stopPropagation(); onCompare(mint.url) }}
             >
               ⇄
@@ -192,9 +193,9 @@ export function MintCard({
           <button
             type="button"
             className={`card-star${isLoggedIn && isWatched ? ' on' : ''}`}
-            aria-label={isLoggedIn ? (isWatched ? 'Unwatch' : 'Watch') : 'Watch'}
+            aria-label={starLabel}
             aria-pressed={isLoggedIn && isWatched}
-            title={isLoggedIn ? (isWatched ? 'Unwatch' : 'Watch') : 'Login with Nostr to add to watchlist'}
+            title={starLabel}
             onClick={e => {
               e.stopPropagation()
               if (!isLoggedIn) {

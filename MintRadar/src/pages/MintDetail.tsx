@@ -1119,9 +1119,9 @@ function MintDetailContent({ url }: { url: string }) {
             <button
               type="button"
               className={`md-watch-star md-watch-star-hero${isWatching ? ' on' : ''}`}
-              aria-label={isWatching ? 'Unwatch' : 'Watch'}
+              aria-label={isWatching ? `Remove ${displayName} from watchlist` : `Add ${displayName} to watchlist`}
               aria-pressed={isWatching}
-              title={isWatching ? 'Unwatch' : 'Watch'}
+              title={isWatching ? `Remove ${displayName} from watchlist` : `Add ${displayName} to watchlist`}
               onClick={toggleWatch}
             >
               <IcStar filled={isWatching} />
@@ -1130,9 +1130,9 @@ function MintDetailContent({ url }: { url: string }) {
             <button
               type="button"
               className="md-watch-star md-watch-star-hero"
-              aria-label="Watch"
+              aria-label={`Add ${displayName} to watchlist`}
               aria-pressed={false}
-              title="Login with Nostr to add to watchlist"
+              title={`Add ${displayName} to watchlist`}
               onClick={() => setShowWatchLoginModal(true)}
             >
               <IcStar filled={false} />

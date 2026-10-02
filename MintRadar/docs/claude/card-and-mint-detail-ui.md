@@ -56,6 +56,10 @@ An earlier `src/components/mint/MintCard.tsx`/`.css` was deleted (zero imports a
 
 **This is no longer true as of the "Post-redesign fixes round 2" session (commit f98694a) below.** `src/components/mint/MintCard.tsx` was recreated and is now the real, actively-imported shared card component used by both `src/pages/Dashboard.tsx` and `src/pages/Watchlist.tsx`. Any task targeting "the mint card" or "the watch button" should edit this file — not Dashboard.tsx/Watchlist.tsx directly — unless the change is genuinely page-specific.
 
+### Star + Compare accessible names (2026-10-02)
+
+The header star (`.card-star` in `MintCard.tsx`, `.md-watch-star-hero` in `MintDetail.tsx`) and the card's Compare icon button carry the mint's displayed name (`displayName()`, so duplicate-name suffixes apply): star `Add <name> to watchlist` / `Remove <name> from watchlist` (Remove only when logged in AND watched; logged-out stars read "Add …"), `title` identical to the `aria-label`, `aria-pressed` = watched; Compare `Compare <name>` for both `aria-label` and `title`. The logged-out star's old `title` hint ("Login with Nostr to add to watchlist") is gone — the click still opens the login modal. Look and hit areas unchanged. Old names were `Watch` / `Unwatch` / `Compare`; e2e tests find the star with `getByRole('button', { name: /^Add .+ to watchlist$/ })`. Test: `e2e/watch-compare-accessible-names.spec.ts` (Dashboard, Watchlist, Mint Detail).
+
 ### Card badges — reduced set + header slot (2026-09-08, commits `c02bdac` / `c9fdaf7`)
 
 The `.card-pills` row (lower body of `MintCard.tsx`) no longer carries age or identity badges:

@@ -198,7 +198,7 @@ for (const width of WIDTHS) {
         await mount(page, CASES[key]!, { width, login: true })
         await page.goto('/')
         await expect(page.locator('.mint-card').first()).toBeVisible()
-        const watch = page.getByRole('button', { name: 'Watch', exact: true })
+        const watch = page.getByRole('button', { name: /^Add .+ to watchlist$/ })
         for (let n = await watch.count(); n > 0; n--) {
           await watch.first().click()
           await expect(watch).toHaveCount(n - 1)

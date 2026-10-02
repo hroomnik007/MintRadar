@@ -80,7 +80,7 @@ test.describe('Compare — URL persistence (?compare=)', () => {
 
     for (const name of ['Alpha Mint', 'Delta Mint']) {
       const card = page.locator('.mint-card', { has: page.locator('.card-name', { hasText: name }) })
-      await card.getByRole('button', { name: 'Watch', exact: true }).click()
+      await card.getByRole('button', { name: /^Add .+ to watchlist$/ }).click()
     }
 
     await page.getByRole('link', { name: 'Watchlist' }).click()

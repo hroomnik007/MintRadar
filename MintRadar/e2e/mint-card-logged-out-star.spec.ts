@@ -12,7 +12,7 @@ test.describe('MintCard — watch star while logged out', () => {
   test('outline star is visible and opens the login prompt', async ({ page }) => {
     const star = page.locator('.mint-grid .mint-card', { hasText: 'Alpha Mint' }).locator('.card-star')
     await expect(star).toBeVisible()
-    await expect(star).toHaveAttribute('aria-label', 'Watch')
+    await expect(star).toHaveAttribute('aria-label', 'Add Alpha Mint to watchlist')
     await expect(star).toHaveAttribute('aria-pressed', 'false')
     await expect(star).not.toHaveClass(/ on/)
 

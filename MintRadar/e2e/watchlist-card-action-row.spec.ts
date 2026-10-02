@@ -24,7 +24,7 @@ test('action row is consistent across latency digit counts and never covers Reli
 
   await page.goto('/')
   await page.waitForSelector('.mint-card')
-  const watch = page.getByRole('button', { name: 'Watch', exact: true })
+  const watch = page.getByRole('button', { name: /^Add .+ to watchlist$/ })
   for (let want = 3; want >= 0; want--) {
     await watch.first().click()
     await expect(watch).toHaveCount(want)

@@ -28,16 +28,16 @@ test.describe('Watchlist', () => {
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
-    // The Alpha card now exposes a Watch button (logged in).
+    // The Alpha card now exposes an "Add … to watchlist" button (logged in).
     const alphaCard = page.locator('.mint-card', {
       has: page.locator('.card-name', { hasText: 'Alpha Mint' }),
     })
-    const watchBtn = alphaCard.getByRole('button', { name: 'Watch', exact: true })
+    const watchBtn = alphaCard.getByRole('button', { name: /^Add .+ to watchlist$/ })
     await expect(watchBtn).toBeVisible()
     await watchBtn.click()
 
-    // The button toggles to "Unwatch" immediately.
-    await expect(alphaCard.getByRole('button', { name: 'Unwatch' })).toBeVisible()
+    // The button toggles to "Remove … from watchlist" immediately.
+    await expect(alphaCard.getByRole('button', { name: 'Remove Alpha Mint from watchlist' })).toBeVisible()
 
     // The watched mint appears on the Watchlist page.
     await page.getByRole('link', { name: 'Watchlist' }).click()

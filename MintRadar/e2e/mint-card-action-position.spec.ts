@@ -20,11 +20,11 @@ test.describe('MintCard — watch star + bottom row', () => {
     await expect(page.locator('.mint-card .watch-btn')).toHaveCount(0)
 
     const star = card(page, 'Alpha Mint').locator('.card-star')
-    await expect(star).toHaveAttribute('aria-label', 'Watch')
+    await expect(star).toHaveAttribute('aria-label', 'Add Alpha Mint to watchlist')
     await expect(star).toHaveAttribute('aria-pressed', 'false')
 
     await star.click()
-    await expect(star).toHaveAttribute('aria-label', 'Unwatch')
+    await expect(star).toHaveAttribute('aria-label', 'Remove Alpha Mint from watchlist')
     await expect(star).toHaveAttribute('aria-pressed', 'true')
 
     // Reflected on the Watchlist.

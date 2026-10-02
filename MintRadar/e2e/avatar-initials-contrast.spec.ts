@@ -34,7 +34,7 @@ test.describe('avatar initials contrast', () => {
     await loginAs(page)
     await page.goto('/')
     await page.waitForSelector('.mint-card')
-    const watch = page.getByRole('button', { name: 'Watch', exact: true })
+    const watch = page.getByRole('button', { name: /^Add .+ to watchlist$/ })
     const total = await watch.count()
     expect(total).toBeGreaterThanOrEqual(3)
     for (let i = 1; i <= 3; i++) {

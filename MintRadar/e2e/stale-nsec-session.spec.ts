@@ -93,8 +93,8 @@ test('local watchlist entries survive the reset', async ({ page }) => {
   await loginAs(page)
   await page.goto('/?status=all')
   const alpha = page.locator('.mint-card', { has: page.locator('.card-name', { hasText: 'Alpha Mint' }) })
-  await alpha.getByRole('button', { name: 'Watch', exact: true }).click()
-  await expect(alpha.getByRole('button', { name: 'Unwatch' })).toBeVisible()
+  await alpha.getByRole('button', { name: /^Add .+ to watchlist$/ }).click()
+  await expect(alpha.getByRole('button', { name: 'Remove Alpha Mint from watchlist' })).toBeVisible()
   await page.waitForTimeout(500) // let the Dexie write land
 
   // 2) fresh tab in the same context (shared IndexedDB, own sessionStorage) with a stale nsec session

@@ -48,7 +48,7 @@ test.describe('MintCard — Community Rating badge', () => {
   test('badge is shared with the Watchlist card', async ({ page }) => {
     await loginAs(page)
     await page.goto('/?status=all')
-    await card(page, 'Alpha Mint').getByRole('button', { name: 'Watch', exact: true }).click()
+    await card(page, 'Alpha Mint').getByRole('button', { name: /^Add .+ to watchlist$/ }).click()
     await page.getByRole('link', { name: 'Watchlist' }).click()
 
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(1)
