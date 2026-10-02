@@ -73,6 +73,11 @@
 - **Data flow untouched** (`useFollowRecommendations`: kind:3 → kind:38000 on `FOLLOW_RELAYS`, 8s/12s timeouts, 5-min staleTime, UI keeps online + not-yet-watched, max 3). Gotcha: `fetchFollowRecs` swallows relay errors/timeouts into an empty result, so a relay failure still shows the "None from your follows yet" line; only a thrown error (`isError`) hides the section.
 - Tests: `e2e/watchlist-recommendations.spec.ts` (empty / with recs / loading / error, identical card layout in both states at 1440/768/390, no overflow at 320–1920; `SHOTS=<dir>` writes screenshots). The error case reroutes the dev-served `useFollowRecommendations.ts` module so `fetchFollowRecs` throws.
 
+### Watchlist — "Showing X of Y" only when cut short (2026-10-02)
+
+- The footer line (`.wl-showing`, `Watchlist.tsx`) renders only when `showWatchlistCount(shown, total)` (`utils/watchlistCount.ts`) is true: `total > 0 && shown < total`. Complete list → no element at all (no empty block, no spacing). The Watchlist has no filter/search, so this only happens past one 20-card page. The Dashboard's `.grid-showing-note` is a separate element and unchanged. Tests: `src/__tests__/watchlistCount.test.ts`, `e2e/watchlist-showing-count.spec.ts`.
+- **Known issue, NOT fixed (outside the task):** the pagination `IntersectionObserver` effect in `Watchlist.tsx` depends only on `listKey`. When the list arrives from Dexie while the page still shows the loading skeleton (`knownLoading || syncStatus === 'pending'`, so no sentinel is rendered), the effect finds no sentinel and never re-runs once the grid appears — a watchlist of more than 20 mints then stays at "Showing 20 of N". Reproduced on the pre-change code too; adding `syncStatus, knownLoading` to the effect's deps makes it load more.
+
 ## Stats Page Layout (as of 2026-09-12, commits `f4e92ec`/`c3523db` — supersedes the old 3-column `.stats-cards-grid`-only layout below)
 
 **`.stats-hero-grid`** — an always-2-column grid (`grid-template-columns: 1fr 1fr`, 1 column at

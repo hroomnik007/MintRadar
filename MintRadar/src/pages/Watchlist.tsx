@@ -13,6 +13,7 @@ import { MintCard } from '@/components/mint/MintCard'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames } from '@/utils/mintFormatting'
+import { showWatchlistCount } from '@/utils/watchlistCount'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import './Watchlist.css'
 
@@ -384,7 +385,7 @@ export default function Watchlist() {
         )}
       </div>
 
-      {mints.length > 0 && (
+      {showWatchlistCount(Math.min(visibleCount, orderedMints.length), orderedMints.length) && (
         <div className="wl-showing">
           Showing {Math.min(visibleCount, orderedMints.length)} of {orderedMints.length}
         </div>
