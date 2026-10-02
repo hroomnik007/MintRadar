@@ -145,15 +145,17 @@ Login modal (`src/components/layout/AppShell.tsx`) supports three methods select
 
 ### Run commands
 
+Run from the app directory (the one holding `package.json`, `e2e/` and `backend/`). Each command is self-contained, so the block can be pasted as-is:
+
 ```bash
 # Backend (unit + integration + security)
-cd backend && npm test
+(cd backend && npm test)
 
 # Frontend unit
-cd MintRadar && npm test
+npm test
 
 # E2E
-cd MintRadar && npm run test:e2e
+npm run test:e2e
 ```
 
 ### E2E mocking strategy
