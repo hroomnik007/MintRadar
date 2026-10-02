@@ -18,8 +18,8 @@ export default defineConfig(({ command }) => ({
         name: 'MintRadar',
         short_name: 'MintRadar',
         description: 'Privacy-first Cashu mint monitoring',
-        theme_color: '#10201c',
-        background_color: '#10201c',
+        theme_color: '#0b1512',
+        background_color: '#0b1512',
         display: 'standalone',
         icons: [
           { src: icon(command, '/icons/icon-72x72.png'),  sizes: '72x72',   type: 'image/png' },

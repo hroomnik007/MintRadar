@@ -52,7 +52,7 @@
 /* ── Design tokens ────────────────────────────────────── */
 :root {
   /* Backgrounds — new names */
-  --bg:           #10201c;
+  --bg:           #0b1512;
   --surface:      #17251f;
   --elevated:     #1c2b24;
   --raised:       #24352c;

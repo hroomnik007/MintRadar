@@ -32,7 +32,7 @@ describe('brand asset cache-busting', () => {
   it('every brand file referenced by index.html is covered, and nothing else is touched', () => {
     for (const a of BRAND_HTML_ASSETS) expect(html).toContain(`${a}?v=`)
     expect(html).toContain('href="/manifest.webmanifest"')
-    expect(html).toContain('<meta name="theme-color" content="#10201c" />')
+    expect(html).toContain('<meta name="theme-color" content="#0b1512" />')
     expect(html).toContain('href="https://mintradar.org/"')
   })
 

@@ -10,7 +10,7 @@
 import sharp from 'sharp'
 import { readFileSync, writeFileSync, mkdirSync } from 'fs'
 
-const BG = '#10201c' // --bg
+const BG = '#0b1512' // --bg
 const faviconSvg = readFileSync('public/favicon.svg')
 
 // The SVG is authored on a 32px grid: render it at density 72 * size / 32 so strokes stay crisp at any size.

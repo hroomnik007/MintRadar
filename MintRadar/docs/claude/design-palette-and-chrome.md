@@ -159,7 +159,7 @@ for this redesign, was deleted once the palette/components below landed in code 
 recreate it or reference it as if it still exists.)
 
 **New design tokens (`src/index.css`):**
-- `--bg` / `--surface` / `--surface-2` / `--surface-3` — dark "verdigris/patina" green-gray instead of pure black (`--bg: #10201c`)
+- `--bg` / `--surface` / `--surface-2` / `--surface-3` — dark "verdigris/patina" green-gray instead of pure black (`--bg: #0b1512`)
 - `--text` / `--text-dim` / `--text-faint` — see Typography section above for exact values and contrast verification
 - `--green` / `--green-bright` — muted "patina" green instead of neon (reference: patina on coins)
 - `--copper` — new secondary accent (reference: coin minting); alternates with green on the Stats page's Software-in-Use and Geographic-Distribution bars
@@ -283,17 +283,19 @@ score greens `#4ade80`); Fresh and Veteran age badges are both `--amber` now (th
 
 ## Brand assets (2026-10-01)
 
-Browser chrome and brand rasters use the settled palette: `--bg` `#10201c`, `--accent` `#5cc9a3` (they are plain files, so
+Browser chrome and brand rasters use the settled palette: `--bg` `#0b1512`, `--accent` `#5cc9a3` (they are plain files, so
 `var()` cannot be used — keep them equal to the tokens; `src/__tests__/brandAssets.test.ts` pins this).
 
 | File | What | Source |
 |---|---|---|
-| `index.html` `<meta name="theme-color">`, `vite.config.ts` manifest `theme_color` + `background_color` | `#10201c` (`--bg`) | hand-edited |
-| `public/favicon.svg` | NavLogo shapes (`fill="none"` like NavLogo, so the ring interiors are transparent), `#5cc9a3` on a `#10201c` rx=6 tile | hand-edited |
+| `index.html` `<meta name="theme-color">`, `vite.config.ts` manifest `theme_color` + `background_color` | `#0b1512` (`--bg`) | hand-edited |
+| `public/favicon.svg` | NavLogo shapes (`fill="none"` like NavLogo, so the ring interiors are transparent), `#5cc9a3` on a `#0b1512` rx=6 tile | hand-edited |
 | `public/favicon-16x16.png`, `favicon-32x32.png`, `favicon.ico` (one 32x32 PNG inside an ICO), `icons/icon-{72,96,128,144,152,192,384,512}x*.png` | rounded tile with transparent corners (192/512 are declared `maskable` in the manifest, unchanged) | rendered from `favicon.svg` |
 | `public/apple-touch-icon.png` | 180x180, opaque `--bg`, same artwork (iOS masks the corners itself) | rendered from `favicon.svg` |
 | `public/og-image.svg` / `og-image.png` | 1200x630. bg `--bg`, panel `--surface`, pills `--surface-card`, dividers/pill borders = `--border-strong` composited over `--surface` (`#414c47`), text `--text` / `--text2` / footer `--text3`, accent `--accent` | SVG hand-edited, PNG rendered from it |
 | `public/mint-coin-placeholder.svg` | copper `#d98a5a` (already current) | hand-edited |
+
+**2026-10-02:** `--bg` was darkened (decision D1; only `--bg` changed, surfaces/text/accents/borders untouched), so `theme-color`, the manifest colours, the `favicon.svg` tile, the `og-image.svg` outer rect and `BG` in `generate-icons.mjs` all moved to `#0b1512` and every raster was regenerated. `src/__tests__/retiredPageBackground.test.ts` fails if a text file in `src`, `public`, `scripts` or `index.html` still carries the previous value. On the OG image only the outer rect is `--bg`; the panel (`--surface`) and pills (`--surface-card`) stay.
 
 **Regenerate** (from `MintRadar/`, uses the existing `sharp` dev dependency — nothing is added to `package.json`):
 `FONTCONFIG_FILE=<fonts.conf> node scripts/generate-icons.mjs`. The OG text is `font-family: monospace`; the committed PNG was

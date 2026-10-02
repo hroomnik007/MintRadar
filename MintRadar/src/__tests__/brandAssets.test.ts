@@ -22,7 +22,7 @@ function pngSize(p: string) {
 
 describe('brand assets', () => {
   it('reads the current tokens', () => {
-    expect(BG).toBe('#10201c')
+    expect(BG).toBe('#0b1512')
     expect(ACCENT).toBe('#5cc9a3')
   })
 
