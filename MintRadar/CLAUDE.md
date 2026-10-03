@@ -175,7 +175,7 @@ The `+ Watch` button on Dashboard mint cards only renders when `isLoggedIn === t
 ## Key rules
 - **Before starting ANY new task, check `git branch --show-current`.** If it isn't `main`, find out why (an in-progress PR still awaiting merge vs. a forgotten checkout left over from a prior session) before committing anything. A 2026-08-05 session left a feature branch checked out after its PR had already merged; two unrelated follow-up fixes got committed there instead of on `main` and had to be recovered via a second PR (#54).
 - NEVER modify anything not explicitly requested
-- ALWAYS run typecheck before build
+- ALWAYS run typecheck before build — `npm run typecheck` is `tsc -b` (app + node projects, noEmit, buildinfo gitignored). It used to be `tsc --noEmit` on the root tsconfig, which has `files: []` and only references, so it checked 0 files (fixed 2026-10-03)
 - ALWAYS rsync dist after build
 - ALWAYS commit and push after deploy: `git push origin main && git push gitea main` (both remotes required)
 - Conventional commits: feat:, fix:, refactor:, docs:, chore:
