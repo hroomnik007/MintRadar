@@ -1135,14 +1135,16 @@
   .stats-trend-panel { order: 7; }
 }
 
-/* Hero tiles with a narrow text column (icon + figure share a ~140px card at 720–880px, ~100px at 320px):
-   an unbreakable note word such as "Frankfurt" stuck out of its tile by up to 24px. Let the note shrink
-   and break inside the word only where it cannot fit; text that fits is untouched. */
-@media (max-width: 335px), (min-width: 700px) and (max-width: 900px) {
-  .stats-metrics .stat-note { min-width: 0; overflow-wrap: anywhere; }
+/* Hero tiles with a narrow text column (701–900px: five tiles in one row, the note column is only
+   25px wide at 701px, 39px at 768px, 65px at 900px; ≤335px: ~40px): an unbreakable note word such as
+   "Frankfurt" stuck out of its tile by up to 24px. The note may shrink and breaks inside a word ONLY when the
+   word is wider than the column (break-word, not anywhere: ordinary words are never split when they fit). */
+@media (max-width: 335px), (min-width: 701px) and (max-width: 900px) {
+  .stats-metrics .stat-note { min-width: 0; overflow-wrap: break-word; }
 }
-/* 700–900px only: 10px keeps "active" / "known" whole (11px made "active" 42px in a 39px column and the
-   anywhere-break split it as "activ|e"); just the long city word still breaks. */
-@media (min-width: 700px) and (max-width: 900px) {
-  .stats-metrics .stat-note { font-size: 10px; }
+/* 701–900px: the note column grows ~0.2px per px of viewport, so the size does too — roughly the largest size at
+   which "active" (6 mono chars ≈ 3.6em) still fits the column: 8px at 701px, 10px at 768px, the original 11px
+   (Dashboard.css .stat-note) from ~780px. */
+@media (min-width: 701px) and (max-width: 900px) {
+  .stats-metrics .stat-note { font-size: clamp(8px, calc(5.3vw - 30.6px), 11px); }
 }
