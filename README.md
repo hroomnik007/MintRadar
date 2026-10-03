@@ -129,7 +129,7 @@ PostgreSQL database backed up every 6 hours via server cron.
 
 ### 📎 Public API
 
-Read-only JSON under `https://mintradar.org/api/` (for example `GET /api/mints/known`). Unofficial, rate-limited, may change. See [MintRadar/docs/API.md](MintRadar/docs/API.md).
+Read-only JSON under `https://mintradar.org/api/` (for example `GET /api/mints/known`). Rate-limited. See [MintRadar/docs/API.md](MintRadar/docs/API.md).
 
 ---
 
