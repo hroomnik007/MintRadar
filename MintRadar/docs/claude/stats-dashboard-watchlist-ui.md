@@ -78,6 +78,13 @@
 - Copy NOT touched but now optimistic about alerts: the watch-login modal, the logged-out gate, the empty state and the page meta description still say "you'll get a message when a mint goes offline" — notifications are opt-in now.
 - Tests: `e2e/watchlist-notify-toggles.spec.ts`, `src/__tests__/notificationSubscription.test.ts`, `notifyState.test.ts`, `useWatchlistSync.test.ts`; `watchlist-card-action-row.spec.ts` now sweeps the strip's pills.
 
+### Removing a watched mint cancels its notifications (2026-10-03)
+
+- Both star handlers (`MintCard`, `MintDetail`) call `removeWatchedMint(url, displayName)` (`core/nostr/removeWatchedMint.ts`) instead of the store's `removeMint`. It reads the Dexie entry, **removes the mint locally first** (never waits for the request), and then — only if a local flag is on (confirmed OR an unconfirmed legacy flag, whose server row the old login sync may have created) or a toggle request for that mint is still running — sends ONE `cancelSubscription(url)` (`/unsubscribe`, one NIP-98 signature from the user's own click, queued behind any running request for the mint via `runExclusive`). Both flags off/unconfirmed-false → no request, no signer prompt. Re-adding a mint starts with both pills off (fresh Dexie row, no `notifyConfirmedAt`).
+- **Failure** (network, 429, 5xx, signer declined/unavailable): the mint stays removed and `useWatchlistStore.pushNotice()` queues "Couldn't turn off notifications for <name>. They stop within 30 days." — rendered by `AppShell` as `.queued-banner.queued-banner-info.watchlist-notice` (`role="status"`, × dismiss, max 3 kept; the same banner pattern as the stale-nsec notice, so it shows on whichever page the removal happened). Nothing is logged.
+- Not covered (user-initiated removals only): a mint that disappears because the synced kind:10003 list changed on another device, or a logout, does not unsubscribe — those server rows lapse via the 30-day prune.
+- Tests: `e2e/watchlist-remove-cancels-notifications.spec.ts` (shared setup in `e2e/fixtures/watchlistNotify.ts`).
+
 ### Watchlist — "Recommended by follows" below the list (2026-10-02)
 
 - **No side column any more.** `.wl-body-two-col` / `.wl-side-col` (380px sticky column, ≤900px stacked) are gone; `.wl-body` is one centred `--dash-chrome-max` column, so `.wl-grid` has the full page width like the Dashboard grid (4 cards per row at 1440 instead of 2).

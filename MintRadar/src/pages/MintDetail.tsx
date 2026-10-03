@@ -19,6 +19,7 @@ import { useVerifiedNip05 } from '@/hooks/useVerifiedNip05'
 import { usePendingAutoWatch } from '@/hooks/usePendingAutoWatch'
 import { submitMintReview } from '@/hooks/useSubmitReview'
 import { useWatchlistStore } from '@/stores/watchlist.store'
+import { removeWatchedMint } from '@/core/nostr/removeWatchedMint'
 import { useAuthStore } from '@/stores/auth.store'
 import { ComparisonModal } from '@/components/ComparisonModal'
 import { MintComparePicker } from '@/components/MintComparePicker'
@@ -424,7 +425,6 @@ function MintDetailContent({ url }: { url: string }) {
   const latestGlobalVersion = versionHistoryData?.latestGlobalVersion ?? null
   const watchlistMints = useWatchlistStore(state => state.mints)
   const addMint = useWatchlistStore(state => state.addMint)
-  const removeMint = useWatchlistStore(state => state.removeMint)
   const loadFromDb = useWatchlistStore(state => state.loadFromDb)
   const profile = useAuthStore(state => state.profile)
   const authMethod = useAuthStore(state => state.method)
@@ -882,7 +882,7 @@ function MintDetailContent({ url }: { url: string }) {
   const discoveredAt = knownMint?.discoveredAt ?? null
 
   const isWatching = watchlistMints.includes(url)
-  const toggleWatch = () => { void (isWatching ? removeMint(url) : addMint(url)) }
+  const toggleWatch = () => { void (isWatching ? removeWatchedMint(url, displayName) : addMint(url)) }
 
   const supportedNutNumbers = new Set(
     data?.info ? Object.keys(data.info.nuts) : Object.keys(knownMint?.nutsLimits ?? {})

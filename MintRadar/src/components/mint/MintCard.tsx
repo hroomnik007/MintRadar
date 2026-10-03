@@ -14,6 +14,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { displayName as mintDisplayName, shouldShowHostLine, isNewMint, cardLatencyLabel, cardLatencyLocationSuffix, cardLightningLabel, uptimeColor, formatTimeAgo } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
 import { NotifyStrip } from '@/components/mint/NotifyStrip'
+import { removeWatchedMint } from '@/core/nostr/removeWatchedMint'
 import { sortUnits } from '@/utils/sortUnits'
 
 function getHostname(url: string): string {
@@ -47,7 +48,6 @@ export function MintCard({
   const { onMintPointerEnter, onMintPointerLeave } = useMintHoverPrefetch()
   const mints = useWatchlistStore(state => state.mints)
   const addMint = useWatchlistStore(state => state.addMint)
-  const removeMint = useWatchlistStore(state => state.removeMint)
   const isWatched = mints.includes(mint.url)
   const profile = useAuthStore(state => state.profile)
   const isLoggedIn = profile !== null
@@ -156,7 +156,7 @@ export function MintCard({
                 setShowWatchLoginModal(true)
                 return
               }
-              void (isWatched ? removeMint(mint.url) : addMint(mint.url))
+              void (isWatched ? removeWatchedMint(mint.url, displayName) : addMint(mint.url))
             }}
           >
             <IcStar filled={isLoggedIn && isWatched} />

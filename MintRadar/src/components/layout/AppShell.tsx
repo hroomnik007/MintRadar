@@ -123,6 +123,8 @@ export function AppShell() {
   const sessionNotice = useAuthStore(state => state.sessionNotice)
   const dismissSessionNotice = useAuthStore(state => state.dismissSessionNotice)
   const watchlistCount = useWatchlistStore(state => state.mints.length)
+  const watchlistNotices = useWatchlistStore(state => state.notices)
+  const dismissWatchlistNotice = useWatchlistStore(state => state.dismissNotice)
 
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [loginMethod, setLoginMethod] = useState<'nip07' | 'nsec' | 'remote-signer'>('nip07')
@@ -524,6 +526,15 @@ export function AppShell() {
           </button>
         </div>
       )}
+
+      {watchlistNotices.map(n => (
+        <div key={n.id} className="queued-banner queued-banner-info watchlist-notice" role="status">
+          <span>{n.text}</span>
+          <button type="button" className="queued-banner-dismiss" aria-label="Dismiss" onClick={() => dismissWatchlistNotice(n.id)}>
+            ×
+          </button>
+        </div>
+      ))}
 
       <main className="app-content">
         <Outlet />

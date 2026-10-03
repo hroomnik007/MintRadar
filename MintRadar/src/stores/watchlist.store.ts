@@ -13,8 +13,17 @@ import { db } from '@/db'
  */
 export type WatchlistSyncStatus = 'pending' | 'done' | 'error'
 
+export interface WatchlistNotice { id: number; text: string }
+
+let nextNoticeId = 1
+const MAX_NOTICES = 3
+
 interface WatchlistState {
   mints: string[]
+  // Short dismissible notices shown by AppShell (e.g. a failed notification cancel on removal).
+  notices: WatchlistNotice[]
+  pushNotice: (text: string) => void
+  dismissNotice: (id: number) => void
   isLoaded: boolean
   syncStatus: WatchlistSyncStatus
   setSyncStatus: (status: WatchlistSyncStatus) => void
@@ -29,8 +38,22 @@ interface WatchlistState {
 export const useWatchlistStore = create<WatchlistState>()(
   immer((set, get) => ({
     mints: [],
+    notices: [],
     isLoaded: false,
     syncStatus: 'pending',
+
+    pushNotice: (text: string) => {
+      set(state => {
+        state.notices.push({ id: nextNoticeId++, text })
+        if (state.notices.length > MAX_NOTICES) state.notices.shift()
+      })
+    },
+
+    dismissNotice: (id: number) => {
+      set(state => {
+        state.notices = state.notices.filter(n => n.id !== id)
+      })
+    },
 
     setSyncStatus: (status: WatchlistSyncStatus) => {
       set(state => {

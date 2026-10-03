@@ -125,6 +125,12 @@ function runExclusive<T>(mintUrl: string, task: () => Promise<T>): Promise<T> {
   return run
 }
 
+// Cancels a mint's server subscription (queued behind any request still running for that mint).
+// Used when the mint is removed from the watchlist; writes nothing locally — the entry is gone.
+export function cancelSubscription(mintUrl: string): Promise<NotifyResult> {
+  return runExclusive(mintUrl, () => unsubscribeFromServer(mintUrl))
+}
+
 // One pill press. The target is computed from the CONFIRMED state (other pill included) at the
 // moment the request runs; the local flags + confirmation are written only after the server
 // answered ok. subscribe is an idempotent upsert on the server and unsubscribe a DELETE, so this
