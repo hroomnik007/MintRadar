@@ -10,7 +10,6 @@ export type ProbeErrorKind =
   | 'dns'
   | 'tls'
   | 'not_cashu'
-  | 'blocked_address'
   | 'unreachable'
 
 const MESSAGES: Record<ProbeErrorKind, string> = {
@@ -21,7 +20,6 @@ const MESSAGES: Record<ProbeErrorKind, string> = {
   dns: "That host name couldn't be found.",
   tls: "The mint's certificate couldn't be verified.",
   not_cashu: "That address doesn't look like a Cashu mint (no valid /v1/info answer).",
-  blocked_address: "That address can't be checked.",
   unreachable: "Couldn't connect to the mint.",
 }
 

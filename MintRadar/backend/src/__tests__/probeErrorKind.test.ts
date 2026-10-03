@@ -33,7 +33,7 @@ describe('classifyProbeFailure — HTTP answers', () => {
 
 describe('classifyProbeFailure — no answer', () => {
   it.each<[string, ProbeFailure, string]>([
-    ['guard: blocked address', { rejected: 'blocked' }, 'blocked_address'],
+    ['guard: blocked address (looks like an unresolvable name)', { rejected: 'blocked' }, 'dns'],
     ['guard: DNS failure', { rejected: 'dns-error' }, 'dns'],
     ['bad redirect', { rejected: 'bad-redirect' }, 'unreachable'],
     ['timeout', { networkLabel: 'Connection timeout' }, 'timeout'],
@@ -47,7 +47,7 @@ describe('classifyProbeFailure — no answer', () => {
   })
 
   it('a guard rejection wins over everything else', () => {
-    expect(classifyProbeFailure({ rejected: 'blocked', status: 403, networkLabel: 'TLS/SSL error' })).toBe('blocked_address')
+    expect(classifyProbeFailure({ rejected: 'blocked', status: 403, networkLabel: 'TLS/SSL error' })).toBe('dns')
   })
 })
 

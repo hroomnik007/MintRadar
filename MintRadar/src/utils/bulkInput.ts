@@ -75,11 +75,10 @@ const FALLBACK_TEXT: Record<Exclude<BulkFailureKind, 'dns'>, string> = {
   error: 'Error',
 }
 
-// The message for a failed row: the shared errorKind helper first (blocked_address is worded like dns), the
-// server-string fallback only when no errorKind came back.
+// The message for a failed row: the shared errorKind helper first, the server-string fallback only when no
+// errorKind came back.
 export function bulkFailureMessage(errorKind: unknown, error: string | undefined): string {
-  const kind = errorKind === 'blocked_address' ? 'dns' : errorKind
-  const fromKind = probeErrorMessage(kind)
+  const fromKind = probeErrorMessage(errorKind)
   if (fromKind !== null) return fromKind
   const c = classifyBulkError(error)
   return c === 'dns' ? (probeErrorMessage('dns') ?? FALLBACK_TEXT.error) : FALLBACK_TEXT[c]

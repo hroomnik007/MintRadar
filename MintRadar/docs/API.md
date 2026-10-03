@@ -216,10 +216,9 @@ On-demand live probe of a single mint URL. Triggers an outbound fetch.
 | `rate_limited_by_host` | 429 |
 | `host_error` | other 5xx (including Cloudflare 5xx pages) |
 | `timeout` | no answer within the probe deadline |
-| `dns` | the host name did not resolve |
+| `dns` | the host name did not resolve — **also** what a name resolving to a private/loopback/link-local/otherwise blocked address (and a redirect to one, or a blocked IP literal) reports, so the two cannot be told apart |
 | `tls` | certificate could not be verified |
 | `not_cashu` | the host answered, but `/v1/info` is a 404, not JSON, or has no `nuts` |
-| `blocked_address` | the SSRF guard rejected the address (also a redirect to one) |
 | `unreachable` | any other connection failure |
 
 `errorKind` is also returned (same enum) in the `400` body of `POST /api/mint/submit` and in per-line `results[]` entries of `POST /api/mints/discover` whose `error` is `"URL does not appear to be a valid Cashu mint"`. The pre-validation errors (`Invalid url`, scheme, length) carry no `errorKind`. Clients must treat a missing or unknown `errorKind` as "no detail".

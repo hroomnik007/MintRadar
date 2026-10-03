@@ -13,7 +13,6 @@ export const PROBE_ERROR_KINDS = [
   'dns',
   'tls',
   'not_cashu',
-  'blocked_address',
   'unreachable',
 ] as const
 
@@ -43,8 +42,10 @@ function isCloudflareHtml(server: string | null | undefined, contentType: string
 }
 
 export function classifyProbeFailure(f: ProbeFailure): ProbeErrorKind {
-  if (f.rejected === 'blocked') return 'blocked_address'
-  if (f.rejected === 'dns-error') return 'dns'
+  // A guard rejection that depends on name resolution (a name that resolves to a private/loopback/etc.
+  // address, also on a redirect hop) must look exactly like a name that does not resolve — a separate
+  // kind would let an anonymous caller enumerate internal host names.
+  if (f.rejected === 'blocked' || f.rejected === 'dns-error') return 'dns'
   if (f.rejected === 'bad-redirect') return 'unreachable'
 
   const status = f.status ?? null
