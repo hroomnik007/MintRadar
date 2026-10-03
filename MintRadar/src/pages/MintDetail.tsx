@@ -2525,7 +2525,7 @@ function MintDetailContent({ url }: { url: string }) {
               <div className="rv-modal-heading">
                 <div className="rv-modal-title">Watch this mint</div>
                 <div className="rv-modal-sub">
-                  Log in with Nostr to add it to your watchlist. Your list syncs over Nostr and you&apos;ll get a message if this mint goes offline or comes back online.
+                  Log in with Nostr to add it to your watchlist. Your list syncs over Nostr. You can then turn on an optional Nostr DM for this mint when it goes offline or comes back online.
                 </div>
               </div>
               <button type="button" className="rv-modal-close" onClick={closeWatchLoginModal} aria-label="Close">×</button>

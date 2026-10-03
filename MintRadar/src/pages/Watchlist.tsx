@@ -283,7 +283,7 @@ export default function Watchlist() {
 
   useDocumentMeta(
     'My Watchlist - MintRadar',
-    'Track your favorite Cashu mints and get notified the moment one goes offline or comes back online.',
+    'Track your favorite Cashu mints and optionally get a Nostr DM when one goes offline or comes back online.',
     { noindex: true }
   )
 
@@ -292,7 +292,7 @@ export default function Watchlist() {
       <div className="watchlist-page">
         <div className="wl-login-gate">
           <h2>My Watchlist</h2>
-          <p>Log in with Nostr to sync your watchlist across devices and get a message when a mint goes offline or comes back online.</p>
+          <p>Log in with Nostr to sync your watchlist across devices. You can turn on optional Nostr DMs for a watched mint that goes offline or comes back online.</p>
           <button
             type="button"
             className="wl-add-btn"
@@ -300,7 +300,7 @@ export default function Watchlist() {
           >
             ⚡ Login via Nostr
           </button>
-          <div className="wl-login-hint">Your list is stored on Nostr. Alerts go to your Nostr identity.</div>
+          <div className="wl-login-hint">Your list is stored on Nostr. Optional DMs go to your Nostr identity.</div>
         </div>
       </div>
     )
@@ -326,7 +326,7 @@ export default function Watchlist() {
             <div className="wl-empty">
               <div className="wl-empty-icon"><IcRadar /></div>
               <div className="wl-empty-title">No mints watched yet</div>
-              <div className="wl-empty-sub">Add mints from the Dashboard with + Watch. Your list syncs over Nostr - you'll get alerts if status changes.</div>
+              <div className="wl-empty-sub">Add mints from the Dashboard with + Watch. Your list syncs over Nostr. Turn on Nostr DMs per mint if you want to hear when its status changes.</div>
               <button type="button" className="wl-add-btn" onClick={() => navigate('/dashboard')}>
                 Go to Dashboard
               </button>
@@ -334,7 +334,7 @@ export default function Watchlist() {
           ) : (
             <>
               <p className="wl-notify-explainer">
-                Get a Nostr DM when a watched mint goes down or comes back, even if this tab is closed. At most one per mint per hour.
+                Optional: turn on Nostr DMs for a watched mint. You get one message when it goes down and one when it comes back (at most one of each per hour), even if this tab is closed. Your Nostr client must support private messages.
               </p>
               <div className="wl-grid">
                 {orderedMints.slice(0, visibleCount).map(url => {
