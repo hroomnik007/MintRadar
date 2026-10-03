@@ -372,7 +372,7 @@ const heroButtons = (page: Page) => page.evaluate(() => {
   })
 })
 
-for (const width of [340, 360, 375, 380, 388, 399]) {
+for (const width of [340, 360, 375, 412, 414, 428]) {
   for (const key of Object.keys(HERO_CASES)) {
     test(`Mint Detail hero buttons are not clipped @ ${width}px — ${key}`, async ({ page }) => {
       const { url } = await mount(page, HERO_CASES[key]!, { width })
@@ -393,10 +393,10 @@ for (const width of [340, 360, 375, 380, 388, 399]) {
 
 // Boxes recorded from the code BEFORE the text-only change (x, width, height; the fixture's plain mint).
 const HERO_BOXES: Record<number, { left: number; width: number; height: number }[]> = {
-  400: [{ left: 79, width: 78.66, height: 28 }, { left: 163.67, width: 78.67, height: 27 }, { left: 248.33, width: 78.67, height: 27 }],
+  420: [{ left: 79, width: 85.33, height: 28 }, { left: 170.33, width: 85.34, height: 27 }, { left: 261.67, width: 85.33, height: 27 }],
   1440: [{ left: 943.42, width: 100.53, height: 30 }, { left: 1051.95, width: 162.14, height: 30 }, { left: 1222.09, width: 100.91, height: 30 }],
 }
-for (const width of [400, 1440]) {
+for (const width of [420, 1440]) {
   test(`Mint Detail hero button boxes are unchanged @ ${width}px`, async ({ page }) => {
     const { url } = await mount(page, {}, { width })
     await page.goto(`/mint/${encodeURIComponent(url)}`)
@@ -471,10 +471,9 @@ for (const width of [700, 768, 800, 900]) {
   }
 }
 
-// ── Hero icons: text-only below 400px (2026-10-03) ───────────────────────────────────────────────
-// The Mint QR icon was flex-shrunk to 0–2px at 360–399px while the other two kept theirs. Below 400px all three
-// decorative icons are hidden; from 400px they keep their previous sizes (the Mint QR one is still squeezed at
-// 400px, pre-existing, and must not change here).
+// ── Hero icons: text-only below 420px (2026-10-03) ───────────────────────────────────────────────
+// The Mint QR icon is flex-shrunk below 12px at every width up to 418px while the other two keep theirs. Below
+// 420px all three decorative icons are hidden; from 420px they all render at full size.
 const heroIcons = (page: Page) => page.evaluate(() =>
   [...document.querySelectorAll('.md-quick-btn, .md-compare-btn')].map(btn => {
     const icon = btn.querySelector(':scope > svg, :scope > span[aria-hidden="true"]')!
@@ -483,7 +482,7 @@ const heroIcons = (page: Page) => page.evaluate(() =>
     return { display: cs.display, width: r.width, hidden: icon.getAttribute('aria-hidden') === 'true' || icon.tagName === 'svg' }
   }))
 
-for (const width of [320, 340, 360, 375, 390, 399]) {
+for (const width of [320, 340, 360, 375, 390, 400, 412, 414]) {
   test(`Mint Detail hero buttons are text-only @ ${width}px`, async ({ page }) => {
     const { url } = await mount(page, {}, { width })
     await page.goto(`/mint/${encodeURIComponent(url)}`)
@@ -500,11 +499,11 @@ for (const width of [320, 340, 360, 375, 390, 399]) {
 }
 
 const HERO_ICON_WIDTHS: Record<number, number[]> = {
-  400: [5.3, 7.3, 11.3],
+  420: [12, 7.3, 11.3],
   430: [12, 7.3, 11.3],
   1440: [12, 7.4, 12.4],
 }
-for (const width of [400, 430, 1440]) {
+for (const width of [420, 430, 1440]) {
   test(`Mint Detail hero icons keep their size @ ${width}px`, async ({ page }) => {
     const { url } = await mount(page, {}, { width })
     await page.goto(`/mint/${encodeURIComponent(url)}`)
