@@ -1181,10 +1181,14 @@
 
 /* ── Submit Modal ───────────────────────────────────────────── */
 .submit-modal-overlay {
+  /* Field and Cancel borders at 3:1 against the modal surface (the old --border was 1.3:1). */
+  --submit-error-text: color-mix(in srgb, var(--red) 55%, var(--text));
+  --submit-field-border: color-mix(in srgb, var(--text3) 62%, var(--bg2));
   position: fixed; inset: 0; z-index: 100;
   background: rgba(0,0,0,0.78); backdrop-filter: blur(10px);
   display: flex; align-items: center; justify-content: center;
   padding: 20px;
+  overflow-y: auto;
 }
 
 .submit-modal {
@@ -1196,13 +1200,19 @@
   width: 100%;
   box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03);
   position: relative; /* anchors the corner close button; nothing else moves */
+  /* Low screens: the dialog scrolls inside the viewport (margin: auto keeps it centred when it fits and lets it
+     scroll from the top when it does not); nothing changes at normal heights. */
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  margin: auto;
 }
 /* Corner close button — same look as .nut-modal-close; absolutely positioned, so the modal's layout is unchanged. */
 .submit-modal-close {
-  position: absolute; top: 14px; right: 14px;
+  position: absolute; top: 12px; right: 12px;
   background: none; border: none; color: var(--text3);
   font-size: 14px; line-height: 1; cursor: pointer;
-  padding: 2px 5px; border-radius: 4px;
+  width: 24px; height: 24px; padding: 0; border-radius: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 .submit-modal-close:hover { background: var(--bg3); color: var(--text); }
 
@@ -1217,13 +1227,14 @@
 }
 .submit-modal-desc code { font-family: var(--font-mono); }
 .submit-modal-input {
-  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  width: 100%; background: var(--bg3); border: 1px solid var(--submit-field-border);
   border-radius: 8px; padding: 10px 12px; color: var(--text);
   font-size: 12px; outline: none; font-family: var(--font-mono);
   margin-bottom: 5px; box-sizing: border-box;
   transition: border-color var(--transition);
 }
 .submit-modal-input:focus { border-color: var(--accent); }
+.submit-modal-input::placeholder, .bulk-textarea::placeholder { color: var(--text3); opacity: 1; }
 
 .submit-input-hint {
   font-size: 10px; color: var(--text3); font-family: var(--font-body);
@@ -1233,12 +1244,12 @@
 .submit-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
 .submit-cancel-btn {
-  background: transparent; border: 1px solid var(--border);
-  border-radius: 7px; padding: 7px 16px; color: var(--text3);
+  background: transparent; border: 1px solid var(--submit-field-border);
+  border-radius: 7px; padding: 7px 16px; color: var(--text2);
   font-size: 11px; cursor: pointer; font-family: var(--font-mono);
   transition: all var(--transition);
 }
-.submit-cancel-btn:hover { border-color: var(--border2); color: var(--text2); }
+.submit-cancel-btn:hover { border-color: var(--text3); color: var(--text); }
 
 .submit-ok-btn {
   background: var(--green-soft); color: var(--green-bright); border: 1px solid var(--green-soft-strong);
@@ -1248,7 +1259,11 @@
   letter-spacing: 0.03em;
 }
 .submit-ok-btn:hover:not([aria-disabled="true"]):not(:disabled) { background: var(--green-soft-strong); border-color: var(--green); }
-.submit-ok-btn:disabled, .submit-ok-btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
+.submit-ok-btn:disabled, .submit-ok-btn[aria-disabled="true"] {
+  /* Unavailable: plain muted text on a flat fill (3:1+ instead of faded green at 0.4 opacity). */
+  background: var(--bg3); border-color: var(--submit-field-border); color: var(--text3);
+  cursor: not-allowed;
+}
 
 .submit-result {
   font-size: 11px; margin-bottom: 12px; padding: 8px 12px;
@@ -1259,7 +1274,7 @@
   border: 1px solid var(--green-soft-strong);
 }
 .submit-result.error {
-  background: var(--red-soft); color: var(--red);
+  background: var(--red-soft); color: var(--submit-error-text);
   border: 1px solid var(--red-soft-strong);
 }
 
@@ -1322,7 +1337,7 @@
 }
 
 .submit-probe-error {
-  font-size: 11px; color: var(--red);
+  font-size: 11px; color: var(--submit-error-text);
   background: var(--red-soft);
   border: 1px solid var(--red-soft-strong);
   border-radius: 6px; padding: 6px 10px;
@@ -2045,13 +2060,25 @@
   font-family: var(--font-body);
   transition: all var(--transition);
 }
-.submit-tab-btn.active { background: var(--bg2); border-color: var(--border2); color: var(--text); }
+.submit-tab-btn.active { background: var(--green-soft-strong); border-color: var(--accent); color: var(--text); }
+.submit-tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Touch: 44px hit areas through an invisible ::before (the visible sizes stay as they are). */
+@media (pointer: coarse), (max-width: 600px) {
+  .submit-tab-btn, .submit-cancel-btn, .submit-ok-btn, .submit-modal-close { position: relative; }
+  .submit-modal-close { position: absolute; }
+  .submit-tab-btn::before, .submit-cancel-btn::before, .submit-ok-btn::before, .submit-modal-close::before {
+    content: ''; position: absolute; left: 50%; top: 50%;
+    width: max(100%, 44px); height: 44px; transform: translate(-50%, -50%);
+  }
+  .submit-modal-input { min-height: 44px; }
+}
 
 /* ── Bulk submit ─────────────────────────────────────────────── */
 .bulk-textarea {
   width: 100%;
   background: var(--bg3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--submit-field-border);
   border-radius: 8px;
   padding: 10px 12px;
   color: var(--text);

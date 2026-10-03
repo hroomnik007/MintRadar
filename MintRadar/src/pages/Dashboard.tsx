@@ -825,9 +825,11 @@ export default function Dashboard() {
 
   // Single <-> Bulk: focus follows the tab to its field, deliberately (the first mount is handled by useModalFocus).
   const prevSubmitTab = useRef(submitTab)
+  const tabKeyNav = useRef(false) // arrow/Home/End on the tabs keeps focus on the tab (roving tabindex)
   useEffect(() => {
     if (prevSubmitTab.current === submitTab) return
     prevSubmitTab.current = submitTab
+    if (tabKeyNav.current) { tabKeyNav.current = false; return }
     if (!showSubmit) return
     document.querySelector<HTMLElement>(submitTab === 'bulk' ? '.submit-modal .bulk-textarea' : '.submit-modal .submit-modal-input')?.focus({ preventScroll: true })
   }, [submitTab, showSubmit])
@@ -841,6 +843,20 @@ export default function Dashboard() {
     submitWasOpen.current = false
     if (!document.activeElement || document.activeElement === document.body) submitBtnRef.current?.focus({ preventScroll: true })
   }, [showSubmit])
+
+  function handleSubmitTabKey(e: React.KeyboardEvent) {
+    const order: Array<'single' | 'bulk'> = ['single', 'bulk']
+    const i = order.indexOf(submitTab)
+    let next: 'single' | 'bulk' | null = null
+    if (e.key === 'ArrowRight') next = order[(i + 1) % 2] ?? null
+    else if (e.key === 'ArrowLeft') next = order[(i + 1) % 2] ?? null
+    else if (e.key === 'Home') next = 'single'
+    else if (e.key === 'End') next = 'bulk'
+    if (next === null) return
+    e.preventDefault()
+    if (next !== submitTab) { tabKeyNav.current = true; setSubmitTab(next) }
+    document.getElementById(`submit-tab-${next}`)?.focus({ preventScroll: true })
+  }
 
   function handleSubmitInputChange(value: string) {
     setSubmitInput(value)
@@ -1435,30 +1451,37 @@ export default function Dashboard() {
           <div className="submit-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="submit-modal-title" ref={dialogRef}>
             <button type="button" className="submit-modal-close" onClick={() => setShowSubmit(false)} aria-label="Close">✕</button>
             <div className="submit-modal-title" id="submit-modal-title">Submit a Mint</div>
-            <div className="submit-tabs">
-              <button type="button" className={`submit-tab-btn${submitTab === 'single' ? ' active' : ''}`} onClick={() => setSubmitTab('single')}>Single</button>
-              <button type="button" className={`submit-tab-btn${submitTab === 'bulk' ? ' active' : ''}`} onClick={() => setSubmitTab('bulk')}>Bulk</button>
+            <div className="submit-tabs" role="tablist" aria-label="Submit mode" onKeyDown={handleSubmitTabKey}>
+              <button type="button" role="tab" id="submit-tab-single" aria-selected={submitTab === 'single'} aria-controls="submit-panel-single" tabIndex={submitTab === 'single' ? 0 : -1} className={`submit-tab-btn${submitTab === 'single' ? ' active' : ''}`} onClick={() => setSubmitTab('single')}>Single</button>
+              <button type="button" role="tab" id="submit-tab-bulk" aria-selected={submitTab === 'bulk'} aria-controls="submit-panel-bulk" tabIndex={submitTab === 'bulk' ? 0 : -1} className={`submit-tab-btn${submitTab === 'bulk' ? ' active' : ''}`} onClick={() => setSubmitTab('bulk')}>Bulk</button>
             </div>
 
             {submitTab === 'single' && (
-              <>
+              <div role="tabpanel" id="submit-panel-single" aria-labelledby="submit-tab-single">
                 <div className="submit-modal-desc">
                   Enter a mint URL, or a Nostr key (npub) to look up the mint it announced (NIP-87). The mint must answer <code>/v1/info</code>.
                 </div>
                 {/* Mirrors SUBMIT_RATE_LIMIT_MAX (20 per hour per IP) in backend/src/index.ts — manually synced like the Bulk limits below. */}
-                <div className="submit-input-hint">Up to 20 submissions per hour.</div>
+                <div className="submit-input-hint" id="submit-limits">Up to 20 submissions per hour.</div>
                 {submitState !== 'success' && (
                   <>
+                    <label htmlFor="submit-input" className="sr-only">Mint URL or npub</label>
                     <input
+                      id="submit-input"
                       className="submit-modal-input"
                       type="text"
+                      inputMode="url"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      autoComplete="off"
                       placeholder="https://yourmint.cash"
                       value={submitInput}
                       onChange={e => handleSubmitInputChange(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !submitDisabled) handleSubmitMint() }}
-                      aria-describedby="submit-status"
+                      aria-describedby="submit-limits submit-helper submit-status"
                     />
-                    <div className="submit-input-hint">or an npub1… key</div>
+                    <div className="submit-input-hint" id="submit-helper">or an npub1… key</div>
                     {/* One status region for everything the field produces: the reason for an unusable value, the key
                         lookup and the mint preview. */}
                     <div id="submit-status" role="status" aria-live="polite">
@@ -1487,7 +1510,7 @@ export default function Dashboard() {
                       )}
                       {probeState === 'error' && <div className="submit-probe-error">{(probe.url === submitUrl ? probeErrorMessage(probe.errorKind) : null) ?? 'Mint unreachable or invalid'}</div>}
                     </div>
-                    {submitState === 'error' && <div className="submit-result error">{submitMsg}</div>}
+                    {submitState === 'error' && <div className="submit-result error" role="alert">{submitMsg}</div>}
                     <div className="submit-modal-actions">
                       <button className="submit-cancel-btn" onClick={() => setShowSubmit(false)}>Cancel</button>
                       <button className="submit-ok-btn" onClick={handleSubmitMint} aria-disabled={submitDisabled} aria-describedby="submit-status">
@@ -1498,7 +1521,7 @@ export default function Dashboard() {
                 )}
                 {submitState === 'success' && (
                   <>
-                    <div className="submit-result success">{submitMsg}</div>
+                    <div className="submit-result success" role="status">{submitMsg}</div>
                     {submitAliasOf.length > 0 && (
                       <div className="submit-alias-hint">
                         Same mint pubkey as:{' '}
@@ -1514,15 +1537,16 @@ export default function Dashboard() {
                       </div>
                     )}
                     <div className="submit-modal-actions">
-                      <button className="submit-ok-btn" onClick={() => setShowSubmit(false)}>Close</button>
+                      {/* The Submit button is gone: focus goes to Close, the next sensible stop after the result. */}
+                      <button className="submit-ok-btn" autoFocus onClick={() => setShowSubmit(false)}>Close</button>
                     </div>
                   </>
                 )}
-              </>
+              </div>
             )}
 
             {submitTab === 'bulk' && (
-              <>
+              <div role="tabpanel" id="submit-panel-bulk" aria-labelledby="submit-tab-bulk">
                 <div className="submit-modal-desc">
                   Paste one mint URL per line, each starting with{'\u00A0'}<code>https://</code>
                 </div>
@@ -1531,16 +1555,22 @@ export default function Dashboard() {
                     backend/src/index.ts (no shared workspace between the two
                     packages, so this is a manually-synced number like
                     testMints.ts/auditScore.ts — update both if either changes). */}
-                <div className="submit-input-hint">Up to 100 mints per submission, 10 submissions per hour.</div>
+                <div className="submit-input-hint" id="bulk-limits">Up to 100 mints per submission, 10 submissions per hour.</div>
                 {!bulkRunning && !bulkDone && (
                   <>
+                    <label htmlFor="bulk-input" className="sr-only">Mint URLs, one per line</label>
                     <textarea
+                      id="bulk-input"
                       className="bulk-textarea"
                       placeholder={'https://mint1.example.com\nhttps://mint2.example.com'}
                       value={bulkInput}
                       onChange={e => setBulkInput(e.target.value)}
                       rows={6}
-                      aria-describedby="bulk-status"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      autoComplete="off"
+                      aria-describedby="bulk-limits bulk-status"
                     />
                     {/* Live summary, refreshed 400 ms after typing stops. */}
                     <div id="bulk-status" role="status" aria-live="polite">
@@ -1609,7 +1639,7 @@ export default function Dashboard() {
                 {bulkDone && (
                   <div style={{ marginTop: 10 }}>
                     {!bulkRateLimitMsg && (
-                      <div className={`submit-result ${bulkTone}`}>
+                      <div className={`submit-result ${bulkTone}`} role="status">
                         {bulkAdded} added, {bulkDuplicate} already tracked, {bulkFailed} failed
                       </div>
                     )}
@@ -1617,11 +1647,12 @@ export default function Dashboard() {
                       <div className="submit-reason">{bulkSkipped} {bulkSkipped === 1 ? 'line was' : 'lines were'} not sent (invalid or duplicate).</div>
                     )}
                     <div className="submit-modal-actions">
-                      <button className="submit-ok-btn" onClick={() => setShowSubmit(false)}>Close</button>
+                      {/* After the results appear, focus moves to Close: the form (and the Submit button) is gone and Close is the one action left. */}
+                      <button className="submit-ok-btn" autoFocus onClick={() => setShowSubmit(false)}>Close</button>
                     </div>
                   </div>
                 )}
-              </>
+              </div>
             )}
             <div className="submit-no-account">No account required.</div>
           </div>
