@@ -426,7 +426,12 @@
 
 /* ── Mint List View ─────────────────────────────────────────── */
 .mint-list-table-wrap {
-  margin-inline: var(--page-pad);
+  /* Same edges as .dashboard-controls / .dash-status content boxes: the shared chrome width minus the
+     two gutters, centred. Never wider than the page content; a table that needs more room scrolls
+     inside this wrapper (overflow-x), it does not widen the page. */
+  width: calc(100% - var(--page-pad) * 2);
+  max-width: calc(var(--dash-chrome-max) - var(--page-pad) * 2);
+  margin-inline: auto;
   overflow-x: auto;
   min-width: 0;
 }
@@ -452,6 +457,8 @@
 }
 
 .mint-list-row {
+  /* Equal row heights: a row without a hostname line is as tall as the two-line row (cells are vertically centred). */
+  height: 56px;
   cursor: pointer;
   border-bottom: 0.5px solid var(--border);
   transition: background 120ms ease;
@@ -473,6 +480,10 @@
   min-width: 150px;
   max-width: 280px;
   width: 100%;
+  /* display:flex makes this cell a block, so vertical-align does not centre it: give it the row height
+     (border-box, padding included) and let align-items centre the icon + text inside. */
+  box-sizing: border-box;
+  height: 56px;
 }
 
 .mint-list-name {

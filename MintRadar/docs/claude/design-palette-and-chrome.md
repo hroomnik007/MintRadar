@@ -34,6 +34,20 @@ declarations there for its three content blocks. Decorative full-bleed bands (`.
 `.wallets-hero`, `.stats-header`, the site nav) are deliberately **not** capped — only content
 columns that hold card grids or controls are.
 
+**2b) Rule: every Dashboard view uses the shared container edges (2026-10-03)**
+
+Every Dashboard view — card grid (`.mint-grid`) and list table (`.mint-list-table-wrap`) — must have the
+same left/right content edges as the search row (`.dashboard-controls`), the stats strip
+(`.dash-status`) and the navbar inner row: `--dash-chrome-max` capped, `--page-pad` gutters, centred.
+`.app-content` keeps its older 1400px cap, so a view with only `margin-inline: var(--page-pad)` overshoots
+the content by ~58px per side on wide screens (that was the list view's bug). `.mint-list-table-wrap` now uses
+`width: calc(100% - var(--page-pad) * 2); max-width: calc(var(--dash-chrome-max) - var(--page-pad) * 2); margin-inline: auto`
+and scrolls its table inside itself (`overflow-x: auto`) when narrow; it never widens the page. List rows
+have a fixed 56px height (`.mint-list-row` + `.mint-list-td-name`, which is `display:flex` and so needs the height
+itself to centre) so rows without a hostname line match the two-line rows. Edge alignment is enforced by
+`e2e/dashboard-container-edges.spec.ts` (list + cards at 1920–1100px, no page overflow at 900/768/390, equal row heights) —
+any new Dashboard view needs a case there.
+
 **3) State before this wave**
 
 Each page defined its own width independently, so first-card left edges did not line up across
