@@ -250,7 +250,7 @@ off several rounds of user-reported layout fixes, in landing order:
   method's min–max range with a comma into one wrapping inline block
   (`"1 - 1,000,000 sat (bolt11), 10,000 - 5,000,000 sat (onchain)"`), which wrapped mid-range on
   narrower cards. Each method group now renders in its own row (`575bb4e`).
-- **Watchlist card: Compare/Down/Up now fit on one line.** `.card-actions` (shared with
+- **(Superseded 2026-10-03 — the Down/Up buttons are gone, see "Watchlist notification toggles" in stats-dashboard-watchlist-ui.md.)** **Watchlist card: Compare/Down/Up now fit on one line.** `.card-actions` (shared with
   Dashboard's Compare-only case) is `flex-flow: row wrap` inside `.card-bottom-main`, which on a
   Watchlist card is only ~187px wide (the Reliability column takes the rest) — the 3 buttons' combined
   width ran ~18px over that, wrapping Up onto its own second row on every card. Trimmed

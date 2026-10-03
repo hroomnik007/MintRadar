@@ -6,6 +6,14 @@
      Dashboard, Learn, Wallets so every card grid's left edge lines up. */
 }
 
+/* One explainer above the card grid (not on every card). */
+.wl-notify-explainer {
+  margin: 14px 0 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--text3);
+}
+
 /* ── Card grid ──────────────────────────────────────────────── */
 .wl-grid {
   flex: 1;

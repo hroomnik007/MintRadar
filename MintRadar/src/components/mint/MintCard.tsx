@@ -1,7 +1,5 @@
-import type { MouseEvent } from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useLiveQuery } from 'dexie-react-hooks'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { usePendingAutoWatch } from '@/hooks/usePendingAutoWatch'
 import './WatchLoginModal.css'
@@ -13,25 +11,10 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
-import { useUserRelays } from '@/hooks/useUserRelays'
 import { displayName as mintDisplayName, shouldShowHostLine, isNewMint, cardLatencyLabel, cardLatencyLocationSuffix, cardLightningLabel, uptimeColor, formatTimeAgo } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
-import { db } from '@/db'
-import { resolveNotificationRelays, syncSubscribeToServer, syncUnsubscribeFromServer } from '@/core/nostr/notificationSubscription'
+import { NotifyStrip } from '@/components/mint/NotifyStrip'
 import { sortUnits } from '@/utils/sortUnits'
-
-const IcBellDown = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-    <path d="M6 1.2C4.6 1.2 3.5 2.4 3.5 3.9V5.6C3.5 6.3 3.2 6.9 2.8 7.3H9.2C8.8 6.9 8.5 6.3 8.5 5.6V3.9C8.5 2.4 7.4 1.2 6 1.2Z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/>
-    <path d="M6 7.3V10.3M6 10.3L4.7 9M6 10.3L7.3 9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-)
-const IcBellUp = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-    <path d="M6 4.7C4.6 4.7 3.5 5.9 3.5 7.4V9.1C3.5 9.8 3.2 10.4 2.8 10.8H9.2C8.8 10.4 8.5 9.8 8.5 9.1V7.4C8.5 5.9 7.4 4.7 6 4.7Z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/>
-    <path d="M6 4.7V1.7M6 1.7L4.7 3M6 1.7L7.3 3" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-)
 
 function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
@@ -88,36 +71,7 @@ export function MintCard({
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
   }, [showWatchLoginModal, closeWatchLoginModal])
-  const { read: userReadRelays } = useUserRelays()
   const hostname = getHostname(mint.url)
-  const notifyEntry = useLiveQuery(
-    () => showNotifyToggles ? db.watchlist.get(mint.url) : undefined,
-    [mint.url, showNotifyToggles]
-  )
-  const toggleNotify = (field: 'notifyOnDown' | 'notifyOnUp') => (e: MouseEvent) => {
-    e.stopPropagation()
-    if (!notifyEntry) return
-    const nextValue = !notifyEntry[field]
-    const writeAndSync = async () => {
-      await db.watchlist.update(mint.url, { [field]: nextValue })
-
-      if (!isLoggedIn) return
-
-      const current = await db.watchlist.get(mint.url)
-      if (!current) return
-      if (current.notifyOnDown || current.notifyOnUp) {
-        await syncSubscribeToServer({
-          mintUrl: mint.url,
-          notifyOnDown: current.notifyOnDown,
-          notifyOnUp: current.notifyOnUp,
-          relays: resolveNotificationRelays(userReadRelays),
-        })
-      } else {
-        await syncUnsubscribeFromServer(mint.url)
-      }
-    }
-    void writeAndSync()
-  }
   const isOnline = mint.online === true
   const isOfflineDegraded = mint.degraded === true
   // Offline (24h+) cards are not dimmed with opacity; status colours are muted towards a text token instead.
@@ -280,24 +234,6 @@ export function MintCard({
             )}
           </div>
           <div className="card-actions">
-            {showNotifyToggles && notifyEntry && (
-              <>
-                <button
-                  type="button"
-                  className={`notify-toggle-btn${notifyEntry.notifyOnDown ? ' on' : ''}`}
-                  onClick={toggleNotify('notifyOnDown')}
-                >
-                  <IcBellDown /><span>Down</span>
-                </button>
-                <button
-                  type="button"
-                  className={`notify-toggle-btn${notifyEntry.notifyOnUp ? ' on' : ''}`}
-                  onClick={toggleNotify('notifyOnUp')}
-                >
-                  <IcBellUp /><span>Up</span>
-                </button>
-              </>
-            )}
           </div>
         </div>
 
@@ -332,6 +268,8 @@ export function MintCard({
         </div>
         </div>
       </div>
+
+      {showNotifyToggles && <NotifyStrip mintUrl={mint.url} name={displayName} />}
     </div>
       {showWatchLoginModal && (
         <div

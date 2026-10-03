@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { sharedPool } from '@/core/nostr/pool'
 import { db } from '@/db'
+import { confirmedNotify } from '@/utils/notifyState'
 import type { NostrEvent, EventTemplate, UnsignedEvent } from 'nostr-tools'
 import { nip44, generateSecretKey, finalizeEvent, getEventHash } from 'nostr-tools'
 
@@ -64,7 +65,7 @@ export function useWatchlistNotifications(
         // Detect online → offline transition
         if (prev === true && isOnline === false) {
           const entry = await db.watchlist.get(url)
-          if (entry?.notifyOnDown) {
+          if (confirmedNotify(entry).down) {
             if (import.meta.env.DEV) console.log(`[notifications] mint down: ${url}`)
             await sendNostrDM(
               profile.pubkey,
@@ -77,7 +78,7 @@ export function useWatchlistNotifications(
         // Detect offline → online transition
         if (prev === false && isOnline === true) {
           const entry = await db.watchlist.get(url)
-          if (entry?.notifyOnUp) {
+          if (confirmedNotify(entry).up) {
             if (import.meta.env.DEV) console.log(`[notifications] mint recovered: ${url}`)
             await sendNostrDM(
               profile.pubkey,

@@ -90,10 +90,10 @@ export function useWatchlistSync() {
 
         if (remote.length > 0) {
           // Remote is authoritative for WHICH urls are watched, but notifyOnDown/
-          // notifyOnUp (and addedAt) are local-only data never synced to Nostr —
-          // preserve them for urls that already exist locally instead of resetting
-          // to defaults on every successful sync. New urls (not previously in
-          // Dexie) default to on/on, matching addMint()'s default.
+          // notifyOnUp, their server confirmation (notifyConfirmedAt) and addedAt are
+          // local-only data never synced to Nostr — preserve them for urls that already
+          // exist locally instead of resetting on every successful sync. New urls (not
+          // previously in Dexie) start with notifications off, matching addMint().
           const existing = await db.watchlist.toArray()
           const existingByUrl = new Map(existing.map(e => [e.url, e]))
           await db.watchlist.clear()
@@ -103,8 +103,9 @@ export function useWatchlistSync() {
               return db.watchlist.put({
                 url,
                 addedAt: prior?.addedAt ?? new Date(),
-                notifyOnDown: prior?.notifyOnDown ?? true,
-                notifyOnUp: prior?.notifyOnUp ?? true,
+                notifyOnDown: prior?.notifyOnDown ?? false,
+                notifyOnUp: prior?.notifyOnUp ?? false,
+                ...(prior?.notifyConfirmedAt ? { notifyConfirmedAt: prior.notifyConfirmedAt } : {}),
               })
             })
           )
@@ -125,8 +126,8 @@ export function useWatchlistSync() {
         console.log('sync: complete —', useWatchlistStore.getState().mints.length, 'mints in store')
 
         // Best-effort: refresh server-side notification_subscriptions rows
-        // (resets their 30-day retention clock) for every entry with a
-        // notify toggle on. Non-blocking — failures are logged and
+        // (resets their 30-day retention clock) for every entry whose
+        // notifications the server has confirmed as on. Non-blocking — failures are logged and
         // swallowed inside refreshAllSubscriptions itself.
         void refreshAllSubscriptions(userReadRelaysRef.current)
       } catch (err) {

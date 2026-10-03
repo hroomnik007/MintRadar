@@ -328,6 +328,9 @@ export default function Watchlist() {
             </div>
           ) : (
             <>
+              <p className="wl-notify-explainer">
+                Get a Nostr DM when a watched mint goes down or comes back, even if this tab is closed. At most one per mint per hour.
+              </p>
               <div className="wl-grid">
                 {orderedMints.slice(0, visibleCount).map(url => {
                   const mint = knownMintsMap.get(url) ?? {

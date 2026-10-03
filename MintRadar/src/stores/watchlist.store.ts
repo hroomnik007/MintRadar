@@ -53,8 +53,10 @@ export const useWatchlistStore = create<WatchlistState>()(
       await db.watchlist.put({
         url,
         addedAt: new Date(),
-        notifyOnDown: true,
-        notifyOnUp: true,
+        // A newly watched mint starts with notifications OFF; the user turns them on deliberately
+        // (that is what creates the server subscription).
+        notifyOnDown: false,
+        notifyOnUp: false,
       })
       set(state => {
         if (!state.mints.includes(url)) {

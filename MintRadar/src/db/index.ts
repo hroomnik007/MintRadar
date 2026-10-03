@@ -20,6 +20,10 @@ interface WatchlistEntry {
   addedAt: Date
   notifyOnDown: boolean
   notifyOnUp: boolean
+  // Set when the server last CONFIRMED these two flags (subscribe/unsubscribe answered ok).
+  // Flags without it (rows from before this field existed, or never confirmed) are unconfirmed
+  // and count as off everywhere — see utils/notifyState.ts.
+  notifyConfirmedAt?: Date
 }
 
 interface MetaEntry {

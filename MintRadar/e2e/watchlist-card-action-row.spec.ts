@@ -1,22 +1,20 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, loginAs, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 
-// Regression 1: the Latency + Down/Up cluster on a Watchlist card must
-// lay out identically no matter how many digits the latency value has — a wider
-// value ("10450 ms" vs "88 ms") must not shift the buttons' wrap point so that
-// some cards wrap onto more lines than others.
+// Regression 1: the notification pills ("Goes down" / "Back up", in the card's `.notify-strip`
+// footer) must lay out identically no matter how many digits the latency value has — a wider
+// value ("10450 ms" vs "88 ms") must not make some cards wrap the pills onto more lines than others.
 //
-// Regression 2: those buttons live in `.card-bottom-main` and must wrap *within*
-// that column. They must never ride over the right-hand `.card-reliability` column
-// (the Reliability number / stars). There is no Unwatch button on the card — the
-// watch star lives in the header.
+// Regression 2: the pills must never ride over the right-hand `.card-reliability` column
+// (the Reliability number / stars), and `.card-bottom-main` must stay left of that column.
+// There is no Unwatch button on the card — the watch star lives in the header.
 
 const LAT = [88, 411, 2336, 10450] // 2..5 digits
 const KNOWN = MOCK_KNOWN_MINTS.slice(0, 4).map((m, i) => ({
   ...m, online: true, degraded: false, latencyMs: LAT[i], reliabilityScore: 80, uptimePct24h: 97,
 }))
 
-test('action row is consistent across latency digit counts and never covers Reliability', async ({ page }) => {
+test('pill row is consistent across latency digit counts and never covers Reliability', async ({ page }) => {
   await mockRelays(page)
   await installApiMocks(page)
   await page.route('**/api/mints/known', r => r.fulfill({ json: KNOWN }))
@@ -44,7 +42,7 @@ test('action row is consistent across latency digit counts and never covers Reli
         const reliability = card.querySelector('.card-reliability') as HTMLElement
         const reliabilityFig = (card.querySelector('.card-reliability-score') ??
           card.querySelector('.card-reliability-na')) as HTMLElement
-        const btns = [...main.querySelectorAll('button')]
+        const btns = [...card.querySelectorAll('.notify-strip button')]
         const tops = new Set(btns.map(b => Math.round(b.getBoundingClientRect().top)))
         const tr = reliabilityFig.getBoundingClientRect()
         return {

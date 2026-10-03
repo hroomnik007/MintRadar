@@ -114,3 +114,30 @@ describe('useWatchlistSync — pubkey re-check after await (audit finding M4)', 
     unmount()
   })
 })
+
+describe('useWatchlistSync — notification flags', () => {
+  it('a url that was not in Dexie starts with notifications off and no confirmation', async () => {
+    fetchRemoteWatchlist.mockResolvedValue({ urls: ['https://new.mint'], failed: false })
+    useAuthStore.setState({ profile: { pubkey: PK_A } })
+    const { unmount } = renderHook(() => useWatchlistSync())
+    await waitFor(() => expect(dbWatchlistPut).toHaveBeenCalled())
+    const put = dbWatchlistPut.mock.calls[0]![0] as Record<string, unknown>
+    expect(put).toMatchObject({ url: 'https://new.mint', notifyOnDown: false, notifyOnUp: false })
+    expect(put).not.toHaveProperty('notifyConfirmedAt')
+    unmount()
+  })
+
+  it('keeps the flags and the server confirmation of a url that already exists locally', async () => {
+    const confirmedAt = new Date('2026-10-01')
+    io.dbWatchlistToArray.mockResolvedValueOnce([
+      { url: 'https://kept.mint', addedAt: new Date('2026-01-01'), notifyOnDown: true, notifyOnUp: false, notifyConfirmedAt: confirmedAt },
+    ])
+    fetchRemoteWatchlist.mockResolvedValue({ urls: ['https://kept.mint'], failed: false })
+    useAuthStore.setState({ profile: { pubkey: PK_A } })
+    const { unmount } = renderHook(() => useWatchlistSync())
+    await waitFor(() => expect(dbWatchlistPut).toHaveBeenCalled())
+    expect(dbWatchlistPut.mock.calls[0]![0]).toMatchObject({ url: 'https://kept.mint', notifyOnDown: true, notifyOnUp: false, notifyConfirmedAt: confirmedAt })
+    unmount()
+  })
+})
+

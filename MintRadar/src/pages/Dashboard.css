@@ -905,34 +905,88 @@
   color: var(--t3);
 }
 
-/* Watchlist-only Down/Up toggles — compact so they can sit under Compare on a
-   Watchlist card without ballooning it past a Dashboard card's height. */
-.notify-toggle-btn {
+/* Watchlist-only footer strip: divider, "NOTIFY" label, two toggle pills ("Goes down", "Back up").
+   Rendered by NotifyStrip (Watchlist cards only). Pills are 26px visible with a 44px touch target
+   through an invisible ::before; width never changes between states (the check/spinner slot is
+   always reserved). */
+.notify-strip {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.notify-strip-row {
   display: flex;
   align-items: center;
-  gap: 3px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-m);
-  padding: 3px 6px;
-  color: var(--text3);
-  font-size: 9.5px;
-  font-weight: 400;
-  cursor: pointer;
+  gap: 6px;
+}
+.notify-strip-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: auto;
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  color: var(--text2);
+  font-family: var(--font-mono);
+}
+.notify-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 9px;
+  box-sizing: border-box;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 500;
   font-family: var(--font-body);
-  transition: all var(--transition);
+  white-space: nowrap;
+  cursor: pointer;
   flex-shrink: 0;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
 }
-
-.notify-toggle-btn:hover { border-color: var(--border-hi); }
-
-.notify-toggle-btn.on {
-  background: var(--green-soft);
-  border-color: rgba(69,173,140,.4);
-  color: var(--green-bright);
+.notify-pill:hover { border-color: var(--text3); }
+.notify-pill:disabled { cursor: progress; }
+.notify-pill.on {
+  background: var(--accent-dim);
+  border-color: var(--accent-brd);
+  color: var(--accent);
 }
-
-.notify-toggle-btn.on:hover { border-color: rgba(69,173,140,.6); }
+.notify-pill.on:hover { border-color: var(--accent); }
+.notify-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.notify-pill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  height: 10px;
+}
+.notify-spinner {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: notify-spin 0.8s linear infinite;
+}
+@keyframes notify-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .notify-spinner { animation: none; } }
+.notify-strip-msg {
+  margin-top: 6px;
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: var(--amber);
+}
+.notify-strip-msg:empty { display: none; }
+/* Touch: visible height stays 26px; an invisible extension (10px above/below the 24px padding box inside the 1px border) brings the target to 44px. */
+@media (pointer: coarse), (max-width: 600px) {
+  .notify-pill::before { content: ''; position: absolute; left: 0; right: 0; top: -10px; bottom: -10px; }
+}
 
 /* ── Skeleton ───────────────────────────────────────────────── */
 @keyframes shimmer {
