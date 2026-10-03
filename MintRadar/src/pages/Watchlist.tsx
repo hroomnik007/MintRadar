@@ -274,7 +274,10 @@ export default function Watchlist() {
     }, { rootMargin: '200px' })
     observer.observe(el)
     return () => observer.disconnect()
-  }, [listKey])
+    // The sentinel only exists once the skeleton is gone (knownLoading / syncStatus), so those are
+    // dependencies too — a list that arrived while the skeleton was up used to leave the observer
+    // unattached for good ("Showing 20 of N" forever).
+  }, [listKey, knownLoading, syncStatus])
 
   useDocumentMeta(
     'My Watchlist - MintRadar',

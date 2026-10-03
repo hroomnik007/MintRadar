@@ -56,7 +56,8 @@ test.describe('Watchlist — "Showing X of Y" only when the list is cut short', 
   })
 
   test('more than a page: the line shows how many of the total are on screen', async ({ page }) => {
-    await openWatchlist(page, 60)
+    // A short viewport keeps the pagination sentinel well out of view, so the first page stays the only one.
+    await openWatchlist(page, 60, { width: 1440, height: 500 })
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(20)
     await expect(page.locator('.wl-showing')).toHaveText('Showing 20 of 60')
   })
@@ -69,7 +70,7 @@ test.describe('Watchlist — "Showing X of Y" only when the list is cut short', 
     await expect(page.locator('.grid-showing-note')).toHaveText(/^Showing 4 of 4/)
   })
 
-  for (const [width, height] of [[1440, 700], [390, 800]] as const) {
+  for (const [width, height] of [[1440, 500], [390, 800]] as const) {
     test(`screenshot of a cut-short list ${width}px`, async ({ page }) => {
       test.skip(!SHOTS, 'set SHOTS=<dir> to write screenshots')
       await openWatchlist(page, 60, { width, height })
