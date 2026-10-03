@@ -1311,7 +1311,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 6px;
-    padding: 8px 12px;
+    padding: 8px var(--page-pad);
   }
   .md-sc {
     padding: 6px 8px;
@@ -1336,7 +1336,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 6px;
-    padding: 8px 14px;
+    padding: 8px var(--page-pad);
   }
   .md-sc {
     padding: 7px 8px;

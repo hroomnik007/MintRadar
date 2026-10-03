@@ -129,9 +129,7 @@ const STATES: State[] = [
       await p.locator('.md-tab', { hasText: new RegExp(`^${tab}$`, 'i') }).click()
       await expect(p.locator('.md-tab.active')).toHaveText(new RegExp(`^${tab}$`, 'i'))
     } })),
-  // Measured mismatches that look unintentional (reported, not fixed — this spec is test-only):
   { name: 'Mint Detail — summary strip', containers: [A('.md-summary')],
-    fixme: '.md-summary content box is 6px (900px) / 4px (768, 640px) outside the navbar content edge per side: the ≤900px rule gives it 12px padding instead of the 18px page gutter',
     setup: async p => { await boot(p); await p.goto(`/mint/${encodeURIComponent(ALPHA)}`); await expect(p.locator('.md-summary')).toBeVisible() } },
   { name: 'Wallets footnote', containers: [A('.wallets-footnote')],
     fixme: '.wallets-footnote text is inset 6px per side from the navbar content edge at ≥701px (padding 24px instead of --page-pad) and 2px at 640/390px (16px padding)',
