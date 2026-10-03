@@ -1583,16 +1583,13 @@ button.md-url-copy.copied > svg { opacity: 1; }
   .md-compare-btn { flex: 1 1 45%; }
 }
 
-/* 360–379px: the single-row hero action row is a 208–227px equal-thirds row (flex: 1 1 0) and the three labels
-   together need ~12px more than it has at 360px, so overflow: hidden clipped "Cashu.me" by up to 3.3px (Compare
-   1.7px, the Mint QR icon 1px; clipping fades out by ~378px). Side padding cannot help (the content is centred and
-   clipped at the border box), so the gaps shrink instead: 6→2px between buttons, 4→2px icon↔label,
-   0.03em→0 letter-spacing. Font, height, colours and the one-row layout stay; ≥380px is untouched (the wrap
-   fallback above starts at ≤359px). */
-@media (min-width: 360px) and (max-width: 379px) {
-  .md-hdr-actions { gap: 2px; }
-  .md-quick-btn,
-  .md-compare-btn { gap: 2px; letter-spacing: 0; }
+/* <400px: text-only hero buttons. The Mint QR icon is flex-shrunk to 0–2px at 360–399px (and 5px at 400) while the
+   other two keep theirs, so the row looked inconsistent. All three decorative icons (aria-hidden; the text
+   label is the accessible name) go; ≥400px is untouched. */
+@media (max-width: 399.98px) {
+  .md-quick-btn > svg,
+  .md-quick-btn > span[aria-hidden="true"],
+  .md-compare-btn > span[aria-hidden="true"] { display: none; }
 }
 
 /* Match the navbar + Dashboard content gutter, which drops to 14px at ≤600px. */

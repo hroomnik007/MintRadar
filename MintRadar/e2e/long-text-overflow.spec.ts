@@ -372,7 +372,7 @@ const heroButtons = (page: Page) => page.evaluate(() => {
   })
 })
 
-for (const width of [340, 360, 375, 380, 388]) {
+for (const width of [340, 360, 375, 380, 388, 399]) {
   for (const key of Object.keys(HERO_CASES)) {
     test(`Mint Detail hero buttons are not clipped @ ${width}px — ${key}`, async ({ page }) => {
       const { url } = await mount(page, HERO_CASES[key]!, { width })
@@ -391,12 +391,12 @@ for (const width of [340, 360, 375, 380, 388]) {
   }
 }
 
-// Boxes recorded from the code BEFORE the hero fix (x, width, height; the fixture's plain mint).
+// Boxes recorded from the code BEFORE the text-only change (x, width, height; the fixture's plain mint).
 const HERO_BOXES: Record<number, { left: number; width: number; height: number }[]> = {
-  390: [{ left: 79, width: 75.33, height: 28 }, { left: 160.33, width: 75.34, height: 27 }, { left: 241.67, width: 75.33, height: 27 }],
+  400: [{ left: 79, width: 78.66, height: 28 }, { left: 163.67, width: 78.67, height: 27 }, { left: 248.33, width: 78.67, height: 27 }],
   1440: [{ left: 943.42, width: 100.53, height: 30 }, { left: 1051.95, width: 162.14, height: 30 }, { left: 1222.09, width: 100.91, height: 30 }],
 }
-for (const width of [390, 1440]) {
+for (const width of [400, 1440]) {
   test(`Mint Detail hero button boxes are unchanged @ ${width}px`, async ({ page }) => {
     const { url } = await mount(page, {}, { width })
     await page.goto(`/mint/${encodeURIComponent(url)}`)
@@ -469,4 +469,52 @@ for (const width of [700, 768, 800, 900]) {
       expect(await leavingParent(page, '.stats-metrics .stat-card')).toEqual([])
     })
   }
+}
+
+// ── Hero icons: text-only below 400px (2026-10-03) ───────────────────────────────────────────────
+// The Mint QR icon was flex-shrunk to 0–2px at 360–399px while the other two kept theirs. Below 400px all three
+// decorative icons are hidden; from 400px they keep their previous sizes (the Mint QR one is still squeezed at
+// 400px, pre-existing, and must not change here).
+const heroIcons = (page: Page) => page.evaluate(() =>
+  [...document.querySelectorAll('.md-quick-btn, .md-compare-btn')].map(btn => {
+    const icon = btn.querySelector(':scope > svg, :scope > span[aria-hidden="true"]')!
+    const cs = getComputedStyle(icon)
+    const r = icon.getBoundingClientRect()
+    return { display: cs.display, width: r.width, hidden: icon.getAttribute('aria-hidden') === 'true' || icon.tagName === 'svg' }
+  }))
+
+for (const width of [320, 340, 360, 375, 390, 399]) {
+  test(`Mint Detail hero buttons are text-only @ ${width}px`, async ({ page }) => {
+    const { url } = await mount(page, {}, { width })
+    await page.goto(`/mint/${encodeURIComponent(url)}`)
+    await expect(page.locator('.md-tabs')).toBeVisible()
+    await page.waitForTimeout(250)
+    for (const ic of await heroIcons(page)) {
+      expect(ic.display === 'none' || ic.width === 0, `icon rendered: display ${ic.display}, ${ic.width}px`).toBe(true)
+    }
+    // text labels and accessible names stay
+    await expect(page.getByRole('button', { name: 'Mint QR' })).toBeVisible()
+    await expect(page.getByRole('link', { name: /Cashu\.me/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Compare', exact: true })).toBeVisible()
+  })
+}
+
+const HERO_ICON_WIDTHS: Record<number, number[]> = {
+  400: [5.3, 7.3, 11.3],
+  430: [12, 7.3, 11.3],
+  1440: [12, 7.4, 12.4],
+}
+for (const width of [400, 430, 1440]) {
+  test(`Mint Detail hero icons keep their size @ ${width}px`, async ({ page }) => {
+    const { url } = await mount(page, {}, { width })
+    await page.goto(`/mint/${encodeURIComponent(url)}`)
+    await expect(page.locator('.md-tabs')).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    await page.waitForTimeout(250)
+    const icons = await heroIcons(page)
+    icons.forEach((ic, i) => {
+      expect(ic.display).not.toBe('none')
+      expect(Math.abs(ic.width - HERO_ICON_WIDTHS[width]![i]!), `icon ${i}`).toBeLessThanOrEqual(0.3)
+    })
+  })
 }
