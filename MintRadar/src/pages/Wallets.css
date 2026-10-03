@@ -164,7 +164,7 @@
   max-width: var(--dash-chrome-max);
   margin-inline: auto;
   width: 100%;
-  padding: 4px 24px 32px;
+  padding: 4px var(--page-pad) 32px;
   font-size: 11px;
   color: var(--text3);
   font-family: var(--font-mono);
@@ -220,8 +220,4 @@
   }
   .wallets-selfhost { padding-left: var(--page-pad); padding-right: var(--page-pad); }
   .wallets-grid-selfhost { padding-left: 0; padding-right: 0; }
-  .wallets-footnote {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
 }

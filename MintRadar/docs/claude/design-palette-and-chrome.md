@@ -57,8 +57,7 @@ its content box or its border box depending on the container. Intentional except
 per-page container table (selector + rule + box) and measures at 1920/1536/1440/1280/1100/900/768/640/390px after fonts are
 loaded, animations are off and the boxes are stable for two animation frames; a new page or container must be added there.
 `EDGES_REPORT=<file>` turns the spec into a read-only measurement dump. Known unfixed mismatches are `test.fixme` cases in the
-spec with the measured difference: `.wallets-footnote`
-(24px/16px padding instead of `--page-pad`), `.app-footer-inner` at exactly 640px (hardcoded 14px padding while `--page-pad` is 18px).
+spec with the measured difference: `.app-footer-inner` at exactly 640px (hardcoded 14px padding while `--page-pad` is 18px).
 
 **3) State before this wave**
 

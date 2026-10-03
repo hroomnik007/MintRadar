@@ -132,7 +132,6 @@ const STATES: State[] = [
   { name: 'Mint Detail — summary strip', containers: [A('.md-summary')],
     setup: async p => { await boot(p); await p.goto(`/mint/${encodeURIComponent(ALPHA)}`); await expect(p.locator('.md-summary')).toBeVisible() } },
   { name: 'Wallets footnote', containers: [A('.wallets-footnote')],
-    fixme: '.wallets-footnote text is inset 6px per side from the navbar content edge at ≥701px (padding 24px instead of --page-pad) and 2px at 640/390px (16px padding)',
     setup: async p => { await boot(p); await p.goto('/wallets'); await expect(p.locator('.wallets-footnote')).toBeVisible() } },
   ...WIDTHS.map((w): State => ({
     name: `Footer inner row (every page)`, widths: [w], containers: [A('.app-footer-inner')],
