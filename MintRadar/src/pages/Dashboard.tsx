@@ -24,6 +24,7 @@ import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolFor
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
 import { InfoTooltip } from '@/components/InfoTooltip'
+import { probeErrorMessage, isProbeErrorKind, type ProbeErrorKind } from '@/utils/probeErrorMessages'
 import './Dashboard.css'
 
 // Historical trend charts pull in Recharts (~380 kB chunk) — lazy-load so
@@ -585,7 +586,7 @@ export default function Dashboard() {
   } | null>(null)
   // Probe/lookup results are keyed by the input they were produced for —
   // 'loading' and 'idle' are derived below instead of set synchronously in effects.
-  const [probe, setProbe] = useState<{ url: string; state: 'success' | 'error'; result: { name: string | null; version: string | null; nutCount: number; latencyMs: number | null } | null }>({ url: '', state: 'error', result: null })
+  const [probe, setProbe] = useState<{ url: string; state: 'success' | 'error'; result: { name: string | null; version: string | null; nutCount: number; latencyMs: number | null } | null; errorKind?: ProbeErrorKind }>({ url: '', state: 'error', result: null })
   const [nostrLookup, setNostrLookup] = useState<{ input: string; state: 'idle' | 'error'; msg: string }>({ input: '', state: 'idle', msg: '' })
   const [searchFocused, setSearchFocused] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -903,7 +904,7 @@ export default function Dashboard() {
               },
             })
           } else {
-            setProbe({ url: submitUrl, state: 'error', result: null })
+            setProbe({ url: submitUrl, state: 'error', result: null, ...(isProbeErrorKind(data.errorKind) ? { errorKind: data.errorKind } : {}) })
           }
         })
         .catch(() => {
@@ -934,13 +935,14 @@ export default function Dashboard() {
           success?: boolean
           isNew?: boolean
           error?: string
+          errorKind?: string
           name?: string | null
           aliasOf?: { url: string; name: string | null }[]
         }
       }) => {
         if (!ok) {
           setSubmitState('error')
-          setSubmitMsg((data.error) ?? 'Submission failed')
+          setSubmitMsg(probeErrorMessage(data.errorKind) ?? data.error ?? 'Submission failed')
         } else {
           setSubmitState('success')
           setSubmitMsg(
@@ -1010,7 +1012,7 @@ export default function Dashboard() {
         })
         const data = await res.json() as {
           error?: string
-          results?: Array<{ url: string; success: boolean; isNew: boolean; error?: string; aliasOf?: { url: string; name: string | null }[] }>
+          results?: Array<{ url: string; success: boolean; isNew: boolean; error?: string; errorKind?: string; aliasOf?: { url: string; name: string | null }[] }>
         }
         if (res.status === 429) {
           // Nothing in this batch was actually processed — rows go back to
@@ -1028,7 +1030,7 @@ export default function Dashboard() {
             const k = validIndices.indexOf(j)
             if (k === -1) return p
             const r = results[k]
-            if (!r || !r.success) return { ...p, status: 'failed', error: r?.error ?? 'Failed' }
+            if (!r || !r.success) return { ...p, status: 'failed', error: probeErrorMessage(r?.errorKind) ?? r?.error ?? 'Failed' }
             return { ...p, status: r.isNew ? 'added' : 'duplicate', aliasOf: r.aliasOf ?? [] }
           }))
         } else {
@@ -1440,7 +1442,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                     )}
-                    {probeState === 'error' && submitUrl.startsWith('https://') && nostrLookupState === 'idle' && <div className="submit-probe-error">Mint unreachable or invalid</div>}
+                    {probeState === 'error' && submitUrl.startsWith('https://') && nostrLookupState === 'idle' && <div className="submit-probe-error">{(probe.url === submitUrl ? probeErrorMessage(probe.errorKind) : null) ?? 'Mint unreachable or invalid'}</div>}
                     {submitState === 'error' && <div className="submit-result error">{submitMsg}</div>}
                     <div className="submit-modal-actions">
                       <button className="submit-cancel-btn" onClick={() => setShowSubmit(false)}>Cancel</button>

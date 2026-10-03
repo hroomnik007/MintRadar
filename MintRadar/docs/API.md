@@ -208,6 +208,22 @@ On-demand live probe of a single mint URL. Triggers an outbound fetch.
 }
 ```
 
+**Failure** (HTTP 200, `online: false`): `error` is always the literal `"Mint unreachable"`; the additive `errorKind` says why. It is an enum — never raw error text, headers, IPs or response bodies:
+
+| `errorKind` | Meaning |
+|---|---|
+| `blocked_by_host` | 401/403, a `cf-mitigated` header, or a Cloudflare HTML page instead of JSON (e.g. a Managed Challenge) |
+| `rate_limited_by_host` | 429 |
+| `host_error` | other 5xx (including Cloudflare 5xx pages) |
+| `timeout` | no answer within the probe deadline |
+| `dns` | the host name did not resolve |
+| `tls` | certificate could not be verified |
+| `not_cashu` | the host answered, but `/v1/info` is a 404, not JSON, or has no `nuts` |
+| `blocked_address` | the SSRF guard rejected the address (also a redirect to one) |
+| `unreachable` | any other connection failure |
+
+`errorKind` is also returned (same enum) in the `400` body of `POST /api/mint/submit` and in per-line `results[]` entries of `POST /api/mints/discover` whose `error` is `"URL does not appear to be a valid Cashu mint"`. The pre-validation errors (`Invalid url`, scheme, length) carry no `errorKind`. Clients must treat a missing or unknown `errorKind` as "no detail".
+
 ---
 
 ### `GET /api/mints/nostr-reviews`

@@ -7,6 +7,7 @@ import { computeReliabilityScore, versionFreshnessScore, TRACKED_NUT_KEYS } from
 import { notifySubscribers, isNotificationServiceEnabled } from './nostrService.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { normalizeMintPubkey } from './mintPubkey.js'
+import { classifyProbeFailure, failureFromResponse, type ProbeErrorKind, type SafeFetchRejection } from './probeErrorKind.js'
 
 function isCloudflareIP(address: string): boolean {
   const parts = address.split('.').map(Number)
@@ -123,7 +124,7 @@ export function parseMintMethods(nuts: Record<string, unknown> | null | undefine
   return { units, mintMethods, meltMethods }
 }
 
-function classifyFetchError(err: unknown): string {
+export function classifyFetchError(err: unknown): string {
   if (!(err instanceof Error)) return 'Unreachable'
   // undici's fetch wraps connect-level errors (ECONNREFUSED, DNS, TLS,
   // connect timeouts) in a generic `TypeError: fetch failed` — the actual
@@ -167,15 +168,37 @@ export async function isValidCashuMint(url: string): Promise<boolean> {
 // discover endpoint's first-insert path) can persist it without a second
 // outbound request. isValidCashuMint() itself keeps its original boolean-only
 // signature for its existing callers.
-export async function validateCashuMintProbe(url: string): Promise<{ valid: boolean; pubkey: string | null }> {
+export async function validateCashuMintProbe(
+  url: string
+): Promise<{ valid: boolean; pubkey: string | null; errorKind?: ProbeErrorKind }> {
+  let capturedErr: unknown = null
+  let rejected: SafeFetchRejection | null = null
+  let res: Response | null = null
   try {
-    const res = await safeFetch(`${url}/v1/info`, { timeoutMs: PROBE_TIMEOUT_MS })
-    if (!res || !res.ok) return { valid: false, pubkey: null }
+    res = await safeFetch(`${url}/v1/info`, {
+      timeoutMs: PROBE_TIMEOUT_MS,
+      onError: (err) => { capturedErr = err },
+      onRejected: (reason) => { rejected = reason },
+    })
+    if (!res) {
+      return {
+        valid: false,
+        pubkey: null,
+        errorKind: classifyProbeFailure({
+          rejected,
+          networkLabel: capturedErr !== null ? classifyFetchError(capturedErr) : null,
+        }),
+      }
+    }
+    if (!res.ok) return { valid: false, pubkey: null, errorKind: classifyProbeFailure(failureFromResponse(res)) }
     const raw = await res.json() as Record<string, unknown>
     const valid = raw['nuts'] !== null && typeof raw['nuts'] === 'object'
-    return { valid, pubkey: valid ? normalizeMintPubkey(raw['pubkey']) : null }
+    if (!valid) return { valid: false, pubkey: null, errorKind: classifyProbeFailure(failureFromResponse(res)) }
+    return { valid, pubkey: normalizeMintPubkey(raw['pubkey']) }
   } catch {
-    return { valid: false, pubkey: null }
+    // res.json() on a non-JSON body: the host answered, but not with a mint
+    // (or a Cloudflare interstitial in front of it — failureFromResponse sees it).
+    return { valid: false, pubkey: null, errorKind: classifyProbeFailure(res ? failureFromResponse(res) : { status: 200 }) }
   }
 }
 

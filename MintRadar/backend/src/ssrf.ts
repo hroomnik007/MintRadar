@@ -179,6 +179,13 @@ const MAX_REDIRECTS = 3
 export interface SafeFetchOptions {
   timeoutMs?: number
   onError?: (err: unknown) => void
+  /**
+   * Called (before returning null) when the request was refused without being
+   * sent or followed: 'blocked' (SSRF guard), 'dns-error' (host did not
+   * resolve) or 'bad-redirect' (missing/invalid Location, too many hops).
+   * Separate from onError so existing onError consumers see no new events.
+   */
+  onRejected?: (reason: 'blocked' | 'dns-error' | 'bad-redirect') => void
   /** Extra request headers (e.g. an Accept header for a JSON API). */
   headers?: Record<string, string>
 }
@@ -201,7 +208,11 @@ export async function safeFetch(
   let currentUrl = rawUrl
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    if (!(await isSafeUrl(currentUrl))) return null
+    const safety = await checkUrlSafety(currentUrl)
+    if (safety !== 'safe') {
+      options.onRejected?.(safety)
+      return null
+    }
 
     let res: Response
     try {
@@ -220,11 +231,15 @@ export async function safeFetch(
     // Manually follow redirects, re-validating each Location.
     if (res.status >= 300 && res.status < 400) {
       const location = res.headers.get('location')
-      if (!location) return null
+      if (!location) {
+        options.onRejected?.('bad-redirect')
+        return null
+      }
       try {
         // Resolve relative redirects against the current URL.
         currentUrl = new URL(location, currentUrl).toString()
       } catch {
+        options.onRejected?.('bad-redirect')
         return null
       }
       continue
@@ -234,5 +249,6 @@ export async function safeFetch(
   }
 
   // Too many redirects.
+  options.onRejected?.('bad-redirect')
   return null
 }

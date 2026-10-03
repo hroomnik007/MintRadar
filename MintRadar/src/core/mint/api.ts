@@ -1,3 +1,5 @@
+import { isProbeErrorKind, type ProbeErrorKind } from '@/utils/probeErrorMessages'
+
 export interface MintInfo {
   name: string
   pubkey?: string
@@ -28,6 +30,8 @@ export interface MintStatus {
   keysets: MintKeyset[] | null
   checkedAt: Date
   error?: string
+  // Coarse failure category from the proxy probe (see utils/probeErrorMessages.ts).
+  errorKind?: ProbeErrorKind
 }
 
 const MAX_URL_LENGTH = 500
@@ -107,6 +111,7 @@ async function probeMintViaProxy(url: string, signal?: AbortSignal): Promise<Min
       keysets: (raw['keysets'] as MintKeyset[] | null) ?? null,
       checkedAt: typeof raw['checkedAt'] === 'string' ? new Date(raw['checkedAt']) : new Date(),
       ...(typeof raw['error'] === 'string' ? { error: raw['error'] } : {}),
+      ...(isProbeErrorKind(raw['errorKind']) ? { errorKind: raw['errorKind'] } : {}),
     }
   } catch {
     return { url, online: false, latencyMs: null, info: null, keysets: null, checkedAt: new Date(), error: 'Mint unreachable' }

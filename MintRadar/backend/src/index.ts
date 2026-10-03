@@ -3,7 +3,8 @@ import express, { type Request, type Response, type NextFunction } from 'express
 import cors from 'cors'
 import { pool, initDb } from './db.js'
 import { isSafeUrl, checkWsUrlSafety, safeFetch } from './ssrf.js'
-import { upsertMint, probeMintToDb, validateCashuMintProbe, parseMintMethods, type MintMethodEntry } from './prober.js'
+import { upsertMint, probeMintToDb, validateCashuMintProbe, parseMintMethods, classifyFetchError, type MintMethodEntry } from './prober.js'
+import { classifyProbeFailure, failureFromResponse, type ProbeErrorKind, type ProbeFailure, type SafeFetchRejection } from './probeErrorKind.js'
 import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } from './mintPubkey.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
@@ -133,6 +134,8 @@ interface MintStatus {
   keysets: MintKeyset[] | null
   checkedAt: string
   error?: string
+  // Coarse failure category (see probeErrorKind.ts) — additive to `error`.
+  errorKind?: ProbeErrorKind
   units: string[] | null
   mintMethods: MintMethodEntry[] | null
   meltMethods: MintMethodEntry[] | null
@@ -175,13 +178,29 @@ setInterval(() => {
 // AbortSignal.timeout(15000) around this endpoint (src/core/mint/api.ts).
 const ON_DEMAND_PROBE_TIMEOUT_MS = 10_000
 
+// safeFetch for /v1/info that also remembers WHY a null came back (network
+// error object or guard rejection), so probeMint can classify the failure.
+function fetchInfoTraced(target: string): {
+  res: ReturnType<typeof safeFetch>
+  trace: { err: unknown; rejected: SafeFetchRejection | null }
+} {
+  const trace: { err: unknown; rejected: SafeFetchRejection | null } = { err: null, rejected: null }
+  const res = safeFetch(target, {
+    timeoutMs: ON_DEMAND_PROBE_TIMEOUT_MS,
+    onError: (err) => { trace.err = err },
+    onRejected: (reason) => { trace.rejected = reason },
+  })
+  return { res, trace }
+}
+
 async function probeMint(url: string): Promise<MintStatus> {
   const start = Date.now()
 
   // safeFetch validates the URL and every redirect hop against isSafeUrl()
   // and pins DNS at connect time (SSRF + rebinding protection).
+  const firstInfo = fetchInfoTraced(`${url}/v1/info`)
   const [infoResFirst, keysetsRes] = await Promise.all([
-    safeFetch(`${url}/v1/info`, { timeoutMs: ON_DEMAND_PROBE_TIMEOUT_MS }),
+    firstInfo.res,
     safeFetch(`${url}/v1/keysets`, { timeoutMs: ON_DEMAND_PROBE_TIMEOUT_MS }),
   ])
 
@@ -189,15 +208,20 @@ async function probeMint(url: string): Promise<MintStatus> {
   // retry in prober.ts, so a transient blip doesn't disagree with the cron's
   // last-known status shown on the Dashboard card (see mint.macadamia.cash report).
   let infoRes = infoResFirst
+  let infoTrace = firstInfo.trace
   if (infoRes === null) {
     await new Promise<void>(r => setTimeout(r, 1000))
-    infoRes = await safeFetch(`${url}/v1/info`, { timeoutMs: ON_DEMAND_PROBE_TIMEOUT_MS })
+    const retry = fetchInfoTraced(`${url}/v1/info`)
+    infoRes = await retry.res
+    infoTrace = retry.trace
   }
 
   const latencyMs = Date.now() - start
 
   let info: MintInfo | null = null
   let online = false
+  // What went wrong, as inputs for the (pure) classifier — never echoed raw.
+  let failure: ProbeFailure | null = null
 
   if (infoRes && infoRes.ok) {
     try {
@@ -205,10 +229,21 @@ async function probeMint(url: string): Promise<MintStatus> {
       if (typeof raw === 'object' && raw !== null && 'nuts' in raw) {
         info = raw as MintInfo
         online = true
+      } else {
+        failure = failureFromResponse(infoRes)
       }
-    } catch { /* invalid JSON — treat as offline */ }
-  } else if (IS_DEV) {
-    console.error('[probeMint] info fetch failed or blocked:', url)
+    } catch {
+      /* invalid JSON — treat as offline */
+      failure = failureFromResponse(infoRes)
+    }
+  } else {
+    if (IS_DEV) console.error('[probeMint] info fetch failed or blocked:', url)
+    failure = infoRes
+      ? failureFromResponse(infoRes)
+      : {
+          rejected: infoTrace.rejected,
+          networkLabel: infoTrace.err !== null ? classifyFetchError(infoTrace.err) : null,
+        }
   }
 
   let keysets: MintKeyset[] | null = null
@@ -243,6 +278,7 @@ async function probeMint(url: string): Promise<MintStatus> {
 
   if (!online) {
     status.error = 'Mint unreachable'
+    status.errorKind = classifyProbeFailure(failure ?? {})
   }
 
   return status
@@ -511,6 +547,7 @@ app.get('/api/mint/probe', (req: Request, res: Response): void => {
           : null,
         keysets: null,
         ...(status.error !== undefined ? { error: status.error } : {}),
+        ...(status.errorKind !== undefined ? { errorKind: status.errorKind } : {}),
       })
     })
     .catch((err: unknown) => {
@@ -1397,7 +1434,10 @@ app.post('/api/mint/submit', (req: Request, res: Response): void => {
       }
       return probeMint(normalized).then(async status => {
         if (!status.online) {
-          res.status(400).json({ error: 'URL does not appear to be a valid Cashu mint' })
+          res.status(400).json({
+            error: 'URL does not appear to be a valid Cashu mint',
+            ...(status.errorKind !== undefined ? { errorKind: status.errorKind } : {}),
+          })
           return
         }
         const result = await pool.query(
@@ -1477,7 +1517,7 @@ app.post('/api/mints/discover', async (req: Request, res: Response): Promise<voi
   }
 
   let added = 0
-  const results: Array<{ url: string; success: boolean; isNew: boolean; error?: string; aliasOf?: { url: string; name: string | null }[] }> = []
+  const results: Array<{ url: string; success: boolean; isNew: boolean; error?: string; errorKind?: ProbeErrorKind; aliasOf?: { url: string; name: string | null }[] }> = []
   for (const url of body.urls) {
     if (typeof url !== 'string') continue
     if (url.length > MAX_URL_LENGTH) {
@@ -1498,9 +1538,15 @@ app.post('/api/mints/discover', async (req: Request, res: Response): Promise<voi
       // isValidCashuMint() used to do, plus hands back the raw pubkey so it
       // can be persisted on first insert (see mintPubkey.ts) without a
       // second outbound request.
-      const { valid, pubkey } = await validateCashuMintProbe(normalized)
+      const { valid, pubkey, errorKind } = await validateCashuMintProbe(normalized)
       if (!valid) {
-        results.push({ url: normalized, success: false, isNew: false, error: 'URL does not appear to be a valid Cashu mint' })
+        results.push({
+          url: normalized,
+          success: false,
+          isNew: false,
+          error: 'URL does not appear to be a valid Cashu mint',
+          ...(errorKind !== undefined ? { errorKind } : {}),
+        })
         continue
       }
       const result = await pool.query(

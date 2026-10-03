@@ -153,7 +153,7 @@ describe('POST /api/mint/submit', () => {
     const res = await post({ url: 'https://not-a-mint.example.com' })
 
     expect(res.status).toBe(400)
-    expect(res.body).toEqual({ error: 'URL does not appear to be a valid Cashu mint' })
+    expect(res.body).toEqual({ error: 'URL does not appear to be a valid Cashu mint', errorKind: 'unreachable' })
     expect(query).not.toHaveBeenCalled()
   })
 
