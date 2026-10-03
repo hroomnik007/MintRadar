@@ -64,8 +64,9 @@ async function seedIndexedDb(page: Page) {
 }
 
 async function scrollUntilAllLoaded(page: Page) {
+  await page.mouse.move(700, 400)
   await expect.poll(async () => {
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+    await page.mouse.wheel(0, 1500) // a real wheel scroll, not a jump to the bottom
     return page.locator('.wl-grid .mint-card').count()
   }, { timeout: 20000, intervals: [200, 300, 500] }).toBe(N)
   await expect(page.locator('.wl-showing')).toHaveCount(0)

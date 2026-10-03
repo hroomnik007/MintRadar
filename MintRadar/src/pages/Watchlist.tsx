@@ -276,8 +276,10 @@ export default function Watchlist() {
     return () => observer.disconnect()
     // The sentinel only exists once the skeleton is gone (knownLoading / syncStatus), so those are
     // dependencies too — a list that arrived while the skeleton was up used to leave the observer
-    // unattached for good ("Showing 20 of N" forever).
-  }, [listKey, knownLoading, syncStatus])
+    // unattached for good ("Showing 20 of N" forever). visibleCount re-creates the observer after
+    // every page: an IntersectionObserver reports only CHANGES, so a sentinel that stays in view after
+    // a page was appended (e.g. browser scroll anchoring) would otherwise never load the next one.
+  }, [listKey, knownLoading, syncStatus, visibleCount])
 
   useDocumentMeta(
     'My Watchlist - MintRadar',
