@@ -1,16 +1,11 @@
 import { nip19 } from 'nostr-tools'
 import { njumpProfileUrl, njumpEventUrl, npubFromPubkey, mintAnnounceNaddr } from '@/utils/nostrLinks'
 import { useParams, useNavigate, Navigate } from 'react-router-dom'
-import { useEffect, useState, useMemo, useRef, useCallback, type JSX } from 'react'
+import { useEffect, useState, useMemo, useRef, useCallback, lazy, Suspense, type JSX } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcStar } from '@/components/mint/IcStar'
-import {
-  XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, LineChart, Line,
-} from 'recharts'
 import { useMintProbe } from '@/hooks/useMintProbe'
-import { useMintHistory } from '@/hooks/useMintHistory'
 import { useKnownMints } from '@/hooks/useKnownMints'
 import { useMintReviews } from '@/hooks/useMintReviews'
 import { mergeStoredAndLiveReviews, visibleReviews } from '@/utils/reviewUtils'
@@ -22,7 +17,6 @@ import { useWatchlistStore } from '@/stores/watchlist.store'
 import { removeWatchedMint } from '@/core/nostr/removeWatchedMint'
 import { useAuthStore } from '@/stores/auth.store'
 import { useModalFocus } from '@/hooks/useModalFocus'
-import { ComparisonModal } from '@/components/ComparisonModal'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
@@ -44,6 +38,13 @@ import { useElementHeight } from '@/hooks/useElementHeight'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { reviewAvatarColor, avatarTextColor } from '@/utils/avatarColors'
 import './MintDetail.css'
+
+// Heavy, rarely needed parts load on demand: the Compare modal (only when opened) and the History chart (recharts, only on
+// the History tab).
+const ComparisonModal = lazy(() => import('@/components/ComparisonModal').then(m => ({ default: m.ComparisonModal })))
+const MintDetailHistoryChart = lazy(() => import('./MintDetailHistoryChart'))
+// Chart height; the Suspense placeholder uses the same value so the History tab does not jump when the chunk arrives.
+const HISTORY_CHART_HEIGHT = 140
 import {
   Copy, Check, Info, ShieldCheck, ShieldOff, AlertTriangle,
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
@@ -355,7 +356,6 @@ function MintDetailContent({ url }: { url: string }) {
   const navigate = useNavigate()
   const now = useNow()
   const { data, isLoading } = useMintProbe(url)
-  useMintHistory(url)
   const { data: knownMintsData } = useKnownMints()
   const knownMint = knownMintsData?.find(m => m.url === url) ?? null
   const operatorNip05 = useMintOperatorNip05(knownMint?.nostrAnnouncePubkey ?? null)
@@ -780,6 +780,10 @@ function MintDetailContent({ url }: { url: string }) {
     setActiveTab(m[1] as 'overview' | 'history' | 'nuts' | 'audit' | 'reviews')
   }, [url])
 
+  // The slot grid only changes when the current hour/day bucket does, so key the memo on the bucket, not on every 30 s
+  // useNow tick: a new data array on each tick made the chart re-run its line animation.
+  const slotBucketMs = chartInterval === '24h' ? 3_600_000 : 86_400_000
+  const currentBucketMs = Math.floor(now / slotBucketMs) * slotBucketMs
   const histLineData = useMemo(() => {
     const segs = chartHistoryData?.segments ?? []
     const nutCount = knownMint?.nutCount ?? 0
@@ -811,7 +815,6 @@ function MintDetailContent({ url }: { url: string }) {
     const isHourly = chartInterval === '24h'
     const slotCount = chartInterval === '24h' ? 24 : chartInterval === '7d' ? 7 : 30
     const bucketMs = isHourly ? 3_600_000 : 86_400_000
-    const currentBucketMs = Math.floor(now / bucketMs) * bucketMs
     const keyLen = isHourly ? 13 : 10
     const segMap = new Map(segs.map(s => [s.bucket.slice(0, keyLen), s]))
     return Array.from({ length: slotCount }, (_, i) => {
@@ -819,7 +822,7 @@ function MintDetailContent({ url }: { url: string }) {
       const iso = new Date(slotMs).toISOString()
       return makePoint(segMap.get(iso.slice(0, keyLen)) ?? null, bucketLabel(iso))
     })
-  }, [chartHistoryData?.segments, chartInterval, knownMint, data?.info?.version, data?.info?.contact, now])
+  }, [chartHistoryData?.segments, chartInterval, knownMint, data?.info?.version, data?.info?.contact, currentBucketMs])
 
   // Render as soon as EITHER source is ready: the cached mints-known list
   // (near-instant — already fetched by Dashboard in the common flow) or the
@@ -1916,38 +1919,9 @@ function MintDetailContent({ url }: { url: string }) {
             ) : histLineData.filter(d => d[chartMetric] !== null).length === 0 ? (
               <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>Not enough data for this period</p>
             ) : (
-              <ResponsiveContainer width="100%" height={140}>
-                <LineChart data={histLineData} margin={{ top: 4, right: 16, left: 10, bottom: 4 }}>
-                  <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 9, fill: 'var(--text3)' }}
-                    axisLine={false} tickLine={false}
-                    interval={chartInterval === '24h' ? 3 : histLineData.length <= 7 ? 0 : Math.ceil(histLineData.length / 7) - 1}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 9, fill: 'var(--text3)' }}
-                    axisLine={false} tickLine={false}
-                    width={60}
-                    domain={chartMetric === 'latency'
-                      ? [(dataMin: number) => dataMin * 0.9, (dataMax: number) => dataMax * 1.1]
-                      : [0, 100]}
-                    tickFormatter={(v: number) => chartMetric === 'latency' ? `${Math.round(v / 100) * 100}ms` : `${Math.round(v)}%`}
-                  />
-                  <Tooltip
-                    contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 11 }}
-                    formatter={(value) => [chartMetric === 'latency' ? `${String(value)}ms` : `${String(value)}%`, chartMetric === 'latency' ? 'Latency' : chartMetric === 'uptime' ? 'Uptime' : 'Reliability Score']}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey={chartMetric}
-                    stroke="var(--accent)"
-                    dot={false}
-                    strokeWidth={2}
-                    connectNulls
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <Suspense fallback={<div style={{ height: HISTORY_CHART_HEIGHT }} />}>
+                <MintDetailHistoryChart data={histLineData} metric={chartMetric} interval={chartInterval} height={HISTORY_CHART_HEIGHT} />
+              </Suspense>
             )}
             {chartCoverage && (
               <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>{chartCoverage}</div>
@@ -2814,7 +2788,7 @@ function MintDetailContent({ url }: { url: string }) {
           ...(knownMintsData?.filter(m => compareSelectedUrls.has(m.url)) ?? []),
         ]
         return comparedMints.length >= 2
-          ? <ComparisonModal mints={comparedMints} onClose={() => setShowComparisonModal(false)} />
+          ? <Suspense fallback={null}><ComparisonModal mints={comparedMints} onClose={() => setShowComparisonModal(false)} /></Suspense>
           : null
       })()}
     </div>
