@@ -317,7 +317,8 @@ Browser chrome and brand rasters use the settled palette: `--bg` `#0b1512`, `--a
 | `public/favicon.svg` | NavLogo shapes (`fill="none"` like NavLogo, so the ring interiors are transparent), `#5cc9a3` on a `#0b1512` rx=6 tile | hand-edited |
 | `public/favicon-16x16.png`, `favicon-32x32.png`, `favicon.ico` (one 32x32 PNG inside an ICO), `icons/icon-{72,96,128,144,152,192,384,512}x*.png` | rounded tile with transparent corners (192/512 are declared `maskable` in the manifest, unchanged) | rendered from `favicon.svg` |
 | `public/apple-touch-icon.png` | 180x180, opaque `--bg`, same artwork (iOS masks the corners itself) | rendered from `favicon.svg` |
-| `public/og-image.svg` / `og-image.png` | 1200x630. bg `--bg`, panel `--surface`, pills `--surface-card`, dividers/pill borders = `--border-strong` composited over `--surface` (`#414c47`), text `--text` / `--text2` / footer `--text3`, accent `--accent` | SVG hand-edited, PNG rendered from it |
+| `public/og-image-reliability.svg` / `og-image-reliability.png` | **the current OG image** (`og:image` + `twitter:image`, `index.html` and `backend/src/og.ts`). Copy of `og-image.svg` with a sixth pill "✓ Reviews"; row 2 is now Reviews / Watchlist / Nostr Login (3 × 260px, 20px gaps, x=90/370/650) | SVG hand-edited, PNG rendered from it by `generate-icons.mjs` |
+| `public/og-image.svg` / `og-image.png` | **frozen, no longer referenced** — X still has this path cached with the old card, so the bytes must not change (SHA-256 pinned in `brandAssetCacheBust.test.ts`). 1200x630. bg `--bg`, panel `--surface`, pills `--surface-card`, dividers/pill borders = `--border-strong` composited over `--surface` (`#414c47`), text `--text` / `--text2` / footer `--text3`, accent `--accent` | SVG hand-edited, PNG rendered from it |
 | `public/mint-coin-placeholder.svg` | copper `#d98a5a` (already current) | hand-edited |
 
 **2026-10-02:** `--bg` was darkened (decision D1; only `--bg` changed, surfaces/text/accents/borders untouched), so `theme-color`, the manifest colours, the `favicon.svg` tile, the `og-image.svg` outer rect and `BG` in `generate-icons.mjs` all moved to `#0b1512` and every raster was regenerated. `src/__tests__/retiredPageBackground.test.ts` fails if a text file in `src`, `public`, `scripts` or `index.html` still carries the previous value. On the OG image only the outer rect is `--bg`; the panel (`--surface`) and pills (`--surface-card`) stay.
@@ -333,7 +334,7 @@ monospace gives different glyphs). The 8 legacy `public/icons/icon-N.png` files 
 **Cache-busting (2026-10-02):** `public/` brand files are not content-hashed by Vite, and the live nginx serves every
 `.png/.svg/.ico` with `expires 1y` + `Cache-Control: public, immutable`. So `vite-brand-assets.ts` (no dependency) appends
 `?v=<first 8 hex of sha256(file bytes)>` at **build time only** (dev leaves URLs untouched): a `transformIndexHtml` (order `post`)
-step rewrites `og:image`, `twitter:image`, `apple-touch-icon`, `favicon.ico`, `favicon-32x32.png`, `favicon-16x16.png`
+step rewrites `apple-touch-icon`, `favicon.ico`, `favicon-32x32.png`, `favicon-16x16.png`
 in `index.html`, and `vite.config.ts` wraps the 7 manifest icons in `icon(command, …)`. File names/paths are unchanged (nginx
 ignores the query). The workbox precache is keyed by URL without query + a revision hash; `ignoreURLParametersMatching` now
 includes `/^v$/` so `?v=` requests still hit it. The precache list comes from `workbox.globPatterns` alone — `VitePWA({ includeAssets })`
@@ -341,11 +342,19 @@ is deliberately not set, because the plugin appends it to the glob patterns and 
 `ico`/`png`) were listed twice (59 → 55 entries). Pinned by `src/__tests__/brandAssetCacheBust.test.ts`.
 - **When an asset changes:** replace the file (e.g. `node scripts/generate-icons.mjs`), commit, deploy — the hash, and with it the
   URL, changes by itself. Nothing to bump by hand.
-- **Not covered:** `backend/src/og.ts` (`OG_IMAGE_URL`, the per-mint bot HTML) and `backend/src/nostrService.ts` (profile picture)
-  still use plain `/og-image.png` / `/icons/icon-512x512.png` — separate package, no build hash available.
+- **Not covered:** `backend/src/og.ts` (`OG_IMAGE_URL`, the per-mint bot HTML; now `/og-image-reliability.png`, see below) and
+  `backend/src/nostrService.ts` (profile picture, plain `/icons/icon-512x512.png`) — separate package, no build hash available.
+- **OG image = new file name, not `?v=` (2026-10-03):** X (and similar platforms) cache the card image **by path** and ignore the query
+  string, so `?v=` on `og-image.png` never refreshed the preview. **When the OG image changes, the file name must change** — current
+  name `og-image-reliability.png` (source `og-image-reliability.svg`, a second output of `scripts/generate-icons.mjs`; next time use
+  e.g. `og-image-<topic>.png`). `og:image` / `twitter:image` use the absolute URL **without** a query; `/og-image.png` was removed from
+  `HTML_ASSETS` in `vite-brand-assets.ts` so the build step leaves them alone (all other brand references keep `?v=`). Update
+  `index.html`, `OG_IMAGE_URL` in `backend/src/og.ts` and the tests together. The new file is precached by the same `**/*.png` glob as
+  every other png (no manifest entry); nginx serves it with the generic 1-year-immutable `.png` rule, which is fine because a changed
+  image gets a new name. Keep the old PNG on disk — the cards already shared still point at it.
 - **Social platforms** keep their own copy of a card image per URL: after a deploy that changes `og-image.png`, re-scrape
-  `https://mintradar.org/` in each platform's sharing debugger (Facebook/LinkedIn/X card validators etc.); the new `?v=` makes
-  the og:image URL new, but the page itself still has to be re-fetched.
+  `https://mintradar.org/` in each platform's sharing debugger (Facebook/LinkedIn card validators etc.); with a new file name the
+  og:image URL is new, but the page itself still has to be re-fetched.
 - **nginx (manual, not applied):** `deploy/nginx.conf` is reference-only; the live file is
   `/etc/nginx/sites-available/mintradar.org.conf`. Hashed `/assets/*` files currently share the one 1-year-immutable rule. To give
   the un-hashed brand files a short revalidating cache, add this block **above** the `location ~* \.(js|css|png|svg|ico|woff2|webmanifest)$`

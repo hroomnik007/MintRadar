@@ -34,7 +34,7 @@ describe('brand assets', () => {
   })
 
   it('favicon.svg and og-image.svg carry no retired colour and use the accent', () => {
-    for (const f of ['public/favicon.svg', 'public/og-image.svg']) {
+    for (const f of ['public/favicon.svg', 'public/og-image.svg', 'public/og-image-reliability.svg']) {
       const svg = read(f).toLowerCase()
       for (const c of RETIRED) expect(svg, `${f} ${c}`).not.toContain(c.toLowerCase())
       expect(svg, f).toContain(ACCENT)
@@ -47,6 +47,7 @@ describe('brand assets', () => {
     expect(pngSize('public/favicon-32x32.png')).toEqual([32, 32])
     expect(pngSize('public/apple-touch-icon.png')).toEqual([180, 180])
     expect(pngSize('public/og-image.png')).toEqual([1200, 630])
+    expect(pngSize('public/og-image-reliability.png')).toEqual([1200, 630])
     for (const s of [72, 96, 128, 144, 152, 192, 384, 512]) expect(pngSize(`public/icons/icon-${s}x${s}.png`)).toEqual([s, s])
   })
 

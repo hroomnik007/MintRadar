@@ -42,7 +42,7 @@ describe('renderMintOgHtml', () => {
     expect(html).toContain('content="Reliability Score: 87% · Online"')
     expect(html).toContain(`property="og:url" content="https://mintradar.org/mint/${encodeURIComponent(mintUrl)}"`)
     expect(html).toContain('name="twitter:card" content="summary_large_image"')
-    expect(html).toContain('property="og:image" content="https://mintradar.org/og-image.png"')
+    expect(html).toContain('property="og:image" content="https://mintradar.org/og-image-reliability.png"')
   })
 
   it('falls back to the mint URL as the display name when name is null', () => {

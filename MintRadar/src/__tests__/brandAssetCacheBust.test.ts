@@ -13,10 +13,8 @@ const sha8 = (file: string) => createHash('sha256').update(fs.readFileSync(path.
 describe('brand asset cache-busting', () => {
   const html = addBrandHashesToHtml(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'))
 
-  it('og:image, twitter:image, favicons and apple-touch-icon carry ?v=<8 hex> equal to the file hash', () => {
+  it('favicons and apple-touch-icon carry ?v=<8 hex> equal to the file hash', () => {
     const refs = [
-      /<meta property="og:image" content="https:\/\/mintradar\.org(\/og-image\.png)\?v=([0-9a-f]{8})"/,
-      /<meta name="twitter:image" content="https:\/\/mintradar\.org(\/og-image\.png)\?v=([0-9a-f]{8})"/,
       /<link rel="apple-touch-icon" href="(\/apple-touch-icon\.png)\?v=([0-9a-f]{8})"/,
       /<link rel="icon" type="image\/x-icon" href="(\/favicon\.ico)\?v=([0-9a-f]{8})"/,
       /<link rel="icon" type="image\/png" sizes="32x32" href="(\/favicon-32x32\.png)\?v=([0-9a-f]{8})"/,
@@ -27,6 +25,24 @@ describe('brand asset cache-busting', () => {
       expect(m, String(re)).not.toBeNull()
       expect(m?.[2]).toBe(sha8(m?.[1] as string))
     }
+  })
+
+  it('og:image and twitter:image are the absolute new-name URL with no query string (X caches by path, ignores ?v=)', () => {
+    const url = 'https://mintradar.org/og-image-reliability.png'
+    expect(html).toContain(`<meta property="og:image" content="${url}" />`)
+    expect(html).toContain(`<meta name="twitter:image" content="${url}" />`)
+    expect(html).not.toMatch(/og-image[^"]*\?/)
+    expect(BRAND_HTML_ASSETS).not.toContain('/og-image.png')
+    expect(BRAND_HTML_ASSETS).not.toContain('/og-image-reliability.png')
+  })
+
+  it('the OG image file is a 1200x630 PNG and the old og-image.png is byte-for-byte unchanged', () => {
+    const png = fs.readFileSync(path.join(ROOT, 'public/og-image-reliability.png'))
+    expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a')
+    expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630])
+    // Frozen: X still has this path cached with the old card, so the bytes must never change.
+    const old = createHash('sha256').update(fs.readFileSync(path.join(ROOT, 'public/og-image.png'))).digest('hex')
+    expect(old).toBe('624bed7a440c5d26db8d6248f6dc0e1b0ea7047ed03b88222884b0a780f0d635')
   })
 
   it('every brand file referenced by index.html is covered, and nothing else is touched', () => {
