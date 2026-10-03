@@ -154,7 +154,7 @@ interface MergedReviewCandidate {
   comment: string
   createdAt: number
   source: 'mintradar' | 'nostr'
-  profile?: { name?: string; picture?: string; nip05?: string }
+  profile?: { name?: string; nip05?: string }
 }
 
 const NUT_DESCRIPTIONS: Record<string, { short: string; desc: string; features: string[]; useCase: string }> = {
@@ -2225,10 +2225,7 @@ function MintDetailContent({ url }: { url: string }) {
                       <div key={r.id} id={`review-${r.id}`} className={`review-card${highlightedReview === r.id ? ' review-card-hl' : ''}`}>
                         <div className="review-card-header">
                           <div className="review-avatar">
-                            {profile?.picture?.startsWith('https://')
-                              ? <img src={profile.picture} alt="" className="review-avatar-img" />
-                              : <div className="review-avatar-fallback" style={{ background: reviewAvatarColor(r.pubkey), color: avatarTextColor(reviewAvatarColor(r.pubkey)) }}>{initial}</div>
-                            }
+                            <div className="review-avatar-fallback" style={{ background: reviewAvatarColor(r.pubkey), color: avatarTextColor(reviewAvatarColor(r.pubkey)) }}>{initial}</div>
                           </div>
                           <div className="review-author">
                             <span className="review-author-name">

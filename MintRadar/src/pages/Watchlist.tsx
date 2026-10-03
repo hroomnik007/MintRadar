@@ -60,7 +60,7 @@ function SkeletonCard() {
   )
 }
 
-interface ProfileInfo { name: string | undefined; picture: string | undefined }
+interface ProfileInfo { name: string | undefined }
 
 function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
   pubkey: string
@@ -105,8 +105,7 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
         try {
           const content = JSON.parse(ev.content) as Record<string, unknown>
           const name = (content['display_name'] ?? content['name']) as string | undefined
-          const picture = content['picture'] as string | undefined
-          map[ev.pubkey] = { name, picture }
+          map[ev.pubkey] = { name }
         } catch { /* ignore */ }
       }
       return map
@@ -161,14 +160,10 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
                   <div className="wl-rec-followers-row">
                     <div className="wl-rec-avatars-overlap">
                       {recommenders.slice(0, 3).map(pk => {
-                        const pic = profiles?.[pk]?.picture
                         const initial = (profiles?.[pk]?.name ?? pk).slice(0, 1).toUpperCase()
                         return (
                           <div key={pk} className="wl-rec-avatar-overlap" title={getDisplayName(pk)}>
-                            {pic ? (
-                              <img src={pic} alt={initial} className="wl-rec-avatar-img" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement | null)?.removeAttribute('hidden') }} />
-                            ) : null}
-                            <span style={pic ? { display: 'none' } : undefined}>{initial}</span>
+                            <span>{initial}</span>
                           </div>
                         )
                       })}
