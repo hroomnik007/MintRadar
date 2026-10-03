@@ -68,7 +68,7 @@
     align-items: center;
     text-align: center;
     gap: 8px;
-    padding: 10px 14px 14px;
+    padding: 10px var(--page-pad) 14px;
   }
 
   .app-footer-links {

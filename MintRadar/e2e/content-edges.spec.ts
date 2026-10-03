@@ -135,7 +135,6 @@ const STATES: State[] = [
     setup: async p => { await boot(p); await p.goto('/wallets'); await expect(p.locator('.wallets-footnote')).toBeVisible() } },
   ...WIDTHS.map((w): State => ({
     name: `Footer inner row (every page)`, widths: [w], containers: [A('.app-footer-inner')],
-    fixme: w === 640 ? '.app-footer-inner content box is 4px inside the navbar content edge per side at 640px: its ≤640px rule hardcodes padding 14px while --page-pad is still 18px until 600px' : undefined,
     setup: async p => { await boot(p); await p.goto('/?status=all'); await expect(p.locator('.app-footer-inner')).toBeVisible() } })),
   { name: 'Compare modal', containers: [BLEED('.cmp-modal', 'modal overlay: centred over the page, not part of the content column')],
     setup: async p => {

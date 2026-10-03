@@ -56,8 +56,8 @@ its content box or its border box depending on the container. Intentional except
 `.wallets-hero`) and the Compare modal, which only have to stay inside the viewport. `e2e/content-edges.spec.ts` holds the
 per-page container table (selector + rule + box) and measures at 1920/1536/1440/1280/1100/900/768/640/390px after fonts are
 loaded, animations are off and the boxes are stable for two animation frames; a new page or container must be added there.
-`EDGES_REPORT=<file>` turns the spec into a read-only measurement dump. Known unfixed mismatches are `test.fixme` cases in the
-spec with the measured difference: `.app-footer-inner` at exactly 640px (hardcoded 14px padding while `--page-pad` is 18px).
+`EDGES_REPORT=<file>` turns the spec into a read-only measurement dump. A measured mismatch that cannot be fixed yet is marked `test.fixme` in the spec with
+the measured difference (none open at the moment). The ≤640px footer rule uses `var(--page-pad)` too, so the footer's inner row matches the navbar at every width.
 
 **3) State before this wave**
 
