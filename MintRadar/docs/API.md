@@ -13,6 +13,7 @@ MintRadar provides a public read-only API for querying Cashu mint data. All endp
 | All read endpoints | **60 requests / minute / IP** |
 | `/api/mint/submit` (POST) | **20 requests / hour / IP** |
 | `/api/mints/discover` (POST) | **10 requests / hour / IP** |
+| `/api/mint/probe` for a URL that is **not** a tracked mint | additionally **10 requests / minute**, **60 requests / hour** and **3 concurrent probes** per IP (tracked mints: global limit only) |
 
 Rate limit headers are returned on all non-exempt endpoints:
 
@@ -195,6 +196,8 @@ Daily uptime counts for the last 30 days for a single mint.
 On-demand live probe of a single mint URL. Triggers an outbound fetch.
 
 **Query parameters:** `url` (required, `https://…`)
+
+**Rate limit (unknown URLs only, added 2026-10-03):** a URL that is not a tracked mint is also charged to a dedicated per-IP budget — 10 / minute, 60 / hour, and at most 3 such probes in flight at once. Exceeding any of them returns `429` `{"error":"Too many requests. Try again later."}` with a `Retry-After` header in seconds (time until the relevant window frees up; `5` for the concurrency cap). A rejected request consumes no budget. Tracked mints are subject to the global 60 requests / minute limit only. The counters are in memory — a backend restart resets them. This `429` means *MintRadar* limited the caller; it is unrelated to `errorKind: rate_limited_by_host` (the mint's host limiting us, returned with HTTP 200).
 
 **Response:**
 ```json

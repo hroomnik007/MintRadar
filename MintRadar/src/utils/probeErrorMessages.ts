@@ -34,3 +34,19 @@ export function isProbeErrorKind(value: unknown): value is ProbeErrorKind {
 export function probeErrorMessage(kind: unknown): string | null {
   return isProbeErrorKind(kind) ? MESSAGES[kind] : null
 }
+
+/**
+ * Sentence for a 429 from /api/mint/probe (OUR rate limit on unknown-URL
+ * probes — not the mint host limiting us, that is errorKind rate_limited_by_host).
+ * `retryAfterHeader` is the raw Retry-After value in seconds; a missing or
+ * non-numeric one gets a sentence without a number.
+ */
+export function probeRateLimitMessage(retryAfterHeader: string | null): string {
+  const prefix = "You're checking addresses too quickly."
+  const seconds = retryAfterHeader !== null && retryAfterHeader.trim() !== '' ? Number(retryAfterHeader) : NaN
+  if (!Number.isFinite(seconds) || seconds <= 0) return `${prefix} Try again in a moment.`
+  if (seconds > 90) return `${prefix} Try again in ${Math.ceil(seconds / 60)} minutes.`
+  if (seconds > 45) return `${prefix} Try again in a minute.`
+  const n = Math.ceil(seconds)
+  return `${prefix} Try again in ${n} ${n === 1 ? 'second' : 'seconds'}.`
+}

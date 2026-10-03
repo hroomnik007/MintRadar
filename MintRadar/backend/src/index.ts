@@ -442,6 +442,62 @@ function checkWindowedLimit(store: Map<string, RateLimitEntry>, max: number, key
   return true
 }
 
+// Unknown-URL probe (GET /api/mint/probe for a URL that is NOT in `mints`):
+// every such request makes the server fetch an arbitrary public host, so it
+// gets its own budget on top of the global limiter — 10/min and 60/hour per IP
+// plus at most 3 probes in flight per IP. Tracked mints never touch this.
+// In memory like the other limiters: a restart resets it.
+const MINUTE_MS = 60_000
+const UNKNOWN_PROBE_PER_MINUTE_MAX = 10
+const UNKNOWN_PROBE_PER_HOUR_MAX = 60
+const UNKNOWN_PROBE_CONCURRENT_MAX = 3
+const UNKNOWN_PROBE_CONCURRENT_RETRY_AFTER_S = 5
+const unknownProbeMinuteStore = new Map<string, RateLimitEntry>()
+const unknownProbeHourStore = new Map<string, RateLimitEntry>()
+const unknownProbeInFlight = new Map<string, number>()
+
+// Admits (and counts) one unknown-URL probe, or returns the seconds until the
+// blocking window frees up. A rejected request consumes no budget. On success
+// the caller MUST call releaseUnknownProbe(ip) in a finally block.
+function tryAcquireUnknownProbe(ip: string): { ok: true } | { ok: false; retryAfterS: number } {
+  const now = Date.now()
+  const minute = unknownProbeMinuteStore.get(ip)
+  const hour = unknownProbeHourStore.get(ip)
+  const minuteFull = minute !== undefined && now < minute.resetAt && minute.count >= UNKNOWN_PROBE_PER_MINUTE_MAX
+  const hourFull = hour !== undefined && now < hour.resetAt && hour.count >= UNKNOWN_PROBE_PER_HOUR_MAX
+  if (minuteFull || hourFull) {
+    const waitMs = Math.max(
+      minuteFull ? minute.resetAt - now : 0,
+      hourFull ? hour.resetAt - now : 0,
+    )
+    return { ok: false, retryAfterS: Math.max(1, Math.ceil(waitMs / 1000)) }
+  }
+  if ((unknownProbeInFlight.get(ip) ?? 0) >= UNKNOWN_PROBE_CONCURRENT_MAX) {
+    return { ok: false, retryAfterS: UNKNOWN_PROBE_CONCURRENT_RETRY_AFTER_S }
+  }
+  if (minute === undefined || now >= minute.resetAt) unknownProbeMinuteStore.set(ip, { count: 1, resetAt: now + MINUTE_MS })
+  else minute.count++
+  if (hour === undefined || now >= hour.resetAt) unknownProbeHourStore.set(ip, { count: 1, resetAt: now + HOUR_MS })
+  else hour.count++
+  unknownProbeInFlight.set(ip, (unknownProbeInFlight.get(ip) ?? 0) + 1)
+  return { ok: true }
+}
+
+function releaseUnknownProbe(ip: string): void {
+  const n = (unknownProbeInFlight.get(ip) ?? 0) - 1
+  if (n > 0) unknownProbeInFlight.set(ip, n)
+  else unknownProbeInFlight.delete(ip)
+}
+
+setInterval(() => {
+  const now = Date.now()
+  for (const store of [unknownProbeMinuteStore, unknownProbeHourStore]) {
+    for (const [key, entry] of store) {
+      if (now >= entry.resetAt) store.delete(key)
+    }
+  }
+}, MINUTE_MS)
+
 function checkSubmitRateLimit(ip: string): boolean {
   return checkWindowedLimit(submitRateLimitStore, SUBMIT_RATE_LIMIT_MAX, ip)
 }
@@ -580,11 +636,27 @@ app.get('/api/mint/probe', (req: Request, res: Response): void => {
   //   - any other URL: return only the fields the submit preview renders
   //     (online, latency, and a stripped-down info: name/version/nut keys) —
   //     not the mint's full contact list / MOTD / description / raw keysets.
-  Promise.all([probeMint(url), pool.query('SELECT 1 FROM mints WHERE url = $1', [url])])
-    .then(([status, known]) => {
+  //
+  // The DB lookup runs first so an unknown URL can be charged to the dedicated
+  // unknown-probe limiter BEFORE any outbound fetch happens.
+  const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown'
+  pool.query('SELECT 1 FROM mints WHERE url = $1', [url])
+    .then(async (known) => {
       if ((known.rowCount ?? 0) > 0) {
-        res.json(status)
+        res.json(await probeMint(url))
         return
+      }
+      const admit = tryAcquireUnknownProbe(ip)
+      if (!admit.ok) {
+        res.setHeader('Retry-After', String(admit.retryAfterS))
+        res.status(429).json({ error: 'Too many requests. Try again later.' })
+        return
+      }
+      let status: Awaited<ReturnType<typeof probeMint>>
+      try {
+        status = await probeMint(url)
+      } finally {
+        releaseUnknownProbe(ip)
       }
       res.json({
         url: status.url,

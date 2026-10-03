@@ -23,7 +23,7 @@ import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolFor
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
 import { InfoTooltip } from '@/components/InfoTooltip'
-import { probeErrorMessage, isProbeErrorKind, type ProbeErrorKind } from '@/utils/probeErrorMessages'
+import { probeErrorMessage, probeRateLimitMessage, isProbeErrorKind, type ProbeErrorKind } from '@/utils/probeErrorMessages'
 import { classifySubmitInput, submitInputReason } from '@/utils/submitInput'
 import { parseBulkInput, bulkFailureMessage, MAX_BULK_URLS } from '@/utils/bulkInput'
 import './Dashboard.css'
@@ -588,7 +588,7 @@ export default function Dashboard() {
   } | null>(null)
   // Probe/lookup results are keyed by the input they were produced for —
   // 'loading' and 'idle' are derived below instead of set synchronously in effects.
-  const [probe, setProbe] = useState<{ url: string; state: 'success' | 'error'; result: { name: string | null; version: string | null; nutCount: number; latencyMs: number | null } | null; errorKind?: ProbeErrorKind }>({ url: '', state: 'error', result: null })
+  const [probe, setProbe] = useState<{ url: string; state: 'success' | 'error'; result: { name: string | null; version: string | null; nutCount: number; latencyMs: number | null } | null; errorKind?: ProbeErrorKind; rateLimitMsg?: string }>({ url: '', state: 'error', result: null })
   // The outcome of one Nostr key lookup, keyed by the input it was run for (derived 'loading' while none matches).
   const [nostrLookup, setNostrLookup] = useState<{ input: string; outcome: 'found' | 'empty' | 'unreachable' | 'nonhttps'; url: string }>({ input: '', outcome: 'empty', url: '' })
   // The reason line follows the input only after a short pause, so the live region does not announce every keystroke.
@@ -933,9 +933,17 @@ export default function Dashboard() {
     const ctrl = new AbortController()
     const timer = setTimeout(() => {
       fetch(`/api/mint/probe?url=${encodeURIComponent(submitUrl)}`, { signal: ctrl.signal })
-        .then(res => { if (!res.ok) throw new Error(); return res.json() as Promise<MintStatus> })
+        .then(res => {
+          if (res.status === 429) {
+            // Our own limit on unknown-URL probes (not the mint host's) — keep the input, no auto-retry.
+            if (!ctrl.signal.aborted) setProbe({ url: submitUrl, state: 'error', result: null, rateLimitMsg: probeRateLimitMessage(res.headers.get('Retry-After')) })
+            return null
+          }
+          if (!res.ok) throw new Error()
+          return res.json() as Promise<MintStatus>
+        })
         .then(data => {
-          if (ctrl.signal.aborted) return
+          if (data === null || ctrl.signal.aborted) return
           if (data.online && data.info) {
             setProbe({
               url: submitUrl,
@@ -1508,7 +1516,7 @@ export default function Dashboard() {
                           </div>
                         </div>
                       )}
-                      {probeState === 'error' && <div className="submit-probe-error">{(probe.url === submitUrl ? probeErrorMessage(probe.errorKind) : null) ?? 'Mint unreachable or invalid'}</div>}
+                      {probeState === 'error' && <div className="submit-probe-error">{(probe.url === submitUrl ? (probe.rateLimitMsg ?? probeErrorMessage(probe.errorKind)) : null) ?? 'Mint unreachable or invalid'}</div>}
                     </div>
                     {submitState === 'error' && <div className="submit-result error" role="alert">{submitMsg}</div>}
                     <div className="submit-modal-actions">
