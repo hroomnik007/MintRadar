@@ -3,6 +3,7 @@ import { njumpProfileUrl, njumpEventUrl, npubFromPubkey, mintAnnounceNaddr } fro
 import { useParams, useNavigate, Navigate } from 'react-router-dom'
 import { useEffect, useState, useMemo, useRef, useCallback, lazy, Suspense, type JSX } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { QRCodeSVG } from 'qrcode.react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcStar } from '@/components/mint/IcStar'
 import { useMintProbe } from '@/hooks/useMintProbe'
@@ -2467,9 +2468,15 @@ function MintDetailContent({ url }: { url: string }) {
             </div>
             <div style={{display:'flex',justifyContent:'center',margin:'16px 0'}}>
               <div style={{background:'#ffffff',borderRadius:12,padding:12,border:'2px solid var(--green-soft-strong)'}}>
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=184x184&data=${encodeURIComponent(url)}&bgcolor=ffffff&color=000000&qzone=1`}
-                  alt="QR Code"
+                <QRCodeSVG
+                  value={url}
+                  size={184}
+                  level="L"
+                  marginSize={1}
+                  bgColor="#ffffff"
+                  fgColor="#000000"
+                  role="img"
+                  aria-label="QR Code"
                   style={{display:'block',width:184,height:184}}
                 />
               </div>
