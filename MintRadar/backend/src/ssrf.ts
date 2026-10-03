@@ -176,6 +176,17 @@ const safeAgent = new Agent({
 
 const MAX_REDIRECTS = 3
 
+// Honest, identifying User-Agent for every outbound request made through
+// safeFetch (mint probes, discovery, GitHub, icons, NIP-05). Operators can see
+// who is calling and allow-list it; it is NOT a browser impersonation. A caller
+// that sets its own User-Agent keeps it.
+export const SAFE_FETCH_USER_AGENT = 'MintRadar/1.0 (+https://mintradar.org)'
+
+function withDefaultUserAgent(headers: Record<string, string> | undefined): Record<string, string> {
+  if (headers !== undefined && Object.keys(headers).some(k => k.toLowerCase() === 'user-agent')) return headers
+  return { ...headers, 'User-Agent': SAFE_FETCH_USER_AGENT }
+}
+
 export interface SafeFetchOptions {
   timeoutMs?: number
   onError?: (err: unknown) => void
@@ -186,7 +197,7 @@ export interface SafeFetchOptions {
    * Separate from onError so existing onError consumers see no new events.
    */
   onRejected?: (reason: 'blocked' | 'dns-error' | 'bad-redirect') => void
-  /** Extra request headers (e.g. an Accept header for a JSON API). */
+  /** Extra request headers (e.g. an Accept header for a JSON API). A User-Agent given here wins over the default. */
   headers?: Record<string, string>
 }
 
@@ -201,6 +212,7 @@ export async function safeFetch(
   options: SafeFetchOptions = {}
 ): Promise<Response | null> {
   const timeoutMs = options.timeoutMs ?? 10_000
+  const requestHeaders = withDefaultUserAgent(options.headers)
   // One deadline for the whole call, not per hop — a signal fresh per redirect
   // hop let a mint that redirects a couple of times before hanging block for
   // up to (MAX_REDIRECTS + 1) * timeoutMs instead of timeoutMs total.
@@ -221,7 +233,7 @@ export async function safeFetch(
         credentials: 'omit',
         redirect: 'manual',
         dispatcher: safeAgent,
-        ...(options.headers ? { headers: options.headers } : {}),
+        headers: requestHeaders,
       }) as unknown as Response
     } catch (err) {
       options.onError?.(err)
