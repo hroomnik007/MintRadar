@@ -825,6 +825,8 @@ export default function Dashboard() {
 
   function handleSubmitInputChange(value: string) {
     setSubmitInput(value)
+    // A new value invalidates the previous attempt's error (a submit in flight keeps its 'loading').
+    if (submitState === 'error') setSubmitState('idle')
     const trimmed = value.trim()
     if (trimmed.startsWith('https://')) {
       setSubmitUrl(trimmed)
@@ -839,6 +841,9 @@ export default function Dashboard() {
     const isNpub = input.startsWith('npub1')
     const isHex = /^[0-9a-f]{64}$/i.test(input)
     if (!isNpub && !isHex) return
+    // Every lookup belongs to the input value it was started for: the cleanup (input changed, modal closed)
+    // marks it stale and a stale result never touches state.
+    let stale = false
     const timer = setTimeout(() => {
       void (async () => {
         try {
@@ -846,6 +851,7 @@ export default function Dashboard() {
           if (isNpub) {
             const decoded = nip19.decode(input)
             if (decoded.type !== 'npub') {
+              if (stale) return
               setNostrLookup({ input, state: 'error', msg: 'Invalid npub format' })
               return
             }
@@ -855,6 +861,7 @@ export default function Dashboard() {
             sharedPool.querySync(NOSTR_LOOKUP_RELAYS, { kinds: [38172], authors: [pubkey], limit: 5 }),
             new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
           ]) as NostrEvent[]
+          if (stale) return
           const mintUrl = events
             .flatMap(e => e.tags)
             .find(t => t[0] === 'u' && t[1])?.[1]
@@ -865,20 +872,25 @@ export default function Dashboard() {
           setNostrLookup({ input, state: 'idle', msg: '' })
           setSubmitUrl(mintUrl)
         } catch {
+          if (stale) return
           setNostrLookup({ input, state: 'error', msg: 'Failed to reach Nostr relays. Try again.' })
         }
       })()
     }, 600)
-    return () => clearTimeout(timer)
+    return () => { stale = true; clearTimeout(timer) }
   }, [submitInput, showSubmit])
 
   useEffect(() => {
     if (!showSubmit) return
     if (!submitUrl.startsWith('https://')) return
+    // Same rule as the lookup: the preview belongs to the URL it was probed for; a stale answer is dropped
+    // (and the request aborted when the URL changes or the modal closes).
+    const ctrl = new AbortController()
     const timer = setTimeout(() => {
-      fetch(`/api/mint/probe?url=${encodeURIComponent(submitUrl)}`)
+      fetch(`/api/mint/probe?url=${encodeURIComponent(submitUrl)}`, { signal: ctrl.signal })
         .then(res => { if (!res.ok) throw new Error(); return res.json() as Promise<MintStatus> })
         .then(data => {
+          if (ctrl.signal.aborted) return
           if (data.online && data.info) {
             setProbe({
               url: submitUrl,
@@ -895,10 +907,11 @@ export default function Dashboard() {
           }
         })
         .catch(() => {
+          if (ctrl.signal.aborted) return
           setProbe({ url: submitUrl, state: 'error', result: null })
         })
     }, 600)
-    return () => clearTimeout(timer)
+    return () => { ctrl.abort(); clearTimeout(timer) }
   }, [submitUrl, showSubmit])
 
   function handleSubmitMint() {
