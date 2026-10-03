@@ -14,6 +14,7 @@ import { MintComparePicker } from '@/components/MintComparePicker'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { showWatchlistCount } from '@/utils/watchlistCount'
+import { useLegacyNotifyNotice, LEGACY_NOTIFY_NOTICE_TEXT } from '@/hooks/useLegacyNotifyNotice'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import './Watchlist.css'
 
@@ -202,6 +203,7 @@ export default function Watchlist() {
   const syncStatus = useWatchlistStore(state => state.syncStatus)
 
   const profile = useAuthStore(state => state.profile)
+  const legacyNotice = useLegacyNotifyNotice(profile?.pubkey)
 
   const { data: knownMintsData, isLoading: knownLoading } = useKnownMints()
   const knownMintsMap = useMemo(() => new Map(knownMintsData?.map(m => [m.url, m]) ?? []), [knownMintsData])
@@ -333,6 +335,14 @@ export default function Watchlist() {
             </div>
           ) : (
             <>
+              {legacyNotice.visible && (
+                <div className="queued-banner queued-banner-info wl-legacy-notice" role="status">
+                  <span>{LEGACY_NOTIFY_NOTICE_TEXT}</span>
+                  <button type="button" className="queued-banner-dismiss" aria-label="Dismiss" onClick={legacyNotice.dismiss}>
+                    ×
+                  </button>
+                </div>
+              )}
               <p className="wl-notify-explainer">
                 Optional: turn on Nostr DMs for a watched mint. You get one message when it goes down and one when it comes back (at most one of each per hour), even if this tab is closed. Your Nostr client must support private messages.
               </p>

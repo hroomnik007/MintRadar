@@ -10,3 +10,11 @@ export function confirmedNotify(entry: Pick<WatchlistEntry, 'notifyOnDown' | 'no
   if (!entry || !entry.notifyConfirmedAt) return { down: false, up: false }
   return { down: entry.notifyOnDown === true, up: entry.notifyOnUp === true }
 }
+
+// Rows from before notifications were confirmed by the server: a flag is on locally but the server never
+// confirmed it. Nothing creates such a row any more (addMint / sync default to off, setNotifyFlag writes the
+// flags and notifyConfirmedAt together), so this is only the legacy population — and it empties as the user
+// re-enables (confirms) or removes those mints.
+export function hasLegacyUnconfirmedFlag(entries: readonly Pick<WatchlistEntry, 'notifyOnDown' | 'notifyOnUp' | 'notifyConfirmedAt'>[]): boolean {
+  return entries.some(e => (e.notifyOnDown || e.notifyOnUp) && !e.notifyConfirmedAt)
+}

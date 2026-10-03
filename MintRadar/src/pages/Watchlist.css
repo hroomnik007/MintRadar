@@ -6,6 +6,14 @@
      Dashboard, Learn, Wallets so every card grid's left edge lines up. */
 }
 
+/* One-time notice about legacy notifications: the shared .queued-banner, but filling the page column
+   (that class is sized for the full-width AppShell banners) and sitting above the explainer + grid. */
+.queued-banner.wl-legacy-notice {
+  width: 100%;
+  max-width: none;
+  margin: 14px 0 0;
+}
+
 /* One explainer above the card grid (not on every card). */
 .wl-notify-explainer {
   margin: 14px 0 0;
