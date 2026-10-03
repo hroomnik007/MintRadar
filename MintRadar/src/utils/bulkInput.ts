@@ -1,3 +1,4 @@
+import { probeErrorMessage } from '@/utils/probeErrorMessages'
 import { classifySubmitInput, normalizeMintUrl, type SubmitInputClass } from '@/utils/submitInput'
 
 // Mirrors MAX_DISCOVER_BATCH in backend/src/index.ts (no shared code between the packages — keep in sync).
@@ -54,22 +55,32 @@ export function parseBulkInput(text: string): BulkParse {
   return { valid, invalid, duplicates }
 }
 
-export type BulkFailureKind = 'unreachable' | 'blocked' | 'invalid' | 'too-long' | 'error'
+export type BulkFailureKind = 'unreachable' | 'dns' | 'invalid' | 'too-long' | 'error'
 
-// Maps the server's per-row error strings to a class; the strings themselves are never shown.
+// Fallback only, for a row without an errorKind (older backend / non-probe failure): the server's string picks a class.
+// 'Invalid url' is the SSRF/DNS rejection — worded like a host name that cannot be found, never as its own status.
 export function classifyBulkError(error: string | undefined): BulkFailureKind {
   if (!error) return 'error'
   if (error.startsWith('URL does not appear to be a valid Cashu mint')) return 'unreachable'
-  if (error === 'Invalid url') return 'blocked'
+  if (error === 'Invalid url') return 'dns'
   if (error.startsWith('url must start with https')) return 'invalid'
   if (error.startsWith('url exceeds maximum length')) return 'too-long'
   return 'error'
 }
 
-export const BULK_FAILURE_LABEL: Record<BulkFailureKind, string> = {
+const FALLBACK_TEXT: Record<Exclude<BulkFailureKind, 'dns'>, string> = {
   unreachable: 'Not a Cashu mint / unreachable',
-  blocked: 'Blocked or unresolvable address',
   invalid: 'Invalid URL',
   'too-long': 'Too long',
   error: 'Error',
+}
+
+// The message for a failed row: the shared errorKind helper first (blocked_address is worded like dns), the
+// server-string fallback only when no errorKind came back.
+export function bulkFailureMessage(errorKind: unknown, error: string | undefined): string {
+  const kind = errorKind === 'blocked_address' ? 'dns' : errorKind
+  const fromKind = probeErrorMessage(kind)
+  if (fromKind !== null) return fromKind
+  const c = classifyBulkError(error)
+  return c === 'dns' ? (probeErrorMessage('dns') ?? FALLBACK_TEXT.error) : FALLBACK_TEXT[c]
 }

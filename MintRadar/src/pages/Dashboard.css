@@ -2140,6 +2140,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.bulk-row.status-failed .bulk-row-fail {
+  color: color-mix(in srgb, var(--red) 85%, var(--text));
+  white-space: normal;
+}
 .bulk-row.status-probing .bulk-status { color: var(--accent); }
 .bulk-row.status-pending .bulk-status { color: var(--text3); }
 

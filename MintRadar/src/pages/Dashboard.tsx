@@ -25,7 +25,7 @@ import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, 
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { probeErrorMessage, isProbeErrorKind, type ProbeErrorKind } from '@/utils/probeErrorMessages'
 import { classifySubmitInput, submitInputReason } from '@/utils/submitInput'
-import { parseBulkInput, classifyBulkError, BULK_FAILURE_LABEL, MAX_BULK_URLS } from '@/utils/bulkInput'
+import { parseBulkInput, bulkFailureMessage, MAX_BULK_URLS } from '@/utils/bulkInput'
 import './Dashboard.css'
 
 // Historical trend charts pull in Recharts (~380 kB chunk) — lazy-load so
@@ -613,7 +613,7 @@ export default function Dashboard() {
 
   // Bulk submit state
   const [bulkInput, setBulkInput] = useState('')
-  const [bulkProgress, setBulkProgress] = useState<Array<{ url: string; status: 'pending' | 'probing' | 'added' | 'duplicate' | 'failed'; error?: string; errorDetail?: string; aliasOf?: { url: string; name: string | null }[] }>>([])
+  const [bulkProgress, setBulkProgress] = useState<Array<{ url: string; status: 'pending' | 'probing' | 'added' | 'duplicate' | 'failed'; error?: string; aliasOf?: { url: string; name: string | null }[] }>>([])
   const [bulkRunning, setBulkRunning] = useState(false)
   // The live summary follows the textarea only after a short pause (it sits in a live region).
   const [bulkSettled, setBulkSettled] = useState('')
@@ -1075,7 +1075,7 @@ export default function Dashboard() {
     }
     const progress = results.map((r, k) => {
       const url = urls[k] ?? r.url
-      if (!r.success) return { url, status: 'failed' as const, error: BULK_FAILURE_LABEL[classifyBulkError(r.error)], ...(probeErrorMessage(r.errorKind) ? { errorDetail: probeErrorMessage(r.errorKind) as string } : {}) }
+      if (!r.success) return { url, status: 'failed' as const, error: bulkFailureMessage(r.errorKind, r.error) }
       return { url, status: r.isNew ? 'added' as const : 'duplicate' as const, aliasOf: r.aliasOf ?? [] }
     })
     setBulkProgress(progress)
@@ -1618,15 +1618,16 @@ export default function Dashboard() {
                 {(bulkRunning || bulkProgress.length > 0) && (
                   <div className="bulk-progress">
                     {bulkProgress.map((p, i) => (
-                      <div key={i} className={`bulk-row status-${p.status}${p.status === 'added' && (p.aliasOf?.length ?? 0) > 0 ? ' bulk-row-alias' : ''}`}>
+                      <div key={i} className={`bulk-row status-${p.status}${(p.status === 'added' && (p.aliasOf?.length ?? 0) > 0) || p.status === 'failed' ? ' bulk-row-alias' : ''}`}>
                         <span className="bulk-url" title={p.url}>{p.url}</span>
-                        <span className="bulk-status" title={p.errorDetail}>
+                        <span className="bulk-status">
                           {p.status === 'pending' && '…'}
                           {p.status === 'probing' && '⟳ probing'}
                           {p.status === 'added' && '✓ Added'}
                           {p.status === 'duplicate' && '• Already tracked'}
-                          {p.status === 'failed' && `✗ ${p.error ?? 'Error'}`}
+                          {p.status === 'failed' && '✗ Failed'}
                         </span>
+                        {p.status === 'failed' && <span className="bulk-row-subtitle bulk-row-fail">{p.error ?? 'Error'}</span>}
                         {p.status === 'added' && (p.aliasOf?.length ?? 0) > 0 && (
                           <span className="bulk-row-subtitle">
                             Same pubkey as {p.aliasOf!.map(a => a.name ?? getHostname(a.url)).join(', ')} — not merged
