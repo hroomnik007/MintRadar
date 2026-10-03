@@ -559,7 +559,8 @@ export default function Dashboard() {
   const [, setTick] = useState(0)
   const [showDegraded, setShowDegraded] = useState(false)
   const [showSubmit, setShowSubmit] = useState(false)
-  const dialogRef = useModalFocus()
+  const dialogRef = useModalFocus('.submit-modal-input') // the Single field first (was autoFocus, which made the input the recorded "trigger")
+  const submitBtnRef = useRef<HTMLButtonElement>(null)
   const [submitTab, setSubmitTab] = useState<'single' | 'bulk'>('single')
   const [submitInput, setSubmitInput] = useState('')
   const [submitUrl, setSubmitUrl] = useState('')
@@ -802,6 +803,25 @@ export default function Dashboard() {
       commitFilters({ sortBy: s, sortDir: DEFAULT_SORT_DIRS[s] })
     }
   }
+
+  // Single <-> Bulk: focus follows the tab to its field, deliberately (the first mount is handled by useModalFocus).
+  const prevSubmitTab = useRef(submitTab)
+  useEffect(() => {
+    if (prevSubmitTab.current === submitTab) return
+    prevSubmitTab.current = submitTab
+    if (!showSubmit) return
+    document.querySelector<HTMLElement>(submitTab === 'bulk' ? '.submit-modal .bulk-textarea' : '.submit-modal .submit-modal-input')?.focus({ preventScroll: true })
+  }, [submitTab, showSubmit])
+
+  // useModalFocus hands focus back to whatever had it when the dialog opened. Browsers that do not focus a
+  // button on click (Safari) leave nothing recorded, so fall back to the Submit button that opened the modal.
+  const submitWasOpen = useRef(false)
+  useEffect(() => {
+    if (showSubmit) { submitWasOpen.current = true; return }
+    if (!submitWasOpen.current) return
+    submitWasOpen.current = false
+    if (!document.activeElement || document.activeElement === document.body) submitBtnRef.current?.focus({ preventScroll: true })
+  }, [showSubmit])
 
   function handleSubmitInputChange(value: string) {
     setSubmitInput(value)
@@ -1147,7 +1167,7 @@ export default function Dashboard() {
         >
           <IcRefresh />
         </button>
-        <button type="button" className="submit-btn" onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setSubmitUrl(''); setProbe({ url: '', state: 'error', result: null }); setNostrLookup({ input: '', state: 'idle', msg: '' }); setBulkInput(''); setBulkProgress([]); setBulkRunning(false); setBulkDone(false); setBulkRateLimitMsg(null) }}>
+        <button type="button" className="submit-btn" ref={submitBtnRef} onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setSubmitUrl(''); setProbe({ url: '', state: 'error', result: null }); setNostrLookup({ input: '', state: 'idle', msg: '' }); setBulkInput(''); setBulkProgress([]); setBulkRunning(false); setBulkDone(false); setBulkRateLimitMsg(null) }}>
           <IcPlus /> Submit mint
         </button>
       </div>
@@ -1391,7 +1411,6 @@ export default function Dashboard() {
                       value={submitInput}
                       onChange={e => handleSubmitInputChange(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && probeState === 'success') handleSubmitMint() }}
-                      autoFocus
                     />
                     <div className="submit-input-hint">Enter a mint URL or the mint operator's Nostr public key</div>
                     {nostrLookupState === 'loading' && <div className="submit-probe-loading">Looking up mint on Nostr…</div>}
@@ -1463,7 +1482,6 @@ export default function Dashboard() {
                       value={bulkInput}
                       onChange={e => setBulkInput(e.target.value)}
                       rows={6}
-                      autoFocus
                     />
                     <div className="submit-modal-actions">
                       <button className="submit-cancel-btn" onClick={() => setShowSubmit(false)}>Cancel</button>
