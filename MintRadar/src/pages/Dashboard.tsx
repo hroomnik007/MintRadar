@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { nip19 } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
 import { useNostrDiscovery } from '@/hooks/useNostrDiscovery'
@@ -25,6 +24,7 @@ import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { probeErrorMessage, isProbeErrorKind, type ProbeErrorKind } from '@/utils/probeErrorMessages'
+import { classifySubmitInput, submitInputReason } from '@/utils/submitInput'
 import './Dashboard.css'
 
 // Historical trend charts pull in Recharts (~380 kB chunk) — lazy-load so
@@ -126,6 +126,8 @@ const NOSTR_LOOKUP_RELAYS = [
   'wss://offchain.pub',
   'wss://nostr-pub.wellorder.net',
 ]
+// nostr-tools gives up waiting for EOSE after 4.4 s; an EOSE that arrives sooner came from the relay.
+const LOOKUP_REAL_EOSE_MS = 4000
 const DEFAULT_SORT_DIRS: Record<'name' | 'latency' | 'rating' | 'reliability' | 'reviewCount', 'asc' | 'desc'> = { rating: 'desc', latency: 'asc', reliability: 'desc', name: 'asc', reviewCount: 'desc' }
 
 // Wallet-only/auth/method NUTs are deliberately not filterable here — a mint
@@ -564,7 +566,6 @@ export default function Dashboard() {
   const submitBtnRef = useRef<HTMLButtonElement>(null)
   const [submitTab, setSubmitTab] = useState<'single' | 'bulk'>('single')
   const [submitInput, setSubmitInput] = useState('')
-  const [submitUrl, setSubmitUrl] = useState('')
   const [submitState, setSubmitState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [submitMsg, setSubmitMsg] = useState('')
   // Populated when a newly-submitted URL shares a mint pubkey with an
@@ -587,22 +588,27 @@ export default function Dashboard() {
   // Probe/lookup results are keyed by the input they were produced for —
   // 'loading' and 'idle' are derived below instead of set synchronously in effects.
   const [probe, setProbe] = useState<{ url: string; state: 'success' | 'error'; result: { name: string | null; version: string | null; nutCount: number; latencyMs: number | null } | null; errorKind?: ProbeErrorKind }>({ url: '', state: 'error', result: null })
-  const [nostrLookup, setNostrLookup] = useState<{ input: string; state: 'idle' | 'error'; msg: string }>({ input: '', state: 'idle', msg: '' })
+  // The outcome of one Nostr key lookup, keyed by the input it was run for (derived 'loading' while none matches).
+  const [nostrLookup, setNostrLookup] = useState<{ input: string; outcome: 'found' | 'empty' | 'unreachable' | 'nonhttps'; url: string }>({ input: '', outcome: 'empty', url: '' })
+  // The reason line follows the input only after a short pause, so the live region does not announce every keystroke.
+  const [settledInput, setSettledInput] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const submitTrimmed = submitInput.trim()
-  const submitIsNostrKey = submitTrimmed.startsWith('npub1') || /^[0-9a-f]{64}$/i.test(submitTrimmed)
-  const nostrLookupState: 'idle' | 'loading' | 'error' =
-    !submitIsNostrKey ? 'idle'
-    : nostrLookup.input === submitTrimmed ? nostrLookup.state
-    : 'loading'
-  const nostrLookupMsg = submitIsNostrKey && nostrLookup.input === submitTrimmed ? nostrLookup.msg : ''
+  const inputClass = useMemo(() => classifySubmitInput(submitInput), [submitInput])
+  const lookupPubkey = inputClass.kind === 'npub' ? inputClass.pubkey : null
+  const lookupResult = lookupPubkey !== null && nostrLookup.input === submitTrimmed ? nostrLookup : null
+  const lookupLoading = lookupPubkey !== null && lookupResult === null
+  // The one URL the Single tab previews and submits: a typed https URL, or the mint a key's announcement points to.
+  const submitUrl = inputClass.kind === 'url' ? inputClass.url : lookupResult?.outcome === 'found' ? lookupResult.url : ''
   const probeState: 'idle' | 'loading' | 'success' | 'error' =
-    !submitUrl.startsWith('https://') ? 'idle'
+    submitUrl === '' ? 'idle'
     : probe.url === submitUrl ? probe.state
     : 'loading'
   const probeResult = probe.url === submitUrl && probeState === 'success' ? probe.result : null
+  const submitReason = settledInput === submitInput ? submitInputReason(inputClass) : null
+  const submitDisabled = probeState !== 'success' || submitState === 'loading'
 
   // Bulk submit state
   const [bulkInput, setBulkInput] = useState('')
@@ -828,62 +834,72 @@ export default function Dashboard() {
     setSubmitInput(value)
     // A new value invalidates the previous attempt's error (a submit in flight keeps its 'loading').
     if (submitState === 'error') setSubmitState('idle')
-    const trimmed = value.trim()
-    if (trimmed.startsWith('https://')) {
-      setSubmitUrl(trimmed)
-    } else {
-      setSubmitUrl('')
-    }
   }
 
   useEffect(() => {
-    if (!showSubmit) return
-    const input = submitInput.trim()
-    const isNpub = input.startsWith('npub1')
-    const isHex = /^[0-9a-f]{64}$/i.test(input)
-    if (!isNpub && !isHex) return
-    // Every lookup belongs to the input value it was started for: the cleanup (input changed, modal closed)
-    // marks it stale and a stale result never touches state.
+    const timer = setTimeout(() => setSettledInput(submitInput), 400)
+    return () => clearTimeout(timer)
+  }, [submitInput])
+
+  // Nostr key lookup — only a valid npub gets here (classifySubmitInput); hex, nsec, nprofile, junk, http and
+  // malformed values never reach a relay. Same relays, filter, 600 ms debounce and 8 s limit as before. Every lookup
+  // belongs to the input it was started for: the cleanup (input changed, modal closed) marks it stale, closes its
+  // subscriptions, and a stale result never touches state.
+  // The relays are queried one subscription each (the same as one subscribeMany over all of them) so that a relay
+  // that really answered can be told apart from one that never did: nostr-tools declares EOSE on its own after
+  // ~4.4 s of silence, which is not an answer.
+  useEffect(() => {
+    if (!showSubmit || lookupPubkey === null) return
+    const input = submitTrimmed
+    const pubkey = lookupPubkey
     let stale = false
+    let done = false
+    let answered = 0
+    let pending = NOSTR_LOOKUP_RELAYS.length
+    let hardTimeout: ReturnType<typeof setTimeout> | undefined
+    const events: NostrEvent[] = []
+    const subs: { close: (reason?: string) => void }[] = []
+    const settle = () => {
+      if (stale || done) return
+      done = true
+      clearTimeout(hardTimeout)
+      subs.forEach(sub => sub.close('lookup done'))
+      // The authors filter is only a request: ignore anything a relay returns that is not this key's announcement.
+      const mine = events.filter(e => e.kind === 38172 && e.pubkey === pubkey)
+      if (mine.length === 0 && answered === 0) { setNostrLookup({ input, outcome: 'unreachable', url: '' }); return }
+      const announced = mine.flatMap(e => e.tags).find(t => t[0] === 'u' && t[1])?.[1]
+      if (!announced) { setNostrLookup({ input, outcome: 'empty', url: '' }); return }
+      const c = classifySubmitInput(announced)
+      setNostrLookup(c.kind === 'url' ? { input, outcome: 'found', url: c.url } : { input, outcome: 'nonhttps', url: '' })
+    }
     const timer = setTimeout(() => {
-      void (async () => {
-        try {
-          let pubkey = input
-          if (isNpub) {
-            const decoded = nip19.decode(input)
-            if (decoded.type !== 'npub') {
-              if (stale) return
-              setNostrLookup({ input, state: 'error', msg: 'Invalid npub format' })
-              return
-            }
-            pubkey = decoded.data as string
-          }
-          const events = await Promise.race([
-            sharedPool.querySync(NOSTR_LOOKUP_RELAYS, { kinds: [38172], authors: [pubkey], limit: 5 }),
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
-          ]) as NostrEvent[]
-          if (stale) return
-          const mintUrl = events
-            .flatMap(e => e.tags)
-            .find(t => t[0] === 'u' && t[1])?.[1]
-          if (!mintUrl) {
-            setNostrLookup({ input, state: 'error', msg: 'No mint announcement found for this Nostr key' })
-            return
-          }
-          setNostrLookup({ input, state: 'idle', msg: '' })
-          setSubmitUrl(mintUrl)
-        } catch {
-          if (stale) return
-          setNostrLookup({ input, state: 'error', msg: 'Failed to reach Nostr relays. Try again.' })
+      const startedAt = Date.now()
+      hardTimeout = setTimeout(settle, 8000)
+      for (const relay of NOSTR_LOOKUP_RELAYS) {
+        let relayDone = false
+        const relayFinished = (answeredByRelay: boolean) => {
+          if (relayDone) return
+          relayDone = true
+          if (answeredByRelay) answered++
+          pending--
+          if (pending === 0) settle()
         }
-      })()
+        const sub = sharedPool.subscribeMany([relay], { kinds: [38172], authors: [pubkey], limit: 5 }, {
+          onevent: e => { events.push(e) },
+          // Faster than the library's own EOSE timeout = the relay really answered. A relay that failed or closed
+          // also reports EOSE, synchronously before its onclose: the microtask lets onclose (a failure) win.
+          oneose: () => { queueMicrotask(() => { relayFinished(Date.now() - startedAt < LOOKUP_REAL_EOSE_MS); sub.close('lookup done') }) },
+          onclose: () => relayFinished(false),
+        })
+        subs.push(sub)
+      }
     }, 600)
-    return () => { stale = true; clearTimeout(timer) }
-  }, [submitInput, showSubmit])
+    return () => { stale = true; clearTimeout(timer); clearTimeout(hardTimeout); subs.forEach(sub => sub.close('stale')) }
+  }, [submitTrimmed, lookupPubkey, showSubmit])
 
   useEffect(() => {
     if (!showSubmit) return
-    if (!submitUrl.startsWith('https://')) return
+    if (submitUrl === '') return
     // Same rule as the lookup: the preview belongs to the URL it was probed for; a stale answer is dropped
     // (and the request aborted when the URL changes or the modal closes).
     const ctrl = new AbortController()
@@ -916,11 +932,8 @@ export default function Dashboard() {
   }, [submitUrl, showSubmit])
 
   function handleSubmitMint() {
-    if (!submitUrl.startsWith('https://')) {
-      setSubmitState('error')
-      setSubmitMsg('URL must start with https://')
-      return
-    }
+    // aria-disabled keeps the button clickable, so the guard lives here.
+    if (submitDisabled) return
     setSubmitState('loading')
     setSubmitAliasOf([])
     fetch('/api/mint/submit', {
@@ -1182,7 +1195,7 @@ export default function Dashboard() {
         >
           <IcRefresh />
         </button>
-        <button type="button" className="submit-btn" ref={submitBtnRef} onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setSubmitUrl(''); setProbe({ url: '', state: 'error', result: null }); setNostrLookup({ input: '', state: 'idle', msg: '' }); setBulkInput(''); setBulkProgress([]); setBulkRunning(false); setBulkDone(false); setBulkRateLimitMsg(null) }}>
+        <button type="button" className="submit-btn" ref={submitBtnRef} onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setProbe({ url: '', state: 'error', result: null }); setNostrLookup({ input: '', outcome: 'empty', url: '' }); setBulkInput(''); setBulkProgress([]); setBulkRunning(false); setBulkDone(false); setBulkRateLimitMsg(null) }}>
           <IcPlus /> Submit mint
         </button>
       </div>
@@ -1427,28 +1440,42 @@ export default function Dashboard() {
                       placeholder="https://yourmint.cash"
                       value={submitInput}
                       onChange={e => handleSubmitInputChange(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && probeState === 'success') handleSubmitMint() }}
+                      onKeyDown={e => { if (e.key === 'Enter' && !submitDisabled) handleSubmitMint() }}
+                      aria-describedby="submit-status"
                     />
                     <div className="submit-input-hint">or an npub1… key</div>
-                    {nostrLookupState === 'loading' && <div className="submit-probe-loading">Looking up mint on Nostr…</div>}
-                    {nostrLookupState === 'error' && <div className="submit-probe-error">{nostrLookupMsg}</div>}
-                    {probeState === 'loading' && submitUrl.startsWith('https://') && <div className="submit-probe-loading">Checking mint…</div>}
-                    {probeState === 'success' && probeResult !== null && (
-                      <div className="submit-probe-preview">
-                        <div className="submit-probe-name">{probeResult.name ?? 'Unknown mint'}</div>
-                        <div className="submit-probe-meta">
-                          <span>v{probeResult.version ?? '?'}</span>
-                          <span>·</span>
-                          <span>{probeResult.nutCount} NUTs</span>
-                          {probeResult.latencyMs !== null && (<><span>·</span><span style={{ color: latencyColor(probeResult.latencyMs) }}>{probeResult.latencyMs} ms</span></>)}
+                    {/* One status region for everything the field produces: the reason for an unusable value, the key
+                        lookup and the mint preview. */}
+                    <div id="submit-status" role="status" aria-live="polite">
+                      {submitReason !== null && <div className={`submit-reason${inputClass.kind === 'nsec' ? ' warn' : ''}`}>{submitReason}</div>}
+                      {lookupLoading && <div className="submit-probe-loading">Looking up mint on Nostr…</div>}
+                      {lookupResult?.outcome === 'empty' && <div className="submit-probe-error">No mint announcement found for this key on the relays we checked.</div>}
+                      {lookupResult?.outcome === 'unreachable' && <div className="submit-probe-error">Couldn't reach the Nostr relays. Try again.</div>}
+                      {lookupResult?.outcome === 'nonhttps' && <div className="submit-probe-error">The announcement points to a non-https address, which can't be listed.</div>}
+                      {lookupResult?.outcome === 'found' && (
+                        <div className="submit-found">
+                          <span>Announced mint:</span>
+                          <span className="submit-found-url" title={lookupResult.url}>{lookupResult.url}</span>
                         </div>
-                      </div>
-                    )}
-                    {probeState === 'error' && submitUrl.startsWith('https://') && nostrLookupState === 'idle' && <div className="submit-probe-error">{(probe.url === submitUrl ? probeErrorMessage(probe.errorKind) : null) ?? 'Mint unreachable or invalid'}</div>}
+                      )}
+                      {probeState === 'loading' && <div className="submit-probe-loading">Checking mint…</div>}
+                      {probeState === 'success' && probeResult !== null && (
+                        <div className="submit-probe-preview">
+                          <div className="submit-probe-name">{probeResult.name ?? 'Unknown mint'}</div>
+                          <div className="submit-probe-meta">
+                            <span>v{probeResult.version ?? '?'}</span>
+                            <span>·</span>
+                            <span>{probeResult.nutCount} NUTs</span>
+                            {probeResult.latencyMs !== null && (<><span>·</span><span style={{ color: latencyColor(probeResult.latencyMs) }}>{probeResult.latencyMs} ms</span></>)}
+                          </div>
+                        </div>
+                      )}
+                      {probeState === 'error' && <div className="submit-probe-error">{(probe.url === submitUrl ? probeErrorMessage(probe.errorKind) : null) ?? 'Mint unreachable or invalid'}</div>}
+                    </div>
                     {submitState === 'error' && <div className="submit-result error">{submitMsg}</div>}
                     <div className="submit-modal-actions">
                       <button className="submit-cancel-btn" onClick={() => setShowSubmit(false)}>Cancel</button>
-                      <button className="submit-ok-btn" onClick={handleSubmitMint} disabled={probeState !== 'success' || submitState === 'loading'}>
+                      <button className="submit-ok-btn" onClick={handleSubmitMint} aria-disabled={submitDisabled} aria-describedby="submit-status">
                         {submitState === 'loading' ? 'Submitting…' : 'Submit'}
                       </button>
                     </div>

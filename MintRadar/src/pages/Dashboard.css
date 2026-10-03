@@ -1241,8 +1241,8 @@
   transition: all var(--transition);
   letter-spacing: 0.03em;
 }
-.submit-ok-btn:hover:not(:disabled) { background: var(--green-soft-strong); border-color: var(--green); }
-.submit-ok-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.submit-ok-btn:hover:not([aria-disabled="true"]):not(:disabled) { background: var(--green-soft-strong); border-color: var(--green); }
+.submit-ok-btn:disabled, .submit-ok-btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
 
 .submit-result {
   font-size: 11px; margin-bottom: 12px; padding: 8px 12px;
@@ -1264,6 +1264,26 @@
   border: 1px solid var(--copper-soft-strong);
 }
 .submit-alias-hint a { color: inherit; text-decoration: underline; }
+
+/* Why the field's value cannot be used (Single tab). Muted; the private-key warning is tinted. */
+.submit-reason {
+  font-size: 11px; color: var(--text3); font-family: var(--font-body);
+  margin-bottom: 10px; line-height: 1.5;
+}
+.submit-reason.warn { color: color-mix(in srgb, var(--red) 85%, var(--text)); }
+
+/* The mint a Nostr key's announcement points to — the full URL that will be submitted. */
+.submit-found {
+  display: flex; gap: 6px; align-items: baseline;
+  font-size: 11px; color: var(--text3); font-family: var(--font-body);
+  margin-bottom: 10px; padding: 6px 10px;
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
+}
+.submit-found > span:first-child { flex-shrink: 0; }
+.submit-found-url {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--text2); font-family: var(--font-mono);
+}
 
 .submit-probe-loading {
   font-size: 11px; color: var(--text3);
