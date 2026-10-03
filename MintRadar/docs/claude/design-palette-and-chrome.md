@@ -48,6 +48,18 @@ itself to centre) so rows without a hostname line match the two-line rows. Edge 
 `e2e/dashboard-container-edges.spec.ts` (list + cards at 1920–1100px, no page overflow at 900/768/390, equal row heights) —
 any new Dashboard view needs a case there.
 
+**2c) Rule: every page's main containers share the navbar's content edges — tested (2026-10-03)**
+
+On every main page (Dashboard grid/list/Filters panel, Watchlist, Stats, Tools, Wallets, Learn, Learn module, Mint Detail
+tabs, footer) each main structural container has the same left/right edge as `.navbar-inner`'s content box (±1px), on either
+its content box or its border box depending on the container. Intentional exceptions: full-bleed bands (`.learn-hero`,
+`.wallets-hero`) and the Compare modal, which only have to stay inside the viewport. `e2e/content-edges.spec.ts` holds the
+per-page container table (selector + rule + box) and measures at 1920/1536/1440/1280/1100/900/768/640/390px after fonts are
+loaded, animations are off and the boxes are stable for two animation frames; a new page or container must be added there.
+`EDGES_REPORT=<file>` turns the spec into a read-only measurement dump. Known unfixed mismatches are `test.fixme` cases in the
+spec with the measured difference: `.md-summary` at 900/768/640px (12px padding instead of the page gutter), `.wallets-footnote`
+(24px/16px padding instead of `--page-pad`), `.app-footer-inner` at exactly 640px (hardcoded 14px padding while `--page-pad` is 18px).
+
 **3) State before this wave**
 
 Each page defined its own width independently, so first-card left edges did not line up across
