@@ -344,3 +344,70 @@ for (const width of WIDTHS) {
     })
   })
 }
+
+// ── Hero action buttons (Mint QR / Open in Cashu.me / Compare) at 360–388px ─────────────────────
+// The single-row, equal-thirds action row clipped "Cashu.me" by up to 3.3px between 360 and ~376px
+// (overflow: hidden + centred content). Fixed below 380px; ≥390px must stay exactly as it was.
+const HERO_CASES: Record<string, Case> = {
+  plain: {},
+  name91: { name: spaced(91) },
+  // Test mint + "New" badges share the header with the name
+  badges: { url: 'https://testnut.cashu.space', name: spaced(45), known: { discoveredAt: new Date().toISOString() } },
+}
+const heroButtons = (page: Page) => page.evaluate(() => {
+  const vw = document.documentElement.clientWidth
+  return [...document.querySelectorAll('.md-quick-btn, .md-compare-btn')].map(e => {
+    const b = e.getBoundingClientRect()
+    const border = parseFloat(getComputedStyle(e).borderRightWidth)
+    const rg = document.createRange()
+    rg.selectNodeContents(e)
+    const c = rg.getBoundingClientRect()
+    const parent = e.parentElement!.closest('.md-hdr-actions')!.getBoundingClientRect()
+    return {
+      label: (e.textContent ?? '').trim(), left: b.left, right: b.right, width: b.width, height: b.height,
+      clippedBy: Math.max(c.right - (b.right - border), (b.left + border) - c.left, 0),
+      outsideContainer: Math.max(b.right - parent.right, parent.left - b.left, 0),
+      outsideViewport: Math.max(b.right - vw, -b.left, 0),
+    }
+  })
+})
+
+for (const width of [340, 360, 375, 380, 388]) {
+  for (const key of Object.keys(HERO_CASES)) {
+    test(`Mint Detail hero buttons are not clipped @ ${width}px — ${key}`, async ({ page }) => {
+      const { url } = await mount(page, HERO_CASES[key]!, { width })
+      await page.goto(`/mint/${encodeURIComponent(url)}`)
+      await expect(page.locator('.md-tabs')).toBeVisible()
+      await page.waitForTimeout(250)
+      const btns = await heroButtons(page)
+      expect(btns).toHaveLength(3)
+      for (const b of btns) {
+        expect(b.clippedBy, `${b.label}: content clipped by ${b.clippedBy.toFixed(1)}px`).toBeLessThanOrEqual(0.5)
+        expect(b.outsideContainer, `${b.label} outside its container`).toBeLessThanOrEqual(0.5)
+        expect(b.outsideViewport, `${b.label} outside the viewport`).toBeLessThanOrEqual(0.5)
+      }
+      await expectNoOverflow(page, `hero/${key}`)
+    })
+  }
+}
+
+// Boxes recorded from the code BEFORE the hero fix (x, width, height; the fixture's plain mint).
+const HERO_BOXES: Record<number, { left: number; width: number; height: number }[]> = {
+  390: [{ left: 79, width: 75.33, height: 28 }, { left: 160.33, width: 75.34, height: 27 }, { left: 241.67, width: 75.33, height: 27 }],
+  1440: [{ left: 943.42, width: 100.53, height: 30 }, { left: 1051.95, width: 162.14, height: 30 }, { left: 1222.09, width: 100.91, height: 30 }],
+}
+for (const width of [390, 1440]) {
+  test(`Mint Detail hero button boxes are unchanged @ ${width}px`, async ({ page }) => {
+    const { url } = await mount(page, {}, { width })
+    await page.goto(`/mint/${encodeURIComponent(url)}`)
+    await expect(page.locator('.md-tabs')).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    await page.waitForTimeout(250)
+    const btns = await heroButtons(page)
+    HERO_BOXES[width]!.forEach((want, i) => {
+      for (const k of ['left', 'width', 'height'] as const) {
+        expect(Math.abs(btns[i]![k] - want[k]), `${btns[i]!.label}.${k}`).toBeLessThanOrEqual(0.05)
+      }
+    })
+  })
+}
