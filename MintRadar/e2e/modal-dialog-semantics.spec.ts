@@ -120,6 +120,8 @@ const CASES: ModalCase[] = [
   },
   {
     id: 'Reliability breakdown (Mint Detail)', name: /reliability score breakdown/i,
+    // The only trigger is the compact tile .md-sc-reliability, displayed at ≤640px; the desktop sidebar shows the breakdown inline (no modal).
+    viewport: { width: 390, height: 844 },
     prepare: p => goto(p, DETAIL, '.md-tabs'),
     trigger: p => p.locator('.md-sc-reliability').locator('visible=true').first(), open: clickTrigger,
     dialog: p => p.getByRole('dialog'), close: 'button:text-is("×")',
