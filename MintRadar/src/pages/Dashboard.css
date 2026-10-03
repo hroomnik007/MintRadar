@@ -1207,8 +1207,9 @@
 }
 .submit-modal-desc {
   font-size: 11px; color: var(--text3); margin-bottom: 16px;
-  line-height: 1.6; font-family: var(--font-mono);
+  line-height: 1.6; font-family: var(--font-body);
 }
+.submit-modal-desc code { font-family: var(--font-mono); }
 .submit-modal-input {
   width: 100%; background: var(--bg3); border: 1px solid var(--border);
   border-radius: 8px; padding: 10px 12px; color: var(--text);
@@ -1219,7 +1220,7 @@
 .submit-modal-input:focus { border-color: var(--accent); }
 
 .submit-input-hint {
-  font-size: 10px; color: var(--text3); font-family: var(--font-mono);
+  font-size: 10px; color: var(--text3); font-family: var(--font-body);
   margin-bottom: 10px; letter-spacing: 0.01em;
 }
 
@@ -1245,7 +1246,7 @@
 
 .submit-result {
   font-size: 11px; margin-bottom: 12px; padding: 8px 12px;
-  border-radius: 7px; font-family: var(--font-mono);
+  border-radius: 7px; font-family: var(--font-body);
 }
 .submit-result.success {
   background: var(--green-soft); color: var(--accent);
@@ -1258,7 +1259,7 @@
 
 .submit-alias-hint {
   font-size: 11px; margin: -6px 0 12px; padding: 8px 12px;
-  border-radius: 7px; font-family: var(--font-mono);
+  border-radius: 7px; font-family: var(--font-body);
   background: var(--copper-soft); color: var(--copper);
   border: 1px solid var(--copper-soft-strong);
 }
@@ -1266,7 +1267,7 @@
 
 .submit-probe-loading {
   font-size: 11px; color: var(--text3);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   margin-bottom: 10px; padding: 6px 10px;
   background: var(--bg3); border: 1px solid var(--border);
   border-radius: 6px;
@@ -1293,13 +1294,13 @@
   background: var(--red-soft);
   border: 1px solid var(--red-soft-strong);
   border-radius: 6px; padding: 6px 10px;
-  margin-bottom: 10px; font-family: var(--font-mono);
+  margin-bottom: 10px; font-family: var(--font-body);
 }
 
 .submit-no-account {
   font-size: 10px; color: var(--text3);
   text-align: center; margin-top: 8px;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
 }
 
 /* ── Filter Button ──────────────────────────────────────────── */
@@ -2057,7 +2058,7 @@
 }
 
 .bulk-url { color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-.bulk-status { flex-shrink: 0; font-size: 10px; }
+.bulk-status { flex-shrink: 0; font-size: 10px; font-family: var(--font-body); }
 .bulk-row.status-added .bulk-status { color: var(--accent); }
 .bulk-row.status-duplicate .bulk-status { color: var(--copper); }
 .bulk-row.status-failed .bulk-status { color: color-mix(in srgb, var(--red) 85%, var(--text)); }
@@ -2066,6 +2067,7 @@
 .bulk-row-subtitle {
   flex-basis: 100%;
   font-size: 10px;
+  font-family: var(--font-body);
   color: var(--copper);
   overflow: hidden;
   text-overflow: ellipsis;

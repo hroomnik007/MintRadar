@@ -948,7 +948,7 @@ export default function Dashboard() {
           setSubmitMsg(
             data.isNew === false
               ? 'Already tracked — this mint is already known to MintRadar.'
-              : 'Tracked. List refresh in ~1 min.'
+              : 'Added. It will show up in the list shortly.'
           )
           setSubmitAliasOf(data.aliasOf ?? [])
           void queryClient.invalidateQueries({ queryKey: ['mints-known'] })
@@ -957,7 +957,7 @@ export default function Dashboard() {
           if (data.isNew !== false) {
             setQueuedBanner({
               id: Date.now(),
-              message: 'Tracked. List refresh in ~1 min.',
+              message: 'Added. It will show up in the list shortly.',
               tone: 'success',
               watchUrls: [submitUrl],
               attempts: 0,
@@ -1415,19 +1415,21 @@ export default function Dashboard() {
             {submitTab === 'single' && (
               <>
                 <div className="submit-modal-desc">
-                  Submit a Cashu mint URL to be listed. The mint must be reachable and respond to <code>/v1/info</code>.
+                  Enter a mint URL, or a Nostr key (npub) to look up the mint it announced (NIP-87). The mint must answer <code>/v1/info</code>.
                 </div>
+                {/* Mirrors SUBMIT_RATE_LIMIT_MAX (20 per hour per IP) in backend/src/index.ts — manually synced like the Bulk limits below. */}
+                <div className="submit-input-hint">Up to 20 submissions per hour.</div>
                 {submitState !== 'success' && (
                   <>
                     <input
                       className="submit-modal-input"
                       type="text"
-                      placeholder="https://yourmint.cash or npub1..."
+                      placeholder="https://yourmint.cash"
                       value={submitInput}
                       onChange={e => handleSubmitInputChange(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && probeState === 'success') handleSubmitMint() }}
                     />
-                    <div className="submit-input-hint">Enter a mint URL or the mint operator's Nostr public key</div>
+                    <div className="submit-input-hint">or an npub1… key</div>
                     {nostrLookupState === 'loading' && <div className="submit-probe-loading">Looking up mint on Nostr…</div>}
                     {nostrLookupState === 'error' && <div className="submit-probe-error">{nostrLookupMsg}</div>}
                     {probeState === 'loading' && submitUrl.startsWith('https://') && <div className="submit-probe-loading">Checking mint…</div>}
@@ -1450,7 +1452,6 @@ export default function Dashboard() {
                         {submitState === 'loading' ? 'Submitting…' : 'Submit'}
                       </button>
                     </div>
-                    <div className="submit-no-account">No account required.</div>
                   </>
                 )}
                 {submitState === 'success' && (
@@ -1481,14 +1482,14 @@ export default function Dashboard() {
             {submitTab === 'bulk' && (
               <>
                 <div className="submit-modal-desc">
-                  Paste one mint URL per line. Each must start with <code>https://</code>.
+                  Paste one mint URL per line, each starting with{'\u00A0'}<code>https://</code>
                 </div>
                 {/* Static limits note — mirrors the backend's MAX_DISCOVER_BATCH
                     (100) and DISCOVER_BULK_RATE_LIMIT_MAX (10) constants in
                     backend/src/index.ts (no shared workspace between the two
                     packages, so this is a manually-synced number like
                     testMints.ts/auditScore.ts — update both if either changes). */}
-                <div className="submit-input-hint">Up to 100 mints per submission, max 10 submissions per hour.</div>
+                <div className="submit-input-hint">Up to 100 mints per submission, 10 submissions per hour.</div>
                 {!bulkRunning && !bulkDone && (
                   <>
                     <textarea
@@ -1550,6 +1551,7 @@ export default function Dashboard() {
                 )}
               </>
             )}
+            <div className="submit-no-account">No account required.</div>
           </div>
         </div>
       )}
