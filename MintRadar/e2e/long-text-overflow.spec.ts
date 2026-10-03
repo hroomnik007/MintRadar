@@ -1,7 +1,7 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page, type Browser } from '@playwright/test'
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure'
 import {
-  installApiMocks, loginAs, probePayload, makeCashuToken,
+  installApiMocks, mockRelays, loginAs, probePayload, makeCashuToken,
   MOCK_KNOWN_MINTS, MOCK_STATS, MOCK_RELIABILITY_MOVERS,
 } from './fixtures/mocks'
 
@@ -515,5 +515,61 @@ for (const width of [420, 430, 1440]) {
       expect(ic.display).not.toBe('none')
       expect(Math.abs(ic.width - HERO_ICON_WIDTHS[width]![i]!), `icon ${i}`).toBeLessThanOrEqual(0.3)
     })
+  })
+}
+
+// ── Hero buttons: 44px touch target (2026-10-03) ─────────────────────────────────────────────────
+// With a coarse pointer each button gets an invisible vertical ::before extension; the visible box and the layout
+// stay the same. At ≤359px the row wraps (Compare sits 6px under the other two), so there the facing edges get 3px
+// and the hit area is 38.5px instead of 44px.
+const touchHero = async (browser: Browser, width: number, coarse: boolean) => {
+  const ctx = await browser.newContext({ viewport: { width, height: 900 }, hasTouch: coarse, isMobile: coarse })
+  const page = await ctx.newPage()
+  await installApiMocks(page)
+  await mockRelays(page)
+  await page.goto('/mint/' + encodeURIComponent('https://alpha.mint.example'))
+  await expect(page.locator('.md-tabs')).toBeVisible()
+  await page.evaluate(() => document.fonts.ready)
+  await page.waitForTimeout(300)
+  return { ctx, page }
+}
+const heroHit = (page: Page) => page.evaluate(() => {
+  const btns = [...document.querySelectorAll('.md-quick-btn, .md-compare-btn')]
+  const layout = btns.map(b => { const r = b.getBoundingClientRect(); return [r.left, r.top, r.width, r.height].map(n => Math.round(n * 100) / 100) })
+  const hit = btns.map(b => {
+    const r = b.getBoundingClientRect()
+    const x = r.left + r.width / 2
+    let top = r.top, bottom = r.bottom
+    for (let y = r.top; y > r.top - 30; y -= 0.5) { if (document.elementFromPoint(x, y)?.closest('.md-quick-btn, .md-compare-btn') === b) top = y; else break }
+    for (let y = r.bottom; y < r.bottom + 30; y += 0.5) { if (document.elementFromPoint(x, y)?.closest('.md-quick-btn, .md-compare-btn') === b) bottom = y; else break }
+    // 8px above/below the visible edge resolve to this button or to something that is not another hero button
+    const other = [r.top - 8, r.bottom + 8].map(y => {
+      const t = document.elementFromPoint(x, y)?.closest('.md-quick-btn, .md-compare-btn')
+      return t !== null && t !== undefined && t !== b
+    })
+    return { height: bottom - top, neighbourHit: other.some(Boolean) }
+  })
+  return { layout, hit, pageHeight: document.documentElement.scrollHeight }
+})
+
+for (const [width, minHit] of [[360, 43.5], [390, 43.5], [768, 43.5], [1440, 43.5], [320, 38]] as const) {
+  test(`Mint Detail hero buttons have a ${minHit === 38 ? '≥38px (wrapped row)' : '44px'} touch target @ ${width}px`, async ({ browser }) => {
+    const touch = await touchHero(browser, width, true)
+    expect(await touch.page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
+    const t = await heroHit(touch.page)
+    await touch.ctx.close()
+    expect(t.hit).toHaveLength(3)
+    for (const [i, h] of t.hit.entries()) {
+      expect(h.height, `button ${i} hit height`).toBeGreaterThanOrEqual(minHit)
+      // (≤359px the wrapped Compare sits only 6px away, so a probe 8px out legitimately lands on it)
+      if (width >= 360) expect(h.neighbourHit, `button ${i}: a point 8px away hits a neighbouring hero button`).toBe(false)
+    }
+    // visible boxes and page height identical to a mouse context
+    const mouse = await touchHero(browser, width, false)
+    const m = await heroHit(mouse.page)
+    await mouse.ctx.close()
+    expect(t.layout).toEqual(m.layout)
+    expect(t.pageHeight).toBe(m.pageHeight)
+    for (const h of m.hit) expect(h.height).toBeLessThan(35) // no extension without a coarse pointer
   })
 }

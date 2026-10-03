@@ -1583,6 +1583,31 @@ button.md-url-copy.copied > svg { opacity: 1; }
   .md-compare-btn { flex: 1 1 45%; }
 }
 
+/* Touch: 44px hit area for Mint QR / Open in Cashu.me / Compare through an invisible ::before (same pattern as the
+   Filters panel segments; the visible box stays 27px high ≤640px, 30px above). Vertical only, so the 6–8px gaps
+   between the buttons are never crossed. ≤640px the buttons are overflow: hidden (a clip guard that no longer
+   clips anything now the icons are gone below 420px), which would cut the extension off, so it is lifted on touch.
+   The neighbours above (First seen line) and below (card padding) are not interactive. */
+@media (pointer: coarse) {
+  .md-quick-btn,
+  .md-compare-btn { position: relative; }
+  .md-quick-btn::before,
+  .md-compare-btn::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; bottom: -8px; }
+}
+@media (pointer: coarse) and (max-width: 640px) {
+  .md-quick-btn,
+  .md-compare-btn { overflow: visible; }
+  /* ::before is positioned from the padding box (1px inside the border): -9.5px = 8.5px beyond the 27px box → 44px */
+  .md-quick-btn::before,
+  .md-compare-btn::before { top: -9.5px; bottom: -9.5px; }
+}
+/* ≤359px the row wraps (Mint QR + Cashu.me, then Compare 6px below): the rows may not reach into each other, so the
+   facing edges get 3px each beyond the border (hit area 38.5px instead of 44px there) and the outer edges the full 9.5px. */
+@media (pointer: coarse) and (max-width: 359px) {
+  .md-quick-btn::before { bottom: -4px; }
+  .md-compare-btn::before { top: -4px; }
+}
+
 /* <420px: text-only hero buttons. The three buttons are equal thirds of a ~208–260px row and the Mint QR icon is
    flex-shrunk below its 12px size at every width up to 418px (0px at 360, 5.3px at 400, 10px at 414) while the
    other two keep theirs, so the row looked inconsistent. All three decorative icons (aria-hidden; the text
