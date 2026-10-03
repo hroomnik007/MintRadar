@@ -3,6 +3,7 @@ import {
   PROBE_ERROR_KINDS,
   classifyProbeFailure,
   failureFromResponse,
+  isAbortLike,
   type ProbeFailure,
 } from '../probeErrorKind.js'
 
@@ -80,5 +81,18 @@ describe('no leakage', () => {
       expect(PROBE_ERROR_KINDS).toContain(kind)
       expect(kind).not.toMatch(/\d+\.\d+|script|secret|internal|leak/)
     }
+  })
+})
+
+describe('isAbortLike', () => {
+  it('recognises deadline aborts, also as a wrapped cause, and nothing else', () => {
+    const timeout = new Error('t'); timeout.name = 'TimeoutError'
+    const abort = new Error('a'); abort.name = 'AbortError'
+    expect(isAbortLike(timeout)).toBe(true)
+    expect(isAbortLike(abort)).toBe(true)
+    expect(isAbortLike(new TypeError('terminated', { cause: abort }))).toBe(true)
+    expect(isAbortLike(new SyntaxError('Unexpected token'))).toBe(false)
+    expect(isAbortLike('TimeoutError')).toBe(false)
+    expect(isAbortLike(null)).toBe(false)
   })
 })

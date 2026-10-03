@@ -89,3 +89,15 @@ export function failureFromResponse(res: { status: number; headers?: HeaderBag |
     contentType: get('content-type'),
   }
 }
+
+/**
+ * True for the error thrown when the probe's deadline signal fires while a
+ * response body is still being read (AbortError / TimeoutError, possibly
+ * wrapped as a `cause`). Such a stall is a timeout, not "not a Cashu mint".
+ */
+export function isAbortLike(err: unknown): boolean {
+  for (let e: unknown = err, depth = 0; e instanceof Error && depth < 3; e = e.cause, depth++) {
+    if (e.name === 'AbortError' || e.name === 'TimeoutError') return true
+  }
+  return false
+}

@@ -4,7 +4,7 @@ import cors from 'cors'
 import { pool, initDb } from './db.js'
 import { isSafeUrl, checkWsUrlSafety, safeFetch } from './ssrf.js'
 import { upsertMint, probeMintToDb, validateCashuMintProbe, parseMintMethods, classifyFetchError, type MintMethodEntry } from './prober.js'
-import { classifyProbeFailure, failureFromResponse, type ProbeErrorKind, type ProbeFailure, type SafeFetchRejection } from './probeErrorKind.js'
+import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type ProbeFailure, type SafeFetchRejection } from './probeErrorKind.js'
 import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } from './mintPubkey.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
@@ -178,42 +178,69 @@ setInterval(() => {
 // AbortSignal.timeout(15000) around this endpoint (src/core/mint/api.ts).
 const ON_DEMAND_PROBE_TIMEOUT_MS = 10_000
 
+// One overall deadline for the whole on-demand probe — both requests plus any
+// retry share it (each request's timeout is derived from the time left), so the
+// worst case is ~12 s instead of 10 + 1 + 10 = 21 s, still under the frontend's
+// 15 s abort. A retry is only started if at least ON_DEMAND_MIN_RETRY_MS would
+// remain for it after the wait.
+const ON_DEMAND_PROBE_DEADLINE_MS = 12_000
+const ON_DEMAND_NETWORK_RETRY_DELAY_MS = 1_000
+const ON_DEMAND_5XX_RETRY_DELAY_MS = 2_000
+const ON_DEMAND_MIN_RETRY_MS = 1_500
+
 // safeFetch for /v1/info that also remembers WHY a null came back (network
 // error object or guard rejection), so probeMint can classify the failure.
-function fetchInfoTraced(target: string): {
+function fetchInfoTraced(target: string, timeoutMs: number): {
   res: ReturnType<typeof safeFetch>
   trace: { err: unknown; rejected: SafeFetchRejection | null }
 } {
   const trace: { err: unknown; rejected: SafeFetchRejection | null } = { err: null, rejected: null }
   const res = safeFetch(target, {
-    timeoutMs: ON_DEMAND_PROBE_TIMEOUT_MS,
+    timeoutMs,
     onError: (err) => { trace.err = err },
     onRejected: (reason) => { trace.rejected = reason },
   })
   return { res, trace }
 }
 
-async function probeMint(url: string): Promise<MintStatus> {
-  const start = Date.now()
+async function probeMintWithin(url: string, start: number): Promise<MintStatus> {
+  const deadlineAt = start + ON_DEMAND_PROBE_DEADLINE_MS
+  const remainingMs = (): number => deadlineAt - Date.now()
+  // Each request gets the usual per-request ceiling, but never more than what
+  // is left of the overall deadline.
+  const budgetMs = (): number => Math.max(1, Math.min(ON_DEMAND_PROBE_TIMEOUT_MS, remainingMs()))
 
   // safeFetch validates the URL and every redirect hop against isSafeUrl()
   // and pins DNS at connect time (SSRF + rebinding protection).
-  const firstInfo = fetchInfoTraced(`${url}/v1/info`)
+  const firstInfo = fetchInfoTraced(`${url}/v1/info`, budgetMs())
   const [infoResFirst, keysetsRes] = await Promise.all([
     firstInfo.res,
-    safeFetch(`${url}/v1/keysets`, { timeoutMs: ON_DEMAND_PROBE_TIMEOUT_MS }),
+    safeFetch(`${url}/v1/keysets`, { timeoutMs: budgetMs() }),
   ])
 
   // Retry once on network/DNS failure (res === null) — mirrors probeMintToDb's
   // retry in prober.ts, so a transient blip doesn't disagree with the cron's
   // last-known status shown on the Dashboard card (see mint.macadamia.cash report).
+  // Also retry once after 2 s on 502/503/504 (a restart/deploy blip), like the
+  // cron — but not on a Cloudflare challenge, which a retry can't clear.
+  // Either retry only starts if the deadline leaves it a usable window.
   let infoRes = infoResFirst
   let infoTrace = firstInfo.trace
-  if (infoRes === null) {
-    await new Promise<void>(r => setTimeout(r, 1000))
-    const retry = fetchInfoTraced(`${url}/v1/info`)
-    infoRes = await retry.res
-    infoTrace = retry.trace
+  const firstStatus = infoResFirst?.status
+  const isTransient5xx = firstStatus === 502 || firstStatus === 503 || firstStatus === 504
+  if (infoResFirst === null || (isTransient5xx && infoResFirst.headers?.get?.('cf-mitigated') == null)) {
+    const delayMs = infoResFirst === null ? ON_DEMAND_NETWORK_RETRY_DELAY_MS : ON_DEMAND_5XX_RETRY_DELAY_MS
+    if (remainingMs() >= delayMs + ON_DEMAND_MIN_RETRY_MS) {
+      await new Promise<void>(r => setTimeout(r, delayMs))
+      const retry = fetchInfoTraced(`${url}/v1/info`, budgetMs())
+      const retryRes = await retry.res
+      // A 5xx that is followed by a network failure keeps the host's own 5xx
+      // answer (more informative than "connection failed" on the retry).
+      if (retryRes !== null || infoResFirst === null) {
+        infoRes = retryRes
+        infoTrace = retry.trace
+      }
+    }
   }
 
   const latencyMs = Date.now() - start
@@ -232,9 +259,9 @@ async function probeMint(url: string): Promise<MintStatus> {
       } else {
         failure = failureFromResponse(infoRes)
       }
-    } catch {
-      /* invalid JSON — treat as offline */
-      failure = failureFromResponse(infoRes)
+    } catch (err) {
+      /* invalid JSON — treat as offline; a deadline abort mid-body is a timeout */
+      failure = isAbortLike(err) ? { networkLabel: 'Connection timeout' } : failureFromResponse(infoRes)
     }
   } else {
     if (IS_DEV) console.error('[probeMint] info fetch failed or blocked:', url)
@@ -282,6 +309,34 @@ async function probeMint(url: string): Promise<MintStatus> {
   }
 
   return status
+}
+
+// Hard cap: safeFetch's own deadline cannot cover its DNS pre-check or a stalled
+// body read in every case, so the whole probe is also raced against the
+// deadline. The losing inner promise just finishes in the background.
+async function probeMint(url: string): Promise<MintStatus> {
+  const start = Date.now()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const capped = new Promise<MintStatus>(resolve => {
+    timer = setTimeout(() => resolve({
+      url,
+      online: false,
+      latencyMs: null,
+      info: null,
+      keysets: null,
+      checkedAt: new Date().toISOString(),
+      error: 'Mint unreachable',
+      errorKind: 'timeout',
+      units: null,
+      mintMethods: null,
+      meltMethods: null,
+    }), ON_DEMAND_PROBE_DEADLINE_MS)
+  })
+  try {
+    return await Promise.race([probeMintWithin(url, start), capped])
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 // ── App ────────────────────────────────────────────────────────

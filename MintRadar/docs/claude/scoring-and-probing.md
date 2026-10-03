@@ -137,6 +137,7 @@ Score's NUT-support component and the Detail/Stats/Compare NUT UI can verify.
 
 - HTTP 429 → probe cycle is skipped entirely (nothing written to `mint_history`); mint stays at its last known state instead of a false-positive offline
 - HTTP 502/503/504 → one retry after 2s before recording offline (handles transient server-side blips like restarts/deploys)
+  - The on-demand `/api/mint/probe` does the same since 2026-10-03, inside one shared 12 s deadline (see backend-api-and-data.md, probe bullet); the cron path is unchanged.
 - "Show my latency" (client-side test in MintDetail) fixed — previously used `mode: 'no-cors'` which hid the HTTP error status, so `fetch` resolved "successfully" even on a 502 and showed a fake latency. Now uses standard cors mode, reads `res.ok`/`res.status`, and shows `Unreachable (HTTP XXX)` instead of a bogus number
 - Tooltip on the HTTP error badge (Mint Detail header) — maps 429/502/503/504 to an explanatory message for less technical users
 

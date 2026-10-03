@@ -7,7 +7,7 @@ import { computeReliabilityScore, versionFreshnessScore, TRACKED_NUT_KEYS } from
 import { notifySubscribers, isNotificationServiceEnabled } from './nostrService.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { normalizeMintPubkey } from './mintPubkey.js'
-import { classifyProbeFailure, failureFromResponse, type ProbeErrorKind, type SafeFetchRejection } from './probeErrorKind.js'
+import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type SafeFetchRejection } from './probeErrorKind.js'
 
 function isCloudflareIP(address: string): boolean {
   const parts = address.split('.').map(Number)
@@ -195,10 +195,14 @@ export async function validateCashuMintProbe(
     const valid = raw['nuts'] !== null && typeof raw['nuts'] === 'object'
     if (!valid) return { valid: false, pubkey: null, errorKind: classifyProbeFailure(failureFromResponse(res)) }
     return { valid, pubkey: normalizeMintPubkey(raw['pubkey']) }
-  } catch {
+  } catch (err) {
     // res.json() on a non-JSON body: the host answered, but not with a mint
     // (or a Cloudflare interstitial in front of it — failureFromResponse sees it).
-    return { valid: false, pubkey: null, errorKind: classifyProbeFailure(res ? failureFromResponse(res) : { status: 200 }) }
+    // A deadline abort mid-body is a timeout instead.
+    const failure = isAbortLike(err)
+      ? { networkLabel: 'Connection timeout' }
+      : res ? failureFromResponse(res) : { status: 200 }
+    return { valid: false, pubkey: null, errorKind: classifyProbeFailure(failure) }
   }
 }
 
