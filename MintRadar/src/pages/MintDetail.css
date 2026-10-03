@@ -627,15 +627,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
   border-top: 1px solid var(--amber-soft-strong);
 }
 
-.md-motd.warning {
-  border-left-color: var(--amber);
-  background: var(--amber-soft);
-}
-
-.md-motd.warning .md-motd-text {
-  color: var(--amber);
-}
-
 /* ── Info rows ──────────────────────────────────────────────── */
 .md-info-row {
   display: flex;
@@ -674,12 +665,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
   gap: 0 40px;
 }
 .md-info-value.green { color: var(--accent); }
-.md-info-value.trunc {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 160px;
-}
 
 /* ── Contact grid ───────────────────────────────────────────── */
 .md-contact-grid {
@@ -790,35 +775,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .nut-name { font-size: 13px; font-weight: 500; color: var(--text); font-family: var(--font-mono); }
 .nut-desc { font-size: 11px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-mono); }
 .nut-check { font-size: 13px; flex-shrink: 0; }
-
-/* ── Chart areas ────────────────────────────────────────────── */
-.md-chart-area {
-  height: 100px;
-  overflow: hidden;
-}
-
-.md-chart-area svg {
-  width: 100%;
-  height: 100%;
-}
-
-.md-mini-chart { height: 44px; overflow: hidden; margin-top: 4px; }
-.md-mini-chart svg { width: 100%; height: 100%; }
-
-/* ── History panel ──────────────────────────────────────────── */
-.mh-row { margin-bottom: 10px; }
-.mh-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.mh-name  { font-size: 11px; color: var(--text2); font-family: var(--font-mono); }
-
-.mh-badge {
-  font-size: 10px;
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-family: var(--font-mono);
-  letter-spacing: 0.01em;
-}
-.mh-badge.green  { background: var(--green-soft);  color: var(--accent); }
-.mh-badge.yellow { background: var(--amber-soft); color: var(--yellow); }
 
 /* ── Reliability score ────────────────────────────────────────────── */
 /* Row layout, not stacked — the gauge sits on the left, the High/Moderate/
@@ -1294,17 +1250,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
   font-weight: 600;
   color: var(--amber);
 }
-
-/* ── Chart tooltip ──────────────────────────────────────────── */
-.chart-tooltip {
-  background: var(--bg3);
-  border: 1px solid var(--border2);
-  border-radius: 7px;
-  padding: 6px 10px;
-}
-
-.chart-tooltip-time  { font-size: 10px; color: var(--text2); margin-bottom: 2px; font-family: var(--font-mono); }
-.chart-tooltip-value { font-family: var(--font-mono); font-size: 13px; color: var(--text); letter-spacing: -0.02em; }
 
 /* ── Responsive ─────────────────────────────────────────────── */
 /* Landscape phones / small tablets: keep compact tiles, not desktop-sized cards. */
@@ -2012,30 +1957,6 @@ a.review-action-btn { color: var(--text3); }
 
 /* Muted age note on the Reliability Score breakdown's Audit row. */
 .rb-row-note { font-size: 10px; color: var(--text3); white-space: nowrap; }
-
-/* Collapsed line for reviews with neither rating nor comment. */
-.reviews-empty-line {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-height: 36px;
-  padding: 6px 12px;
-  font-family: var(--font-body);
-  font-size: 12px;
-  color: var(--text3);
-  background: transparent;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-m);
-  cursor: pointer;
-  text-align: left;
-  gap: 4px;
-}
-.reviews-empty-line:hover { color: var(--text2); border-color: var(--text3); }
-.reviews-empty-line:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; }
-.reviews-empty-line-action { color: var(--copper); font-weight: 600; }
-@media (max-width: 768px) {
-  .reviews-empty-line { min-height: 44px; }
-}
 
 /* A very long lastError (offline mint) used to run ~2000px past the header: the badge is nowrap and its
    flex parents could not shrink. Cap it at the row and ellipsize; short errors are unchanged. */
