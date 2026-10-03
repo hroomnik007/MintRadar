@@ -25,6 +25,7 @@ import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, 
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { probeErrorMessage, isProbeErrorKind, type ProbeErrorKind } from '@/utils/probeErrorMessages'
 import { classifySubmitInput, submitInputReason } from '@/utils/submitInput'
+import { parseBulkInput, classifyBulkError, BULK_FAILURE_LABEL, MAX_BULK_URLS } from '@/utils/bulkInput'
 import './Dashboard.css'
 
 // Historical trend charts pull in Recharts (~380 kB chunk) — lazy-load so
@@ -581,7 +582,7 @@ export default function Dashboard() {
   const [queuedBanner, setQueuedBanner] = useState<{
     id: number
     message: string
-    tone: 'success' | 'info'
+    tone: 'success' | 'info' | 'error'
     watchUrls: string[]
     attempts: number
   } | null>(null)
@@ -612,13 +613,24 @@ export default function Dashboard() {
 
   // Bulk submit state
   const [bulkInput, setBulkInput] = useState('')
-  const [bulkProgress, setBulkProgress] = useState<Array<{ url: string; status: 'pending' | 'probing' | 'added' | 'duplicate' | 'failed'; error?: string; aliasOf?: { url: string; name: string | null }[] }>>([])
+  const [bulkProgress, setBulkProgress] = useState<Array<{ url: string; status: 'pending' | 'probing' | 'added' | 'duplicate' | 'failed'; error?: string; errorDetail?: string; aliasOf?: { url: string; name: string | null }[] }>>([])
   const [bulkRunning, setBulkRunning] = useState(false)
+  // The live summary follows the textarea only after a short pause (it sits in a live region).
+  const [bulkSettled, setBulkSettled] = useState('')
+  // One message for a whole submission that failed as a whole (timeout, network, bad answer) — never per-row guesses.
+  const [bulkError, setBulkError] = useState<string | null>(null)
+  // Lines of the submission that were not sent (invalid or duplicate), for the results note.
+  const [bulkSkipped, setBulkSkipped] = useState(0)
   const [bulkDone, setBulkDone] = useState(false)
   // Set only on a 429 from /api/mints/discover — a single banner shown above
   // the row list instead of repeating "Too many requests" on every row (see
   // handleBulkSubmit below).
   const [bulkRateLimitMsg, setBulkRateLimitMsg] = useState<string | null>(null)
+  const bulkParsed = useMemo(() => parseBulkInput(bulkSettled), [bulkSettled])
+  useEffect(() => {
+    const timer = setTimeout(() => setBulkSettled(bulkInput), 400)
+    return () => clearTimeout(timer)
+  }, [bulkInput])
 
   const queryClient = useQueryClient()
   // Client-side NIP-87 discovery POSTs newly-announced mint URLs to
@@ -985,99 +997,102 @@ export default function Dashboard() {
   }
 
   async function handleBulkSubmit() {
-    const lines = bulkInput.split('\n').map(l => l.trim()).filter(l => l.length > 0)
-    const initial = lines.map(url => ({ url, status: 'pending' as const }))
-    setBulkProgress(initial)
+    // Parsed from the live text, not the debounced copy: what is sent is exactly what the textarea holds now.
+    const parsed = parseBulkInput(bulkInput)
+    const urls = parsed.valid
+    if (urls.length === 0 || urls.length > MAX_BULK_URLS) return
+    setBulkProgress(urls.map(url => ({ url, status: 'probing' as const })))
     setBulkRunning(true)
     setBulkDone(false)
     setBulkRateLimitMsg(null)
+    setBulkError(null)
+    setBulkSkipped(parsed.invalid.length + parsed.duplicates.length)
 
-    const validIndices: number[] = []
-    const validUrls: string[] = []
-    lines.forEach((url, i) => {
-      if (url.startsWith('https://')) {
-        validIndices.push(i)
-        validUrls.push(url)
-      } else {
-        setBulkProgress(prev => prev.map((p, j) => j === i ? { ...p, status: 'failed', error: 'Must start with https://' } : p))
-      }
-    })
-
-    // Tracked alongside the setBulkProgress calls below (that state updates
-    // asynchronously, so it can't be read back synchronously here) — used
-    // only to build the one post-submit banner summary once the batch settles.
-    let addedUrls: string[] = []
-    let duplicateCount = 0
-    // Line-level rejects (didn't start with https://) count as failed too.
-    let failedCount = lines.length - validUrls.length
-    let rateLimited = false
-
-    if (validUrls.length > 0) {
-      setBulkProgress(prev => prev.map((p, j) => validIndices.includes(j) ? { ...p, status: 'probing' } : p))
-      try {
-        // `source: 'bulk'` — an explicit user action, drawing from its own
-        // rate-limit budget separate from the background NIP-87 discovery
-        // scan (see useNostrDiscovery.ts / DISCOVER_BULK_RATE_LIMIT_MAX).
-        const res = await fetch('/api/mints/discover', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ urls: validUrls, source: 'bulk' }),
-        })
-        const data = await res.json() as {
-          error?: string
-          results?: Array<{ url: string; success: boolean; isNew: boolean; error?: string; errorKind?: string; aliasOf?: { url: string; name: string | null }[] }>
-        }
-        if (res.status === 429) {
-          // Nothing in this batch was actually processed — rows go back to
-          // "pending" (not "failed") and one banner explains why, instead of
-          // repeating the same "Too many requests" on every row.
-          setBulkRateLimitMsg(rateLimitMessage(res.headers.get('Retry-After')))
-          setBulkProgress(prev => prev.map((p, j) => validIndices.includes(j) ? { ...p, status: 'pending' } : p))
-          rateLimited = true
-        } else if (res.ok && data.results) {
-          const results = data.results
-          addedUrls = results.filter(r => r.success && r.isNew).map(r => r.url)
-          duplicateCount = results.filter(r => r.success && !r.isNew).length
-          failedCount += results.filter(r => !r.success).length
-          setBulkProgress(prev => prev.map((p, j) => {
-            const k = validIndices.indexOf(j)
-            if (k === -1) return p
-            const r = results[k]
-            if (!r || !r.success) return { ...p, status: 'failed', error: probeErrorMessage(r?.errorKind) ?? r?.error ?? 'Failed' }
-            return { ...p, status: r.isNew ? 'added' : 'duplicate', aliasOf: r.aliasOf ?? [] }
-          }))
-        } else {
-          failedCount += validUrls.length
-          const err = data.error ?? 'Failed'
-          setBulkProgress(prev => prev.map((p, j) => validIndices.includes(j) ? { ...p, status: 'failed', error: err } : p))
-        }
-      } catch {
-        failedCount += validUrls.length
-        setBulkProgress(prev => prev.map((p, j) => validIndices.includes(j) ? { ...p, status: 'failed', error: 'Network error' } : p))
-      }
+    // Back to the form with the text intact and one message for the whole submission.
+    const failAsWhole = (message: string) => {
+      setBulkProgress([])
+      setBulkRunning(false)
+      setBulkDone(false)
+      setBulkError(message)
+      void queryClient.invalidateQueries({ queryKey: ['mints-known'] })
     }
+    const SLOW = 'The server took too long to answer. Some mints may have been added, refresh the list to check.'
 
+    let res: Response
+    try {
+      // `source: 'bulk'` — an explicit user action, drawing from its own rate-limit budget separate from the
+      // background NIP-87 discovery scan (see useNostrDiscovery.ts / DISCOVER_BULK_RATE_LIMIT_MAX).
+      res = await fetch('/api/mints/discover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls, source: 'bulk' }),
+      })
+    } catch {
+      failAsWhole(SLOW)
+      return
+    }
+    if (res.status === 429) {
+      // Nothing in this batch was processed — rows go back to "pending" and one message explains why.
+      setBulkRateLimitMsg(rateLimitMessage(res.headers.get('Retry-After')))
+      setBulkProgress(prev => prev.map(p => ({ ...p, status: 'pending' as const })))
+      setBulkRunning(false)
+      setBulkDone(true)
+      return
+    }
+    if (res.status === 502 || res.status === 503 || res.status === 504) { failAsWhole(SLOW); return }
+    let data: {
+      error?: string
+      results?: Array<{ url: string; success: boolean; isNew: boolean; error?: string; errorKind?: string; aliasOf?: { url: string; name: string | null }[] }>
+    }
+    try {
+      data = await res.json() as typeof data
+    } catch {
+      failAsWhole(SLOW)
+      return
+    }
+    if (!res.ok || !Array.isArray(data.results)) { failAsWhole(data.error ?? 'Submission failed. Try again.'); return }
+    const results = data.results
+    // Rows map to the sent lines by index, so they are only trusted when the counts agree.
+    if (results.length !== urls.length) {
+      failAsWhole('The server returned an unexpected answer. Some mints may have been added, refresh the list to check.')
+      return
+    }
+    const progress = results.map((r, k) => {
+      const url = urls[k] ?? r.url
+      if (!r.success) return { url, status: 'failed' as const, error: BULK_FAILURE_LABEL[classifyBulkError(r.error)], ...(probeErrorMessage(r.errorKind) ? { errorDetail: probeErrorMessage(r.errorKind) as string } : {}) }
+      return { url, status: r.isNew ? 'added' as const : 'duplicate' as const, aliasOf: r.aliasOf ?? [] }
+    })
+    setBulkProgress(progress)
     setBulkRunning(false)
     setBulkDone(true)
     void queryClient.invalidateQueries({ queryKey: ['mints-known'] })
 
-    // One banner summarizing the whole batch, not one per URL. Skipped on a
-    // 429 (bulkRateLimitMsg already covers that case inside the modal) and
-    // when nothing was actually submitted.
-    if (!rateLimited && lines.length > 0) {
-      setQueuedBanner({
-        id: Date.now(),
-        message: `${addedUrls.length} added, ${duplicateCount} duplicate, ${failedCount} failed`,
-        tone: 'success',
-        watchUrls: addedUrls,
-        attempts: 0,
-      })
-    }
+    const added = progress.filter(p => p.status === 'added')
+    const tracked = progress.filter(p => p.status === 'duplicate').length
+    const failed = progress.filter(p => p.status === 'failed').length
+    // One banner summarizing the whole batch, not one per URL.
+    setQueuedBanner({
+      id: Date.now(),
+      message: `${added.length} added, ${tracked} already tracked, ${failed} failed`,
+      tone: failed === 0 ? 'success' : added.length + tracked === 0 ? 'error' : 'info',
+      watchUrls: added.map(p => p.url),
+      attempts: 0,
+    })
   }
 
   const bulkAdded = bulkProgress.filter(p => p.status === 'added').length
   const bulkDuplicate = bulkProgress.filter(p => p.status === 'duplicate').length
   const bulkFailed = bulkProgress.filter(p => p.status === 'failed').length
+  const bulkTone: 'success' | 'warning' | 'error' = bulkFailed === 0 ? 'success' : bulkAdded + bulkDuplicate === 0 ? 'error' : 'warning'
+  const knownUrlSet = useMemo(() => new Set((knownMintsData ?? []).map(m => m.url)), [knownMintsData])
+  const bulkValidCount = bulkParsed.valid.length
+  const bulkAlreadyTracked = knownMintsData ? bulkParsed.valid.filter(u => knownUrlSet.has(u)).length : null
+  const bulkOverBy = bulkValidCount - MAX_BULK_URLS
+  const bulkDisabled = bulkValidCount === 0 || bulkOverBy > 0
+  const bulkReason =
+    bulkOverBy > 0 ? `Up to ${MAX_BULK_URLS} mints per submission. Remove ${bulkOverBy} ${bulkOverBy === 1 ? 'line' : 'lines'}.`
+    : bulkValidCount === 0 ? (bulkSettled.trim() === '' ? 'Paste at least one https:// mint URL.' : 'No valid https:// mint URLs yet.')
+    : null
 
   useDocumentMeta(
     'MintRadar - Cashu Mints Directory & Reliability Score Monitor',
@@ -1195,7 +1210,7 @@ export default function Dashboard() {
         >
           <IcRefresh />
         </button>
-        <button type="button" className="submit-btn" ref={submitBtnRef} onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setProbe({ url: '', state: 'error', result: null }); setNostrLookup({ input: '', outcome: 'empty', url: '' }); setBulkInput(''); setBulkProgress([]); setBulkRunning(false); setBulkDone(false); setBulkRateLimitMsg(null) }}>
+        <button type="button" className="submit-btn" ref={submitBtnRef} onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setProbe({ url: '', state: 'error', result: null }); setNostrLookup({ input: '', outcome: 'empty', url: '' }); setBulkInput(''); setBulkSettled(''); setBulkError(null); setBulkSkipped(0); setBulkProgress([]); setBulkRunning(false); setBulkDone(false); setBulkRateLimitMsg(null) }}>
           <IcPlus /> Submit mint
         </button>
       </div>
@@ -1525,14 +1540,41 @@ export default function Dashboard() {
                       value={bulkInput}
                       onChange={e => setBulkInput(e.target.value)}
                       rows={6}
+                      aria-describedby="bulk-status"
                     />
+                    {/* Live summary, refreshed 400 ms after typing stops. */}
+                    <div id="bulk-status" role="status" aria-live="polite">
+                      {bulkSettled.trim() !== '' && (
+                        <div className="bulk-summary">
+                          {bulkValidCount} valid
+                          {bulkParsed.invalid.length > 0 && ` · ${bulkParsed.invalid.length} invalid`}
+                          {bulkParsed.duplicates.length > 0 && ` · ${bulkParsed.duplicates.length} ${bulkParsed.duplicates.length === 1 ? 'duplicate' : 'duplicates'}`}
+                          {bulkAlreadyTracked !== null && bulkAlreadyTracked > 0 && ` · ${bulkAlreadyTracked} already tracked`}
+                        </div>
+                      )}
+                      {(bulkParsed.invalid.length > 0 || bulkParsed.duplicates.length > 0) && (
+                        <ul className="bulk-issues">
+                          {bulkParsed.invalid.slice(0, 5).map(i => (
+                            <li key={`i${i.line}`}>Line {i.line}: {i.reason}{i.text !== null && <> <span className="bulk-issue-text">{i.text}</span></>}</li>
+                          ))}
+                          {bulkParsed.invalid.length > 5 && <li>+{bulkParsed.invalid.length - 5} more invalid</li>}
+                          {bulkParsed.duplicates.slice(0, 5).map(d => (
+                            <li key={`d${d.line}`}>Line {d.line}: duplicate of line {d.of}, sent once.</li>
+                          ))}
+                          {bulkParsed.duplicates.length > 5 && <li>+{bulkParsed.duplicates.length - 5} more duplicates</li>}
+                        </ul>
+                      )}
+                      {bulkReason !== null && <div className={`submit-reason${bulkOverBy > 0 ? ' warn' : ''}`}>{bulkReason}</div>}
+                    </div>
+                    {bulkError && <div className="submit-result error" role="alert">{bulkError}</div>}
                     <div className="submit-modal-actions">
                       <button className="submit-cancel-btn" onClick={() => setShowSubmit(false)}>Cancel</button>
                       <button
                         className="submit-ok-btn"
-                        onClick={() => { void handleBulkSubmit() }}
-                        disabled={bulkInput.trim().length === 0}
-                      >Submit All</button>
+                        onClick={() => { if (!bulkDisabled) void handleBulkSubmit() }}
+                        aria-disabled={bulkDisabled}
+                        aria-describedby="bulk-status"
+                      >{bulkValidCount === 0 ? 'Submit mints' : `Submit ${bulkValidCount} ${bulkValidCount === 1 ? 'mint' : 'mints'}`}</button>
                     </div>
                   </>
                 )}
@@ -1547,13 +1589,13 @@ export default function Dashboard() {
                   <div className="bulk-progress">
                     {bulkProgress.map((p, i) => (
                       <div key={i} className={`bulk-row status-${p.status}${p.status === 'added' && (p.aliasOf?.length ?? 0) > 0 ? ' bulk-row-alias' : ''}`}>
-                        <span className="bulk-url">{getHostname(p.url)}</span>
-                        <span className="bulk-status">
+                        <span className="bulk-url" title={p.url}>{p.url}</span>
+                        <span className="bulk-status" title={p.errorDetail}>
                           {p.status === 'pending' && '…'}
                           {p.status === 'probing' && '⟳ probing'}
                           {p.status === 'added' && '✓ Added'}
                           {p.status === 'duplicate' && '• Already tracked'}
-                          {p.status === 'failed' && `✗ ${p.error ?? 'Failed'}`}
+                          {p.status === 'failed' && `✗ ${p.error ?? 'Error'}`}
                         </span>
                         {p.status === 'added' && (p.aliasOf?.length ?? 0) > 0 && (
                           <span className="bulk-row-subtitle">
@@ -1567,9 +1609,12 @@ export default function Dashboard() {
                 {bulkDone && (
                   <div style={{ marginTop: 10 }}>
                     {!bulkRateLimitMsg && (
-                      <div className={`submit-result ${bulkFailed === 0 ? 'success' : 'error'}`}>
+                      <div className={`submit-result ${bulkTone}`}>
                         {bulkAdded} added, {bulkDuplicate} already tracked, {bulkFailed} failed
                       </div>
+                    )}
+                    {!bulkRateLimitMsg && bulkSkipped > 0 && (
+                      <div className="submit-reason">{bulkSkipped} {bulkSkipped === 1 ? 'line was' : 'lines were'} not sent (invalid or duplicate).</div>
                     )}
                     <div className="submit-modal-actions">
                       <button className="submit-ok-btn" onClick={() => setShowSubmit(false)}>Close</button>
