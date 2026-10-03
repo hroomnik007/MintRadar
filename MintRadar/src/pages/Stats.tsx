@@ -3,6 +3,7 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Info } from 'lucide-react'
+import { useModalFocus } from '@/hooks/useModalFocus'
 import { ReliabilityMoversPanel } from '@/components/stats/ReliabilityMoversPanel'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcShield } from '@/components/mint/IcShield'
@@ -235,6 +236,7 @@ function SoftwareModal({ sw, versions, total, accentColor, allMints, onClose, du
 }) {
   const [drilled, setDrilled] = useState<SoftwareVersionEntry | null>(null)
 
+  const dialogRef = useModalFocus()
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
@@ -248,8 +250,8 @@ function SoftwareModal({ sw, versions, total, accentColor, allMints, onClose, du
 
   return (
     <div className="nut-modal-overlay" onClick={onClose}>
-      <div className="nut-modal" onClick={e => e.stopPropagation()}>
-        <button type="button" className="nut-modal-close" onClick={onClose}>✕</button>
+      <div className="nut-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={drilled ? `${sw} ${drilled.ver}` : `${sw} versions`} ref={dialogRef}>
+        <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close">✕</button>
         {drilled ? (
           <VersionMintsView
             key={drilled.fullVersion}
@@ -283,6 +285,7 @@ function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
   const navigate = useNavigate()
   const [showAll, setShowAll] = useState(false)
 
+  const dialogRef = useModalFocus()
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
@@ -300,8 +303,8 @@ function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
 
   return (
     <div className="nut-modal-overlay" onClick={onClose}>
-      <div className="nut-modal" onClick={e => e.stopPropagation()}>
-        <button type="button" className="nut-modal-close" onClick={onClose}>✕</button>
+      <div className="nut-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={display} ref={dialogRef}>
+        <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close">✕</button>
         <div className="nut-modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             {flag && <span style={{ fontSize: 20 }}>{flag}</span>}
@@ -365,6 +368,7 @@ function NutMintsModal({ nut, mints, onClose, duplicateDisplayNames }: {
   const navigate = useNavigate()
   const [showAll, setShowAll] = useState(false)
 
+  const dialogRef = useModalFocus()
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
@@ -382,8 +386,8 @@ function NutMintsModal({ nut, mints, onClose, duplicateDisplayNames }: {
 
   return (
     <div className="nut-modal-overlay" onClick={onClose}>
-      <div className="nut-modal" onClick={e => e.stopPropagation()}>
-        <button type="button" className="nut-modal-close" onClick={onClose}>✕</button>
+      <div className="nut-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`${nut}${meta ? ` · ${meta.short}` : ''}`} ref={dialogRef}>
+        <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close">✕</button>
         <div className="nut-modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <span className="nut-modal-title">{nut}{meta ? ` · ${meta.short}` : ''}</span>
@@ -436,6 +440,7 @@ function MoreLocationsModal({ locations, onClose, onSelectLocation }: {
   onClose: () => void
   onSelectLocation: (loc: string) => void
 }) {
+  const dialogRef = useModalFocus()
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
@@ -446,8 +451,8 @@ function MoreLocationsModal({ locations, onClose, onSelectLocation }: {
 
   return (
     <div className="nut-modal-overlay" onClick={onClose}>
-      <div className="nut-modal" onClick={e => e.stopPropagation()}>
-        <button type="button" className="nut-modal-close" onClick={onClose}>✕</button>
+      <div className="nut-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Other locations" ref={dialogRef}>
+        <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close">✕</button>
         <div className="nut-modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <span className="nut-modal-title">Other locations</span>
@@ -564,6 +569,7 @@ function NetworkHealthModal({ score, components, onClose }: {
   components: NetworkHealthComponent[]
   onClose: () => void
 }) {
+  const dialogRef = useModalFocus()
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
@@ -575,8 +581,8 @@ function NetworkHealthModal({ score, components, onClose }: {
 
   return (
     <div className="nut-modal-overlay" onClick={onClose}>
-      <div className="nut-modal" onClick={e => e.stopPropagation()} style={{ width: 420 }}>
-        <button type="button" className="nut-modal-close" onClick={onClose}>✕</button>
+      <div className="nut-modal" onClick={e => e.stopPropagation()} style={{ width: 420 }} role="dialog" aria-modal="true" aria-label="Network Health Index Breakdown" ref={dialogRef}>
+        <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close">✕</button>
         <div className="nut-modal-header">
           <span className="nut-modal-title">Network Health Index Breakdown</span>
         </div>

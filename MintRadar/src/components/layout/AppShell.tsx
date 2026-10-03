@@ -5,6 +5,7 @@ import { Zap, TriangleAlert } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useWatchlistSync } from '@/hooks/useWatchlistSync'
+import { useModalFocus } from '@/hooks/useModalFocus'
 import { initBunkerQR } from '@/core/nostr/client'
 import { NavLogo } from './NavLogo'
 import { AccountMenu } from './AccountMenu'
@@ -149,6 +150,7 @@ export function AppShell() {
 
   // Close the modal and reset all its local state — single close path used by
   // overlay click, X button, Cancel, Escape, and successful login.
+  const dialogRef = useModalFocus()
   const closeLoginModal = useCallback(() => {
     setShowLoginModal(false)
     setNsecInput('')
@@ -322,16 +324,16 @@ export function AppShell() {
       {/* Nostr login modal */}
       {showLoginModal && (
         <div className="nostr-modal-overlay" onClick={closeLoginModal}>
-          <div className="nostr-modal" onClick={e => e.stopPropagation()}>
+          <div className="nostr-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="nostr-modal-title" ref={dialogRef}>
             {!methodPicked ? (
               <>
                 <div className="nostr-modal-header">
                   <div className="nostr-modal-icon"><Zap size={18} strokeWidth={1.75} aria-hidden="true" /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="nostr-modal-title">Connect with Nostr</div>
+                    <div className="nostr-modal-title" id="nostr-modal-title">Connect with Nostr</div>
                     <div className="nostr-modal-subtitle">MintRadar uses your Nostr identity to save watchlists and post reviews. No email, no password.</div>
                   </div>
-                  <button type="button" className="nostr-modal-close" onClick={closeLoginModal}>
+                  <button type="button" className="nostr-modal-close" onClick={closeLoginModal} aria-label="Close">
                     <IcClose />
                   </button>
                 </div>
@@ -380,13 +382,13 @@ export function AppShell() {
                   <button type="button" className="nostr-back-btn" onClick={backToPicker}>
                     <IcBack /> Back
                   </button>
-                  <button type="button" className="nostr-modal-close" onClick={closeLoginModal}>
+                  <button type="button" className="nostr-modal-close" onClick={closeLoginModal} aria-label="Close">
                     <IcClose />
                   </button>
                 </div>
                 <div className="nostr-modal-header nostr-modal-header--focus">
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="nostr-modal-title">{FOCUS_COPY[loginMethod].title}</div>
+                    <div className="nostr-modal-title" id="nostr-modal-title">{FOCUS_COPY[loginMethod].title}</div>
                     <div className="nostr-modal-subtitle">{FOCUS_COPY[loginMethod].subtitle}</div>
                   </div>
                 </div>

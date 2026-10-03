@@ -1189,7 +1189,16 @@
   max-width: 420px;
   width: 100%;
   box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03);
+  position: relative; /* anchors the corner close button; nothing else moves */
 }
+/* Corner close button — same look as .nut-modal-close; absolutely positioned, so the modal's layout is unchanged. */
+.submit-modal-close {
+  position: absolute; top: 14px; right: 14px;
+  background: none; border: none; color: var(--text3);
+  font-size: 14px; line-height: 1; cursor: pointer;
+  padding: 2px 5px; border-radius: 4px;
+}
+.submit-modal-close:hover { background: var(--bg3); color: var(--text); }
 
 .submit-modal-title {
   font-size: 12px; font-weight: 500; color: var(--text2);

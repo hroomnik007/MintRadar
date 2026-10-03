@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { usePendingAutoWatch } from '@/hooks/usePendingAutoWatch'
+import { useModalFocus } from '@/hooks/useModalFocus'
 import './WatchLoginModal.css'
 import { Zap } from 'lucide-react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
@@ -56,6 +57,7 @@ export function MintCard({
     if (!useWatchlistStore.getState().mints.includes(u)) void addMint(u)
   }, [addMint])
   const { arm: armAutoWatch, disarm: disarmAutoWatch } = usePendingAutoWatch(mint.url, isLoggedIn, autoWatch)
+  const dialogRef = useModalFocus()
   const closeWatchLoginModal = useCallback(() => {
     setShowWatchLoginModal(false)
     disarmAutoWatch()
@@ -276,7 +278,7 @@ export function MintCard({
           className="rv-modal-overlay"
           onClick={e => { e.stopPropagation(); closeWatchLoginModal() }}
         >
-          <div className="rv-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Watch this mint">
+          <div className="rv-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Watch this mint" ref={dialogRef}>
             <div className="rv-modal-head">
               <div className="rv-modal-heading">
                 <div className="rv-modal-title">Watch this mint</div>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { type KnownMint } from '@/hooks/useKnownMints'
+import { useModalFocus } from '@/hooks/useModalFocus'
 import { displayName as mintDisplayName, mintHostname as getHostname } from '@/utils/mintFormatting'
 import './MintComparePicker.css'
 
@@ -26,6 +27,7 @@ export function MintComparePicker({
   // own duplicateDisplayNames prop for why this matters.
   duplicateDisplayNames?: ReadonlySet<string> | undefined
 }) {
+  const dialogRef = useModalFocus('.md-picker-search') // search field first, as before (was autoFocus)
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
@@ -36,10 +38,10 @@ export function MintComparePicker({
 
   return (
     <div className="cmp-overlay" onClick={onClose}>
-      <div className="md-picker-modal" onClick={e => e.stopPropagation()}>
+      <div className="md-picker-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="md-picker-title" ref={dialogRef}>
         <div className="md-picker-header">
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Compare with...</div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 18 }}>×</button>
+          <div id="md-picker-title" style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Compare with...</div>
+          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 18 }}>×</button>
         </div>
         <div style={{ padding: '8px 16px 0' }}>
           <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>
@@ -51,7 +53,6 @@ export function MintComparePicker({
             placeholder="Search mints..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            autoFocus
           />
         </div>
         <div className="md-picker-list">

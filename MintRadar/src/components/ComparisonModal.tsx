@@ -6,6 +6,7 @@ import {
   Tooltip, ResponsiveContainer, LineChart, Line,
 } from 'recharts'
 import { MintFavicon } from '@/components/mint/MintFavicon'
+import { useModalFocus } from '@/hooks/useModalFocus'
 import { IcShield } from '@/components/mint/IcShield'
 import { type KnownMint } from '@/hooks/useKnownMints'
 import { splitVersionString, canonicalSoftwareName, parseMajorMinorPatch } from '@/utils/reliabilityScore'
@@ -165,6 +166,7 @@ function useMintCompareData(mint: KnownMint, latestBySoftware: Record<string, st
 
 export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClose: () => void }) {
   const latestBySoftware = latestVersionsBySoftware(mints)
+  const dialogRef = useModalFocus()
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -324,10 +326,10 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
 
   return (
     <div className="cmp-overlay" onClick={onClose}>
-      <div className="cmp-modal" onClick={e => e.stopPropagation()}>
+      <div className="cmp-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="cmp-modal-title" ref={dialogRef}>
         <div className="cmp-modal-header">
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Mint Comparison</div>
-          <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', padding: 4 }}><IcClose /></button>
+          <div id="cmp-modal-title" style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Mint Comparison</div>
+          <button type="button" onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', padding: 4 }}><IcClose /></button>
         </div>
 
         {isMobile ? (

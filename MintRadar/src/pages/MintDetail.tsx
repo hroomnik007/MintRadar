@@ -21,6 +21,7 @@ import { submitMintReview } from '@/hooks/useSubmitReview'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { removeWatchedMint } from '@/core/nostr/removeWatchedMint'
 import { useAuthStore } from '@/stores/auth.store'
+import { useModalFocus } from '@/hooks/useModalFocus'
 import { ComparisonModal } from '@/components/ComparisonModal'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { InfoTooltip } from '@/components/InfoTooltip'
@@ -619,6 +620,7 @@ function MintDetailContent({ url }: { url: string }) {
   const [showComparePicker, setShowComparePicker] = useState(false)
   const [compareSelectedUrls, setCompareSelectedUrls] = useState<Set<string>>(new Set())
   const [showComparisonModal, setShowComparisonModal] = useState(false)
+  const dialogRef = useModalFocus()
 
   async function testClientLatency() {
     // `url` is the /mint/:url route param (decodeURIComponent'd) — not
@@ -2483,14 +2485,14 @@ function MintDetailContent({ url }: { url: string }) {
 
       {showQr && (
         <div className="qr-modal-overlay" onClick={() => setShowQr(false)}>
-          <div className="qr-modal" onClick={e => e.stopPropagation()}>
+          <div className="qr-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="qr-modal-title" ref={dialogRef}>
             <div className="qr-modal-header">
               <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={38} radius={9} />
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:14,fontWeight:700,color:'var(--text)',lineHeight:1.25,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Add {displayName} to wallet</div>
+                <div id="qr-modal-title" style={{fontSize:14,fontWeight:700,color:'var(--text)',lineHeight:1.25,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Add {displayName} to wallet</div>
                 <div style={{fontSize:11,color:'var(--text-faint)',marginTop:2}}>Scan with any Cashu wallet app</div>
               </div>
-              <button onClick={() => setShowQr(false)} style={{background:'none',border:'none',color:'var(--text-faint)',fontSize:20,cursor:'pointer',lineHeight:1,padding:'2px 6px',flexShrink:0}}>×</button>
+              <button onClick={() => setShowQr(false)} aria-label="Close" style={{background:'none',border:'none',color:'var(--text-faint)',fontSize:20,cursor:'pointer',lineHeight:1,padding:'2px 6px',flexShrink:0}}>×</button>
             </div>
             <div style={{display:'flex',justifyContent:'center',margin:'16px 0'}}>
               <div style={{background:'#ffffff',borderRadius:12,padding:12,border:'2px solid var(--green-soft-strong)'}}>
@@ -2520,7 +2522,7 @@ function MintDetailContent({ url }: { url: string }) {
 
       {showWatchLoginModal && (
         <div className="rv-modal-overlay" onClick={closeWatchLoginModal}>
-          <div className="rv-modal" onClick={e => e.stopPropagation()}>
+          <div className="rv-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Watch this mint" ref={dialogRef}>
             <div className="rv-modal-head">
               <div className="rv-modal-heading">
                 <div className="rv-modal-title">Watch this mint</div>
@@ -2542,10 +2544,10 @@ function MintDetailContent({ url }: { url: string }) {
         <div style={{position:'fixed',inset:0,zIndex:100,background:'rgba(0,0,0,0.7)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}
           onClick={() => setShowReliabilityBreakdown(false)}>
           <div style={{background:'var(--bg2)',border:'0.5px solid var(--border2)',borderRadius:14,padding:'24px',maxWidth:380,width:'100%'}}
-            onClick={e => e.stopPropagation()}>
+            onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="reliability-breakdown-title" ref={dialogRef}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-              <div style={{fontSize:16,fontWeight:600,color:'var(--text)'}}>Reliability Score Breakdown</div>
-              <button onClick={() => setShowReliabilityBreakdown(false)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:18,cursor:'pointer'}}>×</button>
+              <div id="reliability-breakdown-title" style={{fontSize:16,fontWeight:600,color:'var(--text)'}}>Reliability Score Breakdown</div>
+              <button onClick={() => setShowReliabilityBreakdown(false)} aria-label="Close" style={{background:'none',border:'none',color:'var(--text3)',fontSize:18,cursor:'pointer'}}>×</button>
             </div>
             <div style={{textAlign:'center',marginBottom:20}}>
               <div style={{fontSize:48,fontWeight:700,color:reliabilityScoreColor(reliabilityScore),lineHeight:1}}>{reliabilityScore}%</div>
@@ -2565,7 +2567,7 @@ function MintDetailContent({ url }: { url: string }) {
 
       {showReviewModal && (
         <div className="rv-modal-overlay" onClick={closeReviewModal}>
-          <div className="rv-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Write a review">
+          <div className="rv-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Write a review" ref={dialogRef}>
             <div className="rv-modal-head">
               <div className="rv-modal-heading">
                 <div className="rv-modal-title">Write a review for {displayName}</div>
@@ -2694,10 +2696,11 @@ function MintDetailContent({ url }: { url: string }) {
                 boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
               }}
               onClick={e => e.stopPropagation()}
+              role="dialog" aria-modal="true" aria-labelledby="nut-modal-title" ref={dialogRef}
             >
               <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 16}}>
                 <div>
-                  <div style={{fontSize: 18, fontWeight: 600, color: supported ? 'var(--accent)' : 'var(--text2)'}}>
+                  <div id="nut-modal-title" style={{fontSize: 18, fontWeight: 600, color: supported ? 'var(--accent)' : 'var(--text2)'}}>
                     {meta?.short ?? selectedNut}
                   </div>
                   <div style={{fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)', marginTop: 2}}>
@@ -2716,6 +2719,7 @@ function MintDetailContent({ url }: { url: string }) {
                   </span>
                   <button
                     onClick={() => setSelectedNut(null)}
+                    aria-label="Close"
                     style={{background:'none', border:'none', color:'var(--text3)', fontSize:18, cursor:'pointer', lineHeight:1}}
                   >×</button>
                 </div>

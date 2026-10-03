@@ -10,6 +10,7 @@ import { useUserRelays } from '@/hooks/useUserRelays'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { useModalFocus } from '@/hooks/useModalFocus'
 
 import type { MintStatus } from '@core/mint/api'
 import { MintCard } from '@/components/mint/MintCard'
@@ -558,6 +559,7 @@ export default function Dashboard() {
   const [, setTick] = useState(0)
   const [showDegraded, setShowDegraded] = useState(false)
   const [showSubmit, setShowSubmit] = useState(false)
+  const dialogRef = useModalFocus()
   const [submitTab, setSubmitTab] = useState<'single' | 'bulk'>('single')
   const [submitInput, setSubmitInput] = useState('')
   const [submitUrl, setSubmitUrl] = useState('')
@@ -1367,8 +1369,9 @@ export default function Dashboard() {
 
       {showSubmit && (
         <div className="submit-modal-overlay" onClick={() => setShowSubmit(false)}>
-          <div className="submit-modal" onClick={e => e.stopPropagation()}>
-            <div className="submit-modal-title">Submit a Mint</div>
+          <div className="submit-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="submit-modal-title" ref={dialogRef}>
+            <button type="button" className="submit-modal-close" onClick={() => setShowSubmit(false)} aria-label="Close">✕</button>
+            <div className="submit-modal-title" id="submit-modal-title">Submit a Mint</div>
             <div className="submit-tabs">
               <button type="button" className={`submit-tab-btn${submitTab === 'single' ? ' active' : ''}`} onClick={() => setSubmitTab('single')}>Single</button>
               <button type="button" className={`submit-tab-btn${submitTab === 'bulk' ? ' active' : ''}`} onClick={() => setSubmitTab('bulk')}>Bulk</button>

@@ -16,6 +16,33 @@ Mint names, hostnames, URLs, operator notices (MOTD / description), NIP-05 value
 - `e2e/long-text-overflow.spec.ts` checks `scrollWidth <= clientWidth` and that cards / tiles / chips stay inside the viewport at 320 / 360 / 390 / 768px for extreme names, hostnames, notices, NIP-05 values, reviewer names and versions on Dashboard (grid + list), Watchlist, Compare, Stats, Tools and every Mint Detail tab. Add a case there when a new surface shows third-party text.
 - Audit tab "Recent success rate" tile: below a 445px strip width the `N / 100` and `NN% ok` sit on two lines (container query on `.audit-summary-strip`).
 
+## Modal dialogs — semantics + focus handling (2026-10-03)
+
+Every modal now has `role="dialog"` + `aria-modal="true"` + an accessible name (`aria-labelledby` an id on the visible title, or `aria-label` where the title is computed), and gets its focus behaviour from one shared hook, **`src/hooks/useModalFocus.ts`**:
+
+```tsx
+const dialogRef = useModalFocus()            // or useModalFocus('.md-picker-search') to start in a field
+{open && <div role="dialog" aria-modal="true" aria-labelledby="…" ref={dialogRef}>…</div>}
+```
+
+It is a React 19 callback ref (works for dialogs rendered conditionally inside a big page component; the returned cleanup runs on unmount). On mount it remembers `document.activeElement` as the trigger and focuses the dialog container (`tabindex=-1`, outline off, so nothing looks different) or the `initialFocus` selector; Tab / Shift+Tab wrap inside the topmost open dialog (a stack handles two dialogs mounted in one commit), a `focusin` guard pulls back focus that escapes some other way; on unmount focus returns to the trigger if it is still in the DOM. **Escape, outside click and the close button are NOT in the hook** — each modal already had its own (window `keydown` listener, overlay `onClick`); an open ⓘ tooltip still swallows Escape first via `useTapTooltip`'s capture-phase listener. A new modal = `role`/`aria-modal`/name + `ref={useModalFocus()}`; give its close glyph button `aria-label="Close"`.
+
+| Modal | File | Name from |
+|---|---|---|
+| Login | `AppShell.tsx` | `#nostr-modal-title` (both views) |
+| Watch this mint (card / Mint Detail) | `MintCard.tsx` / `MintDetail.tsx` | `aria-label` |
+| Write a review | `MintDetail.tsx` | `aria-label` (already had role + aria-modal before) |
+| Mint QR · Reliability breakdown · NUT detail | `MintDetail.tsx` | `#qr-modal-title` / `#reliability-breakdown-title` / `#nut-modal-title` |
+| Submit a mint | `Dashboard.tsx` | `#submit-modal-title` |
+| Compare picker (Dashboard / Watchlist / Mint Detail) | `MintComparePicker.tsx` | `#md-picker-title` — starts in the search field (`autoFocus` replaced by `useModalFocus('.md-picker-search')`) |
+| Comparison | `ComparisonModal.tsx` | `#cmp-modal-title` |
+| Stats: software versions / location mints / NUT coverage / other locations / Network Health | `Stats.tsx` | `aria-label` |
+
+- **Close button added** only to the Submit modal (`.submit-modal-close`, ✕, absolutely positioned in the corner like `.nut-modal-close`; `.submit-modal` got `position: relative`, nothing reflows). Every other modal already had one; the glyph-only ones (`×`, `✕`, `IcClose`) got `aria-label="Close"`.
+- **Not modals, left alone:** the account menu panel (`AccountMenu.tsx`) and the Filters panel are disclosure panels (`aria-expanded`, no overlay, no trap).
+- **Known gaps, not changed:** the page behind is neither inert nor scroll-locked (`aria-modal` + the overlay only); several triggers are non-focusable `div`s (NUT card on Mint Detail, `.sw-row`, `.stats-nut-row`, `.dist-row-clickable`, `.dist-more-row` on Stats), so there is nothing to restore focus to when those modals close — making them buttons is a separate change.
+- Test: `e2e/modal-dialog-semantics.spec.ts` (one test per modal × requirement; `MODAL_AUDIT=1` prints a JSON line per modal for the pass/fail table; also 390 / 320px overflow). `e2e/mint-detail-review-modal.spec.ts` now finds the review modal by `getByRole('dialog', { name: 'Write a review' })`. **Both were written without being run** (2026-10-03, on request: no test runs) — run `npx playwright test e2e/modal-dialog-semantics.spec.ts` before relying on them.
+
 ### White focus ring on chart tap (2026-08-07) — the element is the `<g>`, not the `<svg>`
 
 **GOTCHA — two earlier fixes targeted the wrong element and shipped without effect.**
