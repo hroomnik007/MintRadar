@@ -126,14 +126,53 @@ test.describe('Filters panel — "Show N of M"', () => {
     await expect(page.locator('.filter-panel [aria-live]')).toHaveCount(0)
   })
 
+  // The primary button is 700-weight JetBrains Mono with font-display: swap, and its min-width is in `ch`
+  // — so while the face is still arriving the width steps through fallback values (123 → 125.5 → 127 → 129px
+  // seen with a delayed font). `document.fonts.ready` alone is not enough: the Bold face is only requested
+  // after the button's first layout and `ready` may already have resolved by then. So: ask for the face
+  // explicitly, then wait until the measured width stops changing.
+  const settledShowBtnWidth = async (page: Page) => {
+    await expect(showBtn(page)).toBeVisible()
+    await page.evaluate(async () => { await document.fonts.load('700 11px "JetBrains Mono"'); await document.fonts.ready })
+    let last = -1
+    let steady = 0
+    await expect.poll(async () => {
+      const w = (await showBtn(page).boundingBox())!.width
+      steady = w === last ? steady + 1 : 0
+      last = w
+      return steady
+    }, { intervals: [100], timeout: 5000 }).toBeGreaterThanOrEqual(3)
+    return last
+  }
+
   test('button width does not change with the count', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await openPanel(page)
-    const w1 = (await showBtn(page).boundingBox())!.width
+    const w1 = await settledShowBtnWidth(page)
     await chip(page, 'eur').click() // 8 → 1
     await expect(showBtn(page)).toHaveText('Show 1 of 8')
-    const w2 = (await showBtn(page).boundingBox())!.width
-    expect(w2).toBe(w1)
+    const w2 = await settledShowBtnWidth(page)
+    expect(Math.abs(w2 - w1), `width ${w1} → ${w2}`).toBeLessThanOrEqual(1)
+  })
+
+  test('button width does not jump between one-digit and three-digit counts', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await setup(page)
+    const many = Array.from({ length: 120 }, (_, i) => mk(`M${i}`, i === 0 ? ['eur'] : ['sat'], 70))
+    await page.route('**/api/mints/known', r => r.fulfill({ json: many })) // later route wins over setup()'s 8 mints
+    await page.goto('/')
+    await expect(page.locator('.mint-card').first()).toBeVisible()
+    await page.locator('.filter-btn').click()
+    await expect(showBtn(page)).toHaveText('Show 120 of 120')
+    const w120 = await settledShowBtnWidth(page)
+    await chip(page, 'eur').click() // 120 → 1
+    await expect(showBtn(page)).toHaveText('Show 1 of 120')
+    const w1 = await settledShowBtnWidth(page)
+    await page.getByRole('radio', { name: 'Offline' }).check() // → 0
+    await expect(showBtn(page)).toHaveText('Show 0 of 120')
+    const w0 = await settledShowBtnWidth(page)
+    expect(Math.abs(w1 - w120), `width ${w120} (120) → ${w1} (1)`).toBeLessThanOrEqual(1)
+    expect(Math.abs(w0 - w120), `width ${w120} (120) → ${w0} (0)`).toBeLessThanOrEqual(1)
   })
 
   test('Reset resets the draft and the committed filters', async ({ page }) => {
