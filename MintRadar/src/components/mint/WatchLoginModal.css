@@ -71,3 +71,12 @@
   font-family: var(--font-body);
   transition: opacity var(--transition);
 }
+
+/* Same disabled + ≤480px rules as MintDetail.css's copy of the rv-* modal styles, so the watch modal looks
+   the same whether or not the (lazy) Mint Detail CSS has been loaded. */
+.rv-btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+@media (max-width: 480px) {
+  .rv-modal { padding: 18px; }
+  .rv-actions { flex-direction: column-reverse; }
+  .rv-btn-cancel, .rv-btn-submit { width: 100%; }
+}

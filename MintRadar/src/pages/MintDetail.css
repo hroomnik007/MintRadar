@@ -255,7 +255,9 @@ button.md-url-copy.copied > svg { opacity: 1; }
   white-space: nowrap;
 }
 
-.status-dot {
+/* Scoped to .mint-detail: Dashboard cards define their own 9px .status-dot (Dashboard.css) and this lazy
+   chunk's CSS stays in the document after a visit, so a bare .status-dot made Dashboard dots 7px. */
+.mint-detail .status-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
@@ -263,7 +265,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   flex-shrink: 0;
 }
 
-.status-dot.offline { background: var(--red); }
+.mint-detail .status-dot.offline { background: var(--red); }
 
 /* Inline Online/Offline status shown next to the mint name on both desktop and
    mobile. (The standalone badge that used to sit in the .md-hdr-center action
