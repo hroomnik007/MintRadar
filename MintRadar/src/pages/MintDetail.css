@@ -1779,7 +1779,10 @@ button.md-url-copy.copied > svg { opacity: 1; }
   text-decoration: underline;
 }
 
-.audit-tooltip {
+/* Scoped to .mint-detail: Stats.css has its own .audit-tooltip (no left/transform/width) and this lazy chunk's CSS
+   stays in the document after a visit, so the bare class shifted every Stats tooltip left by half its width. The three
+   resets match Stats.css's copy: the icon can sit inside an uppercase heading, and the tooltip must not inherit that. */
+.mint-detail .audit-tooltip {
   position: absolute;
   bottom: calc(100% + 6px);
   left: 50%;
@@ -1798,6 +1801,9 @@ button.md-url-copy.copied > svg { opacity: 1; }
   white-space: normal;
   text-align: left;
   font-family: var(--font-body);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .latency-test-btn:hover:not(:disabled) {
