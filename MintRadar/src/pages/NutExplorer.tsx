@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useKnownMints } from '@/hooks/useKnownMints'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { ROUTE_META } from '@/constants/routeMeta'
 import { NUT_META, nutSpecUrl } from '@/constants/nuts'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import './NutExplorer.css'
@@ -17,6 +19,7 @@ function getHostname(url: string): string {
 
 export default function NutExplorer() {
   const navigate = useNavigate()
+  useDocumentMeta(ROUTE_META.nuts.title, ROUTE_META.nuts.description)
 
   const { data: nutsData, isLoading: nutsLoading, error: nutsError } = useQuery({
     queryKey: ['nuts'],
