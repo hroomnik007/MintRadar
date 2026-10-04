@@ -191,6 +191,30 @@ Daily uptime counts for the last 30 days for a single mint.
 
 ---
 
+### `GET /api/mints/audit-cz`
+
+Data from the third-party audit service audit.cashu.cz for one mint, refreshed server-side every 10 minutes. Display only: it is **not** part of the Reliability Score and is never merged into any MintRadar value.
+
+**Query parameters:** `url` (required, `https://…`, max 500 characters)
+
+**Response (covered):**
+```json
+{
+  "source": "audit.cashu.cz",
+  "sourceUrl": "https://audit.cashu.cz/mint/abc",
+  "fetchedAt": "2026-10-04T10:03:01.000Z",
+  "covered": true,
+  "mint": { "state": "ok", "uptime24h": 99.5, "uptime7d": 98.1, "uptime30d": 97.4, "attributedFailures": 1, "lastCheck": "2026-10-04T09:58:00.000Z" },
+  "swaps": [
+    { "id": "s1", "at": "2026-10-04T09:00:00.000Z", "status": "failed", "stage": "melt", "error": "…", "amount": 10, "fee": 1,
+      "durationMs": 900, "direction": "from", "otherMintUrl": "https://other.example", "otherMintName": "Other" }
+  ]
+}
+```
+`state` is `ok`, `warn` or `error` — audit.cashu.cz's own verdict, not MintRadar's. `swaps` holds up to 20 newest swaps where the mint is `from` or `to`; `error` is untrusted text (≤300 characters). A mint matches by its URL or by one of the aliases audit.cashu.cz lists. When the mint is not in their feed the response is still `200` with `covered: false`, `mint: null`, `swaps: []` (`sourceUrl` null; `fetchedAt` is the newest fetch of the feed, or null). `Cache-Control: max-age=60`.
+
+---
+
 ### `GET /api/mint/probe`
 
 On-demand live probe of a single mint URL. Triggers an outbound fetch.

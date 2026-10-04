@@ -8,6 +8,7 @@ import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeError
 import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } from './mintPubkey.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
+import { getAuditCzForMint } from './auditCz.js'
 import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
 import { publishServiceProfile } from './nostrService.js'
 import { normalizeUrl, getSyncTimesFromDb, getAuditUpstreamStatus } from './discovery.js'
@@ -1518,6 +1519,44 @@ app.get('/api/mints/swaps', (req: Request, res: Response): void => {
     })
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/mints/swaps]', err)
+      res.status(500).json({ error: 'Internal server error' })
+    })
+})
+
+// GET /api/mints/audit-cz?url= — audit.cashu.cz data (second audit source,
+// display only; never feeds the Reliability Score). Read from audit_cz_* tables
+// filled by the 10-minute cron in auditCz.ts. Always 200 for a valid url;
+// covered:false when the mint is not in their feed.
+app.get('/api/mints/audit-cz', (req: Request, res: Response): void => {
+  const url = req.query['url']
+
+  if (typeof url !== 'string' || url.length === 0) {
+    res.status(400).json({ error: 'Missing required query parameter: url' })
+    return
+  }
+
+  if (!url.startsWith('https://')) {
+    res.status(400).json({ error: 'url must start with https://' })
+    return
+  }
+
+  if (url.length > MAX_URL_LENGTH) {
+    res.status(400).json({ error: `url exceeds maximum length of ${MAX_URL_LENGTH} characters` })
+    return
+  }
+
+  isSafeUrl(url)
+    .then(async safe => {
+      if (!safe) {
+        res.status(400).json({ error: 'Invalid url' })
+        return
+      }
+      const body = await getAuditCzForMint(url)
+      res.setHeader('Cache-Control', 'max-age=60')
+      res.json(body)
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[/api/mints/audit-cz]', err)
       res.status(500).json({ error: 'Internal server error' })
     })
 })
