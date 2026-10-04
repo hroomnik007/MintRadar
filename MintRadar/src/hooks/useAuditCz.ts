@@ -40,6 +40,17 @@ export interface AuditCzData {
     avgDurationMsPaid: number | null
     swapsCounted: number
   } | null
+  /** null / absent when the detail could not be fetched: the tile then falls back to the stored swaps. */
+  detail7d?: AuditCzDetail7d | null
+}
+
+/** audit.cashu.cz's own 7-day swap counts for this mint (our backend caches them up to 10 min). */
+export interface AuditCzDetail7d {
+  total: number
+  success: number
+  failed: number
+  /** Failures the auditor attributes to this mint. */
+  errorsBlamed: number
 }
 
 export interface AuditCzDirectionStats {

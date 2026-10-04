@@ -62,7 +62,7 @@ vi.mock('../ssrf.js', () => ({
   RESPONSE_CAPS: { auditCzMints: 1048576, auditCzSwaps: 1048576 },
 }))
 
-import { auditCzKey, parseAuditCzMintsResponse, parseAuditCzSwapsResponse, syncAuditCz, getAuditCzForMint, getAuditCzSyncStatus } from '../auditCz.js'
+import { auditCzKey, parseAuditCzMintsResponse, parseAuditCzSwapsResponse, syncAuditCz, getAuditCzForMint, getAuditCzSyncStatus, parseAuditCzDetail, auditCzIdFromPage, getAuditCzDetail, resetAuditCzDetailCache } from '../auditCz.js'
 
 const mint = (o: Record<string, unknown> = {}) => ({
   id: 'm1', url: 'https://mint.minibits.cash/Bitcoin', isTest: false, aliases: [], name: 'Minibits', state: 'ok',
@@ -184,5 +184,50 @@ describe('malformed items', () => {
     expect(db.swaps.get('odd')?.['status']).toBe('cancelled')
     expect(db.mints.get('https://e.example')?.['page']).toBeNull()
     expect((db.swaps.get('long')?.['error'] as string).length).toBe(300)
+  })
+})
+
+describe('per-mint detail (swaps7d)', () => {
+  const detail = (o: Record<string, unknown> = {}) => ({
+    id: 'm1', swaps7d: { all: { total: 179, success: 47, failed: 132, successRate: 26.2 }, errorsBlamed: 0 }, ...o,
+  })
+
+  beforeEach(() => { resetAuditCzDetailCache(); vi.useRealTimers() })
+
+  it('reads the counts and rejects a missing or malformed swaps7d', () => {
+    expect(parseAuditCzDetail(detail())).toEqual({ total: 179, success: 47, failed: 132, errorsBlamed: 0 })
+    expect(parseAuditCzDetail({ id: 'x' })).toBeNull()
+    expect(parseAuditCzDetail(detail({ swaps7d: { all: { total: 1, success: 1, failed: 0 } } }))).toBeNull()
+    expect(parseAuditCzDetail(detail({ swaps7d: { all: { total: -1, success: 0, failed: 0 }, errorsBlamed: 0 } }))).toBeNull()
+  })
+
+  it('takes the id from the stored page URL only', () => {
+    expect(auditCzIdFromPage('https://audit.cashu.cz/mint/cmmx4ejkq000ta5drlwl1zehm')).toBe('cmmx4ejkq000ta5drlwl1zehm')
+    expect(auditCzIdFromPage('https://evil.example/mint/abcdefgh12')).toBeNull()
+    expect(auditCzIdFromPage('https://audit.cashu.cz/mint/../x')).toBeNull()
+    expect(auditCzIdFromPage(null)).toBeNull()
+  })
+
+  it('caches for 10 minutes, shares the request, and keeps the old value when a refresh fails', async () => {
+    vi.useFakeTimers()
+    fetchMock.mockResolvedValue({ ok: true, status: 200 })
+    readMock.mockResolvedValue(detail())
+    const [a, b] = await Promise.all([getAuditCzDetail('abcdefgh12'), getAuditCzDetail('abcdefgh12')])
+    expect(a).toEqual(b)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    await getAuditCzDetail('abcdefgh12')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    vi.advanceTimersByTime(10 * 60_000 + 1)
+    fetchMock.mockResolvedValue(null) // upstream down
+    expect(await getAuditCzDetail('abcdefgh12')).toEqual({ total: 179, success: 47, failed: 132, errorsBlamed: 0 })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    await getAuditCzDetail('abcdefgh12') // failure also waits a full TTL
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('returns null when nothing was ever fetched', async () => {
+    fetchMock.mockResolvedValue({ ok: false, status: 500 })
+    expect(await getAuditCzDetail('abcdefgh12')).toBeNull()
   })
 })

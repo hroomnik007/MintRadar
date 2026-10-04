@@ -8,7 +8,7 @@ import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeError
 import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } from './mintPubkey.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
-import { getAuditCzForMint, getAuditCzSyncStatus, clampAuditCzLimit } from './auditCz.js'
+import { getAuditCzForMint, getAuditCzSyncStatus, clampAuditCzLimit, getAuditCzDetail, auditCzIdFromPage } from './auditCz.js'
 import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
 import { publishServiceProfile } from './nostrService.js'
 import { normalizeUrl, getSyncTimesFromDb, getAuditUpstreamStatus } from './discovery.js'
@@ -1559,6 +1559,8 @@ app.get('/api/mints/audit-cz', (req: Request, res: Response): void => {
         return
       }
       const body = await getAuditCzForMint(url, clampAuditCzLimit(req.query['limit']), direction)
+      const detailId = body.covered ? auditCzIdFromPage(body.sourceUrl) : null
+      if (detailId) body.detail7d = await getAuditCzDetail(detailId)
       res.setHeader('Cache-Control', 'max-age=60')
       res.json(body)
     })

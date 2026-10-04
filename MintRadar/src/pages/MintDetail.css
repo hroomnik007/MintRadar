@@ -1676,6 +1676,8 @@ button.md-url-copy.copied > svg { opacity: 1; }
 
 .audit-swap-bar-ok { background: var(--fast); }
 .audit-swap-bar-fail { background: var(--slow); }
+/* stage "limits": the auditor's own pre-flight check, not a failed swap on the mint */
+.audit-swap-bar-neutral { background: var(--text3); opacity: 0.55; }
 
 .audit-recent-swaps {
   margin-top: 10px;
@@ -1718,6 +1720,10 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .audit-swap-row-fail td {
   color: var(--red);
   opacity: 0.75;
+}
+
+.audit-swap-row-neutral td {
+  color: var(--text3);
 }
 
 .audit-swaps-show-all-btn {

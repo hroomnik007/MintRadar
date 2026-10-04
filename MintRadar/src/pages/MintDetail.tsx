@@ -27,7 +27,7 @@ import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { auditFreshness } from '@/utils/auditFreshness'
 import { useAuditCz } from '@/hooks/useAuditCz'
-import { adaptAuditCz, type AuditSwapRow } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzSwapSuccess, isAuditCzNeutralRow, AUDIT_CZ_MIN_SWAPS, type AuditSwapRow } from '@/utils/auditCz'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import { sortUnits } from '@/utils/sortUnits'
 import {
@@ -1013,15 +1013,24 @@ function MintDetailContent({ url }: { url: string }) {
   // Online Mints "55/56"), and an error count read the opposite way at a
   // glance. formatAuditSuccessRatio() does the total-minus-errors math; the
   // sub-line no longer repeats a percentage of the same fraction.
-  const stripRecentSuccessDisplay = formatAuditSuccessRatio(stripTotal, stripErrors)
+  // cashu.cz view with the source's own 7-day counts: swap success as its methodology defines it
+  // (swaps without a failure attributed to the mint), neutral colour. Without them (detail not
+  // available) the tile falls back to the stored from-swaps minus "limits" and pending (adaptAuditCz).
+  const czDetail = czView?.detail7d ?? null
+  const czSuccess = czDetail ? auditCzSwapSuccess(czDetail) : null
+  const stripRecentSuccessDisplay = czDetail
+    ? (czSuccess ? `${czSuccess.good} / ${czSuccess.total}` : '—')
+    : formatAuditSuccessRatio(stripTotal, stripErrors)
   const stripRecentSuccessPct = stripTotal !== null && stripTotal > 0
     ? Math.round(((stripTotal - (stripErrors ?? 0)) / stripTotal) * 100)
     : null
-  const stripRecentSuccessSub = stripTotal === null
-    ? 'no recent swaps'
-    : isAuditUnknown(stripTotal)
-      ? 'too few to score'
-      : `${stripRecentSuccessPct}% ok`
+  const stripRecentSuccessSub = czDetail
+    ? (czSuccess ? `${czSuccess.pct}% ok` : 'n/a')
+    : stripTotal === null
+      ? 'no recent swaps'
+      : isAuditUnknown(stripTotal)
+        ? 'too few to score'
+        : `${stripRecentSuccessPct}% ok`
 
   // Average duration of the successful swaps in the same rolling window
   // (backend/src/discovery.ts's computeSwapStats() → mints.audit_avg_time_ms).
@@ -1030,7 +1039,7 @@ function MintDetailContent({ url }: { url: string }) {
   const stripAvgTimeDisplay = stripAvgTimeMs !== null ? `${Math.round(stripAvgTimeMs)} ms` : 'n/a'
   const stripMints = czView ? czView.nMints : auditNMints
   const stripMelts = czView ? czView.nMelts : auditNMelts
-  const stripReliabilityColor = czView ? auditReliabilityColor(stripTotal, stripErrors) : recentReliabilityColor
+  const stripReliabilityColor = czDetail ? 'var(--text)' : czView ? auditReliabilityColor(stripTotal, stripErrors) : recentReliabilityColor
   const czSince = czView?.sinceLabel ?? ''
   const tipMints = czView
     ? 'Number of successful mints counted by audit.cashu.cz over the window used by audit.cashu.cz.'
@@ -1038,8 +1047,12 @@ function MintDetailContent({ url }: { url: string }) {
   const tipMelts = czView
     ? `Successful ecash melting operations (redeeming ecash back to Lightning), counted by audit.cashu.cz over the window used by audit.cashu.cz.`
     : 'All-time successful ecash melting operations (redeeming ecash back to Lightning).'
-  const tipSuccess = czView
-    ? 'Successful swaps out of the most recent swaps from this mint that MintRadar collected from audit.cashu.cz. Shows "too few to score" below 3 recent swaps.'
+  const tipSuccess = czDetail
+    ? (czSuccess
+      ? `Swaps without a failure audit.cashu.cz attributes to this mint, last 7 days. It excludes failures the auditor does not attribute to a mint, for example test amounts below the mint's minimum and routing failures that cannot be pinned on one mint. In total ${czDetail.success} of ${czDetail.total} swaps succeeded, ${czDetail.failed} failed, ${czDetail.errorsBlamed} failures are attributed to this mint.`
+      : `fewer than ${AUDIT_CZ_MIN_SWAPS} swaps`)
+    : czView
+    ? 'Successful swaps out of the most recent swaps from this mint that MintRadar collected from audit.cashu.cz. Swaps that stopped at the auditor\'s limits check (stage "limits") and pending swaps are not counted. Shows "too few to score" below 3 recent swaps.'
     : 'Successful swaps out of the mint\'s last ~100 audited operations — the same rolling window the Reliability Score\'s Audit component scores on. Shows "too few to score" below 3 recent swaps.'
   const tipAvg = czView
     ? 'Average duration of the successful swaps from the most recent swaps from this mint that MintRadar collected from audit.cashu.cz.'
@@ -2138,8 +2151,8 @@ function MintDetailContent({ url }: { url: string }) {
                     {auditSwapBarItems.map(s => (
                       <div
                         key={s.swapId}
-                        className={`audit-swap-bar-mark ${s.state === 'OK' ? 'audit-swap-bar-ok' : 'audit-swap-bar-fail'}`}
-                        title={`${s.state}${s.createdAt ? ` · ${s.createdAt}` : ''}`}
+                        className={`audit-swap-bar-mark ${s.state === 'OK' ? 'audit-swap-bar-ok' : isAuditCzNeutralRow(s) ? 'audit-swap-bar-neutral' : 'audit-swap-bar-fail'}`}
+                        title={`${s.state}${s.stage ? ` (${s.stage})` : ''}${s.createdAt ? ` · ${s.createdAt}` : ''}`}
                       />
                     ))}
                   </div>
@@ -2162,7 +2175,7 @@ function MintDetailContent({ url }: { url: string }) {
                         </thead>
                         <tbody>
                           {auditRecentSwapRows.map(s => (
-                            <tr key={s.swapId} className={s.state !== 'OK' ? 'audit-swap-row-fail' : ''}>
+                            <tr key={s.swapId} className={s.state === 'OK' ? '' : isAuditCzNeutralRow(s) ? 'audit-swap-row-neutral' : 'audit-swap-row-fail'}>
                               <td>{s.counterpart ?? (s.toUrl ? mintHostname(s.toUrl) : '—')}</td>
                               <td>{s.amount !== null ? `${s.amount} sat` : '—'}</td>
                               <td>{s.fee !== null ? s.fee : '—'}</td>

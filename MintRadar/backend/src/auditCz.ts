@@ -320,6 +320,87 @@ export async function syncAuditCz(): Promise<{ mints: number | null; swaps: numb
   return result
 }
 
+// ── Per-mint detail (swaps7d) ────────────────────────────────────────────────
+// GET /api/v1/mints/{id} carries the source's own 7-day swap counts, including
+// `errorsBlamed` (failures the auditor attributes to this mint). Fetched on demand, only when
+// somebody opens that mint's Audit tab, and cached per mint: at most one request per mint per
+// DETAIL_TTL_MS, whatever the traffic (worst case 65 mints x 6/h). A failure keeps the previous
+// value; with nothing cached the caller falls back to the swaps MintRadar stored. Display only.
+const AUDIT_CZ_DETAIL_URL = 'https://audit.cashu.cz/api/v1/mints/'
+const DETAIL_TTL_MS = 10 * 60_000
+const DETAIL_TIMEOUT_MS = 5_000
+const DETAIL_ID_RE = /^[A-Za-z0-9]{8,64}$/
+
+/** The source's `swaps7d.all` counts plus `errorsBlamed`. */
+export interface AuditCzDetail7d {
+  total: number
+  success: number
+  failed: number
+  errorsBlamed: number
+}
+
+/** Mint id from a stored `page` URL (https://audit.cashu.cz/mint/{id}); null when it does not look like one. */
+export function auditCzIdFromPage(page: string | null | undefined): string | null {
+  if (!page) return null
+  const m = /^https:\/\/audit\.cashu\.cz\/mint\/([^/?#]+)\/?$/.exec(page)
+  return m && DETAIL_ID_RE.test(m[1] as string) ? (m[1] as string) : null
+}
+
+const count = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null)
+
+/** null = unusable (missing or non-count fields): the caller keeps what it had. */
+export function parseAuditCzDetail(raw: unknown): AuditCzDetail7d | null {
+  if (!isObj(raw) || !isObj(raw['swaps7d'])) return null
+  const s7 = raw['swaps7d']
+  const all = s7['all']
+  if (!isObj(all)) return null
+  const total = count(all['total'])
+  const success = count(all['success'])
+  const failed = count(all['failed'])
+  const errorsBlamed = count(s7['errorsBlamed'])
+  if (total === null || success === null || failed === null || errorsBlamed === null) return null
+  return { total, success, failed, errorsBlamed }
+}
+
+interface DetailEntry { data: AuditCzDetail7d | null; nextTryAt: number }
+const detailCache = new Map<string, DetailEntry>()
+const detailInflight = new Map<string, Promise<AuditCzDetail7d | null>>()
+
+async function refreshDetail(id: string): Promise<AuditCzDetail7d | null> {
+  const raw = await (async () => {
+    try {
+      const res = await safeFetch(AUDIT_CZ_DETAIL_URL + id, { timeoutMs: DETAIL_TIMEOUT_MS, headers: { Accept: 'application/json' } })
+      if (!res || !res.ok) return null
+      return await readJsonLimited(res, RESPONSE_CAPS.auditCzMintDetail)
+    } catch {
+      return null
+    }
+  })()
+  const parsed = raw === null ? null : parseAuditCzDetail(raw)
+  const previous = detailCache.get(id)?.data ?? null
+  // A failed refresh keeps the old value and waits a full TTL before the next attempt,
+  // so an outage cannot turn page views into upstream requests.
+  detailCache.set(id, { data: parsed ?? previous, nextTryAt: Date.now() + DETAIL_TTL_MS })
+  return parsed ?? previous
+}
+
+/** Cached for 10 min per mint; concurrent callers share one request. null when nothing is known. */
+export function getAuditCzDetail(id: string): Promise<AuditCzDetail7d | null> {
+  const hit = detailCache.get(id)
+  if (hit && Date.now() < hit.nextTryAt) return Promise.resolve(hit.data)
+  const running = detailInflight.get(id)
+  if (running) return running
+  const p = refreshDetail(id).finally(() => { detailInflight.delete(id) })
+  detailInflight.set(id, p)
+  return p
+}
+
+/** Test helper. */
+export function resetAuditCzDetailCache(): void {
+  detailCache.clear()
+  detailInflight.clear()
+}
+
 // ── Read side ────────────────────────────────────────────────────────────────
 
 export interface AuditCzDirectionStats {
@@ -370,6 +451,8 @@ export interface AuditCzResponse {
     otherMintName: string | null
   }>
   stats7d: AuditCzStats7d | null
+  /** audit.cashu.cz's own 7-day counts for this mint (cached up to 10 min); null when unavailable. */
+  detail7d?: AuditCzDetail7d | null
 }
 
 const STATS_WINDOW_DAYS = 7
