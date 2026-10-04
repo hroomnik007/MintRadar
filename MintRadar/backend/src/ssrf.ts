@@ -128,6 +128,50 @@ export async function isSafeUrl(rawUrl: string): Promise<boolean> {
   return result === 'safe'
 }
 
+// Host-name label: letters, digits, '-' and '_' (some real hosts use '_'), 1-63 chars,
+// no leading/trailing '-'. A trailing dot (absolute FQDN) is stripped before the split.
+const HOSTNAME_LABEL_RE = /^[a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9_])?$/
+
+/**
+ * Purely syntactic URL validation for endpoints that only READ our own database
+ * (history, swaps, audit-cz, ...): no DNS and no network. checkUrlSafety() resolves
+ * the host and answers 'dns-error' for a mint whose DNS record is gone, which made
+ * stored data of dead mints unloadable (400 "Invalid url") although those endpoints
+ * never connect to the host. Endpoints that DO make an outbound request to a
+ * user-supplied host must keep using isSafeUrl()/checkUrlSafety()/safeFetch().
+ *
+ * Accepts: https only, <= 500 chars, no whitespace, no credentials, and either
+ * a host name that looks like one (>= 2 labels) or a non-blocked IP literal (the
+ * URL parser already folds decimal/hex/octal IPv4 forms into dotted quads).
+ * Rejects every IP literal in a range isBlockedAddress() blocks, so the
+ * IP-literal part of the check is the same as in checkUrlSafety().
+ */
+export function isWellFormedMintUrl(rawUrl: string): boolean {
+  try {
+    if (typeof rawUrl !== 'string' || rawUrl.length > 500 || /\s/.test(rawUrl)) return false
+    const url = new URL(rawUrl)
+    if (url.protocol !== 'https:') return false
+    if (url.username !== '' || url.password !== '') return false
+
+    const hostname = url.hostname
+    if (hostname === '') return false
+
+    try {
+      const addr = parse(hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname)
+      return !isBlockedAddress(addr)
+    } catch {
+      // Not an IP literal — validate as a host name below
+    }
+
+    const name = hostname.endsWith('.') ? hostname.slice(0, -1) : hostname
+    if (name.length === 0 || name.length > 253) return false
+    const labels = name.split('.')
+    return labels.length >= 2 && labels.every(label => HOSTNAME_LABEL_RE.test(label))
+  } catch {
+    return false
+  }
+}
+
 // Same guard as checkUrlSafety, but for Nostr relay URLs (ws:/wss:) instead of
 // mint URLs (https:) — used to validate user-supplied relay lists before they
 // are stored, so they can't be used to make the server probe/connect to

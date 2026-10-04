@@ -2,7 +2,7 @@ import './wsPolyfill.js'
 import express, { type Request, type Response, type NextFunction } from 'express'
 import cors from 'cors'
 import { pool, initDb } from './db.js'
-import { isSafeUrl, checkWsUrlSafety, safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
+import { isSafeUrl, isWellFormedMintUrl, checkWsUrlSafety, safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 import { upsertMint, probeMintToDb, validateCashuMintProbe, parseMintMethods, classifyFetchError, type MintMethodEntry } from './prober.js'
 import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type ProbeFailure, type SafeFetchRejection } from './probeErrorKind.js'
 import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } from './mintPubkey.js'
@@ -728,7 +728,7 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
   // Matches each branch's prevQuery window start below (24h→48h ago, 7d→14d ago, 30d→60d ago, 90d→180d ago).
   const PREV_WINDOW_START_HOURS: Record<typeof period, number> = { '24h': 48, '7d': 336, '30d': 1440, '90d': 4320 }
 
-  isSafeUrl(url)
+  Promise.resolve(isWellFormedMintUrl(url))
     .then(safe => {
       if (!safe) {
         res.status(400).json({ error: 'Invalid url' })
@@ -922,7 +922,7 @@ app.get('/api/mints/version-history', (req: Request, res: Response): void => {
     return
   }
 
-  isSafeUrl(url)
+  Promise.resolve(isWellFormedMintUrl(url))
     .then(safe => {
       if (!safe) {
         res.status(400).json({ error: 'Invalid url' })
@@ -1424,7 +1424,7 @@ app.get('/api/mints/daily-uptime', (req: Request, res: Response): void => {
     return
   }
 
-  isSafeUrl(url)
+  Promise.resolve(isWellFormedMintUrl(url))
     .then(safe => {
       if (!safe) {
         res.status(400).json({ error: 'Invalid url' })
@@ -1484,7 +1484,7 @@ app.get('/api/mints/swaps', (req: Request, res: Response): void => {
     return
   }
 
-  isSafeUrl(url)
+  Promise.resolve(isWellFormedMintUrl(url))
     .then(safe => {
       if (!safe) {
         res.status(400).json({ error: 'Invalid url' })
@@ -1546,7 +1546,7 @@ app.get('/api/mints/audit-cz', (req: Request, res: Response): void => {
     return
   }
 
-  isSafeUrl(url)
+  Promise.resolve(isWellFormedMintUrl(url))
     .then(async safe => {
       if (!safe) {
         res.status(400).json({ error: 'Invalid url' })

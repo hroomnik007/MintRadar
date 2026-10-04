@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('dns/promises', () => ({ lookup: vi.fn() }))
 
 import { lookup } from 'dns/promises'
-import { checkUrlSafety, isSafeUrl, checkWsUrlSafety, isSafeWsUrl } from '../ssrf.js'
+import { checkUrlSafety, isSafeUrl, isWellFormedMintUrl, checkWsUrlSafety, isSafeWsUrl } from '../ssrf.js'
 
 const mockedLookup = vi.mocked(lookup)
 
@@ -134,6 +134,43 @@ describe('isSafeUrl', () => {
   it('is false for a dns-error (only "safe" maps to true)', async () => {
     mockedLookup.mockRejectedValue(new Error('boom'))
     expect(await isSafeUrl('https://nx.example.com')).toBe(false)
+  })
+})
+
+// isWellFormedMintUrl — the syntactic-only check used by endpoints that just read our own
+// database. It must never touch DNS, so a mint whose DNS record is gone still validates.
+describe('isWellFormedMintUrl', () => {
+  it('accepts ordinary and dead host names without any DNS lookup', () => {
+    expect(isWellFormedMintUrl('https://mint.example.com')).toBe(true)
+    expect(isWellFormedMintUrl('https://mint.example.com:3338/Bitcoin')).toBe(true)
+    expect(isWellFormedMintUrl('https://xn--mint-4ra.example.com')).toBe(true)
+    expect(isWellFormedMintUrl('https://abcdefghijklmnop.onion')).toBe(true)
+    expect(mockedLookup).not.toHaveBeenCalled()
+  })
+
+  it('rejects blocked IP literals, including bracketed IPv6 and decimal/hex/octal IPv4 forms', () => {
+    for (const u of [
+      'https://127.0.0.1', 'https://10.0.0.5', 'https://169.254.169.254', 'https://[::1]',
+      'https://[::ffff:127.0.0.1]', 'https://2130706433', 'https://0x7f.1', 'https://0177.0.0.1',
+    ]) {
+      expect(isWellFormedMintUrl(u), u).toBe(false)
+    }
+    expect(mockedLookup).not.toHaveBeenCalled()
+  })
+
+  it('treats a public IP literal like checkUrlSafety does (not blocked)', () => {
+    expect(isWellFormedMintUrl('https://8.8.8.8')).toBe(true)
+  })
+
+  it('rejects non-https, credentials, whitespace, over-long URLs and malformed input', () => {
+    for (const u of [
+      'http://mint.example.com', 'ftp://mint.example.com', 'https://user:pw@mint.example.com',
+      'https://mint .example.com', 'https://mint.example.com/\tx', 'https://', 'not a url', '',
+      'https://localhost', 'https://intranet', 'https://-bad.example.com', 'https://' + 'a'.repeat(64) + '.com',
+      'https://mint.example.com/' + 'x'.repeat(500),
+    ]) {
+      expect(isWellFormedMintUrl(u), u).toBe(false)
+    }
   })
 })
 

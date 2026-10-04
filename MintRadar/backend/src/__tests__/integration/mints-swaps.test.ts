@@ -99,6 +99,33 @@ describe('GET /api/mints/swaps', () => {
     expect(res.body.avgTimeMs).toBeNull()
   })
 
+  it('serves stored swaps for a mint whose host no longer resolves in DNS (read-only: no DNS lookup)', async () => {
+    const dns = await import('dns/promises')
+    const lookup = dns.lookup as unknown as ReturnType<typeof vi.fn>
+    lookup.mockRejectedValue(Object.assign(new Error('getaddrinfo ENOTFOUND mint.gone.example'), { code: 'ENOTFOUND' }))
+    query.mockResolvedValueOnce({ rows: [sampleSwapRow()] })
+
+    const res = await request(app).get('/api/mints/swaps').query({ url: 'https://mint.gone.example' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.swaps).toHaveLength(1)
+    expect(lookup).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['a private IP literal', 'https://10.0.0.5'],
+    ['an IPv6 loopback literal', 'https://[::1]'],
+    ['a decimal-encoded loopback IP', 'https://2130706433'],
+    ['credentials in the URL', 'https://user:pw@mint.example.com'],
+    ['a single-label host name', 'https://localhost'],
+  ])('still answers 400 Invalid url for %s, without touching the database', async (_name, url) => {
+    const res = await request(app).get('/api/mints/swaps').query({ url })
+
+    expect(res.status).toBe(400)
+    expect(res.body).toEqual({ error: 'Invalid url' })
+    expect(query).not.toHaveBeenCalled()
+  })
+
   it('returns 500 with a generic message when the DB query fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     query.mockRejectedValueOnce(new Error('connection refused'))
