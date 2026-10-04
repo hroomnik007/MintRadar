@@ -1,7 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
 import { useKnownMints } from '@/hooks/useKnownMints'
-import { useNow } from '@/hooks/useNow'
-import { auditCzFallbackNeeded } from '@/utils/auditCz'
 
 // audit.cashu.cz data (second audit source), read from OUR backend
 // (/api/mints/audit-cz) — the browser never contacts audit.cashu.cz. Display only.
@@ -31,23 +29,29 @@ export interface AuditCzData {
     otherMintUrl: string | null
     otherMintName: string | null
   }>
+  /** Counted by MintRadar over the swaps it stored (not published by audit.cashu.cz). */
+  stats7d: {
+    windowDays: 7
+    collectedSince: string | null
+    melts: AuditCzDirectionStats
+    mints: AuditCzDirectionStats
+    avgDurationMsPaid: number | null
+    swapsCounted: number
+  } | null
 }
 
-/**
- * Fetches only while the Audit tab is active AND the audit.8333.space data for this mint is
- * missing or stale (auditCzFallbackNeeded). `wanted` tells the caller whether the fallback applies.
- */
+export interface AuditCzDirectionStats {
+  paid: number
+  failed: number
+  pending: number
+  amountPaid: number
+  feesPaid: number
+}
+
+/** Fetches only while the Audit tab is active and the known-mints list has loaded. */
 export function useAuditCz(url: string, tabActive: boolean) {
   const { data: knownMints } = useKnownMints()
-  const now = useNow()
-  const known = knownMints?.find(m => m.url === url)
-  const wanted = tabActive && auditCzFallbackNeeded(
-    knownMints !== undefined,
-    known === undefined ? null : known.auditNMints,
-    known?.auditCheckedAt ?? null,
-    known?.auditSyncedAt ?? null,
-    now,
-  )
+  const wanted = tabActive && knownMints !== undefined
   const query = useQuery({
     queryKey: ['mint', 'audit-cz', url],
     queryFn: async () => {
@@ -58,5 +62,5 @@ export function useAuditCz(url: string, tabActive: boolean) {
     enabled: wanted,
     staleTime: 60 * 1000,
   })
-  return { wanted, data: query.data }
+  return { data: query.data, loading: wanted && query.isLoading }
 }

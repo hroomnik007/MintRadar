@@ -1647,10 +1647,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
   .audit-summary-sub { flex-basis: 100%; text-align: center; }
 }
 
-/* audit.cashu.cz fallback fills fewer tiles (data-tiles is set only then): keep them full width. */
-.audit-summary-strip[data-tiles="1"] { grid-template-columns: minmax(0, 1fr); }
-.audit-summary-strip[data-tiles="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
 /* Don't shrink the tiles. Below ~900px four columns collide — use 2×2
    at the original cell size so "98 / 100 · 98% ok" fits inside its box. */
 @media (max-width: 900px) {
@@ -1865,8 +1861,11 @@ button.md-url-copy.copied > svg { opacity: 1; }
 /* Verdict / uptime line under the strip (audit.cashu.cz fallback). */
 .md-audit-cz-line { margin-bottom: 10px; }
 .md-audit-cz-line strong { font-weight: 600; color: var(--text2); }
-.md-audit-cz-line .md-audit-cz-warn { color: var(--amber); }
-.md-audit-cz-line .md-audit-cz-error { color: var(--red); }
+.md-audit-cz-sub { margin: 2px 0 8px; }
+.audit-summary-note { font-size: 11.5px; color: var(--text3); font-family: var(--font-mono); text-align: center; overflow-wrap: anywhere; }
+/* Source switch (audit.cashu.cz / audit.8333.space): existing filter chips, 44px touch targets. */
+.md-audit-switch { margin-bottom: 10px; }
+.md-audit-switch-chip { min-height: 44px; padding-inline: 14px; font-size: 12px; }
 
 @media (max-width: 767px) {
   .md-audit-header-main { display: none; }

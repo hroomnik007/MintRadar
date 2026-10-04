@@ -1,16 +1,13 @@
 import type { AuditCzData } from '@/hooks/useAuditCz'
 import { mintHostname } from '@/utils/mintFormatting'
-import { auditFreshness } from '@/utils/auditFreshness'
 
-// Adapter: audit.cashu.cz endpoint response → the shapes the existing Audit tab
-// components render (summary tiles, outcome bar, Recent swaps table). Pure and
-// display-only. Rules (see docs/claude/card-and-mint-detail-ui.md):
-//  - a tile is filled only if it means the same as the audit.8333.space tile; else hidden
-//  - numbers MintRadar counts itself (success rate, average time) come from the stored
-//    swaps and are labelled as such in their tooltips; nothing is merged with 8333 values.
+// Adapter: audit.cashu.cz endpoint response → the shapes the Audit tab renders (Lightning swaps
+// tiles, outcome bar, Recent swaps table). Pure and display-only. All tile numbers are counted by
+// MintRadar from the swaps it stored (backend `stats7d`), never merged with audit.8333.space values.
 
 export const AUDIT_CZ_PAGE_PREFIX = 'https://audit.cashu.cz/'
 export const AUDIT_CZ_NOT_RECENT_MS = 30 * 60 * 1000
+const WINDOW_MS = 7 * 86_400_000
 
 export interface AuditSwapRow {
   swapId: string | number
@@ -29,6 +26,26 @@ export interface AuditSwapRow {
   neutral?: boolean
 }
 
+export interface AuditCzDirectionView {
+  paid: number
+  /** paid + failed */
+  total: number
+  amountPaid: number
+  feesPaid: number
+}
+
+export interface AuditCzLightning {
+  swapsCounted: number
+  paid: number
+  failed: number
+  pending: number
+  melts: AuditCzDirectionView
+  mints: AuditCzDirectionView
+  avgDurationMsPaid: number | null
+  /** "last 7 days" when the stored swaps cover the whole window, else "since 3 Oct". */
+  windowLabel: string
+}
+
 export interface AuditCzView {
   sourceHref: string | null
   /** lastCheck of the source (ISO) for "checked …"; null when unknown. */
@@ -36,30 +53,15 @@ export interface AuditCzView {
   /** Our own sync (fetchedAt) older than 30 min. */
   notRecent: boolean
   swaps: AuditSwapRow[]
-  /** success / (success + failed) over the swaps above; null when there is none. */
-  success: { total: number; errors: number } | null
-  /** Mean duration of successful swaps that carry a duration; null otherwise. */
-  avgTimeMs: number | null
-  verdict: { label: string; tone: 'ok' | 'warn' | 'error' | 'other' }
-  /** Already formatted, e.g. "100% (24 h, 7 d, 30 d)" or "100% (24 h) · 99% (7 d)"; null when no value. */
-  uptime: string | null
+  /** null when the backend sent no stats (old backend / not covered). */
+  lightning: AuditCzLightning | null
+  /** attributedFailures as published by audit.cashu.cz (its own window). */
+  failuresAttributed: number | null
+  verdict: string
 }
 
 const STATE_LABEL: Record<string, string> = { ok: 'OK', warn: 'Warning', error: 'Error' }
-
-const fmtPct = (v: number): string => `${Number.isInteger(v) ? v : v.toFixed(1)}%`
-
-function uptimeText(u24: number | null, u7: number | null, u30: number | null): string | null {
-  const parts: Array<[number, string]> = []
-  if (u24 !== null) parts.push([u24, '24 h'])
-  if (u7 !== null) parts.push([u7, '7 d'])
-  if (u30 !== null) parts.push([u30, '30 d'])
-  if (parts.length === 0) return null
-  if (parts.every(([v]) => v === parts[0]![0])) {
-    return `${fmtPct(parts[0]![0])} (${parts.map(([, l]) => l).join(', ')})`
-  }
-  return parts.map(([v, l]) => `${fmtPct(v)} (${l})`).join(' · ')
-}
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 function swapState(status: string): { state: string; neutral: boolean } {
   if (status === 'success') return { state: 'OK', neutral: false }
@@ -67,7 +69,30 @@ function swapState(status: string): { state: string; neutral: boolean } {
   return { state: status, neutral: true }
 }
 
-/** Returns null when the mint is not covered (the caller then shows today's panel). */
+function windowLabel(collectedSince: string | null, now: number): string {
+  const t = collectedSince ? new Date(collectedSince).getTime() : NaN
+  if (!Number.isFinite(t) || t <= now - WINDOW_MS) return 'last 7 days'
+  const d = new Date(t)
+  return `since ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`
+}
+
+function lightningOf(stats: NonNullable<AuditCzData['stats7d']>, now: number): AuditCzLightning {
+  const dir = (d: typeof stats.melts): AuditCzDirectionView => ({
+    paid: d.paid, total: d.paid + d.failed, amountPaid: d.amountPaid, feesPaid: d.feesPaid,
+  })
+  return {
+    swapsCounted: stats.swapsCounted,
+    paid: stats.melts.paid + stats.mints.paid,
+    failed: stats.melts.failed + stats.mints.failed,
+    pending: stats.melts.pending + stats.mints.pending,
+    melts: dir(stats.melts),
+    mints: dir(stats.mints),
+    avgDurationMsPaid: stats.avgDurationMsPaid,
+    windowLabel: windowLabel(stats.collectedSince, now),
+  }
+}
+
+/** Returns null when the mint is not covered (the caller then shows the audit.8333.space panel). */
 export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditCzView | null {
   if (!data || !data.covered || !data.mint) return null
   const m = data.mint
@@ -88,38 +113,14 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
       neutral,
     }
   })
-  const ok = data.swaps.filter(s => s.status === 'success')
-  const failed = data.swaps.filter(s => s.status === 'failed')
-  const decided = ok.length + failed.length
-  const durations = ok.map(s => s.durationMs).filter((d): d is number => d !== null)
   const fetchedMs = data.fetchedAt ? new Date(data.fetchedAt).getTime() : NaN
-  const tone = m.state === 'ok' || m.state === 'warn' || m.state === 'error' ? m.state : 'other'
   return {
     sourceHref: data.sourceUrl && data.sourceUrl.startsWith(AUDIT_CZ_PAGE_PREFIX) ? data.sourceUrl : null,
     lastCheck: m.lastCheck,
     notRecent: Number.isFinite(fetchedMs) && now - fetchedMs > AUDIT_CZ_NOT_RECENT_MS,
     swaps,
-    success: decided > 0 ? { total: decided, errors: failed.length } : null,
-    avgTimeMs: durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : null,
-    verdict: { label: STATE_LABEL[m.state] ?? m.state, tone },
-    uptime: uptimeText(m.uptime24h, m.uptime7d, m.uptime30d),
+    lightning: data.stats7d ? lightningOf(data.stats7d, now) : null,
+    failuresAttributed: m.attributedFailures,
+    verdict: STATE_LABEL[m.state] ?? m.state,
   }
-}
-
-/**
- * Fallback condition (unchanged from 7769b23): the known-mints list has loaded and the
- * audit.8333.space data is missing (no auditNMints) or stale (auditor data >7d / our sync >24h).
- */
-export function auditCzFallbackNeeded(
-  knownMintsLoaded: boolean,
-  /** auditNMints of the tracked mint; null when the mint is unknown OR has no audit data. */
-  auditNMints: number | null | undefined,
-  auditCheckedAt: string | null,
-  auditSyncedAt: string | null,
-  now: number,
-): boolean {
-  if (!knownMintsLoaded) return false
-  if (auditNMints === null) return true
-  const f = auditFreshness(auditCheckedAt, auditSyncedAt, now)
-  return f.auditorDataOld || f.syncStale
 }
