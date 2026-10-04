@@ -26,7 +26,8 @@ import { isTestMint } from '@/constants/testMints'
 import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { auditFreshness } from '@/utils/auditFreshness'
-import { AuditCzBlock } from '@/components/mint/AuditCzBlock'
+import { useAuditCz } from '@/hooks/useAuditCz'
+import { adaptAuditCz, type AuditSwapRow } from '@/utils/auditCz'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import { sortUnits } from '@/utils/sortUnits'
 import {
@@ -621,6 +622,11 @@ function MintDetailContent({ url }: { url: string }) {
     enabled: activeTab === 'audit',
     staleTime: 5 * 60 * 1000,
   })
+  // audit.cashu.cz fallback: only when the Audit tab is open, the known-mints list has
+  // loaded and the audit.8333.space data is missing (no auditNMints) or stale (auditor data
+  // >7d or our sync >24h). The request goes to our own /api/mints/audit-cz, never to them.
+  const { wanted: auditCzWanted, data: auditCzData } = useAuditCz(url, activeTab === 'audit')
+  const czView = auditCzWanted ? adaptAuditCz(auditCzData, now) : null
   const [showComparePicker, setShowComparePicker] = useState(false)
   const [compareSelectedUrls, setCompareSelectedUrls] = useState<Set<string>>(new Set())
   const [showComparisonModal, setShowComparisonModal] = useState(false)
@@ -999,9 +1005,30 @@ function MintDetailContent({ url }: { url: string }) {
   // Last ≤100 swaps, newest first (the backend already orders by created_at
   // DESC) — the outcome bar and the "Recent swaps" table below both read from
   // this same array so they can never disagree.
-  const auditSwaps = auditSwapsData?.swaps ?? []
+  const auditSwaps: AuditSwapRow[] = czView ? czView.swaps : (auditSwapsData?.swaps ?? [])
   const AUDIT_SWAP_BAR_MAX = 44
   const AUDIT_SWAP_ROWS_DEFAULT = 8
+  // Strip tiles: audit.8333.space values as before; with the audit.cashu.cz fallback only the
+  // two tiles that can be filled honestly from the stored swaps (Mints/Melts are hidden).
+  const czSuccess = czView?.success ?? null
+  const tileSuccessShow = czView ? czSuccess !== null : true
+  const tileAvgShow = czView ? czView.avgTimeMs !== null : true
+  const czTileCount = (tileSuccessShow ? 1 : 0) + (tileAvgShow ? 1 : 0)
+  const czSuccessPct = czSuccess ? Math.round(((czSuccess.total - czSuccess.errors) / czSuccess.total) * 100) : null
+  const tileSuccessColor = czView ? auditReliabilityColor(czSuccess?.total ?? null, czSuccess?.errors ?? null) : recentReliabilityColor
+  const tileSuccessMain = czView ? formatAuditSuccessRatio(czSuccess?.total ?? null, czSuccess?.errors ?? null) : stripRecentSuccessDisplay
+  const tileSuccessSub = czView
+    ? (czSuccess !== null && isAuditUnknown(czSuccess.total) ? 'too few to score' : `${czSuccessPct}% ok`)
+    : stripRecentSuccessSub
+  const tileSuccessTip = czView
+    ? `Successful swaps out of the ${czSuccess?.total ?? 0} completed swaps listed below. Counted by MintRadar from that list, not a figure published by the source. Shows "too few to score" below 3 swaps.`
+    : `Successful swaps out of the mint's last ~100 audited operations — the same rolling window the Reliability Score's Audit component scores on. Shows "too few to score" below 3 recent swaps.`
+  const tileAvgDisplay = czView && czView.avgTimeMs !== null ? `${Math.round(czView.avgTimeMs)} ms` : auditAvgTimeDisplay
+  const tileAvgTip = czView
+    ? 'Average duration of the successful swaps listed below. Calculated by MintRadar from that list, not a figure published by the source.'
+    : 'Average duration of the successful swaps in the same rolling window as Recent success rate.'
+  const czLastCheckMs = czView?.lastCheck ? new Date(czView.lastCheck).getTime() : NaN
+  const czCheckedLabel = Number.isFinite(czLastCheckMs) ? formatTimeAgo(new Date(czLastCheckMs), now) : null
   const auditSwapBarItems = auditSwaps.slice(0, AUDIT_SWAP_BAR_MAX)
   const auditRecentSwapRows = showAllAuditSwaps ? auditSwaps : auditSwaps.slice(0, AUDIT_SWAP_ROWS_DEFAULT)
 
@@ -1964,9 +1991,27 @@ function MintDetailContent({ url }: { url: string }) {
           </div>
           </>)}
 
-          {activeTab === 'audit' && (<>
-            {knownMint !== null && knownMint.auditNMints !== null ? (
+          {activeTab === 'audit' && (
+            (czView !== null || (knownMint !== null && knownMint.auditNMints !== null)) ? (
               <div className="md-panel md-audit-collapsible" style={{background:'var(--bg)'}}>
+                {czView ? (
+                  <div className="md-audit-header md-audit-header-cz">
+                    <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
+                    <span className="md-audit-via">
+                      · {czView.sourceHref
+                        ? <a className="md-audit-via-link" href={czView.sourceHref} target="_blank" rel="noopener noreferrer">Source: audit.cashu.cz</a>
+                        : 'Source: audit.cashu.cz'}
+                      {czCheckedLabel ? ` · checked ${czCheckedLabel}` : ''}
+                      {czView.notRecent ? ' (not updated recently)' : ''}
+                    </span>
+                    <InfoTooltip
+                      className="md-audit-info-cz"
+                      width={240}
+                      label="About this data source"
+                      text="audit.8333.space has no recent data for this mint, so this tab shows data from audit.cashu.cz. Failures there are attributed by that service."
+                    />
+                  </div>
+                ) : (<>
                 {/* Desktop heading (the mobile collapse toggle below is display:none here). */}
                 <div className="md-audit-header md-audit-header-main">
                   <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
@@ -1980,12 +2025,15 @@ function MintDetailContent({ url }: { url: string }) {
                   <span style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>· via audit.8333.space</span>
                   <AuditSourceInfoIcon align="right" />
                 </div>
+                </>)}
 
                 {/* 5-second overview — always visible, never inside the mobile
                     collapse. Mints/Melts are audit.8333.space lifetime counts;
                     Recent success rate is the rolling ~100-swap window; Last
                     checked is OUR 6h cron's write time (auditSyncedAt). */}
-                <div className="audit-summary-strip">
+                {(!czView || czTileCount > 0) && (
+                <div className="audit-summary-strip" data-tiles={czView ? czTileCount : undefined}>
+                  {!czView && (<>
                   <div className="audit-summary-cell">
                     <div className="audit-summary-value" style={{color:'var(--accent)'}}>{auditNMints.toLocaleString()}</div>
                     <div className="audit-summary-label">
@@ -2026,15 +2074,17 @@ function MintDetailContent({ url }: { url: string }) {
                       </span>
                     </div>
                   </div>
+                  </>)}
+                  {tileSuccessShow && (
                   <div className="audit-summary-cell">
-                    <div className="audit-summary-value" style={{color: recentReliabilityColor}}>
-                      {stripRecentSuccessDisplay !== '—' && (
+                    <div className="audit-summary-value" style={{color: tileSuccessColor}}>
+                      {tileSuccessMain !== '—' && (
                         <>
-                          <span className="audit-summary-main">{stripRecentSuccessDisplay}</span>
+                          <span className="audit-summary-main">{tileSuccessMain}</span>
                           <span className="audit-summary-dot">·</span>
                         </>
                       )}
-                      <span className="audit-summary-sub">{stripRecentSuccessSub}</span>
+                      <span className="audit-summary-sub">{tileSuccessSub}</span>
                     </div>
                     <div className="audit-summary-label">
                       Recent success rate
@@ -2048,14 +2098,16 @@ function MintDetailContent({ url }: { url: string }) {
                         <Info size={11} color="#6b7280" style={{cursor:'help'}} />
                         {auditErrorsTooltip.open && (
                           <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
-                            Successful swaps out of the mint's last ~100 audited operations — the same rolling window the Reliability Score's Audit component scores on. Shows "too few to score" below 3 recent swaps.
+                            {tileSuccessTip}
                           </div>
                         )}
                       </span>
                     </div>
                   </div>
+                  )}
+                  {tileAvgShow && (
                   <div className="audit-summary-cell">
-                    <div className="audit-summary-value" style={{fontSize:15}}>{auditAvgTimeDisplay}</div>
+                    <div className="audit-summary-value" style={{fontSize:15}}>{tileAvgDisplay}</div>
                     <div className="audit-summary-label">
                       Avg swap time
                       <span
@@ -2068,13 +2120,21 @@ function MintDetailContent({ url }: { url: string }) {
                         <Info size={11} color="#6b7280" style={{cursor:'help'}} />
                         {auditAvgTimeTooltip.open && (
                           <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
-                            Average duration of the successful swaps in the same rolling window as Recent success rate.
+                            {tileAvgTip}
                           </div>
                         )}
                       </span>
                     </div>
                   </div>
+                  )}
                 </div>
+                )}
+                {czView && (czView.verdict.label || czView.uptime) && (
+                  <div className="md-audit-via md-audit-cz-line">
+                    Verdict: <strong className={`md-audit-cz-${czView.verdict.tone}`}>{czView.verdict.label}</strong>
+                    {czView.uptime ? ` · uptime ${czView.uptime}` : ''}
+                  </div>
+                )}
 
                 {/* Outcome bar — last ≤44 swaps, newest left (the backend
                     already orders by created_at DESC, so no client-side
@@ -2085,7 +2145,7 @@ function MintDetailContent({ url }: { url: string }) {
                     {auditSwapBarItems.map(s => (
                       <div
                         key={s.swapId}
-                        className={`audit-swap-bar-mark ${s.state === 'OK' ? 'audit-swap-bar-ok' : 'audit-swap-bar-fail'}`}
+                        className={`audit-swap-bar-mark ${s.state === 'OK' ? 'audit-swap-bar-ok' : s.neutral ? 'audit-swap-bar-neutral' : 'audit-swap-bar-fail'}`}
                         title={`${s.state}${s.createdAt ? ` · ${s.createdAt}` : ''}`}
                       />
                     ))}
@@ -2100,7 +2160,7 @@ function MintDetailContent({ url }: { url: string }) {
                       <table className="audit-swaps-table">
                         <thead>
                           <tr>
-                            <th>To</th>
+                            <th>{czView ? 'Other mint' : 'To'}</th>
                             <th>Amount</th>
                             <th>Fee</th>
                             <th>Duration</th>
@@ -2109,12 +2169,12 @@ function MintDetailContent({ url }: { url: string }) {
                         </thead>
                         <tbody>
                           {auditRecentSwapRows.map(s => (
-                            <tr key={s.swapId} className={s.state !== 'OK' ? 'audit-swap-row-fail' : ''}>
-                              <td>{s.toUrl ? mintHostname(s.toUrl) : '—'}</td>
-                              <td>{s.amount !== null ? `${s.amount} sat` : '—'}</td>
+                            <tr key={s.swapId} className={s.state !== 'OK' && !s.neutral ? 'audit-swap-row-fail' : ''}>
+                              <td>{s.counterpart ?? (s.toUrl ? mintHostname(s.toUrl) : '—')}</td>
+                              <td>{s.amount !== null ? (czView ? s.amount : `${s.amount} sat`) : '—'}</td>
                               <td>{s.fee !== null ? s.fee : '—'}</td>
                               <td>{s.timeTakenMs !== null ? `${Math.round(s.timeTakenMs)} ms` : '—'}</td>
-                              <td>{s.state}</td>
+                              <td>{s.state}{s.stage ? ` (${s.stage})` : null}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -2131,10 +2191,10 @@ function MintDetailContent({ url }: { url: string }) {
                     )}
                   </div>
                 )}
-                {auditSwapsLoading && auditSwaps.length === 0 && (
+                {!czView && auditSwapsLoading && auditSwaps.length === 0 && (
                   <div style={{fontSize:12.5,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:4}}>Loading recent swaps…</div>
                 )}
-                {auditSwapsError && (
+                {!czView && auditSwapsError && (
                   <div className="audit-swaps-error-banner" role="status">
                     Couldn't load recent swaps
                     <button type="button" className="audit-swaps-retry-btn" onClick={() => void refetchAuditSwaps()}>
@@ -2143,6 +2203,7 @@ function MintDetailContent({ url }: { url: string }) {
                   </div>
                 )}
 
+                {!czView && (
                 <a
                   href="https://audit.8333.space/"
                   target="_blank"
@@ -2151,6 +2212,7 @@ function MintDetailContent({ url }: { url: string }) {
                 >
                   Open on audit.8333.space →
                 </a>
+                )}
               </div>
             ) : (
               <div className="md-panel">
@@ -2161,14 +2223,8 @@ function MintDetailContent({ url }: { url: string }) {
                 </div>
                 <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>No audit data available for this mint.</div>
               </div>
-            )}
-            {/* Second audit source (audit.cashu.cz): only when the audit.8333.space data is
-                missing (no auditNMints) or stale (auditorDataOld >7d or syncStale >24h), and
-                only once the known-mints list has loaded. Mounting the block starts its query. */}
-            {knownMintsData !== undefined && (knownMint === null || knownMint.auditNMints === null || freshness.auditorDataOld || freshness.syncStale) && (
-              <AuditCzBlock url={url} />
-            )}
-          </>)}
+            )
+          )}
 
           {activeTab === 'reviews' && (
             <div className="md-panel">

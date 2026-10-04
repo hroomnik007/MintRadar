@@ -1647,6 +1647,10 @@ button.md-url-copy.copied > svg { opacity: 1; }
   .audit-summary-sub { flex-basis: 100%; text-align: center; }
 }
 
+/* audit.cashu.cz fallback fills fewer tiles (data-tiles is set only then): keep them full width. */
+.audit-summary-strip[data-tiles="1"] { grid-template-columns: minmax(0, 1fr); }
+.audit-summary-strip[data-tiles="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
 /* Don't shrink the tiles. Below ~900px four columns collide — use 2×2
    at the original cell size so "98 / 100 · 98% ok" fits inside its box. */
 @media (max-width: 900px) {
@@ -1676,6 +1680,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 
 .audit-swap-bar-ok { background: var(--fast); }
 .audit-swap-bar-fail { background: var(--slow); }
+.audit-swap-bar-neutral { background: var(--text3); }
 
 .audit-recent-swaps {
   margin-top: 10px;
@@ -1848,6 +1853,21 @@ button.md-url-copy.copied > svg { opacity: 1; }
   font-family: var(--font-mono);
 }
 
+.md-audit-via-link { color: inherit; text-decoration: underline; display: inline-block; padding-block: 16px; margin-block: -16px; }
+.md-audit-via-link:hover { color: var(--text); }
+/* Hit area of the source info icon grows to 44px without moving the heading. The tooltip is
+   anchored to the heading (not the icon) and opens downward, so it never leaves the viewport. */
+.md-audit-header-cz { position: relative; }
+.md-audit-header .md-audit-info-cz { position: static; padding: 16px; margin: -16px; }
+.md-audit-header .md-audit-info-cz .info-tooltip-pop {
+  left: 0; transform: none; bottom: auto; top: calc(100% + 6px); max-width: calc(100vw - 56px);
+}
+/* Verdict / uptime line under the strip (audit.cashu.cz fallback). */
+.md-audit-cz-line { margin-bottom: 10px; }
+.md-audit-cz-line strong { font-weight: 600; color: var(--text2); }
+.md-audit-cz-line .md-audit-cz-warn { color: var(--amber); }
+.md-audit-cz-line .md-audit-cz-error { color: var(--red); }
+
 @media (max-width: 767px) {
   .md-audit-header-main { display: none; }
 }
@@ -1980,32 +2000,3 @@ a.review-action-btn { color: var(--text3); }
   .md-hist-summary > div { min-width: 0; padding-inline: 6px !important; overflow-wrap: anywhere; }
   .md-hist-summary > div > div:first-child { font-size: 9px !important; letter-spacing: 0.02em !important; }
 }
-
-/* ── audit.cashu.cz block (Audit tab; display only, see AuditCzBlock.tsx) ── */
-.auditcz-panel { margin-top: 12px; min-width: 0; }
-.auditcz-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
-.auditcz-link {
-  display: inline-flex; align-items: center; min-height: 44px;
-  font-size: 12.5px; color: var(--text2); text-decoration: none;
-}
-.auditcz-link:hover { color: var(--text); }
-.auditcz-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--text3); font-family: var(--font-mono); margin-bottom: 10px; }
-.auditcz-stale { color: var(--amber); }
-.auditcz-muted { font-size: 13px; color: var(--text3); font-family: var(--font-mono); margin-top: 12px; }
-.auditcz-panel > .auditcz-muted { margin-top: 0; }
-.auditcz-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
-.auditcz-cell { min-width: 0; }
-.auditcz-label { font-size: 11px; color: var(--text3); margin-bottom: 3px; }
-.auditcz-val { font-size: 14px; color: var(--text); font-family: var(--font-mono); overflow-wrap: anywhere; }
-.auditcz-sub { font-size: 11px; color: var(--text3); }
-.auditcz-badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: var(--radius-m); border: 1px solid var(--brd); color: var(--text); }
-.auditcz-badge-ok { background: var(--green-soft); border-color: var(--green-soft-strong); color: color-mix(in srgb, var(--green-bright) 70%, var(--text)); }
-.auditcz-badge-warn { background: var(--amber-soft); border-color: var(--amber-soft-strong); color: color-mix(in srgb, var(--amber) 55%, var(--text)); }
-.auditcz-badge-error { background: var(--red-soft); border-color: var(--red-soft-strong); color: color-mix(in srgb, var(--red) 45%, var(--text)); }
-.auditcz-table-wrap { margin-top: 14px; overflow-x: auto; max-width: 100%; }
-.auditcz-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.auditcz-table th { text-align: left; font-weight: 600; color: var(--text3); padding: 4px 8px 4px 0; white-space: nowrap; }
-.auditcz-table td { padding: 5px 8px 5px 0; color: var(--text2); border-top: 1px solid var(--brd); white-space: nowrap; }
-.auditcz-other, .auditcz-err { max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
-.auditcz-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.auditcz-badge-neutral { background: var(--surface-2); border-color: var(--brd); color: var(--text2); font-size: 11px; font-weight: 500; padding: 1px 8px; }
