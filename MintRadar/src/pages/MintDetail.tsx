@@ -2039,9 +2039,8 @@ function MintDetailContent({ url }: { url: string }) {
                     Recent success rate is the rolling ~100-swap window; Last
                     checked is OUR 6h cron's write time (auditSyncedAt). */}
                 <div className="audit-summary-strip">
-                  {stripMints !== null && (
                   <div className="audit-summary-cell">
-                    <div className="audit-summary-value" style={{color:'var(--accent)'}}>{stripMints.toLocaleString()}</div>
+                    <div className="audit-summary-value" style={{color:'var(--accent)'}}>{stripMints === null ? '—' : stripMints.toLocaleString()}</div>
                     <div className="audit-summary-label">
                       Mints
                       <span
@@ -2060,10 +2059,8 @@ function MintDetailContent({ url }: { url: string }) {
                       </span>
                     </div>
                   </div>
-                  )}
-                  {stripMelts !== null && (
                   <div className="audit-summary-cell">
-                    <div className="audit-summary-value" style={{color:'var(--accent)'}}>{stripMelts.toLocaleString()}</div>
+                    <div className="audit-summary-value" style={{color:'var(--accent)'}}>{stripMelts === null ? '—' : stripMelts.toLocaleString()}</div>
                     <div className="audit-summary-label">
                       Melts
                       <span
@@ -2082,7 +2079,6 @@ function MintDetailContent({ url }: { url: string }) {
                       </span>
                     </div>
                   </div>
-                  )}
                   <div className="audit-summary-cell">
                     <div className="audit-summary-value" style={{color: stripReliabilityColor}}>
                       {stripRecentSuccessDisplay !== '—' && (
