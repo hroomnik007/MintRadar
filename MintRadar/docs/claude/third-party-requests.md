@@ -1,0 +1,39 @@
+# MintRadar — Third-party requests from the browser (2026-10-04)
+
+Everything the app contacts **from the visitor's browser** other than its own origin (`mintradar.org`). Measured with a scratch Playwright script (e2e mocks, `bypassCSP` because the dev CSP is stricter than production's `connect-src 'self' https: wss:`, every foreign origin answered locally, no live site, no real relays), then cross-checked against the code. Server-side requests (backend → audit.8333.space, GitHub API, mints, relays) are out of scope here.
+
+Every foreign origin below receives at least the visitor's **IP address and User-Agent**; the "Data" column lists what else.
+
+## Third-party requests from the browser
+
+| Origin | Trigger | Data | Proxy? | Can be removed? |
+|---|---|---|---|---|
+| Nostr relays — `DISCOVERY_RELAYS` (12), `REVIEW_*`, `PROFILE_RELAYS`, `FOLLOW_RELAYS` (`src/core/nostr/relays.ts`); 17–18 distinct `wss://` hosts when logged in | **Logged in only**: Dashboard/Watchlist discovery (kind 38172), login bootstrap (kind 0/10002 for the own pubkey), watchlist sync (kind 10003 read + write), follows (kind 3) and follow recommendations (kind 38000 by authors). **Logged out Dashboard: none** | Nostr filter: the own pubkey, the follow list's authors; published events | No (Nostr is the protocol; the own data is only on relays) | No for the user's own data. Discovery is also done server-side (6h cron), so the browser-side 38172 scan after login is redundant but intentional (see `discovery-and-relays.md`) |
+| Review relays (6): nos.lol, relay.primal.net, relay.damus.io, nostr.oxtr.dev, relay.cashumints.space, relay.minibits.cash | **Mint Detail, any visitor, logged out too** (opens at page load): `kinds:[38000], #u:[<viewed mint URL>]`. Review publish: up to 16 relays (`REVIEW_PUBLISH_RELAYS`) | The viewed mint URL (as a Nostr filter), IP; on publish the signed review | Partly: `/api/mints/nostr-reviews` is the DB-backed copy (6h sync) and is already fetched first | **Yes, for the read**: the live relay query could be dropped for logged-out visitors (reviews would be up to 6h old). Not changed in this task |
+| Profile relays (`PROFILE_RELAYS`, purplepag.es, nostr21.com, …) | Mint Detail (kind 0 of reviewers: name + NIP-05 claim only, no picture since 2026-10-04); Watchlist recommenders; login bootstrap (own kind 0/10002) | Pubkeys of reviewers/recommenders as `authors` | No | Reviewer names could come from the backend if `mint_reviews` stored them; not today |
+| Submit a mint → "key lookup" relays (6) | Pasting a valid `npub` in the Single tab (600 ms debounce) | `kinds:[38172], authors:[<npub>]` | No | No (the feature *is* the relay lookup) |
+| `https://<mint>` — `/v1/info` | **Show my latency** button (1 tracked mint, https + length guard) | IP/UA, timing | No — on purpose: it measures latency *from the visitor* | No (purpose of the button) |
+| `https://<mint>` — `/v1/info`, `/v1/keysets`, `/v1/keys` (automatic on Inspect) and `/v1/checkstate` (only on **Check if spent**) | **Token Inspector** — the mint is whichever mint the pasted token names (chosen by the token's author) | IP/UA; `checkstate` additionally sends the proofs' `Y` values (tells the mint that someone looks at this token) | No — by design: token never goes to MintRadar's servers (README) | No (documented behaviour); `checkstate` is user-initiated. Not exercised by the scratch run (mock mint answered `{}`), taken from `cashuToken.ts:305` / `tokenRun.ts` |
+| `https://<mint>` — `/v1/info` for up to **20** known mints in parallel | **Tools → Best Mint wizard**, every "Find my mint" click (5 s timeout each, no cache between runs) | IP/UA and timing to up to 20 mint operators the visitor never chose | No | **Yes** — see the wizard note below |
+| `https://<domain>/.well-known/nostr.json?name=…` | Login → Remote signer → typing a **NIP-05 identifier** instead of `bunker://` (nostr-tools `parseBunkerInput`) | IP/UA, the typed name; the domain is whatever the visitor typed | No (`/api/nip05/verify` exists for reviewer badges but only returns a boolean, not the signer pubkey/relays) | Possible with a new backend endpoint; the typed domain is the visitor's own choice, so low priority |
+| Relay named in the pasted `bunker://…?relay=` URI | Login → Remote signer → Connect with a bunker URI | IP, NIP-46 kind 24133 events (encrypted) | No | No |
+| NIP-46 pairing relays (6): relay.damus.io, nos.lol, relay.primal.net, relay.snort.social, nostr.bitcoiner.social, nostr.cypherpunk.today | Login → **selecting the Remote signer card** (QR pairing opens the sockets immediately, before anything is typed) | `kinds:[24133], #p:[<ephemeral client key>]`, IP | No | No (needed for the QR flow); closes on back/Escape (covered by `login.spec.ts`) |
+| Whatever host the **logged-in user's own** kind 0 `picture` points to | Account chip (`AccountMenu.tsx`) and the "Signing with" row of the review modal (`rv-signer-avatar`) | IP/UA to a host the user picked in their own profile | No | Yes (initials only); left as is on purpose (decision of 2026-10-04) |
+| `njump.me`, `wallet.cashu.me`, `redeem.cashu.me`, `github.com/cashubtc/nuts`, `audit.8333.space`, `getalby.com`, wallet/learn links | **Click only** (plain `<a target=_blank rel=noopener>` — no background request). `Open in Cashu.me` puts the token in the `#fragment` (not sent to servers); the Mint Detail wallet link carries `?mint=<url>` | The clicked link's own data | n/a | n/a |
+
+### Not contacting anything third-party (verified)
+- Logged-out **Dashboard**, **Stats**, **Wallets**, **Learn**, **NUT explorer**, Token Inspector's *local decode*, **Submit a mint** Single-URL and Bulk (`/api/mint/probe`, `/api/mints/discover` are own origin) — zero foreign requests.
+- Mint QR modal — zero requests; the QR is rendered locally (`QRCodeSVG`) since 2026-10-04 (was `api.qrserver.com`, which received the mint URL).
+- Reviewer / recommender avatars — no longer loaded since 2026-10-04 (initials tiles). Mint icons go through `/api/mint/icon`. Fonts are self-hosted. No analytics, no CDN scripts.
+- nostr.mintradar.org (our own relay) is one of the discovery/publish relays; it is first-party but still a separate origin.
+
+## Best Mint wizard — does it fetch from mints in the browser?
+**Yes.** `Tools.tsx` (`BestMintWizard`, the `latencyResults` block, ~line 656): after filtering the known-mints list it takes the top **20** candidates by Reliability Score and does `fetch(`${m.url}/v1/info`, { signal: AbortSignal.timeout(5000) })` for each, in parallel, **on every "Find my mint" click** (no caching between runs). Only the HTTP status and the round-trip time are used.
+
+Everything else the ranking needs already comes from the backend's known-mints API (`/api/mints/known`): `reliabilityScore`, `nutCount`, `units`, `nutsLimits` (NUT-9/11/17), `mintMethods` / `meltMethods` (per-unit limits), `latencyMs` (server-side, measured by the 5-minute probe from Frankfurt) — and the wizard never reads the mint's own `/v1/info` body.
+
+So the same result **could** come from backend data by using `latencyMs` instead of the browser round-trip. The trade-off is semantic: the option is labelled **"Fast from here"**, i.e. it ranks by latency *from the visitor*, while the backend value is latency *from Frankfurt*. Removing the 20 direct requests would also remove an IP/UA disclosure to up to 20 mint operators per run. Not changed in this task; it needs a product decision on the "Fast from here" wording.
+
+## Notes
+- Production CSP (`deploy/nginx.conf`) allows `connect-src 'self' https: wss:` and `img-src 'self' https: data:`, so the CSP does not restrict any of the above; the dev server CSP (`vite.config.ts`) blocks `https:` fetches, so the mint/NIP-05 requests only appear in dev/e2e with `bypassCSP`.
+- The README claims were deliberately not touched in this task.

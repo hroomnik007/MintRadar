@@ -16,6 +16,7 @@
 | Colors and tokens (`--copper`, `--bg`, palette), typography, `--dash-chrome-max` page width, **badge/chip text must reach 4.5:1 (derive tones with color-mix from tokens)** | `docs/claude/design-palette-and-chrome.md` |
 | Tools page, Best Mint Wizard, Token Inspector | `docs/claude/tools-page.md` |
 | Reviews (kind:38000), `mint_reviews` sync, `sharedPool` | `docs/claude/reviews-and-nostr.md` |
+| What the browser contacts outside our origin (relays, mints, NIP-05 hosts, avatars, QR), Best Mint wizard direct fetches | `docs/claude/third-party-requests.md` |
 | Mobile layout, navbar, overflow fixes, tooltips, chart focus ring, **modal dialogs (`useModalFocus`, role/aria-modal/name, focus trap/restore)** | `docs/claude/mobile-and-tooltips.md` |
 | Security audit history, hardening rationale, external reviews, ESLint cleanup | `docs/claude/security-audit-and-reviews-history.md` |
 
