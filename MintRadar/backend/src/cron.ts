@@ -2,6 +2,7 @@ import cron from 'node-cron'
 import pLimit from 'p-limit'
 import { getKnownMints, probeMintToDb, pruneOldHistory, pruneUnvalidatedMints, pruneAbandonedMints, revalidateMints, backfillServerLocations } from './prober.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
+import { syncAuditCz } from './auditCz.js'
 import { refreshAllMintReviews, recomputeReviewCountRollups } from './reviewsSync.js'
 import { refreshReliabilityMoversRollup } from './reliabilityMoversRollup.js'
 import { refreshReviewSurgeBaseline } from './reviewSurgeRollup.js'
@@ -63,6 +64,20 @@ export function startCron(): void {
     } catch (err) {
       if (process.env['NODE_ENV'] !== 'production') {
         console.error('[cron] probe error:', err)
+      }
+    }
+  })
+
+  // audit.cashu.cz (second audit source, display only — never feeds scoring):
+  // two GETs every 10 minutes, offset from the 5-minute probe (minutes 3,13,...).
+  // A failed fetch writes and deletes nothing (see auditCz.ts).
+  cron.schedule('3,13,23,33,43,53 * * * *', async () => {
+    if (isAllowlistMode()) return
+    try {
+      await syncAuditCz()
+    } catch (err) {
+      if (process.env['NODE_ENV'] !== 'production') {
+        console.error('[cron] audit.cashu.cz sync error:', err)
       }
     }
   })

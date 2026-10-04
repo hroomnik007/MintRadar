@@ -60,6 +60,18 @@ Index: (url, created_at DESC). Populated by the 6h reviews sync (`backend/src/re
 Rollup columns on `mints`: `review_count INTEGER`, `review_avg_rating REAL`, `reviews_checked_at TIMESTAMPTZ`.
 `review_count_7d_ago INTEGER` + `review_count_7d_ago_at TIMESTAMPTZ` — rolling ~1-week-ago `review_count` snapshot, advanced once a day (`reviewSurgeRollup.ts`); feeds the informational "recent review surge" sybil flag (see Reviews Feature below).
 
+### audit_cz_mints / audit_cz_aliases / audit_cz_swaps (added 2026-10-04 — audit.cashu.cz, display only)
+Second, public audit source (`backend/src/auditCz.ts`). **Never enters the Reliability Score**: no scoring code, `last_reliability_score` or `/api/mints/known` reads these tables. No FK to `mints`; no row is ever created in `mints` from this source.
+```
+audit_cz_mints(url PK [normalised], state ok|warn|error, uptime24h, uptime7d, uptime30d DOUBLE, attributed_failures INT,
+               last_check TIMESTAMPTZ, page TEXT [only https://audit.cashu.cz/…], fetched_at, source='audit.cashu.cz')
+audit_cz_aliases(alias_url PK, mint_url, fetched_at)      -- their aliases[], normalised
+audit_cz_swaps(id TEXT PK, at, status success|failed|pending, stage melt|mint|balance|NULL, error ≤300 chars,
+               amount, fee, duration_ms, from_url, to_url, from_name, to_name, fetched_at, source)
+  indexes: (from_url, at DESC), (to_url, at DESC), (at DESC)
+```
+Keys use `normalizeUrl()` plus a stripped trailing slash (`auditCzKey`); a tracked mint matches when its key equals their `url` or any alias (our DB has no alias data of its own — `aliasOf` is only a submit/discover hint). Swaps are stored as given and matched at read time (from or to) through the same url+aliases set. Sync: upserts, one transaction per response; any failure (timeout, HTTP error, >1 MiB, bad JSON, bad top-level shape) writes and deletes nothing; malformed items are skipped; pruning (>14 days, hard cap 20000 rows) only after a successful swaps write.
+
 ### mint_audit_swaps (added 2026-09-12 — per-swap audit.8333.space detail)
 ```
 url TEXT REFERENCES mints(url) ON DELETE CASCADE
@@ -98,6 +110,7 @@ anonymized sample payloads captured from a live diagnostic GET against the Minib
 - GET /api/mints/history?url=&period={24h|7d|30d|90d} — bucketed uptime/latency segments + prev period trend
 - GET /api/mints/version-history?url= — per-mint software version timeline + latest global version
 - GET /api/mints/daily-uptime?url= — daily uptime counts for last 30 days
+- GET /api/mints/audit-cz?url= — audit.cashu.cz data for one mint from `audit_cz_*` (see tables above). Same url validation as `/api/mints/swaps`. Always 200 for a valid url: `covered:false` + `mint:null` + `swaps:[]` when not in their feed; otherwise state/uptimes/attributedFailures/lastCheck and up to 20 newest swaps (from or to the mint). `Cache-Control: max-age=60`; normal per-IP rate limit. Display only — never merged into any MintRadar number.
 - GET /api/mints/swaps?url= — the audit.8333.space rolling-window swap detail (`mint_audit_swaps`, ≤100 rows) for one mint plus `avgTimeMs`. Added 2026-09-12, deliberately kept OUT of `/api/mints/known` (which is fetched on every Dashboard load for every mint — embedding the full per-mint swap list there would multiply that payload ~65x for a feature only a not-yet-built Mint Detail view would use); `/api/mints/known` gains only the small scalar `auditAvgTimeMs`. Same url validation (`https://`, `MAX_URL_LENGTH`, `isSafeUrl`) as `/api/mints/history`\|`version-history`\|`daily-uptime`. `Cache-Control: max-age=300`. No frontend UI reads this endpoint yet.
 - GET /api/stats — network-wide stats: totalMints, onlineMints, offlineMints, avgReliabilityScore, avgLatency24h, reliabilityDistribution, nutAdoption, top5ByReliabilityScore
 - GET /api/stats/reliability-movers?period={7d|30d} — Reliability Score risers/fallers (Stats page). As of 2026-09-01 a plain read of `mints` (`last_reliability_score` + `reliability_score_{7,30}d_ago` rollup columns), NOT the old two `DISTINCT ON` passes over all of `mint_history` (~2.5s cold — the "old" CTE had no time bound and `reliability_score IS NOT NULL` was unindexed). Rollup is refreshed by `refreshReliabilityMoversRollup()` (`backend/src/reliabilityMoversRollup.ts`) on the 5-min probe cron + ~15s after boot; partial index `idx_mint_history_score_checked ON mint_history(url, checked_at DESC) WHERE reliability_score IS NOT NULL` backs its point-in-time lookups. In-memory cache TTL 10min (own `RELIABILITY_MOVERS_CACHE_TTL`, not `KNOWN_MINTS_CACHE_TTL`). +/-3 threshold + top-3 ranking in `reliabilityMovers.ts` (`computeReliabilityMovers`). Frontend panel (`src/components/stats/ReliabilityMoversPanel.tsx`) takes `loading`/`refreshing` props — skeleton while pending, `keepPreviousData` across the 7d/30d toggle; "No data yet" shows only for a settled-but-empty result.
@@ -128,6 +141,7 @@ anonymized sample payloads captured from a live diagnostic GET against the Minib
 
 ## Cron jobs
 - Every 5min: probe all mints in DB → write to mint_history, update mints metadata + last_reliability_score, **then `refreshReliabilityMoversRollup()`** (`backend/src/reliabilityMoversRollup.ts`): one `UPDATE mints` recomputing `reliability_score_{7,30}d_ago` from `mint_history` (index-backed per-mint `LIMIT 1` lookups). Single-flight, never throws. Also primed ~15s after boot. Feeds `GET /api/stats/reliability-movers`.
+- Minutes 3,13,23,33,43,53 (every 10 min, skipped in allowlist mode): `syncAuditCz()` (`backend/src/auditCz.ts`) — two GETs (`https://audit.cashu.cz/api/v1/mints`, `…/api/v1/swaps?limit=100`) via `safeFetch`, 15 s timeout, 1 MiB cap each (`RESPONSE_CAPS.auditCzMints/auditCzSwaps`), single-flight, logs counts only. Display only; see the audit_cz_* tables above.
 - Every 6h: NIP-87 discovery from `DISCOVERY_RELAYS` + audit.8333.space API → INSERT new mints, **then `refreshAllMintReviews()`** (`backend/src/reviewsSync.ts`): per-mint kind:38000 fetch (broad `REVIEW_SYNC_RELAYS`, 8s timeout, concurrency 3) → upsert into `mint_reviews` (newest event per pubkey only; a cycle that did not see a row does not delete it) and set `mints.review_count`/`review_avg_rating` from the stored rows, not from this cycle's length. Single-flight (`isReviewSyncRunning`). `wss://relay.nostr.net` is back on `DISCOVERY_RELAYS` and `REVIEW_SYNC_RELAYS` as of 2026-09-27; it stays off `REVIEW_READ_RELAYS`.
 - Daily 3:15am: `pruneUnvalidatedMints()` — deletes rows discovered >24h ago that NEVER had a successful probe (covers any insert path that skips `isValidCashuMint()`).
 - Daily 3:45am: refresh `software_versions` cache from the GitHub Releases API (`cashubtc/nutshell`, `cashubtc/cdk`) — see Reliability Score calculation above

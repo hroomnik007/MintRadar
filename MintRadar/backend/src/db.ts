@@ -94,6 +94,51 @@ export async function initDb(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_mint_audit_swaps_url_created
       ON mint_audit_swaps(url, created_at DESC);
+
+    -- audit.cashu.cz (second, public audit source; see auditCz.ts). Display-only:
+    -- never read by scoring code. No FK to mints — keyed by their normalised URL,
+    -- matched to our mints at read time (url or alias).
+    CREATE TABLE IF NOT EXISTS audit_cz_mints (
+      url TEXT PRIMARY KEY,
+      state TEXT NOT NULL,
+      uptime24h DOUBLE PRECISION,
+      uptime7d DOUBLE PRECISION,
+      uptime30d DOUBLE PRECISION,
+      attributed_failures INTEGER,
+      last_check TIMESTAMPTZ,
+      page TEXT,
+      fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      source TEXT NOT NULL DEFAULT 'audit.cashu.cz'
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_cz_aliases (
+      alias_url TEXT PRIMARY KEY,
+      mint_url TEXT NOT NULL,
+      fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_audit_cz_aliases_mint ON audit_cz_aliases(mint_url);
+
+    CREATE TABLE IF NOT EXISTS audit_cz_swaps (
+      id TEXT PRIMARY KEY,
+      at TIMESTAMPTZ NOT NULL,
+      status TEXT NOT NULL,
+      stage TEXT,
+      error TEXT,
+      amount DOUBLE PRECISION,
+      fee DOUBLE PRECISION,
+      duration_ms DOUBLE PRECISION,
+      from_url TEXT,
+      to_url TEXT,
+      from_name TEXT,
+      to_name TEXT,
+      fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      source TEXT NOT NULL DEFAULT 'audit.cashu.cz'
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_audit_cz_swaps_from ON audit_cz_swaps(from_url, at DESC);
+    CREATE INDEX IF NOT EXISTS idx_audit_cz_swaps_to ON audit_cz_swaps(to_url, at DESC);
+    CREATE INDEX IF NOT EXISTS idx_audit_cz_swaps_at ON audit_cz_swaps(at DESC);
   `)
 
   // Column migrations — each in its own query so a failure in one doesn't block others
