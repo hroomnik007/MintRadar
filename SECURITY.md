@@ -2,9 +2,14 @@
 
 ## Reporting a Vulnerability
 
-**Preferred:** Nostr DM to the project maintainer — npub is listed on [mintradar.org](https://mintradar.org).
+**Preferred:** Nostr DM to the project maintainer:
+
+- npub: `npub1zatej55x47xzhnw06yarqr5ugz7y5el8vygcckek24e5qmrtx77qnmd6rg`
+- NIP-05 identifiers (served at [mintradar.org/.well-known/nostr.json](https://mintradar.org/.well-known/nostr.json), both resolve to the same key): `_@mintradar.org` (shown by Nostr clients as `mintradar.org`) and `wildcitizen7@mintradar.org`
 
 **Alternative:** [GitHub private vulnerability reporting](https://github.com/hroomnik007/MintRadar/security/advisories/new)
+
+No e-mail address is offered for reports.
 
 Please include in your report:
 - Description of the vulnerability
