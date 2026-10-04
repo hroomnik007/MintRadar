@@ -2229,6 +2229,9 @@ function MintDetailContent({ url }: { url: string }) {
                         <div className="review-card-header">
                           <div className="review-avatar">
                             <div className="review-avatar-fallback" style={{ background: reviewAvatarColor(r.pubkey), color: avatarTextColor(reviewAvatarColor(r.pubkey)) }}>{initial}</div>
+                            {profile?.picture?.startsWith('https://') && (
+                              <img src={profile.picture} alt="" className="review-avatar-img" referrerPolicy="no-referrer" onError={e => { e.currentTarget.style.display = 'none' }} />
+                            )}
                           </div>
                           <div className="review-author">
                             <span className="review-author-name">

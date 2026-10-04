@@ -181,7 +181,7 @@ export default function About() {
               <strong>Your browser contacts some services directly,</strong> and they see your IP address: Nostr
               relays, a mint when you test latency or inspect a token, the host of your own profile picture, cashu.me
               when you click &ldquo;Open in cashu.me&rdquo;, and a remote signer&rsquo;s pairing relays. Mint icons
-              and NIP-05 checks go through our server. We do not load other people&rsquo;s profile pictures.
+              and NIP-05 checks go through our server. A review loads the author&rsquo;s https profile picture from their Nostr profile; if it fails, the initial stays. That host sees your IP address.
             </li>
             <li>
               <strong>Our Nostr relay</strong> (nostr.mintradar.org) is public: anyone can read it. We configure no

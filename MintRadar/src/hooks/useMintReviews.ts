@@ -10,10 +10,10 @@ export interface MintReview {
   rating: number | null
   comment: string
   createdAt: number
-  profile?: { name?: string; nip05?: string }
+  profile?: { name?: string; nip05?: string; picture?: string }
 }
 
-type ProfileMap = Record<string, { name?: string; nip05?: string }>
+type ProfileMap = Record<string, { name?: string; nip05?: string; picture?: string }>
 
 // extraPubkeys lets a caller fold in pubkeys it knows about from another
 // review source (e.g. MintDetail's DB-backed nostrOnly reviews) so they get
@@ -78,15 +78,16 @@ export function useMintReviews(mintUrl: string, extraPubkeys: string[] = []) {
         for (const e of sorted) {
           if (profileMap[e.pubkey]) continue
           try {
-            const meta = JSON.parse(e.content) as { name?: string; nip05?: string }
-            const p: { name?: string; nip05?: string } = {}
+            const meta = JSON.parse(e.content) as { name?: string; nip05?: string; picture?: string }
+            const p: { name?: string; nip05?: string; picture?: string } = {}
             if (meta.name) p.name = meta.name
             // Unverified at this point — just the claimed string from the kind:0
             // content, same as any other profile field. Verification (domain
             // lookup + pubkey match) happens separately before this is ever
             // rendered as a confirmed identifier — see useVerifiedNip05.ts.
             if (typeof meta.nip05 === 'string' && meta.nip05.trim()) p.nip05 = meta.nip05.trim()
-            if (p.name || p.nip05) profileMap[e.pubkey] = p
+            if (typeof meta.picture === 'string' && meta.picture.startsWith('https://')) p.picture = meta.picture
+            if (p.name || p.nip05 || p.picture) profileMap[e.pubkey] = p
           } catch { /* invalid profile JSON — skip */ }
         }
         if (Object.keys(profileMap).length > 0) setProfilesState({ url: mintUrl, profiles: profileMap })

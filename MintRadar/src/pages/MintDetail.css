@@ -884,7 +884,15 @@ button.md-url-copy.copied > svg { opacity: 1; }
   align-items: center;
   gap: 10px;
 }
-.review-avatar { flex-shrink: 0; }
+.review-avatar { position: relative; flex-shrink: 0; width: 36px; height: 36px; }
+.review-avatar-img {
+  position: absolute;
+  inset: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
 .review-avatar-fallback {
   width: 36px;
   height: 36px;
