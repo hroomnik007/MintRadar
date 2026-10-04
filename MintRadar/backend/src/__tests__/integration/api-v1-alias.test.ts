@@ -69,7 +69,7 @@ describe('GET /api/v1/* alias', () => {
     const strip = ({ timestamp: _t, ...rest }: Record<string, unknown>) => rest
     expect(strip(aliased.body)).toEqual(strip(root.body))
     expect(Object.keys(root.body).sort()).toEqual(
-      ['auditUpstream', 'auditUpstreamCheckedAt', 'lastAuditSyncAt', 'lastProbeAt', 'lastReviewsSyncAt', 'status', 'timestamp'],
+      ['auditCz', 'auditUpstream', 'auditUpstreamCheckedAt', 'lastAuditSyncAt', 'lastProbeAt', 'lastReviewsSyncAt', 'status', 'timestamp'],
     )
     expect(root.body.auditUpstream).toBe('unknown')
     expect(root.body.auditUpstreamCheckedAt).toBeNull()
