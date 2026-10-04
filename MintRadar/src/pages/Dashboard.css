@@ -900,7 +900,7 @@
 .latency-unit {
   font-size: 12px;
   font-weight: 400;
-  opacity: 0.5;
+  color: var(--t3);
   margin-left: 3px;
 }
 
