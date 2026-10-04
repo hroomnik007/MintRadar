@@ -141,9 +141,7 @@
     position: sticky;
     top: var(--about-scroll-offset);
     z-index: 5;
-    margin-bottom: 22px;
-    padding: 8px 0;
-    background: var(--bg);
+    margin-bottom: 16px;
   }
   .about-h2,
   .about-card {
@@ -165,11 +163,13 @@
   .about-toc-link {
     display: inline-flex;
     align-items: center;
-    min-height: 44px;
-    padding: 0 18px;
+    min-height: 32px;
+    padding: 0 12px;
     border: 1px solid var(--border-strong);
     border-radius: 999px;
-    background: var(--bg2);
+    background: transparent;
+    font-size: 13px;
+    text-decoration: none;
   }
   .about-toc-link:hover { border-color: var(--accent); }
   .about-h1 { font-size: 24px; }
