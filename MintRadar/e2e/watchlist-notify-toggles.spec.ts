@@ -17,7 +17,7 @@ test.describe('Watchlist notification toggles', () => {
     const strip = card(page, ALPHA).locator('.notify-strip')
     await expect(strip.getByRole('group', { name: `Notifications for ${NAME[ALPHA]}` })).toBeVisible()
     await expect(strip.locator('.notify-strip-label')).toHaveText('NOTIFY')
-    await expect(strip.getByRole('button')).toHaveText(['Goes down', 'Back up'])
+    await expect(strip.getByRole('button')).toHaveText(['Goes down', 'Goes up'])
     await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
     await expect(up(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
     // The strip belongs to Watchlist cards only.

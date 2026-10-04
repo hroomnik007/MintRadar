@@ -138,8 +138,16 @@
     padding-top: 20px;
   }
   .about-toc {
-    position: static;
+    position: sticky;
+    top: var(--about-scroll-offset);
+    z-index: 5;
     margin-bottom: 22px;
+    padding: 8px 0;
+    background: var(--bg);
+  }
+  .about-h2,
+  .about-card {
+    scroll-margin-top: calc(var(--about-scroll-offset) + 60px);
   }
   .about-toc-title {
     position: absolute;
