@@ -18,6 +18,7 @@
 | Reviews (kind:38000), `mint_reviews` sync, `sharedPool` | `docs/claude/reviews-and-nostr.md` |
 | What the browser contacts outside our origin (relays, mints, NIP-05 hosts, avatars, QR), Best Mint wizard direct fetches | `docs/claude/third-party-requests.md` |
 | Mobile layout, navbar, overflow fixes, tooltips, chart focus ring, **modal dialogs (`useModalFocus`, role/aria-modal/name, focus trap/restore)** | `docs/claude/mobile-and-tooltips.md` |
+| The `/about` page (privacy notice, rules): what it claims and the source of every claim; **update `About.tsx` when provider backups/snapshots, log fields or retention, the backup script, the relay write policy, notification storage, a new browser request or `PROBE_LOCATION` change** | `docs/claude/privacy-and-about.md` |
 | Security audit history, hardening rationale, external reviews, ESLint cleanup | `docs/claude/security-audit-and-reviews-history.md` |
 
 ## Project

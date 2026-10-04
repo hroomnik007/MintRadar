@@ -1,0 +1,172 @@
+/* About page (/about): one text page with three anchored sections. Everything is scoped under
+   .about-page. Same content shell as the other pages (--dash-chrome-max / --page-pad, the
+   navbar's inner row), text column capped at ~780px, "On this page" column sticky on wide
+   screens and a row of pills above the text below 900px. */
+.about-page {
+  --about-scroll-offset: calc(var(--nav-h) + 20px);
+  width: 100%;
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  padding: 28px var(--page-pad) 56px;
+  display: grid;
+  grid-template-columns: 180px minmax(0, 780px);
+  column-gap: 56px;
+  align-items: start;
+  color: var(--text2);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+/* ── On this page ── */
+.about-toc {
+  position: sticky;
+  top: var(--about-scroll-offset);
+}
+.about-toc-title {
+  margin-bottom: 8px;
+  color: var(--text3);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.about-toc ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.about-toc-link {
+  display: block;
+  padding: 6px 10px;
+  border-left: 2px solid var(--border2);
+  color: var(--text2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.about-toc-link:hover {
+  color: var(--text);
+  border-left-color: var(--accent);
+}
+
+/* ── Text column ── */
+.about-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.about-h1 {
+  margin-bottom: 20px;
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+.about-h2 {
+  margin: 44px 0 6px;
+  color: var(--text);
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.3;
+  scroll-margin-top: var(--about-scroll-offset);
+}
+.about-text section:first-of-type .about-h2 { margin-top: 0; }
+.about-text h2:focus { outline: none; }
+.about-text h2:focus-visible,
+.about-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.about-updated {
+  margin-bottom: 14px;
+  color: var(--text3);
+  font-size: 13px;
+}
+.about-text p { margin-bottom: 14px; }
+.about-text strong { color: var(--text); font-weight: 600; }
+.about-text ul { margin: 0 0 14px; padding-left: 20px; }
+.about-text li { margin-bottom: 10px; padding-left: 2px; }
+.about-text li::marker { color: var(--text3); }
+.about-text a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.about-text a:hover { color: var(--text); }
+.about-text code {
+  font-family: var(--mono-data);
+  font-size: 0.9em;
+  color: var(--text);
+}
+
+/* ── Caveat note (copper tint) ── */
+.about-note {
+  margin: 4px 0 18px;
+  padding: 12px 16px;
+  color: var(--text);
+  font-weight: 500;
+  background: color-mix(in srgb, var(--copper) 14%, var(--bg));
+  border: 1px solid color-mix(in srgb, var(--copper) 45%, transparent);
+  border-left: 3px solid var(--copper);
+  border-radius: var(--r);
+}
+
+/* ── Contact card ── */
+.about-card {
+  margin: 20px 0 0;
+  padding: 6px 18px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r);
+  scroll-margin-top: var(--about-scroll-offset);
+}
+.about-card dl > div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 4px 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.about-card dl > div:last-child { border-bottom: 0; }
+.about-card dt { color: var(--text3); font-size: 13px; }
+.about-card dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
+
+/* ── Narrow: pill navigation above the text ── */
+@media (max-width: 900px) {
+  .about-page {
+    display: block;
+    padding-top: 20px;
+  }
+  .about-toc {
+    position: static;
+    margin-bottom: 22px;
+  }
+  .about-toc-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .about-toc ul {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .about-toc-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--bg2);
+  }
+  .about-toc-link:hover { border-color: var(--accent); }
+  .about-h1 { font-size: 24px; }
+}
+
+@media (max-width: 480px) {
+  .about-card dl > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}

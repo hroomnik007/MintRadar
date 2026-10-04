@@ -6,7 +6,8 @@
 [![Self-Hostable](https://img.shields.io/badge/self--hostable-yes-green.svg)](#-getting-started--self-hosting)
 [![Open Source](https://img.shields.io/badge/open%20source-%E2%9D%A4-red.svg)](https://github.com/hroomnik007/MintRadar)
 
-**Live:** [mintradar.org](https://mintradar.org)
+**Live:** [mintradar.org](https://mintradar.org)  
+**About, privacy and rules:** [mintradar.org/about](https://mintradar.org/about)
 
 ---
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { Zap, TriangleAlert } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
@@ -547,6 +547,7 @@ export function AppShell() {
           <div className="app-footer-links">
             <a href="https://github.com/hroomnik007/MintRadar" target="_blank" rel="noopener noreferrer">© 2026 MintRadar.org</a>
             <a href="https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/API.md" target="_blank" rel="noopener noreferrer">API</a>
+            <Link to="/about">About</Link>
           </div>
           <div className="app-footer-note">
             <span>Reliability is a health signal, not solvency.</span>
