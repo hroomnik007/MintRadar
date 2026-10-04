@@ -147,7 +147,9 @@ export default function About() {
               address, including any query string), the status, the size of the answer, the referrer, your
               browser&rsquo;s user agent and the site name you asked for. The IP address is not anonymised. Logs are
               kept about 14 days. A firewall tool (fail2ban) may temporarily ban abusive IP addresses and keeps its
-              records for 1 day. We use this only to run and protect the service.
+              records for 1 day. We use this only to run and protect the service. Our application logs can contain a
+              shortened public key (8 characters) when someone switches a notification on or off, or when sending one
+              fails; they are capped at about 30 MB in total and overwritten.
             </li>
             <li>
               <strong>Notifications (optional):</strong> if you turn them on we store your Nostr public key, the

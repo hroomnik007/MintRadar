@@ -568,6 +568,7 @@ const SITEMAP_STATIC_PATHS: Array<{ loc: string; changefreq: string; priority: s
   { loc: '/learn/how-to-choose-a-mint', changefreq: 'monthly', priority: '0.5' },
   { loc: '/learn/getting-started-with-a-wallet', changefreq: 'monthly', priority: '0.5' },
   { loc: '/learn/safe-habits', changefreq: 'monthly', priority: '0.5' },
+  { loc: '/about', changefreq: 'monthly', priority: '0.5' },
 ]
 
 // Dynamically includes every tracked mint's /mint/:url page (excluding test mints) —
