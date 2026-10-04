@@ -43,6 +43,8 @@ export interface AuditCzMint {
   uptime7d: number | null
   uptime30d: number | null
   attributedFailures: number | null
+  minted: number | null
+  melted: number | null
   lastCheck: string | null
   page: string | null
 }
@@ -105,11 +107,17 @@ export function parseAuditCzMint(raw: unknown): AuditCzMint | null {
   const u30 = numOrNull(raw['uptime30d'])
   if (u24 === INVALID || u7 === INVALID || u30 === INVALID) return null
   let attributed: number | null = null
+  let minted: number | null = null
+  let melted: number | null = null
   const swaps = raw['swaps']
   if (isObj(swaps)) {
     const a = numOrNull(swaps['attributedFailures'])
-    if (a === INVALID) return null
+    const mi = numOrNull(swaps['minted'])
+    const me = numOrNull(swaps['melted'])
+    if (a === INVALID || mi === INVALID || me === INVALID) return null
     attributed = a === null ? null : Math.round(a)
+    minted = mi === null ? null : Math.round(mi)
+    melted = me === null ? null : Math.round(me)
   }
   const aliases: string[] = []
   if (Array.isArray(raw['aliases'])) {
@@ -122,6 +130,8 @@ export function parseAuditCzMint(raw: unknown): AuditCzMint | null {
     url, aliases, state,
     uptime24h: u24, uptime7d: u7, uptime30d: u30,
     attributedFailures: attributed,
+    minted,
+    melted,
     lastCheck: isoOrNull(raw['lastCheck']),
     page: pageOrNull(raw['page']),
   }
@@ -229,12 +239,12 @@ async function writeMints(mints: AuditCzMint[]): Promise<void> {
   await inTransaction(async q => {
     for (const m of mints) {
       await q(
-        `INSERT INTO audit_cz_mints (url, state, uptime24h, uptime7d, uptime30d, attributed_failures, last_check, page, fetched_at, source)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW(),$9)
+        `INSERT INTO audit_cz_mints (url, state, uptime24h, uptime7d, uptime30d, attributed_failures, minted, melted, last_check, page, fetched_at, source)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW(),$11)
          ON CONFLICT (url) DO UPDATE SET state=EXCLUDED.state, uptime24h=EXCLUDED.uptime24h, uptime7d=EXCLUDED.uptime7d,
-           uptime30d=EXCLUDED.uptime30d, attributed_failures=EXCLUDED.attributed_failures, last_check=EXCLUDED.last_check,
-           page=EXCLUDED.page, fetched_at=NOW(), source=EXCLUDED.source`,
-        [m.url, m.state, m.uptime24h, m.uptime7d, m.uptime30d, m.attributedFailures, m.lastCheck, m.page, AUDIT_CZ_SOURCE],
+           uptime30d=EXCLUDED.uptime30d, attributed_failures=EXCLUDED.attributed_failures, minted=EXCLUDED.minted, melted=EXCLUDED.melted,
+           last_check=EXCLUDED.last_check, page=EXCLUDED.page, fetched_at=NOW(), source=EXCLUDED.source`,
+        [m.url, m.state, m.uptime24h, m.uptime7d, m.uptime30d, m.attributedFailures, m.minted, m.melted, m.lastCheck, m.page, AUDIT_CZ_SOURCE],
       )
       for (const a of m.aliases) {
         await q(
@@ -342,6 +352,8 @@ export interface AuditCzResponse {
     uptime7d: number | null
     uptime30d: number | null
     attributedFailures: number | null
+    minted: number | null
+    melted: number | null
     lastCheck: string | null
   } | null
   swaps: Array<{
@@ -421,11 +433,11 @@ export function clampAuditCzLimit(raw: unknown): number {
   return Math.min(AUDIT_CZ_SWAPS_MAX_LIMIT, Math.max(1, Math.floor(Number(raw))))
 }
 
-export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ_SWAPS_DEFAULT_LIMIT): Promise<AuditCzResponse> {
+export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ_SWAPS_DEFAULT_LIMIT, direction: 'from' | 'to' | 'both' = 'both'): Promise<AuditCzResponse> {
   const key = auditCzKey(rawUrl)
   // Match on their url or any of their aliases (stored keyed the same way).
   const m = await pool.query(
-    `SELECT url, state, uptime24h, uptime7d, uptime30d, attributed_failures, last_check, page, fetched_at
+    `SELECT url, state, uptime24h, uptime7d, uptime30d, attributed_failures, minted, melted, last_check, page, fetched_at
        FROM audit_cz_mints
       WHERE url = $1 OR url IN (SELECT mint_url FROM audit_cz_aliases WHERE alias_url = $1)
       LIMIT 1`,
@@ -442,10 +454,14 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
   const sw = await pool.query(
     `SELECT id, at, status, stage, error, amount, fee, duration_ms, from_url, to_url, from_name, to_name
        FROM audit_cz_swaps
-      WHERE from_url = ANY($1) OR to_url = ANY($1)
+      WHERE (
+        ($3 = 'both' AND (from_url = ANY($1) OR to_url = ANY($1)))
+        OR ($3 = 'from' AND from_url = ANY($1))
+        OR ($3 = 'to' AND to_url = ANY($1))
+      )
       ORDER BY at DESC
       LIMIT $2`,
-    [urls, limit],
+    [urls, limit, direction],
   )
   // One grouped query over the window (indexes on from_url/to_url + at). A swap whose both sides
   // match this mint is counted once, as a melt. Status other than success/failed counts as pending.
@@ -498,6 +514,8 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
       uptime7d: numOrNullRow(row['uptime7d']),
       uptime30d: numOrNullRow(row['uptime30d']),
       attributedFailures: numOrNullRow(row['attributed_failures']),
+      minted: numOrNullRow(row['minted']),
+      melted: numOrNullRow(row['melted']),
       lastCheck: iso(row['last_check']),
     },
     swaps,

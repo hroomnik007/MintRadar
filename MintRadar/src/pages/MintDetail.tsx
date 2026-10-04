@@ -1033,16 +1033,16 @@ function MintDetailContent({ url }: { url: string }) {
   const stripReliabilityColor = czView ? auditReliabilityColor(stripTotal, stripErrors) : recentReliabilityColor
   const czSince = czView?.sinceLabel ?? ''
   const tipMints = czView
-    ? `Successful ecash minting operations the auditor has run against this mint, counted by MintRadar from the swaps it collected from audit.cashu.cz since ${czSince} (at most the last 7 days).`
+    ? 'Number of successful mints counted by audit.cashu.cz over the window used by audit.cashu.cz.'
     : 'All-time successful ecash minting operations the auditor has run against this mint.'
   const tipMelts = czView
-    ? `Successful ecash melting operations (redeeming ecash back to Lightning), counted by MintRadar from the swaps it collected from audit.cashu.cz since ${czSince} (at most the last 7 days).`
+    ? `Successful ecash melting operations (redeeming ecash back to Lightning), counted by audit.cashu.cz over the window used by audit.cashu.cz.`
     : 'All-time successful ecash melting operations (redeeming ecash back to Lightning).'
   const tipSuccess = czView
-    ? 'Successful swaps out of the most recent swaps MintRadar collected from audit.cashu.cz. Shows "too few to score" below 3 recent swaps.'
+    ? 'Successful swaps out of the most recent swaps from this mint that MintRadar collected from audit.cashu.cz. Shows "too few to score" below 3 recent swaps.'
     : 'Successful swaps out of the mint\'s last ~100 audited operations — the same rolling window the Reliability Score\'s Audit component scores on. Shows "too few to score" below 3 recent swaps.'
   const tipAvg = czView
-    ? 'Average duration of the successful swaps from the most recent swaps MintRadar collected from audit.cashu.cz.'
+    ? 'Average duration of the successful swaps from the most recent swaps from this mint that MintRadar collected from audit.cashu.cz.'
     : 'Average duration of the successful swaps in the same rolling window as Recent success rate.'
 
   // Last ≤100 swaps, newest first (the backend already orders by created_at
@@ -2039,6 +2039,7 @@ function MintDetailContent({ url }: { url: string }) {
                     Recent success rate is the rolling ~100-swap window; Last
                     checked is OUR 6h cron's write time (auditSyncedAt). */}
                 <div className="audit-summary-strip">
+                  {stripMints !== null && (
                   <div className="audit-summary-cell">
                     <div className="audit-summary-value" style={{color:'var(--accent)'}}>{stripMints.toLocaleString()}</div>
                     <div className="audit-summary-label">
@@ -2059,6 +2060,8 @@ function MintDetailContent({ url }: { url: string }) {
                       </span>
                     </div>
                   </div>
+                  )}
+                  {stripMelts !== null && (
                   <div className="audit-summary-cell">
                     <div className="audit-summary-value" style={{color:'var(--accent)'}}>{stripMelts.toLocaleString()}</div>
                     <div className="audit-summary-label">
@@ -2079,6 +2082,7 @@ function MintDetailContent({ url }: { url: string }) {
                       </span>
                     </div>
                   </div>
+                  )}
                   <div className="audit-summary-cell">
                     <div className="audit-summary-value" style={{color: stripReliabilityColor}}>
                       {stripRecentSuccessDisplay !== '—' && (
@@ -2153,7 +2157,7 @@ function MintDetailContent({ url }: { url: string }) {
                       <table className="audit-swaps-table">
                         <thead>
                           <tr>
-                            <th>{czView ? 'Other mint' : 'To'}</th>
+                            <th>To</th>
                             <th>Amount</th>
                             <th>Fee</th>
                             <th>Duration</th>

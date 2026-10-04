@@ -14,6 +14,8 @@ export interface AuditCzData {
     uptime7d: number | null
     uptime30d: number | null
     attributedFailures: number | null
+    minted: number | null
+    melted: number | null
     lastCheck: string | null
   } | null
   swaps: Array<{
@@ -55,7 +57,7 @@ export function useAuditCz(url: string, tabActive: boolean) {
   const query = useQuery({
     queryKey: ['mint', 'audit-cz', url],
     queryFn: async () => {
-      const res = await fetch(`/api/mints/audit-cz?url=${encodeURIComponent(url)}&limit=100`)
+      const res = await fetch(`/api/mints/audit-cz?url=${encodeURIComponent(url)}&limit=100&direction=from`)
       if (!res.ok) throw new Error('Failed to fetch audit.cashu.cz data')
       return await res.json() as AuditCzData
     },

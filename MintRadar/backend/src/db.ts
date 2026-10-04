@@ -105,11 +105,15 @@ export async function initDb(): Promise<void> {
       uptime7d DOUBLE PRECISION,
       uptime30d DOUBLE PRECISION,
       attributed_failures INTEGER,
+      minted INTEGER,
+      melted INTEGER,
       last_check TIMESTAMPTZ,
       page TEXT,
       fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       source TEXT NOT NULL DEFAULT 'audit.cashu.cz'
     );
+    ALTER TABLE audit_cz_mints ADD COLUMN IF NOT EXISTS minted INTEGER;
+    ALTER TABLE audit_cz_mints ADD COLUMN IF NOT EXISTS melted INTEGER;
 
     CREATE TABLE IF NOT EXISTS audit_cz_aliases (
       alias_url TEXT PRIMARY KEY,

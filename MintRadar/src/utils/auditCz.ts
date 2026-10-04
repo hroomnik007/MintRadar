@@ -23,7 +23,7 @@ export interface AuditSwapRow {
   error: string | null
   /** audit.cashu.cz only: swap stage, shown in brackets after the state. */
   stage?: string | null
-  /** audit.cashu.cz only: "to host" / "from host" (rows include both directions); replaces the "To" cell. */
+  /** Unused for audit.cashu.cz from-only rows; the To cell uses toUrl. */
   counterpart?: string
 }
 
@@ -39,9 +39,9 @@ export interface AuditCzView {
   recentErrors: number | null
   /** Mean duration of OK swaps with a known time (as computeSwapStats does); null otherwise. */
   avgTimeMs: number | null
-  /** stats7d.mints.paid / melts.paid (counted by MintRadar, last 7 days at most). */
-  nMints: number
-  nMelts: number
+  /** audit.cashu.cz swaps.minted / swaps.melted. null hides the tile. */
+  nMints: number | null
+  nMelts: number | null
   /** "3 Oct": start of the window the counts cover (collectedSince, at most 7 days back). */
   sinceLabel: string
   /** attributedFailures as published by audit.cashu.cz (its own window). */
@@ -62,21 +62,17 @@ function sinceLabel(collectedSince: string | null | undefined, now: number): str
 /** Returns null when the mint is not covered (the caller then shows the audit.8333.space panel). */
 export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditCzView | null {
   if (!data || !data.covered || !data.mint) return null
-  const swaps: AuditSwapRow[] = data.swaps.map(s => {
-    const other = s.otherMintUrl ? mintHostname(s.otherMintUrl) : (s.otherMintName ?? '—')
-    return {
-      swapId: s.id,
-      toUrl: null,
-      amount: s.amount,
-      fee: s.fee,
-      createdAt: s.at || null,
-      timeTakenMs: s.durationMs,
-      state: swapState(s.status),
-      error: s.error,
-      stage: s.stage,
-      counterpart: other === '—' ? '—' : `${s.direction === 'from' ? 'to' : 'from'} ${other}`,
-    }
-  })
+  const swaps: AuditSwapRow[] = data.swaps.map(s => ({
+    swapId: s.id,
+    toUrl: s.otherMintUrl,
+    amount: s.amount,
+    fee: s.fee,
+    createdAt: s.at || null,
+    timeTakenMs: s.durationMs,
+    state: swapState(s.status),
+    error: s.error,
+    stage: s.stage,
+  }))
   const okTimes = swaps.filter(s => s.state === 'OK' && s.timeTakenMs !== null).map(s => s.timeTakenMs as number)
   const fetchedMs = data.fetchedAt ? new Date(data.fetchedAt).getTime() : NaN
   return {
@@ -87,9 +83,9 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
     recentTotal: swaps.length > 0 ? swaps.length : null,
     recentErrors: swaps.length > 0 ? swaps.filter(s => s.state !== 'OK').length : null,
     avgTimeMs: okTimes.length > 0 ? okTimes.reduce((a, b) => a + b, 0) / okTimes.length : null,
-    nMints: data.stats7d?.mints.paid ?? 0,
-    nMelts: data.stats7d?.melts.paid ?? 0,
-    sinceLabel: sinceLabel(data.stats7d?.collectedSince, now),
+    nMints: data.mint.minted,
+    nMelts: data.mint.melted,
+    sinceLabel: '',
     failuresAttributed: data.mint.attributedFailures,
   }
 }

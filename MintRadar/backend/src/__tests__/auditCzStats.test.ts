@@ -142,6 +142,6 @@ describe('swaps limit parameter', () => {
     await getAuditCzForMint(M, clampAuditCzLimit('500'))
     const call = poolMock.query.mock.calls.filter(c => String(c[0]).includes('LIMIT $2')).at(-1)!
     expect(String(call[0])).not.toContain('LIMIT 100')
-    expect(call[1]).toEqual([expect.arrayContaining([M]), 100])
+    expect(call[1]).toEqual([expect.arrayContaining([M]), 100, 'both'])
   })
 })

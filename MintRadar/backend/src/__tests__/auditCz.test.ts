@@ -11,7 +11,7 @@ const { db, fetchMock, readMock, poolMock } = vi.hoisted(() => {
   }
   const exec = (sql: string, p: unknown[] = []) => {
     if (sql.includes('INSERT INTO audit_cz_mints')) {
-      db.mints.set(p[0] as string, { url: p[0], state: p[1], uptime24h: p[2], uptime7d: p[3], uptime30d: p[4], attributed_failures: p[5], last_check: p[6], page: p[7], fetched_at: new Date('2026-10-04T10:00:00Z') })
+      db.mints.set(p[0] as string, { url: p[0], state: p[1], uptime24h: p[2], uptime7d: p[3], uptime30d: p[4], attributed_failures: p[5], minted: p[6], melted: p[7], last_check: p[8], page: p[9], fetched_at: new Date('2026-10-04T10:00:00Z') })
     } else if (sql.includes('INSERT INTO audit_cz_aliases')) {
       db.aliases.set(p[0] as string, p[1] as string)
     } else if (sql.includes('INSERT INTO audit_cz_swaps')) {

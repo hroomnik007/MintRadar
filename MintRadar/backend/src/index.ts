@@ -1552,7 +1552,13 @@ app.get('/api/mints/audit-cz', (req: Request, res: Response): void => {
         res.status(400).json({ error: 'Invalid url' })
         return
       }
-      const body = await getAuditCzForMint(url, clampAuditCzLimit(req.query['limit']))
+      const rawDir = req.query['direction']
+      const direction = rawDir === undefined || rawDir === 'both' ? 'both' : rawDir === 'from' || rawDir === 'to' ? rawDir : null
+      if (direction === null) {
+        res.status(400).json({ error: 'direction must be from, to, or both' })
+        return
+      }
+      const body = await getAuditCzForMint(url, clampAuditCzLimit(req.query['limit']), direction)
       res.setHeader('Cache-Control', 'max-age=60')
       res.json(body)
     })
