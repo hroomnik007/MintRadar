@@ -66,7 +66,7 @@ Second, public audit source (`backend/src/auditCz.ts`). **Never enters the Relia
 audit_cz_mints(url PK [normalised], state ok|warn|error, uptime24h, uptime7d, uptime30d DOUBLE, attributed_failures INT,
                last_check TIMESTAMPTZ, page TEXT [only https://audit.cashu.cz/…], fetched_at, source='audit.cashu.cz')
 audit_cz_aliases(alias_url PK, mint_url, fetched_at)      -- their aliases[], normalised
-audit_cz_swaps(id TEXT PK, at, status success|failed|pending, stage melt|mint|balance|NULL, error ≤300 chars,
+audit_cz_swaps(id TEXT PK, at, status success|failed|pending, stage short lowercase token (melt, mint, balance, limits, …) or NULL, error ≤300 chars,
                amount, fee, duration_ms, from_url, to_url, from_name, to_name, fetched_at, source)
   indexes: (from_url, at DESC), (to_url, at DESC), (at DESC)
 ```

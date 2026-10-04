@@ -25,7 +25,9 @@ const SWAP_MAX_ROWS = 20_000
 
 export const AUDIT_CZ_MINT_STATES = ['ok', 'warn', 'error'] as const
 export const AUDIT_CZ_SWAP_STATUSES = ['success', 'failed', 'pending'] as const
-const SWAP_STAGES = ['melt', 'mint', 'balance'] as const
+// `stage` is open-ended on their side (the live feed also sends e.g. "limits"), so any short
+// lowercase token is accepted; anything else skips the item.
+const STAGE_RE = /^[a-z][a-z_-]{0,29}$/
 
 /** Matching key: the shared normalizeUrl plus a stripped trailing slash on both sides of any comparison. */
 export function auditCzKey(raw: string): string {
@@ -140,7 +142,7 @@ export function parseAuditCzSwap(raw: unknown): AuditCzSwap | null {
   const status = raw['status']
   if (typeof status !== 'string' || !(AUDIT_CZ_SWAP_STATUSES as readonly string[]).includes(status)) return null
   const stageRaw = raw['stage']
-  if (stageRaw !== null && stageRaw !== undefined && !(typeof stageRaw === 'string' && (SWAP_STAGES as readonly string[]).includes(stageRaw))) return null
+  if (stageRaw !== null && stageRaw !== undefined && !(typeof stageRaw === 'string' && STAGE_RE.test(stageRaw))) return null
   const amount = numOrNull(raw['amount'])
   const fee = numOrNull(raw['fee'])
   const dur = numOrNull(raw['durationMs'])

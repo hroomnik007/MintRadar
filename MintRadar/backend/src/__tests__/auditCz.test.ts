@@ -172,11 +172,12 @@ describe('malformed items', () => {
     feed(
       [mint(), mint({ id: 'b', url: 'http://plain.example' }), mint({ id: 'c', url: 'https://c.example', state: 'weird' }),
         mint({ id: 'd', url: 'https://d.example', uptime7d: 'high' }), 'junk', mint({ id: 'e', url: 'https://e.example', page: 'https://evil.example/x' })],
-      [swap({ id: 'ok' }), swap({ id: 'bad1', status: 'maybe' }), swap({ id: 'bad2', stage: 'weird' }), swap({ id: 'bad3', amount: Infinity }),
+      [swap({ id: 'ok' }), swap({ id: 'bad1', status: 'maybe' }), swap({ id: 'bad2', stage: '<b>x</b>' }), swap({ id: 'limits', stage: 'limits' }), swap({ id: 'bad3', amount: Infinity }),
         swap({ id: 'bad4', at: 'not a date' }), null, swap({ id: 'long', error: 'x'.repeat(1000) })],
     )
     const r = await syncAuditCz()
-    expect(r).toEqual({ mints: 2, swaps: 2 })
+    expect(r).toEqual({ mints: 2, swaps: 3 })
+    expect(db.swaps.get('limits')?.['stage']).toBe('limits')
     expect(db.mints.get('https://e.example')?.['page']).toBeNull()
     expect((db.swaps.get('long')?.['error'] as string).length).toBe(300)
   })
