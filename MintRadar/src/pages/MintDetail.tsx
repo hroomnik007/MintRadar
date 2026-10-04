@@ -156,7 +156,7 @@ interface MergedReviewCandidate {
   comment: string
   createdAt: number
   source: 'mintradar' | 'nostr'
-  profile?: { name?: string; nip05?: string }
+  profile?: { name?: string; nip05?: string; picture?: string }
 }
 
 const NUT_DESCRIPTIONS: Record<string, { short: string; desc: string; features: string[]; useCase: string }> = {
