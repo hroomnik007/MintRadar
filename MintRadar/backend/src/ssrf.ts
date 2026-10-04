@@ -281,7 +281,7 @@ export const RESPONSE_CAPS = {
   auditList: 2 * 1024 * 1024, // audit.8333.space page of 100 records
   auditSwaps: 1024 * 1024,    // audit.8333.space last 100 swaps
   auditCzMints: 1024 * 1024,  // audit.cashu.cz /api/v1/mints (~62 mints)
-  auditCzSwaps: 1024 * 1024,  // audit.cashu.cz /api/v1/swaps?limit=100
+  auditCzSwaps: 1024 * 1024,  // audit.cashu.cz /api/v1/swaps?limit=500
   githubRelease: 512 * 1024,  // GitHub /releases/latest
   nip05: 1024 * 1024,         // /.well-known/nostr.json?name=
   geo: 64 * 1024,             // ipinfo.io/<ip>/json

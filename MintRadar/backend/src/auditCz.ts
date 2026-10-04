@@ -13,7 +13,8 @@ import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 
 export const AUDIT_CZ_SOURCE = 'audit.cashu.cz'
 const AUDIT_CZ_MINTS_URL = 'https://audit.cashu.cz/api/v1/mints'
-const AUDIT_CZ_SWAPS_URL = 'https://audit.cashu.cz/api/v1/swaps?limit=100'
+// 500 is the API's maximum (~21 h of the global feed); 100 covered only ~4 h and missed quieter mints.
+const AUDIT_CZ_SWAPS_URL = 'https://audit.cashu.cz/api/v1/swaps?limit=500'
 const AUDIT_CZ_PAGE_PREFIX = 'https://audit.cashu.cz/'
 const FETCH_TIMEOUT_MS = 15_000
 const MAX_URL_LEN = 500
