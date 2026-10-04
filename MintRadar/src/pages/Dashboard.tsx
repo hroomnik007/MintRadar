@@ -893,9 +893,16 @@ export default function Dashboard() {
       clearTimeout(hardTimeout)
       subs.forEach(sub => sub.close('lookup done'))
       // The authors filter is only a request: ignore anything a relay returns that is not this key's announcement.
-      const mine = events.filter(e => e.kind === 38172 && e.pubkey === pubkey)
-      if (mine.length === 0 && answered === 0) { setNostrLookup({ input, outcome: 'unreachable', url: '' }); return }
-      const announced = mine.flatMap(e => e.tags).find(t => t[0] === 'u' && t[1])?.[1]
+      // The newest announcement wins (equal created_at: the first one received), whatever order or relay it came from;
+      // one stamped more than 10 minutes ahead of this clock is ignored. An older announcement is never a fallback.
+      const horizon = Math.floor(Date.now() / 1000) + 600
+      let newest: NostrEvent | undefined
+      for (const e of events) {
+        if (e.kind !== 38172 || e.pubkey !== pubkey || e.created_at > horizon) continue
+        if (!newest || e.created_at > newest.created_at) newest = e
+      }
+      if (!newest && answered === 0) { setNostrLookup({ input, outcome: 'unreachable', url: '' }); return }
+      const announced = newest?.tags.find(t => t[0] === 'u' && t[1])?.[1]
       if (!announced) { setNostrLookup({ input, outcome: 'empty', url: '' }); return }
       const c = classifySubmitInput(announced)
       setNostrLookup(c.kind === 'url' ? { input, outcome: 'found', url: c.url } : { input, outcome: 'nonhttps', url: '' })
