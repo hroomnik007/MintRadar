@@ -412,7 +412,16 @@ export function buildAuditCzStats7d(rows: AuditCzStatsRow[], collectedSince: str
 const iso = (v: unknown): string | null => (v instanceof Date ? v.toISOString() : typeof v === 'string' ? v : null)
 const numOrNullRow = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v))
 
-export async function getAuditCzForMint(rawUrl: string): Promise<AuditCzResponse> {
+export const AUDIT_CZ_SWAPS_DEFAULT_LIMIT = 20
+export const AUDIT_CZ_SWAPS_MAX_LIMIT = 100
+
+/** Optional `limit` query value → integer in 1..100; anything missing or non-numeric keeps the default (20). */
+export function clampAuditCzLimit(raw: unknown): number {
+  if (typeof raw !== 'string' || !/^-?\d+(\.\d+)?$/.test(raw.trim())) return AUDIT_CZ_SWAPS_DEFAULT_LIMIT
+  return Math.min(AUDIT_CZ_SWAPS_MAX_LIMIT, Math.max(1, Math.floor(Number(raw))))
+}
+
+export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ_SWAPS_DEFAULT_LIMIT): Promise<AuditCzResponse> {
   const key = auditCzKey(rawUrl)
   // Match on their url or any of their aliases (stored keyed the same way).
   const m = await pool.query(
@@ -435,8 +444,8 @@ export async function getAuditCzForMint(rawUrl: string): Promise<AuditCzResponse
        FROM audit_cz_swaps
       WHERE from_url = ANY($1) OR to_url = ANY($1)
       ORDER BY at DESC
-      LIMIT 20`,
-    [urls],
+      LIMIT $2`,
+    [urls, limit],
   )
   // One grouped query over the window (indexes on from_url/to_url + at). A swap whose both sides
   // match this mint is counted once, as a melt. Status other than success/failed counts as pending.

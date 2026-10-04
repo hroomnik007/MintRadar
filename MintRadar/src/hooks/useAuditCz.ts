@@ -55,7 +55,7 @@ export function useAuditCz(url: string, tabActive: boolean) {
   const query = useQuery({
     queryKey: ['mint', 'audit-cz', url],
     queryFn: async () => {
-      const res = await fetch(`/api/mints/audit-cz?url=${encodeURIComponent(url)}`)
+      const res = await fetch(`/api/mints/audit-cz?url=${encodeURIComponent(url)}&limit=100`)
       if (!res.ok) throw new Error('Failed to fetch audit.cashu.cz data')
       return await res.json() as AuditCzData
     },

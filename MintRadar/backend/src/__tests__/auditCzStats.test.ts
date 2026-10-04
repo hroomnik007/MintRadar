@@ -41,7 +41,7 @@ const { rowsRef, poolMock } = vi.hoisted(() => {
         const ats = rowsRef.swaps.map(s => (s['at'] as Date).getTime())
         return { rows: [{ since: ats.length ? new Date(Math.min(...ats)) : null }] }
       }
-      if (sql.includes('FROM audit_cz_swaps') && sql.includes('LIMIT 20')) return { rows: [] }
+      if (sql.includes('FROM audit_cz_swaps') && sql.includes('LIMIT $2')) return { rows: [] }
       return { rows: [] }
     }),
   }
@@ -52,7 +52,7 @@ vi.mock('../db.js', () => ({ pool: poolMock }))
 vi.mock('../prober.js', () => ({ probeMintToDb: vi.fn(), isValidCashuMint: vi.fn() }))
 vi.mock('../ssrf.js', () => ({ safeFetch: vi.fn(), readJsonLimited: vi.fn(), RESPONSE_CAPS: {} }))
 
-import { buildAuditCzStats7d, getAuditCzForMint } from '../auditCz.js'
+import { buildAuditCzStats7d, getAuditCzForMint, clampAuditCzLimit } from '../auditCz.js'
 
 const M = 'https://m.example'
 const ALIAS = 'https://alias.example'
@@ -126,5 +126,22 @@ describe('buildAuditCzStats7d', () => {
     expect(r.mints).toEqual({ paid: 0, failed: 0, pending: 1, amountPaid: 0, feesPaid: 0 })
     expect(r.avgDurationMsPaid).toBe(1500)
     expect(r.swapsCounted).toBe(3)
+  })
+})
+
+describe('swaps limit parameter', () => {
+  it('clamps to 1..100, defaults to 20 and is passed as a bound parameter', async () => {
+    expect(clampAuditCzLimit(undefined)).toBe(20)
+    expect(clampAuditCzLimit('abc')).toBe(20)
+    expect(clampAuditCzLimit('')).toBe(20)
+    expect(clampAuditCzLimit('0')).toBe(1)
+    expect(clampAuditCzLimit('-5')).toBe(1)
+    expect(clampAuditCzLimit('50')).toBe(50)
+    expect(clampAuditCzLimit('500')).toBe(100)
+    expect(clampAuditCzLimit('7.9')).toBe(7)
+    await getAuditCzForMint(M, clampAuditCzLimit('500'))
+    const call = poolMock.query.mock.calls.filter(c => String(c[0]).includes('LIMIT $2')).at(-1)!
+    expect(String(call[0])).not.toContain('LIMIT 100')
+    expect(call[1]).toEqual([expect.arrayContaining([M]), 100])
   })
 })

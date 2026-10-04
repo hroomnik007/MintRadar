@@ -8,7 +8,7 @@ import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeError
 import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } from './mintPubkey.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
-import { getAuditCzForMint, getAuditCzSyncStatus } from './auditCz.js'
+import { getAuditCzForMint, getAuditCzSyncStatus, clampAuditCzLimit } from './auditCz.js'
 import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
 import { publishServiceProfile } from './nostrService.js'
 import { normalizeUrl, getSyncTimesFromDb, getAuditUpstreamStatus } from './discovery.js'
@@ -1527,7 +1527,7 @@ app.get('/api/mints/swaps', (req: Request, res: Response): void => {
 // GET /api/mints/audit-cz?url= — audit.cashu.cz data (second audit source,
 // display only; never feeds the Reliability Score). Read from audit_cz_* tables
 // filled by the 10-minute cron in auditCz.ts. Always 200 for a valid url;
-// covered:false when the mint is not in their feed.
+// covered:false when the mint is not in their feed. Optional `limit` (swaps, default 20, clamped 1..100).
 app.get('/api/mints/audit-cz', (req: Request, res: Response): void => {
   const url = req.query['url']
 
@@ -1552,7 +1552,7 @@ app.get('/api/mints/audit-cz', (req: Request, res: Response): void => {
         res.status(400).json({ error: 'Invalid url' })
         return
       }
-      const body = await getAuditCzForMint(url)
+      const body = await getAuditCzForMint(url, clampAuditCzLimit(req.query['limit']))
       res.setHeader('Cache-Control', 'max-age=60')
       res.json(body)
     })
