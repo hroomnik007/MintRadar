@@ -12,7 +12,8 @@ import type { Express } from 'express'
 vi.mock('../../db.js', () => ({ pool: { query: vi.fn() }, initDb: vi.fn() }))
 vi.mock('../../ssrf.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../ssrf.js')>()
-  return { ...actual, safeFetch: vi.fn() }
+  // Test responses are plain objects with json() — the byte-capped reader is pass-through here.
+  return { ...actual, safeFetch: vi.fn(), readJsonLimited: (res: { json: () => Promise<unknown> }) => res.json() }
 })
 
 let app: Express

@@ -12,7 +12,18 @@ import type { Express } from 'express'
 vi.mock('../../db.js', () => ({ pool: { query: vi.fn() }, initDb: vi.fn() }))
 vi.mock('../../ssrf.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../ssrf.js')>()
-  return { ...actual, safeFetch: vi.fn() }
+  return {
+    ...actual,
+    safeFetch: vi.fn(),
+    // Test responses have headers + arrayBuffer() (no stream): same two cap rules as the real reader.
+    readBodyLimited: async (res: { headers: { get: (k: string) => string | null }; arrayBuffer: () => Promise<ArrayBuffer> }, max: number) => {
+      const declared = res.headers.get('content-length')
+      if (declared !== null && Number(declared) > max) throw new actual.ResponseTooLargeError(max)
+      const body = Buffer.from(await res.arrayBuffer())
+      if (body.byteLength > max) throw new actual.ResponseTooLargeError(max)
+      return body
+    },
+  }
 })
 
 let app: Express

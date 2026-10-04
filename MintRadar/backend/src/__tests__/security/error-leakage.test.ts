@@ -15,7 +15,8 @@ vi.mock('../../db.js', () => ({
 vi.mock('dns/promises', () => ({ lookup: vi.fn() }))
 vi.mock('../../ssrf.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../ssrf.js')>()
-  return { ...actual, safeFetch: vi.fn() }
+  // Test responses are plain objects with json() — the byte-capped reader is pass-through here.
+  return { ...actual, safeFetch: vi.fn(), readJsonLimited: (res: { json: () => Promise<unknown> }) => res.json() }
 })
 vi.mock('../../prober.js', () => ({
   upsertMint: vi.fn(),
