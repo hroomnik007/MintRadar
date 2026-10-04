@@ -289,7 +289,7 @@ export default function Watchlist() {
       <div className="watchlist-page">
         <div className="wl-login-gate">
           <h2>My Watchlist</h2>
-          <p>Log in with Nostr to sync your watchlist across devices. You can turn on optional Nostr DMs for a watched mint that goes offline or comes back online.</p>
+          <p>Log in with Nostr to sync your watchlist across devices.</p>
           <button
             type="button"
             className="wl-add-btn"
@@ -297,7 +297,7 @@ export default function Watchlist() {
           >
             ⚡ Login via Nostr
           </button>
-          <div className="wl-login-hint">Your list is stored on Nostr. Optional DMs go to your Nostr identity.</div>
+          <div className="wl-login-hint">Stored on Nostr. Optional DMs when a watched mint goes down or comes back up.</div>
         </div>
       </div>
     )

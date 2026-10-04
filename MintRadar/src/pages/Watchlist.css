@@ -299,8 +299,8 @@
 
 .wl-login-gate p {
   font-size: 13px;
+  line-height: 1.5;
   margin-bottom: 20px;
-  font-family: var(--font-mono);
 }
 
 .wl-login-hint {

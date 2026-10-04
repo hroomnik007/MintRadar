@@ -15,7 +15,7 @@ test.describe('Watchlist', () => {
     await expect(gate.getByRole('heading', { name: 'My Watchlist' })).toBeVisible()
     await expect(gate.getByText(/sync your watchlist across devices/)).toBeVisible()
     await expect(gate.getByRole('button', { name: /Login via Nostr/ })).toBeVisible()
-    await expect(gate.getByText(/Your list is stored on Nostr/)).toBeVisible()
+    await expect(gate.getByText(/Stored on Nostr\. Optional DMs when a watched mint goes down or comes back up\./)).toBeVisible()
     // No watchlist grid is rendered.
     await expect(page.locator('.wl-grid')).toHaveCount(0)
   })

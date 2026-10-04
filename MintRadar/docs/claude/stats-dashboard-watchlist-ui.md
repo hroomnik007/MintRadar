@@ -51,9 +51,9 @@
   no longer imports `NUT_FILTER_KEYS` or renders a filter panel. Dashboard's own filter/sort
   is unaffected.
 - **Logged-out and empty-state copy (rewritten 2026-09-05, made notification-honest 2026-10-03).** Logged-out gate (`profile === null`):
-  "Log in with Nostr to sync your watchlist across devices. You can turn on optional Nostr DMs for a
-  watched mint that goes offline or comes back online." + hint "Your list is stored on Nostr. Optional DMs
-  go to your Nostr identity." Empty watchlist (logged in, zero mints): "No mints watched yet" / "Add mints
+  "Log in with Nostr to sync your watchlist across devices." (body font, 13px/1.5 like `.wallets-subtitle` /
+  `.learn-page-subtitle`; the old mono font is gone) + hint "Stored on Nostr. Optional DMs when a watched
+  mint goes down or comes back up." (shortened 2026-10-04). Empty watchlist (logged in, zero mints): "No mints watched yet" / "Add mints
   from the Dashboard with + Watch. Your list syncs over Nostr. Turn on Nostr DMs per mint if you want to
   hear when its status changes." with a "Go to Dashboard" CTA.
 - **`+Watch` without being logged in (`MintDetail.tsx`)** now shows a confirm modal
