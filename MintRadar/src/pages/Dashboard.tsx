@@ -609,6 +609,9 @@ export default function Dashboard() {
     : 'loading'
   const probeResult = probe.url === submitUrl && probeState === 'success' ? probe.result : null
   const submitReason = settledInput === submitInput ? submitInputReason(inputClass) : null
+  // An empty field shows no reason line (the description and the helper above already say it); the Submit button then
+  // points assistive technology at those two instead of at the empty status region.
+  const submitEmpty = inputClass.kind === 'empty'
   const submitDisabled = probeState !== 'success' || submitState === 'loading'
 
   // Bulk submit state
@@ -1120,6 +1123,8 @@ export default function Dashboard() {
   const bulkAlreadyTracked = knownMintsData ? bulkParsed.valid.filter(u => knownUrlSet.has(u)).length : null
   const bulkOverBy = bulkValidCount - MAX_BULK_URLS
   const bulkDisabled = bulkValidCount === 0 || bulkOverBy > 0
+  // Same notion of "empty" as the live summary (the debounced copy): no reason line then, the description says it.
+  const bulkEmpty = bulkSettled.trim() === ''
   const bulkReason =
     bulkOverBy > 0 ? `Up to ${MAX_BULK_URLS} mints per submission. Remove ${bulkOverBy} ${bulkOverBy === 1 ? 'line' : 'lines'}.`
     : bulkValidCount === 0 ? (bulkSettled.trim() === '' ? 'Paste at least one https:// mint URL.' : 'No valid https:// mint URLs yet.')
@@ -1473,7 +1478,7 @@ export default function Dashboard() {
 
             {submitTab === 'single' && (
               <div role="tabpanel" id="submit-panel-single" aria-labelledby="submit-tab-single">
-                <div className="submit-modal-desc">
+                <div className="submit-modal-desc" id="submit-desc">
                   Enter a mint URL, or a Nostr key (npub) to look up the mint it announced (NIP-87). The mint must answer <code>/v1/info</code>.
                 </div>
                 {/* Mirrors SUBMIT_RATE_LIMIT_MAX (20 per hour per IP) in backend/src/index.ts — manually synced like the Bulk limits below. */}
@@ -1499,8 +1504,8 @@ export default function Dashboard() {
                     <div className="submit-input-hint" id="submit-helper">or an npub1… key</div>
                     {/* One status region for everything the field produces: the reason for an unusable value, the key
                         lookup and the mint preview. */}
-                    <div id="submit-status" role="status" aria-live="polite">
-                      {submitReason !== null && <div className={`submit-reason${inputClass.kind === 'nsec' ? ' warn' : ''}`}>{submitReason}</div>}
+                    <div id="submit-status" className="submit-status-reserve" role="status" aria-live="polite">
+                      {submitReason !== null && !submitEmpty && <div className={`submit-reason${inputClass.kind === 'nsec' ? ' warn' : ''}`}>{submitReason}</div>}
                       {lookupLoading && <div className="submit-probe-loading">Looking up mint on Nostr…</div>}
                       {lookupResult?.outcome === 'empty' && <div className="submit-probe-error">No mint announcement found for this key on the relays we checked.</div>}
                       {lookupResult?.outcome === 'unreachable' && <div className="submit-probe-error">Couldn't reach the Nostr relays. Try again.</div>}
@@ -1528,7 +1533,7 @@ export default function Dashboard() {
                     {submitState === 'error' && <div className="submit-result error" role="alert">{submitMsg}</div>}
                     <div className="submit-modal-actions">
                       <button className="submit-cancel-btn" onClick={() => setShowSubmit(false)}>Cancel</button>
-                      <button className="submit-ok-btn" onClick={handleSubmitMint} aria-disabled={submitDisabled} aria-describedby="submit-status">
+                      <button className="submit-ok-btn" onClick={handleSubmitMint} aria-disabled={submitDisabled} aria-describedby={submitEmpty ? 'submit-desc submit-helper' : 'submit-status'}>
                         {submitState === 'loading' ? 'Submitting…' : 'Submit'}
                       </button>
                     </div>
@@ -1562,7 +1567,7 @@ export default function Dashboard() {
 
             {submitTab === 'bulk' && (
               <div role="tabpanel" id="submit-panel-bulk" aria-labelledby="submit-tab-bulk">
-                <div className="submit-modal-desc">
+                <div className="submit-modal-desc" id="bulk-desc">
                   Paste one mint URL per line, each starting with{'\u00A0'}<code>https://</code>
                 </div>
                 {/* Static limits note — mirrors the backend's MAX_DISCOVER_BATCH
@@ -1588,7 +1593,7 @@ export default function Dashboard() {
                       aria-describedby="bulk-limits bulk-status"
                     />
                     {/* Live summary, refreshed 400 ms after typing stops. */}
-                    <div id="bulk-status" role="status" aria-live="polite">
+                    <div id="bulk-status" className="submit-status-reserve" role="status" aria-live="polite">
                       {bulkSettled.trim() !== '' && (
                         <div className="bulk-summary">
                           {bulkValidCount} valid
@@ -1609,7 +1614,7 @@ export default function Dashboard() {
                           {bulkParsed.duplicates.length > 5 && <li>+{bulkParsed.duplicates.length - 5} more duplicates</li>}
                         </ul>
                       )}
-                      {bulkReason !== null && <div className={`submit-reason${bulkOverBy > 0 ? ' warn' : ''}`}>{bulkReason}</div>}
+                      {bulkReason !== null && !bulkEmpty && <div className={`submit-reason${bulkOverBy > 0 ? ' warn' : ''}`}>{bulkReason}</div>}
                     </div>
                     {bulkError && <div className="submit-result error" role="alert">{bulkError}</div>}
                     <div className="submit-modal-actions">
@@ -1618,7 +1623,7 @@ export default function Dashboard() {
                         className="submit-ok-btn"
                         onClick={() => { if (!bulkDisabled) void handleBulkSubmit() }}
                         aria-disabled={bulkDisabled}
-                        aria-describedby="bulk-status"
+                        aria-describedby={bulkEmpty ? 'bulk-desc bulk-limits' : 'bulk-status'}
                       >{bulkValidCount === 0 ? 'Submit mints' : `Submit ${bulkValidCount} ${bulkValidCount === 1 ? 'mint' : 'mints'}`}</button>
                     </div>
                   </>

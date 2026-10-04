@@ -1299,6 +1299,10 @@
 }
 .submit-reason.warn { color: color-mix(in srgb, var(--red) 85%, var(--text)); }
 
+/* The status region keeps one reason line of height (11px x 1.5 line-height + 10px margin) even when it is empty, so
+   the dialog does not jump when the first character produces a reason. Taller content simply grows past it. */
+.submit-status-reserve { min-height: calc(11px * 1.5 + 10px); }
+
 /* The mint a Nostr key's announcement points to — the full URL that will be submitted. */
 .submit-found {
   display: flex; gap: 6px; align-items: baseline;
