@@ -26,6 +26,7 @@ import { isTestMint } from '@/constants/testMints'
 import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { auditFreshness } from '@/utils/auditFreshness'
+import { AuditCzBlock } from '@/components/mint/AuditCzBlock'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import { sortUnits } from '@/utils/sortUnits'
 import {
@@ -1963,8 +1964,8 @@ function MintDetailContent({ url }: { url: string }) {
           </div>
           </>)}
 
-          {activeTab === 'audit' && (
-            knownMint !== null && knownMint.auditNMints !== null ? (
+          {activeTab === 'audit' && (<>
+            {knownMint !== null && knownMint.auditNMints !== null ? (
               <div className="md-panel md-audit-collapsible" style={{background:'var(--bg)'}}>
                 {/* Desktop heading (the mobile collapse toggle below is display:none here). */}
                 <div className="md-audit-header md-audit-header-main">
@@ -2160,8 +2161,14 @@ function MintDetailContent({ url }: { url: string }) {
                 </div>
                 <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>No audit data available for this mint.</div>
               </div>
-            )
-          )}
+            )}
+            {/* Second audit source (audit.cashu.cz): only when the audit.8333.space data is
+                missing (no auditNMints) or stale (auditorDataOld >7d or syncStale >24h), and
+                only once the known-mints list has loaded. Mounting the block starts its query. */}
+            {knownMintsData !== undefined && (knownMint === null || knownMint.auditNMints === null || freshness.auditorDataOld || freshness.syncStale) && (
+              <AuditCzBlock url={url} />
+            )}
+          </>)}
 
           {activeTab === 'reviews' && (
             <div className="md-panel">

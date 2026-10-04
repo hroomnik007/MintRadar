@@ -101,8 +101,8 @@ export default function About() {
           <p>
             <strong>How we check.</strong> Every 5 minutes our server in {PROBE_LOCATION}, Germany asks each tracked
             mint for its <code>/v1/info</code>. Latency is measured from that server and can differ from what you see.
-            Audit data comes from a third-party service (audit.8333.space) and can be out of date; when it is, we say
-            so. Some mints sit behind firewalls that challenge automated requests; such a mint may work in your wallet
+            Audit data comes from third-party services (audit.8333.space and audit.cashu.cz) and can be out of date;
+            when it is, we say so. Some mints sit behind firewalls that challenge automated requests; such a mint may work in your wallet
             and still show up here as offline, or fail to be listed.
           </p>
           <p>
