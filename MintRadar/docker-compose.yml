@@ -16,6 +16,12 @@ services:
       - postgres
     networks:
       - mintradar_net
+    # Bound the json-file logs by size (matches the strfry relay container): 3 x 10 MB.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   postgres:
     image: postgres:17-alpine
@@ -29,6 +35,12 @@ services:
       - mintradar_pgdata:/var/lib/postgresql/data
     networks:
       - mintradar_net
+    # Bound the json-file logs by size (matches the strfry relay container): 3 x 10 MB.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   mintradar_net:
