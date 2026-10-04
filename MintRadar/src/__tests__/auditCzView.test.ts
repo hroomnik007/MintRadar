@@ -12,17 +12,20 @@ const data = (swaps: AuditCzData['swaps'], detail7d?: AuditCzData['detail7d']): 
   swaps, stats7d: null, ...(detail7d !== undefined ? { detail7d } : {}),
 })
 
-describe('auditCzSwapSuccess (methodology: swaps without an attributed failure)', () => {
-  it('Coinos: 179 swaps, 47 ok, 0 blamed -> 179 / 179, 100%', () => {
-    expect(auditCzSwapSuccess({ total: 179, success: 47, failed: 132, errorsBlamed: 0 })).toEqual({ good: 179, total: 179, pct: 100 })
+const d = (o: Partial<NonNullable<AuditCzData['detail7d']>>): NonNullable<AuditCzData['detail7d']> =>
+  ({ total: 0, success: 0, failed: 0, errorsBlamed: 0, minted: null, melted: null, ...o })
+
+describe('auditCzSwapSuccess (only swaps attributed to the mint count)', () => {
+  it('Coinos-like: 179 total, 47 ok, 132 failed, 0 blamed -> 47 / 47, 100%', () => {
+    expect(auditCzSwapSuccess(d({ total: 179, success: 47, failed: 132, errorsBlamed: 0 }))).toEqual({ good: 47, total: 47, pct: 100 })
   })
-  it('counts attributed failures against the mint', () => {
-    expect(auditCzSwapSuccess({ total: 20, success: 10, failed: 10, errorsBlamed: 5 })).toEqual({ good: 15, total: 20, pct: 75 })
+  it('blamed failures: success 8, errorsBlamed 4 -> 8 / 12, 67%', () => {
+    expect(auditCzSwapSuccess(d({ total: 20, success: 8, failed: 12, errorsBlamed: 4 }))).toEqual({ good: 8, total: 12, pct: 67 })
   })
-  it('n/a below 3 swaps unless there is an attributed failure', () => {
-    expect(auditCzSwapSuccess({ total: 2, success: 2, failed: 0, errorsBlamed: 0 })).toBeNull()
-    expect(auditCzSwapSuccess({ total: 2, success: 1, failed: 1, errorsBlamed: 1 })).toEqual({ good: 1, total: 2, pct: 50 })
-    expect(auditCzSwapSuccess({ total: 0, success: 0, failed: 0, errorsBlamed: 0 })).toBeNull()
+  it('n/a below 3 attributable swaps', () => {
+    expect(auditCzSwapSuccess(d({ total: 100, success: 2, failed: 98, errorsBlamed: 0 }))).toBeNull()
+    expect(auditCzSwapSuccess(d({ total: 5, success: 1, failed: 4, errorsBlamed: 1 }))).toBeNull()
+    expect(auditCzSwapSuccess(d({ total: 5, success: 1, failed: 4, errorsBlamed: 2 }))).toEqual({ good: 1, total: 3, pct: 33 })
   })
 })
 
@@ -37,9 +40,18 @@ describe('fallback counts from the stored swaps', () => {
     expect(v?.swaps).toHaveLength(5) // table and bar still list them all
   })
   it('null counts when only limits/pending swaps exist; detail7d passes through', () => {
-    const v = adaptAuditCz(data([row({ status: 'failed', stage: 'limits' })], { total: 5, success: 1, failed: 4, errorsBlamed: 0 }), Date.now())
+    const v = adaptAuditCz(data([row({ status: 'failed', stage: 'limits' })], { total: 5, success: 1, failed: 4, errorsBlamed: 0, minted: 3, melted: 2 }), Date.now())
     expect(v?.recentTotal).toBeNull()
-    expect(v?.detail7d).toEqual({ total: 5, success: 1, failed: 4, errorsBlamed: 0 })
+    expect(v?.detail7d).toEqual({ total: 5, success: 1, failed: 4, errorsBlamed: 0, minted: 3, melted: 2 })
+    expect(v?.nMints).toBe(3) // detail.asDest.success wins over the list feed's swaps.minted
+    expect(v?.nMelts).toBe(2)
+  })
+})
+
+describe('Mints / Melts tiles', () => {
+  it('fall back to the list feed values without detail or without the direction counts', () => {
+    expect(adaptAuditCz(data([]), Date.now())).toMatchObject({ nMints: 1, nMelts: 1 })
+    expect(adaptAuditCz(data([], d({ minted: null, melted: 7 })), Date.now())).toMatchObject({ nMints: 1, nMelts: 7 })
   })
 })
 

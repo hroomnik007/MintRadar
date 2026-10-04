@@ -51,6 +51,9 @@ export interface AuditCzDetail7d {
   failed: number
   /** Failures the auditor attributes to this mint. */
   errorsBlamed: number
+  /** asDest.success / asSource.success (null when the source omits them). */
+  minted: number | null
+  melted: number | null
 }
 
 export interface AuditCzDirectionStats {

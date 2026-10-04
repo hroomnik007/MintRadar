@@ -189,13 +189,14 @@ describe('malformed items', () => {
 
 describe('per-mint detail (swaps7d)', () => {
   const detail = (o: Record<string, unknown> = {}) => ({
-    id: 'm1', swaps7d: { all: { total: 179, success: 47, failed: 132, successRate: 26.2 }, errorsBlamed: 0 }, ...o,
+    id: 'm1', swaps7d: { all: { total: 179, success: 47, failed: 132, successRate: 26.2 }, asSource: { success: 21 }, asDest: { success: 26 }, errorsBlamed: 0 }, ...o,
   })
 
   beforeEach(() => { resetAuditCzDetailCache(); vi.useRealTimers() })
 
   it('reads the counts and rejects a missing or malformed swaps7d', () => {
-    expect(parseAuditCzDetail(detail())).toEqual({ total: 179, success: 47, failed: 132, errorsBlamed: 0 })
+    expect(parseAuditCzDetail(detail())).toEqual({ total: 179, success: 47, failed: 132, errorsBlamed: 0, minted: 26, melted: 21 })
+    expect(parseAuditCzDetail(detail({ swaps7d: { all: { total: 1, success: 1, failed: 0 }, errorsBlamed: 0 } }))).toMatchObject({ minted: null, melted: null })
     expect(parseAuditCzDetail({ id: 'x' })).toBeNull()
     expect(parseAuditCzDetail(detail({ swaps7d: { all: { total: 1, success: 1, failed: 0 } } }))).toBeNull()
     expect(parseAuditCzDetail(detail({ swaps7d: { all: { total: -1, success: 0, failed: 0 }, errorsBlamed: 0 } }))).toBeNull()
@@ -220,7 +221,7 @@ describe('per-mint detail (swaps7d)', () => {
 
     vi.advanceTimersByTime(10 * 60_000 + 1)
     fetchMock.mockResolvedValue(null) // upstream down
-    expect(await getAuditCzDetail('abcdefgh12')).toEqual({ total: 179, success: 47, failed: 132, errorsBlamed: 0 })
+    expect(await getAuditCzDetail('abcdefgh12')).toEqual({ total: 179, success: 47, failed: 132, errorsBlamed: 0, minted: 26, melted: 21 })
     expect(fetchMock).toHaveBeenCalledTimes(2)
     await getAuditCzDetail('abcdefgh12') // failure also waits a full TTL
     expect(fetchMock).toHaveBeenCalledTimes(2)

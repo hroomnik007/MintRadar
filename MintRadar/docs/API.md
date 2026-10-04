@@ -196,7 +196,7 @@ Daily uptime counts for the last 30 days for a single mint.
 
 ### `GET /api/mints/audit-cz`
 
-Data from the third-party audit service audit.cashu.cz for one mint, refreshed server-side every 10 minutes. Display only: it is **not** part of the Reliability Score and is never merged into any MintRadar value.
+Data from the third-party audit service audit.cashu.cz for one mint, refreshed server-side every 10 minutes (the optional `detail7d` is fetched on demand and cached 10 minutes per mint). Display only: it is **not** part of the Reliability Score and is never merged into any MintRadar value.
 
 **Query parameters:** `url` (required, `https://…`, max 500 characters); `limit` (optional integer, number of newest swaps to return — default `20`, clamped to `1..100`, a missing or non-numeric value keeps `20`, bound as a SQL parameter; `stats7d` is unaffected)
 
@@ -219,10 +219,13 @@ Data from the third-party audit service audit.cashu.cz for one mint, refreshed s
     "mints": { "paid": 23, "failed": 22, "pending": 0, "amountPaid": 1752, "feesPaid": 0 },
     "avgDurationMsPaid": 4213.4,
     "swapsCounted": 69
-  }
+  },
+  "detail7d": { "total": 179, "success": 47, "failed": 132, "errorsBlamed": 0, "minted": 26, "melted": 21 }
 }
 ```
 `state` is `ok`, `warn` or `error` — audit.cashu.cz's own verdict, not MintRadar's.
+
+`detail7d` is **published by audit.cashu.cz** (`swaps7d` of `GET /api/v1/mints/{id}`): `total` / `success` / `failed` over all swaps of the mint in 7 days, `errorsBlamed` the failures it attributes to the mint, `minted` / `melted` the successful swaps as destination / source (`null` when the source omits them). Fetched on demand when this endpoint is called for a covered mint (the id comes only from the stored `page` URL, validated), cached 10 minutes per mint, 5 s timeout, 128 KiB cap; a failed refresh keeps the previous value; `null` when nothing was ever fetched or the mint is not covered. Worst case about 65 mints × 6 per hour = 390 requests/h plus the cron's 12/h.
 
 `stats7d` is **counted by MintRadar** over the swaps it stored with `at` in the last 7 days where `from_url` or `to_url` matches the mint (URL or alias) — it is not a figure published by audit.cashu.cz (`null` when the mint is not covered). A swap where this mint is the source (`from`) is a **melt**, where it is the destination (`to`) a **mint**; a swap matching on both sides is counted once, as a melt. `paid` = status `success`, `failed` = status `failed`, anything else is `pending` (excluded from paid/failed); `paid + failed + pending` over both directions equals `swapsCounted`. `amountPaid` / `feesPaid` are sums over paid swaps (a null fee counts as 0), `avgDurationMsPaid` is the mean `durationMs` of paid swaps that have one (else `null`). `collectedSince` is the `at` of the oldest swap in `audit_cz_swaps` — the window start the counts can claim (a value newer than 7 days ago means the numbers cover less than 7 days). **Unit:** `amount` / `fee` are in sat — an assumption: the feed has no unit field, but audit.cashu.cz's methodology page states every limit and amount in sat (fee = amount sent − amount minted − change) and its error strings read "need 25 sat, have 20 sat"; observed range amount 5–203, fee 0–10. `swaps` holds up to `limit` (default 20, max 100) newest swaps where the mint is `from` or `to`; `error` is untrusted text (≤300 characters). A mint matches by its URL or by one of the aliases audit.cashu.cz lists. When the mint is not in their feed the response is still `200` with `covered: false`, `mint: null`, `swaps: []` (`sourceUrl` null; `fetchedAt` is the newest fetch of the feed, or null). `Cache-Control: max-age=60`.
 

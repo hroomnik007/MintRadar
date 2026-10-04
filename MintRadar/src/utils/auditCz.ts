@@ -1,5 +1,4 @@
 import type { AuditCzData, AuditCzDetail7d } from '@/hooks/useAuditCz'
-import { mintHostname } from '@/utils/mintFormatting'
 
 // Adapter: audit.cashu.cz endpoint response → the data shape the existing audit.8333.space Audit
 // tab components consume (strip tiles, outcome bar, Recent swaps table), so the same rendering
@@ -8,8 +7,6 @@ import { mintHostname } from '@/utils/mintFormatting'
 
 export const AUDIT_CZ_PAGE_PREFIX = 'https://audit.cashu.cz/'
 export const AUDIT_CZ_NOT_RECENT_MS = 30 * 60 * 1000
-const WINDOW_MS = 7 * 86_400_000
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 /** Same shape as a row of GET /api/mints/swaps (audit.8333.space), plus two audit.cashu.cz extras. */
 export interface AuditSwapRow {
@@ -42,11 +39,9 @@ export interface AuditCzView {
   detail7d: AuditCzDetail7d | null
   /** Mean duration of OK swaps with a known time (as computeSwapStats does); null otherwise. */
   avgTimeMs: number | null
-  /** audit.cashu.cz swaps.minted / swaps.melted. null hides the tile. */
+  /** detail.asDest.success / asSource.success, else the list feed's swaps.minted / swaps.melted. null shows "—". */
   nMints: number | null
   nMelts: number | null
-  /** "3 Oct": start of the window the counts cover (collectedSince, at most 7 days back). */
-  sinceLabel: string
   /** attributedFailures as published by audit.cashu.cz (its own window). */
   failuresAttributed: number | null
 }
@@ -54,12 +49,6 @@ export interface AuditCzView {
 function swapState(status: string): string {
   if (status === 'success') return 'OK'
   return status // failed → "failed"; pending / unknown tokens are shown as they are
-}
-
-function sinceLabel(collectedSince: string | null | undefined, now: number): string {
-  const t = collectedSince ? new Date(collectedSince).getTime() : NaN
-  const start = new Date(Number.isFinite(t) ? Math.max(t, now - WINDOW_MS) : now - WINDOW_MS)
-  return `${start.getUTCDate()} ${MONTHS[start.getUTCMonth()]}`
 }
 
 /** The auditor's pre-flight failures (e.g. amount below the mint's minimum): not an event on the mint. */
@@ -72,14 +61,15 @@ export function isAuditCzNeutralRow(s: { state: string; stage?: string | null })
 }
 
 /**
- * Swap success as audit.cashu.cz's methodology defines it: "the share of the mint's swaps without a
- * failure attributed to it", counted from 3 swaps or from the first attributed failure. Failures the
- * auditor does not attribute to a mint therefore do not count against it. null = too few to show.
+ * Recent success rate of the cashu.cz view: only swaps the source attributes to the mint are counted
+ * (counted = success + errorsBlamed). Unattributed failures (limits, auditor-side errors, routing)
+ * are in neither number. NOTE: audit.cashu.cz's own swap success treats them as OK, so its
+ * percentage can differ. null = fewer than 3 attributable swaps.
  */
 export function auditCzSwapSuccess(d: AuditCzDetail7d): { good: number; total: number; pct: number } | null {
-  if (d.total <= 0 || (d.total < AUDIT_CZ_MIN_SWAPS && d.errorsBlamed === 0)) return null
-  const good = Math.max(0, d.total - d.errorsBlamed)
-  return { good, total: d.total, pct: Math.round((good / d.total) * 100) }
+  const counted = d.success + d.errorsBlamed
+  if (counted < AUDIT_CZ_MIN_SWAPS) return null
+  return { good: d.success, total: counted, pct: Math.round((d.success / counted) * 100) }
 }
 
 /** Returns null when the mint is not covered (the caller then shows the audit.8333.space panel). */
@@ -109,9 +99,8 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
     recentErrors: counted.length > 0 ? counted.filter(s => s.state !== 'OK').length : null,
     detail7d: data.detail7d ?? null,
     avgTimeMs: okTimes.length > 0 ? okTimes.reduce((a, b) => a + b, 0) / okTimes.length : null,
-    nMints: data.mint.minted,
-    nMelts: data.mint.melted,
-    sinceLabel: '',
+    nMints: data.detail7d?.minted ?? data.mint.minted,
+    nMelts: data.detail7d?.melted ?? data.mint.melted,
     failuresAttributed: data.mint.attributedFailures,
   }
 }

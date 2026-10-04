@@ -27,7 +27,7 @@ import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { auditFreshness } from '@/utils/auditFreshness'
 import { useAuditCz } from '@/hooks/useAuditCz'
-import { adaptAuditCz, auditCzSwapSuccess, isAuditCzNeutralRow, AUDIT_CZ_MIN_SWAPS, type AuditSwapRow } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzSwapSuccess, isAuditCzNeutralRow, type AuditSwapRow } from '@/utils/auditCz'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import { sortUnits } from '@/utils/sortUnits'
 import {
@@ -1013,9 +1013,9 @@ function MintDetailContent({ url }: { url: string }) {
   // Online Mints "55/56"), and an error count read the opposite way at a
   // glance. formatAuditSuccessRatio() does the total-minus-errors math; the
   // sub-line no longer repeats a percentage of the same fraction.
-  // cashu.cz view with the source's own 7-day counts: swap success as its methodology defines it
-  // (swaps without a failure attributed to the mint), neutral colour. Without them (detail not
-  // available) the tile falls back to the stored from-swaps minus "limits" and pending (adaptAuditCz).
+  // cashu.cz view with the source's own 7-day counts: only swaps it attributes to the mint are
+  // counted (success + errorsBlamed). Without them (detail not available) the tile falls back to the
+  // stored from-swaps minus "limits" and pending (adaptAuditCz). Neutral colour in both cases.
   const czDetail = czView?.detail7d ?? null
   const czSuccess = czDetail ? auditCzSwapSuccess(czDetail) : null
   const stripRecentSuccessDisplay = czDetail
@@ -1039,8 +1039,7 @@ function MintDetailContent({ url }: { url: string }) {
   const stripAvgTimeDisplay = stripAvgTimeMs !== null ? `${Math.round(stripAvgTimeMs)} ms` : 'n/a'
   const stripMints = czView ? czView.nMints : auditNMints
   const stripMelts = czView ? czView.nMelts : auditNMelts
-  const stripReliabilityColor = czDetail ? 'var(--text)' : czView ? auditReliabilityColor(stripTotal, stripErrors) : recentReliabilityColor
-  const czSince = czView?.sinceLabel ?? ''
+  const stripReliabilityColor = czView ? 'var(--text)' : recentReliabilityColor
   const tipMints = czView
     ? 'Number of successful mints counted by audit.cashu.cz over the window used by audit.cashu.cz.'
     : 'All-time successful ecash minting operations the auditor has run against this mint.'
@@ -1049,8 +1048,8 @@ function MintDetailContent({ url }: { url: string }) {
     : 'All-time successful ecash melting operations (redeeming ecash back to Lightning).'
   const tipSuccess = czDetail
     ? (czSuccess
-      ? `Swaps without a failure audit.cashu.cz attributes to this mint, last 7 days. It excludes failures the auditor does not attribute to a mint, for example test amounts below the mint's minimum and routing failures that cannot be pinned on one mint. In total ${czDetail.success} of ${czDetail.total} swaps succeeded, ${czDetail.failed} failed, ${czDetail.errorsBlamed} failures are attributed to this mint.`
-      : `fewer than ${AUDIT_CZ_MIN_SWAPS} swaps`)
+      ? `Successful swaps out of the swaps audit.cashu.cz attributes to this mint, last 7 days. Swaps it does not attribute to a mint (for example test amounts below the mint's minimum, auditor-side errors and routing failures) are not counted. In total ${czDetail.success} of ${czDetail.total} swaps succeeded, ${czDetail.failed} failed, ${czDetail.errorsBlamed} failures are attributed to this mint. audit.cashu.cz's own swap success counts unattributed failures as OK, so its percentage can differ from this one.`
+      : 'fewer than 3 attributable swaps')
     : czView
     ? 'Successful swaps out of the most recent swaps from this mint that MintRadar collected from audit.cashu.cz. Swaps that stopped at the auditor\'s limits check (stage "limits") and pending swaps are not counted. Shows "too few to score" below 3 recent swaps.'
     : 'Successful swaps out of the mint\'s last ~100 audited operations — the same rolling window the Reliability Score\'s Audit component scores on. Shows "too few to score" below 3 recent swaps.'

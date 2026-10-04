@@ -331,12 +331,14 @@ const DETAIL_TTL_MS = 10 * 60_000
 const DETAIL_TIMEOUT_MS = 5_000
 const DETAIL_ID_RE = /^[A-Za-z0-9]{8,64}$/
 
-/** The source's `swaps7d.all` counts plus `errorsBlamed`. */
+/** The source's `swaps7d.all` counts plus `errorsBlamed`; `minted` / `melted` are asDest / asSource `success` (null when absent). */
 export interface AuditCzDetail7d {
   total: number
   success: number
   failed: number
   errorsBlamed: number
+  minted: number | null
+  melted: number | null
 }
 
 /** Mint id from a stored `page` URL (https://audit.cashu.cz/mint/{id}); null when it does not look like one. */
@@ -359,7 +361,8 @@ export function parseAuditCzDetail(raw: unknown): AuditCzDetail7d | null {
   const failed = count(all['failed'])
   const errorsBlamed = count(s7['errorsBlamed'])
   if (total === null || success === null || failed === null || errorsBlamed === null) return null
-  return { total, success, failed, errorsBlamed }
+  const dir = (k: string): number | null => (isObj(s7[k]) ? count((s7[k] as Obj)['success']) : null)
+  return { total, success, failed, errorsBlamed, minted: dir('asDest'), melted: dir('asSource') }
 }
 
 interface DetailEntry { data: AuditCzDetail7d | null; nextTryAt: number }
