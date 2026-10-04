@@ -413,9 +413,9 @@ for (const width of [420, 1440]) {
 }
 
 // ── Stats hero notes wrap at spaces (2026-10-03) ─────────────────────────────────────────────────
-// "all known" / "of all known" / "active mints" / "from Frankfurt": at 701–900px the note column is only
+// "all known" / "of all known" / "active mints" / "from Nuremberg": at 701–900px the note column is only
 // 25–65px wide. The note shrinks its font with the column so ordinary words stay whole (overflow-wrap:
-// break-word, not anywhere); only "Frankfurt" may still break, and only when wider than the column (< ~870px).
+// break-word, not anywhere); only "Nuremberg" may still break, and only when wider than the column (< ~870px).
 for (const width of [700, 740, 768, 800, 900]) {
   test(`Stats notes: no ordinary word is split across lines @ ${width}px`, async ({ page }) => {
     await mount(page, {}, { width })
@@ -440,7 +440,7 @@ for (const width of [700, 740, 768, 800, 900]) {
         rg.setEnd(node, m.index! + m[0].length)
         const lines = new Set([...rg.getClientRects()].map(r => Math.round(r.top))).size
         // Ordinary words must always stay whole; the long city name may break only when it is wider than the column.
-        const mustFit = m[0] !== 'Frankfurt' || natural <= box - 0.5
+        const mustFit = m[0] !== 'Nuremberg' || natural <= box - 0.5
         if (mustFit && lines > 1) out.push(`"${m[0]}" (${natural.toFixed(1)}px in ${box.toFixed(1)}px, ${cs.fontSize}) on ${lines} lines`)
       }
       probe.remove()

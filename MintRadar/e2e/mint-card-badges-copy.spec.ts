@@ -80,7 +80,7 @@ test.describe('MintCard — copy & reduced badge set', () => {
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
-    await expect(card(page, 'Alpha Mint').locator('.latency-value')).toHaveText('50ms · Frankfurt')
+    await expect(card(page, 'Alpha Mint').locator('.latency-value')).toHaveText('50ms · Nuremberg')
     await expect(card(page, 'Bravo Mint').locator('.latency-value')).toHaveText('timeout')
     await expect(card(page, 'Charlie Mint').locator('.latency-value')).toHaveText('n/a')
   })
@@ -108,7 +108,7 @@ test.describe('MintCard — copy & reduced badge set', () => {
     await expect(card(page, 'Bravo Mint').locator('.latency-value')).toHaveText('Never seen online')
   })
 
-  test('"· Frankfurt" appears only next to a real latency sample, not timeout/n/a', async ({ page }) => {
+  test('"· Nuremberg" appears only next to a real latency sample, not timeout/n/a', async ({ page }) => {
     const rows = MOCK_KNOWN_MINTS.map(m => {
       if (m.name === 'Bravo Mint') return { ...m, online: false, latencyMs: null, lastError: 'Connection timeout' }
       if (m.name === 'Charlie Mint') return { ...m, online: false, latencyMs: null, lastError: null }
@@ -120,8 +120,8 @@ test.describe('MintCard — copy & reduced badge set', () => {
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
-    await expect(card(page, 'Alpha Mint').locator('.latency-source')).toHaveText('· Frankfurt')
-    await expect(card(page, 'Delta Mint').locator('.latency-source')).toHaveText('· Frankfurt')
+    await expect(card(page, 'Alpha Mint').locator('.latency-source')).toHaveText('· Nuremberg')
+    await expect(card(page, 'Delta Mint').locator('.latency-source')).toHaveText('· Nuremberg')
     await expect(card(page, 'Bravo Mint').locator('.latency-source')).toHaveCount(0)
     await expect(card(page, 'Charlie Mint').locator('.latency-source')).toHaveCount(0)
   })

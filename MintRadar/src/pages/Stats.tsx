@@ -17,6 +17,7 @@ import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geo
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import { useIsMobile, useMediaQuery } from '@/hooks/useIsMobile'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { PROBE_LOCATION } from '@/constants/probeLocation'
 import './Stats.css'
 
 interface StatsData {
@@ -973,7 +974,7 @@ export default function Stats() {
             <div className="stat-figure">
               <span className="stat-value">{data.avgLatency24h != null ? data.avgLatency24h : '—'}</span>
               {data.avgLatency24h != null && <span className="stat-unit">ms</span>}
-              <span className="stat-note">from Frankfurt</span>
+              <span className="stat-note">from {PROBE_LOCATION}</span>
             </div>
           </div>
         </div>

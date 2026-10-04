@@ -58,7 +58,7 @@ Expected response time: best effort, typically within 7 days.
 ## Known Limitations (by design, not bugs)
 
 - The server sees every mint URL submitted for monitoring — this is necessary for server-side probing
-- All probes originate from a single Frankfurt IP — mints can detect and block this IP
+- All probes originate from a single Nuremberg (Hetzner, Germany) IP — mints can detect and block this IP
 - nsec login holds the private key in JS memory for the duration of the session, so the app can sign; it is zeroed on logout, not earlier
 - After a page reload an nsec session ends (the key is never persisted): the app signs the user out and asks them to log in again
 - Remote signer (NIP-46) logins survive a page reload, so the NIP-46 client key and connection data stay readable in sessionStorage until logout or tab close; a script running on the page (e.g. via XSS) could use them to send signing requests to the signer as this client — whether each request needs approval is the signer's policy, which the app does not control

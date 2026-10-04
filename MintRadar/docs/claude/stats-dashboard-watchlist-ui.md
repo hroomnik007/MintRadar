@@ -154,7 +154,7 @@ Before the 2×2 hero grid, NHI went through multiple repositioning attempts:
   `displayName()` denylist fallback instead of raw `info.name`, so `"Cashu mint"` etc. fall
   back to the hostname (matches the Dashboard cards).
 - **Header tile subtitles** (`f2b25ff`) — "Mints Tracked"/"Online Now" get "all known"/"of all
-  known"; median latency notes "from Frankfurt". Avg mint uptime subtitle: `f2b25ff` set it to
+  known"; median latency notes "from Nuremberg". Avg mint uptime subtitle: `f2b25ff` set it to
   "across all known (offline pulls it down)"; `781617d` trimmed the parenthetical → **"across
   all known"**.
 - **NHI "Online mints" row tooltip** (`f2b25ff`) — now explicitly says `"<n>/30 are NHI points
@@ -255,7 +255,7 @@ Verified: typecheck ✅, build ✅, 70/70 unit tests ✅, Playwright confirmed b
   search+Filters pairing is still desktop-style, so this breakpoint only wraps the row and
   shrinks the sort buttons rather than restructuring search/Filters like the 768px block does.
 - **Search + Filters one row on phones (2026-09-30):** at ≤768px `.controls-search-line` is a nowrap flex row; search takes leftover width (`min-width: 140px`), Filters stays content-sized with its label. Applies at 320px too. Watchlist does not share this toolbar. 901–1000px rule unchanged.
-- **Stats hero notes (2026-09-30):** `.stats-metrics .stat-note` may wrap so "of all known" / "active mints" / "from Frankfurt" stay inside the tile when the five-up row shrinks (~1140px). Labels and counts unchanged.
+- **Stats hero notes (2026-09-30):** `.stats-metrics .stat-note` may wrap so "of all known" / "active mints" / "from Nuremberg" stay inside the tile when the five-up row shrinks (~1140px). Labels and counts unchanged.
 
 ### Dashboard filter panel — Mint age removed (2026-09-08, commit `c02bdac`)
 

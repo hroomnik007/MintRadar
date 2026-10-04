@@ -13,7 +13,7 @@ export function listRating(mint: KnownMint): number {
 }
 
 // Default order: Reliability Score desc, then community rating desc, then name asc.
-// Latency is intentionally not used — it is measured from Frankfurt, not the user.
+// Latency is intentionally not used — it is measured from the probe server (Nuremberg), not the user.
 export function compareReliabilityThenRating(a: KnownMint, b: KnownMint): number {
   const reliability = listReliabilityScore(b) - listReliabilityScore(a)
   if (reliability !== 0) return reliability

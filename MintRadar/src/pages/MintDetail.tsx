@@ -34,6 +34,7 @@ import {
 } from '@/utils/reliabilityScore'
 import { useNow } from '@/hooks/useNow'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { PROBE_LOCATION } from '@/constants/probeLocation'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -1281,14 +1282,14 @@ function MintDetailContent({ url }: { url: string }) {
                 <Info size={11} color="#6b7280" style={{cursor:'help'}} />
                 {latencyInfoTooltip.open && (
                   <div className="audit-tooltip" style={{width:200}}>
-                    Measured from our server in Frankfurt, DE. Click &quot;Test&quot; for your local latency.
+                    Measured from our server in {PROBE_LOCATION}, DE. Click &quot;Test&quot; for your local latency.
                   </div>
                 )}
               </span>
             </div>
             <div className="md-sc-value">{latency !== null ? `${latency} ms` : '—'}</div>
             <div className="md-sc-sub">
-              <span>server · Frankfurt</span>
+              <span>server · {PROBE_LOCATION}</span>
               <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
                 <button
                   onClick={() => { void testClientLatency() }}

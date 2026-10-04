@@ -1137,7 +1137,7 @@
 
 /* Hero tiles with a narrow text column (701–900px: five tiles in one row, the note column is only
    25px wide at 701px, 39px at 768px, 65px at 900px; ≤335px: ~40px): an unbreakable note word such as
-   "Frankfurt" stuck out of its tile by up to 24px. The note may shrink and breaks inside a word ONLY when the
+   "Nuremberg" stuck out of its tile by up to 24px. The note may shrink and breaks inside a word ONLY when the
    word is wider than the column (break-word, not anywhere: ordinary words are never split when they fit). */
 @media (max-width: 335px), (min-width: 701px) and (max-width: 900px) {
   .stats-metrics .stat-note { min-width: 0; overflow-wrap: break-word; }

@@ -2,6 +2,8 @@
 // All functions are side-effect free and accept an optional `now` timestamp
 // for deterministic testing.
 
+import { PROBE_LOCATION } from '@/constants/probeLocation'
+
 // Below this many NIP-87 reviews a Community Rating average is too thin to lean
 // on — the displayed number is de-emphasised (the Rating *sort* already handles
 // this separately via the m=8 Bayesian weighting in backend/src/weightedRating.ts).
@@ -346,13 +348,13 @@ export function cardLatencyLabel(mint: {
 
 // The latency value is a measurement from OUR probe server, not a property of
 // the mint itself — this suffix makes that explicit next to a real sample
-// (same "from Frankfurt" framing as the Stats page's Median Latency tile).
+// (same "from <probe location>" framing as the Stats page's Median Latency tile).
 // Only meaningful when an actual sample exists: "timeout"/"n/a" carry no
 // measurement to attribute to a location.
 export function cardLatencyLocationSuffix(mint: {
   latencyMs?: number | null
 }): string | null {
-  return typeof mint.latencyMs === 'number' && mint.latencyMs >= 0 ? '· Frankfurt' : null
+  return typeof mint.latencyMs === 'number' && mint.latencyMs >= 0 ? `· ${PROBE_LOCATION}` : null
 }
 
 // ── Mint age badge ─────────────────────────────────────────────

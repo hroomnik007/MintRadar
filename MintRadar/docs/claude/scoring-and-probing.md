@@ -155,3 +155,14 @@ Score's NUT-support component and the Detail/Stats/Compare NUT UI can verify.
   true birth. Bulk-seeded mints all share a mid-2026 `discovered_at`, so the badge only starts
   differentiating as the data naturally ages — not a bug.
 
+
+## Probe location label (2026-10-04)
+
+The production server is a Hetzner Cloud vServer in **Nuremberg, Germany** (datacenter `nbg1-dc3`, region `eu-central`);
+earlier text said Frankfurt, which was wrong. The label shown wherever latency is attributed to the probe (mint card
+`· Nuremberg`, Mint Detail latency tile + tooltip, Stats "from Nuremberg") comes from ONE constant,
+`PROBE_LOCATION` in `src/constants/probeLocation.ts`. If the server ever moves, change that value, the README
+"Real-Time Monitoring" line and the SECURITY.md "single … IP" limitation, and update the e2e specs that pin the label
+(`e2e/mint-card-badges-copy.spec.ts`, `e2e/long-text-overflow.spec.ts`) plus `src/__tests__/mintFormatting.test.ts`.
+The backend stores/returns no probe location (`serverLocation` in `/api/mints/known` is the *mint's* location), so there
+is no API field, database column or environment variable to change; historical rows are untouched.

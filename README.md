@@ -16,7 +16,7 @@
 
 - Probes all known mints every **5 minutes** via `/v1/info`
 - A mint is ONLINE only if the endpoint returns HTTP 200 with valid JSON containing a `nuts` field
-- Server-side latency measured from Frankfurt, DE
+- Server-side latency measured from Nuremberg, DE (Hetzner Cloud)
 - "Show my latency" button for a client-side test directly from your browser
 
 ### 🛡️ Reliability Score System

@@ -374,11 +374,11 @@ describe('cardLatencyLabel', () => {
   })
 })
 
-// ── cardLatencyLocationSuffix ("· Frankfurt" — sampled ms only) ──
+// ── cardLatencyLocationSuffix ("· Nuremberg" — sampled ms only) ──
 describe('cardLatencyLocationSuffix', () => {
-  it('renders "· Frankfurt" when a sample exists', () => {
-    expect(cardLatencyLocationSuffix({ latencyMs: 270 })).toBe('· Frankfurt')
-    expect(cardLatencyLocationSuffix({ latencyMs: 0 })).toBe('· Frankfurt')
+  it('renders "· Nuremberg" when a sample exists', () => {
+    expect(cardLatencyLocationSuffix({ latencyMs: 270 })).toBe('· Nuremberg')
+    expect(cardLatencyLocationSuffix({ latencyMs: 0 })).toBe('· Nuremberg')
   })
 
   it('is null when there is no sample (timeout, n/a, missing field)', () => {
