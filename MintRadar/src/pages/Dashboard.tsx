@@ -4,8 +4,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { NostrEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
 import { useNostrDiscovery } from '@/hooks/useNostrDiscovery'
-import { useWatchlistNotifications } from '@/hooks/useWatchlistNotifications'
-import { useUserRelays } from '@/hooks/useUserRelays'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
@@ -645,20 +643,6 @@ export default function Dashboard() {
   useNostrDiscovery()
   const { data: knownMintsData, isLoading: knownLoading, error: knownError } = useKnownMints()
 
-  const statusRecord = useMemo(() => {
-    if (!knownMintsData) return {}
-    return Object.fromEntries(
-      knownMintsData
-        .filter(m => m.online != null)
-        .map(m => [m.url, { online: m.online as boolean, latencyMs: m.latencyMs ?? null }])
-    )
-  }, [knownMintsData])
-
-  const reliabilityScoreRecord = useMemo(() => {
-    if (!knownMintsData) return {}
-    return Object.fromEntries(knownMintsData.map(m => [m.url, m.reliabilityScore ?? null]))
-  }, [knownMintsData])
-
   // Grouped once over every known mint (not just the currently filtered/shown
   // set) so a "Same operator" badge still reflects the full network, not just
   // whichever mints happen to be visible after the active filters.
@@ -670,9 +654,6 @@ export default function Dashboard() {
   // whose own name merely happens to be a domain suffix of its own hostname
   // with no actual collision (e.g. name="cashu.chat").
   const duplicateDisplayNames = useMemo(() => computeDuplicateMintNames(knownMintsData ?? []), [knownMintsData])
-
-  const { read: userReadRelays } = useUserRelays()
-  useWatchlistNotifications(statusRecord, reliabilityScoreRecord, userReadRelays)
 
   // The full set of mints we track — every row of the mints table, archived
   // included: same number as "All Known", Stats "Mints Tracked" and

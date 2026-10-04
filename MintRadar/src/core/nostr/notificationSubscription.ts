@@ -1,7 +1,6 @@
 import { nip98 } from 'nostr-tools'
 import type { Event, EventTemplate } from 'nostr-tools'
 import { db } from '@/db'
-import { NOTIFICATION_RELAYS } from '@/hooks/useWatchlistNotifications'
 import { confirmedNotify, type NotifyState } from '@/utils/notifyState'
 
 // Client for the server-side notification subscription store (backend:
@@ -9,6 +8,35 @@ import { confirmedNotify, type NotifyState } from '@/utils/notifyState'
 // "on" in the UI only after the server answered ok, and the confirmation is stored with the
 // flags (`notifyConfirmedAt`, see utils/notifyState.ts). Nothing here logs user data (no mint
 // URLs, no errors) and the functions never throw — they return a NotifyResult.
+
+// Fallback relay list sent to the server when the user has no NIP-65 read relays (the server
+// publishes the DMs; the browser never does) — the task explicitly required not inventing a
+// second default list.
+// `relay.nostr.band` removed 2026-09-20 — confirmed dead from two independent
+// networks (a sandbox and the production VPS) in the 2026-09-19 relay audit,
+// matching the earlier 2026-08-15 finding. No replacement needed:
+// `resolveNotificationRelays` already caps at 10, and `nostr-pub.wellorder.net`
+// (also re-verified live in that same audit) is already in this list.
+// `pyramid.fiatjaf.com` (restricted_writes: true) and `nostr.lopp.social` (0 events on
+// live probe) removed 2026-09-23 — same measured reasons that already excluded them from
+// REVIEW_PUBLISH_RELAYS; a DM's whole point is delivery, so a relay that connects but never
+// actually carries anything is dead weight here too. Mirror this change in the backend copy
+// (backend/src/nostrService.ts's own NOTIFICATION_RELAYS).
+const NOTIFICATION_RELAYS = [
+  'wss://relay.damus.io',
+  'wss://nos.lol',
+  'wss://purplepag.es',
+  'wss://relay.primal.net',
+  'wss://relay.snort.social',
+  'wss://offchain.pub',
+  'wss://nostr-pub.wellorder.net',
+  'wss://nostr.bitcoiner.social',
+  'wss://nostr.mom',
+  'wss://nostr.oxtr.dev',
+  'wss://relay.mostr.pub',
+  'wss://relay.noswhere.com',
+  'wss://nostr.cypherpunk.today',
+]
 
 const MAX_SERVER_RELAYS = 10
 

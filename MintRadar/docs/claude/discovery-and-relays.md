@@ -122,7 +122,7 @@ wss://nostr21.com, wss://nostr.bitcoiner.social, wss://nostr.cypherpunk.today
 connect) before adding. Requested to go into every relay list in the project, not just the
 unified discovery set above — also added to `REVIEW_PUBLISH_RELAYS`/`PROFILE_RELAYS`
 (`src/core/nostr/relays.ts`), `META_RELAYS`/`NOTIFICATION_RELAYS` (backend `nostrService.ts`
-+ frontend `client.ts`/`useWatchlistNotifications.ts`), `NIP46_RELAYS` (`client.ts`),
++ frontend `client.ts`/`notificationSubscription.ts`), `NIP46_RELAYS` (`client.ts`),
 `BOOTSTRAP_RELAYS` (`useUserRelays.ts`), `FOLLOW_RELAYS` (`useFollowRecommendations.ts`), and
 `WATCHLIST_RELAYS` (`watchlistSync.ts`) — i.e. every relay array in the codebase, not just
 the 4 "unified" discovery/review locations this section otherwise tracks. `REVIEW_PUBLISH_RELAYS`'s
@@ -225,7 +225,7 @@ wss://nostr.bitcoiner.social, wss://nostr.cypherpunk.today, wss://nostr-pub.well
   BOTH the sandbox and the production VPS** (NIP-11 fetch failed, WS handshake timed out).
   Matches the 2026-08-15 finding (`95.216.33.150` still doesn't respond). **Not added
   anywhere** — and since it was already confirmed dead, it was also removed 2026-09-20 from
-  `NOTIFICATION_RELAYS` (frontend `useWatchlistNotifications.ts` + backend
+  `NOTIFICATION_RELAYS` (frontend `notificationSubscription.ts` — moved there 2026-10-04 when the in-browser DM hook was removed — + backend
   `nostrService.ts`), the one place it still lived. No replacement needed there —
   `resolveNotificationRelays` already caps at 10, and `nostr-pub.wellorder.net` (revived
   above) was already present in that list.
