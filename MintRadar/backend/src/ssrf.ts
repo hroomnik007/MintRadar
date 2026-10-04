@@ -84,9 +84,11 @@ async function checkUrlSafetyForProtocols(
 
     const hostname = url.hostname
 
-    // Block if hostname is already a private/blocked IP address
+    // Block if hostname is already a private/blocked IP address. URL.hostname keeps the brackets of an
+    // IPv6 literal ("[::1]"), which ipaddr.js cannot parse — strip them so IPv6 literals go through the
+    // same isBlockedAddress() as IPv4 ones instead of only failing later at the DNS lookup of "[::1]".
     try {
-      const addr = parse(hostname)
+      const addr = parse(hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname)
       if (isBlockedAddress(addr)) return 'blocked'
     } catch {
       // Not a raw IP — continue to DNS lookup
