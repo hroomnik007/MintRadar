@@ -141,7 +141,9 @@
     position: sticky;
     top: var(--about-scroll-offset);
     z-index: 5;
-    margin-bottom: 16px;
+    margin: 0 calc(var(--page-pad) * -1) 16px;
+    padding: 8px var(--page-pad);
+    background: var(--bg);
   }
   .about-h2,
   .about-card {
@@ -158,6 +160,7 @@
   .about-toc ul {
     flex-direction: row;
     flex-wrap: wrap;
+    justify-content: center;
     gap: 8px;
   }
   .about-toc-link {
