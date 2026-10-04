@@ -140,9 +140,18 @@
   .about-toc {
     position: sticky;
     top: var(--about-scroll-offset);
-    z-index: 5;
+    z-index: 20;
     margin: 0 calc(var(--page-pad) * -1) 16px;
     padding: 8px var(--page-pad);
+    background: var(--bg);
+  }
+  .about-toc::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: var(--about-scroll-offset);
     background: var(--bg);
   }
   .about-h2,
