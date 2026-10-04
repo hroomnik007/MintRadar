@@ -87,10 +87,9 @@ export default function About() {
           <h2 id="about" tabIndex={-1} className="about-h2">About</h2>
           <p>
             MintRadar is a free, independent monitor and directory for Cashu ecash mints. It shows two separate
-            signals: how a mint is running (Reliability Score, 0 to 100: uptime 40%, audit results 25%, supported
-            NUTs 15%, software version 15%, published contact information 5%; a mint we first saw less than 30 days
-            ago is capped at 75), and what other people say about it (Community Rating, from NIP-87 reviews posted
-            on Nostr, which we do not verify).
+            signals: how a mint is running (Reliability Score, from uptime, audit results, supported NUTs, software
+            version and published contact), and what other people say about it (Community Rating, from NIP-87 reviews
+            posted on Nostr, which we do not verify).
           </p>
           <p>
             A mint can run perfectly and still lose your funds; the <Link to="/learn">Learn section</Link> explains
@@ -101,10 +100,9 @@ export default function About() {
           </p>
           <p>
             <strong>How we check.</strong> Every 5 minutes our server in {PROBE_LOCATION}, Germany asks each tracked
-            mint for its <code>/v1/info</code>, and once a day it also checks that the mint serves its keys
-            (<code>/v1/keys</code>). Latency is measured from that server and can differ from what you see. Audit
-            data comes from a third-party service (audit.8333.space) and can be out of date; when it is, we say so.
-            Some mints sit behind firewalls that challenge automated requests; such a mint may work in your wallet
+            mint for its <code>/v1/info</code>. Latency is measured from that server and can differ from what you see.
+            Audit data comes from a third-party service (audit.8333.space) and can be out of date; when it is, we say
+            so. Some mints sit behind firewalls that challenge automated requests; such a mint may work in your wallet
             and still show up here as offline, or fail to be listed.
           </p>
           <p>
@@ -138,8 +136,7 @@ export default function About() {
           <h2 id="privacy" tabIndex={-1} className="about-h2">Your data</h2>
           <p className="about-updated">Last updated {LAST_UPDATED}</p>
           <p>
-            MintRadar is run by an individual who uses the pseudonym wildcitizen7 (contact above). We set no
-            cookies, use no analytics or advertising and load no third-party scripts or fonts.
+            We set no cookies, use no analytics or advertising and load no third-party scripts or fonts.
           </p>
           <ul>
             <li>
@@ -163,26 +160,14 @@ export default function About() {
               <strong>Submitting a mint</strong> stores only its address, nothing about who submitted it.
             </li>
             <li>
-              <strong>Hosting:</strong> a Hetzner Cloud server in {PROBE_LOCATION}, Germany (EU). Its disk is not
-              encrypted. A database backup is made every 6 hours on the same server and kept about 8 days; it is not
-              encrypted and contains the data above. The provider does not currently make backups or snapshots of the
-              server.
-            </li>
-            <li>
-              <strong>In your browser</strong> we store your watchlist, notification settings and a cached copy of
-              mint data (IndexedDB), your card-view choice and a list of mint icons that failed to load
-              (localStorage). For the session only we keep your public profile and login state. A private key (nsec)
-              stays in memory for the session only and is never stored or sent.
+              <strong>In your browser</strong> we store your watchlist and notification settings. A private key
+              (nsec) stays in memory for the session only and is never stored or sent.
             </li>
             <li>
               <strong>Your browser contacts some services directly,</strong> and they see your IP address: Nostr
               relays, a mint when you test latency or inspect a token, the host of your own profile picture, cashu.me
               when you click &ldquo;Open in cashu.me&rdquo;, and a remote signer&rsquo;s pairing relays. Mint icons
               and NIP-05 checks go through our server. A review loads the author&rsquo;s https profile picture from their Nostr profile; if it fails, the initial stays. That host sees your IP address.
-            </li>
-            <li>
-              <strong>Our Nostr relay</strong> (nostr.mintradar.org) is public: anyone can read it. We configure no
-              retention.
             </li>
           </ul>
           <p>
@@ -208,12 +193,11 @@ export default function About() {
             </li>
             <li>Mints and wallets listed here belong to their operators; we are not affiliated with them.</li>
             <li>
-              The service has rate limits and the API is unofficial and may change. Do not use the service to attack
-              or overload it or other hosts.
+              The service has rate limits and the API may change. Do not use the service to attack or overload it
+              or other hosts.
             </li>
             <li>
-              To the extent the law allows, we are not liable for losses from using MintRadar. The source code is
-              under the MIT licence.
+              To the extent the law allows, we are not liable for losses from using MintRadar.
             </li>
           </ul>
         </section>
