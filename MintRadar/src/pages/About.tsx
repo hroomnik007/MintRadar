@@ -143,13 +143,10 @@ export default function About() {
           </p>
           <ul>
             <li>
-              <strong>Server logs:</strong> our web server logs your IP address, the time, the request (method and
-              address, including any query string), the status, the size of the answer, the referrer, your
-              browser&rsquo;s user agent and the site name you asked for. The IP address is not anonymised. Logs are
-              kept about 14 days. A firewall tool (fail2ban) may temporarily ban abusive IP addresses and keeps its
-              records for 1 day. We use this only to run and protect the service. Our application logs can contain a
-              shortened public key (8 characters) when someone switches a notification on or off, or when sending one
-              fails; they are capped at about 30 MB in total and overwritten.
+              <strong>Server logs:</strong> the web server keeps ordinary access logs. A line records your IP
+              address, the time, the page you asked for, the response status, and the user agent and referrer your
+              browser sent. We keep them to debug errors and spot abuse. They are not combined with anything else,
+              and they are not sold or shared. The IP address is not anonymised. Logs are kept about 14 days.
             </li>
             <li>
               <strong>Notifications (optional):</strong> if you turn them on we store your Nostr public key, the
