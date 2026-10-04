@@ -52,7 +52,7 @@ test('a late lookup result does not overwrite a URL typed afterwards', async ({ 
   await page.waitForTimeout(3000) // the late announcement has now arrived
   await expect(input).toHaveValue('https://typed.mint.example')
   await expect(page.locator('.submit-probe-name')).toHaveText('Probe https://typed.mint.example')
-  await page.locator('.submit-ok-btn:not([disabled])').click()
+  await page.locator('.submit-ok-btn:not([aria-disabled="true"])').click()
   await expect(page.locator('.submit-result.success')).toBeVisible()
   expect(sent).toEqual(['https://typed.mint.example'])
   expect(probed).not.toContain('https://announced.mint.example')
@@ -69,7 +69,7 @@ test('changing the key twice quickly: only the current key\'s mint is previewed 
   await expect(page.locator('.submit-probe-name')).toHaveText('Probe https://fast.mint.example')
   await page.waitForTimeout(3000)
   await expect(page.locator('.submit-probe-name')).toHaveText('Probe https://fast.mint.example')
-  await page.locator('.submit-ok-btn:not([disabled])').click()
+  await page.locator('.submit-ok-btn:not([aria-disabled="true"])').click()
   await expect(page.locator('.submit-result.success')).toBeVisible()
   expect(sent).toEqual(['https://fast.mint.example'])
   expect(probed).not.toContain('https://slow.mint.example')

@@ -43,10 +43,10 @@ for (const mode of ['single', 'bulk'] as const) {
     ['Close after a successful submit', async p => {
       if (mode === 'single') {
         await p.locator('.submit-modal-input').fill('https://new.mint.example')
-        await p.locator('.submit-ok-btn:not([disabled])').click()
+        await p.locator('.submit-ok-btn:not([aria-disabled="true"])').click()
       } else {
         await p.locator('.bulk-textarea').fill('https://new.mint.example')
-        await p.locator('.submit-ok-btn', { hasText: 'Submit All' }).click()
+        await p.locator('.submit-ok-btn', { hasText: /^Submit \d+ mints?$/ }).click()
       }
       await p.locator('.submit-ok-btn', { hasText: 'Close' }).click()
     }],
