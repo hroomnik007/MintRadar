@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const safeFetch = vi.fn()
-vi.mock('../ssrf.js', () => ({ safeFetch: (...a: unknown[]) => safeFetch(...a) }))
+vi.mock('../ssrf.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../ssrf.js')>()
+  // The test responses are plain objects with json() — the byte-capped reader is pass-through here.
+  return { ...actual, safeFetch: (...a: unknown[]) => safeFetch(...a), readJsonLimited: (res: { json: () => Promise<unknown> }) => res.json() }
+})
 
 import { verifyNip05, isValidNip05Domain, isValidNip05Name, isValidPubkeyHex, _resetNip05VerifyCache } from '../nip05Verify.js'
 

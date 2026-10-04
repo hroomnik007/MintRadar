@@ -3,7 +3,7 @@
 // (shared/reliabilityScore.ts) can score freshness against the real current version
 // instead of a hand-maintained static list.
 import { pool } from './db.js'
-import { safeFetch } from './ssrf.js'
+import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 import { parseMajorMinorPatch } from './shared/reliabilityScore.js'
 
 interface UpstreamRepo {
@@ -77,7 +77,7 @@ export async function fetchLatestUpstreamVersions(): Promise<void> {
         console.error(`[versionCatalog] GitHub API fetch failed${res ? ` (HTTP ${res.status})` : ''} for ${repo.software}`)
         continue
       }
-      const data = await res.json() as Record<string, unknown>
+      const data = await readJsonLimited(res, RESPONSE_CAPS.githubRelease) as Record<string, unknown>
       // /releases/latest already excludes prereleases/drafts — verify anyway.
       if (data['prerelease'] === true || data['draft'] === true) {
         console.error(`[versionCatalog] ${repo.software} latest release is prerelease/draft, skipping`)

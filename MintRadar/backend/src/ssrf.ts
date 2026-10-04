@@ -264,3 +264,65 @@ export async function safeFetch(
   options.onRejected?.('bad-redirect')
   return null
 }
+
+// ── Response size caps ─────────────────────────────────────────
+//
+// safeFetch bounds time, not size: a host that streams (or inflates, for a
+// gzip bomb — undici decompresses transparently) gigabytes inside the
+// deadline would be buffered by res.json()/arrayBuffer(). Every body read goes
+// through readBodyLimited/readJsonLimited instead. Caps are generous
+// (>= 4x the largest legitimate answer) — they only stop abuse.
+export const RESPONSE_CAPS = {
+  mintInfo: 256 * 1024,       // /v1/info — observed 1-2 KB
+  mintKeysets: 256 * 1024,    // /v1/keysets — observed < 1 KB
+  mintKeys: 2 * 1024 * 1024,  // /v1/keys — ~6 KB per 64-key keyset
+  auditList: 2 * 1024 * 1024, // audit.8333.space page of 100 records
+  auditSwaps: 1024 * 1024,    // audit.8333.space last 100 swaps
+  githubRelease: 512 * 1024,  // GitHub /releases/latest
+  nip05: 1024 * 1024,         // /.well-known/nostr.json?name=
+  geo: 64 * 1024,             // ipinfo.io/<ip>/json
+  icon: 512 * 1024,           // proxied mint icon
+} as const
+
+/** The body exceeded its cap. Callers treat it like any other invalid answer. */
+export class ResponseTooLargeError extends Error {
+  constructor(readonly maxBytes: number) {
+    super(`Response body exceeds ${maxBytes} bytes`)
+    this.name = 'ResponseTooLargeError'
+  }
+}
+
+/**
+ * Reads a response body, rejecting at once on a Content-Length above maxBytes,
+ * otherwise streaming and cancelling the stream (which drops the connection) as
+ * soon as the running total passes maxBytes — never more than the cap plus one
+ * chunk is held. Counts decoded (decompressed) bytes.
+ */
+export async function readBodyLimited(res: Response, maxBytes: number): Promise<Buffer> {
+  const declared = res.headers.get('content-length')
+  if (declared !== null && Number(declared) > maxBytes) {
+    void res.body?.cancel().catch(() => undefined)
+    throw new ResponseTooLargeError(maxBytes)
+  }
+  if (!res.body) return Buffer.alloc(0)
+  const reader = res.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    total += value.byteLength
+    if (total > maxBytes) {
+      // Not awaited: cancel() can wait on a producer that is still sending.
+      void reader.cancel().catch(() => undefined)
+      throw new ResponseTooLargeError(maxBytes)
+    }
+    chunks.push(value)
+  }
+  return Buffer.concat(chunks, total)
+}
+
+/** readBodyLimited + JSON.parse (UTF-8, BOM stripped like Response.json()). */
+export async function readJsonLimited(res: Response, maxBytes: number): Promise<unknown> {
+  return JSON.parse(new TextDecoder().decode(await readBodyLimited(res, maxBytes)))
+}

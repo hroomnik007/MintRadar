@@ -1,4 +1,4 @@
-import { safeFetch } from './ssrf.js'
+import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 
 // SSRF-safe NIP-05 verification proxy.
 //
@@ -89,7 +89,7 @@ async function fetchAndVerify(domain: string, name: string, pubkey: string): Pro
   if (!res || !res.ok) return false
 
   try {
-    const body = (await res.json()) as NostrJsonResponse
+    const body = (await readJsonLimited(res, RESPONSE_CAPS.nip05)) as NostrJsonResponse
     const returned = body.names?.[name]
     return typeof returned === 'string' && returned.toLowerCase() === pubkey.toLowerCase()
   } catch {

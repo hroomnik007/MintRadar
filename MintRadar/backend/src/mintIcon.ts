@@ -1,5 +1,5 @@
 import { pool } from './db.js'
-import { safeFetch } from './ssrf.js'
+import { safeFetch, readBodyLimited, ResponseTooLargeError } from './ssrf.js'
 import { normalizeUrl } from './discovery.js'
 
 // SSRF-safe mint favicon proxy.
@@ -130,11 +130,15 @@ async function fetchMintIcon(mintUrl: string): Promise<MintIcon | null> {
 
   const declaredType = (res.headers.get('content-type') ?? '').split(';')[0]!.trim().toLowerCase()
 
-  const declaredLen = Number(res.headers.get('content-length') ?? '0')
-  if (Number.isFinite(declaredLen) && declaredLen > MAX_ICON_BYTES) return null
-
-  const body = Buffer.from(await res.arrayBuffer())
-  if (body.byteLength === 0 || body.byteLength > MAX_ICON_BYTES) return null
+  // Content-Length above the cap is refused up front; otherwise the cap is enforced while streaming.
+  let body: Buffer
+  try {
+    body = await readBodyLimited(res, MAX_ICON_BYTES)
+  } catch (err) {
+    if (err instanceof ResponseTooLargeError) return null
+    throw err
+  }
+  if (body.byteLength === 0) return null
 
   // Trust an allow-listed declared type; otherwise fall back to sniffing the
   // leading bytes (a mint serving a real image under application/octet-stream).

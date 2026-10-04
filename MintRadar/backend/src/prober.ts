@@ -2,7 +2,7 @@ import dns from 'dns'
 import { fetch as undiciFetch } from 'undici'
 import pLimit from 'p-limit'
 import { pool } from './db.js'
-import { checkUrlSafety, safeFetch } from './ssrf.js'
+import { checkUrlSafety, safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 import { computeReliabilityScore, versionFreshnessScore, TRACKED_NUT_KEYS } from './shared/reliabilityScore.js'
 import { notifySubscribers, isNotificationServiceEnabled } from './nostrService.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
@@ -32,7 +32,7 @@ async function lookupServerLocation(mintUrl: string): Promise<string | null> {
       console.log(`[geo] ipinfo.io returned HTTP ${res.status} for ${hostname}`)
       return null
     }
-    const data = await res.json() as Record<string, unknown>
+    const data = await readJsonLimited(res, RESPONSE_CAPS.geo) as Record<string, unknown>
     if (data['bogon'] === true) {
       console.log(`[geo] ${hostname} is bogon — skipping`)
       return null
@@ -191,7 +191,7 @@ export async function validateCashuMintProbe(
       }
     }
     if (!res.ok) return { valid: false, pubkey: null, errorKind: classifyProbeFailure(failureFromResponse(res)) }
-    const raw = await res.json() as Record<string, unknown>
+    const raw = await readJsonLimited(res, RESPONSE_CAPS.mintInfo) as Record<string, unknown>
     const valid = raw['nuts'] !== null && typeof raw['nuts'] === 'object'
     if (!valid) return { valid: false, pubkey: null, errorKind: classifyProbeFailure(failureFromResponse(res)) }
     return { valid, pubkey: normalizeMintPubkey(raw['pubkey']) }
@@ -289,7 +289,7 @@ async function revalidateMintContent(url: string): Promise<RevalidationStatus> {
   if (!infoRes.ok) return 'not-a-mint' // 4xx — the mint API genuinely isn't here
 
   try {
-    const info = await infoRes.json() as Record<string, unknown>
+    const info = await readJsonLimited(infoRes, RESPONSE_CAPS.mintInfo) as Record<string, unknown>
     const nuts = info['nuts']
     const nutsOk =
       typeof nuts === 'object' && nuts !== null && !Array.isArray(nuts) &&
@@ -299,7 +299,7 @@ async function revalidateMintContent(url: string): Promise<RevalidationStatus> {
     if (!keysRes) return 'unreachable'
     if (keysRes.status >= 500) return 'unreachable'
     if (!keysRes.ok) return 'not-a-mint'
-    const keys = await keysRes.json() as Record<string, unknown>
+    const keys = await readJsonLimited(keysRes, RESPONSE_CAPS.mintKeys) as Record<string, unknown>
     const keysets = keys['keysets']
     return Array.isArray(keysets) && keysets.length > 0 ? 'ok' : 'not-a-mint'
   } catch {
@@ -389,7 +389,7 @@ export async function probeMintToDb(url: string): Promise<void> {
 
     if (res && res.ok) {
       try {
-        const raw = await res.json() as Record<string, unknown>
+        const raw = await readJsonLimited(res, RESPONSE_CAPS.mintInfo) as Record<string, unknown>
         const nuts = raw['nuts'] !== null && typeof raw['nuts'] === 'object' ? raw['nuts'] as Record<string, unknown> : null
         if (nuts === null) {
           lastError = 'Invalid Cashu response'
@@ -498,7 +498,7 @@ export async function probeMintToDb(url: string): Promise<void> {
       })
       if (retryRes && retryRes.ok) {
         try {
-          const raw = await retryRes.json() as Record<string, unknown>
+          const raw = await readJsonLimited(retryRes, RESPONSE_CAPS.mintInfo) as Record<string, unknown>
           const nuts = raw['nuts'] !== null && typeof raw['nuts'] === 'object' ? raw['nuts'] as Record<string, unknown> : null
           if (nuts === null) {
             lastError = 'Invalid Cashu response'

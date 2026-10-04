@@ -10,7 +10,8 @@ vi.mock('../db.js', () => ({
 // pinning), not the global fetch — mock it at the ssrf.js boundary.
 vi.mock('../ssrf.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../ssrf.js')>()
-  return { ...actual, safeFetch: vi.fn() }
+  // The test responses are plain objects with json() — the byte-capped reader is pass-through here.
+  return { ...actual, safeFetch: vi.fn(), readJsonLimited: (res: { json: () => Promise<unknown> }) => res.json() }
 })
 
 import {

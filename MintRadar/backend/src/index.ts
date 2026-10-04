@@ -2,7 +2,7 @@ import './wsPolyfill.js'
 import express, { type Request, type Response, type NextFunction } from 'express'
 import cors from 'cors'
 import { pool, initDb } from './db.js'
-import { isSafeUrl, checkWsUrlSafety, safeFetch } from './ssrf.js'
+import { isSafeUrl, checkWsUrlSafety, safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 import { upsertMint, probeMintToDb, validateCashuMintProbe, parseMintMethods, classifyFetchError, type MintMethodEntry } from './prober.js'
 import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type ProbeFailure, type SafeFetchRejection } from './probeErrorKind.js'
 import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } from './mintPubkey.js'
@@ -252,7 +252,7 @@ async function probeMintWithin(url: string, start: number): Promise<MintStatus> 
 
   if (infoRes && infoRes.ok) {
     try {
-      const raw: unknown = await infoRes.json()
+      const raw: unknown = await readJsonLimited(infoRes, RESPONSE_CAPS.mintInfo)
       if (typeof raw === 'object' && raw !== null && 'nuts' in raw) {
         info = raw as MintInfo
         online = true
@@ -277,7 +277,7 @@ async function probeMintWithin(url: string, start: number): Promise<MintStatus> 
 
   if (keysetsRes && keysetsRes.ok) {
     try {
-      const raw: unknown = await keysetsRes.json()
+      const raw: unknown = await readJsonLimited(keysetsRes, RESPONSE_CAPS.mintKeysets)
       if (
         typeof raw === 'object' &&
         raw !== null &&

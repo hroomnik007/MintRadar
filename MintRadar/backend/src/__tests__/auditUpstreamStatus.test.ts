@@ -7,7 +7,11 @@ const { safeFetchMock, queryMock } = vi.hoisted(() => ({
 
 vi.mock('../db.js', () => ({ pool: { connect: vi.fn(), query: queryMock } }))
 vi.mock('../prober.js', () => ({ probeMintToDb: vi.fn(), isValidCashuMint: vi.fn() }))
-vi.mock('../ssrf.js', () => ({ safeFetch: safeFetchMock }))
+vi.mock('../ssrf.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../ssrf.js')>()
+  // The test responses are plain objects with json() — the byte-capped reader is pass-through here.
+  return { ...actual, safeFetch: safeFetchMock, readJsonLimited: (res: { json: () => Promise<unknown> }) => res.json() }
+})
 
 // Fresh module per test = fresh in-memory state, like a process restart.
 let mod: typeof import('../discovery.js')

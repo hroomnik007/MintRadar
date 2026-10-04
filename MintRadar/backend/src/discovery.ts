@@ -4,7 +4,7 @@ import type { Filter } from 'nostr-tools'
 import WebSocket from 'ws'
 import { pool } from './db.js'
 import { probeMintToDb, isValidCashuMint } from './prober.js'
-import { safeFetch } from './ssrf.js'
+import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 
 // Fast string-based pre-filter. isSafeUrl() in probeMintToDb is the authoritative SSRF
 // gate (ipaddr.js + full DNS resolution). This just avoids inserting obvious junk into DB.
@@ -370,7 +370,7 @@ async function fetchRecentSwaps(auditId: number): Promise<ParsedAuditSwap[] | nu
     // this is defence-in-depth, not a fix for an active vector.
     const res = await safeFetch(url, { timeoutMs: 10_000 })
     if (!res || !res.ok) return null
-    const data: unknown = await res.json()
+    const data: unknown = await readJsonLimited(res, RESPONSE_CAPS.auditSwaps)
     if (!Array.isArray(data)) return null
     const parsed: ParsedAuditSwap[] = []
     for (const item of data) {
@@ -512,7 +512,7 @@ export async function discoverMintsFromApi(): Promise<number> {
         upstreamFailed = true
         break
       }
-      const data: unknown = await res.json()
+      const data: unknown = await readJsonLimited(res, RESPONSE_CAPS.auditList)
       if (!Array.isArray(data)) { upstreamFailed = true; break }
       if (data.length === 0) break
       for (const record of data) {

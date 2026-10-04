@@ -3,7 +3,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const query = vi.fn()
 const safeFetch = vi.fn()
 vi.mock('../db.js', () => ({ pool: { query: (...a: unknown[]) => query(...a) } }))
-vi.mock('../ssrf.js', () => ({ safeFetch: (...a: unknown[]) => safeFetch(...a) }))
+vi.mock('../ssrf.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../ssrf.js')>()
+  return {
+    ...actual,
+    safeFetch: (...a: unknown[]) => safeFetch(...a),
+    // The test responses have headers + arrayBuffer() (no stream): same two cap rules as the real reader.
+    readBodyLimited: async (res: { headers: { get: (k: string) => string | null }; arrayBuffer: () => Promise<ArrayBuffer> }, max: number) => {
+      const declared = res.headers.get('content-length')
+      if (declared !== null && Number(declared) > max) throw new actual.ResponseTooLargeError(max)
+      const body = Buffer.from(await res.arrayBuffer())
+      if (body.byteLength > max) throw new actual.ResponseTooLargeError(max)
+      return body
+    },
+  }
+})
 vi.mock('../discovery.js', () => ({ normalizeUrl: (u: string) => u.trim() }))
 
 import { getMintIcon, _resetMintIconCache, sniffRasterImageType } from '../mintIcon.js'
