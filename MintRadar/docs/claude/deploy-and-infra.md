@@ -122,8 +122,19 @@ When a deployed change doesn't appear to users, verify in this order before assu
 Runs every 6h: `0 */6 * * *` → `scripts/backup-db.sh`
 - Output: `/var/backups/mintradar/mintradar_YYYYMMDD_HHMMSS.sql.gz` (rotates to 7 days)
 - Log: `/var/log/mintradar-backup.log`
-- Format: `pg_dump | gzip` — plain SQL, suitable for `zcat | psql` restore
+- Format: `pg_dump | gzip` — plain SQL, suitable for `zcat | psql` restore (unchanged; not encrypted)
 - NOTE: `/var/backups/mintradar/` and `/var/log/mintradar-backup.log` must be owned by `deploy` user (created with `sudo`, `mkdir -p` in script cannot create them itself)
+- **Permissions (2026-10-04):** the script sets `umask 077`, runs `install -d -m 700` on the backup directory (that one directory only, never recursive) and `chmod 600` on each dump — directory `700`, files `600`, owner `deploy`. Before this, the directory was 755 and the files 664 (readable by every local user).
+- **Atomic write:** the dump goes to `/var/backups/mintradar/.mintradar_<ts>.sql.gz.tmp` and is `mv`'d to `mintradar_<ts>.sql.gz` only after `pg_dump | gzip` succeeded (`pipefail`) and the decompressed size is non-zero. A failed run exits 1 (message on stderr → the cron log), leaves no `.sql.gz`, and an `EXIT` trap removes the temp file. A temp file left by a `SIGKILL` / power loss is deleted by the same script after 1 day (`.tmp` does not match the `*.sql.gz` retention pattern).
+- **Retention (unchanged):** `find -name "*.sql.gz" -mtime +7 -delete` runs after a successful backup, so files older than 8 whole days go (about 33 files at 6-hourly). A failed run does not run retention.
+- The cron log `/var/log/mintradar-backup.log` is created by the cron redirect, not by the script, so the script's `umask` does not set its mode. It only holds the "Backup completed: <file>" line and error output.
+- **ONE-TIME MANUAL STEP on server01 (as `deploy`), after the deploy that installs this script** — the script only protects new files, the existing ones keep their old modes:
+  ```
+  chmod 700 /var/backups/mintradar && chmod 600 /var/backups/mintradar/*.sql.gz
+  ```
+  Verify (names and modes only): `ls -ld /var/backups/mintradar && ls -l /var/backups/mintradar`.
+- **Relay events backup (not a file backup):** `deploy/strfry/backup-own-events.sh` (cron 04:00, copy under `/opt/mintradar-strfry`) copies public Nostr events onto our own relay and only writes a timestamp to `/opt/mintradar-strfry/backup-state/last-sync-unix`. Check the relay data directory and the state directory on the server the same way (`ls -ld`, `ls -l`) and apply `700` / `600` if they are world-readable.
+- **Open items (deliberately not done):** no encryption of the dumps, no off-server copy, no restore script (the only documented restore is the manual `zcat | psql` pipe; it has to run as `deploy` or root now that the files are `600`).
 
 ## Code splitting & bundle layout (2026-07-05)
 
