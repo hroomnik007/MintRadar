@@ -9,6 +9,8 @@ export const AUDIT_CZ_PAGE_PREFIX = 'https://audit.cashu.cz/'
 export const AUDIT_CZ_NOT_RECENT_MS = 30 * 60 * 1000
 
 /** Same shape as a row of GET /api/mints/swaps (audit.8333.space), plus two audit.cashu.cz extras. */
+export type AuditCzNeutralKind = 'limits' | 'balance' | 'pending'
+
 export interface AuditSwapRow {
   swapId: string | number
   toUrl: string | null
@@ -20,6 +22,8 @@ export interface AuditSwapRow {
   error: string | null
   /** audit.cashu.cz only: swap stage, shown in brackets after the state. */
   stage?: string | null
+  /** audit.cashu.cz view only: why the row is neutral grey and not counted (never set for 8333 rows). */
+  neutral?: AuditCzNeutralKind
   /** Unused for audit.cashu.cz from-only rows; the To cell uses toUrl. */
   counterpart?: string
 }
@@ -31,11 +35,13 @@ export interface AuditCzView {
   /** Our own sync (fetchedAt) older than 30 min. */
   notRecent: boolean
   swaps: AuditSwapRow[]
-  /** Like audit_recent_total / audit_recent_errors over the stored from-swaps, but swaps with stage
-   *  "limits" and pending swaps are left out of both counts. errors = state !== 'OK'. null when nothing is counted. */
+  /** The tile's counts over the SAME swaps as the bar and the table: neutral rows (limits, balance, pending)
+   *  are left out of both. recentTotal = counted swaps, recentErrors = counted swaps that are not OK. null when none counted. */
   recentTotal: number | null
   recentErrors: number | null
-  /** The source's own 7-day counts (with errorsBlamed); null when unavailable (tile uses recentTotal/Errors). */
+  /** "3 Oct": date of the oldest swap in the list (UTC); null without swaps. */
+  sinceLabel: string | null
+  /** The source's own 7-day counts; feeds Mints / Melts and the attributed-failures sentence of the tile tooltip. */
   detail7d: AuditCzDetail7d | null
   /** Mean duration of OK swaps with a known time (as computeSwapStats does); null otherwise. */
   avgTimeMs: number | null
@@ -51,25 +57,52 @@ function swapState(status: string): string {
   return status // failed → "failed"; pending / unknown tokens are shown as they are
 }
 
-/** The auditor's pre-flight failures (e.g. amount below the mint's minimum): not an event on the mint. */
-export const AUDIT_CZ_NEUTRAL_STAGE = 'limits'
 export const AUDIT_CZ_MIN_SWAPS = 3
 
-/** Failed with stage "limits": shown neutral in the table and bar. Every other non-OK row keeps the failed styling. */
-export function isAuditCzNeutralRow(s: { state: string; stage?: string | null }): boolean {
-  return s.state !== 'OK' && s.stage === AUDIT_CZ_NEUTRAL_STAGE
+export const AUDIT_CZ_NEUTRAL_TEXT: Record<'limits' | 'balance', string> = {
+  limits: 'below minimum',
+  balance: 'auditor balance',
+}
+export const AUDIT_CZ_NEUTRAL_TITLE: Record<'limits' | 'balance', string> = {
+  limits: "Not counted against the mint: the auditor's test was below the mint's minimum amount",
+  balance: "Not counted against the mint: the auditor's wallet had too little balance",
 }
 
 /**
- * Recent success rate of the cashu.cz view: only swaps the source attributes to the mint are counted
- * (counted = success + errorsBlamed). Unattributed failures (limits, auditor-side errors, routing)
- * are in neither number. NOTE: audit.cashu.cz's own swap success treats them as OK, so its
- * percentage can differ. null = fewer than 3 attributable swaps.
+ * Failures that are not the mint's fault, and swaps without an outcome yet: neutral grey, not counted.
+ * Stage "limits" = the auditor sent an amount below the mint's minimum; stage "balance" = the auditor's
+ * own wallet could not fund the swap. A swap without a stage is recognised by its error text.
+ * Everything else that is not OK (melt / mint failures, timeouts, unknown tokens) is counted and red.
  */
-export function auditCzSwapSuccess(d: AuditCzDetail7d): { good: number; total: number; pct: number } | null {
-  const counted = d.success + d.errorsBlamed
-  if (counted < AUDIT_CZ_MIN_SWAPS) return null
-  return { good: d.success, total: counted, pct: Math.round((d.success / counted) * 100) }
+export function auditCzNeutralKind(s: { state: string; stage?: string | null; error?: string | null }): AuditCzNeutralKind | undefined {
+  if (s.state === 'OK') return undefined
+  if (s.state === 'pending') return 'pending'
+  const stage = s.stage || null
+  const err = s.error ?? ''
+  if (stage === 'limits' || (stage === null && err.startsWith('Amount ') && err.includes('is below the mint minimum'))) return 'limits'
+  if (stage === 'balance' || (stage === null && err.startsWith('Insufficient balance:'))) return 'balance'
+  return undefined
+}
+
+/** Recent success rate tile of the cashu.cz view: "{ok} / {counted}" + "{pct}% ok", or n/a below 3 counted swaps. */
+export function auditCzSuccessTile(v: { recentTotal: number | null; recentErrors: number | null }): { counted: number; main: string | null; sub: string } {
+  const counted = v.recentTotal ?? 0
+  if (counted < AUDIT_CZ_MIN_SWAPS) return { counted, main: null, sub: 'n/a' }
+  const ok = counted - (v.recentErrors ?? 0)
+  return { counted, main: `${ok} / ${counted}`, sub: `${Math.round((ok / counted) * 100)}% ok` }
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function oldestLabel(swaps: AuditSwapRow[]): string | null {
+  let oldest = Infinity
+  for (const s of swaps) {
+    const t = s.createdAt ? new Date(s.createdAt).getTime() : NaN
+    if (Number.isFinite(t) && t < oldest) oldest = t
+  }
+  if (!Number.isFinite(oldest)) return null
+  const d = new Date(oldest)
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`
 }
 
 /** Returns null when the mint is not covered (the caller then shows the audit.8333.space panel). */
@@ -85,9 +118,12 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
     state: swapState(s.status),
     error: s.error,
     stage: s.stage,
-  }))
-  // Tile fallback counts: no "limits" stage, no pending; no other stage is excluded.
-  const counted = swaps.filter(s => s.state !== 'pending' && s.stage !== AUDIT_CZ_NEUTRAL_STAGE)
+  })).map(r => {
+    const neutral = auditCzNeutralKind(r)
+    return neutral ? { ...r, neutral } : r
+  })
+  // The tile counts exactly the rows the bar and the table show as OK or red.
+  const counted = swaps.filter(s => !s.neutral)
   const okTimes = swaps.filter(s => s.state === 'OK' && s.timeTakenMs !== null).map(s => s.timeTakenMs as number)
   const fetchedMs = data.fetchedAt ? new Date(data.fetchedAt).getTime() : NaN
   return {
@@ -97,6 +133,7 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
     swaps,
     recentTotal: counted.length > 0 ? counted.length : null,
     recentErrors: counted.length > 0 ? counted.filter(s => s.state !== 'OK').length : null,
+    sinceLabel: oldestLabel(swaps),
     detail7d: data.detail7d ?? null,
     avgTimeMs: okTimes.length > 0 ? okTimes.reduce((a, b) => a + b, 0) / okTimes.length : null,
     nMints: data.detail7d?.minted ?? data.mint.minted,

@@ -27,7 +27,7 @@ import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { auditFreshness } from '@/utils/auditFreshness'
 import { useAuditCz } from '@/hooks/useAuditCz'
-import { adaptAuditCz, auditCzSwapSuccess, isAuditCzNeutralRow, type AuditSwapRow } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzSuccessTile, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import { sortUnits } from '@/utils/sortUnits'
 import {
@@ -1013,19 +1013,18 @@ function MintDetailContent({ url }: { url: string }) {
   // Online Mints "55/56"), and an error count read the opposite way at a
   // glance. formatAuditSuccessRatio() does the total-minus-errors math; the
   // sub-line no longer repeats a percentage of the same fraction.
-  // cashu.cz view with the source's own 7-day counts: only swaps it attributes to the mint are
-  // counted (success + errorsBlamed). Without them (detail not available) the tile falls back to the
-  // stored from-swaps minus "limits" and pending (adaptAuditCz). Neutral colour in both cases.
+  // cashu.cz view: the tile counts the same swaps as the bar and the table below (adaptAuditCz drops the
+  // neutral rows: limits, balance, pending). Neutral colour. The 8333 tile is unchanged.
   const czDetail = czView?.detail7d ?? null
-  const czSuccess = czDetail ? auditCzSwapSuccess(czDetail) : null
-  const stripRecentSuccessDisplay = czDetail
-    ? (czSuccess ? `${czSuccess.good} / ${czSuccess.total}` : '—')
+  const czTile = czView ? auditCzSuccessTile(czView) : null
+  const stripRecentSuccessDisplay = czTile
+    ? (czTile.main ?? '—')
     : formatAuditSuccessRatio(stripTotal, stripErrors)
   const stripRecentSuccessPct = stripTotal !== null && stripTotal > 0
     ? Math.round(((stripTotal - (stripErrors ?? 0)) / stripTotal) * 100)
     : null
-  const stripRecentSuccessSub = czDetail
-    ? (czSuccess ? `${czSuccess.pct}% ok` : 'n/a')
+  const stripRecentSuccessSub = czTile
+    ? czTile.sub
     : stripTotal === null
       ? 'no recent swaps'
       : isAuditUnknown(stripTotal)
@@ -1046,12 +1045,10 @@ function MintDetailContent({ url }: { url: string }) {
   const tipMelts = czView
     ? `Successful ecash melting operations (redeeming ecash back to Lightning), counted by audit.cashu.cz over the window used by audit.cashu.cz.`
     : 'All-time successful ecash melting operations (redeeming ecash back to Lightning).'
-  const tipSuccess = czDetail
-    ? (czSuccess
-      ? `Successful swaps out of the swaps audit.cashu.cz attributes to this mint, last 7 days. Swaps it does not attribute to a mint (for example test amounts below the mint's minimum, auditor-side errors and routing failures) are not counted. In total ${czDetail.success} of ${czDetail.total} swaps succeeded, ${czDetail.failed} failed, ${czDetail.errorsBlamed} failures are attributed to this mint. audit.cashu.cz's own swap success counts unattributed failures as OK, so its percentage can differ from this one.`
-      : 'fewer than 3 attributable swaps')
-    : czView
-    ? 'Successful swaps out of the most recent swaps from this mint that MintRadar collected from audit.cashu.cz. Swaps that stopped at the auditor\'s limits check (stage "limits") and pending swaps are not counted. Shows "too few to score" below 3 recent swaps.'
+  const tipSuccess = czView
+    ? (czTile?.main
+      ? `Successful swaps out of the recent swaps from this mint that MintRadar collected from audit.cashu.cz (up to the latest 100${czView.sinceLabel ? `, since ${czView.sinceLabel}, the date of the oldest swap in the list` : ''}). Swaps below the mint's minimum amount, swaps the auditor could not fund and pending swaps are not counted. Failed swaps are shown in the table.${czDetail ? ` audit.cashu.cz attributes ${czDetail.errorsBlamed} failure${czDetail.errorsBlamed === 1 ? '' : 's'} to this mint over the last 7 days.` : ''}`
+      : 'Fewer than 3 counted swaps collected so far.')
     : 'Successful swaps out of the mint\'s last ~100 audited operations — the same rolling window the Reliability Score\'s Audit component scores on. Shows "too few to score" below 3 recent swaps.'
   const tipAvg = czView
     ? 'Average duration of the successful swaps from the most recent swaps from this mint that MintRadar collected from audit.cashu.cz.'
@@ -2150,8 +2147,8 @@ function MintDetailContent({ url }: { url: string }) {
                     {auditSwapBarItems.map(s => (
                       <div
                         key={s.swapId}
-                        className={`audit-swap-bar-mark ${s.state === 'OK' ? 'audit-swap-bar-ok' : isAuditCzNeutralRow(s) ? 'audit-swap-bar-neutral' : 'audit-swap-bar-fail'}`}
-                        title={`${s.state}${s.stage ? ` (${s.stage})` : ''}${s.createdAt ? ` · ${s.createdAt}` : ''}`}
+                        className={`audit-swap-bar-mark ${s.state === 'OK' ? 'audit-swap-bar-ok' : s.neutral ? 'audit-swap-bar-neutral' : 'audit-swap-bar-fail'}`}
+                        title={s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TITLE[s.neutral] : `${s.state}${s.stage ? ` (${s.stage})` : ''}${s.createdAt ? ` · ${s.createdAt}` : ''}`}
                       />
                     ))}
                   </div>
@@ -2174,12 +2171,12 @@ function MintDetailContent({ url }: { url: string }) {
                         </thead>
                         <tbody>
                           {auditRecentSwapRows.map(s => (
-                            <tr key={s.swapId} className={s.state === 'OK' ? '' : isAuditCzNeutralRow(s) ? 'audit-swap-row-neutral' : 'audit-swap-row-fail'}>
+                            <tr key={s.swapId} className={s.state === 'OK' ? '' : s.neutral ? 'audit-swap-row-neutral' : 'audit-swap-row-fail'} {...(s.neutral === 'limits' || s.neutral === 'balance' ? { title: AUDIT_CZ_NEUTRAL_TITLE[s.neutral] } : {})}>
                               <td>{s.counterpart ?? (s.toUrl ? mintHostname(s.toUrl) : '—')}</td>
                               <td>{s.amount !== null ? `${s.amount} sat` : '—'}</td>
                               <td>{s.fee !== null ? s.fee : '—'}</td>
                               <td>{s.timeTakenMs !== null ? `${Math.round(s.timeTakenMs)} ms` : '—'}</td>
-                              <td>{s.state}{s.stage ? ` (${s.stage})` : null}</td>
+                              <td>{s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TEXT[s.neutral] : <>{s.state}{s.stage ? ` (${s.stage})` : null}</>}</td>
                             </tr>
                           ))}
                         </tbody>
