@@ -53,6 +53,7 @@ function minutesAgoLabel(iso: string | null, now: number): string | null {
 
 const pct = (v: number | null): string => (v === null ? '—' : `${Number.isInteger(v) ? v : v.toFixed(1)}%`)
 
+const KNOWN_SWAP_STATUS = new Set(['success', 'failed', 'pending'])
 const STATE_LABEL: Record<string, string> = { ok: 'OK', warn: 'Warning', error: 'Error' }
 
 function shortTime(iso: string): string {
@@ -144,7 +145,7 @@ export function AuditCzBlock({ url }: { url: string }) {
                     <td>{shortTime(s.at)}</td>
                     <td>{s.direction === 'from' ? 'out →' : '← in'}</td>
                     <td className="auditcz-other" title={s.otherMintUrl ?? undefined}>{other}</td>
-                    <td>{s.status}{s.stage ? ` (${s.stage})` : ''}</td>
+                    <td>{KNOWN_SWAP_STATUS.has(s.status) ? s.status : <span className="auditcz-badge auditcz-badge-neutral">{s.status}</span>}{s.stage ? ` (${s.stage})` : ''}</td>
                     <td className="auditcz-err" title={err || undefined}>{shortErr || '—'}</td>
                     <td>{s.amount ?? '—'}</td>
                   </tr>

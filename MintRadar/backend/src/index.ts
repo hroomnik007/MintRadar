@@ -8,7 +8,7 @@ import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeError
 import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } from './mintPubkey.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
-import { getAuditCzForMint } from './auditCz.js'
+import { getAuditCzForMint, getAuditCzSyncStatus } from './auditCz.js'
 import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
 import { publishServiceProfile } from './nostrService.js'
 import { normalizeUrl, getSyncTimesFromDb, getAuditUpstreamStatus } from './discovery.js'
@@ -552,6 +552,7 @@ app.get('/health', async (_req: Request, res: Response) => {
     lastAuditSyncAt,
     lastReviewsSyncAt,
     ...getAuditUpstreamStatus(),
+    auditCz: getAuditCzSyncStatus(),
   })
 })
 

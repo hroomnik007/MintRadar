@@ -24,10 +24,10 @@ const SWAP_RETENTION_DAYS = 14
 const SWAP_MAX_ROWS = 20_000
 
 export const AUDIT_CZ_MINT_STATES = ['ok', 'warn', 'error'] as const
-export const AUDIT_CZ_SWAP_STATUSES = ['success', 'failed', 'pending'] as const
-// `stage` is open-ended on their side (the live feed also sends e.g. "limits"), so any short
-// lowercase token is accepted; anything else skips the item.
-const STAGE_RE = /^[a-z][a-z_-]{0,29}$/
+// `stage` and `status` are open-ended on their side (the live feed also sends e.g. stage
+// "limits"), so any short lowercase token is accepted; anything else skips the item. The
+// frontend styles success/failed/pending and shows any other status as a neutral badge.
+const TOKEN_RE = /^[a-z][a-z_-]{0,29}$/
 
 /** Matching key: the shared normalizeUrl plus a stripped trailing slash on both sides of any comparison. */
 export function auditCzKey(raw: string): string {
@@ -140,9 +140,9 @@ export function parseAuditCzSwap(raw: unknown): AuditCzSwap | null {
   const at = isoOrNull(raw['at'])
   if (!at) return null
   const status = raw['status']
-  if (typeof status !== 'string' || !(AUDIT_CZ_SWAP_STATUSES as readonly string[]).includes(status)) return null
+  if (typeof status !== 'string' || !TOKEN_RE.test(status)) return null
   const stageRaw = raw['stage']
-  if (stageRaw !== null && stageRaw !== undefined && !(typeof stageRaw === 'string' && STAGE_RE.test(stageRaw))) return null
+  if (stageRaw !== null && stageRaw !== undefined && !(typeof stageRaw === 'string' && TOKEN_RE.test(stageRaw))) return null
   const amount = numOrNull(raw['amount'])
   const fee = numOrNull(raw['fee'])
   const dur = numOrNull(raw['durationMs'])
@@ -158,27 +158,46 @@ export function parseAuditCzSwap(raw: unknown): AuditCzSwap | null {
   }
 }
 
-/** null = the whole response is unusable (nothing may be written). */
-export function parseAuditCzMintsResponse(data: unknown): AuditCzMint[] | null {
+export interface ParsedFeed<T> { items: T[]; fetched: number; skipped: number }
+
+/** null = the whole response is unusable (nothing may be written). `skipped` counts malformed/unknown items. */
+export function parseAuditCzMintsResponse(data: unknown): ParsedFeed<AuditCzMint> | null {
   if (!isObj(data) || !Array.isArray(data['mints'])) return null
-  const out: AuditCzMint[] = []
+  const items: AuditCzMint[] = []
   const seen = new Set<string>()
+  let skipped = 0
   for (const item of data['mints']) {
     const m = parseAuditCzMint(item)
-    if (m && !seen.has(m.url)) { seen.add(m.url); out.push(m) }
+    if (!m) { skipped++; continue }
+    if (!seen.has(m.url)) { seen.add(m.url); items.push(m) }
   }
-  return out
+  return { items, fetched: data['mints'].length, skipped }
 }
 
-export function parseAuditCzSwapsResponse(data: unknown): AuditCzSwap[] | null {
+export function parseAuditCzSwapsResponse(data: unknown): ParsedFeed<AuditCzSwap> | null {
   if (!isObj(data) || !Array.isArray(data['swaps'])) return null
-  const out: AuditCzSwap[] = []
+  const items: AuditCzSwap[] = []
   const seen = new Set<string>()
+  let skipped = 0
   for (const item of data['swaps']) {
-    const s = parseAuditCzSwap(item)
-    if (s && !seen.has(s.id)) { seen.add(s.id); out.push(s) }
+    const sw = parseAuditCzSwap(item)
+    if (!sw) { skipped++; continue }
+    if (!seen.has(sw.id)) { seen.add(sw.id); items.push(sw) }
   }
-  return out
+  return { items, fetched: data['swaps'].length, skipped }
+}
+
+export interface AuditCzSyncStatus {
+  lastSyncAt: string | null
+  mintsStored: number | null
+  swapsStored: number | null
+  skipped: { mints: number; swaps: number } | null
+}
+let lastCycle: AuditCzSyncStatus = { lastSyncAt: null, mintsStored: null, swapsStored: null, skipped: null }
+
+/** Counts of the last sync cycle (in memory; null until the first cycle after a restart). */
+export function getAuditCzSyncStatus(): AuditCzSyncStatus {
+  return { ...lastCycle, skipped: lastCycle.skipped ? { ...lastCycle.skipped } : null }
 }
 
 async function fetchJson(url: string, cap: number): Promise<unknown | null> {
@@ -262,16 +281,28 @@ export async function syncAuditCz(): Promise<{ mints: number | null; swaps: numb
     const mints = mintsRaw === null ? null : parseAuditCzMintsResponse(mintsRaw)
     const swaps = swapsRaw === null ? null : parseAuditCzSwapsResponse(swapsRaw)
     if (mints) {
-      try { await writeMints(mints); result.mints = mints.length } catch { /* rolled back; old rows stay */ }
+      try { await writeMints(mints.items); result.mints = mints.items.length } catch { /* rolled back; old rows stay */ }
     }
     if (swaps) {
       try {
-        await writeSwaps(swaps)
-        result.swaps = swaps.length
+        await writeSwaps(swaps.items)
+        result.swaps = swaps.items.length
         await pruneSwaps()
       } catch { /* rolled back or prune failed; old rows stay */ }
     }
-    console.log(`[audit-cz] mints: ${result.mints === null ? 'failed' : `${result.mints} stored`}, swaps: ${result.swaps === null ? 'failed' : `${result.swaps} stored`}`)
+    const skippedMints = mints?.skipped ?? 0
+    const skippedSwaps = swaps?.skipped ?? 0
+    lastCycle = {
+      lastSyncAt: new Date().toISOString(),
+      mintsStored: result.mints,
+      swapsStored: result.swaps,
+      skipped: { mints: skippedMints, swaps: skippedSwaps },
+    }
+    const part = (name: string, fetched: number | undefined, stored: number | null, skipped: number) =>
+      fetched === undefined || stored === null ? `${name} failed` : `${name} ${fetched} fetched, ${stored} stored, ${skipped} skipped`
+    const line = `audit.cashu.cz sync: ${part('mints', mints?.fetched, result.mints, skippedMints)}; ${part('swaps', swaps?.fetched, result.swaps, skippedSwaps)}`
+    if (skippedMints + skippedSwaps > 0) console.warn(`[audit-cz] ${line}`)
+    else console.log(`[audit-cz] ${line}`)
   } finally {
     running = false
   }

@@ -62,7 +62,7 @@ vi.mock('../ssrf.js', () => ({
   RESPONSE_CAPS: { auditCzMints: 1048576, auditCzSwaps: 1048576 },
 }))
 
-import { auditCzKey, parseAuditCzMintsResponse, parseAuditCzSwapsResponse, syncAuditCz, getAuditCzForMint } from '../auditCz.js'
+import { auditCzKey, parseAuditCzMintsResponse, parseAuditCzSwapsResponse, syncAuditCz, getAuditCzForMint, getAuditCzSyncStatus } from '../auditCz.js'
 
 const mint = (o: Record<string, unknown> = {}) => ({
   id: 'm1', url: 'https://mint.minibits.cash/Bitcoin', isTest: false, aliases: [], name: 'Minibits', state: 'ok',
@@ -84,6 +84,7 @@ beforeEach(() => {
   db.mints.clear(); db.aliases.clear(); db.swaps.clear()
   fetchMock.mockReset(); readMock.mockReset()
   vi.spyOn(console, 'log').mockImplementation(() => {})
+  vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
 
 describe('URL mapping', () => {
@@ -172,12 +173,15 @@ describe('malformed items', () => {
     feed(
       [mint(), mint({ id: 'b', url: 'http://plain.example' }), mint({ id: 'c', url: 'https://c.example', state: 'weird' }),
         mint({ id: 'd', url: 'https://d.example', uptime7d: 'high' }), 'junk', mint({ id: 'e', url: 'https://e.example', page: 'https://evil.example/x' })],
-      [swap({ id: 'ok' }), swap({ id: 'bad1', status: 'maybe' }), swap({ id: 'bad2', stage: '<b>x</b>' }), swap({ id: 'limits', stage: 'limits' }), swap({ id: 'bad3', amount: Infinity }),
+      [swap({ id: 'ok' }), swap({ id: 'bad1', status: 'Maybe!' }), swap({ id: 'odd', status: 'cancelled' }), swap({ id: 'bad2', stage: '<b>x</b>' }), swap({ id: 'limits', stage: 'limits' }), swap({ id: 'bad3', amount: Infinity }),
         swap({ id: 'bad4', at: 'not a date' }), null, swap({ id: 'long', error: 'x'.repeat(1000) })],
     )
     const r = await syncAuditCz()
-    expect(r).toEqual({ mints: 2, swaps: 3 })
+    expect(r).toEqual({ mints: 2, swaps: 4 })
+    expect(getAuditCzSyncStatus()).toMatchObject({ mintsStored: 2, swapsStored: 4, skipped: { mints: 4, swaps: 5 } })
+    expect(console.warn).toHaveBeenCalledWith(expect.stringMatching(/mints 6 fetched, 2 stored, 4 skipped; swaps 9 fetched, 4 stored, 5 skipped$/))
     expect(db.swaps.get('limits')?.['stage']).toBe('limits')
+    expect(db.swaps.get('odd')?.['status']).toBe('cancelled')
     expect(db.mints.get('https://e.example')?.['page']).toBeNull()
     expect((db.swaps.get('long')?.['error'] as string).length).toBe(300)
   })
