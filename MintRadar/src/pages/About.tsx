@@ -174,22 +174,18 @@ export default function About() {
             <li>
               <strong>In your browser</strong> we store your watchlist, notification settings and a cached copy of
               mint data (IndexedDB), your card-view choice and a list of mint icons that failed to load
-              (localStorage) and, for the session only (sessionStorage), your public profile, login method and relay
-              list, plus the pairing data of a remote signer until you log out or close the tab. A private key (nsec)
+              (localStorage). For the session only we keep your public profile and login state. A private key (nsec)
               stays in memory for the session only and is never stored or sent.
             </li>
             <li>
               <strong>Your browser contacts some services directly,</strong> and they see your IP address: Nostr
-              relays (a few on a mint page, 17 to 18 when you are logged in), mints (the Best Mint wizard contacts up
-              to 20 per run; &ldquo;Show my latency&rdquo; and the Token Inspector contact the mint you choose), the
-              host of your own profile picture, cashu.me when you click &ldquo;Open in cashu.me&rdquo;, and a remote
-              signer&rsquo;s pairing relays. Mint icons and NIP-05 checks go through our server. We do not load other
-              people&rsquo;s profile pictures.
+              relays, a mint when you test latency or inspect a token, the host of your own profile picture, cashu.me
+              when you click &ldquo;Open in cashu.me&rdquo;, and a remote signer&rsquo;s pairing relays. Mint icons
+              and NIP-05 checks go through our server. We do not load other people&rsquo;s profile pictures.
             </li>
             <li>
-              <strong>Our Nostr relay</strong> (nostr.mintradar.org) is public: anyone can read it. MintRadar&rsquo;s
-              own keys can publish any event; others can publish only mint announcements (kind 38172) and
-              recommendations or reviews (kind 38000). Events are limited to 64 KiB and we configure no retention.
+              <strong>Our Nostr relay</strong> (nostr.mintradar.org) is public: anyone can read it. We configure no
+              retention.
             </li>
           </ul>
           <p>
