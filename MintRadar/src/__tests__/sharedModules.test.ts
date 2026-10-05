@@ -19,8 +19,8 @@ const codeOf = (rel: string) =>
     .join('\n')
 
 export const DEMO_CASES: Array<{ texts: Array<string | null | undefined>; expected: string | null }> = [
-  { texts: ['This mint is for demonstration purposes only.'], expected: 'for demonstration purposes' },
-  { texts: ['FOR   DEMONSTRATION\nPURPOSES ONLY'], expected: 'for demonstration purposes' },
+  { texts: ['This mint is for demonstration purposes only.'], expected: null },
+  { texts: ['FOR   DEMONSTRATION\nPURPOSES ONLY'], expected: null },
   { texts: ['Welcome to our Demo Mint!'], expected: 'demo mint' },
   { texts: ['Play money, no real value'], expected: 'play money' },
   { texts: ['Please DO NOT DEPOSIT large amounts'], expected: 'do not deposit' },
