@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { usePendingAutoWatch } from '@/hooks/usePendingAutoWatch'
 import { useModalFocus } from '@/hooks/useModalFocus'
@@ -45,7 +45,6 @@ export function MintCard({
   // callers without the full list (rare) get the safe default: no fallback.
   duplicateDisplayNames?: ReadonlySet<string> | undefined
 }) {
-  const navigate = useNavigate()
   const { onMintPointerEnter, onMintPointerLeave } = useMintHoverPrefetch()
   const mints = useWatchlistStore(state => state.mints)
   const addMint = useWatchlistStore(state => state.addMint)
@@ -124,7 +123,6 @@ export function MintCard({
     <>
     <div
       className={`mint-card${isOfflineDegraded ? ' offline' : ''}`}
-      onClick={() => { navigate(`/mint/${encodeURIComponent(mint.url)}`) }}
       onPointerEnter={() => { onMintPointerEnter(mint.url) }}
       onPointerLeave={onMintPointerLeave}
     >
@@ -133,7 +131,12 @@ export function MintCard({
           <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={28} radius={6} className={isOfflineDegraded ? 'card-avatar-offline' : ''} />
           <div style={{ minWidth: 0 }}>
             <div className="card-name-line">
-              <span className="card-name" title={mint.nameFull ?? displayName}>{displayName}</span>
+              {/* Stretched link: its ::after covers the whole card (see .card-link in Dashboard.css), so the
+                  card opens with middle/ctrl/cmd-click and "copy link address". Buttons and chips with a
+                  title sit above the overlay (z-index: 1) and are not nested inside the <a>. */}
+              <Link className="card-link" to={`/mint/${encodeURIComponent(mint.url)}`}>
+                <span className="card-name" title={mint.nameFull ?? displayName}>{displayName}</span>
+              </Link>
               <span
                 className={`status-dot${isOnline ? ' online' : ''}`}
                 style={{ background: isOnline ? 'var(--green-bright)' : 'var(--red)' }}

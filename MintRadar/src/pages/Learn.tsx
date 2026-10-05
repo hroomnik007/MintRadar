@@ -1,11 +1,10 @@
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { LEARN_MODULES } from '@/constants/learnModules'
 import { LearnModuleIcon, LearnHero } from '@/components/learn/LearnIcons'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import './Learn.css'
 
 export default function Learn() {
-  const navigate = useNavigate()
   const modules = [...LEARN_MODULES].sort((a, b) => a.order - b.order)
 
   useDocumentMeta(
@@ -26,16 +25,15 @@ export default function Learn() {
 
       <div className="learn-grid">
         {modules.map(mod => (
-          <div
-            key={mod.id}
-            className="learn-card"
-            onClick={() => navigate(`/learn/${mod.id}`)}
-          >
+          <div key={mod.id} className="learn-card">
             <div className="learn-card-head">
               <LearnModuleIcon moduleId={mod.id} />
               <span className="learn-card-number">Module {mod.order}</span>
             </div>
-            <div className="learn-card-title">{mod.title}</div>
+            <div className="learn-card-title">
+              {/* Stretched link: .learn-card-link::after covers the whole card (Learn.css). */}
+              <Link className="learn-card-link" to={`/learn/${mod.id}`}>{mod.title}</Link>
+            </div>
             <div className="learn-card-summary">{mod.summary}</div>
             <div className="learn-card-cta">Start module →</div>
           </div>

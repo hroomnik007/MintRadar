@@ -64,8 +64,30 @@
   animation: fadein 0.22s ease both;
 }
 
+.learn-card {
+  position: relative;
+}
+
 .learn-card:hover {
   border-color: var(--accent-brd);
+}
+
+/* Stretched link: the title is the real link, its ::after covers the whole card. */
+.learn-card-link,
+.learn-card-link:hover {
+  color: inherit;
+  text-decoration: none;
+}
+.learn-card-link::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--r);
+}
+.learn-card-link:focus-visible { outline: none; }
+.learn-card-link:focus-visible::after {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .learn-card-head {

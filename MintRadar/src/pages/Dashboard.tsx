@@ -374,11 +374,11 @@ function MintListView({
               const displayName = mintDisplayName(mint, duplicateDisplayNames)
               const score = mint.reliabilityScore ?? null
               return (
-                <tr key={mint.url} className="mint-list-row" onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} onPointerEnter={() => onMintPointerEnter(mint.url)} onPointerLeave={onMintPointerLeave}>
+                <tr key={mint.url} className="mint-list-row" onClick={e => { if (!(e.target as Element).closest('a')) navigate(`/mint/${encodeURIComponent(mint.url)}`) }} onPointerEnter={() => onMintPointerEnter(mint.url)} onPointerLeave={onMintPointerLeave}>
                   <td className="mint-list-td-name">
                     <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={24} radius={5} />
                     <div style={{ minWidth: 0 }}>
-                      <div className="mint-list-name" title={displayName}>{displayName}</div>
+                      <div className="mint-list-name" title={displayName}><Link className="mint-list-link" to={`/mint/${encodeURIComponent(mint.url)}`}>{displayName}</Link></div>
                       {displayName !== getHostname(mint.url) && <div className="mint-list-url" title={getHostname(mint.url)}>{getHostname(mint.url)}</div>}
                     </div>
                   </td>
