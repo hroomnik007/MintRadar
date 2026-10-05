@@ -9,6 +9,7 @@ import MintNaddr from '@/pages/MintNaddr'
 import Learn from '@/pages/Learn'
 import LearnModule from '@/pages/LearnModule'
 import Wallets from '@/pages/Wallets'
+import NotFound from '@/pages/NotFound'
 // Moved into their own module (routerLazy.tsx) so this file's only export is
 // `router` — a file mixing component exports with a non-component export
 // breaks react-refresh's fast-refresh detection (react-refresh/only-export-components).
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
       { path: 'nuts', element: <NutExplorer /> },
       { path: 'mint/nostr/:naddr', element: <MintNaddr /> },
       { path: 'mint/:url', element: <Suspense fallback={lazyFallback}><MintDetail /></Suspense> },
+      { path: '*', element: <NotFound /> },
     ],
   },
 ])
