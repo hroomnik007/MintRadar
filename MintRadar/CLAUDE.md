@@ -90,7 +90,7 @@ this (separate npm package, no workspace set up) — `backend/src/discovery.ts` 
 See CLAUDE.local.md for $VPS_HOST, $VPS_USER, $VPS_REPO_PATH, $VPS_DIST_PATH values.
 
 Backend (only if backend changed):
-1. Commit + push local changes: git add -A && git commit -m "..." && git push origin main
+1. Commit + push local changes (stage only your own files — see "Git rules" below): git add <paths> && git commit -m "..." && git push origin main && git push gitea main
 2. On server pull + build: ssh $VPS_USER@$VPS_HOST "cd $VPS_REPO_PATH && git pull origin main && cd backend && npm run build"
 3. Rebuild + restart Docker image: ssh $VPS_USER@$VPS_HOST "cd $VPS_REPO_PATH && docker compose build backend && docker compose up -d backend"
    NOTE: `docker compose restart` does NOT pick up code changes — always use `build` + `up -d`
@@ -99,7 +99,18 @@ Frontend:
 4. Build frontend: npm run typecheck && npm run build
 5. Deploy: rsync -avz --delete dist/ $VPS_USER@$VPS_HOST:$VPS_DIST_PATH/
 6. Reload nginx: ssh $VPS_USER@$VPS_HOST "sudo systemctl reload nginx"
-7. Commit: git add -A && git commit -m "type: description" && git push origin main
+7. Commit (same rules, see "Git rules" below): git add <paths> && git commit -m "type: description" && git push origin main && git push gitea main
+
+## Git rules (several sessions can touch this checkout)
+
+Another session once committed in this checkout between my steps and swept up my staged `git rm` of a hook while `Dashboard.tsx` still imported it; that commit went to `main` and turned Deploy red. These rules prevent that.
+
+- **Never `git add -A` and never `git commit -a`.** Stage only the files you changed: `git add <paths>`.
+- **Before every task** print `git status`, `git stash list` and `git log --oneline -5`. If there are uncommitted changes you did not make: stop and ask.
+- **Before every commit** run `git status` and `git diff --cached --stat`. If a file you did not touch is staged: stop and ask.
+- **Do not run two sessions in the same checkout at the same time.**
+- **If you must change a file another session has modified** (`git diff` shows changes you did not make), stage only your own hunks with `git add -p` and say so in your report.
+- **After every push** check the CI result for your commit (`gh run list --limit 3`) and report it first.
 
 ## Nostr Login
 
