@@ -24,7 +24,6 @@ const shot = async (page: Page, name: string) => {
   const w = page.viewportSize()!.width
   await page.screenshot({ path: `${SHOTS}/${name}-${w}.png`, fullPage: true })
 }
-const cell = (page: Page, label: string) => page.locator('.audit-summary-strip .audit-summary-cell', { hasText: label })
 const base = { auditNMints: 1000, auditNMelts: 500, auditRecentTotal: 100, auditRecentErrors: 2 }
 
 if (process.env.AUDIT_W) test.use({ viewport: { width: Number(process.env.AUDIT_W), height: 900 } })

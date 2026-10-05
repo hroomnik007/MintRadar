@@ -156,6 +156,10 @@ Run from the app directory (the one holding `package.json`, `e2e/` and `backend/
 # Frontend unit
 npm test
 
+# Types (src + node + e2e) and lint (src + e2e); the production build does not check e2e
+npm run typecheck
+npm run lint
+
 # E2E
 npm run test:e2e
 ```
@@ -177,7 +181,7 @@ The `+ Watch` button on Dashboard mint cards only renders when `isLoggedIn === t
 ## Key rules
 - **Before starting ANY new task, check `git branch --show-current`.** If it isn't `main`, find out why (an in-progress PR still awaiting merge vs. a forgotten checkout left over from a prior session) before committing anything. A 2026-08-05 session left a feature branch checked out after its PR had already merged; two unrelated follow-up fixes got committed there instead of on `main` and had to be recovered via a second PR (#54).
 - NEVER modify anything not explicitly requested
-- ALWAYS run typecheck before build — `npm run typecheck` is `tsc -b` (app + node projects, noEmit, buildinfo gitignored). It used to be `tsc --noEmit` on the root tsconfig, which has `files: []` and only references, so it checked 0 files (fixed 2026-10-03)
+- ALWAYS run typecheck before build — `npm run typecheck` is `tsc -b && npm run typecheck:e2e`: `tsc -b` covers the app (`src`) and node (`vite.config.ts`) projects, `typecheck:e2e` (`tsc -p tsconfig.e2e.json`, same strictness flags as `tsconfig.app.json`, `e2e/**/*.ts`) covers the Playwright specs and fixtures (noEmit, buildinfo gitignored). `npm run lint` is `eslint src e2e`. **`npm run build` (`tsc -b && vite build`) intentionally does NOT check e2e**, and `tsconfig.e2e.json` must never be added to the references in `tsconfig.json`: the server runs `npm run build` during a deploy, after the backend is already live, so a type error in a spec must not be able to fail the frontend step. A spec's types are checked locally (this rule) only. (`npm run typecheck` used to be `tsc --noEmit` on the root tsconfig, which has `files: []` and only references, so it checked 0 files — fixed 2026-10-03; e2e was added 2026-10-05.)
 - ALWAYS rsync dist after build
 - ALWAYS commit and push after deploy: `git push origin main && git push gitea main` (both remotes required)
 - Conventional commits: feat:, fix:, refactor:, docs:, chore:

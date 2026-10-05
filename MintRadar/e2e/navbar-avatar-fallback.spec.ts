@@ -128,6 +128,7 @@ test('(d) broken URL replaced by a valid one shows the image again', async ({ pa
   await expect(avatar(page)).toHaveText('P')
   const before = await size(page)
   await page.evaluate(async (url) => {
+    // @ts-expect-error — a Vite dev-server URL, resolved in the browser; there is no such file for tsc to find
     const { useAuthStore } = await import('/src/stores/auth.store.ts')
     const p = useAuthStore.getState().profile!
     useAuthStore.setState({ profile: { ...p, picture: url } })

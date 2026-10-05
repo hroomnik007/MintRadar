@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { finalizeEvent, generateSecretKey, getPublicKey, type EventTemplate } from 'nostr-tools/pure'
+import { finalizeEvent, generateSecretKey, type EventTemplate } from 'nostr-tools/pure'
 import { installApiMocks, loginAs } from './fixtures/mocks'
 
 // useNostrDiscovery.ts's background client-side NIP-87 scan (kind:38172,

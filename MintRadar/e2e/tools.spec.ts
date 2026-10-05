@@ -500,7 +500,7 @@ test.describe('Tools', () => {
     ]
     for (const c of cases) {
       test(c.name, async ({ page }) => {
-        const fx = makeDleqMint(MINT, c.proofs.map((dleq, i) => ({ amount: 2 ** i, dleq })), { hideKeys: c.hideKeys })
+        const fx = makeDleqMint(MINT, c.proofs.map((dleq, i) => ({ amount: 2 ** i, dleq })), c.hideKeys ? { hideKeys: true } : {})
         await serveMintInPage(page, fx)
         await page.reload()
         await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()

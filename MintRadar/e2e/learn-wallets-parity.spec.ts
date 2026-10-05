@@ -77,6 +77,6 @@ test('wallets grid collapses to one column at the same breakpoint as learn', asy
   await page.waitForSelector('.wallet-card')
   const walletCols = await css(page, '.wallets-grid', 'grid-template-columns')
 
-  expect(walletCols.split(' ').length).toBe(1)
-  expect(walletCols.split(' ').length).toBe(learnCols.split(' ').length)
+  expect(walletCols!.split(' ').length).toBe(1)
+  expect(walletCols!.split(' ').length).toBe(learnCols!.split(' ').length)
 })

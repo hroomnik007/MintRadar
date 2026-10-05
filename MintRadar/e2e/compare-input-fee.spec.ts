@@ -5,7 +5,7 @@ const SHOTS = process.env.FEE_SHOTS_DIR
 // FEE_W (optional) only exists for taking screenshots at a given width.
 if (process.env.FEE_W) test.use({ viewport: { width: Number(process.env.FEE_W), height: 900 } })
 
-const [ALPHA, BRAVO, , DELTA] = MOCK_MINTS.map(m => m.url)
+const [ALPHA, BRAVO] = MOCK_MINTS.map(m => m.url)
 const keysets = (fee?: number) => [
   { id: '00aa000000000001', unit: 'sat', active: false, input_fee_ppk: 999 },
   { id: '00aa000000000002', unit: 'sat', active: true, ...(fee !== undefined ? { input_fee_ppk: fee } : {}) },

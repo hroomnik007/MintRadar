@@ -310,10 +310,10 @@ for (const vp of [{ width: 1440, height: 900, name: 'desktop one-row' }, { width
     })
     const clickSeg = async (page: Page, label: string) => {
       const { x, y } = await segCentre(page, label)
-      const hit = await page.evaluate(([px, py]) => {
+      const hit = await page.evaluate(([px, py]: [number, number]) => {
         const e = document.elementFromPoint(px, py) as HTMLInputElement
         return { tag: e.tagName, inSeg: !!e.closest('.filter-seg-opt'), name: e.getAttribute('name') }
-      }, [x, y])
+      }, [x, y] as [number, number])
       expect(hit).toEqual({ tag: 'INPUT', inSeg: true, name: 'filter-status' })
       await page.mouse.click(x, y)
     }
@@ -471,9 +471,9 @@ test.describe('Filters panel — labels versus options', () => {
     await openPanel(page)
     const lefts = await page.locator('.filter-seg').evaluateAll(els => els.map(e => e.getBoundingClientRect().left))
     expect(lefts).toHaveLength(2)
-    expect(lefts[0]).toBeCloseTo(lefts[1], 1)
+    expect(lefts[0]).toBeCloseTo(lefts[1]!, 1)
     const labels = await page.locator('.filter-field-label').evaluateAll(els => els.map(e => e.getBoundingClientRect().width))
-    expect(labels[0]).toBeCloseTo(labels[1], 1)
+    expect(labels[0]).toBeCloseTo(labels[1]!, 1)
   })
 })
 
@@ -532,7 +532,7 @@ test.describe('Filters panel — Reliability slider touch target', () => {
         expect(await countText()).toMatch(/^Show \d+ of \d+ mints$/)
 
         const cdp = await context.newCDPSession(page)
-        const touch = (type: string, x: number, y: number) =>
+        const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', x: number, y: number) =>
           cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] })
         // Drag the thumb from 0 to ~80 along the track — the finger starts 18px below the centre line,
         // i.e. in the extended hit area, outside the 28px layout box.

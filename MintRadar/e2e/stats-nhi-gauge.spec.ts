@@ -27,7 +27,7 @@ for (const v of [
     await expect(gauge(page)).toBeVisible()
 
     const shown = Number((await page.locator('.nhi-gauge-num').textContent())!.trim())
-    const [filled, gap] = ((await arc(page).getAttribute('stroke-dasharray')) || '').split(' ').map(Number)
+    const [filled, gap] = ((await arc(page).getAttribute('stroke-dasharray')) || '').split(' ').map(Number) as [number, number]
 
     // No dash offset — the arc starts at 12 o'clock purely via rotate(-90).
     expect(await arc(page).getAttribute('stroke-dashoffset')).toBe('0')

@@ -79,7 +79,7 @@ function scanInPage({ root, pick, only }: { root: string; pick: string | null; o
           continue
         }
         if (!(r instanceof CSSStyleRule)) continue
-        let hit = false
+        let hit: boolean
         try { hit = el.matches(r.selectorText) } catch { hit = false }
         if (!hit) continue
         const st = r.style
@@ -150,7 +150,7 @@ export async function scanBadges(page: Page, state = 'default', opts: ScanOption
     for (const r of recs.filter(x => x.interactive)) {
       if (seen.has(r.sel)) continue
       seen.add(r.sel)
-      const loc = page.locator(r.sel.replace(/[^\w.\-]/g, '')).filter({ hasText: r.text.slice(0, 20) }).first()
+      const loc = page.locator(r.sel.replace(/[^\w.-]/g, '')).filter({ hasText: r.text.slice(0, 20) }).first()
       try {
         await loc.hover({ timeout: 1500 })
         const again = (await page.evaluate(scanInPage, { root, pick: NAMEY.source, only: { sel: r.sel, text: r.text } })) as BadgeRecord[]

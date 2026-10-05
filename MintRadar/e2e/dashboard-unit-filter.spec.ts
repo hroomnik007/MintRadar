@@ -216,7 +216,7 @@ test.describe('Dashboard unit filter', () => {
       await openPanel(page)
       const r = await page.evaluate(() => {
         const seg = document.querySelectorAll('.filter-seg')
-        return [document.querySelector('.filter-panel')!.getBoundingClientRect().height, seg[0].getBoundingClientRect().x, seg[1].getBoundingClientRect().x]
+        return [document.querySelector('.filter-panel')!.getBoundingClientRect().height, seg[0]!.getBoundingClientRect().x, seg[1]!.getBoundingClientRect().x]
       })
       expect(r[0]).toBe(h)
       expect(r[1]).toBeCloseTo(sx, 1)
