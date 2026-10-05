@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import type { Express } from 'express'
 
-// GET /api/mints/nostr-reviews serves the `mint_reviews` rows that the 6h
+// GET /api/mints/nostr-reviews serves the `mint_reviews` rows that the hourly
 // background sync (reviewsSync.ts) populates from Nostr relays — it no longer
 // does its own live relay query per request. These tests mock the pg pool and
 // assert the route's validation, row→JSON mapping, ordering pass-through, and

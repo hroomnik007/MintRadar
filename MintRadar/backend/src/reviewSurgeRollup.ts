@@ -15,7 +15,7 @@ import { pool } from './db.js'
 //
 // A snapshot is (re)taken only when it's missing or already ≥7 days old, so the
 // baseline is always a genuine ~1-week-ago figure that rolls forward once a
-// week. Mints whose review_count is still NULL (the 6h reviews sync hasn't run
+// week. Mints whose review_count is still NULL (the hourly reviews sync hasn't run
 // for them yet) are skipped, so the first real sync never looks like a surge.
 
 let running = false

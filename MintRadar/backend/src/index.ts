@@ -64,7 +64,7 @@ const RELIABILITY_MOVERS_CACHE_TTL = 10 * 60_000 // 10 minutes
 // Re-exported for backend/src/__tests__/nostrReviewsRelays.test.ts (a drift
 // tripwire that pins the exact array). The list itself now lives in
 // reviewsSync.ts, which owns the only remaining server-side relay fetch of
-// kind:38000 reviews (the 6h background sync). GET /api/mints/nostr-reviews no
+// kind:38000 reviews (the hourly background sync). GET /api/mints/nostr-reviews no
 // longer touches a relay — it serves the DB rows that sync populates.
 export { REVIEW_SYNC_RELAYS as NOSTR_REVIEWS_RELAYS } from './reviewsSync.js'
 
@@ -1782,7 +1782,7 @@ app.post('/api/mints/discover', async (req: Request, res: Response): Promise<voi
 // useMintReviews.ts fetches live from Nostr relays client-side on every Mint
 // Detail view (PRIMARY — the only path guaranteed to surface a user's own
 // just-published review immediately, see useSubmitReview.ts). This endpoint
-// serves the `mint_reviews` rows that the 6h background sync (reviewsSync.ts)
+// serves the `mint_reviews` rows that the hourly background sync (reviewsSync.ts)
 // populates — an independent server-side vantage point that can reach relays a
 // user's connection can't. It used to do its OWN live relay query on every
 // request (~3s, the single biggest contributor to slow Mint Detail loads); now

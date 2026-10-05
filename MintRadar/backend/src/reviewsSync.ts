@@ -4,20 +4,43 @@
 // a client-side `sharedPool.querySync` against ~19 relays (4.4s EOSE ceiling)
 // AND a server-side `GET /api/mints/nostr-reviews` doing the same query (~3s).
 // That was the single largest contributor to the "several seconds until the
-// page has data" problem. Now a cron pass (piggy-backing on the 6h discovery
-// cycle — see cron.ts) fetches reviews for every known mint once and writes
-// them to `mint_reviews` + rolls up `mints.review_count` / `review_avg_rating`.
-// `GET /api/mints/nostr-reviews` and `/api/mints/known` then serve those
-// cached values instantly from the DB. The frontend's own live querySync stays
-// as a non-blocking background refresh (so a user sees their just-published
-// review immediately) but no longer gates the first render.
+// page has data" problem. Now a background pass fetches reviews for every known
+// mint and writes them to `mint_reviews` + rolls up `mints.review_count` /
+// `review_avg_rating`. `GET /api/mints/nostr-reviews` and `/api/mints/known` then
+// serve those cached values instantly from the DB. The frontend's own live
+// querySync stays as a non-blocking background refresh (so a user sees their
+// just-published review immediately) but no longer gates the first render.
+//
+// Schedule: its own hourly timer (reviewsSchedule.ts), independent of the 6h discovery
+// cycle. To keep the load on each relay at a handful of requests per hour a run opens one
+// connection per relay and sends one REQ per batch of mints (reviewsRelayFetch.ts), only for
+// events newer than the last clean run on that relay (minus an overlap), with a full sweep per
+// relay about once a day. Progress per relay lives in `reviews_sync_relay_state`.
 
-import { SimplePool, verifyEvent } from 'nostr-tools'
-import WebSocket from 'ws'
+import { verifyEvent, type Event as NostrEvent } from 'nostr-tools'
 import { pool } from './db.js'
 import { getKnownMints } from './prober.js'
 import { parseReviewRatingAndComment } from './reviews.js'
 import { operatorPubkeys } from './shared/operatorPubkeys.js'
+import {
+  REVIEW_BATCH_SIZE,
+  REVIEW_CONNECT_TIMEOUT_MS,
+  REVIEW_MAX_CONSECUTIVE_FAILURES,
+  REVIEW_MAX_RUN_MS,
+  REVIEW_PACING_MAX_MS,
+  REVIEW_PACING_MIN_MS,
+  REVIEW_QUERY_TIMEOUT_MS,
+  REVIEW_REQ_LIMIT,
+  connectRelayWs,
+  fetchRelayReviews,
+  groupEventsByMint,
+  planRelayQuery,
+  type ConnectRelay,
+  type RelayPlan,
+  type RelayRunOptions,
+  type RelayRunResult,
+  type RelaySyncState,
+} from './reviewsRelayFetch.js'
 
 export const REVIEW_SYNC_RELAYS = [
   'wss://relay.damus.io',
@@ -38,9 +61,6 @@ export const REVIEW_SYNC_RELAYS = [
   'wss://nostr21.com',
 ]
 
-const REVIEW_FETCH_TIMEOUT_MS = 8_000
-const REVIEW_REQ_LIMIT = 500
-const REVIEW_SYNC_CONCURRENCY = 3
 const REVIEW_INSERT_BATCH = 1000
 
 export interface SyncedReview {
@@ -80,22 +100,6 @@ export function computeAvgRating(reviews: SyncedReview[]): number | null {
   if (rated.length === 0) return null
   const sum = rated.reduce((s, r) => s + (r.rating as number), 0)
   return Math.round((sum / rated.length) * 10) / 10
-}
-
-async function fetchReviewsForMint(nostrPool: SimplePool, url: string): Promise<SyncedReview[] | null> {
-  try {
-    const events = await Promise.race([
-      nostrPool.querySync(REVIEW_SYNC_RELAYS, { kinds: [38000], '#u': [url], limit: REVIEW_REQ_LIMIT }),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), REVIEW_FETCH_TIMEOUT_MS)
-      ),
-    ])
-    const valid = events.filter(e => verifyEvent(e))
-    return dedupeAndParseReviewEvents(valid)
-  } catch (err) {
-    console.error(`[reviews-sync] relay fetch failed for ${url}:`, err instanceof Error ? err.message : err)
-    return null
-  }
 }
 
 interface StoredReviewRow {
@@ -232,6 +236,158 @@ export async function recomputeReviewCountRollups(): Promise<number> {
   return n
 }
 
+
+// ── The run ───────────────────────────────────────────────────────────────────────────────
+
+async function loadRelayState(): Promise<Map<string, RelaySyncState>> {
+  const { rows } = await pool.query(
+    'SELECT relay, last_ok_started_at, last_full_at FROM reviews_sync_relay_state',
+  )
+  const out = new Map<string, RelaySyncState>()
+  for (const r of rows as Array<{ relay: string; last_ok_started_at: string | number; last_full_at: string | number | null }>) {
+    out.set(r.relay, {
+      lastOkStartedAt: Number(r.last_ok_started_at),
+      lastFullAt: r.last_full_at === null ? null : Number(r.last_full_at),
+    })
+  }
+  return out
+}
+
+/** Marks a clean run on one relay. A run without `since` also moves the full-sweep time. */
+async function saveRelayState(relay: string, startedAtSec: number, full: boolean): Promise<void> {
+  await pool.query(
+    `INSERT INTO reviews_sync_relay_state (relay, last_ok_started_at, last_full_at)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (relay) DO UPDATE SET
+       last_ok_started_at = EXCLUDED.last_ok_started_at,
+       last_full_at = COALESCE(EXCLUDED.last_full_at, reviews_sync_relay_state.last_full_at)`,
+    [relay, startedAtSec, full ? startedAtSec : null],
+  )
+}
+
+export interface ReviewsSyncDeps {
+  relays: readonly string[]
+  getMints: () => Promise<string[]>
+  loadState: () => Promise<Map<string, RelaySyncState>>
+  saveState: (relay: string, startedAtSec: number, full: boolean) => Promise<void>
+  persist: (url: string, reviews: SyncedReview[]) => Promise<void>
+  connect: ConnectRelay
+  now: () => number
+  sleep: (ms: number) => Promise<void>
+  random: () => number
+  log: (line: string) => void
+  /** Overrides for tests and the stub-relay scratch run. */
+  config?: Partial<Pick<RelayRunOptions, 'batchSize' | 'limit' | 'pacingMinMs' | 'pacingMaxMs' | 'queryTimeoutMs' | 'connectTimeoutMs' | 'maxConsecutiveFailures'>> & { maxRunMs?: number }
+}
+
+export interface ReviewsSyncSummary {
+  mints: number
+  relaysUsed: number
+  relaysFailed: number
+  reqs: number
+  events: number
+  stored: number
+  updated: number
+  persistFailed: number
+  durationMs: number
+  deadlineHit: boolean
+  relays: Array<{ relay: string; plan: RelayPlan; result: RelayRunResult }>
+}
+
+export async function runReviewsSync(deps: ReviewsSyncDeps): Promise<ReviewsSyncSummary> {
+  const startedMs = deps.now()
+  const startedSec = Math.floor(startedMs / 1000)
+  const cfg = deps.config ?? {}
+  const opts: RelayRunOptions = {
+    batchSize: cfg.batchSize ?? REVIEW_BATCH_SIZE,
+    limit: cfg.limit ?? REVIEW_REQ_LIMIT,
+    connectTimeoutMs: cfg.connectTimeoutMs ?? REVIEW_CONNECT_TIMEOUT_MS,
+    queryTimeoutMs: cfg.queryTimeoutMs ?? REVIEW_QUERY_TIMEOUT_MS,
+    pacingMinMs: cfg.pacingMinMs ?? REVIEW_PACING_MIN_MS,
+    pacingMaxMs: cfg.pacingMaxMs ?? REVIEW_PACING_MAX_MS,
+    maxConsecutiveFailures: cfg.maxConsecutiveFailures ?? REVIEW_MAX_CONSECUTIVE_FAILURES,
+    deadlineMs: startedMs + (cfg.maxRunMs ?? REVIEW_MAX_RUN_MS),
+    now: deps.now,
+    sleep: deps.sleep,
+    random: deps.random,
+  }
+
+  const urls = [...new Set(await deps.getMints())]
+  let state = new Map<string, RelaySyncState>()
+  try {
+    state = await deps.loadState()
+  } catch (err) {
+    // Unknown progress means a full sweep everywhere, which is the safe direction.
+    deps.log(`[reviews-sync] could not read relay state, running a full sweep: ${err instanceof Error ? err.message : err}`)
+  }
+
+  // Relays run in parallel, each one strictly one REQ at a time.
+  const relays = await Promise.all(deps.relays.map(async relay => {
+    const plan = planRelayQuery(state.get(relay), startedSec)
+    const result = await fetchRelayReviews(relay, deps.connect, urls, plan.since, opts)
+    if (result.outcome !== 'ok') deps.log(`[reviews-sync] relay ${relay} ${result.outcome}: ${result.reason ?? 'unknown'}`)
+    return { relay, plan, result }
+  }))
+
+  // Signature and kind are checked once per distinct event, whichever relays delivered it.
+  const verified = new Map<string, NostrEvent>()
+  for (const { result } of relays) {
+    for (const e of result.events) {
+      if (verified.has(e.id)) continue
+      let ok: boolean
+      try { ok = e.kind === 38000 && verifyEvent(e) } catch { ok = false }
+      if (ok) verified.set(e.id, e)
+    }
+  }
+  const byMint = groupEventsByMint([...verified.values()], new Set(urls))
+  const covered = new Set<string>()
+  for (const { result } of relays) for (const url of result.covered) covered.add(url)
+
+  // Mints no relay answered for are left alone (no stamp, no change).
+  let updated = 0
+  let stored = 0
+  let persistFailed = 0
+  for (const url of urls) {
+    if (!covered.has(url)) continue
+    const reviews = dedupeAndParseReviewEvents(byMint.get(url) ?? [])
+    try {
+      await deps.persist(url, reviews)
+      updated++
+      stored += reviews.length
+    } catch (err) {
+      persistFailed++
+      deps.log(`[reviews-sync] persist failed for ${url}: ${err instanceof Error ? err.message : err}`)
+    }
+  }
+
+  // Progress only moves for relays that finished cleanly, and only if everything fetched was stored:
+  // otherwise the next run reaches back far enough to fetch it again.
+  if (persistFailed === 0) {
+    for (const { relay, plan, result } of relays) {
+      if (result.outcome !== 'ok') continue
+      try {
+        await deps.saveState(relay, startedSec, plan.full)
+      } catch (err) {
+        deps.log(`[reviews-sync] could not save relay state for ${relay}: ${err instanceof Error ? err.message : err}`)
+      }
+    }
+  }
+
+  const used = relays.filter(r => r.result.reqs > 0).length
+  const failed = relays.filter(r => r.result.outcome !== 'ok').length
+  const reqs = relays.reduce((n, r) => n + r.result.reqs, 0)
+  const events = relays.reduce((n, r) => n + r.result.eventsReceived, 0)
+  const deadlineHit = relays.some(r => r.result.outcome === 'deadline')
+  const durationMs = deps.now() - startedMs
+  if (deadlineHit) deps.log(`[reviews-sync] max run duration of ${Math.round((cfg.maxRunMs ?? REVIEW_MAX_RUN_MS) / 1000)}s reached, stopped cleanly`)
+  deps.log(
+    `[reviews-sync] done: mints=${urls.length} relays_used=${used} relays_failed_or_skipped=${failed} ` +
+    `reqs=${reqs} events=${events} reviews_stored=${stored} mints_updated=${updated} ` +
+    `full_sweep_relays=${relays.filter(r => r.plan.full).length} duration=${(durationMs / 1000).toFixed(1)}s`,
+  )
+  return { mints: urls.length, relaysUsed: used, relaysFailed: failed, reqs, events, stored, updated, persistFailed, durationMs, deadlineHit, relays }
+}
+
 let reviewSyncRunning = false
 export function isReviewSyncRunning(): boolean {
   return reviewSyncRunning
@@ -243,40 +399,24 @@ export async function refreshAllMintReviews(): Promise<number> {
     return -1
   }
   reviewSyncRunning = true
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(globalThis as any).WebSocket = WebSocket
-  const nostrPool = new SimplePool()
-  let updated = 0
-  let failed = 0
   try {
-    const urls = await getKnownMints()
-    let cursor = 0
-    async function worker(): Promise<void> {
-      for (;;) {
-        const i = cursor++
-        if (i >= urls.length) return
-        const url = urls[i]
-        if (url === undefined) return
-        const reviews = await fetchReviewsForMint(nostrPool, url)
-        if (reviews === null) { failed++; continue }
-        try {
-          await persistMintReviews(url, reviews)
-          updated++
-        } catch (err) {
-          failed++
-          console.error(`[reviews-sync] persist failed for ${url}:`, err instanceof Error ? err.message : err)
-        }
-      }
-    }
-    await Promise.all(
-      Array.from({ length: Math.min(REVIEW_SYNC_CONCURRENCY, urls.length) }, () => worker()),
-    )
-    console.log(`[reviews-sync] done: ${updated} mints updated, ${failed} failed (of ${urls.length})`)
+    const summary = await runReviewsSync({
+      relays: REVIEW_SYNC_RELAYS,
+      getMints: getKnownMints,
+      loadState: loadRelayState,
+      saveState: saveRelayState,
+      persist: persistMintReviews,
+      connect: connectRelayWs,
+      now: Date.now,
+      sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
+      random: Math.random,
+      log: line => console.log(line),
+    })
+    return summary.updated
   } catch (err) {
     console.error('[reviews-sync] fatal error:', err instanceof Error ? err.message : err)
+    return 0
   } finally {
-    nostrPool.destroy()
     reviewSyncRunning = false
   }
-  return updated
 }

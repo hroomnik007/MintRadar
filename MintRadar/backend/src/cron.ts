@@ -3,7 +3,8 @@ import pLimit from 'p-limit'
 import { getKnownMints, probeMintToDb, pruneOldHistory, pruneUnvalidatedMints, pruneAbandonedMints, revalidateMints, backfillServerLocations } from './prober.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
 import { syncAuditCz } from './auditCz.js'
-import { refreshAllMintReviews, recomputeReviewCountRollups } from './reviewsSync.js'
+import { refreshAllMintReviews, recomputeReviewCountRollups, isReviewSyncRunning } from './reviewsSync.js'
+import { startReviewsSyncTimer } from './reviewsSchedule.js'
 import { refreshReliabilityMoversRollup } from './reliabilityMoversRollup.js'
 import { refreshReviewSurgeBaseline } from './reviewSurgeRollup.js'
 import { pruneOldNotificationSubscriptions } from './db.js'
@@ -143,7 +144,7 @@ export function startCron(): void {
 
   // Advance the rolling ~1-week-ago review_count snapshot every day at 4:45am —
   // feeds the informational "recent review surge" flag (reviewSurge.ts). Runs
-  // after the 6h reviews sync has had all night to populate review_count.
+  // after the hourly reviews sync has had all night to populate review_count.
   cron.schedule('45 4 * * *', async () => {
     try {
       await refreshReviewSurgeBaseline()
@@ -166,11 +167,18 @@ export function startCron(): void {
     }
   })
 
-  // Discovery: run once after 10s, then every 6h. The mint-reviews sync
-  // (reviewsSync.ts) piggy-backs on the same cadence — it fetches kind:38000
-  // reviews for every known mint into `mint_reviews` so Mint Detail can serve
-  // review count / avg rating / list from the DB instead of a live relay query
-  // on every page open. It's single-flight internally and logs its own summary.
+  // Reviews sync (reviewsSync.ts): its own hourly timer, a few minutes after boot, each tick
+  // moved by up to 5 minutes of random jitter (reviewsSchedule.ts). It fetches kind:38000 reviews
+  // for every known mint into `mint_reviews` so Mint Detail can serve review count / avg rating /
+  // list from the DB instead of a live relay query on every page open. Single-flight: a tick that
+  // finds the previous run still going is skipped. Allowlist mode makes no relay traffic at all.
+  startReviewsSyncTimer({
+    run: refreshAllMintReviews,
+    isRunning: isReviewSyncRunning,
+    shouldSkip: isAllowlistMode,
+  })
+
+  // Discovery: run once after 10s, then every 6h.
   setTimeout(async () => {
     if (isAllowlistMode()) {
       console.log('[cron] allowlist mode: skipping nostr/api discovery and reviews sync')
@@ -179,13 +187,6 @@ export function startCron(): void {
     console.log('[cron] running initial discovery...')
     await discoverMintsFromNostr()
     await discoverMintsFromApi()
-    try {
-      await refreshAllMintReviews()
-    } catch (err) {
-      if (process.env['NODE_ENV'] !== 'production') {
-        console.error('[cron] initial reviews sync error:', err)
-      }
-    }
   }, 10_000)
 
   // Backfill server_location for mints that were never resolved (one-time catch-up)
@@ -194,7 +195,7 @@ export function startCron(): void {
   // Prime the Reliability Score Movers rollup shortly after boot so a fresh
   // deploy/restart serves real data before the first 5-minute probe tick.
   setTimeout(() => { void refreshReliabilityMoversRollup() }, 15_000)
-  // Align card review_count with the empty-review filter without waiting for the 6h relay sync.
+  // Align card review_count with the empty-review filter without waiting for the next hourly relay sync.
   setTimeout(() => { void recomputeReviewCountRollups() }, 12_000)
   // Seed / advance the review-count baseline shortly after boot too. review_count
   // persists across restarts, so on a normal redeploy most mints already have a
@@ -205,12 +206,5 @@ export function startCron(): void {
     console.log('[cron] running scheduled discovery...')
     await discoverMintsFromNostr()
     await discoverMintsFromApi()
-    try {
-      await refreshAllMintReviews()
-    } catch (err) {
-      if (process.env['NODE_ENV'] !== 'production') {
-        console.error('[cron] scheduled reviews sync error:', err)
-      }
-    }
   }, 6 * 60 * 60 * 1000)
 }

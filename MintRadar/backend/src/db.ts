@@ -74,6 +74,16 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_mint_reviews_url_created
       ON mint_reviews(url, created_at DESC);
 
+    -- Per-relay progress of the hourly reviews sync (reviewsSync.ts). Unix seconds.
+    -- last_ok_started_at = when the last run that finished cleanly on that relay STARTED
+    -- (the next incremental query asks for events since that minus a safety overlap);
+    -- last_full_at = start of the last clean run that had no "since" (the daily full sweep).
+    CREATE TABLE IF NOT EXISTS reviews_sync_relay_state (
+      relay TEXT PRIMARY KEY,
+      last_ok_started_at BIGINT NOT NULL,
+      last_full_at BIGINT
+    );
+
     -- Per-swap rows for the audit.8333.space rolling window (see discovery.ts's
     -- fetchRecentSwaps/persistMintAuditSwaps). Fully replaced (DELETE + INSERT,
     -- same atomic-per-mint-replace pattern as mint_reviews) every 6h discovery
