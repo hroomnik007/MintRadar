@@ -133,7 +133,7 @@ export function MintCard({
           <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={28} radius={6} className={isOfflineDegraded ? 'card-avatar-offline' : ''} />
           <div style={{ minWidth: 0 }}>
             <div className="card-name-line">
-              <span className="card-name" title={displayName}>{displayName}</span>
+              <span className="card-name" title={mint.nameFull ?? displayName}>{displayName}</span>
               <span
                 className={`status-dot${isOnline ? ' online' : ''}`}
                 style={{ background: isOnline ? 'var(--green-bright)' : 'var(--red)' }}

@@ -241,3 +241,42 @@ describe('GET /api/mints/known', () => {
     expect(res.headers['referrer-policy']).toBe('no-referrer')
   })
 })
+
+describe('GET /api/mints/known: names, demo notice and operator reviews', () => {
+  it('sends cleaned display names, the full name only when truncated, and no raw name for a hidden mint', async () => {
+    const rlo = String.fromCharCode(0x202e)
+    query.mockResolvedValueOnce({
+      rows: [
+        sampleRow({ url: 'https://clean.example', name: `${rlo}Clean   Mint` }),
+        sampleRow({ url: 'https://long.example', name: 'x'.repeat(90) }),
+        sampleRow({ url: 'https://mint.sortug.com', name: 'A Very Rude Name' }),
+        sampleRow({ url: 'https://empty.example', name: String.fromCharCode(0x200b) }),
+        sampleRow({ url: 'https://none.example', name: null }),
+      ],
+    })
+    const res = await request(app).get('/api/mints/known')
+    const by = (u: string) => res.body.find((m: { url: string }) => m.url === u)
+    expect(by('https://clean.example').name).toBe('Clean Mint')
+    expect(by('https://clean.example')).not.toHaveProperty('nameFull')
+    expect(by('https://long.example').name.length).toBeLessThan(90)
+    expect(by('https://long.example').nameFull).toBe('x'.repeat(90))
+    expect(by('https://mint.sortug.com').name).toBeNull()
+    expect(JSON.stringify(by('https://mint.sortug.com'))).not.toContain('Rude')
+    expect(by('https://empty.example').name).toBeNull()
+    expect(by('https://none.example').name).toBeNull()
+  })
+
+  it('exposes demoNotice / demoNoticePhrase and operatorReviewCount (additive)', async () => {
+    query.mockResolvedValueOnce({
+      rows: [
+        sampleRow({ url: 'https://demo.example', demo_notice: 'for demonstration purposes', review_operator_count: 2 }),
+        sampleRow({ url: 'https://normal.example' }),
+      ],
+    })
+    const res = await request(app).get('/api/mints/known')
+    const demo = res.body.find((m: { url: string }) => m.url === 'https://demo.example')
+    const normal = res.body.find((m: { url: string }) => m.url === 'https://normal.example')
+    expect(demo).toMatchObject({ demoNotice: true, demoNoticePhrase: 'for demonstration purposes', operatorReviewCount: 2 })
+    expect(normal).toMatchObject({ demoNotice: false, demoNoticePhrase: null, operatorReviewCount: 0 })
+  })
+})

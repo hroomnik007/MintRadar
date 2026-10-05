@@ -2,7 +2,10 @@ import { useQuery } from '@tanstack/react-query'
 
 export interface KnownMint {
   url: string
+  // Display name from the backend (cleaned; null = show the hostname, e.g. a mint on the hidden-names list).
   name: string | null
+  // Full cleaned name, only present when `name` was truncated or emoji-capped (title tooltip).
+  nameFull?: string
   iconUrl: string | null
   degraded: boolean
   archived?: boolean

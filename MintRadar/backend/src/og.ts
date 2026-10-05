@@ -1,5 +1,6 @@
 import { pool } from './db.js'
 import { computeDegraded } from './degraded.js'
+import { publicMintName, isHiddenMintName } from './mintNames.js'
 
 // Minimal HTML fragment served ONLY to social-media crawlers (see nginx
 // user-agent map, deploy/nginx.conf) that hit /mint/:url — they don't run JS,
@@ -32,6 +33,10 @@ export function mintStatusLabel(mint: Pick<OgMintData, 'online' | 'degraded'>): 
   return 'Offline'
 }
 
+function hostnameOf(url: string): string {
+  try { return new URL(url).hostname } catch { return url }
+}
+
 const SITE_URL = 'https://mintradar.org'
 const OG_IMAGE_URL = `${SITE_URL}/og-image-reliability.png`
 
@@ -47,7 +52,9 @@ export function renderMintOgHtml(mint: OgMintData | null, mintUrl: string): stri
     return renderHtml(title, description, pageUrl)
   }
 
-  const displayName = mint.name && mint.name.trim().length > 0 ? mint.name.trim() : mintUrl
+  // Cleaned for display; a mint on the hidden list (or with nothing displayable left) shows its hostname.
+  const displayName = publicMintName(mint.name, mintUrl).name
+    ?? (isHiddenMintName(mintUrl) ? hostnameOf(mintUrl) : mintUrl)
   const title = `${displayName} — MintRadar`
   const reliabilityScoreText = mint.reliabilityScore !== null ? `${mint.reliabilityScore}%` : 'N/A'
   const description = `Reliability Score: ${reliabilityScoreText} · ${mintStatusLabel(mint)}`

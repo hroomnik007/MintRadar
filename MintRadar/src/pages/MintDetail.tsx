@@ -25,6 +25,7 @@ import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
 import { detectDemoNotice } from '@/utils/demoNotice'
 import { operatorPubkeys } from '@/utils/operatorPubkeys'
+import { cleanMintNameDetailed } from '@/utils/cleanMintName'
 import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { auditFreshness } from '@/utils/auditFreshness'
@@ -370,7 +371,14 @@ function MintDetailContent({ url }: { url: string }) {
   // duplicateDisplayNames for the rationale.
   const duplicateDisplayNames = useMemo(() => computeDuplicateMintNames(knownMintsData ?? []), [knownMintsData])
 
-  const metaDisplayName = mintDisplayName({ name: data?.info?.name ?? knownMint?.name, url }, duplicateDisplayNames)
+  // Name rule (2026-10-05): a TRACKED mint uses the known-mint display name only (the backend cleaned it
+  // and applied the hidden-names list; null means "show the hostname"), so the live probe's raw name can
+  // never override it. An untracked mint (live probe only) uses the live name cleaned here with the same
+  // function the backend uses (cleanMintName.ts).
+  const liveName = data?.info?.name ? cleanMintNameDetailed(data.info.name, '') : null
+  const resolvedName = knownMint ? (knownMint.name ?? null) : ((liveName?.name ?? '') || null)
+  const resolvedNameFull = knownMint ? (knownMint.nameFull ?? null) : (liveName?.full ?? null)
+  const metaDisplayName = mintDisplayName({ name: resolvedName, url }, duplicateDisplayNames)
   useDocumentMeta(
     `${metaDisplayName} - Cashu Mint Reliability Score & Uptime | MintRadar`,
     knownMint
@@ -858,7 +866,7 @@ function MintDetailContent({ url }: { url: string }) {
 
   const probeLoading = isLoading || data === undefined
 
-  const displayName = mintDisplayName({ name: data?.info?.name ?? knownMint?.name, url }, duplicateDisplayNames)
+  const displayName = metaDisplayName
   const isOnline = data?.online ?? knownMint?.online ?? false
   const latency = knownMint?.latencyMs ?? null
   const version = data?.info?.version ?? knownMint?.version ?? undefined
@@ -866,7 +874,7 @@ function MintDetailContent({ url }: { url: string }) {
   const motd = data?.info?.motd
   const description = data?.info?.description
   const pubkey = data?.info?.pubkey
-  const name = data?.info?.name
+  const name = resolvedName ?? (knownMint ? mintHostname(url) : undefined)
 
   const tosUrl = data?.info?.tos_url ?? knownMint?.tosUrl ?? undefined
   const descriptionLong = data?.info?.description_long ?? knownMint?.descriptionLong ?? undefined
@@ -1231,7 +1239,7 @@ function MintDetailContent({ url }: { url: string }) {
             <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? knownMint?.iconUrl ?? null} size={avatarSize} radius={16} className="md-hdr-favicon" />
             <div className="md-namebox" ref={nameboxRef}>
               <div className="md-name" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                <span>{displayName}</span>
+                <span {...(resolvedNameFull ? { title: resolvedNameFull } : {})}>{displayName}</span>
                 <span className={`md-status-inline ${isOnline ? '' : 'offline'}`}>
                   <span className={`status-dot ${isOnline ? '' : 'offline'}`} />
                   <span>{isOnline ? 'Online' : 'Offline'}</span>

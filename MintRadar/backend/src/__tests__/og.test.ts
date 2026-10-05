@@ -32,6 +32,7 @@ describe('mintStatusLabel', () => {
 
 describe('renderMintOgHtml', () => {
   const mintUrl = 'https://mint.example.com'
+  const baseMint: OgMintData = { name: 'x', reliabilityScore: 50, online: true, degraded: false }
 
   it('renders name, reliability score and status into title/description for a known mint', () => {
     const mint: OgMintData = { name: 'Example Mint', reliabilityScore: 87, online: true, degraded: false }
@@ -55,6 +56,18 @@ describe('renderMintOgHtml', () => {
     const mint: OgMintData = { name: '   ', reliabilityScore: 50, online: false, degraded: false }
     const html = renderMintOgHtml(mint, mintUrl)
     expect(html).toContain(`<title>${mintUrl} — MintRadar</title>`)
+  })
+
+  it('shows only the hostname for a mint on the hidden-names list (the raw name never reaches the bot HTML)', () => {
+    const html = renderMintOgHtml({ ...baseMint, name: 'A Very Rude Name' }, 'https://mint.sortug.com')
+    expect(html).toContain('<title>mint.sortug.com \u2014 MintRadar</title>')
+    expect(html).not.toContain('Rude')
+  })
+
+  it('cleans control characters, bidi marks and emoji spam out of the title', () => {
+    const rlo = String.fromCharCode(0x202e), zw = String.fromCharCode(0x200b)
+    const html = renderMintOgHtml({ ...baseMint, name: `${rlo}Evil${zw}Mint ${String.fromCodePoint(0x1f525).repeat(8)}` }, 'https://evil.example')
+    expect(html).toContain(`<title>EvilMint ${String.fromCodePoint(0x1f525).repeat(3)} \u2014 MintRadar</title>`)
   })
 
   it('shows N/A when reliabilityScore is null', () => {

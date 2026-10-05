@@ -3,6 +3,7 @@
 // for deterministic testing.
 
 import { PROBE_LOCATION } from '@/constants/probeLocation'
+import { cleanMintName } from '@/utils/cleanMintName'
 
 // Below this many NIP-87 reviews a Community Rating average is too thin to lean
 // on — the displayed number is de-emphasised (the Rating *sort* already handles
@@ -147,8 +148,10 @@ const GENERIC_NAME_DENYLIST = new Set(['cashu', 'cashu mint', 'mint'])
 // the same cleanup resolveMintName() applies before deciding whether to use
 // it as the title. Shared so displayName() and computeDuplicateMintNames()
 // can't drift on what counts as "the same name".
-function cleanMintName(rawName: string | null | undefined): string {
-  let name = (rawName ?? '').trim()
+function stripWrappingQuotes(rawName: string | null | undefined): string {
+  // Display cleaning first (controls, zero-width, bidi, emoji spam, length cap; see cleanMintName.ts).
+  // No url: a name with nothing displayable left comes back '' so the host fallback below still applies.
+  let name = cleanMintName(rawName, '')
   if (name.length >= 2) {
     const first = name[0]
     const last = name[name.length - 1]
@@ -172,7 +175,7 @@ function cleanMintName(rawName: string | null | undefined): string {
 export function computeDuplicateMintNames(mints: ReadonlyArray<{ name?: string | null | undefined }>): Set<string> {
   const counts = new Map<string, number>()
   for (const m of mints) {
-    const key = cleanMintName(m.name).toLowerCase()
+    const key = stripWrappingQuotes(m.name).toLowerCase()
     if (key === '') continue
     counts.set(key, (counts.get(key) ?? 0) + 1)
   }
@@ -201,7 +204,7 @@ function resolveMintName(
   duplicateNames?: ReadonlySet<string> | undefined,
 ): { text: string; isFallback: boolean } {
   const host = mintHostname(mint.url)
-  const name = cleanMintName(mint.name)
+  const name = stripWrappingQuotes(mint.name)
   if (name === '' || GENERIC_NAME_DENYLIST.has(name.toLowerCase())) return { text: host, isFallback: true }
   // If the resolved name is just a parent-domain suffix of the hostname
   // (e.g. name "aleafnd.org" for host "bitcoin.aleafnd.org"), two sibling

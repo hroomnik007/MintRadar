@@ -17,6 +17,7 @@ import { latencyColor, reliabilityColor, uptimeColor, displayName as mintDisplay
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import { listReliabilityScore, compareReliabilityThenRating } from '@/utils/reliabilitySort'
 import { isNotRecommendedMint, partitionNotRecommended } from '@/utils/notRecommended'
+import { cleanMintName } from '@/utils/cleanMintName'
 import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolForStatus } from '@/utils/mintCounts'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
@@ -944,7 +945,8 @@ export default function Dashboard() {
               url: submitUrl,
               state: 'success',
               result: {
-                name: data.info.name ?? null,
+                // Cleaned like every displayed mint name (cleanMintName.ts); '' = nothing displayable -> "Unknown mint".
+                name: cleanMintName(data.info.name, '') || null,
                 version: data.info.version ?? null,
                 nutCount: Object.keys(data.info.nuts).length,
                 latencyMs: data.latencyMs,

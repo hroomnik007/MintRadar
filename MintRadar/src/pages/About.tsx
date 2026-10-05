@@ -190,7 +190,7 @@ export default function About() {
             </li>
             <li>
               Reviews are the unverified opinions of their authors. We do not endorse them and may stop displaying
-              unlawful or abusive content.
+              unlawful or abusive content, including mint names.
             </li>
             <li>Mints and wallets listed here belong to their operators; we are not affiliated with them.</li>
             <li>

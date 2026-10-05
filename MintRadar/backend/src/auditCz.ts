@@ -9,6 +9,7 @@
 // per response.
 import { pool } from './db.js'
 import { normalizeUrl } from './discovery.js'
+import { publicMintName } from './mintNames.js'
 import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 
 export const AUDIT_CZ_SOURCE = 'audit.cashu.cz'
@@ -586,7 +587,11 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
       durationMs: numOrNullRow(x['duration_ms']),
       direction: isFrom ? 'from' as const : 'to' as const,
       otherMintUrl: ((isFrom ? x['to_url'] : x['from_url']) as string | null) ?? null,
-      otherMintName: ((isFrom ? x['to_name'] : x['from_name']) as string | null) ?? null,
+      // The counterpart's name is third-party text (audit.cashu.cz): cleaned / hidden-list aware like every name we emit.
+      otherMintName: publicMintName(
+        ((isFrom ? x['to_name'] : x['from_name']) as string | null) ?? null,
+        ((isFrom ? x['to_url'] : x['from_url']) as string | null) ?? '',
+      ).name,
     }
   })
   return {

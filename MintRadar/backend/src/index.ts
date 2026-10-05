@@ -20,6 +20,7 @@ import { computeReliabilityMovers, type MintScoreSnapshot } from './reliabilityM
 import { globalMeanRating, weightedRating } from './weightedRating.js'
 import { hasRecentReviewSurge } from './reviewSurge.js'
 import { isTestMint } from './testMints.js'
+import { publicMintName, publicMintNameOrHost } from './mintNames.js'
 import { verifyNip05 } from './nip05Verify.js'
 import { isAllowlistMode, isAllowedUrl } from './allowlist.js'
 
@@ -103,6 +104,13 @@ function sanitizeLogValue(s: string): string {
   return s.replace(/[\u0000-\u001f\u007f]/g, '\uFFFD').slice(0, 200)
 }
 const RATE_LIMIT_MAX = 60
+
+// Names leave the server cleaned (mintNames.ts): `name` is the display name (null = show the hostname),
+// `nameFull` the full cleaned name, only when `name` was truncated/emoji-capped (title tooltip).
+function knownMintNameFields(raw: string | null, url: string): { name: string | null; nameFull?: string } {
+  const p = publicMintName(raw, url)
+  return p.nameFull !== null ? { name: p.name, nameFull: p.nameFull } : { name: p.name }
+}
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -656,7 +664,8 @@ app.get('/api/mint/probe', (req: Request, res: Response): void => {
   pool.query('SELECT 1 FROM mints WHERE url = $1', [url])
     .then(async (known) => {
       if ((known.rowCount ?? 0) > 0) {
-        res.json(await probeMint(url))
+        const status = await probeMint(url)
+        res.json(status.info ? { ...status, info: { ...status.info, name: publicMintNameOrHost(status.info.name, url) } } : status)
         return
       }
       const admit = tryAcquireUnknownProbe(ip)
@@ -678,7 +687,7 @@ app.get('/api/mint/probe', (req: Request, res: Response): void => {
         checkedAt: status.checkedAt,
         info: status.info
           ? {
-              name: status.info.name,
+              name: publicMintNameOrHost(status.info.name, url),
               version: status.info.version,
               // keys only — enough for `Object.keys(nuts).length`, none of the
               // per-NUT config an arbitrary host might stuff in here.
@@ -1077,7 +1086,7 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
         .filter(r => isEligibleForRecommendation(r.discovered_at))
         .sort((a, b) => (b.last_reliability_score as number) - (a.last_reliability_score as number))
         .slice(0, 5)
-        .map(r => ({ url: r.url, name: r.name, reliabilityScore: r.last_reliability_score as number }))
+        .map(r => ({ url: r.url, name: publicMintName(r.name, r.url).name, reliabilityScore: r.last_reliability_score as number }))
       const data = { totalMints: rows.length, onlineMints: online.length, offlineMints: offline.length, avgReliabilityScore, avgLatency24h, reliabilityDistribution: { low, moderate, high }, nutAdoption, top5ByReliabilityScore: top5 }
       statsCache = { data, expiresAt: Date.now() + STATS_CACHE_TTL }
       res.setHeader('Cache-Control', `max-age=${Math.floor(STATS_CACHE_TTL / 1000)}`)
@@ -1163,7 +1172,7 @@ app.get('/api/stats/reliability-movers', (req: Request, res: Response): void => 
     .then(result => {
       const snapshots: MintScoreSnapshot[] = result.rows.map(r => ({
         url: r.url as string,
-        name: r.name as string | null,
+        name: publicMintName(r.name as string | null, r.url as string).name,
         latestScore: Number(r.latest_score),
         oldScore: Number(r.old_score),
       }))
@@ -1242,7 +1251,9 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         const latestCheckedAt = r.latest_checked_at as string | null
         return {
           url: r.url as string,
-          name: r.name as string | null,
+          // Display name (cleaned; hidden-list mints show their hostname): see mintNames.ts.
+          // nameFull = the full cleaned name, only when `name` was truncated/emoji-capped.
+          ...knownMintNameFields(r.name as string | null, r.url as string),
           iconUrl: (r.icon_url as string | null) ?? null,
           degraded: computeDegraded(total, onlineCount, latestOnline, latestCheckedAt),
           lastOnlineAt: (r.last_online_at as Date | string | null)
@@ -1669,8 +1680,8 @@ app.post('/api/mint/submit', (req: Request, res: Response): void => {
           isNew,
           added: isNew,
           alreadyTracked: !isNew,
-          name: status.info?.name ?? null,
-          aliasOf,
+          name: publicMintName(status.info?.name, normalized).name,
+          aliasOf: aliasOf.map(a => ({ url: a.url, name: publicMintName(a.name, a.url).name })),
         })
       })
     })
@@ -1765,7 +1776,7 @@ app.post('/api/mints/discover', async (req: Request, res: Response): Promise<voi
         }
       }
 
-      results.push({ url: normalized, success: true, isNew, aliasOf })
+      results.push({ url: normalized, success: true, isNew, aliasOf: aliasOf.map(a => ({ url: a.url, name: publicMintName(a.name, a.url).name })) })
     } catch {
       results.push({ url: normalized, success: false, isNew: false, error: 'Internal error' })
     }

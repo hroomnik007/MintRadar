@@ -16,6 +16,36 @@ across components.
   `host.endsWith('.' + name)`) return the full hostname. That last step fixes
   `bitcoin.aleafnd.org` vs `btc.aleafnd.org` both titling as `aleafnd.org`. `"Cashu test mint"`
   is deliberately NOT denylisted (real known test mint, kept verbatim).
+- **Mint names: cleaning and the hidden list (2026-10-05).** A mint's `name` is untrusted text from its
+  own `/v1/info`, so what we SHOW is cleaned; stored database values are never changed.
+  `cleanMintName(raw, url)` (`backend/src/shared/cleanMintName.ts`, identical frontend copy
+  `src/utils/cleanMintName.ts`, pinned by `sharedModules.test.ts`): NFC; removes control characters,
+  zero-width/invisible characters (ZWSP, ZWNJ, ZWJ, word joiner, BOM, soft hyphen, blank fillers), bidi
+  marks/overrides/isolates, tag characters and variation-selector abuse (one U+FE0E/FE0F straight after a
+  visible character is kept); collapses whitespace; caps any run of more than 3 consecutive emoji at 3;
+  caps the name at 48 grapheme clusters (`Intl.Segmenter`, ending in `…`); nothing left -> the hostname.
+  `cleanMintNameDetailed` also returns `full` (the control-cleaned name) only when the shown name was
+  truncated or emoji-capped: that is the card/hero `title` tooltip (`KnownMint.nameFull`). Normal, CJK,
+  accented and punctuation names are unchanged. (ZWJ is stripped, so a family emoji splits into its
+  members; ZWNJ-dependent scripts lose the joiner.)
+  **Backend boundary** (`backend/src/mintNames.ts`, `publicMintName()` / `publicMintNameOrHost()`):
+  `/api/mints/known` (`name`, `nameFull`), `/api/mint/probe` (`info.name`), `/api/mint/submit` and
+  `/api/mints/discover` (`name`, `aliasOf[].name`), `/api/stats` `top5ByReliabilityScore`,
+  `/api/stats/reliability-movers`, the audit-cz swap counterpart `otherMintName`, and the bot OG HTML
+  (`og.ts`). Not affected: `/api/nuts` and the sitemap (URLs only), notification DMs (hostname only).
+  `name: null` from the API means "show the hostname" (hidden list, or nothing displayable) and the
+  frontend `displayName()` then falls back to it with no duplicate host line.
+  **Hidden list:** `backend/src/data/hiddenMintNames.json`, `[{ "url": "https://host", "reason": "short" }]`
+  (validated at startup by `loadHiddenMintNames`: invalid entries ignored with a warning, max 200, url
+  normalised like `normalizeUrl`). A listed mint shows only its hostname everywhere above; its raw name is
+  never sent, not even as a tooltip. Seeded with `https://mint.sortug.com` ("vulgar name; reported by a
+  reviewer"). **To add a name:** criteria are slurs, sexual vulgarity or spam; add one entry with a one-line
+  reason, commit, deploy the backend (the file is compiled into `dist/data`, so a Docker rebuild is needed).
+  **Frontend:** `displayName()` runs the same cleaning on whatever it is given; Submit preview cleans the
+  live probe name. Mint Detail rule: a TRACKED mint uses only the known-mint name (`knownMint.name`, null ->
+  hostname) for hero, document title/description and the "Name" info row, so the live probe's raw name can
+  never override it; a mint with no tracked row would use the live name cleaned client-side (in practice the
+  route resolves only tracked mints).
 - **`mintFaviconInitials(url)`** — 2-letter monogram fallback for a mint with no icon. Strips a
   leading `www.` and/or `mint.` (case-insensitive, both if stacked — `6987e27`) before taking
   the first two hostname chars, so `mint.example.com` and `example.com` don't both render `MI`.
