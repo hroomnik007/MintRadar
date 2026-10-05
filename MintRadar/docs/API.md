@@ -196,18 +196,25 @@ Daily uptime counts for the last 30 days for a single mint.
 
 ### `GET /api/mints/audit-cz`
 
-Data from the third-party audit service audit.cashu.cz for one mint, refreshed server-side every 10 minutes (the optional `detail7d` is fetched on demand and cached 10 minutes per mint). Display only: it is **not** part of the Reliability Score and is never merged into any MintRadar value.
+Data from the third-party audit service audit.cashu.cz for one mint, refreshed server-side every 10 minutes (the optional `detail7d` is fetched on demand and cached 10 minutes per mint). Display only: it is **not** part of the Reliability Score and is never merged into any MintRadar value. Also reachable as `/api/v1/mints/audit-cz`; it is not rate-limit exempt (the global 60 requests / minute / IP applies).
 
-**Query parameters:** `url` (required, `https://…`, max 500 characters); `limit` (optional integer, number of newest swaps to return — default `20`, clamped to `1..100`, a missing or non-numeric value keeps `20`, bound as a SQL parameter; `stats7d` is unaffected)
+**Query parameters:**
 
-**Response (covered):**
+| Parameter | Required | Meaning |
+|---|---|---|
+| `url` | yes | The mint URL: `https://…`, at most 500 characters, no whitespace or credentials, a well-formed public host (no private/loopback IP literals). The DNS record is **not** looked up. A mint matches by its URL or by one of the aliases audit.cashu.cz lists (compared after URL normalisation and without a trailing slash). |
+| `direction` | no | Which swaps to return: `from` (this mint is the source = a melt), `to` (this mint is the destination = a mint) or `both` (default, also when the parameter is absent). The match is case-sensitive; any other value, an empty value (`direction=`) or a repeated parameter gives `400`. |
+| `limit` | no | Number of newest swaps to return, an integer from `1` to `100`, default `20`. A decimal is rounded down (`2.9` → `2`), `0` and negative numbers become `1`, anything above `100` becomes `100`. A missing, non-numeric (`abc`, `1e2`) or repeated value keeps the default `20`. Bound as an SQL parameter. `stats7d` and `detail7d` are not affected by `limit` or `direction`. |
+
+**Response (covered), `200`:**
 ```json
 {
   "source": "audit.cashu.cz",
   "sourceUrl": "https://audit.cashu.cz/mint/abc",
   "fetchedAt": "2026-10-04T10:03:01.000Z",
   "covered": true,
-  "mint": { "state": "ok", "uptime24h": 99.5, "uptime7d": 98.1, "uptime30d": 97.4, "attributedFailures": 1, "lastCheck": "2026-10-04T09:58:00.000Z" },
+  "mint": { "state": "ok", "uptime24h": 99.5, "uptime7d": 98.1, "uptime30d": 97.4, "attributedFailures": 1,
+            "minted": 29, "melted": 23, "lastCheck": "2026-10-04T09:58:00.000Z" },
   "swaps": [
     { "id": "s1", "at": "2026-10-04T09:00:00.000Z", "status": "failed", "stage": "melt", "error": "…", "amount": 10, "fee": 1,
       "durationMs": 900, "direction": "from", "otherMintUrl": "https://other.example", "otherMintName": "Other" }
@@ -223,11 +230,40 @@ Data from the third-party audit service audit.cashu.cz for one mint, refreshed s
   "detail7d": { "total": 179, "success": 47, "failed": 132, "errorsBlamed": 0, "minted": 26, "melted": 21 }
 }
 ```
-`state` is `ok`, `warn` or `error` — audit.cashu.cz's own verdict, not MintRadar's.
 
-`detail7d` is **published by audit.cashu.cz** (`swaps7d` of `GET /api/v1/mints/{id}`): `total` / `success` / `failed` over all swaps of the mint in 7 days, `errorsBlamed` the failures it attributes to the mint, `minted` / `melted` the successful swaps as destination / source (`null` when the source omits them). Fetched on demand when this endpoint is called for a covered mint (the id comes only from the stored `page` URL, validated), cached 10 minutes per mint, 5 s timeout, 128 KiB cap; a failed refresh keeps the previous value; `null` when nothing was ever fetched or the mint is not covered. Worst case about 65 mints × 6 per hour = 390 requests/h plus the cron's 12/h.
+| Field | Type | Notes |
+|---|---|---|
+| `source` | string | Always `"audit.cashu.cz"`. |
+| `sourceUrl` | string \| null | The mint's page on audit.cashu.cz (only `https://audit.cashu.cz/…` URLs are stored); `null` when not covered. |
+| `fetchedAt` | string (ISO) \| null | When MintRadar last stored this mint from their feed (covered), or the newest fetch of the whole feed (not covered; `null` if nothing was ever fetched). |
+| `covered` | boolean | `true` when the mint is in their feed. |
+| `mint` | object \| null | `null` when not covered. |
+| `mint.state` | string | `ok`, `warn` or `error` — audit.cashu.cz's own verdict, not MintRadar's. |
+| `mint.uptime24h` / `uptime7d` / `uptime30d` | number \| null | Percent, as published by the source. |
+| `mint.attributedFailures` | number \| null | Failures the source attributes to this mint (its own window). |
+| `mint.minted` / `mint.melted` | number \| null | Counts from the source's mint list feed (`null` when it omits them). |
+| `mint.lastCheck` | string (ISO) \| null | The source's last check of the mint. |
+| `swaps` | array | Up to `limit` newest swaps for the chosen `direction`, ordered by `at` descending (no tie-break). `[]` when none stored. |
+| `swaps[].id` | string | The source's swap id. |
+| `swaps[].at` | string (ISO) | When the swap happened. |
+| `swaps[].status` | string | `success`, `failed`, `pending`, or any other short lowercase token the source sends (`^[a-z][a-z_-]{0,29}$`). |
+| `swaps[].stage` | string \| null | Same token format, e.g. `melt`, `mint`, `limits`, `balance`; `null` when the source sends none. |
+| `swaps[].error` | string \| null | **Untrusted text**, at most 300 characters. |
+| `swaps[].amount` / `fee` / `durationMs` | number \| null | `amount` and `fee` are in sat — an assumption: the feed has no unit field, but audit.cashu.cz's methodology page states every limit and amount in sat and its error strings read "need 25 sat, have 20 sat". |
+| `swaps[].direction` | `"from"` \| `"to"` | `from` when this mint is the source, `to` when it is the destination. A swap that matches this mint on both sides is returned once, as `from`. |
+| `swaps[].otherMintUrl` / `otherMintName` | string \| null | The counterpart of the swap: the destination for `from`, the source for `to` (name at most 100 characters). |
+| `stats7d` | object \| null | Counted by MintRadar, see below; `null` only when not covered. |
+| `detail7d` | object \| null \| absent | Published by audit.cashu.cz, see below. |
 
-`stats7d` is **counted by MintRadar** over the swaps it stored with `at` in the last 7 days where `from_url` or `to_url` matches the mint (URL or alias) — it is not a figure published by audit.cashu.cz (`null` when the mint is not covered). A swap where this mint is the source (`from`) is a **melt**, where it is the destination (`to`) a **mint**; a swap matching on both sides is counted once, as a melt. `paid` = status `success`, `failed` = status `failed`, anything else is `pending` (excluded from paid/failed); `paid + failed + pending` over both directions equals `swapsCounted`. `amountPaid` / `feesPaid` are sums over paid swaps (a null fee counts as 0), `avgDurationMsPaid` is the mean `durationMs` of paid swaps that have one (else `null`). `collectedSince` is the `at` of the oldest swap in `audit_cz_swaps` — the window start the counts can claim (a value newer than 7 days ago means the numbers cover less than 7 days). **Unit:** `amount` / `fee` are in sat — an assumption: the feed has no unit field, but audit.cashu.cz's methodology page states every limit and amount in sat (fee = amount sent − amount minted − change) and its error strings read "need 25 sat, have 20 sat"; observed range amount 5–203, fee 0–10. `swaps` holds up to `limit` (default 20, max 100) newest swaps where the mint is `from` or `to`; `error` is untrusted text (≤300 characters). A mint matches by its URL or by one of the aliases audit.cashu.cz lists. When the mint is not in their feed the response is still `200` with `covered: false`, `mint: null`, `swaps: []` (`sourceUrl` null; `fetchedAt` is the newest fetch of the feed, or null). `Cache-Control: max-age=60`.
+Which swaps are returned: with `direction=from` the swaps whose source is this mint (or one of its aliases), with `direction=to` those whose destination is this mint, with `direction=both` either. A swap that has this mint on both sides appears in all three, labelled `from`.
+
+`stats7d` is **counted by MintRadar** over the swaps it stored with `at` in the last 7 days where `from_url` or `to_url` matches the mint (URL or alias) — it is not a figure published by audit.cashu.cz. A swap where this mint is the source (`from`) is a **melt**, where it is the destination (`to`) a **mint**; a swap matching on both sides is counted once, as a melt. `paid` = status `success`, `failed` = status `failed`, anything else is `pending` (excluded from paid/failed); `paid + failed + pending` over both directions equals `swapsCounted`. `amountPaid` / `feesPaid` are sums over paid swaps (a null fee counts as 0), `avgDurationMsPaid` is the mean `durationMs` of paid swaps that have one (else `null`). `collectedSince` is the `at` of the oldest swap in `audit_cz_swaps` — the window start the counts can claim (a value newer than 7 days ago means the numbers cover less than 7 days; `null` when the table is empty).
+
+`detail7d` is **published by audit.cashu.cz** (`swaps7d` of `GET /api/v1/mints/{id}`): `total` / `success` / `failed` over all swaps of the mint in 7 days, `errorsBlamed` the failures it attributes to the mint, `minted` / `melted` the successful swaps as destination / source (`null` when the source omits them). It is fetched on demand when this endpoint is called for a covered mint whose stored page URL yields a valid id (`https://audit.cashu.cz/mint/{id}`, id `^[A-Za-z0-9]{8,64}$`), cached 10 minutes per mint, 5 s timeout, 128 KiB cap; a failed refresh keeps the previous value. **Three states:** an object; `null` when the mint is covered but nothing was ever fetched; the **key is absent** when the mint is not covered or has no usable page URL. Worst case about 65 mints × 6 per hour = 390 requests/h plus the cron's 12/h.
+
+**Not covered:** still `200`, `{ "source": "audit.cashu.cz", "sourceUrl": null, "fetchedAt": <newest feed fetch or null>, "covered": false, "mint": null, "swaps": [], "stats7d": null }` — no `detail7d` key. This happens for any well-formed `https://` URL that is not in their feed, and `direction` / `limit` are still validated first.
+
+**Errors:** `400` `{"error":"Missing required query parameter: url"}` (missing, empty or repeated `url`), `{"error":"url must start with https://"}`, `{"error":"url exceeds maximum length of 500 characters"}`, `{"error":"Invalid url"}` (not well-formed, has whitespace or credentials, private/loopback host), `{"error":"direction must be from, to, or both"}`; `429` from the global rate limit; `500` `{"error":"Internal server error"}`. Successful responses carry `Cache-Control: max-age=60`.
 
 ---
 
