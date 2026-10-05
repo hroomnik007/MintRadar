@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { adaptAuditCz, auditCzNeutralKind, auditCzSuccessTile, type AuditCzView } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzNeutralKind, auditCzStateTitle, auditCzSuccessTile, cleanAuditError, type AuditCzView } from '@/utils/auditCz'
 import type { AuditCzData } from '@/hooks/useAuditCz'
 
 type Row = AuditCzData['swaps'][number]
@@ -88,5 +88,44 @@ describe('sinceLabel', () => {
   it('is the date of the oldest swap in the list (UTC)', () => {
     expect(view([row({ at: '2026-10-04T10:00:00Z' }), row({ at: '2026-10-02T23:30:00Z' })]).sinceLabel).toBe('2 Oct')
     expect(view([]).sinceLabel).toBeNull()
+  })
+})
+
+describe('failure reason of a swap (State cell tooltip + hidden text)', () => {
+  const one = (o: Partial<Row>) => view([row(o)]).swaps[0]!
+
+  it('cleanAuditError strips control / bidi characters and collapses whitespace', () => {
+    expect(cleanAuditError('  Lightning payment\n failed:\t no_route.  ')).toBe('Lightning payment failed: no_route.')
+    expect(cleanAuditError('a\u0000b\u202Ec\u200Bd\u007f')).toBe('abcd')
+    expect(cleanAuditError('\u0001\u0002 \n')).toBeNull()
+    expect(cleanAuditError(null)).toBeNull()
+    expect(cleanAuditError('x'.repeat(500))).toHaveLength(300)
+  })
+  it('keeps hostile markup as plain characters', () => {
+    expect(cleanAuditError('<img src=x onerror=alert(1)>')).toBe('<img src=x onerror=alert(1)>')
+  })
+  it('only rows that are not OK carry a reason', () => {
+    expect(one({ status: 'success', error: 'should not show' }).reason).toBeUndefined()
+    expect(one({ status: 'failed', stage: 'melt', error: 'Payment failed' }).reason).toBe('Payment failed')
+    expect(one({ status: 'failed', stage: 'melt', error: null }).reason).toBeUndefined()
+    expect(one({ status: 'failed', stage: 'melt', error: '\n \u0001' }).reason).toBeUndefined()
+  })
+  it('title: red rows carry the text alone, truncated to 200 characters', () => {
+    expect(auditCzStateTitle(one({ status: 'failed', stage: 'melt', error: 'Timeout after 60s' }))).toBe('Timeout after 60s')
+    const long = auditCzStateTitle(one({ status: 'failed', stage: 'melt', error: 'e'.repeat(300) }))!
+    expect(long).toHaveLength(200)
+    expect(long.endsWith('…')).toBe(true)
+    expect(auditCzStateTitle(one({ status: 'failed', stage: 'melt', error: 'x'.repeat(200) }))).toHaveLength(200)
+  })
+  it('title: grey rows start with the fixed explanation, then the text', () => {
+    expect(auditCzStateTitle(one({ status: 'failed', stage: 'limits', error: 'Amount 61 sat is below the mint minimum of 100 sat' })))
+      .toBe("Not counted against the mint: the auditor's test was below the mint's minimum amount. Amount 61 sat is below the mint minimum of 100 sat")
+    expect(auditCzStateTitle(one({ status: 'failed', stage: 'balance', error: null })))
+      .toBe("Not counted against the mint: the auditor's wallet had too little balance")
+  })
+  it('no title for OK rows, pending without text, and rows without a reason (8333 rows)', () => {
+    expect(auditCzStateTitle(one({}))).toBeUndefined()
+    expect(auditCzStateTitle(one({ status: 'pending' }))).toBeUndefined()
+    expect(auditCzStateTitle({ state: 'failed' })).toBeUndefined()
   })
 })

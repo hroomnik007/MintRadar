@@ -1692,6 +1692,9 @@ button.md-url-copy.copied > svg { opacity: 1; }
 
 .audit-swaps-table-wrap {
   overflow-x: auto;
+  /* Containing block for the visually hidden failure text in the State cell (.sr-only is position: absolute):
+     without it the clipped 1px box of a far-right cell is not cut by this scroll box and widens the page. */
+  position: relative;
 }
 
 .audit-swaps-table {

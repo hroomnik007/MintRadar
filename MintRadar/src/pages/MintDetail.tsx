@@ -27,7 +27,7 @@ import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { auditFreshness } from '@/utils/auditFreshness'
 import { useAuditCz } from '@/hooks/useAuditCz'
-import { adaptAuditCz, auditCzSuccessTile, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzStateTitle, auditCzSuccessTile, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import { sortUnits } from '@/utils/sortUnits'
 import {
@@ -2176,7 +2176,11 @@ function MintDetailContent({ url }: { url: string }) {
                               <td>{s.amount !== null ? `${s.amount} sat` : '—'}</td>
                               <td>{s.fee !== null ? s.fee : '—'}</td>
                               <td>{s.timeTakenMs !== null ? `${Math.round(s.timeTakenMs)} ms` : '—'}</td>
-                              <td>{s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TEXT[s.neutral] : <>{s.state}{s.stage ? ` (${s.stage})` : null}</>}</td>
+                              {/* cz rows that are not OK: the failure text as tooltip and as visually hidden text (a title is not available on touch or to screen readers). Plain text only. */}
+                              <td {...(auditCzStateTitle(s) ? { title: auditCzStateTitle(s) } : {})}>
+                                {s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TEXT[s.neutral] : <>{s.state}{s.stage ? ` (${s.stage})` : null}</>}
+                                {s.reason ? <>{' '}<span className="sr-only">{s.reason}</span></> : null}
+                              </td>
                             </tr>
                           ))}
                         </tbody>

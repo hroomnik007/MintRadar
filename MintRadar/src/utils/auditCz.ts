@@ -26,6 +26,8 @@ export interface AuditSwapRow {
   neutral?: AuditCzNeutralKind
   /** Unused for audit.cashu.cz from-only rows; the To cell uses toUrl. */
   counterpart?: string
+  /** audit.cashu.cz view only, rows that are not OK: the sanitized failure text (cleanAuditError), shown as the State cell's tooltip and as visually hidden text. */
+  reason?: string
 }
 
 export interface AuditCzView {
@@ -84,6 +86,54 @@ export function auditCzNeutralKind(s: { state: string; stage?: string | null; er
   return undefined
 }
 
+/** Longest failure text the State cell tooltip carries (the "…" counts), and the cap on the hidden text (the endpoint already stops at 300). */
+export const AUDIT_CZ_REASON_TITLE_MAX = 200
+const AUDIT_CZ_REASON_MAX = 300
+
+// Line breaks and tabs become spaces; every other control, zero-width and bidi-override character is dropped
+// (a right-to-left override in an error string could reorder the text around it).
+function isLayoutBreak(cp: number): boolean {
+  return (cp >= 9 && cp <= 13) || cp === 0x85 || cp === 0x2028 || cp === 0x2029
+}
+function isStrippable(cp: number): boolean {
+  return cp <= 0x1f || (cp >= 0x7f && cp <= 0x9f) || (cp >= 0x200b && cp <= 0x200f)
+    || (cp >= 0x202a && cp <= 0x202e) || (cp >= 0x2060 && cp <= 0x2069) || cp === 0xfeff
+}
+
+/** Untrusted error text of a swap → plain text for display: control characters removed, whitespace collapsed, at most 300 characters. null when nothing is left. */
+export function cleanAuditError(raw: string | null | undefined): string | null {
+  if (typeof raw !== 'string') return null
+  let out = ''
+  for (const ch of raw) {
+    const cp = ch.codePointAt(0) as number
+    if (isLayoutBreak(cp)) out += ' '
+    else if (!isStrippable(cp)) out += ch
+  }
+  const text = truncateText(out.replace(/\s+/g, ' ').trim(), AUDIT_CZ_REASON_MAX)
+  return text === '' ? null : text
+}
+
+/** At most `max` characters (code points), ending in "…" when it was cut. */
+export function truncateText(text: string, max: number): string {
+  const chars = Array.from(text)
+  return chars.length <= max ? text : `${chars.slice(0, max - 1).join('').trimEnd()}…`
+}
+
+/**
+ * Tooltip of the State cell of a row that is not OK (audit.cashu.cz view). Grey rows start with the fixed
+ * "Not counted against the mint: …" explanation, followed by the failure text; other rows carry the failure
+ * text alone. undefined when there is nothing to say (OK rows, 8333 rows, no error text).
+ */
+export function auditCzStateTitle(s: Pick<AuditSwapRow, 'state' | 'neutral' | 'reason'>): string | undefined {
+  if (s.state === 'OK') return undefined
+  const reason = s.reason ? truncateText(s.reason, AUDIT_CZ_REASON_TITLE_MAX) : null
+  if (s.neutral === 'limits' || s.neutral === 'balance') {
+    const why = AUDIT_CZ_NEUTRAL_TITLE[s.neutral]
+    return reason ? `${why}. ${reason}` : why
+  }
+  return reason ?? undefined
+}
+
 /** Recent success rate tile of the cashu.cz view: "{ok} / {counted}" + "{pct}% ok", or n/a below 3 counted swaps. */
 export function auditCzSuccessTile(v: { recentTotal: number | null; recentErrors: number | null }): { counted: number; main: string | null; sub: string } {
   const counted = v.recentTotal ?? 0
@@ -108,17 +158,22 @@ function oldestLabel(swaps: AuditSwapRow[]): string | null {
 /** Returns null when the mint is not covered (the caller then shows the audit.8333.space panel). */
 export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditCzView | null {
   if (!data || !data.covered || !data.mint) return null
-  const swaps: AuditSwapRow[] = data.swaps.map(s => ({
-    swapId: s.id,
-    toUrl: s.otherMintUrl,
-    amount: s.amount,
-    fee: s.fee,
-    createdAt: s.at || null,
-    timeTakenMs: s.durationMs,
-    state: swapState(s.status),
-    error: s.error,
-    stage: s.stage,
-  })).map(r => {
+  const swaps: AuditSwapRow[] = data.swaps.map(s => {
+    const state = swapState(s.status)
+    const reason = state === 'OK' ? null : cleanAuditError(s.error)
+    return {
+      swapId: s.id,
+      toUrl: s.otherMintUrl,
+      amount: s.amount,
+      fee: s.fee,
+      createdAt: s.at || null,
+      timeTakenMs: s.durationMs,
+      state,
+      error: s.error,
+      stage: s.stage,
+      ...(reason ? { reason } : {}),
+    }
+  }).map(r => {
     const neutral = auditCzNeutralKind(r)
     return neutral ? { ...r, neutral } : r
   })
