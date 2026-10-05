@@ -146,6 +146,13 @@ Runs every 6h: `0 */6 * * *` → `scripts/backup-db.sh`
 - **Relay events backup (not a file backup):** `deploy/strfry/backup-own-events.sh` (cron 04:00, copy under `/opt/mintradar-strfry`) copies public Nostr events onto our own relay and only writes a timestamp to `/opt/mintradar-strfry/backup-state/last-sync-unix`. Check the relay data directory and the state directory on the server the same way (`ls -ld`, `ls -l`) and apply `700` / `600` if they are world-readable.
 - **Open items (deliberately not done):** no encryption of the dumps, no off-server copy, no restore script (the only documented restore is the manual `zcat | psql` pipe; it has to run as `deploy` or root now that the files are `600`).
 
+## security.txt (RFC 9116, 2026-10-05)
+
+`public/.well-known/security.txt` is a static file (copied into `dist/` by Vite like `nostr.json`; no backend involved). `Contact` is the repository's GitHub private vulnerability reporting URL (`https://github.com/hroomnik007/MintRadar/security/advisories/new`, same as SECURITY.md; reporting is enabled on the repo), `Preferred-Languages: en`, `Canonical: https://mintradar.org/.well-known/security.txt`. Created 2026-10-05 with `Expires: 2027-10-05T00:00:00.000Z`.
+
+- **YEARLY RENEWAL (before 2027-10-05):** move `Expires` forward to 12 months from the day you edit it (UTC, ISO 8601, e.g. `2028-10-05T00:00:00.000Z`), commit and push (CI deploys it). An expired file is treated by scanners as untrustworthy, so do this a few weeks early. Next reminder: **September 2027**.
+- Served by the catch-all `location /` (`try_files` finds the file), so it gets `Content-Type: text/plain` from `mime.types` plus the server-level security headers, and never falls back to the SPA. RFC 9116 asks for `charset=utf-8` on it; nginx sends none by default. A dedicated `location = /.well-known/security.txt { default_type text/plain; charset utf-8; }` (with the security headers repeated, see add_header non-inheritance) would add it. Not done, because it was out of the scope of the change that added the file.
+
 ## Docker log limits (2026-10-04)
 
 `docker-compose.yml`: the `backend` and `postgres` services use `logging: driver: json-file`, `max-size: "10m"`, `max-file: "3"` (≤ 30 MB per container; same values as the separate strfry relay container, which is NOT in this compose file and was not touched). Before this they had `json-file` with no limits, so the logs grew until the container was recreated.
