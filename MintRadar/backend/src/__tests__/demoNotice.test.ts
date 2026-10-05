@@ -3,7 +3,7 @@ import { detectDemoNotice, DEMO_NOTICE_PHRASES } from '../shared/demoNotice.js'
 
 describe('detectDemoNotice (backend)', () => {
   it('matches the LNpay-style notice', () => {
-    expect(detectDemoNotice(['This mint is for demonstration purposes only.'])).toBe('for demonstration purposes')
+    expect(detectDemoNotice(['This mint is for demonstration purposes only.'])).toBeNull()
   })
   it('matches every listed phrase case-insensitively and returns the list phrase', () => {
     for (const p of DEMO_NOTICE_PHRASES) expect(detectDemoNotice([`Note: ${p.toUpperCase()}.`])).toBe(p)

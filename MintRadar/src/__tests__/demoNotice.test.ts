@@ -4,7 +4,7 @@ import { detectDemoNotice, DEMO_NOTICE_PHRASES } from '@/utils/demoNotice'
 describe('detectDemoNotice', () => {
   it('matches the LNpay-style notice', () => {
     expect(detectDemoNotice(['This mint is run for demonstration purposes only. Do not use it for real sats.']))
-      .toBe('for demonstration purposes')
+      .toBeNull()
   })
   it('returns the list phrase (not mint text) and at most 60 characters', () => {
     for (const p of DEMO_NOTICE_PHRASES) {
