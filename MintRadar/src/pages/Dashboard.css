@@ -1489,10 +1489,18 @@
    mints … Reset · Show N of M] on one 36px row; narrower: flex-wrap moves the footer
    (checkbox + buttons) to the last line. Mobile block below stacks the selection controls. */
 .filter-bar {
+  /* Vertical gap between rows that wrap or stack, for EVERY pointer (the touch layout must stay
+     identical to the mouse layout, see dashboard-filters-panel.spec.ts). Hit-area arithmetic: a
+     28px segment (visible) + an 8px invisible band above + 8px below = 44px, and the Reliability
+     slider grows 8px above and below its box the same way. Two neighbouring rows own their
+     bands only if the gap holds both of them: 8 + 8 = 16px. With 8px the later row's band wins
+     the overlap and the earlier row loses the pixels it needs (a tap just under "Status All"
+     landed on the Unit chip; the Unit chips under the slider and Reset lost theirs too). */
+  --filter-row-gap: 16px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px 12px;
+  gap: var(--filter-row-gap) 12px;
 }
 
 /* Field = plain text label in front of a segmented control. The label is not part of the
@@ -1541,7 +1549,7 @@
 .grid-unit-hidden-note { opacity: 0.85; }
 
 /* Segmented control — a row of buttons, same visual language as .wizard-unit-seg (Tools):
-   36px visible, 44px touch target through an invisible ::before. */
+   28px visible, 44px touch target through an invisible ::before (28 + 8 + 8, see .filter-bar). */
 .filter-seg {
   display: flex;
   align-items: stretch;
@@ -1550,7 +1558,7 @@
   min-width: 0;
   border-radius: 8px;
 }
-/* The 1px outer frame is drawn as an overlay (not a real border) so the options inside are the full 36px. */
+/* The 1px outer frame is drawn as an overlay (not a real border) so the options inside are the full 28px. */
 .filter-seg::after {
   content: '';
   position: absolute;
@@ -1608,8 +1616,9 @@
   }
   .filter-seg-opt:not(.active):active { background-image: none; }
 }
-/* Touch: visible height stays 36px; an invisible extension (4px above/below only, never
-   sideways) brings the target to 44px. Same technique as .wizard-unit-opt / .md-back. */
+/* Touch: visible height stays 28px; an invisible extension (8px above/below only, never
+   sideways) brings the target to 44px: 28 + 8 + 8. Same technique as .wizard-unit-opt / .md-back.
+   The rows around a segment must leave 8px each for it, see --filter-row-gap on .filter-bar. */
 @media (pointer: coarse), (max-width: 600px) {
   .filter-seg-opt::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; bottom: -8px; }
 }
@@ -1663,8 +1672,8 @@
    no longer fit, buttons then share the next line). */
 @media (max-width: 600px) {
   .filter-panel { padding-block: 7px; }
-  /* 8px between rows = the two 4px ::before touch extensions meet without overlapping */
-  .filter-bar { gap: 8px; }
+  /* Rows keep --filter-row-gap (16px): the touch bands of two neighbouring rows meet without overlapping */
+  .filter-bar { gap: var(--filter-row-gap) 8px; }
   .filter-field { flex: 1 1 100%; }
   .filter-field .filter-seg { flex: 1 1 auto; }
   .filter-seg-opt { min-width: 0; }
