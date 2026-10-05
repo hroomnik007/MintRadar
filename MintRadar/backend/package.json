@@ -21,21 +21,21 @@
     "node-cron": "^4.6.0",
     "nostr-tools": "^2.25.2",
     "p-limit": "^7.3.3",
-    "pg": "^8.23.0",
+    "pg": "^8.23.1",
     "undici": "^8.11.2",
-    "ws": "^8.21.3"
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.6",
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.4",
     "@types/supertest": "^7.2.1",
-    "@types/ws": "^8.18.1",
-    "@typescript-eslint/eslint-plugin": "^8.70.1",
+    "@types/ws": "^8.18.2",
+    "@typescript-eslint/eslint-plugin": "^8.71.0",
     "@typescript-eslint/parser": "^8.62.1",
-    "@vitest/coverage-v8": "^5.0.1",
+    "@vitest/coverage-v8": "^5.0.3",
     "eslint": "^10.11.0",
-    "supertest": "^7.3.0",
+    "supertest": "^7.3.1",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vitest": "^5.0.0"
