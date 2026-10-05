@@ -71,6 +71,53 @@ The file `deploy/nginx.conf` in the repo documents the intended production confi
 
 `.github/workflows/nginx-config-drift-check.yml` — a separate, read-only, informational workflow (no `needs:` link to `deploy.yml`, so it can never block or slow down deploys) that runs daily at 06:00 UTC (`cron: '0 6 * * *'`, plus `workflow_dispatch` for manual runs). It SSHes in (reusing the same `HETZNER_HOST`/`HETZNER_USER`/`HETZNER_SSH_KEY` secrets as `deploy.yml`, via `appleboy/ssh-action` with `capture_stdout: true`), `sudo cat`s the live `/etc/nginx/sites-available/mintradar.org.conf` (never writes anything to the server — no `nginx -t`, no reload), diffs it against the checked-out `deploy/nginx.conf`, and writes the result (match or full diff) to the GitHub Actions Job Summary. It always exits 0 — drift is surfaced for a human to notice, never treated as a CI failure. Exists specifically because `deploy/nginx.conf` is manual-deploy-only (see above) and had already drifted silently once before (the `setup-server.sh` privyzap issue was found the same way — a targeted investigation, not this automated check, since the check didn't exist yet at the time).
 
+### Real 404 for unknown paths + manifest MIME — PREPARED, NOT APPLIED to the server (2026-10-05)
+
+`deploy/nginx.conf` (repo copy only) now answers **200 + `index.html` only for known routes** and **404 with the `index.html` body** for everything else that is not a file, so React Router renders the "Page not found" page (`src/pages/NotFound.tsx`, catch-all `*` route in `App.tsx`, `noindex`). Before, every unknown path was a 200 (soft 404). `RouteError` stays the screen for real chunk-load / render failures; the two are not merged.
+
+- **Known routes (from `src/App.tsx`):** `/`, `/watchlist`, `/stats`, `/tools`, `/wallets`, `/learn`, `/learn/<slug>` (one segment; unknown slugs still render the in-app "Module not found"), `/about`, `/nuts`, `/mint/<anything>` (`location /mint/`, also `/mint/nostr/<naddr>`; unchanged, still has the social-bot OG rewrite). Optional trailing slash on all of them. In nginx: regex location `^/(?:watchlist|stats|tools|wallets|about|nuts|learn(?:/[^/]+)?)/?$` (marked `# ROUTES:`; it sits after the static-asset regex because regex locations match in file order) plus `location / { try_files $uri $uri/ =404; error_page 404 /index.html; }`.
+- **Unchanged:** `/api/`, `/health`, `/sitemap.xml`, `/favicon.png`, `/sw.js`, `/registerSW.js`, `/manifest.webmanifest`, the static-asset regex (a missing `/assets/x.js` is still a plain 404 with no SPA body, which the chunk-load recovery relies on), the scanner 444 block, every `add_header`/CSP line. The new locations have no `add_header`, so they inherit the server-level security headers (checked on 200 and 404 responses).
+- **New:** `location /.well-known/ { try_files $uri =404; }` (a missing file there is a plain 404, not the SPA shell; `nostr.json` keeps its exact-match block, `security.txt` is served from here).
+- **Manifest MIME:** the live server sends `manifest.webmanifest` as `application/octet-stream` (its `mime.types` has no `webmanifest`). The server block now does `include /etc/nginx/mime.types;` followed by `types { application/manifest+json webmanifest; }`. A `types {}` block in a server REPLACES the inherited map, so the include is what keeps every default type; two `types` blocks in one context add up. If the server's `mime.types` ever gains `webmanifest`, nginx only warns about the duplicate (remove the block then).
+- **`scripts/check-route-consistency.mjs`** compares the router paths with the nginx list in both directions and exits 1 on any difference (also checks `location /mint/`, the `location /` form and that `/nope-missing`, `/stats/extra`, `/dashboard` do not match). Run `node scripts/check-route-consistency.mjs` whenever a route is added to `App.tsx` AND in `deploy/nginx.conf`; adding a route to only one of them is exactly the bug it catches.
+- **Tested locally (2026-10-05)** in an `nginx:stable-alpine` container (podman) with a stub backend and the Certbot lines swapped for a self-signed cert: `nginx -t` OK, a 37-path curl matrix, headers on 200/404, social-bot rewrite. Not tested on the real server (its nginx version is not the container's).
+- **Known side effects:** a missing non-listed static path such as `/fonts/missing.woff` is now a 404 with the SPA body instead of a 200; `/mint/` (empty) and `/mint/a/b` still get the shell with 200 (router shows the Not found page, as before).
+- **The daily drift check (`nginx-config-drift-check.yml`) will report a difference until the owner applies the file below.** That is expected, not a failure.
+
+**Owner steps (as the `deploy` user on server01; nothing here has been run):**
+
+1. Get the new file onto the server (the CI deploy has already pulled it): `cd /var/www/mintradar-repo && git log -1 --format=%h -- MintRadar/deploy/nginx.conf` and make sure it is the commit "nginx: real 404 for unknown paths and manifest MIME (not yet applied)" or newer.
+2. Check that `/etc/nginx/mime.types` exists (`ls -l /etc/nginx/mime.types`) and has no `webmanifest` line (`grep -n webmanifest /etc/nginx/mime.types`; no output = expected).
+3. Back up the live file: `sudo cp -a /etc/nginx/sites-available/mintradar.org.conf /etc/nginx/sites-available/mintradar.org.conf.bak-$(date +%Y%m%d)` (a `.bak` next to it is not loaded; `sites-enabled` links to the exact file name).
+4. Copy the new one: `sudo cp /var/www/mintradar-repo/MintRadar/deploy/nginx.conf /etc/nginx/sites-available/mintradar.org.conf`
+5. Test: `sudo nginx -t` — must say `syntax is ok` and `test is successful`. If not, go to Rollback; do not reload.
+6. Apply: `sudo systemctl reload nginx`
+7. Curl checks (run from anywhere):
+   ```
+   # known routes: all must print 200
+   for p in / /watchlist /stats /tools /wallets /learn /learn/cashu-basics /about /nuts \
+            "/mint/https%3A%2F%2Ftestnut.cashu.space" /stats/; do
+     printf '%-45s %s\n' "$p" "$(curl -s -o /dev/null -w '%{http_code}' "https://mintradar.org$p")"
+   done
+   # unknown: must print 404, and the body must still be the app shell
+   for p in /nope-missing /dashboard /a/b/c /stats/extra; do
+     printf '%-45s %s\n' "$p" "$(curl -s -o /dev/null -w '%{http_code}' "https://mintradar.org$p")"
+   done
+   curl -s https://mintradar.org/nope-missing | grep -c '<div id="root">'      # 1
+   # untouched: all must print 200
+   for p in /robots.txt /sitemap.xml /health /api/v1/health /.well-known/nostr.json /.well-known/security.txt /manifest.webmanifest /sw.js; do
+     printf '%-45s %s\n' "$p" "$(curl -s -o /dev/null -w '%{http_code}' "https://mintradar.org$p")"
+   done
+   curl -sI https://mintradar.org/manifest.webmanifest | grep -i content-type  # application/manifest+json
+   curl -sI https://mintradar.org/.well-known/security.txt | grep -i content-type  # text/plain
+   curl -s -o /dev/null -w '%{http_code}\n' https://mintradar.org/.well-known/missing   # 404
+   curl -s -o /dev/null -w '%{http_code}\n' https://mintradar.org/assets/missing-abc.js  # 404 (plain, no SPA body)
+   curl -sI https://mintradar.org/nope-missing | grep -i -E 'content-security-policy|strict-transport'   # both present
+   curl -sI -A Twitterbot "https://mintradar.org/mint/https%3A%2F%2Ftestnut.cashu.space" | head -1        # 200 (OG fragment)
+   ```
+   Then open `https://mintradar.org/nope-missing` in a browser: the navbar plus "Page not found" with links to Dashboard and About.
+8. **Rollback:** `sudo cp -a /etc/nginx/sites-available/mintradar.org.conf.bak-<date> /etc/nginx/sites-available/mintradar.org.conf && sudo nginx -t && sudo systemctl reload nginx`. The site keeps working throughout: a failed `nginx -t` never reloads, and a reload with a good config is graceful. (If the daily drift check then compares the old file against the new repo copy, it will keep showing the difference until the repo copy is reverted or the new one applied.)
+
 ### OG tags for /mint/:url — bot-only fragment (2026-08-29)
 
 Social crawlers (Twitterbot, Discordbot, TelegramBot, facebookexternalhit, Slackbot, WhatsApp) don't run JS, so they never see the SPA's client-rendered `<title>`/OG meta tags on `/mint/:url` — they'd only ever see the generic homepage preview from `index.html`. Fixed via **User-Agent sniffing at the nginx layer** (chosen over an SSR rewrite or a prerendering service — MVP scope): regular browsers are completely unaffected and still get the normal SPA.
@@ -151,7 +198,7 @@ Runs every 6h: `0 */6 * * *` → `scripts/backup-db.sh`
 `public/.well-known/security.txt` is a static file (copied into `dist/` by Vite like `nostr.json`; no backend involved). `Contact` is the repository's GitHub private vulnerability reporting URL (`https://github.com/hroomnik007/MintRadar/security/advisories/new`, same as SECURITY.md; reporting is enabled on the repo), `Preferred-Languages: en`, `Canonical: https://mintradar.org/.well-known/security.txt`. Created 2026-10-05 with `Expires: 2027-10-05T00:00:00.000Z`.
 
 - **YEARLY RENEWAL (before 2027-10-05):** move `Expires` forward to 12 months from the day you edit it (UTC, ISO 8601, e.g. `2028-10-05T00:00:00.000Z`), commit and push (CI deploys it). An expired file is treated by scanners as untrustworthy, so do this a few weeks early. Next reminder: **September 2027**.
-- Served by the catch-all `location /` (`try_files` finds the file), so it gets `Content-Type: text/plain` from `mime.types` plus the server-level security headers, and never falls back to the SPA. RFC 9116 asks for `charset=utf-8` on it; nginx sends none by default. A dedicated `location = /.well-known/security.txt { default_type text/plain; charset utf-8; }` (with the security headers repeated, see add_header non-inheritance) would add it. Not done, because it was out of the scope of the change that added the file.
+- Served as a plain file (`location /` finds it with `try_files`; after the 404 config below is applied, `location /.well-known/`), so it gets `Content-Type: text/plain` from `mime.types` plus the server-level security headers, and never falls back to the SPA. RFC 9116 asks for `charset=utf-8` on it; nginx sends none by default. A dedicated `location = /.well-known/security.txt { default_type text/plain; charset utf-8; }` (with the security headers repeated, see add_header non-inheritance) would add it. Not done, because it was out of the scope of the change that added the file.
 
 ## Docker log limits (2026-10-04)
 
@@ -173,6 +220,7 @@ Runs every 6h: `0 */6 * * *` → `scripts/backup-db.sh`
 
 After a deploy the previous build's hashed lazy chunks (`Stats-<hash>.js`, …) are gone (`rm -rf dist/assets/*` in `deploy.yml`, nginx returns 404 for a missing `.js`), so a tab still running the old build fails on `import()` with "Failed to fetch dynamically imported module".
 - `src/utils/chunkReload.ts` — `isChunkLoadError()` (message regex) + `claimAutoReload()` (sessionStorage timestamp `mintradar_chunk_reload_at`, max ONE automatic reload per 60s, try/catch → refuses if storage unavailable) + `reloadOnChunkError()`.
+- Unknown URLs are NOT handled by `RouteError` any more (2026-10-05): `App.tsx` has a catch-all `*` child route rendering `src/pages/NotFound.tsx` inside the app shell. `RouteError` only shows for real route errors.
 - `src/components/RouteError.tsx` is the root route's `errorElement` (App.tsx): friendly message + Reload button, no stack/"Hey developer" text. On a chunk error it auto-reloads once; a second failure inside 60s (or any non-chunk error) just shows the screen. `main.tsx` also handles Vite's `vite:preloadError` the same way.
 - Tests: `src/__tests__/chunkReload.test.ts`, `e2e/chunk-load-recovery.spec.ts` (aborts the dev `/src/pages/Stats.tsx` request). Client-side only — deploy-side (keeping old assets, SW) is unchanged.
 
