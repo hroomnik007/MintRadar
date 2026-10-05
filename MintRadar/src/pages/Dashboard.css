@@ -1515,7 +1515,7 @@
   display: flex;
   align-items: stretch;
   position: relative;
-  height: 36px;
+  height: 28px;
   min-width: 0;
   border-radius: 8px;
 }
@@ -1534,8 +1534,8 @@
   align-items: center;
   justify-content: center;
   flex: 1 1 0;
-  min-width: 52px;
-  padding: 0 10px;
+  min-width: 44px;
+  padding: 0 8px;
   background-color: var(--surface-3);
   background-image: none;
   border: none;
@@ -1580,7 +1580,7 @@
 /* Touch: visible height stays 36px; an invisible extension (4px above/below only, never
    sideways) brings the target to 44px. Same technique as .wizard-unit-opt / .md-back. */
 @media (pointer: coarse), (max-width: 600px) {
-  .filter-seg-opt::before { content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
+  .filter-seg-opt::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; bottom: -8px; }
 }
 
 .filter-rel {
