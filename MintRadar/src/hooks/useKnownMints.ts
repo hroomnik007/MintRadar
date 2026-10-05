@@ -63,6 +63,9 @@ export interface KnownMint {
   // (backend/src/reviewsSync.ts). Null until that sync has run for the mint.
   reviewCount?: number | null
   reviewAvgRating?: number | null
+  // Stored reviews written by the mint's own operator (a key listed in its nostr contact or its
+  // announcement author). They are NOT in reviewCount / reviewAvgRating (backend reviewsSync.ts).
+  operatorReviewCount?: number
   // Forgery-resistant sybil signal: the backend saw this mint's review_count
   // jump sharply vs. its own ~1-week-ago snapshot (backend/src/reviewSurge.ts).
   // Informational only — never affects Reliability Score or the Rating sort; the UI

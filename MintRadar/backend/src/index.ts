@@ -1191,7 +1191,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
         m.discovered_at, m.nostr_announced_at, m.nostr_announce_id, m.nostr_announce_pubkey, m.nostr_announce_d, m.last_reliability_score, m.last_error, m.server_location,
-        m.review_count, m.review_avg_rating, m.review_count_7d_ago, m.review_count_7d_ago_at,
+        m.review_count, m.review_avg_rating, m.review_operator_count, m.review_count_7d_ago, m.review_count_7d_ago_at,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
         h7.total_7d,
@@ -1303,6 +1303,9 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           lastCheckedAt: (r.latest_checked_at as string | null) ?? null,
           reviewCount: (r.review_count as number | null) ?? null,
           reviewAvgRating: r.review_avg_rating != null ? Number(r.review_avg_rating) : null,
+          // Additive: stored reviews written by the mint's own operator. They are NOT in
+          // reviewCount / reviewAvgRating / reviewWeightedRating / reviewSurge (see reviewsSync.ts).
+          operatorReviewCount: (r.review_operator_count as number | null) ?? 0,
           // Forgery-resistant sybil signal: the mint's review_count jumped
           // sharply vs. the daily rollup's ~1-week-ago snapshot. Informational
           // only — never feeds Reliability Score or reviewWeightedRating.

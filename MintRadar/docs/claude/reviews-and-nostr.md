@@ -20,6 +20,42 @@ Backend `REVIEW_SYNC_RELAYS` (`backend/src/reviewsSync.ts`, re-exported from `in
 - **Community-rating stat tile** reads `knownMint.reviewCount` / `reviewAvgRating` (the `mints` rollup, in `/api/mints/known`) while the live fetch is still running — `tileReviewCount` / `tileAvgRating` in `MintDetail.tsx`. This replaced a ~4s window where the empty live array made the tile flash a wrong "No reviews yet". `null` on both the rollup and the live side renders a "…" skeleton (same idea as the existing "Loading live mint data" placeholder).
 - Do not remove either mechanism without re-confirming with the maintainer — see the review-fetch investigation report for the full reasoning.
 
+**Operator reviews are labelled and not counted (2026-10-05).** A review written by the mint's own
+operator key is shown with a text badge "Operator" but is NOT in the Community Rating or the review
+count. `operatorPubkeys(source)` (`backend/src/shared/operatorPubkeys.ts`, identical frontend copy
+`src/utils/operatorPubkeys.ts`, pinned by `sharedModules.test.ts`) returns the lowercase hex keys from
+(a) the mint's NUT-06 `contact` entries with method `nostr` that are an npub, nprofile or 64-char hex
+(optional `nostr:` prefix; at most 3 entries, 300 chars each) and (b) the NIP-87 announcement author
+(`mints.nostr_announce_pubkey`). **NIP-05 contacts (`name@domain`) are NOT resolved**: the backend's
+`verifyNip05` cache is in-process, keyed by an already-known pubkey and never persisted, so there is no
+stored resolution to use, and resolving one would be a new outbound request.
+**Known trust limits (security review 2026-10-05, accepted as specified):** both sources are claims by
+parties who are not the key holder. The `contact` list is written by the mint, so a hostile mint can name
+a critic's key and get that review left out of the count (it stays listed, but wrongly badged "Operator");
+the announcement author is the author of the NEWEST kind:38172 for the URL (`discovery.ts`), which any
+Nostr user can publish. Mitigations in place: at most 3 contact keys are read, nothing is deleted, the tile
+and the badge say why a review is excluded. Recommended hardening if abuse appears: count a key as operator
+only when BOTH sources agree (key listed in `contact` AND equal to the announcement author).
+- **Backend:** the probe stores the raw `nostr` contact strings in `mints.contact_nostr` (JSONB, rewritten on
+  every successful probe, never returned by an endpoint). `reviewsSync.ts` `aggregateReviews()` is the single
+  counting rule (empty events and operator reviews excluded) used by `persistMintReviews` and
+  `recomputeReviewCountRollups` (now computed in JS from the stored rows; the operator set is taken from
+  the mints rows at aggregation time). It writes `review_count`, `review_avg_rating` and the new
+  `review_operator_count`; stored `mint_reviews` rows are never changed or deleted. Everything derived
+  (`reviewWeightedRating`, `reviewSurge` baseline) follows automatically. `/api/mints/known` returns the
+  additive `operatorReviewCount`. A contact/announcement change shows in the rollups at the next review
+  sync (6h) or the boot-time recompute.
+- **Mint Detail:** every review by an operator key carries `.review-operator-badge` ("Operator", tooltip
+  "Published by a key listed as this mint's contact or announcement author."). The Community rating tile
+  (`tileReviewCount` / `tileAvgRating`) is computed from the merged list minus operator keys, using the LIVE
+  probe's contact list + `knownMint.nostrAnnouncePubkey`; while the live contact list is unavailable
+  (loading or offline mint) the tile keeps the backend rollup, which already excludes the operator. When
+  at least one operator review is excluded, an ⓘ (`.operator-excluded-info`) says "Excludes N review(s)
+  written by the mint's operator." The list and its filter chips still count/show ALL reviews (the chip
+  group's tooltip says so when it differs from the tile). Cards, Compare and the Rating sort read the
+  backend rollup and are therefore operator-free.
+- About page sentence and `privacy-and-about.md` updated accordingly.
+
 **Rating sort uses a weighted/Bayesian rating, not the raw average (2026-09-03).**
 `/api/mints/known` also returns `reviewWeightedRating` per mint — the IMDB formula
 `WR = (v/(v+m))·R + (m/(v+m))·C` (`backend/src/weightedRating.ts`): `R` = `reviewAvgRating`,

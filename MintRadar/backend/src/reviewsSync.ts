@@ -17,6 +17,7 @@ import WebSocket from 'ws'
 import { pool } from './db.js'
 import { getKnownMints } from './prober.js'
 import { parseReviewRatingAndComment } from './reviews.js'
+import { operatorPubkeys } from './shared/operatorPubkeys.js'
 
 export const REVIEW_SYNC_RELAYS = [
   'wss://relay.damus.io',
@@ -97,6 +98,46 @@ async function fetchReviewsForMint(nostrPool: SimplePool, url: string): Promise<
   }
 }
 
+interface StoredReviewRow {
+  pubkey: string
+  rating: number | null
+  comment: string | null
+}
+
+export interface ReviewAggregate {
+  /** Counted reviews (operator reviews excluded; empty events - no rating and no comment - excluded). */
+  count: number
+  /** Mean of the counted rated reviews, one decimal, or null when none is rated. */
+  avg: number | null
+  /** Reviews that would have counted but were written by the mint's operator. */
+  operatorCount: number
+}
+
+/** Operator keys of a mints row ({ contact_nostr, nostr_announce_pubkey }), see shared/operatorPubkeys.ts. */
+export function operatorKeysOf(row: { contact_nostr?: unknown; nostr_announce_pubkey?: unknown } | undefined): Set<string> {
+  if (!row) return new Set()
+  const contact = Array.isArray(row.contact_nostr)
+    ? (row.contact_nostr as unknown[]).map(info => ({ method: 'nostr', info }))
+    : []
+  const announcePubkey = typeof row.nostr_announce_pubkey === 'string' ? row.nostr_announce_pubkey : null
+  return operatorPubkeys({ contact, announcePubkey })
+}
+
+/** The one counting rule behind mints.review_count / review_avg_rating / review_operator_count. */
+export function aggregateReviews(rows: readonly StoredReviewRow[], operators: ReadonlySet<string>): ReviewAggregate {
+  let count = 0
+  let operatorCount = 0
+  let ratedSum = 0
+  let rated = 0
+  for (const r of rows) {
+    if (r.rating === null && (r.comment ?? '').trim() === '') continue
+    if (operators.has(r.pubkey.toLowerCase())) { operatorCount++; continue }
+    count++
+    if (r.rating !== null) { ratedSum += Number(r.rating); rated++ }
+  }
+  return { count, avg: rated === 0 ? null : Math.round((ratedSum / rated) * 10) / 10, operatorCount }
+}
+
 export async function persistMintReviews(url: string, reviews: SyncedReview[]): Promise<void> {
   const client = await pool.connect()
   try {
@@ -121,21 +162,22 @@ export async function persistMintReviews(url: string, reviews: SyncedReview[]): 
         values,
       )
     }
-    const { rows } = await client.query(
-      `SELECT COUNT(*)::int AS review_count,
-              AVG(rating) FILTER (WHERE rating IS NOT NULL) AS review_avg_rating
-         FROM mint_reviews
-        WHERE url = $1
-          AND (rating IS NOT NULL OR BTRIM(comment) <> '')`,
+    // Aggregates are computed here, from the stored rows, with the operator's own reviews left out
+    // (stored rows are never changed or deleted; the operator is whoever the mint lists as a nostr
+    // contact or announced itself as — shared/operatorPubkeys.ts).
+    const { rows: mintRows } = await client.query(
+      `SELECT contact_nostr, nostr_announce_pubkey FROM mints WHERE url = $1`,
       [url],
     )
-    const stored = rows[0]
-    const avg = stored?.review_avg_rating == null
-      ? null
-      : Math.round(Number(stored.review_avg_rating) * 10) / 10
+    const operators = operatorKeysOf(mintRows[0])
+    const { rows: stored } = await client.query(
+      `SELECT pubkey, rating, comment FROM mint_reviews WHERE url = $1`,
+      [url],
+    )
+    const agg = aggregateReviews(stored as StoredReviewRow[], operators)
     await client.query(
-      `UPDATE mints SET review_count = $1, review_avg_rating = $2, reviews_checked_at = NOW() WHERE url = $3`,
-      [stored?.review_count ?? 0, avg, url],
+      `UPDATE mints SET review_count = $1, review_avg_rating = $2, review_operator_count = $3, reviews_checked_at = NOW() WHERE url = $4`,
+      [agg.count, agg.avg, agg.operatorCount, url],
     )
     await client.query('COMMIT')
   } catch (err) {
@@ -146,27 +188,45 @@ export async function persistMintReviews(url: string, reviews: SyncedReview[]): 
   }
 }
 
-/** Recount mints.review_count / review_avg_rating from stored mint_reviews
- *  without hitting relays. Empty events (no rating and no comment) are
- *  excluded — same rule as persistMintReviews. */
+/** Recount mints.review_count / review_avg_rating / review_operator_count from stored mint_reviews
+ *  without hitting relays. Same rule as persistMintReviews (aggregateReviews): empty events (no
+ *  rating and no comment) and the operator's own reviews are not counted. */
 export async function recomputeReviewCountRollups(): Promise<number> {
-  const { rowCount } = await pool.query(`
-    UPDATE mints m
-       SET review_count = s.cnt,
-           review_avg_rating = s.avg
-      FROM (
-        SELECT url,
-               COUNT(*) FILTER (
-                 WHERE rating IS NOT NULL OR BTRIM(COALESCE(comment, '')) <> ''
-               )::int AS cnt,
-               CASE WHEN COUNT(rating) FILTER (WHERE rating IS NOT NULL) = 0 THEN NULL
-                    ELSE ROUND(AVG(rating) FILTER (WHERE rating IS NOT NULL)::numeric, 1)
-               END AS avg
-          FROM mint_reviews
-         GROUP BY url
-      ) s
-     WHERE m.url = s.url
-  `)
+  const [{ rows: mintRows }, { rows: reviewRows }] = await Promise.all([
+    pool.query(`SELECT url, contact_nostr, nostr_announce_pubkey FROM mints`),
+    pool.query(`SELECT url, pubkey, rating, comment FROM mint_reviews`),
+  ])
+  const operatorsByUrl = new Map<string, Set<string>>()
+  for (const m of mintRows as Array<{ url: string; contact_nostr?: unknown; nostr_announce_pubkey?: unknown }>) {
+    const ops = operatorKeysOf(m)
+    if (ops.size > 0) operatorsByUrl.set(m.url, ops)
+  }
+  const byUrl = new Map<string, StoredReviewRow[]>()
+  for (const r of reviewRows as Array<StoredReviewRow & { url: string }>) {
+    const list = byUrl.get(r.url)
+    if (list) list.push(r); else byUrl.set(r.url, [r])
+  }
+  const urls: string[] = []
+  const counts: number[] = []
+  const avgs: Array<number | null> = []
+  const opCounts: number[] = []
+  for (const [url, list] of byUrl) {
+    const agg = aggregateReviews(list, operatorsByUrl.get(url) ?? new Set())
+    urls.push(url); counts.push(agg.count); avgs.push(agg.avg); opCounts.push(agg.operatorCount)
+  }
+  if (urls.length === 0) {
+    console.log('[reviews-sync] recomputed review_count rollup for 0 mint(s)')
+    return 0
+  }
+  const { rowCount } = await pool.query(
+    `UPDATE mints m
+        SET review_count = v.cnt,
+            review_avg_rating = v.avg,
+            review_operator_count = v.opc
+       FROM unnest($1::text[], $2::int[], $3::real[], $4::int[]) AS v(url, cnt, avg, opc)
+      WHERE m.url = v.url`,
+    [urls, counts, avgs, opCounts],
+  )
   const n = rowCount ?? 0
   console.log(`[reviews-sync] recomputed review_count rollup for ${n} mint(s)`)
   return n

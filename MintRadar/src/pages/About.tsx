@@ -89,7 +89,8 @@ export default function About() {
             MintRadar is a free, independent monitor and directory for Cashu ecash mints. It shows two separate
             signals: how a mint is running (Reliability Score, from uptime, audit results, supported NUTs, software
             version and published contact), and what other people say about it (Community Rating, from NIP-87 reviews
-            posted on Nostr, which we do not verify).
+            posted on Nostr). We do not verify reviewers or what they claim. Reviews written by a mint's own operator
+            (a key listed in its contact or announcement) are labelled and not counted.
           </p>
           <p>
             A mint can run perfectly and still lose your funds; the <Link to="/learn">Learn section</Link> explains

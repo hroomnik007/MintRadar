@@ -24,6 +24,7 @@ import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityS
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
 import { detectDemoNotice } from '@/utils/demoNotice'
+import { operatorPubkeys } from '@/utils/operatorPubkeys'
 import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { auditFreshness } from '@/utils/auditFreshness'
@@ -1067,23 +1068,37 @@ function MintDetailContent({ url }: { url: string }) {
   const auditSwapBarItems = auditSwaps.slice(0, AUDIT_SWAP_BAR_MAX)
   const auditRecentSwapRows = showAllAuditSwaps ? auditSwaps : auditSwaps.slice(0, AUDIT_SWAP_ROWS_DEFAULT)
 
+  // The mint's operator keys (a nostr contact it lists, or its NIP-87 announcement author). Their
+  // reviews stay in the list, labelled "Operator", but are not counted in the tile (decision
+  // 2026-10-05). Without the live probe's contact list (still loading, or the mint is offline)
+  // only the announcement author is known here, so the tile then keeps the backend rollup, which
+  // already excludes the operator via the stored contacts.
+  // (Plain computation, not a hook: this runs after the component's early return. At most 10 decodes.)
+  const operatorKeys = operatorPubkeys({ contact: data?.info?.contact ?? null, announcePubkey: knownMint?.nostrAnnouncePubkey ?? null })
+  const operatorKeysKnown = data?.info !== undefined
+  const countedReviews = mergedReviews.filter(r => !operatorKeys.has(r.pubkey.toLowerCase()))
+  const operatorListedCount = mergedReviews.length - countedReviews.length
+
   // Average rating is computed only over events that actually carry a numeric
   // rating — rating-less endorsement events are counted in the review total but
   // never contribute to (or dilute) the star average.
-  const ratedReviews = mergedReviews.filter(r => r.rating !== null)
+  const ratedReviews = countedReviews.filter(r => r.rating !== null)
   const avgRating = ratedReviews.length > 0
     ? Math.round(ratedReviews.reduce((s, r) => s + (r.rating as number), 0) / ratedReviews.length * 10) / 10
     : null
 
-  // Same number as the mint card (mints.review_count, one per pubkey). Until
-  // the stored list has loaded, show that rollup directly. After it has, the
-  // list is the stored set, so its length is the card's number — plus one only
-  // when the viewer just published a review the sync has not stored yet.
+  // Same number as the mint card (mints.review_count, one per pubkey, operator excluded). Until
+  // the stored list has loaded, show that rollup directly. After it has, the list is the stored
+  // set, so its length (minus the operator's) is the card's number — plus one only when the
+  // viewer just published a review the sync has not stored yet.
   const storedReviewsReady = nostrReviewsData !== undefined
-  const tileReviewCount = !storedReviewsReady
-    ? (knownMint?.reviewCount ?? null)
-    : mergedReviews.length
-  const tileAvgRating = !storedReviewsReady ? (knownMint?.reviewAvgRating ?? null) : avgRating
+  const tileFromRollup = !storedReviewsReady || !operatorKeysKnown
+  const tileReviewCount = tileFromRollup
+    ? (knownMint?.reviewCount ?? (storedReviewsReady ? countedReviews.length : null))
+    : countedReviews.length
+  const tileAvgRating = tileFromRollup ? (knownMint?.reviewAvgRating ?? (storedReviewsReady ? avgRating : null)) : avgRating
+  const tileOperatorExcluded = tileFromRollup ? (knownMint?.operatorReviewCount ?? 0) : operatorListedCount
+  const operatorExcludedNote = `Excludes ${tileOperatorExcluded} review${tileOperatorExcluded === 1 ? '' : 's'} written by the mint's operator.`
 
   // Reviews-tab filter chips. "all" / "5star" / "critical" are mutually exclusive
   // (one active at a time); "hideAnon" is an independent toggle combined on top of
@@ -1431,6 +1446,15 @@ function MintDetailContent({ url }: { url: string }) {
                   iconSize={11}
                   label="Recent review surge"
                   text="This mint's review count grew unusually fast recently — worth a closer look before trusting the rating."
+                />
+              )}
+              {tileOperatorExcluded > 0 && (
+                <InfoTooltip
+                  className="operator-excluded-info"
+                  width={220}
+                  iconSize={11}
+                  label="Operator reviews not counted"
+                  text={operatorExcludedNote}
                 />
               )}
             </div>
@@ -2273,7 +2297,12 @@ function MintDetailContent({ url }: { url: string }) {
               ) : (
                 <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:8}}>
                   <div className="reviews-filter-row">
-                    <div className="reviews-filter-group" role="group" aria-label="Filter reviews by rating">
+                    <div
+                      className="reviews-filter-group"
+                      role="group"
+                      aria-label="Filter reviews by rating"
+                      {...(operatorListedCount > 0 ? { title: `Counts every listed review, including ${operatorListedCount} written by the mint's operator. The Community rating tile does not count those.` } : {})}
+                    >
                       <button
                         type="button"
                         className={`reviews-filter-chip${activeReviewFilter === 'all' ? ' active' : ''}`}
@@ -2320,9 +2349,14 @@ function MintDetailContent({ url }: { url: string }) {
                           </div>
                           <div className="review-author">
                             <span className="review-author-name">
-                              {displayName}
-                              {profile?.name && verifiedNip05ByPubkey[r.pubkey] && (
-                                <span className="review-author-nip05">{verifiedNip05ByPubkey[r.pubkey]}</span>
+                              <span className="review-author-name-text">
+                                {displayName}
+                                {profile?.name && verifiedNip05ByPubkey[r.pubkey] && (
+                                  <span className="review-author-nip05">{verifiedNip05ByPubkey[r.pubkey]}</span>
+                                )}
+                              </span>
+                              {operatorKeys.has(r.pubkey.toLowerCase()) && (
+                                <span className="review-operator-badge" title="Published by a key listed as this mint's contact or announcement author.">Operator</span>
                               )}
                             </span>
                             <span className="review-author-npub">{shortNpub(npub)}</span>

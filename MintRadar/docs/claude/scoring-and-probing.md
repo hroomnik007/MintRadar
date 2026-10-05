@@ -57,6 +57,9 @@ a small shared SVG component (`size` prop, default 13px, `currentColor` stroke) 
 by the Best Mint wizard's result rows (`Tools.tsx`) and
 `LearnIcons.tsx`. Do not duplicate this shield inline in a new component; import `IcShield`.
 
+Community Rating excludes the mint's own operator's reviews (labelled "Operator", see "Operator reviews are
+labelled and not counted" in reviews-and-nostr.md); the Reliability Score formula is unaffected.
+
 ## NUT list — single source of truth (2026-08-19)
 
 `src/constants/nuts.ts` is the only place the tracked-NUT list and its display metadata

@@ -201,6 +201,13 @@ export async function initDb(): Promise<void> {
     // Matched demo/test-notice phrase from the mint's own description/MOTD (shared/demoNotice.ts),
     // rewritten on every successful probe. Never feeds the Reliability Score.
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS demo_notice TEXT',
+    // The mint's own NUT-06 contact entries with method "nostr" (raw strings, capped), rewritten on
+    // every successful probe. Only used to work out which review authors are the mint's operator
+    // (shared/operatorPubkeys.ts); never displayed or returned by any endpoint.
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS contact_nostr JSONB',
+    // How many stored reviews (same counting rule as review_count) were written by the operator and
+    // therefore are NOT in review_count / review_avg_rating. Set together with them (reviewsSync.ts).
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS review_operator_count INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS nuts_limits JSONB',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_n_mints INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_n_melts INTEGER',
