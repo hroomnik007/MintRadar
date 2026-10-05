@@ -9,7 +9,7 @@ export interface NotRecommendedLike {
 }
 
 export function isNotRecommendedMint(mint: NotRecommendedLike): boolean {
-  return isTestMint(mint.url) || mint.demoNotice === true
+  return isTestMint(mint.url) || (mint.demoNotice === true && mint.demoNoticePhrase !== "for demonstration purposes")
 }
 
 /** Stable partition: every recommended mint first, then every not-recommended one, each group

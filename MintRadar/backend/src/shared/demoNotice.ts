@@ -9,7 +9,6 @@
 // production mints use ("no guarantee", "without guarantee", "use at your own risk") is NOT
 // here and must never be added: a false positive hides a real mint from recommendations.
 export const DEMO_NOTICE_PHRASES: readonly string[] = [
-  'for demonstration purposes',
   'demonstration only',
   'demo mint',
   'for demo purposes',

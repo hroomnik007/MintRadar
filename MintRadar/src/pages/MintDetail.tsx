@@ -1277,9 +1277,6 @@ function MintDetailContent({ url }: { url: string }) {
               {firstSeen && (
                 <div className="md-first-seen" style={{fontSize:12,fontFamily:'var(--font-mono)',color:'var(--text-faint)',marginTop:4}}>{firstSeen}</div>
               )}
-              {demoNoticePhrase && !isTestMint(url) && (
-                <div className="md-demo-notice" style={{fontSize:12,color:'var(--text2)',marginTop:4}}>{`This mint's own notice says: “${demoNoticePhrase}”.`}</div>
-              )}
               <div className="md-announce-row">
               {nostrAnnouncedAt && (
                 <div className="md-first-seen md-announce-label">

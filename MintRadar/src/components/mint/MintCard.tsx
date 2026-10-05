@@ -101,7 +101,7 @@ export function MintCard({
           Test mint
         </span>
       )}
-      {mint.demoNotice === true && mint.demoNoticePhrase && !isTestMint(mint.url) && (
+      {mint.demoNotice === true && mint.demoNoticePhrase && !isTestMint(mint.url) && mint.demoNoticePhrase !== "for demonstration purposes" && (
         <span
           className="card-reliability-badge card-reliability-badge-demo"
           title={`This mint's own notice says: “${mint.demoNoticePhrase}”.`}
