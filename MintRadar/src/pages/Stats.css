@@ -49,6 +49,22 @@
 /* Constrained + centered to the same width/inset as .mint-grid (Dashboard)
    so the hero tile row's left edge lines up with the first Dashboard mint
    card. .stats-header above stays full-bleed (unchanged). */
+.stats-audit-note {
+  margin: 0 auto;
+  padding: 10px var(--page-pad) 0;
+  max-width: var(--dash-chrome-max);
+  width: 100%;
+  color: var(--text3);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.stats-audit-note a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.stats-audit-note a:hover { color: var(--text); }
+
 .stats-metrics {
   display: flex;
   gap: 12px;

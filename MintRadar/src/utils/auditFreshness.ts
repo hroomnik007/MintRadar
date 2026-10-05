@@ -37,6 +37,28 @@ export function auditFreshness(
   }
 }
 
+/**
+ * Network-level staleness of audit.8333.space (Stats page note). Takes every mint's `auditCheckedAt`
+ * (the auditor's own `updated_at`, the same value Mint Detail's "data N days old" uses) and returns the
+ * newest one as an ISO string when it is older than AUDIT_DATA_OLD_DAYS (same strict boundary as
+ * auditFreshness().auditorDataOld), otherwise null: fresh data, or no usable timestamp at all.
+ * `auditSyncedAt` is not used on purpose: our 6h cron advances it even when the upstream records are old.
+ */
+export function staleAuditSince(
+  checkedAts: ReadonlyArray<string | null | undefined>,
+  now: number = Date.now(),
+): string | null {
+  let newest: number | null = null
+  for (const iso of checkedAts) {
+    if (!iso) continue
+    const t = new Date(iso).getTime()
+    if (Number.isFinite(t) && (newest === null || t > newest)) newest = t
+  }
+  if (newest === null) return null
+  const iso = new Date(newest).toISOString()
+  return auditFreshness(iso, null, now).auditorDataOld ? iso : null
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 // "27 Sep 2026, 12:13 UTC" — fixed zone/locale so the notice reads the same everywhere.
@@ -45,4 +67,11 @@ export function formatAuditSyncDate(iso: string): string {
   if (!Number.isFinite(d.getTime())) return iso
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`
+}
+
+// "27 Sep 2026" — date part of formatAuditSyncDate().
+export function formatAuditDate(iso: string): string {
+  const d = new Date(iso)
+  if (!Number.isFinite(d.getTime())) return iso
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`
 }
