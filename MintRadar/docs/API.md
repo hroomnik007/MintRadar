@@ -32,6 +32,8 @@ Exceeding the limit returns HTTP `429 Too Many Requests`:
 
 ## Endpoints
 
+`GET /api` (also `/api/` and `/api/v1`) returns a small JSON pointer: `{"name":"MintRadar API","docs":"<this document on GitHub>","health":"/api/v1/health"}`.
+
 ### `GET /health` and `GET /api/v1/health`
 
 Health check. Available at `/health` and `/api/v1/health` (identical payload). There is no `/api/health`. No rate limiting on either path.

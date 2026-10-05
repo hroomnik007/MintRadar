@@ -556,6 +556,16 @@ app.get('/health', async (_req: Request, res: Response) => {
   })
 })
 
+// API root: a pointer for humans who open /api or /api/ (Express answers /api/ for /api too, non-strict
+// routing). Counted by the normal per-IP limiter like any other read.
+app.get('/api', (_req: Request, res: Response): void => {
+  res.json({
+    name: 'MintRadar API',
+    docs: 'https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/API.md',
+    health: '/api/v1/health',
+  })
+})
+
 // Static routes here must stay in sync with LEARN_MODULES (src/constants/learnModules.ts)
 // and App.tsx's route list — there is no shared workspace between frontend/backend to
 // import that from, same caveat as testMints.ts/reliabilityScore.ts.
