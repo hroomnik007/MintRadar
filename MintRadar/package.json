@@ -17,7 +17,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -b && npm run typecheck:e2e",
     "typecheck:e2e": "tsc -p tsconfig.e2e.json",
-    "lint": "eslint src e2e",
+    "lint": "eslint src e2e && node scripts/check-internal-links.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
