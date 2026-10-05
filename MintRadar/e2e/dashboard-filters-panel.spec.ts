@@ -235,10 +235,19 @@ test.describe('Filters panel — layout', () => {
     expect((await page.locator('.filter-panel').boundingBox())!.height).toBeLessThanOrEqual(58)
   })
 
-  test('segments, checkbox row and buttons are 36px tall', async ({ page }) => {
+  // The segments are 28px with 10px text since 6ed4592 / 20b0541 (compact); the checkbox row and
+  // the buttons are still 36px. The touch target of a segment is 28 + 8 + 8 = 44px (test below).
+  test('segments are 28px tall, checkbox row and buttons are 36px tall', async ({ page }) => {
     await openPanel(page)
-    for (const loc of [page.locator('.filter-seg').first(), page.locator('.filter-seg').nth(1), page.locator('.filter-check'), page.getByRole('button', { name: 'Reset', exact: true }), showBtn(page)]) {
-      expect((await loc.boundingBox())!.height).toBe(36)
+    const expected: Array<[ReturnType<Page['locator']>, number]> = [
+      [page.locator('.filter-seg').first(), 28],
+      [page.locator('.filter-seg').nth(1), 28],
+      [page.locator('.filter-check'), 36],
+      [page.getByRole('button', { name: 'Reset', exact: true }), 36],
+      [showBtn(page), 36],
+    ]
+    for (const [loc, height] of expected) {
+      expect((await loc.boundingBox())!.height).toBe(height)
     }
   })
 
@@ -273,7 +282,8 @@ test.describe('Filters panel — layout', () => {
           up: ownsPoint(el, x, b.top - 3), down: ownsPoint(el, x, b.bottom + 3),
         }
       })
-      expect(r.h).toBe(36)
+      // The first 6 targets are the segment options (28px since 6ed4592 / 20b0541); the rest are 36px.
+      expect(r.h).toBe(targets.indexOf(t) < 6 ? 28 : 36)
       expect(r.pseudoContent).toBe('""')
       expect(r.pseudoH).toBeGreaterThanOrEqual(44)
       expect(r, `target ${targets.indexOf(t)}`).toMatchObject({ up: true, down: true })
@@ -281,6 +291,57 @@ test.describe('Filters panel — layout', () => {
     await ctx.close()
   })
 })
+
+// Touch bands of neighbouring rows (2026-10-05). A 28px segment owns 8px above and 8px below
+// (28 + 8 + 8 = 44px); the rows around it are --filter-row-gap = 16px apart so two bands meet
+// without overlapping. With the old 8px gap the Unit row took the lower band of the Status row (a tap
+// 1px under "Status All" landed on a Unit chip) and, at 900px, the footer's 4px band took the lower
+// band of "All". The rule holds for mouse and touch alike (the layouts are identical).
+for (const vp of [320, 390, 600, 900]) {
+  test(`touch bands: a point 1px below a Status option and 1px above a Unit chip resolve to their own row at ${vp}px`, async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: vp, height: 900 }, hasTouch: true, isMobile: true })
+    const page = await ctx.newPage()
+    await openPanel(page)
+    const r = await page.evaluate(() => {
+      const opts = (i: number) => [...document.querySelectorAll('.filter-seg')[i]!.querySelectorAll<HTMLElement>('.filter-seg-opt')]
+      const status = opts(0), unit = opts(1)
+      const at = (x: number, y: number) => document.elementFromPoint(x, y)
+      const rect = (e: Element) => e.getBoundingClientRect()
+      const cx = (e: Element) => rect(e).left + rect(e).width / 2
+      const sb = rect(status[0]!), ub = rect(unit[0]!)
+      const stacked = ub.top > sb.bottom + 1
+      const gap = ub.top - sb.bottom
+      const check = document.querySelector<HTMLElement>('.filter-check')!
+      return {
+        stacked,
+        gap,
+        // 1px below every Status option, and the band reaching 6.5px (a sub-pixel snap makes the exact edge ±1px)
+        status1: status.map(o => o.contains(at(cx(o), rect(o).bottom + 1))),
+        statusBand: status.map(o => o.contains(at(cx(o), rect(o).bottom + 6.5))),
+        // in the stacked layout: 1px above every Unit chip, and the band reaching 6.5px
+        unit1: stacked ? unit.map(o => o.contains(at(cx(o), rect(o).top - 1))) : [],
+        unitBand: stacked ? unit.map(o => o.contains(at(cx(o), rect(o).top - 6.5))) : [],
+        // inside the gap: the point 1.5px before the middle is Status, 1.5px after is Unit
+        beforeMid: stacked ? status.map(o => o.contains(at(cx(o), sb.bottom + gap / 2 - 1.5))) : [],
+        afterMid: stacked ? status.map((o, i) => unit[i]!.contains(at(cx(o), sb.bottom + gap / 2 + 1.5))) : [],
+        // the footer's own 4px band is still there (1px above the checkbox row belongs to it)
+        check1: check.contains(at(cx(check), rect(check).top - 1)),
+      }
+    })
+    await ctx.close()
+    expect(r.stacked, 'Status and Unit stack at 600px and below, sit side by side above').toBe(vp <= 600)
+    expect(r.status1, 'a point 1px below each Status option').toEqual([true, true, true])
+    expect(r.statusBand, 'Status band reaches 6.5px below').toEqual([true, true, true])
+    expect(r.check1, '1px above the checkbox row').toBe(true)
+    if (r.stacked) {
+      expect(r.gap, 'Status and Unit rows are 16px apart').toBeCloseTo(16, 0)
+      expect(r.unit1, 'a point 1px above each Unit chip').toEqual([true, true, true])
+      expect(r.unitBand, 'Unit band reaches 6.5px above').toEqual([true, true, true])
+      expect(r.beforeMid, 'gap, 1.5px before its middle: Status').toEqual([true, true, true])
+      expect(r.afterMid, 'gap, 1.5px after its middle: Unit').toEqual([true, true, true])
+    }
+  })
+}
 
 // Status "All" must mean every tracked mint (2026-10-01 fix): 51 online + 10 offline <24h +
 // 12 offline 24h+ (degraded) + 3 archived = 76. Real pointer input at the segment centre — no

@@ -145,7 +145,7 @@ test.describe('Dashboard unit filter', () => {
     })
   }
 
-  test('chips have a 44px hit area on touch devices (visible height stays 36px)', async ({ browser }) => {
+  test('chips have a 44px hit area on touch devices (visible height is 28px)', async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
     const page = await ctx.newPage()
     await setup(page)
@@ -154,8 +154,9 @@ test.describe('Dashboard unit filter', () => {
     await openPanel(page)
     for (const u of ['sat', 'usd', 'eur']) {
       const b = (await chip(page, u).boundingBox())!
-      expect(b.height).toBe(36)
-      // 4px invisible ::before above and below → 44px hit area; 3px outside the box still lands on the chip.
+      // 28px since 6ed4592 / 20b0541 (was 36px)
+      expect(b.height).toBe(28)
+      // 8px invisible ::before above and below → 28 + 8 + 8 = 44px hit area; 3px outside the box still lands on the chip.
       const hit = await chip(page, u).evaluate((el, dy) => {
         const r = el.getBoundingClientRect()
         const x = r.left + r.width / 2
@@ -206,9 +207,12 @@ test.describe('Dashboard unit filter', () => {
 
   test('Unit info icon does not move the controls: panel height and Status/Unit left edges unchanged', async ({ page }) => {
     await setup(page)
-    // Baseline measured before the change (no unit selected): panel height / status x / unit x.
+    // Baseline measured before the info icon was added (no unit selected): panel height / status x / unit x.
+    // Re-measured 2026-10-05 for the segment size change (28px segments, 44px minimum width, 8px padding: the
+    // Unit control starts 29.79px further left on one row) and the 16px gap between stacked rows
+    // (--filter-row-gap): 390/360 stack 4 rows (+24px over the 8px gap), 320 wraps the footer once more (228).
     const baseline: Record<number, [number, number, number]> = {
-      1440: [56, 157.19, 408.38], 900: [100, 79.19, 330.38], 390: [176, 75.19, 75.19], 360: [176, 75.19, 75.19], 320: [220, 75.19, 75.19],
+      1440: [56, 157.19, 378.59], 900: [100, 79.19, 300.59], 600: [184, 75.19, 75.19], 390: [184, 75.19, 75.19], 360: [184, 75.19, 75.19], 320: [228, 75.19, 75.19],
     }
     for (const [w, [h, sx, ux]] of Object.entries(baseline)) {
       await page.setViewportSize({ width: Number(w), height: 900 })
