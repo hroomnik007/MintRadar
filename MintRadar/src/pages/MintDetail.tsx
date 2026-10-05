@@ -23,7 +23,6 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
-import { detectDemoNotice } from '@/utils/demoNotice'
 import { operatorPubkeys } from '@/utils/operatorPubkeys'
 import { cleanMintNameDetailed } from '@/utils/cleanMintName'
 import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
@@ -879,9 +878,6 @@ function MintDetailContent({ url }: { url: string }) {
   const tosUrl = data?.info?.tos_url ?? knownMint?.tosUrl ?? undefined
   const descriptionLong = data?.info?.description_long ?? knownMint?.descriptionLong ?? undefined
   const mintTime = data?.info?.time
-  // Live MOTD/description first (they are fresher than the backend's stored phrase); the known-mint
-  // phrase covers the moment before the live probe resolves. Rendered as text only.
-  const demoNoticePhrase = detectDemoNotice([motd, description, descriptionLong]) ?? knownMint?.demoNoticePhrase ?? null
 
   const email = data?.info?.contact?.find(c => c.method === 'email')?.info
   const twitter = data?.info?.contact?.find(c => c.method === 'twitter')?.info

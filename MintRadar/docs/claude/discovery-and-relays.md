@@ -29,6 +29,8 @@ something benign between probes — none of that should silently change what get
 recommendations. The short `description` field (where this warning text actually lives) also
 isn't persisted to the DB today.
 
+Test and demo mints are marked only through the manual list in constants/testMints; there is no text-based detection (it was tried and removed because it flagged normal mints).
+
 These mints are **not hidden from the app** — they still appear in `/api/mints/known`, are
 still probed/tracked normally, and get a "Test mint" badge (`MintCard.tsx`, `MintDetail.tsx`,
 always rendered last among a card's badges). They ARE excluded from anything that implies a
@@ -40,35 +42,21 @@ this section's claim. Update `TEST_MINT_URLS` manually (both copies) if a new de
 surfaces — grep fresh `/v1/info` responses for phrases like "for testing and development
 purposes" or "fakewallet", but confirm it isn't a real mint with a mere risk disclaimer first.
 
-### Demo notices and "not recommended" (2026-10-05)
+### "Not recommended" = test-badged (2026-10-05)
 
-The keyword rejection above still holds for the curated test list; a **separate, conservative
-whole-phrase detector** now covers mints that say so themselves. `detectDemoNotice(texts)`
-(`backend/src/shared/demoNotice.ts`, identical frontend copy `src/utils/demoNotice.ts`; the pair is
-pinned by `src/__tests__/sharedModules.test.ts`) matches only: "for demonstration purposes",
-"demonstration only", "demo mint", "for demo purposes", "for testing purposes", "testing purposes
-only", "test mint", "play money", "not for real funds", "not real money", "do not deposit"
-(case-insensitive, whole phrase, any whitespace between words). **Never add generic wording** such as
-"no guarantee" / "without guarantee" / "use at your own risk": real mints use it. It returns the list
-phrase, never mint text, and scans at most 4000 characters per input.
+"Not recommended" is exactly `isTestMint(url)` (`src/utils/notRecommended.ts`; the helper stays
+because Dashboard, Stats and Tools share it). It is used only for sorting, filtering and labelling,
+never for the Reliability Score.
 
-- **Backend:** `prober.ts` runs it on the probe's `description`, `description_long` and `motd` (the
-  short description and the MOTD are not stored, so the matched phrase is persisted) into the additive
-  column `mints.demo_notice` (not COALESCE'd: a notice the mint removes clears on the next successful
-  probe; existing rows are NULL until their next probe). `/api/mints/known` returns the additive
-  `demoNotice` (boolean) and `demoNoticePhrase` (<= 60 chars). `/api/stats` `top5ByReliabilityScore`
-  also skips `demo_notice` mints. The Reliability Score, the probe and all raw values are unchanged.
-- **"Not recommended" = `isTestMint(url)` OR `demoNotice`** (`src/utils/notRecommended.ts`):
-  Best Mint never returns such mints (no toggle; muted line "Test and demo mints are never
-  recommended here." under the results); Stats `top5ByUptime` / `top5ByReliability` skip them;
-  Dashboard grid and list apply a stable partition AFTER the sort and direction flip so they come
-  after every other mint in every sort mode (there is no pagination, every mint is rendered);
-  "Hide test mints" hides both kinds (tooltip says so; "Show N of M" uses the same `applyFilters`).
-  `useFollowRecommendations` is unchanged (it only has URLs, no known-mint data).
-- **Marking:** card chip "Demo" (`.card-reliability-badge-demo`, neutral, dashed border, tooltip
-  "This mint's own notice says: “{phrase}”.") for demo-notice mints that are not already "Test mint";
-  Mint Detail shows one muted line `.md-demo-notice` with the same sentence (live MOTD/description
-  first, stored phrase as fallback). Nothing about the score, tiles or breakdown changes.
+- Best Mint never returns such mints (no toggle; muted line "Test mints are never recommended
+  here." under the results); Stats `top5ByUptime` / `top5ByReliability` skip them, and so does the
+  backend's `top5ByReliabilityScore` (via `isTestMint`).
+- Dashboard grid and list apply a stable partition AFTER the sort and direction flip so test-badged
+  mints come after every other mint in every sort mode (there is no pagination, every mint is
+  rendered).
+- "Hide test mints" hides test-badged mints only ("Show N of M" uses the same `applyFilters`).
+- `useFollowRecommendations` is unchanged (it only has URLs, no known-mint data).
+- Operator reviews (see reviews-and-nostr.md) and mint name cleaning are separate and unaffected.
 
 ### Recommendation-surface minimum age gate (2026-09-19, audit run-3 MEDIUM finding)
 

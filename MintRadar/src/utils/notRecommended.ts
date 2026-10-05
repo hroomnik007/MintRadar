@@ -1,16 +1,13 @@
 import { isTestMint } from '@/constants/testMints'
 
-// "Not recommended" = a known test mint (curated URL list) OR a mint whose own text says it is
-// a demo/test mint (backend /api/mints/known `demoNotice`, see demoNotice.ts). Used only for
+// "Not recommended" = a known test mint (curated URL list in constants/testMints). Used only for
 // sorting, filtering and labelling — never for the Reliability Score.
 export interface NotRecommendedLike {
   url: string
-  demoNotice?: boolean | null
-  demoNoticePhrase?: string | null
 }
 
 export function isNotRecommendedMint(mint: NotRecommendedLike): boolean {
-  return isTestMint(mint.url) || (mint.demoNotice === true && mint.demoNoticePhrase !== "for demonstration purposes")
+  return isTestMint(mint.url)
 }
 
 /** Stable partition: every recommended mint first, then every not-recommended one, each group

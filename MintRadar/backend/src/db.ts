@@ -198,9 +198,8 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS nut_count INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS tos_url TEXT',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS description_long TEXT',
-    // Matched demo/test-notice phrase from the mint's own description/MOTD (shared/demoNotice.ts),
-    // rewritten on every successful probe. Never feeds the Reliability Score.
-    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS demo_notice TEXT',
+    // Column of the removed text-based notice detector; it only ever held derived data.
+    'ALTER TABLE mints DROP COLUMN IF EXISTS demo_notice',
     // The mint's own NUT-06 contact entries with method "nostr" (raw strings, capped), rewritten on
     // every successful probe. Only used to work out which review authors are the mint's operator
     // (shared/operatorPubkeys.ts); never displayed or returned by any endpoint.

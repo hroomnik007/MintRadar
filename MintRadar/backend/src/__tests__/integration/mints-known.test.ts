@@ -242,7 +242,7 @@ describe('GET /api/mints/known', () => {
   })
 })
 
-describe('GET /api/mints/known: names, demo notice and operator reviews', () => {
+describe('GET /api/mints/known: names and operator reviews', () => {
   it('sends cleaned display names, the full name only when truncated, and no raw name for a hidden mint', async () => {
     const rlo = String.fromCharCode(0x202e)
     query.mockResolvedValueOnce({
@@ -266,17 +266,17 @@ describe('GET /api/mints/known: names, demo notice and operator reviews', () => 
     expect(by('https://none.example').name).toBeNull()
   })
 
-  it('exposes demoNotice / demoNoticePhrase and operatorReviewCount (additive)', async () => {
+  it('exposes operatorReviewCount (additive)', async () => {
     query.mockResolvedValueOnce({
       rows: [
-        sampleRow({ url: 'https://demo.example', demo_notice: 'for demonstration purposes', review_operator_count: 2 }),
+        sampleRow({ url: 'https://operated.example', review_operator_count: 2 }),
         sampleRow({ url: 'https://normal.example' }),
       ],
     })
     const res = await request(app).get('/api/mints/known')
-    const demo = res.body.find((m: { url: string }) => m.url === 'https://demo.example')
+    const operated = res.body.find((m: { url: string }) => m.url === 'https://operated.example')
     const normal = res.body.find((m: { url: string }) => m.url === 'https://normal.example')
-    expect(demo).toMatchObject({ demoNotice: true, demoNoticePhrase: 'for demonstration purposes', operatorReviewCount: 2 })
-    expect(normal).toMatchObject({ demoNotice: false, demoNoticePhrase: null, operatorReviewCount: 0 })
+    expect(operated).toMatchObject({ operatorReviewCount: 2 })
+    expect(normal).toMatchObject({ operatorReviewCount: 0 })
   })
 })

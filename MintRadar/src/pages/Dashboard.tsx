@@ -177,7 +177,7 @@ function applyFilters(
   })
 }
 
-const HIDE_TEST_MINTS_TOOLTIP = 'Hides test mints and demo mints (mints whose own notice says they are for demonstration or testing).'
+const HIDE_TEST_MINTS_TOOLTIP = 'Hides mints on the known test-mint list (fake sats, for testing and development only).'
 
 const UNIT_FILTER_TOOLTIP = 'While a unit is selected, mints whose units are not known yet, or are not SAT, USD or EUR, are hidden.'
 
@@ -326,7 +326,7 @@ function MintListView({
       const name = (mint.name ?? getHostname(mint.url)).toLowerCase()
       return getHostname(mint.url).toLowerCase().includes(q) || name.includes(q)
     })
-    // Test/demo mints always follow every other mint, whatever the sort mode or direction.
+    // Test mints always follow every other mint, whatever the sort mode or direction.
     return partitionNotRecommended([...filtered].sort((a, b) => {
       let result: number
       if (sortBy === 'rating') {
@@ -449,7 +449,7 @@ function MintGrid({
       return getHostname(mint.url).toLowerCase().includes(q) || name.includes(q)
     })
 
-    // Test/demo mints always follow every other mint, whatever the sort mode or direction.
+    // Test mints always follow every other mint, whatever the sort mode or direction.
     return partitionNotRecommended([...filtered].sort((a, b) => {
       let result: number
       if (sortBy === 'rating') {

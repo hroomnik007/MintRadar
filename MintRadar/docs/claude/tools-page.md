@@ -35,7 +35,7 @@ uptime % only now) and **compacted large limit numbers** — `formatCompactAmoun
 
 - **Disclaimer** — `.wizard-disclaimer` under the "Best Mint for Me" title reads exactly
   **"Suggestions from our measurements, not an endorsement."**
-- **Test mints excluded** (and, since 2026-10-05, demo-notice mints: `!isNotRecommendedMint(m)`, see "Demo notices and not recommended" in discovery-and-relays.md) — `candidates` already filters `!isTestMint(m.url)` (line ~499, see
+- **Test mints excluded** (`!isNotRecommendedMint(m)`, which is `isTestMint`; see "Not recommended" in discovery-and-relays.md) — `candidates` already filters `!isTestMint(m.url)` (line ~499, see
   "Best Mint Wizard recommendation age gate" below for the 2026-09-19 addition of the
   `isEligibleForRecommendation()` filter right after it); unchanged, but now explicitly a
   requirement.
