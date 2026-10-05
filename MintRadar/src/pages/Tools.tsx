@@ -10,6 +10,7 @@ import { startTokenRun, classifyRunError, createRunGuard, type TokenRun } from '
 import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { Zap, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Hourglass, ExternalLink, ArrowRight, type LucideIcon } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
+import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation } from '@/utils/reliabilityScore'
 import { sortUnits } from '@/utils/sortUnits'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
@@ -630,7 +631,9 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       // Dev/test-only mints (fake sats, "do not use as default", etc.) are
       // real and findable via Dashboard/Watchlist/Search, but the wizard is
       // an active recommendation — never suggest one as someone's mint.
-      .filter(m => !isTestMint(m.url))
+      // Demo-notice mints (the mint's own text says it is for demonstration/testing) too:
+      // no toggle, never recommended here.
+      .filter(m => !isNotRecommendedMint(m))
       // Same 14-day minimum-age gate as the Reliability Score top-5 surfaces (Stats,
       // /api/stats) — a brand-new mint shouldn't be actively recommended here
       // just because it hasn't accumulated enough history to be penalized yet.
@@ -845,6 +848,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
             })}
             </>
           )}
+          <div className="wizard-rec-exclusion-note">Test and demo mints are never recommended here.</div>
           {recs.length > 0 && (
             <div className="wizard-rec-note">
               Reliability Score reflects the whole mint, not this specific currency — uptime, NUT support and

@@ -13,6 +13,10 @@ export interface KnownMint {
   nutCount: number | null
   tosUrl: string | null
   descriptionLong: string | null
+  // The mint's own description/MOTD says it is a demo/test mint (backend shared/demoNotice.ts).
+  // demoNoticePhrase is the matched list phrase (<= 60 chars). Sorting/filtering/labels only.
+  demoNotice?: boolean
+  demoNoticePhrase?: string | null
   nutsLimits: Record<string, unknown> | null
   units?: string[] | null
   mintMethods?: { method: string; unit: string; [key: string]: unknown }[] | null

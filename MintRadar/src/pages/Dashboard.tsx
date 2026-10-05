@@ -16,7 +16,7 @@ import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { latencyColor, reliabilityColor, uptimeColor, displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import { listReliabilityScore, compareReliabilityThenRating } from '@/utils/reliabilitySort'
-import { isTestMint } from '@/constants/testMints'
+import { isNotRecommendedMint, partitionNotRecommended } from '@/utils/notRecommended'
 import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolForStatus } from '@/utils/mintCounts'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
@@ -159,7 +159,7 @@ function applyFilters(
     // A name/url search reaches every mint — test mints and the online-only
     // default are both bypassed so a searched-for mint is always findable.
     if (!opts.searching) {
-      if (filters.hideTestMints && isTestMint(mint.url)) return false
+      if (filters.hideTestMints && isNotRecommendedMint(mint)) return false
       // "Show" (showDegraded) reveals every mint the default view hides:
       // 24h+ offline, archived and the <24h-offline ones.
       if (filters.status === 'online' && mint.online !== true && !opts.showDegraded) return false
@@ -175,6 +175,8 @@ function applyFilters(
     return true
   })
 }
+
+const HIDE_TEST_MINTS_TOOLTIP = 'Hides test mints and demo mints (mints whose own notice says they are for demonstration or testing).'
 
 const UNIT_FILTER_TOOLTIP = 'While a unit is selected, mints whose units are not known yet, or are not SAT, USD or EUR, are hidden.'
 
@@ -323,7 +325,8 @@ function MintListView({
       const name = (mint.name ?? getHostname(mint.url)).toLowerCase()
       return getHostname(mint.url).toLowerCase().includes(q) || name.includes(q)
     })
-    return [...filtered].sort((a, b) => {
+    // Test/demo mints always follow every other mint, whatever the sort mode or direction.
+    return partitionNotRecommended([...filtered].sort((a, b) => {
       let result: number
       if (sortBy === 'rating') {
         // Sort by the backend's weighted/Bayesian rating (falls back to the raw
@@ -347,7 +350,7 @@ function MintListView({
         result = mintDisplayName(a, duplicateDisplayNames).localeCompare(mintDisplayName(b, duplicateDisplayNames))
       }
       return sortDir === DEFAULT_SORT_DIRS[sortBy] ? result : -result
-    })
+    }))
   }, [mints, search, sortBy, sortDir, duplicateDisplayNames])
 
   return (
@@ -445,7 +448,8 @@ function MintGrid({
       return getHostname(mint.url).toLowerCase().includes(q) || name.includes(q)
     })
 
-    return [...filtered].sort((a, b) => {
+    // Test/demo mints always follow every other mint, whatever the sort mode or direction.
+    return partitionNotRecommended([...filtered].sort((a, b) => {
       let result: number
       if (sortBy === 'rating') {
         // Sort by the backend's weighted/Bayesian rating (falls back to the raw
@@ -469,7 +473,7 @@ function MintGrid({
         result = mintDisplayName(a, duplicateDisplayNames).localeCompare(mintDisplayName(b, duplicateDisplayNames))
       }
       return sortDir === DEFAULT_SORT_DIRS[sortBy] ? result : -result
-    })
+    }))
   }, [mints, search, sortBy, sortDir, duplicateDisplayNames])
 
   return (
@@ -1244,7 +1248,7 @@ export default function Dashboard() {
                 </span>
               )}
               {activeFilters.hideTestMints && (
-                <span className="filter-tag">
+                <span className="filter-tag" title={HIDE_TEST_MINTS_TOOLTIP}>
                   Test mints hidden
                   <button type="button" onClick={() => { const f = { ...activeFilters, hideTestMints: false }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
@@ -1328,7 +1332,7 @@ export default function Dashboard() {
             </div>
 
             <div className="filter-footer">
-              <label className="filter-check">
+              <label className="filter-check" title={HIDE_TEST_MINTS_TOOLTIP}>
                 <input
                   type="checkbox"
                   checked={pendingFilters.hideTestMints}

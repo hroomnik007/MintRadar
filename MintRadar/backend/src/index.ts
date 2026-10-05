@@ -1018,7 +1018,7 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
   }
   Promise.all([
     pool.query(`
-      SELECT m.url, m.name, m.last_reliability_score, m.nuts_limits, m.discovered_at,
+      SELECT m.url, m.name, m.last_reliability_score, m.nuts_limits, m.discovered_at, m.demo_notice,
         latest.online AS online, latest.latency_ms
       FROM mints m
       LEFT JOIN LATERAL (
@@ -1037,7 +1037,7 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
     `),
   ])
     .then(([mintsResult, latencyResult]) => {
-      type MintRow = { url: string; name: string | null; last_reliability_score: number | null; nuts_limits: Record<string, unknown> | null; discovered_at: string | Date | null; online: boolean | null; latency_ms: number | null }
+      type MintRow = { url: string; name: string | null; last_reliability_score: number | null; nuts_limits: Record<string, unknown> | null; discovered_at: string | Date | null; demo_notice?: string | null; online: boolean | null; latency_ms: number | null }
       const rows = mintsResult.rows as MintRow[]
       const online = rows.filter(r => r.online === true)
       const offline = rows.filter(r => r.online === false)
@@ -1068,6 +1068,8 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
         // Known dev/test-only mints are excluded from this "best of" list —
         // still fully visible/probed elsewhere, just not proactively recommended.
         .filter(r => !isTestMint(r.url as string))
+        // ... and mints whose own text says they are a demo/test mint (shared/demoNotice.ts).
+        .filter(r => !r.demo_notice)
         // Minimum observation window before a mint can be recommended — see
         // isEligibleForRecommendation (2026-09-19 audit run-3 MEDIUM finding).
         // Additive to NEW_MINT_RELIABILITY_CAP (score-side discount); this is the
@@ -1184,7 +1186,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
   pool
     .query(`
       SELECT m.url, m.name, m.icon_url, m.version, m.nut_count,
-        m.tos_url, m.description_long, m.nuts_limits,
+        m.tos_url, m.description_long, m.demo_notice, m.nuts_limits,
         m.units, m.mint_methods, m.melt_methods, m.pubkey,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
@@ -1257,6 +1259,12 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           nutCount: r.nut_count as number | null,
           tosUrl: (r.tos_url as string | null) ?? null,
           descriptionLong: (r.description_long as string | null) ?? null,
+          // Additive: the mint's own text says it is a demo/test mint (shared/demoNotice.ts).
+          // Used for sorting/filtering/labelling only; never part of the Reliability Score.
+          demoNotice: typeof r.demo_notice === 'string' && r.demo_notice.length > 0,
+          demoNoticePhrase: typeof r.demo_notice === 'string' && r.demo_notice.length > 0
+            ? r.demo_notice.slice(0, 60)
+            : null,
           nutsLimits: (r.nuts_limits as Record<string, unknown> | null) ?? null,
           units: (r.units as string[] | null) ?? null,
           mintMethods: (r.mint_methods as Record<string, unknown>[] | null) ?? null,

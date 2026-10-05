@@ -7,6 +7,7 @@ import { computeReliabilityScore, versionFreshnessScore, TRACKED_NUT_KEYS } from
 import { notifySubscribers, isNotificationServiceEnabled } from './nostrService.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { normalizeMintPubkey } from './mintPubkey.js'
+import { detectDemoNotice } from './shared/demoNotice.js'
 import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type SafeFetchRejection } from './probeErrorKind.js'
 
 function isCloudflareIP(address: string): boolean {
@@ -402,6 +403,13 @@ export async function probeMintToDb(url: string): Promise<void> {
           const version = typeof raw['version'] === 'string' ? raw['version'] : null
           const tosUrl = typeof raw['tos_url'] === 'string' ? raw['tos_url'] : null
           const descriptionLong = typeof raw['description_long'] === 'string' ? raw['description_long'] : null
+          // The mint's own wording can mark it as a demo/test mint. Short description and MOTD
+          // are not stored (live probe only), so the phrase is derived here and persisted.
+          const demoNotice = detectDemoNotice([
+            typeof raw['description'] === 'string' ? raw['description'] : null,
+            descriptionLong,
+            typeof raw['motd'] === 'string' ? raw['motd'] : null,
+          ])
           // Reliability Score denominator — only mint-side NUTs in TRACKED_NUT_KEYS
           // count. A mint's own nuts object can also carry auth (21/22) and
           // payment-method (23/25/30) keys, which are real features but not
@@ -443,6 +451,8 @@ export async function probeMintToDb(url: string): Promise<void> {
               mint_methods     = COALESCE($10::jsonb, mint_methods),
               melt_methods     = COALESCE($11::jsonb, melt_methods),
               pubkey           = COALESCE($13, pubkey),
+              -- not COALESCE'd: a notice the mint removed must clear (successful probes only)
+              demo_notice      = $14,
               -- not COALESCE'd: 0 is a meaningful value here (mint publishes no
               -- contact methods), and this line only runs on a successful probe
               contact_count    = $12
@@ -454,6 +464,7 @@ export async function probeMintToDb(url: string): Promise<void> {
               meltMethods !== null ? JSON.stringify(meltMethods) : null,
               contactCount,
               pubkey,
+              demoNotice,
             ]
           )
 

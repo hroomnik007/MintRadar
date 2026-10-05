@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test.describe('Dashboard default view', () => {
-  test('fresh load: no offline cards, test mint shown, ordered by Reliability desc', async ({ page }) => {
+  test('fresh load: no offline cards, test mint shown but last, others ordered by Reliability desc', async ({ page }) => {
     const tieHi = { ...MOCK_KNOWN_MINTS[0], url: 'https://zulu.mint.example', name: 'Zulu Mint', online: true, degraded: false, reliabilityScore: 70, reviewCount: 20, reviewAvgRating: 4.9, reviewWeightedRating: 4.6 }
     const tieLo = { ...MOCK_KNOWN_MINTS[0], url: 'https://kilo.mint.example', name: 'Kilo Mint', online: true, degraded: false, reliabilityScore: 70, reviewCount: 4, reviewAvgRating: 3.1, reviewWeightedRating: 3.2 }
     const testMint = { ...MOCK_KNOWN_MINTS[0], url: 'https://testnut.cashu.space', name: 'Cashu test mint', online: true, degraded: false, reliabilityScore: 99 }
@@ -22,8 +22,9 @@ test.describe('Dashboard default view', () => {
 
     // Reliability desc; equal Reliability (70) currently still name-asc (Kilo then Zulu)
     // until Dashboard imports compareReliabilityThenRating from reliabilitySort.ts.
+    // The test mint (score 99) is "not recommended": it sorts after every other mint (2026-10-05).
     await expect(page.locator('.mint-grid .card-name')).toHaveText([
-      'Cashu test mint', 'Alpha Mint', 'Delta Mint', 'Zulu Mint', 'Kilo Mint', 'Bravo Mint',
+      'Alpha Mint', 'Delta Mint', 'Zulu Mint', 'Kilo Mint', 'Bravo Mint', 'Cashu test mint',
     ])
   })
 

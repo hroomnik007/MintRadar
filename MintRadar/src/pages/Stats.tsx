@@ -11,7 +11,7 @@ import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { trackedCount, onlineCount as countOnline } from '@/utils/mintCounts'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
 import { reliabilityColor, reliabilityScoreInfo, reliabilityDonutArc, displayName, computeDuplicateMintNames, mintAgeBadge } from '@/utils/mintFormatting'
-import { isTestMint } from '@/constants/testMints'
+import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { compareMintVersionNumbers, isEligibleForRecommendation } from '@/utils/reliabilityScore'
 import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
@@ -681,7 +681,7 @@ export default function Stats() {
       // Test/dev mints are excluded from this "best of" list (same as the
       // Best Mint wizard and the backend's top5ByReliabilityScore); the Reliability tab
       // just below has its own, separate isTestMint()/age-gate filtering.
-      .filter(m => m.online === true && m.uptimePct7d != null && !isTestMint(m.url))
+      .filter(m => m.online === true && m.uptimePct7d != null && !isNotRecommendedMint(m))
       .sort((a, b) => (b.uptimePct7d ?? 0) - (a.uptimePct7d ?? 0))
       .slice(0, 5)
   }, [knownMintsData])
@@ -694,7 +694,7 @@ export default function Stats() {
       // this mirror previously had NO test-mint exclusion at all, unlike the
       // backend's top5ByReliabilityScore and this page's own top5ByUptime just above
       // (2026-09-19 audit run-3 finding).
-      .filter(m => !isTestMint(m.url))
+      .filter(m => !isNotRecommendedMint(m))
       // Minimum observation window before a mint can be recommended — additive
       // to NEW_MINT_RELIABILITY_CAP (which only discounts score, not eligibility).
       // Same gate as the backend's top5ByReliabilityScore (isEligibleForRecommendation).

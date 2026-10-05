@@ -198,6 +198,9 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS nut_count INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS tos_url TEXT',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS description_long TEXT',
+    // Matched demo/test-notice phrase from the mint's own description/MOTD (shared/demoNotice.ts),
+    // rewritten on every successful probe. Never feeds the Reliability Score.
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS demo_notice TEXT',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS nuts_limits JSONB',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_n_mints INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_n_melts INTEGER',
