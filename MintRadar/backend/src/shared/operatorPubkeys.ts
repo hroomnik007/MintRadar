@@ -5,23 +5,29 @@
 // file (separate npm package, no workspace), so src/utils/operatorPubkeys.ts is a manually-synced
 // copy — keep the code identical; src/__tests__/sharedModules.test.ts fails when the two drift.
 //
-// Sources: (a) the mint's own NUT-06 contact entries with method "nostr" that are an npub,
-// nprofile or 64-character hex key (an optional "nostr:" prefix is accepted), (b) the author of the
-// mint's NIP-87 announcement. NIP-05 contact entries (name@domain) are NOT resolved: neither side
-// holds a verified, persisted resolution, and fetching one here would be a new outbound request.
+// A key counts as the operator ONLY when BOTH sources agree (2026-10-05): (a) it is listed in the
+// mint's own NUT-06 contact entries with method "nostr" as an npub, nprofile or 64-character hex key
+// (an optional "nostr:" prefix is accepted) AND (b) it is the author of the mint's NIP-87
+// announcement (kind 38172). Either source alone proves nothing: the contact list is written by the
+// mint (a hostile mint could list a critic's key to get that review labelled and left out of the
+// rating), and anyone can publish a kind 38172 for any URL. Requiring both means a forger would need
+// the critic's key to have signed an announcement for that mint too.
+// NIP-05 contact entries (name@domain) are NOT resolved: neither side holds a verified, persisted
+// resolution, and fetching one here would be a new outbound request.
 import { nip19 } from 'nostr-tools'
 
 export interface OperatorSource {
   /** NUT-06 `contact` array as published by the mint (only method "nostr" entries are read). */
   contact?: ReadonlyArray<{ method: string; info?: unknown }> | null
-  /** Hex pubkey of the NIP-87 announcement author, when known. */
+  /** Hex pubkey of the author of the mint's NIP-87 announcement (kind 38172), when known. Only the
+   *  newest announcement's author is stored (mints.nostr_announce_pubkey). */
   announcePubkey?: string | null
 }
 
 const HEX64 = /^[0-9a-f]{64}$/i
 // Bounded work AND bounded blast radius: the contact list is written by the mint itself, so a hostile
-// /v1/info could name any key (e.g. a critical reviewer) as "operator" to get its review left out of
-// the rating. At most 3 contact keys are read (real operators list one or two), strings are capped.
+// /v1/info could name any key (e.g. a critical reviewer) as a contact. At most 3 contact keys are read
+// (real operators list one or two), strings are capped.
 const MAX_CONTACTS = 3
 const MAX_INFO_CHARS = 300
 
@@ -39,9 +45,14 @@ function toHexPubkey(raw: string): string | null {
   return null
 }
 
-/** Lowercase hex pubkeys of the mint's operator keys; empty when nothing usable is listed. */
+/** Lowercase hex pubkeys of the mint's operator keys: the contact keys (at most 3) that are also the
+ *  announcement author. Empty when either source is missing or they disagree. */
 export function operatorPubkeys(source: OperatorSource): Set<string> {
   const out = new Set<string>()
+  const announcer = typeof source.announcePubkey === 'string' && HEX64.test(source.announcePubkey)
+    ? source.announcePubkey.toLowerCase()
+    : null
+  if (announcer === null) return out
   const contact = Array.isArray(source.contact) ? source.contact : []
   let seen = 0
   for (const c of contact) {
@@ -49,10 +60,7 @@ export function operatorPubkeys(source: OperatorSource): Set<string> {
     if (!c || c.method !== 'nostr' || typeof c.info !== 'string') continue
     seen++
     const hex = toHexPubkey(c.info)
-    if (hex) out.add(hex)
-  }
-  if (typeof source.announcePubkey === 'string' && HEX64.test(source.announcePubkey)) {
-    out.add(source.announcePubkey.toLowerCase())
+    if (hex === announcer) out.add(hex)
   }
   return out
 }

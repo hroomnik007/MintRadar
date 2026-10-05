@@ -80,6 +80,7 @@ describe('computeAvgRating', () => {
 })
 
 const OPERATOR_HEX = 'a'.repeat(64)
+const CRITIC_HEX = 'c'.repeat(64)
 
 // Routes the three reads persistMintReviews does inside its transaction.
 function routeClient(opts: { mintRow?: Record<string, unknown>; stored?: Array<{ pubkey: string; rating: number | null; comment: string | null }> } = {}) {
@@ -116,9 +117,14 @@ describe('aggregateReviews', () => {
 })
 
 describe('operatorKeysOf', () => {
-  it('reads the stored nostr contacts and the announcement author', () => {
-    const ops = operatorKeysOf({ contact_nostr: [OPERATOR_HEX, 'not a key'], nostr_announce_pubkey: 'b'.repeat(64) })
-    expect([...ops].sort()).toEqual([OPERATOR_HEX, 'b'.repeat(64)])
+  it('a key stored as a nostr contact that is also the announcement author is the operator', () => {
+    const ops = operatorKeysOf({ contact_nostr: [OPERATOR_HEX, 'not a key'], nostr_announce_pubkey: OPERATOR_HEX })
+    expect([...ops]).toEqual([OPERATOR_HEX])
+  })
+  it('a critic listed as contact but not the announcement author is not an operator', () => {
+    expect(operatorKeysOf({ contact_nostr: [CRITIC_HEX], nostr_announce_pubkey: OPERATOR_HEX }).size).toBe(0)
+    expect(operatorKeysOf({ contact_nostr: [CRITIC_HEX], nostr_announce_pubkey: null }).size).toBe(0)
+    expect(operatorKeysOf({ contact_nostr: null, nostr_announce_pubkey: OPERATOR_HEX }).size).toBe(0)
   })
   it('is empty without data', () => {
     expect(operatorKeysOf(undefined).size).toBe(0)
@@ -178,7 +184,7 @@ describe('persistMintReviews', () => {
 
   it('leaves the operator\'s review out of count and average but stores it and counts it separately', async () => {
     routeClient({
-      mintRow: { contact_nostr: [OPERATOR_HEX], nostr_announce_pubkey: null },
+      mintRow: { contact_nostr: [OPERATOR_HEX], nostr_announce_pubkey: OPERATOR_HEX },
       stored: [
         { pubkey: OPERATOR_HEX, rating: 5, comment: '' },
         { pubkey: 'b', rating: 5, comment: '' },
@@ -194,6 +200,22 @@ describe('persistMintReviews', () => {
     expect(insertCall[1]).toHaveLength(18) // all three rows are still stored
     const updateCall = clientQueryMock.mock.calls.find(c => String(c[0]).includes('UPDATE mints'))!
     expect(updateCall[1]).toEqual([2, 4, 1, 'https://m.example'])
+  })
+
+  it('a critic listed as the mint\'s contact but not an announcer is neither excluded nor labelled: the 1-star review counts', async () => {
+    routeClient({
+      mintRow: { contact_nostr: [CRITIC_HEX], nostr_announce_pubkey: OPERATOR_HEX },
+      stored: [
+        { pubkey: CRITIC_HEX, rating: 1, comment: 'lost my sats' },
+        { pubkey: 'b', rating: 5, comment: '' },
+      ],
+    })
+    await persistMintReviews('https://m.example', [
+      { eventId: 'e1', pubkey: CRITIC_HEX, rating: 1, comment: 'lost my sats', createdAt: 2 },
+      { eventId: 'e2', pubkey: 'b', rating: 5, comment: '', createdAt: 1 },
+    ])
+    const updateCall = clientQueryMock.mock.calls.find(c => String(c[0]).includes('UPDATE mints'))!
+    expect(updateCall[1]).toEqual([2, 3, 0, 'https://m.example']) // both counted, average of 1 and 5, no operator review
   })
 
   it('rolls back and rethrows if an insert fails, still releasing the client', async () => {
@@ -223,7 +245,7 @@ describe('recomputeReviewCountRollups', () => {
 
   it('updates the rollup from stored rows: empty reviews and the operator\'s reviews are not counted', async () => {
     routePool(
-      [{ url: 'https://m.example', contact_nostr: [OPERATOR_HEX], nostr_announce_pubkey: null }, { url: 'https://n.example', contact_nostr: null, nostr_announce_pubkey: null }],
+      [{ url: 'https://m.example', contact_nostr: [OPERATOR_HEX], nostr_announce_pubkey: OPERATOR_HEX }, { url: 'https://n.example', contact_nostr: null, nostr_announce_pubkey: null }],
       [
         { url: 'https://m.example', pubkey: OPERATOR_HEX, rating: 5, comment: '' },
         { url: 'https://m.example', pubkey: 'b', rating: 5, comment: '' },

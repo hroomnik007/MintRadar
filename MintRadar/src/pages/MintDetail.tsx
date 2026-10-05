@@ -1076,14 +1076,14 @@ function MintDetailContent({ url }: { url: string }) {
   const auditSwapBarItems = auditSwaps.slice(0, AUDIT_SWAP_BAR_MAX)
   const auditRecentSwapRows = showAllAuditSwaps ? auditSwaps : auditSwaps.slice(0, AUDIT_SWAP_ROWS_DEFAULT)
 
-  // The mint's operator keys (a nostr contact it lists, or its NIP-87 announcement author). Their
-  // reviews stay in the list, labelled "Operator", but are not counted in the tile (decision
-  // 2026-10-05). Without the live probe's contact list (still loading, or the mint is offline)
-  // only the announcement author is known here, so the tile then keeps the backend rollup, which
-  // already excludes the operator via the stored contacts.
+  // The mint's operator keys: a nostr contact it lists that ALSO authored its NIP-87 announcement
+  // (both must agree, decision 2026-10-05). Their reviews stay in the list, labelled "Operator",
+  // but are not counted in the tile. Without the live probe's contact list (still loading, or the
+  // mint is offline) or the known-mints row (the announcement author) the operator set cannot be
+  // worked out here, so the tile then keeps the backend rollup, which applies the same rule.
   // (Plain computation, not a hook: this runs after the component's early return. At most 10 decodes.)
   const operatorKeys = operatorPubkeys({ contact: data?.info?.contact ?? null, announcePubkey: knownMint?.nostrAnnouncePubkey ?? null })
-  const operatorKeysKnown = data?.info !== undefined
+  const operatorKeysKnown = data?.info !== undefined && knownMint !== null
   const countedReviews = mergedReviews.filter(r => !operatorKeys.has(r.pubkey.toLowerCase()))
   const operatorListedCount = mergedReviews.length - countedReviews.length
 
@@ -2364,7 +2364,7 @@ function MintDetailContent({ url }: { url: string }) {
                                 )}
                               </span>
                               {operatorKeys.has(r.pubkey.toLowerCase()) && (
-                                <span className="review-operator-badge" title="Published by a key listed as this mint's contact or announcement author.">Operator</span>
+                                <span className="review-operator-badge" title="Published by a key that is listed as this mint's contact and announced this mint on Nostr.">Operator</span>
                               )}
                             </span>
                             <span className="review-author-npub">{shortNpub(npub)}</span>

@@ -54,6 +54,8 @@ export const OPERATOR_CASES: OperatorSource[] = [
   { announcePubkey: K1 },
   { announcePubkey: 'not-hex' },
   { contact: [{ method: 'nostr', info: K1 }], announcePubkey: K2 },
+  { contact: [{ method: 'nostr', info: nip19.npubEncode(K1) }], announcePubkey: K1 },
+  { contact: [{ method: 'nostr', info: nip19.nprofileEncode({ pubkey: K2 }) }, { method: 'nostr', info: K1 }], announcePubkey: K2.toUpperCase() },
   { contact: null, announcePubkey: null },
   {},
 ]

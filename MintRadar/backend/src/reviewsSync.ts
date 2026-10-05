@@ -163,8 +163,8 @@ export async function persistMintReviews(url: string, reviews: SyncedReview[]): 
       )
     }
     // Aggregates are computed here, from the stored rows, with the operator's own reviews left out
-    // (stored rows are never changed or deleted; the operator is whoever the mint lists as a nostr
-    // contact or announced itself as — shared/operatorPubkeys.ts).
+    // (stored rows are never changed or deleted; the operator is a key the mint lists as a nostr
+    // contact AND that authored its NIP-87 announcement — shared/operatorPubkeys.ts).
     const { rows: mintRows } = await client.query(
       `SELECT contact_nostr, nostr_announce_pubkey FROM mints WHERE url = $1`,
       [url],
