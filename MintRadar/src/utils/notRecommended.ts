@@ -6,6 +6,7 @@ import { isTestMint } from '@/constants/testMints'
 export interface NotRecommendedLike {
   url: string
   demoNotice?: boolean | null
+  demoNoticePhrase?: string | null
 }
 
 export function isNotRecommendedMint(mint: NotRecommendedLike): boolean {
