@@ -932,6 +932,12 @@ button.md-url-copy.copied > svg { opacity: 1; }
   font-weight: 400;
   color: var(--copper);
 }
+.review-author-nip05-claimed {
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text2);
+}
 .review-operator-badge {
   flex-shrink: 0;
   margin-left: 6px;

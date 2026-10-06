@@ -38,6 +38,13 @@ export interface ReviewFilter {
   since?: number
 }
 
+/** One REQ for kind:0 profiles of up to PROFILE_BATCH_SIZE authors (profilesSync.ts). */
+export interface ProfileFilter {
+  kinds: number[]
+  authors: string[]
+  limit: number
+}
+
 export type RelayQueryResult =
   | { status: 'ok'; events: NostrEvent[] }
   /** Rate limit, block, or the relay closed the connection: skip this relay for the rest of the run. */
@@ -46,7 +53,7 @@ export type RelayQueryResult =
 
 export interface RelayConnection {
   /** Never rejects. */
-  query(filter: ReviewFilter, timeoutMs: number): Promise<RelayQueryResult>
+  query(filter: ReviewFilter | ProfileFilter, timeoutMs: number): Promise<RelayQueryResult>
   close(): void
 }
 

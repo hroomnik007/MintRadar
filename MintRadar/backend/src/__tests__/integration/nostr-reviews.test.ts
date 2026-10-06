@@ -61,9 +61,29 @@ describe('GET /api/mints/nostr-reviews', () => {
 
     expect(queryMock).toHaveBeenCalledTimes(1)
     const [sql, params] = queryMock.mock.calls[0]!
-    expect(sql).toMatch(/FROM mint_reviews WHERE url = \$1/)
-    expect(sql).toMatch(/ORDER BY created_at DESC/)
+    expect(sql).toMatch(/FROM mint_reviews r LEFT JOIN nostr_profiles p ON p\.pubkey = r\.pubkey\s+WHERE r\.url = \$1/)
+    expect(sql).toMatch(/ORDER BY r\.created_at DESC/)
     expect(params).toEqual(['https://mint.example.com'])
+  })
+
+  it('adds authorName and authorNip05 only for found profiles (display_name wins over name)', async () => {
+    queryMock.mockResolvedValue({
+      rows: [
+        row({ pubkey: 'a', ...{ found: true, name: 'al', display_name: 'Alice', nip05: 'al@example.com' } }),
+        row({ pubkey: 'b', ...{ found: true, name: 'bob', display_name: null, nip05: null } }),
+        row({ pubkey: 'c', ...{ found: false, name: null, display_name: null, nip05: null } }),
+        row({ pubkey: 'd' }),
+      ],
+    })
+
+    const res = await request(app).get('/api/mints/nostr-reviews').query({ url: 'https://mint.example.com' })
+
+    expect(res.body[0]).toMatchObject({ authorName: 'Alice', authorNip05: 'al@example.com' })
+    expect(res.body[1]).toMatchObject({ authorName: 'bob' })
+    expect(res.body[1]).not.toHaveProperty('authorNip05')
+    expect(res.body[2]).not.toHaveProperty('authorName')
+    expect(res.body[3]).not.toHaveProperty('authorName')
+    expect(res.body[3]).not.toHaveProperty('authorNip05')
   })
 
   it('returns an empty array when the mint has no cached reviews', async () => {

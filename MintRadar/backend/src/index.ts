@@ -23,6 +23,7 @@ import { isTestMint } from './testMints.js'
 import { publicMintName, publicMintNameOrHost } from './mintNames.js'
 import { verifyNip05 } from './nip05Verify.js'
 import { isAllowlistMode, isAllowedUrl } from './allowlist.js'
+import { profileFieldsForReview } from './profilesSync.js'
 
 // Safety net against a nostr-tools bug: AbstractRelay.connect()'s
 // connection-timeout path calls `this.ws.close()` on a socket that hasn't
@@ -1816,9 +1817,10 @@ app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {
 
   pool
     .query(
-      `SELECT event_id, pubkey, rating, comment, created_at
-       FROM mint_reviews WHERE url = $1
-       ORDER BY created_at DESC`,
+      `SELECT r.event_id, r.pubkey, r.rating, r.comment, r.created_at, p.found, p.name, p.display_name, p.nip05
+       FROM mint_reviews r LEFT JOIN nostr_profiles p ON p.pubkey = r.pubkey
+       WHERE r.url = $1
+       ORDER BY r.created_at DESC`,
       [url],
     )
     .then(result => {
@@ -1829,6 +1831,8 @@ app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {
         rating: r.rating as number | null,
         createdAt: Number(r.created_at),
         source: 'nostr' as const,
+        // Untrusted display text only (profilesSync.ts); never used for rating, operator rule or any score.
+        ...profileFieldsForReview(r),
       }))
       res.setHeader('Cache-Control', 'max-age=120')
       res.json(reviews)

@@ -321,10 +321,14 @@ NIP-87 kind:38000 reviews for a single mint fetched live from Nostr relays.
     "content": "Great mint",
     "rating": 4,
     "createdAt": 1750000000,
-    "source": "nostr"
+    "source": "nostr",
+    "authorName": "Alice",
+    "authorNip05": "alice@example.com"
   }
 ]
 ```
+
+`authorName` and `authorNip05` are optional and present only when the server has found the author's public Nostr profile (kind 0, from a profile indexer). `authorName` is the profile's `display_name`, else its `name`; `authorNip05` is the profile's **unverified** NIP-05 claim. Both are untrusted display text (cleaned, `authorName` at most 48 characters, `authorNip05` at most 100): render as plain text, never as verified, and never use them for a rating or any score.
 
 ---
 

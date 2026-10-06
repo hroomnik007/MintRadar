@@ -84,6 +84,20 @@ export async function initDb(): Promise<void> {
       last_full_at BIGINT
     );
 
+    -- Public profile (kind:0) of review authors and mint contact/announcement keys, fetched by the
+    -- hourly reviews sync from the profile indexer relays (profilesSync.ts). Only name, display_name
+    -- and nip05 are stored (cleaned text, unverified). found = false: asked, nobody had it (asked
+    -- again after 24 h). Unix seconds.
+    CREATE TABLE IF NOT EXISTS nostr_profiles (
+      pubkey TEXT PRIMARY KEY,
+      name TEXT,
+      display_name TEXT,
+      nip05 TEXT,
+      event_created_at BIGINT,
+      fetched_at BIGINT NOT NULL,
+      found BOOLEAN NOT NULL
+    );
+
     -- Per-swap rows for the audit.8333.space rolling window (see discovery.ts's
     -- fetchRecentSwaps/persistMintAuditSwaps). Fully replaced (DELETE + INSERT,
     -- same atomic-per-mint-replace pattern as mint_reviews) every 6h discovery

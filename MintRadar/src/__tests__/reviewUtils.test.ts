@@ -7,7 +7,10 @@ import {
   processReviewEvents,
   isEmptyReview,
   splitEmptyReviews,
+  withServerProfileFallback,
+  type ReviewAuthorProfile,
   type ReviewEvent,
+  type ServerAuthorProfile,
 } from '../utils/reviewUtils'
 
 // ── Test helpers ────────────────────────────────────────────────
@@ -268,5 +271,49 @@ describe('isEmptyReview / splitEmptyReviews', () => {
   })
   it('handles empty input', () => {
     expect(splitEmptyReviews([])).toEqual({ visible: [], empty: [] })
+  })
+})
+
+describe('withServerProfileFallback', () => {
+  type R = { pubkey: string; profile?: ReviewAuthorProfile }
+  const server = new Map<string, ServerAuthorProfile>([
+    ['a', { authorName: 'Server A', authorNip05: 'a@example.com' }],
+    ['b', { authorName: 'Server B', authorNip05: 'b@example.com' }],
+    ['c', { authorNip05: 'c@example.com' }],
+  ])
+
+  it('gives a reviewer with no browser profile the server name and NIP-05 claim, marked fromServer', () => {
+    const [r] = withServerProfileFallback<R>([{ pubkey: 'a' }], server)
+    expect(r!.profile).toEqual({ name: 'Server A', nip05: 'a@example.com', fromServer: true })
+  })
+
+  it('never overrides a browser profile that has a name', () => {
+    const own = { name: 'Browser B', nip05: 'own@example.com' }
+    const [r] = withServerProfileFallback([{ pubkey: 'b', profile: own }], server)
+    expect(r!.profile).toBe(own)
+  })
+
+  it('keeps a browser-only picture / NIP-05 when the browser has no name and the server supplies one', () => {
+    const [r] = withServerProfileFallback([{ pubkey: 'b', profile: { picture: 'https://x/p.png', nip05: 'own@example.com' } }], server)
+    expect(r!.profile).toEqual({ picture: 'https://x/p.png', nip05: 'own@example.com', name: 'Server B', fromServer: true })
+  })
+
+  it('does nothing without a server name (a NIP-05 alone is not a name) or an unknown author', () => {
+    const input: R[] = [{ pubkey: 'c' }, { pubkey: 'zzz' }]
+    const out = withServerProfileFallback(input, server)
+    expect(out[0]).toBe(input[0])
+    expect(out[1]).toBe(input[1])
+  })
+
+  it('ignores a non-string or blank server name, keeps the text untouched otherwise', () => {
+    const odd = new Map<string, ServerAuthorProfile>([
+      ['x', { authorName: '   ' }],
+      ['y', { authorName: 42 as unknown as string }],
+      ['z', { authorName: '<b>x</b>' }],
+    ])
+    const out = withServerProfileFallback<R>([{ pubkey: 'x' }, { pubkey: 'y' }, { pubkey: 'z' }], odd)
+    expect(out[0]!.profile).toBeUndefined()
+    expect(out[1]!.profile).toBeUndefined()
+    expect(out[2]!.profile!.name).toBe('<b>x</b>')
   })
 })

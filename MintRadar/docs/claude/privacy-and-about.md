@@ -4,6 +4,10 @@ Page: `src/pages/About.tsx` (+ `About.css`), lazy route `/about` (`routerLazy.ts
 (`AppShell.tsx`). Sections `#about`, `#privacy` ("Your data"), `#terms` ("Rules"); English only; the operator is only the
 pseudonym wildcitizen7. The page makes no promise to remove reviews or data on request and claims no legal compliance.
 
+## Known gaps
+
+- **Reviewer profiles (2026-10-06):** the server also stores the public profile name, display name and NIP-05 address of review authors (`nostr_profiles` table), fetched from profiles.nostr1.com with relay.nos.social as fallback; this is NOT yet described on the About page; the About page must be updated before this feature is extended (for example a retention statement) or if the owner decides to disclose it.
+
 ## Rule: update the page when any of these change
 
 Edit `About.tsx`, bump `LAST_UPDATED`, and fix the matching row below:
@@ -16,6 +20,7 @@ Edit `About.tsx`, bump `LAST_UPDATED`, and fix the matching row below:
 - **Notification storage or retention** (`notification_subscriptions`, `pruneOldNotificationSubscriptions`).
 - **Anything that makes a new request from the browser** (`docs/claude/third-party-requests.md`) or new browser storage.
 - **The server location** — `PROBE_LOCATION` in `src/constants/probeLocation.ts` (the page uses the constant).
+- **Reviewer profiles stored on the server** (`nostr_profiles`, `backend/src/profilesSync.ts`): the server also stores the public profile name, display name and NIP-05 address of review authors (`nostr_profiles` table), fetched from profiles.nostr1.com with relay.nos.social as fallback; this is NOT yet described on the About page; the About page must be updated before this feature is extended (for example a retention statement) or if the owner decides to disclose it.
 - Score weights / the 30-day cap / probe cadence (`reliabilityScore.ts`, `auditScore.ts`, `cron.ts`, `prober.ts`).
 
 ## Claim → source
@@ -45,6 +50,7 @@ Edit `About.tsx`, bump `LAST_UPDATED`, and fix the matching row below:
 | Browser storage | Dexie `src/db/index.ts` (mints, mintHistory, watchlist, meta); `localStorage`: `mintradar-card-view`, `mintRadar_viewMode`, icon-failure cache; `sessionStorage`: `mintradar_session` (profile, method, nip65Relays — `auth.store.ts` partialize), bunker keys, chunk-reload timestamp; nsec in memory only | **adjusted** from the draft: added IndexedDB cache and localStorage items |
 | What the browser contacts | `docs/claude/third-party-requests.md` | confirmed; "6 relays on a mint page" reworded to "a few" (6 review relays + profile relays) |
 | Relay: public, MintRadar keys any kind, others 38172/38000, 64 KiB, no retention | `deploy/strfry/writePolicy.sh`, `strfry.conf` (`maxEventSize = 65536`, no retention section) | confirmed |
+| Reviewer profiles: the server stores name, display name and NIP-05 of review authors, from profiles.nostr1.com (fallback relay.nos.social) | `backend/src/profilesSync.ts` (`PROFILE_PRIMARY_RELAY`, `PROFILE_FALLBACK_RELAY`), `db.ts` `nostr_profiles` (pubkey, name, display_name, nip05, event_created_at, fetched_at, found); rows of authors that are no longer review authors or mint contact/announcement keys are deleted after 30 days; shown via `authorName`/`authorNip05` of `GET /api/mints/nostr-reviews` | **NOT on the page** (see Known gaps) |
 
 ## Not on the page, worth knowing
 

@@ -21,6 +21,7 @@ import { verifyEvent, type Event as NostrEvent } from 'nostr-tools'
 import { pool } from './db.js'
 import { getKnownMints } from './prober.js'
 import { parseReviewRatingAndComment } from './reviews.js'
+import { runProfilesSyncForServer } from './profilesSync.js'
 import { operatorPubkeys } from './shared/operatorPubkeys.js'
 import {
   REVIEW_BATCH_SIZE,
@@ -403,6 +404,7 @@ export async function refreshAllMintReviews(): Promise<number> {
     return -1
   }
   reviewSyncRunning = true
+  const startedMs = Date.now()
   try {
     const summary = await runReviewsSync({
       relays: REVIEW_SYNC_RELAYS,
@@ -416,6 +418,8 @@ export async function refreshAllMintReviews(): Promise<number> {
       random: Math.random,
       log: line => console.log(line),
     })
+    // Reviewer profiles (profilesSync.ts) ride on this run: same single-flight, same maximum run time.
+    await runProfilesSyncForServer(startedMs + REVIEW_MAX_RUN_MS)
     return summary.updated
   } catch (err) {
     console.error('[reviews-sync] fatal error:', err instanceof Error ? err.message : err)

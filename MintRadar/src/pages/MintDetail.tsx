@@ -9,7 +9,7 @@ import { IcStar } from '@/components/mint/IcStar'
 import { useMintProbe } from '@/hooks/useMintProbe'
 import { useKnownMints } from '@/hooks/useKnownMints'
 import { useMintReviews } from '@/hooks/useMintReviews'
-import { mergeStoredAndLiveReviews, visibleReviews } from '@/utils/reviewUtils'
+import { mergeStoredAndLiveReviews, visibleReviews, withServerProfileFallback, type ServerAuthorProfile } from '@/utils/reviewUtils'
 import { useMintOperatorNip05 } from '@/hooks/useMintOperatorNip05'
 import { useVerifiedNip05 } from '@/hooks/useVerifiedNip05'
 import { usePendingAutoWatch } from '@/hooks/usePendingAutoWatch'
@@ -160,7 +160,7 @@ interface MergedReviewCandidate {
   comment: string
   createdAt: number
   source: 'mintradar' | 'nostr'
-  profile?: { name?: string; nip05?: string; picture?: string }
+  profile?: { name?: string; nip05?: string; picture?: string; fromServer?: boolean }
 }
 
 const NUT_DESCRIPTIONS: Record<string, { short: string; desc: string; features: string[]; useCase: string }> = {
@@ -476,7 +476,7 @@ function MintDetailContent({ url }: { url: string }) {
       try {
         const res = await fetch(`/api/mints/nostr-reviews?url=${encodeURIComponent(url)}`)
         if (!res.ok) return []
-        return res.json() as Promise<Array<{ id: string; pubkey: string; content: string; rating: number | null; createdAt: number; source: 'nostr' }>>
+        return res.json() as Promise<Array<{ id: string; pubkey: string; content: string; rating: number | null; createdAt: number; source: 'nostr' } & ServerAuthorProfile>>
       } catch {
         return []
       }
@@ -516,7 +516,12 @@ function MintDetailContent({ url }: { url: string }) {
       }
     })
     const live: MergedReviewCandidate[] = reviews.map(r => ({ ...r, source: 'mintradar' }))
-    return visibleReviews(mergeStoredAndLiveReviews(stored, live, profile?.pubkey ?? null))
+    // Server-side profile names are only a fallback for reviewers the browser found no name for. They are applied
+    // after the merge so a live (newer) review of the same author gets them too.
+    const serverProfiles = new Map<string, ServerAuthorProfile>(
+      (nostrReviewsData ?? []).map((r): [string, ServerAuthorProfile] => [r.pubkey, r]),
+    )
+    return withServerProfileFallback(visibleReviews(mergeStoredAndLiveReviews(stored, live, profile?.pubkey ?? null)), serverProfiles)
   }, [reviews, nostrReviewsData, nostrProfiles, profile?.pubkey])
   const [selectedNut, setSelectedNut] = useState<string | null>(null)
   const [copiedContact, setCopiedContact] = useState<string | null>(null)
@@ -2354,6 +2359,9 @@ function MintDetailContent({ url }: { url: string }) {
                                 {displayName}
                                 {profile?.name && verifiedNip05ByPubkey[r.pubkey] && (
                                   <span className="review-author-nip05">{verifiedNip05ByPubkey[r.pubkey]}</span>
+                                )}
+                                {profile?.fromServer && profile.nip05 && !verifiedNip05ByPubkey[r.pubkey] && (
+                                  <span className="review-author-nip05-claimed">claimed NIP-05: {profile.nip05}</span>
                                 )}
                               </span>
                               {operatorKeys.has(r.pubkey.toLowerCase()) && (

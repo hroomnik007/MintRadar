@@ -106,3 +106,34 @@ export function splitEmptyReviews<T extends { rating: number | null; comment?: s
   for (const r of reviews) (isEmptyReview(r) ? empty : visible).push(r)
   return { visible, empty }
 }
+
+// Profile of a review author as the review list renders it. `fromServer` marks a name that came from the
+// server-side profile index (GET /api/mints/nostr-reviews authorName), not from the visitor's own relay lookup.
+export interface ReviewAuthorProfile {
+  name?: string
+  nip05?: string
+  picture?: string
+  fromServer?: boolean
+}
+
+export interface ServerAuthorProfile {
+  authorName?: string
+  authorNip05?: string
+}
+
+// The browser's own result wins: a profile that already has a name is never touched. Only when the browser
+// found no name does the server's authorName fill in (plus its NIP-05 claim, unless the browser had one).
+// Display text only, never an input to a rating, the operator rule or any score.
+export function withServerProfileFallback<T extends { pubkey: string; profile?: ReviewAuthorProfile }>(
+  reviews: T[],
+  server: ReadonlyMap<string, ServerAuthorProfile>,
+): T[] {
+  return reviews.map(r => {
+    if (r.profile?.name) return r
+    const s = server.get(r.pubkey)
+    const name = typeof s?.authorName === 'string' ? s.authorName.trim() : ''
+    if (name === '') return r
+    const nip05 = r.profile?.nip05 ?? (typeof s?.authorNip05 === 'string' && s.authorNip05.trim() !== '' ? s.authorNip05.trim() : undefined)
+    return { ...r, profile: { ...r.profile, name, ...(nip05 ? { nip05 } : {}), fromServer: true } }
+  })
+}
