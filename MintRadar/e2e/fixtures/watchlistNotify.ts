@@ -90,7 +90,7 @@ export async function seedFlags(page: Page, seed: Seed[]) {
 
 export const card = (page: Page, url: string) => page.locator('.wl-grid .mint-card', { has: page.locator('.card-name', { hasText: NAME[url]! }) })
 export const down = (page: Page, url: string) => card(page, url).getByRole('button', { name: `Notify when ${NAME[url]} goes down` })
-export const up = (page: Page, url: string) => card(page, url).getByRole('button', { name: `Notify when ${NAME[url]} comes back up` })
+export const up = (page: Page, url: string) => card(page, url).getByRole('button', { name: `Notify when ${NAME[url]} goes up` })
 export const msg = (page: Page, url: string) => card(page, url).locator('.notify-strip-msg')
 export const flags = (page: Page, url: string) => page.evaluate(async (u) => {
   const path = '/src/db/index.ts'

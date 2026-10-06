@@ -78,7 +78,7 @@ export function NotifyStrip({ mintUrl, name }: { mintUrl: string; name: string }
       <div className="notify-strip-row" role="group" aria-label={`Notifications for ${name}`}>
         <span className="notify-strip-label"><IcBell /><span>NOTIFY</span></span>
         {pill('notifyOnDown', state.down, 'Goes down', `Notify when ${name} goes down`)}
-        {pill('notifyOnUp', state.up, 'Back up', `Notify when ${name} comes back up`)}
+        {pill('notifyOnUp', state.up, 'Goes up', `Notify when ${name} goes up`)}
       </div>
       <div className="notify-strip-msg" role="status">{error}</div>
     </div>

@@ -955,7 +955,7 @@
   color: var(--t3);
 }
 
-/* Watchlist-only footer strip: divider, "NOTIFY" label, two toggle pills ("Goes down", "Back up").
+/* Watchlist-only footer strip: divider, "NOTIFY" label, two toggle pills ("Goes down", "Goes up").
    Rendered by NotifyStrip (Watchlist cards only). Pills are 26px visible with a 44px touch target
    through an invisible ::before; width never changes between states (the check/spinner slot is
    always reserved). */

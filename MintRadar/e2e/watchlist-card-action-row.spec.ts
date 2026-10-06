@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, loginAs, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 
-// Regression 1: the notification pills ("Goes down" / "Back up", in the card's `.notify-strip`
+// Regression 1: the notification pills ("Goes down" / "Goes up", in the card's `.notify-strip`
 // footer) must lay out identically no matter how many digits the latency value has — a wider
 // value ("10450 ms" vs "88 ms") must not make some cards wrap the pills onto more lines than others.
 //

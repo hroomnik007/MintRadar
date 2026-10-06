@@ -6,7 +6,7 @@ import {
   card, down, up, msg, flags, subscribeCalls,
 } from './fixtures/watchlistNotify'
 
-// Watchlist card footer "NOTIFY · Goes down · Back up": a pill is on only after the server confirmed it.
+// Watchlist card footer "NOTIFY · Goes down · Goes up": a pill is on only after the server confirmed it.
 
 const SHOTS = process.env['SHOTS']
 
@@ -17,7 +17,7 @@ test.describe('Watchlist notification toggles', () => {
     const strip = card(page, ALPHA).locator('.notify-strip')
     await expect(strip.getByRole('group', { name: `Notifications for ${NAME[ALPHA]}` })).toBeVisible()
     await expect(strip.locator('.notify-strip-label')).toHaveText('NOTIFY')
-    await expect(strip.getByRole('button')).toHaveText(['Goes down', 'Back up'])
+    await expect(strip.getByRole('button')).toHaveText(['Goes down', 'Goes up'])
     await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
     await expect(up(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
     // The strip belongs to Watchlist cards only.
@@ -189,7 +189,7 @@ test.describe('Watchlist notification toggles', () => {
     api.release()
     await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'true')
     expect((await style(down(page, ALPHA))).width).toBeCloseTo(off.width, 1)
-    // "Back up" too
+    // "Goes up" too
     const upOff = await style(up(page, ALPHA))
     const upOn = await style(up(page, BRAVO))
     expect(upOn.width).toBeCloseTo(upOff.width, 1)
