@@ -150,3 +150,22 @@ describe('fetchRemoteWatchlist — newest-wins across relays (audit finding M5)'
     expect(res).toEqual({ urls: [], failed: true })
   })
 })
+
+describe('fetchRemoteWatchlist — the user\'s own relay list is filtered and capped', () => {
+  it('connects to at most 10 of the user\'s relays, wss:// public hosts only, on top of the fixed ones', async () => {
+    configureRelays({})
+    await fetchRemoteWatchlist(PK)
+    const baseline = querySync.mock.calls.length
+    querySync.mockClear()
+    configureRelays({})
+    const userRelays = [
+      'ws://plain.example.com', 'wss://127.0.0.1:8765', 'wss://localhost:4870', 'wss://abc.onion',
+      ...Array.from({ length: 51 }, (_, i) => `wss://user-relay-${i}.example.com`),
+    ]
+    await fetchRemoteWatchlist(PK, userRelays)
+    const asked = querySync.mock.calls.map(c => (c[0] as string[])[0]!)
+    expect(asked.length).toBe(baseline + 10)
+    expect(asked.filter(r => r.includes('user-relay-'))).toEqual(userRelays.slice(4, 14))
+    expect(asked.some(r => /^ws:|127\.0\.0\.1|localhost|\.onion/.test(r))).toBe(false)
+  })
+})

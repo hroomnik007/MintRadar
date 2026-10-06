@@ -5,6 +5,7 @@ import type { EventTemplate, Filter, NostrEvent } from 'nostr-tools'
 import * as secp from '@noble/secp256k1'
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js'
 import { sharedPool } from '@/core/nostr/pool'
+import { sanitizeUserRelays } from '@/core/nostr/relayHints'
 import { useAuthStore } from '@/stores/auth.store'
 
 export interface NostrProfile {
@@ -88,8 +89,9 @@ function parseNip65Tags(tags: string[][]): { read: string[]; write: string[] } {
 }
 
 export async function fetchNostrProfile(pubkey: string, extraRelays?: string[]): Promise<{ name?: string; picture?: string }> {
-  const relays = extraRelays && extraRelays.length > 0
-    ? [...new Set([...META_RELAYS, ...extraRelays])]
+  const own = sanitizeUserRelays(extraRelays)
+  const relays = own.length > 0
+    ? [...new Set([...META_RELAYS, ...own])]
     : META_RELAYS
   const event = await subscribeFirstEvent(relays, { kinds: [0], authors: [pubkey], limit: 1 }, USER_BOOTSTRAP_TIMEOUT_MS, pubkey)
   return event ? parseProfileMeta(event.content) : {}

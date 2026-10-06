@@ -2,6 +2,7 @@ import type { NostrEvent } from 'nostr-tools'
 import { verifyEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
 import { detectLoginMethod } from '@/core/nostr/client'
+import { sanitizeUserRelays } from '@/core/nostr/relayHints'
 
 // `relay.nostr.band` (confirmed dead — TIMEOUT on both WS connect and NIP-11, 2026-09-19
 // audit + re-verified 2026-09-23), `pyramid.fiatjaf.com` (restricted_writes: true, connects
@@ -24,6 +25,13 @@ export const WATCHLIST_RELAYS = [
 ]
 
 const WATCHLIST_KIND = 10003
+
+// Our fixed relays plus the user's own (NIP-65) ones, the latter limited to public wss:// hosts and the first 10
+// (relayHints.ts) — the user's list in their account is not touched, only our connections are capped.
+function mergeUserRelays(userRelays: string[] | null | undefined): string[] {
+  const own = sanitizeUserRelays(userRelays)
+  return own.length > 0 ? [...new Set([...WATCHLIST_RELAYS, ...own])] : WATCHLIST_RELAYS
+}
 
 export interface RemoteWatchlistResult {
   urls: string[]
@@ -53,9 +61,7 @@ export async function fetchRemoteWatchlist(pubkey: string, userWriteRelays?: str
     return { urls: [], failed: false }
   }
 
-  const relays = userWriteRelays && userWriteRelays.length > 0
-    ? [...new Set([...WATCHLIST_RELAYS, ...userWriteRelays])]
-    : WATCHLIST_RELAYS
+  const relays = mergeUserRelays(userWriteRelays)
 
   const total = relays.length
   let responded = 0
@@ -153,9 +159,7 @@ export async function fetchRemoteWatchlist(pubkey: string, userWriteRelays?: str
 
 export async function publishWatchlist(pubkey: string, mints: string[], userWriteRelays?: string[] | null): Promise<void> {
   if (!window.nostr?.nip44) return
-  const relays = userWriteRelays && userWriteRelays.length > 0
-    ? [...new Set([...WATCHLIST_RELAYS, ...userWriteRelays])]
-    : WATCHLIST_RELAYS
+  const relays = mergeUserRelays(userWriteRelays)
   try {
     const encrypted = await window.nostr.nip44.encrypt(pubkey, JSON.stringify(mints))
     const event = {

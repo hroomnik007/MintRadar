@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { bootstrapUserData } from '@/core/nostr/client'
+import { sanitizeUserRelays } from '@/core/nostr/relayHints'
 
 // Reads the logged-in user's NIP-65 (kind:10002) read/write relay lists from the
 // auth store. The actual fetch is done once by `bootstrapUserData()` — a single
@@ -20,9 +21,15 @@ export function useUserRelays(): { read: string[] | null; write: string[] | null
     return bootstrapUserData(pubkey)
   }, [pubkey, nip65Relays])
 
-  if (!nip65Relays) return { read: null, write: null }
-  return {
-    read: nip65Relays.read.length > 0 ? nip65Relays.read : null,
-    write: nip65Relays.write.length > 0 ? nip65Relays.write : null,
-  }
+  // Only what we connect to is filtered (public wss:// hosts, max 10 each); the stored list stays as published.
+  // Memoised so callers keep a stable array between renders, as they had with the raw store value.
+  return useMemo(() => {
+    if (!nip65Relays) return { read: null, write: null }
+    const read = sanitizeUserRelays(nip65Relays.read)
+    const write = sanitizeUserRelays(nip65Relays.write)
+    return {
+      read: read.length > 0 ? read : null,
+      write: write.length > 0 ? write : null,
+    }
+  }, [nip65Relays])
 }
