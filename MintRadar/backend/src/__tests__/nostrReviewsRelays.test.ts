@@ -13,7 +13,7 @@ import { DISCOVERY_RELAYS as FRONTEND_DISCOVERY_RELAYS } from '../../../src/core
 // so an edit to one side without the other fails this test immediately instead of
 // only being caught by pinning a hand-copied snapshot. REVIEW_SYNC_RELAYS is NOT a
 // straight mirror of DISCOVERY_RELAYS (it deliberately adds minibits.cash/mom/eden/
-// nostr21 on top — see reviewsSync.ts's comment), so it still uses the snapshot-pin
+// nostr21/yakihonne/wirednet.jp on top — see reviewsSync.ts's comment), so it still uses the snapshot-pin
 // approach. NOTE: the frontend's CLIENT-SIDE read path uses a deliberately smaller,
 // curated REVIEW_READ_RELAYS (fast-path) that is NOT mirrored here on purpose — see
 // the comment on REVIEW_READ_RELAYS.
@@ -74,6 +74,8 @@ describe('NOSTR_REVIEWS_RELAYS (= reviewsSync REVIEW_SYNC_RELAYS, backend-only b
       'wss://nostr.mom',
       'wss://eden.nostr.land',
       'wss://nostr21.com',
+      'wss://nostr-01.yakihonne.com',
+      'wss://relay.nostr.wirednet.jp',
     ])
   })
 

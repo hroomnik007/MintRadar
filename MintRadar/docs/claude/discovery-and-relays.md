@@ -250,7 +250,7 @@ wss://nostr.bitcoiner.social, wss://nostr.cypherpunk.today, wss://nostr-pub.well
 
 **`REVIEW_SYNC_RELAYS` (backend `reviewsSync.ts`) is no longer a straight mirror of
 `DISCOVERY_RELAYS`/the old `REVIEW_RELAYS`** — it's now `DISCOVERY_RELAYS` (10) +
-`relay.minibits.cash` + `nostr.mom` + `eden.nostr.land` + `nostr21.com` (14 total). See its
+`relay.minibits.cash` + `nostr.mom` + `eden.nostr.land` + `nostr21.com` + (2026-10-06) `nostr-01.yakihonne.com` + `relay.nostr.wirednet.jp` (18 total; see `reviews-and-nostr.md`). See its
 own file comment. `backend/src/__tests__/nostrReviewsRelays.test.ts` was extended in the same
 pass to cross-check `DISCOVERY_RELAYS` directly against the frontend's own array (not just a
 hand-copied snapshot) — backend `discovery.ts`'s `DISCOVERY_RELAYS` is now `export`ed for

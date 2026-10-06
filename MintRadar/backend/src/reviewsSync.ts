@@ -42,6 +42,8 @@ import {
   type RelaySyncState,
 } from './reviewsRelayFetch.js'
 
+// yakihonne + wirednet.jp added 2026-10-06 (measured unique kind:38000 events, see docs/claude/reviews-and-nostr.md);
+// nostr.data.haus deliberately left out (near copy of yakihonne).
 export const REVIEW_SYNC_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
@@ -59,6 +61,8 @@ export const REVIEW_SYNC_RELAYS = [
   'wss://nostr.mom',
   'wss://eden.nostr.land',
   'wss://nostr21.com',
+  'wss://nostr-01.yakihonne.com',
+  'wss://relay.nostr.wirednet.jp',
 ]
 
 const REVIEW_INSERT_BATCH = 1000
