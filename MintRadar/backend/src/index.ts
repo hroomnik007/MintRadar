@@ -352,6 +352,13 @@ async function probeMint(url: string): Promise<MintStatus> {
 
 export const app = express()
 
+// `trust proxy` must stay a hop count (a number), never a subnet string such as '10.0.0.0/8' or
+// '::ffff:10.0.0.0/8'. With a number Express never asks proxy-addr to compile a trust subnet; with
+// a short IPv4-mapped IPv6 prefix proxy-addr < 2.0.8 matched EVERY client as a trusted proxy
+// (GHSA-jqcg-44mw-7w3h), so req.ip became whatever X-Forwarded-For says and the per-IP rate
+// limits below, which key on req.ip, could be bypassed. 1 = trust exactly the nginx in front of
+// us, which overwrites X-Forwarded-For with $remote_addr (deploy/nginx.conf).
+// Pinned by __tests__/security/trust-proxy.test.ts.
 app.set('trust proxy', 1)
 
 // Security headers
