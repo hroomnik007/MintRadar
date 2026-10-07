@@ -60,7 +60,7 @@ test('only cz has data: header, four tiles from the stored detail, checks card, 
   await expect(page.locator('.audit-cz-tiles .audit-summary-value')).toHaveText(['51 / 64', '56 / 62', '0', '8.3 s'])
   await expect(page.locator('.audit-cz-tiles .audit-cz-tile-label span').filter({ hasText: /^[A-Z]/ })).toHaveText(
     ['Paid out melts', 'Received mints', 'Attributed of 19 failed swaps', 'Avg swap time'])
-  expect(await tile(page, 'melts').locator('.audit-cz-tile-label span').first().evaluate(e => getComputedStyle(e.parentElement!).textTransform)).toBe('uppercase')
+  expect(await tile(page, 'melts').locator('.audit-cz-tile-label span').first().evaluate(e => getComputedStyle(e).textTransform)).toBe('uppercase')
   // The old Recent success rate tile is gone from this view.
   await expect(page.getByText('Recent success rate')).toHaveCount(0)
 
@@ -210,6 +210,9 @@ test.describe('tiles from the stored detail', () => {
     for (const [key, text] of Object.entries(expected)) {
       await tile(page, key).locator('.info-tooltip').hover()
       await expect(tile(page, key).getByRole('tooltip')).toHaveText(text)
+      // A standard tooltip: sentence case and normal spacing, not the uppercase of the tile label.
+      const pop = await tile(page, key).getByRole('tooltip').evaluate(e => { const c = getComputedStyle(e); return { t: c.textTransform, l: c.letterSpacing, f: c.fontSize } })
+      expect(pop).toEqual({ t: 'none', l: 'normal', f: '10px' })
       await page.mouse.move(0, 0)
     }
   })

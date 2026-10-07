@@ -721,7 +721,11 @@ export default function Stats() {
   const isNarrowGeo = useMediaQuery('(max-width: 700px)')
   const geoTopN = isNarrowGeo ? 5 : 24
   const geoDist = useMemo(() => computeGeoDistribution(knownMintsData ?? [], geoTopN), [knownMintsData, geoTopN])
-  const geoRows = isNarrowGeo ? geoDist.top.length : Math.max(1, Math.ceil(geoDist.top.length / 2))
+  // The CDN / anycast bucket is not a place: it gets its own full-width row above the cities, which then
+  // split into two balanced columns.
+  const geoCdn = geoDist.top.find(e => e.loc === CDN_BUCKET) ?? null
+  const geoCities = geoDist.top.filter(e => e.loc !== CDN_BUCKET)
+  const geoRows = isNarrowGeo ? geoCities.length : Math.max(1, Math.ceil(geoCities.length / 2))
 
   const cityMints = useMemo(() => {
     if (!cityModal || !knownMintsData) return []
@@ -1165,17 +1169,27 @@ export default function Stats() {
             <div className="stats-panel-icon gray"><IcGeoGlobe /></div>
             <div className="stats-panel-title" style={{marginBottom:0}}>Geographic Distribution</div>
           </div>
+          <div className="stats-geo-sub">City from the IP address, not where the operator is.</div>
           <div className="stats-geo-fill">
-            <div className="stats-geo-cols" style={{marginTop:10,gridTemplateRows:`repeat(${geoRows}, auto)`}}>
-              {geoDist.top.length === 0 ? (
+            {geoCdn && (
+              <div className="dist-row dist-row-clickable stats-geo-cdn" onClick={() => setCityModal(geoCdn.loc)}>
+                <span className="stats-geo-cdn-main">
+                  <span className="stats-geo-flag" aria-hidden="true">🌐</span>
+                  <span className="dist-label">{CDN_BUCKET}</span>
+                  <span className="dist-count">{geoCdn.count}</span>
+                </span>
+                <span className="stats-geo-cdn-note">these are not a city.</span>
+              </div>
+            )}
+            <div className="stats-geo-cols" style={{gridTemplateRows:`repeat(${geoRows}, auto)`}}>
+              {geoCdn === null && geoCities.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
-              ) : geoDist.top.map(({loc, count}) => {
-                const {display, flag, color: geoColor} = geoLabel(loc)
+              ) : geoCities.map(({loc, count}) => {
+                const {display, flag} = geoLabel(loc)
                 return (
                   <div key={loc} className="dist-row dist-row-clickable" onClick={() => setCityModal(loc)}>
-                    <span className="dist-label dist-label-city" style={geoColor ? {color:geoColor} : undefined}>
-                      {flag ? `${flag} ${display}` : display}
-                    </span>
+                    <span className="stats-geo-flag" aria-hidden="true">{flag}</span>
+                    <span className="dist-label dist-label-city">{display}</span>
                     <span className="dist-count">{count}</span>
                   </div>
                 )

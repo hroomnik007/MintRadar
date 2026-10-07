@@ -1164,3 +1164,44 @@
 @media (min-width: 701px) and (max-width: 900px) {
   .stats-metrics .stat-note { font-size: clamp(8px, calc(5.3vw - 30.6px), 11px); }
 }
+
+/* ── Geographic Distribution (2026-10-07 mockup): subtitle, a separate CDN / anycast row, larger rows ── */
+.stats-geo-panel .stats-panel-title-row { margin-bottom: 4px; }
+.stats-geo-sub {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text3);
+  font-family: var(--font-body);
+  margin-bottom: 14px;
+}
+.stats-geo-flag {
+  flex: 0 0 26px;
+  width: 26px;
+  text-align: center;
+  font-size: 19px;
+  line-height: 1;
+}
+.stats-geo-panel .dist-row { gap: 10px; min-height: 24px; }
+.stats-geo-panel .dist-label {
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--text);
+}
+.stats-geo-panel .dist-count { font-size: 14px; }
+/* Clickable, but no underline any more: the row reacts on hover (as it did) and keeps its pointer. */
+.stats-geo-cols .dist-label-city { text-decoration: none; }
+.stats-geo-cols { row-gap: 12px; }
+/* One full-width row for the CDN / anycast bucket: label and count in the first column, the note in the second. */
+.stats-geo-cdn {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 16px;
+  margin-bottom: 14px;
+}
+.stats-geo-cdn-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.stats-geo-cdn-note { font-size: 14px; color: var(--text3); font-family: var(--font-body); align-self: center; }
+@media (max-width: 700px) {
+  .stats-geo-cdn { grid-template-columns: 1fr; row-gap: 2px; }
+  .stats-geo-cdn-note { padding-left: 36px; font-size: 12.5px; }
+}
+.stats-geo-panel .stats-panel-title { font-size: 14px; letter-spacing: 0.06em; color: var(--text); }

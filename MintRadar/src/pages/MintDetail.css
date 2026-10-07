@@ -2076,7 +2076,9 @@ a.review-action-btn { color: var(--text3); }
   line-height: 1.45;
   color: var(--text3);
 }
-.audit-cz-tile-label { text-transform: uppercase; letter-spacing: 0.04em; font-size: 11px; text-align: center; flex-wrap: wrap; }
+/* Uppercase only the label text: the ⓘ popup is a standard tooltip (sentence case, normal spacing). */
+.audit-cz-tile-label { font-size: 11px; text-align: center; flex-wrap: wrap; }
+.audit-cz-tile-label > span:first-child { text-transform: uppercase; letter-spacing: 0.04em; }
 .audit-cz-tiles .audit-summary-value { font-size: 19px; }
 
 /* ── Overview info cards: one column of label-left / value-right rows (Mint info + Network) ── */
@@ -2092,3 +2094,4 @@ a.review-action-btn { color: var(--text3); }
 /* Network card values wrap between words ("expires 12 Oct 2026 · expires soon"), and only inside a word when
    it alone is wider than the row (a long network name); the Mint info card keeps its break-all recipe. */
 .md-network-card .md-info-value { word-break: normal; overflow-wrap: anywhere; max-width: 70%; }
+.audit-cz-tile-label .info-tooltip-pop { text-transform: none; letter-spacing: normal; font-size: 10px; }

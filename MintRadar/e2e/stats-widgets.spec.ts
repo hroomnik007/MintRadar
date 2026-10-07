@@ -94,6 +94,35 @@ test('Geographic Distribution buckets CDN / cloud / anycast labels into one row'
   await expect(geo.locator('.dist-row', { hasText: 'Cloudflare' })).toHaveCount(0)
 })
 
+test('Geographic Distribution: subtitle, a separate CDN row with its note, balanced city columns, rows still open the modal', async ({ page }) => {
+  const base = MOCK_KNOWN_MINTS[0]!
+  const locs = ['Cloudflare CDN', 'Cloudflare CDN', 'Frankfurt am Main, DE', 'Frankfurt am Main, DE', 'Linz, AT', 'Tokyo, JP', 'Boston, US']
+  await knownMints(page, locs.map((serverLocation, i) => ({ ...base, url: `https://g${i}.example`, name: `G${i}`, online: true, serverLocation })))
+  await page.goto('/stats')
+
+  const geo = page.locator('.stats-panel', { hasText: 'Geographic Distribution' })
+  await expect(geo.locator('.stats-geo-sub')).toHaveText('City from the IP address, not where the operator is.')
+  const cdn = geo.locator('.stats-geo-cdn')
+  await expect(cdn).toHaveCount(1)
+  await expect(cdn.locator('.dist-label')).toHaveText('CDN / anycast')
+  await expect(cdn.locator('.dist-count')).toHaveText('2')
+  await expect(cdn.locator('.stats-geo-cdn-note')).toHaveText('these are not a city.')
+  // The bucket is not a city: it is not among the city rows, and the 4 cities split 2 + 2.
+  await expect(geo.locator('.stats-geo-cols .dist-row')).toHaveCount(4)
+  await expect(geo.locator('.stats-geo-cols .dist-row', { hasText: 'CDN' })).toHaveCount(0)
+  const xs = await geo.locator('.stats-geo-cols .dist-row').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().left)))
+  expect(new Set(xs).size).toBe(2)
+  // No underline any more, the flag has its own cell, the row is still clickable.
+  const row = geo.locator('.stats-geo-cols .dist-row', { hasText: 'Frankfurt' })
+  await expect(row.locator('.stats-geo-flag')).toHaveText('🇩🇪')
+  expect(await row.locator('.dist-label').evaluate(e => getComputedStyle(e).textDecorationLine)).toBe('none')
+  await row.click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await cdn.click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+})
+
 test('Software panel: "% of tracked mints behind latest release" + explanatory (i)', async ({ page }) => {
   await knownMints(page, [
     { ...MOCK_KNOWN_MINTS[0], online: true, version: 'Nutshell/0.14.0' },
