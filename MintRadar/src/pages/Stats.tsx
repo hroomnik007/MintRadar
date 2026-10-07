@@ -135,7 +135,7 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose, duplicateDisplayNam
           <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{mints.length} mint{mints.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
-      <div className="nut-modal-list">
+      <div className="nut-modal-list" tabIndex={0} role="group" aria-label="Mints">
         {displayed.map(m => {
             const score = m.reliabilityScore ?? null
             const scoreColor = score != null ? (score >= 70 ? 'var(--accent)' : score >= 40 ? 'var(--amber)' : 'var(--red)') : 'var(--text3)'
@@ -195,7 +195,7 @@ function SoftwareVersionsView({ sw, versions, total, accentColor, onSelectVersio
           <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{versions.length} version{versions.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
-      <div className="nut-modal-list">
+      <div className="nut-modal-list" tabIndex={0} role="group" aria-label="Mints">
         {versions.map(v => {
           const vPct = total > 0 ? Math.round(v.count / total * 100) : 0
           return (
@@ -315,7 +315,7 @@ function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
             <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{mints.length} mints</span>
           </div>
         </div>
-        <div className="nut-modal-list">
+        <div className="nut-modal-list" tabIndex={0} role="group" aria-label="Mints">
           {displayed.map(m => {
             const score = m.reliabilityScore ?? null
             const scoreColor = score != null ? (score >= 70 ? 'var(--green-bright)' : score >= 40 ? 'var(--amber)' : 'var(--red)') : 'var(--text3)'
@@ -397,7 +397,7 @@ function NutMintsModal({ nut, mints, onClose, duplicateDisplayNames }: {
             <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{mints.length} mint{mints.length !== 1 ? 's' : ''}</span>
           </div>
         </div>
-        <div className="nut-modal-list">
+        <div className="nut-modal-list" tabIndex={0} role="group" aria-label="Mints">
           {displayed.map(m => {
             const score = m.reliabilityScore ?? null
             const scoreColor = score != null ? (score >= 70 ? 'var(--green-bright)' : score >= 40 ? 'var(--amber)' : 'var(--red)') : 'var(--text3)'
@@ -462,7 +462,7 @@ function MoreLocationsModal({ locations, onClose, onSelectLocation }: {
             <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{locations.length} locations</span>
           </div>
         </div>
-        <div className="nut-modal-list">
+        <div className="nut-modal-list" tabIndex={0} role="group" aria-label="Mints">
           {locations.map(({ loc, count }) => {
             const { display, flag, color: geoColor } = geoLabel(loc)
             return (
@@ -1226,7 +1226,7 @@ export default function Stats() {
                   </span>
                 </div>
                 {isMobile && (
-                  <button onClick={() => setShowHealthBreakdown(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', padding: 0 }}>Details ›</button>
+                  <button onClick={() => setShowHealthBreakdown(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', padding: '6px 8px' }}>Details ›</button>
                 )}
               </div>
               {/* .nhi-fill is the flex:1 region below the header — this panel

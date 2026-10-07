@@ -2,24 +2,27 @@
   background: transparent;
 }
 
+/* Same chrome as /wallets and /learn: no full-bleed bar, title and cards on the Dashboard grid's width and inset. */
 .nuts-header {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg2);
+  padding: 24px var(--page-pad) 4px;
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  width: 100%;
 }
 
 .nuts-title {
-  font-size: 15px;
+  margin: 0;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text);
   letter-spacing: -0.01em;
 }
 
 .nuts-subtitle {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text3);
-  font-family: var(--font-mono);
-  margin-top: 2px;
+  margin-top: 4px;
+  line-height: 1.5;
 }
 
 .nuts-loading {
@@ -35,7 +38,10 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px;
-  padding: 16px 18px;
+  padding: 16px var(--page-pad);
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  width: 100%;
 }
 
 /* ── Card ────────────────────────────────────────────────────── */
@@ -180,5 +186,5 @@
 }
 
 @media (max-width: 600px) {
-  .nuts-grid { grid-template-columns: 1fr; padding: 12px 16px; }
+  .nuts-grid { grid-template-columns: 1fr; padding: 12px var(--page-pad); }
 }

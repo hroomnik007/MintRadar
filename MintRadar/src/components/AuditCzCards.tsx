@@ -51,7 +51,7 @@ function SwapTable({ title, firstHeader, rows, expanded, onToggle }: {
         <p className="audit-cz-muted">No swaps collected yet</p>
       ) : (
         <div className="audit-recent-swaps" style={{ marginTop: 0 }}>
-          <div className="audit-swaps-table-wrap">
+          <div className="audit-swaps-table-wrap" tabIndex={0} role="group" aria-label={`${title} (scrollable)`}>
             <table className="audit-swaps-table">
               <thead>
                 <tr><th>{firstHeader}</th><th>Amount</th><th>Fee</th><th>Duration</th><th>State</th></tr>

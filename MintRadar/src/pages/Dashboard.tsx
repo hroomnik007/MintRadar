@@ -1212,10 +1212,10 @@ export default function Dashboard() {
           ))}
         </div>
         <div className="view-toggle">
-          <button type="button" className={`view-toggle-btn${viewMode === 'cards' ? ' active' : ''}`} onClick={() => handleViewMode('cards')} title="Card view">
+          <button type="button" className={`view-toggle-btn${viewMode === 'cards' ? ' active' : ''}`} onClick={() => handleViewMode('cards')} title="Card view" aria-label="Card view" aria-pressed={viewMode === 'cards'}>
             <IcGrid />
           </button>
-          <button type="button" className={`view-toggle-btn${viewMode === 'list' ? ' active' : ''}`} onClick={() => handleViewMode('list')} title="List view">
+          <button type="button" className={`view-toggle-btn${viewMode === 'list' ? ' active' : ''}`} onClick={() => handleViewMode('list')} title="List view" aria-label="List view" aria-pressed={viewMode === 'list'}>
             <IcList />
           </button>
         </div>
@@ -1223,6 +1223,7 @@ export default function Dashboard() {
           type="button"
           className="refresh-btn"
           title="Reset filters & refresh"
+          aria-label="Reset filters and refresh"
           onClick={() => {
             commitFilters({ search: '', sortBy: 'reliability', sortDir: DEFAULT_SORT_DIRS.reliability, filters: DEFAULT_FILTERS })
             setPendingFilters(DEFAULT_FILTERS)
@@ -1330,6 +1331,7 @@ export default function Dashboard() {
                 value={pendingFilters.minReliabilityScore}
                 onChange={e => setPendingFilters(p => ({ ...p, minReliabilityScore: parseInt(e.target.value) }))}
                 className="filter-slider"
+                aria-label="Minimum Reliability Score"
               />
             </div>
 

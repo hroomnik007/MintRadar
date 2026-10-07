@@ -6,7 +6,7 @@ export default function Module1() {
     <div className="learn-content">
       <h1>Cashu Basics</h1>
 
-      <h3>What is Cashu?</h3>
+      <h2>What is Cashu?</h2>
       <p>
         Cashu is a way to hold and send Bitcoin that works completely differently from a normal wallet. Instead of your wallet tracking a balance on a shared ledger, you hold small digital tokens — like digital cash — on your own device.
       </p>
@@ -17,7 +17,7 @@ export default function Module1() {
         That privacy applies specifically to person-to-person transfers. When you deposit into a mint or redeem tokens back to Lightning (more on this in Module 4), the mint does see the amount and timing of that transaction — it just can't link your token transfers to each other or to you.
       </p>
 
-      <h3>How it actually works (without the math)</h3>
+      <h2>How it actually works (without the math)</h2>
       <ol>
         <li>You send Bitcoin (usually via Lightning) to a mint.</li>
         <li>The mint gives you back ecash tokens of equal value, using a cryptographic trick called a <strong>blind signature</strong>.</li>
@@ -32,7 +32,7 @@ export default function Module1() {
         This is called <strong>Chaumian ecash</strong>, named after cryptographer David Chaum, who invented the concept decades before Bitcoin existed.
       </p>
 
-      <h3>How is this different from a normal Bitcoin wallet?</h3>
+      <h2>How is this different from a normal Bitcoin wallet?</h2>
       <p>
         A regular Bitcoin wallet either holds your keys directly (self-custody) or holds a balance in someone else's database (custodial, like an exchange). Cashu is neither, exactly — it's something in between:
       </p>

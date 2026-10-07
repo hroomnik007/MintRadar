@@ -21,7 +21,12 @@ const fromCard = (page: Page) => tableCard(page, 0)
 const toCard = (page: Page) => tableCard(page, 1)
 /** Expands the "Swaps from this mint" card (every spec row is a `from` swap unless it says otherwise). */
 // The card shows 5 rows by default: expand only when there is something to expand.
-const expandFrom = async (page: Page) => { const b = fromCard(page).locator('.audit-swaps-show-all-btn'); if (await b.count()) await b.click() }
+const expandFrom = async (page: Page) => {
+  const card = fromCard(page)
+  await expect(card.locator('tbody tr').first()).toBeVisible()
+  const b = card.locator('.audit-swaps-show-all-btn')
+  if (await b.count()) await b.click()
+}
 const SIG_GOOD = 'Proof signatures 56 valid, 0 invalid — the mint signed them with its published key.'
 const PROOF_GOOD = 'Our ecash 9 proofs still unspent — the mint has not marked them spent.'
 /** The State cell's visible text: the visually hidden failure text is left out. */

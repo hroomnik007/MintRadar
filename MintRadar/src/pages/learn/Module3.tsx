@@ -11,7 +11,7 @@ export default function Module3() {
         Now that you understand the risks, let's talk about how to actually pick a mint to use — and how MintRadar can help.
       </p>
 
-      <h3>What to look for</h3>
+      <h2>What to look for</h2>
       <p>
         <strong>1. Uptime.</strong> A mint that's frequently offline is one you can't rely on when you need to spend or redeem your funds. MintRadar checks every known mint every 5 minutes and tracks this over time.
       </p>
@@ -33,7 +33,7 @@ export default function Module3() {
         <strong>4. Operator transparency.</strong> Does the mint publish contact information? Is there a real person or team behind it who can be reached? Anonymous mints aren't automatically untrustworthy, but a mint with no way to reach the operator is one you're trusting on faith alone.
       </p>
 
-      <h3>How MintRadar's Reliability Score works</h3>
+      <h2>How MintRadar's Reliability Score works</h2>
       <p>
         MintRadar combines several of these signals into a single Reliability Score out of 100:
       </p>
@@ -51,7 +51,7 @@ export default function Module3() {
         That audit signal comes from <strong><a href="https://audit.8333.space" target="_blank" rel="noopener noreferrer">audit.8333.space</a></strong>, an independent third party that continuously runs real mint/melt transactions against known Cashu mints and publishes how often they actually succeed. MintRadar's own 5-minute checks only confirm a mint is reachable — they can't tell you whether its token operations are working correctly. The audit reliability score looks at the mint's last ~100 real swaps and reflects how many of those transactions actually went through.
       </p>
 
-      <h3>What each component actually measures</h3>
+      <h2>What each component actually measures</h2>
       <p>
         The five percentages above aren't arbitrary — each one reflects how much that signal tells you about whether a mint will actually work when you need it.
       </p>
@@ -80,7 +80,7 @@ export default function Module3() {
         <strong>A high Reliability Score reduces risk — it doesn't eliminate it.</strong> The right mint is the one that fits what you actually need, not just whichever number is highest.
       </KeyTakeaway>
 
-      <h3>Try it yourself</h3>
+      <h2>Try it yourself</h2>
       <p>
         The fastest way to find a mint that fits what you need is the <strong>Best Mint Wizard</strong> in the Tools section. Tell it what matters most to you — speed, reliability, or feature support — and it'll recommend mints based on live data, not guesswork.
       </p>

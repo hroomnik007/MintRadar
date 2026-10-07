@@ -204,7 +204,7 @@
 }
 
 .md-namebox { flex: 1; min-width: 0; }
-.md-name { font-size: 31px; font-weight: 600; color: var(--text); line-height: 1.15; overflow-wrap: anywhere; }
+.md-name { font-size: 31px; font-weight: 600; color: var(--text); line-height: 1.15; overflow-wrap: anywhere; margin: 0; letter-spacing: normal; }
 .md-url  { font-size: 13px; color: var(--text3); font-family: var(--font-mono); margin-top: 3px; }
 
 /* The mint URL under the name doubles as a "share this mint" affordance —
@@ -215,6 +215,7 @@
    state so it reads on tap (mobile) as well as on desktop, not hover-gated.
    Reset the <button> UA styling; keep it visually identical to the old div. */
 button.md-url-copy {
+  min-height: 24px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -2098,3 +2099,13 @@ a.review-action-btn { color: var(--text3); }
    it alone is wider than the row (a long network name); the Mint info card keeps its break-all recipe. */
 .md-network-card .md-info-value { word-break: normal; overflow-wrap: anywhere; max-width: 70%; }
 .audit-cz-tile-label .info-tooltip-pop { text-transform: none; letter-spacing: normal; font-size: 10px; }
+
+/* Icon-only copy buttons: a target of at least 24 px (they carry an aria-label). */
+button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-flex; align-items: center; justify-content: center; }
+.latency-test-btn { min-height: 24px; }
+
+/* Very narrow phones (320): all five tabs fit without sideways scrolling. */
+@media (max-width: 360px) {
+  .md-tabs { padding: 0 12px; gap: 0; }
+  .md-tab { padding: 10px 7px; font-size: 12.5px; }
+}

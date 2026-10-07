@@ -47,7 +47,7 @@
   margin: 0 0 20px;
 }
 
-.learn-content h3 {
+.learn-content h2 {
   font-size: 16px;
   font-weight: 600;
   color: var(--text);
@@ -55,7 +55,7 @@
   margin: 28px 0 10px;
 }
 
-.learn-content h3:first-of-type {
+.learn-content h2:first-of-type {
   margin-top: 20px;
 }
 

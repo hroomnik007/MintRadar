@@ -12,7 +12,7 @@ export default function Module2() {
 
       <RiskAsymmetryDiagram />
 
-      <h3>Risk #1: The mint could disappear or refuse to pay</h3>
+      <h2>Risk #1: The mint could disappear or refuse to pay</h2>
       <p>
         Since the mint holds your actual Bitcoin, your ecash tokens are only worth something as long as the mint is online, honest, and willing to redeem them. If a mint operator shuts down their server, gets hacked, or simply decides to stop honoring tokens, the ecash in your wallet becomes worthless — instantly, with no recourse.
       </p>
@@ -20,7 +20,7 @@ export default function Module2() {
         This isn't a bug. It's the fundamental trade-off of the system. There is no insurance, no chargeback, no support ticket that gets your funds back.
       </p>
 
-      <h3>Risk #2: You can't verify a mint has real backing</h3>
+      <h2>Risk #2: You can't verify a mint has real backing</h2>
       <p>
         This is a limitation baked into the protocol itself, not a flaw in any particular mint's software. Because Cashu is designed so mints <em>can't</em> see what tokens they've issued to whom, there's currently no way for an outside observer — including tools like MintRadar — to cryptographically prove that a mint has enough real Bitcoin to back all the ecash it has issued.
       </p>
@@ -31,12 +31,12 @@ export default function Module2() {
         The Cashu community is actively working on ways to make mint reserves verifiable (look up "Proof of Liabilities" if you want to go deeper), but as of today, this remains an open problem. Trust in a mint is still, to a significant degree, trust in its operator.
       </p>
 
-      <h3>Risk #3: Software bugs</h3>
+      <h2>Risk #3: Software bugs</h2>
       <p>
         Cashu, the mint software, and the wallets built on top of it are still under active development. Bugs happen. A bug in a mint's implementation, or in your wallet, could cause you to lose funds even without any bad intent from anyone involved.
       </p>
 
-      <h3>So how do you protect yourself?</h3>
+      <h2>So how do you protect yourself?</h2>
       <p>
         You can't eliminate these risks, but you can manage them:
       </p>

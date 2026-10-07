@@ -232,6 +232,15 @@ export function AppShell() {
     if (useAuthStore.getState().profile !== null) closeLoginModal()
   }, [login, closeLoginModal])
 
+  // Switching between the method list and a method's view removes the control that had focus; hand it to the
+  // dialog itself (the next Tab lands on its first control) instead of leaving it on <body>.
+  useEffect(() => {
+    if (!showLoginModal) return
+    if (document.activeElement === document.body || document.activeElement === null) {
+      document.querySelector<HTMLElement>('[aria-labelledby="nostr-modal-title"]')?.focus({ preventScroll: true })
+    }
+  }, [showLoginModal, methodPicked, loginMethod])
+
   // Pick a method from the list: collapse to its focused view. Remote signer
   // auto-starts QR pairing; Nostr extension auto-fires the connect (see above).
   // Nostr key is the only one that then waits for a Connect click.
@@ -428,7 +437,7 @@ export function AppShell() {
                       <div className="nostr-qr-wrap">
                         {/* #17251f === var(--surface); qrcode.react renders bgColor as an
                             SVG fill attribute, where CSS custom properties don't resolve */}
-                        <QRCodeSVG value={qrUri} size={192} bgColor="#17251f" fgColor="#f2f7f4" />
+                        <QRCodeSVG value={qrUri} size={192} bgColor="#17251f" fgColor="#f2f7f4" role="img" aria-label="QR code to scan with your signer app" />
                       </div>
                     )}
                     <div className="nostr-qr-caption">

@@ -56,7 +56,7 @@ export function MintComparePicker({
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <div className="md-picker-list">
+        <div className="md-picker-list" tabIndex={0} role="group" aria-label="Mints to compare">
           {filtered.slice(0, 50).map(m => {
             const isChecked = selected.has(m.url)
             const disabled = !isChecked && selected.size >= maxSelect

@@ -4,6 +4,13 @@
   align-items: center;
 }
 
+/* The 11-12 px icon keeps its look; its hit area grows to at least 24 px. */
+.info-tooltip[role="button"]::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+}
+
 .info-tooltip-pop {
   position: absolute;
   bottom: calc(100% + 6px);

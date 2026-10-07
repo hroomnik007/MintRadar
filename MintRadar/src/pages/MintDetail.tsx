@@ -1179,6 +1179,7 @@ function MintDetailContent({ url }: { url: string }) {
                       padding: '2px 4px', display: 'flex', flexShrink: 0,
                     }}
                     title="Copy full keyset ID"
+                    aria-label="Copy full keyset ID"
                   >
                     {copiedContact === `keyset-${ks.id}` ? <Check size={13} /> : <Copy size={13} />}
                   </button>
@@ -1236,7 +1237,7 @@ function MintDetailContent({ url }: { url: string }) {
           <div className="md-avatar-id">
             <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? knownMint?.iconUrl ?? null} size={avatarSize} radius={16} className="md-hdr-favicon" />
             <div className="md-namebox" ref={nameboxRef}>
-              <div className="md-name" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+              <h1 className="md-name" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                 <span {...(resolvedNameFull ? { title: resolvedNameFull } : {})}>{displayName}</span>
                 <span className={`md-status-inline ${isOnline ? '' : 'offline'}`}>
                   <span className={`status-dot ${isOnline ? '' : 'offline'}`} />
@@ -1250,7 +1251,7 @@ function MintDetailContent({ url }: { url: string }) {
                     Test mint
                   </span>
                 )}
-              </div>
+              </h1>
               <button
                 type="button"
                 className={`md-url md-url-copy ${copiedLink ? 'copied' : ''}`}
@@ -1650,6 +1651,7 @@ function MintDetailContent({ url }: { url: string }) {
                         padding: '2px 4px', flexShrink: 0, display: 'flex',
                       }}
                       title="Copy full public key"
+                      aria-label="Copy full public key"
                     >
                       {copiedContact === 'pubkey' ? <Check size={13} /> : <Copy size={13} />}
                     </button>
@@ -1698,6 +1700,7 @@ function MintDetailContent({ url }: { url: string }) {
                             flexShrink:0, display:'flex',
                           }}
                           title="Copy URL"
+                          aria-label="Copy URL"
                         >
                           <Copy size={12} />
                         </button>
@@ -1738,6 +1741,7 @@ function MintDetailContent({ url }: { url: string }) {
                             flexShrink: 0, display: 'flex',
                           }}
                           title="Copy"
+                          aria-label="Copy"
                         >
                           {copiedContact === 'email' ? <Check size={13} /> : <Copy size={13} />}
                         </button>
@@ -1764,6 +1768,7 @@ function MintDetailContent({ url }: { url: string }) {
                             flexShrink: 0, display: 'flex',
                           }}
                           title="Copy"
+                          aria-label="Copy"
                         >
                           {copiedContact === 'twitter' ? <Check size={13} /> : <Copy size={13} />}
                         </button>
@@ -1794,6 +1799,7 @@ function MintDetailContent({ url }: { url: string }) {
                             flexShrink: 0, display: 'flex',
                           }}
                           title="Copy"
+                          aria-label="Copy"
                         >
                           {copiedContact === 'nostr' ? <Check size={13} /> : <Copy size={13} />}
                         </button>
@@ -2200,7 +2206,7 @@ function MintDetailContent({ url }: { url: string }) {
                 {auditRecentSwapRows.length > 0 && (
                   <div className="audit-recent-swaps">
                     <div className="audit-recent-swaps-title">Recent swaps</div>
-                    <div className="audit-swaps-table-wrap">
+                    <div className="audit-swaps-table-wrap" tabIndex={0} role="group" aria-label="Recent swaps (scrollable)">
                       <table className="audit-swaps-table">
                         <thead>
                           <tr>
@@ -2386,6 +2392,7 @@ function MintDetailContent({ url }: { url: string }) {
                                 type="button"
                                 className="review-action-btn"
                                 title="Copy reviewer npub"
+                                aria-label="Copy reviewer npub"
                                 onClick={e => {
                                   e.preventDefault()
                                   const np = npubFromPubkey(r.pubkey)
@@ -2409,6 +2416,7 @@ function MintDetailContent({ url }: { url: string }) {
                                 type="button"
                                 className="review-action-btn"
                                 title="Copy link to this review"
+                                aria-label="Copy link to this review"
                                 onClick={e => {
                                   e.preventDefault()
                                   const permalink = `${window.location.origin}/mint/${encodeURIComponent(url)}#review-${r.id}`
@@ -2623,6 +2631,7 @@ function MintDetailContent({ url }: { url: string }) {
             <div style={{display:'flex',gap:8,alignItems:'center'}}>
               <input
                 readOnly
+                aria-label="Mint URL"
                 value={url}
                 style={{flex:1,background:'var(--surface-3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 10px',color:'var(--text-dim)',fontSize:11,fontFamily:'var(--font-mono)',outline:'none'}}
               />

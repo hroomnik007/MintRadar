@@ -288,7 +288,7 @@ export default function Watchlist() {
     return (
       <div className="watchlist-page">
         <div className="wl-login-gate">
-          <h2>My Watchlist</h2>
+          <h1>My Watchlist</h1>
           <p>Log in with Nostr to sync your watchlist across devices.</p>
           <button
             type="button"

@@ -6,7 +6,7 @@ export default function Module4() {
     <div className="learn-content">
       <h1>Getting Started with a Wallet</h1>
 
-      <h3>Choosing your first wallet</h3>
+      <h2>Choosing your first wallet</h2>
       <p>
         Cashu has several solid wallet options — which one to start with mostly comes down to browser vs. native app, not one being "better." If you're new to Cashu, <strong><a href="https://wallet.cashu.me" target="_blank" rel="noopener noreferrer">cashu.me</a></strong> is a good first stop: it runs in any browser with no installation, and can be saved to your phone's home screen like an app (a "Progressive Web App").
       </p>
@@ -14,7 +14,7 @@ export default function Module4() {
         If you'd rather have a native mobile app from the start, <strong><a href="https://minibits.cash" target="_blank" rel="noopener noreferrer">Minibits</a></strong> (Android/iOS) is an established, actively maintained wallet — a genuine starting point, not just a fallback if cashu.me doesn't suit you.
       </p>
 
-      <h3>Setting up your first mint</h3>
+      <h2>Setting up your first mint</h2>
       <ol>
         <li>Open your wallet and look for an option to add a mint (usually "Add Mint" or a "+" button).</li>
         <li>Paste in the URL of the mint you chose — starting with <code>https://</code>.</li>
@@ -24,12 +24,12 @@ export default function Module4() {
         <strong>Tip:</strong> if you're just testing things out and don't want to risk real sats yet, you can use <a href="https://testnut.cashu.space" target="_blank" rel="noopener noreferrer"><code>testnut.cashu.space</code></a> — a public test mint that issues unbacked "fake" ecash for practice. These tokens have no real value and can't be exchanged for actual Bitcoin — nothing you do there can cost you real money, which makes it a safe place to get comfortable with the wallet before using a real mint.
       </p>
 
-      <h3>Your first deposit</h3>
+      <h2>Your first deposit</h2>
       <p>
         To fund your wallet, look for "Receive" or "Mint," choose an amount, and pay the Lightning invoice that's generated. Once it's confirmed, you'll have ecash tokens in your wallet.
       </p>
 
-      <h3>Sending and receiving tokens</h3>
+      <h2>Sending and receiving tokens</h2>
       <p>
         Sending ecash is different from a normal Bitcoin transaction — there's no address, no block confirmation. You generate a token (a long text string starting with <code>cashuA</code> or <code>cashuB</code>), and send it to someone however you like: paste it in a chat, show a QR code, even embed it in an emoji. The recipient pastes it into their own wallet to receive it.
       </p>
@@ -37,7 +37,7 @@ export default function Module4() {
         Because this doesn't touch the Lightning Network, it's instant and free — this is one of Cashu's biggest advantages for small, frequent payments.
       </p>
 
-      <h3>Backing up your wallet</h3>
+      <h2>Backing up your wallet</h2>
       <p>
         Most wallets, including cashu.me, generate a 12-word seed phrase (similar to a Bitcoin wallet). <strong>Write this down and store it somewhere safe.</strong>
       </p>
@@ -49,7 +49,7 @@ export default function Module4() {
         <strong>Seed phrase + NUT-09 support = recoverable. No seed backup = permanent loss on device failure, no matter how trustworthy the mint is.</strong>
       </KeyTakeaway>
 
-      <h3>Pick a wallet</h3>
+      <h2>Pick a wallet</h2>
       <p>
         MintRadar keeps a plain list of Cashu-compatible wallets — no ranking, no reviews, just the current options so you can pick one and get started.
       </p>

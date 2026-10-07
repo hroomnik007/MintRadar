@@ -37,7 +37,7 @@ export default function NutExplorer() {
   return (
     <div className="nuts-page">
       <div className="nuts-header">
-        <div className="nuts-title">NUT Explorer</div>
+        <h1 className="nuts-title">NUT Explorer</h1>
         <div className="nuts-subtitle">Cashu protocol NUT adoption across online mints</div>
       </div>
 

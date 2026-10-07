@@ -39,6 +39,18 @@
 .app-footer-links a {
   color: var(--text3);
   text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  position: relative;
+}
+/* Touch: a 44px hit area through an invisible ::before; the visible layout stays the same as with a mouse. */
+@media (pointer: coarse) {
+  .app-footer-links a::before {
+    content: '';
+    position: absolute; left: -6px; right: -6px; top: 50%;
+    height: 44px; transform: translateY(-50%);
+  }
 }
 
 .app-footer-links a:hover {

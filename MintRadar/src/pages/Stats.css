@@ -565,10 +565,20 @@
   font-size: 10px;
   font-family: var(--font-mono);
   color: var(--text3);
-  padding: 3px 9px;
+  padding: 5px 10px;
+  min-height: 24px;
+  position: relative;
   cursor: pointer;
   transition: background 150ms ease, color 150ms ease;
   white-space: nowrap;
+}
+/* Touch: 44px hit area through an invisible ::before; the visible box stays the same as with a mouse. */
+@media (pointer: coarse) {
+  .stats-tab-btn::before {
+    content: '';
+    position: absolute; left: 50%; top: 50%;
+    width: max(100%, 44px); height: 44px; transform: translate(-50%, -50%);
+  }
 }
 
 .stats-tab-btn.active {
