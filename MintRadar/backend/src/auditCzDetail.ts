@@ -4,12 +4,15 @@
 //
 // Only a validated subset is kept (see StoredAuditCzDetail). Never stored: score, scoreParts,
 // reviews, daily, changes, incidents7d, Frankfurt data, any spec detail except the onion boolean
-// (the onion address itself is never stored), and any IP address (the source sends none).
+// (the onion address itself is never stored). The host's public IP addresses (one IPv4, one IPv6)
+// are resolved by us from public DNS, not taken from the source (it sends none).
 // Every field is optional: a malformed field is dropped, not the record; a malformed top level
 // (not an object, id mismatch, nothing usable) skips the mint. A failed fetch writes and deletes
 // nothing.
+import { resolve4, resolve6 } from 'dns/promises'
+import { isIP } from 'net'
 import { pool } from './db.js'
-import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
+import { safeFetch, readJsonLimited, RESPONSE_CAPS, isBlockedIpString } from './ssrf.js'
 import { AUDIT_CZ_BASE_URL, AUDIT_CZ_ID_RE, auditCzIdFromPage } from './auditCz.js'
 
 const FETCH_TIMEOUT_MS = 15_000
@@ -41,7 +44,7 @@ export interface StoredAuditCzDetail {
     swap_test?: { ok?: boolean; recentOk?: number; recentFail?: number; ms?: number; timestamp?: number }
     proof_state?: { ok?: boolean; recentOk?: number; recentFail?: number; ms?: number; timestamp?: number; checked?: number; spent?: number; spentSat?: number; pending?: number }
   }
-  network?: { ipv4?: boolean; ipv6?: boolean; asn?: number; asName?: string; country?: string; tlsIssuer?: string; tlsExpiresAt?: string }
+  network?: { ipv4?: boolean; ipv6?: boolean; ipv4Address?: string; ipv6Address?: string; asn?: number; asName?: string; country?: string; tlsIssuer?: string; tlsExpiresAt?: string }
   onion?: boolean
   latency?: { prague?: { p50?: number; p95?: number } }
 }
@@ -172,6 +175,18 @@ async function fetchDetail(id: string): Promise<unknown | null> {
   }
 }
 
+/** First public IPv4 and IPv6 address of the mint's host from DNS; empty for an onion host, an IP literal, or a failed lookup. Private / loopback / reserved answers are dropped. */
+export async function resolveMintAddresses(mintUrl: string): Promise<{ ipv4Address?: string; ipv6Address?: string }> {
+  let host: string
+  try { host = new URL(mintUrl).hostname.toLowerCase() } catch { return {} }
+  if (host === '' || host.endsWith('.onion') || isIP(host) !== 0 || host.startsWith('[')) return {}
+  const pick = (list: string[], version: 4 | 6) => list.find(a => isIP(a) === version && !isBlockedIpString(a))
+  const [v4, v6] = await Promise.all([resolve4(host).catch(() => []), resolve6(host).catch(() => [])])
+  const ipv4Address = pick(v4, 4)
+  const ipv6Address = pick(v6, 6)
+  return { ...(ipv4Address ? { ipv4Address } : {}), ...(ipv6Address ? { ipv6Address } : {}) }
+}
+
 let running = false
 
 /**
@@ -209,6 +224,8 @@ export async function syncAuditCzDetails(opts: DetailRunOptions = {}): Promise<D
       stats.fetched++
       const detail = parseAuditCzDetailFull(raw, id)
       if (!detail) { stats.skipped++; continue }
+      const addresses = await resolveMintAddresses(row.url)
+      if (Object.keys(addresses).length > 0) detail.network = { ...detail.network, ...addresses }
       try {
         await pool.query(
           `INSERT INTO audit_cz_detail (url, detail, fetched_at) VALUES ($1, $2::jsonb, NOW())

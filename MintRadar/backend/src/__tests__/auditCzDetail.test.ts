@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { readFileSync, existsSync } from 'node:fs'
 
-const { db, queryMock, fetchMock, readMock, targets } = vi.hoisted(() => {
+const { db, queryMock, fetchMock, readMock, targets, dnsMock } = vi.hoisted(() => {
   const db = { details: new Map<string, { detail: unknown; fetched_at: Date }>() }
   const targets: { rows: Array<{ url: string; page: string | null }> } = { rows: [] }
   const queryMock = vi.fn(async (sql: string, p?: unknown[]) => {
@@ -12,18 +12,20 @@ const { db, queryMock, fetchMock, readMock, targets } = vi.hoisted(() => {
     }
     return { rows: [] }
   })
-  return { db, queryMock, fetchMock: vi.fn(), readMock: vi.fn(), targets }
+  return { db, queryMock, fetchMock: vi.fn(), readMock: vi.fn(), targets, dnsMock: { resolve4: vi.fn(), resolve6: vi.fn() } }
 })
 
 vi.mock('../db.js', () => ({ pool: { query: queryMock } }))
 vi.mock('../prober.js', () => ({ probeMintToDb: vi.fn(), isValidCashuMint: vi.fn() }))
+vi.mock('dns/promises', () => dnsMock)
 vi.mock('../ssrf.js', () => ({
+  isBlockedIpString: (ip: string) => ip.startsWith('10.') || ip.startsWith('127.') || ip === '::1',
   safeFetch: fetchMock,
   readJsonLimited: readMock,
   RESPONSE_CAPS: { auditCzMints: 1048576, auditCzSwaps: 1048576, auditCzMintDetail: 65536 },
 }))
 
-import { parseAuditCzDetailFull, cleanDetailText, syncAuditCzDetails } from '../auditCzDetail.js'
+import { parseAuditCzDetailFull, cleanDetailText, syncAuditCzDetails, resolveMintAddresses } from '../auditCzDetail.js'
 
 const ID = 'cmmx4oml50000a5l3z6b7qr83'
 
@@ -174,6 +176,8 @@ describe('syncAuditCzDetails', () => {
     vi.spyOn(console, 'log').mockImplementation(() => {})
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     fetchMock.mockResolvedValue({ ok: true, status: 200 })
+    dnsMock.resolve4.mockReset(); dnsMock.resolve6.mockReset()
+    dnsMock.resolve4.mockResolvedValue(['188.166.166.165']); dnsMock.resolve6.mockResolvedValue([])
     readMock.mockImplementation(async () => ({ ...real(), id: undefined }))
   })
 
@@ -255,6 +259,24 @@ describe('syncAuditCzDetails', () => {
   it('stores the validated subset as JSON keyed by the audit mint URL', async () => {
     targets.rows = mk(1)
     await syncAuditCzDetails({ sleep: async () => {} })
-    expect(db.details.get('https://m0.example')?.detail).toEqual(EXPECTED)
+    const stored = db.details.get('https://m0.example')?.detail as { network?: Record<string, unknown> }
+    const { ipv4Address, ...network } = stored.network ?? {}
+    expect(ipv4Address).toBe('188.166.166.165')
+    expect({ ...stored, network }).toEqual(EXPECTED)
+  })
+})
+
+describe('resolveMintAddresses', () => {
+  it('first public IPv4 and IPv6, private answers dropped', async () => {
+    dnsMock.resolve4.mockResolvedValue(['10.0.0.1', '188.166.166.165'])
+    dnsMock.resolve6.mockResolvedValue(['2a03:b0c0::1'])
+    expect(await resolveMintAddresses('https://mint.lnpay.cz')).toEqual({ ipv4Address: '188.166.166.165', ipv6Address: '2a03:b0c0::1' })
+  })
+  it('failed lookup, onion host and IP literal give nothing', async () => {
+    dnsMock.resolve4.mockRejectedValue(new Error('ENOTFOUND'))
+    dnsMock.resolve6.mockRejectedValue(new Error('ENOTFOUND'))
+    expect(await resolveMintAddresses('https://mint.lnpay.cz')).toEqual({})
+    expect(await resolveMintAddresses('http://abcdef.onion')).toEqual({})
+    expect(await resolveMintAddresses('https://1.2.3.4')).toEqual({})
   })
 })

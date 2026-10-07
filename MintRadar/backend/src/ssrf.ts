@@ -57,7 +57,7 @@ function isBlockedAddress(addr: IPv4 | IPv6): boolean {
   return false
 }
 
-function isBlockedIpString(ip: string): boolean {
+export function isBlockedIpString(ip: string): boolean {
   try {
     return isBlockedAddress(parse(ip))
   } catch {

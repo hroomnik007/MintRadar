@@ -9,7 +9,14 @@ export function MintNetworkCard({ rows }: { rows: NetworkRows }) {
         Network <span className="md-panel-tag">via cashu.info</span>
       </div>
       <div className="md-info-grid md-info-list">
-        {rows.ip && (
+        {rows.addresses.length > 0 ? (
+          <div className="md-info-row">
+            <span className="md-info-label">IP</span>
+            <span className="md-info-value" data-testid="mint-network-addresses">
+              {rows.addresses.map(a => <span key={a} style={{ display: 'block', overflowWrap: 'anywhere' }}>{a}</span>)}
+            </span>
+          </div>
+        ) : rows.ip && (
           <div className="md-info-row"><span className="md-info-label">IP</span><span className="md-info-value">{rows.ip}</span></div>
         )}
         {rows.network && (

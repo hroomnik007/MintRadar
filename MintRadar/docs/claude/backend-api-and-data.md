@@ -77,7 +77,7 @@ Keys use `normalizeUrl()` plus a stripped trailing slash (`auditCzKey`); a track
 ```
 audit_cz_detail(url TEXT PK [= audit_cz_mints.url], detail JSONB [validated subset only: swaps7d {all/asSource/asDest {total,success,failed,avgMs}, errorsBlamed, dleq, quoteMs, meltMs, mintMs}, integrity {swap_test, proof_state}, network {ipv4, ipv6, asn, asName, country, tlsIssuer, tlsExpiresAt}, onion (boolean), latency.prague {p50,p95}], fetched_at)
 ```
-Never stored: score, scoreParts, reviews, daily, changes, incidents7d, Frankfurt data, spec details (the onion address becomes a boolean), any IP address. Written only by `syncAuditCzDetails()` (`backend/src/auditCzDetail.ts`); a failed fetch writes and deletes nothing.
+Never stored: score, scoreParts, reviews, daily, changes, incidents7d, Frankfurt data, spec details (the onion address becomes a boolean). The only IPs kept are the mint host's own public IPv4/IPv6 resolved by us (`network.ipv4Address`/`ipv6Address`), never the source's data. Written only by `syncAuditCzDetails()` (`backend/src/auditCzDetail.ts`); a failed fetch writes and deletes nothing.
 
 ### mint_audit_swaps (added 2026-09-12 — per-swap audit.8333.space detail)
 ```

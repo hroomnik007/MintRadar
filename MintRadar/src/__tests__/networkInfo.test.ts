@@ -1,9 +1,18 @@
 import { describe, it, expect } from 'vitest'
-import { countryName, ipLabel, networkLabel, networkRows, tlsLabel, torLabel } from '@/utils/networkInfo'
+import { addressList, countryName, ipLabel, networkLabel, networkRows, tlsLabel, torLabel } from '@/utils/networkInfo'
 import type { AuditCzDetail } from '@/hooks/useAuditCz'
 
 const NOW = Date.parse('2026-10-07T12:00:00Z')
 const DAY = 86_400_000
+
+describe('addressList', () => {
+  it('keeps a plain IPv4 then IPv6 address, drops anything else', () => {
+    expect(addressList('188.166.166.165', '2a03:b0c0::1')).toEqual(['188.166.166.165', '2a03:b0c0::1'])
+    expect(addressList(undefined, undefined)).toEqual([])
+    expect(addressList('<img src=x>', 'not an ip')).toEqual([])
+    expect(addressList('1.2.3', '1.2.3.4')).toEqual([])
+  })
+})
 
 describe('ipLabel', () => {
   it('words the three cases', () => {
@@ -93,7 +102,7 @@ describe('networkRows', () => {
   }
   it('all rows for the LNpay-like detail', () => {
     expect(networkRows(base, NOW)).toEqual({
-      ip: 'IPv4 and IPv6', network: 'AS14061 DigitalOcean', country: { name: 'United States' }, tor: 'No onion address',
+      ip: 'IPv4 and IPv6', addresses: [], network: 'AS14061 DigitalOcean', country: { name: 'United States' }, tor: 'No onion address',
       tls: { text: "Let's Encrypt, expires 27 Dec 2026", state: 'ok', suffix: null },
     })
   })

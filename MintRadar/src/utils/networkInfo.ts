@@ -3,7 +3,7 @@ import { truncateText } from '@/utils/auditCz'
 
 // Formatters of the Overview "Network" card (public network facts about the mint host, from the
 // cashu.info detail our backend stores). Pure. Every input is untrusted text or a number and is
-// only ever rendered as text. There is no address anywhere: the source sends none and we store none.
+// only ever rendered as text. The addresses are resolved by our backend from public DNS (the source sends none).
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const SOON_DAYS = 14
@@ -42,6 +42,14 @@ export function countryName(code: string | undefined): string | null {
   }
 }
 
+/** The mint host's IPv4 / IPv6 address as sent by our backend; anything that is not a plain address of that family is dropped. */
+export function addressList(v4: string | undefined, v6: string | undefined): string[] {
+  const out: string[] = []
+  if (typeof v4 === 'string' && /^\d{1,3}(\.\d{1,3}){3}$/.test(v4)) out.push(v4)
+  if (typeof v6 === 'string' && v6.length <= 45 && /^[0-9a-fA-F:.]+$/.test(v6) && v6.includes(':')) out.push(v6)
+  return out
+}
+
 export function torLabel(onion: boolean | undefined): string | null {
   return onion === true ? 'Onion address available' : onion === false ? 'No onion address' : null
 }
@@ -76,6 +84,8 @@ export function tlsLabel(issuer: string | undefined, expiresAt: string | undefin
 
 export interface NetworkRows {
   ip: string | null
+  /** Real addresses (IPv4 first); when present the IP row shows them instead of the `ip` wording. */
+  addresses: string[]
   network: string | null
   country: { name: string } | null
   tor: string | null
@@ -89,10 +99,11 @@ export function networkRows(detail: AuditCzDetail | null | undefined, now: numbe
   const country = countryName(n.country)
   const rows: NetworkRows = {
     ip: ipLabel(n.ipv4, n.ipv6),
+    addresses: addressList(n.ipv4Address, n.ipv6Address),
     network: networkLabel(n.asn, n.asName),
     country: country ? { name: country } : null,
     tor: torLabel(detail?.onion),
     tls: tlsLabel(n.tlsIssuer, n.tlsExpiresAt, now),
   }
-  return Object.values(rows).some(v => v !== null) ? rows : null
+  return Object.values(rows).some(v => (Array.isArray(v) ? v.length > 0 : v !== null)) ? rows : null
 }
