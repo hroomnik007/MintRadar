@@ -73,10 +73,16 @@ export function classifySubmitInput(raw: string): SubmitInputClass {
   }
   if (/^[0-9a-f]{64}$/i.test(t)) return { kind: 'hex' }
   if (/^nostr:/i.test(t) || /^(nprofile|nevent|naddr|note)1/i.test(t)) return { kind: 'nprofile' }
+  // A bare host such as `mint.example.com` or `mint.example.com/path`: https:// is added. Needs a dot in the host
+  // (so a stray word stays junk) and no other `scheme://` (a `host:port` is fine).
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(t) && /^[^\s/?#@]+\.[^\s/?#@]+/.test(t) && !/\s/.test(t)) {
+    const c = classifySubmitInput(`https://${t}`)
+    return c.kind === 'url' ? c : { kind: 'junk' }
+  }
   return { kind: 'junk' }
 }
 
-export const SUBMIT_EMPTY_REASON = 'Enter an https:// mint URL or an npub1… key.'
+export const SUBMIT_EMPTY_REASON = 'Enter a mint URL or an npub1… key.'
 
 // One specific line per class; null for the classes that are valid input (their own states take over).
 export function submitInputReason(c: SubmitInputClass): string | null {

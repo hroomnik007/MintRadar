@@ -16,7 +16,7 @@ async function openBulkTab(page: import('@playwright/test').Page) {
   await installApiMocks(page)
   await page.goto('/')
   await expect(page.locator('.dashboard')).toBeVisible()
-  await page.locator('.submit-btn', { hasText: 'Submit mint' }).click()
+  await page.locator('.submit-btn', { hasText: 'Add mint' }).click()
   await page.locator('.submit-tab-btn', { hasText: 'Bulk' }).click()
 }
 
@@ -39,7 +39,7 @@ test('successful batch: rows resolve to added/duplicate, no rate-limit banner', 
   }))
 
   await page.locator('.bulk-textarea').fill('https://new.mint.example\nhttps://alpha.mint.example')
-  await page.locator('.submit-ok-btn', { hasText: /^Submit \d+ mints?$/ }).click()
+  await page.locator('.submit-ok-btn', { hasText: /^Add \d+ mints?$/ }).click()
 
   await expect(page.locator('.bulk-row.status-added')).toHaveCount(1)
   await expect(page.locator('.bulk-row.status-duplicate')).toHaveCount(1)
@@ -56,7 +56,7 @@ test('429 with Retry-After: one banner with the exact wait, rows stay pending (n
   }))
 
   await page.locator('.bulk-textarea').fill('https://one.mint.example\nhttps://two.mint.example')
-  await page.locator('.submit-ok-btn', { hasText: /^Submit \d+ mints?$/ }).click()
+  await page.locator('.submit-ok-btn', { hasText: /^Add \d+ mints?$/ }).click()
 
   // One clear banner — not the raw backend message repeated per row.
   const banner = page.locator('.submit-result.error', { hasText: 'Rate limit reached' })
@@ -83,7 +83,7 @@ test('429 without Retry-After: falls back to a generic message', async ({ page }
   }))
 
   await page.locator('.bulk-textarea').fill('https://one.mint.example')
-  await page.locator('.submit-ok-btn', { hasText: /^Submit \d+ mints?$/ }).click()
+  await page.locator('.submit-ok-btn', { hasText: /^Add \d+ mints?$/ }).click()
 
   await expect(page.locator('.submit-result.error', { hasText: 'Rate limit reached — try again later.' })).toBeVisible()
   await expect(page.locator('.bulk-row.status-pending')).toHaveCount(1)
@@ -97,11 +97,11 @@ test('reopening the modal after a 429 clears the banner', async ({ page }) => {
     json: { error: 'Too many requests. Try again later.' },
   }))
   await page.locator('.bulk-textarea').fill('https://one.mint.example')
-  await page.locator('.submit-ok-btn', { hasText: /^Submit \d+ mints?$/ }).click()
+  await page.locator('.submit-ok-btn', { hasText: /^Add \d+ mints?$/ }).click()
   await expect(page.locator('.submit-result.error', { hasText: 'Rate limit reached' })).toBeVisible()
 
   await page.locator('.submit-ok-btn', { hasText: 'Close' }).click()
-  await page.locator('.submit-btn', { hasText: 'Submit mint' }).click()
+  await page.locator('.submit-btn', { hasText: 'Add mint' }).click()
   await page.locator('.submit-tab-btn', { hasText: 'Bulk' }).click()
 
   await expect(page.locator('.submit-result.error', { hasText: 'Rate limit reached' })).toHaveCount(0)

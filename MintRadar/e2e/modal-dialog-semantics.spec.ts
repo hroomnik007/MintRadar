@@ -86,7 +86,7 @@ const CASES: ModalCase[] = [
     dialog: css('.rv-modal'), close: '.rv-modal-close',
   },
   {
-    id: 'Submit a mint modal', name: /submit a mint/i,
+    id: 'Add a mint modal', name: /add a mint/i,
     prepare: p => goto(p, '/', '.mint-card'),
     trigger: p => p.locator('.submit-btn'), open: clickTrigger,
     dialog: css('.submit-modal'), close: '.submit-modal-close',

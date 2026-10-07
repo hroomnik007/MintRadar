@@ -46,7 +46,7 @@ for (const mode of ['single', 'bulk'] as const) {
         await p.locator('.submit-ok-btn:not([aria-disabled="true"])').click()
       } else {
         await p.locator('.bulk-textarea').fill('https://new.mint.example')
-        await p.locator('.submit-ok-btn', { hasText: /^Submit \d+ mints?$/ }).click()
+        await p.locator('.submit-ok-btn', { hasText: /^Add \d+ mints?$/ }).click()
       }
       await p.locator('.submit-ok-btn', { hasText: 'Close' }).click()
     }],

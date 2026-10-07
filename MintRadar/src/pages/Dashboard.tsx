@@ -1234,7 +1234,7 @@ export default function Dashboard() {
           <IcRefresh />
         </button>
         <button type="button" className="submit-btn" ref={submitBtnRef} onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setProbe({ url: '', state: 'error', result: null }); setNostrLookup({ input: '', outcome: 'empty', url: '' }); setBulkInput(''); setBulkSettled(''); setBulkError(null); setBulkSkipped(0); setBulkProgress([]); setBulkRunning(false); setBulkDone(false); setBulkRateLimitMsg(null) }}>
-          <IcPlus /> Submit mint
+          <IcPlus /> Add mint
         </button>
       </div>
 
@@ -1457,7 +1457,8 @@ export default function Dashboard() {
         <div className="submit-modal-overlay" onClick={() => setShowSubmit(false)}>
           <div className="submit-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="submit-modal-title" ref={dialogRef}>
             <button type="button" className="submit-modal-close" onClick={() => setShowSubmit(false)} aria-label="Close">✕</button>
-            <div className="submit-modal-title" id="submit-modal-title">Submit a Mint</div>
+            <div className="submit-modal-eyebrow">Track a mint</div>
+            <div className="submit-modal-title" id="submit-modal-title">Add a mint</div>
             <div className="submit-tabs" role="tablist" aria-label="Submit mode" onKeyDown={handleSubmitTabKey}>
               <button type="button" role="tab" id="submit-tab-single" aria-selected={submitTab === 'single'} aria-controls="submit-panel-single" tabIndex={submitTab === 'single' ? 0 : -1} className={`submit-tab-btn${submitTab === 'single' ? ' active' : ''}`} onClick={() => setSubmitTab('single')}>Single</button>
               <button type="button" role="tab" id="submit-tab-bulk" aria-selected={submitTab === 'bulk'} aria-controls="submit-panel-bulk" tabIndex={submitTab === 'bulk' ? 0 : -1} className={`submit-tab-btn${submitTab === 'bulk' ? ' active' : ''}`} onClick={() => setSubmitTab('bulk')}>Bulk</button>
@@ -1466,7 +1467,7 @@ export default function Dashboard() {
             {submitTab === 'single' && (
               <div role="tabpanel" id="submit-panel-single" aria-labelledby="submit-tab-single">
                 <div className="submit-modal-desc" id="submit-desc">
-                  Enter a mint URL, or a Nostr key (npub) to look up the mint it announced (NIP-87). The mint must answer <code>/v1/info</code>.
+                  The audit checks <code>/v1/info</code> before adding. Only public mints are accepted. Paste a mint URL, or an npub to look up the mint it announced (NIP-87).
                 </div>
                 {/* Mirrors SUBMIT_RATE_LIMIT_MAX (20 per hour per IP) in backend/src/index.ts — manually synced like the Bulk limits below. */}
                 <div className="submit-input-hint" id="submit-limits">Up to 20 submissions per hour.</div>
@@ -1482,13 +1483,13 @@ export default function Dashboard() {
                       autoCorrect="off"
                       spellCheck={false}
                       autoComplete="off"
-                      placeholder="https://yourmint.cash"
+                      placeholder="mint.example.com"
                       value={submitInput}
                       onChange={e => handleSubmitInputChange(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !submitDisabled) handleSubmitMint() }}
                       aria-describedby="submit-limits submit-helper submit-status"
                     />
-                    <div className="submit-input-hint" id="submit-helper">or an npub1… key</div>
+                    <div className="submit-input-hint" id="submit-helper">https:// is added if missing, or paste an npub1… key.</div>
                     {/* One status region for everything the field produces: the reason for an unusable value, the key
                         lookup and the mint preview. */}
                     <div id="submit-status" className="submit-status-reserve" role="status" aria-live="polite">
@@ -1521,7 +1522,7 @@ export default function Dashboard() {
                     <div className="submit-modal-actions">
                       <button className="submit-cancel-btn" onClick={() => setShowSubmit(false)}>Cancel</button>
                       <button className="submit-ok-btn" onClick={handleSubmitMint} aria-disabled={submitDisabled} aria-describedby={submitEmpty ? 'submit-desc submit-helper' : 'submit-status'}>
-                        {submitState === 'loading' ? 'Submitting…' : 'Submit'}
+                        {submitState === 'loading' ? 'Adding…' : 'Add mint'}
                       </button>
                     </div>
                   </>
@@ -1555,7 +1556,7 @@ export default function Dashboard() {
             {submitTab === 'bulk' && (
               <div role="tabpanel" id="submit-panel-bulk" aria-labelledby="submit-tab-bulk">
                 <div className="submit-modal-desc" id="bulk-desc">
-                  Paste one mint URL per line, each starting with{'\u00A0'}<code>https://</code>
+                  Paste one mint URL per line. <code>https://</code> is added if missing.
                 </div>
                 {/* Static limits note — mirrors the backend's MAX_DISCOVER_BATCH
                     (100) and DISCOVER_BULK_RATE_LIMIT_MAX (10) constants in
@@ -1569,7 +1570,7 @@ export default function Dashboard() {
                     <textarea
                       id="bulk-input"
                       className="bulk-textarea"
-                      placeholder={'https://mint1.example.com\nhttps://mint2.example.com'}
+                      placeholder={'mint1.example.com\nmint2.example.com'}
                       value={bulkInput}
                       onChange={e => setBulkInput(e.target.value)}
                       rows={6}
@@ -1611,7 +1612,7 @@ export default function Dashboard() {
                         onClick={() => { if (!bulkDisabled) void handleBulkSubmit() }}
                         aria-disabled={bulkDisabled}
                         aria-describedby={bulkEmpty ? 'bulk-desc bulk-limits' : 'bulk-status'}
-                      >{bulkValidCount === 0 ? 'Submit mints' : `Submit ${bulkValidCount} ${bulkValidCount === 1 ? 'mint' : 'mints'}`}</button>
+                      >{bulkValidCount === 0 ? 'Add mints' : `Add ${bulkValidCount} ${bulkValidCount === 1 ? 'mint' : 'mints'}`}</button>
                     </div>
                   </>
                 )}
