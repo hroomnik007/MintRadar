@@ -1297,16 +1297,16 @@
 .submit-cancel-btn:hover { border-color: var(--text3); color: var(--text); }
 
 .submit-ok-btn {
-  background: var(--green-soft); color: var(--green-bright); border: 1px solid var(--green-soft-strong);
+  background: var(--green); color: var(--bg); border: 1px solid var(--green);
   border-radius: 12px; padding: 9px 20px; font-size: 14px;
   font-weight: 700; cursor: pointer; font-family: var(--font-body);
   transition: all var(--transition);
   letter-spacing: 0.03em;
 }
-.submit-ok-btn:hover:not([aria-disabled="true"]):not(:disabled) { background: var(--green-soft-strong); border-color: var(--green); }
+.submit-ok-btn:hover:not([aria-disabled="true"]):not(:disabled) { background: var(--green-bright); border-color: var(--green-bright); }
 .submit-ok-btn:disabled, .submit-ok-btn[aria-disabled="true"] {
-  /* Unavailable: plain muted text on a flat fill (3:1+ instead of faded green at 0.4 opacity). */
-  background: var(--bg3); border-color: var(--submit-field-border); color: var(--text3);
+  /* Unavailable: still a solid button, in a muted green fill with light text (3:1+ instead of faded green at 0.4 opacity). */
+  background: color-mix(in srgb, var(--green) 38%, var(--bg3)); border-color: color-mix(in srgb, var(--green) 38%, var(--bg3)); color: var(--text);
   cursor: not-allowed;
 }
 

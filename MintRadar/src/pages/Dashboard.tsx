@@ -1467,7 +1467,7 @@ export default function Dashboard() {
             {submitTab === 'single' && (
               <div role="tabpanel" id="submit-panel-single" aria-labelledby="submit-tab-single">
                 <div className="submit-modal-desc" id="submit-desc">
-                  Paste a mint URL, or an npub to find the mint it announced.
+                  Paste a mint URL. We check it before adding. Only public mints are accepted. First checks run within 5 minutes.
                 </div>
                 {/* Mirrors SUBMIT_RATE_LIMIT_MAX (20 per hour per IP) in backend/src/index.ts — manually synced like the Bulk limits below. */}
                 {submitState !== 'success' && (
