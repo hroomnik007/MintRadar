@@ -1,6 +1,6 @@
 import cron from 'node-cron'
 import pLimit from 'p-limit'
-import { getKnownMints, probeMintToDb, pruneOldHistory, pruneUnvalidatedMints, pruneAbandonedMints, revalidateMints, backfillServerLocations } from './prober.js'
+import { getKnownMints, probeMintToDb, pruneOldHistory, pruneUnvalidatedMints, pruneAbandonedMints, revalidateMints, backfillServerLocations, refreshServerLocations } from './prober.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
 import { syncAuditCz } from './auditCz.js'
 import { syncAuditCzDetails } from './auditCzDetail.js'
@@ -206,6 +206,12 @@ export function startCron(): void {
 
   // Backfill server_location for mints that were never resolved (one-time catch-up)
   setTimeout(() => { void backfillServerLocations() }, 30_000)
+  // Refresh every mint's location (a mint that moved hosts kept its first city): once after boot, then daily.
+  setTimeout(() => { if (!isAllowlistMode()) void refreshServerLocations() }, 120_000)
+  cron.schedule('30 5 * * *', async () => {
+    if (isAllowlistMode()) return
+    await refreshServerLocations()
+  })
 
   // Prime the Reliability Score Movers rollup shortly after boot so a fresh
   // deploy/restart serves real data before the first 5-minute probe tick.

@@ -23,7 +23,8 @@ async function lookupServerLocation(mintUrl: string): Promise<string | null> {
   try {
     const hostname = new URL(mintUrl).hostname
     console.log(`[geo] looking up: ${hostname}`)
-    const { address } = await dns.promises.lookup(hostname)
+    // IPv4 first: a dual-stack host can geolocate differently per family, and one family keeps the result stable.
+    const { address } = await dns.promises.lookup(hostname, { family: 4 }).catch(() => dns.promises.lookup(hostname))
     console.log(`[geo] ${hostname} resolved to ${address}`)
     const res = await undiciFetch(`https://ipinfo.io/${address}/json`, {
       signal: AbortSignal.timeout(5_000),
@@ -74,6 +75,31 @@ export async function backfillServerLocations(): Promise<void> {
   } catch (err) {
     console.error('[geo] backfill error:', err)
   }
+}
+
+/**
+ * Daily refresh of mints.server_location. The probe only resolves a location while it is NULL, so a mint that
+ * moved hosts kept its first city forever. A failed lookup (timeout, bogon, no data) changes nothing; a changed
+ * result overwrites. One ipinfo request per mint, sequential, 150 ms apart. `lookup` is injectable for tests.
+ */
+export async function refreshServerLocations(lookup: (mintUrl: string) => Promise<string | null> = lookupServerLocation): Promise<{ checked: number; changed: number }> {
+  const stats = { checked: 0, changed: 0 }
+  try {
+    const res = await pool.query('SELECT url, server_location FROM mints')
+    for (const row of res.rows as { url: string; server_location: string | null }[]) {
+      stats.checked++
+      const location = await lookup(row.url)
+      if (location !== null && location !== row.server_location) {
+        await pool.query('UPDATE mints SET server_location = $1 WHERE url = $2', [location, row.url])
+        stats.changed++
+      }
+      await new Promise<void>(resolve => setTimeout(resolve, 150))
+    }
+    console.log(`[geo] refresh: ${stats.changed} of ${stats.checked} locations changed`)
+  } catch (err) {
+    console.error('[geo] refresh error:', err)
+  }
+  return stats
 }
 
 const PROBE_TIMEOUT_MS = 10000
