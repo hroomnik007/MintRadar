@@ -16,6 +16,7 @@ import { compareMintVersionNumbers, isEligibleForRecommendation } from '@/utils/
 import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { PageHead } from '@/components/layout/PageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
 import './Stats.css'
@@ -889,7 +890,11 @@ export default function Stats() {
 
   return (
     <div className="stats-page">
-      <h1 className="sr-only">Cashu Mints Network Stats — Uptime, Reliability Score & NUT Adoption</h1>
+      <PageHead
+        title="Network stats"
+        srTitle="Cashu mints: uptime, Reliability Score & NUT adoption"
+        description={`How the Cashu mint network is doing right now, measured from ${PROBE_LOCATION}.`}
+      />
       {/* Board: row 1 Network health | The network right now, row 2 (Top + Software) | NUT coverage,
           row 3 Geographic distribution | Reliability Score movers, row 4 trend. DOM order is also the mobile
           stack order (The network right now first, see Stats.css). */}

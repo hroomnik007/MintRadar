@@ -101,9 +101,9 @@ const STATES: State[] = [
     setup: async p => { await bootWatchlist(p, { watched: true, recs: false }); await p.goto('/watchlist'); await expect(p.locator('.wl-grid .mint-card')).toHaveCount(3); await expect(p.locator('.wl-rec-slim')).toBeVisible() } },
   { name: 'Watchlist with mints and recommendations', containers: [...WATCHLIST, A('.wl-grid'), A('.wl-rec-panel', 'border')],
     setup: async p => { await bootWatchlist(p, { watched: true, recs: true }); await p.goto('/watchlist'); await expect(p.locator('.wl-grid .mint-card')).toHaveCount(3); await expect(p.locator('.wl-rec-row')).toHaveCount(1) } },
-  { name: 'Stats', containers: [A('.stats-board-grid')],
+  { name: 'Stats', containers: [A('.page-head'), A('.stats-board-grid')],
     setup: async p => { await boot(p); await p.goto('/stats'); await expect(p.locator('.stats-now-panel')).toBeVisible() } },
-  { name: 'Tools', containers: [A('.tools-grid')],
+  { name: 'Tools', containers: [A('.page-head'), A('.tools-grid')],
     setup: async p => { await boot(p); await p.goto('/tools'); await expect(p.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible() } },
   { name: 'Tools with Best Mint results', containers: [A('.tools-grid'), WITHIN('.wizard-rec-row')],
     setup: async p => {
@@ -114,9 +114,9 @@ const STATES: State[] = [
       await p.getByRole('button', { name: /Find my mint/ }).click()
       await expect(p.locator('.wizard-rec-row').first()).toBeVisible({ timeout: 15_000 })
     } },
-  { name: 'Wallets', containers: [A('.wallets-header'), A('.wallets-grid'), A('.wallets-grid-selfhost'), A('.wallets-selfhost'), BLEED('.wallets-hero', 'decorative full-bleed band')],
+  { name: 'Wallets', containers: [A('.wallets-header'), A('.wallets-grid'), A('.wallets-grid-selfhost'), A('.wallets-selfhost')],
     setup: async p => { await boot(p); await p.goto('/wallets'); await expect(p.locator('.wallets-grid').first()).toBeVisible() } },
-  { name: 'Learn', containers: [A('.learn-page-header'), A('.learn-grid'), BLEED('.learn-hero', 'decorative full-bleed band')],
+  { name: 'Learn', containers: [A('.learn-page-header'), A('.learn-grid')],
     setup: async p => { await boot(p); await p.goto('/learn'); await expect(p.locator('.learn-card').first()).toBeVisible() } },
   { name: 'Learn module', containers: [A('.learn-module-page')],
     setup: async p => { await boot(p); await p.goto('/learn'); await p.locator('.learn-card').first().click(); await expect(p.locator('.learn-module')).toBeVisible() } },

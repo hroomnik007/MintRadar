@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { LEARN_MODULES } from '@/constants/learnModules'
-import { LearnModuleIcon, LearnHero } from '@/components/learn/LearnIcons'
+import { LearnModuleIcon } from '@/components/learn/LearnIcons'
+import { PageHead } from '@/components/layout/PageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import './Learn.css'
 
@@ -14,14 +15,13 @@ export default function Learn() {
 
   return (
     <div className="learn-page">
-      <div className="learn-page-header">
-        <h1 className="learn-page-title">Learn</h1>
-        <div className="learn-page-subtitle">A short course on how Cashu works, what can go wrong, and how to choose a safe Cashu mint.</div>
-      </div>
-
-      <div className="learn-hero" aria-hidden="true">
-        <LearnHero />
-      </div>
+      <PageHead
+        className="learn-page-header"
+        titleClassName="learn-page-title"
+        descriptionClassName="learn-page-subtitle"
+        title="Learn"
+        description="A short course on how Cashu works, what can go wrong, and how to choose a safe Cashu mint."
+      />
 
       <div className="learn-grid">
         {modules.map(mod => (

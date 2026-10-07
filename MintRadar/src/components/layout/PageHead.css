@@ -1,0 +1,32 @@
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  width: 100%;
+  padding: 26px var(--page-pad) 6px;
+}
+.page-head-text { min-width: 0; }
+.page-head-title {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  line-height: 1.2;
+  margin: 0;
+}
+.page-head-desc {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text2);
+  margin: 4px 0 0;
+  max-width: 62ch;
+}
+.page-head-radar { width: 120px; height: 56px; flex-shrink: 0; }
+@media (max-width: 640px) {
+  .page-head { padding-top: 18px; }
+  .page-head-title { font-size: 22px; }
+  .page-head-radar { display: none; }
+}

@@ -1,7 +1,7 @@
 import { WALLETS } from '@/constants/wallets'
 import type { WalletInfo } from '@/constants/wallets'
 import { WalletPlatformIcon } from '@/components/wallets/WalletIcons'
-import { LearnHero } from '@/components/learn/LearnIcons'
+import { PageHead } from '@/components/layout/PageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import './Wallets.css'
 
@@ -47,14 +47,13 @@ export default function Wallets() {
 
   return (
     <div className="wallets-page">
-      <div className="wallets-header">
-        <h1 className="wallets-title">Wallets</h1>
-        <div className="wallets-subtitle">Wallets that work with Cashu mints — a plain list, no ranking or reviews</div>
-      </div>
-
-      <div className="wallets-hero" aria-hidden="true">
-        <LearnHero />
-      </div>
+      <PageHead
+        className="wallets-header"
+        titleClassName="wallets-title"
+        descriptionClassName="wallets-subtitle"
+        title="Wallets"
+        description="Wallets that work with Cashu mints. A plain list, with no ranking or reviews."
+      />
 
       <div className="wallets-grid">
         {wallets.map(w => <WalletCard key={w.name} w={w} />)}
@@ -63,7 +62,7 @@ export default function Wallets() {
       {selfHost.length > 0 && (
         <div className="wallets-selfhost">
           <div className="wallets-selfhost-title">Run your own mint</div>
-          <div className="wallets-selfhost-sub">Not a consumer wallet — the reference implementation, for operators and scripting.</div>
+          <div className="wallets-selfhost-sub">Not a consumer wallet. The reference implementation, for operators and scripting.</div>
           <div className="wallets-grid wallets-grid-selfhost">
             {selfHost.map(w => <WalletCard key={w.name} w={w} />)}
           </div>

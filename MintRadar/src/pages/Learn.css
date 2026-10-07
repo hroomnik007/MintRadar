@@ -1,45 +1,6 @@
 .learn-page {
 }
 
-/* Constrained + centered to the same width/inset as .mint-grid (Dashboard)
-   so the title/subtitle — and the card grid below — left-align with the
-   first Dashboard mint card. The decorative .learn-hero band below stays
-   full-bleed (unchanged) — only this text block and the grid are aligned. */
-.learn-page-header {
-  padding: 24px var(--page-pad) 4px;
-  max-width: var(--dash-chrome-max);
-  margin-inline: auto;
-  width: 100%;
-}
-
-.learn-page-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text);
-  letter-spacing: -0.01em;
-}
-
-.learn-page-subtitle {
-  font-size: 13px;
-  color: var(--text3);
-  margin-top: 4px;
-  line-height: 1.5;
-}
-
-/* Decorative radar band opening the page — ornamental only, so it is kept
-   deliberately faint and is skipped by assistive tech. */
-.learn-hero {
-  padding: 4px 24px 0;
-  pointer-events: none;
-}
-
-.learn-hero-svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: 88px;
-}
-
 .learn-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -51,13 +12,12 @@
 }
 
 .learn-card {
-  background: var(--surface-card);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r);
-  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
   cursor: pointer;
   transition: border-color 150ms ease, box-shadow 150ms ease;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -82,7 +42,7 @@
   content: '';
   position: absolute;
   inset: -1px;
-  border-radius: var(--r);
+  border-radius: 12px;
 }
 .learn-card-link:focus-visible { outline: none; }
 .learn-card-link:focus-visible::after {
@@ -116,9 +76,9 @@
 }
 
 .learn-card-number {
+  margin-left: auto;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--copper);
+  color: var(--text3);
   font-family: var(--sans);
 }
 
@@ -130,15 +90,15 @@
 }
 
 .learn-card-summary {
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--text2);
-  line-height: 1.55;
+  line-height: 1.5;
   flex: 1;
 }
 
 .learn-card-cta {
   margin-top: 4px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   font-family: var(--font-mono);
   color: var(--accent);
@@ -150,18 +110,6 @@
 }
 
 @media (max-width: 700px) {
-  .learn-page-header {
-    padding: 18px var(--page-pad) 4px;
-  }
-
-  .learn-hero {
-    padding: 4px 16px 0;
-  }
-
-  .learn-hero-svg {
-    max-height: 76px;
-  }
-
   .learn-grid {
     grid-template-columns: 1fr;
     padding: 12px var(--page-pad);

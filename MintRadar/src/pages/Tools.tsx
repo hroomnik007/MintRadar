@@ -9,6 +9,7 @@ import { useNow } from '@/hooks/useNow'
 import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, classifySignatureCheck, classifySpentCheck, tokenActionState, amountCarriesCurrencySymbol, stripTokenWhitespace, InvalidMintUrlError, type SignatureCheck, type TokenInfo, type TokenSpentCheck } from '@/utils/cashuToken'
 import { startTokenRun, classifyRunError, createRunGuard, type TokenRun } from '@/utils/tokenRun'
 import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel, computeDuplicateMintNames } from '@/utils/mintFormatting'
+import { PageHead } from '@/components/layout/PageHead'
 import { Zap, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Hourglass, ExternalLink, ArrowRight, type LucideIcon } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
@@ -228,7 +229,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   return (
     <div className="tool-card">
       <div className="tool-header">
-        <div className="tool-title">Token Inspector</div>
+        <div className="tool-title">Token inspector</div>
         <div className="tool-subtitle">Paste a Cashu token (cashuA or cashuB) to check its mint, amount and reliability before redeeming.</div>
       </div>
 
@@ -711,7 +712,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
   return (
     <div className="tool-card">
       <div className="tool-header">
-        <div className="tool-title">Best Mint for Me</div>
+        <div className="tool-title">Best mint for me</div>
         <div className="tool-subtitle">Answer a few quick questions and we'll recommend the best mints for your needs</div>
       </div>
 
@@ -894,7 +895,11 @@ export default function Tools() {
 
   return (
     <div className="tools-page">
-      <h1 className="sr-only">Cashu Mint Tools — Token Inspector & Best Mint Finder</h1>
+      <PageHead
+        title="Tools"
+        srTitle="Cashu Mint Tools: Token Inspector & Best Mint Finder"
+        description="Check a token before you redeem it, or find the mint that fits what you need."
+      />
       <div className="tools-grid">
         <div id="token" tabIndex={-1} className="tool-anchor">
           <TokenInspector knownMints={mints} />
