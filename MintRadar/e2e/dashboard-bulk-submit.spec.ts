@@ -22,7 +22,7 @@ async function openBulkTab(page: import('@playwright/test').Page) {
 
 test('shows the batch size / hourly limit hint', async ({ page }) => {
   await openBulkTab(page)
-  await expect(page.getByText('Up to 100 mints per submission, 10 submissions per hour.')).toBeVisible()
+  await expect(page.getByText('up to 100 mints · 10 per hour.')).toBeVisible()
 })
 
 test('successful batch: rows resolve to added/duplicate, no rate-limit banner', async ({ page }) => {

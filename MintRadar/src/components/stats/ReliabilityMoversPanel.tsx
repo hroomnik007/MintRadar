@@ -1,4 +1,5 @@
 import { TrendingUp, TrendingDown } from 'lucide-react'
+import { clickableProps } from '@/utils/clickableProps'
 import { MintFavicon } from '../mint/MintFavicon'
 
 export interface ReliabilityMover {
@@ -75,7 +76,7 @@ export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, 
       const hostname = getHostname(m.url)
       const name = getDisplayName(m)
       return (
-        <div key={m.url} className="stats-top5-row" onClick={() => onMintClick(m.url)}>
+        <div key={m.url} className="stats-top5-row" {...clickableProps(() => onMintClick(m.url))}>
           <MintFavicon url={m.url} iconUrl={getIconUrl(m)} size={22} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>

@@ -32,6 +32,7 @@ import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { auditFreshness } from '@/utils/auditFreshness'
 import { IcClose } from '@/components/IcClose'
+import { clickableProps } from '@/utils/clickableProps'
 import { useAuditCz } from '@/hooks/useAuditCz'
 import { adaptAuditCz, auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
@@ -705,12 +706,19 @@ function MintDetailContent({ url }: { url: string }) {
     setReviewSuccess(false)
   }, [])
 
+  // Dismissing (overlay / × / Cancel / Escape) with a comment already typed asks first, so a stray click
+  // outside the dialog cannot throw a written review away. Success and sign-out still close directly.
+  const requestCloseReviewModal = useCallback(() => {
+    if (reviewComment.trim() !== '' && !reviewSuccess && !window.confirm('Discard your review?')) return
+    closeReviewModal()
+  }, [reviewComment, reviewSuccess, closeReviewModal])
+
   useEffect(() => {
     if (!showReviewModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeReviewModal() }
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') requestCloseReviewModal() }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
-  }, [showReviewModal, closeReviewModal])
+  }, [showReviewModal, requestCloseReviewModal])
 
   useEffect(() => {
     if (!showQr) return
@@ -1929,7 +1937,7 @@ function MintDetailContent({ url }: { url: string }) {
                 const nutConfig = (rawConfig !== null && rawConfig !== undefined && typeof rawConfig === 'object') ? rawConfig as NutConfig : null
                 const isDisabled = supported && nutConfig?.disabled === true
                 return (
-                  <div key={nut} className={`nut-card ${isDisabled ? 'nut-disabled' : supported ? 'supported' : 'unsupported'}`} onClick={() => setSelectedNut(nut)}>
+                  <div key={nut} className={`nut-card ${isDisabled ? 'nut-disabled' : supported ? 'supported' : 'unsupported'}`} {...clickableProps(() => setSelectedNut(nut))}>
                     <div className={`nut-icon ${isDisabled ? 'nut-disabled' : supported ? 'supported' : 'unsupported'}`}>
                       {NUT_ICONS[nut] ?? (isDisabled ? '!' : supported ? '●' : '○')}
                     </div>
@@ -2675,7 +2683,7 @@ function MintDetailContent({ url }: { url: string }) {
       )}
 
       {showReviewModal && (
-        <div className="rv-modal-overlay" onClick={closeReviewModal}>
+        <div className="rv-modal-overlay" onClick={requestCloseReviewModal}>
           <div className="rv-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Write a review" ref={dialogRef}>
             <div className="rv-modal-head">
               <div className="rv-modal-heading">
@@ -2684,7 +2692,7 @@ function MintDetailContent({ url }: { url: string }) {
                   <div className="rv-modal-sub">Share your experience with this mint.</div>
                 )}
               </div>
-              <button className="rv-modal-close" onClick={closeReviewModal} aria-label="Close"><IcClose /></button>
+              <button className="rv-modal-close" onClick={requestCloseReviewModal} aria-label="Close"><IcClose /></button>
             </div>
 
             {/* Phase 1 + 2 share the star row. Hover/focus previews up to the
@@ -2748,7 +2756,7 @@ function MintDetailContent({ url }: { url: string }) {
                 {reviewSuccess && <div className="rv-msg rv-msg-success">✓ Review published!</div>}
 
                 <div className="rv-actions">
-                  <button type="button" className="rv-btn-cancel" onClick={closeReviewModal}>
+                  <button type="button" className="rv-btn-cancel" onClick={requestCloseReviewModal}>
                     Cancel
                   </button>
                   <button

@@ -222,7 +222,7 @@ async function measure(page: Page, c: ModalCase): Promise<Record<Cell, Result>> 
     ? /close/i.test(await closeBtn.evaluate(b => b.getAttribute('aria-label') ?? b.getAttribute('title') ?? ''))
     : false
 
-  // Page behind: scroll-locked (or inert). Informational — the dialogs rely on aria-modal + the overlay.
+  // Page behind: scroll-locked (useModalFocus) or inert.
   r.scrollLock = await page.evaluate(() => {
     const hidden = (el: Element) => getComputedStyle(el).overflow === 'hidden' || getComputedStyle(el).overflowY === 'hidden'
     return hidden(document.body) || hidden(document.documentElement) || !!document.querySelector('#root[inert], body > [inert]')
@@ -274,7 +274,6 @@ for (const c of CASES) {
     const cells = await measure(page, c)
     if (process.env.MODAL_AUDIT) console.log('AUDIT ' + JSON.stringify({ id: c.id, cells }))
     for (const cell of CELLS) {
-      if (cell === 'scrollLock') continue // informational
       expect.soft(cells[cell], `${c.id} · ${cell}: ${mark(cells[cell])}`).not.toBe(false)
     }
   })

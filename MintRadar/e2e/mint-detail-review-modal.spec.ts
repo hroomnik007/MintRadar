@@ -111,11 +111,27 @@ test.describe('Write-a-review modal — rating change + close paths', () => {
     await expect(page.locator('.rv-textarea')).toBeVisible()
   })
 
+  test('a typed comment survives a stray click outside or a declined Escape', async ({ page }) => {
+    await openModal(page, 'nip07')
+    await page.locator('.rv-star').nth(4).click()
+    await page.locator('.rv-textarea').fill('draft text')
+
+    let prompts = 0
+    page.on('dialog', d => { prompts++; void d.dismiss() })
+    await page.mouse.click(4, 4) // overlay
+    await page.keyboard.press('Escape')
+    await expect.poll(() => prompts).toBeGreaterThanOrEqual(2)
+    await expect(page.getByRole('dialog', { name: 'Write a review' })).toBeVisible()
+    await expect(page.locator('.rv-textarea')).toHaveValue('draft text')
+  })
+
   test('Escape resets back to phase 1 on reopen', async ({ page }) => {
     await openModal(page, 'nip07')
     await page.locator('.rv-star').nth(4).click()
     await page.locator('.rv-textarea').fill('draft text')
 
+    // A typed comment makes Escape ask first; accepting discards it.
+    page.once('dialog', d => void d.accept())
     await page.keyboard.press('Escape')
     await expect(page.getByRole('dialog', { name: 'Write a review' })).toHaveCount(0)
 

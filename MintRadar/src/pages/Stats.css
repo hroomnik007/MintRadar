@@ -185,9 +185,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  /* Muted by colour, not by opacity: the old 0.55 opacity put the text at 3:1 against the panel. */
   color: var(--text3);
-  opacity: 0.55;
-  transition: opacity 150ms ease;
+  transition: color 150ms ease;
 }
 
 .nhi-legend-row.active {

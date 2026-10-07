@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { clickableProps } from '@/utils/clickableProps'
 import { IcClose } from '@/components/IcClose'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Info } from 'lucide-react'
@@ -812,7 +813,7 @@ export default function Stats() {
             count,
             fullVersion: ver ? `${sw}/${ver}` : sw,
             badge: idx === 0 ? 'latest' : idx === 1 ? 'outdated' : 'old',
-            badgeColor: idx === 0 ? 'var(--accent)' : idx === 1 ? 'var(--amber)' : 'var(--red)',
+            badgeColor: idx === 0 ? 'var(--accent)' : idx === 1 ? 'var(--amber)' : 'color-mix(in srgb, var(--red) 55%, var(--text))',
             badgeBg: idx === 0 ? 'var(--green-soft)' : idx === 1 ? 'var(--amber-soft)' : 'var(--red-soft)',
             badgeBorder: idx === 0 ? 'var(--green-soft-strong)' : idx === 1 ? 'var(--amber-soft-strong)' : 'var(--red-soft-strong)',
           }))
@@ -1052,7 +1053,7 @@ export default function Stats() {
                       <div
                         key={sw}
                         className="sw-row"
-                        onClick={() => setSoftwareModal(sw)}
+                        {...clickableProps(() => setSoftwareModal(sw))}
                       >
                         <span className="dist-label" style={{fontWeight:600,color:'var(--text)',fontSize:13}}>{sw}</span>
                         <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:accentColor}} /></div>
@@ -1099,7 +1100,7 @@ export default function Stats() {
                 const loc = normalizeGeoLoc(mint.serverLocation)
                 const cityInfo = loc !== 'Unknown' ? geoLabel(loc) : null
                 return (
-                  <div key={mint.url} onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} className="stats-top5-row">
+                  <div key={mint.url} {...clickableProps(() => navigate(`/mint/${encodeURIComponent(mint.url)}`))} className="stats-top5-row">
                     <span className="stats-top5-rank">#{idx+1}</span>
                     <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
                     <div style={{flex:1,minWidth:0}}>
@@ -1121,7 +1122,7 @@ export default function Stats() {
                 const loc = normalizeGeoLoc(mint.serverLocation)
                 const cityInfo = loc !== 'Unknown' ? geoLabel(loc) : null
                 return (
-                  <div key={mint.url} onClick={() => navigate(`/mint/${encodeURIComponent(mint.url)}`)} className="stats-top5-row">
+                  <div key={mint.url} {...clickableProps(() => navigate(`/mint/${encodeURIComponent(mint.url)}`))} className="stats-top5-row">
                     <span className="stats-top5-rank">#{idx+1}</span>
                     <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
                     <div style={{flex:1,minWidth:0}}>
@@ -1159,7 +1160,7 @@ export default function Stats() {
           <div className="stats-geo-sub">City from the IP address, not where the operator is.</div>
           <div className="stats-geo-fill">
             {geoCdn && (
-              <div className="dist-row dist-row-clickable stats-geo-cdn" onClick={() => setCityModal(geoCdn.loc)}>
+              <div className="dist-row dist-row-clickable stats-geo-cdn" {...clickableProps(() => setCityModal(geoCdn.loc))}>
                 <span className="stats-geo-cdn-main">
                   <span className="stats-geo-flag" aria-hidden="true">🌐</span>
                   <span className="dist-label">{CDN_BUCKET}</span>
@@ -1174,7 +1175,7 @@ export default function Stats() {
               ) : geoCities.map(({loc, count}) => {
                 const {display, flag} = geoLabel(loc)
                 return (
-                  <div key={loc} className="dist-row dist-row-clickable" onClick={() => setCityModal(loc)}>
+                  <div key={loc} className="dist-row dist-row-clickable" {...clickableProps(() => setCityModal(loc))}>
                     <span className="stats-geo-flag" aria-hidden="true">{flag}</span>
                     <span className="dist-label dist-label-city">{display}</span>
                     <span className="dist-count">{count}</span>
@@ -1185,12 +1186,12 @@ export default function Stats() {
             {(geoDist.moreCount > 0 || (geoDist.unknownCount > 0 && !geoDist.unknownShownInTop)) && (
               <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
                 {geoDist.moreCount > 0 && (
-                  <div className="dist-more-row" onClick={() => setShowMoreLocations(true)}>
+                  <div className="dist-more-row" {...clickableProps(() => setShowMoreLocations(true))}>
                     View others →
                   </div>
                 )}
                 {geoDist.unknownCount > 0 && !geoDist.unknownShownInTop && (
-                  <div className="dist-more-row" onClick={() => setCityModal('Unknown')}>
+                  <div className="dist-more-row" {...clickableProps(() => setCityModal('Unknown'))}>
                     Geolocation unavailable: {geoDist.unknownCount} mint{geoDist.unknownCount === 1 ? '' : 's'} →
                   </div>
                 )}
@@ -1242,7 +1243,7 @@ export default function Stats() {
                   stretches this panel taller than its own content) this is a
                   no-op — the gauge just sits at its natural position. */}
               <div className="nhi-fill">
-                <div className="nhi-wrap" onClick={isMobile ? () => setShowHealthBreakdown(true) : undefined} style={isMobile ? undefined : { cursor: 'default' }}>
+                <div className="nhi-wrap" {...(isMobile ? clickableProps(() => setShowHealthBreakdown(true), 'Show the Network Health Index breakdown') : {})} style={isMobile ? undefined : { cursor: 'default' }}>
                   <div className="nhi-gauge-wrap" style={isMobile ? undefined : { width: 112, height: 112 }}>
                     <svg viewBox="0 0 72 72" style={isMobile ? undefined : { width: 112, height: 112 }}>
                       <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
@@ -1308,7 +1309,7 @@ export default function Stats() {
               if (!meta) return null
               const barColor = percent >= 80 ? 'var(--accent)' : percent >= 40 ? 'var(--amber)' : 'var(--red)'
               return (
-                <div key={nut} className="stats-nut-row" onClick={() => setNutModal(nut)}>
+                <div key={nut} className="stats-nut-row" {...clickableProps(() => setNutModal(nut))}>
                   <span className="snr-nut-tag">{nut}</span>
                   <span className="snr-nut-name">{meta.short}</span>
                   <span className="snr-nut-count" style={{color:barColor}}>{count}/{data.onlineMints}</span>

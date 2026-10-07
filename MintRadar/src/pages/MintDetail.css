@@ -1750,8 +1750,8 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 
 .audit-swap-row-fail td {
-  color: var(--red);
-  opacity: 0.75;
+  /* A failed swap reads red, at AA contrast (plain --red at 0.75 opacity was ~3:1). */
+  color: color-mix(in srgb, var(--red) 55%, var(--text));
 }
 
 .audit-swap-row-neutral td {

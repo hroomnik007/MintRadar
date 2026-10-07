@@ -8,6 +8,10 @@ import { useCallback } from 'react'
 //   const dialogRef = useModalFocus()          // or useModalFocus('input') to start in a field
 //   {open && <div role="dialog" aria-modal="true" aria-labelledby="…" ref={dialogRef}>…</div>}
 //
+// While any dialog is open the page behind it does not scroll (reference-counted so stacked dialogs
+// release it only when the last one closes; the scrollbar's width is kept as padding so the layout
+// does not jump).
+//
 // A (React 19) callback ref, not an effect, so it works for dialogs that are rendered
 // conditionally inside a big page component: it runs when the dialog element mounts and its
 // returned cleanup runs when it unmounts. Without `initialFocus` the dialog container itself
@@ -16,6 +20,23 @@ import { useCallback } from 'react'
 
 const FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]'
 const open: HTMLElement[] = [] // mounted dialogs, last = topmost; only the topmost traps
+
+let scrollLocks = 0
+let savedScroll: { overflow: string; paddingRight: string } | null = null
+function lockScroll() {
+  if (scrollLocks++ > 0) return
+  const de = document.documentElement
+  const scrollbar = window.innerWidth - de.clientWidth
+  savedScroll = { overflow: de.style.overflow, paddingRight: document.body.style.paddingRight }
+  de.style.overflow = 'hidden'
+  if (scrollbar > 0) document.body.style.paddingRight = `${scrollbar}px`
+}
+function unlockScroll() {
+  if (--scrollLocks > 0 || savedScroll === null) return
+  document.documentElement.style.overflow = savedScroll.overflow
+  document.body.style.paddingRight = savedScroll.paddingRight
+  savedScroll = null
+}
 
 function tabbables(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
@@ -32,6 +53,7 @@ export function useModalFocus(initialFocus?: string) {
     const prevOutline = dialog.style.outline
     dialog.style.outline = 'none'
     open.push(dialog)
+    lockScroll()
     ;((initialFocus ? dialog.querySelector<HTMLElement>(initialFocus) : null) ?? dialog).focus({ preventScroll: true })
 
     const wrap = (to: 'first' | 'last') => {
@@ -65,6 +87,7 @@ export function useModalFocus(initialFocus?: string) {
       document.removeEventListener('keydown', onKeyDown)
       document.removeEventListener('focusin', onFocusIn)
       open.splice(open.indexOf(dialog), 1)
+      unlockScroll()
       if (!hadTabindex) dialog.removeAttribute('tabindex')
       dialog.style.outline = prevOutline
       if (trigger?.isConnected) trigger.focus({ preventScroll: true })

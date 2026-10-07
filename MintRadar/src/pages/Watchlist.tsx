@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { verifyEvent, nip19 } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
@@ -152,10 +152,10 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
             const scoreColor = scoreTone === 'green' ? 'var(--accent)' : scoreTone === 'amber' ? 'var(--amber)' : scoreTone === 'red' ? 'var(--red)' : 'var(--text3)'
             const followerNames = recommenders.slice(0, 3).map(pk => getDisplayName(pk)).join(', ')
             return (
-              <div key={url} className="wl-rec-row" onClick={() => navigate(`/mint/${encodeURIComponent(url)}`)}>
+              <div key={url} className="wl-rec-row" onClick={e => { if (!(e.target as Element).closest('a, button')) navigate(`/mint/${encodeURIComponent(url)}`) }}>
                 <MintFavicon url={url} iconUrl={mint?.iconUrl ?? null} size={28} radius={6} />
                 <div className="wl-rec-body">
-                  <div className="wl-rec-name">{name}</div>
+                  <div className="wl-rec-name"><Link to={`/mint/${encodeURIComponent(url)}`} style={{ color: 'inherit', textDecoration: 'none' }}>{name}</Link></div>
                   <div className="wl-rec-url">{hostname}</div>
                   <div className="wl-rec-followers-row">
                     <div className="wl-rec-avatars-overlap">

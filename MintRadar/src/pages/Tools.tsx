@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { clickableProps } from '@/utils/clickableProps'
 import { useNavigate } from 'react-router-dom'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { MintFavicon } from '@/components/mint/MintFavicon'
@@ -809,7 +810,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
               const mintRange = formatLimits(rec.mintLimits, unitLabel)
               const meltRange = formatLimits(rec.meltLimits, unitLabel)
               return (
-                <div key={rec.url} className="wizard-rec-row" onClick={() => navigate(`/mint/${encodeURIComponent(rec.url)}`)}>
+                <div key={rec.url} className="wizard-rec-row" {...clickableProps(() => navigate(`/mint/${encodeURIComponent(rec.url)}`))}>
                   <span className="wizard-rank">#{idx + 1}</span>
                   <MintFavicon url={rec.url} iconUrl={rec.mint.iconUrl ?? null} size={28} radius={6} />
                   <div className="wizard-rec-info">

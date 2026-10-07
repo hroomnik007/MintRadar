@@ -20,7 +20,8 @@ const tableCard = (page: Page, i: 0 | 1) => page.getByTestId('audit-cz-table').n
 const fromCard = (page: Page) => tableCard(page, 0)
 const toCard = (page: Page) => tableCard(page, 1)
 /** Expands the "Swaps from this mint" card (every spec row is a `from` swap unless it says otherwise). */
-const expandFrom = (page: Page) => fromCard(page).locator('.audit-swaps-show-all-btn').click()
+// The card shows 5 rows by default: expand only when there is something to expand.
+const expandFrom = async (page: Page) => { const b = fromCard(page).locator('.audit-swaps-show-all-btn'); if (await b.count()) await b.click() }
 const SIG_GOOD = 'Proof signatures 56 valid, 0 invalid — the mint signed them with its published key.'
 const PROOF_GOOD = 'Our ecash 9 proofs still unspent — the mint has not marked them spent.'
 /** The State cell's visible text: the visually hidden failure text is left out. */
@@ -55,12 +56,12 @@ test('only cz has data: header, four tiles from the stored detail, checks card, 
   await expect(header).toBeVisible()
   await expect(header).toHaveText(/^AUDIT STATS\s*·\s*via cashu\.info/, { useInnerText: true })
 
-  // Five tiles from the LNpay detail, in order; the label is uppercased by CSS only.
+  // Five tiles from the LNpay detail, in order; the label is sentence case.
   await expect(page.locator('.audit-cz-tiles .audit-summary-cell')).toHaveCount(5)
-  await expect(page.locator('.audit-cz-tiles .audit-summary-value')).toHaveText(['85%', '51 / 64', '56 / 62', '0', '8.3 s'])
+  await expect(page.locator('.audit-cz-tiles .audit-summary-value')).toHaveText(['85%', '51 / 64', '56 / 62', '0 / 19', '8.3 s'])
   await expect(page.locator('.audit-cz-tiles .audit-cz-tile-label span').filter({ hasText: /^[A-Z]/ })).toHaveText(
     ['Success rate', 'Paid out melts', 'Received mints', "Mint's fault", 'Avg swap time'])
-  expect(await tile(page, 'melts').locator('.audit-cz-tile-label span').first().evaluate(e => getComputedStyle(e).textTransform)).toBe('uppercase')
+  expect(await tile(page, 'melts').locator('.audit-cz-tile-label span').first().evaluate(e => getComputedStyle(e).textTransform)).toBe('none') // sentence case, like the swap strip labels
   // The old Recent success rate tile is gone from this view.
   await expect(page.getByText('Recent success rate')).toHaveCount(0)
 
@@ -158,7 +159,6 @@ test('limits, balance and pending rows are neutral, failures red; the bar follow
   expect(failed.color).not.toBe(okRow.color)
   for (const n of neutral) {
     expect(n.color).not.toBe(failed.color)
-    expect(n.opacity).not.toBe(failed.opacity)
     expect(n.opacity).toBe(okRow.opacity)
   }
   // limits, balance and pending share one neutral style.
@@ -203,7 +203,7 @@ test.describe('tiles from the stored detail', () => {
     const expected: Record<string, string> = {
       melts: 'Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)',
       mints: 'Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)',
-      attributed: 'Failures that cashu.info attributes to this mint. The other failed swaps were not caused by this mint, for example amounts below its minimum or Lightning routing.',
+      attributed: 'Failed swaps in the last 7 days that cashu.info attributes to this mint (attributed / all failed swaps). The other failed swaps were not caused by this mint, for example amounts below its minimum or Lightning routing.',
       avg: 'Average swap time over the last 7 days as reported by cashu.info.',
     }
     for (const [key, text] of Object.entries(expected)) {

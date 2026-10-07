@@ -3,6 +3,7 @@ import {
   XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, LineChart, Line,
 } from 'recharts'
+import { latencyScale } from '@/utils/chartScale'
 
 // The History tab's line chart. Lives in its own file so recharts (~350 kB) is a separate chunk that Mint Detail
 // loads with React.lazy only when the History tab is opened (see MintDetail.tsx).
@@ -18,6 +19,7 @@ function MintDetailHistoryChart({ data, metric, interval, height }: {
   interval: '24h' | '7d' | '30d' | '90d'
   height: number
 }) {
+  const latency = metric === 'latency' ? latencyScale(data.map(d => d.latency)) : null
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 4, right: 16, left: 10, bottom: 4 }}>
@@ -32,10 +34,9 @@ function MintDetailHistoryChart({ data, metric, interval, height }: {
           tick={{ fontSize: 9, fill: 'var(--text3)' }}
           axisLine={false} tickLine={false}
           width={60}
-          domain={metric === 'latency'
-            ? [(dataMin: number) => dataMin * 0.9, (dataMax: number) => dataMax * 1.1]
-            : [0, 100]}
-          tickFormatter={(v: number) => metric === 'latency' ? `${Math.round(v / 100) * 100}ms` : `${Math.round(v)}%`}
+          domain={latency ? latency.domain : [0, 100]}
+          {...(latency ? { ticks: latency.ticks } : {})}
+          tickFormatter={(v: number) => metric === 'latency' ? `${Math.round(v)}ms` : `${Math.round(v)}%`}
         />
         <Tooltip
           contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 11 }}
