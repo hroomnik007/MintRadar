@@ -1700,7 +1700,7 @@ function MintDetailContent({ url }: { url: string }) {
             )}
           </div>
 
-          {(() => { const rows = networkRows(auditCzData?.detail, knownMint?.ipAddress, now, knownMint?.online === false); return rows ? <MintNetworkCard rows={rows} viaCashuInfo={!!auditCzData?.detail?.network} /> : null })()}
+          {(() => { const rows = networkRows(auditCzData?.detail, knownMint?.ipAddress, knownMint?.online === false); return rows ? <MintNetworkCard rows={rows} viaCashuInfo={!!auditCzData?.detail?.network} /> : null })()}
 
           {(email || twitter || nostr || operatorNip05) && (
             <div className="md-panel">

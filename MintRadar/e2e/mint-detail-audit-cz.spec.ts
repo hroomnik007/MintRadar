@@ -227,7 +227,7 @@ test.describe('Checks by the auditor', () => {
   })
 
   test('proofs marked spent and pending', async ({ page }) => {
-    await gotoAuditTab(page, onlyCz([], { detail: czDetail({ integrity: { proof_state: { checked: 9, spent: 2, spentSat: 4, pending: 1 } } }) }))
+    await gotoAuditTab(page, onlyCz([], { detail: czDetail({ integrity: { proof_state: { checked: 9, spent: 2, pending: 1 } } }) }))
     await expect(checksCard(page).locator('.audit-cz-check-line').last()).toHaveText("2 of the auditor's 9 proofs were marked spent by the mint. 1 pending.")
   })
 
@@ -498,7 +498,7 @@ test('hostile values in the detail fields are shown as nothing or as plain text:
       errorsBlamed: XSS,
     },
     integrity: { proof_state: { checked: XSS, spent: XSS, pending: XSS } },
-    network: { asName: XSS, country: XSS, tlsIssuer: XSS, asn: XSS },
+    network: { asName: XSS, country: XSS, asn: XSS },
   })
   const h = await gotoAuditTab(page, onlyCz(czSwapList([ok, ok]), { detail }))
   // Strings where numbers belong are not numbers: their tiles and lines are hidden, nothing is printed.

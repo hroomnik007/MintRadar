@@ -55,15 +55,13 @@ const EXPECTED = {
     all: { total: 126, success: 107, failed: 19, avgMs: 8289 },
     asSource: { total: 64, success: 51, failed: 13, avgMs: 11719 },
     asDest: { total: 62, success: 56, failed: 6, avgMs: 5166 },
-    errorsBlamed: 0, dleq: { valid: 56, invalid: 0, missing: 0 }, quoteMs: 306, meltMs: 1342, mintMs: 166,
+    errorsBlamed: 0, dleq: { valid: 56, invalid: 0, missing: 0 },
   },
   integrity: {
-    swap_test: { ok: true, recentOk: 7, recentFail: 0, ms: 139, timestamp: 1791337568797 },
-    proof_state: { ok: true, recentOk: 7, recentFail: 0, ms: 99, timestamp: 1791337568658, checked: 9, spent: 0, spentSat: 0, pending: 0 },
+    proof_state: { checked: 9, spent: 0, pending: 0 },
   },
-  network: { ipv4: true, ipv6: true, asn: 14061, asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US', country: 'US', tlsIssuer: "Let's Encrypt", tlsExpiresAt: '2026-12-27T08:59:17.000Z' },
+  network: { asn: 14061, asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US', country: 'US' },
   onion: false,
-  latency: { prague: { p50: 41, p95: 53 } },
 }
 
 describe('parseAuditCzDetailFull', () => {
@@ -102,13 +100,10 @@ describe('parseAuditCzDetailFull', () => {
   it('cleans hostile strings and caps their length', () => {
     const r = real()
     r.network.asName = 'A‮evil​\u0000 \n\t name⁦' + 'x'.repeat(200)
-    r.network.tlsIssuer = '<img src=x onerror=alert(1)>' + 'y'.repeat(100)
     const n = parseAuditCzDetailFull(r, ID)?.network
     expect(n?.asName).toMatch(/^Aevil name/)
     expect(n?.asName?.length).toBeLessThanOrEqual(80)
     expect(n?.asName).not.toMatch(/[‮​\u0000⁦\n\t]/)
-    expect(n?.tlsIssuer?.startsWith('<img src=x onerror=alert(1)>')).toBe(true) // kept as text only
-    expect(n?.tlsIssuer?.length).toBeLessThanOrEqual(60)
     expect(cleanDetailText('é'.normalize('NFD'), 5)).toBe('é')
     expect(cleanDetailText('   ', 5)).toBeUndefined()
   })
@@ -117,53 +112,36 @@ describe('parseAuditCzDetailFull', () => {
     const r = real() as Record<string, any>
     r['network'].country = 'usa'
     r['network'].asn = 4294967296
-    r['network'].tlsExpiresAt = 'next tuesday'
-    r['network'].ipv4 = 'yes'
     r['swaps7d'].all.total = -1
     r['swaps7d'].asSource.success = 1e9
     r['swaps7d'].asDest.avgMs = 600_000
-    r['swaps7d'].quoteMs = Infinity
     r['swaps7d'].errorsBlamed = '0'
-    r['integrity'].swap_test.timestamp = 12
     r['integrity'].proof_state.detail.checked = 1.5
-    r['latency7d'].prague.p50 = NaN
     const out = parseAuditCzDetailFull(r, ID)!
-    expect(out.network).toEqual({ ipv6: true, asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US', tlsIssuer: "Let's Encrypt" })
+    expect(out.network).toEqual({ asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US' })
     expect(out.swaps7d?.all).toEqual({ success: 107, failed: 19, avgMs: 8289 })
     expect(out.swaps7d?.asSource).toEqual({ total: 64, failed: 13, avgMs: 11719 })
     expect(out.swaps7d?.asDest).toEqual({ total: 62, success: 56, failed: 6 })
-    expect(out.swaps7d).not.toHaveProperty('quoteMs')
     expect(out.swaps7d).not.toHaveProperty('errorsBlamed')
-    expect(out.integrity?.swap_test).not.toHaveProperty('timestamp')
     expect(out.integrity?.proof_state).not.toHaveProperty('checked')
-    expect(out.latency).toEqual({ prague: { p95: 53 } })
   })
 
   it('wrong types and missing blocks: only the usable blocks remain', () => {
-    expect(parseAuditCzDetailFull({ swaps7d: 'x', integrity: [], network: null, spec: 5, latency7d: 'x' }, ID)).toBeNull()
+    expect(parseAuditCzDetailFull({ swaps7d: 'x', integrity: [], network: null, spec: 5 }, ID)).toBeNull()
     expect(parseAuditCzDetailFull({ network: { asn: 14061 } }, ID)).toEqual({ network: { asn: 14061 } })
-    const r = real() as Record<string, unknown>; delete r['network']; delete r['integrity']; delete r['latency7d']
+    const r = real() as Record<string, unknown>; delete r['network']; delete r['integrity']
     const out = parseAuditCzDetailFull(r, ID)!
     expect(Object.keys(out).sort()).toEqual(['onion', 'swaps7d'])
   })
 
   it('every optional field missing: a bare object is skipped, not stored empty', () => {
     expect(parseAuditCzDetailFull({}, ID)).toBeNull()
-    expect(parseAuditCzDetailFull({ swaps7d: {}, integrity: {}, network: {}, latency7d: { prague: {} } }, ID)).toBeNull()
+    expect(parseAuditCzDetailFull({ swaps7d: {}, integrity: {}, network: {} }, ID)).toBeNull()
   })
 
   it('a malformed top level skips the mint', () => {
     for (const bad of [null, undefined, 'x', 5, [], [real()]]) expect(parseAuditCzDetailFull(bad, ID)).toBeNull()
     expect(parseAuditCzDetailFull({ ...real(), id: 'someoneelse01' }, ID)).toBeNull() // body of another mint
-  })
-
-  it('timestamps outside 2020..2100 are dropped', () => {
-    const r = real()
-    r.integrity.swap_test.timestamp = Date.UTC(2101, 0, 1)
-    r.integrity.proof_state.timestamp = Date.UTC(2019, 11, 31)
-    const out = parseAuditCzDetailFull(r, ID)!
-    expect(out.integrity?.swap_test).not.toHaveProperty('timestamp')
-    expect(out.integrity?.proof_state).not.toHaveProperty('timestamp')
   })
 })
 

@@ -5,8 +5,6 @@ import { truncateText } from '@/utils/auditCz'
 // cashu.info detail our backend stores). Pure. Every input is untrusted text or a number and is
 // only ever rendered as text. The IPv4 address is resolved by our own backend (the source sends none).
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const SOON_DAYS = 14
 const NETWORK_NAME_MAX = 48
 
 /** The mint host's IPv4 address as sent by our backend; anything that is not a plain dotted IPv4 address is dropped. */
@@ -42,44 +40,15 @@ export function torLabel(onion: boolean | undefined): string | null {
   return onion === true ? 'Onion address available' : onion === false ? 'No onion address' : null
 }
 
-export interface TlsLabel {
-  text: string
-  state: 'ok' | 'soon' | 'expired'
-  /** Appended in the warning colour when fewer than 14 days remain. */
-  suffix: string | null
-}
-
-const dayLabel = (t: number) => {
-  const d = new Date(t)
-  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`
-}
-
-/** "{issuer}, expires 27 Dec 2026"; "…, expired 27 Dec 2026" once the date has passed; "expires soon" appended under 14 days. */
-export function tlsLabel(issuer: string | undefined, expiresAt: string | undefined, now: number): TlsLabel | null {
-  const t = typeof expiresAt === 'string' ? new Date(expiresAt).getTime() : NaN
-  const hasDate = Number.isFinite(t)
-  if (!issuer && !hasDate) return null
-  if (!hasDate) return { text: issuer as string, state: 'ok', suffix: null }
-  const expired = t < now
-  const soon = !expired && t - now < SOON_DAYS * 86_400_000
-  const when = `${expired ? 'expired' : 'expires'} ${dayLabel(t)}`
-  return {
-    text: issuer ? `${issuer}, ${when}` : `${when.charAt(0).toUpperCase()}${when.slice(1)}`,
-    state: expired ? 'expired' : soon ? 'soon' : 'ok',
-    suffix: soon ? 'expires soon' : null,
-  }
-}
-
 export interface NetworkRows {
   ip: string | null
   network: string | null
   country: { name: string } | null
   tor: string | null
-  tls: TlsLabel | null
 }
 
 /** null when there is nothing to show (the card is not rendered). `ip` is our own DNS result; the rest comes from the cashu.info detail. An offline mint without an address shows "Offline" in the IP row. */
-export function networkRows(detail: AuditCzDetail | null | undefined, ip: string | null | undefined, now: number, offline = false): NetworkRows | null {
+export function networkRows(detail: AuditCzDetail | null | undefined, ip: string | null | undefined, offline = false): NetworkRows | null {
   const n = detail?.network
   const country = countryName(n?.country)
   const rows: NetworkRows = {
@@ -87,7 +56,6 @@ export function networkRows(detail: AuditCzDetail | null | undefined, ip: string
     network: networkLabel(n?.asn, n?.asName),
     country: country ? { name: country } : null,
     tor: n ? torLabel(detail?.onion) : null,
-    tls: tlsLabel(n?.tlsIssuer, n?.tlsExpiresAt, now),
   }
   return Object.values(rows).some(v => v !== null) ? rows : null
 }

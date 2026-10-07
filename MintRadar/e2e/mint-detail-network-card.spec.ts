@@ -113,7 +113,7 @@ test.describe('no network data: the card is not rendered', () => {
 })
 
 test('hostile network strings are shown as text: no element, no dialog, no request', async ({ page }) => {
-  const h = await open(page, withNetwork({ asName: XSS, tlsIssuer: XSS, country: XSS }))
+  const h = await open(page, withNetwork({ asName: XSS, country: XSS }))
   await expect(value(page, 'Network')).toHaveText(`AS14061 ${XSS}`)
   await expect(rowOf(page, 'Registered in')).toHaveCount(0) // not a country code: the row is hidden, nothing printed
   await expect(card(page).locator('img')).toHaveCount(0)

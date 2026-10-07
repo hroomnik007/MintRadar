@@ -231,10 +231,9 @@ Data from the third-party audit service cashu.info for one mint, refreshed serve
   },
   "detail": {
     "swaps7d": { "all": { "total": 126, "success": 107, "failed": 19, "avgMs": 8289 }, "asSource": { "total": 64, "success": 51, "failed": 13, "avgMs": 11719 }, "asDest": { "total": 62, "success": 56, "failed": 6, "avgMs": 5166 }, "errorsBlamed": 0, "dleq": { "valid": 56, "invalid": 0, "missing": 0 } },
-    "integrity": { "proof_state": { "ok": true, "checked": 9, "spent": 0, "spentSat": 0, "pending": 0 } },
-    "network": { "ipv4": true, "ipv6": true, "asn": 14061, "asName": "DIGITALOCEAN-ASN - DigitalOcean, LLC, US", "country": "US", "tlsIssuer": "Let's Encrypt", "tlsExpiresAt": "2026-12-27T08:59:17.000Z" },
+    "integrity": { "proof_state": { "checked": 9, "spent": 0, "pending": 0 } },
+    "network": { "asn": 14061, "asName": "DIGITALOCEAN-ASN - DigitalOcean, LLC, US", "country": "US" },
     "onion": false,
-    "latency": { "prague": { "p50": 41, "p95": 53 } },
     "fetchedAt": "2026-10-07T07:08:41.120Z"
   }
 }
@@ -268,19 +267,16 @@ Which swaps are returned: with `direction=from` the swaps whose source is this m
 
 `stats7d` is **counted by MintRadar** over the swaps it stored with `at` in the last 7 days where `from_url` or `to_url` matches the mint (URL or alias) — it is not a figure published by cashu.info. A swap where this mint is the source (`from`) is a **melt**, where it is the destination (`to`) a **mint**; a swap matching on both sides is counted once, as a melt. `paid` = status `success`, `failed` = status `failed`, anything else is `pending` (excluded from paid/failed); `paid + failed + pending` over both directions equals `swapsCounted`. `amountPaid` / `feesPaid` are sums over paid swaps (a null fee counts as 0), `avgDurationMsPaid` is the mean `durationMs` of paid swaps that have one (else `null`). `collectedSince` is the `at` of the oldest swap in `audit_cz_swaps` — the window start the counts can claim (a value newer than 7 days ago means the numbers cover less than 7 days; `null` when the table is empty).
 
-`detail` is **published by cashu.info** (`GET /api/v1/mints/{id}`), validated and stored by a 30-minute job; every field is optional and a malformed field is simply absent. Numbers are non-negative; counts are integers. Strings are untrusted text (sanitised: NFC, no control / zero-width / bidi characters, whitespace collapsed, capped). It never contains an IP address, the onion address, score, reviews or Frankfurt data.
+`detail` is **published by cashu.info** (`GET /api/v1/mints/{id}`), validated and stored by a 30-minute job; every field is optional and a malformed field is simply absent. Numbers are non-negative; counts are integers. Strings are untrusted text (sanitised: NFC, no control / zero-width / bidi characters, whitespace collapsed, capped). It never contains an IP address, the onion address, score, reviews, TLS, step timings, latency or Frankfurt data.
 
 | Field | Type | Meaning |
 |---|---|---|
 | `detail.swaps7d.all` / `asSource` / `asDest` | `{ total, success, failed, avgMs }` (each number, optional) | 7-day swap counts of the mint: all swaps, as source (melts) and as destination (mints); `avgMs` in milliseconds. |
 | `detail.swaps7d.errorsBlamed` | number | Failures cashu.info attributes to this mint. |
 | `detail.swaps7d.dleq` | `{ valid, invalid, missing }` | DLEQ proof checks of the swaps. |
-| `detail.swaps7d.quoteMs` / `meltMs` / `mintMs` | number | Average step durations in ms. |
-| `detail.integrity.swap_test` | `{ ok: boolean, recentOk, recentFail, ms, timestamp }` | The auditor's own swap test; `timestamp` is epoch milliseconds (2020–2100). |
-| `detail.integrity.proof_state` | `{ ok, recentOk, recentFail, ms, timestamp, checked, spent, spentSat, pending }` | The auditor's proof-state check of its own ecash. |
-| `detail.network` | `{ ipv4, ipv6: boolean, asn: number, asName: string ≤80, country: "XX", tlsIssuer: string ≤60, tlsExpiresAt: ISO string }` | Public network facts about the mint host (no address). |
+| `detail.integrity.proof_state` | `{ checked, spent, pending }` | The auditor's proof-state check of its own ecash. |
+| `detail.network` | `{ asn: number, asName: string ≤80, country: "XX" }` | Public network facts about the mint host (no address). |
 | `detail.onion` | boolean | Whether the mint advertises an onion address (the address is not stored). |
-| `detail.latency.prague` | `{ p50, p95 }` ms | Only when present. |
 | `detail.fetchedAt` | string \| null | When the row was stored. |
 
 `detail7d` (the old derived summary) was **removed** when the new Audit tab shipped; read `detail.swaps7d` instead.

@@ -59,15 +59,12 @@ export const LNPAY_DETAIL = {
     asDest: { total: 62, success: 56, failed: 6, avgMs: 5166 },
     errorsBlamed: 0,
     dleq: { valid: 56, invalid: 0, missing: 0 },
-    quoteMs: 306, meltMs: 1342, mintMs: 166,
   },
   integrity: {
-    swap_test: { ok: true, recentOk: 7, recentFail: 0, ms: 139, timestamp: 1791337568797 },
-    proof_state: { ok: true, recentOk: 7, recentFail: 0, ms: 99, timestamp: 1791337568658, checked: 9, spent: 0, spentSat: 0, pending: 0 },
+    proof_state: { checked: 9, spent: 0, pending: 0 },
   },
-  network: { ipv4: true, ipv6: true, asn: 14061, asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US', country: 'US', tlsIssuer: "Let's Encrypt", tlsExpiresAt: '2026-12-27T08:59:17.000Z' },
+  network: { asn: 14061, asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US', country: 'US' },
   onion: false,
-  latency: { prague: { p50: 41, p95: 53 } },
 }
 
 /** A deep copy of LNPAY_DETAIL with parts replaced (shallow per top-level block: pass a whole block). */

@@ -2,10 +2,10 @@
 // nothing here feeds the Reliability Score. Visitors never trigger an outbound request; the
 // endpoint reads audit_cz_detail only.
 //
-// Only a validated subset is kept (see StoredAuditCzDetail). Never stored: score, scoreParts,
-// reviews, daily, changes, incidents7d, Frankfurt data, any spec detail except the onion boolean
-// (the onion address itself is never stored), and any IP address (the source sends none; the mint host's
-// IPv4 is resolved by us in mintAddress.ts).
+// Only the subset the UI actually shows is kept (see StoredAuditCzDetail). Never stored: score, scoreParts,
+// reviews, daily, changes, incidents7d, latency, TLS, step timings, the auditor's swap test, Frankfurt data,
+// any spec detail except the onion boolean (the onion address itself is never stored), and any IP address
+// (the source sends none; the mint host's IPv4 is resolved by us in mintAddress.ts).
 // Every field is optional: a malformed field is dropped, not the record; a malformed top level
 // (not an object, id mismatch, nothing usable) skips the mint. A failed fetch writes and deletes
 // nothing.
@@ -18,13 +18,9 @@ export const DETAIL_PAUSE_MS = 2_000
 export const DETAIL_RUN_BUDGET_MS = 25 * 60_000
 
 const MAX_COUNT = 10_000_000
-const MAX_SATS = 1e12
 const MAX_MS = 10 * 60_000
 const MAX_ASN = 4_294_967_296
-const MIN_TS = Date.UTC(2020, 0, 1)
-const MAX_TS = Date.UTC(2100, 0, 1)
 const MAX_AS_NAME = 80
-const MAX_TLS_ISSUER = 60
 
 export interface DetailDirection { total?: number; success?: number; failed?: number; avgMs?: number }
 export interface StoredAuditCzDetail {
@@ -34,17 +30,12 @@ export interface StoredAuditCzDetail {
     asDest?: DetailDirection
     errorsBlamed?: number
     dleq?: { valid?: number; invalid?: number; missing?: number }
-    quoteMs?: number
-    meltMs?: number
-    mintMs?: number
   }
   integrity?: {
-    swap_test?: { ok?: boolean; recentOk?: number; recentFail?: number; ms?: number; timestamp?: number }
-    proof_state?: { ok?: boolean; recentOk?: number; recentFail?: number; ms?: number; timestamp?: number; checked?: number; spent?: number; spentSat?: number; pending?: number }
+    proof_state?: { checked?: number; spent?: number; pending?: number }
   }
-  network?: { ipv4?: boolean; ipv6?: boolean; asn?: number; asName?: string; country?: string; tlsIssuer?: string; tlsExpiresAt?: string }
+  network?: { asn?: number; asName?: string; country?: string }
   onion?: boolean
-  latency?: { prague?: { p50?: number; p95?: number } }
 }
 export type AuditCzDetailResponse = StoredAuditCzDetail & { fetchedAt: string | null }
 
@@ -70,10 +61,6 @@ const ms = (v: unknown): number | undefined => {
   const n = finite(v, MAX_MS)
   return n === undefined ? undefined : Math.round(n)
 }
-const bool = (v: unknown): boolean | undefined => (typeof v === 'boolean' ? v : undefined)
-const timestamp = (v: unknown): number | undefined =>
-  typeof v === 'number' && Number.isFinite(v) && Number.isInteger(v) && v >= MIN_TS && v < MAX_TS ? v : undefined
-
 /** Drops undefined entries; an object with no entry left becomes undefined. */
 function pack<T extends Obj>(o: T): T | undefined {
   const out: Obj = {}
@@ -84,12 +71,6 @@ function pack<T extends Obj>(o: T): T | undefined {
 function direction(v: unknown): DetailDirection | undefined {
   if (!isObj(v)) return undefined
   return pack({ total: count(v['total']), success: count(v['success']), failed: count(v['failed']), avgMs: ms(v['avgMs']) })
-}
-
-function isoDate(v: unknown): string | undefined {
-  if (typeof v !== 'string' || v.length > 40) return undefined
-  const t = Date.parse(v)
-  return Number.isFinite(t) && t >= Date.UTC(2000, 0, 1) && t < MAX_TS ? new Date(t).toISOString() : undefined
 }
 
 /** The validated subset of one detail response, or null when the top level is unusable. `expectedId` guards a mismatching body. */
@@ -104,36 +85,20 @@ export function parseAuditCzDetailFull(raw: unknown, expectedId?: string): Store
     asDest: direction(s['asDest']),
     errorsBlamed: count(s['errorsBlamed']),
     dleq: isObj(s['dleq']) ? pack({ valid: count(s['dleq']['valid']), invalid: count(s['dleq']['invalid']), missing: count(s['dleq']['missing']) }) : undefined,
-    quoteMs: ms(s['quoteMs']),
-    meltMs: ms(s['meltMs']),
-    mintMs: ms(s['mintMs']),
   }) : undefined
 
   const i = isObj(raw['integrity']) ? raw['integrity'] : null
-  const st = i && isObj(i['swap_test']) ? i['swap_test'] : null
   const ps = i && isObj(i['proof_state']) ? i['proof_state'] : null
   const psDetail = ps && isObj(ps['detail']) ? ps['detail'] : null
-  const integrity = i ? pack({
-    swap_test: st ? pack({ ok: bool(st['ok']), recentOk: count(st['recentOk']), recentFail: count(st['recentFail']), ms: ms(st['ms']), timestamp: timestamp(st['timestamp']) }) : undefined,
-    proof_state: ps ? pack({
-      ok: bool(ps['ok']), recentOk: count(ps['recentOk']), recentFail: count(ps['recentFail']), ms: ms(ps['ms']), timestamp: timestamp(ps['timestamp']),
-      checked: psDetail ? count(psDetail['checked']) : undefined,
-      spent: psDetail ? count(psDetail['spent']) : undefined,
-      spentSat: psDetail ? count(psDetail['spentSat'], MAX_SATS) : undefined,
-      pending: psDetail ? count(psDetail['pending']) : undefined,
-    }) : undefined,
-  }) : undefined
+  const proofState = psDetail ? pack({ checked: count(psDetail['checked']), spent: count(psDetail['spent']), pending: count(psDetail['pending']) }) : undefined
+  const integrity = i ? pack({ proof_state: proofState }) : undefined
 
   const n = isObj(raw['network']) ? raw['network'] : null
   const country = n ? cleanDetailText(n['country'], 2) : undefined
   const network = n ? pack({
-    ipv4: bool(n['ipv4']),
-    ipv6: bool(n['ipv6']),
     asn: count(n['asn'], MAX_ASN),
     asName: cleanDetailText(n['asName'], MAX_AS_NAME),
     country: country !== undefined && /^[A-Z]{2}$/.test(country) ? country : undefined,
-    tlsIssuer: cleanDetailText(n['tlsIssuer'], MAX_TLS_ISSUER),
-    tlsExpiresAt: isoDate(n['tlsExpiresAt']),
   }) : undefined
 
   // The onion address is reduced to "is there one"; the string itself is never kept.
@@ -142,12 +107,7 @@ export function parseAuditCzDetailFull(raw: unknown, expectedId?: string): Store
     ? typeof spec['onionUrl'] === 'string' ? spec['onionUrl'].trim().length > 0 : spec['onionUrl'] === null ? false : undefined
     : undefined
 
-  const l = isObj(raw['latency7d']) ? raw['latency7d'] : null
-  const pr = l && isObj(l['prague']) ? l['prague'] : null
-  const prague = pr ? pack({ p50: ms(pr['p50']), p95: ms(pr['p95']) }) : undefined
-  const latency = prague ? { prague } : undefined
-
-  const out = pack({ swaps7d, integrity, network, onion, latency })
+  const out = pack({ swaps7d, integrity, network, onion })
   return out ?? null
 }
 

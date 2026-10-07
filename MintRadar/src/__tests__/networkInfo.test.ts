@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { countryName, ipv4Address, networkLabel, networkRows, tlsLabel, torLabel } from '@/utils/networkInfo'
+import { countryName, ipv4Address, networkLabel, networkRows, torLabel } from '@/utils/networkInfo'
 import type { AuditCzDetail } from '@/hooks/useAuditCz'
-
-const NOW = Date.parse('2026-10-07T12:00:00Z')
-const DAY = 86_400_000
 
 describe('ipv4Address', () => {
   it('keeps a plain dotted IPv4 address, drops anything else', () => {
@@ -65,53 +62,32 @@ describe('torLabel', () => {
   })
 })
 
-describe('tlsLabel', () => {
-  it('valid certificate', () => {
-    expect(tlsLabel("Let's Encrypt", '2026-12-27T08:59:17.000Z', NOW)).toEqual({ text: "Let's Encrypt, expires 27 Dec 2026", state: 'ok', suffix: null })
-  })
-  it('expired: past tense, no "soon"', () => {
-    expect(tlsLabel('LE', new Date(NOW - DAY).toISOString(), NOW)).toMatchObject({ state: 'expired', suffix: null, text: expect.stringMatching(/^LE, expired \d+ \w{3} 2026$/) })
-  })
-  it('fewer than 14 days: "expires soon" appended; exactly 14 days is not yet soon', () => {
-    expect(tlsLabel('LE', new Date(NOW + 13 * DAY).toISOString(), NOW)).toMatchObject({ state: 'soon', suffix: 'expires soon' })
-    expect(tlsLabel('LE', new Date(NOW + 14 * DAY).toISOString(), NOW)).toMatchObject({ state: 'ok', suffix: null })
-  })
-  it('missing parts', () => {
-    expect(tlsLabel(undefined, '2026-12-27T08:59:17.000Z', NOW)?.text).toBe('Expires 27 Dec 2026')
-    expect(tlsLabel('LE', undefined, NOW)).toEqual({ text: 'LE', state: 'ok', suffix: null })
-    expect(tlsLabel('LE', 'not a date', NOW)?.text).toBe('LE')
-    expect(tlsLabel(undefined, undefined, NOW)).toBeNull()
-  })
-})
-
 describe('networkRows', () => {
   const base: AuditCzDetail = {
-    network: { ipv4: true, ipv6: true, asn: 14061, asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US', country: 'US', tlsIssuer: "Let's Encrypt", tlsExpiresAt: '2026-12-27T08:59:17.000Z' },
+    network: { asn: 14061, asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US', country: 'US' },
     onion: false, fetchedAt: null,
   }
   it('all rows for the LNpay-like detail', () => {
-    expect(networkRows(base, '188.166.166.165', NOW)).toEqual({
-      ip: '188.166.166.165', network: 'AS14061 DigitalOcean', country: { name: 'United States' }, tor: 'No onion address',
-      tls: { text: "Let's Encrypt, expires 27 Dec 2026", state: 'ok', suffix: null },
+    expect(networkRows(base, '188.166.166.165')).toEqual({
+      ip: '188.166.166.165', network: 'AS14061 DigitalOcean', country: { name: 'United States' }, tor: 'No onion address'
     })
   })
   it('no network block: no card, whatever else is there', () => {
-    expect(networkRows({ onion: true, fetchedAt: null }, null, NOW)).toBeNull()
-    expect(networkRows(null, null, NOW)).toBeNull()
-    expect(networkRows(undefined, undefined, NOW)).toBeNull()
+    expect(networkRows({ onion: true, fetchedAt: null }, null)).toBeNull()
+    expect(networkRows(null, null)).toBeNull()
+    expect(networkRows(undefined, undefined)).toBeNull()
   })
   it('a mint without a cashu.info detail still gets the IP row from our own lookup', () => {
-    expect(networkRows(null, '188.166.166.165', NOW)).toEqual({ ip: '188.166.166.165', network: null, country: null, tor: null, tls: null })
+    expect(networkRows(null, '188.166.166.165')).toEqual({ ip: '188.166.166.165', network: null, country: null, tor: null })
   })
   it('an offline mint without an address says Offline; an address wins; an online one stays hidden', () => {
-    expect(networkRows(null, null, NOW, true)).toEqual({ ip: 'Offline', network: null, country: null, tor: null, tls: null })
-    expect(networkRows(null, '188.166.166.165', NOW, true)?.ip).toBe('188.166.166.165')
-    expect(networkRows(null, null, NOW, false)).toBeNull()
+    expect(networkRows(null, null, true)).toEqual({ ip: 'Offline', network: null, country: null, tor: null })
+    expect(networkRows(null, '188.166.166.165', true)?.ip).toBe('188.166.166.165')
+    expect(networkRows(null, null, false)).toBeNull()
   })
   it('hostile strings stay strings and a hostile country is hidden', () => {
-    const r = networkRows({ network: { asn: 1, asName: '<img src=x onerror=alert(1)>', country: '<b>', tlsIssuer: '<script>x</script>' }, fetchedAt: null }, null, NOW)!
+    const r = networkRows({ network: { asn: 1, asName: '<img src=x onerror=alert(1)>', country: '<b>' }, fetchedAt: null }, null)!
     expect(r.network).toBe('AS1 <img src=x onerror=alert(1)>')
     expect(r.country).toBeNull()
-    expect(r.tls?.text).toBe('<script>x</script>')
   })
 })

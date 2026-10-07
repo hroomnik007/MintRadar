@@ -18,10 +18,10 @@ const LNPAY: AuditCzDetail = {
     all: { total: 126, success: 107, failed: 19, avgMs: 8289 },
     asSource: { total: 64, success: 51, failed: 13, avgMs: 11719 },
     asDest: { total: 62, success: 56, failed: 6, avgMs: 5166 },
-    errorsBlamed: 0, dleq: { valid: 56, invalid: 0, missing: 0 }, quoteMs: 306, meltMs: 1342, mintMs: 166,
+    errorsBlamed: 0, dleq: { valid: 56, invalid: 0, missing: 0 },
   },
-  integrity: { proof_state: { ok: true, checked: 9, spent: 0, spentSat: 0, pending: 0 } },
-  network: { ipv4: true, ipv6: true, asn: 14061, asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US', country: 'US' },
+  integrity: { proof_state: { checked: 9, spent: 0, pending: 0 } },
+  network: { asn: 14061, asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US', country: 'US' },
   fetchedAt: '2026-10-07T07:00:00.000Z',
 }
 const data = (swaps: Row[], detail: AuditCzData['detail'] = LNPAY, over: Partial<AuditCzData> = {}): AuditCzData => ({
@@ -97,10 +97,6 @@ describe('Checks by the auditor', () => {
     expect(c({ integrity: { proof_state: { checked: 4, spent: 0, pending: 0 } } })).toEqual({ signatures: null, proofs: 'Our ecash 4 proofs still unspent — the mint has not marked them spent.' })
     expect(c({ swaps7d: { dleq: { valid: 5 } } })?.proofs).toBeNull()
     expect(view([], { fetchedAt: null, network: { asn: 1 } }).checks).toBeNull()
-  })
-  it('no swap-test line', () => {
-    const r = c({ ...LNPAY, integrity: { swap_test: { ok: false, recentFail: 7 }, proof_state: LNPAY.integrity?.proof_state ?? {} } })
-    expect(JSON.stringify(r)).not.toMatch(/swap test|swap_test/i)
   })
   it('hostile numbers cannot inject text (only numbers are interpolated)', () => {
     const r = c({ swaps7d: { dleq: { valid: '<b>1</b>' as unknown as number, invalid: 0, missing: 0 } } })

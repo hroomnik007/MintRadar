@@ -54,17 +54,12 @@ export interface AuditCzDetail {
     asDest?: AuditCzDirectionCounts
     errorsBlamed?: number
     dleq?: { valid?: number; invalid?: number; missing?: number }
-    quoteMs?: number
-    meltMs?: number
-    mintMs?: number
   }
   integrity?: {
-    swap_test?: { ok?: boolean; recentOk?: number; recentFail?: number; ms?: number; timestamp?: number }
-    proof_state?: { ok?: boolean; recentOk?: number; recentFail?: number; ms?: number; timestamp?: number; checked?: number; spent?: number; spentSat?: number; pending?: number }
+    proof_state?: { checked?: number; spent?: number; pending?: number }
   }
-  network?: { ipv4?: boolean; ipv6?: boolean; asn?: number; asName?: string; country?: string; tlsIssuer?: string; tlsExpiresAt?: string }
+  network?: { asn?: number; asName?: string; country?: string }
   onion?: boolean
-  latency?: { prague?: { p50?: number; p95?: number } }
   fetchedAt: string | null
 }
 
