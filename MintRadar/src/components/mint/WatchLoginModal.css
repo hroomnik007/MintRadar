@@ -80,3 +80,16 @@
   .rv-actions { flex-direction: column-reverse; }
   .rv-btn-cancel, .rv-btn-submit { width: 100%; }
 }
+
+/* Synced with MintDetail.css's final review-modal look (surface, hairline border, 17px title, boxed close, 14px outlined cancel). */
+.rv-modal { background: var(--surface); border: 1px solid var(--border2); padding: 20px; max-width: 420px; }
+.rv-modal-title { font-size: 17px; letter-spacing: -0.01em; }
+.rv-modal-sub { font-size: 13px; line-height: 1.4; }
+.rv-modal-close { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--border); border-radius: 8px; color: var(--text2); }
+.rv-btn-cancel { border: 1px solid var(--border2); color: var(--text2); font-size: 14px; padding: 9px 16px; }
+@media (max-width: 480px) { .rv-modal { padding: 18px; } }
+
+/* Logged-out watch prompt: outlined green action like the Nostr login modal's Connect. */
+.rv-btn-login { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: transparent; color: var(--green-bright); border: 1px solid var(--green); border-radius: 10px; font-size: 14px; font-weight: 600; padding: 9px 18px; transition: background var(--transition), border-color var(--transition); }
+.rv-btn-login:hover { background: var(--green-soft); border-color: var(--green-bright); }
+.rv-btn-login:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }

@@ -2534,3 +2534,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 @media (max-width: 640px) {
   .md-url-scheme { display: none; }
 }
+
+/* Logged-out watch prompt: outlined green action like the Nostr login modal's Connect. */
+.rv-btn-login { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: transparent; color: var(--green-bright); border: 1px solid var(--green); border-radius: 10px; font-size: 14px; font-weight: 600; padding: 9px 18px; transition: background var(--transition), border-color var(--transition); }
+.rv-btn-login:hover { background: var(--green-soft); border-color: var(--green-bright); }
+.rv-btn-login:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }

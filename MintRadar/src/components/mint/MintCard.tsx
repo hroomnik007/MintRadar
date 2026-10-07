@@ -299,7 +299,7 @@ export function MintCard({
             </div>
             <div className="rv-actions">
               <button type="button" className="rv-btn-cancel" onClick={e => { e.stopPropagation(); closeWatchLoginModal() }}>Cancel</button>
-              <button type="button" className="rv-btn-submit" onClick={e => { e.stopPropagation(); confirmWatchLogin() }}>⚡ Login via Nostr</button>
+              <button type="button" className="rv-btn-submit rv-btn-login" onClick={e => { e.stopPropagation(); confirmWatchLogin() }}><Zap size={14} strokeWidth={2.2} aria-hidden="true" /> Login via Nostr</button>
             </div>
           </div>
         </div>

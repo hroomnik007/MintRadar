@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { Zap } from 'lucide-react'
 import { verifyEvent, nip19 } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
@@ -295,7 +296,7 @@ export default function Watchlist() {
             className="wl-add-btn"
             onClick={() => window.dispatchEvent(new CustomEvent('mintradar:open-login'))}
           >
-            ⚡ Login via Nostr
+            <Zap size={14} strokeWidth={2.2} aria-hidden="true" /> Login via Nostr
           </button>
           <div className="wl-login-hint">Stored on Nostr. Optional DMs when a watched mint goes down or comes back up.</div>
         </div>
