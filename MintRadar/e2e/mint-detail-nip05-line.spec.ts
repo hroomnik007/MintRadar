@@ -155,19 +155,19 @@ test.describe('Mint Detail — unverified NIP-05 line', () => {
 // The block keeps its visibility rule (email || twitter || nostr || NIP-05) but the heading and
 // the card grid only render when at least one of email / twitter / nostr exists.
 const TWITTER = { method: 'twitter', info: '@alpha_mint' }
-const noHeading = (page: Page) => page.locator('.md-panel-title', { hasText: 'Get in Touch' })
+const noHeading = (page: Page) => page.locator('.md-panel-title', { hasText: 'Get in touch' })
 
 test.describe('Mint Detail — "Get in Touch" heading', () => {
   test('all values: heading, three cards and the NIP-05 line', async ({ page }) => {
     const { panel, line } = await open(page, { contacts: [EMAIL, TWITTER, NOSTR] })
-    await expect(panel.locator('.md-panel-title')).toHaveText('Get in Touch')
+    await expect(panel.locator('.md-panel-title')).toHaveText('Get in touch')
     await expect(panel.locator('.md-contact-type')).toHaveText(['Email', 'Twitter', 'Nostr'])
     await expect(line).toBeVisible()
   })
 
   test('email only: heading and one card, no NIP-05 line', async ({ page }) => {
     const { panel, line } = await open(page, { contacts: [EMAIL], nip05: null })
-    await expect(panel.locator('.md-panel-title')).toHaveText('Get in Touch')
+    await expect(panel.locator('.md-panel-title')).toHaveText('Get in touch')
     await expect(panel.locator('.md-contact-card')).toHaveCount(1)
     await page.waitForTimeout(1500) // let the (empty) profile lookup settle
     await expect(line).toHaveCount(0)
@@ -177,7 +177,7 @@ test.describe('Mint Detail — "Get in Touch" heading', () => {
     const { panel, line, icon } = await open(page, { contacts: [] })
     await expect(line).toBeVisible()
     await expect(noHeading(page)).toHaveCount(0)
-    await expect(page.getByText('Get in Touch')).toHaveCount(0)
+    await expect(page.getByText('Get in touch', { exact: true })).toHaveCount(0)
     await expect(page.locator('.md-contact-grid')).toHaveCount(0)
     await expect(panel.locator('.md-contact-card')).toHaveCount(0)
     await expect(line).toContainText('Profile NIP-05 · not verified: alice@example.com')
@@ -205,7 +205,7 @@ test.describe('Mint Detail — "Get in Touch" heading', () => {
     const { panel } = await open(page, { contacts: [], nip05: null })
     await page.waitForTimeout(1500) // let the (empty) profile lookup settle
     await expect(panel).toHaveCount(0)
-    await expect(page.getByText('Get in Touch')).toHaveCount(0)
+    await expect(page.getByText('Get in touch', { exact: true })).toHaveCount(0)
     await expect(page.locator('.md-contact-grid, .md-nip05-line')).toHaveCount(0)
   })
 })

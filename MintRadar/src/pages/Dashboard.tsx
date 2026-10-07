@@ -1459,7 +1459,6 @@ export default function Dashboard() {
         <div className="submit-modal-overlay" onClick={() => setShowSubmit(false)}>
           <div className="submit-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="submit-modal-title" ref={dialogRef}>
             <button type="button" className="submit-modal-close" onClick={() => setShowSubmit(false)} aria-label="Close"><IcClose /></button>
-            <div className="submit-modal-eyebrow">Track a mint</div>
             <div className="submit-modal-title" id="submit-modal-title">Add a mint</div>
             <div className="submit-tabs" role="tablist" aria-label="Submit mode" onKeyDown={handleSubmitTabKey}>
               <button type="button" role="tab" id="submit-tab-single" aria-selected={submitTab === 'single'} aria-controls="submit-panel-single" tabIndex={submitTab === 'single' ? 0 : -1} className={`submit-tab-btn${submitTab === 'single' ? ' active' : ''}`} onClick={() => setSubmitTab('single')}>Single</button>

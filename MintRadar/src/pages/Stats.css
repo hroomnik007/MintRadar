@@ -819,9 +819,9 @@
 }
 
 .nut-modal {
-  background: var(--bg2);
-  border: 1px solid var(--border-hi);
-  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
   padding: 20px;
   width: 480px;
   max-width: calc(100vw - 40px);
@@ -835,15 +835,19 @@
 
 .nut-modal-close {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: 16px;
+  right: 16px;
   background: none;
-  border: none;
-  color: var(--text3);
+  border: 1px solid var(--border);
+  color: var(--text2);
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  padding: 5px;
-  border-radius: 4px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
   line-height: 1;
 }
 .nut-modal-close:hover { background: var(--bg3); color: var(--text); }
@@ -865,18 +869,19 @@
 }
 .nut-modal-back:hover { background: var(--bg3); color: var(--text); border-color: var(--border-hi); }
 
-.nut-modal-header { padding-right: 24px; }
+.nut-modal-header { padding-right: 44px; }
 
 .nut-modal-title {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--text);
 }
 
 .nut-modal-subtitle {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text3);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
 }
 
 .nut-modal-search {
@@ -899,7 +904,7 @@
   max-height: 280px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 0;
   scrollbar-width: thin;
   scrollbar-color: var(--border2) transparent;
 }
@@ -911,14 +916,16 @@
 .nut-modal-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 8px;
-  background: var(--bg3);
-  border-radius: 7px;
-  border: 1px solid transparent;
+  gap: 10px;
+  padding: 10px 2px;
+  background: none;
+  border-radius: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
-.nut-modal-row:hover { border-color: var(--border); }
+.nut-modal-row:first-child { border-top: 0; }
+.nut-modal-row:hover { background: var(--surface-2); }
 
 .nut-modal-row-info {
   display: flex;
@@ -940,7 +947,7 @@
 }
 
 .nut-modal-row-name {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text);
   font-weight: 500;
   white-space: nowrap;
@@ -961,7 +968,7 @@
 }
 
 .nut-modal-row-url {
-  font-size: 10px;
+  font-size: 11.5px;
   color: var(--text3);
   font-family: var(--font-mono);
   white-space: nowrap;
@@ -985,9 +992,9 @@
 }
 
 .nut-modal-footer {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text3);
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   padding-top: 8px;
   border-top: 1px solid var(--border);
   flex-shrink: 0;

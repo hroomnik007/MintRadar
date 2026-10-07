@@ -563,9 +563,9 @@ function MintDetailContent({ url }: { url: string }) {
   // 40 and (b) doesn't risk new wrapping on real mobile widths — 40 is the
   // only safe choice, and it reproduces the original mobile layout exactly.
   const isMobile = useIsMobile()
-  const AVATAR_COL_CAP = isMobile ? 40 : 112
+  const AVATAR_COL_CAP = isMobile ? 40 : 72
   const [nameboxRef, nameboxHeight] = useElementHeight<HTMLDivElement>()
-  const avatarSize = Math.min(nameboxHeight ?? (isMobile ? 40 : 80), AVATAR_COL_CAP)
+  const avatarSize = Math.min(nameboxHeight ?? (isMobile ? 40 : 72), AVATAR_COL_CAP)
 
   const [showQr, setShowQr] = useState(false)
   const [showReliabilityBreakdown, setShowReliabilityBreakdown] = useState(false)
@@ -1722,7 +1722,7 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="md-panel">
               {(email || twitter || nostr) && (
                 <>
-                  <div className="md-panel-title">Get in Touch</div>
+                  <div className="md-panel-title">Get in touch</div>
                   <div className="md-contact-grid">
                     {email && (
                       <div className="md-contact-card">
@@ -1862,7 +1862,7 @@ function MintDetailContent({ url }: { url: string }) {
             }
             return (
               <div className="md-panel">
-                <div className="md-panel-title">NUT Limits</div>
+                <div className="md-panel-title">NUT limits</div>
                 {!showLimitsGrid ? (
                   <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Limits not specified by this mint.</div>
                 ) : (
@@ -1892,7 +1892,7 @@ function MintDetailContent({ url }: { url: string }) {
 
             <div className="md-panel">
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:11}}>
-                <div className="md-panel-title" style={{marginBottom:0}}>NUT Compatibility</div>
+                <div className="md-panel-title" style={{marginBottom:0}}>NUT compatibility</div>
               {supportsBackupRestore ? (
                 <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
                   <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--accent)',background:'var(--green-soft)',border:'0.5px solid var(--green-soft-strong)',borderRadius:5,padding:'2px 7px'}}>
@@ -2521,7 +2521,7 @@ function MintDetailContent({ url }: { url: string }) {
           <div className="md-um-keysets-row">
             {knownMint?.units && knownMint.units.length > 0 && (
               <div className="md-panel md-um-panel md-um-panel-methods">
-                <div className="md-panel-title">Units & Methods</div>
+                <div className="md-panel-title">Units and methods</div>
                 {sortUnits(knownMint.units).map(unit => {
                   const mintChips = (knownMint.mintMethods ?? []).filter(m => m.unit === unit)
                   const meltChips = (knownMint.meltMethods ?? []).filter(m => m.unit === unit)

@@ -328,7 +328,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
     <div className="cmp-overlay" onClick={onClose}>
       <div className="cmp-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="cmp-modal-title" ref={dialogRef}>
         <div className="cmp-modal-header">
-          <div id="cmp-modal-title" style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Mint Comparison</div>
+          <div id="cmp-modal-title" style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text)' }}>Mint comparison</div>
           <button type="button" onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', padding: 4 }}><IcClose /></button>
         </div>
 

@@ -1231,8 +1231,8 @@
 .submit-modal {
   background: var(--bg2);
   border: 1px solid var(--border2);
-  border-radius: 16px;
-  padding: 22px;
+  border-radius: 14px;
+  padding: 20px;
   max-width: 440px;
   width: 100%;
   box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03);
@@ -1246,9 +1246,9 @@
 /* Corner close button — same look as .nut-modal-close; absolutely positioned, so the modal's layout is unchanged. */
 .submit-modal-close {
   position: absolute; top: 12px; right: 12px;
-  background: none; border: none; color: var(--text3);
+  background: none; border: 1px solid var(--border); color: var(--text2);
   font-size: 14px; line-height: 1; cursor: pointer;
-  width: 24px; height: 24px; padding: 0; border-radius: 4px;
+  width: 32px; height: 32px; padding: 0; border-radius: 8px;
   display: inline-flex; align-items: center; justify-content: center;
 }
 .submit-modal-close:hover { background: var(--bg3); color: var(--text); }
@@ -1259,9 +1259,9 @@
   font-family: var(--font-mono); margin-bottom: 2px;
 }
 .submit-modal-title {
-  font-size: 21px; font-weight: 700; color: var(--text);
+  font-size: 17px; font-weight: 600; color: var(--text);
   letter-spacing: -0.01em; line-height: 1.2;
-  font-family: var(--font-body); margin-bottom: 10px;
+  font-family: var(--font-body); margin-bottom: 12px; padding-right: 40px;
 }
 .submit-modal-desc {
   font-size: 13px; color: var(--text2); margin-bottom: 12px;
@@ -1270,7 +1270,7 @@
 .submit-modal-desc code { font-family: var(--font-mono); }
 .submit-modal-input {
   width: 100%; background: var(--bg3); border: 1px solid var(--submit-field-border);
-  border-radius: 12px; padding: 10px 14px; color: var(--text);
+  border-radius: 8px; padding: 10px 14px; color: var(--text);
   font-size: 15px; outline: none; font-family: var(--font-body);
   margin-bottom: 6px; box-sizing: border-box;
   transition: border-color var(--transition);
@@ -1890,7 +1890,7 @@
 }
 
 .cmp-modal {
-  background: var(--bg2);
+  background: var(--surface);
   border: 1px solid var(--border2);
   border-radius: 14px;
   min-width: min(900px, 90vw);
@@ -1927,12 +1927,12 @@
 .cmp-lbl {
   padding: 12px 14px 12px 0;
   border-bottom: 0.5px solid var(--border2);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 400;
   color: var(--text3);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-family: var(--font-mono);
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--font-body);
   display: flex;
   align-items: center;
   white-space: nowrap;
