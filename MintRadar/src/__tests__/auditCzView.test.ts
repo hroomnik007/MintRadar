@@ -62,7 +62,7 @@ describe('tiles from the stored detail (LNpay values)', () => {
     const t = tiles(LNPAY)
     expect(t['melts']?.tooltip).toBe('Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)')
     expect(t['mints']?.tooltip).toBe('Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)')
-    expect(t['attributed']?.tooltip).toContain('Failures that cashu.info attributes to this mint.')
+    expect(t['attributed']?.tooltip).toContain('that cashu.info attributes to this mint (attributed / all failed swaps)')
     expect(t['avg']?.tooltip).toBe('Average swap time over the last 7 days as reported by cashu.info.')
     expect(t['avg']?.tooltip).not.toMatch(/successful swaps/)
   })

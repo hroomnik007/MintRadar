@@ -61,7 +61,6 @@ export interface AuditCzView {
   tiles: AuditCzTile[]
   /** null hides the whole card. */
   checks: AuditCzChecks | null
-  /** "3 Oct" when the oldest swap MintRadar stored is newer than 7 days; null otherwise. */
   /** attributedFailures as published by the cashu.info feed (feeds the header tooltip sentence). */
   failuresAttributed: number | null
 }
