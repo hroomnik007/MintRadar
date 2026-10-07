@@ -11,6 +11,7 @@ import { pool } from './db.js'
 import { normalizeUrl } from './discovery.js'
 import { publicMintName } from './mintNames.js'
 import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
+import type { StoredAuditCzDetail, AuditCzDetailResponse } from './auditCzDetail.js'
 
 // Historical identifier (the service was audit.cashu.cz): stays as the `source` column / API value.
 export const AUDIT_CZ_SOURCE = 'audit.cashu.cz'
@@ -325,17 +326,18 @@ export async function syncAuditCz(): Promise<{ mints: number | null; swaps: numb
   return result
 }
 
-// ── Per-mint detail (swaps7d) ────────────────────────────────────────────────
-// GET /api/v1/mints/{id} carries the source's own 7-day swap counts, including
-// `errorsBlamed` (failures the auditor attributes to this mint). Fetched on demand, only when
-// somebody opens that mint's Audit tab, and cached per mint: at most one request per mint per
-// DETAIL_TTL_MS, whatever the traffic (worst case 65 mints x 6/h). A failure keeps the previous
-// value; with nothing cached the caller falls back to the swaps MintRadar stored. Display only.
-const AUDIT_CZ_DETAIL_URL = `${AUDIT_CZ_BASE_URL}/api/v1/mints/`
-const DETAIL_TTL_MS = 10 * 60_000
-const DETAIL_TIMEOUT_MS = 5_000
+// ── Per-mint detail ──────────────────────────────────────────────────────────
+// The detail is fetched by the 30-minute cron in auditCzDetail.ts and stored in audit_cz_detail;
+// this module only reads it. No visitor ever triggers an outbound request.
 
-/** The source's `swaps7d.all` counts plus `errorsBlamed`; `minted` / `melted` are asDest / asSource `success` (null when absent). */
+/** Mint id from a stored `page` URL (https://cashu.info/mint/{id}; rows from before the move still carry https://audit.cashu.cz/mint/{id}); null when it does not look like one. */
+export function auditCzIdFromPage(page: string | null | undefined): string | null {
+  if (!page) return null
+  const m = /^https:\/\/(?:cashu\.info|audit\.cashu\.cz)\/mint\/([^/?#]+)\/?$/.exec(page)
+  return m && AUDIT_CZ_ID_RE.test(m[1] as string) ? (m[1] as string) : null
+}
+
+/** `swaps7d.all` counts plus `errorsBlamed`; `minted` / `melted` are asDest / asSource `success` (null when absent). */
 export interface AuditCzDetail7d {
   total: number
   success: number
@@ -345,67 +347,20 @@ export interface AuditCzDetail7d {
   melted: number | null
 }
 
-/** Mint id from a stored `page` URL (https://cashu.info/mint/{id}; rows from before the move still carry https://audit.cashu.cz/mint/{id}); null when it does not look like one. */
-export function auditCzIdFromPage(page: string | null | undefined): string | null {
-  if (!page) return null
-  const m = /^https:\/\/(?:cashu\.info|audit\.cashu\.cz)\/mint\/([^/?#]+)\/?$/.exec(page)
-  return m && AUDIT_CZ_ID_RE.test(m[1] as string) ? (m[1] as string) : null
+export function auditCzDetail7dFrom(d: StoredAuditCzDetail | null): AuditCzDetail7d | null {
+  const s = d?.swaps7d
+  const all = s?.all
+  if (!s || !all || all.total === undefined || all.success === undefined || all.failed === undefined || s.errorsBlamed === undefined) return null
+  return { total: all.total, success: all.success, failed: all.failed, errorsBlamed: s.errorsBlamed, minted: s.asDest?.success ?? null, melted: s.asSource?.success ?? null }
 }
 
-const count = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null)
-
-/** null = unusable (missing or non-count fields): the caller keeps what it had. */
-export function parseAuditCzDetail(raw: unknown): AuditCzDetail7d | null {
-  if (!isObj(raw) || !isObj(raw['swaps7d'])) return null
-  const s7 = raw['swaps7d']
-  const all = s7['all']
-  if (!isObj(all)) return null
-  const total = count(all['total'])
-  const success = count(all['success'])
-  const failed = count(all['failed'])
-  const errorsBlamed = count(s7['errorsBlamed'])
-  if (total === null || success === null || failed === null || errorsBlamed === null) return null
-  const dir = (k: string): number | null => (isObj(s7[k]) ? count((s7[k] as Obj)['success']) : null)
-  return { total, success, failed, errorsBlamed, minted: dir('asDest'), melted: dir('asSource') }
-}
-
-interface DetailEntry { data: AuditCzDetail7d | null; nextTryAt: number }
-const detailCache = new Map<string, DetailEntry>()
-const detailInflight = new Map<string, Promise<AuditCzDetail7d | null>>()
-
-async function refreshDetail(id: string): Promise<AuditCzDetail7d | null> {
-  const raw = await (async () => {
-    try {
-      const res = await safeFetch(AUDIT_CZ_DETAIL_URL + id, { timeoutMs: DETAIL_TIMEOUT_MS, headers: { Accept: 'application/json' } })
-      if (!res || !res.ok) return null
-      return await readJsonLimited(res, RESPONSE_CAPS.auditCzMintDetail)
-    } catch {
-      return null
-    }
-  })()
-  const parsed = raw === null ? null : parseAuditCzDetail(raw)
-  const previous = detailCache.get(id)?.data ?? null
-  // A failed refresh keeps the old value and waits a full TTL before the next attempt,
-  // so an outage cannot turn page views into upstream requests.
-  detailCache.set(id, { data: parsed ?? previous, nextTryAt: Date.now() + DETAIL_TTL_MS })
-  return parsed ?? previous
-}
-
-/** Cached for 10 min per mint; concurrent callers share one request. null when nothing is known. */
-export function getAuditCzDetail(id: string): Promise<AuditCzDetail7d | null> {
-  const hit = detailCache.get(id)
-  if (hit && Date.now() < hit.nextTryAt) return Promise.resolve(hit.data)
-  const running = detailInflight.get(id)
-  if (running) return running
-  const p = refreshDetail(id).finally(() => { detailInflight.delete(id) })
-  detailInflight.set(id, p)
-  return p
-}
-
-/** Test helper. */
-export function resetAuditCzDetailCache(): void {
-  detailCache.clear()
-  detailInflight.clear()
+/** The stored detail of one mint (database only), or null when none was stored yet. */
+export async function readAuditCzDetail(canonicalUrl: string): Promise<AuditCzDetailResponse | null> {
+  const r = await pool.query(`SELECT detail, fetched_at FROM audit_cz_detail WHERE url = $1`, [canonicalUrl])
+  const row = r.rows[0] as { detail?: unknown; fetched_at?: unknown } | undefined
+  if (!row || !isObj(row.detail)) return null
+  const f = row.fetched_at
+  return { ...(row.detail as StoredAuditCzDetail), fetchedAt: f instanceof Date ? f.toISOString() : typeof f === 'string' ? f : null }
 }
 
 // ── Read side ────────────────────────────────────────────────────────────────
@@ -458,7 +413,9 @@ export interface AuditCzResponse {
     otherMintName: string | null
   }>
   stats7d: AuditCzStats7d | null
-  /** cashu.info's own 7-day counts for this mint (cached up to 10 min); null when unavailable. */
+  /** The validated subset of cashu.info's per-mint detail (stored by the 30-minute cron) plus `fetchedAt`; null when none is stored yet. Absent when the mint is not covered. */
+  detail?: AuditCzDetailResponse | null
+  /** Legacy shape for the current frontend, derived from `detail` (removed with the new Audit tab). null when the stored detail lacks the counts. */
   detail7d?: AuditCzDetail7d | null
 }
 
@@ -597,6 +554,7 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
       ).name,
     }
   })
+  const detail = await readAuditCzDetail(canonical)
   return {
     source: AUDIT_CZ_SOURCE,
     // Rebuilt from the id, so a row stored under the old host is served with the new page URL.
@@ -615,5 +573,7 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
     },
     swaps,
     stats7d,
+    detail,
+    detail7d: auditCzDetail7dFrom(detail),
   }
 }

@@ -42,3 +42,7 @@ So the same result **could** come from backend data by using `latencyMs` instead
 ## Notes
 - Production CSP (`deploy/nginx.conf`) allows `connect-src 'self' https: wss:` and `img-src 'self' https: data:`, so the CSP does not restrict any of the above; the dev server CSP (`vite.config.ts`) blocks `https:` fetches, so the mint/NIP-05 requests only appear in dev/e2e with `bypassCSP`.
 - The README claims were deliberately not touched in this task.
+
+## Server-side requests to the audit sources (not the visitor's browser)
+
+The backend (never the browser) contacts `cashu.info` (formerly audit.cashu.cz, same service): the mint feed and the swaps feed every 10 minutes (about 12 requests/h) and the per-mint detail every 30 minutes for each covered tracked mint, one at a time with a 2 s pause (about 130 requests/h). None is triggered by a visitor; `/api/mints/audit-cz` reads the database only. Public technical data about mints; no personal data and no IP addresses are requested, stored or shown.

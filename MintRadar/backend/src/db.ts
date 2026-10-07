@@ -167,6 +167,14 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_audit_cz_swaps_from ON audit_cz_swaps(from_url, at DESC);
     CREATE INDEX IF NOT EXISTS idx_audit_cz_swaps_to ON audit_cz_swaps(to_url, at DESC);
     CREATE INDEX IF NOT EXISTS idx_audit_cz_swaps_at ON audit_cz_swaps(at DESC);
+
+    -- Validated subset of the per-mint detail (auditCzDetail.ts), filled by the 30-minute cron.
+    -- Keyed like audit_cz_mints. Never holds an IP address, the onion address, score or reviews.
+    CREATE TABLE IF NOT EXISTS audit_cz_detail (
+      url TEXT PRIMARY KEY,
+      detail JSONB NOT NULL,
+      fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `)
 
   // Column migrations — each in its own query so a failure in one doesn't block others

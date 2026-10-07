@@ -8,6 +8,7 @@ const { db, fetchMock, readMock, poolMock } = vi.hoisted(() => {
     mints: new Map<string, Record<string, unknown>>(),
     aliases: new Map<string, string>(),
     swaps: new Map<string, Record<string, unknown>>(),
+    details: new Map<string, Record<string, unknown>>(),
   }
   const exec = (sql: string, p: unknown[] = []) => {
     if (sql.includes('INSERT INTO audit_cz_mints')) {
@@ -19,6 +20,9 @@ const { db, fetchMock, readMock, poolMock } = vi.hoisted(() => {
     } else if (sql.includes('FROM audit_cz_mints') && sql.includes('WHERE url = $1')) {
       const k = p[0] as string
       const hit = db.mints.get(k) ?? db.mints.get(db.aliases.get(k) ?? '')
+      return { rows: hit ? [hit] : [] }
+    } else if (sql.includes('FROM audit_cz_detail')) {
+      const hit = db.details.get(p?.[0] as string)
       return { rows: hit ? [hit] : [] }
     } else if (sql.includes('MAX(fetched_at)')) {
       return { rows: [{ fetched_at: null }] }
@@ -59,10 +63,10 @@ vi.mock('../prober.js', () => ({ probeMintToDb: vi.fn(), isValidCashuMint: vi.fn
 vi.mock('../ssrf.js', () => ({
   safeFetch: fetchMock,
   readJsonLimited: readMock,
-  RESPONSE_CAPS: { auditCzMints: 1048576, auditCzSwaps: 1048576 },
+  RESPONSE_CAPS: { auditCzMints: 1048576, auditCzSwaps: 1048576, auditCzMintDetail: 65536 },
 }))
 
-import { auditCzKey, parseAuditCzMintsResponse, parseAuditCzSwapsResponse, syncAuditCz, getAuditCzForMint, getAuditCzSyncStatus, parseAuditCzDetail, auditCzIdFromPage, getAuditCzDetail, resetAuditCzDetailCache } from '../auditCz.js'
+import { auditCzKey, parseAuditCzMintsResponse, parseAuditCzSwapsResponse, syncAuditCz, getAuditCzForMint, getAuditCzSyncStatus, auditCzIdFromPage, auditCzDetail7dFrom } from '../auditCz.js'
 
 const mint = (o: Record<string, unknown> = {}) => ({
   id: 'mint0001', url: 'https://mint.minibits.cash/Bitcoin', isTest: false, aliases: [], name: 'Minibits', state: 'ok',
@@ -81,7 +85,7 @@ const feed = (mints: unknown[], swaps: unknown[]) => {
 }
 
 beforeEach(() => {
-  db.mints.clear(); db.aliases.clear(); db.swaps.clear()
+  db.mints.clear(); db.aliases.clear(); db.swaps.clear(); db.details.clear()
   fetchMock.mockReset(); readMock.mockReset()
   vi.spyOn(console, 'log').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -212,21 +216,7 @@ describe('malformed items', () => {
   })
 })
 
-describe('per-mint detail (swaps7d)', () => {
-  const detail = (o: Record<string, unknown> = {}) => ({
-    id: 'm1', swaps7d: { all: { total: 179, success: 47, failed: 132, successRate: 26.2 }, asSource: { success: 21 }, asDest: { success: 26 }, errorsBlamed: 0 }, ...o,
-  })
-
-  beforeEach(() => { resetAuditCzDetailCache(); vi.useRealTimers() })
-
-  it('reads the counts and rejects a missing or malformed swaps7d', () => {
-    expect(parseAuditCzDetail(detail())).toEqual({ total: 179, success: 47, failed: 132, errorsBlamed: 0, minted: 26, melted: 21 })
-    expect(parseAuditCzDetail(detail({ swaps7d: { all: { total: 1, success: 1, failed: 0 }, errorsBlamed: 0 } }))).toMatchObject({ minted: null, melted: null })
-    expect(parseAuditCzDetail({ id: 'x' })).toBeNull()
-    expect(parseAuditCzDetail(detail({ swaps7d: { all: { total: 1, success: 1, failed: 0 } } }))).toBeNull()
-    expect(parseAuditCzDetail(detail({ swaps7d: { all: { total: -1, success: 0, failed: 0 }, errorsBlamed: 0 } }))).toBeNull()
-  })
-
+describe('per-mint detail (read side)', () => {
   it('takes the id from the stored page URL only', () => {
     expect(auditCzIdFromPage('https://cashu.info/mint/cmmx4ejkq000ta5drlwl1zehm')).toBe('cmmx4ejkq000ta5drlwl1zehm')
     expect(auditCzIdFromPage('https://audit.cashu.cz/mint/cmmx4ejkq000ta5drlwl1zehm')).toBe('cmmx4ejkq000ta5drlwl1zehm')
@@ -238,26 +228,28 @@ describe('per-mint detail (swaps7d)', () => {
     expect(auditCzIdFromPage(null)).toBeNull()
   })
 
-  it('caches for 10 minutes, shares the request, and keeps the old value when a refresh fails', async () => {
-    vi.useFakeTimers()
-    fetchMock.mockResolvedValue({ ok: true, status: 200 })
-    readMock.mockResolvedValue(detail())
-    const [a, b] = await Promise.all([getAuditCzDetail('abcdefgh12'), getAuditCzDetail('abcdefgh12')])
-    expect(a).toEqual(b)
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    await getAuditCzDetail('abcdefgh12')
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-
-    vi.advanceTimersByTime(10 * 60_000 + 1)
-    fetchMock.mockResolvedValue(null) // upstream down
-    expect(await getAuditCzDetail('abcdefgh12')).toEqual({ total: 179, success: 47, failed: 132, errorsBlamed: 0, minted: 26, melted: 21 })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    await getAuditCzDetail('abcdefgh12') // failure also waits a full TTL
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+  it('derives the legacy detail7d from the stored detail and null without counts', () => {
+    expect(auditCzDetail7dFrom({ swaps7d: { all: { total: 126, success: 107, failed: 19 }, errorsBlamed: 0, asSource: { success: 51 }, asDest: { success: 56 } } }))
+      .toEqual({ total: 126, success: 107, failed: 19, errorsBlamed: 0, minted: 56, melted: 51 })
+    expect(auditCzDetail7dFrom({ swaps7d: { all: { total: 1, success: 1, failed: 0 }, errorsBlamed: 0 } })).toMatchObject({ minted: null, melted: null })
+    expect(auditCzDetail7dFrom({ swaps7d: { all: { total: 1, success: 1, failed: 0 } } })).toBeNull()
+    expect(auditCzDetail7dFrom({ network: { asn: 1 } })).toBeNull()
+    expect(auditCzDetail7dFrom(null)).toBeNull()
   })
 
-  it('returns null when nothing was ever fetched', async () => {
-    fetchMock.mockResolvedValue({ ok: false, status: 500 })
-    expect(await getAuditCzDetail('abcdefgh12')).toBeNull()
+  it('the endpoint body carries detail (stored object plus fetchedAt) read from the database only', async () => {
+    feed([mint()], [])
+    await syncAuditCz()
+    fetchMock.mockClear()
+    db.details.set('https://mint.minibits.cash/Bitcoin', { detail: { swaps7d: { all: { total: 5, success: 4, failed: 1 }, errorsBlamed: 0 }, network: { asn: 14061 } }, fetched_at: new Date('2026-10-07T07:00:00Z') })
+    const r = await getAuditCzForMint('https://mint.minibits.cash/Bitcoin')
+    expect(r.detail).toEqual({ swaps7d: { all: { total: 5, success: 4, failed: 1 }, errorsBlamed: 0 }, network: { asn: 14061 }, fetchedAt: '2026-10-07T07:00:00.000Z' })
+    expect(r.detail7d).toMatchObject({ total: 5, errorsBlamed: 0 })
+    expect(fetchMock).not.toHaveBeenCalled() // no outbound request on a read
+    db.details.clear()
+    const none = await getAuditCzForMint('https://mint.minibits.cash/Bitcoin')
+    expect(none.detail).toBeNull()
+    expect(none.detail7d).toBeNull()
+    expect('detail' in (await getAuditCzForMint('https://nobody.example'))).toBe(false)
   })
 })

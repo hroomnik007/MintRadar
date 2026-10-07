@@ -3,6 +3,7 @@ import pLimit from 'p-limit'
 import { getKnownMints, probeMintToDb, pruneOldHistory, pruneUnvalidatedMints, pruneAbandonedMints, revalidateMints, backfillServerLocations } from './prober.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
 import { syncAuditCz } from './auditCz.js'
+import { syncAuditCzDetails } from './auditCzDetail.js'
 import { refreshAllMintReviews, recomputeReviewCountRollups, isReviewSyncRunning } from './reviewsSync.js'
 import { startReviewsSyncTimer } from './reviewsSchedule.js'
 import { refreshReliabilityMoversRollup } from './reliabilityMoversRollup.js'
@@ -79,6 +80,20 @@ export function startCron(): void {
     } catch (err) {
       if (process.env['NODE_ENV'] !== 'production') {
         console.error('[cron] cashu.info sync error:', err)
+      }
+    }
+  })
+
+  // cashu.info per-mint detail (display only): every 30 minutes, started after a random 0-4 min
+  // offset, one mint at a time with a 2 s pause (see auditCzDetail.ts). Visitors never trigger it.
+  cron.schedule('8,38 * * * *', async () => {
+    if (isAllowlistMode()) return
+    try {
+      await new Promise<void>(r => setTimeout(r, Math.floor(Math.random() * 4 * 60_000)))
+      await syncAuditCzDetails()
+    } catch (err) {
+      if (process.env['NODE_ENV'] !== 'production') {
+        console.error('[cron] cashu.info detail error:', err)
       }
     }
   })
