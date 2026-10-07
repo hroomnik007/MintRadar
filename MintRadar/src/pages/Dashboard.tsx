@@ -1467,10 +1467,9 @@ export default function Dashboard() {
             {submitTab === 'single' && (
               <div role="tabpanel" id="submit-panel-single" aria-labelledby="submit-tab-single">
                 <div className="submit-modal-desc" id="submit-desc">
-                  The audit checks <code>/v1/info</code> before adding. Only public mints are accepted. Paste a mint URL, or an npub to look up the mint it announced (NIP-87).
+                  Paste a mint URL, or an npub to find the mint it announced.
                 </div>
                 {/* Mirrors SUBMIT_RATE_LIMIT_MAX (20 per hour per IP) in backend/src/index.ts — manually synced like the Bulk limits below. */}
-                <div className="submit-input-hint" id="submit-limits">Up to 20 submissions per hour.</div>
                 {submitState !== 'success' && (
                   <>
                     <label htmlFor="submit-input" className="sr-only">Mint URL or npub</label>
@@ -1487,9 +1486,9 @@ export default function Dashboard() {
                       value={submitInput}
                       onChange={e => handleSubmitInputChange(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !submitDisabled) handleSubmitMint() }}
-                      aria-describedby="submit-limits submit-helper submit-status"
+                      aria-describedby="submit-helper submit-status"
                     />
-                    <div className="submit-input-hint" id="submit-helper">https:// is added if missing, or paste an npub1… key.</div>
+                    <div className="submit-input-hint" id="submit-helper">https:// is added if missing · 20 per hour.</div>
                     {/* One status region for everything the field produces: the reason for an unusable value, the key
                         lookup and the mint preview. */}
                     <div id="submit-status" className="submit-status-reserve" role="status" aria-live="polite">
@@ -1556,14 +1555,14 @@ export default function Dashboard() {
             {submitTab === 'bulk' && (
               <div role="tabpanel" id="submit-panel-bulk" aria-labelledby="submit-tab-bulk">
                 <div className="submit-modal-desc" id="bulk-desc">
-                  Paste one mint URL per line. <code>https://</code> is added if missing.
+                  Paste one mint URL per line.
                 </div>
                 {/* Static limits note — mirrors the backend's MAX_DISCOVER_BATCH
                     (100) and DISCOVER_BULK_RATE_LIMIT_MAX (10) constants in
                     backend/src/index.ts (no shared workspace between the two
                     packages, so this is a manually-synced number like
                     testMints.ts/auditScore.ts — update both if either changes). */}
-                <div className="submit-input-hint" id="bulk-limits">Up to 100 mints per submission, 10 submissions per hour.</div>
+                <div className="submit-input-hint" id="bulk-limits">https:// is added if missing · up to 100 mints, 10 submissions per hour.</div>
                 {!bulkRunning && !bulkDone && (
                   <>
                     <label htmlFor="bulk-input" className="sr-only">Mint URLs, one per line</label>
