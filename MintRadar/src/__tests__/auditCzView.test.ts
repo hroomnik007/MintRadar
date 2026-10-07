@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { adaptAuditCz, auditCzNeutralKind, auditCzStateTitle, auditCzSuccessTile, cleanAuditError, type AuditCzView } from '@/utils/auditCz'
-import type { AuditCzData } from '@/hooks/useAuditCz'
+import { adaptAuditCz, auditCzChecks, auditCzNeutralKind, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, type AuditCzView } from '@/utils/auditCz'
+import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
 
 type Row = AuditCzData['swaps'][number]
 let n = 0
@@ -11,50 +11,122 @@ const row = (o: Partial<Row> = {}): Row => ({
 const ok = (c: number) => Array.from({ length: c }, () => row())
 const failed = (c: number, stage: string | null, error: string | null = null) =>
   Array.from({ length: c }, () => row({ status: 'failed', stage, error }))
-const data = (swaps: Row[], detail7d?: AuditCzData['detail7d']): AuditCzData => ({
-  source: 'audit.cashu.cz', sourceUrl: null, fetchedAt: null, covered: true,
-  mint: { state: 'ok', uptime24h: 1, uptime7d: 1, uptime30d: 1, attributedFailures: 0, minted: 1, melted: 1, lastCheck: null },
-  swaps, stats7d: null, ...(detail7d !== undefined ? { detail7d } : {}),
-})
-const view = (swaps: Row[], detail7d?: AuditCzData['detail7d']): AuditCzView => adaptAuditCz(data(swaps, detail7d), Date.now()) as AuditCzView
-const tile = (swaps: Row[], detail7d?: AuditCzData['detail7d']) => {
-  const t = auditCzSuccessTile(view(swaps, detail7d))
-  return t.main ? `${t.main} · ${t.sub}` : t.sub
-}
 
-describe('Recent success rate tile = the displayed swaps minus the neutral ones', () => {
-  it('Minibits-like: 5 OK + 3 melt failures -> 5 / 8 · 63% ok', () => {
-    expect(tile([...ok(5), ...failed(3, 'melt', 'Payment failed')])).toBe('5 / 8 · 63% ok')
+// The stored subset of the real mint.lnpay.cz detail.
+const LNPAY: AuditCzDetail = {
+  swaps7d: {
+    all: { total: 126, success: 107, failed: 19, avgMs: 8289 },
+    asSource: { total: 64, success: 51, failed: 13, avgMs: 11719 },
+    asDest: { total: 62, success: 56, failed: 6, avgMs: 5166 },
+    errorsBlamed: 0, dleq: { valid: 56, invalid: 0, missing: 0 }, quoteMs: 306, meltMs: 1342, mintMs: 166,
+  },
+  integrity: { proof_state: { ok: true, checked: 9, spent: 0, spentSat: 0, pending: 0 } },
+  network: { ipv4: true, ipv6: true, asn: 14061, asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US', country: 'US' },
+  fetchedAt: '2026-10-07T07:00:00.000Z',
+}
+const data = (swaps: Row[], detail: AuditCzData['detail'] = LNPAY, over: Partial<AuditCzData> = {}): AuditCzData => ({
+  source: 'audit.cashu.cz', sourceUrl: null, fetchedAt: '2026-10-07T07:05:00.000Z', covered: true,
+  mint: { state: 'ok', uptime24h: 1, uptime7d: 1, uptime30d: 1, attributedFailures: 0, minted: 1, melted: 1, lastCheck: null },
+  swaps, stats7d: null, detail, ...over,
+})
+const view = (swaps: Row[], detail: AuditCzData['detail'] = LNPAY, over: Partial<AuditCzData> = {}, now = Date.parse('2026-10-07T07:30:00Z')): AuditCzView =>
+  adaptAuditCz(data(swaps, detail, over), now) as AuditCzView
+const tiles = (d: AuditCzDetail) => Object.fromEntries(view([], d).tiles.map(t => [t.key, t]))
+
+describe('tiles from the stored detail (LNpay values)', () => {
+  it('fractions, attributed caption and average time', () => {
+    const t = tiles(LNPAY)
+    expect(t['melts']).toMatchObject({ value: '51 / 64', label: 'Paid out melts' })
+    expect(t['mints']).toMatchObject({ value: '56 / 62', label: 'Received mints' })
+    expect(t['attributed']).toMatchObject({ value: '0', label: 'Attributed of 19 failed swaps' })
+    expect(t['avg']).toMatchObject({ value: '8.3 s', label: 'Avg swap time' })
+    expect(view([]).tiles.map(x => x.key)).toEqual(['melts', 'mints', 'attributed', 'avg'])
   })
-  it('4 OK, 2 melt failures, 3 limits, 2 balance -> 4 / 6 · 67% ok', () => {
-    expect(tile([...ok(4), ...failed(2, 'melt'), ...failed(3, 'limits'), ...failed(2, 'balance')])).toBe('4 / 6 · 67% ok')
+  it('singular caption for one failed swap', () => {
+    expect(tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { failed: 1 } } })['attributed']?.label).toBe('Attributed of 1 failed swap')
   })
-  it('pending swaps are not counted', () => {
-    expect(tile([...ok(3), row({ status: 'pending' }), row({ status: 'pending' })])).toBe('3 / 3 · 100% ok')
+  it('a tile whose field is missing is hidden', () => {
+    expect(Object.keys(tiles({ fetchedAt: null, swaps7d: { asSource: { success: 1, total: 2 } } }))).toEqual(['melts'])
+    expect(Object.keys(tiles({ fetchedAt: null, swaps7d: { asDest: { success: 3 } } }))).toEqual([])
+    expect(Object.keys(tiles({ fetchedAt: null, network: { asn: 1 } }))).toEqual([])
+    expect(tiles({ fetchedAt: null, swaps7d: { errorsBlamed: 2 } })['attributed']?.label).toBe('Attributed')
   })
-  it('every other stage and unknown tokens stay counted as failures', () => {
-    expect(tile([...ok(2), ...failed(1, 'mint'), ...failed(1, 'mint_quote'), row({ status: 'cancelled' })])).toBe('2 / 5 · 40% ok')
+  it('formats the average: seconds with one decimal, under a second in ms', () => {
+    expect(formatAvgSwapTime(8289)).toBe('8.3 s')
+    expect(formatAvgSwapTime(4868)).toBe('4.9 s')
+    expect(formatAvgSwapTime(999.4)).toBe('999 ms')
+    expect(formatAvgSwapTime(999.6)).toBe('1.0 s')
+    expect(formatAvgSwapTime(0)).toBe('0 ms')
   })
-  it('counted below 3 -> n/a (also when only neutral rows exist)', () => {
-    expect(tile([...ok(2), ...failed(5, 'limits')])).toBe('n/a')
-    expect(tile([...failed(4, 'limits')])).toBe('n/a')
-    expect(tile([])).toBe('n/a')
+  it('tooltips are the honest wording', () => {
+    const t = tiles(LNPAY)
+    expect(t['melts']?.tooltip).toBe('Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)')
+    expect(t['mints']?.tooltip).toBe('Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)')
+    expect(t['attributed']?.tooltip).toContain('Failures that cashu.info attributes to this mint.')
+    expect(t['avg']?.tooltip).toBe('Average swap time over the last 7 days as reported by cashu.info.')
+    expect(t['avg']?.tooltip).not.toMatch(/successful swaps/)
   })
-  it('does not depend on the detail (errorsBlamed, success) at all', () => {
-    const swaps = [...ok(5), ...failed(3, 'melt')]
-    const d = { total: 179, success: 47, failed: 132, errorsBlamed: 0, minted: 26, melted: 21 }
-    expect(tile(swaps, d)).toBe('5 / 8 · 63% ok')
-    expect(tile(swaps, null)).toBe('5 / 8 · 63% ok')
+  it('not covered or no detail stored: no view (the 8333 panel or the empty panel stays)', () => {
+    expect(adaptAuditCz(data([], null), Date.now())).toBeNull()
+    expect(adaptAuditCz({ ...data([]), detail: undefined } as unknown as AuditCzData, Date.now())).toBeNull()
+    expect(adaptAuditCz({ ...data([]), covered: false, mint: null }, Date.now())).toBeNull()
   })
-  it('still hands the detail on for the Mints / Melts tiles', () => {
-    const v = view([], { total: 5, success: 1, failed: 4, errorsBlamed: 0, minted: 3, melted: 2 })
-    expect(v.detail7d?.errorsBlamed).toBe(0)
-    expect(v.nMints).toBe(3)
-    expect(v.nMelts).toBe(2)
-    expect(view([]).nMints).toBe(1) // list feed fallback
+})
+
+describe('Checks by the auditor', () => {
+  const c = (o: Partial<AuditCzDetail>) => auditCzChecks({ fetchedAt: null, ...o })
+  it('good state', () => {
+    expect(c(LNPAY)).toEqual({
+      signatures: 'Proof signatures 56 valid, 0 invalid — the mint signed them with its published key.',
+      proofs: 'Our ecash 9 proofs still unspent — the mint has not marked them spent.',
+    })
   })
-  it('the table keeps listing every swap', () => {
-    expect(view([...ok(2), ...failed(3, 'limits'), row({ status: 'pending' })]).swaps).toHaveLength(6)
+  it('invalid signatures: no accusation words, missing appended', () => {
+    const r = c({ swaps7d: { dleq: { valid: 40, invalid: 3, missing: 2 } } })
+    expect(r?.signatures).toBe("Proof signatures 40 valid, 3 invalid — some signatures did not verify against the mint's published key. 2 without a proof.")
+    expect(r?.signatures).not.toMatch(/fraud|cheat|fake|scam|steal/i)
+  })
+  it('spent and pending proofs', () => {
+    expect(c({ integrity: { proof_state: { checked: 9, spent: 2, pending: 1 } } })?.proofs).toBe("2 of the auditor's 9 proofs were marked spent by the mint. 1 pending.")
+    expect(c({ integrity: { proof_state: { checked: 9, spent: 0, pending: 2 } } })?.proofs).toBe('Our ecash 9 proofs still unspent — the mint has not marked them spent. 2 pending.')
+  })
+  it('lines without data are hidden, and the whole card when both are', () => {
+    expect(c({ swaps7d: { dleq: { valid: 0, invalid: 0, missing: 0 } }, integrity: { proof_state: { checked: 0 } } })).toBeNull()
+    expect(c({ network: { asn: 1 } })).toBeNull()
+    expect(c({ integrity: { proof_state: { checked: 4, spent: 0, pending: 0 } } })).toEqual({ signatures: null, proofs: 'Our ecash 4 proofs still unspent — the mint has not marked them spent.' })
+    expect(c({ swaps7d: { dleq: { valid: 5 } } })?.proofs).toBeNull()
+    expect(view([], { fetchedAt: null, network: { asn: 1 } }).checks).toBeNull()
+  })
+  it('no swap-test line', () => {
+    const r = c({ ...LNPAY, integrity: { swap_test: { ok: false, recentFail: 7 }, proof_state: LNPAY.integrity?.proof_state ?? {} } })
+    expect(JSON.stringify(r)).not.toMatch(/swap test|swap_test/i)
+  })
+  it('hostile numbers cannot inject text (only numbers are interpolated)', () => {
+    const r = c({ swaps7d: { dleq: { valid: '<b>1</b>' as unknown as number, invalid: 0, missing: 0 } } })
+    expect(r).toBeNull()
+  })
+})
+
+describe('the two tables, the bar rows and the freshness', () => {
+  const mixed = [row({ direction: 'from', otherMintUrl: 'https://dest.example' }), row({ direction: 'to', otherMintUrl: 'https://src.example' }), row({ direction: 'from' })]
+  it('splits by direction and keeps all rows for the bar, newest first order preserved', () => {
+    const v = view(mixed)
+    expect(v.swaps).toHaveLength(3)
+    expect(v.fromRows.map(r => r.toUrl)).toEqual(['https://dest.example', 'https://o.example'])
+    expect(v.toRows.map(r => r.toUrl)).toEqual(['https://src.example'])
+  })
+  it('collected since: only when the oldest stored swap is newer than 7 days', () => {
+    const stats = (collectedSince: string | null) => ({ stats7d: { windowDays: 7 as const, collectedSince, melts: { paid: 0, failed: 0, pending: 0, amountPaid: 0, feesPaid: 0 }, mints: { paid: 0, failed: 0, pending: 0, amountPaid: 0, feesPaid: 0 }, avgDurationMsPaid: null, swapsCounted: 0 } })
+    expect(view([], LNPAY, stats('2026-10-04T10:00:00Z')).collectedSince).toBe('4 Oct')
+    expect(view([], LNPAY, stats('2026-09-20T10:00:00Z')).collectedSince).toBeNull()
+    expect(view([], LNPAY, stats(null)).collectedSince).toBeNull()
+    expect(view([]).collectedSince).toBeNull()
+  })
+  it('not updated recently only after 90 minutes (from the stored detail)', () => {
+    expect(view([], LNPAY, {}, Date.parse('2026-10-07T08:29:00Z')).notRecent).toBe(false)
+    expect(view([], LNPAY, {}, Date.parse('2026-10-07T08:31:00Z')).notRecent).toBe(true)
+    expect(view([], { ...LNPAY, fetchedAt: null }, { fetchedAt: '2026-10-07T07:00:00Z' }, Date.parse('2026-10-07T09:00:00Z')).notRecent).toBe(true)
+    expect(view([], { ...LNPAY, fetchedAt: null }, { fetchedAt: null }).notRecent).toBe(false)
   })
 })
 
@@ -79,15 +151,8 @@ describe('neutral classification (adapter) and the error-text fallback', () => {
     expect(kind({ status: 'failed', stage: 'melt', error: 'Insufficient balance: need 27 sat' })).toBeUndefined()
     expect(auditCzNeutralKind({ state: 'failed', stage: null, error: null })).toBeUndefined()
   })
-  it('the text fallback feeds the tile too', () => {
-    expect(tile([...ok(3), ...failed(2, null, 'Amount 61 sat is below the mint minimum of 100 sat')])).toBe('3 / 3 · 100% ok')
-  })
-})
-
-describe('sinceLabel', () => {
-  it('is the date of the oldest swap in the list (UTC)', () => {
-    expect(view([row({ at: '2026-10-04T10:00:00Z' }), row({ at: '2026-10-02T23:30:00Z' })]).sinceLabel).toBe('2 Oct')
-    expect(view([]).sinceLabel).toBeNull()
+  it('the text fallback classifies the rows', () => {
+    expect(view([...ok(3), ...failed(2, null, 'Amount 61 sat is below the mint minimum of 100 sat')]).swaps.filter(s => s.neutral === 'limits')).toHaveLength(2)
   })
 })
 

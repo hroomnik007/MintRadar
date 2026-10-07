@@ -1,15 +1,15 @@
-import type { AuditCzData, AuditCzDetail7d } from '@/hooks/useAuditCz'
+import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
 
-// Adapter: cashu.info endpoint response → the data shape the existing audit.8333.space Audit
-// tab components consume (strip tiles, outcome bar, Recent swaps table), so the same rendering
-// code computes everything. Pure and display-only; numbers are counted by MintRadar from the
-// swaps it stored and never merged with audit.8333.space values.
+// Adapter: cashu.info endpoint response → what the cashu.info Audit tab renders (four tiles from
+// the stored 7-day detail, the auditor's checks, the outcome bar and two swap tables from the swaps
+// MintRadar stored). Pure and display-only; never merged with audit.8333.space values. cashu.info's
+// own score, score parts and reviews are not part of the response and never shown.
 
 // The only link we render: exactly https://cashu.info/mint/<id> (the backend builds it from a validated id).
 const AUDIT_CZ_PAGE_RE = /^https:\/\/cashu\.info\/mint\/[A-Za-z0-9]{8,64}$/
-export const AUDIT_CZ_NOT_RECENT_MS = 30 * 60 * 1000
+/** The detail job runs every 30 minutes: older than three runs is "not updated recently". */
+export const AUDIT_CZ_NOT_RECENT_MS = 90 * 60 * 1000
 
-/** Same shape as a row of GET /api/mints/swaps (audit.8333.space), plus two cashu.info extras. */
 export type AuditCzNeutralKind = 'limits' | 'balance' | 'pending'
 
 export interface AuditSwapRow {
@@ -27,31 +27,43 @@ export interface AuditSwapRow {
   neutral?: AuditCzNeutralKind
   /** Unused for cashu.info from-only rows; the To cell uses toUrl. */
   counterpart?: string
+  /** cashu.info view only: `from` = this mint paid out (the other column is the destination), `to` = this mint received. */
+  direction?: 'from' | 'to'
   /** cashu.info view only, rows that are not OK: the sanitized failure text (cleanAuditError), shown as the State cell's tooltip and as visually hidden text. */
   reason?: string
 }
 
+export interface AuditCzTile {
+  key: 'melts' | 'mints' | 'attributed' | 'avg'
+  value: string
+  /** Uppercase by CSS; a plain sentence-case string here. */
+  label: string
+  tooltip: string
+}
+
+export interface AuditCzChecks {
+  signatures: string | null
+  proofs: string | null
+}
+
 export interface AuditCzView {
   sourceHref: string | null
-  /** lastCheck of the source (ISO); null when unknown. */
-  lastCheck: string | null
-  /** Our own sync (fetchedAt) older than 30 min. */
+  /** When our stored detail (else the feed) was last fetched (ISO); null when unknown. */
+  checkedAt: string | null
+  /** Older than 90 minutes (the detail job runs every 30). */
   notRecent: boolean
+  /** Both directions, newest first: the outcome bar reads this. */
   swaps: AuditSwapRow[]
-  /** The tile's counts over the SAME swaps as the bar and the table: neutral rows (limits, balance, pending)
-   *  are left out of both. recentTotal = counted swaps, recentErrors = counted swaps that are not OK. null when none counted. */
-  recentTotal: number | null
-  recentErrors: number | null
-  /** "3 Oct": date of the oldest swap in the list (UTC); null without swaps. */
-  sinceLabel: string | null
-  /** The source's own 7-day counts; feeds Mints / Melts and the attributed-failures sentence of the tile tooltip. */
-  detail7d: AuditCzDetail7d | null
-  /** Mean duration of OK swaps with a known time (as computeSwapStats does); null otherwise. */
-  avgTimeMs: number | null
-  /** detail.asDest.success / asSource.success, else the list feed's swaps.minted / swaps.melted. null shows "—". */
-  nMints: number | null
-  nMelts: number | null
-  /** attributedFailures as published by cashu.info (its own window). */
+  /** This mint paid out ("Swaps from this mint", first column To = the destination). */
+  fromRows: AuditSwapRow[]
+  /** This mint received ("Swaps to this mint", first column From = the source). */
+  toRows: AuditSwapRow[]
+  tiles: AuditCzTile[]
+  /** null hides the whole card. */
+  checks: AuditCzChecks | null
+  /** "3 Oct" when the oldest swap MintRadar stored is newer than 7 days; null otherwise. */
+  collectedSince: string | null
+  /** attributedFailures as published by the cashu.info feed (feeds the header tooltip sentence). */
   failuresAttributed: number | null
 }
 
@@ -59,8 +71,6 @@ function swapState(status: string): string {
   if (status === 'success') return 'OK'
   return status // failed → "failed"; pending / unknown tokens are shown as they are
 }
-
-export const AUDIT_CZ_MIN_SWAPS = 3
 
 export const AUDIT_CZ_NEUTRAL_TEXT: Record<'limits' | 'balance', string> = {
   limits: 'below minimum',
@@ -135,31 +145,86 @@ export function auditCzStateTitle(s: Pick<AuditSwapRow, 'state' | 'neutral' | 'r
   return reason ?? undefined
 }
 
-/** Recent success rate tile of the cashu.cz view: "{ok} / {counted}" + "{pct}% ok", or n/a below 3 counted swaps. */
-export function auditCzSuccessTile(v: { recentTotal: number | null; recentErrors: number | null }): { counted: number; main: string | null; sub: string } {
-  const counted = v.recentTotal ?? 0
-  if (counted < AUDIT_CZ_MIN_SWAPS) return { counted, main: null, sub: 'n/a' }
-  const ok = counted - (v.recentErrors ?? 0)
-  return { counted, main: `${ok} / ${counted}`, sub: `${Math.round((ok / counted) * 100)}% ok` }
-}
-
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-function oldestLabel(swaps: AuditSwapRow[]): string | null {
-  let oldest = Infinity
-  for (const s of swaps) {
-    const t = s.createdAt ? new Date(s.createdAt).getTime() : NaN
-    if (Number.isFinite(t) && t < oldest) oldest = t
-  }
-  if (!Number.isFinite(oldest)) return null
-  const d = new Date(oldest)
+function dayLabel(iso: string): string | null {
+  const t = new Date(iso).getTime()
+  if (!Number.isFinite(t)) return null
+  const d = new Date(t)
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`
 }
 
-/** Returns null when the mint is not covered (the caller then shows the audit.8333.space panel). */
+const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : undefined)
+
+/** "8.3 s"; under one second "{n} ms". */
+export function formatAvgSwapTime(ms: number): string {
+  const r = Math.round(ms)
+  return r < 1000 ? `${r} ms` : `${(r / 1000).toFixed(1)} s`
+}
+
+const fmt = (n: number) => n.toLocaleString('en-US')
+
+function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
+  const s = d.swaps7d
+  if (!s) return []
+  const tiles: AuditCzTile[] = []
+  const meltsOk = num(s.asSource?.success), meltsAll = num(s.asSource?.total)
+  if (meltsOk !== undefined && meltsAll !== undefined) tiles.push({
+    key: 'melts', value: `${fmt(meltsOk)} / ${fmt(meltsAll)}`, label: 'Paid out melts',
+    tooltip: 'Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)',
+  })
+  const mintsOk = num(s.asDest?.success), mintsAll = num(s.asDest?.total)
+  if (mintsOk !== undefined && mintsAll !== undefined) tiles.push({
+    key: 'mints', value: `${fmt(mintsOk)} / ${fmt(mintsAll)}`, label: 'Received mints',
+    tooltip: 'Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)',
+  })
+  const blamed = num(s.errorsBlamed)
+  if (blamed !== undefined) {
+    const failed = num(s.all?.failed)
+    tiles.push({
+      key: 'attributed', value: fmt(blamed),
+      label: failed !== undefined ? `Attributed of ${fmt(failed)} failed swap${failed === 1 ? '' : 's'}` : 'Attributed',
+      tooltip: 'Failures that cashu.info attributes to this mint. The other failed swaps were not caused by this mint, for example amounts below its minimum or Lightning routing.',
+    })
+  }
+  const avg = num(s.all?.avgMs)
+  if (avg !== undefined) tiles.push({
+    key: 'avg', value: formatAvgSwapTime(avg), label: 'Avg swap time',
+    tooltip: 'Average swap time over the last 7 days as reported by cashu.info.',
+  })
+  return tiles
+}
+
+/** The two sentences of the "Checks by the auditor" card; null for a line without data, the card hides when both are null. */
+export function auditCzChecks(d: AuditCzDetail): AuditCzChecks | null {
+  const dl = d.swaps7d?.dleq
+  const valid = num(dl?.valid) ?? 0, invalid = num(dl?.invalid) ?? 0, missing = num(dl?.missing) ?? 0
+  let signatures: string | null = null
+  if (valid + invalid + missing > 0) {
+    const head = invalid > 0
+      ? `Proof signatures ${valid} valid, ${invalid} invalid — some signatures did not verify against the mint's published key.`
+      : valid > 0
+        ? `Proof signatures ${valid} valid, 0 invalid — the mint signed them with its published key.`
+        : 'Proof signatures 0 valid, 0 invalid.'
+    signatures = missing > 0 ? `${head} ${missing} without a proof.` : head
+  }
+  const ps = d.integrity?.proof_state
+  const checked = num(ps?.checked) ?? 0, spent = num(ps?.spent) ?? 0, pending = num(ps?.pending) ?? 0
+  let proofs: string | null = null
+  if (checked > 0) {
+    const noun = checked === 1 ? 'proof' : 'proofs'
+    const head = spent > 0
+      ? `${spent} of the auditor's ${checked} ${noun} ${spent === 1 ? 'was' : 'were'} marked spent by the mint.`
+      : `Our ecash ${checked} ${noun} still unspent — the mint has not marked ${checked === 1 ? 'it' : 'them'} spent.`
+    proofs = pending > 0 ? `${head} ${pending} pending.` : head
+  }
+  return signatures === null && proofs === null ? null : { signatures, proofs }
+}
+
+/** Returns null when the mint is not covered or no detail is stored (the caller then shows the audit.8333.space panel or the empty panel). */
 export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditCzView | null {
-  if (!data || !data.covered || !data.mint) return null
-  const swaps: AuditSwapRow[] = data.swaps.map(s => {
+  if (!data || !data.covered || !data.mint || !data.detail) return null
+  const rows: AuditSwapRow[] = data.swaps.map(s => {
     const state = swapState(s.status)
     const reason = state === 'OK' ? null : cleanAuditError(s.error)
     return {
@@ -172,28 +237,27 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
       state,
       error: s.error,
       stage: s.stage,
+      direction: s.direction,
       ...(reason ? { reason } : {}),
     }
   }).map(r => {
     const neutral = auditCzNeutralKind(r)
     return neutral ? { ...r, neutral } : r
   })
-  // The tile counts exactly the rows the bar and the table show as OK or red.
-  const counted = swaps.filter(s => !s.neutral)
-  const okTimes = swaps.filter(s => s.state === 'OK' && s.timeTakenMs !== null).map(s => s.timeTakenMs as number)
-  const fetchedMs = data.fetchedAt ? new Date(data.fetchedAt).getTime() : NaN
+  const checkedAt = data.detail.fetchedAt ?? data.fetchedAt
+  const checkedMs = checkedAt ? new Date(checkedAt).getTime() : NaN
+  const since = data.stats7d?.collectedSince ?? null
+  const sinceMs = since ? new Date(since).getTime() : NaN
   return {
     sourceHref: data.sourceUrl && AUDIT_CZ_PAGE_RE.test(data.sourceUrl) ? data.sourceUrl : null,
-    lastCheck: data.mint.lastCheck,
-    notRecent: Number.isFinite(fetchedMs) && now - fetchedMs > AUDIT_CZ_NOT_RECENT_MS,
-    swaps,
-    recentTotal: counted.length > 0 ? counted.length : null,
-    recentErrors: counted.length > 0 ? counted.filter(s => s.state !== 'OK').length : null,
-    sinceLabel: oldestLabel(swaps),
-    detail7d: data.detail7d ?? null,
-    avgTimeMs: okTimes.length > 0 ? okTimes.reduce((a, b) => a + b, 0) / okTimes.length : null,
-    nMints: data.detail7d?.minted ?? data.mint.minted,
-    nMelts: data.detail7d?.melted ?? data.mint.melted,
+    checkedAt,
+    notRecent: Number.isFinite(checkedMs) && now - checkedMs > AUDIT_CZ_NOT_RECENT_MS,
+    swaps: rows,
+    fromRows: rows.filter(r => r.direction === 'from'),
+    toRows: rows.filter(r => r.direction === 'to'),
+    tiles: auditCzTiles(data.detail),
+    checks: auditCzChecks(data.detail),
+    collectedSince: since && Number.isFinite(sinceMs) && now - sinceMs < 7 * 86_400_000 ? dayLabel(since) : null,
     failuresAttributed: data.mint.attributedFailures,
   }
 }

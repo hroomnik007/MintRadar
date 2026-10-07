@@ -20,6 +20,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { InfoTooltip } from '@/components/InfoTooltip'
+import { AuditCzTiles, AuditCzChecks, AuditCzSwapTables } from '@/components/AuditCzCards'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
@@ -29,7 +30,7 @@ import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { auditFreshness } from '@/utils/auditFreshness'
 import { useAuditCz } from '@/hooks/useAuditCz'
-import { adaptAuditCz, auditCzStateTitle, auditCzSuccessTile, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import { sortUnits } from '@/utils/sortUnits'
 import {
@@ -609,6 +610,9 @@ function MintDetailContent({ url }: { url: string }) {
   const auditAvgTimeTooltip = useTapTooltip(auditAvgTimeRef)
   const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'nuts' | 'audit' | 'reviews'>('overview')
   const [showAllAuditSwaps, setShowAllAuditSwaps] = useState(false)
+  // cashu.info view: each of the two swap tables expands on its own.
+  const [showAllCzFrom, setShowAllCzFrom] = useState(false)
+  const [showAllCzTo, setShowAllCzTo] = useState(false)
   // Last ≤100 audit.8333.space swaps for this mint (backend/src/discovery.ts's
   // mint_audit_swaps, served via GET /api/mints/swaps — never audit.8333.space
   // directly). Lazily fetched only once the Audit tab is actually opened, and
@@ -970,7 +974,7 @@ function MintDetailContent({ url }: { url: string }) {
   const auditNeedsFallback = !has8333Audit || freshness.auditorDataOld || freshness.syncStale
   const auditSource = auditSourcePick ?? (auditNeedsFallback ? 'cz' : '8333')
   const czView = czData !== null && (!has8333Audit || auditSource === 'cz') ? czData : null
-  const czCheckedMin = czView?.lastCheck ? Math.max(0, Math.floor((now - new Date(czView.lastCheck).getTime()) / 60_000)) : null
+  const czCheckedMin = czView?.checkedAt ? Math.max(0, Math.floor((now - new Date(czView.checkedAt).getTime()) / 60_000)) : null
   const czInfoText = czView
     ? `${has8333Audit && !auditNeedsFallback ? 'This tab shows data from cashu.info (Cashu Mints Auditor)' : 'audit.8333.space has no recent data for this mint, so this tab shows data from cashu.info (Cashu Mints Auditor)'}${
       czCheckedMin !== null && Number.isFinite(czCheckedMin) || czView.notRecent
@@ -986,8 +990,8 @@ function MintDetailContent({ url }: { url: string }) {
   ) : null
 
   // Strip values: audit.8333.space as stored, or (cz view) counted from the swaps MintRadar collected.
-  const stripTotal = czView ? czView.recentTotal : breakdownAuditRecentTotal
-  const stripErrors = czView ? czView.recentErrors : breakdownAuditRecentErrors
+  const stripTotal = breakdownAuditRecentTotal
+  const stripErrors = breakdownAuditRecentErrors
   // "still counts toward the score" is only true when the rolling window is usable.
   const auditDataCounts = breakdownAuditRecentTotal !== null && !isAuditUnknown(breakdownAuditRecentTotal)
   const auditStaleNote = freshness.auditorDataOld && auditDataCounts
@@ -1027,54 +1031,36 @@ function MintDetailContent({ url }: { url: string }) {
   // Online Mints "55/56"), and an error count read the opposite way at a
   // glance. formatAuditSuccessRatio() does the total-minus-errors math; the
   // sub-line no longer repeats a percentage of the same fraction.
-  // cashu.cz view: the tile counts the same swaps as the bar and the table below (adaptAuditCz drops the
-  // neutral rows: limits, balance, pending). Neutral colour. The 8333 tile is unchanged.
-  const czDetail = czView?.detail7d ?? null
-  const czTile = czView ? auditCzSuccessTile(czView) : null
-  const stripRecentSuccessDisplay = czTile
-    ? (czTile.main ?? '—')
-    : formatAuditSuccessRatio(stripTotal, stripErrors)
+  const stripRecentSuccessDisplay = formatAuditSuccessRatio(stripTotal, stripErrors)
   const stripRecentSuccessPct = stripTotal !== null && stripTotal > 0
     ? Math.round(((stripTotal - (stripErrors ?? 0)) / stripTotal) * 100)
     : null
-  const stripRecentSuccessSub = czTile
-    ? czTile.sub
-    : stripTotal === null
-      ? 'no recent swaps'
-      : isAuditUnknown(stripTotal)
-        ? 'too few to score'
-        : `${stripRecentSuccessPct}% ok`
+  const stripRecentSuccessSub = stripTotal === null
+    ? 'no recent swaps'
+    : isAuditUnknown(stripTotal)
+      ? 'too few to score'
+      : `${stripRecentSuccessPct}% ok`
 
   // Average duration of the successful swaps in the same rolling window
   // (backend/src/discovery.ts's computeSwapStats() → mints.audit_avg_time_ms).
   const auditAvgTimeMs = knownMint?.auditAvgTimeMs ?? null
-  const stripAvgTimeMs = czView ? czView.avgTimeMs : auditAvgTimeMs
-  const stripAvgTimeDisplay = stripAvgTimeMs !== null ? `${Math.round(stripAvgTimeMs)} ms` : 'n/a'
-  const stripMints = czView ? czView.nMints : auditNMints
-  const stripMelts = czView ? czView.nMelts : auditNMelts
-  const stripReliabilityColor = czView ? 'var(--text)' : recentReliabilityColor
-  const tipMints = czView
-    ? 'Number of successful mints counted by cashu.info over the window used by cashu.info.'
-    : 'All-time successful ecash minting operations the auditor has run against this mint.'
-  const tipMelts = czView
-    ? `Successful ecash melting operations (redeeming ecash back to Lightning), counted by cashu.info over the window used by cashu.info.`
-    : 'All-time successful ecash melting operations (redeeming ecash back to Lightning).'
-  const tipSuccess = czView
-    ? (czTile?.main
-      ? `Successful swaps out of the recent swaps from this mint that MintRadar collected from cashu.info (up to the latest 100${czView.sinceLabel ? `, since ${czView.sinceLabel}, the date of the oldest swap in the list` : ''}). Swaps below the mint's minimum amount, swaps the auditor could not fund and pending swaps are not counted. Failed swaps are shown in the table.${czDetail ? ` cashu.info attributes ${czDetail.errorsBlamed} failure${czDetail.errorsBlamed === 1 ? '' : 's'} to this mint over the last 7 days.` : ''}`
-      : 'Fewer than 3 counted swaps collected so far.')
-    : 'Successful swaps out of the mint\'s last ~100 audited operations — the same rolling window the Reliability Score\'s Audit component scores on. Shows "too few to score" below 3 recent swaps.'
-  const tipAvg = czView
-    ? 'Average duration of the successful swaps from the most recent swaps from this mint that MintRadar collected from cashu.info.'
-    : 'Average duration of the successful swaps in the same rolling window as Recent success rate.'
+  const stripAvgTimeDisplay = auditAvgTimeMs !== null ? `${Math.round(auditAvgTimeMs)} ms` : 'n/a'
+  const stripMints = auditNMints
+  const stripMelts = auditNMelts
+  const stripReliabilityColor = recentReliabilityColor
+  const tipMints = 'All-time successful ecash minting operations the auditor has run against this mint.'
+  const tipMelts = 'All-time successful ecash melting operations (redeeming ecash back to Lightning).'
+  const tipSuccess = 'Successful swaps out of the mint\'s last ~100 audited operations — the same rolling window the Reliability Score\'s Audit component scores on. Shows "too few to score" below 3 recent swaps.'
+  const tipAvg = 'Average duration of the successful swaps in the same rolling window as Recent success rate.'
 
   // Last ≤100 swaps, newest first (the backend already orders by created_at
   // DESC) — the outcome bar and the "Recent swaps" table below both read from
   // this same array so they can never disagree.
-  const auditSwaps: AuditSwapRow[] = czView ? czView.swaps : (auditSwapsData?.swaps ?? [])
+  const auditSwaps: AuditSwapRow[] = auditSwapsData?.swaps ?? []
   const AUDIT_SWAP_BAR_MAX = 44
   const AUDIT_SWAP_ROWS_DEFAULT = 8
-  const auditSwapBarItems = auditSwaps.slice(0, AUDIT_SWAP_BAR_MAX)
+  // cashu.info view: the bar shows the stored swaps of both directions together.
+  const auditSwapBarItems = (czView ? czView.swaps : auditSwaps).slice(0, AUDIT_SWAP_BAR_MAX)
   const auditRecentSwapRows = showAllAuditSwaps ? auditSwaps : auditSwaps.slice(0, AUDIT_SWAP_ROWS_DEFAULT)
 
   // The mint's operator keys: a nostr contact it lists that ALSO authored its NIP-87 announcement
@@ -2080,6 +2066,7 @@ function MintDetailContent({ url }: { url: string }) {
                   {auditSwitch}
                 </div>
 
+                {czView ? <AuditCzTiles view={czView} /> : (<>
                 {/* 5-second overview — always visible, never inside the mobile
                     collapse. Mints/Melts are audit.8333.space lifetime counts;
                     Recent success rate is the rolling ~100-swap window; Last
@@ -2174,6 +2161,7 @@ function MintDetailContent({ url }: { url: string }) {
                     </div>
                   </div>
                 </div>
+                </>)}
 
                 {/* Outcome bar — last ≤44 swaps, newest left (the backend
                     already orders by created_at DESC, so no client-side
@@ -2191,6 +2179,10 @@ function MintDetailContent({ url }: { url: string }) {
                   </div>
                 )}
 
+                {czView ? (<>
+                  <AuditCzChecks view={czView} />
+                  <AuditCzSwapTables view={czView} expandedFrom={showAllCzFrom} expandedTo={showAllCzTo} onToggleFrom={() => setShowAllCzFrom(v => !v)} onToggleTo={() => setShowAllCzTo(v => !v)} />
+                </>) : (<>
                 {/* Recent swaps — last 8, newest first. Failed rows are muted red. */}
                 {auditRecentSwapRows.length > 0 && (
                   <div className="audit-recent-swaps">
@@ -2245,6 +2237,7 @@ function MintDetailContent({ url }: { url: string }) {
                     </button>
                   </div>
                 )}
+                </>)}
 
                 {czView ? (czView.sourceHref && (
                   <a

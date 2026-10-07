@@ -51,6 +51,30 @@ export function czSwapList(spec: Array<Partial<CzSwap> & { kind: string }>): CzS
   return spec.map(({ kind, ...over }, i) => czSwap(i, { otherMintUrl: `https://${kind}${i}.example`, ...over }))
 }
 
+/** The stored detail of mint.lnpay.cz (the subset the backend keeps; built from the real response). */
+export const LNPAY_DETAIL = {
+  swaps7d: {
+    all: { total: 126, success: 107, failed: 19, avgMs: 8289 },
+    asSource: { total: 64, success: 51, failed: 13, avgMs: 11719 },
+    asDest: { total: 62, success: 56, failed: 6, avgMs: 5166 },
+    errorsBlamed: 0,
+    dleq: { valid: 56, invalid: 0, missing: 0 },
+    quoteMs: 306, meltMs: 1342, mintMs: 166,
+  },
+  integrity: {
+    swap_test: { ok: true, recentOk: 7, recentFail: 0, ms: 139, timestamp: 1791337568797 },
+    proof_state: { ok: true, recentOk: 7, recentFail: 0, ms: 99, timestamp: 1791337568658, checked: 9, spent: 0, spentSat: 0, pending: 0 },
+  },
+  network: { ipv4: true, ipv6: true, asn: 14061, asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US', country: 'US', tlsIssuer: "Let's Encrypt", tlsExpiresAt: '2026-12-27T08:59:17.000Z' },
+  onion: false,
+  latency: { prague: { p50: 41, p95: 53 } },
+}
+
+/** A deep copy of LNPAY_DETAIL with parts replaced (shallow per top-level block: pass a whole block). */
+export function czDetail(over: Record<string, unknown> = {}, fetchedMinutesAgo = 10) {
+  return { ...JSON.parse(JSON.stringify(LNPAY_DETAIL)), ...over, fetchedAt: ago(fetchedMinutesAgo * 60_000) }
+}
+
 export function auditCzResponse(over: Record<string, unknown> = {}) {
   return {
     source: 'audit.cashu.cz',
@@ -63,12 +87,12 @@ export function auditCzResponse(over: Record<string, unknown> = {}) {
     },
     swaps: [] as CzSwap[],
     stats7d: null,
-    detail7d: { total: 60, success: 47, failed: 13, errorsBlamed: 1, minted: 26, melted: 21 },
+    detail: czDetail(),
     ...over,
   }
 }
 
-export const NOT_COVERED = auditCzResponse({ covered: false, mint: null, swaps: [], sourceUrl: null, detail7d: null })
+export const NOT_COVERED = { source: 'audit.cashu.cz', sourceUrl: null, fetchedAt: ago(5 * 60_000), covered: false, mint: null, swaps: [], stats7d: null }
 
 /** audit.8333.space data as the known-mints payload carries it: fresh by default. */
 export const FRESH_8333 = {

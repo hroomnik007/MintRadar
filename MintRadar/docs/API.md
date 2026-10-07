@@ -229,7 +229,14 @@ Data from the third-party audit service cashu.info for one mint, refreshed serve
     "avgDurationMsPaid": 4213.4,
     "swapsCounted": 69
   },
-  "detail7d": { "total": 179, "success": 47, "failed": 132, "errorsBlamed": 0, "minted": 26, "melted": 21 }
+  "detail": {
+    "swaps7d": { "all": { "total": 126, "success": 107, "failed": 19, "avgMs": 8289 }, "asSource": { "total": 64, "success": 51, "failed": 13, "avgMs": 11719 }, "asDest": { "total": 62, "success": 56, "failed": 6, "avgMs": 5166 }, "errorsBlamed": 0, "dleq": { "valid": 56, "invalid": 0, "missing": 0 } },
+    "integrity": { "proof_state": { "ok": true, "checked": 9, "spent": 0, "spentSat": 0, "pending": 0 } },
+    "network": { "ipv4": true, "ipv6": true, "asn": 14061, "asName": "DIGITALOCEAN-ASN - DigitalOcean, LLC, US", "country": "US", "tlsIssuer": "Let's Encrypt", "tlsExpiresAt": "2026-12-27T08:59:17.000Z" },
+    "onion": false,
+    "latency": { "prague": { "p50": 41, "p95": 53 } },
+    "fetchedAt": "2026-10-07T07:08:41.120Z"
+  }
 }
 ```
 
@@ -256,7 +263,6 @@ Data from the third-party audit service cashu.info for one mint, refreshed serve
 | `swaps[].otherMintUrl` / `otherMintName` | string \| null | The counterpart of the swap: the destination for `from`, the source for `to` (name at most 100 characters). |
 | `stats7d` | object \| null | Counted by MintRadar, see below; `null` only when not covered. |
 | `detail` | object \| null \| absent | Validated subset of cashu.info's per-mint detail plus `fetchedAt`; `null` when covered but none stored yet; absent when not covered. See below. |
-| `detail7d` | object \| null \| absent | **Deprecated**, derived from `detail` (`swaps7d`); removed when the new Audit tab ships. |
 
 Which swaps are returned: with `direction=from` the swaps whose source is this mint (or one of its aliases), with `direction=to` those whose destination is this mint, with `direction=both` either. A swap that has this mint on both sides appears in all three, labelled `from`.
 
@@ -277,9 +283,9 @@ Which swaps are returned: with `direction=from` the swaps whose source is this m
 | `detail.latency.prague` | `{ p50, p95 }` ms | Only when present. |
 | `detail.fetchedAt` | string \| null | When the row was stored. |
 
-`detail7d` (deprecated) is `{ total, success, failed, errorsBlamed, minted, melted }` derived from `detail.swaps7d` (`null` when the counts are missing).
+`detail7d` (the old derived summary) was **removed** when the new Audit tab shipped; read `detail.swaps7d` instead.
 
-**Not covered:** still `200`, `{ "source": "audit.cashu.cz", "sourceUrl": null, "fetchedAt": <newest feed fetch or null>, "covered": false, "mint": null, "swaps": [], "stats7d": null }` — no `detail` or `detail7d` key. This happens for any well-formed `https://` URL that is not in their feed, and `direction` / `limit` are still validated first.
+**Not covered:** still `200`, `{ "source": "audit.cashu.cz", "sourceUrl": null, "fetchedAt": <newest feed fetch or null>, "covered": false, "mint": null, "swaps": [], "stats7d": null }` — no `detail` key. This happens for any well-formed `https://` URL that is not in their feed, and `direction` / `limit` are still validated first.
 
 **Errors:** `400` `{"error":"Missing required query parameter: url"}` (missing, empty or repeated `url`), `{"error":"url must start with https://"}`, `{"error":"url exceeds maximum length of 500 characters"}`, `{"error":"Invalid url"}` (not well-formed, has whitespace or credentials, private/loopback host), `{"error":"direction must be from, to, or both"}`; `429` from the global rate limit; `500` `{"error":"Internal server error"}`. Successful responses carry `Cache-Control: max-age=60`.
 

@@ -337,23 +337,6 @@ export function auditCzIdFromPage(page: string | null | undefined): string | nul
   return m && AUDIT_CZ_ID_RE.test(m[1] as string) ? (m[1] as string) : null
 }
 
-/** `swaps7d.all` counts plus `errorsBlamed`; `minted` / `melted` are asDest / asSource `success` (null when absent). */
-export interface AuditCzDetail7d {
-  total: number
-  success: number
-  failed: number
-  errorsBlamed: number
-  minted: number | null
-  melted: number | null
-}
-
-export function auditCzDetail7dFrom(d: StoredAuditCzDetail | null): AuditCzDetail7d | null {
-  const s = d?.swaps7d
-  const all = s?.all
-  if (!s || !all || all.total === undefined || all.success === undefined || all.failed === undefined || s.errorsBlamed === undefined) return null
-  return { total: all.total, success: all.success, failed: all.failed, errorsBlamed: s.errorsBlamed, minted: s.asDest?.success ?? null, melted: s.asSource?.success ?? null }
-}
-
 /** The stored detail of one mint (database only), or null when none was stored yet. */
 export async function readAuditCzDetail(canonicalUrl: string): Promise<AuditCzDetailResponse | null> {
   const r = await pool.query(`SELECT detail, fetched_at FROM audit_cz_detail WHERE url = $1`, [canonicalUrl])
@@ -415,8 +398,6 @@ export interface AuditCzResponse {
   stats7d: AuditCzStats7d | null
   /** The validated subset of cashu.info's per-mint detail (stored by the 30-minute cron) plus `fetchedAt`; null when none is stored yet. Absent when the mint is not covered. */
   detail?: AuditCzDetailResponse | null
-  /** Legacy shape for the current frontend, derived from `detail` (removed with the new Audit tab). null when the stored detail lacks the counts. */
-  detail7d?: AuditCzDetail7d | null
 }
 
 const STATS_WINDOW_DAYS = 7
@@ -574,6 +555,5 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
     swaps,
     stats7d,
     detail,
-    detail7d: auditCzDetail7dFrom(detail),
   }
 }

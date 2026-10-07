@@ -66,7 +66,7 @@ vi.mock('../ssrf.js', () => ({
   RESPONSE_CAPS: { auditCzMints: 1048576, auditCzSwaps: 1048576, auditCzMintDetail: 65536 },
 }))
 
-import { auditCzKey, parseAuditCzMintsResponse, parseAuditCzSwapsResponse, syncAuditCz, getAuditCzForMint, getAuditCzSyncStatus, auditCzIdFromPage, auditCzDetail7dFrom } from '../auditCz.js'
+import { auditCzKey, parseAuditCzMintsResponse, parseAuditCzSwapsResponse, syncAuditCz, getAuditCzForMint, getAuditCzSyncStatus, auditCzIdFromPage } from '../auditCz.js'
 
 const mint = (o: Record<string, unknown> = {}) => ({
   id: 'mint0001', url: 'https://mint.minibits.cash/Bitcoin', isTest: false, aliases: [], name: 'Minibits', state: 'ok',
@@ -228,15 +228,6 @@ describe('per-mint detail (read side)', () => {
     expect(auditCzIdFromPage(null)).toBeNull()
   })
 
-  it('derives the legacy detail7d from the stored detail and null without counts', () => {
-    expect(auditCzDetail7dFrom({ swaps7d: { all: { total: 126, success: 107, failed: 19 }, errorsBlamed: 0, asSource: { success: 51 }, asDest: { success: 56 } } }))
-      .toEqual({ total: 126, success: 107, failed: 19, errorsBlamed: 0, minted: 56, melted: 51 })
-    expect(auditCzDetail7dFrom({ swaps7d: { all: { total: 1, success: 1, failed: 0 }, errorsBlamed: 0 } })).toMatchObject({ minted: null, melted: null })
-    expect(auditCzDetail7dFrom({ swaps7d: { all: { total: 1, success: 1, failed: 0 } } })).toBeNull()
-    expect(auditCzDetail7dFrom({ network: { asn: 1 } })).toBeNull()
-    expect(auditCzDetail7dFrom(null)).toBeNull()
-  })
-
   it('the endpoint body carries detail (stored object plus fetchedAt) read from the database only', async () => {
     feed([mint()], [])
     await syncAuditCz()
@@ -244,12 +235,11 @@ describe('per-mint detail (read side)', () => {
     db.details.set('https://mint.minibits.cash/Bitcoin', { detail: { swaps7d: { all: { total: 5, success: 4, failed: 1 }, errorsBlamed: 0 }, network: { asn: 14061 } }, fetched_at: new Date('2026-10-07T07:00:00Z') })
     const r = await getAuditCzForMint('https://mint.minibits.cash/Bitcoin')
     expect(r.detail).toEqual({ swaps7d: { all: { total: 5, success: 4, failed: 1 }, errorsBlamed: 0 }, network: { asn: 14061 }, fetchedAt: '2026-10-07T07:00:00.000Z' })
-    expect(r.detail7d).toMatchObject({ total: 5, errorsBlamed: 0 })
+    expect(r).not.toHaveProperty('detail7d')
     expect(fetchMock).not.toHaveBeenCalled() // no outbound request on a read
     db.details.clear()
     const none = await getAuditCzForMint('https://mint.minibits.cash/Bitcoin')
     expect(none.detail).toBeNull()
-    expect(none.detail7d).toBeNull()
     expect('detail' in (await getAuditCzForMint('https://nobody.example'))).toBe(false)
   })
 })

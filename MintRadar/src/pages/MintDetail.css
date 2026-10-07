@@ -2045,3 +2045,36 @@ a.review-action-btn { color: var(--text3); }
   .md-hist-summary > div { min-width: 0; padding-inline: 6px !important; overflow-wrap: anywhere; }
   .md-hist-summary > div > div:first-child { font-size: 9px !important; letter-spacing: 0.02em !important; }
 }
+
+/* ── Audit tab, cashu.info view: auditor checks + two swap tables (same surface/border/radius as the tiles) ── */
+.audit-cz-card {
+  background: var(--surface-2);
+  border: 0.5px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-top: 10px;
+  min-width: 0;
+}
+.audit-cz-card-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+.audit-cz-check-line {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.audit-cz-muted {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text3);
+}
+.audit-cz-tile-label { text-transform: uppercase; letter-spacing: 0.04em; font-size: 11px; text-align: center; flex-wrap: wrap; }
+.audit-cz-tiles .audit-summary-value { font-size: 19px; }

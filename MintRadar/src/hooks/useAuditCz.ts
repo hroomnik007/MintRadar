@@ -40,20 +40,32 @@ export interface AuditCzData {
     avgDurationMsPaid: number | null
     swapsCounted: number
   } | null
-  /** null / absent when the detail could not be fetched: the tile then falls back to the stored swaps. */
-  detail7d?: AuditCzDetail7d | null
+  /** The validated subset of cashu.info's per-mint detail (stored by our 30-minute job) plus when it was stored. null / absent: none stored yet. */
+  detail?: AuditCzDetail | null
 }
 
-/** cashu.info's own 7-day swap counts for this mint (our backend caches them up to 10 min). */
-export interface AuditCzDetail7d {
-  total: number
-  success: number
-  failed: number
-  /** Failures the auditor attributes to this mint. */
-  errorsBlamed: number
-  /** asDest.success / asSource.success (null when the source omits them). */
-  minted: number | null
-  melted: number | null
+export interface AuditCzDirectionCounts { total?: number; success?: number; failed?: number; avgMs?: number }
+
+/** Every field is optional: the backend drops a malformed field instead of the record. Strings are untrusted text. */
+export interface AuditCzDetail {
+  swaps7d?: {
+    all?: AuditCzDirectionCounts
+    asSource?: AuditCzDirectionCounts
+    asDest?: AuditCzDirectionCounts
+    errorsBlamed?: number
+    dleq?: { valid?: number; invalid?: number; missing?: number }
+    quoteMs?: number
+    meltMs?: number
+    mintMs?: number
+  }
+  integrity?: {
+    swap_test?: { ok?: boolean; recentOk?: number; recentFail?: number; ms?: number; timestamp?: number }
+    proof_state?: { ok?: boolean; recentOk?: number; recentFail?: number; ms?: number; timestamp?: number; checked?: number; spent?: number; spentSat?: number; pending?: number }
+  }
+  network?: { ipv4?: boolean; ipv6?: boolean; asn?: number; asName?: string; country?: string; tlsIssuer?: string; tlsExpiresAt?: string }
+  onion?: boolean
+  latency?: { prague?: { p50?: number; p95?: number } }
+  fetchedAt: string | null
 }
 
 export interface AuditCzDirectionStats {
@@ -71,7 +83,7 @@ export function useAuditCz(url: string, tabActive: boolean) {
   const query = useQuery({
     queryKey: ['mint', 'audit-cz', url],
     queryFn: async () => {
-      const res = await fetch(`/api/mints/audit-cz?url=${encodeURIComponent(url)}&limit=100&direction=from`)
+      const res = await fetch(`/api/mints/audit-cz?url=${encodeURIComponent(url)}&limit=100&direction=both`)
       if (!res.ok) throw new Error('Failed to fetch cashu.info data')
       return await res.json() as AuditCzData
     },
