@@ -1644,17 +1644,14 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 
 .audit-summary-label {
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--text3);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 3px;
 }
-/* Uppercase only the label text: the ⓘ popup stays sentence case with normal spacing. */
-.audit-summary-label .audit-tooltip { text-transform: none; letter-spacing: normal; }
 
 /* "Recent errors" cell only — the reliability sub-text ("97% ok" /
    "too few to score" / "no recent swaps") now sits on the same line as the
@@ -2079,9 +2076,8 @@ a.review-action-btn { color: var(--text3); }
   line-height: 1.45;
   color: var(--text3);
 }
-/* Uppercase only the label text: the ⓘ popup is a standard tooltip (sentence case, normal spacing). */
-.audit-cz-tile-label { font-size: 11px; text-align: center; flex-wrap: wrap; }
-.audit-cz-tile-label > span:first-child { text-transform: uppercase; letter-spacing: 0.04em; }
+/* cashu.info tiles share the swap strip's label style (sentence case, 12.5px); labels may wrap. */
+.audit-cz-tile-label { text-align: center; flex-wrap: wrap; }
 .audit-cz-tiles .audit-summary-value { font-size: 19px; }
 .audit-cz-tiles { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
 
