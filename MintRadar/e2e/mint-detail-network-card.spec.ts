@@ -75,6 +75,10 @@ test.describe('IP row', () => {
     await expect(rowOf(page, 'IP')).toHaveCount(0)
     await expect(card(page).locator('.md-info-label')).toHaveText(['Network', 'Registered in', 'Tor', 'TLS'])
   })
+  test('offline mint without an address: the IP row says Offline', async ({ page }) => {
+    await open(page, { alpha: { ...NO_8333, online: false }, cz: NOT_COVERED })
+    await expect(value(page, 'IP')).toHaveText('Offline')
+  })
   test('hostile address is dropped, not printed', async ({ page }) => {
     await open(page, withNetwork({}, {}, { ipAddress: XSS }))
     await expect(rowOf(page, 'IP')).toHaveCount(0)

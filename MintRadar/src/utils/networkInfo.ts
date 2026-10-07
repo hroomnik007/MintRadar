@@ -78,12 +78,12 @@ export interface NetworkRows {
   tls: TlsLabel | null
 }
 
-/** null when there is nothing to show (the card is not rendered). `ip` is our own DNS result; the rest comes from the cashu.info detail. */
-export function networkRows(detail: AuditCzDetail | null | undefined, ip: string | null | undefined, now: number): NetworkRows | null {
+/** null when there is nothing to show (the card is not rendered). `ip` is our own DNS result; the rest comes from the cashu.info detail. An offline mint without an address shows "Offline" in the IP row. */
+export function networkRows(detail: AuditCzDetail | null | undefined, ip: string | null | undefined, now: number, offline = false): NetworkRows | null {
   const n = detail?.network
   const country = countryName(n?.country)
   const rows: NetworkRows = {
-    ip: ipv4Address(ip),
+    ip: ipv4Address(ip) ?? (offline ? 'Offline' : null),
     network: networkLabel(n?.asn, n?.asName),
     country: country ? { name: country } : null,
     tor: n ? torLabel(detail?.onion) : null,

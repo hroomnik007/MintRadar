@@ -103,6 +103,11 @@ describe('networkRows', () => {
   it('a mint without a cashu.info detail still gets the IP row from our own lookup', () => {
     expect(networkRows(null, '188.166.166.165', NOW)).toEqual({ ip: '188.166.166.165', network: null, country: null, tor: null, tls: null })
   })
+  it('an offline mint without an address says Offline; an address wins; an online one stays hidden', () => {
+    expect(networkRows(null, null, NOW, true)).toEqual({ ip: 'Offline', network: null, country: null, tor: null, tls: null })
+    expect(networkRows(null, '188.166.166.165', NOW, true)?.ip).toBe('188.166.166.165')
+    expect(networkRows(null, null, NOW, false)).toBeNull()
+  })
   it('hostile strings stay strings and a hostile country is hidden', () => {
     const r = networkRows({ network: { asn: 1, asName: '<img src=x onerror=alert(1)>', country: '<b>', tlsIssuer: '<script>x</script>' }, fetchedAt: null }, null, NOW)!
     expect(r.network).toBe('AS1 <img src=x onerror=alert(1)>')
