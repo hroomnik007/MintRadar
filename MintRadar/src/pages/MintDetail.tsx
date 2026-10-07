@@ -31,6 +31,7 @@ import { cleanMintNameDetailed } from '@/utils/cleanMintName'
 import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
 import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
 import { auditFreshness } from '@/utils/auditFreshness'
+import { IcClose } from '@/components/IcClose'
 import { useAuditCz } from '@/hooks/useAuditCz'
 import { adaptAuditCz, auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
@@ -2594,7 +2595,7 @@ function MintDetailContent({ url }: { url: string }) {
                 <div id="qr-modal-title" style={{fontSize:14,fontWeight:700,color:'var(--text)',lineHeight:1.25,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Add {displayName} to wallet</div>
                 <div style={{fontSize:11,color:'var(--text-faint)',marginTop:2}}>Scan with any Cashu wallet app</div>
               </div>
-              <button onClick={() => setShowQr(false)} aria-label="Close" style={{background:'none',border:'none',color:'var(--text-faint)',fontSize:20,cursor:'pointer',lineHeight:1,padding:'2px 6px',flexShrink:0}}>×</button>
+              <button onClick={() => setShowQr(false)} aria-label="Close" style={{background:'none',border:'none',color:'var(--text-faint)',cursor:'pointer',display:'flex',padding:'4px 6px',flexShrink:0}}><IcClose /></button>
             </div>
             <div style={{display:'flex',justifyContent:'center',margin:'16px 0'}}>
               <div style={{background:'#ffffff',borderRadius:12,padding:12,border:'2px solid var(--green-soft-strong)'}}>
@@ -2638,7 +2639,7 @@ function MintDetailContent({ url }: { url: string }) {
                   Log in with Nostr to add it to your watchlist. Your list syncs over Nostr. You can then turn on an optional Nostr DM for this mint when it goes offline or comes back online.
                 </div>
               </div>
-              <button type="button" className="rv-modal-close" onClick={closeWatchLoginModal} aria-label="Close">×</button>
+              <button type="button" className="rv-modal-close" onClick={closeWatchLoginModal} aria-label="Close"><IcClose /></button>
             </div>
             <div className="rv-actions">
               <button type="button" className="rv-btn-cancel" onClick={closeWatchLoginModal}>Cancel</button>
@@ -2655,7 +2656,7 @@ function MintDetailContent({ url }: { url: string }) {
             onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="reliability-breakdown-title" ref={dialogRef}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
               <div id="reliability-breakdown-title" style={{fontSize:16,fontWeight:600,color:'var(--text)'}}>Reliability Score Breakdown</div>
-              <button onClick={() => setShowReliabilityBreakdown(false)} aria-label="Close" style={{background:'none',border:'none',color:'var(--text3)',fontSize:18,cursor:'pointer'}}>×</button>
+              <button onClick={() => setShowReliabilityBreakdown(false)} aria-label="Close" style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',display:'flex',padding:4}}><IcClose /></button>
             </div>
             <div style={{textAlign:'center',marginBottom:20}}>
               <div style={{fontSize:48,fontWeight:700,color:reliabilityScoreColor(reliabilityScore),lineHeight:1}}>{reliabilityScore}%</div>
@@ -2683,7 +2684,7 @@ function MintDetailContent({ url }: { url: string }) {
                   <div className="rv-modal-sub">Share your experience with this mint.</div>
                 )}
               </div>
-              <button className="rv-modal-close" onClick={closeReviewModal} aria-label="Close">×</button>
+              <button className="rv-modal-close" onClick={closeReviewModal} aria-label="Close"><IcClose /></button>
             </div>
 
             {/* Phase 1 + 2 share the star row. Hover/focus previews up to the
@@ -2828,8 +2829,8 @@ function MintDetailContent({ url }: { url: string }) {
                   <button
                     onClick={() => setSelectedNut(null)}
                     aria-label="Close"
-                    style={{background:'none', border:'none', color:'var(--text3)', fontSize:18, cursor:'pointer', lineHeight:1}}
-                  >×</button>
+                    style={{background:'none', border:'none', color:'var(--text3)', cursor:'pointer', display:'flex', padding:4}}
+                  ><IcClose /></button>
                 </div>
               </div>
 
@@ -2872,9 +2873,11 @@ function MintDetailContent({ url }: { url: string }) {
                         {m.method} / {m.unit}
                       </span>
                       <span style={{fontSize:11, color:'var(--text3)', fontFamily:'var(--font-mono)'}}>
-                        {m.min_amount != null ? m.min_amount.toLocaleString() : '—'}
-                        {' – '}
-                        {m.max_amount != null ? m.max_amount.toLocaleString() : '—'}
+                        {m.min_amount == null && m.max_amount == null ? 'No limits specified' : (<>
+                          {m.min_amount != null ? m.min_amount.toLocaleString() : '—'}
+                          {' – '}
+                          {m.max_amount != null ? m.max_amount.toLocaleString() : '—'}
+                        </>)}
                       </span>
                     </div>
                   ))}

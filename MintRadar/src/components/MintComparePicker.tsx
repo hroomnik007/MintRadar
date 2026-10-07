@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { IcClose } from '@/components/IcClose'
 import { type KnownMint } from '@/hooks/useKnownMints'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import { displayName as mintDisplayName, mintHostname as getHostname } from '@/utils/mintFormatting'
@@ -41,7 +42,7 @@ export function MintComparePicker({
       <div className="md-picker-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="md-picker-title" ref={dialogRef}>
         <div className="md-picker-header">
           <div id="md-picker-title" style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Compare with...</div>
-          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 18 }}>×</button>
+          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', display: 'flex', padding: 4 }}><IcClose /></button>
         </div>
         <div style={{ padding: '8px 16px 0' }}>
           <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>

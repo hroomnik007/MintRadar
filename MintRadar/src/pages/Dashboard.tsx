@@ -1456,7 +1456,7 @@ export default function Dashboard() {
       {showSubmit && (
         <div className="submit-modal-overlay" onClick={() => setShowSubmit(false)}>
           <div className="submit-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="submit-modal-title" ref={dialogRef}>
-            <button type="button" className="submit-modal-close" onClick={() => setShowSubmit(false)} aria-label="Close">✕</button>
+            <button type="button" className="submit-modal-close" onClick={() => setShowSubmit(false)} aria-label="Close"><IcClose /></button>
             <div className="submit-modal-eyebrow">Track a mint</div>
             <div className="submit-modal-title" id="submit-modal-title">Add a mint</div>
             <div className="submit-tabs" role="tablist" aria-label="Submit mode" onKeyDown={handleSubmitTabKey}>
@@ -1562,7 +1562,7 @@ export default function Dashboard() {
                     backend/src/index.ts (no shared workspace between the two
                     packages, so this is a manually-synced number like
                     testMints.ts/auditScore.ts — update both if either changes). */}
-                <div className="submit-input-hint" id="bulk-limits">https:// is added if missing · up to 100 mints, 10 submissions per hour.</div>
+                <div className="submit-input-hint" id="bulk-limits">https:// is added if missing · up to 100 mints · 10 per hour.</div>
                 {!bulkRunning && !bulkDone && (
                   <>
                     <label htmlFor="bulk-input" className="sr-only">Mint URLs, one per line</label>

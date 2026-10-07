@@ -67,7 +67,7 @@ test('closes from the version-list level', async ({ page }) => {
   await expect(modal(page)).toHaveCount(0)
 })
 
-test('closes from the mint-list level, from both ✕ and overlay click', async ({ page }) => {
+test('closes from the mint-list level, from both the close button and overlay click', async ({ page }) => {
   // ✕ while drilled down
   await swRow(page).click()
   await modal(page).locator('.nut-modal-row', { hasText: '0.20.0' }).click()

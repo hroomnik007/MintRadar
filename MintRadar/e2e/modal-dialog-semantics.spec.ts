@@ -124,7 +124,7 @@ const CASES: ModalCase[] = [
     viewport: { width: 390, height: 844 },
     prepare: p => goto(p, DETAIL, '.md-tabs'),
     trigger: p => p.locator('.md-sc-reliability').locator('visible=true').first(), open: clickTrigger,
-    dialog: p => p.getByRole('dialog'), close: 'button:text-is("×")',
+    dialog: p => p.getByRole('dialog'), close: 'button[aria-label="Close"]',
   },
   {
     id: 'NUT detail modal (Mint Detail)', name: /\S/,
@@ -133,7 +133,7 @@ const CASES: ModalCase[] = [
       await p.locator('.md-tab', { hasText: 'NUTs' }).click()
     },
     trigger: p => p.locator('.nut-card').first(), open: clickTrigger,
-    dialog: p => p.getByRole('dialog'), close: 'button:text-is("×")',
+    dialog: p => p.getByRole('dialog'), close: 'button[aria-label="Close"]',
   },
   {
     id: 'Stats: software versions', name: /nutshell/i, statsMints: true,

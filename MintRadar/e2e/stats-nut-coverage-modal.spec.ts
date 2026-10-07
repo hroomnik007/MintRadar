@@ -61,7 +61,7 @@ test.describe('Stats NUT coverage modal', () => {
     await expect(modal(page)).toHaveCount(0)
   })
 
-  test('Escape / ✕ / overlay all close the modal', async ({ page }) => {
+  test('Escape / close button / overlay all close the modal', async ({ page }) => {
     await page.goto('/stats')
     await page.locator('.stats-nut-row', { hasText: 'NUT-07' }).click()
     await expect(modal(page)).toBeVisible()

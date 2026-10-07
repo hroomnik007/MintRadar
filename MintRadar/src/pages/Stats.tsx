@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { IcClose } from '@/components/IcClose'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Info } from 'lucide-react'
 import { useModalFocus } from '@/hooks/useModalFocus'
@@ -252,7 +253,7 @@ function SoftwareModal({ sw, versions, total, accentColor, allMints, onClose, du
   return (
     <div className="nut-modal-overlay" onClick={onClose}>
       <div className="nut-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={drilled ? `${sw} ${drilled.ver}` : `${sw} versions`} ref={dialogRef}>
-        <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close">✕</button>
+        <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close"><IcClose /></button>
         {drilled ? (
           <VersionMintsView
             key={drilled.fullVersion}
@@ -305,7 +306,7 @@ function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
   return (
     <div className="nut-modal-overlay" onClick={onClose}>
       <div className="nut-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={display} ref={dialogRef}>
-        <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close">✕</button>
+        <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close"><IcClose /></button>
         <div className="nut-modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             {flag && <span style={{ fontSize: 20 }}>{flag}</span>}
@@ -388,7 +389,7 @@ function NutMintsModal({ nut, mints, onClose, duplicateDisplayNames }: {
   return (
     <div className="nut-modal-overlay" onClick={onClose}>
       <div className="nut-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`${nut}${meta ? ` · ${meta.short}` : ''}`} ref={dialogRef}>
-        <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close">✕</button>
+        <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close"><IcClose /></button>
         <div className="nut-modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <span className="nut-modal-title">{nut}{meta ? ` · ${meta.short}` : ''}</span>
@@ -453,7 +454,7 @@ function MoreLocationsModal({ locations, onClose, onSelectLocation }: {
   return (
     <div className="nut-modal-overlay" onClick={onClose}>
       <div className="nut-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Other locations" ref={dialogRef}>
-        <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close">✕</button>
+        <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close"><IcClose /></button>
         <div className="nut-modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <span className="nut-modal-title">Other locations</span>
@@ -559,7 +560,7 @@ const NETWORK_HEALTH_FORMULA_TEXT =
 // breakdown no longer renders this; see NETWORK_HEALTH_FORMULA_TEXT above).
 function NetworkHealthFormulaNote({ compact }: { compact?: boolean }) {
   return (
-    <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: compact ? 8 : 10, marginTop: 2, fontSize: compact ? 9 : 10, color: 'var(--text3)', lineHeight: 1.5 }}>
+    <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: compact ? 8 : 10, marginTop: 2, fontSize: compact ? 11 : 12, color: 'var(--text3)', lineHeight: 1.5 }}>
       {NETWORK_HEALTH_FORMULA_TEXT}
     </div>
   )
@@ -583,7 +584,7 @@ function NetworkHealthModal({ score, components, onClose }: {
   return (
     <div className="nut-modal-overlay" onClick={onClose}>
       <div className="nut-modal" onClick={e => e.stopPropagation()} style={{ width: 420 }} role="dialog" aria-modal="true" aria-label="Network Health Index Breakdown" ref={dialogRef}>
-        <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close">✕</button>
+        <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close"><IcClose /></button>
         <div className="nut-modal-header">
           <span className="nut-modal-title">Network Health Index Breakdown</span>
         </div>

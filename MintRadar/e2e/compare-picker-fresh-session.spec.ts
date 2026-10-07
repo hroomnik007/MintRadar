@@ -34,7 +34,7 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
     const headerStyle = await header.evaluate(el => getComputedStyle(el).display)
     expect(headerStyle).toBe('flex')
     const titleBox = await page.getByText('Compare with...').boundingBox()
-    const closeBtn = header.locator('button', { hasText: '×' })
+    const closeBtn = header.getByRole('button', { name: 'Close' })
     const closeBox = await closeBtn.boundingBox()
     // Side-by-side means roughly the same vertical position, not stacked below.
     expect(Math.abs(titleBox!.y - closeBox!.y)).toBeLessThan(10)
@@ -80,7 +80,7 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
 
     const header = page.locator('.md-picker-header')
     await expect(header).toBeVisible()
-    await expect(header.locator('button', { hasText: '×' })).toBeVisible()
+    await expect(header.getByRole('button', { name: 'Close' })).toBeVisible()
     await expect(page.locator('.md-picker-search')).toBeVisible()
 
     const firstItem = page.locator('.md-picker-item').first()

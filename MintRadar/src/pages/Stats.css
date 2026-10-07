@@ -801,6 +801,8 @@
 }
 
 .stats-nut-row:hover { background: var(--surface-2); }
+/* The last row of each column sits on the grid's own border: no second divider line there. */
+.stats-nut-rows-grid > .stats-nut-row:nth-last-child(-n+2) { border-bottom: none; }
 
 /* Font sizes here follow this page's existing vocabulary rather than their
    own smaller scale (measured in-browser, same approach as the Units &
@@ -870,9 +872,9 @@
   background: none;
   border: none;
   color: var(--text3);
-  font-size: 14px;
+  display: inline-flex;
   cursor: pointer;
-  padding: 2px 5px;
+  padding: 5px;
   border-radius: 4px;
   line-height: 1;
 }
@@ -1056,6 +1058,8 @@
 @media (max-width: 768px) {
   .stats-cards-grid { grid-template-columns: 1fr; }
   .stats-nut-rows-grid { grid-template-columns: 1fr; overflow: hidden; }
+  /* One column: only the very last row drops its divider. */
+  .stats-nut-rows-grid > .stats-nut-row:nth-last-child(2) { border-bottom: 0.5px solid var(--border); }
   .stats-nut-panel { grid-column: 1 / -1; }
 }
 
@@ -1067,7 +1071,10 @@
      flex-grow — a single small number in an oversized card). 5 cards now
      land as 3+2, no lone full-width row, and the whole hero section is
      shorter. */
-  .stats-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 10px var(--page-pad); }
+  /* 3 + 2: the first row has three tiles, the second two that share the full width (no orphan tile beside an empty slot). */
+  .stats-metrics { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; padding: 10px var(--page-pad); }
+  .stats-metrics > :nth-child(-n+3) { grid-column: span 2; }
+  .stats-metrics > :nth-child(n+4) { grid-column: span 3; }
   .stats-metrics .stat-card { flex: unset; max-width: none; min-width: 0; padding: 8px; gap: 4px; }
   .stats-metrics .stat-row { gap: 8px; }
   .stats-metrics .stat-icon { width: 26px; height: 26px; border-radius: 8px; }

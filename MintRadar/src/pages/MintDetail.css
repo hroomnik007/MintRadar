@@ -644,6 +644,9 @@ button.md-url-copy.copied > svg { opacity: 1; }
   text-align: left;
   max-width: none;
   line-height: 1.5;
+  /* Prose, not an address or a key: wrap at word boundaries; only a single over-long token may break. */
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 .md-info-label { font-size: 12px; color: var(--text3); flex-shrink: 0; font-family: var(--font-mono); font-weight: 400; }
 .md-info-value {
@@ -1046,10 +1049,10 @@ button.md-url-copy.copied > svg { opacity: 1; }
   background: none;
   border: none;
   color: var(--text3);
-  font-size: 20px;
+  display: inline-flex;
   line-height: 1;
   cursor: pointer;
-  padding: 0 2px;
+  padding: 4px;
   transition: color var(--transition);
 }
 .rv-modal-close:hover { color: var(--text); }

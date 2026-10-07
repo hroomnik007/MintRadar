@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { IcClose } from '@/components/IcClose'
 import { Link } from 'react-router-dom'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { usePendingAutoWatch } from '@/hooks/usePendingAutoWatch'
@@ -289,7 +290,7 @@ export function MintCard({
                   Log in with Nostr to add it to your watchlist. Your list syncs over Nostr. You can then turn on an optional Nostr DM for this mint when it goes offline or comes back online.
                 </div>
               </div>
-              <button type="button" className="rv-modal-close" onClick={e => { e.stopPropagation(); closeWatchLoginModal() }} aria-label="Close">×</button>
+              <button type="button" className="rv-modal-close" onClick={e => { e.stopPropagation(); closeWatchLoginModal() }} aria-label="Close"><IcClose /></button>
             </div>
             <div className="rv-actions">
               <button type="button" className="rv-btn-cancel" onClick={e => { e.stopPropagation(); closeWatchLoginModal() }}>Cancel</button>
