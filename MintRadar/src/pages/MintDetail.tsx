@@ -644,7 +644,7 @@ function MintDetailContent({ url }: { url: string }) {
   })
   // cashu.info data: fetched (from our own /api/mints/audit-cz, never from them) only while
   // the Audit tab is open and the known-mints list has loaded.
-  const { data: auditCzData, loading: auditCzLoading } = useAuditCz(url, activeTab === 'audit' || activeTab === 'overview')
+  const { data: auditCzData, loading: auditCzLoading } = useAuditCz(url, activeTab === 'audit')
   const czData = adaptAuditCz(auditCzData, now)
   // Source chosen with the header switch (null = default: cashu.info when the 8333 data is missing/stale).
   const [auditSourcePick, setAuditSourcePick] = useState<'cz' | '8333' | null>(null)
@@ -1700,7 +1700,7 @@ function MintDetailContent({ url }: { url: string }) {
             )}
           </div>
 
-          {(() => { const rows = networkRows(auditCzData?.detail, knownMint?.ipAddress, knownMint?.online === false); return rows ? <MintNetworkCard rows={rows} viaCashuInfo={!!auditCzData?.detail?.network} /> : null })()}
+          {(() => { const rows = networkRows(knownMint); return rows ? <MintNetworkCard rows={rows} /> : null })()}
 
           {(email || twitter || nostr || operatorNip05) && (
             <div className="md-panel">

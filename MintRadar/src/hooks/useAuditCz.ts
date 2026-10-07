@@ -58,8 +58,6 @@ export interface AuditCzDetail {
   integrity?: {
     proof_state?: { checked?: number; spent?: number; pending?: number }
   }
-  network?: { asn?: number; asName?: string; country?: string }
-  onion?: boolean
   fetchedAt: string | null
 }
 

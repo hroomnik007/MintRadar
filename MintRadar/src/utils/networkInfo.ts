@@ -1,9 +1,10 @@
-import type { AuditCzDetail } from '@/hooks/useAuditCz'
+import type { KnownMint } from '@/hooks/useKnownMints'
 import { truncateText } from '@/utils/auditCz'
 
-// Formatters of the Overview "Network" card (public network facts about the mint host, from the
-// cashu.info detail our backend stores). Pure. Every input is untrusted text or a number and is
-// only ever rendered as text. The IPv4 address is resolved by our own backend (the source sends none).
+// Formatters of the Overview "Network" card (public network facts about the mint host). Everything is
+// measured by our own backend: IPv4 from DNS, AS number / organisation / country from the ipinfo.io lookup
+// that also gives the city, the onion flag from the mint's own /v1/info. Pure. Every input is untrusted text
+// or a number and is only ever rendered as text.
 
 const NETWORK_NAME_MAX = 48
 
@@ -47,15 +48,14 @@ export interface NetworkRows {
   tor: string | null
 }
 
-/** null when there is nothing to show (the card is not rendered). `ip` is our own DNS result; the rest comes from the cashu.info detail. An offline mint without an address shows "Offline" in the IP row. */
-export function networkRows(detail: AuditCzDetail | null | undefined, ip: string | null | undefined, offline = false): NetworkRows | null {
-  const n = detail?.network
-  const country = countryName(n?.country)
+/** null when there is nothing to show (the card is not rendered). An offline mint without an address shows "Offline" in the IP row. */
+export function networkRows(m: Partial<Pick<KnownMint, 'ipAddress' | 'netAsn' | 'netOrg' | 'netCountry' | 'hasOnion' | 'online'>> | null | undefined): NetworkRows | null {
+  const country = countryName(m?.netCountry ?? undefined)
   const rows: NetworkRows = {
-    ip: ipv4Address(ip) ?? (offline ? 'Offline' : null),
-    network: networkLabel(n?.asn, n?.asName),
+    ip: ipv4Address(m?.ipAddress) ?? (m?.online === false ? 'Offline' : null),
+    network: networkLabel(m?.netAsn ?? undefined, m?.netOrg ?? undefined),
     country: country ? { name: country } : null,
-    tor: n ? torLabel(detail?.onion) : null,
+    tor: torLabel(m?.hasOnion ?? undefined),
   }
   return Object.values(rows).some(v => v !== null) ? rows : null
 }

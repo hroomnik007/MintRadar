@@ -2,10 +2,10 @@
 // nothing here feeds the Reliability Score. Visitors never trigger an outbound request; the
 // endpoint reads audit_cz_detail only.
 //
-// Only the subset the UI actually shows is kept (see StoredAuditCzDetail). Never stored: score, scoreParts,
-// reviews, daily, changes, incidents7d, latency, TLS, step timings, the auditor's swap test, Frankfurt data,
-// any spec detail except the onion boolean (the onion address itself is never stored), and any IP address
-// (the source sends none; the mint host's IPv4 is resolved by us in mintAddress.ts).
+// Only the subset the Audit tab actually shows is kept (see StoredAuditCzDetail). Never stored: score, scoreParts,
+// reviews, daily, changes, incidents7d, latency, TLS, step timings, the auditor's swap test, network facts, spec,
+// Frankfurt data. The Network card does not use this source at all: IP, AS, country and the onion flag are
+// measured by us (mintAddress.ts, the ipinfo lookup in prober.ts, /v1/info `urls`).
 // Every field is optional: a malformed field is dropped, not the record; a malformed top level
 // (not an object, id mismatch, nothing usable) skips the mint. A failed fetch writes and deletes
 // nothing.
@@ -19,8 +19,6 @@ export const DETAIL_RUN_BUDGET_MS = 25 * 60_000
 
 const MAX_COUNT = 10_000_000
 const MAX_MS = 10 * 60_000
-const MAX_ASN = 4_294_967_296
-const MAX_AS_NAME = 80
 
 export interface DetailDirection { total?: number; success?: number; failed?: number; avgMs?: number }
 export interface StoredAuditCzDetail {
@@ -34,22 +32,11 @@ export interface StoredAuditCzDetail {
   integrity?: {
     proof_state?: { checked?: number; spent?: number; pending?: number }
   }
-  network?: { asn?: number; asName?: string; country?: string }
-  onion?: boolean
 }
 export type AuditCzDetailResponse = StoredAuditCzDetail & { fetchedAt: string | null }
 
 type Obj = Record<string, unknown>
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v)
-
-const INVISIBLE = new RegExp('[\\p{Cc}\\u200B-\\u200D\\u2060\\uFEFF\\u180E\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069]', 'gu')
-
-/** NFC, control / zero-width / bidi characters removed, whitespace collapsed, capped; '' → undefined. */
-export function cleanDetailText(v: unknown, max: number): string | undefined {
-  if (typeof v !== 'string') return undefined
-  const t = v.normalize('NFC').replace(/\s+/gu, ' ').replace(INVISIBLE, '').replace(/\s+/gu, ' ').trim().slice(0, max).trim()
-  return t === '' ? undefined : t
-}
 
 const finite = (v: unknown, max: number): number | undefined =>
   typeof v === 'number' && Number.isFinite(v) && v >= 0 && v < max ? v : undefined
@@ -93,21 +80,7 @@ export function parseAuditCzDetailFull(raw: unknown, expectedId?: string): Store
   const proofState = psDetail ? pack({ checked: count(psDetail['checked']), spent: count(psDetail['spent']), pending: count(psDetail['pending']) }) : undefined
   const integrity = i ? pack({ proof_state: proofState }) : undefined
 
-  const n = isObj(raw['network']) ? raw['network'] : null
-  const country = n ? cleanDetailText(n['country'], 2) : undefined
-  const network = n ? pack({
-    asn: count(n['asn'], MAX_ASN),
-    asName: cleanDetailText(n['asName'], MAX_AS_NAME),
-    country: country !== undefined && /^[A-Z]{2}$/.test(country) ? country : undefined,
-  }) : undefined
-
-  // The onion address is reduced to "is there one"; the string itself is never kept.
-  const spec = isObj(raw['spec']) ? raw['spec'] : null
-  const onion = spec && 'onionUrl' in spec
-    ? typeof spec['onionUrl'] === 'string' ? spec['onionUrl'].trim().length > 0 : spec['onionUrl'] === null ? false : undefined
-    : undefined
-
-  const out = pack({ swaps7d, integrity, network, onion })
+  const out = pack({ swaps7d, integrity })
   return out ?? null
 }
 

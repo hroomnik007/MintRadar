@@ -23,7 +23,7 @@ vi.mock('../ssrf.js', () => ({
   RESPONSE_CAPS: { auditCzMints: 1048576, auditCzSwaps: 1048576, auditCzMintDetail: 65536 },
 }))
 
-import { parseAuditCzDetailFull, cleanDetailText, syncAuditCzDetails } from '../auditCzDetail.js'
+import { parseAuditCzDetailFull, syncAuditCzDetails } from '../auditCzDetail.js'
 
 const ID = 'cmmx4oml50000a5l3z6b7qr83'
 
@@ -60,8 +60,6 @@ const EXPECTED = {
   integrity: {
     proof_state: { checked: 9, spent: 0, pending: 0 },
   },
-  network: { asn: 14061, asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US', country: 'US' },
-  onion: false,
 }
 
 describe('parseAuditCzDetailFull', () => {
@@ -81,44 +79,22 @@ describe('parseAuditCzDetailFull', () => {
     }
   })
 
-  it('reduces onionUrl to a boolean and never keeps the address', () => {
+  it('never keeps the onion address, network facts or the spec (the Network card is measured by us)', () => {
     const r = real(); r.spec.onionUrl = 'http://abcdefghijklmnop.onion' as never
     const out = parseAuditCzDetailFull(r, ID)
-    expect(out?.onion).toBe(true)
+    expect(out).not.toHaveProperty('onion')
+    expect(out).not.toHaveProperty('network')
     expect(JSON.stringify(out)).not.toContain('.onion')
-    const r2 = real(); (r2.spec as Record<string, unknown>)['onionUrl'] = 42
-    expect(parseAuditCzDetailFull(r2, ID)).not.toHaveProperty('onion')
-    const r3 = real(); delete (r3.spec as Record<string, unknown>)['onionUrl']
-    expect(parseAuditCzDetailFull(r3, ID)).not.toHaveProperty('onion')
-  })
-
-  it('an IP-looking string in asName is just text', () => {
-    const r = real(); r.network.asName = '203.0.113.7 - 2001:db8::1'
-    expect(parseAuditCzDetailFull(r, ID)?.network?.asName).toBe('203.0.113.7 - 2001:db8::1')
-  })
-
-  it('cleans hostile strings and caps their length', () => {
-    const r = real()
-    r.network.asName = 'A‮evil​\u0000 \n\t name⁦' + 'x'.repeat(200)
-    const n = parseAuditCzDetailFull(r, ID)?.network
-    expect(n?.asName).toMatch(/^Aevil name/)
-    expect(n?.asName?.length).toBeLessThanOrEqual(80)
-    expect(n?.asName).not.toMatch(/[‮​\u0000⁦\n\t]/)
-    expect(cleanDetailText('é'.normalize('NFD'), 5)).toBe('é')
-    expect(cleanDetailText('   ', 5)).toBeUndefined()
   })
 
   it('drops only the malformed fields', () => {
     const r = real() as Record<string, any>
-    r['network'].country = 'usa'
-    r['network'].asn = 4294967296
     r['swaps7d'].all.total = -1
     r['swaps7d'].asSource.success = 1e9
     r['swaps7d'].asDest.avgMs = 600_000
     r['swaps7d'].errorsBlamed = '0'
     r['integrity'].proof_state.detail.checked = 1.5
     const out = parseAuditCzDetailFull(r, ID)!
-    expect(out.network).toEqual({ asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US' })
     expect(out.swaps7d?.all).toEqual({ success: 107, failed: 19, avgMs: 8289 })
     expect(out.swaps7d?.asSource).toEqual({ total: 64, failed: 13, avgMs: 11719 })
     expect(out.swaps7d?.asDest).toEqual({ total: 62, success: 56, failed: 6 })
@@ -127,16 +103,16 @@ describe('parseAuditCzDetailFull', () => {
   })
 
   it('wrong types and missing blocks: only the usable blocks remain', () => {
-    expect(parseAuditCzDetailFull({ swaps7d: 'x', integrity: [], network: null, spec: 5 }, ID)).toBeNull()
-    expect(parseAuditCzDetailFull({ network: { asn: 14061 } }, ID)).toEqual({ network: { asn: 14061 } })
-    const r = real() as Record<string, unknown>; delete r['network']; delete r['integrity']
+    expect(parseAuditCzDetailFull({ swaps7d: 'x', integrity: [] }, ID)).toBeNull()
+    expect(parseAuditCzDetailFull({ network: { asn: 14061 } }, ID)).toBeNull() // network facts are not stored any more
+    const r = real() as Record<string, unknown>; delete r['integrity']
     const out = parseAuditCzDetailFull(r, ID)!
-    expect(Object.keys(out).sort()).toEqual(['onion', 'swaps7d'])
+    expect(Object.keys(out)).toEqual(['swaps7d'])
   })
 
   it('every optional field missing: a bare object is skipped, not stored empty', () => {
     expect(parseAuditCzDetailFull({}, ID)).toBeNull()
-    expect(parseAuditCzDetailFull({ swaps7d: {}, integrity: {}, network: {} }, ID)).toBeNull()
+    expect(parseAuditCzDetailFull({ swaps7d: {}, integrity: {} }, ID)).toBeNull()
   })
 
   it('a malformed top level skips the mint', () => {

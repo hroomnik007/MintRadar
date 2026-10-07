@@ -19,7 +19,20 @@ function isCloudflareIP(address: string): boolean {
   return false
 }
 
-async function lookupServerLocation(mintUrl: string): Promise<string | null> {
+/** What one ipinfo.io answer gives us: the city (server_location) and the network facts of the Network card. */
+export interface GeoInfo { location: string | null; asn: number | null; org: string | null; country: string | null }
+
+/** ipinfo `org` is "AS14061 DigitalOcean, LLC": the AS number and the name, both bounded. */
+export function parseIpinfoOrg(v: unknown): { asn: number | null; org: string | null } {
+  if (typeof v !== 'string') return { asn: null, org: null }
+  const m = /^AS(\d{1,10})(?:\s+(.*))?$/.exec(v.trim())
+  if (!m) return { asn: null, org: null }
+  const asn = Number(m[1])
+  const org = (m[2] ?? '').replace(/[\p{Cc}\u200B-\u200D\u2060\uFEFF\u202A-\u202E\u2066-\u2069]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 80)
+  return { asn: Number.isSafeInteger(asn) && asn < 4_294_967_296 ? asn : null, org: org === '' ? null : org }
+}
+
+async function lookupGeo(mintUrl: string): Promise<GeoInfo | null> {
   try {
     const hostname = new URL(mintUrl).hostname
     console.log(`[geo] looking up: ${hostname}`)
@@ -40,33 +53,45 @@ async function lookupServerLocation(mintUrl: string): Promise<string | null> {
     }
     const city = typeof data['city'] === 'string' ? data['city'] : null
     const country = typeof data['country'] === 'string' ? data['country'] : null
+    const { asn, org } = parseIpinfoOrg(data['org'])
+    const netCountry = country !== null && /^[A-Z]{2}$/.test(country) ? country : null
     if (!city && !country) {
       console.log(`[geo] no city/country in ipinfo response for ${hostname}`)
-      return null
+      return asn !== null || org !== null ? { location: null, asn, org, country: null } : null
     }
     if (city === 'San Francisco' && isCloudflareIP(address)) {
       console.log(`[geo] ${hostname} (${address}) detected as Cloudflare CDN`)
-      return 'Cloudflare CDN'
+      return { location: 'Cloudflare CDN', asn, org, country: netCountry }
     }
     const location = [city, country].filter(Boolean).join(', ')
     console.log(`[geo] ${hostname} → ${location}`)
-    return location
+    return { location, asn, org, country: netCountry }
   } catch (err) {
     console.error(`[geo] lookup error for ${mintUrl}:`, err)
     return null
   }
 }
 
+async function storeNetwork(url: string, g: GeoInfo): Promise<void> {
+  if (g.asn === null && g.org === null && g.country === null) return
+  await pool.query('UPDATE mints SET net_asn = $1, net_org = $2, net_country = $3 WHERE url = $4', [g.asn, g.org, g.country, url])
+}
+
+async function lookupServerLocation(mintUrl: string): Promise<string | null> {
+  return (await lookupGeo(mintUrl))?.location ?? null
+}
+
 export async function backfillServerLocations(): Promise<void> {
   try {
-    const res = await pool.query('SELECT url FROM mints WHERE server_location IS NULL')
+    const res = await pool.query('SELECT url FROM mints WHERE server_location IS NULL OR net_country IS NULL')
     const urls = (res.rows as { url: string }[]).map(r => r.url)
-    console.log(`[geo] backfill: ${urls.length} mints with NULL server_location`)
+    console.log(`[geo] backfill: ${urls.length} mints with NULL server_location or network info`)
     let found = 0
     for (const mintUrl of urls) {
-      const location = await lookupServerLocation(mintUrl)
-      if (location !== null) {
-        await pool.query('UPDATE mints SET server_location = $1 WHERE url = $2', [location, mintUrl])
+      const geo = await lookupGeo(mintUrl)
+      if (geo !== null) {
+        if (geo.location !== null) await pool.query('UPDATE mints SET server_location = $1 WHERE url = $2 AND server_location IS NULL', [geo.location, mintUrl])
+        await storeNetwork(mintUrl, geo)
         found++
       }
       await new Promise<void>(resolve => setTimeout(resolve, 150))
@@ -82,13 +107,16 @@ export async function backfillServerLocations(): Promise<void> {
  * moved hosts kept its first city forever. A failed lookup (timeout, bogon, no data) changes nothing; a changed
  * result overwrites. One ipinfo request per mint, sequential, 150 ms apart. `lookup` is injectable for tests.
  */
-export async function refreshServerLocations(lookup: (mintUrl: string) => Promise<string | null> = lookupServerLocation): Promise<{ checked: number; changed: number }> {
+export async function refreshServerLocations(lookup: (mintUrl: string) => Promise<string | GeoInfo | null> = lookupGeo): Promise<{ checked: number; changed: number }> {
   const stats = { checked: 0, changed: 0 }
   try {
     const res = await pool.query('SELECT url, server_location FROM mints')
     for (const row of res.rows as { url: string; server_location: string | null }[]) {
       stats.checked++
-      const location = await lookup(row.url)
+      const found = await lookup(row.url)
+      const geo: GeoInfo | null = typeof found === 'string' ? { location: found, asn: null, org: null, country: null } : found
+      if (geo !== null) await storeNetwork(row.url, geo)
+      const location = geo?.location ?? null
       if (location !== null && location !== row.server_location) {
         await pool.query('UPDATE mints SET server_location = $1 WHERE url = $2', [location, row.url])
         stats.changed++
@@ -445,6 +473,13 @@ export async function probeMintToDb(url: string): Promise<void> {
             .slice(0, 10)
             .map(c => (c.info as string).trim().slice(0, 300))
 
+          // NUT-06 `urls`: does the mint advertise a Tor (.onion) address? Only the boolean is kept, never the address.
+          const urlsArr = Array.isArray(raw['urls']) ? raw['urls'] : []
+          const hasOnion = urlsArr.some(u => {
+            if (typeof u !== 'string') return false
+            try { return new URL(u).hostname.toLowerCase().endsWith('.onion') } catch { return false }
+          })
+
           const storedRes = await pool.query('SELECT version, pubkey FROM mints WHERE url = $1', [url])
           const storedVersion = storedRes.rows[0]?.version as string | null
           const storedPubkey = (storedRes.rows[0]?.pubkey as string | null) ?? null
@@ -478,7 +513,9 @@ export async function probeMintToDb(url: string): Promise<void> {
               contact_nostr    = $14::jsonb,
               -- not COALESCE'd: 0 is a meaningful value here (mint publishes no
               -- contact methods), and this line only runs on a successful probe
-              contact_count    = $12
+              contact_count    = $12,
+              -- successful probes only, like contact_nostr: the mint's own current answer
+              has_onion        = $15
             WHERE url = $8`,
             [
               name, iconUrl, version, nutCount, tosUrl, descriptionLong, JSON.stringify(nuts), url,
@@ -488,6 +525,7 @@ export async function probeMintToDb(url: string): Promise<void> {
               contactCount,
               pubkey,
               JSON.stringify(contactNostr),
+              hasOnion,
             ]
           )
 
@@ -509,9 +547,10 @@ export async function probeMintToDb(url: string): Promise<void> {
           const locRow = await pool.query('SELECT server_location FROM mints WHERE url = $1', [url])
           const currentLoc = locRow.rows[0]?.server_location as string | null | undefined
           if (currentLoc == null) {
-            const location = await lookupServerLocation(url)
-            if (location !== null) {
-              await pool.query('UPDATE mints SET server_location = $1 WHERE url = $2', [location, url])
+            const geo = await lookupGeo(url)
+            if (geo !== null) {
+              if (geo.location !== null) await pool.query('UPDATE mints SET server_location = $1 WHERE url = $2', [geo.location, url])
+              await storeNetwork(url, geo)
             }
           }
         } catch (err) {

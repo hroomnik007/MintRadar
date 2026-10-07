@@ -269,6 +269,11 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS revalidated_at TIMESTAMPTZ',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS server_location TEXT',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS ip_address TEXT',
+    // Network card facts from our own ipinfo.io lookup (same request as server_location) and /v1/info `urls`.
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS net_asn INTEGER',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS net_org TEXT',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS net_country TEXT',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS has_onion BOOLEAN',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS units JSONB',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS mint_methods JSONB',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS melt_methods JSONB',

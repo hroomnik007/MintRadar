@@ -63,8 +63,6 @@ export const LNPAY_DETAIL = {
   integrity: {
     proof_state: { checked: 9, spent: 0, pending: 0 },
   },
-  network: { asn: 14061, asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US', country: 'US' },
-  onion: false,
 }
 
 /** A deep copy of LNPAY_DETAIL with parts replaced (shallow per top-level block: pass a whole block). */

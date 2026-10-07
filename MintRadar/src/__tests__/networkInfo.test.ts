@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { countryName, ipv4Address, networkLabel, networkRows, torLabel } from '@/utils/networkInfo'
-import type { AuditCzDetail } from '@/hooks/useAuditCz'
 
 describe('ipv4Address', () => {
   it('keeps a plain dotted IPv4 address, drops anything else', () => {
@@ -63,30 +62,25 @@ describe('torLabel', () => {
 })
 
 describe('networkRows', () => {
-  const base: AuditCzDetail = {
-    network: { asn: 14061, asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US', country: 'US' },
-    onion: false, fetchedAt: null,
-  }
-  it('all rows for the LNpay-like detail', () => {
-    expect(networkRows(base, '188.166.166.165')).toEqual({
-      ip: '188.166.166.165', network: 'AS14061 DigitalOcean', country: { name: 'United States' }, tor: 'No onion address'
-    })
+  const base = { ipAddress: '188.166.166.165', netAsn: 14061, netOrg: 'DigitalOcean, LLC', netCountry: 'US', hasOnion: false, online: true }
+  it('all rows for a fully measured mint', () => {
+    expect(networkRows(base)).toEqual({ ip: '188.166.166.165', network: 'AS14061 DigitalOcean', country: { name: 'United States' }, tor: 'No onion address' })
   })
-  it('no network block: no card, whatever else is there', () => {
-    expect(networkRows({ onion: true, fetchedAt: null }, null)).toBeNull()
-    expect(networkRows(null, null)).toBeNull()
-    expect(networkRows(undefined, undefined)).toBeNull()
+  it('onion flag', () => {
+    expect(networkRows({ ...base, hasOnion: true })?.tor).toBe('Onion address available')
+    expect(networkRows({ ...base, hasOnion: null })?.tor).toBeNull()
   })
-  it('a mint without a cashu.info detail still gets the IP row from our own lookup', () => {
-    expect(networkRows(null, '188.166.166.165')).toEqual({ ip: '188.166.166.165', network: null, country: null, tor: null })
+  it('nothing measured yet: no card', () => {
+    expect(networkRows(null)).toBeNull()
+    expect(networkRows(undefined)).toBeNull()
+    expect(networkRows({ online: true })).toBeNull()
   })
   it('an offline mint without an address says Offline; an address wins; an online one stays hidden', () => {
-    expect(networkRows(null, null, true)).toEqual({ ip: 'Offline', network: null, country: null, tor: null })
-    expect(networkRows(null, '188.166.166.165', true)?.ip).toBe('188.166.166.165')
-    expect(networkRows(null, null, false)).toBeNull()
+    expect(networkRows({ online: false })).toEqual({ ip: 'Offline', network: null, country: null, tor: null })
+    expect(networkRows({ online: false, ipAddress: '188.166.166.165' })?.ip).toBe('188.166.166.165')
   })
   it('hostile strings stay strings and a hostile country is hidden', () => {
-    const r = networkRows({ network: { asn: 1, asName: '<img src=x onerror=alert(1)>', country: '<b>' }, fetchedAt: null }, null)!
+    const r = networkRows({ netAsn: 1, netOrg: '<img src=x onerror=alert(1)>', netCountry: '<b>' })!
     expect(r.network).toBe('AS1 <img src=x onerror=alert(1)>')
     expect(r.country).toBeNull()
   })

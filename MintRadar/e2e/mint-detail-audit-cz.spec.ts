@@ -498,7 +498,6 @@ test('hostile values in the detail fields are shown as nothing or as plain text:
       errorsBlamed: XSS,
     },
     integrity: { proof_state: { checked: XSS, spent: XSS, pending: XSS } },
-    network: { asName: XSS, country: XSS, asn: XSS },
   })
   const h = await gotoAuditTab(page, onlyCz(czSwapList([ok, ok]), { detail }))
   // Strings where numbers belong are not numbers: their tiles and lines are hidden, nothing is printed.

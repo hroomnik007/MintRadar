@@ -89,12 +89,17 @@ All known mints with current online status, latency, reliability score, and meta
     "uptimePct24h": 100,
     "discoveredAt": "2025-11-01T12:00:00.000Z",
     "serverLocation": "Frankfurt am Main, DE",
+    "ipAddress": "188.166.166.165",
+    "netAsn": 14061,
+    "netOrg": "DigitalOcean, LLC",
+    "netCountry": "US",
+    "hasOnion": false,
     "lastCheckedAt": "2026-06-25T09:55:00.000Z"
   }
 ]
 ```
 
-`degraded` = mint has been offline for 24h+. `nutsLimits` keys are NUT numbers as strings.
+`degraded` = mint has been offline for 24h+. `nutsLimits` keys are NUT numbers as strings. `ipAddress` (public IPv4 of the mint host, our own DNS lookup), `netAsn` / `netOrg` / `netCountry` (AS number, organisation and ISO country of that IP block, from ipinfo.io) and `hasOnion` (the mint's `/v1/info` lists a `.onion` address) are measured by MintRadar itself; each is `null` until first measured.
 
 ---
 

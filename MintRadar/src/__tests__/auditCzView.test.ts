@@ -21,7 +21,6 @@ const LNPAY: AuditCzDetail = {
     errorsBlamed: 0, dleq: { valid: 56, invalid: 0, missing: 0 },
   },
   integrity: { proof_state: { checked: 9, spent: 0, pending: 0 } },
-  network: { asn: 14061, asName: 'DIGITALOCEAN-ASN - DigitalOcean, LLC, US', country: 'US' },
   fetchedAt: '2026-10-07T07:00:00.000Z',
 }
 const data = (swaps: Row[], detail: AuditCzData['detail'] = LNPAY, over: Partial<AuditCzData> = {}): AuditCzData => ({
@@ -49,7 +48,7 @@ describe('tiles from the stored detail (LNpay values)', () => {
   it('a tile whose field is missing is hidden', () => {
     expect(Object.keys(tiles({ fetchedAt: null, swaps7d: { asSource: { success: 1, total: 2 } } }))).toEqual(['melts'])
     expect(Object.keys(tiles({ fetchedAt: null, swaps7d: { asDest: { success: 3 } } }))).toEqual([])
-    expect(Object.keys(tiles({ fetchedAt: null, network: { asn: 1 } }))).toEqual([])
+    expect(Object.keys(tiles({ fetchedAt: null }))).toEqual([])
     expect(tiles({ fetchedAt: null, swaps7d: { errorsBlamed: 2 } })['attributed']?.label).toBe('Attributed')
   })
   it('formats the average: seconds with one decimal, under a second in ms', () => {
@@ -93,10 +92,10 @@ describe('Checks by the auditor', () => {
   })
   it('lines without data are hidden, and the whole card when both are', () => {
     expect(c({ swaps7d: { dleq: { valid: 0, invalid: 0, missing: 0 } }, integrity: { proof_state: { checked: 0 } } })).toBeNull()
-    expect(c({ network: { asn: 1 } })).toBeNull()
+    expect(c({ fetchedAt: null })).toBeNull()
     expect(c({ integrity: { proof_state: { checked: 4, spent: 0, pending: 0 } } })).toEqual({ signatures: null, proofs: 'Our ecash 4 proofs still unspent — the mint has not marked them spent.' })
     expect(c({ swaps7d: { dleq: { valid: 5 } } })?.proofs).toBeNull()
-    expect(view([], { fetchedAt: null, network: { asn: 1 } }).checks).toBeNull()
+    expect(view([], { fetchedAt: null }).checks).toBeNull()
   })
   it('hostile numbers cannot inject text (only numbers are interpolated)', () => {
     const r = c({ swaps7d: { dleq: { valid: '<b>1</b>' as unknown as number, invalid: 0, missing: 0 } } })

@@ -59,6 +59,12 @@ export interface KnownMint {
   serverLocation?: string | null
   /** Public IPv4 of the mint host, resolved by our backend. */
   ipAddress?: string | null
+  /** Network card facts from our own ipinfo.io lookup: AS number, organisation, ISO country of the IP block. */
+  netAsn?: number | null
+  netOrg?: string | null
+  netCountry?: string | null
+  /** True when the mint's own /v1/info `urls` lists a .onion address; null until probed. */
+  hasOnion?: boolean | null
   lastCheckedAt?: string | null
   // NIP-87 review rollup, refreshed by the backend's 6h reviews sync
   // (backend/src/reviewsSync.ts). Null until that sync has run for the mint.
