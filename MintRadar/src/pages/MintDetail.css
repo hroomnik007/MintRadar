@@ -2394,3 +2394,14 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .audit-summary-value { font-size: 20px; }
   .md-limit-card { padding-left: 12px; }
 }
+
+/* Mobile polish: Audit figures in two even columns; NUT limits stack without an indented second block. */
+@media (max-width: 900px) {
+  .audit-summary-strip { row-gap: 16px; }
+  .audit-summary-cell { border-left: 0; padding-left: 0; padding-right: 8px; }
+  .audit-summary-cell:nth-child(even) { border-left: 1px solid var(--border); padding-left: 14px; }
+}
+@media (max-width: 640px) {
+  .md-limit-card { border-left: 0; padding-left: 0; }
+  .md-limit-card + .md-limit-card { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px; }
+}
