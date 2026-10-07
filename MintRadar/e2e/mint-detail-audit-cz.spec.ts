@@ -55,11 +55,11 @@ test('only cz has data: header, four tiles from the stored detail, checks card, 
   await expect(header).toBeVisible()
   await expect(header).toHaveText(/^AUDIT STATS\s*·\s*via cashu\.info/, { useInnerText: true })
 
-  // Four tiles from the LNpay detail, in order; the label is uppercased by CSS only.
-  await expect(page.locator('.audit-cz-tiles .audit-summary-cell')).toHaveCount(4)
-  await expect(page.locator('.audit-cz-tiles .audit-summary-value')).toHaveText(['51 / 64', '56 / 62', '0', '8.3 s'])
+  // Five tiles from the LNpay detail, in order; the label is uppercased by CSS only.
+  await expect(page.locator('.audit-cz-tiles .audit-summary-cell')).toHaveCount(5)
+  await expect(page.locator('.audit-cz-tiles .audit-summary-value')).toHaveText(['85%', '51 / 64', '56 / 62', '0', '8.3 s'])
   await expect(page.locator('.audit-cz-tiles .audit-cz-tile-label span').filter({ hasText: /^[A-Z]/ })).toHaveText(
-    ['Paid out melts', 'Received mints', 'Attributed of 19 failed swaps', 'Avg swap time'])
+    ['Success rate', 'Paid out melts', 'Received mints', 'Attributed of 19 failed swaps', 'Avg swap time'])
   expect(await tile(page, 'melts').locator('.audit-cz-tile-label span').first().evaluate(e => getComputedStyle(e).textTransform)).toBe('uppercase')
   // The old Recent success rate tile is gone from this view.
   await expect(page.getByText('Recent success rate')).toHaveCount(0)
@@ -78,7 +78,7 @@ test('only cz has data: header, four tiles from the stored detail, checks card, 
   await expect(toCard(page).locator('th').first()).toHaveText('From')
   await expect(fromCard(page).locator('th')).toHaveText(['To', 'Amount', 'Fee', 'Duration', 'State'])
   await expect(toCard(page).locator('th')).toHaveText(['From', 'Amount', 'Fee', 'Duration', 'State'])
-  await expect(fromCard(page).locator('tbody tr')).toHaveCount(3)
+  await expect(fromCard(page).locator('tbody tr')).toHaveCount(5)
   await expect(fromCard(page).locator('.audit-swaps-show-all-btn')).toHaveText('Show all (10)')
   await expect(toCard(page).locator('tbody tr')).toHaveCount(2)
   await expect(toCard(page).locator('.audit-swaps-show-all-btn')).toHaveCount(0)
@@ -188,7 +188,7 @@ test.describe('tiles from the stored detail', () => {
     const rest: Record<string, unknown> = { ...LNPAY_DETAIL.swaps7d }
     delete rest['asSource']
     await gotoAuditTab(page, onlyCz([], { detail: czDetail({ swaps7d: { ...rest, all: { ...LNPAY_DETAIL.swaps7d.all, avgMs: 640 } } }) }))
-    await expect(page.locator('.audit-cz-tiles .audit-summary-cell')).toHaveCount(3)
+    await expect(page.locator('.audit-cz-tiles .audit-summary-cell')).toHaveCount(4)
     await expect(tile(page, 'melts')).toHaveCount(0)
     await expect(tile(page, 'avg').locator('.audit-summary-value')).toHaveText('640 ms')
   })

@@ -5,7 +5,7 @@ import { mintHostname } from '@/utils/mintFormatting'
 // The cashu.info view of the Audit tab below the header: four tiles, the auditor's checks and two
 // swap tables. Every string from the source is rendered as plain text (React escapes it).
 
-const ROWS_DEFAULT = 3
+const ROWS_DEFAULT = 5
 
 export function AuditCzTiles({ view }: { view: AuditCzView }) {
   if (view.tiles.length === 0) return null

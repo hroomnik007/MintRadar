@@ -34,7 +34,7 @@ export interface AuditSwapRow {
 }
 
 export interface AuditCzTile {
-  key: 'melts' | 'mints' | 'attributed' | 'avg'
+  key: 'success' | 'melts' | 'mints' | 'attributed' | 'avg'
   value: string
   /** Uppercase by CSS; a plain sentence-case string here. */
   label: string
@@ -168,6 +168,11 @@ function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
   const s = d.swaps7d
   if (!s) return []
   const tiles: AuditCzTile[] = []
+  const allOk = num(s.all?.success), allTotal = num(s.all?.total)
+  if (allOk !== undefined && allTotal !== undefined && allTotal > 0) tiles.push({
+    key: 'success', value: `${Math.round((allOk / allTotal) * 100)}%`, label: 'Success rate',
+    tooltip: 'Share of swaps in the last 7 days, in both directions, that succeeded, counted by cashu.info (successful of all)',
+  })
   const meltsOk = num(s.asSource?.success), meltsAll = num(s.asSource?.total)
   if (meltsOk !== undefined && meltsAll !== undefined) tiles.push({
     key: 'melts', value: `${fmt(meltsOk)} / ${fmt(meltsAll)}`, label: 'Paid out melts',

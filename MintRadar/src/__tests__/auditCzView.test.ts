@@ -36,11 +36,12 @@ const tiles = (d: AuditCzDetail) => Object.fromEntries(view([], d).tiles.map(t =
 describe('tiles from the stored detail (LNpay values)', () => {
   it('fractions, attributed caption and average time', () => {
     const t = tiles(LNPAY)
+    expect(t['success']).toMatchObject({ value: '85%', label: 'Success rate' })
     expect(t['melts']).toMatchObject({ value: '51 / 64', label: 'Paid out melts' })
     expect(t['mints']).toMatchObject({ value: '56 / 62', label: 'Received mints' })
     expect(t['attributed']).toMatchObject({ value: '0', label: 'Attributed of 19 failed swaps' })
     expect(t['avg']).toMatchObject({ value: '8.3 s', label: 'Avg swap time' })
-    expect(view([]).tiles.map(x => x.key)).toEqual(['melts', 'mints', 'attributed', 'avg'])
+    expect(view([]).tiles.map(x => x.key)).toEqual(['success', 'melts', 'mints', 'attributed', 'avg'])
   })
   it('singular caption for one failed swap', () => {
     expect(tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { failed: 1 } } })['attributed']?.label).toBe('Attributed of 1 failed swap')

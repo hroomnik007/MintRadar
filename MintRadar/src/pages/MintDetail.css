@@ -511,7 +511,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 
 .md-panel-title {
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--t3);
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -2057,7 +2057,7 @@ a.review-action-btn { color: var(--text3); }
 }
 .audit-cz-card-title {
   font-size: 11.5px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text3);
@@ -2080,6 +2080,7 @@ a.review-action-btn { color: var(--text3); }
 .audit-cz-tile-label { font-size: 11px; text-align: center; flex-wrap: wrap; }
 .audit-cz-tile-label > span:first-child { text-transform: uppercase; letter-spacing: 0.04em; }
 .audit-cz-tiles .audit-summary-value { font-size: 19px; }
+.audit-cz-tiles { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
 
 /* ── Overview info cards: one column of label-left / value-right rows (Mint info + Network) ── */
 .md-info-grid.md-info-list { grid-template-columns: 1fr; gap: 0; }

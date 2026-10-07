@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { D, LNPAY_DETAIL, NO_8333, NOT_COVERED, auditCzResponse, czDetail, gotoAuditTab } from './fixtures/auditCz'
+import { LNPAY_DETAIL, NO_8333, NOT_COVERED, auditCzResponse, czDetail, gotoAuditTab } from './fixtures/auditCz'
 
 type Page = import('@playwright/test').Page
 
@@ -11,9 +11,6 @@ const rowOf = (page: Page, label: string) => card(page).locator('.md-info-row', 
 const value = (page: Page, label: string) => rowOf(page, label).locator('.md-info-value')
 const XSS = '<img src=x onerror=alert(1)>'
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const dayLabel = (t: number) => { const d = new Date(t); return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}` }
-
 const IP = '188.166.166.165'
 const withNetwork = (net: Record<string, unknown>, extra: Record<string, unknown> = {}, alpha: Record<string, unknown> = {}) =>
   ({ alpha: { ...NO_8333, ...alpha }, cz: auditCzResponse({ detail: czDetail({ network: { ...LNPAY_DETAIL.network, ...net }, ...extra }) }) })
@@ -21,17 +18,15 @@ const withNetwork = (net: Record<string, unknown>, extra: Record<string, unknown
 const open = (page: Page, setup: Parameters<typeof gotoAuditTab>[1]) => gotoAuditTab(page, setup, false)
 
 test('LNpay-like detail: title with the source tag and the rows', async ({ page }) => {
-  const expires = Date.now() + 60 * D
-  await open(page, withNetwork({ tlsExpiresAt: new Date(expires).toISOString() }, {}, { ipAddress: IP }))
+  await open(page, withNetwork({}, {}, { ipAddress: IP }))
   await expect(card(page)).toBeVisible()
   await expect(card(page).locator('.md-panel-title')).toHaveText(/^network\s*via cashu\.info$/i, { useInnerText: true })
-  await expect(card(page).locator('.md-info-label')).toHaveText(['IP', 'Network', 'Registered in', 'Tor', 'TLS'])
+  await expect(card(page).locator('.md-info-label')).toHaveText(['IP', 'Network', 'Registered in', 'Tor'])
   await expect(value(page, 'IP')).toHaveText(IP)
   await expect(value(page, 'Network')).toHaveText('AS14061 DigitalOcean')
   await expect(value(page, 'Registered in')).toHaveText('United States')
   await expect(value(page, 'Tor')).toHaveText('No onion address')
-  await expect(value(page, 'TLS')).toHaveText(`Let's Encrypt, expires ${dayLabel(expires)}`)
-  await expect(value(page, 'TLS')).toHaveAttribute('data-tls', 'ok')
+  await expect(card(page).getByText('TLS')).toHaveCount(0)
 
   // IPv4 only: no IPv6 address anywhere in the card.
   const text = (await card(page).innerText()).replace(/\s+/g, ' ')
@@ -73,7 +68,7 @@ test.describe('IP row', () => {
   test('no address yet: the row is hidden', async ({ page }) => {
     await open(page, withNetwork({}))
     await expect(rowOf(page, 'IP')).toHaveCount(0)
-    await expect(card(page).locator('.md-info-label')).toHaveText(['Network', 'Registered in', 'Tor', 'TLS'])
+    await expect(card(page).locator('.md-info-label')).toHaveText(['Network', 'Registered in', 'Tor'])
   })
   test('offline mint without an address: the IP row says Offline', async ({ page }) => {
     await open(page, { alpha: { ...NO_8333, online: false }, cz: NOT_COVERED })
@@ -89,42 +84,6 @@ test.describe('IP row', () => {
     await expect(card(page).locator('.md-info-label')).toHaveText(['IP'])
     await expect(value(page, 'IP')).toHaveText(IP)
     await expect(card(page).locator('.md-panel-title')).not.toContainText(/cashu\.info/i)
-  })
-})
-
-test.describe('TLS states', () => {
-  test('expired: "expired {date}" in the warning colour', async ({ page }) => {
-    const t = Date.now() - 3 * D
-    await open(page, withNetwork({ tlsExpiresAt: new Date(t).toISOString() }))
-    await expect(value(page, 'TLS')).toHaveText(`Let's Encrypt, expired ${dayLabel(t)}`)
-    await expect(value(page, 'TLS')).toHaveAttribute('data-tls', 'expired')
-    const [c, amber, normal] = await page.evaluate(() => {
-      const probe = (v: string) => { const e = document.createElement('i'); e.style.color = v; document.body.appendChild(e); const c = getComputedStyle(e).color; e.remove(); return c }
-      const span = document.querySelector('[data-tls] span') as HTMLElement
-      return [getComputedStyle(span).color, probe('var(--amber)'), getComputedStyle(document.querySelector('[data-testid="mint-network-card"] .md-info-value')!).color]
-    })
-    expect(c).toBe(amber)
-    expect(c).not.toBe(normal)
-  })
-
-  test('fewer than 14 days left: "expires soon" appended in the warning colour', async ({ page }) => {
-    const t = Date.now() + 5 * D
-    await open(page, withNetwork({ tlsExpiresAt: new Date(t).toISOString() }))
-    await expect(value(page, 'TLS')).toHaveText(`Let's Encrypt, expires ${dayLabel(t)} · expires soon`)
-    await expect(value(page, 'TLS')).toHaveAttribute('data-tls', 'soon')
-    const soon = value(page, 'TLS').locator('span').last()
-    await expect(soon).toHaveText('· expires soon')
-    const [c, amber] = await soon.evaluate(e => {
-      const x = document.createElement('i'); x.style.color = 'var(--amber)'; document.body.appendChild(x)
-      const a = getComputedStyle(x).color; x.remove(); return [getComputedStyle(e).color, a]
-    })
-    expect(c).toBe(amber)
-  })
-
-  test('15 days left: plain, no warning', async ({ page }) => {
-    await open(page, withNetwork({ tlsExpiresAt: new Date(Date.now() + 15 * D).toISOString() }))
-    await expect(value(page, 'TLS')).not.toContainText('soon')
-    await expect(value(page, 'TLS')).toHaveAttribute('data-tls', 'ok')
   })
 })
 
@@ -156,7 +115,6 @@ test.describe('no network data: the card is not rendered', () => {
 test('hostile network strings are shown as text: no element, no dialog, no request', async ({ page }) => {
   const h = await open(page, withNetwork({ asName: XSS, tlsIssuer: XSS, country: XSS }))
   await expect(value(page, 'Network')).toHaveText(`AS14061 ${XSS}`)
-  await expect(value(page, 'TLS')).toContainText(XSS)
   await expect(rowOf(page, 'Registered in')).toHaveCount(0) // not a country code: the row is hidden, nothing printed
   await expect(card(page).locator('img')).toHaveCount(0)
   await expect(page.locator('[onerror], img[src="x"]')).toHaveCount(0)

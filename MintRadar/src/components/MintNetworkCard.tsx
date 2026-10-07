@@ -28,15 +28,6 @@ export function MintNetworkCard({ rows, viaCashuInfo }: { rows: NetworkRows; via
         {rows.tor && (
           <div className="md-info-row"><span className="md-info-label">Tor</span><span className="md-info-value">{rows.tor}</span></div>
         )}
-        {rows.tls && (
-          <div className="md-info-row">
-            <span className="md-info-label">TLS</span>
-            <span className="md-info-value" data-tls={rows.tls.state}>
-              <span style={rows.tls.state === 'expired' ? { color: 'var(--amber)' } : undefined}>{rows.tls.text}</span>
-              {rows.tls.suffix && <span style={{ color: 'var(--amber)' }}>{' · '}{rows.tls.suffix}</span>}
-            </span>
-          </div>
-        )}
       </div>
     </div>
   )
