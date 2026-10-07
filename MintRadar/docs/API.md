@@ -228,7 +228,6 @@ Data from the third-party audit service cashu.info for one mint, refreshed serve
   ],
   "stats7d": {
     "windowDays": 7,
-    "collectedSince": "2026-09-27T14:56:14.546Z",
     "melts": { "paid": 18, "failed": 5, "pending": 1, "amountPaid": 11100, "feesPaid": 60 },
     "mints": { "paid": 23, "failed": 22, "pending": 0, "amountPaid": 1752, "feesPaid": 0 },
     "avgDurationMsPaid": 4213.4,
@@ -270,7 +269,7 @@ Data from the third-party audit service cashu.info for one mint, refreshed serve
 
 Which swaps are returned: with `direction=from` the swaps whose source is this mint (or one of its aliases), with `direction=to` those whose destination is this mint, with `direction=both` either. A swap that has this mint on both sides appears in all three, labelled `from`.
 
-`stats7d` is **counted by MintRadar** over the swaps it stored with `at` in the last 7 days where `from_url` or `to_url` matches the mint (URL or alias) — it is not a figure published by cashu.info. A swap where this mint is the source (`from`) is a **melt**, where it is the destination (`to`) a **mint**; a swap matching on both sides is counted once, as a melt. `paid` = status `success`, `failed` = status `failed`, anything else is `pending` (excluded from paid/failed); `paid + failed + pending` over both directions equals `swapsCounted`. `amountPaid` / `feesPaid` are sums over paid swaps (a null fee counts as 0), `avgDurationMsPaid` is the mean `durationMs` of paid swaps that have one (else `null`). `collectedSince` is the `at` of the oldest swap in `audit_cz_swaps` — the window start the counts can claim (a value newer than 7 days ago means the numbers cover less than 7 days; `null` when the table is empty).
+`stats7d` is **counted by MintRadar** over the swaps it stored with `at` in the last 7 days where `from_url` or `to_url` matches the mint (URL or alias) — it is not a figure published by cashu.info. A swap where this mint is the source (`from`) is a **melt**, where it is the destination (`to`) a **mint**; a swap matching on both sides is counted once, as a melt. `paid` = status `success`, `failed` = status `failed`, anything else is `pending` (excluded from paid/failed); `paid + failed + pending` over both directions equals `swapsCounted`. `amountPaid` / `feesPaid` are sums over paid swaps (a null fee counts as 0), `avgDurationMsPaid` is the mean `durationMs` of paid swaps that have one (else `null`).
 
 `detail` is **published by cashu.info** (`GET /api/v1/mints/{id}`), validated and stored by a 30-minute job; every field is optional and a malformed field is simply absent. Numbers are non-negative; counts are integers. Strings are untrusted text (sanitised: NFC, no control / zero-width / bidi characters, whitespace collapsed, capped). It never contains an IP address, the onion address, score, reviews, TLS, step timings, latency or Frankfurt data.
 

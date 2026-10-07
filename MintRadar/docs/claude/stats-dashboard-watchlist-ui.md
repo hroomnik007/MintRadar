@@ -162,6 +162,7 @@ Before the 2×2 hero grid, NHI went through multiple repositioning attempts:
   (this row is 30% of the index), not <n> mints online. Dashboard listed/online counts are a
   different set."` so it can't be confused with the Dashboard's online headcount. The
   panel-level ⓘ makes the same point.
+- **Most Reliable panel opens on the Reliability tab (2026-10-07)** — `reliableTab` default is `'reliability'` ("Top Reliability Score"); the Uptime tab ("Top Uptime · 7D") is one click away. Tab order and labels unchanged.
 - **Most Reliable list excludes `isTestMint()`** (`781617d`) — `top5ByUptime` filters them out.
   (An earlier pass, `f2b25ff`, only *badged* them here; `781617d` actually excludes them from
   the Reliable list.) **Superseded 2026-09-19 (audit run-3 MEDIUM finding):** the Reliability tab

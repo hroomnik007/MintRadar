@@ -614,7 +614,7 @@ export default function Stats() {
   const [showMoreLocations, setShowMoreLocations] = useState(false)
   const [softwareModal, setSoftwareModal] = useState<string | null>(null)
   const [nutModal, setNutModal] = useState<string | null>(null)
-  const [reliableTab, setReliableTab] = useState<'reliable' | 'reliability'>('reliable')
+  const [reliableTab, setReliableTab] = useState<'reliable' | 'reliability'>('reliability')
   const [moversPeriod, setMoversPeriod] = useState<'7d' | '30d'>('7d')
   const [trendDays, setTrendDays] = useState<30 | 90>(30)
   const [showHealthBreakdown, setShowHealthBreakdown] = useState(false)

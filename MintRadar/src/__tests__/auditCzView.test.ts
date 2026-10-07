@@ -111,13 +111,6 @@ describe('the two tables, the bar rows and the freshness', () => {
     expect(v.fromRows.map(r => r.toUrl)).toEqual(['https://dest.example', 'https://o.example'])
     expect(v.toRows.map(r => r.toUrl)).toEqual(['https://src.example'])
   })
-  it('collected since: only when the oldest stored swap is newer than 7 days', () => {
-    const stats = (collectedSince: string | null) => ({ stats7d: { windowDays: 7 as const, collectedSince, melts: { paid: 0, failed: 0, pending: 0, amountPaid: 0, feesPaid: 0 }, mints: { paid: 0, failed: 0, pending: 0, amountPaid: 0, feesPaid: 0 }, avgDurationMsPaid: null, swapsCounted: 0 } })
-    expect(view([], LNPAY, stats('2026-10-04T10:00:00Z')).collectedSince).toBe('4 Oct')
-    expect(view([], LNPAY, stats('2026-09-20T10:00:00Z')).collectedSince).toBeNull()
-    expect(view([], LNPAY, stats(null)).collectedSince).toBeNull()
-    expect(view([]).collectedSince).toBeNull()
-  })
   it('not updated recently only after 90 minutes (from the stored detail)', () => {
     expect(view([], LNPAY, {}, Date.parse('2026-10-07T08:29:00Z')).notRecent).toBe(false)
     expect(view([], LNPAY, {}, Date.parse('2026-10-07T08:31:00Z')).notRecent).toBe(true)

@@ -62,7 +62,6 @@ export interface AuditCzView {
   /** null hides the whole card. */
   checks: AuditCzChecks | null
   /** "3 Oct" when the oldest swap MintRadar stored is newer than 7 days; null otherwise. */
-  collectedSince: string | null
   /** attributedFailures as published by the cashu.info feed (feeds the header tooltip sentence). */
   failuresAttributed: number | null
 }
@@ -143,15 +142,6 @@ export function auditCzStateTitle(s: Pick<AuditSwapRow, 'state' | 'neutral' | 'r
     return reason ? `${why}. ${reason}` : why
   }
   return reason ?? undefined
-}
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-function dayLabel(iso: string): string | null {
-  const t = new Date(iso).getTime()
-  if (!Number.isFinite(t)) return null
-  const d = new Date(t)
-  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`
 }
 
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : undefined)
@@ -251,8 +241,6 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
   })
   const checkedAt = data.detail.fetchedAt ?? data.fetchedAt
   const checkedMs = checkedAt ? new Date(checkedAt).getTime() : NaN
-  const since = data.stats7d?.collectedSince ?? null
-  const sinceMs = since ? new Date(since).getTime() : NaN
   return {
     sourceHref: data.sourceUrl && AUDIT_CZ_PAGE_RE.test(data.sourceUrl) ? data.sourceUrl : null,
     checkedAt,
@@ -262,7 +250,6 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
     toRows: rows.filter(r => r.direction === 'to'),
     tiles: auditCzTiles(data.detail),
     checks: auditCzChecks(data.detail),
-    collectedSince: since && Number.isFinite(sinceMs) && now - sinceMs < 7 * 86_400_000 ? dayLabel(since) : null,
     failuresAttributed: data.mint.attributedFailures,
   }
 }

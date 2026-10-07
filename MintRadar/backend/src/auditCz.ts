@@ -359,8 +359,6 @@ export interface AuditCzDirectionStats {
 /** MintRadar's own count over the swaps it stored (never a figure published by cashu.info). */
 export interface AuditCzStats7d {
   windowDays: 7
-  /** Oldest swap (`at`) held in audit_cz_swaps: the window start the counts can claim. null when the table is empty. */
-  collectedSince: string | null
   melts: AuditCzDirectionStats
   mints: AuditCzDirectionStats
   avgDurationMsPaid: number | null
@@ -417,7 +415,7 @@ const emptyDir = (): AuditCzDirectionStats => ({ paid: 0, failed: 0, pending: 0,
 const num = (v: unknown): number => (v === null || v === undefined ? 0 : Number(v))
 
 /** Pure: grouped rows → stats7d. Melt = this mint is `from` (also when both sides match); mint = `to`. */
-export function buildAuditCzStats7d(rows: AuditCzStatsRow[], collectedSince: string | null): AuditCzStats7d {
+export function buildAuditCzStats7d(rows: AuditCzStatsRow[]): AuditCzStats7d {
   const melts = emptyDir()
   const mints = emptyDir()
   let durSum = 0
@@ -441,7 +439,6 @@ export function buildAuditCzStats7d(rows: AuditCzStatsRow[], collectedSince: str
   }
   return {
     windowDays: STATS_WINDOW_DAYS,
-    collectedSince,
     melts,
     mints,
     avgDurationMsPaid: durN > 0 ? durSum / durN : null,
@@ -494,26 +491,20 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
   // One grouped query over the window (indexes on from_url/to_url + at). A swap whose both sides
   // match this mint is counted once, as a melt. Status other than success/failed counts as pending.
   const cutoff = new Date(Date.now() - STATS_WINDOW_DAYS * 86_400_000)
-  const [st, since] = await Promise.all([
-    pool.query(
-      `SELECT CASE WHEN from_url = ANY($1) THEN 'melt' ELSE 'mint' END AS dir,
-              CASE WHEN status = 'success' THEN 'paid' WHEN status = 'failed' THEN 'failed' ELSE 'pending' END AS outcome,
-              COUNT(*) AS n,
-              COALESCE(SUM(amount), 0) AS amount_sum,
-              COALESCE(SUM(COALESCE(fee, 0)), 0) AS fee_sum,
-              COALESCE(SUM(duration_ms), 0) AS dur_sum,
-              COUNT(duration_ms) AS dur_n
-         FROM audit_cz_swaps
-        WHERE at >= $2 AND (from_url = ANY($1) OR to_url = ANY($1))
-        GROUP BY 1, 2`,
-      [urls, cutoff],
-    ),
-    pool.query(`SELECT MIN(at) AS since FROM audit_cz_swaps`),
-  ])
-  const stats7d = buildAuditCzStats7d(
-    st.rows as AuditCzStatsRow[],
-    iso((since.rows[0] as Record<string, unknown> | undefined)?.['since']),
+  const st = await pool.query(
+    `SELECT CASE WHEN from_url = ANY($1) THEN 'melt' ELSE 'mint' END AS dir,
+            CASE WHEN status = 'success' THEN 'paid' WHEN status = 'failed' THEN 'failed' ELSE 'pending' END AS outcome,
+            COUNT(*) AS n,
+            COALESCE(SUM(amount), 0) AS amount_sum,
+            COALESCE(SUM(COALESCE(fee, 0)), 0) AS fee_sum,
+            COALESCE(SUM(duration_ms), 0) AS dur_sum,
+            COUNT(duration_ms) AS dur_n
+       FROM audit_cz_swaps
+      WHERE at >= $2 AND (from_url = ANY($1) OR to_url = ANY($1))
+      GROUP BY 1, 2`,
+    [urls, cutoff],
   )
+  const stats7d = buildAuditCzStats7d(st.rows as AuditCzStatsRow[])
   const swaps = sw.rows.map(r => {
     const x = r as Record<string, unknown>
     const isFrom = typeof x['from_url'] === 'string' && urls.includes(x['from_url'])

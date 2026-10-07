@@ -34,7 +34,6 @@ export interface AuditCzData {
   /** Counted by MintRadar over the swaps it stored (not published by cashu.info). */
   stats7d: {
     windowDays: 7
-    collectedSince: string | null
     melts: AuditCzDirectionStats
     mints: AuditCzDirectionStats
     avgDurationMsPaid: number | null

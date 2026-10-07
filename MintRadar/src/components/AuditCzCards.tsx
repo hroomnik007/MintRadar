@@ -95,7 +95,6 @@ export function AuditCzSwapTables({ view, expandedFrom, expandedTo, onToggleFrom
     <>
       <SwapTable title="Swaps from this mint" firstHeader="To" rows={view.fromRows} expanded={expandedFrom} onToggle={onToggleFrom} />
       <SwapTable title="Swaps to this mint" firstHeader="From" rows={view.toRows} expanded={expandedTo} onToggle={onToggleTo} />
-      {view.collectedSince && <p className="audit-cz-muted" data-testid="audit-cz-since">Collected by MintRadar since {view.collectedSince}</p>}
     </>
   )
 }

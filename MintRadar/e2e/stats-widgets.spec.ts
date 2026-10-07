@@ -56,7 +56,7 @@ test('Uptime tab rows never show a hostname/URL subtitle under the name', async 
   expect(text).not.toContain('alpha.example')
 })
 
-test('Uptime tab panel is labeled 7D and ranks by uptimePct7d, not uptimePct24h', async ({ page }) => {
+test('Uptime tab (after a click) is labeled 7D and ranks by uptimePct7d, not uptimePct24h', async ({ page }) => {
   const base = MOCK_KNOWN_MINTS[0]!
   // Deliberately opposite orderings on the two fields — Bravo has the higher
   // 24h uptime but the lower 7d uptime; if the panel were still reading
@@ -68,6 +68,9 @@ test('Uptime tab panel is labeled 7D and ranks by uptimePct7d, not uptimePct24h'
   await page.goto('/stats')
 
   const widget = page.locator('.stats-panel').filter({ has: page.getByRole('button', { name: 'Uptime', exact: true }) })
+  // The panel opens on Reliability (default since 2026-10-07); Uptime is one click away.
+  await expect(widget).toContainText('Top Reliability Score')
+  await widget.getByRole('button', { name: 'Uptime', exact: true }).click()
   await expect(widget).toContainText('Top Uptime · 7D')
   await expect(widget).not.toContainText('Top Uptime · 24H')
 

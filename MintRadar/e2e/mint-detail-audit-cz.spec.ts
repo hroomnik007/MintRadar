@@ -262,21 +262,6 @@ test.describe('the two tables', () => {
     await expect(fromCard(page).getByText('No swaps collected yet')).toBeVisible()
     await expect(toCard(page).locator('tbody tr')).toHaveCount(2)
   })
-
-  test('"Collected by MintRadar since" shows only while the oldest stored swap is younger than 7 days', async ({ page }) => {
-    const stats = (at: string | null) => ({ windowDays: 7, collectedSince: at, melts: { paid: 0, failed: 0, pending: 0, amountPaid: 0, feesPaid: 0 }, mints: { paid: 0, failed: 0, pending: 0, amountPaid: 0, feesPaid: 0 }, avgDurationMsPaid: null, swapsCounted: 0 })
-    const since = new Date(Date.now() - 2 * D)
-    await gotoAuditTab(page, onlyCz(czSwapList([ok]), { stats7d: stats(since.toISOString()) }))
-    const label = `${since.getUTCDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][since.getUTCMonth()]}`
-    await expect(page.getByTestId('audit-cz-since')).toHaveText(`Collected by MintRadar since ${label}`)
-  })
-
-  test('older than 7 days: no "collected since" line', async ({ page }) => {
-    const stats = { windowDays: 7, collectedSince: new Date(Date.now() - 9 * D).toISOString(), melts: { paid: 0, failed: 0, pending: 0, amountPaid: 0, feesPaid: 0 }, mints: { paid: 0, failed: 0, pending: 0, amountPaid: 0, feesPaid: 0 }, avgDurationMsPaid: null, swapsCounted: 0 }
-    await gotoAuditTab(page, onlyCz(czSwapList([ok]), { stats7d: stats }))
-    await expect(fromCard(page)).toBeVisible()
-    await expect(page.getByTestId('audit-cz-since')).toHaveCount(0)
-  })
 })
 
 // ── e) both sources have data: the switch ───────────────────────

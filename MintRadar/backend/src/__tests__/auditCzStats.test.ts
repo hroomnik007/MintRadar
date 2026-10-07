@@ -37,10 +37,6 @@ const { rowsRef, poolMock } = vi.hoisted(() => {
         }
         return { rows: [...g.values()].map(r => ({ ...r, n: String(r['n']), dur_n: String(r['dur_n']) })) }
       }
-      if (sql.includes('MIN(at)')) {
-        const ats = rowsRef.swaps.map(s => (s['at'] as Date).getTime())
-        return { rows: [{ since: ats.length ? new Date(Math.min(...ats)) : null }] }
-      }
       if (sql.includes('FROM audit_cz_swaps') && sql.includes('LIMIT $2')) return { rows: [] }
       return { rows: [] }
     }),
@@ -85,7 +81,6 @@ describe('stats7d aggregation', () => {
     const r = await getAuditCzForMint(ALIAS)
     expect(r.stats7d).toEqual({
       windowDays: 7,
-      collectedSince: ago(7 * DAY + MIN).toISOString(),
       melts: { paid: 3, failed: 1, pending: 1, amountPaid: 160, feesPaid: 2 },
       mints: { paid: 1, failed: 2, pending: 1, amountPaid: 30, feesPaid: 1 },
       avgDurationMsPaid: 1625,
@@ -121,7 +116,7 @@ describe('buildAuditCzStats7d', () => {
     const r = buildAuditCzStats7d([
       { dir: 'melt', outcome: 'paid', n: '2', amount_sum: '30', fee_sum: '1', dur_sum: '3000', dur_n: '2' },
       { dir: 'mint', outcome: 'pending', n: '1', amount_sum: '5', fee_sum: '0', dur_sum: '0', dur_n: '0' },
-    ], null)
+    ])
     expect(r.melts).toEqual({ paid: 2, failed: 0, pending: 0, amountPaid: 30, feesPaid: 1 })
     expect(r.mints).toEqual({ paid: 0, failed: 0, pending: 1, amountPaid: 0, feesPaid: 0 })
     expect(r.avgDurationMsPaid).toBe(1500)
