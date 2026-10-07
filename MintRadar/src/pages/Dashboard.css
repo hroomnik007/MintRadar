@@ -1393,12 +1393,6 @@
   margin-bottom: 10px; font-family: var(--font-body);
 }
 
-.submit-no-account {
-  font-size: 10px; color: var(--text3);
-  text-align: center; margin-top: 8px;
-  font-family: var(--font-body);
-}
-
 /* ── Filter Button ──────────────────────────────────────────── */
 .filter-btn {
   display: flex;

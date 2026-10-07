@@ -1662,7 +1662,6 @@ export default function Dashboard() {
                 )}
               </div>
             )}
-            <div className="submit-no-account">No account required.</div>
           </div>
         </div>
       )}
