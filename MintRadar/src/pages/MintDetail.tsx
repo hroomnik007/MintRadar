@@ -1269,7 +1269,17 @@ function MintDetailContent({ url }: { url: string }) {
                   {showTor && (
                     <span className="md-url-tor" title={trackedIsOnion ? 'Tor hidden service — reachable only over the Tor network' : 'Mint also advertises a .onion URL'}>Tor</span>
                   )}
-                  {url.split(/(?<=\/)/).map((part, i) => <Fragment key={i}>{part}<wbr /></Fragment>)}
+                  {(() => {
+                    // The scheme is hidden on phones (CSS) so a typical URL fits one line; it stays in the DOM.
+                    const m = /^(https?:\/\/)(.*)$/.exec(url)
+                    const rest = m ? m[2]! : url
+                    return (
+                      <>
+                        {m && <span className="md-url-scheme">{m[1]}</span>}
+                        {rest.split(/(?<=\/)/).map((part, i) => <Fragment key={i}>{part}<wbr /></Fragment>)}
+                      </>
+                    )
+                  })()}
                 </span>
                 {copiedLink ? <span className="md-url-copied-label">Link copied</span> : <ArrowUpRight size={12} />}
               </button>
