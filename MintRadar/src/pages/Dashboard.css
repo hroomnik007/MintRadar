@@ -795,10 +795,9 @@
 .card-reliability-na {
   display: flex;
   align-items: center;
-  gap: 3px;
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  gap: 4px;
+  font-size: 11px;
+  letter-spacing: 0.01em;
   color: var(--t2);
   white-space: nowrap;
   flex-shrink: 0;
@@ -921,11 +920,10 @@
 .card-compare-btn:hover { border-color: var(--green); background: var(--elevated); }
 
 .latency-block .latency-label {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--t2);
   margin-bottom: 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.01em;
 }
 
 .latency-value {

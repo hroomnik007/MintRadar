@@ -116,12 +116,10 @@
 }
 
 .learn-card-number {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--copper);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-family: var(--font-mono);
+  font-family: var(--sans);
 }
 
 .learn-card-title {

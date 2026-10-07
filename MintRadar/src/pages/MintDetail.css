@@ -620,6 +620,11 @@ button.md-url-copy.copied > svg { opacity: 1; }
   line-height: 1.55;
   overflow-wrap: anywhere;
 }
+/* short notice ("migrated"): one line, icon + title + text, instead of a two-line box */
+.md-mint-alert--inline { align-items: center; padding: 7px 12px; }
+.md-mint-alert--inline .md-mint-alert-icon { margin-top: 0; }
+.md-mint-alert--inline .md-mint-alert-body { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.md-mint-alert--inline .md-mint-alert-text { font-size: 13px; color: var(--text); }
 /* second block (both minting AND melting disabled) gets a divider above it */
 .md-mint-alert-title:not(:first-child) {
   margin-top: 4px;
@@ -640,6 +645,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 
 .md-desc-row { flex-direction: column; align-items: flex-start; gap: 4px; }
 .md-desc-row .md-info-value {
+  font-family: var(--sans);
   font-weight: 400;
   font-size: 14px;
   text-align: left;
@@ -649,6 +655,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   word-break: normal;
   overflow-wrap: anywhere;
 }
+.md-desc-row .md-info-label { font-family: var(--sans); }
 .md-info-label { font-size: 12px; color: var(--text3); flex-shrink: 0; font-family: var(--font-mono); font-weight: 400; }
 .md-info-value {
   font-size: 14px;

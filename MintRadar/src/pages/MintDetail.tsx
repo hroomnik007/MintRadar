@@ -1548,7 +1548,11 @@ function MintDetailContent({ url }: { url: string }) {
               <div className="md-panel">
                 <div className="md-panel-title">About</div>
                 {motd && isMotdAlert(motd) && (
-                  <div className="md-mint-alert" role="status">
+                  <div
+                    className={`md-mint-alert${motd.trim().length <= 24 ? ' md-mint-alert--inline' : ''}`}
+                    role="status"
+                  >
+                    <AlertTriangle size={16} className="md-mint-alert-icon" />
                     <div className="md-mint-alert-body">
                       <div className="md-mint-alert-title">Operator notice</div>
                       <div className="md-mint-alert-text">{motd}</div>
