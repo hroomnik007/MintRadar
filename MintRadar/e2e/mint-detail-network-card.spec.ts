@@ -24,10 +24,10 @@ test('LNpay-like detail: title with the source tag and the five rows', async ({ 
   await open(page, withNetwork({ tlsExpiresAt: new Date(expires).toISOString() }))
   await expect(card(page)).toBeVisible()
   await expect(card(page).locator('.md-panel-title')).toHaveText(/^network\s*via cashu\.info$/i, { useInnerText: true })
-  await expect(card(page).locator('.md-info-label')).toHaveText(['IP', 'Network', 'Country', 'Tor', 'TLS'])
+  await expect(card(page).locator('.md-info-label')).toHaveText(['IP', 'Network', 'Registered in', 'Tor', 'TLS'])
   await expect(value(page, 'IP')).toHaveText('IPv4 and IPv6')
   await expect(value(page, 'Network')).toHaveText('AS14061 DigitalOcean')
-  await expect(value(page, 'Country')).toHaveText('United States')
+  await expect(value(page, 'Registered in')).toHaveText('United States')
   await expect(value(page, 'Tor')).toHaveText('No onion address')
   await expect(value(page, 'TLS')).toHaveText(`Let's Encrypt, expires ${dayLabel(expires)}`)
   await expect(value(page, 'TLS')).toHaveAttribute('data-tls', 'ok')
@@ -62,9 +62,12 @@ test('the card sits between Mint info and the rest, and Mint info keeps its rows
   }
 })
 
-test('the country row is followed by a Registered row with the registration caveat', async ({ page }) => {
+test('the registration row says what it is and carries the caveat as an info tooltip', async ({ page }) => {
   await open(page, withNetwork({}))
-  await expect(rowOf(page, 'Registered')).toContainText('where that block is registered')
+  await expect(rowOf(page, 'Registered in')).toContainText('United States')
+  await expect(card(page).locator('.md-info-label', { hasText: /^Country$/ })).toHaveCount(0)
+  await rowOf(page, 'Registered in').locator('.info-tooltip').hover()
+  await expect(rowOf(page, 'Registered in').getByRole('tooltip')).toContainText('Country where the IP block is registered, not where the server stands.')
 })
 
 test.describe('IP wording', () => {
@@ -80,7 +83,7 @@ test.describe('IP wording', () => {
   test('both false: the row is hidden', async ({ page }) => {
     await open(page, withNetwork({ ipv4: false, ipv6: false }))
     await expect(rowOf(page, 'IP')).toHaveCount(0)
-    await expect(card(page).locator('.md-info-label')).toHaveText(['Network', 'Country', 'Tor', 'TLS'])
+    await expect(card(page).locator('.md-info-label')).toHaveText(['Network', 'Registered in', 'Tor', 'TLS'])
   })
 })
 
@@ -149,7 +152,7 @@ test('hostile network strings are shown as text: no element, no dialog, no reque
   const h = await open(page, withNetwork({ asName: XSS, tlsIssuer: XSS, country: XSS }))
   await expect(value(page, 'Network')).toHaveText(`AS14061 ${XSS}`)
   await expect(value(page, 'TLS')).toContainText(XSS)
-  await expect(rowOf(page, 'Country')).toHaveCount(0) // not a country code: the row is hidden, nothing printed
+  await expect(rowOf(page, 'Registered in')).toHaveCount(0) // not a country code: the row is hidden, nothing printed
   await expect(card(page).locator('img')).toHaveCount(0)
   await expect(page.locator('[onerror], img[src="x"]')).toHaveCount(0)
   expect(h.requests.filter(u => new URL(u).pathname === '/x')).toEqual([])
