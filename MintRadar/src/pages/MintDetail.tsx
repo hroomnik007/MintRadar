@@ -20,6 +20,8 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { InfoTooltip } from '@/components/InfoTooltip'
+import { MintNetworkCard } from '@/components/MintNetworkCard'
+import { networkRows } from '@/utils/networkInfo'
 import { AuditCzTiles, AuditCzChecks, AuditCzSwapTables } from '@/components/AuditCzCards'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
@@ -642,7 +644,7 @@ function MintDetailContent({ url }: { url: string }) {
   })
   // cashu.info data: fetched (from our own /api/mints/audit-cz, never from them) only while
   // the Audit tab is open and the known-mints list has loaded.
-  const { data: auditCzData, loading: auditCzLoading } = useAuditCz(url, activeTab === 'audit')
+  const { data: auditCzData, loading: auditCzLoading } = useAuditCz(url, activeTab === 'audit' || activeTab === 'overview')
   const czData = adaptAuditCz(auditCzData, now)
   // Source chosen with the header switch (null = default: cashu.info when the 8333 data is missing/stale).
   const [auditSourcePick, setAuditSourcePick] = useState<'cz' | '8333' | null>(null)
@@ -1600,7 +1602,7 @@ function MintDetailContent({ url }: { url: string }) {
                 </div>
               </div>
             )}
-            <div className="md-info-grid">
+            <div className="md-info-grid md-info-list">
               <div className="md-info-row">
                 <span className="md-info-label">Name</span>
                 <span className="md-info-value">{name ?? '—'}</span>
@@ -1697,6 +1699,8 @@ function MintDetailContent({ url }: { url: string }) {
               </div>
             )}
           </div>
+
+          {(() => { const rows = networkRows(auditCzData?.detail, now); return rows ? <MintNetworkCard rows={rows} /> : null })()}
 
           {(email || twitter || nostr || operatorNip05) && (
             <div className="md-panel">

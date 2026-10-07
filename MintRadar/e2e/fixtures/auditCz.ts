@@ -147,7 +147,7 @@ export async function disableMotion(page: Page) {
  * cashu.info / audit.8333.space themselves are aborted, so a regression that makes the browser contact
  * them directly cannot reach the network (it is still recorded in `requests`).
  */
-export async function gotoAuditTab(page: Page, setup: AuditCzSetup = {}): Promise<AuditCzHarness> {
+export async function gotoAuditTab(page: Page, setup: AuditCzSetup = {}, openAuditTab = true): Promise<AuditCzHarness> {
   const requests: string[] = []
   const dialogs: string[] = []
   page.on('request', r => requests.push(r.url()))
@@ -167,7 +167,7 @@ export async function gotoAuditTab(page: Page, setup: AuditCzSetup = {}): Promis
 
   await page.goto(ALPHA_PATH)
   await expect(page.locator('.md-tabs')).toBeVisible()
-  await page.locator('.md-tab', { hasText: 'Audit' }).click()
+  if (openAuditTab) await page.locator('.md-tab', { hasText: 'Audit' }).click()
 
   return {
     requests,

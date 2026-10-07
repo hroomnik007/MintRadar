@@ -2078,3 +2078,17 @@ a.review-action-btn { color: var(--text3); }
 }
 .audit-cz-tile-label { text-transform: uppercase; letter-spacing: 0.04em; font-size: 11px; text-align: center; flex-wrap: wrap; }
 .audit-cz-tiles .audit-summary-value { font-size: 19px; }
+
+/* ── Overview info cards: one column of label-left / value-right rows (Mint info + Network) ── */
+.md-info-grid.md-info-list { grid-template-columns: 1fr; gap: 0; }
+.md-panel-tag {
+  margin-left: 6px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--text3);
+}
+.md-info-label-tip { display: inline-flex; align-items: center; gap: 4px; }
+/* Network card values wrap between words ("expires 12 Oct 2026 · expires soon"), and only inside a word when
+   it alone is wider than the row (a long network name); the Mint info card keeps its break-all recipe. */
+.md-network-card .md-info-value { word-break: normal; overflow-wrap: anywhere; max-width: 70%; }
