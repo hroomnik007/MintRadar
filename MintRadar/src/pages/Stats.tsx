@@ -138,7 +138,7 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose, duplicateDisplayNam
       <div className="nut-modal-list" tabIndex={0} role="group" aria-label="Mints">
         {displayed.map(m => {
             const score = m.reliabilityScore ?? null
-            const scoreColor = score != null ? (score >= 70 ? 'var(--accent)' : score >= 40 ? 'var(--amber)' : 'var(--red)') : 'var(--text3)'
+            const scoreColor = score != null ? (score >= 70 ? 'var(--accent)' : score >= 40 ? 'var(--amber)' : 'color-mix(in srgb, var(--red) 80%, var(--text))') : 'var(--text3)'
             return (
               <div
                 key={m.url}
@@ -318,7 +318,7 @@ function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
         <div className="nut-modal-list" tabIndex={0} role="group" aria-label="Mints">
           {displayed.map(m => {
             const score = m.reliabilityScore ?? null
-            const scoreColor = score != null ? (score >= 70 ? 'var(--green-bright)' : score >= 40 ? 'var(--amber)' : 'var(--red)') : 'var(--text3)'
+            const scoreColor = score != null ? (score >= 70 ? 'var(--green-bright)' : score >= 40 ? 'var(--amber)' : 'color-mix(in srgb, var(--red) 80%, var(--text))') : 'var(--text3)'
             return (
               <div
                 key={m.url}
@@ -400,7 +400,7 @@ function NutMintsModal({ nut, mints, onClose, duplicateDisplayNames }: {
         <div className="nut-modal-list" tabIndex={0} role="group" aria-label="Mints">
           {displayed.map(m => {
             const score = m.reliabilityScore ?? null
-            const scoreColor = score != null ? (score >= 70 ? 'var(--green-bright)' : score >= 40 ? 'var(--amber)' : 'var(--red)') : 'var(--text3)'
+            const scoreColor = score != null ? (score >= 70 ? 'var(--green-bright)' : score >= 40 ? 'var(--amber)' : 'color-mix(in srgb, var(--red) 80%, var(--text))') : 'var(--text3)'
             return (
               <div
                 key={m.url}
@@ -1118,7 +1118,7 @@ export default function Stats() {
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data yet</div>
               ) : top5ByReliability.map((mint, idx) => {
                 const score = mint.reliabilityScore ?? 0
-                const color = score >= 70 ? 'var(--accent)' : score >= 40 ? 'var(--amber)' : 'var(--red)'
+                const color = score >= 70 ? 'var(--accent)' : score >= 40 ? 'var(--amber)' : 'color-mix(in srgb, var(--red) 80%, var(--text))'
                 const loc = normalizeGeoLoc(mint.serverLocation)
                 const cityInfo = loc !== 'Unknown' ? geoLabel(loc) : null
                 return (
