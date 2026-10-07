@@ -85,7 +85,7 @@ test.describe('MintCard — copy & reduced badge set', () => {
     await expect(card(page, 'Charlie Mint').locator('.latency-value')).toHaveText('n/a')
   })
 
-  test('Offline 24h+ card shows LAST SEEN from lastOnlineAt, not the last probe time', async ({ page }) => {
+  test('Offline 24h+ card shows Last seen from lastOnlineAt, not the last probe time', async ({ page }) => {
     const sixDaysAgo = new Date(Date.now() - 6 * 86_400_000).toISOString()
     const rows = MOCK_KNOWN_MINTS.map(m => {
       // Charlie has been probed recently (lastCheckedAt is ~"now" in the fixture)
@@ -102,9 +102,9 @@ test.describe('MintCard — copy & reduced badge set', () => {
     // Status = All shows the degraded (offline 24h+) mints without the "Show" banner.
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
-    await expect(card(page, 'Charlie Mint').locator('.latency-label')).toHaveText('LAST SEEN')
+    await expect(card(page, 'Charlie Mint').locator('.latency-label')).toHaveText('Last seen')
     await expect(card(page, 'Charlie Mint').locator('.latency-value')).toHaveText('6d ago')
-    await expect(card(page, 'Bravo Mint').locator('.latency-label')).toHaveText('LAST SEEN')
+    await expect(card(page, 'Bravo Mint').locator('.latency-label')).toHaveText('Last seen')
     await expect(card(page, 'Bravo Mint').locator('.latency-value')).toHaveText('Never seen online')
   })
 

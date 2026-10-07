@@ -660,7 +660,7 @@
   width: 26px;
   height: 26px;
   padding: 0;
-  border: none;
+  border: 1px solid var(--border);
   background: transparent;
   border-radius: 7px;
   color: var(--t3);
@@ -709,10 +709,10 @@
 }
 
 .card-pill {
-  background: var(--elevated);
-  border: 1px solid var(--brd);
-  border-radius: 4px;
-  padding: 1px 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 1px 7px;
   font-size: 11px;
   color: var(--t2);
   font-family: var(--font-mono);
@@ -837,7 +837,7 @@
 }
 
 .card-reliability-score {
-  font-size: 27px;
+  font-size: 32px;
   font-weight: 700;
   line-height: 1;
   font-family: var(--font-mono-data);
@@ -2359,3 +2359,7 @@
     text-align: center;
   }
 }
+
+/* Thin score bar under the score row (colour = score band, same as the number). */
+.card-score-bar { height: 3px; margin-top: 8px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.card-score-bar i { display: block; height: 100%; border-radius: 2px; }

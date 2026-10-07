@@ -213,7 +213,7 @@ export function MintCard({
         <div className="card-lower-row">
         <div className="card-bottom-main">
           <div className="latency-block">
-            <div className="latency-label">{isOfflineDegraded ? 'LAST SEEN' : 'LATENCY'}</div>
+            <div className="latency-label">{isOfflineDegraded ? 'Last seen' : 'Latency'}</div>
             {isOfflineDegraded ? (
               <div
                 className="latency-value muted"
@@ -273,6 +273,11 @@ export function MintCard({
           )}
         </div>
         </div>
+        {mint.reliabilityScore != null && (
+          <div className="card-score-bar" aria-hidden="true">
+            <i style={{ width: `${Math.max(0, Math.min(100, mint.reliabilityScore))}%`, background: offlineTone(mint.reliabilityScore >= 70 ? 'var(--green-bright)' : mint.reliabilityScore >= 40 ? 'var(--amber)' : 'var(--red)', 'var(--text3)') }} />
+          </div>
+        )}
       </div>
 
       {showNotifyToggles && <NotifyStrip mintUrl={mint.url} name={displayName} />}
