@@ -294,16 +294,16 @@
 
 .navbar-method-badge {
   flex-shrink: 0;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
   font-family: var(--font-body);
   color: var(--green-bright);
   background: var(--green-soft);
-  border: 1px solid var(--green-soft-strong);
-  border-radius: 4px;
-  padding: 1px 5px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 1px 9px;
   line-height: 1.4;
 }
 /* nsec: the key lives in this browser — copper so it stands out from Extension / Remote signer. */
@@ -326,9 +326,9 @@
   flex-direction: column;
   gap: 4px;
   padding: 8px;
-  background: var(--bg2);
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
 }
 .navbar-account-panel[hidden] { display: none; }
@@ -343,7 +343,7 @@
 .navbar-account-name {
   min-width: 0;
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text);
   overflow-wrap: anywhere;

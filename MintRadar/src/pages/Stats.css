@@ -909,6 +909,7 @@
   scrollbar-color: var(--border2) transparent;
 }
 
+.nut-modal-list { padding-right: 2px; }
 .nut-modal-list::-webkit-scrollbar { width: 4px; }
 .nut-modal-list::-webkit-scrollbar-track { background: transparent; }
 .nut-modal-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
@@ -917,7 +918,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 2px;
+  padding: 10px 10px;
   background: none;
   border-radius: 0;
   border: 0;

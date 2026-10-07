@@ -1473,8 +1473,8 @@ function MintDetailContent({ url }: { url: string }) {
                     className="md-sc-value"
                     style={{display:'flex',alignItems:'baseline',gap:6,opacity: tileReviewCount < MIN_MEANINGFUL_REVIEWS ? 0.6 : 1}}
                   >
+                    <span style={{color:'var(--text)'}}>{tileAvgRating}</span>
                     <span className="md-sc-stars" aria-label={`${tileAvgRating} out of 5`}>{starString(tileAvgRating)}</span>
-                    <span style={{color:'var(--text2)'}}>{tileAvgRating}</span>
                   </div>
                 ) : (
                   <div className="md-sc-value sm" style={{color:'var(--text-faint)'}}>Unrated</div>
@@ -2690,9 +2690,7 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="rv-modal-head">
               <div className="rv-modal-heading">
                 <div className="rv-modal-title">Write a review for {displayName}</div>
-                {reviewRating > 0 && (
-                  <div className="rv-modal-sub">Share your experience with this mint.</div>
-                )}
+                <div className="rv-modal-sub">Share your experience with this mint.</div>
               </div>
               <button className="rv-modal-close" onClick={requestCloseReviewModal} aria-label="Close"><IcClose /></button>
             </div>
@@ -2726,7 +2724,7 @@ function MintDetailContent({ url }: { url: string }) {
             </div>
 
             {reviewRating > 0 && (
-              <>
+              <div className="rv-phase2">
                 <div className="rv-signer">
                   {profile?.picture?.startsWith('https://')
                     ? <img src={profile.picture} alt="" className="rv-signer-avatar" onError={e => { e.currentTarget.style.display = 'none' }} />
@@ -2785,7 +2783,7 @@ function MintDetailContent({ url }: { url: string }) {
                   </button>
                 </div>
                 <p className="rv-permanence-note">Published permanently to public Nostr relays.</p>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -2799,90 +2797,48 @@ function MintDetailContent({ url }: { url: string }) {
         const nutConfig = (rawNutConfig !== null && typeof rawNutConfig === 'object') ? rawNutConfig as NutConfig : null
         const isNutDisabled = supported && nutConfig?.disabled === true
         return (
-          <div
-            style={{
-              position: 'fixed', inset: 0, zIndex: 100,
-              background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '20px',
-            }}
-            onClick={() => setSelectedNut(null)}
-          >
+          <div className="nm-overlay" onClick={() => setSelectedNut(null)}>
             <div
-              style={{
-                background: 'var(--bg2)', border: '0.5px solid var(--border2)',
-                borderRadius: 14, padding: '24px', maxWidth: 420, width: '100%',
-                boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
-              }}
+              className="nm"
               onClick={e => e.stopPropagation()}
               role="dialog" aria-modal="true" aria-labelledby="nut-modal-title" ref={dialogRef}
             >
-              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 16}}>
-                <div>
-                  <div id="nut-modal-title" style={{fontSize: 18, fontWeight: 600, color: supported ? 'var(--accent)' : 'var(--text2)'}}>
-                    {meta?.short ?? selectedNut}
-                  </div>
-                  <div style={{fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)', marginTop: 2}}>
-                    {selectedNut}
-                  </div>
+              <div className="nm-head">
+                <div className="nm-heading">
+                  <div id="nut-modal-title" className="nm-title">{meta?.short ?? selectedNut}</div>
+                  <div className="nm-code">{selectedNut}</div>
                 </div>
-                <div style={{display:'flex', alignItems:'center', gap: 8}}>
-                  <span style={{
-                    fontSize: 11, padding: '3px 10px', borderRadius: 6,
-                    background: isNutDisabled ? 'var(--amber-soft)' : supported ? 'var(--green-soft)' : 'var(--bg3)',
-                    color: isNutDisabled ? 'var(--amber)' : supported ? 'var(--accent)' : 'var(--text3)',
-                    border: `0.5px solid ${isNutDisabled ? 'var(--amber-soft-strong)' : supported ? 'var(--green-soft-strong)' : 'var(--border)'}`,
-                    fontFamily: 'var(--font-mono)',
-                  }}>
-                    {isNutDisabled ? '⊘ Disabled by operator' : supported ? '✓ Supported' : '– Not supported'}
-                  </span>
-                  <button
-                    onClick={() => setSelectedNut(null)}
-                    aria-label="Close"
-                    style={{background:'none', border:'none', color:'var(--text3)', cursor:'pointer', display:'flex', padding:4}}
-                  ><IcClose /></button>
-                </div>
+                <span className={`nm-status ${isNutDisabled ? 'disabled' : supported ? 'ok' : 'off'}`}>
+                  {isNutDisabled ? '⊘ Disabled by operator' : supported ? '✓ Supported' : '– Not supported'}
+                </span>
+                <button type="button" className="rv-modal-close" onClick={() => setSelectedNut(null)} aria-label="Close"><IcClose /></button>
               </div>
 
-              <p style={{fontSize: 13, color: 'var(--text2)', marginBottom: 14, lineHeight: 1.6}}>
-                {meta?.desc}
-              </p>
+              <p className="nm-desc">{meta?.desc}</p>
 
               {meta?.features && (
-                <div style={{marginBottom: 14}}>
-                  <div style={{fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8}}>Features</div>
-                  <div style={{display: 'flex', flexWrap: 'wrap', gap: 6}}>
-                    {meta.features.map(f => (
-                      <span key={f} style={{
-                        fontSize: 11, padding: '3px 9px', borderRadius: 6,
-                        background: 'var(--bg3)', border: '0.5px solid var(--border)',
-                        color: 'var(--text2)',
-                      }}>
-                        {f}
-                      </span>
-                    ))}
+                <div className="nm-sec">
+                  <div className="nm-sec-label">Features</div>
+                  <div className="nm-chips">
+                    {meta.features.map(f => <span key={f} className="nm-chip">{f}</span>)}
                   </div>
                 </div>
               )}
 
               {meta?.useCase && (
-                <div style={{
-                  borderTop: '0.5px solid var(--border)', paddingTop: 12, marginTop: 4,
-                }}>
-                  <div style={{fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6}}>Use case</div>
-                  <p style={{fontSize: 12, color: 'var(--text3)', lineHeight: 1.5}}>{meta.useCase}</p>
+                <div className="nm-sec">
+                  <div className="nm-sec-label">Use case</div>
+                  <p className="nm-text">{meta.useCase}</p>
                 </div>
               )}
 
               {nutConfig?.methods && nutConfig.methods.length > 0 && (
-                <div style={{borderTop: '0.5px solid var(--border)', paddingTop: 12, marginTop: 4}}>
-                  <div style={{fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8}}>Limits</div>
+                <div className="nm-sec">
+                  <div className="nm-sec-label">Limits</div>
                   {nutConfig.methods.map((m, i) => (
-                    <div key={i} style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:5}}>
-                      <span style={{fontSize:11, color:'var(--text2)', fontFamily:'var(--font-mono)'}}>
-                        {m.method} / {m.unit}
-                      </span>
-                      <span style={{fontSize:11, color:'var(--text3)', fontFamily:'var(--font-mono)'}}>
+                    <div key={i} className="nm-limit">
+                      <span className="nm-limit-method">{m.method} / {m.unit}</span>
+                      <span className="nm-limit-range">
                         {m.min_amount == null && m.max_amount == null ? 'No limits specified' : (<>
                           {m.min_amount != null ? m.min_amount.toLocaleString() : '—'}
                           {' – '}
@@ -2895,14 +2851,10 @@ function MintDetailContent({ url }: { url: string }) {
               )}
 
               <a
+                className="nm-link"
                 href={`https://github.com/cashubtc/nuts/blob/main/${parseInt(selectedNut.replace('NUT-', ''), 10).toString().padStart(2, '0')}.md`}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  marginTop: 16, fontSize: 11, color: 'var(--accent)',
-                  textDecoration: 'none',
-                }}
               >
                 ↗ View NUT spec on GitHub
               </a>

@@ -465,7 +465,7 @@ test.describe('Filters panel — labels versus options', () => {
       expect(st['background-color']).toBe('rgba(0, 0, 0, 0)')
       for (const side of ['top', 'right', 'bottom', 'left']) expect(st[`border-${side}-width`]).toBe('0px')
       expect(st.cursor).toBe('default')
-      expect(st['text-transform']).toBe('uppercase')
+      expect(st['text-transform']).toBe('none')
       expect(await l.getAttribute('tabindex')).toBeNull()
     }
     // Same type treatment as the existing "RELIABILITY ≥ N%" label.

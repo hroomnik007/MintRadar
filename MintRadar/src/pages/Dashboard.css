@@ -172,12 +172,12 @@
 }
 .dash-action {
   /* Height / radius / border matched to the sort chips (.sort-btn). */
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 5.5px 11px;
-  color: var(--text2);
-  font-size: 11.5px;
+  background: transparent;
+  border: 1px solid var(--green-soft-strong);
+  border-radius: 8px;
+  padding: 6px 13px;
+  color: var(--accent);
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   font-family: var(--font-body);
@@ -186,7 +186,8 @@
 }
 .dash-action:hover {
   color: var(--text);
-  border-color: var(--border2);
+  background: var(--green-soft);
+  border-color: var(--green);
 }
 @media (max-width: 600px) {
   .dash-actions { width: 100%; }
@@ -1430,7 +1431,7 @@
 .filter-panel {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-m);
+  border-radius: 12px;
   padding: 9px 12px;
   margin-inline: auto;
   /* Unlike .dashboard-controls / .dash-intro (which inset their children by
@@ -1512,13 +1513,14 @@
 }
 .filter-field-label {
   flex: 0 0 auto;
-  /* "STATUS" = 6 mono characters + their letter-spacing; "UNIT" is padded to the same width */
-  width: calc(6 * (1ch + 0.07em));
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--text3);
+  /* Both labels ("Status", "Unit") share one width so the two controls start at the same left edge;
+     the Unit info icon sits in the empty tail of its label */
+  width: 64px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text2);
   white-space: nowrap;
   cursor: default;
   user-select: none;
@@ -1528,15 +1530,15 @@
    (in the spare ~2 characters after "UNIT") never moves the segmented control. */
 .filter-field-labelcell {
   flex: 0 0 auto;
-  width: calc(6 * (1ch + 0.07em));
+  position: relative;
+  width: 64px;
   display: flex;
   align-items: center;
-  font-family: var(--font-mono);
-  font-size: 10px;
+  font-family: var(--font-body);
+  font-size: 13px;
 }
 .filter-field-labelcell .filter-field-label { flex: 0 0 auto; }
-/* Pull the icon back into the label's empty tail ("UNIT" is 4 of the 6 characters of width). */
-.filter-unit-tip { flex: 0 0 auto; margin-left: calc(3px - 2 * (1ch + 0.07em)); }
+.filter-unit-tip { position: absolute; left: 44px; top: 50%; transform: translateY(-50%); flex: 0 0 auto; margin-left: 0; }
 .filter-unit-tip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 /* Anchor the popup to the icon's left side (centred, it would run off a 320px screen). */
 .filter-unit-tip .info-tooltip-pop { left: -27px; transform: none; max-width: calc(100vw - 32px); }
@@ -1579,9 +1581,9 @@
   border-radius: 0;
   box-shadow: none;
   color: var(--text2);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.04em;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  letter-spacing: 0;
   cursor: pointer;
 }
 .filter-seg-opt + .filter-seg-opt { border-left: 1px solid var(--border2); }
@@ -1707,11 +1709,11 @@
 }
 
 .filter-group-label {
-  font-size: 10px;
-  color: var(--text3);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text2);
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--font-body);
 }
 .filter-group-label strong {
   color: var(--text);
@@ -1780,15 +1782,15 @@
   position: relative;
   height: 36px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: 11.5px;
   cursor: pointer;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   transition: all var(--transition);
 }
 .filter-reset-btn {
   background: transparent;
   border: 1px solid var(--border);
-  padding: 0 12px;
+  padding: 0 10px;
   color: var(--text3);
 }
 .filter-reset-btn:hover { border-color: var(--border2); color: var(--text2); }
@@ -1796,12 +1798,12 @@
 .filter-apply-btn {
   background: var(--accent);
   border: none;
-  padding: 0 12px;
+  padding: 0 10px;
   color: var(--bg);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  /* "Show 100 of 100" is 15 characters of the mono font — the button never resizes with the count */
-  min-width: calc(15ch + 24px);
+  /* "Show 100 of 100" at this size is ~100px — the button never resizes with the count */
+  min-width: 120px;
 }
 .filter-apply-btn:hover { opacity: 0.9; }
 .filter-reset-btn:focus-visible,

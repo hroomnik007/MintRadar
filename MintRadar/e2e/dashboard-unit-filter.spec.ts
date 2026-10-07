@@ -211,8 +211,9 @@ test.describe('Dashboard unit filter', () => {
     // Re-measured 2026-10-05 for the segment size change (28px segments, 44px minimum width, 8px padding: the
     // Unit control starts 29.79px further left on one row) and the 16px gap between stacked rows
     // (--filter-row-gap): 390/360 stack 4 rows (+24px over the 8px gap), 320 wraps the footer once more (228).
+    // Re-measured 2026-10-07 for the sans labels (both 64px wide, so the controls start 23.8px further right); heights unchanged.
     const baseline: Record<number, [number, number, number]> = {
-      1440: [56, 157.19, 378.59], 900: [100, 79.19, 300.59], 600: [184, 75.19, 75.19], 390: [184, 75.19, 75.19], 360: [184, 75.19, 75.19], 320: [228, 75.19, 75.19],
+      1440: [56, 181, 418], 900: [100, 103, 340], 600: [184, 99, 99], 390: [184, 99, 99], 360: [184, 99, 99], 320: [228, 99, 99],
     }
     for (const [w, [h, sx, ux]] of Object.entries(baseline)) {
       await page.setViewportSize({ width: Number(w), height: 900 })

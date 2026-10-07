@@ -393,7 +393,7 @@ for (const width of [340, 360, 375, 412, 414, 428]) {
 
 // Boxes recorded from the code BEFORE the text-only change (x, width, height; the fixture's plain mint).
 const HERO_BOXES: Record<number, { left: number; width: number; height: number }[]> = {
-  420: [{ left: 79, width: 85.33, height: 28 }, { left: 170.33, width: 85.34, height: 27 }, { left: 261.67, width: 85.33, height: 27 }],
+  420: [{ left: 79, width: 79.66, height: 28 }, { left: 164.66, width: 79.67, height: 27 }, { left: 250.33, width: 79.67, height: 27 }],
   1440: [{ left: 905, width: 93, height: 31 }, { left: 1006, width: 156, height: 31 }, { left: 1170, width: 103, height: 31 }],
 }
 for (const width of [420, 1440]) {
@@ -499,8 +499,8 @@ for (const width of [320, 340, 360, 375, 390, 400, 412, 414]) {
 }
 
 const HERO_ICON_WIDTHS: Record<number, number[]> = {
-  420: [12, 7.3, 11.3],
-  430: [12, 7.3, 11.3],
+  420: [12, 9, 11],
+  430: [12, 9, 11],
   1440: [12, 10, 13],
 }
 for (const width of [420, 430, 1440]) {
