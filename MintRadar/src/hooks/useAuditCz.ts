@@ -62,7 +62,7 @@ export interface AuditCzDetail {
     swap_test?: { ok?: boolean; recentOk?: number; recentFail?: number; ms?: number; timestamp?: number }
     proof_state?: { ok?: boolean; recentOk?: number; recentFail?: number; ms?: number; timestamp?: number; checked?: number; spent?: number; spentSat?: number; pending?: number }
   }
-  network?: { ipv4?: boolean; ipv6?: boolean; ipv4Address?: string; ipv6Address?: string; asn?: number; asName?: string; country?: string; tlsIssuer?: string; tlsExpiresAt?: string }
+  network?: { ipv4?: boolean; ipv6?: boolean; asn?: number; asName?: string; country?: string; tlsIssuer?: string; tlsExpiresAt?: string }
   onion?: boolean
   latency?: { prague?: { p50?: number; p95?: number } }
   fetchedAt: string | null

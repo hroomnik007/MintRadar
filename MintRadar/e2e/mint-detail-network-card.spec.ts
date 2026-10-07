@@ -14,28 +14,27 @@ const XSS = '<img src=x onerror=alert(1)>'
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const dayLabel = (t: number) => { const d = new Date(t); return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}` }
 
-const withNetwork = (net: Record<string, unknown>, extra: Record<string, unknown> = {}) =>
-  ({ alpha: NO_8333, cz: auditCzResponse({ detail: czDetail({ network: { ...LNPAY_DETAIL.network, ...net }, ...extra }) }) })
+const IP = '188.166.166.165'
+const withNetwork = (net: Record<string, unknown>, extra: Record<string, unknown> = {}, alpha: Record<string, unknown> = {}) =>
+  ({ alpha: { ...NO_8333, ...alpha }, cz: auditCzResponse({ detail: czDetail({ network: { ...LNPAY_DETAIL.network, ...net }, ...extra }) }) })
 
 const open = (page: Page, setup: Parameters<typeof gotoAuditTab>[1]) => gotoAuditTab(page, setup, false)
 
-test('LNpay-like detail: title with the source tag and the five rows', async ({ page }) => {
+test('LNpay-like detail: title with the source tag and the rows', async ({ page }) => {
   const expires = Date.now() + 60 * D
-  await open(page, withNetwork({ tlsExpiresAt: new Date(expires).toISOString() }))
+  await open(page, withNetwork({ tlsExpiresAt: new Date(expires).toISOString() }, {}, { ipAddress: IP }))
   await expect(card(page)).toBeVisible()
   await expect(card(page).locator('.md-panel-title')).toHaveText(/^network\s*via cashu\.info$/i, { useInnerText: true })
   await expect(card(page).locator('.md-info-label')).toHaveText(['IP', 'Network', 'Registered in', 'Tor', 'TLS'])
-  await expect(value(page, 'IP')).toHaveText('IPv4 and IPv6')
+  await expect(value(page, 'IP')).toHaveText(IP)
   await expect(value(page, 'Network')).toHaveText('AS14061 DigitalOcean')
   await expect(value(page, 'Registered in')).toHaveText('United States')
   await expect(value(page, 'Tor')).toHaveText('No onion address')
   await expect(value(page, 'TLS')).toHaveText(`Let's Encrypt, expires ${dayLabel(expires)}`)
   await expect(value(page, 'TLS')).toHaveAttribute('data-tls', 'ok')
 
-  // No Address row and no IP address anywhere in the card.
-  await expect(card(page).getByText('Address', { exact: true })).toHaveCount(0)
+  // IPv4 only: no IPv6 address anywhere in the card.
   const text = (await card(page).innerText()).replace(/\s+/g, ' ')
-  expect(text).not.toMatch(/\b\d{1,3}(\.\d{1,3}){3}\b/)
   expect(text).not.toMatch(/\b[0-9a-f]{0,4}(:[0-9a-f]{0,4}){3,}\b/i)
 })
 
@@ -70,20 +69,22 @@ test('the registration row says what it is and carries the caveat as an info too
   await expect(rowOf(page, 'Registered in').getByRole('tooltip')).toContainText('Country where the IP block is registered, not where the server stands.')
 })
 
-test.describe('IP wording', () => {
-  for (const [name, net, expected] of [
-    ['IPv4 only', { ipv4: true, ipv6: false }, 'IPv4 only'],
-    ['IPv6 only', { ipv4: false, ipv6: true }, 'IPv6 only'],
-  ] as const) {
-    test(name, async ({ page }) => {
-      await open(page, withNetwork(net))
-      await expect(value(page, 'IP')).toHaveText(expected)
-    })
-  }
-  test('both false: the row is hidden', async ({ page }) => {
-    await open(page, withNetwork({ ipv4: false, ipv6: false }))
+test.describe('IP row', () => {
+  test('no address yet: the row is hidden', async ({ page }) => {
+    await open(page, withNetwork({}))
     await expect(rowOf(page, 'IP')).toHaveCount(0)
     await expect(card(page).locator('.md-info-label')).toHaveText(['Network', 'Registered in', 'Tor', 'TLS'])
+  })
+  test('hostile address is dropped, not printed', async ({ page }) => {
+    await open(page, withNetwork({}, {}, { ipAddress: XSS }))
+    await expect(rowOf(page, 'IP')).toHaveCount(0)
+  })
+  test('a mint without a cashu.info detail still shows the IP row alone, without the source tag', async ({ page }) => {
+    await open(page, { alpha: { ...NO_8333, ipAddress: IP }, cz: NOT_COVERED })
+    await expect(card(page)).toBeVisible()
+    await expect(card(page).locator('.md-info-label')).toHaveText(['IP'])
+    await expect(value(page, 'IP')).toHaveText(IP)
+    await expect(card(page).locator('.md-panel-title')).not.toContainText(/cashu\.info/i)
   })
 })
 

@@ -1205,7 +1205,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         m.units, m.mint_methods, m.melt_methods, m.pubkey,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
-        m.discovered_at, m.nostr_announced_at, m.nostr_announce_id, m.nostr_announce_pubkey, m.nostr_announce_d, m.last_reliability_score, m.last_error, m.server_location,
+        m.discovered_at, m.nostr_announced_at, m.nostr_announce_id, m.nostr_announce_pubkey, m.nostr_announce_d, m.last_reliability_score, m.last_error, m.server_location, m.ip_address,
         m.review_count, m.review_avg_rating, m.review_operator_count, m.review_count_7d_ago, m.review_count_7d_ago_at,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
@@ -1233,7 +1233,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         m.units, m.mint_methods, m.melt_methods, m.pubkey,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
-        m.discovered_at, m.last_reliability_score, m.last_error, m.server_location,
+        m.discovered_at, m.last_reliability_score, m.last_error, m.server_location, m.ip_address,
         m.review_count, m.review_avg_rating, m.review_count_7d_ago, m.review_count_7d_ago_at,
         h7.total_7d, h7.online_count_7d,
         latest.online, latest.latency_ms, latest.checked_at
@@ -1311,6 +1311,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           // hero tile, degraded detection).
           uptimePct7d: total7d === 0 ? null : Math.round(onlineCount7d / total7d * 100),
           serverLocation: (r.server_location as string | null) ?? null,
+          ipAddress: (r.ip_address as string | null) ?? null,
           lastCheckedAt: (r.latest_checked_at as string | null) ?? null,
           reviewCount: (r.review_count as number | null) ?? null,
           reviewAvgRating: r.review_avg_rating != null ? Number(r.review_avg_rating) : null,

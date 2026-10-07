@@ -1,30 +1,19 @@
 import { describe, it, expect } from 'vitest'
-import { addressList, countryName, ipLabel, networkLabel, networkRows, tlsLabel, torLabel } from '@/utils/networkInfo'
+import { countryName, ipv4Address, networkLabel, networkRows, tlsLabel, torLabel } from '@/utils/networkInfo'
 import type { AuditCzDetail } from '@/hooks/useAuditCz'
 
 const NOW = Date.parse('2026-10-07T12:00:00Z')
 const DAY = 86_400_000
 
-describe('addressList', () => {
-  it('keeps a plain IPv4 then IPv6 address, drops anything else', () => {
-    expect(addressList('188.166.166.165', '2a03:b0c0::1')).toEqual(['188.166.166.165', '2a03:b0c0::1'])
-    expect(addressList(undefined, undefined)).toEqual([])
-    expect(addressList('<img src=x>', 'not an ip')).toEqual([])
-    expect(addressList('1.2.3', '1.2.3.4')).toEqual([])
-  })
-})
-
-describe('ipLabel', () => {
-  it('words the three cases', () => {
-    expect(ipLabel(true, false)).toBe('IPv4 only')
-    expect(ipLabel(false, true)).toBe('IPv6 only')
-    expect(ipLabel(true, true)).toBe('IPv4 and IPv6')
-  })
-  it('hidden when both are false or either is unknown', () => {
-    expect(ipLabel(false, false)).toBeNull()
-    expect(ipLabel(undefined, undefined)).toBeNull()
-    expect(ipLabel(true, undefined)).toBeNull()
-    expect(ipLabel('yes' as unknown as boolean, true)).toBeNull()
+describe('ipv4Address', () => {
+  it('keeps a plain dotted IPv4 address, drops anything else', () => {
+    expect(ipv4Address('188.166.166.165')).toBe('188.166.166.165')
+    expect(ipv4Address(null)).toBeNull()
+    expect(ipv4Address(undefined)).toBeNull()
+    expect(ipv4Address('<img src=x>')).toBeNull()
+    expect(ipv4Address('1.2.3')).toBeNull()
+    expect(ipv4Address('999.1.1.1')).toBeNull()
+    expect(ipv4Address('2a03:b0c0::1')).toBeNull()
   })
 })
 
@@ -101,18 +90,21 @@ describe('networkRows', () => {
     onion: false, fetchedAt: null,
   }
   it('all rows for the LNpay-like detail', () => {
-    expect(networkRows(base, NOW)).toEqual({
-      ip: 'IPv4 and IPv6', addresses: [], network: 'AS14061 DigitalOcean', country: { name: 'United States' }, tor: 'No onion address',
+    expect(networkRows(base, '188.166.166.165', NOW)).toEqual({
+      ip: '188.166.166.165', network: 'AS14061 DigitalOcean', country: { name: 'United States' }, tor: 'No onion address',
       tls: { text: "Let's Encrypt, expires 27 Dec 2026", state: 'ok', suffix: null },
     })
   })
   it('no network block: no card, whatever else is there', () => {
-    expect(networkRows({ onion: true, fetchedAt: null }, NOW)).toBeNull()
-    expect(networkRows(null, NOW)).toBeNull()
-    expect(networkRows(undefined, NOW)).toBeNull()
+    expect(networkRows({ onion: true, fetchedAt: null }, null, NOW)).toBeNull()
+    expect(networkRows(null, null, NOW)).toBeNull()
+    expect(networkRows(undefined, undefined, NOW)).toBeNull()
+  })
+  it('a mint without a cashu.info detail still gets the IP row from our own lookup', () => {
+    expect(networkRows(null, '188.166.166.165', NOW)).toEqual({ ip: '188.166.166.165', network: null, country: null, tor: null, tls: null })
   })
   it('hostile strings stay strings and a hostile country is hidden', () => {
-    const r = networkRows({ network: { asn: 1, asName: '<img src=x onerror=alert(1)>', country: '<b>', tlsIssuer: '<script>x</script>' }, fetchedAt: null }, NOW)!
+    const r = networkRows({ network: { asn: 1, asName: '<img src=x onerror=alert(1)>', country: '<b>', tlsIssuer: '<script>x</script>' }, fetchedAt: null }, null, NOW)!
     expect(r.network).toBe('AS1 <img src=x onerror=alert(1)>')
     expect(r.country).toBeNull()
     expect(r.tls?.text).toBe('<script>x</script>')

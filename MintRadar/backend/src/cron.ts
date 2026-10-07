@@ -4,6 +4,7 @@ import { getKnownMints, probeMintToDb, pruneOldHistory, pruneUnvalidatedMints, p
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
 import { syncAuditCz } from './auditCz.js'
 import { syncAuditCzDetails } from './auditCzDetail.js'
+import { refreshMintAddresses } from './mintAddress.js'
 import { refreshAllMintReviews, recomputeReviewCountRollups, isReviewSyncRunning } from './reviewsSync.js'
 import { startReviewsSyncTimer } from './reviewsSchedule.js'
 import { refreshReliabilityMoversRollup } from './reliabilityMoversRollup.js'
@@ -211,6 +212,13 @@ export function startCron(): void {
   cron.schedule('30 5 * * *', async () => {
     if (isAllowlistMode()) return
     await refreshServerLocations()
+  })
+
+  // Public IPv4 of every mint host (own DNS lookup): once after boot, then every 6 hours.
+  setTimeout(() => { if (!isAllowlistMode()) void refreshMintAddresses() }, 45_000)
+  cron.schedule('20 */6 * * *', async () => {
+    if (isAllowlistMode()) return
+    await refreshMintAddresses()
   })
 
   // Prime the Reliability Score Movers rollup shortly after boot so a fresh

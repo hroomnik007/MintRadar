@@ -3,19 +3,15 @@ import { truncateText } from '@/utils/auditCz'
 
 // Formatters of the Overview "Network" card (public network facts about the mint host, from the
 // cashu.info detail our backend stores). Pure. Every input is untrusted text or a number and is
-// only ever rendered as text. The addresses are resolved by our backend from public DNS (the source sends none).
+// only ever rendered as text. The IPv4 address is resolved by our own backend (the source sends none).
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const SOON_DAYS = 14
 const NETWORK_NAME_MAX = 48
 
-/** "IPv4 only", "IPv6 only" or "IPv4 and IPv6"; null (row hidden) when both are false or either is unknown. */
-export function ipLabel(ipv4: boolean | undefined, ipv6: boolean | undefined): string | null {
-  if (typeof ipv4 !== 'boolean' || typeof ipv6 !== 'boolean') return null
-  if (ipv4 && ipv6) return 'IPv4 and IPv6'
-  if (ipv4) return 'IPv4 only'
-  if (ipv6) return 'IPv6 only'
-  return null
+/** The mint host's IPv4 address as sent by our backend; anything that is not a plain dotted IPv4 address is dropped. */
+export function ipv4Address(v: string | null | undefined): string | null {
+  return typeof v === 'string' && /^(\d{1,3})(\.\d{1,3}){3}$/.test(v) && v.split('.').every(n => Number(n) <= 255) ? v : null
 }
 
 /** "AS14061 DigitalOcean": the name is what follows the first " - " (else the whole text), cut at the first comma, capped at 48 characters. */
@@ -40,14 +36,6 @@ export function countryName(code: string | undefined): string | null {
   } catch {
     return code
   }
-}
-
-/** The mint host's IPv4 / IPv6 address as sent by our backend; anything that is not a plain address of that family is dropped. */
-export function addressList(v4: string | undefined, v6: string | undefined): string[] {
-  const out: string[] = []
-  if (typeof v4 === 'string' && /^\d{1,3}(\.\d{1,3}){3}$/.test(v4)) out.push(v4)
-  if (typeof v6 === 'string' && v6.length <= 45 && /^[0-9a-fA-F:.]+$/.test(v6) && v6.includes(':')) out.push(v6)
-  return out
 }
 
 export function torLabel(onion: boolean | undefined): string | null {
@@ -84,26 +72,22 @@ export function tlsLabel(issuer: string | undefined, expiresAt: string | undefin
 
 export interface NetworkRows {
   ip: string | null
-  /** Real addresses (IPv4 first); when present the IP row shows them instead of the `ip` wording. */
-  addresses: string[]
   network: string | null
   country: { name: string } | null
   tor: string | null
   tls: TlsLabel | null
 }
 
-/** null when the detail has no network block (the card is not rendered). */
-export function networkRows(detail: AuditCzDetail | null | undefined, now: number): NetworkRows | null {
+/** null when there is nothing to show (the card is not rendered). `ip` is our own DNS result; the rest comes from the cashu.info detail. */
+export function networkRows(detail: AuditCzDetail | null | undefined, ip: string | null | undefined, now: number): NetworkRows | null {
   const n = detail?.network
-  if (!n) return null
-  const country = countryName(n.country)
+  const country = countryName(n?.country)
   const rows: NetworkRows = {
-    ip: ipLabel(n.ipv4, n.ipv6),
-    addresses: addressList(n.ipv4Address, n.ipv6Address),
-    network: networkLabel(n.asn, n.asName),
+    ip: ipv4Address(ip),
+    network: networkLabel(n?.asn, n?.asName),
     country: country ? { name: country } : null,
-    tor: torLabel(detail?.onion),
-    tls: tlsLabel(n.tlsIssuer, n.tlsExpiresAt, now),
+    tor: n ? torLabel(detail?.onion) : null,
+    tls: tlsLabel(n?.tlsIssuer, n?.tlsExpiresAt, now),
   }
-  return Object.values(rows).some(v => (Array.isArray(v) ? v.length > 0 : v !== null)) ? rows : null
+  return Object.values(rows).some(v => v !== null) ? rows : null
 }

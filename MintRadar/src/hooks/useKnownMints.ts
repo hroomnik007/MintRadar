@@ -57,6 +57,8 @@ export interface KnownMint {
    *  everywhere else (mint cards, avg-uptime hero tile, degraded detection). */
   uptimePct7d?: number | null
   serverLocation?: string | null
+  /** Public IPv4 of the mint host, resolved by our backend. */
+  ipAddress?: string | null
   lastCheckedAt?: string | null
   // NIP-87 review rollup, refreshed by the backend's 6h reviews sync
   // (backend/src/reviewsSync.ts). Null until that sync has run for the mint.

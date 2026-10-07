@@ -268,6 +268,7 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS invalid_since TIMESTAMPTZ',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS revalidated_at TIMESTAMPTZ',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS server_location TEXT',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS ip_address TEXT',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS units JSONB',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS mint_methods JSONB',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS melt_methods JSONB',
