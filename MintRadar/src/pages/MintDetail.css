@@ -1644,14 +1644,17 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 
 .audit-summary-label {
-  font-size: 12.5px;
+  font-size: 11px;
   color: var(--text3);
-  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 3px;
 }
+/* Uppercase only the label text: the ⓘ popup stays sentence case with normal spacing. */
+.audit-summary-label .audit-tooltip { text-transform: none; letter-spacing: normal; }
 
 /* "Recent errors" cell only — the reliability sub-text ("97% ok" /
    "too few to score" / "no recent swaps") now sits on the same line as the
