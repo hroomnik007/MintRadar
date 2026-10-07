@@ -59,7 +59,7 @@ test('only cz has data: header, four tiles from the stored detail, checks card, 
 
   const header = page.locator('.md-audit-header-main')
   await expect(header).toBeVisible()
-  await expect(header).toHaveText(/^AUDIT STATS\s*·\s*via cashu\.info/, { useInnerText: true })
+  await expect(header).toHaveText(/^Audit stats\s*·\s*via cashu\.info/, { useInnerText: true })
 
   // Five tiles from the LNpay detail, in order; the label is sentence case.
   await expect(page.locator('.audit-cz-tiles .audit-summary-cell')).toHaveCount(5)
