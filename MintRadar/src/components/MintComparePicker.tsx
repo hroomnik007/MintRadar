@@ -41,17 +41,17 @@ export function MintComparePicker({
     <div className="cmp-overlay" onClick={onClose}>
       <div className="md-picker-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="md-picker-title" ref={dialogRef}>
         <div className="md-picker-header">
-          <div id="md-picker-title" style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text)' }}>Compare with...</div>
-          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', display: 'flex', padding: 4 }}><IcClose /></button>
+          <div id="md-picker-title" className="md-picker-title">Compare with...</div>
+          <button type="button" className="md-picker-close" onClick={onClose} aria-label="Close"><IcClose /></button>
         </div>
-        <div style={{ padding: '8px 16px 0' }}>
-          <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>
-            Select 1–{maxSelect} mints to compare with <strong style={{ color: 'var(--text)' }}>{baseLabel}</strong>
+        <div className="md-picker-top">
+          <div className="md-picker-hint">
+            Select 1–{maxSelect} mints to compare with <strong>{baseLabel}</strong>
           </div>
           <input
             className="md-picker-search"
             type="text"
-            placeholder="Search mints..."
+            placeholder="Search mints…" aria-label="Search mints"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -73,23 +73,21 @@ export function MintComparePicker({
                   })
                 }}
               >
-                <div className={`card-checkbox${isChecked ? ' checked' : ''}`} style={{ width: 14, height: 14, borderRadius: 3, flexShrink: 0 }}>
-                  {isChecked && <span style={{ fontSize: 10, lineHeight: 1 }}>✓</span>}
-                </div>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: m.online === true ? 'var(--accent)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mintDisplayName(m, duplicateDisplayNames)}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getHostname(m.url)}</div>
+                <div className="md-picker-check" aria-hidden="true">{isChecked && '✓'}</div>
+                <span className={`md-picker-dot${m.online === true ? '' : ' off'}`} />
+                <div className="md-picker-text">
+                  <div className="md-picker-name">{mintDisplayName(m, duplicateDisplayNames)}</div>
+                  <div className="md-picker-host">{getHostname(m.url)}</div>
                 </div>
               </div>
             )
           })}
           {filtered.length === 0 && (
-            <div style={{ padding: '16px', fontSize: 12, color: 'var(--text3)', textAlign: 'center' }}>No mints found</div>
+            <div className="md-picker-empty">No mints match your search.</div>
           )}
         </div>
         <div className="md-picker-footer">
-          <span style={{ fontSize: 11, color: 'var(--text3)' }}>{selected.size} / {maxSelect} selected</span>
+          <span className="md-picker-count">{selected.size} of {maxSelect} selected</span>
           <button
             className="md-picker-confirm"
             disabled={selected.size === 0}
