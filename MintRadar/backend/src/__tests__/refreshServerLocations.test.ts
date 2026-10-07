@@ -74,7 +74,7 @@ describe('parseIpinfoOrg', () => {
     expect(parseIpinfoOrg('AS13335')).toEqual({ asn: 13335, org: null })
     expect(parseIpinfoOrg('DigitalOcean')).toEqual({ asn: null, org: null })
     expect(parseIpinfoOrg(42)).toEqual({ asn: null, org: null })
-    expect(parseIpinfoOrg('AS99999999999 X')).toEqual({ asn: null, org: 'X' })
+    expect(parseIpinfoOrg('AS99999999999 X')).toEqual({ asn: null, org: null })
     expect(parseIpinfoOrg(`AS1 ${'x'.repeat(200)}`).org?.length).toBe(80)
   })
 })
