@@ -2365,3 +2365,26 @@
 /* Thin score bar under the score row (colour = score band, same as the number). */
 .card-score-bar { height: 3px; margin-top: 8px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
 .card-score-bar i { display: block; height: 100%; border-radius: 2px; }
+
+/* ── New language: Add a mint modal ──
+   Surface instead of bg2, 14px sans copy and results, outlined green primary like the other modals. */
+.submit-modal-overlay { background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); }
+.submit-modal { background: var(--surface); box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55); padding: 24px; }
+.submit-modal-title { margin-bottom: 14px; }
+.submit-modal-desc { font-size: 14px; line-height: 1.5; color: var(--text3); }
+.submit-modal-input { background: rgba(0, 0, 0, 0.22); border-radius: 10px; }
+.submit-input-hint { font-size: 13px; letter-spacing: 0; }
+.submit-result { font-size: 13px; line-height: 1.45; border-radius: 10px; }
+.submit-cancel-btn { border: 1px solid var(--border2); border-radius: 10px; padding: 9px 16px; font-size: 14px; }
+.submit-cancel-btn:hover { border-color: var(--text3); }
+.submit-ok-btn { background: transparent; color: var(--green-bright); border: 1px solid var(--green); border-radius: 10px; padding: 9px 18px; font-weight: 600; letter-spacing: 0; }
+.submit-ok-btn:hover:not([aria-disabled="true"]):not(:disabled) { background: var(--green-soft); border-color: var(--green-bright); }
+.submit-ok-btn:disabled, .submit-ok-btn[aria-disabled="true"] { background: transparent; border-color: var(--border2); color: var(--text3); }
+.submit-ok-btn:focus-visible, .submit-cancel-btn:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.submit-found, .submit-probe-loading, .submit-probe-error { font-size: 13px; line-height: 1.45; border-radius: 10px; padding: 8px 12px; background: rgba(0, 0, 0, 0.22); }
+.submit-probe-error { background: var(--red-soft); }
+.submit-found-url { font-family: var(--font-body); }
+.submit-probe-preview { border-radius: 10px; }
+.submit-probe-name { font-size: 15px; }
+.submit-probe-meta { font-size: 13px; font-family: var(--font-body); }
+.submit-tab-btn { font-size: 13px; border-radius: 7px; padding: 5px 16px; }

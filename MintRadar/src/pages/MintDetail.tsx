@@ -247,9 +247,9 @@ function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, n
   const ref = useRef<HTMLSpanElement>(null)
   const tip = useTapTooltip(ref)
   return (
-    <div style={{ marginBottom: 8 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', rowGap: 3, marginBottom: 3 }}>
-        <span style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 4 }}>
+    <div className="rb-row">
+      <div className="rb-row-top">
+        <span className="rb-row-label">
           {label}
           <span
             ref={ref}
@@ -264,13 +264,13 @@ function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, n
             )}
           </span>
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="rb-row-right">
           {note && <span className="rb-row-note" title={tooltip}>{note}</span>}
-          <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)', maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{display}</span>
-          <span style={{ fontSize: 13, fontWeight: 600, color }}>{score}/{max}</span>
+          <span className="rb-row-display">{display}</span>
+          <span className="rb-row-score" style={{ color }}>{score}/{max}</span>
         </div>
       </div>
-      <div style={{ height: 3, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden' }}>
+      <div className="rb-row-bar">
         <div style={{ height: '100%', width: `${(score / max) * 100}%`, background: color, borderRadius: 2, transition: 'width 0.3s ease' }} />
       </div>
     </div>
@@ -2610,14 +2610,14 @@ function MintDetailContent({ url }: { url: string }) {
           <div className="qr-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="qr-modal-title" ref={dialogRef}>
             <div className="qr-modal-header">
               <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={38} radius={9} />
-              <div style={{flex:1,minWidth:0}}>
-                <div id="qr-modal-title" style={{fontSize:14,fontWeight:700,color:'var(--text)',lineHeight:1.25,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Add {displayName} to wallet</div>
-                <div style={{fontSize:11,color:'var(--text-faint)',marginTop:2}}>Scan with any Cashu wallet app</div>
+              <div className="qr-modal-heading">
+                <div id="qr-modal-title" className="qr-modal-title">Add {displayName} to wallet</div>
+                <div className="qr-modal-sub">Scan with any Cashu wallet app</div>
               </div>
-              <button onClick={() => setShowQr(false)} aria-label="Close" style={{background:'none',border:'none',color:'var(--text-faint)',cursor:'pointer',display:'flex',padding:'4px 6px',flexShrink:0}}><IcClose /></button>
+              <button type="button" className="qr-modal-close" onClick={() => setShowQr(false)} aria-label="Close"><IcClose /></button>
             </div>
-            <div style={{display:'flex',justifyContent:'center',margin:'16px 0'}}>
-              <div style={{background:'#ffffff',borderRadius:12,padding:12,border:'2px solid var(--green-soft-strong)'}}>
+            <div className="qr-modal-code">
+              <div className="qr-modal-code-frame">
                 <QRCodeSVG
                   value={url}
                   size={184}
@@ -2631,18 +2631,19 @@ function MintDetailContent({ url }: { url: string }) {
                 />
               </div>
             </div>
-            <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <div className="qr-modal-url-row">
               <input
+                className="qr-modal-url"
                 readOnly
                 aria-label="Mint URL"
                 value={url}
-                style={{flex:1,background:'var(--surface-3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 10px',color:'var(--text-dim)',fontSize:11,fontFamily:'var(--font-mono)',outline:'none'}}
               />
               <button
+                type="button"
+                className="qr-modal-copy"
                 onClick={() => { void navigator.clipboard.writeText(url); setCopiedUrl(true); setTimeout(() => setCopiedUrl(false), 2000) }}
-                style={{background: 'var(--green-soft)', color: 'var(--green-bright)', border: '1px solid var(--green-soft-strong)', borderRadius: 'var(--radius-m)', padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'var(--font-body)',whiteSpace:'nowrap',flexShrink:0}}
               >
-                {copiedUrl ? 'Copied!' : 'Copy'}
+                {copiedUrl ? 'Copied' : 'Copy'}
               </button>
             </div>
           </div>
@@ -2670,24 +2671,20 @@ function MintDetailContent({ url }: { url: string }) {
       )}
 
       {showReliabilityBreakdown && (
-        <div style={{position:'fixed',inset:0,zIndex:100,background:'rgba(0,0,0,0.7)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}
-          onClick={() => setShowReliabilityBreakdown(false)}>
-          <div style={{background:'var(--bg2)',border:'0.5px solid var(--border2)',borderRadius:14,padding:'24px',maxWidth:380,width:'100%'}}
-            onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="reliability-breakdown-title" ref={dialogRef}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-              <div id="reliability-breakdown-title" style={{fontSize:16,fontWeight:600,color:'var(--text)'}}>Reliability Score Breakdown</div>
-              <button onClick={() => setShowReliabilityBreakdown(false)} aria-label="Close" style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',display:'flex',padding:4}}><IcClose /></button>
+        <div className="rb-overlay" onClick={() => setShowReliabilityBreakdown(false)}>
+          <div className="rb-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="reliability-breakdown-title" ref={dialogRef}>
+            <div className="rb-head">
+              <div id="reliability-breakdown-title" className="rb-title">Reliability Score Breakdown</div>
+              <button type="button" className="rb-close" onClick={() => setShowReliabilityBreakdown(false)} aria-label="Close"><IcClose /></button>
             </div>
-            <div style={{textAlign:'center',marginBottom:20}}>
-              <div style={{fontSize:48,fontWeight:700,color:reliabilityScoreColor(reliabilityScore),lineHeight:1}}>{reliabilityScore}%</div>
-              <div style={{marginTop:8,display:'flex',justifyContent:'center'}}>
-                <span style={{fontSize:11,fontFamily:'var(--font-mono)',fontWeight:600,color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:5,padding:'2px 8px'}}>{tsInfo.label}</span>
-              </div>
+            <div className="rb-hero">
+              <div className="rb-hero-score" style={{color:reliabilityScoreColor(reliabilityScore)}}>{reliabilityScore}%</div>
+              <span className="rb-hero-badge" style={{color:tsInfo.color,background:tsInfo.bg,borderColor:tsInfo.border}}>{tsInfo.label}</span>
             </div>
             {reliabilityBreakdownRows.map(row => (
               <ReliabilityBreakdownRow key={row.label} {...row} />
             ))}
-            <div style={{borderTop:'0.5px solid var(--border)',paddingTop:12,marginTop:4,fontSize:10,color:'var(--text3)',lineHeight:1.6}}>
+            <div className="rb-formula">
               Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.
             </div>
           </div>
