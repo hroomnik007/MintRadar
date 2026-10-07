@@ -227,7 +227,8 @@ button.md-url-copy {
   cursor: pointer;
   transition: color var(--transition);
 }
-button.md-url-copy > span { word-break: break-all; }
+/* Breaks at slashes first (<wbr> after each one); a single over-long token still wraps. */
+button.md-url-copy > span { overflow-wrap: anywhere; }
 .md-url-tor {
   display: inline-block;
   margin-right: 6px;
@@ -2282,4 +2283,112 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-vh-table th { text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-size: 12.5px; font-weight: 400; }
 @media (max-width: 768px) {
   .md-sc-label { text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-size: 12px; font-weight: 400; }
+}
+
+/* Mobile contacts: label and copy button on one row, the value below at full width. */
+@media (max-width: 640px) {
+  .md-contact-card { grid-template-columns: minmax(0, 1fr) auto; row-gap: 2px; }
+  .md-contact-type { grid-column: 1; grid-row: 1; font-size: 13px; }
+  .md-contact-card > button { grid-column: 2; grid-row: 1; }
+  .md-contact-val { grid-column: 1 / -1; grid-row: 2; text-align: left; overflow-wrap: anywhere; word-break: normal; }
+}
+
+/* ═══ Tabs: History, NUTs, Audit, Reviews ═══════════════════════════════════ */
+
+/* Segmented control (period, metric): same look as the Stats toggles. */
+.md-seg { display: inline-flex; border: 1px solid var(--border2); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+.md-seg button {
+  background: none;
+  border: 0;
+  padding: 4px 11px;
+  font-size: 12.5px;
+  font-family: var(--font-body);
+  color: var(--text2);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.md-seg button.on { background: var(--raised); color: var(--text); }
+.md-seg button:hover:not(.on) { color: var(--text); }
+.md-hist-metric { margin-bottom: 12px; }
+
+/* History: three figures with dividers (no boxed cards). */
+.md-hist-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 18px; padding: 4px 0; }
+.md-hist-fig { padding: 0 20px; border-left: 1px solid var(--border); min-width: 0; }
+.md-hist-fig:first-child { border-left: 0; padding-left: 0; }
+.md-hist-fig-value { font-family: var(--font-mono-data); font-weight: 700; font-size: 26px; line-height: 1.15; letter-spacing: -0.03em; }
+.md-hist-fig-label { font-size: 13px; color: var(--text2); margin-top: 2px; }
+.md-hist-fig-delta { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+/* NUT limits: two columns divided by a hairline instead of two boxes. */
+.md-limit-card { display: flex; flex-direction: column; gap: 5px; padding: 0 0 0 18px; border-left: 1px solid var(--border); }
+.md-limit-card:first-child { padding-left: 0; border-left: 0; }
+.md-limit-range-label { font-size: 12.5px; color: var(--text3); font-family: var(--font-body); }
+
+/* NUT compatibility: flat tiles, no icon wells; unsupported ones recede. */
+.nut-summary-line { font-family: var(--font-body); font-size: 13px; margin-bottom: 12px; }
+.nut-grid { gap: 8px; }
+.nut-card { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; }
+.nut-card:hover { background: var(--surface-2); border-color: var(--border2); }
+.nut-card.supported { background: none; border-color: var(--border); }
+.nut-card.supported:hover { background: var(--surface-2); }
+.nut-card.nut-disabled { background: var(--amber-soft); border-color: var(--amber-soft-strong); }
+.nut-icon { display: none; }
+.nut-name { font-size: 12.5px; font-weight: 700; color: var(--accent); }
+.nut-card.unsupported .nut-name { color: var(--text3); }
+.nut-desc { font-family: var(--font-body); font-size: 13px; color: var(--text2); }
+
+/* Audit: figure strip instead of five boxed tiles; nested cards become hairline sections. */
+.audit-summary-strip { gap: 0; padding: 4px 0; margin-bottom: 14px; }
+.audit-summary-cell {
+  background: none;
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+  align-items: flex-start;
+  text-align: left;
+  padding: 0 16px;
+  gap: 2px;
+}
+.audit-summary-cell:first-child { border-left: 0; padding-left: 0; }
+.audit-summary-value { justify-content: flex-start; font-size: 24px; letter-spacing: -0.03em; }
+.audit-summary-label { justify-content: flex-start; font-size: 13px; color: var(--text2); letter-spacing: 0; }
+.md-audit-via { font-family: var(--font-body); font-size: 13px; }
+.audit-cz-card {
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  padding: 16px 0 0;
+  margin-top: 16px;
+}
+.audit-cz-card-title { font-size: 15px; font-weight: 600; letter-spacing: -0.005em; text-transform: none; color: var(--text); margin-bottom: 10px; }
+.md-audit-collapsible, .md-audit-collapsible .md-panel { background: none; }
+.audit-swaps-table th { font-weight: 400; font-size: 13px; }
+.audit-swaps-table td { padding: 8px 8px 8px 0; }
+.audit-swaps-show-all-btn { font-size: 13px; color: var(--accent); }
+
+/* Reviews: rows with hairlines instead of boxed cards; quiet filter segments. */
+.review-card { background: none; border: 0; border-top: 1px solid var(--border); border-radius: 0; padding: 16px 2px 40px; }
+.review-card:first-of-type { border-top: 0; }
+.review-card-hl { outline: 1px solid var(--accent); outline-offset: -1px; border-radius: 8px; }
+.reviews-disclaimer { font-size: 13px; }
+.reviews-filter-chip { background: none; border-radius: 8px; font-family: var(--font-body); font-size: 12.5px; padding: 4px 11px; color: var(--text2); }
+.reviews-filter-chip.toggle { border-left: 1px solid var(--border); margin-left: 0; padding-left: 11px; }
+.reviews-write-btn { font-family: var(--font-body); font-size: 13px; letter-spacing: 0; background: transparent; border-color: var(--green-soft-strong); }
+.reviews-write-btn:hover { background: var(--green-soft); }
+
+/* Latency tile: the "Show my latency" button sits in the tile's top-right corner on wide screens,
+   so it no longer makes this tile (and the whole strip) taller than the others. */
+@media (min-width: 1101px) {
+  .md-sc { position: relative; }
+  .md-sc-sub > span:last-child:has(.latency-test-btn) { position: absolute; top: 0; right: 14px; }
+}
+
+@media (max-width: 768px) {
+  .md-hist-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .md-hist-fig { padding: 0 10px; }
+  .md-hist-fig-value { font-size: 20px; }
+  .audit-summary-cell { padding: 0 10px; }
+  .audit-summary-value { font-size: 20px; }
+  .md-limit-card { padding-left: 12px; }
 }

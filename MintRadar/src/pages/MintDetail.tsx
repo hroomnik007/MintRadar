@@ -1,7 +1,7 @@
 import { nip19 } from 'nostr-tools'
 import { njumpProfileUrl, njumpEventUrl, npubFromPubkey, mintAnnounceNaddr } from '@/utils/nostrLinks'
 import { useParams, useNavigate, Navigate } from 'react-router-dom'
-import { useEffect, useState, useMemo, useRef, useCallback, lazy, Suspense, type JSX } from 'react'
+import { Fragment, useEffect, useState, useMemo, useRef, useCallback, lazy, Suspense, type JSX } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
@@ -1269,7 +1269,7 @@ function MintDetailContent({ url }: { url: string }) {
                   {showTor && (
                     <span className="md-url-tor" title={trackedIsOnion ? 'Tor hidden service — reachable only over the Tor network' : 'Mint also advertises a .onion URL'}>Tor</span>
                   )}
-                  {url}
+                  {url.split(/(?<=\/)/).map((part, i) => <Fragment key={i}>{part}<wbr /></Fragment>)}
                 </span>
                 {copiedLink ? <span className="md-url-copied-label">Link copied</span> : <ArrowUpRight size={12} />}
               </button>
@@ -1868,13 +1868,13 @@ function MintDetailContent({ url }: { url: string }) {
                 ) : (
                   <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
                     {[{ key: 'NUT-04 (Minting)', cfg: nut4, disabled: nut4Disabled }, { key: 'NUT-05 (Melting)', cfg: nut5, disabled: nut5Disabled }].map(({ key, cfg, disabled }) => (
-                      <div key={key} style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 12px',display:'flex',flexDirection:'column',gap:5,opacity: disabled ? 0.75 : 1}}>
+                      <div key={key} className="md-limit-card" style={{opacity: disabled ? 0.75 : 1}}>
                         <span style={{fontSize:13,fontWeight:600,color:'var(--text2)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',textDecoration: disabled ? 'line-through' : 'none'}}>{key}</span>
                         {disabled ? (
                           <span className="md-limit-off"><AlertTriangle size={11} /> Disabled by operator</span>
                         ) : (
                           <>
-                            <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Min – Max</span>
+                            <span className="md-limit-range-label">Min – Max</span>
                             <div>{renderLimits(cfg)}</div>
                           </>
                         )}
@@ -1969,52 +1969,41 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="md-panel">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div className="md-panel-title" style={{ marginBottom: 0 }}>Historical data</div>
-              <div style={{ display: 'flex', background: 'var(--bg3)', borderRadius: 6, padding: 2, gap: 1 }}>
+              <div className="md-seg" role="group" aria-label="Period">
                 {(['24h', '7d', '30d', '90d'] as const).map(iv => (
                   <button
                     key={iv}
+                    type="button"
                     onClick={() => setChartInterval(iv)}
-                    style={{
-                      background: chartInterval === iv ? 'var(--accent)' : 'transparent',
-                      color: chartInterval === iv ? 'var(--bg)' : 'var(--text2)',
-                      border: 'none', borderRadius: 4, padding: '3px 10px',
-                      fontSize: 12, fontFamily: 'var(--font-mono)',
-                      cursor: 'pointer', fontWeight: chartInterval === iv ? 700 : 400,
-                    }}
+                    className={chartInterval === iv ? 'on' : ''}
                   >{iv}</button>
                 ))}
               </div>
             </div>
 
             {/* Summary metric cards */}
-            <div className="md-hist-summary" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 14 }}>
+            <div className="md-hist-summary">
               {[
-                { label: 'Avg Latency', value: chartAvgLatency !== null ? `${chartAvgLatency}ms` : '—', delta: deltaStr(chartAvgLatency, chartPrevLatency, 'ms', chartPrevInsufficientHistory), color: 'var(--text)' },
-                { label: 'Avg Uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%', chartPrevInsufficientHistory), color: 'var(--accent)' },
-                { label: 'Avg Reliability', value: `${reliabilityScore}%`, delta: null, color: tsInfo.color },
+                { label: 'Average latency', value: chartAvgLatency !== null ? `${chartAvgLatency}ms` : '—', delta: deltaStr(chartAvgLatency, chartPrevLatency, 'ms', chartPrevInsufficientHistory), color: 'var(--text)' },
+                { label: 'Average uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%', chartPrevInsufficientHistory), color: 'var(--accent)' },
+                { label: 'Average reliability', value: `${reliabilityScore}%`, delta: null, color: tsInfo.color },
               ].map(({ label, value, delta, color }) => (
-                <div key={label} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 11px' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4, fontFamily: 'var(--font-mono)' }}>{label}</div>
-                  <div style={{ fontSize: 19, fontWeight: 700, color, fontFamily: 'var(--font-mono)', lineHeight: 1 }}>{value}</div>
-                  {delta && <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4, fontFamily: 'var(--font-mono)' }}>{delta}</div>}
+                <div key={label} className="md-hist-fig">
+                  <div className="md-hist-fig-value" style={{ color }}>{value}</div>
+                  <div className="md-hist-fig-label">{label}</div>
+                  {delta && <div className="md-hist-fig-delta">{delta}</div>}
                 </div>
               ))}
             </div>
 
             {/* Tab switcher */}
-            <div style={{ display: 'flex', gap: 2, marginBottom: 10, background: 'var(--bg3)', borderRadius: 6, padding: 2, width: 'fit-content' }}>
+            <div className="md-seg md-hist-metric" role="group" aria-label="Metric">
               {([['latency', 'Latency'], ['uptime', 'Uptime'], ['reliability', 'Reliability Score']] as const).map(([m, label]) => (
                 <button
                   key={m}
+                  type="button"
                   onClick={() => setChartMetric(m)}
-                  style={{
-                    background: chartMetric === m ? 'var(--bg2)' : 'transparent',
-                    border: chartMetric === m ? '1px solid var(--border2)' : '1px solid transparent',
-                    borderRadius: 5, padding: '4px 12px',
-                    fontSize: 12, fontFamily: 'var(--font-mono)',
-                    color: chartMetric === m ? 'var(--text)' : 'var(--text3)',
-                    cursor: 'pointer',
-                  }}
+                  className={chartMetric === m ? 'on' : ''}
                 >{label}</button>
               ))}
             </div>

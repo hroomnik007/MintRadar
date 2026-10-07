@@ -927,6 +927,8 @@ test.describe('Best Mint wizard currency control', () => {
     const opts = group.getByRole('radio')
     // Re-measure before each click: selecting a unit can change the content below and shift the control.
     const clickOffset = async (dy: 'above' | 'below') => {
+      // Centre the control first: the page now opens with a header, so the sticky navbar could otherwise cover the 3px band above it.
+      await opts.nth(1).evaluate(el => el.scrollIntoView({ block: 'center' }))
       const b = (await opts.nth(1).boundingBox())!
       await page.mouse.click(b.x + b.width / 2, dy === 'above' ? b.y - 3 : b.y + b.height + 3)
     }
