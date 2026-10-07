@@ -69,10 +69,10 @@ test('Uptime tab (after a click) is labeled 7D and ranks by uptimePct7d, not upt
 
   const widget = page.locator('.stats-panel').filter({ has: page.getByRole('button', { name: 'Uptime', exact: true }) })
   // The panel opens on Reliability (default since 2026-10-07); Uptime is one click away.
-  await expect(widget).toContainText('Top Reliability Score')
+  await expect(widget).toContainText('Top by Reliability Score')
   await widget.getByRole('button', { name: 'Uptime', exact: true }).click()
-  await expect(widget).toContainText('Top Uptime · 7D')
-  await expect(widget).not.toContainText('Top Uptime · 24H')
+  await expect(widget).toContainText('Top uptime · 7D')
+  await expect(widget).not.toContainText('Top uptime · 24H')
 
   const firstRow = widget.locator('.stats-top5-row').first()
   await expect(firstRow).toContainText('Alpha Mint')
@@ -97,23 +97,24 @@ test('Geographic Distribution buckets CDN / cloud / anycast labels into one row'
   await expect(geo.locator('.dist-row', { hasText: 'Cloudflare' })).toHaveCount(0)
 })
 
-test('Geographic Distribution: subtitle, a separate CDN row with its note, balanced city columns, rows still open the modal', async ({ page }) => {
+test('Geographic distribution: description, CDN / anycast as the last cell of the city grid, balanced columns, rows still open the modal', async ({ page }) => {
   const base = MOCK_KNOWN_MINTS[0]!
   const locs = ['Cloudflare CDN', 'Cloudflare CDN', 'Frankfurt am Main, DE', 'Frankfurt am Main, DE', 'Linz, AT', 'Tokyo, JP', 'Boston, US']
   await knownMints(page, locs.map((serverLocation, i) => ({ ...base, url: `https://g${i}.example`, name: `G${i}`, online: true, serverLocation })))
   await page.goto('/stats')
 
   const geo = page.locator('.stats-panel', { hasText: 'Geographic Distribution' })
-  await expect(geo.locator('.stats-geo-sub')).toHaveText('City from the IP address, not where the operator is.')
+  await expect(geo.locator('.stats-panel-desc')).toHaveText('City from the IP address, not where the operator is.')
   const cdn = geo.locator('.stats-geo-cdn')
   await expect(cdn).toHaveCount(1)
   await expect(cdn.locator('.dist-label')).toHaveText('CDN / anycast')
   await expect(cdn.locator('.dist-count')).toHaveText('2')
-  await expect(cdn.locator('.stats-geo-cdn-note')).toHaveText('these are not a city.')
-  // The bucket is not a city: it is not among the city rows, and the 4 cities split 2 + 2.
-  await expect(geo.locator('.stats-geo-cols .dist-row')).toHaveCount(4)
-  await expect(geo.locator('.stats-geo-cols .dist-row', { hasText: 'CDN' })).toHaveCount(0)
-  const xs = await geo.locator('.stats-geo-cols .dist-row').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().left)))
+  await expect(cdn).toHaveAttribute('title', /not a city/)
+  // The bucket sits in the same grid as the cities, in the last cell: 4 cities + the bucket split 3 + 2.
+  const cells = geo.locator('.stats-geo-cols .dist-row')
+  await expect(cells).toHaveCount(5)
+  await expect(cells.last()).toHaveClass(/stats-geo-cdn/)
+  const xs = await cells.evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().left)))
   expect(new Set(xs).size).toBe(2)
   // No underline any more, the flag has its own cell, the row is still clickable.
   const row = geo.locator('.stats-geo-cols .dist-row', { hasText: 'Frankfurt' })
@@ -133,8 +134,8 @@ test('Software panel: "% of tracked mints behind latest release" + explanatory (
   ])
   await page.goto('/stats')
 
-  const sw = page.locator('.stats-sw-panel')
-  await expect(sw.getByText('% of tracked mints behind latest release')).toBeVisible()
+  const sw = page.locator('.stats-now-panel')
+  await expect(sw.getByText('Tracked mints behind the latest release')).toBeVisible()
   await expect(sw.getByText('Behind current release')).toHaveCount(0)
   await expect(sw.getByText('Running outdated or older versions')).toHaveCount(0)
 

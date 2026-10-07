@@ -7,8 +7,6 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { Info } from 'lucide-react'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import { ReliabilityMoversPanel } from '@/components/stats/ReliabilityMoversPanel'
-import { MintFavicon } from '@/components/mint/MintFavicon'
-import { IcShield } from '@/components/mint/IcShield'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { trackedCount, onlineCount as countOnline } from '@/utils/mintCounts'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
@@ -17,7 +15,7 @@ import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { compareMintVersionNumbers, isEligibleForRecommendation } from '@/utils/reliabilityScore'
 import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
-import { useIsMobile, useMediaQuery } from '@/hooks/useIsMobile'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
 import './Stats.css'
@@ -32,22 +30,6 @@ interface StatsData {
   nutAdoption: Array<{ nut: string; count: number; percent: number }>
   top5ByReliabilityScore: Array<{ url: string; name: string | null; reliabilityScore: number }>
 }
-
-// ── Panel title icon wells (2×2 hero grid visual pass) ──────────
-// Same markup already used elsewhere on this page / Dashboard.tsx (Software
-// in Use panel below reuses the "NUTs in Spec" stacked-bars shape, Network
-// Health Index reuses the "Online Now" pulse shape, Geographic Distribution
-// reuses Dashboard's IcSignal radar-dot shape) — duplicated locally rather
-// than imported since none of the originals are exported, not new artwork.
-const IcSwLayers = () => (
-  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="10" width="12" height="3" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="2" y="6" width="12" height="3" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="2" y="2" width="12" height="3" rx="1" stroke="currentColor" strokeWidth="1.1"/></svg>
-)
-const IcGeoGlobe = () => (
-  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.8" stroke="currentColor" strokeWidth="1.1"/><circle cx="8" cy="8" r="4" stroke="currentColor" strokeWidth="1" strokeDasharray="2 1.5" opacity="0.6"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/></svg>
-)
-const IcHealthPulse = () => (
-  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M1 11C3 8 5 7 8 7s5 1 7-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M3 14C5 11.5 6.5 10 8 10s3 1.5 5-1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><circle cx="8" cy="4" r="2" stroke="currentColor" strokeWidth="1.2"/></svg>
-)
 
 function uptimeColor(pct: number): string {
   if (pct >= 80) return 'var(--accent)'
@@ -707,20 +689,13 @@ export default function Stats() {
   // separate "does it fit" check. computeGeoDistribution's own default
   // stays 8 for other callers/tests — only this page's usage needs this.
   //
-  // Mobile (≤700px, same breakpoint as the rest of this page's single-column
-  // stacking — see Stats.css): a phone screen can't show 10-20 stacked rows
-  // without turning the panel into a scroll-fest, so it gets topN=5 and
-  // relies on the existing "View others" modal for the rest — same
-  // computeGeoDistribution grouping and the same MoreLocationsModal, just a
-  // smaller cut line. Grouping/aggregation itself is untouched either way.
-  const isNarrowGeo = useMediaQuery('(max-width: 700px)')
-  const geoTopN = isNarrowGeo ? 5 : 24
-  const geoDist = useMemo(() => computeGeoDistribution(knownMintsData ?? [], geoTopN), [knownMintsData, geoTopN])
-  // The CDN / anycast bucket is not a place: it gets its own full-width row above the cities, which then
-  // split into two balanced columns.
+  // Same cut on every width (24 places; "View others" lists the rest). The CDN / anycast bucket is not a place:
+  // it is the last cell of the two balanced columns, next to the odd city.
+  const geoTopN = 24
+  const geoDist = useMemo(() => computeGeoDistribution(knownMintsData ?? [], geoTopN), [knownMintsData])
   const geoCdn = geoDist.top.find(e => e.loc === CDN_BUCKET) ?? null
   const geoCities = geoDist.top.filter(e => e.loc !== CDN_BUCKET)
-  const geoRows = isNarrowGeo ? geoCities.length : Math.max(1, Math.ceil(geoCities.length / 2))
+  const geoRows = Math.max(1, Math.ceil((geoCities.length + (geoCdn ? 1 : 0)) / 2))
 
   const cityMints = useMemo(() => {
     if (!cityModal || !knownMintsData) return []
@@ -915,158 +890,181 @@ export default function Stats() {
   return (
     <div className="stats-page">
       <h1 className="sr-only">Cashu Mints Network Stats — Uptime, Reliability Score & NUT Adoption</h1>
-      {/* ── 5 flat stat boxes ── */}
-      <div className="stats-metrics">
-        <div className="stat-card">
-          <div className="stat-label">Mints Tracked</div>
-          <div className="stat-row">
-            <div className="stat-icon gray">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.1"/></svg>
-            </div>
-            <div className="stat-figure">
-              <span className="stat-value">{trackedCount(knownMintsData ?? []) || data.totalMints}</span>
-              <span className="stat-note">all known</span>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Online Now</div>
-          <div className="stat-row">
-            <div className="stat-icon green">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M1 11C3 8 5 7 8 7s5 1 7-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M3 14C5 11.5 6.5 10 8 10s3 1.5 5-1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><circle cx="8" cy="4" r="2" stroke="currentColor" strokeWidth="1.2"/></svg>
-            </div>
-            <div className="stat-figure">
-              <span className="stat-value">{knownMintsData ? countOnline(knownMintsData) : data.onlineMints}</span>
-              <span className="stat-note">of all known</span>
+      {/* Board: row 1 Network health | The network right now, row 2 (Top + Software) | NUT coverage,
+          row 3 Geographic distribution | Reliability Score movers, row 4 trend. DOM order is also the mobile
+          stack order (The network right now first, see Stats.css). */}
+      <div className="stats-board-grid">
+
+        {/* Network right now: the headline figures, in one panel next to the Network Health Index.
+            Keeps the .stats-metrics / .stat-card / .stat-note class names (specs and the 701-900px
+            note rules key off them); the icon wells and the separate "Mints Tracked" tile are gone,
+            the tracked count lives in the first tile's note. The "behind latest release" bar moved here
+            from Software in Use. */}
+        <div className="stats-panel stats-now-panel">
+          <div className="stats-panel-head">
+            <div>
+              <div className="stats-panel-title">The network right now</div>
+              <div className="stats-panel-desc">Measured from {PROBE_LOCATION}, refreshed every 5 minutes.</div>
             </div>
           </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label smc-label-info">
-            Avg mint uptime · 24h
-            <span
-              ref={uptimeInfoRef}
-              style={{ position: 'relative', display: 'inline-flex' }}
-              onPointerEnter={uptimeInfoTooltip.onPointerEnter}
-              onPointerLeave={uptimeInfoTooltip.onPointerLeave}
-              onClick={uptimeInfoTooltip.onClick}
-            >
-              <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
-              {uptimeInfoTooltip.open && (
-                <div className="audit-tooltip audit-tooltip-down" style={{ width: isMobile ? 200 : 240, left: 0 }}>
-                  Average 24-hour uptime of active mints (same set as the Dashboard default grid). 24h+ offline mints are excluded; missing samples are skipped, not counted as 0%.
-                </div>
-              )}
-            </span>
-          </div>
-          <div className="stat-row">
-            <div className="stat-icon orange">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v5l3 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="8" cy="9" r="6" stroke="currentColor" strokeWidth="1.2"/><path d="M6 1.5h4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
+          <div className="stats-metrics">
+            <div className="stat-card">
+              <div className="stat-figure"><span className="stat-value">{knownMintsData ? countOnline(knownMintsData) : data.onlineMints}</span></div>
+              <div className="stat-label">mints online</div>
+              <span className="stat-note">of {trackedCount(knownMintsData ?? []) || data.totalMints} tracked</span>
             </div>
-            <div className="stat-figure">
-              <span className="stat-value" style={{color: avgUptime24h != null ? uptimeColor(avgUptime24h) : undefined}}>
-                {avgUptime24h != null ? `${avgUptime24h}%` : '—'}
-              </span>
-              <span className="stat-note">active mints</span>
+            <div className="stat-card">
+              <div className="stat-figure"><span className="stat-value" style={{color: avgUptime24h != null ? uptimeColor(avgUptime24h) : undefined}}>{avgUptime24h != null ? `${avgUptime24h}%` : '—'}</span></div>
+              <div className="stat-label smc-label-info">
+                average uptime
+                <span
+                  ref={uptimeInfoRef}
+                  style={{ position: 'relative', display: 'inline-flex' }}
+                  onPointerEnter={uptimeInfoTooltip.onPointerEnter}
+                  onPointerLeave={uptimeInfoTooltip.onPointerLeave}
+                  onClick={uptimeInfoTooltip.onClick}
+                >
+                  <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
+                  {uptimeInfoTooltip.open && (
+                    <div className="audit-tooltip audit-tooltip-down" style={{ width: isMobile ? 200 : 240, left: 0 }}>
+                      Average 24-hour uptime of active mints (same set as the Dashboard default grid). 24h+ offline mints are excluded; missing samples are skipped, not counted as 0%.
+                    </div>
+                  )}
+                </span>
+              </div>
+              <span className="stat-note">active mints, 24h</span>
             </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Median Latency</div>
-          <div className="stat-row">
-            <div className="stat-icon orange">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.1"/><path d="M8 6v3.5l2 1" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/><path d="M5.5 1h5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
-            </div>
-            <div className="stat-figure">
-              <span className="stat-value">{data.avgLatency24h != null ? data.avgLatency24h : '—'}</span>
-              {data.avgLatency24h != null && <span className="stat-unit">ms</span>}
+            <div className="stat-card">
+              <div className="stat-figure">
+                <span className="stat-value">{data.avgLatency24h != null ? data.avgLatency24h : '—'}</span>
+                {data.avgLatency24h != null && <span className="stat-unit">ms</span>}
+              </div>
+              <div className="stat-label">median latency</div>
               <span className="stat-note">from {PROBE_LOCATION}</span>
             </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">NUTs in Spec</div>
-          <div className="stat-row">
-            <div className="stat-icon green">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="10" width="12" height="3" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="2" y="6" width="12" height="3" rx="1" stroke="currentColor" strokeWidth="1.1"/><rect x="2" y="2" width="12" height="3" rx="1" stroke="currentColor" strokeWidth="1.1"/></svg>
-            </div>
-            <div className="stat-figure">
-              <span className="stat-value">{TRACKED_NUTS.length}</span>
+            <div className="stat-card">
+              <div className="stat-figure"><span className="stat-value">{TRACKED_NUTS.length}</span></div>
+              <div className="stat-label">NUTs in spec</div>
+              <span className="stat-note">features tracked</span>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* ── 2×2 hero grid: Software in Use | Most Reliable, Geographic
-          Distribution | Network Health Index — visual pass to mirror the
-          reference mockup's layout, DOM order doubling as the mobile stack
-          order. NUT Coverage / Reliability Score Movers / Reliability Score Trend stay
-          in the separate .stats-cards-grid below, unchanged. */}
-      <div className="stats-board-grid">
-      <div className="stats-hero-grid">
-
-        {/* Card 1: Software in Use — stretched to match its row's tallest
-              panel via .stats-hero-grid's align-items:stretch, same
-              mechanism as .stats-nhi-panel. .stats-sw-fill's flex:1 absorbs
-              the resulting surplus height so it lands below the version
-              list instead of stretching the rows themselves. */}
-          <div className="stats-panel stats-sw-panel">
-            <div className="stats-panel-title-row">
-              <div className="stats-panel-icon gray"><IcSwLayers /></div>
-              <div className="stats-panel-title" style={{marginBottom:0}}>Software in Use</div>
-            </div>
-            <div className="stats-sw-fill">
-              <div>
-                {swFreshnessSummary.total > 0 && (
-                  <div>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:4}}>
-                      <span style={{fontSize:12,color:'var(--text2)',display:'inline-flex',alignItems:'center',gap:4}}>
-                        % of tracked mints behind latest release
-                        <span
-                          ref={swBehindInfoRef}
-                          className="stats-sw-behind-info"
-                          style={{ position: 'relative', display: 'inline-flex' }}
-                          onPointerEnter={swBehindInfoTooltip.onPointerEnter}
-                          onPointerLeave={swBehindInfoTooltip.onPointerLeave}
-                          onClick={swBehindInfoTooltip.onClick}
-                        >
-                          <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
-                          {swBehindInfoTooltip.open && (
-                            <div className="audit-tooltip audit-tooltip-down" style={{ width: isMobile ? 210 : 250, left: 0 }}>
-                              We compare the version each mint reports to the latest known release for that implementation — not a CVE or security score.
-                            </div>
-                          )}
-                        </span>
-                      </span>
-                      <span style={{fontSize:13,fontWeight:swFreshnessSummary.pct >= 50 ? 700 : 600,color:'var(--amber)',fontFamily:'var(--font-mono-data)'}}>{swFreshnessSummary.pct}%</span>
-                    </div>
-                    <div className="dist-track"><div className="dist-fill" style={{width:`${swFreshnessSummary.pct}%`,background:'var(--amber)',opacity:swFreshnessSummary.pct >= 50 ? 0.9 : 0.6}} /></div>
+          <div className="stats-now-behind">
+      {swFreshnessSummary.total > 0 && (
+        <div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:4}}>
+            <span style={{fontSize:12,color:'var(--text2)',display:'inline-flex',alignItems:'center',gap:4}}>
+              Tracked mints behind the latest release
+              <span
+                ref={swBehindInfoRef}
+                className="stats-sw-behind-info"
+                style={{ position: 'relative', display: 'inline-flex' }}
+                onPointerEnter={swBehindInfoTooltip.onPointerEnter}
+                onPointerLeave={swBehindInfoTooltip.onPointerLeave}
+                onClick={swBehindInfoTooltip.onClick}
+              >
+                <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
+                {swBehindInfoTooltip.open && (
+                  <div className="audit-tooltip audit-tooltip-down" style={{ width: isMobile ? 210 : 250, left: 0 }}>
+                    We compare the version each mint reports to the latest known release for that implementation — not a CVE or security score.
                   </div>
                 )}
-                <div style={{marginTop:swFreshnessSummary.total > 0 ? 10 : 0,display:'flex',flexDirection:'column',gap:'var(--stats-row-gap)'}}>
-                  {versionDist.length === 0 ? (
-                    <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
-                  ) : versionDist.map(({sw, total, accentColor}) => {
-                    const totalOnline = versionDist.reduce((s, d) => s + d.total, 0)
-                    const pct = totalOnline > 0 ? Math.round(total / totalOnline * 100) : 0
-                    return (
-                      <div
-                        key={sw}
-                        className="sw-row"
-                        {...clickableProps(() => setSoftwareModal(sw))}
-                      >
-                        <span className="dist-label" style={{fontWeight:600,color:'var(--text)',fontSize:13}}>{sw}</span>
-                        <div className="dist-track"><div className="dist-fill" style={{width:`${pct}%`,background:accentColor}} /></div>
-                        <span className="dist-count" style={{color:'var(--text2)'}}>{total}</span>
-                        <span className="sw-chevron" style={{color:'var(--text3)'}}>›</span>
+              </span>
+            </span>
+            <span style={{fontSize:13,fontWeight:swFreshnessSummary.pct >= 50 ? 700 : 600,color:'var(--amber)',fontFamily:'var(--font-mono-data)'}}>{swFreshnessSummary.pct}%</span>
+          </div>
+          <div className="dist-track"><div className="dist-fill" style={{width:`${swFreshnessSummary.pct}%`,background:'var(--amber)',opacity:swFreshnessSummary.pct >= 50 ? 0.9 : 0.6}} /></div>
+        </div>
+      )}
+          </div>
+        </div>
+
+        {/* Row 2, 2nd panel: Network Health Index. */}
+        {networkHealth && (() => {
+          const info = reliabilityScoreInfo(networkHealth.score)
+          const gaugeArc = reliabilityDonutArc(networkHealth.score)
+          return (
+            <div className="stats-panel stats-nhi-panel">
+              <div className="stats-panel-head">
+                <div>
+                <div className="stats-panel-title nhi-title-row">
+                  Network health index
+                  <span
+                    ref={nhiInfoRef}
+                    style={{ position: 'relative', display: 'inline-flex' }}
+                    onPointerEnter={nhiInfoTooltip.onPointerEnter}
+                    onPointerLeave={nhiInfoTooltip.onPointerLeave}
+                    onClick={nhiInfoTooltip.onClick}
+                  >
+                    <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
+                    {nhiInfoTooltip.open && (
+                      <div className="audit-tooltip" style={isMobile ? { width: 220, left: 0 } : { width: 260, right: 0 }}>
+                        Composite 0-100 score across uptime, average Reliability Score, software diversity, advanced feature adoption &amp; network stability. Each row below shows index points, not a mint count.{isMobile ? ' Tap the gauge for the full breakdown.' : ` ${NETWORK_HEALTH_FORMULA_TEXT}`}
                       </div>
-                    )
-                  })}
+                    )}
+                  </span>
+                </div>
+                <div className="stats-panel-desc">Weighted from five factors.</div>
                 </div>
               </div>
+              {/* .nhi-fill is the flex:1 region below the header — this panel
+                  shares its .stats-hero-grid row with Geographic
+                  Distribution and stretches to match whichever is taller
+                  (align-self:
+                  stretch on .stats-nhi-panel, opting out of the grid's own
+                  align-items:start just for this one panel), so there can be
+                  real surplus height here to distribute. justify-content:
+                  space-between pins the gauge/badge to the top and the
+                  breakdown block to the bottom edge, putting any extra space
+                  between them instead of leaving it all as dead space below
+                  the breakdown. On mobile (no breakdown block, and nothing
+                  stretches this panel taller than its own content) this is a
+                  no-op — the gauge just sits at its natural position. */}
+              <div className="nhi-fill">
+                <div className="nhi-wrap" {...(isMobile ? { ...clickableProps(() => setShowHealthBreakdown(true)), 'aria-haspopup': 'dialog' as const } : {})} style={isMobile ? undefined : { cursor: 'default' }}>
+                  <div className="nhi-gauge-wrap" style={isMobile ? undefined : { width: 140, height: 140 }}>
+                    <svg viewBox="0 0 72 72" style={isMobile ? undefined : { width: 140, height: 140 }}>
+                      <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
+                      <circle cx="36" cy="36" r="27" fill="none" stroke={info.color} strokeWidth="7"
+                        strokeDasharray={gaugeArc.dashArray}
+                        strokeDashoffset={gaugeArc.dashOffset}
+                        strokeLinecap="round"
+                        transform="rotate(-90 36 36)" />
+                    </svg>
+                    <div className="nhi-gauge-num" style={{ color: info.color, ...(isMobile ? {} : { fontSize: 36 }) }}>{networkHealth.score}</div>
+                  </div>
+                  <div className="nhi-legend">
+                    <div className={`nhi-legend-row${networkHealth.score >= 70 ? ' active' : ''}`}>
+                      <span className="nhi-legend-dot" style={{ background: 'var(--accent)' }} />Healthy · 70+
+                    </div>
+                    <div className={`nhi-legend-row${networkHealth.score >= 40 && networkHealth.score < 70 ? ' active' : ''}`}>
+                      <span className="nhi-legend-dot" style={{ background: 'var(--amber)' }} />Moderate · 40-69
+                    </div>
+                    <div className={`nhi-legend-row${networkHealth.score < 40 ? ' active' : ''}`}>
+                      <span className="nhi-legend-dot" style={{ background: 'var(--red)' }} />At Risk · &lt;40
+                    </div>
+                  </div>
+                </div>
+                {isMobile && (
+                  <button type="button" className="nhi-show-details" onClick={() => setShowHealthBreakdown(true)} aria-haspopup="dialog">Show details ›</button>
+                )}
+                {/* Desktop only: same breakdown the mobile modal shows, inline
+                    instead of behind a click. The formula footer is NOT
+                    repeated here (moved to the header ⓘ tooltip, see
+                    NETWORK_HEALTH_FORMULA_TEXT above) — the space it freed up
+                    went to enlarging the gauge instead. */}
+                {!isMobile && (
+                  <div className="nhi-breakdown">
+                    {networkHealth.components.map((c, i) => (
+                      <NetworkHealthComponentRow key={c.label} component={c} index={i} total={networkHealth.components.length} compact />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )
+        })()}
 
+        <div className="stats-stack">
         {/* Row 1, 2nd panel: Most Reliable. Mockup order is Software | Most
             Reliable on row 1, Geographic Distribution | Network Health Index
             on row 2 — see .stats-hero-grid below. City subtitle added under
@@ -1074,11 +1072,13 @@ export default function Stats() {
             field already carried on KnownMint / used by Geographic
             Distribution — omitted when a mint has none. */}
         <div className="stats-panel stats-reliable-panel">
-          <div className="stats-card-header">
-            <div className="stats-panel-title-row" style={{marginBottom:0}}>
-              <div className="stats-panel-icon green"><IcShield size={12} /></div>
-              <div className="stats-panel-title" style={{marginBottom:0}}>
-                {reliableTab === 'reliable' ? 'Top Uptime · 7D' : 'Top Reliability Score'}
+          <div className="stats-panel-head">
+            <div>
+              <div className="stats-panel-title">
+                {reliableTab === 'reliable' ? 'Top uptime · 7D' : 'Top by Reliability Score'}
+              </div>
+              <div className="stats-panel-desc">
+                {reliableTab === 'reliable' ? 'Mints with the best 7-day uptime.' : 'Mints with the best combined score.'}
               </div>
             </div>
             <div className="stats-tab-toggle">
@@ -1090,26 +1090,20 @@ export default function Stats() {
               <button type="button" className={`stats-tab-btn${reliableTab === 'reliability' ? ' active' : ''}`} onClick={() => setReliableTab('reliability')}>Reliability</button>
             </div>
           </div>
-          <div style={{display:'flex',flexDirection:'column',gap:'var(--stats-row-gap)',marginTop:10}}>
+          <div className="stats-top5-list">
             {reliableTab === 'reliable' ? (
               top5ByUptime.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data yet</div>
               ) : top5ByUptime.map((mint, idx) => {
                 const uptime = mint.uptimePct7d ?? 0
                 const color = uptimeColor(uptime)
-                const loc = normalizeGeoLoc(mint.serverLocation)
-                const cityInfo = loc !== 'Unknown' ? geoLabel(loc) : null
                 return (
                   <div key={mint.url} {...clickableProps(() => navigate(`/mint/${encodeURIComponent(mint.url)}`))} className="stats-top5-row">
-                    <span className="stats-top5-rank">#{idx+1}</span>
-                    <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
+                    <span className="stats-top5-rank">{idx+1}</span>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName(mint, duplicateDisplayNames)}</div>
-                      {cityInfo && (
-                        <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{cityInfo.flag ? `${cityInfo.flag} ${cityInfo.display}` : cityInfo.display}</div>
-                      )}
+                      <div className="stats-top5-name">{displayName(mint, duplicateDisplayNames)}</div>
                     </div>
-                    <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:700,color,flexShrink:0}}>{uptime}%</span>
+                    <span className="stats-top5-value" style={{color}}>{uptime}%</span>
                   </div>
                 )
               })
@@ -1119,23 +1113,88 @@ export default function Stats() {
               ) : top5ByReliability.map((mint, idx) => {
                 const score = mint.reliabilityScore ?? 0
                 const color = score >= 70 ? 'var(--accent)' : score >= 40 ? 'var(--amber)' : 'color-mix(in srgb, var(--red) 80%, var(--text))'
-                const loc = normalizeGeoLoc(mint.serverLocation)
-                const cityInfo = loc !== 'Unknown' ? geoLabel(loc) : null
                 return (
                   <div key={mint.url} {...clickableProps(() => navigate(`/mint/${encodeURIComponent(mint.url)}`))} className="stats-top5-row">
-                    <span className="stats-top5-rank">#{idx+1}</span>
-                    <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
+                    <span className="stats-top5-rank">{idx+1}</span>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:500,color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName(mint, duplicateDisplayNames)}</div>
-                      {cityInfo && (
-                        <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{cityInfo.flag ? `${cityInfo.flag} ${cityInfo.display}` : cityInfo.display}</div>
-                      )}
+                      <div className="stats-top5-name">{displayName(mint, duplicateDisplayNames)}</div>
                     </div>
-                    <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:700,color,flexShrink:0}}>{score}%</span>
+                    <span className="stats-top5-value" style={{color}}>{score}</span>
                   </div>
                 )
               })
             )}
+          </div>
+        </div>
+
+
+        {/* Card 1: Software in Use — stretched to match its row's tallest
+              panel via .stats-hero-grid's align-items:stretch, same
+              mechanism as .stats-nhi-panel. .stats-sw-fill's flex:1 absorbs
+              the resulting surplus height so it lands below the version
+              list instead of stretching the rows themselves. */}
+          <div className="stats-panel stats-sw-panel">
+            <div className="stats-panel-head">
+              <div>
+                <div className="stats-panel-title">Software in use</div>
+                <div className="stats-panel-desc">Mints by implementation. Click to filter.</div>
+              </div>
+            </div>
+            <div className="stats-sw-fill">
+              <div>
+                <div style={{display:'flex',flexDirection:'column',gap:'var(--stats-row-gap)'}}>
+                  {versionDist.length === 0 ? (
+                    <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
+                  ) : versionDist.map(({sw, total}) => {
+                    return (
+                      <div
+                        key={sw}
+                        className="sw-row"
+                        {...clickableProps(() => setSoftwareModal(sw))}
+                      >
+                        <span className="dist-label" style={{fontWeight:600,color:'var(--text)',fontSize:13}}>{sw}</span>
+                        <span className="dist-count" style={{color:'var(--text2)'}}>{total}</span>
+                        <span className="sw-chevron" style={{color:'var(--text3)'}}>›</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Row 2, cols 1-3: NUT Coverage — span 3 so its rows (14, after the
+            2026-09-14 mint-side-only cut) split into 3
+            inner columns instead of 2 (shorter, less vertical scrolling) now
+            that Reliability Score Movers shares this row as a standalone
+            1-column panel. DOM order matters here: this must come before
+            Reliability Score Movers below so CSS Grid's auto-placement fills row 2
+            left-to-right (NUT Coverage cols 1-3, then Movers falls into the
+            remaining col 4) instead of Movers grabbing col 1 first. */}
+        <div className="stats-panel stats-nut-panel">
+          <div className="stats-panel-head">
+            <div>
+              <div className="stats-panel-title">NUT coverage</div>
+              <div className="stats-panel-desc">How many of the {data.onlineMints} online mints support each protocol feature. Click a row to list them.</div>
+            </div>
+          </div>
+          <div className="stats-nut-rows-grid">
+            {TRACKED_NUTS.map(nut => {
+              const adoption = nutAdoptionMap[nut] ?? { count: 0, percent: 0 }
+              const { count, percent } = adoption
+              const meta = NUT_META[nut]
+              if (!meta) return null
+              const barColor = percent >= 80 ? 'var(--accent)' : percent >= 40 ? 'var(--amber)' : 'var(--red)'
+              return (
+                <div key={nut} className="stats-nut-row" {...clickableProps(() => setNutModal(nut))}>
+                  <span className="snr-nut-tag">{nut}</span>
+                  <span className="snr-nut-name">{meta.short}</span>
+                  <span className="snr-nut-count" style={{color:barColor}}>{count}/{data.onlineMints}</span>
+                </div>
+              )
+            })}
           </div>
         </div>
 
@@ -1153,22 +1212,13 @@ export default function Stats() {
             geoRows (ceil(top.length/2)) as the explicit row count so both
             columns balance evenly instead of overloading column 1. */}
         <div className="stats-panel stats-geo-panel">
-          <div className="stats-panel-title-row">
-            <div className="stats-panel-icon gray"><IcGeoGlobe /></div>
-            <div className="stats-panel-title" style={{marginBottom:0}}>Geographic Distribution</div>
+          <div className="stats-panel-head">
+            <div>
+              <div className="stats-panel-title">Geographic distribution</div>
+              <div className="stats-panel-desc">City from the IP address, not where the operator is.</div>
+            </div>
           </div>
-          <div className="stats-geo-sub">City from the IP address, not where the operator is.</div>
           <div className="stats-geo-fill">
-            {geoCdn && (
-              <div className="dist-row dist-row-clickable stats-geo-cdn" {...clickableProps(() => setCityModal(geoCdn.loc))}>
-                <span className="stats-geo-cdn-main">
-                  <span className="stats-geo-flag" aria-hidden="true">🌐</span>
-                  <span className="dist-label">{CDN_BUCKET}</span>
-                  <span className="dist-count">{geoCdn.count}</span>
-                </span>
-                <span className="stats-geo-cdn-note">these are not a city.</span>
-              </div>
-            )}
             <div className="stats-geo-cols" style={{gridTemplateRows:`repeat(${geoRows}, auto)`}}>
               {geoCdn === null && geoCities.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
@@ -1182,6 +1232,13 @@ export default function Stats() {
                   </div>
                 )
               })}
+              {geoCdn && (
+                <div className="dist-row dist-row-clickable stats-geo-cdn" title="CDN / anycast addresses are not a city" {...clickableProps(() => setCityModal(geoCdn.loc))}>
+                  <span className="stats-geo-flag" aria-hidden="true">🌐</span>
+                  <span className="dist-label dist-label-city">{CDN_BUCKET}</span>
+                  <span className="dist-count">{geoCdn.count}</span>
+                </div>
+              )}
             </div>
             {(geoDist.moreCount > 0 || (geoDist.unknownCount > 0 && !geoDist.unknownShownInTop)) && (
               <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
@@ -1197,125 +1254,6 @@ export default function Stats() {
                 )}
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Row 2, 2nd panel: Network Health Index. */}
-        {networkHealth && (() => {
-          const info = reliabilityScoreInfo(networkHealth.score)
-          const gaugeArc = reliabilityDonutArc(networkHealth.score)
-          return (
-            <div className="stats-panel stats-nhi-panel">
-              <div className="stats-card-header">
-                <div className="stats-panel-title nhi-title-row" style={{ marginBottom: 0 }}>
-                  <div className="stats-panel-icon orange"><IcHealthPulse /></div>
-                  Network Health Index
-                  <span
-                    ref={nhiInfoRef}
-                    style={{ position: 'relative', display: 'inline-flex' }}
-                    onPointerEnter={nhiInfoTooltip.onPointerEnter}
-                    onPointerLeave={nhiInfoTooltip.onPointerLeave}
-                    onClick={nhiInfoTooltip.onClick}
-                  >
-                    <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
-                    {nhiInfoTooltip.open && (
-                      <div className="audit-tooltip" style={isMobile ? { width: 220, left: 0 } : { width: 260, right: 0 }}>
-                        Composite 0-100 score across uptime, average Reliability Score, software diversity, advanced feature adoption &amp; network stability. Each row below shows index points, not a mint count.{isMobile ? ' Tap the gauge for the full breakdown.' : ` ${NETWORK_HEALTH_FORMULA_TEXT}`}
-                      </div>
-                    )}
-                  </span>
-                </div>
-                {isMobile && (
-                  <button onClick={() => setShowHealthBreakdown(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', padding: '6px 8px' }}>Details ›</button>
-                )}
-              </div>
-              {/* .nhi-fill is the flex:1 region below the header — this panel
-                  shares its .stats-hero-grid row with Geographic
-                  Distribution and stretches to match whichever is taller
-                  (align-self:
-                  stretch on .stats-nhi-panel, opting out of the grid's own
-                  align-items:start just for this one panel), so there can be
-                  real surplus height here to distribute. justify-content:
-                  space-between pins the gauge/badge to the top and the
-                  breakdown block to the bottom edge, putting any extra space
-                  between them instead of leaving it all as dead space below
-                  the breakdown. On mobile (no breakdown block, and nothing
-                  stretches this panel taller than its own content) this is a
-                  no-op — the gauge just sits at its natural position. */}
-              <div className="nhi-fill">
-                <div className="nhi-wrap" {...(isMobile ? { ...clickableProps(() => setShowHealthBreakdown(true)), 'aria-haspopup': 'dialog' as const } : {})} style={isMobile ? undefined : { cursor: 'default' }}>
-                  <div className="nhi-gauge-wrap" style={isMobile ? undefined : { width: 112, height: 112 }}>
-                    <svg viewBox="0 0 72 72" style={isMobile ? undefined : { width: 112, height: 112 }}>
-                      <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
-                      <circle cx="36" cy="36" r="27" fill="none" stroke={info.color} strokeWidth="7"
-                        strokeDasharray={gaugeArc.dashArray}
-                        strokeDashoffset={gaugeArc.dashOffset}
-                        strokeLinecap="round"
-                        transform="rotate(-90 36 36)" />
-                    </svg>
-                    <div className="nhi-gauge-num" style={{ color: info.color, ...(isMobile ? {} : { fontSize: 27 }) }}>{networkHealth.score}</div>
-                  </div>
-                  <div className="nhi-legend">
-                    <div className={`nhi-legend-row${networkHealth.score >= 70 ? ' active' : ''}`}>
-                      <span className="nhi-legend-dot" style={{ background: 'var(--accent)' }} />Healthy · 70+
-                    </div>
-                    <div className={`nhi-legend-row${networkHealth.score >= 40 && networkHealth.score < 70 ? ' active' : ''}`}>
-                      <span className="nhi-legend-dot" style={{ background: 'var(--amber)' }} />Moderate · 40-69
-                    </div>
-                    <div className={`nhi-legend-row${networkHealth.score < 40 ? ' active' : ''}`}>
-                      <span className="nhi-legend-dot" style={{ background: 'var(--red)' }} />At Risk · &lt;40
-                    </div>
-                  </div>
-                </div>
-                {/* Desktop only: same breakdown the mobile modal shows, inline
-                    instead of behind a click. The formula footer is NOT
-                    repeated here (moved to the header ⓘ tooltip, see
-                    NETWORK_HEALTH_FORMULA_TEXT above) — the space it freed up
-                    went to enlarging the gauge instead. */}
-                {!isMobile && (
-                  <div style={{ marginTop: 14 }}>
-                    {networkHealth.components.map((c, i) => (
-                      <NetworkHealthComponentRow key={c.label} component={c} index={i} total={networkHealth.components.length} compact />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )
-        })()}
-
-      </div>{/* /stats-hero-grid */}
-
-      {/* ── existing NUT Coverage / Reliability Score Movers / Reliability Score Trend
-          grid — layout/behavior unchanged by this visual pass. ── */}
-      <div className="stats-cards-grid">
-
-        {/* Row 2, cols 1-3: NUT Coverage — span 3 so its rows (14, after the
-            2026-09-14 mint-side-only cut) split into 3
-            inner columns instead of 2 (shorter, less vertical scrolling) now
-            that Reliability Score Movers shares this row as a standalone
-            1-column panel. DOM order matters here: this must come before
-            Reliability Score Movers below so CSS Grid's auto-placement fills row 2
-            left-to-right (NUT Coverage cols 1-3, then Movers falls into the
-            remaining col 4) instead of Movers grabbing col 1 first. */}
-        <div className="stats-panel stats-nut-panel">
-          <div className="stats-panel-title">NUT Coverage Across the Network</div>
-          <div className="stats-section-sublabel" style={{marginBottom:10}}>Protocol adoption across {data.onlineMints} online mints · click any NUT to see which mints support it</div>
-          <div className="stats-nut-rows-grid">
-            {TRACKED_NUTS.map(nut => {
-              const adoption = nutAdoptionMap[nut] ?? { count: 0, percent: 0 }
-              const { count, percent } = adoption
-              const meta = NUT_META[nut]
-              if (!meta) return null
-              const barColor = percent >= 80 ? 'var(--accent)' : percent >= 40 ? 'var(--amber)' : 'var(--red)'
-              return (
-                <div key={nut} className="stats-nut-row" {...clickableProps(() => setNutModal(nut))}>
-                  <span className="snr-nut-tag">{nut}</span>
-                  <span className="snr-nut-name">{meta.short}</span>
-                  <span className="snr-nut-count" style={{color:barColor}}>{count}/{data.onlineMints}</span>
-                </div>
-              )
-            })}
           </div>
         </div>
 
@@ -1347,8 +1285,11 @@ export default function Stats() {
             them (interval="preserveStartEnd" already reacts to available
             width; it was never hardcoded to a fixed tick count). */}
         <div className="stats-panel stats-trend-panel">
-          <div className="stats-card-header">
-            <div className="stats-panel-title" style={{marginBottom:0}}>Reliability Score Trend</div>
+          <div className="stats-panel-head">
+            <div>
+              <div className="stats-panel-title">Reliability Score trend</div>
+              <div className="stats-panel-desc">Network-wide average of all mints' Reliability Score.</div>
+            </div>
             <div className="stats-tab-toggle">
               <button type="button" className={`stats-tab-btn${trendDays === 30 ? ' active' : ''}`} onClick={() => setTrendDays(30)}>30d</button>
               <button type="button" className={`stats-tab-btn${trendDays === 90 ? ' active' : ''}`} onClick={() => setTrendDays(90)}>90d</button>
@@ -1391,8 +1332,6 @@ export default function Stats() {
             <div style={{marginTop:6,fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>{trendCoverage}</div>
           )}
         </div>
-      </div>
-
       </div>
       {cityModal !== null && (
         <CityMintsModal

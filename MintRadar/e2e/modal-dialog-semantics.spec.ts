@@ -163,7 +163,7 @@ const CASES: ModalCase[] = [
     id: 'Stats: Network Health breakdown (mobile)', name: /network health index/i, statsMints: true,
     viewport: { width: 390, height: 844 },
     prepare: p => goto(p, '/stats', '.stats-panel'),
-    trigger: p => p.getByRole('button', { name: 'Details ›' }), open: clickTrigger,
+    trigger: p => p.getByRole('button', { name: 'Show details ›' }), open: clickTrigger,
     dialog: css('.nut-modal'), close: '.nut-modal-close',
   },
 ]

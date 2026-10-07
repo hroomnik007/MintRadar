@@ -92,15 +92,18 @@ export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, 
 
   return (
     <div className="stats-panel stats-movers-panel">
-      <div className="stats-card-header">
-        <div className="stats-panel-title" style={{ marginBottom: 0 }}>Reliability Score Movers</div>
+      <div className="stats-panel-head">
+        <div>
+          <div className="stats-panel-title">Reliability Score movers</div>
+          <div className="stats-panel-desc">Biggest score changes over the period.</div>
+        </div>
         <div className="stats-tab-toggle">
           <button type="button" className={`stats-tab-btn${period === '7d' ? ' active' : ''}`} onClick={() => onPeriodChange('7d')}>7d</button>
           <button type="button" className={`stats-tab-btn${period === '30d' ? ' active' : ''}`} onClick={() => onPeriodChange('30d')}>30d</button>
         </div>
       </div>
       <div
-        style={{ marginTop: 10, opacity: refreshing ? 0.5 : 1, transition: 'opacity 0.15s ease' }}
+        style={{ opacity: refreshing ? 0.5 : 1, transition: 'opacity 0.15s ease' }}
         aria-busy={refreshing || loading}
       >
         <div className="stats-movers-section-label"><TrendingUp size={11} /> Risers</div>

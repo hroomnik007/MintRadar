@@ -23,7 +23,7 @@ test.describe('Primary navigation', () => {
     // Stats
     await page.getByRole('link', { name: 'Stats' }).click()
     await expect(page).toHaveURL(/\/stats$/)
-    await expect(page.getByText('Mints Tracked')).toBeVisible()
+    await expect(page.locator('.stats-now-panel')).toBeVisible()
 
     // Tools
     await page.getByRole('link', { name: 'Tools' }).click()
@@ -47,6 +47,6 @@ test.describe('Primary navigation', () => {
 
     await page.getByRole('link', { name: 'Stats' }).click()
     await expect(page).toHaveURL(/\/stats$/)
-    await expect(page.getByText('Mints Tracked')).toBeVisible()
+    await expect(page.locator('.stats-now-panel')).toBeVisible()
   })
 })

@@ -78,9 +78,8 @@ test.describe('Mint counts agree everywhere', () => {
   test('Stats page uses the same 90 and 49', async ({ page }) => {
     await setup(page)
     await page.goto('/stats')
-    const tracked = page.locator('.stat-card', { hasText: 'Mints Tracked' }).locator('.stat-value')
-    const online = page.locator('.stat-card', { hasText: 'Online Now' }).locator('.stat-value')
-    await expect(tracked).toHaveText('90')
-    await expect(online).toHaveText('49')
+    const tile = page.locator('.stat-card', { hasText: 'mints online' })
+    await expect(tile.locator('.stat-value')).toHaveText('49')
+    await expect(tile.locator('.stat-note')).toHaveText('of 90 tracked')
   })
 })

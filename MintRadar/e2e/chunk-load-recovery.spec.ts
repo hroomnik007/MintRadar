@@ -21,7 +21,7 @@ test.describe('Lazy chunk load failure', () => {
     await page.goto('/')
     await page.getByRole('link', { name: 'Stats' }).click()
 
-    await expect(page.getByText('Mints Tracked')).toBeVisible()
+    await expect(page.locator('.stats-now-panel')).toBeVisible()
     expect(statsDocs).toHaveLength(1)
     await expect(page.getByText(/couldn.t load/)).toHaveCount(0)
   })
