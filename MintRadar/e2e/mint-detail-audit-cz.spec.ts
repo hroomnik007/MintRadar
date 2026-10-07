@@ -59,7 +59,7 @@ test('only cz has data: header, four tiles from the stored detail, checks card, 
   await expect(page.locator('.audit-cz-tiles .audit-summary-cell')).toHaveCount(5)
   await expect(page.locator('.audit-cz-tiles .audit-summary-value')).toHaveText(['85%', '51 / 64', '56 / 62', '0', '8.3 s'])
   await expect(page.locator('.audit-cz-tiles .audit-cz-tile-label span').filter({ hasText: /^[A-Z]/ })).toHaveText(
-    ['Success rate', 'Paid out melts', 'Received mints', 'Attributed of 19 failed swaps', 'Avg swap time'])
+    ['Success rate', 'Paid out melts', 'Received mints', "Mint's fault", 'Avg swap time'])
   expect(await tile(page, 'melts').locator('.audit-cz-tile-label span').first().evaluate(e => getComputedStyle(e).textTransform)).toBe('uppercase')
   // The old Recent success rate tile is gone from this view.
   await expect(page.getByText('Recent success rate')).toHaveCount(0)
@@ -177,11 +177,10 @@ test('limits, balance and pending rows are neutral, failures red; the bar follow
 
 // ── d) tiles, checks and tables from the stored detail ──────────
 test.describe('tiles from the stored detail', () => {
-  test('"attributed of N failed swaps": singular, plural and the number itself', async ({ page }) => {
+  test('"Mint\'s fault": blamed / failed numbers', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: czDetail({ swaps7d: { ...LNPAY_DETAIL.swaps7d, errorsBlamed: 3, all: { ...LNPAY_DETAIL.swaps7d.all, failed: 1 } } }) }))
-    await expect(tile(page, 'attributed').locator('.audit-summary-value')).toHaveText('3')
-    await expect(tile(page, 'attributed')).toContainText('Attributed of 1 failed swap')
-    await expect(tile(page, 'attributed')).not.toContainText('swaps')
+    await expect(tile(page, 'attributed').locator('.audit-summary-value')).toHaveText('3 / 1')
+    await expect(tile(page, 'attributed')).toContainText("Mint's fault")
   })
 
   test('a tile whose source field is missing is hidden; under a second the average is in ms', async ({ page }) => {

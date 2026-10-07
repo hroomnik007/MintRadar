@@ -38,18 +38,18 @@ describe('tiles from the stored detail (LNpay values)', () => {
     expect(t['success']).toMatchObject({ value: '85%', label: 'Success rate' })
     expect(t['melts']).toMatchObject({ value: '51 / 64', label: 'Paid out melts' })
     expect(t['mints']).toMatchObject({ value: '56 / 62', label: 'Received mints' })
-    expect(t['attributed']).toMatchObject({ value: '0', label: 'Attributed of 19 failed swaps' })
+    expect(t['attributed']).toMatchObject({ value: '0 / 19', label: "Mint's fault" })
     expect(t['avg']).toMatchObject({ value: '8.3 s', label: 'Avg swap time' })
     expect(view([]).tiles.map(x => x.key)).toEqual(['success', 'melts', 'mints', 'attributed', 'avg'])
   })
-  it('singular caption for one failed swap', () => {
-    expect(tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { failed: 1 } } })['attributed']?.label).toBe('Attributed of 1 failed swap')
+  it('attributed tile shows blamed / failed', () => {
+    expect(tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { failed: 1 } } })['attributed']?.value).toBe('0 / 1')
   })
   it('a tile whose field is missing is hidden', () => {
     expect(Object.keys(tiles({ fetchedAt: null, swaps7d: { asSource: { success: 1, total: 2 } } }))).toEqual(['melts'])
     expect(Object.keys(tiles({ fetchedAt: null, swaps7d: { asDest: { success: 3 } } }))).toEqual([])
     expect(Object.keys(tiles({ fetchedAt: null }))).toEqual([])
-    expect(tiles({ fetchedAt: null, swaps7d: { errorsBlamed: 2 } })['attributed']?.label).toBe('Attributed')
+    expect(tiles({ fetchedAt: null, swaps7d: { errorsBlamed: 2 } })['attributed']?.label).toBe("Mint's fault")
   })
   it('formats the average: seconds with one decimal, under a second in ms', () => {
     expect(formatAvgSwapTime(8289)).toBe('8.3 s')

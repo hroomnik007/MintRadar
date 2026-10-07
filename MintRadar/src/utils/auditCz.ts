@@ -187,9 +187,9 @@ function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
   if (blamed !== undefined) {
     const failed = num(s.all?.failed)
     tiles.push({
-      key: 'attributed', value: fmt(blamed),
-      label: failed !== undefined ? `Attributed of ${fmt(failed)} failed swap${failed === 1 ? '' : 's'}` : 'Attributed',
-      tooltip: 'Failures that cashu.info attributes to this mint. The other failed swaps were not caused by this mint, for example amounts below its minimum or Lightning routing.',
+      key: 'attributed', value: failed !== undefined ? `${fmt(blamed)} / ${fmt(failed)}` : fmt(blamed),
+      label: "Mint's fault",
+      tooltip: 'Failed swaps in the last 7 days that cashu.info attributes to this mint (attributed / all failed swaps). The other failed swaps were not caused by this mint, for example amounts below its minimum or Lightning routing.',
     })
   }
   const avg = num(s.all?.avgMs)
