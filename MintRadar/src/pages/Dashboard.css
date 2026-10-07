@@ -1233,9 +1233,9 @@
 .submit-modal {
   background: var(--bg2);
   border: 1px solid var(--border2);
-  border-radius: 20px;
-  padding: 28px;
-  max-width: 520px;
+  border-radius: 16px;
+  padding: 22px;
+  max-width: 440px;
   width: 100%;
   box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03);
   position: relative; /* anchors the corner close button; nothing else moves */
@@ -1256,33 +1256,33 @@
 .submit-modal-close:hover { background: var(--bg3); color: var(--text); }
 
 .submit-modal-eyebrow {
-  font-size: 12px; font-weight: 600; color: var(--green-bright);
+  font-size: 11px; font-weight: 600; color: var(--green-bright);
   text-transform: uppercase; letter-spacing: 0.1em;
-  font-family: var(--font-mono); margin-bottom: 4px;
+  font-family: var(--font-mono); margin-bottom: 2px;
 }
 .submit-modal-title {
-  font-size: 26px; font-weight: 700; color: var(--text);
+  font-size: 21px; font-weight: 700; color: var(--text);
   letter-spacing: -0.01em; line-height: 1.2;
-  font-family: var(--font-body); margin-bottom: 12px;
+  font-family: var(--font-body); margin-bottom: 10px;
 }
 .submit-modal-desc {
-  font-size: 14px; color: var(--text2); margin-bottom: 18px;
-  line-height: 1.55; font-family: var(--font-body);
+  font-size: 13px; color: var(--text2); margin-bottom: 12px;
+  line-height: 1.5; font-family: var(--font-body);
 }
 .submit-modal-desc code { font-family: var(--font-mono); }
 .submit-modal-input {
   width: 100%; background: var(--bg3); border: 1px solid var(--submit-field-border);
-  border-radius: 14px; padding: 14px 16px; color: var(--text);
-  font-size: 16px; outline: none; font-family: var(--font-body);
-  margin-bottom: 8px; box-sizing: border-box;
+  border-radius: 12px; padding: 10px 14px; color: var(--text);
+  font-size: 15px; outline: none; font-family: var(--font-body);
+  margin-bottom: 6px; box-sizing: border-box;
   transition: border-color var(--transition);
 }
 .submit-modal-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
 .submit-modal-input::placeholder, .bulk-textarea::placeholder { color: var(--text3); opacity: 1; }
 
 .submit-input-hint {
-  font-size: 13px; color: var(--text3); font-family: var(--font-body);
-  margin-bottom: 14px; letter-spacing: 0.01em;
+  font-size: 12px; color: var(--text3); font-family: var(--font-body);
+  margin-bottom: 10px; letter-spacing: 0.01em;
 }
 
 /* Primary action full width on top, Cancel as a quiet text button under it. */
@@ -1290,7 +1290,7 @@
 
 .submit-cancel-btn {
   background: transparent; border: 1px solid var(--submit-field-border);
-  border-radius: 14px; padding: 9px 16px; color: var(--text2);
+  border-radius: 12px; padding: 6px 16px; color: var(--text2);
   font-size: 13px; cursor: pointer; font-family: var(--font-body);
   transition: all var(--transition); border-color: transparent;
 }
@@ -1298,7 +1298,7 @@
 
 .submit-ok-btn {
   background: var(--green-soft); color: var(--green-bright); border: 1px solid var(--green-soft-strong);
-  border-radius: 14px; padding: 14px 18px; font-size: 16px;
+  border-radius: 12px; padding: 10px 16px; font-size: 14px;
   font-weight: 700; cursor: pointer; font-family: var(--font-body);
   transition: all var(--transition);
   letter-spacing: 0.03em;
@@ -2129,7 +2129,7 @@
     content: ''; position: absolute; left: 50%; top: 50%;
     width: max(100%, 44px); height: 44px; transform: translate(-50%, -50%);
   }
-  .submit-modal-input { min-height: 44px; }
+  .submit-modal-input { min-height: 44px; font-size: 16px; }
 }
 
 /* ── Bulk submit ─────────────────────────────────────────────── */
