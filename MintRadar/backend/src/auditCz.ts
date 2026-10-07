@@ -13,10 +13,11 @@ import { publicMintName } from './mintNames.js'
 import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 
 export const AUDIT_CZ_SOURCE = 'audit.cashu.cz'
-const AUDIT_CZ_MINTS_URL = 'https://audit.cashu.cz/api/v1/mints'
+const AUDIT_CZ_MINTS_URL = 'https://cashu.info/api/v1/mints'
 // 500 is the API's maximum (~21 h of the global feed); 100 covered only ~4 h and missed quieter mints.
-const AUDIT_CZ_SWAPS_URL = 'https://audit.cashu.cz/api/v1/swaps?limit=500'
-const AUDIT_CZ_PAGE_PREFIX = 'https://audit.cashu.cz/'
+const AUDIT_CZ_SWAPS_URL = 'https://cashu.info/api/v1/swaps?limit=500'
+// The service moved audit.cashu.cz -> cashu.info (301). Pages stored before the move still carry the old host.
+const AUDIT_CZ_PAGE_HOSTS = ['cashu.info', 'audit.cashu.cz']
 const FETCH_TIMEOUT_MS = 15_000
 const MAX_URL_LEN = 500
 const MAX_ERROR_LEN = 300
@@ -90,10 +91,10 @@ function isoOrNull(v: unknown): string | null {
 }
 
 function pageOrNull(v: unknown): string | null {
-  if (typeof v !== 'string' || !v.startsWith(AUDIT_CZ_PAGE_PREFIX) || v.length > MAX_URL_LEN) return null
+  if (typeof v !== 'string' || v.length > MAX_URL_LEN) return null
   try {
     const u = new URL(v)
-    return u.protocol === 'https:' && u.hostname === 'audit.cashu.cz' ? u.toString() : null
+    return u.protocol === 'https:' && AUDIT_CZ_PAGE_HOSTS.includes(u.hostname) ? u.toString() : null
   } catch { return null }
 }
 
@@ -327,7 +328,7 @@ export async function syncAuditCz(): Promise<{ mints: number | null; swaps: numb
 // somebody opens that mint's Audit tab, and cached per mint: at most one request per mint per
 // DETAIL_TTL_MS, whatever the traffic (worst case 65 mints x 6/h). A failure keeps the previous
 // value; with nothing cached the caller falls back to the swaps MintRadar stored. Display only.
-const AUDIT_CZ_DETAIL_URL = 'https://audit.cashu.cz/api/v1/mints/'
+const AUDIT_CZ_DETAIL_URL = 'https://cashu.info/api/v1/mints/'
 const DETAIL_TTL_MS = 10 * 60_000
 const DETAIL_TIMEOUT_MS = 5_000
 const DETAIL_ID_RE = /^[A-Za-z0-9]{8,64}$/
@@ -342,10 +343,10 @@ export interface AuditCzDetail7d {
   melted: number | null
 }
 
-/** Mint id from a stored `page` URL (https://audit.cashu.cz/mint/{id}); null when it does not look like one. */
+/** Mint id from a stored `page` URL (https://cashu.info/mint/{id}, formerly audit.cashu.cz); null when it does not look like one. */
 export function auditCzIdFromPage(page: string | null | undefined): string | null {
   if (!page) return null
-  const m = /^https:\/\/audit\.cashu\.cz\/mint\/([^/?#]+)\/?$/.exec(page)
+  const m = /^https:\/\/(?:cashu\.info|audit\.cashu\.cz)\/mint\/([^/?#]+)\/?$/.exec(page)
   return m && DETAIL_ID_RE.test(m[1] as string) ? (m[1] as string) : null
 }
 

@@ -5,7 +5,8 @@ import type { AuditCzData, AuditCzDetail7d } from '@/hooks/useAuditCz'
 // code computes everything. Pure and display-only; numbers are counted by MintRadar from the
 // swaps it stored and never merged with audit.8333.space values.
 
-export const AUDIT_CZ_PAGE_PREFIX = 'https://audit.cashu.cz/'
+// Moved audit.cashu.cz -> cashu.info; rows stored before the move keep the old host.
+const AUDIT_CZ_PAGE_PREFIXES = ['https://cashu.info/', 'https://audit.cashu.cz/']
 export const AUDIT_CZ_NOT_RECENT_MS = 30 * 60 * 1000
 
 /** Same shape as a row of GET /api/mints/swaps (audit.8333.space), plus two audit.cashu.cz extras. */
@@ -182,7 +183,7 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
   const okTimes = swaps.filter(s => s.state === 'OK' && s.timeTakenMs !== null).map(s => s.timeTakenMs as number)
   const fetchedMs = data.fetchedAt ? new Date(data.fetchedAt).getTime() : NaN
   return {
-    sourceHref: data.sourceUrl && data.sourceUrl.startsWith(AUDIT_CZ_PAGE_PREFIX) ? data.sourceUrl : null,
+    sourceHref: data.sourceUrl && AUDIT_CZ_PAGE_PREFIXES.some(p => data.sourceUrl!.startsWith(p)) ? data.sourceUrl : null,
     lastCheck: data.mint.lastCheck,
     notRecent: Number.isFinite(fetchedMs) && now - fetchedMs > AUDIT_CZ_NOT_RECENT_MS,
     swaps,

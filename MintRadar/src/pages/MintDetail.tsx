@@ -636,11 +636,11 @@ function MintDetailContent({ url }: { url: string }) {
     enabled: activeTab === 'audit',
     staleTime: 5 * 60 * 1000,
   })
-  // audit.cashu.cz data: fetched (from our own /api/mints/audit-cz, never from them) only while
+  // cashu.info data: fetched (from our own /api/mints/audit-cz, never from them) only while
   // the Audit tab is open and the known-mints list has loaded.
   const { data: auditCzData, loading: auditCzLoading } = useAuditCz(url, activeTab === 'audit')
   const czData = adaptAuditCz(auditCzData, now)
-  // Source chosen with the header switch (null = default: audit.cashu.cz when the 8333 data is missing/stale).
+  // Source chosen with the header switch (null = default: cashu.info when the 8333 data is missing/stale).
   const [auditSourcePick, setAuditSourcePick] = useState<'cz' | '8333' | null>(null)
   const [showComparePicker, setShowComparePicker] = useState(false)
   const [compareSelectedUrls, setCompareSelectedUrls] = useState<Set<string>>(new Set())
@@ -964,7 +964,7 @@ function MintDetailContent({ url }: { url: string }) {
   const auditorLastCheckDisplay = formatTimeAgo(auditCheckedAt ? new Date(auditCheckedAt) : null)
   const freshness = auditFreshness(auditCheckedAt, auditSyncedAt)
 
-  // Audit tab source: audit.cashu.cz is shown by default only when the audit.8333.space data is
+  // Audit tab source: cashu.info is shown by default only when the audit.8333.space data is
   // missing or stale; with both sources present the header switch lets the visitor pick.
   const has8333Audit = knownMint !== null && knownMint.auditNMints !== null
   const auditNeedsFallback = !has8333Audit || freshness.auditorDataOld || freshness.syncStale
@@ -972,7 +972,7 @@ function MintDetailContent({ url }: { url: string }) {
   const czView = czData !== null && (!has8333Audit || auditSource === 'cz') ? czData : null
   const czCheckedMin = czView?.lastCheck ? Math.max(0, Math.floor((now - new Date(czView.lastCheck).getTime()) / 60_000)) : null
   const czInfoText = czView
-    ? `${has8333Audit && !auditNeedsFallback ? 'This tab shows data from audit.cashu.cz' : 'audit.8333.space has no recent data for this mint, so this tab shows data from audit.cashu.cz'}${
+    ? `${has8333Audit && !auditNeedsFallback ? 'This tab shows data from cashu.info' : 'audit.8333.space has no recent data for this mint, so this tab shows data from cashu.info'}${
       czCheckedMin !== null && Number.isFinite(czCheckedMin) || czView.notRecent
         ? ` (${[czCheckedMin !== null && Number.isFinite(czCheckedMin) ? `checked ${czCheckedMin} minute${czCheckedMin === 1 ? '' : 's'} ago` : null, czView.notRecent ? 'not updated recently' : null].filter(Boolean).join(', ')})`
         : ''
@@ -1054,18 +1054,18 @@ function MintDetailContent({ url }: { url: string }) {
   const stripMelts = czView ? czView.nMelts : auditNMelts
   const stripReliabilityColor = czView ? 'var(--text)' : recentReliabilityColor
   const tipMints = czView
-    ? 'Number of successful mints counted by audit.cashu.cz over the window used by audit.cashu.cz.'
+    ? 'Number of successful mints counted by cashu.info over the window used by cashu.info.'
     : 'All-time successful ecash minting operations the auditor has run against this mint.'
   const tipMelts = czView
-    ? `Successful ecash melting operations (redeeming ecash back to Lightning), counted by audit.cashu.cz over the window used by audit.cashu.cz.`
+    ? `Successful ecash melting operations (redeeming ecash back to Lightning), counted by cashu.info over the window used by cashu.info.`
     : 'All-time successful ecash melting operations (redeeming ecash back to Lightning).'
   const tipSuccess = czView
     ? (czTile?.main
-      ? `Successful swaps out of the recent swaps from this mint that MintRadar collected from audit.cashu.cz (up to the latest 100${czView.sinceLabel ? `, since ${czView.sinceLabel}, the date of the oldest swap in the list` : ''}). Swaps below the mint's minimum amount, swaps the auditor could not fund and pending swaps are not counted. Failed swaps are shown in the table.${czDetail ? ` audit.cashu.cz attributes ${czDetail.errorsBlamed} failure${czDetail.errorsBlamed === 1 ? '' : 's'} to this mint over the last 7 days.` : ''}`
+      ? `Successful swaps out of the recent swaps from this mint that MintRadar collected from cashu.info (up to the latest 100${czView.sinceLabel ? `, since ${czView.sinceLabel}, the date of the oldest swap in the list` : ''}). Swaps below the mint's minimum amount, swaps the auditor could not fund and pending swaps are not counted. Failed swaps are shown in the table.${czDetail ? ` cashu.info attributes ${czDetail.errorsBlamed} failure${czDetail.errorsBlamed === 1 ? '' : 's'} to this mint over the last 7 days.` : ''}`
       : 'Fewer than 3 counted swaps collected so far.')
     : 'Successful swaps out of the mint\'s last ~100 audited operations — the same rolling window the Reliability Score\'s Audit component scores on. Shows "too few to score" below 3 recent swaps.'
   const tipAvg = czView
-    ? 'Average duration of the successful swaps from the most recent swaps from this mint that MintRadar collected from audit.cashu.cz.'
+    ? 'Average duration of the successful swaps from the most recent swaps from this mint that MintRadar collected from cashu.info.'
     : 'Average duration of the successful swaps in the same rolling window as Recent success rate.'
 
   // Last ≤100 swaps, newest first (the backend already orders by created_at
@@ -2067,7 +2067,7 @@ function MintDetailContent({ url }: { url: string }) {
                 {/* Desktop heading (the mobile collapse toggle below is display:none here). */}
                 <div className="md-audit-header md-audit-header-main">
                   <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
-                  <span className="md-audit-via">· via {czView ? 'audit.cashu.cz' : 'audit.8333.space'}</span>
+                  <span className="md-audit-via">· via {czView ? 'cashu.info' : 'audit.8333.space'}</span>
                   <AuditSourceInfoIcon {...(czInfoText ? { text: czInfoText } : {})} />
                   {auditSwitch}
                 </div>
@@ -2075,7 +2075,7 @@ function MintDetailContent({ url }: { url: string }) {
                     toggle was removed once the Audit tab lost its collapsible body). */}
                 <div className="md-audit-toggle">
                   <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
-                  <span style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>· via {czView ? 'audit.cashu.cz' : 'audit.8333.space'}</span>
+                  <span style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>· via {czView ? 'cashu.info' : 'audit.8333.space'}</span>
                   <AuditSourceInfoIcon align="right" {...(czInfoText ? { text: czInfoText } : {})} />
                   {auditSwitch}
                 </div>
@@ -2253,7 +2253,7 @@ function MintDetailContent({ url }: { url: string }) {
                     rel="noopener noreferrer"
                     className="audit-external-link"
                   >
-                    Open on audit.cashu.cz →
+                    Open on cashu.info →
                   </a>
                 )) : (
                 <a

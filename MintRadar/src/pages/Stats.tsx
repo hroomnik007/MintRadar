@@ -919,7 +919,7 @@ export default function Stats() {
       {auditStaleSince !== null && (
         <p className="stats-audit-note">
           audit.8333.space has had no new data since {formatAuditDate(auditStaleSince)}. The audit part of the
-          Reliability Score uses its last values. Data from audit.cashu.cz is shown on the Audit tab of each mint
+          Reliability Score uses its last values. Data from cashu.info is shown on the Audit tab of each mint
           when available. See <Link to="/about">About</Link>.
         </p>
       )}
