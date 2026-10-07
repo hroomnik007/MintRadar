@@ -533,7 +533,7 @@
    0.1em letter-spacing, var(--text-dim) (--t2) — not a separate, larger
    Stats-only heading style. */
 .stats-panel-title {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-dim);
   text-transform: uppercase;
