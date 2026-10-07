@@ -512,7 +512,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .md-panel-title {
   font-size: 10px;
   font-weight: 700;
-  color: var(--t3);
+  color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin-bottom: 11px;
@@ -2060,7 +2060,7 @@ a.review-action-btn { color: var(--text3); }
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text3);
+  color: var(--text-dim);
   margin-bottom: 8px;
 }
 .audit-cz-check-line {

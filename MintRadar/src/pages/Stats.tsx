@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Info } from 'lucide-react'
 import { useModalFocus } from '@/hooks/useModalFocus'
@@ -18,7 +18,6 @@ import { useTapTooltip } from '@/hooks/useTapTooltip'
 import { useIsMobile, useMediaQuery } from '@/hooks/useIsMobile'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
-import { staleAuditSince, formatAuditDate } from '@/utils/auditFreshness'
 import './Stats.css'
 
 interface StatsData {
@@ -644,12 +643,6 @@ export default function Stats() {
 
   const { data: knownMintsData } = useKnownMints()
 
-  // Newest audit.8333.space check across the already-loaded known mints (no extra request); null while fresh.
-  const auditStaleSince = useMemo(
-    () => staleAuditSince((knownMintsData ?? []).map(m => m.auditCheckedAt)),
-    [knownMintsData],
-  )
-
   // Computed once over the full known-mints list — see Dashboard.tsx's own
   // duplicateDisplayNames for the full rationale (parent-domain suffix guard
   // should only collapse a title when a real sibling-name collision exists).
@@ -920,13 +913,6 @@ export default function Stats() {
   return (
     <div className="stats-page">
       <h1 className="sr-only">Cashu Mints Network Stats — Uptime, Reliability Score & NUT Adoption</h1>
-      {auditStaleSince !== null && (
-        <p className="stats-audit-note">
-          audit.8333.space has had no new data since {formatAuditDate(auditStaleSince)}. The audit part of the
-          Reliability Score uses its last values. Data from cashu.info is shown on the Audit tab of each mint
-          when available. See <Link to="/about">About</Link>.
-        </p>
-      )}
       {/* ── 5 flat stat boxes ── */}
       <div className="stats-metrics">
         <div className="stat-card">
