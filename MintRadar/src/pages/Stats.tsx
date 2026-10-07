@@ -1243,7 +1243,7 @@ export default function Stats() {
                   stretches this panel taller than its own content) this is a
                   no-op — the gauge just sits at its natural position. */}
               <div className="nhi-fill">
-                <div className="nhi-wrap" {...(isMobile ? clickableProps(() => setShowHealthBreakdown(true), 'Show the Network Health Index breakdown') : {})} style={isMobile ? undefined : { cursor: 'default' }}>
+                <div className="nhi-wrap" {...(isMobile ? { ...clickableProps(() => setShowHealthBreakdown(true)), 'aria-haspopup': 'dialog' as const } : {})} style={isMobile ? undefined : { cursor: 'default' }}>
                   <div className="nhi-gauge-wrap" style={isMobile ? undefined : { width: 112, height: 112 }}>
                     <svg viewBox="0 0 72 72" style={isMobile ? undefined : { width: 112, height: 112 }}>
                       <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />

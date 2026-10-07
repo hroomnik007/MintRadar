@@ -42,6 +42,8 @@
   display: inline-flex;
   align-items: center;
   min-height: 24px;
+  min-width: 24px;
+  justify-content: center;
   position: relative;
 }
 /* Touch: a 44px hit area through an invisible ::before; the visible layout stays the same as with a mouse. */
