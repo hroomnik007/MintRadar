@@ -62,10 +62,9 @@ test('the card sits between Mint info and the rest, and Mint info keeps its rows
   }
 })
 
-test('the country row carries the registration caveat as an info tooltip', async ({ page }) => {
+test('the country row is followed by a Registered row with the registration caveat', async ({ page }) => {
   await open(page, withNetwork({}))
-  await rowOf(page, 'Country').locator('.info-tooltip').hover()
-  await expect(rowOf(page, 'Country').getByRole('tooltip')).toHaveText('Country where the network block is registered, not necessarily where the server stands.')
+  await expect(rowOf(page, 'Registered')).toContainText('where that block is registered')
 })
 
 test.describe('IP wording', () => {

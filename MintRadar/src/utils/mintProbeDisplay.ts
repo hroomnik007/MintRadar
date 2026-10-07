@@ -34,7 +34,7 @@ export function clockDriftLabel(mintUnixSec: number, nowSec = Math.floor(Date.no
 } {
   const drift = mintUnixSec - nowSec
   const abs = Math.abs(drift)
-  if (abs < 30) return { label: 'in sync', color: 'var(--accent)' }
+  if (abs <= 30) return { label: 'in sync', color: 'var(--accent)' }
   const label = `${drift > 0 ? '+' : '−'}${abs < 120 ? `${abs}s` : `${Math.round(abs / 60)}m`}`
   return { label, color: abs < 120 ? 'var(--amber)' : 'var(--red)' }
 }

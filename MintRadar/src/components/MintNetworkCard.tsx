@@ -1,4 +1,3 @@
-import { InfoTooltip } from '@/components/InfoTooltip'
 import type { NetworkRows } from '@/utils/networkInfo'
 
 // Overview "Network" card: public network facts about the mint host from cashu.info. Label left,
@@ -17,13 +16,10 @@ export function MintNetworkCard({ rows }: { rows: NetworkRows }) {
           <div className="md-info-row"><span className="md-info-label">Network</span><span className="md-info-value">{rows.network}</span></div>
         )}
         {rows.country && (
-          <div className="md-info-row">
-            <span className="md-info-label md-info-label-tip">
-              Country
-              <InfoTooltip text="Country where the network block is registered, not necessarily where the server stands." width={230} iconSize={11} label="About the country" />
-            </span>
-            <span className="md-info-value">{rows.country.name}</span>
-          </div>
+          <>
+            <div className="md-info-row"><span className="md-info-label">Country</span><span className="md-info-value">{rows.country.name}</span></div>
+            <div className="md-info-row"><span className="md-info-label">Registered</span><span className="md-info-value">where that block is registered</span></div>
+          </>
         )}
         {rows.tor && (
           <div className="md-info-row"><span className="md-info-label">Tor</span><span className="md-info-value">{rows.tor}</span></div>
