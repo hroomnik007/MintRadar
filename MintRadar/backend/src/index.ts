@@ -1556,7 +1556,7 @@ app.get('/api/mints/swaps', (req: Request, res: Response): void => {
     })
 })
 
-// GET /api/mints/audit-cz?url= — audit.cashu.cz data (second audit source,
+// GET /api/mints/audit-cz?url= — cashu.info data (formerly audit.cashu.cz; second audit source,
 // display only; never feeds the Reliability Score). Read from audit_cz_* tables
 // filled by the 10-minute cron in auditCz.ts. Always 200 for a valid url;
 // covered:false when the mint is not in their feed. Optional `limit` (swaps, default 20, clamped 1..100).

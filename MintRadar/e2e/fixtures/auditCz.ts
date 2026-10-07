@@ -2,12 +2,12 @@ import type { Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_MINTS, MOCK_KNOWN_MINTS } from './mocks'
 
-// Fixtures for the audit.cashu.cz branch of the Mint Detail Audit tab. The shapes mirror
+// Fixtures for the cashu.info branch of the Mint Detail Audit tab. The shapes mirror
 // GET /api/mints/audit-cz (docs/API.md, src/hooks/useAuditCz.ts) and GET /api/mints/swaps.
 
 export const ALPHA = MOCK_MINTS[0]!.url
 export const ALPHA_PATH = `/mint/${encodeURIComponent(ALPHA)}`
-export const CZ_PAGE_URL = 'https://audit.cashu.cz/mint/abc12345'
+export const CZ_PAGE_URL = 'https://cashu.info/mint/abc12345'
 
 const H = 3_600_000
 const D = 24 * H
@@ -120,7 +120,7 @@ export async function disableMotion(page: Page) {
 
 /**
  * Mocks every endpoint the Audit tab uses (no real network), opens Alpha's detail page and the Audit tab.
- * audit.cashu.cz / audit.8333.space themselves are aborted, so a regression that makes the browser contact
+ * cashu.info / audit.8333.space themselves are aborted, so a regression that makes the browser contact
  * them directly cannot reach the network (it is still recorded in `requests`).
  */
 export async function gotoAuditTab(page: Page, setup: AuditCzSetup = {}): Promise<AuditCzHarness> {
@@ -139,7 +139,7 @@ export async function gotoAuditTab(page: Page, setup: AuditCzSetup = {}): Promis
     if (setup.hold) await setup.hold
     await route.fulfill({ status: setup.czStatus ?? 200, json: setup.cz ?? NOT_COVERED })
   })
-  await page.route(/^https?:\/\/(audit\.cashu\.cz|audit\.8333\.space|api\.audit\.8333\.space)\//, route => route.abort())
+  await page.route(/^https?:\/\/(cashu\.info|audit\.8333\.space|api\.audit\.8333\.space)\//, route => route.abort())
 
   await page.goto(ALPHA_PATH)
   await expect(page.locator('.md-tabs')).toBeVisible()

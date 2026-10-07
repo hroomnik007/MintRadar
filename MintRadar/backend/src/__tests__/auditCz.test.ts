@@ -65,13 +65,13 @@ vi.mock('../ssrf.js', () => ({
 import { auditCzKey, parseAuditCzMintsResponse, parseAuditCzSwapsResponse, syncAuditCz, getAuditCzForMint, getAuditCzSyncStatus, parseAuditCzDetail, auditCzIdFromPage, getAuditCzDetail, resetAuditCzDetailCache } from '../auditCz.js'
 
 const mint = (o: Record<string, unknown> = {}) => ({
-  id: 'm1', url: 'https://mint.minibits.cash/Bitcoin', isTest: false, aliases: [], name: 'Minibits', state: 'ok',
+  id: 'mint0001', url: 'https://mint.minibits.cash/Bitcoin', isTest: false, aliases: [], name: 'Minibits', state: 'ok',
   reasons: [], score: 90, uptime24h: 99.5, uptime7d: 98, uptime30d: 97, latencyMs24h: 120, version: 'x',
-  swaps: { minted: 3, melted: 2, attributedFailures: 1 }, lastCheck: '2026-10-04T09:58:00Z', page: 'https://audit.cashu.cz/mint/m1', ...o,
+  swaps: { minted: 3, melted: 2, attributedFailures: 1 }, lastCheck: '2026-10-04T09:58:00Z', page: 'https://cashu.info/mint/mint0001', ...o,
 })
 const swap = (o: Record<string, unknown> = {}) => ({
   id: 's1', at: '2026-10-04T09:00:00Z', kind: 'x', status: 'success', stage: null, error: null, amount: 10, fee: 1, durationMs: 900,
-  from: { id: 'm1', url: 'https://mint.minibits.cash/Bitcoin', name: 'Minibits' },
+  from: { id: 'mint0001', url: 'https://mint.minibits.cash/Bitcoin', name: 'Minibits' },
   to: { id: 'm2', url: 'https://other.example', name: 'Other' }, ...o,
 })
 
@@ -105,15 +105,40 @@ describe('URL mapping', () => {
 
   it('matches a tracked mint stored under an alias URL, including its swaps', async () => {
     feed(
-      [mint({ id: 'sat', url: 'https://mint.satscribe.me', aliases: ['https://satscribe.me/cashu'], page: 'https://audit.cashu.cz/mint/sat' })],
+      [mint({ id: 'satmint01', url: 'https://mint.satscribe.me', aliases: ['https://satscribe.me/cashu'] })],
       [swap({ id: 'a', from: { id: 'sat', url: 'https://mint.satscribe.me', name: 'Sat' } })],
     )
     await syncAuditCz()
     const r = await getAuditCzForMint('https://satscribe.me/cashu')
     expect(r.covered).toBe(true)
-    expect(r.sourceUrl).toBe('https://audit.cashu.cz/mint/sat')
+    expect(r.sourceUrl).toBe('https://cashu.info/mint/satmint01')
     expect(r.swaps).toHaveLength(1)
     expect(r.swaps[0]).toMatchObject({ direction: 'from', otherMintUrl: 'https://other.example' })
+  })
+
+  it('builds the page URL from the validated id and ignores the feed page field', async () => {
+    feed([
+      mint({ id: 'goodid123', url: 'https://a.example', page: 'https://evil.example/x' }),
+      mint({ id: 'bad id!', url: 'https://b.example', page: 'https://cashu.info/mint/whatever99' }),
+      mint({ id: 'short', url: 'https://c.example' }),
+    ], [])
+    await syncAuditCz()
+    expect(db.mints.get('https://a.example')?.['page']).toBe('https://cashu.info/mint/goodid123')
+    expect(db.mints.get('https://b.example')?.['page']).toBeNull()
+    expect(db.mints.get('https://c.example')?.['page']).toBeNull()
+    expect(db.mints.has('https://b.example')).toBe(true)
+  })
+
+  it('serves a row stored under the old host with the rebuilt cashu.info page URL', async () => {
+    feed([mint()], [])
+    await syncAuditCz()
+    const row = db.mints.get('https://mint.minibits.cash/Bitcoin') as Record<string, unknown>
+    row['page'] = 'https://audit.cashu.cz/mint/cmmx4oml50000a5l3z6b7qr83'
+    expect((await getAuditCzForMint('https://mint.minibits.cash/Bitcoin')).sourceUrl).toBe('https://cashu.info/mint/cmmx4oml50000a5l3z6b7qr83')
+    row['page'] = 'https://audit.cashu.cz/mint/x'
+    expect((await getAuditCzForMint('https://mint.minibits.cash/Bitcoin')).sourceUrl).toBeNull()
+    row['page'] = 'https://evil.example/mint/cmmx4oml50000a5l3z6b7qr83'
+    expect((await getAuditCzForMint('https://mint.minibits.cash/Bitcoin')).sourceUrl).toBeNull()
   })
 
   it('stores audit mints we do not track but never touches any other table', async () => {
@@ -203,9 +228,13 @@ describe('per-mint detail (swaps7d)', () => {
   })
 
   it('takes the id from the stored page URL only', () => {
+    expect(auditCzIdFromPage('https://cashu.info/mint/cmmx4ejkq000ta5drlwl1zehm')).toBe('cmmx4ejkq000ta5drlwl1zehm')
     expect(auditCzIdFromPage('https://audit.cashu.cz/mint/cmmx4ejkq000ta5drlwl1zehm')).toBe('cmmx4ejkq000ta5drlwl1zehm')
+    expect(auditCzIdFromPage('https://cashu.info.evil.example/mint/abcdefgh12')).toBeNull()
+    expect(auditCzIdFromPage('https://evilcashu.info/mint/abcdefgh12')).toBeNull()
+    expect(auditCzIdFromPage('https://cashu.info@evil.example/mint/abcdefgh12')).toBeNull()
     expect(auditCzIdFromPage('https://evil.example/mint/abcdefgh12')).toBeNull()
-    expect(auditCzIdFromPage('https://audit.cashu.cz/mint/../x')).toBeNull()
+    expect(auditCzIdFromPage('https://cashu.info/mint/../x')).toBeNull()
     expect(auditCzIdFromPage(null)).toBeNull()
   })
 

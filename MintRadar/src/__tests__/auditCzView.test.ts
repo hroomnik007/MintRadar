@@ -129,3 +129,23 @@ describe('failure reason of a swap (State cell tooltip + hidden text)', () => {
     expect(auditCzStateTitle({ state: 'failed' })).toBeUndefined()
   })
 })
+
+describe('sourceHref accepts only https://cashu.info/mint/<id>', () => {
+  const href = (sourceUrl: string | null) => (adaptAuditCz({ ...data(ok(1)), sourceUrl }, Date.now()) as AuditCzView).sourceHref
+  it('keeps the exact page URL', () => {
+    expect(href('https://cashu.info/mint/cmmx4oml50000a5l3z6b7qr83')).toBe('https://cashu.info/mint/cmmx4oml50000a5l3z6b7qr83')
+  })
+  it.each([
+    'http://cashu.info/mint/abc12345',
+    'https://cashu.info.evil.example/mint/abc12345',
+    'https://evilcashu.info/mint/abc12345',
+    'https://cashu.info@evil.example/mint/abc12345',
+    'https://evil.example/https://cashu.info/mint/abc12345',
+    'https://audit.cashu.cz/mint/abc12345',
+    'https://cashu.info/mint/abc',
+    'https://cashu.info/mint/abc12345/extra',
+    'https://cashu.info/other/abc12345',
+    'javascript:alert(1)',
+    null,
+  ])('rejects %s', u => { expect(href(u)).toBeNull() })
+})

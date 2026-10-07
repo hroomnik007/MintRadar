@@ -119,7 +119,7 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_mint_audit_swaps_url_created
       ON mint_audit_swaps(url, created_at DESC);
 
-    -- audit.cashu.cz (second, public audit source; see auditCz.ts). Display-only:
+    -- cashu.info, formerly audit.cashu.cz (second, public audit source; see auditCz.ts). Display-only:
     -- never read by scoring code. No FK to mints — keyed by their normalised URL,
     -- matched to our mints at read time (url or alias).
     CREATE TABLE IF NOT EXISTS audit_cz_mints (
@@ -332,6 +332,11 @@ export async function initDb(): Promise<void> {
            CHECK (rating IS NULL OR rating BETWEEN 1 AND 5);
        END IF;
      END $$`,
+    // The audit source moved audit.cashu.cz -> cashu.info: rewrite stored page URLs that still
+    // carry the old host (id re-validated). Idempotent — matches nothing once rewritten.
+    `UPDATE audit_cz_mints
+       SET page = 'https://cashu.info/mint/' || substring(page from '^https://audit\\.cashu\\.cz/mint/([A-Za-z0-9]{8,64})/?$')
+     WHERE page ~ '^https://audit\\.cashu\\.cz/mint/[A-Za-z0-9]{8,64}/?$'`,
   ]
 
   for (const sql of migrations) {

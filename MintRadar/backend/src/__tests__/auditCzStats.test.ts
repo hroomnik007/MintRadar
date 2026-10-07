@@ -12,7 +12,7 @@ const { rowsRef, poolMock } = vi.hoisted(() => {
       if (sql.includes('FROM audit_cz_mints') && sql.includes('WHERE url = $1')) {
         const k = p[0] as string
         return k === M || k === 'https://alias.example'
-          ? { rows: [{ url: M, state: 'ok', uptime24h: 100, uptime7d: 100, uptime30d: 100, attributed_failures: 3, last_check: new Date(), page: 'https://audit.cashu.cz/mint/m', fetched_at: new Date() }] }
+          ? { rows: [{ url: M, state: 'ok', uptime24h: 100, uptime7d: 100, uptime30d: 100, attributed_failures: 3, last_check: new Date(), page: 'https://cashu.info/mint/mint0001', fetched_at: new Date() }] }
           : { rows: [] }
       }
       if (sql.includes('SELECT alias_url')) return { rows: [{ alias_url: 'https://alias.example' }] }
@@ -111,7 +111,7 @@ describe('stats7d aggregation', () => {
     expect(r.stats7d).toMatchObject({ swapsCounted: 0, avgDurationMsPaid: null, melts: { paid: 0, failed: 0, pending: 0, amountPaid: 0, feesPaid: 0 } })
   })
 
-  it('is null for a mint audit.cashu.cz does not cover', async () => {
+  it('is null for a mint cashu.info does not cover', async () => {
     expect((await getAuditCzForMint('https://nobody.example')).stats7d).toBeNull()
   })
 })

@@ -69,7 +69,7 @@ export function startCron(): void {
     }
   })
 
-  // audit.cashu.cz (second audit source, display only — never feeds scoring):
+  // cashu.info, formerly audit.cashu.cz (second audit source, display only — never feeds scoring):
   // two GETs every 10 minutes, offset from the 5-minute probe (minutes 3,13,...).
   // A failed fetch writes and deletes nothing (see auditCz.ts).
   cron.schedule('3,13,23,33,43,53 * * * *', async () => {
@@ -78,7 +78,7 @@ export function startCron(): void {
       await syncAuditCz()
     } catch (err) {
       if (process.env['NODE_ENV'] !== 'production') {
-        console.error('[cron] audit.cashu.cz sync error:', err)
+        console.error('[cron] cashu.info sync error:', err)
       }
     }
   })

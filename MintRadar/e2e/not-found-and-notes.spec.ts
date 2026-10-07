@@ -111,7 +111,7 @@ test.describe('Stats audit note', () => {
     await expect(page.locator('.stats-audit-note')).toHaveCount(0)
   })
 
-  test('the wording does not claim that audit.cashu.cz is current', async ({ page }) => {
+  test('the wording does not claim that cashu.info is current', async ({ page }) => {
     const newest = ago(9 * D)
     await gotoStats(page, 9 * D)
 
@@ -119,7 +119,7 @@ test.describe('Stats audit note', () => {
     await expect(note).toHaveText(
       `audit.8333.space has had no new data since ${utcDate(newest)}. ` +
       'The audit part of the Reliability Score uses its last values. ' +
-      'Data from audit.cashu.cz is shown on the Audit tab of each mint when available. See About.',
+      'Data from cashu.info is shown on the Audit tab of each mint when available. See About.',
     )
     await expect(note).not.toContainText(/\bis current\b|up to date|\bfresh\b|\bup-to-date\b/i)
   })

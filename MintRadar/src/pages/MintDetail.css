@@ -1883,7 +1883,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   font-family: var(--font-mono);
 }
 
-/* Source switch in the Audit card header (audit.cashu.cz | audit.8333.space): same recipe as the
+/* Source switch in the Audit card header (cashu.info | audit.8333.space): same recipe as the
    Stats page "Uptime | Reliability" toggle (.stats-tab-toggle / .stats-tab-btn — Stats.css can't be
    loaded here, it carries a global .audit-tooltip). Right-aligned; wraps under the title when narrow.
    44px hit area through an invisible ::before (vertical extension only, same technique as .md-back). */

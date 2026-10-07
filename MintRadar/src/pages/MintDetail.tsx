@@ -972,7 +972,7 @@ function MintDetailContent({ url }: { url: string }) {
   const czView = czData !== null && (!has8333Audit || auditSource === 'cz') ? czData : null
   const czCheckedMin = czView?.lastCheck ? Math.max(0, Math.floor((now - new Date(czView.lastCheck).getTime()) / 60_000)) : null
   const czInfoText = czView
-    ? `${has8333Audit && !auditNeedsFallback ? 'This tab shows data from cashu.info' : 'audit.8333.space has no recent data for this mint, so this tab shows data from cashu.info'}${
+    ? `${has8333Audit && !auditNeedsFallback ? 'This tab shows data from cashu.info (Cashu Mints Auditor)' : 'audit.8333.space has no recent data for this mint, so this tab shows data from cashu.info (Cashu Mints Auditor)'}${
       czCheckedMin !== null && Number.isFinite(czCheckedMin) || czView.notRecent
         ? ` (${[czCheckedMin !== null && Number.isFinite(czCheckedMin) ? `checked ${czCheckedMin} minute${czCheckedMin === 1 ? '' : 's'} ago` : null, czView.notRecent ? 'not updated recently' : null].filter(Boolean).join(', ')})`
         : ''
@@ -980,7 +980,7 @@ function MintDetailContent({ url }: { url: string }) {
     : null
   const auditSwitch = czData !== null && has8333Audit ? (
     <div className="md-audit-seg" role="group" aria-label="Audit source">
-      <button type="button" className={`md-audit-seg-btn${czView ? ' active' : ''}`} aria-pressed={czView !== null} onClick={() => setAuditSourcePick('cz')}>cashu.cz</button>
+      <button type="button" className={`md-audit-seg-btn${czView ? ' active' : ''}`} aria-pressed={czView !== null} onClick={() => setAuditSourcePick('cz')}>cashu.info</button>
       <button type="button" className={`md-audit-seg-btn${czView ? '' : ' active'}`} aria-pressed={czView === null} onClick={() => setAuditSourcePick('8333')}>8333.space</button>
     </div>
   ) : null

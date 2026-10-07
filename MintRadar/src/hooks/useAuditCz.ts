@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useKnownMints } from '@/hooks/useKnownMints'
 
-// audit.cashu.cz data (second audit source), read from OUR backend
-// (/api/mints/audit-cz) — the browser never contacts audit.cashu.cz. Display only.
+// cashu.info data (second audit source), read from OUR backend
+// (/api/mints/audit-cz) — the browser never contacts cashu.info. Display only.
 export interface AuditCzData {
   source: string
   sourceUrl: string | null
@@ -31,7 +31,7 @@ export interface AuditCzData {
     otherMintUrl: string | null
     otherMintName: string | null
   }>
-  /** Counted by MintRadar over the swaps it stored (not published by audit.cashu.cz). */
+  /** Counted by MintRadar over the swaps it stored (not published by cashu.info). */
   stats7d: {
     windowDays: 7
     collectedSince: string | null
@@ -44,7 +44,7 @@ export interface AuditCzData {
   detail7d?: AuditCzDetail7d | null
 }
 
-/** audit.cashu.cz's own 7-day swap counts for this mint (our backend caches them up to 10 min). */
+/** cashu.info's own 7-day swap counts for this mint (our backend caches them up to 10 min). */
 export interface AuditCzDetail7d {
   total: number
   success: number
@@ -72,7 +72,7 @@ export function useAuditCz(url: string, tabActive: boolean) {
     queryKey: ['mint', 'audit-cz', url],
     queryFn: async () => {
       const res = await fetch(`/api/mints/audit-cz?url=${encodeURIComponent(url)}&limit=100&direction=from`)
-      if (!res.ok) throw new Error('Failed to fetch audit.cashu.cz data')
+      if (!res.ok) throw new Error('Failed to fetch cashu.info data')
       return await res.json() as AuditCzData
     },
     enabled: wanted,

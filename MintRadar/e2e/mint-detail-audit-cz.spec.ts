@@ -7,12 +7,12 @@ import {
 type Page = import('@playwright/test').Page
 interface Rect { x: number; y: number; width: number; height: number; right: number }
 
-// Audit tab, audit.cashu.cz branch (src/utils/auditCz.ts, MintDetail.tsx). Every endpoint is mocked
-// (e2e/fixtures/auditCz.ts); nothing here reaches audit.cashu.cz or audit.8333.space.
+// Audit tab, cashu.info branch (src/utils/auditCz.ts, MintDetail.tsx). Every endpoint is mocked
+// (e2e/fixtures/auditCz.ts); nothing here reaches cashu.info or audit.8333.space.
 
 const cell = (page: Page, label: string) => page.locator('.audit-summary-strip .audit-summary-cell', { hasText: label })
 const row = (page: Page, host: string) => page.locator('.audit-swaps-table tbody tr', { hasText: host })
-const czLink = (page: Page) => page.getByRole('link', { name: 'Open on audit.cashu.cz →' })
+const czLink = (page: Page) => page.getByRole('link', { name: 'Open on cashu.info →' })
 const showAll = (page: Page) => page.locator('.audit-swaps-show-all-btn')
 /** The State cell's visible text: the visually hidden failure text is left out. */
 const visibleState = (page: Page, host: string) =>
@@ -29,7 +29,7 @@ const limits = { kind: 'limits', status: 'failed', stage: 'limits', error: 'Amou
 const balance = { kind: 'balance', status: 'failed', stage: 'balance', error: 'Insufficient balance: need 27 sat, have 20 sat', durationMs: null }
 const pending = { kind: 'pending', status: 'pending', durationMs: null }
 
-/** audit.8333.space has no data for Alpha, audit.cashu.cz covers it. */
+/** audit.8333.space has no data for Alpha, cashu.info covers it. */
 const onlyCz = (swaps: ReturnType<typeof czSwapList>, extra: Record<string, unknown> = {}) =>
   ({ alpha: NO_8333, cz: auditCzResponse({ swaps, ...extra }) })
 
@@ -41,7 +41,7 @@ test('only cz has data: header, four tiles in order, "To" column, safe link, no 
 
   const header = page.locator('.md-audit-header-main')
   await expect(header).toBeVisible()
-  await expect(header).toHaveText(/^AUDIT STATS\s*·\s*via audit\.cashu\.cz/, { useInnerText: true })
+  await expect(header).toHaveText(/^AUDIT STATS\s*·\s*via cashu\.info/, { useInnerText: true })
 
   await expect(page.locator('.audit-summary-label')).toHaveText(['Mints', 'Melts', 'Recent success rate', 'Avg swap time'])
   await expect(page.locator('.audit-summary-cell')).toHaveCount(4)
@@ -66,7 +66,7 @@ test('only cz has data: header, four tiles in order, "To" column, safe link, no 
   await expect(link).toHaveAttribute('rel', /\bnoopener\b/)
   await expect(link).toHaveAttribute('rel', /\bnoreferrer\b/)
   await expect(link).toHaveAttribute('target', '_blank')
-  await expect(link).toHaveAttribute('href', /^https:\/\/audit\.cashu\.cz\//)
+  await expect(link).toHaveAttribute('href', /^https:\/\/cashu\.info\//)
 
   await expect(page.locator('.md-audit-seg')).toHaveCount(0)
   await expect(segGroup(page)).toHaveCount(0)
@@ -75,13 +75,13 @@ test('only cz has data: header, four tiles in order, "To" column, safe link, no 
 })
 
 // ── b) the browser only talks to our own backend ────────────────
-test('the browser never requests audit.cashu.cz: only /api/mints/audit-cz?direction=from&limit=100', async ({ page }) => {
+test('the browser never requests cashu.info: only /api/mints/audit-cz?direction=from&limit=100', async ({ page }) => {
   await page.addInitScript(() => {
     ;(window as unknown as { __csp: string[] }).__csp = []
     document.addEventListener('securitypolicyviolation', e => (window as unknown as { __csp: string[] }).__csp.push(e.blockedURI))
   })
   const h = await gotoAuditTab(page, onlyCz(czSwapList([ok, ok, ok])))
-  await expect(page.locator('.md-audit-header-main')).toContainText('via audit.cashu.cz')
+  await expect(page.locator('.md-audit-header-main')).toContainText('via cashu.info')
 
   const origin = new URL(page.url()).origin
   const external = h.requests.filter(u => /^https?:/.test(u) && new URL(u).origin !== origin)
@@ -186,13 +186,13 @@ test.describe('source switch (both sources have data)', () => {
     const header = page.locator('.md-audit-header-main')
     const seg = header.locator('.md-audit-seg')
     const card = page.locator('.md-audit-collapsible')
-    const czBtn = segGroup(page).getByRole('button', { name: 'cashu.cz', exact: true })
+    const czBtn = segGroup(page).getByRole('button', { name: 'cashu.info', exact: true })
     const eightBtn = segGroup(page).getByRole('button', { name: '8333.space', exact: true })
 
     // The control sits in the card's header row, to the right of the title.
     await expect(seg).toBeVisible()
     await expect(segGroup(page)).toHaveCount(1)
-    await expect(segGroup(page).getByRole('button')).toHaveText(['cashu.cz', '8333.space'])
+    await expect(segGroup(page).getByRole('button')).toHaveText(['cashu.info', '8333.space'])
     const [h, s] = await measureSettled(page, ['.md-audit-header-main', '.md-audit-header-main .md-audit-seg']) as [Rect, Rect]
     // Layout rects are fractional (font metrics, flex rounding): 1px tolerance, nothing looser.
     expect(s.y).toBeGreaterThanOrEqual(h.y - 1)
@@ -209,7 +209,7 @@ test.describe('source switch (both sources have data)', () => {
     const before = await card.evaluate(e => e.outerHTML)
 
     await czBtn.click()
-    await expect(header).toContainText('via audit.cashu.cz')
+    await expect(header).toContainText('via cashu.info')
     await expect(czBtn).toHaveAttribute('aria-pressed', 'true')
     await expect(eightBtn).toHaveAttribute('aria-pressed', 'false')
     await expect(cell(page, 'Mints').locator('.audit-summary-value')).toHaveText('26')
@@ -227,14 +227,14 @@ test.describe('source switch (both sources have data)', () => {
   test('operable from the keyboard, with a group name and aria-pressed', async ({ page }) => {
     await gotoAuditTab(page, bothSources())
     const header = page.locator('.md-audit-header-main')
-    const czBtn = segGroup(page).getByRole('button', { name: 'cashu.cz', exact: true })
+    const czBtn = segGroup(page).getByRole('button', { name: 'cashu.info', exact: true })
     const eightBtn = segGroup(page).getByRole('button', { name: '8333.space', exact: true })
 
     await czBtn.focus()
     await expect(czBtn).toBeFocused()
     await page.keyboard.press('Enter')
     await expect(czBtn).toHaveAttribute('aria-pressed', 'true')
-    await expect(header).toContainText('via audit.cashu.cz')
+    await expect(header).toContainText('via cashu.info')
     await expect(czBtn).toBeFocused() // the re-render keeps the focus on the pressed button
 
     await page.keyboard.press('Tab')
@@ -254,7 +254,7 @@ test.describe('source switch (both sources have data)', () => {
       // ≤767px the mobile heading carries the control (the desktop one is display:none).
       const header = page.locator('.md-audit-toggle')
       await expect(header).toBeVisible()
-      const czBtn = segGroup(page).getByRole('button', { name: 'cashu.cz', exact: true })
+      const czBtn = segGroup(page).getByRole('button', { name: 'cashu.info', exact: true })
       const eightBtn = segGroup(page).getByRole('button', { name: '8333.space', exact: true })
       await expect(czBtn).toBeVisible()
       await czBtn.scrollIntoViewIfNeeded() // taps and elementFromPoint use viewport coordinates
@@ -301,7 +301,7 @@ test.describe('cz does not cover the mint (covered: false)', () => {
     await expect(page.locator('.md-audit-header')).toContainText('via audit.8333.space')
     await expect(page.locator('.audit-summary-strip')).toHaveCount(0)
     await expect(page.locator('.md-audit-seg')).toHaveCount(0)
-    await expect(page.getByText(/audit\.cashu\.cz/)).toHaveCount(0)
+    await expect(page.getByText(/cashu\.info/)).toHaveCount(0)
   })
 
   const stale = [
@@ -319,7 +319,7 @@ test.describe('cz does not cover the mint (covered: false)', () => {
       await expect(page.getByRole('link', { name: 'Open on audit.8333.space →' })).toBeVisible()
       await expect(page.locator('.md-audit-seg')).toHaveCount(0)
       await expect(segGroup(page)).toHaveCount(0)
-      await expect(page.getByText(/audit\.cashu\.cz/)).toHaveCount(0)
+      await expect(page.getByText(/cashu\.info/)).toHaveCount(0)
     })
   }
 })
@@ -349,7 +349,7 @@ test('while the audit-cz response is held: "Loading audit data…", then the cz 
   await expect(page.locator('.md-audit-header, .md-audit-header-main, .audit-summary-strip')).toHaveCount(0)
 
   release()
-  await expect(page.locator('.md-audit-header-main')).toContainText('via audit.cashu.cz')
+  await expect(page.locator('.md-audit-header-main')).toContainText('via cashu.info')
   await expect(loading).toHaveCount(0)
   await expect(cell(page, 'Recent success rate').locator('.audit-summary-main')).toHaveText('3 / 4')
   expect(await page.evaluate(() => (window as unknown as { __flash8333: boolean }).__flash8333)).toBe(false)
@@ -384,22 +384,27 @@ test('hostile text from the endpoint is shown as text: no element, no dialog, no
   expect(h.dialogs).toEqual(['canary'])
 })
 
-test.describe('the page link needs the https://audit.cashu.cz/ prefix', () => {
+test.describe('the page link must be exactly https://cashu.info/mint/<id>', () => {
   const bad = [
-    ['http scheme', 'http://audit.cashu.cz/mint/abc'],
-    ['look-alike host', 'https://audit.cashu.cz.evil.example/mint/abc'],
-    ['userinfo trick', 'https://audit.cashu.cz@evil.example/mint/abc'],
-    ['prefix only in the path', 'https://evil.example/https://audit.cashu.cz/mint/abc'],
+    ['http scheme', 'http://cashu.info/mint/abc12345'],
+    ['look-alike host (suffix)', 'https://cashu.info.evil.example/mint/abc12345'],
+    ['look-alike host (prefix)', 'https://evilcashu.info/mint/abc12345'],
+    ['userinfo trick', 'https://cashu.info@evil.example/mint/abc12345'],
+    ['prefix only in the path', 'https://evil.example/https://cashu.info/mint/abc12345'],
+    ['old host (not rendered any more)', 'https://audit.cashu.cz/mint/abc12345'],
+    ['wrong path', 'https://cashu.info/evil/abc12345'],
+    ['id too short', 'https://cashu.info/mint/abc'],
+    ['trailing path', 'https://cashu.info/mint/abc12345/../x'],
     ['javascript: URL', 'javascript:alert(1)'],
     ['no URL', null],
   ] as const
   for (const [name, sourceUrl] of bad) {
     test(`${name}: no link, the card still renders`, async ({ page }) => {
       const h = await gotoAuditTab(page, onlyCz(czSwapList([ok, ok, melt]), { sourceUrl }))
-      await expect(page.locator('.md-audit-header-main')).toContainText('via audit.cashu.cz')
+      await expect(page.locator('.md-audit-header-main')).toContainText('via cashu.info')
       await expect(cell(page, 'Recent success rate').locator('.audit-summary-main')).toHaveText('2 / 3')
       await expect(page.locator('.audit-external-link')).toHaveCount(0)
-      await expect(page.getByRole('link', { name: /audit\.cashu\.cz/ })).toHaveCount(0)
+      await expect(page.getByRole('link', { name: /cashu\.info/ })).toHaveCount(0)
       await expect(page.locator('.md-audit-collapsible a[href]')).toHaveCount(0)
       expect(h.dialogs).toEqual([])
     })
@@ -540,8 +545,8 @@ test.describe('390px viewport', () => {
   for (const [name, setup] of cases) {
     test(`${name}: no horizontal page overflow, the table scrolls inside its own box`, async ({ page }) => {
       await gotoAuditTab(page, setup())
-      if (name !== 'cz only') await segGroup(page).getByRole('button', { name: 'cashu.cz', exact: true }).click()
-      await expect(page.locator('.md-audit-toggle')).toContainText('via audit.cashu.cz')
+      if (name !== 'cz only') await segGroup(page).getByRole('button', { name: 'cashu.info', exact: true }).click()
+      await expect(page.locator('.md-audit-toggle')).toContainText('via cashu.info')
       await expect(page.locator('.audit-swaps-table tbody tr').first()).toBeVisible()
 
       const [card, wrap] = await measureSettled(page, ['.md-audit-collapsible', '.audit-swaps-table-wrap'])

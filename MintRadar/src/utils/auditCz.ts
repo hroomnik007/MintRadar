@@ -1,15 +1,15 @@
 import type { AuditCzData, AuditCzDetail7d } from '@/hooks/useAuditCz'
 
-// Adapter: audit.cashu.cz endpoint response → the data shape the existing audit.8333.space Audit
+// Adapter: cashu.info endpoint response → the data shape the existing audit.8333.space Audit
 // tab components consume (strip tiles, outcome bar, Recent swaps table), so the same rendering
 // code computes everything. Pure and display-only; numbers are counted by MintRadar from the
 // swaps it stored and never merged with audit.8333.space values.
 
-// Moved audit.cashu.cz -> cashu.info; rows stored before the move keep the old host.
-const AUDIT_CZ_PAGE_PREFIXES = ['https://cashu.info/', 'https://audit.cashu.cz/']
+// The only link we render: exactly https://cashu.info/mint/<id> (the backend builds it from a validated id).
+const AUDIT_CZ_PAGE_RE = /^https:\/\/cashu\.info\/mint\/[A-Za-z0-9]{8,64}$/
 export const AUDIT_CZ_NOT_RECENT_MS = 30 * 60 * 1000
 
-/** Same shape as a row of GET /api/mints/swaps (audit.8333.space), plus two audit.cashu.cz extras. */
+/** Same shape as a row of GET /api/mints/swaps (audit.8333.space), plus two cashu.info extras. */
 export type AuditCzNeutralKind = 'limits' | 'balance' | 'pending'
 
 export interface AuditSwapRow {
@@ -21,13 +21,13 @@ export interface AuditSwapRow {
   timeTakenMs: number | null
   state: string
   error: string | null
-  /** audit.cashu.cz only: swap stage, shown in brackets after the state. */
+  /** cashu.info only: swap stage, shown in brackets after the state. */
   stage?: string | null
-  /** audit.cashu.cz view only: why the row is neutral grey and not counted (never set for 8333 rows). */
+  /** cashu.info view only: why the row is neutral grey and not counted (never set for 8333 rows). */
   neutral?: AuditCzNeutralKind
-  /** Unused for audit.cashu.cz from-only rows; the To cell uses toUrl. */
+  /** Unused for cashu.info from-only rows; the To cell uses toUrl. */
   counterpart?: string
-  /** audit.cashu.cz view only, rows that are not OK: the sanitized failure text (cleanAuditError), shown as the State cell's tooltip and as visually hidden text. */
+  /** cashu.info view only, rows that are not OK: the sanitized failure text (cleanAuditError), shown as the State cell's tooltip and as visually hidden text. */
   reason?: string
 }
 
@@ -51,7 +51,7 @@ export interface AuditCzView {
   /** detail.asDest.success / asSource.success, else the list feed's swaps.minted / swaps.melted. null shows "—". */
   nMints: number | null
   nMelts: number | null
-  /** attributedFailures as published by audit.cashu.cz (its own window). */
+  /** attributedFailures as published by cashu.info (its own window). */
   failuresAttributed: number | null
 }
 
@@ -121,7 +121,7 @@ export function truncateText(text: string, max: number): string {
 }
 
 /**
- * Tooltip of the State cell of a row that is not OK (audit.cashu.cz view). Grey rows start with the fixed
+ * Tooltip of the State cell of a row that is not OK (cashu.info view). Grey rows start with the fixed
  * "Not counted against the mint: …" explanation, followed by the failure text; other rows carry the failure
  * text alone. undefined when there is nothing to say (OK rows, 8333 rows, no error text).
  */
@@ -183,7 +183,7 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
   const okTimes = swaps.filter(s => s.state === 'OK' && s.timeTakenMs !== null).map(s => s.timeTakenMs as number)
   const fetchedMs = data.fetchedAt ? new Date(data.fetchedAt).getTime() : NaN
   return {
-    sourceHref: data.sourceUrl && AUDIT_CZ_PAGE_PREFIXES.some(p => data.sourceUrl!.startsWith(p)) ? data.sourceUrl : null,
+    sourceHref: data.sourceUrl && AUDIT_CZ_PAGE_RE.test(data.sourceUrl) ? data.sourceUrl : null,
     lastCheck: data.mint.lastCheck,
     notRecent: Number.isFinite(fetchedMs) && now - fetchedMs > AUDIT_CZ_NOT_RECENT_MS,
     swaps,

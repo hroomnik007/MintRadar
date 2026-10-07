@@ -1,7 +1,7 @@
-// audit.cashu.cz — second, public audit source. DISPLAY ONLY: nothing here feeds
+// cashu.info (Cashu Mints Auditor, formerly audit.cashu.cz) — second, public audit source. DISPLAY ONLY: nothing here feeds
 // the Reliability Score, `last_reliability_score` or any scoring module, and no
 // scoring code reads the audit_cz_* tables. Two server-side GETs every 10 minutes
-// (cron.ts); the visitor's browser never contacts audit.cashu.cz.
+// (cron.ts); the visitor's browser never contacts cashu.info.
 //
 // Failure policy: any failure (timeout, HTTP error, oversize, bad JSON, bad
 // top-level shape) writes and deletes nothing — the previous rows stay as they
@@ -12,12 +12,19 @@ import { normalizeUrl } from './discovery.js'
 import { publicMintName } from './mintNames.js'
 import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 
+// Historical identifier (the service was audit.cashu.cz): stays as the `source` column / API value.
 export const AUDIT_CZ_SOURCE = 'audit.cashu.cz'
-const AUDIT_CZ_MINTS_URL = 'https://cashu.info/api/v1/mints'
+/** The one place that names the source host; every URL below is built from it. */
+export const AUDIT_CZ_BASE_URL = 'https://cashu.info'
+const AUDIT_CZ_MINTS_URL = `${AUDIT_CZ_BASE_URL}/api/v1/mints`
 // 500 is the API's maximum (~21 h of the global feed); 100 covered only ~4 h and missed quieter mints.
-const AUDIT_CZ_SWAPS_URL = 'https://cashu.info/api/v1/swaps?limit=500'
-// The service moved audit.cashu.cz -> cashu.info (301). Pages stored before the move still carry the old host.
-const AUDIT_CZ_PAGE_HOSTS = ['cashu.info', 'audit.cashu.cz']
+const AUDIT_CZ_SWAPS_URL = `${AUDIT_CZ_BASE_URL}/api/v1/swaps?limit=500`
+/** A mint id of the source: the only part of a page URL we ever trust. */
+export const AUDIT_CZ_ID_RE = /^[A-Za-z0-9]{8,64}$/
+/** The page of a mint, always BUILT from a validated id, never copied from the feed. */
+export function auditCzPageUrl(id: string): string | null {
+  return AUDIT_CZ_ID_RE.test(id) ? `${AUDIT_CZ_BASE_URL}/mint/${id}` : null
+}
 const FETCH_TIMEOUT_MS = 15_000
 const MAX_URL_LEN = 500
 const MAX_ERROR_LEN = 300
@@ -90,12 +97,8 @@ function isoOrNull(v: unknown): string | null {
   return Number.isFinite(t) ? new Date(t).toISOString() : null
 }
 
-function pageOrNull(v: unknown): string | null {
-  if (typeof v !== 'string' || v.length > MAX_URL_LEN) return null
-  try {
-    const u = new URL(v)
-    return u.protocol === 'https:' && AUDIT_CZ_PAGE_HOSTS.includes(u.hostname) ? u.toString() : null
-  } catch { return null }
+function pageFromFeedId(v: unknown): string | null {
+  return typeof v === 'string' ? auditCzPageUrl(v) : null
 }
 
 export function parseAuditCzMint(raw: unknown): AuditCzMint | null {
@@ -135,7 +138,7 @@ export function parseAuditCzMint(raw: unknown): AuditCzMint | null {
     minted,
     melted,
     lastCheck: isoOrNull(raw['lastCheck']),
-    page: pageOrNull(raw['page']),
+    page: pageFromFeedId(raw['id']),
   }
 }
 
@@ -313,7 +316,7 @@ export async function syncAuditCz(): Promise<{ mints: number | null; swaps: numb
     }
     const part = (name: string, fetched: number | undefined, stored: number | null, skipped: number) =>
       fetched === undefined || stored === null ? `${name} failed` : `${name} ${fetched} fetched, ${stored} stored, ${skipped} skipped`
-    const line = `audit.cashu.cz sync: ${part('mints', mints?.fetched, result.mints, skippedMints)}; ${part('swaps', swaps?.fetched, result.swaps, skippedSwaps)}`
+    const line = `cashu.info sync: ${part('mints', mints?.fetched, result.mints, skippedMints)}; ${part('swaps', swaps?.fetched, result.swaps, skippedSwaps)}`
     if (skippedMints + skippedSwaps > 0) console.warn(`[audit-cz] ${line}`)
     else console.log(`[audit-cz] ${line}`)
   } finally {
@@ -328,10 +331,9 @@ export async function syncAuditCz(): Promise<{ mints: number | null; swaps: numb
 // somebody opens that mint's Audit tab, and cached per mint: at most one request per mint per
 // DETAIL_TTL_MS, whatever the traffic (worst case 65 mints x 6/h). A failure keeps the previous
 // value; with nothing cached the caller falls back to the swaps MintRadar stored. Display only.
-const AUDIT_CZ_DETAIL_URL = 'https://cashu.info/api/v1/mints/'
+const AUDIT_CZ_DETAIL_URL = `${AUDIT_CZ_BASE_URL}/api/v1/mints/`
 const DETAIL_TTL_MS = 10 * 60_000
 const DETAIL_TIMEOUT_MS = 5_000
-const DETAIL_ID_RE = /^[A-Za-z0-9]{8,64}$/
 
 /** The source's `swaps7d.all` counts plus `errorsBlamed`; `minted` / `melted` are asDest / asSource `success` (null when absent). */
 export interface AuditCzDetail7d {
@@ -343,11 +345,11 @@ export interface AuditCzDetail7d {
   melted: number | null
 }
 
-/** Mint id from a stored `page` URL (https://cashu.info/mint/{id}, formerly audit.cashu.cz); null when it does not look like one. */
+/** Mint id from a stored `page` URL (https://cashu.info/mint/{id}; rows from before the move still carry https://audit.cashu.cz/mint/{id}); null when it does not look like one. */
 export function auditCzIdFromPage(page: string | null | undefined): string | null {
   if (!page) return null
   const m = /^https:\/\/(?:cashu\.info|audit\.cashu\.cz)\/mint\/([^/?#]+)\/?$/.exec(page)
-  return m && DETAIL_ID_RE.test(m[1] as string) ? (m[1] as string) : null
+  return m && AUDIT_CZ_ID_RE.test(m[1] as string) ? (m[1] as string) : null
 }
 
 const count = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null)
@@ -416,7 +418,7 @@ export interface AuditCzDirectionStats {
   feesPaid: number
 }
 
-/** MintRadar's own count over the swaps it stored (never a figure published by audit.cashu.cz). */
+/** MintRadar's own count over the swaps it stored (never a figure published by cashu.info). */
 export interface AuditCzStats7d {
   windowDays: 7
   /** Oldest swap (`at`) held in audit_cz_swaps: the window start the counts can claim. null when the table is empty. */
@@ -456,7 +458,7 @@ export interface AuditCzResponse {
     otherMintName: string | null
   }>
   stats7d: AuditCzStats7d | null
-  /** audit.cashu.cz's own 7-day counts for this mint (cached up to 10 min); null when unavailable. */
+  /** cashu.info's own 7-day counts for this mint (cached up to 10 min); null when unavailable. */
   detail7d?: AuditCzDetail7d | null
 }
 
@@ -588,7 +590,7 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
       durationMs: numOrNullRow(x['duration_ms']),
       direction: isFrom ? 'from' as const : 'to' as const,
       otherMintUrl: ((isFrom ? x['to_url'] : x['from_url']) as string | null) ?? null,
-      // The counterpart's name is third-party text (audit.cashu.cz): cleaned / hidden-list aware like every name we emit.
+      // The counterpart's name is third-party text (cashu.info): cleaned / hidden-list aware like every name we emit.
       otherMintName: publicMintName(
         ((isFrom ? x['to_name'] : x['from_name']) as string | null) ?? null,
         ((isFrom ? x['to_url'] : x['from_url']) as string | null) ?? '',
@@ -597,7 +599,8 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
   })
   return {
     source: AUDIT_CZ_SOURCE,
-    sourceUrl: (row['page'] as string | null) ?? null,
+    // Rebuilt from the id, so a row stored under the old host is served with the new page URL.
+    sourceUrl: (() => { const id = auditCzIdFromPage(row['page'] as string | null); return id ? auditCzPageUrl(id) : null })(),
     fetchedAt: iso(row['fetched_at']),
     covered: true,
     mint: {
