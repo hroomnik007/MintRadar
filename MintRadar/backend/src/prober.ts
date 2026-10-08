@@ -77,10 +77,6 @@ async function storeNetwork(url: string, g: GeoInfo): Promise<void> {
   await pool.query('UPDATE mints SET net_asn = $1, net_org = $2, net_country = $3 WHERE url = $4', [g.asn, g.org, g.country, url])
 }
 
-async function lookupServerLocation(mintUrl: string): Promise<string | null> {
-  return (await lookupGeo(mintUrl))?.location ?? null
-}
-
 export async function backfillServerLocations(): Promise<void> {
   try {
     const res = await pool.query('SELECT url FROM mints WHERE server_location IS NULL OR net_country IS NULL')
