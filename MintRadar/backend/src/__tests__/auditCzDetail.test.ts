@@ -88,7 +88,11 @@ describe('parseAuditCzDetailFull', () => {
   })
 
   it('drops only the malformed fields', () => {
-    const r = real() as Record<string, any>
+    type Counts = { total: unknown; success: unknown; avgMs: unknown }
+    const r = real() as unknown as {
+      swaps7d: { all: Counts; asSource: Counts; asDest: Counts; errorsBlamed: unknown }
+      integrity: { proof_state: { detail: { checked: unknown } } }
+    }
     r['swaps7d'].all.total = -1
     r['swaps7d'].asSource.success = 1e9
     r['swaps7d'].asDest.avgMs = 600_000
