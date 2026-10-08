@@ -16,7 +16,7 @@ jobs:
     # Pinned on 2026-10-08: GitHub moves ubuntu-latest to Ubuntu 26 on 2026-10-19; move deliberately.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Fetch live nginx config from server
         id: fetch_live_conf
