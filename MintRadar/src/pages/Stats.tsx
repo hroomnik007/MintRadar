@@ -940,7 +940,7 @@ export default function Stats() {
                   )}
                 </span>
               </div>
-              <span className="stat-note">active mints, 24h</span>
+              <span className="stat-note">of active mints</span>
             </div>
             <div className="stat-card">
               <div className="stat-figure">
@@ -952,8 +952,8 @@ export default function Stats() {
             </div>
             <div className="stat-card">
               <div className="stat-figure"><span className="stat-value">{TRACKED_NUTS.length}</span></div>
-              <div className="stat-label">NUTs in spec</div>
-              <span className="stat-note">features tracked</span>
+              <div className="stat-label">NUTs tracked</div>
+              <span className="stat-note">of the Cashu spec</span>
             </div>
           </div>
           <div className="stats-now-behind">
