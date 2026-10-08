@@ -72,7 +72,7 @@ test.describe('Escape and ⓘ tooltips', () => {
 
   test('modal with a tooltip inside: first Escape closes only the tooltip, second closes the modal', async ({ page }) => {
     const title = await openBreakdownModal(page)
-    const modal = title.locator('xpath=ancestor::div[contains(@style,"max-width: 380px")]')
+    const modal = page.getByRole('dialog', { name: 'Reliability Score Breakdown' })
     await modal.locator('svg.lucide-info').first().hover()
     await expect(modal.locator('.audit-tooltip')).toBeVisible()
 
