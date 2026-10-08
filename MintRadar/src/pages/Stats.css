@@ -374,6 +374,8 @@
   background: var(--red-soft);
 }
 
+.stats-movers-note { margin-top: 12px; font-size: 12px; }
+.stats-movers-note a { color: inherit; text-decoration: underline; }
 .stats-movers-empty {
   font-size: 11.5px;
   color: var(--text3);

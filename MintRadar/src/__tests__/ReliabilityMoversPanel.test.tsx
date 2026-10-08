@@ -115,4 +115,17 @@ describe('ReliabilityMoversPanel', () => {
       expect(screen.getAllByText('Custom Label')).toHaveLength(2)
     })
   })
+
+  describe('footer (one-time audit-source note)', () => {
+    it('renders the footer under the rows when given, and nothing extra when not', () => {
+      const { container, rerender } = renderPanel({ footer: <p data-testid="note">switch note</p> })
+      expect(screen.getByTestId('note')).toBeInTheDocument()
+      expect(container.querySelector('.stats-movers-panel')?.lastElementChild).toBe(screen.getByTestId('note'))
+      rerender(
+        <ReliabilityMoversPanel period="7d" onPeriodChange={vi.fn()} data={sample} loading={false}
+          onMintClick={vi.fn()} getDisplayName={m => m.name ?? m.url} getIconUrl={() => null} />,
+      )
+      expect(screen.queryByTestId('note')).toBeNull()
+    })
+  })
 })

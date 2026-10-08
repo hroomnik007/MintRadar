@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { clickableProps } from '@/utils/clickableProps'
 import { IcClose } from '@/components/IcClose'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
@@ -19,6 +19,9 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { PageHead } from '@/components/layout/PageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
+import { useNow } from '@/hooks/useNow'
+import { AUDIT_SOURCE_SWITCH_DATE, showAuditSwitchNote } from '@/utils/auditSourceSwitch'
+import { formatAuditDate } from '@/utils/auditFreshness'
 import './Stats.css'
 
 interface StatsData {
@@ -601,6 +604,7 @@ export default function Stats() {
   const [nutModal, setNutModal] = useState<string | null>(null)
   const [reliableTab, setReliableTab] = useState<'reliable' | 'reliability'>('reliability')
   const [moversPeriod, setMoversPeriod] = useState<'7d' | '30d'>('7d')
+  const now = useNow()
   const [trendDays, setTrendDays] = useState<30 | 90>(30)
   const [showHealthBreakdown, setShowHealthBreakdown] = useState(false)
   const nhiInfoRef = useRef<HTMLSpanElement>(null)
@@ -1282,6 +1286,12 @@ export default function Stats() {
           onMintClick={url => navigate(`/mint/${encodeURIComponent(url)}`)}
           getDisplayName={m => displayName(m, duplicateDisplayNames)}
           getIconUrl={m => knownMintsData?.find(km => km.url === m.url)?.iconUrl ?? null}
+          footer={showAuditSwitchNote(now) ? (
+            <p className="stats-panel-desc stats-movers-note">
+              On {formatAuditDate(AUDIT_SOURCE_SWITCH_DATE)} the audit part of the score moved to cashu.info (failures attributed to each mint), so changes in this period include that switch.{' '}
+              <Link to="/learn/how-to-choose-a-mint">How scoring works</Link>
+            </p>
+          ) : undefined}
         />
 
         {/* Row 3, full width: Reliability Score Trend. Chart height is unchanged

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 import { clickableProps } from '@/utils/clickableProps'
 import { MintFavicon } from '../mint/MintFavicon'
@@ -27,6 +28,8 @@ interface ReliabilityMoversPanelProps {
   onMintClick: (url: string) => void
   getDisplayName: (mover: ReliabilityMover) => string
   getIconUrl: (mover: ReliabilityMover) => string | null
+  // Optional muted line under the rows (the one-time audit-source note, supplied by Stats.tsx).
+  footer?: ReactNode
 }
 
 function SkeletonRows() {
@@ -57,7 +60,7 @@ function getHostname(url: string): string {
 // no path-alias resolution (unlike vite.config.ts), so this component takes
 // all data via props instead of reaching into hooks/utils itself, and imports
 // MintFavicon by relative path.
-export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, refreshing = false, onMintClick, getDisplayName, getIconUrl }: ReliabilityMoversPanelProps) {
+export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, refreshing = false, onMintClick, getDisplayName, getIconUrl, footer }: ReliabilityMoversPanelProps) {
   // Row markup mirrors .stats-top5-row (Most Reliable, in Stats.tsx) — favicon,
   // name on top with its hostname underneath, value flush right — so the two
   // panels in the same grid row read as one visual family. Only the right-hand
@@ -116,6 +119,7 @@ export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, 
           {renderRows(data?.fallers ?? [], 'down')}
         </div>
       </div>
+      {footer}
     </div>
   )
 }
