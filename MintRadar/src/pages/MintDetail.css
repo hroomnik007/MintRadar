@@ -2372,7 +2372,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 @media (max-width: 640px) {
   .audit-cz-card .audit-swaps-table { table-layout: fixed; font-size: 12px; }
   .audit-cz-card .audit-swaps-table th,
-  .audit-cz-card .audit-swaps-table td { padding-right: 6px; overflow: hidden; text-overflow: ellipsis; }
+  .audit-cz-card .audit-swaps-table td { padding-right: 6px; overflow: hidden; text-overflow: ellipsis; position: relative; }
   .audit-cz-card .audit-swaps-table th:nth-child(2),
   .audit-cz-card .audit-swaps-table td:nth-child(2) { width: 58px; }
   .audit-cz-card .audit-swaps-table th:nth-child(3),
@@ -2591,3 +2591,12 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .rb-row-bar { height: 4px; background: rgba(0, 0, 0, 0.28); border-radius: 2px; overflow: hidden; }
 .rb-row-note { font-size: 13px; }
 .rb-formula { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 6px; font-size: 13px; color: var(--text3); line-height: 1.5; }
+
+/* Phones: cashu.info figures in a plain two-column grid, no vertical dividers (the dividers made the
+   second row look pushed right). */
+@media (max-width: 900px) {
+  .audit-summary-strip.audit-cz-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 16px; column-gap: 12px; }
+  .audit-summary-strip.audit-cz-tiles .audit-summary-cell,
+  .audit-summary-strip.audit-cz-tiles .audit-summary-cell:nth-child(even) { border-left: 0; padding: 0; }
+  .audit-cz-tile-label { text-align: left; justify-content: flex-start; }
+}

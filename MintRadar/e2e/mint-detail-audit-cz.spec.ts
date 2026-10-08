@@ -654,7 +654,7 @@ test.describe('failure reason in the State cell', () => {
 test.describe('390px viewport', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
-  // Hostnames without a break opportunity force the nowrap table wider than the card.
+  // Hostnames without a break opportunity: on phones the fixed-layout table cuts them with an ellipsis instead of scrolling.
   const wide = (i: number) => `https://${'x'.repeat(48)}${i}.example`
   const swaps = () => czSwapList([ok, ok, melt, ok, ok, ok, ok, ok, ok, ok]).map((s, i) => ({ ...s, otherMintUrl: wide(i) }))
   const cases = [
@@ -663,7 +663,7 @@ test.describe('390px viewport', () => {
   ] as const
 
   for (const [name, setup] of cases) {
-    test(`${name}: no horizontal page overflow, the table scrolls inside its own box`, async ({ page }) => {
+    test(`${name}: no horizontal page overflow, the table fits its box (long names are cut)`, async ({ page }) => {
       await gotoAuditTab(page, setup())
       if (name !== 'cz only') await segGroup(page).getByRole('button', { name: 'cashu.info', exact: true }).click()
       await expect(page.locator('.md-audit-toggle')).toContainText('via cashu.info')
@@ -690,11 +690,10 @@ test.describe('390px viewport', () => {
       expect(m.docScroll).toBeLessThanOrEqual(m.docClient)
       expect(m.bodyScroll).toBeLessThanOrEqual(m.docClient)
       expect(m.pageScrollX).toBe(0)
-      // The table is wider than its box and scrolls there.
-      expect(['auto', 'scroll']).toContain(m.overflowX)
-      expect(m.before.scrollWidth).toBeGreaterThan(m.before.clientWidth)
-      expect(m.before.tableWidth).toBeGreaterThan(m.before.clientWidth)
-      expect(m.scrolled).toBeGreaterThan(0)
+      // The table fits its box: nothing to scroll sideways.
+      expect(m.before.scrollWidth).toBeLessThanOrEqual(m.before.clientWidth)
+      expect(m.before.tableWidth).toBeLessThanOrEqual(m.before.clientWidth + 1)
+      expect(m.scrolled).toBe(0)
       // The card and the table box stay inside the viewport (fractional rects: 1px tolerance).
       expect(card!.right).toBeLessThanOrEqual(390 + 1)
       expect(wrap!.right).toBeLessThanOrEqual(390 + 1)
