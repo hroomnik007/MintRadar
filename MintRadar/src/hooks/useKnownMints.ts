@@ -36,6 +36,11 @@ export interface KnownMint {
   auditSyncedAt?: string | null
   auditRecentTotal?: number | null
   auditRecentErrors?: number | null
+  // cashu.info 7-day window that feeds the audit part of the Reliability Score (backend shared/auditScore.ts):
+  // swaps whose failure is attributed to this mint, all swaps, and the stored detail's fetch time (ISO).
+  auditCzBlamed?: number | null
+  auditCzTotal?: number | null
+  auditCzFetchedAt?: string | null
   // Mean time_taken (ms) over the OK swaps in the same rolling window as
   // auditRecentTotal/Errors (backend/src/discovery.ts's computeSwapStats()).
   // Null when the window has no OK swap with a known time.

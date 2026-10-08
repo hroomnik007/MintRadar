@@ -485,10 +485,11 @@ export function uptimeColor(pct: number | null | undefined): string {
 
 // ── Audit reliability colour (Audit summary strip + Reliability Score Breakdown
 // "Audit reliability" row) ──────────────────────────────────────
-// UI-only presentation of the rolling-window error rate — deliberately NOT the
-// same thresholds as auditReliabilityScore()'s 1-5 scoring buckets in
-// auditScore.ts (that function feeds the actual Reliability Score number and must
-// not change). Those buckets are stricter than what reads as "OK" at a
+// UI-only presentation of an error rate — deliberately NOT the same thresholds as
+// auditComponent()'s scoring bands in auditScore.ts (that function feeds the actual
+// Reliability Score number). The Audit tab passes the audit.8333.space window with its own
+// 3-sample floor; the Reliability Score breakdown row passes the cashu.info window with
+// AUDIT_MIN_SAMPLES. Those buckets are stricter than what reads as "OK" at a
 // glance — e.g. a 5% error rate (95% success) already drops two tiers below
 // the top and painted red. This colours directly off the error rate instead,
 // so a mint succeeding ~95%+ of the time reads as green regardless of which
@@ -496,8 +497,9 @@ export function uptimeColor(pct: number | null | undefined): string {
 export function auditReliabilityColor(
   recentTotal: number | null | undefined,
   recentErrors: number | null | undefined,
+  minSamples = 3,
 ): string {
-  if (recentTotal === null || recentTotal === undefined || recentTotal < 3) return 'var(--t3)'
+  if (recentTotal === null || recentTotal === undefined || recentTotal < minSamples) return 'var(--t3)'
   const errorRate = (recentErrors ?? 0) / recentTotal
   if (errorRate <= 0.05) return 'var(--fast)'
   if (errorRate <= 0.25) return 'var(--med)'

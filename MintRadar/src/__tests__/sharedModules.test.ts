@@ -9,6 +9,10 @@ import { operatorPubkeys as feOperators, type OperatorSource } from '@/utils/ope
 import { operatorPubkeys as beOperators } from '../../backend/src/shared/operatorPubkeys'
 import { cleanMintNameDetailed as feClean } from '@/utils/cleanMintName'
 import { cleanMintNameDetailed as beClean } from '../../backend/src/shared/cleanMintName'
+import * as feAudit from '@/utils/auditScore'
+import * as beAudit from '../../backend/src/shared/auditScore'
+import { computeReliabilityScore as feScore } from '@/utils/reliabilityScore'
+import { computeReliabilityScore as beScore } from '../../backend/src/shared/reliabilityScore'
 
 const codeOf = (rel: string) =>
   readFileSync(resolve(__dirname, rel), 'utf8')
@@ -65,5 +69,32 @@ describe('cleanMintName: backend and frontend copies agree', () => {
   })
   it.each(NAME_CASES.map((c, i) => [i, c] as const))('case %i', (_i, [raw, url]) => {
     expect(feClean(raw, url)).toEqual(beClean(raw, url))
+  })
+})
+
+// Audit component of the Reliability Score (cashu.info attributed failures, 7-day window, 168 h freshness).
+const A_NOW = Date.parse('2026-10-08T12:00:00Z')
+const aH = (h: number) => new Date(A_NOW - h * 3_600_000).toISOString()
+export const AUDIT_CASES: Array<[number | null, number | null, string | Date | null]> = [
+  [0, 12, aH(1)], [0, 9, aH(1)], [1, 30, aH(1)], [1, 200, aH(1)], [1, 8, aH(1)], [3, 10, aH(1)], [10, 100, aH(1)],
+  [5, 100, aH(1)], [1, 100, aH(1)], [15, 100, aH(1)], [500, 20, aH(1)], [0, 10, aH(1)],
+  [null, null, null], [null, 100, aH(1)], [0, null, aH(1)], [Number.NaN, 100, aH(1)], [-1, 100, aH(1)], [0, Number.POSITIVE_INFINITY, aH(1)],
+  [0, 100, aH(167)], [0, 100, aH(168)], [0, 100, aH(169)], [0, 100, aH(-5)], [0, 100, 'garbage'], [0, 100, null],
+  [0, 100, new Date(A_NOW - 3_600_000)],
+]
+
+describe('auditScore: backend and frontend copies agree', () => {
+  it('has identical code', () => {
+    expect(codeOf('../utils/auditScore.ts')).toBe(codeOf('../../backend/src/shared/auditScore.ts'))
+  })
+  it('exports the same constants', () => {
+    expect([feAudit.AUDIT_MIN_SAMPLES, feAudit.AUDIT_MAX_AGE_HOURS, feAudit.AUDIT_NEUTRAL, feAudit.AUDIT_TAB_MIN_SAMPLES])
+      .toEqual([beAudit.AUDIT_MIN_SAMPLES, beAudit.AUDIT_MAX_AGE_HOURS, beAudit.AUDIT_NEUTRAL, beAudit.AUDIT_TAB_MIN_SAMPLES])
+  })
+  it.each(AUDIT_CASES.map((c, i) => [i, c] as const))('case %i: component, state and total', (_i, [blamed, total, at]) => {
+    expect(feAudit.auditComponent(blamed, total, at, A_NOW)).toBe(beAudit.auditComponent(blamed, total, at, A_NOW))
+    expect(feAudit.auditDataState(blamed, total, at, A_NOW)).toBe(beAudit.auditDataState(blamed, total, at, A_NOW))
+    const audit = { blamed, total, fetchedAt: at }
+    expect(feScore(97, 12, 'Nutshell/0.20', 2, audit, undefined, null, A_NOW)).toBe(beScore(97, 12, 'Nutshell/0.20', 2, audit, undefined, null, A_NOW))
   })
 })

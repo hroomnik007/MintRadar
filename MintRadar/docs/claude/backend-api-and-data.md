@@ -18,7 +18,12 @@ audit_n_mints INTEGER
 audit_n_melts INTEGER
 audit_n_errors INTEGER
 audit_checked_at TIMESTAMPTZ    -- audit.8333.space's own `updated_at` for this mint
-audit_synced_at TIMESTAMPTZ     -- when OUR 6h discovery cron last wrote the audit_* cols (drives the breakdown-row sync-age note; `/health` `lastAuditSyncAt` = `MAX(audit_synced_at)`, 30s cache shared with `lastReviewsSyncAt` = `MAX(reviews_checked_at)` in one query, restart-proof)
+audit_synced_at TIMESTAMPTZ     -- when OUR 6h discovery cron last wrote the audit_* cols (audit.8333.space; drives the Audit tab's source fallback and the Stats stale-feed note, no longer the score row; `/health` `lastAuditSyncAt` = `MAX(audit_synced_at)`, 30s cache shared with `lastReviewsSyncAt` = `MAX(reviews_checked_at)` in one query, restart-proof)
+audit_recent_total INTEGER      -- audit.8333.space rolling window (last ~100 swaps): Audit tab + /api only, NOT a score input since 2026-10-08
+audit_recent_errors INTEGER
+audit_cz_total INTEGER          -- cashu.info swaps7d.all.total (added 2026-10-08, feeds the Reliability Score audit part; NULL = neutral)
+audit_cz_blamed INTEGER         -- cashu.info swaps7d.errorsBlamed (failures attributed to the mint)
+audit_cz_fetched_at TIMESTAMPTZ -- fetched_at of that stored detail (168 h freshness rule); all three written by the detail cron in one statement with the audit_cz_detail upsert for every tracked mint matched by exact url or alias, backfilled once at startup (db.ts AUDIT_CZ_BACKFILL_SQL)
 audit_avg_time_ms DOUBLE PRECISION  -- mean time_taken (ms) over OK swaps in the same rolling window as audit_recent_total/errors — see mint_audit_swaps below. Backend-only as of 2026-09-12 (not yet surfaced in the Audit tab UI).
 last_reliability_score INTEGER
 last_error TEXT
@@ -62,7 +67,7 @@ Rollup columns on `mints`: `review_count INTEGER`, `review_avg_rating REAL`, `re
 `review_count_7d_ago INTEGER` + `review_count_7d_ago_at TIMESTAMPTZ` — rolling ~1-week-ago `review_count` snapshot, advanced once a day (`reviewSurgeRollup.ts`); feeds the informational "recent review surge" sybil flag (see Reviews Feature below).
 
 ### audit_cz_mints / audit_cz_aliases / audit_cz_swaps (added 2026-10-04 — cashu.info, formerly audit.cashu.cz, display only; the table names, the `source` value and the endpoint path keep the historical name on purpose)
-Second, public audit source (`backend/src/auditCz.ts`). **Never enters the Reliability Score**: no scoring code, `last_reliability_score` or `/api/mints/known` reads these tables. No FK to `mints`; no row is ever created in `mints` from this source.
+Second, public audit source (`backend/src/auditCz.ts`). **These three tables stay display only**: the prober and `/api/mints/known` never read them. Since 2026-10-08 two numbers of the per-mint detail reach the Reliability Score, but through `mints.audit_cz_*` (see `audit_cz_detail` below), never from these tables at probe time. No FK to `mints`; no row is ever created in `mints` from this source.
 ```
 audit_cz_mints(url PK [normalised], state ok|warn|error, uptime24h, uptime7d, uptime30d DOUBLE, attributed_failures INT, minted INT, melted INT [their list feed's counts, nullable],
                last_check TIMESTAMPTZ, page TEXT [https://cashu.info/mint/<id>, BUILT by `auditCzPageUrl(id)` from the feed id after `^[A-Za-z0-9]{8,64}$`; never the feed's own `page`; a boot migration in `db.ts` rewrites rows that still hold https://audit.cashu.cz/mint/<id> (idempotent)], fetched_at, source='audit.cashu.cz')
@@ -73,11 +78,11 @@ audit_cz_swaps(id TEXT PK, at, status short lowercase token (success, failed, pe
 ```
 Keys use `normalizeUrl()` plus a stripped trailing slash (`auditCzKey`); a tracked mint matches when its key equals their `url` or any alias (our DB has no alias data of its own — `aliasOf` is only a submit/discover hint). Swaps are stored as given and matched at read time (from or to) through the same url+aliases set. Sync: upserts, one transaction per response; any failure (timeout, HTTP error, >1 MiB, bad JSON, bad top-level shape) writes and deletes nothing; malformed items are skipped; pruning (>14 days, hard cap 20000 rows) only after a successful swaps write.
 
-### audit_cz_detail (added 2026-10-07 — cashu.info per-mint detail, display only)
+### audit_cz_detail (added 2026-10-07 — cashu.info per-mint detail; display, plus two numbers copied to `mints.audit_cz_*` for the Reliability Score since 2026-10-08)
 ```
 audit_cz_detail(url TEXT PK [= audit_cz_mints.url], detail JSONB [validated subset only: swaps7d {all/asSource/asDest {total,success,failed,avgMs}, errorsBlamed, dleq}, integrity {proof_state {checked,spent,pending}}, network {asn, asName, country}, onion (boolean); pruned 2026-10-07: step timings, swap_test, TLS, ipv4/ipv6 flags, latency], fetched_at)
 ```
-Never stored: score, scoreParts, reviews, daily, changes, incidents7d, Frankfurt data, spec details (the onion address becomes a boolean). The only IP kept anywhere is the mint host's own public IPv4, resolved by us into `mints.ip_address` (`mintAddress.ts`, boot + every 6 h), never the source's data. Written only by `syncAuditCzDetails()` (`backend/src/auditCzDetail.ts`); a failed fetch writes and deletes nothing.
+Never stored: score, scoreParts, reviews, daily, changes, incidents7d, Frankfurt data, spec details (the onion address becomes a boolean). The only IP kept anywhere is the mint host's own public IPv4, resolved by us into `mints.ip_address` (`mintAddress.ts`, boot + every 6 h), never the source's data. Written only by `syncAuditCzDetails()` (`backend/src/auditCzDetail.ts`); a failed fetch writes and deletes nothing. The same statement (a CTE: upsert + `UPDATE mints`) copies `swaps7d.all.total`, `swaps7d.errorsBlamed` and the fetch time to `mints.audit_cz_total` / `audit_cz_blamed` / `audit_cz_fetched_at` of every tracked mint whose `rtrim(url,'/')` equals the audit mint url or an alias in `audit_cz_aliases`; a detail without both numbers writes NULLs. Untrusted detail strings are never used in the score: only two validated non-negative integers.
 
 ### mint_audit_swaps (added 2026-09-12 — per-swap audit.8333.space detail)
 ```

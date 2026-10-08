@@ -285,9 +285,9 @@ const AUDIT_API_BASE = 'https://api.audit.8333.space/mints/'
 const AUDIT_PAGE_SIZE = 100
 const AUDIT_MAX_RECORDS = 10_000
 const AUDIT_SWAPS_BASE = 'https://api.audit.8333.space/swaps/mint/'
-// Rolling-window sample size for the reliability score — matches the reference
-// pablof7z/cashu-mint-audit project ("last ~100 swaps") instead of audit.8333.space's
-// cumulative lifetime counters. See auditReliabilityScore() in shared/auditScore.ts.
+// Rolling-window sample size for the audit.8333.space window ("last ~100 swaps", as in the reference
+// pablof7z/cashu-mint-audit project) instead of its cumulative lifetime counters. Audit tab / API only:
+// the Reliability Score's audit part reads cashu.info instead (shared/auditScore.ts auditComponent()).
 const AUDIT_SWAPS_WINDOW = 100
 // Small delay between per-mint swap-history requests so a ~65-mint discovery cycle doesn't
 // hammer audit.8333.space with a burst of back-to-back requests.
@@ -348,8 +348,8 @@ export function parseAuditSwapItem(raw: unknown): ParsedAuditSwap | null {
   }
 }
 
-// total/errors feed the existing Reliability Score audit-reliability component + the
-// Audit tab's "Recent errors" cell (unchanged behavior — errors is still
+// total/errors feed the Audit tab's "Recent errors" cell and /api (audit.8333.space archive; they no longer
+// feed the Reliability Score; behavior otherwise unchanged — errors is still
 // "state !== 'OK'"); avgTimeMs is new, over OK swaps with a known time only.
 export function computeSwapStats(swaps: ParsedAuditSwap[]): AuditSwapStats {
   const total = swaps.length

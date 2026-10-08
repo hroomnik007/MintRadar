@@ -30,7 +30,7 @@ Composite score (0–100) calculated server-side after every probe. Shown alongs
 | NUT Support | 15% | Supported NUT specs (out of the tracked mint-side set) |
 | Version Freshness | 15% | Recency of the mint's software release (Nutshell or cdk) vs. latest known version |
 | Contact Info | 5% | Contact methods provided (email, Twitter, Nostr); capped at 3 channels |
-| Audit Reliability | 25% | Rolling-window error rate on the last ~100 real swaps from audit.8333.space. Fewer than 3 samples scores a neutral 12.5, not zero; the score is not adjusted for how old the audit data is |
+| Audit Reliability | 25% | Share of the last 7 days' swaps whose failure cashu.info attributes to the mint (errorsBlamed / swaps7d total), bands 0 % = 25, <1 % = 20, <5 % = 15, <15 % = 10, else 5. Fewer than 10 swaps, no cashu.info detail, or a stored detail older than 168 h scores a neutral 12.5, not zero. audit.8333.space is no longer used for the score |
 
 Mints discovered less than **30 days** ago are **capped at 75**, even if every component is maxed.
 
@@ -56,7 +56,7 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 - Charts for **Latency**, **Uptime**, and **Reliability Score** over 24 h / 7 d / 30 d / 90 d
 - Per-period averages with delta vs. previous period
 - Full Mint History panel with per-probe results
-- **Audit tab** on each mint — a summary strip (mints / melts / recent success rate / avg swap time) backed by real swap data from audit.8333.space, with an amber/red reliability signal based on the rolling error rate. When the audit data is stale, a muted note on the Reliability Score breakdown row shows the age; the score itself is not adjusted.
+- **Audit tab** on each mint — a summary strip (mints / melts / recent success rate / avg swap time) backed by real swap data from audit.8333.space, with an amber/red reliability signal based on the rolling error rate. This tab (and its audit.8333.space / cashu.info source switch) is display only; the Reliability Score's audit row uses cashu.info and shows a muted "data N days old" note when the stored detail is over 24 hours old.
 
 ### 🌐 Global Stats
 

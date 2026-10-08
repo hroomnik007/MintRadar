@@ -2,12 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { readFileSync, existsSync } from 'node:fs'
 
 const { db, queryMock, fetchMock, readMock, targets } = vi.hoisted(() => {
-  const db = { details: new Map<string, { detail: unknown; fetched_at: Date }>() }
+  const db = {
+    details: new Map<string, { detail: unknown; fetched_at: Date }>(),
+    // what the combined statement writes onto mints.audit_cz_* (params 3 and 4), keyed by the audit mint URL
+    scoreInputs: new Map<string, { total: number | null; blamed: number | null }>(),
+  }
   const targets: { rows: Array<{ url: string; page: string | null }> } = { rows: [] }
   const queryMock = vi.fn(async (sql: string, p?: unknown[]) => {
     if (sql.includes('FROM audit_cz_mints m')) return { rows: targets.rows }
     if (sql.includes('INSERT INTO audit_cz_detail')) {
       db.details.set(p?.[0] as string, { detail: JSON.parse(p?.[1] as string), fetched_at: new Date() })
+      db.scoreInputs.set(p?.[0] as string, { total: p?.[2] as number | null, blamed: p?.[3] as number | null })
       return { rows: [] }
     }
     return { rows: [] }
@@ -128,7 +133,7 @@ describe('parseAuditCzDetailFull', () => {
 describe('syncAuditCzDetails', () => {
   const mk = (n: number) => Array.from({ length: n }, (_, i) => ({ url: `https://m${i}.example`, page: `https://cashu.info/mint/mintid${String(i).padStart(4, '0')}` }))
   beforeEach(() => {
-    db.details.clear(); queryMock.mockClear(); fetchMock.mockReset(); readMock.mockReset()
+    db.details.clear(); db.scoreInputs.clear(); queryMock.mockClear(); fetchMock.mockReset(); readMock.mockReset()
     vi.spyOn(console, 'log').mockImplementation(() => {})
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     fetchMock.mockResolvedValue({ ok: true, status: 200 })
@@ -214,5 +219,56 @@ describe('syncAuditCzDetails', () => {
     targets.rows = mk(1)
     await syncAuditCzDetails({ sleep: async () => {} })
     expect(db.details.get('https://m0.example')?.detail).toEqual(EXPECTED)
+  })
+
+  describe('Reliability Score inputs on mints (audit_cz_total / audit_cz_blamed / audit_cz_fetched_at)', () => {
+    const writeCall = () => queryMock.mock.calls.find(c => String(c[0]).includes('INSERT INTO audit_cz_detail'))
+
+    it('writes swaps7d.all.total and errorsBlamed in the same statement as the detail upsert', async () => {
+      targets.rows = mk(1)
+      await syncAuditCzDetails({ sleep: async () => {} })
+      expect(db.scoreInputs.get('https://m0.example')).toEqual({ total: 126, blamed: 0 })
+      const sql = String(writeCall()?.[0])
+      expect(sql).toContain('WITH up AS')
+      expect(sql).toContain('UPDATE mints m')
+      expect(sql).toContain('audit_cz_total = $3::integer')
+      expect(sql).toContain('audit_cz_blamed = $4::integer')
+      expect(sql).toContain('audit_cz_fetched_at')
+    })
+
+    it('resolves the tracked mint by exact normalised URL or by an alias cashu.info lists for the mint', async () => {
+      targets.rows = mk(1)
+      await syncAuditCzDetails({ sleep: async () => {} })
+      const sql = String(writeCall()?.[0])
+      expect(sql).toContain("rtrim(m.url, '/') = $1")
+      expect(sql).toContain('FROM audit_cz_aliases a WHERE a.mint_url = $1')
+    })
+
+    it('carries a non-zero attributed count through', async () => {
+      targets.rows = mk(1)
+      readMock.mockImplementation(async () => { const r = real(); r.swaps7d.errorsBlamed = 7; return { ...r, id: undefined } })
+      await syncAuditCzDetails({ sleep: async () => {} })
+      expect(db.scoreInputs.get('https://m0.example')).toEqual({ total: 126, blamed: 7 })
+    })
+
+    it('writes NULLs (neutral) when the detail has no usable numbers, and still stores the detail', async () => {
+      targets.rows = mk(2)
+      readMock
+        .mockImplementationOnce(async () => { const r = real(); delete (r.swaps7d as { errorsBlamed?: number }).errorsBlamed; return { ...r, id: undefined } })
+        .mockImplementationOnce(async () => { const r = real(); (r.swaps7d as { all: unknown }).all = { total: 'x' }; return { ...r, id: undefined } })
+      await syncAuditCzDetails({ sleep: async () => {} })
+      expect(db.scoreInputs.get('https://m0.example')).toEqual({ total: null, blamed: null })
+      expect(db.scoreInputs.get('https://m1.example')).toEqual({ total: null, blamed: null })
+      expect(db.details.has('https://m0.example')).toBe(true)
+    })
+
+    it('a failed fetch, a bad body or an unusable top level writes nothing, not even NULLs', async () => {
+      targets.rows = mk(3)
+      fetchMock.mockResolvedValueOnce(null).mockResolvedValueOnce({ ok: false, status: 500 }).mockResolvedValueOnce({ ok: true, status: 200 })
+      readMock.mockResolvedValueOnce('<html>')
+      await syncAuditCzDetails({ sleep: async () => {} })
+      expect(db.scoreInputs.size).toBe(0)
+      expect(queryMock.mock.calls.some(c => /UPDATE mints/i.test(String(c[0])))).toBe(false)
+    })
   })
 })

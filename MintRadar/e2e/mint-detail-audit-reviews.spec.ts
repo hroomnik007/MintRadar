@@ -4,9 +4,10 @@ import { installApiMocks, mockRelays, MOCK_MINTS, MOCK_KNOWN_MINTS } from './fix
 const ALPHA = MOCK_MINTS[0]!.url
 const detailPath = `/mint/${encodeURIComponent(ALPHA)}`
 
-// Give Alpha a populated rolling-window audit sample (3 errors / 100 swaps).
+// Give Alpha a populated audit.8333.space rolling window (3 errors / 100 swaps, Audit tab) and, separately,
+// the cashu.info 7-day window that feeds the Reliability Score's audit row (1 attributed of 50 swaps).
 const KNOWN_WITH_RECENT = MOCK_KNOWN_MINTS.map((m, i) =>
-  i === 0 ? { ...m, auditRecentTotal: 100, auditRecentErrors: 3 } : m,
+  i === 0 ? { ...m, auditRecentTotal: 100, auditRecentErrors: 3, auditCzTotal: 50, auditCzBlamed: 1, auditCzFetchedAt: new Date(Date.now() - 3_600_000).toISOString() } : m,
 )
 
 test.beforeEach(async ({ page }) => {
@@ -17,7 +18,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('.md-tabs')).toBeVisible()
 })
 
-test('Audit tab: summary strip "Recent success rate" matches the Reliability Score breakdown', async ({ page }) => {
+test('Audit tab strip shows the audit.8333.space window; the Reliability Score breakdown row shows the cashu.info window', async ({ page }) => {
   await page.locator('.md-tab', { hasText: 'Audit' }).click()
 
   const strip = page.locator('.audit-summary-strip')
@@ -35,11 +36,12 @@ test('Audit tab: summary strip "Recent success rate" matches the Reliability Sco
 
   await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-summary-strip.png' })
 
-  // Cross-check against the sidebar Reliability Score breakdown — same 3/100 window.
+  // The sidebar Reliability Score breakdown reads the cashu.info 7-day window instead (1 of 50), not the strip's 3/100.
   // The breakdown is always visible inline on the Overview sidebar panel now
   // (no "Details ›" click needed).
   const reliabilityPanel = page.locator('.md-reliability-panel')
   await expect(reliabilityPanel.getByText('Audit reliability (25%)')).toBeVisible()
-  await expect(reliabilityPanel.getByText('3.0% err')).toBeVisible() // 3/100 errors → same source as the strip's 97/100 successes
+  await expect(reliabilityPanel.getByText('1 of 50 swaps in the last 7 days had a failure attributed to this mint (cashu.info)')).toBeVisible()
+  await expect(reliabilityPanel.getByText('3.0% err')).toHaveCount(0)
   await page.screenshot({ path: 'test-results/audit-breakdown-crosscheck.png' })
 })

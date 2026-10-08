@@ -639,7 +639,7 @@ export async function probeMintToDb(url: string): Promise<void> {
     const statsRes = await pool.query(
       `SELECT
         m.nut_count, m.version, m.contact_count,
-        m.audit_recent_total, m.audit_recent_errors,
+        m.audit_cz_total, m.audit_cz_blamed, m.audit_cz_fetched_at,
         m.discovered_at,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count
@@ -647,7 +647,7 @@ export async function probeMintToDb(url: string): Promise<void> {
        LEFT JOIN mint_history h
          ON h.url = m.url AND h.checked_at > NOW() - INTERVAL '24 hours'
        WHERE m.url = $1
-       GROUP BY m.nut_count, m.version, m.contact_count, m.audit_recent_total, m.audit_recent_errors, m.discovered_at`,
+       GROUP BY m.nut_count, m.version, m.contact_count, m.audit_cz_total, m.audit_cz_blamed, m.audit_cz_fetched_at, m.discovered_at`,
       [url]
     )
     const row = statsRes.rows[0]
@@ -669,8 +669,11 @@ export async function probeMintToDb(url: string): Promise<void> {
         row.nut_count as number | null,
         row.version as string | null,
         effectiveContactCount,
-        row.audit_recent_total as number | null,
-        row.audit_recent_errors as number | null,
+        {
+          blamed: row.audit_cz_blamed as number | null,
+          total: row.audit_cz_total as number | null,
+          fetchedAt: row.audit_cz_fetched_at as Date | string | null,
+        },
         latestVersions,
         row.discovered_at as string | null,
       )

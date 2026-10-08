@@ -7,6 +7,19 @@ export const pool = new Pool({
   connectionTimeoutMillis: 5000,
 })
 
+export const AUDIT_CZ_BACKFILL_SQL = `UPDATE mints m
+     SET audit_cz_total = (d.detail #>> '{swaps7d,all,total}')::integer,
+         audit_cz_blamed = (d.detail #>> '{swaps7d,errorsBlamed}')::integer,
+         audit_cz_fetched_at = d.fetched_at
+    FROM audit_cz_detail d
+   WHERE (rtrim(m.url, '/') = d.url
+          OR rtrim(m.url, '/') IN (SELECT a.alias_url FROM audit_cz_aliases a WHERE a.mint_url = d.url))
+     AND (d.detail #>> '{swaps7d,all,total}') ~ '^[0-9]{1,8}$'
+     AND (d.detail #>> '{swaps7d,errorsBlamed}') ~ '^[0-9]{1,8}$'
+     AND (m.audit_cz_total IS DISTINCT FROM (d.detail #>> '{swaps7d,all,total}')::integer
+          OR m.audit_cz_blamed IS DISTINCT FROM (d.detail #>> '{swaps7d,errorsBlamed}')::integer
+          OR m.audit_cz_fetched_at IS DISTINCT FROM d.fetched_at)`
+
 export async function initDb(): Promise<void> {
   // Core tables — single batch (ordered by dependency)
   await pool.query(`
@@ -351,6 +364,16 @@ export async function initDb(): Promise<void> {
     `UPDATE audit_cz_mints
        SET page = 'https://cashu.info/mint/' || substring(page from '^https://audit\\.cashu\\.cz/mint/([A-Za-z0-9]{8,64})/?$')
      WHERE page ~ '^https://audit\\.cashu\\.cz/mint/[A-Za-z0-9]{8,64}/?$'`,
+    // Audit part of the Reliability Score reads these three columns (shared/auditScore.ts), filled by
+    // the cashu.info detail cron (auditCzDetail.ts): swaps7d.all.total, swaps7d.errorsBlamed and the
+    // detail's fetched_at, on the tracked mint the url/alias mapping resolves. The audit_recent_*
+    // columns stay (audit.8333.space data: Audit tab, /api).
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_cz_total INTEGER',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_cz_blamed INTEGER',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_cz_fetched_at TIMESTAMPTZ',
+    // Backfill from the stored detail rows so scores don't drop to neutral between a deploy and the
+    // next detail cron run. Idempotent (a second run matches nothing); a mint with no detail row stays NULL.
+    AUDIT_CZ_BACKFILL_SQL,
   ]
 
   for (const sql of migrations) {

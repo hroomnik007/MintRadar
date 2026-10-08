@@ -1205,6 +1205,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         m.units, m.mint_methods, m.melt_methods, m.pubkey,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
+        m.audit_cz_total, m.audit_cz_blamed, m.audit_cz_fetched_at,
         m.discovered_at, m.nostr_announced_at, m.nostr_announce_id, m.nostr_announce_pubkey, m.nostr_announce_d, m.last_reliability_score, m.last_error, m.server_location, m.ip_address, m.net_asn, m.net_org, m.net_country, m.has_onion,
         m.review_count, m.review_avg_rating, m.review_operator_count, m.review_count_7d_ago, m.review_count_7d_ago_at,
         COUNT(h.online) AS total,
@@ -1233,6 +1234,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         m.units, m.mint_methods, m.melt_methods, m.pubkey,
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
+        m.audit_cz_total, m.audit_cz_blamed, m.audit_cz_fetched_at,
         m.discovered_at, m.last_reliability_score, m.last_error, m.server_location, m.ip_address, m.net_asn, m.net_org, m.net_country, m.has_onion,
         m.review_count, m.review_avg_rating, m.review_count_7d_ago, m.review_count_7d_ago_at,
         h7.total_7d, h7.online_count_7d,
@@ -1291,6 +1293,11 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           auditSyncedAt: (r.audit_synced_at as string | null) ?? null,
           auditRecentTotal: (r.audit_recent_total as number | null) ?? null,
           auditRecentErrors: (r.audit_recent_errors as number | null) ?? null,
+          // cashu.info 7-day window feeding the audit part of the Reliability Score (shared/auditScore.ts):
+          // swaps whose failure is attributed to the mint, all swaps, and when the stored detail was fetched.
+          auditCzBlamed: (r.audit_cz_blamed as number | null) ?? null,
+          auditCzTotal: (r.audit_cz_total as number | null) ?? null,
+          auditCzFetchedAt: r.audit_cz_fetched_at ? new Date(r.audit_cz_fetched_at as string | Date).toISOString() : null,
           // Mean time_taken (ms) over the OK swaps in the same rolling window
           // as auditRecentTotal/Errors — see mint_audit_swaps / computeSwapStats()
           // in discovery.ts. Null when the window has no OK swap with a known time.

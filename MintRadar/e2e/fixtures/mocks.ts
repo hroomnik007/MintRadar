@@ -110,6 +110,11 @@ function knownMintPayload(m: MockMint) {
     // specs override this for the <3-sample and no-audit cases.
     auditRecentTotal: 100,
     auditRecentErrors: 0,
+    // cashu.info 7-day window that feeds the Reliability Score's audit row (backend shared/auditScore.ts):
+    // 100 swaps, none attributed to the mint, stored an hour ago. Specs override it for the neutral cases.
+    auditCzTotal: 100,
+    auditCzBlamed: 0,
+    auditCzFetchedAt: new Date(now - 3_600_000).toISOString(),
     discoveredAt: m.discoveredAt,
     reliabilityScore: m.reliabilityScore,
     lastError: null,

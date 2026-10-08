@@ -7,6 +7,7 @@ import {
   latencyColor,
   formatTimeAgo,
   formatAuditSuccessRatio,
+  auditReliabilityColor,
   reliabilityDonutArc,
   RELIABILITY_DONUT_CIRCUMFERENCE,
   normalizeMintUrl,
@@ -751,5 +752,18 @@ describe('resolveMintDetailUrl', () => {
   it('offers the closest known host as a suggestion on a near-miss', () => {
     const res = resolveMintDetailUrl('mint.21mint.me', known)
     expect(res).toEqual({ kind: 'not-tracked', slug: 'mint.21mint.me', suggestion: 'https://21mint.me' })
+  })
+})
+
+describe('auditReliabilityColor minimum sample floor', () => {
+  it('Audit tab default floor of 3 (audit.8333.space window) is unchanged', () => {
+    expect(auditReliabilityColor(2, 0)).toBe('var(--t3)')
+    expect(auditReliabilityColor(3, 0)).toBe('var(--fast)')
+    expect(auditReliabilityColor(100, 30)).toBe('var(--slow)')
+  })
+  it('the Reliability Score row passes the cashu.info floor of 10', () => {
+    expect(auditReliabilityColor(9, 0, 10)).toBe('var(--t3)')
+    expect(auditReliabilityColor(10, 0, 10)).toBe('var(--fast)')
+    expect(auditReliabilityColor(null, 0, 10)).toBe('var(--t3)')
   })
 })

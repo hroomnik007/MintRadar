@@ -46,7 +46,7 @@ Health check. Available at `/health` and `/api/v1/health` (identical payload). T
 
 `lastProbeAt` is when the 5-minute probe cycle last finished sweeping every mint (not merely "process is alive") — `null` until the first cycle completes after a restart.
 
-`lastAuditSyncAt` is the newest `audit_synced_at` in the database (`MAX(audit_synced_at)` over all mints, cached in-process for 30s), so it **survives restarts and deploys**. It is `null` only if no mint has ever synced. If it stays old, audit-derived data (Recent reliability, the Audit component of the Reliability Score) is stale.
+`lastAuditSyncAt` is the newest `audit_synced_at` in the database (`MAX(audit_synced_at)` over all mints, cached in-process for 30s), so it **survives restarts and deploys**. It is `null` only if no mint has ever synced. If it stays old, the audit.8333.space data (Audit tab, `auditRecent*`) is stale; the Reliability Score's audit part does not depend on it (it uses cashu.info, see `auditCzFetchedAt`).
 
 `lastReviewsSyncAt` is the newest `reviews_checked_at` in the database (`MAX(reviews_checked_at)`, read in the same query and the same 30s cache as `lastAuditSyncAt`), so it also **survives restarts**. It is `null` only if no mint has ever been reviews-synced. It is stamped for every mint that at least one relay answered for (and whose DB write completed) in the hourly reviews sync, even when nothing changed, so it should advance about every 60 minutes (+ up to a few minutes of start offset and jitter). Caveat: an answer with no events still counts, so this proves the sync job is running and at least one relay is reachable, not that every relay is. If no relay answers at all, nothing is stamped.
 
@@ -85,6 +85,9 @@ All known mints with current online status, latency, reliability score, and meta
     "auditSyncedAt": "2026-06-25T06:00:03.000Z",
     "auditRecentTotal": 100,
     "auditRecentErrors": 2,
+    "auditCzTotal": 104,
+    "auditCzBlamed": 0,
+    "auditCzFetchedAt": "2026-06-25T09:30:00.000Z",
     "reliabilityScore": 88,
     "uptimePct24h": 100,
     "discoveredAt": "2025-11-01T12:00:00.000Z",
@@ -103,7 +106,7 @@ All known mints with current online status, latency, reliability score, and meta
 
 ---
 
-**Audit timestamps (per mint, both ISO 8601 UTC):** `auditCheckedAt` is the auditor's own last check (audit.8333.space `updated_at`); `auditSyncedAt` is when MintRadar's 6-hourly job last wrote that mint's audit data. They can differ a lot — `auditCheckedAt` may be days or months old while `auditSyncedAt` is recent, or both may age together while the upstream is unreachable. `auditRecentTotal`/`auditRecentErrors` are the rolling-window figures the Audit score component uses (`auditRecentTotal` below 3 or `null` scores a neutral 12.5/25). The score is not adjusted for the age of this data.
+**Audit timestamps (per mint, both ISO 8601 UTC):** `auditCheckedAt` is the auditor's own last check (audit.8333.space `updated_at`); `auditSyncedAt` is when MintRadar's 6-hourly job last wrote that mint's audit data. They can differ a lot — `auditCheckedAt` may be days or months old while `auditSyncedAt` is recent, or both may age together while the upstream is unreachable. `auditRecentTotal`/`auditRecentErrors` are the audit.8333.space rolling-window figures of the Audit tab; since 2026-10-08 they are an archive and no longer feed the Reliability Score. **Audit inputs of the Reliability Score (additive, `null` when absent):** `auditCzTotal` (swaps in cashu.info's 7-day window), `auditCzBlamed` (the swaps whose failure cashu.info attributes to the mint) and `auditCzFetchedAt` (ISO 8601 UTC, when that detail was stored). The audit component is 0–25 from `auditCzBlamed / auditCzTotal` (0 % = 25, <1 % = 20, <5 % = 15, <15 % = 10, else 5); fewer than 10 swaps, null values, or a `auditCzFetchedAt` more than 168 hours old score a neutral 12.5.
 
 ### `GET /api/stats`
 
@@ -203,7 +206,7 @@ Daily uptime counts for the last 30 days for a single mint.
 
 ### `GET /api/mints/audit-cz`
 
-Data from the third-party audit service cashu.info for one mint, refreshed server-side every 10 minutes (feeds) and every 30 minutes (the per-mint `detail`); the endpoint reads the database only and never calls cashu.info. Display only: it is **not** part of the Reliability Score and is never merged into any MintRadar value. Also reachable as `/api/v1/mints/audit-cz`; it is not rate-limit exempt (the global 60 requests / minute / IP applies).
+Data from the third-party audit service cashu.info for one mint, refreshed server-side every 10 minutes (feeds) and every 30 minutes (the per-mint `detail`); the endpoint reads the database only and never calls cashu.info. This endpoint itself is display only and never merged into any MintRadar value; the Reliability Score's audit part reads two numbers of the same stored `detail` (`swaps7d.all.total`, `swaps7d.errorsBlamed`) through `auditCzTotal` / `auditCzBlamed` / `auditCzFetchedAt` of `/api/mints/known`. Also reachable as `/api/v1/mints/audit-cz`; it is not rate-limit exempt (the global 60 requests / minute / IP applies).
 
 **Query parameters:**
 

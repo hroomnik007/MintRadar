@@ -11,7 +11,7 @@ import { IcShield } from '@/components/mint/IcShield'
 import { type KnownMint } from '@/hooks/useKnownMints'
 import { splitVersionString, canonicalSoftwareName, parseMajorMinorPatch } from '@/utils/reliabilityScore'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
-import { AUDIT_MIN_SAMPLES } from '@/utils/auditScore'
+import { AUDIT_MIN_SAMPLES, auditDataState } from '@/utils/auditScore'
 import { formatAuditSuccessRatio, auditReliabilityColor } from '@/utils/mintFormatting'
 import { useNow } from '@/hooks/useNow'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -39,19 +39,19 @@ function uptimeColor(pct: number | null | undefined): string {
   return 'var(--red)'
 }
 
-// "Audit success" row — reuses the same rolling-window fields, minimum-sample
-// floor, and colour logic as the Mint Detail Audit tab's success-rate cell
-// (auditRecentTotal/auditRecentErrors, AUDIT_MIN_SAMPLES, auditReliabilityColor()),
-// so this never disagrees with the numbers shown there. Deliberately not the
-// lifetime auditNMints/auditNErrors counters, which have no sample-size floor.
-function auditSuccessDisplay(mint: KnownMint): { text: string; color: string } {
-  const total = mint.auditRecentTotal ?? null
-  if (total === null || total < AUDIT_MIN_SAMPLES) {
+// "Audit success" row — the same cashu.info 7-day window, minimum-sample floor and staleness
+// rule the Reliability Score's audit part scores on (auditDataState() from shared/auditScore.ts), so
+// the row never disagrees with the Mint Detail breakdown. "Successes" here means swaps not
+// attributed to the mint (cashu.info attributes only the failures the mint caused).
+function auditSuccessDisplay(mint: KnownMint, now: number): { text: string; color: string } {
+  const total = mint.auditCzTotal ?? null
+  const blamed = mint.auditCzBlamed ?? null
+  if (auditDataState(blamed, total, mint.auditCzFetchedAt ?? null, now) !== 'scored') {
     return { text: 'n/a', color: 'var(--text3)' }
   }
   return {
-    text: formatAuditSuccessRatio(total, mint.auditRecentErrors ?? null),
-    color: auditReliabilityColor(total, mint.auditRecentErrors ?? null),
+    text: formatAuditSuccessRatio(total, Math.min(blamed ?? 0, total ?? 0)),
+    color: auditReliabilityColor(total, blamed, AUDIT_MIN_SAMPLES),
   }
 }
 
@@ -167,6 +167,7 @@ function useMintCompareData(mint: KnownMint, latestBySoftware: Record<string, st
 export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClose: () => void }) {
   const latestBySoftware = latestVersionsBySoftware(mints)
   const dialogRef = useModalFocus()
+  const now = useNow()
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -479,13 +480,13 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                             pointerEvents: 'none', whiteSpace: 'normal', textAlign: 'left',
                             fontFamily: 'var(--font-body)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400,
                           }}>
-                            Rolling window from audit.8333.space. Not a solvency or reserves signal — only whether recent swaps succeeded.
+                            Last 7 days from cashu.info; only failures attributed to the mint count. n/a below 10 swaps. Not a solvency or reserves signal.
                           </div>
                         )}
                       </span>
                     </span>
-                    <span className="cmp-mobile-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: auditSuccessDisplay(mint).color }}>
-                      {auditSuccessDisplay(mint).text}
+                    <span className="cmp-mobile-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: auditSuccessDisplay(mint, now).color }}>
+                      {auditSuccessDisplay(mint, now).text}
                     </span>
                   </div>
 
@@ -667,7 +668,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             )
           })}
 
-          {/* ── Audit success (rolling window from audit.8333.space, same fields/threshold/colour as the Mint Detail Audit tab) ── */}
+          {/* ── Audit success (cashu.info 7-day window, same fields/threshold as the Reliability Score's audit part) ── */}
           <div className="cmp-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             Audit success
             <span
@@ -687,13 +688,13 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                   pointerEvents: 'none', whiteSpace: 'normal', textAlign: 'left',
                   fontFamily: 'var(--font-body)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400,
                 }}>
-                  Rolling window from audit.8333.space. Not a solvency or reserves signal — only whether recent swaps succeeded.
+                  Last 7 days from cashu.info; only failures attributed to the mint count. n/a below 10 swaps. Not a solvency or reserves signal.
                 </div>
               )}
             </span>
           </div>
           {mints.map(mint => {
-            const audit = auditSuccessDisplay(mint)
+            const audit = auditSuccessDisplay(mint, now)
             return (
               <div key={mint.url} className="cmp-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: audit.color }}>
                 {audit.text}

@@ -13,7 +13,7 @@
 // `latestVersions` params below are always omitted here — the frontend has no
 // access to the software_versions DB cache, so this copy always uses the static
 // NUTSHELL_VERSIONS/CDK_VERSIONS fallback ladders.
-import { auditReliabilityScore } from './auditScore'
+import { auditComponent } from './auditScore'
 
 /**
  * Number of NUTs the app tracks, i.e. the denominator of the NUT-support
@@ -180,7 +180,7 @@ function versionLadder(latest: { major: number; minor: number }, steps = 10): [n
  *
  * Software the app doesn't recognize (no leaderboard at all — a different mint
  * implementation, a future one, or malformed data) scores a neutral 2.5, the same
- * neutral default auditReliabilityScore() uses for "Unknown" — NOT 0 (which would
+ * neutral default auditComponent() uses for "Unknown" — NOT 0 (which would
  * wrongly treat it as maximally stale) and NOT 10 (which would wrongly treat any
  * higher major/minor number as automatically freshest).
  */
@@ -292,21 +292,28 @@ export function isEligibleForRecommendation(
   return now - t >= MIN_RECOMMENDATION_AGE_DAYS * 86_400_000
 }
 
+/** The cashu.info audit inputs stored on mints.audit_cz_* (see shared/auditScore.ts). */
+export interface AuditInput {
+  blamed: number | null
+  total: number | null
+  fetchedAt: string | Date | null
+}
+
 export function computeReliabilityScore(
   uptimePct: number,
   nutCount: number | null,
   version: string | null,
   contactCount: number,
-  auditRecentTotal: number | null,
-  auditRecentErrors: number | null,
+  audit: AuditInput,
   latestVersions?: Record<string, { major: number; minor: number }>,
   discoveredAt?: string | null,
+  now: number = Date.now(),
 ): number {
   const uScore = uptimeComponent(uptimePct)
   const nScore = nutComponent(nutCount)
   const vScore = versionComponent(version, latestVersions)
   const cScore = contactComponent(contactCount)
-  const aScore = auditReliabilityScore(auditRecentTotal, auditRecentErrors)
+  const aScore = auditComponent(audit.blamed, audit.total, audit.fetchedAt, now)
   const total = Math.min(100, Math.round(uScore + nScore + vScore + cScore + aScore))
-  return applyNewMintCap(total, discoveredAt)
+  return applyNewMintCap(total, discoveredAt, now)
 }

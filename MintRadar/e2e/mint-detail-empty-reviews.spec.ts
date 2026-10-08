@@ -55,11 +55,11 @@ test.describe('Empty reviews (no rating and no comment) are omitted', () => {
 })
 
 test.describe('Audit row without audit data', () => {
-  test('breakdown row says "No audit data available"; Audit tab text unchanged', async ({ page }) => {
-    await open(page, ['rated'], { auditNMints: null, auditNMelts: null, auditRecentTotal: null, auditRecentErrors: null, auditCheckedAt: null, auditSyncedAt: null })
+  test('breakdown row says "No cashu.info audit data: neutral"; Audit tab text unchanged', async ({ page }) => {
+    await open(page, ['rated'], { auditNMints: null, auditNMelts: null, auditRecentTotal: null, auditRecentErrors: null, auditCheckedAt: null, auditSyncedAt: null, auditCzTotal: null, auditCzBlamed: null, auditCzFetchedAt: null })
     const mobile = page.viewportSize()!.width <= 768
     if (mobile) await page.locator('.md-sc-reliability').click()
-    const row = page.getByText('No audit data available', { exact: true }).locator('visible=true')
+    const row = page.getByText('No cashu.info audit data: neutral', { exact: true }).locator('visible=true')
     await expect(row.first()).toBeVisible()
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/audit-row-${page.viewportSize()!.width}.png` })
     if (mobile) await page.keyboard.press('Escape')

@@ -23,13 +23,13 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { MintNetworkCard } from '@/components/MintNetworkCard'
 import { networkRows } from '@/utils/networkInfo'
 import { AuditCzTiles, AuditCzChecks, AuditCzSwapTables } from '@/components/AuditCzCards'
-import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
 import { operatorPubkeys } from '@/utils/operatorPubkeys'
 import { cleanMintNameDetailed } from '@/utils/cleanMintName'
 import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
-import { auditReliabilityScore, isAuditUnknown } from '@/utils/auditScore'
+import { auditComponent, auditDataState, auditAgeHours, isAuditUnknown, AUDIT_MIN_SAMPLES, AUDIT_MAX_AGE_HOURS } from '@/utils/auditScore'
 import { auditFreshness } from '@/utils/auditFreshness'
 import { IcClose } from '@/components/IcClose'
 import { clickableProps } from '@/utils/clickableProps'
@@ -40,6 +40,7 @@ import { sortUnits } from '@/utils/sortUnits'
 import {
   computeReliabilityScore as sharedComputeReliabilityScore,
   uptimeComponent, nutComponent, versionComponent, contactComponent,
+  type AuditInput,
 } from '@/utils/reliabilityScore'
 import { useNow } from '@/hooks/useNow'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
@@ -235,10 +236,12 @@ const NUT_ICONS: Record<string, JSX.Element> = {
 // ref/tooltip state (a shared ref across two simultaneously-mounted rows
 // would fight over which DOM node it points at), so this owns its own
 // useTapTooltip rather than taking one as a prop.
-function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, note }: {
+function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, note, detail }: {
   label: string
   display: string
   note?: string
+  // Full-width explanation under the row (wraps; `display` is ellipsized at 170px).
+  detail?: string
   score: number
   max: number
   color: string
@@ -270,6 +273,7 @@ function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, n
           <span className="rb-row-score" style={{ color }}>{score}/{max}</span>
         </div>
       </div>
+      {detail && <div className="rb-row-detail">{detail}</div>}
       <div className="rb-row-bar">
         <div style={{ height: '100%', width: `${(score / max) * 100}%`, background: color, borderRadius: 2, transition: 'width 0.3s ease' }} />
       </div>
@@ -305,16 +309,14 @@ function computeReliabilityScore(
   email?: string,
   twitter?: string,
   nostr?: string,
-  auditRecentTotal?: number | null,
-  auditRecentErrors?: number | null,
+  audit?: AuditInput,
 ): number {
   return sharedComputeReliabilityScore(
     uptimePct,
     nutCount,
     versionStr ?? null,
     contactCountOf(email, twitter, nostr),
-    auditRecentTotal ?? null,
-    auditRecentErrors ?? null,
+    audit ?? { blamed: null, total: null, fetchedAt: null },
   )
 }
 
@@ -828,8 +830,11 @@ function MintDetailContent({ url }: { url: string }) {
     const segs = chartHistoryData?.segments ?? []
     const nutCount = knownMint?.nutCount ?? 0
     const versionStr = knownMint?.version ?? data?.info?.version ?? null
-    const auditRecentTotal = knownMint?.auditRecentTotal ?? null
-    const auditRecentErrors = knownMint?.auditRecentErrors ?? null
+    const auditInput: AuditInput = {
+      blamed: knownMint?.auditCzBlamed ?? null,
+      total: knownMint?.auditCzTotal ?? null,
+      fetchedAt: knownMint?.auditCzFetchedAt ?? null,
+    }
     const emailVal = data?.info?.contact?.find((c: { method: string }) => c.method === 'email')?.info
     const twitterVal = data?.info?.contact?.find((c: { method: string }) => c.method === 'twitter')?.info
     const nostrVal = data?.info?.contact?.find((c: { method: string }) => c.method === 'nostr')?.info
@@ -843,7 +848,7 @@ function MintDetailContent({ url }: { url: string }) {
       const reliabilityVal = seg.reliabilityScore !== null && seg.reliabilityScore !== undefined
         ? seg.reliabilityScore
         : seg.uptimePct !== null
-          ? computeReliabilityScore(seg.uptimePct, nutCount, versionStr, emailVal, twitterVal, nostrVal, auditRecentTotal, auditRecentErrors)
+          ? computeReliabilityScore(seg.uptimePct, nutCount, versionStr, emailVal, twitterVal, nostrVal, auditInput)
           : null
       return { label, latency: seg.latencyMs, uptime: seg.uptimePct, reliability: reliabilityVal }
     }
@@ -942,7 +947,7 @@ function MintDetailContent({ url }: { url: string }) {
   // (restore signatures) — check that instead.
   const supportsBackupRestore = supportedNutNumbers.has('9')
 
-  const reliabilityScore = knownMint?.reliabilityScore ?? computeReliabilityScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, knownMint?.auditRecentTotal ?? null, knownMint?.auditRecentErrors ?? null)
+  const reliabilityScore = knownMint?.reliabilityScore ?? computeReliabilityScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, { blamed: knownMint?.auditCzBlamed ?? null, total: knownMint?.auditCzTotal ?? null, fetchedAt: knownMint?.auditCzFetchedAt ?? null })
   const tsInfo = reliabilityScoreInfo(reliabilityScore)
   const reliabilityDonut = reliabilityDonutArc(reliabilityScore)
 
@@ -955,28 +960,37 @@ function MintDetailContent({ url }: { url: string }) {
   const breakdownContactFields = [email, twitter, nostr].filter(Boolean)
   const breakdownCScore = contactComponent(breakdownContactFields.length)
   const breakdownContactDisplay = breakdownContactFields.length === 0 ? 'None' : (email ? 'Email' : '') + (twitter ? (email ? ' + Twitter' : 'Twitter') : '') + (nostr ? ((email || twitter) ? ' + Nostr' : 'Nostr') : '')
+  // Audit part of the score: cashu.info's 7-day attributed failures (mints.audit_cz_*), the same
+  // functions the server scores with (shared/auditScore.ts). The audit.8333.space figures below
+  // (breakdownAuditRecent*) are for the Audit tab only.
+  const auditCzBlamed = knownMint?.auditCzBlamed ?? null
+  const auditCzTotal = knownMint?.auditCzTotal ?? null
+  const auditCzFetchedAt = knownMint?.auditCzFetchedAt ?? null
+  const breakdownAScore = auditComponent(auditCzBlamed, auditCzTotal, auditCzFetchedAt, now)
+  const auditState = auditDataState(auditCzBlamed, auditCzTotal, auditCzFetchedAt, now)
+  const auditAgeH = auditAgeHours(auditCzFetchedAt, now)
+  const auditDetailText = auditState === 'scored'
+    ? `${Math.min(auditCzBlamed ?? 0, auditCzTotal ?? 0)} of ${auditCzTotal} swaps in the last 7 days had a failure attributed to this mint (cashu.info)`
+    : auditState === 'too-few'
+      ? `Not enough audit data yet (fewer than ${AUDIT_MIN_SAMPLES} swaps in the last 7 days): neutral`
+      : auditState === 'too-old'
+        ? 'Audit data older than 7 days: neutral'
+        : 'No cashu.info audit data: neutral'
+  const breakdownAuditDisplay = auditState === 'scored' ? `${Math.min(auditCzBlamed ?? 0, auditCzTotal ?? 0)} / ${auditCzTotal}` : 'neutral'
+  const auditAgeDays = auditAgeH !== null && auditAgeH > 24 && (auditState === 'scored' || auditState === 'too-few') ? Math.floor(auditAgeH / 24) : null
+  const auditStaleNote = auditAgeDays !== null ? `data ${auditAgeDays} ${auditAgeDays === 1 ? 'day' : 'days'} old` : undefined
   const breakdownAuditRecentTotal = knownMint?.auditRecentTotal ?? null
   const breakdownAuditRecentErrors = knownMint?.auditRecentErrors ?? null
-  const breakdownAScore = auditReliabilityScore(breakdownAuditRecentTotal, breakdownAuditRecentErrors)
-  const breakdownAuditDisplay = breakdownAuditRecentTotal === null
-    ? 'No audit data available'
-    : isAuditUnknown(breakdownAuditRecentTotal)
-      ? 'Unknown'
-      : `${((breakdownAuditRecentErrors ?? 0) / breakdownAuditRecentTotal * 100).toFixed(1)}% err`
-  // Audit summary strip's "Recent success rate" cell — same rolling window
-  // (audit_recent_total / audit_recent_errors, up to AUDIT_SWAPS_WINDOW = 100
-  // swaps) that feeds the Reliability Score's Audit reliability component. Reuses the
-  // exact values above (breakdownAuditRecent*). Colour comes from
-  // auditReliabilityColor() (error-rate based: <=5% green/25% amber/else red) —
-  // NOT from breakdownAScore's 1-5 scoring buckets, which are stricter than
-  // what reads as "OK" at a glance (see mintFormatting.ts). This only changes
-  // the displayed colour; the Reliability Score's numeric Audit component
-  // (breakdownAScore) is unaffected.
+  // Audit summary strip's "Recent success rate" cell — the audit.8333.space rolling window
+  // (audit_recent_total / audit_recent_errors, up to AUDIT_SWAPS_WINDOW = 100 swaps), Audit tab
+  // only: it no longer feeds the Reliability Score (that uses cashu.info, see breakdownAScore
+  // above). Colour comes from auditReliabilityColor() (error-rate based:
+  // <=5% green/25% amber/else red), not from the score's bands (see mintFormatting.ts).
   const recentReliabilityColor = auditReliabilityColor(breakdownAuditRecentTotal, breakdownAuditRecentErrors)
+  // Breakdown row colour: same error-rate colouring over the cashu.info window, muted while neutral.
+  const auditRowColor = auditReliabilityColor(auditState === 'scored' ? auditCzTotal : null, auditCzBlamed, AUDIT_MIN_SAMPLES)
   const auditSyncedAt = knownMint?.auditSyncedAt ?? null
-  const auditLastCheckedDisplay = formatTimeAgo(auditSyncedAt ? new Date(auditSyncedAt) : null)
   const auditCheckedAt = knownMint?.auditCheckedAt ?? null
-  const auditorLastCheckDisplay = formatTimeAgo(auditCheckedAt ? new Date(auditCheckedAt) : null)
   const freshness = auditFreshness(auditCheckedAt, auditSyncedAt)
 
   // Audit tab source: cashu.info is shown by default only when the audit.8333.space data is
@@ -1003,17 +1017,9 @@ function MintDetailContent({ url }: { url: string }) {
   // Strip values: audit.8333.space as stored, or (cz view) counted from the swaps MintRadar collected.
   const stripTotal = breakdownAuditRecentTotal
   const stripErrors = breakdownAuditRecentErrors
-  // "still counts toward the score" is only true when the rolling window is usable.
-  const auditDataCounts = breakdownAuditRecentTotal !== null && !isAuditUnknown(breakdownAuditRecentTotal)
-  const auditStaleNote = freshness.auditorDataOld && auditDataCounts
-    ? `data ${freshness.auditorAgeDays} days old`
-    : freshness.syncStale && auditDataCounts ? `sync ${freshness.syncAgeHours}h old` : undefined
-  const auditStaleTooltipExtra = auditStaleNote
-    ? ` Two times apply: the auditor's own last check (${auditorLastCheckDisplay}) and when MintRadar last synced this data (${auditLastCheckedDisplay}). The score is not adjusted for age.`
-    : ''
   const reliabilityBreakdownRows = [
     { label: 'Uptime (40%)', display: `${uptimePct}%`, score: breakdownUScore, max: 40, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.' },
-    { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, score: breakdownAScore, max: 25, color: recentReliabilityColor, tooltip: "Based on error rate from audit.8333.space — the percentage of failed swaps out of the mint's last ~100 tested operations. Lower error rate = higher score. Shows \"Unknown\" when fewer than 3 recent swaps are available." + auditStaleTooltipExtra, ...(auditStaleNote ? { note: auditStaleNote } : {}) },
+    { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, detail: auditDetailText, score: breakdownAScore, max: 25, color: auditRowColor, tooltip: `Source: cashu.info. The share of the swaps its auditor ran against this mint in the last 7 days whose failure is attributed to the mint itself. cashu.info attributes to a mint only the failures the mint caused, not amounts below its minimum, the auditor's own balance or Lightning routing. With fewer than ${AUDIT_MIN_SAMPLES} swaps, no data, or data older than ${AUDIT_MAX_AGE_HOURS / 24} days the row is a neutral 12.5 of 25.`, ...(auditStaleNote ? { note: auditStaleNote } : {}) },
     { label: 'NUT Support (15%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 15, color: supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.' },
     { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? 'var(--accent)' : breakdownVScore >= 6 ? 'var(--amber)' : 'var(--red)', tooltip: "How recent the mint's software version is compared to the latest known Nutshell releases. Newer = higher score." },
     { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? 'var(--accent)' : breakdownCScore >= 2 ? 'var(--amber)' : 'var(--red)', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.' },
@@ -1061,7 +1067,7 @@ function MintDetailContent({ url }: { url: string }) {
   const stripReliabilityColor = recentReliabilityColor
   const tipMints = 'All-time successful ecash minting operations the auditor has run against this mint.'
   const tipMelts = 'All-time successful ecash melting operations (redeeming ecash back to Lightning).'
-  const tipSuccess = 'Successful swaps out of the mint\'s last ~100 audited operations — the same rolling window the Reliability Score\'s Audit component scores on. Shows "too few to score" below 3 recent swaps.'
+  const tipSuccess = 'Successful swaps out of the mint\'s last ~100 operations audited by audit.8333.space. Shows "too few to score" below 3 recent swaps. The Reliability Score\'s audit part uses cashu.info instead.'
   const tipAvg = 'Average duration of the successful swaps in the same rolling window as Recent success rate.'
 
   // Last ≤100 swaps, newest first (the backend already orders by created_at

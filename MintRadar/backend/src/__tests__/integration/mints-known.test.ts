@@ -45,6 +45,9 @@ function sampleRow(overrides: Record<string, unknown> = {}) {
     audit_synced_at: '2026-06-30T06:00:00.000Z',
     audit_recent_total: 100,
     audit_recent_errors: 0,
+    audit_cz_total: 104,
+    audit_cz_blamed: 2,
+    audit_cz_fetched_at: new Date('2026-06-30T11:30:00.000Z'),
     discovered_at: '2026-01-01T00:00:00.000Z',
     last_reliability_score: 88,
     last_error: null,
@@ -100,6 +103,23 @@ describe('GET /api/mints/known', () => {
     // (audit.8333.space's own updated_at) and both are exposed.
     expect(mint.auditSyncedAt).toBe('2026-06-30T06:00:00.000Z')
     expect(mint.auditCheckedAt).toBe('2026-06-30T00:00:00.000Z')
+  })
+
+  it('exposes the cashu.info audit inputs of the Reliability Score additively (the audit* fields stay)', async () => {
+    query.mockResolvedValueOnce({ rows: [sampleRow()] })
+    const res = await request(app).get('/api/mints/known')
+    const mint = res.body[0]
+    expect(mint.auditCzTotal).toBe(104)
+    expect(mint.auditCzBlamed).toBe(2)
+    expect(mint.auditCzFetchedAt).toBe('2026-06-30T11:30:00.000Z')
+    expect(mint.auditRecentTotal).toBe(100) // audit.8333.space archive stays in the API
+    expect(mint.auditRecentErrors).toBe(0)
+  })
+
+  it('auditCz fields are null for a mint without a detail', async () => {
+    query.mockResolvedValueOnce({ rows: [sampleRow({ audit_cz_total: null, audit_cz_blamed: null, audit_cz_fetched_at: null })] })
+    const res = await request(app).get('/api/mints/known')
+    expect(res.body[0]).toMatchObject({ auditCzTotal: null, auditCzBlamed: null, auditCzFetchedAt: null })
   })
 
   it('adds a weighted rating for the Rating sort that dampens tiny samples', async () => {

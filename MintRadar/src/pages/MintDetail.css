@@ -2047,6 +2047,7 @@ a.review-action-btn { color: var(--text3); }
 
 /* Muted age note on the Reliability Score breakdown's Audit row. */
 .rb-row-note { font-size: 10px; color: var(--text3); white-space: nowrap; }
+.rb-row-detail { font-size: 12px; line-height: 1.4; color: var(--text3); margin: -2px 0 6px; }
 
 /* A very long lastError (offline mint) used to run ~2000px past the header: the badge is nowrap and its
    flex parents could not shrink. Cap it at the row and ellipsize; short errors are unchanged. */
@@ -2590,6 +2591,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .rb-row-score { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .rb-row-bar { height: 4px; background: rgba(0, 0, 0, 0.28); border-radius: 2px; overflow: hidden; }
 .rb-row-note { font-size: 13px; }
+.rb-row-detail { font-size: 13px; }
 .rb-formula { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 6px; font-size: 13px; color: var(--text3); line-height: 1.5; }
 
 /* Phones: cashu.info figures in a plain two-column grid, no vertical dividers (the dividers made the

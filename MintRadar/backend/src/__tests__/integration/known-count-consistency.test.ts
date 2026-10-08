@@ -44,6 +44,7 @@ function knownRow(m: { url: string; online: boolean | null; name: string | null 
     units: null, mint_methods: null, melt_methods: null,
     audit_n_mints: null, audit_n_melts: null, audit_n_errors: null, audit_checked_at: null,
     audit_synced_at: null, audit_recent_total: null, audit_recent_errors: null,
+    audit_cz_total: null, audit_cz_blamed: null, audit_cz_fetched_at: null,
     discovered_at: '2026-01-01T00:00:00.000Z', last_reliability_score: m.online ? 70 : null, last_error: null,
     server_location: null, review_count: null, review_avg_rating: null,
     review_count_7d_ago: null, review_count_7d_ago_at: null,

@@ -1,6 +1,7 @@
-// cashu.info (Cashu Mints Auditor, formerly audit.cashu.cz) — second, public audit source. DISPLAY ONLY: nothing here feeds
-// the Reliability Score, `last_reliability_score` or any scoring module, and no
-// scoring code reads the audit_cz_* tables. Two server-side GETs every 10 minutes
+// cashu.info (Cashu Mints Auditor, formerly audit.cashu.cz) — second, public audit source. This file (the mint
+// list and the swap feed) is display only; the audit part of the Reliability Score reads two numbers of the per-mint
+// detail via mints.audit_cz_* (auditCzDetail.ts, shared/auditScore.ts), never the audit_cz_* tables themselves at
+// probe time. Two server-side GETs every 10 minutes
 // (cron.ts); the visitor's browser never contacts cashu.info.
 //
 // Failure policy: any failure (timeout, HTTP error, oversize, bad JSON, bad

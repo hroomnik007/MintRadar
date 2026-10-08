@@ -78,7 +78,7 @@ beforeEach(async () => {
       return { rows: [{ server_location: 'Existing, Location' }] }
     }
     if (/FROM mints m\s*\n\s*LEFT JOIN mint_history h/.test(sql)) {
-      return { rows: [{ nut_count: 1, version: '1.0.0', audit_recent_total: null, audit_recent_errors: null, total: '4', online_count: '2' }] }
+      return { rows: [{ nut_count: 1, version: '1.0.0', audit_cz_total: null, audit_cz_blamed: null, audit_cz_fetched_at: null, total: '4', online_count: '2' }] }
     }
     if (/UPDATE mints SET last_reliability_score/.test(sql)) {
       return { rowCount: 1 }
@@ -281,7 +281,7 @@ describe('probeMintToDb — pubkey persistence', () => {
       if (/INSERT INTO mint_version_history/.test(sql)) return { rowCount: 1 }
       if (/SELECT server_location FROM mints WHERE url = \$1/.test(sql)) return { rows: [{ server_location: null }] }
       if (/FROM mints m\s*\n\s*LEFT JOIN mint_history h/.test(sql)) {
-        return { rows: [{ nut_count: 1, version: '1.0.0', audit_recent_total: null, audit_recent_errors: null, total: '4', online_count: '2' }] }
+        return { rows: [{ nut_count: 1, version: '1.0.0', audit_cz_total: null, audit_cz_blamed: null, audit_cz_fetched_at: null, total: '4', online_count: '2' }] }
       }
       if (/UPDATE mints SET last_reliability_score/.test(sql)) return { rowCount: 1 }
       if (/UPDATE mint_history SET reliability_score/.test(sql)) return { rowCount: 1 }

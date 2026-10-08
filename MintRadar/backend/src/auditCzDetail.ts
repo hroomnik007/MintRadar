@@ -144,10 +144,25 @@ export async function syncAuditCzDetails(opts: DetailRunOptions = {}): Promise<D
       const detail = parseAuditCzDetailFull(raw, id)
       if (!detail) { stats.skipped++; continue }
       try {
+        // One statement = one transaction: the detail row and the score inputs on the tracked mint(s)
+        // (exact normalised url, or an alias cashu.info lists for this mint) are written together. Both
+        // numbers must be usable, otherwise NULLs (the mint scores neutral); a failed fetch never gets here.
+        const total = detail.swaps7d?.all?.total
+        const blamed = detail.swaps7d?.errorsBlamed
+        const usable = typeof total === 'number' && typeof blamed === 'number'
         await pool.query(
-          `INSERT INTO audit_cz_detail (url, detail, fetched_at) VALUES ($1, $2::jsonb, NOW())
-           ON CONFLICT (url) DO UPDATE SET detail = EXCLUDED.detail, fetched_at = NOW()`,
-          [row.url, JSON.stringify(detail)],
+          `WITH up AS (
+             INSERT INTO audit_cz_detail (url, detail, fetched_at) VALUES ($1, $2::jsonb, NOW())
+             ON CONFLICT (url) DO UPDATE SET detail = EXCLUDED.detail, fetched_at = NOW()
+             RETURNING url
+           )
+           UPDATE mints m
+              SET audit_cz_total = $3::integer,
+                  audit_cz_blamed = $4::integer,
+                  audit_cz_fetched_at = CASE WHEN $3::integer IS NULL OR $4::integer IS NULL THEN NULL ELSE NOW() END
+            WHERE rtrim(m.url, '/') = $1
+               OR rtrim(m.url, '/') IN (SELECT a.alias_url FROM audit_cz_aliases a WHERE a.mint_url = $1)`,
+          [row.url, JSON.stringify(detail), usable ? total : null, usable ? blamed : null],
         )
         stats.stored++
       } catch {

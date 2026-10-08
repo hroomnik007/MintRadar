@@ -383,6 +383,11 @@ test.describe('source switch (both sources have data)', () => {
   })
 })
 
+// The Reliability Score breakdown (sidebar panel) now names its source, cashu.info, in the audit row text, so the
+// "no cashu.info on this tab" checks look at everything outside that panel.
+const cashuInfoOutsideBreakdown = (page: import('@playwright/test').Page) =>
+  page.getByText(/cashu\.info/).evaluateAll(els => els.filter(e => !e.closest('.md-reliability-panel')).length)
+
 // ── f) cz does not cover the mint: the page is as before ────────
 test.describe('cz does not cover the mint (covered: false)', () => {
   test('8333 data absent: "No audit data available", no cz card, no switch', async ({ page }) => {
@@ -393,7 +398,7 @@ test.describe('cz does not cover the mint (covered: false)', () => {
     await expect(page.locator('.md-audit-header')).toContainText('via audit.8333.space')
     await expect(page.locator('.audit-summary-strip')).toHaveCount(0)
     await expect(page.locator('.md-audit-seg')).toHaveCount(0)
-    await expect(page.getByText(/cashu\.info/)).toHaveCount(0)
+    expect(await cashuInfoOutsideBreakdown(page)).toBe(0)
   })
 
   const stale = [
@@ -411,7 +416,7 @@ test.describe('cz does not cover the mint (covered: false)', () => {
       await expect(page.getByRole('link', { name: 'Open on audit.8333.space →' })).toBeVisible()
       await expect(page.locator('.md-audit-seg')).toHaveCount(0)
       await expect(segGroup(page)).toHaveCount(0)
-      await expect(page.getByText(/cashu\.info/)).toHaveCount(0)
+      expect(await cashuInfoOutsideBreakdown(page)).toBe(0)
     })
   }
 })
