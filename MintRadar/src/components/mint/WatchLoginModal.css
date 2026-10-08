@@ -85,7 +85,7 @@
 .rv-modal { background: var(--surface); border: 1px solid var(--border2); padding: 20px; max-width: 420px; }
 .rv-modal-title { font-size: 17px; letter-spacing: -0.01em; }
 .rv-modal-sub { font-size: 13px; line-height: 1.4; }
-.rv-modal-close { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--border); border-radius: 8px; color: var(--text2); }
+.rv-modal-close { width: 32px; height: 32px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--border); border-radius: 8px; color: var(--text2); }
 .rv-btn-cancel { border: 1px solid var(--border2); color: var(--text2); font-size: 14px; padding: 9px 16px; }
 @media (max-width: 480px) { .rv-modal { padding: 18px; } }
 

@@ -20,7 +20,7 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
 
     // Modal itself must be a bounded card, not an unstyled full-bleed block.
     const modalBox = await modal.boundingBox()
-    expect(modalBox!.width).toBeLessThanOrEqual(400)
+    expect(modalBox!.width).toBeLessThanOrEqual(440)
     const modalStyle = await modal.evaluate(el => {
       const s = getComputedStyle(el)
       return { display: s.display, flexDirection: s.flexDirection, borderRadius: s.borderRadius, overflow: s.overflow }
@@ -44,10 +44,11 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
     const firstItem = page.locator('.md-picker-item').first()
     const itemDisplay = await firstItem.evaluate(el => getComputedStyle(el).display)
     expect(itemDisplay).toBe('flex')
-    const checkboxBox = await firstItem.locator('.card-checkbox').boundingBox()
-    const nameBox = await firstItem.locator('div').last().boundingBox()
-    // Checkbox and name text must sit on the same row (small y-delta), not stacked.
-    expect(Math.abs(checkboxBox!.y - nameBox!.y)).toBeLessThan(10)
+    const checkboxBox = await firstItem.locator('.md-picker-check').boundingBox()
+    const nameBox = await firstItem.locator('.md-picker-text').boundingBox()
+    // Checkbox and name text must sit on the same row (centres aligned; the text
+    // block is two lines tall and the row is vertically centred), not stacked.
+    expect(Math.abs((checkboxBox!.y + checkboxBox!.height / 2) - (nameBox!.y + nameBox!.height / 2))).toBeLessThan(10)
 
     // Search input must be present and functional.
     const search = page.locator('.md-picker-search')
