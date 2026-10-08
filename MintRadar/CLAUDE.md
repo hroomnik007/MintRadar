@@ -49,7 +49,7 @@ Sensitive values are in CLAUDE.local.md (gitignored) — ask the developer
 - Backend proxy → /api/* proxied by Nginx to localhost:3002
 - Cron every 5min → probes all mints via /v1/info → writes to mint_history
 - Online status: mint is ONLINE only if /v1/info returns HTTP 200 with valid JSON containing `nuts` field
-- Nostr DM notifications → browser-side via NIP-07 when watchlist mint goes down/up
+- Notifications → sent only by the server (NIP-17 gift-wrapped DMs from `nostrService.ts`) after the user turns on a pill ("Goes down" / "Goes up") for a mint; the browser never publishes DMs
 - Reviews → NIP-87 kind:38000 events, read/write directly from browser via Nostr relays
 
 ## Hard invariants (lifted verbatim from docs/claude files — they stay in core on purpose)
@@ -83,7 +83,7 @@ this (separate npm package, no workspace set up) — `backend/src/discovery.ts` 
 - Stats page: totalMints/onlineMints/offlineMints/avgReliabilityScore/avgLatency cards, NUT adoption horizontal bars, Reliability Score donut chart, Most Reliable / Top Reliability widget, Reliability Score Movers, Network Health Index, Geographic Distribution, Software in Use. See "Stats widgets (2026-09-08)" below for the recent changes (test-mint exclusion, CDN bucket, software copy, subtitle omission).
 - Watchlist: IndexedDB + optional NIP-44 kind:10003 sync, Nostr login required, no JSON/CSV export, DMs via POST /api/notifications/subscribe (tab can be closed; opt-in per mint, a pill is on only after the server confirmed it — see docs/claude/stats-dashboard-watchlist-ui.md), mint comparison tool (added 2026-09-19 — see "Compare feature" above, `?compare=` URL persistence)
 - Wallets: curated list, `src/constants/wallets.ts`. Main grid = 8 end-user wallets (Minibits, Nutstash, Macadamia, Sovran, Cashu.me, Agicash, Coinos, Zeus). **Nutshell** carries `selfHost: true` and renders in a separate **"Run your own mint"** subsection below the grid (2026-09-08 — it's the reference implementation, not a consumer wallet). Card head: platform icon on the left + `.wallet-platform-tag` chips on the right only (the duplicate standalone platform word was removed). `Agicash` was renamed from `Boardwalk Cash`; `eNuts` was removed. No documented inclusion criteria beyond maintainer judgment.
-- Nostr: NIP-07 login, profile fetch (kind:0), reviews (kind:38000), DM notifications (kind:4), watchlist sync (NIP-44 kind:10003)
+- Nostr: NIP-07 login, profile fetch (kind:0), reviews (kind:38000), server-sent DM notifications (opt-in pills), watchlist sync (NIP-44 kind:10003)
 - Learn: educational modules under `src/pages/learn/` (`LearnModule.tsx` router, `LEARN_MODULES` metadata). Slugs: `cashu-basics`, `understanding-the-risks`, `how-to-choose-a-mint`, `getting-started-with-a-wallet`, `safe-habits`. **`/learn/1`…`/learn/5` `<Navigate replace>` to the slug** (matched by `.order`); any other number or unknown slug → "Module not found". Footer nav: `← Previous`, `Next: {title}` for middle modules, **"Browse mints" → `/`** on the last module; "← Back to Learn" kept. Module 4/5 also carry their own in-content CTA `Link` (Module 4 → `/wallets`, Module 5 → `/watchlist`).
 
 ## Deploy workflow (ALWAYS do all steps)
@@ -138,18 +138,15 @@ Login modal (`src/components/layout/AppShell.tsx`) supports three methods select
 
 ## Testing Infrastructure
 
-### Test counts (as of 2026-09-08): ~966 total
+### Test counts (as of 2026-10-08)
 
 | Suite | Count | Tool | Location |
 |-------|-------|------|----------|
-| Backend unit | ~306 | Vitest | `backend/src/__tests__/` (excl. subdirs) |
-| Frontend unit | 313 | Vitest | `MintRadar/src/__tests__/` |
-| API integration | 115 | Vitest | `backend/src/__tests__/integration/` |
-| Security | 40 | Vitest | `backend/src/__tests__/security/` |
-| E2E | 192 | Playwright | `MintRadar/e2e/` (39 spec files) |
+| Backend (unit + integration + security) | 799 tests, 64 files | Vitest | `backend/src/__tests__/` (incl. `integration/`, `security/`) |
+| Frontend unit | 656 tests, 47 files | Vitest | `src/__tests__/` |
+| E2E | 1028 tests, 87 spec files (`playwright test --list`) | Playwright | `e2e/` |
 
-`cd backend && npm test` runs all backend suites together and reports **461**
-(306 unit + 115 integration + 40 security). Counts drift often — treat as approximate.
+Counts drift often — treat as approximate.
 
 ### Key tested modules
 
@@ -189,12 +186,19 @@ The `+ Watch` button on Dashboard mint cards only renders when `isLoggedIn === t
 
 `test` job in `.github/workflows/deploy.yml` runs the full suite (backend + frontend unit; e2e is separate). `deploy` job declares `needs: test` — a failing test blocks deployment.
 
+## Verification policy
+- Backend or frontend code changed: before pushing run the whole backend suite (`cd backend && npm test`) and the whole frontend suite (`npm test`) — CI blocks the deploy on them — plus `npm run typecheck` and `npm run lint` (backend: its own lint, typecheck and build), and the targeted e2e specs of the touched pages.
+- Run the full e2e suite only when the task says so. Docs-only changes need no suites.
+
+## Docs rule
+A change to user-visible behaviour, to which hosts the browser or the server contacts, or to what is stored about people or for how long updates the matching `docs/claude/` file in the SAME commit; if a public statement changes, also `About.tsx` and `docs/claude/privacy-and-about.md`.
+
 ## Key rules
 - **Before starting ANY new task, check `git branch --show-current`.** If it isn't `main`, find out why (an in-progress PR still awaiting merge vs. a forgotten checkout left over from a prior session) before committing anything. A 2026-08-05 session left a feature branch checked out after its PR had already merged; two unrelated follow-up fixes got committed there instead of on `main` and had to be recovered via a second PR (#54).
 - NEVER modify anything not explicitly requested
 - ALWAYS run typecheck before build — `npm run typecheck` is `tsc -b && npm run typecheck:e2e`: `tsc -b` covers the app (`src`) and node (`vite.config.ts`) projects, `typecheck:e2e` (`tsc -p tsconfig.e2e.json`, same strictness flags as `tsconfig.app.json`, `e2e/**/*.ts`) covers the Playwright specs and fixtures (noEmit, buildinfo gitignored). `npm run lint` is `eslint src e2e`. **`npm run build` (`tsc -b && vite build`) intentionally does NOT check e2e**, and `tsconfig.e2e.json` must never be added to the references in `tsconfig.json`: the server runs `npm run build` during a deploy, after the backend is already live, so a type error in a spec must not be able to fail the frontend step. A spec's types are checked locally (this rule) only. (`npm run typecheck` used to be `tsc --noEmit` on the root tsconfig, which has `files: []` and only references, so it checked 0 files — fixed 2026-10-03; e2e was added 2026-10-05.)
 - ALWAYS rsync dist after build
 - ALWAYS commit and push after deploy: `git push origin main && git push gitea main` (both remotes required)
-- Conventional commits: feat:, fix:, refactor:, docs:, chore:
+- Commit messages: a short imperative sentence. The prefixes the repository actually uses (`fix:`, `style:`, `feat:`, `test:`, `e2e:`, `docs:`, `chore:`) are allowed, not required.
 - Security: always audit new code for SSRF, rate limits, XSS
 - Security: `verifyEvent()` from nostr-tools must be called on all inbound Nostr events (frontend hooks and backend discovery)
