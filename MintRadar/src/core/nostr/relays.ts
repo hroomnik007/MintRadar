@@ -67,7 +67,7 @@ export const REVIEW_RELAYS: string[] = [
 // this specific fast-path (several of them yield well on the broader/slower paths instead,
 // see DISCOVERY_RELAYS' and backend REVIEW_SYNC_RELAYS' own comments). This is the client's
 // fast first paint; the authoritative count/rating comes from the DB-backed
-// /api/mints/known + /api/mints/nostr-reviews (populated by the 6h backend sync, which uses
+// /api/mints/known + /api/mints/nostr-reviews (populated by the hourly backend sync, which uses
 // a much broader relay set — see backend/src/reviewsSync.ts).
 export const REVIEW_READ_RELAYS: string[] = [
   'wss://nos.lol',
