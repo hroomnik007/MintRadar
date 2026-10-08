@@ -36,8 +36,8 @@ describe('tiles from the stored detail (LNpay values)', () => {
   it('fractions, attributed caption and average time', () => {
     const t = tiles(LNPAY)
     expect(t['success']).toMatchObject({ value: '85%', label: 'Success rate' })
-    expect(t['melts']).toMatchObject({ value: '51 / 64', label: 'Paid out melts' })
-    expect(t['mints']).toMatchObject({ value: '56 / 62', label: 'Received mints' })
+    expect(t['melts']).toMatchObject({ value: '51 / 64', label: 'Payouts' })
+    expect(t['mints']).toMatchObject({ value: '56 / 62', label: 'Receives' })
     expect(t['attributed']).toMatchObject({ value: '0 / 19', label: "Mint's fault" })
     expect(t['avg']).toMatchObject({ value: '8.3 s', label: 'Avg swap time' })
     expect(view([]).tiles.map(x => x.key)).toEqual(['success', 'melts', 'mints', 'attributed', 'avg'])

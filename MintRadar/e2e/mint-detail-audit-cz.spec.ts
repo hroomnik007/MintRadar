@@ -65,7 +65,7 @@ test('only cz has data: header, four tiles from the stored detail, checks card, 
   await expect(page.locator('.audit-cz-tiles .audit-summary-cell')).toHaveCount(5)
   await expect(page.locator('.audit-cz-tiles .audit-summary-value')).toHaveText(['85%', '51 / 64', '56 / 62', '0 / 19', '8.3 s'])
   await expect(page.locator('.audit-cz-tiles .audit-cz-tile-label span').filter({ hasText: /^[A-Z]/ })).toHaveText(
-    ['Success rate', 'Paid out melts', 'Received mints', "Mint's fault", 'Avg swap time'])
+    ['Success rate', 'Payouts', 'Receives', "Mint's fault", 'Avg swap time'])
   expect(await tile(page, 'melts').locator('.audit-cz-tile-label span').first().evaluate(e => getComputedStyle(e).textTransform)).toBe('none') // sentence case, like the swap strip labels
   // The old Recent success rate tile is gone from this view.
   await expect(page.getByText('Recent success rate')).toHaveCount(0)

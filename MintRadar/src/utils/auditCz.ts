@@ -164,12 +164,12 @@ function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
   })
   const meltsOk = num(s.asSource?.success), meltsAll = num(s.asSource?.total)
   if (meltsOk !== undefined && meltsAll !== undefined) tiles.push({
-    key: 'melts', value: `${fmt(meltsOk)} / ${fmt(meltsAll)}`, label: 'Paid out melts',
+    key: 'melts', value: `${fmt(meltsOk)} / ${fmt(meltsAll)}`, label: 'Payouts',
     tooltip: 'Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)',
   })
   const mintsOk = num(s.asDest?.success), mintsAll = num(s.asDest?.total)
   if (mintsOk !== undefined && mintsAll !== undefined) tiles.push({
-    key: 'mints', value: `${fmt(mintsOk)} / ${fmt(mintsAll)}`, label: 'Received mints',
+    key: 'mints', value: `${fmt(mintsOk)} / ${fmt(mintsAll)}`, label: 'Receives',
     tooltip: 'Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)',
   })
   const blamed = num(s.errorsBlamed)
