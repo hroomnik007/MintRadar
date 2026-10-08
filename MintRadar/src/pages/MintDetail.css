@@ -2367,6 +2367,22 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .audit-swaps-table td { padding: 8px 8px 8px 0; }
 .audit-swaps-show-all-btn { font-size: 13px; color: var(--accent); }
 
+/* Phones: swap tables fit the card, no sideways scroll. Fixed layout keeps every column on the same
+   x in every row; the mint name takes the leftover width and is cut with an ellipsis. */
+@media (max-width: 640px) {
+  .audit-cz-card .audit-swaps-table { table-layout: fixed; font-size: 12px; }
+  .audit-cz-card .audit-swaps-table th,
+  .audit-cz-card .audit-swaps-table td { padding-right: 6px; overflow: hidden; text-overflow: ellipsis; }
+  .audit-cz-card .audit-swaps-table th:nth-child(2),
+  .audit-cz-card .audit-swaps-table td:nth-child(2) { width: 58px; }
+  .audit-cz-card .audit-swaps-table th:nth-child(3),
+  .audit-cz-card .audit-swaps-table td:nth-child(3) { width: 28px; }
+  .audit-cz-card .audit-swaps-table th:nth-child(4),
+  .audit-cz-card .audit-swaps-table td:nth-child(4) { width: 70px; }
+  .audit-cz-card .audit-swaps-table th:nth-child(5),
+  .audit-cz-card .audit-swaps-table td:nth-child(5) { width: 54px; padding-right: 0; }
+}
+
 /* Reviews: rows with hairlines instead of boxed cards; quiet filter segments. */
 .review-card { background: none; border: 0; border-top: 1px solid var(--border); border-radius: 0; padding: 16px 2px 40px; }
 .review-card:first-of-type { border-top: 0; }
