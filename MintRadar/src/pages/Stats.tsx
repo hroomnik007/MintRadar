@@ -20,8 +20,7 @@ import { PageHead } from '@/components/layout/PageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
 import { useNow } from '@/hooks/useNow'
-import { AUDIT_SOURCE_SWITCH_DATE, showAuditSwitchNote } from '@/utils/auditSourceSwitch'
-import { formatAuditDate } from '@/utils/auditFreshness'
+import { showAuditSwitchNote } from '@/utils/auditSourceSwitch'
 import './Stats.css'
 
 interface StatsData {
@@ -1288,7 +1287,6 @@ export default function Stats() {
           getIconUrl={m => knownMintsData?.find(km => km.url === m.url)?.iconUrl ?? null}
           footer={showAuditSwitchNote(now) ? (
             <p className="stats-panel-desc stats-movers-note">
-              On {formatAuditDate(AUDIT_SOURCE_SWITCH_DATE)} the audit part of the score moved to cashu.info (failures attributed to each mint), so changes in this period include that switch.{' '}
               <Link to="/learn/how-to-choose-a-mint">How scoring works</Link>
             </p>
           ) : undefined}

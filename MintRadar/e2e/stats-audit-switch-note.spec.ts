@@ -12,14 +12,14 @@ test.beforeEach(async ({ page }) => {
   await installApiMocks(page)
 })
 
-test('shown on the switch date: muted line with date, no banner, link to the scoring module', async ({ page }) => {
+test('shown on the switch date: muted line, no banner, link to the scoring module', async ({ page }) => {
   await page.clock.setFixedTime(new Date(SWITCH + 3_600_000))
   await page.goto('/stats')
   const panel = page.locator('.stats-movers-panel')
   await panel.scrollIntoViewIfNeeded()
   const note = panel.locator('.stats-movers-note')
   await expect(note).toBeVisible()
-  await expect(note).toContainText('On 8 Oct 2026 the audit part of the score moved to cashu.info (failures attributed to each mint), so changes in this period include that switch.')
+  await expect(note).not.toContainText('the audit part of the score moved to cashu.info')
   await expect(note).not.toHaveAttribute('role', 'alert')
   const link = note.getByRole('link', { name: 'How scoring works' })
   await expect(link).toHaveAttribute('href', '/learn/how-to-choose-a-mint')
