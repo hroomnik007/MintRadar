@@ -14,6 +14,8 @@ import * as beAudit from '../../backend/src/shared/auditScore'
 import { computeReliabilityScore as feScore } from '@/utils/reliabilityScore'
 import * as feVersion from '@/utils/versionRule'
 import * as beVersion from '../../backend/src/shared/versionRule'
+import { TEST_MINT_URLS as feTestMints, isTestMint as feIsTestMint } from '@/constants/testMints'
+import { TEST_MINT_URLS as beTestMints, isTestMint as beIsTestMint } from '../../backend/src/testMints'
 import { VERSION_CASES, ORDER_CASES } from './versionCases'
 import { computeReliabilityScore as beScore } from '../../backend/src/shared/reliabilityScore'
 
@@ -118,6 +120,17 @@ describe('versionRule: backend and frontend copies agree', () => {
       const a = feScore(100, 14, v, 3, { blamed: 0, total: 100, fetchedAt: new Date().toISOString() }, L)
       const b = beScore(100, 14, v, 3, { blamed: 0, total: 100, fetchedAt: new Date().toISOString() }, L)
       expect(a).toBe(b)
+    }
+  })
+})
+
+describe('test-mint list: backend copy equals the frontend list', () => {
+  it('same URLs', () => {
+    expect([...beTestMints].sort()).toEqual([...feTestMints].sort())
+  })
+  it('same answer for listed, unlisted and trailing-slash URLs', () => {
+    for (const u of [...feTestMints, ...[...feTestMints].map(x => `${x}/`), 'https://mint.minibits.cash/Bitcoin', 'https://example.com']) {
+      expect(beIsTestMint(u), u).toBe(feIsTestMint(u))
     }
   })
 })

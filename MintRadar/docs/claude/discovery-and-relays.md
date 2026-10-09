@@ -25,6 +25,8 @@ same no-workspace caveat as `auditScore.ts`/`reliabilityScore.ts`) hold `TEST_MI
 `testnut.cashu.space`, `nofee.testnut.cashu.space`, `rugs.cashu.exchange`,
 `rugs01.cashu.exchange`, `cashu.centurymetadata.org`) — and `isTestMint(url)`.
 
+The two copies are compared by `src/__tests__/sharedModules.test.ts` (same URLs, same `isTestMint` answers). Server-side users of the backend copy: the `/api/stats` leaderboards and, since 2026-10-09, `/api/stats/reliability-movers` (test mints never take a Risers/Fallers slot).
+
 A pure keyword match on `/v1/info`'s `description`/`description_long` was deliberately
 rejected as the runtime mechanism: wording isn't consistent across mints, generic risk
 disclaimers on real production mints (Minibits, Sovran: "use at your own risk", "still in

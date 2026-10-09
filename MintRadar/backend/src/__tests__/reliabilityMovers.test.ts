@@ -98,3 +98,30 @@ describe('computeReliabilityMovers', () => {
     expect(risers[0].name).toBeNull()
   })
 })
+
+describe('test mints are excluded before the top-N cut', () => {
+  const TEST = 'https://testnut.cashu.space'
+  it('a test mint with the biggest fall is not shown; the next mint takes its place', () => {
+    const snaps = [
+      snap(TEST, 10, 90),                          // -80: would be first
+      snap('https://a.example', 70, 80),           // -10
+      snap('https://b.example', 74, 80),           // -6
+      snap('https://c.example', 75, 80),           // -5
+      snap('https://d.example', 76, 80),           // -4
+    ]
+    const { fallers } = computeReliabilityMovers(snaps)
+    expect(fallers.map(m => m.url)).toEqual(['https://a.example', 'https://b.example', 'https://c.example'])
+  })
+  it('a test mint with the biggest rise is not shown either', () => {
+    const { risers } = computeReliabilityMovers([
+      snap('https://nofee.testnut.cashu.space', 100, 20),
+      snap('https://a.example', 90, 80),
+    ])
+    expect(risers.map(m => m.url)).toEqual(['https://a.example'])
+  })
+  it('matches the test list the way isTestMint does (trailing slash)', () => {
+    const { fallers } = computeReliabilityMovers([snap(`${TEST}/`, 10, 90), snap('https://a.example', 70, 80)])
+    expect(fallers.map(m => m.url)).toEqual(['https://a.example'])
+  })
+})
+

@@ -98,7 +98,7 @@ export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, 
       <div className="stats-panel-head">
         <div>
           <div className="stats-panel-title">Reliability Score movers</div>
-          <div className="stats-panel-desc">Biggest score changes over the period.</div>
+          <div className="stats-panel-desc">Biggest score changes over the period. Test mints are not included.</div>
         </div>
         <div className="stats-tab-toggle">
           <button type="button" className={`stats-tab-btn${period === '7d' ? ' active' : ''}`} onClick={() => onPeriodChange('7d')}>7d</button>

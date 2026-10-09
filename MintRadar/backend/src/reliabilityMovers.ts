@@ -6,6 +6,10 @@
 // (latest, and the most recent one at-or-before the N-day cutoff — a
 // point-in-time lookup, never an average); this module only turns already-
 // resolved snapshots into deltas, applies the +/-3 threshold, and ranks them.
+// Test mints (testMints.ts, the same manual list as the /api/stats leaderboards) are dropped
+// BEFORE ranking, so one never takes a top-N slot from a real mint.
+
+import { isTestMint } from './testMints.js'
 
 export const RELIABILITY_MOVER_THRESHOLD = 3
 export const RELIABILITY_MOVER_TOP_N = 3
@@ -29,7 +33,7 @@ export interface ReliabilityMovers {
 }
 
 export function computeReliabilityMovers(snapshots: MintScoreSnapshot[]): ReliabilityMovers {
-  const deltas = snapshots.map(s => ({ url: s.url, name: s.name, delta: s.latestScore - s.oldScore }))
+  const deltas = snapshots.filter(s => !isTestMint(s.url)).map(s => ({ url: s.url, name: s.name, delta: s.latestScore - s.oldScore }))
 
   const risers = deltas
     .filter(m => m.delta >= RELIABILITY_MOVER_THRESHOLD)

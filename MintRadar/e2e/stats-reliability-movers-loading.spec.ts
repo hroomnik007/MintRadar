@@ -49,3 +49,11 @@ test('shows a skeleton while loading and never flashes "No data yet" on load or 
   await expect(panel.getByText('ThirtyDay Riser')).toBeVisible()
   await expect(panel.getByText('SevenDay Riser')).toHaveCount(0)
 })
+
+test('the panel says that test mints are not included', async ({ page }) => {
+  await page.goto('/stats')
+  const panel = page.locator('.stats-movers-panel')
+  await panel.scrollIntoViewIfNeeded()
+  await expect(panel.locator('.stats-panel-desc')).toHaveText('Biggest score changes over the period. Test mints are not included.')
+})
+

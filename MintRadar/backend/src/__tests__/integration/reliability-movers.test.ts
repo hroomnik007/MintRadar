@@ -49,6 +49,23 @@ describe('GET /api/stats/reliability-movers', () => {
     expect(res.body.fallers).toEqual([{ url: 'https://faller.example.com', name: 'Faller Mint', delta: -10 }])
   })
 
+  it('leaves test mints out of both windows, so the next mint takes the slot', async () => {
+    for (const period of ['7d', '30d'] as const) {
+      query.mockResolvedValueOnce({
+        rows: [
+          row('https://testnut.cashu.space', 'Testnut', 5, 95),
+          row('https://rugs.cashu.exchange', 'Rugs', 99, 40),
+          row('https://real-faller.example.com', 'Real Faller', 70, 80),
+          row('https://real-riser.example.com', 'Real Riser', 90, 80),
+        ],
+      })
+      const res = await request(app).get('/api/stats/reliability-movers').query({ period })
+      expect(res.status).toBe(200)
+      expect(res.body.fallers.map((m: { url: string }) => m.url)).toEqual(['https://real-faller.example.com'])
+      expect(res.body.risers.map((m: { url: string }) => m.url)).toEqual(['https://real-riser.example.com'])
+    }
+  })
+
   it('defaults to period=7d and requests a 7-day cutoff', async () => {
     query.mockResolvedValueOnce({ rows: [] })
     await request(app).get('/api/stats/reliability-movers')
