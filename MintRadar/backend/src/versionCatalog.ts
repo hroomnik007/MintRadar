@@ -129,8 +129,10 @@ const TRACKED_FAMILIES = ['nutshell', 'cdk'] as const
 
 // The ONE "latest" per software family: the software_versions cache (GitHub release catalog without
 // pre-releases and drafts) with the grace period applied. A family the cache has no usable row for falls
-// back to the newest STABLE version seen among the tracked mints of that family. Never throws — a DB
-// hiccup just leaves a family without a "latest" (its mints are then not labelled and score neutrally).
+// back to the highest STABLE version that at least two DISTINCT tracked mints of that family report exactly
+// (newestStableByFamily: one hostile mint reporting a made-up version moves nothing); with no such version
+// the family has no "latest". Never throws — a DB hiccup just leaves a family without a "latest" (its mints
+// are then not labelled and score neutrally).
 export async function getLatestVersionsMap(): Promise<LatestVersions> {
   let map: LatestVersions = {}
   try {
@@ -143,7 +145,8 @@ export async function getLatestVersionsMap(): Promise<LatestVersions> {
   }
   if (TRACKED_FAMILIES.every(f => map[f])) return map
   try {
-    const seen = await pool.query<{ version: string }>('SELECT DISTINCT version FROM mints WHERE version IS NOT NULL')
+    // One row per mint (url is the key): the fallback counts distinct mints per exact version.
+    const seen = await pool.query<{ version: string }>('SELECT version FROM mints WHERE version IS NOT NULL')
     const fallback = newestStableByFamily(seen.rows.map(r => r.version))
     for (const f of TRACKED_FAMILIES) {
       if (!map[f] && fallback[f]) map[f] = fallback[f]

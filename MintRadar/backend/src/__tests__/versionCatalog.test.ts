@@ -145,24 +145,52 @@ describe('getLatestVersionsMap', () => {
     await expect(getLatestVersionsMap()).resolves.toEqual({})
   })
 
-  it('falls back to the newest STABLE version seen among the tracked mints for a family the catalog lacks', async () => {
+  it('falls back, for a family the catalog lacks, to the highest STABLE version at least two distinct mints report', async () => {
     queryMock
       .mockResolvedValueOnce({ rows: [{ software: 'nutshell', latest_version: '0.21.0', previous_version: null, released_at: null }] })
       .mockResolvedValueOnce({ rows: [
-        { version: 'cdk-mintd/0.18.0-rc.1' }, { version: 'cdk-mintd/0.17.7' }, { version: 'cdk-mintd/0.18.1' },
-        { version: 'cdk-mintd/0.19.0-rc.0' }, { version: 'Nutshell/0.99.0' }, { version: 'LekMint/9.9.9' },
+        { version: 'cdk-mintd/0.18.0-rc.1' }, { version: 'cdk-mintd/0.18.0-rc.1' }, { version: 'cdk-mintd/0.17.7' }, { version: 'cdk-mintd/0.17.7' },
+        { version: 'cdk-mintd/0.18.1' }, { version: 'cdk/0.18.1' }, // two mints, only the software-name prefix differs
+        { version: 'cdk-mintd/0.19.0-rc.0' }, { version: 'cdk-mintd/0.19.0-rc.0' },
+        { version: 'Nutshell/0.99.0' }, { version: 'Nutshell/0.99.0' }, { version: 'LekMint/9.9.9' }, { version: 'LekMint/9.9.9' },
       ] })
     const map = await getLatestVersionsMap()
     expect(map['cdk']).toEqual({ major: 0, minor: 18 }) // 0.19.0-rc.0 is a pre-release: never "latest"
     expect(map['nutshell']).toEqual({ major: 0, minor: 21 }) // the catalog wins over the mints' 0.99.0
     expect(map['lekmint']).toBeUndefined()
+    const sql = queryMock.mock.calls[1]?.[0] as string
+    expect(sql).not.toMatch(/DISTINCT/i) // one row per mint, so distinct mints can be counted
+  })
+
+  it('one hostile mint reporting 0.99.0 changes nothing; two mints reporting it do', async () => {
+    const catalogMissing = () => queryMock.mockResolvedValueOnce({ rows: [] })
+    catalogMissing()
+    queryMock.mockResolvedValueOnce({ rows: [
+      { version: 'Nutshell/0.21.0' }, { version: 'Nutshell/0.21.0' }, { version: 'Nutshell/0.99.0' },
+      { version: 'cdk-mintd/0.18.1' }, { version: 'cdk-mintd/0.18.1' },
+    ] })
+    expect(await getLatestVersionsMap()).toEqual({ nutshell: { major: 0, minor: 21 }, cdk: { major: 0, minor: 18 } })
+
+    catalogMissing()
+    queryMock.mockResolvedValueOnce({ rows: [
+      { version: 'Nutshell/0.21.0' }, { version: 'Nutshell/0.21.0' }, { version: 'Nutshell/0.99.0' }, { version: 'Nutshell/v0.99.0' },
+      { version: 'cdk-mintd/0.18.1' }, { version: 'cdk-mintd/0.18.1' },
+    ] })
+    expect((await getLatestVersionsMap())['nutshell']).toEqual({ major: 0, minor: 99 })
+  })
+
+  it('no latest for a family when no version is reported by two mints (and no catalog row)', async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ version: 'Nutshell/0.21.0' }, { version: 'cdk-mintd/0.18.1' }, { version: 'cdk-mintd/0.18.0' }] })
+    expect(await getLatestVersionsMap()).toEqual({})
   })
 
   it('uses the mints for both families when the catalog read fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     queryMock
       .mockRejectedValueOnce(new Error('relation does not exist'))
-      .mockResolvedValueOnce({ rows: [{ version: 'Nutshell/0.21.0' }, { version: 'cdk-mintd/0.18.1' }] })
+      .mockResolvedValueOnce({ rows: [{ version: 'Nutshell/0.21.0' }, { version: 'Nutshell/0.21.0' }, { version: 'cdk-mintd/0.18.1' }, { version: 'cdk-mintd/0.18.1' }] })
     await expect(getLatestVersionsMap()).resolves.toEqual({ nutshell: { major: 0, minor: 21 }, cdk: { major: 0, minor: 18 } })
   })
 })

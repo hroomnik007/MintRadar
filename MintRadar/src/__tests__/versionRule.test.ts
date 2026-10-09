@@ -57,12 +57,48 @@ describe('compareMintVersionNumbers (ordering)', () => {
   })
 })
 
-describe('newestStableByFamily (the fallback "latest")', () => {
-  it('takes the newest stable version per family and ignores pre-releases and unknown software', () => {
+describe('newestStableByFamily (the fallback "latest": at least two DISTINCT mints report the exact version)', () => {
+  const two = (v: string) => [v, v]
+  it('takes the highest stable version per family that two mints report; pre-releases and unknown software never count', () => {
     expect(newestStableByFamily([
-      'Nutshell/0.20.3', 'Nutshell/0.21.0', 'Nutshell/0.22.0-rc.1', 'cdk-mintd/0.18.1', 'cdk-mintd/0.19.0-rc.0',
-      'LekMint/9.9.9', null, undefined, 'garbage',
+      ...two('Nutshell/0.20.3'), ...two('Nutshell/0.21.0'), ...two('Nutshell/0.22.0-rc.1'), ...two('cdk-mintd/0.18.1'),
+      ...two('cdk-mintd/0.19.0-rc.0'), ...two('LekMint/9.9.9'), null, undefined, 'garbage', 'garbage',
     ])).toEqual({ nutshell: { major: 0, minor: 21 }, cdk: { major: 0, minor: 18 } })
+  })
+
+  it('one hostile mint reporting 0.99.0 changes nothing', () => {
+    const honest = [...two('Nutshell/0.21.0'), 'Nutshell/0.20.3', 'Nutshell/0.20.3']
+    expect(newestStableByFamily(honest)).toEqual({ nutshell: { major: 0, minor: 21 } })
+    expect(newestStableByFamily([...honest, 'Nutshell/0.99.0'])).toEqual({ nutshell: { major: 0, minor: 21 } })
+  })
+
+  it('two mints reporting 0.99.0 do move it', () => {
+    expect(newestStableByFamily(['Nutshell/0.21.0', 'Nutshell/0.21.0', 'Nutshell/0.99.0', 'Nutshell/0.99.0']))
+      .toEqual({ nutshell: { major: 0, minor: 99 } })
+  })
+
+  it('mints that only differ by prefix count as the same version', () => {
+    expect(newestStableByFamily(['cdk/0.18.1', 'cdk-mintd/0.18.1'])).toEqual({ cdk: { major: 0, minor: 18 } })
+    expect(newestStableByFamily(['Nutshell/v0.99.0', 'nutshell/0.99.0'])).toEqual({ nutshell: { major: 0, minor: 99 } })
+    expect(newestStableByFamily(['CDK-MINTD/0.18.1', 'cdk/v0.18.1'])).toEqual({ cdk: { major: 0, minor: 18 } })
+  })
+
+  it('different exact versions do not add up (0.99.0 and 0.99.1 are two different versions)', () => {
+    expect(newestStableByFamily(['Nutshell/0.99.0', 'Nutshell/0.99.1'])).toEqual({})
+    expect(newestStableByFamily(['Nutshell/0.20.3', 'Nutshell/0.20.3.1'])).toEqual({})
+  })
+
+  it('a family where no version qualifies gets no latest at all', () => {
+    expect(newestStableByFamily(['Nutshell/0.21.0', 'cdk-mintd/0.18.1'])).toEqual({})
+    expect(newestStableByFamily([])).toEqual({})
+  })
+
+  it('a pre-release reported by two mints still never counts', () => {
+    expect(newestStableByFamily(['cdk-mintd/0.19.0-rc.1', 'cdk-mintd/0.19.0-rc.1'])).toEqual({})
+  })
+
+  it('the minimum can be lowered explicitly (the old "newest seen" behaviour)', () => {
+    expect(newestStableByFamily(['Nutshell/0.99.0'], 1)).toEqual({ nutshell: { major: 0, minor: 99 } })
   })
 })
 

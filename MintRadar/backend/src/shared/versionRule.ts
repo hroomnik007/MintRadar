@@ -221,17 +221,44 @@ export function latestMapFor(
   return family ? { [family]: latest } : undefined
 }
 
-/** Fallback for "latest": the newest STABLE version seen per family among the given mint version strings. */
-export function newestStableByFamily(versions: Iterable<string | null | undefined>): LatestVersions {
-  const out: LatestVersions = {}
+/** A fallback "latest" must be reported by at least this many DISTINCT mints (one hostile mint must not move it). */
+export const MIN_MINTS_FOR_FALLBACK_LATEST = 2
+
+/**
+ * Fallback for "latest" (used only when the GitHub release catalog has no value for a family): the highest STABLE
+ * version, per family, that at least `minMints` DISTINCT mints report EXACTLY (same family, same major.minor.patch
+ * and fourth segment; the software-name spelling ("cdk" / "cdk-mintd" / "Nutshell"), its case and a leading "v" do
+ * not matter). `versions` holds ONE entry per mint (the mint's own reported version string). A family where no
+ * version qualifies gets no entry: there is no latest for it. Mint versions are untrusted, which is why a single
+ * mint reporting a made-up "0.99.0" changes nothing.
+ */
+export function newestStableByFamily(
+  versions: Iterable<string | null | undefined>,
+  minMints: number = MIN_MINTS_FOR_FALLBACK_LATEST,
+): LatestVersions {
+  const seen = new Map<string, { family: string; p: ParsedVersion; mints: number }>()
   for (const v of versions) {
     if (!v) continue
     const { software, versionNumber } = splitVersionString(v)
     const family = canonicalSoftwareName(software)
     const p = family ? parseVersion(versionNumber) : null
     if (!family || !p || p.prerelease !== null) continue
-    const cur = out[family]
-    if (!cur || p.major > cur.major || (p.major === cur.major && p.minor > cur.minor)) out[family] = { major: p.major, minor: p.minor }
+    const key = `${family}|${p.major}.${p.minor}.${p.patch}.${p.segment4 ?? 0}`
+    const cur = seen.get(key)
+    if (cur) cur.mints += 1
+    else seen.set(key, { family, p, mints: 1 })
   }
+  const best = new Map<string, ParsedVersion>()
+  for (const { family, p, mints } of seen.values()) {
+    if (mints < minMints) continue
+    const cur = best.get(family)
+    if (!cur || compareMintVersionNumbers(formatBase(p), formatBase(cur)) > 0) best.set(family, p)
+  }
+  const out: LatestVersions = {}
+  for (const [family, p] of best) out[family] = { major: p.major, minor: p.minor }
   return out
+}
+
+function formatBase(p: ParsedVersion): string {
+  return `${p.major}.${p.minor}.${p.patch}${p.segment4 !== null ? `.${p.segment4}` : ''}`
 }
