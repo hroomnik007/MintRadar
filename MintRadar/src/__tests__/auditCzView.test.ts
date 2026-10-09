@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { adaptAuditCz, auditCzChecks, auditCzNeutralKind, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, type AuditCzView } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzChecks, auditCzNeutralKind, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, type AuditCzView } from '@/utils/auditCz'
 import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
 
 type Row = AuditCzData['swaps'][number]
@@ -98,6 +98,12 @@ describe('tiles from the stored detail (LNpay values)', () => {
     expect(formatAvgSwapTime(999.4)).toBe('999 ms')
     expect(formatAvgSwapTime(999.6)).toBe('1.0 s')
     expect(formatAvgSwapTime(0)).toBe('0 ms')
+    expect(formatSwapDuration(0)).toBe('0.1 s')
+    expect(formatSwapDuration(49)).toBe('0.1 s')
+    expect(formatSwapDuration(50)).toBe('0.1 s')
+    expect(formatSwapDuration(640)).toBe('0.6 s')
+    expect(formatSwapDuration(3974)).toBe('4.0 s')
+    expect(formatSwapDuration(14221)).toBe('14.2 s')
   })
   it('tooltips are the honest wording', () => {
     const t = tiles(LNPAY)

@@ -1,5 +1,5 @@
 import { InfoTooltip } from '@/components/InfoTooltip'
-import { formatAvgSwapTime, type AuditCzView, type AuditSwapRow } from '@/utils/auditCz'
+import { formatSwapDuration, type AuditCzView, type AuditSwapRow } from '@/utils/auditCz'
 import { mintHostname } from '@/utils/mintFormatting'
 
 // The cashu.info view of the Audit tab below the header: four tiles, the auditor's checks and two
@@ -52,7 +52,7 @@ function SwapTable({ title, firstHeader, rows, expanded, onToggle }: {
                     <td>{s.toUrl ? mintHostname(s.toUrl) : '—'}</td>
                     <td>{s.amount !== null ? `${s.amount} sat` : '—'}</td>
                     <td>{s.fee !== null ? s.fee : '—'}</td>
-                    <td>{s.timeTakenMs !== null ? formatAvgSwapTime(s.timeTakenMs) : '—'}</td>
+                    <td>{s.timeTakenMs !== null ? formatSwapDuration(s.timeTakenMs) : '—'}</td>
                     {/* State is only OK or Failed. No title: the failure reason must not appear on hover. */}
                     <td>{s.state === 'OK' ? 'OK' : 'Failed'}</td>
                   </tr>

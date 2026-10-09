@@ -155,6 +155,12 @@ export function formatAvgSwapTime(ms: number): string {
   return r < 1000 ? `${r} ms` : `${(r / 1000).toFixed(1)} s`
 }
 
+/** Duration column: always seconds, one decimal. Under 50 ms stays "0.1 s", never "0.0 s". */
+export function formatSwapDuration(ms: number): string {
+  if (ms < 50) return '0.1 s'
+  return `${(ms / 1000).toFixed(1)} s`
+}
+
 const fmt = (n: number) => n.toLocaleString('en-US')
 
 function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
