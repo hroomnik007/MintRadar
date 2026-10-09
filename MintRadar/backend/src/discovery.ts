@@ -260,10 +260,12 @@ export async function discoverMintsFromNostr(): Promise<number> {
          nostr_announce_d = CASE
            WHEN mints.nostr_announced_at IS NULL OR EXCLUDED.nostr_announced_at > mints.nostr_announced_at
              OR mints.nostr_announce_d IS NULL
-           THEN EXCLUDED.nostr_announce_d ELSE mints.nostr_announce_d END`,
+           THEN EXCLUDED.nostr_announce_d ELSE mints.nostr_announce_d END
+       RETURNING (xmax = 0) AS inserted`,
       [url, meta.createdAt, meta.id, meta.pubkey, meta.dTag],
     )
-    if ((r.rowCount ?? 0) > 0) added38172++
+    // rowCount is 1 for a DO UPDATE as well; (xmax = 0) is true only for a row that was really inserted.
+    if (r.rows[0]?.['inserted'] === true) added38172++
   }
   console.log(`[discovery] kind:38172 found ${discovered38172.size} mints, added ${added38172} new`)
 

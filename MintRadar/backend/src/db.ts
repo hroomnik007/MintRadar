@@ -192,6 +192,13 @@ export async function initDb(): Promise<void> {
 
   // Column migrations — each in its own query so a failure in one doesn't block others
   const migrations = [
+    // Small key/value store for one-time application state (first user: 'known_mints_seeded', see
+    // cron.ts seedKnownMints). Additive and idempotent.
+    `CREATE TABLE IF NOT EXISTS app_state (
+       key TEXT PRIMARY KEY,
+       value TEXT NOT NULL,
+       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+     )`,
     // Reliability Score rename (was "Trust Score") — atomic, metadata-only column
     // and index renames, guarded so they're a no-op once already applied (fresh
     // installs never have the old names, so these guards also make the migration

@@ -9,7 +9,7 @@ import { refreshAllMintReviews, recomputeReviewCountRollups, isReviewSyncRunning
 import { startReviewsSyncTimer } from './reviewsSchedule.js'
 import { refreshReliabilityMoversRollup } from './reliabilityMoversRollup.js'
 import { refreshReviewSurgeBaseline } from './reviewSurgeRollup.js'
-import { pruneOldNotificationSubscriptions } from './db.js'
+import { pool, pruneOldNotificationSubscriptions } from './db.js'
 import { publishServiceProfile } from './nostrService.js'
 import { fetchLatestUpstreamVersions } from './versionCatalog.js'
 import { isAllowlistMode, getAllowlistUrls } from './allowlist.js'
@@ -25,7 +25,7 @@ export function getLastProbeCompletedAt(): string | null {
   return lastProbeCompletedAt
 }
 
-const KNOWN_MINTS = [
+export const KNOWN_MINTS = [
   'https://mint.minibits.cash/Bitcoin',
   'https://stablenut.umint.cash',
   'https://mint.coinos.io',
@@ -46,11 +46,35 @@ const KNOWN_MINTS = [
   'https://npub.cash/Bitcoin',
 ]
 
+/** app_state key written once the public KNOWN_MINTS have been seeded. */
+export const KNOWN_MINTS_SEEDED_KEY = 'known_mints_seeded'
+
+// KNOWN_MINTS is a BOOTSTRAP list: it is inserted ONCE per database, not at every process start. Seeding at
+// every start re-inserted mints the prune had just removed (dead, never-online ones) after each deploy. Once
+// the app_state flag exists nothing is inserted any more — a pruned mint stays gone. (The seed's upsert only
+// ever changed `is_known` to true on existing rows, which nothing reads, so there is nothing to refresh.)
+// The flag is written only after the whole list was seeded; a failure halfway leaves no flag and the next
+// start seeds again (idempotent). Allowlist mode (MINT_ALLOWLIST) is a fixed, operator-configured list and
+// keeps seeding at every start.
 export async function seedKnownMints(upsertMint: (url: string, name: undefined, isKnown: boolean) => Promise<void>): Promise<void> {
-  const urls = getAllowlistUrls() ?? KNOWN_MINTS
-  for (const url of urls) {
+  const allowlist = getAllowlistUrls()
+  if (allowlist) {
+    for (const url of allowlist) await upsertMint(url, undefined, true)
+    return
+  }
+  const flag = await pool.query('SELECT 1 FROM app_state WHERE key = $1', [KNOWN_MINTS_SEEDED_KEY])
+  if ((flag.rowCount ?? 0) > 0) {
+    console.log('[seed] known mints were seeded before — not inserting them again')
+    return
+  }
+  for (const url of KNOWN_MINTS) {
     await upsertMint(url, undefined, true)
   }
+  await pool.query(
+    'INSERT INTO app_state (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING',
+    [KNOWN_MINTS_SEEDED_KEY, new Date().toISOString()],
+  )
+  console.log(`[seed] seeded ${KNOWN_MINTS.length} known mints (once per database)`)
 }
 
 export function startCron(): void {
