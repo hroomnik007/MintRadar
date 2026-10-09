@@ -24,18 +24,6 @@ export function AuditCzTiles({ view }: { view: AuditCzView }) {
   )
 }
 
-export function AuditCzChecks({ view }: { view: AuditCzView }) {
-  if (!view.checks) return null
-  return (
-    <div className="audit-cz-card" data-testid="audit-cz-checks">
-      <div className="audit-cz-card-title">Checks by the auditor</div>
-      {view.checks.signatures && <p className="audit-cz-check-line">{view.checks.signatures}</p>}
-      {view.checks.proofs && <p className="audit-cz-check-line">{view.checks.proofs}</p>}
-      <p className="audit-cz-muted">Tests the auditor ran with its own small amounts. They do not prove that the mint can pay out everything it owes.</p>
-    </div>
-  )
-}
-
 function SwapTable({ title, firstHeader, rows, expanded, onToggle }: {
   title: string
   firstHeader: 'To' | 'From'

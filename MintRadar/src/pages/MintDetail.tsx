@@ -22,14 +22,14 @@ import { MintComparePicker } from '@/components/MintComparePicker'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { MintNetworkCard } from '@/components/MintNetworkCard'
 import { networkRows } from '@/utils/networkInfo'
-import { AuditCzTiles, AuditCzChecks, AuditCzSwapTables } from '@/components/AuditCzCards'
+import { AuditCzTiles, AuditCzSwapTables } from '@/components/AuditCzCards'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
 import { operatorPubkeys } from '@/utils/operatorPubkeys'
 import { cleanMintNameDetailed } from '@/utils/cleanMintName'
 import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
-import { auditComponent, auditDataState, auditAgeHours, isAuditUnknown, AUDIT_MIN_SAMPLES, AUDIT_MAX_AGE_HOURS } from '@/utils/auditScore'
+import { auditComponent, auditDataState, auditAgeHours, isAuditUnknown, AUDIT_MIN_SAMPLES } from '@/utils/auditScore'
 import { auditFreshness } from '@/utils/auditFreshness'
 import { IcClose } from '@/components/IcClose'
 import { clickableProps } from '@/utils/clickableProps'
@@ -970,7 +970,7 @@ function MintDetailContent({ url }: { url: string }) {
   const auditState = auditDataState(auditCzBlamed, auditCzTotal, auditCzFetchedAt, now)
   const auditAgeH = auditAgeHours(auditCzFetchedAt, now)
   const auditDetailText = auditState === 'scored'
-    ? `${Math.min(auditCzBlamed ?? 0, auditCzTotal ?? 0)} of ${auditCzTotal} swaps in the last 7 days had a failure attributed to this mint (cashu.info)`
+    ? undefined
     : auditState === 'too-few'
       ? `Not enough audit data yet (fewer than ${AUDIT_MIN_SAMPLES} swaps in the last 7 days): neutral`
       : auditState === 'too-old'
@@ -1019,7 +1019,7 @@ function MintDetailContent({ url }: { url: string }) {
   const stripErrors = breakdownAuditRecentErrors
   const reliabilityBreakdownRows = [
     { label: 'Uptime (40%)', display: `${uptimePct}%`, score: breakdownUScore, max: 40, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.' },
-    { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, detail: auditDetailText, score: breakdownAScore, max: 25, color: auditRowColor, tooltip: `Source: cashu.info. The share of the swaps its auditor ran against this mint in the last 7 days whose failure is attributed to the mint itself. cashu.info attributes to a mint only the failures the mint caused, not amounts below its minimum, the auditor's own balance or Lightning routing. With fewer than ${AUDIT_MIN_SAMPLES} swaps, no data, or data older than ${AUDIT_MAX_AGE_HOURS / 24} days the row is a neutral 12.5 of 25.`, ...(auditStaleNote ? { note: auditStaleNote } : {}) },
+    { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, ...(auditDetailText ? { detail: auditDetailText } : {}), score: breakdownAScore, max: 25, color: auditRowColor, tooltip: `Failures cashu.info attributes to this mint, as a share of its auditor's swaps in the last 7 days. Not the overall success rate. Fewer than ${AUDIT_MIN_SAMPLES} swaps or no recent data: a neutral 12.5 of 25.`, ...(auditStaleNote ? { note: auditStaleNote } : {}) },
     { label: 'NUT Support (15%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 15, color: supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.' },
     { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? 'var(--accent)' : breakdownVScore >= 6 ? 'var(--amber)' : 'var(--red)', tooltip: "How recent the mint's software version is compared to the latest known Nutshell releases. Newer = higher score." },
     { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? 'var(--accent)' : breakdownCScore >= 2 ? 'var(--amber)' : 'var(--red)', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.' },
@@ -2048,8 +2048,8 @@ function MintDetailContent({ url }: { url: string }) {
             ) : (
               <table className="md-vh-table">
                 <colgroup>
-                  <col style={{width:'96px'}} />
-                  <col />
+                  <col className="md-vh-col-date" />
+                  <col className="md-vh-col-from" />
                   <col />
                 </colgroup>
                 <thead>
@@ -2208,7 +2208,6 @@ function MintDetailContent({ url }: { url: string }) {
                 )}
 
                 {czView ? (<>
-                  <AuditCzChecks view={czView} />
                   <AuditCzSwapTables view={czView} expandedFrom={showAllCzFrom} expandedTo={showAllCzTo} onToggleFrom={() => setShowAllCzFrom(v => !v)} onToggleTo={() => setShowAllCzTo(v => !v)} />
                 </>) : (<>
                 {/* Recent swaps — last 8, newest first. Failed rows are muted red. */}

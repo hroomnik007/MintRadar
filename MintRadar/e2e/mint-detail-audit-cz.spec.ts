@@ -13,7 +13,7 @@ interface Rect { x: number; y: number; width: number; height: number; right: num
 const cell = (page: Page, label: string) => page.locator('.audit-summary-strip .audit-summary-cell', { hasText: label })
 const row = (page: Page, host: string) => page.locator('.audit-swaps-table tbody tr', { hasText: host })
 const czLink = (page: Page) => page.getByRole('link', { name: 'Open on cashu.info →' })
-// cashu.info view: tile by key, the checks card and the two table cards ("Swaps from this mint", "Swaps to this mint").
+// cashu.info view: tile by key, the two table cards ("Swaps from this mint", "Swaps to this mint").
 const tile = (page: Page, key: string) => page.locator(`.audit-cz-tiles [data-tile="${key}"]`)
 const checksCard = (page: Page) => page.getByTestId('audit-cz-checks')
 const tableCard = (page: Page, i: 0 | 1) => page.getByTestId('audit-cz-table').nth(i)
@@ -27,8 +27,6 @@ const expandFrom = async (page: Page) => {
   const b = card.locator('.audit-swaps-show-all-btn')
   if (await b.count()) await b.click()
 }
-const SIG_GOOD = 'Proof signatures 56 valid, 0 invalid — the mint signed them with its published key.'
-const PROOF_GOOD = 'Our ecash 9 proofs still unspent — the mint has not marked them spent.'
 /** The State cell's visible text: the visually hidden failure text is left out. */
 const visibleState = (page: Page, host: string) =>
   row(page, host).locator('td').last().evaluate(td => {
@@ -49,7 +47,7 @@ const onlyCz = (swaps: ReturnType<typeof czSwapList>, extra: Record<string, unkn
   ({ alpha: NO_8333, cz: auditCzResponse({ swaps, ...extra }) })
 
 // ── a) cz is the only source ────────────────────────────────────
-test('only cz has data: header, four tiles from the stored detail, checks card, two tables, safe link, no switch', async ({ page }) => {
+test('only cz has data: header, four tiles from the stored detail, no checks card, two tables, safe link, no switch', async ({ page }) => {
   // 7 OK, 2 failed melts, 1 below-minimum row = 10 swaps from this mint, plus 2 swaps to it.
   const swaps = [
     ...czSwapList([ok, ok, melt, ok, ok, limits, ok, melt, ok, ok]),
@@ -73,9 +71,7 @@ test('only cz has data: header, four tiles from the stored detail, checks card, 
   // The bar shows both directions together.
   await expect(page.locator('.audit-swap-bar-mark')).toHaveCount(12)
 
-  await expect(checksCard(page)).toContainText('Checks by the auditor')
-  await expect(checksCard(page).locator('.audit-cz-check-line')).toHaveText([SIG_GOOD, PROOF_GOOD])
-  await expect(checksCard(page)).toContainText('Tests the auditor ran with its own small amounts. They do not prove that the mint can pay out everything it owes.')
+  await expect(checksCard(page)).toHaveCount(0)
 
   await expect(page.getByTestId('audit-cz-table')).toHaveCount(2)
   await expect(fromCard(page)).toContainText('Swaps from this mint')
@@ -219,37 +215,6 @@ test.describe('tiles from the stored detail', () => {
       expect(pop).toEqual({ t: 'none', l: 'normal', f: '10px' })
       await page.mouse.move(0, 0)
     }
-  })
-})
-
-test.describe('Checks by the auditor', () => {
-  test('invalid signatures: neutral wording, "without a proof" appended', async ({ page }) => {
-    await gotoAuditTab(page, onlyCz([], { detail: czDetail({ swaps7d: { ...LNPAY_DETAIL.swaps7d, dleq: { valid: 40, invalid: 3, missing: 2 } } }) }))
-    await expect(checksCard(page).locator('.audit-cz-check-line').first()).toHaveText(
-      "Proof signatures 40 valid, 3 invalid — some signatures did not verify against the mint's published key. 2 without a proof.")
-    await expect(checksCard(page)).not.toContainText(/fraud|cheat|fake|scam|steal/i)
-  })
-
-  test('proofs marked spent and pending', async ({ page }) => {
-    await gotoAuditTab(page, onlyCz([], { detail: czDetail({ integrity: { proof_state: { checked: 9, spent: 2, pending: 1 } } }) }))
-    await expect(checksCard(page).locator('.audit-cz-check-line').last()).toHaveText("2 of the auditor's 9 proofs were marked spent by the mint. 1 pending.")
-  })
-
-  test('a line without data is hidden; with neither line the whole card is gone', async ({ page }) => {
-    await gotoAuditTab(page, onlyCz([], { detail: czDetail({ swaps7d: { ...LNPAY_DETAIL.swaps7d, dleq: { valid: 0, invalid: 0, missing: 0 } } }) }))
-    await expect(checksCard(page).locator('.audit-cz-check-line')).toHaveText([PROOF_GOOD])
-  })
-
-  test('neither line has data: no card, no muted line', async ({ page }) => {
-    await gotoAuditTab(page, onlyCz([], { detail: czDetail({ swaps7d: { ...LNPAY_DETAIL.swaps7d, dleq: { valid: 0, invalid: 0, missing: 0 } }, integrity: { proof_state: { checked: 0, spent: 0, pending: 0 } } }) }))
-    await expect(checksCard(page)).toHaveCount(0)
-    await expect(page.getByText('Tests the auditor ran with its own small amounts')).toHaveCount(0)
-    await expect(page.locator('.audit-cz-tiles')).toBeVisible()
-  })
-
-  test('there is no swap-test line', async ({ page }) => {
-    await gotoAuditTab(page, onlyCz([]))
-    await expect(checksCard(page)).not.toContainText(/swap test/i)
   })
 })
 

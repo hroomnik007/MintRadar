@@ -26,7 +26,6 @@ const shot = async (page: Page, name: string) => {
 }
 // audit.8333.space fields (Audit tab) + the cashu.info 7-day window that feeds the Reliability Score row
 const base = { auditNMints: 1000, auditNMelts: 500, auditRecentTotal: 100, auditRecentErrors: 2, auditCzTotal: 100, auditCzBlamed: 2 }
-const SCORED = '2 of 100 swaps in the last 7 days had a failure attributed to this mint (cashu.info)'
 
 if (process.env.AUDIT_W) test.use({ viewport: { width: Number(process.env.AUDIT_W), height: 900 } })
 
@@ -39,7 +38,7 @@ test.describe('Audit data freshness', () => {
     await expect(page.locator('.audit-summary-cell', { hasText: "Auditor's last check" })).toHaveCount(0)
     await expect(page.locator('.audit-summary-cell', { hasText: 'MintRadar last synced' })).toHaveCount(0)
     await expect(page.locator('.audit-stale-notice')).toHaveCount(0)
-    await expect(page.locator('.rb-row-detail').first()).toHaveText(SCORED)
+    await expect(page.locator('.rb-row-detail')).toHaveCount(0)
     await expect(page.locator('.rb-row-note')).toHaveCount(0)
     await shot(page, 'fresh')
   })
@@ -47,7 +46,7 @@ test.describe('Audit data freshness', () => {
   test('detail 5 days old: still scored, quiet "data 5 days old" note, no copper notice', async ({ page }) => {
     await gotoAudit(page, { ...base, auditCheckedAt: ago(3 * H), auditSyncedAt: ago(2 * H), auditCzFetchedAt: ago(5 * D + H) })
     await expect(page.locator('.audit-stale-notice')).toHaveCount(0)
-    await expect(page.locator('.rb-row-detail').first()).toHaveText(SCORED)
+    await expect(page.locator('.rb-row-detail')).toHaveCount(0)
     await expect(page.locator('.rb-row-note').first()).toHaveText('data 5 days old')
     await shot(page, 'detail-5d')
   })
@@ -72,7 +71,7 @@ test.describe('Audit data freshness', () => {
   test('stale audit.8333.space data does not touch the score row (no note, scored text)', async ({ page }) => {
     await gotoAudit(page, { ...base, auditCheckedAt: ago(10 * D + H), auditSyncedAt: ago(2 * D), auditCzFetchedAt: ago(2 * H) })
     await expect(page.locator('.audit-stale-notice')).toHaveCount(0)
-    await expect(page.locator('.rb-row-detail').first()).toHaveText(SCORED)
+    await expect(page.locator('.rb-row-detail')).toHaveCount(0)
     await expect(page.locator('.rb-row-note')).toHaveCount(0)
     await shot(page, 'auditor-old')
   })

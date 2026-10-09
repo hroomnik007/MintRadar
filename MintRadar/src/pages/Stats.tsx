@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { clickableProps } from '@/utils/clickableProps'
 import { IcClose } from '@/components/IcClose'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
@@ -19,8 +19,6 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { PageHead } from '@/components/layout/PageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
-import { useNow } from '@/hooks/useNow'
-import { showAuditSwitchNote } from '@/utils/auditSourceSwitch'
 import './Stats.css'
 
 interface StatsData {
@@ -499,7 +497,7 @@ function NetworkHealthComponentRow({ component: c, index, total, compact }: {
   return (
     <div style={{ marginBottom: compact ? 8 : 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <span style={{ fontSize: compact ? 10.5 : 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
+        <span style={{ fontSize: compact ? 12 : 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
           <span style={{ color: 'var(--text3)', flexShrink: 0 }}>({c.weight}%)</span>
           <span
@@ -509,7 +507,7 @@ function NetworkHealthComponentRow({ component: c, index, total, compact }: {
             onPointerLeave={tooltip.onPointerLeave}
             onClick={tooltip.onClick}
           >
-            <Info size={compact ? 10 : 11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
+            <Info size={compact ? 11 : 11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
             {tooltip.open && (
               <div
                 className="audit-tooltip"
@@ -521,8 +519,8 @@ function NetworkHealthComponentRow({ component: c, index, total, compact }: {
           </span>
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 5 : 8, flexShrink: 0 }}>
-          <span style={{ fontSize: compact ? 10 : 11, color: 'var(--text3)', fontFamily: 'var(--font-mono-data)' }}>{Math.round(c.value)}%</span>
-          <span style={{ fontSize: compact ? 11.5 : 13, fontWeight: 600, color }}>{points}/{c.weight}</span>
+          <span style={{ fontSize: compact ? 11.5 : 11, color: 'var(--text3)', fontFamily: 'var(--font-mono-data)' }}>{Math.round(c.value)}%</span>
+          <span style={{ fontSize: compact ? 13 : 13, fontWeight: 600, color }}>{points}/{c.weight}</span>
         </div>
       </div>
       <div style={{ height: compact ? 3 : 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden' }}>
@@ -603,7 +601,6 @@ export default function Stats() {
   const [nutModal, setNutModal] = useState<string | null>(null)
   const [reliableTab, setReliableTab] = useState<'reliable' | 'reliability'>('reliability')
   const [moversPeriod, setMoversPeriod] = useState<'7d' | '30d'>('7d')
-  const now = useNow()
   const [trendDays, setTrendDays] = useState<30 | 90>(30)
   const [showHealthBreakdown, setShowHealthBreakdown] = useState(false)
   const nhiInfoRef = useRef<HTMLSpanElement>(null)
@@ -1005,7 +1002,7 @@ export default function Stats() {
                   >
                     <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
                     {nhiInfoTooltip.open && (
-                      <div className="audit-tooltip" style={isMobile ? { width: 220, left: 0 } : { width: 260, right: 0 }}>
+                      <div className="audit-tooltip" style={isMobile ? { width: 220, left: 0, bottom: 'auto', top: 'calc(100% + 6px)' } : { width: 260, left: 0, bottom: 'auto', top: 'calc(100% + 6px)' }}>
                         Composite 0-100 score across uptime, average Reliability Score, software diversity, advanced feature adoption &amp; network stability. Each row below shows index points, not a mint count.{isMobile ? ' Tap the gauge for the full breakdown.' : ` ${NETWORK_HEALTH_FORMULA_TEXT}`}
                       </div>
                     )}
@@ -1083,7 +1080,7 @@ export default function Stats() {
           <div className="stats-panel-head">
             <div>
               <div className="stats-panel-title">
-                {reliableTab === 'reliable' ? 'Top uptime · 7D' : 'Top by Reliability Score'}
+                {reliableTab === 'reliable' ? 'Top uptime' : 'Top by Reliability Score'}
               </div>
               <div className="stats-panel-desc">
                 {reliableTab === 'reliable' ? 'Mints with the best 7-day uptime.' : 'Mints with the best combined score.'}
@@ -1285,11 +1282,6 @@ export default function Stats() {
           onMintClick={url => navigate(`/mint/${encodeURIComponent(url)}`)}
           getDisplayName={m => displayName(m, duplicateDisplayNames)}
           getIconUrl={m => knownMintsData?.find(km => km.url === m.url)?.iconUrl ?? null}
-          footer={showAuditSwitchNote(now) ? (
-            <p className="stats-panel-desc stats-movers-note">
-              <Link to="/learn/how-to-choose-a-mint">How scoring works</Link>
-            </p>
-          ) : undefined}
         />
 
         {/* Row 3, full width: Reliability Score Trend. Chart height is unchanged

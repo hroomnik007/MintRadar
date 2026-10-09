@@ -71,7 +71,7 @@ test('Uptime tab (after a click) is labeled 7D and ranks by uptimePct7d, not upt
   // The panel opens on Reliability (default since 2026-10-07); Uptime is one click away.
   await expect(widget).toContainText('Top by Reliability Score')
   await widget.getByRole('button', { name: 'Uptime', exact: true }).click()
-  await expect(widget).toContainText('Top uptime · 7D')
+  await expect(widget).toContainText('Top uptime')
   await expect(widget).not.toContainText('Top uptime · 24H')
 
   const firstRow = widget.locator('.stats-top5-row').first()

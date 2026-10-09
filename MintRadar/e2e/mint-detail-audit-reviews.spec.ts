@@ -41,7 +41,7 @@ test('Audit tab strip shows the audit.8333.space window; the Reliability Score b
   // (no "Details ›" click needed).
   const reliabilityPanel = page.locator('.md-reliability-panel')
   await expect(reliabilityPanel.getByText('Audit reliability (25%)')).toBeVisible()
-  await expect(reliabilityPanel.getByText('1 of 50 swaps in the last 7 days had a failure attributed to this mint (cashu.info)')).toBeVisible()
+  await expect(reliabilityPanel.getByText('1 / 50')).toBeVisible()
   await expect(reliabilityPanel.getByText('3.0% err')).toHaveCount(0)
   await page.screenshot({ path: 'test-results/audit-breakdown-crosscheck.png' })
 })

@@ -542,6 +542,9 @@ button.md-url-copy.copied > svg { opacity: 1; }
   border-top: 0.5px solid var(--border);
   vertical-align: middle;
 }
+.md-vh-col-date { width: 140px; }
+.md-vh-col-from { width: 38%; }
+@media (max-width: 640px) { .md-vh-col-date { width: 112px; } .md-vh-col-from { width: 36%; } }
 .md-vh-table tr:first-child td { border-top: none; }
 .md-vh-table th:last-child,
 .md-vh-table td:last-child { padding-right: 0; }
