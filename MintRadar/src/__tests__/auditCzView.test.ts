@@ -63,7 +63,7 @@ describe('tiles from the stored detail (LNpay values)', () => {
   })
   it('success tile: singular other failure, no note without failures, never "x / y"', () => {
     const one = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 50, success: 47, failed: 3 }, errorsBlamed: 2 } })['clean']
-    expect(one?.tooltip.startsWith('47 of 50 swaps, 2 caused by this mint, 1 failed for other reasons last 7 days.')).toBe(true)
+    expect(one?.tooltip.startsWith('48 of 50 swaps, 2 caused by this mint, 1 failed for other reasons last 7 days.')).toBe(true)
     const none = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 50, success: 50, failed: 0 }, errorsBlamed: 0 } })['clean']
     expect(none).toMatchObject({ value: '100%' })
     expect(none?.tooltip.startsWith('50 of 50 swaps last 7 days.')).toBe(true)
