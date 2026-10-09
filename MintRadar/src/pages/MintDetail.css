@@ -544,7 +544,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 .md-vh-col-date { width: 190px; }
 .md-vh-col-from { width: 260px; }
-.md-vh-date-num { display: none; }
+.md-vh-date-short { display: none; }
 @media (max-width: 640px) {
   .md-vh-col-date { width: 92px; }
   .md-vh-col-from { width: auto; }
@@ -552,7 +552,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   .md-vh-table th:last-child, .md-vh-table td:last-child { padding-right: 0; }
   .md-vh-ver { font-size: 12px; }
   .md-vh-date-long { display: none; }
-  .md-vh-date-num { display: inline; }
+  .md-vh-date-short { display: inline; }
 }
 .md-vh-table tr:first-child td { border-top: none; }
 .md-vh-table th:last-child,

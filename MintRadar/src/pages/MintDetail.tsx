@@ -94,9 +94,11 @@ function formatReviewDate(ts: number): string {
 function formatVhDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
 }
-/** "07/09/2026" — the numeric form the Version history shows on mobile. */
-function formatVhDateNumeric(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
+const VH_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+/** "7 Sep 2026" — always a three-letter month (en-GB gives "Sept"); the form the Version history shows on mobile. */
+function formatVhDateShort(iso: string): string {
+  const d = new Date(iso)
+  return `${d.getUTCDate()} ${VH_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`
 }
 /** A five-character ★/☆ string for a rating, rounded to whole stars. */
 function starString(rating: number): string {
@@ -2063,7 +2065,7 @@ function MintDetailContent({ url }: { url: string }) {
                 <tbody>
                   {versionHistory.map((vh, i) => (
                     <tr key={i}>
-                      <td className="md-vh-date"><span className="md-vh-date-long">{formatVhDate(vh.firstSeenAt)}</span><span className="md-vh-date-num">{formatVhDateNumeric(vh.firstSeenAt)}</span></td>
+                      <td className="md-vh-date"><span className="md-vh-date-long">{formatVhDate(vh.firstSeenAt)}</span><span className="md-vh-date-short">{formatVhDateShort(vh.firstSeenAt)}</span></td>
                       <td className="md-vh-ver md-vh-from">{versionHistory[i + 1]?.version ?? '—'}</td>
                       <td className="md-vh-ver md-vh-to">{vh.version}</td>
                     </tr>
