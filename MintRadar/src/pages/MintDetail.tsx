@@ -1,7 +1,7 @@
 import { nip19 } from 'nostr-tools'
 import { njumpProfileUrl, njumpEventUrl, npubFromPubkey, mintAnnounceNaddr } from '@/utils/nostrLinks'
 import { useParams, useNavigate, Navigate } from 'react-router-dom'
-import { Fragment, useEffect, useState, useMemo, useRef, useCallback, lazy, Suspense, type JSX } from 'react'
+import { Fragment, useEffect, useState, useMemo, useRef, useCallback, lazy, Suspense, type JSX, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
@@ -23,6 +23,7 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { MintNetworkCard } from '@/components/MintNetworkCard'
 import { networkRows } from '@/utils/networkInfo'
 import { AuditCzTiles, AuditCzSwapTables } from '@/components/AuditCzCards'
+import { formatDate } from '@/utils/formatDate'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
@@ -90,15 +91,10 @@ const RATING_LABELS: Record<1 | 2 | 3 | 4 | 5, string> = {
 function formatReviewDate(ts: number): string {
   return new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
-/** "7 Sep 2026" — no dotted numeric date. */
-function formatVhDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
-}
-const VH_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-/** "7 Sep 2026" — always a three-letter month (en-GB gives "Sept"); the form the Version history shows on mobile. */
-function formatVhDateShort(iso: string): string {
-  const d = new Date(iso)
-  return `${d.getUTCDate()} ${VH_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`
+/** A version string with a line-break opportunity after each "/" ("Nutshell/0.20.3"); no <wbr> text is added. */
+function versionWithBreaks(v: string): ReactNode {
+  const parts = v.split('/')
+  return parts.map((part, i) => (i === 0 ? part : <Fragment key={i}>/<wbr />{part}</Fragment>))
 }
 /** A five-character ★/☆ string for a rating, rounded to whole stars. */
 function starString(rating: number): string {
@@ -843,7 +839,7 @@ function MintDetailContent({ url }: { url: string }) {
     function bucketLabel(bucket: string): string {
       const d = new Date(bucket)
       if (chartInterval === '24h') return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-      return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+      return formatDate(d, { year: false, local: true })
     }
     function makePoint(seg: typeof segs[0] | null, label: string) {
       if (!seg) return { label, latency: null as number | null, uptime: null as number | null, reliability: null as number | null }
@@ -2065,9 +2061,9 @@ function MintDetailContent({ url }: { url: string }) {
                 <tbody>
                   {versionHistory.map((vh, i) => (
                     <tr key={i}>
-                      <td className="md-vh-date"><span className="md-vh-date-long">{formatVhDate(vh.firstSeenAt)}</span><span className="md-vh-date-short">{formatVhDateShort(vh.firstSeenAt)}</span></td>
-                      <td className="md-vh-ver md-vh-from">{versionHistory[i + 1]?.version ?? '—'}</td>
-                      <td className="md-vh-ver md-vh-to">{vh.version}</td>
+                      <td className="md-vh-date">{formatDate(vh.firstSeenAt)}</td>
+                      <td className="md-vh-ver md-vh-from">{versionHistory[i + 1] ? versionWithBreaks(versionHistory[i + 1]!.version) : '—'}</td>
+                      <td className="md-vh-ver md-vh-to">{versionWithBreaks(vh.version)}</td>
                     </tr>
                   ))}
                 </tbody>

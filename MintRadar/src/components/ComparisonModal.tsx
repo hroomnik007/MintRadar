@@ -15,6 +15,7 @@ import { AUDIT_MIN_SAMPLES, auditDataState } from '@/utils/auditScore'
 import { formatAuditSuccessRatio, auditReliabilityColor } from '@/utils/mintFormatting'
 import { useNow } from '@/hooks/useNow'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { formatDate } from '@/utils/formatDate'
 import { probeMint } from '@core/mint/api'
 import { pickInputFee } from '@/utils/mintProbeDisplay'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
@@ -269,7 +270,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
       const d = new Date(bucket)
       const label = historyPeriod === '24h'
         ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-        : d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+        : formatDate(d, { year: false, local: true })
       const row: Record<string, string | number | null> = { label }
       segMaps.forEach((map, i) => {
         const seg = map.get(bucket)
@@ -849,7 +850,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                   ) : versionHistory.map((vh, j) => (
                     <div key={j} className="cmp-vh-entry">
                       <div className="cmp-vh-version" style={{ fontWeight: j === 0 ? 700 : 500 }}>{vh.version}</div>
-                      <div className="cmp-vh-since">since {new Date(vh.firstSeenAt).toLocaleDateString()}</div>
+                      <div className="cmp-vh-since">since {formatDate(vh.firstSeenAt, { local: true })}</div>
                     </div>
                   ))
                 })()}
@@ -866,7 +867,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                       ) : versionHistory.map((vh, j) => (
                         <div key={j} className="cmp-vh-entry">
                           <div className="cmp-vh-version" style={{ fontWeight: j === 0 ? 700 : 500 }}>{vh.version}</div>
-                          <div className="cmp-vh-since">since {new Date(vh.firstSeenAt).toLocaleDateString()}</div>
+                          <div className="cmp-vh-since">since {formatDate(vh.firstSeenAt, { local: true })}</div>
                         </div>
                       ))}
                     </div>

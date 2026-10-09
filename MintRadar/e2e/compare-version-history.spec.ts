@@ -81,8 +81,8 @@ for (const n of [2, 3, 4]) {
         expect(canScrollX).toBe(false)
       }
 
-      // At least one full "since M/D/YYYY" string is rendered intact.
-      await expect(entries.filter({ hasText: /since \d+\/\d+\/\d{4}/ }).first()).toBeVisible()
+      // At least one full "since 29 Sep 2026" string is rendered intact.
+      await expect(entries.filter({ hasText: /since \d{1,2} [A-Z][a-z]{2} \d{4}/ }).first()).toBeVisible()
       await expect(entries.filter({ hasText: 'Nutshell/0.19.2' }).first()).toBeVisible()
     })
   }

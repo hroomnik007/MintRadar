@@ -20,6 +20,7 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { PageHead } from '@/components/layout/PageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
+import { formatDate } from '@/utils/formatDate'
 import './Stats.css'
 
 interface StatsData {
@@ -1327,11 +1328,12 @@ export default function Stats() {
                       <stop offset="95%" stopColor="var(--accent)" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="date" tick={{fontSize:9,fill:'var(--text3)',fontFamily:'var(--font-mono)'}} tickFormatter={d => d.slice(5)} interval="preserveStartEnd" axisLine={false} tickLine={false} />
+                  <XAxis dataKey="date" tick={{fontSize:9,fill:'var(--text3)',fontFamily:'var(--font-mono)'}} tickFormatter={d => formatDate(d, { year: false })} interval="preserveStartEnd" axisLine={false} tickLine={false} />
                   <YAxis domain={[0,100]} tick={{fontSize:9,fill:'var(--text3)',fontFamily:'var(--font-mono)'}} axisLine={false} tickLine={false} />
                   <Tooltip
                     contentStyle={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:6,fontSize:11,fontFamily:'var(--font-mono)'}}
                     labelStyle={{color:'var(--text3)'}}
+                    labelFormatter={d => formatDate(String(d)) || String(d)}
                     formatter={(v) => [`${v ?? '—'}%`, 'Avg Reliability']}
                   />
                   <Area type="monotone" dataKey="avgReliability" stroke="var(--accent)" strokeWidth={1.5} fill="url(#reliabilityGrad)" dot={false} />

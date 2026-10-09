@@ -544,15 +544,16 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 .md-vh-col-date { width: 190px; }
 .md-vh-col-from { width: 260px; }
-.md-vh-date-short { display: none; }
 @media (max-width: 640px) {
-  .md-vh-col-date { width: 92px; }
+  /* Date column = "29 Sep 2026" at 12px monospace (11 characters) plus its right padding;
+     From and To share the rest equally and wrap (after the "/", else anywhere) instead of truncating. */
+  .md-vh-col-date { width: 88px; }
   .md-vh-col-from { width: auto; }
-  .md-vh-table th, .md-vh-table td { padding-right: 8px; }
+  .md-vh-table th, .md-vh-table td { padding-right: 8px; min-width: 0; }
   .md-vh-table th:last-child, .md-vh-table td:last-child { padding-right: 0; }
-  .md-vh-ver { font-size: 12px; }
-  .md-vh-date-long { display: none; }
-  .md-vh-date-short { display: inline; }
+  .md-vh-table td { padding-top: 10px; padding-bottom: 10px; vertical-align: top; line-height: 1.4; }
+  .md-vh-table .md-vh-date { padding: 10px 8px 10px 0 !important; }
+  .md-vh-table .md-vh-ver { font-size: 12px; white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
 }
 .md-vh-table tr:first-child td { border-top: none; }
 .md-vh-table th:last-child,

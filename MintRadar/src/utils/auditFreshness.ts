@@ -2,6 +2,8 @@
 // Two different times exist per mint: auditCheckedAt (the auditor's own last
 // check, audit.8333.space `updated_at`) and auditSyncedAt (when MintRadar's 6h
 // job last wrote the data). Thresholds live here and nowhere else.
+import { DATE_MONTHS, formatDate } from './formatDate'
+
 export const AUDIT_DATA_OLD_DAYS = 7
 export const AUDIT_SYNC_STALE_HOURS = 24
 
@@ -59,19 +61,16 @@ export function staleAuditSince(
   return auditFreshness(iso, null, now).auditorDataOld ? iso : null
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 // "27 Sep 2026, 12:13 UTC" — fixed zone/locale so the notice reads the same everywhere.
 export function formatAuditSyncDate(iso: string): string {
   const d = new Date(iso)
   if (!Number.isFinite(d.getTime())) return iso
   const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`
+  return `${d.getUTCDate()} ${DATE_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`
 }
 
 // "27 Sep 2026" — date part of formatAuditSyncDate().
 export function formatAuditDate(iso: string): string {
-  const d = new Date(iso)
-  if (!Number.isFinite(d.getTime())) return iso
-  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`
+  return formatDate(iso) || iso
 }
