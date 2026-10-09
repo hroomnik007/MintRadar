@@ -39,7 +39,7 @@ describe('tiles from the stored detail (LNpay values)', () => {
     expect(t['mints']).toMatchObject({ value: '56 / 62', label: 'Receives' })
     expect(t['clean']).toMatchObject({ value: '100%', label: "Not this mint's fault" })
     expect(t['clean']?.caption).toBeUndefined()
-    expect(t['clean']?.tooltip.startsWith('126 of 126 swaps, 19 failed for other reasons last 7 days.')).toBe(true)
+    expect(t['clean']?.tooltip.startsWith('126 of 126 swaps, 19 failed for other reasons last 7 days')).toBe(true)
     expect(t['avg']).toMatchObject({ value: '8.3 s', label: 'Avg swap time' })
     // four tiles, no overall "Success rate" that mixes in unattributed failures
     expect(view([]).tiles.map(x => x.key)).toEqual(['melts', 'mints', 'clean', 'avg'])
@@ -48,25 +48,25 @@ describe('tiles from the stored detail (LNpay values)', () => {
   it('success tile: LNpay-like, 0 blamed of 105 with 16 failed', () => {
     const t = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 105, success: 89, failed: 16 }, errorsBlamed: 0 } })['clean']
     expect(t).toMatchObject({ value: '100%' })
-    expect(t?.tooltip.startsWith('105 of 105 swaps, 16 failed for other reasons last 7 days.')).toBe(true)
+    expect(t?.tooltip.startsWith('105 of 105 swaps, 16 failed for other reasons last 7 days')).toBe(true)
     expect(t?.caption).toBeUndefined()
   })
   it('success tile: lnw.cash-like, 202 blamed of 229 with 207 failed', () => {
     const t = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 229, success: 22, failed: 207 }, errorsBlamed: 202 } })['clean']
     expect(t).toMatchObject({ value: '12%' })
-    expect(t?.tooltip.startsWith('27 of 229 swaps, 202 caused by this mint, 5 failed for other reasons last 7 days.')).toBe(true)
+    expect(t?.tooltip.startsWith('27 of 229 swaps, 202 caused by this mint, 5 failed for other reasons last 7 days')).toBe(true)
   })
   it('success tile: 1 blamed of 200 shows 99%, never 100%', () => {
     const t = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 200, success: 199, failed: 1 }, errorsBlamed: 1 } })['clean']
     expect(t).toMatchObject({ value: '99%' })
-    expect(t?.tooltip.startsWith('199 of 200 swaps, 1 caused by this mint last 7 days.')).toBe(true)
+    expect(t?.tooltip.startsWith('199 of 200 swaps, 1 caused by this mint last 7 days')).toBe(true)
   })
   it('success tile: singular other failure, no note without failures, never "x / y"', () => {
     const one = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 50, success: 47, failed: 3 }, errorsBlamed: 2 } })['clean']
-    expect(one?.tooltip.startsWith('48 of 50 swaps, 2 caused by this mint, 1 failed for other reasons last 7 days.')).toBe(true)
+    expect(one?.tooltip.startsWith('48 of 50 swaps, 2 caused by this mint, 1 failed for other reasons last 7 days')).toBe(true)
     const none = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 50, success: 50, failed: 0 }, errorsBlamed: 0 } })['clean']
     expect(none).toMatchObject({ value: '100%' })
-    expect(none?.tooltip.startsWith('50 of 50 swaps last 7 days.')).toBe(true)
+    expect(none?.tooltip.startsWith('50 of 50 swaps last 7 days')).toBe(true)
     expect(none?.caption).toBeUndefined()
     for (const t of [one, none]) expect(t?.value).not.toContain('/')
   })
@@ -76,13 +76,13 @@ describe('tiles from the stored detail (LNpay values)', () => {
   })
   it('success tile: hostile numbers are clamped or hide the tile', () => {
     const w = (all: Record<string, unknown>, errorsBlamed: unknown) => tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all, errorsBlamed } } as AuditCzDetail)['clean']
-    expect(w({ total: 20, failed: 20 }, 999)?.tooltip.startsWith('0 of 20 swaps, 20 caused by this mint last 7 days.')).toBe(true)
+    expect(w({ total: 20, failed: 20 }, 999)?.tooltip.startsWith('0 of 20 swaps, 20 caused by this mint last 7 days')).toBe(true)
     expect(w({ total: 0, failed: 0 }, 0)).toBeUndefined()
     expect(w({ total: NaN }, 0)).toBeUndefined()
     expect(w({ total: -5 }, 0)).toBeUndefined()
     expect(w({ total: 20 }, NaN)).toBeUndefined()
     expect(w({ total: 20 }, -1)).toBeUndefined()
-    expect(w({ total: 20, failed: -3 }, 0)?.tooltip.startsWith('20 of 20 swaps last 7 days.')).toBe(true)
+    expect(w({ total: 20, failed: -3 }, 0)?.tooltip.startsWith('20 of 20 swaps last 7 days')).toBe(true)
     expect(w({ total: 20, failed: -3 }, 0)?.caption).toBeUndefined()
   })
   it('a tile whose field is missing is hidden', () => {

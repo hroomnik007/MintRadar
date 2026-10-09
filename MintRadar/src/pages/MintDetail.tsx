@@ -600,8 +600,6 @@ function MintDetailContent({ url }: { url: string }) {
   }, [])
   const backupBadgeRef = useRef<HTMLSpanElement>(null)
   const backupBadgeTooltip = useTapTooltip(backupBadgeRef)
-  const latencyInfoRef = useRef<HTMLSpanElement>(null)
-  const latencyInfoTooltip = useTapTooltip(latencyInfoRef)
   const clientLatencyInfoRef = useRef<HTMLSpanElement>(null)
   const clientLatencyInfoTooltip = useTapTooltip(clientLatencyInfoRef)
   const auditMintsRef = useRef<HTMLSpanElement>(null)
@@ -1372,23 +1370,7 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-sc">
           <div className="md-sc-icon orange"><Clock size={14} /></div>
           <div style={{flex:1}}>
-            <div className="md-sc-label" style={{display:'flex',alignItems:'center',gap:4}}>
-              Latency
-              <span
-                ref={latencyInfoRef}
-                style={{position:'relative',display:'inline-flex'}}
-                onPointerEnter={latencyInfoTooltip.onPointerEnter}
-                onPointerLeave={latencyInfoTooltip.onPointerLeave}
-                onClick={latencyInfoTooltip.onClick}
-              >
-                <Info size={11} color="#6b7280" style={{cursor:'help'}} />
-                {latencyInfoTooltip.open && (
-                  <div className="audit-tooltip" style={{width:200}}>
-                    Measured from our server in {PROBE_LOCATION}, DE. Click &quot;Test&quot; for your local latency.
-                  </div>
-                )}
-              </span>
-            </div>
+            <div className="md-sc-label">Latency</div>
             <div className="md-sc-value">{latency !== null ? `${latency} ms` : '—'}</div>
             <div className="md-sc-sub">
               <span>server · {PROBE_LOCATION}</span>
