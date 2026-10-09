@@ -48,12 +48,12 @@ function SwapTable({ title, firstHeader, rows, expanded, onToggle }: {
               </thead>
               <tbody>
                 {shown.map(s => (
-                  <tr key={s.swapId}>
+                  <tr key={s.swapId} className={s.state === 'OK' ? '' : 'audit-swap-row-fail'}>
                     <td>{s.toUrl ? mintHostname(s.toUrl) : '—'}</td>
                     <td>{s.amount !== null ? `${s.amount} sat` : '—'}</td>
                     <td>{s.fee !== null ? s.fee : '—'}</td>
                     <td>{s.timeTakenMs !== null ? `${Math.round(s.timeTakenMs)} ms` : '—'}</td>
-                    {/* State is only OK or Failed. The reason stays out of the cell until we decide where it goes. */}
+                    {/* State is only OK or Failed. No title: the failure reason must not appear on hover. */}
                     <td>{s.state === 'OK' ? 'OK' : 'Failed'}</td>
                   </tr>
                 ))}

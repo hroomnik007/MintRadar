@@ -138,7 +138,7 @@ test('the browser never requests cashu.info: only /api/mints/audit-cz?direction=
 })
 
 // ── c) neutral rows ─────────────────────────────────────────────
-test('every non-OK row says Failed and looks like an OK row; the bar follows the same split', async ({ page }) => {
+test('every non-OK row says Failed and stays red; the bar follows the same split', async ({ page }) => {
   // 5 OK, 3 failed (melt), 3 limits, 2 balance, 1 pending, interleaved so no position implies the kind.
   const swaps = czSwapList([ok, melt, limits, ok, balance, pending, ok, melt, limits, balance, ok, limits, melt, ok])
   expect(swaps).toHaveLength(14)
@@ -160,8 +160,10 @@ test('every non-OK row says Failed and looks like an OK row; the bar follows the
   for (const host of ['ok0', 'ok3', 'ok6', 'ok10', 'ok13']) await state(`${host}.example`).toBe('OK')
 
   const okRow = await style('ok0.example')
-  for (const host of ['melt1', 'limits2', 'balance4', 'pending5', 'melt7', 'melt12']) {
-    expect(await style(`${host}.example`)).toEqual(okRow)
+  const failed = await style('melt1.example')
+  expect(failed.color).not.toBe(okRow.color)
+  for (const host of ['limits2', 'balance4', 'pending5', 'melt7', 'melt12']) {
+    expect(await style(`${host}.example`)).toEqual(failed)
   }
 
   // The outcome bar: 5 OK, 3 failed, 6 neutral (limits + balance + pending).
