@@ -151,6 +151,18 @@ describe('GET /api/mints/known', () => {
     expect(established.reviewWeightedRating).toBeCloseTo((99 / 107) * 4.7 + (8 / 107) * 4.58, 4)
   })
 
+  it('adds reviewRatedCount (null until the recount has run)', async () => {
+    query.mockResolvedValueOnce({
+      rows: [
+        sampleRow({ url: 'https://a.example', review_count: 5, review_avg_rating: 4.5, review_rated_count: 3 }),
+        sampleRow({ url: 'https://b.example', review_count: 2, review_avg_rating: 4.0, review_rated_count: null }),
+      ],
+    })
+    const res = await request(app).get('/api/mints/known')
+    expect(res.body.find((m: { url: string }) => m.url === 'https://a.example').reviewRatedCount).toBe(3)
+    expect(res.body.find((m: { url: string }) => m.url === 'https://b.example').reviewRatedCount).toBeNull()
+  })
+
   it('flags reviewSurge when review_count jumped sharply vs the ~1-week-ago snapshot', async () => {
     const fourDaysAgo = new Date(Date.now() - 4 * 86_400_000).toISOString()
     query.mockResolvedValueOnce({

@@ -247,8 +247,8 @@ Verified: typecheck ✅, build ✅, 70/70 unit tests ✅, Playwright confirmed b
 - **"Most reviewed" sort** — a 5th sort button (`sortBy: 'reviewCount'`), placed before
   Rating, ordering mints by `reviewCount` descending; mints with `reviewCount` 0 or `null`
   always sort last regardless of direction toggle. Same `reviewCount ?? 0`-last convention
-  used for tie-breaking as the weighted-rating sort (see "Rating sort uses a weighted/Bayesian
-  rating" above). e2e coverage in `e2e/dashboard.spec.ts`.
+  used for tie-breaking as the Rating sort (see "Rating sort uses a weighted/Bayesian
+  rating" and the 2026-10-09 confidence-adjusted change in reviews-and-nostr.md). e2e coverage in `e2e/dashboard.spec.ts`.
 - **Floating controls row** — the single shared border+background box that used to wrap
   search/Filters/sort/view-toggle/Submit-mint as one bar was removed. Each control group now
   floats independently with its own border/background (`.search-input`, `.filter-btn`,

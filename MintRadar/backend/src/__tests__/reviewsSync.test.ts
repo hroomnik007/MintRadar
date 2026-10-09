@@ -96,23 +96,27 @@ describe('aggregateReviews', () => {
   const five = (pubkey: string) => ({ pubkey, rating: 5, comment: 'x' })
   it('no operator: counts every non-empty review, average unchanged', () => {
     expect(aggregateReviews([five('a'), five('b'), { pubkey: 'c', rating: 3, comment: '' }], new Set()))
-      .toEqual({ count: 3, avg: 4.3, operatorCount: 0 })
+      .toEqual({ count: 3, avg: 4.3, operatorCount: 0, ratedCount: 3 })
   })
   it('3 five-star reviews, one by the operator: count 2, average of the other two', () => {
     const rows = [five(OPERATOR_HEX), { pubkey: 'b', rating: 5, comment: '' }, { pubkey: 'c', rating: 3, comment: 'ok' }]
-    expect(aggregateReviews(rows, new Set([OPERATOR_HEX]))).toEqual({ count: 2, avg: 4, operatorCount: 1 })
+    expect(aggregateReviews(rows, new Set([OPERATOR_HEX]))).toEqual({ count: 2, avg: 4, operatorCount: 1, ratedCount: 2 })
   })
   it('matches the operator key case-insensitively', () => {
     expect(aggregateReviews([five(OPERATOR_HEX.toUpperCase())], new Set([OPERATOR_HEX])))
-      .toEqual({ count: 0, avg: null, operatorCount: 1 })
+      .toEqual({ count: 0, avg: null, operatorCount: 1, ratedCount: 0 })
   })
   it('empty events (no rating, no comment) count nowhere, not even as operator reviews', () => {
     expect(aggregateReviews([{ pubkey: OPERATOR_HEX, rating: null, comment: '  ' }], new Set([OPERATOR_HEX])))
-      .toEqual({ count: 0, avg: null, operatorCount: 0 })
+      .toEqual({ count: 0, avg: null, operatorCount: 0, ratedCount: 0 })
   })
   it('null average when counted reviews carry no rating', () => {
     expect(aggregateReviews([{ pubkey: 'a', rating: null, comment: 'hi' }], new Set()))
-      .toEqual({ count: 1, avg: null, operatorCount: 0 })
+      .toEqual({ count: 1, avg: null, operatorCount: 0, ratedCount: 0 })
+  })
+  it('comment-only reviews are in count but not in ratedCount (the n behind avg)', () => {
+    expect(aggregateReviews([five('a'), { pubkey: 'b', rating: null, comment: 'hi' }, { pubkey: 'c', rating: 4, comment: '' }], new Set()))
+      .toEqual({ count: 3, avg: 4.5, operatorCount: 0, ratedCount: 2 })
   })
 })
 
@@ -153,7 +157,7 @@ describe('persistMintReviews', () => {
     expect(insertCall[1]).toHaveLength(12)
 
     const updateCall = clientQueryMock.mock.calls.find(c => String(c[0]).includes('UPDATE mints'))!
-    expect(updateCall[1]).toEqual([2, 5, 0, 'https://m.example'])
+    expect(updateCall[1]).toEqual([2, 5, 0, 2, 'https://m.example'])
     expect(String(updateCall[0])).not.toMatch(/pending_low/)
     expect(clientReleaseMock).toHaveBeenCalledOnce()
   })
@@ -170,7 +174,7 @@ describe('persistMintReviews', () => {
     const insertCall = clientQueryMock.mock.calls.find(c => String(c[0]).includes('INSERT INTO mint_reviews'))!
     expect(insertCall[1]).toHaveLength(31 * 6)
     const updateCall = clientQueryMock.mock.calls.find(c => String(c[0]).includes('UPDATE mints'))!
-    expect(updateCall[1]).toEqual([96, 4.8, 0, 'https://m.example'])
+    expect(updateCall[1]).toEqual([96, 4.8, 0, 96, 'https://m.example'])
   })
 
   it('writes a null average when the stored rows have no ratings', async () => {
@@ -179,7 +183,7 @@ describe('persistMintReviews', () => {
       { eventId: 'e', pubkey: 'p', rating: null, comment: 'only a comment', createdAt: 1 },
     ])
     const updateCall = clientQueryMock.mock.calls.find(c => String(c[0]).includes('UPDATE mints'))!
-    expect(updateCall[1]).toEqual([2, null, 0, 'https://m.example'])
+    expect(updateCall[1]).toEqual([2, null, 0, 0, 'https://m.example'])
   })
 
   it('leaves the operator\'s review out of count and average but stores it and counts it separately', async () => {
@@ -199,7 +203,7 @@ describe('persistMintReviews', () => {
     const insertCall = clientQueryMock.mock.calls.find(c => String(c[0]).includes('INSERT INTO mint_reviews'))!
     expect(insertCall[1]).toHaveLength(18) // all three rows are still stored
     const updateCall = clientQueryMock.mock.calls.find(c => String(c[0]).includes('UPDATE mints'))!
-    expect(updateCall[1]).toEqual([2, 4, 1, 'https://m.example'])
+    expect(updateCall[1]).toEqual([2, 4, 1, 2, 'https://m.example'])
   })
 
   it('a critic listed as the mint\'s contact but not an announcer is neither excluded nor labelled: the 1-star review counts', async () => {
@@ -215,7 +219,7 @@ describe('persistMintReviews', () => {
       { eventId: 'e2', pubkey: 'b', rating: 5, comment: '', createdAt: 1 },
     ])
     const updateCall = clientQueryMock.mock.calls.find(c => String(c[0]).includes('UPDATE mints'))!
-    expect(updateCall[1]).toEqual([2, 3, 0, 'https://m.example']) // both counted, average of 1 and 5, no operator review
+    expect(updateCall[1]).toEqual([2, 3, 0, 2, 'https://m.example']) // both counted, average of 1 and 5, no operator review
   })
 
   it('rolls back and rethrows if an insert fails, still releasing the client', async () => {
@@ -258,7 +262,8 @@ describe('recomputeReviewCountRollups', () => {
     await expect(recomputeReviewCountRollups()).resolves.toBe(2)
     const upd = poolQueryMock.mock.calls.find(c => String(c[0]).includes('UPDATE mints'))!
     expect(String(upd[0])).toMatch(/review_operator_count = v\.opc/)
-    expect(upd[1]).toEqual([['https://m.example', 'https://n.example'], [2, 1], [4, 2], [1, 0]])
+    expect(upd[1]).toEqual([['https://m.example', 'https://n.example'], [2, 1], [4, 2], [1, 0], [2, 1]])
+    expect(String(upd[0])).toMatch(/review_rated_count = v\.rated/)
   })
 
   it('returns 0 and writes nothing when there are no stored reviews', async () => {

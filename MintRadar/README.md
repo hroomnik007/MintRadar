@@ -45,7 +45,7 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 - Dashboard state lives in the URL, so views can be shared as links: `?q=` (search), `?sort=` (`name`/`latency`/`rating`/`reliability`/`reviewCount`) with `?dir=` (`asc`/`desc`), `?status=` (`all`/`offline`), `?reliability=` (0–100), `?testmints=hide`, `?unit=` (`sat`, `usd`, `eur`, comma-separated, e.g. `?unit=sat,usd`) and `?compare=` (2–4 comma-separated mint URLs, also on the Watchlist page); default values are omitted
 - Deep links: Mint Detail tabs open from the URL hash (`#overview`, `#history`, `#nuts`, `#audit`, `#reviews`, `#review-<id>`), and Tools from `/tools#pick` and `/tools#token`
 - Counts: the header shows online and tracked mints; "tracked" is every mint in the database (archived ones included), and the grid footer reads "Showing X of <tracked>". Mints the default view hides (offline, degraded, archived) sit behind a "N mints hidden (offline 24h+)" toggle; **Show** reveals all of them
-- Sort by Latency / Name / Reliability Score / **Rating** / **Most reviewed** (asc/desc) — Rating uses a weighted (Bayesian) average so a mint with two 5★ reviews doesn't outrank one with fifty
+- Sort by Latency / Name / Reliability Score / **Rating** / **Most reviewed** (asc/desc) — Rating uses a confidence-adjusted average, (n·avg + 5·3.5) / (n + 5), so mints with few reviews rank lower and a mint with one 5★ review doesn't outrank one with eighty 4.8★ (the stars and counts shown do not change)
 - Controls row stays docked at the top of the list while you scroll
 - Compact and expanded card view toggle
 - Single URL or bulk mint submission (paste multiple URLs at once)

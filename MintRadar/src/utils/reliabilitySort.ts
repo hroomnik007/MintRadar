@@ -1,15 +1,16 @@
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { displayName as mintDisplayName } from '@/utils/mintFormatting'
+import { ratingSortKey } from '@/utils/bayesianRating'
 
 export function listReliabilityScore(mint: KnownMint): number {
   if (mint.online !== true) return 0
   return mint.reliabilityScore ?? 0
 }
 
-// Prefer the backend Bayesian average so a mint with two 5★ reviews does not
+// The confidence-adjusted average (bayesianRating.ts), so a mint with two 5★ reviews does not
 // beat one with fifty 4.6★. Unrated mints sink below any rated mint.
 export function listRating(mint: KnownMint): number {
-  return mint.reviewWeightedRating ?? mint.reviewAvgRating ?? -1
+  return ratingSortKey(mint)
 }
 
 // Default order: Reliability Score desc, then community rating desc, then name asc.

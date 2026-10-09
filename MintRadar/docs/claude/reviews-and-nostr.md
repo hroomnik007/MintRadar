@@ -115,9 +115,27 @@ outweighs the crowd), `C` = mean `reviewAvgRating` over all mints with ≥1 revi
 average. `C` is computed in the `/api/mints/known` handler (which already loads every mint in one
 query) — NOT in `reviewsSync`'s per-mint rollup, which would need a full-table scan per mint to
 get `C`. **Display is unchanged** — the Community Rating badge still shows `reviewAvgRating` /
-`reviewCount`. Frontend Rating sort (`Dashboard.tsx` ×2, `Watchlist.tsx`) orders by
-`reviewWeightedRating ?? reviewAvgRating ?? -1`. Tests: `backend/src/__tests__/weightedRating.test.ts`
+`reviewCount`. Tests: `backend/src/__tests__/weightedRating.test.ts`
 + a case in `integration/mints-known.test.ts` (1×5.0 review ranks below 99×4.7).
+
+**Rating sort changed to a confidence-adjusted average (2026-10-09, owner decision).** The IMDB value
+above is still computed and returned, but the frontend no longer sorts by it: with `C` ≈ 4.58 (reviews are
+overwhelmingly positive) and `m = 8`, a mint with 83 reviews at 4.8 sat on rank 8 behind mints with 3–6
+five-star reviews. The Rating sort now orders by `bayesianRating(avg, n, { prior = 3.5, weight = 5 }) =
+(n·avg + weight·prior) / (n + weight)` (`src/utils/bayesianRating.ts`, pure, runs on the already loaded
+list): 1×5.0 → 3.75, 83×4.8 → 4.73, 30×4.0 → 3.93. Inputs are exactly what the card shows: `reviewAvgRating`
+(average over RATED reviews, operator reviews excluded) and `reviewRatedCount` — a new additive field of
+`/api/mints/known` (`mints.review_rated_count`, written by the same `aggregateReviews()` rule in
+`persistMintReviews` and `recomputeReviewCountRollups`; the startup recount (~12 s after boot) backfills it,
+so it is filled right after a deploy; until then the sort falls back to `reviewCount`, which also counts
+comment-only reviews). Mints without a rated review sort after every rated mint (key −1); ties keep the list
+order (stable sort — the rating branch never had a tie-breaker). Used by: Dashboard card sort and list sort
+(`Dashboard.tsx` ×2) and the rating tie-break of the Reliability Score sort (`listRating` in
+`reliabilitySort.ts`). The Watchlist has no rating sort (alphabetical); Compare, Stats and the Best Mint
+wizard do not rank by rating. Display is unchanged (stars, average, the count in brackets, chips, Community
+rating tile). The sort buttons have no tooltip, so "Mints with few reviews rank lower (confidence-adjusted
+average)." lives here and in docs/API.md only. Tests: `src/__tests__/bayesianRating.test.ts`, the "Rating"
+case in `e2e/dashboard.spec.ts`, `reviewsSync.test.ts` / `mints-known.test.ts` for the new field.
 
 Key implementation details:
 - Rating parsed from `content` via regex `/\[(\d)\/5\]/` — the `rating` tag does not exist in practice
@@ -151,8 +169,7 @@ treat it as a directional signal, not proof. Counts may also differ from other s
 ⚠ on those two surfaces is unchanged.) Separately, a Community Rating average
 backed by fewer than `MIN_MEANINGFUL_REVIEWS` (3, in `mintFormatting.ts`) is de-emphasised
 (`opacity: 0.6` on the badge/value, "· too few to be reliable" on the tile sub-line) — this
-is display-only; the Rating *sort* handles thin samples via the m=8 Bayesian weighting in
-`backend/src/weightedRating.ts`. e2e: `e2e/community-rating-caveat.spec.ts`.
+is display-only; the Rating *sort* handles thin samples via `bayesianRating` (`src/utils/bayesianRating.ts`, see above). e2e: `e2e/community-rating-caveat.spec.ts`.
 
 **Recent review surge flag (2026-09-08, sybil Community Rating mitigation step 2 — "option D"):**
 `/api/mints/known` carries a `reviewSurge: boolean` per mint. It is **forgery-resistant** — it

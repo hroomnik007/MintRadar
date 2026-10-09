@@ -16,6 +16,7 @@ import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { latencyColor, reliabilityColor, uptimeColor, displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import { listReliabilityScore, compareReliabilityThenRating } from '@/utils/reliabilitySort'
+import { ratingSortKey } from '@/utils/bayesianRating'
 import { isNotRecommendedMint, partitionNotRecommended } from '@/utils/notRecommended'
 import { cleanMintName } from '@/utils/cleanMintName'
 import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolForStatus } from '@/utils/mintCounts'
@@ -330,12 +331,9 @@ function MintListView({
     return partitionNotRecommended([...filtered].sort((a, b) => {
       let result: number
       if (sortBy === 'rating') {
-        // Sort by the backend's weighted/Bayesian rating (falls back to the raw
-        // average if the backend hasn't sent one), NOT the displayed average —
-        // see KnownMint.reviewWeightedRating.
-        const ra = a.reviewWeightedRating ?? a.reviewAvgRating ?? -1
-        const rb = b.reviewWeightedRating ?? b.reviewAvgRating ?? -1
-        result = rb - ra
+        // Confidence-adjusted average (few reviews rank lower), NOT the displayed average —
+        // see utils/bayesianRating.ts. Mints without a rated review sort last.
+        result = ratingSortKey(b) - ratingSortKey(a)
       } else if (sortBy === 'latency') {
         const la = a.online === true && a.latencyMs != null ? a.latencyMs : Infinity
         const lb = b.online === true && b.latencyMs != null ? b.latencyMs : Infinity
@@ -453,12 +451,9 @@ function MintGrid({
     return partitionNotRecommended([...filtered].sort((a, b) => {
       let result: number
       if (sortBy === 'rating') {
-        // Sort by the backend's weighted/Bayesian rating (falls back to the raw
-        // average if the backend hasn't sent one), NOT the displayed average —
-        // see KnownMint.reviewWeightedRating.
-        const ra = a.reviewWeightedRating ?? a.reviewAvgRating ?? -1
-        const rb = b.reviewWeightedRating ?? b.reviewAvgRating ?? -1
-        result = rb - ra
+        // Confidence-adjusted average (few reviews rank lower), NOT the displayed average —
+        // see utils/bayesianRating.ts. Mints without a rated review sort last.
+        result = ratingSortKey(b) - ratingSortKey(a)
       } else if (sortBy === 'latency') {
         const la = a.online === true && a.latencyMs != null ? a.latencyMs : Infinity
         const lb = b.online === true && b.latencyMs != null ? b.latencyMs : Infinity

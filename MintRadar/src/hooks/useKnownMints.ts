@@ -86,11 +86,13 @@ export interface KnownMint {
   // Informational only — never affects Reliability Score or the Rating sort; the UI
   // shows a quiet ⚠ next to the Community Rating.
   reviewSurge?: boolean
-  // IMDB-style weighted/Bayesian rating computed by the backend
-  // (backend/src/weightedRating.ts). Used ONLY for the Rating sort so a mint
-  // with one 5.0 review doesn't outrank a mint with many reviews at 4.7 — never
-  // shown in the UI (the Community Rating badge uses reviewAvgRating/reviewCount).
+  // IMDB-style weighted rating computed by the backend (backend/src/weightedRating.ts). No longer used by the
+  // frontend (the Rating sort uses bayesianRating over reviewAvgRating + reviewRatedCount since 2026-10-09);
+  // kept in the API. Never shown in the UI (the Community Rating badge uses reviewAvgRating/reviewCount).
   reviewWeightedRating?: number | null
+  // How many of reviewCount carry a rating (the n behind reviewAvgRating); null until the backend recount.
+  // Feeds the Rating sort only (src/utils/bayesianRating.ts), never displayed.
+  reviewRatedCount?: number | null
 }
 
 async function fetchKnownMints(): Promise<KnownMint[]> {

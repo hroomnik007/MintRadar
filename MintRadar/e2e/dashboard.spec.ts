@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { installApiMocks, mockRelays } from './fixtures/mocks'
+import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 
 test.beforeEach(async ({ page }) => {
   await mockRelays(page)
@@ -105,4 +105,29 @@ test.describe('Dashboard', () => {
     await expect(page.locator('.md-tabs')).toBeVisible()
     await expect(page.getByText('Alpha Mint').first()).toBeVisible()
   })
+
+  test('"Rating" sorts by the confidence-adjusted average; the displayed stars and counts do not change', async ({ page }) => {
+    const mk = (name: string, over: Record<string, unknown>) => ({
+      ...MOCK_KNOWN_MINTS[0], url: `https://${name.toLowerCase()}.rating.example`, name: `${name} Mint`,
+      online: true, degraded: false, reliabilityScore: 80, reviewCount: 0, reviewAvgRating: null, reviewRatedCount: null, reviewWeightedRating: null,
+      ...over,
+    })
+    // 5.0 x1 -> 3.75, 4.8 x83 -> 4.73, 5.0 x3 -> 4.06, none -> last. (The old raw order would be One, Three, Many, None.)
+    const rows = [
+      mk('One', { reviewCount: 1, reviewAvgRating: 5.0, reviewRatedCount: 1, reviewWeightedRating: 4.99 }),
+      mk('Many', { reviewCount: 90, reviewAvgRating: 4.8, reviewRatedCount: 83, reviewWeightedRating: 4.5 }),
+      mk('Three', { reviewCount: 3, reviewAvgRating: 5.0, reviewRatedCount: 3, reviewWeightedRating: 4.98 }),
+      mk('None', {}),
+    ]
+    await page.route('**/api/mints/known', r => r.fulfill({ json: rows }))
+    await page.goto('/?status=all')
+    await expect(page.locator('.mint-card')).toHaveCount(4)
+    await page.locator('.sort-btn', { hasText: 'Rating' }).click()
+    await expect(page.locator('.mint-grid .card-name')).toHaveText(['Many Mint', 'Three Mint', 'One Mint', 'None Mint'])
+    // What the card shows is the real average and the count of all reviews, as before.
+    const many = page.locator('.mint-card', { hasText: 'Many Mint' })
+    await expect(many.locator('.card-reliability-rating-val')).toHaveText('4.8')
+    await expect(many.locator('.card-reliability-rating-n')).toHaveText('(90)')
+  })
 })
+

@@ -259,6 +259,10 @@ export async function initDb(): Promise<void> {
     // How many stored reviews (same counting rule as review_count) were written by the operator and
     // therefore are NOT in review_count / review_avg_rating. Set together with them (reviewsSync.ts).
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS review_operator_count INTEGER',
+    // How many of the counted reviews (review_count) carry a rating: the n behind review_avg_rating. Only the
+    // frontend Rating sort reads it (confidence-adjusted average). Set with the other aggregates (reviewsSync.ts);
+    // NULL until the startup recount / next review sync has run for the mint.
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS review_rated_count INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS nuts_limits JSONB',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_n_mints INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_n_melts INTEGER',

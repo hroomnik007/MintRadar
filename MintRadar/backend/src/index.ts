@@ -1217,7 +1217,7 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
         m.audit_cz_total, m.audit_cz_blamed, m.audit_cz_fetched_at,
         m.discovered_at, m.nostr_announced_at, m.nostr_announce_id, m.nostr_announce_pubkey, m.nostr_announce_d, m.last_reliability_score, m.last_error, m.server_location, m.ip_address, m.net_asn, m.net_org, m.net_country, m.has_onion,
-        m.review_count, m.review_avg_rating, m.review_operator_count, m.review_count_7d_ago, m.review_count_7d_ago_at,
+        m.review_count, m.review_avg_rating, m.review_operator_count, m.review_rated_count, m.review_count_7d_ago, m.review_count_7d_ago_at,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
         h7.total_7d,
@@ -1345,6 +1345,9 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           // Additive: stored reviews written by the mint's own operator. They are NOT in
           // reviewCount / reviewAvgRating / reviewWeightedRating / reviewSurge (see reviewsSync.ts).
           operatorReviewCount: (r.review_operator_count as number | null) ?? 0,
+          // Additive: how many of reviewCount carry a rating (the n behind reviewAvgRating); null until the
+          // startup recount / next review sync. The frontend Rating sort uses it (src/utils/bayesianRating.ts).
+          reviewRatedCount: (r.review_rated_count as number | null) ?? null,
           // Forgery-resistant sybil signal: the mint's review_count jumped
           // sharply vs. the daily rollup's ~1-week-ago snapshot. Informational
           // only — never feeds Reliability Score or reviewWeightedRating.

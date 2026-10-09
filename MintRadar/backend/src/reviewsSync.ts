@@ -120,6 +120,8 @@ export interface ReviewAggregate {
   avg: number | null
   /** Reviews that would have counted but were written by the mint's operator. */
   operatorCount: number
+  /** How many of the counted reviews carry a rating: the n behind `avg` (comment-only reviews are in `count` but not here). */
+  ratedCount: number
 }
 
 /** Operator keys of a mints row ({ contact_nostr, nostr_announce_pubkey }), see shared/operatorPubkeys.ts. */
@@ -132,7 +134,7 @@ export function operatorKeysOf(row: { contact_nostr?: unknown; nostr_announce_pu
   return operatorPubkeys({ contact, announcePubkey })
 }
 
-/** The one counting rule behind mints.review_count / review_avg_rating / review_operator_count. */
+/** The one counting rule behind mints.review_count / review_avg_rating / review_operator_count / review_rated_count. */
 export function aggregateReviews(rows: readonly StoredReviewRow[], operators: ReadonlySet<string>): ReviewAggregate {
   let count = 0
   let operatorCount = 0
@@ -144,7 +146,7 @@ export function aggregateReviews(rows: readonly StoredReviewRow[], operators: Re
     count++
     if (r.rating !== null) { ratedSum += Number(r.rating); rated++ }
   }
-  return { count, avg: rated === 0 ? null : Math.round((ratedSum / rated) * 10) / 10, operatorCount }
+  return { count, avg: rated === 0 ? null : Math.round((ratedSum / rated) * 10) / 10, operatorCount, ratedCount: rated }
 }
 
 export async function persistMintReviews(url: string, reviews: SyncedReview[]): Promise<void> {
@@ -185,8 +187,8 @@ export async function persistMintReviews(url: string, reviews: SyncedReview[]): 
     )
     const agg = aggregateReviews(stored as StoredReviewRow[], operators)
     await client.query(
-      `UPDATE mints SET review_count = $1, review_avg_rating = $2, review_operator_count = $3, reviews_checked_at = NOW() WHERE url = $4`,
-      [agg.count, agg.avg, agg.operatorCount, url],
+      `UPDATE mints SET review_count = $1, review_avg_rating = $2, review_operator_count = $3, review_rated_count = $4, reviews_checked_at = NOW() WHERE url = $5`,
+      [agg.count, agg.avg, agg.operatorCount, agg.ratedCount, url],
     )
     await client.query('COMMIT')
   } catch (err) {
@@ -197,7 +199,7 @@ export async function persistMintReviews(url: string, reviews: SyncedReview[]): 
   }
 }
 
-/** Recount mints.review_count / review_avg_rating / review_operator_count from stored mint_reviews
+/** Recount mints.review_count / review_avg_rating / review_operator_count / review_rated_count from stored mint_reviews
  *  without hitting relays. Same rule as persistMintReviews (aggregateReviews): empty events (no
  *  rating and no comment) and the operator's own reviews are not counted. */
 export async function recomputeReviewCountRollups(): Promise<number> {
@@ -219,9 +221,10 @@ export async function recomputeReviewCountRollups(): Promise<number> {
   const counts: number[] = []
   const avgs: Array<number | null> = []
   const opCounts: number[] = []
+  const ratedCounts: number[] = []
   for (const [url, list] of byUrl) {
     const agg = aggregateReviews(list, operatorsByUrl.get(url) ?? new Set())
-    urls.push(url); counts.push(agg.count); avgs.push(agg.avg); opCounts.push(agg.operatorCount)
+    urls.push(url); counts.push(agg.count); avgs.push(agg.avg); opCounts.push(agg.operatorCount); ratedCounts.push(agg.ratedCount)
   }
   if (urls.length === 0) {
     console.log('[reviews-sync] recomputed review_count rollup for 0 mint(s)')
@@ -231,10 +234,11 @@ export async function recomputeReviewCountRollups(): Promise<number> {
     `UPDATE mints m
         SET review_count = v.cnt,
             review_avg_rating = v.avg,
-            review_operator_count = v.opc
-       FROM unnest($1::text[], $2::int[], $3::real[], $4::int[]) AS v(url, cnt, avg, opc)
+            review_operator_count = v.opc,
+            review_rated_count = v.rated
+       FROM unnest($1::text[], $2::int[], $3::real[], $4::int[], $5::int[]) AS v(url, cnt, avg, opc, rated)
       WHERE m.url = v.url`,
-    [urls, counts, avgs, opCounts],
+    [urls, counts, avgs, opCounts, ratedCounts],
   )
   const n = rowCount ?? 0
   console.log(`[reviews-sync] recomputed review_count rollup for ${n} mint(s)`)

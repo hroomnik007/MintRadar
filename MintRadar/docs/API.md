@@ -99,12 +99,15 @@ All known mints with current online status, latency, reliability score, and meta
     "netOrg": "DigitalOcean, LLC",
     "netCountry": "US",
     "hasOnion": false,
-    "lastCheckedAt": "2026-06-25T09:55:00.000Z"
+    "lastCheckedAt": "2026-06-25T09:55:00.000Z",
+    "reviewCount": 90,
+    "reviewAvgRating": 4.8,
+    "reviewRatedCount": 83
   }
 ]
 ```
 
-`degraded` = mint has been offline for 24h+. `nutsLimits` keys are NUT numbers as strings. `ipAddress` (public IPv4 of the mint host, our own DNS lookup), `netAsn` / `netOrg` / `netCountry` (AS number, organisation and ISO country of that IP block, from ipinfo.io) and `hasOnion` (the mint's `/v1/info` lists a `.onion` address) are measured by MintRadar itself; each is `null` until first measured.
+`reviewCount` = counted NIP-87 reviews of the mint (the operator's own are left out; empty events are not counted); `reviewAvgRating` = their average over the rated ones (one decimal, `null` when none is rated); `reviewRatedCount` = how many of them carry a rating, the n behind the average (additive field, `null` until the backend's startup recount or the next review sync has filled it). The website's Dashboard "Rating" sort orders by the confidence-adjusted average `(n·avg + 5·3.5) / (n + 5)` over `reviewAvgRating` and `reviewRatedCount` (mints with few reviews rank lower; unrated mints last); the displayed values are not changed. `reviewWeightedRating` (an older server-side weighted value) is still returned, but the website no longer sorts by it. `degraded` = mint has been offline for 24h+. `nutsLimits` keys are NUT numbers as strings. `ipAddress` (public IPv4 of the mint host, our own DNS lookup), `netAsn` / `netOrg` / `netCountry` (AS number, organisation and ISO country of that IP block, from ipinfo.io) and `hasOnion` (the mint's `/v1/info` lists a `.onion` address) are measured by MintRadar itself; each is `null` until first measured.
 
 ---
 
