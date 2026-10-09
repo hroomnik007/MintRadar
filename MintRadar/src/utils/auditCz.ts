@@ -34,12 +34,14 @@ export interface AuditSwapRow {
 }
 
 export interface AuditCzTile {
-  key: 'success' | 'melts' | 'mints' | 'attributed' | 'avg'
+  key: 'melts' | 'mints' | 'clean' | 'avg'
   value: string
   /** Uppercase by CSS; a plain sentence-case string here. */
   label: string
-  /** Muted small line under the label ("of 16 failed swaps"); absent when there is nothing to add. */
+  /** Muted small line under the label ("105 of 105 swaps"); absent when there is nothing to add. */
   caption?: string
+  /** Second muted line ("16 failed for other reasons"); absent when no swap failed. */
+  captionNote?: string
   tooltip: string
 }
 
@@ -159,11 +161,6 @@ function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
   const s = d.swaps7d
   if (!s) return []
   const tiles: AuditCzTile[] = []
-  const allOk = num(s.all?.success), allTotal = num(s.all?.total)
-  if (allOk !== undefined && allTotal !== undefined && allTotal > 0) tiles.push({
-    key: 'success', value: `${Math.round((allOk / allTotal) * 100)}%`, label: 'Success rate',
-    tooltip: 'Share of swaps in the last 7 days, in both directions, that succeeded, counted by cashu.info (successful of all)',
-  })
   const meltsOk = num(s.asSource?.success), meltsAll = num(s.asSource?.total)
   if (meltsOk !== undefined && meltsAll !== undefined) tiles.push({
     key: 'melts', value: `${fmt(meltsOk)} / ${fmt(meltsAll)}`, label: 'Payouts',
@@ -174,17 +171,24 @@ function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
     key: 'mints', value: `${fmt(mintsOk)} / ${fmt(mintsAll)}`, label: 'Receives',
     tooltip: 'Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)',
   })
-  const blamed = num(s.errorsBlamed)
-  if (blamed !== undefined) {
-    const failed = num(s.all?.failed)
-    // Never "x / y": the second number is all failed swaps, not a total, and "0 / 16" read as "receives 0 of 16".
-    // Nothing blamed on this mint: no "of N failed swaps" caption either, "0 … of 16" reads as a broken fraction.
-    const noFailures = failed === 0 && blamed === 0
+  // The one success figure of this view is the one the Reliability Score's audit part uses: swaps without a
+  // failure that cashu.info attributes to this mint, (total - blamed) / total of the same 7-day window.
+  // Never "x / y" in the big number; whole percent, capped at 99 while anything is attributed so "1 of 200 caused" cannot read as 100%.
+  const total = num(s.all?.total), blamedRaw = num(s.errorsBlamed)
+  if (total !== undefined && total > 0 && blamedRaw !== undefined) {
+    const blamed = Math.min(blamedRaw, total)
+    const clean = total - blamed
+    const failed = Math.max(num(s.all?.failed) ?? blamed, blamed)
+    const other = failed - blamed
+    const note = failed === 0 ? undefined
+      : blamed === 0 ? `${fmt(other)} failed for other reasons`
+        : `${fmt(blamed)} caused by this mint${other > 0 ? ` · ${fmt(other)} other failure${other === 1 ? '' : 's'}` : ''}`
     tiles.push({
-      key: 'attributed', value: fmt(blamed),
-      label: noFailures ? 'Failed swaps' : 'Caused by this mint',
-      ...(failed !== undefined && blamed > 0 ? { caption: `of ${fmt(failed)} failed swap${failed === 1 ? '' : 's'}` } : {}),
-      tooltip: 'Swaps that failed because of this mint, as attributed by cashu.info. Failures with other causes are not counted against a mint, for example amounts below its minimum, the auditor\'s own balance and Lightning routing.',
+      key: 'clean', value: `${blamed > 0 ? Math.min(99, Math.round((clean / total) * 100)) : 100}%`,
+      label: 'Without a failure caused by this mint',
+      caption: `${fmt(clean)} of ${fmt(total)} swaps`,
+      ...(note ? { captionNote: note } : {}),
+      tooltip: 'Swaps in the last 7 days without a failure that cashu.info attributes to this mint. Failures caused by test amounts below the mint\'s minimum, the auditor\'s balance, Lightning routing or another mint are not counted against it. This is the figure the audit part of the Reliability Score uses; fewer than 10 swaps scores neutral.',
     })
   }
   const avg = num(s.all?.avgMs)
