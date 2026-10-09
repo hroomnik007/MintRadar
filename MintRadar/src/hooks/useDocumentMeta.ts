@@ -17,7 +17,15 @@ import { useLocation } from 'react-router-dom'
 // trailing slash) and mirrors the title/description into og:title/og:description and
 // twitter:title/twitter:description. The root route sets nothing of that: index.html's static values ARE
 // the root's, and every other route restores what it found (the static defaults) on unmount.
-// Mint Detail opts out (`routeTags: false`) and keeps the static tags it always had.
+// Mint Detail opts out (`routeTags: false`) and keeps the static tags it always had, except for
+// `canonicalPath` (below): its own canonical and og:url.
+//
+// `canonicalPath` (only meaningful with `routeTags: false`): sets JUST <link rel="canonical"> and
+// og:url to https://mintradar.org + that path and restores the previous values on unmount. Used by Mint
+// Detail, whose route path is not the canonical one (the page resolves the slug first), and which must not
+// inherit the homepage canonical of index.html when Google renders the page. The caller passes an
+// already-encoded path (encodeURIComponent for the mint URL); a value that does not start with a single "/"
+// is ignored.
 const SITE_ORIGIN = 'https://mintradar.org'
 
 // Sets one tag attribute and returns the function that puts the previous state back.
@@ -51,10 +59,11 @@ function canonicalUrlFor(pathname: string): string {
 export function useDocumentMeta(
   title: string,
   description?: string,
-  options?: { noindex?: boolean; routeTags?: boolean },
+  options?: { noindex?: boolean; routeTags?: boolean; canonicalPath?: string },
 ): void {
   const noindex = options?.noindex ?? false
   const routeTags = options?.routeTags ?? true
+  const canonicalPath = options?.canonicalPath
   const { pathname } = useLocation()
   const canonical = canonicalUrlFor(pathname)
   const isRoot = canonical === `${SITE_ORIGIN}/`
@@ -75,6 +84,16 @@ export function useDocumentMeta(
     }
     return () => { for (const fn of undo.reverse()) fn() }
   }, [canonical, isRoot, routeTags, title, description])
+
+  useEffect(() => {
+    if (routeTags || !canonicalPath || !/^\/(?!\/)\S*$/.test(canonicalPath)) return
+    const href = `${SITE_ORIGIN}${canonicalPath}`
+    const undo = [
+      setTag('link[rel="canonical"]', () => { const l = document.createElement('link'); l.setAttribute('rel', 'canonical'); return l }, 'href', href),
+      setTag('meta[property="og:url"]', metaBy('property', 'og:url'), 'content', href),
+    ]
+    return () => { for (const fn of undo.reverse()) fn() }
+  }, [routeTags, canonicalPath])
 
   useEffect(() => {
     const prevTitle = document.title

@@ -389,7 +389,7 @@ function MintDetailContent({ url }: { url: string }) {
     knownMint
       ? `${metaDisplayName} (${mintHostname(url)}) is ${knownMint.online ? 'online' : 'offline'} with a Reliability Score of ${knownMint.reliabilityScore ?? '—'}%. See live uptime, latency, NUT support and reviews on MintRadar.`
       : `Live Reliability Score, uptime, latency and NUT support for the Cashu mint ${mintHostname(url)} on MintRadar.`,
-    { routeTags: false },
+    { routeTags: false, canonicalPath: `/mint/${encodeURIComponent(url)}` },
   )
 
   const [chartInterval, setChartInterval] = useState<'24h' | '7d' | '30d' | '90d'>('7d')
