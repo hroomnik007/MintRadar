@@ -109,12 +109,12 @@ export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, 
         style={{ opacity: refreshing ? 0.5 : 1, transition: 'opacity 0.15s ease' }}
         aria-busy={refreshing || loading}
       >
-        <div className="stats-movers-section-label"><TrendingUp size={11} /> Risers</div>
+        <div className="stats-movers-section-label up"><TrendingUp size={15} aria-hidden="true" /> Risers</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stats-row-gap)' }}>
           {renderRows(data?.risers ?? [], 'up')}
         </div>
 
-        <div className="stats-movers-section-label"><TrendingDown size={11} /> Fallers</div>
+        <div className="stats-movers-section-label down"><TrendingDown size={15} aria-hidden="true" /> Fallers</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--stats-row-gap)' }}>
           {renderRows(data?.fallers ?? [], 'down')}
         </div>
