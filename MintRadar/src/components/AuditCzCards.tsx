@@ -18,6 +18,7 @@ export function AuditCzTiles({ view }: { view: AuditCzView }) {
             <span>{t.label}</span>
             <InfoTooltip text={t.tooltip} width={240} iconSize={11} label={`About ${t.label}`} />
           </div>
+          {t.caption && <div className="audit-cz-tile-caption">{t.caption}</div>}
         </div>
       ))}
     </div>

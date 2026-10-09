@@ -38,6 +38,8 @@ export interface AuditCzTile {
   value: string
   /** Uppercase by CSS; a plain sentence-case string here. */
   label: string
+  /** Muted small line under the label ("of 16 failed swaps"); absent when there is nothing to add. */
+  caption?: string
   tooltip: string
 }
 
@@ -175,10 +177,13 @@ function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
   const blamed = num(s.errorsBlamed)
   if (blamed !== undefined) {
     const failed = num(s.all?.failed)
+    // Never "x / y": the second number is all failed swaps, not a total, and "0 / 16" read as "receives 0 of 16".
+    const noFailures = failed === 0 && blamed === 0
     tiles.push({
-      key: 'attributed', value: failed !== undefined ? `${fmt(blamed)} / ${fmt(failed)}` : fmt(blamed),
-      label: "Mint's fault",
-      tooltip: 'Failed swaps in the last 7 days that cashu.info attributes to this mint (attributed / all failed swaps). The other failed swaps were not caused by this mint, for example amounts below its minimum or Lightning routing.',
+      key: 'attributed', value: fmt(blamed),
+      label: noFailures ? 'Failed swaps' : 'Caused by this mint',
+      ...(failed !== undefined && !noFailures ? { caption: `of ${fmt(failed)} failed swap${failed === 1 ? '' : 's'}` } : {}),
+      tooltip: 'Swaps that failed because of this mint, as attributed by cashu.info. Failures with other causes are not counted against a mint, for example amounts below its minimum, the auditor\'s own balance and Lightning routing.',
     })
   }
   const avg = num(s.all?.avgMs)
@@ -187,6 +192,18 @@ function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
     tooltip: 'Average swap time over the last 7 days as reported by cashu.info.',
   })
   return tiles
+}
+
+/**
+ * Text under the "Audit reliability" row of the score breakdown when the stored 7-day detail is at hand:
+ * the overall result next to the attributed failures, so the row cannot be read as the success rate.
+ * null when the detail lacks one of the numbers (the row then keeps its own text).
+ */
+export function auditCzBreakdownText(d: AuditCzDetail | null | undefined): string | null {
+  const s = d?.swaps7d
+  const total = num(s?.all?.total), success = num(s?.all?.success), failed = num(s?.all?.failed), blamed = num(s?.errorsBlamed)
+  if (total === undefined || success === undefined || failed === undefined || blamed === undefined) return null
+  return `${fmt(success)} of ${fmt(total)} swaps succeeded in the last 7 days; ${fmt(failed)} failed, ${fmt(blamed)} attributed to this mint (cashu.info)`
 }
 
 /** The two sentences of the "Checks by the auditor" card; null for a line without data, the card hides when both are null. */

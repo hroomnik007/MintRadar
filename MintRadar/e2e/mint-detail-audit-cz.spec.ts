@@ -61,9 +61,10 @@ test('only cz has data: header, four tiles from the stored detail, no checks car
 
   // Five tiles from the LNpay detail, in order; the label is sentence case.
   await expect(page.locator('.audit-cz-tiles .audit-summary-cell')).toHaveCount(5)
-  await expect(page.locator('.audit-cz-tiles .audit-summary-value')).toHaveText(['85%', '51 / 64', '56 / 62', '0 / 19', '8.3 s'])
+  await expect(page.locator('.audit-cz-tiles .audit-summary-value')).toHaveText(['85%', '51 / 64', '56 / 62', '0', '8.3 s'])
   await expect(page.locator('.audit-cz-tiles .audit-cz-tile-label span').filter({ hasText: /^[A-Z]/ })).toHaveText(
-    ['Success rate', 'Payouts', 'Receives', "Mint's fault", 'Avg swap time'])
+    ['Success rate', 'Payouts', 'Receives', 'Caused by this mint', 'Avg swap time'])
+  await expect(tile(page, 'attributed').locator('.audit-cz-tile-caption')).toHaveText('of 19 failed swaps')
   expect(await tile(page, 'melts').locator('.audit-cz-tile-label span').first().evaluate(e => getComputedStyle(e).textTransform)).toBe('none') // sentence case, like the swap strip labels
   // The old Recent success rate tile is gone from this view.
   await expect(page.getByText('Recent success rate')).toHaveCount(0)
@@ -178,10 +179,19 @@ test('limits, balance and pending rows are neutral, failures red; the bar follow
 
 // ── d) tiles, checks and tables from the stored detail ──────────
 test.describe('tiles from the stored detail', () => {
-  test('"Mint\'s fault": blamed / failed numbers', async ({ page }) => {
+  test('"Caused by this mint": the blamed number, the failed total as a caption, never "x / y"', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: czDetail({ swaps7d: { ...LNPAY_DETAIL.swaps7d, errorsBlamed: 3, all: { ...LNPAY_DETAIL.swaps7d.all, failed: 1 } } }) }))
-    await expect(tile(page, 'attributed').locator('.audit-summary-value')).toHaveText('3 / 1')
-    await expect(tile(page, 'attributed')).toContainText("Mint's fault")
+    await expect(tile(page, 'attributed').locator('.audit-summary-value')).toHaveText('3')
+    await expect(tile(page, 'attributed').locator('.audit-cz-tile-label span').first()).toHaveText('Caused by this mint')
+    await expect(tile(page, 'attributed').locator('.audit-cz-tile-caption')).toHaveText('of 1 failed swap')
+    await expect(tile(page, 'attributed')).not.toContainText('/')
+  })
+
+  test('no failed swaps: label "Failed swaps", no caption', async ({ page }) => {
+    await gotoAuditTab(page, onlyCz([], { detail: czDetail({ swaps7d: { ...LNPAY_DETAIL.swaps7d, errorsBlamed: 0, all: { ...LNPAY_DETAIL.swaps7d.all, failed: 0 } } }) }))
+    await expect(tile(page, 'attributed').locator('.audit-summary-value')).toHaveText('0')
+    await expect(tile(page, 'attributed').locator('.audit-cz-tile-label span').first()).toHaveText('Failed swaps')
+    await expect(tile(page, 'attributed').locator('.audit-cz-tile-caption')).toHaveCount(0)
   })
 
   test('a tile whose source field is missing is hidden; under a second the average is in ms', async ({ page }) => {
@@ -204,7 +214,7 @@ test.describe('tiles from the stored detail', () => {
     const expected: Record<string, string> = {
       melts: 'Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)',
       mints: 'Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)',
-      attributed: 'Failed swaps in the last 7 days that cashu.info attributes to this mint (attributed / all failed swaps). The other failed swaps were not caused by this mint, for example amounts below its minimum or Lightning routing.',
+      attributed: "Swaps that failed because of this mint, as attributed by cashu.info. Failures with other causes are not counted against a mint, for example amounts below its minimum, the auditor's own balance and Lightning routing.",
       avg: 'Average swap time over the last 7 days as reported by cashu.info.',
     }
     for (const [key, text] of Object.entries(expected)) {
@@ -674,4 +684,26 @@ test.describe('390px viewport', () => {
       }
     })
   }
+})
+
+// ── score breakdown row: the detail the Audit tab loaded ────────
+test.describe('Reliability breakdown: audit row sentence', () => {
+  const auditRow = (page: Page) => page.locator('.md-reliability-panel .rb-row', { hasText: 'Audit reliability (25%)' })
+
+  test('shows the overall result next to the attributed failures once the Audit tab has loaded the detail; before that the row keeps its own text', async ({ page }) => {
+    const detail = czDetail({ swaps7d: { all: { total: 105, success: 89, failed: 16, avgMs: 9418 }, asSource: { total: 54, success: 42, failed: 12 }, asDest: { total: 51, success: 47, failed: 4 }, errorsBlamed: 0, dleq: { valid: 47, invalid: 0, missing: 0 } } })
+    await gotoAuditTab(page, onlyCz([], { detail }), false)
+    // No Audit tab visit yet: no extra request, the row shows only "x / y" and the points.
+    await expect(auditRow(page)).toBeVisible()
+    await expect(auditRow(page).locator('.rb-row-detail')).toHaveCount(0)
+    await expect(auditRow(page).locator('.rb-row-display')).toHaveText('0 / 100')
+
+    await page.locator('.md-tab', { hasText: 'Audit' }).click()
+    await expect(tile(page, 'attributed')).toBeVisible()
+    await page.locator('.md-tab', { hasText: 'Overview' }).click()
+    await expect(auditRow(page).locator('.rb-row-detail')).toHaveText('89 of 105 swaps succeeded in the last 7 days; 16 failed, 0 attributed to this mint (cashu.info)')
+    await expect(auditRow(page).locator('.rb-row-score')).toHaveText('25/25')
+    await auditRow(page).locator('svg').first().hover()
+    await expect(page.getByText('Only failures attributed to this mint count, not the overall success rate.')).toBeVisible()
+  })
 })

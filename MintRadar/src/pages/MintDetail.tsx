@@ -35,7 +35,7 @@ import { auditFreshness } from '@/utils/auditFreshness'
 import { IcClose } from '@/components/IcClose'
 import { clickableProps } from '@/utils/clickableProps'
 import { useAuditCz } from '@/hooks/useAuditCz'
-import { adaptAuditCz, auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzBreakdownText, auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import { sortUnits } from '@/utils/sortUnits'
 import {
@@ -969,8 +969,9 @@ function MintDetailContent({ url }: { url: string }) {
   const breakdownAScore = auditComponent(auditCzBlamed, auditCzTotal, auditCzFetchedAt, now)
   const auditState = auditDataState(auditCzBlamed, auditCzTotal, auditCzFetchedAt, now)
   const auditAgeH = auditAgeHours(auditCzFetchedAt, now)
+  // The stored detail comes from the Audit tab's query: used when it is already in the cache (no extra request).
   const auditDetailText = auditState === 'scored'
-    ? undefined
+    ? (auditCzBreakdownText(auditCzData?.detail) ?? undefined)
     : auditState === 'too-few'
       ? `Not enough audit data yet (fewer than ${AUDIT_MIN_SAMPLES} swaps in the last 7 days): neutral`
       : auditState === 'too-old'
@@ -1019,7 +1020,7 @@ function MintDetailContent({ url }: { url: string }) {
   const stripErrors = breakdownAuditRecentErrors
   const reliabilityBreakdownRows = [
     { label: 'Uptime (40%)', display: `${uptimePct}%`, score: breakdownUScore, max: 40, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.' },
-    { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, ...(auditDetailText ? { detail: auditDetailText } : {}), score: breakdownAScore, max: 25, color: auditRowColor, tooltip: `Failures cashu.info attributes to this mint, as a share of its auditor's swaps in the last 7 days. Not the overall success rate. Fewer than ${AUDIT_MIN_SAMPLES} swaps or no recent data: a neutral 12.5 of 25.`, ...(auditStaleNote ? { note: auditStaleNote } : {}) },
+    { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, ...(auditDetailText ? { detail: auditDetailText } : {}), score: breakdownAScore, max: 25, color: auditRowColor, tooltip: `Failures cashu.info attributes to this mint, as a share of its auditor's swaps in the last 7 days. Only failures attributed to this mint count, not the overall success rate. Fewer than ${AUDIT_MIN_SAMPLES} swaps or no recent data: a neutral 12.5 of 25.`, ...(auditStaleNote ? { note: auditStaleNote } : {}) },
     { label: 'NUT Support (15%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 15, color: supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.' },
     { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? 'var(--accent)' : breakdownVScore >= 6 ? 'var(--amber)' : 'var(--red)', tooltip: "Compared with the newest stable release of the same software (Nutshell or cdk-mintd). 0 or 1 minor version behind scores the full 15 points; two or more behind is labelled Outdated and scores less (2 behind: 9, 3: 6, 4: 3, 5 or more: 0). Other software scores a neutral value." },
     { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? 'var(--accent)' : breakdownCScore >= 2 ? 'var(--amber)' : 'var(--red)', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.' },

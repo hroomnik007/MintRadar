@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { adaptAuditCz, auditCzChecks, auditCzNeutralKind, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, type AuditCzView } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzBreakdownText, auditCzChecks, auditCzNeutralKind, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, type AuditCzView } from '@/utils/auditCz'
 import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
 
 type Row = AuditCzData['swaps'][number]
@@ -32,24 +32,52 @@ const view = (swaps: Row[], detail: AuditCzData['detail'] = LNPAY, over: Partial
   adaptAuditCz(data(swaps, detail, over), now) as AuditCzView
 const tiles = (d: AuditCzDetail) => Object.fromEntries(view([], d).tiles.map(t => [t.key, t]))
 
+describe('breakdown row text from the stored detail', () => {
+  it('overall result next to the attributed failures', () => {
+    expect(auditCzBreakdownText(LNPAY)).toBe('107 of 126 swaps succeeded in the last 7 days; 19 failed, 0 attributed to this mint (cashu.info)')
+    // the Minibits case of the external review: 89 of 105 succeeded, 16 failed, none attributed
+    expect(auditCzBreakdownText({ fetchedAt: null, swaps7d: { all: { total: 105, success: 89, failed: 16 }, errorsBlamed: 0 } }))
+      .toBe('89 of 105 swaps succeeded in the last 7 days; 16 failed, 0 attributed to this mint (cashu.info)')
+  })
+  it('null while a number is missing, so the row keeps its own text', () => {
+    expect(auditCzBreakdownText(null)).toBeNull()
+    expect(auditCzBreakdownText(undefined)).toBeNull()
+    expect(auditCzBreakdownText({ fetchedAt: null })).toBeNull()
+    expect(auditCzBreakdownText({ fetchedAt: null, swaps7d: { all: { total: 10, success: 9 }, errorsBlamed: 0 } })).toBeNull()
+    expect(auditCzBreakdownText({ fetchedAt: null, swaps7d: { all: { total: 10, success: 9, failed: 1 } } })).toBeNull()
+  })
+})
+
 describe('tiles from the stored detail (LNpay values)', () => {
   it('fractions, attributed caption and average time', () => {
     const t = tiles(LNPAY)
     expect(t['success']).toMatchObject({ value: '85%', label: 'Success rate' })
     expect(t['melts']).toMatchObject({ value: '51 / 64', label: 'Payouts' })
     expect(t['mints']).toMatchObject({ value: '56 / 62', label: 'Receives' })
-    expect(t['attributed']).toMatchObject({ value: '0 / 19', label: "Mint's fault" })
+    expect(t['attributed']).toMatchObject({ value: '0', label: 'Caused by this mint', caption: 'of 19 failed swaps' })
     expect(t['avg']).toMatchObject({ value: '8.3 s', label: 'Avg swap time' })
     expect(view([]).tiles.map(x => x.key)).toEqual(['success', 'melts', 'mints', 'attributed', 'avg'])
   })
-  it('attributed tile shows blamed / failed', () => {
-    expect(tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { failed: 1 } } })['attributed']?.value).toBe('0 / 1')
+  it('attributed tile: the blamed number alone, "of N failed swaps" as caption, never "x / y"', () => {
+    const one = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { failed: 1 } } })['attributed']
+    expect(one).toMatchObject({ value: '0', label: 'Caused by this mint', caption: 'of 1 failed swap' })
+    const some = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, errorsBlamed: 3, all: { failed: 16 } } })['attributed']
+    expect(some).toMatchObject({ value: '3', label: 'Caused by this mint', caption: 'of 16 failed swaps' })
+    for (const t of view([]).tiles.filter(x => x.key === 'attributed')) expect(t.value).not.toContain('/')
+  })
+  it('attributed tile: no failed swaps at all is labelled "Failed swaps" without a caption', () => {
+    const none = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, errorsBlamed: 0, all: { failed: 0 } } })['attributed']
+    expect(none).toMatchObject({ value: '0', label: 'Failed swaps' })
+    expect(none?.caption).toBeUndefined()
+    // blamed above zero keeps the "caused by" wording even if the failed count is odd
+    expect(tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, errorsBlamed: 2, all: { failed: 0 } } })['attributed']).toMatchObject({ label: 'Caused by this mint', caption: 'of 0 failed swaps' })
   })
   it('a tile whose field is missing is hidden', () => {
     expect(Object.keys(tiles({ fetchedAt: null, swaps7d: { asSource: { success: 1, total: 2 } } }))).toEqual(['melts'])
     expect(Object.keys(tiles({ fetchedAt: null, swaps7d: { asDest: { success: 3 } } }))).toEqual([])
     expect(Object.keys(tiles({ fetchedAt: null }))).toEqual([])
-    expect(tiles({ fetchedAt: null, swaps7d: { errorsBlamed: 2 } })['attributed']?.label).toBe("Mint's fault")
+    expect(tiles({ fetchedAt: null, swaps7d: { errorsBlamed: 2 } })['attributed']?.label).toBe('Caused by this mint')
+    expect(tiles({ fetchedAt: null, swaps7d: { errorsBlamed: 2 } })['attributed']?.caption).toBeUndefined()
   })
   it('formats the average: seconds with one decimal, under a second in ms', () => {
     expect(formatAvgSwapTime(8289)).toBe('8.3 s')
@@ -62,7 +90,10 @@ describe('tiles from the stored detail (LNpay values)', () => {
     const t = tiles(LNPAY)
     expect(t['melts']?.tooltip).toBe('Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)')
     expect(t['mints']?.tooltip).toBe('Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)')
-    expect(t['attributed']?.tooltip).toContain('that cashu.info attributes to this mint (attributed / all failed swaps)')
+    expect(t['attributed']?.tooltip).toMatch(/^Swaps that failed because of this mint, as attributed by cashu\.info\. /)
+    expect(t['attributed']?.tooltip).toContain('amounts below its minimum')
+    expect(t['attributed']?.tooltip).toContain('balance')
+    expect(t['attributed']?.tooltip).toContain('Lightning routing')
     expect(t['avg']?.tooltip).toBe('Average swap time over the last 7 days as reported by cashu.info.')
     expect(t['avg']?.tooltip).not.toMatch(/successful swaps/)
   })
