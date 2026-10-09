@@ -689,7 +689,7 @@ test.describe('390px viewport', () => {
 // ── score breakdown row: identical whether or not the Audit tab was opened ──
 test.describe('Reliability breakdown: audit row', () => {
   const auditRow = (page: Page) => page.locator('.md-reliability-panel .rb-row', { hasText: 'Audit reliability (25%)' })
-  const TIP = 'Failures cashu.info attributes to this mint, of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5/25.'
+  const TIP = 'Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.'
   const detail = () => czDetail({ swaps7d: { all: { total: 105, success: 89, failed: 16, avgMs: 9418 }, asSource: { total: 54, success: 42, failed: 12 }, asDest: { total: 51, success: 47, failed: 4 }, errorsBlamed: 0, dleq: { valid: 47, invalid: 0, missing: 0 } } })
   const snapshot = async (page: Page) => ({
     detail: await auditRow(page).locator('.rb-row-detail').count(),
@@ -698,20 +698,22 @@ test.describe('Reliability breakdown: audit row', () => {
     text: await auditRow(page).innerText(),
   })
 
-  test('a scored row has no sentence under it, only "x / y" and the points, before and after opening the Audit tab; the tooltip is the short one', async ({ page }) => {
+  test('a scored row has no sentence, the exact tooltip, and the audit detail is requested only by the Audit tab (0, then 1, then still 1)', async ({ page }) => {
     const h = await gotoAuditTab(page, onlyCz([], { detail: detail() }), false)
+    const czRequests = () => h.requests.filter(u => new URL(u, 'http://x').pathname === '/api/mints/audit-cz')
     await expect(auditRow(page).locator('.rb-row-score')).toHaveText('25/25')
     const before = await snapshot(page)
     expect(before).toMatchObject({ detail: 0, display: '0 / 100', score: '25/25' })
-    expect(before.text).not.toMatch(/swaps succeeded|attributed to this mint \(cashu\.info\)/)
+    expect(before.text).not.toMatch(/swaps succeeded|attributed to this mint \(cashu\.info\)|had a failure/)
     await auditRow(page).locator('svg').first().hover()
     await expect(page.getByText(TIP, { exact: true })).toBeVisible()
-    expect(TIP.length).toBeLessThanOrEqual(160)
-    expect(h.requests.filter(u => u.includes('/api/mints/audit-cz'))).toHaveLength(1)
+    expect(czRequests()).toHaveLength(0)
 
     await page.locator('.md-tab', { hasText: 'Audit' }).click()
     await expect(tile(page, 'attributed')).toBeVisible()
+    expect(czRequests()).toHaveLength(1)
     await page.locator('.md-tab', { hasText: 'Overview' }).click()
     expect(await snapshot(page)).toEqual(before)
+    expect(czRequests()).toHaveLength(1)
   })
 })

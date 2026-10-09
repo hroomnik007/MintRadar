@@ -644,10 +644,9 @@ function MintDetailContent({ url }: { url: string }) {
     enabled: activeTab === 'audit',
     staleTime: 5 * 60 * 1000,
   })
-  // cashu.info data: read from our own /api/mints/audit-cz (database only, never from them) once the
-  // known-mints list has loaded, whatever tab is open, so the Reliability breakdown's Audit row text does not
-  // depend on which tabs were visited.
-  const { data: auditCzData, loading: auditCzLoading } = useAuditCz(url)
+  // cashu.info data: fetched (from our own /api/mints/audit-cz, never from them) only while
+  // the Audit tab is open and the known-mints list has loaded. The breakdown's Audit row does not use it.
+  const { data: auditCzData, loading: auditCzLoading } = useAuditCz(url, activeTab === 'audit')
   const czData = adaptAuditCz(auditCzData, now)
   // Source chosen with the header switch (null = default: cashu.info when the 8333 data is missing/stale).
   const [auditSourcePick, setAuditSourcePick] = useState<'cz' | '8333' | null>(null)
@@ -1021,7 +1020,7 @@ function MintDetailContent({ url }: { url: string }) {
   const stripErrors = breakdownAuditRecentErrors
   const reliabilityBreakdownRows = [
     { label: 'Uptime (40%)', display: `${uptimePct}%`, score: breakdownUScore, max: 40, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.' },
-    { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, ...(auditDetailText ? { detail: auditDetailText } : {}), score: breakdownAScore, max: 25, color: auditRowColor, tooltip: `Failures cashu.info attributes to this mint, of its swaps in the last 7 days (not the overall success rate). Under ${AUDIT_MIN_SAMPLES} swaps or no recent data: neutral 12.5/25.`, ...(auditStaleNote ? { note: auditStaleNote } : {}) },
+    { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, ...(auditDetailText ? { detail: auditDetailText } : {}), score: breakdownAScore, max: 25, color: auditRowColor, tooltip: `Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under ${AUDIT_MIN_SAMPLES} swaps or no recent data: neutral 12.5 of 25.`, ...(auditStaleNote ? { note: auditStaleNote } : {}) },
     { label: 'NUT Support (15%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 15, color: supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.' },
     { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? 'var(--accent)' : breakdownVScore >= 6 ? 'var(--amber)' : 'var(--red)', tooltip: "Compared with the newest stable release of the same software (Nutshell or cdk-mintd). 0 or 1 minor version behind scores the full 15 points; two or more behind is labelled Outdated and scores less (2 behind: 9, 3: 6, 4: 3, 5 or more: 0). Other software scores a neutral value." },
     { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? 'var(--accent)' : breakdownCScore >= 2 ? 'var(--amber)' : 'var(--red)', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.' },
