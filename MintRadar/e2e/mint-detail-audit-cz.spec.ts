@@ -64,7 +64,7 @@ test('only cz has data: header, four tiles from the stored detail, no checks car
   await expect(page.locator('.audit-cz-tiles .audit-summary-cell')).toHaveCount(4)
   await expect(page.locator('.audit-cz-tiles .audit-summary-value')).toHaveText(['51 / 64', '56 / 62', '100%', '8.3 s'])
   await expect(page.locator('.audit-cz-tiles .audit-cz-tile-label span').filter({ hasText: /^[A-Z]/ })).toHaveText(
-    ['Payouts', 'Receives', 'Without a failure caused by this mint', 'Avg swap time'])
+    ['Payouts', 'Receives', 'Not this mint\'s fault', 'Avg swap time'])
   await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
   await tile(page, 'clean').locator('.info-tooltip').hover()
   await expect(tile(page, 'clean').getByRole('tooltip')).toContainText('126 of 126 swaps, 19 failed for other reasons last 7 days')
@@ -223,11 +223,12 @@ test.describe('tiles from the stored detail', () => {
     await page.mouse.move(0, 0)
   })
 
-  test('fewer than 10 swaps still shows the number; the tooltip explains the neutral rule', async ({ page }) => {
+  test('fewer than 10 swaps still shows the number; tooltip is only the sentence', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(4, 0, 0) }))
     await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('100%')
     await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(tile(page, 'clean').getByRole('tooltip')).toContainText('fewer than 10 swaps scores neutral')
+    await expect(tile(page, 'clean').getByRole('tooltip')).toHaveText('4 of 4 swaps last 7 days')
+    await page.mouse.move(0, 0)
   })
 
   test('blamed above total is clamped', async ({ page }) => {
@@ -265,7 +266,7 @@ test.describe('tiles from the stored detail', () => {
     const expected: Record<string, string> = {
       melts: 'Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)',
       mints: 'Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)',
-      clean: "126 of 126 swaps, 19 failed for other reasons last 7 days. Failures caused by test amounts below the mint's minimum, the auditor's balance, Lightning routing or another mint are not counted against it. This is the figure the audit part of the Reliability Score uses; fewer than 10 swaps scores neutral.",
+      clean: '126 of 126 swaps, 19 failed for other reasons last 7 days',
       avg: 'Average swap time over the last 7 days as reported by cashu.info.',
     }
     for (const [key, text] of Object.entries(expected)) {

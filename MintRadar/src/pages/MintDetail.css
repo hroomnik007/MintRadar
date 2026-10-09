@@ -2109,7 +2109,7 @@ a.review-action-btn { color: var(--text3); }
   color: var(--text3);
 }
 /* cashu.info tiles share the swap strip's label style (sentence case, 12.5px); labels may wrap. */
-.audit-cz-tile-label { text-align: center; flex-wrap: wrap; }
+.audit-cz-tile-label { text-align: center; flex-wrap: nowrap; white-space: nowrap; }
 .audit-cz-tile-caption { font-size: 12px; line-height: 1.3; color: var(--text3); }
 .audit-cz-tiles .audit-summary-value { font-size: 19px; }
 .audit-cz-tiles { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }

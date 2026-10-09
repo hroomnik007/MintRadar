@@ -37,7 +37,7 @@ describe('tiles from the stored detail (LNpay values)', () => {
     const t = tiles(LNPAY)
     expect(t['melts']).toMatchObject({ value: '51 / 64', label: 'Payouts' })
     expect(t['mints']).toMatchObject({ value: '56 / 62', label: 'Receives' })
-    expect(t['clean']).toMatchObject({ value: '100%', label: 'Without a failure caused by this mint' })
+    expect(t['clean']).toMatchObject({ value: '100%', label: "Not this mint's fault" })
     expect(t['clean']?.caption).toBeUndefined()
     expect(t['clean']?.tooltip.startsWith('126 of 126 swaps, 19 failed for other reasons last 7 days.')).toBe(true)
     expect(t['avg']).toMatchObject({ value: '8.3 s', label: 'Avg swap time' })
@@ -70,11 +70,9 @@ describe('tiles from the stored detail (LNpay values)', () => {
     expect(none?.caption).toBeUndefined()
     for (const t of [one, none]) expect(t?.value).not.toContain('/')
   })
-  it('success tile: fewer than 10 swaps still shows the number, the tooltip explains the neutral rule', () => {
+  it('success tile: fewer than 10 swaps still shows the number, tooltip is only the sentence', () => {
     const t = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 4, success: 4, failed: 0 }, errorsBlamed: 0 } })['clean']
-    expect(t).toMatchObject({ value: '100%' })
-    expect(t?.tooltip.startsWith('4 of 4 swaps last 7 days.')).toBe(true)
-    expect(t?.tooltip).toContain('fewer than 10 swaps scores neutral')
+    expect(t).toMatchObject({ value: '100%', tooltip: '4 of 4 swaps last 7 days' })
   })
   it('success tile: hostile numbers are clamped or hide the tile', () => {
     const w = (all: Record<string, unknown>, errorsBlamed: unknown) => tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all, errorsBlamed } } as AuditCzDetail)['clean']
@@ -105,7 +103,7 @@ describe('tiles from the stored detail (LNpay values)', () => {
     const t = tiles(LNPAY)
     expect(t['melts']?.tooltip).toBe('Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)')
     expect(t['mints']?.tooltip).toBe('Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)')
-    expect(t['clean']?.tooltip).toBe("126 of 126 swaps, 19 failed for other reasons last 7 days. Failures caused by test amounts below the mint's minimum, the auditor's balance, Lightning routing or another mint are not counted against it. This is the figure the audit part of the Reliability Score uses; fewer than 10 swaps scores neutral.")
+    expect(t['clean']?.tooltip).toBe('126 of 126 swaps, 19 failed for other reasons last 7 days')
     expect(t['avg']?.tooltip).toBe('Average swap time over the last 7 days as reported by cashu.info.')
     expect(t['avg']?.tooltip).not.toMatch(/successful swaps/)
   })

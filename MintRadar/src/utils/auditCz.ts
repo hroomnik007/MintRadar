@@ -188,8 +188,8 @@ function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
         : `${fmt(clean)} of ${fmt(total)} swaps, ${fmt(blamed)} caused by this mint${other > 0 ? `, ${fmt(other)} failed for other reasons` : ''} last 7 days`
     tiles.push({
       key: 'clean', value: `${blamed > 0 ? Math.min(99, Math.round((clean / total) * 100)) : 100}%`,
-      label: 'Without a failure caused by this mint',
-      tooltip: `${sentence}. Failures caused by test amounts below the mint's minimum, the auditor's balance, Lightning routing or another mint are not counted against it. This is the figure the audit part of the Reliability Score uses; fewer than 10 swaps scores neutral.`,
+      label: "Not this mint's fault",
+      tooltip: sentence,
     })
   }
   const avg = num(s.all?.avgMs)
