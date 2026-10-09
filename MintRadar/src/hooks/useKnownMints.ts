@@ -13,6 +13,9 @@ export interface KnownMint {
   online: boolean | null
   latencyMs: number | null
   version: string | null
+  // The ONE "latest" { major, minor } of this mint's own software family (the same value the stored Reliability
+  // Score was computed against; null for unknown software). All version labels and the breakdown use it.
+  softwareLatest?: { major: number; minor: number } | null
   nutCount: number | null
   tosUrl: string | null
   descriptionLong: string | null

@@ -118,7 +118,7 @@ anonymized sample payloads captured from a live diagnostic GET against the Minib
 
 ## Backend API
 - GET /health and GET /api/v1/health — health check (same payload, both rate-limit exempt; the `/api/v1` prefix rewrite has a special case mapping it to `/health`; there is deliberately NO `/api/health`). Payload: `status, timestamp, lastProbeAt, lastAuditSyncAt, lastReviewsSyncAt, auditUpstream, auditUpstreamCheckedAt`. `auditUpstream` (`ok|down|unknown`) is module-level in-memory state in `discovery.ts` set by `discoverMintsFromApi()` (last sync attempt, not a live check; `unknown` after restart until the next 6h sync); `/health` makes no outbound request. `getSyncTimesFromDb()` dedupes concurrent queries on cache expiry
-- GET /api/mints/known — all mints with online status, latency, reliability score, degraded flag (TTL cached 60s)
+- GET /api/mints/known — all mints with online status, latency, reliability score, degraded flag (TTL cached 60s). Each mint carries `softwareLatest` (`{ major, minor }` of its own software family, `null` for unknown software — the ONE "latest" from `versionCatalog.ts` `getLatestVersionsMap()`, see docs/claude/scoring-and-probing.md); `/api/mints/version-history` still returns the same value as `latestGlobalVersion` (`nutshell/0.21`)
 - GET /api/mints/history?url=&period={24h|7d|30d|90d} — bucketed uptime/latency segments + prev period trend
 - GET /api/mints/version-history?url= — per-mint software version timeline + latest global version
 - GET /api/mints/daily-uptime?url= — daily uptime counts for last 30 days

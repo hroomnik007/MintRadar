@@ -128,9 +128,10 @@ now itself superseded (NHI moved out of `.stats-right-col` into this hero grid).
   (always full width `1 / -1`). The 2×2 hero panels moved out of this grid entirely into
   `.stats-hero-grid` above.
 - **Software in Use subtitle (`c3523db`):** "Behind current release" → **"% of tracked mints
-  behind latest release"**, shown under the panel title. The 75% `swFreshnessSummary.pct`
-  bar/value and the methodology (i) tooltip text are unchanged (see "Stats widgets — 2026-09-08
-  changes" below for that tooltip's own history).
+  behind latest release"**, shown under the panel title. **Replaced 2026-10-09:** the bar is now
+  **"Tracked mints running outdated software"** — the share (`swFreshnessSummary.pct`) of the
+  Nutshell / cdk-mintd mints that are OUTDATED (two or more minor versions behind the newest stable
+  release of their software, `shared/versionRule.ts`); other software is not in the denominator. The (i) tooltip says exactly that.
 - **Network Health Index donut (`c3523db`):** desktop gauge enlarged **84px → 112px** (~1.33x,
   filling empty space the panel already had next to the legend); number font scaled to match.
   Legend position, breakdown-bar placement, mobile gauge size, and the score formula are
@@ -186,7 +187,7 @@ Before the 2×2 hero grid, NHI went through multiple repositioning attempts:
   mint reports to the latest known release for that implementation — not a CVE or security
   score." **Superseded 2026-09-12 (`c3523db`):** the subtitle text itself was changed again, to
   **"% of tracked mints behind latest release"** — see "Stats Page Layout" above. The (i)
-  tooltip content and **the 75% `swFreshnessSummary.pct` formula are unchanged.**
+  tooltip content and the old 75% rank-based formula were replaced on 2026-10-09 (see above).
 - Tests: `e2e/stats-widgets.spec.ts`, `e2e/stats-nhi-gauge.spec.ts`,
   `src/__tests__/geoDistribution.test.ts` (`normalizeGeoLoc`).
 
@@ -315,3 +316,5 @@ One layout for every width, `.filter-bar` = flex-wrap (Dashboard.tsx / Dashboard
 
 ## Geographic Distribution layout (2026-10-07, owner mockup)
 Title row (icon kept) + subtitle "City from the IP address, not where the operator is." (`.stats-geo-sub`). The CDN / anycast bucket (`CDN_BUCKET`) is NOT a city: it gets its own full-width row above the cities (`.stats-geo-cdn`: 🌐 + label + count in the first column, the note "these are not a city." in the second; one column on ≤700px) and is excluded from `geoCities`, which split into two balanced columns (`ceil(n/2)` rows). City rows: flag in a fixed 26px cell (`.stats-geo-flag`, emoji flag, so Windows shows letters as before), name in the body font 15px, count muted; no underline any more (the pointer + hover background stay). Every row, CDN included, still opens the same city modal (`setCityModal`); "View others →" and "Geolocation unavailable" lines are unchanged. Tests: `e2e/stats-widgets.spec.ts` (Geographic cases), `e2e/modal-dialog-semantics.spec.ts`.
+
+- **Software cards and modal labels (2026-10-09):** the version list shows only **`latest`** (green) and **`outdated`** (amber) chips from the one shared rule (`classifyVersion`, `shared/versionRule.ts`; latest = `softwareLatest` sent by `/api/mints/known`). The old rank-based `latest / outdated / old` labelling (rank 0 / 1 / rest) and the red `old` chip are gone: a version one minor behind, a pre-release of the current line and unknown software get no chip. Versions are sorted with `compareMintVersionNumbers` (`0.20.3.1` above `0.20.3`, a stable version above its pre-releases). The Stats note under "Reliability movers" is untouched. Tests: `e2e/stats-software-modal.spec.ts`, `e2e/stats-widgets.spec.ts`, `e2e/badge-contrast.spec.ts`.

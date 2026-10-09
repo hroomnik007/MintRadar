@@ -127,20 +127,38 @@ test('Geographic distribution: description, CDN / anycast as the last cell of th
   await expect(page.getByRole('dialog')).toBeVisible()
 })
 
-test('Software panel: "% of tracked mints behind latest release" + explanatory (i)', async ({ page }) => {
+test('Software panel: "% of tracked mints running outdated software" + explanatory (i)', async ({ page }) => {
+  // Fixture latest = Nutshell 0.20: 0.20.0 current, 0.19.0 one behind (NOT outdated), 0.18.0 and 0.16.0 two or more behind.
   await knownMints(page, [
-    { ...MOCK_KNOWN_MINTS[0], online: true, version: 'Nutshell/0.14.0' },
-    { ...MOCK_KNOWN_MINTS[1], online: true, version: 'Nutshell/0.16.0' },
+    { ...MOCK_KNOWN_MINTS[0], online: true, version: 'Nutshell/0.20.0' },
+    { ...MOCK_KNOWN_MINTS[1], online: true, version: 'Nutshell/0.19.0' },
+    { ...MOCK_KNOWN_MINTS[2], online: true, version: 'Nutshell/0.18.0' },
+    { ...MOCK_KNOWN_MINTS[3], online: true, version: 'Nutshell/0.16.0' },
   ])
   await page.goto('/stats')
 
   const sw = page.locator('.stats-now-panel')
-  await expect(sw.getByText('Tracked mints behind the latest release')).toBeVisible()
+  await expect(sw.getByText('Tracked mints running outdated software')).toBeVisible()
+  await expect(sw.getByText('Tracked mints behind the latest release')).toHaveCount(0)
   await expect(sw.getByText('Behind current release')).toHaveCount(0)
   await expect(sw.getByText('Running outdated or older versions')).toHaveCount(0)
+  // 2 of the 4 classifiable mints are two or more minor versions behind
+  await expect(sw.locator('.stats-now-behind')).toContainText('50%')
 
   await sw.locator('.stats-sw-behind-info').hover()
-  await expect(page.locator('.audit-tooltip', { hasText: /latest known release/i })).toBeVisible()
+  await expect(page.locator('.audit-tooltip', { hasText: /two or more minor versions behind the newest stable release/i })).toBeVisible()
+})
+
+test('Software panel: the share counts only Nutshell / cdk-mintd mints and never a one-behind or pre-release mint', async ({ page }) => {
+  await knownMints(page, [
+    { ...MOCK_KNOWN_MINTS[0], online: true, version: 'cdk-mintd/0.18.0-rc.1', softwareLatest: { major: 0, minor: 18 } },
+    { ...MOCK_KNOWN_MINTS[1], online: true, version: 'cdk-mintd/0.17.7', softwareLatest: { major: 0, minor: 18 } },
+    { ...MOCK_KNOWN_MINTS[2], online: true, version: 'LekMint/1.1.1', softwareLatest: null },
+    { ...MOCK_KNOWN_MINTS[3], online: true, version: 'cdk-mintd/0.15.1', softwareLatest: { major: 0, minor: 18 } },
+  ])
+  await page.goto('/stats')
+  // 1 outdated (0.15.1) of the 3 cdk-mintd mints; the unknown software is not in the denominator
+  await expect(page.locator('.stats-now-panel .stats-now-behind')).toContainText('33%')
 })
 
 for (const width of [901, 1024, 1140, 1280, 1440, 1920, 390]) {

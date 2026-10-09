@@ -12,6 +12,9 @@ import { cleanMintNameDetailed as beClean } from '../../backend/src/shared/clean
 import * as feAudit from '@/utils/auditScore'
 import * as beAudit from '../../backend/src/shared/auditScore'
 import { computeReliabilityScore as feScore } from '@/utils/reliabilityScore'
+import * as feVersion from '@/utils/versionRule'
+import * as beVersion from '../../backend/src/shared/versionRule'
+import { VERSION_CASES, ORDER_CASES } from './versionCases'
 import { computeReliabilityScore as beScore } from '../../backend/src/shared/reliabilityScore'
 
 const codeOf = (rel: string) =>
@@ -96,5 +99,25 @@ describe('auditScore: backend and frontend copies agree', () => {
     expect(feAudit.auditDataState(blamed, total, at, A_NOW)).toBe(beAudit.auditDataState(blamed, total, at, A_NOW))
     const audit = { blamed, total, fetchedAt: at }
     expect(feScore(97, 12, 'Nutshell/0.20', 2, audit, undefined, null, A_NOW)).toBe(beScore(97, 12, 'Nutshell/0.20', 2, audit, undefined, null, A_NOW))
+  })
+})
+
+describe('versionRule: backend and frontend copies agree', () => {
+  it('has identical code', () => {
+    expect(codeOf('../utils/versionRule.ts')).toBe(codeOf('../../backend/src/shared/versionRule.ts'))
+  })
+  it.each(VERSION_CASES.map(c => [c.name, c] as const))('%s', (_n, c) => {
+    expect(feVersion.classifyVersion(c.software, c.version, c.latest)).toEqual(beVersion.classifyVersion(c.software, c.version, c.latest))
+  })
+  it.each(ORDER_CASES)('orders %s above %s the same way', (newer, older) => {
+    expect(Math.sign(feVersion.compareMintVersionNumbers(newer, older))).toBe(Math.sign(beVersion.compareMintVersionNumbers(newer, older)))
+  })
+  it('the score uses the rule: the version component is the rule\'s points in both score copies', () => {
+    const L = { nutshell: { major: 0, minor: 21 }, cdk: { major: 0, minor: 18 } }
+    for (const v of ['Nutshell/0.21.0', 'Nutshell/0.20.3.1', 'Nutshell/0.19.2', 'cdk-mintd/0.18.0-rc.1', 'cdk-mintd/0.13.4', 'LekMint/1.0', 'garbage', null]) {
+      const a = feScore(100, 14, v, 3, { blamed: 0, total: 100, fetchedAt: new Date().toISOString() }, L)
+      const b = beScore(100, 14, v, 3, { blamed: 0, total: 100, fetchedAt: new Date().toISOString() }, L)
+      expect(a).toBe(b)
+    }
   })
 })

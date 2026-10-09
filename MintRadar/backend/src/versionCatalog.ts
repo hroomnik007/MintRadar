@@ -1,10 +1,10 @@
 // Keeps the software_versions DB cache (see db.ts) up to date with each tracked
-// mint implementation's latest upstream release, so versionFreshnessScore
-// (shared/reliabilityScore.ts) can score freshness against the real current version
-// instead of a hand-maintained static list.
+// mint implementation's latest upstream release. That "latest" is the ONE value every
+// version label and the version part of the Reliability Score are measured against
+// (shared/versionRule.ts); there is no hand-maintained static list.
 import { pool } from './db.js'
 import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
-import { parseMajorMinorPatch } from './shared/reliabilityScore.js'
+import { parseMajorMinorPatch, newestStableByFamily, type LatestVersions } from './shared/versionRule.js'
 
 interface UpstreamRepo {
   software: string
@@ -124,18 +124,32 @@ export async function fetchLatestUpstreamVersions(): Promise<void> {
   }
 }
 
-// Reads the software_versions cache and applies the grace period into the
-// { major, minor } map that versionFreshnessScore/computeServerReliabilityScore expect.
-// Never throws — a DB hiccup here just means the caller falls back to the static
-// ladders (versionFreshnessScore's own fallback when a software key is missing).
-export async function getLatestVersionsMap(): Promise<Record<string, { major: number; minor: number }>> {
+// Families the version rule knows (canonical names, see shared/versionRule.ts).
+const TRACKED_FAMILIES = ['nutshell', 'cdk'] as const
+
+// The ONE "latest" per software family: the software_versions cache (GitHub release catalog without
+// pre-releases and drafts) with the grace period applied. A family the cache has no usable row for falls
+// back to the newest STABLE version seen among the tracked mints of that family. Never throws — a DB
+// hiccup just leaves a family without a "latest" (its mints are then not labelled and score neutrally).
+export async function getLatestVersionsMap(): Promise<LatestVersions> {
+  let map: LatestVersions = {}
   try {
     const res = await pool.query<SoftwareVersionRow>(
       'SELECT software, latest_version, previous_version, released_at FROM software_versions'
     )
-    return effectiveLatestVersions(res.rows)
+    map = effectiveLatestVersions(res.rows)
   } catch (err) {
     console.error('[versionCatalog] failed to read software_versions cache:', err)
-    return {}
   }
+  if (TRACKED_FAMILIES.every(f => map[f])) return map
+  try {
+    const seen = await pool.query<{ version: string }>('SELECT DISTINCT version FROM mints WHERE version IS NOT NULL')
+    const fallback = newestStableByFamily(seen.rows.map(r => r.version))
+    for (const f of TRACKED_FAMILIES) {
+      if (!map[f] && fallback[f]) map[f] = fallback[f]
+    }
+  } catch (err) {
+    console.error('[versionCatalog] failed to read mint versions for the latest-version fallback:', err)
+  }
+  return map
 }

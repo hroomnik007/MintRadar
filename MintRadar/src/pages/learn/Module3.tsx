@@ -43,7 +43,7 @@ export default function Module3() {
       <ul>
         <li><strong>Uptime (40%)</strong> — how reliably the mint has responded over the last 24 hours</li>
         <li><strong>NUT Support (15%)</strong> — how many of the tracked NUTs the mint supports</li>
-        <li><strong>Version freshness (15%)</strong> — how close the mint's software is to the latest release</li>
+        <li><strong>Version freshness (15%)</strong> — how far the mint's software is behind the newest stable release (two or more minor versions behind is "outdated")</li>
         <li><strong>Contact info (5%)</strong> — whether the operator has published a way to reach them</li>
         <li><strong>Audit reliability (25%)</strong> — real swap results from an independent auditor, counting only the failures attributed to the mint</li>
       </ul>
@@ -66,7 +66,7 @@ export default function Module3() {
           <strong>NUT Support — 15%.</strong> The share of the tracked NUTs (the individual pieces of the Cashu spec — see the list above for the security-relevant ones) that the mint's <code>/v1/info</code> reports supporting. This is weighted lower than uptime and audit reliability because missing NUTs is a feature gap, not necessarily a sign the mint is broken or untrustworthy — but it does mean fewer safety nets (like NUT-09 restore or NUT-12 DLEQ proofs) are available to you.
         </li>
         <li>
-          <strong>Version freshness — 15%.</strong> How close the mint's reported software version is to the latest known release for that software (Nutshell or cdk-mintd). Recent versions carry security patches and bug fixes, but a slightly outdated version doesn't necessarily mean the mint is unsafe today — which is why this sits at the same modest weight as NUT support rather than higher.
+          <strong>Version freshness — 15%.</strong> How far the mint's reported software version is behind the newest stable release of that software (Nutshell or cdk-mintd). Being on the latest release or one minor version behind earns the full 15 points; two minor versions behind earns 9, three 6, four 3 and five or more 0, and a mint two or more minor versions behind is labelled "outdated". Pre-releases of a current line (such as a release candidate) are not penalised. Recent versions carry security patches and bug fixes, but a slightly outdated version doesn't necessarily mean the mint is unsafe today — which is why this sits at the same modest weight as NUT support rather than higher.
         </li>
         <li>
           <strong>Contact info — 5%.</strong> Whether the operator has published a reachable channel (email, X/Twitter, or Nostr) in the mint's own <code>/v1/info</code>. This gets the smallest weight deliberately: it's operator-supplied information, not independently verified, so it's treated as a weak, easily-gamed signal rather than a strong indicator of trustworthiness on its own.

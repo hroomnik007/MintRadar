@@ -28,7 +28,7 @@ Composite score (0–100) calculated server-side after every probe. Shown alongs
 |-----------|--------|-------|
 | Uptime | 40% | 24 h availability |
 | NUT Support | 15% | Supported NUT specs (out of the tracked mint-side set) |
-| Version Freshness | 15% | Recency of the mint's software release (Nutshell or cdk) vs. latest known version |
+| Version Freshness | 15% | How far the mint's software (Nutshell or cdk) is behind the newest stable release: 0–1 minor versions behind = full points, then 9 / 6 / 3 / 0; two or more minor versions behind is labelled "outdated" |
 | Contact Info | 5% | Contact methods provided (email, Twitter, Nostr); capped at 3 channels |
 | Audit Reliability | 25% | Share of the last 7 days' swaps whose failure cashu.info attributes to the mint (errorsBlamed / swaps7d total), bands 0 % = 25, <1 % = 20, <5 % = 15, <15 % = 10, else 5. Fewer than 10 swaps, no cashu.info detail, or a stored detail older than 168 h scores a neutral 12.5, not zero. audit.8333.space is no longer used for the score |
 

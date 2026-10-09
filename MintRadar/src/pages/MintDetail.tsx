@@ -42,6 +42,7 @@ import {
   uptimeComponent, nutComponent, versionComponent, contactComponent,
   type AuditInput,
 } from '@/utils/reliabilityScore'
+import { classifyMintVersion, latestMapFor, type LatestVersions } from '@/utils/versionRule'
 import { useNow } from '@/hooks/useNow'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
@@ -289,12 +290,6 @@ function uptimeColor(pct: number | null | undefined): string {
 }
 
 
-function parseMinorVer(v: string | null | undefined): number {
-  if (!v) return 0
-  const m = v.match(/\d+\.(\d+)/)
-  return m ? parseInt(m[1] ?? '0', 10) : 0
-}
-
 function contactCountOf(email?: string, twitter?: string, nostr?: string): number {
   return [email, twitter, nostr].filter(Boolean).length
 }
@@ -310,6 +305,7 @@ function computeReliabilityScore(
   twitter?: string,
   nostr?: string,
   audit?: AuditInput,
+  latestVersions?: LatestVersions,
 ): number {
   return sharedComputeReliabilityScore(
     uptimePct,
@@ -317,6 +313,7 @@ function computeReliabilityScore(
     versionStr ?? null,
     contactCountOf(email, twitter, nostr),
     audit ?? { blamed: null, total: null, fetchedAt: null },
+    latestVersions,
   )
 }
 
@@ -444,7 +441,6 @@ function MintDetailContent({ url }: { url: string }) {
     staleTime: 10 * 60 * 1000,
   })
   const versionHistory = versionHistoryData?.history
-  const latestGlobalVersion = versionHistoryData?.latestGlobalVersion ?? null
   const watchlistMints = useWatchlistStore(state => state.mints)
   const addMint = useWatchlistStore(state => state.addMint)
   const loadFromDb = useWatchlistStore(state => state.loadFromDb)
@@ -848,7 +844,7 @@ function MintDetailContent({ url }: { url: string }) {
       const reliabilityVal = seg.reliabilityScore !== null && seg.reliabilityScore !== undefined
         ? seg.reliabilityScore
         : seg.uptimePct !== null
-          ? computeReliabilityScore(seg.uptimePct, nutCount, versionStr, emailVal, twitterVal, nostrVal, auditInput)
+          ? computeReliabilityScore(seg.uptimePct, nutCount, versionStr, emailVal, twitterVal, nostrVal, auditInput, latestMapFor(versionStr, knownMint?.softwareLatest))
           : null
       return { label, latency: seg.latencyMs, uptime: seg.uptimePct, reliability: reliabilityVal }
     }
@@ -894,6 +890,8 @@ function MintDetailContent({ url }: { url: string }) {
   const isOnline = data?.online ?? knownMint?.online ?? false
   const latency = knownMint?.latencyMs ?? null
   const version = data?.info?.version ?? knownMint?.version ?? undefined
+  // The one "latest" of this mint's software family, as the API sent it with the stored score (versionRule.ts).
+  const versionLatestMap = latestMapFor(knownMint?.version, knownMint?.softwareLatest)
   const nutCount = data?.info ? Object.keys(data.info.nuts).length : (knownMint?.nutCount ?? 0)
   const motd = data?.info?.motd
   const description = data?.info?.description
@@ -947,7 +945,7 @@ function MintDetailContent({ url }: { url: string }) {
   // (restore signatures) — check that instead.
   const supportsBackupRestore = supportedNutNumbers.has('9')
 
-  const reliabilityScore = knownMint?.reliabilityScore ?? computeReliabilityScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, { blamed: knownMint?.auditCzBlamed ?? null, total: knownMint?.auditCzTotal ?? null, fetchedAt: knownMint?.auditCzFetchedAt ?? null })
+  const reliabilityScore = knownMint?.reliabilityScore ?? computeReliabilityScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, { blamed: knownMint?.auditCzBlamed ?? null, total: knownMint?.auditCzTotal ?? null, fetchedAt: knownMint?.auditCzFetchedAt ?? null }, versionLatestMap)
   const tsInfo = reliabilityScoreInfo(reliabilityScore)
   const reliabilityDonut = reliabilityDonutArc(reliabilityScore)
 
@@ -956,7 +954,7 @@ function MintDetailContent({ url }: { url: string }) {
   // ref from inside a hand-rolled nested function during render.
   const breakdownUScore = uptimeComponent(uptimePct)
   const breakdownNScore = nutComponent(supportedNuts.length)
-  const breakdownVScore = versionComponent(version)
+  const breakdownVScore = versionComponent(version, versionLatestMap)
   const breakdownContactFields = [email, twitter, nostr].filter(Boolean)
   const breakdownCScore = contactComponent(breakdownContactFields.length)
   const breakdownContactDisplay = breakdownContactFields.length === 0 ? 'None' : (email ? 'Email' : '') + (twitter ? (email ? ' + Twitter' : 'Twitter') : '') + (nostr ? ((email || twitter) ? ' + Nostr' : 'Nostr') : '')
@@ -1021,15 +1019,14 @@ function MintDetailContent({ url }: { url: string }) {
     { label: 'Uptime (40%)', display: `${uptimePct}%`, score: breakdownUScore, max: 40, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.' },
     { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, ...(auditDetailText ? { detail: auditDetailText } : {}), score: breakdownAScore, max: 25, color: auditRowColor, tooltip: `Failures cashu.info attributes to this mint, as a share of its auditor's swaps in the last 7 days. Not the overall success rate. Fewer than ${AUDIT_MIN_SAMPLES} swaps or no recent data: a neutral 12.5 of 25.`, ...(auditStaleNote ? { note: auditStaleNote } : {}) },
     { label: 'NUT Support (15%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 15, color: supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.' },
-    { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? 'var(--accent)' : breakdownVScore >= 6 ? 'var(--amber)' : 'var(--red)', tooltip: "How recent the mint's software version is compared to the latest known Nutshell releases. Newer = higher score." },
+    { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? 'var(--accent)' : breakdownVScore >= 6 ? 'var(--amber)' : 'var(--red)', tooltip: "Compared with the newest stable release of the same software (Nutshell or cdk-mintd). 0 or 1 minor version behind scores the full 15 points; two or more behind is labelled Outdated and scores less (2 behind: 9, 3: 6, 4: 3, 5 or more: 0). Other software scores a neutral value." },
     { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? 'var(--accent)' : breakdownCScore >= 2 ? 'var(--amber)' : 'var(--red)', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.' },
   ]
   const firstSeen = firstSeenLabel(discoveredAt)
   const nostrAnnouncedAt = knownMint?.nostrAnnouncedAt ?? null
   const nostrAnnounceHref = njumpEventUrl(knownMint?.nostrAnnounceId)
   const isNew = isNewMint(discoveredAt)
-  const isOutdated = version !== null && latestGlobalVersion !== null
-    && (parseMinorVer(latestGlobalVersion) - parseMinorVer(version)) > 2
+  const isOutdated = classifyMintVersion(version, versionLatestMap).label === 'outdated'
 
   // audit.8333.space lifetime counters (display-only "Audit stats" panel) — the
   // rolling-window figures that feed Reliability Score are auditRecent* / breakdownAudit* above.

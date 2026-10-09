@@ -48,6 +48,8 @@ function mockQueries(opts: {
     .mockResolvedValueOnce({ rows: opts.history ?? [] })
     .mockResolvedValueOnce({ rows: [{ version: opts.mintVersion ?? null }] })
     .mockResolvedValueOnce({ rows: opts.softwareVersions ?? [] })
+    // Any later query (the getLatestVersionsMap() fallback over the mints' versions) sees no rows.
+    .mockResolvedValue({ rows: [] })
 }
 
 const OLD_RELEASE = new Date('2020-01-01T00:00:00Z') // always past any grace period

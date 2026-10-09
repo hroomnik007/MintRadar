@@ -119,7 +119,8 @@ for (const w of [1440, 390]) {
     })
 
     test('Stats, Wallets and banners', async ({ page }) => {
-      await setup(page)
+      // GRID mints all run Nutshell/0.16.0 (outdated against the fixture's 0.20); one current mint adds the "latest" chip.
+      await setup(page, [...GRID, { ...DIMMED_MINTS[0], url: 'https://current.mint.example', name: 'Current Mint', version: 'Nutshell/0.20.0' }])
       const all: BadgeRecord[] = []
       await page.goto('/stats')
       await expect(page.getByText('Software in Use')).toBeVisible()
@@ -149,7 +150,7 @@ for (const w of [1440, 390]) {
       assertAll(all, 'stats/wallets/banners')
       expectSeen(all, [
         ['stats-movers-delta', /-9/], ['wallet-platform-tag', 'Android'], ['bulk-status', '✗ Failed'],
-        ['queued-banner-dismiss', '×'], ['wl-sync-error-banner', /Couldn't sync/], ['sw-badge', 'latest'],
+        ['queued-banner-dismiss', '×'], ['wl-sync-error-banner', /Couldn't sync/], ['sw-badge', 'latest'], ['sw-badge', 'outdated'],
       ], 'stats/wallets/banners')
     })
   })

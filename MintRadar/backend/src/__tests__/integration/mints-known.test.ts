@@ -15,6 +15,10 @@ vi.mock('../../db.js', () => ({
   pool: { query: vi.fn() },
   initDb: vi.fn(),
 }))
+// The ONE "latest" per software family (software_versions + fallback) is its own module with its own queries.
+vi.mock('../../versionCatalog.js', () => ({
+  getLatestVersionsMap: vi.fn().mockResolvedValue({ nutshell: { major: 0, minor: 21 }, cdk: { major: 0, minor: 18 } }),
+}))
 
 let app: Express
 let query: ReturnType<typeof vi.fn>
@@ -249,6 +253,23 @@ describe('GET /api/mints/known', () => {
 
     // 60s TTL cache → only one DB round-trip for two requests.
     expect(query).toHaveBeenCalledTimes(1)
+  })
+
+  it('adds softwareLatest: the latest of the mint\'s own software family, null for unknown software', async () => {
+    query.mockResolvedValueOnce({ rows: [
+      sampleRow({ url: 'https://a.example', version: 'Nutshell/0.20.3' }),
+      sampleRow({ url: 'https://b.example', version: 'cdk-mintd/0.17.7' }),
+      sampleRow({ url: 'https://c.example', version: 'LekMint/1.1.1' }),
+      sampleRow({ url: 'https://d.example', version: null }),
+    ] })
+
+    const res = await request(app).get('/api/mints/known')
+
+    const by = Object.fromEntries((res.body as Array<{ url: string; softwareLatest: unknown }>).map(m => [m.url, m.softwareLatest]))
+    expect(by['https://a.example']).toEqual({ major: 0, minor: 21 })
+    expect(by['https://b.example']).toEqual({ major: 0, minor: 18 })
+    expect(by['https://c.example']).toBeNull()
+    expect(by['https://d.example']).toBeNull()
   })
 
   it('applies standard security headers', async () => {

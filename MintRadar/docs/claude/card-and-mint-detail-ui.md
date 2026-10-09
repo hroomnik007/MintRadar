@@ -120,6 +120,7 @@ The `.card-pills` row (lower body of `MintCard.tsx`) no longer carries age or id
   desktop-only via `col-hide-mobile`) and on **Mint Detail** (NUT compatibility grid, Reliability Score
   breakdown). Version is visible only on **Mint Detail** now (header, version history table, Reliability
   Score breakdown's Version Freshness row) — there is no card or list-view column for it.
+  **Version stat badge and breakdown row (2026-10-09):** the red `Outdated` badge next to the version, the Version row's points and tooltip and Compare's `Outdated` badge all come from the one shared rule (`shared/versionRule.ts`): outdated = two or more minor versions behind the newest stable release of the mint's own software; 0–1 behind scores the full 15 points. "Latest" is the mint's `softwareLatest` from `/api/mints/known` (the value the stored score used), so the breakdown row equals the version points inside the score. Compare no longer takes "latest" from the compared mints. See docs/claude/scoring-and-probing.md.
 - **Community Rating ★ badge** stays, but its `.card-rating-info` **(i) caveat tooltip was
   removed** 2026-09-08 (the caveat now lives only in the Reviews-tab `.reviews-disclaimer`).
   The `reviewSurge` **⚠** flag (`.card-review-surge-flag`) is unchanged. **"No reviews yet"

@@ -28,7 +28,7 @@ Composite score (0–100) calculated server-side after every probe. Shown alongs
 |-----------|--------|-------|
 | Uptime | 40% | 24 h availability |
 | NUT Support | 15% | Supported NUT specs (out of the tracked mint-side set) |
-| Version Freshness | 15% | Recency of the mint's software release (Nutshell or cdk) vs. latest known version |
+| Version Freshness | 15% | How far the mint's software (Nutshell or cdk) is behind the newest stable release: 0–1 minor versions behind = full points, then 9 / 6 / 3 / 0; two or more minor versions behind is labelled "outdated" |
 | Contact Info | 5% | Contact methods provided (email, Twitter, Nostr); capped at 3 channels |
 | Audit Reliability | 25% | Rolling-window error rate on the last ~100 real swaps from audit.8333.space. Fewer than 3 samples scores a neutral 12.5, not zero; the score is not adjusted for how old the audit data is |
 

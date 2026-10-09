@@ -172,7 +172,7 @@ export function startCron(): void {
   })
 
   // Refresh the software_versions cache (latest Nutshell/cdk releases from GitHub)
-  // every day at 3:45am — feeds versionFreshnessScore (shared/reliabilityScore.ts).
+  // every day at 3:45am — feeds the version rule (shared/versionRule.ts) via getLatestVersionsMap().
   cron.schedule('45 3 * * *', async () => {
     try {
       await fetchLatestUpstreamVersions()

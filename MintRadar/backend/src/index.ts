@@ -7,6 +7,7 @@ import { upsertMint, probeMintToDb, validateCashuMintProbe, parseMintMethods, cl
 import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type ProbeFailure, type SafeFetchRejection } from './probeErrorKind.js'
 import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } from './mintPubkey.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
+import type { LatestVersions } from './shared/versionRule.js'
 import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
 import { getAuditCzForMint, getAuditCzSyncStatus, clampAuditCzLimit } from './auditCz.js'
 import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
@@ -1193,12 +1194,21 @@ app.get('/api/stats/reliability-movers', (req: Request, res: Response): void => 
     })
 })
 
+// "latest" { major, minor } of a mint's own software family from the latest-versions map (null when the
+// software is not recognised or the family has no latest). Sent as `softwareLatest` on /api/mints/known.
+function latestOfFamily(version: string | null, latestVersions: LatestVersions): { major: number; minor: number } | null {
+  if (!version) return null
+  const family = canonicalSoftwareName(splitVersionString(version).software)
+  return family ? latestVersions[family] ?? null : null
+}
+
 app.get('/api/mints/known', (_req: Request, res: Response): void => {
   if (knownMintsCache && Date.now() < knownMintsCache.expiresAt) {
     res.json(knownMintsCache.data)
     return
   }
-  pool
+  Promise.all([
+    pool
     .query(`
       SELECT m.url, m.name, m.icon_url, m.version, m.nut_count,
         m.tos_url, m.description_long, m.nuts_limits,
@@ -1239,8 +1249,12 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
         m.review_count, m.review_avg_rating, m.review_count_7d_ago, m.review_count_7d_ago_at,
         h7.total_7d, h7.online_count_7d,
         latest.online, latest.latency_ms, latest.checked_at
-    `)
-    .then(result => {
+    `),
+    // The ONE "latest" per software family (versionCatalog.ts), sent with every mint so the labels and the
+    // breakdown on the frontend are measured against exactly what the stored score used.
+    getLatestVersionsMap(),
+  ])
+    .then(([result, latestVersions]) => {
       // C for the IMDB-style weighted Rating sort (see below) — computed from
       // the raw rollup columns before the row map so each mint's WR can be set
       // inline in the literal.
@@ -1275,6 +1289,8 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           online: r.latest_online as boolean | null,
           latencyMs: r.latest_latency_ms as number | null,
           version: r.version as string | null,
+          // Latest { major, minor } of THIS mint's software family (null for unknown software).
+          softwareLatest: latestOfFamily(r.version as string | null, latestVersions),
           nutCount: r.nut_count as number | null,
           tosUrl: (r.tos_url as string | null) ?? null,
           descriptionLong: (r.description_long as string | null) ?? null,

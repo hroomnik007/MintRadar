@@ -131,6 +131,7 @@ describe('getLatestVersionsMap', () => {
       ],
     })
     const map = await getLatestVersionsMap()
+    expect(queryMock).toHaveBeenCalledTimes(1) // both families known: no fallback query
     expect(map['cdk']).toEqual({ major: 0, minor: 16 }) // still within grace
     expect(map['nutshell']).toEqual({ major: 0, minor: 20 }) // past grace
     const sql = queryMock.mock.calls[0]?.[0] as string
@@ -138,9 +139,31 @@ describe('getLatestVersionsMap', () => {
     expect(sql).toMatch(/released_at/)
   })
 
-  it('never throws — returns an empty map on a DB error', async () => {
-    queryMock.mockRejectedValueOnce(new Error('connection refused'))
+  it('never throws — returns an empty map when both reads fail', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    queryMock.mockRejectedValue(new Error('connection refused'))
     await expect(getLatestVersionsMap()).resolves.toEqual({})
+  })
+
+  it('falls back to the newest STABLE version seen among the tracked mints for a family the catalog lacks', async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ software: 'nutshell', latest_version: '0.21.0', previous_version: null, released_at: null }] })
+      .mockResolvedValueOnce({ rows: [
+        { version: 'cdk-mintd/0.18.0-rc.1' }, { version: 'cdk-mintd/0.17.7' }, { version: 'cdk-mintd/0.18.1' },
+        { version: 'cdk-mintd/0.19.0-rc.0' }, { version: 'Nutshell/0.99.0' }, { version: 'LekMint/9.9.9' },
+      ] })
+    const map = await getLatestVersionsMap()
+    expect(map['cdk']).toEqual({ major: 0, minor: 18 }) // 0.19.0-rc.0 is a pre-release: never "latest"
+    expect(map['nutshell']).toEqual({ major: 0, minor: 21 }) // the catalog wins over the mints' 0.99.0
+    expect(map['lekmint']).toBeUndefined()
+  })
+
+  it('uses the mints for both families when the catalog read fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    queryMock
+      .mockRejectedValueOnce(new Error('relation does not exist'))
+      .mockResolvedValueOnce({ rows: [{ version: 'Nutshell/0.21.0' }, { version: 'cdk-mintd/0.18.1' }] })
+    await expect(getLatestVersionsMap()).resolves.toEqual({ nutshell: { major: 0, minor: 21 }, cdk: { major: 0, minor: 18 } })
   })
 })
 

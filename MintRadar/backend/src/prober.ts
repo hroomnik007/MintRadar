@@ -3,7 +3,7 @@ import { fetch as undiciFetch } from 'undici'
 import pLimit from 'p-limit'
 import { pool } from './db.js'
 import { checkUrlSafety, safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
-import { computeReliabilityScore, versionFreshnessScore, TRACKED_NUT_KEYS } from './shared/reliabilityScore.js'
+import { computeReliabilityScore, TRACKED_NUT_KEYS } from './shared/reliabilityScore.js'
 import { notifySubscribers, isNotificationServiceEnabled } from './nostrService.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { normalizeMintPubkey } from './mintPubkey.js'
@@ -132,7 +132,6 @@ const RETENTION_DAYS = 90
 // Reliability Score maths now lives in shared/reliabilityScore.ts, shared (via a synced copy)
 // with the frontend's Reliability Score Breakdown. These re-exports keep prober.ts the
 // import site the rest of the backend and its tests already use.
-export const serverVersionFreshnessScore = versionFreshnessScore
 export const computeServerReliabilityScore = computeReliabilityScore
 
 export interface MintMethodEntry {

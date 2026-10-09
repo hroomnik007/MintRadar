@@ -382,9 +382,9 @@ export async function initDb(): Promise<void> {
 
   // Seed software_versions so scoring works identically right after deploy, even
   // before fetchLatestUpstreamVersions' daily cron job has run for the first time.
-  // Values mirror STATIC_LATEST_VERSIONS in shared/reliabilityScore.ts (major.minor must
-  // stay in sync — the exact patch here doesn't affect scoring). ON CONFLICT DO
-  // NOTHING makes this a no-op after the first run, once the cron job owns the row.
+  // Initial values only (major.minor is what the version rule uses; the exact patch doesn't
+  // matter). ON CONFLICT DO NOTHING makes this a no-op after the first run, once the cron job
+  // owns the row and replaces them with the real latest GitHub release.
   await pool.query(`
     INSERT INTO software_versions (software, latest_version, fetched_at, source_url)
     VALUES

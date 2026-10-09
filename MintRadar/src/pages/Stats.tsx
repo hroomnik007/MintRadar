@@ -12,7 +12,8 @@ import { trackedCount, onlineCount as countOnline } from '@/utils/mintCounts'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
 import { reliabilityColor, reliabilityScoreInfo, reliabilityDonutArc, displayName, computeDuplicateMintNames, mintAgeBadge } from '@/utils/mintFormatting'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
-import { compareMintVersionNumbers, isEligibleForRecommendation } from '@/utils/reliabilityScore'
+import { isEligibleForRecommendation } from '@/utils/reliabilityScore'
+import { compareMintVersionNumbers, classifyVersion } from '@/utils/versionRule'
 import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -78,10 +79,13 @@ interface SoftwareVersionEntry {
   ver: string
   count: number
   fullVersion: string
-  badge: string
+  /** 'latest' | 'outdated' by the shared version rule, null = no label. */
+  badge: 'latest' | 'outdated' | null
   badgeColor: string
   badgeBg: string
   badgeBorder: string
+  /** True when the rule could classify this version (recognised software with a readable version and a latest). */
+  classifiable: boolean
 }
 
 // Mint-list drill-down level of SoftwareModal — this is the body the
@@ -161,7 +165,7 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose, duplicateDisplayNam
 // Version-list level of SoftwareModal. Replaces the inline accordion that used
 // to expand inside the Software in Use panel (which stretched the panel and
 // left the neighbouring fixed-height panels with dead space). Same data the
-// accordion showed — version, mint count, latest/outdated/old badge — restyled
+// accordion showed — version, mint count, latest/outdated badge — restyled
 // onto the .nut-modal-row/.sw-badge vocabulary the mint-list level already uses.
 function SoftwareVersionsView({ sw, versions, total, accentColor, onSelectVersion }: {
   sw: string
@@ -193,7 +197,7 @@ function SoftwareVersionsView({ sw, versions, total, accentColor, onSelectVersio
                 <div className="dist-fill" style={{ width: `${vPct}%`, background: accentColor, opacity: 0.55 }} />
               </div>
               <span style={{ fontSize: 11, fontFamily: 'var(--font-mono-data)', color: 'var(--text2)', flexShrink: 0 }}>{v.count}</span>
-              <span className="sw-badge" style={{ color: v.badgeColor, borderColor: v.badgeBorder, background: v.badgeBg }}>{v.badge}</span>
+              {v.badge && <span className="sw-badge" style={{ color: v.badgeColor, borderColor: v.badgeBorder, background: v.badgeBg }}>{v.badge}</span>}
             </div>
           )
         })}
@@ -766,12 +770,15 @@ export default function Stats() {
   const versionDist = useMemo(() => {
     if (!knownMintsData) return []
     const swMap = new Map<string, Map<string, number>>()
+    // The one "latest" per reported software name, from the API (each mint carries its family's value).
+    const latestBySw = new Map<string, { major: number; minor: number }>()
     for (const m of knownMintsData) {
       if (m.online !== true || !m.version) continue
       const slashIdx = m.version.indexOf('/')
       const sw = slashIdx >= 0 ? m.version.slice(0, slashIdx) : m.version
       const ver = slashIdx >= 0 ? m.version.slice(slashIdx + 1) : ''
       if (!swMap.has(sw)) swMap.set(sw, new Map())
+      if (m.softwareLatest && !latestBySw.has(sw)) latestBySw.set(sw, m.softwareLatest)
       const vmap = swMap.get(sw)!
       vmap.set(ver, (vmap.get(ver) ?? 0) + 1)
     }
@@ -784,15 +791,20 @@ export default function Stats() {
       .map(([sw, vmap], swIdx) => {
         const versions = [...vmap.entries()]
           .sort((a, b) => semverCmp(a[0], b[0]))
-          .map(([ver, count], idx) => ({
-            ver,
-            count,
-            fullVersion: ver ? `${sw}/${ver}` : sw,
-            badge: idx === 0 ? 'latest' : idx === 1 ? 'outdated' : 'old',
-            badgeColor: idx === 0 ? 'var(--accent)' : idx === 1 ? 'var(--amber)' : 'color-mix(in srgb, var(--red) 55%, var(--text))',
-            badgeBg: idx === 0 ? 'var(--green-soft)' : idx === 1 ? 'var(--amber-soft)' : 'var(--red-soft)',
-            badgeBorder: idx === 0 ? 'var(--green-soft-strong)' : idx === 1 ? 'var(--amber-soft-strong)' : 'var(--red-soft-strong)',
-          }))
+          .map(([ver, count]): SoftwareVersionEntry => {
+            const c = classifyVersion(sw, ver, latestBySw.get(sw))
+            const badge = c.label
+            return {
+              ver,
+              count,
+              fullVersion: ver ? `${sw}/${ver}` : sw,
+              badge,
+              badgeColor: badge === 'latest' ? 'var(--accent)' : 'var(--amber)',
+              badgeBg: badge === 'latest' ? 'var(--green-soft)' : 'var(--amber-soft)',
+              badgeBorder: badge === 'latest' ? 'var(--green-soft-strong)' : 'var(--amber-soft-strong)',
+              classifiable: c.minorsBehind !== null,
+            }
+          })
         const total = versions.reduce((s, v) => s + v.count, 0)
         const accentColor = swIdx % 2 === 0 ? 'var(--green)' : 'var(--copper)'
         return { sw, total, versions, accentColor }
@@ -800,15 +812,18 @@ export default function Stats() {
   }, [knownMintsData])
 
   const swFreshnessSummary = useMemo(() => {
+    // Share of the mints the rule can classify (Nutshell / cdk-mintd with a readable version) that are
+    // OUTDATED = two or more minor versions behind the newest stable release of their software.
     let total = 0
-    let outdatedOrOld = 0
+    let outdated = 0
     for (const { versions } of versionDist) {
       for (const v of versions) {
+        if (!v.classifiable) continue
         total += v.count
-        if (v.badge !== 'latest') outdatedOrOld += v.count
+        if (v.badge === 'outdated') outdated += v.count
       }
     }
-    return { total, pct: total > 0 ? Math.round(outdatedOrOld / total * 100) : 0 }
+    return { total, pct: total > 0 ? Math.round(outdated / total * 100) : 0 }
   }, [versionDist])
 
   // Cashu Network Health Index: composite 0-100 score across 5 weighted
@@ -958,7 +973,7 @@ export default function Stats() {
         <div>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:4}}>
             <span style={{fontSize:12,color:'var(--text2)',display:'inline-flex',alignItems:'center',gap:4}}>
-              Tracked mints behind the latest release
+              Tracked mints running outdated software
               <span
                 ref={swBehindInfoRef}
                 className="stats-sw-behind-info"
@@ -970,7 +985,7 @@ export default function Stats() {
                 <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
                 {swBehindInfoTooltip.open && (
                   <div className="audit-tooltip audit-tooltip-down" style={{ width: isMobile ? 210 : 250, left: 0 }}>
-                    We compare the version each mint reports to the latest known release for that implementation — not a CVE or security score.
+                    Share of tracked Nutshell and cdk-mintd mints that are two or more minor versions behind the newest stable release of the same software. Pre-releases of a current line are not counted. Not a CVE or security score.
                   </div>
                 )}
               </span>

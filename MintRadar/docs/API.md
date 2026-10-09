@@ -64,6 +64,8 @@ All known mints with current online status, latency, reliability score, and meta
 
 **Response:** Array of mint objects.
 
+`softwareLatest` (additive, 2026-10-09) is `{ "major": 0, "minor": 21 }`, the latest release line of **this mint's own software family** (Nutshell, cdk-mintd), or `null` for other software and for mints without a version. It is the ONE "latest" the stored `reliabilityScore` (version component) and every "outdated" label are measured against: a mint is "outdated" when it is two or more minor versions behind it (`docs/claude/scoring-and-probing.md`). It comes from the GitHub release catalog (no pre-releases, 14-day grace period) and falls back to the newest stable version among the tracked mints.
+
 ```json
 [
   {
@@ -172,7 +174,7 @@ Bucketed uptime/latency/reliability history for a single mint.
 
 ### `GET /api/mints/version-history`
 
-Software version timeline for a single mint.
+Software version timeline for a single mint. `latestGlobalVersion` is `<family>/<major>.<minor>`, the same value `/api/mints/known` sends as `softwareLatest` for this mint's software family (`null` for unknown software).
 
 **Query parameters:** `url` (required, `https://…`)
 
@@ -183,7 +185,7 @@ Software version timeline for a single mint.
   "history": [
     { "version": "0.16.3", "firstSeenAt": "2026-05-10T08:00:00.000Z" }
   ],
-  "latestGlobalVersion": "0.16.3"
+  "latestGlobalVersion": "nutshell/0.21"
 }
 ```
 

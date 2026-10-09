@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { installApiMocks, mockRelays } from './fixtures/mocks'
+import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 
 // Software in Use → SoftwareModal drill-down (version list → mint list).
 // Replaced the inline accordion that used to expand inside the panel; these
@@ -31,6 +31,54 @@ test('clicking a software row opens the version list in a modal', async ({ page 
     await expect(modal(page).locator('.nut-modal-row', { hasText: v })).toBeVisible()
   }
   await expect(modal(page).locator('.sw-badge').first()).toHaveText('latest')
+  // 0.16.0 and 0.15.0 are two or more minor versions behind the fixture latest (0.20): outdated. There is no "old" chip.
+  await expect(modal(page).locator('.nut-modal-row', { hasText: '0.16.0' }).locator('.sw-badge')).toHaveText('outdated')
+  await expect(modal(page).locator('.nut-modal-row', { hasText: '0.15.0' }).locator('.sw-badge')).toHaveText('outdated')
+  await expect(modal(page).getByText('old', { exact: true })).toHaveCount(0)
+})
+
+test('labels follow the version distance, not the rank; four segments and pre-releases sort and label correctly', async ({ page }) => {
+  await mockRelays(page)
+  await installApiMocks(page)
+  const L = { major: 0, minor: 21 }
+  const mk = (i: number, version: string) => ({
+    ...MOCK_KNOWN_MINTS[0], url: `https://v${i}.mint.example`, name: `V${i}`, online: true, degraded: false, version, softwareLatest: L,
+  })
+  const versions = ['Nutshell/0.19.2', 'Nutshell/0.20.3', 'Nutshell/0.21.0', 'Nutshell/0.20.3.1', 'Nutshell/0.17.0']
+  await page.route('**/api/mints/known', r => r.fulfill({ json: versions.map((v, i) => mk(i, v)) }))
+  await page.goto('/stats')
+  await swRow(page).click()
+  const rows = modal(page).locator('.nut-modal-row')
+  await expect(rows).toHaveCount(5)
+  const text = await rows.evaluateAll(els => els.map(e => ({ v: e.querySelector('span')!.textContent, b: e.querySelector('.sw-badge')?.textContent ?? null })))
+  // newest first; 0.20.3.1 above 0.20.3; only 0.21.0 is "latest", only two or more minors behind is "outdated"
+  expect(text).toEqual([
+    { v: '0.21.0', b: 'latest' },
+    { v: '0.20.3.1', b: null },
+    { v: '0.20.3', b: null },
+    { v: '0.19.2', b: 'outdated' },
+    { v: '0.17.0', b: 'outdated' },
+  ])
+})
+
+test('a pre-release of the current line gets no label and sorts below its stable release', async ({ page }) => {
+  await mockRelays(page)
+  await installApiMocks(page)
+  const L = { major: 0, minor: 18 }
+  const mk = (i: number, version: string) => ({
+    ...MOCK_KNOWN_MINTS[0], url: `https://c${i}.mint.example`, name: `C${i}`, online: true, degraded: false, version, softwareLatest: L,
+  })
+  const versions = ['cdk-mintd/0.18.0-rc.1', 'cdk-mintd/0.18.1', 'cdk-mintd/0.18.0-rc.0', 'cdk-mintd/0.17.0-rc.3']
+  await page.route('**/api/mints/known', r => r.fulfill({ json: versions.map((v, i) => mk(i, v)) }))
+  await page.goto('/stats')
+  await page.locator('.sw-row', { hasText: 'cdk-mintd' }).click()
+  const text = await modal(page).locator('.nut-modal-row').evaluateAll(els => els.map(e => ({ v: e.querySelector('span')!.textContent, b: e.querySelector('.sw-badge')?.textContent ?? null })))
+  expect(text).toEqual([
+    { v: '0.18.1', b: 'latest' },
+    { v: '0.18.0-rc.1', b: null },
+    { v: '0.18.0-rc.0', b: null },
+    { v: '0.17.0-rc.3', b: null },
+  ])
 })
 
 test('clicking a version drills down to the mint list in the same modal', async ({ page }) => {

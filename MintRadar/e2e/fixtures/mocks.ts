@@ -84,6 +84,13 @@ function buildMethods(units: string[] | null, min: number, max: number) {
 
 const MOCK_GLOBAL_MEAN_RATING = mockGlobalMeanRating(MOCK_MINTS)
 
+// Latest { major, minor } per software family in the fixtures: Nutshell 0.20, cdk-mintd 0.17; null for other software.
+export function softwareLatestFor(version: string | null): { major: number; minor: number } | null {
+  if (!version) return null
+  const sw = version.split('/')[0]!.toLowerCase()
+  return sw === 'nutshell' ? { major: 0, minor: 20 } : sw === 'cdk-mintd' || sw === 'cdk' ? { major: 0, minor: 17 } : null
+}
+
 function knownMintPayload(m: MockMint) {
   return {
     url: m.url,
@@ -93,6 +100,8 @@ function knownMintPayload(m: MockMint) {
     online: m.online,
     latencyMs: m.latencyMs,
     version: m.version,
+    // The ONE "latest" of the mint's software family, as the API sends it (backend versionCatalog.ts).
+    softwareLatest: softwareLatestFor(m.version),
     nutCount: m.nutCount || null,
     tosUrl: null,
     descriptionLong: null,
@@ -154,6 +163,18 @@ export const MOCK_RELIABILITY_MOVERS = {
   fallers: [
     { url: 'https://bravo.mint.example', name: 'Bravo Mint', delta: -9 },
   ],
+}
+
+/**
+ * Makes the live probe (GET /api/mint/probe, which Mint Detail prefers over the stored version) report
+ * `version` for every mint. Register it AFTER installApiMocks().
+ */
+export async function mockProbedVersion(page: import('@playwright/test').Page, version: string) {
+  await page.route('**/api/mint/probe**', route => {
+    const target = new URL(route.request().url()).searchParams.get('url') ?? ''
+    const p = probePayload(target)
+    route.fulfill({ json: { ...p, info: { ...p.info, version } } })
+  })
 }
 
 export function probePayload(url: string) {

@@ -10,10 +10,10 @@
 // (1) a fallback when a mint has no stored score yet, and (2) the per-component
 // Reliability Score Breakdown on Mint Detail, which must add up to the stored total.
 //
-// `latestVersions` params below are always omitted here — the frontend has no
-// access to the software_versions DB cache, so this copy always uses the static
-// NUTSHELL_VERSIONS/CDK_VERSIONS fallback ladders.
+// `latestVersions` (family -> latest) is the value the API sends with each mint (`softwareLatest`);
+// pass it so the breakdown uses the same "latest" as the stored score. There is no static fallback.
 import { auditComponent } from './auditScore'
+import { classifyMintVersion, type LatestVersions } from './versionRule'
 
 /**
  * Number of NUTs the app tracks, i.e. the denominator of the NUT-support
@@ -22,187 +22,13 @@ import { auditComponent } from './auditScore'
  */
 export const TRACKED_NUT_COUNT = 14
 
-// [major, minor] descending — newest first.
-export const NUTSHELL_VERSIONS: [number, number][] = [
-  [0, 20], [0, 19], [0, 18], [0, 17], [0, 16], [0, 15], [0, 14], [0, 13], [0, 12], [0, 11],
-]
-
-// Same shape as NUTSHELL_VERSIONS, for cdk-mintd. Used as the last-resort fallback
-// when the software_versions DB cache has no row yet (see versionFreshnessScore below
-// and versionCatalog.ts's fetchLatestUpstreamVersions).
-export const CDK_VERSIONS: [number, number][] = [
-  [0, 17], [0, 16], [0, 15], [0, 14], [0, 13], [0, 12], [0, 11], [0, 10], [0, 9], [0, 8],
-]
-
-// ── Version string parsing ──────────────────────────────────────────────────
-// Mint /v1/info reports its version as "SoftwareName/X.Y.Z" (e.g. "Nutshell/0.20.3",
-// "cdk-mintd/0.17.0-rc.3") per NUT-06. This split is also done independently on the
-// frontend for display only (Stats.tsx's Software-in-Use breakdown) — that copy is
-// display-only grouping and intentionally untouched; this is the version used for
-// scoring.
-
-/** Splits a raw mint version string into its software name and version number. */
-export function splitVersionString(v: string): { software: string; versionNumber: string } {
-  const slashIdx = v.indexOf('/')
-  return slashIdx >= 0
-    ? { software: v.slice(0, slashIdx), versionNumber: v.slice(slashIdx + 1) }
-    : { software: v, versionNumber: '' }
-}
-
-/**
- * Normalizes a version number for comparison: strips a leading "v" (GitHub tag
- * convention, e.g. cdk's "v0.17.5") and any "-rc.N"/prerelease suffix
- * (e.g. "0.17.0-rc.3" → "0.17.0").
- */
-export function normalizeVersionNumber(v: string): string {
-  return v.replace(/^v/i, '').replace(/-.*$/, '')
-}
-
-/**
- * Parses a normalized version number into major/minor/patch. Patch is extracted
- * but not currently used by the scoring granularity below — kept so normalization
- * is ready for it if the scoring is ever made more precise.
- */
-export function parseMajorMinorPatch(
-  versionNumber: string
-): { major: number; minor: number; patch: number } | null {
-  const norm = normalizeVersionNumber(versionNumber)
-  const m = norm.match(/^(\d+)\.(\d+)(?:\.(\d+))?/)
-  if (!m || !m[1] || !m[2]) return null
-  return { major: parseInt(m[1], 10), minor: parseInt(m[2], 10), patch: m[3] ? parseInt(m[3], 10) : 0 }
-}
-
-/**
- * Compare two mint version numbers (the part after "Software/").
- * Returns >0 if `a` is newer than `b`, <0 if older, 0 if equal.
- * Semver: 0.18.0 is newer than 0.18.0-rc.1.
- */
-export function compareMintVersionNumbers(a: string, b: string): number {
-  const pa = parseVersionForCompare(a)
-  const pb = parseVersionForCompare(b)
-  if (pa.major !== pb.major) return pa.major - pb.major
-  if (pa.minor !== pb.minor) return pa.minor - pb.minor
-  if (pa.patch !== pb.patch) return pa.patch - pb.patch
-  if (pa.prerelease === null && pb.prerelease === null) return 0
-  if (pa.prerelease === null) return 1
-  if (pb.prerelease === null) return -1
-  return comparePrerelease(pa.prerelease, pb.prerelease)
-}
-
-function parseVersionForCompare(raw: string): {
-  major: number; minor: number; patch: number; prerelease: string | null
-} {
-  const s = raw.trim().replace(/^v/i, '')
-  const m = s.match(/^(\d+)\.(\d+)(?:\.(\d+))?(?:-([0-9A-Za-z.-]+))?/)
-  if (!m || !m[1] || !m[2]) {
-    return { major: 0, minor: 0, patch: 0, prerelease: s || null }
-  }
-  return {
-    major: parseInt(m[1], 10),
-    minor: parseInt(m[2], 10),
-    patch: m[3] ? parseInt(m[3], 10) : 0,
-    prerelease: m[4] ?? null,
-  }
-}
-
-function comparePrerelease(a: string, b: string): number {
-  const as = a.split('.'), bs = b.split('.')
-  const n = Math.max(as.length, bs.length)
-  for (let i = 0; i < n; i++) {
-    const ai = as[i], bi = bs[i]
-    if (ai === undefined) return -1
-    if (bi === undefined) return 1
-    const an = /^\d+$/.test(ai) ? parseInt(ai, 10) : NaN
-    const bn = /^\d+$/.test(bi) ? parseInt(bi, 10) : NaN
-    if (!Number.isNaN(an) && !Number.isNaN(bn)) {
-      if (an !== bn) return an - bn
-      continue
-    }
-    if (!Number.isNaN(an) && Number.isNaN(bn)) return -1
-    if (Number.isNaN(an) && !Number.isNaN(bn)) return 1
-    if (ai !== bi) return ai < bi ? -1 : 1
-  }
-  return 0
-}
-
-
-// ── Software recognition ────────────────────────────────────────────────────
-// Reported software names are matched case-insensitively but NOT by prefix —
-// "Nutshell-CF" must not match "nutshell". Anything not listed here (including
-// future/unknown software) has no version leaderboard and scores neutrally.
-const SOFTWARE_ALIASES: Record<string, string> = {
-  nutshell: 'nutshell',
-  cdk: 'cdk',
-  'cdk-mintd': 'cdk',
-}
-
-export function canonicalSoftwareName(software: string): string | null {
-  return SOFTWARE_ALIASES[software.trim().toLowerCase()] ?? null
-}
-
-// Static fallback "latest known version" per canonical software — the last-resort
-// safety net used when the software_versions DB cache (populated daily by
-// versionCatalog.ts's fetchLatestUpstreamVersions cron job) has no row yet, e.g. a
-// fresh deploy before the first cron run. Mirrors the top entry of NUTSHELL_VERSIONS
-// / CDK_VERSIONS above.
-export const STATIC_LATEST_VERSIONS: Record<string, { major: number; minor: number }> = {
-  nutshell: { major: NUTSHELL_VERSIONS[0]![0], minor: NUTSHELL_VERSIONS[0]![1] },
-  cdk: { major: CDK_VERSIONS[0]![0], minor: CDK_VERSIONS[0]![1] },
-}
-
-const STATIC_LADDERS: Record<string, [number, number][]> = {
-  nutshell: NUTSHELL_VERSIONS,
-  cdk: CDK_VERSIONS,
-}
-
-// Builds a ranked ladder (newest first, 10 steps) counting down by minor version
-// from a single "latest known version" — the same shape as NUTSHELL_VERSIONS/
-// CDK_VERSIONS, used when the latest version comes from the DB cache instead of
-// a hardcoded list.
-function versionLadder(latest: { major: number; minor: number }, steps = 10): [number, number][] {
-  const ladder: [number, number][] = []
-  for (let i = 0; i < steps; i++) {
-    const minor = latest.minor - i
-    if (minor < 0) break
-    ladder.push([latest.major, minor])
-  }
-  return ladder
-}
-
-/**
- * Version recency on a 0-10 scale (scaled to the 15-point component below).
- *
- * `latestVersions` (canonical software name → latest {major, minor}) comes from the
- * software_versions DB cache — only the backend can supply it (prober.ts). When
- * omitted (always the case on the frontend, and on the backend before the cache has
- * a row for this software) each recognized software falls back to its static ladder
- * (NUTSHELL_VERSIONS / CDK_VERSIONS).
- *
- * Software the app doesn't recognize (no leaderboard at all — a different mint
- * implementation, a future one, or malformed data) scores a neutral 2.5, the same
- * neutral default auditComponent() uses for "Unknown" — NOT 0 (which would
- * wrongly treat it as maximally stale) and NOT 10 (which would wrongly treat any
- * higher major/minor number as automatically freshest).
- */
-export function versionFreshnessScore(
-  v: string | null | undefined,
-  latestVersions?: Record<string, { major: number; minor: number }>
-): number {
-  if (!v) return 0
-  const { software, versionNumber } = splitVersionString(v)
-  const canonical = canonicalSoftwareName(software)
-  if (!canonical) return 2.5
-  const parsed = parseMajorMinorPatch(versionNumber)
-  if (!parsed) return 3
-  const latest = latestVersions?.[canonical] ?? STATIC_LATEST_VERSIONS[canonical]
-  if (!latest) return 2.5
-  const ladder = latestVersions?.[canonical] ? versionLadder(latest) : STATIC_LADDERS[canonical]!
-  const idx = ladder.findIndex(
-    ([mj, mn]) => parsed.major > mj || (parsed.major === mj && parsed.minor >= mn)
-  )
-  if (idx === -1) return 0
-  return Math.max(0, 10 - idx * 2)
-}
+// ── Software versions ────────────────────────────────────────────────────────
+// The version rule (labels AND points) lives in ONE shared module, versionRule.ts; the score only
+// takes its points. `latestVersions` is the family -> latest map the API sends (never a static list).
+export {
+  splitVersionString, normalizeVersionNumber, parseMajorMinorPatch, compareMintVersionNumbers,
+  canonicalSoftwareName, classifyVersion, classifyMintVersion,
+} from './versionRule'
 
 // ── Individual components ────────────────────────────────────────────────────
 // Exported separately so the Reliability Score Breakdown UI shows exactly the numbers
@@ -218,12 +44,15 @@ export function nutComponent(nutCount: number | null | undefined): number {
   return Math.round(Math.min((nutCount ?? 0) / TRACKED_NUT_COUNT, 1) * 15)
 }
 
-/** Software version freshness — 15 points. */
+/**
+ * Software version freshness — 15 points: 0 or 1 minor versions behind the family's latest stable
+ * release = 15, 2 behind = 9, 3 = 6, 4 = 3, 5 or more = 0 (see versionRule.ts).
+ */
 export function versionComponent(
   version: string | null | undefined,
-  latestVersions?: Record<string, { major: number; minor: number }>
+  latestVersions?: LatestVersions
 ): number {
-  return Math.round(versionFreshnessScore(version, latestVersions) / 10 * 15)
+  return classifyMintVersion(version, latestVersions).points
 }
 
 /**
@@ -305,7 +134,7 @@ export function computeReliabilityScore(
   version: string | null,
   contactCount: number,
   audit: AuditInput,
-  latestVersions?: Record<string, { major: number; minor: number }>,
+  latestVersions?: LatestVersions,
   discoveredAt?: string | null,
   now: number = Date.now(),
 ): number {

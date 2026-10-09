@@ -9,7 +9,7 @@ import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import { IcShield } from '@/components/mint/IcShield'
 import { type KnownMint } from '@/hooks/useKnownMints'
-import { splitVersionString, canonicalSoftwareName, parseMajorMinorPatch } from '@/utils/reliabilityScore'
+import { classifyMintVersion, latestMapFor } from '@/utils/versionRule'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { AUDIT_MIN_SAMPLES, auditDataState } from '@/utils/auditScore'
 import { formatAuditSuccessRatio, auditReliabilityColor } from '@/utils/mintFormatting'
@@ -64,41 +64,6 @@ function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
 }
 
-function parseMinorVer(v: string | null | undefined): number {
-  if (!v) return 0
-  const m = v.match(/\d+\.(\d+)/)
-  return m ? parseInt(m[1] ?? '0', 10) : 0
-}
-
-// Groups the mints currently being compared by canonical software (same
-// parsing rules as versionFreshnessScore() in reliabilityScore.ts — split off the
-// "Software/" prefix, match case-insensitively) and finds the newest version
-// within each group. Comparing raw minor-version numbers across DIFFERENT
-// software (e.g. Nutshell vs cdk-mintd) is meaningless — they're independent
-// projects with independent release cadences and numbering, so a cdk-mintd
-// mint must never be flagged "Outdated" just because a Nutshell mint in the
-// same comparison happens to carry a higher number. Software this app
-// doesn't recognize has no ladder to compare against and is skipped, same
-// neutral treatment as the Reliability Score's version component.
-function latestVersionsBySoftware(mints: KnownMint[]): Record<string, string> {
-  const bestParsed: Record<string, { major: number; minor: number }> = {}
-  const bestVersion: Record<string, string> = {}
-  for (const mint of mints) {
-    if (!mint.version) continue
-    const { software, versionNumber } = splitVersionString(mint.version)
-    const canonical = canonicalSoftwareName(software)
-    if (!canonical) continue
-    const parsed = parseMajorMinorPatch(versionNumber)
-    if (!parsed) continue
-    const current = bestParsed[canonical]
-    if (!current || parsed.major > current.major || (parsed.major === current.major && parsed.minor > current.minor)) {
-      bestParsed[canonical] = { major: parsed.major, minor: parsed.minor }
-      bestVersion[canonical] = mint.version
-    }
-  }
-  return bestVersion
-}
-
 // Per-mint line colors for the historical trend overlay — reuses hues already
 // established elsewhere in the app (Reliability Trend green, copper accent, the
 // Fresh/OG badge blue and purple) rather than inventing new ones.
@@ -144,7 +109,7 @@ const EMPTY_MINT: KnownMint = {
   descriptionLong: null, nutsLimits: null,
 }
 
-function useMintCompareData(mint: KnownMint, latestBySoftware: Record<string, string>) {
+function useMintCompareData(mint: KnownMint) {
   const now = useNow()
   const isOnline = mint.online === true
   const displayName = mint.name ?? getHostname(mint.url)
@@ -157,15 +122,12 @@ function useMintCompareData(mint: KnownMint, latestBySoftware: Record<string, st
   // it in /v1/info. NUT-09 (restore signatures) is the mint-side capability
   // that actually gates backup/restore — matches MintDetail's supportsBackupRestore.
   const supportsBackupRestore = nutsLimits['9'] != null
-  const mintSoftware = mint.version != null ? canonicalSoftwareName(splitVersionString(mint.version).software) : null
-  const latestForSoftware = mintSoftware != null ? latestBySoftware[mintSoftware] ?? null : null
-  const isOutdated = mint.version != null && latestForSoftware != null
-    && (parseMinorVer(latestForSoftware) - parseMinorVer(mint.version)) > 2
+  // Same rule and the same "latest" as everywhere else (versionRule.ts + the value the API sends with the mint).
+  const isOutdated = classifyMintVersion(mint.version, latestMapFor(mint.version, mint.softwareLatest)).label === 'outdated'
   return { isOnline, displayName, hostname, reliabilityScore, tsInfo, isNew, nutsLimits, supportsBackupRestore, isOutdated }
 }
 
 export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClose: () => void }) {
-  const latestBySoftware = latestVersionsBySoftware(mints)
   const dialogRef = useModalFocus()
   const now = useNow()
 
@@ -176,10 +138,10 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
   }, [onClose])
 
   // Unconditional hook calls for up to 4 mint slots
-  const d0 = useMintCompareData(mints[0] ?? EMPTY_MINT, latestBySoftware)
-  const d1 = useMintCompareData(mints[1] ?? EMPTY_MINT, latestBySoftware)
-  const d2 = useMintCompareData(mints[2] ?? EMPTY_MINT, latestBySoftware)
-  const d3 = useMintCompareData(mints[3] ?? EMPTY_MINT, latestBySoftware)
+  const d0 = useMintCompareData(mints[0] ?? EMPTY_MINT)
+  const d1 = useMintCompareData(mints[1] ?? EMPTY_MINT)
+  const d2 = useMintCompareData(mints[2] ?? EMPTY_MINT)
+  const d3 = useMintCompareData(mints[3] ?? EMPTY_MINT)
   const allData = [d0, d1, d2, d3].slice(0, mints.length)
 
   const gridCols = `132px ${mints.map(() => 'minmax(150px, 1fr)').join(' ')}`
