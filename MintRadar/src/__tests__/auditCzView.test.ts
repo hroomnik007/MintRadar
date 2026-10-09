@@ -38,13 +38,17 @@ describe('tiles from the stored detail (LNpay values)', () => {
     expect(t['success']).toMatchObject({ value: '85%', label: 'Success rate' })
     expect(t['melts']).toMatchObject({ value: '51 / 64', label: 'Payouts' })
     expect(t['mints']).toMatchObject({ value: '56 / 62', label: 'Receives' })
-    expect(t['attributed']).toMatchObject({ value: '0', label: 'Caused by this mint', caption: 'of 19 failed swaps' })
+    expect(t['attributed']).toMatchObject({ value: '0', label: 'Caused by this mint' })
+    expect(t['attributed']?.caption).toBeUndefined()
     expect(t['avg']).toMatchObject({ value: '8.3 s', label: 'Avg swap time' })
     expect(view([]).tiles.map(x => x.key)).toEqual(['success', 'melts', 'mints', 'attributed', 'avg'])
   })
   it('attributed tile: the blamed number alone, "of N failed swaps" as caption, never "x / y"', () => {
-    const one = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { failed: 1 } } })['attributed']
-    expect(one).toMatchObject({ value: '0', label: 'Caused by this mint', caption: 'of 1 failed swap' })
+    const one = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, errorsBlamed: 1, all: { failed: 1 } } })['attributed']
+    expect(one).toMatchObject({ value: '1', label: 'Caused by this mint', caption: 'of 1 failed swap' })
+    const zero = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, errorsBlamed: 0, all: { failed: 16 } } })['attributed']
+    expect(zero).toMatchObject({ value: '0', label: 'Caused by this mint' })
+    expect(zero?.caption).toBeUndefined()
     const some = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, errorsBlamed: 3, all: { failed: 16 } } })['attributed']
     expect(some).toMatchObject({ value: '3', label: 'Caused by this mint', caption: 'of 16 failed swaps' })
     for (const t of view([]).tiles.filter(x => x.key === 'attributed')) expect(t.value).not.toContain('/')

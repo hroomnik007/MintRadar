@@ -178,11 +178,12 @@ function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
   if (blamed !== undefined) {
     const failed = num(s.all?.failed)
     // Never "x / y": the second number is all failed swaps, not a total, and "0 / 16" read as "receives 0 of 16".
+    // Nothing blamed on this mint: no "of N failed swaps" caption either, "0 … of 16" reads as a broken fraction.
     const noFailures = failed === 0 && blamed === 0
     tiles.push({
       key: 'attributed', value: fmt(blamed),
       label: noFailures ? 'Failed swaps' : 'Caused by this mint',
-      ...(failed !== undefined && !noFailures ? { caption: `of ${fmt(failed)} failed swap${failed === 1 ? '' : 's'}` } : {}),
+      ...(failed !== undefined && blamed > 0 ? { caption: `of ${fmt(failed)} failed swap${failed === 1 ? '' : 's'}` } : {}),
       tooltip: 'Swaps that failed because of this mint, as attributed by cashu.info. Failures with other causes are not counted against a mint, for example amounts below its minimum, the auditor\'s own balance and Lightning routing.',
     })
   }
