@@ -60,12 +60,15 @@ test('only cz has data: header, four tiles from the stored detail, no checks car
   await expect(header).toHaveText(/^Audit stats\s*·\s*via cashu\.info/, { useInnerText: true })
 
   // Four tiles from the LNpay detail, in order; the label is sentence case. The one success figure is the
-  // score's: 0 attributed of 126 swaps is 100%, the 19 failures of other causes are only a caption.
+  // score's: 0 attributed of 126 swaps is 100%. The 19 other failures live in the tooltip, not under the number.
   await expect(page.locator('.audit-cz-tiles .audit-summary-cell')).toHaveCount(4)
   await expect(page.locator('.audit-cz-tiles .audit-summary-value')).toHaveText(['51 / 64', '56 / 62', '100%', '8.3 s'])
   await expect(page.locator('.audit-cz-tiles .audit-cz-tile-label span').filter({ hasText: /^[A-Z]/ })).toHaveText(
     ['Payouts', 'Receives', 'Without a failure caused by this mint', 'Avg swap time'])
-  await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveText(['126 of 126 swaps', '19 failed for other reasons'])
+  await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
+  await tile(page, 'clean').locator('.info-tooltip').hover()
+  await expect(tile(page, 'clean').getByRole('tooltip')).toContainText('126 of 126 swaps, 19 failed for other reasons last 7 days')
+  await page.mouse.move(0, 0)
   await expect(page.getByText('Success rate')).toHaveCount(0)
   expect(await tile(page, 'melts').locator('.audit-cz-tile-label span').first().evaluate(e => getComputedStyle(e).textTransform)).toBe('none') // sentence case, like the swap strip labels
   // The old Recent success rate tile is gone from this view.
@@ -186,26 +189,38 @@ test.describe('tiles from the stored detail', () => {
   test('LNpay-like: 0 attributed of 105 with 16 failed is 100%', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(105, 16, 0) }))
     await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('100%')
-    await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveText(['105 of 105 swaps', '16 failed for other reasons'])
+    await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
+    await tile(page, 'clean').locator('.info-tooltip').hover()
+    await expect(tile(page, 'clean').getByRole('tooltip')).toContainText('105 of 105 swaps, 16 failed for other reasons last 7 days')
+    await page.mouse.move(0, 0)
     await expect(tile(page, 'clean')).not.toContainText('0 / 16')
   })
 
   test('lnw.cash-like: 202 attributed of 229 with 207 failed is 12%', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(229, 207, 202) }))
     await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('12%')
-    await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveText(['27 of 229 swaps', '202 caused by this mint · 5 other failures'])
+    await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
+    await tile(page, 'clean').locator('.info-tooltip').hover()
+    await expect(tile(page, 'clean').getByRole('tooltip')).toContainText('27 of 229 swaps, 202 caused by this mint, 5 failed for other reasons last 7 days')
+    await page.mouse.move(0, 0)
   })
 
   test('1 attributed of 200 shows 99%, not 100%', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(200, 1, 1) }))
     await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('99%')
-    await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveText(['199 of 200 swaps', '1 caused by this mint'])
+    await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
+    await tile(page, 'clean').locator('.info-tooltip').hover()
+    await expect(tile(page, 'clean').getByRole('tooltip')).toContainText('199 of 200 swaps, 1 caused by this mint last 7 days')
+    await page.mouse.move(0, 0)
   })
 
-  test('no failed swaps: one caption line only', async ({ page }) => {
+  test('no failed swaps: the count is only in the tooltip', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(50, 0, 0) }))
     await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('100%')
-    await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveText(['50 of 50 swaps'])
+    await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
+    await tile(page, 'clean').locator('.info-tooltip').hover()
+    await expect(tile(page, 'clean').getByRole('tooltip')).toContainText('50 of 50 swaps last 7 days')
+    await page.mouse.move(0, 0)
   })
 
   test('fewer than 10 swaps still shows the number; the tooltip explains the neutral rule', async ({ page }) => {
@@ -218,7 +233,10 @@ test.describe('tiles from the stored detail', () => {
   test('blamed above total is clamped', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(20, 20, 999) }))
     await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('0%')
-    await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveText(['0 of 20 swaps', '20 caused by this mint'])
+    await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
+    await tile(page, 'clean').locator('.info-tooltip').hover()
+    await expect(tile(page, 'clean').getByRole('tooltip')).toContainText('0 of 20 swaps, 20 caused by this mint last 7 days')
+    await page.mouse.move(0, 0)
   })
 
   test('total 0 hides the tile', async ({ page }) => {
@@ -247,7 +265,7 @@ test.describe('tiles from the stored detail', () => {
     const expected: Record<string, string> = {
       melts: 'Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)',
       mints: 'Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)',
-      clean: "Swaps in the last 7 days without a failure that cashu.info attributes to this mint. Failures caused by test amounts below the mint's minimum, the auditor's balance, Lightning routing or another mint are not counted against it. This is the figure the audit part of the Reliability Score uses; fewer than 10 swaps scores neutral.",
+      clean: "126 of 126 swaps, 19 failed for other reasons last 7 days. Failures caused by test amounts below the mint's minimum, the auditor's balance, Lightning routing or another mint are not counted against it. This is the figure the audit part of the Reliability Score uses; fewer than 10 swaps scores neutral.",
       avg: 'Average swap time over the last 7 days as reported by cashu.info.',
     }
     for (const [key, text] of Object.entries(expected)) {
