@@ -686,33 +686,32 @@ test.describe('390px viewport', () => {
   }
 })
 
-// ── score breakdown row: the detail, whichever tab is open ──────
-test.describe('Reliability breakdown: audit row sentence', () => {
+// ── score breakdown row: identical whether or not the Audit tab was opened ──
+test.describe('Reliability breakdown: audit row', () => {
   const auditRow = (page: Page) => page.locator('.md-reliability-panel .rb-row', { hasText: 'Audit reliability (25%)' })
-  const SENTENCE = '89 of 105 swaps succeeded in the last 7 days; 16 failed, 0 attributed to this mint (cashu.info)'
+  const TIP = 'Failures cashu.info attributes to this mint, of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5/25.'
   const detail = () => czDetail({ swaps7d: { all: { total: 105, success: 89, failed: 16, avgMs: 9418 }, asSource: { total: 54, success: 42, failed: 12 }, asDest: { total: 51, success: 47, failed: 4 }, errorsBlamed: 0, dleq: { valid: 47, invalid: 0, missing: 0 } } })
+  const snapshot = async (page: Page) => ({
+    detail: await auditRow(page).locator('.rb-row-detail').count(),
+    display: await auditRow(page).locator('.rb-row-display').textContent(),
+    score: await auditRow(page).locator('.rb-row-score').textContent(),
+    text: await auditRow(page).innerText(),
+  })
 
-  test('the sentence is on Overview without opening the Audit tab, from ONE request that the Audit tab reuses', async ({ page }) => {
+  test('a scored row has no sentence under it, only "x / y" and the points, before and after opening the Audit tab; the tooltip is the short one', async ({ page }) => {
     const h = await gotoAuditTab(page, onlyCz([], { detail: detail() }), false)
-    await expect(auditRow(page).locator('.rb-row-detail')).toHaveText(SENTENCE)
-    await expect(auditRow(page).locator('.rb-row-display')).toHaveText('0 / 100')
     await expect(auditRow(page).locator('.rb-row-score')).toHaveText('25/25')
+    const before = await snapshot(page)
+    expect(before).toMatchObject({ detail: 0, display: '0 / 100', score: '25/25' })
+    expect(before.text).not.toMatch(/swaps succeeded|attributed to this mint \(cashu\.info\)/)
     await auditRow(page).locator('svg').first().hover()
-    await expect(page.getByText('Only failures attributed to this mint count, not the overall success rate.')).toBeVisible()
-    const czRequests = () => h.requests.filter(u => u.includes('/api/mints/audit-cz'))
-    expect(czRequests()).toHaveLength(1)
+    await expect(page.getByText(TIP, { exact: true })).toBeVisible()
+    expect(TIP.length).toBeLessThanOrEqual(160)
+    expect(h.requests.filter(u => u.includes('/api/mints/audit-cz'))).toHaveLength(1)
 
     await page.locator('.md-tab', { hasText: 'Audit' }).click()
     await expect(tile(page, 'attributed')).toBeVisible()
     await page.locator('.md-tab', { hasText: 'Overview' }).click()
-    await expect(auditRow(page).locator('.rb-row-detail')).toHaveText(SENTENCE)
-    expect(czRequests()).toHaveLength(1)
-  })
-
-  test('without a stored detail the row keeps its own text', async ({ page }) => {
-    await gotoAuditTab(page, { alpha: NO_8333, cz: NOT_COVERED }, false)
-    await expect(auditRow(page)).toBeVisible()
-    await expect(auditRow(page).locator('.rb-row-detail')).toHaveCount(0)
-    await expect(auditRow(page).locator('.rb-row-display')).toHaveText('0 / 100')
+    expect(await snapshot(page)).toEqual(before)
   })
 })

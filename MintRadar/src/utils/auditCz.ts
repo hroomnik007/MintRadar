@@ -194,18 +194,6 @@ function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
   return tiles
 }
 
-/**
- * Text under the "Audit reliability" row of the score breakdown when the stored 7-day detail is at hand:
- * the overall result next to the attributed failures, so the row cannot be read as the success rate.
- * null when the detail lacks one of the numbers (the row then keeps its own text).
- */
-export function auditCzBreakdownText(d: AuditCzDetail | null | undefined): string | null {
-  const s = d?.swaps7d
-  const total = num(s?.all?.total), success = num(s?.all?.success), failed = num(s?.all?.failed), blamed = num(s?.errorsBlamed)
-  if (total === undefined || success === undefined || failed === undefined || blamed === undefined) return null
-  return `${fmt(success)} of ${fmt(total)} swaps succeeded in the last 7 days; ${fmt(failed)} failed, ${fmt(blamed)} attributed to this mint (cashu.info)`
-}
-
 /** The two sentences of the "Checks by the auditor" card; null for a line without data, the card hides when both are null. */
 export function auditCzChecks(d: AuditCzDetail): AuditCzChecks | null {
   const dl = d.swaps7d?.dleq

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { adaptAuditCz, auditCzBreakdownText, auditCzChecks, auditCzNeutralKind, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, type AuditCzView } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzChecks, auditCzNeutralKind, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, type AuditCzView } from '@/utils/auditCz'
 import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
 
 type Row = AuditCzData['swaps'][number]
@@ -31,22 +31,6 @@ const data = (swaps: Row[], detail: AuditCzData['detail'] = LNPAY, over: Partial
 const view = (swaps: Row[], detail: AuditCzData['detail'] = LNPAY, over: Partial<AuditCzData> = {}, now = Date.parse('2026-10-07T07:30:00Z')): AuditCzView =>
   adaptAuditCz(data(swaps, detail, over), now) as AuditCzView
 const tiles = (d: AuditCzDetail) => Object.fromEntries(view([], d).tiles.map(t => [t.key, t]))
-
-describe('breakdown row text from the stored detail', () => {
-  it('overall result next to the attributed failures', () => {
-    expect(auditCzBreakdownText(LNPAY)).toBe('107 of 126 swaps succeeded in the last 7 days; 19 failed, 0 attributed to this mint (cashu.info)')
-    // the Minibits case of the external review: 89 of 105 succeeded, 16 failed, none attributed
-    expect(auditCzBreakdownText({ fetchedAt: null, swaps7d: { all: { total: 105, success: 89, failed: 16 }, errorsBlamed: 0 } }))
-      .toBe('89 of 105 swaps succeeded in the last 7 days; 16 failed, 0 attributed to this mint (cashu.info)')
-  })
-  it('null while a number is missing, so the row keeps its own text', () => {
-    expect(auditCzBreakdownText(null)).toBeNull()
-    expect(auditCzBreakdownText(undefined)).toBeNull()
-    expect(auditCzBreakdownText({ fetchedAt: null })).toBeNull()
-    expect(auditCzBreakdownText({ fetchedAt: null, swaps7d: { all: { total: 10, success: 9 }, errorsBlamed: 0 } })).toBeNull()
-    expect(auditCzBreakdownText({ fetchedAt: null, swaps7d: { all: { total: 10, success: 9, failed: 1 } } })).toBeNull()
-  })
-})
 
 describe('tiles from the stored detail (LNpay values)', () => {
   it('fractions, attributed caption and average time', () => {
