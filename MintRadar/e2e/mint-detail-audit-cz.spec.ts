@@ -686,24 +686,33 @@ test.describe('390px viewport', () => {
   }
 })
 
-// ── score breakdown row: the detail the Audit tab loaded ────────
+// ── score breakdown row: the detail, whichever tab is open ──────
 test.describe('Reliability breakdown: audit row sentence', () => {
   const auditRow = (page: Page) => page.locator('.md-reliability-panel .rb-row', { hasText: 'Audit reliability (25%)' })
+  const SENTENCE = '89 of 105 swaps succeeded in the last 7 days; 16 failed, 0 attributed to this mint (cashu.info)'
+  const detail = () => czDetail({ swaps7d: { all: { total: 105, success: 89, failed: 16, avgMs: 9418 }, asSource: { total: 54, success: 42, failed: 12 }, asDest: { total: 51, success: 47, failed: 4 }, errorsBlamed: 0, dleq: { valid: 47, invalid: 0, missing: 0 } } })
 
-  test('shows the overall result next to the attributed failures once the Audit tab has loaded the detail; before that the row keeps its own text', async ({ page }) => {
-    const detail = czDetail({ swaps7d: { all: { total: 105, success: 89, failed: 16, avgMs: 9418 }, asSource: { total: 54, success: 42, failed: 12 }, asDest: { total: 51, success: 47, failed: 4 }, errorsBlamed: 0, dleq: { valid: 47, invalid: 0, missing: 0 } } })
-    await gotoAuditTab(page, onlyCz([], { detail }), false)
-    // No Audit tab visit yet: no extra request, the row shows only "x / y" and the points.
-    await expect(auditRow(page)).toBeVisible()
-    await expect(auditRow(page).locator('.rb-row-detail')).toHaveCount(0)
+  test('the sentence is on Overview without opening the Audit tab, from ONE request that the Audit tab reuses', async ({ page }) => {
+    const h = await gotoAuditTab(page, onlyCz([], { detail: detail() }), false)
+    await expect(auditRow(page).locator('.rb-row-detail')).toHaveText(SENTENCE)
     await expect(auditRow(page).locator('.rb-row-display')).toHaveText('0 / 100')
+    await expect(auditRow(page).locator('.rb-row-score')).toHaveText('25/25')
+    await auditRow(page).locator('svg').first().hover()
+    await expect(page.getByText('Only failures attributed to this mint count, not the overall success rate.')).toBeVisible()
+    const czRequests = () => h.requests.filter(u => u.includes('/api/mints/audit-cz'))
+    expect(czRequests()).toHaveLength(1)
 
     await page.locator('.md-tab', { hasText: 'Audit' }).click()
     await expect(tile(page, 'attributed')).toBeVisible()
     await page.locator('.md-tab', { hasText: 'Overview' }).click()
-    await expect(auditRow(page).locator('.rb-row-detail')).toHaveText('89 of 105 swaps succeeded in the last 7 days; 16 failed, 0 attributed to this mint (cashu.info)')
-    await expect(auditRow(page).locator('.rb-row-score')).toHaveText('25/25')
-    await auditRow(page).locator('svg').first().hover()
-    await expect(page.getByText('Only failures attributed to this mint count, not the overall success rate.')).toBeVisible()
+    await expect(auditRow(page).locator('.rb-row-detail')).toHaveText(SENTENCE)
+    expect(czRequests()).toHaveLength(1)
+  })
+
+  test('without a stored detail the row keeps its own text', async ({ page }) => {
+    await gotoAuditTab(page, { alpha: NO_8333, cz: NOT_COVERED }, false)
+    await expect(auditRow(page)).toBeVisible()
+    await expect(auditRow(page).locator('.rb-row-detail')).toHaveCount(0)
+    await expect(auditRow(page).locator('.rb-row-display')).toHaveText('0 / 100')
   })
 })

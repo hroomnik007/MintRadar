@@ -644,9 +644,10 @@ function MintDetailContent({ url }: { url: string }) {
     enabled: activeTab === 'audit',
     staleTime: 5 * 60 * 1000,
   })
-  // cashu.info data: fetched (from our own /api/mints/audit-cz, never from them) only while
-  // the Audit tab is open and the known-mints list has loaded.
-  const { data: auditCzData, loading: auditCzLoading } = useAuditCz(url, activeTab === 'audit')
+  // cashu.info data: read from our own /api/mints/audit-cz (database only, never from them) once the
+  // known-mints list has loaded, whatever tab is open, so the Reliability breakdown's Audit row text does not
+  // depend on which tabs were visited.
+  const { data: auditCzData, loading: auditCzLoading } = useAuditCz(url)
   const czData = adaptAuditCz(auditCzData, now)
   // Source chosen with the header switch (null = default: cashu.info when the 8333 data is missing/stale).
   const [auditSourcePick, setAuditSourcePick] = useState<'cz' | '8333' | null>(null)
@@ -969,7 +970,7 @@ function MintDetailContent({ url }: { url: string }) {
   const breakdownAScore = auditComponent(auditCzBlamed, auditCzTotal, auditCzFetchedAt, now)
   const auditState = auditDataState(auditCzBlamed, auditCzTotal, auditCzFetchedAt, now)
   const auditAgeH = auditAgeHours(auditCzFetchedAt, now)
-  // The stored detail comes from the Audit tab's query: used when it is already in the cache (no extra request).
+  // The stored detail (same query as the Audit tab): the detailed sentence whenever it exists.
   const auditDetailText = auditState === 'scored'
     ? (auditCzBreakdownText(auditCzData?.detail) ?? undefined)
     : auditState === 'too-few'

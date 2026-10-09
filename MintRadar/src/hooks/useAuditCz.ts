@@ -68,10 +68,10 @@ export interface AuditCzDirectionStats {
   feesPaid: number
 }
 
-/** Fetches only while the Audit tab is active and the known-mints list has loaded. */
-export function useAuditCz(url: string, tabActive: boolean) {
+/** Fetches once per mint page, as soon as the known-mints list has loaded; the Audit tab and the Reliability breakdown row share the query. */
+export function useAuditCz(url: string) {
   const { data: knownMints } = useKnownMints()
-  const wanted = tabActive && knownMints !== undefined
+  const wanted = knownMints !== undefined
   const query = useQuery({
     queryKey: ['mint', 'audit-cz', url],
     queryFn: async () => {
