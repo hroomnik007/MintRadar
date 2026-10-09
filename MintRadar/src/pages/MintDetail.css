@@ -1777,6 +1777,22 @@ button.md-url-copy.copied > svg { opacity: 1; }
   border-bottom: 0.5px solid var(--border);
 }
 
+/* Both cashu.info tables use the lower table's spacing. Auto layout sized each table
+   from its own rows, so Amount started further right above. Percentages, not a right-hand pack. */
+.audit-cz-card .audit-swaps-table { table-layout: fixed; }
+.audit-cz-card .audit-swaps-table th,
+.audit-cz-card .audit-swaps-table td { text-align: left; }
+.audit-cz-card .audit-swaps-table th:nth-child(1),
+.audit-cz-card .audit-swaps-table td:nth-child(1) { width: 42%; }
+.audit-cz-card .audit-swaps-table th:nth-child(2),
+.audit-cz-card .audit-swaps-table td:nth-child(2) { width: 16%; }
+.audit-cz-card .audit-swaps-table th:nth-child(3),
+.audit-cz-card .audit-swaps-table td:nth-child(3) { width: 12%; }
+.audit-cz-card .audit-swaps-table th:nth-child(4),
+.audit-cz-card .audit-swaps-table td:nth-child(4) { width: 16%; }
+.audit-cz-card .audit-swaps-table th:nth-child(5),
+.audit-cz-card .audit-swaps-table td:nth-child(5) { width: 14%; }
+
 .audit-swap-row-fail td {
   /* A failed swap reads red, at AA contrast (plain --red at 0.75 opacity was ~3:1). */
   color: color-mix(in srgb, var(--red) 55%, var(--text));
