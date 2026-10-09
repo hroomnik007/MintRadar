@@ -542,9 +542,18 @@ button.md-url-copy.copied > svg { opacity: 1; }
   border-top: 0.5px solid var(--border);
   vertical-align: middle;
 }
-.md-vh-col-date { width: 140px; }
-.md-vh-col-from { width: 38%; }
-@media (max-width: 640px) { .md-vh-col-date { width: 112px; } .md-vh-col-from { width: 36%; } }
+.md-vh-col-date { width: 190px; }
+.md-vh-col-from { width: 260px; }
+.md-vh-date-num { display: none; }
+@media (max-width: 640px) {
+  .md-vh-col-date { width: 92px; }
+  .md-vh-col-from { width: auto; }
+  .md-vh-table th, .md-vh-table td { padding-right: 8px; }
+  .md-vh-table th:last-child, .md-vh-table td:last-child { padding-right: 0; }
+  .md-vh-ver { font-size: 12px; }
+  .md-vh-date-long { display: none; }
+  .md-vh-date-num { display: inline; }
+}
 .md-vh-table tr:first-child td { border-top: none; }
 .md-vh-table th:last-child,
 .md-vh-table td:last-child { padding-right: 0; }

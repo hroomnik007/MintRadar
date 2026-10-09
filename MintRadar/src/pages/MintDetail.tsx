@@ -94,6 +94,10 @@ function formatReviewDate(ts: number): string {
 function formatVhDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
 }
+/** "07/09/2026" — the numeric form the Version history shows on mobile. */
+function formatVhDateNumeric(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
+}
 /** A five-character ★/☆ string for a rating, rounded to whole stars. */
 function starString(rating: number): string {
   const full = Math.max(0, Math.min(5, Math.round(rating)))
@@ -2059,7 +2063,7 @@ function MintDetailContent({ url }: { url: string }) {
                 <tbody>
                   {versionHistory.map((vh, i) => (
                     <tr key={i}>
-                      <td className="md-vh-date">{formatVhDate(vh.firstSeenAt)}</td>
+                      <td className="md-vh-date"><span className="md-vh-date-long">{formatVhDate(vh.firstSeenAt)}</span><span className="md-vh-date-num">{formatVhDateNumeric(vh.firstSeenAt)}</span></td>
                       <td className="md-vh-ver md-vh-from">{versionHistory[i + 1]?.version ?? '—'}</td>
                       <td className="md-vh-ver md-vh-to">{vh.version}</td>
                     </tr>
