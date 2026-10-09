@@ -1777,6 +1777,18 @@ button.md-url-copy.copied > svg { opacity: 1; }
   border-bottom: 0.5px solid var(--border);
 }
 
+/* Both cashu.info tables share one column grid. Auto layout sized each table from its own
+   rows, so Amount started further right in "Swaps from this mint". Fixed widths match the lower table. */
+.audit-cz-card .audit-swaps-table { table-layout: fixed; }
+.audit-cz-card .audit-swaps-table th:nth-child(2),
+.audit-cz-card .audit-swaps-table td:nth-child(2) { width: 76px; }
+.audit-cz-card .audit-swaps-table th:nth-child(3),
+.audit-cz-card .audit-swaps-table td:nth-child(3) { width: 40px; }
+.audit-cz-card .audit-swaps-table th:nth-child(4),
+.audit-cz-card .audit-swaps-table td:nth-child(4) { width: 72px; }
+.audit-cz-card .audit-swaps-table th:nth-child(5),
+.audit-cz-card .audit-swaps-table td:nth-child(5) { width: 64px; }
+
 .audit-swap-row-fail td {
   /* A failed swap reads red, at AA contrast (plain --red at 0.75 opacity was ~3:1). */
   color: color-mix(in srgb, var(--red) 55%, var(--text));
