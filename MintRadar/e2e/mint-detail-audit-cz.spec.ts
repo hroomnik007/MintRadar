@@ -138,7 +138,7 @@ test('the browser never requests cashu.info: only /api/mints/audit-cz?direction=
 })
 
 // ── c) neutral rows ─────────────────────────────────────────────
-test('limits, balance and pending rows are neutral, failures red; the bar follows the same split', async ({ page }) => {
+test('every non-OK row says Failed and looks like an OK row; the bar follows the same split', async ({ page }) => {
   // 5 OK, 3 failed (melt), 3 limits, 2 balance, 1 pending, interleaved so no position implies the kind.
   const swaps = czSwapList([ok, melt, limits, ok, balance, pending, ok, melt, limits, balance, ok, limits, melt, ok])
   expect(swaps).toHaveLength(14)
@@ -153,27 +153,16 @@ test('limits, balance and pending rows are neutral, failures red; the bar follow
     return { color: s.color, opacity: s.opacity }
   })
 
-  for (const host of ['melt1', 'melt7', 'melt12']) await state(`${host}.example`).toBe('failed (melt)')
-  for (const host of ['limits2', 'limits8', 'limits11']) await state(`${host}.example`).toBe('below minimum')
-  for (const host of ['balance4', 'balance9']) await state(`${host}.example`).toBe('auditor balance')
-  await state('pending5.example').toBe('pending')
+  for (const host of ['melt1', 'melt7', 'melt12']) await state(`${host}.example`).toBe('Failed')
+  for (const host of ['limits2', 'limits8', 'limits11']) await state(`${host}.example`).toBe('Failed')
+  for (const host of ['balance4', 'balance9']) await state(`${host}.example`).toBe('Failed')
+  await state('pending5.example').toBe('Failed')
   for (const host of ['ok0', 'ok3', 'ok6', 'ok10', 'ok13']) await state(`${host}.example`).toBe('OK')
 
-  const failed = await style('melt1.example')
   const okRow = await style('ok0.example')
-  const neutral = [await style('limits2.example'), await style('balance4.example'), await style('pending5.example')]
-  // Failed rows are the muted red; the neutral rows must look like neither a failure nor a dimmed row.
-  expect(failed.color).not.toBe(okRow.color)
-  for (const n of neutral) {
-    expect(n.color).not.toBe(failed.color)
-    expect(n.opacity).toBe(okRow.opacity)
+  for (const host of ['melt1', 'limits2', 'balance4', 'pending5', 'melt7', 'melt12']) {
+    expect(await style(`${host}.example`)).toEqual(okRow)
   }
-  // limits, balance and pending share one neutral style.
-  expect(neutral[1]).toEqual(neutral[0])
-  expect(neutral[2]).toEqual(neutral[0])
-  // the other failed rows look like the first one
-  expect(await style('melt7.example')).toEqual(failed)
-  expect(await style('melt12.example')).toEqual(failed)
 
   // The outcome bar: 5 OK, 3 failed, 6 neutral (limits + balance + pending).
   await expect(page.locator('.audit-swap-bar-mark')).toHaveCount(14)
@@ -494,8 +483,8 @@ test('hostile text from the endpoint is shown as text: no element, no dialog, no
   await expandFrom(page)
   await expect(page.locator('.audit-swaps-table tbody tr')).toHaveCount(5)
 
-  // `stage` and the destination are displayed: literally, as text. (`error` and `otherMintName` are not shown.)
-  expect(await visibleState(page, 'stage2.example')).toBe(`failed (${XSS})`)
+  // State is only OK or Failed. The destination is displayed literally. Stage, error and otherMintName are not shown.
+  expect(await visibleState(page, 'stage2.example')).toBe('Failed')
   await expect(page.locator('.audit-swaps-table tbody tr').nth(3).locator('td').first()).toHaveText(XSS)
   await expect(page.locator('.audit-swaps-table')).toContainText(XSS)
 
@@ -589,43 +578,24 @@ test.describe('failure reason in the State cell', () => {
     await expandFrom(page)
     await expect(page.locator('.audit-swaps-table tbody tr')).toHaveCount(5)
 
-    // red melt row
-    const meltCell = stateCell(page, 'melt1.example')
-    await expect(meltCell).toHaveAttribute('title', NO_ROUTE)
-    await expect(meltCell.locator('.sr-only')).toHaveText(NO_ROUTE)
-    expect(await visibleState(page, 'melt1.example')).toBe('failed (melt)')
-    // grey rows: the fixed explanation first, then the error text
-    const limitsCell = stateCell(page, 'limits2.example')
-    await expect(limitsCell).toHaveAttribute('title', `${LIMITS_WHY}. ${MIN_TEXT}`)
-    await expect(limitsCell.locator('.sr-only')).toHaveText(MIN_TEXT)
-    expect(await visibleState(page, 'limits2.example')).toBe('below minimum')
-    const balanceCell = stateCell(page, 'balance3.example')
-    await expect(balanceCell).toHaveAttribute('title', `${BALANCE_WHY}. ${BAL_TEXT}`)
-    await expect(balanceCell.locator('.sr-only')).toHaveText(BAL_TEXT)
-    expect(await visibleState(page, 'balance3.example')).toBe('auditor balance')
-    // pending is not OK either
-    await expect(stateCell(page, 'pending4.example')).toHaveAttribute('title', 'Waiting for the quote')
-    expect(await visibleState(page, 'pending4.example')).toBe('pending')
-
-    // the hidden element is really hidden: 1px box, clipped, takes no room (cell text width = the visible text's)
-    const hidden = await meltCell.locator('.sr-only').evaluate(el => {
-      const r = el.getBoundingClientRect(), cs = getComputedStyle(el)
-      return { w: r.width, h: r.height, position: cs.position, overflow: cs.overflow }
-    })
-    expect(hidden).toEqual({ w: 1, h: 1, position: 'absolute', overflow: 'hidden' })
-    // …but it is in the accessibility tree: the cell's accessible text includes it after the visible text
-    await expect(meltCell).toContainText(`failed (melt) ${NO_ROUTE}`, { useInnerText: false })
+    expect(await visibleState(page, 'melt1.example')).toBe('Failed')
+    expect(await visibleState(page, 'limits2.example')).toBe('Failed')
+    expect(await visibleState(page, 'balance3.example')).toBe('Failed')
+    expect(await visibleState(page, 'pending4.example')).toBe('Failed')
+    for (const host of ['melt1', 'limits2', 'balance3', 'pending4']) {
+      await expect(stateCell(page, `${host}.example`)).not.toHaveAttribute('title', /.*/)
+      await expect(stateCell(page, `${host}.example`).locator('.sr-only')).toHaveCount(0)
+    }
   })
 
-  test('a failed row without an error text has no title and no hidden element; a grey row keeps the explanation', async ({ page }) => {
+  test('a non-OK row does not show why it failed', async ({ page }) => {
     await gotoAuditTab(page, onlyCz(czSwapList([ok, { ...melt, error: null }, { ...limits, error: null }, { ...melt, error: ' \n\t ' }])))
     await expandFrom(page)
     await expect(page.locator('.audit-swaps-table tbody tr')).toHaveCount(4)
-    await expect(stateCell(page, 'melt1.example')).not.toHaveAttribute('title', /.*/)
-    await expect(stateCell(page, 'melt1.example').locator('.sr-only')).toHaveCount(0)
-    await expect(stateCell(page, 'limits2.example')).toHaveAttribute('title', LIMITS_WHY)
-    await expect(stateCell(page, 'melt3.example')).not.toHaveAttribute('title', /.*/)
-    await expect(stateCell(page, 'melt3.example').locator('.sr-only')).toHaveCount(0)
+    for (const host of ['melt1', 'limits2', 'melt3']) {
+      expect(await visibleState(page, `${host}.example`)).toBe('Failed')
+      await expect(stateCell(page, `${host}.example`)).not.toHaveAttribute('title', /.*/)
+    }
   })
 
   test('an OK row has neither a title nor a hidden element, even when the endpoint sends an error text', async ({ page }) => {
@@ -640,45 +610,19 @@ test.describe('failure reason in the State cell', () => {
     await expect(row(page, 'ok0.example')).not.toContainText('leftover text')
   })
 
-  test('hostile error text appears only as text: no element, no dialog, no request', async ({ page }) => {
+  test('hostile error text is not written into the State cell', async ({ page }) => {
     const h = await gotoAuditTab(page, onlyCz(czSwapList([ok, { ...melt, error: XSS }, { ...limits, error: XSS }])))
     await expect(page.locator('.audit-swaps-table tbody tr')).toHaveCount(3)
     for (const host of ['melt1.example', 'limits2.example']) {
       const cellEl = stateCell(page, host)
-      await expect(cellEl.locator('.sr-only')).toHaveText(XSS)
-      await expect(cellEl).toHaveAttribute('title', new RegExp(`${XSS.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`))
-      await expect(cellEl.locator('*')).toHaveCount(1) // the hidden span, nothing else
+      expect(await visibleState(page, host)).toBe('Failed')
+      await expect(cellEl).not.toContainText(XSS)
+      await expect(cellEl.locator('.sr-only')).toHaveCount(0)
     }
     await expect(page.locator('.md-audit-collapsible img')).toHaveCount(0)
     await expect(page.locator('[onerror], img[src="x"]')).toHaveCount(0)
     expect(h.requests.filter(u => new URL(u).pathname === '/x')).toEqual([])
     expect(h.dialogs).toEqual([])
-  })
-
-  test('control characters and extra whitespace are cleaned before use', async ({ page }) => {
-    await gotoAuditTab(page, onlyCz(czSwapList([ok, { ...melt, error: '  Lightning\n\n payment\tfailed\u0000:\u202e  no_route.  ' }])))
-    const cellEl = stateCell(page, 'melt1.example')
-    await expect(cellEl).toHaveAttribute('title', 'Lightning payment failed: no_route.')
-    await expect(cellEl.locator('.sr-only')).toHaveText('Lightning payment failed: no_route.')
-  })
-
-  test('a very long error text is truncated to 200 characters in the title', async ({ page }) => {
-    const long = `${'word '.repeat(60)}END` // 303 characters, the endpoint caps at 300
-    await gotoAuditTab(page, onlyCz(czSwapList([ok, { ...melt, error: long.slice(0, 300) }, { ...limits, error: long.slice(0, 300) }])))
-    const title = await stateCell(page, 'melt1.example').getAttribute('title')
-    expect(title).not.toBeNull()
-    expect(title!.length).toBeLessThanOrEqual(200)
-    expect(title!.length).toBeGreaterThan(150)
-    expect(title!.endsWith('…')).toBe(true)
-    expect(long.startsWith(title!.slice(0, -1).trimEnd())).toBe(true)
-    // the grey row: explanation, then the same truncated text
-    const greyTitle = await stateCell(page, 'limits2.example').getAttribute('title')
-    expect(greyTitle!.startsWith(`${LIMITS_WHY}. `)).toBe(true)
-    const greyReason = greyTitle!.slice(`${LIMITS_WHY}. `.length)
-    expect(greyReason.length).toBeLessThanOrEqual(200)
-    expect(greyReason).toBe(title)
-    // the hidden text is not cut at 200
-    expect(((await stateCell(page, 'melt1.example').locator('.sr-only').textContent()) ?? '').length).toBeGreaterThan(200)
   })
 })
 

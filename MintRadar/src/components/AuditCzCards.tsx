@@ -1,5 +1,5 @@
 import { InfoTooltip } from '@/components/InfoTooltip'
-import { auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, type AuditCzView, type AuditSwapRow } from '@/utils/auditCz'
+import { type AuditCzView, type AuditSwapRow } from '@/utils/auditCz'
 import { mintHostname } from '@/utils/mintFormatting'
 
 // The cashu.info view of the Audit tab below the header: four tiles, the auditor's checks and two
@@ -48,16 +48,13 @@ function SwapTable({ title, firstHeader, rows, expanded, onToggle }: {
               </thead>
               <tbody>
                 {shown.map(s => (
-                  <tr key={s.swapId} className={s.state === 'OK' ? '' : s.neutral ? 'audit-swap-row-neutral' : 'audit-swap-row-fail'} {...(s.neutral === 'limits' || s.neutral === 'balance' ? { title: AUDIT_CZ_NEUTRAL_TITLE[s.neutral] } : {})}>
+                  <tr key={s.swapId}>
                     <td>{s.toUrl ? mintHostname(s.toUrl) : '—'}</td>
                     <td>{s.amount !== null ? `${s.amount} sat` : '—'}</td>
                     <td>{s.fee !== null ? s.fee : '—'}</td>
                     <td>{s.timeTakenMs !== null ? `${Math.round(s.timeTakenMs)} ms` : '—'}</td>
-                    {/* Rows that are not OK: the failure text as tooltip and as visually hidden text (a title is not available on touch or to screen readers). Plain text only. */}
-                    <td {...(auditCzStateTitle(s) ? { title: auditCzStateTitle(s) } : {})}>
-                      {s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TEXT[s.neutral] : <>{s.state}{s.stage ? ` (${s.stage})` : null}</>}
-                      {s.reason ? <>{' '}<span className="sr-only">{s.reason}</span></> : null}
-                    </td>
+                    {/* State is only OK or Failed. The reason stays out of the cell until we decide where it goes. */}
+                    <td>{s.state === 'OK' ? 'OK' : 'Failed'}</td>
                   </tr>
                 ))}
               </tbody>
