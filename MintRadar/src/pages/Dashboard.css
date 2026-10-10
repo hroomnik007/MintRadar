@@ -2388,3 +2388,29 @@
 .submit-probe-name { font-size: 15px; }
 .submit-probe-meta { font-size: 13px; font-family: var(--font-body); }
 .submit-tab-btn { font-size: 13px; border-radius: 7px; padding: 5px 16px; }
+
+.notify-more-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 11px;
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+.notify-more-chevron { font-size: 9px; }
+.notify-more-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.notify-more-pills .notify-pill {
+  height: 22px;
+  font-size: 10px;
+  padding: 0 7px;
+}

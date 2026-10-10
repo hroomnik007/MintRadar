@@ -81,20 +81,22 @@ export function NotifyStrip({ mintUrl, name }: { mintUrl: string; name: string }
         {pill('notifyOnDown', state.down, 'Goes down', `Notify when ${name} goes down`)}
         {pill('notifyOnUp', state.up, 'Goes up', `Notify when ${name} goes up`)}
       </div>
-      <details className="notify-more" open={moreOpen} onToggle={e => setMoreOpen((e.target as HTMLDetailsElement).open)}>
-        <summary className="notify-more-summary">More alerts</summary>
-        <div className="notify-more-body">
-          <label className="notify-check">
-            <input type="checkbox" disabled /> Mint/melt issues (3d)
-          </label>
-          <label className="notify-check">
-            <input type="checkbox" disabled /> Version outdated
-          </label>
-          <label className="notify-check">
-            <input type="checkbox" disabled /> Lost NUT-04/05
-          </label>
+      <button
+        type="button"
+        className="notify-more-toggle"
+        aria-expanded={moreOpen}
+        onClick={() => setMoreOpen(o => !o)}
+      >
+        <span className="notify-more-chevron">{moreOpen ? '▾' : '▸'}</span>
+        More alerts
+      </button>
+      {moreOpen && (
+        <div className="notify-more-pills">
+          <button type="button" className="notify-pill" disabled>Mint/melt issues</button>
+          <button type="button" className="notify-pill" disabled>Version outdated</button>
+          <button type="button" className="notify-pill" disabled>Lost NUT-04/05</button>
         </div>
-      </details>
+      )}
       <div className="notify-strip-msg" role="status">{error}</div>
     </div>
   )
