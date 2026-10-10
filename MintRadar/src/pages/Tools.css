@@ -397,10 +397,10 @@ a.token-action-btn:focus {
 
   .wizard-rec-row {
     display: grid;
-    grid-template-columns: auto auto 1fr;
+    grid-template-columns: auto auto minmax(0, 1fr);
     grid-template-areas:
-      "rank icon info"
-      ".     .    badges";
+      "rank   icon   info"
+      "badges badges badges";
     column-gap: 8px;
     row-gap: 8px;
     align-items: start;
@@ -408,7 +408,9 @@ a.token-action-btn:focus {
   .wizard-rank { grid-area: rank; width: auto; text-align: left; padding-top: 8px; }
   .wizard-rec-row > :nth-child(2) { grid-area: icon; }
   .wizard-rec-info { grid-area: info; }
-  .wizard-rec-badges { grid-area: badges; }
+  /* Full row under rank/icon/info: starts at the card's left edge so Reliability + rating + LN fit with
+     space on the right; wraps instead of clipping on very narrow screens. */
+  .wizard-rec-badges { grid-area: badges; flex-wrap: wrap; min-width: 0; }
   .wizard-rec-view { display: none; }
 }
 
