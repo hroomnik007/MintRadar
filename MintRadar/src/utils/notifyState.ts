@@ -11,6 +11,18 @@ export function confirmedNotify(entry: Pick<WatchlistEntry, 'notifyOnDown' | 'no
   return { down: entry.notifyOnDown === true, up: entry.notifyOnUp === true }
 }
 
+// The three "More alerts" flags, with the same rule: on only when the server confirmed them.
+export interface MoreNotifyState { mintMelt: boolean; versionOutdated: boolean; nutLoss: boolean }
+
+export function confirmedMoreNotify(entry: Pick<WatchlistEntry, 'notifyConfirmedAt' | 'notifyOnMintMeltIssues' | 'notifyOnVersionOutdated' | 'notifyOnNutLoss'> | undefined | null): MoreNotifyState {
+  if (!entry || !entry.notifyConfirmedAt) return { mintMelt: false, versionOutdated: false, nutLoss: false }
+  return {
+    mintMelt: entry.notifyOnMintMeltIssues === true,
+    versionOutdated: entry.notifyOnVersionOutdated === true,
+    nutLoss: entry.notifyOnNutLoss === true,
+  }
+}
+
 // Rows from before notifications were confirmed by the server: a flag is on locally but the server never
 // confirmed it. Nothing creates such a row any more (addMint / sync default to off, setNotifyFlag writes the
 // flags and notifyConfirmedAt together), so this is only the legacy population — and it empties as the user

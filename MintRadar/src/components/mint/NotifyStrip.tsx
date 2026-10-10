@@ -2,10 +2,10 @@ import { useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { useUserRelays } from '@/hooks/useUserRelays'
-import { setNotifyFlag, type NotifyFailure } from '@/core/nostr/notificationSubscription'
-import { confirmedNotify } from '@/utils/notifyState'
+import { setNotifyFlag, type NotifyFailure, type NotifyField } from '@/core/nostr/notificationSubscription'
+import { confirmedNotify, confirmedMoreNotify } from '@/utils/notifyState'
 
-type Field = 'notifyOnDown' | 'notifyOnUp'
+type Field = NotifyField
 
 const FAILURE_TEXT: Record<NotifyFailure, string | null> = {
   'signer-unavailable': 'No signer available. Log in again.',
@@ -29,7 +29,7 @@ const IcCheck = () => (
   </svg>
 )
 
-// Watchlist-card footer: "NOTIFY" + two toggle pills. A pill is on only when the server confirmed
+// Watchlist-card footer: "NOTIFY" + two toggle pills, plus three "More alerts" pills of the same kind. A pill is on only when the server confirmed
 // it (confirmedNotify); a press is pending until the server answers and never shows "on" early.
 export function NotifyStrip({ mintUrl, name }: { mintUrl: string; name: string }) {
   const { read: userReadRelays } = useUserRelays()
@@ -42,12 +42,20 @@ export function NotifyStrip({ mintUrl, name }: { mintUrl: string; name: string }
 
   if (!entry) return null
   const state = confirmedNotify(entry)
+  const more = confirmedMoreNotify(entry)
+  const isOn: Record<Field, boolean> = {
+    notifyOnDown: state.down,
+    notifyOnUp: state.up,
+    notifyOnMintMeltIssues: more.mintMelt,
+    notifyOnVersionOutdated: more.versionOutdated,
+    notifyOnNutLoss: more.nutLoss,
+  }
 
   const press = (field: Field) => {
     if (busy.current) return
     busy.current = true
     setPending(field)
-    const turningOn = !(field === 'notifyOnDown' ? state.down : state.up)
+    const turningOn = !isOn[field]
     void setNotifyFlag(mintUrl, field, turningOn, userReadRelays).then(result => {
       if (result.ok) setError(null)
       else setError(FAILURE_TEXT[result.reason] ?? `Couldn't turn ${turningOn ? 'on' : 'off'} notifications. Try again.`)
@@ -92,9 +100,9 @@ export function NotifyStrip({ mintUrl, name }: { mintUrl: string; name: string }
       </button>
       {moreOpen && (
         <div className="notify-more-pills">
-          <button type="button" className="notify-pill">Mint/melt issues</button>
-          <button type="button" className="notify-pill">Version outdated</button>
-          <button type="button" className="notify-pill">Lost NUT04/05</button>
+          {pill('notifyOnMintMeltIssues', more.mintMelt, 'Mint/melt issues', `Notify when ${name} has mint or melt issues`)}
+          {pill('notifyOnVersionOutdated', more.versionOutdated, 'Version outdated', `Notify when ${name} runs an outdated version`)}
+          {pill('notifyOnNutLoss', more.nutLoss, 'Lost NUT04/05', `Notify when ${name} loses NUT-04 or NUT-05 support`)}
         </div>
       )}
       <div className="notify-strip-msg" role="status">{error}</div>

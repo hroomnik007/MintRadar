@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { confirmedNotify, hasLegacyUnconfirmedFlag } from '@/utils/notifyState'
+import { confirmedNotify, confirmedMoreNotify, hasLegacyUnconfirmedFlag } from '@/utils/notifyState'
 
 describe('confirmedNotify', () => {
   it('counts the flags only when the server confirmed them', () => {
@@ -26,5 +26,15 @@ describe('hasLegacyUnconfirmedFlag', () => {
     expect(hasLegacyUnconfirmedFlag([{ notifyOnDown: false, notifyOnUp: false }])).toBe(false)
     expect(hasLegacyUnconfirmedFlag([{ notifyOnDown: true, notifyOnUp: true, notifyConfirmedAt: confirmed }])).toBe(false)
     expect(hasLegacyUnconfirmedFlag([{ notifyOnDown: false, notifyOnUp: false, notifyConfirmedAt: confirmed }])).toBe(false)
+  })
+})
+
+describe('confirmedMoreNotify', () => {
+  it('counts the More alerts flags only when the server confirmed them', () => {
+    const flags = { notifyOnMintMeltIssues: true, notifyOnVersionOutdated: false, notifyOnNutLoss: true }
+    expect(confirmedMoreNotify({ ...flags, notifyConfirmedAt: new Date() })).toEqual({ mintMelt: true, versionOutdated: false, nutLoss: true })
+    expect(confirmedMoreNotify(flags)).toEqual({ mintMelt: false, versionOutdated: false, nutLoss: false })
+    expect(confirmedMoreNotify({ notifyConfirmedAt: new Date() })).toEqual({ mintMelt: false, versionOutdated: false, nutLoss: false })
+    expect(confirmedMoreNotify(undefined)).toEqual({ mintMelt: false, versionOutdated: false, nutLoss: false })
   })
 })

@@ -76,6 +76,45 @@ describe('setNotifyFlag', () => {
     expect(calls[0]).toMatchObject({ path: '/api/notifications/subscribe', body: { notifyOnDown: false, notifyOnUp: true } })
   })
 
+  it('a More alerts pill subscribes with all five flags, keeping the others as confirmed', async () => {
+    seed(A, true, false, true)
+    expect(await setNotifyFlag(A, 'notifyOnNutLoss', true, null)).toEqual({ ok: true })
+    expect(calls[0]).toMatchObject({
+      path: '/api/notifications/subscribe',
+      body: { mintUrl: A, notifyOnDown: true, notifyOnUp: false, notifyOnMintMeltIssues: false, notifyOnVersionOutdated: false, notifyOnNutLoss: true },
+    })
+    expect(rows.get(A)).toMatchObject({ notifyOnDown: true, notifyOnNutLoss: true })
+  })
+
+  it('a More alerts pill alone keeps the subscription (Goes down/up off), and only after ok', async () => {
+    seed(A, false, false, false)
+    let finish!: () => void
+    respond = () => new Promise(resolve => { finish = () => resolve(new Response('{}', { status: 200 })) })
+    const p = setNotifyFlag(A, 'notifyOnVersionOutdated', true, null)
+    await vi.waitFor(() => expect(calls).toHaveLength(1))
+    expect(rows.get(A)!['notifyOnVersionOutdated']).toBeUndefined() // not "on" before the server answers
+    finish()
+    await p
+    expect(calls[0]!.path).toBe('/api/notifications/subscribe')
+    expect(rows.get(A)).toMatchObject({ notifyOnVersionOutdated: true, notifyOnDown: false, notifyOnUp: false })
+  })
+
+  it('only unsubscribes when the last of all five flags goes off', async () => {
+    seed(A, true, false, true)
+    rows.set(A, { ...rows.get(A)!, notifyOnMintMeltIssues: true })
+    await setNotifyFlag(A, 'notifyOnDown', false, null)
+    expect(calls[0]!.path).toBe('/api/notifications/subscribe') // mint/melt still on
+    await setNotifyFlag(A, 'notifyOnMintMeltIssues', false, null)
+    expect(calls[1]).toMatchObject({ path: '/api/notifications/unsubscribe', body: { mintUrl: A } })
+  })
+
+  it('a failed More alerts press leaves the local state untouched', async () => {
+    seed(A, false, false, false)
+    respond = () => new Response('{}', { status: 500 })
+    expect(await setNotifyFlag(A, 'notifyOnMintMeltIssues', true, null)).toEqual({ ok: false, reason: 'rejected' })
+    expect(rows.get(A)!['notifyOnMintMeltIssues']).toBeUndefined()
+  })
+
   it.each([
     [500, 'rejected'], [401, 'rejected'], [429, 'rate-limited'], [409, 'limit'],
   ])('HTTP %i leaves the local state untouched and reports %s', async (status, reason) => {
@@ -132,6 +171,12 @@ describe('refreshAllSubscriptions', () => {
     await refreshAllSubscriptions(null)
     expect(calls.map(c => c.body['mintUrl'])).toEqual([B])
     expect(calls[0]!.body).toMatchObject({ notifyOnDown: true, notifyOnUp: false })
+  })
+
+  it('refreshes an entry whose only confirmed flag is a More alerts one, with all five flags', async () => {
+    rows.set(B, { url: B, notifyOnDown: false, notifyOnUp: false, notifyOnNutLoss: true, notifyConfirmedAt: confirmedAt })
+    await refreshAllSubscriptions(null)
+    expect(calls[0]!.body).toMatchObject({ mintUrl: B, notifyOnDown: false, notifyOnUp: false, notifyOnNutLoss: true, notifyOnMintMeltIssues: false })
   })
 
   it('does nothing without a signer or without confirmed entries', async () => {

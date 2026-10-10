@@ -24,6 +24,11 @@ interface WatchlistEntry {
   // Flags without it (rows from before this field existed, or never confirmed) are unconfirmed
   // and count as off everywhere — see utils/notifyState.ts.
   notifyConfirmedAt?: Date
+  // "More alerts" flags (same confirmation rule as notifyOnDown/notifyOnUp: they count only while
+  // notifyConfirmedAt is set). Optional: rows from before they existed simply read as off.
+  notifyOnMintMeltIssues?: boolean
+  notifyOnVersionOutdated?: boolean
+  notifyOnNutLoss?: boolean
 }
 
 interface MetaEntry {
