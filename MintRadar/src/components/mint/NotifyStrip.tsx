@@ -95,7 +95,7 @@ export function NotifyStrip({ mintUrl, name }: { mintUrl: string; name: string }
         aria-expanded={moreOpen}
         onClick={() => setMoreOpen(o => !o)}
       >
-        <span className="notify-more-chevron">{moreOpen ? '▾' : '▸'}</span>
+        <span className="notify-more-chevron">{moreOpen ? '−' : '+'}</span>
         More alerts
       </button>
       {moreOpen && (
