@@ -291,3 +291,110 @@ describe('notifySubscribers', () => {
     await expect(svc.notifySubscribers(MINT, 'down', new Date())).resolves.toBeUndefined()
   })
 })
+
+describe('notifyAlert / resetAlert ("More alerts")', () => {
+  const MINT = 'https://mint.example.com'
+  const CLAIMED_AT = new Date('2026-10-10T12:00:00.000Z')
+  const claimedRow = (pubkey: string) => ({ pubkey, relays: ['wss://relay.example.com'], claimed_at: CLAIMED_AT })
+
+  async function decryptedText(svc: Awaited<ReturnType<typeof loadWithNsec>>, kind: 'mint_melt' | 'version_outdated' | 'nut_loss', name: string | null) {
+    const recipient = generateSecretKey()
+    query
+      .mockResolvedValueOnce({ rows: [claimedRow(getPublicKey(recipient))] })
+      .mockResolvedValueOnce({ rows: [{ name }] })
+    await svc.notifyAlert(MINT, kind)
+    const wrap = publishMock.mock.calls[0]![1] as NostrEvent
+    return nip17.unwrapEvent(wrap, recipient).content
+  }
+
+  it('mint/melt: claims on its own flag with a 12 h cooldown and sends the specified text', async () => {
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    const text = await decryptedText(svc, 'mint_melt', 'Test Mint')
+    const [sql, params] = query.mock.calls[0] as [string, unknown[]]
+    expect(sql).toContain('notify_on_mint_melt_issues = true')
+    expect(sql).toContain('last_notified_mint_melt_at = now()')
+    expect(sql).toMatch(/last_notified_mint_melt_at IS NULL OR last_notified_mint_melt_at < now\(\) - INTERVAL '12 hours'/)
+    expect(params).toEqual([MINT])
+    expect(text).toBe(`MintRadar: mint/melt issues on Test Mint (${MINT})`)
+  })
+
+  it('version outdated: one-shot claim (slot must be NULL), specified text, hostname fallback for an unnamed mint', async () => {
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    const text = await decryptedText(svc, 'version_outdated', null)
+    const [sql] = query.mock.calls[0] as [string, unknown[]]
+    expect(sql).toContain('notify_on_version_outdated = true')
+    expect(sql).toContain('last_notified_version_outdated_at IS NULL')
+    expect(sql).not.toContain('INTERVAL')
+    expect(text).toBe(`MintRadar: mint.example.com is now outdated (${MINT})`)
+  })
+
+  it('does not let a mint-controlled name inject newlines or links into the DM', async () => {
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    const text = await decryptedText(svc, 'version_outdated', 'Evil\nMintRadar: log in at https://evil.example/login www.evil.example')
+    expect(text).not.toContain('\n')
+    expect(text).not.toContain('evil.example')
+    expect(text).toBe(`MintRadar: EvilMintRadar: log in at is now outdated (${MINT})`)
+  })
+
+  it('falls back to the hostname when the name is only a link', async () => {
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    const text = await decryptedText(svc, 'nut_loss', 'https://evil.example')
+    expect(text).toBe(`MintRadar: mint.example.com no longer supports NUT-04/05 (${MINT})`)
+  })
+
+  it('NUT loss: specified text', async () => {
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    const text = await decryptedText(svc, 'nut_loss', 'Test Mint')
+    expect(text).toBe(`MintRadar: Test Mint no longer supports NUT-04/05 (${MINT})`)
+  })
+
+  it('RACE: two concurrent calls send only ONE DM (the second claim matches no row)', async () => {
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    const pubkey = getPublicKey(generateSecretKey())
+    query
+      .mockResolvedValueOnce({ rows: [claimedRow(pubkey)] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ name: 'Test Mint' }] })
+    await Promise.all([svc.notifyAlert(MINT, 'nut_loss'), svc.notifyAlert(MINT, 'nut_loss')])
+    expect(publishMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('sends nothing when no subscriber has the flag on', async () => {
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    query.mockResolvedValueOnce({ rows: [] })
+    await svc.notifyAlert(MINT, 'version_outdated')
+    expect(publishMock).not.toHaveBeenCalled()
+    expect(query).toHaveBeenCalledTimes(1)
+  })
+
+  it('releases the claim (guarded on the claimed timestamp) when every relay publish fails', async () => {
+    publishMock.mockImplementation((relays: string[]) => relays.map(() => Promise.reject(new Error('fail'))))
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    const pubkey = getPublicKey(generateSecretKey())
+    query
+      .mockResolvedValueOnce({ rows: [claimedRow(pubkey)] })
+      .mockResolvedValueOnce({ rows: [{ name: 'Test Mint' }] })
+      .mockResolvedValueOnce({ rowCount: 1 })
+    await svc.notifyAlert(MINT, 'mint_melt')
+    const [releaseSql, releaseParams] = query.mock.calls[2] as [string, unknown[]]
+    expect(releaseSql).toContain('SET last_notified_mint_melt_at = NULL')
+    expect(releaseSql).toContain('last_notified_mint_melt_at = $3')
+    expect(releaseParams).toEqual([pubkey, MINT, CLAIMED_AT])
+  })
+
+  it('does nothing without the service key', async () => {
+    const svc = await loadWithNsec(undefined)
+    await svc.notifyAlert(MINT, 'nut_loss')
+    expect(query).not.toHaveBeenCalled()
+  })
+
+  it('resetAlert re-arms only that alert slot for the mint', async () => {
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    query.mockResolvedValueOnce({ rowCount: 1 })
+    await svc.resetAlert(MINT, 'version_outdated')
+    const [sql, params] = query.mock.calls[0] as [string, unknown[]]
+    expect(sql).toContain('SET last_notified_version_outdated_at = NULL')
+    expect(sql).toContain('last_notified_version_outdated_at IS NOT NULL')
+    expect(params).toEqual([MINT])
+  })
+})

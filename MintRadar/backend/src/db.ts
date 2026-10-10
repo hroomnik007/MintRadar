@@ -340,6 +340,11 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS review_count_pending_low_streak INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_down_at TIMESTAMPTZ',
     'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_up_at TIMESTAMPTZ',
+    // "More alerts" claim slots (nostrService.ts notifyAlert). NULL = armed; set = already sent for the
+    // current condition; reset to NULL when the condition clears (resetAlert). mint/melt also keeps a 12 h cooldown.
+    'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_mint_melt_at TIMESTAMPTZ',
+    'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_version_outdated_at TIMESTAMPTZ',
+    'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_nut_loss_at TIMESTAMPTZ',
     // Version freshness grace period (see versionCatalog.ts's effectiveLatestVersions()):
     // released_at is GitHub's own published_at for latest_version, so grace periods are
     // measured from the real upstream release date, not from whenever our daily cron

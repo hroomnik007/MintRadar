@@ -4,7 +4,8 @@ import pLimit from 'p-limit'
 import { pool } from './db.js'
 import { checkUrlSafety, safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 import { computeReliabilityScore, TRACKED_NUT_KEYS } from './shared/reliabilityScore.js'
-import { notifySubscribers, isNotificationServiceEnabled } from './nostrService.js'
+import { notifySubscribers, notifyAlert, resetAlert, isNotificationServiceEnabled, type AlertKind } from './nostrService.js'
+import { mintMeltCondition, versionCondition, nutLossTransition, type Condition } from './alertTriggers.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { normalizeMintPubkey } from './mintPubkey.js'
 import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type SafeFetchRejection } from './probeErrorKind.js'
@@ -75,6 +76,14 @@ async function lookupGeo(mintUrl: string): Promise<GeoInfo | null> {
 async function storeNetwork(url: string, g: GeoInfo): Promise<void> {
   if (g.asn === null && g.org === null && g.country === null) return
   await pool.query('UPDATE mints SET net_asn = $1, net_org = $2, net_country = $3 WHERE url = $4', [g.asn, g.org, g.country, url])
+}
+
+// "More alerts": an active condition tries to claim + send (notifyAlert is atomic and one-shot per
+// condition), a cleared one re-arms the mint's subscribers, an unknown one does nothing. Fire-and-forget:
+// both helpers never throw, so this cannot block or fail the probe.
+function applyAlertCondition(url: string, kind: AlertKind, condition: Condition): void {
+  if (condition === 'active') void notifyAlert(url, kind)
+  else if (condition === 'clear') void resetAlert(url, kind)
 }
 
 export async function backfillServerLocations(): Promise<void> {
@@ -419,6 +428,7 @@ export async function probeMintToDb(url: string): Promise<void> {
   let lastError: string | null = null
   let capturedErr: unknown = null
   let contactCount: number | null = null
+  let nutTransition: 'lost' | 'restored' | null = null
 
   try {
     let res = await safeFetch(`${url}/v1/info`, {
@@ -475,9 +485,14 @@ export async function probeMintToDb(url: string): Promise<void> {
             try { return new URL(u).hostname.toLowerCase().endsWith('.onion') } catch { return false }
           })
 
-          const storedRes = await pool.query('SELECT version, pubkey FROM mints WHERE url = $1', [url])
+          const storedRes = await pool.query('SELECT version, pubkey, nuts_limits FROM mints WHERE url = $1', [url])
           const storedVersion = storedRes.rows[0]?.version as string | null
           const storedPubkey = (storedRes.rows[0]?.pubkey as string | null) ?? null
+          const storedNuts = storedRes.rows[0]?.nuts_limits
+          nutTransition = nutLossTransition(
+            storedNuts !== null && typeof storedNuts === 'object' ? storedNuts as Record<string, unknown> : null,
+            nuts,
+          )
 
           // NUT-06 mint identity pubkey — see mintPubkey.ts. A probe with no
           // pubkey (or an invalid one) must not wipe a previously-good stored
@@ -634,6 +649,11 @@ export async function probeMintToDb(url: string): Promise<void> {
     }
   }
 
+  if (isNotificationServiceEnabled()) {
+    if (nutTransition === 'lost') applyAlertCondition(url, 'nut_loss', 'active')
+    else if (nutTransition === 'restored') applyAlertCondition(url, 'nut_loss', 'clear')
+  }
+
   try {
     const statsRes = await pool.query(
       `SELECT
@@ -680,6 +700,15 @@ export async function probeMintToDb(url: string): Promise<void> {
         `UPDATE mints SET last_reliability_score = $1, last_error = $2 WHERE url = $3`,
         [reliabilityScore, lastError, url]
       )
+      if (isNotificationServiceEnabled()) {
+        applyAlertCondition(url, 'mint_melt', mintMeltCondition(
+          row.audit_cz_total as number | null,
+          row.audit_cz_blamed as number | null,
+          row.audit_cz_fetched_at as Date | string | null,
+        ))
+        // Only a successful probe says anything about the version the mint runs right now.
+        if (online) applyAlertCondition(url, 'version_outdated', versionCondition(row.version as string | null, latestVersions))
+      }
       if (histId !== undefined) {
         await pool.query(
           `UPDATE mint_history SET reliability_score = $1 WHERE id = $2`,

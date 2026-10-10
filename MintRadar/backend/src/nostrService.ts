@@ -16,6 +16,7 @@ import WebSocket from 'ws'
 import type { ClientRequestArgs } from 'http'
 import { pool } from './db.js'
 import { safeLookup } from './ssrf.js'
+import { publicMintNameOrHost } from './mintNames.js'
 
 // Always install the 'ws' package as globalThis.WebSocket, even on Node
 // versions (22+) that ship a native undici WebSocket. The root 'nostr-tools'
@@ -291,5 +292,117 @@ export async function notifySubscribers(mintUrl: string, direction: 'down' | 'up
     )
   } catch (err) {
     console.error(`[notify] notifySubscribers error for mint=${mintUrl}:`, err)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// "More alerts": mint/melt issues, version outdated, lost NUT-04/05.
+// Same atomic-claim pattern as notifySubscribers, one claim column per alert.
+// NULL = armed. The claim sets it to now() and RETURNs only the rows it claimed,
+// so overlapping probe cycles cannot both send. resetAlert() re-arms a mint's
+// subscribers once the condition has cleared. Existing up/down code is untouched.
+// ---------------------------------------------------------------------------
+export type AlertKind = 'mint_melt' | 'version_outdated' | 'nut_loss'
+
+const MINT_MELT_COOLDOWN_HOURS = 12
+
+const ALERTS: Record<AlertKind, { flag: string; claim: string; cooldownHours: number | null; text: (name: string, url: string) => string }> = {
+  mint_melt: {
+    flag: 'notify_on_mint_melt_issues',
+    claim: 'last_notified_mint_melt_at',
+    cooldownHours: MINT_MELT_COOLDOWN_HOURS,
+    text: (name, url) => `MintRadar: mint/melt issues on ${name} (${url})`,
+  },
+  version_outdated: {
+    flag: 'notify_on_version_outdated',
+    claim: 'last_notified_version_outdated_at',
+    cooldownHours: null,
+    text: (name, url) => `MintRadar: ${name} is now outdated (${url})`,
+  },
+  nut_loss: {
+    flag: 'notify_on_nut_loss',
+    claim: 'last_notified_nut_loss_at',
+    cooldownHours: null,
+    text: (name, url) => `MintRadar: ${name} no longer supports NUT-04/05 (${url})`,
+  },
+}
+
+// The mint's name is untrusted text from its own /v1/info, and the DM comes from the MintRadar service
+// identity. Same display cleaning as the API (controls, newlines, bidi/zero-width, hidden list, length cap),
+// plus any link-like text removed, so a mint cannot plant its own URL or a second "line" in our message.
+// Nothing displayable left -> the hostname.
+export function dmMintName(raw: string | null | undefined, mintUrl: string): string {
+  const cleaned = publicMintNameOrHost(raw, mintUrl)
+    .replace(/\b[a-z][a-z0-9+.-]*:\/\/\S*/gi, '')
+    .replace(/\bwww\.\S*/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return cleaned.length > 0 ? cleaned : new URL(mintUrl).hostname
+}
+
+// Sends one DM per subscriber of `mintUrl` who has the alert's flag on and whose claim slot is armed
+// (and, for mint/melt, whose last alert is older than 12 h). Never throws.
+export async function notifyAlert(mintUrl: string, kind: AlertKind): Promise<void> {
+  if (!serviceSecretKey) return
+  const secretKey = serviceSecretKey
+  const cfg = ALERTS[kind]
+
+  try {
+    const cooldown = cfg.cooldownHours === null
+      ? `${cfg.claim} IS NULL`
+      : `(${cfg.claim} IS NULL OR ${cfg.claim} < now() - INTERVAL '${cfg.cooldownHours} hours')`
+    const claimed = await pool.query(
+      `UPDATE notification_subscriptions
+          SET ${cfg.claim} = now()
+        WHERE mint_url = $1
+          AND ${cfg.flag} = true
+          AND ${cooldown}
+       RETURNING pubkey, relays, ${cfg.claim} AS claimed_at`,
+      [mintUrl]
+    )
+    const rows = claimed.rows as ClaimedRow[]
+    if (rows.length === 0) return
+
+    const nameRes = await pool.query('SELECT name FROM mints WHERE url = $1', [mintUrl])
+    const message = cfg.text(dmMintName(nameRes.rows[0]?.name as string | null | undefined, mintUrl), mintUrl)
+
+    const releaseClaim = (pubkey: string, claimedAt: Date) =>
+      pool.query(
+        `UPDATE notification_subscriptions SET ${cfg.claim} = NULL
+         WHERE pubkey = $1 AND mint_url = $2 AND ${cfg.claim} = $3`,
+        [pubkey, mintUrl, claimedAt]
+      ).catch(err => console.error(`[notify] failed to release ${kind} claim for ${pubkey.slice(0, 8)}…:`, err))
+
+    let sent = 0
+    let failed = 0
+    for (const row of rows) {
+      try {
+        const giftWrap = nip17.wrapEvent(secretKey, { publicKey: row.pubkey }, message)
+        const targetRelays = [...new Set([...row.relays, ...NOTIFICATION_RELAYS])]
+        const { succeeded } = await publishToRelays(targetRelays, giftWrap)
+        if (succeeded > 0) sent++
+        else { failed++; await releaseClaim(row.pubkey, row.claimed_at) }
+      } catch (err) {
+        failed++
+        console.error(`[notify] ${kind} send error for mint=${mintUrl} pubkey=${row.pubkey.slice(0, 8)}…:`, err)
+        await releaseClaim(row.pubkey, row.claimed_at)
+      }
+    }
+    console.log(`[notify] ${kind}-alert for ${mintUrl}: claimed ${rows.length}, ${sent} sent, ${failed} failed (claim released)`)
+  } catch (err) {
+    console.error(`[notify] notifyAlert(${kind}) error for mint=${mintUrl}:`, err)
+  }
+}
+
+// The condition cleared: re-arm this mint's subscribers so a later recurrence notifies again. Never throws.
+export async function resetAlert(mintUrl: string, kind: AlertKind): Promise<void> {
+  try {
+    const col = ALERTS[kind].claim
+    await pool.query(
+      `UPDATE notification_subscriptions SET ${col} = NULL WHERE mint_url = $1 AND ${col} IS NOT NULL`,
+      [mintUrl]
+    )
+  } catch (err) {
+    console.error(`[notify] resetAlert(${kind}) error for mint=${mintUrl}:`, err)
   }
 }

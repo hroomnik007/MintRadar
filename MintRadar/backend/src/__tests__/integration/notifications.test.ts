@@ -199,7 +199,48 @@ describe('POST /api/notifications/subscribe', () => {
       true,
       false,
       ['wss://relay.example.com', 'ws://relay2.example.com'],
+      null, // "More alerts" flags omitted -> keep what is stored (false for a new row)
+      null,
+      null,
     ])
+  })
+
+  it('stores the three "More alerts" flags when provided', async () => {
+    const { header, pubkey } = await nip98Header(SUBSCRIBE_PATH, 'POST')
+    resolvesTo({ address: '1.2.3.4', family: 4 })
+    query.mockResolvedValueOnce({ rowCount: 1, rows: [{}] })
+    query.mockResolvedValueOnce({ rows: [{ total: 0, this_mint: 0, other_relays: [] }] })
+    query.mockResolvedValueOnce({ rowCount: 1 })
+
+    const res = await post(
+      SUBSCRIBE_PATH,
+      {
+        mintUrl: 'https://mint.example.com',
+        notifyOnDown: false,
+        notifyOnUp: false,
+        notifyOnMintMeltIssues: true,
+        notifyOnVersionOutdated: false,
+        notifyOnNutLoss: true,
+        relays: ['wss://relay.example.com'],
+      },
+      header
+    )
+
+    expect(res.status).toBe(200)
+    const [sql, params] = query.mock.calls[2]
+    expect(sql).toContain('notify_on_mint_melt_issues = COALESCE($6::boolean, notification_subscriptions.notify_on_mint_melt_issues)')
+    expect(params).toEqual([pubkey, 'https://mint.example.com', false, false, ['wss://relay.example.com'], true, false, true])
+  })
+
+  it('rejects a non-boolean "More alerts" flag', async () => {
+    const { header } = await nip98Header(SUBSCRIBE_PATH, 'POST')
+    const res = await post(
+      SUBSCRIBE_PATH,
+      { mintUrl: 'https://mint.example.com', notifyOnDown: true, notifyOnUp: true, notifyOnNutLoss: 'yes', relays: ['wss://relay.example.com'] },
+      header
+    )
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/must be boolean when provided/)
   })
 
   it('rejects relays that is not an array', async () => {
@@ -336,7 +377,7 @@ describe('POST /api/notifications/subscribe', () => {
       expect(res.body).toEqual({ success: true })
       // The unresolvable relay is still stored exactly as submitted.
       const [, params] = query.mock.calls[2]
-      expect(params).toEqual([pubkey, 'https://mint.example.com', true, true, relays])
+      expect(params).toEqual([pubkey, 'https://mint.example.com', true, true, relays, null, null, null])
     })
 
     it('still rejects the whole batch when a relay is genuinely SSRF-blocked, even alongside an unresolvable one', async () => {
