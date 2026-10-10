@@ -1092,6 +1092,74 @@ app.get('/api/mints/outages', (req: Request, res: Response): void => {
     })
 })
 
+
+app.get('/api/mints/recommend', (req: Request, res: Response): void => {
+  const unit = typeof req.query['unit'] === 'string' ? req.query['unit'] : 'sat'
+  const minScore = typeof req.query['minScore'] === 'string' && /^\d+$/.test(req.query['minScore'])
+    ? Math.min(100, Math.max(0, parseInt(req.query['minScore'], 10)))
+    : 80
+  const limit = typeof req.query['limit'] === 'string' && /^\d+$/.test(req.query['limit'])
+    ? Math.min(10, Math.max(1, parseInt(req.query['limit'], 10)))
+    : 5
+  const nutsParam = typeof req.query['nuts'] === 'string' ? req.query['nuts'] : ''
+  const requiredNuts = nutsParam.split(',').map(n => n.trim()).filter(Boolean)
+
+  pool.query(`
+    SELECT m.url, m.name, m.last_reliability_score, m.version, m.nuts_limits,
+           latest.online, latest.latency_ms,
+           (SELECT COUNT(*) FILTER (WHERE online) * 100.0 / NULLIF(COUNT(*), 0)
+            FROM mint_history h
+            WHERE h.url = m.url AND h.checked_at >= NOW() - INTERVAL '24 hours') AS uptime_24h
+    FROM mints m
+    JOIN LATERAL (
+      SELECT online, latency_ms FROM mint_history
+      WHERE url = m.url ORDER BY checked_at DESC, id DESC LIMIT 1
+    ) latest ON true
+    WHERE latest.online = true
+      AND m.last_reliability_score >= $1
+      AND ($2 = '' OR m.units @> ARRAY[$2]::text[])
+    ORDER BY m.last_reliability_score DESC, latest.latency_ms ASC NULLS LAST
+    LIMIT $3
+  `, [minScore, unit, limit])
+    .then(result => {
+      let rows = result.rows as Array<{
+        url: string
+        name: string | null
+        last_reliability_score: number
+        version: string | null
+        nuts_limits: Record<string, unknown> | null
+        latency_ms: number | null
+        uptime_24h: number | null
+      }>
+
+      if (requiredNuts.length > 0) {
+        rows = rows.filter(r => {
+          const limits = r.nuts_limits ?? {}
+          return requiredNuts.every(n => limits[n] != null || limits[n.replace(/^0+/, '')] != null)
+        })
+      }
+
+      const recommended = rows.slice(0, limit).map(r => ({
+        url: r.url,
+        name: publicMintName(r.name, r.url).name,
+        reliabilityScore: r.last_reliability_score,
+        uptimePct24h: r.uptime_24h != null ? Math.round(r.uptime_24h) : null,
+        latencyMs: r.latency_ms,
+        version: r.version,
+        units: [unit],
+      }))
+
+      res.json({
+        recommended,
+        generatedAt: new Date().toISOString(),
+      })
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[/api/mints/recommend]', err)
+      res.status(500).json({ error: 'Internal server error' })
+    })
+})
+
 app.get('/api/nuts', (_req: Request, res: Response): void => {
   pool.query(`
     SELECT m.url, m.name, m.nuts_limits

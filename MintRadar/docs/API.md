@@ -395,3 +395,46 @@ Rate limit: **10 requests / hour / IP**.
 | `400` | Bad request — missing or invalid parameter |
 | `429` | Rate limit exceeded |
 | `500` | Internal server error |
+
+---
+
+## For wallet developers
+
+`GET /api/v1/mints/recommend` returns a short list of currently healthy mints suitable for a wallet’s default or suggested list.
+
+**Query parameters**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `unit` | `sat` | Unit the mint must support |
+| `minScore` | `80` | Minimum reliability score (0–100) |
+| `limit` | `5` | Max results (1–10) |
+| `nuts` | — | Comma-separated NUT numbers the mint must support (e.g. `4,5`) |
+
+**Example**
+
+```bash
+curl "https://mintradar.org/api/v1/mints/recommend?unit=sat&minScore=85&limit=3&nuts=4,5"
+```
+
+**Response**
+
+```json
+{
+  "recommended": [
+    {
+      "url": "https://mint.example.com",
+      "name": "Example Mint",
+      "reliabilityScore": 96,
+      "uptimePct24h": 100,
+      "latencyMs": 180,
+      "version": "Nutshell/0.21.0",
+      "units": ["sat"]
+    }
+  ],
+  "generatedAt": "2026-10-10T19:00:00.000Z"
+}
+```
+
+Results change every few minutes (probe cycle). A wallet should still let the user override and pin a preferred mint.
+
