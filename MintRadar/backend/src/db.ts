@@ -61,8 +61,6 @@ export async function initDb(): Promise<void> {
       source_url TEXT
     );
 
-    
-      await pool.query(`
     CREATE TABLE IF NOT EXISTS notification_subscriptions (
       pubkey TEXT NOT NULL,
       mint_url TEXT NOT NULL REFERENCES mints(url) ON DELETE CASCADE,
@@ -78,9 +76,12 @@ export async function initDb(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_notification_subs_updated_at
       ON notification_subscriptions(updated_at);
-  `)
 
-  await pool.query(`
+    -- Existing databases: CREATE TABLE IF NOT EXISTS does not add the new flag columns.
+    ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS notify_on_mint_melt_issues BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS notify_on_version_outdated BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS notify_on_nut_loss BOOLEAN NOT NULL DEFAULT false;
+
     CREATE TABLE IF NOT EXISTS mint_reviews (
       url TEXT NOT NULL REFERENCES mints(url) ON DELETE CASCADE,
       pubkey TEXT NOT NULL,
@@ -94,12 +95,20 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_mint_reviews_url_created
       ON mint_reviews(url, created_at DESC);
 
+    -- Per-relay progress of the hourly reviews sync (reviewsSync.ts). Unix seconds.
+    -- last_ok_started_at = when the last run that finished cleanly on that relay STARTED
+    -- (the next incremental query asks for events since that minus a safety overlap);
+    -- last_full_at = start of the last clean run that had no "since" (the daily full sweep).
     CREATE TABLE IF NOT EXISTS reviews_sync_relay_state (
       relay TEXT PRIMARY KEY,
       last_ok_started_at BIGINT NOT NULL,
       last_full_at BIGINT
     );
 
+    -- Public profile (kind:0) of review authors and mint contact/announcement keys, fetched by the
+    -- hourly reviews sync from the profile indexer relays (profilesSync.ts). Only name, display_name
+    -- and nip05 are stored (cleaned text, unverified). found = false: asked, nobody had it (asked
+    -- again after 24 h). Unix seconds.
     CREATE TABLE IF NOT EXISTS nostr_profiles (
       pubkey TEXT PRIMARY KEY,
       name TEXT,
@@ -109,9 +118,13 @@ export async function initDb(): Promise<void> {
       fetched_at BIGINT NOT NULL,
       found BOOLEAN NOT NULL
     );
-  `)
 
-CREATE TABLE IF NOT EXISTS mint_audit_swaps (
+    -- Per-swap rows for the audit.8333.space rolling window (see discovery.ts's
+    -- fetchRecentSwaps/persistMintAuditSwaps). Fully replaced (DELETE + INSERT,
+    -- same atomic-per-mint-replace pattern as mint_reviews) every 6h discovery
+    -- cycle, so this table only ever holds each mint's current ~100-swap window,
+    -- not history across cycles. swap_id is audit.8333.space's own per-swap id.
+    CREATE TABLE IF NOT EXISTS mint_audit_swaps (
       url TEXT NOT NULL REFERENCES mints(url) ON DELETE CASCADE,
       swap_id BIGINT NOT NULL,
       to_url TEXT,
