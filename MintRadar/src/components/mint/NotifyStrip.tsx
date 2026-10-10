@@ -5,7 +5,7 @@ import { useUserRelays } from '@/hooks/useUserRelays'
 import { setNotifyFlag, type NotifyFailure } from '@/core/nostr/notificationSubscription'
 import { confirmedNotify } from '@/utils/notifyState'
 
-type Field = 'notifyOnDown' | 'notifyOnUp' | 'notifyOnMintMeltIssues' | 'notifyOnVersionOutdated' | 'notifyOnNutLoss'
+type Field = 'notifyOnDown' | 'notifyOnUp'
 
 const FAILURE_TEXT: Record<NotifyFailure, string | null> = {
   'signer-unavailable': 'No signer available. Log in again.',
