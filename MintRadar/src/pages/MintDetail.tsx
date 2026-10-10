@@ -93,14 +93,14 @@ function formatReviewDate(ts: number): string {
 }
 
 function formatDuration(ms: number): string {
-  if (ms < 60000) return `${Math.round(ms / 1000)}s`
+  if (ms < 60000) return `${Math.round(ms / 1000)} s`
   if (ms < 3600000) return `${Math.round(ms / 60000)} min`
   const h = Math.floor(ms / 3600000)
   const m = Math.round((ms % 3600000) / 60000)
-  if (h < 24) return m > 0 ? `${h}h ${m}m` : `${h}h`
+  if (h < 24) return m > 0 ? `${h} h ${m} m` : `${h} h`
   const d = Math.floor(h / 24)
   const rh = h % 24
-  return rh > 0 ? `${d}d ${rh}h` : `${d}d`
+  return rh > 0 ? `${d} d ${rh} h` : `${d} d`
 }
 /** A version string with a line-break opportunity after each "/" ("Nutshell/0.20.3"); no <wbr> text is added. */
 function versionWithBreaks(v: string): ReactNode {
@@ -2027,7 +2027,7 @@ function MintDetailContent({ url }: { url: string }) {
             {/* Summary metric cards */}
             <div className="md-hist-summary">
               {[
-                { label: 'Average latency', value: chartAvgLatency !== null ? `${chartAvgLatency}ms` : '—', delta: deltaStr(chartAvgLatency, chartPrevLatency, 'ms', chartPrevInsufficientHistory), color: 'var(--text)' },
+                { label: 'Average latency', value: chartAvgLatency !== null ? `${chartAvgLatency} ms` : '—', delta: deltaStr(chartAvgLatency, chartPrevLatency, ' ms', chartPrevInsufficientHistory), color: 'var(--text)' },
                 { label: 'Average uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%', chartPrevInsufficientHistory), color: 'var(--accent)' },
                 { label: 'Average reliability', value: `${reliabilityScore}%`, delta: null, color: tsInfo.color },
               ].map(({ label, value, delta, color }) => (
