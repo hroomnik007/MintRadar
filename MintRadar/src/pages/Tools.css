@@ -339,6 +339,7 @@ a.token-action-btn:focus {
 .wizard-rec-score { font-size: 14px; font-weight: 700; font-family: var(--font-mono); flex-shrink: 0; }
 .wizard-rec-badges { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .wizard-rec-reliability,
+.wizard-rec-rating,
 .wizard-rec-ln {
   display: inline-flex; align-items: center; gap: 3px;
   font-size: 12px; font-family: var(--font-mono-data);
@@ -346,6 +347,9 @@ a.token-action-btn:focus {
   border-radius: 4px; padding: 3px 8px; white-space: nowrap;
 }
 .wizard-rec-ln { color: var(--t3); }
+.wizard-rec-rating { color: var(--text2); }
+.wizard-rec-star { color: var(--yellow); }
+.wizard-rec-rating-n { color: var(--text3); }
 .wizard-rec-view {
   font-size: 13px; color: var(--text2); font-family: var(--font-body); flex-shrink: 0;
 }

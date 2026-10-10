@@ -45,6 +45,28 @@ uptime % only now) and **compacted large limit numbers** — `formatCompactAmoun
   `.wizard-rec-score`. Per-unit NUT-04/05 limits and the whole-mint caveat note are unchanged.
 - Token Inspector is untouched by this pass.
 
+### Best Mint Wizard: community reviews in the score (2026-10-10)
+
+Scoring moved out of `Tools.tsx` into the pure `src/utils/wizardScoring.ts` (`weightsFor`, `reviewsScore`,
+`WizardCheck`/`SizeOption`; unit tests in `src/__tests__/wizardScoring.test.ts`). The score is now four parts:
+`latency + reliability + nuts + reviews`. **Reviews are the wizard's only use of them; the Reliability Score
+formula (Uptime/Audit/NUT/Version/Contact) is unchanged and still contains no reviews.**
+
+- **Weight:** `REVIEWS_WEIGHT = 0.10`. The three existing vectors (Fast / Reliable / average / Large boost) are
+  computed exactly as before and then multiplied by 0.9, so the four weights still sum to 1 (Reliable: 0.18 /
+  0.63 / 0.09 / 0.10; Fast: 0.54 / 0.27 / 0.09 / 0.10). The Large boost is applied before the 0.9 scaling.
+- **Value:** `reviewsScore(mint)` = `(bayesianRating(avg, n) − 1) / 4` (0..1), the same prior (3.5, weight 5) as
+  the Rating sort in `utils/bayesianRating.ts`, with `n = reviewRatedCount ?? reviewCount`. Operator reviews are
+  already excluded from those fields by the backend.
+- **Neutral cases (value 0.625 = the prior, i.e. neither help nor hurt):** no average, fewer than
+  `MIN_REVIEWS_FOR_SCORE = 3` rated reviews, or `reviewSurge`. A mint without reviews is never penalized.
+- **No review-based filter:** nothing is excluded for bad reviews, only ordered slightly lower.
+- **UI:** each result row shows `★ 4.2 (12)` (`.wizard-rec-rating`, same numbers as the mint card, only when
+  `reviewCount > 0` and an average exists) and the bottom note adds "Community ratings are self-published on
+  Nostr and count only slightly toward the order." E2E: "result rows show the community rating…".
+- The "Suggestions from our measurements, not an endorsement." disclaimer below is no longer rendered (see the
+  `.wizard-disclaimer` toHaveCount(0) e2e); it is kept in that section only as history.
+
 ### Best Mint Wizard steps 1–2 redesign (2026-09-28)
 
 Presentation-only; scoring/filters, results, the six `WizardCheck` booleans and the step-1 size
