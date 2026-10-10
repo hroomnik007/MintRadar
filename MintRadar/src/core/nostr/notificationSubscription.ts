@@ -1,7 +1,7 @@
 import { nip98 } from 'nostr-tools'
 import type { Event, EventTemplate } from 'nostr-tools'
 import { db } from '@/db'
-import { confirmedNotify, type NotifyState } from '@/utils/notifyState'
+import { confirmedNotify, confirmedMoreNotify } from '@/utils/notifyState'
 
 // Client for the server-side notification subscription store (backend:
 // POST /api/notifications/subscribe|unsubscribe). The server is the truth: a toggle is
@@ -108,14 +108,51 @@ export interface SubscribeParams {
   mintUrl: string
   notifyOnDown: boolean
   notifyOnUp: boolean
+  // "More alerts" — optional; left out, the server keeps whatever it has stored.
+  notifyOnMintMeltIssues?: boolean
+  notifyOnVersionOutdated?: boolean
+  notifyOnNutLoss?: boolean
   relays: string[]
 }
+
+export type NotifyField =
+  | 'notifyOnDown'
+  | 'notifyOnUp'
+  | 'notifyOnMintMeltIssues'
+  | 'notifyOnVersionOutdated'
+  | 'notifyOnNutLoss'
+
+interface NotifyFlags {
+  notifyOnDown: boolean
+  notifyOnUp: boolean
+  notifyOnMintMeltIssues: boolean
+  notifyOnVersionOutdated: boolean
+  notifyOnNutLoss: boolean
+}
+
+// The confirmed flags of one entry, all five, in the shape the server and Dexie use.
+function confirmedFlags(entry: Parameters<typeof confirmedNotify>[0] & Parameters<typeof confirmedMoreNotify>[0]): NotifyFlags {
+  const base = confirmedNotify(entry)
+  const more = confirmedMoreNotify(entry)
+  return {
+    notifyOnDown: base.down,
+    notifyOnUp: base.up,
+    notifyOnMintMeltIssues: more.mintMelt,
+    notifyOnVersionOutdated: more.versionOutdated,
+    notifyOnNutLoss: more.nutLoss,
+  }
+}
+
+const anyOn = (f: NotifyFlags): boolean => Object.values(f).some(Boolean)
 
 export function subscribeToServer(params: SubscribeParams): Promise<NotifyResult> {
   return postWithNip98('/api/notifications/subscribe', {
     mintUrl: params.mintUrl,
     notifyOnDown: params.notifyOnDown,
     notifyOnUp: params.notifyOnUp,
+    notifyOnMintMeltIssues: params.notifyOnMintMeltIssues,
+    notifyOnVersionOutdated: params.notifyOnVersionOutdated,
+    notifyOnNutLoss: params.notifyOnNutLoss,
     relays: params.relays,
   })
 }
@@ -162,25 +199,22 @@ export function cancelSubscription(mintUrl: string): Promise<NotifyResult> {
 // One pill press. The target is computed from the CONFIRMED state (other pill included) at the
 // moment the request runs; the local flags + confirmation are written only after the server
 // answered ok. subscribe is an idempotent upsert on the server and unsubscribe a DELETE, so this
-// is safe on top of a pre-existing server row. Both flags off → unsubscribe.
+// is safe on top of a pre-existing server row. All five flags off → unsubscribe.
 export function setNotifyFlag(
   mintUrl: string,
-  field: 'notifyOnDown' | 'notifyOnUp',
+  field: NotifyField,
   next: boolean,
   userReadRelays: string[] | null | undefined,
 ): Promise<NotifyResult> {
   return runExclusive(mintUrl, async (): Promise<NotifyResult> => {
     const entry = await db.watchlist.get(mintUrl)
     if (!entry) return { ok: false, reason: 'rejected' } // removed meanwhile
-    const cur = confirmedNotify(entry)
-    const target: NotifyState = { down: cur.down, up: cur.up }
-    if (field === 'notifyOnDown') target.down = next
-    else target.up = next
-    const result = (target.down || target.up)
-      ? await subscribeToServer({ mintUrl, notifyOnDown: target.down, notifyOnUp: target.up, relays: resolveNotificationRelays(userReadRelays) })
+    const target: NotifyFlags = { ...confirmedFlags(entry), [field]: next }
+    const result = anyOn(target)
+      ? await subscribeToServer({ mintUrl, ...target, relays: resolveNotificationRelays(userReadRelays) })
       : await unsubscribeFromServer(mintUrl)
     if (result.ok) {
-      await db.watchlist.update(mintUrl, { notifyOnDown: target.down, notifyOnUp: target.up, notifyConfirmedAt: new Date() })
+      await db.watchlist.update(mintUrl, { ...target, notifyConfirmedAt: new Date() })
     }
     return result
   })
@@ -208,8 +242,7 @@ async function refreshConfirmedSubscriptions(userReadRelays: string[] | null | u
 
   const entries = await db.watchlist.toArray()
   const toRefresh = entries.filter(e => {
-    const c = confirmedNotify(e)
-    return c.down || c.up
+    return anyOn(confirmedFlags(e))
   })
   if (toRefresh.length === 0) return
 
@@ -220,9 +253,9 @@ async function refreshConfirmedSubscriptions(userReadRelays: string[] | null | u
     await Promise.allSettled(
       chunk.map(entry =>
         runExclusive(entry.url, async () => {
-          const current = confirmedNotify(await db.watchlist.get(entry.url))
-          if (!current.down && !current.up) return
-          await subscribeToServer({ mintUrl: entry.url, notifyOnDown: current.down, notifyOnUp: current.up, relays })
+          const current = confirmedFlags(await db.watchlist.get(entry.url))
+          if (!anyOn(current)) return
+          await subscribeToServer({ mintUrl: entry.url, ...current, relays })
         })
       )
     )

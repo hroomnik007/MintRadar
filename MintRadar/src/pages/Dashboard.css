@@ -2406,11 +2406,6 @@
 .notify-more-pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
   margin-top: 6px;
-}
-.notify-more-pills .notify-pill {
-  height: 26px;
-  font-size: 11px;
-  padding: 0 9px;
 }

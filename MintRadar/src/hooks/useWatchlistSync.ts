@@ -105,6 +105,9 @@ export function useWatchlistSync() {
                 addedAt: prior?.addedAt ?? new Date(),
                 notifyOnDown: prior?.notifyOnDown ?? false,
                 notifyOnUp: prior?.notifyOnUp ?? false,
+                notifyOnMintMeltIssues: prior?.notifyOnMintMeltIssues ?? false,
+                notifyOnVersionOutdated: prior?.notifyOnVersionOutdated ?? false,
+                notifyOnNutLoss: prior?.notifyOnNutLoss ?? false,
                 ...(prior?.notifyConfirmedAt ? { notifyConfirmedAt: prior.notifyConfirmedAt } : {}),
               })
             })

@@ -12,7 +12,7 @@ import { cancelSubscription, hasNotifyRequestInFlight } from '@/core/nostr/notif
 // server row then lapses on its own within 30 days. Nothing here logs the mint or the error.
 export async function removeWatchedMint(url: string, name: string): Promise<void> {
   const entry = await db.watchlist.get(url)
-  const mayBeSubscribed = !!entry && (entry.notifyOnDown || entry.notifyOnUp)
+  const mayBeSubscribed = !!entry && (entry.notifyOnDown || entry.notifyOnUp || entry.notifyOnMintMeltIssues || entry.notifyOnVersionOutdated || entry.notifyOnNutLoss)
   const toggleRunning = hasNotifyRequestInFlight(url)
 
   await useWatchlistStore.getState().removeMint(url)

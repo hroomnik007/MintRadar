@@ -17,13 +17,50 @@ test.describe('Watchlist notification toggles', () => {
     const strip = card(page, ALPHA).locator('.notify-strip')
     await expect(strip.getByRole('group', { name: `Notifications for ${NAME[ALPHA]}` })).toBeVisible()
     await expect(strip.locator('.notify-strip-label')).toHaveText('NOTIFY')
-    await expect(strip.getByRole('button')).toHaveText(['Goes down', 'Goes up'])
+    await expect(strip.getByRole('group', { name: `Notifications for ${NAME[ALPHA]}` }).getByRole('button')).toHaveText(['Goes down', 'Goes up'])
     await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
     await expect(up(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
     // The strip belongs to Watchlist cards only.
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card').first()).toBeVisible()
     await expect(page.locator('.notify-strip')).toHaveCount(0)
+  })
+
+  test('More alerts pills toggle like Goes down/up: pending until the server answers, five flags sent, same size', async ({ page }) => {
+    const api = await mockNotifyApi(page)
+    await openWatchlist(page)
+    const strip = card(page, ALPHA).locator('.notify-strip')
+    await strip.getByRole('button', { name: /More alerts/ }).click()
+    const more = strip.locator('.notify-more-pills')
+    await expect(more.getByRole('button')).toHaveText(['Mint/melt issues', 'Version outdated', 'Lost NUT04/05'])
+
+    // Same visual size as Goes down / Goes up (26px high, same pill class).
+    const goesDownBox = await down(page, ALPHA).boundingBox()
+    for (const b of await more.getByRole('button').all()) {
+      expect((await b.boundingBox())!.height).toBe(goesDownBox!.height)
+      await expect(b).toHaveClass(/notify-pill/)
+      await expect(b).toHaveAttribute('aria-pressed', 'false')
+    }
+
+    api.mode = 'gate'
+    const pill = more.getByRole('button', { name: /mint or melt issues/ })
+    await pill.click()
+    await expect(pill).toBeDisabled()
+    await expect(pill).toHaveAttribute('aria-pressed', 'false') // never "on" before the answer
+    await expect(pill.locator('.notify-spinner')).toBeVisible()
+    api.release()
+    await expect(pill).toHaveAttribute('aria-pressed', 'true')
+    expect(subscribeCalls(api)).toHaveLength(1)
+    expect(subscribeCalls(api)[0]!.body).toMatchObject({
+      mintUrl: ALPHA, notifyOnDown: false, notifyOnUp: false,
+      notifyOnMintMeltIssues: true, notifyOnVersionOutdated: false, notifyOnNutLoss: false,
+    })
+
+    // Turning the only pill off unsubscribes.
+    api.mode = 'ok'
+    await pill.click()
+    await expect(pill).toHaveAttribute('aria-pressed', 'false')
+    expect(api.calls.map(c => c.path)).toEqual(['subscribe', 'unsubscribe'])
   })
 
   test('success: off → pending (disabled, spinner) → on only after the server answered; press again → off', async ({ page }) => {
