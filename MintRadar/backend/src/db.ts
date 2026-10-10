@@ -78,7 +78,9 @@ export async function initDb(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_notification_subs_updated_at
       ON notification_subscriptions(updated_at);
+  `)
 
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS mint_reviews (
       url TEXT NOT NULL REFERENCES mints(url) ON DELETE CASCADE,
       pubkey TEXT NOT NULL,
