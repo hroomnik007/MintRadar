@@ -92,9 +92,9 @@ export function NotifyStrip({ mintUrl, name }: { mintUrl: string; name: string }
       </button>
       {moreOpen && (
         <div className="notify-more-pills">
-          <button type="button" className="notify-pill" disabled>Mint/melt issues</button>
-          <button type="button" className="notify-pill" disabled>Version outdated</button>
-          <button type="button" className="notify-pill" disabled>Lost NUT-04/05</button>
+          <button type="button" className="notify-pill">Mint/melt issues</button>
+          <button type="button" className="notify-pill">Version outdated</button>
+          <button type="button" className="notify-pill">Lost NUT04/05</button>
         </div>
       )}
       <div className="notify-strip-msg" role="status">{error}</div>
