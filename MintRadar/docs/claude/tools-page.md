@@ -65,7 +65,7 @@ formula (Uptime/Audit/NUT/Version/Contact) is unchanged and still contains no re
   `reviewCount > 0` and an average exists) and the bottom note adds "Community ratings are self-published on
   Nostr and count only slightly toward the order." E2E: "result rows show the community rating…".
 - **#1 reason line (2026-10-10):** the first result only (`idx === 0`, also when just one mint is returned) shows
-  "Best match for your filters" (`.wizard-rec-reason`, 12px `--text3`) under the badge row. Badges and the line sit
+  "Best match for your filters" (`.wizard-rec-reason`, 13px/500 `--green-bright`) under the badge row. Badges and the line sit
   in `.wizard-rec-badge-col`; ranking, filters and the rest of the card are unchanged.
 - The "Suggestions from our measurements, not an endorsement." disclaimer below is no longer rendered (see the
   `.wizard-disclaimer` toHaveCount(0) e2e); it is kept in that section only as history.
