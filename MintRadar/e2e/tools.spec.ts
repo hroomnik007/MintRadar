@@ -564,6 +564,36 @@ test.describe('Tools', () => {
     await expect(page.locator('.wizard-rec-note')).toContainText('count only slightly')
   })
 
+  test('Best Mint Wizard shows "Best match for your filters" on the #1 result only', async ({ page }) => {
+    await page.getByRole('radio', { name: 'SAT', exact: true }).click()
+    await page.locator('.wizard-opt', { hasText: 'Small' }).click()
+    await page.locator('.wizard-opt', { hasText: 'Reliable' }).click()
+    await page.getByRole('button', { name: /Find my mint/ }).click()
+
+    await expect(page.locator('.wizard-rec-row')).toHaveCount(2, { timeout: 15_000 })
+    await expect(page.locator('.wizard-rec-reason')).toHaveCount(1)
+    await expect(page.locator('.wizard-rec-row').first().locator('.wizard-rec-reason')).toHaveText('Best match for your filters')
+    await expect(page.locator('.wizard-rec-row').nth(1).locator('.wizard-rec-reason')).toHaveCount(0)
+  })
+
+  test('Best Mint Wizard still shows the reason when only one mint is returned', async ({ page }) => {
+    await page.route('**/api/mints/known', route => {
+      const mints = MOCK_KNOWN_MINTS.map(m =>
+        m.name === 'Bravo Mint' ? { ...m, discoveredAt: new Date(Date.now() - 30 * 86_400_000).toISOString() } : m
+      )
+      route.fulfill({ json: mints })
+    })
+    await page.reload()
+    await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
+    await page.getByRole('radio', { name: 'USD', exact: true }).click()
+    await page.locator('.wizard-opt', { hasText: 'Small' }).click()
+    await page.locator('.wizard-opt', { hasText: 'Fast from here' }).click()
+    await page.getByRole('button', { name: /Find my mint/ }).click()
+
+    await expect(page.locator('.wizard-rec-row')).toHaveCount(1)
+    await expect(page.locator('.wizard-rec-reason')).toHaveText('Best match for your filters')
+  })
+
   test('Best Mint Wizard walks through its questions and recommends mints', async ({ page }) => {
     // Step 1 — currency, then how much to store (the latter auto-advances to step 2).
     await expect(page.getByRole('radiogroup', { name: 'Currency unit' })).toBeVisible()

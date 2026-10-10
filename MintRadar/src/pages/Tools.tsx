@@ -796,6 +796,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
                       )}
                     </div>
                   </div>
+                  <div className="wizard-rec-badge-col">
                   <span className="wizard-rec-badges">
                     <span className="wizard-rec-reliability" style={{ color: reliabilityCol }}>
                       <IcShield size={11} /><span>{cardReliabilityLabel(reliabilityNum)}</span>
@@ -813,6 +814,8 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
                       </span>
                     )}
                   </span>
+                  {idx === 0 && <div className="wizard-rec-reason">Best match for your filters</div>}
+                  </div>
                   <span className="wizard-rec-view">View →</span>
                 </div>
               )
