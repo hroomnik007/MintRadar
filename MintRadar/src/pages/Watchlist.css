@@ -31,6 +31,8 @@
   gap: 16px;
   padding: 16px 0;
   align-content: start;
+  /* Cards keep their own height: expanding "More alerts" on one must not stretch its row neighbour. */
+  align-items: start;
 }
 
 @keyframes shimmer {
