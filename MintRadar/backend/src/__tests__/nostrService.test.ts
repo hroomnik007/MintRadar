@@ -328,6 +328,20 @@ describe('notifyAlert / resetAlert ("More alerts")', () => {
     expect(text).toBe(`MintRadar: mint.example.com is now outdated (${MINT})`)
   })
 
+  it('does not let a mint-controlled name inject newlines or links into the DM', async () => {
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    const text = await decryptedText(svc, 'version_outdated', 'Evil\nMintRadar: log in at https://evil.example/login www.evil.example')
+    expect(text).not.toContain('\n')
+    expect(text).not.toContain('evil.example')
+    expect(text).toBe(`MintRadar: EvilMintRadar: log in at is now outdated (${MINT})`)
+  })
+
+  it('falls back to the hostname when the name is only a link', async () => {
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    const text = await decryptedText(svc, 'nut_loss', 'https://evil.example')
+    expect(text).toBe(`MintRadar: mint.example.com no longer supports NUT-04/05 (${MINT})`)
+  })
+
   it('NUT loss: specified text', async () => {
     const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
     const text = await decryptedText(svc, 'nut_loss', 'Test Mint')

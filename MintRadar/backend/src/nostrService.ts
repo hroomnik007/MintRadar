@@ -16,6 +16,7 @@ import WebSocket from 'ws'
 import type { ClientRequestArgs } from 'http'
 import { pool } from './db.js'
 import { safeLookup } from './ssrf.js'
+import { publicMintNameOrHost } from './mintNames.js'
 
 // Always install the 'ws' package as globalThis.WebSocket, even on Node
 // versions (22+) that ship a native undici WebSocket. The root 'nostr-tools'
@@ -326,6 +327,19 @@ const ALERTS: Record<AlertKind, { flag: string; claim: string; cooldownHours: nu
   },
 }
 
+// The mint's name is untrusted text from its own /v1/info, and the DM comes from the MintRadar service
+// identity. Same display cleaning as the API (controls, newlines, bidi/zero-width, hidden list, length cap),
+// plus any link-like text removed, so a mint cannot plant its own URL or a second "line" in our message.
+// Nothing displayable left -> the hostname.
+export function dmMintName(raw: string | null | undefined, mintUrl: string): string {
+  const cleaned = publicMintNameOrHost(raw, mintUrl)
+    .replace(/\b[a-z][a-z0-9+.-]*:\/\/\S*/gi, '')
+    .replace(/\bwww\.\S*/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return cleaned.length > 0 ? cleaned : new URL(mintUrl).hostname
+}
+
 // Sends one DM per subscriber of `mintUrl` who has the alert's flag on and whose claim slot is armed
 // (and, for mint/melt, whose last alert is older than 12 h). Never throws.
 export async function notifyAlert(mintUrl: string, kind: AlertKind): Promise<void> {
@@ -350,9 +364,7 @@ export async function notifyAlert(mintUrl: string, kind: AlertKind): Promise<voi
     if (rows.length === 0) return
 
     const nameRes = await pool.query('SELECT name FROM mints WHERE url = $1', [mintUrl])
-    const stored = nameRes.rows[0]?.name as string | null | undefined
-    const name = stored && stored.trim().length > 0 ? stored.trim() : new URL(mintUrl).hostname
-    const message = cfg.text(name, mintUrl)
+    const message = cfg.text(dmMintName(nameRes.rows[0]?.name as string | null | undefined, mintUrl), mintUrl)
 
     const releaseClaim = (pubkey: string, claimedAt: Date) =>
       pool.query(
