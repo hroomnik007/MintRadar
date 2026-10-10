@@ -90,6 +90,10 @@ const GET_ENDPOINTS: { name: string; req: () => request.Test }[] = [
     name: 'GET /api/mints/daily-uptime',
     req: () => request(app).get('/api/mints/daily-uptime').query({ url: 'https://mint.example.com' }),
   },
+  {
+    name: 'GET /api/mints/outages',
+    req: () => request(app).get('/api/mints/outages').query({ url: 'https://mint.example.com' }),
+  },
 ]
 
 describe('5xx error responses do not leak internal details', () => {

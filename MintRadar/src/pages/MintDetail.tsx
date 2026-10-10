@@ -91,6 +91,17 @@ const RATING_LABELS: Record<1 | 2 | 3 | 4 | 5, string> = {
 function formatReviewDate(ts: number): string {
   return new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
+
+function formatDuration(ms: number): string {
+  if (ms < 60000) return `${Math.round(ms / 1000)}s`
+  if (ms < 3600000) return `${Math.round(ms / 60000)} min`
+  const h = Math.floor(ms / 3600000)
+  const m = Math.round((ms % 3600000) / 60000)
+  if (h < 24) return m > 0 ? `${h}h ${m}m` : `${h}h`
+  const d = Math.floor(h / 24)
+  const rh = h % 24
+  return rh > 0 ? `${d}d ${rh}h` : `${d}d`
+}
 /** A version string with a line-break opportunity after each "/" ("Nutshell/0.20.3"); no <wbr> text is added. */
 function versionWithBreaks(v: string): ReactNode {
   const parts = v.split('/')
@@ -443,6 +454,22 @@ function MintDetailContent({ url }: { url: string }) {
     staleTime: 10 * 60 * 1000,
   })
   const versionHistory = versionHistoryData?.history
+
+  const { data: outagesData } = useQuery({
+    queryKey: ['mint', 'outages', url],
+    queryFn: async () => {
+      const res = await fetch(`/api/mints/outages?url=${encodeURIComponent(url)}&days=30`)
+      if (!res.ok) throw new Error('Failed to fetch outages')
+      return await res.json() as {
+        sinceLastOutageMs: number | null
+        avgRecoveryMs: number | null
+        outageCount: number
+        outages: Array<{ startedAt: string; durationMs: number; error: string }>
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+
   const watchlistMints = useWatchlistStore(state => state.mints)
   const addMint = useWatchlistStore(state => state.addMint)
   const loadFromDb = useWatchlistStore(state => state.loadFromDb)
@@ -2039,6 +2066,47 @@ function MintDetailContent({ url }: { url: string }) {
             {chartCoverage && (
               <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>{chartCoverage}</div>
             )}
+          </div>
+
+          <div className="md-panel">
+            <div className="md-panel-title">Incident timeline</div>
+            <div className="md-hist-summary" style={{ marginBottom: 12 }}>
+              {[
+                { label: 'Since last outage', value: outagesData?.sinceLastOutageMs != null ? formatDuration(outagesData.sinceLastOutageMs) : '—' },
+                { label: 'Time to recover', value: outagesData?.avgRecoveryMs != null ? formatDuration(outagesData.avgRecoveryMs) : '—' },
+                { label: 'Outages (30d)', value: outagesData?.outageCount != null ? String(outagesData.outageCount) : '—' },
+              ].map(({ label, value }) => (
+                <div key={label} className="md-hist-fig">
+                  <div className="md-hist-fig-value">{value}</div>
+                  <div className="md-hist-fig-label">{label}</div>
+                </div>
+              ))}
+            </div>
+            <details>
+              <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text2)', marginBottom: 8 }}>Show outage details</summary>
+              {outagesData?.outages && outagesData.outages.length > 0 ? (
+                <table className="md-vh-table">
+                  <thead>
+                    <tr>
+                      <th>Started</th>
+                      <th>Duration</th>
+                      <th>Error</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {outagesData.outages.slice().reverse().map((o, i) => (
+                      <tr key={i}>
+                        <td>{new Date(o.startedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td>{formatDuration(o.durationMs)}</td>
+                        <td>{o.error}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div style={{ fontSize: 13, color: 'var(--text3)' }}>No outages in the last 30 days.</div>
+              )}
+            </details>
           </div>
 
           <div className="md-panel">

@@ -999,6 +999,99 @@ app.get('/api/mints/version-history', (req: Request, res: Response): void => {
     })
 })
 
+
+app.get('/api/mints/outages', (req: Request, res: Response): void => {
+  const url = req.query['url']
+  const daysParam = req.query['days']
+  const days = typeof daysParam === 'string' && /^\d+$/.test(daysParam)
+    ? Math.min(90, Math.max(1, parseInt(daysParam, 10)))
+    : 30
+
+  if (typeof url !== 'string' || url.length === 0) {
+    res.status(400).json({ error: 'Missing required query parameter: url' })
+    return
+  }
+  if (!url.startsWith('https://')) {
+    res.status(400).json({ error: 'url must start with https://' })
+    return
+  }
+  if (url.length > MAX_URL_LENGTH) {
+    res.status(400).json({ error: `url exceeds maximum length of ${MAX_URL_LENGTH} characters` })
+    return
+  }
+
+  Promise.resolve(isWellFormedMintUrl(url))
+    .then(safe => {
+      if (!safe) {
+        res.status(400).json({ error: 'Invalid url' })
+        return
+      }
+
+      // Consecutive offline blocks (min 2 checks) in the window.
+      // A single failed probe is ignored to avoid flaky noise.
+      return pool.query(
+        `SELECT online, checked_at
+         FROM mint_history
+         WHERE url = $1
+           AND checked_at >= NOW() - ($2 || ' days')::interval
+         ORDER BY checked_at ASC`,
+        [url, days]
+      ).then(result => {
+        const rows = result.rows as { online: boolean; checked_at: Date }[]
+        const outages: { startedAt: string; durationMs: number; error: string }[] = []
+        let blockStart: Date | null = null
+        let blockCount = 0
+
+        for (const row of rows) {
+          if (!row.online) {
+            if (blockStart === null) blockStart = row.checked_at
+            blockCount++
+          } else if (blockStart !== null) {
+            if (blockCount >= 2) {
+              const durationMs = row.checked_at.getTime() - blockStart.getTime()
+              outages.push({
+                startedAt: blockStart.toISOString(),
+                durationMs,
+                error: 'offline',
+              })
+            }
+            blockStart = null
+            blockCount = 0
+          }
+        }
+        // Open block at the end of the window
+        if (blockStart !== null && blockCount >= 2) {
+          const last = rows[rows.length - 1]!
+          const durationMs = last.checked_at.getTime() - blockStart.getTime()
+          outages.push({
+            startedAt: blockStart.toISOString(),
+            durationMs,
+            error: 'offline',
+          })
+        }
+
+        const lastOutage = outages[outages.length - 1]
+        const sinceLastOutageMs = lastOutage
+          ? Date.now() - new Date(lastOutage.startedAt).getTime() - lastOutage.durationMs
+          : null
+        const avgRecoveryMs = outages.length > 0
+          ? Math.round(outages.reduce((s, o) => s + o.durationMs, 0) / outages.length)
+          : null
+
+        res.json({
+          sinceLastOutageMs,
+          avgRecoveryMs,
+          outageCount: outages.length,
+          outages: outages.slice(-20),
+        })
+      })
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[/api/mints/outages]', err)
+      res.status(500).json({ error: 'Internal server error' })
+    })
+})
+
 app.get('/api/nuts', (_req: Request, res: Response): void => {
   pool.query(`
     SELECT m.url, m.name, m.nuts_limits
