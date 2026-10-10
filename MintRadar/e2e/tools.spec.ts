@@ -552,6 +552,18 @@ test.describe('Tools', () => {
     await expect(firstRow.locator('.wizard-rec-score')).toHaveCount(0)    // no bare "NN%"
   })
 
+  test('Best Mint Wizard result rows show the community rating and say it counts only slightly', async ({ page }) => {
+    await page.getByRole('radio', { name: 'SAT', exact: true }).click()
+    await page.locator('.wizard-opt', { hasText: 'Small' }).click()
+    await page.locator('.wizard-opt', { hasText: 'Reliable' }).click()
+    await page.getByRole('button', { name: /Find my mint/ }).click()
+
+    const alpha = page.locator('.wizard-rec-row', { hasText: 'Alpha Mint' })
+    await expect(alpha).toBeVisible({ timeout: 15_000 })
+    await expect(alpha.locator('.wizard-rec-rating')).toHaveText(/4\.2\s*\(12\)/)
+    await expect(page.locator('.wizard-rec-note')).toContainText('count only slightly')
+  })
+
   test('Best Mint Wizard walks through its questions and recommends mints', async ({ page }) => {
     // Step 1 — currency, then how much to store (the latter auto-advances to step 2).
     await expect(page.getByRole('radiogroup', { name: 'Currency unit' })).toBeVisible()

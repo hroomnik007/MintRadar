@@ -14,6 +14,7 @@ import { Zap, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Sear
 import { isTestMint } from '@/constants/testMints'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation } from '@/utils/reliabilityScore'
+import { weightsFor, reviewsScore, type WizardCheck, type SizeOption } from '@/utils/wizardScoring'
 import { sortUnits } from '@/utils/sortUnits'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import './Tools.css'
@@ -470,8 +471,6 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
 // ~94-100% adoption across tracked mints per /api/stats' nutAdoption, so a
 // checkbox against them isn't filtering against mostly-null data — unlike
 // e.g. MPP/NUT-15 at ~63%, deliberately left out).
-type WizardCheck = 'fast' | 'reliable' | 'ln' | 'seed' | 'p2pk' | 'ws'
-type SizeOption = 'small' | 'medium' | 'large'
 
 interface UnitLimits { min: number | null; max: number | null }
 interface WizardRec {
@@ -522,41 +521,6 @@ function formatLimits(limits: UnitLimits | null, unit: string): string | null {
   const min = limits.min !== null ? formatCompactAmount(limits.min) : '—'
   const max = limits.max !== null ? formatCompactAmount(limits.max) : '∞'
   return `${min}–${max} ${unit}`
-}
-
-type Weights = { latency: number; reliability: number; nuts: number }
-
-const FAST_WEIGHTS: Weights = { latency: 0.6, reliability: 0.3, nuts: 0.1 }
-const RELIABLE_WEIGHTS: Weights = { latency: 0.2, reliability: 0.7, nuts: 0.1 }
-
-// Fast+Reliable both checked → average the two vectors (each already sums to
-// 1, so the average does too — no separate re-normalization step needed).
-// Neither checked (only filter-type checks selected) → falls back to the
-// Reliable weights, per spec.
-function baseWeightsFor(checks: Set<WizardCheck>): Weights {
-  const fast = checks.has('fast')
-  const reliable = checks.has('reliable')
-  if (fast && reliable) {
-    return {
-      latency: (FAST_WEIGHTS.latency + RELIABLE_WEIGHTS.latency) / 2,
-      reliability: (FAST_WEIGHTS.reliability + RELIABLE_WEIGHTS.reliability) / 2,
-      nuts: (FAST_WEIGHTS.nuts + RELIABLE_WEIGHTS.nuts) / 2,
-    }
-  }
-  if (fast) return FAST_WEIGHTS
-  return RELIABLE_WEIGHTS
-}
-
-// Larger stored balances carry more risk if the mint turns out unreliable, so
-// shift weight toward reliability — proportionally reducing latency/nuts so the
-// three weights still sum to 1.
-const LARGE_RELIABILITY_BOOST = 0.15
-
-function weightsFor(checks: Set<WizardCheck>, size: SizeOption): Weights {
-  const base = baseWeightsFor(checks)
-  if (size !== 'large') return base
-  const scale = (1 - base.reliability - LARGE_RELIABILITY_BOOST) / (1 - base.reliability)
-  return { latency: base.latency * scale, reliability: base.reliability + LARGE_RELIABILITY_BOOST, nuts: base.nuts * scale }
 }
 
 // Rough balance-size thresholds per unit, shown as labels only — `size` is a bucket
@@ -683,7 +647,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       return {
         url: m.url,
         mint: m,
-        score: w.latency * latScore + w.reliability * reliabilityScore + w.nuts * nutsScore,
+        score: w.latency * latScore + w.reliability * reliabilityScore + w.nuts * nutsScore + w.reviews * reviewsScore(m),
         latencyMs: latMs,
         mintLimits: limitsForUnit(m.mintMethods ?? null, selectedUnit),
         meltLimits: limitsForUnit(m.meltMethods ?? null, selectedUnit),
@@ -836,6 +800,13 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
                     <span className="wizard-rec-reliability" style={{ color: reliabilityCol }}>
                       <IcShield size={11} /><span>{cardReliabilityLabel(reliabilityNum)}</span>
                     </span>
+                    {(rec.mint.reviewCount ?? 0) > 0 && rec.mint.reviewAvgRating != null && (
+                      <span className="wizard-rec-rating">
+                        <span className="wizard-rec-star" aria-hidden="true">★</span>
+                        <span>{rec.mint.reviewAvgRating.toFixed(1)}</span>
+                        <span className="wizard-rec-rating-n">({rec.mint.reviewCount})</span>
+                      </span>
+                    )}
                     {lnLabel && (
                       <span className="wizard-rec-ln">
                         <Zap size={10} aria-hidden /><span>{lnLabel}</span>
@@ -853,6 +824,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
             <div className="wizard-rec-note">
               Reliability Score reflects the whole mint, not this specific currency — uptime, NUT support and
               version freshness are measured per mint. Only the limits above are {recsUnit}-specific.
+              Community ratings are self-published on Nostr and count only slightly toward the order.
             </div>
           )}
           <button type="button" className="wizard-start-over-btn"
