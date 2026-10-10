@@ -95,7 +95,7 @@ function formatReviewDate(ts: number): string {
 /** "17 Sep 13:30" — day, short month, 24h time, in the viewer's local time zone. */
 function formatOutageStart(iso: string): string {
   const d = new Date(iso)
-  const date = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  const date = formatDate(d, { year: false, local: true })
   const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
   return `${date} ${time}`
 }
