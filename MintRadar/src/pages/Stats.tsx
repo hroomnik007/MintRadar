@@ -16,7 +16,7 @@ import { isEligibleForRecommendation } from '@/utils/reliabilityScore'
 import { compareMintVersionNumbers, classifyVersion } from '@/utils/versionRule'
 import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
-import { useIsMobile } from '@/hooks/useIsMobile'
+import { useIsMobile, useMediaQuery } from '@/hooks/useIsMobile'
 import { PageHead } from '@/components/layout/PageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
@@ -619,6 +619,10 @@ export default function Stats() {
   // (no reason to click through to a modal that would show the exact same
   // rows again); mobile keeps today's compact panel + tap-to-open modal.
   const isMobile = useIsMobile()
+  // The Network health index shows its inline five-factor breakdown only where the panel is wide
+  // enough (>= 1100px, e.g. not a phone in landscape); below that it keeps the compact gauge +
+  // tap-to-open modal, same as portrait mobile.
+  const compactNhi = useMediaQuery('(max-width: 1099px)')
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['stats'],
@@ -1019,7 +1023,7 @@ export default function Stats() {
                     <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
                     {nhiInfoTooltip.open && (
                       <div className="audit-tooltip" style={isMobile ? { width: 220, left: 0, bottom: 'auto', top: 'calc(100% + 6px)' } : { width: 260, left: 0, bottom: 'auto', top: 'calc(100% + 6px)' }}>
-                        Composite 0-100 score across uptime, average Reliability Score, software diversity, advanced feature adoption &amp; network stability. Each row below shows index points, not a mint count.{isMobile ? ' Tap the gauge for the full breakdown.' : ` ${NETWORK_HEALTH_FORMULA_TEXT}`}
+                        Composite 0-100 score across uptime, average Reliability Score, software diversity, advanced feature adoption &amp; network stability. Each row below shows index points, not a mint count.{compactNhi ? ' Tap the gauge for the full breakdown.' : ` ${NETWORK_HEALTH_FORMULA_TEXT}`}
                       </div>
                     )}
                   </span>
@@ -1041,9 +1045,9 @@ export default function Stats() {
                   stretches this panel taller than its own content) this is a
                   no-op — the gauge just sits at its natural position. */}
               <div className="nhi-fill">
-                <div className="nhi-wrap" {...(isMobile ? { ...clickableProps(() => setShowHealthBreakdown(true)), 'aria-haspopup': 'dialog' as const } : {})} style={isMobile ? undefined : { cursor: 'default' }}>
-                  <div className="nhi-gauge-wrap" style={isMobile ? undefined : { width: 140, height: 140 }}>
-                    <svg viewBox="0 0 72 72" style={isMobile ? undefined : { width: 140, height: 140 }}>
+                <div className="nhi-wrap" {...(compactNhi ? { ...clickableProps(() => setShowHealthBreakdown(true)), 'aria-haspopup': 'dialog' as const } : {})} style={compactNhi ? undefined : { cursor: 'default' }}>
+                  <div className="nhi-gauge-wrap" style={compactNhi ? undefined : { width: 140, height: 140 }}>
+                    <svg viewBox="0 0 72 72" style={compactNhi ? undefined : { width: 140, height: 140 }}>
                       <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
                       <circle cx="36" cy="36" r="27" fill="none" stroke={info.color} strokeWidth="7"
                         strokeDasharray={gaugeArc.dashArray}
@@ -1051,7 +1055,7 @@ export default function Stats() {
                         strokeLinecap="round"
                         transform="rotate(-90 36 36)" />
                     </svg>
-                    <div className="nhi-gauge-num" style={{ color: info.color, ...(isMobile ? {} : { fontSize: 36 }) }}>{networkHealth.score}</div>
+                    <div className="nhi-gauge-num" style={{ color: info.color, ...(compactNhi ? {} : { fontSize: 36 }) }}>{networkHealth.score}</div>
                   </div>
                   <div className="nhi-legend">
                     <div className={`nhi-legend-row${networkHealth.score >= 70 ? ' active' : ''}`}>
@@ -1065,7 +1069,7 @@ export default function Stats() {
                     </div>
                   </div>
                 </div>
-                {isMobile && (
+                {compactNhi && (
                   <button type="button" className="nhi-show-details" onClick={() => setShowHealthBreakdown(true)} aria-haspopup="dialog">Show details ›</button>
                 )}
                 {/* Desktop only: same breakdown the mobile modal shows, inline
@@ -1073,7 +1077,7 @@ export default function Stats() {
                     repeated here (moved to the header ⓘ tooltip, see
                     NETWORK_HEALTH_FORMULA_TEXT above) — the space it freed up
                     went to enlarging the gauge instead. */}
-                {!isMobile && (
+                {!compactNhi && (
                   <div className="nhi-breakdown">
                     {networkHealth.components.map((c, i) => (
                       <NetworkHealthComponentRow key={c.label} component={c} index={i} total={networkHealth.components.length} compact />

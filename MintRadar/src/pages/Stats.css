@@ -1179,7 +1179,7 @@
 .nhi-title-row { display: inline-flex; align-items: center; gap: 6px; }
 .nhi-breakdown { margin-top: 14px; }
 /* Desktop: ring on the left; legend and the five factors stacked on the right. */
-@media (min-width: 769px) {
+@media (min-width: 1100px) {
   .stats-nhi-panel .nhi-fill {
     display: grid;
     grid-template-columns: 140px minmax(0, 1fr);
@@ -1244,6 +1244,18 @@
 /* Movers + trend headers follow the same head pattern. */
 .stats-trend-panel .stats-panel-head { margin-bottom: 8px; }
 
+/* Health index below 1100px (phones, landscape too): bigger ring, legend pushed right, details in a modal. */
+@media (max-width: 1099px) {
+  .nhi-show-details { display: block; }
+
+  /* Health index: bigger ring, legend pushed further right. */
+  .stats-nhi-panel .nhi-wrap { gap: 28px; padding-left: 8px; }
+  .stats-nhi-panel .nhi-gauge-wrap,
+  .stats-nhi-panel .nhi-gauge-wrap svg { width: 104px; height: 104px; }
+  .stats-nhi-panel .nhi-gauge-num { font-size: 26px; }
+  .stats-nhi-panel .nhi-legend { gap: 8px; font-size: 13.5px; }
+}
+
 /* ── Mobile: one column; The network right now first, Network health index collapsed to its gauge ── */
 @media (max-width: 768px) {
   .stats-board-grid { grid-template-columns: 1fr; gap: 10px; padding: 10px var(--page-pad); }
@@ -1265,15 +1277,6 @@
   .stats-now-panel .stat-card { padding: 0 0 0 14px; }
   .stats-now-panel .stat-card:nth-child(odd) { padding-left: 0; border-left: 0; }
   .stats-now-panel .stat-value { font-size: 26px; }
-
-  .nhi-show-details { display: block; }
-
-  /* Health index: bigger ring, legend pushed further right. */
-  .stats-nhi-panel .nhi-wrap { gap: 28px; padding-left: 8px; }
-  .stats-nhi-panel .nhi-gauge-wrap,
-  .stats-nhi-panel .nhi-gauge-wrap svg { width: 104px; height: 104px; }
-  .stats-nhi-panel .nhi-gauge-num { font-size: 26px; }
-  .stats-nhi-panel .nhi-legend { gap: 8px; font-size: 13.5px; }
 
   .stats-top5-row, .sw-row { padding: 8px 2px; }
   .stats-nut-row { padding: 5px 2px; }
