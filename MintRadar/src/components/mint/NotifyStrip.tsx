@@ -5,7 +5,7 @@ import { useUserRelays } from '@/hooks/useUserRelays'
 import { setNotifyFlag, type NotifyFailure } from '@/core/nostr/notificationSubscription'
 import { confirmedNotify } from '@/utils/notifyState'
 
-type Field = 'notifyOnDown' | 'notifyOnUp'
+type Field = 'notifyOnDown' | 'notifyOnUp' | 'notifyOnMintMeltIssues' | 'notifyOnVersionOutdated' | 'notifyOnNutLoss'
 
 const FAILURE_TEXT: Record<NotifyFailure, string | null> = {
   'signer-unavailable': 'No signer available. Log in again.',
@@ -36,6 +36,7 @@ export function NotifyStrip({ mintUrl, name }: { mintUrl: string; name: string }
   const entry = useLiveQuery(() => db.watchlist.get(mintUrl), [mintUrl])
   const [pending, setPending] = useState<Field | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [moreOpen, setMoreOpen] = useState(false)
   // Synchronous guard: a second click in the same tick (before React re-renders `pending`) is dropped.
   const busy = useRef(false)
 
@@ -80,6 +81,20 @@ export function NotifyStrip({ mintUrl, name }: { mintUrl: string; name: string }
         {pill('notifyOnDown', state.down, 'Goes down', `Notify when ${name} goes down`)}
         {pill('notifyOnUp', state.up, 'Goes up', `Notify when ${name} goes up`)}
       </div>
+      <details className="notify-more" open={moreOpen} onToggle={e => setMoreOpen((e.target as HTMLDetailsElement).open)}>
+        <summary className="notify-more-summary">More alerts</summary>
+        <div className="notify-more-body">
+          <label className="notify-check">
+            <input type="checkbox" disabled /> Mint/melt issues (3d)
+          </label>
+          <label className="notify-check">
+            <input type="checkbox" disabled /> Version outdated
+          </label>
+          <label className="notify-check">
+            <input type="checkbox" disabled /> Lost NUT-04/05
+          </label>
+        </div>
+      </details>
       <div className="notify-strip-msg" role="status">{error}</div>
     </div>
   )
