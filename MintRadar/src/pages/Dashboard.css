@@ -2402,7 +2402,7 @@
   font-family: var(--font-body);
   cursor: pointer;
 }
-.notify-more-chevron { font-size: 11px; }
+.notify-more-chevron { font-size: 13px; }
 .notify-more-pills {
   display: flex;
   flex-wrap: wrap;
