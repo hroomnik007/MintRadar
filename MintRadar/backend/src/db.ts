@@ -63,13 +63,6 @@ export async function initDb(): Promise<void> {
 
     
   await pool.query(`
-    ALTER TABLE notification_subscriptions
-      ADD COLUMN IF NOT EXISTS notify_on_mint_melt_issues BOOLEAN NOT NULL DEFAULT false,
-      ADD COLUMN IF NOT EXISTS notify_on_version_outdated BOOLEAN NOT NULL DEFAULT false,
-      ADD COLUMN IF NOT EXISTS notify_on_nut_loss BOOLEAN NOT NULL DEFAULT false
-  `)
-
-  await pool.query(`
     CREATE TABLE IF NOT EXISTS notification_subscriptions (
       pubkey TEXT NOT NULL,
       mint_url TEXT NOT NULL REFERENCES mints(url) ON DELETE CASCADE,
