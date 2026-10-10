@@ -2135,6 +2135,9 @@ app.post('/api/notifications/subscribe', (req: Request, res: Response): void => 
         mintUrl?: unknown
         notifyOnDown?: unknown
         notifyOnUp?: unknown
+        notifyOnMintMeltIssues?: unknown
+        notifyOnVersionOutdated?: unknown
+        notifyOnNutLoss?: unknown
         relays?: unknown
       }
 
@@ -2153,6 +2156,14 @@ app.post('/api/notifications/subscribe', (req: Request, res: Response): void => 
         res.status(400).json({ error: 'notifyOnDown and notifyOnUp must be boolean' })
         return
       }
+      // "More alerts" flags are optional: omitted = keep what is stored (false for a new row), so a client
+      // that only knows down/up never switches them off. When present they must be boolean.
+      const moreFlags = [body.notifyOnMintMeltIssues, body.notifyOnVersionOutdated, body.notifyOnNutLoss]
+      if (moreFlags.some(f => f !== undefined && typeof f !== 'boolean')) {
+        res.status(400).json({ error: 'notifyOnMintMeltIssues, notifyOnVersionOutdated and notifyOnNutLoss must be boolean when provided' })
+        return
+      }
+      const [notifyOnMintMelt, notifyOnVersionOutdated, notifyOnNutLoss] = moreFlags.map(f => (typeof f === 'boolean' ? f : null))
 
       return validateRelays(body.relays, pubkey.slice(0, 8)).then(relays => {
         if (relays === null) {
@@ -2202,14 +2213,19 @@ app.post('/api/notifications/subscribe', (req: Request, res: Response): void => 
             }
 
             return pool.query(
-              `INSERT INTO notification_subscriptions (pubkey, mint_url, notify_on_down, notify_on_up, relays, updated_at)
-             VALUES ($1, $2, $3, $4, $5, now())
+              `INSERT INTO notification_subscriptions
+               (pubkey, mint_url, notify_on_down, notify_on_up, relays, updated_at,
+                notify_on_mint_melt_issues, notify_on_version_outdated, notify_on_nut_loss)
+             VALUES ($1, $2, $3, $4, $5, now(), COALESCE($6::boolean, false), COALESCE($7::boolean, false), COALESCE($8::boolean, false))
              ON CONFLICT (pubkey, mint_url) DO UPDATE SET
                notify_on_down = EXCLUDED.notify_on_down,
                notify_on_up = EXCLUDED.notify_on_up,
+               notify_on_mint_melt_issues = COALESCE($6::boolean, notification_subscriptions.notify_on_mint_melt_issues),
+               notify_on_version_outdated = COALESCE($7::boolean, notification_subscriptions.notify_on_version_outdated),
+               notify_on_nut_loss = COALESCE($8::boolean, notification_subscriptions.notify_on_nut_loss),
                relays = EXCLUDED.relays,
                updated_at = now()`,
-            [pubkey, mintUrl, notifyOnDown, notifyOnUp, relays]
+            [pubkey, mintUrl, notifyOnDown, notifyOnUp, relays, notifyOnMintMelt, notifyOnVersionOutdated, notifyOnNutLoss]
             ).then(() => {
               // Audit trail: truncated pubkey + mint only — never relays/notify
               // flags, which is the rest of the request body.
