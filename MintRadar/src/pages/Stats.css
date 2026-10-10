@@ -512,26 +512,26 @@
 }
 
 /* ── Toggle tabs ─────────────────────────────────────────────── */
+/* Same segmented control as Mint Detail's "Historical data" period switch (.md-seg). */
 .stats-tab-toggle {
-  display: flex;
-  background: var(--bg2);
-  border-radius: 6px;
-  padding: 2px;
-  gap: 2px;
+  display: inline-flex;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .stats-tab-btn {
   background: none;
-  border: none;
-  border-radius: 5px;
-  font-size: 10px;
-  font-family: var(--font-mono);
-  color: var(--text3);
-  padding: 5px 10px;
-  min-height: 24px;
+  border: 0;
+  padding: 4px 11px;
+  min-height: 26px;
+  font-size: 12.5px;
+  font-family: var(--font-body);
+  color: var(--text2);
   position: relative;
   cursor: pointer;
-  transition: background 150ms ease, color 150ms ease;
+  transition: background 120ms ease, color 120ms ease;
   white-space: nowrap;
 }
 /* Touch: 44px hit area through an invisible ::before; the visible box stays the same as with a mouse. */
@@ -544,12 +544,12 @@
 }
 
 .stats-tab-btn.active {
-  background: var(--surface-3);
+  background: var(--raised);
   color: var(--text);
 }
 
 .stats-tab-btn:hover:not(.active) {
-  color: var(--text2);
+  color: var(--text);
 }
 
 /* ── Top rows (Most Reliable / Fastest) ──────────────────────── */
@@ -1267,6 +1267,13 @@
   .stats-now-panel .stat-value { font-size: 26px; }
 
   .nhi-show-details { display: block; }
+
+  /* Health index: bigger ring, legend pushed further right. */
+  .stats-nhi-panel .nhi-wrap { gap: 28px; padding-left: 8px; }
+  .stats-nhi-panel .nhi-gauge-wrap,
+  .stats-nhi-panel .nhi-gauge-wrap svg { width: 104px; height: 104px; }
+  .stats-nhi-panel .nhi-gauge-num { font-size: 26px; }
+  .stats-nhi-panel .nhi-legend { gap: 8px; font-size: 13.5px; }
 
   .stats-top5-row, .sw-row { padding: 8px 2px; }
   .stats-nut-row { padding: 5px 2px; }
