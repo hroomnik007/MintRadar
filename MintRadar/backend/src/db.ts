@@ -62,7 +62,7 @@ export async function initDb(): Promise<void> {
     );
 
     
-    await pool.query(`
+      await pool.query(`
     CREATE TABLE IF NOT EXISTS notification_subscriptions (
       pubkey TEXT NOT NULL,
       mint_url TEXT NOT NULL REFERENCES mints(url) ON DELETE CASCADE,
@@ -78,9 +78,27 @@ export async function initDb(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_notification_subs_updated_at
       ON notification_subscriptions(updated_at);
-  `)
 
-CREATE TABLE IF NOT EXISTS nostr_profiles (
+    CREATE TABLE IF NOT EXISTS mint_reviews (
+      url TEXT NOT NULL REFERENCES mints(url) ON DELETE CASCADE,
+      pubkey TEXT NOT NULL,
+      event_id TEXT NOT NULL,
+      rating INTEGER,
+      comment TEXT NOT NULL DEFAULT '',
+      created_at BIGINT NOT NULL,
+      PRIMARY KEY (url, pubkey)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_mint_reviews_url_created
+      ON mint_reviews(url, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS reviews_sync_relay_state (
+      relay TEXT PRIMARY KEY,
+      last_ok_started_at BIGINT NOT NULL,
+      last_full_at BIGINT
+    );
+
+    CREATE TABLE IF NOT EXISTS nostr_profiles (
       pubkey TEXT PRIMARY KEY,
       name TEXT,
       display_name TEXT,
@@ -89,13 +107,9 @@ CREATE TABLE IF NOT EXISTS nostr_profiles (
       fetched_at BIGINT NOT NULL,
       found BOOLEAN NOT NULL
     );
+  `)
 
-    -- Per-swap rows for the audit.8333.space rolling window (see discovery.ts's
-    -- fetchRecentSwaps/persistMintAuditSwaps). Fully replaced (DELETE + INSERT,
-    -- same atomic-per-mint-replace pattern as mint_reviews) every 6h discovery
-    -- cycle, so this table only ever holds each mint's current ~100-swap window,
-    -- not history across cycles. swap_id is audit.8333.space's own per-swap id.
-    CREATE TABLE IF NOT EXISTS mint_audit_swaps (
+CREATE TABLE IF NOT EXISTS mint_audit_swaps (
       url TEXT NOT NULL REFERENCES mints(url) ON DELETE CASCADE,
       swap_id BIGINT NOT NULL,
       to_url TEXT,
