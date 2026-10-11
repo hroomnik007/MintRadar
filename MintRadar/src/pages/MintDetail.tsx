@@ -2077,7 +2077,7 @@ function MintDetailContent({ url }: { url: string }) {
           </div>
 
           <div className="md-panel">
-            <div className="md-panel-title">Incident timeline</div>
+            <div className="md-panel-title">Outages</div>
             <div className="md-hist-summary" style={{ marginBottom: 12 }}>
               {[
                 { label: 'Since last outage', value: outagesData?.sinceLastOutageMs != null ? formatDuration(outagesData.sinceLastOutageMs) : '—' },
