@@ -64,3 +64,20 @@ export function prefetchMintDetail(queryClient: QueryClient, url: string): void 
     staleTime: NOSTR_REVIEWS_STALE_MS,
   })
 }
+
+// Warm the Stats page: the lazy chunk (Recharts, ~380 kB) and the /api/stats
+// payload. Triggered on hover/focus/touch of the "Stats" nav tab so both are
+// usually done by the time the click lands. queryKey / queryFn / staleTime MUST
+// match the useQuery in Stats.tsx exactly (same rule as prefetchMintDetail).
+export function prefetchStats(queryClient: QueryClient): void {
+  void import('@/pages/Stats')
+  void queryClient.prefetchQuery({
+    queryKey: ['stats'],
+    queryFn: async () => {
+      const res = await fetch('/api/stats')
+      if (!res.ok) throw new Error('Failed to fetch stats')
+      return res.json()
+    },
+    staleTime: 2 * 60 * 1000,
+  })
+}
