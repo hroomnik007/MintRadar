@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
+import { prefetchStats } from '@/core/mint/prefetch'
 import { QRCodeSVG } from 'qrcode.react'
 import { Zap, TriangleAlert } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
@@ -88,6 +90,15 @@ const FOCUS_COPY = {
 } as const
 
 export function AppShell() {
+  const queryClient = useQueryClient()
+  const warmStats = useCallback(() => prefetchStats(queryClient), [queryClient])
+  // Idle warm-up so even a first click without a prior hover (keyboard, fast tap)
+  // finds the Stats chunk + data already loaded.
+  useEffect(() => {
+    const ric = (window as { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback
+    const id = ric ? ric(warmStats) : window.setTimeout(warmStats, 2000)
+    return () => { if (!ric) window.clearTimeout(id) }
+  }, [warmStats])
   const { pathname } = useLocation()
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
 
@@ -304,7 +315,8 @@ export function AppShell() {
             Watchlist
             {profile !== null && watchlistCount > 0 && <span className="nav-tab-badge">{watchlistCount}</span>}
           </NavLink>
-          <NavLink to="/stats" className={({isActive}) => `nav-tab${isActive ? ' active' : ''}`}>
+          <NavLink to="/stats" className={({isActive}) => `nav-tab${isActive ? ' active' : ''}`}
+            onMouseEnter={warmStats} onFocus={warmStats} onTouchStart={warmStats}>
             Stats
           </NavLink>
           <NavLink to="/tools" className={({isActive}) => `nav-tab${isActive ? ' active' : ''}`}>
