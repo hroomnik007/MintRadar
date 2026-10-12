@@ -541,3 +541,90 @@ describe('rate limits', () => {
     expect(blocked.body).toEqual({ error: 'Too many requests. Try again later.' })
   })
 })
+
+describe('GET /api/mints/recommend', () => {
+  const rec = (qs = '') => request(app).get('/api/mints/recommend' + qs)
+  const recUrls = (body: { recommended: Array<{ url: string }> }) => body.recommended.map(r => r.url)
+
+  it('keeps its response shape (additive: methodology) and orders like the wallet list', async () => {
+    const res = await rec('?unit=sat&minScore=0&limit=10')
+    expect(res.status).toBe(200)
+    expect(Object.keys(res.body).sort()).toEqual(['generatedAt', 'methodology', 'recommended'])
+    expect(res.body.methodology).toBe(METHODOLOGY_VERSION)
+    expect(new Date(res.body.generatedAt).toISOString()).toBe(res.body.generatedAt)
+    expect(Object.keys(res.body.recommended[0]).sort()).toEqual(['latencyMs', 'name', 'reliabilityScore', 'units', 'uptimePct24h', 'url', 'version'])
+    expect(res.body.recommended[0]).toEqual({
+      url: 'https://a.example.com', name: 'Mint A', reliabilityScore: 90, uptimePct24h: 100, latencyMs: 120, version: 'Nutshell/0.21.0', units: ['sat'],
+    })
+    expect(recUrls(res.body)).toEqual(['https://a.example.com', 'https://b.example.com', 'https://c.example.com'])
+  })
+
+  it('never returns a test mint, an unscored, offline, degraded or archived mint, or a mint under 14 days', async () => {
+    query.mockResolvedValue({
+      rows: [
+        ...ROWS,
+        row('https://almost.example.com', { last_reliability_score: 97, discovered_at: ago(13.9) }),
+        row('https://mature.example.com', { last_reliability_score: 50, discovered_at: ago(14.1) }),
+        row('https://nofirstseen.example.com', { last_reliability_score: 98, discovered_at: null }),
+      ],
+    })
+    const res = await rec('?minScore=0&limit=10')
+    expect(recUrls(res.body)).toEqual(['https://a.example.com', 'https://b.example.com', 'https://c.example.com', 'https://mature.example.com'])
+    for (const banned of ['testnut.cashu.space', 'new.example.com', 'almost.example.com', 'nofirstseen.example.com', 'offline.example.com',
+      'degraded.example.com', 'archived.example.com', 'unscored.example.com']) {
+      expect(JSON.stringify(res.body)).not.toContain(banned)
+    }
+  })
+
+  it('filters by unit, minScore (default 80) and nuts, and caps limit at 10 (default 5)', async () => {
+    expect(recUrls((await rec('?unit=usd&minScore=0')).body)).toEqual(['https://c.example.com'])
+    expect((await rec('?unit=usd&minScore=0')).body.recommended[0].units).toEqual(['usd'])
+    expect(recUrls((await rec()).body)).toEqual(['https://a.example.com', 'https://b.example.com', 'https://c.example.com']) // minScore 80 default
+    expect(recUrls((await rec('?minScore=85')).body)).toEqual(['https://a.example.com', 'https://b.example.com'])
+    expect(recUrls((await rec('?minScore=0&nuts=8')).body)).toEqual(['https://c.example.com'])
+    expect(recUrls((await rec('?minScore=0&nuts=4,5,08')).body)).toEqual(['https://c.example.com'])
+    expect(recUrls((await rec('?minScore=0&nuts=4,99')).body)).toEqual([])
+    expect((await rec('?minScore=0&limit=1')).body.recommended).toHaveLength(1)
+  })
+
+  it('limit is applied after the nuts filter and caps at 10', async () => {
+    query.mockResolvedValue({
+      rows: Array.from({ length: 14 }, (_, i) => row(`https://m${String.fromCharCode(97 + i)}.example.com`, { last_reliability_score: 90 - i, nuts_limits: i === 13 ? { '4': {}, '9': {} } : { '4': {} } })),
+    })
+    expect((await rec('?limit=99')).body.recommended).toHaveLength(10)
+    expect(recUrls((await rec('?minScore=0&nuts=9&limit=1')).body)).toEqual(['https://mn.example.com'])
+    expect((await rec('?limit=0')).body.recommended).toHaveLength(1)
+  })
+
+  it('sends Cache-Control and a strong ETag on a miss and a hit, 304 on If-None-Match, from the shared snapshot', async () => {
+    const miss = await rec('?unit=sat')
+    const hit = await rec('?unit=sat')
+    expect(query).toHaveBeenCalledTimes(1)
+    for (const r of [miss, hit]) {
+      expect(r.headers['cache-control']).toBe('public, max-age=300')
+      expect(r.headers['etag']).toMatch(/^"[0-9a-f]{32}"$/)
+    }
+    expect(hit.headers['etag']).toBe(miss.headers['etag'])
+    const nm = await rec('?unit=sat').set('If-None-Match', miss.headers['etag'] as string)
+    expect(nm.status).toBe(304)
+    expect(nm.headers['access-control-allow-origin']).toBe('*')
+  })
+
+  it('stays on the general 60/min limiter and keeps the old error shape', async () => {
+    const ip = '198.51.100.50'
+    const first = await rec().set('X-Forwarded-For', ip)
+    expect(first.headers['x-ratelimit-limit']).toBe('60')
+    query.mockReset()
+    query.mockRejectedValue(new Error('boom'))
+    // the snapshot is cached, so force a failing read with a fresh app
+    vi.resetModules()
+    const db = await import('../../db.js')
+    const q2 = db.pool.query as unknown as ReturnType<typeof vi.fn>
+    q2.mockReset()
+    q2.mockRejectedValue(new Error('boom'))
+    const { app: app2 } = await import('../../index.js')
+    const failed = await request(app2).get('/api/mints/recommend')
+    expect(failed.status).toBe(500)
+    expect(failed.body).toEqual({ error: 'Internal server error' })
+  })
+})

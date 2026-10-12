@@ -258,6 +258,36 @@ export function walletSingleEnvelope(snap: Snapshot, url: string): object | null
   return { methodology: METHODOLOGY_VERSION, generatedAt: new Date(snap.computedAt).toISOString(), mint: toWalletMint(found, snap.computedAt) }
 }
 
+export interface RecommendQuery { unit: string; minScore: number; limit: number; requiredNuts: string[] }
+
+/** GET /api/mints/recommend: the wallet list restricted to eligibleForRecommendation, in the 2026-10-10 shape. */
+export function recommendEnvelope(snap: Snapshot, q: RecommendQuery): object {
+  const rows = snap.data as KnownMintLike[]
+  const latency = new Map(rows.map(r => [r.url, r.latencyMs ?? null]))
+  const all = rows.map(m => toWalletMint(m, snap.computedAt))
+  const picked = filterWalletMints(all, {
+    unit: q.unit === '' ? undefined : q.unit.toLowerCase(),
+    minScore: q.minScore,
+    includeOffline: false, includeTest: false, includeArchived: false, includeUnscored: false,
+    limit: q.limit,
+    eligibleOnly: true,
+    requiredNuts: q.requiredNuts,
+  })
+  return {
+    recommended: picked.map(m => ({
+      url: m.url,
+      name: m.name,
+      reliabilityScore: m.score,
+      uptimePct24h: m.uptime24hPct,
+      latencyMs: latency.get(m.url) ?? null,
+      version: m.software,
+      units: [q.unit],
+    })),
+    generatedAt: new Date(snap.computedAt).toISOString(),
+    methodology: METHODOLOGY_VERSION,
+  }
+}
+
 // ── Paths (CORS, rate limit) ──────────────────────────────────────────────────
 
 const PUBLIC_CORS_EXACT = new Set(['/api/mints/known', '/api/mints/recommend', '/health'])

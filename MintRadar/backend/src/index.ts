@@ -23,7 +23,7 @@ import { hasRecentReviewSurge } from './reviewSurge.js'
 import { isTestMint } from './testMints.js'
 import { publicMintName, publicMintNameOrHost } from './mintNames.js'
 import {
-  isWalletApiPath, isPublicCorsPath, PUBLIC_CORS_EXPOSE_HEADERS, parseWalletListQuery, walletListEnvelope, walletSingleEnvelope,
+  isWalletApiPath, isPublicCorsPath, PUBLIC_CORS_EXPOSE_HEADERS, parseWalletListQuery, walletListEnvelope, walletSingleEnvelope, recommendEnvelope,
   memoizedBody, sendCachedBody, sendWalletError, queryOf, type Snapshot,
 } from './walletApi.js'
 import { verifyNip05 } from './nip05Verify.js'
@@ -1163,6 +1163,9 @@ app.get('/api/mints/outages', (req: Request, res: Response): void => {
 })
 
 
+// Built on the same snapshot and the same filter function as the wallet API (walletApi.ts): only online, scored,
+// non-test, non-archived mints that were first seen at least 14 days ago (eligibleForRecommendation). The shape is
+// the one from 2026-10-10 plus `methodology`; `generatedAt` is the time of the snapshot (so the ETag stays stable).
 app.get('/api/mints/recommend', (req: Request, res: Response): void => {
   const unit = typeof req.query['unit'] === 'string' ? req.query['unit'] : 'sat'
   const minScore = typeof req.query['minScore'] === 'string' && /^\d+$/.test(req.query['minScore'])
@@ -1174,56 +1177,9 @@ app.get('/api/mints/recommend', (req: Request, res: Response): void => {
   const nutsParam = typeof req.query['nuts'] === 'string' ? req.query['nuts'] : ''
   const requiredNuts = nutsParam.split(',').map(n => n.trim()).filter(Boolean)
 
-  pool.query(`
-    SELECT m.url, m.name, m.last_reliability_score, m.version, m.nuts_limits,
-           latest.online, latest.latency_ms,
-           (SELECT COUNT(*) FILTER (WHERE online) * 100.0 / NULLIF(COUNT(*), 0)
-            FROM mint_history h
-            WHERE h.url = m.url AND h.checked_at >= NOW() - INTERVAL '24 hours') AS uptime_24h
-    FROM mints m
-    JOIN LATERAL (
-      SELECT online, latency_ms FROM mint_history
-      WHERE url = m.url ORDER BY checked_at DESC, id DESC LIMIT 1
-    ) latest ON true
-    WHERE latest.online = true
-      AND m.last_reliability_score >= $1
-      AND ($2 = '' OR m.units @> ARRAY[$2]::text[])
-    ORDER BY m.last_reliability_score DESC, latest.latency_ms ASC NULLS LAST
-    LIMIT $3
-  `, [minScore, unit, limit])
-    .then(result => {
-      let rows = result.rows as Array<{
-        url: string
-        name: string | null
-        last_reliability_score: number
-        version: string | null
-        nuts_limits: Record<string, unknown> | null
-        latency_ms: number | null
-        uptime_24h: number | null
-      }>
-
-      if (requiredNuts.length > 0) {
-        rows = rows.filter(r => {
-          const limits = r.nuts_limits ?? {}
-          return requiredNuts.every(n => limits[n] != null || limits[n.replace(/^0+/, '')] != null)
-        })
-      }
-
-      const recommended = rows.slice(0, limit).map(r => ({
-        url: r.url,
-        name: publicMintName(r.name, r.url).name,
-        reliabilityScore: r.last_reliability_score,
-        uptimePct24h: r.uptime_24h != null ? Math.round(r.uptime_24h) : null,
-        latencyMs: r.latency_ms,
-        version: r.version,
-        units: [unit],
-      }))
-
-      res.json({
-        recommended,
-        generatedAt: new Date().toISOString(),
-      })
-    })
+  loadKnownMints()
+    .then(snap => sendCachedBody(res, memoizedBody(snap, `recommend|${JSON.stringify([unit, minScore, limit, requiredNuts])}`,
+      () => recommendEnvelope(snap, { unit, minScore, limit, requiredNuts }))))
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/mints/recommend]', err)
       res.status(500).json({ error: 'Internal server error' })

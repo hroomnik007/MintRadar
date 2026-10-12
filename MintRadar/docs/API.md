@@ -565,18 +565,22 @@ The error shape of the wallet routes (`{ "error": { "code", "message" } }`) is d
 
 ---
 
-## For wallet developers
+## `GET /api/v1/mints/recommend`
 
-`GET /api/v1/mints/recommend` returns a short list of currently healthy mints suitable for a wallet’s default or suggested list.
+A short list of currently healthy mints for a wallet's default or suggested list. For a full, stable view of every mint use [`/api/v1/wallets/mints`](#api-for-wallets-v1); this route keeps the shape it was introduced with on 2026-10-10 (new fields may be added). Built on the same data and the same filter function as the wallet API; public with `Access-Control-Allow-Origin: *`, `Cache-Control: public, max-age=300` and a strong `ETag` (poll at most every 5 minutes); it counts against the general 60 requests / minute / IP limit.
+
+**Only mints with `eligibleForRecommendation` are returned** (since 2026-10-12): online, scored, not on the manual test-mint list, not archived, and first seen at least 14 days ago. Test mints and mints under 14 days never appear.
 
 **Query parameters**
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `unit` | `sat` | Unit the mint must support |
+| `unit` | `sat` | Unit the mint must list (an empty value turns the filter off) |
 | `minScore` | `80` | Minimum reliability score (0–100) |
-| `limit` | `5` | Max results (1–10) |
-| `nuts` | — | Comma-separated NUT numbers the mint must support (e.g. `4,5`) |
+| `limit` | `5` | Max results (1–10), applied after all filters |
+| `nuts` | — | Comma-separated NUT numbers the mint must advertise (e.g. `4,5`) |
+
+An invalid `minScore` or `limit` falls back to its default or is clamped (this route does not return `400` for them). Results are ordered by score (descending), then 7-day uptime, then name.
 
 **Example**
 
@@ -599,9 +603,9 @@ curl "https://mintradar.org/api/v1/mints/recommend?unit=sat&minScore=85&limit=3&
       "units": ["sat"]
     }
   ],
-  "generatedAt": "2026-10-10T19:00:00.000Z"
+  "generatedAt": "2026-10-12T18:30:12.345Z",
+  "methodology": 3
 }
 ```
 
-Results change every few minutes (probe cycle). A wallet should still let the user override and pin a preferred mint.
-
+`generatedAt` is the time of the data snapshot (at most 60 seconds old); `methodology` is the version of the score formula (see "Stability"). Errors keep the older shape `{ "error": "Internal server error" }`. A wallet should still let the user override and pin a preferred mint.
