@@ -16,6 +16,10 @@ import WebSocket from 'ws'
 import type { ClientRequestArgs } from 'http'
 import { pool } from './db.js'
 import { safeLookup, isWellFormedMintUrl } from './ssrf.js'
+import { reserveDmSlot, releaseDmSlot, resetSummaryFlag, type DmSlot } from './dmQuota.js'
+import {
+  ALERT_COOLDOWN_HOURS, CLEAR_PROBES_TO_REARM, DM_CAP_SUMMARY_TEXT, UPDOWN_COOLDOWN_MINUTES, type AlertKind,
+} from './notificationLimits.js'
 
 // Always install the 'ws' package as globalThis.WebSocket, even on Node
 // versions (22+) that ship a native undici WebSocket. The root 'nostr-tools'
@@ -97,9 +101,9 @@ const NOTIFICATION_RELAYS = [
 
 const RELAY_PUBLISH_TIMEOUT_MS = 5_000
 // Per-direction cooldown: at most one down-alert and one up-alert per subscriber
-// per mint per hour. Enforced atomically in SQL (see notifySubscribers) — a
-// constant so the interval literal in the query stays in one place.
-const COOLDOWN_MINUTES = 60
+// per mint per hour (UPDOWN_COOLDOWN_MINUTES, notificationLimits.ts). Enforced
+// atomically in SQL (see notifySubscribers).
+const COOLDOWN_MINUTES = UPDOWN_COOLDOWN_MINUTES
 
 let serviceSecretKey: Uint8Array | null = null
 
@@ -217,6 +221,7 @@ export async function publishLongFormArticle(params: {
 // mint cannot put its own sentences, links, nostr: references or @mentions into a message signed by
 // the MintRadar service key. The only "://" in a DM is the one in "https://mintradar.org/".
 // ---------------------------------------------------------------------------
+export type { AlertKind }
 export type DmKind = 'down' | 'up' | AlertKind
 
 const MINTRADAR_ORIGIN = 'https://mintradar.org'
@@ -246,6 +251,69 @@ interface ClaimedRow {
   pubkey: string
   relays: string[]
   claimed_at: Date
+  /** "More alerts" only: the claim column's value before this claim (restored when the send fails). */
+  prev_at?: Date | null
+}
+
+type DeliveryOutcome = 'sent' | 'failed' | 'dropped'
+
+// The 13 fixed notification relays plus the subscriber's own.
+function targetRelaysFor(row: ClaimedRow): string[] {
+  return [...new Set([...row.relays, ...NOTIFICATION_RELAYS])]
+}
+
+// Sent once per window to a subscriber whose daily cap was just exceeded (not itself counted).
+async function sendCapSummary(secretKey: Uint8Array, row: ClaimedRow, slot: DmSlot): Promise<void> {
+  try {
+    const giftWrap = nip17.wrapEvent(secretKey, { publicKey: row.pubkey }, DM_CAP_SUMMARY_TEXT)
+    const { succeeded } = await publishToRelays(targetRelaysFor(row), giftWrap)
+    if (succeeded === 0) await resetSummaryFlag(row.pubkey, slot.windowStart)
+  } catch (err) {
+    console.error(`[notify] cap summary error for pubkey=${row.pubkey.slice(0, 8)}…:`, err)
+    await resetSummaryFlag(row.pubkey, slot.windowStart).catch(() => undefined)
+  }
+}
+
+// One claimed subscriber: take a slot of the per-subscriber daily cap, then publish the gift wrap.
+//  - over the cap          -> 'dropped' (never queued; the claim stays used; one summary DM per window)
+//  - published somewhere   -> 'sent'
+//  - nothing went out      -> 'failed': the claim AND the cap slot are given back so the next probe retries
+// Never throws.
+async function deliverDm(
+  secretKey: Uint8Array,
+  row: ClaimedRow,
+  message: string,
+  errorLabel: string,
+  releaseClaim: (row: ClaimedRow) => Promise<unknown>,
+): Promise<DeliveryOutcome> {
+  let slot: DmSlot | null = null
+  const giveBack = async (): Promise<void> => {
+    await releaseClaim(row)
+    if (slot?.allowed) {
+      await releaseDmSlot(row.pubkey, slot.windowStart).catch(err =>
+        console.error(`[notify] failed to release cap slot for ${row.pubkey.slice(0, 8)}…:`, err))
+    }
+  }
+  try {
+    slot = await reserveDmSlot(row.pubkey)
+    if (!slot.allowed) {
+      if (slot.sendSummary) await sendCapSummary(secretKey, row, slot)
+      return 'dropped'
+    }
+    const giftWrap = nip17.wrapEvent(secretKey, { publicKey: row.pubkey }, message)
+    const { succeeded } = await publishToRelays(targetRelaysFor(row), giftWrap)
+    if (succeeded > 0) return 'sent'
+    await giveBack()
+    return 'failed'
+  } catch (err) {
+    console.error(`[notify] ${errorLabel} pubkey=${row.pubkey.slice(0, 8)}…:`, err)
+    await giveBack()
+    return 'failed'
+  }
+}
+
+function summaryLine(sent: number, failed: number, dropped: number): string {
+  return `${sent} sent, ${failed} failed (claim released)` + (dropped > 0 ? `, ${dropped} dropped (daily cap)` : '')
 }
 
 // Fires the DM for a down/up transition to every subscriber with a matching
@@ -259,6 +327,7 @@ interface ClaimedRow {
 // probe cycles racing on the same up/down transition can't both claim the same
 // subscriber — the loser's UPDATE matches zero rows — so at most one DM is sent.
 // (Replaces a race-prone SELECT-check → send → UPDATE sequence.)
+// Every claimed DM also takes a slot of the subscriber's daily cap (deliverDm).
 export async function notifySubscribers(mintUrl: string, direction: 'down' | 'up', checkedAt: Date): Promise<void> {
   if (!serviceSecretKey) return
   const secretKey = serviceSecretKey
@@ -267,9 +336,11 @@ export async function notifySubscribers(mintUrl: string, direction: 'down' | 'up
     const notifyColumn = direction === 'down' ? 'notify_on_down' : 'notify_on_up'
     const cooldownColumn = direction === 'down' ? 'last_notified_down_at' : 'last_notified_up_at'
 
+    // The claim time is cut to milliseconds: it is read back as a JS Date and used as the guard of
+    // releaseClaim below, and PostgreSQL's microseconds would never compare equal to it.
     const claimed = await pool.query(
       `UPDATE notification_subscriptions
-          SET ${cooldownColumn} = now()
+          SET ${cooldownColumn} = date_trunc('milliseconds', now())
         WHERE mint_url = $1
           AND ${notifyColumn} = true
           AND (${cooldownColumn} IS NULL OR ${cooldownColumn} < now() - INTERVAL '${COOLDOWN_MINUTES} minutes')
@@ -285,38 +356,21 @@ export async function notifySubscribers(mintUrl: string, direction: 'down' | 'up
     // retry that subscriber. Guarded on the exact timestamp we set, so a
     // concurrent successful claim is never clobbered. Reverting to NULL is
     // safe — the claim query only matched rows whose cooldown had elapsed.
-    const releaseClaim = (pubkey: string, claimedAt: Date) =>
+    const releaseClaim = (row: ClaimedRow) =>
       pool.query(
         `UPDATE notification_subscriptions SET ${cooldownColumn} = NULL
          WHERE pubkey = $1 AND mint_url = $2 AND ${cooldownColumn} = $3`,
-        [pubkey, mintUrl, claimedAt]
-      ).catch(err => console.error(`[notify] failed to release claim for ${pubkey.slice(0, 8)}…:`, err))
+        [row.pubkey, mintUrl, row.claimed_at]
+      ).catch(err => console.error(`[notify] failed to release claim for ${row.pubkey.slice(0, 8)}…:`, err))
 
-    let sent = 0
-    let failed = 0
-
+    const count = { sent: 0, failed: 0, dropped: 0 }
     for (const row of rows) {
-      try {
-        const giftWrap = nip17.wrapEvent(secretKey, { publicKey: row.pubkey }, message)
-        const targetRelays = [...new Set([...row.relays, ...NOTIFICATION_RELAYS])]
-        const { succeeded } = await publishToRelays(targetRelays, giftWrap)
-
-        if (succeeded > 0) {
-          sent++
-        } else {
-          failed++
-          await releaseClaim(row.pubkey, row.claimed_at)
-        }
-      } catch (err) {
-        failed++
-        console.error(`[notify] send error for mint=${mintUrl} pubkey=${row.pubkey.slice(0, 8)}…:`, err)
-        await releaseClaim(row.pubkey, row.claimed_at)
-      }
+      count[await deliverDm(secretKey, row, message, `send error for mint=${mintUrl}`, releaseClaim)]++
     }
 
     console.log(
       `[notify] ${direction}-alert (checked ${checkedAt.toISOString()}) for ${mintUrl}: ` +
-      `claimed ${rows.length}, ${sent} sent, ${failed} failed (claim released)`
+      `claimed ${rows.length}, ${summaryLine(count.sent, count.failed, count.dropped)}`
     )
   } catch (err) {
     console.error(`[notify] notifySubscribers error for mint=${mintUrl}:`, err)
@@ -325,83 +379,105 @@ export async function notifySubscribers(mintUrl: string, direction: 'down' | 'up
 
 // ---------------------------------------------------------------------------
 // "More alerts": mint/melt issues, version outdated, lost NUT-04/05.
-// Same atomic-claim pattern as notifySubscribers, one claim column per alert.
-// NULL = armed. The claim sets it to now() and RETURNs only the rows it claimed,
-// so overlapping probe cycles cannot both send. resetAlert() re-arms a mint's
-// subscribers once the condition has cleared. Existing up/down code is untouched.
+// Same atomic-claim pattern as notifySubscribers, one claim column per alert:
+// notification_subscriptions.last_notified_*_at = the time of the subscriber's last claim, NEVER reset
+// to NULL by a cleared condition (that used to bypass every cooldown). A subscriber can be claimed when
+//   - the slot is NULL (never notified), or
+//   - the cooldown (ALERT_COOLDOWN_HOURS) has passed since the last claim AND the mint has been re-armed
+//     since that claim (mints.alert_rearmed_<kind>_at > the claim): the condition stayed clear for
+//     CLEAR_PROBES_TO_REARM consecutive probes (recordAlertClear), so one episode = at most one DM.
+// The claim is one atomic statement (row lock + re-check), so overlapping probes or two backend
+// processes cannot both send. Every claimed DM also takes a slot of the daily cap (deliverDm).
+// The probe loop drives it: an active condition calls notifyAlert (which also resets the clear streak),
+// a clear one calls recordAlertClear, an unknown one does neither.
 // ---------------------------------------------------------------------------
-export type AlertKind = 'mint_melt' | 'version_outdated' | 'nut_loss'
-
-const MINT_MELT_COOLDOWN_HOURS = 12
-
-const ALERTS: Record<AlertKind, { flag: string; claim: string; cooldownHours: number | null }> = {
-  mint_melt: { flag: 'notify_on_mint_melt_issues', claim: 'last_notified_mint_melt_at', cooldownHours: MINT_MELT_COOLDOWN_HOURS },
-  version_outdated: { flag: 'notify_on_version_outdated', claim: 'last_notified_version_outdated_at', cooldownHours: null },
-  nut_loss: { flag: 'notify_on_nut_loss', claim: 'last_notified_nut_loss_at', cooldownHours: null },
+const ALERTS: Record<AlertKind, { flag: string; claim: string; streak: string; rearmed: string }> = {
+  mint_melt: {
+    flag: 'notify_on_mint_melt_issues', claim: 'last_notified_mint_melt_at',
+    streak: 'alert_clear_streak_mint_melt', rearmed: 'alert_rearmed_mint_melt_at',
+  },
+  version_outdated: {
+    flag: 'notify_on_version_outdated', claim: 'last_notified_version_outdated_at',
+    streak: 'alert_clear_streak_version_outdated', rearmed: 'alert_rearmed_version_outdated_at',
+  },
+  nut_loss: {
+    flag: 'notify_on_nut_loss', claim: 'last_notified_nut_loss_at',
+    streak: 'alert_clear_streak_nut_loss', rearmed: 'alert_rearmed_nut_loss_at',
+  },
 }
 
-// Sends one DM per subscriber of `mintUrl` who has the alert's flag on and whose claim slot is armed
-// (and, for mint/melt, whose last alert is older than 12 h). Never throws.
+// Sends one DM per subscriber of `mintUrl` who has the alert's flag on and can be claimed (see above).
+// Never throws.
 export async function notifyAlert(mintUrl: string, kind: AlertKind): Promise<void> {
   if (!serviceSecretKey) return
   const secretKey = serviceSecretKey
   const cfg = ALERTS[kind]
 
   try {
-    const cooldown = cfg.cooldownHours === null
-      ? `${cfg.claim} IS NULL`
-      : `(${cfg.claim} IS NULL OR ${cfg.claim} < now() - INTERVAL '${cfg.cooldownHours} hours')`
-    const claimed = await pool.query(
-      `UPDATE notification_subscriptions
-          SET ${cfg.claim} = now()
-        WHERE mint_url = $1
-          AND ${cfg.flag} = true
-          AND ${cooldown}
-       RETURNING pubkey, relays, ${cfg.claim} AS claimed_at`,
+    // The condition is active: restart the clear streak (a no-op write is skipped when it is already 0).
+    await pool.query(
+      `UPDATE mints SET ${cfg.streak} = 0 WHERE url = $1 AND ${cfg.streak} <> 0`,
       [mintUrl]
+    )
+
+    // FOR UPDATE row-locks the candidates; a concurrent claim waits, re-checks the WHERE against the
+    // updated row and no longer matches. prev_at is what the release restores if the send fails.
+    const claimed = await pool.query(
+      `WITH cand AS (
+         SELECT ns.pubkey, ns.mint_url, ns.${cfg.claim} AS prev_at
+           FROM notification_subscriptions ns
+           JOIN mints m ON m.url = ns.mint_url
+          WHERE ns.mint_url = $1
+            AND ns.${cfg.flag} = true
+            AND (ns.${cfg.claim} IS NULL
+                 OR (ns.${cfg.claim} < now() - make_interval(hours => $2::int)
+                     AND ns.${cfg.claim} < m.${cfg.rearmed}))
+            FOR UPDATE OF ns
+       )
+       UPDATE notification_subscriptions ns
+          SET ${cfg.claim} = date_trunc('milliseconds', now())
+         FROM cand
+        WHERE ns.pubkey = cand.pubkey AND ns.mint_url = cand.mint_url
+       RETURNING ns.pubkey, ns.relays, ns.${cfg.claim} AS claimed_at, cand.prev_at AS prev_at`,
+      [mintUrl, ALERT_COOLDOWN_HOURS[kind]]
     )
     const rows = claimed.rows as ClaimedRow[]
     if (rows.length === 0) return
 
     const message = buildDmText(kind, mintUrl)
 
-    const releaseClaim = (pubkey: string, claimedAt: Date) =>
+    // Guarded on the exact timestamp we set (ms precision, see the claim) so a newer claim is never clobbered.
+    const releaseClaim = (row: ClaimedRow) =>
       pool.query(
-        `UPDATE notification_subscriptions SET ${cfg.claim} = NULL
+        `UPDATE notification_subscriptions SET ${cfg.claim} = $4
          WHERE pubkey = $1 AND mint_url = $2 AND ${cfg.claim} = $3`,
-        [pubkey, mintUrl, claimedAt]
-      ).catch(err => console.error(`[notify] failed to release ${kind} claim for ${pubkey.slice(0, 8)}…:`, err))
+        [row.pubkey, mintUrl, row.claimed_at, row.prev_at ?? null]
+      ).catch(err => console.error(`[notify] failed to release ${kind} claim for ${row.pubkey.slice(0, 8)}…:`, err))
 
-    let sent = 0
-    let failed = 0
+    const count = { sent: 0, failed: 0, dropped: 0 }
     for (const row of rows) {
-      try {
-        const giftWrap = nip17.wrapEvent(secretKey, { publicKey: row.pubkey }, message)
-        const targetRelays = [...new Set([...row.relays, ...NOTIFICATION_RELAYS])]
-        const { succeeded } = await publishToRelays(targetRelays, giftWrap)
-        if (succeeded > 0) sent++
-        else { failed++; await releaseClaim(row.pubkey, row.claimed_at) }
-      } catch (err) {
-        failed++
-        console.error(`[notify] ${kind} send error for mint=${mintUrl} pubkey=${row.pubkey.slice(0, 8)}…:`, err)
-        await releaseClaim(row.pubkey, row.claimed_at)
-      }
+      count[await deliverDm(secretKey, row, message, `${kind} send error for mint=${mintUrl}`, releaseClaim)]++
     }
-    console.log(`[notify] ${kind}-alert for ${mintUrl}: claimed ${rows.length}, ${sent} sent, ${failed} failed (claim released)`)
+    console.log(`[notify] ${kind}-alert for ${mintUrl}: claimed ${rows.length}, ${summaryLine(count.sent, count.failed, count.dropped)}`)
   } catch (err) {
     console.error(`[notify] notifyAlert(${kind}) error for mint=${mintUrl}:`, err)
   }
 }
 
-// The condition cleared: re-arm this mint's subscribers so a later recurrence notifies again. Never throws.
-export async function resetAlert(mintUrl: string, kind: AlertKind): Promise<void> {
+// The condition is clear on this probe: count it. After CLEAR_PROBES_TO_REARM clear probes in a row the
+// mint is re-armed (alert_rearmed_*_at = now), which lets a later episode notify again — still subject to
+// the cooldown. One atomic statement; once the streak is full there is nothing left to write. Never throws.
+export async function recordAlertClear(mintUrl: string, kind: AlertKind): Promise<void> {
   try {
-    const col = ALERTS[kind].claim
+    const { streak, rearmed } = ALERTS[kind]
     await pool.query(
-      `UPDATE notification_subscriptions SET ${col} = NULL WHERE mint_url = $1 AND ${col} IS NOT NULL`,
-      [mintUrl]
+      `UPDATE mints
+          SET ${streak} = ${streak} + 1,
+              ${rearmed} = CASE WHEN ${streak} + 1 >= $2::int THEN now() ELSE ${rearmed} END
+        WHERE url = $1 AND ${streak} < $2::int`,
+      [mintUrl, CLEAR_PROBES_TO_REARM]
     )
   } catch (err) {
-    console.error(`[notify] resetAlert(${kind}) error for mint=${mintUrl}:`, err)
+    console.error(`[notify] recordAlertClear(${kind}) error for mint=${mintUrl}:`, err)
   }
 }

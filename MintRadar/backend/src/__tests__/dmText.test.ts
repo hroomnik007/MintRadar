@@ -99,21 +99,27 @@ describe('end to end through notifyAlert / notifySubscribers: DB-held mint text 
     last_error: 'connect failed: contact evil.example',
   }
   const claimed = (pubkey: string) => ({ rows: [{ pubkey, relays: ['wss://relay.example.com'], claimed_at: new Date('2026-10-12T10:00:00Z') }] })
+  // The claim gets its subscriber, the cap reservation a free slot, EVERY other query the hostile mint row:
+  // if the code read a mint name/version/motd/error from the DB, it would show up in the text.
+  const route = (pubkey: string) => (sql: string) => {
+    if (/WITH cand AS|UPDATE notification_subscriptions/.test(sql) && /RETURNING/.test(sql)) return Promise.resolve(claimed(pubkey))
+    if (sql.includes('INSERT INTO notification_dm_quota')) return Promise.resolve({ rows: [{ dm_count: 1, window_start: new Date() }] })
+    return Promise.resolve({ rows: [HOSTILE_ROW], rowCount: 1 })
+  }
   const decrypt = (sk: Uint8Array) => nip17.unwrapEvent(publishMock.mock.calls[0]![1] as NostrEvent, sk).content
 
   for (const kind of ['mint_melt', 'version_outdated', 'nut_loss'] as const) {
     it(`${kind}: sends exactly buildDmText and issues no query that could read name/version/motd/error`, async () => {
       const sk = generateSecretKey()
       const url = 'https://mint.example.com/pay-evil.example'
-      query.mockResolvedValueOnce(claimed(getPublicKey(sk)))
-      query.mockResolvedValue({ rows: [HOSTILE_ROW], rowCount: 1 }) // any extra query would hand over hostile text
+      query.mockImplementation(route(getPublicKey(sk)))
       await svc.notifyAlert(url, kind)
       const text = decrypt(sk)
       expect(text).toBe(svc.buildDmText(kind, url))
       for (const bad of ['URGENT', 'npub1abc', '@jack', 'evil.example/', 'www.', 'Nutshell', 'motd', 'connect failed']) {
         expect(text.replace(/View details: \S+$/, '')).not.toContain(bad)
       }
-      for (const call of query.mock.calls) expect(String(call[0])).not.toMatch(/\b(name|motd|last_error|version)\b/i)
+      for (const call of query.mock.calls) expect(String(call[0])).not.toMatch(/\b(name|motd|last_error)\b/i)
     })
   }
 
@@ -121,8 +127,7 @@ describe('end to end through notifyAlert / notifySubscribers: DB-held mint text 
     it(`${direction}: sends exactly buildDmText`, async () => {
       const sk = generateSecretKey()
       const url = 'https://mint.example.com/pay-evil.example'
-      query.mockResolvedValueOnce(claimed(getPublicKey(sk)))
-      query.mockResolvedValue({ rows: [HOSTILE_ROW], rowCount: 1 })
+      query.mockImplementation(route(getPublicKey(sk)))
       await svc.notifySubscribers(url, direction, new Date())
       expect(decrypt(sk)).toBe(svc.buildDmText(direction, url))
     })

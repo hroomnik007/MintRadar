@@ -340,11 +340,30 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS review_count_pending_low_streak INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_down_at TIMESTAMPTZ',
     'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_up_at TIMESTAMPTZ',
-    // "More alerts" claim slots (nostrService.ts notifyAlert). NULL = armed; set = already sent for the
-    // current condition; reset to NULL when the condition clears (resetAlert). mint/melt also keeps a 12 h cooldown.
+    // "More alerts" claim slots (nostrService.ts notifyAlert): the time of the subscriber's last claim
+    // (NULL = never notified). Never reset by a cleared condition any more; the cooldown and the re-arm
+    // (alert_rearmed_*_at, below) decide when the next DM may go out.
     'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_mint_melt_at TIMESTAMPTZ',
     'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_version_outdated_at TIMESTAMPTZ',
     'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_nut_loss_at TIMESTAMPTZ',
+    // Hysteresis of the "More alerts" (notificationLimits.ts CLEAR_PROBES_TO_REARM): consecutive probes on
+    // which the condition was clear (reset to 0 while it is active) and the moment the streak last reached
+    // the threshold. A subscriber is claimable again only when its last claim is older than this moment.
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS alert_clear_streak_mint_melt INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS alert_clear_streak_version_outdated INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS alert_clear_streak_nut_loss INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS alert_rearmed_mint_melt_at TIMESTAMPTZ',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS alert_rearmed_version_outdated_at TIMESTAMPTZ',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS alert_rearmed_nut_loss_at TIMESTAMPTZ',
+    // Per-subscriber daily cap on notification DMs (dmQuota.ts): one row per pubkey, window = 24 h from the
+    // first DM, count capped at cap+1 (bounded), summary_sent = the one "paused alerts" DM of the window.
+    `CREATE TABLE IF NOT EXISTS notification_dm_quota (
+       pubkey TEXT PRIMARY KEY,
+       window_start TIMESTAMPTZ NOT NULL DEFAULT now(),
+       dm_count INTEGER NOT NULL DEFAULT 0,
+       summary_sent BOOLEAN NOT NULL DEFAULT false
+     )`,
+    'CREATE INDEX IF NOT EXISTS idx_notification_dm_quota_window ON notification_dm_quota(window_start)',
     // Version freshness grace period (see versionCatalog.ts's effectiveLatestVersions()):
     // released_at is GitHub's own published_at for latest_version, so grace periods are
     // measured from the real upstream release date, not from whenever our daily cron
@@ -424,5 +443,7 @@ export async function pruneOldNotificationSubscriptions(): Promise<number> {
   const result = await pool.query(
     `DELETE FROM notification_subscriptions WHERE updated_at < now() - interval '30 days'`
   )
+  // Cap windows last 24 h; a row older than two days carries no information any more.
+  await pool.query(`DELETE FROM notification_dm_quota WHERE window_start < now() - interval '2 days'`)
   return result.rowCount ?? 0
 }

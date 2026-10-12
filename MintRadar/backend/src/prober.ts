@@ -4,7 +4,7 @@ import pLimit from 'p-limit'
 import { pool } from './db.js'
 import { checkUrlSafety, safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 import { computeReliabilityScore, TRACKED_NUT_KEYS } from './shared/reliabilityScore.js'
-import { notifySubscribers, notifyAlert, resetAlert, isNotificationServiceEnabled, type AlertKind } from './nostrService.js'
+import { notifySubscribers, notifyAlert, recordAlertClear, isNotificationServiceEnabled, type AlertKind } from './nostrService.js'
 import { mintMeltCondition, versionCondition, nutLossTransition, type Condition } from './alertTriggers.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { normalizeMintPubkey } from './mintPubkey.js'
@@ -78,12 +78,12 @@ async function storeNetwork(url: string, g: GeoInfo): Promise<void> {
   await pool.query('UPDATE mints SET net_asn = $1, net_org = $2, net_country = $3 WHERE url = $4', [g.asn, g.org, g.country, url])
 }
 
-// "More alerts": an active condition tries to claim + send (notifyAlert is atomic and one-shot per
-// condition), a cleared one re-arms the mint's subscribers, an unknown one does nothing. Fire-and-forget:
-// both helpers never throw, so this cannot block or fail the probe.
+// "More alerts": an active condition tries to claim + send (notifyAlert is atomic; one DM per episode and
+// cooldown), a cleared one counts towards the re-arm (CLEAR_PROBES_TO_REARM consecutive clear probes), an
+// unknown one does nothing. Fire-and-forget: both helpers never throw, so this cannot block or fail the probe.
 function applyAlertCondition(url: string, kind: AlertKind, condition: Condition): void {
   if (condition === 'active') void notifyAlert(url, kind)
-  else if (condition === 'clear') void resetAlert(url, kind)
+  else if (condition === 'clear') void recordAlertClear(url, kind)
 }
 
 export async function backfillServerLocations(): Promise<void> {
