@@ -130,7 +130,7 @@ PostgreSQL database backed up every 6 hours via server cron.
 
 ### 📎 Public API
 
-Read-only JSON under `https://mintradar.org/api/`, including a stable, CORS-enabled API for wallets (`GET /api/v1/wallets/mints`). Rate-limited. See [docs/API.md](docs/API.md).
+Read-only JSON under `https://mintradar.org/api/`, including a stable, CORS-enabled API for wallets (`GET /api/v1/wallets/mints`). Rate-limited. See [docs/API.md](docs/API.md). How the score is computed (with its change log): [mintradar.org/methodology](https://mintradar.org/methodology); a quick start for wallet developers: [mintradar.org/for-wallets](https://mintradar.org/for-wallets).
 
 ---
 

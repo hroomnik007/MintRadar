@@ -8,6 +8,7 @@ import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeError
 import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } from './mintPubkey.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import type { LatestVersions } from './shared/versionRule.js'
+import { METHODOLOGY_CHANGES } from './shared/methodology.js'
 import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
 import { getAuditCzForMint, getAuditCzSyncStatus, clampAuditCzLimit } from './auditCz.js'
 import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
@@ -656,7 +657,12 @@ app.get('/api', (_req: Request, res: Response): void => {
 // Static routes here must stay in sync with LEARN_MODULES (src/constants/learnModules.ts)
 // and App.tsx's route list — there is no shared workspace between frontend/backend to
 // import that from, same caveat as testMints.ts/reliabilityScore.ts.
-const SITEMAP_STATIC_PATHS: Array<{ loc: string; changefreq: string; priority: string }> = [
+// `lastmod` (YYYY-MM-DD) only where the content has a date of its own: /methodology = the date of the newest
+// METHODOLOGY_CHANGES entry (it changes with the formula); /for-wallets = FOR_WALLETS_PAGE_LASTMOD, bumped by hand
+// when the page content changes.
+const METHODOLOGY_LASTMOD = METHODOLOGY_CHANGES.reduce((latest, c) => (c.date > latest ? c.date : latest), '')
+const FOR_WALLETS_PAGE_LASTMOD = '2026-10-13'
+const SITEMAP_STATIC_PATHS: Array<{ loc: string; changefreq: string; priority: string; lastmod?: string }> = [
   { loc: '/', changefreq: 'hourly', priority: '1.0' },
   { loc: '/stats', changefreq: 'daily', priority: '0.8' },
   { loc: '/tools', changefreq: 'weekly', priority: '0.7' },
@@ -668,6 +674,8 @@ const SITEMAP_STATIC_PATHS: Array<{ loc: string; changefreq: string; priority: s
   { loc: '/learn/getting-started-with-a-wallet', changefreq: 'monthly', priority: '0.5' },
   { loc: '/learn/safe-habits', changefreq: 'monthly', priority: '0.5' },
   { loc: '/about', changefreq: 'monthly', priority: '0.5' },
+  { loc: '/methodology', changefreq: 'monthly', priority: '0.6', lastmod: METHODOLOGY_LASTMOD },
+  { loc: '/for-wallets', changefreq: 'monthly', priority: '0.6', lastmod: FOR_WALLETS_PAGE_LASTMOD },
 ]
 
 // Dynamically includes every tracked mint's /mint/:url page (excluding test mints) —
@@ -681,11 +689,11 @@ app.get('/sitemap.xml', (_req: Request, res: Response): void => {
         .map(r => r.url)
         .filter(url => !isTestMint(url))
 
-      const urlEntry = (loc: string, changefreq: string, priority: string): string =>
-        `  <url>\n    <loc>${loc}</loc>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`
+      const urlEntry = (loc: string, changefreq: string, priority: string, lastmod?: string): string =>
+        `  <url>\n    <loc>${loc}</loc>\n${lastmod ? `    <lastmod>${lastmod}</lastmod>\n` : ''}    <changefreq>${changefreq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`
 
       const staticXml = SITEMAP_STATIC_PATHS
-        .map(p => urlEntry(`https://mintradar.org${p.loc}`, p.changefreq, p.priority))
+        .map(p => urlEntry(`https://mintradar.org${p.loc}`, p.changefreq, p.priority, p.lastmod))
         .join('\n')
       const mintXml = mintUrls
         .map(u => urlEntry(`https://mintradar.org/mint/${encodeURIComponent(u)}`, 'daily', '0.4'))

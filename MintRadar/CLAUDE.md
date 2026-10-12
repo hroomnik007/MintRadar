@@ -15,6 +15,7 @@
 | Dashboard filters/default view, Watchlist UI, Compare feature, Stats page layout | `docs/claude/stats-dashboard-watchlist-ui.md` |
 | Colors and tokens (`--copper`, `--bg`, palette), typography, `--dash-chrome-max` page width, **badge/chip text must reach 4.5:1 (derive tones with color-mix from tokens)** | `docs/claude/design-palette-and-chrome.md` |
 | Tools page, Best Mint Wizard, Token Inspector | `docs/claude/tools-page.md` |
+| The `/methodology` and `/for-wallets` pages, `METHODOLOGY_VERSION` / `METHODOLOGY_CHANGES`, `WALLET_MINT_FIELDS`, the sitemap, footer links | `docs/claude/methodology-and-wallet-pages.md` |
 | Reviews (kind:38000), `mint_reviews` sync, `sharedPool` | `docs/claude/reviews-and-nostr.md` |
 | What the browser contacts outside our origin (relays, mints, NIP-05 hosts, avatars, QR), Best Mint wizard direct fetches | `docs/claude/third-party-requests.md` |
 | Mobile layout, navbar, overflow fixes, tooltips, chart focus ring, **modal dialogs (`useModalFocus`, role/aria-modal/name, focus trap/restore)** | `docs/claude/mobile-and-tooltips.md` |
@@ -193,6 +194,7 @@ The `+ Watch` button on Dashboard mint cards only renders when `isLoggedIn === t
 
 ## Docs rule
 A change to user-visible behaviour, to which hosts the browser or the server contacts, or to what is stored about people or for how long updates the matching `docs/claude/` file in the SAME commit; if a public statement changes, also `About.tsx` and `docs/claude/privacy-and-about.md`.
+A change to the Reliability Score formula (component weights, the audit rule, the version rule, the new-mint cap, the recommendation gate) also adds a `METHODOLOGY_CHANGES` entry and bumps `METHODOLOGY_VERSION` in the SAME commit (`backend/src/shared/methodology.ts` and its frontend copy `src/utils/methodology.ts`) and updates the `/methodology` page data (`src/constants/methodologyPage.ts`) — its test fails otherwise; a new field of the wallet API's mint object needs its line in `WALLET_MINT_FIELDS` (`docs/claude/methodology-and-wallet-pages.md`).
 
 ## Key rules
 - **Before starting ANY new task, check `git branch --show-current`.** If it isn't `main`, find out why (an in-progress PR still awaiting merge vs. a forgotten checkout left over from a prior session) before committing anything. A 2026-08-05 session left a feature branch checked out after its PR had already merged; two unrelated follow-up fixes got committed there instead of on `main` and had to be recovered via a second PR (#54).

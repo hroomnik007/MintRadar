@@ -38,6 +38,19 @@ describe('GET /sitemap.xml', () => {
     expect(res.text).toContain(`<loc>https://mintradar.org/mint/${encodeURIComponent('https://b.example')}</loc>`)
   })
 
+  it('lists /methodology and /for-wallets, with a lastmod from the methodology change log and the page date', async () => {
+    query.mockResolvedValueOnce({ rows: [] })
+    const { METHODOLOGY_CHANGES } = await import('../../shared/methodology.js')
+    const newest = [...METHODOLOGY_CHANGES].map(c => c.date).sort().pop()
+
+    const res = await request(app).get('/sitemap.xml')
+
+    expect(res.text).toMatch(new RegExp(`<loc>https://mintradar.org/methodology</loc>\\s*<lastmod>${newest}</lastmod>`))
+    expect(res.text).toMatch(/<loc>https:\/\/mintradar.org\/for-wallets<\/loc>\s*<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/)
+    // entries without a date of their own keep their old shape
+    expect(res.text).toMatch(/<loc>https:\/\/mintradar.org\/about<\/loc>\s*<changefreq>/)
+  })
+
   it('excludes known dev/test-only mints', async () => {
     query.mockResolvedValueOnce({
       rows: [{ url: 'https://testnut.cashu.space' }, { url: 'https://a.example' }],

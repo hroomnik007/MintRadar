@@ -2,6 +2,8 @@
 > Note: references like "see X below" in this file may point into another docs/claude file; the map is the index in CLAUDE.md.
 ## Reliability Score calculation (server-side, in prober.ts)
 
+**Public reference (2026-10-13):** `/methodology` describes this formula for visitors and wallet developers and carries the change log; every number on it is tested against the code. **A formula change must add a `METHODOLOGY_CHANGES` entry and bump `METHODOLOGY_VERSION`** (backend + frontend copy) and update `src/constants/methodologyPage.ts` in the same commit — see `methodology-and-wallet-pages.md`.
+
 **Current weights (verified against `backend/src/shared/reliabilityScore.ts`/`auditScore.ts`,
 2026-09-19): Uptime 40% · Audit reliability 25% · NUT Support 15% · Version freshness 15% ·
 Contact info 5%.** These were reweighted 2026-09-12 (commit `6ae582b`, "reweight toward

@@ -569,6 +569,8 @@ export function AppShell() {
             <a href="https://github.com/hroomnik007/MintRadar" target="_blank" rel="noopener noreferrer">© 2026 MintRadar.org</a>
             <a href="https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/API.md" target="_blank" rel="noopener noreferrer">API</a>
             <Link to="/about">About</Link>
+            <Link to="/methodology">Methodology</Link>
+            <Link to="/for-wallets">For wallets</Link>
           </div>
           <div className="app-footer-note">
             <span>Reliability is a health signal, not solvency.</span>

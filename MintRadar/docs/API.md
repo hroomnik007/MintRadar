@@ -10,7 +10,7 @@ MintRadar provides a public read-only API for querying Cashu mint data. All endp
 
 ## API for wallets (v1)
 
-A small, stable, read-only API for wallet developers: one compact health summary per Cashu mint. It is served from the same snapshot as `/api/mints/known` (one database read per 60 seconds for all callers), under `https://mintradar.org/api/v1/wallets/…`.
+A small, stable, read-only API for wallet developers: one compact health summary per Cashu mint. It is served from the same snapshot as `/api/mints/known` (one database read per 60 seconds for all callers), under `https://mintradar.org/api/v1/wallets/…`. A quick start with runnable examples is on [mintradar.org/for-wallets](https://mintradar.org/for-wallets); the exact rules of the score are on [mintradar.org/methodology](https://mintradar.org/methodology).
 
 > **Operational health signal, not solvency, not a recommendation to deposit funds. Based on MintRadar's probes and third-party audit data; it can be wrong or out of date.**
 
@@ -156,7 +156,7 @@ The other routes keep their older shape `{ "error": "text" }` (see "Error Respon
 
 - Inside v1 a field is **never renamed or removed**, and its type does not change; changes are **additive** (new fields, new optional parameters). Clients must ignore fields they do not know.
 - A deprecation is announced with `Deprecation` and `Sunset` response headers at least **90 days** before anything is removed, and in this document.
-- `methodology` is an integer that changes **whenever the score formula changes** (weights, audit rule, version rule, new-mint cap). `score` values from different `methodology` numbers are not comparable. The history lives in `backend/src/shared/methodology.ts` (`METHODOLOGY_CHANGES`):
+- `methodology` is an integer that changes **whenever the score formula changes** (weights, audit rule, version rule, new-mint cap). `score` values from different `methodology` numbers are not comparable. The history lives in `backend/src/shared/methodology.ts` (`METHODOLOGY_CHANGES`) and is shown on [mintradar.org/methodology](https://mintradar.org/methodology):
 
 | Version | Date | Change |
 |---|---|---|

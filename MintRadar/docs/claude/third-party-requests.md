@@ -46,3 +46,7 @@ So the same result **could** come from backend data by using `latencyMs` instead
 ## Server-side requests to the audit sources (not the visitor's browser)
 
 The backend (never the browser) contacts `cashu.info` (formerly audit.cashu.cz, same service): the mint feed and the swaps feed every 10 minutes (about 12 requests/h) and the per-mint detail every 30 minutes for each covered tracked mint, one at a time with a 2 s pause (about 130 requests/h). None is triggered by a visitor; `/api/mints/audit-cz` reads the database only. Since 2026-10-08 two numbers of each stored detail (attributed failures and swap count of the 7-day window) also feed the audit part of the Reliability Score via `mints.audit_cz_*`; no new request, host or data is involved. Public technical data about mints; no personal data is requested. The mint host's public DNS A record is resolved by the backend itself (not cashu.info) and shown as the IP row.
+
+## /methodology and /for-wallets (2026-10-13)
+
+Both pages are static: they add **no** browser request to any other host and no API call of their own (e2e `methodology-page.spec.ts` / `for-wallets-page.spec.ts` record every request and WebSocket and expect only the app's origin). Their external links (GitHub docs, issues) are plain `<a rel="noopener noreferrer">` links that the visitor follows on purpose.
