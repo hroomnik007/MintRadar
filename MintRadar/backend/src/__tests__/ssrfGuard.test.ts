@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('dns/promises', () => ({ lookup: vi.fn() }))
 
 import { lookup } from 'dns/promises'
-import { checkUrlSafety, isSafeUrl, isWellFormedMintUrl, checkWsUrlSafety, isSafeWsUrl } from '../ssrf.js'
+import { checkUrlSafety, isSafeUrl, isWellFormedMintUrl, checkWsUrlSafety, isSafeWsUrl, isAllowedRelayPort } from '../ssrf.js'
 
 const mockedLookup = vi.mocked(lookup)
 
@@ -215,6 +215,35 @@ describe('checkWsUrlSafety', () => {
 
   it('blocks malformed URLs without throwing', async () => {
     expect(await checkWsUrlSafety('not a url')).toBe('blocked')
+  })
+})
+
+// Subscriber relays: wss only on 443, ws only on 80 (no port = the default). Everything else is rejected
+// before any DNS lookup, with the same 'blocked' result (-> the existing 400 "relays must be ..." answer).
+describe('relay port allowlist', () => {
+  const ALLOWED = [
+    'wss://relay.example.com', 'wss://relay.example.com:443', 'wss://relay.example.com:443/path',
+    'ws://relay.example.com', 'ws://relay.example.com:80', 'wss://[2606:4700:4700::1111]',
+  ]
+  const REJECTED = [
+    'wss://relay.example.com:8080', 'wss://relay.example.com:25', 'wss://relay.example.com:6379',
+    'ws://relay.example.com:8080', 'ws://relay.example.com:443', 'wss://relay.example.com:80',
+    'ws://relay.example.com:22', 'wss://[2606:4700:4700::1111]:8443', 'https://relay.example.com', 'not a url',
+  ]
+  it.each(ALLOWED)('isAllowedRelayPort accepts %s', (url) => { expect(isAllowedRelayPort(url)).toBe(true) })
+  it.each(REJECTED)('isAllowedRelayPort rejects %s', (url) => { expect(isAllowedRelayPort(url)).toBe(false) })
+
+  it.each(ALLOWED)('checkWsUrlSafety: %s is safe when it resolves publicly', async (url) => {
+    resolvesTo({ address: '1.2.3.4', family: 4 })
+    expect(await checkWsUrlSafety(url)).toBe('safe')
+  })
+  it.each(REJECTED)('checkWsUrlSafety: %s is blocked without a DNS lookup', async (url) => {
+    expect(await checkWsUrlSafety(url)).toBe('blocked')
+    expect(mockedLookup).not.toHaveBeenCalled()
+  })
+  it('an IPv6 loopback literal stays blocked, with or without an allowed port', async () => {
+    expect(await checkWsUrlSafety('wss://[::1]')).toBe('blocked')
+    expect(await checkWsUrlSafety('wss://[::1]:443')).toBe('blocked')
   })
 })
 

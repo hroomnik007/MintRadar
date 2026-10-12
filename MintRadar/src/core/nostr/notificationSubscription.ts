@@ -40,11 +40,26 @@ const NOTIFICATION_RELAYS = [
 
 const MAX_SERVER_RELAYS = 10
 
+// The server accepts a subscriber relay only as wss on port 443 or ws on port 80 (no port = the default;
+// backend/src/ssrf.ts isAllowedRelayPort, keep both in sync) and answers 400 to the WHOLE request if one relay
+// breaks the rule. A NIP-65 list can contain relays on other ports, so those are left out here.
+export function isAllowedRelayPort(relay: string): boolean {
+  try {
+    const url = new URL(relay)
+    if (url.protocol === 'wss:') return url.port === '' || url.port === '443'
+    if (url.protocol === 'ws:') return url.port === '' || url.port === '80'
+    return false
+  } catch {
+    return false
+  }
+}
+
 // Server rejects >10 relays (Phase 1 SSRF/abuse guard). NIP-65 read relay
 // lists and NOTIFICATION_RELAYS can both exceed that, so cap here rather
-// than at every call site.
+// than at every call site. If no usable relay is left, the fixed list is used.
 export function resolveNotificationRelays(userReadRelays: string[] | null | undefined): string[] {
-  const relays = userReadRelays && userReadRelays.length > 0 ? userReadRelays : NOTIFICATION_RELAYS
+  const usable = (userReadRelays ?? []).filter(isAllowedRelayPort)
+  const relays = usable.length > 0 ? usable : NOTIFICATION_RELAYS
   return relays.slice(0, MAX_SERVER_RELAYS)
 }
 

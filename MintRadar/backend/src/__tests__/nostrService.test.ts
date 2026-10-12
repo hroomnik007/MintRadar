@@ -440,6 +440,47 @@ describe('notifyAlert / recordAlertClear ("More alerts")', () => {
   })
 })
 
+describe('stored subscriber relays on other ports', () => {
+  const MINT = 'https://mint.example.com'
+  const row = (relays: string[]) => ({ pubkey: getPublicKey(generateSecretKey()), relays, claimed_at: new Date('2026-10-10T12:00:00.000Z') })
+
+  it('are skipped at send time (not used, not deleted) and only counted in the log line', async () => {
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    query.mockResolvedValueOnce({ rows: [row(['wss://ok.example.com', 'wss://odd.example.com:8080', 'ws://plain.example.com:80', 'ws://wrong.example.com:443'])] })
+    await svc.notifySubscribers(MINT, 'down', new Date())
+    const [relays] = publishMock.mock.calls[0] as [string[], NostrEvent]
+    expect(relays).toContain('wss://ok.example.com')
+    expect(relays).toContain('ws://plain.example.com:80')
+    expect(relays).toContain('wss://relay.damus.io') // the 13 fixed relays are unaffected
+    expect(relays.some(r => r.includes(':8080') || r.includes(':443'))).toBe(false)
+    expect(sqlCalls(/DELETE|UPDATE notification_subscriptions SET relays/)).toHaveLength(0)
+    const line = log.mock.calls.map(c => String(c[0])).find(l => l.includes('down-alert'))!
+    expect(line).toContain('2 stored relay(s) skipped (port not 80/443)')
+    expect(line).not.toContain('odd.example.com')
+    log.mockRestore()
+  })
+
+  it('a subscriber whose relays are all on other ports still gets the DM through the 13 fixed relays', async () => {
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    query.mockResolvedValueOnce({ rowCount: 0 }).mockResolvedValueOnce({ rows: [row(['wss://odd.example.com:8443'])] })
+    await svc.notifyAlert(MINT, 'nut_loss')
+    const [relays] = publishMock.mock.calls[0] as [string[], NostrEvent]
+    expect(relays).not.toContain('wss://odd.example.com:8443')
+    expect(relays.length).toBeGreaterThanOrEqual(13)
+  })
+
+  it('no skipped relays -> the log line is unchanged', async () => {
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    query.mockResolvedValueOnce({ rows: [row(['wss://ok.example.com'])] })
+    await svc.notifySubscribers(MINT, 'up', new Date())
+    const line = log.mock.calls.map(c => String(c[0])).find(l => l.includes('up-alert'))!
+    expect(line).toMatch(/claimed 1, 1 sent, 0 failed \(claim released\)$/)
+    log.mockRestore()
+  })
+})
+
 describe('per-subscriber daily cap', () => {
   const MINT = 'https://mint.example.com'
   const CLAIMED_AT = new Date('2026-10-10T12:00:00.000Z')

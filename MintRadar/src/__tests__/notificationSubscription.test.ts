@@ -15,7 +15,7 @@ vi.mock('nostr-tools', () => ({
   nip98: { getToken: async (_u: string, _m: string, sign: (e: object) => Promise<object>) => { await sign({ kind: 27235 }); return 'Nostr token' } },
 }))
 
-import { setNotifyFlag, refreshAllSubscriptions, subscribeToServer, hasNotifyRequestInFlight } from '@/core/nostr/notificationSubscription'
+import { setNotifyFlag, refreshAllSubscriptions, subscribeToServer, hasNotifyRequestInFlight, resolveNotificationRelays, isAllowedRelayPort } from '@/core/nostr/notificationSubscription'
 
 const A = 'https://a.example'
 const B = 'https://b.example'
@@ -218,5 +218,29 @@ describe('subscribeToServer', () => {
     const init = (fetch as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls[0]![1]
     expect((init.headers as Record<string, string>)['Authorization']).toBe('Nostr token')
     expect(init.credentials).toBe('omit')
+  })
+})
+
+// The server answers 400 to the WHOLE subscribe request if one relay is not wss:443 / ws:80 (no port = default).
+describe('relay port rule on the client', () => {
+  it.each([
+    ['wss://relay.example.com', true], ['wss://relay.example.com:443', true], ['ws://relay.example.com', true], ['ws://relay.example.com:80', true],
+    ['wss://relay.example.com:8080', false], ['wss://relay.example.com:25', false], ['ws://relay.example.com:443', false],
+    ['wss://relay.example.com:80', false], ['https://relay.example.com', false], ['not a url', false],
+  ])('isAllowedRelayPort(%s) = %s', (relay, ok) => { expect(isAllowedRelayPort(relay)).toBe(ok) })
+
+  it('leaves relays on other ports out of the list sent to the server', () => {
+    expect(resolveNotificationRelays(['wss://a.example.com', 'wss://b.example.com:8443', 'ws://c.example.com:80', 'wss://d.example.com:6379']))
+      .toEqual(['wss://a.example.com', 'ws://c.example.com:80'])
+  })
+  it('falls back to the fixed list when nothing usable is left (or there is no NIP-65 list)', () => {
+    const fixed = resolveNotificationRelays(null)
+    expect(fixed.length).toBeGreaterThan(0)
+    expect(resolveNotificationRelays(['wss://b.example.com:8443'])).toEqual(fixed)
+    expect(resolveNotificationRelays([])).toEqual(fixed)
+  })
+  it('still caps the list at 10', () => {
+    const many = Array.from({ length: 15 }, (_, i) => `wss://r${i}.example.com`)
+    expect(resolveNotificationRelays(many)).toHaveLength(10)
   })
 })

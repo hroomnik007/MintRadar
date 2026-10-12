@@ -310,6 +310,35 @@ describe('POST /api/notifications/subscribe', () => {
     warnSpy.mockRestore()
   })
 
+  describe('relay port allowlist (wss 443 / ws 80 only)', () => {
+    it.each([
+      'wss://relay.example.com:8080', 'wss://relay.example.com:25', 'wss://relay.example.com:6379',
+      'ws://relay.example.com:443', 'wss://relay.example.com:80', 'ws://relay.example.com:8080',
+    ])('rejects %s with the usual 400 error and no DNS lookup or write', async (relayUrl) => {
+      const { header } = await nip98Header(SUBSCRIBE_PATH, 'POST')
+      const res = await post(
+        SUBSCRIBE_PATH,
+        { mintUrl: 'https://mint.example.com', notifyOnDown: true, notifyOnUp: true, relays: [relayUrl] },
+        header
+      )
+      expect(res.status).toBe(400)
+      expect(res.body.error).toMatch(/relays must be an array of 1-10 valid ws:\/\/ or wss:\/\/ URLs/)
+      expect(lookup).not.toHaveBeenCalled()
+      expect(query).not.toHaveBeenCalled()
+    })
+
+    it('one relay on a bad port invalidates the whole batch, like any other blocked relay', async () => {
+      const { header } = await nip98Header(SUBSCRIBE_PATH, 'POST')
+      resolvesTo({ address: '1.2.3.4', family: 4 })
+      const res = await post(
+        SUBSCRIBE_PATH,
+        { mintUrl: 'https://mint.example.com', notifyOnDown: true, notifyOnUp: true, relays: ['wss://good.example.com', 'wss://bad.example.com:9735'] },
+        header
+      )
+      expect(res.status).toBe(400)
+    })
+  })
+
   describe('relay SSRF guard', () => {
     it.each([
       ['ws://127.0.0.1', 'loopback literal'],

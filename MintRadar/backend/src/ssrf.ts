@@ -176,7 +176,25 @@ export function isWellFormedMintUrl(rawUrl: string): boolean {
 // mint URLs (https:) — used to validate user-supplied relay lists before they
 // are stored, so they can't be used to make the server probe/connect to
 // internal infrastructure later.
+// Subscriber relays may only listen where relays really do: wss on 443, ws on 80 (no port = the default).
+// Anything else (25, 6379, 8080, ws on 443, wss on 80, ...) would let a subscriber point the backend at an
+// arbitrary port of a public host. new URL() drops an explicit default port, so '' means the default.
+export const RELAY_WSS_PORT = '443'
+export const RELAY_WS_PORT = '80'
+
+export function isAllowedRelayPort(rawUrl: string): boolean {
+  try {
+    const url = new URL(rawUrl)
+    if (url.protocol === 'wss:') return url.port === '' || url.port === RELAY_WSS_PORT
+    if (url.protocol === 'ws:') return url.port === '' || url.port === RELAY_WS_PORT
+    return false
+  } catch {
+    return false
+  }
+}
+
 export async function checkWsUrlSafety(rawUrl: string): Promise<UrlSafetyResult> {
+  if (!isAllowedRelayPort(rawUrl)) return 'blocked'
   return checkUrlSafetyForProtocols(rawUrl, ['ws:', 'wss:'])
 }
 

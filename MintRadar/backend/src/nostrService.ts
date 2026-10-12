@@ -15,7 +15,7 @@ import type { Event as NostrEvent } from 'nostr-tools'
 import WebSocket from 'ws'
 import type { ClientRequestArgs } from 'http'
 import { pool } from './db.js'
-import { safeLookup, isWellFormedMintUrl } from './ssrf.js'
+import { safeLookup, isWellFormedMintUrl, isAllowedRelayPort } from './ssrf.js'
 import { reserveDmSlot, releaseDmSlot, resetSummaryFlag, type DmSlot } from './dmQuota.js'
 import {
   ALERT_COOLDOWN_HOURS, CLEAR_PROBES_TO_REARM, DM_CAP_SUMMARY_TEXT, UPDOWN_COOLDOWN_MINUTES, type AlertKind,
@@ -257,16 +257,21 @@ interface ClaimedRow {
 
 type DeliveryOutcome = 'sent' | 'failed' | 'dropped'
 
-// The 13 fixed notification relays plus the subscriber's own.
-function targetRelaysFor(row: ClaimedRow): string[] {
-  return [...new Set([...row.relays, ...NOTIFICATION_RELAYS])]
+interface RunStats { skippedRelays: number }
+
+// The 13 fixed notification relays plus the subscriber's own. Stored subscriber relays on a port other than
+// 80/443 (accepted before the port rule existed) are skipped, not deleted; the skips are only counted.
+function targetRelaysFor(row: ClaimedRow, stats?: RunStats): string[] {
+  const own = row.relays.filter(isAllowedRelayPort)
+  if (stats) stats.skippedRelays += row.relays.length - own.length
+  return [...new Set([...own, ...NOTIFICATION_RELAYS])]
 }
 
 // Sent once per window to a subscriber whose daily cap was just exceeded (not itself counted).
-async function sendCapSummary(secretKey: Uint8Array, row: ClaimedRow, slot: DmSlot): Promise<void> {
+async function sendCapSummary(secretKey: Uint8Array, row: ClaimedRow, slot: DmSlot, stats: RunStats): Promise<void> {
   try {
     const giftWrap = nip17.wrapEvent(secretKey, { publicKey: row.pubkey }, DM_CAP_SUMMARY_TEXT)
-    const { succeeded } = await publishToRelays(targetRelaysFor(row), giftWrap)
+    const { succeeded } = await publishToRelays(targetRelaysFor(row, stats), giftWrap)
     if (succeeded === 0) await resetSummaryFlag(row.pubkey, slot.windowStart)
   } catch (err) {
     console.error(`[notify] cap summary error for pubkey=${row.pubkey.slice(0, 8)}…:`, err)
@@ -285,6 +290,7 @@ async function deliverDm(
   message: string,
   errorLabel: string,
   releaseClaim: (row: ClaimedRow) => Promise<unknown>,
+  stats: RunStats,
 ): Promise<DeliveryOutcome> {
   let slot: DmSlot | null = null
   const giveBack = async (): Promise<void> => {
@@ -297,11 +303,11 @@ async function deliverDm(
   try {
     slot = await reserveDmSlot(row.pubkey)
     if (!slot.allowed) {
-      if (slot.sendSummary) await sendCapSummary(secretKey, row, slot)
+      if (slot.sendSummary) await sendCapSummary(secretKey, row, slot, stats)
       return 'dropped'
     }
     const giftWrap = nip17.wrapEvent(secretKey, { publicKey: row.pubkey }, message)
-    const { succeeded } = await publishToRelays(targetRelaysFor(row), giftWrap)
+    const { succeeded } = await publishToRelays(targetRelaysFor(row, stats), giftWrap)
     if (succeeded > 0) return 'sent'
     await giveBack()
     return 'failed'
@@ -312,8 +318,10 @@ async function deliverDm(
   }
 }
 
-function summaryLine(sent: number, failed: number, dropped: number): string {
-  return `${sent} sent, ${failed} failed (claim released)` + (dropped > 0 ? `, ${dropped} dropped (daily cap)` : '')
+function summaryLine(sent: number, failed: number, dropped: number, skippedRelays: number): string {
+  return `${sent} sent, ${failed} failed (claim released)` +
+    (dropped > 0 ? `, ${dropped} dropped (daily cap)` : '') +
+    (skippedRelays > 0 ? `, ${skippedRelays} stored relay(s) skipped (port not 80/443)` : '')
 }
 
 // Fires the DM for a down/up transition to every subscriber with a matching
@@ -364,13 +372,14 @@ export async function notifySubscribers(mintUrl: string, direction: 'down' | 'up
       ).catch(err => console.error(`[notify] failed to release claim for ${row.pubkey.slice(0, 8)}…:`, err))
 
     const count = { sent: 0, failed: 0, dropped: 0 }
+    const stats: RunStats = { skippedRelays: 0 }
     for (const row of rows) {
-      count[await deliverDm(secretKey, row, message, `send error for mint=${mintUrl}`, releaseClaim)]++
+      count[await deliverDm(secretKey, row, message, `send error for mint=${mintUrl}`, releaseClaim, stats)]++
     }
 
     console.log(
       `[notify] ${direction}-alert (checked ${checkedAt.toISOString()}) for ${mintUrl}: ` +
-      `claimed ${rows.length}, ${summaryLine(count.sent, count.failed, count.dropped)}`
+      `claimed ${rows.length}, ${summaryLine(count.sent, count.failed, count.dropped, stats.skippedRelays)}`
     )
   } catch (err) {
     console.error(`[notify] notifySubscribers error for mint=${mintUrl}:`, err)
@@ -455,10 +464,11 @@ export async function notifyAlert(mintUrl: string, kind: AlertKind): Promise<voi
       ).catch(err => console.error(`[notify] failed to release ${kind} claim for ${row.pubkey.slice(0, 8)}…:`, err))
 
     const count = { sent: 0, failed: 0, dropped: 0 }
+    const stats: RunStats = { skippedRelays: 0 }
     for (const row of rows) {
-      count[await deliverDm(secretKey, row, message, `${kind} send error for mint=${mintUrl}`, releaseClaim)]++
+      count[await deliverDm(secretKey, row, message, `${kind} send error for mint=${mintUrl}`, releaseClaim, stats)]++
     }
-    console.log(`[notify] ${kind}-alert for ${mintUrl}: claimed ${rows.length}, ${summaryLine(count.sent, count.failed, count.dropped)}`)
+    console.log(`[notify] ${kind}-alert for ${mintUrl}: claimed ${rows.length}, ${summaryLine(count.sent, count.failed, count.dropped, stats.skippedRelays)}`)
   } catch (err) {
     console.error(`[notify] notifyAlert(${kind}) error for mint=${mintUrl}:`, err)
   }
