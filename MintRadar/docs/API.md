@@ -2,7 +2,169 @@
 
 MintRadar provides a public read-only API for querying Cashu mint data. All endpoints are served under the same origin as the web app (`https://mintradar.org/api/`).
 
-**Versioning:** every endpoint below is also reachable under `/api/v1/` (e.g. `/api/v1/mints/known`) — same response shape, same rate limits, no behavior differences. `/api/v1` is the preferred path going forward; the unversioned `/api/*` shown below is kept as a legacy alias and may be removed in a future release.
+**Versioning:** every endpoint is also reachable under `/api/v1/` (e.g. `/api/v1/mints/known`) — same response shape, same rate limits, no behavior differences. `/api/v1` is the preferred path going forward; the unversioned `/api/*` is kept as a legacy alias and may be removed in a future release.
+
+**Stable for wallets:** only [API for wallets (v1)](#api-for-wallets-v1) carries a stability guarantee. `GET /api/mints/known` and `GET /api/mints/recommend` are public with the same CORS and caching rules, but their shape may still grow. Every other route is **internal**: it serves the MintRadar website, may change without notice and has no stability guarantee (`/api/mints/outages`, `swaps`, `audit-cz`, `nostr-reviews`, `history`, `version-history`, `daily-uptime`, `/api/nuts`, `/api/stats`, `/api/stats/reliability-trend`, `/api/stats/reliability-movers`, `/api/mint/icon`, `/api/nip05/verify`, `/api/og/mint`, `/sitemap.xml`, the notification routes; those from `history` to `nostr-reviews`, `stats` and `probe` are described below as a convenience).
+
+---
+
+## API for wallets (v1)
+
+A small, stable, read-only API for wallet developers: one compact health summary per Cashu mint. It is served from the same snapshot as `/api/mints/known` (one database read per 60 seconds for all callers), under `https://mintradar.org/api/v1/wallets/…`.
+
+> **Operational health signal, not solvency, not a recommendation to deposit funds. Based on MintRadar's probes and third-party audit data; it can be wrong or out of date.**
+
+### Endpoints
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/v1/wallets/mints` | List of mints with filters (below) |
+| `GET /api/v1/wallets/mints/{url}` | One mint; `{url}` is the mint URL, percent-encoded (`https%3A%2F%2Fmint.example.com`) |
+
+Machine-readable description: [`docs/openapi/wallets-v1.yaml`](openapi/wallets-v1.yaml) (OpenAPI 3.1). `/api/wallets/…` (without `v1`) is the same route.
+
+**List query parameters** (all optional; a present but invalid value is a `400`, unknown parameters are ignored):
+
+| Parameter | Default | Meaning |
+|---|---|---|
+| `unit` | — | Keep mints that list this unit (`sat`, `usd`, `eur`, …; case-insensitive). Mints whose units are unknown (`units: null`) never match. |
+| `minScore` | — | Integer 0 to 100: keep mints with `score >= minScore` (a mint without a score never matches). |
+| `includeOffline` | `false` | Also return `offline` and `degraded` mints. |
+| `includeArchived` | `false` | Also return `archived` mints (offline for 30+ days). This flag alone is enough for them. |
+| `includeTest` | `false` | Also return mints from MintRadar's manual test-mint list (`isTest: true`). |
+| `includeUnscored` | `false` | Also return mints whose `score` is `null` (not probed yet). |
+| `limit` | `100` | Integer 1 to 200 (`400` outside that range). |
+
+Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` last), then `name` (the hostname when `name` is `null`), then `url`.
+
+### Response
+
+```json
+{
+  "methodology": 3,
+  "generatedAt": "2026-10-12T18:30:12.345Z",
+  "count": 1,
+  "mints": [
+    {
+      "url": "https://mint.example.com",
+      "name": "Example Mint",
+      "status": "online",
+      "score": 92,
+      "scoreCappedNew": false,
+      "uptime24hPct": 100,
+      "uptime7dPct": 99,
+      "lastCheckedAt": "2026-10-12T18:29:41.000Z",
+      "units": ["sat"],
+      "nuts": ["4", "5", "7", "8", "9", "10", "11", "12"],
+      "software": "Nutshell/0.21.0",
+      "outdated": false,
+      "isTest": false,
+      "audit": { "swaps7d": 104, "attributedFailures": 0, "fetchedAt": "2026-10-12T17:40:00.000Z" },
+      "reviews": { "count": 12, "ratedCount": 10, "avg": 4.6, "operatorCount": 1 },
+      "eligibleForRecommendation": true
+    }
+  ]
+}
+```
+
+`GET /api/v1/wallets/mints/{url}` returns `{ "methodology", "generatedAt", "mint": { … } }` with the same mint object. The URL is normalised exactly like stored mint URLs (`https`, lower-case host, no trailing slash) and checked for a well-formed public `https://` URL without any DNS lookup or outbound request: a malformed URL is `400 invalid_url`, an unknown mint `404 mint_not_found`. A test, archived or offline mint is returned when asked for by URL; `status` and `isTest` tell them apart.
+
+| Envelope field | Type | Notes |
+|---|---|---|
+| `methodology` | integer | Version of the Reliability Score formula (`METHODOLOGY_VERSION`, see "Stability"). |
+| `generatedAt` | string, ISO 8601 UTC | When the snapshot behind the answer was read from the database (at most 60 s old; identical for every caller of one snapshot). |
+| `count` | integer | Length of `mints` (list only). |
+
+| Mint field | Type | Notes |
+|---|---|---|
+| `url` | string | Normalised mint URL. |
+| `name` | string \| null | The cleaned display name the website uses; `null` means show the hostname (also for mints on MintRadar's hidden-names list). Untrusted text: render as plain text. |
+| `status` | `"online"` \| `"offline"` \| `"degraded"` \| `"archived"` | `online`: the latest probe succeeded. `offline`: the latest probe failed (or the mint was never probed). `degraded`: no successful probe in the last 24 hours. `archived`: offline for 30+ days. |
+| `score` | integer 0–100 \| null | The stored Reliability Score (operational health: uptime 40, audit 25, NUTs 15, software version 15, contact 5). `null` until the first probe. |
+| `scoreCappedNew` | boolean | `true` while the mint is younger than 30 days: its score is capped at 75. |
+| `uptime24hPct`, `uptime7dPct` | integer \| null | Share of successful probes (percent, rounded). |
+| `lastCheckedAt` | string, ISO 8601 UTC \| null | Latest probe. |
+| `units` | string[] \| null | Units the mint's keysets list; `null` when unknown. |
+| `nuts` | string[] \| null | NUT numbers the mint advertises (ascending, as strings); `null` when unknown. |
+| `software` | string \| null | The mint's own version string (`Nutshell/0.21.0`); untrusted text, at most 100 characters. |
+| `outdated` | boolean \| null | `true`: two or more minor versions behind the newest stable release of that software family. `false`: not outdated. `null`: unknown software, no or unreadable version, or no reference release. |
+| `isTest` | boolean | On MintRadar's manual test-mint list. Test mints are never recommended. |
+| `audit` | object \| null | cashu.info's 7-day window: `swaps7d` (all swaps), `attributedFailures` (failures cashu.info attributes to this mint), `fetchedAt` (ISO 8601). `null` when no data is stored. Fewer than 10 swaps or data older than 168 hours scores neutral in the Reliability Score. |
+| `reviews` | object | Community Rating, same definitions as the website: `count` (counted NIP-87 reviews), `ratedCount` (how many carry a rating), `avg` (average rating over those, one decimal, `null` when none), `operatorCount` (reviews by the mint's own operator, which are left out of the other three). |
+| `eligibleForRecommendation` | boolean | `true` when the mint is online, has a score, is not a test mint and was first seen at least 14 days ago. |
+
+The wallet responses never contain IP addresses or other network data, onion data, reviewer public keys or review texts, contact details, or the mint's NUT-06 public key.
+
+### Requests
+
+```bash
+# Mints that list sat, score 70 or better (offline, test, archived and unscored mints are left out by default)
+curl -s "https://mintradar.org/api/v1/wallets/mints?unit=sat&minScore=70&limit=20"
+
+# One mint
+curl -s "https://mintradar.org/api/v1/wallets/mints/https%3A%2F%2Fmint.example.com"
+
+# Conditional request: 304 with no body while nothing changed
+curl -si -H 'If-None-Match: "<etag from the last answer>"' "https://mintradar.org/api/v1/wallets/mints?unit=sat"
+```
+
+```ts
+// Browser or Node 18+; any origin may call these routes
+const res = await fetch('https://mintradar.org/api/v1/wallets/mints?unit=sat&minScore=70')
+if (!res.ok) throw new Error((await res.json()).error.message)
+const { methodology, mints } = await res.json()
+```
+
+### CORS
+
+`/api/v1/wallets/*`, `/api/v1/mints/known`, `/api/v1/mints/recommend` and `/api/v1/health` (and the unversioned paths) answer **any origin**: `Access-Control-Allow-Origin: *` for `GET`, `HEAD` and `OPTIONS`, no credentials, with `Access-Control-Expose-Headers: ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset`. A preflight (`OPTIONS`) is answered with `204` and is not counted against any limit. Every other route (notably `probe`, `submit`, `discover` and `notifications`) only serves the MintRadar website's own origins; a browser request from another origin to one of them gets `403` with `{"error":{"code":"cors_forbidden","message":"…"}}`. Requests without an `Origin` header (servers, curl, native apps) are never affected.
+
+### Caching
+
+Every successful `GET` of `/api/v1/wallets/*`, `/api/v1/mints/known` and `/api/v1/mints/recommend` carries `Cache-Control: public, max-age=300` and a strong `ETag` over the body, on a cache hit as well as a miss. Send `If-None-Match` to get `304 Not Modified` (same headers, no body). The data moves with the 5-minute probe cycle, so **poll at most every 5 minutes**; a wallet that fetches the list once when it starts and then every 10 minutes is well within the limits. Error responses are not cached.
+
+### Rate limits
+
+| Routes | Limit |
+|---|---|
+| `/api/v1/wallets/*` | **300 requests / minute / IP** (its own counter) |
+| `/health`, `/api/mints/known`, `/api/stats`, `/api/mint/icon` | no limit (read-only, cached) |
+| every other read route, including `/api/mints/recommend` | **60 requests / minute / IP** |
+
+Responses of limited routes carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset` (Unix time, seconds, when the window ends). Every `429` carries `Retry-After` (seconds). Preflight requests are not counted. Counters are kept in memory and reset on a restart.
+
+### Errors
+
+The wallet routes answer errors as JSON:
+
+```json
+{ "error": { "code": "invalid_parameter", "message": "minScore must be an integer from 0 to 100" } }
+```
+
+| Status | `code` | When |
+|---|---|---|
+| `400` | `invalid_parameter` | a list query value is present but invalid |
+| `400` | `invalid_url` | the `{url}` is not valid percent-encoding or not a well-formed public `https://` URL |
+| `404` | `mint_not_found` | no tracked mint has this URL |
+| `404` | `not_found` | unknown route below `/api/wallets` |
+| `429` | `rate_limited` | over 300 requests per minute; also carries `retryAfterSec` |
+| `500` | `internal_error` | server error |
+
+The other routes keep their older shape `{ "error": "text" }` (see "Error Responses"), except the CORS rejection above.
+
+### Stability
+
+- Inside v1 a field is **never renamed or removed**, and its type does not change; changes are **additive** (new fields, new optional parameters). Clients must ignore fields they do not know.
+- A deprecation is announced with `Deprecation` and `Sunset` response headers at least **90 days** before anything is removed, and in this document.
+- `methodology` is an integer that changes **whenever the score formula changes** (weights, audit rule, version rule, new-mint cap). `score` values from different `methodology` numbers are not comparable. The history lives in `backend/src/shared/methodology.ts` (`METHODOLOGY_CHANGES`):
+
+| Version | Date | Change |
+|---|---|---|
+| 1 | 2026-09-12 | Initial formula: uptime 40, audit 25 (audit.8333.space), NUTs 15, software version 15, contact 5; new mints capped at 75 for 30 days. |
+| 2 | 2026-10-08 | Audit part now from cashu.info: failures attributed to the mint divided by swaps in 7 days; neutral under 10 swaps or without recent data. |
+| 3 | 2026-10-09 | Version part follows one rule: outdated means two or more minor versions behind the newest stable release; zero or one behind scores full points. |
+
+- Everything under "Internal routes" below has **no stability guarantee**.
 
 ---
 
@@ -10,19 +172,21 @@ MintRadar provides a public read-only API for querying Cashu mint data. All endp
 
 | Endpoint type | Limit |
 |---|---|
-| All read endpoints | **60 requests / minute / IP** |
+| `/api/v1/wallets/*` | **300 requests / minute / IP** |
+| Read endpoints **except** `/health`, `/api/mints/known`, `/api/stats` and `/api/mint/icon` (these four are exempt) | **60 requests / minute / IP** |
 | `/api/mint/submit` (POST) | **20 requests / hour / IP** |
 | `/api/mints/discover` (POST) | **10 requests / hour / IP** |
 | `/api/mint/probe` for a URL that is **not** a tracked mint | additionally **10 requests / minute**, **60 requests / hour** and **3 concurrent probes** per IP (tracked mints: global limit only) |
 
-Rate limit headers are returned on all non-exempt endpoints:
+Rate limit headers are returned on every non-exempt read endpoint:
 
 ```
 X-RateLimit-Limit: 60
 X-RateLimit-Remaining: 58
+X-RateLimit-Reset: 1760293860
 ```
 
-Exceeding the limit returns HTTP `429 Too Many Requests`:
+Exceeding a limit returns HTTP `429 Too Many Requests` with a `Retry-After` header (seconds):
 
 ```json
 { "error": "Too many requests" }
@@ -62,7 +226,7 @@ Only timestamps, counts and this three-value enum are exposed — no error messa
 
 All known mints with current online status, latency, reliability score, and metadata. Returns **every row** the server knows, including archived mints (offline 30+ days) — nothing is filtered out; use the `archived` and `degraded` flags on each object to tell them apart.
 
-**Response:** Array of mint objects.
+**Response:** Array of mint objects. Public with `Access-Control-Allow-Origin: *`; every response carries `Cache-Control: public, max-age=300` and a strong `ETag` (`If-None-Match` gives `304`). Wallets should prefer [`/api/v1/wallets/mints`](#api-for-wallets-v1), a compact summary with a stability guarantee; this array also carries website-only fields (`ipAddress`, `netAsn`, …) that may change.
 
 `softwareLatest` (additive, 2026-10-09) is `{ "major": 0, "minor": 21 }`, the latest release line of **this mint's own software family** (Nutshell, cdk-mintd), or `null` for other software and for mints without a version. It is the ONE "latest" the stored `reliabilityScore` (version component) and every "outdated" label are measured against: a mint is "outdated" when it is two or more minor versions behind it (`docs/claude/scoring-and-probing.md`). It comes from the GitHub release catalog (no pre-releases, 14-day grace period) and falls back to the highest stable version that at least two distinct tracked mints report exactly (no value, `null`, when none qualifies).
 
@@ -393,8 +557,11 @@ Rate limit: **10 requests / hour / IP**.
 | Status | Meaning |
 |---|---|
 | `400` | Bad request — missing or invalid parameter |
-| `429` | Rate limit exceeded |
+| `403` | A browser request from an origin that is not allowed on a non-public route: `{"error":{"code":"cors_forbidden","message":"…"}}` |
+| `429` | Rate limit exceeded (`Retry-After` header) |
 | `500` | Internal server error |
+
+The error shape of the wallet routes (`{ "error": { "code", "message" } }`) is described in "API for wallets (v1)".
 
 ---
 

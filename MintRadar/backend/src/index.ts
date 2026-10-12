@@ -22,6 +22,10 @@ import { globalMeanRating, weightedRating } from './weightedRating.js'
 import { hasRecentReviewSurge } from './reviewSurge.js'
 import { isTestMint } from './testMints.js'
 import { publicMintName, publicMintNameOrHost } from './mintNames.js'
+import {
+  isWalletApiPath, isPublicCorsPath, PUBLIC_CORS_EXPOSE_HEADERS, parseWalletListQuery, walletListEnvelope, walletSingleEnvelope,
+  memoizedBody, sendCachedBody, sendWalletError, queryOf, type Snapshot,
+} from './walletApi.js'
 import { verifyNip05 } from './nip05Verify.js'
 import { isAllowlistMode, isAllowedUrl } from './allowlist.js'
 import { profileFieldsForReview } from './profilesSync.js'
@@ -43,7 +47,14 @@ process.on('unhandledRejection', (err) => {
   console.error('[unhandledRejection]', err)
 })
 
-let knownMintsCache: { data: unknown; expiresAt: number } | null = null
+// ONE computation of the /api/mints/known rows, shared with the wallet API (walletApi.ts): at most one database read
+// per KNOWN_MINTS_CACHE_TTL for all of them, concurrent callers join the read in flight.
+let knownMintsCache: (Snapshot & { expiresAt: number }) | null = null
+let knownMintsInflight: Promise<Snapshot> | null = null
+function invalidateKnownMints(): void {
+  knownMintsCache = null
+  knownMintsInflight = null
+}
 const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
 
 // /api/stats is in RATE_LIMIT_EXEMPT (see below) but, unlike the other three
@@ -156,28 +167,56 @@ interface MintStatus {
 
 const rateLimitStore = new Map<string, RateLimitEntry>()
 
-function checkRateLimit(ip: string): { allowed: boolean; remaining: number; limit: number } {
+interface RateLimitResult { allowed: boolean; remaining: number; limit: number; resetAt: number }
+
+function checkFixedWindow(store: Map<string, RateLimitEntry>, max: number, ip: string): RateLimitResult {
   const now = Date.now()
-  const entry = rateLimitStore.get(ip)
+  const entry = store.get(ip)
 
   if (entry === undefined || now >= entry.resetAt) {
-    rateLimitStore.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
-    return { allowed: true, remaining: RATE_LIMIT_MAX - 1, limit: RATE_LIMIT_MAX }
+    const resetAt = now + RATE_LIMIT_WINDOW_MS
+    store.set(ip, { count: 1, resetAt })
+    return { allowed: true, remaining: max - 1, limit: max, resetAt }
   }
 
-  if (entry.count >= RATE_LIMIT_MAX) {
-    return { allowed: false, remaining: 0, limit: RATE_LIMIT_MAX }
+  if (entry.count >= max) {
+    return { allowed: false, remaining: 0, limit: max, resetAt: entry.resetAt }
   }
 
   entry.count++
-  return { allowed: true, remaining: RATE_LIMIT_MAX - entry.count, limit: RATE_LIMIT_MAX }
+  return { allowed: true, remaining: max - entry.count, limit: max, resetAt: entry.resetAt }
 }
 
-// Prevent unbounded memory growth
+function checkRateLimit(ip: string): RateLimitResult {
+  return checkFixedWindow(rateLimitStore, RATE_LIMIT_MAX, ip)
+}
+
+// The wallet API (/api/wallets/*) has its own, larger per-IP budget: wallet backends and users behind one NAT
+// share an address. Same in-memory mechanism, separate counters.
+const WALLET_RATE_LIMIT_MAX = 300
+const walletRateLimitStore = new Map<string, RateLimitEntry>()
+
+function setRateLimitHeaders(res: Response, r: RateLimitResult): number {
+  const retryAfterSec = Math.max(1, Math.ceil((r.resetAt - Date.now()) / 1000))
+  res.setHeader('X-RateLimit-Limit', String(r.limit))
+  res.setHeader('X-RateLimit-Remaining', String(r.remaining))
+  res.setHeader('X-RateLimit-Reset', String(Math.ceil(r.resetAt / 1000)))
+  return retryAfterSec
+}
+
+// Seconds until the window of a per-key limiter frees up (for Retry-After on its 429).
+function setRetryAfter(res: Response, store: Map<string, RateLimitEntry>, key: string): void {
+  const resetAt = store.get(key)?.resetAt
+  if (resetAt !== undefined) res.setHeader('Retry-After', String(Math.max(1, Math.ceil((resetAt - Date.now()) / 1000))))
+}
+
+// Prevent unbounded memory growth: an entry lives at most one window, expired ones are dropped every window.
 setInterval(() => {
   const now = Date.now()
-  for (const [ip, entry] of rateLimitStore) {
-    if (now >= entry.resetAt) rateLimitStore.delete(ip)
+  for (const store of [rateLimitStore, walletRateLimitStore]) {
+    for (const [ip, entry] of store) {
+      if (now >= entry.resetAt) store.delete(ip)
+    }
   }
 }, RATE_LIMIT_WINDOW_MS)
 
@@ -372,20 +411,6 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
   next()
 })
 
-// CORS
-app.use(cors({
-  origin: (origin, callback) => {
-    if (origin === undefined || ALLOWED_ORIGINS.includes(origin)) {
-      callback(null, true)
-    } else {
-      callback(new Error('Not allowed by CORS'))
-    }
-  },
-  methods: ['GET', 'POST'],
-}))
-
-app.use(express.json())
-
 // /api/v1/* alias — rewritten to its /api/* equivalent before any routing,
 // rate-limit, or exemption check below runs, so it shares every one of those
 // mechanisms (and their per-IP/per-pubkey counters) with the unversioned path
@@ -403,6 +428,40 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   }
   next()
 })
+
+// CORS. The public read routes (the wallet API, /api/mints/known, /api/mints/recommend, /health) answer ANY origin
+// for GET, HEAD and OPTIONS, without credentials; the preflight is a 204 that never reaches the rate limiter.
+// Every other route keeps the origin allow-list; a foreign Origin there gets a JSON 403 (it used to be an HTML 500).
+// Runs after the /api/v1 rewrite above, so it sees the canonical path.
+const restrictedCors = cors({
+  origin: (origin, callback) => callback(null, origin === undefined || ALLOWED_ORIGINS.includes(origin)),
+  methods: ['GET', 'POST'],
+})
+const PREFLIGHT_HEADERS_RE = /^[A-Za-z0-9-]+(?:, ?[A-Za-z0-9-]+){0,19}$/
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (isPublicCorsPath(req.path) && (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS')) {
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Expose-Headers', PUBLIC_CORS_EXPOSE_HEADERS)
+    if (req.method === 'OPTIONS') {
+      const asked = req.headers['access-control-request-headers']
+      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS')
+      res.setHeader('Access-Control-Allow-Headers', typeof asked === 'string' && PREFLIGHT_HEADERS_RE.test(asked) ? asked : 'Content-Type, If-None-Match')
+      res.setHeader('Access-Control-Max-Age', '86400')
+      res.status(204).end()
+      return
+    }
+    next()
+    return
+  }
+  const origin = req.headers.origin
+  if (origin !== undefined && !ALLOWED_ORIGINS.includes(origin)) {
+    res.status(403).json({ error: { code: 'cors_forbidden', message: 'This origin may not call this endpoint from a browser. Public read routes (/api/wallets/*, /api/mints/known, /api/mints/recommend, /health) allow any origin.' } })
+    return
+  }
+  restrictedCors(req, res, next)
+})
+
+app.use(express.json())
 
 // Rate limiting — exempt public read-only endpoints that sit behind Cache-Control
 const RATE_LIMIT_EXEMPT = new Set(['/health', '/api/mints/known', '/api/stats', '/api/mint/icon'])
@@ -548,10 +607,21 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     return
   }
   const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown'
-  const { allowed, remaining, limit } = checkRateLimit(ip)
-  res.setHeader('X-RateLimit-Limit', String(limit))
-  res.setHeader('X-RateLimit-Remaining', String(remaining))
-  if (!allowed) {
+  if (isWalletApiPath(req.path)) {
+    const r = checkFixedWindow(walletRateLimitStore, WALLET_RATE_LIMIT_MAX, ip)
+    const retryAfterSec = setRateLimitHeaders(res, r)
+    if (!r.allowed) {
+      res.setHeader('Retry-After', String(retryAfterSec))
+      sendWalletError(res, 429, 'rate_limited', 'Too many requests. See Retry-After.', retryAfterSec)
+      return
+    }
+    next()
+    return
+  }
+  const r = checkRateLimit(ip)
+  const retryAfterSec = setRateLimitHeaders(res, r)
+  if (!r.allowed) {
+    res.setHeader('Retry-After', String(retryAfterSec))
     res.status(429).json({ error: 'Too many requests' })
     return
   }
@@ -1363,12 +1433,18 @@ function latestOfFamily(version: string | null, latestVersions: LatestVersions):
   return family ? latestVersions[family] ?? null : null
 }
 
-app.get('/api/mints/known', (_req: Request, res: Response): void => {
-  if (knownMintsCache && Date.now() < knownMintsCache.expiresAt) {
-    res.json(knownMintsCache.data)
-    return
-  }
-  Promise.all([
+// The /api/mints/known rows: ONE database read (plus the cached software-version map) per KNOWN_MINTS_CACHE_TTL for
+// every caller (this route, the wallet API, /api/mints/recommend); callers during a read join it.
+function loadKnownMints(): Promise<Snapshot> {
+  if (knownMintsCache && Date.now() < knownMintsCache.expiresAt) return Promise.resolve(knownMintsCache)
+  if (knownMintsInflight) return knownMintsInflight
+  const p: Promise<Snapshot> = computeKnownMints().finally(() => { if (knownMintsInflight === p) knownMintsInflight = null })
+  knownMintsInflight = p
+  return p
+}
+
+function computeKnownMints(): Promise<Snapshot> {
+  return Promise.all([
     pool
     .query(`
       SELECT m.url, m.name, m.icon_url, m.version, m.nut_count,
@@ -1528,14 +1604,73 @@ app.get('/api/mints/known', (_req: Request, res: Response): void => {
           ),
         }
       })
-      knownMintsCache = { data, expiresAt: Date.now() + KNOWN_MINTS_CACHE_TTL }
-      res.setHeader('Cache-Control', 'max-age=300')
-      res.json(data)
+      const now = Date.now()
+      const snapshot = { data, computedAt: now, expiresAt: now + KNOWN_MINTS_CACHE_TTL }
+      knownMintsCache = snapshot
+      return snapshot
     })
+}
+
+// Cache-Control public, max-age=300 and a strong ETag on every response (cache hit or miss); If-None-Match gives 304.
+app.get('/api/mints/known', (_req: Request, res: Response): void => {
+  loadKnownMints()
+    .then(snap => sendCachedBody(res, memoizedBody(snap, 'known', () => snap.data)))
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/mints/known]', err)
       res.status(500).json({ error: 'Internal server error' })
     })
+})
+
+// ── Wallet API v1 (docs/API.md "API for wallets", docs/openapi/wallets-v1.yaml) ──────────────────────────────
+// Served from the same snapshot as /api/mints/known (loadKnownMints), never one query per request. CORS and the
+// 300/min limiter for /api/wallets/* are in the middleware above. Errors use { error: { code, message } }.
+const walletInternalError = (res: Response, route: string, err: unknown): void => {
+  if (IS_DEV) console.error(route, err)
+  sendWalletError(res, 500, 'internal_error', 'Internal server error')
+}
+
+app.get('/api/wallets/mints', (req: Request, res: Response): void => {
+  const parsed = parseWalletListQuery(queryOf(req))
+  if (!parsed.ok) {
+    sendWalletError(res, 400, 'invalid_parameter', parsed.message)
+    return
+  }
+  const f = parsed.filter
+  loadKnownMints()
+    .then(snap => sendCachedBody(res, memoizedBody(snap, `list|${JSON.stringify(f)}`, () => walletListEnvelope(snap, f))))
+    .catch((err: unknown) => walletInternalError(res, '[/api/wallets/mints]', err))
+})
+
+// One mint: the rest of the path is the percent-encoded mint URL. A mount (not a :param route) so a malformed
+// percent-encoding is ours to answer as JSON 400 instead of Express's HTML.
+app.use('/api/wallets/mints/', (req: Request, res: Response, next: NextFunction): void => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') { next(); return }
+  let decoded: string
+  try {
+    decoded = decodeURIComponent(req.path.slice(1))
+  } catch {
+    sendWalletError(res, 400, 'invalid_url', 'The mint URL in the path is not valid percent-encoding')
+    return
+  }
+  const url = normalizeUrl(decoded)
+  if (!isWellFormedMintUrl(url)) {
+    sendWalletError(res, 400, 'invalid_url', 'The path must be a percent-encoded https:// mint URL')
+    return
+  }
+  loadKnownMints()
+    .then(snap => {
+      const body = walletSingleEnvelope(snap, url)
+      if (body === null) {
+        sendWalletError(res, 404, 'mint_not_found', 'No tracked mint has this URL')
+        return
+      }
+      sendCachedBody(res, memoizedBody(snap, `mint|${url}`, () => body))
+    })
+    .catch((err: unknown) => walletInternalError(res, '[/api/wallets/mints/:url]', err))
+})
+
+app.use('/api/wallets', (_req: Request, res: Response): void => {
+  sendWalletError(res, 404, 'not_found', 'Unknown wallet API route')
 })
 
 // Bot-only OG tag fragment for /mint/:url — nginx routes social-crawler user
@@ -1795,6 +1930,7 @@ app.get('/api/mints/audit-cz', (req: Request, res: Response): void => {
 app.post('/api/mint/submit', (req: Request, res: Response): void => {
   const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown'
   if (!checkSubmitRateLimit(ip)) {
+    setRetryAfter(res, submitRateLimitStore, ip)
     res.status(429).json({ error: 'Too many requests. Try again later.' })
     return
   }
@@ -1848,7 +1984,7 @@ app.post('/api/mint/submit', (req: Request, res: Response): void => {
         } catch (probeErr) {
           if (IS_DEV) console.error('[submit] post-insert probe failed:', probeErr)
         }
-        knownMintsCache = null
+        invalidateKnownMints()
 
         // Alias hint — never merges cards, URL stays the only identity. Only
         // meaningful for a genuinely new row; a re-submit of an already-tracked
@@ -1972,7 +2108,7 @@ app.post('/api/mints/discover', async (req: Request, res: Response): Promise<voi
     }
   }
 
-  if (added > 0) knownMintsCache = null
+  if (added > 0) invalidateKnownMints()
   res.json({ added, total: body.urls.length, results })
 })
 
@@ -2127,6 +2263,7 @@ app.post('/api/notifications/subscribe', (req: Request, res: Response): void => 
       const { pubkey } = auth
 
       if (!checkNotifySubscribeRateLimit(pubkey)) {
+        setRetryAfter(res, notifySubscribeRateLimitStore, pubkey)
         res.status(429).json({ error: 'Too many requests. Try again later.' })
         return
       }
@@ -2252,6 +2389,7 @@ app.post('/api/notifications/unsubscribe', (req: Request, res: Response): void =
       const { pubkey } = auth
 
       if (!checkNotifyUnsubscribeRateLimit(pubkey)) {
+        setRetryAfter(res, notifyUnsubscribeRateLimitStore, pubkey)
         res.status(429).json({ error: 'Too many requests. Try again later.' })
         return
       }

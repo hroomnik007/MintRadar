@@ -1,0 +1,374 @@
+openapi: 3.1.0
+info:
+  title: MintRadar API for wallets
+  version: 1.0.0
+  summary: Operational health of Cashu mints, one compact object per mint.
+  description: |
+    A small, stable, read-only API for wallet developers, served by https://mintradar.org.
+
+    **Operational health signal, not solvency, not a recommendation to deposit funds. Based on
+    MintRadar's probes and third-party audit data; it can be wrong or out of date.**
+
+    **CORS.** Every route below answers any origin: `Access-Control-Allow-Origin: *` for `GET`, `HEAD`
+    and `OPTIONS`, no credentials, with `Access-Control-Expose-Headers: ETag, Retry-After,
+    X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset`. A preflight is answered with `204`.
+
+    **Caching.** Every successful response carries `Cache-Control: public, max-age=300` and a strong
+    `ETag` over the body (on a cache hit as well as a miss). Send `If-None-Match` to get `304`. The data
+    follows MintRadar's 5-minute probe cycle: poll at most every 5 minutes. Errors are not cached.
+
+    **Rate limit.** 300 requests per minute per IP for `/wallets/*` (its own counter). Every response
+    carries `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`; a `429` carries
+    `Retry-After` (seconds).
+
+    **Stability.** Inside v1 a field is never renamed or removed and its type does not change; changes
+    are additive, so clients must ignore fields they do not know. A deprecation is announced with
+    `Deprecation` and `Sunset` response headers at least 90 days before anything is removed. The integer
+    `methodology` changes whenever the score formula changes; scores of different methodology numbers are
+    not comparable. The history is in `backend/src/shared/methodology.ts` and docs/API.md.
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: https://mintradar.org/api/v1
+    description: Production. The same routes are served without the `v1` segment (`/api/wallets/...`).
+security: []
+tags:
+  - name: Mints
+    description: Health summary of tracked Cashu mints.
+paths:
+  /wallets/mints:
+    get:
+      operationId: listMints
+      tags: [Mints]
+      summary: List mints with their health summary
+      description: |
+        By default only online, scored, non-test mints are returned. Order: `score` descending (null last),
+        then `uptime7dPct` descending (null last), then `name` (the hostname when `name` is null), then `url`.
+        A query value that is present but invalid is a `400`; unknown parameters are ignored.
+      parameters:
+        - name: unit
+          in: query
+          description: 'Keep mints that list this unit (case-insensitive). Mints with `units: null` never match.'
+          schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,16}$' }
+          example: sat
+        - name: minScore
+          in: query
+          description: Keep mints with `score >= minScore`. A mint without a score never matches.
+          schema: { type: integer, minimum: 0, maximum: 100 }
+          example: 70
+        - name: includeOffline
+          in: query
+          description: Also return `offline` and `degraded` mints.
+          schema: { type: boolean, default: false }
+        - name: includeArchived
+          in: query
+          description: Also return `archived` mints (offline for 30+ days). This flag alone is enough for them.
+          schema: { type: boolean, default: false }
+        - name: includeTest
+          in: query
+          description: 'Also return mints from MintRadar''s manual test-mint list (`isTest: true`).'
+          schema: { type: boolean, default: false }
+        - name: includeUnscored
+          in: query
+          description: Also return mints whose `score` is null (not probed yet).
+          schema: { type: boolean, default: false }
+        - name: limit
+          in: query
+          description: Maximum number of mints. A value outside 1 to 200 is a `400`.
+          schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+        - $ref: '#/components/parameters/IfNoneMatch'
+      responses:
+        '200':
+          description: The list.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/CacheControl' }
+            ETag: { $ref: '#/components/headers/ETag' }
+            Access-Control-Allow-Origin: { $ref: '#/components/headers/AllowOrigin' }
+            X-RateLimit-Limit: { $ref: '#/components/headers/RateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/RateLimitRemaining' }
+            X-RateLimit-Reset: { $ref: '#/components/headers/RateLimitReset' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MintList' }
+              examples:
+                lnpay-like:
+                  summary: One online mint
+                  value:
+                    methodology: 3
+                    generatedAt: '2026-10-12T18:30:12.345Z'
+                    count: 1
+                    mints:
+                      - url: https://mint.example.com
+                        name: Example Mint
+                        status: online
+                        score: 92
+                        scoreCappedNew: false
+                        uptime24hPct: 100
+                        uptime7dPct: 99
+                        lastCheckedAt: '2026-10-12T18:29:41.000Z'
+                        units: [sat]
+                        nuts: ['4', '5', '7', '8', '9', '10', '11', '12']
+                        software: Nutshell/0.21.0
+                        outdated: false
+                        isTest: false
+                        audit: { swaps7d: 104, attributedFailures: 0, fetchedAt: '2026-10-12T17:40:00.000Z' }
+                        reviews: { count: 12, ratedCount: 10, avg: 4.6, operatorCount: 1 }
+                        eligibleForRecommendation: true
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /wallets/mints/{url}:
+    get:
+      operationId: getMint
+      tags: [Mints]
+      summary: One mint
+      description: |
+        `url` is the mint URL, percent-encoded. It is normalised exactly like stored mint URLs (https, lower-case
+        host, no trailing slash) and checked for a well-formed public https URL without any DNS lookup or outbound
+        request. A test, archived or offline mint is returned when asked for by URL; `status` and `isTest` tell
+        them apart.
+      parameters:
+        - name: url
+          in: path
+          required: true
+          description: The percent-encoded mint URL.
+          schema: { type: string, maxLength: 1500 }
+          example: https%3A%2F%2Fmint.example.com
+        - $ref: '#/components/parameters/IfNoneMatch'
+      responses:
+        '200':
+          description: The mint.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/CacheControl' }
+            ETag: { $ref: '#/components/headers/ETag' }
+            Access-Control-Allow-Origin: { $ref: '#/components/headers/AllowOrigin' }
+            X-RateLimit-Limit: { $ref: '#/components/headers/RateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/RateLimitRemaining' }
+            X-RateLimit-Reset: { $ref: '#/components/headers/RateLimitReset' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MintResponse' }
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400':
+          description: The path is not valid percent-encoding or not a well-formed public https URL (`invalid_url`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: { code: invalid_url, message: The path must be a percent-encoded https:// mint URL } }
+        '404':
+          description: No tracked mint has this URL (`mint_not_found`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: { code: mint_not_found, message: No tracked mint has this URL } }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/InternalError' }
+components:
+  parameters:
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      description: The `ETag` of an earlier answer. A match gives `304` with the same headers and no body.
+      schema: { type: string }
+  headers:
+    CacheControl:
+      description: Always `public, max-age=300`.
+      schema: { type: string, const: 'public, max-age=300' }
+    ETag:
+      description: Strong ETag over the body.
+      schema: { type: string }
+    AllowOrigin:
+      description: Always `*` (no credentials).
+      schema: { type: string, const: '*' }
+    RateLimitLimit:
+      description: Requests allowed per minute and IP (300).
+      schema: { type: integer }
+    RateLimitRemaining:
+      description: Requests left in the current window.
+      schema: { type: integer }
+    RateLimitReset:
+      description: Unix time in seconds when the current window ends.
+      schema: { type: integer }
+    RetryAfter:
+      description: Seconds until the window frees up.
+      schema: { type: integer, minimum: 1 }
+  responses:
+    NotModified:
+      description: Not modified. Same `Cache-Control` and `ETag`, no body.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/CacheControl' }
+        ETag: { $ref: '#/components/headers/ETag' }
+        Access-Control-Allow-Origin: { $ref: '#/components/headers/AllowOrigin' }
+    BadRequest:
+      description: A query value is present but invalid (`invalid_parameter`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: invalid_parameter, message: minScore must be an integer from 0 to 100 } }
+    TooManyRequests:
+      description: Over 300 requests per minute for this IP (`rate_limited`).
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+        Access-Control-Allow-Origin: { $ref: '#/components/headers/AllowOrigin' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: rate_limited, message: Too many requests. See Retry-After., retryAfterSec: 23 } }
+    InternalError:
+      description: Server error (`internal_error`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: internal_error, message: Internal server error } }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: Stable snake_case identifier.
+              enum: [invalid_parameter, invalid_url, mint_not_found, not_found, rate_limited, internal_error, cors_forbidden]
+            message:
+              type: string
+              description: Human-readable text; not stable, do not parse it.
+            retryAfterSec:
+              type: integer
+              minimum: 1
+              description: Only on `rate_limited`; equals the `Retry-After` header.
+    MintList:
+      type: object
+      required: [methodology, generatedAt, count, mints]
+      properties:
+        methodology: { $ref: '#/components/schemas/Methodology' }
+        generatedAt: { $ref: '#/components/schemas/GeneratedAt' }
+        count:
+          type: integer
+          minimum: 0
+          description: Length of `mints`.
+        mints:
+          type: array
+          items: { $ref: '#/components/schemas/Mint' }
+    MintResponse:
+      type: object
+      required: [methodology, generatedAt, mint]
+      properties:
+        methodology: { $ref: '#/components/schemas/Methodology' }
+        generatedAt: { $ref: '#/components/schemas/GeneratedAt' }
+        mint: { $ref: '#/components/schemas/Mint' }
+    Methodology:
+      type: integer
+      minimum: 1
+      description: Version of the Reliability Score formula. Changes whenever the formula changes; scores of different versions are not comparable.
+      examples: [3]
+    GeneratedAt:
+      type: string
+      format: date-time
+      description: When the snapshot behind the answer was read from the database (at most 60 seconds old; identical for every caller of one snapshot).
+    Mint:
+      type: object
+      description: |
+        Operational health of one mint. Never contains IP addresses or other network data, onion data,
+        reviewer public keys or review texts, contact details or the mint's NUT-06 public key.
+      required:
+        - url
+        - name
+        - status
+        - score
+        - scoreCappedNew
+        - uptime24hPct
+        - uptime7dPct
+        - lastCheckedAt
+        - units
+        - nuts
+        - software
+        - outdated
+        - isTest
+        - audit
+        - reviews
+        - eligibleForRecommendation
+      properties:
+        url:
+          type: string
+          description: Normalised mint URL (https, lower-case host, no trailing slash).
+        name:
+          type: [string, 'null']
+          description: The cleaned display name the website uses; null means show the hostname (also for mints on the hidden-names list). Untrusted text, render as plain text.
+        status:
+          type: string
+          enum: [online, offline, degraded, archived]
+          description: |
+            `online`: the latest probe succeeded. `offline`: the latest probe failed or the mint was never probed.
+            `degraded`: no successful probe in the last 24 hours. `archived`: offline for 30+ days.
+        score:
+          type: [integer, 'null']
+          minimum: 0
+          maximum: 100
+          description: The stored Reliability Score (operational health; not solvency). Null until the first probe.
+        scoreCappedNew:
+          type: boolean
+          description: True while the mint is younger than 30 days; its score is capped at 75.
+        uptime24hPct:
+          type: [integer, 'null']
+          minimum: 0
+          maximum: 100
+        uptime7dPct:
+          type: [integer, 'null']
+          minimum: 0
+          maximum: 100
+        lastCheckedAt:
+          type: [string, 'null']
+          format: date-time
+        units:
+          type: [array, 'null']
+          items: { type: string }
+          description: Units the mint's keysets list; null when unknown.
+        nuts:
+          type: [array, 'null']
+          items: { type: string }
+          description: NUT numbers the mint advertises, ascending, as strings; null when unknown.
+        software:
+          type: [string, 'null']
+          maxLength: 100
+          description: The mint's own version string (for example `Nutshell/0.21.0`). Untrusted text.
+        outdated:
+          type: [boolean, 'null']
+          description: |
+            True when two or more minor versions behind the newest stable release of that software family.
+            Null for unknown software, a missing or unreadable version, or no reference release.
+        isTest:
+          type: boolean
+          description: On MintRadar's manual test-mint list. Test mints are never recommended.
+        audit:
+          oneOf:
+            - $ref: '#/components/schemas/Audit'
+            - type: 'null'
+        reviews: { $ref: '#/components/schemas/Reviews' }
+        eligibleForRecommendation:
+          type: boolean
+          description: True when the mint is online, has a score, is not a test mint and was first seen at least 14 days ago.
+    Audit:
+      type: object
+      description: The 7-day swap window published by cashu.info. Fewer than 10 swaps, or data older than 168 hours, scores neutral in the Reliability Score.
+      required: [swaps7d, attributedFailures, fetchedAt]
+      properties:
+        swaps7d: { type: integer, minimum: 0, description: All swaps in the window. }
+        attributedFailures: { type: integer, minimum: 0, description: Failures cashu.info attributes to this mint. }
+        fetchedAt: { type: string, format: date-time }
+    Reviews:
+      type: object
+      description: Community Rating, the same definitions as the MintRadar website. Reviews written by the mint's own operator are left out of `count`, `ratedCount` and `avg`.
+      required: [count, ratedCount, avg, operatorCount]
+      properties:
+        count: { type: integer, minimum: 0, description: Counted NIP-87 reviews. }
+        ratedCount: { type: integer, minimum: 0, description: How many of them carry a rating (the n behind `avg`). }
+        avg:
+          type: [number, 'null']
+          description: Average rating over the rated reviews (one decimal); null when none.
+        operatorCount: { type: integer, minimum: 0, description: Reviews written by the mint's own operator. }

@@ -2,11 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import type { Express } from 'express'
 
-// CORS is configured in index.ts with an origin allow-list (ALLOWED_ORIGINS).
-// The test env sets ALLOWED_ORIGINS to:
+// CORS is configured in index.ts. The public read routes (/api/wallets/*, /api/mints/known,
+// /api/mints/recommend, /health) answer any origin with Access-Control-Allow-Origin: * (covered in
+// walletApi.test.ts). Every OTHER route keeps an origin allow-list (ALLOWED_ORIGINS); these tests use
+// the `/api` pointer as the restricted route. The test env sets ALLOWED_ORIGINS to:
 //   https://mintradar.org, http://localhost:5173
 // (see vitest.config.ts). The middleware reflects an allowed Origin back in
-// Access-Control-Allow-Origin and rejects everything else. Same-origin / no-Origin
+// Access-Control-Allow-Origin and answers a disallowed one with a JSON 403. Same-origin / no-Origin
 // requests (curl, server-to-server) are always permitted.
 
 vi.mock('../../db.js', () => ({
@@ -31,25 +33,21 @@ beforeEach(async () => {
 
 describe('CORS allow-list', () => {
   it('reflects an allowed production origin in Access-Control-Allow-Origin', async () => {
-    query.mockResolvedValueOnce({ rows: [] })
-
-    const res = await request(app).get('/api/mints/known').set('Origin', ALLOWED)
+    const res = await request(app).get('/api').set('Origin', ALLOWED)
 
     expect(res.status).toBe(200)
     expect(res.headers['access-control-allow-origin']).toBe(ALLOWED)
   })
 
   it('allows the configured dev origin', async () => {
-    query.mockResolvedValueOnce({ rows: [] })
-
-    const res = await request(app).get('/api/mints/known').set('Origin', ALLOWED_DEV)
+    const res = await request(app).get('/api').set('Origin', ALLOWED_DEV)
 
     expect(res.status).toBe(200)
     expect(res.headers['access-control-allow-origin']).toBe(ALLOWED_DEV)
   })
 
   it('does NOT grant Access-Control-Allow-Origin to a disallowed origin', async () => {
-    const res = await request(app).get('/api/mints/known').set('Origin', DISALLOWED)
+    const res = await request(app).get('/api').set('Origin', DISALLOWED)
 
     // The browser-enforced security guarantee: no ACAO header echoing the
     // attacker origin (and certainly not a wildcard), so the response is not
@@ -57,6 +55,10 @@ describe('CORS allow-list', () => {
     expect(res.headers['access-control-allow-origin']).toBeUndefined()
     expect(res.headers['access-control-allow-origin']).not.toBe(DISALLOWED)
     expect(res.headers['access-control-allow-origin']).not.toBe('*')
+    // A JSON 403, no longer Express's HTML 500.
+    expect(res.status).toBe(403)
+    expect(res.headers['content-type']).toMatch(/application\/json/)
+    expect(res.body).toEqual({ error: { code: 'cors_forbidden', message: expect.any(String) } })
   })
 
   it('rejects a CORS preflight (OPTIONS) from a disallowed origin', async () => {

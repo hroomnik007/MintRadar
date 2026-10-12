@@ -237,12 +237,23 @@ describe('GET /api/mints/known', () => {
     expect(res.body).toEqual([])
   })
 
-  it('sends a Cache-Control header for CDN/browser caching', async () => {
+  it('sends Cache-Control and a strong ETag on a cache miss AND on a cache hit; If-None-Match gives 304', async () => {
     query.mockResolvedValueOnce({ rows: [] })
 
-    const res = await request(app).get('/api/mints/known')
+    const miss = await request(app).get('/api/mints/known')
+    const hit = await request(app).get('/api/mints/known')
 
-    expect(res.headers['cache-control']).toBe('max-age=300')
+    expect(query).toHaveBeenCalledTimes(1)
+    for (const res of [miss, hit]) {
+      expect(res.headers['cache-control']).toBe('public, max-age=300')
+      expect(res.headers['etag']).toMatch(/^"[0-9a-f]{32}"$/)
+    }
+    expect(hit.headers['etag']).toBe(miss.headers['etag'])
+
+    const revalidated = await request(app).get('/api/mints/known').set('If-None-Match', miss.headers['etag'] as string)
+    expect(revalidated.status).toBe(304)
+    expect(revalidated.headers['cache-control']).toBe('public, max-age=300')
+    expect(revalidated.headers['etag']).toBe(miss.headers['etag'])
   })
 
   it('returns 500 with a generic message when the DB query fails', async () => {
