@@ -39,7 +39,7 @@ const example = (id: string) => {
 function FieldTable({ fields, label }: { fields: readonly WalletField[]; label: string }) {
   return (
     <div className="doc-table-wrap" tabIndex={0} role="region" aria-label={label}>
-      <table className="doc-table">
+      <table className="doc-table doc-table-stack">
         <thead>
           <tr><th scope="col">Field</th><th scope="col">Type</th><th scope="col">Null</th><th scope="col">Meaning</th></tr>
         </thead>
@@ -47,8 +47,8 @@ function FieldTable({ fields, label }: { fields: readonly WalletField[]; label: 
           {fields.map(f => (
             <tr key={f.name} data-field={f.name}>
               <th scope="row" className="doc-nowrap"><code>{f.name}</code></th>
-              <td className="doc-nowrap">{f.type}</td>
-              <td className="doc-nowrap">{f.nullable ? 'yes' : 'no'}</td>
+              <td className="doc-nowrap" data-label="Type">{f.type}</td>
+              <td className="doc-nowrap" data-label="Null">{f.nullable ? 'yes' : 'no'}</td>
               <td className="doc-wide">{f.meaning}</td>
             </tr>
           ))}
@@ -191,7 +191,7 @@ export default function ForWallets() {
             <code>uptime7dPct</code> descending, then <code>name</code>, then <code>url</code>.
           </p>
           <div className="doc-table-wrap" tabIndex={0} role="region" aria-label="List parameters">
-            <table className="doc-table">
+            <table className="doc-table doc-table-stack">
               <thead>
                 <tr><th scope="col">Parameter</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">Meaning</th></tr>
               </thead>
@@ -199,8 +199,8 @@ export default function ForWallets() {
                 {WALLET_QUERY_PARAMS.map(p => (
                   <tr key={p.name} data-param={p.name}>
                     <th scope="row" className="doc-nowrap"><code>{p.name}</code></th>
-                    <td className="doc-nowrap">{p.type}</td>
-                    <td className="doc-nowrap"><code>{p.default}</code></td>
+                    <td className="doc-nowrap" data-label="Type">{p.type}</td>
+                    <td className="doc-nowrap" data-label="Default"><code>{p.default}</code></td>
                     <td className="doc-wide">{p.meaning}</td>
                   </tr>
                 ))}
@@ -218,7 +218,7 @@ export default function ForWallets() {
             code={'{ "error": { "code": "invalid_parameter", "message": "minScore must be an integer from 0 to 100" } }'}
           />
           <div className="doc-table-wrap" tabIndex={0} role="region" aria-label="Error codes">
-            <table className="doc-table">
+            <table className="doc-table doc-table-stack">
               <thead>
                 <tr><th scope="col">Status</th><th scope="col">Code</th><th scope="col">When</th></tr>
               </thead>
@@ -226,7 +226,7 @@ export default function ForWallets() {
                 {WALLET_ERRORS.map(e => (
                   <tr key={e.code} data-code={e.code}>
                     <th scope="row" className="doc-nowrap">{e.status}</th>
-                    <td className="doc-nowrap"><code>{e.code}</code></td>
+                    <td className="doc-nowrap" data-label="Code"><code>{e.code}</code></td>
                     <td className="doc-wide">{e.when}</td>
                   </tr>
                 ))}

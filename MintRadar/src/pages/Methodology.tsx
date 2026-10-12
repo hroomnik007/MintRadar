@@ -230,24 +230,24 @@ export default function Methodology() {
         <section aria-labelledby="sources">
           <h2 id="sources" tabIndex={-1} className="about-h2">Data sources and cadence</h2>
           <div className="doc-table-wrap" tabIndex={0} role="region" aria-label="Data sources">
-            <table className="doc-table">
+            <table className="doc-table doc-table-stack">
               <thead>
                 <tr><th scope="col">Source</th><th scope="col">How often</th><th scope="col">When it is missing or old</th></tr>
               </thead>
               <tbody>
                 <tr>
                   <th scope="row">MintRadar probe of <code>/v1/info</code> from {PROBE_LOCATION}</th>
-                  <td>Every {M.cadence.probeMinutes} minutes</td>
+                  <td data-label="How often">Every {M.cadence.probeMinutes} minutes</td>
                   <td>A failed probe counts as offline in uptime. NUT count, software version and contact count keep their last known values.</td>
                 </tr>
                 <tr>
                   <th scope="row">cashu.info per-mint detail (swaps of the last {M.audit.windowDays} days)</th>
-                  <td>Every {M.cadence.detailMinutes} minutes</td>
+                  <td data-label="How often">Every {M.cadence.detailMinutes} minutes</td>
                   <td>No data, fewer than {M.audit.minSwaps} swaps, or data older than {M.audit.maxAgeHours} hours: neutral {M.audit.neutral}. A failed fetch changes nothing that is stored.</td>
                 </tr>
                 <tr>
                   <th scope="row">GitHub releases of Nutshell and cdk</th>
-                  <td>Once a day</td>
+                  <td data-label="How often">Once a day</td>
                   <td>The last known release is kept. Without any, the fallback above applies; without that, {v.pointsUnknownSoftware} points and no label.</td>
                 </tr>
               </tbody>
