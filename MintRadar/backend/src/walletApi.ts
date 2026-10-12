@@ -4,14 +4,17 @@ import { NEW_MINT_MAX_DAYS, isEligibleForRecommendation } from './shared/reliabi
 import { classifyVersion, MAX_VERSION_LENGTH, type LatestVersion } from './shared/versionRule.js'
 import { METHODOLOGY_VERSION } from './shared/methodology.js'
 import { isTestMint } from './testMints.js'
+export { WALLET_ENVELOPE_FIELDS, WALLET_MINT_FIELDS, WALLET_QUERY_PARAMS, WALLET_ERRORS } from './shared/walletFields.js'
 
 // Public API for wallets (docs/API.md, docs/openapi/wallets-v1.yaml): a compact, fixed-shape view of the
 // /api/mints/known snapshot. Everything here is a pure function of that snapshot; the snapshot itself (one
 // database read per 60 seconds, shared with /api/mints/known) lives in index.ts.
 //
 // The mint object has EXACTLY the keys of WalletMint and is a v1 contract: never rename or remove a key,
-// only add. It must never carry IP/network data, onion data, reviewer keys or texts, contact details or the
-// mint's NUT-06 pubkey (a contract test lists the key set and scans the JSON for those names).
+// only add, and add its line to WALLET_MINT_FIELDS (shared/walletFields.ts: the /for-wallets page renders it, a
+// test compares it with this mapper). It must never carry IP/network data, onion data, reviewer keys or texts,
+// contact details or the mint's NUT-06 pubkey (a contract test lists the key set and scans the JSON for those
+// names).
 
 /** The fields of an /api/mints/known row that the wallet view reads. */
 export interface KnownMintLike {
@@ -136,7 +139,7 @@ export const WALLET_LIST_DEFAULT_LIMIT = 100
 export const WALLET_LIST_MAX_LIMIT = 200
 
 export interface WalletListFilter {
-  unit?: string
+  unit?: string | undefined
   minScore?: number
   includeOffline: boolean
   includeTest: boolean

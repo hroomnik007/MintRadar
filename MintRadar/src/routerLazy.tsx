@@ -11,3 +11,5 @@ export const Tools = lazy(() => import('@/pages/Tools'))
 export const About = lazy(() => import('@/pages/About'))
 // Methodology is a long static text page (the Reliability Score reference): not in the initial payload.
 export const Methodology = lazy(() => import('@/pages/Methodology'))
+// For wallets is a long static text page (the API quick start): not in the initial payload.
+export const ForWallets = lazy(() => import('@/pages/ForWallets'))

@@ -13,7 +13,7 @@ import NotFound from '@/pages/NotFound'
 // Moved into their own module (routerLazy.tsx) so this file's only export is
 // `router` — a file mixing component exports with a non-component export
 // breaks react-refresh's fast-refresh detection (react-refresh/only-export-components).
-import { Stats, MintDetail, Tools, About, Methodology } from '@/routerLazy'
+import { Stats, MintDetail, Tools, About, Methodology, ForWallets } from '@/routerLazy'
 
 const lazyFallback = (
   <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text2)' }}>Loading…</div>
@@ -30,6 +30,7 @@ export const router = createBrowserRouter([
       { path: 'tools', element: <Suspense fallback={lazyFallback}><Tools /></Suspense> },
       { path: 'about', element: <Suspense fallback={lazyFallback}><About /></Suspense> },
       { path: 'methodology', element: <Suspense fallback={lazyFallback}><Methodology /></Suspense> },
+      { path: 'for-wallets', element: <Suspense fallback={lazyFallback}><ForWallets /></Suspense> },
       { path: 'wallets', element: <Wallets /> },
       { path: 'learn', element: <Learn /> },
       { path: 'learn/:moduleId', element: <LearnModule /> },

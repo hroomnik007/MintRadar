@@ -140,3 +140,9 @@ describe('methodology: backend and frontend copies agree', () => {
     expect(codeOf('../utils/methodology.ts')).toBe(codeOf('../../backend/src/shared/methodology.ts'))
   })
 })
+
+describe('walletFields: backend and frontend copies agree', () => {
+  it('has identical code (field lists of the wallet API)', () => {
+    expect(codeOf('../utils/walletFields.ts')).toBe(codeOf('../../backend/src/shared/walletFields.ts'))
+  })
+})

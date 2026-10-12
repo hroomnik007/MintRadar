@@ -309,6 +309,10 @@ export default function Methodology() {
               </div>
             </dl>
           </div>
+          <p className="doc-after-card">
+            Wallet developers can read the score, and the fields it is built from, through the{' '}
+            <Link to="/for-wallets">API for wallets</Link>. Every answer of that API carries the methodology number above.
+          </p>
         </section>
       </div>
     </div>

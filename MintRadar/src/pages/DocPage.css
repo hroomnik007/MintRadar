@@ -11,6 +11,13 @@
   line-height: 1.35;
 }
 .doc-after-card { margin-top: 18px; }
+.doc-h4 {
+  margin: 20px 0 4px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
 
 /* ── Tables (same tokens as the Stats / Compare tables) ── */
 .doc-table-wrap {
@@ -119,4 +126,16 @@
 .doc-copy-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (pointer: coarse) {
   .doc-copy-btn { min-height: 44px; padding-inline: 16px; }
+}
+
+.doc-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
