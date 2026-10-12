@@ -11,17 +11,20 @@ export function AuditCzTiles({ view }: { view: AuditCzView }) {
   if (view.tiles.length === 0) return null
   return (
     <div className="audit-summary-strip audit-cz-tiles">
-      {view.tiles.map(t => (
+      {view.tiles.map(t => {
+        // The icon stays glued to the last word, so a wrapped label never leaves it alone on a line.
+        const cut = t.label.lastIndexOf(' ') + 1
+        const lead = t.label.slice(0, cut), last = t.label.slice(cut)
+        return (
         <div className="audit-summary-cell" key={t.key} data-tile={t.key}>
           <div className="audit-summary-value" style={{ color: 'var(--accent)' }}>{t.value}</div>
           <div className="audit-summary-label audit-cz-tile-label">
-            <span>{t.label}</span>
-            <InfoTooltip text={t.tooltip} width={240} iconSize={11} label={`About ${t.label}`} />
+            {lead}
+            <span className="audit-cz-tile-tail">{last}<InfoTooltip text={t.tooltip} width={240} iconSize={11} label={`About ${t.label}`} /></span>
           </div>
-          {t.caption && <div className="audit-cz-tile-caption">{t.caption}</div>}
-          {t.captionNote && <div className="audit-cz-tile-caption">{t.captionNote}</div>}
         </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

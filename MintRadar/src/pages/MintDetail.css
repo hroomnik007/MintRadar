@@ -2108,9 +2108,12 @@ a.review-action-btn { color: var(--text3); }
   line-height: 1.45;
   color: var(--text3);
 }
-/* cashu.info tiles share the swap strip's label style (sentence case, 12.5px); labels may wrap. */
-.audit-cz-tile-label { text-align: center; flex-wrap: wrap; }
-.audit-cz-tile-caption { font-size: 12px; line-height: 1.3; color: var(--text3); }
+/* cashu.info tiles share the swap strip's label style (sentence case, 12.5px); a long label wraps left-aligned
+   with the icon glued to its last word. Content starts at the top so all four values sit on one baseline. */
+.audit-cz-tile-label { display: block; text-align: left; }
+.audit-cz-tile-tail { white-space: nowrap; }
+.audit-cz-tile-tail .info-tooltip { vertical-align: middle; margin-left: 3px; }
+.audit-cz-tiles .audit-summary-cell { justify-content: flex-start; }
 .audit-cz-tiles .audit-summary-value { font-size: 19px; }
 .audit-cz-tiles { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
 
@@ -2127,7 +2130,7 @@ a.review-action-btn { color: var(--text3); }
 /* Network card values wrap between words ("expires 12 Oct 2026 · expires soon"), and only inside a word when
    it alone is wider than the row (a long network name); the Mint info card keeps its break-all recipe. */
 .md-network-card .md-info-value { word-break: normal; overflow-wrap: anywhere; max-width: 70%; }
-.audit-cz-tile-label .info-tooltip-pop { text-transform: none; letter-spacing: normal; font-size: 10px; }
+.audit-cz-tile-label .info-tooltip-pop { text-transform: none; letter-spacing: normal; font-size: 10px; white-space: normal; }
 
 /* Icon-only copy buttons: a target of at least 24 px (they carry an aria-label). */
 button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-flex; align-items: center; justify-content: center; }
@@ -2614,5 +2617,4 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .audit-summary-strip.audit-cz-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 16px; column-gap: 12px; }
   .audit-summary-strip.audit-cz-tiles .audit-summary-cell,
   .audit-summary-strip.audit-cz-tiles .audit-summary-cell:nth-child(even) { border-left: 0; padding: 0; }
-  .audit-cz-tile-label { text-align: left; justify-content: flex-start; }
 }

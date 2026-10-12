@@ -37,7 +37,9 @@ describe('tiles from the stored detail (LNpay values)', () => {
     const t = tiles(LNPAY)
     expect(t['melts']).toMatchObject({ value: '51 / 64', label: 'Payouts' })
     expect(t['mints']).toMatchObject({ value: '56 / 62', label: 'Receives' })
-    expect(t['clean']).toMatchObject({ value: '100%', label: 'Without a failure caused by this mint', caption: '126 of 126 swaps', captionNote: '19 failed for other reasons' })
+    expect(t['clean']).toMatchObject({ value: '100%', label: 'Without a failure caused by this mint', tooltip: '126 of 126 swaps in the last 7 days, 19 failed for other reasons' })
+    expect(t['clean']).not.toHaveProperty('caption')
+    expect(t['clean']).not.toHaveProperty('captionNote')
     expect(t['avg']).toMatchObject({ value: '8.3 s', label: 'Avg swap time' })
     // four tiles, no overall "Success rate" that mixes in unattributed failures
     expect(view([]).tiles.map(x => x.key)).toEqual(['melts', 'mints', 'clean', 'avg'])
@@ -45,39 +47,38 @@ describe('tiles from the stored detail (LNpay values)', () => {
   })
   it('success tile: LNpay-like, 0 blamed of 105 with 16 failed', () => {
     const t = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 105, success: 89, failed: 16 }, errorsBlamed: 0 } })['clean']
-    expect(t).toMatchObject({ value: '100%', caption: '105 of 105 swaps', captionNote: '16 failed for other reasons' })
+    expect(t).toMatchObject({ value: '100%', tooltip: '105 of 105 swaps in the last 7 days, 16 failed for other reasons' })
   })
   it('success tile: lnw.cash-like, 202 blamed of 229 with 207 failed', () => {
     const t = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 229, success: 22, failed: 207 }, errorsBlamed: 202 } })['clean']
-    expect(t).toMatchObject({ value: '12%', caption: '27 of 229 swaps', captionNote: '202 caused by this mint · 5 other failures' })
+    expect(t).toMatchObject({ value: '12%', tooltip: '27 of 229 swaps in the last 7 days, 202 caused by this mint, 5 other failures' })
   })
   it('success tile: 1 blamed of 200 shows 99%, never 100%', () => {
     const t = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 200, success: 199, failed: 1 }, errorsBlamed: 1 } })['clean']
-    expect(t).toMatchObject({ value: '99%', caption: '199 of 200 swaps', captionNote: '1 caused by this mint' })
+    expect(t).toMatchObject({ value: '99%', tooltip: '199 of 200 swaps in the last 7 days, 1 caused by this mint' })
   })
-  it('success tile: singular other failure, no note without failures, never "x / y"', () => {
+  it('success tile: singular forms, no failures, never "x / y"', () => {
+    const oneOther = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 50, success: 49, failed: 1 }, errorsBlamed: 0 } })['clean']
+    expect(oneOther?.tooltip).toBe('50 of 50 swaps in the last 7 days, 1 failed for other reasons')
     const one = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 50, success: 47, failed: 3 }, errorsBlamed: 2 } })['clean']
-    expect(one?.captionNote).toBe('2 caused by this mint · 1 other failure')
+    expect(one?.tooltip).toBe('48 of 50 swaps in the last 7 days, 2 caused by this mint, 1 other failure')
     const none = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 50, success: 50, failed: 0 }, errorsBlamed: 0 } })['clean']
-    expect(none).toMatchObject({ value: '100%', caption: '50 of 50 swaps' })
-    expect(none?.captionNote).toBeUndefined()
-    for (const t of [one, none]) expect(t?.value).not.toContain('/')
+    expect(none).toMatchObject({ value: '100%', tooltip: '50 of 50 swaps in the last 7 days' })
+    for (const t of [one, none, oneOther]) expect(t?.value).not.toContain('/')
   })
-  it('success tile: fewer than 10 swaps still shows the number, the tooltip explains the neutral rule', () => {
+  it('success tile: fewer than 10 swaps still shows the number', () => {
     const t = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 4, success: 4, failed: 0 }, errorsBlamed: 0 } })['clean']
-    expect(t).toMatchObject({ value: '100%', caption: '4 of 4 swaps' })
-    expect(t?.tooltip).toContain('fewer than 10 swaps scores neutral')
+    expect(t).toMatchObject({ value: '100%', tooltip: '4 of 4 swaps in the last 7 days' })
   })
   it('success tile: hostile numbers are clamped or hide the tile', () => {
     const w = (all: Record<string, unknown>, errorsBlamed: unknown) => tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all, errorsBlamed } } as AuditCzDetail)['clean']
-    expect(w({ total: 20, failed: 20 }, 999)).toMatchObject({ value: '0%', caption: '0 of 20 swaps', captionNote: '20 caused by this mint' })
+    expect(w({ total: 20, failed: 20 }, 999)).toMatchObject({ value: '0%', tooltip: '0 of 20 swaps in the last 7 days, 20 caused by this mint' })
     expect(w({ total: 0, failed: 0 }, 0)).toBeUndefined()
     expect(w({ total: NaN }, 0)).toBeUndefined()
     expect(w({ total: -5 }, 0)).toBeUndefined()
     expect(w({ total: 20 }, NaN)).toBeUndefined()
     expect(w({ total: 20 }, -1)).toBeUndefined()
-    expect(w({ total: 20, failed: -3 }, 0)).toMatchObject({ value: '100%', caption: '20 of 20 swaps' })
-    expect(w({ total: 20, failed: -3 }, 0)?.captionNote).toBeUndefined()
+    expect(w({ total: 20, failed: -3 }, 0)).toMatchObject({ value: '100%', tooltip: '20 of 20 swaps in the last 7 days' })
   })
   it('a tile whose field is missing is hidden', () => {
     expect(Object.keys(tiles({ fetchedAt: null, swaps7d: { asSource: { success: 1, total: 2 } } }))).toEqual(['melts'])
@@ -97,7 +98,7 @@ describe('tiles from the stored detail (LNpay values)', () => {
     const t = tiles(LNPAY)
     expect(t['melts']?.tooltip).toBe('Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)')
     expect(t['mints']?.tooltip).toBe('Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)')
-    expect(t['clean']?.tooltip).toBe("Swaps in the last 7 days without a failure that cashu.info attributes to this mint. Failures caused by test amounts below the mint's minimum, the auditor's balance, Lightning routing or another mint are not counted against it. This is the figure the audit part of the Reliability Score uses; fewer than 10 swaps scores neutral.")
+    expect(t['clean']?.tooltip).toBe('126 of 126 swaps in the last 7 days, 19 failed for other reasons')
     expect(t['avg']?.tooltip).toBe('Average swap time over the last 7 days as reported by cashu.info.')
     expect(t['avg']?.tooltip).not.toMatch(/successful swaps/)
   })
