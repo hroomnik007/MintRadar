@@ -111,6 +111,7 @@ Another session once committed in this checkout between my steps and swept up my
 - **Do not run two sessions in the same checkout at the same time.**
 - **If you must change a file another session has modified** (`git diff` shows changes you did not make), stage only your own hunks with `git add -p` and say so in your report.
 - **After every push** check the CI result for your commit (`gh run list --limit 3`) and report it first.
+- **Remotes: `origin` (GitHub) is the source of truth; local `main` tracks `origin/main`.** Push with one command from one sha: `git push origin main && git push gitea main`. **NEVER `git pull`, `git rebase` or `git merge` from gitea.** If the push to gitea is rejected or the host is unreachable: report it and STOP (no rebase, merge or force). Realigning a diverged gitea: see `docs/claude/deploy-and-infra.md` ("Gitea remote").
 
 ## Nostr Login
 
