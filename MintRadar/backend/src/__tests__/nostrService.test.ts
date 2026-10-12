@@ -296,12 +296,11 @@ describe('notifyAlert / resetAlert ("More alerts")', () => {
   const MINT = 'https://mint.example.com'
   const CLAIMED_AT = new Date('2026-10-10T12:00:00.000Z')
   const claimedRow = (pubkey: string) => ({ pubkey, relays: ['wss://relay.example.com'], claimed_at: CLAIMED_AT })
+  const DETAIL = `https://mintradar.org/mint/${encodeURIComponent(MINT)}`
 
-  async function decryptedText(svc: Awaited<ReturnType<typeof loadWithNsec>>, kind: 'mint_melt' | 'version_outdated' | 'nut_loss', name: string | null) {
+  async function decryptedText(svc: Awaited<ReturnType<typeof loadWithNsec>>, kind: 'mint_melt' | 'version_outdated' | 'nut_loss') {
     const recipient = generateSecretKey()
-    query
-      .mockResolvedValueOnce({ rows: [claimedRow(getPublicKey(recipient))] })
-      .mockResolvedValueOnce({ rows: [{ name }] })
+    query.mockResolvedValueOnce({ rows: [claimedRow(getPublicKey(recipient))] })
     await svc.notifyAlert(MINT, kind)
     const wrap = publishMock.mock.calls[0]![1] as NostrEvent
     return nip17.unwrapEvent(wrap, recipient).content
@@ -309,43 +308,37 @@ describe('notifyAlert / resetAlert ("More alerts")', () => {
 
   it('mint/melt: claims on its own flag with a 12 h cooldown and sends the specified text', async () => {
     const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
-    const text = await decryptedText(svc, 'mint_melt', 'Test Mint')
+    const text = await decryptedText(svc, 'mint_melt')
     const [sql, params] = query.mock.calls[0] as [string, unknown[]]
     expect(sql).toContain('notify_on_mint_melt_issues = true')
     expect(sql).toContain('last_notified_mint_melt_at = now()')
     expect(sql).toMatch(/last_notified_mint_melt_at IS NULL OR last_notified_mint_melt_at < now\(\) - INTERVAL '12 hours'/)
     expect(params).toEqual([MINT])
-    expect(text).toBe(`MintRadar: mint/melt issues on Test Mint (${MINT})`)
+    expect(text).toBe(`⚠️ mint.example.com: mint or melt issues were detected.\nView details: ${DETAIL}`)
   })
 
-  it('version outdated: one-shot claim (slot must be NULL), specified text, hostname fallback for an unnamed mint', async () => {
+  it('version outdated: one-shot claim (slot must be NULL) and the specified text', async () => {
     const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
-    const text = await decryptedText(svc, 'version_outdated', null)
+    const text = await decryptedText(svc, 'version_outdated')
     const [sql] = query.mock.calls[0] as [string, unknown[]]
     expect(sql).toContain('notify_on_version_outdated = true')
     expect(sql).toContain('last_notified_version_outdated_at IS NULL')
     expect(sql).not.toContain('INTERVAL')
-    expect(text).toBe(`MintRadar: mint.example.com is now outdated (${MINT})`)
+    expect(text).toBe(`ℹ️ mint.example.com is now running outdated software.\nView details: ${DETAIL}`)
   })
 
-  it('does not let a mint-controlled name inject newlines or links into the DM', async () => {
+  it('never reads or uses the mint name: the only query is the claim, and the text is template + hostname + link', async () => {
     const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
-    const text = await decryptedText(svc, 'version_outdated', 'Evil\nMintRadar: log in at https://evil.example/login www.evil.example')
-    expect(text).not.toContain('\n')
-    expect(text).not.toContain('evil.example')
-    expect(text).toBe(`MintRadar: EvilMintRadar: log in at is now outdated (${MINT})`)
-  })
-
-  it('falls back to the hostname when the name is only a link', async () => {
-    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
-    const text = await decryptedText(svc, 'nut_loss', 'https://evil.example')
-    expect(text).toBe(`MintRadar: mint.example.com no longer supports NUT-04/05 (${MINT})`)
+    const text = await decryptedText(svc, 'version_outdated')
+    expect(query).toHaveBeenCalledTimes(1)
+    expect(query.mock.calls.map(c => String(c[0])).join('\n')).not.toMatch(/\bname\b/)
+    expect(text).not.toContain('MintRadar:')
   })
 
   it('NUT loss: specified text', async () => {
     const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
-    const text = await decryptedText(svc, 'nut_loss', 'Test Mint')
-    expect(text).toBe(`MintRadar: Test Mint no longer supports NUT-04/05 (${MINT})`)
+    const text = await decryptedText(svc, 'nut_loss')
+    expect(text).toBe(`⚠️ mint.example.com no longer supports NUT-04 or NUT-05 (minting or melting).\nView details: ${DETAIL}`)
   })
 
   it('RACE: two concurrent calls send only ONE DM (the second claim matches no row)', async () => {
@@ -354,7 +347,6 @@ describe('notifyAlert / resetAlert ("More alerts")', () => {
     query
       .mockResolvedValueOnce({ rows: [claimedRow(pubkey)] })
       .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [{ name: 'Test Mint' }] })
     await Promise.all([svc.notifyAlert(MINT, 'nut_loss'), svc.notifyAlert(MINT, 'nut_loss')])
     expect(publishMock).toHaveBeenCalledTimes(1)
   })
@@ -373,10 +365,9 @@ describe('notifyAlert / resetAlert ("More alerts")', () => {
     const pubkey = getPublicKey(generateSecretKey())
     query
       .mockResolvedValueOnce({ rows: [claimedRow(pubkey)] })
-      .mockResolvedValueOnce({ rows: [{ name: 'Test Mint' }] })
       .mockResolvedValueOnce({ rowCount: 1 })
     await svc.notifyAlert(MINT, 'mint_melt')
-    const [releaseSql, releaseParams] = query.mock.calls[2] as [string, unknown[]]
+    const [releaseSql, releaseParams] = query.mock.calls[1] as [string, unknown[]]
     expect(releaseSql).toContain('SET last_notified_mint_melt_at = NULL')
     expect(releaseSql).toContain('last_notified_mint_melt_at = $3')
     expect(releaseParams).toEqual([pubkey, MINT, CLAIMED_AT])

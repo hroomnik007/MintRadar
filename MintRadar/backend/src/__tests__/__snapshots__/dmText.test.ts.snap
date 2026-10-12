@@ -1,0 +1,26 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DM templates (snapshots) > down 1`] = `
+"⚠️ mint.example.com just went offline.
+View details: https://mintradar.org/mint/https%3A%2F%2Fmint.example.com"
+`;
+
+exports[`DM templates (snapshots) > mint_melt 1`] = `
+"⚠️ mint.example.com: mint or melt issues were detected.
+View details: https://mintradar.org/mint/https%3A%2F%2Fmint.example.com"
+`;
+
+exports[`DM templates (snapshots) > nut_loss 1`] = `
+"⚠️ mint.example.com no longer supports NUT-04 or NUT-05 (minting or melting).
+View details: https://mintradar.org/mint/https%3A%2F%2Fmint.example.com"
+`;
+
+exports[`DM templates (snapshots) > up 1`] = `
+"✅ mint.example.com is back online.
+View details: https://mintradar.org/mint/https%3A%2F%2Fmint.example.com"
+`;
+
+exports[`DM templates (snapshots) > version_outdated 1`] = `
+"ℹ️ mint.example.com is now running outdated software.
+View details: https://mintradar.org/mint/https%3A%2F%2Fmint.example.com"
+`;

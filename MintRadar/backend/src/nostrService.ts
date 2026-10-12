@@ -15,8 +15,7 @@ import type { Event as NostrEvent } from 'nostr-tools'
 import WebSocket from 'ws'
 import type { ClientRequestArgs } from 'http'
 import { pool } from './db.js'
-import { safeLookup } from './ssrf.js'
-import { publicMintNameOrHost } from './mintNames.js'
+import { safeLookup, isWellFormedMintUrl } from './ssrf.js'
 
 // Always install the 'ws' package as globalThis.WebSocket, even on Node
 // versions (22+) that ship a native undici WebSocket. The root 'nostr-tools'
@@ -210,6 +209,39 @@ export async function publishLongFormArticle(params: {
   return { succeeded, failed }
 }
 
+// ---------------------------------------------------------------------------
+// DM text. EVERY notification text (down, up and the three "More alerts") is built ONLY from a fixed
+// template, the hostname of the mint (validated by isWellFormedMintUrl's hostname rules) and a link
+// https://mintradar.org/mint/<encodeURIComponent(mint url)>. The mint's name, version, MOTD, error
+// texts and the raw URL (path, query, fragment) are mint-controlled and never reach a DM, so a hostile
+// mint cannot put its own sentences, links, nostr: references or @mentions into a message signed by
+// the MintRadar service key. The only "://" in a DM is the one in "https://mintradar.org/".
+// ---------------------------------------------------------------------------
+export type DmKind = 'down' | 'up' | AlertKind
+
+const MINTRADAR_ORIGIN = 'https://mintradar.org'
+const FALLBACK_HOSTNAME = 'A watched mint'
+
+const DM_TEMPLATES: Record<DmKind, (host: string, detailUrl: string) => string> = {
+  down: (host, url) => `⚠️ ${host} just went offline.\nView details: ${url}`,
+  up: (host, url) => `✅ ${host} is back online.\nView details: ${url}`,
+  mint_melt: (host, url) => `⚠️ ${host}: mint or melt issues were detected.\nView details: ${url}`,
+  version_outdated: (host, url) => `ℹ️ ${host} is now running outdated software.\nView details: ${url}`,
+  nut_loss: (host, url) => `⚠️ ${host} no longer supports NUT-04 or NUT-05 (minting or melting).\nView details: ${url}`,
+}
+
+export function dmHostname(mintUrl: string): string {
+  try {
+    return isWellFormedMintUrl(mintUrl) ? new URL(mintUrl).hostname : FALLBACK_HOSTNAME
+  } catch {
+    return FALLBACK_HOSTNAME
+  }
+}
+
+export function buildDmText(kind: DmKind, mintUrl: string): string {
+  return DM_TEMPLATES[kind](dmHostname(mintUrl), `${MINTRADAR_ORIGIN}/mint/${encodeURIComponent(mintUrl)}`)
+}
+
 interface ClaimedRow {
   pubkey: string
   relays: string[]
@@ -247,11 +279,7 @@ export async function notifySubscribers(mintUrl: string, direction: 'down' | 'up
     const rows = claimed.rows as ClaimedRow[]
     if (rows.length === 0) return
 
-    const hostname = new URL(mintUrl).hostname
-    const detailUrl = `https://mintradar.org/mint/${encodeURIComponent(mintUrl)}`
-    const message = direction === 'down'
-      ? `⚠️ ${hostname} just went offline.\nView details: ${detailUrl}`
-      : `✅ ${hostname} is back online.\nView details: ${detailUrl}`
+    const message = buildDmText(direction, mintUrl)
 
     // Release a claim whose DM never went out, so the next probe cycle can
     // retry that subscriber. Guarded on the exact timestamp we set, so a
@@ -306,38 +334,10 @@ export type AlertKind = 'mint_melt' | 'version_outdated' | 'nut_loss'
 
 const MINT_MELT_COOLDOWN_HOURS = 12
 
-const ALERTS: Record<AlertKind, { flag: string; claim: string; cooldownHours: number | null; text: (name: string, url: string) => string }> = {
-  mint_melt: {
-    flag: 'notify_on_mint_melt_issues',
-    claim: 'last_notified_mint_melt_at',
-    cooldownHours: MINT_MELT_COOLDOWN_HOURS,
-    text: (name, url) => `MintRadar: mint/melt issues on ${name} (${url})`,
-  },
-  version_outdated: {
-    flag: 'notify_on_version_outdated',
-    claim: 'last_notified_version_outdated_at',
-    cooldownHours: null,
-    text: (name, url) => `MintRadar: ${name} is now outdated (${url})`,
-  },
-  nut_loss: {
-    flag: 'notify_on_nut_loss',
-    claim: 'last_notified_nut_loss_at',
-    cooldownHours: null,
-    text: (name, url) => `MintRadar: ${name} no longer supports NUT-04/05 (${url})`,
-  },
-}
-
-// The mint's name is untrusted text from its own /v1/info, and the DM comes from the MintRadar service
-// identity. Same display cleaning as the API (controls, newlines, bidi/zero-width, hidden list, length cap),
-// plus any link-like text removed, so a mint cannot plant its own URL or a second "line" in our message.
-// Nothing displayable left -> the hostname.
-export function dmMintName(raw: string | null | undefined, mintUrl: string): string {
-  const cleaned = publicMintNameOrHost(raw, mintUrl)
-    .replace(/\b[a-z][a-z0-9+.-]*:\/\/\S*/gi, '')
-    .replace(/\bwww\.\S*/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-  return cleaned.length > 0 ? cleaned : new URL(mintUrl).hostname
+const ALERTS: Record<AlertKind, { flag: string; claim: string; cooldownHours: number | null }> = {
+  mint_melt: { flag: 'notify_on_mint_melt_issues', claim: 'last_notified_mint_melt_at', cooldownHours: MINT_MELT_COOLDOWN_HOURS },
+  version_outdated: { flag: 'notify_on_version_outdated', claim: 'last_notified_version_outdated_at', cooldownHours: null },
+  nut_loss: { flag: 'notify_on_nut_loss', claim: 'last_notified_nut_loss_at', cooldownHours: null },
 }
 
 // Sends one DM per subscriber of `mintUrl` who has the alert's flag on and whose claim slot is armed
@@ -363,8 +363,7 @@ export async function notifyAlert(mintUrl: string, kind: AlertKind): Promise<voi
     const rows = claimed.rows as ClaimedRow[]
     if (rows.length === 0) return
 
-    const nameRes = await pool.query('SELECT name FROM mints WHERE url = $1', [mintUrl])
-    const message = cfg.text(dmMintName(nameRes.rows[0]?.name as string | null | undefined, mintUrl), mintUrl)
+    const message = buildDmText(kind, mintUrl)
 
     const releaseClaim = (pubkey: string, claimedAt: Date) =>
       pool.query(
