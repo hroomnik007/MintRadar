@@ -10,7 +10,7 @@ import './About.css'
 const REPO_URL = 'https://github.com/hroomnik007/MintRadar'
 const NPUB = 'npub1zatej55x47xzhnw06yarqr5ugz7y5el8vygcckek24e5qmrtx77qnmd6rg'
 const NIP05 = 'wildcitizen7@mintradar.org'
-const LAST_UPDATED = '4 October 2026'
+const LAST_UPDATED = '12 October 2026'
 
 const SECTIONS = [
   { id: 'about', label: 'About' },
@@ -148,7 +148,7 @@ export default function About() {
             </li>
             <li>
               <strong>Notifications (optional):</strong> if you turn them on we store your Nostr public key, the
-              mint, your message relays, your settings and a timestamp. A subscription is deleted when you turn both
+              mint, your message relays, your settings and a timestamp. A subscription is deleted when you turn all
               alerts for that mint off, when you remove the mint from your watchlist, or about 30 days after its last
               update (logging in to MintRadar refreshes it). Logging out does not cancel a notification.
             </li>

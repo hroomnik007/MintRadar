@@ -340,7 +340,7 @@ export default function Watchlist() {
                 </div>
               )}
               <p className="wl-notify-explainer">
-                Optional: turn on Nostr DMs for a watched mint. You get one message when it goes down and one when it comes back (at most one of each per hour), even if this tab is closed. Your Nostr client must support private messages.
+                Optional: turn on Nostr DMs for a watched mint. You get one message when it goes down and one when it comes back (at most one of each per hour), even if this tab is closed. &quot;More alerts&quot; are optional too, and all messages are limited in frequency (at most 40 a day). Your Nostr client must support private messages.
               </p>
               <div className="wl-grid">
                 {orderedMints.slice(0, visibleCount).map(url => {
