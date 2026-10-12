@@ -73,7 +73,7 @@ export default function Module3() {
         </li>
       </ul>
       <p>
-        No single number can tell you everything, so we also show a full breakdown — click on any mint's Reliability Score to see exactly what's contributing to it.
+        No single number can tell you everything, so we also show a full breakdown — click on any mint's Reliability Score to see exactly what's contributing to it. The exact rules, and the history of the formula, are on the <Link to="/methodology">Reliability Score methodology</Link> page.
       </p>
 
       <KeyTakeaway>

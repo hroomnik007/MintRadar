@@ -1,8 +1,10 @@
-// Version of the Reliability Score methodology, sent in the wallet API envelope (docs/API.md).
+// Version of the Reliability Score methodology, sent in the wallet API envelope (docs/API.md) and shown with
+// its change log on the /methodology page.
 //
 // Bump METHODOLOGY_VERSION and append a METHODOLOGY_CHANGES entry in the SAME commit as any change to the
-// formula (component weights, the audit rule, the version rule, the new-mint cap). Backend only: the
-// frontend never shows the number, so there is no frontend copy.
+// formula (component weights, the audit rule, the version rule, the new-mint cap). This file has no imports,
+// so the frontend copy src/utils/methodology.ts is byte-identical (code, comments aside);
+// src/__tests__/sharedModules.test.ts fails when they drift.
 
 export const METHODOLOGY_VERSION = 3
 

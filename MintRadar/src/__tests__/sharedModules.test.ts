@@ -134,3 +134,9 @@ describe('test-mint list: backend copy equals the frontend list', () => {
     }
   })
 })
+
+describe('methodology: backend and frontend copies agree', () => {
+  it('has identical code (version, change log and their types)', () => {
+    expect(codeOf('../utils/methodology.ts')).toBe(codeOf('../../backend/src/shared/methodology.ts'))
+  })
+})

@@ -1,6 +1,6 @@
 import { nip19 } from 'nostr-tools'
 import { njumpProfileUrl, njumpEventUrl, npubFromPubkey, mintAnnounceNaddr } from '@/utils/nostrLinks'
-import { useParams, useNavigate, Navigate } from 'react-router-dom'
+import { useParams, useNavigate, Navigate, Link } from 'react-router-dom'
 import { Fragment, useEffect, useState, useMemo, useRef, useCallback, lazy, Suspense, type JSX, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
@@ -2767,6 +2767,7 @@ function MintDetailContent({ url }: { url: string }) {
             ))}
             <div className="rb-formula">
               Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.
+              {' '}<Link to="/methodology" className="rb-method-link">How the score is computed</Link>
             </div>
           </div>
         </div>

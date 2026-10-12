@@ -9,3 +9,5 @@ export const MintDetail = lazy(() => import('@/pages/MintDetail'))
 export const Tools = lazy(() => import('@/pages/Tools'))
 // About is a long static text page: no reason to put it in the initial payload.
 export const About = lazy(() => import('@/pages/About'))
+// Methodology is a long static text page (the Reliability Score reference): not in the initial payload.
+export const Methodology = lazy(() => import('@/pages/Methodology'))
