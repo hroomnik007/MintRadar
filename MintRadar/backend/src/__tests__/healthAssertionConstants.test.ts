@@ -18,6 +18,8 @@ const full: HealthInput = {
   outdated: false, isTest: false, scoreCappedNew: false, lastCheckedAt: new Date(NOW - 60_000).toISOString(), now: NOW,
   audit: { swaps7d: 120, attributedFailures: 1, fetchedAt: new Date(NOW - 3_600_000).toISOString() },
 }
+// The fixed list of labels a tag may carry (the table on /for-wallets prints "defined by <NIP>" or "MintRadar tag").
+const SOURCE_LABELS = ['NIP-85', 'NIP-73', 'NIP-40', 'MintRadar']
 const names = (i: HealthInput): string[] => buildHealthEvent(i)!.tags.map(t => t[0]!)
 
 describe('HEALTH_ASSERTION_TAGS equals what the builder can emit', () => {
@@ -40,12 +42,12 @@ describe('HEALTH_ASSERTION_TAGS equals what the builder can emit', () => {
   it('describes every tag', () => {
     for (const t of HEALTH_ASSERTION_TAGS) {
       for (const k of ['type', 'presence', 'meaning'] as const) expect(t[k].trim().length, `${t.name}.${k}`).toBeGreaterThan(0)
-      expect(['NIP-85', 'NIP-40', 'MintRadar']).toContain(t.source)
+      expect(SOURCE_LABELS).toContain(t.source)
     }
   })
-  it('marks the tags NIP-85 defines (d, k, rank) and expiration (NIP-40); every mint_* tag and methodology* is MintRadar\'s', () => {
+  it('labels d and rank NIP-85, k NIP-73 (NIP-85 says to add it), expiration NIP-40; every mint_* tag and methodology* is MintRadar\'s', () => {
     const src = Object.fromEntries(HEALTH_ASSERTION_TAGS.map(t => [t.name, t.source]))
-    expect(src['d']).toBe('NIP-85'); expect(src['k']).toBe('NIP-85'); expect(src['rank']).toBe('NIP-85')
+    expect(src['d']).toBe('NIP-85'); expect(src['k']).toBe('NIP-73'); expect(src['rank']).toBe('NIP-85')
     expect(src['expiration']).toBe('NIP-40')
     for (const t of HEALTH_ASSERTION_TAGS) if (/^(mint_|methodology)/.test(t.name)) expect(t.source, t.name).toBe('MintRadar')
   })

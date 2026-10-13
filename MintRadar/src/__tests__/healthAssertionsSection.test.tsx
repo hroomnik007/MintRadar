@@ -70,7 +70,8 @@ describe('the signed health assertions section on /for-wallets', () => {
       expect(text).toContain(t.source === 'MintRadar' ? 'MintRadar tag' : `defined by ${t.source}`)
       expect(text).toContain(t.meaning)
     }
-    expect(rows.filter(r => r.textContent!.includes('defined by NIP-85')).map(r => r.getAttribute('data-tag'))).toEqual(['d', 'k', 'rank'])
+    expect(rows.filter(r => r.textContent!.includes('defined by NIP-85')).map(r => r.getAttribute('data-tag'))).toEqual(['d', 'rank'])
+    expect(rows.find(r => r.getAttribute('data-tag') === 'k')!.textContent).toContain('defined by NIP-73')
   })
 
   it('shows the exact tested snippet', () => {

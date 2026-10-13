@@ -163,6 +163,8 @@ test.describe('Signed health assertions section', () => {
     const rows = await page.locator('tr[data-tag]').evaluateAll(els => els.map(e => e.getAttribute('data-tag')))
     expect(rows).toEqual(HEALTH_ASSERTION_TAGS.map(t => t.name))
     await expect(page.locator('tr[data-tag="rank"]')).toContainText('defined by NIP-85')
+    await expect(page.locator('tr[data-tag="d"]')).toContainText('defined by NIP-85')
+    await expect(page.locator('tr[data-tag="k"]')).toContainText('defined by NIP-73')
     await expect(page.locator('tr[data-tag="mint_status"]')).toContainText('MintRadar tag')
     await expect(page.locator('tr[data-tag="expiration"]')).toContainText('defined by NIP-40')
   })

@@ -19,13 +19,14 @@ export const ATTESTATION_RELAYS_PUBLIC = [
   'wss://relay.primal.net',
 ] as const
 
-export type HealthTagSource = 'NIP-85' | 'NIP-40' | 'MintRadar'
+export type HealthTagSource = 'NIP-85' | 'NIP-73' | 'NIP-40' | 'MintRadar'
 
 export interface HealthAssertionTag {
   name: string
   /** The shape of the value. */
   type: string
-  /** Who defines the tag: NIP-85, NIP-40 (expiration) or MintRadar itself (agreed between provider and clients). */
+  /** Who defines the tag: NIP-85 (d, rank), NIP-73 (k: NIP-85 says to add it), NIP-40 (expiration) or MintRadar itself
+   *  (agreed between provider and clients). */
   source: HealthTagSource
   /** When the tag is in an event. */
   presence: string
@@ -34,8 +35,8 @@ export interface HealthAssertionTag {
 
 /** Every tag the builder (buildHealthEvent) can emit, in the order it emits them. */
 export const HEALTH_ASSERTION_TAGS: readonly HealthAssertionTag[] = [
-  { name: 'd', type: 'text (URL)', source: 'NIP-85', presence: 'always', meaning: 'The mint URL, normalised (https, lower-case host, no default port, no trailing slash on a bare host, no fragment). It identifies the mint.' },
-  { name: 'k', type: 'text', source: 'NIP-85', presence: 'always', meaning: 'Always web: the NIP-73 type of the d value.' },
+  { name: 'd', type: 'text (URL)', source: 'NIP-85', presence: 'always', meaning: 'The NIP-73 identifier of the subject: the mint URL, normalised (https, lower-case host, no default port, no trailing slash on a bare host, no fragment).' },
+  { name: 'k', type: 'text', source: 'NIP-73', presence: 'always', meaning: 'Always web: the NIP-73 type of the d value (NIP-85 says to add it).' },
   { name: 'rank', type: 'integer 0 to 100', source: 'NIP-85', presence: 'always', meaning: 'The Reliability Score of the mint (the same number as score in the API).' },
   { name: 'mint_status', type: 'online | offline | degraded', source: 'MintRadar', presence: 'always', meaning: 'State at the last probe. degraded: no successful probe in the last 24 hours.' },
   { name: 'mint_uptime_24h', type: 'integer 0 to 100', source: 'MintRadar', presence: 'when known', meaning: 'Percentage of successful probes in the last 24 hours.' },
