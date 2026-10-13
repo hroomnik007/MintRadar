@@ -11,14 +11,17 @@ import { nip19, getPublicKey } from 'nostr-tools'
 import type { EventTemplate } from 'nostr-tools'
 import { normalizeUrl } from './discovery.js'
 import { METHODOLOGY_VERSION } from './shared/methodology.js'
+import { ATTESTATION_PUBKEY_HEX } from './shared/healthAssertionConstants.js'
 
-/** Public key (hex) of the MintRadar Health attestation identity. The private key is only in the owner's file
- *  and, once activated, in the server's backend/.env as ATTESTATION_SERVICE_NSEC. */
-export const ATTESTATION_PUBKEY_HEX = '2ddd7ce9833d2ed8a0bfaaf903cc71f65641f20d8f8142130163a625aa6b941c'
+/** Public key (hex) of the MintRadar Health attestation identity: defined in shared/healthAssertionConstants.ts (one
+ *  value for the publisher and the public page). The private key is only in the owner's file and, once activated, in
+ *  the server's backend/.env as ATTESTATION_SERVICE_NSEC. */
+export { ATTESTATION_PUBKEY_HEX }
 
 /** NIP-85 "NIP-73 identifier as subject" (addressable). */
 export const HEALTH_KIND = 30385
-/** Relays that receive assertions: the only connections the assertion publisher ever opens. */
+/** Relays that receive assertions: the only connections the assertion publisher ever opens. The public pages name the
+ *  subset ATTESTATION_RELAYS_PUBLIC (shared/healthAssertionConstants.ts). */
 export const ATTESTATION_RELAYS = [
   'wss://nostr.mintradar.org',
   'wss://relay.damus.io',

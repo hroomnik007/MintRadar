@@ -152,3 +152,9 @@ describe('pageMeta: backend and frontend copies agree', () => {
     expect(codeOf('../utils/pageMeta.ts')).toBe(codeOf('../../backend/src/shared/pageMeta.ts'))
   })
 })
+
+describe('healthAssertionConstants: backend and frontend copies agree', () => {
+  it('has identical code (key, NIP-05 name, public relays and the tag list of the health assertions)', () => {
+    expect(codeOf('../utils/healthAssertionConstants.ts')).toBe(codeOf('../../backend/src/shared/healthAssertionConstants.ts'))
+  })
+})
