@@ -28,13 +28,24 @@ describe('the attestation key agrees everywhere', () => {
     expect(hexOfNpub(ATTESTATION_NPUB)).toBe(ATTESTATION_PUBKEY_HEX)
   })
 
-  it('docs/claude/nostr-health-assertions.md names the same npub and hex', () => {
-    const doc = read('docs/claude/nostr-health-assertions.md')
+  it.each(['docs/claude/nostr-health-assertions.md', 'docs/nostr-health-assertions.md'])('%s names the same npub and hex', file => {
+    const doc = read(file)
     expect(doc).toContain(ATTESTATION_NPUB)
     expect(doc).toContain(ATTESTATION_PUBKEY_HEX)
     const npubs = doc.match(/npub1[a-z0-9]{58}/g) ?? []
     expect(npubs.length).toBeGreaterThan(0)
     for (const n of npubs) expect(hexOfNpub(n)).toBe(ATTESTATION_PUBKEY_HEX)
+  })
+
+  it('the draft spec says the feature is not live yet and the example event matches the tag grammar', () => {
+    const spec = read('docs/nostr-health-assertions.md')
+    expect(spec).toMatch(/not live yet/i)
+    const json = spec.match(/```json\n([\s\S]*?)\n```/)![1]!
+    const ev = JSON.parse(json) as { kind: number; created_at: number; tags: string[][] }
+    expect(ev.kind).toBe(30385)
+    const exp = ev.tags.find(t => t[0] === 'expiration')![1]!
+    expect(Number(exp)).toBe(ev.created_at + 172_800)
+    expect(ev.tags.map(t => t[0])).toEqual(['d', 'k', 'rank', 'mint_status', 'mint_uptime_24h', 'mint_uptime_7d', 'mint_software', 'mint_outdated', 'mint_audit_swaps_7d', 'mint_audit_attributed_7d', 'mint_audit_at', 'mint_test', 'mint_new_capped', 'mint_checked_at', 'methodology', 'methodology_url', 'expiration'])
   })
 })
 

@@ -10,6 +10,7 @@ import {
   resolveAttestationKey, sanitizeSoftware, shouldPublish,
   type HealthInput, type PublishedState,
 } from '../healthAssertions.js'
+import { HEALTH_URL_TABLE } from './healthUrlTable.js'
 
 const NOW = Date.UTC(2026, 9, 14, 12, 0, 0) // 2026-10-14T12:00:00Z
 
@@ -160,24 +161,7 @@ describe('buildHealthEvent — audit tags', () => {
 })
 
 describe('d tag — the repository normalizeUrl, fragment dropped', () => {
-  const table: Array<[string, string]> = [
-    ['https://mint.example.com', 'https://mint.example.com'],
-    ['https://mint.example.com/', 'https://mint.example.com'],
-    ['https://MINT.Example.COM', 'https://mint.example.com'],
-    ['http://mint.example.com', 'https://mint.example.com'],
-    ['https://mint.example.com:443', 'https://mint.example.com'],
-    ['http://mint.example.com:443/', 'https://mint.example.com'],
-    ['https://mint.example.com:3338', 'https://mint.example.com:3338'],
-    ['https://mint.example.com/Bitcoin', 'https://mint.example.com/Bitcoin'],
-    ['https://Mint.Example.com/Bitcoin/', 'https://mint.example.com/Bitcoin/'],
-    ['https://mint.example.com/?a=b', 'https://mint.example.com/?a=b'],
-    ['https://mint.example.com/Bitcoin?a=b', 'https://mint.example.com/Bitcoin?a=b'],
-    ['https://mint.example.com/Bitcoin#frag', 'https://mint.example.com/Bitcoin'],
-    ['https://mint.example.com/#frag', 'https://mint.example.com'],
-    ['https://mint.example.com#frag', 'https://mint.example.com'],
-    ['https://mint.example.com/#', 'https://mint.example.com'],
-    ['  https://mint.example.com/  ', 'https://mint.example.com'],
-  ]
+  const table = HEALTH_URL_TABLE
   it.each(table)('%s -> %s', (raw, expected) => {
     expect(healthIdentifier(raw)).toBe(expected)
     expect(tagMap(buildHealthEvent(input({ url: raw }))!.tags)['d']).toBe(expected)
