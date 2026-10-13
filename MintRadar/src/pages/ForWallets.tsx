@@ -14,7 +14,7 @@ import {
   ATTESTATION_NPUB, HEALTH_FACTS, HEALTH_FILTER_ALL, HEALTH_FILTER_ONE, HEALTH_SECTION_ID, HEALTH_SECTION_TITLE,
   HEALTH_EXAMPLE_URL, HEALTH_SPEC_URL, HEALTH_SPEC_TAGS_URL,
 } from '@/constants/healthAssertionPage'
-import { VERIFY_HEALTH_INSTALL, VERIFY_HEALTH_SNIPPET } from '@/constants/verifyHealthSnippet'
+import { VERIFY_HEALTH_FILE_NAME, VERIFY_HEALTH_INSTALL, VERIFY_HEALTH_RUNTIME_SENTENCE, VERIFY_HEALTH_SNIPPET } from '@/constants/verifyHealthSnippet'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
 import { PAGE_META } from '@/utils/pageMeta'
 import {
@@ -346,13 +346,15 @@ export default function ForWallets() {
             For each event: check the signature, check that the author is the pinned key, check that <code>d</code> equals
             <em> your own</em> normalisation of the mint URL, check that <code>expiration</code> is in the future, and
             take the event with the newest <code>created_at</code>. A missing or expired event means{' '}
-            <strong>unknown</strong>, not a bad mint. Read <code>methodology</code> before you compare scores. The code
-            below does all of this; it imports nothing but <code>nostr-tools</code>.
+            <strong>unknown</strong>, not a bad mint. Read <code>methodology</code> before you compare scores. Save the
+            code below as <code>{VERIFY_HEALTH_FILE_NAME}</code> and run it. It does all of this, reads each relay on its
+            own (an unreachable relay is reported and skipped) and imports nothing but <code>nostr-tools</code>.{' '}
+            {VERIFY_HEALTH_RUNTIME_SENTENCE}
           </p>
-          <CodeBlock label="Install" title="Install nostr-tools" code={VERIFY_HEALTH_INSTALL} />
-          <CodeBlock label="TypeScript" title="Verify a health assertion (TypeScript, nostr-tools)" code={VERIFY_HEALTH_SNIPPET} />
+          <CodeBlock label="Install and run" title="Install nostr-tools and run the example" code={VERIFY_HEALTH_INSTALL} />
+          <CodeBlock label="JavaScript" title="Verify a health assertion (JavaScript, nostr-tools)" code={VERIFY_HEALTH_SNIPPET} />
           <ul>
-            <li><a href={HEALTH_EXAMPLE_URL} target="_blank" rel="noopener noreferrer">docs/examples/verify-health.mjs</a>: a command-line version of the same checks.</li>
+            <li><a href={HEALTH_EXAMPLE_URL} target="_blank" rel="noopener noreferrer">docs/examples/verify-health.mjs</a>: the same code as the block above, as a file.</li>
             <li><a href={HEALTH_SPEC_URL} target="_blank" rel="noopener noreferrer">docs/nostr-health-assertions.md</a>: the specification.</li>
           </ul>
           <p>

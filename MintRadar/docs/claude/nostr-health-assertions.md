@@ -20,7 +20,7 @@ The backend signs one **kind 30385** event per tracked mint (NIP-85 "NIP-73 iden
 | `backend/src/nostrService.ts` | exports `META_RELAYS` and `publishToRelays` (the existing helper and the DNS-pinned WebSocket installation) |
 | `deploy/strfry/privileged-pubkeys.txt` | the hex key, so the own relay accepts its events (repository copy only; the server apply is a separate gated step) |
 
-Tests: `healthAssertionConstants.test.ts` (tag list = what the builder emits), `verifyHealthSnippet.test.ts` (the code shown on /for-wallets is evaluated), `healthAssertions.test.ts`, `healthPublisher.test.ts`, `healthRelays.test.ts` (local stub WebSocket relays), `dbAttestationStateMigration.test.ts`, `healthStaticFiles.test.ts` (NIP-05 file, relay list, docs agree on the key), `verifyHealthExample.test.ts`.
+Tests: `healthAssertionConstants.test.ts` (tag list = what the builder emits), `verifyHealthSnippet.test.ts` (the example `docs/examples/verify-health.mjs`, which equals the text on /for-wallets byte for byte, is run against builder events and local stub relays that refuse, close, stall, hang, answer with an HTTP error or CLOSED; plus a child-process run), `healthAssertions.test.ts`, `healthPublisher.test.ts`, `healthRelays.test.ts` (local stub WebSocket relays), `dbAttestationStateMigration.test.ts`, `healthStaticFiles.test.ts` (NIP-05 file, relay list, docs agree on the key), `verifyHealthExample.test.ts`.
 
 ## The event (v1, tag names are fixed)
 

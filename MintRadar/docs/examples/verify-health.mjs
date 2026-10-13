@@ -1,27 +1,21 @@
-#!/usr/bin/env node
-// Verify a MintRadar Health assertion (Nostr kind 30385) for one Cashu mint.
-// Draft spec: docs/nostr-health-assertions.md. STATUS: live since 2026-10-13 (early version).
-//
-//   npm install nostr-tools
-//   node verify-health.mjs https://mint.example.com
-//
-// The only dependency is nostr-tools (verifyEvent, SimplePool). The signal is operational health, not solvency and not
-// a recommendation to deposit funds.
-
+// Runs in browsers and in Node 22 or newer; on older Node pass the ws package's WebSocket class as the webSocket option.
+// Verifies the MintRadar Health assertion (Nostr kind 30385) of one Cashu mint. Command line:
+//   node verify-health.mjs <mint url> [relay url ...]
 import { verifyEvent } from 'nostr-tools'
-import { SimplePool } from 'nostr-tools/pool'
 
-/** The provider key you pin. Check it against the npub in the docs and against health@mintradar.org (NIP-05). */
+// Pin the provider key in your code. Confirm it once through NIP-05 (health@mintradar.org).
 export const PINNED_PUBKEY = '2ddd7ce9833d2ed8a0bfaaf903cc71f65641f20d8f8142130163a625aa6b941c'
-export const RELAYS = ['wss://nostr.mintradar.org', 'wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net']
+export const RELAYS = [
+  'wss://nostr.mintradar.org',
+  'wss://nos.lol',
+  'wss://relay.primal.net',
+]
 export const KIND = 30385
-/** Seconds of clock skew tolerated for a created_at that lies in the future. */
-const FUTURE_SKEW_S = 300
+const CONNECT_TIMEOUT_MS = 5000 // a relay that does not connect in 5 seconds is skipped
+const READ_TIMEOUT_MS = 6000 // a relay that does not send EOSE in 6 seconds is skipped
+const MAX_EVENTS_PER_RELAY = 100
 
-/**
- * The `d` value for a mint URL: https, lowercase host, no default port, no trailing slash on a bare host, NO fragment.
- * Same rules as MintRadar's backend (normalizeUrl + dropped fragment).
- */
+// The d value for a mint URL: https, lower-case host, no default port, no trailing slash on a bare host, no fragment.
 export function normalizeMintUrl(raw) {
   let parsed
   try { parsed = new URL(String(raw).trim()) } catch { return String(raw).trim() }
@@ -33,78 +27,118 @@ export function normalizeMintUrl(raw) {
   return result
 }
 
-const tagValue = (event, name) => event.tags.find(t => t[0] === name)?.[1]
-const isInt = (s) => typeof s === 'string' && /^\d{1,12}$/.test(s)
-
-/**
- * Checks one event. Returns { ok: true, health } or { ok: false, reason }.
- * Steps: signature and id, author equals the pinned key, kind, d equals the normalised mint URL, k, expiration,
- * created_at not in the future, rank and methodology are integers.
- */
-export function verifyHealthEvent(event, { mintUrl, pubkey = PINNED_PUBKEY, now = Math.floor(Date.now() / 1000) } = {}) {
-  if (!event || typeof event !== 'object' || !Array.isArray(event.tags)) return { ok: false, reason: 'not an event' }
-  if (!verifyEvent(event)) return { ok: false, reason: 'bad signature or id' }
-  if (event.pubkey !== pubkey) return { ok: false, reason: 'not signed by the pinned key' }
-  if (event.kind !== KIND) return { ok: false, reason: 'wrong kind' }
-  if (tagValue(event, 'd') !== normalizeMintUrl(mintUrl)) return { ok: false, reason: 'd does not match the mint URL' }
-  if (tagValue(event, 'k') !== 'web') return { ok: false, reason: 'k is not "web"' }
-  const expiration = tagValue(event, 'expiration')
-  if (!isInt(expiration)) return { ok: false, reason: 'no expiration' }
-  if (now >= Number(expiration)) return { ok: false, reason: 'expired' }
-  if (event.created_at > now + FUTURE_SKEW_S) return { ok: false, reason: 'created_at in the future' }
-  const rank = tagValue(event, 'rank')
-  if (!isInt(rank) || Number(rank) > 100) return { ok: false, reason: 'rank is not an integer from 0 to 100' }
-  const methodology = tagValue(event, 'methodology')
-  if (!isInt(methodology)) return { ok: false, reason: 'methodology is not an integer' }
+// One event: null unless it is a current, valid assertion of the pinned key about THIS mint.
+// Leave options.pubkey alone: the pinned key is the point. (It exists so that tests can use a throwaway key.)
+export function checkHealthEvent(event, mintUrl, { pubkey = PINNED_PUBKEY, nowSec = Math.floor(Date.now() / 1000) } = {}) {
+  if (!event || typeof event !== 'object' || !Array.isArray(event.tags)) return null
+  const tag = (name) => event.tags.find((t) => Array.isArray(t) && t[0] === name)?.[1]
+  const int = (name) => (/^\d{1,12}$/.test(tag(name) ?? '') ? Number(tag(name)) : NaN) // digits only, else NaN
+  try { if (!verifyEvent(event)) return null } catch { return null } // signature and id
+  if (event.pubkey !== pubkey) return null // only the pinned key counts
+  if (event.kind !== KIND) return null
+  if (tag('d') !== normalizeMintUrl(mintUrl)) return null // never take the d of an event as another mint's identity
+  if (tag('k') !== 'web') return null
+  const expiration = int('expiration')
+  if (!Number.isInteger(expiration) || expiration <= nowSec) return null // expired or missing: no current signal
+  if (event.created_at > nowSec + 300) return null // created in the future
+  const score = int('rank')
+  const methodology = int('methodology')
+  if (!Number.isInteger(score) || score > 100 || !Number.isInteger(methodology)) return null
   return {
-    ok: true,
-    health: {
-      createdAt: event.created_at,
-      expiration: Number(expiration),
-      rank: Number(rank),
-      status: tagValue(event, 'mint_status'),
-      methodology: Number(methodology),
-      methodologyUrl: tagValue(event, 'methodology_url'),
-      isTest: tagValue(event, 'mint_test') === '1',
-      newMintCapped: tagValue(event, 'mint_new_capped') === '1',
-      checkedAt: isInt(tagValue(event, 'mint_checked_at')) ? Number(tagValue(event, 'mint_checked_at')) : null,
-      tags: Object.fromEntries(event.tags.map(t => [t[0], t[1]])),
-    },
+    score, // rank: the Reliability Score, 0 to 100
+    status: tag('mint_status'), // online | offline | degraded
+    methodology, // scores of different methodology numbers are not comparable
+    createdAt: event.created_at,
+    expiresAt: expiration,
+    tags: Object.fromEntries(event.tags.map((t) => [t[0], t[1] ?? ''])),
   }
 }
 
-/** The valid event with the newest created_at (addressable events: newest wins), or null. */
-export function pickNewest(events, options) {
-  let best = null
-  for (const event of events) {
-    const result = verifyHealthEvent(event, options)
-    if (result.ok && (best === null || event.created_at > best.event.created_at)) best = { event, health: result.health }
-  }
-  return best
+// Reads one relay with a plain WebSocket and a manual REQ. It never rejects and never throws later: every path ends in
+// finish(), which clears both timers and closes the socket. Resolves { events, ok }; ok is true only after EOSE.
+function queryRelay(url, filter, WebSocketClass) {
+  return new Promise((resolve) => {
+    const events = []
+    const subId = 'h' + Math.random().toString(36).slice(2, 10)
+    let ws = null
+    let done = false
+    let connectTimer = null
+    let readTimer = null
+    const finish = (ok) => {
+      if (done) return
+      done = true
+      clearTimeout(connectTimer)
+      clearTimeout(readTimer)
+      if (ws) {
+        ws.onopen = ws.onmessage = ws.onclose = null
+        ws.onerror = () => {} // a no-op: a handler that calls close() again is what recurses in nostr-tools
+        try { if (ws.readyState === 1) ws.send(JSON.stringify(['CLOSE', subId])) } catch { /* ignore */ }
+        try { ws.close() } catch { /* ignore */ }
+      }
+      resolve({ events, ok })
+    }
+    try { ws = new WebSocketClass(url) } catch { finish(false); return }
+    connectTimer = setTimeout(() => finish(false), CONNECT_TIMEOUT_MS)
+    ws.onopen = () => {
+      clearTimeout(connectTimer)
+      readTimer = setTimeout(() => finish(false), READ_TIMEOUT_MS)
+      try { ws.send(JSON.stringify(['REQ', subId, filter])) } catch { finish(false) }
+    }
+    ws.onmessage = (message) => {
+      let data
+      try { data = JSON.parse(String(message.data)) } catch { return }
+      if (!Array.isArray(data) || data[1] !== subId) return
+      if (data[0] === 'EVENT') { if (events.length < MAX_EVENTS_PER_RELAY) events.push(data[2]) }
+      else if (data[0] === 'EOSE') finish(true)
+      else if (data[0] === 'CLOSED') finish(false)
+    }
+    ws.onerror = () => finish(false)
+    ws.onclose = () => finish(false)
+  })
 }
 
-/** Queries the four relays and returns the newest valid assertion for the mint, or null (no event, or an expired one: that means "unknown", not "bad"). */
-export async function fetchHealth(mintUrl, { pool = new SimplePool(), relays = RELAYS, pubkey = PINNED_PUBKEY, now } = {}) {
-  try {
-    const events = await pool.querySync(relays, { kinds: [KIND], authors: [pubkey], '#d': [normalizeMintUrl(mintUrl)], limit: 5 })
-    return pickNewest(events, { mintUrl, pubkey, now })
-  } finally {
-    pool.close(relays)
-  }
+// The newest valid assertion for a mint from all relays at once. It never throws. Returns
+//   { health, answered, failed }: health is null when no relay has a valid event - that means "unknown", not "bad";
+//   answered and failed list the relay URLs, so a partial failure is visible. Nothing answered at all: answered is [].
+export async function getMintHealth(mintUrl, { relays = RELAYS, webSocket = globalThis.WebSocket, pubkey = PINNED_PUBKEY, nowSec } = {}) {
+  const filter = { kinds: [KIND], authors: [pubkey], '#d': [normalizeMintUrl(mintUrl)] }
+  const settled = await Promise.allSettled(
+    relays.map((url) => (typeof webSocket === 'function' ? queryRelay(url, filter, webSocket) : Promise.resolve({ events: [], ok: false }))),
+  )
+  const answered = []
+  const failed = []
+  let health = null
+  settled.forEach((result, i) => {
+    const value = result.status === 'fulfilled' ? result.value : { events: [], ok: false }
+    ;(value.ok ? answered : failed).push(relays[i])
+    for (const event of value.events) {
+      const checked = checkHealthEvent(event, mintUrl, { pubkey, nowSec })
+      if (checked && (health === null || checked.createdAt > health.createdAt)) health = checked
+    }
+  })
+  return { health, answered, failed }
 }
 
-// Command line: node verify-health.mjs <mint url>
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-  const mintUrl = process.argv[2]
-  if (!mintUrl) {
-    console.error('usage: node verify-health.mjs <mint url>')
-    process.exit(2)
+// Command line: node verify-health.mjs <mint url> [relay url ...]
+// Exit code 0 when at least one relay answered (also when no valid assertion exists), 1 when no relay answered, 2 for a usage error.
+const argv = globalThis.process?.argv
+if (argv && argv[1] && import.meta.url === new URL('file://' + argv[1]).href) {
+  const host = (url) => { try { return new URL(url).host } catch { return url } }
+  if (!argv[2]) {
+    console.error('usage: node verify-health.mjs <mint url> [relay url ...]')
+    globalThis.process.exitCode = 2
+  } else {
+    const { health, answered, failed } = await getMintHealth(argv[2], argv.length > 3 ? { relays: argv.slice(3) } : {})
+    console.log('relays answered: ' + (answered.map(host).join(', ') || 'none'))
+    if (failed.length > 0) console.log('relays failed: ' + failed.map(host).join(', '))
+    if (answered.length === 0) {
+      console.error('no relay answered' + (typeof globalThis.WebSocket === 'function' ? '' : ' (this runtime has no WebSocket: use Node 22 or newer)'))
+      globalThis.process.exitCode = 1
+    } else if (health === null) {
+      console.log('no valid assertion found: unknown, not a bad mint')
+    } else {
+      console.log(JSON.stringify(health, null, 2))
+      console.log('Operational health signal, not solvency, not a recommendation to deposit funds.')
+    }
   }
-  const found = await fetchHealth(mintUrl)
-  if (!found) {
-    console.log('no valid assertion found (the mint has none, or its event expired: unknown, not bad)')
-    process.exit(1)
-  }
-  console.log(JSON.stringify(found.health, null, 2))
-  console.log('Operational health signal, not solvency, not a recommendation to deposit funds.')
 }

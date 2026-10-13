@@ -10,7 +10,7 @@ import { nip19 } from 'nostr-tools'
 import ForWallets from '@/pages/ForWallets'
 import { ATTESTATION_NIP05, ATTESTATION_PUBKEY_HEX, ATTESTATION_RELAYS_PUBLIC, HEALTH_ASSERTION_TAGS } from '@/utils/healthAssertionConstants'
 import { ATTESTATION_NPUB, HEALTH_SECTION_ID, HEALTH_SECTION_TITLE, HEALTH_EXAMPLE_URL, HEALTH_SPEC_URL } from '@/constants/healthAssertionPage'
-import { VERIFY_HEALTH_SNIPPET } from '@/constants/verifyHealthSnippet'
+import { VERIFY_HEALTH_SNIPPET, VERIFY_HEALTH_INSTALL, VERIFY_HEALTH_RUNTIME_SENTENCE } from '@/constants/verifyHealthSnippet'
 
 const renderPage = (el: ReactElement) => render(<MemoryRouter>{el}</MemoryRouter>)
 const section = (): HTMLElement => {
@@ -77,7 +77,15 @@ describe('the signed health assertions section on /for-wallets', () => {
   it('shows the exact tested snippet', () => {
     const code = [...section().querySelectorAll('pre code')].map(c => c.textContent)
     expect(code).toContain(VERIFY_HEALTH_SNIPPET)
+    expect(code).toContain(VERIFY_HEALTH_INSTALL)
   })
+
+  it('states the runtime requirement once in the text and as the first line of the code', () => {
+    const s = section()
+    const prose = [...s.querySelectorAll('p')].map(p => p.textContent).join(' ')
+    expect(prose.split(VERIFY_HEALTH_RUNTIME_SENTENCE)).toHaveLength(2)
+    expect(VERIFY_HEALTH_SNIPPET.startsWith(`// ${VERIFY_HEALTH_RUNTIME_SENTENCE}`)).toBe(true)
+    expect(VERIFY_HEALTH_RUNTIME_SENTENCE).toContain('Node 22 or newer')  })
 
   it('states the update and publication rules, the disclaimer and the key rotation', () => {
     const text = section().textContent ?? ''

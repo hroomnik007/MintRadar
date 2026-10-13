@@ -175,7 +175,7 @@ test.describe('Signed health assertions section', () => {
     for (const [title, text] of [
       ['MintRadar Health public key (npub)', EXPECTED_NPUB],
       ['MintRadar Health public key (hex)', EXPECTED_HEX],
-      ['Verify a health assertion (TypeScript, nostr-tools)', VERIFY_HEALTH_SNIPPET],
+      ['Verify a health assertion (JavaScript, nostr-tools)', VERIFY_HEALTH_SNIPPET],
     ] as const) {
       const button = page.getByRole('button', { name: `Copy: ${title}` })
       await button.click()
@@ -188,7 +188,7 @@ test.describe('Signed health assertions section', () => {
     test(`the snippet scrolls inside its container without widening the page at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 })
       await page.goto('/for-wallets')
-      const pre = page.locator('pre.doc-code-pre[aria-label="Verify a health assertion (TypeScript, nostr-tools)"]')
+      const pre = page.locator('pre.doc-code-pre[aria-label="Verify a health assertion (JavaScript, nostr-tools)"]')
       await pre.scrollIntoViewIfNeeded()
       await expect(pre).toBeVisible()
       const before = await page.evaluate(() => document.documentElement.scrollWidth)

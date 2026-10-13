@@ -91,7 +91,7 @@ For each mint, query the relays with `{ "kinds": [30385], "authors": ["<pinned h
 6. Of the events that pass, use the one with the newest `created_at` (the event is addressable; relays may still return older versions).
 7. Look at `methodology`: ranks are comparable only within one version. Read `methodology_url` before mixing versions.
 
-A runnable example with the normalisation function is in `docs/examples/verify-health.mjs` (nostr-tools only).
+A runnable example with the normalisation function is in `docs/examples/verify-health.mjs` (nostr-tools only; the same code is shown on [mintradar.org/for-wallets](https://mintradar.org/for-wallets#signed-health-assertions)). It reads each relay on its own with a plain WebSocket, skips a relay that is unreachable and prints which relays answered. Runs in browsers and in Node 22 or newer; on older Node pass the ws package's WebSocket class as the webSocket option.
 
 ## Security considerations
 
