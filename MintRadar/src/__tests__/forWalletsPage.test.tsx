@@ -7,7 +7,6 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, fireEvent, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import ForWallets from '@/pages/ForWallets'
-import Methodology from '@/pages/Methodology'
 import {
   WALLET_ENVELOPE_FIELDS, WALLET_MINT_FIELDS, WALLET_QUERY_PARAMS, WALLET_ERRORS, type WalletField,
 } from '@/utils/walletFields'
@@ -276,10 +275,8 @@ describe('the rendered page', () => {
     const text = c.textContent ?? ''
     expect(text).toContain('Operational health signal, not solvency, not a recommendation to deposit funds')
     expect(text).toContain('npub1zatej55x47xzhnw06yarqr5ugz7y5el8vygcckek24e5qmrtx77qnmd6rg')
-    expect(text).not.toMatch(/assertion|30385/i)
+    expect(text).toMatch(/Signed health assertions on Nostr \(early version\)/) // announced since 2026-10-13 (healthAssertionsSection.test.tsx)
     expect(text).not.toMatch(/(?<![-\w])(first|only) (api|service|tool|platform|source|provider|project|monitor)\b|\bno other\b|\bunique\b/i)
-    const methodology = render(<MemoryRouter><Methodology /></MemoryRouter>).container.textContent ?? ''
-    expect(methodology).not.toMatch(/assertion|30385/i)
     expect(c.querySelector('a[href^="mailto:"]')).toBeNull()
   })
 
@@ -289,7 +286,7 @@ describe('the rendered page', () => {
     const c = renderPage()
     const buttons = Array.from(c.querySelectorAll<HTMLButtonElement>('.doc-copy-btn'))
     const blocks = Array.from(c.querySelectorAll('.doc-code-pre code')).map(b => b.textContent)
-    expect(buttons.length).toBe(WALLET_EXAMPLES.length + 1) // the examples and the error body
+    expect(buttons.length).toBe(WALLET_EXAMPLES.length + 1 + 6) // the examples, the error body and the 6 blocks of the signed assertions section (npub, hex, 2 filters, install, snippet)
     expect(blocks).toHaveLength(buttons.length)
     for (const ex of WALLET_EXAMPLES) expect(blocks).toContain(ex.code)
     fireEvent.click(buttons[1]!)

@@ -7,6 +7,14 @@ import { CONTACT_NIP05, CONTACT_NPUB, REPO_URL } from '@/constants/contact'
 import {
   WALLET_API_BASE, WALLET_API_FACTS as F, WALLET_EXAMPLES, DOCS_API_URL, DOCS_OPENAPI_URL,
 } from '@/constants/forWalletsPage'
+import {
+  ATTESTATION_NIP05, ATTESTATION_PUBKEY_HEX, ATTESTATION_RELAYS_PUBLIC, HEALTH_ASSERTION_TAGS,
+} from '@/utils/healthAssertionConstants'
+import {
+  ATTESTATION_NPUB, HEALTH_FACTS, HEALTH_FILTER_ALL, HEALTH_FILTER_ONE, HEALTH_SECTION_ID, HEALTH_SECTION_TITLE,
+  HEALTH_EXAMPLE_URL, HEALTH_SPEC_URL, HEALTH_SPEC_TAGS_URL,
+} from '@/constants/healthAssertionPage'
+import { VERIFY_HEALTH_INSTALL, VERIFY_HEALTH_SNIPPET } from '@/constants/verifyHealthSnippet'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
 import { PAGE_META } from '@/utils/pageMeta'
 import {
@@ -27,6 +35,7 @@ const SECTIONS = [
   { id: 'filters', label: 'Filters' },
   { id: 'errors', label: 'Errors' },
   { id: 'stability', label: 'Stability' },
+  { id: HEALTH_SECTION_ID, label: 'Signed assertions on Nostr' },
   { id: 'ux', label: 'Suggested UX' },
   { id: 'links', label: 'Docs and contact' },
 ] as const
@@ -245,6 +254,123 @@ export default function ForWallets() {
               <Link to="/methodology">methodology page</Link>.
             </li>
           </ul>
+        </section>
+
+        <section aria-labelledby={HEALTH_SECTION_ID}>
+          <h2 id={HEALTH_SECTION_ID} tabIndex={-1} className="about-h2">{HEALTH_SECTION_TITLE}</h2>
+          <p className="about-note" role="note" data-testid="early-version-notice">
+            <strong>Early version.</strong> The <code>mint_*</code> tags are MintRadar&apos;s own tags: NIP-85 defines the
+            tags <code>rank</code>, <code>comment_cnt</code> and <code>reaction_cnt</code> for kind 30385, and any other
+            tag is agreed between a provider and its clients. The format may change before it is frozen. Changes are
+            announced on this page and in <a href={HEALTH_SPEC_URL} target="_blank" rel="noopener noreferrer">the
+            spec</a>, and every event carries the <code>methodology</code> integer.
+          </p>
+
+          <h3 className="doc-h3">What it is</h3>
+          <p>
+            The same operational health signal as the API above, published as signed Nostr events (kind 30385, one per
+            mint) so that a wallet can verify it without relying on a server of ours. It is not solvency and not advice.
+          </p>
+
+          <h3 className="doc-h3">Who publishes it</h3>
+          <p>
+            The events are signed by the MintRadar Health key. <strong>Pin this public key in your wallet&apos;s code</strong>{' '}
+            and ignore events signed by any other key. You can confirm it once through NIP-05:{' '}
+            <code>{ATTESTATION_NIP05}</code> (<code>https://mintradar.org/.well-known/nostr.json?name=health</code>).
+          </p>
+          <CodeBlock label="npub" title="MintRadar Health public key (npub)" code={ATTESTATION_NPUB} />
+          <CodeBlock label="hex" title="MintRadar Health public key (hex)" code={ATTESTATION_PUBKEY_HEX} />
+
+          <h3 className="doc-h3">Relays</h3>
+          <ul data-testid="health-relays">
+            {ATTESTATION_RELAYS_PUBLIC.map(r => <li key={r}><code>{r}</code></li>)}
+          </ul>
+          <p>Query them together: a relay can be unreachable or can have dropped an event.</p>
+
+          <h3 className="doc-h3">Query</h3>
+          <p>
+            One query returns every mint: currently about 60 events of about 1 kB each, so a limit of {HEALTH_FACTS.queryLimit} is
+            plenty.
+          </p>
+          <CodeBlock label="Filter" title="Filter for every mint" code={HEALTH_FILTER_ALL} />
+          <p>
+            For a single mint add <code>&quot;#d&quot;</code> with the normalised mint URL (rules below):
+          </p>
+          <CodeBlock label="Filter" title="Filter for one mint" code={HEALTH_FILTER_ONE} />
+
+          <h3 className="doc-h3">Tags</h3>
+          <div className="doc-table-wrap" tabIndex={0} role="region" aria-label="Tags of a health assertion">
+            <table className="doc-table doc-table-stack">
+              <thead>
+                <tr>
+                  <th scope="col">Tag</th><th scope="col">Value</th><th scope="col">Defined by</th>
+                  <th scope="col">When present</th><th scope="col">Meaning</th>
+                </tr>
+              </thead>
+              <tbody>
+                {HEALTH_ASSERTION_TAGS.map(t => (
+                  <tr key={t.name} data-tag={t.name}>
+                    <th scope="row" className="doc-nowrap"><code>{t.name}</code></th>
+                    <td data-label="Value">{t.type}</td>
+                    <td data-label="Defined by">{t.source === 'MintRadar' ? 'MintRadar tag' : `defined by ${t.source}`}</td>
+                    <td data-label="When present">{t.presence}</td>
+                    <td className="doc-wide">{t.meaning}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p>Clients must ignore tags they do not know.</p>
+
+          <h3 className="doc-h3">Updates and expiry</h3>
+          <ul>
+            <li>
+              Every event expires {HEALTH_FACTS.expiryHours} hours after it was created (the <code>expiration</code> tag).
+              Check it yourself: a relay can keep an expired event.
+            </li>
+            <li>
+              For each mint a new event is published at most every {HEALTH_FACTS.minIntervalHours} hours, if the
+              score changed by at least {HEALTH_FACTS.minRankDelta} points, the status changed or the methodology
+              changed. A mint whose event is {HEALTH_FACTS.refreshHours} hours old gets a new one anyway, so the expiry does not lapse.
+            </li>
+          </ul>
+
+          <h3 className="doc-h3">What is published and what is not</h3>
+          <ul>
+            <li><strong>Published:</strong> mints that have a score and are not archived. An offline mint is published with <code>mint_status</code> <code>offline</code>; a test mint with <code>mint_test</code> <code>1</code>.</li>
+            <li><strong>Not published:</strong> mints without a score, archived mints, and mints whose URL is an onion or an IP address. The last event of a mint that drops out expires after {HEALTH_FACTS.expiryHours} hours.</li>
+          </ul>
+
+          <h3 className="doc-h3">How to verify</h3>
+          <p>
+            For each event: check the signature, check that the author is the pinned key, check that <code>d</code> equals
+            <em> your own</em> normalisation of the mint URL, check that <code>expiration</code> is in the future, and
+            take the event with the newest <code>created_at</code>. A missing or expired event means{' '}
+            <strong>unknown</strong>, not a bad mint. Read <code>methodology</code> before you compare scores. The code
+            below does all of this; it imports nothing but <code>nostr-tools</code>.
+          </p>
+          <CodeBlock label="Install" title="Install nostr-tools" code={VERIFY_HEALTH_INSTALL} />
+          <CodeBlock label="TypeScript" title="Verify a health assertion (TypeScript, nostr-tools)" code={VERIFY_HEALTH_SNIPPET} />
+          <ul>
+            <li><a href={HEALTH_EXAMPLE_URL} target="_blank" rel="noopener noreferrer">docs/examples/verify-health.mjs</a>: a command-line version of the same checks.</li>
+            <li><a href={HEALTH_SPEC_URL} target="_blank" rel="noopener noreferrer">docs/nostr-health-assertions.md</a>: the specification.</li>
+          </ul>
+          <p>
+            URL normalisation: https, lower-case host, no default port, no trailing slash on a bare host and no fragment.
+            Examples for each rule are in the <a href={HEALTH_SPEC_TAGS_URL} target="_blank" rel="noopener noreferrer">tag table of the spec</a>.
+          </p>
+
+          <h3 className="doc-h3">Disclaimer</h3>
+          <p>
+            Operational health signal, not solvency, not a recommendation to deposit funds. Based on MintRadar&apos;s probes
+            and third-party audit data; it can be wrong or out of date.
+          </p>
+
+          <h3 className="doc-h3">Key rotation</h3>
+          <p>
+            A new key would be announced on this page, in the profile of MintRadar Health and in the NIP-05 entry. Events of
+            a retired key simply expire within {HEALTH_FACTS.expiryHours} hours.
+          </p>
         </section>
 
         <section aria-labelledby="ux">

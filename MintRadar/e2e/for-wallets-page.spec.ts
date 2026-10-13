@@ -23,7 +23,7 @@ test.describe('For wallets page', () => {
     for (const name of ['Quick start', 'Polling and caching', 'CORS and limits', 'Response', 'Filters', 'Errors', 'Stability', 'Suggested UX', 'Docs and contact']) {
       await expect(page.getByRole('heading', { level: 2, name })).toBeVisible()
     }
-    await expect(page.getByRole('note')).toContainText('Operational health signal, not solvency, not a recommendation to deposit funds')
+    await expect(page.getByRole('note').first()).toContainText('Operational health signal, not solvency, not a recommendation to deposit funds')
   })
 
   test('title, description, canonical and Open Graph tags', async ({ page }) => {
