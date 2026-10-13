@@ -295,7 +295,7 @@ export default function Methodology() {
         <section aria-labelledby="where-published">
           <h2 id="where-published" tabIndex={-1} className="about-h2">Where the score is published</h2>
           <p>
-            The <Link to="/for-wallets">API for wallets</Link> returns the score as <code>score</code>. MintRadar also
+            The <Link to="/for-wallets">wallet API</Link> returns the score as <code>score</code>. MintRadar also
             publishes it as signed health assertions on Nostr (an early version): the <code>rank</code> tag of each event
             carries the score, and the <code>methodology</code> tag carries the number at the top of this page, currently{' '}
             {METHODOLOGY_VERSION}. How to read and verify them:{' '}

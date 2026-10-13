@@ -21,7 +21,7 @@ test.describe('Methodology page', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'How the Reliability Score is computed' })).toBeVisible()
     for (const name of [
       'What the score is, and what it is not', 'The five components', 'Caps and gates', 'Reviews are separate',
-      'Data sources and cadence', 'What is not measured', 'Change log', 'Report an error',
+      'Data sources and cadence', 'What is not measured', 'Change log', 'Where the score is published', 'Report an error',
     ]) {
       await expect(page.getByRole('heading', { level: 2, name })).toBeVisible()
     }
@@ -120,5 +120,22 @@ test.describe('Methodology page', () => {
     await link.click()
     await expect.poll(() => new URL(page.url()).pathname).toBe('/methodology')
     await expect(page.getByRole('heading', { level: 1, name: 'How the Reliability Score is computed' })).toBeVisible()
+  })
+})
+
+test.describe('Methodology page: where the score is published', () => {
+  test('the section links to the signed health assertions and the link scrolls to that section', async ({ page }) => {
+    await page.goto('/methodology')
+    const section = page.locator('section[aria-labelledby="where-published"]')
+    await expect(section).toContainText('rank')
+    await expect(section).toContainText(`currently ${METHODOLOGY_VERSION}`)
+    const link = section.getByRole('link', { name: 'signed health assertions on the wallets page' })
+    await expect(link).toHaveAttribute('href', '/for-wallets#signed-health-assertions')
+    await link.click()
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/for-wallets')
+    await expect(page.locator('h2#signed-health-assertions')).toBeFocused()
+    const top = await page.locator('h2#signed-health-assertions').evaluate(el => el.getBoundingClientRect().top)
+    expect(top).toBeGreaterThanOrEqual(0)
+    expect(top).toBeLessThan(260)
   })
 })
