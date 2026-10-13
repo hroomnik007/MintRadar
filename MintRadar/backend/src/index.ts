@@ -25,7 +25,7 @@ import { isTestMint } from './testMints.js'
 import { publicMintName, publicMintNameOrHost } from './mintNames.js'
 import {
   usesWalletRateLimit, isRecommendPath, isPublicCorsPath, PUBLIC_CORS_EXPOSE_HEADERS, parseWalletListQuery, walletListEnvelope, walletSingleEnvelope, recommendEnvelope,
-  memoizedBody, sendCachedBody, sendWalletError, queryOf, type Snapshot,
+  memoizedBody, cachedBodyOf, buildCachedBody, sendCachedBody, sendWalletError, queryOf, type Snapshot,
 } from './walletApi.js'
 import { verifyNip05 } from './nip05Verify.js'
 import { isAllowlistMode, isAllowedUrl } from './allowlist.js'
@@ -66,10 +66,10 @@ const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
 // as knownMintsCache above; the underlying data only moves once per 5-min
 // probe cycle, so a 60s cache is well within tolerance and needs no
 // invalidation beyond the TTL expiring.
-let statsCache: { data: unknown; expiresAt: number } | null = null
+let statsCache: { data: object; expiresAt: number } | null = null
 const STATS_CACHE_TTL = 60_000 // 60 seconds
 
-const reliabilityMoversCache = new Map<string, { data: unknown; expiresAt: number }>()
+const reliabilityMoversCache = new Map<string, { data: object; expiresAt: number }>()
 // Longer than KNOWN_MINTS_CACHE_TTL: the underlying snapshots only move once per
 // probe cycle (5 min, refreshReliabilityMoversRollup on the probe cron), and a 7d/30d
 // delta barely shifts between cycles — no reason to recompute per-minute.
@@ -81,6 +81,7 @@ const RELIABILITY_MOVERS_CACHE_TTL = 10 * 60_000 // 10 minutes
 // kind:38000 reviews (the hourly background sync). GET /api/mints/nostr-reviews no
 // longer touches a relay — it serves the DB rows that sync populates.
 export { REVIEW_SYNC_RELAYS as NOSTR_REVIEWS_RELAYS } from './reviewsSync.js'
+import { aggregateReviews, operatorKeysOf, type ReviewAggregate } from './reviewsSync.js'
 
 const REQUIRED_ENV_VARS = ['DATABASE_URL', 'ALLOWED_ORIGINS'] as const
 const missingVars = REQUIRED_ENV_VARS.filter(v => !process.env[v])
@@ -1228,8 +1229,7 @@ app.get('/api/nuts', (_req: Request, res: Response): void => {
 
 app.get('/api/stats', (_req: Request, res: Response): void => {
   if (statsCache && Date.now() < statsCache.expiresAt) {
-    res.setHeader('Cache-Control', `max-age=${Math.floor(STATS_CACHE_TTL / 1000)}`)
-    res.json(statsCache.data)
+    sendCachedBody(res, cachedBodyOf(statsCache.data), Math.floor(STATS_CACHE_TTL / 1000))
     return
   }
   Promise.all([
@@ -1294,8 +1294,7 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
         .map(r => ({ url: r.url, name: publicMintName(r.name, r.url).name, reliabilityScore: r.last_reliability_score as number }))
       const data = { totalMints: rows.length, onlineMints: online.length, offlineMints: offline.length, avgReliabilityScore, avgLatency24h, reliabilityDistribution: { low, moderate, high }, nutAdoption, top5ByReliabilityScore: top5 }
       statsCache = { data, expiresAt: Date.now() + STATS_CACHE_TTL }
-      res.setHeader('Cache-Control', `max-age=${Math.floor(STATS_CACHE_TTL / 1000)}`)
-      res.json(data)
+      sendCachedBody(res, cachedBodyOf(data), Math.floor(STATS_CACHE_TTL / 1000))
     })
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/stats]', err)
@@ -1360,8 +1359,7 @@ app.get('/api/stats/reliability-movers', (req: Request, res: Response): void => 
 
   const cached = reliabilityMoversCache.get(period)
   if (cached && Date.now() < cached.expiresAt) {
-    res.setHeader('Cache-Control', `max-age=${Math.floor(RELIABILITY_MOVERS_CACHE_TTL / 1000)}`)
-    res.json(cached.data)
+    sendCachedBody(res, cachedBodyOf(cached.data), Math.floor(RELIABILITY_MOVERS_CACHE_TTL / 1000))
     return
   }
 
@@ -1383,8 +1381,7 @@ app.get('/api/stats/reliability-movers', (req: Request, res: Response): void => 
       }))
       const data = { period, ...computeReliabilityMovers(snapshots) }
       reliabilityMoversCache.set(period, { data, expiresAt: Date.now() + RELIABILITY_MOVERS_CACHE_TTL })
-      res.setHeader('Cache-Control', `max-age=${Math.floor(RELIABILITY_MOVERS_CACHE_TTL / 1000)}`)
-      res.json(data)
+      sendCachedBody(res, cachedBodyOf(data), Math.floor(RELIABILITY_MOVERS_CACHE_TTL / 1000))
     })
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/stats/reliability-movers]', err)
@@ -1422,6 +1419,13 @@ function computeKnownMints(): Promise<Snapshot> {
         m.audit_cz_total, m.audit_cz_blamed, m.audit_cz_fetched_at,
         m.discovered_at, m.nostr_announced_at, m.nostr_announce_id, m.nostr_announce_pubkey, m.nostr_announce_d, m.last_reliability_score, m.last_error, m.server_location, m.ip_address, m.net_asn, m.net_org, m.net_country, m.has_onion,
         m.review_count, m.review_avg_rating, m.review_operator_count, m.review_rated_count, m.review_count_7d_ago, m.review_count_7d_ago_at,
+        m.contact_nostr,
+        -- Only while the rollup is missing (review_rated_count IS NULL: before the first recount after a deploy or
+        -- a failed one): the stored reviews, so the wallet API can count them at read time instead of showing 0.
+        CASE WHEN m.review_rated_count IS NULL THEN
+          (SELECT json_agg(json_build_object('pubkey', r.pubkey, 'rating', r.rating, 'comment', r.comment))
+             FROM mint_reviews r WHERE r.url = m.url)
+        END AS stored_reviews,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
         h7.total_7d,
@@ -1571,8 +1575,15 @@ function computeKnownMints(): Promise<Snapshot> {
           ),
         }
       })
+      // Read-time fallback for the wallet API (never part of /api/mints/known): the review aggregate of the stored
+      // reviews of every mint whose review_rated_count is still NULL, by the same rule as the rollup.
+      const reviewFallback = new Map<string, ReviewAggregate>()
+      for (const r of result.rows as Array<{ url: string; review_rated_count: number | null; stored_reviews?: unknown; contact_nostr?: unknown; nostr_announce_pubkey?: unknown }>) {
+        if (r.review_rated_count != null || !Array.isArray(r.stored_reviews) || r.stored_reviews.length === 0) continue
+        reviewFallback.set(r.url, aggregateReviews(r.stored_reviews as Array<{ pubkey: string; rating: number | null; comment: string | null }>, operatorKeysOf(r)))
+      }
       const now = Date.now()
-      const snapshot = { data, computedAt: now, expiresAt: now + KNOWN_MINTS_CACHE_TTL }
+      const snapshot = { data, computedAt: now, expiresAt: now + KNOWN_MINTS_CACHE_TTL, reviewFallback }
       knownMintsCache = snapshot
       return snapshot
     })
@@ -1617,6 +1628,13 @@ app.use('/api/wallets/mints/', (req: Request, res: Response, next: NextFunction)
     decoded = decodeURIComponent(req.path.slice(1))
   } catch {
     sendWalletError(res, 400, 'invalid_url', 'The mint URL in the path is not valid percent-encoding')
+    return
+  }
+  // normalizeUrl rewrites the scheme of any special URL to https (ftp://x, ws://x), which would turn a foreign scheme into
+  // a 404 for a "valid" mint. Only http:// (normalised to https://) and https:// are accepted; nothing else is looked up.
+  const scheme = /^\s*([a-z][a-z0-9+.-]*):/i.exec(decoded)?.[1]?.toLowerCase()
+  if (scheme !== undefined && scheme !== 'http' && scheme !== 'https') {
+    sendWalletError(res, 400, 'invalid_url', 'The URL scheme must be http or https')
     return
   }
   const url = normalizeUrl(decoded)
@@ -1840,8 +1858,7 @@ app.get('/api/mints/swaps', (req: Request, res: Response): void => {
             .filter(s => s.state === 'OK' && s.timeTakenMs !== null)
             .map(s => s.timeTakenMs as number)
           const avgTimeMs = okTimes.length > 0 ? okTimes.reduce((a, b) => a + b, 0) / okTimes.length : null
-          res.setHeader('Cache-Control', 'max-age=300')
-          res.json({ url, avgTimeMs, swaps })
+          sendCachedBody(res, buildCachedBody({ url, avgTimeMs, swaps }), 300)
         })
     })
     .catch((err: unknown) => {
@@ -1885,8 +1902,7 @@ app.get('/api/mints/audit-cz', (req: Request, res: Response): void => {
         return
       }
       const body = await getAuditCzForMint(url, clampAuditCzLimit(req.query['limit']), direction)
-      res.setHeader('Cache-Control', 'max-age=60')
-      res.json(body)
+      sendCachedBody(res, buildCachedBody(body), 60)
     })
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/mints/audit-cz]', err)
@@ -2127,8 +2143,7 @@ app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {
         // Untrusted display text only (profilesSync.ts); never used for rating, operator rule or any score.
         ...profileFieldsForReview(r),
       }))
-      res.setHeader('Cache-Control', 'max-age=120')
-      res.json(reviews)
+      sendCachedBody(res, buildCachedBody(reviews), 120)
     })
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/mints/nostr-reviews]', err)

@@ -127,8 +127,8 @@ paths:
       summary: One mint
       description: |
         `url` is the mint URL, percent-encoded. It is normalised exactly like stored mint URLs (https, lower-case
-        host, no trailing slash) and checked for a well-formed public https URL without any DNS lookup or outbound
-        request. A test, archived or offline mint is returned when asked for by URL; `status` and `isTest` tell
+        host, no trailing slash; `http://` becomes `https://`) and checked for a well-formed public https URL without
+        any DNS lookup or outbound request. Any other scheme (`ftp://`, `javascript:`, `data:`, …) is `400 invalid_url`. A test, archived or offline mint is returned when asked for by URL; `status` and `isTest` tell
         them apart.
       parameters:
         - name: url
@@ -153,7 +153,7 @@ paths:
               schema: { $ref: '#/components/schemas/MintResponse' }
         '304': { $ref: '#/components/responses/NotModified' }
         '400':
-          description: The path is not valid percent-encoding or not a well-formed public https URL (`invalid_url`).
+          description: The path is not valid percent-encoding, has a scheme other than http or https, or is not a well-formed public https URL (`invalid_url`).
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }

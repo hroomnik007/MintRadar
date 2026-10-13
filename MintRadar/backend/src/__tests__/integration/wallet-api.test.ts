@@ -352,6 +352,40 @@ describe('GET /api/wallets/mints/:url', () => {
     expect(nf.body).toEqual({ error: { code: 'mint_not_found', message: expect.any(String) } })
   })
 
+  it('400 invalid_url (never 404) for a scheme other than http or https, however it is written', async () => {
+    const enc = encodeURIComponent
+    const bad: Array<[string, string]> = [
+      ['ftp', enc('ftp://a.example.com')],
+      ['ftp, uppercase', enc('FTP://a.example.com')],
+      ['ws', enc('ws://a.example.com')],
+      ['wss', enc('wss://a.example.com')],
+      ['file', enc('file:///etc/passwd')],
+      ['javascript', enc('javascript:alert(1)')],
+      ['data', enc('data:text/html,<script>alert(1)</script>')],
+      ['unencoded ftp', 'ftp://a.example.com'],
+      ['leading blanks', enc('  ftp://a.example.com')],
+      ['empty (blank)', '%20'],
+      ['empty (NUL)', '%00'],
+      ['very long host', enc('https://' + 'a'.repeat(600) + '.example.com')],
+      ['very long path', enc('https://a.example.com/' + 'x'.repeat(5000))],
+      ['very long junk', 'x'.repeat(6000)],
+      ['double-encoded https', enc(enc('https://a.example.com'))],
+      ['double-encoded ftp', enc(enc('ftp://a.example.com'))],
+    ]
+    for (const [label, p] of bad) {
+      const res = await one(p)
+      expect(res.status, label).toBe(400)
+      expect(res.headers['content-type'], label).toMatch(/application\/json/)
+      expect(res.body, label).toEqual({ error: { code: 'invalid_url', message: expect.any(String) } })
+    }
+    // http:// is still normalised to the stored https:// url, and an https:// url with no such mint is still a 404
+    const http = await one(enc('http://a.example.com'))
+    expect(http.status).toBe(200)
+    expect(http.body.mint.url).toBe('https://a.example.com')
+    expect((await one(enc('HTTPS://A.EXAMPLE.COM'))).status).toBe(200)
+    expect((await one(enc('https://unknown.example.com'))).status).toBe(404)
+  })
+
   it('an unknown route below /api/wallets is a JSON 404', async () => {
     const res = await request(app).get('/api/wallets/nothing')
     expect(res.status).toBe(404)

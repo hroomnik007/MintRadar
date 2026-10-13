@@ -67,7 +67,7 @@ Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` l
 }
 ```
 
-`GET /api/v1/wallets/mints/{url}` returns `{ "methodology", "generatedAt", "mint": { … } }` with the same mint object. The URL is normalised exactly like stored mint URLs (`https`, lower-case host, no trailing slash) and checked for a well-formed public `https://` URL without any DNS lookup or outbound request: a malformed URL is `400 invalid_url`, an unknown mint `404 mint_not_found`. A test, archived or offline mint is returned when asked for by URL; `status` and `isTest` tell them apart.
+`GET /api/v1/wallets/mints/{url}` returns `{ "methodology", "generatedAt", "mint": { … } }` with the same mint object. The URL is normalised exactly like stored mint URLs (`https`, lower-case host, no trailing slash) and checked for a well-formed public `https://` URL without any DNS lookup or outbound request: a URL with any scheme other than `http` or `https` (`ftp://…`, `javascript:…`, `data:…`) or a malformed one is `400 invalid_url` (`http://` is still normalised to `https://`), an unknown mint `404 mint_not_found`. A test, archived or offline mint is returned when asked for by URL; `status` and `isTest` tell them apart.
 
 | Envelope field | Type | Notes |
 |---|---|---|
@@ -90,7 +90,7 @@ Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` l
 | `outdated` | boolean \| null | `true`: two or more minor versions behind the newest stable release of that software family. `false`: not outdated. `null`: unknown software, no or unreadable version, or no reference release. |
 | `isTest` | boolean | On MintRadar's manual test-mint list. Test mints are never recommended. |
 | `audit` | object \| null | cashu.info's 7-day window: `swaps7d` (all swaps), `attributedFailures` (failures cashu.info attributes to this mint), `fetchedAt` (ISO 8601). `null` when no data is stored. Fewer than 10 swaps or data older than 168 hours scores neutral in the Reliability Score. |
-| `reviews` | object | Community Rating, same definitions as the website: `count` (counted NIP-87 reviews), `ratedCount` (how many carry a rating), `avg` (average rating over those, one decimal, `null` when none), `operatorCount` (reviews by the mint's own operator, which are left out of the other three). |
+| `reviews` | object | Community Rating, same definitions as the website: `count` (counted NIP-87 reviews), `ratedCount` (how many carry a rating; always an integer, `0` only when no counted review carries one), `avg` (average rating over those, one decimal, `null` when none), `operatorCount` (reviews by the mint's own operator, which are left out of the other three). |
 | `eligibleForRecommendation` | boolean | `true` when the mint is online, has a score, is not a test mint and was first seen at least 14 days ago. |
 
 The wallet responses never contain IP addresses or other network data, onion data, reviewer public keys or review texts, contact details, or the mint's NUT-06 public key.
@@ -121,7 +121,7 @@ const { methodology, mints } = await res.json()
 
 ### Caching
 
-Every successful `GET` of `/api/v1/wallets/*`, `/api/v1/mints/known` and `/api/v1/mints/recommend` carries `Cache-Control: public, max-age=300` and a strong `ETag` over the body, on a cache hit as well as a miss. Send `If-None-Match` to get `304 Not Modified` (same headers, no body). The data moves with the 5-minute probe cycle, so **poll at most every 5 minutes**; a wallet that fetches the list once when it starts and then every 10 minutes is well within the limits. Error responses are not cached.
+Every successful `GET` of `/api/v1/wallets/*`, `/api/v1/mints/known` and `/api/v1/mints/recommend` carries `Cache-Control: public, max-age=300` and a strong `ETag` over the body, on a cache hit as well as a miss. Send `If-None-Match` to get `304 Not Modified` (same headers, no body). The data moves with the 5-minute probe cycle, so **poll at most every 5 minutes**; a wallet that fetches the list once when it starts and then every 10 minutes is well within the limits. Error responses are not cached. The read routes of the website that show shared data (`/api/stats`, `/api/stats/reliability-movers`, `/api/mints/swaps`, `/api/mints/audit-cz`, `/api/mints/nostr-reviews`) use the same header form and the same kind of `ETag` with their own shorter `max-age` (60 s, 10 min, 5 min, 60 s, 2 min); they are internal and carry no stability guarantee.
 
 ### Rate limits
 
@@ -144,7 +144,7 @@ The wallet routes answer errors as JSON:
 | Status | `code` | When |
 |---|---|---|
 | `400` | `invalid_parameter` | a list query value is present but invalid |
-| `400` | `invalid_url` | the `{url}` is not valid percent-encoding or not a well-formed public `https://` URL |
+| `400` | `invalid_url` | the `{url}` is not valid percent-encoding, has a scheme other than `http`/`https`, or is not a well-formed public `https://` URL |
 | `404` | `mint_not_found` | no tracked mint has this URL |
 | `404` | `not_found` | unknown route below `/api/wallets` |
 | `429` | `rate_limited` | over 300 requests per minute; also carries `retryAfterSec` |

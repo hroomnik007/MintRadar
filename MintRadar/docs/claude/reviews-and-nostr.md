@@ -128,7 +128,7 @@ list): 1×5.0 → 3.75, 83×4.8 → 4.73, 30×4.0 → 3.93. Inputs are exactly w
 `/api/mints/known` (`mints.review_rated_count`, written by the same `aggregateReviews()` rule in
 `persistMintReviews` and `recomputeReviewCountRollups`; the startup recount (~12 s after boot) backfills it,
 so it is filled right after a deploy; until then the sort falls back to `reviewCount`, which also counts
-comment-only reviews). Mints without a rated review sort after every rated mint (key −1); ties keep the list
+comment-only reviews; `/api/mints/known` itself keeps `null`). The wallet API (`reviews.ratedCount`) never shows that gap as 0: while the column is NULL the `/api/mints/known` snapshot query also carries the mint's stored reviews (`stored_reviews`, only for NULL mints) and `computeKnownMints` recomputes the whole aggregate with `aggregateReviews()` into `Snapshot.reviewFallback` (not serialised), which `toWalletMint` uses instead of the NULL column. Both writers of `review_count` set `review_rated_count` in the same statement. Mints without a rated review sort after every rated mint (key −1); ties keep the list
 order (stable sort — the rating branch never had a tie-breaker). Used by: Dashboard card sort and list sort
 (`Dashboard.tsx` ×2) and the rating tie-break of the Reliability Score sort (`listRating` in
 `reliabilitySort.ts`). The Watchlist has no rating sort (alphabetical); Compare, Stats and the Best Mint

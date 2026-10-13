@@ -100,7 +100,10 @@ function outdatedOf(version: string | null, latest: LatestVersion | null): boole
   return false
 }
 
-export function toWalletMint(m: KnownMintLike, now: number = Date.now()): WalletMint {
+/** The reviews rollup recomputed from the stored reviews (same rule as mints.review_*), for a mint whose rollup is still NULL. */
+export interface ReviewsFallback { count: number; ratedCount: number; avg: number | null; operatorCount: number }
+
+export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviewsFallback?: ReviewsFallback): WalletMint {
   const status = statusOf(m)
   const score = typeof m.reliabilityScore === 'number' ? m.reliabilityScore : null
   const test = isTestMint(m.url)
@@ -122,12 +125,16 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now()): Wallet
     audit: auditOk
       ? { swaps7d: m.auditCzTotal as number, attributedFailures: m.auditCzBlamed as number, fetchedAt: toIso(m.auditCzFetchedAt) as string }
       : null,
-    reviews: {
-      count: m.reviewCount ?? 0,
-      ratedCount: m.reviewRatedCount ?? 0,
-      avg: m.reviewAvgRating ?? null,
-      operatorCount: m.operatorReviewCount ?? 0,
-    },
+    // While review_rated_count is NULL the stored reviews are counted at read time (the snapshot carries them), so
+    // ratedCount is never a misleading 0; 0 only when there really are no rated reviews.
+    reviews: m.reviewRatedCount == null && reviewsFallback
+      ? { count: reviewsFallback.count, ratedCount: reviewsFallback.ratedCount, avg: reviewsFallback.avg, operatorCount: reviewsFallback.operatorCount }
+      : {
+        count: m.reviewCount ?? 0,
+        ratedCount: m.reviewRatedCount ?? 0,
+        avg: m.reviewAvgRating ?? null,
+        operatorCount: m.operatorReviewCount ?? 0,
+      },
     eligibleForRecommendation:
       isEligibleForRecommendation(m.discoveredAt, now) && !test && status === 'online' && score !== null,
   }
@@ -246,11 +253,16 @@ export function filterWalletMints(mints: WalletMint[], f: WalletListFilter): Wal
 
 // ── Envelope ──────────────────────────────────────────────────────────────────
 
-export interface Snapshot { data: unknown; computedAt: number }
+export interface Snapshot {
+  data: unknown
+  computedAt: number
+  /** Review aggregates recomputed from stored reviews, by mint URL, only for mints whose rollup column is NULL. Never serialised. */
+  reviewFallback?: ReadonlyMap<string, ReviewsFallback>
+}
 
 export function walletListEnvelope(snap: Snapshot, filter: WalletListFilter): object {
   const now = snap.computedAt
-  const all = (snap.data as KnownMintLike[]).map(m => toWalletMint(m, now))
+  const all = (snap.data as KnownMintLike[]).map(m => toWalletMint(m, now, snap.reviewFallback?.get(m.url)))
   const mints = filterWalletMints(all, filter)
   return { methodology: METHODOLOGY_VERSION, generatedAt: new Date(now).toISOString(), count: mints.length, mints }
 }
@@ -258,7 +270,7 @@ export function walletListEnvelope(snap: Snapshot, filter: WalletListFilter): ob
 export function walletSingleEnvelope(snap: Snapshot, url: string): object | null {
   const found = (snap.data as KnownMintLike[]).find(m => m.url === url)
   if (!found) return null
-  return { methodology: METHODOLOGY_VERSION, generatedAt: new Date(snap.computedAt).toISOString(), mint: toWalletMint(found, snap.computedAt) }
+  return { methodology: METHODOLOGY_VERSION, generatedAt: new Date(snap.computedAt).toISOString(), mint: toWalletMint(found, snap.computedAt, snap.reviewFallback?.get(found.url)) }
 }
 
 export interface RecommendQuery { unit: string; minScore: number; limit: number; requiredNuts: string[] }
@@ -267,7 +279,7 @@ export interface RecommendQuery { unit: string; minScore: number; limit: number;
 export function recommendEnvelope(snap: Snapshot, q: RecommendQuery): object {
   const rows = snap.data as KnownMintLike[]
   const latency = new Map(rows.map(r => [r.url, r.latencyMs ?? null]))
-  const all = rows.map(m => toWalletMint(m, snap.computedAt))
+  const all = rows.map(m => toWalletMint(m, snap.computedAt, snap.reviewFallback?.get(m.url)))
   const picked = filterWalletMints(all, {
     unit: q.unit === '' ? undefined : q.unit.toLowerCase(),
     minScore: q.minScore,
@@ -343,9 +355,22 @@ export function memoizedBody(snapshot: object, key: string, build: () => unknown
   return body
 }
 
-/** Cache-Control public, max-age=300 and a strong ETag on EVERY response; Express turns a matching If-None-Match into 304. */
-export function sendCachedBody(res: Response, body: CachedBody): void {
-  res.setHeader('Cache-Control', 'public, max-age=300')
+// A body built from a long-lived in-process data object (the /api/stats cache and the like): serialised and hashed
+// once per object, so a cache hit costs no stringify or sha256. Weak keys: dropped together with the object.
+const bodyByData = new WeakMap<object, CachedBody>()
+
+export function cachedBodyOf(data: object): CachedBody {
+  let body = bodyByData.get(data)
+  if (!body) { body = buildCachedBody(data); bodyByData.set(data, body) }
+  return body
+}
+
+/**
+ * Cache-Control public, max-age=<maxAgeSec> (default 300) and a strong ETag on EVERY response; Express turns a
+ * matching If-None-Match into 304. Only for responses every caller may share (no per-user data).
+ */
+export function sendCachedBody(res: Response, body: CachedBody, maxAgeSec = 300): void {
+  res.setHeader('Cache-Control', `public, max-age=${maxAgeSec}`)
   res.setHeader('ETag', body.etag)
   res.type('application/json')
   res.send(body.json)
