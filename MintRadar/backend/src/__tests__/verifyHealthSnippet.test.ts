@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { resolve } from 'node:path'
 import http from 'node:http'
 import net from 'node:net'
@@ -216,9 +216,15 @@ describe('getMintHealth against stub relays', () => {
 })
 
 describe('the command line (child process)', () => {
+  // CI installs the backend packages before the root ones, so the file is run from a copy inside backend/node_modules
+  // (git-ignored), where `nostr-tools` resolves in both places. The copy is byte-identical to docs/examples/verify-health.mjs.
+  const COPY_DIR = resolve(__dirname, '../../node_modules/.verify-health-test')
+  const COPY = resolve(COPY_DIR, 'verify-health.mjs')
+  beforeAll(() => { mkdirSync(COPY_DIR, { recursive: true }); copyFileSync(FILE, COPY) })
+  afterAll(() => { rmSync(COPY_DIR, { recursive: true, force: true }) })
   const run = (args: string[]): Promise<{ code: number | null; stdout: string; stderr: string; ms: number }> => new Promise(res => {
     const t = Date.now()
-    execFile(process.execPath, [FILE, ...args], { timeout: 15_000 }, (err, stdout, stderr) => {
+    execFile(process.execPath, [COPY, ...args], { timeout: 15_000 }, (err, stdout, stderr) => {
       res({ code: err ? ((err as { code?: number }).code ?? 1) : 0, stdout, stderr, ms: Date.now() - t })
     })
   })
