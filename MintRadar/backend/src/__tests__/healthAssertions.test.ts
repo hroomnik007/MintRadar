@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import { generateSecretKey, getPublicKey, finalizeEvent, verifyEvent, nip19 } from 'nostr-tools'
 import { bytesToHex } from 'nostr-tools/utils'
@@ -5,7 +7,7 @@ import { normalizeUrl } from '../discovery.js'
 import { METHODOLOGY_VERSION } from '../shared/methodology.js'
 import {
   ATTESTATION_AUDIT_MAX_AGE_MS, ATTESTATION_EXPIRY_S, ATTESTATION_MAX_EVENTS_PER_RUN, ATTESTATION_MIN_INTERVAL_MS,
-  ATTESTATION_MIN_RANK_DELTA, ATTESTATION_PROFILE, ATTESTATION_PUBKEY_HEX, ATTESTATION_REFRESH_MS, ATTESTATION_RELAYS,
+  ATTESTATION_MIN_RANK_DELTA, ATTESTATION_PROFILE, ATTESTATION_PROFILE_PICTURE_URL, ATTESTATION_PUBKEY_HEX, ATTESTATION_REFRESH_MS, ATTESTATION_RELAYS,
   HEALTH_CONTENT, HEALTH_KIND, METHODOLOGY_URL, buildHealthEvent, buildProfileTemplate, healthIdentifier,
   resolveAttestationKey, sanitizeSoftware, shouldPublish,
   type HealthInput, type PublishedState,
@@ -325,7 +327,7 @@ describe('shouldPublish (fake clock)', () => {
 })
 
 describe('profile (kind 0)', () => {
-  it('has exactly the agreed fields and no picture', () => {
+  it('has exactly the agreed fields, the site logo as picture and no banner', () => {
     const t = buildProfileTemplate(NOW)
     expect(t.kind).toBe(0)
     expect(t.tags).toEqual([])
@@ -337,9 +339,50 @@ describe('profile (kind 0)', () => {
       about: 'Operational health signals for Cashu mints, computed by MintRadar. Not solvency, not advice. Method: https://mintradar.org/methodology',
       website: 'https://mintradar.org',
       nip05: 'health@mintradar.org',
+      picture: ATTESTATION_PROFILE_PICTURE_URL,
     })
-    expect(profile).not.toHaveProperty('picture')
+    expect(profile['picture']).toBe('https://mintradar.org/icons/icon-512x512.png')
+    expect(profile).not.toHaveProperty('banner')
     expect(ATTESTATION_PROFILE.nip05).toBe('health@mintradar.org')
+  })
+
+  it('keeps the fields before the picture byte-for-byte as published before', () => {
+    const before = JSON.stringify({
+      name: 'MintRadar Health', display_name: 'MintRadar Health',
+      about: 'Operational health signals for Cashu mints, computed by MintRadar. Not solvency, not advice. Method: https://mintradar.org/methodology',
+      website: 'https://mintradar.org', nip05: 'health@mintradar.org',
+    })
+    expect(buildProfileTemplate(NOW).content).toBe(before.slice(0, -1) + `,"picture":${JSON.stringify(ATTESTATION_PROFILE_PICTURE_URL)}}`)
+  })
+
+  it('the picture is an https URL on mintradar.org', () => {
+    const u = new URL(ATTESTATION_PROFILE_PICTURE_URL)
+    expect(u.protocol).toBe('https:')
+    expect(u.hostname).toBe('mintradar.org')
+    expect(u.search).toBe('')
+    expect(u.hash).toBe('')
+    expect(ATTESTATION_PROFILE_PICTURE_URL.startsWith('data:')).toBe(false)
+  })
+
+  it('the picture file exists in public/ and is a square PNG of at least 256 px under 150 KB', () => {
+    const rel = new URL(ATTESTATION_PROFILE_PICTURE_URL).pathname.replace(/^\//, '')
+    const bytes = readFileSync(resolve(__dirname, '../../../public', rel))
+    expect(bytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a') // PNG signature
+    expect(bytes.subarray(12, 16).toString('ascii')).toBe('IHDR')
+    const width = bytes.readUInt32BE(16)
+    const height = bytes.readUInt32BE(20)
+    expect(width).toBe(height)
+    expect(width).toBeGreaterThanOrEqual(256)
+    expect(bytes.length).toBeLessThan(150 * 1024)
+  })
+
+  it('the signed profile event verifies with a throwaway key', () => {
+    const sk = generateSecretKey()
+    const signed = finalizeEvent(buildProfileTemplate(NOW), sk)
+    expect(verifyEvent(signed)).toBe(true)
+    expect(signed.kind).toBe(0)
+    expect(signed.pubkey).toBe(getPublicKey(sk))
+    expect((JSON.parse(signed.content) as Record<string, string>)['picture']).toBe(ATTESTATION_PROFILE_PICTURE_URL)
   })
 })
 

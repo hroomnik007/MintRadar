@@ -38,12 +38,17 @@ export const METHODOLOGY_URL = 'https://mintradar.org/methodology'
 export const HEALTH_CONTENT =
   "Operational health signal, not solvency, not a recommendation to deposit funds. Based on MintRadar's probes and third-party audit data; it can be wrong or out of date."
 
+/** The site's own app icon (public/icons/icon-512x512.png, the 512 px icon of the web manifest): a static PNG served
+ *  from mintradar.org, no third-party host. */
+export const ATTESTATION_PROFILE_PICTURE_URL = 'https://mintradar.org/icons/icon-512x512.png'
+
 export const ATTESTATION_PROFILE = {
   name: 'MintRadar Health',
   display_name: 'MintRadar Health',
   about: 'Operational health signals for Cashu mints, computed by MintRadar. Not solvency, not advice. Method: https://mintradar.org/methodology',
   website: 'https://mintradar.org',
   nip05: 'health@mintradar.org',
+  picture: ATTESTATION_PROFILE_PICTURE_URL,
 } as const
 
 export type HealthStatus = 'online' | 'offline' | 'degraded'
@@ -155,7 +160,7 @@ export function buildHealthEvent(input: HealthInput): EventTemplate | null {
   return { kind: HEALTH_KIND, created_at: createdAt, tags, content: HEALTH_CONTENT }
 }
 
-/** The kind 0 profile of the attestation key (no picture). */
+/** The kind 0 profile of the attestation key (the site logo as picture, no banner). */
 export function buildProfileTemplate(nowMs: number): EventTemplate {
   return { kind: 0, created_at: Math.floor(nowMs / 1000), tags: [], content: JSON.stringify(ATTESTATION_PROFILE) }
 }

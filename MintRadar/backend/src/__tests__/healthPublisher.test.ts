@@ -179,7 +179,8 @@ describe('enabled mode', () => {
     expect(profile.pubkey).toBe(getPublicKey(sk))
     expect(verifyEvent(profile)).toBe(true)
     expect(JSON.parse(profile.content)).toMatchObject({ name: 'MintRadar Health', nip05: 'health@mintradar.org' })
-    expect(JSON.parse(profile.content)).not.toHaveProperty('picture')
+    expect(JSON.parse(profile.content)).toHaveProperty('picture', 'https://mintradar.org/icons/icon-512x512.png')
+    expect(JSON.parse(profile.content)).not.toHaveProperty('banner')
 
     // first tick starts at the start offset (random = 0) and blocks inside loadSnapshot
     await vi.advanceTimersByTimeAsync(ATTESTATION_START_OFFSET_MS)
