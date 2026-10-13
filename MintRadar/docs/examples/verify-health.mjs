@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Verify a MintRadar Health assertion (Nostr kind 30385) for one Cashu mint.
-// Draft spec: docs/nostr-health-assertions.md. STATUS: the feature is not live yet, so a query returns nothing today.
+// Draft spec: docs/nostr-health-assertions.md. STATUS: live since 2026-10-13 (early version).
 //
 //   npm install nostr-tools
 //   node verify-health.mjs https://mint.example.com
@@ -83,7 +83,7 @@ export function pickNewest(events, options) {
   return best
 }
 
-/** Queries the four relays and returns the newest valid assertion for the mint, or null (also while the feature is not live). */
+/** Queries the four relays and returns the newest valid assertion for the mint, or null (no event, or an expired one: that means "unknown", not "bad"). */
 export async function fetchHealth(mintUrl, { pool = new SimplePool(), relays = RELAYS, pubkey = PINNED_PUBKEY, now } = {}) {
   try {
     const events = await pool.querySync(relays, { kinds: [KIND], authors: [pubkey], '#d': [normalizeMintUrl(mintUrl)], limit: 5 })
@@ -102,7 +102,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
   }
   const found = await fetchHealth(mintUrl)
   if (!found) {
-    console.log('no valid assertion found (the feature may not be live yet, or the mint has none)')
+    console.log('no valid assertion found (the mint has none, or its event expired: unknown, not bad)')
     process.exit(1)
   }
   console.log(JSON.stringify(found.health, null, 2))

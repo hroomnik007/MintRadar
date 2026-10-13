@@ -1,8 +1,8 @@
-# Mint Health Assertions on Nostr (draft)
+# Mint Health Assertions on Nostr (early version)
 
-`draft` `optional`
+`early version` `optional`
 
-**Status: not live yet.** MintRadar does not publish these events today. This page describes the format MintRadar intends to publish, so that wallet developers can review it first. Names and values may change before the first event is published; after that the v1 tag names are fixed.
+**Status: live since 2026-10-13 (first publication 17:48 UTC), early version.** MintRadar publishes these events now. The `mint_*` tags are MintRadar's own tags (see below), and the format may change before it is frozen. Changes are announced in this document and on [mintradar.org/for-wallets](https://mintradar.org/for-wallets#signed-health-assertions), and every event carries the `methodology` integer.
 
 ## Abstract
 

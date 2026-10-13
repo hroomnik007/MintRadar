@@ -37,9 +37,11 @@ describe('the attestation key agrees everywhere', () => {
     for (const n of npubs) expect(hexOfNpub(n)).toBe(ATTESTATION_PUBKEY_HEX)
   })
 
-  it('the draft spec says the feature is not live yet and the example event matches the tag grammar', () => {
+  it('the spec says the feature is live since 2026-10-13 (early version) and the example event matches the tag grammar', () => {
     const spec = read('docs/nostr-health-assertions.md')
-    expect(spec).toMatch(/not live yet/i)
+    expect(spec).toMatch(/live since 2026-10-13/i)
+    expect(spec).toMatch(/early version/i)
+    expect(spec).not.toMatch(/not live yet/i)
     const json = spec.match(/```json\n([\s\S]*?)\n```/)![1]!
     const ev = JSON.parse(json) as { kind: number; created_at: number; tags: string[][] }
     expect(ev.kind).toBe(30385)

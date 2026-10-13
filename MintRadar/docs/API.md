@@ -164,6 +164,7 @@ The other routes keep their older shape `{ "error": "text" }` (see "Error Respon
 | 2 | 2026-10-08 | Audit part now from cashu.info: failures attributed to the mint divided by swaps in 7 days; neutral under 10 swaps or without recent data. |
 | 3 | 2026-10-09 | Version part follows one rule: outdated means two or more minor versions behind the newest stable release; zero or one behind scores full points. |
 
+- **Signed health assertions on Nostr** (kind 30385, early version, published under the key `health@mintradar.org`) carry the same `score` as `rank` and the same `methodology` integer. They are not part of this HTTP API; see [mintradar.org/for-wallets](https://mintradar.org/for-wallets#signed-health-assertions) and [nostr-health-assertions.md](nostr-health-assertions.md).
 - Everything under "Internal routes" below has **no stability guarantee**.
 
 ---
