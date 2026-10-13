@@ -1,6 +1,7 @@
 import { pool } from './db.js'
 import { computeDegraded } from './degraded.js'
 import { publicMintName, isHiddenMintName } from './mintNames.js'
+import { PAGE_META, OG_PAGE_SLUGS } from './shared/pageMeta.js'
 
 // Minimal HTML fragment served ONLY to social-media crawlers (see nginx
 // user-agent map, deploy/nginx.conf) that hit /mint/:url — they don't run JS,
@@ -62,16 +63,20 @@ export function renderMintOgHtml(mint: OgMintData | null, mintUrl: string): stri
   return renderHtml(title, description, pageUrl)
 }
 
-function renderHtml(title: string, description: string, pageUrl: string): string {
+// `page` is set only for the static documentation pages (renderPageOgHtml): it adds the canonical link and a
+// visible link to the real page. Without it the output is exactly what the mint fragment always was.
+function renderHtml(title: string, description: string, pageUrl: string, page?: { linkText: string }): string {
   const safeTitle = escapeHtml(title)
   const safeDescription = escapeHtml(description)
   const safePageUrl = escapeHtml(pageUrl)
+  const canonicalLink = page ? `\n    <link rel="canonical" href="${safePageUrl}" />` : ''
+  const body = page ? `\n    <p><a href="${safePageUrl}">${escapeHtml(page.linkText)}</a></p>\n  ` : ''
 
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>${safeTitle}</title>
+    <title>${safeTitle}</title>${canonicalLink}
     <meta name="description" content="${safeDescription}" />
     <meta property="og:title" content="${safeTitle}" />
     <meta property="og:description" content="${safeDescription}" />
@@ -86,9 +91,23 @@ function renderHtml(title: string, description: string, pageUrl: string): string
     <meta name="twitter:description" content="${safeDescription}" />
     <meta name="twitter:image" content="${OG_IMAGE_URL}" />
   </head>
-  <body></body>
+  <body>${body}</body>
 </html>
 `
+}
+
+// GET /api/og/page?p=<slug> — the bot HTML of a static documentation page (/methodology, /for-wallets), routed
+// here by fixed `location = /path` rules in deploy/nginx.conf. The slug is looked up in a strict allowlist
+// (Map, so `__proto__` or `constructor` are just unknown keys); every word of the output comes from PAGE_META
+// (shared/pageMeta.ts), none from the request. Returns null for anything not on the list.
+const PAGE_SLUGS: ReadonlyMap<string, keyof typeof PAGE_META> = new Map(Object.entries(OG_PAGE_SLUGS))
+
+export function renderPageOgHtml(slug: unknown): string | null {
+  if (typeof slug !== 'string') return null
+  const path = PAGE_SLUGS.get(slug)
+  if (path === undefined) return null
+  const meta = PAGE_META[path]
+  return renderHtml(meta.title, meta.description, `${SITE_URL}${meta.canonicalPath}`, { linkText: meta.title })
 }
 
 // Scoped, single-mint version of the /api/mints/known aggregate query —

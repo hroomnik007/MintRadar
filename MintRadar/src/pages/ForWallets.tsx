@@ -8,6 +8,7 @@ import {
   WALLET_API_BASE, WALLET_API_FACTS as F, WALLET_EXAMPLES, DOCS_API_URL, DOCS_OPENAPI_URL,
 } from '@/constants/forWalletsPage'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
+import { PAGE_META } from '@/utils/pageMeta'
 import {
   WALLET_ENVELOPE_FIELDS, WALLET_MINT_FIELDS, WALLET_QUERY_PARAMS, WALLET_ERRORS, type WalletField,
 } from '@/utils/walletFields'
@@ -70,10 +71,7 @@ function Example({ id, label, level }: { id: string; label: string; level: 'h3' 
 }
 
 export default function ForWallets() {
-  useDocumentMeta(
-    'MintRadar for wallets | MintRadar',
-    'A quick start for wallet developers: the read-only MintRadar API v1 with one operational health summary per Cashu mint, with examples, filters, caching, limits and the stability policy.',
-  )
+  useDocumentMeta(PAGE_META['/for-wallets'].title, PAGE_META['/for-wallets'].description)
   const { hash } = useLocation()
   const pageRef = useRef<HTMLDivElement>(null)
   useNavbarOffset(pageRef)

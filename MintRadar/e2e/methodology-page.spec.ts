@@ -5,6 +5,7 @@ import {
   expectExternalLinksSafe, expectKeyboardOrder,
 } from './fixtures/docPage'
 import { METHODOLOGY_CHANGES, METHODOLOGY_VERSION } from '../src/utils/methodology'
+import { PAGE_META } from '../src/utils/pageMeta'
 
 // /methodology: the Reliability Score reference (pages/Methodology.tsx, numbers in constants/methodologyPage.ts).
 
@@ -34,12 +35,12 @@ test.describe('Methodology page', () => {
     await page.goto('/')
     const genericImage = await page.locator('meta[property="og:image"]').getAttribute('content')
     await page.goto('/methodology')
-    await expect(page).toHaveTitle('Reliability Score methodology | MintRadar')
+    await expect(page).toHaveTitle(PAGE_META['/methodology'].title)
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://mintradar.org/methodology')
     await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', 'https://mintradar.org/methodology')
-    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', 'Reliability Score methodology | MintRadar')
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', PAGE_META['/methodology'].title)
     const description = await page.locator('meta[name="description"]').getAttribute('content')
-    expect(description).toMatch(/Reliability Score/)
+    expect(description).toBe(PAGE_META['/methodology'].description)
     await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', description!)
     await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', genericImage!)
   })

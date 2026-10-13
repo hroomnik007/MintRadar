@@ -6,6 +6,7 @@ import {
 } from './fixtures/docPage'
 import { WALLET_MINT_FIELDS, WALLET_QUERY_PARAMS, WALLET_ERRORS } from '../src/utils/walletFields'
 import { WALLET_EXAMPLES } from '../src/constants/forWalletsPage'
+import { PAGE_META } from '../src/utils/pageMeta'
 
 // /for-wallets: quick start for wallet developers (pages/ForWallets.tsx), a static page.
 
@@ -29,12 +30,12 @@ test.describe('For wallets page', () => {
     await page.goto('/')
     const genericImage = await page.locator('meta[property="og:image"]').getAttribute('content')
     await page.goto('/for-wallets')
-    await expect(page).toHaveTitle('MintRadar for wallets | MintRadar')
+    await expect(page).toHaveTitle(PAGE_META['/for-wallets'].title)
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://mintradar.org/for-wallets')
     await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', 'https://mintradar.org/for-wallets')
-    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', 'MintRadar for wallets | MintRadar')
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', PAGE_META['/for-wallets'].title)
     const description = await page.locator('meta[name="description"]').getAttribute('content')
-    expect(description).toMatch(/wallet/i)
+    expect(description).toBe(PAGE_META['/for-wallets'].description)
     await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', description!)
     await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', genericImage!)
   })

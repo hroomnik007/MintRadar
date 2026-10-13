@@ -146,3 +146,9 @@ describe('walletFields: backend and frontend copies agree', () => {
     expect(codeOf('../utils/walletFields.ts')).toBe(codeOf('../../backend/src/shared/walletFields.ts'))
   })
 })
+
+describe('pageMeta: backend and frontend copies agree', () => {
+  it('has identical code (title, description and canonical path of the documentation pages, the og slug allowlist)', () => {
+    expect(codeOf('../utils/pageMeta.ts')).toBe(codeOf('../../backend/src/shared/pageMeta.ts'))
+  })
+})

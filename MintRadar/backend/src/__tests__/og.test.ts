@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { escapeHtml, mintStatusLabel, renderMintOgHtml, type OgMintData } from '../og.js'
+import { describe, it, expect, vi } from 'vitest'
+import { escapeHtml, mintStatusLabel, renderMintOgHtml, renderPageOgHtml, type OgMintData } from '../og.js'
+import { PAGE_META, OG_PAGE_SLUGS } from '../shared/pageMeta.js'
 
 describe('escapeHtml', () => {
   it('escapes all five HTML-significant characters', () => {
@@ -99,5 +100,59 @@ describe('renderMintOgHtml', () => {
     const html = renderMintOgHtml(null, mintUrl)
     expect(html.trim().startsWith('<!doctype html>')).toBe(true)
     expect(html).toContain('</html>')
+  })
+})
+
+describe('renderPageOgHtml (documentation pages)', () => {
+  it('renders every allowlisted slug from PAGE_META: title, description, canonical, og:url and a visible link', () => {
+    for (const [slug, path] of Object.entries(OG_PAGE_SLUGS)) {
+      const meta = PAGE_META[path]
+      const url = `https://mintradar.org${meta.canonicalPath}`
+      const html = renderPageOgHtml(slug)!
+      expect(html, slug).toContain(`<title>${meta.title}</title>`)
+      expect(html).toContain(`<link rel="canonical" href="${url}" />`)
+      expect(html).toContain(`<meta name="description" content="${meta.description}" />`)
+      expect(html).toContain(`<meta property="og:title" content="${meta.title}" />`)
+      expect(html).toContain(`<meta property="og:description" content="${meta.description}" />`)
+      expect(html).toContain(`<meta property="og:url" content="${url}" />`)
+      expect(html).toContain(`<meta name="twitter:title" content="${meta.title}" />`)
+      expect(html).toContain(`<meta name="twitter:description" content="${meta.description}" />`)
+      expect(html).toContain('<meta name="twitter:card" content="summary_large_image" />')
+      expect(html).toContain('<meta property="og:image" content="https://mintradar.org/og-image-reliability.png" />')
+      expect(html).toContain(`<body>\n    <p><a href="${url}">${meta.title}</a></p>\n  </body>`)
+    }
+  })
+
+  it('uses the same generic image as the mint fragment and the home card', () => {
+    const image = /property="og:image" content="([^"]+)"/
+    expect(image.exec(renderPageOgHtml('methodology')!)?.[1]).toBe(image.exec(renderMintOgHtml(null, ''))?.[1])
+  })
+
+  it('returns null for anything that is not an allowlisted slug', () => {
+    const odd = ['', 'unknown', 'Methodology', 'methodology ', '/methodology', '../methodology', '__proto__', 'constructor', 'toString', 'hasOwnProperty', '<script>alert(1)</script>']
+    for (const slug of odd) expect(renderPageOgHtml(slug), slug).toBeNull()
+    for (const slug of [undefined, null, 1, true, {}, ['methodology'], ['methodology', 'for-wallets']]) expect(renderPageOgHtml(slug)).toBeNull()
+  })
+
+  it('leaves the mint fragment unchanged: no canonical link, an empty body', () => {
+    const html = renderMintOgHtml(null, '')
+    expect(html).not.toContain('rel="canonical"')
+    expect(html).toContain('<body></body>')
+  })
+
+  it('escapes every PAGE_META value it interpolates (checked with hostile values)', async () => {
+    vi.resetModules()
+    vi.doMock('../shared/pageMeta.js', () => ({
+      PAGE_META: { '/x': { title: `<b>"T"&'t'</b>`, description: `<i>"D"&'d'</i>`, canonicalPath: '/x"><script>' } },
+      OG_PAGE_SLUGS: { x: '/x' },
+    }))
+    const og = await import('../og.js')
+    const html = og.renderPageOgHtml('x')!
+    vi.doUnmock('../shared/pageMeta.js')
+    vi.resetModules()
+    expect(html).not.toMatch(/<b>|<i>|<script>/)
+    expect(html).toContain('<title>&lt;b&gt;&quot;T&quot;&amp;&#39;t&#39;&lt;/b&gt;</title>')
+    expect(html).toContain('content="&lt;i&gt;&quot;D&quot;&amp;&#39;d&#39;&lt;/i&gt;"')
+    expect(html).toContain('href="https://mintradar.org/x&quot;&gt;&lt;script&gt;"')
   })
 })

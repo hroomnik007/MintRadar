@@ -16,7 +16,7 @@ import { publishServiceProfile } from './nostrService.js'
 import { normalizeUrl, getSyncTimesFromDb, getAuditUpstreamStatus } from './discovery.js'
 import { computeDegraded } from './degraded.js'
 import { authenticateNip98 } from './nip98Auth.js'
-import { fetchOgMintData, renderMintOgHtml } from './og.js'
+import { fetchOgMintData, renderMintOgHtml, renderPageOgHtml } from './og.js'
 import { getMintIcon } from './mintIcon.js'
 import { computeReliabilityMovers, type MintScoreSnapshot } from './reliabilityMovers.js'
 import { globalMeanRating, weightedRating } from './weightedRating.js'
@@ -1748,6 +1748,20 @@ app.get('/api/og/mint', (req: Request, res: Response): void => {
       if (IS_DEV) console.error('[/api/og/mint]', err)
       res.send(renderMintOgHtml(null, normalized))
     })
+})
+
+// Bot HTML for the static documentation pages (/methodology, /for-wallets); nginx routes social crawlers here with
+// a fixed slug per path (deploy/nginx.conf). Strict allowlist in og.ts: anything but a listed slug is a 404 JSON
+// with a constant body, and no query value is ever echoed.
+app.get('/api/og/page', (req: Request, res: Response): void => {
+  const html = renderPageOgHtml(req.query['p'])
+  if (html === null) {
+    res.status(404).json({ error: 'Not found' })
+    return
+  }
+  res.setHeader('Content-Type', 'text/html; charset=utf-8')
+  res.setHeader('Cache-Control', 'public, max-age=300')
+  res.send(html)
 })
 
 app.get('/api/mints/daily-uptime', (req: Request, res: Response): void => {

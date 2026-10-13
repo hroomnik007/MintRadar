@@ -6,6 +6,7 @@ import { PROBE_LOCATION } from '@/constants/probeLocation'
 import { METHODOLOGY_PAGE as M } from '@/constants/methodologyPage'
 import { CONTACT_NIP05, CONTACT_NPUB, REPO_URL } from '@/constants/contact'
 import { METHODOLOGY_CHANGES, METHODOLOGY_VERSION } from '@/utils/methodology'
+import { PAGE_META } from '@/utils/pageMeta'
 import './About.css'
 import './DocPage.css'
 
@@ -30,10 +31,7 @@ const CHANGES_NEWEST_FIRST = [...METHODOLOGY_CHANGES].sort((a, b) => b.version -
 const nutLabel = (key: string): string => `NUT-${key.padStart(2, '0')}`
 
 export default function Methodology() {
-  useDocumentMeta(
-    'Reliability Score methodology | MintRadar',
-    'Exactly how MintRadar computes the Reliability Score of a Cashu mint: five weighted components, caps, data sources, what is not measured, and the versioned change log.',
-  )
+  useDocumentMeta(PAGE_META['/methodology'].title, PAGE_META['/methodology'].description)
   const { hash } = useLocation()
   const pageRef = useRef<HTMLDivElement>(null)
   useNavbarOffset(pageRef)
