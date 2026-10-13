@@ -62,7 +62,7 @@ created_at BIGINT NOT NULL         -- nostr event created_at (unix seconds)
 PRIMARY KEY (url, pubkey)          -- one row per author per mint, newest wins
 ```
 Index: (url, created_at DESC). Populated by the hourly reviews sync (`backend/src/reviewsSync.ts`).
-`reviews_sync_relay_state` (relay TEXT PK, `last_ok_started_at` BIGINT, `last_full_at` BIGINT NULL; unix seconds) — per-relay progress of that sync: when the last clean run on the relay started and when the last full sweep did. Drives the `since` of the next incremental query; see "Reviews sync" in `docs/claude/reviews-and-nostr.md`.
+`reviews_sync_relay_state` (relay TEXT PK, `last_ok_started_at` BIGINT NULL (NULL = counters row of a relay that never finished a clean run; ignored by the sync), `last_full_at` BIGINT NULL; unix seconds) — per-relay progress of that sync: when the last clean run on the relay started and when the last full sweep did. Drives the `since` of the next incremental query. Since 2026-10-13 the same row also holds per-relay delivery counters (`runs`, `ok_runs`, `failed_runs`, `skipped_runs`, `events_delivered`, `events_exclusive`, `events_new`, `total_ms`, `last_run_exclusive`, `counters_since`; counts only, see "Relay delivery counters" in `docs/claude/reviews-and-nostr.md`); see "Reviews sync" in `docs/claude/reviews-and-nostr.md`.
 Rollup columns on `mints`: `review_count INTEGER`, `review_avg_rating REAL`, `reviews_checked_at TIMESTAMPTZ`.
 `review_count_7d_ago INTEGER` + `review_count_7d_ago_at TIMESTAMPTZ` — rolling ~1-week-ago `review_count` snapshot, advanced once a day (`reviewSurgeRollup.ts`); feeds the informational "recent review surge" sybil flag (see Reviews Feature below).
 

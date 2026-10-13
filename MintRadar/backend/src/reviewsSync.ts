@@ -42,6 +42,14 @@ import {
   type RelayRunResult,
   type RelaySyncState,
 } from './reviewsRelayFetch.js'
+import {
+  accountRelayDeliveries,
+  accountedIds,
+  loadExistingEventIds,
+  saveRelayCounters,
+  type RelayDelivery,
+  type RelayRunCounters,
+} from './reviewsRelayStats.js'
 
 // yakihonne + wirednet.jp added 2026-10-06 (measured unique kind:38000 events, see docs/claude/reviews-and-nostr.md);
 // nostr.data.haus deliberately left out (near copy of yakihonne).
@@ -250,7 +258,8 @@ export async function recomputeReviewCountRollups(): Promise<number> {
 
 async function loadRelayState(): Promise<Map<string, RelaySyncState>> {
   const { rows } = await pool.query(
-    'SELECT relay, last_ok_started_at, last_full_at FROM reviews_sync_relay_state',
+    // Rows with a NULL last_ok_started_at only carry delivery counters (relay never finished a clean run): no progress.
+    'SELECT relay, last_ok_started_at, last_full_at FROM reviews_sync_relay_state WHERE last_ok_started_at IS NOT NULL',
   )
   const out = new Map<string, RelaySyncState>()
   for (const r of rows as Array<{ relay: string; last_ok_started_at: string | number; last_full_at: string | number | null }>) {
@@ -280,6 +289,9 @@ export interface ReviewsSyncDeps {
   loadState: () => Promise<Map<string, RelaySyncState>>
   saveState: (relay: string, startedAtSec: number, full: boolean) => Promise<void>
   persist: (url: string, reviews: SyncedReview[]) => Promise<void>
+  /** Per-relay delivery counters (reviewsRelayStats.ts). Both optional: without them the run only logs. */
+  loadExistingEventIds?: (ids: readonly string[]) => Promise<Set<string>>
+  saveCounters?: (rows: readonly RelayRunCounters[]) => Promise<void>
   connect: ConnectRelay
   now: () => number
   sleep: (ms: number) => Promise<void>
@@ -300,7 +312,7 @@ export interface ReviewsSyncSummary {
   persistFailed: number
   durationMs: number
   deadlineHit: boolean
-  relays: Array<{ relay: string; plan: RelayPlan; result: RelayRunResult }>
+  relays: Array<{ relay: string; plan: RelayPlan; result: RelayRunResult; ms: number }>
 }
 
 export async function runReviewsSync(deps: ReviewsSyncDeps): Promise<ReviewsSyncSummary> {
@@ -333,9 +345,9 @@ export async function runReviewsSync(deps: ReviewsSyncDeps): Promise<ReviewsSync
   // Relays run in parallel, each one strictly one REQ at a time.
   const relays = await Promise.all(deps.relays.map(async relay => {
     const plan = planRelayQuery(state.get(relay), startedSec)
+    const relayStartedMs = deps.now()
     const result = await fetchRelayReviews(relay, deps.connect, urls, plan.since, opts)
-    if (result.outcome !== 'ok') deps.log(`[reviews-sync] relay ${relay} ${result.outcome}: ${result.reason ?? 'unknown'}`)
-    return { relay, plan, result }
+    return { relay, plan, result, ms: Math.max(0, deps.now() - relayStartedMs) }
   }))
 
   // Signature and kind are checked once per distinct event, whichever relays delivered it.
@@ -349,6 +361,24 @@ export async function runReviewsSync(deps: ReviewsSyncDeps): Promise<ReviewsSync
     }
   }
   const byMint = groupEventsByMint([...verified.values()], new Set(urls))
+
+  // Per-relay accounting (counters only), computed BEFORE the inserts so "new" means "not stored yet".
+  // Never allowed to affect the sync itself: any failure here only drops the counters of this run.
+  const deliveries: RelayDelivery[] = relays.map(({ relay, result }) => ({
+    relay,
+    ok: result.outcome === 'ok',
+    eventIds: result.events.filter(e => verified.has(e.id)).map(e => e.id),
+  }))
+  let accounting: ReturnType<typeof accountRelayDeliveries> | null = null
+  if (deps.loadExistingEventIds) {
+    try {
+      const existing = await deps.loadExistingEventIds(accountedIds(deliveries))
+      accounting = accountRelayDeliveries(deliveries, existing)
+    } catch (err) {
+      deps.log(`[reviews-sync] relay accounting skipped: ${err instanceof Error ? err.message : err}`)
+    }
+  }
+  const countsOf = new Map((accounting?.counts ?? []).map(c => [c.relay, c]))
   const covered = new Set<string>()
   for (const { result } of relays) for (const url of result.covered) covered.add(url)
 
@@ -382,6 +412,39 @@ export async function runReviewsSync(deps: ReviewsSyncDeps): Promise<ReviewsSync
     }
   }
 
+  // One line per relay per run, counts only. Failure lines keep the earlier text ("relay <url> <outcome>: <reason>").
+  for (const { relay, result, ms } of relays) {
+    const c = countsOf.get(relay)
+    const nums = `ms=${ms} delivered=${c?.delivered ?? 0} exclusive=${c?.exclusive ?? 0} new=${c?.newEvents ?? 0}`
+    deps.log(
+      result.outcome === 'ok'
+        ? `[reviews-sync] relay=${relay.replace(/^wss?:\/\//, '')} result=ok ${nums}`
+        : `[reviews-sync] relay ${relay} ${result.outcome}: ${result.reason ?? 'unknown'} ${nums}`,
+    )
+  }
+  // Counters are written once, at the very end: a run that threw earlier writes nothing. A relay that ran out of
+  // run time ('deadline') was never really asked, so it is not counted as a run.
+  if (deps.saveCounters && accounting) {
+    const rows: RelayRunCounters[] = relays
+      .filter(r => r.result.outcome !== 'deadline')
+      .map(({ relay, result, ms }) => {
+        const c = countsOf.get(relay)
+        return {
+          relay,
+          kind: result.outcome === 'ok' ? 'ok' : result.outcome === 'failed' ? 'failed' : 'skipped',
+          ms,
+          delivered: c?.delivered ?? 0,
+          exclusive: c?.exclusive ?? 0,
+          newEvents: c?.newEvents ?? 0,
+        } satisfies RelayRunCounters
+      })
+    try {
+      await deps.saveCounters(rows)
+    } catch (err) {
+      deps.log(`[reviews-sync] could not save relay counters: ${err instanceof Error ? err.message : err}`)
+    }
+  }
+
   const used = relays.filter(r => r.result.reqs > 0).length
   const failed = relays.filter(r => r.result.outcome !== 'ok').length
   const reqs = relays.reduce((n, r) => n + r.result.reqs, 0)
@@ -392,7 +455,8 @@ export async function runReviewsSync(deps: ReviewsSyncDeps): Promise<ReviewsSync
   deps.log(
     `[reviews-sync] done: mints=${urls.length} relays_used=${used} relays_failed_or_skipped=${failed} ` +
     `reqs=${reqs} events=${events} reviews_stored=${stored} mints_updated=${updated} ` +
-    `full_sweep_relays=${relays.filter(r => r.plan.full).length} duration=${(durationMs / 1000).toFixed(1)}s`,
+    `full_sweep_relays=${relays.filter(r => r.plan.full).length} duration=${(durationMs / 1000).toFixed(1)}s` +
+    (accounting?.truncated ? ' accounting=truncated' : ''),
   )
   return { mints: urls.length, relaysUsed: used, relaysFailed: failed, reqs, events, stored, updated, persistFailed, durationMs, deadlineHit, relays }
 }
@@ -416,6 +480,8 @@ export async function refreshAllMintReviews(): Promise<number> {
       loadState: loadRelayState,
       saveState: saveRelayState,
       persist: persistMintReviews,
+      loadExistingEventIds,
+      saveCounters: saveRelayCounters,
       connect: connectRelayWs,
       now: Date.now,
       sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),

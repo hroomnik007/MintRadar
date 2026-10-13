@@ -105,6 +105,21 @@ export async function initDb(): Promise<void> {
       last_full_at BIGINT
     );
 
+    -- Per-relay delivery counters of the same sync (reviewsRelayStats.ts): counts only, no ids/keys/text/URLs.
+    -- Additive. last_ok_started_at may be NULL = the relay has a counters row but never finished a clean run
+    -- (loadRelayState ignores such rows). counters_since = when this relay's counters started.
+    ALTER TABLE reviews_sync_relay_state ALTER COLUMN last_ok_started_at DROP NOT NULL;
+    ALTER TABLE reviews_sync_relay_state ADD COLUMN IF NOT EXISTS runs INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE reviews_sync_relay_state ADD COLUMN IF NOT EXISTS ok_runs INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE reviews_sync_relay_state ADD COLUMN IF NOT EXISTS failed_runs INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE reviews_sync_relay_state ADD COLUMN IF NOT EXISTS skipped_runs INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE reviews_sync_relay_state ADD COLUMN IF NOT EXISTS events_delivered BIGINT NOT NULL DEFAULT 0;
+    ALTER TABLE reviews_sync_relay_state ADD COLUMN IF NOT EXISTS events_exclusive BIGINT NOT NULL DEFAULT 0;
+    ALTER TABLE reviews_sync_relay_state ADD COLUMN IF NOT EXISTS events_new BIGINT NOT NULL DEFAULT 0;
+    ALTER TABLE reviews_sync_relay_state ADD COLUMN IF NOT EXISTS total_ms BIGINT NOT NULL DEFAULT 0;
+    ALTER TABLE reviews_sync_relay_state ADD COLUMN IF NOT EXISTS last_run_exclusive INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE reviews_sync_relay_state ADD COLUMN IF NOT EXISTS counters_since TIMESTAMPTZ NOT NULL DEFAULT now();
+
     -- Public profile (kind:0) of review authors and mint contact/announcement keys, fetched by the
     -- hourly reviews sync from the profile indexer relays (profilesSync.ts). Only name, display_name
     -- and nip05 are stored (cleaned text, unverified). found = false: asked, nobody had it (asked
