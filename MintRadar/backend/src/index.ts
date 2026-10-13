@@ -13,6 +13,7 @@ import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVER
 import { getAuditCzForMint, getAuditCzSyncStatus, clampAuditCzLimit } from './auditCz.js'
 import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
 import { publishServiceProfile } from './nostrService.js'
+import { startAttestations } from './healthPublisher.js'
 import { normalizeUrl, getSyncTimesFromDb, getAuditUpstreamStatus } from './discovery.js'
 import { computeDegraded } from './degraded.js'
 import { authenticateNip98 } from './nip98Auth.js'
@@ -2440,6 +2441,8 @@ if (process.env['NODE_ENV'] !== 'test') {
       .then(() => {
         startCron()
         void publishServiceProfile()
+        // Dormant: does nothing (one log line) unless ATTESTATION_SERVICE_NSEC is set — healthPublisher.ts.
+        startAttestations({ loadSnapshot: loadKnownMints, isAllowlistMode })
       })
       .catch((err: unknown) => {
         console.error('[startup] DB init failed — exiting:', err)

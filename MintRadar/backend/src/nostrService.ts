@@ -65,7 +65,7 @@ useWebSocketImplementation(DnsPinnedWebSocket)
 // about propagation reach, not latency, so it was deliberately left alone —
 // see dc43304's own commit message, which scoped that change to the frontend
 // only and documented it as an exception, not a rename of a shared list.
-const META_RELAYS = [
+export const META_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
   'wss://purplepag.es',
@@ -133,7 +133,7 @@ export function isNotificationServiceEnabled(): boolean {
 // timeout → destroy. Matches the existing backend pattern (discovery.ts),
 // not the frontend's long-lived backoff-patched singleton (pool.ts), which
 // solves a different problem.
-async function publishToRelays(relays: string[], event: NostrEvent): Promise<{ succeeded: number; failed: number }> {
+export async function publishToRelays(relays: string[], event: NostrEvent): Promise<{ succeeded: number; failed: number }> {
   const nostrPool = new SimplePool()
   try {
     const pubs = nostrPool.publish(relays, event)

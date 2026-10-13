@@ -432,6 +432,17 @@ export async function initDb(): Promise<void> {
     // Backfill from the stored detail rows so scores don't drop to neutral between a deploy and the
     // next detail cron run. Idempotent (a second run matches nothing); a mint with no detail row stays NULL.
     AUDIT_CZ_BACKFILL_SQL,
+    // What the (dormant until a key is configured) Nostr health-assertion publisher last published per mint
+    // (healthPublisher.ts): the state behind the 6 h / rank delta / 24 h rules, so a restart never republishes
+    // everything. Additive and idempotent; stays empty while the feature is off.
+    `CREATE TABLE IF NOT EXISTS attestation_state (
+       mint_url TEXT PRIMARY KEY,
+       last_event_id TEXT,
+       last_created_at BIGINT,
+       last_rank INTEGER,
+       last_status TEXT,
+       last_methodology INTEGER
+     )`,
   ]
 
   for (const sql of migrations) {
