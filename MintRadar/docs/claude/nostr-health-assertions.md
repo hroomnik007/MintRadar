@@ -1,6 +1,6 @@
 # MintRadar — Signed mint health assertions (Nostr kind 30385), 2026-10-14
 
-**Status: built and DORMANT.** The code is deployed with the backend but does nothing until the owner puts a signing key on the server (activation steps below). Nothing about it is announced on the public pages (`/methodology`, `/for-wallets`, About, README) — do not add it there without a decision of the owner. The draft specification for wallet developers is `docs/nostr-health-assertions.md`, the verification example is `docs/examples/verify-health.mjs`.
+**Status: LIVE since 2026-10-13 (first publication 17:48:27 UTC).** The owner put `ATTESTATION_SERVICE_NSEC` into the server's `backend/.env`, the key was added to the own relay's allow-list (backup `/opt/mintradar-strfry/privileged-pubkeys.txt.bak-20261013-174222`) and the backend was recreated. The first run published **61 events** (every mint with a stored score, not archived: 50 `online`, 11 `degraded` in `attestation_state`); the kind 0 profile went to 10 of 10 relays. Accepted by: `wss://nostr.mintradar.org` 61/61, `wss://nos.lol` 61/61, `wss://relay.primal.net` 61/61, `wss://relay.damus.io` only 5 (3 failures in a row, then skipped for the rest of that run; the log keeps counts only, not the relay's reason). The second tick published nothing. Without the key the code is still dormant (see "The dormant switch"). Nothing about it is announced on the public pages (`/methodology`, `/for-wallets`, About, README) — do not add it there without a decision of the owner. The draft specification for wallet developers is `docs/nostr-health-assertions.md` (it still says "not live yet" until the public announcement), the verification example is `docs/examples/verify-health.mjs` (run against the live relays on 2026-10-13: `https://mint.lnpay.cz` rank 100, `https://mint.minibits.cash/Bitcoin` rank 98, both equal to `/api/v1/wallets/mints/<url>`).
 
 ## What it is
 
@@ -71,9 +71,9 @@ Relay failures are normal. Right after the deploy of the allow-list change but b
 
 The key is never logged, never part of an error message (the decode error is dropped), never stored in the database and never returned by any endpoint. Tests capture all console output and prove no part of the key or its hex appears.
 
-## Activation (owner, later; not part of the task that built this)
+## Activation (done 2026-10-13) and rollback
 
-Nothing below has been run. The owner performs (a) and the gated server task performs (b) to (d).
+The steps below were performed on 2026-10-13 (owner: key; gated server task: the rest). They are kept as the repeatable procedure (new server, key rotation).
 
 1. **(a) Key.** The owner puts `ATTESTATION_SERVICE_NSEC=<nsec>` into the server's `backend/.env` (never in the repository, never in a chat). It must be the private key of the npub above, or the feature stays off with an error line.
 2. **(b) Relay allow-list.** Install the repository's `deploy/strfry/privileged-pubkeys.txt` into the strfry install directory on the server (`/opt/mintradar-strfry`, where the compose file bind-mounts it; `ls -l` first to confirm the path and keep the existing lines) and reload the relay so `writePolicy.sh` re-reads the file (it reads the list once at startup): restart the strfry container. Check that the file holds the hex exactly once.
@@ -84,9 +84,13 @@ Nothing below has been run. The owner performs (a) and the gated server task per
    - Relay: `nak req -k 30385 -a 2ddd7ce9833d2ed8a0bfaaf903cc71f65641f20d8f8142130163a625aa6b941c -l 3 wss://nostr.mintradar.org` (and `-k 0` for the profile).
    - NIP-05: `curl -s https://mintradar.org/.well-known/nostr.json` contains `health`.
 
-**Checking the dormant state** (what a deploy of this code looks like before activation): `docker compose logs backend | grep '\[attestations\]'` shows exactly one line per backend start: `[attestations] disabled: no signing key is configured`.
+**Checking the state** — dormant (no key) logs exactly one line per backend start; live logs `enabled: signing key loaded…`, `published kind:0 profile (N succeeded, M failed)` and then a `run:` line per tick. The dormant line: `docker compose logs backend | grep '\[attestations\]'` shows exactly one line per backend start: `[attestations] disabled: no signing key is configured`.
 
-To switch it off again: remove (or empty) `ATTESTATION_SERVICE_NSEC` from `backend/.env` and recreate the backend. Existing events expire on their own after 48 hours.
+**Live behaviour observed on 2026-10-13:** the log shows `enabled` (the code does not print the public key; a key of another identity would log `disabled … does not match`), the profile line, the first `run:` about 140 seconds after start and a `run: 61 eligible, nothing due` line every 15 minutes while nothing changes. `wss://nostr.mintradar.org` does not advertise NIP-40 (`supported_nips` 1, 9, 11, 42), so it keeps the (replaceable) events after `expiration`; the other relays may delete them.
+
+**Rollback (run only for the part that failed):**
+- Relay allow-list: `sudo cp -p /opt/mintradar-strfry/privileged-pubkeys.txt.bak-20261013-174222 /opt/mintradar-strfry/privileged-pubkeys.txt`, then `sudo docker restart mintradar-strfry`, then re-measure the event counts of kinds 38172, 38000 and 0 (before 2026-10-13: 1, 3, 1; kind 0 is 2 since the health profile exists).
+- Backend (feature dormant again): `sed -i '/^ATTESTATION_SERVICE_NSEC=/d' backend/.env` in `$VPS_REPO_PATH/MintRadar` on the server, then `docker compose up -d backend`. Existing events simply expire after 48 hours (relays that honour NIP-40). Never print `.env`; `grep -c "^ATTESTATION_SERVICE_NSEC=" backend/.env` shows whether the line exists.
 
 ## Security notes
 

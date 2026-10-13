@@ -216,12 +216,14 @@ Runs every 6h: `0 */6 * * *` → `scripts/backup-db.sh`
 
 `deploy/strfry/privileged-pubkeys.txt` is the ONE list of privileged authors of the own relay (`wss://nostr.mintradar.org`): `writePolicy.sh` (inside the strfry container, bind-mounted read-only, **read once at startup**) lets these keys write any kind, everyone else only kinds 38172 and 38000; `backup-own-events.sh` reads the same file for its author list (every listed author gets the base kinds 38172 and 38000; extra kinds are per author in `EXTRA_KINDS_BY_AUTHOR`, nothing for the health key). Three keys are listed: the maintainer identity, the MintRadar service identity (alerts) and, since 2026-10-14, the **MintRadar Health** attestation key (`2ddd7ce9…941c`). The repository copy is only the source: the file on the server (strfry install directory, `/opt/mintradar-strfry`) changes when the gated server step copies it and restarts the relay container; a deploy of the repository does not do that.
 
-Activation checklist for the health assertions (nothing has been applied; details and read-only checks in `docs/claude/nostr-health-assertions.md`):
-1. Owner: `ATTESTATION_SERVICE_NSEC` into the server's `backend/.env`.
-2. Server task: install the repository `privileged-pubkeys.txt` into the strfry directory (hex present exactly once, other lines unchanged) and restart the strfry container.
-3. Server task: `docker compose up -d backend` (recreate, so the new `.env` is read).
+Health assertions are **live since 2026-10-13** (first publication 17:48:27 UTC, 61 mints; details, constants and observed behaviour in `docs/claude/nostr-health-assertions.md`). The allow-list change was applied on server01 the same day: the live list at `/opt/mintradar-strfry/privileged-pubkeys.txt` now equals the repository file (backup `privileged-pubkeys.txt.bak-20261013-174222` next to it), the relay container `mintradar-strfry` was restarted (event counts for kinds 38172, 38000 and 0 were identical before and after), and the backend was recreated with `docker compose up -d backend` so it reads `ATTESTATION_SERVICE_NSEC` from `backend/.env`.
+
+Repeatable checklist (new server, key rotation):
+1. Owner: `ATTESTATION_SERVICE_NSEC` into the server's `backend/.env` (never printed; `ls -l` and `grep -c "^ATTESTATION_SERVICE_NSEC="` only).
+2. Server task: back up the live list (`sudo cp -p … .bak-<UTC timestamp>`), install the repository `privileged-pubkeys.txt` over it, `sudo docker restart mintradar-strfry` (the list is read once at start), re-measure the event counts.
+3. Server task: `docker compose up -d backend` (recreate, so the new `.env` is read; `restart` would not).
 4. Read-only: backend log lines starting `[attestations]`, `attestation_state` row count, `nak req -k 30385 -a <hex> wss://nostr.mintradar.org`.
-Until step 1 the backend logs one line per start: `[attestations] disabled: no signing key is configured`. Until step 2 the own relay rejects the key; the other three relays still receive the events.
+Rollback: restore the backup list and restart the relay; for the backend delete the `ATTESTATION_SERVICE_NSEC=` line with `sed -i` and `docker compose up -d backend` (dormant again). `wss://nostr.mintradar.org` does not advertise NIP-40, so its copies of expired events stay (one replaceable event per mint).
 
 ## security.txt (RFC 9116, 2026-10-05)
 
