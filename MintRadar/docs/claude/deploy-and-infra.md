@@ -212,6 +212,17 @@ Runs every 6h: `0 */6 * * *` → `scripts/backup-db.sh`
 - **Relay events backup (not a file backup):** `deploy/strfry/backup-own-events.sh` (cron 04:00, copy under `/opt/mintradar-strfry`) copies public Nostr events onto our own relay and only writes a timestamp to `/opt/mintradar-strfry/backup-state/last-sync-unix`. Check the relay data directory and the state directory on the server the same way (`ls -ld`, `ls -l`) and apply `700` / `600` if they are world-readable.
 - **Open items (deliberately not done):** no encryption of the dumps, no off-server copy, no restore script (the only documented restore is the manual `zcat | psql` pipe; it has to run as `deploy` or root now that the files are `600`).
 
+## Relay allow-list and the health-assertion activation checklist (2026-10-14)
+
+`deploy/strfry/privileged-pubkeys.txt` is the ONE list of privileged authors of the own relay (`wss://nostr.mintradar.org`): `writePolicy.sh` (inside the strfry container, bind-mounted read-only, **read once at startup**) lets these keys write any kind, everyone else only kinds 38172 and 38000; `backup-own-events.sh` reads the same file for its author list (every listed author gets the base kinds 38172 and 38000; extra kinds are per author in `EXTRA_KINDS_BY_AUTHOR`, nothing for the health key). Three keys are listed: the maintainer identity, the MintRadar service identity (alerts) and, since 2026-10-14, the **MintRadar Health** attestation key (`2ddd7ce9…941c`). The repository copy is only the source: the file on the server (strfry install directory, `/opt/mintradar-strfry`) changes when the gated server step copies it and restarts the relay container; a deploy of the repository does not do that.
+
+Activation checklist for the health assertions (nothing has been applied; details and read-only checks in `docs/claude/nostr-health-assertions.md`):
+1. Owner: `ATTESTATION_SERVICE_NSEC` into the server's `backend/.env`.
+2. Server task: install the repository `privileged-pubkeys.txt` into the strfry directory (hex present exactly once, other lines unchanged) and restart the strfry container.
+3. Server task: `docker compose up -d backend` (recreate, so the new `.env` is read).
+4. Read-only: backend log lines starting `[attestations]`, `attestation_state` row count, `nak req -k 30385 -a <hex> wss://nostr.mintradar.org`.
+Until step 1 the backend logs one line per start: `[attestations] disabled: no signing key is configured`. Until step 2 the own relay rejects the key; the other three relays still receive the events.
+
 ## security.txt (RFC 9116, 2026-10-05)
 
 `public/.well-known/security.txt` is a static file (copied into `dist/` by Vite like `nostr.json`; no backend involved). `Contact` is the repository's GitHub private vulnerability reporting URL (`https://github.com/hroomnik007/MintRadar/security/advisories/new`, same as SECURITY.md; reporting is enabled on the repo), `Preferred-Languages: en`, `Canonical: https://mintradar.org/.well-known/security.txt`. Created 2026-10-05 with `Expires: 2027-10-05T00:00:00.000Z`.

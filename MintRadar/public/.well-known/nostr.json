@@ -1,13 +1,17 @@
 {
   "names": {
     "_": "1757995286af8c2bcdcfd13a300e9c40bc4a67e761118c5b365573406c6b37bc",
-    "wildcitizen7": "1757995286af8c2bcdcfd13a300e9c40bc4a67e761118c5b365573406c6b37bc"
+    "wildcitizen7": "1757995286af8c2bcdcfd13a300e9c40bc4a67e761118c5b365573406c6b37bc",
+    "health": "2ddd7ce9833d2ed8a0bfaaf903cc71f65641f20d8f8142130163a625aa6b941c"
   },
   "relays": {
     "1757995286af8c2bcdcfd13a300e9c40bc4a67e761118c5b365573406c6b37bc": [
       "wss://relay.primal.net",
       "wss://relay.damus.io",
       "wss://nos.lol"
+    ],
+    "2ddd7ce9833d2ed8a0bfaaf903cc71f65641f20d8f8142130163a625aa6b941c": [
+      "wss://nostr.mintradar.org"
     ]
   }
 }

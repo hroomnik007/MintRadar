@@ -1,0 +1,96 @@
+# MintRadar — Signed mint health assertions (Nostr kind 30385), 2026-10-14
+
+**Status: built and DORMANT.** The code is deployed with the backend but does nothing until the owner puts a signing key on the server (activation steps below). Nothing about it is announced on the public pages (`/methodology`, `/for-wallets`, About, README) — do not add it there without a decision of the owner. The draft specification for wallet developers is `docs/nostr-health-assertions.md`, the verification example is `docs/examples/verify-health.mjs`.
+
+## What it is
+
+The backend signs one **kind 30385** event per tracked mint (NIP-85 "NIP-73 identifier as subject": `d` = the mint URL, `k` = `web`, `rank` = the Reliability Score) and publishes it to four relays. A wallet that pins the MintRadar Health public key can verify the signature and read an *operational health* signal without calling mintradar.org. It is not solvency and not advice; the event content says so.
+
+- Identity: the public key `ATTESTATION_PUBKEY_HEX` (`backend/src/healthAssertions.ts`) = npub `npub19hwhe6vr85hd3g9l4tus8nr37etyrusd37q5yycpvwnzt2ntjswqjaru7p`, NIP-05 `health@mintradar.org` (`public/.well-known/nostr.json`, name `health`, relay hint `wss://nostr.mintradar.org`). The private key exists only in the owner's file and, once activated, in the server's `backend/.env` as `ATTESTATION_SERVICE_NSEC`. Separate from `NOTIFICATION_SERVICE_NSEC`, which is never used for assertions.
+- Profile (kind 0, no picture): name and display name `MintRadar Health`, about `Operational health signals for Cashu mints, computed by MintRadar. Not solvency, not advice. Method: https://mintradar.org/methodology`, website `https://mintradar.org`, nip05 `health@mintradar.org`. Published at start and once a day (checked on the 15-minute tick) to the own relay and `META_RELAYS` of `nostrService.ts` (the service-profile relays), through the existing `publishToRelays` helper.
+
+## Files
+
+| File | Role |
+|---|---|
+| `backend/src/healthAssertions.ts` | Pure: constants, `buildHealthEvent`, `healthIdentifier`, `sanitizeSoftware`, `shouldPublish`, `buildProfileTemplate`, `resolveAttestationKey` |
+| `backend/src/healthPublisher.ts` | Impure: `planCycle`, `publishBatch`, `runAttestationCycle`, the 15-minute timer, state table access, `startAttestations` (the dormant switch) |
+| `backend/src/db.ts` | `attestation_state` table, `CREATE TABLE IF NOT EXISTS` in the migrations array |
+| `backend/src/index.ts` | one call: `startAttestations({ loadSnapshot: loadKnownMints, isAllowlistMode })` after `startCron()` |
+| `backend/src/nostrService.ts` | exports `META_RELAYS` and `publishToRelays` (the existing helper and the DNS-pinned WebSocket installation) |
+| `deploy/strfry/privileged-pubkeys.txt` | the hex key, so the own relay accepts its events (repository copy only; the server apply is a separate gated step) |
+
+Tests: `healthAssertions.test.ts`, `healthPublisher.test.ts`, `healthRelays.test.ts` (local stub WebSocket relays), `dbAttestationStateMigration.test.ts`, `healthStaticFiles.test.ts` (NIP-05 file, relay list, docs agree on the key), `verifyHealthExample.test.ts`.
+
+## The event (v1, tag names are fixed)
+
+Tags, in this order: `d` (normalised mint URL, fragment dropped), `k` = `web`, `rank` (integer 0 to 100, the stored Reliability Score, rounded and clamped), `mint_status` (`online` | `offline` | `degraded`), `mint_uptime_24h`, `mint_uptime_7d` (integers), `mint_software` (see below), `mint_outdated` (`0` | `1`), `mint_audit_swaps_7d`, `mint_audit_attributed_7d`, `mint_audit_at` (UNIX seconds; these three only when the audit data is at most 168 hours old), `mint_test` (`0` | `1`), `mint_new_capped` (`0` | `1`: the 75 cap for mints younger than 30 days applies), `mint_checked_at` (UNIX seconds of the last probe), `methodology` (`METHODOLOGY_VERSION`), `methodology_url` (`https://mintradar.org/methodology`), `expiration` (NIP-40: `created_at` + 172800). Content: `Operational health signal, not solvency, not a recommendation to deposit funds. Based on MintRadar's probes and third-party audit data; it can be wrong or out of date.`
+
+- A tag whose value is unknown is **omitted**, never guessed: no uptime yet, `mint_outdated` when the version rule cannot decide (unknown software, missing or unreadable version), `mint_checked_at` without a probe, `mint_software` when it fails the pattern.
+- `mint_software` is the only mint-controlled text. It is trimmed and must match `^[A-Za-z0-9._+/ -]{1,64}$`, otherwise the tag is omitted. The pattern is a character class, not a meaning check: a plain-letter string such as an ordinary sentence or a host name up to 64 characters passes. That is the owner's decision (do not reopen); keep it in mind before widening what a wallet shows from this tag.
+- **Not in the event:** reviews or review counts, mint names, IP addresses, network data, onion addresses, pubkeys of anyone, contact details, error texts. The builder also returns no event for a mint whose URL host is a `.onion` name or an IP literal.
+- **Which mints:** a non-null stored score and not archived. Offline mints are published (`mint_status` `offline`), test mints with `mint_test` `1`. A mint whose score becomes null or that is archived gets no new event; its old one expires after 48 hours.
+- **A new alert-like or API field must not be added to the event without updating the draft spec (`docs/nostr-health-assertions.md`) first.** Tag names are a v1 contract with wallets.
+- **A methodology bump refreshes all assertions:** `shouldPublish` treats a changed `methodology` as a reason to publish, so every mint gets a new event on the next runs (paced by the 6 hour minimum and the 200 per run cap). Bumping `METHODOLOGY_VERSION` needs nothing else for the assertions.
+
+## Constants
+
+| Constant | Value | Where |
+|---|---|---|
+| `ATTESTATION_MIN_INTERVAL_MS` | 6 h | per mint, at most one new event |
+| `ATTESTATION_MIN_RANK_DELTA` | 2 | rank change that justifies a new event |
+| `ATTESTATION_REFRESH_MS` | 24 h | daily hard refresh, so the 48 h expiration never lapses |
+| `ATTESTATION_EXPIRY_S` | 172800 | NIP-40 expiration after `created_at` |
+| `ATTESTATION_MAX_EVENTS_PER_RUN` | 200 | never-published mints first, then the oldest; the rest waits for the next run |
+| `ATTESTATION_AUDIT_MAX_AGE_MS` | 168 h | audit tags are left out when older |
+| `ATTESTATION_RELAYS` | `wss://nostr.mintradar.org`, `wss://relay.damus.io`, `wss://nos.lol`, `wss://relay.primal.net` | the only connections the assertion publisher opens |
+| `ATTESTATION_RELAY_PAUSE_MS` / `_TIMEOUT_MS` / `_MAX_FAILURES` | 200 ms / 5 s / 3 | between events per relay / per event and relay / consecutive failures before a relay is skipped for the rest of the run |
+| `ATTESTATION_TICK_MS` + jitter | 15 min + up to 60 s, first tick 90 s after start | own timer, single-flight (a tick that finds the previous run still going is skipped) |
+
+## Decision rule and state
+
+`shouldPublish(prev, next, now)`: a never-published mint publishes immediately (the 6 hour interval is ignored for it, so an event no relay accepted is retried on the next tick). Otherwise nothing inside 6 hours since the last event; after that a new event when `|rank - last_rank| >= 2`, or the status changed, or the methodology changed, or the last event is 24 hours old.
+
+`attestation_state (mint_url TEXT PRIMARY KEY, last_event_id TEXT, last_created_at BIGINT, last_rank INTEGER, last_status TEXT, last_methodology INTEGER)`: written only after **at least one relay accepted** the event, so it survives restarts (a restart never republishes everything) and an event rejected by every relay leaves no row. The table stays empty while the feature is off. Rows of mints that stopped being eligible are left alone (harmless; the daily rule applies if the mint returns).
+
+One tick = the shared known-mints snapshot (`loadKnownMints()`, the same single database read cached for 60 s that serves `/api/mints/known` and the wallet API, so the values equal what `/api/v1` shows) + one read of `attestation_state`. It never probes a mint and never reads reviews.
+
+Relay failures are normal. Right after the deploy of the allow-list change but before the server apply, `wss://nostr.mintradar.org` rejects the key (`blocked:`): it is skipped after 3 failures per run and the other relays carry the event. Logs hold counts only (`[attestations] run: N eligible, M due (K deferred), A accepted by at least one relay; <relay> ok=.. failed=.. skipped=..`), never event ids or mint URLs.
+
+## The dormant switch (key handling)
+
+`startAttestations()` reads `ATTESTATION_SERVICE_NSEC` once at start:
+
+| State | Result |
+|---|---|
+| unset, empty or blank | disabled; ONE info line `[attestations] disabled: no signing key is configured`; no timer, no network, no database access |
+| set but not a valid nsec | disabled; ONE error line `... the configured signing key is not a valid nsec` |
+| valid nsec of another identity (public key differs from `ATTESTATION_PUBKEY_HEX`) | disabled; ONE error line `... does not match the attestation public key`; the secret bytes are zeroed |
+| valid and matching | enabled; profile published, timer started |
+| allowlist mode (`MINT_ALLOWLIST`) | disabled even with a key; no relay traffic in that mode |
+
+The key is never logged, never part of an error message (the decode error is dropped), never stored in the database and never returned by any endpoint. Tests capture all console output and prove no part of the key or its hex appears.
+
+## Activation (owner, later; not part of the task that built this)
+
+Nothing below has been run. The owner performs (a) and the gated server task performs (b) to (d).
+
+1. **(a) Key.** The owner puts `ATTESTATION_SERVICE_NSEC=<nsec>` into the server's `backend/.env` (never in the repository, never in a chat). It must be the private key of the npub above, or the feature stays off with an error line.
+2. **(b) Relay allow-list.** Install the repository's `deploy/strfry/privileged-pubkeys.txt` into the strfry install directory on the server (`/opt/mintradar-strfry`, where the compose file bind-mounts it; `ls -l` first to confirm the path and keep the existing lines) and reload the relay so `writePolicy.sh` re-reads the file (it reads the list once at startup): restart the strfry container. Check that the file holds the hex exactly once.
+3. **(c) Backend.** Recreate the backend so it reads the new `.env`: `docker compose up -d backend` from `$VPS_REPO_PATH/MintRadar` (a plain `docker compose restart` would not pick up a changed `env_file`).
+4. **(d) Read-only checks.**
+   - Log: `docker compose logs --since 15m backend | grep '\[attestations\]'` — expect `enabled`, the `published kind:0 profile` line, then a `run:` line about 90 to 150 seconds after start (and one every 15 minutes).
+   - Database: `docker compose exec -T postgres psql -U mintradar -d mintradar -c "SELECT count(*), max(last_created_at) FROM attestation_state"`.
+   - Relay: `nak req -k 30385 -a 2ddd7ce9833d2ed8a0bfaaf903cc71f65641f20d8f8142130163a625aa6b941c -l 3 wss://nostr.mintradar.org` (and `-k 0` for the profile).
+   - NIP-05: `curl -s https://mintradar.org/.well-known/nostr.json` contains `health`.
+
+**Checking the dormant state** (what a deploy of this code looks like before activation): `docker compose logs backend | grep '\[attestations\]'` shows exactly one line per backend start: `[attestations] disabled: no signing key is configured`.
+
+To switch it off again: remove (or empty) `ATTESTATION_SERVICE_NSEC` from `backend/.env` and recreate the backend. Existing events expire on their own after 48 hours.
+
+## Security notes
+
+- Key handling and logs: see the table above. Only `ATTESTATION_RELAYS` are used as targets of assertions (no user, mint or database-supplied relay), through the backend's DNS-pinned WebSocket class (SSRF guard at connect time). The profile goes to the own relay and `META_RELAYS` (constants too).
+- Bounded: at most 200 events per run, 4 relays, 15-minute ticks, 200 ms pause, 5 s timeout, 3-failure skip.
+- A stolen key could sign false assertions; wallets pin the key and check `created_at` and `expiration` (draft spec). Rotating the key means a new pubkey in `ATTESTATION_PUBKEY_HEX`, the NIP-05 file, the relay list and the docs, and telling wallets.
+- Backup: `deploy/strfry/backup-own-events.sh` reads the same `privileged-pubkeys.txt`, so the new key automatically gets the base kinds (38172, 38000) only. Its kind 30385 and kind 0 events are not backed up on purpose: they expire or are re-published daily.

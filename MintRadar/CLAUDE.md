@@ -17,6 +17,7 @@
 | Tools page, Best Mint Wizard, Token Inspector | `docs/claude/tools-page.md` |
 | The `/methodology` and `/for-wallets` pages, `METHODOLOGY_VERSION` / `METHODOLOGY_CHANGES`, `WALLET_MINT_FIELDS`, the sitemap, footer links | `docs/claude/methodology-and-wallet-pages.md` |
 | Reviews (kind:38000), `mint_reviews` sync, `sharedPool` | `docs/claude/reviews-and-nostr.md` |
+| Signed mint health assertions (Nostr kind 30385, `healthAssertions.ts`/`healthPublisher.ts`, `ATTESTATION_SERVICE_NSEC`, the own-relay allow-list `privileged-pubkeys.txt`) | `docs/claude/nostr-health-assertions.md` |
 | What the browser contacts outside our origin (relays, mints, NIP-05 hosts, avatars, QR), Best Mint wizard direct fetches | `docs/claude/third-party-requests.md` |
 | Mobile layout, navbar, overflow fixes, tooltips, chart focus ring, **modal dialogs (`useModalFocus`, role/aria-modal/name, focus trap/restore)** | `docs/claude/mobile-and-tooltips.md` |
 | The `/about` page (privacy notice, rules): what it claims and the source of every claim; **update `About.tsx` when provider backups/snapshots, log fields or retention, the backup script, the relay write policy, notification storage, a new browser request or `PROBE_LOCATION` change** | `docs/claude/privacy-and-about.md` |
