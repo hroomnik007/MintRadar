@@ -610,10 +610,48 @@ describe('GET /api/mints/recommend', () => {
     expect(nm.headers['access-control-allow-origin']).toBe('*')
   })
 
-  it('stays on the general 60/min limiter and keeps the old error shape', async () => {
+  it('is on the wallet budget (300/min per IP, one counter with /api/wallets/*): the 61st request is fine, the 301st gets 429 with Retry-After', async () => {
     const ip = '198.51.100.50'
-    const first = await rec().set('X-Forwarded-For', ip)
-    expect(first.headers['x-ratelimit-limit']).toBe('60')
+    const get = (path = '/api/mints/recommend') => request(app).get(path).set('X-Forwarded-For', ip)
+    const first = await get()
+    expect(first.headers['x-ratelimit-limit']).toBe('300')
+    expect(first.headers['x-ratelimit-remaining']).toBe('299')
+    for (let i = 1; i < 61; i++) expect((await get()).status).toBe(200) // past the general 60/min limit
+    const sixtyOne = await get()
+    expect(sixtyOne.status).toBe(200)
+    expect(sixtyOne.headers['x-ratelimit-limit']).toBe('300')
+    expect(sixtyOne.headers['x-ratelimit-remaining']).toBe(String(300 - 62))
+    // the wallet routes count against the same budget; every spelling Express routes to the handler too
+    expect((await get('/api/wallets/mints')).headers['x-ratelimit-remaining']).toBe(String(300 - 63))
+    expect((await get('/api/v1/mints/recommend/')).headers['x-ratelimit-remaining']).toBe(String(300 - 64))
+    expect((await get('/API/MINTS/RECOMMEND')).headers['x-ratelimit-remaining']).toBe(String(300 - 65))
+    for (let i = 65; i < 300; i++) expect((await get()).status).toBe(200)
+    const blocked = await get().set('Origin', FOREIGN)
+    expect(blocked.status).toBe(429)
+    expect(blocked.body).toEqual({ error: 'Too many requests' }) // recommend keeps its { error: "text" } shape
+    const ra = Number(blocked.headers['retry-after'])
+    expect(ra).toBeGreaterThanOrEqual(1)
+    expect(ra).toBeLessThanOrEqual(60)
+    expect(blocked.headers['x-ratelimit-limit']).toBe('300')
+    expect(blocked.headers['x-ratelimit-remaining']).toBe('0')
+    expect(blocked.headers['access-control-allow-origin']).toBe('*')
+    // the wallet routes are blocked by the same counter and answer in their own envelope
+    const walletBlocked = await get('/api/wallets/mints')
+    expect(walletBlocked.status).toBe(429)
+    expect(walletBlocked.body.error.code).toBe('rate_limited')
+    // another IP is unaffected; the general 60/min limiter has its own counter
+    expect((await request(app).get('/api/mints/recommend').set('X-Forwarded-For', '198.51.100.51')).status).toBe(200)
+    expect((await get('/api')).status).toBe(200)
+  }, 60_000)
+
+  it('does not give other routes the wallet budget (a look-alike path stays on 60/min)', async () => {
+    const ip = '198.51.100.52'
+    const get = () => request(app).get('/api/mints/recommendations').set('X-Forwarded-For', ip)
+    expect((await get()).headers['x-ratelimit-limit']).toBe('60')
+    expect((await request(app).get('/api/nuts').set('X-Forwarded-For', ip)).headers['x-ratelimit-limit']).toBe('60')
+  })
+
+  it('keeps the old error shape on a server error', async () => {
     query.mockReset()
     query.mockRejectedValue(new Error('boom'))
     // the snapshot is cached, so force a failing read with a fresh app

@@ -127,9 +127,9 @@ Every successful `GET` of `/api/v1/wallets/*`, `/api/v1/mints/known` and `/api/v
 
 | Routes | Limit |
 |---|---|
-| `/api/v1/wallets/*` | **300 requests / minute / IP** (its own counter) |
+| `/api/v1/wallets/*` and `/api/v1/mints/recommend` | **300 requests / minute / IP** (one shared counter, separate from the 60/min one) |
 | `/health`, `/api/mints/known`, `/api/stats`, `/api/mint/icon` | no limit (read-only, cached) |
-| every other read route, including `/api/mints/recommend` | **60 requests / minute / IP** |
+| every other read route | **60 requests / minute / IP** |
 
 Responses of limited routes carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset` (Unix time, seconds, when the window ends). Every `429` carries `Retry-After` (seconds). Preflight requests are not counted. Counters are kept in memory and reset on a restart.
 
@@ -172,8 +172,8 @@ The other routes keep their older shape `{ "error": "text" }` (see "Error Respon
 
 | Endpoint type | Limit |
 |---|---|
-| `/api/v1/wallets/*` | **300 requests / minute / IP** |
-| Read endpoints **except** `/health`, `/api/mints/known`, `/api/stats` and `/api/mint/icon` (these four are exempt) | **60 requests / minute / IP** |
+| `/api/v1/wallets/*` and `/api/v1/mints/recommend` | **300 requests / minute / IP** (one shared counter) |
+| Read endpoints **except** those two and `/health`, `/api/mints/known`, `/api/stats` and `/api/mint/icon` (these four are exempt) | **60 requests / minute / IP** |
 | `/api/mint/submit` (POST) | **20 requests / hour / IP** |
 | `/api/mints/discover` (POST) | **10 requests / hour / IP** |
 | `/api/mint/probe` for a URL that is **not** a tracked mint | additionally **10 requests / minute**, **60 requests / hour** and **3 concurrent probes** per IP (tracked mints: global limit only) |
@@ -185,6 +185,8 @@ X-RateLimit-Limit: 60
 X-RateLimit-Remaining: 58
 X-RateLimit-Reset: 1760293860
 ```
+
+(`/api/v1/wallets/*` and `/api/v1/mints/recommend` report `X-RateLimit-Limit: 300`.)
 
 Exceeding a limit returns HTTP `429 Too Many Requests` with a `Retry-After` header (seconds):
 
@@ -567,7 +569,7 @@ The error shape of the wallet routes (`{ "error": { "code", "message" } }`) is d
 
 ## `GET /api/v1/mints/recommend`
 
-A short list of currently healthy mints for a wallet's default or suggested list. For a full, stable view of every mint use [`/api/v1/wallets/mints`](#api-for-wallets-v1); this route keeps the shape it was introduced with on 2026-10-10 (new fields may be added). Built on the same data and the same filter function as the wallet API; public with `Access-Control-Allow-Origin: *`, `Cache-Control: public, max-age=300` and a strong `ETag` (poll at most every 5 minutes); it counts against the general 60 requests / minute / IP limit.
+A short list of currently healthy mints for a wallet's default or suggested list. For a full, stable view of every mint use [`/api/v1/wallets/mints`](#api-for-wallets-v1); this route keeps the shape it was introduced with on 2026-10-10 (new fields may be added). Built on the same data and the same filter function as the wallet API; public with `Access-Control-Allow-Origin: *`, `Cache-Control: public, max-age=300` and a strong `ETag` (poll at most every 5 minutes); it uses the same per-IP limit as the wallet API, **300 requests / minute / IP** (one counter shared with `/api/v1/wallets/*`, same `X-RateLimit-*` headers and `Retry-After`; see "Rate limits").
 
 **Only mints with `eligibleForRecommendation` are returned** (since 2026-10-12): online, scored, not on the manual test-mint list, not archived, and first seen at least 14 days ago. Test mints and mints under 14 days never appear.
 
@@ -608,4 +610,4 @@ curl "https://mintradar.org/api/v1/mints/recommend?unit=sat&minScore=85&limit=3&
 }
 ```
 
-`generatedAt` is the time of the data snapshot (at most 60 seconds old); `methodology` is the version of the score formula (see "Stability"). Errors keep the older shape `{ "error": "Internal server error" }`. A wallet should still let the user override and pin a preferred mint.
+`generatedAt` is the time of the data snapshot (at most 60 seconds old); `methodology` is the version of the score formula (see "Stability"). Errors keep the older shape `{ "error": "text" }` (also the `429`: `{ "error": "Too many requests" }` with `Retry-After`). A wallet should still let the user override and pin a preferred mint.

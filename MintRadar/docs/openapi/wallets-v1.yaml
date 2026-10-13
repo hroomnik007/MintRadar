@@ -17,7 +17,8 @@ info:
     `ETag` over the body (on a cache hit as well as a miss). Send `If-None-Match` to get `304`. The data
     follows MintRadar's 5-minute probe cycle: poll at most every 5 minutes. Errors are not cached.
 
-    **Rate limit.** 300 requests per minute per IP for `/wallets/*` (its own counter). Every response
+    **Rate limit.** 300 requests per minute per IP for `/wallets/*` (its own counter, shared with
+    `/mints/recommend`, which is not part of this specification). Every response
     carries `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`; a `429` carries
     `Retry-After` (seconds).
 

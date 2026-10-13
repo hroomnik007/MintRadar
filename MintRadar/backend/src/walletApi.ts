@@ -301,6 +301,16 @@ export function isWalletApiPath(path: string): boolean {
   return p === '/api/wallets' || p.startsWith('/api/wallets/')
 }
 
+/** /api/mints/recommend (any case, trailing slashes ignored, as Express routes it). */
+export function isRecommendPath(path: string): boolean {
+  return path.toLowerCase().replace(/\/+$/, '') === '/api/mints/recommend'
+}
+
+/** Routes on the wallet budget (300/min/IP, ONE shared counter): the wallet API and /api/mints/recommend, which wallets call. */
+export function usesWalletRateLimit(path: string): boolean {
+  return isWalletApiPath(path) || isRecommendPath(path)
+}
+
 /** Routes that answer any origin: the wallet API, /api/mints/known, /api/mints/recommend and /health. */
 export function isPublicCorsPath(path: string): boolean {
   const p = path.toLowerCase().replace(/\/+$/, '')

@@ -24,7 +24,7 @@ import { hasRecentReviewSurge } from './reviewSurge.js'
 import { isTestMint } from './testMints.js'
 import { publicMintName, publicMintNameOrHost } from './mintNames.js'
 import {
-  isWalletApiPath, isPublicCorsPath, PUBLIC_CORS_EXPOSE_HEADERS, parseWalletListQuery, walletListEnvelope, walletSingleEnvelope, recommendEnvelope,
+  usesWalletRateLimit, isRecommendPath, isPublicCorsPath, PUBLIC_CORS_EXPOSE_HEADERS, parseWalletListQuery, walletListEnvelope, walletSingleEnvelope, recommendEnvelope,
   memoizedBody, sendCachedBody, sendWalletError, queryOf, type Snapshot,
 } from './walletApi.js'
 import { verifyNip05 } from './nip05Verify.js'
@@ -192,8 +192,9 @@ function checkRateLimit(ip: string): RateLimitResult {
   return checkFixedWindow(rateLimitStore, RATE_LIMIT_MAX, ip)
 }
 
-// The wallet API (/api/wallets/*) has its own, larger per-IP budget: wallet backends and users behind one NAT
-// share an address. Same in-memory mechanism, separate counters.
+// The wallet API (/api/wallets/*) and /api/mints/recommend (which wallets call) have their own, larger per-IP
+// budget: wallet backends and users behind one NAT share an address. Same in-memory mechanism, separate counters
+// from the general limiter; the wallet routes and recommend share ONE counter.
 const WALLET_RATE_LIMIT_MAX = 300
 const walletRateLimitStore = new Map<string, RateLimitEntry>()
 
@@ -608,12 +609,14 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     return
   }
   const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown'
-  if (isWalletApiPath(req.path)) {
+  if (usesWalletRateLimit(req.path)) {
     const r = checkFixedWindow(walletRateLimitStore, WALLET_RATE_LIMIT_MAX, ip)
     const retryAfterSec = setRateLimitHeaders(res, r)
     if (!r.allowed) {
       res.setHeader('Retry-After', String(retryAfterSec))
-      sendWalletError(res, 429, 'rate_limited', 'Too many requests. See Retry-After.', retryAfterSec)
+      // /api/mints/recommend keeps its documented error shape { error: "text" }; the wallet routes use the JSON envelope.
+      if (isRecommendPath(req.path)) res.status(429).json({ error: 'Too many requests' })
+      else sendWalletError(res, 429, 'rate_limited', 'Too many requests. See Retry-After.', retryAfterSec)
       return
     }
     next()
