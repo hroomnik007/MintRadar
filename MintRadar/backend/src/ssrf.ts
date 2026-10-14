@@ -7,7 +7,10 @@ import { Agent, fetch as undiciFetch } from 'undici'
 
 const BLOCKED_RANGES = [
   'loopback', 'private', 'linkLocal', 'uniqueLocal',
-  'unspecified', 'reserved', 'carrierGradeNat', 'broadcast'
+  'unspecified', 'reserved', 'carrierGradeNat', 'broadcast',
+  // Never a public unicast destination: multicast (224/4, ff00::/8), the IPv6 discard prefix 100::/64,
+  // benchmarking 2001:2::/48 and the deprecated site-local fec0::/10.
+  'multicast', 'discard', 'benchmarking', 'deprecatedSiteLocal'
 ] as const
 
 // Extracts an embedded IPv4 address from an IPv6 address that uses one of
@@ -33,6 +36,11 @@ function extractEmbeddedIPv4(addr: IPv6): IPv4 | null {
     return new IPv4(bytes.slice(2, 6))
   }
 
+  // IPv4-translated ::ffff:0:0:0/96 (RFC 2765/6145) — the IPv4 address is the last 4 bytes.
+  if (range === 'rfc6145') {
+    return new IPv4(bytes.slice(12, 16))
+  }
+
   // Teredo 2001::/32 (RFC 4380) — the client IPv4 occupies the last 4
   // bytes, XOR-obfuscated with 0xFFFFFFFF.
   if (range === 'teredo') {
@@ -42,9 +50,20 @@ function extractEmbeddedIPv4(addr: IPv6): IPv4 | null {
   return null
 }
 
+// Prefixes that must never be a destination, whatever they embed:
+//  - ::/96 (deprecated IPv4-compatible addresses, e.g. ::127.0.0.1 which the URL parser prints as ::7f00:1; ipaddr.js
+//    labels most of them "unicast");
+//  - 64:ff9b:1::/48 (RFC 8215 local-use NAT64): the IPv4 sits at bytes 6-10 there, not in the last 4 bytes the
+//    well-known-prefix unwrap reads, so an embedded private address could be hidden behind a public-looking suffix.
+function isNeverPublicIPv6(bytes: number[]): boolean {
+  if (bytes.slice(0, 12).every(b => b === 0)) return true
+  return bytes[0] === 0x00 && bytes[1] === 0x64 && bytes[2] === 0xff && bytes[3] === 0x9b && bytes[4] === 0x00 && bytes[5] === 0x01
+}
+
 function isBlockedAddress(addr: IPv4 | IPv6): boolean {
   const range = addr.range()
   if ((BLOCKED_RANGES as readonly string[]).includes(range)) return true
+  if (addr.kind() === 'ipv6' && range !== 'ipv4Mapped' && isNeverPublicIPv6((addr as IPv6).toByteArray())) return true
 
   // Handle IPv4 addresses embedded in IPv6 (::ffff:x.x.x.x, NAT64, 6to4,
   // Teredo) — unwrap and re-check the embedded address against the same
