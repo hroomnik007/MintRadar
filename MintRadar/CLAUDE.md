@@ -141,13 +141,13 @@ Login modal (`src/components/layout/AppShell.tsx`) supports three methods select
 
 ## Testing Infrastructure
 
-### Test counts (as of 2026-10-08)
+### Test counts (as of 2026-10-14)
 
 | Suite | Count | Tool | Location |
 |-------|-------|------|----------|
-| Backend (unit + integration + security) | 799 tests, 64 files | Vitest | `backend/src/__tests__/` (incl. `integration/`, `security/`) |
-| Frontend unit | 656 tests, 47 files | Vitest | `src/__tests__/` |
-| E2E | 1028 tests, 87 spec files (`playwright test --list`) | Playwright | `e2e/` |
+| Backend (unit + integration + security) | 1891 tests, 91 files | Vitest | `backend/src/__tests__/` (incl. `integration/`, `security/`) |
+| Frontend unit | 1074 tests, 69 files | Vitest | `src/__tests__/` |
+| E2E | 1227 tests, 104 spec files (`playwright test --list`) | Playwright | `e2e/` |
 
 Counts drift often — treat as approximate.
 
