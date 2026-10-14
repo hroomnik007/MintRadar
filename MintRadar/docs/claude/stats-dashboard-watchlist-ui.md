@@ -340,3 +340,17 @@ Wording rules: no "Dashboard default grid" (the Dashboard default is online-only
 
 **NUT-27 and NUT-28 left the index (2026-10-14, owner decision).** They are wallet-side specs that no mint ever advertises (see `TRACKED_NUTS` in `src/constants/nuts.ts`), so they were permanently 0% and capped the component: with all 10 features the live value was 39.2, with the 8 that remain it is 49.0 (the same four features at 100/100/98/94, divided by 8 instead of 10). Only `ADVANCED_NUTS` changed — the generated tooltip no longer names "Nostr backup" or "pay-to-blinded-key". Mint-side features stay in the list even when nobody advertises them yet (NUT-21, 22, 25 and 30: 0 of 24 sampled mints on 2026-10-14), because they can be adopted. Untouched: `NHI_WEIGHTS`, `DEGRADED_AFTER_HOURS`, the Reliability Score, `/api/stats` and the backend (`MINT_ADVERTISED_NUT_KEYS` still lacks 27/28, which is now irrelevant to the index). The "NUT coverage" panel iterates `TRACKED_NUTS` only, so it never showed 27/28 and is unchanged. The index arithmetic moved into `nhiScore()` in `src/utils/networkHealthIndex.ts` (same operations, so the rounding is identical) so a test can pin it by hand.
 
+
+## Error states: an API failure is never shown as a mint state (2026-10-14)
+
+**Rule.** When `/api/mints/known` fails (HTTP error or no network after the query's 2 retries), the page shows the error state instead of anything derived from the missing list. It never shows a mint as offline, unknown or absent, never "Not a tracked mint", and never zero counts ("0 online mints · 0 tracked mints"). This is not a mint state: it is "we could not ask".
+
+**Component.** `src/components/LoadError.tsx` (+ `.css`, built from the `RouteError` card styles): `<LoadError message onRetry />` renders `role="alert"` with a fixed sentence and a **Try again** button; `MINT_LIST_ERROR` = "Could not load the mint list. Please try again."; `<LoadingNote />` is the quiet `role="status"` "Loading…". Callers pass literal sentences only — never `error.message` or anything from the server body. Try again calls the query's `refetch()` (no other request); while it runs the query is pending again, so the page shows its normal loading state, then the data or the error state again.
+
+**Where.**
+- Mint Detail (`MintDetail` wrapper, before the URL is resolved): header with Back + `LoadError`; while the list is still loading, `LoadingNote` (it used to be an empty page with only the back arrow, also after a failed request). "Not a tracked mint" only appears for a list that loaded and does not contain the slug.
+- Watchlist: `LoadError` in place of the grid when there are watched mints and the list failed (cards built from the fallback object read "offline" / "n/a"). With nothing watched, the normal empty state stays.
+- Home (`Dashboard`): `LoadError` in place of the grid; the `.dash-status` strip is not rendered while the list failed.
+- Only when nothing is loaded: a failed background refresh with data in the cache keeps showing the data.
+
+Tests: `src/__tests__/loadErrorStates.test.tsx` (component + each page's error branch), `e2e/error-states.spec.ts` (500, network error and a slow response that then fails: error state, no mint state, Try again recovers once the mock is healthy). Stats, NUT Explorer and the other pages keep their own "Failed to load …" lines (not touched).

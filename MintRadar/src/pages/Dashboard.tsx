@@ -6,6 +6,7 @@ import { sharedPool } from '@/core/nostr/pool'
 import { useNostrDiscovery } from '@/hooks/useNostrDiscovery'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
+import { LoadError, MINT_LIST_ERROR } from '@/components/LoadError'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { useModalFocus } from '@/hooks/useModalFocus'
 
@@ -641,7 +642,9 @@ export default function Dashboard() {
   // "how many mints we track" is /api/mints/known, which is exactly what
   // /api/stats counts too (both are an unfiltered `SELECT ... FROM mints`).
   useNostrDiscovery()
-  const { data: knownMintsData, isLoading: knownLoading, error: knownError } = useKnownMints()
+  const { data: knownMintsData, isLoading: knownLoading, isError: knownIsError, refetch: refetchKnown } = useKnownMints()
+  // Only when there is nothing to show: a failed background refresh keeps the data already loaded.
+  const knownError = knownIsError && knownMintsData === undefined
 
   // Grouped once over every known mint (not just the currently filtered/shown
   // set) so a "Same operator" badge still reflects the full network, not just
@@ -1135,7 +1138,7 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {!search && (
+      {!search && !knownError && (
         <div className="dash-status">
           <div className="dash-status-btn">
             <span className="dash-status-live" aria-hidden="true" />
@@ -1379,7 +1382,7 @@ export default function Dashboard() {
       <div ref={gridAnchorRef} className="mint-grid-anchor" aria-hidden="true" />
 
       {knownError ? (
-        <p className="error-msg">Failed to load mints</p>
+        <LoadError message={MINT_LIST_ERROR} onRetry={() => void refetchKnown()} />
       ) : knownLoading ? (
         <div className="mint-grid">
           {Array.from({ length: 9 }, (_, i) => <SkeletonCard key={i} />)}

@@ -8,6 +8,7 @@ import { sharedPool } from '@/core/nostr/pool'
 import { useFollowRecommendations, FOLLOW_RELAYS } from '@/hooks/useFollowRecommendations'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
+import { LoadError, MINT_LIST_ERROR } from '@/components/LoadError'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { MintCard } from '@/components/mint/MintCard'
@@ -201,7 +202,7 @@ export default function Watchlist() {
   const profile = useAuthStore(state => state.profile)
   const legacyNotice = useLegacyNotifyNotice(profile?.pubkey)
 
-  const { data: knownMintsData, isLoading: knownLoading } = useKnownMints()
+  const { data: knownMintsData, isLoading: knownLoading, isError: knownError, refetch: refetchKnown } = useKnownMints()
   const knownMintsMap = useMemo(() => new Map(knownMintsData?.map(m => [m.url, m]) ?? []), [knownMintsData])
   const pubkeyGroups = useMemo(() => groupMintsByPubkey(knownMintsData ?? []), [knownMintsData])
   const duplicateDisplayNames = useMemo(() => computeDuplicateMintNames(knownMintsData ?? []), [knownMintsData])
@@ -320,6 +321,9 @@ export default function Watchlist() {
             <div className="wl-grid">
               {Array.from({ length: 9 }, (_, i) => <SkeletonCard key={i} />)}
             </div>
+          ) : mints.length > 0 && knownMintsData === undefined && knownError ? (
+            // The mint list failed: a card built without it would read "offline" / "n/a" for every mint.
+            <LoadError message={MINT_LIST_ERROR} onRetry={() => void refetchKnown()} />
           ) : mints.length === 0 ? (
             <div className="wl-empty">
               <div className="wl-empty-icon"><IcRadar /></div>

@@ -8,6 +8,7 @@ import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcStar } from '@/components/mint/IcStar'
 import { useMintProbe } from '@/hooks/useMintProbe'
 import { useKnownMints } from '@/hooks/useKnownMints'
+import { LoadError, LoadingNote, MINT_LIST_ERROR } from '@/components/LoadError'
 import { useMintReviews } from '@/hooks/useMintReviews'
 import { mergeStoredAndLiveReviews, visibleReviews, withServerProfileFallback, type ServerAuthorProfile } from '@/utils/reviewUtils'
 import { useMintOperatorNip05 } from '@/hooks/useMintOperatorNip05'
@@ -2835,7 +2836,7 @@ export default function MintDetail() {
   const params = useParams<{ url: string }>()
   const rawUrl = params['url']
   const navigate = useNavigate()
-  const { data: knownMintsData } = useKnownMints()
+  const { data: knownMintsData, isError: knownError, refetch: refetchKnown } = useKnownMints()
 
   const slug = rawUrl === undefined ? null : safeDecode(rawUrl)
 
@@ -2852,12 +2853,14 @@ export default function MintDetail() {
 
   // Need the tracked list before we can canonicalise a bare-host slug and decide
   // between "redirect to the real mint" and "not tracked".
+  // A failed list is an error state with a retry, never "Not a tracked mint" (the list is simply missing).
   if (knownMintsData === undefined) {
     return (
       <div className="mint-detail">
         <div className="md-header">
           <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
         </div>
+        {knownError ? <LoadError message={MINT_LIST_ERROR} onRetry={() => void refetchKnown()} /> : <LoadingNote />}
       </div>
     )
   }

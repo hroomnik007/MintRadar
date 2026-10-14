@@ -1194,14 +1194,6 @@
   opacity: 1;
 }
 
-.error-msg {
-  text-align: center;
-  color: var(--text3);
-  padding: 48px 20px;
-  font-size: 13px;
-  font-family: var(--font-mono);
-}
-
 .dashboard-footer {
   text-align: center;
   font-size: 10px;

@@ -3,7 +3,11 @@ import { fileURLToPath } from 'node:url'
 
 export default defineConfig({
   resolve: {
-    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // same alias as vite.config.ts, needed to render pages that import from '@core/…'
+      '@core': fileURLToPath(new URL('./src/core', import.meta.url)),
+    },
   },
   test: {
     environment: 'jsdom',
