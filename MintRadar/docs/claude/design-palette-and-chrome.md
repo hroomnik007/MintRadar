@@ -323,8 +323,8 @@ Browser chrome and brand rasters use the settled palette: `--bg` `#0b1512`, `--a
 
 **2026-10-02:** `--bg` was darkened (decision D1; only `--bg` changed, surfaces/text/accents/borders untouched), so `theme-color`, the manifest colours, the `favicon.svg` tile, the `og-image.svg` outer rect and `BG` in `generate-icons.mjs` all moved to `#0b1512` and every raster was regenerated. `src/__tests__/retiredPageBackground.test.ts` fails if a text file in `src`, `public`, `scripts` or `index.html` still carries the previous value. On the OG image only the outer rect is `--bg`; the panel (`--surface`) and pills (`--surface-card`) stay.
 
-**Regenerate** (from `MintRadar/`, uses the existing `sharp` dev dependency — nothing is added to `package.json`):
-`FONTCONFIG_FILE=<fonts.conf> node scripts/generate-icons.mjs`. The OG text is `font-family: monospace`; the committed PNG was
+**Regenerate** (from `MintRadar/`; `sharp` is **not** in `package.json` since 2026-10-14 — install it on demand, which changes neither `package.json` nor the lockfile):
+`npm i --no-save sharp@0.35.5 && FONTCONFIG_FILE=<fonts.conf> node scripts/generate-icons.mjs`. The OG text is `font-family: monospace`; the committed PNG was
 rasterised with **DejaVu Sans Mono**, so point `FONTCONFIG_FILE` at a fontconfig that has a `<dir>` with `DejaVuSansMono*.ttf`
 and `<alias><family>monospace</family><prefer><family>DejaVu Sans Mono</family></prefer></alias>` (any machine default
 monospace gives different glyphs). The 8 legacy `public/icons/icon-N.png` files (PrivyZap logo, unreferenced) were removed 2026-10-02; `public/icons/` now holds only the generated `icon-<N>x<N>.png` files (pinned by `brandAssets.test.ts`). `logo-original.png` (the PrivyZap source image) is no longer used by any script and was left in place.

@@ -1,4 +1,7 @@
-// Regenerates every raster brand asset from the two SVG sources (run from the MintRadar/ app folder):
+// Regenerates every raster brand asset from the two SVG sources (run from the MintRadar/ app folder).
+// sharp is deliberately NOT in package.json (only this script uses it; with its native binaries it is ~29 MB and
+// 30 lockfile entries). Install it for the run without touching package.json or the lockfile, then run the script:
+//   npm i --no-save sharp@0.35.5
 //   node scripts/generate-icons.mjs
 //   public/favicon.svg    -> public/favicon-16x16.png, favicon-32x32.png, favicon.ico (32x32 PNG in an ICO),
 //                            icons/icon-{72,96,128,144,152,192,384,512}x*.png (rounded tile, transparent corners),
