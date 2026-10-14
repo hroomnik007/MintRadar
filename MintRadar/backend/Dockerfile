@@ -1,7 +1,7 @@
 FROM node:22-alpine
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev --omit=optional --ignore-scripts
 COPY dist/ ./dist/
 EXPOSE 3002
 USER node
