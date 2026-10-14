@@ -2533,8 +2533,13 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 /* Round 4: mobile type — notes and the reliability badge in DM Sans, the scheme hidden in the header URL. */
 @media (max-width: 768px) {
   .md-sc-sub { font-family: var(--font-body); font-size: 12px; color: var(--text3); }
-  .md-sc-reliability-badge { font-family: var(--font-body); font-size: 11px; font-weight: 500; border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
+  /* "Moderate Reliability" is wider than the column beside the donut: it wraps inside it ("Moderate" / "Reliability") instead of being clipped. */
+  .md-sc-reliability-badge { font-family: var(--font-body); font-size: 11px; font-weight: 500; border-radius: 12px; padding: 1px 7px; white-space: normal; max-width: 100%; line-height: 1.3; }
   .md-sc-reliability-link { font-family: var(--font-body); font-size: 12px; }
+}
+/* 320-360px: the column beside the donut is only ~62-82px; narrower tile padding and gap give "Reliability" room to fit on one line. */
+@media (max-width: 360px) {
+  .md-sc.md-sc-reliability { padding-inline: 8px; gap: 8px; }
 }
 @media (max-width: 640px) {
   .md-url-scheme { display: none; }
