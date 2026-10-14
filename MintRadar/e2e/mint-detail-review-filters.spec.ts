@@ -141,7 +141,7 @@ test.describe('Mint Detail — Reviews filters (large corpus)', () => {
     await expect(page.locator('.reviews-disclaimer')).toContainText('Reviews · NIP-87')
     await page.locator('.reviews-disclaimer .info-tooltip').hover()
     await expect(page.getByRole('tooltip')).toContainText(
-      /artificially inflated.*directional signal, not proof/i
+      /ratings can be inflated\. Treat them as a hint, not proof/i
     )
   })
 

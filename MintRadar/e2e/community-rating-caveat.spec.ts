@@ -61,7 +61,7 @@ test.describe('Community Rating — card badge always full weight', () => {
 // ~1-week-ago snapshot (backend/src/reviewSurge.ts, unit-tested there). These
 // specs only check the quiet ⚠ badge appears iff the API says so.
 
-const SURGE_RE = /grew unusually fast recently/i
+const SURGE_RE = /10 or more new reviews in about a week, or at least double the count from a base of 5 or more\. Ratings can be gamed/i
 
 async function setupWithSurge(page: Page) {
   await mockRelays(page)

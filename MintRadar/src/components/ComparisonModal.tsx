@@ -1,3 +1,4 @@
+import { INPUT_FEE_TEXT, compareAuditSuccessText } from '@/utils/tooltipTexts'
 import { useEffect, useMemo, useState } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import {
@@ -177,7 +178,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
       </>
     )
   }
-  const feeTooltipText = 'Input fee per 1000 proofs spent from the mint’s active keyset (NUT-02 input_fee_ppk), for its main unit. “free” = no fee. Lower is cheaper. n/a = the mint did not report it.'
+  const feeTooltipText = INPUT_FEE_TEXT
   const feeLabelInfo = <InfoTooltip iconSize={11} width={200} about="Input fee" text={feeTooltipText} />
 
   const historyQueries = useQueries({
@@ -399,7 +400,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                   <div className="cmp-mobile-row">
                     <span className="cmp-mobile-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       Audit success
-                      <InfoTooltip iconSize={11} width={200} about="Audit success" text="Last 7 days from cashu.info; only failures attributed to the mint count. n/a below 10 swaps. Not a solvency or reserves signal." />
+                      <InfoTooltip iconSize={11} width={200} about="Audit success" text={compareAuditSuccessText()} />
                     </span>
                     <span className="cmp-mobile-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: auditSuccessDisplay(mint, now).color }}>
                       {auditSuccessDisplay(mint, now).text}
@@ -567,7 +568,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           {/* ── Audit success (cashu.info 7-day window, same fields/threshold as the Reliability Score's audit part) ── */}
           <div className="cmp-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             Audit success
-            <InfoTooltip iconSize={11} width={200} about="Audit success" text="Last 7 days from cashu.info; only failures attributed to the mint count. n/a below 10 swaps. Not a solvency or reserves signal." />
+            <InfoTooltip iconSize={11} width={200} about="Audit success" text={compareAuditSuccessText()} />
           </div>
           {mints.map(mint => {
             const audit = auditSuccessDisplay(mint, now)

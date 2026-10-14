@@ -207,6 +207,26 @@ explanations on chips are migrated and deleted. A test (`src/__tests__/tooltipPa
 constant the code uses (see `utils/networkHealthIndex.ts`). Titles that remain (labels of icon-only buttons, text that repeats the visible
 name or an ellipsised value) are listed with their reason in `tooltipPatterns.test.ts`; a new one fails that test.
 
+**Tooltip texts: style and where they come from (2026-10-14).** Rules for every text: English, plain words, one or two short sentences, 160
+characters where possible and **220 at most**, no ALL CAPS word (technical names like DLEQ are the only exceptions), none of "safe",
+"secure", "trusted", "guaranteed", "recommended" as a verdict, nothing that implies solvency or reserves (the score is operational
+health only), and the same terms everywhere: "Reliability Score", "Community Rating", "audit data from cashu.info", "attributed to this
+mint", "probe", "mint" (never "minter"), numbers with units.
+- **A number, window, threshold, list or button name in a text comes from the constant or function the code uses, never typed a second
+  time.** `src/utils/tooltipTexts.ts` holds the builders (`reviewSurgeText()`, `versionRowText()`, `auditRowText()`, `scoreFormulaText()`,
+  `cashuInfoViewText()`, `moreAlertsNote()`, the HTTP-error explanations ...); the Network Health Index texts stay in
+  `networkHealthIndex.ts`, the latency text in `constants/probeLocation.ts`. Score-component maxima are derived by calling the real
+  functions (`uptimeComponent(100)`, `pointsForMinorsBehind(0)`, `contactComponent(99)`, `auditComponent(0, ...)`), so the text cannot drift
+  from the score. Facts only the backend defines (review surge rule, audit window of ~100 swaps, alert cooldowns, the 24 h uptime window)
+  are declared once in `tooltipTexts.ts` and compared with the backend by `src/__tests__/tooltipTexts.test.ts`.
+- **`tooltipTexts.test.ts`** fails when a number in a built text differs from its source (it extracts the numbers and compares them with the
+  expected list), and runs the style rules on every built text and on every text of the e2e extraction fixture (`styleProblems()`).
+- **If a text and the code disagree, the text changes to match the code** (the meaning of a computed value is never changed to fit a
+  sentence). Update the builder, not the string at the call site.
+- **`e2e/fixtures/tooltip-texts.json`** is the text of every tooltip / explanatory title of every state in `fixtures/tooltipStates.ts` at
+  1440 and 390 px; `tooltips-contract.spec.ts` compares the browser with it. After changing a text: `TT_WRITE_TEXTS=1 npx playwright test
+  e2e/tooltip-texts-update.spec.ts` (about 6 minutes), then read the JSON diff - it is the list of what users will see.
+
 **Not migrated, on purpose:**
 - Chart tooltips (hover values drawn inside a chart): the Recharts `<Tooltip>` of the uptime/latency chart on Mint Detail (`MintDetailHistoryChart.tsx`),
   the two in `ComparisonModal.tsx` (history lines) and the Stats reliability trend chart (`Stats.tsx`).
@@ -223,8 +243,8 @@ upper-case because its trigger was in an upper-case label); they open above dial
 The icons' hit area is bigger. (The ⓘ beside an error badge whose error has no explanation is still drawn, as a plain decorative icon —
 it used to be a control that opened nothing.)
 
-e2e: `e2e/tooltips-contract.spec.ts` (+ `fixtures/tooltipStates.ts`, `tooltipExtract.ts`, `tooltipHitArea.ts`, and `fixtures/tooltip-texts-before.json`,
-the text of every tooltip and explanatory title extracted before the migration, which the spec compares against), `tooltip-escape.spec.ts`,
+e2e: `e2e/tooltips-contract.spec.ts` (+ `fixtures/tooltipStates.ts`, `tooltipExtract.ts`, `tooltipHitArea.ts`, and `fixtures/tooltip-texts.json`,
+the text of every tooltip and explanatory title, which the spec compares against), `tooltip-escape.spec.ts`,
 `tooltip-facts.spec.ts`. Unit: `InfoTooltip.test.tsx`, `tooltipPosition.test.ts`, `tooltipPatterns.test.ts`.
 
 **Escape (2026-10-02, now in `tooltipManager.ts`):** while a tooltip is open (hover, tap or keyboard focus), Escape closes only that

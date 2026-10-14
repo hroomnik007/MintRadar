@@ -1,3 +1,5 @@
+import { UPTIME_WINDOW_HOURS, numberWord } from './tooltipTexts'
+
 // Network Health Index (NHI) on the Stats page: the weights, the list of "advanced" features and
 // every tooltip/explanation string that describes them. The computation (Stats.tsx) and the texts
 // below read the SAME constants, so a changed weight or feature list changes the text with it.
@@ -84,7 +86,7 @@ export function nhiScore(p: NhiParts, w: NhiWeights = NHI_WEIGHTS): number {
 
 /** Header tooltip of the index: the components and their weights. */
 export function nhiSummaryText(w: NhiWeights = NHI_WEIGHTS): string {
-  return `Five parts, in points: online mints ${w.online}, Reliability Score ${w.reliability}, software diversity ${w.diversity}, advanced NUTs ${w.advanced}, network stability ${w.stability}. Rows show points, not mint counts.`
+  return `${numberWord(Object.keys(w).length, true)} parts, in points: online mints ${w.online}, Reliability Score ${w.reliability}, software diversity ${w.diversity}, advanced NUTs ${w.advanced}, network stability ${w.stability}. Rows show points, not mint counts.`
 }
 
 /** Which mints the Online share is taken over (also appended to the desktop header tooltip). */
@@ -116,5 +118,5 @@ export function nhiAdvancedRowText(features: readonly AdvancedNut[] = ADVANCED_N
 
 /** "Average uptime" tile on the Stats page. */
 export function avgUptimeText(hours: number = DEGRADED_AFTER_HOURS): string {
-  return `Average 24-hour uptime of all mints not offline for ${hours}h or more. Mints without probe data are skipped, not counted as 0%. Test mints are included.`
+  return `Average ${UPTIME_WINDOW_HOURS}-hour uptime of all mints not offline for ${hours}h or more. Mints without probe data are skipped, not counted as 0%. Test mints are included.`
 }

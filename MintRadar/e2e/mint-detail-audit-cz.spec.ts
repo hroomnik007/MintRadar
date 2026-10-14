@@ -198,7 +198,7 @@ test.describe('tiles from the stored detail', () => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(229, 207, 202) }))
     await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('12%')
     await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(page.getByRole('tooltip')).toHaveText('27 of 229 swaps in the last 7 days, 202 caused by this mint, 5 other failures')
+    await expect(page.getByRole('tooltip')).toHaveText('27 of 229 swaps in the last 7 days, 202 attributed to this mint, 5 other failures')
     await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
   })
 
@@ -206,7 +206,7 @@ test.describe('tiles from the stored detail', () => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(200, 1, 1) }))
     await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('99%')
     await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(page.getByRole('tooltip')).toHaveText('199 of 200 swaps in the last 7 days, 1 caused by this mint')
+    await expect(page.getByRole('tooltip')).toHaveText('199 of 200 swaps in the last 7 days, 1 attributed to this mint')
     await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
   })
 
@@ -231,14 +231,14 @@ test.describe('tiles from the stored detail', () => {
     await expect(page.getByRole('tooltip')).toHaveText('50 of 50 swaps in the last 7 days, 1 failed for other reasons')
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(50, 3, 2) }))
     await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(page.getByRole('tooltip')).toHaveText('48 of 50 swaps in the last 7 days, 2 caused by this mint, 1 other failure')
+    await expect(page.getByRole('tooltip')).toHaveText('48 of 50 swaps in the last 7 days, 2 attributed to this mint, 1 other failure')
   })
 
   test('blamed above total is clamped', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(20, 20, 999) }))
     await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('0%')
     await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(page.getByRole('tooltip')).toHaveText('0 of 20 swaps in the last 7 days, 20 caused by this mint')
+    await expect(page.getByRole('tooltip')).toHaveText('0 of 20 swaps in the last 7 days, 20 attributed to this mint')
     await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
   })
 

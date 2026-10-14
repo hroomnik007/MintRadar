@@ -1,3 +1,4 @@
+import { SIGNATURE_CHECK_TEXT } from '@/utils/tooltipTexts'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { clickableProps } from '@/utils/clickableProps'
 import { useNavigate } from 'react-router-dom'
@@ -341,7 +342,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
           <div className="token-verify">
             <div className="token-section-label">
               <span>Signature check</span>
-              <InfoTooltip text="Each proof in a token can carry a mint signature proof (NUT-12 DLEQ). When it's there, we check it against the mint's public keys. A pass shows the proofs were signed by this mint. It doesn't show whether they're spent (use Check if spent) or how reliable the mint is (see the score above)." about="Signature check" />
+              <InfoTooltip text={SIGNATURE_CHECK_TEXT} about="Signature check" />
             </div>
             {phase === 'verifying' && (
               <ResultNote tone="loading" Icon={LoaderCircle}>Verifying with mint… checking this token's signatures.</ResultNote>

@@ -1,4 +1,5 @@
 import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
+import { payoutsTileText, receivesTileText, cleanTileText } from './tooltipTexts'
 
 // Adapter: cashu.info endpoint response → what the cashu.info Audit tab renders (four tiles from
 // the stored 7-day detail, the auditor's checks, the outcome bar and two swap tables from the swaps
@@ -160,12 +161,12 @@ function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
   const meltsOk = num(s.asSource?.success), meltsAll = num(s.asSource?.total)
   if (meltsOk !== undefined && meltsAll !== undefined) tiles.push({
     key: 'melts', value: `${fmt(meltsOk)} / ${fmt(meltsAll)}`, label: 'Payouts',
-    tooltip: 'Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)',
+    tooltip: payoutsTileText(),
   })
   const mintsOk = num(s.asDest?.success), mintsAll = num(s.asDest?.total)
   if (mintsOk !== undefined && mintsAll !== undefined) tiles.push({
     key: 'mints', value: `${fmt(mintsOk)} / ${fmt(mintsAll)}`, label: 'Receives',
-    tooltip: 'Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)',
+    tooltip: receivesTileText(),
   })
   // The one success figure of this view is the one the Reliability Score's audit part uses: swaps without a
   // failure that cashu.info attributes to this mint, (total - blamed) / total of the same 7-day window.
@@ -176,10 +177,7 @@ function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
     const clean = total - blamed
     const failed = Math.max(num(s.all?.failed) ?? blamed, blamed)
     const other = failed - blamed
-    const head = `${fmt(clean)} of ${fmt(total)} swaps in the last 7 days`
-    const tooltip = failed === 0 ? head
-      : blamed === 0 ? `${head}, ${fmt(other)} failed for other reasons`
-        : `${head}, ${fmt(blamed)} caused by this mint${other > 0 ? `, ${fmt(other)} other failure${other === 1 ? '' : 's'}` : ''}`
+    const tooltip = cleanTileText(clean, total, blamed, other, fmt)
     tiles.push({
       key: 'clean', value: `${blamed > 0 ? Math.min(99, Math.round((clean / total) * 100)) : 100}%`,
       label: 'Without a failure caused by this mint',

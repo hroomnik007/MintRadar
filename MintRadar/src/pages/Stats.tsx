@@ -1,3 +1,4 @@
+import { outdatedSoftwareText, NETWORK_STABILITY_TEXT } from '@/utils/tooltipTexts'
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
@@ -835,7 +836,7 @@ export default function Stats() {
         { label: 'Avg. Reliability Score', value: avgReliability, weight: NHI_WEIGHTS.reliability, tooltip: nhiReliabilityRowText() },
         { label: 'Software diversity', value: diversity, weight: NHI_WEIGHTS.diversity, tooltip: 'How evenly mints are spread across different software - heavy reliance on one implementation scores lower.' },
         { label: 'Advanced feature adoption', value: advancedAdoption, weight: NHI_WEIGHTS.advanced, tooltip: nhiAdvancedRowText() },
-        { label: 'Network stability', value: stability, weight: NHI_WEIGHTS.stability, tooltip: 'Share of mints that have been tracked for 1 month or more. Used as a stand-in for churn rate, since mints are never marked "removed" in the database so actual churn isn\'t reliably measurable yet.' },
+        { label: 'Network stability', value: stability, weight: NHI_WEIGHTS.stability, tooltip: NETWORK_STABILITY_TEXT },
       ],
     }
   }, [data, knownMintsData, versionDist])
@@ -929,7 +930,7 @@ export default function Stats() {
                 iconSize={11}
                 width={isMobile ? 210 : 250}
                 about="outdated software"
-                text="Share of tracked Nutshell and cdk-mintd mints that are two or more minor versions behind the newest stable release of the same software. Pre-releases of a current line are not counted. Not a CVE or security score."
+                text={outdatedSoftwareText()}
               />
             </span>
             <span style={{fontSize:13,fontWeight:swFreshnessSummary.pct >= 50 ? 700 : 600,color:'var(--amber)',fontFamily:'var(--font-mono-data)'}}>{swFreshnessSummary.pct}%</span>

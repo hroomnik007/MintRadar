@@ -7,6 +7,11 @@ import { QRCodeSVG } from 'qrcode.react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcStar } from '@/components/mint/IcStar'
 import { useMintProbe } from '@/hooks/useMintProbe'
+import {
+  reviewSurgeText, AUDIT_MINTS_TEXT, AUDIT_MELTS_TEXT, auditSuccessRateText, uptimeRowText, auditRowText, NUT_ROW_TEXT,
+  versionRowText, contactRowText, scoreFormulaText, BACKUP_SUPPORTED_TEXT, NO_BACKUP_TEXT, REVIEWS_NIP87_TEXT, cashuInfoViewText,
+  HTTP_ERROR_EXPLANATIONS, NON_HTTP_ERROR_EXPLANATIONS,
+} from '@/utils/tooltipTexts'
 import { useKnownMints } from '@/hooks/useKnownMints'
 import { LoadError, LoadingNote, MINT_LIST_ERROR } from '@/components/LoadError'
 import { useMintReviews } from '@/hooks/useMintReviews'
@@ -316,28 +321,6 @@ const NOSTR_REVIEWS_STALE_TIME_MS = 2 * 60 * 1000 // 2 minutes
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-}
-
-const HTTP_ERROR_EXPLANATIONS: Record<string, string> = {
-  '400': "The mint's info endpoint rejected the request as malformed — likely a misconfiguration on the mint's side",
-  '401': "The mint's info endpoint unexpectedly requires authentication — likely a misconfiguration, NUT-06 should be public",
-  '403': "The mint's info endpoint is blocking this request — may be a firewall/WAF rule or IP block",
-  '404': "Mint's info endpoint returned 404 — it may not implement NUT-06, or the URL has changed",
-  '429': 'The mint is rate-limiting requests',
-  '500': "The mint's server hit an internal error while handling the request",
-  '502': "The mint's server is unreachable — the application behind the proxy may have crashed or restarted",
-  '503': "The mint's server is temporarily unavailable — likely under maintenance or overloaded",
-  '504': "The mint's server took too long to respond — likely overloaded or misconfigured",
-}
-
-const NON_HTTP_ERROR_EXPLANATIONS: Record<string, string> = {
-  'Invalid JSON response': "The mint returned a response that isn't valid JSON — its info endpoint may be misconfigured",
-  'Invalid Cashu response': "The mint's info endpoint responded, but the body is missing the expected `nuts` field — it may not be a valid Cashu mint",
-  'DNS resolution failed': "The mint's domain name could not be resolved — it may no longer exist or its DNS is misconfigured",
-  'Connection timeout': "The mint didn't respond in time — its server may be overloaded or unreachable",
-  'Connection refused': "The mint's server actively refused the connection — it may be down or blocking this request",
-  'TLS/SSL error': "The mint's HTTPS certificate could not be verified — it may be expired, invalid, or misconfigured",
-  'Unreachable': 'The mint could not be reached — the server may be down or the network path is blocked',
 }
 
 function httpErrorTooltip(lastError: string): string | undefined {
@@ -973,11 +956,12 @@ function MintDetailContent({ url }: { url: string }) {
   const czView = czData !== null && (!has8333Audit || auditSource === 'cz') ? czData : null
   const czCheckedMin = czView?.checkedAt ? Math.max(0, Math.floor((now - new Date(czView.checkedAt).getTime()) / 60_000)) : null
   const czInfoText = czView
-    ? `${has8333Audit && !auditNeedsFallback ? 'This tab shows data from cashu.info (Cashu Mints Auditor)' : 'audit.8333.space has no recent data for this mint, so this tab shows data from cashu.info (Cashu Mints Auditor)'}${
-      czCheckedMin !== null && Number.isFinite(czCheckedMin) || czView.notRecent
-        ? ` (${[czCheckedMin !== null && Number.isFinite(czCheckedMin) ? `checked ${czCheckedMin} minute${czCheckedMin === 1 ? '' : 's'} ago` : null, czView.notRecent ? 'not updated recently' : null].filter(Boolean).join(', ')})`
-        : ''
-    }. Failures there are attributed by that service${czView.failuresAttributed !== null ? `; it currently attributes ${czView.failuresAttributed} failure${czView.failuresAttributed === 1 ? '' : 's'} to this mint` : ''}.`
+    ? cashuInfoViewText({
+        fallbackFrom8333: !(has8333Audit && !auditNeedsFallback),
+        checkedMinutesAgo: czCheckedMin,
+        notRecent: czView.notRecent,
+        failuresAttributed: czView.failuresAttributed,
+      })
     : null
   const auditSwitch = czData !== null && has8333Audit ? (
     <div className="md-audit-seg" role="group" aria-label="Audit source">
@@ -990,11 +974,11 @@ function MintDetailContent({ url }: { url: string }) {
   const stripTotal = breakdownAuditRecentTotal
   const stripErrors = breakdownAuditRecentErrors
   const reliabilityBreakdownRows = [
-    { label: 'Uptime (40%)', display: `${uptimePct}%`, score: breakdownUScore, max: 40, color: uptimeColor(uptimePct), tooltip: 'Percentage of successful checks over the last 24h. 100% uptime = full points.' },
-    { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, ...(auditDetailText ? { detail: auditDetailText } : {}), score: breakdownAScore, max: 25, color: auditRowColor, tooltip: `Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under ${AUDIT_MIN_SAMPLES} swaps or no recent data: neutral 12.5 of 25.`, ...(auditStaleNote ? { note: auditStaleNote } : {}) },
-    { label: 'NUT Support (15%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 15, color: supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.' },
-    { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? 'var(--accent)' : breakdownVScore >= 6 ? 'var(--amber)' : 'var(--red)', tooltip: "Compared with the newest stable release of the same software (Nutshell or cdk-mintd). 0 or 1 minor version behind scores the full 15 points; two or more behind is labelled Outdated and scores less (2 behind: 9, 3: 6, 4: 3, 5 or more: 0). Other software scores a neutral value." },
-    { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? 'var(--accent)' : breakdownCScore >= 2 ? 'var(--amber)' : 'var(--red)', tooltip: 'Number of contact methods provided (email, Twitter, Nostr). More contact options = higher score.' },
+    { label: 'Uptime (40%)', display: `${uptimePct}%`, score: breakdownUScore, max: 40, color: uptimeColor(uptimePct), tooltip: uptimeRowText() },
+    { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, ...(auditDetailText ? { detail: auditDetailText } : {}), score: breakdownAScore, max: 25, color: auditRowColor, tooltip: auditRowText(), ...(auditStaleNote ? { note: auditStaleNote } : {}) },
+    { label: 'NUT Support (15%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 15, color: supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: NUT_ROW_TEXT },
+    { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? 'var(--accent)' : breakdownVScore >= 6 ? 'var(--amber)' : 'var(--red)', tooltip: versionRowText() },
+    { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? 'var(--accent)' : breakdownCScore >= 2 ? 'var(--amber)' : 'var(--red)', tooltip: contactRowText() },
   ]
   const firstSeen = firstSeenLabel(discoveredAt)
   const nostrAnnouncedAt = knownMint?.nostrAnnouncedAt ?? null
@@ -1036,9 +1020,9 @@ function MintDetailContent({ url }: { url: string }) {
   const stripMints = auditNMints
   const stripMelts = auditNMelts
   const stripReliabilityColor = recentReliabilityColor
-  const tipMints = 'All-time successful ecash minting operations the auditor has run against this mint.'
-  const tipMelts = 'All-time successful ecash melting operations (redeeming ecash back to Lightning).'
-  const tipSuccess = 'Successful swaps out of the mint\'s last ~100 operations audited by audit.8333.space. Shows "too few to score" below 3 recent swaps. The Reliability Score\'s audit part uses cashu.info instead.'
+  const tipMints = AUDIT_MINTS_TEXT
+  const tipMelts = AUDIT_MELTS_TEXT
+  const tipSuccess = auditSuccessRateText()
   const tipAvg = 'Average duration of the successful swaps in the same rolling window as Recent success rate.'
 
   // Last ≤100 swaps, newest first (the backend already orders by created_at
@@ -1394,7 +1378,7 @@ function MintDetailContent({ url }: { url: string }) {
                   width={210}
                   iconSize={11}
                   label="Recent review surge"
-                  text="This mint's review count grew unusually fast recently — worth a closer look before trusting the rating."
+                  text={reviewSurgeText()}
                 />
               )}
               {tileOperatorExcluded > 0 && (
@@ -1843,14 +1827,14 @@ function MintDetailContent({ url }: { url: string }) {
                   <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--accent)',background:'var(--green-soft)',border:'0.5px solid var(--green-soft-strong)',borderRadius:5,padding:'2px 7px'}}>
                     <ShieldCheck size={11} /> Backup supported
                   </span>
-                  <InfoTooltip iconSize={11} width={220} about="backup support" text="This mint supports restoring blind signatures (NUT-09), which lets a wallet recover its ecash from a seed phrase after losing its device." />
+                  <InfoTooltip iconSize={11} width={220} about="backup support" text={BACKUP_SUPPORTED_TEXT} />
                 </span>
               ) : (
                 <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
                   <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--text3)',background:'var(--bg3)',border:'0.5px solid var(--border)',borderRadius:5,padding:'2px 7px'}}>
                     <ShieldOff size={11} /> No backup
                   </span>
-                  <InfoTooltip iconSize={11} width={220} about="backup support" text="This mint doesn't support wallet backup restore (NUT-09) — losing your device may mean losing funds stored here." />
+                  <InfoTooltip iconSize={11} width={220} about="backup support" text={NO_BACKUP_TEXT} />
                 </span>
               )}
             </div>
@@ -2204,7 +2188,7 @@ function MintDetailContent({ url }: { url: string }) {
                 <InfoTooltip
                   width={260}
                   label="About NIP-87 reviews"
-                  text="Anyone can create a new key, so a rating can be artificially inflated — treat it as a directional signal, not proof. Counts may also differ from other sites."
+                  text={REVIEWS_NIP87_TEXT}
                 />
               </div>
               {reviewsLoading ? (
@@ -2376,7 +2360,7 @@ function MintDetailContent({ url }: { url: string }) {
                 Audit tab heading's own AuditSourceInfoIcon usage. */}
             <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:11}}>
               <span className="md-panel-title" style={{marginBottom:0}}>Reliability Score</span>
-              <AuditSourceInfoIcon about="Reliability Score" text="Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75." />
+              <AuditSourceInfoIcon about="Reliability Score" text={scoreFormulaText()} />
             </div>
             <div className="reliability-wrap">
               <div className="gauge-wrap">
@@ -2578,7 +2562,7 @@ function MintDetailContent({ url }: { url: string }) {
               <ReliabilityBreakdownRow key={row.label} {...row} />
             ))}
             <div className="rb-formula">
-              Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.
+              {scoreFormulaText()}
               {' '}<Link to="/methodology" className="rb-method-link">How the score is computed</Link>
             </div>
           </div>

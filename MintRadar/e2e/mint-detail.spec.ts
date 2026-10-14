@@ -54,7 +54,7 @@ test.describe('Mint Detail', () => {
     await expect(page.locator('.reviews-disclaimer')).toContainText('Reviews · NIP-87')
     await page.locator('.reviews-disclaimer .info-tooltip').hover()
     await expect(page.getByRole('tooltip')).toContainText(
-      /artificially inflated.*directional signal, not proof.*Counts may also differ/i
+      /Anyone can create a key, so ratings can be inflated\. Treat them as a hint, not proof\./i
     )
     // No filter chips when there is nothing to filter.
     await expect(page.locator('.reviews-filter-chip')).toHaveCount(0)

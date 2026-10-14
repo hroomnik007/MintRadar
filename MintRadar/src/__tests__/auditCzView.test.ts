@@ -51,17 +51,17 @@ describe('tiles from the stored detail (LNpay values)', () => {
   })
   it('success tile: lnw.cash-like, 202 blamed of 229 with 207 failed', () => {
     const t = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 229, success: 22, failed: 207 }, errorsBlamed: 202 } })['clean']
-    expect(t).toMatchObject({ value: '12%', tooltip: '27 of 229 swaps in the last 7 days, 202 caused by this mint, 5 other failures' })
+    expect(t).toMatchObject({ value: '12%', tooltip: '27 of 229 swaps in the last 7 days, 202 attributed to this mint, 5 other failures' })
   })
   it('success tile: 1 blamed of 200 shows 99%, never 100%', () => {
     const t = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 200, success: 199, failed: 1 }, errorsBlamed: 1 } })['clean']
-    expect(t).toMatchObject({ value: '99%', tooltip: '199 of 200 swaps in the last 7 days, 1 caused by this mint' })
+    expect(t).toMatchObject({ value: '99%', tooltip: '199 of 200 swaps in the last 7 days, 1 attributed to this mint' })
   })
   it('success tile: singular forms, no failures, never "x / y"', () => {
     const oneOther = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 50, success: 49, failed: 1 }, errorsBlamed: 0 } })['clean']
     expect(oneOther?.tooltip).toBe('50 of 50 swaps in the last 7 days, 1 failed for other reasons')
     const one = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 50, success: 47, failed: 3 }, errorsBlamed: 2 } })['clean']
-    expect(one?.tooltip).toBe('48 of 50 swaps in the last 7 days, 2 caused by this mint, 1 other failure')
+    expect(one?.tooltip).toBe('48 of 50 swaps in the last 7 days, 2 attributed to this mint, 1 other failure')
     const none = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 50, success: 50, failed: 0 }, errorsBlamed: 0 } })['clean']
     expect(none).toMatchObject({ value: '100%', tooltip: '50 of 50 swaps in the last 7 days' })
     for (const t of [one, none, oneOther]) expect(t?.value).not.toContain('/')
@@ -72,7 +72,7 @@ describe('tiles from the stored detail (LNpay values)', () => {
   })
   it('success tile: hostile numbers are clamped or hide the tile', () => {
     const w = (all: Record<string, unknown>, errorsBlamed: unknown) => tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all, errorsBlamed } } as AuditCzDetail)['clean']
-    expect(w({ total: 20, failed: 20 }, 999)).toMatchObject({ value: '0%', tooltip: '0 of 20 swaps in the last 7 days, 20 caused by this mint' })
+    expect(w({ total: 20, failed: 20 }, 999)).toMatchObject({ value: '0%', tooltip: '0 of 20 swaps in the last 7 days, 20 attributed to this mint' })
     expect(w({ total: 0, failed: 0 }, 0)).toBeUndefined()
     expect(w({ total: NaN }, 0)).toBeUndefined()
     expect(w({ total: -5 }, 0)).toBeUndefined()

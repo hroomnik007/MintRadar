@@ -16,7 +16,7 @@ import { hitAreaReport } from './fixtures/tooltipHitArea'
 // Escape closes it), a trigger inside a Dashboard card does not navigate, a tooltip survives a refetch re-render
 // of the Stats tiles, and (1440 and 390 px) every tooltip text equals the extraction made before the migration.
 
-const BEFORE = JSON.parse(readFileSync(new URL('./fixtures/tooltip-texts-before.json', import.meta.url), 'utf8')) as Record<string, { texts: string[] }>
+const BEFORE = JSON.parse(readFileSync(new URL('./fixtures/tooltip-texts.json', import.meta.url), 'utf8')) as Record<string, { texts: string[] }>
 const MAX_OPENED_PER_STATE = 8
 // Debugging aid: TT_STATES=home,stats runs only those states (and TT_TIMING=1 prints where the time goes).
 const ONLY = process.env.TT_STATES?.split(',')

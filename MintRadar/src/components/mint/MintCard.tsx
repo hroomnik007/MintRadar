@@ -1,3 +1,4 @@
+import { reviewSurgeText, sameOperatorText } from '@/utils/tooltipTexts'
 import { useCallback, useEffect, useState } from 'react'
 import { IcClose } from '@/components/IcClose'
 import { Link } from 'react-router-dom'
@@ -101,7 +102,7 @@ export function MintCard({
       {sameOperatorUrls && sameOperatorUrls.length > 0 && (
         <InfoTooltip
           width={260}
-          text={`Same operator (pubkey) as: ${sameOperatorUrls.map(getHostname).join(', ')}. Not merged — tracked as separate mints.`}
+          text={sameOperatorText(sameOperatorUrls.map(getHostname))}
         >
           <span className="card-reliability-badge card-reliability-badge-same-op">Same op</span>
         </InfoTooltip>
@@ -261,7 +262,7 @@ export function MintCard({
                   width={200}
                   iconSize={10}
                   label="Recent review surge"
-                  text="This mint's review count grew unusually fast recently — worth a closer look before trusting the rating."
+                  text={reviewSurgeText()}
                 />
               )}
             </span>

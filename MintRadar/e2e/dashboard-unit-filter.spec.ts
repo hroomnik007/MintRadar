@@ -177,7 +177,7 @@ test.describe('Dashboard unit filter', () => {
     await ctx.close()
   })
 
-  const TIP = 'While a unit is selected, mints whose units are not known yet, or are not SAT, USD or EUR, are hidden.'
+  const TIP = 'Shows only mints that list a selected unit. Mints with unknown units are hidden while a unit is selected.'
   const tip = (page: Page) => page.locator('.filter-unit-tip')
   const note = (page: Page) => page.getByTestId('unit-hidden-note')
 

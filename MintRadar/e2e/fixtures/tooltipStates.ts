@@ -6,7 +6,7 @@ import { auditCzResponse, czSwapList, NOT_COVERED, SWAPS_8333 } from './auditCz'
 import { openWatchlist, URLS } from './watchlistNotify'
 
 // Pages and states that carry tooltips, used by e2e/tooltips-contract.spec.ts (and by the one-off
-// extraction that produced e2e/fixtures/tooltip-texts-before.json). Every state is rebuilt from the repo's own
+// extraction that produced e2e/fixtures/tooltip-texts.json). Every state is rebuilt from the repo's own
 // mocks plus a few mint variants: a normal mint with reviews and a review surge, a test mint, a new mint
 // (score capped), a mint whose operator wrote a review, an offline mint with an HTTP error, and a mint
 // that shares its operator key with another one.
@@ -222,6 +222,20 @@ export const TOOLTIP_STATES: TooltipState[] = [
   mint('alpha', ALPHA, 'history'),
   mint('alpha', ALPHA, 'nuts'),
   mint('alpha', ALPHA, 'audit'),
+  {
+    // The cashu.info view of the Audit tab (segment "cashu.info"): its tiles, heading and swap tables carry tooltips.
+    id: 'mint-alpha-audit-cz',
+    run: async page => {
+      await installTooltipMocks(page)
+      await page.goto(mintPath(ALPHA, '#audit'))
+      await expect(page.locator('.md-tabs')).toBeVisible()
+      await settle(page)
+      if (!(await clickIfPresent(page, 'button.md-audit-seg-btn:has-text("cashu.info") >> visible=true'))) return false
+      await expect(page.locator('.audit-cz-tiles [data-tile]').first()).toBeVisible()
+      await settle(page, 300)
+      return true
+    },
+  },
   {
     id: 'mint-alpha-audit-8333',
     run: async page => {

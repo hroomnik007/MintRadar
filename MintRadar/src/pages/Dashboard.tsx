@@ -1,3 +1,4 @@
+import { UNIT_FILTER_TEXT, HIDE_TEST_MINTS_TEXT } from '@/utils/tooltipTexts'
 import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
@@ -179,9 +180,9 @@ function applyFilters(
   })
 }
 
-const HIDE_TEST_MINTS_TOOLTIP = 'Hides mints on the known test-mint list (fake sats, for testing and development only).'
+const HIDE_TEST_MINTS_TOOLTIP = HIDE_TEST_MINTS_TEXT
 
-const UNIT_FILTER_TOOLTIP = 'While a unit is selected, mints whose units are not known yet, or are not SAT, USD or EUR, are hidden.'
+const UNIT_FILTER_TOOLTIP = UNIT_FILTER_TEXT
 
 function countActiveFilters(f: FilterState): number {
   return [
