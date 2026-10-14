@@ -56,13 +56,7 @@
    is always in the main bundle since Dashboard isn't lazy-loaded) instead of
    duplicating card/icon/value rules here — same min-height, padding, radius,
    border, ~40px/10px-radius icon wrapper, and muted green/amber/gray fills
-   as the Dashboard stat row. .smc-label-info is the one Stats-only addition
-   (the ⓘ tooltip trigger on the uptime tile's label). */
-.smc-label-info {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
+   as the Dashboard stat row. */
 
 /* ── Network Health Index (standalone panel, .stats-hero-grid row 2 col 2 —
    .stats-nhi-panel) ── Container is the plain .stats-panel background/border

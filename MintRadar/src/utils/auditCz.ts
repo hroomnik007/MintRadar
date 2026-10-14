@@ -43,11 +43,6 @@ export interface AuditCzTile {
   tooltip?: string
 }
 
-export interface AuditCzChecks {
-  signatures: string | null
-  proofs: string | null
-}
-
 export interface AuditCzView {
   sourceHref: string | null
   /** When our stored detail (else the feed) was last fetched (ISO); null when unknown. */
@@ -61,8 +56,6 @@ export interface AuditCzView {
   /** This mint received ("Swaps to this mint", first column From = the source). */
   toRows: AuditSwapRow[]
   tiles: AuditCzTile[]
-  /** null hides the whole card. */
-  checks: AuditCzChecks | null
   /** attributedFailures as published by the cashu.info feed (feeds the header tooltip sentence). */
   failuresAttributed: number | null
 }
@@ -192,32 +185,6 @@ function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
   return tiles
 }
 
-/** The two sentences of the "Checks by the auditor" card; null for a line without data, the card hides when both are null. */
-export function auditCzChecks(d: AuditCzDetail): AuditCzChecks | null {
-  const dl = d.swaps7d?.dleq
-  const valid = num(dl?.valid) ?? 0, invalid = num(dl?.invalid) ?? 0, missing = num(dl?.missing) ?? 0
-  let signatures: string | null = null
-  if (valid + invalid + missing > 0) {
-    const head = invalid > 0
-      ? `Proof signatures ${valid} valid, ${invalid} invalid — some signatures did not verify against the mint's published key.`
-      : valid > 0
-        ? `Proof signatures ${valid} valid, 0 invalid — the mint signed them with its published key.`
-        : 'Proof signatures 0 valid, 0 invalid.'
-    signatures = missing > 0 ? `${head} ${missing} without a proof.` : head
-  }
-  const ps = d.integrity?.proof_state
-  const checked = num(ps?.checked) ?? 0, spent = num(ps?.spent) ?? 0, pending = num(ps?.pending) ?? 0
-  let proofs: string | null = null
-  if (checked > 0) {
-    const noun = checked === 1 ? 'proof' : 'proofs'
-    const head = spent > 0
-      ? `${spent} of the auditor's ${checked} ${noun} ${spent === 1 ? 'was' : 'were'} marked spent by the mint.`
-      : `Our ecash ${checked} ${noun} still unspent — the mint has not marked ${checked === 1 ? 'it' : 'them'} spent.`
-    proofs = pending > 0 ? `${head} ${pending} pending.` : head
-  }
-  return signatures === null && proofs === null ? null : { signatures, proofs }
-}
-
 /** Returns null when the mint is not covered or no detail is stored (the caller then shows the audit.8333.space panel or the empty panel). */
 export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditCzView | null {
   if (!data || !data.covered || !data.mint || !data.detail) return null
@@ -251,7 +218,6 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
     fromRows: rows.filter(r => r.direction === 'from'),
     toRows: rows.filter(r => r.direction === 'to'),
     tiles: auditCzTiles(data.detail),
-    checks: auditCzChecks(data.detail),
     failuresAttributed: data.mint.attributedFailures,
   }
 }

@@ -142,16 +142,15 @@ function reviewPageList(current: number, total: number): (number | '…')[] {
 // The Audit tiles' ⓘ sits 3 px after the label (the trigger's hit-area padding is compensated by InfoTooltip.css).
 const TT_GAP_LEFT = { '--tt-ml': '3px' } as CSSProperties
 
-// ⓘ next to the "Audit stats" heading and the Reliability Score title: the shared InfoTooltip with the
-// audit explanation (or the given text). A local component so the identical icon can be dropped into both the
-// desktop header and the mobile heading.
-function AuditSourceInfoIcon({ text, about = 'Audit stats' }: { text?: string; about?: string }) {
+// ⓘ next to the "Audit stats" heading: the shared InfoTooltip with the audit explanation (or the given text). A local
+// component so the identical icon can be dropped into both the desktop header and the mobile heading.
+function AuditSourceInfoIcon({ text }: { text?: string }) {
   return (
     <InfoTooltip
       className="md-audit-info"
       iconSize={11}
       width={230}
-      about={about}
+      about="Audit stats"
       text={text ?? 'These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.'}
     />
   )
@@ -2356,8 +2355,6 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-right">
 
           <div className="md-panel md-reliability-panel">
-            {/* The (i) icon sits beside .md-panel-title, not inside it — same sibling layout as the
-                Audit tab heading's own AuditSourceInfoIcon usage. */}
             <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:11}}>
               <span className="md-panel-title" style={{marginBottom:0}}>Reliability Score</span>
             </div>

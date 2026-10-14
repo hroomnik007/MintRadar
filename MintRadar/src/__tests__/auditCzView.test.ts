@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { adaptAuditCz, auditCzChecks, auditCzNeutralKind, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, type AuditCzView } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzNeutralKind, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, type AuditCzView } from '@/utils/auditCz'
 import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
 
 type Row = AuditCzData['swaps'][number]
@@ -106,36 +106,6 @@ describe('tiles from the stored detail (LNpay values)', () => {
     expect(adaptAuditCz(data([], null), Date.now())).toBeNull()
     expect(adaptAuditCz({ ...data([]), detail: undefined } as unknown as AuditCzData, Date.now())).toBeNull()
     expect(adaptAuditCz({ ...data([]), covered: false, mint: null }, Date.now())).toBeNull()
-  })
-})
-
-describe('Checks by the auditor', () => {
-  const c = (o: Partial<AuditCzDetail>) => auditCzChecks({ fetchedAt: null, ...o })
-  it('good state', () => {
-    expect(c(LNPAY)).toEqual({
-      signatures: 'Proof signatures 56 valid, 0 invalid — the mint signed them with its published key.',
-      proofs: 'Our ecash 9 proofs still unspent — the mint has not marked them spent.',
-    })
-  })
-  it('invalid signatures: no accusation words, missing appended', () => {
-    const r = c({ swaps7d: { dleq: { valid: 40, invalid: 3, missing: 2 } } })
-    expect(r?.signatures).toBe("Proof signatures 40 valid, 3 invalid — some signatures did not verify against the mint's published key. 2 without a proof.")
-    expect(r?.signatures).not.toMatch(/fraud|cheat|fake|scam|steal/i)
-  })
-  it('spent and pending proofs', () => {
-    expect(c({ integrity: { proof_state: { checked: 9, spent: 2, pending: 1 } } })?.proofs).toBe("2 of the auditor's 9 proofs were marked spent by the mint. 1 pending.")
-    expect(c({ integrity: { proof_state: { checked: 9, spent: 0, pending: 2 } } })?.proofs).toBe('Our ecash 9 proofs still unspent — the mint has not marked them spent. 2 pending.')
-  })
-  it('lines without data are hidden, and the whole card when both are', () => {
-    expect(c({ swaps7d: { dleq: { valid: 0, invalid: 0, missing: 0 } }, integrity: { proof_state: { checked: 0 } } })).toBeNull()
-    expect(c({ fetchedAt: null })).toBeNull()
-    expect(c({ integrity: { proof_state: { checked: 4, spent: 0, pending: 0 } } })).toEqual({ signatures: null, proofs: 'Our ecash 4 proofs still unspent — the mint has not marked them spent.' })
-    expect(c({ swaps7d: { dleq: { valid: 5 } } })?.proofs).toBeNull()
-    expect(view([], { fetchedAt: null }).checks).toBeNull()
-  })
-  it('hostile numbers cannot inject text (only numbers are interpolated)', () => {
-    const r = c({ swaps7d: { dleq: { valid: '<b>1</b>' as unknown as number, invalid: 0, missing: 0 } } })
-    expect(r).toBeNull()
   })
 })
 
