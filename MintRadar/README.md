@@ -140,7 +140,7 @@ Read-only JSON under `https://mintradar.org/api/`, including a stable, CORS-enab
 - React 19 + TypeScript + Vite 8
 - TanStack Query v5, Zustand, Dexie (IndexedDB)
 - Recharts, vite-plugin-pwa (PWA / offline support)
-- nostr-tools (NIP-07, NIP-44, NIP-46), @noble/secp256k1
+- nostr-tools (NIP-07, NIP-44, NIP-46, key derivation for the nsec login)
 - Self-hosted open-source fonts: **DM Sans** and **JetBrains Mono** (both SIL Open Font License 1.1), plus the system `ui-monospace` stack for numeric/data values — no Google Fonts, no CDN
 
 **Backend**
