@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, loginAs, MOCK_KNOWN_MINTS } from './fixtures/mocks'
+import { resize } from './fixtures/settle'
 
 // Regression 1: the notification pills ("Goes down" / "Goes up", in the card's `.notify-strip`
 // footer) must lay out identically no matter how many digits the latency value has — a wider
@@ -32,8 +33,7 @@ test('pill row is consistent across latency digit counts and never covers Reliab
 
   // Sweep the widths where card width lands in the sensitive ~300-340px band.
   for (const w of [700, 720, 1080, 1100, 1300, 1390]) {
-    await page.setViewportSize({ width: w, height: 900 })
-    await page.waitForTimeout(80)
+    await resize(page, w, 900)
     const perCard = await page.evaluate(() => {
       const intersects = (a: DOMRect, b: DOMRect) =>
         a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top

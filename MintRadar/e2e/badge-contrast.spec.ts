@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, probePayload, makeCashuToken, MOCK_MINTS, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 import { DIMMED_MINTS } from './fixtures/dimmedCards'
 import { scanBadges, type BadgeRecord } from './fixtures/badgeContrast'
+import { layoutReady } from './fixtures/settle'
 
 // Every badge, chip, pill, tag and notice text reaches WCAG AA (4.5:1) as an EFFECTIVE colour (translucent
 // backgrounds and opacity composited over the real backdrop), in default and hover state, on online / offline
@@ -23,7 +24,7 @@ async function setup(page: Page, mints: unknown[] = GRID) {
 }
 async function scan(page: Page, hover = false): Promise<BadgeRecord[]> {
   await page.addStyleTag({ content: '*{animation:none !important;transition:none !important}' })
-  await page.waitForTimeout(400)
+  await layoutReady(page)
   return scanBadges(page, 'default', { hover })
 }
 const floor = (r: BadgeRecord) => (r.sel.includes('queued-banner-dismiss') ? 3 : 4.5)

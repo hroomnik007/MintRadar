@@ -5,6 +5,7 @@ import {
   KNOWN, ALPHA, BRAVO, CHARLIE, DELTA, NAME, mockNotifyApi, openWatchlist,
   card, down, up, msg, flags, subscribeCalls,
 } from './fixtures/watchlistNotify'
+import { flush, layoutReady, resize } from './fixtures/settle'
 
 // Watchlist card footer "NOTIFY · Goes down · Goes up": a pill is on only after the server confirmed it.
 
@@ -127,6 +128,7 @@ test.describe('Watchlist notification toggles', () => {
     await down(page, ALPHA).click()
     await expect(msg(page, ALPHA)).toHaveText('Signer declined the request.')
     await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
+    await flush(page)
     expect(api.calls).toHaveLength(0)
     expect(await flags(page, ALPHA)).toEqual({ down: false, up: false, confirmed: false })
   })
@@ -147,9 +149,12 @@ test.describe('Watchlist notification toggles', () => {
     await openWatchlist(page)
     api.mode = 'gate'
     await down(page, ALPHA).dblclick()
+    // the first press is pending: its request has reached the (held) mock and the button says so
+    await expect.poll(() => api.calls.length, { message: 'the pending request reached the mock' }).toBe(1)
+    await expect(down(page, ALPHA)).toBeDisabled()
     await down(page, ALPHA).click({ force: true }).catch(() => {})
     await up(page, ALPHA).click({ force: true }).catch(() => {})
-    await page.waitForTimeout(300)
+    await flush(page)
     expect(api.calls).toHaveLength(1)
     await api.release()
     await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'true')
@@ -170,7 +175,7 @@ test.describe('Watchlist notification toggles', () => {
     await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
     await expect(up(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
     expect(await flags(page, ALPHA)).toEqual({ down: false, up: false, confirmed: false })
-    await page.waitForTimeout(500)
+    await flush(page)
     expect(api.calls).toHaveLength(0)
   })
 
@@ -189,7 +194,7 @@ test.describe('Watchlist notification toggles', () => {
     await page.reload()
     await expect(page.locator('.wl-grid .notify-strip')).toHaveCount(4)
     await expect.poll(() => api.calls.length, { timeout: 8000 }).toBeGreaterThanOrEqual(1)
-    await page.waitForTimeout(500)
+    await flush(page)
     expect(subscribeCalls(api).map(c => c.body['mintUrl'])).toEqual([BRAVO])
     expect(subscribeCalls(api)[0]!.body).toMatchObject({ notifyOnDown: true, notifyOnUp: false })
 
@@ -272,8 +277,7 @@ test.describe('Watchlist notification toggles', () => {
     await down(page, ALPHA).click()
     await expect(msg(page, ALPHA)).toHaveText('Too many requests. Try again later.')
     for (const width of [320, 360, 390, 768, 1440]) {
-      await page.setViewportSize({ width, height: 900 })
-      await page.waitForTimeout(100)
+      await resize(page, width, 900)
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `page overflow at ${width}px`).toBeLessThanOrEqual(0)
       const over = await page.evaluate(() => [...document.querySelectorAll('.wl-grid .mint-card')].filter(c => c.scrollWidth > c.clientWidth + 1).length)
       expect(over, `card content overflow at ${width}px`).toBe(0)
@@ -316,7 +320,7 @@ test.describe('Watchlist notification toggles', () => {
         { url: ALPHA, down: true, up: true, confirmed: true },    // both on
         { url: BRAVO, down: true, up: false, confirmed: true },   // one on
       ] })                                                          // Charlie, Delta: none
-      await page.waitForTimeout(400)
+      await layoutReady(page)
       await page.screenshot({ path: `${SHOTS}/notify-after-states-${width}.png`, fullPage: true })
       api.byUrl[DELTA] = '500'
       await down(page, DELTA).click()
@@ -324,7 +328,7 @@ test.describe('Watchlist notification toggles', () => {
       api.byUrl[CHARLIE] = 'gate'
       await down(page, CHARLIE).click()
       await expect(down(page, CHARLIE)).toBeDisabled()
-      await page.waitForTimeout(300)
+      await layoutReady(page)
       await page.screenshot({ path: `${SHOTS}/notify-after-pending-error-${width}.png`, fullPage: true })
       await api.release()
     })

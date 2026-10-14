@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure'
 import { nip19 } from 'nostr-tools'
 import { installApiMocks, MOCK_KNOWN_MINTS } from './fixtures/mocks'
+import { flush, layoutReady, resize } from './fixtures/settle'
 
 // "Recommended by follows" sits BELOW the full-width card grid: one slim 44px line when there is
 // nothing to show, the section (heading + rows) otherwise, nothing while loading or on a load error.
@@ -27,6 +28,7 @@ interface Opts {
 async function open(page: Page, opts: Opts = {}) {
   const { recs = false, noFollows = false, hold = false, throwOnLoad = false, width = 1440 } = opts
   let release!: () => void
+  let followsRequested = false // the held follow-list REQ has reached the relay mock
   const gate = hold ? new Promise<void>(r => { release = r }) : Promise.resolve()
 
   const watchlistEv = finalizeEvent({ kind: 10003, created_at: now(), tags: [], content: JSON.stringify(WATCHED) }, userSk)
@@ -53,7 +55,7 @@ async function open(page: Page, opts: Opts = {}) {
     const kinds = filter?.kinds ?? []
     const reply = (ev?: object) => { if (ev) ws.send(JSON.stringify(['EVENT', subId, ev])); ws.send(JSON.stringify(['EOSE', subId])) }
     if (kinds.includes(10003)) reply(watchlistEv)
-    else if (kinds.includes(3)) void gate.then(() => reply(noFollows ? undefined : followsEv))
+    else if (kinds.includes(3)) { followsRequested = true; void gate.then(() => reply(noFollows ? undefined : followsEv)) }
     else if (kinds.includes(38000)) reply(recs ? reviewEv : undefined)
     else reply()
   }))
@@ -76,7 +78,15 @@ async function open(page: Page, opts: Opts = {}) {
   await page.setViewportSize({ width, height: 1000 })
   await page.goto('/watchlist')
   await expect(page.locator('.wl-grid .mint-card')).toHaveCount(3)
-  return { release: () => release() }
+  return {
+    /** Waits until the held request has reached the mock, then lets it through (it can never run ahead of the request). */
+    release: async () => {
+      await expect.poll(() => followsRequested, { message: 'the held follow-list request reaches the relay mock before it is released' }).toBe(true)
+      release()
+    },
+    /** Resolves once the (held) follow-list request is pending at the mock: the loading state is really in flight. */
+    requested: () => expect.poll(() => followsRequested, { message: 'the follow-list request is pending' }).toBe(true),
+  }
 }
 
 const section = (page: Page) => page.locator('.wl-rec-panel')
@@ -124,11 +134,12 @@ test.describe('Watchlist — recommendations section', () => {
   })
 
   test('loading shows nothing (no flash of the empty line), then the empty line appears', async ({ page }) => {
-    const { release } = await open(page, { hold: true, noFollows: true })
-    await page.waitForTimeout(600)
+    const { release, requested } = await open(page, { hold: true, noFollows: true })
+    await requested()
+    await flush(page)
     await expect(section(page)).toHaveCount(0)
     await expect(page.getByText('None from your follows yet')).toHaveCount(0)
-    release()
+    await release()
     await expect(slim(page)).toBeVisible()
   })
 
@@ -136,7 +147,7 @@ test.describe('Watchlist — recommendations section', () => {
     await open(page, { throwOnLoad: true })
     // initial attempt + the app's single query retry
     await expect.poll(() => page.evaluate(() => (window as unknown as { __recCalls?: number }).__recCalls ?? 0), { timeout: 8000 }).toBeGreaterThanOrEqual(2)
-    await page.waitForTimeout(400)
+    await flush(page)
     await expect(section(page)).toHaveCount(0)
     await expect(page.getByText('None from your follows yet')).toHaveCount(0)
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(3)
@@ -167,8 +178,7 @@ test.describe('Watchlist — recommendations section', () => {
       await open(page, opts)
       await expect(opts.recs ? page.locator('.wl-rec-row') : slim(page)).toBeVisible()
       for (const width of [320, 360, 390, 768, 1440, 1920]) {
-        await page.setViewportSize({ width, height: 1000 })
-        await page.waitForTimeout(100)
+        await resize(page, width, 1000)
         const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
         expect(over, `overflow at ${width}px`).toBeLessThanOrEqual(0)
         const box = (await section(page).boundingBox())!
@@ -186,7 +196,7 @@ test.describe('Watchlist — recommendations section', () => {
         test.skip(!SHOTS, 'set SHOTS=<dir> to write screenshots')
         await open(page, { ...opts, width })
         await expect(opts.recs ? page.locator('.wl-rec-row') : slim(page)).toBeVisible()
-        await page.waitForTimeout(500)
+        await layoutReady(page)
         await page.screenshot({ path: `${SHOTS}/watchlist-recs-${label}-${width}.png`, fullPage: true })
       })
     }

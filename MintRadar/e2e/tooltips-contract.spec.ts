@@ -4,6 +4,7 @@ import { MOCK_STATS } from './fixtures/mocks'
 import { TOOLTIP_STATES, VIEWPORTS, installTooltipMocks, type TooltipState } from './fixtures/tooltipStates'
 import { extractTooltipTexts } from './fixtures/tooltipExtract'
 import { hitAreaReport } from './fixtures/tooltipHitArea'
+import { scrollToStable } from './fixtures/settle'
 
 // The contract of the one tooltip component (src/components/InfoTooltip.tsx), checked on every page and state that
 // carries tooltips, at the five viewports, with a mouse and with touch. One test per viewport.
@@ -108,8 +109,7 @@ async function safePoint(page: Page): Promise<{ x: number; y: number }> {
 async function reachable(page: Page, i: number): Promise<{ x: number; y: number } | null> {
   const loc = page.locator(`[data-tt-i="${i}"]`)
   if ((await loc.count()) === 0) return null // re-rendered away since the scan
-  await loc.evaluate(el => el.scrollIntoView({ block: 'center', inline: 'center' }))
-  await page.waitForTimeout(40)
+  await scrollToStable(loc)
   const box = await loc.boundingBox()
   if (!box) return null
   const x = box.x + box.width / 2, y = box.y + box.height / 2

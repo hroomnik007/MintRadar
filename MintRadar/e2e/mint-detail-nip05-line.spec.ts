@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure'
 import { installApiMocks, probePayload, MOCK_MINTS, MOCK_KNOWN_MINTS } from './fixtures/mocks'
+import { flush } from './fixtures/settle'
 
 // "Get in Touch": the unverified NIP-05 of the announcing profile is a muted text line under the
 // card grid (no card / link / copy button); only its ⓘ is interactive.
@@ -14,10 +15,12 @@ const NOSTR = { method: 'nostr', info: 'npub1' + 'q'.repeat(58) }
 async function open(page: Page, opts: { contacts?: { method: string; info: string }[]; nip05?: string | null; width?: number } = {}) {
   const { contacts = [EMAIL, NOSTR], nip05 = 'alice@example.com', width } = opts
   const ev = nip05 === null ? null : finalizeEvent({ kind: 0, created_at: Math.floor(Date.now() / 1000), tags: [], content: JSON.stringify({ nip05 }) }, sk)
+  let profileAsked = false // the kind:0 lookup of the announcing account reached the relay mock
   await page.routeWebSocket(/^wss:\/\//, ws => ws.onMessage(m => {
     const p = JSON.parse(String(m)) as [string, ...unknown[]]
     if (p[0] === 'REQ') {
       const kinds = ((p[2] as { kinds?: number[] })?.kinds) ?? []
+      if (kinds.includes(0)) profileAsked = true
       if (ev && kinds.includes(0)) ws.send(JSON.stringify(['EVENT', p[1], ev]))
       ws.send(JSON.stringify(['EOSE', p[1]]))
     } else if (p[0] === 'EVENT') ws.send(JSON.stringify(['OK', (p[1] as { id: string }).id, true, '']))
@@ -35,7 +38,12 @@ async function open(page: Page, opts: { contacts?: { method: string; info: strin
   await expect(page.locator('.md-tabs')).toBeVisible()
   // The block is found by its content, not its heading: with only a NIP-05 value there is no heading.
   const panel = page.locator('.md-panel', { has: page.locator('.md-contact-grid, .md-nip05-line') })
-  return { panel, line: panel.locator('.md-nip05-line'), icon: panel.locator('.md-nip05-tip') }
+  /** The (possibly empty) profile lookup has been asked and answered: whatever it changes is on the page. */
+  const lookupSettled = async () => {
+    await expect.poll(() => profileAsked, { message: 'the profile lookup reached the relay' }).toBe(true)
+    await flush(page)
+  }
+  return { panel, line: panel.locator('.md-nip05-line'), icon: panel.locator('.md-nip05-tip'), lookupSettled }
 }
 
 test.describe('Mint Detail — unverified NIP-05 line', () => {
@@ -137,10 +145,10 @@ test.describe('Mint Detail — unverified NIP-05 line', () => {
   })
 
   test('no NIP-05 value → no line; only email → block unchanged', async ({ page }) => {
-    const { panel, line } = await open(page, { contacts: [EMAIL], nip05: null })
+    const { panel, line, lookupSettled } = await open(page, { contacts: [EMAIL], nip05: null })
     await expect(panel).toBeVisible()
     await expect(panel.locator('.md-contact-card')).toHaveCount(1)
-    await page.waitForTimeout(1500) // let the (empty) profile lookup settle
+    await lookupSettled()
     await expect(line).toHaveCount(0)
     await expect(panel).not.toContainText('NIP-05')
   })
@@ -167,10 +175,10 @@ test.describe('Mint Detail — "Get in Touch" heading', () => {
   })
 
   test('email only: heading and one card, no NIP-05 line', async ({ page }) => {
-    const { panel, line } = await open(page, { contacts: [EMAIL], nip05: null })
+    const { panel, line, lookupSettled } = await open(page, { contacts: [EMAIL], nip05: null })
     await expect(panel.locator('.md-panel-title')).toHaveText('Get in touch')
     await expect(panel.locator('.md-contact-card')).toHaveCount(1)
-    await page.waitForTimeout(1500) // let the (empty) profile lookup settle
+    await lookupSettled()
     await expect(line).toHaveCount(0)
   })
 
@@ -203,8 +211,8 @@ test.describe('Mint Detail — "Get in Touch" heading', () => {
   })
 
   test('nothing at all: the block is not rendered', async ({ page }) => {
-    const { panel } = await open(page, { contacts: [], nip05: null })
-    await page.waitForTimeout(1500) // let the (empty) profile lookup settle
+    const { panel, lookupSettled } = await open(page, { contacts: [], nip05: null })
+    await lookupSettled()
     await expect(panel).toHaveCount(0)
     await expect(page.getByText('Get in touch', { exact: true })).toHaveCount(0)
     await expect(page.locator('.md-contact-grid, .md-nip05-line')).toHaveCount(0)

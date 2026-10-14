@@ -3,6 +3,7 @@ import { installApiMocks, mockRelays, loginAs } from './fixtures/mocks'
 import {
   KNOWN, ALPHA, BRAVO, CHARLIE, NAME, mockNotifyApi, openWatchlist, card, down, up, flags,
 } from './fixtures/watchlistNotify'
+import { flush, layoutReady, resize } from './fixtures/settle'
 
 // One-time Watchlist notice for users whose old, never-confirmed "on" flags now show as off.
 
@@ -24,7 +25,7 @@ test.describe('Watchlist — notice about notifications that were switched off',
     expect(n.y + n.height).toBeLessThanOrEqual((await page.locator('.wl-grid').boundingBox())!.y + 1)
     // the legacy mint shows as off
     await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
-    await page.waitForTimeout(500)
+    await flush(page)
     expect(api.calls).toHaveLength(0) // showing it asks for no signature and sends nothing
   })
 
@@ -113,8 +114,7 @@ test.describe('Watchlist — notice about notifications that were switched off',
     await openWatchlist(page, { seed: LEGACY })
     await expect(notice(page)).toBeVisible()
     for (const width of [320, 360, 390, 768, 1440]) {
-      await page.setViewportSize({ width, height: 900 })
-      await page.waitForTimeout(100)
+      await resize(page, width, 900)
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `overflow at ${width}px`).toBeLessThanOrEqual(0)
       const b = (await notice(page).boundingBox())!
       expect(b.x, `left edge at ${width}px`).toBeGreaterThanOrEqual(0)
@@ -133,7 +133,7 @@ test.describe('Watchlist — notice about notifications that were switched off',
         { url: BRAVO, down: true, up: false, confirmed: true },
       ] })
       await expect(notice(page)).toBeVisible()
-      await page.waitForTimeout(400)
+      await layoutReady(page)
       await page.screenshot({ path: `${SHOTS}/legacy-notice-${width}.png` })
     })
   }

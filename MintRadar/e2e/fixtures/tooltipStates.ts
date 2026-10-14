@@ -4,6 +4,7 @@ import { generateSecretKey, getPublicKey } from 'nostr-tools/pure'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS, MOCK_MINTS, probePayload, makeCashuTokenV4 } from './mocks'
 import { auditCzResponse, czSwapList, NOT_COVERED, SWAPS_8333 } from './auditCz'
 import { openWatchlist, URLS } from './watchlistNotify'
+import { frames, layoutReady } from './settle'
 
 // Pages and states that carry tooltips, used by e2e/tooltips-contract.spec.ts (and by the one-off
 // extraction that produced e2e/fixtures/tooltip-texts.json). Every state is rebuilt from the repo's own
@@ -96,10 +97,10 @@ export interface TooltipState {
   run: (page: Page) => Promise<boolean>
 }
 
-const settle = async (page: Page, ms = 500) => {
+const settle = async (page: Page) => {
   await page.waitForLoadState('domcontentloaded')
   await page.waitForLoadState('networkidle', { timeout: 6000 }).catch(() => undefined)
-  await page.waitForTimeout(ms)
+  await layoutReady(page)
 }
 const page_ = (id: string, path: string, wait?: (p: Page) => Promise<void>): TooltipState => ({
   id,
@@ -127,7 +128,7 @@ const clickIfPresent = async (page: Page, sel: string): Promise<boolean> => {
   const el = page.locator(sel).first()
   if (!(await el.isVisible().catch(() => false))) return false
   await el.click()
-  await page.waitForTimeout(300)
+  await frames(page)
   return true
 }
 
@@ -141,7 +142,7 @@ export const TOOLTIP_STATES: TooltipState[] = [
       await expect(page.locator('.mint-card').first()).toBeVisible()
       await page.locator('.filter-btn').click()
       await expect(page.locator('.filter-panel')).toBeVisible()
-      await settle(page, 300)
+      await settle(page)
       return true
     },
   },
@@ -154,7 +155,7 @@ export const TOOLTIP_STATES: TooltipState[] = [
       // the "Test mints hidden" tag lives in the open filter panel
       await page.locator('.filter-btn').click()
       await expect(page.locator('.filter-active-tags .filter-tag', { hasText: 'Test mints hidden' })).toBeVisible()
-      await settle(page, 300)
+      await settle(page)
       return true
     },
   },
@@ -170,7 +171,7 @@ export const TOOLTIP_STATES: TooltipState[] = [
       await page.reload()
       await expect(page.locator('.wl-grid .mint-card')).toHaveCount(3)
       await page.locator('.wl-grid .notify-strip').first().getByRole('button', { name: /More alerts/ }).click().catch(() => undefined)
-      await settle(page, 300)
+      await settle(page)
       return true
     },
   },
@@ -183,7 +184,7 @@ export const TOOLTIP_STATES: TooltipState[] = [
       await expect(page.locator('.sw-row').first()).toBeVisible()
       await page.locator('.sw-row').first().click()
       await expect(page.locator('.nut-modal')).toBeVisible()
-      await settle(page, 300)
+      await settle(page)
       return true
     },
   },
@@ -195,7 +196,7 @@ export const TOOLTIP_STATES: TooltipState[] = [
       await expect(page.locator('.nhi-gauge-wrap')).toBeVisible()
       await page.locator('.nhi-gauge-wrap').click()
       if (!(await page.locator('[role=dialog]').isVisible().catch(() => false))) return false
-      await settle(page, 300)
+      await settle(page)
       return true
     },
   },
@@ -207,7 +208,7 @@ export const TOOLTIP_STATES: TooltipState[] = [
       await page.goto('/tools')
       await page.locator('textarea').first().fill(makeCashuTokenV4(TEST_MINT, [8, 4, 2, 1]))
       await page.getByRole('button', { name: /inspect/i }).first().click()
-      await settle(page, 800)
+      await settle(page)
       return true
     },
   },
@@ -232,7 +233,7 @@ export const TOOLTIP_STATES: TooltipState[] = [
       await settle(page)
       if (!(await clickIfPresent(page, 'button.md-audit-seg-btn:has-text("cashu.info") >> visible=true'))) return false
       await expect(page.locator('.audit-cz-tiles [data-tile]').first()).toBeVisible()
-      await settle(page, 300)
+      await settle(page)
       return true
     },
   },
@@ -254,7 +255,7 @@ export const TOOLTIP_STATES: TooltipState[] = [
       await installTooltipMocks(page)
       await page.goto(mintPath(ALPHA, '#overview'))
       await expect(page.locator('.md-tabs')).toBeVisible()
-      await settle(page, 300)
+      await settle(page)
       if (!(await clickIfPresent(page, '.md-sc.md-sc-reliability'))) return false
       if (!(await page.locator('[role=dialog]').isVisible().catch(() => false))) return false
       return true
@@ -277,7 +278,7 @@ export const TOOLTIP_STATES: TooltipState[] = [
       await page.locator('.md-picker-item', { hasText: 'Bravo Mint' }).click()
       await page.locator('.md-picker-confirm').click()
       await expect(page.getByText('Mint Comparison')).toBeVisible()
-      await settle(page, 600)
+      await settle(page)
       return true
     },
   },

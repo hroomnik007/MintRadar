@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
+import { flush } from './fixtures/settle'
 
 // Rows that open a dialog are real keyboard controls (role=button, Tab, Enter / Space), focus goes back to
 // the row when the dialog closes, and the page behind an open dialog does not scroll.
@@ -44,7 +45,7 @@ test('the page behind an open dialog does not scroll, and scrolls again after it
   expect(locked).toBe('hidden')
   await page.mouse.move(20, 300)
   await page.mouse.wheel(0, 800)
-  await page.waitForTimeout(200)
+  await flush(page) // the wheel event is dispatched and its scroll (if any) applied
   expect(await page.evaluate(() => window.scrollY)).toBe(0)
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).toHaveCount(0)

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, makeCashuToken, makeCashuTokenV4, makeDleqMint, serveMintInPage, MOCK_MINTS, MOCK_KNOWN_MINTS, type DleqKind } from './fixtures/mocks'
+import { flush } from './fixtures/settle'
 
 test.beforeEach(async ({ page }) => {
   await mockRelays(page)
@@ -173,8 +174,8 @@ test.describe('Tools', () => {
     await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
 
     await expect(page.locator('.token-error')).toBeVisible()
-    // Give any (incorrect) network call a chance to fire before asserting it didn't.
-    await page.waitForTimeout(500)
+    // Anything the page had already started (an incorrect network call) has reached its route handler by now.
+    await flush(page)
     expect(mintFetchSeen).toBe(false)
     await expect(page.locator('.token-verify-result')).toHaveCount(0)
   })
@@ -888,7 +889,7 @@ test.describe('Token Inspector mint icon (tracked mints only)', () => {
     await inspect(page, host)
     await expect(page.locator('.token-result-grid .trc-mint-icon')).toHaveCount(0)
     await expect(page.locator('.trc-name')).toHaveText('untracked-mint.example')
-    await page.waitForTimeout(500)
+    await flush(page)
     expect(requests.filter(u => u.includes('/api/mint/icon') || u.startsWith(host))).toEqual([])
     expect(requests.filter(u => /\.(png|jpe?g|gif|webp|svg|ico)(\?|$)/i.test(u) && !u.startsWith(new URL(page.url()).origin))).toEqual([])
   })
@@ -1080,7 +1081,7 @@ test.describe('Token Inspector cancellation and timeouts', () => {
     await inspectBtn(page).click()
     await expect(page.locator('.token-verify-result.tv-ok')).toBeVisible({ timeout: 15_000 })
     mint.releaseAll()
-    await page.waitForTimeout(800)
+    await flush(page) // the stale response (if the app would still apply it) has been delivered and processed
 
     await expect(page.locator('.token-spent .token-verify-result')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Check if spent' })).toBeEnabled()
@@ -1106,7 +1107,7 @@ test.describe('Token Inspector cancellation and timeouts', () => {
     await expect(inspectBtn(page)).toHaveText(/Verifying with mint/)
     await expect.poll(() => mint.hits.filter(h => h === '/v1/keys').length).toBe(2)
     mint.releaseOldest()
-    await page.waitForTimeout(800)
+    await flush(page) // the old run's response has been delivered and processed
     await expect(inspectBtn(page)).toHaveText(/Verifying with mint/)
     await expect(page.locator('.token-verify-result.tv-ok')).toHaveCount(0)
 

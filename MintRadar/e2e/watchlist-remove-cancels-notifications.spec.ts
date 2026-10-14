@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import {
   ALPHA, BRAVO, NAME, mockNotifyApi, openWatchlist, card, down, up, flags, subscribeCalls, unsubscribeCalls,
 } from './fixtures/watchlistNotify'
+import { flush } from './fixtures/settle'
 
 // Removing a watched mint (star) cancels its server subscription once when one may exist. The removal itself
 // never waits for or depends on that request.
@@ -23,7 +24,7 @@ test.describe('Watchlist — removing a mint cancels its notifications', () => {
     // Bravo has both pills off (never confirmed): removing it sends nothing at all.
     await star(page, BRAVO).click()
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(2)
-    await page.waitForTimeout(600)
+    await flush(page)
     expect(api.calls).toHaveLength(1)
   })
 
@@ -37,7 +38,7 @@ test.describe('Watchlist — removing a mint cancels its notifications', () => {
     const before = api.calls.length // subscribe + unsubscribe from the toggles
     await star(page, ALPHA).click()
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(3)
-    await page.waitForTimeout(600)
+    await flush(page)
     expect(api.calls).toHaveLength(before)
   })
 
@@ -82,6 +83,7 @@ test.describe('Watchlist — removing a mint cancels its notifications', () => {
     await star(page, ALPHA).click()
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(3)
     await expect(notice(page)).toContainText(NOTICE_ALPHA)
+    await flush(page)
     expect(api.calls).toHaveLength(0)
   })
 
@@ -100,7 +102,7 @@ test.describe('Watchlist — removing a mint cancels its notifications', () => {
     await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
     await expect(up(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
     expect(await flags(page, ALPHA)).toEqual({ down: false, up: false, confirmed: false })
-    await page.waitForTimeout(500)
+    await flush(page)
     expect(subscribeCalls(api)).toHaveLength(0)
   })
 
@@ -123,7 +125,7 @@ test.describe('Watchlist — removing a mint cancels its notifications', () => {
     await expect(down(page, ALPHA)).toBeDisabled()
     await star(page, ALPHA).click()
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(3)
-    await page.waitForTimeout(300)
+    await flush(page)
     expect(api.calls.map(c => c.path)).toEqual(['subscribe']) // the unsubscribe queues behind it
     api.mode = 'ok'
     await api.release()

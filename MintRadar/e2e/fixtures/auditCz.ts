@@ -126,6 +126,8 @@ export interface AuditCzHarness {
   dialogs: string[]
   /** Query strings of the /api/mints/audit-cz requests. */
   czQueries: () => URLSearchParams[]
+  /** With `hold`: true once an audit-cz request has reached the mock and is waiting for the hold. */
+  heldAtMock: () => boolean
 }
 
 /** Turns CSS animations/transitions off before any app code runs so geometry never depends on them. */
@@ -154,8 +156,9 @@ export async function gotoAuditTab(page: Page, setup: AuditCzSetup = {}, openAud
   const rows = MOCK_KNOWN_MINTS.map((m, i) => (i === 0 ? { ...m, ...setup.alpha } : m))
   await page.route('**/api/mints/known', route => route.fulfill({ json: rows }))
   await page.route('**/api/mints/swaps**', route => route.fulfill({ json: SWAPS_8333 }))
+  let heldAtMock = false
   await page.route('**/api/mints/audit-cz**', async route => {
-    if (setup.hold) await setup.hold
+    if (setup.hold) { heldAtMock = true; await setup.hold }
     await route.fulfill({ status: setup.czStatus ?? 200, json: setup.cz ?? NOT_COVERED })
   })
   await page.route(/^https?:\/\/(cashu\.info|audit\.8333\.space|api\.audit\.8333\.space)\//, route => route.abort())
@@ -167,6 +170,7 @@ export async function gotoAuditTab(page: Page, setup: AuditCzSetup = {}, openAud
   return {
     requests,
     dialogs,
+    heldAtMock: () => heldAtMock,
     czQueries: () => requests
       .filter(u => new URL(u).pathname === '/api/mints/audit-cz')
       .map(u => new URL(u).searchParams),

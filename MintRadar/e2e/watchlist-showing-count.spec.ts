@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure'
 import { nip19 } from 'nostr-tools'
 import { installApiMocks, mockRelays, loginAs } from './fixtures/mocks'
+import { layoutReady } from './fixtures/settle'
 
 // The Watchlist's "Showing X of Y" line appears only when the list is cut short (X < Y). The Watchlist has
 // no filter or search; the only way to show fewer than all is the 20-per-page list.
@@ -76,7 +77,7 @@ test.describe('Watchlist — "Showing X of Y" only when the list is cut short', 
       await openWatchlist(page, 60, { width, height })
       const line = page.locator('.wl-showing')
       await expect(line).toHaveText('Showing 20 of 60')
-      await page.waitForTimeout(400)
+      await layoutReady(page)
       const box = (await line.boundingBox())!
       const y = await page.evaluate(() => window.scrollY)
       await page.screenshot({

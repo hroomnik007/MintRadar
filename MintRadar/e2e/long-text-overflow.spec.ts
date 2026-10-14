@@ -4,6 +4,7 @@ import {
   installApiMocks, mockRelays, loginAs, probePayload, makeCashuToken,
   MOCK_KNOWN_MINTS, MOCK_STATS, MOCK_RELIABILITY_MOVERS,
 } from './fixtures/mocks'
+import { layoutReady } from './fixtures/settle'
 
 // Data-driven text (mint names, hostnames, URLs, operator notices, descriptions, NIP-05 values,
 // reviewer names, version strings, review texts) comes from third parties, so no length of it may
@@ -141,7 +142,7 @@ const CONTENT = [
 ].join(',')
 
 async function expectNoOverflow(page: Page, where: string) {
-  await page.waitForTimeout(150)
+  await layoutReady(page)
   const m = await page.evaluate((sel) => {
     const cw = document.documentElement.clientWidth
     // An element wider than the viewport is fine when it sits inside its own horizontal scroller
@@ -292,7 +293,7 @@ for (const width of WIDTHS) {
 
 /** Selector matches whose box leaves their nearest non-`display:contents` parent's box by more than 1px. */
 async function leavingParent(page: Page, selector: string): Promise<string[]> {
-  await page.waitForTimeout(250)
+  await layoutReady(page)
   return page.evaluate(sel => [...document.querySelectorAll(sel)].flatMap(el => {
     let p = el.parentElement
     while (p && getComputedStyle(p).display === 'contents') p = p.parentElement
@@ -310,7 +311,7 @@ for (const width of WIDTHS) {
       await mount(page, {}, { width })
       await page.goto('/')
       await expect(page.locator('.sort-segment')).toBeVisible()
-      await page.waitForTimeout(250)
+      await layoutReady(page)
       const seg = await page.locator('.sort-segment').evaluate(el => ({ sw: el.scrollWidth, cw: el.clientWidth }))
       expect(seg.sw, `sort-segment scrollWidth ${seg.sw} > clientWidth ${seg.cw}`).toBeLessThanOrEqual(seg.cw + 1)
       expect(await leavingParent(page, '.sort-btn')).toEqual([])
@@ -389,7 +390,7 @@ for (const width of [340, 360, 375, 412, 414, 428]) {
       const { url } = await mount(page, HERO_CASES[key]!, { width })
       await page.goto(`/mint/${encodeURIComponent(url)}`)
       await expect(page.locator('.md-tabs')).toBeVisible()
-      await page.waitForTimeout(250)
+      await layoutReady(page)
       const btns = await heroButtons(page)
       expect(btns).toHaveLength(3)
       for (const b of btns) {
@@ -412,8 +413,7 @@ for (const width of [420, 1440]) {
     const { url } = await mount(page, {}, { width })
     await page.goto(`/mint/${encodeURIComponent(url)}`)
     await expect(page.locator('.md-tabs')).toBeVisible()
-    await page.evaluate(() => document.fonts.ready)
-    await page.waitForTimeout(250)
+    await layoutReady(page)
     const btns = await heroButtons(page)
     HERO_BOXES[width]!.forEach((want, i) => {
       for (const k of ['left', 'width', 'height'] as const) {
@@ -432,8 +432,7 @@ for (const width of [700, 740, 768, 800, 900]) {
     await mount(page, {}, { width })
     await page.goto('/stats')
     await expect(page.locator('.stats-metrics .stat-note').first()).toBeVisible()
-    await page.evaluate(() => document.fonts.ready)
-    await page.waitForTimeout(250)
+    await layoutReady(page)
     const split = await page.evaluate(() => [...document.querySelectorAll('.stats-metrics .stat-note')].flatMap(note => {
       const cs = getComputedStyle(note)
       const node = note.firstChild as Text
@@ -498,7 +497,7 @@ for (const width of [320, 340, 360, 375, 390, 400, 412, 414]) {
     const { url } = await mount(page, {}, { width })
     await page.goto(`/mint/${encodeURIComponent(url)}`)
     await expect(page.locator('.md-tabs')).toBeVisible()
-    await page.waitForTimeout(250)
+    await layoutReady(page)
     for (const ic of await heroIcons(page)) {
       expect(ic.display === 'none' || ic.width === 0, `icon rendered: display ${ic.display}, ${ic.width}px`).toBe(true)
     }
@@ -519,8 +518,7 @@ for (const width of [420, 430, 1440]) {
     const { url } = await mount(page, {}, { width })
     await page.goto(`/mint/${encodeURIComponent(url)}`)
     await expect(page.locator('.md-tabs')).toBeVisible()
-    await page.evaluate(() => document.fonts.ready)
-    await page.waitForTimeout(250)
+    await layoutReady(page)
     const icons = await heroIcons(page)
     icons.forEach((ic, i) => {
       expect(ic.display).not.toBe('none')
@@ -540,8 +538,7 @@ const touchHero = async (browser: Browser, width: number, coarse: boolean) => {
   await mockRelays(page)
   await page.goto('/mint/' + encodeURIComponent('https://alpha.mint.example'))
   await expect(page.locator('.md-tabs')).toBeVisible()
-  await page.evaluate(() => document.fonts.ready)
-  await page.waitForTimeout(300)
+  await layoutReady(page)
   return { ctx, page }
 }
 const heroHit = (page: Page) => page.evaluate(() => {

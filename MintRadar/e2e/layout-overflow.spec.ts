@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, loginAs, MOCK_MINTS } from './fixtures/mocks'
+import { layoutReady } from './fixtures/settle'
 
 // Three layout fixes (docs/claude/mobile-and-tooltips.md, "Layout overflow fixes (2026-09-30)"):
 //  1. Dashboard toolbar: .submit-btn pushed the page sideways at 901–990px (row needs 991px on one line).
@@ -122,9 +123,11 @@ for (const width of [769, 800, 860]) {
       await installApiMocks(page)
       await loginAs(page)
       await page.route('**/fonts/*.woff2', async route => { await new Promise(r => setTimeout(r, 1500)); await route.continue() })
+      let reviewsServed = false
       await page.route('**/api/mints/nostr-reviews**', async route => {
         if (late) await new Promise(r => setTimeout(r, 1500))
         await route.fulfill({ json: late ? [] : oneRatedReview })
+        reviewsServed = true
       })
       await page.setViewportSize({ width, height: 900 })
       await page.goto(ALPHA_DETAIL, { waitUntil: 'commit' })
@@ -137,8 +140,9 @@ for (const width of [769, 800, 860]) {
       await page.waitForLoadState('networkidle')
       const b = await measure()
       expect(b.sw).toBeLessThanOrEqual(b.cw)
-      // (c) 3 seconds later
-      await page.waitForTimeout(3000)
+      // (c) after everything that arrives late has arrived: the delayed reviews answer is served and rendered, the fonts are loaded
+      await expect.poll(() => reviewsServed, { message: 'the (late) reviews answer was served' }).toBe(true)
+      await layoutReady(page)
       const c = await measure()
       expect(c.sw).toBeLessThanOrEqual(c.cw)
       if (!late) await expect(page.locator('.md-sc-stars')).toBeVisible()

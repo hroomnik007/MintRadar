@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays } from './fixtures/mocks'
+import { flush } from './fixtures/settle'
 
 // The Stats page is a lazy chunk (src/routerLazy.tsx). In dev the chunk is
 // served as /src/pages/Stats.tsx; aborting that request mimics a stale tab
@@ -38,8 +39,8 @@ test.describe('Lazy chunk load failure', () => {
     await expect(page.getByText('The app was probably updated.')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Reload' })).toBeVisible()
     await expect(page.getByText(/Hey developer|Unexpected Application Error/)).toHaveCount(0)
-    // exactly one automatic reload, no loop
-    await page.waitForTimeout(1500)
+    // exactly one automatic reload, no loop: the error screen is the end of the recovery logic; nothing it queued is still on its way
+    await flush(page)
     expect(statsDocs).toHaveLength(1)
   })
 })

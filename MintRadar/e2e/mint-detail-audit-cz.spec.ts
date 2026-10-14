@@ -470,12 +470,12 @@ test('while the audit-cz response is held: "Loading audit data…", then the cz 
 
   const loading = page.getByRole('status').filter({ hasText: 'Loading audit data…' })
   await expect(loading).toBeVisible()
-  await expect.poll(() => h.czQueries().length).toBeGreaterThan(0) // the request is in flight, held
+  await expect.poll(() => h.heldAtMock(), { message: 'the audit-cz request is in flight at the mock, held' }).toBe(true)
   // (the Reliability Score breakdown has its own, different "No audit data available" row: match the panel's full sentence)
   await expect(page.getByText('No audit data available for this mint.')).toHaveCount(0)
   await expect(page.locator('.md-audit-header, .md-audit-header-main, .audit-summary-strip')).toHaveCount(0)
 
-  release()
+  release() // only after the request reached the mock (asserted above): it can never run ahead of it
   await expect(page.locator('.md-audit-header-main')).toContainText('via cashu.info')
   await expect(loading).toHaveCount(0)
   await expect(tile(page, 'melts').locator('.audit-summary-value')).toHaveText('51 / 64')

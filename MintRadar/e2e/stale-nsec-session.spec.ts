@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { nip19 } from 'nostr-tools'
 import { installApiMocks, mockRelays, loginAs, loginAsNsecLive, TEST_PUBKEY_HEX } from './fixtures/mocks'
+import { flush } from './fixtures/settle'
 
 const NOTICE = 'Your key was cleared when the page reloaded. Log in again to sign.'
 const NPUB = nip19.npubEncode(TEST_PUBKEY_HEX)
@@ -22,6 +23,15 @@ async function seedSessionOnce(page: Page, method: string, extra: Record<string,
 }
 
 const notice = (page: Page) => page.locator('.session-notice')
+const watchlistCount = (p: Page) => p.evaluate(() => new Promise<number>((resolve, reject) => {
+  const open = indexedDB.open('mintradar-v1')
+  open.onerror = () => reject(open.error)
+  open.onsuccess = () => {
+    const req = open.result.transaction('watchlist').objectStore('watchlist').count()
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  }
+}))
 
 test('nsec session seeded without a key loads logged out, shows the notice once, not on the next reload', async ({ page }) => {
   await seedSessionOnce(page, 'nsec')
@@ -82,10 +92,11 @@ test('nip07 session stays logged in with no notice, even when window.nostr is in
     }, 300)
   })
   await page.goto('/')
-  await page.waitForTimeout(800)
+  // the late injection (300 ms in the init script) has happened: window.nostr is an object now
+  await expect.poll(() => page.evaluate(() => typeof (window as unknown as { nostr?: unknown }).nostr)).toBe('object')
   await expect(page.locator('.navbar-profile')).toBeVisible()
+  await flush(page)
   await expect(notice(page)).toHaveCount(0)
-  expect(await page.evaluate(() => typeof (window as unknown as { nostr?: unknown }).nostr)).toBe('object')
 })
 
 test('local watchlist entries survive the reset', async ({ page }) => {
@@ -95,7 +106,7 @@ test('local watchlist entries survive the reset', async ({ page }) => {
   const alpha = page.locator('.mint-card', { has: page.locator('.card-name', { hasText: 'Alpha Mint' }) })
   await alpha.getByRole('button', { name: /^Add .+ to watchlist$/ }).click()
   await expect(alpha.getByRole('button', { name: 'Remove Alpha Mint from watchlist' })).toBeVisible()
-  await page.waitForTimeout(500) // let the Dexie write land
+  await expect.poll(() => watchlistCount(page), { message: 'the Dexie write landed' }).toBe(1)
 
   // 2) fresh tab in the same context (shared IndexedDB, own sessionStorage) with a stale nsec session
   const page2 = await page.context().newPage()
@@ -105,20 +116,11 @@ test('local watchlist entries survive the reset', async ({ page }) => {
   await page2.goto('/')
   await expect(page2.locator('.navbar-login-btn')).toBeVisible()
   await expect(notice(page2)).toHaveCount(1)
-  const count = await page2.evaluate(() => new Promise<number>((resolve, reject) => {
-    const open = indexedDB.open('mintradar-v1')
-    open.onerror = () => reject(open.error)
-    open.onsuccess = () => {
-      const req = open.result.transaction('watchlist').objectStore('watchlist').count()
-      req.onsuccess = () => resolve(req.result)
-      req.onerror = () => reject(req.error)
-    }
-  }))
-  expect(count).toBe(1)
+  expect(await watchlistCount(page2)).toBe(1)
   // nothing that starts on login ran
   const requests: string[] = []
   page2.on('request', r => { if (r.url().includes('/api/notifications/subscribe')) requests.push(r.url()) })
-  await page2.waitForTimeout(800)
+  await flush(page2)
   expect(requests).toEqual([])
 })
 
@@ -129,8 +131,8 @@ test('remote-signer session with its persisted bunker connection survives the re
     bunkerPubkey: TEST_PUBKEY_HEX,
   })
   await page.goto('/')
-  await page.waitForTimeout(1000)
   await expect(page.locator('.navbar-profile')).toBeVisible()
+  await flush(page)
   await expect(notice(page)).toHaveCount(0)
   // the restored signer shim is installed synchronously from the persisted connection
   expect(await page.evaluate(() => (window as unknown as { nostr?: { __mintradarShim?: boolean } }).nostr?.__mintradarShim)).toBe(true)
