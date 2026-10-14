@@ -21,8 +21,8 @@ import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
 import {
-  NHI_WEIGHTS, advancedAdoptionPercent, nhiScore, nhiSummaryText, nhiOnlineSetText, nhiFormulaText,
-  nhiOnlineRowText, nhiReliabilityRowText, nhiAdvancedRowText, avgUptimeText,
+  NHI_WEIGHTS, advancedAdoptionPercent, nhiScore, nhiSubtitle, nhiFormulaText,
+  nhiOnlineRowText, nhiReliabilityRowText, nhiAdvancedRowText, avgUptimeCaption,
 } from '@/utils/networkHealthIndex'
 import { formatDate } from '@/utils/formatDate'
 import './Stats.css'
@@ -514,8 +514,8 @@ function NetworkHealthComponentRow({ component: c, compact }: {
 }
 
 // Single source of truth for the formula explanation text — used by the
-// modal's footer (NetworkHealthFormulaNote, unchanged). The desktop header's ⓘ
-// tooltip shows nhiSummaryText + nhiOnlineSetText instead (Stats() below).
+// modal's footer (NetworkHealthFormulaNote, unchanged). The header has no tooltip any more
+// (removed 2026-10-14); the weights are visible in the breakdown rows.
 // Built from NHI_WEIGHTS, so it can never disagree with the computation.
 const NETWORK_HEALTH_FORMULA_TEXT = nhiFormulaText()
 
@@ -899,11 +899,8 @@ export default function Stats() {
             </div>
             <div className="stat-card">
               <div className="stat-figure"><span className="stat-value" style={{color: avgUptime24h != null ? uptimeColor(avgUptime24h) : undefined}}>{avgUptime24h != null ? `${avgUptime24h}%` : '—'}</span></div>
-              <div className="stat-label smc-label-info">
-                average uptime
-                <InfoTooltip iconSize={11} width={isMobile ? 200 : 240} about="average uptime" text={avgUptimeText()} />
-              </div>
-              <span className="stat-note">of active mints</span>
+              <div className="stat-label">average uptime</div>
+              <span className="stat-note">{avgUptimeCaption()}</span>
             </div>
             <div className="stat-card">
               <div className="stat-figure">
@@ -951,14 +948,8 @@ export default function Stats() {
                 <div>
                 <div className="stats-panel-title nhi-title-row">
                   Network health index
-                  <InfoTooltip
-                    iconSize={11}
-                    width={isMobile ? 220 : 260}
-                    about="Network health index"
-                    text={`${nhiSummaryText()}${isMobile ? ' Tap the gauge for the full breakdown.' : ` ${nhiOnlineSetText()}`}`}
-                  />
                 </div>
-                <div className="stats-panel-desc">Weighted from five factors.</div>
+                <div className="stats-panel-desc">{nhiSubtitle(isMobile)}</div>
                 </div>
               </div>
               {/* .nhi-fill is the flex:1 region below the header — this panel

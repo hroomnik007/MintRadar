@@ -1,5 +1,3 @@
-import { UPTIME_WINDOW_HOURS, numberWord } from './tooltipTexts'
-
 // Network Health Index (NHI) on the Stats page: the weights, the list of "advanced" features and
 // every tooltip/explanation string that describes them. The computation (Stats.tsx) and the texts
 // below read the SAME constants, so a changed weight or feature list changes the text with it.
@@ -84,9 +82,11 @@ export function nhiScore(p: NhiParts, w: NhiWeights = NHI_WEIGHTS): number {
 
 // ── Texts ────────────────────────────────────────────────────────────────────
 
-/** Header tooltip of the index: the components and their weights. */
-export function nhiSummaryText(w: NhiWeights = NHI_WEIGHTS): string {
-  return `${numberWord(Object.keys(w).length, true)} parts, in points: online mints ${w.online}, Reliability Score ${w.reliability}, software diversity ${w.diversity}, advanced NUTs ${w.advanced}, network stability ${w.stability}. Rows show points, not mint counts.`
+/** Subtitle under the "Network health index" header; where the gauge opens the breakdown dialog (<= 768 px) it says so. */
+export const NHI_SUBTITLE = 'Weighted from five factors.'
+export const NHI_SUBTITLE_GAUGE_HINT = 'Tap or click the gauge for the breakdown.'
+export function nhiSubtitle(gaugeOpensBreakdown: boolean): string {
+  return gaugeOpensBreakdown ? `${NHI_SUBTITLE} ${NHI_SUBTITLE_GAUGE_HINT}` : NHI_SUBTITLE
 }
 
 /** Which mints the Online share is taken over (also appended to the desktop header tooltip). */
@@ -116,7 +116,7 @@ export function nhiAdvancedRowText(features: readonly AdvancedNut[] = ADVANCED_N
   return `Average share of online mints offering each of: ${features.map(f => f.label).join(', ')}. A feature no mint offers counts as 0%.`
 }
 
-/** "Average uptime" tile on the Stats page. */
-export function avgUptimeText(hours: number = DEGRADED_AFTER_HOURS): string {
-  return `Average ${UPTIME_WINDOW_HOURS}-hour uptime of all mints not offline for ${hours}h or more. Mints without probe data are skipped, not counted as 0%. Test mints are included.`
+/** Caption of the "average uptime" tile on the Stats page: which mints are averaged (the others are left out). */
+export function avgUptimeCaption(hours: number = DEGRADED_AFTER_HOURS): string {
+  return `of mints not offline for ${hours}h+`
 }

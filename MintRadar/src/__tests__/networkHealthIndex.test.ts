@@ -3,10 +3,10 @@ import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import {
   NHI_WEIGHTS, ADVANCED_NUTS, ADVANCED_NUT_KEYS, DEGRADED_AFTER_HOURS, advancedAdoptionPercent,
-  nhiSummaryText, nhiOnlineSetText, nhiFormulaText, nhiOnlineRowText, nhiReliabilityRowText,
-  nhiAdvancedRowText, avgUptimeText, nhiScore,
+  nhiSubtitle, NHI_SUBTITLE, NHI_SUBTITLE_GAUGE_HINT, nhiOnlineSetText, nhiFormulaText, nhiOnlineRowText, nhiReliabilityRowText,
+  nhiAdvancedRowText, avgUptimeCaption, nhiScore,
 } from '@/utils/networkHealthIndex'
-import { PROBE_LOCATION, CLIENT_LATENCY_BUTTON_LABEL, latencyTooltipText } from '@/constants/probeLocation'
+import { PROBE_LOCATION, CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLocation'
 
 const src = (rel: string) => readFileSync(resolve(__dirname, rel), 'utf8')
 const adoption = (pairs: Record<string, number>) => Object.entries(pairs).map(([k, percent]) => ({ nut: `NUT-${k.padStart(2, '0')}`, count: 0, percent }))
@@ -67,18 +67,15 @@ describe('advancedAdoptionPercent', () => {
 })
 
 describe('Network Health Index texts come from the constants', () => {
-  it('the summary names every component with its weight', () => {
-    const t = nhiSummaryText()
+  it('the formula names every component with its weight', () => {
+    const t = nhiFormulaText()
     for (const [k, w] of Object.entries(NHI_WEIGHTS)) expect(t, k).toContain(String(w))
-    expect(t).toContain(`online mints ${NHI_WEIGHTS.online}`)
-    expect(t).toContain(`network stability ${NHI_WEIGHTS.stability}`)
+    expect(t).toContain(`Online%×${NHI_WEIGHTS.online}`)
+    expect(t).toContain(`Stability×${NHI_WEIGHTS.stability}`)
   })
 
-  it('changing a weight changes the summary, the formula and the row text', () => {
+  it('changing a weight changes the formula and the row text', () => {
     const w = { online: 40, reliability: 20, diversity: 15, advanced: 15, stability: 10 }
-    expect(nhiSummaryText(w)).toContain('online mints 40')
-    expect(nhiSummaryText(w)).toContain('network stability 10')
-    expect(nhiSummaryText(w)).not.toBe(nhiSummaryText())
     expect(nhiFormulaText(w)).toContain('Online%×40')
     expect(nhiFormulaText(w)).toContain('Stability×10')
     expect(nhiOnlineRowText(36, w)).toBe(nhiOnlineRowText(36, w, DEGRADED_AFTER_HOURS))
@@ -90,8 +87,8 @@ describe('Network Health Index texts come from the constants', () => {
     expect(nhiFormulaText()).toContain(nhiOnlineSetText())
     expect(nhiOnlineSetText(48)).toContain('48h')
     expect(nhiOnlineRowText(10, NHI_WEIGHTS, 48)).toContain('48h')
-    expect(avgUptimeText(48)).toContain('48h')
-    expect(avgUptimeText()).toContain(`${DEGRADED_AFTER_HOURS}h`)
+    expect(avgUptimeCaption(48)).toBe('of mints not offline for 48h+')
+    expect(avgUptimeCaption()).toBe(`of mints not offline for ${DEGRADED_AFTER_HOURS}h+`)
   })
 
   it('the advanced row lists exactly the computed features, in order', () => {
@@ -112,22 +109,18 @@ describe('Network Health Index texts come from the constants', () => {
   })
 
   it('says what is counted: online mints, 0% for a feature nobody offers, no "uptime", no Dashboard grid', () => {
-    const all = [nhiSummaryText(), nhiOnlineSetText(), nhiFormulaText(), nhiOnlineRowText(27), nhiReliabilityRowText(), nhiAdvancedRowText(), avgUptimeText()]
+    const all = [nhiOnlineSetText(), nhiFormulaText(), nhiOnlineRowText(27), nhiReliabilityRowText(), nhiAdvancedRowText(), avgUptimeCaption()]
     for (const t of all) {
       expect(t).not.toMatch(/dashboard/i)
       expect(t).not.toMatch(/\b(safe|secure|trusted|guaranteed|recommended)\b/i)
     }
-    expect(nhiSummaryText()).not.toMatch(/uptime/i)
     expect(nhiAdvancedRowText()).toContain('A feature no mint offers counts as 0%')
     expect(nhiReliabilityRowText()).toContain('without a score counts as 0')
     expect(nhiReliabilityRowText()).toContain('Test mints are included')
-    expect(avgUptimeText()).toContain('not counted as 0%')
   })
 
-  it('every tooltip stays within 220 characters (the desktop header one is summary + online set)', () => {
-    expect(`${nhiSummaryText()} ${nhiOnlineSetText()}`.length).toBeLessThanOrEqual(220)
-    expect(`${nhiSummaryText()} Tap the gauge for the full breakdown.`.length).toBeLessThanOrEqual(220)
-    for (const t of [nhiOnlineRowText(27), nhiReliabilityRowText(), nhiAdvancedRowText(), avgUptimeText(), latencyTooltipText()]) {
+  it('every remaining NHI tooltip stays within 220 characters', () => {
+    for (const t of [nhiOnlineRowText(27), nhiReliabilityRowText(), nhiAdvancedRowText()]) {
       expect(t.length).toBeLessThanOrEqual(220)
     }
   })
@@ -165,7 +158,7 @@ describe('advanced row text names exactly the computed features', () => {
   })
 
   it('never names the removed wallet-side features, in any NHI text', () => {
-    const all = [nhiSummaryText(), nhiOnlineSetText(), nhiFormulaText(), nhiOnlineRowText(27), nhiReliabilityRowText(), nhiAdvancedRowText(), avgUptimeText()]
+    const all = [nhiOnlineSetText(), nhiFormulaText(), nhiOnlineRowText(27), nhiReliabilityRowText(), nhiAdvancedRowText(), avgUptimeCaption()]
     for (const t of all) {
       expect(t).not.toMatch(/Nostr backup|blinded-key|pay-to-blinded|NUT-27|NUT-28/i)
     }
@@ -181,23 +174,39 @@ describe('Stats.tsx wires the generated texts', () => {
     expect(stats).toContain('advancedAdoptionPercent(data.nutAdoption)')
     expect(stats).toContain('nhiScore({')
     expect(stats).toContain('weight: NHI_WEIGHTS.advanced')
-    expect(stats).toContain('{avgUptimeText()}')
-    expect(stats).toContain('nhiSummaryText()')
+    expect(stats).toContain('{avgUptimeCaption()}')
+    expect(stats).toContain('{nhiSubtitle(isMobile)}')
   })
 })
 
-describe('Latency tooltip (Mint Detail)', () => {
-  it('names the real button label and the probe location from their constants', () => {
-    expect(CLIENT_LATENCY_BUTTON_LABEL).toBe('Show my latency')
-    expect(latencyTooltipText()).toBe(`Measured from our server in ${PROBE_LOCATION} at the last probe. "${CLIENT_LATENCY_BUTTON_LABEL}" measures from your device.`)
-    expect(latencyTooltipText('Helsinki', 'Test')).toBe('Measured from our server in Helsinki at the last probe. "Test" measures from your device.')
-    expect(latencyTooltipText()).not.toMatch(/, DE|Click/)
+describe('NHI subtitle and the average-uptime caption (they replaced two tooltips)', () => {
+  it('the subtitle gets the gauge hint only where the gauge opens the breakdown', () => {
+    expect(NHI_SUBTITLE).toBe('Weighted from five factors.')
+    expect(nhiSubtitle(false)).toBe('Weighted from five factors.')
+    expect(nhiSubtitle(true)).toBe('Weighted from five factors. Tap or click the gauge for the breakdown.')
+    expect(nhiSubtitle(true)).toBe(`${NHI_SUBTITLE} ${NHI_SUBTITLE_GAUGE_HINT}`)
   })
 
-  it('MintDetail renders the button label and the tooltip from the same constants', () => {
+  it('the caption is built from DEGRADED_AFTER_HOURS, stays within 32 characters and follows the constant', () => {
+    expect(avgUptimeCaption()).toBe(`of mints not offline for ${DEGRADED_AFTER_HOURS}h+`)
+    expect(avgUptimeCaption().length).toBeLessThanOrEqual(32)
+    expect(avgUptimeCaption(72)).not.toBe(avgUptimeCaption())
+    expect(avgUptimeCaption(72)).toContain('72h')
+  })
+})
+
+describe('Latency caption (Mint Detail)', () => {
+  it('says where the number was measured, from PROBE_LOCATION, and the button keeps its label', () => {
+    expect(CLIENT_LATENCY_BUTTON_LABEL).toBe('Show my latency')
+    expect(latencyCaption()).toBe(`server · ${PROBE_LOCATION}`)
+    expect(latencyCaption('Helsinki')).toBe('server · Helsinki')
+  })
+
+  it('MintDetail renders the caption and the button label from the constants, and has no Latency tooltip', () => {
     const md = src('../pages/MintDetail.tsx')
     expect(md).toContain('{CLIENT_LATENCY_BUTTON_LABEL}')
-    expect(md).toContain('{latencyTooltipText()}')
-    expect(md).not.toMatch(/Click &quot;Test&quot;/)
+    expect(md).toContain('{latencyCaption()}')
+    expect(md).not.toContain('latencyTooltipText')
+    expect(md).not.toContain('latency-info')
   })
 })

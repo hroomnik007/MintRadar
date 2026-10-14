@@ -8,9 +8,10 @@ import * as T from '@/utils/tooltipTexts'
 import { AUDIT_MAX_AGE_HOURS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL, AUDIT_TAB_MIN_SAMPLES } from '@/utils/auditScore'
 import { NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP, TRACKED_NUT_COUNT, computeReliabilityScore, contactComponent } from '@/utils/reliabilityScore'
 import { UNKNOWN_SOFTWARE_POINTS, classifyMintVersion, pointsForMinorsBehind } from '@/utils/versionRule'
-import { NHI_WEIGHTS, DEGRADED_AFTER_HOURS, nhiSummaryText, nhiOnlineSetText, nhiOnlineRowText, nhiReliabilityRowText, nhiAdvancedRowText, avgUptimeText } from '@/utils/networkHealthIndex'
-import { latencyTooltipText } from '@/constants/probeLocation'
+import { NHI_WEIGHTS, DEGRADED_AFTER_HOURS, nhiOnlineSetText, nhiOnlineRowText, nhiReliabilityRowText, nhiAdvancedRowText, avgUptimeCaption } from '@/utils/networkHealthIndex'
 import { TRACKED_NUTS } from '@/constants/nuts'
+import * as nhi from '@/utils/networkHealthIndex'
+import * as probeLocation from '@/constants/probeLocation'
 import { mintAgeBadge } from '@/utils/mintFormatting'
 import { SURGE_ABSOLUTE_GAIN as beGain, SURGE_RATIO as beRatio, SURGE_RATIO_MIN_BASELINE as beBase } from '../../backend/src/reviewSurge'
 import { MINT_MELT_BLAMED_RATIO as beBlamed, MINT_MELT_MIN_SWAPS as beMinSwaps } from '../../backend/src/alertTriggers'
@@ -122,11 +123,9 @@ describe('numbers in the built texts equal their sources', () => {
     expect(beBlamed).toBe(0.5)
   })
   it('Network Health Index texts carry the weights and the degraded hours', () => {
-    expect(numbers(nhiSummaryText())).toEqual(Object.values(NHI_WEIGHTS))
-    expect(nhiSummaryText().startsWith('Five parts')).toBe(true)
     expect(Object.keys(NHI_WEIGHTS)).toHaveLength(5)
     expect(numbers(nhiOnlineSetText())).toEqual([DEGRADED_AFTER_HOURS])
-    expect(numbers(avgUptimeText())).toEqual([T.UPTIME_WINDOW_HOURS, DEGRADED_AFTER_HOURS, 0]) // "counted as 0%"
+    expect(numbers(avgUptimeCaption())).toEqual([DEGRADED_AFTER_HOURS])
   })
 })
 
@@ -155,8 +154,8 @@ const BUILT: Record<string, string> = {
   cleanTileText: T.cleanTileText(120, 126, 4, 2, n => n.toLocaleString('en-US')),
   cashuInfoViewText: T.cashuInfoViewText({ fallbackFrom8333: true, checkedMinutesAgo: 12, notRecent: true, failuresAttributed: 3 }),
   moreAlertsNote: T.moreAlertsNote(), KEYSETS_HINT: T.KEYSETS_HINT, newMintBadgeText: T.newMintBadgeText(), newMintCapNote: T.newMintCapNote(), OPERATOR_REVIEW_NOTE: T.OPERATOR_REVIEW_NOTE, operatorExcludedText: T.operatorExcludedText(2),
-  nhiSummaryText: nhiSummaryText() + ' ' + nhiOnlineSetText(), nhiOnlineRowText: nhiOnlineRowText(26), nhiReliabilityRowText: nhiReliabilityRowText(),
-  nhiAdvancedRowText: nhiAdvancedRowText(), avgUptimeText: avgUptimeText(), latencyTooltipText: latencyTooltipText(),
+  nhiOnlineSetText: nhiOnlineSetText(), nhiOnlineRowText: nhiOnlineRowText(26), nhiReliabilityRowText: nhiReliabilityRowText(),
+  nhiAdvancedRowText: nhiAdvancedRowText(),
   ...Object.fromEntries(Object.entries(T.HTTP_ERROR_EXPLANATIONS).map(([k, v]) => [`HTTP ${k}`, v])),
   ...Object.fromEntries(Object.entries(T.NON_HTTP_ERROR_EXPLANATIONS).map(([k, v]) => [k, v])),
 }
@@ -181,6 +180,18 @@ describe('tooltip style rules', () => {
     }
     expect(seen.size).toBeGreaterThan(40)
     expect(bad).toEqual([])
+  })
+
+  // The four explanations removed 2026-10-14 (Latency tile, Network health index header, average uptime tile, Reliability
+  // Score card header) are gone from the extraction, and the builders that produced them are gone from the code.
+  it('the removed tooltips are neither in the e2e extraction fixture nor exported any more', () => {
+    const fixture = readFileSync(resolve(__dirname, '../../e2e/fixtures/tooltip-texts.json'), 'utf8')
+    for (const gone of ['Measured from our server in', 'Five parts, in points', 'Average 24-hour uptime of all mints', 'Score = Uptime×']) {
+      expect(fixture, gone).not.toContain(gone)
+    }
+    expect(nhi).not.toHaveProperty('nhiSummaryText')
+    expect(nhi).not.toHaveProperty('avgUptimeText')
+    expect(probeLocation).not.toHaveProperty('latencyTooltipText')
   })
 
   it('the checker itself catches what it should', () => {

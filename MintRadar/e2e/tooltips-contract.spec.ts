@@ -287,7 +287,7 @@ async function survivesRefetch(browser: Browser, vp: Vp, pointer: Pointer) {
   await page.clock.install()
   await page.goto('/stats')
   await expect(page.locator('.nhi-gauge-wrap')).toBeVisible()
-  const uptime = page.locator('.smc-label-info').filter({ hasText: 'average uptime' }).locator('[data-tooltip-trigger]')
+  const uptime = page.locator('.stats-now-panel [data-tooltip-trigger]').first() // the "outdated software" ⓘ (the average-uptime one was removed)
   await uptime.scrollIntoViewIfNeeded()
   const box = (await uptime.boundingBox())!
   if (pointer === 'touch') await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2)

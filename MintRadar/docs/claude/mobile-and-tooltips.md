@@ -215,7 +215,7 @@ mint", "probe", "mint" (never "minter"), numbers with units.
 - **A number, window, threshold, list or button name in a text comes from the constant or function the code uses, never typed a second
   time.** `src/utils/tooltipTexts.ts` holds the builders (`reviewSurgeText()`, `versionRowText()`, `auditRowText()`, `scoreFormulaText()`,
   `cashuInfoViewText()`, `moreAlertsNote()`, the HTTP-error explanations ...); the Network Health Index texts stay in
-  `networkHealthIndex.ts`, the latency text in `constants/probeLocation.ts`. Score-component maxima are derived by calling the real
+  `networkHealthIndex.ts`, the Latency caption in `constants/probeLocation.ts`. Score-component maxima are derived by calling the real
   functions (`uptimeComponent(100)`, `pointsForMinorsBehind(0)`, `contactComponent(99)`, `auditComponent(0, ...)`), so the text cannot drift
   from the score. Facts only the backend defines (review surge rule, audit window of ~100 swaps, alert cooldowns, the 24 h uptime window)
   are declared once in `tooltipTexts.ts` and compared with the backend by `src/__tests__/tooltipTexts.test.ts`.
@@ -289,6 +289,21 @@ Measured (touch context): visible height 27px ≤640px (padding 7/8), 30px above
 - cashu.info tile "Avg swap time": no ⓘ any more (`AuditCzTile.tooltip` is optional); the label says what it is and the sibling tiles' tooltips and the tab's ⓘ state the 7 days and the source.
 - "Hide test mints": the `title` on the checkbox label is gone; the one explanation is the InfoTooltip on the "Test mints hidden" tag (the card's "Test mint" badge only exists while test mints are shown, so it cannot carry it).
 - Reviews tab filter-group `title` ("Counts every listed review ..."): gone; its fact moved into the Community Rating tile's ⓘ (`operatorExcludedText()`: "... The Reviews tab still lists it, marked Operator.").
+
+**Four more explanations removed (2026-10-14, owner decision; `e2e/tooltips-removed-captions.spec.ts`).** The ⓘ and its text are gone; the rows INSIDE the score
+breakdowns and every other tooltip stay. Where each fact lives now:
+- Mint Detail **Latency** tile: caption `latencyCaption()` ("server · {PROBE_LOCATION}", `constants/probeLocation.ts`) says where the number comes from; the
+  "Show my latency" button (`CLIENT_LATENCY_BUTTON_LABEL`) keeps its label and its own ⓘ. Not carried: "at the last probe" (the tile shows the latest probe anyway).
+- Stats **"Network health index"** header: the subtitle `nhiSubtitle()` is "Weighted from five factors." and, **only up to 768 px**, adds "Tap or click the gauge for the breakdown."
+  - that is where the gauge (`.nhi-wrap`, `role=button`, tabbable, Enter/Space) opens the dialog; above 768 px the breakdown is inline and the gauge is not clickable, so the hint
+  would be false. The weights are the "(30%)" in each breakdown row; the online-set sentence (`nhiOnlineSetText()`) is in the dialog footer and the Online row's tooltip (on desktop only there).
+- Stats **"average uptime"** tile: the caption `avgUptimeCaption()` is "of mints not offline for {DEGRADED_AFTER_HOURS}h+" (was "of active mints"). The rule is the code's: mints with
+  `degraded === true` (backend `computeDegraded`: >= 4 probes in 24 h and none online, or offline with the last probe older than 24 h) and mints without probe data are left out.
+  Not carried (32-character limit): the 24-hour window, "mints without probe data are skipped", "test mints are included"; `Methodology` has the full definition.
+- Mint Detail **"Reliability Score"** card header: the five weights are the row labels ("Uptime (40%)" ...), the new-mint cap is the `.rb-new-note` line when it applies, and the
+  breakdown dialog (mobile) still shows the formula line `scoreFormulaText()`. New: one muted `.rb-scope-note` "Operational health, not solvency." under the badge (the card is hidden at <= 640 px,
+  where the compact tile opens the dialog). Not carried on the desktop card: the formula as one sentence.
+The extraction fixture lost exactly these four texts (and the trigger counts); `tooltipTexts.test.ts` checks they are gone and that every remaining text obeys the style rules.
 
 **Explanations promoted from a tooltip to visible text (2026-10-14).** Each is one muted line in the existing style, next to what it explains, and
 only when it applies (all in `tooltipTexts.ts`; `e2e/tooltip-promoted-lines.spec.ts` checks text, condition and fit at 320 / 390 / 1440 px):

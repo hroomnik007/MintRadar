@@ -53,7 +53,7 @@ import {
 import { classifyMintVersion, latestMapFor, type LatestVersions } from '@/utils/versionRule'
 import { useNow } from '@/hooks/useNow'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
-import { PROBE_LOCATION, CLIENT_LATENCY_BUTTON_LABEL, latencyTooltipText } from '@/constants/probeLocation'
+import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLocation'
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { reviewAvatarColor, avatarTextColor } from '@/utils/avatarColors'
@@ -1314,11 +1314,10 @@ function MintDetailContent({ url }: { url: string }) {
           <div style={{flex:1}}>
             <div className="md-sc-label" style={{display:'flex',alignItems:'center',gap:4}}>
               Latency
-              <InfoTooltip className="latency-info" iconSize={11} width={200} about="Latency" text={latencyTooltipText()} />
             </div>
             <div className="md-sc-value">{latency !== null ? `${latency} ms` : '—'}</div>
             <div className="md-sc-sub">
-              <span>server · {PROBE_LOCATION}</span>
+              <span>{latencyCaption()}</span>
               <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
                 <button
                   onClick={() => { void testClientLatency() }}
@@ -2361,7 +2360,6 @@ function MintDetailContent({ url }: { url: string }) {
                 Audit tab heading's own AuditSourceInfoIcon usage. */}
             <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:11}}>
               <span className="md-panel-title" style={{marginBottom:0}}>Reliability Score</span>
-              <AuditSourceInfoIcon about="Reliability Score" text={scoreFormulaText()} />
             </div>
             <div className="reliability-wrap">
               <div className="gauge-wrap">
@@ -2377,6 +2375,7 @@ function MintDetailContent({ url }: { url: string }) {
               </div>
               <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:5,padding:'4px 10px',textAlign:'center'}}>{tsInfo.label}</span>
             </div>
+            <div className="rb-scope-note">Operational health, not solvency.</div>
             {isNew && <div className="rb-new-note">{newMintCapNote()}</div>}
             {/* All 5 components always visible here (no "Details" click / donut
                 tap needed) — the modal below (opened only from the mobile

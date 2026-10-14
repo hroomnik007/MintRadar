@@ -1,10 +1,10 @@
 import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_MINTS } from './fixtures/mocks'
+import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '../src/constants/probeLocation'
 
-// The Stats tooltips (Network Health Index header, its rows, the average-uptime tile) and the
-// Mint Detail Latency tooltip state what the code computes. Their texts are built from constants
-// (src/utils/networkHealthIndex.ts, src/constants/probeLocation.ts); this checks what the browser
-// shows: weights, the advanced-feature list, and the real "Show my latency" button label.
+// The Stats tooltips of the Network Health Index rows state what the code computes; their texts are built from
+// constants (src/utils/networkHealthIndex.ts); this checks what the browser shows: weights and the advanced-feature
+// list. The header, average-uptime and Latency tooltips were removed 2026-10-14 (e2e/tooltips-removed-captions.spec.ts).
 
 const ALPHA = MOCK_MINTS[0]!.url
 const tip = (page: Page) => page.getByRole('tooltip')
@@ -14,18 +14,11 @@ test.beforeEach(async ({ page }) => {
   await installApiMocks(page)
 })
 
-test.describe('Stats tooltips state what is computed', () => {
+test.describe('Stats breakdown-row tooltips state what is computed', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 1400 })
     await page.goto('/stats')
     await expect(page.locator('.nhi-gauge-wrap')).toBeVisible()
-  })
-
-  test('Network health index header: components with weights, the online set, no Dashboard-grid claim', async ({ page }) => {
-    await page.locator('.nhi-title-row svg').first().hover()
-    await expect(tip(page)).toContainText('online mints 30, Reliability Score 25, software diversity 15, advanced NUTs 15, network stability 15')
-    await expect(tip(page)).toContainText('not offline for 24h or more')
-    await expect(tip(page)).not.toContainText(/dashboard/i)
   })
 
   test('breakdown rows: each row tooltip matches the row it explains', async ({ page }) => {
@@ -46,26 +39,17 @@ test.describe('Stats tooltips state what is computed', () => {
     await expect(tip(page)).not.toContainText(/Nostr backup|blinded/i)
     await expect(tip(page)).toContainText('A feature no mint offers counts as 0%')
   })
-
-  test('average uptime tile: says which mints are averaged and how missing data is treated', async ({ page }) => {
-    await page.locator('.smc-label-info').filter({ hasText: 'average uptime' }).locator('svg').hover()
-    await expect(tip(page)).toContainText('all mints not offline for 24h or more')
-    await expect(tip(page)).toContainText('not counted as 0%')
-    await expect(tip(page)).not.toContainText(/dashboard/i)
-  })
 })
 
-test('Mint Detail Latency tooltip names the real button label', async ({ page }) => {
+test('Mint Detail Latency tile: the caption names the probe location and the button keeps its label', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1000 })
   await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
   await expect(page.locator('.md-tabs')).toBeVisible()
 
   const label = (await page.locator('.latency-test-btn').innerText()).trim()
+  expect(label).toBe(CLIENT_LATENCY_BUTTON_LABEL)
   expect(label).toBe('Show my latency')
-
-  await page.locator('.md-sc-label').filter({ hasText: 'Latency' }).first().locator('svg').hover()
-  const t = tip(page).filter({ hasText: 'Measured from our server' })
-  await expect(t).toContainText(`"${label}" measures from your device`)
-  await expect(t).toContainText('Measured from our server in Nuremberg at the last probe.')
-  await expect(t).not.toContainText(/Click|, DE/)
+  const tile = page.locator('.md-sc').filter({ has: page.locator('.latency-test-btn') })
+  await expect(tile.locator('.md-sc-sub')).toContainText(latencyCaption())
+  await expect(tile.locator('.md-sc-sub')).toContainText('server · Nuremberg')
 })

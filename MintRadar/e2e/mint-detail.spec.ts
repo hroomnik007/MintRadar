@@ -67,11 +67,10 @@ test.describe('Mint Detail', () => {
     await expect(panel.getByText('NUT Support (15%)')).toBeVisible()
     await expect(panel.getByText('Version (15%)')).toBeVisible()
     await expect(panel.getByText('Contact (5%)')).toBeVisible()
-    // The score formula moved into an (i) tooltip beside the panel title
-    // (2026-09-20, to reclaim vertical space) instead of always being
-    // visible as text.
-    await panel.locator('.md-audit-info').hover()
-    await expect(page.getByRole('tooltip')).toContainText(/Score = Uptime×40%/)
+    // The (i) beside the panel title (which held the score formula) was removed 2026-10-14; the weights are in the
+    // row labels above, and one muted line says what the score is not.
+    await expect(panel.locator('.md-audit-info')).toHaveCount(0)
+    await expect(panel.getByText('Operational health, not solvency.')).toBeVisible()
   })
 
   test('Reliability Score details modal still opens from the mobile compact tile', async ({ page }) => {

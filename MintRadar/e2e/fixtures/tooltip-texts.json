@@ -586,19 +586,17 @@
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Last swaps, newest first",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "OK · <DATE>",
       "OK · <DATE>",
       "OK · <DATE>",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
       "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 14
+    "triggers": 12
   },
   "mint-alpha-audit-8333@390": {
     "texts": [
@@ -608,7 +606,6 @@
       "All-time count of mint operations that audit.8333.space has recorded for this mint.",
       "Average duration of the successful swaps in the same rolling window as Recent success rate.",
       "Last swaps, newest first",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "OK · <DATE>",
       "OK · <DATE>",
@@ -617,7 +614,7 @@
       "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 8
+    "triggers": 7
   },
   "mint-alpha-audit-cz@1440": {
     "texts": [
@@ -629,14 +626,12 @@
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Last swaps, newest first",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "OK · <DATE>",
       "OK · <DATE>",
       "OK · <DATE>",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)",
       "Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)",
       "This tab shows cashu.info data, checked 9 minutes ago. cashu.info attributes 1 failure to this mint.",
@@ -644,7 +639,7 @@
       "failed · <DATE>",
       "melt quote failed"
     ],
-    "triggers": 14
+    "triggers": 12
   },
   "mint-alpha-audit-cz@390": {
     "texts": [
@@ -652,7 +647,6 @@
       "126 of 126 swaps in the last 7 days, 19 failed for other reasons",
       "Add Alpha Mint to watchlist",
       "Last swaps, newest first",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "OK · <DATE>",
       "OK · <DATE>",
@@ -664,7 +658,7 @@
       "failed · <DATE>",
       "melt quote failed"
     ],
-    "triggers": 8
+    "triggers": 7
   },
   "mint-alpha-audit@1440": {
     "texts": [
@@ -678,19 +672,17 @@
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Last swaps, newest first",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "OK · <DATE>",
       "OK · <DATE>",
       "OK · <DATE>",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
       "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 14
+    "triggers": 12
   },
   "mint-alpha-audit@390": {
     "texts": [
@@ -700,7 +692,6 @@
       "All-time count of mint operations that audit.8333.space has recorded for this mint.",
       "Average duration of the successful swaps in the same rolling window as Recent success rate.",
       "Last swaps, newest first",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "OK · <DATE>",
       "OK · <DATE>",
@@ -709,7 +700,7 @@
       "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 8
+    "triggers": 7
   },
   "mint-alpha-history@1440": {
     "texts": [
@@ -719,24 +710,21 @@
       "Copy full keyset ID",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 9
+    "triggers": 7
   },
   "mint-alpha-history@390": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "Add Alpha Mint to watchlist",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 3
+    "triggers": 2
   },
   "mint-alpha-nuts@1440": {
     "texts": [
@@ -746,27 +734,24 @@
       "Copy full keyset ID",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 10
+    "triggers": 8
   },
   "mint-alpha-nuts@390": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "Add Alpha Mint to watchlist",
       "Copy full keyset ID",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 4
+    "triggers": 3
   },
   "mint-alpha-overview@1440": {
     "texts": [
@@ -779,14 +764,12 @@
       "Country where the IP block is registered, not where the server stands. For the server's city see Geographic Distribution on the Stats page.",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 10
+    "triggers": 8
   },
   "mint-alpha-overview@390": {
     "texts": [
@@ -795,11 +778,10 @@
       "Copy",
       "Copy full public key",
       "Country where the IP block is registered, not where the server stands. For the server's city see Geographic Distribution on the Stats page.",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 4
+    "triggers": 3
   },
   "mint-alpha-reviews@1440": {
     "texts": [
@@ -812,15 +794,13 @@
       "Copy reviewer npub",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Open this review on Nostr",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 10
+    "triggers": 8
   },
   "mint-alpha-reviews@390": {
     "texts": [
@@ -829,12 +809,11 @@
       "Anyone can create a key, so ratings can be inflated. Treat them as a hint, not proof.",
       "Copy link to this review",
       "Copy reviewer npub",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Open this review on Nostr",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 4
+    "triggers": 3
   },
   "mint-alpha-score-dialog@390": {
     "texts": [
@@ -846,13 +825,12 @@
       "Country where the IP block is registered, not where the server stands. For the server's city see Geographic Distribution on the Stats page.",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 9
+    "triggers": 8
   },
   "mint-new-nuts@1440": {
     "texts": [
@@ -861,28 +839,25 @@
       "Copy full keyset ID",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
       "Reliability Score capped at 75 for the first 30 days.",
-      "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "This mint does not support NUT-09, so wallets cannot restore ecash from a seed phrase here. Keep your own token backups.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 10
+    "triggers": 8
   },
   "mint-new-nuts@390": {
     "texts": [
       "Add Newbie Mint to watchlist",
       "Copy full keyset ID",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Reliability Score capped at 75 for the first 30 days.",
       "This mint does not support NUT-09, so wallets cannot restore ecash from a seed phrase here. Keep your own token backups.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 4
+    "triggers": 3
   },
   "mint-new-overview@1440": {
     "texts": [
@@ -893,27 +868,24 @@
       "Copy full public key",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
       "Reliability Score capped at 75 for the first 30 days.",
-      "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 9
+    "triggers": 7
   },
   "mint-new-overview@390": {
     "texts": [
       "Add Newbie Mint to watchlist",
       "Copy",
       "Copy full public key",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Reliability Score capped at 75 for the first 30 days.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 3
+    "triggers": 2
   },
   "mint-offline-overview@1440": {
     "texts": [
@@ -924,27 +896,24 @@
       "Copy full public key",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "The mint's server is unreachable — the application behind the proxy may have crashed or restarted",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 9
+    "triggers": 7
   },
   "mint-offline-overview@390": {
     "texts": [
       "Add Charlie Mint to watchlist",
       "Copy",
       "Copy full public key",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "The mint's server is unreachable — the application behind the proxy may have crashed or restarted",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 3
+    "triggers": 2
   },
   "mint-operator-overview@1440": {
     "texts": [
@@ -957,14 +926,12 @@
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Excludes 1 review written by the mint's operator. The Reviews tab still lists it, marked Operator.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 9
+    "triggers": 7
   },
   "mint-operator-overview@390": {
     "texts": [
@@ -973,11 +940,10 @@
       "Copy",
       "Copy full public key",
       "Excludes 1 review written by the mint's operator. The Reviews tab still lists it, marked Operator.",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 3
+    "triggers": 2
   },
   "mint-operator-reviews@1440": {
     "texts": [
@@ -992,16 +958,14 @@
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Excludes 1 review written by the mint's operator. The Reviews tab still lists it, marked Operator.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Open this review on Nostr",
       "Open this review on Nostr",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 10
+    "triggers": 8
   },
   "mint-operator-reviews@390": {
     "texts": [
@@ -1012,13 +976,12 @@
       "Copy reviewer npub",
       "Copy reviewer npub",
       "Excludes 1 review written by the mint's operator. The Reviews tab still lists it, marked Operator.",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Open this review on Nostr",
       "Open this review on Nostr",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 4
+    "triggers": 3
   },
   "mint-test-audit@1440": {
     "texts": [
@@ -1031,7 +994,6 @@
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Last swaps, newest first",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Not for real funds — for testing and development only",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
@@ -1039,12 +1001,11 @@
       "OK · <DATE>",
       "OK · <DATE>",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
       "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 14
+    "triggers": 12
   },
   "mint-test-audit@390": {
     "texts": [
@@ -1053,7 +1014,6 @@
       "All-time count of mint operations that audit.8333.space has recorded for this mint.",
       "Average duration of the successful swaps in the same rolling window as Recent success rate.",
       "Last swaps, newest first",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Not for real funds — for testing and development only",
       "OK · <DATE>",
@@ -1063,7 +1023,7 @@
       "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 8
+    "triggers": 7
   },
   "mint-test-overview@1440": {
     "texts": [
@@ -1074,27 +1034,24 @@
       "Copy full public key",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Not for real funds — for testing and development only",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 9
+    "triggers": 7
   },
   "mint-test-overview@390": {
     "texts": [
       "Add Test Nut to watchlist",
       "Copy",
       "Copy full public key",
-      "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Not for real funds — for testing and development only",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 3
+    "triggers": 2
   },
   "nuts@1440": {
     "texts": [
@@ -1167,62 +1124,52 @@
   "stats-nhi-dialog@390": {
     "texts": [
       "26 of 30 points: the share of online mints among all mints not offline for 24h or more (test mints included). Not a count of mints.",
-      "Average 24-hour uptime of all mints not offline for 24h or more. Mints without probe data are skipped, not counted as 0%. Test mints are included.",
       "Average Reliability Score (0-100) of online mints. An online mint without a score counts as 0. Test mints are included.",
       "Average share of online mints offering each of: P2PK, DLEQ, HTLCs, WebSocket, clear auth, blind auth, BOLT12, on-chain. A feature no mint offers counts as 0%.",
-      "Five parts, in points: online mints 30, Reliability Score 25, software diversity 15, advanced NUTs 15, network stability 15. Rows show points, not mint counts. Tap the gauge for the full breakdown.",
       "How evenly mints are spread across different software - heavy reliance on one implementation scores lower.",
       "MintRadar",
       "Share of mints tracked for a month or more. A stand-in for churn, which MintRadar cannot measure yet.",
       "Share of tracked Nutshell and cdk-mintd mints that are two or more minor versions behind the newest stable release. Pre-releases of a current line are not counted. Not a security score."
     ],
-    "triggers": 8
+    "triggers": 6
   },
   "stats-software-modal@1440": {
     "texts": [
       "26 of 30 points: the share of online mints among all mints not offline for 24h or more (test mints included). Not a count of mints.",
-      "Average 24-hour uptime of all mints not offline for 24h or more. Mints without probe data are skipped, not counted as 0%. Test mints are included.",
       "Average Reliability Score (0-100) of online mints. An online mint without a score counts as 0. Test mints are included.",
       "Average share of online mints offering each of: P2PK, DLEQ, HTLCs, WebSocket, clear auth, blind auth, BOLT12, on-chain. A feature no mint offers counts as 0%.",
-      "Five parts, in points: online mints 30, Reliability Score 25, software diversity 15, advanced NUTs 15, network stability 15. Rows show points, not mint counts. Online share counts mints not offline for 24h or more.",
       "How evenly mints are spread across different software - heavy reliance on one implementation scores lower.",
       "MintRadar",
       "Share of mints tracked for a month or more. A stand-in for churn, which MintRadar cannot measure yet.",
       "Share of tracked Nutshell and cdk-mintd mints that are two or more minor versions behind the newest stable release. Pre-releases of a current line are not counted. Not a security score."
     ],
-    "triggers": 8
+    "triggers": 6
   },
   "stats-software-modal@390": {
     "texts": [
-      "Average 24-hour uptime of all mints not offline for 24h or more. Mints without probe data are skipped, not counted as 0%. Test mints are included.",
-      "Five parts, in points: online mints 30, Reliability Score 25, software diversity 15, advanced NUTs 15, network stability 15. Rows show points, not mint counts. Tap the gauge for the full breakdown.",
       "MintRadar",
       "Share of tracked Nutshell and cdk-mintd mints that are two or more minor versions behind the newest stable release. Pre-releases of a current line are not counted. Not a security score."
     ],
-    "triggers": 3
+    "triggers": 1
   },
   "stats@1440": {
     "texts": [
       "26 of 30 points: the share of online mints among all mints not offline for 24h or more (test mints included). Not a count of mints.",
-      "Average 24-hour uptime of all mints not offline for 24h or more. Mints without probe data are skipped, not counted as 0%. Test mints are included.",
       "Average Reliability Score (0-100) of online mints. An online mint without a score counts as 0. Test mints are included.",
       "Average share of online mints offering each of: P2PK, DLEQ, HTLCs, WebSocket, clear auth, blind auth, BOLT12, on-chain. A feature no mint offers counts as 0%.",
-      "Five parts, in points: online mints 30, Reliability Score 25, software diversity 15, advanced NUTs 15, network stability 15. Rows show points, not mint counts. Online share counts mints not offline for 24h or more.",
       "How evenly mints are spread across different software - heavy reliance on one implementation scores lower.",
       "MintRadar",
       "Share of mints tracked for a month or more. A stand-in for churn, which MintRadar cannot measure yet.",
       "Share of tracked Nutshell and cdk-mintd mints that are two or more minor versions behind the newest stable release. Pre-releases of a current line are not counted. Not a security score."
     ],
-    "triggers": 8
+    "triggers": 6
   },
   "stats@390": {
     "texts": [
-      "Average 24-hour uptime of all mints not offline for 24h or more. Mints without probe data are skipped, not counted as 0%. Test mints are included.",
-      "Five parts, in points: online mints 30, Reliability Score 25, software diversity 15, advanced NUTs 15, network stability 15. Rows show points, not mint counts. Tap the gauge for the full breakdown.",
       "MintRadar",
       "Share of tracked Nutshell and cdk-mintd mints that are two or more minor versions behind the newest stable release. Pre-releases of a current line are not counted. Not a security score."
     ],
-    "triggers": 3
+    "triggers": 1
   },
   "submit-modal@1440": {
     "texts": [
