@@ -20,6 +20,8 @@ import { expectedTableProblems, expectedTooltips } from './fixtures/tooltipExpec
 
 const BEFORE = JSON.parse(readFileSync(new URL('./fixtures/tooltip-texts.json', import.meta.url), 'utf8')) as Record<string, { texts: string[] }>
 const MAX_OPENED_PER_STATE = 8
+/** States whose first trigger is also pinned to the left and right edge (the clamp check); three pages are enough, it is one function. */
+const EDGE_STATES = ['home', 'stats', 'mint-alpha-overview']
 // Debugging aid: TT_STATES=home,stats runs only those states (and TT_TIMING=1 prints where the time goes).
 const ONLY = process.env.TT_STATES?.split(',')
 const dbg = (m: string) => { if (process.env.TT_TIMING) console.log(`  . ${new Date().toISOString().slice(14, 23)} ${m}`) }
@@ -126,6 +128,9 @@ async function open(page: Page, pointer: Pointer, p: { x: number; y: number }) {
   if (pointer === 'touch') await page.touchscreen.tap(p.x, p.y)
   else await page.mouse.move(p.x, p.y)
   await expect(tips(page)).toHaveCount(1)
+  // The box exists before it is placed (left/top 0, hidden); it becomes visible only once the component has positioned it.
+  // Measuring earlier would read the unplaced box, which always lies inside the viewport.
+  await expect(tips(page)).toHaveCSS('visibility', 'visible')
 }
 
 async function checkState(page: Page, state: TooltipState, vp: Vp, pointer: Pointer, expected: [number, number]) {
@@ -176,6 +181,26 @@ async function checkState(page: Page, state: TooltipState, vp: Vp, pointer: Poin
   // reached, fails here instead of passing silently with nothing to check.
   expect(opened, `${state.id} @${vp.width} ${pointer}: distinct triggers opened (expected at least ${expected[1]})`).toBeGreaterThanOrEqual(expected[1])
   if (!first) return
+
+  // --- the horizontal clamp: a trigger pinned to the left and to the right edge of the viewport still gets a tooltip inside it.
+  // (In the pages as they are every trigger sits near the middle of a 320 px screen, so only this exercises the clamp.)
+  if (EDGE_STATES.includes(state.id)) {
+    for (const edge of ['left', 'right'] as const) {
+      const loc = page.locator(`[data-tt-i="${first.i}"]`)
+      const original = await loc.evaluate(el => el.getAttribute('style'))
+      await loc.evaluate((el, side) => { (el as HTMLElement).style.cssText += `;position:fixed;${side}:2px;top:160px;margin:0;z-index:2147483000` }, edge)
+      const p = await reachable(page, first.i)
+      expect(p, `${state.id}: the trigger pinned to the ${edge} edge is reachable`).not.toBeNull()
+      await open(page, pointer, p!)
+      const s = await openState(page, first.i)
+      expect(s.inside, `${state.id} @${vp.width} ${pointer}: tooltip of a trigger at the ${edge} edge is inside the viewport ${JSON.stringify(s.rect)} of ${s.vw}x${s.vh}`).toBe(true)
+      expect(s.touchesTrigger, `${state.id}: ... and does not cover the trigger`).toBe(false)
+      await page.keyboard.press('Escape')
+      await expect(tips(page)).toHaveCount(0)
+      await loc.evaluate((el, style) => { if (style === null) el.removeAttribute('style'); else el.setAttribute('style', style) }, original)
+      if (pointer === 'mouse') await page.mouse.move(1, 1)
+    }
+  }
 
   dbg('one at a time')
   // --- one at a time: opening a second tooltip closes the first
