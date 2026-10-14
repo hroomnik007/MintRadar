@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from '@playwright/test'
+import { expect, type Locator, type Page, type Request } from '@playwright/test'
 
 // Deterministic replacements for fixed waits (see docs/claude/e2e-conventions.md). Nothing here sleeps: every
 // helper waits for something the browser can report (frames painted, a message-channel task, a network round trip
@@ -61,4 +61,34 @@ export async function scrollToStable(locator: Locator): Promise<void> {
     const after = await locator.boundingBox()
     return !!before && !!after && before.x === after.x && before.y === after.y && before.width === after.width && before.height === after.height
   }, { message: 'the element has a stable box in the viewport' }).toBe(true)
+}
+
+const pendingRequests = new WeakMap<Page, Set<Request>>()
+
+/** Starts tracking the page's in-flight HTTP requests (call before the first navigation; safe to call twice). */
+export function trackRequests(page: Page): Set<Request> {
+  let pending = pendingRequests.get(page)
+  if (!pending) {
+    const set = new Set<Request>()
+    pending = set
+    pendingRequests.set(page, set)
+    page.on('request', r => { set.add(r) })
+    page.on('requestfinished', r => { set.delete(r) })
+    page.on('requestfailed', r => { set.delete(r) })
+  }
+  return pending
+}
+
+/**
+ * Waits until no request is in flight across three consecutive painted frames (a response that makes the app ask for
+ * more is followed by a render, so one quiet instant is not enough). Replaces waitForLoadState('networkidle'), which
+ * always pays its 500 ms quiet period. Needs trackRequests(page) before the navigation to see requests made during it.
+ */
+export async function networkQuiet(page: Page): Promise<void> {
+  const pending = trackRequests(page)
+  await expect.poll(async () => {
+    if (pending.size > 0) return `in flight: ${[...pending].map(r => r.url()).join(', ')}`
+    await frames(page, 3)
+    return pending.size === 0 ? 'quiet' : 'busy again'
+  }, { message: 'no request in flight', timeout: 10_000, intervals: [20] }).toBe('quiet')
 }

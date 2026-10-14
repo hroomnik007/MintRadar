@@ -1,10 +1,11 @@
 import { readFileSync } from 'node:fs'
-import { test, expect, type Browser, type Page } from '@playwright/test'
+import { test, expect, type Browser, type BrowserContext, type Page } from '@playwright/test'
 import { MOCK_STATS } from './fixtures/mocks'
 import { TOOLTIP_STATES, VIEWPORTS, installTooltipMocks, type TooltipState } from './fixtures/tooltipStates'
 import { extractTooltipTexts } from './fixtures/tooltipExtract'
 import { hitAreaReport } from './fixtures/tooltipHitArea'
 import { scrollToStable } from './fixtures/settle'
+import { expectedTableProblems, expectedTooltips } from './fixtures/tooltipExpected'
 
 // The contract of the one tooltip component (src/components/InfoTooltip.tsx), checked on every page and state that
 // carries tooltips, at the five viewports, with a mouse and with touch. One test per viewport.
@@ -26,13 +27,17 @@ const dbg = (m: string) => { if (process.env.TT_TIMING) console.log(`  . ${new D
 type Pointer = 'mouse' | 'touch'
 type Vp = { width: number; height: number }
 
-async function newPage(browser: Browser, vp: Vp, pointer: Pointer): Promise<Page> {
-  const ctx = await browser.newContext({
+function newContext(browser: Browser, vp: Vp, pointer: Pointer): Promise<BrowserContext> {
+  return browser.newContext({
     viewport: vp,
     hasTouch: pointer === 'touch',
     isMobile: pointer === 'touch' && vp.width <= 768,
     serviceWorkers: 'block',
   })
+}
+
+/** A page of the given context with animations off. */
+async function pageIn(ctx: BrowserContext): Promise<Page> {
   const page = await ctx.newPage()
   await page.addInitScript(() => {
     const s = document.createElement('style')
@@ -123,8 +128,9 @@ async function open(page: Page, pointer: Pointer, p: { x: number; y: number }) {
   await expect(tips(page)).toHaveCount(1)
 }
 
-async function checkState(page: Page, state: TooltipState, vp: Vp, pointer: Pointer, notes: string[]) {
+async function checkState(page: Page, state: TooltipState, vp: Vp, pointer: Pointer, expected: [number, number]) {
   const all = await scanTriggers(page)
+  expect(all.length, `${state.id} @${vp.width} ${pointer}: visible tooltip triggers (expected at least ${expected[0]})`).toBeGreaterThanOrEqual(expected[0])
   // --- every trigger: button, focusable, named, 24 x 24, no overlap, nothing described while closed
   for (const t of all) {
     const where = `${state.id} · "${t.name.slice(0, 40)}"`
@@ -166,7 +172,9 @@ async function checkState(page: Page, state: TooltipState, vp: Vp, pointer: Poin
     if (pointer === 'mouse') await page.mouse.move(1, 1)
     opened++
   }
-  if (opened === 0) notes.push(`${state.id}: no reachable trigger`)
+  // The explicit expectation of tooltipExpected.ts: a state that loses its tooltips, or whose triggers can no longer be
+  // reached, fails here instead of passing silently with nothing to check.
+  expect(opened, `${state.id} @${vp.width} ${pointer}: distinct triggers opened (expected at least ${expected[1]})`).toBeGreaterThanOrEqual(expected[1])
   if (!first) return
 
   dbg('one at a time')
@@ -279,8 +287,8 @@ async function textsMatchBefore(page: Page, state: TooltipState, vp: Vp) {
   expect(texts, `tooltip texts of ${key} equal the extraction made before the migration`).toEqual(before.texts)
 }
 
-async function survivesRefetch(browser: Browser, vp: Vp, pointer: Pointer) {
-  const page = await newPage(browser, vp, pointer)
+async function survivesRefetch(ctx: BrowserContext, pointer: Pointer) {
+  const page = await pageIn(ctx)
   let hits = 0
   await installTooltipMocks(page)
   await page.route('**/api/stats', r => { hits++; return r.fulfill({ json: { ...MOCK_STATS, avgReliabilityScore: 50 + hits } }) })
@@ -300,33 +308,64 @@ async function survivesRefetch(browser: Browser, vp: Vp, pointer: Pointer) {
   await expect.poll(() => hits).toBeGreaterThan(before)
   await expect(tips(page), 'the tooltip survives the re-render of the tiles').toHaveCount(1)
   expect(await tips(page).textContent()).toBe(text)
-  await page.context().close()
+  await page.close()
 }
 
+/**
+ * Closes a state's page and leaves nothing behind for the next one: the states share one browser context per test (so the
+ * dev server's modules come from the HTTP cache after the first state instead of being fetched again for every state),
+ * which means storage has to be emptied by hand.
+ */
+async function closeState(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    localStorage.clear()
+    sessionStorage.clear()
+    await Promise.all((await indexedDB.databases()).map(db => new Promise<void>(done => {
+      const req = indexedDB.deleteDatabase(db.name!)
+      req.onsuccess = req.onerror = req.onblocked = () => done()
+    })))
+  }).catch(() => undefined) // a page that never got to the app (about:blank) has nothing to clear
+  await page.close()
+}
+
+test('the expected tooltip counts cover every state, and only the states there are', () => {
+  expect(expectedTableProblems()).toEqual([])
+})
+
+// The mouse runs at all five widths. Touch runs at 320, 390 and 768 px: the touch layout is the mobile one (isMobile is on up
+// to 768 px) and 1024 / 1440 px are the same desktop layout the mouse run already covers there; the touch-only behaviour
+// (tap, second tap, tap outside, the viewport clamp at 320) is exercised in full at the three widths. Mutation-checked: removing
+// the horizontal clamp of the tooltip fails the touch run at 320 px (docs/claude/e2e-conventions.md).
+const TOUCH_WIDTHS: readonly number[] = [320, 390, 768]
+
 for (const vp of VIEWPORTS) {
-  test(`tooltip contract at ${vp.width}x${vp.height}, mouse and touch`, async ({ browser }) => {
-    test.setTimeout(1_200_000)
-    const notes: string[] = []
-    let checked = 0
-    for (const pointer of ['mouse', 'touch'] as const) {
+  for (const pointer of ['mouse', 'touch'] as const) {
+    if (pointer === 'touch' && !TOUCH_WIDTHS.includes(vp.width)) continue
+    test(`tooltip contract at ${vp.width}x${vp.height}, ${pointer}`, async ({ browser }) => {
+      test.setTimeout(1_200_000)
+      let checked = 0
+      const ctx = await newContext(browser, vp, pointer)
       for (const state of TOOLTIP_STATES) {
         if (ONLY && !ONLY.includes(state.id)) continue
-        const page = await newPage(browser, vp, pointer)
+        const page = await pageIn(ctx)
         await test.step(`${state.id} (${pointer})`, async () => {
           const t0 = Date.now()
-          if (!(await state.run(page))) return
+          const expected = expectedTooltips(state.id, vp.width)
+          const exists = await state.run(page)
+          expect(exists, `${state.id} @${vp.width}: the state ${expected ? 'exists' : 'does not exist'} at this viewport (tooltipExpected.ts)`).toBe(expected !== null)
+          if (!exists || !expected) return
           const t1 = Date.now()
           checked++
           if (pointer === 'mouse') await textsMatchBefore(page, state, vp)
           const t2 = Date.now()
-          await checkState(page, state, vp, pointer, notes)
+          await checkState(page, state, vp, pointer, expected)
           if (process.env.TT_TIMING) console.log(`[timing ${vp.width} ${pointer}] ${state.id}: run ${t1 - t0} ms, texts ${t2 - t1} ms, checks ${Date.now() - t2} ms`)
         })
-        await page.context().close()
+        await closeState(page)
       }
-      await test.step(`refetch survival (${pointer})`, () => survivesRefetch(browser, vp, pointer))
-    }
-    if (!ONLY) expect(checked, 'states that exist at this viewport').toBeGreaterThan(20)
-    if (notes.length) console.log(`[tooltips-contract ${vp.width}] ${notes.join('; ')}`)
-  })
+      await test.step(`refetch survival (${pointer})`, () => survivesRefetch(ctx, pointer))
+      await ctx.close()
+      if (!ONLY) expect(checked, 'states that exist at this viewport').toBeGreaterThan(20)
+    })
+  }
 }

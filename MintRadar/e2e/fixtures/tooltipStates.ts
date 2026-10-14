@@ -4,7 +4,7 @@ import { generateSecretKey, getPublicKey } from 'nostr-tools/pure'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS, MOCK_MINTS, probePayload, makeCashuTokenV4 } from './mocks'
 import { auditCzResponse, czSwapList, NOT_COVERED, SWAPS_8333 } from './auditCz'
 import { openWatchlist, URLS } from './watchlistNotify'
-import { frames, layoutReady } from './settle'
+import { frames, layoutReady, networkQuiet, trackRequests } from './settle'
 
 // Pages and states that carry tooltips, used by e2e/tooltips-contract.spec.ts (and by the one-off
 // extraction that produced e2e/fixtures/tooltip-texts.json). Every state is rebuilt from the repo's own
@@ -59,6 +59,7 @@ const reviewsFor = (url: string) => {
 
 /** Mocks for every page below (call before goto). */
 export async function installTooltipMocks(page: Page): Promise<void> {
+  trackRequests(page)
   await mockRelays(page)
   await installApiMocks(page)
   await page.route('**/api/mints/known', r => r.fulfill({ json: KNOWN_VARIANTS }))
@@ -99,7 +100,7 @@ export interface TooltipState {
 
 const settle = async (page: Page) => {
   await page.waitForLoadState('domcontentloaded')
-  await page.waitForLoadState('networkidle', { timeout: 6000 }).catch(() => undefined)
+  await networkQuiet(page)
   await layoutReady(page)
 }
 const page_ = (id: string, path: string, wait?: (p: Page) => Promise<void>): TooltipState => ({
@@ -207,7 +208,12 @@ export const TOOLTIP_STATES: TooltipState[] = [
       await installTooltipMocks(page)
       await page.goto('/tools')
       await page.locator('textarea').first().fill(makeCashuTokenV4(TEST_MINT, [8, 4, 2, 1]))
-      await page.getByRole('button', { name: /inspect/i }).first().click()
+      const inspect = page.getByRole('button', { name: /Inspect & Verify Token|Inspecting|Verifying with mint/ })
+      await inspect.click()
+      // The result (and the tooltips in it) only exists once the inspection answered and the verification step ended.
+      await expect(page.locator('.token-result-grid')).toBeVisible()
+      await expect(inspect).toHaveText('Inspect & Verify Token')
+      await expect(inspect).toBeEnabled()
       await settle(page)
       return true
     },
