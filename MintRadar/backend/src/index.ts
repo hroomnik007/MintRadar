@@ -2420,16 +2420,12 @@ if (process.env['NODE_ENV'] !== 'test') {
   // Registered here, with the SIGTERM/SIGINT handlers, and not at import: every integration test imports this module,
   // and one more pair of process listeners per import made Node print MaxListenersExceededWarning. The handlers
   // themselves are unchanged and still active before the first socket is opened (nothing async runs before this block).
-  // Safety net against a nostr-tools bug: AbstractRelay.connect()'s
-  // connection-timeout path calls `this.ws.close()` on a socket that hasn't
-  // finished connecting, which the 'ws' package (installed via wsPolyfill.ts,
-  // see there for why) surfaces as an EventEmitter 'error' event race — it can
-  // fire before nostr-tools' own onerror handler is attached. An unhandled
-  // EventEmitter 'error' event throws, which without this handler kills the
-  // whole API process over a single flaky background relay connection
-  // (discovery.ts / reviewsSync.ts / nostrService.ts all open relay sockets on
-  // hardcoded, non-attacker-controlled relay lists — this is not swallowing
-  // arbitrary/unexpected errors, just a known third-party timing bug).
+  // Last-resort safety net for unexpected errors: log and keep the API process alive instead of letting one stray
+  // error in a background job kill it. These handlers are NOT the fix for the known nostr-tools relay case (a
+  // connection-timeout path closes a socket that is still connecting and nulls onerror, so `ws` emitted an
+  // unhandled 'error' event): that is handled at the source, every nostr-tools pool connects with RelayWebSocket
+  // (wsPolyfill.ts, a permanent no-op 'error' listener) and relayConnectionErrors.test.ts fails when an uncaught
+  // exception or rejection escapes.
   process.on('uncaughtException', (err) => {
     console.error('[uncaughtException]', err)
   })
