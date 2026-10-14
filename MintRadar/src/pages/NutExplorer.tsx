@@ -5,7 +5,10 @@ import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { ROUTE_META } from '@/constants/routeMeta'
 import { NUT_META, nutSpecUrl } from '@/constants/nuts'
 import { MintFavicon } from '@/components/mint/MintFavicon'
+import { LoadError } from '@/components/LoadError'
 import './NutExplorer.css'
+
+const NUTS_ERROR = 'Could not load the NUT data. Please try again.'
 
 interface NutData {
   nut: string
@@ -21,7 +24,7 @@ export default function NutExplorer() {
   const navigate = useNavigate()
   useDocumentMeta(ROUTE_META.nuts.title, ROUTE_META.nuts.description)
 
-  const { data: nutsData, isLoading: nutsLoading, error: nutsError } = useQuery({
+  const { data: nutsData, isLoading: nutsLoading, error: nutsError, refetch } = useQuery({
     queryKey: ['nuts'],
     queryFn: async (): Promise<NutData[]> => {
       const res = await fetch('/api/nuts')
@@ -45,7 +48,7 @@ export default function NutExplorer() {
         <div className="nuts-loading">Loading…</div>
       )}
       {(nutsError != null || (!nutsLoading && !nutsData)) && (
-        <div className="nuts-loading">Failed to load NUT data</div>
+        <LoadError message={NUTS_ERROR} onRetry={() => { void refetch() }} />
       )}
 
       {nutsData && (

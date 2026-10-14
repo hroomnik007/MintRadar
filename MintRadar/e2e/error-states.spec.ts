@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { installApiMocks, mockRelays, loginAs, MOCK_KNOWN_MINTS, MOCK_MINTS, TEST_PUBKEY_HEX } from './fixtures/mocks'
+import { installApiMocks, mockRelays, loginAs, MOCK_KNOWN_MINTS, MOCK_MINTS, MOCK_STATS, TEST_PUBKEY_HEX } from './fixtures/mocks'
 
 // An API failure is never presented as a mint state. With /api/mints/known failing (500, network error, or a
 // slow response that then fails) Mint Detail, the Watchlist and Home show ONE error state with a "Try again"
@@ -88,3 +88,39 @@ test('Mint Detail: a slow successful list shows a quiet Loading… (not an error
   await expect(page.getByRole('alert')).toHaveCount(0)
   await expect(page.locator('.md-tabs')).toBeVisible({ timeout: 15_000 })
 })
+
+// The Stats page and the NUT Explorer own their data (/api/stats, /api/nuts). A failure there shows the same
+// error state (fixed sentence + "Try again"), never a raw error text, and "Try again" recovers once the mock is healthy.
+const OWN_DATA_PAGES = [
+  { id: 'Stats', path: '/stats', route: '**/api/stats', text: 'Could not load the statistics. Please try again.', ready: '.nhi-gauge-wrap', ok: MOCK_STATS },
+  { id: 'NUT Explorer', path: '/nuts', route: '**/api/nuts', text: 'Could not load the NUT data. Please try again.', ready: '.nut-explorer-card',
+    ok: [{ nut: 'NUT-04', percent: 90, count: 3, mints: [MOCK_MINTS[0]!.url] }] },
+]
+
+for (const pg of OWN_DATA_PAGES) {
+  for (const failure of ['500', 'abort'] as const) {
+    test(`${pg.id}: ${failure} shows the error state with Try again, and Try again recovers`, async ({ page }) => {
+      test.setTimeout(60_000)
+      await mockRelays(page)
+      await installApiMocks(page)
+      let healthy = false
+      await page.route(pg.route, r => {
+        if (healthy) return r.fulfill({ json: pg.ok })
+        if (failure === 'abort') return r.abort('failed')
+        return r.fulfill({ status: 500, json: { error: 'secret-internal-detail' } })
+      })
+      await page.goto(pg.path)
+
+      const alert = page.getByRole('alert')
+      await expect(alert).toContainText(pg.text, { timeout: 20_000 })
+      await expect(alert.getByRole('button', { name: 'Try again' })).toBeVisible()
+      await expect(page.locator('body')).not.toContainText('secret-internal-detail')
+      await expect(page.locator('body')).not.toContainText('Failed to load')
+
+      healthy = true
+      await alert.getByRole('button', { name: 'Try again' }).click()
+      await expect(page.locator(pg.ready).first()).toBeVisible({ timeout: 20_000 })
+      await expect(page.getByRole('alert')).toHaveCount(0)
+    })
+  }
+}

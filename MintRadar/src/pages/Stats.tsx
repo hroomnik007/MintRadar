@@ -19,6 +19,7 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { PageHead } from '@/components/layout/PageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { InfoTooltip } from '@/components/InfoTooltip'
+import { LoadError } from '@/components/LoadError'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
 import {
   NHI_WEIGHTS, advancedAdoptionPercent, nhiScore, nhiSubtitle, nhiFormulaText,
@@ -26,6 +27,8 @@ import {
 } from '@/utils/networkHealthIndex'
 import { formatDate } from '@/utils/formatDate'
 import './Stats.css'
+
+const STATS_ERROR = 'Could not load the statistics. Please try again.'
 
 interface StatsData {
   totalMints: number
@@ -588,7 +591,7 @@ export default function Stats() {
   // rows again); mobile keeps today's compact panel + tap-to-open modal.
   const isMobile = useIsMobile()
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['stats'],
     queryFn: async (): Promise<StatsData> => {
       const res = await fetch('/api/stats')
@@ -860,7 +863,7 @@ export default function Stats() {
       <div className="stats-header">
         <div className="stats-title">Statistics</div>
       </div>
-      <div className="stats-loading">Failed to load statistics</div>
+      <LoadError message={STATS_ERROR} onRetry={() => { void refetch() }} />
     </div>
   )
 
