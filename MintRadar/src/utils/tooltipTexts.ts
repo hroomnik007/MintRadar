@@ -158,10 +158,24 @@ export function cashuInfoViewText(o: { fallbackFrom8333: boolean; checkedMinutes
   return `${lead}${parts.length ? `, ${parts.join(', ')}` : ''}. ${failures}`
 }
 
+/** Mint Detail > Keysets: the visible line under the title (it replaced the tooltip). */
+export const KEYSETS_HINT = 'Signing keys per unit. Active keys sign new tokens; tokens from old keys can still be spent.'
+
+/** Mint Detail: the "New" badge tooltip, and the visible line in the Reliability Score panel. */
+export function newMintBadgeText(): string {
+  return `Reliability Score capped at ${NEW_MINT_RELIABILITY_CAP} for the first ${NEW_MINT_MAX_DAYS} days.`
+}
+export function newMintCapNote(): string {
+  return `Capped at ${NEW_MINT_RELIABILITY_CAP} for the first ${NEW_MINT_MAX_DAYS} days (new mint).`
+}
+
+/** Mint Detail > Reviews: the visible line that explains the "Operator" badge (it replaced the badge's tooltip). */
+export const OPERATOR_REVIEW_NOTE = 'Operator: a review published by a key the mint lists as its contact that also announced the mint on Nostr.'
+
 /** Watchlist: the line under the "More alerts" pills. */
 export function moreAlertsNote(): string {
   const half = MINT_MELT_BLAMED_RATIO === 0.5 ? 'half' : `${Math.round(MINT_MELT_BLAMED_RATIO * 100)}%`
-  return `Mint/melt: ${half} or more of the last ${AUDIT_WINDOW_DAYS} days' swaps blamed on the mint. Version: ${OUTDATED_AFTER_MINORS}+ minor versions behind. NUT: NUT-04 or NUT-05 lost. At most one message per ${MINT_MELT_COOLDOWN_HOURS} h (mint/melt) or ${OTHER_ALERT_COOLDOWN_HOURS} h (others).`
+  return `Mint/melt: ${half} or more of the last ${AUDIT_WINDOW_DAYS} days' swaps attributed to the mint. Version: ${OUTDATED_AFTER_MINORS}+ minor versions behind. NUT: NUT-04 or NUT-05 lost. At most one message per ${MINT_MELT_COOLDOWN_HOURS} h (mint/melt) or ${OTHER_ALERT_COOLDOWN_HOURS} h (others).`
 }
 
 // ── Mint Detail: why the mint's info request failed (the ⓘ beside the red error badge) ───────────────────────────

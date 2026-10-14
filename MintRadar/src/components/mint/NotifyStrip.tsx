@@ -4,6 +4,7 @@ import { db } from '@/db'
 import { useUserRelays } from '@/hooks/useUserRelays'
 import { setNotifyFlag, type NotifyFailure, type NotifyField } from '@/core/nostr/notificationSubscription'
 import { confirmedNotify, confirmedMoreNotify } from '@/utils/notifyState'
+import { moreAlertsNote } from '@/utils/tooltipTexts'
 
 type Field = NotifyField
 
@@ -103,6 +104,7 @@ export function NotifyStrip({ mintUrl, name }: { mintUrl: string; name: string }
           {pill('notifyOnMintMeltIssues', more.mintMelt, 'Mint/melt issues', `Notify when ${name} has mint or melt issues`)}
           {pill('notifyOnVersionOutdated', more.versionOutdated, 'Version outdated', `Notify when ${name} runs an outdated version`)}
           {pill('notifyOnNutLoss', more.nutLoss, 'Lost NUT04/05', `Notify when ${name} loses NUT-04 or NUT-05 support`)}
+          <p className="notify-more-note">{moreAlertsNote()}</p>
         </div>
       )}
       <div className="notify-strip-msg" role="status">{error}</div>

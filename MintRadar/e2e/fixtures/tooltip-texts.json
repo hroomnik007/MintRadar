@@ -577,7 +577,6 @@
   "mint-alpha-audit-8333@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
-      "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Alpha Mint to watchlist",
       "All-time count of melt operations (ecash back to Lightning) that audit.8333.space has recorded for this mint.",
       "All-time count of mint operations that audit.8333.space has recorded for this mint.",
@@ -590,16 +589,16 @@
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
-      "OK · <ISO>",
-      "OK · <ISO>",
-      "OK · <ISO>",
+      "OK · <DATE>",
+      "OK · <DATE>",
+      "OK · <DATE>",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
       "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
       "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 15
+    "triggers": 14
   },
   "mint-alpha-audit-8333@390": {
     "texts": [
@@ -611,9 +610,9 @@
       "Last swaps, newest first",
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
-      "OK · <ISO>",
-      "OK · <ISO>",
-      "OK · <ISO>",
+      "OK · <DATE>",
+      "OK · <DATE>",
+      "OK · <DATE>",
       "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
       "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.",
       "Your latency from this browser to the mint (client-side measurement)."
@@ -624,7 +623,6 @@
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "126 of 126 swaps in the last 7 days, 19 failed for other reasons",
-      "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Alpha Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
@@ -634,19 +632,19 @@
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
-      "OK · <ISO>",
-      "OK · <ISO>",
-      "OK · <ISO>",
+      "OK · <DATE>",
+      "OK · <DATE>",
+      "OK · <DATE>",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
       "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)",
       "Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)",
       "This tab shows cashu.info data, checked 9 minutes ago. cashu.info attributes 1 failure to this mint.",
       "Your latency from this browser to the mint (client-side measurement).",
-      "failed · <ISO>",
+      "failed · <DATE>",
       "melt quote failed"
     ],
-    "triggers": 15
+    "triggers": 14
   },
   "mint-alpha-audit-cz@390": {
     "texts": [
@@ -656,14 +654,14 @@
       "Last swaps, newest first",
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
-      "OK · <ISO>",
-      "OK · <ISO>",
-      "OK · <ISO>",
+      "OK · <DATE>",
+      "OK · <DATE>",
+      "OK · <DATE>",
       "Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)",
       "Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)",
       "This tab shows cashu.info data, checked 9 minutes ago. cashu.info attributes 1 failure to this mint.",
       "Your latency from this browser to the mint (client-side measurement).",
-      "failed · <ISO>",
+      "failed · <DATE>",
       "melt quote failed"
     ],
     "triggers": 8
@@ -671,7 +669,6 @@
   "mint-alpha-audit@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
-      "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Alpha Mint to watchlist",
       "All-time count of melt operations (ecash back to Lightning) that audit.8333.space has recorded for this mint.",
       "All-time count of mint operations that audit.8333.space has recorded for this mint.",
@@ -684,16 +681,16 @@
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
-      "OK · <ISO>",
-      "OK · <ISO>",
-      "OK · <ISO>",
+      "OK · <DATE>",
+      "OK · <DATE>",
+      "OK · <DATE>",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
       "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
       "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 15
+    "triggers": 14
   },
   "mint-alpha-audit@390": {
     "texts": [
@@ -705,9 +702,9 @@
       "Last swaps, newest first",
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
-      "OK · <ISO>",
-      "OK · <ISO>",
-      "OK · <ISO>",
+      "OK · <DATE>",
+      "OK · <DATE>",
+      "OK · <DATE>",
       "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
       "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.",
       "Your latency from this browser to the mint (client-side measurement)."
@@ -717,7 +714,6 @@
   "mint-alpha-history@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
-      "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Alpha Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
@@ -730,7 +726,7 @@
       "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 10
+    "triggers": 9
   },
   "mint-alpha-history@390": {
     "texts": [
@@ -745,7 +741,6 @@
   "mint-alpha-nuts@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
-      "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Alpha Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
@@ -759,12 +754,11 @@
       "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 11
+    "triggers": 10
   },
   "mint-alpha-nuts@390": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
-      "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Alpha Mint to watchlist",
       "Copy full keyset ID",
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
@@ -772,12 +766,11 @@
       "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 5
+    "triggers": 4
   },
   "mint-alpha-overview@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
-      "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Alpha Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy",
@@ -793,7 +786,7 @@
       "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 11
+    "triggers": 10
   },
   "mint-alpha-overview@390": {
     "texts": [
@@ -811,7 +804,6 @@
   "mint-alpha-reviews@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
-      "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Alpha Mint to watchlist",
       "Anyone can create a key, so ratings can be inflated. Treat them as a hint, not proof.",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
@@ -828,7 +820,7 @@
       "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 11
+    "triggers": 10
   },
   "mint-alpha-reviews@390": {
     "texts": [
@@ -864,7 +856,6 @@
   },
   "mint-new-nuts@1440": {
     "texts": [
-      "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Newbie Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
@@ -872,31 +863,29 @@
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
-      "New mint (< 30 days) — Reliability Score is capped at 75 until it builds a track record",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Reliability Score capped at 75 for the first 30 days.",
       "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "This mint does not support NUT-09, so wallets cannot restore ecash from a seed phrase here. Keep your own token backups.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 11
+    "triggers": 10
   },
   "mint-new-nuts@390": {
     "texts": [
-      "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Newbie Mint to watchlist",
       "Copy full keyset ID",
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
-      "New mint (< 30 days) — Reliability Score is capped at 75 until it builds a track record",
+      "Reliability Score capped at 75 for the first 30 days.",
       "This mint does not support NUT-09, so wallets cannot restore ecash from a seed phrase here. Keep your own token backups.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 5
+    "triggers": 4
   },
   "mint-new-overview@1440": {
     "texts": [
-      "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Newbie Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy",
@@ -906,13 +895,13 @@
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
-      "New mint (< 30 days) — Reliability Score is capped at 75 until it builds a track record",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Reliability Score capped at 75 for the first 30 days.",
       "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 10
+    "triggers": 9
   },
   "mint-new-overview@390": {
     "texts": [
@@ -921,14 +910,13 @@
       "Copy full public key",
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
-      "New mint (< 30 days) — Reliability Score is capped at 75 until it builds a track record",
+      "Reliability Score capped at 75 for the first 30 days.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
     "triggers": 3
   },
   "mint-offline-overview@1440": {
     "texts": [
-      "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Charlie Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy",
@@ -944,7 +932,7 @@
       "The mint's server is unreachable — the application behind the proxy may have crashed or restarted",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 10
+    "triggers": 9
   },
   "mint-offline-overview@390": {
     "texts": [
@@ -960,7 +948,6 @@
   },
   "mint-operator-overview@1440": {
     "texts": [
-      "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Operator Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy",
@@ -977,7 +964,7 @@
       "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 10
+    "triggers": 9
   },
   "mint-operator-overview@390": {
     "texts": [
@@ -994,7 +981,6 @@
   },
   "mint-operator-reviews@1440": {
     "texts": [
-      "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Operator Mint to watchlist",
       "Anyone can create a key, so ratings can be inflated. Treat them as a hint, not proof.",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
@@ -1012,11 +998,10 @@
       "Open this review on Nostr",
       "Open this review on Nostr",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Published by a key that is listed as this mint's contact and announced this mint on Nostr.",
       "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 12
+    "triggers": 10
   },
   "mint-operator-reviews@390": {
     "texts": [
@@ -1031,14 +1016,12 @@
       "MintRadar",
       "Open this review on Nostr",
       "Open this review on Nostr",
-      "Published by a key that is listed as this mint's contact and announced this mint on Nostr.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 5
+    "triggers": 4
   },
   "mint-test-audit@1440": {
     "texts": [
-      "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Test Nut to watchlist",
       "All-time count of melt operations (ecash back to Lightning) that audit.8333.space has recorded for this mint.",
       "All-time count of mint operations that audit.8333.space has recorded for this mint.",
@@ -1052,16 +1035,16 @@
       "MintRadar",
       "Not for real funds — for testing and development only",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
-      "OK · <ISO>",
-      "OK · <ISO>",
-      "OK · <ISO>",
+      "OK · <DATE>",
+      "OK · <DATE>",
+      "OK · <DATE>",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
       "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
       "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 15
+    "triggers": 14
   },
   "mint-test-audit@390": {
     "texts": [
@@ -1073,9 +1056,9 @@
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Not for real funds — for testing and development only",
-      "OK · <ISO>",
-      "OK · <ISO>",
-      "OK · <ISO>",
+      "OK · <DATE>",
+      "OK · <DATE>",
+      "OK · <DATE>",
       "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
       "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.",
       "Your latency from this browser to the mint (client-side measurement)."
@@ -1084,7 +1067,6 @@
   },
   "mint-test-overview@1440": {
     "texts": [
-      "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Test Nut to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy",
@@ -1100,7 +1082,7 @@
       "Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 10
+    "triggers": 9
   },
   "mint-test-overview@390": {
     "texts": [

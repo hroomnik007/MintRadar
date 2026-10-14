@@ -64,7 +64,7 @@ export async function extractTooltipTexts(page: Page): Promise<Extracted> {
     else await page.mouse.move(cx, cy)
     await page.waitForTimeout(260)
     const text = await readPopup(POPUP)
-    if (text) texts.push(text.replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/g, '<ISO>'))
+    if (text) texts.push(text.replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/g, '<ISO>').replace(/\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC/g, '<DATE>'))
     if (covered) { await loc.evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))); await page.waitForTimeout(80) }
     await page.mouse.move(1, 1)
     await page.waitForTimeout(140)
@@ -74,7 +74,7 @@ export async function extractTooltipTexts(page: Page): Promise<Extracted> {
     const visible = (e: Element) => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' }
     return Array.from(document.querySelectorAll('[title]'))
       .filter(e => !e.closest('svg') && visible(e))
-      .map(e => (e.getAttribute('title') ?? '').replace(/\s+/g, ' ').trim().replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/g, '<ISO>'))
+      .map(e => (e.getAttribute('title') ?? '').replace(/\s+/g, ' ').trim().replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/g, '<ISO>').replace(/\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC/g, '<DATE>'))
       .filter(Boolean)
   })
   return { texts: [...texts, ...titles].sort(), triggers: count }

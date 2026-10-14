@@ -11,6 +11,7 @@ import {
   reviewSurgeText, AUDIT_MINTS_TEXT, AUDIT_MELTS_TEXT, auditSuccessRateText, uptimeRowText, auditRowText, NUT_ROW_TEXT,
   versionRowText, contactRowText, scoreFormulaText, BACKUP_SUPPORTED_TEXT, NO_BACKUP_TEXT, REVIEWS_NIP87_TEXT, cashuInfoViewText,
   HTTP_ERROR_EXPLANATIONS, NON_HTTP_ERROR_EXPLANATIONS, operatorExcludedText,
+  KEYSETS_HINT, newMintBadgeText, newMintCapNote, OPERATOR_REVIEW_NOTE,
 } from '@/utils/tooltipTexts'
 import { useKnownMints } from '@/hooks/useKnownMints'
 import { LoadError, LoadingNote, MINT_LIST_ERROR } from '@/components/LoadError'
@@ -29,7 +30,7 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { MintNetworkCard } from '@/components/MintNetworkCard'
 import { networkRows } from '@/utils/networkInfo'
 import { AuditCzTiles, AuditCzSwapTables, AuditStateText } from '@/components/AuditCzCards'
-import { formatDate } from '@/utils/formatDate'
+import { formatDate, formatDateTimeUtc } from '@/utils/formatDate'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
@@ -1114,12 +1115,12 @@ function MintDetailContent({ url }: { url: string }) {
   // active), no extra fetch. Rendered on the Overview sidebar on desktop
   // (≥901px) and on the NUTs tab on mobile (<901px); the two wrappers below
   // hide the copy that doesn't belong to the current breakpoint.
-  const KEYSET_TOOLTIP = 'A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.'
   const keysetsPanel = (() => {
     const keysets = data?.keysets ?? null
     return (
       <div className="md-panel">
-        <div className="md-panel-title"><InfoTooltip text={KEYSET_TOOLTIP} width={240}>Keysets</InfoTooltip></div>
+        <div className="md-panel-title">Keysets</div>
+        <div className="md-panel-hint">{KEYSETS_HINT}</div>
         {!keysets || keysets.length === 0 ? (
           <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Keyset data not available.</div>
         ) : (
@@ -1205,7 +1206,7 @@ function MintDetailContent({ url }: { url: string }) {
                   <span>{isOnline ? 'Online' : 'Offline'}</span>
                 </span>
                 {isNew && (
-                  <InfoTooltip text="New mint (< 30 days) — Reliability Score is capped at 75 until it builds a track record" width={240}><span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}}>New</span></InfoTooltip>
+                  <InfoTooltip text={newMintBadgeText()} width={240}><span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}}>New</span></InfoTooltip>
                 )}
                 {isTestMint(url) && (
                   <InfoTooltip text="Not for real funds — for testing and development only">
@@ -2077,7 +2078,7 @@ function MintDetailContent({ url }: { url: string }) {
                       <div
                         key={s.swapId}
                         className={`audit-swap-bar-mark ${s.state === 'OK' ? 'audit-swap-bar-ok' : s.neutral ? 'audit-swap-bar-neutral' : 'audit-swap-bar-fail'}`}
-                        title={s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TITLE[s.neutral] : `${s.state}${s.stage ? ` (${s.stage})` : ''}${s.createdAt ? ` · ${s.createdAt}` : ''}`}
+                        title={s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TITLE[s.neutral] : `${s.state}${s.stage ? ` (${s.stage})` : ''}${s.createdAt ? ` · ${formatDateTimeUtc(s.createdAt)}` : ''}`}
                       />
                     ))}
                   </div>
@@ -2191,6 +2192,7 @@ function MintDetailContent({ url }: { url: string }) {
                   text={REVIEWS_NIP87_TEXT}
                 />
               </div>
+              {operatorListedCount > 0 && <div className="reviews-disclaimer">{OPERATOR_REVIEW_NOTE}</div>}
               {reviewsLoading ? (
                 <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>Loading reviews...</div>
               ) : mergedReviews.length === 0 ? (
@@ -2259,7 +2261,7 @@ function MintDetailContent({ url }: { url: string }) {
                                 )}
                               </span>
                               {operatorKeys.has(r.pubkey.toLowerCase()) && (
-                                <InfoTooltip text="Published by a key that is listed as this mint's contact and announced this mint on Nostr." width={240}><span className="review-operator-badge">Operator</span></InfoTooltip>
+                                <span className="review-operator-badge">Operator</span>
                               )}
                             </span>
                             <span className="review-author-npub">{shortNpub(npub)}</span>
@@ -2375,6 +2377,7 @@ function MintDetailContent({ url }: { url: string }) {
               </div>
               <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:5,padding:'4px 10px',textAlign:'center'}}>{tsInfo.label}</span>
             </div>
+            {isNew && <div className="rb-new-note">{newMintCapNote()}</div>}
             {/* All 5 components always visible here (no "Details" click / donut
                 tap needed) — the modal below (opened only from the mobile
                 compact tile, where this panel is hidden) shows the same rows. */}

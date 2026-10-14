@@ -288,3 +288,13 @@ Measured (touch context): visible height 27px ≤640px (padding 7/8), 30px above
 - cashu.info tile "Avg swap time": no ⓘ any more (`AuditCzTile.tooltip` is optional); the label says what it is and the sibling tiles' tooltips and the tab's ⓘ state the 7 days and the source.
 - "Hide test mints": the `title` on the checkbox label is gone; the one explanation is the InfoTooltip on the "Test mints hidden" tag (the card's "Test mint" badge only exists while test mints are shown, so it cannot carry it).
 - Reviews tab filter-group `title` ("Counts every listed review ..."): gone; its fact moved into the Community Rating tile's ⓘ (`operatorExcludedText()`: "... The Reviews tab still lists it, marked Operator.").
+
+**Explanations promoted from a tooltip to visible text (2026-10-14).** Each is one muted line in the existing style, next to what it explains, and
+only when it applies (all in `tooltipTexts.ts`; `e2e/tooltip-promoted-lines.spec.ts` checks text, condition and fit at 320 / 390 / 1440 px):
+- Keysets: `.md-panel-hint` under the title (`KEYSETS_HINT`), replaces the title's tooltip (both the Overview sidebar and the NUTs tab copy).
+- New mint: `.rb-new-note` "Capped at 75 for the first 30 days (new mint)." under the score in the Reliability Score panel. The panel is hidden at
+  <= 640 px, so the "New" badge KEEPS a (shorter) tooltip, `newMintBadgeText()`; the breakdown dialog's visible formula line also states the cap.
+- Operator reviews: `.reviews-disclaimer` line `OPERATOR_REVIEW_NOTE` above the filters (only when an operator review is listed); the badge is a plain span.
+- Watchlist "More alerts": `.notify-more-note` under the three pills while the row is open (`moreAlertsNote()`: what triggers each alert and the
+  12 h / 24 h limits, built from the same constants as the backend's `alertTriggers.ts` / `notificationLimits.ts`).
+- The swap bar's outcome marks (still `title`s, hover values) read "OK · 13 Oct 2026, 19:59 UTC" (`formatDateTimeUtc()` in `utils/formatDate.ts`), not the raw ISO timestamp; the extraction fixture normalises both forms (`<ISO>`, `<DATE>`) because the mock times move with the clock.

@@ -114,8 +114,8 @@ deleted, the tile and the badge say why a review is excluded.
   (`reviewWeightedRating`, `reviewSurge` baseline) follows automatically. `/api/mints/known` returns the
   additive `operatorReviewCount`. A contact/announcement change shows in the rollups at the next review
   sync (hourly) or the boot-time recompute.
-- **Mint Detail:** every review by an operator key carries `.review-operator-badge` ("Operator", tooltip
-  "Published by a key that is listed as this mint's contact and announced this mint on Nostr."). The Community rating tile
+- **Mint Detail:** every review by an operator key carries `.review-operator-badge` ("Operator"; since 2026-10-14 a plain badge, explained by the visible
+  `.reviews-disclaimer` line `OPERATOR_REVIEW_NOTE` above the filters, shown only while the list holds an operator review). The Community rating tile
   (`tileReviewCount` / `tileAvgRating`) is computed from the merged list minus operator keys, using the LIVE
   probe's contact list + `knownMint.nostrAnnouncePubkey`; while the live contact list or the known-mints
   row is unavailable (loading or offline mint) the tile keeps the backend rollup, which applies the same rule. When

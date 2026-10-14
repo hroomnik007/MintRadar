@@ -2400,6 +2400,14 @@
   gap: 6px;
   margin-top: 6px;
 }
+/* What each "More alerts" pill triggers on and how often (replaces the explanation that did not exist). */
+.notify-more-note {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text3);
+}
 
 /* The filter tag's text is ~13 px high: its tooltip trigger is padded to 24 px (the close button sits beside the
    text, so only the vertical sides grow). */

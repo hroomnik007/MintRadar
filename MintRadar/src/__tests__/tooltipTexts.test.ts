@@ -91,6 +91,10 @@ describe('numbers in the built texts equal their sources', () => {
     expect(T.operatorExcludedText(1)).toBe("Excludes 1 review written by the mint's operator. The Reviews tab still lists it, marked Operator.")
     expect(T.operatorExcludedText(3)).toBe("Excludes 3 reviews written by the mint's operator. The Reviews tab still lists them, marked Operator.")
   })
+  it('new-mint cap texts carry the cap and the days', () => {
+    expect(numbers(T.newMintBadgeText())).toEqual([NEW_MINT_RELIABILITY_CAP, NEW_MINT_MAX_DAYS])
+    expect(numbers(T.newMintCapNote())).toEqual([NEW_MINT_RELIABILITY_CAP, NEW_MINT_MAX_DAYS])
+  })
   it('outdated-software text', () => expect(T.outdatedSoftwareText()).toContain('two or more minor versions'))
   it('audit tab text: ~100 swaps window, "too few" below 3', () => {
     expect(numbers(T.auditSuccessRateText())).toEqual([T.AUDIT_SWAPS_WINDOW, AUDIT_TAB_MIN_SAMPLES])
@@ -150,7 +154,7 @@ const BUILT: Record<string, string> = {
   payoutsTileText: T.payoutsTileText(), receivesTileText: T.receivesTileText(),
   cleanTileText: T.cleanTileText(120, 126, 4, 2, n => n.toLocaleString('en-US')),
   cashuInfoViewText: T.cashuInfoViewText({ fallbackFrom8333: true, checkedMinutesAgo: 12, notRecent: true, failuresAttributed: 3 }),
-  moreAlertsNote: T.moreAlertsNote(), operatorExcludedText: T.operatorExcludedText(2),
+  moreAlertsNote: T.moreAlertsNote(), KEYSETS_HINT: T.KEYSETS_HINT, newMintBadgeText: T.newMintBadgeText(), newMintCapNote: T.newMintCapNote(), OPERATOR_REVIEW_NOTE: T.OPERATOR_REVIEW_NOTE, operatorExcludedText: T.operatorExcludedText(2),
   nhiSummaryText: nhiSummaryText() + ' ' + nhiOnlineSetText(), nhiOnlineRowText: nhiOnlineRowText(26), nhiReliabilityRowText: nhiReliabilityRowText(),
   nhiAdvancedRowText: nhiAdvancedRowText(), avgUptimeText: avgUptimeText(), latencyTooltipText: latencyTooltipText(),
   ...Object.fromEntries(Object.entries(T.HTTP_ERROR_EXPLANATIONS).map(([k, v]) => [`HTTP ${k}`, v])),
@@ -172,7 +176,7 @@ describe('tooltip style rules', () => {
     for (const v of Object.values(fixture)) for (const t of v.texts) {
       if (seen.has(t)) continue
       seen.add(t)
-      const p = styleProblems(t)
+      const p = styleProblems(t.replace(/<[A-Z]+>/g, 'x')) // <ISO> / <DATE> are the fixture's placeholders for a clock-dependent date
       if (p.length) bad.push(`${p.join(', ')}: ${t.slice(0, 80)}`)
     }
     expect(seen.size).toBeGreaterThan(40)

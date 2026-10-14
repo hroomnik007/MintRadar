@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatDate, DATE_MONTHS } from '../utils/formatDate'
+import { formatDate, formatDateTimeUtc, DATE_MONTHS } from '../utils/formatDate'
 
 describe('formatDate', () => {
   it('uses a fixed three-letter month: September is "Sep", never "Sept"', () => {
@@ -43,5 +43,16 @@ describe('formatDate', () => {
     expect(formatDate('nonsense')).toBe('')
     expect(formatDate(new Date('x'))).toBe('')
     expect(formatDate(Number.NaN)).toBe('')
+  })
+})
+
+describe('formatDateTimeUtc', () => {
+  it('is the date, a comma and the UTC time of day', () => {
+    expect(formatDateTimeUtc('2026-10-13T19:59:40Z')).toBe('13 Oct 2026, 19:59 UTC')
+    expect(formatDateTimeUtc('2026-01-02T03:04:00+02:00')).toBe('2 Jan 2026, 01:04 UTC')
+  })
+  it('gives an empty string for nothing or garbage', () => {
+    expect(formatDateTimeUtc(null)).toBe('')
+    expect(formatDateTimeUtc('nope')).toBe('')
   })
 })

@@ -22,3 +22,12 @@ export function formatDate(input: string | number | Date | null | undefined, opt
   if (opts.year === false) return `${day} ${month}`
   return `${day} ${month} ${local ? d.getFullYear() : d.getUTCFullYear()}`
 }
+
+/** "29 Sep 2026, 14:05 UTC": the date above plus the UTC time of day; '' for an unparseable value. */
+export function formatDateTimeUtc(input: string | number | Date | null | undefined): string {
+  const date = formatDate(input)
+  if (date === '') return ''
+  const d = input instanceof Date ? input : new Date(input as string | number)
+  const two = (n: number) => String(n).padStart(2, '0')
+  return `${date}, ${two(d.getUTCHours())}:${two(d.getUTCMinutes())} UTC`
+}

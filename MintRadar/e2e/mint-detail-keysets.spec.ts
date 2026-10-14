@@ -46,13 +46,13 @@ test.describe('Mint Detail — Keysets panel placement (desktop)', () => {
     await expect(page.locator('.md-keysets-at-nuts')).toBeHidden()
   })
 
-  test('heading carries the keyset explainer as a tooltip', async ({ page }) => {
+  test('the keyset explanation is visible text under the heading, not a tooltip', async ({ page }) => {
     await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(KS) }))
     await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
-    const heading = page.locator('.md-keysets-at-overview .md-panel-title', { hasText: 'Keysets' })
-    await expect(heading).not.toHaveAttribute('title', /./) // a tooltip, not a title attribute
-    await heading.getByRole('button', { name: 'Keysets' }).hover()
-    await expect(page.getByRole('tooltip')).toHaveText(/Active = used for new tokens/)
+    const panel = page.locator('.md-keysets-at-overview')
+    await expect(panel.locator('.md-panel-title', { hasText: 'Keysets' })).toBeVisible()
+    await expect(panel.locator('.md-panel-hint')).toHaveText('Signing keys per unit. Active keys sign new tokens; tokens from old keys can still be spent.')
+    await expect(panel.locator('.md-panel-title [data-tooltip-trigger]')).toHaveCount(0)
   })
 
   test('lists active / inactive state and copies the full id', async ({ page }) => {
@@ -101,13 +101,11 @@ test.describe('Mint Detail — Keysets panel placement (mobile)', () => {
     await expect(panel.locator('.md-keyset-row')).toHaveCount(3)
   })
 
-  test('heading tooltip + active/inactive badges + copy still work', async ({ page }) => {
+  test('visible hint under the heading + active/inactive badges + copy still work', async ({ page }) => {
     await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(KS) }))
     await openNutsTab(page)
     const panel = page.locator('.md-keysets-at-nuts')
-    await panel.locator('.md-panel-title', { hasText: 'Keysets' }).getByRole('button', { name: 'Keysets' }).hover()
-    await expect(page.getByRole('tooltip')).toHaveText(/existing tokens may still melt/)
-    await page.mouse.move(0, 0)
+    await expect(panel.locator('.md-panel-hint')).toHaveText(/tokens from old keys can still be spent/)
     await expect(panel.getByText('Active', { exact: true })).toHaveCount(2)
     await expect(panel.getByText('Inactive', { exact: true })).toHaveCount(1)
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])

@@ -200,7 +200,7 @@ empty state when no keysets are known. **Rendered once, shown per breakpoint** (
 data — a layout-only follow-up the next day): **desktop (≥901px)** it sits in the Overview sidebar,
 directly under "Units & Methods" (same card chrome), and is hidden on the NUTs tab; **mobile
 (<901px)** it stays on the **NUTs tab**, under NUT Limits, and is hidden on Overview. The panel
-heading has a short title-tooltip explaining keysets / Active vs Inactive. Tests:
+heading has a visible one-line hint (`.md-panel-hint`, `KEYSETS_HINT`; it was a tooltip until 2026-10-14). Tests:
 `e2e/mint-detail-keysets.spec.ts` (desktop/Overview and mobile/NUTs-tab describe blocks).
 
 **Superseded 2026-09-20 (commit `c68d98d`) — desktop placement is now "always visible", not
