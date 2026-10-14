@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
-// client.ts drags in nip46 / SimplePool / @noble and the (circular) auth store.
+// client.ts drags in nip46 / SimplePool and the (circular) auth store.
 // Stub everything except the pieces bootstrapUserData / subscribeFirstEvent
 // actually exercise: verifyEvent, sharedPool.subscribeMany, useAuthStore.getState.
 
@@ -24,8 +24,6 @@ vi.mock('nostr-tools/nip46', () => ({
   toBunkerURL: vi.fn(),
 }))
 vi.mock('nostr-tools/pool', () => ({ SimplePool: class {} }))
-vi.mock('@noble/secp256k1', () => ({ getPublicKey: vi.fn() }))
-vi.mock('@noble/hashes/utils.js', () => ({ bytesToHex: vi.fn(), hexToBytes: vi.fn() }))
 vi.mock('@/core/nostr/pool', () => ({ sharedPool: { subscribeMany } }))
 vi.mock('@/stores/auth.store', () => ({ useAuthStore: { getState: vi.fn() } }))
 

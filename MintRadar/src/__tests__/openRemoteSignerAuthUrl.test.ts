@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// client.ts drags in nip46 / SimplePool / @noble / the auth store — stub them;
+// client.ts drags in nip46 / SimplePool / the auth store — stub them;
 // openRemoteSignerAuthUrl only touches window.open + console.warn.
 vi.mock('nostr-tools', async (importOriginal) => {
   const real = await importOriginal<typeof import('nostr-tools')>()
@@ -10,8 +10,6 @@ vi.mock('nostr-tools/nip46', () => ({
   BunkerSigner: class {}, parseBunkerInput: vi.fn(), createNostrConnectURI: vi.fn(), toBunkerURL: vi.fn(),
 }))
 vi.mock('nostr-tools/pool', () => ({ SimplePool: class {} }))
-vi.mock('@noble/secp256k1', () => ({ getPublicKey: vi.fn() }))
-vi.mock('@noble/hashes/utils.js', () => ({ bytesToHex: vi.fn(), hexToBytes: vi.fn() }))
 vi.mock('@/core/nostr/pool', () => ({ sharedPool: { subscribeMany: vi.fn() } }))
 vi.mock('@/stores/auth.store', () => ({ useAuthStore: { getState: vi.fn(() => ({})) } }))
 
