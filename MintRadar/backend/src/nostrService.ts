@@ -12,7 +12,7 @@ import { nip19, nip17, getPublicKey, finalizeEvent } from 'nostr-tools'
 // reads the _WebSocket useWebSocketImplementation() mutates).
 import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool'
 import type { Event as NostrEvent } from 'nostr-tools'
-import WebSocket from 'ws'
+import { RelayWebSocket } from './wsPolyfill.js'
 import type { ClientRequestArgs } from 'http'
 import { pool } from './db.js'
 import { safeLookup, isWellFormedMintUrl, isAllowedRelayPort } from './ssrf.js'
@@ -32,7 +32,7 @@ import {
 // moved to node:22-alpine, leaving the buggy native implementation in place.
 // (same pattern as discovery.ts / index.ts's nostr-reviews endpoint).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-;(globalThis as any).WebSocket = WebSocket
+;(globalThis as any).WebSocket = RelayWebSocket
 
 // DNS-rebinding TOCTOU fix: relay URLs stored on subscribe are SSRF-checked
 // once (checkWsUrlSafety in index.ts), but nostr-tools' SimplePool otherwise
@@ -46,7 +46,7 @@ import {
 // installed as the nostr-tools-wide WebSocket implementation (there is no
 // per-relay hook on SimplePool), so it applies to every relay connection the
 // backend makes, closing the gap for good rather than just narrowing it.
-class DnsPinnedWebSocket extends WebSocket {
+class DnsPinnedWebSocket extends RelayWebSocket {
   constructor(address: string | URL, protocols?: string | string[]) {
     super(address, protocols, { lookup: safeLookup } as ClientRequestArgs)
   }
