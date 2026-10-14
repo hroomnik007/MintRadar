@@ -1538,7 +1538,8 @@
   font-size: 13px;
 }
 .filter-field-labelcell .filter-field-label { flex: 0 0 auto; }
-.filter-field-labelcell .filter-unit-tip { position: absolute; left: 44px; top: 50%; transform: translateY(-50%); flex: 0 0 auto; }
+/* Absolutely positioned: the trigger's vertical negative margins would move it (top: 50% centres the padded box), only the left one is needed. */
+.filter-field-labelcell .filter-unit-tip { position: absolute; left: 44px; top: 50%; transform: translateY(-50%); flex: 0 0 auto; margin-block: 0; }
 .filter-unit-tip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 /* Touch: 44px hit area through an invisible ::before (the icon itself stays 12px). */
 @media (pointer: coarse), (max-width: 600px) {

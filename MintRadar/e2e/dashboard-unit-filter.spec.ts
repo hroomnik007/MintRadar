@@ -205,6 +205,19 @@ test.describe('Dashboard unit filter', () => {
     await expect(page.getByRole('tooltip')).toHaveText(TIP)
   })
 
+  test('Unit info icon stays vertically centred on its label (the hit-area padding does not move it)', async ({ page }) => {
+    await setup(page)
+    await page.goto('/')
+    await openPanel(page)
+    const c = await page.evaluate(() => {
+      const mid = (r: DOMRect) => r.top + r.height / 2
+      const label = document.querySelector('#filter-unit-label')!.getBoundingClientRect()
+      const icon = document.querySelector('.filter-unit-tip svg')!.getBoundingClientRect()
+      return { dy: Math.abs(mid(label) - mid(icon)) }
+    })
+    expect(c.dy).toBeLessThan(2.5)
+  })
+
   test('Unit info icon does not move the controls: panel height and Status/Unit left edges unchanged', async ({ page }) => {
     await setup(page)
     // Baseline measured before the info icon was added (no unit selected): panel height / status x / unit x.
