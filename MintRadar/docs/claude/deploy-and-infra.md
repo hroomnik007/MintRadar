@@ -258,6 +258,125 @@ Runs every 6h: `0 */6 * * *` → `scripts/backup-db.sh`
 - **Relay events backup (not a file backup):** `deploy/strfry/backup-own-events.sh` (cron 04:00, copy under `/opt/mintradar-strfry`) copies public Nostr events onto our own relay and only writes a timestamp to `/opt/mintradar-strfry/backup-state/last-sync-unix`. Check the relay data directory and the state directory on the server the same way (`ls -ld`, `ls -l`) and apply `700` / `600` if they are world-readable.
 - **Open items (deliberately not done):** no encryption of the dumps, no off-server copy, no restore script (the only documented restore is the manual `zcat | psql` pipe; it has to run as `deploy` or root now that the files are `600`).
 
+## Finvu backup (2026-10-14)
+
+Finvu (the household finance tracker, a separate project on the same server) had no automatic backup. Since 2026-10-14 its database is dumped on the same pattern as MintRadar's. Nothing about Finvu's containers, compose files, data or configuration was changed; the script lives on the server, **not** in this repository or in the Finvu repository (the text below is a copy for safekeeping).
+
+- **What:** `pg_dump` (no extra options, like `backup-db.sh`) of database `finance_tracker` (user `user`) in the container `finance-tracker-postgres-1` (`postgres:17-alpine`, PostgreSQL 17.10), through `docker exec`, piped to `gzip`. Plain SQL, not encrypted. The live database was 9518 kB (18 tables, 1020 rows) and one dump is about 70 kB compressed (248 kB as SQL; most of the 9.5 MB is system catalogs, the user tables total roughly 1 MB).
+- **Where:** `/var/backups/finvu/finvu_<YYYYMMDD>_<HHMMSS>.sql.gz` (UTC). Directory `drwx------ deploy:deploy`, files `600` (same as `/var/backups/mintradar`). Script: `/home/deploy/bin/backup-finvu-db.sh` (`deploy`, `700`).
+- **Schedule:** every 6 hours at :30, offset from MintRadar's `0 */6` so the two never overlap. The server and cron run in UTC.
+- **Retention:** like MintRadar, files older than `-mtime +7` go, only inside `/var/backups/finvu`, only the exact pattern `finvu_*.sql.gz`, and **never the 4 newest files**, so a long failure cannot wipe all backups. A failed run does not run retention.
+- **Safety:** `flock` (no overlapping runs), refuses to run when the container is not running, temp file `finvu_<ts>.sql.gz.tmp` verified (`gzip -t`, at least 1 KB, header contains "PostgreSQL database dump") before the atomic `mv`, then `chmod 600`, then `LAST_OK` is written last. On any error the temp file is removed, one line `finvu-backup FAILED: <reason> (exit N)` goes to stderr and the exit code is non-zero.
+- **Log:** `/var/backups/finvu/backup.log` (`600`), the script keeps the last 500 lines itself.
+
+Cron line (deploy user's crontab; the previous crontab is saved as `/home/deploy/backups/crontab.bak-20261014-185223`):
+
+```
+30 */6 * * * /home/deploy/bin/backup-finvu-db.sh >> /var/backups/finvu/backup.log 2>&1
+```
+
+Script (verbatim, sha256 `4145ca1e91b8e9cb7e0ad6eb55007a330ac9a6be79c6058d653605503dd75054`):
+
+```bash
+#!/bin/bash
+set -euo pipefail
+umask 077
+export PATH=/usr/bin:/bin:/usr/local/bin
+
+BACKUP_DIR=/var/backups/finvu
+CONTAINER=finance-tracker-postgres-1
+KEEP_DAYS=7        # same as MintRadar (find -mtime +7)
+KEEP_NEWEST=4      # never delete the 4 newest, even if old
+LOG="$BACKUP_DIR/backup.log"
+LOCK="$BACKUP_DIR/.lock"
+TS=$(date -u +%Y%m%d_%H%M%S)
+FINAL="$BACKUP_DIR/finvu_$TS.sql.gz"
+TMP="$FINAL.tmp"
+MSG="unexpected error"
+
+log() { echo "$(date -u '+%Y-%m-%d %H:%M:%S') UTC $*"; }
+
+# Any error: remove the temp file, one line to stderr, non-zero exit.
+trap 'rc=$?; rm -f "$TMP"; if [ "$rc" -ne 0 ]; then echo "finvu-backup FAILED: $MSG (exit $rc)" >&2; fi' EXIT
+
+[ -d "$BACKUP_DIR" ] || { MSG="$BACKUP_DIR does not exist"; exit 1; }
+
+# No two runs at once.
+exec 9>"$LOCK"
+MSG="another run holds the lock"
+flock -n 9 || exit 1
+
+# Keep the last 500 log lines (in place: the cron >> descriptor stays valid).
+if [ -f "$LOG" ] && [ "$(wc -l < "$LOG")" -gt 500 ]; then
+  tail -n 500 "$LOG" > "$LOG.rot" && cat "$LOG.rot" > "$LOG"; rm -f "$LOG.rot"
+fi
+chmod 600 "$LOG" 2>/dev/null || true
+
+if ! [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null)" = "true" ]; then
+  MSG="container $CONTAINER is not running"
+  exit 1
+fi
+
+log "start"
+MSG="pg_dump or gzip returned an error"
+docker exec "$CONTAINER" sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' | gzip > "$TMP"
+
+MSG="dump is not a valid gzip stream"
+gzip -t "$TMP"
+MSG="dump is smaller than 1 KB"
+[ "$(stat -c %s "$TMP")" -ge 1024 ]
+MSG="dump header is missing 'PostgreSQL database dump'"
+HEAD=$(gzip -dc "$TMP" | head -n 5 || true)
+grep -q "PostgreSQL database dump" <<<"$HEAD"
+
+MSG="could not move the dump into place"
+chmod 600 "$TMP"
+mv -f "$TMP" "$FINAL"
+
+MSG="could not write LAST_OK"
+printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(basename "$FINAL")" > "$BACKUP_DIR/LAST_OK.tmp"
+chmod 600 "$BACKUP_DIR/LAST_OK.tmp"
+mv -f "$BACKUP_DIR/LAST_OK.tmp" "$BACKUP_DIR/LAST_OK"
+
+# Retention: only exact-pattern files in this directory, never the newest 4.
+MSG="retention failed"
+mapfile -t NEWEST < <(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'finvu_*.sql.gz' | sort -r | sed -n "1,${KEEP_NEWEST}p")
+while IFS= read -r -d '' f; do
+  for k in "${NEWEST[@]}"; do [ "$f" = "$k" ] && continue 2; done
+  rm -f -- "$f"; log "removed old backup $(basename "$f")"
+done < <(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'finvu_*.sql.gz' -mtime +"$KEEP_DAYS" -print0)
+find "$BACKUP_DIR" -maxdepth 1 -type f -name 'finvu_*.sql.gz.tmp' -mtime +1 -delete
+
+log "Backup completed: $(basename "$FINAL") ($(stat -c %s "$FINAL") bytes)"
+```
+
+**Check freshness** (names, sizes and times only): `cat /var/backups/finvu/LAST_OK` (UTC timestamp and file name of the last good backup), `ls -l --time-style=long-iso /var/backups/finvu`, `tail -n 5 /var/backups/finvu/backup.log`.
+
+**Restore** (as `deploy`; the dump has to be restored by a role that can create objects owned by `finance_user` and `"user"`, which exist in the live container). Restore into a new database first, check it, and only then swap:
+
+```
+F=/var/backups/finvu/finvu_<YYYYMMDD>_<HHMMSS>.sql.gz
+docker stop finance-tracker-repo-backend-1        # stop the app: nobody writes during the swap
+docker exec finance-tracker-postgres-1 sh -c 'psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE finance_tracker_restore"'
+zcat "$F" | docker exec -i finance-tracker-postgres-1 sh -c 'psql -U "$POSTGRES_USER" -d finance_tracker_restore -v ON_ERROR_STOP=1 -q'
+# compare table list and row counts with the old database, then swap:
+docker exec finance-tracker-postgres-1 sh -c 'psql -U "$POSTGRES_USER" -d postgres -c "ALTER DATABASE finance_tracker RENAME TO finance_tracker_old" -c "ALTER DATABASE finance_tracker_restore RENAME TO finance_tracker"'
+docker start finance-tracker-repo-backend-1
+```
+
+Drop `finance_tracker_old` only after the app has been checked. Rollback of the swap: rename the two databases back.
+
+**Restore test (2026-10-14, server01):** the newest dump (`finvu_20261014_185226.sql.gz`, 69 928 B) was restored into a throwaway `postgres:17-alpine` container (`--network none`, `--memory 384m`, tmpfs data, no volumes, no ports; roles `"user"` and `finance_user` created first because the dump assigns ownership to them; the first attempt failed on the missing `finance_user`, which is why that role is listed above). Result: restore exit 0 in 0.52 s, peak memory 81.6 MiB. All 18 tables had exactly the same row counts as the live database (1020 rows; a second live count a minute later showed no change in any table), and the indexes (36), sequences (4) and constraints (50) matched. The container was removed in a `trap`; `docker ps -a` and `docker volume ls` were identical before and after. Only table names and counts were compared, no data was printed.
+
+**Off-server copy (not set up yet; pull from a laptop):**
+
+```
+rsync -a --ignore-existing server01:/var/backups/finvu/ ~/backups/finvu/
+rsync -a --ignore-existing server01:/var/backups/mintradar/ ~/backups/mintradar/
+```
+
+**Honest limitation:** the backups sit on the same server and the same disk. They protect against mistakes, bad deploys and corrupted data, **not** against losing the server or the disk. For that, Hetzner snapshots or a regular off-server copy (the `rsync` above, ideally encrypted) are needed. No encryption, no notification on failure (the only signal is `LAST_OK` going stale and `backup.log`).
+
 ## Relay allow-list and the health-assertion activation checklist (2026-10-14)
 
 `deploy/strfry/privileged-pubkeys.txt` is the ONE list of privileged authors of the own relay (`wss://nostr.mintradar.org`): `writePolicy.sh` (inside the strfry container, bind-mounted read-only, **read once at startup**) lets these keys write any kind, everyone else only kinds 38172 and 38000; `backup-own-events.sh` reads the same file for its author list (every listed author gets the base kinds 38172 and 38000; extra kinds are per author in `EXTRA_KINDS_BY_AUTHOR`, nothing for the health key). Three keys are listed: the maintainer identity, the MintRadar service identity (alerts) and, since 2026-10-14, the **MintRadar Health** attestation key (`2ddd7ce9…941c`). The repository copy is only the source: the file on the server (strfry install directory, `/opt/mintradar-strfry`) changes when the gated server step copies it and restarts the relay container; a deploy of the repository does not do that.
