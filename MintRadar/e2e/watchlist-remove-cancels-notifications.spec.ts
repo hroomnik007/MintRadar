@@ -57,7 +57,7 @@ test.describe('Watchlist — removing a mint cancels its notifications', () => {
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(3) // gone while the unsubscribe is still pending
     await expect.poll(() => unsubscribeCalls(api).length).toBe(1)
     expect(await flags(page, ALPHA)).toBeNull()
-    api.release()
+    await api.release()
   })
 
   for (const [mode, label] of [['500', 'HTTP 500'], ['429', 'HTTP 429'], ['abort', 'network error']] as const) {
@@ -126,7 +126,7 @@ test.describe('Watchlist — removing a mint cancels its notifications', () => {
     await page.waitForTimeout(300)
     expect(api.calls.map(c => c.path)).toEqual(['subscribe']) // the unsubscribe queues behind it
     api.mode = 'ok'
-    api.release()
+    await api.release()
     await expect.poll(() => api.calls.map(c => c.path)).toEqual(['subscribe', 'unsubscribe'])
   })
 })

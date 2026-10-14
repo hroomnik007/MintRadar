@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 
 // Extracts every tooltip text of the current page state: the text of each tooltip as shown after hovering its
 // trigger, plus every visible `title` attribute (the explanatory ones that are not migrated stay titles).
@@ -62,12 +62,24 @@ export async function extractTooltipTexts(page: Page): Promise<Extracted> {
     await page.evaluate(() => { (window as unknown as { __ttAdded: Element[] }).__ttAdded = [] })
     if (covered) await loc.evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })))
     else await page.mouse.move(cx, cy)
-    await page.waitForTimeout(260)
-    const text = await readPopup(POPUP)
+    // The component opens after its hover delay and shows the box once it is placed: wait for that observable state
+    // (aria-describedby on the trigger -> a visible role="tooltip" with that id), never for a fixed time.
+    const isComponent = await loc.evaluate(el => el.hasAttribute('data-tooltip-trigger'))
+    let text: string
+    if (isComponent) {
+      await expect(loc, `tooltip of trigger ${i} opens`).toHaveAttribute('aria-describedby', /./)
+      const pop = page.locator(`[id="${(await loc.getAttribute('aria-describedby'))!}"][role="tooltip"]`)
+      await expect(pop, `tooltip of trigger ${i} is shown`).toBeVisible()
+      text = (await pop.textContent() ?? '').replace(/\s+/g, ' ').trim()
+    } else {
+      await page.waitForTimeout(260) // not an InfoTooltip (a bare cursor:help element): no observable open state to wait for
+      text = await readPopup(POPUP)
+    }
     if (text) texts.push(text.replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/g, '<ISO>').replace(/\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC/g, '<DATE>'))
-    if (covered) { await loc.evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))); await page.waitForTimeout(80) }
+    if (covered) await loc.evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })))
     await page.mouse.move(1, 1)
-    await page.waitForTimeout(140)
+    if (isComponent) await expect(page.locator(POPUP), 'the tooltip is closed before the next trigger').toHaveCount(0)
+    else await page.waitForTimeout(140)
   }
 
   const titles = await page.evaluate(() => {

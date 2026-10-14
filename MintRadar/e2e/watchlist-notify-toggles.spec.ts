@@ -48,7 +48,7 @@ test.describe('Watchlist notification toggles', () => {
     await expect(pill).toBeDisabled()
     await expect(pill).toHaveAttribute('aria-pressed', 'false') // never "on" before the answer
     await expect(pill.locator('.notify-spinner')).toBeVisible()
-    api.release()
+    await api.release()
     await expect(pill).toHaveAttribute('aria-pressed', 'true')
     expect(subscribeCalls(api)).toHaveLength(1)
     expect(subscribeCalls(api)[0]!.body).toMatchObject({
@@ -75,7 +75,7 @@ test.describe('Watchlist notification toggles', () => {
     await expect(pill.locator('.notify-spinner')).toBeVisible()
     await expect(up(page, ALPHA)).toBeDisabled() // one request per mint at a time
     expect(await flags(page, ALPHA)).toEqual({ down: false, up: false, confirmed: false })
-    api.release()
+    await api.release()
     await expect(pill).toHaveAttribute('aria-pressed', 'true')
     await expect(pill).toBeEnabled()
     expect(await flags(page, ALPHA)).toEqual({ down: true, up: false, confirmed: true })
@@ -151,7 +151,7 @@ test.describe('Watchlist notification toggles', () => {
     await up(page, ALPHA).click({ force: true }).catch(() => {})
     await page.waitForTimeout(300)
     expect(api.calls).toHaveLength(1)
-    api.release()
+    await api.release()
     await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'true')
     expect(api.calls).toHaveLength(1)
   })
@@ -223,7 +223,7 @@ test.describe('Watchlist notification toggles', () => {
     const pending = await style(down(page, ALPHA))
     expect(pending.width).toBeCloseTo(off.width, 1)
     expect(pending.height).toBeCloseTo(26, 0)
-    api.release()
+    await api.release()
     await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'true')
     expect((await style(down(page, ALPHA))).width).toBeCloseTo(off.width, 1)
     // "Goes up" too
@@ -326,7 +326,7 @@ test.describe('Watchlist notification toggles', () => {
       await expect(down(page, CHARLIE)).toBeDisabled()
       await page.waitForTimeout(300)
       await page.screenshot({ path: `${SHOTS}/notify-after-pending-error-${width}.png`, fullPage: true })
-      api.release()
+      await api.release()
     })
   }
 })

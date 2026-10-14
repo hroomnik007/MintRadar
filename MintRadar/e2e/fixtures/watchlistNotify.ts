@@ -19,18 +19,24 @@ export interface Api {
   calls: { path: string; body: Record<string, unknown> }[]
   mode: Mode
   byUrl: Record<string, Mode>
-  release: () => void
+  /** Lets the held ('gate') request(s) through; waits until one has reached the mock, so it can never run ahead of the request. */
+  release: () => Promise<void>
 }
 
 export async function mockNotifyApi(page: Page): Promise<Api> {
-  let release!: () => void
-  let gate = new Promise<void>(r => { release = r })
-  const api: Api = { calls: [], mode: 'ok', byUrl: {}, release: () => { release(); gate = new Promise<void>(r => { release = r }) } }
+  const held: (() => void)[] = []
+  const api: Api = {
+    calls: [], mode: 'ok', byUrl: {},
+    release: async () => {
+      await expect.poll(() => held.length, { message: 'a gated request reaches the mock before it is released' }).toBeGreaterThan(0)
+      held.splice(0).forEach(r => r())
+    },
+  }
   await page.route('**/api/notifications/**', async (route: Route) => {
     const body = (route.request().postDataJSON() ?? {}) as Record<string, unknown>
     api.calls.push({ path: new URL(route.request().url()).pathname.split('/').pop()!, body })
     const mode = api.byUrl[String(body['mintUrl'])] ?? api.mode
-    if (mode === 'gate') await gate
+    if (mode === 'gate') await new Promise<void>(r => held.push(r))
     if (mode === '500') return route.fulfill({ status: 500, json: { error: 'Internal server error' } })
     if (mode === '429') return route.fulfill({ status: 429, json: { error: 'Too many requests. Try again later.' } })
     if (mode === 'abort') return route.abort('failed')
@@ -86,6 +92,11 @@ export async function seedFlags(page: Page, seed: Seed[]) {
       await db.watchlist.update(r.url, { notifyOnDown: r.down, notifyOnUp: r.up, ...(r.confirmed ? { notifyConfirmedAt: new Date() } : {}) })
     }
   }, seed)
+  // The write is only done when the pills show it (the card re-renders from IndexedDB asynchronously).
+  for (const r of seed.filter(r => r.confirmed)) {
+    await expect(down(page, r.url)).toHaveAttribute('aria-pressed', String(r.down))
+    await expect(up(page, r.url)).toHaveAttribute('aria-pressed', String(r.up))
+  }
 }
 
 export const card = (page: Page, url: string) => page.locator('.wl-grid .mint-card', { has: page.locator('.card-name', { hasText: NAME[url]! }) })
