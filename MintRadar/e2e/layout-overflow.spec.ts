@@ -122,10 +122,13 @@ for (const width of [769, 800, 860]) {
       await mockRelays(page)
       await installApiMocks(page)
       await loginAs(page)
-      await page.route('**/fonts/*.woff2', async route => { await new Promise(r => setTimeout(r, 1500)); await route.continue() })
+      // The fonts (and, for `late`, the stored reviews) are held until the first measurement is taken, then let through together.
+      let letThrough!: () => void
+      const held = new Promise<void>(done => { letThrough = done })
+      await page.route('**/fonts/*.woff2', async route => { await held; await route.continue().catch(() => undefined) })
       let reviewsServed = false
       await page.route('**/api/mints/nostr-reviews**', async route => {
-        if (late) await new Promise(r => setTimeout(r, 1500))
+        if (late) await held
         await route.fulfill({ json: late ? [] : oneRatedReview })
         reviewsServed = true
       })
@@ -136,6 +139,7 @@ for (const width of [769, 800, 860]) {
       // (a) as soon as the header renders — the tile shows the rollup's stars while the stored list is still loading
       const a = await measure()
       expect(a.sw).toBeLessThanOrEqual(a.cw)
+      letThrough()
       // (b) network idle
       await page.waitForLoadState('networkidle')
       const b = await measure()

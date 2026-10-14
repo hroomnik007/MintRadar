@@ -12,14 +12,23 @@ const WATCHED = [MOCK_MINTS[0]!.url, MOCK_MINTS[1]!.url, MOCK_MINTS[2]!.url]
 
 type Mode = '500' | 'abort' | 'slow500' | 'ok'
 
-async function setup(page: Page, mode: { current: Mode }) {
+/** `slow500` answers only when `letThrough()` is called (never by a timer); `arrived()` says a request is waiting at the mock. */
+function slowGate() {
+  let letThrough!: () => void
+  const gate = new Promise<void>(done => { letThrough = done })
+  let arrived = false
+  return { gate, letThrough, arrived: () => arrived, mark: () => { arrived = true } }
+}
+type Slow = ReturnType<typeof slowGate>
+
+async function setup(page: Page, mode: { current: Mode }, slow?: Slow) {
   await mockRelays(page)
   await installApiMocks(page)
   await loginAs(page)
   await page.unroute('**/api/mints/known')
   await page.route('**/api/mints/known', async r => {
     if (mode.current === 'abort') return r.abort('failed')
-    if (mode.current === 'slow500') { await new Promise(res => setTimeout(res, 2500)); return r.fulfill({ status: 500, json: { error: 'secret-internal-detail' } }) }
+    if (mode.current === 'slow500') { slow?.mark?.(); await slow?.gate; return r.fulfill({ status: 500, json: { error: 'secret-internal-detail' } }) }
     if (mode.current === '500') return r.fulfill({ status: 500, json: { error: 'secret-internal-detail' } })
     return r.fulfill({ json: MOCK_KNOWN_MINTS })
   })
@@ -57,12 +66,21 @@ for (const pg of PAGES) {
     test(`${pg.id}: ${failure} shows the error state, no mint state, and Try again recovers`, async ({ page }) => {
       test.setTimeout(60_000)
       const mode = { current: 'ok' as Mode }
-      await setup(page, mode)
+      const slow = slowGate()
+      await setup(page, mode, slow)
       if (pg.prepare) await pg.prepare(page)
       mode.current = failure
       await page.goto(pg.path)
 
       const alert = page.getByRole('alert')
+      if (failure === 'slow500') {
+        // While the answer is still on its way the page shows no error yet; then the answer arrives (500).
+        // (Not asserted here: that Home's header strip does not read "0 online mints" while loading. It does, which is a
+        // finding listed in docs/claude/e2e-conventions.md, not something this spec may fix.)
+        await expect.poll(slow.arrived, { message: 'the slow request is waiting at the mock' }).toBe(true)
+        await expect(alert).toHaveCount(0)
+        slow.letThrough()
+      }
       await expect(alert).toContainText(ERROR_TEXT, { timeout: 20_000 })
       await expect(alert.getByRole('button', { name: 'Try again' })).toBeVisible()
       await expectNoMintState(page)
@@ -79,13 +97,16 @@ test('Mint Detail: a slow successful list shows a quiet Loading… (not an error
   await mockRelays(page)
   await installApiMocks(page)
   await page.unroute('**/api/mints/known')
+  let letThrough!: () => void
+  const held = new Promise<void>(done => { letThrough = done })
   await page.route('**/api/mints/known', async r => {
-    await new Promise(res => setTimeout(res, 2500))
+    await held
     await r.fulfill({ json: MOCK_KNOWN_MINTS })
   })
   await page.goto(DETAIL)
   await expect(page.getByRole('status')).toContainText('Loading…')
   await expect(page.getByRole('alert')).toHaveCount(0)
+  letThrough()
   await expect(page.locator('.md-tabs')).toBeVisible({ timeout: 15_000 })
 })
 
