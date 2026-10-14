@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest'
 import {
   NHI_WEIGHTS, ADVANCED_NUTS, ADVANCED_NUT_KEYS, DEGRADED_AFTER_HOURS, advancedAdoptionPercent,
   nhiSummaryText, nhiOnlineSetText, nhiFormulaText, nhiOnlineRowText, nhiReliabilityRowText,
-  nhiAdvancedRowText, avgUptimeText,
+  nhiAdvancedRowText, avgUptimeText, nhiScore,
 } from '@/utils/networkHealthIndex'
 import { PROBE_LOCATION, CLIENT_LATENCY_BUTTON_LABEL, latencyTooltipText } from '@/constants/probeLocation'
 
@@ -17,9 +17,17 @@ describe('Network Health Index constants', () => {
   })
 
   it('the advanced NUT keys are the ones the index averages', () => {
-    expect(ADVANCED_NUT_KEYS).toEqual(['11', '12', '14', '17', '21', '22', '25', '27', '28', '30'])
+    expect(ADVANCED_NUT_KEYS).toEqual(['11', '12', '14', '17', '21', '22', '25', '30'])
     expect(ADVANCED_NUT_KEYS).toEqual(ADVANCED_NUTS.map(n => n.key))
     expect(new Set(ADVANCED_NUTS.map(n => n.label)).size).toBe(ADVANCED_NUTS.length)
+  })
+
+  it('leaves out the wallet-side NUT-27 and NUT-28 (a mint never advertises them) and keeps the mint-side rest', () => {
+    expect(ADVANCED_NUT_KEYS).not.toContain('27')
+    expect(ADVANCED_NUT_KEYS).not.toContain('28')
+    for (const k of ['11', '12', '14', '17', '21', '22', '25', '30']) expect(ADVANCED_NUT_KEYS, k).toContain(k)
+    expect(ADVANCED_NUTS.map(n => n.label)).not.toContain('Nostr backup')
+    expect(ADVANCED_NUTS.map(n => n.label)).not.toContain('pay-to-blinded-key')
   })
 
   it('DEGRADED_AFTER_HOURS equals the backend rule that sets `degraded`', () => {
@@ -31,15 +39,25 @@ describe('Network Health Index constants', () => {
 
 describe('advancedAdoptionPercent', () => {
   it('averages the listed NUTs and counts a NUT missing from the stats as 0%', () => {
-    // 11/12/14/17 at 100/100/98/94, the rest absent or 0: (100+100+98+94)/10
+    // 11/12/14/17 at 100/100/98/94, the other four absent or 0: (100+100+98+94)/8
     const a = adoption({ '11': 100, '12': 100, '14': 98, '17': 94, '21': 0, '22': 0, '25': 0, '30': 0 })
-    expect(advancedAdoptionPercent(a)).toBeCloseTo(39.2, 5)
+    expect(advancedAdoptionPercent(a)).toBeCloseTo(49, 5)
   })
 
-  it('is non-zero for a NUT-27/28 that the stats do report, 0 for a missing one', () => {
-    const only = ADVANCED_NUTS.filter(n => n.key === '27' || n.key === '28')
-    expect(advancedAdoptionPercent(adoption({ '27': 50, '28': 30 }), only)).toBe(40)
-    expect(advancedAdoptionPercent(adoption({}), only)).toBe(0)
+  it('is 100 when every remaining feature is offered by every mint (it was capped below 100 with 27/28 listed)', () => {
+    const all = adoption(Object.fromEntries(ADVANCED_NUT_KEYS.map(k => [k, 100])))
+    expect(advancedAdoptionPercent(all)).toBe(100)
+  })
+
+  it('is 0 when no mint offers any of them, or the stats list none', () => {
+    expect(advancedAdoptionPercent(adoption(Object.fromEntries(ADVANCED_NUT_KEYS.map(k => [k, 0]))))).toBe(0)
+    expect(advancedAdoptionPercent(adoption({}))).toBe(0)
+  })
+
+  it('ignores NUT-27 and NUT-28 even when the stats report them', () => {
+    expect(advancedAdoptionPercent(adoption({ '27': 100, '28': 100 }))).toBe(0)
+    const all = adoption(Object.fromEntries(ADVANCED_NUT_KEYS.map(k => [k, 100])))
+    expect(advancedAdoptionPercent([...all, ...adoption({ '27': 0, '28': 0 })])).toBe(100)
   })
 
   it('ignores NUTs that are not in the list and handles an empty list', () => {
@@ -115,6 +133,45 @@ describe('Network Health Index texts come from the constants', () => {
   })
 })
 
+describe('nhiScore', () => {
+  it('equals the value computed by hand from the weights', () => {
+    // 80*0.30 + 60*0.25 + 40*0.15 + 100*0.15 + 40*0.15 = 24 + 15 + 6 + 15 + 6
+    expect(nhiScore({ online: 80, reliability: 60, diversity: 40, advanced: 100, stability: 40 })).toBe(66)
+    // 100*0.30 + 86*0.25 + 51*0.15 + 49*0.15 + 82*0.15 = 30 + 21.5 + 7.65 + 7.35 + 12.3 = 78.8
+    expect(nhiScore({ online: 100, reliability: 86, diversity: 51, advanced: 49, stability: 82 })).toBe(79)
+    expect(nhiScore({ online: 0, reliability: 0, diversity: 0, advanced: 0, stability: 0 })).toBe(0)
+    expect(nhiScore({ online: 100, reliability: 100, diversity: 100, advanced: 100, stability: 100 })).toBe(100)
+  })
+
+  it('moves by the advanced weight x the change of that part (49 -> 100 is +7.65 points at weight 15)', () => {
+    const base = { online: 100, reliability: 86, diversity: 51, stability: 82 }
+    expect(nhiScore({ ...base, advanced: 100 }) - nhiScore({ ...base, advanced: 49 })).toBe(7) // 86.45 -> 86 minus 78.8 -> 79
+    expect(nhiScore({ ...base, advanced: 100 }, { online: 30, reliability: 25, diversity: 15, advanced: 0, stability: 30 })).toBe(
+      nhiScore({ ...base, advanced: 0 }, { online: 30, reliability: 25, diversity: 15, advanced: 0, stability: 30 }),
+    )
+  })
+
+  it('follows the weights it is given', () => {
+    const p = { online: 100, reliability: 0, diversity: 0, advanced: 0, stability: 0 }
+    expect(nhiScore(p, { online: 40, reliability: 20, diversity: 15, advanced: 15, stability: 10 })).toBe(40)
+  })
+})
+
+describe('advanced row text names exactly the computed features', () => {
+  it('lists the labels of ADVANCED_NUTS and nothing else', () => {
+    const t = nhiAdvancedRowText()
+    const list = /each of: (.*)\. A feature/.exec(t)![1]!
+    expect(list.split(', ')).toEqual(ADVANCED_NUTS.map(n => n.label))
+  })
+
+  it('never names the removed wallet-side features, in any NHI text', () => {
+    const all = [nhiSummaryText(), nhiOnlineSetText(), nhiFormulaText(), nhiOnlineRowText(27), nhiReliabilityRowText(), nhiAdvancedRowText(), avgUptimeText()]
+    for (const t of all) {
+      expect(t).not.toMatch(/Nostr backup|blinded-key|pay-to-blinded|NUT-27|NUT-28/i)
+    }
+  })
+})
+
 describe('Stats.tsx wires the generated texts', () => {
   const stats = src('../pages/Stats.tsx')
   it('uses the constants and no second copy of the numbers or the old claims', () => {
@@ -122,6 +179,7 @@ describe('Stats.tsx wires the generated texts', () => {
     expect(stats).not.toMatch(/ADVANCED_NUT_KEYS\s*=/)
     expect(stats).not.toMatch(/\* 0\.(30|25|15)\b/)
     expect(stats).toContain('advancedAdoptionPercent(data.nutAdoption)')
+    expect(stats).toContain('nhiScore({')
     expect(stats).toContain('weight: NHI_WEIGHTS.advanced')
     expect(stats).toContain('{avgUptimeText()}')
     expect(stats).toContain('nhiSummaryText()')

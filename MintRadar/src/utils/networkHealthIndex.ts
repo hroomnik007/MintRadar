@@ -33,9 +33,12 @@ export interface AdvancedNut {
  * feature-adoption component averages the adoption of exactly these NUTs; a NUT that no mint
  * advertises counts as 0%.
  *
- * Measured 2026-10-14: no online mint advertises 21, 22, 25, 27, 28 or 30. NUT-27 and NUT-28 are
- * wallet-side specs (see TRACKED_NUTS in src/constants/nuts.ts), so they stay at 0% until a mint
- * implements them — the index has a permanent ceiling below 100 while they are listed here.
+ * Only MINT-SIDE features belong here. NUT-27 (Nostr mint backup) and NUT-28 (pay to blinded key)
+ * were removed on 2026-10-14: they are wallet-side specs (see TRACKED_NUTS in src/constants/nuts.ts)
+ * that a mint never advertises in /v1/info, so they were stuck at 0% and capped the component below
+ * 100 (39.2 instead of 49.0 on the live data). Mint-side features stay in even when nobody
+ * advertises them yet (measured 2026-10-14: no online mint reports 21, 22, 25 or 30) — those can
+ * be adopted, so they are meant to count.
  */
 export const ADVANCED_NUTS: readonly AdvancedNut[] = [
   { key: '11', label: 'P2PK' },
@@ -45,8 +48,6 @@ export const ADVANCED_NUTS: readonly AdvancedNut[] = [
   { key: '21', label: 'clear auth' },
   { key: '22', label: 'blind auth' },
   { key: '25', label: 'BOLT12' },
-  { key: '27', label: 'Nostr backup' },
-  { key: '28', label: 'pay-to-blinded-key' },
   { key: '30', label: 'on-chain' },
 ]
 
@@ -60,6 +61,23 @@ export function advancedAdoptionPercent(
   if (features.length === 0) return 0
   const percents = features.map(f => nutAdoption.find(n => n.nut === `NUT-${f.key.padStart(2, '0')}`)?.percent ?? 0)
   return percents.reduce((s, p) => s + p, 0) / percents.length
+}
+
+export interface NhiParts {
+  /** Each part as 0-100. */
+  online: number
+  reliability: number
+  diversity: number
+  advanced: number
+  stability: number
+}
+
+/** The index: the five parts weighted by `w` (points per 100), rounded to a whole number. */
+export function nhiScore(p: NhiParts, w: NhiWeights = NHI_WEIGHTS): number {
+  return Math.round(
+    p.online * (w.online / 100) + p.reliability * (w.reliability / 100) + p.diversity * (w.diversity / 100) +
+      p.advanced * (w.advanced / 100) + p.stability * (w.stability / 100),
+  )
 }
 
 // ── Texts ────────────────────────────────────────────────────────────────────

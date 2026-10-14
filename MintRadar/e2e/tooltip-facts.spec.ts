@@ -42,7 +42,8 @@ test.describe('Stats tooltips state what is computed', () => {
 
     await page.mouse.move(0, 0)
     await rows.nth(2).locator('xpath=..').locator('svg').hover()
-    await expect(tip(page)).toContainText('P2PK, DLEQ, HTLCs, WebSocket, clear auth, blind auth, BOLT12, Nostr backup, pay-to-blinded-key, on-chain')
+    await expect(tip(page)).toContainText('P2PK, DLEQ, HTLCs, WebSocket, clear auth, blind auth, BOLT12, on-chain')
+    await expect(tip(page)).not.toContainText(/Nostr backup|blinded/i)
     await expect(tip(page)).toContainText('A feature no mint offers counts as 0%')
   })
 

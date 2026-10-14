@@ -21,7 +21,7 @@ import { PageHead } from '@/components/layout/PageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
 import {
-  NHI_WEIGHTS, advancedAdoptionPercent, nhiSummaryText, nhiOnlineSetText, nhiFormulaText,
+  NHI_WEIGHTS, advancedAdoptionPercent, nhiScore, nhiSummaryText, nhiOnlineSetText, nhiFormulaText,
   nhiOnlineRowText, nhiReliabilityRowText, nhiAdvancedRowText, avgUptimeText,
 } from '@/utils/networkHealthIndex'
 import { formatDate } from '@/utils/formatDate'
@@ -844,10 +844,7 @@ export default function Stats() {
     const notFresh = knownMintsData.filter(m => mintAgeBadge(m.discoveredAt)?.label !== 'Fresh').length
     const stability = notFresh / knownMintsData.length * 100
 
-    const score = Math.round(
-      onlinePct * (NHI_WEIGHTS.online / 100) + avgReliability * (NHI_WEIGHTS.reliability / 100) + diversity * (NHI_WEIGHTS.diversity / 100) +
-        advancedAdoption * (NHI_WEIGHTS.advanced / 100) + stability * (NHI_WEIGHTS.stability / 100)
-    )
+    const score = nhiScore({ online: onlinePct, reliability: avgReliability, diversity, advanced: advancedAdoption, stability })
 
     // Matches NetworkHealthComponentRow's own points formula so the tooltip's
     // numbers can never drift from what the row actually displays.
