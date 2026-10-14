@@ -259,7 +259,9 @@ test.describe('tiles from the stored detail', () => {
 
   test('tiles use one neutral number colour, whatever the numbers', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: czDetail({ swaps7d: { ...LNPAY_DETAIL.swaps7d, errorsBlamed: 12 } }) }))
+    await expect(page.locator('.audit-cz-tiles .audit-summary-value').first()).toBeVisible() // the tiles exist before their colours are read
     const colors = await page.locator('.audit-cz-tiles .audit-summary-value').evaluateAll(els => els.map(e => getComputedStyle(e).color))
+    expect(colors.length).toBeGreaterThan(1)
     expect(new Set(colors).size).toBe(1)
   })
 

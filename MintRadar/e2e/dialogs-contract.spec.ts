@@ -78,7 +78,8 @@ async function geometry(dialog: Locator, closeSelector: string | null) {
 
 for (const c of CASES) {
   for (const vp of viewportsOf(c)) {
-    test(`${c.id} @ ${vp.width}x${vp.height}: close button 32 px and clear, fits the viewport, scrolls inside`, async ({ page }) => {
+    test(`${c.id} @ ${vp.width}x${vp.height}`, async ({ page }) => {
+      // One navigation per dialog and viewport; the three rules below are checked on the same open dialog.
       const dialog = await open(page, c, vp)
       const { w, h } = await viewportBox(page)
       const g = await geometry(dialog, c.close)
@@ -106,10 +107,8 @@ for (const c of CASES) {
       if (g.contentTaller) {
         expect(['auto', 'scroll'], `${c.id}: content taller than the dialog box, so the box must scroll (overflow-y ${g.overflowY})`).toContain(g.overflowY)
       }
-    })
 
-    test(`${c.id} @ ${vp.width}x${vp.height}: a wheel over the backdrop does not scroll the page behind`, async ({ page }) => {
-      const dialog = await open(page, c, vp)
+      // A wheel over the backdrop does not scroll the page behind.
       expect(await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight + 100), 'the page behind is scrollable (spacer)').toBe(true)
       const before = await page.evaluate(() => window.scrollY)
       // A point outside the dialog box when there is one (the backdrop); on a phone the dialog may fill the screen: then its own surface.

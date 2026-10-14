@@ -107,7 +107,8 @@ for (const route of AUDIT_ROUTES) {
       await layoutReady(page)
     })
 
-    test('structure: one h1, landmarks, heading levels, names, alt text, ids, language', async ({ page }) => {
+    // One navigation per route: structure, the accessibility tree and (not for states reached by clicking) the Tab order.
+    test('structure, accessibility tree and Tab order', async ({ page }) => {
       const s = await collectStructure(page)
       const known = KNOWN[route.id] ?? {}
       expect(s.lang, 'document.documentElement.lang is set').toMatch(/^[a-z]{2}/)
@@ -122,17 +123,14 @@ for (const route of AUDIT_ROUTES) {
       expect(s.unnamed, 'interactive elements without an accessible name').toEqual([])
       expect(s.imagesWithoutAlt, 'img elements without an alt attribute').toEqual([])
       expect(s.duplicateIds, 'duplicate id attributes').toEqual([])
-    })
 
-    test('the accessibility tree names every link, button and field too', async ({ page }) => {
       // The same question asked of the browser's own accessibility tree (what a screen reader gets), not of our DOM walk.
       const snapshot = await page.locator('body').ariaSnapshot()
       const unnamed = snapshot.split('\n').filter(l => /^\s*- (link|button|textbox|combobox|checkbox|radio|switch|tab|searchbox|slider|spinbutton|menuitem)(\s*\[[^\]]*\])*:?\s*$/.test(l))
       expect(unnamed, 'nodes of the accessibility tree without a name').toEqual([])
-    })
 
-    // A state reached by clicking (route.after) starts Tab from the click point, not from the top: the plain route covers the top.
-    if (!route.after) test('Tab: first interactive element within 3 stops, DOM order, visible focus style, nothing hidden', async ({ page }) => {
+      // A state reached by clicking (route.after) starts Tab from the click point, not from the top: the plain route covers the top.
+      if (route.after) return
       const { stops, firstInteractiveAt } = await tabThrough(page, 12)
       expect(firstInteractiveAt, `the first visible interactive element is reached by Tab ${firstInteractiveAt}: ${stops.slice(0, 4).map(s => s.desc).join(' → ')}`).toBeGreaterThan(0)
       expect(firstInteractiveAt, 'the first interactive element is reached within three Tab presses').toBeLessThanOrEqual(3)
