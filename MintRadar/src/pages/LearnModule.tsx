@@ -42,6 +42,7 @@ export default function LearnModule() {
     return (
       <div className="learn-module-page">
         <article className="learn-module">
+          <h1 className="sr-only">Module not found</h1>
           <div className="learn-not-found">
             Module not found. <Link to="/learn">Back to Learn</Link>
           </div>

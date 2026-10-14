@@ -69,9 +69,9 @@ export default function MintNaddr() {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       minHeight: '60vh', flexDirection: 'column', gap: 12,
     }}>
-      <div style={{ fontSize: 13, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>
+      <h1 style={{ fontSize: 13, fontWeight: 400, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>
         Resolving mint…
-      </div>
+      </h1>
     </div>
   )
 }

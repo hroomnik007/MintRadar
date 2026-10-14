@@ -2807,7 +2807,7 @@ function MintNotTracked({ slug, suggestion }: { slug: string; suggestion: string
         <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
       </div>
       <div className="md-not-tracked">
-        <div className="md-not-tracked-title">Not a tracked mint</div>
+        <h1 className="md-not-tracked-title">Not a tracked mint</h1>
         <p className="md-not-tracked-body">
           MintRadar isn’t tracking <code>{slug}</code>. It may not be a Cashu mint, or it hasn’t been submitted yet.
         </p>
@@ -2846,7 +2846,7 @@ export default function MintDetail() {
         <div className="md-header">
           <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
         </div>
-        <p style={{ color: 'var(--red)', padding: '24px', fontSize: '14px' }}>Invalid mint URL.</p>
+        <h1 style={{ color: 'var(--red)', padding: '24px', fontSize: '14px', fontWeight: 400 }}>Invalid mint URL.</h1>
       </div>
     )
   }
@@ -2860,6 +2860,7 @@ export default function MintDetail() {
         <div className="md-header">
           <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
         </div>
+        <h1 className="sr-only">Mint details</h1>
         {knownError ? <LoadError message={MINT_LIST_ERROR} onRetry={() => void refetchKnown()} /> : <LoadingNote />}
       </div>
     )
