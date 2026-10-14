@@ -71,7 +71,7 @@ test.describe('Mint Detail', () => {
     // (2026-09-20, to reclaim vertical space) instead of always being
     // visible as text.
     await panel.locator('.md-audit-info').hover()
-    await expect(panel.getByText(/Score = Uptime×40%/)).toBeVisible()
+    await expect(page.getByRole('tooltip')).toContainText(/Score = Uptime×40%/)
   })
 
   test('Reliability Score details modal still opens from the mobile compact tile', async ({ page }) => {

@@ -578,8 +578,17 @@ test.describe('failure reason in the State cell', () => {
   const LIMITS_WHY = "Not counted against the mint: the auditor's test was below the mint's minimum amount"
   const BALANCE_WHY = "Not counted against the mint: the auditor's wallet had too little balance"
   const stateCell = (page: Page, host: string) => row(page, host).locator('td').last()
+  // The failure text is the State cell's tooltip (an InfoTooltip button around the state text), not a title attribute.
+  const stateTip = async (page: Page, host: string) => {
+    const trigger = stateCell(page, host).getByRole('button')
+    await trigger.hover()
+    const text = await page.getByRole('tooltip').textContent()
+    await page.mouse.move(0, 0)
+    await expect(page.getByRole('tooltip')).toHaveCount(0)
+    return text
+  }
 
-  test('failed, below-minimum and balance rows: error text in the title and in a hidden element, visible text unchanged', async ({ page }) => {
+  test('failed, below-minimum and balance rows: error text in the tooltip and in a hidden element, visible text unchanged', async ({ page }) => {
     const swaps = czSwapList([
       ok,
       { ...melt, error: NO_ROUTE },
@@ -593,20 +602,21 @@ test.describe('failure reason in the State cell', () => {
 
     // red melt row
     const meltCell = stateCell(page, 'melt1.example')
-    await expect(meltCell).toHaveAttribute('title', NO_ROUTE)
+    await expect(meltCell).not.toHaveAttribute('title', /.*/)
+    expect(await stateTip(page, 'melt1.example')).toBe(NO_ROUTE)
     await expect(meltCell.locator('.sr-only')).toHaveText(NO_ROUTE)
     expect(await visibleState(page, 'melt1.example')).toBe('failed (melt)')
     // grey rows: the fixed explanation first, then the error text
     const limitsCell = stateCell(page, 'limits2.example')
-    await expect(limitsCell).toHaveAttribute('title', `${LIMITS_WHY}. ${MIN_TEXT}`)
+    expect(await stateTip(page, 'limits2.example')).toBe(`${LIMITS_WHY}. ${MIN_TEXT}`)
     await expect(limitsCell.locator('.sr-only')).toHaveText(MIN_TEXT)
     expect(await visibleState(page, 'limits2.example')).toBe('below minimum')
     const balanceCell = stateCell(page, 'balance3.example')
-    await expect(balanceCell).toHaveAttribute('title', `${BALANCE_WHY}. ${BAL_TEXT}`)
+    expect(await stateTip(page, 'balance3.example')).toBe(`${BALANCE_WHY}. ${BAL_TEXT}`)
     await expect(balanceCell.locator('.sr-only')).toHaveText(BAL_TEXT)
     expect(await visibleState(page, 'balance3.example')).toBe('auditor balance')
     // pending is not OK either
-    await expect(stateCell(page, 'pending4.example')).toHaveAttribute('title', 'Waiting for the quote')
+    expect(await stateTip(page, 'pending4.example')).toBe('Waiting for the quote')
     expect(await visibleState(page, 'pending4.example')).toBe('pending')
 
     // the hidden element is really hidden: 1px box, clipped, takes no room (cell text width = the visible text's)
@@ -619,22 +629,23 @@ test.describe('failure reason in the State cell', () => {
     await expect(meltCell).toContainText(`failed (melt) ${NO_ROUTE}`, { useInnerText: false })
   })
 
-  test('a failed row without an error text has no title and no hidden element; a grey row keeps the explanation', async ({ page }) => {
+  test('a failed row without an error text has no tooltip and no hidden element; a grey row keeps the explanation', async ({ page }) => {
     await gotoAuditTab(page, onlyCz(czSwapList([ok, { ...melt, error: null }, { ...limits, error: null }, { ...melt, error: ' \n\t ' }])))
     await expandFrom(page)
     await expect(page.locator('.audit-swaps-table tbody tr')).toHaveCount(4)
-    await expect(stateCell(page, 'melt1.example')).not.toHaveAttribute('title', /.*/)
+    await expect(stateCell(page, 'melt1.example').getByRole('button')).toHaveCount(0) // no tooltip without an error text
     await expect(stateCell(page, 'melt1.example').locator('.sr-only')).toHaveCount(0)
-    await expect(stateCell(page, 'limits2.example')).toHaveAttribute('title', LIMITS_WHY)
-    await expect(stateCell(page, 'melt3.example')).not.toHaveAttribute('title', /.*/)
+    expect(await stateTip(page, 'limits2.example')).toBe(LIMITS_WHY)
+    await expect(stateCell(page, 'melt3.example').getByRole('button')).toHaveCount(0)
     await expect(stateCell(page, 'melt3.example').locator('.sr-only')).toHaveCount(0)
   })
 
-  test('an OK row has neither a title nor a hidden element, even when the endpoint sends an error text', async ({ page }) => {
+  test('an OK row has neither a tooltip nor a hidden element, even when the endpoint sends an error text', async ({ page }) => {
     await gotoAuditTab(page, onlyCz(czSwapList([{ ...ok, error: 'leftover text' }, ok, { ...melt, error: NO_ROUTE }])))
     await expect(page.locator('.audit-swaps-table tbody tr')).toHaveCount(3)
     for (const host of ['ok0.example', 'ok1.example']) {
       await expect(stateCell(page, host)).not.toHaveAttribute('title', /.*/)
+      await expect(stateCell(page, host).getByRole('button')).toHaveCount(0)
       await expect(stateCell(page, host).locator('.sr-only')).toHaveCount(0)
       expect(await visibleState(page, host)).toBe('OK')
     }
@@ -648,8 +659,10 @@ test.describe('failure reason in the State cell', () => {
     for (const host of ['melt1.example', 'limits2.example']) {
       const cellEl = stateCell(page, host)
       await expect(cellEl.locator('.sr-only')).toHaveText(XSS)
-      await expect(cellEl).toHaveAttribute('title', new RegExp(`${XSS.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`))
-      await expect(cellEl.locator('*')).toHaveCount(1) // the hidden span, nothing else
+      expect(await stateTip(page, host)).toMatch(new RegExp(`${XSS.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`))
+      // only the tooltip button (with its text span) and the hidden span: nothing the text could have created
+      await expect(cellEl.locator('*:not(button):not(span)')).toHaveCount(0)
+      await expect(cellEl.locator('*')).toHaveCount(3)
     }
     await expect(page.locator('.md-audit-collapsible img')).toHaveCount(0)
     await expect(page.locator('[onerror], img[src="x"]')).toHaveCount(0)
@@ -660,21 +673,21 @@ test.describe('failure reason in the State cell', () => {
   test('control characters and extra whitespace are cleaned before use', async ({ page }) => {
     await gotoAuditTab(page, onlyCz(czSwapList([ok, { ...melt, error: '  Lightning\n\n payment\tfailed\u0000:\u202e  no_route.  ' }])))
     const cellEl = stateCell(page, 'melt1.example')
-    await expect(cellEl).toHaveAttribute('title', 'Lightning payment failed: no_route.')
+    expect(await stateTip(page, 'melt1.example')).toBe('Lightning payment failed: no_route.')
     await expect(cellEl.locator('.sr-only')).toHaveText('Lightning payment failed: no_route.')
   })
 
-  test('a very long error text is truncated to 200 characters in the title', async ({ page }) => {
+  test('a very long error text is truncated to 200 characters in the tooltip', async ({ page }) => {
     const long = `${'word '.repeat(60)}END` // 303 characters, the endpoint caps at 300
     await gotoAuditTab(page, onlyCz(czSwapList([ok, { ...melt, error: long.slice(0, 300) }, { ...limits, error: long.slice(0, 300) }])))
-    const title = await stateCell(page, 'melt1.example').getAttribute('title')
+    const title = await stateTip(page, 'melt1.example')
     expect(title).not.toBeNull()
     expect(title!.length).toBeLessThanOrEqual(200)
     expect(title!.length).toBeGreaterThan(150)
     expect(title!.endsWith('…')).toBe(true)
     expect(long.startsWith(title!.slice(0, -1).trimEnd())).toBe(true)
     // the grey row: explanation, then the same truncated text
-    const greyTitle = await stateCell(page, 'limits2.example').getAttribute('title')
+    const greyTitle = await stateTip(page, 'limits2.example')
     expect(greyTitle!.startsWith(`${LIMITS_WHY}. `)).toBe(true)
     const greyReason = greyTitle!.slice(`${LIMITS_WHY}. `.length)
     expect(greyReason.length).toBeLessThanOrEqual(200)
