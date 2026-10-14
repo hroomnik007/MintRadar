@@ -208,4 +208,5 @@ A change to the Reliability Score formula (component weights, the audit rule, th
 - Commit messages: a short imperative sentence. The prefixes the repository actually uses (`fix:`, `style:`, `feat:`, `test:`, `e2e:`, `docs:`, `chore:`) are allowed, not required.
 - New dependency: only with a written reason in the commit message, prefer Node/browser APIs and packages already installed, no packages with install scripts; rules, the quarterly audit method and the kept-on-purpose list are in `docs/claude/deploy-and-infra.md` ("Dependency policy")
 - Security: always audit new code for SSRF, rate limits, XSS
+- Outbound connections to non-hard-coded hosts go through `backend/src/ssrf.ts` (`safeFetch`, `safeLookup`, `DnsPinnedWebSocket`); every nostr-tools pool connects with `RelayWebSocket` (`wsPolyfill.ts`) so a connection error never becomes an uncaughtException; rule table, tests and icon-proxy failure reasons: `docs/claude/backend-api-and-data.md` ("Network layer")
 - Security: `verifyEvent()` from nostr-tools must be called on all inbound Nostr events (frontend hooks and backend discovery)
