@@ -1,7 +1,7 @@
 import { nip19 } from 'nostr-tools'
 import { njumpProfileUrl, njumpEventUrl, npubFromPubkey, mintAnnounceNaddr } from '@/utils/nostrLinks'
 import { useParams, useNavigate, Navigate, Link } from 'react-router-dom'
-import { Fragment, useEffect, useState, useMemo, useRef, useCallback, lazy, Suspense, type JSX, type ReactNode } from 'react'
+import { Fragment, useEffect, useState, useMemo, useCallback, lazy, Suspense, type CSSProperties, type JSX, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
@@ -22,7 +22,7 @@ import { MintComparePicker } from '@/components/MintComparePicker'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { MintNetworkCard } from '@/components/MintNetworkCard'
 import { networkRows } from '@/utils/networkInfo'
-import { AuditCzTiles, AuditCzSwapTables } from '@/components/AuditCzCards'
+import { AuditCzTiles, AuditCzSwapTables, AuditStateText } from '@/components/AuditCzCards'
 import { formatDate } from '@/utils/formatDate'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
@@ -35,7 +35,7 @@ import { auditFreshness } from '@/utils/auditFreshness'
 import { IcClose } from '@/components/IcClose'
 import { clickableProps } from '@/utils/clickableProps'
 import { useAuditCz } from '@/hooks/useAuditCz'
-import { adaptAuditCz, auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
+import { adaptAuditCz, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
 import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import { sortUnits } from '@/utils/sortUnits'
 import {
@@ -47,7 +47,6 @@ import { classifyMintVersion, latestMapFor, type LatestVersions } from '@/utils/
 import { useNow } from '@/hooks/useNow'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { PROBE_LOCATION, CLIENT_LATENCY_BUTTON_LABEL, latencyTooltipText } from '@/constants/probeLocation'
-import { useTapTooltip } from '@/hooks/useTapTooltip'
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { reviewAvatarColor, avatarTextColor } from '@/utils/avatarColors'
@@ -133,39 +132,21 @@ function reviewPageList(current: number, total: number): (number | '…')[] {
   return out
 }
 
-// ⓘ next to the "Audit stats" heading — same hover/tap tooltip pattern as the
-// per-metric icons (useTapTooltip + .audit-tooltip). Local component so its
-// tooltip state doesn't leak into MintDetail, and so the identical icon can be
-// dropped into both the desktop header and the mobile collapse toggle. Opens
-// downward (top: 100%+6px) since the heading sits at the panel's top edge.
-function AuditSourceInfoIcon({ align = 'left', text }: { align?: 'left' | 'right'; text?: string }) {
-  const ref = useRef<HTMLSpanElement>(null)
-  const tip = useTapTooltip(ref)
-  // `align` decides which way the (downward) tooltip extends so it doesn't clip:
-  // 'left' for the desktop heading (icon near the panel's left edge), 'right'
-  // for the mobile collapse toggle (icon sits near the right edge).
-  const anchor = align === 'right'
-    ? { right: 0, left: 'auto' as const }
-    : { left: 0, right: 'auto' as const }
+// The Audit tiles' ⓘ sits 3 px after the label (the trigger's hit-area padding is compensated by InfoTooltip.css).
+const TT_GAP_LEFT = { '--tt-ml': '3px' } as CSSProperties
+
+// ⓘ next to the "Audit stats" heading and the Reliability Score title: the shared InfoTooltip with the
+// audit explanation (or the given text). A local component so the identical icon can be dropped into both the
+// desktop header and the mobile heading.
+function AuditSourceInfoIcon({ text, about = 'Audit stats' }: { text?: string; about?: string }) {
   return (
-    <span
-      ref={ref}
+    <InfoTooltip
       className="md-audit-info"
-      style={{ position: 'relative', display: 'inline-flex' }}
-      onPointerEnter={tip.onPointerEnter}
-      onPointerLeave={tip.onPointerLeave}
-      onClick={tip.onClick}
-    >
-      <Info size={11} color="#6b7280" style={{ cursor: 'help' }} />
-      {tip.open && (
-        <div
-          className="audit-tooltip"
-          style={{ width: 230, maxWidth: 'calc(100vw - 40px)', transform: 'none', bottom: 'auto', top: 'calc(100% + 6px)', ...anchor }}
-        >
-          {text ?? 'These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.'}
-        </div>
-      )}
-    </span>
+      iconSize={11}
+      width={230}
+      about={about}
+      text={text ?? 'These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.'}
+    />
   )
 }
 
@@ -254,10 +235,7 @@ const NUT_ICONS: Record<string, JSX.Element> = {
 
 // One row of the Reliability Score breakdown (label + info tooltip + measured
 // value + score bar). Rendered both inline on the Overview sidebar panel and
-// inside the "Reliability Score Breakdown" modal — each usage gets its own
-// ref/tooltip state (a shared ref across two simultaneously-mounted rows
-// would fight over which DOM node it points at), so this owns its own
-// useTapTooltip rather than taking one as a prop.
+// inside the "Reliability Score Breakdown" modal; each usage has its own tooltip.
 function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, note, detail }: {
   label: string
   display: string
@@ -269,28 +247,15 @@ function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, n
   color: string
   tooltip: string
 }) {
-  const ref = useRef<HTMLSpanElement>(null)
-  const tip = useTapTooltip(ref)
   return (
     <div className="rb-row">
       <div className="rb-row-top">
         <span className="rb-row-label">
           {label}
-          <span
-            ref={ref}
-            style={{ position: 'relative', display: 'inline-flex' }}
-            onPointerEnter={tip.onPointerEnter}
-            onPointerLeave={tip.onPointerLeave}
-            onClick={tip.onClick}
-          >
-            <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
-            {tip.open && (
-              <div className="audit-tooltip" style={{ width: 220, left: '50%', transform: 'translateX(-50%)' }}>{tooltip}</div>
-            )}
-          </span>
+          <InfoTooltip iconSize={11} width={220} about={label} text={tooltip} />
         </span>
         <div className="rb-row-right">
-          {note && <span className="rb-row-note" title={tooltip}>{note}</span>}
+          {note && <InfoTooltip text={tooltip} width={220}><span className="rb-row-note">{note}</span></InfoTooltip>}
           <span className="rb-row-display">{display}</span>
           <span className="rb-row-score" style={{ color }}>{score}/{max}</span>
         </div>
@@ -617,36 +582,6 @@ function MintDetailContent({ url }: { url: string }) {
   const [reviewSuccess, setReviewSuccess] = useState(false)
   const [clientLatency, setClientLatency] = useState<number | string | null>(null)
   const [testingLatency, setTestingLatency] = useState(false)
-  const errorBadgeRef = useRef<HTMLSpanElement>(null)
-  const errorBadgeTooltip = useTapTooltip(errorBadgeRef)
-  // The error badge's horizontal position varies with the error string's length
-  // (unlike AuditSourceInfoIcon's `align` prop, which is a static per-callsite
-  // choice — there's no fixed "near the left edge" or "near the right edge"
-  // here). Measured on open, in the event handler (not render, to stay
-  // purity-rule-clean) via the trigger's own rect vs. window width, so the
-  // popup grows away from whichever edge is actually tight instead of always
-  // centering (the old behavior — see the audit-tooltip style below).
-  const [errorTooltipAlign, setErrorTooltipAlign] = useState<'left' | 'right'>('left')
-  const measureErrorTooltipAlign = useCallback(() => {
-    const el = errorBadgeRef.current
-    if (!el) return
-    const spaceRight = window.innerWidth - el.getBoundingClientRect().right
-    setErrorTooltipAlign(spaceRight >= 200 ? 'left' : 'right')
-  }, [])
-  const backupBadgeRef = useRef<HTMLSpanElement>(null)
-  const backupBadgeTooltip = useTapTooltip(backupBadgeRef)
-  const latencyInfoRef = useRef<HTMLSpanElement>(null)
-  const latencyInfoTooltip = useTapTooltip(latencyInfoRef)
-  const clientLatencyInfoRef = useRef<HTMLSpanElement>(null)
-  const clientLatencyInfoTooltip = useTapTooltip(clientLatencyInfoRef)
-  const auditMintsRef = useRef<HTMLSpanElement>(null)
-  const auditMintsTooltip = useTapTooltip(auditMintsRef)
-  const auditMeltsRef = useRef<HTMLSpanElement>(null)
-  const auditMeltsTooltip = useTapTooltip(auditMeltsRef)
-  const auditErrorsRef = useRef<HTMLSpanElement>(null)
-  const auditErrorsTooltip = useTapTooltip(auditErrorsRef)
-  const auditAvgTimeRef = useRef<HTMLSpanElement>(null)
-  const auditAvgTimeTooltip = useTapTooltip(auditAvgTimeRef)
   const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'nuts' | 'audit' | 'reviews'>('overview')
   const [showAllAuditSwaps, setShowAllAuditSwaps] = useState(false)
   // cashu.info view: each of the two swap tables expands on its own.
@@ -1199,7 +1134,7 @@ function MintDetailContent({ url }: { url: string }) {
     const keysets = data?.keysets ?? null
     return (
       <div className="md-panel">
-        <div className="md-panel-title" title={KEYSET_TOOLTIP}>Keysets</div>
+        <div className="md-panel-title"><InfoTooltip text={KEYSET_TOOLTIP} width={240}>Keysets</InfoTooltip></div>
         {!keysets || keysets.length === 0 ? (
           <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Keyset data not available.</div>
         ) : (
@@ -1227,7 +1162,7 @@ function MintDetailContent({ url }: { url: string }) {
                 </div>
                 <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.06em'}}>{ks.unit}</span>
                 {typeof ks.input_fee_ppk === 'number' && (
-                  <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)'}} title="Input fee per 1000 proofs spent from this keyset">{formatKeysetFee(ks.input_fee_ppk)}</span>
+                  <InfoTooltip text="Input fee per 1000 proofs spent from this keyset" width={200}><span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>{formatKeysetFee(ks.input_fee_ppk)}</span></InfoTooltip>
                 )}
                 <span style={{
                   fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,borderRadius:5,padding:'2px 7px',marginLeft:'auto',
@@ -1285,12 +1220,14 @@ function MintDetailContent({ url }: { url: string }) {
                   <span>{isOnline ? 'Online' : 'Offline'}</span>
                 </span>
                 {isNew && (
-                  <span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}} title="New mint (< 30 days) — Reliability Score is capped at 75 until it builds a track record">New</span>
+                  <InfoTooltip text="New mint (< 30 days) — Reliability Score is capped at 75 until it builds a track record" width={240}><span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}}>New</span></InfoTooltip>
                 )}
                 {isTestMint(url) && (
-                  <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}} title="Not for real funds — for testing and development only">
-                    Test mint
-                  </span>
+                  <InfoTooltip text="Not for real funds — for testing and development only">
+                    <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}}>
+                      Test mint
+                    </span>
+                  </InfoTooltip>
                 )}
               </h1>
               <button
@@ -1347,30 +1284,12 @@ function MintDetailContent({ url }: { url: string }) {
               >
                 {knownMint.lastError}
               </span>
-              <span
-                ref={errorBadgeRef}
-                style={{position:'relative',display:'inline-flex'}}
-                onPointerEnter={e => { measureErrorTooltipAlign(); errorBadgeTooltip.onPointerEnter(e) }}
-                onPointerLeave={errorBadgeTooltip.onPointerLeave}
-                onClick={e => { measureErrorTooltipAlign(); errorBadgeTooltip.onClick(e) }}
-              >
-                <Info size={11} color="#6b7280" style={{cursor:'help'}} />
-                {errorBadgeTooltip.open && httpErrorTooltip(knownMint.lastError) && (
-                  <div
-                    className="audit-tooltip"
-                    style={{
-                      width: 200,
-                      maxWidth: 'calc(100vw - 40px)',
-                      transform: 'none',
-                      bottom: 'auto',
-                      top: 'calc(100% + 6px)',
-                      ...(errorTooltipAlign === 'right' ? { right: 0, left: 'auto' } : { left: 0, right: 'auto' }),
-                    }}
-                  >
-                    {httpErrorTooltip(knownMint.lastError)}
-                  </div>
-                )}
-              </span>
+              {httpErrorTooltip(knownMint.lastError) ? (
+                <InfoTooltip iconSize={11} width={200} about={knownMint.lastError} text={httpErrorTooltip(knownMint.lastError) ?? ''} />
+              ) : (
+                // No explanation for this error: the icon stays (as before) but is not a control that opens nothing.
+                <Info size={11} color="#6b7280" style={{cursor:'help'}} aria-hidden="true" />
+              )}
             </span>
           )}
           <button className="md-quick-btn" onClick={() => setShowQr(true)}>
@@ -1409,20 +1328,7 @@ function MintDetailContent({ url }: { url: string }) {
           <div style={{flex:1}}>
             <div className="md-sc-label" style={{display:'flex',alignItems:'center',gap:4}}>
               Latency
-              <span
-                ref={latencyInfoRef}
-                style={{position:'relative',display:'inline-flex'}}
-                onPointerEnter={latencyInfoTooltip.onPointerEnter}
-                onPointerLeave={latencyInfoTooltip.onPointerLeave}
-                onClick={latencyInfoTooltip.onClick}
-              >
-                <Info size={11} color="#6b7280" style={{cursor:'help'}} />
-                {latencyInfoTooltip.open && (
-                  <div className="audit-tooltip" style={{width:200}}>
-                    {latencyTooltipText()}
-                  </div>
-                )}
-              </span>
+              <InfoTooltip className="latency-info" iconSize={11} width={200} about="Latency" text={latencyTooltipText()} />
             </div>
             <div className="md-sc-value">{latency !== null ? `${latency} ms` : '—'}</div>
             <div className="md-sc-sub">
@@ -1436,20 +1342,7 @@ function MintDetailContent({ url }: { url: string }) {
                   {testingLatency && <span className="latency-spinner" />}
                   {CLIENT_LATENCY_BUTTON_LABEL}
                 </button>
-                <span
-                  ref={clientLatencyInfoRef}
-                  style={{position:'relative',display:'inline-flex'}}
-                  onPointerEnter={clientLatencyInfoTooltip.onPointerEnter}
-                  onPointerLeave={clientLatencyInfoTooltip.onPointerLeave}
-                  onClick={clientLatencyInfoTooltip.onClick}
-                >
-                  <Info size={11} color="#6b7280" style={{cursor:'help'}} />
-                  {clientLatencyInfoTooltip.open && (
-                    <div className="audit-tooltip" style={{width:200}}>
-                      Your latency from this browser to the mint (client-side measurement).
-                    </div>
-                  )}
-                </span>
+                <InfoTooltip className="latency-client-info" iconSize={11} width={200} about="your latency from this browser" text="Your latency from this browser to the mint (client-side measurement)." />
               </span>
             </div>
             {clientLatency !== null && (
@@ -1949,40 +1842,14 @@ function MintDetailContent({ url }: { url: string }) {
                   <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--accent)',background:'var(--green-soft)',border:'0.5px solid var(--green-soft-strong)',borderRadius:5,padding:'2px 7px'}}>
                     <ShieldCheck size={11} /> Backup supported
                   </span>
-                  <span
-                    ref={backupBadgeRef}
-                    style={{position:'relative',display:'inline-flex'}}
-                    onPointerEnter={backupBadgeTooltip.onPointerEnter}
-                    onPointerLeave={backupBadgeTooltip.onPointerLeave}
-                    onClick={backupBadgeTooltip.onClick}
-                  >
-                    <Info size={11} color="#6b7280" style={{cursor:'help'}} />
-                    {backupBadgeTooltip.open && (
-                      <div className="audit-tooltip" style={{width:220,left:'50%',transform:'translateX(-50%)'}}>
-                        This mint supports restoring blind signatures (NUT-09), which lets a wallet recover its ecash from a seed phrase after losing its device.
-                      </div>
-                    )}
-                  </span>
+                  <InfoTooltip iconSize={11} width={220} about="backup support" text="This mint supports restoring blind signatures (NUT-09), which lets a wallet recover its ecash from a seed phrase after losing its device." />
                 </span>
               ) : (
                 <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
                   <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--text3)',background:'var(--bg3)',border:'0.5px solid var(--border)',borderRadius:5,padding:'2px 7px'}}>
                     <ShieldOff size={11} /> No backup
                   </span>
-                  <span
-                    ref={backupBadgeRef}
-                    style={{position:'relative',display:'inline-flex'}}
-                    onPointerEnter={backupBadgeTooltip.onPointerEnter}
-                    onPointerLeave={backupBadgeTooltip.onPointerLeave}
-                    onClick={backupBadgeTooltip.onClick}
-                  >
-                    <Info size={11} color="#6b7280" style={{cursor:'help'}} />
-                    {backupBadgeTooltip.open && (
-                      <div className="audit-tooltip" style={{width:220,left:'50%',transform:'translateX(-50%)'}}>
-                        This mint doesn't support wallet backup restore (NUT-09) — losing your device may mean losing funds stored here.
-                      </div>
-                    )}
-                  </span>
+                  <InfoTooltip iconSize={11} width={220} about="backup support" text="This mint doesn't support wallet backup restore (NUT-09) — losing your device may mean losing funds stored here." />
                 </span>
               )}
             </div>
@@ -2166,7 +2033,7 @@ function MintDetailContent({ url }: { url: string }) {
                 <div className="md-audit-toggle">
                   <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
                   <span style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>· via {czView ? 'cashu.info' : 'audit.8333.space'}</span>
-                  <AuditSourceInfoIcon align="right" {...(czInfoText ? { text: czInfoText } : {})} />
+                  <AuditSourceInfoIcon {...(czInfoText ? { text: czInfoText } : {})} />
                   {auditSwitch}
                 </div>
 
@@ -2180,40 +2047,14 @@ function MintDetailContent({ url }: { url: string }) {
                     <div className="audit-summary-value" style={{color:'var(--accent)'}}>{stripMints === null ? '—' : stripMints.toLocaleString()}</div>
                     <div className="audit-summary-label">
                       Mints
-                      <span
-                        ref={auditMintsRef}
-                        style={{position:'relative',display:'inline-flex',marginLeft:3}}
-                        onPointerEnter={auditMintsTooltip.onPointerEnter}
-                        onPointerLeave={auditMintsTooltip.onPointerLeave}
-                        onClick={auditMintsTooltip.onClick}
-                      >
-                        <Info size={11} color="#6b7280" style={{cursor:'help'}} />
-                        {auditMintsTooltip.open && (
-                          <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
-                            {tipMints}
-                          </div>
-                        )}
-                      </span>
+                      <InfoTooltip iconSize={11} width={180} about="Mints" style={TT_GAP_LEFT} text={tipMints} />
                     </div>
                   </div>
                   <div className="audit-summary-cell">
                     <div className="audit-summary-value" style={{color:'var(--accent)'}}>{stripMelts === null ? '—' : stripMelts.toLocaleString()}</div>
                     <div className="audit-summary-label">
                       Melts
-                      <span
-                        ref={auditMeltsRef}
-                        style={{position:'relative',display:'inline-flex',marginLeft:3}}
-                        onPointerEnter={auditMeltsTooltip.onPointerEnter}
-                        onPointerLeave={auditMeltsTooltip.onPointerLeave}
-                        onClick={auditMeltsTooltip.onClick}
-                      >
-                        <Info size={11} color="#6b7280" style={{cursor:'help'}} />
-                        {auditMeltsTooltip.open && (
-                          <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
-                            {tipMelts}
-                          </div>
-                        )}
-                      </span>
+                      <InfoTooltip iconSize={11} width={180} about="Melts" style={TT_GAP_LEFT} text={tipMelts} />
                     </div>
                   </div>
                   <div className="audit-summary-cell">
@@ -2228,40 +2069,14 @@ function MintDetailContent({ url }: { url: string }) {
                     </div>
                     <div className="audit-summary-label">
                       Recent success rate
-                      <span
-                        ref={auditErrorsRef}
-                        style={{position:'relative',display:'inline-flex',marginLeft:3}}
-                        onPointerEnter={auditErrorsTooltip.onPointerEnter}
-                        onPointerLeave={auditErrorsTooltip.onPointerLeave}
-                        onClick={auditErrorsTooltip.onClick}
-                      >
-                        <Info size={11} color="#6b7280" style={{cursor:'help'}} />
-                        {auditErrorsTooltip.open && (
-                          <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
-                            {tipSuccess}
-                          </div>
-                        )}
-                      </span>
+                      <InfoTooltip iconSize={11} width={180} about="Recent success rate" style={TT_GAP_LEFT} text={tipSuccess} />
                     </div>
                   </div>
                   <div className="audit-summary-cell">
                     <div className="audit-summary-value" style={{fontSize:15}}>{stripAvgTimeDisplay}</div>
                     <div className="audit-summary-label">
                       Avg swap time
-                      <span
-                        ref={auditAvgTimeRef}
-                        style={{position:'relative',display:'inline-flex',marginLeft:3}}
-                        onPointerEnter={auditAvgTimeTooltip.onPointerEnter}
-                        onPointerLeave={auditAvgTimeTooltip.onPointerLeave}
-                        onClick={auditAvgTimeTooltip.onClick}
-                      >
-                        <Info size={11} color="#6b7280" style={{cursor:'help'}} />
-                        {auditAvgTimeTooltip.open && (
-                          <div className="audit-tooltip" style={{left:'50%',transform:'translateX(-50%)'}}>
-                            {tipAvg}
-                          </div>
-                        )}
-                      </span>
+                      <InfoTooltip iconSize={11} width={180} about="Avg swap time" style={TT_GAP_LEFT} text={tipAvg} />
                     </div>
                   </div>
                 </div>
@@ -2309,9 +2124,8 @@ function MintDetailContent({ url }: { url: string }) {
                               <td>{s.fee !== null ? s.fee : '—'}</td>
                               <td>{s.timeTakenMs !== null ? `${Math.round(s.timeTakenMs)} ms` : '—'}</td>
                               {/* cz rows that are not OK: the failure text as tooltip and as visually hidden text (a title is not available on touch or to screen readers). Plain text only. */}
-                              <td {...(auditCzStateTitle(s) ? { title: auditCzStateTitle(s) } : {})}>
-                                {s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TEXT[s.neutral] : <>{s.state}{s.stage ? ` (${s.stage})` : null}</>}
-                                {s.reason ? <>{' '}<span className="sr-only">{s.reason}</span></> : null}
+                              <td>
+                                <AuditStateText row={s} />
                               </td>
                             </tr>
                           ))}
@@ -2461,7 +2275,7 @@ function MintDetailContent({ url }: { url: string }) {
                                 )}
                               </span>
                               {operatorKeys.has(r.pubkey.toLowerCase()) && (
-                                <span className="review-operator-badge" title="Published by a key that is listed as this mint's contact and announced this mint on Nostr.">Operator</span>
+                                <InfoTooltip text="Published by a key that is listed as this mint's contact and announced this mint on Nostr." width={240}><span className="review-operator-badge">Operator</span></InfoTooltip>
                               )}
                             </span>
                             <span className="review-author-npub">{shortNpub(npub)}</span>
@@ -2557,14 +2371,11 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-right">
 
           <div className="md-panel md-reliability-panel">
-            {/* The (i) icon sits beside .md-panel-title, not inside it — .audit-tooltip
-                only resets font-family, so nesting it inside the uppercase/letter-spaced
-                title made the tooltip text inherit that styling too (looked like a
-                different font from every other tooltip in the app). Same sibling
-                layout as the Audit tab heading's own AuditSourceInfoIcon usage. */}
+            {/* The (i) icon sits beside .md-panel-title, not inside it — same sibling layout as the
+                Audit tab heading's own AuditSourceInfoIcon usage. */}
             <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:11}}>
               <span className="md-panel-title" style={{marginBottom:0}}>Reliability Score</span>
-              <AuditSourceInfoIcon text="Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75." />
+              <AuditSourceInfoIcon about="Reliability Score" text="Score = Uptime×40% + NUT support×15% + Version×15% + Contact×5% + Audit×25%. New mints (first 30 days) are capped at 75." />
             </div>
             <div className="reliability-wrap">
               <div className="gauge-wrap">

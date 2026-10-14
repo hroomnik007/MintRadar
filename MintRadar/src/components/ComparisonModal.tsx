@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQueries } from '@tanstack/react-query'
-import { Info } from 'lucide-react'
 import {
   XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, LineChart, Line,
@@ -18,7 +17,7 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { formatDate } from '@/utils/formatDate'
 import { probeMint } from '@core/mint/api'
 import { pickInputFee } from '@/utils/mintProbeDisplay'
-import { useTapTooltip } from '@/hooks/useTapTooltip'
+import { InfoTooltip } from '@/components/InfoTooltip'
 
 const IcClose = () => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -148,12 +147,6 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
   const gridCols = `132px ${mints.map(() => 'minmax(150px, 1fr)').join(' ')}`
 
   const isMobile = useIsMobile()
-  const backupInfoRef = useRef<HTMLSpanElement>(null)
-  const backupInfoTooltip = useTapTooltip(backupInfoRef)
-  const feeInfoRef = useRef<HTMLSpanElement>(null)
-  const feeInfoTooltip = useTapTooltip(feeInfoRef)
-  const auditInfoRef = useRef<HTMLSpanElement>(null)
-  const auditInfoTooltip = useTapTooltip(auditInfoRef)
   const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('7d')
   const [metric, setMetric] = useState<HistoryMetric>('latency')
   // Mobile only: which mint's single-column stack is shown (see .cmp-mobile-*
@@ -185,28 +178,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
     )
   }
   const feeTooltipText = 'Input fee per 1000 proofs spent from the mint’s active keyset (NUT-02 input_fee_ppk), for its main unit. “free” = no fee. Lower is cheaper. n/a = the mint did not report it.'
-  const feeTooltipBox = (
-    <div style={{
-      position: 'absolute', bottom: 'calc(100% + 6px)', left: 0,
-      background: 'var(--bg)', border: '0.5px solid var(--border2)', borderRadius: 8,
-      padding: '8px 10px', fontSize: 10, color: 'var(--text2)', lineHeight: 1.5,
-      width: 200, zIndex: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-      pointerEvents: 'none', whiteSpace: 'normal', textAlign: 'left',
-      fontFamily: 'var(--font-body)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400,
-    }}>{feeTooltipText}</div>
-  )
-  const feeLabelInfo = (
-    <span
-      ref={feeInfoRef}
-      style={{ position: 'relative', display: 'inline-flex' }}
-      onPointerEnter={feeInfoTooltip.onPointerEnter}
-      onPointerLeave={feeInfoTooltip.onPointerLeave}
-      onClick={feeInfoTooltip.onClick}
-    >
-      <Info size={11} color="#6b7280" style={{ cursor: 'help', flexShrink: 0 }} />
-      {feeInfoTooltip.open && feeTooltipBox}
-    </span>
-  )
+  const feeLabelInfo = <InfoTooltip iconSize={11} width={200} about="Input fee" text={feeTooltipText} />
 
   const historyQueries = useQueries({
     queries: mints.map(m => ({
@@ -427,26 +399,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                   <div className="cmp-mobile-row">
                     <span className="cmp-mobile-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       Audit success
-                      <span
-                        style={{ position: 'relative', display: 'inline-flex' }}
-                        onPointerEnter={auditInfoTooltip.onPointerEnter}
-                        onPointerLeave={auditInfoTooltip.onPointerLeave}
-                        onClick={auditInfoTooltip.onClick}
-                      >
-                        <Info size={11} color="#6b7280" style={{ cursor: 'help', flexShrink: 0 }} />
-                        {auditInfoTooltip.open && (
-                          <div style={{
-                            position: 'absolute', bottom: 'calc(100% + 6px)', left: 0,
-                            background: 'var(--bg)', border: '0.5px solid var(--border2)', borderRadius: 8,
-                            padding: '8px 10px', fontSize: 10, color: 'var(--text2)', lineHeight: 1.5,
-                            width: 200, zIndex: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-                            pointerEvents: 'none', whiteSpace: 'normal', textAlign: 'left',
-                            fontFamily: 'var(--font-body)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400,
-                          }}>
-                            Last 7 days from cashu.info; only failures attributed to the mint count. n/a below 10 swaps. Not a solvency or reserves signal.
-                          </div>
-                        )}
-                      </span>
+                      <InfoTooltip iconSize={11} width={200} about="Audit success" text="Last 7 days from cashu.info; only failures attributed to the mint count. n/a below 10 swaps. Not a solvency or reserves signal." />
                     </span>
                     <span className="cmp-mobile-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: auditSuccessDisplay(mint, now).color }}>
                       {auditSuccessDisplay(mint, now).text}
@@ -456,27 +409,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                   <div className="cmp-mobile-row cmp-mobile-row-last">
                     <span className="cmp-mobile-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       Backup
-                      <span
-                        ref={backupInfoRef}
-                        style={{ position: 'relative', display: 'inline-flex' }}
-                        onPointerEnter={backupInfoTooltip.onPointerEnter}
-                        onPointerLeave={backupInfoTooltip.onPointerLeave}
-                        onClick={backupInfoTooltip.onClick}
-                      >
-                        <Info size={11} color="#6b7280" style={{ cursor: 'help', flexShrink: 0 }} />
-                        {backupInfoTooltip.open && (
-                          <div style={{
-                            position: 'absolute', bottom: 'calc(100% + 6px)', left: 0,
-                            background: 'var(--bg)', border: '0.5px solid var(--border2)', borderRadius: 8,
-                            padding: '8px 10px', fontSize: 10, color: 'var(--text2)', lineHeight: 1.5,
-                            width: 200, zIndex: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-                            pointerEvents: 'none', whiteSpace: 'normal', textAlign: 'left',
-                            fontFamily: 'var(--font-body)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400,
-                          }}>
-                            Whether this mint supports NUT-09, letting wallets restore proofs after data loss.
-                          </div>
-                        )}
-                      </span>
+                      <InfoTooltip iconSize={11} width={200} about="Backup" text="Whether this mint supports NUT-09, letting wallets restore proofs after data loss." />
                     </span>
                     <span className="cmp-mobile-val">
                       {d.supportsBackupRestore
@@ -634,27 +567,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           {/* ── Audit success (cashu.info 7-day window, same fields/threshold as the Reliability Score's audit part) ── */}
           <div className="cmp-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             Audit success
-            <span
-              ref={auditInfoRef}
-              style={{ position: 'relative', display: 'inline-flex' }}
-              onPointerEnter={auditInfoTooltip.onPointerEnter}
-              onPointerLeave={auditInfoTooltip.onPointerLeave}
-              onClick={auditInfoTooltip.onClick}
-            >
-              <Info size={11} color="#6b7280" style={{ cursor: 'help', flexShrink: 0 }} />
-              {auditInfoTooltip.open && (
-                <div style={{
-                  position: 'absolute', bottom: 'calc(100% + 6px)', left: 0,
-                  background: 'var(--bg)', border: '0.5px solid var(--border2)', borderRadius: 8,
-                  padding: '8px 10px', fontSize: 10, color: 'var(--text2)', lineHeight: 1.5,
-                  width: 200, zIndex: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-                  pointerEvents: 'none', whiteSpace: 'normal', textAlign: 'left',
-                  fontFamily: 'var(--font-body)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400,
-                }}>
-                  Last 7 days from cashu.info; only failures attributed to the mint count. n/a below 10 swaps. Not a solvency or reserves signal.
-                </div>
-              )}
-            </span>
+            <InfoTooltip iconSize={11} width={200} about="Audit success" text="Last 7 days from cashu.info; only failures attributed to the mint count. n/a below 10 swaps. Not a solvency or reserves signal." />
           </div>
           {mints.map(mint => {
             const audit = auditSuccessDisplay(mint, now)
@@ -668,27 +581,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           {/* ── Backup ── */}
           <div className="cmp-lbl cmp-last" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             Backup
-            <span
-              ref={backupInfoRef}
-              style={{ position: 'relative', display: 'inline-flex' }}
-              onPointerEnter={backupInfoTooltip.onPointerEnter}
-              onPointerLeave={backupInfoTooltip.onPointerLeave}
-              onClick={backupInfoTooltip.onClick}
-            >
-              <Info size={11} color="#6b7280" style={{ cursor: 'help', flexShrink: 0 }} />
-              {backupInfoTooltip.open && (
-                <div style={{
-                  position: 'absolute', bottom: 'calc(100% + 6px)', left: 0,
-                  background: 'var(--bg)', border: '0.5px solid var(--border2)', borderRadius: 8,
-                  padding: '8px 10px', fontSize: 10, color: 'var(--text2)', lineHeight: 1.5,
-                  width: 200, zIndex: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-                  pointerEvents: 'none', whiteSpace: 'normal', textAlign: 'left',
-                  fontFamily: 'var(--font-body)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400,
-                }}>
-                  Whether this mint supports NUT-09, letting wallets restore proofs after data loss.
-                </div>
-              )}
-            </span>
+            <InfoTooltip iconSize={11} width={200} about="Backup" text="Whether this mint supports NUT-09, letting wallets restore proofs after data loss." />
           </div>
           {mints.map((mint, i) => {
             const d = allData[i]!

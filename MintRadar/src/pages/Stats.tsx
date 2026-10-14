@@ -1,10 +1,9 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { clickableProps } from '@/utils/clickableProps'
 import { IcClose } from '@/components/IcClose'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { Info } from 'lucide-react'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import { ReliabilityMoversPanel } from '@/components/stats/ReliabilityMoversPanel'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
@@ -15,10 +14,10 @@ import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation } from '@/utils/reliabilityScore'
 import { compareMintVersionNumbers, classifyVersion } from '@/utils/versionRule'
 import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
-import { useTapTooltip } from '@/hooks/useTapTooltip'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { PageHead } from '@/components/layout/PageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { InfoTooltip } from '@/components/InfoTooltip'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
 import {
   NHI_WEIGHTS, advancedAdoptionPercent, nhiScore, nhiSummaryText, nhiOnlineSetText, nhiFormulaText,
@@ -486,14 +485,10 @@ interface NetworkHealthComponent { label: string; value: number; weight: number;
 // and the inline desktop breakdown in Stats() below, so the two can never
 // silently drift apart. `compact` shrinks spacing/type for the narrower
 // desktop panel (span-1 grid column) without changing the modal's sizing.
-function NetworkHealthComponentRow({ component: c, index, total, compact }: {
+function NetworkHealthComponentRow({ component: c, compact }: {
   component: NetworkHealthComponent
-  index: number
-  total: number
   compact?: boolean
 }) {
-  const tooltipRef = useRef<HTMLSpanElement>(null)
-  const tooltip = useTapTooltip(tooltipRef)
   const points = Math.round(c.value * c.weight / 100)
   const color = reliabilityColor(c.value)
 
@@ -503,23 +498,7 @@ function NetworkHealthComponentRow({ component: c, index, total, compact }: {
         <span style={{ fontSize: compact ? 12 : 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
           <span style={{ color: 'var(--text3)', flexShrink: 0 }}>({c.weight}%)</span>
-          <span
-            ref={tooltipRef}
-            style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}
-            onPointerEnter={tooltip.onPointerEnter}
-            onPointerLeave={tooltip.onPointerLeave}
-            onClick={tooltip.onClick}
-          >
-            <Info size={compact ? 11 : 11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
-            {tooltip.open && (
-              <div
-                className="audit-tooltip"
-                style={index >= total - 2
-                  ? { width: 220, left: '50%', transform: 'translateX(-50%)', top: 'auto', bottom: 'calc(100% + 6px)' }
-                  : { width: 220, left: '50%', transform: 'translateX(-50%)', bottom: 'auto', top: 'calc(100% + 6px)' }}
-              >{c.tooltip}</div>
-            )}
-          </span>
+          <InfoTooltip iconSize={11} width={220} about={c.label} text={c.tooltip} />
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 5 : 8, flexShrink: 0 }}>
           <span style={{ fontSize: compact ? 11.5 : 11, color: 'var(--text3)', fontFamily: 'var(--font-mono-data)' }}>{Math.round(c.value)}%</span>
@@ -578,8 +557,8 @@ function NetworkHealthModal({ score, components, onClose }: {
           </span>
         </div>
         <div style={{ overflowY: 'auto' }}>
-          {components.map((c, i) => (
-            <NetworkHealthComponentRow key={c.label} component={c} index={i} total={components.length} />
+          {components.map(c => (
+            <NetworkHealthComponentRow key={c.label} component={c} />
           ))}
         </div>
         <NetworkHealthFormulaNote />
@@ -602,12 +581,6 @@ export default function Stats() {
   const [moversPeriod, setMoversPeriod] = useState<'7d' | '30d'>('7d')
   const [trendDays, setTrendDays] = useState<30 | 90>(30)
   const [showHealthBreakdown, setShowHealthBreakdown] = useState(false)
-  const nhiInfoRef = useRef<HTMLSpanElement>(null)
-  const nhiInfoTooltip = useTapTooltip(nhiInfoRef)
-  const uptimeInfoRef = useRef<HTMLSpanElement>(null)
-  const uptimeInfoTooltip = useTapTooltip(uptimeInfoRef)
-  const swBehindInfoRef = useRef<HTMLSpanElement>(null)
-  const swBehindInfoTooltip = useTapTooltip(swBehindInfoRef)
   // Same 768px breakpoint as the rest of the app's mobile/desktop split (see
   // useIsMobile.ts). Desktop shows the breakdown inline in the panel itself
   // (no reason to click through to a modal that would show the exact same
@@ -927,20 +900,7 @@ export default function Stats() {
               <div className="stat-figure"><span className="stat-value" style={{color: avgUptime24h != null ? uptimeColor(avgUptime24h) : undefined}}>{avgUptime24h != null ? `${avgUptime24h}%` : '—'}</span></div>
               <div className="stat-label smc-label-info">
                 average uptime
-                <span
-                  ref={uptimeInfoRef}
-                  style={{ position: 'relative', display: 'inline-flex' }}
-                  onPointerEnter={uptimeInfoTooltip.onPointerEnter}
-                  onPointerLeave={uptimeInfoTooltip.onPointerLeave}
-                  onClick={uptimeInfoTooltip.onClick}
-                >
-                  <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
-                  {uptimeInfoTooltip.open && (
-                    <div className="audit-tooltip audit-tooltip-down" style={{ width: isMobile ? 200 : 240, left: 0 }}>
-                      {avgUptimeText()}
-                    </div>
-                  )}
-                </span>
+                <InfoTooltip iconSize={11} width={isMobile ? 200 : 240} about="average uptime" text={avgUptimeText()} />
               </div>
               <span className="stat-note">of active mints</span>
             </div>
@@ -964,21 +924,13 @@ export default function Stats() {
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:4}}>
             <span style={{fontSize:12,color:'var(--text2)',display:'inline-flex',alignItems:'center',gap:4}}>
               Tracked mints running outdated software
-              <span
-                ref={swBehindInfoRef}
+              <InfoTooltip
                 className="stats-sw-behind-info"
-                style={{ position: 'relative', display: 'inline-flex' }}
-                onPointerEnter={swBehindInfoTooltip.onPointerEnter}
-                onPointerLeave={swBehindInfoTooltip.onPointerLeave}
-                onClick={swBehindInfoTooltip.onClick}
-              >
-                <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
-                {swBehindInfoTooltip.open && (
-                  <div className="audit-tooltip audit-tooltip-down" style={{ width: isMobile ? 210 : 250, left: 0 }}>
-                    Share of tracked Nutshell and cdk-mintd mints that are two or more minor versions behind the newest stable release of the same software. Pre-releases of a current line are not counted. Not a CVE or security score.
-                  </div>
-                )}
-              </span>
+                iconSize={11}
+                width={isMobile ? 210 : 250}
+                about="outdated software"
+                text="Share of tracked Nutshell and cdk-mintd mints that are two or more minor versions behind the newest stable release of the same software. Pre-releases of a current line are not counted. Not a CVE or security score."
+              />
             </span>
             <span style={{fontSize:13,fontWeight:swFreshnessSummary.pct >= 50 ? 700 : 600,color:'var(--amber)',fontFamily:'var(--font-mono-data)'}}>{swFreshnessSummary.pct}%</span>
           </div>
@@ -998,20 +950,12 @@ export default function Stats() {
                 <div>
                 <div className="stats-panel-title nhi-title-row">
                   Network health index
-                  <span
-                    ref={nhiInfoRef}
-                    style={{ position: 'relative', display: 'inline-flex' }}
-                    onPointerEnter={nhiInfoTooltip.onPointerEnter}
-                    onPointerLeave={nhiInfoTooltip.onPointerLeave}
-                    onClick={nhiInfoTooltip.onClick}
-                  >
-                    <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
-                    {nhiInfoTooltip.open && (
-                      <div className="audit-tooltip" style={isMobile ? { width: 220, left: 0, bottom: 'auto', top: 'calc(100% + 6px)' } : { width: 260, left: 0, bottom: 'auto', top: 'calc(100% + 6px)' }}>
-                        {nhiSummaryText()}{isMobile ? ' Tap the gauge for the full breakdown.' : ` ${nhiOnlineSetText()}`}
-                      </div>
-                    )}
-                  </span>
+                  <InfoTooltip
+                    iconSize={11}
+                    width={isMobile ? 220 : 260}
+                    about="Network health index"
+                    text={`${nhiSummaryText()}${isMobile ? ' Tap the gauge for the full breakdown.' : ` ${nhiOnlineSetText()}`}`}
+                  />
                 </div>
                 <div className="stats-panel-desc">Weighted from five factors.</div>
                 </div>
@@ -1064,8 +1008,8 @@ export default function Stats() {
                     went to enlarging the gauge instead. */}
                 {!isMobile && (
                   <div className="nhi-breakdown">
-                    {networkHealth.components.map((c, i) => (
-                      <NetworkHealthComponentRow key={c.label} component={c} index={i} total={networkHealth.components.length} compact />
+                    {networkHealth.components.map(c => (
+                      <NetworkHealthComponentRow key={c.label} component={c} compact />
                     ))}
                   </div>
                 )}

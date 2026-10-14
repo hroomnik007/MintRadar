@@ -214,6 +214,9 @@ async function measure(page: Page, c: ModalCase): Promise<Record<Cell, Result>> 
     }
   }
   r.trap = trapped
+  // Tabbing through the dialog may have stopped on a tooltip trigger (keyboard focus opens its tooltip); that
+  // tooltip takes the first Escape (see tooltip-escape.spec.ts), so close it before testing the dialog's own Escape.
+  if ((await page.getByRole('tooltip').count()) > 0) await page.keyboard.press('Escape')
 
   // Close button: visible, inside the dialog, and named "Close".
   const closeBtn = c.close ? dlg.locator(c.close).first() : null

@@ -65,6 +65,6 @@ test.describe('Reliability breakdown: version row', () => {
   test('the row tooltip states the rule', async ({ page }) => {
     const panel = await openBreakdown(page, 'Nutshell/0.19.2', L)
     await panel.locator('.rb-row', { hasText: 'Version (15%)' }).locator('svg').first().hover()
-    await expect(page.locator('.audit-tooltip')).toContainText('0 or 1 minor version behind scores the full 15 points')
+    await expect(page.getByRole('tooltip')).toContainText('0 or 1 minor version behind scores the full 15 points')
   })
 })

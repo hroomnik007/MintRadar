@@ -74,10 +74,10 @@ test.describe('Escape and ⓘ tooltips', () => {
     const title = await openBreakdownModal(page)
     const modal = page.getByRole('dialog', { name: 'Reliability Score Breakdown' })
     await modal.locator('svg.lucide-info').first().hover()
-    await expect(modal.locator('.audit-tooltip')).toBeVisible()
+    await expect(modal.getByRole('tooltip')).toBeVisible()
 
     await page.keyboard.press('Escape')
-    await expect(modal.locator('.audit-tooltip')).toHaveCount(0)
+    await expect(modal.getByRole('tooltip')).toHaveCount(0)
     await expect(title).toBeVisible()
 
     await page.keyboard.press('Escape')

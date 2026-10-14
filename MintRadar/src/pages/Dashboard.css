@@ -1473,7 +1473,7 @@
   font-family: var(--font-mono);
 }
 
-.filter-tag button {
+.filter-tag > button:not([data-tooltip-trigger]) {
   background: none;
   border: none;
   color: var(--accent);
@@ -1482,7 +1482,7 @@
   display: flex;
   opacity: 0.7;
 }
-.filter-tag button:hover { opacity: 1; }
+.filter-tag > button:not([data-tooltip-trigger]):hover { opacity: 1; }
 
 /* One layout for every width (2026-10-01). Wide: Status · Unit · Reliability · [Hide test
    mints … Reset · Show N of M] on one 36px row; narrower: flex-wrap moves the footer
@@ -2407,3 +2407,7 @@
   gap: 6px;
   margin-top: 6px;
 }
+
+/* The filter tag's text is ~13 px high: its tooltip trigger is padded to 24 px (the close button sits beside the
+   text, so only the vertical sides grow). */
+.filter-tag .info-tooltip--chip { --tt-hit-t: 6px; --tt-hit-b: 6px; }

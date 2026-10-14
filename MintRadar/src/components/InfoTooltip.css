@@ -32,8 +32,8 @@
    (the chip element sits inside); only the height is padded up to 24 px, vertically, without moving anything. */
 .info-tooltip--chip {
   --tt-hit: 0px;
-  --tt-hit-t: 4px;
-  --tt-hit-b: 4px;
+  --tt-hit-t: 3.5px;
+  --tt-hit-b: 3.5px;
   border-radius: 0;
   line-height: inherit;
   letter-spacing: inherit;

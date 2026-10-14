@@ -46,11 +46,13 @@ test.describe('Mint Detail — Keysets panel placement (desktop)', () => {
     await expect(page.locator('.md-keysets-at-nuts')).toBeHidden()
   })
 
-  test('heading carries the keyset explainer as a title tooltip', async ({ page }) => {
+  test('heading carries the keyset explainer as a tooltip', async ({ page }) => {
     await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(KS) }))
     await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
     const heading = page.locator('.md-keysets-at-overview .md-panel-title', { hasText: 'Keysets' })
-    await expect(heading).toHaveAttribute('title', /Active = used for new tokens/)
+    await expect(heading).not.toHaveAttribute('title', /./) // a tooltip, not a title attribute
+    await heading.getByRole('button', { name: 'Keysets' }).hover()
+    await expect(page.getByRole('tooltip')).toHaveText(/Active = used for new tokens/)
   })
 
   test('lists active / inactive state and copies the full id', async ({ page }) => {
@@ -103,8 +105,9 @@ test.describe('Mint Detail — Keysets panel placement (mobile)', () => {
     await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(KS) }))
     await openNutsTab(page)
     const panel = page.locator('.md-keysets-at-nuts')
-    await expect(panel.locator('.md-panel-title', { hasText: 'Keysets' }))
-      .toHaveAttribute('title', /existing tokens may still melt/)
+    await panel.locator('.md-panel-title', { hasText: 'Keysets' }).getByRole('button', { name: 'Keysets' }).hover()
+    await expect(page.getByRole('tooltip')).toHaveText(/existing tokens may still melt/)
+    await page.mouse.move(0, 0)
     await expect(panel.getByText('Active', { exact: true })).toHaveCount(2)
     await expect(panel.getByText('Inactive', { exact: true })).toHaveCount(1)
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])

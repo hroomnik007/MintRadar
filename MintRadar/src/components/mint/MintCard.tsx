@@ -94,20 +94,17 @@ export function MintCard({
   const reliabilityBadges = (
     <>
       {isTestMint(mint.url) && (
-        <span
-          className="card-reliability-badge card-reliability-badge-test-mint"
-          title="Not for real funds — for testing and development only"
-        >
-          Test mint
-        </span>
+        <InfoTooltip text="Not for real funds — for testing and development only">
+          <span className="card-reliability-badge card-reliability-badge-test-mint">Test mint</span>
+        </InfoTooltip>
       )}
       {sameOperatorUrls && sameOperatorUrls.length > 0 && (
-        <span
-          className="card-reliability-badge card-reliability-badge-same-op"
-          title={`Same operator (pubkey) as: ${sameOperatorUrls.map(getHostname).join(', ')}. Not merged — tracked as separate mints.`}
+        <InfoTooltip
+          width={260}
+          text={`Same operator (pubkey) as: ${sameOperatorUrls.map(getHostname).join(', ')}. Not merged — tracked as separate mints.`}
         >
-          Same op
-        </span>
+          <span className="card-reliability-badge card-reliability-badge-same-op">Same op</span>
+        </InfoTooltip>
       )}
     </>
   )

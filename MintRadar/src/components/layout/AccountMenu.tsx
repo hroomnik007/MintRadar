@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { ChevronDown, ChevronUp, User } from 'lucide-react'
+import { InfoTooltip } from '@/components/InfoTooltip'
 import type { NostrProfile } from '@/core/nostr/client'
 
 type LoginMethod = 'nip07' | 'nsec' | 'remote-signer'
@@ -149,14 +150,14 @@ export function AccountMenu({ profile, method, onLogout }: Props) {
       <div id="navbar-account-panel" className="navbar-account-panel" hidden={!open}>
         <div className="navbar-account-who">
           <span className="navbar-account-name">{displayName}</span>
-          {method !== null && (
-            <span
-              className={`navbar-method-badge${method === 'nsec' ? ' navbar-method-badge--nsec' : ''}`}
-              title={method === 'nsec' ? 'Your key is held in this browser for this session' : undefined}
-            >
-              {METHOD_BADGE[method]}
-            </span>
-          )}
+          {method !== null && (() => {
+            const badge = (
+              <span className={`navbar-method-badge${method === 'nsec' ? ' navbar-method-badge--nsec' : ''}`}>
+                {METHOD_BADGE[method]}
+              </span>
+            )
+            return method === 'nsec' ? <InfoTooltip text="Your key is held in this browser for this session" width={200}>{badge}</InfoTooltip> : badge
+          })()}
         </div>
         <button type="button" className="navbar-npub" title="Copy full npub" onClick={() => { void copyNpub() }}>
           {copyLabel}

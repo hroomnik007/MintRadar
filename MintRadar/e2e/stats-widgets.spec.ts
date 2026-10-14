@@ -146,7 +146,7 @@ test('Software panel: "% of tracked mints running outdated software" + explanato
   await expect(sw.locator('.stats-now-behind')).toContainText('50%')
 
   await sw.locator('.stats-sw-behind-info').hover()
-  await expect(page.locator('.audit-tooltip', { hasText: /two or more minor versions behind the newest stable release/i })).toBeVisible()
+  await expect(page.getByRole('tooltip').filter({ hasText: /two or more minor versions behind the newest stable release/i })).toBeVisible()
 })
 
 test('Software panel: the share counts only Nutshell / cdk-mintd mints and never a one-behind or pre-release mint', async ({ page }) => {

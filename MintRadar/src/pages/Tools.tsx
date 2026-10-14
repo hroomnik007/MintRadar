@@ -273,13 +273,14 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <div className="trc-name">{mintInfo?.name ?? getHostname(result.mint)}</div>
                 {isTestMint(mintInfo?.url ?? result.mint) && (
-                  <span
-                    className="token-test-mint-badge"
-                    style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)', borderRadius: 5, padding: '2px 7px' }}
-                    title="Not for real funds — for testing and development only"
-                  >
-                    Test mint
-                  </span>
+                  <InfoTooltip text="Not for real funds — for testing and development only">
+                    <span
+                      className="token-test-mint-badge"
+                      style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)', borderRadius: 5, padding: '2px 7px' }}
+                    >
+                      Test mint
+                    </span>
+                  </InfoTooltip>
                 )}
               </div>
               <div className="trc-sub">{getHostname(result.mint)}</div>
@@ -340,7 +341,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
           <div className="token-verify">
             <div className="token-section-label">
               <span>Signature check</span>
-              <InfoTooltip text="Each proof in a token can carry a mint signature proof (NUT-12 DLEQ). When it's there, we check it against the mint's public keys. A pass shows the proofs were signed by this mint. It doesn't show whether they're spent (use Check if spent) or how reliable the mint is (see the score above)." />
+              <InfoTooltip text="Each proof in a token can carry a mint signature proof (NUT-12 DLEQ). When it's there, we check it against the mint's public keys. A pass shows the proofs were signed by this mint. It doesn't show whether they're spent (use Check if spent) or how reliable the mint is (see the score above)." about="Signature check" />
             </div>
             {phase === 'verifying' && (
               <ResultNote tone="loading" Icon={LoaderCircle}>Verifying with mint… checking this token's signatures.</ResultNote>

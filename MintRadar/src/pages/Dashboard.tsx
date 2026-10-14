@@ -1246,8 +1246,8 @@ export default function Dashboard() {
                 </span>
               )}
               {activeFilters.hideTestMints && (
-                <span className="filter-tag" title={HIDE_TEST_MINTS_TOOLTIP}>
-                  Test mints hidden
+                <span className="filter-tag">
+                  <InfoTooltip text={HIDE_TEST_MINTS_TOOLTIP} width={240}>Test mints hidden</InfoTooltip>
                   <button type="button" onClick={() => { const f = { ...activeFilters, hideTestMints: false }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}

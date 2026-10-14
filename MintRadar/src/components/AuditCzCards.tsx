@@ -57,9 +57,8 @@ function SwapTable({ title, firstHeader, rows, expanded, onToggle }: {
                     <td>{s.fee !== null ? s.fee : '—'}</td>
                     <td>{s.timeTakenMs !== null ? `${Math.round(s.timeTakenMs)} ms` : '—'}</td>
                     {/* Rows that are not OK: the failure text as tooltip and as visually hidden text (a title is not available on touch or to screen readers). Plain text only. */}
-                    <td {...(auditCzStateTitle(s) ? { title: auditCzStateTitle(s) } : {})}>
-                      {s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TEXT[s.neutral] : <>{s.state}{s.stage ? ` (${s.stage})` : null}</>}
-                      {s.reason ? <>{' '}<span className="sr-only">{s.reason}</span></> : null}
+                    <td>
+                      <AuditStateText row={s} />
                     </td>
                   </tr>
                 ))}
@@ -74,6 +73,22 @@ function SwapTable({ title, firstHeader, rows, expanded, onToggle }: {
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * The State cell text of a swap row: the state (or the grey-row wording) and, for a row that is not OK, the failure
+ * text as an InfoTooltip on it and as visually hidden text (a title is not available on touch or to screen readers).
+ * Plain text only.
+ */
+export function AuditStateText({ row: s }: { row: AuditSwapRow }) {
+  const tip = auditCzStateTitle(s)
+  const text = s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TEXT[s.neutral] : <>{s.state}{s.stage ? ` (${s.stage})` : null}</>
+  return (
+    <>
+      {tip ? <InfoTooltip text={tip} width={240}><span>{text}</span></InfoTooltip> : text}
+      {s.reason ? <>{' '}<span className="sr-only">{s.reason}</span></> : null}
+    </>
   )
 }
 

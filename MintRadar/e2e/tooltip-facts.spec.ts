@@ -7,7 +7,7 @@ import { installApiMocks, mockRelays, MOCK_MINTS } from './fixtures/mocks'
 // shows: weights, the advanced-feature list, and the real "Show my latency" button label.
 
 const ALPHA = MOCK_MINTS[0]!.url
-const tip = (page: Page) => page.locator('.audit-tooltip')
+const tip = (page: Page) => page.getByRole('tooltip')
 
 test.beforeEach(async ({ page }) => {
   await mockRelays(page)
