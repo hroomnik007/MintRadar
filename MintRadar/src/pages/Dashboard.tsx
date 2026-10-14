@@ -1,4 +1,5 @@
-import { UNIT_FILTER_TEXT, HIDE_TEST_MINTS_TEXT } from '@/utils/tooltipTexts'
+import { UNIT_FILTER_TEXT, HIDE_TEST_MINTS_TEXT, hiddenMintsText } from '@/utils/tooltipTexts'
+import { DEGRADED_AFTER_HOURS } from '@/utils/networkHealthIndex'
 import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
@@ -1422,7 +1423,7 @@ export default function Dashboard() {
               onClick={() => setShowDegraded(v => !v)}
               aria-expanded={showDegraded}
             >
-              {!showDegraded && <>{hiddenCount} mints hidden (offline 24h+){' '}</>}
+              {!showDegraded && <>{hiddenMintsText(hiddenCount, DEGRADED_AFTER_HOURS)}{' '}</>}
               <span className="degraded-note-action">{showDegraded ? 'Hide' : 'Show'}</span>
             </button>
           )}

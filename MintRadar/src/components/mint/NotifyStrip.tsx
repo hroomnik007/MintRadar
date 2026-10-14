@@ -4,7 +4,7 @@ import { db } from '@/db'
 import { useUserRelays } from '@/hooks/useUserRelays'
 import { setNotifyFlag, type NotifyFailure, type NotifyField } from '@/core/nostr/notificationSubscription'
 import { confirmedNotify, confirmedMoreNotify } from '@/utils/notifyState'
-import { moreAlertsNote } from '@/utils/tooltipTexts'
+import { moreAlertsNote, notifyLimitText } from '@/utils/tooltipTexts'
 
 type Field = NotifyField
 
@@ -14,7 +14,7 @@ const FAILURE_TEXT: Record<NotifyFailure, string | null> = {
   'signer-timeout': "Signer didn't respond. Try again.",
   unreachable: "Couldn't reach the server. Try again.",
   'rate-limited': 'Too many requests. Try again later.',
-  limit: 'Notification limit reached (50 mints).',
+  limit: notifyLimitText(),
   rejected: null, // generic message below
 }
 

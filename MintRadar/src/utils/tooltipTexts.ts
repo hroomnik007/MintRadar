@@ -31,6 +31,16 @@ export const MINT_MELT_BLAMED_RATIO = 0.5
 export const MINT_MELT_MIN_SWAPS = 10
 export const MINT_MELT_COOLDOWN_HOURS = 12
 export const OTHER_ALERT_COOLDOWN_HOURS = 24
+/** Goes down / Goes up: at most one DM per mint and direction per this many minutes (backend/src/notificationLimits.ts). */
+export const UPDOWN_COOLDOWN_MINUTES = 60
+/** At most this many notification DMs per subscriber per day (backend/src/notificationLimits.ts DM_DAILY_CAP). */
+export const DM_DAILY_CAP = 40
+/** A notification subscription that was not touched for this many days is dropped (backend/src/db.ts). */
+export const NOTIFICATION_RETENTION_DAYS = 30
+/** Most mints one subscriber can have notifications on for (backend/src/index.ts MAX_SUBSCRIPTIONS_PER_PUBKEY). */
+export const MAX_NOTIFICATION_SUBSCRIPTIONS = 50
+/** Window of the Mint Detail outages list; the page requests it explicitly (`days=`), the backend default is the same. */
+export const OUTAGES_WINDOW_DAYS = 30
 
 // ── Facts derived from the code's own functions (maximum of each score component) ────────────────────────────
 const FIXED_NOW = Date.UTC(2026, 0, 1)
@@ -199,4 +209,52 @@ export const NON_HTTP_ERROR_EXPLANATIONS: Record<string, string> = {
   'Connection refused': "The mint's server actively refused the connection — it may be down or blocking this request",
   'TLS/SSL error': "The mint's HTTPS certificate could not be verified — it may be expired, invalid, or misconfigured",
   'Unreachable': 'The mint could not be reached — the server may be down or the network path is blocked',
+}
+
+// ── Displayed numbers outside tooltips (each text takes its numbers as parameters, defaulting to the constants) ──
+/** Label of a Reliability Score breakdown row: "Uptime (40%)". */
+export function scoreRowLabel(name: string, points: number): string {
+  return `${name} (${points}%)`
+}
+export const UPTIME_ROW_LABEL = scoreRowLabel('Uptime', UPTIME_POINTS)
+export const AUDIT_ROW_LABEL = scoreRowLabel('Audit reliability', AUDIT_POINTS)
+export const NUT_ROW_LABEL = scoreRowLabel('NUT Support', NUT_POINTS)
+export const VERSION_ROW_LABEL = scoreRowLabel('Version', VERSION_POINTS)
+export const CONTACT_ROW_LABEL = scoreRowLabel('Contact', CONTACT_POINTS)
+
+/** Line under the Audit row of the breakdown while the audit part is neutral. */
+export function auditTooFewDetail(minSamples: number = AUDIT_MIN_SAMPLES, days: number = AUDIT_WINDOW_DAYS): string {
+  return `Not enough audit data yet (fewer than ${minSamples} swaps in the last ${days} days): neutral`
+}
+export function auditTooOldDetail(days: number = AUDIT_WINDOW_DAYS): string {
+  return `Audit data older than ${days} days: neutral`
+}
+
+/** Mint Detail > Outages. */
+export function outagesCountLabel(days: number = OUTAGES_WINDOW_DAYS): string {
+  return `Outages (${days}d)`
+}
+export function noOutagesText(days: number = OUTAGES_WINDOW_DAYS): string {
+  return `No outages in the last ${days} days.`
+}
+
+/** "hour" for 60 minutes, "2 hours" for 120, "45 minutes" otherwise. */
+export function cooldownUnit(minutes: number): string {
+  if (minutes === 60) return 'hour'
+  return minutes % 60 === 0 ? `${minutes / 60} hours` : `${minutes} minutes`
+}
+/** Explainer above the Watchlist cards. */
+export function watchlistNotifyExplainer(cooldownMinutes: number = UPDOWN_COOLDOWN_MINUTES, dailyCap: number = DM_DAILY_CAP): string {
+  return `Optional: turn on Nostr DMs for a watched mint. You get one message when it goes down and one when it comes back (at most one of each per ${cooldownUnit(cooldownMinutes)}), even if this tab is closed. "More alerts" are optional too, and all messages are limited in frequency (at most ${dailyCap} a day). Your Nostr client must support private messages.`
+}
+/** Notice after a failed unsubscribe on removing a watched mint. */
+export function notifyStopNotice(name: string, days: number = NOTIFICATION_RETENTION_DAYS): string {
+  return `Couldn't turn off notifications for ${name}. They stop within ${days} days.`
+}
+export function notifyLimitText(max: number = MAX_NOTIFICATION_SUBSCRIPTIONS): string {
+  return `Notification limit reached (${max} mints).`
+}
+/** Dashboard: the note that counts the mints hidden as degraded. */
+export function hiddenMintsText(count: number, hours: number): string {
+  return `${count} mints hidden (offline ${hours}h+)`
 }

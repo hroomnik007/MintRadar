@@ -214,7 +214,7 @@ health only), and the same terms everywhere: "Reliability Score", "Community Rat
 mint", "probe", "mint" (never "minter"), numbers with units.
 - **A number, window, threshold, list or button name in a text comes from the constant or function the code uses, never typed a second
   time.** `src/utils/tooltipTexts.ts` holds the builders (`reviewSurgeText()`, `versionRowText()`, `auditRowText()`, `scoreFormulaText()`,
-  `cashuInfoViewText()`, `moreAlertsNote()`, the HTTP-error explanations ...); the Network Health Index texts stay in
+  `cashuInfoViewText()`, `moreAlertsNote()`, the HTTP-error explanations ...); numbers shown OUTSIDE tooltips follow the same rule (2026-10-14: breakdown row labels, audit detail lines, Outages label, Watchlist explainer, notification notices, Dashboard hidden-mints note, `FRESH_MINT_MONTHS` in the NHI formula; each is a builder or constant in `tooltipTexts.ts` / `networkHealthIndex.ts` with a parameter, covered by `displayedNumbers.test.ts`); the Network Health Index texts stay in
   `networkHealthIndex.ts`, the Latency caption in `constants/probeLocation.ts`. Score-component maxima are derived by calling the real
   functions (`uptimeComponent(100)`, `pointsForMinorsBehind(0)`, `contactComponent(99)`, `auditComponent(0, ...)`), so the text cannot drift
   from the score. Facts only the backend defines (review surge rule, audit window of ~100 swaps, alert cooldowns, the 24 h uptime window)

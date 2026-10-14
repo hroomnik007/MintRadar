@@ -12,6 +12,9 @@ import {
   versionRowText, contactRowText, scoreFormulaText, BACKUP_SUPPORTED_TEXT, NO_BACKUP_TEXT, REVIEWS_NIP87_TEXT, cashuInfoViewText,
   HTTP_ERROR_EXPLANATIONS, NON_HTTP_ERROR_EXPLANATIONS, operatorExcludedText,
   KEYSETS_HINT, newMintBadgeText, newMintCapNote, OPERATOR_REVIEW_NOTE,
+  UPTIME_ROW_LABEL, AUDIT_ROW_LABEL, NUT_ROW_LABEL, VERSION_ROW_LABEL, CONTACT_ROW_LABEL,
+  UPTIME_POINTS, AUDIT_POINTS, NUT_POINTS, VERSION_POINTS, CONTACT_POINTS,
+  auditTooFewDetail, auditTooOldDetail, outagesCountLabel, noOutagesText, OUTAGES_WINDOW_DAYS,
 } from '@/utils/tooltipTexts'
 import { useKnownMints } from '@/hooks/useKnownMints'
 import { LoadError, LoadingNote, MINT_LIST_ERROR } from '@/components/LoadError'
@@ -415,7 +418,7 @@ function MintDetailContent({ url }: { url: string }) {
   const { data: outagesData } = useQuery({
     queryKey: ['mint', 'outages', url],
     queryFn: async () => {
-      const res = await fetch(`/api/mints/outages?url=${encodeURIComponent(url)}&days=30`)
+      const res = await fetch(`/api/mints/outages?url=${encodeURIComponent(url)}&days=${OUTAGES_WINDOW_DAYS}`)
       if (!res.ok) throw new Error('Failed to fetch outages')
       return await res.json() as {
         sinceLastOutageMs: number | null
@@ -927,9 +930,9 @@ function MintDetailContent({ url }: { url: string }) {
   const auditDetailText = auditState === 'scored'
     ? undefined
     : auditState === 'too-few'
-      ? `Not enough audit data yet (fewer than ${AUDIT_MIN_SAMPLES} swaps in the last 7 days): neutral`
+      ? auditTooFewDetail()
       : auditState === 'too-old'
-        ? 'Audit data older than 7 days: neutral'
+        ? auditTooOldDetail()
         : 'No cashu.info audit data: neutral'
   const breakdownAuditDisplay = auditState === 'scored' ? `${Math.min(auditCzBlamed ?? 0, auditCzTotal ?? 0)} / ${auditCzTotal}` : 'neutral'
   const auditAgeDays = auditAgeH !== null && auditAgeH > 24 && (auditState === 'scored' || auditState === 'too-few') ? Math.floor(auditAgeH / 24) : null
@@ -974,11 +977,11 @@ function MintDetailContent({ url }: { url: string }) {
   const stripTotal = breakdownAuditRecentTotal
   const stripErrors = breakdownAuditRecentErrors
   const reliabilityBreakdownRows = [
-    { label: 'Uptime (40%)', display: `${uptimePct}%`, score: breakdownUScore, max: 40, color: uptimeColor(uptimePct), tooltip: uptimeRowText() },
-    { label: 'Audit reliability (25%)', display: breakdownAuditDisplay, ...(auditDetailText ? { detail: auditDetailText } : {}), score: breakdownAScore, max: 25, color: auditRowColor, tooltip: auditRowText(), ...(auditStaleNote ? { note: auditStaleNote } : {}) },
-    { label: 'NUT Support (15%)', display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: 15, color: supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: NUT_ROW_TEXT },
-    { label: 'Version (15%)', display: version ?? 'Unknown', score: breakdownVScore, max: 15, color: breakdownVScore >= 12 ? 'var(--accent)' : breakdownVScore >= 6 ? 'var(--amber)' : 'var(--red)', tooltip: versionRowText() },
-    { label: 'Contact (5%)', display: breakdownContactDisplay, score: breakdownCScore, max: 5, color: breakdownCScore >= 4 ? 'var(--accent)' : breakdownCScore >= 2 ? 'var(--amber)' : 'var(--red)', tooltip: contactRowText() },
+    { label: UPTIME_ROW_LABEL, display: `${uptimePct}%`, score: breakdownUScore, max: UPTIME_POINTS, color: uptimeColor(uptimePct), tooltip: uptimeRowText() },
+    { label: AUDIT_ROW_LABEL, display: breakdownAuditDisplay, ...(auditDetailText ? { detail: auditDetailText } : {}), score: breakdownAScore, max: AUDIT_POINTS, color: auditRowColor, tooltip: auditRowText(), ...(auditStaleNote ? { note: auditStaleNote } : {}) },
+    { label: NUT_ROW_LABEL, display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: NUT_POINTS, color: supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: NUT_ROW_TEXT },
+    { label: VERSION_ROW_LABEL, display: version ?? 'Unknown', score: breakdownVScore, max: VERSION_POINTS, color: breakdownVScore >= 12 ? 'var(--accent)' : breakdownVScore >= 6 ? 'var(--amber)' : 'var(--red)', tooltip: versionRowText() },
+    { label: CONTACT_ROW_LABEL, display: breakdownContactDisplay, score: breakdownCScore, max: CONTACT_POINTS, color: breakdownCScore >= 4 ? 'var(--accent)' : breakdownCScore >= 2 ? 'var(--amber)' : 'var(--red)', tooltip: contactRowText() },
   ]
   const firstSeen = firstSeenLabel(discoveredAt)
   const nostrAnnouncedAt = knownMint?.nostrAnnouncedAt ?? null
@@ -1933,7 +1936,7 @@ function MintDetailContent({ url }: { url: string }) {
               {[
                 { label: 'Since last outage', value: outagesData?.sinceLastOutageMs != null ? formatDuration(outagesData.sinceLastOutageMs) : '—' },
                 { label: 'Time to recover', value: outagesData?.avgRecoveryMs != null ? formatDuration(outagesData.avgRecoveryMs) : '—' },
-                { label: 'Outages (30d)', value: outagesData?.outageCount != null ? String(outagesData.outageCount) : '—' },
+                { label: outagesCountLabel(), value: outagesData?.outageCount != null ? String(outagesData.outageCount) : '—' },
               ].map(({ label, value }) => (
                 <div key={label} className="md-hist-fig">
                   <div className="md-hist-fig-value">{value}</div>
@@ -1963,7 +1966,7 @@ function MintDetailContent({ url }: { url: string }) {
                   </tbody>
                 </table>
               ) : (
-                <div style={{ fontSize: 13, color: 'var(--text3)' }}>No outages in the last 30 days.</div>
+                <div style={{ fontSize: 13, color: 'var(--text3)' }}>{noOutagesText()}</div>
               )}
             </details>
           </div>

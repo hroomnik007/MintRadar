@@ -361,8 +361,10 @@ export function cardLatencyLocationSuffix(mint: {
 }
 
 // ── Mint age badge ─────────────────────────────────────────────
-// Thresholds: < 1 month → Fresh, < 6 months → Established,
+// Thresholds: < FRESH_MINT_MONTHS (1) month → Fresh, < 6 months → Established,
 //             < 12 months → Veteran, ≥ 12 months → OG
+/** A mint tracked for fewer months than this is "Fresh" (left out of the Network Health Index's stability share). */
+export const FRESH_MINT_MONTHS = 1
 export interface AgeBadge {
   label: 'Fresh' | 'Established' | 'Veteran' | 'OG'
   color: string
@@ -376,7 +378,7 @@ export function mintAgeBadge(
 ): AgeBadge | null {
   if (!discoveredAt) return null
   const months = (now - new Date(discoveredAt).getTime()) / (1000 * 60 * 60 * 24 * 30.44)
-  if (months < 1)  return { label: 'Fresh',       color: 'var(--amber)', bg: 'var(--amber-soft)',  border: 'var(--amber-soft-strong)'  }
+  if (months < FRESH_MINT_MONTHS) return { label: 'Fresh',       color: 'var(--amber)', bg: 'var(--amber-soft)',  border: 'var(--amber-soft-strong)'  }
   if (months < 6)  return { label: 'Established', color: 'var(--accent)', bg: 'var(--green-soft)',  border: 'var(--green-soft-strong)'  }
   if (months < 12) return { label: 'Veteran',     color: 'var(--amber)', bg: 'var(--amber-soft)',   border: 'var(--amber-soft-strong)'   }
   return              { label: 'OG',          color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' }

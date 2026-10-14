@@ -1,3 +1,6 @@
+import { numberWord } from './tooltipTexts'
+import { FRESH_MINT_MONTHS } from './mintFormatting'
+
 // Network Health Index (NHI) on the Stats page: the weights, the list of "advanced" features and
 // every tooltip/explanation string that describes them. The computation (Stats.tsx) and the texts
 // below read the SAME constants, so a changed weight or feature list changes the text with it.
@@ -83,10 +86,13 @@ export function nhiScore(p: NhiParts, w: NhiWeights = NHI_WEIGHTS): number {
 // ── Texts ────────────────────────────────────────────────────────────────────
 
 /** Subtitle under the "Network health index" header; where the gauge opens the breakdown dialog (<= 768 px) it says so. */
-export const NHI_SUBTITLE = 'Weighted from five factors.'
+export function nhiBaseSubtitle(w: NhiWeights = NHI_WEIGHTS): string {
+  return `Weighted from ${numberWord(Object.keys(w).length)} factors.`
+}
+export const NHI_SUBTITLE = nhiBaseSubtitle()
 export const NHI_SUBTITLE_GAUGE_HINT = 'Tap or click the gauge for the breakdown.'
-export function nhiSubtitle(gaugeOpensBreakdown: boolean): string {
-  return gaugeOpensBreakdown ? `${NHI_SUBTITLE} ${NHI_SUBTITLE_GAUGE_HINT}` : NHI_SUBTITLE
+export function nhiSubtitle(gaugeOpensBreakdown: boolean, w: NhiWeights = NHI_WEIGHTS): string {
+  return gaugeOpensBreakdown ? `${nhiBaseSubtitle(w)} ${NHI_SUBTITLE_GAUGE_HINT}` : nhiBaseSubtitle(w)
 }
 
 /** Which mints the Online share is taken over (also appended to the desktop header tooltip). */
@@ -95,9 +101,9 @@ export function nhiOnlineSetText(hours: number = DEGRADED_AFTER_HOURS): string {
 }
 
 /** The formula line of the breakdown dialog's footer. */
-export function nhiFormulaText(w: NhiWeights = NHI_WEIGHTS): string {
+export function nhiFormulaText(w: NhiWeights = NHI_WEIGHTS, freshMonths: number = FRESH_MINT_MONTHS): string {
   return `Score = Online%×${w.online} + Reliability×${w.reliability} + SW Diversity×${w.diversity} + Advanced NUTs×${w.advanced} + Stability×${w.stability}, each part 0-100%. ${nhiOnlineSetText()} Test mints are included. ` +
-    'Network Stability (share of mints tracked 1 month+) stands in for churn rate — churn ' +
+    `Network Stability (share of mints tracked ${freshMonths} ${freshMonths === 1 ? 'month' : 'months'}+) stands in for churn rate — churn ` +
     'isn\'t reliably measurable yet, since mints are never marked "removed" in the database.'
 }
 

@@ -1,5 +1,6 @@
 import { db } from '@/db'
 import { useWatchlistStore } from '@/stores/watchlist.store'
+import { notifyStopNotice } from '@/utils/tooltipTexts'
 import { cancelSubscription, hasNotifyRequestInFlight } from '@/core/nostr/notificationSubscription'
 
 // Removes a mint from the watchlist (star on a watched mint) and, when a server subscription may
@@ -20,7 +21,7 @@ export async function removeWatchedMint(url: string, name: string): Promise<void
   if (!mayBeSubscribed && !toggleRunning) return
   void cancelSubscription(url).then(result => {
     if (!result.ok) {
-      useWatchlistStore.getState().pushNotice(`Couldn't turn off notifications for ${name}. They stop within 30 days.`)
+      useWatchlistStore.getState().pushNotice(notifyStopNotice(name))
     }
   })
 }
