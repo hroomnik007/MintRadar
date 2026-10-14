@@ -191,7 +191,7 @@ export function moreAlertsNote(): string {
 // ── Mint Detail: why the mint's info request failed (the ⓘ beside the red error badge) ───────────────────────────
 export const HTTP_ERROR_EXPLANATIONS: Record<string, string> = {
   '400': "The mint's info endpoint rejected the request as malformed — likely a misconfiguration on the mint's side",
-  '401': "The mint's info endpoint unexpectedly requires authentication — likely a misconfiguration, NUT-06 should be public",
+  '401': "The mint's info endpoint unexpectedly requires authentication — likely a misconfiguration. NUT-06 should be public",
   '403': "The mint's info endpoint is blocking this request — may be a firewall rule or IP block",
   '404': "The mint's info endpoint returned 404 — it may not support NUT-06, or the URL has changed",
   '429': 'The mint is rate-limiting requests',
