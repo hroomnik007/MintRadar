@@ -3,7 +3,7 @@ import { useCallback } from 'react'
 // Focus handling shared by every modal dialog: initial focus inside, Tab / Shift+Tab trap,
 // and focus handed back to whatever opened the dialog when it closes. Escape, the outside
 // click and the close button stay with each modal (they already exist there; an open
-// tooltip swallows Escape first via useTapTooltip's capture listener).
+// tooltip swallows Escape first via tooltipManager's capture listener).
 //
 //   const dialogRef = useModalFocus()          // or useModalFocus('input') to start in a field
 //   {open && <div role="dialog" aria-modal="true" aria-labelledby="…" ref={dialogRef}>…</div>}

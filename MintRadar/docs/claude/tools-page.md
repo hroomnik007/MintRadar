@@ -157,7 +157,7 @@ and the test was never updated to match.
   renders it as a distinct `"bad-mint-url"` result and makes **no** network request.
 - **`InfoTooltip`** (`src/components/InfoTooltip.tsx` + co-located `.css`) — the shared ⓘ
   hover-on-desktop / tap-on-mobile tooltip (`text` / `width` / `iconSize` / `className` /
-  `tone` / `label` props; wraps `useTapTooltip`; popup is `role="tooltip"` with its own
+  `tone` / `label` / `about` props; since 2026-10-14 the one tooltip of the whole app, see `mobile-and-tooltips.md`; popup is `role="tooltip"` with its own
   `.info-tooltip-pop` styling so it renders identically regardless of which page stylesheet is
   loaded). Promoted out of `Tools.tsx` (2026-09-08). **Current uses:** DLEQ / NUT-07 in Tools,
   and the `reviewSurge` **⚠** flag (`tone="warn"`) on the Community Rating tile

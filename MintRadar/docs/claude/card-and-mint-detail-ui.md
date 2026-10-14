@@ -173,8 +173,8 @@ components (Uptime 40% · Audit reliability 25% · NUT Support 15% · Version 15
 and the "Score = Uptime×40% + …" explanatory line directly under the donut/badge — no click on
 a "Details ›" link or the donut itself needed anymore (both removed from the desktop panel).
 `ReliabilityBreakdownRow` (`MintDetail.tsx`, a top-level component alongside `AuditSourceInfoIcon`)
-renders one row (label + ⓘ tooltip + measured value + score bar); it owns its own
-`useRef`/`useTapTooltip` internally rather than taking one as a prop, specifically so the same
+renders one row (label + ⓘ tooltip + measured value + score bar); it renders its own `InfoTooltip`
+(2026-10-14; it was a `useTapTooltip` hook before), so the same
 row data (`reliabilityBreakdownRows`) can be rendered in two places at once (the always-visible panel
 list AND the "Reliability Score Breakdown" modal) without two DOM nodes fighting over one shared ref.
 The Uptime/NUTs/Latency 3-line mini-summary that used to sit in this panel (`.reliability-info`,
@@ -268,7 +268,7 @@ off several rounds of user-reported layout fixes, in landing order:
   blurb) generalized with an optional `text` prop. **Gotcha found and fixed same commit:** the
   icon was first nested *inside* `.md-panel-title`, so the tooltip text inherited that element's
   `text-transform: uppercase` / `letter-spacing: 0.1em` / `font-family: var(--font-mono)` —
-  `.audit-tooltip` only resets `font-family`, not the other two, so the tooltip visibly looked
+  `.audit-tooltip` (gone since 2026-10-14: every tooltip is an `InfoTooltip` in a portal, see `mobile-and-tooltips.md`) only reset `font-family`, not the other two, so the tooltip visibly looked
   like a different font from every other tooltip in the app. Fixed by making the icon a sibling
   of the title `<span>`, matching the layout the Audit tab heading's own `AuditSourceInfoIcon`
   already uses (`73e6c3e` landed it broken, `1e7c329` fixed the nesting same day after the user

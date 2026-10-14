@@ -25,7 +25,7 @@ const dialogRef = useModalFocus()            // or useModalFocus('.md-picker-sea
 {open && <div role="dialog" aria-modal="true" aria-labelledby="…" ref={dialogRef}>…</div>}
 ```
 
-It is a React 19 callback ref (works for dialogs rendered conditionally inside a big page component; the returned cleanup runs on unmount). On mount it remembers `document.activeElement` as the trigger and focuses the dialog container (`tabindex=-1`, outline off, so nothing looks different) or the `initialFocus` selector; Tab / Shift+Tab wrap inside the topmost open dialog (a stack handles two dialogs mounted in one commit), a `focusin` guard pulls back focus that escapes some other way; on unmount focus returns to the trigger if it is still in the DOM. **Escape, outside click and the close button are NOT in the hook** — each modal already had its own (window `keydown` listener, overlay `onClick`); an open ⓘ tooltip still swallows Escape first via `useTapTooltip`'s capture-phase listener. A new modal = `role`/`aria-modal`/name + `ref={useModalFocus()}`; give its close glyph button `aria-label="Close"`.
+It is a React 19 callback ref (works for dialogs rendered conditionally inside a big page component; the returned cleanup runs on unmount). On mount it remembers `document.activeElement` as the trigger and focuses the dialog container (`tabindex=-1`, outline off, so nothing looks different) or the `initialFocus` selector; Tab / Shift+Tab wrap inside the topmost open dialog (a stack handles two dialogs mounted in one commit), a `focusin` guard pulls back focus that escapes some other way; on unmount focus returns to the trigger if it is still in the DOM. **Escape, outside click and the close button are NOT in the hook** — each modal already had its own (window `keydown` listener, overlay `onClick`); an open ⓘ tooltip still swallows Escape first via `tooltipManager`'s capture-phase listener. A new modal = `role`/`aria-modal`/name + `ref={useModalFocus()}`; give its close glyph button `aria-label="Close"`.
 
 | Modal | File | Name from |
 |---|---|---|
@@ -166,36 +166,71 @@ covers only the overflowing range; never hide or move a control. Everything else
    The 4px `.md-sc`/`.md-tab` overflow at 320px noted earlier did not reproduce (321px, rated tile: 0px) and was
    not touched; a `.md-tab` overflow was not re-investigated.
 
-## Tooltip positioning in scrollable/small containers
+## Tooltips — one component (2026-10-14, supersedes the per-container positioning fixes and `useTapTooltip`)
 
-**Pattern:** in a small or scrollable container (e.g. the Network Health Index Breakdown
-modal), a tooltip that always pops in one fixed direction (e.g. always upward) gets
-clipped for rows near the edge that don't have room in that direction.
+**Every explanation in the app is an `InfoTooltip`** (`src/components/InfoTooltip.tsx`). The bespoke popups (`.audit-tooltip` and its
+`-down` variant, the inline-style boxes of `ComparisonModal`, the `useTapTooltip` hook and its per-trigger `useRef`s) and title-attribute
+explanations on chips are migrated and deleted. A test (`src/__tests__/tooltipPatterns.test.ts`) fails if one of them comes back.
 
-**Fix applied in `NetworkHealthModal` (`Stats.tsx`):** direction is chosen dynamically by
-position in the list — the last 2 rows pop downward, the rest pop upward (rather than
-one fixed direction for every row).
+**The contract** (also at the top of `InfoTooltip.tsx`; checked on every page/state, five viewports, mouse and touch, by
+`e2e/tooltips-contract.spec.ts`):
+- **Trigger:** a real `<button type="button" data-tooltip-trigger>`. Icon mode (no children): the ⓘ (or ⚠ with `tone="warn"`), named by
+  `label`, or `about="Latency"` → "More information about Latency", default "More information". Chip mode (children): the chip / badge /
+  value the tooltip explains is the button's content (the chip keeps its own classes inside; nothing looks different), and the content is
+  its accessible name. While open the button has `aria-describedby` → the tooltip's id; the tooltip is `role="tooltip"` and exists in the
+  DOM only while open.
+- **Opening:** mouse hover after ~100 ms (leaving closes); keyboard `:focus-visible` opens, blur closes, Enter / Space toggle; touch: a
+  tap opens, a second tap on the trigger or a tap anywhere else closes. **Escape closes only the tooltip** (window capture listener,
+  `stopPropagation` — every container listens in the *bubble* phase, so a new Escape handler for a dialog/panel must not use the capture
+  phase) and focus stays on the trigger. One tooltip at a time.
+- **`src/utils/tooltipManager.ts`** owns that: the one open tooltip, and the only document/window listeners (Escape, `pointerdown`
+  outside, resize, orientationchange, visual-viewport and scroll re-placement). They are registered when a tooltip opens and removed
+  when it closes; nothing is held while all tooltips are closed, and an unmount cleans up.
+- **Position:** `src/utils/tooltipPosition.ts` (`computeTooltipPosition`, pure, unit-tested): above the trigger, else below, centred and
+  clamped inside the visual viewport with an 8 px margin, a 6 px gap (never covers its trigger), cut to the roomier side and scrolling
+  when neither fits, kept inside when the trigger has scrolled away (the component closes then). One rectangle read per placement.
+  `position: fixed` in a portal: the nearest enclosing `[role="dialog"]` when the trigger is inside one (above the dialog's content and
+  inside its focus trap — `useModalFocus` makes nothing inert, it traps Tab and locks scroll — and the Escape stays with the tooltip),
+  else `document.body`; `z-index: 2000`. The dialog overlays have a `backdrop-filter`, which makes them the containing block of fixed
+  descendants: the component lays the box out at 0/0 first and corrects by where that landed, so the result is right wherever the
+  containing block sits. Width: the `width` prop (default 220), capped at `min(320px, 100vw − 16px)`.
+- **Hit area:** the visible icon stays 10–13 px; the button is padded by 7 px per side with the same negative margin (24+ px square, the
+  layout does not move). Chips get 3.5 px above and below (24+ px high). Where a neighbouring control is within reach the hit area is cut
+  on that side with `--tt-hit-t/r/b/l` (and `--tt-ml` for an icon that used to carry a margin-left); cases: the client-latency ⓘ beside
+  "Show my latency" (`.latency-client-info`: 4 px left, 9 px right), the New / Test mint chips above the URL button (`.md-namebox`: 4 px above,
+  2 px below), the filter tag's text (`.filter-tag`: 6 px, the close button is beside it). The Unit and NIP-05 icons keep their 44 px touch
+  overlay (`::before`). Cards: `.mint-card .info-tooltip` stays above the stretched-link overlay; `click` never reaches the host
+  (`stopPropagation` + `preventDefault`), so a card, a label or a dialog backdrop is not activated.
 
-Same fix pattern as the existing precedent in `MintDetail.tsx:616` — when a similar
-tooltip-clipping issue shows up in a small container elsewhere in the app, check this
-pattern first before inventing a new one.
+**Adding a tooltip:** use `<InfoTooltip text="…" about="Visible label" />` (icon) or `<InfoTooltip text="…"><span className="chip">…</span></InfoTooltip>`
+(chip). Never a `title` attribute for an explanation, never a bespoke popup, never an `aria-label`-less icon. Build the text from the
+constant the code uses (see `utils/networkHealthIndex.ts`). Titles that remain (labels of icon-only buttons, text that repeats the visible
+name or an ellipsised value) are listed with their reason in `tooltipPatterns.test.ts`; a new one fails that test.
 
-**Established visual rule:** info icons attached to a badge (e.g. "Backup supported", the
-error badge) must be a separate sibling element placed next to the badge — never nested
-inside the same pill-shaped container as the badge. This convention is used consistently
-across the app.
+**Not migrated, on purpose:**
+- Chart tooltips (hover values drawn inside a chart): the Recharts `<Tooltip>` of the uptime/latency chart on Mint Detail (`MintDetailHistoryChart.tsx`),
+  the two in `ComparisonModal.tsx` (history lines) and the Stats reliability trend chart (`Stats.tsx`).
+- Titles on hosts that are themselves controls, where a nested button would be invalid or change what the host does: the "Hide test
+  mints" label (a label + checkbox), the Tor chip inside the copy-URL button, the CDN / anycast row of Geographic Distribution (a
+  clickable row), the "Redeem to Lightning" link.
+- Titles on table rows / groups (the grey swap rows, the review filter group) and the swap bar's outcome marks (a sparkline-like strip of
+  hover values). Their text is also reachable another way (the State cell's tooltip and visually hidden text).
+- The Stats software modal has no tooltip trigger of its own.
 
-**Escape closes an open tooltip first (2026-10-02, `useTapTooltip.ts`):** while any ⓘ tooltip
-is open (hover, tap or keyboard focus), Escape closes only that tooltip — a capture-phase
-`keydown` listener on `window` calls `stopPropagation()` before the surrounding container sees
-it, and focus is not moved. A second Escape then closes the container as before. This works
-because every container (Filters panel via `mintradar:escape` from `AppShell.tsx`, the account
-menu's `document` listener, every modal's `window` listener) listens in the **bubble** phase —
-**a new Escape handler for a dialog/panel must not use the capture phase**, or it would bypass
-this. Applies to every `useTapTooltip` consumer (`InfoTooltip`, the Reliability breakdown rows,
-Comparison/Stats modals), not only `InfoTooltip`. `InfoTooltip`'s old own `onKeyDown` Escape
-handler was removed (redundant). e2e: `e2e/tooltip-escape.spec.ts`.
+**Visible differences from the old popups:** none in size, colours, font, radius or shadow (the box CSS is the old `.audit-tooltip` /
+`.info-tooltip-pop`). The tooltips no longer inherit `text-transform` from the label they sat in (the Tools "Signature check" tooltip was
+upper-case because its trigger was in an upper-case label); they open above dialogs and are no longer clipped by scrolling containers.
+The icons' hit area is bigger. (The ⓘ beside an error badge whose error has no explanation is still drawn, as a plain decorative icon —
+it used to be a control that opened nothing.)
 
+e2e: `e2e/tooltips-contract.spec.ts` (+ `fixtures/tooltipStates.ts`, `tooltipExtract.ts`, `tooltipHitArea.ts`, and `fixtures/tooltip-texts-before.json`,
+the text of every tooltip and explanatory title extracted before the migration, which the spec compares against), `tooltip-escape.spec.ts`,
+`tooltip-facts.spec.ts`. Unit: `InfoTooltip.test.tsx`, `tooltipPosition.test.ts`, `tooltipPatterns.test.ts`.
+
+**Escape (2026-10-02, now in `tooltipManager.ts`):** while a tooltip is open (hover, tap or keyboard focus), Escape closes only that
+tooltip and is stopped before the surrounding container sees it; focus is not moved. A second Escape closes the container as before.
+Every container (Filters panel via `mintradar:escape` from `AppShell.tsx`, the account menu's `document` listener, every modal's `window`
+listener) listens in the **bubble** phase. e2e: `e2e/tooltip-escape.spec.ts`.
 
 ## Mobile navbar row 1 (2026-09-30)
 Logo + auth stay on one row at ≤640px. Npub line is hidden; display name ellipsizes (72px, 56px at ≤360px); method badge hides at ≤360px. Tabs still wrap to row 2.

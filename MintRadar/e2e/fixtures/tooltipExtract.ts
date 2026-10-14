@@ -6,7 +6,7 @@ import type { Page } from '@playwright/test'
 // component's buttons carry data-tooltip-trigger and the same cursor). The result is sorted so that two runs
 // compare as multisets: before the migration a chip's text is its title, afterwards it is a popup.
 
-const POPUP = '[role="tooltip"], .info-tooltip-pop, .audit-tooltip'
+const POPUP = '[role="tooltip"]'
 
 export interface Extracted {
   /** Sorted texts: tooltip popups and visible title attributes. */
