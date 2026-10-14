@@ -20,6 +20,10 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { PageHead } from '@/components/layout/PageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
+import {
+  NHI_WEIGHTS, advancedAdoptionPercent, nhiSummaryText, nhiOnlineSetText, nhiFormulaText,
+  nhiOnlineRowText, nhiReliabilityRowText, nhiAdvancedRowText, avgUptimeText,
+} from '@/utils/networkHealthIndex'
 import { formatDate } from '@/utils/formatDate'
 import './Stats.css'
 
@@ -40,12 +44,6 @@ function uptimeColor(pct: number): string {
   return 'var(--red)'
 }
 
-
-// "Advanced" features: security/privacy capabilities that go beyond the
-// baseline mint/melt/state-check/restore lifecycle every mint needs just to
-// function (NUT-04/05/07/08/09/10). Used by the Network Health Index's
-// feature-adoption component.
-const ADVANCED_NUT_KEYS = ['11', '12', '14', '17', '21', '22', '25', '27', '28', '30']
 
 function countryFlag(cc: string): string {
   if (cc.length !== 2) return ''
@@ -536,14 +534,10 @@ function NetworkHealthComponentRow({ component: c, index, total, compact }: {
 }
 
 // Single source of truth for the formula explanation text — used by the
-// modal's footer (NetworkHealthFormulaNote, unchanged) and appended to the
-// desktop header's ⓘ tooltip (Stats() below, replacing the old always-visible
-// inline footer under the desktop breakdown).
-const NETWORK_HEALTH_FORMULA_TEXT =
-  'Score = Online%×30 + Reliability×25 + SW Diversity×15 + Advanced NUTs×15 + Stability×15. ' +
-  'Online% uses the same set as the Dashboard default grid (24h+ offline mints excluded). ' +
-  'Network Stability (share of mints tracked 1 month+) stands in for churn rate — churn ' +
-  'isn\'t reliably measurable yet, since mints are never marked "removed" in the database.'
+// modal's footer (NetworkHealthFormulaNote, unchanged). The desktop header's ⓘ
+// tooltip shows nhiSummaryText + nhiOnlineSetText instead (Stats() below).
+// Built from NHI_WEIGHTS, so it can never disagree with the computation.
+const NETWORK_HEALTH_FORMULA_TEXT = nhiFormulaText()
 
 // Shared formula/explanation footer — modal only now (desktop inline
 // breakdown no longer renders this; see NETWORK_HEALTH_FORMULA_TEXT above).
@@ -845,21 +839,19 @@ export default function Stats() {
     const hhi = swTotal > 0 ? versionDist.reduce((s, d) => s + (d.total / swTotal) ** 2, 0) : 1
     const diversity = swTotal > 0 ? (1 - hhi) * 100 : 0
 
-    const advPercents = ADVANCED_NUT_KEYS.map(key =>
-      data.nutAdoption.find(n => n.nut === `NUT-${key.padStart(2, '0')}`)?.percent ?? 0
-    )
-    const advancedAdoption = advPercents.reduce((s, p) => s + p, 0) / advPercents.length
+    const advancedAdoption = advancedAdoptionPercent(data.nutAdoption)
 
     const notFresh = knownMintsData.filter(m => mintAgeBadge(m.discoveredAt)?.label !== 'Fresh').length
     const stability = notFresh / knownMintsData.length * 100
 
     const score = Math.round(
-      onlinePct * 0.30 + avgReliability * 0.25 + diversity * 0.15 + advancedAdoption * 0.15 + stability * 0.15
+      onlinePct * (NHI_WEIGHTS.online / 100) + avgReliability * (NHI_WEIGHTS.reliability / 100) + diversity * (NHI_WEIGHTS.diversity / 100) +
+        advancedAdoption * (NHI_WEIGHTS.advanced / 100) + stability * (NHI_WEIGHTS.stability / 100)
     )
 
     // Matches NetworkHealthComponentRow's own points formula so the tooltip's
     // numbers can never drift from what the row actually displays.
-    const onlinePts = Math.round(onlinePct * 30 / 100)
+    const onlinePts = Math.round(onlinePct * NHI_WEIGHTS.online / 100)
 
     return {
       score,
@@ -867,13 +859,13 @@ export default function Stats() {
         {
           label: 'Online mints',
           value: onlinePct,
-          weight: 30,
-          tooltip: `${onlinePts}/30 are NHI points (this row is 30% of the index), not ${onlinePts} mints online. Denominator is non-degraded mints (same set as the Dashboard default grid).`,
+          weight: NHI_WEIGHTS.online,
+          tooltip: nhiOnlineRowText(onlinePts),
         },
-        { label: 'Avg. Reliability Score', value: avgReliability, weight: 25, tooltip: 'Average Reliability Score across all currently online mints.' },
-        { label: 'Software diversity', value: diversity, weight: 15, tooltip: 'How evenly mints are spread across different software - heavy reliance on one implementation scores lower.' },
-        { label: 'Advanced feature adoption', value: advancedAdoption, weight: 15, tooltip: 'Average adoption rate of optional, security/privacy-oriented NUTs (P2PK, DLEQ, HTLCs, WebSocket, auth, BOLT12, Nostr backup, Pay-to-BK, on-chain) beyond the baseline mint/melt/state-check/restore lifecycle.' },
-        { label: 'Network stability', value: stability, weight: 15, tooltip: 'Share of mints that have been tracked for 1 month or more. Used as a stand-in for churn rate, since mints are never marked "removed" in the database so actual churn isn\'t reliably measurable yet.' },
+        { label: 'Avg. Reliability Score', value: avgReliability, weight: NHI_WEIGHTS.reliability, tooltip: nhiReliabilityRowText() },
+        { label: 'Software diversity', value: diversity, weight: NHI_WEIGHTS.diversity, tooltip: 'How evenly mints are spread across different software - heavy reliance on one implementation scores lower.' },
+        { label: 'Advanced feature adoption', value: advancedAdoption, weight: NHI_WEIGHTS.advanced, tooltip: nhiAdvancedRowText() },
+        { label: 'Network stability', value: stability, weight: NHI_WEIGHTS.stability, tooltip: 'Share of mints that have been tracked for 1 month or more. Used as a stand-in for churn rate, since mints are never marked "removed" in the database so actual churn isn\'t reliably measurable yet.' },
       ],
     }
   }, [data, knownMintsData, versionDist])
@@ -948,7 +940,7 @@ export default function Stats() {
                   <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
                   {uptimeInfoTooltip.open && (
                     <div className="audit-tooltip audit-tooltip-down" style={{ width: isMobile ? 200 : 240, left: 0 }}>
-                      Average 24-hour uptime of active mints (same set as the Dashboard default grid). 24h+ offline mints are excluded; missing samples are skipped, not counted as 0%.
+                      {avgUptimeText()}
                     </div>
                   )}
                 </span>
@@ -1019,7 +1011,7 @@ export default function Stats() {
                     <Info size={11} color="#6b7280" style={{ flexShrink: 0, cursor: 'help' }} />
                     {nhiInfoTooltip.open && (
                       <div className="audit-tooltip" style={isMobile ? { width: 220, left: 0, bottom: 'auto', top: 'calc(100% + 6px)' } : { width: 260, left: 0, bottom: 'auto', top: 'calc(100% + 6px)' }}>
-                        Composite 0-100 score across uptime, average Reliability Score, software diversity, advanced feature adoption &amp; network stability. Each row below shows index points, not a mint count.{isMobile ? ' Tap the gauge for the full breakdown.' : ` ${NETWORK_HEALTH_FORMULA_TEXT}`}
+                        {nhiSummaryText()}{isMobile ? ' Tap the gauge for the full breakdown.' : ` ${nhiOnlineSetText()}`}
                       </div>
                     )}
                   </span>

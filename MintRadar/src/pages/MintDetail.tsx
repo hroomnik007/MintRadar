@@ -46,7 +46,7 @@ import {
 import { classifyMintVersion, latestMapFor, type LatestVersions } from '@/utils/versionRule'
 import { useNow } from '@/hooks/useNow'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
-import { PROBE_LOCATION } from '@/constants/probeLocation'
+import { PROBE_LOCATION, CLIENT_LATENCY_BUTTON_LABEL, latencyTooltipText } from '@/constants/probeLocation'
 import { useTapTooltip } from '@/hooks/useTapTooltip'
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -1419,7 +1419,7 @@ function MintDetailContent({ url }: { url: string }) {
                 <Info size={11} color="#6b7280" style={{cursor:'help'}} />
                 {latencyInfoTooltip.open && (
                   <div className="audit-tooltip" style={{width:200}}>
-                    Measured from our server in {PROBE_LOCATION}, DE. Click &quot;Test&quot; for your local latency.
+                    {latencyTooltipText()}
                   </div>
                 )}
               </span>
@@ -1434,7 +1434,7 @@ function MintDetailContent({ url }: { url: string }) {
                   className="latency-test-btn"
                 >
                   {testingLatency && <span className="latency-spinner" />}
-                  Show my latency
+                  {CLIENT_LATENCY_BUTTON_LABEL}
                 </button>
                 <span
                   ref={clientLatencyInfoRef}
