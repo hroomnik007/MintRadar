@@ -61,7 +61,7 @@ test('the registration row says what it is and carries the caveat as an info too
   await expect(rowOf(page, 'Registered in')).toContainText('United States')
   await expect(card(page).locator('.md-info-label', { hasText: /^Country$/ })).toHaveCount(0)
   await rowOf(page, 'Registered in').locator('.info-tooltip').hover()
-  await expect(rowOf(page, 'Registered in').getByRole('tooltip')).toContainText('Country where the IP block is registered, not where the server stands.')
+  await expect(page.getByRole('tooltip')).toContainText('Country where the IP block is registered, not where the server stands.')
 })
 
 test.describe('IP row', () => {

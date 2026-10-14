@@ -65,33 +65,34 @@ test.describe('Mint Detail — unverified NIP-05 line', () => {
     const { line } = await open(page)
     await expect(line).toBeVisible()
     await expect(line.locator('a')).toHaveCount(0)
-    await expect(line.locator('button')).toHaveCount(0)
     expect(await line.innerHTML()).not.toMatch(/mailto:|nostr:|href=/i)
     const text = line.locator('.md-nip05-text')
     expect(await text.evaluate(el => getComputedStyle(el).cursor)).not.toBe('pointer')
-    // Only the ⓘ is interactive.
-    await expect(line.locator('[tabindex], [role="button"]')).toHaveCount(1)
+    // Only the ⓘ is interactive: one button, and it is the tooltip trigger (no copy button, no link).
+    await expect(line.locator('button, [tabindex], [role="button"]')).toHaveCount(1)
+    await expect(line.locator('button')).toHaveAttribute('data-tooltip-trigger', '')
   })
 
   test('the ⓘ is focusable and shows the tooltip on keyboard focus and on hover', async ({ page }) => {
     const { line, icon } = await open(page)
     await expect(line).toBeVisible()
     await expect(icon).toHaveAttribute('aria-label', TOOLTIP)
-    await expect(icon).toHaveAttribute('tabindex', '0')
-    await expect(line.getByRole('tooltip')).toHaveCount(0)
+    expect(await icon.evaluate(el => el.tagName)).toBe('BUTTON') // a real, focusable button
+    await expect(page.getByRole('tooltip')).toHaveCount(0)
 
     await page.keyboard.press('Tab') // make the next programmatic focus count as keyboard focus
     await icon.focus()
     await expect(icon).toBeFocused()
-    await expect(line.getByRole('tooltip')).toHaveText(TOOLTIP)
+    await expect(page.getByRole('tooltip')).toHaveText(TOOLTIP)
+    await expect(icon).toHaveAttribute('aria-describedby', (await page.getByRole('tooltip').getAttribute('id'))!)
     await page.keyboard.press('Escape')
-    await expect(line.getByRole('tooltip')).toHaveCount(0)
+    await expect(page.getByRole('tooltip')).toHaveCount(0)
     await icon.blur()
 
     await icon.hover()
-    await expect(line.getByRole('tooltip')).toHaveText(TOOLTIP)
+    await expect(page.getByRole('tooltip')).toHaveText(TOOLTIP)
     await page.mouse.move(5, 5)
-    await expect(line.getByRole('tooltip')).toHaveCount(0)
+    await expect(page.getByRole('tooltip')).toHaveCount(0)
   })
 
   for (const long of [false, true]) {
@@ -121,17 +122,17 @@ test.describe('Mint Detail — unverified NIP-05 line', () => {
     const { line, icon } = await open(page)
     await expect(line).toBeVisible()
     const r = await icon.evaluate(el => {
-      const b = el.getBoundingClientRect(), p = getComputedStyle(el, '::before')
+      const b = el.querySelector('svg')!.getBoundingClientRect(), p = getComputedStyle(el, '::before')
       return { w: b.width, h: b.height, pw: parseFloat(p.width), ph: parseFloat(p.height) }
     })
-    expect(r.w).toBeLessThan(20)
+    expect(r.w).toBeLessThan(20) // the visible icon stays small
     expect(r.pw).toBeGreaterThanOrEqual(44)
     expect(r.ph).toBeGreaterThanOrEqual(44)
     // A tap on the ::before area (15px right of the icon's centre, outside the icon) opens the tooltip.
     await icon.scrollIntoViewIfNeeded()
     const b = (await icon.boundingBox())!
     await page.touchscreen.tap(b.x + b.width / 2 + 15, b.y + b.height / 2)
-    await expect(line.getByRole('tooltip')).toHaveText(TOOLTIP)
+    await expect(page.getByRole('tooltip')).toHaveText(TOOLTIP)
     await ctx.close()
   })
 
@@ -190,7 +191,7 @@ test.describe('Mint Detail — "Get in Touch" heading', () => {
     // The ⓘ still works (keyboard focus opens the tooltip).
     await page.keyboard.press('Tab')
     await icon.focus()
-    await expect(line.getByRole('tooltip')).toHaveText(TOOLTIP)
+    await expect(page.getByRole('tooltip')).toHaveText(TOOLTIP)
   })
 
   test('with a card, the line keeps its 10px gap under the grid', async ({ page }) => {

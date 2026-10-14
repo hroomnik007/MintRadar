@@ -738,9 +738,8 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .md-panel > .md-nip05-line:first-child { margin-top: 0; }
 .md-nip05-text { min-width: 0; user-select: text; }
 .md-nip05-val { font-family: var(--font-mono); color: var(--text2); word-break: break-all; }
-.md-nip05-tip { flex: 0 0 auto; margin-top: 3px; }
+.md-nip05-line .md-nip05-tip { flex: 0 0 auto; margin-top: calc(3px - var(--tt-hit-t, var(--tt-hit))); }
 .md-nip05-tip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
-.md-nip05-tip .info-tooltip-pop { left: 0; transform: none; }
 /* Touch: 44px hit area through an invisible ::before (the icon itself stays 13px). */
 @media (pointer: coarse), (max-width: 700px) {
   .md-nip05-tip::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
@@ -2112,7 +2111,7 @@ a.review-action-btn { color: var(--text3); }
    with the icon glued to its last word. Content starts at the top so all four values sit on one baseline. */
 .audit-cz-tile-label { display: block; text-align: left; }
 .audit-cz-tile-tail { white-space: nowrap; }
-.audit-cz-tile-tail .info-tooltip { vertical-align: middle; margin-left: 3px; }
+.audit-cz-tile-tail .info-tooltip { vertical-align: middle; --tt-ml: 3px; }
 .audit-cz-tiles .audit-summary-cell { justify-content: flex-start; }
 .audit-cz-tiles .audit-summary-value { font-size: 19px; }
 .audit-cz-tiles { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
@@ -2130,7 +2129,6 @@ a.review-action-btn { color: var(--text3); }
 /* Network card values wrap between words ("expires 12 Oct 2026 · expires soon"), and only inside a word when
    it alone is wider than the row (a long network name); the Mint info card keeps its break-all recipe. */
 .md-network-card .md-info-value { word-break: normal; overflow-wrap: anywhere; max-width: 70%; }
-.audit-cz-tile-label .info-tooltip-pop { text-transform: none; letter-spacing: normal; font-size: 10px; white-space: normal; }
 
 /* Icon-only copy buttons: a target of at least 24 px (they carry an aria-label). */
 button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-flex; align-items: center; justify-content: center; }

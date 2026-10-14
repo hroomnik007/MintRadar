@@ -66,7 +66,7 @@ test('only cz has data: header, four tiles from the stored detail, no checks car
   await expect(page.locator('.audit-cz-tiles .audit-cz-tile-label')).toHaveText(
     ['Payouts', 'Receives', 'Without a failure caused by this mint', 'Avg swap time'])
   await tile(page, 'clean').locator('.info-tooltip').hover()
-  await expect(tile(page, 'clean').getByRole('tooltip')).toHaveText('126 of 126 swaps in the last 7 days, 19 failed for other reasons')
+  await expect(page.getByRole('tooltip')).toHaveText('126 of 126 swaps in the last 7 days, 19 failed for other reasons')
   await expect(page.locator('.audit-cz-tile-caption')).toHaveCount(0)
   await expect(page.getByText('Success rate')).toHaveCount(0)
   expect(await tile(page, 'melts').locator('.audit-cz-tile-label').evaluate(e => getComputedStyle(e).textTransform)).toBe('none') // sentence case, like the swap strip labels
@@ -189,7 +189,7 @@ test.describe('tiles from the stored detail', () => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(105, 16, 0) }))
     await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('100%')
     await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(tile(page, 'clean').getByRole('tooltip')).toHaveText('105 of 105 swaps in the last 7 days, 16 failed for other reasons')
+    await expect(page.getByRole('tooltip')).toHaveText('105 of 105 swaps in the last 7 days, 16 failed for other reasons')
     await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
     await expect(tile(page, 'clean')).not.toContainText('0 / 16')
   })
@@ -198,7 +198,7 @@ test.describe('tiles from the stored detail', () => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(229, 207, 202) }))
     await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('12%')
     await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(tile(page, 'clean').getByRole('tooltip')).toHaveText('27 of 229 swaps in the last 7 days, 202 caused by this mint, 5 other failures')
+    await expect(page.getByRole('tooltip')).toHaveText('27 of 229 swaps in the last 7 days, 202 caused by this mint, 5 other failures')
     await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
   })
 
@@ -206,7 +206,7 @@ test.describe('tiles from the stored detail', () => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(200, 1, 1) }))
     await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('99%')
     await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(tile(page, 'clean').getByRole('tooltip')).toHaveText('199 of 200 swaps in the last 7 days, 1 caused by this mint')
+    await expect(page.getByRole('tooltip')).toHaveText('199 of 200 swaps in the last 7 days, 1 caused by this mint')
     await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
   })
 
@@ -214,7 +214,7 @@ test.describe('tiles from the stored detail', () => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(50, 0, 0) }))
     await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('100%')
     await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(tile(page, 'clean').getByRole('tooltip')).toHaveText('50 of 50 swaps in the last 7 days')
+    await expect(page.getByRole('tooltip')).toHaveText('50 of 50 swaps in the last 7 days')
     await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
   })
 
@@ -222,23 +222,23 @@ test.describe('tiles from the stored detail', () => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(4, 0, 0) }))
     await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('100%')
     await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(tile(page, 'clean').getByRole('tooltip')).toHaveText('4 of 4 swaps in the last 7 days')
+    await expect(page.getByRole('tooltip')).toHaveText('4 of 4 swaps in the last 7 days')
   })
 
   test('one other failure and one attributed use the singular', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(50, 1, 0) }))
     await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(tile(page, 'clean').getByRole('tooltip')).toHaveText('50 of 50 swaps in the last 7 days, 1 failed for other reasons')
+    await expect(page.getByRole('tooltip')).toHaveText('50 of 50 swaps in the last 7 days, 1 failed for other reasons')
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(50, 3, 2) }))
     await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(tile(page, 'clean').getByRole('tooltip')).toHaveText('48 of 50 swaps in the last 7 days, 2 caused by this mint, 1 other failure')
+    await expect(page.getByRole('tooltip')).toHaveText('48 of 50 swaps in the last 7 days, 2 caused by this mint, 1 other failure')
   })
 
   test('blamed above total is clamped', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(20, 20, 999) }))
     await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('0%')
     await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(tile(page, 'clean').getByRole('tooltip')).toHaveText('0 of 20 swaps in the last 7 days, 20 caused by this mint')
+    await expect(page.getByRole('tooltip')).toHaveText('0 of 20 swaps in the last 7 days, 20 caused by this mint')
     await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
   })
 
@@ -273,9 +273,9 @@ test.describe('tiles from the stored detail', () => {
     }
     for (const [key, text] of Object.entries(expected)) {
       await tile(page, key).locator('.info-tooltip').hover()
-      await expect(tile(page, key).getByRole('tooltip')).toHaveText(text)
+      await expect(page.getByRole('tooltip')).toHaveText(text)
       // A standard tooltip: sentence case and normal spacing, not the uppercase of the tile label.
-      const pop = await tile(page, key).getByRole('tooltip').evaluate(e => { const c = getComputedStyle(e); return { t: c.textTransform, l: c.letterSpacing, f: c.fontSize } })
+      const pop = await page.getByRole('tooltip').evaluate(e => { const c = getComputedStyle(e); return { t: c.textTransform, l: c.letterSpacing, f: c.fontSize } })
       expect(pop).toEqual({ t: 'none', l: 'normal', f: '10px' })
       await page.mouse.move(0, 0)
     }

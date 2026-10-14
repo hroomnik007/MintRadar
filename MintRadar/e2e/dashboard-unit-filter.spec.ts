@@ -186,7 +186,7 @@ test.describe('Dashboard unit filter', () => {
     await page.goto('/')
     await openPanel(page)
     await expect(tip(page)).toHaveAttribute('aria-label', TIP)
-    await expect(tip(page)).toHaveAttribute('tabindex', '0')
+    expect(await tip(page).evaluate(el => el.tagName)).toBe('BUTTON') // a real, focusable button
     // The label itself stays plain text.
     expect(await page.locator('#filter-unit-label').evaluate(el => el.tagName)).toBe('SPAN')
     await page.locator('.filter-btn').focus()

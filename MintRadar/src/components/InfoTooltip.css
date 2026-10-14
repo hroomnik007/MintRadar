@@ -1,21 +1,60 @@
+/* The tooltip trigger: a real button. The visible icon (10-13 px) keeps its look; padding with a compensating
+   negative margin makes the interactive area at least 24 x 24 px without moving the layout around it.
+   A host that has another control right next to the icon shrinks a side of the hit area through
+   --tt-hit-t / -r / -b / -l (never below the visible icon + 4 px: 2 px per side), and moves the icon with
+   --tt-ml (what used to be a margin-left on the trigger). */
 .info-tooltip {
+  --tt-hit: 7px;
   position: relative;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: var(--tt-hit-t, var(--tt-hit)) var(--tt-hit-r, var(--tt-hit)) var(--tt-hit-b, var(--tt-hit)) var(--tt-hit-l, var(--tt-hit));
+  margin: calc(-1 * var(--tt-hit-t, var(--tt-hit))) calc(-1 * var(--tt-hit-r, var(--tt-hit))) calc(-1 * var(--tt-hit-b, var(--tt-hit))) calc(var(--tt-ml, 0px) - var(--tt-hit-l, var(--tt-hit)));
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  font: inherit;
+  line-height: 0;
+  text-align: inherit;
+  cursor: help;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* The 11-12 px icon keeps its look; its hit area grows to at least 24 px. */
-.info-tooltip[role="button"]::before {
-  content: '';
-  position: absolute;
-  inset: -7px;
+.info-tooltip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
 }
 
+/* Chip mode: the trigger wraps the visible text of a badge / chip / value. It looks exactly like the chip
+   (the chip element sits inside); only the height is padded up to 24 px, vertically, without moving anything. */
+.info-tooltip--chip {
+  --tt-hit: 0px;
+  --tt-hit-t: 4px;
+  --tt-hit-b: 4px;
+  border-radius: 0;
+  line-height: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: inherit;
+  min-width: 0;
+  max-width: 100%;
+}
+.info-tooltip--chip:focus-visible {
+  outline-offset: 1px;
+  border-radius: 5px;
+}
+
+/* The box. Positioned by computeTooltipPosition() (fixed, left/top set from the trigger rectangle), rendered in a
+   portal (the enclosing dialog, else document.body), above dialogs and sticky headers. */
 .info-tooltip-pop {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
+  position: fixed;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  max-width: min(320px, calc(100vw - 16px));
   display: block;
   background: var(--bg);
   border: 0.5px solid var(--border2, var(--border));
@@ -25,10 +64,12 @@
   font-weight: 400;
   color: var(--text2);
   line-height: 1.5;
-  z-index: 30;
+  z-index: 2000;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   pointer-events: none;
   white-space: normal;
   text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
   font-family: var(--font-body);
 }

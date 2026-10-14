@@ -53,7 +53,7 @@ test.describe('Mint Detail', () => {
     // its InfoTooltip.
     await expect(page.locator('.reviews-disclaimer')).toContainText('Reviews · NIP-87')
     await page.locator('.reviews-disclaimer .info-tooltip').hover()
-    await expect(page.locator('.reviews-disclaimer .info-tooltip-pop')).toContainText(
+    await expect(page.getByRole('tooltip')).toContainText(
       /artificially inflated.*directional signal, not proof.*Counts may also differ/i
     )
     // No filter chips when there is nothing to filter.

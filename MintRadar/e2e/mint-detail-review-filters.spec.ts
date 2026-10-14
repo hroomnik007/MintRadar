@@ -140,7 +140,7 @@ test.describe('Mint Detail — Reviews filters (large corpus)', () => {
   test('NIP-87 label + caveat tooltip is shown above the filter row and review list', async ({ page }) => {
     await expect(page.locator('.reviews-disclaimer')).toContainText('Reviews · NIP-87')
     await page.locator('.reviews-disclaimer .info-tooltip').hover()
-    await expect(page.locator('.reviews-disclaimer .info-tooltip-pop')).toContainText(
+    await expect(page.getByRole('tooltip')).toContainText(
       /artificially inflated.*directional signal, not proof/i
     )
   })
