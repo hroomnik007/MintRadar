@@ -158,7 +158,6 @@
       "Compare Twin Mint",
       "Delta Mint",
       "Hides the mints on MintRadar's test-mint list (fake sats).",
-      "Hides the mints on MintRadar's test-mint list (fake sats).",
       "List view",
       "MintRadar",
       "Newbie Mint",
@@ -206,7 +205,6 @@
       "Compare Operator Mint",
       "Compare Twin Mint",
       "Delta Mint",
-      "Hides the mints on MintRadar's test-mint list (fake sats).",
       "Hides the mints on MintRadar's test-mint list (fake sats).",
       "List view",
       "MintRadar",
@@ -257,7 +255,6 @@
       "Compare Test Nut",
       "Compare Twin Mint",
       "Delta Mint",
-      "Hides the mints on MintRadar's test-mint list (fake sats).",
       "List view",
       "MintRadar",
       "Newbie Mint",
@@ -311,7 +308,6 @@
       "Compare Test Nut",
       "Compare Twin Mint",
       "Delta Mint",
-      "Hides the mints on MintRadar's test-mint list (fake sats).",
       "List view",
       "MintRadar",
       "Newbie Mint",
@@ -630,7 +626,6 @@
       "126 of 126 swaps in the last 7 days, 19 failed for other reasons",
       "A keyset is the mint’s signing keys for a unit. Active = used for new tokens. Inactive = old keys; existing tokens may still melt.",
       "Add Alpha Mint to watchlist",
-      "Average swap time over the last 7 days as reported by cashu.info.",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
@@ -651,14 +646,13 @@
       "failed · <ISO>",
       "melt quote failed"
     ],
-    "triggers": 16
+    "triggers": 15
   },
   "mint-alpha-audit-cz@390": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "126 of 126 swaps in the last 7 days, 19 failed for other reasons",
       "Add Alpha Mint to watchlist",
-      "Average swap time over the last 7 days as reported by cashu.info.",
       "Last swaps, newest first",
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
@@ -672,7 +666,7 @@
       "failed · <ISO>",
       "melt quote failed"
     ],
-    "triggers": 9
+    "triggers": 8
   },
   "mint-alpha-audit@1440": {
     "texts": [
@@ -974,7 +968,7 @@
       "Copy full keyset ID",
       "Copy full public key",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Excludes 1 review written by the mint's operator.",
+      "Excludes 1 review written by the mint's operator. The Reviews tab still lists it, marked Operator.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
@@ -991,7 +985,7 @@
       "Copy",
       "Copy",
       "Copy full public key",
-      "Excludes 1 review written by the mint's operator.",
+      "Excludes 1 review written by the mint's operator. The Reviews tab still lists it, marked Operator.",
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Your latency from this browser to the mint (client-side measurement)."
@@ -1009,9 +1003,8 @@
       "Copy link to this review",
       "Copy reviewer npub",
       "Copy reviewer npub",
-      "Counts every listed review, including 1 written by the mint's operator. The Community rating tile does not count those.",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Excludes 1 review written by the mint's operator.",
+      "Excludes 1 review written by the mint's operator. The Reviews tab still lists it, marked Operator.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
@@ -1033,8 +1026,7 @@
       "Copy link to this review",
       "Copy reviewer npub",
       "Copy reviewer npub",
-      "Counts every listed review, including 1 written by the mint's operator. The Community rating tile does not count those.",
-      "Excludes 1 review written by the mint's operator.",
+      "Excludes 1 review written by the mint's operator. The Reviews tab still lists it, marked Operator.",
       "Measured from our server in Nuremberg at the last probe. \"Show my latency\" measures from your device.",
       "MintRadar",
       "Open this review on Nostr",

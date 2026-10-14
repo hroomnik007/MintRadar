@@ -1335,7 +1335,7 @@ export default function Dashboard() {
             </div>
 
             <div className="filter-footer">
-              <label className="filter-check" title={HIDE_TEST_MINTS_TOOLTIP}>
+              <label className="filter-check">
                 <input
                   type="checkbox"
                   checked={pendingFilters.hideTestMints}

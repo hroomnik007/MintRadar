@@ -20,7 +20,7 @@ export function AuditCzTiles({ view }: { view: AuditCzView }) {
           <div className="audit-summary-value" style={{ color: 'var(--accent)' }}>{t.value}</div>
           <div className="audit-summary-label audit-cz-tile-label">
             {lead}
-            <span className="audit-cz-tile-tail">{last}<InfoTooltip text={t.tooltip} width={240} iconSize={11} label={`About ${t.label}`} /></span>
+            <span className="audit-cz-tile-tail">{last}{t.tooltip ? <InfoTooltip text={t.tooltip} width={240} iconSize={11} label={`About ${t.label}`} /> : null}</span>
           </div>
         </div>
         )

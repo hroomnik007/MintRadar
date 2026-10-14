@@ -118,6 +118,11 @@ export function compareAuditSuccessText(): string {
   return `Last ${AUDIT_WINDOW_DAYS} days from cashu.info; only failures attributed to the mint count. n/a below ${AUDIT_MIN_SAMPLES} swaps. Not a solvency or reserves signal.`
 }
 
+/** Community Rating tile: how many operator reviews it leaves out (the Reviews tab still lists them). */
+export function operatorExcludedText(n: number): string {
+  return `Excludes ${n} review${n === 1 ? '' : 's'} written by the mint's operator. The Reviews tab still lists ${n === 1 ? 'it' : 'them'}, marked Operator.`
+}
+
 /** Card chip "Same op". */
 export function sameOperatorText(hosts: readonly string[]): string {
   return `Same operator as ${hosts.join(', ')} (shared public key). Kept as separate mints.`

@@ -87,6 +87,10 @@ describe('numbers in the built texts equal their sources', () => {
     expect(T.reviewSurgeText()).toContain('at least double')
     expect(beRatio).toBe(2)
   })
+  it('operator-excluded note counts the reviews and says where they still are', () => {
+    expect(T.operatorExcludedText(1)).toBe("Excludes 1 review written by the mint's operator. The Reviews tab still lists it, marked Operator.")
+    expect(T.operatorExcludedText(3)).toBe("Excludes 3 reviews written by the mint's operator. The Reviews tab still lists them, marked Operator.")
+  })
   it('outdated-software text', () => expect(T.outdatedSoftwareText()).toContain('two or more minor versions'))
   it('audit tab text: ~100 swaps window, "too few" below 3', () => {
     expect(numbers(T.auditSuccessRateText())).toEqual([T.AUDIT_SWAPS_WINDOW, AUDIT_TAB_MIN_SAMPLES])
@@ -146,7 +150,7 @@ const BUILT: Record<string, string> = {
   payoutsTileText: T.payoutsTileText(), receivesTileText: T.receivesTileText(),
   cleanTileText: T.cleanTileText(120, 126, 4, 2, n => n.toLocaleString('en-US')),
   cashuInfoViewText: T.cashuInfoViewText({ fallbackFrom8333: true, checkedMinutesAgo: 12, notRecent: true, failuresAttributed: 3 }),
-  moreAlertsNote: T.moreAlertsNote(),
+  moreAlertsNote: T.moreAlertsNote(), operatorExcludedText: T.operatorExcludedText(2),
   nhiSummaryText: nhiSummaryText() + ' ' + nhiOnlineSetText(), nhiOnlineRowText: nhiOnlineRowText(26), nhiReliabilityRowText: nhiReliabilityRowText(),
   nhiAdvancedRowText: nhiAdvancedRowText(), avgUptimeText: avgUptimeText(), latencyTooltipText: latencyTooltipText(),
   ...Object.fromEntries(Object.entries(T.HTTP_ERROR_EXPLANATIONS).map(([k, v]) => [`HTTP ${k}`, v])),

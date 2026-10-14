@@ -99,8 +99,8 @@ describe('tiles from the stored detail (LNpay values)', () => {
     expect(t['melts']?.tooltip).toBe('Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)')
     expect(t['mints']?.tooltip).toBe('Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)')
     expect(t['clean']?.tooltip).toBe('126 of 126 swaps in the last 7 days, 19 failed for other reasons')
-    expect(t['avg']?.tooltip).toBe('Average swap time over the last 7 days as reported by cashu.info.')
-    expect(t['avg']?.tooltip).not.toMatch(/successful swaps/)
+    // The Avg swap time tile has no ⓘ: its label says it, the window and source are in the sibling tooltips.
+    expect(t['avg']?.tooltip).toBeUndefined()
   })
   it('not covered or no detail stored: no view (the 8333 panel or the empty panel stays)', () => {
     expect(adaptAuditCz(data([], null), Date.now())).toBeNull()

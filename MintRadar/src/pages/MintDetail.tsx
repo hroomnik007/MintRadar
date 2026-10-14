@@ -10,7 +10,7 @@ import { useMintProbe } from '@/hooks/useMintProbe'
 import {
   reviewSurgeText, AUDIT_MINTS_TEXT, AUDIT_MELTS_TEXT, auditSuccessRateText, uptimeRowText, auditRowText, NUT_ROW_TEXT,
   versionRowText, contactRowText, scoreFormulaText, BACKUP_SUPPORTED_TEXT, NO_BACKUP_TEXT, REVIEWS_NIP87_TEXT, cashuInfoViewText,
-  HTTP_ERROR_EXPLANATIONS, NON_HTTP_ERROR_EXPLANATIONS,
+  HTTP_ERROR_EXPLANATIONS, NON_HTTP_ERROR_EXPLANATIONS, operatorExcludedText,
 } from '@/utils/tooltipTexts'
 import { useKnownMints } from '@/hooks/useKnownMints'
 import { LoadError, LoadingNote, MINT_LIST_ERROR } from '@/components/LoadError'
@@ -1065,7 +1065,7 @@ function MintDetailContent({ url }: { url: string }) {
     : countedReviews.length
   const tileAvgRating = tileFromRollup ? (knownMint?.reviewAvgRating ?? (storedReviewsReady ? avgRating : null)) : avgRating
   const tileOperatorExcluded = tileFromRollup ? (knownMint?.operatorReviewCount ?? 0) : operatorListedCount
-  const operatorExcludedNote = `Excludes ${tileOperatorExcluded} review${tileOperatorExcluded === 1 ? '' : 's'} written by the mint's operator.`
+  const operatorExcludedNote = operatorExcludedText(tileOperatorExcluded)
 
   // Reviews-tab filter chips. "all" / "5star" / "critical" are mutually exclusive
   // (one active at a time); "hideAnon" is an independent toggle combined on top of
@@ -2202,7 +2202,6 @@ function MintDetailContent({ url }: { url: string }) {
                       className="reviews-filter-group"
                       role="group"
                       aria-label="Filter reviews by rating"
-                      {...(operatorListedCount > 0 ? { title: `Counts every listed review, including ${operatorListedCount} written by the mint's operator. The Community rating tile does not count those.` } : {})}
                     >
                       <button
                         type="button"

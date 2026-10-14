@@ -230,10 +230,9 @@ mint", "probe", "mint" (never "minter"), numbers with units.
 **Not migrated, on purpose:**
 - Chart tooltips (hover values drawn inside a chart): the Recharts `<Tooltip>` of the uptime/latency chart on Mint Detail (`MintDetailHistoryChart.tsx`),
   the two in `ComparisonModal.tsx` (history lines) and the Stats reliability trend chart (`Stats.tsx`).
-- Titles on hosts that are themselves controls, where a nested button would be invalid or change what the host does: the "Hide test
-  mints" label (a label + checkbox), the Tor chip inside the copy-URL button, the CDN / anycast row of Geographic Distribution (a
+- Titles on hosts that are themselves controls, where a nested button would be invalid or change what the host does: the Tor chip inside the copy-URL button, the CDN / anycast row of Geographic Distribution (a
   clickable row), the "Redeem to Lightning" link.
-- Titles on table rows / groups (the grey swap rows, the review filter group) and the swap bar's outcome marks (a sparkline-like strip of
+- Titles on table rows (the grey swap rows) and the swap bar ("Last swaps, newest first": kept on purpose, nothing else on the page says which end is the newest) and its outcome marks (a sparkline-like strip of
   hover values). Their text is also reachable another way (the State cell's tooltip and visually hidden text).
 - The Stats software modal has no tooltip trigger of its own.
 
@@ -284,3 +283,8 @@ Sweep 340–460px (normal + long name, icons forced on): the Mint QR icon is bel
 
 ### Hero buttons: 44px touch target (2026-10-03)
 Measured (touch context): visible height 27px ≤640px (padding 7/8), 30px above (padding 8/15); `position: static`, `overflow: hidden` ≤640px; 6–8px gaps; the only things 8px above/below are the non-interactive First seen line / `md-hdr-left` container and the card padding (15px below, 23px at 1440). So the existing invisible-`::before` pattern fits without touching a clickable neighbour. `@media (pointer: coarse)`: buttons get `position: relative` and a vertical-only `::before` (inset ±8px → 44px on 30px buttons; ±9.5px → 44px on 27px buttons, because it is positioned from the padding box); ≤640px `overflow: hidden` is lifted on touch (it would clip the extension, and nothing clips now the icons are gone below 420px). **Exception:** at ≤359px the row wraps (Compare 6px under the other two), so the facing edges get 4px (3px beyond the border): hit area 38.5px there instead of 44px, to avoid overlapping the other row. Mouse/keyboard, focus ring, visible boxes and page height unchanged (compared against a mouse context in the test). Tests: `hero buttons have a … touch target` in `e2e/long-text-overflow.spec.ts` (360/390/768/1440 ≥44px, 320 ≥38px; scan by `elementFromPoint`).
+
+**Removed or merged tooltips (2026-10-14, review verdicts REMOVE / MERGE):**
+- cashu.info tile "Avg swap time": no ⓘ any more (`AuditCzTile.tooltip` is optional); the label says what it is and the sibling tiles' tooltips and the tab's ⓘ state the 7 days and the source.
+- "Hide test mints": the `title` on the checkbox label is gone; the one explanation is the InfoTooltip on the "Test mints hidden" tag (the card's "Test mint" badge only exists while test mints are shown, so it cannot carry it).
+- Reviews tab filter-group `title` ("Counts every listed review ..."): gone; its fact moved into the Community Rating tile's ⓘ (`operatorExcludedText()`: "... The Reviews tab still lists it, marked Operator.").

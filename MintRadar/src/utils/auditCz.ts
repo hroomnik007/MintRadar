@@ -39,7 +39,8 @@ export interface AuditCzTile {
   value: string
   /** Uppercase by CSS; a plain sentence-case string here. */
   label: string
-  tooltip: string
+  /** The ⓘ text; a tile whose label already says it all (Avg swap time) has none. */
+  tooltip?: string
 }
 
 export interface AuditCzChecks {
@@ -187,7 +188,6 @@ function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
   const avg = num(s.all?.avgMs)
   if (avg !== undefined) tiles.push({
     key: 'avg', value: formatAvgSwapTime(avg), label: 'Avg swap time',
-    tooltip: 'Average swap time over the last 7 days as reported by cashu.info.',
   })
   return tiles
 }

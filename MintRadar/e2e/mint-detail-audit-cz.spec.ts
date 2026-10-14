@@ -269,7 +269,6 @@ test.describe('tiles from the stored detail', () => {
       melts: 'Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)',
       mints: 'Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)',
       clean: '126 of 126 swaps in the last 7 days, 19 failed for other reasons',
-      avg: 'Average swap time over the last 7 days as reported by cashu.info.',
     }
     for (const [key, text] of Object.entries(expected)) {
       await tile(page, key).locator('.info-tooltip').hover()
@@ -279,6 +278,8 @@ test.describe('tiles from the stored detail', () => {
       expect(pop).toEqual({ t: 'none', l: 'normal', f: '10px' })
       await page.mouse.move(0, 0)
     }
+    // Avg swap time has no ⓘ: its label says it, and the window and source are in the sibling tooltips.
+    await expect(tile(page, 'avg').locator('.info-tooltip')).toHaveCount(0)
   })
 })
 
