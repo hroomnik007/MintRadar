@@ -226,6 +226,7 @@ mint", "probe", "mint" (never "minter"), numbers with units.
 - **`e2e/fixtures/tooltip-texts.json`** is the text of every tooltip / explanatory title of every state in `fixtures/tooltipStates.ts` at
   1440 and 390 px; `tooltips-contract.spec.ts` compares the browser with it. After changing a text: `TT_WRITE_TEXTS=1 npx playwright test
   e2e/tooltip-texts-update.spec.ts` (about 6 minutes), then read the JSON diff - it is the list of what users will see.
+- **e2e rule (2026-10-14): never fix a race with a timeout.** Assert server-confirmed UI (a pill that is on, a saved flag) only after awaiting the mocked response (`await api.release()` waits until the gated request has reached the mock; `seedFlags` waits until the pills show the seed); read tooltip text only after the tooltip is open (the trigger has `aria-describedby` and its `role="tooltip"` target is visible - `extractTooltipTexts`), never after a fixed `waitForTimeout`.
 
 **Not migrated, on purpose:**
 - Chart tooltips (hover values drawn inside a chart): the Recharts `<Tooltip>` of the uptime/latency chart on Mint Detail (`MintDetailHistoryChart.tsx`),
