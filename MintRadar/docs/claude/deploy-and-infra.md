@@ -175,22 +175,61 @@ When a deployed change doesn't appear to users, verify in this order before assu
 
 `src/core/crypto/vault.ts` was deleted. It had zero imports across the codebase and contained a broken nsec bech32 decode (`.slice(5)` instead of `nip19.decode`). The entire `src/core/crypto/` directory no longer exists — do not recreate it.
 
+## Dependency policy (2026-10-14)
+
+Result of a read-only dependency audit followed by a cleanup (commits `d3833b8b`..`7f25ffad`): fewer packages, no new tool. `npm audit` was and is 0 in both roots.
+
+**Rules**
+- A new dependency needs a written reason in the commit message (what it does, why not the platform or a package already installed, how many call sites). Prefer Node 22 / browser APIs and what is already in the tree (example: `nostr-tools/utils` and `getPublicKey` replaced `@noble/hashes` and `@noble/secp256k1`).
+- No packages with install scripts: check `hasInstallScript` in the lockfile entry before adding. The runtime image installs with `--ignore-scripts`; the only scripts left in either lockfile are `fsevents` (macOS, optional) and the backend's dev-only `esbuild`.
+- Types: `@types/X` only next to a runtime `X` that has none (check the package's `types` field first — `node-cron` 4.x ships its own, which made `@types/node-cron` dead weight). Types live in `devDependencies`, never in `dependencies`.
+- Do not hand-edit lockfiles; change them only with `npm install` / `npm uninstall`.
+- Re-run the audit every quarter with the scratch method (all in a directory outside the repo, nothing is installed into the project): (1) walk every source, test, e2e, script and config file with the TypeScript compiler API (`ts.createSourceFile`: static/dynamic imports, `require`, `import type`, triple-slash, tsconfig `types`, `vi.mock` strings) and list the importers of each direct dependency; (2) `vite build --outDir <outside repo> --sourcemap` and attribute bytes per `node_modules` package from the `.map` files; (3) in a scratch copy holding only `package.json` + `package-lock.json`, `npm uninstall <pkg> --package-lock-only --ignore-scripts` and diff the lockfile; (4) `npm ci --omit=dev` in such a copy for the runtime tree; (5) `npm audit`, `npm outdated`, `npm ls --all`, `npm dedupe --dry-run`, and an `npm ci --ignore-scripts` run of build, typecheck, lint and the unit suites.
+
+**On-demand tools (not in `package.json`)**
+- `sharp` (only `scripts/generate-icons.mjs`): `npm i --no-save sharp@0.35.5 && node scripts/generate-icons.mjs` from `MintRadar/` (see "Brand assets" in `design-palette-and-chrome.md` for the font setup of the OG images). Checked in a scratch copy: favicons and all app icons come out byte-identical.
+- Coverage: `@vitest/coverage-v8` is **still declared** in both roots and `npm run test:coverage` still works. The 2026-10-14 attempt to drop it failed on an npm quirk: `vitest` declares it as an optional peer, so `npm uninstall` leaves the package installed and in the lockfile (only flags change). Not forced, lockfiles are not edited by hand. If npm ever removes it cleanly, the on-demand command is `npm i --no-save @vitest/coverage-v8@<installed vitest version>` followed by `npx vitest run --coverage`.
+
+**`backend/Dockerfile`** — `RUN npm ci --omit=dev --omit=optional --ignore-scripts`. `--only=production` is deprecated. `--omit=optional` is there because `nostr-tools` declares `typescript` as an optional peer; `typescript` is also a root devDependency, so npm does not flag it "dev" and `--omit=dev` alone installed it (24 MB, 54 % of the runtime `node_modules`). Measured: image 224 → 192 MB, runtime `node_modules` 44,964 → 17,788 kB, 103 → 97 listed packages, typescript absent. The image is built from a `dist/` compiled on the host (the deploy runs `npm run build` first), there is no build stage. Do not re-add dev tooling to `dependencies`.
+
+**Consequences worth knowing**
+- Backend `npm run lint` loads `../eslint.config.js` and therefore the frontend root's `typescript-eslint`; the backend has no `@typescript-eslint/*` packages of its own. A backend lint run needs the frontend root's `node_modules`.
+- The backend no longer has a `@typescript-eslint` peer range that blocks `typescript` majors; `.github/dependabot.yml` (`ignore` of semver-major `typescript`) is now the only gate there. The frontend still has the `typescript-eslint` peer range (`<6.1.0`).
+
+**Kept on purpose** (audit 2026-10-14, owner decision — do not "clean up" without a new reason)
+- `p-limit` — 2 call sites (`cron.ts`, `prober.ts`); a 12-line limiter would do, kept to avoid churn in the probe path.
+- `cors` + `@types/cors` — one call site (`restrictedCors` in `index.ts`); CORS is security-sensitive and covered by tests, so not hand-rolled.
+- `dexie-react-hooks` — `useLiveQuery` in 3 files; own hook possible, but dependency/default-value semantics are a risk for ~1 kB.
+- `@testing-library/jest-dom` — matchers in 5 test files plus `src/test/setup.ts`.
+- `supertest` — 27 integration test files.
+- `qrcode.react` — QR rendering in 2 files; last release 2024-12 but zero dependencies, 15.8 kB, no advisories. Swap for a zero-dependency QR library if it ever breaks.
+- `recharts` — 3 files, lazy 236 kB chunk; the only alternative is a hand-made SVG chart set.
+- `vite-plugin-pwa` — service worker via workbox; 291 build-time-only transitive packages. The alternative is a hand-written service worker plus precache list.
+- `nostr-tools` — protocol core in both roots; single maintainer, so watch its releases (its pinned `@noble/*` copies are why the bundle has duplicate noble versions).
+- `immer` — peer of `zustand/middleware/immer` (`watchlist.store.ts`); `recharts` depends on it as well.
+- `ipaddr.js` — the SSRF guard in `ssrf.ts` (including NAT64/6to4/Teredo extraction); never hand-roll IP classification.
+- `undici` (backend) — `Agent` with DNS pinning for `safeFetch`; Node's bundled copy cannot be imported. Backend `ws` — `DnsPinnedWebSocket` and the nostr-tools polyfill.
+- `pg`, `express`, `node-cron` — core; replacements would be far beyond 30 lines.
+- `@cashu/cashu-ts` (lazy `/tools` chunk), `dexie`, `react`, `react-dom`, `vite`, `vitest`, `@playwright/test` — core.
+- `typescript` — frontend `^5.9`, backend `^6.0`; majors are deliberate (typescript-eslint peer range, Dependabot `ignore`).
+- `@vitest/coverage-v8` — see above.
+- GitHub Actions and the workflows were not touched.
+
 ## Dependency versions (as of 2026-06-29)
+
+_Entries for packages removed on 2026-10-14 (`globals`, `@noble/hashes` and `@noble/secp256k1`, the backend's `@typescript-eslint/*`, `@types/node-cron`, `ws` and `@noble/ciphers` in the frontend, `sharp`) are gone from this list; see "Dependency policy" above._
 
 ### Frontend
 - eslint: 10.6.0 (upgraded from 9.x)
 - eslint-plugin-react-hooks: 7.1.1 (upgraded from 5.2.0 — v7 adds ESLint v10 support)
 - lucide-react: 1.22.0
-- globals: 17.7.0
 - @types/node: 26.0.1
 - immer: 11.1.16 (upgraded 2026-08-15 — was held at v10 pending verification with Zustand, now confirmed compatible, see the "GOTCHA — Dependabot PRs" Batch 3 note above)
-- @noble/hashes: 2.3.0 (upgraded 2026-08-15 — v2's `exports` map requires explicit `.js` subpath extensions; see Batch 3 note above)
 
 ### Backend
 - undici: 8.5.0 (security fix — 8 CVE patched)
 - pg: 8.22.0
 - node-cron: 4.5.0
-- @typescript-eslint/eslint-plugin: 8.62.0
 - @types/node: 26.0.1
 
 ## Backup cron
