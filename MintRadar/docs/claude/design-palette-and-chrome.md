@@ -327,7 +327,7 @@ Browser chrome and brand rasters use the settled palette: `--bg` `#0b1512`, `--a
 `npm i --no-save sharp@0.35.5 && FONTCONFIG_FILE=<fonts.conf> node scripts/generate-icons.mjs`. The OG text is `font-family: monospace`; the committed PNG was
 rasterised with **DejaVu Sans Mono**, so point `FONTCONFIG_FILE` at a fontconfig that has a `<dir>` with `DejaVuSansMono*.ttf`
 and `<alias><family>monospace</family><prefer><family>DejaVu Sans Mono</family></prefer></alias>` (any machine default
-monospace gives different glyphs). The 8 legacy `public/icons/icon-N.png` files (PrivyZap logo, unreferenced) were removed 2026-10-02; `public/icons/` now holds only the generated `icon-<N>x<N>.png` files (pinned by `brandAssets.test.ts`). `logo-original.png` (the PrivyZap source image) is no longer used by any script and was left in place.
+monospace gives different glyphs). The 8 legacy `public/icons/icon-N.png` files (PrivyZap logo, unreferenced) were removed 2026-10-02; `public/icons/` now holds only the generated `icon-<N>x<N>.png` files (pinned by `brandAssets.test.ts`). `logo-original.png` (the PrivyZap source image; it was a JPEG with a .png extension, 151 kB, referenced by nothing) was deleted 2026-10-14. The nginx `location` below still lists the name; the pattern simply matches nothing now and the server config was not touched.
 
 **OG pills:** the first pill ("✓ Reliability Score", 19 mono chars ≈ 275px at 24px) is 333px wide (the others are 260px) so it keeps the same ~29px inner padding; the other two pills of row 1 are shifted right by 73px. Row 2 was left where it was (so it is no longer centred under row 1). The PNG is rendered straight from the SVG text.
 
