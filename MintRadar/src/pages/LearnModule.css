@@ -36,6 +36,16 @@
 
 .learn-not-found a {
   color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Links in running text are underlined as well as coloured (WCAG 1.4.1: colour alone was 1.16:1 against the
+   text). The CTA buttons and the Back / Previous / Next links are not in-text links and stay as they are. */
+.learn-content p a:not(.learn-cta-btn),
+.learn-content li a:not(.learn-cta-btn) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* ── Module content typography ──────────────────────────── */

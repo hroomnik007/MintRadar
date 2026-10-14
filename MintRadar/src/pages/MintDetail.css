@@ -776,7 +776,8 @@ button.md-url-copy.copied > svg { opacity: 1; }
 
 .nut-card:hover { border-color: var(--border2); }
 .nut-card.supported { border-color: var(--green-soft-strong); background: var(--green-soft); }
-.nut-card.unsupported { opacity: 0.4; }
+/* Unsupported = dashed border + muted token colours (NOT opacity: it dropped the text to 2.2-2.6:1); the "–" mark stays. */
+.nut-card.unsupported { border-style: dashed; }
 .nut-card.nut-disabled { border-color: var(--amber-soft-strong); background: var(--amber-soft); }
 
 .nut-icon {
@@ -2323,7 +2324,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .nut-card.nut-disabled { background: var(--amber-soft); border-color: var(--amber-soft-strong); }
 .nut-icon { display: none; }
 .nut-name { font-size: 12.5px; font-weight: 700; color: var(--accent); }
-.nut-card.unsupported .nut-name { color: var(--text3); }
+.nut-card.unsupported .nut-name,
+.nut-card.unsupported .nut-desc { color: var(--text3); }
 .nut-desc { font-family: var(--font-body); font-size: 13px; color: var(--text2); }
 
 /* Audit: figure strip instead of five boxed tiles; nested cards become hairline sections. */
