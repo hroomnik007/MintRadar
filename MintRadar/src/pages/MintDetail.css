@@ -992,9 +992,9 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .review-stars { color: var(--yellow); font-size: 12px; letter-spacing: 1px; }
 .review-date { font-size: 10px; color: var(--text3); font-family: var(--font-mono); }
 .review-comment {
-  font-size: 13px;
-  color: var(--text2);
-  line-height: 1.5;
+  font-size: 15px;
+  color: var(--text);
+  line-height: 1.55;
   margin: 10px 0 0 0;
   overflow-wrap: anywhere;
 }
