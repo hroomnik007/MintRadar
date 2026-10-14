@@ -17,10 +17,14 @@ paths = [
 # test fixtures (so token-parsing assertions are deterministic) — these are
 # Cashu protocol data, not credentials, but their hex shape/entropy trips the
 # generic-api-key rule. Scoped to that one rule/file, not a blanket allow.
+# loginWithNsec.test.ts pins the nsec -> public key derivation with the public
+# x coordinates of k*G on secp256k1 for k = 1, 2, 3 (the first is the well-known
+# generator point) — public constants, not credentials; same scoped allowance.
 [[rules]]
 id = "generic-api-key"
 
     [[rules.allowlists]]
     paths = [
         '''^MintRadar/src/__tests__/cashuToken\.test\.ts$''',
+        '''^MintRadar/src/__tests__/loginWithNsec\.test\.ts$''',
     ]
