@@ -64,7 +64,7 @@ export default defineConfig(({ command }) => ({
       output: {
         // Rolldown-native chunk grouping (Vite 8). The legacy manualChunks
         // compat layer silently ignored group changes. First matching group wins.
-        advancedChunks: {
+        codeSplitting: {
           groups: [
             // immer is shared by the watchlist store (eager) and recharts (lazy) —
             // without its own group it lands inside vendor-charts and forces the

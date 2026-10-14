@@ -32,23 +32,6 @@ import { verifyNip05 } from './nip05Verify.js'
 import { isAllowlistMode, isAllowedUrl } from './allowlist.js'
 import { profileFieldsForReview } from './profilesSync.js'
 
-// Safety net against a nostr-tools bug: AbstractRelay.connect()'s
-// connection-timeout path calls `this.ws.close()` on a socket that hasn't
-// finished connecting, which the 'ws' package (installed via wsPolyfill.ts,
-// see there for why) surfaces as an EventEmitter 'error' event race — it can
-// fire before nostr-tools' own onerror handler is attached. An unhandled
-// EventEmitter 'error' event throws, which without this handler kills the
-// whole API process over a single flaky background relay connection
-// (discovery.ts / reviewsSync.ts / nostrService.ts all open relay sockets on
-// hardcoded, non-attacker-controlled relay lists — this is not swallowing
-// arbitrary/unexpected errors, just a known third-party timing bug).
-process.on('uncaughtException', (err) => {
-  console.error('[uncaughtException]', err)
-})
-process.on('unhandledRejection', (err) => {
-  console.error('[unhandledRejection]', err)
-})
-
 // ONE computation of the /api/mints/known rows, shared with the wallet API (walletApi.ts): at most one database read
 // per KNOWN_MINTS_CACHE_TTL for all of them, concurrent callers join the read in flight.
 let knownMintsCache: (Snapshot & { expiresAt: number }) | null = null
@@ -2434,6 +2417,26 @@ app.post('/api/notifications/unsubscribe', (req: Request, res: Response): void =
 // Integration tests import `app` directly and drive it via supertest, so the
 // real server, DB init, seeding and cron must not run on import.
 if (process.env['NODE_ENV'] !== 'test') {
+  // Registered here, with the SIGTERM/SIGINT handlers, and not at import: every integration test imports this module,
+  // and one more pair of process listeners per import made Node print MaxListenersExceededWarning. The handlers
+  // themselves are unchanged and still active before the first socket is opened (nothing async runs before this block).
+  // Safety net against a nostr-tools bug: AbstractRelay.connect()'s
+  // connection-timeout path calls `this.ws.close()` on a socket that hasn't
+  // finished connecting, which the 'ws' package (installed via wsPolyfill.ts,
+  // see there for why) surfaces as an EventEmitter 'error' event race — it can
+  // fire before nostr-tools' own onerror handler is attached. An unhandled
+  // EventEmitter 'error' event throws, which without this handler kills the
+  // whole API process over a single flaky background relay connection
+  // (discovery.ts / reviewsSync.ts / nostrService.ts all open relay sockets on
+  // hardcoded, non-attacker-controlled relay lists — this is not swallowing
+  // arbitrary/unexpected errors, just a known third-party timing bug).
+  process.on('uncaughtException', (err) => {
+    console.error('[uncaughtException]', err)
+  })
+  process.on('unhandledRejection', (err) => {
+    console.error('[unhandledRejection]', err)
+  })
+
   const server = app.listen(PORT, () => {
     console.log(`MintRadar backend listening on port ${PORT}`)
     initDb()
