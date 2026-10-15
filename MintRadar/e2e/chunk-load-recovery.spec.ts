@@ -14,10 +14,16 @@ test.beforeEach(async ({ page }) => {
 
 test.describe('Lazy chunk load failure', () => {
   test('reloads once automatically and the page then works', async ({ page }) => {
-    let chunkRequests = 0
-    await page.route(STATS_CHUNK, route => (++chunkRequests === 1 ? route.abort() : route.continue()))
+    // A stale tab: the chunk is gone for as long as this document lives and is back as soon as the page has been reloaded
+    // (a reload fetches the fresh index.html). Not "the first request fails": the app also asks for the Stats chunk once when
+    // the pointer reaches the Stats link (prefetch), and whether Chromium then remembers that failure for the later import()
+    // differs between versions (Playwright 1.64's Chromium asks again and succeeds, with no error and no reload).
+    let staleDocument = true
+    await page.route(STATS_CHUNK, route => (staleDocument ? route.abort() : route.continue()))
     const statsDocs: string[] = []
-    page.on('request', r => { if (r.resourceType() === 'document' && new URL(r.url()).pathname === '/stats') statsDocs.push(r.url()) })
+    page.on('request', r => {
+      if (r.resourceType() === 'document' && new URL(r.url()).pathname === '/stats') { statsDocs.push(r.url()); staleDocument = false }
+    })
 
     await page.goto('/')
     await page.getByRole('link', { name: 'Stats' }).click()
