@@ -107,6 +107,26 @@
 - The footer line (`.wl-showing`, `Watchlist.tsx`) renders only when `showWatchlistCount(shown, total)` (`utils/watchlistCount.ts`) is true: `total > 0 && shown < total`. Complete list → no element at all (no empty block, no spacing). The Watchlist has no filter/search, so this only happens past one 20-card page that has not been scrolled to the end yet. The Dashboard's `.grid-showing-note` is a separate element and unchanged. Tests: `src/__tests__/watchlistCount.test.ts`, `e2e/watchlist-showing-count.spec.ts`.
 - **Pagination observer fix (2026-10-03):** the `IntersectionObserver` effect in `Watchlist.tsx` used to depend only on `listKey`. The sentinel `<div>` exists only after the skeleton is gone (`knownLoading || syncStatus === 'pending'`), so a list that arrived from Dexie (or the relay) while the skeleton was still up found no sentinel, and the effect never re-ran once the grid appeared — a watchlist of more than 20 mints stayed at "Showing 20 of N" forever. The deps are now `[listKey, knownLoading, syncStatus, visibleCount]` — `visibleCount` re-creates the observer after every page, because an IntersectionObserver reports only CHANGES and a sentinel that stays in view after a page was appended (browser scroll anchoring) never fired again (seen as an intermittent "Showing 40 of 60" stall). Page size and layout unchanged. Test: `e2e/watchlist-load-more.spec.ts` (60 mints: list from IndexedDB during the sync skeleton, list ready before the known-mints skeleton ends, list from the relay; all 60 cards after scrolling, `.wl-showing` gone).
 
+## Stats board grid (2026-10-15) — current layout, supersedes the grid description in the sections below
+
+`.stats-board-grid` (Stats.css) is one CSS grid with named areas; only layout changed, no text, data or component behaviour.
+
+| Breakpoint | Areas |
+|---|---|
+| desktop, 1280 px and up | `nhi nhi now now` / `top nut nut geo` / `mov trend trend trend` on four tracks 353 : 107 : 246 : 294 (row 1 about 46/54, row 2 about 3 : 3 : 2.5, row 3 about 35/65) |
+| tablet, 768 to 1279 px | two equal columns: `nhi now` / `top nut` / `geo mov` / `trend trend` |
+| mobile, below 768 px | one column: nhi, now, top, nut, geo, mov, trend |
+
+Areas: `nhi` Network health index, `now` The network right now, `top` `.stats-stack` (Top by Reliability Score above Software in use), `nut` NUT coverage, `geo` Geographic distribution, `mov` Reliability Score movers, `trend` Reliability Score trend.
+The NHI breakdown dialog still keys off the JS `isMobile` (768 px and below), not off the grid.
+
+- **DOM order rule:** the markup order is the reading order at every breakpoint (nhi, now, top, nut, geo, mov, trend). No CSS `order`, no placement that puts a card visually before an earlier one, so keyboard Tab order follows the visual order. Change the markup when the order changes.
+- **Gap:** one token, `--stats-board-gap` (16 px, 10 px at 768 px and below), for rows, columns and the stack.
+- **Equal height:** `align-items: stretch`; content stays at the top of each card.
+- **Reserved heights** (typical loaded height, so the page does not jump when data lands; cards may still grow): geo 300 px, movers 280 px, trend 240 px (260 / 240 / 220 px at 768 px and below).
+- **Desktop geo list:** the narrow third column shows cities and the CDN bucket as one list (the inline two-column row template is reset at 1280 px and up).
+- **New card:** add it to the markup after the trend card with the class `stats-extra-panel`; it fills a full-width row after the named rows. To put it in a named row instead, add an area name to all three `grid-template-areas` blocks (desktop, tablet, mobile) and keep the DOM position equal to the reading position.
+
 ## Stats Page Layout (as of 2026-09-12, commits `f4e92ec`/`c3523db` — supersedes the old 3-column `.stats-cards-grid`-only layout below)
 
 **`.stats-hero-grid`** — an always-2-column grid (`grid-template-columns: 1fr 1fr`, 1 column at
