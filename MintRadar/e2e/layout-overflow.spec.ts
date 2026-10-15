@@ -134,7 +134,9 @@ for (const width of [769, 800, 860]) {
       })
       await page.setViewportSize({ width, height: 900 })
       await page.goto(ALPHA_DETAIL, { waitUntil: 'commit' })
-      await expect(page.locator('.md-summary')).toBeVisible()
+      // Only the first render of the page is given more than the default 5 s: it is a whole Mint Detail rendered by a dev server, which
+      // a loaded machine can take longer than 5 s for (seen at load average 23). Every later wait keeps the default.
+      await expect(page.locator('.md-summary')).toBeVisible({ timeout: 20_000 })
       const measure = () => page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }))
       // (a) as soon as the header renders — the tile shows the rollup's stars while the stored list is still loading
       const a = await measure()
