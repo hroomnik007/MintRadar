@@ -1044,13 +1044,11 @@
 }
 
 /* ═══ 2026-10-07 Stats redesign ═══════════════════════════════════════════════
-   Board (12 columns): row 1 Network health index | The network right now,
-   row 2 [Top + Software in use] | NUT coverage, row 3 Geographic distribution | Reliability Score movers,
-   row 4 Reliability Score trend. Same chrome width and gutters as the navbar (see content-edges.spec.ts). */
+   Board (named grid areas, see below): row 1 Network health index | The network right now,
+   row 2 [Top + Software in use] | NUT coverage | Geographic distribution, row 3 movers | trend.
+   Same chrome width and gutters as the navbar (see content-edges.spec.ts). */
 .stats-board-grid {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 16px;
   padding: 16px var(--page-pad);
   max-width: var(--dash-chrome-max);
   margin-inline: auto;
@@ -1058,15 +1056,55 @@
   align-items: stretch;
   min-width: 0;
 }
-.stats-nhi-panel   { grid-column: 1 / 6;  grid-row: 1; }
-.stats-now-panel   { grid-column: 6 / -1; grid-row: 1; }
-.stats-stack       { grid-column: 1 / 7;  grid-row: 2; }
-.stats-nut-panel   { grid-column: 7 / -1; grid-row: 2; }
-.stats-geo-panel   { grid-column: 1 / 8;  grid-row: 3; }
-.stats-movers-panel{ grid-column: 8 / -1; grid-row: 3; }
-.stats-trend-panel { grid-column: 1 / -1; grid-row: 4; }
+.stats-board-grid {
+  --stats-board-gap: 16px;
+  gap: var(--stats-board-gap);
+  /* Four shared tracks (353 : 107 : 246 : 294) so every row can split where it needs to:
+     row 1 46 / 54 (tracks 1-2 | 3-4), row 2 3 : 3 : 2.5 (1 | 2-3 | 4), row 3 35 / 65 (1 | 2-4). */
+  grid-template-columns: minmax(0, 353fr) minmax(0, 107fr) minmax(0, 246fr) minmax(0, 294fr);
+  grid-template-areas:
+    "nhi nhi now now"
+    "top nut nut geo"
+    "mov trend trend trend";
+}
+.stats-nhi-panel    { grid-area: nhi; }
+.stats-now-panel    { grid-area: now; }
+.stats-stack        { grid-area: top; }
+.stats-nut-panel    { grid-area: nut; }
+.stats-geo-panel    { grid-area: geo; }
+.stats-movers-panel { grid-area: mov; }
+.stats-trend-panel  { grid-area: trend; }
+/* Desktop: the geographic card is the narrow third column, so its cities (and the CDN bucket) form one list.
+   The inline grid-template-rows (two balanced columns) is reset; rows then simply follow the DOM order. */
+@media (min-width: 1280px) {
+  .stats-board-grid .stats-geo-cols { grid-template-columns: minmax(0, 1fr); grid-template-rows: none !important; grid-auto-flow: row; }
+}
+/* Reserved space for the cards whose content arrives asynchronously: their typical loaded height,
+   so the rows below do not jump when the data lands. Cards may still grow past it; nothing is clipped. */
+.stats-geo-panel    { min-height: 300px; }
+.stats-movers-panel { min-height: 280px; }
+.stats-trend-panel  { min-height: 240px; }
+@media (max-width: 768px) {
+  .stats-geo-panel    { min-height: 260px; }
+  .stats-movers-panel { min-height: 240px; }
+  .stats-trend-panel  { min-height: 220px; }
+}
+/* Extra cards: add after the trend card in the markup; they fill a full-width row below the named rows. */
+.stats-board-grid > .stats-extra-panel { grid-column: 1 / -1; }
 
-.stats-stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+/* Tablet: two columns; DOM order unchanged. */
+@media (max-width: 1279px) {
+  .stats-board-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "nhi now"
+      "top nut"
+      "geo mov"
+      "trend trend";
+  }
+}
+
+.stats-stack { display: flex; flex-direction: column; gap: var(--stats-board-gap); min-width: 0; }
 .stats-stack > .stats-panel { flex: 1; }
 
 /* Panels: 12px radius, 20px padding, title + one plain description line (no tracked caps). */
@@ -1210,18 +1248,15 @@
 /* Movers + trend headers follow the same head pattern. */
 .stats-trend-panel .stats-panel-head { margin-bottom: 8px; }
 
-/* ── Mobile: one column; The network right now first, Network health index collapsed to its gauge ── */
+/* ── Mobile: one column in DOM order; Network health index collapsed to its gauge (dialog) ── */
+@media (max-width: 767px) {
+  .stats-board-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "nhi" "now" "top" "nut" "geo" "mov" "trend";
+  }
+}
 @media (max-width: 768px) {
-  .stats-board-grid { grid-template-columns: 1fr; gap: 10px; padding: 10px var(--page-pad); }
-  .stats-nhi-panel, .stats-now-panel, .stats-stack, .stats-nut-panel,
-  .stats-geo-panel, .stats-movers-panel, .stats-trend-panel { grid-column: 1 / -1; grid-row: auto; }
-  .stats-now-panel { order: 1; }
-  .stats-nhi-panel { order: 2; }
-  .stats-stack { order: 3; gap: 10px; }
-  .stats-nut-panel { order: 4; }
-  .stats-geo-panel { order: 5; }
-  .stats-movers-panel { order: 6; }
-  .stats-trend-panel { order: 7; }
+  .stats-board-grid { --stats-board-gap: 10px; padding: 10px var(--page-pad); }
 
   .stats-panel { padding: 14px; }
   .stats-panel-head { margin-bottom: 10px; }

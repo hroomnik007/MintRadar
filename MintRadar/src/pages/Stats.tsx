@@ -877,71 +877,12 @@ export default function Stats() {
         srTitle="Cashu mints: uptime, Reliability Score & NUT adoption"
         description={`How the Cashu mint network is doing right now, measured from ${PROBE_LOCATION}.`}
       />
-      {/* Board: row 1 Network health | The network right now, row 2 (Top + Software) | NUT coverage,
-          row 3 Geographic distribution | Reliability Score movers, row 4 trend. DOM order is also the mobile
-          stack order (The network right now first, see Stats.css). */}
+      {/* Board (grid areas in Stats.css). DOM order = visual reading order at every breakpoint:
+          Network health, The network right now, [Top + Software], NUT coverage, Geographic distribution,
+          movers, trend. Desktop: 3 rows; tablet: 2 columns; mobile: one column. Extra cards go last. */}
       <div className="stats-board-grid">
 
-        {/* Network right now: the headline figures, in one panel next to the Network Health Index.
-            Keeps the .stats-metrics / .stat-card / .stat-note class names (specs and the 701-900px
-            note rules key off them); the icon wells and the separate "Mints Tracked" tile are gone,
-            the tracked count lives in the first tile's note. The "behind latest release" bar moved here
-            from Software in Use. */}
-        <div className="stats-panel stats-now-panel">
-          <div className="stats-panel-head">
-            <div>
-              <div className="stats-panel-title">The network right now</div>
-              <div className="stats-panel-desc">Measured from {PROBE_LOCATION}, refreshed every 5 minutes.</div>
-            </div>
-          </div>
-          <div className="stats-metrics">
-            <div className="stat-card">
-              <div className="stat-figure"><span className="stat-value">{knownMintsData ? countOnline(knownMintsData) : data.onlineMints}</span></div>
-              <div className="stat-label">mints online</div>
-              <span className="stat-note">of {trackedCount(knownMintsData ?? []) || data.totalMints} tracked</span>
-            </div>
-            <div className="stat-card">
-              <div className="stat-figure"><span className="stat-value" style={{color: avgUptime24h != null ? uptimeColor(avgUptime24h) : undefined}}>{avgUptime24h != null ? `${avgUptime24h}%` : '—'}</span></div>
-              <div className="stat-label">average uptime</div>
-              <span className="stat-note">{avgUptimeCaption()}</span>
-            </div>
-            <div className="stat-card">
-              <div className="stat-figure">
-                <span className="stat-value">{data.avgLatency24h != null ? data.avgLatency24h : '—'}</span>
-                {data.avgLatency24h != null && <span className="stat-unit">ms</span>}
-              </div>
-              <div className="stat-label">median latency</div>
-              <span className="stat-note">from {PROBE_LOCATION}</span>
-            </div>
-            <div className="stat-card">
-              <div className="stat-figure"><span className="stat-value">{TRACKED_NUTS.length}</span></div>
-              <div className="stat-label">NUTs tracked</div>
-              <span className="stat-note">of the Cashu spec</span>
-            </div>
-          </div>
-          <div className="stats-now-behind">
-      {swFreshnessSummary.total > 0 && (
-        <div>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:4}}>
-            <span style={{fontSize:12,color:'var(--text2)',display:'inline-flex',alignItems:'center',gap:4}}>
-              Tracked mints running outdated software
-              <InfoTooltip
-                className="stats-sw-behind-info"
-                iconSize={11}
-                width={isMobile ? 210 : 250}
-                about="outdated software"
-                text={outdatedSoftwareText()}
-              />
-            </span>
-            <span style={{fontSize:13,fontWeight:swFreshnessSummary.pct >= 50 ? 700 : 600,color:'var(--amber)',fontFamily:'var(--font-mono-data)'}}>{swFreshnessSummary.pct}%</span>
-          </div>
-          <div className="dist-track"><div className="dist-fill" style={{width:`${swFreshnessSummary.pct}%`,background:'var(--amber)',opacity:swFreshnessSummary.pct >= 50 ? 0.9 : 0.6}} /></div>
-        </div>
-      )}
-          </div>
-        </div>
-
-        {/* Row 2, 2nd panel: Network Health Index. */}
+        {/* Network Health Index (first card of the board). */}
         {networkHealth && (() => {
           const info = reliabilityScoreInfo(networkHealth.score)
           const gaugeArc = reliabilityDonutArc(networkHealth.score)
@@ -1012,6 +953,65 @@ export default function Stats() {
             </div>
           )
         })()}
+
+        {/* Network right now: the headline figures, in one panel next to the Network Health Index.
+            Keeps the .stats-metrics / .stat-card / .stat-note class names (specs and the 701-900px
+            note rules key off them); the icon wells and the separate "Mints Tracked" tile are gone,
+            the tracked count lives in the first tile's note. The "behind latest release" bar moved here
+            from Software in Use. */}
+        <div className="stats-panel stats-now-panel">
+          <div className="stats-panel-head">
+            <div>
+              <div className="stats-panel-title">The network right now</div>
+              <div className="stats-panel-desc">Measured from {PROBE_LOCATION}, refreshed every 5 minutes.</div>
+            </div>
+          </div>
+          <div className="stats-metrics">
+            <div className="stat-card">
+              <div className="stat-figure"><span className="stat-value">{knownMintsData ? countOnline(knownMintsData) : data.onlineMints}</span></div>
+              <div className="stat-label">mints online</div>
+              <span className="stat-note">of {trackedCount(knownMintsData ?? []) || data.totalMints} tracked</span>
+            </div>
+            <div className="stat-card">
+              <div className="stat-figure"><span className="stat-value" style={{color: avgUptime24h != null ? uptimeColor(avgUptime24h) : undefined}}>{avgUptime24h != null ? `${avgUptime24h}%` : '—'}</span></div>
+              <div className="stat-label">average uptime</div>
+              <span className="stat-note">{avgUptimeCaption()}</span>
+            </div>
+            <div className="stat-card">
+              <div className="stat-figure">
+                <span className="stat-value">{data.avgLatency24h != null ? data.avgLatency24h : '—'}</span>
+                {data.avgLatency24h != null && <span className="stat-unit">ms</span>}
+              </div>
+              <div className="stat-label">median latency</div>
+              <span className="stat-note">from {PROBE_LOCATION}</span>
+            </div>
+            <div className="stat-card">
+              <div className="stat-figure"><span className="stat-value">{TRACKED_NUTS.length}</span></div>
+              <div className="stat-label">NUTs tracked</div>
+              <span className="stat-note">of the Cashu spec</span>
+            </div>
+          </div>
+          <div className="stats-now-behind">
+      {swFreshnessSummary.total > 0 && (
+        <div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:4}}>
+            <span style={{fontSize:12,color:'var(--text2)',display:'inline-flex',alignItems:'center',gap:4}}>
+              Tracked mints running outdated software
+              <InfoTooltip
+                className="stats-sw-behind-info"
+                iconSize={11}
+                width={isMobile ? 210 : 250}
+                about="outdated software"
+                text={outdatedSoftwareText()}
+              />
+            </span>
+            <span style={{fontSize:13,fontWeight:swFreshnessSummary.pct >= 50 ? 700 : 600,color:'var(--amber)',fontFamily:'var(--font-mono-data)'}}>{swFreshnessSummary.pct}%</span>
+          </div>
+          <div className="dist-track"><div className="dist-fill" style={{width:`${swFreshnessSummary.pct}%`,background:'var(--amber)',opacity:swFreshnessSummary.pct >= 50 ? 0.9 : 0.6}} /></div>
+        </div>
+      )}
+          </div>
+        </div>
 
         <div className="stats-stack">
         {/* Row 1, 2nd panel: Most Reliable. Mockup order is Software | Most
