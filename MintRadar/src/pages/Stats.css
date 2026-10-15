@@ -1078,6 +1078,9 @@
    The inline grid-template-rows (two balanced columns) is reset; rows then simply follow the DOM order. */
 @media (min-width: 1280px) {
   .stats-board-grid .stats-geo-cols { grid-template-columns: minmax(0, 1fr); grid-template-rows: none !important; grid-auto-flow: row; }
+  /* Row pitch 26px (24px row + 2px gap) so the long single list does not stretch row 2 much; text and flags unchanged. */
+  .stats-board-grid .stats-geo-cols { row-gap: 2px; }
+  .stats-board-grid .stats-geo-panel .dist-row { min-height: 24px; }
 }
 /* Reserved space for the cards whose content arrives asynchronously: their typical loaded height,
    so the rows below do not jump when the data lands. Cards may still grow past it; nothing is clipped. */
@@ -1088,6 +1091,23 @@
   .stats-geo-panel    { min-height: 260px; }
   .stats-movers-panel { min-height: 240px; }
   .stats-trend-panel  { min-height: 220px; }
+}
+/* Trend card (desktop): the chart fills the space between the subtitle and the summary line. The chart wrapper is a
+   flex child (flex: 1, min-height: 120px) and the responsive container is absolutely positioned inside it, so the
+   chart never sizes the card: the row height stays set by the movers card (no resize loop). The wrapper's inline
+   height (120px) is overridden on purpose. Tablet and mobile keep the 120px chart.
+   Movers show Risers | Fallers side by side here, so row 3 is low (about 300px) as in the design template. */
+@media (min-width: 1280px) {
+  /* Movers: Risers and Fallers side by side (DOM order unchanged: label, rows, label, rows), so row 3 stays low. */
+  .stats-movers-panel > div[aria-busy] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 24px; align-content: start; }
+  .stats-movers-panel > div[aria-busy] > :nth-child(1) { grid-column: 1; grid-row: 1; }
+  .stats-movers-panel > div[aria-busy] > :nth-child(2) { grid-column: 1; grid-row: 2; }
+  .stats-movers-panel > div[aria-busy] > :nth-child(3) { grid-column: 2; grid-row: 1; }
+  .stats-movers-panel > div[aria-busy] > :nth-child(4) { grid-column: 2; grid-row: 2; }
+  .stats-movers-panel .stats-top5-row { padding-block: 4px; }
+  .stats-trend-panel { display: flex; flex-direction: column; }
+  .stats-trend-panel > .stats-panel-head + div { flex: 1 1 0; min-height: 120px; height: auto !important; position: relative; }
+  .stats-trend-panel > .stats-panel-head + div > .recharts-responsive-container { position: absolute; inset: 0; }
 }
 /* Extra cards: add after the trend card in the markup; they fill a full-width row below the named rows. */
 .stats-board-grid > .stats-extra-panel { grid-column: 1 / -1; }
@@ -1105,7 +1125,7 @@
 }
 
 .stats-stack { display: flex; flex-direction: column; gap: var(--stats-board-gap); min-width: 0; }
-.stats-stack > .stats-panel { flex: 1; }
+.stats-stack > .stats-panel { flex: 1 1 auto; }
 
 /* Panels: 12px radius, 20px padding, title + one plain description line (no tracked caps). */
 .stats-panel { border-radius: 12px; padding: 20px; }
@@ -1252,7 +1272,8 @@
 @media (max-width: 767px) {
   .stats-board-grid {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "nhi" "now" "top" "nut" "geo" "mov" "trend";
+    /* Phones: The network right now first, then Network health index (grid placement; the DOM order is unchanged). */
+    grid-template-areas: "now" "nhi" "top" "nut" "geo" "mov" "trend";
   }
 }
 @media (max-width: 768px) {
