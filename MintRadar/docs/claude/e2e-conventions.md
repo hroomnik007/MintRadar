@@ -1,0 +1,70 @@
+# MintRadar — e2e conventions (Playwright)
+> Note: references like "see X below" in this file may point into another docs/claude file; the map is the index in CLAUDE.md.
+
+How the specs in `e2e/` are written, what the permanent specs protect, and the application findings they turned up (2026-10-14/15, task "P4b").
+Run commands and mocking strategy: CLAUDE.md ("Testing Infrastructure"). Tooltip component and its contract: `mobile-and-tooltips.md`.
+
+## Rules for every new or touched test
+
+- **No `waitForTimeout`.** There is none left in `e2e/` (grep proves it); do not add one. No longer global timeouts, no `test.retry`, no `test.fixme` / `test.skip` (a spec that does not apply to a state is not generated for it), no weakened assertions.
+- **Wait for something the browser can report.** An auto-retrying `expect`, an awaited mocked response, a visible and stable element. `e2e/fixtures/settle.ts` has the helpers:
+  - `frames(page, n)` — n painted animation frames (not usable after `page.clock.install()`).
+  - `layoutReady(page)` — web fonts loaded + 2 frames. Use it before a measurement or screenshot instead of a sleep.
+  - `resize(page, w, h)` — `setViewportSize`, then waits until `innerWidth` says so + 2 frames.
+  - `scrollToStable(locator)` — `scrollIntoView`, `toBeInViewport()`, and a bounding box that is identical across two frames.
+  - `flush(page)` — the barrier for **negative** assertions ("nothing was requested", "the list did not change"): 2 frames, one message-channel task and a request to a route the test serves itself. Requests are intercepted in the order the page issued them, so when the barrier is answered, every request the page had already started has reached its route handler. It does not prove that nothing happens *later*; it proves nothing the page had already started is still on its way. Always call it AFTER the positive condition the test awaited (a pill that flipped, a card that left), never instead of it.
+  - `trackRequests(page)` / `networkQuiet(page)` — in-flight request set + "none in flight across 3 frames" (replaces `networkidle`, which always pays 500 ms). Call `trackRequests` before the first navigation.
+- **Held mocks release only after the request reached the mock.** The pattern of `fixtures/watchlistNotify.ts` (`await api.release()` polls until a gated request is waiting) is the model; `watchlist-recommendations.spec.ts` (`release()` / `requested()`), `submit-modal-lookup.spec.ts` (`inFlight(key)` / `release(key)`), `fixtures/auditCz.ts` (`heldAtMock()`), `error-states.spec.ts` (`slowGate()`), `layout-overflow.spec.ts` (fonts and late reviews) follow it. A mock that sleeps (`setTimeout(…, 2500)`) to "be slow" is not allowed: hold it and let it through.
+- **Read state only after the thing that produces it.** A click that triggers a mocked request is followed by the observable result (a pill, a text, the request landing in the mock's list) before the test reads anything derived from it. The Token Inspector tooltip state read the page before the inspection result existed (1 run in 6 saw no trigger at 1024 px); `mint-detail-audit-cz.spec.ts` read tile colours before the tiles existed. Both were races of this kind.
+- **Explicit expected counts.** A check that iterates "whatever it finds" passes with nothing to iterate. `e2e/fixtures/tooltipExpected.ts` lists, per tooltip state and viewport, the minimum number of triggers and of opened triggers (`null` = the state does not exist there). A state with 0 says why.
+- **Measure the placed tooltip.** `open()` in `tooltips-contract.spec.ts` waits for `visibility: visible`: the box exists first at left/top 0 (hidden); reading its rectangle earlier always lands inside the viewport. Before 2026-10-15 this made the "inside the viewport" check vacuous for placement.
+- **No real network.** Every spec mocks `/api/**` (`fixtures/mocks.ts`) and the relay sockets (`routeWebSocket`). `page-hygiene.spec.ts` additionally aborts-and-fails any request to a host other than the app and reports any `/api/` request no mock handles (the dev proxy would answer 502).
+
+## The permanent specs and what each protects
+
+| Spec | Protects |
+|---|---|
+| `tooltips-contract.spec.ts` (+ `fixtures/tooltipStates.ts`, `tooltipExpected.ts`, `tooltipExtract.ts`, `tooltipHitArea.ts`, `tooltip-texts.json`) | The one tooltip component on every page and state: button, named, ≥24×24, no overlap; hover/tap opens exactly one box wired by `aria-describedby`, inside the viewport (also for a trigger pinned to the left and right edge: the horizontal clamp), not covering the trigger; Escape; keyboard; second tap / tap outside; dialogs; no navigation from a card trigger; survives a refetch; texts equal the fixture (1440 and 390 px). Mouse at 320 / 390 / 768 / 1024 / 1440, touch at 320 / 390 / 768 (see below). |
+| `modal-dialog-semantics.spec.ts` | Per dialog: role, `aria-modal`, accessible name, initial focus, Tab / Shift+Tab trap, focus back to the trigger, Escape (tooltip first), outside click, a named close button, scroll lock (CSS), no side scroll at 390 / 320. |
+| `dialogs-contract.spec.ts` | Per dialog at 1440×900 and 320×640 (Login also 390×844): close button ≥32×32 and not clipped (its centre hits the button), dialog box inside the viewport and scrolling inside itself when taller, a wheel over the backdrop does not move the page (the page is made scrollable with a spacer first). Dialog list: `fixtures/dialogCases.ts`, shared with the semantics spec. |
+| `modal-consistency.spec.ts` | Login and Watch-login look the same (width, close box, title font) from the Dashboard, a mint page, the Watchlist and Stats. |
+| `copy-buttons.spec.ts` | Every copy button not covered elsewhere: the clipboard holds exactly the expected string, a confirmation shows and goes away by itself (Mint Detail public key / URLs / contacts / reviewer npub / review link / QR dialog; every code block on `/for-wallets`, the attestation npub and hex, the curl example). Also asserts the Methodology page and the Watchlist have no copy button. Elsewhere: account menu (`profile-dropdown`), share link (`mint-detail`), pairing link (`login`), keyset id (`mint-detail-keysets`). |
+| `keyboard-and-landmarks.spec.ts` | On 11 routes + a rich Mint Detail state: lang, one h1, one main / footer, nav count, no skipped heading level, every link / button / field named (own DOM walk **and** the accessibility tree via `ariaSnapshot()`), every img with `alt`, no duplicate id, first interactive element within 3 Tab stops, first 12 stops in DOM order with a focus indicator that differs from the unfocused style (element, its pseudo-elements, 3 ancestors), none hidden or zero-size. |
+| `page-hygiene.spec.ts` | On the same routes at 390×844 and 320×640: no console error or warning (allow-list below), no page error, no response ≥ 400 (except the mocked icon 404), no failed request, no unmocked `/api/`, no stranger host, no `securitypolicyviolation`, no horizontal overflow, no element wider than the viewport, no visible `undefined` / `NaN` / `null` / `[object` / `{{` / `Infinity` (code blocks are skipped; `/for-wallets` documents `null`, so only that word is exempt there), every image loaded; mint icons that 404 fall back to the monogram. |
+| `error-states.spec.ts`, `layout-overflow.spec.ts`, `long-text-overflow.spec.ts` | API failures never look like mint states; no horizontal overflow; third-party text never widens the page. |
+
+### Tooltip contract: why touch has three widths
+
+Mouse runs at 320, 390, 768, 1024 and 1440 px. Touch runs at 320, 390 and 768 px: `isMobile` is on up to 768 px, and 1024 / 1440 px are the same desktop layout the mouse run already covers; what is touch-specific (tap, second tap, tap outside, the clamp at 320 px) is exercised in full at the three widths. Mutation-checked: removing the horizontal clamp (`x = cx - width / 2` in `src/utils/tooltipPosition.ts`) fails `tooltip contract at 320x640, touch`.
+
+### Regenerating the tooltip text fixture
+
+After a tooltip text changes: `TT_WRITE_TEXTS=1 npx playwright test e2e/tooltip-texts-update.spec.ts` (several minutes), then read the diff of `e2e/fixtures/tooltip-texts.json` — it is the list of what users see. After a tooltip is added to or removed from a page: run `tooltips-contract.spec.ts`, read the failure (it names the state, viewport and the number), and update `fixtures/tooltipExpected.ts` with the reason in the commit message. Debugging: `TT_STATES=home,stats` runs only those states; `TT_TIMING=1` prints where the time goes.
+
+## Allow-lists (and why)
+
+- **page-hygiene console allow-list** (`CONSOLE_ALLOW` in the spec): exactly one entry — `Failed to load resource … 404` whose location is `/api/mint/icon`. The spec mocks the icon proxy to answer 404 (no icon bytes in the fixtures); `MintFavicon` then shows the monogram (asserted). Relay websocket warnings need **no** entry: the relays are mocked, so a real-relay warning appearing here is a regression, not noise. An entry that never fires would hide real messages; this one fires on `/` (verified by logging).
+- **page-hygiene responses ≥ 400**: only the same icon 404.
+- **`SMALL_CLOSE_FINDING`** in `dialogs-contract.spec.ts`, **`NO_FOCUS_STYLE`** and **`KNOWN`** in `keyboard-and-landmarks.spec.ts`: the application defects below, each with a comment. Remove the entry when the app is fixed.
+
+## Running a spec under load
+
+A flaky test shows itself when the machine is busy. Prove a fixed spec with
+`npx playwright test e2e/<spec> --repeat-each=40 --workers=1` (0 failures) and `--repeat-each=20 --workers=4` while a CPU stress runs: start it yourself (for example `for i in $(seq 8); do (while :; do :; done) & echo $! >> $S/pids; done`), and when done kill **only your own PIDs** (`kill $(cat $S/pids)`; check with `ps`). Do not start or stop dev servers by hand: the Playwright config starts its own; if port 5173 is held by a process you did not start, stop and report.
+
+## Mutation proofs (not committed; app edited, spec run, `git checkout -- <file>`)
+
+Each of these makes its spec fail: focus not returned after Escape; Tab trap removed; close button 20 px; dialog `min-width: 480px` at 320; page scroll lock removed; a copy button copying a wrong string (code block and Mint Detail public key); a button losing `title` and `aria-label`; a second `<h1>`; a duplicate `id`; a 900 px wide element in the footer; the tooltip horizontal clamp removed (touch 320); a state that loses all its tooltips (the Stats outdated-software ⓘ at 320).
+
+## Findings — application issues the new specs found (NOT fixed; fix the app, then drop the matching exemption)
+
+| # | Severity | Where | What | Reproduce |
+|---|---|---|---|---|
+| F1 | S3 | Home header strip | While `/api/mints/known` is still pending the strip reads "0 online mints · 0 tracked mints · last checked —", i.e. a loading state looks like an empty network (`error-states.spec.ts`, Home slow500; the in-flight "no mint state" check is therefore left out for Home). | Delay `/api/mints/known`, open `/`, read the strip. |
+| F2 | S3 | Comparison modal close button | `.cmp-modal-header button` is 20×20 CSS px, below the 32×32 of every other dialog (and below WCAG 2.5.8's 24). Exempt: `SMALL_CLOSE_FINDING`. | Open Compare on two mints; measure the ✕. |
+| F3 | S4 | Mint Detail "URLs" copy buttons | `button[aria-label="Copy URL"]` copies, but gives no confirmation (`copiedUrl` is set, the icon is never swapped). The clipboard is asserted, the confirmation is not. | Click a copy icon next to a URL in the Overview info rows. |
+| F4 | S4 | Primary `<nav>` | Has no accessible name; on `/about`, `/methodology`, `/for-wallets` a second nav ("On this page") exists, so the two cannot be told apart by name. Exempt: `KNOWN.unnamedNavs`. | Landmarks list of a screen reader on `/about`. |
+| F5 | S2 | Token Inspector | `textarea.token-input` shows no focus indicator when reached with Tab (no outline, no box-shadow, nothing on a pseudo-element or ancestor) — WCAG 2.4.7. Exempt: `NO_FOCUS_STYLE`. | `/tools`, press Tab 9 times (or focus the field): nothing changes. |
+| F6 | S4 | Page structure | Home, Stats, Tools, Wallets, Learn, Watchlist and Mint Detail expose only the h1; their section titles are `div`s, so heading navigation finds nothing between the h1 and the footer. No level is *skipped* (the spec asserts that), the structure is flat. | Headings list of a screen reader on `/stats`. |
+
+Not application findings but worth knowing: `installApiMocks` has no answer for `/api/mints/outages` (Mint Detail asks for it; the dev proxy answers 502) — `fixtures/pageAudit.ts` mocks it for the page specs; the older specs that open a mint page log that 502 without failing.

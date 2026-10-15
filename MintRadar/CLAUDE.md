@@ -20,6 +20,7 @@
 | Signed mint health assertions (Nostr kind 30385, `healthAssertions.ts`/`healthPublisher.ts`, `ATTESTATION_SERVICE_NSEC`, the own-relay allow-list `privileged-pubkeys.txt`) | `docs/claude/nostr-health-assertions.md` |
 | What the browser contacts outside our origin (relays, mints, NIP-05 hosts, avatars, QR), Best Mint wizard direct fetches | `docs/claude/third-party-requests.md` |
 | Mobile layout, navbar, overflow fixes, tooltips, chart focus ring, **modal dialogs (`useModalFocus`, role/aria-modal/name, focus trap/restore)** | `docs/claude/mobile-and-tooltips.md` |
+| Writing or changing an **e2e spec** (`e2e/`): waits, held mocks, the settle helpers, the permanent contract specs, allow-lists, tooltip expected counts, known application findings | `docs/claude/e2e-conventions.md` |
 | The `/about` page (privacy notice, rules): what it claims and the source of every claim; **update `About.tsx` when provider backups/snapshots, log fields or retention, the backup script, the relay write policy, notification storage, a new browser request or `PROBE_LOCATION` change** | `docs/claude/privacy-and-about.md` |
 | Security audit history, hardening rationale, external reviews, ESLint cleanup | `docs/claude/security-audit-and-reviews-history.md` |
 
@@ -141,13 +142,13 @@ Login modal (`src/components/layout/AppShell.tsx`) supports three methods select
 
 ## Testing Infrastructure
 
-### Test counts (as of 2026-10-14)
+### Test counts (as of 2026-10-15)
 
 | Suite | Count | Tool | Location |
 |-------|-------|------|----------|
 | Backend (unit + integration + security) | 1891 tests, 91 files | Vitest | `backend/src/__tests__/` (incl. `integration/`, `security/`) |
 | Frontend unit | 1074 tests, 69 files | Vitest | `src/__tests__/` |
-| E2E | 1227 tests, 104 spec files (`playwright test --list`) | Playwright | `e2e/` |
+| E2E | 1311 tests (1299 passed + 12 known skips in two full runs, 0 flaky), 108 spec files (`playwright test --list`) | Playwright | `e2e/` |
 
 Counts drift often — treat as approximate.
 
