@@ -194,7 +194,8 @@ describe('getMintHealth against stub relays', () => {
   it('never throws: nothing answers, an invalid relay URL, no WebSocket in the runtime', async () => {
     const refuse = await stub('refuse')
     const none = await example.getMintHealth(URL_, { relays: [refuse, 'not a url', 'http://127.0.0.1:1'], webSocket: WebSocket, ...opts }) as { health: unknown; answered: string[]; failed: string[] }
-    expect(none).toEqual({ health: null, answered: [], failed: [refuse, 'not a url', 'http://127.0.0.1:1'] })
+    expect(none).toMatchObject({ health: null, answered: [], failed: [refuse, 'not a url', 'http://127.0.0.1:1'] })
+    expect((none as unknown as { reasons: Record<string, string> }).reasons['not a url']).toBe('invalid URL')
     const noWs = await example.getMintHealth(URL_, { relays: [refuse], webSocket: undefined, ...opts }) as { answered: string[]; failed: string[] }
     expect(noWs).toMatchObject({ answered: [], failed: [refuse] })
     expect(uncaught).toEqual([])
@@ -236,7 +237,9 @@ describe('the command line (child process)', () => {
     expect(r.stderr).not.toMatch(/RangeError|Maximum call stack|Error/)
     expect(r.code).toBe(0)
     expect(r.stdout).toContain('relays answered: 127.0.0.1:' + new URL(empty).port)
-    expect(r.stdout).toContain('relays failed:')
+    expect(r.stdout).toMatch(/^127\.0\.0\.1:\d+: unreachable \(.+\)$/m)
+    expect(r.stdout.match(/: unreachable \(/g)).toHaveLength(bad.length)
+    expect(r.stdout).not.toContain('relays failed')
     expect(r.stdout).toContain('no valid assertion found: unknown, not a bad mint')
     expect(r.ms).toBeLessThan(12_000)
   }, 20_000)

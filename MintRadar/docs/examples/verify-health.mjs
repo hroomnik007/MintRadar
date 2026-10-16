@@ -55,7 +55,7 @@ export function checkHealthEvent(event, mintUrl, { pubkey = PINNED_PUBKEY, nowSe
 }
 
 // Reads one relay with a plain WebSocket and a manual REQ. It never rejects and never throws later: every path ends in
-// finish(), which clears both timers and closes the socket. Resolves { events, ok }; ok is true only after EOSE.
+// finish(), which clears both timers and closes the socket. Resolves { events, ok, reason }; ok is true only after EOSE, otherwise reason says why not.
 function queryRelay(url, filter, WebSocketClass) {
   return new Promise((resolve) => {
     const events = []
@@ -64,7 +64,7 @@ function queryRelay(url, filter, WebSocketClass) {
     let done = false
     let connectTimer = null
     let readTimer = null
-    const finish = (ok) => {
+    const finish = (ok, reason) => {
       if (done) return
       done = true
       clearTimeout(connectTimer)
@@ -75,14 +75,14 @@ function queryRelay(url, filter, WebSocketClass) {
         try { if (ws.readyState === 1) ws.send(JSON.stringify(['CLOSE', subId])) } catch { /* ignore */ }
         try { ws.close() } catch { /* ignore */ }
       }
-      resolve({ events, ok })
+      resolve({ events, ok, reason })
     }
-    try { ws = new WebSocketClass(url) } catch { finish(false); return }
-    connectTimer = setTimeout(() => finish(false), CONNECT_TIMEOUT_MS)
+    try { ws = new WebSocketClass(url) } catch { finish(false, 'invalid URL'); return }
+    connectTimer = setTimeout(() => finish(false, 'no connection after ' + CONNECT_TIMEOUT_MS / 1000 + ' s'), CONNECT_TIMEOUT_MS)
     ws.onopen = () => {
       clearTimeout(connectTimer)
-      readTimer = setTimeout(() => finish(false), READ_TIMEOUT_MS)
-      try { ws.send(JSON.stringify(['REQ', subId, filter])) } catch { finish(false) }
+      readTimer = setTimeout(() => finish(false, 'no answer after ' + READ_TIMEOUT_MS / 1000 + ' s'), READ_TIMEOUT_MS)
+      try { ws.send(JSON.stringify(['REQ', subId, filter])) } catch { finish(false, 'connection error') }
     }
     ws.onmessage = (message) => {
       let data
@@ -90,33 +90,35 @@ function queryRelay(url, filter, WebSocketClass) {
       if (!Array.isArray(data) || data[1] !== subId) return
       if (data[0] === 'EVENT') { if (events.length < MAX_EVENTS_PER_RELAY) events.push(data[2]) }
       else if (data[0] === 'EOSE') finish(true)
-      else if (data[0] === 'CLOSED') finish(false)
+      else if (data[0] === 'CLOSED') finish(false, 'relay closed the subscription')
     }
-    ws.onerror = () => finish(false)
-    ws.onclose = () => finish(false)
+    ws.onerror = () => finish(false, 'connection error')
+    ws.onclose = () => finish(false, 'connection closed')
   })
 }
 
 // The newest valid assertion for a mint from all relays at once. It never throws. Returns
-//   { health, answered, failed }: health is null when no relay has a valid event - that means "unknown", not "bad";
-//   answered and failed list the relay URLs, so a partial failure is visible. Nothing answered at all: answered is [].
+//   { health, answered, failed, reasons }: health is null when no relay has a valid event - that means "unknown", not "bad";
+//   answered and failed list the relay URLs, so a partial failure is visible (reasons[url] says why a relay failed). Nothing answered at all: answered is [].
 export async function getMintHealth(mintUrl, { relays = RELAYS, webSocket = globalThis.WebSocket, pubkey = PINNED_PUBKEY, nowSec } = {}) {
   const filter = { kinds: [KIND], authors: [pubkey], '#d': [normalizeMintUrl(mintUrl)] }
   const settled = await Promise.allSettled(
-    relays.map((url) => (typeof webSocket === 'function' ? queryRelay(url, filter, webSocket) : Promise.resolve({ events: [], ok: false }))),
+    relays.map((url) => (typeof webSocket === 'function' ? queryRelay(url, filter, webSocket) : Promise.resolve({ events: [], ok: false, reason: 'no WebSocket in this runtime' }))),
   )
   const answered = []
   const failed = []
+  const reasons = {}
   let health = null
   settled.forEach((result, i) => {
-    const value = result.status === 'fulfilled' ? result.value : { events: [], ok: false }
+    const value = result.status === 'fulfilled' ? result.value : { events: [], ok: false, reason: 'connection error' }
     ;(value.ok ? answered : failed).push(relays[i])
+    if (!value.ok) reasons[relays[i]] = value.reason
     for (const event of value.events) {
       const checked = checkHealthEvent(event, mintUrl, { pubkey, nowSec })
       if (checked && (health === null || checked.createdAt > health.createdAt)) health = checked
     }
   })
-  return { health, answered, failed }
+  return { health, answered, failed, reasons }
 }
 
 // Command line: node verify-health.mjs <mint url> [relay url ...]
@@ -128,9 +130,9 @@ if (argv && argv[1] && import.meta.url === new URL('file://' + argv[1]).href) {
     console.error('usage: node verify-health.mjs <mint url> [relay url ...]')
     globalThis.process.exitCode = 2
   } else {
-    const { health, answered, failed } = await getMintHealth(argv[2], argv.length > 3 ? { relays: argv.slice(3) } : {})
+    const { health, answered, failed, reasons } = await getMintHealth(argv[2], argv.length > 3 ? { relays: argv.slice(3) } : {})
     console.log('relays answered: ' + (answered.map(host).join(', ') || 'none'))
-    if (failed.length > 0) console.log('relays failed: ' + failed.map(host).join(', '))
+    for (const url of failed) console.log(host(url) + ': unreachable (' + reasons[url] + ')')
     if (answered.length === 0) {
       console.error('no relay answered' + (typeof globalThis.WebSocket === 'function' ? '' : ' (this runtime has no WebSocket: use Node 22 or newer)'))
       globalThis.process.exitCode = 1
