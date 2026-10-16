@@ -191,8 +191,13 @@ The `+ Watch` button on Dashboard mint cards only renders when `isLoggedIn === t
 `test` job in `.github/workflows/deploy.yml` runs the full suite (backend + frontend unit; e2e is separate). `deploy` job declares `needs: test` — a failing test blocks deployment.
 
 ## Verification policy
-- Backend or frontend code changed: before pushing run the whole backend suite (`cd backend && npm test`) and the whole frontend suite (`npm test`) — CI blocks the deploy on them — plus `npm run typecheck` and `npm run lint` (backend: its own lint, typecheck and build), and the targeted e2e specs of the touched pages.
-- Run the full e2e suite only when the task says so. Docs-only changes need no suites.
+Pick the tier by the risk of the change; each tier includes the one before it. Backend: its own lint, typecheck and build.
+- **Tier 1, small changes** (documentation, comments, texts, CSS of a single page, e2e-only changes): `npm run typecheck`, `npm run lint`, a production build, and ONLY the targeted specs of the touched area. No full unit suites needed locally (CI runs them before the deploy). No full e2e. Docs-only changes need no suites at all.
+- **Tier 2, shared frontend changes** (a component or utility used on several pages, frontend logic): Tier 1 plus the whole backend suite (`cd backend && npm test`) and the whole frontend suite (`npm test`), and the targeted e2e specs of every affected area.
+- **Tier 3, risky changes** (backend, API shapes, dependency updates including Dependabot bumps, build or router configuration, login and key handling, notifications, anything that touches many pages): Tier 2 plus ONE full e2e run (`npm run test:e2e`) before pushing. A second full run only to investigate flakiness.
+- **Milestones:** one full e2e run before announcing the project to others and after a batch of Dependabot updates.
+- A task prompt names its tier; if it does not, the task decides by the rules above and says which tier it chose in the report. A full e2e run is never added "just in case" to a Tier 1 or Tier 2 change.
+- CI (the `test` job) runs the backend and frontend unit tests before every deploy, and the server runs the production build during the deploy; typecheck and lint are NOT in CI, and e2e is NOT in CI either (a broken e2e spec is only noticed when someone runs it).
 
 ## Docs rule
 A change to user-visible behaviour, to which hosts the browser or the server contacts, or to what is stored about people or for how long updates the matching `docs/claude/` file in the SAME commit; if a public statement changes, also `About.tsx` and `docs/claude/privacy-and-about.md`.
