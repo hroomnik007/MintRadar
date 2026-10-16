@@ -4,7 +4,7 @@ import type { Express } from 'express'
 
 // Read routes that every caller may share send `Cache-Control: public, max-age=<their TTL>` and the same strong
 // ETag as /api/mints/known and the wallet routes (sha256 of the body), on a miss and on a hit; If-None-Match gives
-// 304. The TTLs are unchanged: stats 60, reliability-movers 600, swaps 300, audit-cz 60, nostr-reviews 120.
+// 304. The TTLs are unchanged: stats 60, reliability-movers 600, reliability-trend 600, swaps 300, audit-cz 60, nostr-reviews 120.
 // Routes that must not be shared (submit, probe) are not touched. The pool is mocked at the db.js boundary.
 
 vi.mock('../../db.js', () => ({
@@ -53,6 +53,14 @@ const ROUTES: Route[] = [
   {
     name: '/api/stats/reliability-movers', path: '/api/stats/reliability-movers', maxAge: 600,
     arrange: () => { query.mockResolvedValueOnce({ rows: [{ url: MINT, name: 'Example', latest_score: 90, old_score: 80 }] }) },
+  },
+  {
+    name: '/api/stats/reliability-trend', path: '/api/stats/reliability-trend?days=90', maxAge: 600,
+    arrange: () => {
+      query.mockImplementation((sql: string) => Promise.resolve(String(sql).includes('MIN(checked_at)')
+        ? { rows: [{ earliest: new Date('2026-06-01T00:00:00Z') }] }
+        : { rows: [{ date: new Date('2026-10-16T00:00:00Z'), avg_reliability: 82 }] }))
+    },
   },
   {
     name: '/api/mints/swaps', path: `/api/mints/swaps?url=${encodeURIComponent(MINT)}`, maxAge: 300,

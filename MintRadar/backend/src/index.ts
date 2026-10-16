@@ -53,6 +53,14 @@ const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
 let statsCache: { data: object; expiresAt: number } | null = null
 const STATS_CACHE_TTL = 60_000 // 60 seconds
 
+// /api/stats/reliability-trend aggregates ~1.3M mint_history rows for 90d (sequential scan, ~1.3s; MIN(checked_at) another
+// ~0.3s, EXPLAIN ANALYZE 2026-10-16) and the result only changes once a day, so each period is cached for 10 minutes,
+// concurrent misses share one query, and the cache is warmed at startup and refreshed in the background (below).
+const reliabilityTrendCache = new Map<number, { data: object; expiresAt: number }>()
+const reliabilityTrendInFlight = new Map<number, Promise<object>>()
+const RELIABILITY_TREND_CACHE_TTL = 10 * 60_000 // 10 minutes
+const RELIABILITY_TREND_REFRESH_MS = 9 * 60_000 // refresh before the TTL ends, so a visitor never pays for the scan
+
 const reliabilityMoversCache = new Map<string, { data: object; expiresAt: number }>()
 // Longer than KNOWN_MINTS_CACHE_TTL: the underlying snapshots only move once per
 // probe cycle (5 min, refreshReliabilityMoversRollup on the probe cron), and a 7d/30d
@@ -1286,10 +1294,8 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
     })
 })
 
-app.get('/api/stats/reliability-trend', (req: Request, res: Response): void => {
-  const daysParam = parseInt(String(req.query['days'] ?? '30'), 10)
-  const days = [30, 90].includes(daysParam) ? daysParam : 30
-  Promise.all([
+async function computeReliabilityTrend(days: number): Promise<object> {
+  const [result, earliestResult] = await Promise.all([
     pool.query(
       `SELECT
          (DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')::date AS date,
@@ -1306,21 +1312,58 @@ app.get('/api/stats/reliability-trend', (req: Request, res: Response): void => {
     // the selected window (e.g. 90d) exceeds what's actually been collected.
     pool.query('SELECT MIN(checked_at) AS earliest FROM mint_history'),
   ])
-    .then(([result, earliestResult]) => {
-      const earliestRaw = earliestResult.rows[0]?.earliest as Date | null
-      const earliestCheckedAt = earliestRaw ? earliestRaw.toISOString() : null
-      const daysOfDataAvailable = earliestRaw
-        ? Math.min(days, Math.max(0, Math.floor((Date.now() - earliestRaw.getTime()) / 86_400_000)))
-        : 0
-      res.json({
-        trend: result.rows.map(r => ({
-          date: (r.date as Date).toISOString().slice(0, 10),
-          avgReliability: r.avg_reliability as number,
-        })),
-        periodDays: days,
-        earliestCheckedAt,
-        daysOfDataAvailable,
-      })
+  const earliestRaw = earliestResult.rows[0]?.earliest as Date | null
+  const earliestCheckedAt = earliestRaw ? earliestRaw.toISOString() : null
+  const daysOfDataAvailable = earliestRaw
+    ? Math.min(days, Math.max(0, Math.floor((Date.now() - earliestRaw.getTime()) / 86_400_000)))
+    : 0
+  return {
+    trend: result.rows.map(r => ({
+      date: (r.date as Date).toISOString().slice(0, 10),
+      avgReliability: r.avg_reliability as number,
+    })),
+    periodDays: days,
+    earliestCheckedAt,
+    daysOfDataAvailable,
+  }
+}
+
+// One query pair per period at a time: concurrent callers (and the background refresh) share the same promise.
+function loadReliabilityTrend(days: number): Promise<object> {
+  const running = reliabilityTrendInFlight.get(days)
+  if (running) return running
+  const started = computeReliabilityTrend(days)
+    .then(data => {
+      reliabilityTrendCache.set(days, { data, expiresAt: Date.now() + RELIABILITY_TREND_CACHE_TTL })
+      return data
+    })
+    .finally(() => { reliabilityTrendInFlight.delete(days) })
+  reliabilityTrendInFlight.set(days, started)
+  return started
+}
+
+// Warms both periods; a failure is only logged (the route then computes on demand and answers 500 itself on an error).
+function refreshReliabilityTrendCache(): void {
+  for (const days of [30, 90]) {
+    loadReliabilityTrend(days).catch((err: unknown) => {
+      if (IS_DEV) console.error('[reliability-trend warm-up]', err)
+    })
+  }
+}
+
+app.get('/api/stats/reliability-trend', (req: Request, res: Response): void => {
+  const daysParam = parseInt(String(req.query['days'] ?? '30'), 10)
+  const days = [30, 90].includes(daysParam) ? daysParam : 30
+
+  const cached = reliabilityTrendCache.get(days)
+  if (cached && Date.now() < cached.expiresAt) {
+    sendCachedBody(res, cachedBodyOf(cached.data), Math.floor(RELIABILITY_TREND_CACHE_TTL / 1000))
+    return
+  }
+
+  loadReliabilityTrend(days)
+    .then(data => {
+      sendCachedBody(res, cachedBodyOf(data), Math.floor(RELIABILITY_TREND_CACHE_TTL / 1000))
     })
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/stats/reliability-trend]', err)
@@ -2439,6 +2482,8 @@ if (process.env['NODE_ENV'] !== 'test') {
       .then(() => seedKnownMints(upsertMint))
       .then(() => {
         startCron()
+        refreshReliabilityTrendCache()
+        setInterval(refreshReliabilityTrendCache, RELIABILITY_TREND_REFRESH_MS).unref()
         void publishServiceProfile()
         // Dormant: does nothing (one log line) unless ATTESTATION_SERVICE_NSEC is set — healthPublisher.ts.
         startAttestations({ loadSnapshot: loadKnownMints, isAllowlistMode })
