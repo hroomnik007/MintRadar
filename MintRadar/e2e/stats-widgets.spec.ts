@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
+import { resize } from './fixtures/settle'
 
 type Json = Record<string, unknown>
 
@@ -110,12 +111,24 @@ test('Geographic distribution: description, CDN / anycast as the last cell of th
   await expect(cdn.locator('.dist-label')).toHaveText('CDN / anycast')
   await expect(cdn.locator('.dist-count')).toHaveText('2')
   await expect(cdn).toHaveAttribute('title', /not a city/)
-  // The bucket sits in the same grid as the cities, in the last cell: 4 cities + the bucket split 3 + 2.
+  // The bucket sits in the same list as the cities, in the last cell: 4 cities + the bucket.
   const cells = geo.locator('.stats-geo-cols .dist-row')
   await expect(cells).toHaveCount(5)
   await expect(cells.last()).toHaveClass(/stats-geo-cdn/)
-  const xs = await cells.evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().left)))
-  expect(new Set(xs).size).toBe(2)
+  const lefts = () => cells.evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().left)))
+  const tops = () => cells.evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)))
+  // From 1280 px the card is the narrow third column of the board: ONE list, every cell under the previous one, in DOM order.
+  expect(page.viewportSize()!.width).toBeGreaterThanOrEqual(1280)
+  expect(new Set(await lefts()).size, 'one column from 1280 px').toBe(1)
+  const listTops = await tops()
+  expect(listTops, 'cells follow each other downwards').toEqual([...listTops].sort((a, b) => a - b))
+  expect(new Set(listTops).size, 'no two cells on the same row').toBe(5)
+  // Below 1280 px (here 1000) the cities go back to two balanced columns: 3 + 2, the bucket last.
+  await resize(page, 1000, 900)
+  const narrow = await lefts()
+  expect(new Set(narrow).size, 'two columns below 1280 px').toBe(2)
+  expect(narrow.filter(x => x === Math.min(...narrow)).length, 'balanced columns, 3 + 2').toBe(3)
+  await resize(page, 1280, 720)
   // No underline any more, the flag has its own cell, the row is still clickable.
   const row = geo.locator('.stats-geo-cols .dist-row', { hasText: 'Frankfurt' })
   await expect(row.locator('.stats-geo-flag')).toHaveText('🇩🇪')
