@@ -1102,6 +1102,9 @@
   .stats-movers-panel { min-height: 240px; }
   .stats-trend-panel  { min-height: 220px; }
 }
+/* Trend card, the other period is loading: the previous chart stays (dimmed, not clickable) instead of an empty state. */
+.stats-trend-body { transition: opacity 150ms ease; }
+.stats-trend-body.is-pending { opacity: 0.5; pointer-events: none; }
 /* Trend card (desktop): the chart fills the space between the subtitle and the summary line. The chart wrapper is a
    flex child (flex: 1, min-height: 120px) and the responsive container is absolutely positioned inside it, so the
    chart never sizes the card: the row height stays set by the movers card (no resize loop). The wrapper's inline

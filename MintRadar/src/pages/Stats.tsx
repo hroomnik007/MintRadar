@@ -4,7 +4,8 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { clickableProps } from '@/utils/clickableProps'
 import { IcClose } from '@/components/IcClose'
-import { ReliabilityTrendChart } from '@/components/stats/ReliabilityTrendChart'
+import { ReliabilityTrendView } from '@/components/stats/ReliabilityTrendChart'
+import { useReliabilityTrend } from '@/hooks/useReliabilityTrend'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import { ReliabilityMoversPanel } from '@/components/stats/ReliabilityMoversPanel'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
@@ -688,24 +689,11 @@ export default function Stats() {
     return knownMintsData.filter(m => (m.nutsLimits as Record<string, unknown> | null)?.[key] != null)
   }, [nutModal, knownMintsData])
 
-  interface ReliabilityTrendResponse {
-    trend: Array<{ date: string; avgReliability: number }>
-    periodDays: number
-    earliestCheckedAt: string | null
-    daysOfDataAvailable: number
-  }
-
-  const { data: trendResponse } = useQuery({
-    queryKey: ['stats-reliability-trend', trendDays],
-    queryFn: async (): Promise<ReliabilityTrendResponse> => {
-      const res = await fetch(`/api/stats/reliability-trend?days=${trendDays}`)
-      if (!res.ok) throw new Error('reliability-trend fetch failed')
-      return res.json() as Promise<ReliabilityTrendResponse>
-    },
-    staleTime: 10 * 60 * 1000,
-  })
+  const { data: trendResponse, isPending: trendPending, isError: trendError, isPlaceholderData: trendPlaceholder, refetch: refetchTrend } = useReliabilityTrend(trendDays)
 
   const trendData = trendResponse?.trend
+  // The summary describes the data on screen, which is the previous period while the other one loads.
+  const trendPeriod = trendResponse?.periodDays ?? trendDays
   const trendCoverage = trendResponse && trendResponse.daysOfDataAvailable < trendResponse.periodDays
     ? `Showing ${trendResponse.daysOfDataAvailable} of ${trendResponse.periodDays} days of data (history retention started recently)`
     : null
@@ -1244,20 +1232,14 @@ export default function Stats() {
               <button type="button" className={`stats-tab-btn${trendDays === 90 ? ' active' : ''}`} onClick={() => setTrendDays(90)}>90d</button>
             </div>
           </div>
-          <div style={{marginTop:'var(--stats-header-gap)',height:120}}>
-            {(!trendData || trendData.length === 0) ? (
-              <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)',paddingTop:30,textAlign:'center'}}>No data yet</div>
-            ) : (
-              <ReliabilityTrendChart data={trendData} />
-            )}
-          </div>
+          <ReliabilityTrendView data={trendData} isPending={trendPending} isError={trendError} isPlaceholderData={trendPlaceholder} onRetry={() => { void refetchTrend() }} />
           {trendSummary && (
             <div className="trend-summary-row">
               <span className="trend-summary-item"><span className="trend-summary-label">Current</span><span style={{color:'var(--accent)',fontWeight:700}}>{trendSummary.current}%</span></span>
               <span className="trend-summary-sep">·</span>
-              <span className="trend-summary-item"><span className="trend-summary-label">{trendDays}d High</span><span style={{color:'var(--accent)'}}>{trendSummary.high}%</span></span>
+              <span className="trend-summary-item"><span className="trend-summary-label">{trendPeriod}d High</span><span style={{color:'var(--accent)'}}>{trendSummary.high}%</span></span>
               <span className="trend-summary-sep">·</span>
-              <span className="trend-summary-item"><span className="trend-summary-label">{trendDays}d Low</span><span style={{color:'var(--text2)'}}>{trendSummary.low}%</span></span>
+              <span className="trend-summary-item"><span className="trend-summary-label">{trendPeriod}d Low</span><span style={{color:'var(--text2)'}}>{trendSummary.low}%</span></span>
             </div>
           )}
           {trendCoverage && (

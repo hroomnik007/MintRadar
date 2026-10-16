@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Text, type XAxisTickContentProps } from 'recharts'
 import { formatDate } from '@/utils/formatDate'
+import { LoadError, LoadingNote } from '@/components/LoadError'
 import { selectTrendTicks, trendTickLabels } from '@/utils/trendTicks'
 
 export interface TrendPoint { date: string; avgReliability: number }
@@ -50,5 +51,34 @@ export function ReliabilityTrendChart({ data }: { data: readonly TrendPoint[] })
         <Area type="monotone" dataKey="avgReliability" stroke="var(--accent)" strokeWidth={1.5} fill="url(#reliabilityGrad)" dot={false} />
       </AreaChart>
     </ResponsiveContainer>
+  )
+}
+
+// Same fixed sentence as the page-level statistics error (Stats.tsx STATS_ERROR).
+const TREND_ERROR = 'Could not load the statistics. Please try again.'
+
+/**
+ * The chart card body (the reserved 120px area under the header). Loading never looks like empty:
+ *  - first load, nothing to show yet: the loading note;
+ *  - another period is loading: the previous chart stays, dimmed and not clickable (`is-pending`);
+ *  - a failed request: the app's LoadError with Try again;
+ *  - "No data yet" only for a successful response that is empty.
+ */
+export function ReliabilityTrendView({ data, isPending, isError, isPlaceholderData, onRetry }: {
+  data: readonly TrendPoint[] | undefined
+  isPending: boolean
+  isError: boolean
+  isPlaceholderData: boolean
+  onRetry: () => void
+}) {
+  let body
+  if (isError) body = <LoadError message={TREND_ERROR} onRetry={onRetry} />
+  else if (isPending || !data) body = <LoadingNote />
+  else if (data.length === 0) body = <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)',paddingTop:30,textAlign:'center'}}>No data yet</div>
+  else body = <ReliabilityTrendChart data={data} />
+  return (
+    <div className={`stats-trend-body${isPlaceholderData ? ' is-pending' : ''}`} aria-busy={isPlaceholderData || isPending} style={{marginTop:'var(--stats-header-gap)',height:120}}>
+      {body}
+    </div>
   )
 }
