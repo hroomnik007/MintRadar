@@ -8,6 +8,8 @@ export interface LearnModuleMeta {
   title: string
   summary: string
   order: number
+  // Shown as "N min read" on the index card. Recomputed from the module text by src/__tests__/learnReadingTime.test.tsx.
+  readingMinutes: number
 }
 
 export const LEARN_MODULES: LearnModuleMeta[] = [
@@ -16,29 +18,34 @@ export const LEARN_MODULES: LearnModuleMeta[] = [
     title: 'Cashu Basics',
     summary: 'What Cashu actually is: the mint holds your Bitcoin, you hold a bearer token, and blind signatures keep person-to-person transfers private.',
     order: 1,
+    readingMinutes: 3,
   },
   {
     id: 'understanding-the-risks',
     title: 'Understanding the Risks',
     summary: 'Why a mint can disappear or refuse to pay, why nobody can currently verify a mint has real backing, and how to limit what you stand to lose.',
     order: 2,
+    readingMinutes: 3,
   },
   {
     id: 'how-to-choose-a-mint',
     title: 'How to Choose a Cashu Mint',
     summary: 'What to check before trusting a mint — uptime, NUT support, operator transparency — and how MintRadar\'s Reliability Score combines those signals.',
     order: 3,
+    readingMinutes: 6,
   },
   {
     id: 'getting-started-with-a-wallet',
     title: 'Getting Started with a Wallet',
     summary: 'Choosing a wallet, adding your first mint, making a deposit, sending tokens, and why backing up your seed phrase is non-negotiable.',
     order: 4,
+    readingMinutes: 3,
   },
   {
     id: 'safe-habits',
     title: 'Safe Habits',
     summary: 'Five day-to-day habits — diversifying mints, redeeming regularly, checking Reliability Score first — that meaningfully reduce your risk.',
     order: 5,
+    readingMinutes: 3,
   },
 ]
