@@ -21,7 +21,7 @@ describe('selectTrendTicks', () => {
       const ticks = selectTrendTicks(dates, width)
       expect(ticks.at(-1)).toBe('2026-10-16')
       const gaps = gapsInDays(ticks)
-      expect([7, 14, 28]).toContain(gaps[0])
+      expect([7, 14, 21, 28]).toContain(gaps[0])
       expect(new Set(gaps).size).toBe(1)
       expect(minPx(dates, ticks, width)).toBeGreaterThanOrEqual(TREND_TICK_MIN_SPACING)
     })
@@ -31,13 +31,15 @@ describe('selectTrendTicks', () => {
     expect(gapsInDays(selectTrendTicks(series(30), 1000))[0]).toBe(7)
     expect(gapsInDays(selectTrendTicks(series(90), 1000))[0]).toBe(7)
     expect(gapsInDays(selectTrendTicks(series(90), 700))[0]).toBe(14)
-    expect(gapsInDays(selectTrendTicks(series(90), 280))[0]).toBe(28)
+    expect(gapsInDays(selectTrendTicks(series(90), 280))[0]).toBe(21)
+    expect(gapsInDays(selectTrendTicks(series(90), 200))[0]).toBe(28)
   })
 
   it('gives about the expected counts', () => {
     expect(selectTrendTicks(series(30), 1000)).toHaveLength(5)
     expect(selectTrendTicks(series(90), 700)).toHaveLength(7)
-    expect(selectTrendTicks(series(90), 280)).toHaveLength(4)
+    expect(selectTrendTicks(series(90), 280)).toHaveLength(5) // same count as 30d on a phone
+    expect(selectTrendTicks(series(90), 200)).toHaveLength(4)
     expect(selectTrendTicks(series(30), 220)).toHaveLength(3)
   })
 

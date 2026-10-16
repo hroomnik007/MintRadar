@@ -38,7 +38,7 @@ const dayOfLabel = (text: string): number => {
 const EXPECTED_COUNT: Record<number, { 30: [number, number]; 90: [number, number] }> = {
   1440: { 30: [9, 11], 90: [11, 14] },
   768: { 30: [4, 6], 90: [5, 8] },
-  390: { 30: [3, 5], 90: [3, 5] },
+  390: { 30: [5, 5], 90: [5, 5] }, // a phone shows 5 dates in both periods
   320: { 30: [3, 4], 90: [3, 4] },
 }
 
@@ -83,8 +83,8 @@ for (const width of [1440, 768, 390, 320]) {
       // Time spacing is constant: one step of 7, 14 or 28 days, within a day.
       const dayNumbers = ticks.map(t => dayOfLabel(t.text))
       const gaps = dayNumbers.slice(1).map((d, i) => d - dayNumbers[i]!)
-      // Mobile (up to 768px): 7, 14 or 28 days; desktop also 2 or 3.
-      expect(width <= 768 ? [7, 14, 28] : [2, 3, 7, 14, 28]).toContain(gaps[0])
+      // Mobile (up to 768px): 7, 14, 21 or 28 days; desktop also 2 or 3.
+      expect(width <= 768 ? [7, 14, 21, 28] : [2, 3, 7, 14, 28]).toContain(gaps[0])
       for (const g of gaps) expect(Math.abs(g - gaps[0]!)).toBeLessThanOrEqual(1)
     })
   }

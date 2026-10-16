@@ -1,6 +1,6 @@
 // X-axis ticks for the Reliability Score trend chart, chosen BY DATE (not by index).
 //
-// The ticks are the newest data date minus multiples of a step of 7, 14 or 28 days (desktop also 2 and 3); the step is the smallest of these
+// The ticks are the newest data date minus multiples of a step of 7, 14, 21 or 28 days (desktop also 2 and 3); the step is the smallest of these
 // that leaves at least `minSpacing` px between neighbouring labels at the given chart width. The newest date is always
 // the last tick, so the right edge of the chart shows the latest date and a 30d and a 90d chart both read as
 // "weeks back from today". The chart is categorical (one point per data date, evenly spaced by index), so every tick is
@@ -9,7 +9,7 @@
 
 import { DATE_MONTHS } from '@/utils/formatDate'
 
-export const TREND_TICK_STEPS = [7, 14, 28] as const
+export const TREND_TICK_STEPS = [7, 14, 21, 28] as const
 export const TREND_TICK_MIN_SPACING = 64
 // Desktop (a chart wider than about 700px): finer steps and a tighter minimum, so a wide chart does not get big gaps.
 export const DESKTOP_TREND_TICK_STEPS = [2, 3, 7, 14, 28] as const
