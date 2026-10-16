@@ -1171,33 +1171,34 @@ function MintDetailContent({ url }: { url: string }) {
   return (
     <div className="mint-detail">
       <div className="md-header">
-        {isLoggedIn
-          ? (
-            <button
-              type="button"
-              className={`md-watch-star md-watch-star-hero${isWatching ? ' on' : ''}`}
-              aria-label={isWatching ? `Remove ${displayName} from watchlist` : `Add ${displayName} to watchlist`}
-              aria-pressed={isWatching}
-              title={isWatching ? `Remove ${displayName} from watchlist` : `Add ${displayName} to watchlist`}
-              onClick={toggleWatch}
-            >
-              <IcStar filled={isWatching} />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="md-watch-star md-watch-star-hero"
-              aria-label={`Add ${displayName} to watchlist`}
-              aria-pressed={false}
-              title={`Add ${displayName} to watchlist`}
-              onClick={() => setShowWatchLoginModal(true)}
-            >
-              <IcStar filled={false} />
-            </button>
-          )
-        }
         <div className="md-hdr-left">
           <button className="md-back md-back-compact" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
+          {/* Right after Back in the DOM (Tab: Back, then the star); the top-right corner is CSS: absolute against .md-header. */}
+          {isLoggedIn
+            ? (
+              <button
+                type="button"
+                className={`md-watch-star md-watch-star-hero${isWatching ? ' on' : ''}`}
+                aria-label={isWatching ? `Remove ${displayName} from watchlist` : `Add ${displayName} to watchlist`}
+                aria-pressed={isWatching}
+                title={isWatching ? `Remove ${displayName} from watchlist` : `Add ${displayName} to watchlist`}
+                onClick={toggleWatch}
+              >
+                <IcStar filled={isWatching} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="md-watch-star md-watch-star-hero"
+                aria-label={`Add ${displayName} to watchlist`}
+                aria-pressed={false}
+                title={`Add ${displayName} to watchlist`}
+                onClick={() => setShowWatchLoginModal(true)}
+              >
+                <IcStar filled={false} />
+              </button>
+            )
+          }
           <div className="md-avatar-id">
             <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? knownMint?.iconUrl ?? null} size={avatarSize} radius={16} className="md-hdr-favicon" />
             <div className="md-namebox" ref={nameboxRef}>
