@@ -230,7 +230,7 @@ mint", "probe", "mint" (never "minter"), numbers with units.
 
 **Not migrated, on purpose:**
 - Chart tooltips (hover values drawn inside a chart): the Recharts `<Tooltip>` of the uptime/latency chart on Mint Detail (`MintDetailHistoryChart.tsx`),
-  the two in `ComparisonModal.tsx` (history lines) and the Stats reliability trend chart (`Stats.tsx`).
+  the two in `ComparisonModal.tsx` (history lines) and the Stats reliability trend chart (`ReliabilityTrendChart.tsx`).
 - Titles on hosts that are themselves controls, where a nested button would be invalid or change what the host does: the Tor chip inside the copy-URL button, the CDN / anycast row of Geographic Distribution (a
   clickable row), the "Redeem to Lightning" link.
 - Titles on table rows (the grey swap rows) and the swap bar ("Last swaps, newest first": kept on purpose, nothing else on the page says which end is the newest) and its outcome marks (a sparkline-like strip of
