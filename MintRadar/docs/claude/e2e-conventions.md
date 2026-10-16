@@ -45,7 +45,7 @@ After a tooltip text changes: `TT_WRITE_TEXTS=1 npx playwright test e2e/tooltip-
 
 - **page-hygiene console allow-list** (`CONSOLE_ALLOW` in the spec): exactly one entry — `Failed to load resource … 404` whose location is `/api/mint/icon`. The spec mocks the icon proxy to answer 404 (no icon bytes in the fixtures); `MintFavicon` then shows the monogram (asserted). Relay websocket warnings need **no** entry: the relays are mocked, so a real-relay warning appearing here is a regression, not noise. An entry that never fires would hide real messages; this one fires on `/` (verified by logging).
 - **page-hygiene responses ≥ 400**: only the same icon 404.
-- **`KNOWN`** in `keyboard-and-landmarks.spec.ts`: the application defects below, each with a comment. Remove the entry when the app is fixed.
+- **`KNOWN`** in `keyboard-and-landmarks.spec.ts`: removed 2026-10-16 (F4 fixed) — the spec now asserts that every nav has an accessible name and that the names on one page are distinct. A future known defect gets a new, commented entry here.
 
 ## Running a spec under load
 
@@ -60,10 +60,10 @@ Each of these makes its spec fail: focus not returned after Escape; Tab trap rem
 
 | # | Severity | Where | What | Reproduce |
 |---|---|---|---|---|
-| F1 | S3 | Home header strip | While `/api/mints/known` is still pending the strip reads "0 online mints · 0 tracked mints · last checked —", i.e. a loading state looks like an empty network (`error-states.spec.ts`, Home slow500; the in-flight "no mint state" check is therefore left out for Home). | Delay `/api/mints/known`, open `/`, read the strip. |
+| F1 | — | Home header strip | FIXED 2026-10-16: while `/api/mints/known` is pending the strip shows "— online mints · — tracked mints · last checked —" (never "0 online mints"); `error-states.spec.ts` asserts it and checks that Home shows no mint state while the request is in flight. | — |
 | F2 | — | Comparison modal close button | FIXED 2026-10-16: `.cmp-modal-close` (`ComparisonModal.css`) is 32×32 like the other dialogs; `SMALL_CLOSE_FINDING` removed. | — |
 | F3 | — | Mint Detail "URLs" copy buttons | FIXED 2026-10-16: the icon swaps to a check for 2 s (per row, via `copiedContact = url-<url>`) like the other copy buttons; `copy-buttons.spec.ts` asserts it. | — |
-| F4 | S4 | Primary `<nav>` | Has no accessible name; on `/about`, `/methodology`, `/for-wallets` a second nav ("On this page") exists, so the two cannot be told apart by name. Exempt: `KNOWN.unnamedNavs`. | Landmarks list of a screen reader on `/about`. |
+| F4 | — | Primary `<nav>` | FIXED 2026-10-16: the primary nav has `aria-label="Main"` (the doc pages keep "On this page"); `KNOWN.unnamedNavs` removed, `keyboard-and-landmarks.spec.ts` asserts named and distinct navs. | — |
 | F5 | — | Token Inspector | FIXED 2026-10-16: `textarea.token-input` has the app-wide keyboard focus ring (`.token-input:focus-visible`, 2px accent, offset 2px); `NO_FOCUS_STYLE` removed. | — |
 | F6 | S4 | Page structure | Home, Stats, Tools, Wallets, Learn, Watchlist and Mint Detail expose only the h1; their section titles are `div`s, so heading navigation finds nothing between the h1 and the footer. No level is *skipped* (the spec asserts that), the structure is flat. | Headings list of a screen reader on `/stats`. |
 

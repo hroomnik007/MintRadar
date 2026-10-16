@@ -230,8 +230,9 @@ Before the 2×2 hero grid, NHI went through multiple repositioning attempts:
 tests `src/__tests__/mintCounts.test.ts`, `e2e/mint-counts.spec.ts`) is the one definition used by
 Dashboard and Stats. **"Tracked" = every mint in the DB, archived included** (= `/api/stats` `totalMints`
 = `/api/mints/known` length; the public API is unchanged and the UI says what it says).
-- Dashboard header: `<online> online mints` · `<tracked> tracked mints`; grid footer
+- Dashboard header: `<online> online mints` · `<tracked> tracked mints` (both counts show an em dash while `/api/mints/known` is pending, never 0); grid footer
   "Showing X of <tracked>" (the Filters panel shows the same numbers on its "Show X of <tracked>" button, for the draft); Stats "Mints Tracked" / "Online Now" use the same helper.
+- Counts in visible text go through `pluralize(count, noun)` (`src/utils/plural.ts`): "1 mint hidden", "2 mints hidden"; never write `{n} mints` by hand where `n` can be 1.
 - Banner "N mints hidden (offline 24h+)": N = mints the default view hides, computed from the Status radio
   only (online → every non-online mint: degraded + archived + <24h offline; all → nothing (2026-10-01: All = every tracked mint, "Show 76 of 76", no banner);
   offline → banner hidden). The wording "(offline 24h+)" is deliberately kept although the set also holds
