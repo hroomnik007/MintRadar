@@ -70,11 +70,8 @@ test.describe('Mint Detail copy buttons', () => {
     await openMint(page)
     const rows = page.locator('.md-info-row', { has: page.locator('.md-info-label', { hasText: 'URLs' }) }).locator('button')
     await expect(rows).toHaveCount(2)
-    // FINDING (application, not fixed here): these buttons show no confirmation at all (the state is set but the icon is never
-    // swapped), so only the clipboard is asserted. See docs/claude/e2e-conventions.md, "Findings".
     for (const [i, expected] of [ALPHA, SECOND_URL].entries()) {
-      await rows.nth(i).click()
-      await expect.poll(() => clipboard(page), { message: `URL row ${i} copies its URL` }).toBe(expected)
+      await expectIconCopy(page, rows.nth(i), expected)
     }
   })
 

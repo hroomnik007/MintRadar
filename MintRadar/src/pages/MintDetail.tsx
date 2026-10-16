@@ -1626,18 +1626,18 @@ function MintDetailContent({ url }: { url: string }) {
                         <button
                           onClick={() => {
                             void navigator.clipboard.writeText(u)
-                            setCopiedUrl(true)
-                            setTimeout(() => setCopiedUrl(false), 2000)
+                            setCopiedContact(`url-${u}`)
+                            setTimeout(() => setCopiedContact(null), 2000)
                           }}
                           style={{
                             background:'none', border:'none', cursor:'pointer',
-                            color:'var(--text3)', padding:'2px 4px',
+                            color: copiedContact === `url-${u}` ? 'var(--accent)' : 'var(--text3)', padding:'2px 4px',
                             flexShrink:0, display:'flex',
                           }}
                           title="Copy URL"
                           aria-label="Copy URL"
                         >
-                          <Copy size={12} />
+                          {copiedContact === `url-${u}` ? <Check size={12} /> : <Copy size={12} />}
                         </button>
                       </div>
                     )
