@@ -573,6 +573,8 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 .md-vh-from { color: var(--text2); }
 .md-vh-to { color: var(--text); font-weight: 500; }
+/* Outage rows share the value style above but wrap (an error text can be long) instead of truncating. */
+.md-vh-wrap { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
 
 /* ── MOTD ───────────────────────────────────────────────────── */
 .md-motd {

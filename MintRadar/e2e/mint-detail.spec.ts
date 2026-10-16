@@ -192,3 +192,47 @@ test.describe('Mint Detail — /mint/:url canonicalisation (bare-host collision 
     await expect(page.locator('.gauge-num')).toHaveCount(0)
   })
 })
+
+test.describe('Mint Detail — outage table', () => {
+  // The outage rows use the value style of the Version history "To" column (same typography, same row height),
+  // not the page's body text. Short errors only, so no row wraps and the heights are comparable.
+  for (const [width, height] of [[1440, 900], [390, 844]] as const) {
+    test(`outage rows share the Version history value typography and row height at ${width}px`, async ({ page }) => {
+      const ago = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString()
+      await page.route('**/api/mints/outages**', r => r.fulfill({ json: {
+        sinceLastOutageMs: 3_000_000, avgRecoveryMs: 2_000_000, outageCount: 2,
+        outages: [{ startedAt: ago(9), durationMs: 35 * 60_000, error: 'offline' }, { startedAt: ago(5), durationMs: 90 * 60_000, error: 'HTTP 502' }],
+      } }))
+      await page.route('**/api/mints/version-history**', r => r.fulfill({ json: {
+        history: [{ version: 'Nutshell/0.19.2', firstSeenAt: ago(10) }, { version: 'Nutshell/0.18.3', firstSeenAt: ago(40) }], latestGlobalVersion: 'Nutshell/0.20.0',
+      } }))
+      await page.setViewportSize({ width, height })
+      await page.goto(detailPath)
+      await expect(page.locator('.md-tabs')).toBeVisible()
+      await page.locator('.md-tab', { hasText: 'History' }).click()
+      await page.getByText('Show outage details').click()
+
+      const outageTable = page.locator('details table.md-vh-table')
+      const versionTable = page.locator('.md-panel', { has: page.locator('.md-panel-title', { hasText: 'Version history' }) }).locator('table.md-vh-table')
+      await expect(outageTable.locator('tbody tr')).toHaveCount(2)
+      await expect(versionTable.locator('tbody tr')).toHaveCount(2)
+
+      const typography = (cell: import('@playwright/test').Locator) => cell.evaluate(el => {
+        const c = getComputedStyle(el)
+        return { family: c.fontFamily, size: c.fontSize, lineHeight: c.lineHeight, letterSpacing: c.letterSpacing, weight: c.fontWeight, color: c.color }
+      })
+      const versionTo = await typography(versionTable.locator('tbody tr').first().locator('td').nth(2))
+      expect(versionTo.family).toContain('JetBrains Mono')
+      for (const col of [0, 1, 2]) {
+        await expect.poll(() => typography(outageTable.locator('tbody tr').first().locator('td').nth(col)), `outage column ${col}`).toEqual(versionTo)
+      }
+      await expect.poll(async () => {
+        const outageRow = (await outageTable.locator('tbody tr').first().boundingBox())!.height
+        const versionRow = (await versionTable.locator('tbody tr').first().boundingBox())!.height
+        return Math.abs(outageRow - versionRow) <= 1
+      }, 'row heights within 1px').toBe(true)
+      // Nothing sticks out of the table on the page.
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+    })
+  }
+})

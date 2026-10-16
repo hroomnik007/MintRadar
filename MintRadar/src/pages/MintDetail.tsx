@@ -1959,9 +1959,9 @@ function MintDetailContent({ url }: { url: string }) {
                   <tbody>
                     {outagesData.outages.slice().reverse().map((o, i) => (
                       <tr key={i}>
-                        <td>{formatOutageStart(o.startedAt)}</td>
-                        <td>{formatDuration(o.durationMs)}</td>
-                        <td>{o.error}</td>
+                        <td className="md-vh-ver md-vh-to md-vh-wrap">{formatOutageStart(o.startedAt)}</td>
+                        <td className="md-vh-ver md-vh-to md-vh-wrap">{formatDuration(o.durationMs)}</td>
+                        <td className="md-vh-ver md-vh-to md-vh-wrap">{o.error}</td>
                       </tr>
                     ))}
                   </tbody>
