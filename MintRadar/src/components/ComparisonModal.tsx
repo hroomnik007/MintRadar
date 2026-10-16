@@ -19,13 +19,8 @@ import { formatDate } from '@/utils/formatDate'
 import { probeMint } from '@core/mint/api'
 import { pickInputFee } from '@/utils/mintProbeDisplay'
 import { InfoTooltip } from '@/components/InfoTooltip'
-
-const IcClose = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-    <line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-    <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-  </svg>
-)
+import { IcClose } from '@/components/IcClose'
+import './ComparisonModal.css'
 
 function reliabilityScoreInfo(score: number) {
   if (score >= 70) return { label: 'High Reliability', color: 'var(--accent)', bg: 'var(--green-soft)', border: 'var(--green-soft-strong)' }
@@ -266,7 +261,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
       <div className="cmp-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="cmp-modal-title" ref={dialogRef}>
         <div className="cmp-modal-header">
           <div id="cmp-modal-title" style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text)' }}>Mint comparison</div>
-          <button type="button" onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', padding: 4 }}><IcClose /></button>
+          <button type="button" className="cmp-modal-close" onClick={onClose} aria-label="Close"><IcClose /></button>
         </div>
 
         {isMobile ? (

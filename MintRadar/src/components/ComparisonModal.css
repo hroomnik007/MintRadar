@@ -1,0 +1,4 @@
+/* Close button of the Comparison modal: the same 32px boxed button as the other dialogs (.md-picker-close, .qr-modal-close). */
+.cmp-modal-close { width: 32px; height: 32px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; padding: 0; background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text2); cursor: pointer; transition: color var(--transition), border-color var(--transition); }
+.cmp-modal-close:hover { color: var(--text); border-color: var(--border2); }
+.cmp-modal-close:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }

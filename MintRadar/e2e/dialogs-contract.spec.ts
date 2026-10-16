@@ -17,11 +17,6 @@ const DESKTOP = { width: 1440, height: 900 }
 const SMALL = { width: 320, height: 640 }
 const PHONE = { width: 390, height: 844 }
 
-// FINDING (application defect, not fixed here): the close button of the Comparison modal is 20 x 20 CSS px, below the 32 px
-// every other dialog has. Its size assertion is left out until the app is fixed (docs/claude/e2e-conventions.md, "Findings");
-// every other check in the test still runs for it. Remove the entry when the button is 32 px.
-const SMALL_CLOSE_FINDING = new Set(['Comparison modal'])
-
 function viewportsOf(c: ModalCase) {
   const own = c.viewport
   if (own) return own.width <= SMALL.width ? [SMALL] : [own, SMALL]
@@ -87,10 +82,8 @@ for (const c of CASES) {
       // The close control is a real target and not clipped.
       expect(g.close, `${c.id}: has a close button (${c.close})`).not.toBeNull()
       const close = g.close!
-      if (!SMALL_CLOSE_FINDING.has(c.id)) {
-        expect(close.w, `${c.id}: close button width ${close.w}`).toBeGreaterThanOrEqual(32)
-        expect(close.h, `${c.id}: close button height ${close.h}`).toBeGreaterThanOrEqual(32)
-      }
+      expect(close.w, `${c.id}: close button width ${close.w}`).toBeGreaterThanOrEqual(32)
+      expect(close.h, `${c.id}: close button height ${close.h}`).toBeGreaterThanOrEqual(32)
       expect(close.l, `${c.id}: close button inside the viewport (left)`).toBeGreaterThanOrEqual(-0.5)
       expect(close.t, `${c.id}: close button inside the viewport (top)`).toBeGreaterThanOrEqual(-0.5)
       expect(close.r, `${c.id}: close button inside the viewport (right)`).toBeLessThanOrEqual(w + 0.5)
