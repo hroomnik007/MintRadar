@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const { queries } = vi.hoisted(() => ({ queries: [] as string[] }))
 vi.mock('pg', () => ({
-  Pool: class { query = async (sql: string) => { queries.push(sql); return { rows: [], rowCount: 0 } } },
+  Pool: class { on = () => this; query = async (sql: string) => { queries.push(sql); return { rows: [], rowCount: 0 } } },
 }))
 
 import { initDb, AUDIT_CZ_BACKFILL_SQL } from '../db.js'

@@ -4,6 +4,7 @@ import { finalizeEvent, generateSecretKey, type Event as NostrEvent } from 'nost
 const { queries } = vi.hoisted(() => ({ queries: [] as Array<{ sql: string; params?: unknown[] }> }))
 vi.mock('pg', () => ({
   Pool: class {
+    on = () => this
     query = async (sql: string, params?: unknown[]) => { queries.push({ sql, params }); return { rows: [], rowCount: 0 } }
     connect = vi.fn()
   },

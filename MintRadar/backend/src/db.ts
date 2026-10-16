@@ -1,11 +1,47 @@
 import { Pool } from 'pg'
 
+const POOL_ERROR_LOG_INTERVAL_MS = 10_000
+
+/**
+ * The pg Pool emits 'error' when an IDLE client loses its connection (Postgres restart, container recreation, network
+ * drop). Without a listener Node turns that into an uncaughtException, one per idle client. pg removes the failed client
+ * from the pool by itself and connects anew on the next query, so the listener only logs: ONE line (message and code,
+ * anything that looks like a URL redacted, never SQL or parameters), at most one per interval, followed by one line with
+ * the number of repeats it swallowed. Every long-lived pg Pool/Client needs such a listener.
+ */
+export function attachPoolErrorHandler(
+  emitter: { on(event: 'error', listener: (err: unknown) => void): unknown },
+  intervalMs: number = POOL_ERROR_LOG_INTERVAL_MS,
+): void {
+  let windowOpen = false
+  let suppressed = 0
+  emitter.on('error', (err: unknown) => {
+    if (windowOpen) { suppressed++; return }
+    windowOpen = true
+    console.error(`[db] pool error: ${describePoolError(err)}`)
+    setTimeout(() => {
+      if (suppressed > 0) console.error(`[db] pool error: ${suppressed} more in the last ${Math.round(intervalMs / 1000)}s (suppressed)`)
+      suppressed = 0
+      windowOpen = false
+    }, intervalMs).unref()
+  })
+}
+
+function describePoolError(err: unknown): string {
+  const e = (err ?? {}) as { message?: unknown; code?: unknown }
+  const message = typeof e.message === 'string' ? e.message : 'unknown error'
+  const code = typeof e.code === 'string' ? e.code : 'none'
+  const clean = message.replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, '[redacted-url]').replace(/\s+/g, ' ').slice(0, 200)
+  return `${clean} (code ${code.slice(0, 40)})`
+}
+
 export const pool = new Pool({
   connectionString: process.env['DATABASE_URL'],
   max: 5,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
 })
+attachPoolErrorHandler(pool)
 
 export const AUDIT_CZ_BACKFILL_SQL = `UPDATE mints m
      SET audit_cz_total = (d.detail #>> '{swaps7d,all,total}')::integer,
