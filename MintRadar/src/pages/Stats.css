@@ -1210,17 +1210,18 @@
   min-width: 0;
 }
 .stats-now-behind { font-size: 13px; }
-/* Design template (desktop): centred tiles with the dividers, and the outdated-software bar as a boxed amber row. */
+/* The outdated-software bar is a boxed amber row at every width. */
+.stats-now-behind > div {
+  border: 1px solid color-mix(in srgb, var(--amber) 35%, var(--border));
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+/* Design template (desktop): centred tiles with the dividers. */
 @media (min-width: 1280px) {
   .stats-now-panel .stat-card { align-items: center; text-align: center; padding: 0 18px; }
   .stats-now-panel .stat-card:first-child { padding-left: 18px; }
   .stats-now-panel .stat-figure { justify-content: center; }
-  .stats-now-behind > div {
-    border: 1px solid color-mix(in srgb, var(--amber) 35%, var(--border));
-    background: color-mix(in srgb, var(--amber) 8%, transparent);
-    border-radius: 10px;
-    padding: 12px 16px;
-  }
 }
 
 /* Network health index: ring left, factors right on desktop. */

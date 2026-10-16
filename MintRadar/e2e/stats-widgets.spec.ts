@@ -174,6 +174,37 @@ test('Software panel: the share counts only Nutshell / cdk-mintd mints and never
   await expect(page.locator('.stats-now-panel .stats-now-behind')).toContainText('33%')
 })
 
+// The outdated-software row is a boxed amber row at every width, with the same declarations as on desktop
+// (it used to be boxed from 1280 px only). At 320 px the label wraps and the content must stay inside the box.
+test('Software panel: the outdated-software row keeps the same box on phones as on desktop', async ({ page }) => {
+  await knownMints(page, [
+    { ...MOCK_KNOWN_MINTS[0], online: true, version: 'Nutshell/0.20.0' },
+    { ...MOCK_KNOWN_MINTS[1], online: true, version: 'Nutshell/0.19.0' },
+    { ...MOCK_KNOWN_MINTS[2], online: true, version: 'Nutshell/0.18.0' },
+    { ...MOCK_KNOWN_MINTS[3], online: true, version: 'Nutshell/0.16.0' },
+  ])
+  const box = async (width: number, height: number) => {
+    await page.setViewportSize({ width, height })
+    await page.goto('/stats')
+    const row = page.locator('.stats-now-behind > div')
+    await expect(row).toBeVisible()
+    return row.evaluate(el => {
+      const cs = getComputedStyle(el)
+      return {
+        borderWidth: cs.borderTopWidth, borderStyle: cs.borderTopStyle, borderColor: cs.borderTopColor,
+        background: cs.backgroundColor, radius: cs.borderTopLeftRadius, padding: cs.padding,
+        fits: el.scrollWidth <= el.clientWidth,
+      }
+    })
+  }
+  const desktop = await box(1440, 900)
+  expect(desktop.borderWidth).toBe('1px')
+  expect(desktop.fits).toBe(true)
+  for (const [width, height] of [[390, 844], [320, 640]] as const) {
+    expect(await box(width, height), `row box at ${width}px`).toEqual(desktop)
+  }
+})
+
 for (const width of [901, 1024, 1140, 1280, 1440, 1920, 390]) {
   test(`Stats hero tile notes stay inside their tiles at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
