@@ -75,10 +75,13 @@ for (const pg of PAGES) {
       const alert = page.getByRole('alert')
       if (failure === 'slow500') {
         // While the answer is still on its way the page shows no error yet; then the answer arrives (500).
-        // (Not asserted here: that Home's header strip does not read "0 online mints" while loading. It does, which is a
-        // finding listed in docs/claude/e2e-conventions.md, not something this spec may fix.)
+        // On Home the header strip shows dashes (never "0 online mints") and no mint state exists meanwhile.
         await expect.poll(slow.arrived, { message: 'the slow request is waiting at the mock' }).toBe(true)
         await expect(alert).toHaveCount(0)
+        if (pg.id === 'Home') {
+          await expect(page.locator('.dash-status')).toBeVisible()
+          await expectNoMintState(page)
+        }
         slow.letThrough()
       }
       await expect(alert).toContainText(ERROR_TEXT, { timeout: 20_000 })
@@ -92,6 +95,30 @@ for (const pg of PAGES) {
     })
   }
 }
+
+test('Home: while the list is pending the header strip shows dashes (never "0 online"), then the counts', async ({ page }) => {
+  await mockRelays(page)
+  await installApiMocks(page)
+  await page.unroute('**/api/mints/known')
+  let letThrough!: () => void
+  const held = new Promise<void>(done => { letThrough = done })
+  let arrived = false
+  await page.route('**/api/mints/known', async r => {
+    arrived = true
+    await held
+    await r.fulfill({ json: MOCK_KNOWN_MINTS })
+  })
+  await page.goto('/')
+  await expect.poll(() => arrived, { message: 'the request is waiting at the mock' }).toBe(true)
+  const strip = page.locator('.dash-status')
+  await expect(strip).toHaveText(/^\s*—\s*online mints\s*—\s*tracked mints\s*last checked —\s*$/)
+  await expect(page.locator('body')).not.toContainText(/\b0 (online|tracked) mints/i)
+  letThrough()
+  await expect(page.locator('.mint-grid .mint-card').first()).toBeVisible({ timeout: 15_000 })
+  await expect(strip).not.toContainText('—')
+  await expect(strip.locator('b').first()).toHaveText(/^[1-9]\d*$/)
+  await expect(strip.locator('b').nth(1)).toHaveText(String(MOCK_KNOWN_MINTS.length))
+})
 
 test('Mint Detail: a slow successful list shows a quiet Loading… (not an error) and then the page', async ({ page }) => {
   await mockRelays(page)

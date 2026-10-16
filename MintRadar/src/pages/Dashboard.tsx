@@ -1144,9 +1144,9 @@ export default function Dashboard() {
         <div className="dash-status">
           <div className="dash-status-btn">
             <span className="dash-status-live" aria-hidden="true" />
-            <span className="dash-status-item"><b>{onlineCount}</b> online mints</span>
+            <span className="dash-status-item"><b>{knownLoading ? '—' : onlineCount}</b> online mints</span>
             <span className="dash-status-sep" aria-hidden="true" />
-            <span className="dash-status-item"><b>{knownTotal}</b> tracked mints</span>
+            <span className="dash-status-item"><b>{knownLoading ? '—' : knownTotal}</b> tracked mints</span>
             <span className="dash-status-item dash-status-end">last checked {formatTimeAgo(lastCheckTime)}</span>
           </div>
         </div>
