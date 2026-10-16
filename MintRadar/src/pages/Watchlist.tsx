@@ -20,6 +20,7 @@ import { showWatchlistCount } from '@/utils/watchlistCount'
 import { useLegacyNotifyNotice, LEGACY_NOTIFY_NOTICE_TEXT } from '@/hooks/useLegacyNotifyNotice'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import './Watchlist.css'
+import { pluralize } from '@/utils/plural'
 
 // Same lazy-loading rationale as Dashboard.tsx — Recharts only loads once a
 // user actually opens Compare.
@@ -139,7 +140,7 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
         <span className="wl-rec-panel-badge">NIP-87</span>
       </div>
       {!isEmpty && (
-        <div className="wl-rec-panel-subheader">{filteredRecs.length} mints · from {followCount} follows</div>
+        <div className="wl-rec-panel-subheader">{pluralize(filteredRecs.length, 'mint')} · from {pluralize(followCount, 'follow')}</div>
       )}
 
       {isEmpty ? (

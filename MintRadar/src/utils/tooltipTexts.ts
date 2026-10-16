@@ -14,6 +14,7 @@
 import { AUDIT_MAX_AGE_HOURS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL, AUDIT_TAB_MIN_SAMPLES, auditComponent } from './auditScore'
 import { NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP, TRACKED_NUT_COUNT, contactComponent, nutComponent, uptimeComponent } from './reliabilityScore'
 import { UNKNOWN_SOFTWARE_POINTS, pointsForMinorsBehind } from './versionRule'
+import { pluralize } from './plural'
 
 // ── Facts that only the backend defines (compared with it by the unit test) ───────────────────────────────────
 /** Window of the uptime figure (backend/src/prober.ts: the last 24 hours of probes). */
@@ -256,5 +257,5 @@ export function notifyLimitText(max: number = MAX_NOTIFICATION_SUBSCRIPTIONS): s
 }
 /** Dashboard: the note that counts the mints hidden as degraded. */
 export function hiddenMintsText(count: number, hours: number): string {
-  return `${count} mints hidden (offline ${hours}h+)`
+  return `${pluralize(count, 'mint')} hidden (offline ${hours}h+)`
 }

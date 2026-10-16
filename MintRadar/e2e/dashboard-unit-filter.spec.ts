@@ -124,7 +124,7 @@ test.describe('Dashboard unit filter', () => {
     await page.route('**/api/mints/known', r => r.fulfill({ json: [...mints, mk('Zulu', ['sat'], 5, { online: false, degraded: true })] }))
     await page.goto('/?unit=usd')
     await expect(cards(page)).toHaveCount(3)
-    await expect(page.locator('.degraded-note')).toContainText('1 mints hidden')
+    await expect(page.locator('.degraded-note')).toContainText('1 mint hidden')
   })
 
   for (const [width, height] of [[320, 700], [390, 844], [768, 900], [1440, 900]] as const) {

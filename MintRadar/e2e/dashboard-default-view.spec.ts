@@ -72,6 +72,20 @@ test.describe('Dashboard default view', () => {
     await expect(page.locator('.card-name', { hasText: 'Charlie Mint' })).toBeVisible()
   })
 
+  test('hidden-mints note uses the singular for one mint and the plural for two', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('.mint-card').first()).toBeVisible()
+    await expect(page.locator('.degraded-note')).toContainText('1 mint hidden (offline 24h+)')
+    await expect(page.locator('.degraded-note')).not.toContainText('1 mints')
+
+    const degraded = { ...MOCK_KNOWN_MINTS[0], url: 'https://golf.mint.example', name: 'Golf Mint', online: false, degraded: true, reliabilityScore: 20 }
+    await page.unroute('**/api/mints/known')
+    await page.route('**/api/mints/known', r => r.fulfill({ json: [...MOCK_KNOWN_MINTS, degraded] }))
+    await page.goto('/')
+    await expect(page.locator('.mint-card').first()).toBeVisible()
+    await expect(page.locator('.degraded-note')).toContainText('2 mints hidden (offline 24h+)')
+  })
+
   test('action strip deep links still reach /tools#pick and #token', async ({ page }) => {
     await page.goto('/')
     await expect(page.locator('.mint-card').first()).toBeVisible()

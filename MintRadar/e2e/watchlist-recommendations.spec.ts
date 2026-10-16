@@ -123,7 +123,7 @@ test.describe('Watchlist — recommendations section', () => {
     await expect(slim(page)).toHaveCount(0)
     await expect(section(page).locator('.wl-rec-panel-title')).toHaveText('Recommended by follows')
     await expect(section(page).locator('.wl-rec-panel-badge')).toHaveText('NIP-87')
-    await expect(section(page).locator('.wl-rec-panel-subheader')).toHaveText('1 mints · from 1 follows')
+    await expect(section(page).locator('.wl-rec-panel-subheader')).toHaveText('1 mint · from 1 follow')
     await expect(section(page).locator('.wl-rec-row')).toHaveCount(1)
     await expect(section(page).locator('.wl-rec-row')).toContainText(RECOMMENDED.name!)
     const lastCard = (await page.locator('.wl-grid .mint-card').last().boundingBox())!

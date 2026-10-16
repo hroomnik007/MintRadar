@@ -26,6 +26,7 @@ import {
   nhiOnlineRowText, nhiReliabilityRowText, nhiAdvancedRowText, avgUptimeCaption,
 } from '@/utils/networkHealthIndex'
 import { formatDate } from '@/utils/formatDate'
+import { pluralize } from '@/utils/plural'
 import './Stats.css'
 
 const STATS_ERROR = 'Could not load the statistics. Please try again.'
@@ -301,7 +302,7 @@ function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             {flag && <span style={{ fontSize: 20 }}>{flag}</span>}
             <span className="nut-modal-title">{display}</span>
-            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{mints.length} mints</span>
+            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{pluralize(mints.length, 'mint')}</span>
           </div>
         </div>
         <div className="nut-modal-list" tabIndex={0} role="group" aria-label="Mints">
@@ -475,7 +476,7 @@ function MoreLocationsModal({ locations, onClose, onSelectLocation }: {
           {locations.length === 0 && <div className="nut-modal-empty">No locations</div>}
         </div>
         <div className="nut-modal-footer">
-          <span>{total} mints across {locations.length} location{locations.length === 1 ? '' : 's'}</span>
+          <span>{pluralize(total, 'mint')} across {pluralize(locations.length, 'location')}</span>
         </div>
       </div>
     </div>
