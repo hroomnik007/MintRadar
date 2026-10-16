@@ -377,6 +377,141 @@ rsync -a --ignore-existing server01:/var/backups/mintradar/ ~/backups/mintradar/
 
 **Honest limitation:** the backups sit on the same server and the same disk. They protect against mistakes, bad deploys and corrupted data, **not** against losing the server or the disk. For that, Hetzner snapshots or a regular off-server copy (the `rsync` above, ideally encrypted) are needed. No encryption, no notification on failure (the only signal is `LAST_OK` going stale and `backup.log`).
 
+## Relay (strfry) backup (2026-10-16)
+
+The own relay (container `mintradar-strfry`, compose file `/opt/mintradar-strfry/docker-compose.strfry.yml`, database in the Docker volume `mintradar-strfry_strfry-db`, mounted at `/app/strfry-db`) had no backup. The Postgres backups do not cover it, and `backup-own-events.sh` only copies events from public relays INTO the relay. The relay also holds events that exist on no public relay (for example kinds 7375, 7376 and 30078 of the owner), so it can be the only copy. Since 2026-10-16 it is exported every 6 hours. Nothing about the relay, its compose file, configuration, allow-list, volume or the other cron jobs was changed; the script lives on the server, **not** in the application code (the text below is a copy for safekeeping).
+
+- **Method:** `docker exec mintradar-strfry /app/strfry export | gzip` (read-only, safe while the relay runs). One event per line, JSON, key order starts with `"content"`.
+- **Where:** `/var/backups/strfry/strfry_<YYYYMMDD>_<HHMMSS>.jsonl.gz` (UTC). Directory `drwx------ deploy:deploy`, files `600`. Script: `/home/deploy/bin/backup-strfry.sh` (`deploy`, `700`).
+- **Schedule:** `50 */6 * * *` UTC (server and cron run in UTC), 20 minutes after the Finvu dump.
+- **Retention:** files older than `-mtime +14` go, only inside `/var/backups/strfry`, only the exact pattern `strfry_*.jsonl.gz`, and **never the 8 newest files**. A failed run does not run retention.
+- **Safety:** `flock`, refuses to run when the container is not running, temp file `.tmp` verified before the atomic `mv`: `gzip -t`, at least 100 bytes, every line carries a 64-hex `"id"` (the export starts with `{"content"`, not `{"id":"`, so the check counts lines with an id instead of looking at the first characters). `LAST_OK` is written last: `<UTC timestamp> <file name> <event count>`. A `WARNING` line in the log (not a failure) appears if the count is below 80 % of the previous backup's count. On any error the temp files are removed, one line `strfry-backup FAILED: <reason> (exit N)` goes to stderr and the exit code is non-zero.
+- **Log:** `/var/backups/strfry/backup.log` (`600`), the script keeps the last 500 lines itself.
+
+Cron line (`crontab -l` of `deploy`):
+
+```
+50 */6 * * * /home/deploy/bin/backup-strfry.sh >> /var/backups/strfry/backup.log 2>&1
+```
+
+Script `/home/deploy/bin/backup-strfry.sh` (sha256 `45d15b05f1cb9dc03d66ecc9a968a9e1513966fa104f151c103fbcfb5dea8167`):
+
+```bash
+#!/bin/bash
+set -euo pipefail
+umask 077
+export PATH=/usr/bin:/bin:/usr/local/bin
+
+BACKUP_DIR=/var/backups/strfry
+CONTAINER=mintradar-strfry
+KEEP_DAYS=14       # delete strfry_*.jsonl.gz older than this
+KEEP_NEWEST=8      # never delete the 8 newest, even if old
+MIN_BYTES=100
+LOG="$BACKUP_DIR/backup.log"
+LOCK="$BACKUP_DIR/.lock"
+TS=$(date -u +%Y%m%d_%H%M%S)
+FINAL="$BACKUP_DIR/strfry_$TS.jsonl.gz"
+TMP="$FINAL.tmp"
+ERR="$BACKUP_DIR/.export.err"
+MSG="unexpected error"
+
+log() { echo "$(date -u '+%Y-%m-%d %H:%M:%S') UTC $*"; }
+
+# Any error: remove temp files, one line to stderr, non-zero exit.
+trap 'rc=$?; rm -f "$TMP" "$ERR"; if [ "$rc" -ne 0 ]; then echo "strfry-backup FAILED: $MSG (exit $rc)" >&2; fi' EXIT
+
+[ -d "$BACKUP_DIR" ] || { MSG="$BACKUP_DIR does not exist"; exit 1; }
+
+# No two runs at once.
+exec 9>"$LOCK"
+MSG="another run holds the lock"
+flock -n 9 || exit 1
+
+# Keep the last 500 log lines (in place: the cron >> descriptor stays valid).
+if [ -f "$LOG" ] && [ "$(wc -l < "$LOG")" -gt 500 ]; then
+  tail -n 500 "$LOG" > "$LOG.rot" && cat "$LOG.rot" > "$LOG"; rm -f "$LOG.rot"
+fi
+chmod 600 "$LOG" 2>/dev/null || true
+
+if ! [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null)" = "true" ]; then
+  MSG="container $CONTAINER is not running"
+  exit 1
+fi
+
+log "start"
+MSG="strfry export or gzip returned an error"
+docker exec "$CONTAINER" /app/strfry export 2>"$ERR" | gzip > "$TMP" \
+  || { MSG="strfry export or gzip returned an error: $(tail -n 1 "$ERR" 2>/dev/null | cut -c1-200)"; exit 1; }
+
+MSG="export is not a valid gzip stream"
+gzip -t "$TMP"
+MSG="export is smaller than $MIN_BYTES bytes"
+[ "$(stat -c %s "$TMP")" -ge "$MIN_BYTES" ]
+MSG="could not count events"
+COUNT=$(gzip -dc "$TMP" | wc -l)
+# strfry export writes one JSON event per line (key order: content first),
+# so check that every line carries a 64-hex "id" field.
+MSG="export lines are not all events with a 64-hex id"
+IDS=$(gzip -dc "$TMP" | grep -c '"id":"[0-9a-f]\{64\}"' || true)
+[ "$COUNT" -gt 0 ] && [ "$IDS" -eq "$COUNT" ]
+
+# Compare with the previous backup (3rd field of LAST_OK); warn, do not fail.
+if [ -f "$BACKUP_DIR/LAST_OK" ]; then
+  PREV=$(awk '{print $3}' "$BACKUP_DIR/LAST_OK" 2>/dev/null || true)
+  if [[ "${PREV:-}" =~ ^[0-9]+$ ]] && [ "$PREV" -gt 0 ] && [ $((COUNT * 100)) -lt $((PREV * 80)) ]; then
+    log "WARNING: event count $COUNT is below 80% of previous backup ($PREV)"
+  fi
+fi
+
+MSG="could not move the export into place"
+chmod 600 "$TMP"
+mv -f "$TMP" "$FINAL"
+
+MSG="could not write LAST_OK"
+printf '%s %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(basename "$FINAL")" "$COUNT" > "$BACKUP_DIR/LAST_OK.tmp"
+chmod 600 "$BACKUP_DIR/LAST_OK.tmp"
+mv -f "$BACKUP_DIR/LAST_OK.tmp" "$BACKUP_DIR/LAST_OK"
+
+# Retention: only exact-pattern files in this directory, never the newest 8.
+MSG="retention failed"
+mapfile -t NEWEST < <(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'strfry_*.jsonl.gz' | sort -r | sed -n "1,${KEEP_NEWEST}p")
+while IFS= read -r -d '' f; do
+  for k in "${NEWEST[@]}"; do [ "$f" = "$k" ] && continue 2; done
+  rm -f -- "$f"; log "removed old backup $(basename "$f")"
+done < <(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'strfry_*.jsonl.gz' -mtime +"$KEEP_DAYS" -print0)
+find "$BACKUP_DIR" -maxdepth 1 -type f -name 'strfry_*.jsonl.gz.tmp' -mtime +1 -delete
+
+log "Backup completed: $(basename "$FINAL") ($(stat -c %s "$FINAL") bytes, $COUNT events)"
+```
+
+**Check freshness** (names, sizes, times and counts only; never print events from this relay, it holds private data): `cat /var/backups/strfry/LAST_OK`, `ls -l --time-style=long-iso /var/backups/strfry`, `tail -n 5 /var/backups/strfry/backup.log`.
+
+**Restore into a NEW relay** (as `deploy`; an existing event is skipped as a duplicate, so importing into a non-empty database is safe). Stop the relay, import into its volume with a one-off container of the same image and the same read-only configuration, start it again:
+
+```
+F=/var/backups/strfry/strfry_<YYYYMMDD>_<HHMMSS>.jsonl.gz
+docker compose -f /opt/mintradar-strfry/docker-compose.strfry.yml stop strfry
+gzip -dc "$F" | docker run --rm -i --network none --memory 256m \
+  -v mintradar-strfry_strfry-db:/app/strfry-db \
+  -v /opt/mintradar-strfry/strfry.conf:/etc/strfry.conf:ro \
+  -v /opt/mintradar-strfry/writePolicy.sh:/app/plugins/writePolicy.sh:ro \
+  -v /opt/mintradar-strfry/privileged-pubkeys.txt:/app/plugins/privileged-pubkeys.txt:ro \
+  --entrypoint /app/strfry mintradar-strfry-strfry import
+docker compose -f /opt/mintradar-strfry/docker-compose.strfry.yml start strfry
+```
+
+The last line of the import output must read `Done. Processed N lines. N added, 0 rejected` (N = the count in `LAST_OK`). Then compare the count: `docker exec mintradar-strfry /app/strfry scan '{}' | wc -l`. For a brand-new server first create the volume and the container with the compose file (`up -d --build`) and stop it, then run the same import.
+
+**Restore test (2026-10-16, server01):** the newest backup (`strfry_20261016_180841.jsonl.gz`, 35 511 B, 113 events) was imported (without `--no-verify`) into a throwaway container from the same image as the relay (`--network none`, `--memory 256m`, `--memory-swap 256m`, no ports, no volumes, `/app/strfry-db` on a tmpfs, the three configuration files mounted read-only, entrypoint `sleep 600`). Result: import exit 0 in 0.28 s, `113 added, 0 rejected, 0 dups`. Live relay and restored copy had the same total (113), the same counts for all 20 kinds, and the same sha256 of the sorted list of event ids (`61f41289…2fa03001`); a second live count a minute later was still 113, so no event was written in between. The container was removed in a `trap`; `docker ps -a` and `docker volume ls` were identical before and after. Only counts, kinds and hashes were compared, no event was printed. Note: the test restored into a tmpfs; the variant above that imports into the real volume uses the same `import` command but was not run against the production volume.
+
+**Off-server copy (not set up yet; pull from a laptop):**
+
+```
+rsync -a --ignore-existing server01:/var/backups/strfry/ ~/backups/strfry/
+```
+
+**Honest limitation:** the backups sit on the same server and the same disk. They protect against mistakes and a damaged database, **not** against losing the server or the disk. No encryption (the files contain private events of the owner in clear text, so keep any copy on an encrypted disk), no notification on failure (the only signal is `LAST_OK` going stale and `backup.log`).
+
 ## Relay allow-list and the health-assertion activation checklist (2026-10-14)
 
 `deploy/strfry/privileged-pubkeys.txt` is the ONE list of privileged authors of the own relay (`wss://nostr.mintradar.org`): `writePolicy.sh` (inside the strfry container, bind-mounted read-only, **read once at startup**) lets these keys write any kind, everyone else only kinds 38172 and 38000; `backup-own-events.sh` reads the same file for its author list (every listed author gets the base kinds 38172 and 38000; extra kinds are per author in `EXTRA_KINDS_BY_AUTHOR`, nothing for the health key). Three keys are listed: the maintainer identity, the MintRadar service identity (alerts) and, since 2026-10-14, the **MintRadar Health** attestation key (`2ddd7ce9…941c`). The repository copy is only the source: the file on the server (strfry install directory, `/opt/mintradar-strfry`) changes when the gated server step copies it and restarts the relay container; a deploy of the repository does not do that.
