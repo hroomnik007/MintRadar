@@ -36,7 +36,7 @@ const dayOfLabel = (text: string): number => {
 }
 
 const EXPECTED_COUNT: Record<number, { 30: [number, number]; 90: [number, number] }> = {
-  1440: { 30: [4, 6], 90: [6, 8] },
+  1440: { 30: [9, 11], 90: [11, 14] },
   768: { 30: [4, 6], 90: [5, 8] },
   390: { 30: [3, 5], 90: [3, 5] },
   320: { 30: [3, 4], 90: [3, 4] },
@@ -83,7 +83,8 @@ for (const width of [1440, 768, 390, 320]) {
       // Time spacing is constant: one step of 7, 14 or 28 days, within a day.
       const dayNumbers = ticks.map(t => dayOfLabel(t.text))
       const gaps = dayNumbers.slice(1).map((d, i) => d - dayNumbers[i]!)
-      expect([7, 14, 28]).toContain(gaps[0])
+      // Mobile (up to 768px): 7, 14 or 28 days; desktop also 2 or 3.
+      expect(width <= 768 ? [7, 14, 28] : [2, 3, 7, 14, 28]).toContain(gaps[0])
       for (const g of gaps) expect(Math.abs(g - gaps[0]!)).toBeLessThanOrEqual(1)
     })
   }
@@ -257,17 +258,20 @@ test('the other period is prefetched after the first load, and the toggle is the
   await expect.poll(() => mock.requests.length, { message: 'both periods were requested' }).toBe(2)
   await flush(page)
 
+  const ticks30 = (await stableTicks(page)).map(t => t.text)
   const sampled = await startSampler(page)
   await panel.getByRole('button', { name: '90d', exact: true }).click()
   const body = panel.locator('.stats-trend-body')
   // Same task as the click: the 90d chart is already there, nothing is dimmed and no loading note is shown.
   expect(await body.evaluate(el => el.classList.contains('is-pending'))).toBe(false)
   await expect(panel.getByRole('status')).toHaveCount(0)
-  expect((await stableTicks(page)).length).toBeGreaterThanOrEqual(6)
+  const ticks90 = (await stableTicks(page)).map(t => t.text)
+  expect(ticks90).not.toEqual(ticks30)
+  expect(ticks90.at(-1)).toBe(NEWEST_LABEL)
 
   await panel.getByRole('button', { name: '30d', exact: true }).click()
   expect(await body.evaluate(el => el.classList.contains('is-pending'))).toBe(false)
-  expect((await stableTicks(page)).length).toBeLessThanOrEqual(6)
+  expect((await stableTicks(page)).map(t => t.text)).toEqual(ticks30)
   await flush(page)
   const end = await sampled()
   expect(end.pending).toBe(false)

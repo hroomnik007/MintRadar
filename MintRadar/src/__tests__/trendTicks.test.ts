@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { selectTrendTicks, trendTickLabels, TREND_TICK_MIN_SPACING } from '../utils/trendTicks'
+import { selectTrendTicks, trendTickLabels, TREND_TICK_MIN_SPACING, DESKTOP_TREND_TICK_STEPS, DESKTOP_TREND_TICK_MIN_SPACING } from '../utils/trendTicks'
 
 const DAY = 86_400_000
 function series(days: number, newest = '2026-10-16'): string[] {
@@ -77,6 +77,25 @@ describe('selectTrendTicks', () => {
   it('a single point and an empty series', () => {
     expect(selectTrendTicks(['2026-10-16'], 700)).toEqual(['2026-10-16'])
     expect(selectTrendTicks([], 700)).toEqual([])
+  })
+})
+
+describe('selectTrendTicks, desktop steps', () => {
+  const desktop = (dates: string[], width: number) => selectTrendTicks(dates, width, DESKTOP_TREND_TICK_MIN_SPACING, DESKTOP_TREND_TICK_STEPS)
+  for (const [days, width] of [[30, 730], [30, 900], [30, 1200], [90, 730], [90, 900], [90, 1200]] as const) {
+    it(`${days}d at ${width}px: newest last, equal steps, at least ${DESKTOP_TREND_TICK_MIN_SPACING}px apart`, () => {
+      const dates = series(days)
+      const ticks = desktop(dates, width)
+      expect(ticks.at(-1)).toBe('2026-10-16')
+      expect(new Set(gapsInDays(ticks)).size).toBe(1)
+      expect(minPx(dates, ticks, width)).toBeGreaterThanOrEqual(DESKTOP_TREND_TICK_MIN_SPACING)
+    })
+  }
+
+  it('is denser than the mobile rule on a wide chart', () => {
+    for (const days of [30, 90]) {
+      expect(desktop(series(days), 730).length).toBeGreaterThan(selectTrendTicks(series(days), 730).length)
+    }
   })
 })
 

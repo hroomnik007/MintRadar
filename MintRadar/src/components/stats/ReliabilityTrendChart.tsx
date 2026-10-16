@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Text, type XAxisTickContentProps } from 'recharts'
 import { formatDate } from '@/utils/formatDate'
 import { LoadError, LoadingNote } from '@/components/LoadError'
-import { selectTrendTicks, trendTickLabels } from '@/utils/trendTicks'
+import { useIsMobile } from '@/hooks/useIsMobile'
+import { selectTrendTicks, trendTickLabels, DESKTOP_TREND_TICK_STEPS, DESKTOP_TREND_TICK_MIN_SPACING, TREND_TICK_STEPS, TREND_TICK_MIN_SPACING } from '@/utils/trendTicks'
 
 export interface TrendPoint { date: string; avgReliability: number }
 
@@ -14,7 +15,11 @@ const PLOT_INSET = 36
 export function ReliabilityTrendChart({ data }: { data: readonly TrendPoint[] }) {
   const [width, setWidth] = useState(0)
   const dates = useMemo(() => data.map(d => d.date), [data])
-  const ticks = useMemo(() => selectTrendTicks(dates, width - PLOT_INSET), [dates, width])
+  const isMobile = useIsMobile()
+  const ticks = useMemo(
+    () => selectTrendTicks(dates, width - PLOT_INSET, isMobile ? TREND_TICK_MIN_SPACING : DESKTOP_TREND_TICK_MIN_SPACING, isMobile ? TREND_TICK_STEPS : DESKTOP_TREND_TICK_STEPS),
+    [dates, width, isMobile],
+  )
   const labels = useMemo(() => trendTickLabels(ticks), [ticks])
   const first = dates[0]
   const last = dates[dates.length - 1]

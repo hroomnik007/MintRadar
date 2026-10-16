@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { render, screen, renderHook, waitFor, act, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
@@ -14,6 +14,11 @@ function view(overrides: Partial<React.ComponentProps<typeof ReliabilityTrendVie
 }
 
 describe('ReliabilityTrendView', () => {
+  beforeEach(() => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query, addEventListener: () => undefined, removeEventListener: () => undefined }))
+  })
+  afterEach(() => { vi.unstubAllGlobals() })
+
   it('first load with nothing to show: the loading note, never "No data yet"', () => {
     view({ data: undefined, isPending: true })
     expect(screen.getByRole('status')).toHaveTextContent('Loading…')
