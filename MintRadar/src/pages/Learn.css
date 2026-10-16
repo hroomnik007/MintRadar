@@ -75,8 +75,18 @@
   height: 18px;
 }
 
-.learn-card-number {
+/* Reading time: top right of the header row (it used to be the "Module N" label). */
+.learn-card-time {
   margin-left: auto;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text3);
+  font-family: var(--sans);
+}
+
+/* "Module N" sits on its own line under the header row, right above the title. */
+.learn-card-number {
+  margin-bottom: -4px;
   font-size: 12px;
   color: var(--text3);
   font-family: var(--sans);

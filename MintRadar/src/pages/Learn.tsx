@@ -28,8 +28,9 @@ export default function Learn() {
           <div key={mod.id} className="learn-card">
             <div className="learn-card-head">
               <LearnModuleIcon moduleId={mod.id} />
-              <span className="learn-card-number">Module {mod.order}</span>
+              <span className="learn-card-time">{mod.readingMinutes} min read</span>
             </div>
+            <div className="learn-card-number">Module {mod.order}</div>
             <div className="learn-card-title">
               {/* Stretched link: .learn-card-link::after covers the whole card (Learn.css). */}
               <Link className="learn-card-link" to={`/learn/${mod.id}`}>{mod.title}</Link>
