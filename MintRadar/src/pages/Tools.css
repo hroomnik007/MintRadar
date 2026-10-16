@@ -88,6 +88,7 @@
   line-height: 1.5;
 }
 .token-input:focus { border-color: var(--accent); }
+.token-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 768px) { .token-input { resize: none; } }
 .token-input::placeholder { color: var(--text3); }
 

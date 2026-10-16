@@ -45,7 +45,7 @@ After a tooltip text changes: `TT_WRITE_TEXTS=1 npx playwright test e2e/tooltip-
 
 - **page-hygiene console allow-list** (`CONSOLE_ALLOW` in the spec): exactly one entry — `Failed to load resource … 404` whose location is `/api/mint/icon`. The spec mocks the icon proxy to answer 404 (no icon bytes in the fixtures); `MintFavicon` then shows the monogram (asserted). Relay websocket warnings need **no** entry: the relays are mocked, so a real-relay warning appearing here is a regression, not noise. An entry that never fires would hide real messages; this one fires on `/` (verified by logging).
 - **page-hygiene responses ≥ 400**: only the same icon 404.
-- **`SMALL_CLOSE_FINDING`** in `dialogs-contract.spec.ts`, **`NO_FOCUS_STYLE`** and **`KNOWN`** in `keyboard-and-landmarks.spec.ts`: the application defects below, each with a comment. Remove the entry when the app is fixed.
+- **`SMALL_CLOSE_FINDING`** in `dialogs-contract.spec.ts`, **`KNOWN`** in `keyboard-and-landmarks.spec.ts`: the application defects below, each with a comment. Remove the entry when the app is fixed.
 
 ## Running a spec under load
 
@@ -64,7 +64,7 @@ Each of these makes its spec fail: focus not returned after Escape; Tab trap rem
 | F2 | S3 | Comparison modal close button | `.cmp-modal-header button` is 20×20 CSS px, below the 32×32 of every other dialog (and below WCAG 2.5.8's 24). Exempt: `SMALL_CLOSE_FINDING`. | Open Compare on two mints; measure the ✕. |
 | F3 | S4 | Mint Detail "URLs" copy buttons | `button[aria-label="Copy URL"]` copies, but gives no confirmation (`copiedUrl` is set, the icon is never swapped). The clipboard is asserted, the confirmation is not. | Click a copy icon next to a URL in the Overview info rows. |
 | F4 | S4 | Primary `<nav>` | Has no accessible name; on `/about`, `/methodology`, `/for-wallets` a second nav ("On this page") exists, so the two cannot be told apart by name. Exempt: `KNOWN.unnamedNavs`. | Landmarks list of a screen reader on `/about`. |
-| F5 | S2 | Token Inspector | `textarea.token-input` shows no focus indicator when reached with Tab (no outline, no box-shadow, nothing on a pseudo-element or ancestor) — WCAG 2.4.7. Exempt: `NO_FOCUS_STYLE`. | `/tools`, press Tab 9 times (or focus the field): nothing changes. |
+| F5 | — | Token Inspector | FIXED 2026-10-16: `textarea.token-input` has the app-wide keyboard focus ring (`.token-input:focus-visible`, 2px accent, offset 2px); `NO_FOCUS_STYLE` removed. | — |
 | F6 | S4 | Page structure | Home, Stats, Tools, Wallets, Learn, Watchlist and Mint Detail expose only the h1; their section titles are `div`s, so heading navigation finds nothing between the h1 and the footer. No level is *skipped* (the spec asserts that), the structure is flat. | Headings list of a screen reader on `/stats`. |
 
 Not application findings but worth knowing: `installApiMocks` has no answer for `/api/mints/outages` (Mint Detail asks for it; the dev proxy answers 502) — `fixtures/pageAudit.ts` mocks it for the page specs; the older specs that open a mint page log that 502 without failing.

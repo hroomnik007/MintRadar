@@ -18,13 +18,6 @@ const KNOWN: Record<string, { unnamedNavs?: number }> = {
   about: { unnamedNavs: 1 }, methodology: { unnamedNavs: 1 }, 'for-wallets': { unnamedNavs: 1 },
 }
 
-/**
- * FINDING F6 (application, not fixed here): these elements show NO focus indicator when reached with Tab (no outline, no
- * box-shadow, nothing on a pseudo-element or on a card around them). Their focus-style assertion is left out; remove the entry
- * when the app shows focus.
- */
-const NO_FOCUS_STYLE: Record<string, string[]> = { tools: ['textarea.token-input'] }
-
 async function navNames(page: Page): Promise<string[]> {
   return page.evaluate(() => Array.from(document.querySelectorAll('nav, [role=navigation]')).map(n => n.getAttribute('aria-label')?.trim() ?? (n.getAttribute('aria-labelledby') ? document.getElementById(n.getAttribute('aria-labelledby')!)?.textContent?.trim() ?? '' : '')))
 }
@@ -139,7 +132,6 @@ for (const route of AUDIT_ROUTES) {
         expect(s.hidden, `${at}: not hidden`).toBe(false)
         expect(s.w > 0 && s.h > 0, `${at}: not zero-size (${s.w} x ${s.h})`).toBe(true)
         expect(s.inDomOrder, `${at}: follows the previous stop in the DOM`).toBe(true)
-        if (NO_FOCUS_STYLE[route.id]?.some(prefix => s.desc.startsWith(prefix))) continue
         expect(s.focusStyleDiffers, `${at}: its outline or box-shadow differs from the unfocused element`).toBe(true)
       }
     })
