@@ -192,3 +192,34 @@ for (const width of [901, 1024, 1140, 1280, 1440, 1920, 390]) {
     expect(overflow).toBe(false)
   })
 }
+
+// 320 px: the two city columns leave the label ~54 px; "Germany" used to break as "German / y". A word never breaks
+// inside (a line break is fine at a space).
+test('Geographic distribution at 320 px: no city name breaks inside a word', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 })
+  const base = MOCK_KNOWN_MINTS[0]!
+  const locs = ['Germany', 'Germany', 'Netherlands', 'Singapore', 'San Francisco, US', 'Kuala Lumpur, MY', 'Frankfurt am Main, DE', 'Linz, AT', 'Tokyo, JP']
+  await knownMints(page, locs.map((serverLocation, i) => ({ ...base, url: `https://g${i}.example`, name: `G${i}`, online: true, serverLocation })))
+  await page.goto('/stats')
+
+  const geo = page.locator('.stats-panel', { hasText: 'Geographic Distribution' })
+  const labels = geo.locator('.stats-geo-cols .dist-label-city')
+  await expect(labels.first()).toBeVisible()
+  const broken = await labels.evaluateAll(els => els.flatMap(el => {
+    const text = el.firstChild as Text
+    const out: string[] = []
+    for (const m of (text.data).matchAll(/\S+/g)) {
+      const range = document.createRange()
+      range.setStart(text, m.index!)
+      range.setEnd(text, m.index! + m[0].length)
+      const lines = new Set(Array.from(range.getClientRects()).map(r => Math.round(r.top)))
+      if (lines.size > 1) out.push(m[0])
+    }
+    return out
+  }))
+  expect(broken, 'words that wrap inside the word').toEqual([])
+  // A one-word name takes exactly one line: as tall as "Tokyo", which always fits.
+  const height = (name: RegExp) => geo.locator('.stats-geo-cols .dist-label-city', { hasText: name }).evaluate(e => e.getBoundingClientRect().height)
+  const oneLine = await height(/^Tokyo$/)
+  for (const name of [/^Germany$/, /^Netherlands$/, /^Singapore$/]) expect(await height(name), `${name} on one line`).toBe(oneLine)
+})

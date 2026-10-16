@@ -1038,6 +1038,16 @@
 }
 .stats-geo-cdn-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .stats-geo-cdn-note { font-size: 14px; color: var(--text3); font-family: var(--font-body); align-self: center; }
+/* Below 360 px the two city columns leave the label ~54 px, so "Germany" broke inside the word. A word must not break
+   inside: give the label the room (smaller flag, count, gaps and type) so the longest realistic single word fits;
+   a break stays possible at a space (overflow-wrap: break-word only splits a word that cannot fit a line at all). */
+@media (max-width: 359px) {
+  .stats-geo-cols { column-gap: 10px; }
+  .stats-geo-panel .dist-row { gap: 6px; }
+  .stats-geo-flag { flex-basis: 16px; width: 16px; font-size: 14px; }
+  .stats-geo-panel .dist-label { font-size: 12px; }
+  .stats-geo-panel .dist-count { font-size: 13px; width: 18px; }
+}
 @media (max-width: 700px) {
   .stats-geo-cdn { grid-template-columns: 1fr; row-gap: 2px; }
   .stats-geo-cdn-note { padding-left: 36px; font-size: 12.5px; }
