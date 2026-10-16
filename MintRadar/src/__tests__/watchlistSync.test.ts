@@ -126,6 +126,17 @@ describe('fetchRemoteWatchlist — newest-wins across relays (audit finding M5)'
     expect(res).toEqual({ urls: [], failed: false })
   })
 
+  it('logs the genuinely-empty case at debug level, not as a warning (empty watchlists are normal)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const debug = vi.spyOn(console, 'debug').mockImplementation(() => {})
+    configureRelays({})
+    await fetchRemoteWatchlist(PK)
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('remote list genuinely empty'))
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+    debug.mockRestore()
+  })
+
   it('surfaces a connection error (failed: true) when a relay errors and none returned data', async () => {
     configureRelays({ 'wss://relay.damus.io': new Error('ECONNREFUSED') })
     const res = await fetchRemoteWatchlist(PK)

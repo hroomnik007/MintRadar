@@ -124,7 +124,7 @@ export async function fetchRemoteWatchlist(pubkey: string, userWriteRelays?: str
       return { urls: [], failed: true }
     }
     // Every relay was reached and none held a matching event — genuinely empty.
-    console.warn(`[watchlist-sync] remote list genuinely empty (kind:10003 not found or empty content) — no relay returned a valid event (pubkey=${pk}, method=${method}, ${responded}/${total} relays responded)`)
+    console.debug(`[watchlist-sync] remote list genuinely empty (kind:10003 not found or empty content) — no relay returned a valid event (pubkey=${pk}, method=${method}, ${responded}/${total} relays responded)`)
     return { urls: [], failed: false }
   }
 
@@ -147,12 +147,12 @@ export async function fetchRemoteWatchlist(pubkey: string, userWriteRelays?: str
   }
 
   if (!Array.isArray(parsed)) {
-    console.warn(`[watchlist-sync] remote list genuinely empty (kind:10003 not found or empty content) (pubkey=${pk}, method=${method})`)
+    console.debug(`[watchlist-sync] remote list genuinely empty (kind:10003 not found or empty content) (pubkey=${pk}, method=${method})`)
     return { urls: [], failed: false }
   }
   const urls = parsed.filter((u): u is string => typeof u === 'string')
   if (urls.length === 0) {
-    console.warn(`[watchlist-sync] remote list genuinely empty (kind:10003 not found or empty content) (pubkey=${pk}, method=${method})`)
+    console.debug(`[watchlist-sync] remote list genuinely empty (kind:10003 not found or empty content) (pubkey=${pk}, method=${method})`)
   }
   return { urls, failed: false }
 }
