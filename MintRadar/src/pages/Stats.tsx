@@ -4,7 +4,7 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { clickableProps } from '@/utils/clickableProps'
 import { IcClose } from '@/components/IcClose'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { ReliabilityTrendChart } from '@/components/stats/ReliabilityTrendChart'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import { ReliabilityMoversPanel } from '@/components/stats/ReliabilityMoversPanel'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
@@ -25,7 +25,6 @@ import {
   NHI_WEIGHTS, advancedAdoptionPercent, nhiScore, nhiSubtitle, nhiFormulaText,
   nhiOnlineRowText, nhiReliabilityRowText, nhiAdvancedRowText, avgUptimeCaption,
 } from '@/utils/networkHealthIndex'
-import { formatDate } from '@/utils/formatDate'
 import { pluralize } from '@/utils/plural'
 import './Stats.css'
 
@@ -1249,25 +1248,7 @@ export default function Stats() {
             {(!trendData || trendData.length === 0) ? (
               <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)',paddingTop:30,textAlign:'center'}}>No data yet</div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData} margin={{top:4,right:4,left:-28,bottom:0}}>
-                  <defs>
-                    <linearGradient id="reliabilityGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor="var(--accent)" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="date" tick={{fontSize:9,fill:'var(--text3)',fontFamily:'var(--font-mono)'}} tickFormatter={d => formatDate(d, { year: false })} interval="preserveStartEnd" axisLine={false} tickLine={false} />
-                  <YAxis domain={[0,100]} tick={{fontSize:9,fill:'var(--text3)',fontFamily:'var(--font-mono)'}} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:6,fontSize:11,fontFamily:'var(--font-mono)'}}
-                    labelStyle={{color:'var(--text3)'}}
-                    labelFormatter={d => formatDate(String(d)) || String(d)}
-                    formatter={(v) => [`${v ?? '—'}%`, 'Avg Reliability']}
-                  />
-                  <Area type="monotone" dataKey="avgReliability" stroke="var(--accent)" strokeWidth={1.5} fill="url(#reliabilityGrad)" dot={false} />
-                </AreaChart>
-              </ResponsiveContainer>
+              <ReliabilityTrendChart data={trendData} />
             )}
           </div>
           {trendSummary && (
