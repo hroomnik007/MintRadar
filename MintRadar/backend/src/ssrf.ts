@@ -90,11 +90,46 @@ export function isBlockedIpString(ip: string): boolean {
 // 'dns-error' — DNS lookup failed, mint is unreachable — write offline history entry
 export type UrlSafetyResult = 'safe' | 'blocked' | 'dns-error'
 
+// A resolver that never answers must not hold a request open. The DNS step of one request gets at most this
+// long (all lookups of the request together), and never more than what is left of the request deadline.
+// A timeout is reported as 'dns-error' (fail closed, same as a failed lookup).
+export const DNS_LOOKUP_CEILING_MS = 3_000
+
+/**
+ * Time left for DNS in one request: `deadlineAt` is the request deadline (ms timestamp), `dnsUsedMs` the time
+ * earlier lookups of the same request already used. Standalone checks get a fresh budget (ceiling only).
+ */
+export interface DnsBudget { deadlineAt: number; dnsUsedMs: number }
+
+class DnsTimeoutError extends Error {
+  readonly code = 'ETIMEOUT'
+  constructor() { super('DNS lookup timed out') }
+}
+
+async function boundedLookup(hostname: string, budget: DnsBudget): Promise<LookupAddress[]> {
+  const limitMs = Math.min(budget.deadlineAt - Date.now(), DNS_LOOKUP_CEILING_MS - budget.dnsUsedMs)
+  if (limitMs <= 0) throw new DnsTimeoutError()
+  const startedAt = Date.now()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  // async wrapper: a stub or resolver that throws synchronously becomes a rejection like any other.
+  const pending = (async () => lookup(hostname, { all: true }))()
+  // The lookup may settle after the timeout won; its late rejection must never surface as unhandledRejection.
+  pending.catch(() => undefined)
+  const timeout = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new DnsTimeoutError()), limitMs) })
+  try {
+    return await Promise.race([pending, timeout])
+  } finally {
+    clearTimeout(timer)
+    budget.dnsUsedMs += Date.now() - startedAt
+  }
+}
+
 // Shared by checkUrlSafety (https:) and checkWsUrlSafety (ws:/wss:) — only the
 // allowed protocol set differs; hostname/DNS/private-range checks are identical.
 async function checkUrlSafetyForProtocols(
   rawUrl: string,
-  allowedProtocols: readonly string[]
+  allowedProtocols: readonly string[],
+  budget: DnsBudget = { deadlineAt: Infinity, dnsUsedMs: 0 }
 ): Promise<UrlSafetyResult> {
   try {
     const url = new URL(rawUrl)
@@ -116,8 +151,10 @@ async function checkUrlSafetyForProtocols(
     // Resolve DNS — failure here is a network error, not an SSRF attempt
     let addresses: LookupAddress[]
     try {
-      addresses = await lookup(hostname, { all: true })
-    } catch {
+      addresses = await boundedLookup(hostname, budget)
+    } catch (err) {
+      // Same outcome as any failed lookup — every caller treats 'dns-error' generically; the log line tells them apart.
+      if (err instanceof DnsTimeoutError) console.warn('[ssrf] dns-timeout')
       return 'dns-error'
     }
 
@@ -138,8 +175,8 @@ async function checkUrlSafetyForProtocols(
   }
 }
 
-export async function checkUrlSafety(rawUrl: string): Promise<UrlSafetyResult> {
-  return checkUrlSafetyForProtocols(rawUrl, ['https:'])
+export async function checkUrlSafety(rawUrl: string, budget?: DnsBudget): Promise<UrlSafetyResult> {
+  return checkUrlSafetyForProtocols(rawUrl, ['https:'], budget)
 }
 
 export async function isSafeUrl(rawUrl: string): Promise<boolean> {
@@ -235,22 +272,39 @@ export async function isSafeWsUrl(rawUrl: string): Promise<boolean> {
 // Custom DNS lookup that rejects any resolved address in a blocked range.
 // undici uses this for the actual TCP connect, closing the TOCTOU window
 // while preserving the original hostname for SNI and the Host header.
+// Bounded by DNS_LOOKUP_CEILING_MS too (the WebSocket path has no other deadline); an answer after the timeout is dropped.
 export const safeLookup: LookupFunction = (hostname, options, callback): void => {
-  dnsLookupCb(hostname, { ...options, all: true }, (err, addresses) => {
-    if (err) { callback(err, '', 0); return }
-    const list = addresses as unknown as LookupAddress[]
-    if (!Array.isArray(list) || list.length === 0) {
-      callback(new Error('No addresses resolved'), '', 0)
-      return
-    }
-    for (const a of list) {
-      if (isBlockedIpString(a.address)) {
-        callback(new Error('Blocked address (SSRF protection)'), '', 0)
+  let settled = false
+  const finish = (err: NodeJS.ErrnoException | null, address: string | LookupAddress[], family?: number): void => {
+    if (settled) return
+    settled = true
+    clearTimeout(timer)
+    callback(err, address as never, family as never)
+  }
+  const timer = setTimeout(() => {
+    console.warn('[ssrf] dns-timeout')
+    finish(new DnsTimeoutError(), '', 0)
+  }, DNS_LOOKUP_CEILING_MS)
+  try {
+    dnsLookupCb(hostname, { ...options, all: true }, (err, addresses) => {
+      if (err) { finish(err, '', 0); return }
+      const list = addresses as unknown as LookupAddress[]
+      if (!Array.isArray(list) || list.length === 0) {
+        finish(new Error('No addresses resolved'), '', 0)
         return
       }
-    }
-    callback(null, list, list[0]!.family)
-  })
+      for (const a of list) {
+        if (isBlockedIpString(a.address)) {
+          finish(new Error('Blocked address (SSRF protection)'), '', 0)
+          return
+        }
+      }
+      finish(null, list, list[0]!.family)
+    })
+  } catch (err) {
+    clearTimeout(timer)
+    throw err
+  }
 }
 
 const safeAgent = new Agent({
@@ -300,10 +354,12 @@ export async function safeFetch(
   // hop let a mint that redirects a couple of times before hanging block for
   // up to (MAX_REDIRECTS + 1) * timeoutMs instead of timeoutMs total.
   const deadline = AbortSignal.timeout(timeoutMs)
+  // The DNS pre-checks of all hops count against that same deadline (and share one DNS ceiling), not on top of it.
+  const dnsBudget: DnsBudget = { deadlineAt: Date.now() + timeoutMs, dnsUsedMs: 0 }
   let currentUrl = rawUrl
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const safety = await checkUrlSafety(currentUrl)
+    const safety = await checkUrlSafety(currentUrl, dnsBudget)
     if (safety !== 'safe') {
       options.onRejected?.(safety)
       return null
