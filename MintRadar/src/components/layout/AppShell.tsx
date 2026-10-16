@@ -297,7 +297,7 @@ export function AppShell() {
 
   return (
     <div className="app-shell">
-      <nav className="navbar">
+      <nav className="navbar" aria-label="Main">
        <div className={`navbar-inner${profile !== null ? ' is-authed' : ''}`}>
         <NavLink to="/" className="navbar-brand nav-logo" title="MintRadar">
           <NavLogo />

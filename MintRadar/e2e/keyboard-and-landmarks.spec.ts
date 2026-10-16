@@ -12,11 +12,6 @@ import { layoutReady } from './fixtures/settle'
 
 /** Landmarks per route: [nav landmarks]. The doc pages carry a second nav ("On this page"). main and footer are one everywhere. */
 const NAV_COUNT: Record<string, number> = { about: 2, methodology: 2, 'for-wallets': 2 }
-/** Known violations (upper bounds). Everything not listed must be 0. */
-const KNOWN: Record<string, { unnamedNavs?: number }> = {
-  // FINDING F4: the primary <nav> has no accessible name; with a second nav on the page the two cannot be told apart by name.
-  about: { unnamedNavs: 1 }, methodology: { unnamedNavs: 1 }, 'for-wallets': { unnamedNavs: 1 },
-}
 
 async function navNames(page: Page): Promise<string[]> {
   return page.evaluate(() => Array.from(document.querySelectorAll('nav, [role=navigation]')).map(n => n.getAttribute('aria-label')?.trim() ?? (n.getAttribute('aria-labelledby') ? document.getElementById(n.getAttribute('aria-labelledby')!)?.textContent?.trim() ?? '' : '')))
@@ -103,15 +98,15 @@ for (const route of AUDIT_ROUTES) {
     // One navigation per route: structure, the accessibility tree and (not for states reached by clicking) the Tab order.
     test('structure, accessibility tree and Tab order', async ({ page }) => {
       const s = await collectStructure(page)
-      const known = KNOWN[route.id] ?? {}
       expect(s.lang, 'document.documentElement.lang is set').toMatch(/^[a-z]{2}/)
       expect(s.h1, 'exactly one h1').toBe(1)
       expect(s.landmarks.main, 'exactly one main').toBe(1)
       expect(s.landmarks.footer, 'exactly one footer').toBe(1)
       expect(s.landmarks.nav, 'nav landmarks').toBe(NAV_COUNT[route.id] ?? 1)
-      // A lone nav needs no name; when there are two, they must be told apart by name.
+      // Every nav has an accessible name and the names on one page are distinct (a screen reader's landmark list).
       const names = await navNames(page)
-      if (names.length > 1) expect(names.filter(n => n === '').length, `navs without an accessible name (${JSON.stringify(names)})`).toBeLessThanOrEqual(known.unnamedNavs ?? 0)
+      expect(names.filter(n => n === ''), `navs without an accessible name (${JSON.stringify(names)})`).toEqual([])
+      expect(new Set(names).size, `nav names are distinct (${JSON.stringify(names)})`).toBe(names.length)
       expect(skippedHeadingLevels(s.headingLevels), `heading levels ${s.headingLevels.join('')} do not skip a level`).toEqual([])
       expect(s.unnamed, 'interactive elements without an accessible name').toEqual([])
       expect(s.imagesWithoutAlt, 'img elements without an alt attribute').toEqual([])
