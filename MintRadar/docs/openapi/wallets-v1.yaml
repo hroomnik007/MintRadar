@@ -235,7 +235,7 @@ components:
             code:
               type: string
               description: Stable snake_case identifier.
-              enum: [invalid_parameter, invalid_url, mint_not_found, not_found, rate_limited, internal_error, cors_forbidden]
+              enum: [invalid_parameter, invalid_url, mint_not_found, not_found, rate_limited, internal_error]
             message:
               type: string
               description: Human-readable text; not stable, do not parse it.
