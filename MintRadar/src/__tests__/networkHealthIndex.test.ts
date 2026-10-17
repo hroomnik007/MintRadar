@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import {
   NHI_WEIGHTS, ADVANCED_NUTS, ADVANCED_NUT_KEYS, DEGRADED_AFTER_HOURS, advancedAdoptionPercent,
-  nhiSubtitle, NHI_SUBTITLE, NHI_SUBTITLE_GAUGE_HINT, nhiOnlineSetText, nhiFormulaText, nhiOnlineRowText, nhiReliabilityRowText,
+  nhiSubtitle, NHI_SUBTITLE, nhiOnlineSetText, nhiFormulaText, nhiOnlineRowText, nhiReliabilityRowText,
   nhiAdvancedRowText, avgUptimeCaption, nhiScore,
 } from '@/utils/networkHealthIndex'
 import { PROBE_LOCATION, CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLocation'
@@ -175,16 +175,14 @@ describe('Stats.tsx wires the generated texts', () => {
     expect(stats).toContain('nhiScore({')
     expect(stats).toContain('weight: NHI_WEIGHTS.advanced')
     expect(stats).toContain('{avgUptimeCaption()}')
-    expect(stats).toContain('{nhiSubtitle(isMobile)}')
+    expect(stats).toContain('{nhiSubtitle()}')
   })
 })
 
 describe('NHI subtitle and the average-uptime caption (they replaced two tooltips)', () => {
-  it('the subtitle gets the gauge hint only where the gauge opens the breakdown', () => {
+  it('the subtitle is one short sentence (the "Show details" link says how to open the breakdown)', () => {
     expect(NHI_SUBTITLE).toBe('Weighted from five factors.')
-    expect(nhiSubtitle(false)).toBe('Weighted from five factors.')
-    expect(nhiSubtitle(true)).toBe('Weighted from five factors. Tap or click the gauge for the breakdown.')
-    expect(nhiSubtitle(true)).toBe(`${NHI_SUBTITLE} ${NHI_SUBTITLE_GAUGE_HINT}`)
+    expect(nhiSubtitle()).toBe('Weighted from five factors.')
   })
 
   it('the caption is built from DEGRADED_AFTER_HOURS, stays within 32 characters and follows the constant', () => {

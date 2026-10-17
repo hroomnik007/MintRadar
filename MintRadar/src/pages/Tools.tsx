@@ -243,7 +243,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
         rows={3}
         spellCheck={false}
       />
-      <div className="token-note">Decoded in your browser, so MintRadar's servers never see your token; checking contacts the mint named in it. "Open in cashu.me" puts the token in the link's #fragment, which browsers don't send to servers, though the wallet may leave it in the address bar and browser history. "Redeem to Lightning" opens the redeem page without the token, so you paste it there.</div>
+      <div className="token-note">Decoded in your browser; MintRadar's servers never see your token. Checking contacts the mint named in it.</div>
 
       <button
         type="button"
@@ -459,6 +459,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             )}
           </div>
           {!actions.redeemDisabled && <div className="token-note">Paste your token on the redeem page.</div>}
+          {actions.showOpenInWallet && <div className="token-note">Open in cashu.me puts the token in the link's #fragment, which browsers don't send to servers. The wallet may keep it in your address bar and history.</div>}
           {actions.note === 'nothing-left' && <div className="token-note">Nothing left to redeem.</div>}
         </>
       )}
@@ -679,7 +680,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
     <div className="tool-card">
       <div className="tool-header">
         <div className="tool-title">Best mint for me</div>
-        <div className="tool-subtitle">Answer a few quick questions and we'll recommend the best mints for your needs</div>
+        <div className="tool-subtitle">Answer a few quick questions to find the best mints for you.</div>
       </div>
 
       <div className="wizard-steps">

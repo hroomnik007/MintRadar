@@ -85,14 +85,13 @@ export function nhiScore(p: NhiParts, w: NhiWeights = NHI_WEIGHTS): number {
 
 // ── Texts ────────────────────────────────────────────────────────────────────
 
-/** Subtitle under the "Network health index" header; where the gauge opens the breakdown dialog (<= 768 px) it says so. */
+/** Subtitle under the "Network health index" header. */
 export function nhiBaseSubtitle(w: NhiWeights = NHI_WEIGHTS): string {
   return `Weighted from ${numberWord(Object.keys(w).length)} factors.`
 }
 export const NHI_SUBTITLE = nhiBaseSubtitle()
-export const NHI_SUBTITLE_GAUGE_HINT = 'Tap or click the gauge for the breakdown.'
-export function nhiSubtitle(gaugeOpensBreakdown: boolean, w: NhiWeights = NHI_WEIGHTS): string {
-  return gaugeOpensBreakdown ? `${nhiBaseSubtitle(w)} ${NHI_SUBTITLE_GAUGE_HINT}` : nhiBaseSubtitle(w)
+export function nhiSubtitle(w: NhiWeights = NHI_WEIGHTS): string {
+  return nhiBaseSubtitle(w)
 }
 
 /** Which mints the Online share is taken over (also appended to the desktop header tooltip). */

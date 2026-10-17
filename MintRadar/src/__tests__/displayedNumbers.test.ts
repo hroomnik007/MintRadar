@@ -74,7 +74,7 @@ describe('each text follows its constant', () => {
   it('NHI subtitle counts the weights, the formula names the Fresh threshold', () => {
     const six = { ...NHI_WEIGHTS, extra: 0 } as unknown as typeof NHI_WEIGHTS
     expect(nhiBaseSubtitle(six)).toBe('Weighted from six factors.')
-    expect(nhiSubtitle(true, six)).toBe('Weighted from six factors. Tap or click the gauge for the breakdown.')
+    expect(nhiSubtitle(six)).toBe('Weighted from six factors.')
     expect(nhiFormulaText(NHI_WEIGHTS, 2)).toContain('mints tracked 2 months+)')
   })
   it('"Fresh" ends at FRESH_MINT_MONTHS', () => {

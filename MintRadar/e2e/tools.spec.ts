@@ -319,22 +319,23 @@ test.describe('Tools', () => {
     await expect(page.locator('.token-result-grid')).toHaveCount(0)
   })
 
-  test('Token Inspector states exactly what stays local and what contacts the mint', async ({ page }) => {
+  test('Token Inspector states what stays local and what contacts the mint, and the cashu.me link note shows with the result', async ({ page }) => {
     const note = page.locator('.token-note').first()
-    await expect(note).toHaveText(
-      `Decoded in your browser, so MintRadar's servers never see your token; checking contacts the mint named in it. "Open in cashu.me" puts the token in the link's #fragment, which browsers don't send to servers, though the wallet may leave it in the address bar and browser history. "Redeem to Lightning" opens the redeem page without the token, so you paste it there.`
-    )
-    // The four facts, pinned individually so a rewrite cannot quietly drop one.
+    await expect(note).toHaveText("Decoded in your browser; MintRadar's servers never see your token. Checking contacts the mint named in it.")
+    // The facts, pinned individually so a rewrite cannot quietly drop one.
     await expect(note).toContainText("MintRadar's servers never see your token")
     await expect(note).toContainText('contacts the mint named in it')
-    await expect(note).toContainText("#fragment, which browsers don't send to servers")
-    await expect(note).toContainText('address bar and browser history')
-    await expect(note).toContainText('opens the redeem page without the token, so you paste it there')
     await expect(note).not.toContainText('send the full token to cashu.me')
     // The separate line under the action buttons is gone — its content lives in the line above.
     await expect(page.getByText('These open cashu.me with your full token in the link.')).toHaveCount(0)
     await expect(page.getByPlaceholder('cashuB… or cashuA…')).toBeVisible()
     await expect(page.locator('.tool-subtitle', { hasText: 'Paste a Cashu token (cashuA or cashuB)' })).toBeVisible()
+
+    // The wallet link's caveat is stated next to the buttons, once the result and its actions are shown.
+    await page.locator('.token-input').fill(makeCashuToken(MOCK_MINTS[0]!.url, [21]))
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+    const walletNote = page.locator('.token-note', { hasText: 'Open in cashu.me puts the token' })
+    await expect(walletNote).toHaveText("Open in cashu.me puts the token in the link's #fragment, which browsers don't send to servers. The wallet may keep it in your address bar and history.")
   })
 
   test('Empty input: Inspect is disabled with a "Paste a token first" hint', async ({ page }) => {
@@ -537,7 +538,7 @@ test.describe('Tools', () => {
   test('Best Mint Wizard shows the helper line and no endorsement disclaimer', async ({ page }) => {
     await expect(page.locator('.wizard-disclaimer')).toHaveCount(0)
     await expect(page.locator('.tool-card', { hasText: 'Best Mint for Me' }).locator('.tool-subtitle'))
-      .toContainText("we'll recommend the best mints for your needs")
+      .toContainText('to find the best mints for you.')
   })
 
   test('Best Mint Wizard result rows use the card Reliability formatting (shield + "Reliability N")', async ({ page }) => {
