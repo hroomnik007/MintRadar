@@ -13,18 +13,20 @@ info:
     and `OPTIONS`, no credentials, with `Access-Control-Expose-Headers: ETag, Retry-After,
     X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset`. A preflight is answered with `204`.
 
-    **Caching.** Every successful response carries `Cache-Control: public, max-age=300` and a strong
-    `ETag` over the body (on a cache hit as well as a miss). Send `If-None-Match` to get `304`. The data
+    **Caching.** Every successful response carries `Cache-Control: public, max-age=300` and an
+    `ETag` over the body (on a cache hit as well as a miss; strong, but a compressed answer carries the same
+    value in the weak form `W/"..."`, so treat it as an opaque string). Send `If-None-Match` to get `304`. The data
     follows MintRadar's 5-minute probe cycle: poll at most every 5 minutes. Errors are not cached.
 
     **Rate limit.** 300 requests per minute per IP address, one counter shared by `/api/v1/wallets/*`
     and `/api/v1/mints/recommend` (the unversioned `/api/...` paths count the same; `/mints/recommend`
-    is not part of this specification). Every response carries `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`; a `429` carries
-    `Retry-After` (seconds).
+    is not part of this specification). Every response except a preflight carries `X-RateLimit-Limit`, `X-RateLimit-Remaining` and
+    `X-RateLimit-Reset`; a `429` carries `Retry-After` (seconds).
 
     **Stability.** Inside v1 a field is never renamed or removed and its type does not change; changes
-    are additive, so clients must ignore fields they do not know. A deprecation is announced with
-    `Deprecation` and `Sunset` response headers at least 90 days before anything is removed. The integer
+    are additive, so clients must ignore fields they do not know. A removal is announced in
+    docs/API.md and on mintradar.org/for-wallets at least 90 days before it takes effect; no `Deprecation`
+    or `Sunset` response headers are sent today. The integer
     `methodology` changes whenever the score formula changes; scores of different methodology numbers are
     not comparable. The history is in `backend/src/shared/methodology.ts` and docs/API.md.
   license:
@@ -46,7 +48,7 @@ paths:
       description: |
         By default only online, scored, non-test mints are returned. Order: `score` descending (null last),
         then `uptime7dPct` descending (null last), then `name` (the hostname when `name` is null), then `url`.
-        A query value that is present but invalid is a `400`; unknown parameters are ignored.
+        A query value that is present but invalid (a repeated parameter included; the boolean flags take exactly `true` or `false`) is a `400`; unknown parameters are ignored.
       parameters:
         - name: unit
           in: query
@@ -178,7 +180,7 @@ components:
       description: Always `public, max-age=300`.
       schema: { type: string, const: 'public, max-age=300' }
     ETag:
-      description: Strong ETag over the body.
+      description: ETag over the body. Strong on an uncompressed answer; the weak form `W/"..."` of the same value when the answer is compressed. Send it back unchanged.
       schema: { type: string }
     AllowOrigin:
       description: Always `*` (no credentials).
@@ -297,7 +299,7 @@ components:
       properties:
         url:
           type: string
-          description: Normalised mint URL (https, lower-case host, no trailing slash).
+          description: Normalised mint URL (https, lower-case host, no trailing slash after a bare host; a path is kept as it is).
         name:
           type: [string, 'null']
           description: The cleaned display name the website uses; null means show the hostname (also for mints on the hidden-names list). Untrusted text, render as plain text.

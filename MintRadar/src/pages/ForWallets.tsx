@@ -145,7 +145,7 @@ export default function ForWallets() {
               then every 10 minutes is well within the limits.
             </li>
             <li>
-              <strong>Use the ETag.</strong> Every successful answer has a strong <code>ETag</code>. Send it back in{' '}
+              <strong>Use the ETag.</strong> Every successful answer has an <code>ETag</code> (a compressed answer carries it in the weak form <code>W/&quot;…&quot;</code>; keep it as it is). Send it back in{' '}
               <code>If-None-Match</code>: while nothing changed you get <code>304 Not Modified</code> with the same
               headers and no body. A browser&apos;s HTTP cache does this for you; a server or a native app should keep
               the ETag itself.
@@ -194,8 +194,9 @@ export default function ForWallets() {
         <section aria-labelledby="filters">
           <h2 id="filters" tabIndex={-1} className="about-h2">Filters</h2>
           <p>
-            All parameters of the list are optional. A present but invalid value is a <code>400</code>; unknown
-            parameters are ignored. Order: <code>score</code> descending (<code>null</code> last), then{' '}
+            All parameters of the list are optional. A present but invalid value is a <code>400</code> (a repeated
+            parameter included; the <code>include…</code> flags take exactly <code>true</code> or <code>false</code>);
+            unknown parameters are ignored. Order: <code>score</code> descending (<code>null</code> last), then{' '}
             <code>uptime7dPct</code> descending, then <code>name</code>, then <code>url</code>.
           </p>
           <div className="doc-table-wrap" tabIndex={0} role="region" aria-label="List parameters">
@@ -248,7 +249,7 @@ export default function ForWallets() {
           <h2 id="stability" tabIndex={-1} className="about-h2">Stability</h2>
           <ul>
             <li>Inside v1 a field is never renamed or removed, and its type does not change. Changes are additive: new fields and new optional parameters.</li>
-            <li>A deprecation is announced with <code>Deprecation</code> and <code>Sunset</code> response headers at least {F.deprecationNoticeDays} days before anything is removed.</li>
+            <li>A removal is announced on this page and in <code>docs/API.md</code> at least {F.deprecationNoticeDays} days before it takes effect. The API sends no <code>Deprecation</code> or <code>Sunset</code> response headers today.</li>
             <li>
               <code>methodology</code> is an integer (currently {METHODOLOGY_VERSION}) that changes whenever the score
               formula changes. Scores of different numbers are not comparable. The rules and their history are on the{' '}

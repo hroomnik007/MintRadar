@@ -71,7 +71,7 @@ function mdTable(md: string, header: string): string[][] {
   if (start < 0) throw new Error(`${API_MD}: table "${header}" not found`)
   const rows: string[][] = []
   for (let i = start + 2; i < lines.length && lines[i]!.startsWith('|'); i++) {
-    rows.push(lines[i]!.replace(/\\\|/g, '\u0000').split('|').slice(1, -1).map(c => c.replace(/\u0000/g, '|').trim()))
+    rows.push(lines[i]!.replace(/\\\|/g, '\uE000').split('|').slice(1, -1).map(c => c.replace(/\uE000/g, '|').trim()))
   }
   return rows
 }

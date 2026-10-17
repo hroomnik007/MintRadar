@@ -27,7 +27,7 @@ export const WALLET_ENVELOPE_FIELDS: readonly WalletField[] = [
 ]
 
 export const WALLET_MINT_FIELDS: readonly WalletField[] = [
-  { name: 'url', type: 'string', nullable: false, meaning: 'Normalised mint URL (https, lower-case host, no trailing slash).' },
+  { name: 'url', type: 'string', nullable: false, meaning: 'Normalised mint URL: https, lower-case host, no trailing slash after a bare host; a path is kept as it is.' },
   { name: 'name', type: 'string', nullable: true, meaning: 'Cleaned display name. null means show the hostname. Untrusted text: render it as plain text.' },
   { name: 'status', type: '"online" | "offline" | "degraded" | "archived"', nullable: false, meaning: 'online: the latest probe succeeded. offline: it failed, or the mint was never probed. degraded: the latest probe failed and either at least 4 probes in the last 24 hours all failed or that failed probe is more than 24 hours old. archived: the latest probe failed and the last successful probe was more than 30 days ago (checked first; a mint that never succeeded is not archived).' },
   { name: 'score', type: 'integer 0 to 100', nullable: true, meaning: 'Reliability Score, an operational health signal. null until the first probe: "no data yet", not a bad score.' },
@@ -61,7 +61,7 @@ export interface WalletQueryParam {
 
 /** The optional list query parameters; a present but invalid value is a 400, unknown parameters are ignored. */
 export const WALLET_QUERY_PARAMS: readonly WalletQueryParam[] = [
-  { name: 'unit', type: 'string', default: 'any', meaning: 'Keep mints that list this unit (sat, usd, eur, ...; case-insensitive). Mints whose units are unknown never match.' },
+  { name: 'unit', type: 'string', default: 'any', meaning: 'Keep mints that list this unit (sat, usd, eur, ...; case-insensitive; 1 to 16 letters, digits, _ or -). Mints whose units are unknown never match.' },
   { name: 'minScore', type: 'integer 0 to 100', default: 'none', meaning: 'Keep mints with score >= minScore. A mint without a score never matches.' },
   { name: 'includeOffline', type: 'true | false', default: 'false', meaning: 'Also return offline and degraded mints.' },
   { name: 'includeArchived', type: 'true | false', default: 'false', meaning: 'Also return archived mints (see status).' },
