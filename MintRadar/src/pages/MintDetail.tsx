@@ -55,7 +55,7 @@ import {
 } from '@/utils/reliabilityScore'
 import { classifyMintVersion, latestMapFor, type LatestVersions } from '@/utils/versionRule'
 import { useNow } from '@/hooks/useNow'
-import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { useDocumentMeta, useRemoveCanonical } from '@/hooks/useDocumentMeta'
 import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLocation'
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -360,7 +360,7 @@ function MintDetailContent({ url }: { url: string }) {
     knownMint
       ? `${metaDisplayName} (${mintHostname(url)}) is ${knownMint.online ? 'online' : 'offline'} with a Reliability Score of ${knownMint.reliabilityScore ?? '—'}%. See live uptime, latency, NUT support and reviews on MintRadar.`
       : `Live Reliability Score, uptime, latency and NUT support for the Cashu mint ${mintHostname(url)} on MintRadar.`,
-    { routeTags: false, canonicalPath: `/mint/${encodeURIComponent(url)}` },
+    { canonicalPath: `/mint/${encodeURIComponent(url)}` },
   )
 
   const [chartInterval, setChartInterval] = useState<'24h' | '7d' | '30d' | '90d'>('7d')
@@ -2787,6 +2787,7 @@ function safeDecode(raw: string): string | null {
 
 function MintNotTracked({ slug, suggestion }: { slug: string; suggestion: string | null }) {
   const navigate = useNavigate()
+  useRemoveCanonical()
   return (
     <div className="mint-detail">
       <div className="md-header">
@@ -2818,6 +2819,20 @@ function MintNotTracked({ slug, suggestion }: { slug: string; suggestion: string
   )
 }
 
+// A slug that does not decode has no mint page to point a canonical at.
+function MintInvalidUrl() {
+  const navigate = useNavigate()
+  useRemoveCanonical()
+  return (
+    <div className="mint-detail">
+      <div className="md-header">
+        <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
+      </div>
+      <h1 style={{ color: 'var(--red)', padding: '24px', fontSize: '14px', fontWeight: 400 }}>Invalid mint URL.</h1>
+    </div>
+  )
+}
+
 export default function MintDetail() {
   const params = useParams<{ url: string }>()
   const rawUrl = params['url']
@@ -2826,16 +2841,7 @@ export default function MintDetail() {
 
   const slug = rawUrl === undefined ? null : safeDecode(rawUrl)
 
-  if (slug === null) {
-    return (
-      <div className="mint-detail">
-        <div className="md-header">
-          <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
-        </div>
-        <h1 style={{ color: 'var(--red)', padding: '24px', fontSize: '14px', fontWeight: 400 }}>Invalid mint URL.</h1>
-      </div>
-    )
-  }
+  if (slug === null) return <MintInvalidUrl />
 
   // Need the tracked list before we can canonicalise a bare-host slug and decide
   // between "redirect to the real mint" and "not tracked".

@@ -2,8 +2,9 @@ import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_MINTS, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 
 // Mint Detail sets its own <link rel="canonical"> and og:url (useDocumentMeta `canonicalPath`) so a
-// rendered /mint/<url> page does not carry index.html's homepage canonical. og:title, og:image and the
-// rest keep the static values; the homepage values come back when the page is left.
+// rendered /mint/<url> page does not carry index.html's homepage canonical. og:title/og:description follow the
+// page title and description like on every route (e2e/document-meta.spec.ts); og:image stays static. The homepage
+// values (canonical and og:url, both with the single trailing slash) come back when the page is left.
 
 const ALPHA = MOCK_MINTS[0]!.url
 const HOME_CANONICAL = 'https://mintradar.org/'
@@ -26,14 +27,14 @@ test('a mint page has its own canonical and og:url; the homepage values return a
   await expect.poll(() => canonical(page)).toBe(self)
   expect(self).toBe(`https://mintradar.org/mint/${encodeURIComponent(ALPHA)}`)
   expect(await ogUrl(page)).toBe(self)
-  // The rest of the head is untouched: the generic og:title and og:image stay.
+  // og:image stays the generic static one; og:title is the page title.
   expect(await page.locator('meta[property="og:image"]').getAttribute('content')).toBe('https://mintradar.org/og-image-reliability.png')
-  expect(await page.locator('meta[property="og:title"]').getAttribute('content')).toContain('MintRadar')
+  expect(await page.locator('meta[property="og:title"]').getAttribute('content')).toBe(await page.title())
 
   await page.goBack()
   await expect(page).not.toHaveURL(/\/mint\//)
   await expect.poll(() => canonical(page)).toBe(HOME_CANONICAL)
-  expect(await ogUrl(page)).toBe('https://mintradar.org')
+  await expect.poll(() => ogUrl(page)).toBe(HOME_CANONICAL)
 })
 
 test('a direct visit to a mint page renders its own canonical', async ({ page }) => {

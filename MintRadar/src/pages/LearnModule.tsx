@@ -33,7 +33,7 @@ export default function LearnModule() {
   useDocumentMeta(
     mod ? `${mod.title} - MintRadar Learn` : 'Module not found - MintRadar Learn',
     mod ? mod.summary : undefined,
-    { routeTags: mod !== null },
+    { notFound: mod === null },
   )
 
   if (numericRedirectTarget) return <Navigate to={`/learn/${numericRedirectTarget.id}`} replace />

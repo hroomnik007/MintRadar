@@ -12,20 +12,19 @@ import { useLocation } from 'react-router-dom'
 // the real content pages in search results. `follow` (not `nofollow`) is deliberate:
 // it still lets link equity flow through any links the page renders.
 //
-// Per-route sharing tags (2026-10-04): unless `routeTags: false`, the hook also points
-// <link rel="canonical"> and og:url at https://mintradar.org + the route path (no query, no hash, no
-// trailing slash) and mirrors the title/description into og:title/og:description and
-// twitter:title/twitter:description. The root route sets nothing of that: index.html's static values ARE
-// the root's, and every other route restores what it found (the static defaults) on unmount.
-// Mint Detail opts out (`routeTags: false`) and keeps the static tags it always had, except for
-// `canonicalPath` (below): its own canonical and og:url.
+// Per-route sharing tags: the hook points <link rel="canonical"> and og:url at https://mintradar.org + the route
+// path (no query, no hash, no trailing slash; the root keeps its single "/") and mirrors the title/description
+// into og:title/og:description and twitter:title/twitter:description, on EVERY route including the root. Every tag
+// is looked up before it is created (never a duplicate) and each route puts back what it found on unmount, so a
+// single-page navigation leaves no stale value behind.
 //
-// `canonicalPath` (only meaningful with `routeTags: false`): sets JUST <link rel="canonical"> and
-// og:url to https://mintradar.org + that path and restores the previous values on unmount. Used by Mint
-// Detail, whose route path is not the canonical one (the page resolves the slug first), and which must not
-// inherit the homepage canonical of index.html when Google renders the page. The caller passes an
-// already-encoded path (encodeURIComponent for the mint URL); a value that does not start with a single "/"
-// is ignored.
+// `canonicalPath`: the canonical path when it differs from the route path (Mint Detail: the page resolves the slug
+// first). The caller passes an already-encoded path (encodeURIComponent for the mint URL); a value that does not
+// start with a single "/" is ignored and the route path is used.
+//
+// `notFound: true` (unknown Learn module, unknown or untracked mint, the 404 route): such a page has no address of
+// its own, so the canonical link is REMOVED instead of set (it comes back on unmount) and the sharing tags keep the
+// static defaults of index.html. `useRemoveCanonical()` does just that for states that set no title.
 const SITE_ORIGIN = 'https://mintradar.org'
 
 // Sets one tag attribute and returns the function that puts the previous state back.
@@ -51,6 +50,28 @@ const metaBy = (key: 'name' | 'property', name: string) => () => {
   return m
 }
 
+const canonicalLink = () => {
+  const l = document.createElement('link')
+  l.setAttribute('rel', 'canonical')
+  return l
+}
+
+// Takes the canonical link out of <head> and returns the function that puts the same node back.
+function removeCanonical(): () => void {
+  const nodes = Array.from(document.querySelectorAll<HTMLElement>('link[rel="canonical"]'))
+  const parents = nodes.map(n => ({ n, parent: n.parentNode, next: n.nextSibling }))
+  for (const n of nodes) n.remove()
+  return () => {
+    for (const { n, parent, next } of parents) {
+      if (parent && !document.querySelector('link[rel="canonical"]')) parent.insertBefore(n, next && next.parentNode === parent ? next : null)
+    }
+  }
+}
+
+export function useRemoveCanonical(): void {
+  useEffect(() => removeCanonical(), [])
+}
+
 function canonicalUrlFor(pathname: string): string {
   const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
   return `${SITE_ORIGIN}${path === '/' ? '/' : path}`
@@ -59,19 +80,20 @@ function canonicalUrlFor(pathname: string): string {
 export function useDocumentMeta(
   title: string,
   description?: string,
-  options?: { noindex?: boolean; routeTags?: boolean; canonicalPath?: string },
+  options?: { noindex?: boolean; notFound?: boolean; canonicalPath?: string },
 ): void {
   const noindex = options?.noindex ?? false
-  const routeTags = options?.routeTags ?? true
+  const notFound = options?.notFound ?? false
   const canonicalPath = options?.canonicalPath
   const { pathname } = useLocation()
-  const canonical = canonicalUrlFor(pathname)
-  const isRoot = canonical === `${SITE_ORIGIN}/`
+  const canonical = canonicalPath !== undefined && /^\/(?!\/)\S*$/.test(canonicalPath)
+    ? `${SITE_ORIGIN}${canonicalPath}`
+    : canonicalUrlFor(pathname)
 
   useEffect(() => {
-    if (!routeTags || isRoot) return
+    if (notFound) return removeCanonical()
     const undo = [
-      setTag('link[rel="canonical"]', () => { const l = document.createElement('link'); l.setAttribute('rel', 'canonical'); return l }, 'href', canonical),
+      setTag('link[rel="canonical"]', canonicalLink, 'href', canonical),
       setTag('meta[property="og:url"]', metaBy('property', 'og:url'), 'content', canonical),
       setTag('meta[property="og:title"]', metaBy('property', 'og:title'), 'content', title),
       setTag('meta[name="twitter:title"]', metaBy('name', 'twitter:title'), 'content', title),
@@ -83,17 +105,7 @@ export function useDocumentMeta(
       )
     }
     return () => { for (const fn of undo.reverse()) fn() }
-  }, [canonical, isRoot, routeTags, title, description])
-
-  useEffect(() => {
-    if (routeTags || !canonicalPath || !/^\/(?!\/)\S*$/.test(canonicalPath)) return
-    const href = `${SITE_ORIGIN}${canonicalPath}`
-    const undo = [
-      setTag('link[rel="canonical"]', () => { const l = document.createElement('link'); l.setAttribute('rel', 'canonical'); return l }, 'href', href),
-      setTag('meta[property="og:url"]', metaBy('property', 'og:url'), 'content', href),
-    ]
-    return () => { for (const fn of undo.reverse()) fn() }
-  }, [routeTags, canonicalPath])
+  }, [canonical, notFound, title, description])
 
   useEffect(() => {
     const prevTitle = document.title
