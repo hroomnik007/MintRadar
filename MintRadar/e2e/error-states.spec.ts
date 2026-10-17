@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { installApiMocks, mockRelays, loginAs, MOCK_KNOWN_MINTS, MOCK_MINTS, MOCK_STATS, TEST_PUBKEY_HEX } from './fixtures/mocks'
+import { installApiMocks, mockRelays, loginAs, probePayload, MOCK_KNOWN_MINTS, MOCK_MINTS, MOCK_STATS, TEST_PUBKEY_HEX } from './fixtures/mocks'
 
 // An API failure is never presented as a mint state. With /api/mints/known failing (500, network error, or a
 // slow response that then fails) Mint Detail, the Watchlist and Home show ONE error state with a "Try again"
@@ -95,6 +95,32 @@ for (const pg of PAGES) {
     })
   }
 }
+
+// The live probe (/api/mint/probe) is a second call on Mint Detail. When OUR API fails it, the page keeps
+// rendering from the stored mint (status, score, name) and says the live data could not be loaded; it never
+// turns the failure into an "offline" state, and Try again recovers once the mock is healthy.
+test('Mint Detail: a failing live probe shows a retryable note and keeps the stored status', async ({ page }) => {
+  await mockRelays(page)
+  await installApiMocks(page)
+  let healthy = false
+  await page.route('**/api/mint/probe**', route => {
+    if (healthy) {
+      const target = new URL(route.request().url()).searchParams.get('url') ?? ''
+      return route.fulfill({ json: probePayload(target) })
+    }
+    return route.fulfill({ status: 500, json: { error: 'secret-internal-detail' } })
+  })
+  await page.goto(DETAIL)
+  await expect(page.locator('.md-tabs')).toBeVisible({ timeout: 15_000 })
+  const alert = page.getByRole('alert')
+  await expect(alert).toContainText('Could not load the live mint data. Please try again.', { timeout: 20_000 })
+  await expect(page.locator('body')).not.toContainText('secret-internal-detail')
+  await expect(page.locator('body')).not.toContainText('Loading live mint data')
+  await expect(page.locator('body')).not.toContainText(/mint unreachable/i)
+  healthy = true
+  await alert.getByRole('button', { name: 'Try again' }).click()
+  await expect(page.getByRole('alert')).toHaveCount(0, { timeout: 20_000 })
+})
 
 test('Home: while the list is pending the header strip shows dashes (never "0 online"), then the counts', async ({ page }) => {
   await mockRelays(page)

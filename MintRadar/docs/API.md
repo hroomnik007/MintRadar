@@ -493,6 +493,8 @@ On-demand live probe of a single mint URL. Triggers an outbound fetch.
 
 For a URL that is **not** a tracked mint the response is reduced: `keysets` is `null` and `info` carries only `name`, `version` and the NUT numbers as keys of `nuts` (each with `{}`); the example above is the answer for a tracked mint.
 
+**Server error:** a failure of MintRadar itself (a database error) is `500` `{"error":"Internal server error"}`, never an `online: false` answer.
+
 **Failure** (HTTP 200, `online: false`): `error` is always the literal `"Mint unreachable"`; the additive `errorKind` says why. It is an enum — never raw error text, headers, IPs or response bodies:
 
 | `errorKind` | Meaning |

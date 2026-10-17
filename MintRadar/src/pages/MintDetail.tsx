@@ -17,7 +17,7 @@ import {
   auditTooFewDetail, auditTooOldDetail, outagesCountLabel, noOutagesText, OUTAGES_WINDOW_DAYS,
 } from '@/utils/tooltipTexts'
 import { useKnownMints } from '@/hooks/useKnownMints'
-import { LoadError, LoadingNote, MINT_LIST_ERROR } from '@/components/LoadError'
+import { LoadError, LoadingNote, MINT_LIST_ERROR, LIVE_DATA_ERROR } from '@/components/LoadError'
 import { useMintReviews } from '@/hooks/useMintReviews'
 import { mergeStoredAndLiveReviews, visibleReviews, withServerProfileFallback, type ServerAuthorProfile } from '@/utils/reviewUtils'
 import { useMintOperatorNip05 } from '@/hooks/useMintOperatorNip05'
@@ -338,7 +338,7 @@ const NIP05_TOOLTIP = 'Taken from the Nostr profile of the account that announce
 function MintDetailContent({ url }: { url: string }) {
   const navigate = useNavigate()
   const now = useNow()
-  const { data, isLoading } = useMintProbe(url)
+  const { data, isLoading, isError: probeError, refetch: refetchProbe } = useMintProbe(url)
   const { data: knownMintsData } = useKnownMints()
   const knownMint = knownMintsData?.find(m => m.url === url) ?? null
   const operatorNip05 = useMintOperatorNip05(knownMint?.nostrAnnouncePubkey ?? null)
@@ -843,7 +843,7 @@ function MintDetailContent({ url }: { url: string }) {
     )
   }
 
-  const probeLoading = isLoading || data === undefined
+  const probeLoading = (isLoading || data === undefined) && !probeError
 
   const displayName = metaDisplayName
   const isOnline = data?.online ?? knownMint?.online ?? false
@@ -1520,6 +1520,7 @@ function MintDetailContent({ url }: { url: string }) {
                 Loading live mint data (MOTD, description, contact)…
               </div>
             )}
+            {probeError && data === undefined && <LoadError message={LIVE_DATA_ERROR} onRetry={() => { void refetchProbe() }} />}
             {(nut4Disabled || nut5Disabled) && (
               <div className="md-mint-alert">
                 <AlertTriangle size={16} className="md-mint-alert-icon" />

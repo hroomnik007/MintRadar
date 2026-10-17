@@ -61,6 +61,15 @@ describe('GET /api/mint/probe', () => {
     await request(app).get('/api/mint/probe?url=http://mint.example').expect(400)
   })
 
+  it('answers 500 (not an offline mint) when its own database lookup fails', async () => {
+    query.mockRejectedValue(new Error('db down'))
+
+    const r = await request(app).get('/api/mint/probe?url=https://mint.example').expect(500)
+
+    expect(r.body).toEqual({ error: 'Internal server error' })
+    expect(safeFetch).not.toHaveBeenCalled()
+  })
+
   it('returns the FULL live /v1/info for a KNOWN mint', async () => {
     query.mockResolvedValue({ rowCount: 1, rows: [{ '?column?': 1 }] }) // mint lookup hit
     serveMint(FULL_INFO)
