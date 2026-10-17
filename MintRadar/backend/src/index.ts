@@ -783,16 +783,9 @@ app.get('/api/mint/probe', (req: Request, res: Response): void => {
       })
     })
     .catch((err: unknown) => {
+      // Our own failure (a database error), not a mint state: never answered as "offline".
       if (IS_DEV) console.error('[/api/mint/probe] unexpected error:', err)
-      res.json({
-        url,
-        online: false,
-        latencyMs: null,
-        info: null,
-        keysets: null,
-        checkedAt: new Date().toISOString(),
-        error: 'Mint unreachable',
-      })
+      res.status(500).json({ error: 'Internal server error' })
     })
 })
 

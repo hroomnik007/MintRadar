@@ -9,6 +9,8 @@ import './LoadError.css'
 
 export const MINT_LIST_ERROR = 'Could not load the mint list. Please try again.'
 
+export const LIVE_DATA_ERROR = 'Could not load the live mint data. Please try again.'
+
 export function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="load-error" role="alert">

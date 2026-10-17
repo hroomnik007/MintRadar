@@ -93,28 +93,26 @@ async function probeMintViaProxy(url: string, signal?: AbortSignal): Promise<Min
   const timeout = AbortSignal.timeout(15000)
   const fetchSignal = signal !== undefined ? AbortSignal.any([signal, timeout]) : timeout
 
-  try {
-    const response = await fetch(probeUrl, { signal: fetchSignal, credentials: 'omit' })
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
-    }
-    const data: unknown = await response.json()
-    if (typeof data !== 'object' || data === null) {
-      throw new TypeError('Invalid proxy response')
-    }
-    const raw = data as Record<string, unknown>
-    return {
-      url: typeof raw['url'] === 'string' ? raw['url'] : url,
-      online: raw['online'] === true,
-      latencyMs: typeof raw['latencyMs'] === 'number' ? raw['latencyMs'] : null,
-      info: (raw['info'] as MintInfo | null) ?? null,
-      keysets: (raw['keysets'] as MintKeyset[] | null) ?? null,
-      checkedAt: typeof raw['checkedAt'] === 'string' ? new Date(raw['checkedAt']) : new Date(),
-      ...(typeof raw['error'] === 'string' ? { error: raw['error'] } : {}),
-      ...(isProbeErrorKind(raw['errorKind']) ? { errorKind: raw['errorKind'] } : {}),
-    }
-  } catch {
-    return { url, online: false, latencyMs: null, info: null, keysets: null, checkedAt: new Date(), error: 'Mint unreachable' }
+  // A failed call to OUR API (HTTP error, no network, timeout, malformed answer) throws: it is "we could not ask",
+  // never a mint state. Only a 200 answer carries `online`; a mint that is down arrives as `online: false`.
+  const response = await fetch(probeUrl, { signal: fetchSignal, credentials: 'omit' })
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`)
+  }
+  const data: unknown = await response.json()
+  if (typeof data !== 'object' || data === null) {
+    throw new TypeError('Invalid proxy response')
+  }
+  const raw = data as Record<string, unknown>
+  return {
+    url: typeof raw['url'] === 'string' ? raw['url'] : url,
+    online: raw['online'] === true,
+    latencyMs: typeof raw['latencyMs'] === 'number' ? raw['latencyMs'] : null,
+    info: (raw['info'] as MintInfo | null) ?? null,
+    keysets: (raw['keysets'] as MintKeyset[] | null) ?? null,
+    checkedAt: typeof raw['checkedAt'] === 'string' ? new Date(raw['checkedAt']) : new Date(),
+    ...(typeof raw['error'] === 'string' ? { error: raw['error'] } : {}),
+    ...(isProbeErrorKind(raw['errorKind']) ? { errorKind: raw['errorKind'] } : {}),
   }
 }
 
