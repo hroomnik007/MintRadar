@@ -20,7 +20,7 @@ export default function Learn() {
         titleClassName="learn-page-title"
         descriptionClassName="learn-page-subtitle"
         title="Learn"
-        description="A short course on how Cashu works, what can go wrong, and how to choose a safe Cashu mint."
+        description="How Cashu works, what can go wrong, and how to choose a mint."
       />
 
       <div className="learn-grid">
