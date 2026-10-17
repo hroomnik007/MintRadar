@@ -31,11 +31,8 @@ for (const width of [1440, 768, 390, 320]) {
 
     const head = page.locator('.stats-nhi-panel .stats-panel-head')
     await expect(triggers(head)).toHaveCount(0)
-    // the gauge opens the breakdown dialog only up to 768 px; above it the breakdown is inline and the hint would be false
-    const mobile = width <= 768
-    await expect(head.locator('.stats-panel-desc')).toHaveText(nhiSubtitle(mobile))
-    if (mobile) await expect(head.locator('.stats-panel-desc')).toHaveText('Weighted from five factors. Tap or click the gauge for the breakdown.')
-    else await expect(head.locator('.stats-panel-desc')).toHaveText('Weighted from five factors.')
+    await expect(head.locator('.stats-panel-desc')).toHaveText(nhiSubtitle())
+    await expect(head.locator('.stats-panel-desc')).toHaveText('Weighted from five factors.')
 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   })

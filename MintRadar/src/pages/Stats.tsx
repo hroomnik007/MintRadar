@@ -881,7 +881,7 @@ export default function Stats() {
                 <div className="stats-panel-title nhi-title-row">
                   Network health index
                 </div>
-                <div className="stats-panel-desc">{nhiSubtitle(isMobile)}</div>
+                <div className="stats-panel-desc">{nhiSubtitle()}</div>
                 </div>
               </div>
               {/* .nhi-fill is the flex:1 region below the header — this panel
@@ -951,7 +951,7 @@ export default function Stats() {
           <div className="stats-panel-head">
             <div>
               <div className="stats-panel-title">The network right now</div>
-              <div className="stats-panel-desc">Measured from {PROBE_LOCATION}, refreshed every 5 minutes.</div>
+              <div className="stats-panel-desc">Refreshed every 5 minutes.</div>
             </div>
           </div>
           <div className="stats-metrics">
@@ -1114,7 +1114,7 @@ export default function Stats() {
           <div className="stats-panel-head">
             <div>
               <div className="stats-panel-title">NUT coverage</div>
-              <div className="stats-panel-desc">How many of the {data.onlineMints} online mints support each protocol feature. Click a row to list them.</div>
+              <div className="stats-panel-desc">Mints that support each protocol feature. Click a row to list them.</div>
             </div>
           </div>
           <div className="stats-nut-rows-grid">

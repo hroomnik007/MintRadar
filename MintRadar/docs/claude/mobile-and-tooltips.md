@@ -294,7 +294,7 @@ Measured (touch context): visible height 27px ≤640px (padding 7/8), 30px above
 breakdowns and every other tooltip stay. Where each fact lives now:
 - Mint Detail **Latency** tile: caption `latencyCaption()` ("server · {PROBE_LOCATION}", `constants/probeLocation.ts`) says where the number comes from; the
   "Show my latency" button (`CLIENT_LATENCY_BUTTON_LABEL`) keeps its label and its own ⓘ. Not carried: "at the last probe" (the tile shows the latest probe anyway).
-- Stats **"Network health index"** header: the subtitle `nhiSubtitle()` is "Weighted from five factors." and, **only up to 768 px**, adds "Tap or click the gauge for the breakdown."
+- Stats **"Network health index"** header: the subtitle `nhiSubtitle()` is "Weighted from five factors." at every width (the gauge hint "Tap or click the gauge for the breakdown." was removed 2026-10-17: the "Show details ›" link says the same)
   - that is where the gauge (`.nhi-wrap`, `role=button`, tabbable, Enter/Space) opens the dialog; above 768 px the breakdown is inline and the gauge is not clickable, so the hint
   would be false. The weights are the "(30%)" in each breakdown row; the online-set sentence (`nhiOnlineSetText()`) is in the dialog footer and the Online row's tooltip (on desktop only there).
 - Stats **"average uptime"** tile: the caption `avgUptimeCaption()` is "of mints not offline for {DEGRADED_AFTER_HOURS}h+" (was "of active mints"). The rule is the code's: mints with
