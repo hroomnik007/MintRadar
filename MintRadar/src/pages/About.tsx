@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
+import { WALLET_API_FACTS } from '@/constants/forWalletsPage'
 import './About.css'
 
 // Every factual statement on this page is mapped to its source in
@@ -10,7 +11,8 @@ import './About.css'
 const REPO_URL = 'https://github.com/hroomnik007/MintRadar'
 const NPUB = 'npub1zatej55x47xzhnw06yarqr5ugz7y5el8vygcckek24e5qmrtx77qnmd6rg'
 const NIP05 = 'wildcitizen7@mintradar.org'
-const LAST_UPDATED = '12 October 2026'
+const PRIVACY_UPDATED = '12 October 2026'
+const RULES_UPDATED = '17 October 2026'
 
 const SECTIONS = [
   { id: 'about', label: 'About' },
@@ -102,8 +104,9 @@ export default function About() {
           <p>
             <strong>How we check.</strong> Every 5 minutes our server in {PROBE_LOCATION}, Germany asks each tracked
             mint for its <code>/v1/info</code>. Latency is measured from that server and can differ from what you see.
-            Audit data comes from third-party services (audit.8333.space and cashu.info) and can be out of date;
-            when it is, we say so. Some mints sit behind firewalls that challenge automated requests; such a mint may work in your wallet
+            Audit data comes from third-party services and can be out of date; when it is, we say so. cashu.info
+            feeds the audit part of the Reliability Score; audit.8333.space is only shown on a mint&apos;s Audit tab and
+            is not part of the score. Some mints sit behind firewalls that challenge automated requests; such a mint may work in your wallet
             and still show up here as offline, or fail to be listed.
           </p>
           <p>
@@ -135,7 +138,7 @@ export default function About() {
 
         <section aria-labelledby="privacy">
           <h2 id="privacy" tabIndex={-1} className="about-h2">Your data</h2>
-          <p className="about-updated">Last updated {LAST_UPDATED}</p>
+          <p className="about-updated">Last updated {PRIVACY_UPDATED}</p>
           <p>
             We set no cookies, use no analytics or advertising and load no third-party scripts or fonts.
           </p>
@@ -178,7 +181,7 @@ export default function About() {
 
         <section aria-labelledby="terms">
           <h2 id="terms" tabIndex={-1} className="about-h2">Rules</h2>
-          <p className="about-updated">Last updated {LAST_UPDATED}</p>
+          <p className="about-updated">Last updated {RULES_UPDATED}</p>
           <ul>
             <li>
               MintRadar is provided as it is, free of charge, without any warranty. It can be unavailable, wrong or
@@ -194,8 +197,10 @@ export default function About() {
             </li>
             <li>Mints and wallets listed here belong to their operators; we are not affiliated with them.</li>
             <li>
-              The service has rate limits and the API may change. Do not use the service to attack or overload it
-              or other hosts.
+              The service has rate limits. The wallet API (v1) only changes by adding fields and parameters, and a
+              removal is announced at least {WALLET_API_FACTS.deprecationNoticeDays} days ahead (see{' '}
+              <Link to="/for-wallets#stability">For wallets</Link>); every other API route may change without notice.
+              Do not use the service to attack or overload it or other hosts.
             </li>
             <li>
               To the extent the law allows, we are not liable for losses from using MintRadar.
