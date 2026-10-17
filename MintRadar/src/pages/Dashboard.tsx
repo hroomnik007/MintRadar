@@ -24,6 +24,7 @@ import { isNotRecommendedMint, partitionNotRecommended } from '@/utils/notRecomm
 import { cleanMintName } from '@/utils/cleanMintName'
 import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolForStatus } from '@/utils/mintCounts'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
+import { SITE_DESCRIPTION } from '@/constants/routeMeta'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { probeErrorMessage, probeRateLimitMessage, isProbeErrorKind, type ProbeErrorKind } from '@/utils/probeErrorMessages'
@@ -1119,7 +1120,7 @@ export default function Dashboard() {
 
   useDocumentMeta(
     'MintRadar - Cashu Mints Directory & Reliability Score Monitor',
-    'Find trusted Cashu mints. Privacy-first, real-time directory with Reliability Score, uptime, latency and NUT compatibility for every Cashu mint.'
+    SITE_DESCRIPTION
   )
 
   return (

@@ -1,0 +1,48 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { describe, expect, it } from 'vitest'
+import { PAGE_META } from '@/utils/pageMeta'
+import { ROUTE_META, SITE_DESCRIPTION } from '@/constants/routeMeta'
+
+// The words the app's own rules forbid as a verdict (docs/claude/mobile-and-tooltips.md, tooltipTexts.test.ts).
+const VERDICT = /\b(trusted|safe|safely|secure|securely|guaranteed?|recommended?)\b/i
+const MAX_DESCRIPTION = 160
+// Known exception, owner decision pending: the /for-wallets description is 168 characters. It lives in the
+// byte-identical backend/src/shared/pageMeta.ts and feeds the bot HTML of /api/og/page, which this task must not
+// change. The ceiling is pinned so it cannot grow; shorten it in both copies to drop the exception.
+const LENGTH_EXCEPTIONS: Record<string, number> = { 'PAGE_META /for-wallets': 168 }
+
+const indexHtml = readFileSync(resolve(__dirname, '../../index.html'), 'utf8')
+const tag = (re: RegExp) => {
+  const m = indexHtml.match(re)
+  const content = m?.[1]
+  if (content === undefined) throw new Error(`index.html: tag not found for ${re}`)
+  return content.replace(/&amp;/g, '&')
+}
+const headDescriptions = {
+  'meta description': tag(/<meta name="description" content="([^"]*)"/),
+  'og:description': tag(/<meta property="og:description" content="([^"]*)"/),
+  'twitter:description': tag(/<meta name="twitter:description" content="([^"]*)"/),
+}
+
+describe('site description (head defaults)', () => {
+  it.each(Object.entries(headDescriptions))('index.html %s is the one site description', (_name, text) => {
+    expect(text).toBe(SITE_DESCRIPTION)
+  })
+
+  it('has no verdict word and fits a snippet', () => {
+    expect(SITE_DESCRIPTION).not.toMatch(VERDICT)
+    expect(SITE_DESCRIPTION.length).toBeLessThanOrEqual(MAX_DESCRIPTION)
+  })
+})
+
+describe('per-page descriptions', () => {
+  const all: Array<[string, string]> = [
+    ...Object.entries(PAGE_META).map(([k, v]): [string, string] => [`PAGE_META ${k}`, v.description]),
+    ...Object.entries(ROUTE_META).map(([k, v]): [string, string] => [`ROUTE_META ${k}`, v.description]),
+  ]
+  it.each(all)('%s has no verdict word and is at most 160 characters', (name, text) => {
+    expect(text).not.toMatch(VERDICT)
+    expect(text.length).toBeLessThanOrEqual(LENGTH_EXCEPTIONS[name] ?? MAX_DESCRIPTION)
+  })
+})
