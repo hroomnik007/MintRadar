@@ -35,7 +35,7 @@ describe('PAGE_META', () => {
     })
     expect(PAGE_META['/for-wallets']).toEqual({
       title: 'MintRadar for wallets | Cashu mint health API',
-      description: 'A free, stable and documented JSON API with operational health data for Cashu mints: score, status, uptime, software and audit summary. CORS enabled, cached, versioned.',
+      description: 'Free, stable JSON API for Cashu mint health: score, status, uptime, software and audit. CORS enabled, cached, versioned.',
       canonicalPath: '/for-wallets',
     })
   })

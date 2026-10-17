@@ -7,10 +7,7 @@ import { ROUTE_META, SITE_DESCRIPTION } from '@/constants/routeMeta'
 // The words the app's own rules forbid as a verdict (docs/claude/mobile-and-tooltips.md, tooltipTexts.test.ts).
 const VERDICT = /\b(trusted|safe|safely|secure|securely|guaranteed?|recommended?)\b/i
 const MAX_DESCRIPTION = 160
-// Known exception, owner decision pending: the /for-wallets description is 168 characters. It lives in the
-// byte-identical backend/src/shared/pageMeta.ts and feeds the bot HTML of /api/og/page, which this task must not
-// change. The ceiling is pinned so it cannot grow; shorten it in both copies to drop the exception.
-const LENGTH_EXCEPTIONS: Record<string, number> = { 'PAGE_META /for-wallets': 168 }
+const LENGTH_EXCEPTIONS: Record<string, number> = {}
 
 const indexHtml = readFileSync(resolve(__dirname, '../../index.html'), 'utf8')
 const tag = (re: RegExp) => {

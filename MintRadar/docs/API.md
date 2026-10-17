@@ -89,7 +89,7 @@ Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` l
 | `software` | string \| null | The mint's own version string (`Nutshell/0.21.0`); untrusted text, at most 100 characters. |
 | `outdated` | boolean \| null | `true`: two or more minor versions behind the newest stable release of that software family. `false`: not outdated. `null`: unknown software, no or unreadable version, or no reference release. |
 | `isTest` | boolean | On MintRadar's manual test-mint list. Test mints are never recommended. |
-| `audit` | object \| null | cashu.info's 7-day window: `swaps7d` (all swaps), `attributedFailures` (failures cashu.info attributes to this mint), `fetchedAt` (ISO 8601). `null` when no data is stored. Fewer than 10 swaps or data older than 168 hours scores neutral in the Reliability Score. |
+| `audit` | object \| null | cashu.info's 7-day window: `swaps7d` (all swaps), `attributedFailures` (failures cashu.info attributes to this mint, never more than `swaps7d`), `fetchedAt` (ISO 8601). `null` when no data is stored. Fewer than 10 swaps or data older than 168 hours scores neutral in the Reliability Score. |
 | `reviews` | object | Community Rating, same definitions as the website: `count` (counted NIP-87 reviews), `ratedCount` (how many carry a rating; always an integer, `0` only when no counted review carries one), `avg` (average rating over those, one decimal, `null` when none), `operatorCount` (reviews by the mint's own operator, which are left out of the other three). |
 | `eligibleForRecommendation` | boolean | `true` when the mint is online, has a score, is not a test mint and was first seen at least 14 days ago. |
 
@@ -590,7 +590,7 @@ A short list of currently healthy mints for a wallet's default or suggested list
 | `limit` | `5` | Max results (1–10), applied after all filters |
 | `nuts` | — | Comma-separated NUT numbers the mint must advertise (e.g. `4,5`) |
 
-An invalid `minScore` or `limit` falls back to its default (`minScore` not a whole number, `limit` not a whole number) or is clamped (`minScore` above 100 becomes 100, `limit` is held between 1 and 10); this route does not return `400` for them. In each result `units` is the requested `unit` (`[""]` when the filter is off), not the mint's own unit list. Results are ordered by score (descending), then 7-day uptime, then name.
+An invalid `minScore` or `limit` falls back to its default (`minScore` not a whole number, `limit` not a whole number) or is clamped (`minScore` above 100 becomes 100, `limit` is held between 1 and 10); this route does not return `400` for them. In each result `units` is the mint's own unit list (`null` when unknown), the same as in the wallet API; the requested `unit` only filters. Results are ordered by score (descending), then 7-day uptime, then name.
 
 **Example**
 

@@ -123,7 +123,7 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviews
     outdated: outdatedOf(m.version, m.softwareLatest),
     isTest: test,
     audit: auditOk
-      ? { swaps7d: m.auditCzTotal as number, attributedFailures: m.auditCzBlamed as number, fetchedAt: toIso(m.auditCzFetchedAt) as string }
+      ? { swaps7d: m.auditCzTotal as number, attributedFailures: Math.min(m.auditCzBlamed as number, m.auditCzTotal as number), fetchedAt: toIso(m.auditCzFetchedAt) as string }
       : null,
     // While review_rated_count is NULL the stored reviews are counted at read time (the snapshot carries them), so
     // ratedCount is never a misleading 0; 0 only when there really are no rated reviews.
@@ -296,7 +296,7 @@ export function recommendEnvelope(snap: Snapshot, q: RecommendQuery): object {
       uptimePct24h: m.uptime24hPct,
       latencyMs: latency.get(m.url) ?? null,
       version: m.software,
-      units: [q.unit],
+      units: m.units,
     })),
     generatedAt: new Date(snap.computedAt).toISOString(),
     methodology: METHODOLOGY_VERSION,
