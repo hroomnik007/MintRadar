@@ -245,6 +245,12 @@ describe('status, flags and fields', () => {
     expect(m.nuts).toBeNull()
   })
 
+  it('attributedFailures never exceeds swaps7d', async () => {
+    query.mockResolvedValue({ rows: [row('https://a.example.com', { audit_cz_total: 12, audit_cz_blamed: 30 })] })
+    const m = (await list()).body.mints[0]
+    expect(m.audit).toMatchObject({ swaps7d: 12, attributedFailures: 12 })
+  })
+
   it('name is the cleaned display name and honours the hidden-names list (null = show the hostname)', async () => {
     const names = await import('../../mintNames.js')
     names._setHiddenMintNamesForTest(new Map([['https://b.example.com', 'test']]))
@@ -612,7 +618,7 @@ describe('GET /api/mints/recommend', () => {
 
   it('filters by unit, minScore (default 80) and nuts, and caps limit at 10 (default 5)', async () => {
     expect(recUrls((await rec('?unit=usd&minScore=0')).body)).toEqual(['https://c.example.com'])
-    expect((await rec('?unit=usd&minScore=0')).body.recommended[0].units).toEqual(['usd'])
+    expect((await rec('?unit=usd&minScore=0')).body.recommended[0].units).toEqual(['sat', 'usd'])
     expect(recUrls((await rec()).body)).toEqual(['https://a.example.com', 'https://b.example.com', 'https://c.example.com']) // minScore 80 default
     expect(recUrls((await rec('?minScore=85')).body)).toEqual(['https://a.example.com', 'https://b.example.com'])
     expect(recUrls((await rec('?minScore=0&nuts=8')).body)).toEqual(['https://c.example.com'])

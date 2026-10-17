@@ -89,6 +89,7 @@ async function refresh() {
   return latest
 }
 
+refresh() // first request right away
 setInterval(refresh, ${EXAMPLE_POLL_MINUTES} * 60 * 1000) // every ${EXAMPLE_POLL_MINUTES} minutes`,
   },
 ]

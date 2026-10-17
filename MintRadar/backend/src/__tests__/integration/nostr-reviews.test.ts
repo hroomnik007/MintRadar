@@ -103,14 +103,14 @@ describe('GET /api/mints/nostr-reviews', () => {
     expect(res.body[0]).toMatchObject({ rating: null, content: '' })
   })
 
-  it('returns an empty array (not 500) when the DB query fails', async () => {
+  it('returns 500 (not an empty list) when the DB query fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     queryMock.mockRejectedValue(new Error('db down'))
 
     const res = await request(app).get('/api/mints/nostr-reviews').query({ url: 'https://mint.example.com' })
 
-    expect(res.status).toBe(200)
-    expect(res.body).toEqual([])
+    expect(res.status).toBe(500)
+    expect(res.body).toEqual({ error: 'Internal server error' })
   })
 
   it('returns 400 when the url query param is missing', async () => {
