@@ -98,8 +98,8 @@ export default function Methodology() {
               <tbody>
                 <tr><th scope="row">Uptime</th><td>{w.uptime}</td><td>MintRadar probes of the last {M.uptime.windowHours} hours</td></tr>
                 <tr><th scope="row">Audit reliability</th><td>{w.audit}</td><td>cashu.info swaps of the last {M.audit.windowDays} days</td></tr>
-                <tr><th scope="row">NUT support</th><td>{w.nuts}</td><td>NUTs the mint advertises in <code>/v1/info</code></td></tr>
-                <tr><th scope="row">Software version</th><td>{w.version}</td><td>The mint&apos;s version against the newest stable release</td></tr>
+                <tr><th scope="row">NUT support</th><td>{w.nuts}</td><td>NUTs the mint says it supports in <code>/v1/info</code></td></tr>
+                <tr><th scope="row">Software version</th><td>{w.version}</td><td>The version the mint reports, against the newest stable release</td></tr>
                 <tr><th scope="row">Contact</th><td>{w.contact}</td><td>Contact channels the mint publishes</td></tr>
               </tbody>
             </table>
@@ -121,8 +121,11 @@ export default function Methodology() {
             Input: the stored cashu.info detail of the mint. The error rate is the number of swaps in the last{' '}
             {M.audit.windowDays} days whose failure cashu.info attributes to <em>the mint itself</em> (
             <code>errorsBlamed</code>) divided by all swaps of that window. Failures cashu.info does not blame on the
-            mint (an amount below the mint&apos;s minimum, the auditor&apos;s own balance, Lightning routing) are not
-            counted; a count above the total is limited to the total.
+            mint are not counted. By default that includes Lightning routing failures, which can sit anywhere on the
+            path; cashu.info blames a mint for them only when payments to or from it keep failing across several
+            counterparts. Attempts the auditor stops itself before sending anything (too little balance, an amount
+            outside the mint&apos;s limits) are not swaps and are not in the total. A count above the total is limited
+            to the total.
           </p>
           <div className="doc-table-wrap" tabIndex={0} role="region" aria-label="Audit bands">
             <table className="doc-table">
@@ -269,6 +272,7 @@ export default function Methodology() {
             <li>Latency from your location. Latency is measured from {PROBE_LOCATION} and is not part of the score.</li>
             <li>Lightning liquidity and routing, and failures cashu.info does not attribute to the mint.</li>
             <li>Software quality beyond how recent the version is.</li>
+            <li>Whether a mint really supports the NUTs it advertises or runs the software version it reports. MintRadar takes both, and the contact entries, from the mint&apos;s own <code>/v1/info</code>. The audit swaps exercise minting and melting; other NUTs are taken at the mint&apos;s word.</li>
             <li>What people say about the mint (see Reviews above).</li>
           </ul>
         </section>
