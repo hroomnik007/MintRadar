@@ -29,8 +29,8 @@ Machine-readable description: [`docs/openapi/wallets-v1.yaml`](openapi/wallets-v
 |---|---|---|
 | `unit` | — | Keep mints that list this unit (`sat`, `usd`, `eur`, …; case-insensitive). Mints whose units are unknown (`units: null`) never match. |
 | `minScore` | — | Integer 0 to 100: keep mints with `score >= minScore` (a mint without a score never matches). |
-| `includeOffline` | `false` | Also return `offline` and `degraded` mints. |
-| `includeArchived` | `false` | Also return `archived` mints (offline for 30+ days). This flag alone is enough for them. |
+| `includeOffline` | `false` | Also return `offline` and `degraded` mints (see `status` for the exact rule). |
+| `includeArchived` | `false` | Also return `archived` mints (see `status`). This flag alone is enough for them. |
 | `includeTest` | `false` | Also return mints from MintRadar's manual test-mint list (`isTest: true`). |
 | `includeUnscored` | `false` | Also return mints whose `score` is `null` (not probed yet). |
 | `limit` | `100` | Integer 1 to 200 (`400` outside that range). |
@@ -79,7 +79,7 @@ Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` l
 |---|---|---|
 | `url` | string | Normalised mint URL. |
 | `name` | string \| null | The cleaned display name the website uses; `null` means show the hostname (also for mints on MintRadar's hidden-names list). Untrusted text: render as plain text. |
-| `status` | `"online"` \| `"offline"` \| `"degraded"` \| `"archived"` | `online`: the latest probe succeeded. `offline`: the latest probe failed (or the mint was never probed). `degraded`: no successful probe in the last 24 hours. `archived`: offline for 30+ days. |
+| `status` | `"online"` \| `"offline"` \| `"degraded"` \| `"archived"` | `online`: the latest probe succeeded. `offline`: the latest probe failed (or the mint was never probed). `degraded`: the latest probe failed and either the mint has at least 4 probes in the last 24 hours and none of them succeeded, or that failed probe is more than 24 hours old. `archived`: the latest probe failed and the last successful probe was more than 30 days ago (checked first; a mint that never had a successful probe is not archived). |
 | `score` | integer 0–100 \| null | The stored Reliability Score (operational health: uptime 40, audit 25, NUTs 15, software version 15, contact 5). `null` until the first probe. |
 | `scoreCappedNew` | boolean | `true` while the mint is younger than 30 days: its score is capped at 75. |
 | `uptime24hPct`, `uptime7dPct` | integer \| null | Share of successful probes (percent, rounded). |
@@ -121,13 +121,13 @@ const { methodology, mints } = await res.json()
 
 ### Caching
 
-Every successful `GET` of `/api/v1/wallets/*`, `/api/v1/mints/known` and `/api/v1/mints/recommend` carries `Cache-Control: public, max-age=300` and a strong `ETag` over the body, on a cache hit as well as a miss. Send `If-None-Match` to get `304 Not Modified` (same headers, no body). The data moves with the 5-minute probe cycle, so **poll at most every 5 minutes**; a wallet that fetches the list once when it starts and then every 10 minutes is well within the limits. Error responses are not cached. The read routes of the website that show shared data (`/api/stats`, `/api/stats/reliability-movers`, `/api/mints/swaps`, `/api/mints/audit-cz`, `/api/mints/nostr-reviews`) use the same header form and the same kind of `ETag` with their own shorter `max-age` (60 s, 10 min, 5 min, 60 s, 2 min); they are internal and carry no stability guarantee.
+Every successful `GET` of `/api/v1/wallets/*`, `/api/v1/mints/known` and `/api/v1/mints/recommend` carries `Cache-Control: public, max-age=300` and a strong `ETag` over the body, on a cache hit as well as a miss. Send `If-None-Match` to get `304 Not Modified` (same headers, no body). The data moves with the 5-minute probe cycle, so **poll at most every 5 minutes**; a wallet that fetches the list once when it starts and then every 10 minutes is well within the limits. Error responses are not cached. The read routes of the website that show shared data use the same header form and the same kind of `ETag` with their own `max-age`: `/api/stats` 60 s (`max-age=60`), `/api/stats/reliability-trend` 10 min (`max-age=600`), `/api/stats/reliability-movers` 10 min (`max-age=600`), `/api/mints/swaps` 5 min (`max-age=300`), `/api/mints/audit-cz` 60 s (`max-age=60`), `/api/mints/nostr-reviews` 2 min (`max-age=120`); they are internal and carry no stability guarantee.
 
 ### Rate limits
 
 | Routes | Limit |
 |---|---|
-| `/api/v1/wallets/*` and `/api/v1/mints/recommend` | **300 requests / minute / IP** (one shared counter, separate from the 60/min one) |
+| `/api/v1/wallets/*` and `/api/v1/mints/recommend` | **300 requests per minute per IP address**, one counter shared by `/api/v1/wallets/*` and `/api/v1/mints/recommend` (the unversioned `/api/...` paths count the same); separate from the 60/min counter |
 | `/health`, `/api/mints/known`, `/api/stats`, `/api/mint/icon` | no limit (read-only, cached) |
 | every other read route | **60 requests / minute / IP** |
 
@@ -173,7 +173,7 @@ The other routes keep their older shape `{ "error": "text" }` (see "Error Respon
 
 | Endpoint type | Limit |
 |---|---|
-| `/api/v1/wallets/*` and `/api/v1/mints/recommend` | **300 requests / minute / IP** (one shared counter) |
+| `/api/v1/wallets/*` and `/api/v1/mints/recommend` | **300 requests per minute per IP address**, one counter shared by `/api/v1/wallets/*` and `/api/v1/mints/recommend` (the unversioned `/api/...` paths count the same); separate from the 60/min counter |
 | Read endpoints **except** those two and `/health`, `/api/mints/known`, `/api/stats` and `/api/mint/icon` (these four are exempt) | **60 requests / minute / IP** |
 | `/api/mint/submit` (POST) | **20 requests / hour / IP** |
 | `/api/mints/discover` (POST) | **10 requests / hour / IP** |

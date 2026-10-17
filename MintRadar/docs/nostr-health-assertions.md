@@ -51,7 +51,7 @@ This is an application of kind `30385` of [NIP-85](https://github.com/nostr-prot
 | `d` | the mint URL, normalised | https, lower-case host, no default port, no trailing slash on a bare host, **no fragment** (NIP-73: URL, normalised, no fragment) |
 | `k` | `web` | NIP-73 type of the `d` value |
 | `rank` | integer 0 to 100 | the provider's Reliability Score for the mint (the method is at `methodology_url`) |
-| `mint_status` | `online` \| `offline` \| `degraded` | state at the last probe; `degraded` = offline for longer (no successful probe in the last 24 hours) |
+| `mint_status` | `online` \| `offline` \| `degraded` | state at the last probe; `degraded` = the latest probe failed and either at least 4 probes in the last 24 hours all failed or that failed probe is more than 24 hours old (the same rule as `status` in the wallet API) |
 | `mint_uptime_24h`, `mint_uptime_7d` | integer 0 to 100 | percentage of successful probes in the window; omitted when unknown |
 | `mint_software` | text, `^[A-Za-z0-9._+/ -]{1,64}$` | the version string the mint reports about itself (mint-controlled; omitted when it does not match). Display it as plain text only |
 | `mint_outdated` | `0` \| `1` | the software is two or more minor versions behind the newest stable release of its family; omitted when the provider cannot decide |

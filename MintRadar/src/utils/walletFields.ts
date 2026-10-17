@@ -29,7 +29,7 @@ export const WALLET_ENVELOPE_FIELDS: readonly WalletField[] = [
 export const WALLET_MINT_FIELDS: readonly WalletField[] = [
   { name: 'url', type: 'string', nullable: false, meaning: 'Normalised mint URL (https, lower-case host, no trailing slash).' },
   { name: 'name', type: 'string', nullable: true, meaning: 'Cleaned display name. null means show the hostname. Untrusted text: render it as plain text.' },
-  { name: 'status', type: '"online" | "offline" | "degraded" | "archived"', nullable: false, meaning: 'online: the latest probe succeeded. offline: it failed, or the mint was never probed. degraded: no successful probe in the last 24 hours. archived: offline for 30+ days.' },
+  { name: 'status', type: '"online" | "offline" | "degraded" | "archived"', nullable: false, meaning: 'online: the latest probe succeeded. offline: it failed, or the mint was never probed. degraded: the latest probe failed and either at least 4 probes in the last 24 hours all failed or that failed probe is more than 24 hours old. archived: the latest probe failed and the last successful probe was more than 30 days ago (checked first; a mint that never succeeded is not archived).' },
   { name: 'score', type: 'integer 0 to 100', nullable: true, meaning: 'Reliability Score, an operational health signal. null until the first probe: "no data yet", not a bad score.' },
   { name: 'scoreCappedNew', type: 'boolean', nullable: false, meaning: 'true while the mint is younger than 30 days; its score is capped at 75.' },
   { name: 'uptime24hPct', type: 'integer', nullable: true, meaning: 'Share of successful probes in the last 24 hours, in percent.' },
@@ -64,7 +64,7 @@ export const WALLET_QUERY_PARAMS: readonly WalletQueryParam[] = [
   { name: 'unit', type: 'string', default: 'any', meaning: 'Keep mints that list this unit (sat, usd, eur, ...; case-insensitive). Mints whose units are unknown never match.' },
   { name: 'minScore', type: 'integer 0 to 100', default: 'none', meaning: 'Keep mints with score >= minScore. A mint without a score never matches.' },
   { name: 'includeOffline', type: 'true | false', default: 'false', meaning: 'Also return offline and degraded mints.' },
-  { name: 'includeArchived', type: 'true | false', default: 'false', meaning: 'Also return archived mints (offline for 30+ days).' },
+  { name: 'includeArchived', type: 'true | false', default: 'false', meaning: 'Also return archived mints (see status).' },
   { name: 'includeTest', type: 'true | false', default: 'false', meaning: 'Also return mints from the test-mint list (isTest: true).' },
   { name: 'includeUnscored', type: 'true | false', default: 'false', meaning: 'Also return mints whose score is null.' },
   { name: 'limit', type: 'integer 1 to 200', default: '100', meaning: 'Maximum number of mints returned.' },

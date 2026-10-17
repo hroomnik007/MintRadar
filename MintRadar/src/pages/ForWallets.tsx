@@ -164,8 +164,9 @@ export default function ForWallets() {
               readable from browser code. A preflight is answered with <code>204</code> and does not count against the limit.
             </li>
             <li>
-              <strong>Rate limit:</strong> {F.rateLimitPerMinute} requests per minute per IP address on{' '}
-              <code>/api/wallets/*</code> (its own counter). Answers carry <code>X-RateLimit-Limit</code>,{' '}
+              <strong>Rate limit:</strong> {F.rateLimitPerMinute} requests per minute per IP address, one counter shared by{' '}
+              <code>/api/v1/wallets/*</code> and <code>/api/v1/mints/recommend</code> (the unversioned{' '}
+              <code>/api/...</code> paths count the same). Answers carry <code>X-RateLimit-Limit</code>,{' '}
               <code>X-RateLimit-Remaining</code> and <code>X-RateLimit-Reset</code>; a <code>429</code> carries{' '}
               <code>Retry-After</code>. Users behind one NAT share the budget, so a wallet backend should fetch once and
               serve its users from its own cache.

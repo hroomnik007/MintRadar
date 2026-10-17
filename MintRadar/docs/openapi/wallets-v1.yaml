@@ -17,9 +17,9 @@ info:
     `ETag` over the body (on a cache hit as well as a miss). Send `If-None-Match` to get `304`. The data
     follows MintRadar's 5-minute probe cycle: poll at most every 5 minutes. Errors are not cached.
 
-    **Rate limit.** 300 requests per minute per IP for `/wallets/*` (its own counter, shared with
-    `/mints/recommend`, which is not part of this specification). Every response
-    carries `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`; a `429` carries
+    **Rate limit.** 300 requests per minute per IP address, one counter shared by `/api/v1/wallets/*`
+    and `/api/v1/mints/recommend` (the unversioned `/api/...` paths count the same; `/mints/recommend`
+    is not part of this specification). Every response carries `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`; a `429` carries
     `Retry-After` (seconds).
 
     **Stability.** Inside v1 a field is never renamed or removed and its type does not change; changes
@@ -60,11 +60,11 @@ paths:
           example: 70
         - name: includeOffline
           in: query
-          description: Also return `offline` and `degraded` mints.
+          description: Also return `offline` and `degraded` mints (see `status` for the exact rule).
           schema: { type: boolean, default: false }
         - name: includeArchived
           in: query
-          description: Also return `archived` mints (offline for 30+ days). This flag alone is enough for them.
+          description: Also return `archived` mints (see `status`). This flag alone is enough for them.
           schema: { type: boolean, default: false }
         - name: includeTest
           in: query
@@ -306,7 +306,10 @@ components:
           enum: [online, offline, degraded, archived]
           description: |
             `online`: the latest probe succeeded. `offline`: the latest probe failed or the mint was never probed.
-            `degraded`: no successful probe in the last 24 hours. `archived`: offline for 30+ days.
+            `degraded`: the latest probe failed and either the mint has at least 4 probes in the last 24 hours
+            and none of them succeeded, or that failed probe is more than 24 hours old. `archived`: the latest
+            probe failed and the last successful probe was more than 30 days ago (checked first; a mint that
+            never had a successful probe is not archived).
         score:
           type: [integer, 'null']
           minimum: 0
