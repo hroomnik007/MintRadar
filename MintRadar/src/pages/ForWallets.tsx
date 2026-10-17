@@ -290,7 +290,7 @@ export default function ForWallets() {
 
           <h3 className="doc-h3">Query</h3>
           <p>
-            One query returns every mint: currently about 60 events of about 1 kB each, so a limit of {HEALTH_FACTS.queryLimit} is
+            One query returns one event per scored mint, each about 1 kB, so a limit of {HEALTH_FACTS.queryLimit} is
             plenty.
           </p>
           <CodeBlock label="Filter" title="Filter for every mint" code={HEALTH_FILTER_ALL} />
