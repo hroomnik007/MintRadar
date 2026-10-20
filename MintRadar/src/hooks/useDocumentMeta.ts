@@ -25,6 +25,10 @@ import { useLocation } from 'react-router-dom'
 // `notFound: true` (unknown Learn module, unknown or untracked mint, the 404 route): such a page has no address of
 // its own, so the canonical link is REMOVED instead of set (it comes back on unmount) and the sharing tags keep the
 // static defaults of index.html. `useRemoveCanonical()` does just that for states that set no title.
+// Every not-found state is also `noindex, follow`: pass `noindex` next to `notFound` (the Learn module, the 404
+// route) or call `useNoindex()` next to `useRemoveCanonical()` (the Mint Detail states that set no title). The
+// robots tag is put back on unmount. This is client-side only: a crawler that does not run JavaScript still gets
+// status 200 and the static head for an unknown path (a real 404 is not part of this hook).
 const SITE_ORIGIN = 'https://mintradar.org'
 
 // Sets one tag attribute and returns the function that puts the previous state back.
@@ -70,6 +74,29 @@ function removeCanonical(): () => void {
 
 export function useRemoveCanonical(): void {
   useEffect(() => removeCanonical(), [])
+}
+
+// Sets <meta name="robots" content="noindex, follow"> (creating it when missing) and returns the function that
+// puts the previous state back: the tag is removed when this call created it, otherwise its content is restored.
+function setNoindex(): () => void {
+  let el = document.querySelector<HTMLMetaElement>('meta[name="robots"]')
+  const created = el === null
+  if (!el) {
+    el = document.createElement('meta')
+    el.setAttribute('name', 'robots')
+    document.head.appendChild(el)
+  }
+  const prev = el.getAttribute('content')
+  el.setAttribute('content', 'noindex, follow')
+  const node = el
+  return () => {
+    if (created) node.remove()
+    else if (prev !== null) node.setAttribute('content', prev)
+  }
+}
+
+export function useNoindex(): void {
+  useEffect(() => setNoindex(), [])
 }
 
 function canonicalUrlFor(pathname: string): string {

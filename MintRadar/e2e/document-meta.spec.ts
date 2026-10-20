@@ -80,18 +80,26 @@ test('a tracked mint page: canonical and og:url are its own path, the title is t
   await expect(meta(page, SOCIAL.twDescription)).toHaveAttribute('content', description!)
 })
 
-test.describe('not-found states have no canonical', () => {
+const robots = (page: Page) => page.locator('meta[name="robots"]')
+// Crawlers that do not run JavaScript still see status 200 and the static head for an unknown path; these tests
+// cover what the browser sets after load (docs/claude/mobile-and-tooltips.md is not involved, see
+// docs/claude/deploy-and-infra.md "Not-found pages").
+test.describe('not-found states have no canonical and are noindex, follow', () => {
   test('/learn/99 (unknown module)', async ({ page }) => {
     await page.goto('/learn/99')
     await expect(page.getByText('Module not found.')).toBeVisible()
     await expect(page).toHaveTitle('Module not found - MintRadar Learn')
     await expect(canonicalLinks(page)).toHaveCount(0)
+    await expect(robots(page)).toHaveCount(1)
+    await expect(robots(page)).toHaveAttribute('content', 'noindex, follow')
   })
 
   test('an untracked mint', async ({ page }) => {
     await page.goto(`/mint/${encodeURIComponent(UNTRACKED)}`)
     await expect(page.getByRole('heading', { name: 'Not a tracked mint' })).toBeVisible()
     await expect(canonicalLinks(page)).toHaveCount(0)
+    await expect(robots(page)).toHaveCount(1)
+    await expect(robots(page)).toHaveAttribute('content', 'noindex, follow')
   })
 
   test('an unknown route', async ({ page }) => {
@@ -99,7 +107,43 @@ test.describe('not-found states have no canonical', () => {
     await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible()
     await expect(page).toHaveTitle('Page not found | MintRadar')
     await expect(canonicalLinks(page)).toHaveCount(0)
+    await expect(robots(page)).toHaveCount(1)
+    await expect(robots(page)).toHaveAttribute('content', 'noindex, follow')
   })
+
+  test('an invalid mint URL', async ({ page }) => {
+    await page.goto('/mint/%25E0')
+    await expect(page.getByRole('heading', { name: 'Invalid mint URL.' })).toBeVisible()
+    await expect(canonicalLinks(page)).toHaveCount(0)
+    await expect(robots(page)).toHaveCount(1)
+    await expect(robots(page)).toHaveAttribute('content', 'noindex, follow')
+  })
+
+  test('/about and a tracked mint page are indexable (no robots tag)', async ({ page }) => {
+    await page.goto('/about')
+    await expect(canonicalLinks(page)).toHaveCount(1)
+    await expect(robots(page)).toHaveCount(0)
+    await page.goto(`/mint/${encodeURIComponent(TRACKED)}`)
+    await expect(page).toHaveTitle(/ - Cashu Mint Reliability Score & Uptime \| MintRadar$/)
+    await expect(canonicalLinks(page)).toHaveCount(1)
+    await expect(robots(page)).toHaveCount(0)
+  })
+})
+
+test('the noindex of a not-found page is removed by a navigation to /about', async ({ page }) => {
+  await page.goto('/learn/99')
+  await expect(page.getByText('Module not found.')).toBeVisible()
+  await expect(robots(page)).toHaveAttribute('content', 'noindex, follow')
+
+  await page.getByRole('link', { name: 'Back to Learn' }).click()
+  await expect(page).toHaveURL(/\/learn$/)
+  await expect(robots(page)).toHaveCount(0)
+  await expect(canonicalLinks(page)).toHaveCount(1)
+
+  await page.getByRole('link', { name: 'About' }).first().click()
+  await expect(page).toHaveURL(/\/about$/)
+  await expect(robots(page)).toHaveCount(0)
+  await expect(canonicalLinks(page)).toHaveAttribute('href', `${ORIGIN}/about`)
 })
 
 test('a navigation by link replaces every tag', async ({ page }) => {

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { render, renderHook, act } from '@testing-library/react'
 import { MemoryRouter, Routes, Route, Link } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import { useDocumentMeta, useRemoveCanonical } from '@/hooks/useDocumentMeta'
+import { useDocumentMeta, useNoindex, useRemoveCanonical } from '@/hooks/useDocumentMeta'
 
 // One hook sets title, description, canonical, og:* and twitter:* for the route after load. Not-found states have
 // no canonical. A single-page navigation leaves no stale tag and no duplicate.
@@ -151,6 +151,58 @@ describe('useDocumentMeta notFound', () => {
     expect(ogUrl()).toBe('https://mintradar.org')
     unmount()
     expect(canonical()).toBe(HOME)
+  })
+})
+
+const robots = () => document.querySelector('meta[name="robots"]')
+
+describe('not-found states are noindex, follow', () => {
+  it('notFound + noindex sets the robots tag, removes the canonical and takes both away/back on unmount', () => {
+    const { unmount } = renderHook(() => useDocumentMeta('Module not found', undefined, { notFound: true, noindex: true }), { wrapper: wrapperAt('/learn/99') })
+    expect(robots()?.getAttribute('content')).toBe('noindex, follow')
+    expect(count('meta[name="robots"]')).toBe(1)
+    expect(count('link[rel="canonical"]')).toBe(0)
+    unmount()
+    expect(robots()).toBeNull()
+    expect(canonical()).toBe(HOME)
+  })
+
+  it('a found page (no notFound, no noindex) has no robots tag', () => {
+    renderHook(() => useDocumentMeta('About', 'd', { notFound: false, noindex: false }), { wrapper: wrapperAt('/about') })
+    expect(robots()).toBeNull()
+  })
+
+  it('useNoindex creates the tag once, leaves title and canonical alone and removes the tag it created on unmount', () => {
+    const { unmount } = renderHook(() => useNoindex(), { wrapper: wrapperAt('/mint/x') })
+    expect(robots()?.getAttribute('content')).toBe('noindex, follow')
+    expect(count('meta[name="robots"]')).toBe(1)
+    expect(document.title).toBe('Home')
+    expect(canonical()).toBe(HOME)
+    unmount()
+    expect(robots()).toBeNull()
+  })
+
+  it('useNoindex puts a robots tag that already existed back to its previous content', () => {
+    document.head.insertAdjacentHTML('beforeend', '<meta name="robots" content="index, follow" />')
+    const { unmount } = renderHook(() => useNoindex(), { wrapper: wrapperAt('/mint/x') })
+    expect(robots()?.getAttribute('content')).toBe('noindex, follow')
+    unmount()
+    expect(robots()?.getAttribute('content')).toBe('index, follow')
+    expect(count('meta[name="robots"]')).toBe(1)
+  })
+
+  it('a navigation from a not-found page to a found page removes the noindex', () => {
+    function NF() { useDocumentMeta('Module not found', undefined, { notFound: true, noindex: true }); return <Link to="/about">back</Link> }
+    function A() { useDocumentMeta('About', 'd'); return <span>about</span> }
+    const { getByText } = render(
+      <MemoryRouter initialEntries={['/learn/99']}>
+        <Routes><Route path="/learn/99" element={<NF />} /><Route path="/about" element={<A />} /></Routes>
+      </MemoryRouter>,
+    )
+    expect(robots()?.getAttribute('content')).toBe('noindex, follow')
+    act(() => { getByText('back').click() })
+    expect(robots()).toBeNull()
+    expect(canonical()).toBe('https://mintradar.org/about')
   })
 })
 

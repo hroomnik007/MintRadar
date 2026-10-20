@@ -55,7 +55,7 @@ import {
 } from '@/utils/reliabilityScore'
 import { classifyMintVersion, latestMapFor, type LatestVersions } from '@/utils/versionRule'
 import { useNow } from '@/hooks/useNow'
-import { useDocumentMeta, useRemoveCanonical } from '@/hooks/useDocumentMeta'
+import { useDocumentMeta, useNoindex, useRemoveCanonical } from '@/hooks/useDocumentMeta'
 import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLocation'
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -2789,6 +2789,7 @@ function safeDecode(raw: string): string | null {
 function MintNotTracked({ slug, suggestion }: { slug: string; suggestion: string | null }) {
   const navigate = useNavigate()
   useRemoveCanonical()
+  useNoindex()
   return (
     <div className="mint-detail">
       <div className="md-header">
@@ -2824,6 +2825,7 @@ function MintNotTracked({ slug, suggestion }: { slug: string; suggestion: string
 function MintInvalidUrl() {
   const navigate = useNavigate()
   useRemoveCanonical()
+  useNoindex()
   return (
     <div className="mint-detail">
       <div className="md-header">
