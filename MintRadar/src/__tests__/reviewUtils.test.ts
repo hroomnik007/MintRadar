@@ -38,7 +38,7 @@ describe('deduplicateByPubkey', () => {
     const newest = makeEvent({ pubkey: 'alice', created_at: 2000 })
     const older = makeEvent({ pubkey: 'alice', created_at: 500 })
     const result = deduplicateByPubkey([old, newest, older])
-    expect(result).toHaveLength(99)
+    expect(result).toHaveLength(1)
     expect(result[0]).toBe(newest)
   })
 
