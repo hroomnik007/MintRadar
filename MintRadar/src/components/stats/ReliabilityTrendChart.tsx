@@ -51,7 +51,7 @@ export function ReliabilityTrendChart({ data }: { data: readonly TrendPoint[] })
           contentStyle={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:6,fontSize:11,fontFamily:'var(--font-mono)'}}
           labelStyle={{color:'var(--text3)'}}
           labelFormatter={d => formatDate(String(d)) || String(d)}
-          formatter={(v) => [`${v ?? '—'}%`, 'Avg Reliability']}
+          formatter={(v) => [v ?? '—', 'Avg Reliability']}
         />
         <Area type="monotone" dataKey="avgReliability" stroke="var(--accent)" strokeWidth={1.5} fill="url(#reliabilityGrad)" dot={false} />
       </AreaChart>

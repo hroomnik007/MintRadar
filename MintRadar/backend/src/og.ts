@@ -57,7 +57,7 @@ export function renderMintOgHtml(mint: OgMintData | null, mintUrl: string): stri
   const displayName = publicMintName(mint.name, mintUrl).name
     ?? (isHiddenMintName(mintUrl) ? hostnameOf(mintUrl) : mintUrl)
   const title = `${displayName} — MintRadar`
-  const reliabilityScoreText = mint.reliabilityScore !== null ? `${mint.reliabilityScore}%` : 'N/A'
+  const reliabilityScoreText = mint.reliabilityScore !== null ? `${mint.reliabilityScore}/100` : 'N/A'
   const description = `Reliability Score: ${reliabilityScoreText} · ${mintStatusLabel(mint)}`
 
   return renderHtml(title, description, pageUrl)

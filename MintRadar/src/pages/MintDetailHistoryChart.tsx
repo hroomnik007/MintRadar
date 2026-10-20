@@ -36,11 +36,11 @@ function MintDetailHistoryChart({ data, metric, interval, height }: {
           width={60}
           domain={latency ? latency.domain : [0, 100]}
           {...(latency ? { ticks: latency.ticks } : {})}
-          tickFormatter={(v: number) => metric === 'latency' ? `${Math.round(v)}ms` : `${Math.round(v)}%`}
+          tickFormatter={(v: number) => metric === 'latency' ? `${Math.round(v)}ms` : metric === 'uptime' ? `${Math.round(v)}%` : `${Math.round(v)}`}
         />
         <Tooltip
           contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 11 }}
-          formatter={(value) => [metric === 'latency' ? `${String(value)}ms` : `${String(value)}%`, metric === 'latency' ? 'Latency' : metric === 'uptime' ? 'Uptime' : 'Reliability Score']}
+          formatter={(value) => [metric === 'latency' ? `${String(value)}ms` : metric === 'uptime' ? `${String(value)}%` : String(value), metric === 'latency' ? 'Latency' : metric === 'uptime' ? 'Uptime' : 'Reliability Score']}
         />
         <Line
           type="monotone"

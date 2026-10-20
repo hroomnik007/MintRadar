@@ -317,7 +317,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                     <span className="cmp-mobile-val">
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: d.tsInfo.color }}>
                         <IcShield size={12} />
-                        <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? `${d.reliabilityScore}%` : '—'}</span>
+                        <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? d.reliabilityScore : '—'}</span>
                       </span>
                       {d.isOnline && (
                         <span style={{ fontSize: 11, color: d.tsInfo.color, background: d.tsInfo.bg, border: `0.5px solid ${d.tsInfo.border}`, borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-mono)' }}>{d.tsInfo.label}</span>
@@ -459,7 +459,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               <div key={mint.url} className="cmp-val">
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: d.tsInfo.color }}>
                   <IcShield size={12} />
-                  <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? `${d.reliabilityScore}%` : '—'}</span>
+                  <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? d.reliabilityScore : '—'}</span>
                 </span>
                 {d.isOnline && (
                   <span style={{ marginLeft: 6, fontSize: 11, color: d.tsInfo.color, background: d.tsInfo.bg, border: `0.5px solid ${d.tsInfo.border}`, borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-mono)' }}>{d.tsInfo.label}</span>
@@ -667,7 +667,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                         />
                         <Tooltip
                           contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 11 }}
-                          formatter={(value) => [metric === 'latency' ? `${String(value)}ms` : `${String(value)}%`, allData[i]!.displayName]}
+                          formatter={(value) => [metric === 'latency' ? `${String(value)}ms` : metric === 'uptime' ? `${String(value)}%` : String(value), allData[i]!.displayName]}
                         />
                         <Line type="monotone" dataKey={`m${i}`} stroke={MINT_COLORS[i]!} dot={false} strokeWidth={1.5} connectNulls />
                       </LineChart>
@@ -693,11 +693,11 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                       domain={metric === 'latency'
                         ? [(dataMin: number) => dataMin * 0.9, (dataMax: number) => dataMax * 1.1]
                         : [0, 100]}
-                      tickFormatter={(v: number) => metric === 'latency' ? `${Math.round(v / 100) * 100}ms` : `${Math.round(v)}%`}
+                      tickFormatter={(v: number) => metric === 'latency' ? `${Math.round(v / 100) * 100}ms` : metric === 'uptime' ? `${Math.round(v)}%` : `${Math.round(v)}`}
                     />
                     <Tooltip
                       contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 11 }}
-                      formatter={(value, name) => [metric === 'latency' ? `${String(value)}ms` : `${String(value)}%`, name]}
+                      formatter={(value, name) => [metric === 'latency' ? `${String(value)}ms` : metric === 'uptime' ? `${String(value)}%` : String(value), name]}
                     />
                     {mints.map((mint, i) => (
                       <Line

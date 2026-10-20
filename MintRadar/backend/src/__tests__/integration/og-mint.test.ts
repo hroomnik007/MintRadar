@@ -45,7 +45,7 @@ describe('GET /api/og/mint', () => {
     expect(res.status).toBe(200)
     expect(res.headers['content-type']).toContain('text/html')
     expect(res.text).toContain('<title>Example Mint — MintRadar</title>')
-    expect(res.text).toContain('Reliability Score: 87% · Online')
+    expect(res.text).toContain('Reliability Score: 87/100 · Online')
     expect(res.text).toContain('og:url" content="https://mintradar.org/mint/https%3A%2F%2Fmint.example.com"')
   })
 

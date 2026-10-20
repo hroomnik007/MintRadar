@@ -358,7 +358,7 @@ function MintDetailContent({ url }: { url: string }) {
   useDocumentMeta(
     `${metaDisplayName} - Cashu Mint Reliability Score & Uptime | MintRadar`,
     knownMint
-      ? `${metaDisplayName} (${mintHostname(url)}) is ${knownMint.online ? 'online' : 'offline'} with a Reliability Score of ${knownMint.reliabilityScore ?? '—'}%. See live uptime, latency, NUT support and reviews on MintRadar.`
+      ? `${metaDisplayName} (${mintHostname(url)}) is ${knownMint.online ? 'online' : 'offline'} with a Reliability Score of ${knownMint.reliabilityScore ?? '—'}/100. See live uptime, latency, NUT support and reviews on MintRadar.`
       : `Live Reliability Score, uptime, latency and NUT support for the Cashu mint ${mintHostname(url)} on MintRadar.`,
     { canonicalPath: `/mint/${encodeURIComponent(url)}` },
   )
@@ -1439,7 +1439,7 @@ function MintDetailContent({ url }: { url: string }) {
                 strokeLinecap="round"
                 transform="rotate(-90 36 36)" />
             </svg>
-            <span className="md-sc-reliability-num">{reliabilityScore}%</span>
+            <span className="md-sc-reliability-num">{reliabilityScore}</span>
           </div>
           <div className="md-sc-reliability-meta">
             <div className="md-sc-label">Reliability</div>
@@ -1893,7 +1893,7 @@ function MintDetailContent({ url }: { url: string }) {
               {[
                 { label: 'Average latency', value: chartAvgLatency !== null ? `${chartAvgLatency} ms` : '—', delta: deltaStr(chartAvgLatency, chartPrevLatency, ' ms', chartPrevInsufficientHistory), color: 'var(--text)' },
                 { label: 'Average uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%', chartPrevInsufficientHistory), color: 'var(--accent)' },
-                { label: 'Average reliability', value: `${reliabilityScore}%`, delta: null, color: tsInfo.color },
+                { label: 'Average reliability', value: `${reliabilityScore}`, delta: null, color: tsInfo.color },
               ].map(({ label, value, delta, color }) => (
                 <div key={label} className="md-hist-fig">
                   <div className="md-hist-fig-value" style={{ color }}>{value}</div>
@@ -2373,7 +2373,7 @@ function MintDetailContent({ url }: { url: string }) {
                     strokeLinecap="round"
                     transform="rotate(-90 36 36)" />
                 </svg>
-                <div className="gauge-num" style={{ color: 'var(--green-bright)', fontFamily: 'var(--font-mono-data)' }}>{reliabilityScore}%</div>
+                <div className="gauge-num" style={{ color: 'var(--green-bright)', fontFamily: 'var(--font-mono-data)' }}>{reliabilityScore}</div>
               </div>
               <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:5,padding:'4px 10px',textAlign:'center'}}>{tsInfo.label}</span>
             </div>
@@ -2558,7 +2558,7 @@ function MintDetailContent({ url }: { url: string }) {
               <button type="button" className="rb-close" onClick={() => setShowReliabilityBreakdown(false)} aria-label="Close"><IcClose /></button>
             </div>
             <div className="rb-hero">
-              <div className="rb-hero-score" style={{color:reliabilityScoreColor(reliabilityScore)}}>{reliabilityScore}%</div>
+              <div className="rb-hero-score" style={{color:reliabilityScoreColor(reliabilityScore)}}>{reliabilityScore}</div>
               <span className="rb-hero-badge" style={{color:tsInfo.color,background:tsInfo.bg,borderColor:tsInfo.border}}>{tsInfo.label}</span>
             </div>
             {reliabilityBreakdownRows.map(row => (

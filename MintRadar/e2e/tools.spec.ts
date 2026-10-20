@@ -225,7 +225,9 @@ test.describe('Tools', () => {
     await expect(page.locator('.token-result-grid')).toBeVisible()
     await expect(page.locator('.token-risk-badge')).toHaveCount(0)
     await expect(page.locator('.token-result-grid')).not.toContainText(/risk/i)
-    await expect(page.locator('.token-result-cell', { hasText: 'Reliability Score' })).toContainText('92%')
+    const scoreCell = page.locator('.token-result-cell', { hasText: 'Reliability Score' })
+    await expect(scoreCell.locator('.trc-value')).toHaveText('92')
+    await expect(scoreCell).not.toContainText('%')
   })
 
   test('A mint MintRadar has never seen shows "Not in database" and no risk badge', async ({ page }) => {

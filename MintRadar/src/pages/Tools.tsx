@@ -314,7 +314,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
               <div className="trc-label">Reliability Score</div>
               {mintInfo?.reliabilityScore != null ? (
                 <>
-                  <div className="trc-value" style={{ color: reliabilityColor(mintInfo.reliabilityScore) }}>{mintInfo.reliabilityScore}%</div>
+                  <div className="trc-value" style={{ color: reliabilityColor(mintInfo.reliabilityScore) }}>{mintInfo.reliabilityScore}</div>
                   <div className="trc-sub" style={{ color: reliabilityColor(mintInfo.reliabilityScore) }}>
                     {reliabilityScoreInfo(mintInfo.reliabilityScore).label}
                   </div>

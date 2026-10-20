@@ -141,7 +141,7 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose, duplicateDisplayNam
                   <span className="nut-modal-row-name mint-link">{displayName(m, duplicateDisplayNames)}</span>
                 </div>
                 <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
-                  {score != null ? `${score}%` : '—'}
+                  {score != null ? score : '—'}
                 </span>
               </div>
             )
@@ -323,7 +323,7 @@ function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
                   <span className="nut-modal-row-name mint-link">{displayName(m, duplicateDisplayNames)}</span>
                 </div>
                 <span style={{ fontSize: 12, fontFamily: 'var(--font-mono-data)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
-                  {score != null ? `${score}%` : '—'}
+                  {score != null ? score : '—'}
                 </span>
               </div>
             )
@@ -403,7 +403,7 @@ function NutMintsModal({ nut, mints, onClose, duplicateDisplayNames }: {
                   <span className="nut-modal-row-name mint-link">{displayName(m, duplicateDisplayNames)}</span>
                 </div>
                 <span style={{ fontSize: 12, fontFamily: 'var(--font-mono-data)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
-                  {score != null ? `${score}%` : '—'}
+                  {score != null ? score : '—'}
                 </span>
               </div>
             )
@@ -1235,11 +1235,11 @@ export default function Stats() {
           <ReliabilityTrendView data={trendData} isPending={trendPending} isError={trendError} isPlaceholderData={trendPlaceholder} onRetry={() => { void refetchTrend() }} />
           {trendSummary && (
             <div className="trend-summary-row">
-              <span className="trend-summary-item"><span className="trend-summary-label">Current</span><span style={{color:'var(--accent)',fontWeight:700}}>{trendSummary.current}%</span></span>
+              <span className="trend-summary-item"><span className="trend-summary-label">Current</span><span style={{color:'var(--accent)',fontWeight:700}}>{trendSummary.current}</span></span>
               <span className="trend-summary-sep">·</span>
-              <span className="trend-summary-item"><span className="trend-summary-label">{trendPeriod}d High</span><span style={{color:'var(--accent)'}}>{trendSummary.high}%</span></span>
+              <span className="trend-summary-item"><span className="trend-summary-label">{trendPeriod}d High</span><span style={{color:'var(--accent)'}}>{trendSummary.high}</span></span>
               <span className="trend-summary-sep">·</span>
-              <span className="trend-summary-item"><span className="trend-summary-label">{trendPeriod}d Low</span><span style={{color:'var(--text2)'}}>{trendSummary.low}%</span></span>
+              <span className="trend-summary-item"><span className="trend-summary-label">{trendPeriod}d Low</span><span style={{color:'var(--text2)'}}>{trendSummary.low}</span></span>
             </div>
           )}
           {trendCoverage && (

@@ -1,5 +1,14 @@
 # MintRadar — Reliability Score, NUT list, probing, NUT tracking scope (split from CLAUDE.md)
 > Note: references like "see X below" in this file may point into another docs/claude file; the map is the index in CLAUDE.md.
+## A score is points, never a percent (2026-10-20)
+
+The Reliability Score is a number of POINTS from 0 to 100, not a percentage. Rule for every place that shows it:
+- **Compact places** (the ring and the gauge on Mint Detail, the breakdown dialog hero, the Dashboard card, the Compare table, the Watchlist recommendation badge, the Token Inspector cell, the NUT / software / location modal rows, the Stats trend summary "Current / 30d High / 30d Low", the chart axis and tooltip of the Reliability Score metric, the "Reliability ≥ N" filter): the **plain number** ("92").
+- **Running text, aria-labels, share and OG text:** **"92/100"** (Mint Detail meta description, `og:description` / `twitter:description`: "Reliability Score: 92/100 · Online", `backend/src/og.ts`).
+- **Reliability Score movers:** the column is a change in points (`backend/src/reliabilityMovers.ts`: `latestScore - oldScore`), shown as "+12" / "-9", no unit.
+- **Stays a percent sign:** uptime, NUT and software adoption, the outdated-software share, the share of a component's maximum in the Network Health Index rows, the component weights ("Uptime (40%)", tooltips and the Learn module). These are real percentages (or shares of the weights).
+- Tests: `src/__tests__/reliabilityScoreNoPercent.test.tsx` renders the card, the Compare modal, Mint Detail and Stats with a fixture and scans for a percent sign; `backend/src/__tests__/og.test.ts` pins the OG text. A new place that shows a score uses the plain number or "n/100".
+
 ## Reliability Score calculation (server-side, in prober.ts)
 
 **Public reference (2026-10-13):** `/methodology` describes this formula for visitors and wallet developers and carries the change log; every number on it is tested against the code. **A formula change must add a `METHODOLOGY_CHANGES` entry and bump `METHODOLOGY_VERSION`** (backend + frontend copy) and update `src/constants/methodologyPage.ts` in the same commit — see `methodology-and-wallet-pages.md`.

@@ -449,7 +449,7 @@ for (const vp of [{ width: 1440, height: 900, name: 'desktop one-row' }, { width
 }
 
 // Plain labels vs button-like options (2026-10-01): the Status/Unit labels sit OUTSIDE the segmented
-// control, styled like the "RELIABILITY ≥ N%" label; the options look and behave like buttons.
+// control, styled like the "RELIABILITY ≥ N" label; the options look and behave like buttons.
 test.describe('Filters panel — labels versus options', () => {
   const style = (loc: import('@playwright/test').Locator, props: string[]) =>
     loc.evaluate((el, ps) => { const cs = getComputedStyle(el); return Object.fromEntries(ps.map(p => [p, cs.getPropertyValue(p)])) }, props)
@@ -468,7 +468,7 @@ test.describe('Filters panel — labels versus options', () => {
       expect(st['text-transform']).toBe('none')
       expect(await l.getAttribute('tabindex')).toBeNull()
     }
-    // Same type treatment as the existing "RELIABILITY ≥ N%" label.
+    // Same type treatment as the existing "RELIABILITY ≥ N" label.
     const ref = await style(page.locator('.filter-group-label'), ['font-family', 'font-size', 'letter-spacing', 'text-transform', 'color'])
     expect(await style(label(page, 'Status'), ['font-family', 'font-size', 'letter-spacing', 'text-transform', 'color'])).toEqual(ref)
     // The label text is the group's accessible name.
@@ -603,7 +603,7 @@ test.describe('Filters panel — Reliability slider touch target', () => {
         await touch('touchEnd', 0, 0)
         expect(live).toBeGreaterThanOrEqual(70)
         expect(live).toBeLessThanOrEqual(90)
-        await expect(page.locator('.filter-rel strong')).toHaveText(`${live}%`)
+        await expect(page.locator('.filter-rel strong')).toHaveText(`${live}`)
         expect(await countText()).toBe(`Show ${expected(live)} of ${mints.length} mints`)
 
         // Tap on the track, 18px above the centre line, moves the value back

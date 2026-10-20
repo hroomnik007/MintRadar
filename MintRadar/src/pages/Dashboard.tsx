@@ -1259,7 +1259,7 @@ export default function Dashboard() {
               )}
               {activeFilters.minReliabilityScore > 0 && (
                 <span className="filter-tag">
-                  Reliability ≥ {activeFilters.minReliabilityScore}%
+                  Reliability ≥ {activeFilters.minReliabilityScore}
                   <button type="button" onClick={() => { const f = { ...activeFilters, minReliabilityScore: 0 }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
@@ -1326,7 +1326,7 @@ export default function Dashboard() {
             </div>
 
             <div className="filter-rel">
-              <span className="filter-group-label">Reliability ≥ <strong>{pendingFilters.minReliabilityScore}%</strong></span>
+              <span className="filter-group-label">Reliability ≥ <strong>{pendingFilters.minReliabilityScore}</strong></span>
               <input
                 type="range" min={0} max={100} step={5}
                 value={pendingFilters.minReliabilityScore}

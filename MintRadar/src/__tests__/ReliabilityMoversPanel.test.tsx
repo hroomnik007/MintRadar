@@ -90,14 +90,14 @@ describe('ReliabilityMoversPanel', () => {
   describe('riser/faller color differentiation', () => {
     it('gives a riser delta the "up" class and a "+" prefix', () => {
       renderPanel()
-      const delta = screen.getByText('+12%')
+      const delta = screen.getByText('+12')
       expect(delta).toHaveClass('stats-movers-delta', 'up')
       expect(delta).not.toHaveClass('down')
     })
 
     it('gives a faller delta the "down" class with no "+" prefix (negative sign is native)', () => {
       renderPanel()
-      const delta = screen.getByText('-9%')
+      const delta = screen.getByText('-9')
       expect(delta).toHaveClass('stats-movers-delta', 'down')
       expect(delta).not.toHaveClass('up')
     })

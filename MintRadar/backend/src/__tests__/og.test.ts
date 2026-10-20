@@ -41,10 +41,25 @@ describe('renderMintOgHtml', () => {
 
     expect(html).toContain('<title>Example Mint — MintRadar</title>')
     expect(html).toContain('property="og:title" content="Example Mint — MintRadar"')
-    expect(html).toContain('content="Reliability Score: 87% · Online"')
+    expect(html).toContain('content="Reliability Score: 87/100 · Online"')
     expect(html).toContain(`property="og:url" content="https://mintradar.org/mint/${encodeURIComponent(mintUrl)}"`)
     expect(html).toContain('name="twitter:card" content="summary_large_image"')
     expect(html).toContain('property="og:image" content="https://mintradar.org/og-image-reliability.png"')
+  })
+
+  it('writes the score as points out of 100 and never with a percent sign (og:description, twitter:description, description)', () => {
+    for (const score of [0, 7, 87, 100]) {
+      const html = renderMintOgHtml({ name: 'Example Mint', reliabilityScore: score, online: true, degraded: false }, mintUrl)
+      const lines = html.split('\n').filter(l => /name="description"|og:description|twitter:description/.test(l))
+      expect(lines).toHaveLength(3)
+      for (const line of lines) {
+        expect(line).toContain(`Reliability Score: ${score}/100`)
+        expect(line).not.toContain('%')
+      }
+    }
+    const none = renderMintOgHtml({ name: 'x', reliabilityScore: null, online: true, degraded: false }, mintUrl)
+    expect(none).toContain('content="Reliability Score: N/A · Online"')
+    expect(none).not.toContain('N/A/100')
   })
 
   it('falls back to the mint URL as the display name when name is null', () => {

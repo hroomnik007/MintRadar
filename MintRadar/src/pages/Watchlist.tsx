@@ -177,7 +177,7 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
                 </div>
                 <div className="wl-rec-right">
                   {score != null && (
-                    <span className="wl-rec-reliability" style={{ color: scoreColor, borderColor: `var(--${scoreTone}-soft-strong)`, background: `var(--${scoreTone}-soft)` }}>{score}%</span>
+                    <span className="wl-rec-reliability" style={{ color: scoreColor, borderColor: `var(--${scoreTone}-soft-strong)`, background: `var(--${scoreTone}-soft)` }}>{score}</span>
                   )}
                   <span className="wl-rec-online-dot">●</span>
                   <button
