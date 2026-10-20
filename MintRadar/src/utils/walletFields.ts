@@ -22,8 +22,11 @@ export const WALLET_ENVELOPE_FIELDS: readonly WalletField[] = [
   { name: 'methodology', type: 'integer', nullable: false, meaning: 'Version of the Reliability Score formula. Scores of different numbers are not comparable. See /methodology.' },
   { name: 'generatedAt', type: 'string (ISO 8601, UTC)', nullable: false, meaning: 'When the snapshot behind the answer was read from the database (at most 60 seconds old).' },
   { name: 'count', type: 'integer', nullable: false, meaning: 'List only: the number of objects in mints.' },
+  { name: 'total', type: 'integer', nullable: false, meaning: 'List only: how many mints match the filters before limit is applied. Added 2026-10-20.' },
+  { name: 'truncated', type: 'boolean', nullable: false, meaning: 'List only: true when total is greater than count, that is limit cut the list. Added 2026-10-20.' },
   { name: 'mints', type: 'object[]', nullable: false, meaning: 'List only: the mint objects below.' },
-  { name: 'mint', type: 'object', nullable: false, meaning: 'Single mint only: the mint object below.' },
+  { name: 'mint', type: 'object', nullable: false, meaning: 'Single mint only: the mint object below, with every field including the ones the list only returns for include.' },
+  { name: 'canonicalUrl', type: 'string', nullable: true, meaning: 'Single mint only: null when the URL you asked for is the stored one. Otherwise the stored URL: the request differed from it only in the letter case of the path and exactly one mint matched. Added 2026-10-20.' },
 ]
 
 export const WALLET_MINT_FIELDS: readonly WalletField[] = [
@@ -50,6 +53,33 @@ export const WALLET_MINT_FIELDS: readonly WalletField[] = [
   { name: 'reviews.avg', type: 'number', nullable: true, meaning: 'Average rating over the rated reviews, one decimal. null when there are none.' },
   { name: 'reviews.operatorCount', type: 'integer', nullable: false, meaning: 'Reviews by the mint\'s own operator, which the other three leave out.' },
   { name: 'eligibleForRecommendation', type: 'boolean', nullable: false, meaning: 'true when the mint is online, has a score, is not a test mint and was first seen at least 14 days ago.' },
+  // Added 2026-10-20 (all additive). downSince, hasOnion, authRequired and auditNeutralReason are on every object; the others only
+  // with the matching include= value or on the single-mint endpoint.
+  { name: 'pubkey', type: 'string', nullable: true, meaning: 'Only with include=facts (always on the single-mint endpoint). The mint\'s public NUT-06 key as MintRadar last stored it (66 hex characters). null when none is stored. Public data the mint publishes itself.' },
+  { name: 'firstSeenAt', type: 'string (ISO 8601, UTC)', nullable: true, meaning: 'Only with include=facts (always on the single-mint endpoint). When MintRadar first saw the mint (the date eligibleForRecommendation counts from).' },
+  { name: 'lastOnlineAt', type: 'string (ISO 8601, UTC)', nullable: true, meaning: 'Only with include=facts (always on the single-mint endpoint). Time of the latest successful probe. null when the mint never answered.' },
+  { name: 'downSince', type: 'string (ISO 8601, UTC)', nullable: true, meaning: 'Start of the current offline streak: the first failed probe after lastOnlineAt (the first failed probe kept in the 90-day history for a mint that never answered). null while status is online.' },
+  { name: 'hasOnion', type: 'boolean', nullable: false, meaning: 'true when the mint advertises a Tor (.onion) address. false when it does not or when that is not known.' },
+  { name: 'authRequired', type: 'object', nullable: true, meaning: 'What the mint ADVERTISES about authentication: clear is true when it lists NUT-21 (clear auth), blind when it lists NUT-22 (blind auth). MintRadar does not parse protected_endpoints, so true does not say which endpoints (mint, melt, swap, ...) need a token. null when the mint\'s NUTs are unknown.' },
+  { name: 'authRequired.clear', type: 'boolean', nullable: false, meaning: 'The mint advertises NUT-21.' },
+  { name: 'authRequired.blind', type: 'boolean', nullable: false, meaning: 'The mint advertises NUT-22.' },
+  { name: 'sample', type: 'object', nullable: false, meaning: 'Only with include=facts (always on the single-mint endpoint). How much data the numbers above rest on.' },
+  { name: 'sample.probes24h', type: 'integer', nullable: true, meaning: 'Only with include=facts. Probes recorded in the last 24 hours (about 288 for a mint probed every 5 minutes). null only if the figure is unavailable.' },
+  { name: 'sample.swaps7d', type: 'integer', nullable: true, meaning: 'Only with include=facts. Swaps in the stored cashu.info 7-day window, the number the audit part of the score uses. null when no detail is stored.' },
+  { name: 'auditNeutralReason', type: '"low_sample" | "stale" | "no_data"', nullable: true, meaning: 'Why the audit part of the score is the neutral value 12.5 instead of a measured one: low_sample (fewer swaps than the minimum), stale (the stored detail is older than the maximum age), no_data (nothing stored). null while the audit part is measured. Same rules and thresholds as the score, read when the response is built.' },
+  { name: 'keysets', type: 'object[]', nullable: false, meaning: 'Only with include=keysets (always on the single-mint endpoint). The keysets the latest successful check found, ordered by id: { id, unit, active, inputFeePpk, finalExpiry, idVersion, idValid }. inputFeePpk is null when the mint did not state a valid fee, finalExpiry is an ISO 8601 time or null, idVersion is "v1", "v2" or "legacy", idValid is true or false after MintRadar compared the id with the keys, null when it could not be verified. An empty array when the mint was never checked.' },
+  { name: 'keysetsCheckedAt', type: 'string (ISO 8601, UTC)', nullable: true, meaning: 'Only with include=keysets. Time of the latest successful keysets check. null when there was none.' },
+  { name: 'methods', type: 'object', nullable: true, meaning: 'Only with include=methods (always on the single-mint endpoint). The payment methods the mint advertises in NUT-04 (mint) and NUT-05 (melt), such as bolt11, bolt12 or onchain. null when neither is stored.' },
+  { name: 'methods.mint', type: 'object[]', nullable: false, meaning: 'NUT-04 entries: { method, unit, minAmount, maxAmount }. The amounts are integers or null when the mint states none. Empty when none are stored.' },
+  { name: 'methods.melt', type: 'object[]', nullable: false, meaning: 'NUT-05 entries, same shape as methods.mint.' },
+  { name: 'scoreBreakdown', type: 'object', nullable: true, meaning: 'Only with include=breakdown (always on the single-mint endpoint). What the score used at its last computation, written in the same step as the score. The parts uptime, audit, nuts, version and contact are { points, max } (max 40, 25, 15, 15 and 5); newMintCap is { points, cap } with points 0 or negative; sum is the score. Neutral audit data counts 12.5 points, so the five parts can end in .5: sum = the parts added, rounded once, plus newMintCap.points. null until the first probe after this field was introduced.' },
+  { name: 'scoreBreakdown.uptime', type: 'object', nullable: false, meaning: '{ points, max } for uptime over the last 24 hours.' },
+  { name: 'scoreBreakdown.audit', type: 'object', nullable: false, meaning: '{ points, max } for the audit part (see auditNeutralReason).' },
+  { name: 'scoreBreakdown.nuts', type: 'object', nullable: false, meaning: '{ points, max } for NUT support.' },
+  { name: 'scoreBreakdown.version', type: 'object', nullable: false, meaning: '{ points, max } for software freshness.' },
+  { name: 'scoreBreakdown.contact', type: 'object', nullable: false, meaning: '{ points, max } for published contact methods.' },
+  { name: 'scoreBreakdown.newMintCap', type: 'object', nullable: false, meaning: '{ points, cap }: the correction the cap for mints younger than 30 days made (0 or negative) and the cap itself.' },
+  { name: 'scoreBreakdown.sum', type: 'integer', nullable: false, meaning: 'Equal to score as it was stored with this breakdown.' },
 ]
 
 export interface WalletQueryParam {
@@ -69,6 +99,9 @@ export const WALLET_QUERY_PARAMS: readonly WalletQueryParam[] = [
   { name: 'includeUnscored', type: 'true | false', default: 'false', meaning: 'Also return mints whose score is null.' },
   { name: 'nuts', type: 'comma-separated NUT numbers', default: 'none', meaning: 'Keep mints that advertise all of these NUTs, for example 4,5 (1 to 32 numbers of up to 3 digits; compared with the nuts field). A mint whose nuts are unknown never matches.' },
   { name: 'eligible', type: 'true | false', default: 'none', meaning: 'true: keep only mints with eligibleForRecommendation: true, the ones the deprecated /mints/recommend would return. false: keep only the others. Combine with unit, minScore, nuts and limit to replace /mints/recommend.' },
+  { name: 'method', type: 'bolt11 | bolt12 | onchain', default: 'none', meaning: 'Keep mints that advertise this payment method in NUT-04 or NUT-05, on any unit; with unit also given, on that unit. A mint whose methods are unknown never matches. Added 2026-10-20.' },
+  { name: 'maxInputFeePpk', type: 'integer 0 to 1000000', default: 'none', meaning: 'Keep mints whose active keysets for unit (every unit when unit is not given) all have inputFeePpk <= this value. A mint with an unknown fee, or without an active keyset in scope, is excluded. Added 2026-10-20.' },
+  { name: 'include', type: 'comma-separated: facts, keysets, methods, breakdown', default: 'none', meaning: 'Add the heavier fields to every object of the list: facts (pubkey, firstSeenAt, lastOnlineAt, sample), keysets (and keysetsCheckedAt), methods, breakdown (scoreBreakdown). Unknown values are a 400. Added 2026-10-20.' },
   { name: 'limit', type: 'integer 1 to 200', default: '100', meaning: 'Maximum number of mints returned.' },
 ]
 

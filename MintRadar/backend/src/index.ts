@@ -27,8 +27,9 @@ import { isTestMint } from './testMints.js'
 import { publicMintName, publicMintNameOrHost } from './mintNames.js'
 import {
   usesWalletRateLimit, isRecommendPath, isPublicCorsPath, PUBLIC_CORS_EXPOSE_HEADERS, parseWalletListQuery, walletListEnvelope, walletSingleEnvelope, recommendEnvelope,
-  memoizedBody, cachedBodyOf, buildCachedBody, sendCachedBody, sendWalletError, queryOf, type Snapshot,
+  memoizedBody, cachedBodyOf, buildCachedBody, sendCachedBody, sendWalletError, queryOf, keysetsOf, type Snapshot, type WalletExtra,
 } from './walletApi.js'
+import { readStoredBreakdown } from './scoreBreakdown.js'
 import { setDeprecationHeaders, RECOMMEND_DEPRECATION } from './deprecation.js'
 import { verifyNip05 } from './nip05Verify.js'
 import { isAllowlistMode, isAllowedUrl } from './allowlist.js'
@@ -1467,6 +1468,19 @@ function computeKnownMints(): Promise<Snapshot> {
           (SELECT json_agg(json_build_object('pubkey', r.pubkey, 'rating', r.rating, 'comment', r.comment))
              FROM mint_reviews r WHERE r.url = m.url)
         END AS stored_reviews,
+        -- Wallet API only (never in /api/mints/known): the breakdown stored with the score, the start of the current
+        -- offline streak (first failed probe after the last successful one) and the keysets of the latest keysets check.
+        m.score_breakdown, m.keysets_checked_at,
+        CASE WHEN latest.online = false THEN
+          (SELECT MIN(d.checked_at) FROM mint_history d
+            WHERE d.url = m.url AND d.online = false AND d.checked_at > COALESCE(m.last_online_at, '-infinity'::timestamptz))
+        END AS down_since,
+        (SELECT json_agg(json_build_object('id', k.keyset_id, 'unit', k.unit, 'active', k.active, 'fee', k.input_fee_ppk,
+                  'expiry', to_char(k.final_expiry AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+                  'version', k.id_version, 'valid', k.id_valid) ORDER BY k.keyset_id)
+           FROM mint_keysets k
+          WHERE k.url = m.url AND m.keysets_checked_at IS NOT NULL AND k.last_seen_at >= m.keysets_checked_at - INTERVAL '10 minutes'
+        ) AS keysets_json,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
         h7.total_7d,
@@ -1623,8 +1637,19 @@ function computeKnownMints(): Promise<Snapshot> {
         if (r.review_rated_count != null || !Array.isArray(r.stored_reviews) || r.stored_reviews.length === 0) continue
         reviewFallback.set(r.url, aggregateReviews(r.stored_reviews as Array<{ pubkey: string; rating: number | null; comment: string | null }>, operatorKeysOf(r)))
       }
+      // Wallet API extras (probes in the last 24 h, offline-streak start, stored score breakdown, keysets), by URL.
+      const walletExtra = new Map<string, WalletExtra>()
+      for (const r of result.rows as Array<Record<string, unknown>>) {
+        walletExtra.set(r.url as string, {
+          probes24h: Number(r.total ?? 0),
+          downSince: r.down_since ? new Date(r.down_since as string | Date).toISOString() : null,
+          scoreBreakdown: readStoredBreakdown(r.score_breakdown),
+          keysets: keysetsOf(r.keysets_json),
+          keysetsCheckedAt: r.keysets_checked_at ? new Date(r.keysets_checked_at as string | Date).toISOString() : null,
+        })
+      }
       const now = Date.now()
-      const snapshot = { data, computedAt: now, expiresAt: now + KNOWN_MINTS_CACHE_TTL, reviewFallback }
+      const snapshot = { data, computedAt: now, expiresAt: now + KNOWN_MINTS_CACHE_TTL, reviewFallback, walletExtra }
       knownMintsCache = snapshot
       return snapshot
     })

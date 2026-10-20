@@ -4,6 +4,8 @@ import { NEW_MINT_MAX_DAYS, isEligibleForRecommendation } from './shared/reliabi
 import { classifyVersion, MAX_VERSION_LENGTH, type LatestVersion } from './shared/versionRule.js'
 import { METHODOLOGY_VERSION } from './shared/methodology.js'
 import { isTestMint } from './testMints.js'
+import { auditDataState } from './shared/auditScore.js'
+import type { ScoreBreakdown } from './scoreBreakdown.js'
 export { WALLET_ENVELOPE_FIELDS, WALLET_MINT_FIELDS, WALLET_QUERY_PARAMS, WALLET_ERRORS } from './shared/walletFields.js'
 
 // Public API for wallets (docs/API.md, docs/openapi/wallets-v1.yaml): a compact, fixed-shape view of the
@@ -12,9 +14,10 @@ export { WALLET_ENVELOPE_FIELDS, WALLET_MINT_FIELDS, WALLET_QUERY_PARAMS, WALLET
 //
 // The mint object has EXACTLY the keys of WalletMint and is a v1 contract: never rename or remove a key,
 // only add, and add its line to WALLET_MINT_FIELDS (shared/walletFields.ts: the /for-wallets page renders it, a
-// test compares it with this mapper). It must never carry IP/network data, onion data, reviewer keys or texts,
-// contact details or the mint's NUT-06 pubkey (a contract test lists the key set and scans the JSON for those
-// names).
+// test compares it with this mapper). It must never carry IP/network data (address, ASN, hosting organisation,
+// server location), lastError, reviewer keys or texts or contact details. Since 2026-10-20 it does carry the mint's
+// public NUT-06 pubkey and the boolean hasOnion (a contract test lists the key set and scans the JSON for the
+// forbidden names).
 
 /** The fields of an /api/mints/known row that the wallet view reads. */
 export interface KnownMintLike {
@@ -40,7 +43,44 @@ export interface KnownMintLike {
   reviewAvgRating: number | null
   operatorReviewCount: number | null
   latencyMs: number | null
+  // Read by the 2026-10-20 additive fields; optional so older fixtures still type-check.
+  pubkey?: string | null
+  hasOnion?: boolean | null
+  lastOnlineAt?: string | Date | null
+  mintMethods?: Record<string, unknown>[] | null
+  meltMethods?: Record<string, unknown>[] | null
 }
+
+/** Per-mint data the snapshot carries beside the /api/mints/known rows (never serialised there). */
+export interface WalletExtra {
+  /** mint_history rows of the last 24 hours. */
+  probes24h: number
+  /** First failed probe after lastOnlineAt (see WALLET_MINT_FIELDS); null while the mint is online or has no history. */
+  downSince: string | null
+  /** The breakdown stored with the score (mints.score_breakdown); null until the first probe cycle after the deploy. */
+  scoreBreakdown: ScoreBreakdown | null
+  /** Keysets present in the latest successful keysets check, ordered by id. */
+  keysets: WalletKeyset[]
+  keysetsCheckedAt: string | null
+}
+
+export interface WalletKeyset {
+  id: string
+  unit: string
+  active: boolean
+  inputFeePpk: number | null
+  finalExpiry: string | null
+  idVersion: string
+  idValid: boolean | null
+}
+
+export interface WalletMethodEntry { method: string; unit: string; minAmount: number | null; maxAmount: number | null }
+
+export type AuditNeutralReason = 'low_sample' | 'stale' | 'no_data'
+
+export const WALLET_METHODS = ['bolt11', 'bolt12', 'onchain'] as const
+export const WALLET_INCLUDES = ['facts', 'keysets', 'methods', 'breakdown'] as const
+export type WalletInclude = typeof WALLET_INCLUDES[number]
 
 export type WalletMintStatus = 'online' | 'offline' | 'degraded' | 'archived'
 
@@ -61,7 +101,23 @@ export interface WalletMint {
   audit: { swaps7d: number; attributedFailures: number; fetchedAt: string } | null
   reviews: { count: number; ratedCount: number; avg: number | null; operatorCount: number }
   eligibleForRecommendation: boolean
+  pubkey: string | null
+  firstSeenAt: string | null
+  lastOnlineAt: string | null
+  downSince: string | null
+  hasOnion: boolean
+  authRequired: { clear: boolean; blind: boolean } | null
+  sample: { probes24h: number | null; swaps7d: number | null }
+  auditNeutralReason: AuditNeutralReason | null
+  // Heavier fields (pubkey, firstSeenAt, lastOnlineAt, sample and the four below): always built here, kept in the output only
+  // for the single-mint endpoint and `include=` on the list (the default list may grow by about 25% over the 2026-10-12 shape).
+  keysets: WalletKeyset[]
+  keysetsCheckedAt: string | null
+  methods: { mint: WalletMethodEntry[]; melt: WalletMethodEntry[] } | null
+  scoreBreakdown: ScoreBreakdown | null
 }
+
+const HEAVY_KEYS = { facts: ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample'], keysets: ['keysets', 'keysetsCheckedAt'], methods: ['methods'], breakdown: ['scoreBreakdown'] } as const
 
 function toIso(v: string | Date | null | undefined): string | null {
   if (v === null || v === undefined) return null
@@ -103,7 +159,61 @@ function outdatedOf(version: string | null, latest: LatestVersion | null): boole
 /** The reviews rollup recomputed from the stored reviews (same rule as mints.review_*), for a mint whose rollup is still NULL. */
 export interface ReviewsFallback { count: number; ratedCount: number; avg: number | null; operatorCount: number }
 
-export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviewsFallback?: ReviewsFallback): WalletMint {
+const PUBKEY_RE = /^[0-9a-f]{66}$/i
+const METHOD_NAME_RE = /^[a-z0-9_-]{1,32}$/i
+const UNIT_RE = /^[A-Za-z0-9_-]{1,16}$/
+const METHODS_MAX_ENTRIES = 32
+
+const amountOf = (v: unknown): number | null => (typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 ? v : null)
+
+/** The advertised NUT-04/05 methods (method, unit, min and max amount), bounded and validated; null when neither is stored. */
+export function methodsOf(mint: Record<string, unknown>[] | null | undefined, melt: Record<string, unknown>[] | null | undefined): WalletMint['methods'] {
+  if (!Array.isArray(mint) && !Array.isArray(melt)) return null
+  const clean = (list: unknown): WalletMethodEntry[] => {
+    if (!Array.isArray(list)) return []
+    const out: WalletMethodEntry[] = []
+    for (const e of list as Array<Record<string, unknown> | null>) {
+      if (out.length >= METHODS_MAX_ENTRIES) break
+      if (e === null || typeof e !== 'object') continue
+      const method = e['method'], unit = e['unit']
+      if (typeof method !== 'string' || !METHOD_NAME_RE.test(method) || typeof unit !== 'string' || !UNIT_RE.test(unit)) continue
+      out.push({ method: method.toLowerCase(), unit: unit.toLowerCase(), minAmount: amountOf(e['min_amount']), maxAmount: amountOf(e['max_amount']) })
+    }
+    return out
+  }
+  return { mint: clean(mint), melt: clean(melt) }
+}
+
+/** The keysets_json column of the snapshot query as WalletKeyset[]; entries of the wrong shape are dropped. */
+export function keysetsOf(raw: unknown): WalletKeyset[] {
+  if (!Array.isArray(raw)) return []
+  const out: WalletKeyset[] = []
+  for (const e of raw as Array<Record<string, unknown> | null>) {
+    if (e === null || typeof e !== 'object') continue
+    const { id, unit, active, fee, expiry, version, valid } = e
+    if (typeof id !== 'string' || typeof unit !== 'string' || typeof active !== 'boolean' || typeof version !== 'string') continue
+    out.push({
+      id, unit, active,
+      inputFeePpk: typeof fee === 'number' && Number.isSafeInteger(fee) && fee >= 0 ? fee : null,
+      finalExpiry: typeof expiry === 'string' ? toIso(expiry) : null,
+      idVersion: version,
+      idValid: typeof valid === 'boolean' ? valid : null,
+    })
+  }
+  return out
+}
+
+/** Why the audit component is neutral (shared/auditScore.ts decides); null while it is scored. */
+function auditNeutralReasonOf(m: KnownMintLike, now: number): AuditNeutralReason | null {
+  switch (auditDataState(m.auditCzBlamed, m.auditCzTotal, m.auditCzFetchedAt, now)) {
+    case 'scored': return null
+    case 'too-few': return 'low_sample'
+    case 'too-old': return 'stale'
+    default: return 'no_data'
+  }
+}
+
+export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviewsFallback?: ReviewsFallback, extra?: WalletExtra): WalletMint {
   const status = statusOf(m)
   const score = typeof m.reliabilityScore === 'number' ? m.reliabilityScore : null
   const test = isTestMint(m.url)
@@ -137,6 +247,20 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviews
       },
     eligibleForRecommendation:
       isEligibleForRecommendation(m.discoveredAt, now) && !test && status === 'online' && score !== null,
+    pubkey: typeof m.pubkey === 'string' && PUBKEY_RE.test(m.pubkey) ? m.pubkey.toLowerCase() : null,
+    firstSeenAt: toIso(m.discoveredAt),
+    lastOnlineAt: toIso(m.lastOnlineAt),
+    downSince: status === 'online' ? null : (extra?.downSince ?? null),
+    hasOnion: m.hasOnion === true,
+    authRequired: m.nutsLimits === null || m.nutsLimits === undefined || typeof m.nutsLimits !== 'object'
+      ? null
+      : { clear: m.nutsLimits['21'] != null, blind: m.nutsLimits['22'] != null },
+    sample: { probes24h: extra?.probes24h ?? null, swaps7d: typeof m.auditCzTotal === 'number' ? m.auditCzTotal : null },
+    auditNeutralReason: auditNeutralReasonOf(m, now),
+    keysets: extra?.keysets ?? [],
+    keysetsCheckedAt: extra?.keysetsCheckedAt ?? null,
+    methods: methodsOf(m.mintMethods, m.meltMethods),
+    scoreBreakdown: extra?.scoreBreakdown ?? null,
   }
 }
 
@@ -159,7 +283,16 @@ export interface WalletListFilter {
   eligible?: boolean
   /** NUT numbers the mint must advertise (the `nuts` query parameter, and /api/mints/recommend). */
   requiredNuts?: string[]
+  /** The `method` query parameter: the mint advertises it (mint or melt), for `unit` when that is given too. */
+  method?: string
+  /** The `maxInputFeePpk` query parameter. */
+  maxInputFeePpk?: number
+  /** The `include` query parameter: which heavier fields the list objects carry. */
+  include: WalletInclude[]
 }
+
+/** The largest fee the keysets collection stores (keysetsSync.ts MAX_FEE_PPK); the bound of `maxInputFeePpk`. */
+export const WALLET_MAX_FEE_PPK = 1_000_000
 
 /** The most NUT numbers one `nuts` value may list (there are fewer than 30 NUTs). */
 export const WALLET_NUTS_MAX = 32
@@ -175,7 +308,7 @@ function single(q: Record<string, unknown>, key: string): string | undefined | n
 /** Strict parse of the list query: a present but invalid value is an error; unknown parameters are ignored. */
 export function parseWalletListQuery(q: Record<string, unknown>): QueryResult {
   const filter: WalletListFilter = {
-    includeOffline: false, includeTest: false, includeArchived: false, includeUnscored: false, limit: WALLET_LIST_DEFAULT_LIMIT,
+    includeOffline: false, includeTest: false, includeArchived: false, includeUnscored: false, limit: WALLET_LIST_DEFAULT_LIMIT, include: [],
   }
   const unit = single(q, 'unit')
   if (unit === null || unit === '') return { ok: false, message: 'unit must be a single non-empty string' }
@@ -210,6 +343,26 @@ export function parseWalletListQuery(q: Record<string, unknown>): QueryResult {
   if (eligible !== undefined) {
     if (eligible !== 'true' && eligible !== 'false') return { ok: false, message: 'eligible must be true or false' }
     filter.eligible = eligible === 'true'
+  }
+  const method = single(q, 'method')
+  if (method === null || method === '') return { ok: false, message: `method must be a single value: ${WALLET_METHODS.join(', ')}` }
+  if (method !== undefined) {
+    const lower = method.toLowerCase()
+    if (!(WALLET_METHODS as readonly string[]).includes(lower)) return { ok: false, message: `method must be one of ${WALLET_METHODS.join(', ')}` }
+    filter.method = lower
+  }
+  const maxFee = single(q, 'maxInputFeePpk')
+  if (maxFee === null || maxFee === '') return { ok: false, message: 'maxInputFeePpk must be a single integer from 0 to 1000000' }
+  if (maxFee !== undefined) {
+    if (!/^\d{1,7}$/.test(maxFee) || Number(maxFee) > WALLET_MAX_FEE_PPK) return { ok: false, message: 'maxInputFeePpk must be an integer from 0 to 1000000' }
+    filter.maxInputFeePpk = Number(maxFee)
+  }
+  const include = single(q, 'include')
+  if (include === null || include === '') return { ok: false, message: `include must be a single comma-separated list of: ${WALLET_INCLUDES.join(', ')}` }
+  if (include !== undefined) {
+    const list = include.split(',').map(v => v.trim())
+    if (!list.every(v => (WALLET_INCLUDES as readonly string[]).includes(v))) return { ok: false, message: `include must be a comma-separated list of: ${WALLET_INCLUDES.join(', ')}` }
+    filter.include = WALLET_INCLUDES.filter(v => list.includes(v))
   }
   const limit = single(q, 'limit')
   if (limit === null) return { ok: false, message: 'limit must be a single integer' }
@@ -250,11 +403,26 @@ function nutRequirementMet(m: WalletMint, n: string): boolean {
   return set.includes(n) || set.includes(n.replace(/^0+/, ''))
 }
 
+function methodRequirementMet(m: WalletMint, method: string, unit: string | undefined): boolean {
+  if (m.methods === null) return false
+  return [...m.methods.mint, ...m.methods.melt].some(e => e.method === method && (unit === undefined || e.unit === unit))
+}
+
 /**
- * Filters, orders and truncates. Offline and degraded mints need includeOffline; archived mints need
- * includeArchived (alone: an archived mint is offline by definition). minScore excludes unscored mints.
+ * maxInputFeePpk: the active keysets in scope (the requested unit, or every unit) must exist and ALL have a known fee
+ * at or below the limit. An unknown fee (null) or no active keyset in scope never matches.
  */
-export function filterWalletMints(mints: WalletMint[], f: WalletListFilter): WalletMint[] {
+function feeRequirementMet(m: WalletMint, max: number, unit: string | undefined): boolean {
+  const scope = m.keysets.filter(k => k.active && (unit === undefined || k.unit === unit))
+  return scope.length > 0 && scope.every(k => k.inputFeePpk !== null && k.inputFeePpk <= max)
+}
+
+/**
+ * Filters and orders (no truncation: `total` of the list envelope counts these). Offline and degraded mints need
+ * includeOffline; archived mints need includeArchived (alone: an archived mint is offline by definition). minScore
+ * excludes unscored mints.
+ */
+export function matchWalletMints(mints: WalletMint[], f: WalletListFilter): WalletMint[] {
   return mints
     .filter(m => {
       if (m.status === 'archived') { if (!f.includeArchived) return false }
@@ -266,10 +434,16 @@ export function filterWalletMints(mints: WalletMint[], f: WalletListFilter): Wal
       if (f.eligibleOnly && !m.eligibleForRecommendation) return false
       if (f.eligible !== undefined && m.eligibleForRecommendation !== f.eligible) return false
       if (f.requiredNuts && !f.requiredNuts.every(n => nutRequirementMet(m, n))) return false
+      if (f.method !== undefined && !methodRequirementMet(m, f.method, f.unit)) return false
+      if (f.maxInputFeePpk !== undefined && !feeRequirementMet(m, f.maxInputFeePpk, f.unit)) return false
       return true
     })
     .sort(compareWalletMints)
-    .slice(0, f.limit)
+}
+
+/** matchWalletMints, truncated to f.limit. */
+export function filterWalletMints(mints: WalletMint[], f: WalletListFilter): WalletMint[] {
+  return matchWalletMints(mints, f).slice(0, f.limit)
 }
 
 // ── Envelope ──────────────────────────────────────────────────────────────────
@@ -279,19 +453,64 @@ export interface Snapshot {
   computedAt: number
   /** Review aggregates recomputed from stored reviews, by mint URL, only for mints whose rollup column is NULL. Never serialised. */
   reviewFallback?: ReadonlyMap<string, ReviewsFallback>
+  /** probes24h, downSince, the stored score breakdown and the keysets, by mint URL. Never serialised. */
+  walletExtra?: ReadonlyMap<string, WalletExtra>
+}
+
+const toMint = (snap: Snapshot, m: KnownMintLike): WalletMint =>
+  toWalletMint(m, snap.computedAt, snap.reviewFallback?.get(m.url), snap.walletExtra?.get(m.url))
+
+/** The mint object without the heavier fields that `include` did not ask for. */
+function withIncludes(m: WalletMint, include: readonly WalletInclude[]): object {
+  const out: Record<string, unknown> = { ...m }
+  for (const group of WALLET_INCLUDES) {
+    if (include.includes(group)) continue
+    for (const key of HEAVY_KEYS[group]) delete out[key]
+  }
+  return out
 }
 
 export function walletListEnvelope(snap: Snapshot, filter: WalletListFilter): object {
   const now = snap.computedAt
-  const all = (snap.data as KnownMintLike[]).map(m => toWalletMint(m, now, snap.reviewFallback?.get(m.url)))
-  const mints = filterWalletMints(all, filter)
-  return { methodology: METHODOLOGY_VERSION, generatedAt: new Date(now).toISOString(), count: mints.length, mints }
+  const all = (snap.data as KnownMintLike[]).map(m => toMint(snap, m))
+  const matched = matchWalletMints(all, filter)
+  const mints = matched.slice(0, filter.limit)
+  return {
+    methodology: METHODOLOGY_VERSION, generatedAt: new Date(now).toISOString(),
+    count: mints.length, total: matched.length, truncated: matched.length > mints.length,
+    mints: mints.map(m => withIncludes(m, filter.include)),
+  }
+}
+
+/** scheme + host and the lower-cased path of a mint URL, for the case-insensitive fallback; null when unparseable. */
+function pathKey(url: string): string | null {
+  try {
+    const u = new URL(url)
+    return `${u.origin}${u.pathname.replace(/\/+$/, '').toLowerCase()}`
+  } catch { return null }
+}
+
+/**
+ * The mint for a requested (already normalised) URL: the exact match, else the ONE mint whose URL differs only in the
+ * case of the path (canonicalUrl = its stored URL). Several candidates or none: null.
+ */
+export function findWalletMint(rows: KnownMintLike[], url: string): { mint: KnownMintLike; canonicalUrl: string | null } | null {
+  const exact = rows.find(m => m.url === url)
+  if (exact) return { mint: exact, canonicalUrl: null }
+  const key = pathKey(url)
+  if (key === null) return null
+  const candidates = rows.filter(m => pathKey(m.url) === key)
+  return candidates.length === 1 ? { mint: candidates[0] as KnownMintLike, canonicalUrl: (candidates[0] as KnownMintLike).url } : null
 }
 
 export function walletSingleEnvelope(snap: Snapshot, url: string): object | null {
-  const found = (snap.data as KnownMintLike[]).find(m => m.url === url)
+  const found = findWalletMint(snap.data as KnownMintLike[], url)
   if (!found) return null
-  return { methodology: METHODOLOGY_VERSION, generatedAt: new Date(snap.computedAt).toISOString(), mint: toWalletMint(found, snap.computedAt, snap.reviewFallback?.get(found.url)) }
+  return {
+    methodology: METHODOLOGY_VERSION, generatedAt: new Date(snap.computedAt).toISOString(),
+    mint: toMint(snap, found.mint),
+    canonicalUrl: found.canonicalUrl,
+  }
 }
 
 export interface RecommendQuery { unit: string; minScore: number; limit: number; requiredNuts: string[] }
@@ -300,11 +519,11 @@ export interface RecommendQuery { unit: string; minScore: number; limit: number;
 export function recommendEnvelope(snap: Snapshot, q: RecommendQuery): object {
   const rows = snap.data as KnownMintLike[]
   const latency = new Map(rows.map(r => [r.url, r.latencyMs ?? null]))
-  const all = rows.map(m => toWalletMint(m, snap.computedAt, snap.reviewFallback?.get(m.url)))
+  const all = rows.map(m => toMint(snap, m))
   const picked = filterWalletMints(all, {
     unit: q.unit === '' ? undefined : q.unit.toLowerCase(),
     minScore: q.minScore,
-    includeOffline: false, includeTest: false, includeArchived: false, includeUnscored: false,
+    includeOffline: false, includeTest: false, includeArchived: false, includeUnscored: false, include: [],
     limit: q.limit,
     eligibleOnly: true,
     requiredNuts: q.requiredNuts,
@@ -350,7 +569,8 @@ export function isPublicCorsPath(path: string): boolean {
   return isWalletApiPath(p) || PUBLIC_CORS_EXACT.has(p)
 }
 
-export const PUBLIC_CORS_EXPOSE_HEADERS = 'ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset'
+// Deprecation, Sunset and Link let browser wallets read the deprecation notice of the recommend routes (deprecation.ts).
+export const PUBLIC_CORS_EXPOSE_HEADERS = 'ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Deprecation, Sunset, Link'
 
 // ── Cached JSON ───────────────────────────────────────────────────────────────
 

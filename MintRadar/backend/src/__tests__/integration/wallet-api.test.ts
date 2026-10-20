@@ -91,10 +91,15 @@ beforeEach(async () => {
 const urls = (body: { mints: Array<{ url: string }> }) => body.mints.map(m => m.url)
 const list = (qs = '') => request(app).get('/api/wallets/mints' + qs)
 
-const MINT_KEYS = [
+// The keys of the 2026-10-20 additive fields are in W2B_LIGHT_KEYS (every object) and W2B_HEAVY_KEYS (include= / single mint).
+const V1_KEYS = [
   'audit', 'eligibleForRecommendation', 'isTest', 'lastCheckedAt', 'name', 'nuts', 'outdated', 'reviews', 'score',
   'scoreCappedNew', 'software', 'status', 'units', 'uptime24hPct', 'uptime7dPct', 'url',
 ]
+const W2B_LIGHT_KEYS = ['auditNeutralReason', 'authRequired', 'downSince', 'hasOnion']
+const W2B_HEAVY_KEYS = ['firstSeenAt', 'keysets', 'keysetsCheckedAt', 'lastOnlineAt', 'methods', 'pubkey', 'sample', 'scoreBreakdown']
+const MINT_KEYS = [...V1_KEYS, ...W2B_LIGHT_KEYS].sort()
+const MINT_KEYS_FULL = [...MINT_KEYS, ...W2B_HEAVY_KEYS].sort()
 
 function allKeys(v: unknown, out: string[] = []): string[] {
   if (Array.isArray(v)) v.forEach(x => allKeys(x, out))
@@ -107,7 +112,7 @@ describe('contract', () => {
     const res = await list('?includeTest=true&includeOffline=true&includeArchived=true&includeUnscored=true')
     expect(res.status).toBe(200)
     expect(res.headers['content-type']).toMatch(/application\/json/)
-    expect(Object.keys(res.body).sort()).toEqual(['count', 'generatedAt', 'methodology', 'mints'])
+    expect(Object.keys(res.body).sort()).toEqual(['count', 'generatedAt', 'methodology', 'mints', 'total', 'truncated'])
     expect(res.body.methodology).toBe(METHODOLOGY_VERSION)
     expect(Number.isInteger(res.body.methodology)).toBe(true)
     expect(new Date(res.body.generatedAt).toISOString()).toBe(res.body.generatedAt)
@@ -134,14 +139,15 @@ describe('contract', () => {
 
   it('carries no IP, network, onion, key, contact or review-text data, by key or by value', async () => {
     const res = await list('?includeTest=true&includeOffline=true&includeArchived=true&includeUnscored=true')
-    const forbiddenKeys = ['ip', 'ipaddress', 'netasn', 'netorg', 'netcountry', 'hasonion', 'onion', 'pubkey', 'nostrannouncepubkey',
-      'content', 'text', 'contact', 'tosurl', 'descriptionlong', 'serverlocation', 'lasterror', 'iconurl', 'reviewer', 'author']
+    // Since 2026-10-20 the object carries the mint's public NUT-06 `pubkey` and the boolean `hasOnion` (and nothing else of these kinds).
+    const forbiddenKeys = ['ip', 'ipaddress', 'netasn', 'netorg', 'netcountry', 'onion', 'onionaddress', 'nostrannouncepubkey',
+      'content', 'text', 'contact', 'tosurl', 'descriptionlong', 'serverlocation', 'lasterror', 'iconurl', 'reviewer', 'author', 'asn', 'org', 'location']
     for (const k of allKeys(res.body)) {
       expect(forbiddenKeys, `key ${k}`).not.toContain(k.toLowerCase())
-      expect(k.toLowerCase(), `key ${k}`).not.toMatch(/pubkey|onion|contact|^net[A-Z]?/i)
+      if (!['pubkey', 'hasonion'].includes(k.toLowerCase())) expect(k.toLowerCase(), `key ${k}`).not.toMatch(/pubkey|onion|contact|^net[A-Z]?/i)
     }
     const text = JSON.stringify(res.body)
-    for (const needle of ['203.0.113.7', 'operator@example.com', 'DigitalOcean', 'Frankfurt', 'ECONNRESET', 'ab'.repeat(32), 'cd'.repeat(32), 'icons.example']) {
+    for (const needle of ['203.0.113.7', 'operator@example.com', 'DigitalOcean', 'Frankfurt', 'ECONNRESET', 'cd'.repeat(32), 'icons.example']) {
       expect(text).not.toContain(needle)
     }
   })
@@ -323,9 +329,10 @@ describe('GET /api/wallets/mints/:url', () => {
   it('returns the envelope with one mint for a percent-encoded url', async () => {
     const res = await one(encodeURIComponent('https://a.example.com'))
     expect(res.status).toBe(200)
-    expect(Object.keys(res.body).sort()).toEqual(['generatedAt', 'methodology', 'mint'])
+    expect(Object.keys(res.body).sort()).toEqual(['canonicalUrl', 'generatedAt', 'methodology', 'mint'])
+    expect(res.body.canonicalUrl).toBeNull()
     expect(res.body.methodology).toBe(METHODOLOGY_VERSION)
-    expect(Object.keys(res.body.mint).sort()).toEqual(MINT_KEYS)
+    expect(Object.keys(res.body.mint).sort()).toEqual(MINT_KEYS_FULL)
     expect(res.body.mint.url).toBe('https://a.example.com')
   })
 
@@ -479,7 +486,7 @@ describe('CORS', () => {
     expect(res.status).toBe(200)
     expect(res.headers['access-control-allow-origin']).toBe('*')
     expect(res.headers['access-control-allow-credentials']).toBeUndefined()
-    expect(res.headers['access-control-expose-headers']).toBe('ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset')
+    expect(res.headers['access-control-expose-headers']).toBe('ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Deprecation, Sunset, Link')
   })
 
   it('HEAD works with * too', async () => {

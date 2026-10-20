@@ -8,6 +8,7 @@ import { notifySubscribers, notifyAlert, recordAlertClear, isNotificationService
 import { mintMeltCondition, versionCondition, nutLossTransition, type Condition } from './alertTriggers.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { normalizeMintPubkey } from './mintPubkey.js'
+import { computeScoreBreakdown } from './scoreBreakdown.js'
 import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type SafeFetchRejection } from './probeErrorKind.js'
 
 function isCloudflareIP(address: string): boolean {
@@ -719,22 +720,30 @@ async function recordProbeResult(url: string, result: ProbeResult): Promise<void
       // only our ability to read it did.
       const effectiveContactCount = contactCount ?? Number(row.contact_count ?? 0)
       const latestVersions = await getLatestVersionsMap()
+      const auditInput = {
+        blamed: row.audit_cz_blamed as number | null,
+        total: row.audit_cz_total as number | null,
+        fetchedAt: row.audit_cz_fetched_at as Date | string | null,
+      }
+      // One `now` for the score and its breakdown, written in the same UPDATE (scoreBreakdown.ts).
+      const scoreNow = Date.now()
       const reliabilityScore = computeServerReliabilityScore(
         uptimePct,
         row.nut_count as number | null,
         row.version as string | null,
         effectiveContactCount,
-        {
-          blamed: row.audit_cz_blamed as number | null,
-          total: row.audit_cz_total as number | null,
-          fetchedAt: row.audit_cz_fetched_at as Date | string | null,
-        },
+        auditInput,
         latestVersions,
         row.discovered_at as string | null,
+        scoreNow,
+      )
+      const breakdown = computeScoreBreakdown(
+        uptimePct, row.nut_count as number | null, row.version as string | null, effectiveContactCount,
+        auditInput, latestVersions, row.discovered_at as string | null, scoreNow,
       )
       await pool.query(
-        `UPDATE mints SET last_reliability_score = $1, last_error = $2 WHERE url = $3`,
-        [reliabilityScore, lastError, url]
+        `UPDATE mints SET last_reliability_score = $1, last_error = $2, score_breakdown = $4::jsonb WHERE url = $3`,
+        [reliabilityScore, lastError, url, JSON.stringify(breakdown)]
       )
       if (isNotificationServiceEnabled()) {
         applyAlertCondition(url, 'mint_melt', mintMeltCondition(

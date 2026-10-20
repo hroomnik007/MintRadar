@@ -160,7 +160,7 @@ export default function ForWallets() {
           <ul>
             <li>
               <strong>CORS:</strong> any origin may call <code>GET</code> (and <code>HEAD</code>, <code>OPTIONS</code>),
-              without credentials. <code>ETag</code>, <code>Retry-After</code> and the <code>X-RateLimit-*</code> headers are
+              without credentials. <code>ETag</code>, <code>Retry-After</code>, the <code>X-RateLimit-*</code> headers and, since {F.walletAdditionsOn}, <code>Deprecation</code>, <code>Sunset</code> and <code>Link</code> are
               readable from browser code. A preflight is answered with <code>204</code> and does not count against the limit.
             </li>
             <li>
@@ -178,15 +178,23 @@ export default function ForWallets() {
           <h2 id="response" tabIndex={-1} className="about-h2">Response</h2>
           <p>
             Every answer is JSON in an envelope. The list returns <code>methodology</code>, <code>generatedAt</code>,{' '}
-            <code>count</code> and <code>mints</code>; a single mint returns <code>methodology</code>,{' '}
-            <code>generatedAt</code> and <code>mint</code>.
+            <code>count</code>, <code>total</code>, <code>truncated</code> and <code>mints</code>; a single mint returns{' '}
+            <code>methodology</code>, <code>generatedAt</code>, <code>mint</code> and <code>canonicalUrl</code>.
           </p>
           <FieldTable fields={WALLET_ENVELOPE_FIELDS} label="Envelope fields" />
           <h3 className="doc-h3">The mint object</h3>
           <p>
             Fields of a nested object are written <code>parent.child</code>. Clients must ignore fields they do not know.
-            The answers never contain IP addresses or other network data, reviewer keys or review texts, or contact
-            details.
+            The answers never contain IP addresses, AS numbers, hosting organisations, server locations or error
+            messages, reviewer keys or review texts, or contact details. They do carry the mint&apos;s public NUT-06
+            key (<code>pubkey</code>) and whether it advertises a Tor address (<code>hasOnion</code>). The heavier fields{' '}
+            <code>keysets</code>, <code>keysetsCheckedAt</code>, <code>methods</code> and <code>scoreBreakdown</code> are
+            in the list only with <code>include=</code> (so are <code>pubkey</code>, <code>firstSeenAt</code>, <code>lastOnlineAt</code> and <code>sample</code>, as <code>include=facts</code>) and always in the single-mint answer.{' '}
+            <code>scoreBreakdown</code> is what the score used at its last computation, written together with the score.
+          </p>
+          <p data-testid="request-privacy">
+            <strong>Privacy of your request:</strong> download the whole list and filter locally; the single-mint
+            endpoint tells MintRadar which mint you asked about.
           </p>
           <FieldTable fields={WALLET_MINT_FIELDS} label="Mint object fields" />
         </section>
@@ -249,6 +257,13 @@ export default function ForWallets() {
           <h2 id="stability" tabIndex={-1} className="about-h2">Stability</h2>
           <ul>
             <li>Inside v1 a field is never renamed or removed, and its type does not change. Changes are additive: new fields and new optional parameters. The list parameters <code>nuts</code> and <code>eligible</code> (added {F.recommendDeprecatedOn}) are such additions.</li>
+            <li data-testid="additions">
+              Added {F.walletAdditionsOn} (nothing renamed, removed or changed): the list parameters <code>method</code>, <code>maxInputFeePpk</code> and{' '}
+              <code>include</code>; the list fields <code>total</code> and <code>truncated</code>; the single-mint field <code>canonicalUrl</code> (a path that differs only in letter
+              case can now answer <code>200</code> instead of <code>404</code> when exactly one mint matches); the mint fields <code>pubkey</code>, <code>firstSeenAt</code>,{' '}
+              <code>lastOnlineAt</code>, <code>downSince</code>, <code>hasOnion</code>, <code>authRequired</code>, <code>sample</code>, <code>auditNeutralReason</code>,{' '}
+              <code>keysets</code>, <code>keysetsCheckedAt</code>, <code>methods</code> and <code>scoreBreakdown</code>; and the exposed CORS headers <code>Deprecation</code>, <code>Sunset</code> and <code>Link</code>.
+            </li>
             <li>A removal is announced on this page and in <code>docs/API.md</code> at least {F.deprecationNoticeDays} days before it takes effect. A route that is going away also says so in its responses, with the <code>Deprecation</code> and <code>Sunset</code> headers and a <code>Link</code> header with <code>rel=&quot;successor-version&quot;</code>; the only route that does so today is the one below.</li>
             <li data-testid="recommend-deprecation">
               <strong>Deprecated: <code>GET /api/v1/mints/recommend</code></strong> (and <code>/api/mints/recommend</code>), since {F.recommendDeprecatedOn}. It may be removed from {F.recommendSunsetOn} on; until then it answers as before.

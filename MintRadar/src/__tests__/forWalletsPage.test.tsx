@@ -18,7 +18,7 @@ import { METHODOLOGY_PAGE } from '@/constants/methodologyPage'
 import {
   toWalletMint, walletListEnvelope, walletSingleEnvelope, parseWalletListQuery, sendCachedBody, buildCachedBody,
   WALLET_LIST_DEFAULT_LIMIT, WALLET_LIST_MAX_LIMIT, WALLET_MINT_FIELDS as beMintFields, WALLET_QUERY_PARAMS as beParams,
-  type KnownMintLike,
+  type KnownMintLike, type WalletExtra,
 } from '../../backend/src/walletApi'
 import { RECOMMEND_DEPRECATION } from '../../backend/src/deprecation'
 
@@ -32,12 +32,23 @@ const FULL: KnownMintLike = {
   discoveredAt: '2026-01-01T00:00:00.000Z', reliabilityScore: 92, uptimePct24h: 100, uptimePct7d: 99,
   lastCheckedAt: '2026-10-13T11:59:00.000Z', reviewCount: 12, reviewRatedCount: 10, reviewAvgRating: 4.6,
   operatorReviewCount: 1, latencyMs: 120,
+  pubkey: '02' + 'ab'.repeat(32), hasOnion: true, lastOnlineAt: '2026-10-13T11:59:00.000Z',
+  mintMethods: [{ method: 'bolt11', unit: 'sat', min_amount: 1, max_amount: 100000 }], meltMethods: [{ method: 'bolt11', unit: 'sat' }],
+}
+const FULL_EXTRA: WalletExtra = {
+  probes24h: 288, downSince: null, keysetsCheckedAt: '2026-10-13T11:00:00.000Z',
+  keysets: [{ id: '00aaaaaaaaaaaaaa', unit: 'sat', active: true, inputFeePpk: 100, finalExpiry: null, idVersion: 'v1', idValid: true }],
+  scoreBreakdown: {
+    uptime: { points: 40, max: 40 }, audit: { points: 25, max: 25 }, nuts: { points: 6, max: 15 }, version: { points: 15, max: 15 },
+    contact: { points: 5, max: 5 }, newMintCap: { points: 0, cap: 75 }, sum: 92,
+  },
 }
 const EMPTY: KnownMintLike = {
   ...FULL, name: null, online: null, version: null, softwareLatest: null, nutsLimits: null, units: null,
   auditCzTotal: null, auditCzBlamed: null, auditCzFetchedAt: null, discoveredAt: null, reliabilityScore: null,
   uptimePct24h: null, uptimePct7d: null, lastCheckedAt: null, reviewCount: null, reviewRatedCount: null,
   reviewAvgRating: null, operatorReviewCount: null,
+  pubkey: null, hasOnion: null, lastOnlineAt: null, mintMethods: null, meltMethods: null,
 }
 
 type Json = Record<string, unknown>
@@ -51,14 +62,16 @@ function flatten(m: Json): string[] {
 }
 
 describe('mint object: the field table equals the real mapper', () => {
-  const full = toWalletMint(FULL, NOW) as unknown as Json
+  const full = toWalletMint(FULL, NOW, undefined, FULL_EXTRA) as unknown as Json
   const empty = toWalletMint(EMPTY, NOW) as unknown as Json
+  // offline with a neutral audit: the values downSince and auditNeutralReason take only then
+  const down = toWalletMint({ ...FULL, online: false, auditCzTotal: 3 }, NOW, undefined, { ...FULL_EXTRA, downSince: '2026-10-13T10:00:00.000Z' }) as unknown as Json
 
   it('lists exactly the keys the mapper produces (nested keys as parent.child)', () => {
     expect(new Set(WALLET_MINT_FIELDS.map(f => f.name)).size).toBe(WALLET_MINT_FIELDS.length)
     expect([...WALLET_MINT_FIELDS.map(f => f.name)].sort()).toEqual([...flatten(full)].sort())
     // the same keys with every input missing, except the nested ones of an object that is null then
-    expect(flatten(empty).sort()).toEqual(flatten(full).filter(k => !k.startsWith('audit.')).sort())
+    expect(flatten(empty).sort()).toEqual(flatten(full).filter(k => !/^(audit|authRequired|methods|scoreBreakdown)\./.test(k)).sort())
   })
 
   it('"Null: yes" is exactly the fields the mapper can return as null', () => {
@@ -73,12 +86,13 @@ describe('mint object: the field table equals the real mapper', () => {
       string: v => typeof v === 'string', integer: v => Number.isInteger(v), number: v => typeof v === 'number',
       boolean: v => typeof v === 'boolean', object: v => typeof v === 'object' && v !== null && !Array.isArray(v),
       'string[]': v => Array.isArray(v) && v.every(x => typeof x === 'string'),
+      'object[]': v => Array.isArray(v) && v.every(x => typeof x === 'object' && x !== null),
     }
     const kind = (f: WalletField) =>
       f.type.startsWith('string (ISO') ? 'string' : f.type.startsWith('integer') ? 'integer'
-        : f.type.startsWith('"online"') ? 'string' : f.type
+        : f.type.startsWith('"') ? 'string' : f.type
     for (const f of WALLET_MINT_FIELDS) {
-      const v = valueAt(full, f.name)
+      const v = [full, down, empty].map(m => valueAt(m, f.name)).find(x => x !== null && x !== undefined)
       expect(check[kind(f)]?.(v), `${f.name} (${f.type})`).toBe(true)
     }
     expect(WALLET_MINT_FIELDS.find(f => f.name === 'status')!.type).toBe('"online" | "offline" | "degraded" | "archived"')
@@ -120,11 +134,11 @@ function parseOk(q: Record<string, unknown>) {
 describe('list parameters: the table equals the real parser', () => {
   const INVALID: Record<string, string> = {
     unit: '!!', minScore: '101', includeOffline: 'maybe', includeArchived: 'maybe', includeTest: 'maybe',
-    includeUnscored: 'maybe', limit: '0', nuts: 'abc', eligible: 'maybe',
+    includeUnscored: 'maybe', limit: '0', nuts: 'abc', eligible: 'maybe', method: 'lightning', maxInputFeePpk: '1000001', include: 'foo',
   }
   const VALID: Record<string, string> = {
     unit: 'sat', minScore: '70', includeOffline: 'true', includeArchived: 'true', includeTest: 'true',
-    includeUnscored: 'true', limit: '20', nuts: '4,5', eligible: 'true',
+    includeUnscored: 'true', limit: '20', nuts: '4,5', eligible: 'true', method: 'bolt12', maxInputFeePpk: '100', include: 'keysets,methods,breakdown',
   }
 
   it('every documented parameter is read by the parser (an invalid value is rejected, a valid one accepted)', () => {
@@ -320,3 +334,20 @@ describe('the rendered page', () => {
     await waitFor(() => expect(button.textContent).toBe('Copy failed'))
   })
 })
+
+describe('page text added with the 2026-10-20 wallet additions', () => {
+  it('states the request-privacy rule, lists every addition and names the new exposed headers', () => {
+    const { container } = render(<MemoryRouter><ForWallets /></MemoryRouter>)
+    const text = container.textContent ?? ''
+    expect(container.querySelector('[data-testid="request-privacy"]')?.textContent).toContain('download the whole list and filter locally')
+    expect(container.querySelector('[data-testid="request-privacy"]')?.textContent).toContain('tells MintRadar which mint you asked about')
+    const additions = container.querySelector('[data-testid="additions"]')?.textContent ?? ''
+    expect(additions).toContain(F.walletAdditionsOn)
+    for (const name of ['method', 'maxInputFeePpk', 'include', 'total', 'truncated', 'canonicalUrl', 'pubkey', 'firstSeenAt', 'lastOnlineAt', 'downSince',
+      'hasOnion', 'authRequired', 'sample', 'auditNeutralReason', 'keysets', 'keysetsCheckedAt', 'methods', 'scoreBreakdown', 'Deprecation', 'Sunset', 'Link']) {
+      expect(additions, name).toContain(name)
+    }
+    expect(text).toContain('what the score used at its last computation')
+  })
+})
+

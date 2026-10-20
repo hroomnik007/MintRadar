@@ -19,6 +19,8 @@ export const WALLET_API_FACTS = {
   /** GET /api/v1/mints/recommend: deprecated on this day, may be removed from the sunset day (backend/src/deprecation.ts). */
   recommendDeprecatedOn: '2026-10-20',
   recommendSunsetOn: '2027-01-26',
+  /** The day the second batch of additive fields and parameters (method, maxInputFeePpk, include, facts, keysets, breakdown) was added. */
+  walletAdditionsOn: '2026-10-20',
   /** The list query that returns the same mints as /mints/recommend with its defaults. */
   recommendReplacementQuery: '/wallets/mints?eligible=true&unit=sat&minScore=80&limit=5',
 } as const

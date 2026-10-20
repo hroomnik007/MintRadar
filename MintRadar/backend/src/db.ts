@@ -499,6 +499,9 @@ export async function initDb(): Promise<void> {
     'CREATE INDEX IF NOT EXISTS idx_mint_keysets_url ON mint_keysets(url)',
     // Nullable, no default: a metadata-only change, no table rewrite.
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS keysets_checked_at TIMESTAMPTZ',
+    // The per-component points behind last_reliability_score, written in the same UPDATE (scoreBreakdown.ts); NULL until
+    // the next probe cycle after the deploy. Nullable, no default: a metadata-only change, no table rewrite.
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS score_breakdown JSONB',
   ]
 
   for (const sql of migrations) {

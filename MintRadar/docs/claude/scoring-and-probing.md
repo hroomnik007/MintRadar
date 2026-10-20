@@ -44,6 +44,7 @@ not this document**. Same source list used by Learn Module 3's breakdown
 - **The whole computation lives in `backend/src/shared/reliabilityScore.ts`** (`computeReliabilityScore()` plus the per-component `uptimeComponent`/`nutComponent`/`versionComponent`/`contactComponent` helpers). `prober.ts` re-exports it as `computeServerReliabilityScore` for its existing call sites and tests. `src/utils/reliabilityScore.ts` is the manually-synced frontend copy (same no-workspace caveat as `auditScore.ts`) — edit both if the logic changes. The frontend used to carry a second, silently divergent implementation in `MintDetail.tsx` (its own `NUTSHELL_VERSIONS` list topped out at 0.21 vs. the backend's 0.16, so the Reliability Score Breakdown's Version row could disagree with the total it was breaking down); that duplicate is gone.
 - The stored server-side score is authoritative. `MintDetail.tsx` computes a score itself only as a fallback — when `knownMint.reliabilityScore` is missing, or for a historical chart bucket with no stored `reliability_score`.
 - Rounding: each component rounds individually, then the total gets exactly one outer `Math.round` before the cap — `Math.min(100, Math.round(sum))`, followed by `applyNewMintCap()`. Both copies must keep this ordering or a mint's breakdown rows won't add up to its stored total.
+- **Stored breakdown for the wallet API (2026-10-20, formula untouched):** `backend/src/scoreBreakdown.ts` (`computeScoreBreakdown`, backend only, calls the same component functions) returns `{ uptime, audit, nuts, version, contact }` as `{ points, max }` (maxima 40/25/15/15/5), `newMintCap: { points, cap: 75 }` and `sum`. `points` of the cap is `capped - uncapped` (0 or negative), `sum = min(100, round(parts)) + newMintCap.points` = the stored score. The neutral audit value is 12.5, so the parts may end in .5; the single outer rounding is why `sum` is not the plain total of the parts. `prober.ts` `recordProbeResult` calls both functions with ONE `now` and writes the JSON into `mints.score_breakdown` in the same `UPDATE` as `last_reliability_score` (never recomputed at read time; NULL until the first probe after the deploy). `scoreBreakdown.test.ts` checks `sum === computeReliabilityScore(...)` on a grid of more than 10,000 inputs, `prober-audit-inputs.test.ts` checks the UPDATE parameters. Any change to the formula must keep both in step (the test fails otherwise).
 
 ## Reliability Score donut arc — shared geometry helper (2026-09-04)
 
@@ -177,8 +178,9 @@ Percentages are compared as integers (`part * 100 >= whole * percent`), so 49 vs
 
 ## Keysets and NUT-02 id check — `mint_keysets` (2026-10-20, task W2a)
 
-Data collection only. **Nothing here feeds the Reliability Score**, no `/api` field exposes it yet (that is task W2b, which will
-add the public fields and the wallet-facing docs), and `/methodology` is unchanged.
+Data collection only. **Nothing here feeds the Reliability Score** and `/methodology` is unchanged. Since 2026-10-20 (task W2b) the
+wallet API exposes it: `keysets` / `keysetsCheckedAt` (keysets of the latest successful check) and the `maxInputFeePpk` filter, see
+`backend-api-and-data.md` "Wallet API additive fields".
 
 - **Table `mint_keysets`** (`db.ts`, additive and idempotent, runs at startup like every migration): `url` (FK to `mints`,
   `ON DELETE CASCADE`, so every prune path that deletes a mint removes its keysets), `keyset_id`, `unit`, `active`,

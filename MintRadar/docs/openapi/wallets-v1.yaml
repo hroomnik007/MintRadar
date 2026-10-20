@@ -11,7 +11,8 @@ info:
 
     **CORS.** Every route below answers any origin: `Access-Control-Allow-Origin: *` for `GET`, `HEAD`
     and `OPTIONS`, no credentials, with `Access-Control-Expose-Headers: ETag, Retry-After,
-    X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset`. A preflight is answered with `204`.
+    X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Deprecation, Sunset, Link` (the last three let a
+    browser wallet read a deprecation notice, since 2026-10-20). A preflight is answered with `204`.
 
     **Caching.** Every successful response carries `Cache-Control: public, max-age=300` and an
     `ETag` over the body (on a cache hit as well as a miss; strong, but a compressed answer carries the same
@@ -29,9 +30,17 @@ info:
     also sends `Deprecation`, `Sunset` and `Link: <successor>; rel="successor-version"` headers; the only such route
     is `/mints/recommend` (deprecated 2026-10-20, sunset 2027-01-26, not part of this specification): replace it with
     `/wallets/mints?eligible=true&unit=sat&minScore=80&nuts=4,5&limit=5`, which returns the same mints in the same
-    order. The list parameters `nuts` and `eligible` were added on 2026-10-20 (additions). The integer
+    order. The list parameters `nuts` and `eligible` were added on 2026-10-20 (additions), and so were, the same day, the
+    list parameters `method`, `maxInputFeePpk` and `include`, the list fields `total` and `truncated`, the single-mint field
+    `canonicalUrl` and the mint fields `pubkey`, `firstSeenAt`, `lastOnlineAt`, `downSince`, `hasOnion`, `authRequired`,
+    `sample`, `auditNeutralReason`, `keysets`, `keysetsCheckedAt`, `methods` and `scoreBreakdown` (`pubkey`, `firstSeenAt`,
+    `lastOnlineAt`, `sample` and the last four only with `include` or on the single-mint endpoint). The integer
     `methodology` changes whenever the score formula changes; scores of different methodology numbers are
     not comparable. The history is in `backend/src/shared/methodology.ts` and docs/API.md.
+
+    **Privacy.** Download the whole list and filter locally: a list request tells MintRadar nothing about which mint you
+    care about. The single-mint endpoint tells MintRadar which mint you asked about. The responses never contain IP
+    addresses, ASNs, hosting organisations, server locations or error messages.
   license:
     name: MIT
     identifier: MIT
@@ -52,6 +61,8 @@ paths:
         By default only online, scored, non-test mints are returned. Order: `score` descending (null last),
         then `uptime7dPct` descending (null last), then `name` (the hostname when `name` is null), then `url`.
         A query value that is present but invalid (a repeated parameter included; the boolean flags take exactly `true` or `false`) is a `400`; unknown parameters are ignored.
+        `total` counts the mints that match the filters before `limit` is applied; `truncated` is true when `limit` cut the list.
+        The heavier fields (`pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `keysets`, `keysetsCheckedAt`, `methods`, `scoreBreakdown`) are only in the objects when `include` asks for them.
       parameters:
         - name: unit
           in: query
@@ -93,6 +104,29 @@ paths:
             `true`: keep only mints with `eligibleForRecommendation: true`, the mints the deprecated `/mints/recommend`
             returns. `false`: keep only the others. Absent: no filter. Added 2026-10-20.
           schema: { type: boolean }
+        - name: method
+          in: query
+          description: >-
+            Keep mints that advertise this payment method in NUT-04 (mint) or NUT-05 (melt), on any unit; with `unit`
+            also given, on that unit. A mint with `methods: null` never matches. Added 2026-10-20.
+          schema: { type: string, enum: [bolt11, bolt12, onchain] }
+        - name: maxInputFeePpk
+          in: query
+          description: >-
+            Keep mints whose active keysets for `unit` (every unit when `unit` is not given) all have
+            `inputFeePpk <= maxInputFeePpk`. A mint with an unknown fee, or without an active keyset in scope, is excluded.
+            Added 2026-10-20.
+          schema: { type: integer, minimum: 0, maximum: 1000000 }
+          example: 0
+        - name: include
+          in: query
+          description: >-
+            Comma-separated list of `facts`, `keysets`, `methods`, `breakdown`: add the heavier fields of that name to every object
+            (`facts` brings `pubkey`, `firstSeenAt`, `lastOnlineAt` and `sample`; `keysets` brings `keysets` and `keysetsCheckedAt`; `methods` brings
+            `methods`; `breakdown` brings `scoreBreakdown`).
+            An unknown value is a `400`. Added 2026-10-20.
+          schema: { type: string, pattern: '^(facts|keysets|methods|breakdown)(,(facts|keysets|methods|breakdown))*$' }
+          example: 'facts,keysets,methods,breakdown'
         - name: limit
           in: query
           description: Maximum number of mints. A value outside 1 to 200 is a `400`.
@@ -118,6 +152,8 @@ paths:
                     methodology: 3
                     generatedAt: '2026-10-12T18:30:12.345Z'
                     count: 1
+                    total: 1
+                    truncated: false
                     mints:
                       - url: https://mint.example.com
                         name: Example Mint
@@ -135,6 +171,10 @@ paths:
                         audit: { swaps7d: 104, attributedFailures: 0, fetchedAt: '2026-10-12T17:40:00.000Z' }
                         reviews: { count: 12, ratedCount: 10, avg: 4.6, operatorCount: 1 }
                         eligibleForRecommendation: true
+                        downSince: null
+                        hasOnion: false
+                        authRequired: { clear: false, blind: false }
+                        auditNeutralReason: null
         '304': { $ref: '#/components/responses/NotModified' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
@@ -148,7 +188,9 @@ paths:
         `url` is the mint URL, percent-encoded. It is normalised exactly like stored mint URLs (https, lower-case
         host, no trailing slash; `http://` becomes `https://`) and checked for a well-formed public https URL without
         any DNS lookup or outbound request. Any other scheme (`ftp://`, `javascript:`, `data:`, …) is `400 invalid_url`. A test, archived or offline mint is returned when asked for by URL; `status` and `isTest` tell
-        them apart.
+        them apart. If no mint has exactly this URL but exactly one differs from it only in the letter case of the path,
+        that mint is returned and `canonicalUrl` holds its stored URL; with several candidates, or none, the answer is `404`.
+        The mint object carries every field here, including `keysets`, `keysetsCheckedAt`, `methods` and `scoreBreakdown`.
       parameters:
         - name: url
           in: path
@@ -264,7 +306,7 @@ components:
               description: Only on `rate_limited`; equals the `Retry-After` header.
     MintList:
       type: object
-      required: [methodology, generatedAt, count, mints]
+      required: [methodology, generatedAt, count, total, truncated, mints]
       properties:
         methodology: { $ref: '#/components/schemas/Methodology' }
         generatedAt: { $ref: '#/components/schemas/GeneratedAt' }
@@ -272,16 +314,26 @@ components:
           type: integer
           minimum: 0
           description: Length of `mints`.
+        total:
+          type: integer
+          minimum: 0
+          description: How many mints match the filters before `limit` is applied. Added 2026-10-20.
+        truncated:
+          type: boolean
+          description: True when `total` is greater than `count`, that is `limit` cut the list. Added 2026-10-20.
         mints:
           type: array
           items: { $ref: '#/components/schemas/Mint' }
     MintResponse:
       type: object
-      required: [methodology, generatedAt, mint]
+      required: [methodology, generatedAt, mint, canonicalUrl]
       properties:
         methodology: { $ref: '#/components/schemas/Methodology' }
         generatedAt: { $ref: '#/components/schemas/GeneratedAt' }
         mint: { $ref: '#/components/schemas/Mint' }
+        canonicalUrl:
+          type: [string, 'null']
+          description: Null when the URL you asked for is the stored one. Otherwise the stored URL (the request differed from it only in the letter case of the path and exactly one mint matched). Added 2026-10-20.
     Methodology:
       type: integer
       minimum: 1
@@ -294,8 +346,11 @@ components:
     Mint:
       type: object
       description: |
-        Operational health of one mint. Never contains IP addresses or other network data, onion data,
-        reviewer public keys or review texts, contact details or the mint's NUT-06 public key.
+        Operational health of one mint. Never contains IP addresses, ASNs, hosting organisations, server locations,
+        error messages, reviewer public keys, review texts or contact details. It does carry the mint's public NUT-06
+        key (`pubkey`) and whether it advertises a Tor address (`hasOnion`). The fields from `pubkey` on were added on
+        2026-10-20; `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `keysets`, `keysetsCheckedAt`, `methods` and
+        `scoreBreakdown` are only present on the single-mint endpoint and in the list with the matching `include` value.
       required:
         - url
         - name
@@ -313,6 +368,10 @@ components:
         - audit
         - reviews
         - eligibleForRecommendation
+        - downSince
+        - hasOnion
+        - authRequired
+        - auditNeutralReason
       properties:
         url:
           type: string
@@ -376,6 +435,124 @@ components:
         eligibleForRecommendation:
           type: boolean
           description: True when the mint is online, has a score, is not a test mint and was first seen at least 14 days ago.
+        pubkey:
+          type: [string, 'null']
+          description: Only with `include=facts` (always on the single-mint endpoint). The mint's public NUT-06 key as MintRadar last stored it (66 hex characters); null when none is stored. Public data the mint publishes itself.
+        firstSeenAt:
+          type: [string, 'null']
+          format: date-time
+          description: Only with `include=facts` (always on the single-mint endpoint). When MintRadar first saw the mint (the date eligibleForRecommendation counts from).
+        lastOnlineAt:
+          type: [string, 'null']
+          format: date-time
+          description: Only with `include=facts` (always on the single-mint endpoint). Time of the latest successful probe; null when the mint never answered.
+        downSince:
+          type: [string, 'null']
+          format: date-time
+          description: 'Start of the current offline streak: the first failed probe after `lastOnlineAt` (the first failed probe kept in the 90-day history for a mint that never answered). Null while `status` is `online`.'
+        hasOnion:
+          type: boolean
+          description: True when the mint advertises a Tor (.onion) address; false when it does not or when that is not known.
+        authRequired:
+          oneOf:
+            - $ref: '#/components/schemas/AuthRequired'
+            - type: 'null'
+        sample:
+          description: Only with `include=facts` (always on the single-mint endpoint).
+          allOf:
+            - $ref: '#/components/schemas/Sample'
+        auditNeutralReason:
+          type: [string, 'null']
+          enum: [low_sample, stale, no_data, null]
+          description: >-
+            Why the audit part of the score is the neutral value 12.5: `low_sample` (fewer swaps than the minimum),
+            `stale` (the stored detail is older than the maximum age), `no_data` (nothing stored). Null while the audit part is
+            measured. Same rules and thresholds as the score, read when the response is built.
+        keysets:
+          type: array
+          items: { $ref: '#/components/schemas/Keyset' }
+          description: Only with `include=keysets` (always on the single-mint endpoint). The keysets the latest successful check found, ordered by id. An empty array when the mint was never checked.
+        keysetsCheckedAt:
+          type: [string, 'null']
+          format: date-time
+          description: Only with `include=keysets`. Time of the latest successful keysets check; null when there was none.
+        methods:
+          oneOf:
+            - $ref: '#/components/schemas/Methods'
+            - type: 'null'
+        scoreBreakdown:
+          oneOf:
+            - $ref: '#/components/schemas/ScoreBreakdown'
+            - type: 'null'
+    AuthRequired:
+      type: object
+      description: >-
+        What the mint ADVERTISES about authentication, not what is enforced: MintRadar does not parse
+        `protected_endpoints`, so `true` does not say which endpoints (mint, melt, swap, ...) need a token.
+      required: [clear, blind]
+      properties:
+        clear: { type: boolean, description: The mint lists NUT-21 (clear auth). }
+        blind: { type: boolean, description: The mint lists NUT-22 (blind auth). }
+    Sample:
+      type: object
+      description: How much data the numbers rest on.
+      required: [probes24h, swaps7d]
+      properties:
+        probes24h: { type: [integer, 'null'], minimum: 0, description: Probes recorded in the last 24 hours. }
+        swaps7d: { type: [integer, 'null'], minimum: 0, description: Swaps in the stored cashu.info 7-day window (the number the audit part of the score uses); null when no detail is stored. }
+    Keyset:
+      type: object
+      required: [id, unit, active, inputFeePpk, finalExpiry, idVersion, idValid]
+      properties:
+        id: { type: string }
+        unit: { type: string }
+        active: { type: boolean }
+        inputFeePpk: { type: [integer, 'null'], minimum: 0, description: Input fee in parts per thousand of a unit; null when the mint did not state a valid fee. }
+        finalExpiry: { type: [string, 'null'], format: date-time }
+        idVersion: { type: string, description: '`v1`, `v2` or `legacy`.' }
+        idValid: { type: [boolean, 'null'], description: True or false after MintRadar compared the id with the keys; null when it could not be verified. }
+    Methods:
+      type: object
+      description: The payment methods the mint advertises in NUT-04 (mint) and NUT-05 (melt); null when neither is stored.
+      required: [mint, melt]
+      properties:
+        mint: { type: array, items: { $ref: '#/components/schemas/MethodEntry' } }
+        melt: { type: array, items: { $ref: '#/components/schemas/MethodEntry' } }
+    MethodEntry:
+      type: object
+      required: [method, unit, minAmount, maxAmount]
+      properties:
+        method: { type: string, description: 'For example `bolt11`, `bolt12` or `onchain`.' }
+        unit: { type: string }
+        minAmount: { type: [integer, 'null'] }
+        maxAmount: { type: [integer, 'null'] }
+    ScoreBreakdown:
+      type: object
+      description: >-
+        What the score used at its last computation, written in the same step as the score. Neutral audit data counts
+        12.5 points, so the five parts can end in .5: `sum` is the parts added, rounded once, plus `newMintCap.points`.
+        Null until the first probe after this field was introduced.
+      required: [uptime, audit, nuts, version, contact, newMintCap, sum]
+      properties:
+        uptime: { $ref: '#/components/schemas/ScorePart' }
+        audit: { $ref: '#/components/schemas/ScorePart' }
+        nuts: { $ref: '#/components/schemas/ScorePart' }
+        version: { $ref: '#/components/schemas/ScorePart' }
+        contact: { $ref: '#/components/schemas/ScorePart' }
+        newMintCap:
+          type: object
+          description: The correction (0 or negative) the cap for mints younger than 30 days made, and the cap.
+          required: [points, cap]
+          properties:
+            points: { type: integer, maximum: 0 }
+            cap: { type: integer }
+        sum: { type: integer, minimum: 0, maximum: 100, description: Equal to `score` as it was stored with this breakdown. }
+    ScorePart:
+      type: object
+      required: [points, max]
+      properties:
+        points: { type: number, minimum: 0 }
+        max: { type: integer, description: 'uptime 40, audit 25, nuts 15, version 15, contact 5.' }
     Audit:
       type: object
       description: The 7-day swap window published by cashu.info. Fewer than 10 swaps, or data older than 168 hours, scores neutral in the Reliability Score.

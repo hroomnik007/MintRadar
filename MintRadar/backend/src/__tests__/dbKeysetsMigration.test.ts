@@ -40,3 +40,25 @@ describe('initDb — mint_keysets', () => {
     }
   })
 })
+
+describe('initDb — mints.score_breakdown', () => {
+  const COL = 'ALTER TABLE mints ADD COLUMN IF NOT EXISTS score_breakdown JSONB'
+
+  it('adds a nullable jsonb column without default, additively, after mints exists', async () => {
+    await initDb()
+    expect(queries).toContain(COL)
+    expect(queries.indexOf(COL)).toBeGreaterThan(queries.findIndex(q => q.includes('CREATE TABLE IF NOT EXISTS mints')))
+  })
+
+  it('running it twice issues the identical statement, which is idempotent and not destructive', async () => {
+    await initDb()
+    const first = queries.filter(q => q.includes('score_breakdown'))
+    queries.length = 0
+    await initDb()
+    expect(queries.filter(q => q.includes('score_breakdown'))).toEqual(first)
+    expect(first).toEqual([COL])
+    expect(first[0]).toMatch(/IF NOT EXISTS/)
+    expect(first[0]).not.toMatch(/DROP|TRUNCATE|DELETE|RENAME|NOT NULL|DEFAULT/i)
+  })
+})
+

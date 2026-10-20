@@ -93,3 +93,42 @@ describe('probeMintToDb — audit inputs from mints.audit_cz_*', () => {
   })
 })
 
+
+describe('probeMintToDb — the score breakdown is written in the same UPDATE as the score', () => {
+  const update = () => query.mock.calls.filter(c => /UPDATE mints SET last_reliability_score/.test(String(c[0])))
+
+  it('one UPDATE carries score, last_error and score_breakdown; the breakdown adds up to that very score', async () => {
+    scoreRow = { ...baseRow, audit_cz_total: 100, audit_cz_blamed: 0, audit_cz_fetched_at: new Date(), contact_count: 2 }
+    await probeMintToDb(MINT)
+    expect(update()).toHaveLength(1)
+    const [sql, params] = update()[0] as [string, unknown[]]
+    expect(sql).toContain('score_breakdown = $4::jsonb')
+    expect(params[2]).toBe(MINT)
+    const b = JSON.parse(params[3] as string) as import('../scoreBreakdown.js').ScoreBreakdown
+    const parts = b.uptime.points + b.audit.points + b.nuts.points + b.version.points + b.contact.points
+    expect(b.sum).toBe(params[0])
+    expect(Math.min(100, Math.round(parts)) + b.newMintCap.points).toBe(params[0])
+    expect(b.uptime.points).toBe(20) // 50% of 40
+  })
+
+  it('a neutral audit shows 12.5 and still sums to the stored score', async () => {
+    scoreRow = { ...baseRow, audit_cz_total: null, audit_cz_blamed: null, audit_cz_fetched_at: null }
+    await probeMintToDb(MINT)
+    const params = (update()[0] as [string, unknown[]])[1]
+    const b = JSON.parse(params[3] as string)
+    expect(b.audit.points).toBe(12.5)
+    expect(b.sum).toBe(params[0])
+    expect(params[0]).toBe(38)
+  })
+
+  it('a young mint: the cap correction is in the breakdown, sum is the capped score', async () => {
+    scoreRow = { ...baseRow, nut_count: 14, total: '4', online_count: '4', contact_count: 3, audit_cz_total: 100, audit_cz_blamed: 0, audit_cz_fetched_at: new Date(), discovered_at: new Date(Date.now() - 3 * 86_400_000).toISOString() }
+    await probeMintToDb(MINT)
+    const params = (update()[0] as [string, unknown[]])[1]
+    const b = JSON.parse(params[3] as string)
+    expect(params[0]).toBeLessThanOrEqual(75)
+    expect(b.sum).toBe(params[0])
+    expect(b.newMintCap.points).toBe(params[0] as number - Math.min(100, Math.round(b.uptime.points + b.audit.points + b.nuts.points + b.version.points + b.contact.points)))
+    expect(b.newMintCap.points).toBeLessThan(0)
+  })
+})
