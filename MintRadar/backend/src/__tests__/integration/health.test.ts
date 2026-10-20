@@ -28,6 +28,19 @@ beforeEach(async () => {
 })
 
 describe('GET /health', () => {
+  it('reports lastVantageOutageAt: null until a cycle was classified, then its ISO time', async () => {
+    getLastProbeCompletedAt.mockReturnValue(null)
+    const before = await request(app).get('/health')
+    expect(before.body).toHaveProperty('lastVantageOutageAt', null)
+
+    const { noteVantageOutage } = await import('../../probeCycle.js')
+    noteVantageOutage(new Date('2026-10-20T11:05:00.000Z'))
+    const after = await request(app).get('/health')
+    expect(after.body.lastVantageOutageAt).toBe('2026-10-20T11:05:00.000Z')
+    const aliased = await request(app).get('/api/v1/health')
+    expect(aliased.body.lastVantageOutageAt).toBe('2026-10-20T11:05:00.000Z')
+  })
+
   it('reports lastProbeAt: null before any probe cycle has completed', async () => {
     getLastProbeCompletedAt.mockReturnValue(null)
     const res = await request(app).get('/health')

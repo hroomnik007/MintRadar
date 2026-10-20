@@ -12,6 +12,7 @@ import { METHODOLOGY_CHANGES } from './shared/methodology.js'
 import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
 import { getAuditCzForMint, getAuditCzSyncStatus, clampAuditCzLimit } from './auditCz.js'
 import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
+import { getLastVantageOutageAt } from './probeCycle.js'
 import { publishServiceProfile } from './nostrService.js'
 import { startAttestations } from './healthPublisher.js'
 import { normalizeUrl, getSyncTimesFromDb, getAuditUpstreamStatus } from './discovery.js'
@@ -636,6 +637,7 @@ app.get('/health', async (_req: Request, res: Response) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     lastProbeAt: getLastProbeCompletedAt(),
+    lastVantageOutageAt: getLastVantageOutageAt(),
     lastAuditSyncAt,
     lastReviewsSyncAt,
     ...getAuditUpstreamStatus(),

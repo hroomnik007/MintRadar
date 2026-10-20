@@ -1,6 +1,6 @@
 import cron from 'node-cron'
-import pLimit from 'p-limit'
-import { getKnownMints, probeMintToDb, pruneOldHistory, pruneUnvalidatedMints, pruneAbandonedMints, revalidateMints, backfillServerLocations, refreshServerLocations } from './prober.js'
+import { getKnownMints, pruneOldHistory, pruneUnvalidatedMints, pruneAbandonedMints, revalidateMints, backfillServerLocations, refreshServerLocations } from './prober.js'
+import { runProbeCycle } from './probeCycle.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
 import { syncAuditCz } from './auditCz.js'
 import { syncAuditCzDetails } from './auditCzDetail.js'
@@ -83,8 +83,7 @@ export function startCron(): void {
   cron.schedule('*/5 * * * *', async () => {
     try {
       const mints = await getKnownMints()
-      const limit = pLimit(10)
-      await Promise.allSettled(mints.map(url => limit(() => probeMintToDb(url))))
+      await runProbeCycle(mints)
       lastProbeCompletedAt = new Date().toISOString()
       // Refresh the Reliability Score Movers snapshots right after probes, so
       // mints.last_reliability_score and the newest history rows are already current.

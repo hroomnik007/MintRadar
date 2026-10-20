@@ -400,7 +400,21 @@ export async function revalidateMints(): Promise<{ checked: number; invalid: num
   return { checked: urls.length, invalid, reaped }
 }
 
-export async function probeMintToDb(url: string): Promise<void> {
+/**
+ * A network failure of ours (see VANTAGE_NETWORK_KINDS) held back by probeMintToDb: nothing is written until
+ * the caller runs `commit()`. probeCycle.ts drops these when the cycle looks like a vantage outage of ours.
+ */
+export interface DeferredProbeFailure {
+  url: string
+  kind: ProbeErrorKind
+  commit: () => Promise<void>
+}
+
+/**
+ * With `onDeferFailure`, a failure caused by our own network (DNS, timeout, unreachable, TLS) is handed to it
+ * instead of being recorded. Without it (discovery, submit) behaviour is unchanged.
+ */
+export async function probeMintToDb(url: string, onDeferFailure?: (f: DeferredProbeFailure) => void): Promise<void> {
   const urlSafety = await checkUrlSafety(url)
   if (urlSafety === 'blocked') {
     if (process.env['NODE_ENV'] !== 'production') {
@@ -411,14 +425,18 @@ export async function probeMintToDb(url: string): Promise<void> {
   if (urlSafety === 'dns-error') {
     // DNS failure is not an SSRF attempt — record the mint as offline so
     // uptime history and the degraded flag remain accurate.
-    await pool.query(
-      `INSERT INTO mint_history (url, online, latency_ms, checked_at) VALUES ($1, false, NULL, NOW())`,
-      [url]
-    )
-    await pool.query(
-      `UPDATE mints SET last_error = $1 WHERE url = $2`,
-      ['DNS resolution failed', url]
-    )
+    const recordDnsFailure = async (): Promise<void> => {
+      await pool.query(
+        `INSERT INTO mint_history (url, online, latency_ms, checked_at) VALUES ($1, false, NULL, NOW())`,
+        [url]
+      )
+      await pool.query(
+        `UPDATE mints SET last_error = $1 WHERE url = $2`,
+        ['DNS resolution failed', url]
+      )
+    }
+    if (onDeferFailure) onDeferFailure({ url, kind: 'dns', commit: recordDnsFailure })
+    else await recordDnsFailure()
     return
   }
 
@@ -427,6 +445,7 @@ export async function probeMintToDb(url: string): Promise<void> {
   let latencyMs: number | null = null
   let lastError: string | null = null
   let capturedErr: unknown = null
+  let networkFailed = false
   let contactCount: number | null = null
   let nutTransition: 'lost' | 'restored' | null = null
 
@@ -594,16 +613,39 @@ export async function probeMintToDb(url: string): Promise<void> {
         lastError = `HTTP ${retryRes.status}`
       } else {
         lastError = classifyFetchError(capturedErr)
+        networkFailed = true
       }
     } else if (res && !res.ok) {
       lastError = `HTTP ${res.status}`
     } else {
       lastError = classifyFetchError(capturedErr)
+      networkFailed = true
     }
   } catch {
     lastError = 'Unreachable'
   }
 
+  if (!online && networkFailed && onDeferFailure) {
+    onDeferFailure({
+      url,
+      kind: classifyProbeFailure({ networkLabel: lastError }),
+      commit: () => recordProbeResult(url, { online, latencyMs, lastError, contactCount, nutTransition }),
+    })
+    return
+  }
+  await recordProbeResult(url, { online, latencyMs, lastError, contactCount, nutTransition })
+}
+
+interface ProbeResult {
+  online: boolean
+  latencyMs: number | null
+  lastError: string | null
+  contactCount: number | null
+  nutTransition: 'lost' | 'restored' | null
+}
+
+async function recordProbeResult(url: string, result: ProbeResult): Promise<void> {
+  const { online, latencyMs, lastError, contactCount, nutTransition } = result
   // Snapshot the previous state before inserting the new row, so a
   // down/up transition can be detected. No prior row (first-ever probe of
   // this mint) means nothing to compare against — skip detection entirely.
