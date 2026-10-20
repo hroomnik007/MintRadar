@@ -51,7 +51,7 @@ Sensitive values are in CLAUDE.local.md (gitignored) — ask the developer
 - Mint discovery → NIP-87 kind:38172 server cron every 6h + client-side after Nostr login
 - Backend proxy → /api/* proxied by Nginx to localhost:3002
 - Cron every 5min → probes all mints via /v1/info → writes to mint_history
-- Online status: mint is ONLINE only if /v1/info returns HTTP 200 with valid JSON containing `nuts` field
+- Online status: mint is ONLINE only if /v1/info returns a 2xx response (`res.ok`) with valid JSON whose `nuts` field is an object (`backend/src/prober.ts`)
 - Notifications → sent only by the server (NIP-17 gift-wrapped DMs from `nostrService.ts`) after the user turns on a pill ("Goes down" / "Goes up") for a mint; the browser never publishes DMs
 - Reviews → NIP-87 kind:38000 events, read/write directly from browser via Nostr relays
 
