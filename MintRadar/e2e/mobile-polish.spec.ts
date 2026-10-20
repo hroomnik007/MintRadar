@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
-import { AUDIT_ROUTES, loadRoute } from './fixtures/pageAudit'
+import { installApiMocks, mockRelays, probePayload, MOCK_KNOWN_MINTS, MOCK_MINTS } from './fixtures/mocks'
+import { AUDIT_ROUTES, loadRoute, type AuditRoute } from './fixtures/pageAudit'
+import { trendDaysOf, trendPayload } from './fixtures/trendSeries'
 import { frames, layoutReady, networkQuiet, resize, trackRequests } from './fixtures/settle'
 
 // Phone polish (docs/claude/mobile-and-tooltips.md, "Phone text floor"): no HTML text below 12px at <=767px, the
@@ -21,7 +22,9 @@ function scanText(minPx: number): ScanResult {
   //  1. text inside role="img": the two-letter monogram of a mint without an icon (MintFavicon) stands in for an
   //     image and is sized as a fraction of its tile (42% of 22px = 9px in the Stats rows); it is decoration with
   //     an aria-label, not text to read, and a 12px monogram would not fit the 22px tile.
-  const exempt = (el: Element): boolean => el.closest('[role="img"]') !== null
+  //  2. Recharts' off-screen measuring span (a direct child of <body>, id recharts_measurement_span): it measures
+  //     tick labels, is never painted in view and carries the 9px tick size; it only exists once a chart has data.
+  const exempt = (el: Element): boolean => el.closest('[role="img"]') !== null || el.id === 'recharts_measurement_span'
   const describe = (el: Element): string => {
     const cls = Array.from(el.classList).slice(0, 2).map(c => `.${c}`).join('')
     const parent = el.parentElement
@@ -46,14 +49,32 @@ function scanText(minPx: number): ScanResult {
   return { examined, small }
 }
 
+// States the plain mocks leave out and production data has: a Stats trend with data (the Current / High / Low row)
+// and a mint that reports its clock and Lightning methods (the "in sync" label, the method chips).
+const EXTRA_ROUTES: AuditRoute[] = [
+  {
+    id: 'stats-with-trend', path: '/stats', ready: '.trend-summary-row',
+    before: async page => { await page.route('**/api/stats/reliability-trend**', r => r.fulfill({ json: trendPayload(trendDaysOf(r.request().url())) })) },
+  },
+  {
+    id: 'mint-clock-and-methods', path: AUDIT_ROUTES.find(r => r.id === 'mint')!.path, ready: '.md-tabs',
+    before: async page => {
+      await page.route('**/api/mint/probe**', route => {
+        const p = probePayload(MOCK_MINTS[0]!.url)
+        return route.fulfill({ json: { ...p, info: { ...p.info, time: Math.floor(Date.now() / 1000) } } })
+      })
+    },
+  },
+]
+
 for (const phone of PHONES) {
   test.describe(`${phone.width}x${phone.height}`, () => {
-    for (const route of AUDIT_ROUTES.filter(r => r.id !== 'not-found')) {
+    for (const route of [...AUDIT_ROUTES.filter(r => r.id !== 'not-found'), ...EXTRA_ROUTES]) {
       test(`${route.id}: no HTML text below ${MIN_TEXT_PX}px`, async ({ page }) => {
         await page.setViewportSize(phone)
         await loadRoute(page, route)
         await layoutReady(page)
-        const tabs = route.id === 'mint' ? ['Overview', 'History', 'NUTs', 'Audit', 'Reviews'] : [null]
+        const tabs = route.id.startsWith('mint') && route.id !== 'mint-rich' ? ['Overview', 'History', 'NUTs', 'Audit', 'Reviews'] : [null]
         for (const tab of tabs) {
           if (tab) {
             await page.locator('.md-tab', { hasText: new RegExp(`^${tab}`) }).click()

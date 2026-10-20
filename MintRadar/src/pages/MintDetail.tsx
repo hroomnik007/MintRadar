@@ -1567,7 +1567,7 @@ function MintDetailContent({ url }: { url: string }) {
                   <span className="md-info-label">Server time</span>
                   <span className="md-info-value" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                     {formatTime(new Date(mintTime * 1000))}
-                    {(() => { const d = clockDriftLabel(mintTime); return <span style={{fontSize:11,fontFamily:'var(--font-mono)',color:d.color}} title="Mint clock vs this browser">{d.label}</span> })()}
+                    {(() => { const d = clockDriftLabel(mintTime); return <span className="md-clock-drift" style={{fontSize:11,fontFamily:'var(--font-mono)',color:d.color}} title="Mint clock vs this browser">{d.label}</span> })()}
                   </span>
                 </div>
               )}

@@ -1349,6 +1349,9 @@
   .stats-movers-delta { font-size: 12px; }
   .snr-nut-tag { font-size: 12px; }
   .snr-nut-count { font-size: 12px; }
+  .trend-summary-item,
+  .trend-summary-label,
+  .trend-summary-sep { font-size: 12px; }
   .stats-host-line { font-size: 12px !important; }
   .trend-coverage { font-size: 12px !important; }
 }
