@@ -16,23 +16,27 @@
 ### 📊 Real-Time Monitoring
 
 - Probes all known mints every **5 minutes** via `/v1/info`
-- A mint is ONLINE only if the endpoint returns HTTP 200 with valid JSON containing a `nuts` field
+- A mint is ONLINE only if the endpoint answers with a successful HTTP status and valid JSON whose `nuts` field is an object
 - Server-side latency measured from Nuremberg, DE (Hetzner Cloud)
 - "Show my latency" button for a client-side test directly from your browser
 
 ### 🛡️ Reliability Score System
 
-Composite score (0–100) calculated server-side after every probe. Shown alongside a separate **Community Rating** (average of Nostr reviews), so an operator-independent signal sits next to the objective one. This is a health / transparency score — it does not measure solvency or whether a mint can pay out.
+Composite score (0–100, in points, not a percentage) calculated server-side after every probe. Shown alongside a separate **Community Rating** (average of Nostr reviews), so a signal that does not come from the operator sits next to the objective one. This is a health / transparency score — it does not measure solvency or whether a mint can pay out.
 
-| Component | Weight | Basis |
-|-----------|--------|-------|
-| Uptime | 40% | 24 h availability |
-| NUT Support | 15% | Supported NUT specs (out of the tracked mint-side set) |
-| Version Freshness | 15% | How far the mint's software (Nutshell or cdk) is behind the newest stable release: 0–1 minor versions behind = full points, then 9 / 6 / 3 / 0; two or more minor versions behind is labelled "outdated" |
-| Contact Info | 5% | Contact methods provided (email, Twitter, Nostr); capped at 3 channels |
-| Audit Reliability | 25% | Rolling-window error rate on the last ~100 real swaps from audit.8333.space. Fewer than 3 samples scores a neutral 12.5, not zero; the score is not adjusted for how old the audit data is |
+Five components feed the score:
 
-Mints discovered less than **30 days** ago are **capped at 75**, even if every component is maxed.
+| Component | Basis |
+|-----------|-------|
+| Uptime | Availability over the last 24 hours |
+| Audit Reliability | Share of the last 7 days' swaps whose failure [cashu.info](https://cashu.info) attributes to the mint. Too few swaps, no cashu.info data, or stale data scores a neutral middle value, not zero. audit.8333.space is not used for the score |
+| NUT Support | Supported NUT specs, out of the set of mint-side NUTs MintRadar tracks |
+| Version Freshness | How far the mint's software (Nutshell or cdk) is behind the newest stable release of the same software |
+| Contact Info | Contact methods provided (email, Twitter, Nostr); capped, so a long contact list cannot inflate the score |
+
+Mints that were discovered recently are capped below the maximum, even if every component is maxed.
+
+The exact weights, audit bands, thresholds, cap and the change log are published on [mintradar.org/methodology](https://mintradar.org/methodology) (generated from the same constants the backend uses).
 
 Interactive breakdown modal on each mint — hover any row for a tooltip explaining the scoring logic.
 
@@ -42,78 +46,79 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 - Filter panel: Status (All / Online / Offline), Unit (SAT / USD / EUR, any of the selected), Reliability Score minimum, Hide test mints
 - There is **no NUT filter** in the panel; the only way to filter by NUT is a `?nuts=` link (comma-separated NUT numbers, e.g. `?nuts=9,12`; a mint must support all of them), shown as dismissible `NUT-NN` tags
 - Active filters shown as dismissible tags at the top of the open panel
-- Dashboard state lives in the URL, so views can be shared as links: `?q=` (search), `?sort=` (`name`/`latency`/`rating`/`reliability`/`reviewCount`) with `?dir=` (`asc`/`desc`), `?status=` (`all`/`offline`), `?reliability=` (0–100), `?testmints=hide`, `?unit=` (`sat`, `usd`, `eur`, comma-separated, e.g. `?unit=sat,usd`) and `?compare=` (2–4 comma-separated mint URLs, also on the Watchlist page); default values are omitted
+- Dashboard state lives in the URL, so views can be shared as links: `?q=` (search), `?sort=` (`name`/`latency`/`rating`/`reliability`/`reviewCount`) with `?dir=` (`asc`/`desc`), `?status=` (`all`/`offline`), `?reliability=` (0–100), `?testmints=hide`, `?unit=` (`sat`, `usd`, `eur`, comma-separated, e.g. `?unit=sat,usd`) and `?compare=` (comma-separated mint URLs, also on the Watchlist page); default values are omitted
 - Deep links: Mint Detail tabs open from the URL hash (`#overview`, `#history`, `#nuts`, `#audit`, `#reviews`, `#review-<id>`), and Tools from `/tools#pick` and `/tools#token`
 - Counts: the header shows online and tracked mints; "tracked" is every mint in the database (archived ones included), and the grid footer reads "Showing X of <tracked>". Mints the default view hides (offline, degraded, archived) sit behind a "N mints hidden (offline 24h+)" toggle; **Show** reveals all of them
-- Sort by Latency / Name / Reliability Score / **Rating** / **Most reviewed** (asc/desc) — Rating uses a weighted (Bayesian) average so a mint with two 5★ reviews doesn't outrank one with fifty
-- Controls row stays docked at the top of the list while you scroll
-- Compact and expanded card view toggle
+- Sort by Latency / Name / Reliability Score / **Rating** / **Most reviewed** (asc/desc) — Rating uses a confidence-adjusted average, (n·avg + 5·3.5) / (n + 5), so mints with few reviews rank lower and a mint with one 5★ review doesn't outrank one with eighty 4.8★ (the stars and counts shown do not change)
+- Compact (list) and expanded (card) view toggle
 - Single URL or bulk mint submission (paste multiple URLs at once)
-- Recently discovered mints get a **New** badge (first 30 days); known dev/test mints are badged separately and kept out of recommendations
+- Recently discovered mints get a **New** badge; known dev/test mints are badged separately
 
 ### 📈 Historical Data
 
 - Charts for **Latency**, **Uptime**, and **Reliability Score** over 24 h / 7 d / 30 d / 90 d
-- Per-period averages with delta vs. previous period
+- Per-period averages for latency and uptime, with the change vs. the previous period
 - Full Mint History panel with per-probe results
-- **Audit tab** on each mint — a summary strip (mints / melts / recent success rate / avg swap time) backed by real swap data from audit.8333.space, with an amber/red reliability signal based on the rolling error rate. When the audit data is stale, a muted note on the Reliability Score breakdown row shows the age; the score itself is not adjusted.
+- **Audit tab** on each mint — swap data from two independent auditors, with a source switch (**cashu.info** / **8333.space**) when both have data. It opens on audit.8333.space when that data is present and fresh, and on cashu.info otherwise (the visitor can switch at any time). The 8333.space view has a summary strip (mints / melts / recent success rate / avg swap time), an outcome bar and a recent-swaps table; the cashu.info view shows the failures cashu.info attributes to the mint. The tab itself is display only: the Reliability Score's audit row always uses the stored cashu.info detail, and the breakdown shows a muted "data N days old" note when that detail is getting old
 
 ### 🌐 Global Stats
 
-- Network-wide totals: online/offline counts, average reliability score, average latency
-- Reliability Score distribution
-- Top mints by Reliability Score
-- NUT adoption across the network
+- The network right now: online mints out of tracked, average uptime, median latency, and the share of mints running outdated software
+- Network Health Index (one score for the whole network, with its components)
+- Top mints by Reliability Score and by uptime
 - Software in use across known mints
-- Reliability movers — recent risers and fallers
+- NUT coverage across the network
+- Geographic distribution of the mints' servers
+- Reliability movers — recent risers and fallers — and a Reliability Score trend chart
 
 ### ⚖️ Mint Comparison Tool
 
-Select 2–4 mints and compare side-by-side: Status, Reliability Score, Community Rating, Uptime, Latency, NUT support grid, software version. On narrow screens the table becomes a stacked/tabbed layout — one mint at a time, no horizontal scrolling.
+Compare up to **4** mints side-by-side: Status, Reliability Score, Community Rating, Uptime, Latency, NUT support grid, software version and its history. On narrow screens the table becomes a stacked/tabbed layout — one mint at a time, no horizontal scrolling.
 
 ### 👁️ Watchlist with Nostr Login
 
 - Login via **NIP-07 browser extension**, **nsec private key**, or **NIP-46 bunker / Amber**
 - Adding a mint to your watchlist requires a Nostr login (you're prompted to sign in first) — this keeps the list portable across devices
-- Watchlist itself is stored locally (IndexedDB) and optionally synced across devices as **NIP-44 encrypted kind:10003** events on Nostr relays
-- **No JSON/CSV export.** The list is the in-app watchlist plus optional Nostr sync — there is no download/export button
-- Downtime/recovery DMs via Nostr (NIP-17 gift wrap). They can arrive **even with the browser tab closed**, at a Nostr client that supports private messages (NIP-17; delivery is not guaranteed): the client registers via `POST /api/notifications/subscribe` (NIP-98) and the MintRadar notification service sends gift-wrapped DMs from its service nsec. Notifications are **off** for a newly watched mint: on the Watchlist card you turn on "Goes down" / "Goes up" yourself, and optionally any of the "More alerts" ("Mint/melt issues", "Version outdated", "Lost NUT04/05"), each one separately, and a pill shows as on only after the server confirmed the subscription (a failed request leaves it off and says so). Frequency is limited: at most one DM per mint and direction per hour for Goes down / Goes up; at most one per mint and type per 12 hours for mint/melt issues and per 24 hours for outdated software and lost NUT-04/05 (a condition that returns notifies again only after it has been clear for about an hour); and at most 40 DMs per day per subscriber across all mints, after which one summary DM is sent and the rest are dropped. A DM contains only a fixed text, the mint's host name and a link to MintRadar, never text taken from the mint. Subscriber relays must be wss on port 443 or ws on port 80. A mint's URL is sent to the backend only while notifications are on for that mint — turn them off and the URL is not shared
+- The watchlist itself is stored locally (IndexedDB) and optionally synced across devices as **NIP-44 encrypted kind:10003** events on Nostr relays
+- There is no JSON/CSV export: the list is the in-app watchlist plus optional Nostr sync
+- Optional downtime/recovery DMs via Nostr (NIP-17 gift wrap). They can arrive even with the browser tab closed, at a Nostr client that supports private messages; delivery depends on relays and your client. The client registers via `POST /api/notifications/subscribe` (NIP-98) and the MintRadar notification service sends gift-wrapped DMs from its service key. Notifications are **off** for a newly watched mint: on the Watchlist card you turn on "Goes down" / "Goes up" yourself, and optionally any of the "More alerts" ("Mint/melt issues", "Version outdated", "Lost NUT04/05"), each one separately, and a pill shows as on only after the server confirmed the subscription (a failed request leaves it off and says so). Alerts are rate-limited per mint and per subscriber, so a flapping mint cannot flood your inbox. A DM contains only a fixed text, the mint's host name and a link to MintRadar, never text taken from the mint. Subscriber relays must use the standard web ports. A mint's URL is sent to the backend only while notifications are on for that mint — turn them off and the URL is not shared
 
 ### 📡 Nostr NIP-87 Discovery
 
-Automatic mint discovery on a schedule from a set of public Nostr relays, using **kind:38172** mint announcements and **kind:38000** review events (URL mining), plus the **audit.8333.space** API — sources running in parallel.
+Automatic mint discovery on a schedule from a set of public Nostr relays, using **kind:38172** mint announcements and **kind:38000** review events (URL mining), plus the audit.8333.space API — the sources run in parallel.
 
 ### 🔧 Tools
 
 - **Token Inspector** — paste a Cashu token (`cashuA` / `cashuB`) to see its mint, amount, unit, proof count, memo, mint status, and Reliability Score, plus a signature check (NUT-12) — with a link to Mint Detail or Cashu.me. Optional **Check if spent** queries the mint (NUT-07) for unspent / spent / pending / partial proofs
-- **Best Mint for Me** — 2-step wizard: pick your currency unit and how much you plan to store, then multi-select what matters (fast latency measured from your browser, Reliability Score, Lightning in + out, seed-phrase restore/NUT-09, locked payments (P2PK)/NUT-11, live WebSocket updates/NUT-17). The top matches show latency, uptime, Reliability Score, community rating, LN support, and mint/melt limits for the chosen unit (ratings carry a small, capped weight in the order)
+- **Best Mint for Me** — a short wizard: pick your currency unit and how much you plan to store, then multi-select what matters (fast latency measured from your browser, Reliability Score, Lightning in + out, seed-phrase restore/NUT-09, locked payments (P2PK)/NUT-11, live WebSocket updates/NUT-17). The top matches show latency, uptime, Reliability Score, community rating, LN support, and mint/melt limits for the chosen unit
 
 ### 📚 Learn
 
-A 5-module "Cashu 101" course, written as plain-language text with custom illustrated diagrams and highlighted key-takeaway callouts — no quizzes or progress tracking, just prev/next navigation between modules:
+A 5-module "Cashu 101" course, written as plain-language text with illustrated diagrams and key-takeaway callouts — no quizzes or progress tracking, just prev/next navigation between modules:
 
-1. **Cashu Basics** — what Cashu actually is: the mint holds your Bitcoin, you hold a bearer token, and blind signatures keep person-to-person transfers private
-2. **Understanding the Risks** — why a mint can disappear or refuse to pay, why nobody can currently verify a mint has real backing, and how to limit what you stand to lose
-3. **How to Choose a Mint** — what to check before trusting a mint (uptime, audit reliability, software version, operator transparency) and how MintRadar's Reliability Score combines those signals
-4. **Getting Started with a Wallet** — choosing a wallet, adding your first mint, making a deposit, sending tokens, and why backing up your seed phrase is non-negotiable
-5. **Safe Habits** — day-to-day habits (diversifying mints, redeeming regularly, checking Reliability Score first) that meaningfully reduce your risk
+1. **Cashu Basics** — what Cashu is: the mint holds the Bitcoin, you hold a bearer token, and blind signatures keep transfers private
+2. **Understanding the Risks** — why a mint can disappear or refuse to pay, why nobody can currently verify that a mint has real backing, and how to limit what you stand to lose
+3. **How to Choose a Cashu Mint** — what to check (uptime, NUT support, software freshness, operator transparency) and how MintRadar's Reliability Score combines those signals
+4. **Getting Started with a Wallet** — choosing a wallet, setting up your first mint, a first deposit, sending and receiving tokens, and backing up your wallet
+5. **Day-to-day habits** — keeping your backup current, spreading funds across mints, checking before you commit, redeeming regularly and keeping an eye on your mints
 
 ### 👛 Wallet Directory
 
-A hand-maintained list of Cashu-compatible wallets — each with supported platforms, a short description, and a link to the wallet's own site. No ranking, reviews, or affiliate links.
+A hand-maintained list of Cashu-compatible wallets — each with supported platforms, a short description, and a link to the wallet's own site — plus a short section on running your own mint. No ranking or reviews.
 
 ### ⭐ Nostr-Based Reviews
 
-Mint Detail page shows community reviews as **kind:38000** events. On page load they're fetched live from a small fast relay set; a server-side sync additionally aggregates reviews from a broader relay set so counts and averages stay complete. Ratings are parsed from review text (`[N/5]` format). Author profiles (name + avatar) are resolved from Nostr. Images are only loaded over HTTPS.
+Mint Detail shows community reviews as **kind:38000** events. On page load they're fetched live from a small fast relay set; a server-side sync additionally aggregates reviews from a broader relay set so counts and averages stay complete. Ratings are parsed from the review's rating tag or its `[N/5]` marker. Author profiles (name + avatar) are resolved from Nostr. Avatars are only loaded over HTTPS.
 
 - Events with **neither a rating nor a comment** are not shown in the list and are not counted on mint cards
-- Filter chips: **All**, **5★**, **Critical** (≤ 2★), and a separate **Hide anon** toggle
-- A short disclaimer notes these are unverified NIP-87 events from the open Nostr network, not vetted testimonials
+- The mint operator's own reviews are labelled and not counted in the Community Rating
+- Filter chips: **All**, **5★**, **Critical**, and a separate **Hide anon** toggle
+- A short disclaimer notes these are unverified NIP-87 events from the open Nostr network
 - Write your own review from the page, with a "Signing with …" indicator for the active login method
 
 ### 🔗 Social Link Previews
 
-Sharing a mint page link on Twitter/X, Discord, Telegram, Slack, or WhatsApp shows a preview card with that mint's name, Reliability Score, and online status — server-rendered for link-preview crawlers that don't run JavaScript.
+Sharing a mint page link on Twitter/X, Discord, Telegram, Slack, WhatsApp or Facebook shows a preview card with that mint's name, Reliability Score, and online status — server-rendered for link-preview crawlers that don't run JavaScript.
 
 ### 🔒 Privacy-First
 
@@ -126,11 +131,11 @@ Sharing a mint page link on Twitter/X, Discord, Telegram, Slack, or WhatsApp sho
 
 ### 🔁 Automatic Backups
 
-PostgreSQL database backed up every 6 hours via server cron.
+The hosted instance takes regular automatic database backups.
 
 ### 📎 Public API
 
-Read-only JSON under `https://mintradar.org/api/`, including a stable, CORS-enabled API for wallets (`GET /api/v1/wallets/mints`). Rate-limited. See [MintRadar/docs/API.md](MintRadar/docs/API.md). How the score is computed (with its change log): [mintradar.org/methodology](https://mintradar.org/methodology); a quick start for wallet developers: [mintradar.org/for-wallets](https://mintradar.org/for-wallets). Signed health assertions (Nostr kind 30385) are published under the key health@mintradar.org: see [mintradar.org/for-wallets](https://mintradar.org/for-wallets#signed-health-assertions).
+Read-only JSON under `https://mintradar.org/api/`, including an API for wallets (`GET /api/v1/wallets/mints`). Rate-limited. See [MintRadar/docs/API.md](MintRadar/docs/API.md). How the score is computed (with its change log): [mintradar.org/methodology](https://mintradar.org/methodology); a quick start for wallet developers: [mintradar.org/for-wallets](https://mintradar.org/for-wallets). Signed health assertions (Nostr kind 30385) are published under the key health@mintradar.org: see [mintradar.org/for-wallets](https://mintradar.org/for-wallets#signed-health-assertions).
 
 ---
 
@@ -140,8 +145,8 @@ Read-only JSON under `https://mintradar.org/api/`, including a stable, CORS-enab
 - React 19 + TypeScript + Vite 8
 - TanStack Query v5, Zustand, Dexie (IndexedDB)
 - Recharts, vite-plugin-pwa (PWA / offline support)
-- nostr-tools (NIP-07, NIP-44, NIP-46), @noble/secp256k1
-- Self-hosted open-source fonts: **DM Sans** and **JetBrains Mono** (both SIL Open Font License 1.1), plus the system `ui-monospace` stack for numeric/data values — no Google Fonts, no CDN
+- nostr-tools (NIP-07, NIP-44, NIP-46 and the nsec login)
+- Self-hosted open-source fonts: **DM Sans** and **JetBrains Mono**, plus the system `ui-monospace` stack for numeric/data values — no Google Fonts, no CDN
 
 **Backend**
 - Node.js 22 + Express 5 + TypeScript
@@ -157,9 +162,9 @@ Read-only JSON under `https://mintradar.org/api/`, including a stable, CORS-enab
 
 ## 🔑 Nostr Login
 
-Three login methods are supported:
+Supported login methods:
 
-- **NIP-07 extension** — [Alby](https://getalby.com/alby-extension) (recommended), [nos2x](https://chromewebstore.google.com/detail/nos2x/kpgefcfmnafjgpblomihpgmejjdanjjp) (Chrome/Edge), [nos2x-fox](https://addons.mozilla.org/en-US/firefox/addon/nos2x-fox/) (Firefox)
+- **NIP-07 extension** — e.g. [Alby](https://getalby.com/alby-extension), [nos2x](https://chromewebstore.google.com/detail/nos2x/kpgefcfmnafjgpblomihpgmejjdanjjp) (Chrome/Edge), [nos2x-fox](https://addons.mozilla.org/en-US/firefox/addon/nos2x-fox/) (Firefox)
 - **nsec** — paste your private key; it is held only in JavaScript memory for the session, never written to localStorage, sessionStorage or IndexedDB, and zeroed on logout
 - **Amber / NIP-46 bunker** — connect via `bunker://` URI or NIP-05 identifier; also supports QR pairing with the Amber mobile app
 
@@ -169,7 +174,7 @@ Three login methods are supported:
 
 ### Prerequisites
 
-- Node.js 22+
+- Node.js 22 or newer
 - Docker and Docker Compose
 - Nginx (for production deployments)
 
@@ -180,7 +185,7 @@ git clone https://github.com/hroomnik007/MintRadar.git
 cd MintRadar/MintRadar
 ```
 
-The frontend and backend source live in the `MintRadar/` subdirectory. The working directory for app code, Docker, and CI is `MintRadar/MintRadar`. The repository root holds only README, LICENSE, SECURITY.md, CONTRIBUTING.md, and repository config (`.github/`, `.gitignore`, `.gitleaks.toml`).
+The frontend and backend source live in the `MintRadar/` subdirectory. The working directory for app code, Docker, and CI is `MintRadar/MintRadar`. The repository root holds only the README, LICENSE, SECURITY.md and repository config (`.github/` with CONTRIBUTING.md and the templates, `.gitignore`, `.gitleaks.toml`).
 
 ### 2. Configure the backend
 
@@ -191,26 +196,33 @@ cp backend/.env.example backend/.env
 Edit `backend/.env`:
 
 ```env
-DATABASE_URL=postgresql://mintradar:yourpassword@localhost:5432/mintradar
+DATABASE_URL=postgresql://mintradar:yourpassword@postgres:5432/mintradar
 ALLOWED_ORIGINS=http://localhost:5173
 ```
 
-### 3. Start the backend
+With Docker Compose the backend reaches PostgreSQL by its service name `postgres` (the database port is not published to the host). Compose also needs `POSTGRES_PASSWORD` (the same password as in `DATABASE_URL`), either exported in your shell or set in a `.env` file next to `docker-compose.yml`:
 
 ```bash
+echo "POSTGRES_PASSWORD=yourpassword" > .env
+```
+
+### 3. Build and start the backend
+
+```bash
+(cd backend && npm ci && npm run build)
 docker compose up -d
 ```
 
-This starts PostgreSQL and the backend API on port 3002.
+The backend image is built from the compiled `backend/dist/` (git-ignored), so the build must come first. `docker compose up -d` starts PostgreSQL and the backend API on port 3002 (bound to 127.0.0.1 only); `curl http://127.0.0.1:3002/health` answers once it is up.
 
 ### 4. Run the frontend
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
+Open [http://localhost:5173](http://localhost:5173). The dev server proxies `/api` to the backend on port 3002.
 
 ### Production build
 
@@ -218,26 +230,26 @@ Open [http://localhost:5173](http://localhost:5173).
 npm run typecheck && npm run build
 ```
 
-Serve the `dist/` directory with Nginx. See `MintRadar/deploy/nginx.conf` for the recommended Nginx configuration — includes CSP, HSTS, X-Frame-Options, and the `/api/` reverse proxy block.
+Serve the `dist/` directory with Nginx. See `MintRadar/deploy/nginx.conf` for the Nginx configuration of the hosted instance — it includes the security headers (CSP, HSTS, X-Frame-Options) and the `/api/` reverse proxy block.
 
 ---
 
 ## 🔐 Security
 
-MintRadar handles Nostr private keys and is used by the Bitcoin/Cashu community where trust matters. To report a vulnerability, see **[SECURITY.md](SECURITY.md)**.
+MintRadar handles Nostr private keys and is used by the Bitcoin/Cashu community. To report a vulnerability, see **[SECURITY.md](SECURITY.md)**.
 
 - No tracking or telemetry
 - Nostr private keys are never sent to the server or written to browser storage; an nsec is held in memory for the session and zeroed on logout
 - No `dangerouslySetInnerHTML`; user-controlled URLs are validated before rendering
 - Backend SSRF protection (DNS pinning + blocked IP ranges), rate limiting, parameterized SQL
-- Docker non-root containers and internal-only port binding
+- The backend container runs as the unprivileged `node` user; the backend port is bound to the loopback interface and PostgreSQL is not published to the host
 - HTTP security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy)
 
 ---
 
 ## 🤝 Contributing
 
-Issues and pull requests are welcome. Please open an issue to discuss significant changes before submitting a PR. See [CONTRIBUTING.md](CONTRIBUTING.md). Look for issues labeled **good first issue**
+Issues and pull requests are welcome. Please open an issue to discuss significant changes before submitting a PR. See [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
 ---
 
@@ -255,7 +267,7 @@ Issues and pull requests are welcome. Please open an issue to discuss significan
 
 [MIT](LICENSE)
 
-App code is MIT. Bundled webfonts are **SIL Open Font License 1.1** (DM Sans, JetBrains Mono) — both OSI-approved / libre licenses, self-hosted under `MintRadar/public/fonts/`.
+App code is MIT. The bundled webfonts (DM Sans, JetBrains Mono) are open-source fonts under their own licenses, self-hosted under `MintRadar/public/fonts/`.
 
 ---
 

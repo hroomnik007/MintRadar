@@ -26,7 +26,8 @@ function documentedParams(readme: string): string[] {
 }
 
 describe('README URL parameters', () => {
-  for (const file of ['README.md', '../README.md']) {
+  // MintRadar/README.md is only a pointer to the root README; the root one is canonical.
+  for (const file of ['../README.md']) {
     it(`${file}: every documented ?param= is still read by the source`, () => {
       const params = documentedParams(fs.readFileSync(path.join(ROOT, file), 'utf8'))
       expect(params.length, 'no ?param= found in the Dashboard & Discovery section').toBeGreaterThan(0)
