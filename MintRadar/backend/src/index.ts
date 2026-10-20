@@ -388,6 +388,9 @@ async function probeMint(url: string): Promise<MintStatus> {
 
 export const app = express()
 
+// Do not tell the world which framework answers (Express sets X-Powered-By by default).
+app.disable('x-powered-by')
+
 // `trust proxy` must stay a hop count (a number), never a subnet string such as '10.0.0.0/8' or
 // '::ffff:10.0.0.0/8'. With a number Express never asks proxy-addr to compile a trust subnet; with
 // a short IPv4-mapped IPv6 prefix proxy-addr < 2.0.8 matched EVERY client as a trusted proxy
