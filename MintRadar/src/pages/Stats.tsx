@@ -1,8 +1,9 @@
-import { outdatedSoftwareText, NETWORK_STABILITY_TEXT } from '@/utils/tooltipTexts'
+import { outdatedSoftwareText, TRACKING_HISTORY_TEXT } from '@/utils/tooltipTexts'
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { clickableProps } from '@/utils/clickableProps'
+import { methodologyChangesInWindow, moversMethodologyNote } from '@/utils/methodologyMarkers'
 import { IcClose } from '@/components/IcClose'
 import { ReliabilityTrendView } from '@/components/stats/ReliabilityTrendChart'
 import { useReliabilityTrend } from '@/hooks/useReliabilityTrend'
@@ -161,6 +162,7 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose, duplicateDisplayNam
         <span>{onlineCount} online · {offlineCount} offline</span>
         <span>Sorted by Reliability Score</span>
       </div>
+      <div className="nut-modal-note">Offline mints are not counted.</div>
     </>
   )
 }
@@ -237,7 +239,8 @@ function SoftwareModal({ sw, versions, total, accentColor, allMints, onClose, du
   }, [onClose])
 
   const drilledMints = useMemo(
-    () => drilled ? allMints.filter(m => m.version === drilled.fullVersion) : [],
+    // Online mints only: the Software in use card and the version list count online mints.
+    () => drilled ? allMints.filter(m => m.online === true && m.version === drilled.fullVersion) : [],
     [drilled, allMints]
   )
 
@@ -343,6 +346,7 @@ function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
           <span>{onlineCount} online · {offlineCount} offline</span>
           <span>Sorted by Reliability Score</span>
         </div>
+        <div className="nut-modal-note">Offline mints are not counted.</div>
       </div>
     </div>
   )
@@ -423,6 +427,7 @@ function NutMintsModal({ nut, mints, onClose, duplicateDisplayNames }: {
           <span>{onlineCount} online · {offlineCount} offline</span>
           <span>Sorted by Reliability Score</span>
         </div>
+        <div className="nut-modal-note">Offline mints are not counted.</div>
       </div>
     </div>
   )
@@ -677,7 +682,8 @@ export default function Stats() {
 
   const cityMints = useMemo(() => {
     if (!cityModal || !knownMintsData) return []
-    return knownMintsData.filter(m => normalizeGeoLoc(m.serverLocation) === cityModal)
+    // Online mints only: the Geographic distribution card (computeGeoDistribution) counts online mints.
+    return knownMintsData.filter(m => m.online === true && normalizeGeoLoc(m.serverLocation) === cityModal)
   }, [cityModal, knownMintsData])
 
   const nutModalMints = useMemo(() => {
@@ -686,7 +692,8 @@ export default function Stats() {
     // Dashboard ?nuts= filter uses). nutModal is "NUT-09"; the nuts object is
     // keyed by the unpadded number.
     const key = String(parseInt(nutModal.slice(4), 10))
-    return knownMintsData.filter(m => (m.nutsLimits as Record<string, unknown> | null)?.[key] != null)
+    // Online mints only: the NUT coverage card's count (/api/stats nutAdoption) is over online mints.
+    return knownMintsData.filter(m => m.online === true && (m.nutsLimits as Record<string, unknown> | null)?.[key] != null)
   }, [nutModal, knownMintsData])
 
   const { data: trendResponse, isPending: trendPending, isError: trendError, isPlaceholderData: trendPlaceholder, refetch: refetchTrend } = useReliabilityTrend(trendDays)
@@ -709,6 +716,8 @@ export default function Stats() {
 
   interface ReliabilityMover { url: string; name: string | null; delta: number }
   interface ReliabilityMoversResponse { period: '7d' | '30d'; risers: ReliabilityMover[]; fallers: ReliabilityMover[] }
+
+  const moversNote = moversMethodologyNote(methodologyChangesInWindow(moversPeriod === '7d' ? 7 : 30))
 
   const { data: moversData, isPending: moversPending, isFetching: moversFetching } = useQuery({
     queryKey: ['stats-reliability-movers', moversPeriod],
@@ -788,7 +797,7 @@ export default function Stats() {
 
   // Cashu Network Health Index: composite 0-100 score across 5 weighted
   // components. All inputs are already fetched by this page (no new backend
-  // calls). "Network stability" (mint-age composition) stands in for churn
+  // calls). "Tracking history" (how long MintRadar has known the mints) stands in for churn
   // rate — see the commit message / task writeup for why churn rate itself
   // isn't reliably computable from current data.
   const networkHealth = useMemo(() => {
@@ -804,7 +813,7 @@ export default function Stats() {
     const hhi = swTotal > 0 ? versionDist.reduce((s, d) => s + (d.total / swTotal) ** 2, 0) : 1
     const diversity = swTotal > 0 ? (1 - hhi) * 100 : 0
 
-    const advancedAdoption = advancedAdoptionPercent(data.nutAdoption)
+    const advancedAdoption = advancedAdoptionPercent(data.nutAdoption, undefined, knownMintsData)
 
     const notFresh = knownMintsData.filter(m => mintAgeBadge(m.discoveredAt)?.label !== 'Fresh').length
     const stability = notFresh / knownMintsData.length * 100
@@ -827,7 +836,7 @@ export default function Stats() {
         { label: 'Avg. Reliability Score', value: avgReliability, weight: NHI_WEIGHTS.reliability, tooltip: nhiReliabilityRowText() },
         { label: 'Software diversity', value: diversity, weight: NHI_WEIGHTS.diversity, tooltip: 'How evenly mints are spread across different software - heavy reliance on one implementation scores lower.' },
         { label: 'Advanced feature adoption', value: advancedAdoption, weight: NHI_WEIGHTS.advanced, tooltip: nhiAdvancedRowText() },
-        { label: 'Network stability', value: stability, weight: NHI_WEIGHTS.stability, tooltip: NETWORK_STABILITY_TEXT },
+        { label: 'Tracking history', value: stability, weight: NHI_WEIGHTS.stability, tooltip: TRACKING_HISTORY_TEXT },
       ],
     }
   }, [data, knownMintsData, versionDist])
@@ -1074,7 +1083,7 @@ export default function Stats() {
             <div className="stats-panel-head">
               <div>
                 <div className="stats-panel-title">Software in use</div>
-                <div className="stats-panel-desc">Mints by implementation. Click to filter.</div>
+                <div className="stats-panel-desc">Mints by implementation. Click for versions.</div>
               </div>
             </div>
             <div className="stats-sw-fill">
@@ -1214,6 +1223,7 @@ export default function Stats() {
           onMintClick={url => navigate(`/mint/${encodeURIComponent(url)}`)}
           getDisplayName={m => displayName(m, duplicateDisplayNames)}
           getIconUrl={m => knownMintsData?.find(km => km.url === m.url)?.iconUrl ?? null}
+          footer={moversNote !== '' ? <div className="stats-movers-note">{moversNote}</div> : undefined}
         />
 
         {/* Row 3, full width: Reliability Score Trend. Chart height is unchanged

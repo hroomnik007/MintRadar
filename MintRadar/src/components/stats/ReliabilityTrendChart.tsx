@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Text, type XAxisTickContentProps } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Text, type XAxisTickContentProps } from 'recharts'
 import { formatDate } from '@/utils/formatDate'
 import { LoadError, LoadingNote } from '@/components/LoadError'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { trendMarkers, trendMarkersSummary, placeMarkerLabels } from '@/utils/methodologyMarkers'
 import { selectTrendTicks, trendTickLabels, DESKTOP_TREND_TICK_STEPS, DESKTOP_TREND_TICK_MIN_SPACING, TREND_TICK_STEPS, TREND_TICK_MIN_SPACING } from '@/utils/trendTicks'
 
 export interface TrendPoint { date: string; avgReliability: number }
@@ -23,6 +24,13 @@ export function ReliabilityTrendChart({ data }: { data: readonly TrendPoint[] })
   const labels = useMemo(() => trendTickLabels(ticks), [ticks])
   const first = dates[0]
   const last = dates[dates.length - 1]
+  const markers = useMemo(() => trendMarkers(dates), [dates])
+  // Version labels next to their lines; they never leave the plot or touch each other (placeMarkerLabels).
+  const pxPerIndex = dates.length > 1 ? (width - PLOT_INSET) / (dates.length - 1) : 0
+  const labelPlaces = useMemo(
+    () => placeMarkerLabels(markers.map(m => dates.indexOf(m.at) * pxPerIndex), width - PLOT_INSET),
+    [markers, dates, pxPerIndex, width],
+  )
 
   // The newest date sits on the right edge and is right aligned, the oldest point on the left edge is left aligned:
   // neither label is clipped. Every other label is centred on its point.
@@ -53,6 +61,27 @@ export function ReliabilityTrendChart({ data }: { data: readonly TrendPoint[] })
           labelFormatter={d => formatDate(String(d)) || String(d)}
           formatter={(v) => [v ?? '—', 'Avg Reliability']}
         />
+        {markers.map((m, i) => (
+          <ReferenceLine
+            key={m.version}
+            x={m.at}
+            className="stats-trend-marker"
+            stroke="var(--copper)"
+            strokeOpacity={0.7}
+            strokeWidth={1}
+            strokeDasharray="3 3"
+            ifOverflow="visible"
+            label={({ viewBox }: { viewBox?: { x?: number; y?: number } }) => {
+              const { side, row } = labelPlaces[i] ?? { side: 'right', row: 0 }
+              const left = side === 'left'
+              return (
+                <text x={(viewBox?.x ?? 0) + (left ? -3 : 3)} y={(viewBox?.y ?? 0) + 9 + row * 12} textAnchor={left ? 'end' : 'start'} {...AXIS_TICK} fill="var(--copper)">
+                  {`v${m.version}`}
+                </text>
+              )
+            }}
+          />
+        ))}
         <Area type="monotone" dataKey="avgReliability" stroke="var(--accent)" strokeWidth={1.5} fill="url(#reliabilityGrad)" dot={false} />
       </AreaChart>
     </ResponsiveContainer>
@@ -81,9 +110,11 @@ export function ReliabilityTrendView({ data, isPending, isError, isPlaceholderDa
   else if (isPending || !data) body = <LoadingNote />
   else if (data.length === 0) body = <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)',paddingTop:30,textAlign:'center'}}>No data yet</div>
   else body = <ReliabilityTrendChart data={data} />
+  const markerSummary = !isError && !isPending && data ? trendMarkersSummary(trendMarkers(data.map(d => d.date))) : ''
   return (
     <div className={`stats-trend-body${isPlaceholderData ? ' is-pending' : ''}`} aria-busy={isPlaceholderData || isPending} style={{marginTop:'var(--stats-header-gap)',height:120}}>
       {body}
+      {markerSummary !== '' && <span className="sr-only">{markerSummary}</span>}
     </div>
   )
 }

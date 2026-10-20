@@ -15,6 +15,7 @@ import { AUDIT_MAX_AGE_HOURS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL, AUDIT_TAB_MIN_SA
 import { NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP, TRACKED_NUT_COUNT, contactComponent, nutComponent, uptimeComponent } from './reliabilityScore'
 import { UNKNOWN_SOFTWARE_POINTS, pointsForMinorsBehind } from './versionRule'
 import { pluralize } from './plural'
+import { FRESH_MINT_MONTHS } from './mintFormatting'
 
 // ── Facts that only the backend defines (compared with it by the unit test) ───────────────────────────────────
 /** Window of the uptime figure (backend/src/prober.ts: the last 24 hours of probes). */
@@ -80,8 +81,12 @@ export function outdatedSoftwareText(): string {
   return `Share of tracked Nutshell and cdk-mintd mints that are ${numberWord(OUTDATED_AFTER_MINORS)} or more minor versions behind the newest stable release. Pre-releases of a current line are not counted. Not a security score.`
 }
 
-/** Stats: Network stability row of the index. */
-export const NETWORK_STABILITY_TEXT = 'Share of mints tracked for a month or more. A stand-in for churn, which MintRadar cannot measure yet.'
+/**
+ * Stats: Tracking history row of the index. It measures how long MintRadar has known the mints (from `discoveredAt`),
+ * not how stable the network is: the share of ALL known mints, offline ones too, that MintRadar first saw at least
+ * FRESH_MINT_MONTHS (1 month, mintAgeBadge) ago. A mint without a first-seen date counts as known for a month or more.
+ */
+export const TRACKING_HISTORY_TEXT = `Share of all tracked mints that MintRadar has known for ${FRESH_MINT_MONTHS} ${FRESH_MINT_MONTHS === 1 ? 'month' : 'months'} or more, from the day it first saw each. It does not measure how stable the network is. A stand-in for churn, which MintRadar cannot measure yet.`
 
 /** Mint Detail: the Reliability Score formula (tooltip next to the title, and the visible line of the breakdown dialog). */
 export function scoreFormulaText(): string {

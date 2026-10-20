@@ -110,6 +110,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
 
   const actions = tokenActionState(spentResult?.status === 'ok' ? spentResult.data : null)
   const mintOffline = mintInfo != null && mintInfo.online === false
+  const isTestMintToken = result !== null && isTestMint(mintInfo?.url ?? result.mint)
 
   const handleInspectAndVerify = async () => {
     const token = cleanToken
@@ -273,7 +274,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
                 <div className="trc-mint-text">
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <div className="trc-name">{mintInfo?.name ?? getHostname(result.mint)}</div>
-                {isTestMint(mintInfo?.url ?? result.mint) && (
+                {isTestMintToken && (
                   <InfoTooltip text="Not for real funds — for testing and development only">
                     <span
                       className="token-test-mint-badge"
@@ -312,7 +313,9 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             </div>
             <div className="token-result-cell">
               <div className="trc-label">Reliability Score</div>
-              {mintInfo?.reliabilityScore != null ? (
+              {isTestMintToken ? (
+                <div className="trc-sub">Test mint. Ecash from it has no value.</div>
+              ) : mintInfo?.reliabilityScore != null ? (
                 <>
                   <div className="trc-value" style={{ color: reliabilityColor(mintInfo.reliabilityScore) }}>{mintInfo.reliabilityScore}</div>
                   <div className="trc-sub" style={{ color: reliabilityColor(mintInfo.reliabilityScore) }}>
@@ -351,7 +354,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
               <ResultNote tone="ok" Icon={CircleCheck}>Verified. Every proof is signed by this mint. This doesn't show whether it's spent.</ResultNote>
             )}
             {verify?.status === 'invalid' && (
-              <ResultNote tone="bad" Icon={CircleX}>Invalid signature — do not trust this token. At least one signature proof failed its check.</ResultNote>
+              <ResultNote tone="unknown" Icon={TriangleAlert}>The DLEQ proof does not match this mint's published keys. The token may have been altered, or the mint may be using different keys.</ResultNote>
             )}
             {verify?.status === 'partial' && (
               <ResultNote tone="neutral" Icon={CircleMinus}>

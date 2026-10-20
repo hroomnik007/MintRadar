@@ -45,7 +45,7 @@ describe('texts equal the literals they replaced (current values)', () => {
   it('hidden mints note and the Network Health Index texts', () => {
     expect(T.hiddenMintsText(3, DEGRADED_AFTER_HOURS)).toBe('3 mints hidden (offline 24h+)')
     expect(nhiBaseSubtitle()).toBe('Weighted from five factors.')
-    expect(nhiFormulaText()).toContain('Network Stability (share of mints tracked 1 month+) stands in for churn rate')
+    expect(nhiFormulaText()).toContain('Tracking history (share of mints tracked 1 month+) stands in for churn rate')
   })
 })
 

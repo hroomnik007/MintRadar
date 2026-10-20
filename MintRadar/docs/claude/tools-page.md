@@ -194,11 +194,12 @@ blocks only non-public hosts).
 
 - **Signature check states** — `classifySignatureCheck()` (`cashuToken.ts`) maps per-proof DLEQ
   results to one state: `valid` (every proof carries a DLEQ and all verify — green), `invalid`
-  (a present DLEQ was checked and failed — red), `partial` (only some proofs carry a DLEQ, those
+  (a present DLEQ was checked and failed — copper warning, W5a 2026-10-20), `partial` (only some proofs carry a DLEQ, those
   verify — neutral), `unresolved` (a keyset couldn't be resolved — copper), `no-dleq` (no proof
   carries one — neutral). Plus `unreachable` (copper) and `bad-mint-url` (red) from `Tools.tsx`.
-  **Fixed on purpose:** partial DLEQ and unresolved keysets used to fall into the red "At least one
+  The `invalid` text is "The DLEQ proof does not match this mint's published keys. The token may have been altered, or the mint may be using different keys." (it used to read "Invalid signature — do not trust this token", which was wrong: the mint's own signature C can be valid while the DLEQ proof does not match). No red or "do not trust" wording anywhere in this flow; the spent/unspent line is independent. **Fixed on purpose:** partial DLEQ and unresolved keysets used to fall into the red "At least one
   proof failed its DLEQ check". "Valid" says nothing about spent-ness (a spent token still verifies).
+- **Test mint tokens (W5a):** when the token's mint is a test mint (`isTestMint`, same helper as the "Test mint" chip), the Reliability Score cell shows the neutral line "Test mint. Ecash from it has no value." instead of the score and its band label; the rest of the result stays.
 - **Spent check** — `classifySpentCheck()`: all-spent (red), all-unspent (green), **all-pending
   (neutral, "the mint is still processing")**, else partial (copper).
 - **Input** — `stripTokenWhitespace()` removes ALL whitespace (not just the ends) before parsing

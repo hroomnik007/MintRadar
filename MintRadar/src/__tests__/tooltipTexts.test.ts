@@ -44,7 +44,7 @@ describe('facts the frontend repeats from the backend', () => {
     expect(label(20 - (T.OUTDATED_AFTER_MINORS - 1))).not.toBe('outdated')
     expect(label(20 - T.OUTDATED_AFTER_MINORS)).toBe('outdated')
   })
-  it('the stability row counts a mint as "tracked for a month" once it is no longer Fresh', () => {
+  it('the Tracking history row counts a mint as "tracked for a month" once it is no longer Fresh', () => {
     const days = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString()
     expect(mintAgeBadge(days(29))?.label).toBe('Fresh')
     expect(mintAgeBadge(days(31))?.label).not.toBe('Fresh')
@@ -146,7 +146,7 @@ const BUILT: Record<string, string> = {
   scoreFormulaText: T.scoreFormulaText(), uptimeRowText: T.uptimeRowText(), auditRowText: T.auditRowText(), NUT_ROW_TEXT: T.NUT_ROW_TEXT,
   versionRowText: T.versionRowText(), contactRowText: T.contactRowText(), reviewSurgeText: T.reviewSurgeText(),
   UNIT_FILTER_TEXT: T.UNIT_FILTER_TEXT, HIDE_TEST_MINTS_TEXT: T.HIDE_TEST_MINTS_TEXT, outdatedSoftwareText: T.outdatedSoftwareText(),
-  NETWORK_STABILITY_TEXT: T.NETWORK_STABILITY_TEXT, BACKUP_SUPPORTED_TEXT: T.BACKUP_SUPPORTED_TEXT, NO_BACKUP_TEXT: T.NO_BACKUP_TEXT,
+  TRACKING_HISTORY_TEXT: T.TRACKING_HISTORY_TEXT, BACKUP_SUPPORTED_TEXT: T.BACKUP_SUPPORTED_TEXT, NO_BACKUP_TEXT: T.NO_BACKUP_TEXT,
   AUDIT_MINTS_TEXT: T.AUDIT_MINTS_TEXT, AUDIT_MELTS_TEXT: T.AUDIT_MELTS_TEXT, auditSuccessRateText: T.auditSuccessRateText(),
   REVIEWS_NIP87_TEXT: T.REVIEWS_NIP87_TEXT, SIGNATURE_CHECK_TEXT: T.SIGNATURE_CHECK_TEXT, INPUT_FEE_TEXT: T.INPUT_FEE_TEXT,
   compareAuditSuccessText: T.compareAuditSuccessText(), sameOperatorText: T.sameOperatorText(['alpha.mint.example', 'twin.mint.example']),

@@ -252,6 +252,34 @@ test.describe('Tools', () => {
     await expect(mintCell.locator('.token-test-mint-badge')).toContainText('Test mint')
   })
 
+  test('A test mint in the database shows no Reliability Score or band, only the neutral test-mint line', async ({ page }) => {
+    const testMint = { ...MOCK_KNOWN_MINTS[0]!, url: 'https://testnut.cashu.space', name: 'Testnut', reliabilityScore: 88 }
+    await page.route('**/api/mints/known', route => route.fulfill({ json: [...MOCK_KNOWN_MINTS, testMint] }))
+    await page.reload()
+    await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
+    await page.locator('.token-input').fill(makeCashuToken(testMint.url, [21]))
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+
+    const grid = page.locator('.token-result-grid')
+    await expect(grid).toContainText('Testnut')
+    const scoreCell = page.locator('.token-result-cell', { hasText: 'Reliability Score' })
+    await expect(scoreCell.locator('.trc-sub')).toHaveText('Test mint. Ecash from it has no value.')
+    await expect(scoreCell.locator('.trc-value')).toHaveCount(0)
+    await expect(scoreCell).not.toContainText('88')
+    await expect(scoreCell).not.toContainText(/(High|Moderate|Low) Reliability/)
+    // The rest of the result stays.
+    await expect(grid).toContainText('Mint Status')
+    await expect(grid).toContainText('21')
+  })
+
+  test('A regular mint still shows its Reliability Score and not the test-mint line', async ({ page }) => {
+    await page.locator('.token-input').fill(makeCashuToken(MOCK_MINTS[0]!.url, [21]))
+    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+    const scoreCell = page.locator('.token-result-cell', { hasText: 'Reliability Score' })
+    await expect(scoreCell.locator('.trc-value')).toHaveText('92')
+    await expect(scoreCell).not.toContainText('Test mint')
+  })
+
   test('Test mint chip is absent for a token from a regular production mint', async ({ page }) => {
     const token = makeCashuToken(MOCK_MINTS[0]!.url, [21]) // Alpha Mint — not a test mint
 
@@ -499,7 +527,7 @@ test.describe('Tools', () => {
       { name: 'every proof verifies → green "Verified"', proofs: [v, v], text: /Verified\. Every proof is signed by this mint\. This doesn't show whether it's spent\./, cls: /tv-ok/ },
       { name: 'only some proofs carry DLEQ → neutral "Partly verified", never red', proofs: [v, none], text: /Partly verified\. 1 of 2 proofs carry signature proofs and those check out\. The rest can't be checked\./, cls: /tv-neutral/, notText: /Invalid signature/ },
       { name: 'no proof carries DLEQ → neutral "can\'t be checked"', proofs: [none, none], text: /Signatures can't be checked\. This token has no signature proofs attached\. That doesn't mean it's bad\./, cls: /tv-neutral/, notText: /issuing mint/ },
-      { name: 'a present DLEQ that fails → red "Invalid signature"', proofs: [v, bad], text: /Invalid signature/, cls: /tv-bad/ },
+      { name: 'a present DLEQ that fails → factual warning about the keys, never red or "do not trust"', proofs: [v, bad], text: /The DLEQ proof does not match this mint's published keys\. The token may have been altered, or the mint may be using different keys\./, cls: /tv-unknown/, notText: /do not trust|Invalid signature/i },
       { name: 'keyset without keys → copper "Couldn\'t check", never red', proofs: [v], hideKeys: true, text: /Couldn't check signatures\. Says nothing about the token itself\./, cls: /tv-unknown/, notText: /Invalid signature/ },
     ]
     for (const c of cases) {
