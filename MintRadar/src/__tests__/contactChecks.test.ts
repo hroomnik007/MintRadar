@@ -14,17 +14,17 @@ describe('contactChecksLine', () => {
     expect(contactChecksLine(null, NOW)).toBeNull()
   })
 
-  it('all valid: e-mail with mail records and a Nostr key', () => {
-    expect(text([c('email', true, true), c('nostr', true)])).toBe('Contact checks: email format valid, domain has mail records · Nostr key valid · checked 3 min ago')
+  it('all recognised: e-mail with mail records and a Nostr contact', () => {
+    expect(text([c('email', true, true), c('nostr', true)])).toBe('Contact checks: email format recognised, domain has mail records · Nostr contact format recognised · checked 3 min ago')
   })
 
-  it('an invalid e-mail format says so and states nothing about the domain', () => {
-    expect(text([c('email', false)])).toBe('Contact checks: email format not valid · checked 3 min ago')
+  it('an e-mail format that is not recognised says so and states nothing about the domain', () => {
+    expect(text([c('email', false)])).toBe('Contact checks: email format not recognised · checked 3 min ago')
   })
 
   it('an unknown DNS result is "inconclusive", never "no mail records"', () => {
     const t = text([c('email', true, null)])
-    expect(t).toBe('Contact checks: email format valid, domain lookup inconclusive · checked 3 min ago')
+    expect(t).toBe('Contact checks: email format recognised, domain lookup inconclusive · checked 3 min ago')
     expect(t).not.toContain('no mail records')
   })
 
@@ -34,14 +34,14 @@ describe('contactChecksLine', () => {
 
   it('several entries of one kind are counted, not repeated', () => {
     expect(text([c('email', true, true), c('email', true, false), c('email', false)])).toBe(
-      'Contact checks: email format valid for 2 of 3, 1 of 2 domains have mail records · checked 3 min ago')
+      'Contact checks: email format recognised for 2 of 3, 1 of 2 domains have mail records · checked 3 min ago')
     expect(text([c('email', true, true), c('email', true, true)])).toContain('domains have mail records')
     expect(text([c('email', true, true), c('email', true, null)])).toContain('1 of 2 domains have mail records, 1 lookup inconclusive')
   })
 
   it('every other kind has a label; an unknown kind reads as "other"; the order is fixed', () => {
     expect(text([c('url', true), c('twitter', false), c('telegram', true), c('signal', true), c('x', true), c('weird', true), c('nostr', false)])).toBe(
-      'Contact checks: Nostr key not valid · Twitter format not valid · X format valid · Telegram format valid · Signal format valid · website URL valid · other entry format valid · checked 3 min ago')
+      'Contact checks: Nostr contact format not recognised · Twitter format not recognised · X format recognised · Telegram format recognised · Signal format recognised · website URL format recognised · other entry format recognised · checked 3 min ago')
   })
 
   it('the time label is relative and the title is the absolute UTC time', () => {
@@ -51,8 +51,8 @@ describe('contactChecksLine', () => {
   })
 
   it('no verdict words, whatever the facts', () => {
-    const all = [text([c('email', true, true), c('nostr', true)]), text([c('email', false)]), text([c('email', true, false), c('url', false)])].join(' ')
-    expect(all).not.toMatch(/verified|trusted|trust|fake|safe|legit|scam|genuine/i)
+    const all = [text([c('email', true, true), c('nostr', true)]), text([c('email', false)]), text([c('email', true, false), c('url', false)]), text(['email', 'nostr', 'twitter', 'x', 'telegram', 'signal', 'url', 'other'].map(k => c(k, false)))].join(' ')
+    expect(all).not.toMatch(/verified|trusted|trust|fake|safe|legit|scam|genuine|invalid|not valid/i)
   })
 })
 

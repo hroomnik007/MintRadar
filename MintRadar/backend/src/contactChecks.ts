@@ -4,10 +4,11 @@
 //
 // Privacy rules (tests/contactChecks.test.ts has a canary for each):
 //  - the contact VALUE and its domain are used in memory only; what is stored is { kind, formatValid, domainResolves,
-//    checkedAt } per entry, nothing else;
+//    checkedAt } per entry plus the rules version the result was computed with (stored only, never returned), nothing else;
 //  - no HTTP request of any kind is made to a contact value (a url is checked for its shape only);
-//  - the only network traffic is a DNS query (MX, then A/AAAA) for the domain of an e-mail address, through the system
-//    resolver, never a connection to that domain;
+//  - the only network traffic is a DNS query (MX, then A/AAAA) for the domain of an e-mail address or of a NIP-05 style
+//    nostr identifier (local@domain), through the system resolver, never a connection to that domain: no request to
+//    /.well-known/nostr.json, no relay;
 //  - no log line or error message carries a value or a domain (a DNS failure is reduced to "unknown").
 import { Resolver } from 'dns/promises'
 import { isIP } from 'net'
@@ -15,6 +16,13 @@ import { domainToASCII } from 'url'
 import { nip19 } from 'nostr-tools'
 import { pool } from './db.js'
 
+/**
+ * The version of the format rules. Stored with every result (`rules`); a stored result of another version is recomputed
+ * at the next successful probe of the mint, once (the new result carries the current version). Raise it whenever a rule
+ * changes what formatValid or domainResolves can say. 2: nostr also accepts nprofile, an optional "nostr:" prefix,
+ * all-uppercase bech32 and NIP-05 style local@domain (W6a correction).
+ */
+export const CONTACT_RULES_VERSION = 2
 export const CONTACT_CHECK_MAX_EMAILS = 3
 /** Entries read from one /v1/info (the rest is ignored). */
 export const CONTACT_CHECK_MAX_ENTRIES = 10
@@ -101,12 +109,43 @@ export function parseEmail(value: string): { valid: boolean; domain: string | nu
   return { valid: true, domain: ascii }
 }
 
-/** npub (bech32 with checksum) or 64 hex characters. No relay is asked. */
-export function isValidNostrKey(value: string): boolean {
-  const v = value.trim()
-  if (/^[0-9a-f]{64}$/i.test(v)) return true
-  if (!/^npub1[023456789acdefghjklmnpqrstuvwxyz]{58}$/.test(v)) return false
-  try { return nip19.decode(v).type === 'npub' } catch { return false }
+const NIP05_LOCAL_RE = /^[a-z0-9._-]+$/i
+
+export interface NostrContact {
+  valid: boolean
+  /** The ASCII domain of a NIP-05 style identifier (local@domain), the only thing that is looked up; null otherwise. */
+  domain: string | null
+}
+
+/**
+ * The forms of a nostr contact that are recognised, after trimming whitespace and removing an optional "nostr:" prefix:
+ * npub or nprofile with a valid bech32 checksum (all lower or all upper case; mixed case is invalid as BIP-173 says) and
+ * a 32-byte public key, 64 hex characters, or a NIP-05 style local@domain (local part a-z0-9-_. only, public domain
+ * name). Nothing is requested: no relay, no /.well-known/nostr.json.
+ */
+export function parseNostrContact(value: string): NostrContact {
+  const none: NostrContact = { valid: false, domain: null }
+  const trimmed = value.trim()
+  if (trimmed.length === 0 || trimmed.length > CONTACT_CHECK_VALUE_MAX) return none
+  const v = trimmed.replace(/^nostr:/i, '')
+  if (/^[0-9a-f]{64}$/i.test(v)) return { valid: true, domain: null }
+  if (/^(?:npub|nprofile)1/i.test(v)) {
+    if (v !== v.toLowerCase() && v !== v.toUpperCase()) return none
+    try {
+      const d = nip19.decode(v.toLowerCase())
+      if (d.type === 'npub') return { valid: /^[0-9a-f]{64}$/.test(d.data), domain: null }
+      if (d.type === 'nprofile') return { valid: /^[0-9a-f]{64}$/.test(d.data.pubkey), domain: null }
+    } catch { /* not a valid bech32 string */ }
+    return none
+  }
+  const at = v.indexOf('@')
+  if (at < 1 || at !== v.lastIndexOf('@')) return none
+  if (!NIP05_LOCAL_RE.test(v.slice(0, at))) return none
+  const host = v.slice(at + 1)
+  // domainToASCII parses a URL host and would drop a path, port or query: only a bare name goes in.
+  if (/[\s/\\?#:@[\]]/.test(host)) return none
+  const ascii = domainToASCII(host).toLowerCase().replace(/\.$/, '')
+  return isPublicDomainName(ascii) ? { valid: true, domain: ascii } : none
 }
 
 /** https URL with a public host name. Shape only: nothing is fetched and no name is resolved. */
@@ -271,7 +310,13 @@ async function checkEntry(entry: Entry, checkedAt: string, domains: DomainChecke
     const domainResolves = lookupable ? await domains.check(parsed.domain as string) : null
     return { kind, formatValid: parsed.valid, domainResolves, checkedAt }
   }
-  const formatValid = kind === 'nostr' ? isValidNostrKey(value) : kind === 'url' ? isValidContactUrl(value) : isValidHandle(value)
+  if (kind === 'nostr') {
+    const nostr = parseNostrContact(value)
+    // A NIP-05 style identifier gets the same DNS-only check as an e-mail domain; nothing else is asked.
+    const domainResolves = nostr.domain !== null ? await domains.check(nostr.domain) : null
+    return { kind, formatValid: nostr.valid, domainResolves, checkedAt }
+  }
+  const formatValid = kind === 'url' ? isValidContactUrl(value) : isValidHandle(value)
   return { kind, formatValid, domainResolves: null, checkedAt }
 }
 
@@ -303,10 +348,19 @@ export function readStoredContactChecks(raw: unknown): ContactCheck[] | null {
 
 const signature = (kinds: readonly string[]): string => [...kinds].sort().join(',')
 
-/** Due when nothing is stored yet, the kinds of the entries changed, or the oldest check is 24 h old. */
-export function isCheckDue(stored: ContactCheck[] | null, entries: readonly Entry[], now: number): boolean {
+/** true when every stored entry carries the current rules version (a stored column that is not an array has none). */
+export function storedRulesCurrent(storedRaw: unknown): boolean {
+  return Array.isArray(storedRaw) && storedRaw.every(e => (e as { rules?: unknown } | null)?.rules === CONTACT_RULES_VERSION)
+}
+
+/**
+ * Due when nothing is stored yet, the stored result was computed with other rules, the kinds of the entries changed, or the
+ * oldest check is 24 h old. A rules change therefore costs one recheck per mint: the new result carries the new version.
+ */
+export function isCheckDue(stored: ContactCheck[] | null, entries: readonly Entry[], now: number, rulesCurrent = true): boolean {
   if (entries.length === 0) return stored !== null && stored.length > 0
   if (stored === null || stored.length === 0) return true
+  if (!rulesCurrent) return true
   if (signature(stored.map(c => c.kind)) !== signature(entries.map(e => e.kind))) return true
   const oldest = Math.min(...stored.map(c => Date.parse(c.checkedAt)))
   return now - oldest >= CONTACT_CHECK_INTERVAL_MS
@@ -326,9 +380,9 @@ export async function scheduleContactChecks(
   running.add(url)
   try {
     const now = (opts.now ?? Date.now)()
-    if (!isCheckDue(readStoredContactChecks(storedRaw), entriesOf(rawContact), now)) return
+    if (!isCheckDue(readStoredContactChecks(storedRaw), entriesOf(rawContact), now, storedRulesCurrent(storedRaw))) return
     const checks = await computeContactChecks(rawContact, opts)
-    await pool.query('UPDATE mints SET contact_checks = $1::jsonb WHERE url = $2', [JSON.stringify(checks), url])
+    await pool.query('UPDATE mints SET contact_checks = $1::jsonb WHERE url = $2', [JSON.stringify(checks.map(c => ({ ...c, rules: CONTACT_RULES_VERSION }))), url])
   } catch {
     console.error('[contact-checks] check or store failed')
   } finally {

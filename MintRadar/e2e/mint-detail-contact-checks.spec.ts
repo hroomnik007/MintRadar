@@ -26,7 +26,7 @@ test.describe('Mint Detail — contact checks line', () => {
   test('all checks valid: facts, a relative time and the absolute UTC time in the title', async ({ page }) => {
     const { panel, line } = await open(page, [check('email', true, true), check('nostr', true, null)])
     await expect(line).toHaveCount(1)
-    await expect(line).toContainText('Contact checks: email format valid, domain has mail records · Nostr key valid · checked 5 min ago')
+    await expect(line).toContainText('Contact checks: email format recognised, domain has mail records · Nostr contact format recognised · checked 5 min ago')
     await expect(line.locator('span[title]')).toHaveAttribute('title', /UTC$/)
     // Under the contact cards, inside the same block, muted and at least 12 px.
     const g = (await panel.locator('.md-contact-grid').boundingBox())!
@@ -41,17 +41,17 @@ test.describe('Mint Detail — contact checks line', () => {
     await expect(line).not.toContainText('example.com')
   })
 
-  test('an invalid e-mail format is stated as a fact, without a domain claim and without verdict words', async ({ page }) => {
+  test('an e-mail format that is not recognised is stated as a fact, without a domain claim and without verdict words', async ({ page }) => {
     const { line } = await open(page, [check('email', false, null), check('nostr', true, null)])
-    await expect(line).toContainText('Contact checks: email format not valid · Nostr key valid · checked 5 min ago')
+    await expect(line).toContainText('Contact checks: email format not recognised · Nostr contact format recognised · checked 5 min ago')
     const text = (await line.innerText())
     expect(text).not.toMatch(/domain/)
-    expect(text).not.toMatch(/verified|trusted|fake|safe|scam/i)
+    expect(text).not.toMatch(/verified|trusted|fake|safe|scam|invalid|not valid/i)
   })
 
   test('an unknown DNS result reads as inconclusive, never as "no mail records"', async ({ page }) => {
     const { line } = await open(page, [check('email', true, null)])
-    await expect(line).toContainText('email format valid, domain lookup inconclusive')
+    await expect(line).toContainText('email format recognised, domain lookup inconclusive')
     await expect(line).not.toContainText('no mail records')
   })
 
@@ -67,7 +67,7 @@ test.describe('Mint Detail — contact checks line', () => {
 
   test('checks for a mint that lists no e-mail, Twitter or Nostr (a website only) still show, without a "Get in touch" heading', async ({ page }) => {
     const { line } = await open(page, [check('url', true, null)], { contact: [{ method: 'website', info: 'https://mint-site.com' }] })
-    await expect(line).toContainText('Contact checks: website URL valid · checked 5 min ago')
+    await expect(line).toContainText('Contact checks: website URL format recognised · checked 5 min ago')
     await expect(page.locator('.md-panel-title', { hasText: 'Get in touch' })).toHaveCount(0)
   })
 

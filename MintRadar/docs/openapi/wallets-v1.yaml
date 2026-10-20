@@ -359,7 +359,7 @@ components:
       type: object
       description: |
         Operational health of one mint. Never contains IP addresses, ASNs, hosting organisations, server locations,
-        error messages, reviewer public keys, review texts or contact details (`contactChecks` states only whether entries are well formed, never a value or a domain). It does carry the mint's public NUT-06
+        error messages, reviewer public keys, review texts or contact details (`contactChecks` states only whether MintRadar recognises the format of the entries, never a value or a domain). It does carry the mint's public NUT-06
         key (`pubkey`) and whether it advertises a Tor address (`hasOnion`). The fields from `pubkey` on were added on
         2026-10-20; `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `keysets`, `keysetsCheckedAt`, `methods`,
         `scoreBreakdown`, `changes` and `contactChecks` are only present on the single-mint endpoint and in the list with the matching `include` value.
@@ -515,12 +515,13 @@ components:
       required: [kind, formatValid, domainResolves, checkedAt]
       properties:
         kind: { type: string, enum: [email, nostr, twitter, x, telegram, signal, url, other], description: 'The kind the mint states; its "website" entry is url, an unlisted kind is other.' }
-        formatValid: { type: boolean, description: 'The value is well formed for its kind: e-mail syntax; npub with a valid checksum or 64 hex characters; https URL with a public host name; for every other kind printable text of a sane length.' }
+        formatValid: { type: boolean, description: 'true: MintRadar recognises the format of the value for its kind: e-mail syntax; for nostr (after trimming and removing an optional nostr: prefix) npub or nprofile with a valid bech32 checksum and a 32-byte public key, 64 hex characters, or a NIP-05 style name@domain; https URL with a public host name; for every other kind printable text of a sane length. false means "format not recognised by MintRadar", not that the contact is wrong, fake or unusable.' }
         domainResolves:
           type: [boolean, 'null']
           description: >-
-            E-mail entries only. true: DNS has MX (else A/AAAA) records for the domain; false: DNS says it has none; null: not applicable (not an e-mail,
-            an IP literal, localhost, a private or reserved name) or the lookup failed or timed out. null means unknown, never false.
+            E-mail entries and NIP-05 style nostr entries (name@domain) only. true: DNS has MX (else A/AAAA) records for the domain; false: DNS says it has none;
+            null: not applicable (another kind, an IP literal, localhost, a private or reserved name) or the lookup failed or timed out. null means unknown, never false.
+            Only DNS is asked: /.well-known/nostr.json is never requested, so true says nothing about whether a NIP-05 name exists.
         checkedAt: { type: string, format: date-time, description: When the entry was checked (a mint is re-checked at most once every 24 hours). }
     Change:
       type: object

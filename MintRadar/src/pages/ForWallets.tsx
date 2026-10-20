@@ -186,7 +186,7 @@ export default function ForWallets() {
           <p>
             Fields of a nested object are written <code>parent.child</code>. Clients must ignore fields they do not know.
             The answers never contain IP addresses, AS numbers, hosting organisations, server locations or error
-            messages, reviewer keys or review texts, or contact details (<code>contactChecks</code> says only whether the entries a mint lists are well formed, never a value or a domain). They do carry the mint&apos;s public NUT-06
+            messages, reviewer keys or review texts, or contact details (<code>contactChecks</code> says only whether MintRadar recognises the format of the entries a mint lists, never a value or a domain). They do carry the mint&apos;s public NUT-06
             key (<code>pubkey</code>) and whether it advertises a Tor address (<code>hasOnion</code>). The heavier fields{' '}
             <code>keysets</code>, <code>keysetsCheckedAt</code>, <code>methods</code> and <code>scoreBreakdown</code> are
             in the list only with <code>include=</code> (so are <code>pubkey</code>, <code>firstSeenAt</code>, <code>lastOnlineAt</code>, <code>sample</code> and <code>contactChecks</code>, as <code>include=facts</code>) and always in the single-mint answer.{' '}
@@ -270,8 +270,8 @@ export default function ForWallets() {
               only for a mint that has a recorded change.
             </li>
             <li data-testid="additions-contact-checks">
-              Also added {F.walletAdditionsOn}: the mint field <code>contactChecks</code> (on the single-mint endpoint, and in the list with <code>include=facts</code>): per contact entry the kind, whether the value is well formed,
-              whether the domain of an e-mail address has mail records in DNS (<code>null</code> when that is unknown) and when it was checked. The default list is unchanged.
+              Also added {F.walletAdditionsOn}: the mint field <code>contactChecks</code> (on the single-mint endpoint, and in the list with <code>include=facts</code>): per contact entry the kind, whether MintRadar recognises the format of the value (<code>formatValid: false</code> means &quot;format not recognised by MintRadar&quot;, not that the contact is wrong),
+              whether the domain of an e-mail address or of a NIP-05 style Nostr name has mail or address records in DNS (<code>null</code> when that is unknown; the name itself is never looked up) and when it was checked. The default list is unchanged.
             </li>
             <li>A removal is announced on this page and in <code>docs/API.md</code> at least {F.deprecationNoticeDays} days before it takes effect. A route that is going away also says so in its responses, with the <code>Deprecation</code> and <code>Sunset</code> headers and a <code>Link</code> header with <code>rel=&quot;successor-version&quot;</code>; the only route that does so today is the one below.</li>
             <li data-testid="recommend-deprecation">

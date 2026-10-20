@@ -1,6 +1,7 @@
 // The muted "Contact checks" line on Mint Detail: facts about the contact entries a mint lists (kind, whether the value is
-// well formed, whether the domain of an e-mail address has mail records in DNS, when it was checked), from the backend's
-// contactChecks.ts. Neutral wording only: it states what was measured and never calls a contact verified, trusted or fake.
+// recognised, whether the domain of an e-mail address has mail records in DNS, when it was checked), from the backend's
+// contactChecks.ts. Neutral wording only: it states what was measured and never calls a contact verified, trusted, fake or
+// "invalid" ("format not recognised" says what MintRadar understood, not that the contact is wrong).
 // A value or a domain is never part of the data, so none can appear here.
 import { formatTimeAgo } from './mintFormatting'
 import { formatDateTimeUtc } from './formatDate'
@@ -29,25 +30,25 @@ export function readContactChecks(raw: unknown): ContactCheckFact[] {
 
 const ORDER = ['email', 'nostr', 'twitter', 'x', 'telegram', 'signal', 'url', 'other']
 
-/** What each kind is called in the line; the phrase is "<label> valid" or "<label> not valid". */
+/** What each kind is called in the line; the phrase is "<label> format recognised" or "<label> format not recognised". */
 const LABEL: Record<string, string> = {
-  email: 'email format',
-  nostr: 'Nostr key',
-  twitter: 'Twitter format',
-  x: 'X format',
-  telegram: 'Telegram format',
-  signal: 'Signal format',
+  email: 'email',
+  nostr: 'Nostr contact',
+  twitter: 'Twitter',
+  x: 'X',
+  telegram: 'Telegram',
+  signal: 'Signal',
   url: 'website URL',
-  other: 'other entry format',
+  other: 'other entry',
 }
 
 function formatPhrase(kind: string, valid: number, total: number): string {
   const label = LABEL[kind] ?? LABEL['other']
-  if (total === 1) return `${label} ${valid === 1 ? 'valid' : 'not valid'}`
-  return `${label} valid for ${valid} of ${total}`
+  if (total === 1) return `${label} format ${valid === 1 ? 'recognised' : 'not recognised'}`
+  return `${label} format recognised for ${valid} of ${total}`
 }
 
-/** E-mail entries whose format is valid: what DNS said about their domains. null when no entry has a result worth stating. */
+/** E-mail entries whose format is recognised: what DNS said about their domains. null when no entry has a result worth stating. */
 function domainPhrase(emails: readonly ContactCheckFact[]): string | null {
   const ok = emails.filter(c => c.formatValid)
   if (ok.length === 0) return null

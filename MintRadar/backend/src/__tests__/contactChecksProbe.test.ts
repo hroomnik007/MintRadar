@@ -28,6 +28,7 @@ vi.mock('../mintChanges.js', async (importOriginal) => {
   return { ...actual, recordInfoObservation: vi.fn().mockResolvedValue(undefined), recordKeysetsObservation: vi.fn().mockResolvedValue(undefined) }
 })
 
+const { CONTACT_RULES_VERSION } = await import('../contactChecks.js')
 const MINT = 'https://mint.example.com'
 const CONTACT = [
   { method: 'email', info: 'ops@canary-mail-7f3a9c.com' },
@@ -106,11 +107,27 @@ describe('probe -> contact checks', () => {
   })
 
   it('checks stored less than 24 h ago for the same kinds are not repeated (no DNS, no write)', async () => {
-    const fresh = CONTACT.map(c => ({ kind: c.method, formatValid: true, domainResolves: null, checkedAt: new Date(NOW.getTime() - 3_600_000).toISOString() }))
+    const fresh = CONTACT.map(c => ({ kind: c.method, formatValid: true, domainResolves: null, checkedAt: new Date(NOW.getTime() - 3_600_000).toISOString(), rules: CONTACT_RULES_VERSION }))
     const probe = await setup('on', fresh)
     await runProbe(probe)
     expect(calls.filter(([sql]) => isCheckWrite(sql))).toHaveLength(0)
     expect(dnsMock.resolveMx).not.toHaveBeenCalled()
+  })
+
+  it('a result stored under older rules is rechecked at the next probe, once', async () => {
+    const at = new Date(NOW.getTime() - 3_600_000).toISOString()
+    const old = CONTACT.map(c => ({ kind: c.method, formatValid: false, domainResolves: null, checkedAt: at, rules: CONTACT_RULES_VERSION - 1 }))
+    const probe = await setup('on', old)
+    await runProbe(probe)
+    const writes = calls.filter(([sql]) => isCheckWrite(sql))
+    expect(writes).toHaveLength(1)
+    const written = JSON.parse(writes[0]![1][0] as string) as Array<Record<string, unknown>>
+    expect(written.every(e => e['rules'] === CONTACT_RULES_VERSION)).toBe(true)
+
+    // The next probe sees what was written: current rules, fresh, same kinds: nothing to do.
+    const next = await setup('on', written)
+    await runProbe(next)
+    expect(calls.filter(([sql]) => isCheckWrite(sql))).toHaveLength(0)
   })
 
   it.each([

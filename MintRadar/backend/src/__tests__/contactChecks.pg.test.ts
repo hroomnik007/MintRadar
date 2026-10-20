@@ -38,7 +38,7 @@ describe.skipIf(!url)('mints.contact_checks against a real Postgres', () => {
         { kind: 'twitter', formatValid: true, domainResolves: null, checkedAt: '2026-10-20T12:00:00.000Z' },
         { kind: 'url', formatValid: true, domainResolves: null, checkedAt: '2026-10-20T12:00:00.000Z' },
       ])
-      for (const e of stored as Array<Record<string, unknown>>) expect(Object.keys(e).sort()).toEqual(['checkedAt', 'domainResolves', 'formatValid', 'kind'])
+      for (const e of stored as Array<Record<string, unknown>>) expect(Object.keys(e).sort()).toEqual(['checkedAt', 'domainResolves', 'formatValid', 'kind', 'rules'])
 
       // Canary: not in this mint's row, and not in any table of the public schema.
       const tables = (await pool.query(`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`)).rows.map(r => r.tablename as string)

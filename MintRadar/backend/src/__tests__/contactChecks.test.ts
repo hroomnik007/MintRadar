@@ -21,6 +21,7 @@ let query: ReturnType<typeof vi.fn>
 
 const HEX = 'ab'.repeat(32)
 const NPUB = nip19.npubEncode(HEX)
+const NPROFILE = nip19.nprofileEncode({ pubkey: HEX, relays: ['wss://relay.nip19-host.com'] })
 const NOW = Date.UTC(2026, 9, 20, 12, 0, 0)
 const DAY = 24 * 60 * 60 * 1000
 
@@ -72,15 +73,55 @@ describe('public domain names', () => {
 
 describe('nostr, url and handle formats', () => {
   it('npub with a valid checksum or 64 hex characters', () => {
-    expect(m.isValidNostrKey(NPUB)).toBe(true)
-    expect(m.isValidNostrKey(HEX)).toBe(true)
-    expect(m.isValidNostrKey(HEX.toUpperCase())).toBe(true)
+    const ok = (v: string) => m.parseNostrContact(v).valid
+    expect(ok(NPUB)).toBe(true)
+    expect(ok(HEX)).toBe(true)
+    expect(ok(HEX.toUpperCase())).toBe(true)
     const broken = NPUB.slice(0, -1) + (NPUB.endsWith('q') ? 'p' : 'q')
-    expect(m.isValidNostrKey(broken)).toBe(false)
-    expect(m.isValidNostrKey(HEX.slice(1))).toBe(false)
-    expect(m.isValidNostrKey('nsec1' + 'q'.repeat(58))).toBe(false)
-    expect(m.isValidNostrKey(nip19.nsecEncode(new Uint8Array(32).fill(7)))).toBe(false)
-    expect(m.isValidNostrKey('')).toBe(false)
+    expect(ok(broken)).toBe(false)
+    expect(ok(HEX.slice(1))).toBe(false)
+    expect(ok('nsec1' + 'q'.repeat(58))).toBe(false)
+    expect(ok(nip19.nsecEncode(new Uint8Array(32).fill(7)))).toBe(false)
+    expect(ok('')).toBe(false)
+    expect(ok('   ')).toBe(false)
+  })
+  it('accepts whitespace around the value and an optional nostr: prefix (any case)', () => {
+    for (const v of [`  ${NPUB}\n`, `nostr:${NPUB}`, `NOSTR:${NPUB}`, ` nostr:${HEX} `, `nostr:${NPROFILE}`, `nostr:ops@nip05-host.com`])
+      expect(m.parseNostrContact(v).valid, v).toBe(true)
+  })
+  it('all-uppercase bech32 is accepted, mixed case is not (BIP-173)', () => {
+    expect(m.parseNostrContact(NPUB.toUpperCase()).valid).toBe(true)
+    expect(m.parseNostrContact(NPROFILE.toUpperCase()).valid).toBe(true)
+    expect(m.parseNostrContact(`nostr:${NPUB.toUpperCase()}`).valid).toBe(true)
+    const mixed = NPUB.slice(0, 20) + NPUB.slice(20).toUpperCase()
+    expect(m.parseNostrContact(mixed).valid).toBe(false)
+    expect(m.parseNostrContact('N' + NPUB.slice(1)).valid).toBe(false)
+    expect(m.parseNostrContact(NPROFILE.slice(0, 20) + NPROFILE.slice(20).toUpperCase()).valid).toBe(false)
+  })
+  it('a bad checksum is rejected, for npub and nprofile', () => {
+    const flip = (v: string) => v.slice(0, -1) + (v.endsWith('q') ? 'p' : 'q')
+    expect(m.parseNostrContact(flip(NPUB)).valid).toBe(false)
+    expect(m.parseNostrContact(flip(NPROFILE)).valid).toBe(false)
+    expect(m.parseNostrContact(`nostr:${flip(NPUB)}`).valid).toBe(false)
+  })
+  it('nprofile: valid checksum and a 32-byte public key (relay hints are ignored, never contacted)', () => {
+    expect(m.parseNostrContact(NPROFILE)).toEqual({ valid: true, domain: null })
+    expect(m.parseNostrContact(nip19.nprofileEncode({ pubkey: HEX })).valid).toBe(true)
+    // note1... / nevent1... are bech32 too but not a contact key
+    expect(m.parseNostrContact(nip19.noteEncode(HEX)).valid).toBe(false)
+    expect(m.parseNostrContact(nip19.neventEncode({ id: HEX })).valid).toBe(false)
+  })
+  it('NIP-05 style local@domain: a-z0-9-_. local part, public domain, case-insensitive', () => {
+    for (const v of ['ops@nip05-host.com', '_@nip05-host.com', 'First.Last_1-x@Sub.NIP05-host.org', 'a@bücher.de'])
+      expect(m.parseNostrContact(v).valid, v).toBe(true)
+    expect(m.parseNostrContact('Ops@NIP05-Host.com')).toEqual({ valid: true, domain: 'nip05-host.com' })
+    for (const v of ['@nip05-host.com', 'ops@', 'a b@nip05-host.com', 'a+b@nip05-host.com', 'a@@nip05-host.com', 'a@b@nip05-host.com', 'ops@localhost',
+      'ops@printer.local', 'ops@1.2.3.4', 'ops@[::1]', 'ops@example.com', 'ops@nodot', 'ops@nip05-host.com/path', 'ops@nip05-host.com:80', 'npub@nip05-host.com.'.replace('.com.', '..com')])
+      expect(m.parseNostrContact(v).valid, v).toBe(false)
+  })
+  it('anything else is not recognised', () => {
+    for (const v of ['@somebody', 'somebody', 'https://nip05-host.com', 'npub', 'npub1', `npub${HEX}`, 'x'.repeat(301), `nostr:`, `nostr:nostr:${NPUB}`])
+      expect(m.parseNostrContact(v).valid, v).toBe(false)
   })
   it('url: https with a public host name only', () => {
     expect(m.isValidContactUrl('https://mint-site.com/about')).toBe(true)
@@ -106,6 +147,7 @@ describe('checks per entry', () => {
       { method: 'email', info: 'not an email' },
       { method: 'nostr', info: NPUB },
       { method: 'nostr', info: 'npub1bad' },
+      { method: 'nostr', info: 'ops@nip05-host.com' },
       { method: 'twitter', info: '@somebody' },
       { method: 'telegram', info: '' },
       { method: 'website', info: 'https://mint-site.com' },
@@ -118,14 +160,15 @@ describe('checks per entry', () => {
       { kind: 'email', formatValid: false, domainResolves: null, checkedAt: at },
       { kind: 'nostr', formatValid: true, domainResolves: null, checkedAt: at },
       { kind: 'nostr', formatValid: false, domainResolves: null, checkedAt: at },
+      { kind: 'nostr', formatValid: true, domainResolves: true, checkedAt: at },
       { kind: 'twitter', formatValid: true, domainResolves: null, checkedAt: at },
       { kind: 'telegram', formatValid: false, domainResolves: null, checkedAt: at },
       { kind: 'url', formatValid: true, domainResolves: null, checkedAt: at },
       { kind: 'url', formatValid: false, domainResolves: null, checkedAt: at },
       { kind: 'other', formatValid: true, domainResolves: null, checkedAt: at },
     ])
-    expect(lookup).toHaveBeenCalledTimes(1)
-    expect(lookup).toHaveBeenCalledWith('mail-host.com')
+    expect(lookup).toHaveBeenCalledTimes(2)
+    expect(lookup.mock.calls.map(c => (c as unknown[])[0])).toEqual(['mail-host.com', 'nip05-host.com'])
   })
 
   it('an IP literal, localhost, a private or reserved name is never looked up (null)', async () => {
@@ -287,6 +330,32 @@ describe('no request to a contact value', () => {
     expect(dnsMock.resolveMx).not.toHaveBeenCalled()
     expect(dnsMock.resolve4).not.toHaveBeenCalled()
   })
+  it('a NIP-05 style identifier is checked by DNS only: no HTTP request, no relay, no safeFetch', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('no network in this test'))
+    const { safeFetch } = await import('../ssrf.js')
+    const lookup = vi.fn(yes)
+    const out = await m.computeContactChecks([{ method: 'nostr', info: 'zq7@canary-nip05-7f3a.com' }], { domains: m.createDomainChecker({ lookup }) })
+    expect(out[0]).toMatchObject({ kind: 'nostr', formatValid: true, domainResolves: true })
+    expect(lookup).toHaveBeenCalledWith('canary-nip05-7f3a.com')
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(safeFetch).not.toHaveBeenCalled()
+  })
+  it('a NIP-05 domain goes through the real resolver path (MX, else A/AAAA) and nothing else', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    dnsMock.resolveMx.mockRejectedValue(err('ENODATA'))
+    dnsMock.resolve4.mockResolvedValue(['203.0.113.5'])
+    const out = await m.computeContactChecks([{ method: 'nostr', info: 'ops@nip05-host.com' }], { domains: m.createDomainChecker() })
+    expect(out[0]).toMatchObject({ formatValid: true, domainResolves: true })
+    expect(dnsMock.resolveMx).toHaveBeenCalledWith('nip05-host.com')
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+  it('a NIP-05 domain whose lookup fails stays unknown (null); a non-public domain is not looked up at all', async () => {
+    const lookup = vi.fn<m.MailLookup>().mockResolvedValue(null)
+    const domains = m.createDomainChecker({ lookup })
+    const out = await m.computeContactChecks([{ method: 'nostr', info: 'ops@nip05-host.com' }, { method: 'nostr', info: 'ops@localhost' }], { domains })
+    expect(out.map(c => [c.formatValid, c.domainResolves])).toEqual([[true, null], [false, null]])
+    expect(lookup).toHaveBeenCalledTimes(1)
+  })
   it('a nostr key is not looked up anywhere', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
     await m.computeContactChecks([{ method: 'nostr', info: NPUB }], { domains: m.createDomainChecker({ lookup: yes }) })
@@ -304,6 +373,17 @@ describe('when a check is due', () => {
     expect(m.isCheckDue(stored(['email', 'nostr'], NOW - DAY), entries(['email', 'nostr']), NOW)).toBe(true)
     expect(m.isCheckDue(stored(['email'], NOW - 1000), entries(['email', 'nostr']), NOW)).toBe(true)
     expect(m.isCheckDue(stored(['email'], NOW - 1000), entries(['email', 'email']), NOW)).toBe(true)
+  })
+  it('results of other rules are due at once, once: the new result carries the current version', async () => {
+    const fresh = stored(['nostr'], NOW - 1000)
+    expect(m.isCheckDue(fresh, entries(['nostr']), NOW, true)).toBe(false)
+    expect(m.isCheckDue(fresh, entries(['nostr']), NOW, false)).toBe(true)
+    expect(m.storedRulesCurrent(null)).toBe(false)
+    expect(m.storedRulesCurrent(fresh)).toBe(false)
+    expect(m.storedRulesCurrent(fresh.map(c => ({ ...c, rules: m.CONTACT_RULES_VERSION - 1 })))).toBe(false)
+    expect(m.storedRulesCurrent(fresh.map(c => ({ ...c, rules: m.CONTACT_RULES_VERSION })))).toBe(true)
+    expect(m.isCheckDue(fresh, [], NOW, false)).toBe(true) // entries gone: cleared as before
+    expect(m.isCheckDue([], [], NOW, false)).toBe(false)
   })
   it('no entries: nothing to do unless old checks must be cleared', () => {
     expect(m.isCheckDue(null, [], NOW)).toBe(false)
@@ -329,11 +409,34 @@ describe('scheduling and storage', () => {
     expect(params[1]).toBe('https://mint.example')
     const stored = JSON.parse(params[0]) as Array<Record<string, unknown>>
     expect(stored).toHaveLength(2)
-    for (const e of stored) expect(Object.keys(e).sort()).toEqual(['checkedAt', 'domainResolves', 'formatValid', 'kind'])
+    for (const e of stored) expect(Object.keys(e).sort()).toEqual(['checkedAt', 'domainResolves', 'formatValid', 'kind', 'rules'])
+    expect(stored.every(e => e['rules'] === m.CONTACT_RULES_VERSION)).toBe(true)
+  })
+
+  it('a result stored under older rules is recomputed once; the next probe finds it current and writes nothing', async () => {
+    const old = [{ kind: 'nostr', formatValid: false, domainResolves: null, checkedAt: new Date(NOW - 1000).toISOString(), rules: m.CONTACT_RULES_VERSION - 1 }]
+    const noRules = old.map(e => ({ kind: e.kind, formatValid: e.formatValid, domainResolves: e.domainResolves, checkedAt: e.checkedAt })) // written before the rules version existed
+    const raw = [{ method: 'nostr', info: `nostr:${NPUB}` }]
+    for (const before of [old, noRules]) {
+      query.mockClear()
+      await m.scheduleContactChecks('https://mint.example', raw, before, opts())
+      expect(query).toHaveBeenCalledTimes(1)
+      const written = JSON.parse((query.mock.calls[0] as [string, string[]])[1][0] as string) as Array<Record<string, unknown>>
+      expect(written).toMatchObject([{ kind: 'nostr', formatValid: true, rules: m.CONTACT_RULES_VERSION }])
+      query.mockClear()
+      await m.scheduleContactChecks('https://mint.example', raw, written, opts())
+      expect(query).not.toHaveBeenCalled()
+    }
+  })
+
+  it('what the API returns (readStoredContactChecks) has the four fields, never the rules version', () => {
+    const at = new Date(NOW).toISOString()
+    const out = m.readStoredContactChecks([{ kind: 'nostr', formatValid: true, domainResolves: null, checkedAt: at, rules: 2 }])
+    expect(Object.keys(out![0]!).sort()).toEqual(['checkedAt', 'domainResolves', 'formatValid', 'kind'])
   })
 
   it('does not write inside 24 h for the same kinds, and writes [] when the entries are gone', async () => {
-    const fresh = [{ kind: 'email', formatValid: true, domainResolves: true, checkedAt: new Date(NOW - 1000).toISOString() }]
+    const fresh = [{ kind: 'email', formatValid: true, domainResolves: true, checkedAt: new Date(NOW - 1000).toISOString(), rules: m.CONTACT_RULES_VERSION }]
     await m.scheduleContactChecks('https://mint.example', [{ method: 'email', info: 'ops@mail-host.com' }], fresh, opts())
     expect(query).not.toHaveBeenCalled()
     await m.scheduleContactChecks('https://mint.example', [], fresh, opts())
@@ -375,14 +478,19 @@ describe('canary: no contact value or domain is persisted, logged or put in an e
     handle: '@canaryhandle7f3a9c',
     site: 'https://canary-site-7f3a9c.com/contact',
     siteHost: 'canary-site-7f3a9c.com',
+    nip05: 'zq7canarynip@canary-nip05-7f3a9c.com',
+    nip05Local: 'zq7canarynip',
+    nip05Domain: 'canary-nip05-7f3a9c.com',
   }
   const contact = [
     { method: 'email', info: CANARY.email },
     { method: 'nostr', info: NPUB },
+    { method: 'nostr', info: `nostr:${NPROFILE}` },
+    { method: 'nostr', info: CANARY.nip05 },
     { method: 'twitter', info: CANARY.handle },
     { method: 'website', info: CANARY.site },
   ]
-  const needles = [CANARY.email, CANARY.local, CANARY.domain, CANARY.handle, CANARY.site, CANARY.siteHost, NPUB, HEX, 'canary']
+  const needles = [CANARY.email, CANARY.local, CANARY.domain, CANARY.handle, CANARY.site, CANARY.siteHost, CANARY.nip05, CANARY.nip05Local, CANARY.nip05Domain, NPUB, NPROFILE, HEX, 'nip19-host', 'canary']
 
   async function run(rejectDns: boolean): Promise<{ writes: string; logs: string }> {
     const spies = (['log', 'warn', 'error', 'info', 'debug'] as const).map(k => vi.spyOn(console, k).mockImplementation(() => undefined))
@@ -407,10 +515,10 @@ describe('canary: no contact value or domain is persisted, logged or put in an e
     }
   })
 
-  it('the stored result of the canary contact is exactly the four fields per entry', async () => {
+  it('the stored result of the canary contact is exactly the four fields plus the rules version per entry', async () => {
     await run(false)
     const stored = JSON.parse((query.mock.calls.at(-1) as [string, string[]])[1][0] as string) as Array<Record<string, unknown>>
-    expect(stored.map(e => e['kind'])).toEqual(['email', 'nostr', 'twitter', 'url'])
-    expect(stored.every(e => Object.keys(e).sort().join() === 'checkedAt,domainResolves,formatValid,kind')).toBe(true)
+    expect(stored.map(e => e['kind'])).toEqual(['email', 'nostr', 'nostr', 'nostr', 'twitter', 'url'])
+    expect(stored.every(e => Object.keys(e).sort().join() === 'checkedAt,domainResolves,formatValid,kind,rules')).toBe(true)
   })
 })
