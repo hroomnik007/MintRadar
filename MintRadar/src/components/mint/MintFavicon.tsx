@@ -12,7 +12,7 @@ interface Props {
 
 export function MintFavicon({ url, iconUrl, size = 22, radius = 5, className = '' }: Props) {
   const hostname = mintHostname(url)
-  // Seeded from the failure cache so a mint whose icon recently 404'd/failed
+  // Seeded from the failure cache so a mint whose icon recently failed (204 / error)
   // renders straight to the monogram on this mount — no repeat request. See
   // mintIconFailureCache.ts.
   const [imgFailed, setImgFailed] = useState(() => hasIconFailedRecently(url))
@@ -21,8 +21,9 @@ export function MintFavicon({ url, iconUrl, size = 22, radius = 5, className = '
   // bytes are always fetched through the backend's SSRF-guarded proxy, never
   // straight from a mint-controlled host. A hostile icon_url in a mint's
   // /v1/info can't turn a page view into an IP / User-Agent tracking beacon
-  // (2026-09-07 security audit). The proxy 404s anything unsafe/unfetchable and
-  // onError drops us to the SVG placeholder below.
+  // (2026-09-07 security audit). The proxy answers 204 No Content for anything
+  // unsafe/unfetchable (no console noise, unlike a 404) and the img error event still fires,
+  // so onError drops us to the SVG placeholder below.
   const proxiedSrc = iconUrl ? `/api/mint/icon?url=${encodeURIComponent(url)}` : null
 
   if (proxiedSrc && !imgFailed) {

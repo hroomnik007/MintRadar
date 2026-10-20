@@ -1691,9 +1691,18 @@ app.use('/api/wallets', (_req: Request, res: Response): void => {
 // icon_url directly, so a hostile icon_url can't turn a page view into an IP /
 // User-Agent tracking beacon (2026-09-07 security audit). Known mints only;
 // bytes are fetched through safeFetch and re-served from our origin, cached
-// in-process. Anything unsafe/unfetchable → 404 and the client shows its SVG
-// placeholder. Exempt from the per-IP rate limit (read-only, cacheable, and the
+// in-process. Anything unsafe/unfetchable → 204 No Content (one answer for every
+// reason, see sendNoIcon) and the client shows its SVG placeholder. Exempt from the per-IP rate limit (read-only, cacheable, and the
 // in-process cache means upstream is hit at most once per mint per TTL anyway).
+// "No icon to serve", the one answer for EVERY reason (unknown mint, no icon_url, blocked address, DNS, TLS, upstream
+// status, too large, wrong type, timeout, internal error): 204 with no body, so the route is no oracle for why. 204, not 404:
+// Chromium prints "Failed to load resource" for a 404 on every <img> request but stays silent for a 204, and the <img> error
+// event still fires, so MintFavicon shows the monogram. Same Cache-Control as the former 404.
+function sendNoIcon(res: Response): void {
+  res.setHeader('Cache-Control', 'public, max-age=1800')
+  res.status(204).end()
+}
+
 app.get('/api/mint/icon', (req: Request, res: Response): void => {
   const rawUrl = req.query['url']
   if (typeof rawUrl !== 'string' || rawUrl.length === 0 || rawUrl.length > MAX_URL_LENGTH) {
@@ -1704,8 +1713,7 @@ app.get('/api/mint/icon', (req: Request, res: Response): void => {
   getMintIcon(rawUrl)
     .then(icon => {
       if (!icon) {
-        res.setHeader('Cache-Control', 'public, max-age=1800')
-        res.status(404).end()
+        sendNoIcon(res)
         return
       }
       res.setHeader('Content-Type', icon.contentType)
@@ -1719,7 +1727,7 @@ app.get('/api/mint/icon', (req: Request, res: Response): void => {
     })
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/mint/icon]', err)
-      res.status(404).end()
+      sendNoIcon(res)
     })
 })
 

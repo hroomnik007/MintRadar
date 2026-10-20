@@ -72,22 +72,78 @@ describe('GET /api/mint/icon', () => {
     expect(res.headers['cache-control']).toContain('max-age=86400')
     expect(res.headers['content-security-policy']).toContain("default-src 'none'")
     expect(res.headers['cross-origin-resource-policy']).toBe('same-origin')
+    expect(res.headers['x-content-type-options']).toBe('nosniff')
     expect(Buffer.compare(res.body as Buffer, PNG)).toBe(0)
     // safeFetch (SSRF guard) is what actually reached out — never the browser.
     expect(safeFetch).toHaveBeenCalledWith('https://mint.example/icon.png', expect.objectContaining({ timeoutMs: 5000 }))
   })
 
-  it('404s an unknown mint without any outbound fetch', async () => {
+  it('answers an unknown mint with 204 and no body, without any outbound fetch', async () => {
     query.mockResolvedValue({ rows: [] })
-    await request(app).get('/api/mint/icon?url=https://unknown.example').expect(404)
+    const res = await request(app).get('/api/mint/icon?url=https://unknown.example').expect(204)
+    expect(res.text).toBe('')
     expect(safeFetch).not.toHaveBeenCalled()
   })
 
-  it('404s when the mint\'s icon_url points somewhere unsafe / non-image', async () => {
-    query.mockResolvedValue({ rows: [{ icon_url: 'https://tracker.evil.example/px.png' }] })
-    safeFetch.mockResolvedValue(fakeRes({ contentType: 'text/html', body: Buffer.from('<img>') }))
-    const res = await request(app).get('/api/mint/icon?url=https://mint.example').expect(404)
-    expect(res.headers['cache-control']).toContain('max-age=1800')
+  // The Date header differs between requests by design; everything else must match.
+  const withoutDate = (h: Record<string, unknown>) => Object.fromEntries(Object.entries(h).filter(([k]) => k !== 'date'))
+
+  // Every reason an icon cannot be served must look exactly the same from outside: status, body and headers.
+  const BIG = Buffer.concat([PNG, Buffer.alloc(512 * 1024)])
+  const REASONS: { reason: string; arrange: () => void }[] = [
+    { reason: 'unknown mint', arrange: () => { query.mockResolvedValue({ rows: [] }) } },
+    { reason: 'no icon_url', arrange: () => { query.mockResolvedValue({ rows: [{ icon_url: null }] }) } },
+    { reason: 'icon_url is not https', arrange: () => { query.mockResolvedValue({ rows: [{ icon_url: 'http://mint.example/i.png' }] }) } },
+    { reason: 'blocked address / DNS / TLS / timeout (safeFetch returns null)', arrange: () => { query.mockResolvedValue({ rows: [{ icon_url: 'https://10.0.0.1/i.png' }] }); safeFetch.mockResolvedValue(null) } },
+    { reason: 'upstream status 404', arrange: () => { query.mockResolvedValue({ rows: [{ icon_url: 'https://h.example/i.png' }] }); safeFetch.mockResolvedValue(fakeRes({ ok: false })) } },
+    { reason: 'over the 512 KiB limit', arrange: () => { query.mockResolvedValue({ rows: [{ icon_url: 'https://h.example/i.png' }] }); safeFetch.mockResolvedValue(fakeRes({ contentType: 'image/png', body: BIG })) } },
+    { reason: 'wrong content type', arrange: () => { query.mockResolvedValue({ rows: [{ icon_url: 'https://h.example/i.png' }] }); safeFetch.mockResolvedValue(fakeRes({ contentType: 'text/html', body: Buffer.from('<img>') })) } },
+    { reason: 'SVG', arrange: () => { query.mockResolvedValue({ rows: [{ icon_url: 'https://h.example/i.svg' }] }); safeFetch.mockResolvedValue(fakeRes({ contentType: 'image/svg+xml', body: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>') })) } },
+    { reason: 'empty body', arrange: () => { query.mockResolvedValue({ rows: [{ icon_url: 'https://h.example/i.png' }] }); safeFetch.mockResolvedValue(fakeRes({ contentType: 'image/png', body: Buffer.alloc(0) })) } },
+    { reason: 'internal error (database throws)', arrange: () => { query.mockRejectedValue(new Error('db down')) } },
+    { reason: 'internal error (safeFetch throws)', arrange: () => { query.mockResolvedValue({ rows: [{ icon_url: 'https://h.example/i.png' }] }); safeFetch.mockRejectedValue(new Error('boom')) } },
+  ]
+
+  it('answers every unservable-icon reason with the identical 204: no body, same headers (no oracle)', async () => {
+    const seen: { reason: string; status: number; text: string; headers: Record<string, unknown> }[] = []
+    for (const { reason, arrange } of REASONS) {
+      query.mockReset(); safeFetch.mockReset()
+      const { _resetMintIconCache } = await import('../../mintIcon.js')
+      _resetMintIconCache()
+      arrange()
+      const res = await request(app).get('/api/mint/icon?url=https://mint.example')
+      seen.push({ reason, status: res.status, text: res.text, headers: withoutDate(res.headers) })
+    }
+    for (const s of seen) {
+      expect(s.status, s.reason).toBe(204)
+      expect(s.text, s.reason).toBe('')
+      expect(s.headers['cache-control'], s.reason).toBe('public, max-age=1800')
+      expect(s.headers['content-type'], s.reason).toBeUndefined()
+      expect(s.headers['content-length'], s.reason).toBeUndefined()
+      expect(s.headers, s.reason).toEqual(seen[0]!.headers)
+    }
+  })
+
+  it('answers a mint whose icon host is SSRF-blocked exactly like a mint without an icon', async () => {
+    query.mockResolvedValue({ rows: [{ icon_url: 'https://127.0.0.1/i.png' }] })
+    // The real safeFetch is stubbed (it returns null for a blocked address, never throws).
+    safeFetch.mockResolvedValue(null)
+    const blocked = await request(app).get('/api/mint/icon?url=https://blocked.example').expect(204)
+
+    query.mockResolvedValue({ rows: [{ icon_url: null }] })
+    const missing = await request(app).get('/api/mint/icon?url=https://missing.example').expect(204)
+
+    expect(withoutDate(blocked.headers)).toEqual(withoutDate(missing.headers))
+    expect(blocked.text).toBe(missing.text)
+  })
+
+  it('keeps the 512 KiB limit: exactly 512 KiB is served, one byte more is not', async () => {
+    const atLimit = Buffer.concat([PNG, Buffer.alloc(512 * 1024 - PNG.length)])
+    query.mockResolvedValue({ rows: [{ icon_url: 'https://h.example/i.png' }] })
+    safeFetch.mockResolvedValue(fakeRes({ contentType: 'image/png', body: atLimit }))
+    await request(app).get('/api/mint/icon?url=https://limit-ok.example').expect(200)
+    safeFetch.mockResolvedValue(fakeRes({ contentType: 'image/png', body: Buffer.concat([atLimit, Buffer.alloc(1)]) }))
+    await request(app).get('/api/mint/icon?url=https://limit-over.example').expect(204)
   })
 
   it('is exempt from the per-IP rate limit (favicons burst on a dashboard load)', async () => {

@@ -68,6 +68,17 @@ describe('MintFavicon', () => {
     expect(container.querySelector('img')).toBeNull()
   })
 
+  it('does not retry the same url in a loop: one error event, one monogram, no <img> left to request again', () => {
+    const { container, rerender } = render(
+      <MintFavicon url="https://noloop.example" iconUrl="https://noloop.example/i.png" />,
+    )
+    fireEvent.error(container.querySelector('img')!)
+    // A re-render with the same props (what a 204 answer to the proxy request leads to) must not bring the <img> back.
+    rerender(<MintFavicon url="https://noloop.example" iconUrl="https://noloop.example/i.png" />)
+    expect(container.querySelector('img')).toBeNull()
+    expect(screen.getAllByLabelText(/mint icon placeholder/)).toHaveLength(1)
+  })
+
   it('remembers a failed load across remounts and skips the request entirely', () => {
     const first = render(
       <MintFavicon url="https://flaky.example" iconUrl="https://flaky.example/i.png" />,
