@@ -179,18 +179,19 @@ describe('auditNeutralReason (the audit rule decides)', () => {
 describe('include= and the single-mint endpoint', () => {
   it('the default list has none of the heavy fields', async () => {
     const m = (await list()).body.mints[0]
-    for (const k of ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'keysets', 'keysetsCheckedAt', 'methods', 'scoreBreakdown']) expect(m, k).not.toHaveProperty(k)
+    for (const k of ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'keysets', 'keysetsCheckedAt', 'methods', 'scoreBreakdown', 'changes']) expect(m, k).not.toHaveProperty(k)
   })
 
   it('each include value adds exactly its own fields', async () => {
-    const ALL = ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'keysets', 'keysetsCheckedAt', 'methods', 'scoreBreakdown']
+    const ALL = ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'keysets', 'keysetsCheckedAt', 'methods', 'scoreBreakdown', 'changes']
     const keys = async (inc: string) => Object.keys((await list('?include=' + inc)).body.mints[0]).filter(k => ALL.includes(k)).sort()
     expect(await keys('facts')).toEqual(['firstSeenAt', 'lastOnlineAt', 'pubkey', 'sample'])
     expect(await keys('keysets')).toEqual(['keysets', 'keysetsCheckedAt'])
     expect(await keys('methods')).toEqual(['methods'])
     expect(await keys('breakdown')).toEqual(['scoreBreakdown'])
+    expect(await keys('changes')).toEqual(['changes'])
     expect(await keys('keysets,methods,breakdown')).toEqual(['keysets', 'keysetsCheckedAt', 'methods', 'scoreBreakdown'])
-    expect(await keys('breakdown,facts,methods,keysets')).toEqual([...ALL].sort())
+    expect(await keys('breakdown,facts,methods,keysets,changes')).toEqual([...ALL].sort())
     expect(await keys('breakdown,breakdown')).toEqual(['scoreBreakdown'])
   })
 
@@ -204,7 +205,7 @@ describe('include= and the single-mint endpoint', () => {
 
   it('the single-mint endpoint always carries every heavy field', async () => {
     const m = (await one('https://a.example.com')).body.mint
-    for (const k of ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'keysets', 'keysetsCheckedAt', 'methods', 'scoreBreakdown']) expect(m, k).toHaveProperty(k)
+    for (const k of ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'keysets', 'keysetsCheckedAt', 'methods', 'scoreBreakdown', 'changes']) expect(m, k).toHaveProperty(k)
   })
 
   it('different include sets are different cached bodies (and different ETags)', async () => {

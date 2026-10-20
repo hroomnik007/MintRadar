@@ -10,7 +10,7 @@ import { refreshAllMintReviews, recomputeReviewCountRollups, isReviewSyncRunning
 import { startReviewsSyncTimer } from './reviewsSchedule.js'
 import { refreshReliabilityMoversRollup } from './reliabilityMoversRollup.js'
 import { refreshReviewSurgeBaseline } from './reviewSurgeRollup.js'
-import { pool, pruneOldNotificationSubscriptions } from './db.js'
+import { pool, pruneOldNotificationSubscriptions, pruneOldMintChanges } from './db.js'
 import { logCronError } from './cronLog.js'
 import { publishServiceProfile } from './nostrService.js'
 import { fetchLatestUpstreamVersions } from './versionCatalog.js'
@@ -134,6 +134,8 @@ export function startCron(): void {
   cron.schedule('0 3 * * *', async () => {
     try {
       await pruneOldHistory()
+      const deleted = await pruneOldMintChanges()
+      console.log(`[cron] pruned ${deleted} mint change row(s) older than the retention`)
     } catch (err) {
       logCronError('prune', err)
     }

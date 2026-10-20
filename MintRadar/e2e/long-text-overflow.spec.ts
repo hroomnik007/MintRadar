@@ -564,7 +564,9 @@ const heroHit = (page: Page) => page.evaluate(() => {
     })
     return { height: bottom - top, neighbourHit: other.some(Boolean) }
   })
-  return { layout, hit, pageHeight: document.documentElement.scrollHeight }
+  // The hero's own height, not the page's: the labelled copy buttons further down (Signed health record row) follow the site's copy-button
+  // pattern, which is 44px tall on a coarse pointer (W4 Part F), so the whole page is legitimately taller on touch.
+  return { layout, hit, pageHeight: Math.round(document.querySelector('.md-header')!.getBoundingClientRect().height) }
 })
 
 for (const [width, minHit] of [[360, 43.5], [390, 43.5], [768, 43.5], [1440, 43.5], [320, 38]] as const) {
@@ -586,5 +588,44 @@ for (const [width, minHit] of [[360, 43.5], [390, 43.5], [768, 43.5], [1440, 43.
     expect(t.layout).toEqual(m.layout)
     expect(t.pageHeight).toBe(m.pageHeight)
     for (const h of m.hit) expect(h.height).toBeLessThan(35) // no extension without a coarse pointer
+  })
+}
+
+// ── Header: a 600-character lastError is clamped to one line and overlaps nothing ───────────────────
+// At 1440px the badge sits in the absolute action group; with `max-width: 60vw` it grew leftwards over the avatar and the name.
+// The clamp is visual: the whole text is still in the badge, the ellipsis hides the rest. The other elements of the header (avatar,
+// name and status, URL, first-seen line, back button, the star and the buttons) never intersect it.
+const ERR600 = `Connection failed ${'very-long-error-text '.repeat(40)}`.slice(0, 600)
+for (const width of [1440, 768, 390, 320]) {
+  test(`Mint Detail: a 600-character lastError is clamped in the header and overlaps nothing @ ${width}px`, async ({ page }) => {
+    const { url } = await mount(page, { known: { online: false, lastError: ERR600 } }, { width })
+    await page.route('**/api/mint/probe**', r => r.fulfill({ status: 502, json: { error: 'down' } }))
+    await page.goto(`/mint/${encodeURIComponent(url)}`)
+    const badge = page.locator('.md-error-badge')
+    await expect(badge).toBeVisible()
+    await expect(badge).toHaveText(ERR600) // the full text is in the page; only the display is clamped
+    await settled(page)
+    const m = await page.evaluate(() => {
+      const badgeEl = document.querySelector('.md-error-badge') as HTMLElement
+      const b = badgeEl.getBoundingClientRect()
+      const header = document.querySelector('.md-header')!.getBoundingClientRect()
+      const hit = (r: DOMRect) => Math.min(b.right, r.right) - Math.max(b.left, r.left) > 1 && Math.min(b.bottom, r.bottom) - Math.max(b.top, r.top) > 1
+      const others: string[] = []
+      for (const sel of ['.md-hdr-favicon', '.md-name', '.md-status-inline', '.md-url', '.md-first-seen', '.md-back', '.md-watch-star-hero', '.md-quick-btn', '.md-compare-btn']) {
+        for (const el of document.querySelectorAll(sel)) {
+          const r = el.getBoundingClientRect()
+          if (r.width > 0 && r.height > 0 && hit(r)) others.push(`${sel} [${Math.round(r.left)}-${Math.round(r.right)} x ${Math.round(r.top)}-${Math.round(r.bottom)}]`)
+        }
+      }
+      return {
+        others, clamped: badgeEl.scrollWidth > badgeEl.clientWidth, lines: Math.round(b.height / parseFloat(getComputedStyle(badgeEl).lineHeight || '16')),
+        left: b.left, right: b.right, hLeft: header.left, hRight: header.right, vw: document.documentElement.clientWidth, sw: document.documentElement.scrollWidth,
+      }
+    })
+    expect(m.clamped, 'the badge is clamped (its text is wider than the box)').toBe(true)
+    expect(m.others, 'elements the badge overlaps').toEqual([])
+    expect(m.left, 'inside the header, left').toBeGreaterThanOrEqual(m.hLeft - 1)
+    expect(m.right, 'inside the header, right').toBeLessThanOrEqual(m.hRight + 1)
+    expect(m.sw, 'no horizontal page scroll').toBeLessThanOrEqual(m.vw + 1)
   })
 }

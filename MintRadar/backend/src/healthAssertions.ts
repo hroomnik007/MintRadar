@@ -87,6 +87,8 @@ export interface HealthInput {
   /** The keysets of the latest successful keysets check (wallet API keysets) and when that check ran. */
   keysets?: readonly WalletKeyset[]
   keysetsCheckedAt?: string | null
+  /** Time of the newest confirmed change in the mint's public data (wallet API changes[0].observedAt); the tag is left out when null. */
+  lastChangeAt?: string | null
   /** Current time, ms. */
   now: number
 }
@@ -157,8 +159,9 @@ function keysetTags(keysets: readonly WalletKeyset[] | undefined, checkedAtIso: 
  * that may not appear in an event). Tags, in this order (v1 names are fixed): d, k, rank, mint_status,
  * mint_uptime_24h, mint_uptime_7d, mint_software, mint_outdated, mint_audit_swaps_7d, mint_audit_attributed_7d,
  * mint_audit_at, mint_test, mint_new_capped, mint_checked_at, mint_probes_24h, mint_down_since, mint_keysets_verified,
- * mint_keysets_legacy, mint_keysets_id_invalid, mint_keyset_final_expiry, mint_keysets_checked_at, methodology,
- * methodology_url, expiration (the seven tags between mint_checked_at and methodology were added 2026-10-20).
+ * mint_keysets_legacy, mint_keysets_id_invalid, mint_keyset_final_expiry, mint_keysets_checked_at, mint_last_change, methodology,
+ * methodology_url, expiration (the seven tags between mint_checked_at and methodology were added 2026-10-20; mint_last_change, present only when
+ * the mint has a confirmed change in its public data, on 2026-10-20).
  * A tag whose value is unknown (no uptime yet, version rule cannot decide, no probe time) is omitted, never guessed.
  */
 export function buildHealthEvent(input: HealthInput): EventTemplate | null {
@@ -198,6 +201,9 @@ export function buildHealthEvent(input: HealthInput): EventTemplate | null {
   const downSince = input.status === 'online' ? null : unixSeconds(input.downSince ?? null)
   if (downSince !== null) tags.push(['mint_down_since', String(downSince)])
   tags.push(...keysetTags(input.keysets, input.keysetsCheckedAt))
+  // Informational only: it never takes part in the publish decision (publishReason), it just appears in the next event.
+  const lastChange = unixSeconds(input.lastChangeAt ?? null)
+  if (lastChange !== null) tags.push(['mint_last_change', String(lastChange)])
   tags.push(
     ['methodology', String(METHODOLOGY_VERSION)],
     ['methodology_url', METHODOLOGY_URL],

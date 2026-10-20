@@ -221,6 +221,30 @@ describe('enabled mode', () => {
 
 // ── Planning ─────────────────────────────────────────────────────────────────
 
+describe('planCycle — a recorded change never causes a publication (mint_last_change)', () => {
+  const SEC = Math.floor(NOW / 1000)
+  const fresh = (over: Partial<PublishedState> = {}): PublishedState => ({ lastCreatedAt: SEC - 3600, lastRank: 80, lastStatus: 'online', lastMethodology: METHODOLOGY_VERSION, ...over })
+  const extra = (changeAt: string | null) => new Map([['https://mint1.example.com', {
+    probes24h: 288, downSince: null, scoreBreakdown: null, keysets: [], keysetsCheckedAt: null,
+    changes: changeAt === null ? [] : [{ type: 'pubkey_changed', field: 'pubkey', oldValue: 'a', newValue: 'b', observedAt: changeAt, firstSeenAt: changeAt }],
+  }]])
+
+  it('a new change alone does not make a mint due (same rank, status and methodology, 1 hour after the last event)', () => {
+    const states = new Map([['https://mint1.example.com', fresh()]])
+    expect(planCycle([row(1)], states, NOW, { extras: extra(null) }).due).toEqual([])
+    expect(planCycle([row(1)], states, NOW, { extras: extra(new Date(NOW - 60_000).toISOString()) }).due).toEqual([])
+  })
+
+  it('the tag appears in the next event that is published for another reason, and only then', () => {
+    const states = new Map([['https://mint1.example.com', fresh({ lastCreatedAt: SEC - 25 * 3600 })]]) // the 24 hour refresh
+    const withChange = planCycle([row(1)], states, NOW, { extras: extra(new Date(NOW - 3_600_000).toISOString()) }).due
+    expect(withChange.map(p => p.reason)).toEqual(['periodic'])
+    expect(withChange[0]!.template.tags.map(t => t[0])).toContain('mint_last_change')
+    const without = planCycle([row(1)], states, NOW, { extras: extra(null) }).due
+    expect(without[0]!.template.tags.map(t => t[0])).not.toContain('mint_last_change')
+  })
+})
+
 describe('planCycle', () => {
   it('skips null-score and archived mints, publishes offline and test mints', () => {
     const rows = [

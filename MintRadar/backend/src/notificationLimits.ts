@@ -20,7 +20,7 @@ export const ALERT_COOLDOWN_HOURS: Record<AlertKind, number> = {
  */
 export const CLEAR_PROBES_TO_REARM = 12
 
-/** At most this many notification DMs per subscriber pubkey (all mints, all five types) per window. */
+/** At most this many notification DMs per subscriber pubkey (all mints, all seven types: down, up, the three "More alerts", public key change, input fee change) per window. */
 export const DM_DAILY_CAP = 40
 /** The window starts with the first DM and lasts this long; the first DM after it starts a new one. */
 export const DM_CAP_WINDOW_HOURS = 24

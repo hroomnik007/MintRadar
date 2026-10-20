@@ -253,6 +253,8 @@ interface ClaimedRow {
   claimed_at: Date
   /** "More alerts" only: the claim column's value before this claim (restored when the send fails). */
   prev_at?: Date | null
+  /** Change DMs only: last_notified_change_id before this claim (restored when the send fails). */
+  prev_id?: string | null
 }
 
 type DeliveryOutcome = 'sent' | 'failed' | 'dropped'
@@ -491,3 +493,93 @@ export async function recordAlertClear(mintUrl: string, kind: AlertKind): Promis
     console.error(`[notify] recordAlertClear(${kind}) error for mint=${mintUrl}:`, err)
   }
 }
+
+// ---------------------------------------------------------------------------
+// Mint change DMs (mintChanges.ts): a CONFIRMED public key change and a CONFIRMED input fee change, nothing else
+// (MOTD, description, version, keysets and the rest never send a DM). Same rule as every text above: fixed template,
+// the hostname, the link, and only values this module validates itself (a date, integers, and a unit from the short
+// allow-list below; any other unit is written "other"). Neutral and factual: no verdict, no advice.
+// ---------------------------------------------------------------------------
+export interface ChangeNotice {
+  /** mint_changes.id: the dedupe claim is the newest id a subscriber was told about. */
+  id: number
+  type: 'pubkey_changed' | 'input_fee_changed'
+  observedAt: Date
+  /** input_fee_changed: the units whose fee differs (null = no active keyset with a stated fee). */
+  fees?: Array<{ unit: string; old: number | null; new: number | null }>
+}
+
+const DM_FEE_UNITS: readonly string[] = ['sat', 'msat', 'usd', 'eur', 'btc']
+
+export function dmUtcTime(d: Date): string {
+  return `${d.toISOString().slice(0, 16).replace('T', ' ')} UTC`
+}
+
+const ppk = (n: number | null): string => (n === null ? 'none' : String(Math.trunc(n)))
+
+export const CHANGE_DM_SENTENCES = {
+  pubkey_changed: (host: string, when: string) => `Mint ${host} changed its public key on ${when}.`,
+  input_fee_changed: (host: string, when: string, fees: Array<{ unit: string; old: number | null; new: number | null }>) =>
+    `Mint ${host} changed its input fee on ${when}: ` +
+    fees.map(f => `${ppk(f.old)} → ${ppk(f.new)} ppk (${DM_FEE_UNITS.includes(f.unit) ? f.unit : 'other'})`).join('; ') + '.',
+} as const
+
+/** One DM for everything confirmed in the same run: one sentence per change, then the link. */
+export function buildChangeDmText(mintUrl: string, notices: readonly ChangeNotice[]): string {
+  const host = dmHostname(mintUrl)
+  const sentences = notices.map(n => n.type === 'pubkey_changed'
+    ? CHANGE_DM_SENTENCES.pubkey_changed(host, dmUtcTime(n.observedAt))
+    : CHANGE_DM_SENTENCES.input_fee_changed(host, dmUtcTime(n.observedAt), n.fees ?? []))
+  return `ℹ️ ${sentences.join('\n')}\nView details: ${MINTRADAR_ORIGIN}/mint/${encodeURIComponent(mintUrl)}`
+}
+
+/**
+ * Sends the change DM to every ACTIVE subscriber of the mint (at least one notification flag on) once per change row:
+ * the claim is last_notified_change_id < the newest id of this run, taken atomically (row lock + re-check, like
+ * notifyAlert), given back when nothing went out. Every claimed DM also takes a slot of the daily cap (deliverDm).
+ * Never throws.
+ */
+export async function notifyMintChanges(mintUrl: string, notices: readonly ChangeNotice[]): Promise<void> {
+  if (!serviceSecretKey || notices.length === 0) return
+  const secretKey = serviceSecretKey
+  const newestId = Math.max(...notices.map(n => n.id))
+  try {
+    const claimed = await pool.query(
+      `WITH cand AS (
+         SELECT ns.pubkey, ns.mint_url, ns.last_notified_change_id AS prev_id
+           FROM notification_subscriptions ns
+          WHERE ns.mint_url = $1
+            AND (ns.notify_on_down OR ns.notify_on_up OR ns.notify_on_mint_melt_issues
+                 OR ns.notify_on_version_outdated OR ns.notify_on_nut_loss)
+            AND (ns.last_notified_change_id IS NULL OR ns.last_notified_change_id < $2::bigint)
+            FOR UPDATE OF ns
+       )
+       UPDATE notification_subscriptions ns
+          SET last_notified_change_id = $2::bigint
+         FROM cand
+        WHERE ns.pubkey = cand.pubkey AND ns.mint_url = cand.mint_url
+       RETURNING ns.pubkey, ns.relays, cand.prev_id AS prev_id`,
+      [mintUrl, newestId]
+    )
+    const rows = (claimed.rows as ClaimedRow[]).map(r => ({ ...r, claimed_at: new Date() }))
+    if (rows.length === 0) return
+
+    const message = buildChangeDmText(mintUrl, notices)
+    const releaseClaim = (row: ClaimedRow) =>
+      pool.query(
+        `UPDATE notification_subscriptions SET last_notified_change_id = $4::bigint
+         WHERE pubkey = $1 AND mint_url = $2 AND last_notified_change_id = $3::bigint`,
+        [row.pubkey, mintUrl, newestId, row.prev_id ?? null]
+      ).catch(err => console.error(`[notify] failed to release change claim for ${row.pubkey.slice(0, 8)}…:`, err))
+
+    const count = { sent: 0, failed: 0, dropped: 0 }
+    const stats: RunStats = { skippedRelays: 0 }
+    for (const row of rows) {
+      count[await deliverDm(secretKey, row, message, `change send error for mint=${mintUrl}`, releaseClaim, stats)]++
+    }
+    console.log(`[notify] change-alert for ${mintUrl}: claimed ${rows.length}, ${summaryLine(count.sent, count.failed, count.dropped, stats.skippedRelays)}`)
+  } catch (err) {
+    console.error(`[notify] notifyMintChanges error for mint=${mintUrl}:`, err)
+  }
+}
+

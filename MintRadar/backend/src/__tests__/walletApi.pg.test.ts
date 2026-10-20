@@ -34,6 +34,11 @@ describe.skipIf(!url)('wallet API snapshot SQL against a real Postgres', () => {
         VALUES ($1, '00k1', 'sat', true, 100, 'v1', true, NOW() - INTERVAL '1 second', NOW()),
                ($1, '00k2', 'sat', false, 0, 'v1', null, NOW() - INTERVAL '70 minutes', NOW() - INTERVAL '70 minutes')`, [up])
 
+      // change log: two confirmed changes on `up` (newest first), none on the others
+      await pool.query(`INSERT INTO mint_changes (url, change_type, field, old_value, new_value, observed_at, first_seen_at, source) VALUES
+        ($1, 'motd_changed', 'motd', 'a', 'b', NOW() - INTERVAL '2 hours', NOW() - INTERVAL '2 hours 5 minutes', 'info'),
+        ($1, 'input_fee_changed', 'input_fee', 'sat: 0 ppk', 'sat: 100 ppk', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 hour 5 minutes', 'keysets')`, [up])
+
       const { app } = await import('../index.js')
       const get = async (u: string) => (await request(app).get('/api/wallets/mints/' + encodeURIComponent(u))).body.mint
       const d = await get(down), u = await get(up), n = await get(never)
@@ -52,6 +57,13 @@ describe.skipIf(!url)('wallet API snapshot SQL against a real Postgres', () => {
       expect(u.keysets[0]).toMatchObject({ unit: 'sat', active: true, inputFeePpk: 100, idVersion: 'v1', idValid: true, finalExpiry: null })
       expect(u.keysetsCheckedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
       expect(u.scoreBreakdown).toBeNull()
+      expect(u.changes.map((c: { type: string }) => c.type)).toEqual(['input_fee_changed', 'motd_changed'])
+      expect(u.changes[0]).toEqual({ type: 'input_fee_changed', field: 'input_fee', oldValue: 'sat: 0 ppk', newValue: 'sat: 100 ppk', observedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/), firstSeenAt: expect.stringMatching(/Z$/) })
+      expect(d.changes).toEqual([])
+      expect(n.changes).toEqual([])
+      const since = new Date(Date.now() - 90 * 60_000).toISOString()
+      const changed = (await request(app).get('/api/wallets/mints').query({ changedSince: since, includeOffline: 'true', includeUnscored: 'true' })).body
+      expect(changed.mints.map((m: { url: string }) => m.url)).toEqual([up])
 
       // never online: the streak starts at its first retained failure
       const first = (await pool.query(`SELECT MIN(checked_at) AS t FROM mint_history WHERE url = $1`, [never])).rows[0].t as Date

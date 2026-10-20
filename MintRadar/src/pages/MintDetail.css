@@ -2040,8 +2040,20 @@ a.review-action-btn { color: var(--text3); }
 /* A very long lastError (offline mint) used to run ~2000px past the header: the badge is nowrap and its
    flex parents could not shrink. Cap it at the row and ellipsize; short errors are unchanged. */
 .md-hdr-error { min-width: 0; max-width: 100%; }
-/* Desktop: .md-hdr-center never shrinks (flex-shrink: 0), so a percentage cap would be circular — cap by viewport. */
-@media (min-width: 641px) { .md-hdr-error { max-width: 60vw; } }
+/* From 641px the badge shares the action row with the buttons. A 60vw cap pushed the row past the viewport (641-768px: Compare
+   ended up off screen) and, from 769px, where the group sits absolutely at the bottom-right corner of the header, made it grow
+   leftwards over the avatar and the name. The group may now shrink: the badge is the one thing that gives way (single-line ellipsis,
+   as before), the buttons keep their size, and from 769px the group never takes more than 56% of the header. The full text stays
+   where it is shown in full (the unavailable block, capped at 120 characters). */
+@media (min-width: 641px) {
+  .md-hdr-error { flex: 0 1 auto; max-width: none; }
+  .md-hdr-actions { min-width: 0; max-width: 100%; }
+  .md-hdr-center { flex-shrink: 1; min-width: 0; }
+  .md-hdr-center .md-quick-btn { flex-shrink: 0; }
+}
+@media (min-width: 769px) {
+  .md-header .md-hdr-actions { max-width: 56%; }
+}
 .md-error-badge { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* History tab summary cards (Avg Latency / Uptime / Reliability): inline `repeat(3,1fr)` tracks cannot
@@ -2661,9 +2673,23 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 
 .md-hr-row { flex-wrap: wrap; gap: 6px 12px; align-items: center; }
 .md-hr-value { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 8px; max-width: 100%; word-break: normal; font-family: var(--font-body, inherit); font-size: 13px; }
-.md-hr-btn { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 3px 9px; font-size: 12px; font-family: var(--font-mono); color: var(--text2); background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
-.md-hr-btn:hover { color: var(--text); }
-.md-hr-btn.copied { color: var(--accent); }
 .md-hr-none { font-size: 13px; color: var(--text3); }
 .md-hr-link { font-size: 12px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; }
 @media (max-width: 640px) { .md-hr-value { flex-basis: 100%; justify-content: flex-start; } }
+
+/* ── Change log (Mint Detail → Overview): confirmed changes in the mint's public data. Values wrap (overflow-wrap) on every width.
+   The placeholder is as tall as the empty state, so the panel does not move while the (lazy) request is in flight. ── */
+.md-changes-placeholder { height: 46px; border-radius: 8px; background: var(--bg3); }
+.md-changes-empty { font-size: 13px; line-height: 1.45; color: var(--text2); min-height: 46px; }
+.md-changes-since { margin-top: 2px; font-size: 12px; color: var(--text3); font-family: var(--font-mono); }
+.md-changes-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.md-change { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; min-width: 0; }
+.md-change-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 2px 12px; }
+.md-change-type { font-size: 13px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; min-width: 0; }
+.md-change-time { font-size: 11.5px; color: var(--text3); font-family: var(--font-mono); white-space: nowrap; }
+.md-change-vals { margin-top: 5px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
+.md-change-val { font-size: 12.5px; line-height: 1.45; font-family: var(--font-mono); color: var(--text2); overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
+.md-change-new { color: var(--text); }
+.md-change-arrow { color: var(--text3); flex: none; }
+.md-change-first { margin-top: 4px; font-size: 11.5px; color: var(--text3); }
+.md-changes-toggle { margin-top: 10px; }

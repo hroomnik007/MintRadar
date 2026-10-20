@@ -62,6 +62,18 @@ export interface WalletExtra {
   /** Keysets present in the latest successful keysets check, ordered by id. */
   keysets: WalletKeyset[]
   keysetsCheckedAt: string | null
+  /** Confirmed changes of the mint's public data (mint_changes), newest first, at most 50. */
+  changes: WalletChange[]
+}
+
+/** One confirmed change (docs/API.md "Mint change log"); times are ISO 8601, the Nostr tags use UNIX seconds. */
+export interface WalletChange {
+  type: string
+  field: string
+  oldValue: string | null
+  newValue: string | null
+  observedAt: string
+  firstSeenAt: string
 }
 
 export interface WalletKeyset {
@@ -79,7 +91,9 @@ export interface WalletMethodEntry { method: string; unit: string; minAmount: nu
 export type AuditNeutralReason = 'low_sample' | 'stale' | 'no_data'
 
 export const WALLET_METHODS = ['bolt11', 'bolt12', 'onchain'] as const
-export const WALLET_INCLUDES = ['facts', 'keysets', 'methods', 'breakdown'] as const
+export const WALLET_INCLUDES = ['facts', 'keysets', 'methods', 'breakdown', 'changes'] as const
+/** `include=changes` on the list returns this many newest changes per mint; the single-mint endpoint returns up to 50. */
+export const WALLET_LIST_CHANGES_CAP = 10
 export type WalletInclude = typeof WALLET_INCLUDES[number]
 
 export type WalletMintStatus = 'online' | 'offline' | 'degraded' | 'archived'
@@ -115,9 +129,10 @@ export interface WalletMint {
   keysetsCheckedAt: string | null
   methods: { mint: WalletMethodEntry[]; melt: WalletMethodEntry[] } | null
   scoreBreakdown: ScoreBreakdown | null
+  changes: WalletChange[]
 }
 
-const HEAVY_KEYS = { facts: ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample'], keysets: ['keysets', 'keysetsCheckedAt'], methods: ['methods'], breakdown: ['scoreBreakdown'] } as const
+const HEAVY_KEYS = { facts: ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample'], keysets: ['keysets', 'keysetsCheckedAt'], methods: ['methods'], breakdown: ['scoreBreakdown'], changes: ['changes'] } as const
 
 function toIso(v: string | Date | null | undefined): string | null {
   if (v === null || v === undefined) return null
@@ -182,6 +197,24 @@ export function methodsOf(mint: Record<string, unknown>[] | null | undefined, me
     return out
   }
   return { mint: clean(mint), melt: clean(melt) }
+}
+
+/** The changes_json column of the snapshot query (newest first) as WalletChange[]; entries of the wrong shape are dropped. */
+export function changesOf(raw: unknown): WalletChange[] {
+  if (!Array.isArray(raw)) return []
+  const out: WalletChange[] = []
+  for (const e of raw as Array<Record<string, unknown> | null>) {
+    if (e === null || typeof e !== 'object') continue
+    const { type, field, old, new: next, observed, first } = e
+    if (typeof type !== 'string' || typeof field !== 'string' || typeof observed !== 'string' || typeof first !== 'string') continue
+    out.push({
+      type, field,
+      oldValue: typeof old === 'string' ? old : null,
+      newValue: typeof next === 'string' ? next : null,
+      observedAt: observed, firstSeenAt: first,
+    })
+  }
+  return out
 }
 
 /** The keysets_json column of the snapshot query as WalletKeyset[]; entries of the wrong shape are dropped. */
@@ -261,6 +294,7 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviews
     keysetsCheckedAt: extra?.keysetsCheckedAt ?? null,
     methods: methodsOf(m.mintMethods, m.meltMethods),
     scoreBreakdown: extra?.scoreBreakdown ?? null,
+    changes: extra?.changes ?? [],
   }
 }
 
@@ -289,6 +323,8 @@ export interface WalletListFilter {
   maxInputFeePpk?: number
   /** The `include` query parameter: which heavier fields the list objects carry. */
   include: WalletInclude[]
+  /** The `changedSince` query parameter (ms): keep mints with a confirmed change observed after this time. */
+  changedSince?: number
 }
 
 /** The largest fee the keysets collection stores (keysetsSync.ts MAX_FEE_PPK); the bound of `maxInputFeePpk`. */
@@ -296,6 +332,17 @@ export const WALLET_MAX_FEE_PPK = 1_000_000
 
 /** The most NUT numbers one `nuts` value may list (there are fewer than 30 NUTs). */
 export const WALLET_NUTS_MAX = 32
+
+const CHANGED_SINCE_MESSAGE = 'changedSince must be a single ISO 8601 UTC time such as 2026-10-20T12:00:00Z (a bare date means 00:00 UTC), or UNIX seconds'
+const ISO_SINCE_RE = /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2}))?$/
+
+/** ISO 8601 (date, or date and time WITH Z or an offset) or UNIX seconds (9 to 11 digits) as milliseconds; null when it is neither. */
+export function parseChangedSince(v: string): number | null {
+  if (/^\d{9,11}$/.test(v)) return Number(v) * 1000
+  if (!ISO_SINCE_RE.test(v)) return null
+  const ms = Date.parse(v.length === 10 ? `${v}T00:00:00Z` : v)
+  return Number.isFinite(ms) ? ms : null
+}
 
 export type QueryResult = { ok: true; filter: WalletListFilter } | { ok: false; message: string }
 
@@ -363,6 +410,13 @@ export function parseWalletListQuery(q: Record<string, unknown>): QueryResult {
     const list = include.split(',').map(v => v.trim())
     if (!list.every(v => (WALLET_INCLUDES as readonly string[]).includes(v))) return { ok: false, message: `include must be a comma-separated list of: ${WALLET_INCLUDES.join(', ')}` }
     filter.include = WALLET_INCLUDES.filter(v => list.includes(v))
+  }
+  const changedSince = single(q, 'changedSince')
+  if (changedSince === null || changedSince === '') return { ok: false, message: CHANGED_SINCE_MESSAGE }
+  if (changedSince !== undefined) {
+    const ms = parseChangedSince(changedSince)
+    if (ms === null) return { ok: false, message: CHANGED_SINCE_MESSAGE }
+    filter.changedSince = ms
   }
   const limit = single(q, 'limit')
   if (limit === null) return { ok: false, message: 'limit must be a single integer' }
@@ -436,6 +490,7 @@ export function matchWalletMints(mints: WalletMint[], f: WalletListFilter): Wall
       if (f.requiredNuts && !f.requiredNuts.every(n => nutRequirementMet(m, n))) return false
       if (f.method !== undefined && !methodRequirementMet(m, f.method, f.unit)) return false
       if (f.maxInputFeePpk !== undefined && !feeRequirementMet(m, f.maxInputFeePpk, f.unit)) return false
+      if (f.changedSince !== undefined && !m.changes.some(c => Date.parse(c.observedAt) > (f.changedSince as number))) return false
       return true
     })
     .sort(compareWalletMints)
@@ -467,6 +522,7 @@ function withIncludes(m: WalletMint, include: readonly WalletInclude[]): object 
     if (include.includes(group)) continue
     for (const key of HEAVY_KEYS[group]) delete out[key]
   }
+  if (include.includes('changes')) out['changes'] = m.changes.slice(0, WALLET_LIST_CHANGES_CAP)
   return out
 }
 

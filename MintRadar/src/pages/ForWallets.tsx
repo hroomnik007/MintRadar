@@ -264,6 +264,11 @@ export default function ForWallets() {
               <code>lastOnlineAt</code>, <code>downSince</code>, <code>hasOnion</code>, <code>authRequired</code>, <code>sample</code>, <code>auditNeutralReason</code>,{' '}
               <code>keysets</code>, <code>keysetsCheckedAt</code>, <code>methods</code> and <code>scoreBreakdown</code>; and the exposed CORS headers <code>Deprecation</code>, <code>Sunset</code> and <code>Link</code>.
             </li>
+            <li data-testid="additions-changes">
+              Also added {F.walletAdditionsOn}, with the mint change log: the mint field <code>changes</code> (on the single-mint endpoint, and in the list with <code>include=changes</code>), the list
+              parameter <code>changedSince</code> and the <code>include</code> value <code>changes</code>. The default list is unchanged. The signed health event gets one more tag, <code>mint_last_change</code>,
+              only for a mint that has a recorded change.
+            </li>
             <li>A removal is announced on this page and in <code>docs/API.md</code> at least {F.deprecationNoticeDays} days before it takes effect. A route that is going away also says so in its responses, with the <code>Deprecation</code> and <code>Sunset</code> headers and a <code>Link</code> header with <code>rel=&quot;successor-version&quot;</code>; the only route that does so today is the one below.</li>
             <li data-testid="recommend-deprecation">
               <strong>Deprecated: <code>GET /api/v1/mints/recommend</code></strong> (and <code>/api/mints/recommend</code>), since {F.recommendDeprecatedOn}. It may be removed from {F.recommendSunsetOn} on; until then it answers as before.

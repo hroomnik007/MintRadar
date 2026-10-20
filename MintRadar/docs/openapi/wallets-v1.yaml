@@ -34,7 +34,9 @@ info:
     list parameters `method`, `maxInputFeePpk` and `include`, the list fields `total` and `truncated`, the single-mint field
     `canonicalUrl` and the mint fields `pubkey`, `firstSeenAt`, `lastOnlineAt`, `downSince`, `hasOnion`, `authRequired`,
     `sample`, `auditNeutralReason`, `keysets`, `keysetsCheckedAt`, `methods` and `scoreBreakdown` (`pubkey`, `firstSeenAt`,
-    `lastOnlineAt`, `sample` and the last four only with `include` or on the single-mint endpoint). The integer
+    `lastOnlineAt`, `sample` and the last four only with `include` or on the single-mint endpoint). The mint change log
+    followed (also 2026-10-20): the mint field `changes` (single-mint endpoint and `include=changes`), the list parameter
+    `changedSince` and the `include` value `changes`; the default list is unchanged. The integer
     `methodology` changes whenever the score formula changes; scores of different methodology numbers are
     not comparable. The history is in `backend/src/shared/methodology.ts` and docs/API.md.
 
@@ -121,12 +123,21 @@ paths:
         - name: include
           in: query
           description: >-
-            Comma-separated list of `facts`, `keysets`, `methods`, `breakdown`: add the heavier fields of that name to every object
+            Comma-separated list of `facts`, `keysets`, `methods`, `breakdown`, `changes`: add the heavier fields of that name to every object
             (`facts` brings `pubkey`, `firstSeenAt`, `lastOnlineAt` and `sample`; `keysets` brings `keysets` and `keysetsCheckedAt`; `methods` brings
-            `methods`; `breakdown` brings `scoreBreakdown`).
+            `methods`; `breakdown` brings `scoreBreakdown`; `changes` brings the newest 10 `changes` of each mint).
             An unknown value is a `400`. Added 2026-10-20.
-          schema: { type: string, pattern: '^(facts|keysets|methods|breakdown)(,(facts|keysets|methods|breakdown))*$' }
-          example: 'facts,keysets,methods,breakdown'
+          schema: { type: string, pattern: '^(facts|keysets|methods|breakdown|changes)(,(facts|keysets|methods|breakdown|changes))*$' }
+          example: 'facts,keysets,methods,breakdown,changes'
+        - name: changedSince
+          in: query
+          description: >-
+            Keep mints with at least one confirmed change (see `changes`) observed after this time. Accepted: an ISO 8601 time with
+            `Z` or an offset (encode a `+` as `%2B`), a bare date (00:00 UTC) or UNIX seconds (9 to 11 digits); anything else is a `400`.
+            `total` and `truncated` count the matches. The JSON API writes times as ISO 8601, the Nostr tags use UNIX seconds.
+            Added 2026-10-20.
+          schema: { type: string }
+          example: '2026-10-20T12:00:00Z'
         - name: limit
           in: query
           description: Maximum number of mints. A value outside 1 to 200 is a `400`.
@@ -190,7 +201,7 @@ paths:
         any DNS lookup or outbound request. Any other scheme (`ftp://`, `javascript:`, `data:`, …) is `400 invalid_url`. A test, archived or offline mint is returned when asked for by URL; `status` and `isTest` tell
         them apart. If no mint has exactly this URL but exactly one differs from it only in the letter case of the path,
         that mint is returned and `canonicalUrl` holds its stored URL; with several candidates, or none, the answer is `404`.
-        The mint object carries every field here, including `keysets`, `keysetsCheckedAt`, `methods` and `scoreBreakdown`.
+        The mint object carries every field here, including `keysets`, `keysetsCheckedAt`, `methods`, `scoreBreakdown` and `changes`.
       parameters:
         - name: url
           in: path
@@ -349,8 +360,8 @@ components:
         Operational health of one mint. Never contains IP addresses, ASNs, hosting organisations, server locations,
         error messages, reviewer public keys, review texts or contact details. It does carry the mint's public NUT-06
         key (`pubkey`) and whether it advertises a Tor address (`hasOnion`). The fields from `pubkey` on were added on
-        2026-10-20; `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `keysets`, `keysetsCheckedAt`, `methods` and
-        `scoreBreakdown` are only present on the single-mint endpoint and in the list with the matching `include` value.
+        2026-10-20; `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `keysets`, `keysetsCheckedAt`, `methods`,
+        `scoreBreakdown` and `changes` are only present on the single-mint endpoint and in the list with the matching `include` value.
       required:
         - url
         - name
@@ -484,6 +495,25 @@ components:
           oneOf:
             - $ref: '#/components/schemas/ScoreBreakdown'
             - type: 'null'
+        changes:
+          type: array
+          items: { $ref: '#/components/schemas/Change' }
+          description: >-
+            Only with `include=changes` (the newest 10 per mint; always on the single-mint endpoint, the newest 50). Confirmed changes in the
+            mint's public data, newest first; an empty array when there are none. A difference is recorded only after two consecutive
+            successful observations. Facts with a source and a time, not a verdict. Added 2026-10-20.
+    Change:
+      type: object
+      required: [type, field, oldValue, newValue, observedAt, firstSeenAt]
+      properties:
+        type:
+          type: string
+          enum: [pubkey_changed, input_fee_changed, keyset_added, keyset_removed, keyset_deactivated, keyset_reactivated, keyset_final_expiry_changed, motd_changed, name_changed, description_changed, contact_changed, version_changed, nuts_changed, methods_changed]
+        field: { type: string, description: 'Short name of what changed: pubkey, motd, name, description, description_long, contact, version, nuts, methods, keyset or input_fee.' }
+        oldValue: { type: [string, 'null'], maxLength: 200, description: 'Plain text; URLs are replaced by [link], contacts are method kinds and a count only. Null when there is no old side (a keyset added).' }
+        newValue: { type: [string, 'null'], maxLength: 200, description: 'Same rules as oldValue. "multiple changes" for the summary row of a day with more than 20 changes of one mint and type.' }
+        observedAt: { type: string, format: date-time, description: When the change was confirmed by the second consecutive observation. }
+        firstSeenAt: { type: string, format: date-time, description: When the new value was first seen, before it was confirmed. }
     AuthRequired:
       type: object
       description: >-

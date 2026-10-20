@@ -2,7 +2,7 @@
 
 `early version` `optional`
 
-**Status: live since 2026-10-13 (first publication 17:48 UTC), early version.** MintRadar publishes these events now. The `mint_*` tags are MintRadar's own tags (see below), and the format may change before it is frozen. Since 2026-10-20 a status change is published at the next run instead of after up to 6 hours, and seven tags were added (`mint_probes_24h`, `mint_down_since` and five keyset tags). All changes are additive: no tag was renamed and none changed its meaning or format. Changes are announced in this document and on [mintradar.org/for-wallets](https://mintradar.org/for-wallets#signed-health-assertions), and every event carries the `methodology` integer.
+**Status: live since 2026-10-13 (first publication 17:48 UTC), early version.** MintRadar publishes these events now. The `mint_*` tags are MintRadar's own tags (see below), and the format may change before it is frozen. Since 2026-10-20 a status change is published at the next run instead of after up to 6 hours, and seven tags were added (`mint_probes_24h`, `mint_down_since` and five keyset tags). Later the same day one more tag was added, `mint_last_change`, present only for a mint with a recorded change in its public data. All changes are additive: no tag was renamed and none changed its meaning or format. Changes are announced in this document and on [mintradar.org/for-wallets](https://mintradar.org/for-wallets#signed-health-assertions), and every event carries the `methodology` integer.
 
 ## Abstract
 
@@ -56,7 +56,7 @@ This is an application of kind `30385` of [NIP-85](https://github.com/nostr-prot
 ["mint_down_since", "1791969003"],
 ```
 
-A signed event with all tags is about 1 kB (1.0 to 1.2 kB for the mints of 2026-10-20), far below the 64 kB event limit of common relays.
+A signed event with all tags is about 1 kB (1.0 to 1.25 kB for the mints of 2026-10-20; `mint_last_change` adds about 35 bytes), far below the 64 kB event limit of common relays.
 
 ## Tags
 
@@ -82,6 +82,7 @@ The `mint_*` tags are the **measurements**: what MintRadar observed. `rank` is t
 | `mint_keysets_id_invalid` | integer | active keysets whose id does not match their keys; only a confirmed mismatch counts, never an id that could not be checked |
 | `mint_keyset_final_expiry` | UNIX seconds | the earliest final expiry among the active keysets; present only if an active keyset has one |
 | `mint_keysets_checked_at` | UNIX seconds | when the keysets that the four tags above describe were last read from the mint (the latest successful check) |
+| `mint_last_change` | UNIX seconds | the time of the newest confirmed change in the mint's public data (public key, input fees, keysets, MOTD, name, description, contact methods, version, supported NUTs and methods) that MintRadar recorded; the same moment as `changes[0].observedAt` in the wallet API. **Present only when at least one change was recorded**, absent otherwise. It is informational: it never causes an event of its own (it appears in the next event published for the usual reasons), and it is a fact with a time, not a verdict. What changed is in the wallet API (`changes`) |
 | `methodology` | integer | version of the provider's scoring method; ranks of different versions are not comparable |
 | `methodology_url` | URL | where that method is described |
 | `expiration` | UNIX seconds | NIP-40: `created_at` + 172800 (48 hours) |

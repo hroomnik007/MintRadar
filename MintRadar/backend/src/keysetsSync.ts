@@ -15,6 +15,7 @@ import { createHash } from 'node:crypto'
 import { pool } from './db.js'
 import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 import { classifyKeysetId, verifyKeysetId, type KeysetIdVersion, type KeysetKeys } from './keysetId.js'
+import { recordKeysetsObservation } from './mintChanges.js'
 
 export const KEYSETS_SLOTS_PER_HOUR = 12
 /** Hard cap on keysets processed per mint; the rest is ignored (counted in the log line). */
@@ -123,6 +124,8 @@ export interface KeysetsDeps {
   store: (url: string, rows: StoredKeyset[]) => Promise<void>
   /** "url\nkeyset id" of verdicts that disagreed once and wait for the confirming check. */
   pendingMismatch: Set<string>
+  /** Mint change log: called with a complete, stored answer (never on a failure). Must not throw. */
+  onObserved?: (url: string, parsed: ParsedKeysets) => Promise<void>
 }
 
 export interface StoredKeyset extends ParsedKeyset {
@@ -179,6 +182,7 @@ export async function collectMintKeysets(url: string, deps: KeysetsDeps): Promis
   } catch {
     return { ...EMPTY, requests }
   }
+  await deps.onObserved?.(url, parsed)
   return { ok: true, requests, keysets: rows.length, verified, legacy, invalid, skipped: parsed.skipped, ignored: parsed.ignored }
 }
 
@@ -278,7 +282,7 @@ export async function runKeysetsTick(opts: KeysetsTickOptions = {}): Promise<Key
   const random = opts.random ?? Math.random
   const sleep = opts.sleep ?? defaultSleep
   const log = opts.log ?? ((line: string) => console.log(line))
-  const deps = opts.deps ?? { fetchJson: defaultFetchJson, store: defaultStore, pendingMismatch: sharedPending }
+  const deps = opts.deps ?? { fetchJson: defaultFetchJson, store: defaultStore, pendingMismatch: sharedPending, onObserved: recordKeysetsObservation }
   const slot = keysetsSlotAt(now().getMinutes())
   const stats: KeysetsTickStats = {
     skipped: null, slot, mints: 0, ok: 0, failed: 0, requests: 0, keysets: 0, verified: 0, legacy: 0, invalid: 0, ignored: 0,

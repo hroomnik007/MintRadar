@@ -59,6 +59,7 @@ export function inputFromWalletMint(w: WalletMint, now: number): HealthInput {
     downSince: w.downSince,
     keysets: w.keysets,
     keysetsCheckedAt: w.keysetsCheckedAt,
+    lastChangeAt: w.changes[0]?.observedAt ?? null,
     now,
   }
 }

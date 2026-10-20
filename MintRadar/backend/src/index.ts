@@ -10,6 +10,7 @@ import { getLatestVersionsMap } from './versionCatalog.js'
 import type { LatestVersions } from './shared/versionRule.js'
 import { METHODOLOGY_CHANGES } from './shared/methodology.js'
 import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
+import { listMintChanges, ROUTE_CHANGES_MAX, WALLET_CHANGES_PER_MINT } from './mintChanges.js'
 import { getAuditCzForMint, getAuditCzSyncStatus, auditCzSourceStatus, clampAuditCzLimit } from './auditCz.js'
 import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
 import { getLastVantageOutageAt } from './probeCycle.js'
@@ -27,7 +28,7 @@ import { isTestMint } from './testMints.js'
 import { publicMintName, publicMintNameOrHost } from './mintNames.js'
 import {
   usesWalletRateLimit, isRecommendPath, isPublicCorsPath, PUBLIC_CORS_EXPOSE_HEADERS, parseWalletListQuery, walletListEnvelope, walletSingleEnvelope, recommendEnvelope,
-  memoizedBody, cachedBodyOf, buildCachedBody, sendCachedBody, sendWalletError, queryOf, keysetsOf, type Snapshot, type WalletExtra,
+  memoizedBody, cachedBodyOf, buildCachedBody, sendCachedBody, sendWalletError, queryOf, keysetsOf, changesOf, type Snapshot, type WalletExtra,
 } from './walletApi.js'
 import { readStoredBreakdown } from './scoreBreakdown.js'
 import { setDeprecationHeaders, RECOMMEND_DEPRECATION } from './deprecation.js'
@@ -1481,6 +1482,12 @@ function computeKnownMints(): Promise<Snapshot> {
            FROM mint_keysets k
           WHERE k.url = m.url AND m.keysets_checked_at IS NOT NULL AND k.last_seen_at >= m.keysets_checked_at - INTERVAL '10 minutes'
         ) AS keysets_json,
+        -- Wallet API only: the newest confirmed changes of the mint (mintChanges.ts), same read as everything else.
+        (SELECT json_agg(json_build_object('type', c.change_type, 'field', c.field, 'old', c.old_value, 'new', c.new_value,
+                  'observed', to_char(c.observed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+                  'first', to_char(c.first_seen_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) ORDER BY c.observed_at DESC, c.id DESC)
+           FROM (SELECT * FROM mint_changes WHERE url = m.url ORDER BY observed_at DESC, id DESC LIMIT ${WALLET_CHANGES_PER_MINT}) c
+        ) AS changes_json,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
         h7.total_7d,
@@ -1655,6 +1662,7 @@ function computeKnownMints(): Promise<Snapshot> {
           scoreBreakdown: readStoredBreakdown(r.score_breakdown),
           keysets: keysetsOf(r.keysets_json),
           keysetsCheckedAt: r.keysets_checked_at ? new Date(r.keysets_checked_at as string | Date).toISOString() : null,
+          changes: changesOf(r.changes_json),
         })
       }
       const now = Date.now()
@@ -2003,6 +2011,34 @@ app.get('/api/mints/audit-cz', (req: Request, res: Response): void => {
     })
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/mints/audit-cz]', err)
+      res.status(500).json({ error: 'Internal server error' })
+    })
+})
+
+// GET /api/mints/changes?url= — the mint change log of ONE tracked mint (mintChanges.ts) for the Mint Detail page: the newest
+// confirmed changes (up to ROUTE_CHANGES_MAX) and when tracking of the mint started. A website route like /api/mints/known (the
+// default CORS allow-list and the general per-IP limit); the wallet API serves the same rows as `changes`. Unknown url -> 404,
+// so it is no oracle for anything but "is this mint tracked".
+app.get('/api/mints/changes', (req: Request, res: Response): void => {
+  const url = req.query['url']
+  if (typeof url !== 'string' || url.length === 0) {
+    res.status(400).json({ error: 'Missing required query parameter: url' })
+    return
+  }
+  if (url.length > MAX_URL_LENGTH || !url.startsWith('https://') || !isWellFormedMintUrl(url)) {
+    res.status(400).json({ error: 'Invalid url' })
+    return
+  }
+  pool.query('SELECT 1 FROM mints WHERE url = $1', [url])
+    .then(async found => {
+      if ((found.rowCount ?? 0) === 0) {
+        res.status(404).json({ error: 'Not found' })
+        return
+      }
+      sendCachedBody(res, buildCachedBody({ url, ...(await listMintChanges(url, ROUTE_CHANGES_MAX)) }), 60)
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[/api/mints/changes]', err)
       res.status(500).json({ error: 'Internal server error' })
     })
 })

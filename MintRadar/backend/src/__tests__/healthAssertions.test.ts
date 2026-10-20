@@ -202,6 +202,53 @@ describe('buildHealthEvent — probe, outage and keyset tags (added 2026-10-20)'
   })
 })
 
+describe('buildHealthEvent — mint_last_change (added 2026-10-20)', () => {
+  const tags = (over: Partial<HealthInput>) => buildHealthEvent(input(over))!.tags
+  const names = (over: Partial<HealthInput>) => tags(over).map(t => t[0])
+  const CHANGE = new Date(NOW - 5 * 86_400_000).toISOString()
+
+  it('is present only when the mint has a confirmed change, absent otherwise (an event looks exactly like before)', () => {
+    expect(names({})).not.toContain('mint_last_change')
+    expect(names({ lastChangeAt: null })).not.toContain('mint_last_change')
+    expect(names({ lastChangeAt: 'not a date' })).not.toContain('mint_last_change')
+    expect(names({ lastChangeAt: CHANGE })).toContain('mint_last_change')
+    expect(buildHealthEvent(input({ lastChangeAt: null }))).toEqual(buildHealthEvent(input()))
+  })
+
+  it('is UNIX seconds: a 10-digit integer equal to the change time (the API writes the same moment as ISO)', () => {
+    const v = tagMap(tags({ lastChangeAt: CHANGE }))['mint_last_change']!
+    expect(v).toMatch(/^\d{10}$/)
+    expect(Number(v)).toBe(Math.floor(Date.parse(CHANGE) / 1000))
+  })
+
+  it('sits after the keyset tags and before methodology; all other tags keep their names, values and order', () => {
+    const extra = { probes24h: 288, keysets: [keyset()], keysetsCheckedAt: CHECKED }
+    const without = buildHealthEvent(input(extra))!.tags
+    const withTag = buildHealthEvent(input({ ...extra, lastChangeAt: CHANGE }))!.tags
+    expect(withTag.filter(t => t[0] !== 'mint_last_change')).toEqual(without)
+    const order = withTag.map(t => t[0])
+    expect(order.indexOf('mint_last_change')).toBe(order.indexOf('mint_keysets_checked_at') + 1)
+    expect(order.indexOf('methodology')).toBe(order.indexOf('mint_last_change') + 1)
+    // and without keyset data it still precedes methodology
+    const bare = names({ lastChangeAt: CHANGE })
+    expect(bare.indexOf('methodology')).toBe(bare.indexOf('mint_last_change') + 1)
+  })
+
+  it('a mint that is archived still gets no event, with or without a change', () => {
+    expect(buildHealthEvent(input({ status: 'archived', lastChangeAt: CHANGE }))).toBeNull()
+  })
+
+  it('the signed event stays about 1.0 to 1.2 kB with every tag present', () => {
+    const full = buildHealthEvent(input({
+      status: 'degraded', probes24h: 288, downSince: CHECKED, keysets: [keyset({ finalExpiry: '2027-01-15T12:30:00Z' })], keysetsCheckedAt: CHECKED, lastChangeAt: CHANGE,
+    }))!
+    const signed = finalizeEvent(full, generateSecretKey())
+    const bytes = new TextEncoder().encode(JSON.stringify(signed)).length
+    expect(bytes).toBeGreaterThan(900)
+    expect(bytes).toBeLessThan(1300)
+  })
+})
+
 describe('buildHealthEvent — skipped mints', () => {
   it('null score, NaN score and archived mints get no event', () => {
     expect(buildHealthEvent(input({ score: null }))).toBeNull()

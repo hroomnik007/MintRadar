@@ -6,6 +6,8 @@ import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcStar } from '@/components/mint/IcStar'
+import { MintChangeLog } from '@/components/mint/MintChangeLog'
+import { CopyTextButton } from '@/components/mint/CopyTextButton'
 import { useMintProbe } from '@/hooks/useMintProbe'
 import {
   reviewSurgeText, AUDIT_MINTS_TEXT, AUDIT_MELTS_TEXT, auditSuccessRateText, uptimeRowText, auditRowText, NUT_ROW_TEXT,
@@ -1666,22 +1668,8 @@ function MintDetailContent({ url }: { url: string }) {
                 <span className="md-info-value md-hr-value">
                   {healthRecord ? (
                     <>
-                      {([['naddr', 'Copy naddr', 'Copy the Nostr address (naddr) of the signed health record', healthRecord.naddr], ['nak', 'Copy nak command', 'Copy a nak command that fetches the signed health record', healthRecord.nakCommand]] as const).map(([key, text, aria, value]) => (
-                        <button
-                          key={key}
-                          type="button"
-                          className={`md-hr-btn${copiedContact === `hr-${key}` ? ' copied' : ''}`}
-                          aria-label={aria}
-                          onClick={() => {
-                            void navigator.clipboard.writeText(value)
-                            setCopiedContact(`hr-${key}`)
-                            setTimeout(() => setCopiedContact(null), 2000)
-                          }}
-                        >
-                          {copiedContact === `hr-${key}` ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
-                          <span>{copiedContact === `hr-${key}` ? 'Copied' : text}</span>
-                        </button>
-                      ))}
+                      <CopyTextButton label="Copy naddr" what="the Nostr address (naddr) of the signed health record" value={healthRecord.naddr} />
+                      <CopyTextButton label="Copy nak command" what="a nak command that fetches the signed health record" value={healthRecord.nakCommand} />
                     </>
                   ) : (
                     <span className="md-hr-none">No current record</span>
@@ -1856,6 +1844,7 @@ function MintDetailContent({ url }: { url: string }) {
               )}
             </div>
           )}
+            <MintChangeLog url={url} />
           </>)}
 
           {activeTab === 'nuts' && (<>

@@ -42,6 +42,7 @@ const FULL_EXTRA: WalletExtra = {
     uptime: { points: 40, max: 40 }, audit: { points: 25, max: 25 }, nuts: { points: 6, max: 15 }, version: { points: 15, max: 15 },
     contact: { points: 5, max: 5 }, newMintCap: { points: 0, cap: 75 }, sum: 92,
   },
+  changes: [{ type: 'motd_changed', field: 'motd', oldValue: 'a', newValue: null, observedAt: '2026-10-13T11:00:00.000Z', firstSeenAt: '2026-10-13T10:55:00.000Z' }],
 }
 const EMPTY: KnownMintLike = {
   ...FULL, name: null, online: null, version: null, softwareLatest: null, nutsLimits: null, units: null,
@@ -134,11 +135,11 @@ function parseOk(q: Record<string, unknown>) {
 describe('list parameters: the table equals the real parser', () => {
   const INVALID: Record<string, string> = {
     unit: '!!', minScore: '101', includeOffline: 'maybe', includeArchived: 'maybe', includeTest: 'maybe',
-    includeUnscored: 'maybe', limit: '0', nuts: 'abc', eligible: 'maybe', method: 'lightning', maxInputFeePpk: '1000001', include: 'foo',
+    includeUnscored: 'maybe', limit: '0', nuts: 'abc', eligible: 'maybe', method: 'lightning', maxInputFeePpk: '1000001', include: 'foo', changedSince: 'yesterday',
   }
   const VALID: Record<string, string> = {
     unit: 'sat', minScore: '70', includeOffline: 'true', includeArchived: 'true', includeTest: 'true',
-    includeUnscored: 'true', limit: '20', nuts: '4,5', eligible: 'true', method: 'bolt12', maxInputFeePpk: '100', include: 'keysets,methods,breakdown',
+    includeUnscored: 'true', limit: '20', nuts: '4,5', eligible: 'true', method: 'bolt12', maxInputFeePpk: '100', include: 'keysets,methods,breakdown,changes', changedSince: '2026-10-20T12:00:00Z',
   }
 
   it('every documented parameter is read by the parser (an invalid value is rejected, a valid one accepted)', () => {

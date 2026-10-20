@@ -502,6 +502,32 @@ export async function initDb(): Promise<void> {
     // The per-component points behind last_reliability_score, written in the same UPDATE (scoreBreakdown.ts); NULL until
     // the next probe cycle after the deploy. Nullable, no default: a metadata-only change, no table rewrite.
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS score_breakdown JSONB',
+    // Confirmed changes in a mint's public data (mintChanges.ts): a difference becomes a row only after two consecutive
+    // successful observations. Facts with a source and a time; nothing here feeds the Reliability Score. Values are
+    // sanitised text (no URLs, no contact values). ON DELETE CASCADE removes the rows together with the mint.
+    `CREATE TABLE IF NOT EXISTS mint_changes (
+       id BIGSERIAL PRIMARY KEY,
+       url TEXT NOT NULL REFERENCES mints(url) ON DELETE CASCADE,
+       change_type TEXT NOT NULL,
+       field TEXT NOT NULL,
+       old_value TEXT,
+       new_value TEXT,
+       observed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+       first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+       source TEXT NOT NULL CHECK (source IN ('info', 'keysets'))
+     )`,
+    'CREATE INDEX IF NOT EXISTS idx_mint_changes_url_observed ON mint_changes(url, observed_at DESC)',
+    // The last CONFIRMED normalised values per mint (the baseline the next observation is compared with) and the time
+    // the mint was first observed. NULL info/keysets = never observed: the first observation is a baseline, no change.
+    `CREATE TABLE IF NOT EXISTS mint_change_state (
+       url TEXT PRIMARY KEY REFERENCES mints(url) ON DELETE CASCADE,
+       info JSONB,
+       keysets JSONB,
+       tracking_since TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+     )`,
+    // Newest mint_changes.id a subscriber was told about (public key / input fee DMs): the dedupe claim, one DM per change row.
+    'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_change_id BIGINT',
   ]
 
   for (const sql of migrations) {
@@ -520,6 +546,16 @@ export async function initDb(): Promise<void> {
       ('cdk', '0.17.5', NOW(), NULL)
     ON CONFLICT (software) DO NOTHING
   `)
+}
+
+/** Rows of mint_changes older than this are deleted by the daily maintenance job. */
+export const MINT_CHANGES_RETENTION_DAYS = 365
+
+export async function pruneOldMintChanges(): Promise<number> {
+  const result = await pool.query(
+    `DELETE FROM mint_changes WHERE observed_at < NOW() - INTERVAL '${MINT_CHANGES_RETENTION_DAYS} days'`
+  )
+  return result.rowCount ?? 0
 }
 
 // 30-day retention: a subscription not touched (created/updated) in 30 days

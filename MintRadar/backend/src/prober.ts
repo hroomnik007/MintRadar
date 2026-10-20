@@ -8,6 +8,7 @@ import { notifySubscribers, notifyAlert, recordAlertClear, isNotificationService
 import { mintMeltCondition, versionCondition, nutLossTransition, type Condition } from './alertTriggers.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { normalizeMintPubkey } from './mintPubkey.js'
+import { recordInfoObservation } from './mintChanges.js'
 import { computeScoreBreakdown } from './scoreBreakdown.js'
 import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type SafeFetchRejection } from './probeErrorKind.js'
 
@@ -562,6 +563,9 @@ export async function probeMintToDb(url: string, onDeferFailure?: (f: DeferredPr
             )
           }
 
+          // Mint change log (mintChanges.ts): compares the body fetched above, no extra request. Isolated: it never throws
+          // and never touches the probe result.
+          await recordInfoObservation(url, raw)
         }
       } catch { lastError = 'Invalid JSON response' }
 
