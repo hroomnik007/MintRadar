@@ -179,6 +179,8 @@ When a deployed change doesn't appear to users, verify in this order before assu
 
 ## Dependency policy (2026-10-14)
 
+- **Node 22 is required (2026-10-20):** `engines.node` is `>=22` in both `package.json` files, `.nvmrc` says `22`, the backend Dockerfile is `FROM node:22-alpine`, the deploy workflow uses 22. Node 20 fails the frontend and backend unit suites with `webidl.util.markAsUncloneable is not a function`. The engines field is a warning only (no `engine-strict` in any `.npmrc`, `package.json` or workflow); `src/__tests__/nodeEngine.test.ts` keeps the four places in step.
+
 Result of a read-only dependency audit followed by a cleanup (commits `d3833b8b`..`7f25ffad`): fewer packages, no new tool. `npm audit` was and is 0 in both roots.
 
 **Rules**
