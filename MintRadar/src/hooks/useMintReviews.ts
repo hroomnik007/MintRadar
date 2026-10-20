@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { verifyEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
+import { pickNewestProfileEvents } from '@/core/nostr/profileEvents'
 import { REVIEW_READ_RELAYS, PROFILE_RELAYS } from '@/core/nostr/relays'
 import { deduplicateByPubkey, parseReviewEvent, sortReviewsByNewest } from '@/utils/reviewUtils'
 
@@ -71,12 +72,10 @@ export function useMintReviews(mintUrl: string, extraPubkeys: string[] = []) {
       .then(profileEvents => {
         if (cancelled) return
         const profileMap: ProfileMap = {}
-        // querySync returns events in relay-arrival order, not by created_at — sort
-        // newest-first (same idiom nostr-tools' own SimplePool.get() uses internally)
-        // so a slower relay serving a stale cached kind:0 can't clobber a newer one.
-        const sorted = [...profileEvents].sort((a, b) => b.created_at - a.created_at)
-        for (const e of sorted) {
-          if (profileMap[e.pubkey]) continue
+        // querySync returns events in relay-arrival order, not by created_at, and a relay can serve
+        // forged events or ones for other authors: only a verified kind:0 from a requested pubkey counts,
+        // and the newest one per pubkey (a slower relay's stale copy can't clobber a newer one).
+        for (const e of pickNewestProfileEvents(profileEvents, new Set(pubkeys)).values()) {
           try {
             const meta = JSON.parse(e.content) as { name?: string; nip05?: string; picture?: string }
             const p: { name?: string; nip05?: string; picture?: string } = {}

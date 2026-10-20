@@ -4,6 +4,14 @@
 
 `src/core/nostr/pool.ts` exports `sharedPool` — a single `SimplePool` instance patched with exponential backoff (1s base, doubles per attempt, 5-min cap, ±20% jitter). All frontend Nostr reads/writes must use `sharedPool`. Never call `sharedPool.destroy()`.
 
+## Nostr data rule (2026-10-20)
+Every event from a relay is checked before it is used: right `kind`, `verifyEvent()` true, `pubkey` one of the pubkeys that were asked for. A relay can ignore the `authors` filter, serve other kinds, stale copies or forged events, and a failed check is ignored silently (no log with the content). For replaceable events (kind 0, 3, 10002, 10003) the NEWEST valid event (`created_at`) is used, never the first to arrive.
+- **kind 0 (profiles):** frontend `pickNewestProfileEvents()` in `src/core/nostr/profileEvents.ts`, used by `useMintReviews` (reviewer profiles), `useMintOperatorNip05` and the Watchlist recommenders (`Watchlist.tsx`); backend `pickNewestProfileEvents()` in `backend/src/profilesSync.ts` (fills `nostr_profiles`). The two copies are separate (no shared package) and tested separately. Only the newest valid event is parsed: if it has no usable field, an older event is NOT consulted.
+- **kind 3 (follow list):** `fetchFollowRecs` keeps only kind 3, a valid signature and the user's own pubkey as author, sorts by `created_at` descending and uses the first.
+- **kind 10003 (watchlist):** `watchlistSync.ts` already validated and kept the newest.
+- **Deliberate exception (login latency path):** `subscribeFirstEvent()` / `bootstrapUserData()` in `src/core/nostr/client.ts` act on the FIRST valid event (kind in the filter, signature, pinned author) and close the subscription, so login is not held until the slowest relay answers. That includes the kind 10002 relay list, which `bootstrapUserData` also takes first-wins. They do not pick the newest.
+- A test that forges an event must build it field by field: a `{ ...ev }` spread of a `finalizeEvent()` result copies nostr-tools' internal "already verified" marker and the forged copy passes `verifyEvent()`.
+
 ## Reviews Feature (Mint Detail)
 
 All review-related relay lists live in `src/core/nostr/relays.ts`:

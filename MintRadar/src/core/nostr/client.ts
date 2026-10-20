@@ -57,6 +57,7 @@ function subscribeFirstEvent(relays: string[], filter: Filter, timeoutMs: number
     const timer = setTimeout(() => finish(null), timeoutMs)
     held.sub = sharedPool.subscribeMany(relays, filter, {
       onevent: (ev: NostrEvent) => {
+        if (filter.kinds && !filter.kinds.includes(ev.kind)) return
         if (!verifyEvent(ev)) return
         if (expectedPubkey !== undefined && ev.pubkey !== expectedPubkey) return
         finish(ev)

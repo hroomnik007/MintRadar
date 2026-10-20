@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { verifyEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
 import { PROFILE_RELAYS } from '@/core/nostr/relays'
+import { pickNewestProfileEvents } from '@/core/nostr/profileEvents'
 
 // Informational only: reads the `nip05` field straight from the mint operator's kind:0
 // profile metadata (fetched over Nostr relays, same source/pattern as reviewer profiles
@@ -22,17 +22,12 @@ export function useMintOperatorNip05(pubkey: string | null | undefined): string 
     sharedPool.querySync(PROFILE_RELAYS, { kinds: [0], authors: [pubkey], limit: 1 }, { maxWait: 2000 })
       .then(events => {
         if (cancelled) return
-        const valid = events
-          .filter(e => verifyEvent(e) && e.pubkey === pubkey)
-          .sort((a, b) => b.created_at - a.created_at)
+        const newest = pickNewestProfileEvents(events, new Set([pubkey])).get(pubkey)
         let nip05: string | null = null
-        for (const e of valid) {
+        if (newest) {
           try {
-            const meta = JSON.parse(e.content) as { nip05?: string }
-            if (typeof meta.nip05 === 'string' && meta.nip05.trim()) {
-              nip05 = meta.nip05.trim()
-              break
-            }
+            const meta = JSON.parse(newest.content) as { nip05?: string }
+            if (typeof meta.nip05 === 'string' && meta.nip05.trim()) nip05 = meta.nip05.trim()
           } catch { /* invalid profile JSON — skip */ }
         }
         setResult({ pubkey, nip05 })

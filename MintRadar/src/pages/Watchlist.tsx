@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } fro
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Zap } from 'lucide-react'
-import { verifyEvent, nip19 } from 'nostr-tools'
+import { nip19 } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
+import { pickNewestProfileEvents } from '@/core/nostr/profileEvents'
 import { useFollowRecommendations, FOLLOW_RELAYS } from '@/hooks/useFollowRecommendations'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
@@ -104,8 +105,7 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000)),
       ]).catch(() => [] as NostrEvent[])
       const map: Record<string, ProfileInfo> = {}
-      for (const ev of (events as NostrEvent[])) {
-        if (!verifyEvent(ev)) continue
+      for (const ev of pickNewestProfileEvents(events as NostrEvent[], new Set(allRecommenderPubkeys)).values()) {
         try {
           const content = JSON.parse(ev.content) as Record<string, unknown>
           const name = (content['display_name'] ?? content['name']) as string | undefined

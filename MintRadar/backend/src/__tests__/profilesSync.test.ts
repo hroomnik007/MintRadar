@@ -125,6 +125,15 @@ describe('pickNewestProfileEvents', () => {
     expect(out.size).toBe(0)
   })
 
+  it('uses a valid profile and the newer of two valid events whatever the arrival order', () => {
+    const older = roundTrip(ev('{"name":"old"}', 100))
+    const newer = roundTrip(ev('{"name":"new"}', 200))
+    expect(JSON.parse(pickNewestProfileEvents([older], new Set([pk])).get(pk)!.content)).toEqual({ name: 'old' })
+    for (const order of [[older, newer], [newer, older]]) {
+      expect(JSON.parse(pickNewestProfileEvents(order, new Set([pk])).get(pk)!.content)).toEqual({ name: 'new' })
+    }
+  })
+
   it('a newer forged event does not displace a valid older one', () => {
     const good = roundTrip(ev('{"name":"good"}', 100))
     const forged = roundTrip(ev('{"name":"real"}', 900))
