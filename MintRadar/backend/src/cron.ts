@@ -1,6 +1,7 @@
 import cron from 'node-cron'
 import { getKnownMints, pruneOldHistory, pruneUnvalidatedMints, pruneAbandonedMints, revalidateMints, backfillServerLocations, refreshServerLocations } from './prober.js'
-import { runProbeCycle } from './probeCycle.js'
+import { runProbeCycle, getLastVantageOutageAt } from './probeCycle.js'
+import { runKeysetsTick } from './keysetsSync.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
 import { syncAuditCz } from './auditCz.js'
 import { syncAuditCzDetails } from './auditCzDetail.js'
@@ -90,6 +91,17 @@ export function startCron(): void {
       await refreshReliabilityMoversRollup()
     } catch (err) {
       logCronError('probe', err)
+    }
+  })
+
+  // Keysets and NUT-02 id check (keysetsSync.ts): every 5 minutes at minutes 2,7,...,57 (between probe cycles); each tick
+  // serves one twelfth of the online mints (a fixed hash slot per URL), so every mint is visited once an hour.
+  // Skipped right after a suspected vantage outage. A failed fetch writes nothing.
+  cron.schedule('2-57/5 * * * *', async () => {
+    try {
+      await runKeysetsTick({ lastVantageOutageAt: getLastVantageOutageAt })
+    } catch (err) {
+      logCronError('keysets', err)
     }
   })
 

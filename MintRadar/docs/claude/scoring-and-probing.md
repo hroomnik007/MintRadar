@@ -175,6 +175,36 @@ Percentages are compared as integers (`part * 100 >= whole * percent`), so 49 vs
 
 **Reading it.** One log line per classified cycle, numbers only (no mint names, no URLs): `[probe] suspected vantage outage: F of N previously online mints failed (network errors), R of C covered failures seen up by cashu.info: this cycle's failures are not recorded` — F failed (network) of N previously online, R of the C covered-and-fresh failures seen up. In normal operation it never appears (`docker compose logs backend | grep -c "vantage outage"` is 0). `/api/v1/health` carries `lastVantageOutageAt` (ISO 8601 UTC, in memory, `null` until one happens after a restart); `getVantageOutageCount()` is the counter since start. Structural limit: a mint behind a challenge page that blocks only our server is a single failure of kind `blocked_by_host` or `host_error`, never a network failure, and rule (a) needs half of all previously online mints, so it is not affected. cashu.info checks every 5 minutes and our feed sync runs every 10, so a stored `last_check` is 0–15 min old: a mint near the limit is simply not evidence (fail open). Tests: `vantageOutage.test.ts` (boundaries), `probeCycle.test.ts` (the cycle with stubbed fetches), `integration/health.test.ts`; the Methodology page says it in one sentence (Data sources paragraph).
 
+## Keysets and NUT-02 id check — `mint_keysets` (2026-10-20, task W2a)
+
+Data collection only. **Nothing here feeds the Reliability Score**, no `/api` field exposes it yet (that is task W2b, which will
+add the public fields and the wallet-facing docs), and `/methodology` is unchanged.
+
+- **Table `mint_keysets`** (`db.ts`, additive and idempotent, runs at startup like every migration): `url` (FK to `mints`,
+  `ON DELETE CASCADE`, so every prune path that deletes a mint removes its keysets), `keyset_id`, `unit`, `active`,
+  `input_fee_ppk` (nullable), `final_expiry` (nullable), `id_version` (`v1` = `00…`, `v2` = `01…`, `legacy` = old base64-style
+  id, `unknown`), `id_valid` (nullable: NULL = could not be checked), `first_seen_at`, `last_seen_at`, `last_checked_at`;
+  primary key `(url, keyset_id)`, index on `url`. Plus `mints.keysets_checked_at` (nullable, no default).
+- **Hourly job** (`keysetsSync.ts`, cron `2-57/5 * * * *` in `cron.ts`, outside the 5-minute probe cycle): every mint has one
+  fixed slot of 12 (hash of its URL), a tick serves the online mints (latest history row online, not older than 15 min) of its
+  slot, one at a time after a random 0–45 s start offset and a 1 s pause between mints. So each mint is visited once an hour
+  and the load is spread over the whole hour. A tick within 10 minutes after a cycle classified as a suspected vantage outage
+  (see below) does nothing.
+- **Requests per mint and hour:** `GET /v1/keysets` plus `GET /v1/keys/{id}` for each *active* v1/v2 keyset (legacy ids are not
+  fetched: they cannot be verified). Through `safeFetch` (SSRF guard, DNS pinning) with the response caps `mintKeysets` /
+  `mintKeys`; at most 32 keysets per mint are processed, the rest is ignored and counted in the log line, never an error.
+- **A failed fetch never overwrites** (same principle as `mints.pubkey` / `nuts_limits`): any failure of the keysets request
+  (network, status, size, invalid JSON, schema surprise, an empty list) writes nothing, so the stored rows and
+  `last_checked_at` stay as they were. A keyset that disappears from the list stays in the table (only `last_seen_at`
+  stops advancing, its `active` is the value last seen). A failed `/v1/keys/{id}` keeps the row and leaves the stored `id_valid`
+  (the upsert never replaces a verdict with NULL). One log line per tick, counts only (no URL, no body).
+- **ID verification** (`keysetId.ts`, pure, unit-tested with the vectors of `cashubtc/nuts` `tests/02-tests.md` and compared with
+  cashu-ts `deriveKeysetId`): v1 = `00` + first 14 hex of sha256 over the raw keys sorted by amount; v2 = `01` + sha256 of
+  `amount:key` pairs joined by `,` + `|unit:` + (`|input_fee_ppk:` if non-zero) + (`|final_expiry:` if non-zero). `id_valid` is
+  true/false only when the id and all its keys came from the same check. A *mismatch* is stored as `false` only after two
+  consecutive hourly checks agree (in-memory, reset by a restart); until then `id_valid` keeps its previous value, so one odd
+  response is never a stored conclusion.
+
 ## Mint Age Badge — known data limitation
 
 - **`mintAgeBadge()` no longer drives the mint card or any Dashboard filter (2026-09-08).** The

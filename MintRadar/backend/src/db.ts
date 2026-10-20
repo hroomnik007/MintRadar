@@ -479,6 +479,26 @@ export async function initDb(): Promise<void> {
        last_status TEXT,
        last_methodology INTEGER
      )`,
+    // Keysets of every mint (keysetsSync.ts, hourly): data collection only, nothing here feeds the Reliability Score.
+    // ON DELETE CASCADE removes a mint's rows together with the mint (every prune path deletes from mints).
+    // id_valid: NULL = could not be checked (legacy id, or the keys were not obtained in the same check).
+    `CREATE TABLE IF NOT EXISTS mint_keysets (
+       url TEXT NOT NULL REFERENCES mints(url) ON DELETE CASCADE,
+       keyset_id TEXT NOT NULL,
+       unit TEXT NOT NULL,
+       active BOOLEAN NOT NULL,
+       input_fee_ppk INTEGER,
+       final_expiry TIMESTAMPTZ,
+       id_version TEXT NOT NULL,
+       id_valid BOOLEAN,
+       first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+       last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+       last_checked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+       PRIMARY KEY (url, keyset_id)
+     )`,
+    'CREATE INDEX IF NOT EXISTS idx_mint_keysets_url ON mint_keysets(url)',
+    // Nullable, no default: a metadata-only change, no table rewrite.
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS keysets_checked_at TIMESTAMPTZ',
   ]
 
   for (const sql of migrations) {
