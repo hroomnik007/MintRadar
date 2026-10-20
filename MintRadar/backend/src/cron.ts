@@ -95,7 +95,8 @@ export function startCron(): void {
     }
   })
 
-  // cashu.info, formerly audit.cashu.cz (second audit source, display only — never feeds scoring):
+  // cashu.info, formerly audit.cashu.cz (second audit source; this FEED, the mint list and the swaps, is
+  // display only — the per-mint detail job below supplies the audit part of the Reliability Score):
   // two GETs every 10 minutes, offset from the 5-minute probe (minutes 3,13,...).
   // A failed fetch writes and deletes nothing (see auditCz.ts).
   cron.schedule('3,13,23,33,43,53 * * * *', async () => {
@@ -109,7 +110,7 @@ export function startCron(): void {
     }
   })
 
-  // cashu.info per-mint detail (display only): every 30 minutes, started after a random 0-4 min
+  // cashu.info per-mint detail (feeds the audit part of the Reliability Score via mints.audit_cz_*): every 30 minutes, started after a random 0-4 min
   // offset, one mint at a time with a 2 s pause (see auditCzDetail.ts). Visitors never trigger it.
   cron.schedule('8,38 * * * *', async () => {
     if (isAllowlistMode()) return

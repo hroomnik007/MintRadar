@@ -1,6 +1,7 @@
-// cashu.info per-mint detail (GET /api/v1/mints/{id}), fetched by a cron and stored. DISPLAY ONLY:
-// nothing here feeds the Reliability Score. Visitors never trigger an outbound request; the
-// endpoint reads audit_cz_detail only.
+// cashu.info per-mint detail (GET /api/v1/mints/{id}), fetched by a cron and stored. Two numbers of it
+// (swaps7d.all.total and swaps7d.errorsBlamed) are copied to mints.audit_cz_total / audit_cz_blamed /
+// audit_cz_fetched_at and are the inputs of the audit part of the Reliability Score (shared/auditScore.ts);
+// the rest is for display. Visitors never trigger an outbound request; the endpoint reads audit_cz_detail only.
 //
 // Only the subset the Audit tab actually shows is kept (see StoredAuditCzDetail). Never stored: score, scoreParts,
 // reviews, daily, changes, incidents7d, latency, TLS, step timings, the auditor's swap test, network facts, spec,
