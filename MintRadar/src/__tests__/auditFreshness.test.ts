@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { auditFreshness, formatAuditSyncDate, formatAuditDate, staleAuditSince, AUDIT_DATA_OLD_DAYS, AUDIT_SYNC_STALE_HOURS } from '@/utils/auditFreshness'
+import { auditFreshness, formatAuditSyncDate, formatAuditDate, staleAuditSince, audit8333StaleLine, AUDIT_DATA_OLD_DAYS, AUDIT_SYNC_STALE_HOURS } from '@/utils/auditFreshness'
 
 const NOW = Date.parse('2026-09-30T12:00:00Z')
 const ago = (ms: number) => new Date(NOW - ms).toISOString()
@@ -53,5 +53,27 @@ describe('staleAuditSince (Stats note)', () => {
   it('formats the date part in UTC', () => {
     expect(formatAuditDate('2026-09-27T12:13:41.466Z')).toBe('27 Sep 2026')
     expect(formatAuditDate('garbage')).toBe('garbage')
+  })
+})
+
+describe('audit8333StaleLine (Audit tab, 8333.space view)', () => {
+  it('says the age in whole days and the date of the last sync (UTC) once the sync is older than 24 hours', () => {
+    expect(audit8333StaleLine(ago(21 * D), NOW)).toBe('audit.8333.space data is 21 days old; the service has not responded since 9 Sep 2026')
+    expect(audit8333StaleLine('2026-09-27T12:13:41.466Z', NOW)).toBe('audit.8333.space data is 2 days old; the service has not responded since 27 Sep 2026')
+  })
+  it('uses the singular for one day (24 to 47 hours)', () => {
+    expect(audit8333StaleLine(ago(24 * H + 1), NOW)).toBe('audit.8333.space data is 1 day old; the service has not responded since 29 Sep 2026')
+    expect(audit8333StaleLine(ago(47 * H), NOW)).toContain('is 1 day old')
+  })
+  it('shows nothing while the sync is fresh (24 hours or less), unknown or unparseable', () => {
+    expect(audit8333StaleLine(ago(24 * H), NOW)).toBeNull()
+    expect(audit8333StaleLine(ago(H), NOW)).toBeNull()
+    expect(audit8333StaleLine(null, NOW)).toBeNull()
+    expect(audit8333StaleLine(undefined, NOW)).toBeNull()
+    expect(audit8333StaleLine('garbage', NOW)).toBeNull()
+  })
+  it('follows AUDIT_SYNC_STALE_HOURS, not a number of its own', () => {
+    expect(audit8333StaleLine(ago(AUDIT_SYNC_STALE_HOURS * H), NOW)).toBeNull()
+    expect(audit8333StaleLine(ago(AUDIT_SYNC_STALE_HOURS * H + 1), NOW)).not.toBeNull()
   })
 })

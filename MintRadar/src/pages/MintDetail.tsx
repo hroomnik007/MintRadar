@@ -41,7 +41,7 @@ import { operatorPubkeys } from '@/utils/operatorPubkeys'
 import { cleanMintNameDetailed } from '@/utils/cleanMintName'
 import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert } from '@/utils/mintProbeDisplay'
 import { auditComponent, auditDataState, auditAgeHours, isAuditUnknown, AUDIT_MIN_SAMPLES } from '@/utils/auditScore'
-import { auditFreshness } from '@/utils/auditFreshness'
+import { auditFreshness, audit8333StaleLine } from '@/utils/auditFreshness'
 import { IcClose } from '@/components/IcClose'
 import { clickableProps } from '@/utils/clickableProps'
 import { useAuditCz } from '@/hooks/useAuditCz'
@@ -950,6 +950,7 @@ function MintDetailContent({ url }: { url: string }) {
   const auditSyncedAt = knownMint?.auditSyncedAt ?? null
   const auditCheckedAt = knownMint?.auditCheckedAt ?? null
   const freshness = auditFreshness(auditCheckedAt, auditSyncedAt)
+  const audit8333Stale = audit8333StaleLine(auditSyncedAt, now)
 
   // Audit tab source: cashu.info is shown by default only when the audit.8333.space data is
   // missing or stale; with both sources present the header switch lets the visitor pick.
@@ -2026,6 +2027,7 @@ function MintDetailContent({ url }: { url: string }) {
                   {auditSwitch}
                 </div>
 
+                {!czView && audit8333Stale && <p className="audit-cz-muted">{audit8333Stale}</p>}
                 {czView ? <AuditCzTiles view={czView} /> : (<>
                 {/* 5-second overview — always visible, never inside the mobile
                     collapse. Mints/Melts are audit.8333.space lifetime counts;

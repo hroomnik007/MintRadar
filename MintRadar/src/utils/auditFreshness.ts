@@ -40,6 +40,18 @@ export function auditFreshness(
 }
 
 /**
+ * The line under the Audit heading while audit.8333.space data is on screen and MintRadar's last sync from it is older
+ * than AUDIT_SYNC_STALE_HOURS: how old the data is (whole days) and since when the service has not answered. Built from
+ * the stored sync time only; null while the sync is fresh or unknown.
+ */
+export function audit8333StaleLine(auditSyncedAt: string | null | undefined, now: number = Date.now()): string | null {
+  const f = auditFreshness(null, auditSyncedAt, now)
+  if (!f.syncStale || f.syncAgeHours === null || !auditSyncedAt) return null
+  const days = Math.floor(f.syncAgeHours / 24)
+  return `audit.8333.space data is ${days} ${days === 1 ? 'day' : 'days'} old; the service has not responded since ${formatAuditDate(auditSyncedAt)}`
+}
+
+/**
  * Network-level staleness of audit.8333.space (Stats page note). Takes every mint's `auditCheckedAt`
  * (the auditor's own `updated_at`, the same value Mint Detail's "data N days old" uses) and returns the
  * newest one as an ISO string when it is older than AUDIT_DATA_OLD_DAYS (same strict boundary as

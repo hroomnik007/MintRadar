@@ -453,6 +453,58 @@ test.describe('cz does not cover the mint (covered: false)', () => {
   }
 })
 
+// ── f2) how old the audit.8333.space data is ───────────────────
+// The 8333.space view says so once MintRadar's last sync from it is older than 24 hours (one muted line, built from the
+// stored auditSyncedAt); it is the only place the age shows, because a visitor who picks 8333.space sees old numbers.
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const utcDate = (iso: string) => { const d = new Date(iso); return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}` }
+const staleLine = (page: Page) => page.locator('.md-audit-collapsible .audit-cz-muted', { hasText: /^audit\.8333\.space data is/ })
+
+test.describe('audit.8333.space data age line', () => {
+  test('sync 21 days old, both sources: cashu.info by default without the line; the 8333.space view shows it with age and date', async ({ page }) => {
+    const synced = ago(21 * D)
+    await gotoAuditTab(page, { alpha: { ...FRESH_8333, auditCheckedAt: synced, auditSyncedAt: synced }, cz: auditCzResponse({ swaps: czSwapList([ok, ok]) }) })
+    const header = page.locator('.md-audit-header-main')
+    await expect(header).toContainText('via cashu.info')
+    await expect(staleLine(page)).toHaveCount(0)
+
+    await segGroup(page).getByRole('button', { name: '8333.space', exact: true }).click()
+    await expect(header).toContainText('via audit.8333.space')
+    await expect(staleLine(page)).toHaveText(`audit.8333.space data is 21 days old; the service has not responded since ${utcDate(synced)}`)
+
+    await segGroup(page).getByRole('button', { name: 'cashu.info', exact: true }).click()
+    await expect(header).toContainText('via cashu.info')
+    await expect(staleLine(page)).toHaveCount(0)
+  })
+
+  test('8333.space is the only source: the line shows by default, singular at one day', async ({ page }) => {
+    const synced = ago(30 * 3_600_000)
+    await gotoAuditTab(page, { alpha: { ...FRESH_8333, auditSyncedAt: synced }, cz: NOT_COVERED })
+    await expect(page.locator('.md-audit-header-main')).toContainText('via audit.8333.space')
+    await expect(staleLine(page)).toHaveText(`audit.8333.space data is 1 day old; the service has not responded since ${utcDate(synced)}`)
+    await expect(page.locator('.audit-summary-strip')).toBeVisible()
+  })
+
+  test('fresh sync: no line (also when the auditor\'s own check is old)', async ({ page }) => {
+    await gotoAuditTab(page, { alpha: { ...FRESH_8333, auditCheckedAt: ago(10 * D), auditSyncedAt: ago(2 * 3_600_000) }, cz: NOT_COVERED })
+    await expect(page.locator('.audit-summary-strip')).toBeVisible()
+    await expect(staleLine(page)).toHaveCount(0)
+  })
+
+  test.describe('390px', () => {
+    test.use({ viewport: { width: 390, height: 844 } })
+    test('the line wraps inside the card and the page does not scroll sideways', async ({ page }) => {
+      await gotoAuditTab(page, { alpha: { ...FRESH_8333, auditSyncedAt: ago(21 * D) }, cz: NOT_COVERED })
+      await expect(staleLine(page)).toBeVisible()
+      const box = (await staleLine(page).boundingBox())!
+      const card = (await page.locator('.md-audit-collapsible').boundingBox())!
+      expect(box.x).toBeGreaterThanOrEqual(card.x)
+      expect(box.x + box.width).toBeLessThanOrEqual(card.x + card.width + 1)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0)
+    })
+  })
+})
+
 // ── g) loading state ────────────────────────────────────────────
 test('while the audit-cz response is held: "Loading audit data…", then the cz card, no 8333 flash', async ({ page }) => {
   // Records whether the audit.8333.space panel (or its empty state) is ever in the DOM.
