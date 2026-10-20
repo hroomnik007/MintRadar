@@ -235,6 +235,14 @@ describe('change log and version', () => {
       expect(text).toContain(String(n))
     }
   })
+
+  it('says in the data sources paragraph that a suspected outage on our side is not recorded', () => {
+    const section = renderPage().querySelector('section[aria-labelledby="sources"]')
+    const text = (section?.textContent ?? '').replace(/\s+/g, ' ')
+    expect(text).toContain(
+      'If most mints fail from our server at the same moment and cashu.info sees them up, MintRadar treats that cycle as a problem on its own side and does not record the failures.',
+    )
+  })
 })
 
 describe('contact card', () => {
