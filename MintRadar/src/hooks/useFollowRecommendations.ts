@@ -24,7 +24,11 @@ export async function fetchFollowRecs(pubkey: string): Promise<{ recs: FollowRec
     new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
   ]).catch(() => [] as NostrEvent[])
 
-  const followEvent = (followEvents as NostrEvent[]).filter(e => verifyEvent(e))[0]
+  // A relay may ignore the filter, serve a stale list or forge one: only a kind:3 signed by the user counts,
+  // and the newest (created_at) wins whatever the arrival order.
+  const followEvent = (followEvents as NostrEvent[])
+    .filter(e => e.kind === 3 && e.pubkey === pubkey && verifyEvent(e))
+    .sort((a, b) => b.created_at - a.created_at)[0]
   if (!followEvent) return { recs: [], followCount: 0 }
 
   const follows = followEvent.tags
