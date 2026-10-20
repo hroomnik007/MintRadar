@@ -130,18 +130,12 @@ function unixSeconds(iso: string | null): number | null {
 
 const nonNegInt = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0
 
-/** The ISO 8601 UTC form of a time the wallet API already carries as ISO text; null when absent or unreadable. */
-function isoOrNull(v: string | null | undefined): string | null {
-  if (typeof v !== 'string') return null
-  const ms = new Date(v).getTime()
-  return Number.isFinite(ms) ? new Date(ms).toISOString() : null
-}
 
 /**
  * The keyset facts of the ACTIVE keysets of the latest successful check (all counts are over active keysets, so they
  * partition them: verified + legacy + id_invalid <= active). Nothing at all for a mint that was never checked.
- * mint_keysets_checked_at is UNIX seconds like the other *_at tags; mint_keyset_final_expiry is ISO 8601 UTC like the
- * wallet API and only present when an active keyset has one (the earliest).
+ * Every time tag is UNIX seconds (decimal string), also mint_keyset_final_expiry (only present when an active keyset
+ * has one, the earliest); the wallet API keeps ISO 8601 for the same values.
  */
 function keysetTags(keysets: readonly WalletKeyset[] | undefined, checkedAtIso: string | null | undefined): string[][] {
   const checkedAt = unixSeconds(checkedAtIso ?? null)
@@ -152,8 +146,8 @@ function keysetTags(keysets: readonly WalletKeyset[] | undefined, checkedAtIso: 
     ['mint_keysets_legacy', String(active.filter(k => k.idVersion === 'legacy').length)],
     ['mint_keysets_id_invalid', String(active.filter(k => k.idValid === false).length)],
   ]
-  const expiries = active.map(k => isoOrNull(k.finalExpiry)).filter((e): e is string => e !== null).sort()
-  if (expiries.length > 0) tags.push(['mint_keyset_final_expiry', expiries[0] as string])
+  const expiries = active.map(k => unixSeconds(k.finalExpiry ?? null)).filter((e): e is number => e !== null)
+  if (expiries.length > 0) tags.push(['mint_keyset_final_expiry', String(Math.min(...expiries))])
   tags.push(['mint_keysets_checked_at', String(checkedAt)])
   return tags
 }
@@ -201,8 +195,8 @@ export function buildHealthEvent(input: HealthInput): EventTemplate | null {
   const checked = unixSeconds(input.lastCheckedAt)
   if (checked !== null) tags.push(['mint_checked_at', String(checked)])
   if (nonNegInt(input.probes24h)) tags.push(['mint_probes_24h', String(input.probes24h)])
-  const downSince = input.status === 'online' ? null : isoOrNull(input.downSince)
-  if (downSince !== null) tags.push(['mint_down_since', downSince])
+  const downSince = input.status === 'online' ? null : unixSeconds(input.downSince ?? null)
+  if (downSince !== null) tags.push(['mint_down_since', String(downSince)])
   tags.push(...keysetTags(input.keysets, input.keysetsCheckedAt))
   tags.push(
     ['methodology', String(METHODOLOGY_VERSION)],

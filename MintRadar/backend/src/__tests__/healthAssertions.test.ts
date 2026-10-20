@@ -142,8 +142,9 @@ describe('buildHealthEvent — probe, outage and keyset tags (added 2026-10-20)'
 
   it('mint_down_since: the wallet API value, only while the mint is not online', () => {
     const since = '2026-10-14T09:10:03.876Z'
-    expect(tagMap(tags({ status: 'degraded', downSince: since }))['mint_down_since']).toBe(since)
-    expect(tagMap(tags({ status: 'offline', downSince: since }))['mint_down_since']).toBe(since)
+    // UNIX seconds as a plain decimal string (the wallet API keeps the ISO text), milliseconds dropped
+    expect(tagMap(tags({ status: 'degraded', downSince: since }))['mint_down_since']).toBe('1791969003')
+    expect(tagMap(tags({ status: 'offline', downSince: since }))['mint_down_since']).toBe('1791969003')
     expect(names({ status: 'online', downSince: since })).not.toContain('mint_down_since')
     expect(names({ status: 'offline', downSince: null })).not.toContain('mint_down_since')
     expect(names({ status: 'offline', downSince: 'not a date' })).not.toContain('mint_down_since')
@@ -167,7 +168,7 @@ describe('buildHealthEvent — probe, outage and keyset tags (added 2026-10-20)'
     expect(t['mint_keysets_checked_at']).toBe(String(Math.floor((NOW - 600_000) / 1000)))
   })
 
-  it('mint_keyset_final_expiry is the earliest of the ACTIVE keysets, ISO, only when one has it', () => {
+  it('mint_keyset_final_expiry is the earliest of the ACTIVE keysets, UNIX seconds, only when one has it', () => {
     const t = tagMap(tags({
       keysetsCheckedAt: CHECKED,
       keysets: [
@@ -175,7 +176,7 @@ describe('buildHealthEvent — probe, outage and keyset tags (added 2026-10-20)'
         keyset({ finalExpiry: '2026-11-01T00:00:00Z', active: false }), keyset(),
       ],
     }))
-    expect(t['mint_keyset_final_expiry']).toBe('2027-01-15T12:30:00.000Z')
+    expect(t['mint_keyset_final_expiry']).toBe('1800016200')
     expect(names({ keysetsCheckedAt: CHECKED, keysets: [keyset(), keyset({ finalExpiry: '2026-11-01T00:00:00Z', active: false })] })).not.toContain('mint_keyset_final_expiry')
   })
 
@@ -186,6 +187,13 @@ describe('buildHealthEvent — probe, outage and keyset tags (added 2026-10-20)'
     const zero = tagMap(tags({ keysets: [], keysetsCheckedAt: CHECKED }))
     expect([zero['mint_keysets_verified'], zero['mint_keysets_legacy'], zero['mint_keysets_id_invalid']]).toEqual(['0', '0', '0'])
     expect(zero['mint_keyset_final_expiry']).toBeUndefined()
+  })
+
+  it('every time tag of a full event is a plain integer of UNIX seconds', () => {
+    const t = tagMap(tags({ probes24h: 3, keysets: [keyset({ finalExpiry: '2027-01-15T12:30:00Z' })], keysetsCheckedAt: CHECKED, status: 'offline', downSince: CHECKED, lastCheckedAt: CHECKED }))
+    for (const name of ['mint_checked_at', 'mint_down_since', 'mint_keyset_final_expiry', 'mint_keysets_checked_at', 'expiration']) {
+      expect(t[name], name).toMatch(/^[0-9]{10}$/)
+    }
   })
 
   it('there is no verdict or low-sample tag', () => {

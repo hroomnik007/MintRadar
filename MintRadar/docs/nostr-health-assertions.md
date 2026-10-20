@@ -37,7 +37,7 @@ This is an application of kind `30385` of [NIP-85](https://github.com/nostr-prot
     ["mint_keysets_verified", "1"],
     ["mint_keysets_legacy", "0"],
     ["mint_keysets_id_invalid", "0"],
-    ["mint_keyset_final_expiry", "2027-01-15T12:30:00.000Z"],
+    ["mint_keyset_final_expiry", "1800016200"],
     ["mint_keysets_checked_at", "1792151400"],
     ["methodology", "3"],
     ["methodology_url", "https://mintradar.org/methodology"],
@@ -53,7 +53,7 @@ This is an application of kind `30385` of [NIP-85](https://github.com/nostr-prot
 ```json
 ["mint_status", "degraded"],
 ["mint_probes_24h", "288"],
-["mint_down_since", "2026-10-14T09:10:03.876Z"],
+["mint_down_since", "1791969003"],
 ```
 
 A signed event with all tags is about 1 kB (1.0 to 1.2 kB for the mints of 2026-10-20), far below the 64 kB event limit of common relays.
@@ -76,21 +76,21 @@ The `mint_*` tags are the **measurements**: what MintRadar observed. `rank` is t
 | `mint_new_capped` | `0` \| `1` | `1` while the provider's cap for mints younger than 30 days limits the rank to 75 |
 | `mint_checked_at` | UNIX seconds | time of the last probe |
 | `mint_probes_24h` | integer | number of probes of the mint in the last 24 hours (the same number as `sample.probes24h` in the wallet API). The sample size behind the uptime values; there is no separate "low sample" tag. Omitted when unknown |
-| `mint_down_since` | ISO 8601 time, UTC | while `mint_status` is not `online`: the earliest failed probe after the last successful one (the same value as `downSince` in the wallet API). Omitted when unknown |
+| `mint_down_since` | UNIX seconds | while `mint_status` is not `online`: the earliest failed probe after the last successful one (the same moment as `downSince` in the wallet API). Omitted when unknown |
 | `mint_keysets_verified` | integer | active keysets whose id MintRadar recomputed from the keys and found correct (NUT-02 id versions `00` and `01`) |
 | `mint_keysets_legacy` | integer | active keysets with a legacy (base64-style) id; such an id cannot be recomputed, so it counts neither as verified nor as invalid |
 | `mint_keysets_id_invalid` | integer | active keysets whose id does not match their keys; only a confirmed mismatch counts, never an id that could not be checked |
-| `mint_keyset_final_expiry` | ISO 8601 time, UTC | the earliest final expiry among the active keysets; present only if an active keyset has one |
+| `mint_keyset_final_expiry` | UNIX seconds | the earliest final expiry among the active keysets; present only if an active keyset has one |
 | `mint_keysets_checked_at` | UNIX seconds | when the keysets that the four tags above describe were last read from the mint (the latest successful check) |
 | `methodology` | integer | version of the provider's scoring method; ranks of different versions are not comparable |
 | `methodology_url` | URL | where that method is described |
 | `expiration` | UNIX seconds | NIP-40: `created_at` + 172800 (48 hours) |
 
-The five keyset tags are present together or not at all: a mint whose keysets were never checked has none of them. A checked mint with no active keyset has `0` in the three counts. All counts are over the **active** keysets of the latest successful check, so `mint_keysets_verified` + `mint_keysets_legacy` + `mint_keysets_id_invalid` is at most the number of active keysets. Two time formats are in use: UNIX seconds for the `*_checked_at` and `*_audit_at` tags, ISO 8601 for `mint_down_since` and `mint_keyset_final_expiry` (the form the wallet API uses).
+The five keyset tags are present together or not at all: a mint whose keysets were never checked has none of them. A checked mint with no active keyset has `0` in the three counts. All counts are over the **active** keysets of the latest successful check, so `mint_keysets_verified` + `mint_keysets_legacy` + `mint_keysets_id_invalid` is at most the number of active keysets. Every time tag in the event is UNIX seconds as a decimal string; the JSON wallet API writes the same moments as ISO 8601 strings, which is the convention there. Until 2026-10-21 some events still carry ISO 8601 text in `mint_down_since` or `mint_keyset_final_expiry` (the first version of these two tags, replaced by the normal daily refresh): a client that parses these tags must treat a value that is not a plain integer as absent.
 
 Anyone may publish events of this shape under their own key: the format is open. Only the pinned key (below) is MintRadar's.
 
-`content` is the fixed sentence in the example. Reviews, review counts, mint names, IP addresses, network data, onion addresses, public keys of other people, contact details and error texts are never part of the event. Unknown tag names must be ignored by clients.
+`content` is the fixed sentence in the example. Reviews, review counts, mint names, IP addresses, network data, onion addresses, public keys of other people, contact details and error texts are never part of the event. Clients must ignore tag names they do not know, and treat a value in a format they do not know as absent.
 
 ## Update rules
 

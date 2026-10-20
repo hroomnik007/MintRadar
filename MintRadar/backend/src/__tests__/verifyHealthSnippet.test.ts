@@ -5,7 +5,7 @@ import net from 'node:net'
 import { execFile } from 'node:child_process'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { WebSocketServer } from 'ws'
-import { generateSecretKey, getPublicKey, finalizeEvent } from 'nostr-tools'
+import { generateSecretKey, getPublicKey, finalizeEvent, verifyEvent } from 'nostr-tools'
 import type { Event as NostrEvent } from 'nostr-tools'
 import {
   buildHealthEvent, healthIdentifier, ATTESTATION_EXPIRY_S, ATTESTATION_MIN_INTERVAL_MS, ATTESTATION_MIN_RANK_DELTA,
@@ -163,6 +163,35 @@ beforeAll(() => { process.on('uncaughtException', onUncaught); process.on('unhan
 afterAll(() => { process.off('uncaughtException', onUncaught); process.off('unhandledRejection', onUncaught); closers.forEach(c => c()) })
 
 const ALL_BAD: Kind[] = ['refuse', 'close', 'stall', 'hang', 'http-error', 'closed', 'junk']
+
+describe('an event written field by field from the spec, with the UNIX seconds time tags', () => {
+  // Not produced by the builder: every tag typed out as the tag table of docs/nostr-health-assertions.md describes it.
+  const forged = () => finalizeEvent({
+    kind: 30385, created_at: nowS, content: 'Operational health signal, not solvency, not a recommendation to deposit funds. Based on MintRadar\'s probes and third-party audit data; it can be wrong or out of date.',
+    tags: [
+      ['d', 'https://mint.example.com'], ['k', 'web'], ['rank', '77'], ['mint_status', 'degraded'], ['mint_uptime_24h', '97'], ['mint_uptime_7d', '99'],
+      ['mint_test', '0'], ['mint_new_capped', '0'], ['mint_checked_at', String(nowS - 60)], ['mint_probes_24h', '288'],
+      ['mint_down_since', String(nowS - 3600)], ['mint_keysets_verified', '1'], ['mint_keysets_legacy', '0'], ['mint_keysets_id_invalid', '0'],
+      ['mint_keyset_final_expiry', '1800016200'], ['mint_keysets_checked_at', String(nowS - 600)],
+      ['methodology', '3'], ['methodology_url', 'https://mintradar.org/methodology'], ['expiration', String(nowS + ATTESTATION_EXPIRY_S)],
+    ],
+  }, sk)
+  it('verifies as a Nostr event and passes the checks of the example', () => {
+    const e = forged()
+    expect(verifyEvent(e)).toBe(true)
+    expect(check(e)).toMatchObject({ score: 77, status: 'degraded', methodology: 3, createdAt: nowS, expiresAt: nowS + ATTESTATION_EXPIRY_S })
+  })
+  it('the two new tags are plain integers; an ISO value in them (transitional events) does not break the example', () => {
+    const t = Object.fromEntries(forged().tags.map(x => [x[0], x[1]]))
+    expect(t['mint_down_since']).toMatch(/^[0-9]+$/)
+    expect(t['mint_keyset_final_expiry']).toMatch(/^[0-9]+$/)
+    const iso = finalizeEvent({
+      kind: 30385, created_at: nowS, content: 'x',
+      tags: [...forged().tags.filter(x => x[0] !== 'mint_down_since'), ['mint_down_since', '2026-10-14T09:10:03.876Z']],
+    }, sk)
+    expect(check(iso)).not.toBeNull()
+  })
+})
 
 describe('getMintHealth against stub relays', () => {
   it('returns the valid result when one relay is good, whatever the others do (refuse, close, stall, hang, HTTP error, CLOSED, junk), and cleans up', async () => {
