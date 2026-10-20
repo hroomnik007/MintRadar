@@ -56,9 +56,9 @@ Use `npm ci`, not `npm install`: npm 10 rewrites the lockfiles and drops fields 
 
 ## Before you push
 
-CI runs the backend and frontend unit test suites on every push to `main`, and a
-security workflow on every push and pull request. Typecheck and lint are not in CI, so
-run them yourself, together with the tests of the area you touched (run these from
+CI runs the backend and frontend unit test suites on every pull request and on every push
+to `main`, and a security workflow on every push and pull request. Typecheck, lint and
+the e2e suite are not in CI, so run them yourself, together with the tests of the area you touched (run these from
 `MintRadar/`; a bare `npx vitest` from the git root pulls the wrong package):
 
 ```bash
