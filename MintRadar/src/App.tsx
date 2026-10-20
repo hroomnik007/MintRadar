@@ -19,6 +19,12 @@ const lazyFallback = (
   <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text2)' }}>Loading…</div>
 )
 
+// The Stats route's fallback is as tall as the viewport, so the footer is already below the fold when the first frame
+// is painted and does not jump out of view when the page arrives (docs/claude/stats-dashboard-watchlist-ui.md, "Layout shift rule").
+const statsFallback = (
+  <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text2)', minHeight: '100vh' }}>Loading…</div>
+)
+
 export const router = createBrowserRouter([
   {
     element: <AppShell />,
@@ -26,7 +32,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> },
       { path: 'watchlist', element: <Watchlist /> },
-      { path: 'stats', element: <Suspense fallback={lazyFallback}><Stats /></Suspense> },
+      { path: 'stats', element: <Suspense fallback={statsFallback}><Stats /></Suspense> },
       { path: 'tools', element: <Suspense fallback={lazyFallback}><Tools /></Suspense> },
       { path: 'about', element: <Suspense fallback={lazyFallback}><About /></Suspense> },
       { path: 'methodology', element: <Suspense fallback={lazyFallback}><Methodology /></Suspense> },

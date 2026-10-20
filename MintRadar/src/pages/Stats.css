@@ -1102,6 +1102,40 @@
   .stats-movers-panel { min-height: 240px; }
   .stats-trend-panel  { min-height: 220px; }
 }
+/* Layout shift rule (2026-10-20): a block whose data arrives later reserves its LOADED height, measured at the same
+   breakpoints as the grid (docs/claude/stats-dashboard-watchlist-ui.md, "Reserved heights and how to re-measure").
+   Each value is the smallest loaded height in its width band, so a reservation never exceeds the loaded block by more
+   than a few px and never clips (it is a min-height). Values: realistic fixture e2e/fixtures/statsLayout.ts.
+   head  = the page header (the loading screen has the short .stats-header, the loaded page the taller PageHead)
+   board = the whole board (keeps the footer below the fold while /api/stats is pending)
+   nhi   = the Network health index card, which is not rendered until /api/mints/known arrives
+   stack = Top by Reliability Score + Software in use + the gap */
+.stats-page {
+  --stats-reserve-head: 88px;
+  --stats-reserve-board: 1326px;
+  --stats-reserve-nhi: 346px;
+  --stats-reserve-stack: 618px;
+}
+@media (max-width: 1279px) { .stats-page { --stats-reserve-board: 1822px; --stats-reserve-nhi: 310px; } }
+@media (max-width: 1269px) { .stats-page { --stats-reserve-nhi: 333px; } }
+@media (max-width: 1007px) { .stats-page { --stats-reserve-nhi: 355px; } }
+@media (max-width: 799px)  { .stats-page { --stats-reserve-stack: 659px; } }
+@media (max-width: 768px)  { .stats-page { --stats-reserve-board: 1616px; --stats-reserve-nhi: 275px; --stats-reserve-stack: 538px; } }
+@media (max-width: 767px)  { .stats-page { --stats-reserve-board: 2730px; --stats-reserve-nhi: 181px; --stats-reserve-stack: 521px; } }
+@media (max-width: 409px)  { .stats-page { --stats-reserve-stack: 561px; } }
+@media (max-width: 359px)  { .stats-page { --stats-reserve-stack: 583px; } }
+@media (max-width: 329px)  { .stats-page { --stats-reserve-stack: 618px; } }
+@media (max-width: 670px)  { .stats-page { --stats-reserve-head: 109px; } }
+@media (max-width: 640px)  { .stats-page { --stats-reserve-head: 75px; } }
+@media (max-width: 518px)  { .stats-page { --stats-reserve-head: 96px; } }
+.stats-header { min-height: var(--stats-reserve-head); }
+/* The loading block becomes the board in place, so it has the board's width and centring as well (above 1340 px the board is
+   narrower than the viewport and a full-width block moved sideways). */
+.stats-loading { min-height: var(--stats-reserve-board); max-width: var(--dash-chrome-max); margin-inline: auto; width: 100%; }
+/* The Network health index has no placeholder (its card does not exist before the data does): an empty box in its
+   grid area holds the row; the card, once rendered, sits in the same area and is at least as tall. */
+.stats-board-grid::before { content: ''; grid-area: nhi; min-height: var(--stats-reserve-nhi); }
+.stats-stack { min-height: var(--stats-reserve-stack); }
 /* Trend card, the other period is loading: the previous chart stays (dimmed, not clickable) instead of an empty state. */
 .stats-trend-body { transition: opacity 150ms ease; }
 .stats-trend-body.is-pending { opacity: 0.5; pointer-events: none; }

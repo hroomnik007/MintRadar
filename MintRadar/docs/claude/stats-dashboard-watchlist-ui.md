@@ -123,7 +123,7 @@ The NHI breakdown dialog still keys off the JS `isMobile` (768 px and below), no
 - **DOM order rule:** the markup order is the reading order at every breakpoint (nhi, now, top, nut, geo, mov, trend). No CSS `order`, no placement that puts a card visually before an earlier one, so keyboard Tab order follows the visual order. Change the markup when the order changes.
 - **Gap:** one token, `--stats-board-gap` (16 px, 10 px at 768 px and below), for rows, columns and the stack.
 - **Equal height:** `align-items: stretch`; content stays at the top of each card.
-- **Reserved heights** (typical loaded height, so the page does not jump when data lands; cards may still grow): geo 300 px, movers 280 px, trend 240 px (260 / 240 / 220 px at 768 px and below).
+- **Reserved heights** (typical loaded height, so the page does not jump when data lands; cards may still grow): geo 300 px, movers 280 px, trend 240 px (260 / 240 / 220 px at 768 px and below). The Network health index, the left stack, the page header and the loading screen reserve theirs too: see "Layout shift rule" below.
 - **Desktop geo list:** the narrow third column shows cities and the CDN bucket as one list (the inline two-column row template is reset at 1280 px and up).
 - **Layout fixes (2026-10-15, 1280 px and up unless noted):**
   - **Geography list row pitch:** 26 px (24 px minimum row + 2 px row gap), one column; text and flags unchanged, same click behaviour. A 21-row list at the old 36 px pitch made the geography card 845 px tall and stretched row 2 (NUT coverage and Software in use had 170 to 250 px empty). Do not cap, group or scroll the list. Tablet keeps its two columns.
@@ -133,6 +133,41 @@ The NHI breakdown dialog still keys off the JS `isMobile` (768 px and below), no
   - **One accepted exception to the DOM order rule (below 768 px only):** The network right now is shown first and Network health index second (the two names are swapped in the mobile `grid-template-areas`; `order` would not work on cards placed by area). The DOM order is unchanged, so on phones with a hardware keyboard Tab visits Network health index before The network right now.
 - **Row 1 look (1280 px and up, 2026-10-15):** The network right now has centred tiles with the dividers and the outdated-software bar as a boxed amber row. The Network health index factors sit next to the ring with 6 px bars and even spacing, and the legend (Healthy, Moderate, At Risk) stays above them on one row (12 px, 8 px gap; it wraps only if the column is too narrow). A one-line "label | bar | value" row was tried and dropped: the label carries weight and tooltip, the value carries percentage and points, so no usable bar is left at this width. Tablet and mobile are unchanged. **Outdated row box (2026-10-16):** the outdated-software row has the same amber box (border, tint, 10 px radius, 12px 16px padding) at every width, declared once in the base `.stats-now-behind > div` rule; only the tile centring stays 1280 px and up. At 320 px the label wraps and the percentage stays on the first line. Test: `e2e/stats-widgets.spec.ts` ("keeps the same box on phones").
 - **New card:** add it to the markup after the trend card with the class `stats-extra-panel`; it fills a full-width row after the named rows. To put it in a named row instead, add an area name to all three `grid-template-areas` blocks (desktop, tablet, mobile) and keep the DOM position equal to the reading position.
+
+## Layout shift rule (2026-10-20)
+
+**Rule: any card whose data arrives later reserves its LOADED height** (a `min-height` in its CSS, taken from a measurement of the loaded state at each breakpoint, never from an estimate), so nothing visible moves when the data lands. A reservation is the smallest loaded height of its width band, so it never exceeds the loaded height by more than a few px and never clips. Spec: `e2e/stats-layout-shift.spec.ts` (every endpoint held in turn, plus "all at once" and "known last": layout shift below 0.02 at 1440, 1024, 768, 390 and 320; the reservations against the loaded heights). Fixture: `e2e/fixtures/statsLayout.ts` (50 online mints, 20 geography rows with a CDN row, 5 software families, 3 risers and 3 fallers, a 30 day trend; `mockStatsEndpoints(page, held)` holds an endpoint until the request reached the mock).
+
+What moved, measured on that fixture before the change (phone: Lighthouse reported 0.247 on the live page; the same page measured 1.08 here):
+
+| What | Why it moved |
+|---|---|
+| Footer (up to 0.9 at 390 px) | While `/api/stats` is pending the page is a short "Loading…" screen with the footer in view; the board then pushes the footer out of view. The route fallback had the same problem one step earlier. |
+| Page header (about 0.02 at 1440, 0.04 at 390) | The loading screen has the short `.stats-header` (59 px); the loaded page has the taller `PageHead` (75 to 109 px). React reuses the DOM node, so the board starts 29 to 50 px lower than the waiting block did. |
+| Network health index (0.07 to 0.37) | Its card is not rendered until `/api/mints/known` arrives, so row 1 was only as tall as "The network right now" and everything below moved down 90 to 130 px. |
+| Left stack (`.stats-stack`) | Top by Reliability Score shows "No data yet" and Software in use shows "No data" while known mints load; the stack grew from 250 to 561 px on a phone. |
+| Waiting block width (1440 px) | The full-width "Loading…" block became the centred board (`--dash-chrome-max`), a 58 px sideways move. |
+
+The reservations (all in `Stats.css`, values as `--stats-reserve-*` custom properties on `.stats-page`, one value per width band, minimum of the band):
+
+| Block | Rule | Values (px) by width |
+|---|---|---|
+| Page header | `.stats-header { min-height }` (the loading and error screens; equals the loaded `PageHead`) | 96 up to 518, 75 for 519 to 640, 109 for 641 to 670, 88 from 671 |
+| Waiting block | `.stats-loading { min-height }` (becomes the board in place; also takes the board's max width and centring) | 2730 up to 767, 1616 at 768, 1822 for 769 to 1279, 1326 from 1280 (keeps the footer below the fold) |
+| Network health index | `.stats-board-grid::before { grid-area: nhi; min-height }` (an empty box: the card does not exist before its data does; the card later sits in the same area) | 181 up to 767, 275 at 768, 355 for 769 to 1007, 333 for 1008 to 1269, 310 for 1270 to 1279, 346 from 1280 |
+| Left stack | `.stats-stack { min-height }` = Top by Reliability Score + Software in use + gap | 618 up to 329, 583 for 330 to 359, 561 for 360 to 409, 521 for 410 to 767, 538 at 768, 659 for 769 to 799, 618 from 800 |
+
+Also: the `/stats` route fallback (`statsFallback` in `App.tsx`) is as tall as the viewport (`min-height: 100vh`), because the footer must be below the fold from the first painted frame. It has no `.stats-*` classes: `Stats.css` is in the lazy chunk and is not loaded while the fallback shows.
+
+Result (same fixture, worst case of every endpoint held 1.5 s, all released at once, known last): layout shift 0.0000 to 0.0019 at 1440, 1280, 1024, 768, 390 and 320 px; the document height and the boxes of the main cards after loading are unchanged (0 px, at most 0.3 px). A reserved block with nothing to fill it (known mints fail: no Network health index) leaves an empty area of its reserved height.
+
+**How to re-measure** (after a change to a card, a font, the header text or the breakpoints; the spec's `LOADED` table fails by name and band when the loaded page drifted):
+1. A scratch Playwright script OUTSIDE the repo (a folder with a `node_modules` symlink to the app's, a config whose `webServer` is `npm run dev` with `cwd` the app and `reuseExistingServer: true`), importing `mockStatsEndpoints` from `e2e/fixtures/statsLayout.ts`.
+2. Layout shift: an init script with `new PerformanceObserver(...).observe({ type: 'layout-shift', buffered: true })` (skip `hadRecentInput`), keep `value` and `sources` (node, previous and current rect), `takeRecords()` before reading.
+3. Per viewport (and for a width sweep 320 to 1600 in steps of 10, then 1 px steps around every change) and per held endpoint: hold the endpoint, wait until `gate.reached`, wait 1.5 s, release, wait for `networkQuiet` and `layoutReady`, read the shift total and its sources; for the loaded heights read `.page-head`, `.stats-nhi-panel`, `.stats-stack` and `.stats-board-grid`, for the waiting state `.stats-header` and `.stats-loading` with everything held.
+4. Set each `--stats-reserve-*` value to the smallest loaded height of its band (a band ends where the loaded height changes), update `LOADED` in the spec, and run the spec. Rects of a layout-shift source are clipped to the viewport (a card that moves out of view reports `[0, 0, 0, 0]`), so read heights from `getBoundingClientRect`, not from the sources.
+
+Mutation-checked: removing the stack's `min-height` fails the reserved-heights test at every width and the "stack and the cards after it already stand where they will" test at 768 px and below; doubling it fails "loaded stack" at every width. (The shift limit alone does not catch the stack: on desktop the row is held by NUT coverage, on a phone the stack's own growth happens below the first screen; the height assertions do.)
 
 ## Reliability Score trend: axis and loading (2026-10-16)
 
