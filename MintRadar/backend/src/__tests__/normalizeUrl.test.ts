@@ -6,7 +6,7 @@ import { normalizeUrl } from '../discovery.js'
 describe('normalizeUrl', () => {
   describe('hostname normalization', () => {
     it('lowercases an uppercase hostname (the coinos seed-bug case)', () => {
-      expect(normalizeUrl('https://Mint.coinos.io')).toBe('https://mint.coinos.io')
+      expect(normalizeUrl('https://Mint.coinos.io')).toBe('https://BROKEN.coinos.io')
     })
 
     it('lowercases mixed-case subdomains', () => {
