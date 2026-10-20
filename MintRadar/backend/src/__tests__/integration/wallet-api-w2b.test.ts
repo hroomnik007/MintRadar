@@ -42,6 +42,7 @@ function row(url: string, o: Record<string, unknown> = {}) {
     total: 288, online_count: 288, total_7d: 2016, online_count_7d: 2016,
     latest_online: true, latest_latency_ms: 120, latest_checked_at: ago(0.001), last_online_at: ago(0.001),
     score_breakdown: BREAKDOWN, keysets_checked_at: ago(0.01), keysets_json: KEYSETS, down_since: null,
+    contact_checks: null,
     ...o,
   }
 }
@@ -78,7 +79,7 @@ async function listWith(rows: unknown[], qs = '') {
   return request(fresh).get('/api/wallets/mints' + qs)
 }
 
-const FACTS = ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample']
+const FACTS = ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'contactChecks']
 
 describe('facts and sample sizes', () => {
   it('pubkey, firstSeenAt, lastOnlineAt, sample come with include=facts; hasOnion and authRequired are on every object', async () => {
@@ -396,6 +397,45 @@ describe('single mint: canonical URL', () => {
   })
 })
 
+describe('contactChecks (facts about the contact entries; no values, no domains)', () => {
+  const AT = '2026-10-20T11:00:00.000Z'
+  const STORED = [
+    { kind: 'email', formatValid: true, domainResolves: true, checkedAt: AT },
+    { kind: 'email', formatValid: false, domainResolves: null, checkedAt: AT },
+    { kind: 'nostr', formatValid: true, domainResolves: null, checkedAt: AT },
+  ]
+
+  it('the default list has no contactChecks key, with or without stored checks', async () => {
+    withRows([row('https://a.example.com', { contact_checks: STORED }), row('https://b.example.com')])
+    for (const qs of ['', '?minScore=0', '?include=keysets,methods,breakdown,changes']) {
+      for (const m of (await list(qs)).body.mints) expect(m, qs).not.toHaveProperty('contactChecks')
+    }
+  })
+
+  it('include=facts brings it for every object: the stored entries, or an empty array', async () => {
+    withRows([row('https://a.example.com', { contact_checks: STORED }), row('https://b.example.com')])
+    const body = (await list('?include=facts')).body
+    expect(by(body, 'https://a.example.com')['contactChecks']).toEqual(STORED)
+    expect(by(body, 'https://b.example.com')['contactChecks']).toEqual([])
+  })
+
+  it('the single-mint endpoint always has it', async () => {
+    withRows([row('https://a.example.com', { contact_checks: STORED }), row('https://b.example.com', { contact_checks: [] })])
+    expect((await one('https://a.example.com')).body.mint.contactChecks).toEqual(STORED)
+    expect((await one('https://b.example.com')).body.mint.contactChecks).toEqual([])
+  })
+
+  it('a malformed stored column is an empty array, and every entry has exactly the four fields', async () => {
+    withRows([row('https://a.example.com', { contact_checks: [{ kind: 'email', value: 'a@b.com' }] }), row('https://b.example.com', { contact_checks: { x: 1 } }), row('https://c.example.com', { contact_checks: [{ ...STORED[0], extra: 'a@mail-host.com' }] })])
+    const body = (await list('?include=facts')).body
+    expect(by(body, 'https://a.example.com')['contactChecks']).toEqual([])
+    expect(by(body, 'https://b.example.com')['contactChecks']).toEqual([])
+    const c = by(body, 'https://c.example.com')['contactChecks'] as Array<Record<string, unknown>>
+    expect(Object.keys(c[0]!).sort()).toEqual(['checkedAt', 'domainResolves', 'formatValid', 'kind'])
+    expect(JSON.stringify(body)).not.toContain('mail-host.com')
+  })
+})
+
 describe('privacy rule and CORS', () => {
   const forbidden = ['ip', 'ipaddress', 'netasn', 'netorg', 'netcountry', 'serverlocation', 'lasterror', 'asn', 'org', 'location', 'hostingorganisation', 'nostrannouncepubkey']
   const keysOf = (v: unknown, out: string[] = []): string[] => {
@@ -429,6 +469,6 @@ describe('privacy rule and CORS', () => {
   it('/api/mints/known is unchanged: none of the new wallet-only snapshot columns leaks into it', async () => {
     const res = await request(app).get('/api/mints/known')
     const ks = Object.keys(res.body[0])
-    for (const k of ['scoreBreakdown', 'keysets', 'downSince', 'probes24h', 'walletExtra', 'keysetsJson', 'score_breakdown']) expect(ks).not.toContain(k)
+    for (const k of ['scoreBreakdown', 'keysets', 'downSince', 'probes24h', 'walletExtra', 'keysetsJson', 'score_breakdown', 'contactChecks', 'contact_checks']) expect(ks).not.toContain(k)
   })
 })

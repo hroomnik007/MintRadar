@@ -36,7 +36,8 @@ info:
     `sample`, `auditNeutralReason`, `keysets`, `keysetsCheckedAt`, `methods` and `scoreBreakdown` (`pubkey`, `firstSeenAt`,
     `lastOnlineAt`, `sample` and the last four only with `include` or on the single-mint endpoint). The mint change log
     followed (also 2026-10-20): the mint field `changes` (single-mint endpoint and `include=changes`), the list parameter
-    `changedSince` and the `include` value `changes`; the default list is unchanged. The integer
+    `changedSince` and the `include` value `changes`; the default list is unchanged. The mint field `contactChecks` followed
+    (also 2026-10-20: single-mint endpoint and `include=facts`); the default list is unchanged. The integer
     `methodology` changes whenever the score formula changes; scores of different methodology numbers are
     not comparable. The history is in `backend/src/shared/methodology.ts` and docs/API.md.
 
@@ -64,7 +65,7 @@ paths:
         then `uptime7dPct` descending (null last), then `name` (the hostname when `name` is null), then `url`.
         A query value that is present but invalid (a repeated parameter included; the boolean flags take exactly `true` or `false`) is a `400`; unknown parameters are ignored.
         `total` counts the mints that match the filters before `limit` is applied; `truncated` is true when `limit` cut the list.
-        The heavier fields (`pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `keysets`, `keysetsCheckedAt`, `methods`, `scoreBreakdown`) are only in the objects when `include` asks for them.
+        The heavier fields (`pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `keysets`, `keysetsCheckedAt`, `methods`, `scoreBreakdown`) are only in the objects when `include` asks for them.
       parameters:
         - name: unit
           in: query
@@ -124,7 +125,7 @@ paths:
           in: query
           description: >-
             Comma-separated list of `facts`, `keysets`, `methods`, `breakdown`, `changes`: add the heavier fields of that name to every object
-            (`facts` brings `pubkey`, `firstSeenAt`, `lastOnlineAt` and `sample`; `keysets` brings `keysets` and `keysetsCheckedAt`; `methods` brings
+            (`facts` brings `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample` and `contactChecks`; `keysets` brings `keysets` and `keysetsCheckedAt`; `methods` brings
             `methods`; `breakdown` brings `scoreBreakdown`; `changes` brings the newest 10 `changes` of each mint).
             An unknown value is a `400`. Added 2026-10-20.
           schema: { type: string, pattern: '^(facts|keysets|methods|breakdown|changes)(,(facts|keysets|methods|breakdown|changes))*$' }
@@ -358,10 +359,10 @@ components:
       type: object
       description: |
         Operational health of one mint. Never contains IP addresses, ASNs, hosting organisations, server locations,
-        error messages, reviewer public keys, review texts or contact details. It does carry the mint's public NUT-06
+        error messages, reviewer public keys, review texts or contact details (`contactChecks` states only whether entries are well formed, never a value or a domain). It does carry the mint's public NUT-06
         key (`pubkey`) and whether it advertises a Tor address (`hasOnion`). The fields from `pubkey` on were added on
         2026-10-20; `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `keysets`, `keysetsCheckedAt`, `methods`,
-        `scoreBreakdown` and `changes` are only present on the single-mint endpoint and in the list with the matching `include` value.
+        `scoreBreakdown`, `changes` and `contactChecks` are only present on the single-mint endpoint and in the list with the matching `include` value.
       required:
         - url
         - name
@@ -457,6 +458,13 @@ components:
           type: [string, 'null']
           format: date-time
           description: Only with `include=facts` (always on the single-mint endpoint). Time of the latest successful probe; null when the mint never answered.
+        contactChecks:
+          type: array
+          items: { $ref: '#/components/schemas/ContactCheck' }
+          description: >-
+            Only with `include=facts` (always on the single-mint endpoint). Facts about the contact entries the mint lists, one object per
+            entry (at most 10 entries, at most 3 of kind email); an empty array when nothing was checked. No value and no domain is returned
+            or stored, and no request is made to a contact value. Facts with a time, not a judgement; not part of the score. Added 2026-10-20.
         downSince:
           type: [string, 'null']
           format: date-time
@@ -502,6 +510,18 @@ components:
             Only with `include=changes` (the newest 10 per mint; always on the single-mint endpoint, the newest 50). Confirmed changes in the
             mint's public data, newest first; an empty array when there are none. A difference is recorded only after two consecutive
             successful observations. Facts with a source and a time, not a verdict. Added 2026-10-20.
+    ContactCheck:
+      type: object
+      required: [kind, formatValid, domainResolves, checkedAt]
+      properties:
+        kind: { type: string, enum: [email, nostr, twitter, x, telegram, signal, url, other], description: 'The kind the mint states; its "website" entry is url, an unlisted kind is other.' }
+        formatValid: { type: boolean, description: 'The value is well formed for its kind: e-mail syntax; npub with a valid checksum or 64 hex characters; https URL with a public host name; for every other kind printable text of a sane length.' }
+        domainResolves:
+          type: [boolean, 'null']
+          description: >-
+            E-mail entries only. true: DNS has MX (else A/AAAA) records for the domain; false: DNS says it has none; null: not applicable (not an e-mail,
+            an IP literal, localhost, a private or reserved name) or the lookup failed or timed out. null means unknown, never false.
+        checkedAt: { type: string, format: date-time, description: When the entry was checked (a mint is re-checked at most once every 24 hours). }
     Change:
       type: object
       required: [type, field, oldValue, newValue, observedAt, firstSeenAt]

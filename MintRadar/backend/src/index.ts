@@ -31,6 +31,7 @@ import {
   memoizedBody, cachedBodyOf, buildCachedBody, sendCachedBody, sendWalletError, queryOf, keysetsOf, changesOf, type Snapshot, type WalletExtra,
 } from './walletApi.js'
 import { readStoredBreakdown } from './scoreBreakdown.js'
+import { readStoredContactChecks } from './contactChecks.js'
 import { setDeprecationHeaders, RECOMMEND_DEPRECATION } from './deprecation.js'
 import { verifyNip05 } from './nip05Verify.js'
 import { isAllowlistMode, isAllowedUrl } from './allowlist.js'
@@ -764,11 +765,14 @@ app.get('/api/mint/probe', (req: Request, res: Response): void => {
   // The DB lookup runs first so an unknown URL can be charged to the dedicated
   // unknown-probe limiter BEFORE any outbound fetch happens.
   const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown'
-  pool.query('SELECT 1 FROM mints WHERE url = $1', [url])
+  pool.query('SELECT contact_checks FROM mints WHERE url = $1', [url])
     .then(async (known) => {
       if ((known.rowCount ?? 0) > 0) {
         const status = await probeMint(url)
-        res.json(status.info ? { ...status, info: { ...status.info, name: publicMintNameOrHost(status.info.name, url) } } : status)
+        // Additive, known mints only: the stored facts about the contact entries (contactChecks.ts), which Mint Detail shows
+        // as one muted line under the contact information. Never a value or a domain; [] while nothing was checked.
+        const contactChecks = readStoredContactChecks(known.rows[0]?.contact_checks) ?? []
+        res.json(status.info ? { ...status, info: { ...status.info, name: publicMintNameOrHost(status.info.name, url) }, contactChecks } : { ...status, contactChecks })
         return
       }
       const admit = tryAcquireUnknownProbe(ip)
@@ -1462,7 +1466,7 @@ function computeKnownMints(): Promise<Snapshot> {
         m.audit_cz_total, m.audit_cz_blamed, m.audit_cz_fetched_at,
         m.discovered_at, m.nostr_announced_at, m.nostr_announce_id, m.nostr_announce_pubkey, m.nostr_announce_d, m.last_reliability_score, m.last_error, m.server_location, m.ip_address, m.net_asn, m.net_org, m.net_country, m.has_onion,
         m.review_count, m.review_avg_rating, m.review_operator_count, m.review_rated_count, m.review_count_7d_ago, m.review_count_7d_ago_at,
-        m.contact_nostr,
+        m.contact_nostr, m.contact_checks,
         -- Only while the rollup is missing (review_rated_count IS NULL: before the first recount after a deploy or
         -- a failed one): the stored reviews, so the wallet API can count them at read time instead of showing 0.
         CASE WHEN m.review_rated_count IS NULL THEN
@@ -1663,6 +1667,7 @@ function computeKnownMints(): Promise<Snapshot> {
           keysets: keysetsOf(r.keysets_json),
           keysetsCheckedAt: r.keysets_checked_at ? new Date(r.keysets_checked_at as string | Date).toISOString() : null,
           changes: changesOf(r.changes_json),
+          contactChecks: readStoredContactChecks(r.contact_checks) ?? [],
         })
       }
       const now = Date.now()

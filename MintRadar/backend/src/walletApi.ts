@@ -6,6 +6,7 @@ import { METHODOLOGY_VERSION } from './shared/methodology.js'
 import { isTestMint } from './testMints.js'
 import { auditDataState } from './shared/auditScore.js'
 import type { ScoreBreakdown } from './scoreBreakdown.js'
+import type { ContactCheck } from './contactChecks.js'
 export { WALLET_ENVELOPE_FIELDS, WALLET_MINT_FIELDS, WALLET_QUERY_PARAMS, WALLET_ERRORS } from './shared/walletFields.js'
 
 // Public API for wallets (docs/API.md, docs/openapi/wallets-v1.yaml): a compact, fixed-shape view of the
@@ -16,8 +17,8 @@ export { WALLET_ENVELOPE_FIELDS, WALLET_MINT_FIELDS, WALLET_QUERY_PARAMS, WALLET
 // only add, and add its line to WALLET_MINT_FIELDS (shared/walletFields.ts: the /for-wallets page renders it, a
 // test compares it with this mapper). It must never carry IP/network data (address, ASN, hosting organisation,
 // server location), lastError, reviewer keys or texts or contact details. Since 2026-10-20 it does carry the mint's
-// public NUT-06 pubkey and the boolean hasOnion (a contract test lists the key set and scans the JSON for the
-// forbidden names).
+// public NUT-06 pubkey, the boolean hasOnion and contactChecks (facts about the entries: kind, formatValid, domainResolves,
+// checkedAt; never a contact value or a domain). A contract test lists the key set and scans the JSON for the forbidden names.
 
 /** The fields of an /api/mints/known row that the wallet view reads. */
 export interface KnownMintLike {
@@ -64,6 +65,8 @@ export interface WalletExtra {
   keysetsCheckedAt: string | null
   /** Confirmed changes of the mint's public data (mint_changes), newest first, at most 50. */
   changes: WalletChange[]
+  /** The stored facts about the contact entries (mints.contact_checks); never a value or a domain. */
+  contactChecks?: ContactCheck[]
 }
 
 /** One confirmed change (docs/API.md "Mint change log"); times are ISO 8601, the Nostr tags use UNIX seconds. */
@@ -130,9 +133,11 @@ export interface WalletMint {
   methods: { mint: WalletMethodEntry[]; melt: WalletMethodEntry[] } | null
   scoreBreakdown: ScoreBreakdown | null
   changes: WalletChange[]
+  /** Facts about the contact entries (kind, formatValid, domainResolves, checkedAt); no values, no domains. */
+  contactChecks: ContactCheck[]
 }
 
-const HEAVY_KEYS = { facts: ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample'], keysets: ['keysets', 'keysetsCheckedAt'], methods: ['methods'], breakdown: ['scoreBreakdown'], changes: ['changes'] } as const
+const HEAVY_KEYS = { facts: ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'contactChecks'], keysets: ['keysets', 'keysetsCheckedAt'], methods: ['methods'], breakdown: ['scoreBreakdown'], changes: ['changes'] } as const
 
 function toIso(v: string | Date | null | undefined): string | null {
   if (v === null || v === undefined) return null
@@ -295,6 +300,7 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviews
     methods: methodsOf(m.mintMethods, m.meltMethods),
     scoreBreakdown: extra?.scoreBreakdown ?? null,
     changes: extra?.changes ?? [],
+    contactChecks: extra?.contactChecks ?? [],
   }
 }
 

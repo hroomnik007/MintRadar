@@ -526,6 +526,9 @@ export async function initDb(): Promise<void> {
        tracking_since TIMESTAMPTZ NOT NULL DEFAULT NOW(),
        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
      )`,
+    // Facts about the mint's contact entries (contactChecks.ts): [{ kind, formatValid, domainResolves, checkedAt }] per entry,
+    // never a contact value or a domain. NULL until the first check after the deploy. Nullable, no default: metadata only.
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS contact_checks JSONB',
     // Newest mint_changes.id a subscriber was told about (public key / input fee DMs): the dedupe claim, one DM per change row.
     'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_change_id BIGINT',
   ]

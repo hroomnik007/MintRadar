@@ -9,6 +9,7 @@ import { mintMeltCondition, versionCondition, nutLossTransition, type Condition 
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { normalizeMintPubkey } from './mintPubkey.js'
 import { recordInfoObservation } from './mintChanges.js'
+import { queueContactChecks } from './contactChecks.js'
 import { computeScoreBreakdown } from './scoreBreakdown.js'
 import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type SafeFetchRejection } from './probeErrorKind.js'
 
@@ -500,10 +501,11 @@ export async function probeMintToDb(url: string, onDeferFailure?: (f: DeferredPr
             try { return new URL(u).hostname.toLowerCase().endsWith('.onion') } catch { return false }
           })
 
-          const storedRes = await pool.query('SELECT version, pubkey, nuts_limits FROM mints WHERE url = $1', [url])
+          const storedRes = await pool.query('SELECT version, pubkey, nuts_limits, contact_checks FROM mints WHERE url = $1', [url])
           const storedVersion = storedRes.rows[0]?.version as string | null
           const storedPubkey = (storedRes.rows[0]?.pubkey as string | null) ?? null
           const storedNuts = storedRes.rows[0]?.nuts_limits
+          const storedContactChecks = storedRes.rows[0]?.contact_checks
           nutTransition = nutLossTransition(
             storedNuts !== null && typeof storedNuts === 'object' ? storedNuts as Record<string, unknown> : null,
             nuts,
@@ -566,6 +568,11 @@ export async function probeMintToDb(url: string, onDeferFailure?: (f: DeferredPr
           // Mint change log (mintChanges.ts): compares the body fetched above, no extra request. Isolated: it never throws
           // and never touches the probe result.
           await recordInfoObservation(url, raw)
+
+          // Contact checks (contactChecks.ts): facts about the contact entries of the body fetched above, no extra request to
+          // the mint. Deliberately NOT awaited: DNS work is queued and best effort, and it never rejects, so it cannot slow
+          // the probe or change its result, the score, the status or a notification.
+          queueContactChecks(url, raw['contact'], storedContactChecks)
         }
       } catch { lastError = 'Invalid JSON response' }
 

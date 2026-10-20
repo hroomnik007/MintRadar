@@ -54,3 +54,5 @@ Because the owner has set `ATTESTATION_SERVICE_NSEC` on the server (without it t
 ## /methodology and /for-wallets (2026-10-13)
 
 Both pages are static: they add **no** browser request to any other host and no API call of their own (e2e `methodology-page.spec.ts` / `for-wallets-page.spec.ts` record every request and WebSocket and expect only the app's origin). Their external links (GitHub docs, issues) are plain `<a rel="noopener noreferrer">` links that the visitor follows on purpose.
+
+**Contact checks (2026-10-20).** For the domain of an e-mail address a mint lists as contact, the backend (never the browser) asks the system DNS resolver for MX, then A/AAAA records (`contactChecks.ts`, at most 3 addresses per mint, once per 24 h per mint, answers cached 7 days, 5 lookups at a time). It is a DNS query for the name only: no connection to that domain, no HTTP request to any contact value (a website entry is checked for its shape only, a Nostr key is not looked up on a relay). Neither the address nor the domain is stored or logged; see `backend-api-and-data.md` ("Contact checks").

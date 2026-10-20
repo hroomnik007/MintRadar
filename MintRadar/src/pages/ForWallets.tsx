@@ -186,10 +186,10 @@ export default function ForWallets() {
           <p>
             Fields of a nested object are written <code>parent.child</code>. Clients must ignore fields they do not know.
             The answers never contain IP addresses, AS numbers, hosting organisations, server locations or error
-            messages, reviewer keys or review texts, or contact details. They do carry the mint&apos;s public NUT-06
+            messages, reviewer keys or review texts, or contact details (<code>contactChecks</code> says only whether the entries a mint lists are well formed, never a value or a domain). They do carry the mint&apos;s public NUT-06
             key (<code>pubkey</code>) and whether it advertises a Tor address (<code>hasOnion</code>). The heavier fields{' '}
             <code>keysets</code>, <code>keysetsCheckedAt</code>, <code>methods</code> and <code>scoreBreakdown</code> are
-            in the list only with <code>include=</code> (so are <code>pubkey</code>, <code>firstSeenAt</code>, <code>lastOnlineAt</code> and <code>sample</code>, as <code>include=facts</code>) and always in the single-mint answer.{' '}
+            in the list only with <code>include=</code> (so are <code>pubkey</code>, <code>firstSeenAt</code>, <code>lastOnlineAt</code>, <code>sample</code> and <code>contactChecks</code>, as <code>include=facts</code>) and always in the single-mint answer.{' '}
             <code>scoreBreakdown</code> is what the score used at its last computation, written together with the score.
           </p>
           <p data-testid="request-privacy">
@@ -268,6 +268,10 @@ export default function ForWallets() {
               Also added {F.walletAdditionsOn}, with the mint change log: the mint field <code>changes</code> (on the single-mint endpoint, and in the list with <code>include=changes</code>), the list
               parameter <code>changedSince</code> and the <code>include</code> value <code>changes</code>. The default list is unchanged. The signed health event gets one more tag, <code>mint_last_change</code>,
               only for a mint that has a recorded change.
+            </li>
+            <li data-testid="additions-contact-checks">
+              Also added {F.walletAdditionsOn}: the mint field <code>contactChecks</code> (on the single-mint endpoint, and in the list with <code>include=facts</code>): per contact entry the kind, whether the value is well formed,
+              whether the domain of an e-mail address has mail records in DNS (<code>null</code> when that is unknown) and when it was checked. The default list is unchanged.
             </li>
             <li>A removal is announced on this page and in <code>docs/API.md</code> at least {F.deprecationNoticeDays} days before it takes effect. A route that is going away also says so in its responses, with the <code>Deprecation</code> and <code>Sunset</code> headers and a <code>Link</code> header with <code>rel=&quot;successor-version&quot;</code>; the only route that does so today is the one below.</li>
             <li data-testid="recommend-deprecation">

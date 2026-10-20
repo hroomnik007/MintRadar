@@ -1,4 +1,5 @@
 import { isProbeErrorKind, type ProbeErrorKind } from '@/utils/probeErrorMessages'
+import { readContactChecks, type ContactCheckFact } from '@/utils/contactChecks'
 
 export interface MintInfo {
   name: string
@@ -32,6 +33,8 @@ export interface MintStatus {
   error?: string
   // Coarse failure category from the proxy probe (see utils/probeErrorMessages.ts).
   errorKind?: ProbeErrorKind
+  // Facts about the contact entries of a tracked mint (kind, formatValid, domainResolves, checkedAt); never a value.
+  contactChecks?: ContactCheckFact[]
 }
 
 const MAX_URL_LENGTH = 500
@@ -113,6 +116,7 @@ async function probeMintViaProxy(url: string, signal?: AbortSignal): Promise<Min
     checkedAt: typeof raw['checkedAt'] === 'string' ? new Date(raw['checkedAt']) : new Date(),
     ...(typeof raw['error'] === 'string' ? { error: raw['error'] } : {}),
     ...(isProbeErrorKind(raw['errorKind']) ? { errorKind: raw['errorKind'] } : {}),
+    ...(raw['contactChecks'] !== undefined ? { contactChecks: readContactChecks(raw['contactChecks']) } : {}),
   }
 }
 

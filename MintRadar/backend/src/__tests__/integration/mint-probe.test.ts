@@ -84,6 +84,23 @@ describe('GET /api/mint/probe', () => {
     expect(r.body.keysets).toEqual(KEYSETS.keysets)
   })
 
+  it('adds the stored contact checks (facts, no values) for a KNOWN mint; an empty array when there are none', async () => {
+    const stored = [{ kind: 'email', formatValid: true, domainResolves: null, checkedAt: '2026-10-20T11:00:00.000Z' }]
+    query.mockResolvedValue({ rowCount: 1, rows: [{ contact_checks: stored }] })
+    serveMint(FULL_INFO)
+    const r = await request(app).get('/api/mint/probe?url=https://mint.example').expect(200)
+    expect(r.body.contactChecks).toEqual(stored)
+    expect(JSON.stringify(r.body.contactChecks)).not.toContain('admin@example.com')
+
+    query.mockResolvedValue({ rowCount: 1, rows: [{ contact_checks: null }] })
+    serveMint(FULL_INFO)
+    expect((await request(app).get('/api/mint/probe?url=https://mint.example').expect(200)).body.contactChecks).toEqual([])
+
+    query.mockResolvedValue({ rowCount: 1, rows: [{ contact_checks: [{ kind: 'email' }] }] })
+    serveMint(null)
+    expect((await request(app).get('/api/mint/probe?url=https://mint.example').expect(200)).body.contactChecks).toEqual([])
+  })
+
   it('returns only online/latency + a STRIPPED info for an UNKNOWN url (not a general fetch oracle)', async () => {
     query.mockResolvedValue({ rowCount: 0, rows: [] }) // not a known mint
     serveMint(FULL_INFO)
@@ -104,6 +121,7 @@ describe('GET /api/mint/probe', () => {
     expect(r.body.info.description).toBeUndefined()
     expect(r.body.info.pubkey).toBeUndefined()
     expect(r.body.keysets).toBeNull()
+    expect(r.body).not.toHaveProperty('contactChecks')
   })
 
   it('reflects nothing but online:false for an unknown host that is not a Cashu mint', async () => {

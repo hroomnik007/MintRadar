@@ -61,6 +61,7 @@ import { useDocumentMeta, useNoindex, useRemoveCanonical } from '@/hooks/useDocu
 import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLocation'
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
+import { ContactChecksLine } from '@/components/ContactChecksLine'
 import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
 import { LAST_SCORE_CAPTION, KEEP_WALLET_SENTENCE, TEMPORARY_SENTENCE, contactSentence, restoreSentence, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
@@ -1733,7 +1734,7 @@ function MintDetailContent({ url }: { url: string }) {
 
           {(() => { const rows = networkRows(knownMint); return rows ? <MintNetworkCard rows={rows} /> : null })()}
 
-          {(email || twitter || nostr || operatorNip05) && (
+          {(email || twitter || nostr || operatorNip05 || (data?.contactChecks?.length ?? 0) > 0) && (
             <div className="md-panel">
               {(email || twitter || nostr) && (
                 <>
@@ -1842,6 +1843,7 @@ function MintDetailContent({ url }: { url: string }) {
                   </span>
                 </div>
               )}
+              <ContactChecksLine checks={data?.contactChecks} now={now} />
             </div>
           )}
             <MintChangeLog url={url} />

@@ -97,7 +97,7 @@ const V1_KEYS = [
   'scoreCappedNew', 'software', 'status', 'units', 'uptime24hPct', 'uptime7dPct', 'url',
 ]
 const W2B_LIGHT_KEYS = ['auditNeutralReason', 'authRequired', 'downSince', 'hasOnion']
-const W2B_HEAVY_KEYS = ['changes', 'firstSeenAt', 'keysets', 'keysetsCheckedAt', 'lastOnlineAt', 'methods', 'pubkey', 'sample', 'scoreBreakdown']
+const W2B_HEAVY_KEYS = ['changes', 'contactChecks', 'firstSeenAt', 'keysets', 'keysetsCheckedAt', 'lastOnlineAt', 'methods', 'pubkey', 'sample', 'scoreBreakdown']
 const MINT_KEYS = [...V1_KEYS, ...W2B_LIGHT_KEYS].sort()
 const MINT_KEYS_FULL = [...MINT_KEYS, ...W2B_HEAVY_KEYS].sort()
 
