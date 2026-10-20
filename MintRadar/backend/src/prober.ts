@@ -424,17 +424,11 @@ export async function probeMintToDb(url: string, onDeferFailure?: (f: DeferredPr
   }
   if (urlSafety === 'dns-error') {
     // DNS failure is not an SSRF attempt — record the mint as offline so
-    // uptime history and the degraded flag remain accurate.
-    const recordDnsFailure = async (): Promise<void> => {
-      await pool.query(
-        `INSERT INTO mint_history (url, online, latency_ms, checked_at) VALUES ($1, false, NULL, NOW())`,
-        [url]
-      )
-      await pool.query(
-        `UPDATE mints SET last_error = $1 WHERE url = $2`,
-        ['DNS resolution failed', url]
-      )
-    }
+    // uptime history and the degraded flag remain accurate. Same path as every other
+    // outcome: the stored score is recomputed and the down/up transition is detected.
+    const recordDnsFailure = (): Promise<void> => recordProbeResult(url, {
+      online: false, latencyMs: null, lastError: 'DNS resolution failed', contactCount: null, nutTransition: null,
+    })
     if (onDeferFailure) onDeferFailure({ url, kind: 'dns', commit: recordDnsFailure })
     else await recordDnsFailure()
     return

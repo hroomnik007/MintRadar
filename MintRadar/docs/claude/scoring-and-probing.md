@@ -111,6 +111,8 @@ Frontend hides degraded mints by default (`showDegraded=false`); footer shows "N
 
 **Known edge case:** After the first DNS-failure write, a mint may briefly show `degraded=false` for ~20 min until 4 probe records accumulate. Self-correcting, no intervention needed.
 
+**Invariant (2026-10-20): every recorded probe outcome, including network failures, updates the stored score and runs the transition logic.** All outcomes (online, HTTP error, invalid JSON, not Cashu, timeout/unreachable/TLS and the DNS error of the SSRF guard) end in `recordProbeResult` in `prober.ts`: history row, `invalid_since`/`last_online_at`, the online→offline / offline→online DM trigger, the alert conditions, and the recomputed `mints.last_reliability_score` (also copied to the new history row). The DNS-error branch used to write only a history row and `last_error`, so a mint whose DNS broke kept its old score (a mint at 0 % uptime showed 87) and never sent "Goes down"; it now calls `recordProbeResult`. Failures held back as a suspected vantage outage are still not written at all (`commit()` of `DeferredProbeFailure` runs this same function). There is no per-probe kind 30385 hook: the health publisher reads status and score from the database on its own timer, so it follows the stored score. Tests: `prober-network-failure-score.test.ts`.
+
 ## NUT tracking scope: mint-side vs. wallet-only (2026-09-14)
 
 The 25-NUT list from the 2026-07-02 expansion below was audited against the current
