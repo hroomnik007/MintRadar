@@ -67,6 +67,8 @@ export const WALLET_QUERY_PARAMS: readonly WalletQueryParam[] = [
   { name: 'includeArchived', type: 'true | false', default: 'false', meaning: 'Also return archived mints (see status).' },
   { name: 'includeTest', type: 'true | false', default: 'false', meaning: 'Also return mints from the test-mint list (isTest: true).' },
   { name: 'includeUnscored', type: 'true | false', default: 'false', meaning: 'Also return mints whose score is null.' },
+  { name: 'nuts', type: 'comma-separated NUT numbers', default: 'none', meaning: 'Keep mints that advertise all of these NUTs, for example 4,5 (1 to 32 numbers of up to 3 digits; compared with the nuts field). A mint whose nuts are unknown never matches.' },
+  { name: 'eligible', type: 'true | false', default: 'none', meaning: 'true: keep only mints with eligibleForRecommendation: true, the ones the deprecated /mints/recommend would return. false: keep only the others. Combine with unit, minScore, nuts and limit to replace /mints/recommend.' },
   { name: 'limit', type: 'integer 1 to 200', default: '100', meaning: 'Maximum number of mints returned.' },
 ]
 
@@ -81,7 +83,7 @@ export const WALLET_ERRORS: readonly WalletError[] = [
   { status: 400, code: 'invalid_parameter', when: 'A list query value is present but invalid.' },
   { status: 400, code: 'invalid_url', when: 'The {url} is not valid percent-encoding or not a well-formed public https:// URL.' },
   { status: 404, code: 'mint_not_found', when: 'No tracked mint has this URL.' },
-  { status: 404, code: 'not_found', when: 'Unknown route below /api/wallets.' },
+  { status: 404, code: 'not_found', when: 'Unknown route below /api/v1 (or /api/wallets).' },
   { status: 429, code: 'rate_limited', when: 'More than 300 requests per minute from one IP.' },
   { status: 500, code: 'internal_error', when: 'Server error.' },
 ]

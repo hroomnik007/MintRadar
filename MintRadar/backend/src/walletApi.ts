@@ -153,11 +153,16 @@ export interface WalletListFilter {
   includeArchived: boolean
   includeUnscored: boolean
   limit: number
-  /** Only mints with eligibleForRecommendation (used by /api/mints/recommend, not a wallet query parameter). */
+  /** Only mints with eligibleForRecommendation (used by /api/mints/recommend; the wallet query parameter is `eligible`). */
   eligibleOnly?: boolean
-  /** NUT numbers the mint must advertise (used by /api/mints/recommend, not a wallet query parameter). */
+  /** The `eligible` query parameter: keep only mints whose eligibleForRecommendation equals this. */
+  eligible?: boolean
+  /** NUT numbers the mint must advertise (the `nuts` query parameter, and /api/mints/recommend). */
   requiredNuts?: string[]
 }
+
+/** The most NUT numbers one `nuts` value may list (there are fewer than 30 NUTs). */
+export const WALLET_NUTS_MAX = 32
 
 export type QueryResult = { ok: true; filter: WalletListFilter } | { ok: false; message: string }
 
@@ -190,6 +195,21 @@ export function parseWalletListQuery(q: Record<string, unknown>): QueryResult {
     if (v === undefined) continue
     if (v !== 'true' && v !== 'false') return { ok: false, message: `${key} must be true or false` }
     filter[key] = v === 'true'
+  }
+  const nuts = single(q, 'nuts')
+  if (nuts === null || nuts === '') return { ok: false, message: 'nuts must be a single comma-separated list of NUT numbers, for example 4,5' }
+  if (nuts !== undefined) {
+    const list = nuts.split(',').map(n => n.trim())
+    if (list.length > WALLET_NUTS_MAX || !list.every(n => /^\d{1,3}$/.test(n))) {
+      return { ok: false, message: `nuts must be 1 to ${WALLET_NUTS_MAX} comma-separated NUT numbers, for example 4,5` }
+    }
+    filter.requiredNuts = [...new Set(list)]
+  }
+  const eligible = single(q, 'eligible')
+  if (eligible === null) return { ok: false, message: 'eligible must be a single value: true or false' }
+  if (eligible !== undefined) {
+    if (eligible !== 'true' && eligible !== 'false') return { ok: false, message: 'eligible must be true or false' }
+    filter.eligible = eligible === 'true'
   }
   const limit = single(q, 'limit')
   if (limit === null) return { ok: false, message: 'limit must be a single integer' }
@@ -244,6 +264,7 @@ export function filterWalletMints(mints: WalletMint[], f: WalletListFilter): Wal
       if (f.minScore !== undefined && (m.score === null || m.score < f.minScore)) return false
       if (f.unit !== undefined && !(m.units ?? []).some(u => u.toLowerCase() === f.unit)) return false
       if (f.eligibleOnly && !m.eligibleForRecommendation) return false
+      if (f.eligible !== undefined && m.eligibleForRecommendation !== f.eligible) return false
       if (f.requiredNuts && !f.requiredNuts.every(n => nutRequirementMet(m, n))) return false
       return true
     })
@@ -305,7 +326,7 @@ export function recommendEnvelope(snap: Snapshot, q: RecommendQuery): object {
 
 // ── Paths (CORS, rate limit) ──────────────────────────────────────────────────
 
-const PUBLIC_CORS_EXACT = new Set(['/api/mints/known', '/api/mints/recommend', '/health'])
+const PUBLIC_CORS_EXACT = new Set(['/api/mints/recommend', '/health'])
 
 /** /api/wallets and everything below it (the /api/v1 alias is already rewritten when this runs). */
 export function isWalletApiPath(path: string): boolean {
@@ -323,7 +344,7 @@ export function usesWalletRateLimit(path: string): boolean {
   return isWalletApiPath(path) || isRecommendPath(path)
 }
 
-/** Routes that answer any origin: the wallet API, /api/mints/known, /api/mints/recommend and /health. */
+/** Routes that answer any origin: the wallet API, /api/mints/recommend and /health. /api/mints/known is NOT one of them. */
 export function isPublicCorsPath(path: string): boolean {
   const p = path.toLowerCase().replace(/\/+$/, '')
   return isWalletApiPath(p) || PUBLIC_CORS_EXACT.has(p)

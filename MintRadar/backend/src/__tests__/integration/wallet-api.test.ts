@@ -470,8 +470,8 @@ describe('caching', () => {
 })
 
 describe('CORS', () => {
-  const PUBLIC = ['/api/wallets/mints', '/api/wallets/mints/' + encodeURIComponent('https://a.example.com'), '/api/mints/known', '/api/mints/recommend', '/health',
-    '/api/v1/wallets/mints', '/api/v1/mints/known', '/api/v1/mints/recommend', '/api/v1/health']
+  const PUBLIC = ['/api/wallets/mints', '/api/wallets/mints/' + encodeURIComponent('https://a.example.com'), '/api/mints/recommend', '/health',
+    '/api/v1/wallets/mints', '/api/v1/mints/recommend', '/api/v1/health']
 
   it.each(PUBLIC)('%s answers a foreign origin with * and exposes the headers', async (path) => {
     query.mockResolvedValue({ rows: ROWS })
@@ -488,7 +488,7 @@ describe('CORS', () => {
     expect(res.headers['access-control-allow-origin']).toBe('*')
   })
 
-  it.each(['/api/wallets/mints', '/api/mints/known', '/api/mints/recommend', '/health', '/api/v1/wallets/mints'])('preflight on %s is a 204', async (path) => {
+  it.each(['/api/wallets/mints', '/api/mints/recommend', '/health', '/api/v1/wallets/mints'])('preflight on %s is a 204', async (path) => {
     const res = await request(app).options(path).set('Origin', FOREIGN).set('Access-Control-Request-Method', 'GET').set('Access-Control-Request-Headers', 'If-None-Match')
     expect(res.status).toBe(204)
     expect(res.headers['access-control-allow-origin']).toBe('*')
@@ -504,7 +504,7 @@ describe('CORS', () => {
     expect(res.headers['access-control-allow-headers']).toBe('Content-Type, If-None-Match')
   })
 
-  it.each(['/api', '/api/stats', '/api/mints/history?url=https://a.example.com', '/api/mint/probe?url=https://a.example.com', '/api/nuts', '/sitemap.xml'])(
+  it.each(['/api', '/api/stats', '/api/mints/known', '/api/v1/mints/known', '/api/mints/history?url=https://a.example.com', '/api/mint/probe?url=https://a.example.com', '/api/nuts', '/sitemap.xml'])(
     'restricted GET %s with a foreign origin is a JSON 403', async (path) => {
       const res = await request(app).get(path).set('Origin', FOREIGN)
       expect(res.status).toBe(403)
@@ -567,9 +567,13 @@ describe('rate limits', () => {
     expect(blocked.headers['x-ratelimit-remaining']).toBe('0')
     // wallet routes are on their own budget
     expect((await request(app).get('/api/wallets/mints').set('X-Forwarded-For', ip)).status).toBe(200)
-    // the exempt routes stay exempt
-    expect((await request(app).get('/api/mints/known').set('X-Forwarded-For', ip)).status).toBe(200)
-    expect((await request(app).get('/api/mints/known').set('X-Forwarded-For', ip)).headers['x-ratelimit-limit']).toBeUndefined()
+    // /api/mints/known is on the general budget like the other website routes; /health stays exempt
+    const known = await request(app).get('/api/mints/known').set('X-Forwarded-For', ip)
+    expect(known.status).toBe(429)
+    expect(known.headers['x-ratelimit-limit']).toBe('60')
+    const health = await request(app).get('/health').set('X-Forwarded-For', ip)
+    expect(health.status).toBe(200)
+    expect(health.headers['x-ratelimit-limit']).toBeUndefined()
   })
 
   it('the submit limiter sends Retry-After on its 429', async () => {
@@ -705,4 +709,178 @@ describe('GET /api/mints/recommend', () => {
     expect(failed.status).toBe(500)
     expect(failed.body).toEqual({ error: 'Internal server error' })
   })
+})
+
+describe('list filters nuts and eligible (replace /mints/recommend)', () => {
+  const FIXTURE = [
+    ...ROWS,
+    row('https://almost.example.com', { last_reliability_score: 97, discovered_at: ago(13.9) }),
+    row('https://mature.example.com', { last_reliability_score: 50, discovered_at: ago(14.1), nuts_limits: { '4': {}, '5': {}, '9': {} } }),
+    row('https://nofirstseen.example.com', { last_reliability_score: 98, discovered_at: null }),
+    row('https://nonuts.example.com', { last_reliability_score: 85, nuts_limits: null }),
+  ]
+  beforeEach(() => { query.mockResolvedValue({ rows: FIXTURE }) })
+  const rec = (qs: string) => request(app).get('/api/mints/recommend' + qs)
+  const recUrls = (body: { recommended: Array<{ url: string }> }) => body.recommended.map(r => r.url)
+
+  it('nuts keeps only mints that advertise all the listed NUTs (leading zeros ignored, order and repeats do not matter)', async () => {
+    expect(urls((await list('?nuts=8')).body)).toEqual(['https://c.example.com'])
+    expect(urls((await list('?nuts=4,5,08')).body)).toEqual(['https://c.example.com'])
+    expect(urls((await list('?nuts=8,4,4')).body)).toEqual(['https://c.example.com'])
+    expect(urls((await list('?nuts=4,99')).body)).toEqual([])
+    expect(urls((await list('?nuts=9&includeUnscored=true')).body)).toEqual(['https://mature.example.com'])
+    // a mint whose nuts are unknown never matches; without the parameter it is listed
+    expect(urls((await list()).body)).toContain('https://nonuts.example.com')
+    expect(urls((await list('?nuts=4')).body)).not.toContain('https://nonuts.example.com')
+  })
+
+  it('eligible=true keeps what /recommend would consider; eligible=false keeps only the others; absent = no filter', async () => {
+    const all = urls((await list('?limit=200')).body)
+    const yes = urls((await list('?eligible=true&limit=200')).body)
+    const no = urls((await list('?eligible=false&limit=200')).body)
+    for (const young of ['https://new.example.com', 'https://almost.example.com', 'https://nofirstseen.example.com']) {
+      expect(yes).not.toContain(young)
+      expect(no).toContain(young)
+    }
+    expect(yes).toContain('https://mature.example.com')
+    expect(new Set([...yes, ...no])).toEqual(new Set(all))
+    expect(yes.filter(u => no.includes(u))).toEqual([])
+    const body = (await list('?eligible=true&limit=200')).body
+    expect(body.mints.every((m: { eligibleForRecommendation: boolean }) => m.eligibleForRecommendation)).toBe(true)
+  })
+
+  it.each([
+    ['', '?eligible=true&unit=sat&minScore=80&limit=5'],
+    ['?unit=usd&minScore=0', '?eligible=true&unit=usd&minScore=0&limit=5'],
+    ['?minScore=0&nuts=4,5,08', '?eligible=true&unit=sat&minScore=0&nuts=4,5,08&limit=5'],
+    ['?minScore=0&nuts=9', '?eligible=true&unit=sat&minScore=0&nuts=9&limit=5'],
+    ['?minScore=85', '?eligible=true&unit=sat&minScore=85&limit=5'],
+    ['?minScore=0&limit=2', '?eligible=true&unit=sat&minScore=0&limit=2'],
+    ['?minScore=0&nuts=4,99', '?eligible=true&unit=sat&minScore=0&nuts=4,99&limit=5'],
+  ])('/recommend%s returns the same mints in the same order as /api/v1/wallets/mints%s', async (recQs, walletQs) => {
+    const r = recUrls((await rec(recQs)).body)
+    const w = urls((await request(app).get('/api/v1/wallets/mints' + walletQs)).body)
+    expect(w).toEqual(r)
+  })
+
+  it('the documented replacement query returns a non-empty, equal set', async () => {
+    const w = urls((await request(app).get('/api/v1/wallets/mints?eligible=true&unit=sat&minScore=80&nuts=4,5&limit=5')).body)
+    expect(w.length).toBeGreaterThan(0)
+    expect(w).toEqual(recUrls((await rec('?unit=sat&minScore=80&nuts=4,5&limit=5')).body))
+  })
+
+  it('invalid nuts and eligible values are 400 invalid_parameter, like the other bad parameters', async () => {
+    const many = Array.from({ length: 33 }, (_, i) => i + 1).join(',')
+    for (const qs of ['?nuts=', '?nuts=abc', '?nuts=4,', '?nuts=,4', '?nuts=4,,5', '?nuts=4,x', '?nuts=1000', '?nuts=-4', '?nuts=4.5', '?nuts=4%205',
+      '?nuts=4&nuts=5', `?nuts=${many}`, '?eligible=', '?eligible=yes', '?eligible=1', '?eligible=TRUE', '?eligible=true&eligible=false']) {
+      const res = await list(qs)
+      expect(res.status, qs).toBe(400)
+      expect(res.body, qs).toEqual({ error: { code: 'invalid_parameter', message: expect.any(String) } })
+    }
+    expect((await list('?nuts=4,5&eligible=true')).status).toBe(200)
+    expect((await list('?nuts=4, 5')).status).toBe(200) // spaces around a number are trimmed
+  })
+})
+
+describe('JSON 404 for unmatched /api paths', () => {
+  it('/api/v1/* answers the wallet error envelope', async () => {
+    for (const path of ['/api/v1/foo', '/api/v1/foo/bar', '/api/v1/health/extra', '/api/v1/wallets/nothing', '/api/v1/mints/nothing', '/API/V1/foo']) {
+      const res = await request(app).get(path)
+      expect(res.status, path).toBe(404)
+      expect(res.headers['content-type'], path).toMatch(/application\/json/)
+      expect(res.body, path).toEqual({ error: { code: 'not_found', message: expect.any(String) } })
+    }
+  })
+
+  it('other /api/* paths answer { error: "Not found" }, for any method', async () => {
+    for (const path of ['/api/foo', '/api/mints/nothing', '/api/mints/known/extra']) {
+      const res = await request(app).get(path)
+      expect(res.status, path).toBe(404)
+      expect(res.headers['content-type'], path).toMatch(/application\/json/)
+      expect(res.body, path).toEqual({ error: 'Not found' })
+    }
+    const post = await request(app).post('/api/nothing').send({})
+    expect(post.status).toBe(404)
+    expect(post.body).toEqual({ error: 'Not found' })
+    expect(JSON.stringify(post.body)).not.toContain('Cannot')
+  })
+
+  it('does not swallow real routes', async () => {
+    expect((await request(app).get('/api')).status).toBe(200)
+    expect((await request(app).get('/api/v1')).status).toBe(200)
+    expect((await request(app).get('/api/v1/health')).status).toBe(200)
+    expect((await request(app).get('/api/v1/wallets/mints')).status).toBe(200)
+  })
+})
+
+describe('deprecation of /mints/recommend', () => {
+  const HEADERS = ['deprecation', 'sunset', 'link']
+
+  it('/api/v1/mints/recommend and its unversioned alias carry Deprecation (@unix), Sunset (HTTP-date) and the successor Link', async () => {
+    for (const path of ['/api/v1/mints/recommend', '/api/mints/recommend']) {
+      const res = await request(app).get(path)
+      expect(res.status, path).toBe(200)
+      expect(res.headers['deprecation'], path).toBe('@1792454400')
+      expect(res.headers['sunset'], path).toBe('Tue, 26 Jan 2027 00:00:00 GMT')
+      expect(res.headers['link'], path).toBe('<https://mintradar.org/api/v1/wallets/mints?eligible=true&unit=sat&minScore=80&limit=5>; rel="successor-version"')
+      expect(res.body.recommended, path).toBeDefined() // the body is unchanged
+    }
+  })
+
+  it('a 304 and a CORS preflight-free GET from a foreign origin keep the headers; the body shape is unchanged', async () => {
+    const first = await request(app).get('/api/v1/mints/recommend').set('Origin', FOREIGN)
+    const again = await request(app).get('/api/v1/mints/recommend').set('Origin', FOREIGN).set('If-None-Match', first.headers['etag'] as string)
+    expect(again.status).toBe(304)
+    for (const h of HEADERS) expect(again.headers[h], h).toBe(first.headers[h])
+    expect(Object.keys(first.body).sort()).toEqual(['generatedAt', 'methodology', 'recommended'])
+  })
+
+  it('no other route sends them', async () => {
+    for (const path of ['/api/v1/wallets/mints', '/api/v1/wallets/mints/' + encodeURIComponent('https://a.example.com'), '/api/v1/mints/known', '/api/stats', '/api', '/api/v1/health']) {
+      const res = await request(app).get(path)
+      for (const h of HEADERS) expect(res.headers[h], `${path} ${h}`).toBeUndefined()
+    }
+  })
+})
+
+describe('/api/mints/known is a website route', () => {
+  it.each(['/api/mints/known', '/api/v1/mints/known'])('%s: a foreign Origin is a JSON 403 without CORS headers', async (path) => {
+    const res = await request(app).get(path).set('Origin', FOREIGN)
+    expect(res.status).toBe(403)
+    expect(res.body).toEqual({ error: { code: 'cors_forbidden', message: expect.any(String) } })
+    expect(res.headers['access-control-allow-origin']).toBeUndefined()
+    const pre = await request(app).options(path).set('Origin', FOREIGN).set('Access-Control-Request-Method', 'GET')
+    expect(pre.status).toBe(403)
+    expect(pre.headers['access-control-allow-origin']).toBeUndefined()
+  })
+
+  it.each(['/api/mints/known', '/api/v1/mints/known'])('%s: the website\'s own origin and a request without Origin keep working, with the cache headers', async (path) => {
+    const own = await request(app).get(path).set('Origin', 'https://mintradar.org')
+    expect(own.status).toBe(200)
+    expect(own.headers['access-control-allow-origin']).toBe('https://mintradar.org')
+    expect(own.headers['cache-control']).toBe('public, max-age=300')
+    expect(own.headers['etag']).toBeDefined()
+    const none = await request(app).get(path)
+    expect(none.status).toBe(200)
+    expect(none.headers['access-control-allow-origin']).toBeUndefined()
+    expect(Array.isArray(none.body)).toBe(true)
+  })
+
+  it('every field is still there (nothing was removed)', async () => {
+    const res = await request(app).get('/api/mints/known')
+    expect(Object.keys(res.body[0])).toEqual(expect.arrayContaining(['ipAddress', 'netAsn', 'netOrg', 'netCountry', 'serverLocation', 'pubkey', 'lastError', 'auditNErrors', 'reviewWeightedRating']))
+  })
+
+  it('shares the general 60/min budget per IP (X-RateLimit-*), the 61st request is a 429 with Retry-After', async () => {
+    const ip = '198.51.100.40'
+    const get = () => request(app).get('/api/mints/known').set('X-Forwarded-For', ip)
+    const first = await get()
+    expect(first.headers['x-ratelimit-limit']).toBe('60')
+    expect(first.headers['x-ratelimit-remaining']).toBe('59')
+    for (let i = 1; i < 60; i++) expect((await get()).status).toBe(200)
+    const blocked = await get()
+    expect(blocked.status).toBe(429)
+    expect(blocked.body).toEqual({ error: 'Too many requests' })
+    expect(Number(blocked.headers['retry-after'])).toBeGreaterThanOrEqual(1)
+  }, 60_000)
 })

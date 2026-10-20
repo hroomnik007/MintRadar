@@ -10,7 +10,7 @@ import { getLatestVersionsMap } from './versionCatalog.js'
 import type { LatestVersions } from './shared/versionRule.js'
 import { METHODOLOGY_CHANGES } from './shared/methodology.js'
 import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
-import { getAuditCzForMint, getAuditCzSyncStatus, clampAuditCzLimit } from './auditCz.js'
+import { getAuditCzForMint, getAuditCzSyncStatus, auditCzSourceStatus, clampAuditCzLimit } from './auditCz.js'
 import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
 import { getLastVantageOutageAt } from './probeCycle.js'
 import { publishServiceProfile } from './nostrService.js'
@@ -29,6 +29,7 @@ import {
   usesWalletRateLimit, isRecommendPath, isPublicCorsPath, PUBLIC_CORS_EXPOSE_HEADERS, parseWalletListQuery, walletListEnvelope, walletSingleEnvelope, recommendEnvelope,
   memoizedBody, cachedBodyOf, buildCachedBody, sendCachedBody, sendWalletError, queryOf, type Snapshot,
 } from './walletApi.js'
+import { setDeprecationHeaders, RECOMMEND_DEPRECATION } from './deprecation.js'
 import { verifyNip05 } from './nip05Verify.js'
 import { isAllowlistMode, isAllowedUrl } from './allowlist.js'
 import { profileFieldsForReview } from './profilesSync.js'
@@ -43,7 +44,7 @@ function invalidateKnownMints(): void {
 }
 const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
 
-// /api/stats is in RATE_LIMIT_EXEMPT (see below) but, unlike the other three
+// /api/stats is in RATE_LIMIT_EXEMPT (see below) but, unlike the other
 // exempt endpoints, ran two live pool.query() calls via Promise.all on every
 // single request with no cache — against the shared `pool` (max: 5), that let
 // ordinary traffic (Stats page open + Dashboard's own periodic refetch, no
@@ -428,9 +429,10 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   next()
 })
 
-// CORS. The public read routes (the wallet API, /api/mints/known, /api/mints/recommend, /health) answer ANY origin
+// CORS. The public read routes (the wallet API, /api/mints/recommend, /health) answer ANY origin
 // for GET, HEAD and OPTIONS, without credentials; the preflight is a 204 that never reaches the rate limiter.
-// Every other route keeps the origin allow-list; a foreign Origin there gets a JSON 403 (it used to be an HTML 500).
+// Every other route, /api/mints/known included (it is the website's own data feed, with network details the wallet API
+// leaves out), keeps the origin allow-list; a foreign Origin there gets a JSON 403 (it used to be an HTML 500).
 // Runs after the /api/v1 rewrite above, so it sees the canonical path.
 const restrictedCors = cors({
   origin: (origin, callback) => callback(null, origin === undefined || ALLOWED_ORIGINS.includes(origin)),
@@ -454,7 +456,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   }
   const origin = req.headers.origin
   if (origin !== undefined && !ALLOWED_ORIGINS.includes(origin)) {
-    res.status(403).json({ error: { code: 'cors_forbidden', message: 'This origin may not call this endpoint from a browser. Public read routes (/api/wallets/*, /api/mints/known, /api/mints/recommend, /health) allow any origin.' } })
+    res.status(403).json({ error: { code: 'cors_forbidden', message: 'This origin may not call this endpoint from a browser. Public read routes (/api/wallets/*, /api/mints/recommend, /health) allow any origin.' } })
     return
   }
   restrictedCors(req, res, next)
@@ -463,7 +465,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use(express.json())
 
 // Rate limiting — exempt public read-only endpoints that sit behind Cache-Control
-const RATE_LIMIT_EXEMPT = new Set(['/health', '/api/mints/known', '/api/stats', '/api/mint/icon'])
+const RATE_LIMIT_EXEMPT = new Set(['/health', '/api/stats', '/api/mint/icon'])
 
 // Stricter limiters for write endpoints that trigger outbound fetches /
 // DNS resolution. Each submit performs 2+ outbound probes; each discovered
@@ -633,15 +635,26 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 app.get('/health', async (_req: Request, res: Response) => {
   const { lastAuditSyncAt, lastReviewsSyncAt } = await getSyncTimesFromDb()
+  const lastProbeAt = getLastProbeCompletedAt()
+  const audit8333 = getAuditUpstreamStatus()
+  const auditCz = getAuditCzSyncStatus()
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    lastProbeAt: getLastProbeCompletedAt(),
+    lastProbeAt,
     lastVantageOutageAt: getLastVantageOutageAt(),
     lastAuditSyncAt,
     lastReviewsSyncAt,
-    ...getAuditUpstreamStatus(),
-    auditCz: getAuditCzSyncStatus(),
+    ...audit8333,
+    auditCz,
+    // Additive (2026-10-20): the same facts grouped by input. usedForScore says whether the source feeds the
+    // Reliability Score (docs/API.md "GET /health"); audit.8333.space is display only since methodology 2.
+    sources: {
+      ownProbe: { usedForScore: true, lastProbeAt },
+      cashuInfo: { usedForScore: true, lastSyncAt: auditCz.lastSyncAt, status: auditCzSourceStatus(auditCz) },
+      reviews: { usedForScore: false, lastSyncAt: lastReviewsSyncAt },
+      audit8333: { usedForScore: false, lastSyncAt: lastAuditSyncAt, status: audit8333.auditUpstream },
+    },
   })
 })
 
@@ -1169,6 +1182,9 @@ app.get('/api/mints/outages', (req: Request, res: Response): void => {
 // non-test, non-archived mints that were first seen at least 14 days ago (eligibleForRecommendation). The shape is
 // the one from 2026-10-10 plus `methodology`; `generatedAt` is the time of the snapshot (so the ETag stays stable).
 app.get('/api/mints/recommend', (req: Request, res: Response): void => {
+  // Deprecated 2026-10-20 in favour of GET /api/v1/wallets/mints?eligible=true (docs/API.md "Stability"). The body and
+  // the behaviour are unchanged. /api/v1/mints/recommend and the unversioned alias are this one route.
+  setDeprecationHeaders(res, RECOMMEND_DEPRECATION)
   const unit = typeof req.query['unit'] === 'string' ? req.query['unit'] : 'sat'
   const minScore = typeof req.query['minScore'] === 'string' && /^\d+$/.test(req.query['minScore'])
     ? Math.min(100, Math.max(0, parseInt(req.query['minScore'], 10)))
@@ -2458,6 +2474,14 @@ app.post('/api/notifications/unsubscribe', (req: Request, res: Response): void =
       if (IS_DEV) console.error('[/api/notifications/unsubscribe]', err)
       if (!res.headersSent) res.status(500).json({ error: 'Internal server error' })
     })
+})
+
+// Any /api/* path no route above answered: JSON, never Express's HTML "Cannot GET". /api/v1/* uses the wallet API's
+// error envelope, the other paths the { error: "text" } shape the rest of the API uses (og/page does the same).
+// The /api/v1 rewrite has already run, so the original URL is what tells the two apart.
+app.use('/api', (req: Request, res: Response): void => {
+  if (/^\/api\/v1(?:[/?]|$)/i.test(req.originalUrl)) sendWalletError(res, 404, 'not_found', 'Unknown API route')
+  else res.status(404).json({ error: 'Not found' })
 })
 
 // ── Start ──────────────────────────────────────────────────────

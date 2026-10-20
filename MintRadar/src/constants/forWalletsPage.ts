@@ -16,6 +16,11 @@ export const WALLET_API_FACTS = {
   cacheMaxAgeSeconds: 300,
   rateLimitPerMinute: 300,
   deprecationNoticeDays: 90,
+  /** GET /api/v1/mints/recommend: deprecated on this day, may be removed from the sunset day (backend/src/deprecation.ts). */
+  recommendDeprecatedOn: '2026-10-20',
+  recommendSunsetOn: '2027-01-26',
+  /** The list query that returns the same mints as /mints/recommend with its defaults. */
+  recommendReplacementQuery: '/wallets/mints?eligible=true&unit=sat&minScore=80&limit=5',
 } as const
 
 export const DOCS_API_URL = `${REPO_BLOB_URL}/docs/API.md`

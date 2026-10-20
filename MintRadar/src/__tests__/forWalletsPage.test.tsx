@@ -20,6 +20,7 @@ import {
   WALLET_LIST_DEFAULT_LIMIT, WALLET_LIST_MAX_LIMIT, WALLET_MINT_FIELDS as beMintFields, WALLET_QUERY_PARAMS as beParams,
   type KnownMintLike,
 } from '../../backend/src/walletApi'
+import { RECOMMEND_DEPRECATION } from '../../backend/src/deprecation'
 
 const read = (rel: string) => readFileSync(resolve(__dirname, rel), 'utf8')
 const NOW = Date.UTC(2026, 9, 13, 12, 0, 0)
@@ -119,11 +120,11 @@ function parseOk(q: Record<string, unknown>) {
 describe('list parameters: the table equals the real parser', () => {
   const INVALID: Record<string, string> = {
     unit: '!!', minScore: '101', includeOffline: 'maybe', includeArchived: 'maybe', includeTest: 'maybe',
-    includeUnscored: 'maybe', limit: '0',
+    includeUnscored: 'maybe', limit: '0', nuts: 'abc', eligible: 'maybe',
   }
   const VALID: Record<string, string> = {
     unit: 'sat', minScore: '70', includeOffline: 'true', includeArchived: 'true', includeTest: 'true',
-    includeUnscored: 'true', limit: '20',
+    includeUnscored: 'true', limit: '20', nuts: '4,5', eligible: 'true',
   }
 
   it('every documented parameter is read by the parser (an invalid value is rejected, a valid one accepted)', () => {
@@ -170,6 +171,22 @@ describe('error codes and numbers', () => {
   it('the deprecation notice period is the one in docs/API.md and the OpenAPI file', () => {
     expect(read('../../docs/API.md')).toContain(`at least **${F.deprecationNoticeDays} days**`)
     expect(read('../../docs/openapi/wallets-v1.yaml')).toContain(`at least ${F.deprecationNoticeDays} days`)
+  })
+
+  it('the /mints/recommend deprecation on the page is the one the backend sends, and docs/API.md and the OpenAPI file name it', () => {
+    expect(F.recommendDeprecatedOn).toBe(RECOMMEND_DEPRECATION.deprecatedOn)
+    expect(F.recommendSunsetOn).toBe(RECOMMEND_DEPRECATION.sunsetOn)
+    const noticeDays = (Date.parse(F.recommendSunsetOn) - Date.parse(F.recommendDeprecatedOn)) / 86_400_000
+    expect(noticeDays).toBeGreaterThanOrEqual(F.deprecationNoticeDays)
+    const replacement = new URL(RECOMMEND_DEPRECATION.successorUrl)
+    expect(WALLET_API_BASE + F.recommendReplacementQuery).toBe(replacement.origin + replacement.pathname + replacement.search)
+    expect(Array.from(replacement.searchParams.keys()).every(k => WALLET_QUERY_PARAMS.some(p => p.name === k))).toBe(true)
+    for (const file of ['../../docs/API.md', '../../docs/openapi/wallets-v1.yaml']) {
+      const text = read(file)
+      expect(text, file).toContain(F.recommendDeprecatedOn)
+      expect(text, file).toContain(F.recommendSunsetOn)
+    }
+    expect(read('../../docs/API.md')).toContain(RECOMMEND_DEPRECATION.successorUrl)
   })
 
   it('the documentation links use the blob URL pattern of the footer API link and point at files that exist', () => {

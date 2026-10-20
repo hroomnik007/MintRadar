@@ -37,11 +37,11 @@ describe('GET /api/v1/* alias', () => {
     expect(aliased.body).toEqual(legacy.body)
   })
 
-  it('/api/v1/mints/known is exempt from the per-IP rate limiter, same as /api/mints/known', async () => {
+  it('/api/v1/mints/known is on the general per-IP limiter, same as /api/mints/known', async () => {
     query.mockResolvedValue({ rows: [] })
     const res = await request(app).get('/api/v1/mints/known')
     expect(res.status).toBe(200)
-    expect(res.headers['x-ratelimit-limit']).toBeUndefined()
+    expect(res.headers['x-ratelimit-limit']).toBe('60')
   })
 
   it('a bare /api/v1 with a query string rewrites to /api with the query string preserved', async () => {
@@ -69,7 +69,7 @@ describe('GET /api/v1/* alias', () => {
     const strip = (body: Record<string, unknown>) => { const rest = { ...body }; delete rest['timestamp']; return rest }
     expect(strip(aliased.body)).toEqual(strip(root.body))
     expect(Object.keys(root.body).sort()).toEqual(
-      ['auditCz', 'auditUpstream', 'auditUpstreamCheckedAt', 'lastAuditSyncAt', 'lastProbeAt', 'lastReviewsSyncAt', 'lastVantageOutageAt', 'status', 'timestamp'],
+      ['auditCz', 'auditUpstream', 'auditUpstreamCheckedAt', 'lastAuditSyncAt', 'lastProbeAt', 'lastReviewsSyncAt', 'lastVantageOutageAt', 'sources', 'status', 'timestamp'],
     )
     expect(root.body.auditUpstream).toBe('unknown')
     expect(root.body.auditUpstreamCheckedAt).toBeNull()
@@ -100,5 +100,7 @@ describe('GET /api/v1/* alias', () => {
   it('/api/v1/nonexistent-route still 404s (alias does not swallow unknown paths)', async () => {
     const res = await request(app).get('/api/v1/nonexistent-route')
     expect(res.status).toBe(404)
+    expect(res.headers['content-type']).toMatch(/application\/json/)
+    expect(res.body).toEqual({ error: { code: 'not_found', message: expect.any(String) } })
   })
 })

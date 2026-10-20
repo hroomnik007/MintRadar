@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import type { Express } from 'express'
 
-// CORS is configured in index.ts. The public read routes (/api/wallets/*, /api/mints/known,
+// CORS is configured in index.ts. The public read routes (/api/wallets/*,
 // /api/mints/recommend, /health) answer any origin with Access-Control-Allow-Origin: * (covered in
 // walletApi.test.ts). Every OTHER route keeps an origin allow-list (ALLOWED_ORIGINS); these tests use
 // the `/api` pointer as the restricted route. The test env sets ALLOWED_ORIGINS to:

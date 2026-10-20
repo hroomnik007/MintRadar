@@ -248,8 +248,13 @@ export default function ForWallets() {
         <section aria-labelledby="stability">
           <h2 id="stability" tabIndex={-1} className="about-h2">Stability</h2>
           <ul>
-            <li>Inside v1 a field is never renamed or removed, and its type does not change. Changes are additive: new fields and new optional parameters.</li>
-            <li>A removal is announced on this page and in <code>docs/API.md</code> at least {F.deprecationNoticeDays} days before it takes effect. The API sends no <code>Deprecation</code> or <code>Sunset</code> response headers today.</li>
+            <li>Inside v1 a field is never renamed or removed, and its type does not change. Changes are additive: new fields and new optional parameters. The list parameters <code>nuts</code> and <code>eligible</code> (added {F.recommendDeprecatedOn}) are such additions.</li>
+            <li>A removal is announced on this page and in <code>docs/API.md</code> at least {F.deprecationNoticeDays} days before it takes effect. A route that is going away also says so in its responses, with the <code>Deprecation</code> and <code>Sunset</code> headers and a <code>Link</code> header with <code>rel=&quot;successor-version&quot;</code>; the only route that does so today is the one below.</li>
+            <li data-testid="recommend-deprecation">
+              <strong>Deprecated: <code>GET /api/v1/mints/recommend</code></strong> (and <code>/api/mints/recommend</code>), since {F.recommendDeprecatedOn}. It may be removed from {F.recommendSunsetOn} on; until then it answers as before.
+              Replacement: <code>{F.recommendReplacementQuery}</code> returns the same mints in the same order (the defaults of <code>/mints/recommend</code> are <code>unit=sat</code>, <code>minScore=80</code>, <code>limit=5</code>; add <code>nuts=4,5</code> for its <code>nuts</code> filter).
+              The list route has a larger <code>limit</code> range and the stable wallet object.
+            </li>
             <li>
               <code>methodology</code> is an integer (currently {METHODOLOGY_VERSION}) that changes whenever the score
               formula changes. Scores of different numbers are not comparable. The rules and their history are on the{' '}

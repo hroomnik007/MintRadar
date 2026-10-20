@@ -142,15 +142,14 @@ describe('rate limit window resets after it elapses', () => {
 })
 
 describe('general limiter wiring', () => {
-  it('does not rate-limit the exempt /api/mints/known endpoint', async () => {
+  it('counts /api/mints/known against the general limiter (it is no longer exempt)', async () => {
     const db = await import('../../db.js')
     const query = db.pool.query as unknown as ReturnType<typeof vi.fn>
     query.mockResolvedValue({ rows: [] })
 
     const res = await request(app).get('/api/mints/known')
 
-    // Exempt endpoints carry no X-RateLimit accounting headers.
-    expect(res.headers['x-ratelimit-limit']).toBeUndefined()
+    expect(res.headers['x-ratelimit-limit']).toBe('60')
   })
 
   it('applies the general limiter (X-RateLimit-* headers) to non-exempt endpoints', async () => {

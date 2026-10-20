@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import type { Express } from 'express'
 
-// GET /api/mints/known is a read-only, rate-limit-exempt endpoint backed by a
+// GET /api/mints/known is a read-only endpoint (website-only CORS, the general 60/min limiter) backed by a
 // single SQL query and a 60s in-memory cache. We mock the `pg`-backed pool at
 // the db.js boundary so the real route handler, middleware stack and the
 // computeDegraded/shape-mapping logic run end-to-end without a database.

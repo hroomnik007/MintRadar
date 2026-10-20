@@ -218,6 +218,18 @@ export function getAuditCzSyncStatus(): AuditCzSyncStatus {
   return { ...lastCycle, skipped: lastCycle.skipped ? { ...lastCycle.skipped } : null }
 }
 
+export type AuditCzSourceStatus = 'ok' | 'partial' | 'down' | 'unknown'
+
+/**
+ * One word for the last sync cycle, for /health `sources.cashuInfo.status`: `unknown` before the first cycle after a
+ * restart, `ok` when both responses were stored, `partial` when only one was, `down` when neither was.
+ */
+export function auditCzSourceStatus(s: AuditCzSyncStatus): AuditCzSourceStatus {
+  if (s.lastSyncAt === null) return 'unknown'
+  if (s.mintsStored !== null && s.swapsStored !== null) return 'ok'
+  return s.mintsStored === null && s.swapsStored === null ? 'down' : 'partial'
+}
+
 async function fetchJson(url: string, cap: number): Promise<unknown | null> {
   try {
     const res = await safeFetch(url, { timeoutMs: FETCH_TIMEOUT_MS, headers: { Accept: 'application/json' } })
