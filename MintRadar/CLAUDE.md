@@ -142,15 +142,15 @@ Login modal (`src/components/layout/AppShell.tsx`) supports three methods select
 
 ## Testing Infrastructure
 
-### Test counts (as of 2026-10-15)
+### Test suites
 
-| Suite | Count | Tool | Location |
-|-------|-------|------|----------|
-| Backend (unit + integration + security) | 1891 tests, 91 files | Vitest | `backend/src/__tests__/` (incl. `integration/`, `security/`) |
-| Frontend unit | 1074 tests, 69 files | Vitest | `src/__tests__/` |
-| E2E | 1311 tests (1299 passed + 12 known skips in two full runs, 0 flaky), 108 spec files (`playwright test --list`) | Playwright | `e2e/` |
+No test counts are kept in this file (they drift). Each suite prints its current number when it runs:
 
-Counts drift often — treat as approximate.
+| Suite | Tool | Location | Current count |
+|-------|------|----------|---------------|
+| Backend (unit + integration + security) | Vitest | `backend/src/__tests__/` (incl. `integration/`, `security/`) | `(cd backend && npm test)` prints "Test Files" and "Tests" |
+| Frontend unit | Vitest | `src/__tests__/` | `npm test` prints "Test Files" and "Tests" |
+| E2E | Playwright | `e2e/` | `npx playwright test --list` prints the number of tests and spec files; known skips are marked in the specs |
 
 ### Key tested modules
 
