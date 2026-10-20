@@ -58,7 +58,7 @@ export function prefetchMintDetail(queryClient: QueryClient, url: string): void 
     queryKey: ['mint', 'nostr-reviews', url],
     queryFn: async () => {
       const res = await fetch(`/api/mints/nostr-reviews?url=${encodeURIComponent(url)}`)
-      if (!res.ok) return []
+      if (!res.ok) throw new Error('Failed to fetch stored reviews')
       return res.json()
     },
     staleTime: NOSTR_REVIEWS_STALE_MS,

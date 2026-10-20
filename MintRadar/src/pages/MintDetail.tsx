@@ -484,16 +484,14 @@ function MintDetailContent({ url }: { url: string }) {
     return () => window.removeEventListener('keydown', h)
   }, [showWatchLoginModal, closeWatchLoginModal])
 
-  const { data: nostrReviewsData } = useQuery({
+  // A failed request must end in the error state, never in a cached []: an empty list
+  // would read as "0 reviews" for the staleTime while the card shows the DB count.
+  const { data: nostrReviewsData, isError: storedReviewsFailed } = useQuery({
     queryKey: ['mint', 'nostr-reviews', url],
     queryFn: async () => {
-      try {
-        const res = await fetch(`/api/mints/nostr-reviews?url=${encodeURIComponent(url)}`)
-        if (!res.ok) return []
-        return res.json() as Promise<Array<{ id: string; pubkey: string; content: string; rating: number | null; createdAt: number; source: 'nostr' } & ServerAuthorProfile>>
-      } catch {
-        return []
-      }
+      const res = await fetch(`/api/mints/nostr-reviews?url=${encodeURIComponent(url)}`)
+      if (!res.ok) throw new Error('Failed to fetch stored reviews')
+      return res.json() as Promise<Array<{ id: string; pubkey: string; content: string; rating: number | null; createdAt: number; source: 'nostr' } & ServerAuthorProfile>>
     },
     staleTime: NOSTR_REVIEWS_STALE_TIME_MS,
     retry: false,
@@ -2290,7 +2288,9 @@ function MintDetailContent({ url }: { url: string }) {
               {reviewsLoading ? (
                 <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>Loading reviews...</div>
               ) : mergedReviews.length === 0 ? (
-                <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>No Nostr reviews found for this mint yet.</div>
+                <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>
+                  {storedReviewsFailed ? 'Reviews are not available right now.' : 'No Nostr reviews found for this mint yet.'}
+                </div>
               ) : (
                 <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:8}}>
                   <div className="reviews-filter-row">
