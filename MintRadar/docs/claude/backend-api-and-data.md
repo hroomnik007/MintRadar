@@ -224,3 +224,7 @@ Chain: `index.ts` route -> `getMintIcon` (cache 6 h / 24 h negative) -> `mints.i
 | rugs.cashu.exchange, rugs01.cashu.exchange | same host /logo.png | 1.9 MB PNG, over the 512 KB cap | cap (deliberate) |
 
 These cannot show an icon until the operator fixes the icon URL or serves a small image. The 512 KB cap is a policy (memory bound, see mintIcon.ts); it was not raised. The list changes as mints change their `/v1/info`.
+
+## Backend unit tests: no wall-clock budget on CPU work (2026-10-20)
+
+A test must not depend on how fast the machine is. `healthPublisher.test.ts` "publishes at most 200 events per run" signed 260 events with real BIP-340 (~1.4 s idle) against vitest's 5 s default timeout; it passed in 15 of 15 idle runs and failed in 6 of 6 runs with 2x CPU oversubscription (a busy laptop, a CI neighbour). Rule: if a test asserts counts or planning and not signatures, replace the CPU-heavy step in that test only (a flag-switched wrapper around the real function via `vi.mock(..., importOriginal)`, reset in `beforeEach`), keep real crypto in the tests that verify it, and never "fix" it with a longer timeout, `retry` or `skip`. Check a suspected flaky test by running the suite repeatedly with burner processes at 2x `nproc` (the JSON reporter keeps failing titles per run).

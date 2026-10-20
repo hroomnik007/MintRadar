@@ -6,7 +6,20 @@ import { bytesToHex } from 'nostr-tools/utils'
 // healthPublisher.ts with every external boundary mocked: no database (db.js pool), no relay connection (SimplePool,
 // counted by poolCtor), a fake RelayPublisher. Real relay sockets are covered in healthRelays.test.ts.
 
-const { poolCtor } = vi.hoisted(() => ({ poolCtor: vi.fn() }))
+const { poolCtor, signing } = vi.hoisted(() => ({ poolCtor: vi.fn(), signing: { cheap: false, n: 0 } }))
+// Real BIP-340 signing is the only CPU-heavy step of a cycle (~5 ms per event, so ~1.4 s for the 260 events of the cap test
+// and more than the 5 s default timeout on a loaded machine). Only the cap test switches `signing.cheap` on: it asserts
+// counts, not signatures. Every other test keeps the real finalizeEvent and verifies real signatures.
+vi.mock('nostr-tools', async importOriginal => {
+  const actual = await importOriginal<typeof import('nostr-tools')>()
+  return {
+    ...actual,
+    finalizeEvent: ((template: Parameters<typeof actual.finalizeEvent>[0], sk: Parameters<typeof actual.finalizeEvent>[1]) => {
+      if (!signing.cheap) return actual.finalizeEvent(template, sk)
+      return { ...template, pubkey: actual.getPublicKey(sk), id: (++signing.n).toString(16).padStart(64, '0'), sig: '0'.repeat(128) }
+    }) as typeof actual.finalizeEvent,
+  }
+})
 vi.mock('nostr-tools/pool', async importOriginal => {
   const actual = await importOriginal<typeof import('nostr-tools/pool')>()
   return {
@@ -62,7 +75,7 @@ function harness(opts: { reject?: (relay: string) => boolean } = {}) {
   return { store, sent, publisher, saveState, loadStates: async () => new Map(store) }
 }
 
-beforeEach(() => { poolCtor.mockClear(); vi.mocked(db.query).mockReset() })
+beforeEach(() => { poolCtor.mockClear(); vi.mocked(db.query).mockReset(); signing.cheap = false })
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
 
 // ── Inert mode ───────────────────────────────────────────────────────────────
@@ -384,6 +397,7 @@ describe('runAttestationCycle', () => {
   })
 
   it('publishes at most 200 events per run to at most 4 relays', async () => {
+    signing.cheap = true
     const sk = generateSecretKey()
     const h = harness()
     const res = await runAttestationCycle({
