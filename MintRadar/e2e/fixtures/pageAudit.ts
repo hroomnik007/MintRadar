@@ -36,7 +36,7 @@ const richMint: Pick<AuditRoute, 'before' | 'after'> = {
 
 export const AUDIT_ROUTES: AuditRoute[] = [
   {
-    // Every mint claims an icon, so the cards ask the icon proxy for it (page-hygiene mocks the proxy to answer 404: monogram fallback).
+    // Every mint claims an icon, so the cards ask the icon proxy for it (page-hygiene mocks the proxy to answer 204 No Content: monogram fallback, no console message).
     id: 'home', path: '/', ready: '.mint-card',
     before: async page => { await page.route('**/api/mints/known', r => r.fulfill({ json: MOCK_KNOWN_MINTS.map(m => ({ ...m, iconUrl: 'https://icon.example/i.png' })) })) },
   },
@@ -49,6 +49,11 @@ export const AUDIT_ROUTES: AuditRoute[] = [
   { id: 'for-wallets', path: '/for-wallets', ready: '.doc-code' },
   { id: 'watchlist', path: '/watchlist', ready: '.wl-login-gate' },
   { id: 'mint', path: `/mint/${encodeURIComponent(MOCK_MINTS[0]!.url)}`, ready: '.md-tabs' },
+  {
+    // The mint claims an icon, so the Mint Detail header asks the icon proxy (page-hygiene answers 204: monogram, console stays empty).
+    id: 'mint-icon', path: `/mint/${encodeURIComponent(MOCK_MINTS[0]!.url)}`, ready: '.md-tabs',
+    before: async page => { await page.route('**/api/mints/known', r => r.fulfill({ json: MOCK_KNOWN_MINTS.map(m => ({ ...m, iconUrl: 'https://icon.example/i.png' })) })) },
+  },
   { id: 'mint-rich', path: `/mint/${encodeURIComponent(MOCK_MINTS[0]!.url)}`, ready: '.md-tabs', ...richMint },
   { id: 'not-found', path: '/this-page-does-not-exist', ready: 'h1' },
 ]

@@ -52,8 +52,8 @@ test('mint favicons load through /api/mint/icon, never from the mint-supplied ho
   expect(beaconHits).toEqual([])
 })
 
-test('falls back to the placeholder icon when the proxy has nothing to serve (404)', async ({ page }) => {
-  await page.route('**/api/mint/icon**', route => route.fulfill({ status: 404, body: '' }))
+test('falls back to the placeholder icon when the proxy has nothing to serve (204)', async ({ page }) => {
+  await page.route('**/api/mint/icon**', route => route.fulfill({ status: 204 }))
 
   await page.goto('/')
   const alphaCard = page.locator('.mint-card', {
