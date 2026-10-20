@@ -1,0 +1,30 @@
+name: Unit tests
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unit-tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Run tests
+    # Same runner pin as deploy.yml (see the note there).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            MintRadar/backend/package-lock.json
+            MintRadar/package-lock.json
+      - name: Run backend tests
+        run: cd MintRadar/backend && npm ci && npm test
+      - name: Run frontend tests
+        run: cd MintRadar && npm ci && npm test
