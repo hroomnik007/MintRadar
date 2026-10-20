@@ -43,6 +43,8 @@ test('NUT coverage: the modal lists the mints the card counts, not the offline o
   await expect(modal(page).locator('.nut-modal-row')).toHaveCount(nut09)
   await expect(modal(page).getByText('Offline', { exact: false }).filter({ hasText: /Mint Offline/ })).toHaveCount(0)
   await expect(modal(page).locator('.nut-modal-note')).toHaveText(NOTE)
+  await expect(modal(page).locator('.nut-modal-footer')).toHaveText(/^\d+ online\s*Sorted by Reliability Score$/)
+  await expect(modal(page).locator('.nut-modal-footer')).not.toContainText('offline')
 })
 
 test('Software in use: the mint list of a version holds the online mints the version list counts', async ({ page }) => {
@@ -57,6 +59,8 @@ test('Software in use: the mint list of a version holds the online mints the ver
   await expect(modal(page).locator('.nut-modal-row')).toContainText('Alpha Mint')
   await expect(modal(page).locator('.nut-modal-row', { hasText: 'Offline' })).toHaveCount(0)
   await expect(modal(page).locator('.nut-modal-note')).toHaveText(NOTE)
+  await expect(modal(page).locator('.nut-modal-footer')).toHaveText(/^\d+ online\s*Sorted by Reliability Score$/)
+  await expect(modal(page).locator('.nut-modal-footer')).not.toContainText('offline')
 })
 
 test('Geographic distribution: the modal of a place lists the online mints the card counts', async ({ page }) => {
@@ -67,6 +71,8 @@ test('Geographic distribution: the modal of a place lists the online mints the c
   await expect(modal(page).locator('.nut-modal-row')).toHaveCount(online)
   await expect(modal(page).locator('.nut-modal-row', { hasText: 'Offline' })).toHaveCount(0)
   await expect(modal(page).locator('.nut-modal-note')).toHaveText(NOTE)
+  await expect(modal(page).locator('.nut-modal-footer')).toHaveText(/^\d+ online\s*Sorted by Reliability Score$/)
+  await expect(modal(page).locator('.nut-modal-footer')).not.toContainText('offline')
 })
 
 test('the Software in use hint says what a click does', async ({ page }) => {

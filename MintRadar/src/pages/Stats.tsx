@@ -115,7 +115,6 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose, duplicateDisplayNam
   const title = ver ? `${sw} ${ver}` : sw
   const displayed = showAll ? sorted : sorted.slice(0, 10)
   const onlineCount = mints.filter(m => m.online === true).length
-  const offlineCount = mints.filter(m => m.online === false).length
 
   return (
     <>
@@ -159,7 +158,7 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose, duplicateDisplayNam
         {sorted.length === 0 && <div className="nut-modal-empty">No mints</div>}
       </div>
       <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span>{onlineCount} online · {offlineCount} offline</span>
+        <span>{onlineCount} online</span>
         <span>Sorted by Reliability Score</span>
       </div>
       <div className="nut-modal-note">Offline mints are not counted.</div>
@@ -295,7 +294,6 @@ function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
   const { display, flag } = geoLabel(loc)
   const displayed = showAll ? sorted : sorted.slice(0, 10)
   const onlineCount = mints.filter(m => m.online === true).length
-  const offlineCount = mints.filter(m => m.online === false).length
 
   return (
     <div className="nut-modal-overlay" onClick={onClose}>
@@ -308,6 +306,7 @@ function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
             <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{pluralize(mints.length, 'mint')}</span>
           </div>
         </div>
+        {display === CDN_BUCKET && <div className="nut-modal-note">CDN / anycast addresses are not a city</div>}
         <div className="nut-modal-list" tabIndex={0} role="group" aria-label="Mints">
           {displayed.map(m => {
             const score = m.reliabilityScore ?? null
@@ -343,7 +342,7 @@ function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
           {sorted.length === 0 && <div className="nut-modal-empty">No mints</div>}
         </div>
         <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span>{onlineCount} online · {offlineCount} offline</span>
+          <span>{onlineCount} online</span>
           <span>Sorted by Reliability Score</span>
         </div>
         <div className="nut-modal-note">Offline mints are not counted.</div>
@@ -379,7 +378,6 @@ function NutMintsModal({ nut, mints, onClose, duplicateDisplayNames }: {
   const meta = NUT_META[nut]
   const displayed = showAll ? sorted : sorted.slice(0, 10)
   const onlineCount = mints.filter(m => m.online === true).length
-  const offlineCount = mints.filter(m => m.online === false).length
 
   return (
     <div className="nut-modal-overlay" onClick={onClose}>
@@ -424,7 +422,7 @@ function NutMintsModal({ nut, mints, onClose, duplicateDisplayNames }: {
           {sorted.length === 0 && <div className="nut-modal-empty">No mints</div>}
         </div>
         <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span>{onlineCount} online · {offlineCount} offline</span>
+          <span>{onlineCount} online</span>
           <span>Sorted by Reliability Score</span>
         </div>
         <div className="nut-modal-note">Offline mints are not counted.</div>
@@ -1179,7 +1177,7 @@ export default function Stats() {
                 )
               })}
               {geoCdn && (
-                <div className="dist-row dist-row-clickable stats-geo-cdn" title="CDN / anycast addresses are not a city" {...clickableProps(() => setCityModal(geoCdn.loc))}>
+                <div className="dist-row dist-row-clickable stats-geo-cdn" {...clickableProps(() => setCityModal(geoCdn.loc))}>
                   <span className="stats-geo-flag" aria-hidden="true">🌐</span>
                   <span className="dist-label dist-label-city">{CDN_BUCKET}</span>
                   <span className="dist-count">{geoCdn.count}</span>

@@ -231,3 +231,7 @@ These cannot show an icon until the operator fixes the icon URL or serves a smal
 ## Backend unit tests: no wall-clock budget on CPU work (2026-10-20)
 
 A test must not depend on how fast the machine is. `healthPublisher.test.ts` "publishes at most 200 events per run" signed 260 events with real BIP-340 (~1.4 s idle) against vitest's 5 s default timeout; it passed in 15 of 15 idle runs and failed in 6 of 6 runs with 2x CPU oversubscription (a busy laptop, a CI neighbour). Rule: if a test asserts counts or planning and not signatures, replace the CPU-heavy step in that test only (a flag-switched wrapper around the real function via `vi.mock(..., importOriginal)`, reset in `beforeEach`), keep real crypto in the tests that verify it, and never "fix" it with a longer timeout, `retry` or `skip`. Check a suspected flaky test by running the suite repeatedly with burner processes at 2x `nproc` (the JSON reporter keeps failing titles per run).
+
+
+## /api/mints/known: offlineSince, lastKeysets, lastKeysetsCheckedAt (2026-10-20)
+Additive, website only (never in the wallet API): for a mint whose latest probe is not online, the start of the offline streak and the keysets of the last successful keysets check with its time; `null` / `[]` / `null` for an online mint. Same snapshot data as the wallet API's `downSince` / `keysets`, under other names so the "wallet-only columns do not leak into /known" test keeps its list.

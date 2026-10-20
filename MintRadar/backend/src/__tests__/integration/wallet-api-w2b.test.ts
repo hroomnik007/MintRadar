@@ -132,6 +132,23 @@ describe('facts and sample sizes', () => {
     expect(by(body, 'https://on.example.com')['downSince']).toBeNull()
   })
 
+  it('/api/mints/known carries offlineSince and the last keysets for a mint that is not online only', async () => {
+    const start = ago(2)
+    withRows([
+      row('https://off.example.com', { latest_online: false, down_since: start, last_online_at: ago(2.1) }),
+      row('https://on.example.com', { down_since: start }),
+    ])
+    const rows = (await request(app).get('/api/mints/known')).body as Array<Record<string, unknown>>
+    const off = rows.find(r => r['url'] === 'https://off.example.com')!
+    const on = rows.find(r => r['url'] === 'https://on.example.com')!
+    expect(off['offlineSince']).toBe(new Date(start).toISOString())
+    expect(Array.isArray(off['lastKeysets']) && (off['lastKeysets'] as unknown[]).length).toBeGreaterThan(0)
+    expect(typeof off['lastKeysetsCheckedAt']).toBe('string')
+    expect(on['offlineSince']).toBeNull()
+    expect(on['lastKeysets']).toEqual([])
+    expect(on['lastKeysetsCheckedAt']).toBeNull()
+  })
+
   it('the snapshot SQL defines downSince as the first failed probe after last_online_at (nothing older than that)', async () => {
     await list()
     const sql = String(query.mock.calls[0]![0])

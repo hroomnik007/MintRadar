@@ -91,7 +91,7 @@ test('clicking a version drills down to the mint list in the same modal', async 
   await expect(modal(page).getByText('1 mint', { exact: true })).toBeVisible()
   await expect(modal(page).getByText('Delta Mint')).toBeVisible()
   await expect(modal(page).getByText('Sorted by Reliability Score')).toBeVisible()
-  await expect(modal(page).getByText('1 online · 0 offline')).toBeVisible()
+  await expect(modal(page).getByText('1 online', { exact: true })).toBeVisible()
 })
 
 test('back button returns to the version list without closing the modal', async ({ page }) => {

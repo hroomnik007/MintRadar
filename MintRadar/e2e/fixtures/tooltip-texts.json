@@ -577,6 +577,11 @@
   "mint-alpha-audit-8333@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
       "Add Alpha Mint to watchlist",
       "All-time count of melt operations (ecash back to Lightning) that audit.8333.space has recorded for this mint.",
       "All-time count of mint operations that audit.8333.space has recorded for this mint.",
@@ -620,6 +625,11 @@
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "126 of 126 swaps in the last 7 days, 19 failed for other reasons",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
       "Add Alpha Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
@@ -663,6 +673,11 @@
   "mint-alpha-audit@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
       "Add Alpha Mint to watchlist",
       "All-time count of melt operations (ecash back to Lightning) that audit.8333.space has recorded for this mint.",
       "All-time count of mint operations that audit.8333.space has recorded for this mint.",
@@ -705,6 +720,11 @@
   "mint-alpha-history@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
       "Add Alpha Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
@@ -729,6 +749,11 @@
   "mint-alpha-nuts@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
       "Add Alpha Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
@@ -756,6 +781,11 @@
   "mint-alpha-overview@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
       "Add Alpha Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy",
@@ -786,6 +816,11 @@
   "mint-alpha-reviews@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
       "Add Alpha Mint to watchlist",
       "Anyone can create a key, so ratings can be inflated. Treat them as a hint, not proof.",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
@@ -818,6 +853,11 @@
   "mint-alpha-score-dialog@390": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
       "Add Alpha Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy",
@@ -834,7 +874,13 @@
   },
   "mint-new-nuts@1440": {
     "texts": [
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
       "Add Newbie Mint to watchlist",
+      "Audit based on fewer than 10 swaps; tracked for 3 of 30 days, score capped at 75.",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
@@ -846,7 +892,7 @@
       "This mint does not support NUT-09, so wallets cannot restore ecash from a seed phrase here. Keep your own token backups.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 8
+    "triggers": 9
   },
   "mint-new-nuts@390": {
     "texts": [
@@ -861,7 +907,13 @@
   },
   "mint-new-overview@1440": {
     "texts": [
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
       "Add Newbie Mint to watchlist",
+      "Audit based on fewer than 10 swaps; tracked for 3 of 30 days, score capped at 75.",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy",
       "Copy full keyset ID",
@@ -874,7 +926,7 @@
       "Reliability Score capped at 75 for the first 30 days.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 7
+    "triggers": 8
   },
   "mint-new-overview@390": {
     "texts": [
@@ -889,6 +941,9 @@
   },
   "mint-offline-overview@1440": {
     "texts": [
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
       "Add Charlie Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy",
@@ -906,6 +961,7 @@
   },
   "mint-offline-overview@390": {
     "texts": [
+      "<DATE>",
       "Add Charlie Mint to watchlist",
       "Copy",
       "Copy full public key",
@@ -917,6 +973,11 @@
   },
   "mint-operator-overview@1440": {
     "texts": [
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
       "Add Operator Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy",
@@ -947,6 +1008,11 @@
   },
   "mint-operator-reviews@1440": {
     "texts": [
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
       "Add Operator Mint to watchlist",
       "Anyone can create a key, so ratings can be inflated. Treat them as a hint, not proof.",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
@@ -985,6 +1051,11 @@
   },
   "mint-test-audit@1440": {
     "texts": [
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
       "Add Test Nut to watchlist",
       "All-time count of melt operations (ecash back to Lightning) that audit.8333.space has recorded for this mint.",
       "All-time count of mint operations that audit.8333.space has recorded for this mint.",
@@ -1027,6 +1098,11 @@
   },
   "mint-test-overview@1440": {
     "texts": [
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
       "Add Test Nut to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy",

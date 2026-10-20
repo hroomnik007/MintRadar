@@ -98,6 +98,15 @@ test('Geographic Distribution buckets CDN / cloud / anycast labels into one row'
   await expect(geo.locator('.dist-row', { hasText: 'Cloudflare' })).toHaveCount(0)
 })
 
+test('Geographic distribution: the CDN / anycast explanation is a visible sentence in its modal, not a title', async ({ page }) => {
+  const base = MOCK_KNOWN_MINTS[0]!
+  await knownMints(page, ['Cloudflare CDN', 'anycast', 'Linz, AT'].map((serverLocation, i) => ({ ...base, url: `https://h${i}.example`, name: `H${i}`, online: true, serverLocation })))
+  await page.goto('/stats')
+  await page.locator('.stats-geo-cdn').click()
+  await expect(page.locator('.nut-modal .nut-modal-note').first()).toHaveText('CDN / anycast addresses are not a city')
+  await expect(page.locator('.nut-modal-footer')).toHaveText(/^2 online\s*Sorted by Reliability Score$/)
+})
+
 test('Geographic distribution: description, CDN / anycast as the last cell of the city grid, balanced columns, rows still open the modal', async ({ page }) => {
   const base = MOCK_KNOWN_MINTS[0]!
   const locs = ['Cloudflare CDN', 'Cloudflare CDN', 'Frankfurt am Main, DE', 'Frankfurt am Main, DE', 'Linz, AT', 'Tokyo, JP', 'Boston, US']
@@ -110,7 +119,7 @@ test('Geographic distribution: description, CDN / anycast as the last cell of th
   await expect(cdn).toHaveCount(1)
   await expect(cdn.locator('.dist-label')).toHaveText('CDN / anycast')
   await expect(cdn.locator('.dist-count')).toHaveText('2')
-  await expect(cdn).toHaveAttribute('title', /not a city/)
+  await expect(cdn, 'the explanation is not a title attribute').not.toHaveAttribute('title', /.+/)
   // The bucket sits in the same list as the cities, in the last cell: 4 cities + the bucket.
   const cells = geo.locator('.stats-geo-cols .dist-row')
   await expect(cells).toHaveCount(5)

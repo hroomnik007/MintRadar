@@ -1603,6 +1603,15 @@ function computeKnownMints(): Promise<Snapshot> {
           netCountry: (r.net_country as string | null) ?? null,
           hasOnion: (r.has_onion as boolean | null) ?? null,
           lastCheckedAt: (r.latest_checked_at as string | null) ?? null,
+          // Additive, only for a mint that is not online (Mint Detail's "unavailable" block): the start of the
+          // current offline streak and the keysets of the last successful keysets check. Online mints get null/[].
+          ...(r.latest_online === true
+            ? { offlineSince: null, lastKeysets: [], lastKeysetsCheckedAt: null }
+            : {
+                offlineSince: r.down_since ? new Date(r.down_since as string | Date).toISOString() : null,
+                lastKeysets: keysetsOf(r.keysets_json),
+                lastKeysetsCheckedAt: r.keysets_checked_at ? new Date(r.keysets_checked_at as string | Date).toISOString() : null,
+              }),
           reviewCount: (r.review_count as number | null) ?? null,
           reviewAvgRating: r.review_avg_rating != null ? Number(r.review_avg_rating) : null,
           // Additive: stored reviews written by the mint's own operator. They are NOT in

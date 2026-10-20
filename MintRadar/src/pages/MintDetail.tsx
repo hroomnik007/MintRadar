@@ -34,7 +34,7 @@ import { MintNetworkCard } from '@/components/MintNetworkCard'
 import { networkRows } from '@/utils/networkInfo'
 import { AuditCzTiles, AuditCzSwapTables, AuditStateText } from '@/components/AuditCzCards'
 import { formatDate, formatDateTimeUtc } from '@/utils/formatDate'
-import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
 import { operatorPubkeys } from '@/utils/operatorPubkeys'
@@ -58,6 +58,12 @@ import { useNow } from '@/hooks/useNow'
 import { useDocumentMeta, useNoindex, useRemoveCanonical } from '@/hooks/useDocumentMeta'
 import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLocation'
 import { useElementHeight } from '@/hooks/useElementHeight'
+import { METHODOLOGY_VERSION } from '@/utils/methodology'
+import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
+import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
+import { LAST_SCORE_CAPTION, KEEP_WALLET_SENTENCE, TEMPORARY_SENTENCE, contactSentence, restoreSentence, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
+import { healthRecordFor } from '@/utils/healthRecord'
+import { AUDIT_SWAPS_WINDOW, AUDIT_WINDOW_DAYS } from '@/utils/tooltipTexts'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { reviewAvatarColor, avatarTextColor } from '@/utils/avatarColors'
 import './MintDetail.css'
@@ -245,12 +251,24 @@ const NUT_ICONS: Record<string, JSX.Element> = {
 // One row of the Reliability Score breakdown (label + info tooltip + measured
 // value + score bar). Rendered both inline on the Overview sidebar panel and
 // inside the "Reliability Score Breakdown" modal; each usage has its own tooltip.
-function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, note, detail }: {
+// "source · window · sample · time" under a row; the time carries its absolute value in the title attribute.
+function SourceLineView({ line }: { line: SourceLine }) {
+  return (
+    <div className="rb-row-source">
+      {line.parts.join(' · ')}
+      {line.time && <>{' · '}<span title={line.time.title}>{line.time.verb} {line.time.label}</span></>}
+    </div>
+  )
+}
+
+function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, note, detail, source }: {
   label: string
   display: string
   note?: string
   // Full-width explanation under the row (wraps; `display` is ellipsized at 170px).
   detail?: string
+  // Where the number comes from: source, window, sample, time.
+  source?: SourceLine
   score: number
   max: number
   color: string
@@ -270,6 +288,7 @@ function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, n
         </div>
       </div>
       {detail && <div className="rb-row-detail">{detail}</div>}
+      {source && <SourceLineView line={source} />}
       <div className="rb-row-bar">
         <div style={{ height: '100%', width: `${(score / max) * 100}%`, background: color, borderRadius: 2, transition: 'width 0.3s ease' }} />
       </div>
@@ -977,13 +996,33 @@ function MintDetailContent({ url }: { url: string }) {
   // Strip values: audit.8333.space as stored, or (cz view) counted from the swaps MintRadar collected.
   const stripTotal = breakdownAuditRecentTotal
   const stripErrors = breakdownAuditRecentErrors
+  // Latest successful /v1/info fetch: the latest probe while the mint is online, else the last time it was seen online.
+  const infoFetchedAt = isOnline ? knownMint?.lastCheckedAt : knownMint?.lastOnlineAt
+  const uptimeSource = uptimeSourceLine({ checks: uptime24hData ? headerTotalChecks : null, lastProbeAt: knownMint?.lastCheckedAt, now })
+  const auditRowSource = auditSourceLine({ blamed: auditCzBlamed, total: auditCzTotal, fetchedAt: auditCzFetchedAt, now })
+  const infoSource = infoSourceLine({ fetchedAt: infoFetchedAt, now })
+  const versionSource = infoSourceLine({ fetchedAt: infoFetchedAt, now, comparedWithLatest: true })
   const reliabilityBreakdownRows = [
-    { label: UPTIME_ROW_LABEL, display: `${uptimePct}%`, score: breakdownUScore, max: UPTIME_POINTS, color: uptimeColor(uptimePct), tooltip: uptimeRowText() },
-    { label: AUDIT_ROW_LABEL, display: breakdownAuditDisplay, ...(auditDetailText ? { detail: auditDetailText } : {}), score: breakdownAScore, max: AUDIT_POINTS, color: auditRowColor, tooltip: auditRowText(), ...(auditStaleNote ? { note: auditStaleNote } : {}) },
-    { label: NUT_ROW_LABEL, display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, score: breakdownNScore, max: NUT_POINTS, color: supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: NUT_ROW_TEXT },
-    { label: VERSION_ROW_LABEL, display: version ?? 'Unknown', score: breakdownVScore, max: VERSION_POINTS, color: breakdownVScore >= 12 ? 'var(--accent)' : breakdownVScore >= 6 ? 'var(--amber)' : 'var(--red)', tooltip: versionRowText() },
-    { label: CONTACT_ROW_LABEL, display: breakdownContactDisplay, score: breakdownCScore, max: CONTACT_POINTS, color: breakdownCScore >= 4 ? 'var(--accent)' : breakdownCScore >= 2 ? 'var(--amber)' : 'var(--red)', tooltip: contactRowText() },
+    { label: UPTIME_ROW_LABEL, display: `${uptimePct}%`, source: uptimeSource, score: breakdownUScore, max: UPTIME_POINTS, color: uptimeColor(uptimePct), tooltip: uptimeRowText() },
+    { label: AUDIT_ROW_LABEL, display: breakdownAuditDisplay, source: auditRowSource, ...(auditDetailText ? { detail: auditDetailText } : {}), score: breakdownAScore, max: AUDIT_POINTS, color: auditRowColor, tooltip: auditRowText(), ...(auditStaleNote ? { note: auditStaleNote } : {}) },
+    { label: NUT_ROW_LABEL, display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, source: infoSource, score: breakdownNScore, max: NUT_POINTS, color: supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: NUT_ROW_TEXT },
+    { label: VERSION_ROW_LABEL, display: version ?? 'Unknown', source: versionSource, score: breakdownVScore, max: VERSION_POINTS, color: breakdownVScore >= 12 ? 'var(--accent)' : breakdownVScore >= 6 ? 'var(--amber)' : 'var(--red)', tooltip: versionRowText() },
+    { label: CONTACT_ROW_LABEL, display: breakdownContactDisplay, source: infoSource, score: breakdownCScore, max: CONTACT_POINTS, color: breakdownCScore >= 4 ? 'var(--accent)' : breakdownCScore >= 2 ? 'var(--amber)' : 'var(--red)', tooltip: contactRowText() },
   ]
+  // "Limited data": the audit part is neutral, or the new-mint cap applies (the score's own constants).
+  const limitedReasons = limitedDataReasons({ auditBlamed: auditCzBlamed, auditTotal: auditCzTotal, auditFetchedAt: auditCzFetchedAt, discoveredAt, now })
+  const limitedDataLabel = limitedReasons.length > 0 ? (
+    <InfoTooltip className="md-limited-data" width={240} text={limitedDataText(limitedReasons)}>
+      <span className="md-limited-data-chip">Limited data</span>
+    </InfoTooltip>
+  ) : null
+  // Mint that is not online: an honest block at the top of the Overview (since when, last error, what to do).
+  const unavailable = !isOnline && knownMint !== null
+  const unavailableInfo = unavailable ? unavailableHeadline({ since: knownMint?.offlineSince ?? knownMint?.lastOnlineAt, archived: knownMint?.archived === true, now }) : null
+  const lastErrorText = sanitizeLastError(knownMint?.lastError)
+  const unavailableContacts = [email && `email ${email}`, twitter && `Twitter ${twitter}`, nostr && `Nostr ${nostr}`].filter((c): c is string => !!c)
+  // Signed health record: only a mint with a current event (not archived, scored, https host that may appear in an event).
+  const healthRecord = knownMint && knownMint.archived !== true && typeof knownMint.reliabilityScore === 'number' ? healthRecordFor(url) : null
   const firstSeen = firstSeenLabel(discoveredAt)
   const nostrAnnouncedAt = knownMint?.nostrAnnouncedAt ?? null
   const nostrAnnounceHref = njumpEventUrl(knownMint?.nostrAnnounceId)
@@ -1119,11 +1158,17 @@ function MintDetailContent({ url }: { url: string }) {
   // (≥901px) and on the NUTs tab on mobile (<901px); the two wrappers below
   // hide the copy that doesn't belong to the current breakpoint.
   const keysetsPanel = (() => {
-    const keysets = data?.keysets ?? null
+    const liveKeysets = data?.keysets ?? null
+    // A mint that is not online has no live keysets: show the last known ones, labelled with their check date.
+    const lastKnown = unavailable && (!liveKeysets || liveKeysets.length === 0) && knownMint?.lastKeysets && knownMint.lastKeysets.length > 0 && knownMint.lastKeysetsCheckedAt
+      ? knownMint.lastKeysets.map(k => ({ id: k.id, unit: k.unit, active: k.active, ...(k.inputFeePpk !== null ? { input_fee_ppk: k.inputFeePpk } : {}) }))
+      : null
+    const keysets = lastKnown ?? liveKeysets
     return (
       <div className="md-panel">
         <div className="md-panel-title">Keysets</div>
         <div className="md-panel-hint">{KEYSETS_HINT}</div>
+        {lastKnown && <div className="md-panel-hint">from the last successful check on {formatDate(knownMint?.lastKeysetsCheckedAt)}</div>}
         {!keysets || keysets.length === 0 ? (
           <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Keyset data not available.</div>
         ) : (
@@ -1477,6 +1522,26 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="md-left">
 
           {activeTab === 'overview' && (<>
+            {unavailableInfo && (
+              <div className="md-panel md-unavailable">
+                <div className="md-ua-headline">{unavailableInfo.text}</div>
+                {knownMint?.lastCheckedAt && (
+                  <div className="md-ua-line">Last check <span title={formatDateTimeUtc(knownMint.lastCheckedAt)}>{formatTimeAgo(new Date(knownMint.lastCheckedAt), now)}</span></div>
+                )}
+                {lastErrorText && <div className="md-ua-line">Last error: {lastErrorText}</div>}
+                <div className="md-ua-line md-ua-score">Reliability Score {reliabilityScore}. {LAST_SCORE_CAPTION}</div>
+                <div className="md-ua-todo">
+                  <div className="md-panel-title">What to do with tokens from an unreachable mint</div>
+                  <ul className="md-ua-list">
+                    <li>{KEEP_WALLET_SENTENCE}</li>
+                    <li>{TEMPORARY_SENTENCE}</li>
+                    <li>{restoreSentence(supportsBackupRestore)}</li>
+                    <li>{contactSentence(unavailableContacts)}</li>
+                  </ul>
+                  <Link to="/learn/understanding-the-risks" className="md-ua-link">Read about the risks of using a mint</Link>
+                </div>
+              </div>
+            )}
             {(motd || description || descriptionLong) && (
               <div className="md-panel">
                 <div className="md-panel-title">About</div>
@@ -1596,6 +1661,34 @@ function MintDetailContent({ url }: { url: string }) {
                   </div>
                 </div>
               )}
+              <div className="md-info-row md-hr-row">
+                <span className="md-info-label">Signed health record</span>
+                <span className="md-info-value md-hr-value">
+                  {healthRecord ? (
+                    <>
+                      {([['naddr', 'Copy naddr', 'Copy the Nostr address (naddr) of the signed health record', healthRecord.naddr], ['nak', 'Copy nak command', 'Copy a nak command that fetches the signed health record', healthRecord.nakCommand]] as const).map(([key, text, aria, value]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          className={`md-hr-btn${copiedContact === `hr-${key}` ? ' copied' : ''}`}
+                          aria-label={aria}
+                          onClick={() => {
+                            void navigator.clipboard.writeText(value)
+                            setCopiedContact(`hr-${key}`)
+                            setTimeout(() => setCopiedContact(null), 2000)
+                          }}
+                        >
+                          {copiedContact === `hr-${key}` ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
+                          <span>{copiedContact === `hr-${key}` ? 'Copied' : text}</span>
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    <span className="md-hr-none">No current record</span>
+                  )}
+                  <Link to="/for-wallets#signed-health-assertions" className="md-hr-link">About signed health records</Link>
+                </span>
+              </div>
               {tosUrl && (tosUrl.startsWith('https://') || tosUrl.startsWith('http://')) && (
                 <div className="md-info-row">
                   <span className="md-info-label">Terms of Service</span>
@@ -2028,6 +2121,11 @@ function MintDetailContent({ url }: { url: string }) {
                 </div>
 
                 {!czView && audit8333Stale && <p className="audit-cz-muted">{audit8333Stale}</p>}
+                <p className="audit-cz-muted">{czView
+                  ? `The Reliability Score uses this same cashu.info window: the last ${AUDIT_WINDOW_DAYS} days.`
+                  : czData !== null
+                    ? `The Reliability Score uses cashu.info's last ${AUDIT_WINDOW_DAYS} days; this view shows audit.8333.space's last ~${AUDIT_SWAPS_WINDOW} swaps.`
+                    : `This view shows audit.8333.space's last ~${AUDIT_SWAPS_WINDOW} swaps; the Reliability Score does not use it.`}</p>
                 {czView ? <AuditCzTiles view={czView} /> : (<>
                 {/* 5-second overview — always visible, never inside the mobile
                     collapse. Mints/Melts are audit.8333.space lifetime counts;
@@ -2364,6 +2462,7 @@ function MintDetailContent({ url }: { url: string }) {
           <div className="md-panel md-reliability-panel">
             <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:11}}>
               <span className="md-panel-title" style={{marginBottom:0}}>Reliability Score</span>
+              <Link to="/methodology" className="md-method-ver">Methodology v{METHODOLOGY_VERSION}</Link>
             </div>
             <div className="reliability-wrap">
               <div className="gauge-wrap">
@@ -2377,9 +2476,13 @@ function MintDetailContent({ url }: { url: string }) {
                 </svg>
                 <div className="gauge-num" style={{ color: 'var(--green-bright)', fontFamily: 'var(--font-mono-data)' }}>{reliabilityScore}</div>
               </div>
-              <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:5,padding:'4px 10px',textAlign:'center'}}>{tsInfo.label}</span>
+              <div className="reliability-badges">
+                <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:5,padding:'4px 10px',textAlign:'center'}}>{tsInfo.label}</span>
+                {limitedDataLabel}
+              </div>
             </div>
             <div className="rb-scope-note">Operational health, not solvency.</div>
+            {unavailable && <div className="rb-scope-note md-ua-caption">{LAST_SCORE_CAPTION}</div>}
             {isNew && <div className="rb-new-note">{newMintCapNote()}</div>}
             {/* All 5 components always visible here (no "Details" click / donut
                 tap needed) — the modal below (opened only from the mobile
@@ -2557,12 +2660,15 @@ function MintDetailContent({ url }: { url: string }) {
           <div className="rb-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="reliability-breakdown-title" ref={dialogRef}>
             <div className="rb-head">
               <div id="reliability-breakdown-title" className="rb-title">Reliability Score Breakdown</div>
+              <Link to="/methodology" className="md-method-ver rb-method-ver">Methodology v{METHODOLOGY_VERSION}</Link>
               <button type="button" className="rb-close" onClick={() => setShowReliabilityBreakdown(false)} aria-label="Close"><IcClose /></button>
             </div>
             <div className="rb-hero">
               <div className="rb-hero-score" style={{color:reliabilityScoreColor(reliabilityScore)}}>{reliabilityScore}</div>
               <span className="rb-hero-badge" style={{color:tsInfo.color,background:tsInfo.bg,borderColor:tsInfo.border}}>{tsInfo.label}</span>
+              {limitedDataLabel}
             </div>
+            {unavailable && <div className="rb-scope-note md-ua-caption">{LAST_SCORE_CAPTION}</div>}
             {reliabilityBreakdownRows.map(row => (
               <ReliabilityBreakdownRow key={row.label} {...row} />
             ))}

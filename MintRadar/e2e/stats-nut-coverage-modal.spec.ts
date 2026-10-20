@@ -35,7 +35,7 @@ test.describe('Stats NUT coverage modal', () => {
     await expect(modal(page).getByText('Charlie Mint')).toHaveCount(0)
 
     // footer online/offline + sort note
-    await expect(modal(page).locator('.nut-modal-footer')).toContainText('3 online · 0 offline')
+    await expect(modal(page).locator('.nut-modal-footer')).toHaveText(/^3 online\s*Sorted by/)
     await expect(modal(page).locator('.nut-modal-footer')).toContainText('Sorted by Reliability Score')
   })
 
