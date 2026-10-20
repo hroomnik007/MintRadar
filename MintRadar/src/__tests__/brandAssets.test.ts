@@ -33,6 +33,10 @@ describe('brand assets', () => {
     expect(/background_color:\s*'(#[0-9a-fA-F]{6})'/.exec(cfg)?.[1]?.toLowerCase()).toBe(BG)
   })
 
+  it('index.html has no manual manifest link: vite-plugin-pwa injects the one link of a build', () => {
+    expect(read('index.html')).not.toMatch(/rel="manifest"/)
+  })
+
   it('favicon.svg and og-image.svg carry no retired colour and use the accent', () => {
     for (const f of ['public/favicon.svg', 'public/og-image.svg', 'public/og-image-reliability.svg']) {
       const svg = read(f).toLowerCase()

@@ -47,7 +47,8 @@ describe('brand asset cache-busting', () => {
 
   it('every brand file referenced by index.html is covered, and nothing else is touched', () => {
     for (const a of BRAND_HTML_ASSETS) expect(html).toContain(`${a}?v=`)
-    expect(html).toContain('href="/manifest.webmanifest"')
+    // The manifest link is injected by vite-plugin-pwa at build time; index.html carries none (brandAssets.test.ts).
+    expect(html).not.toContain('rel="manifest"')
     expect(html).toContain('<meta name="theme-color" content="#0b1512" />')
     expect(html).toContain('href="https://mintradar.org/"')
   })
