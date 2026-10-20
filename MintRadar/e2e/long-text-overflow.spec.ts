@@ -409,7 +409,8 @@ for (const width of [340, 360, 375, 412, 414, 428]) {
 
 // Boxes recorded from the code BEFORE the text-only change (x, width, height; the fixture's plain mint).
 const HERO_BOXES: Record<number, { left: number; width: number; height: number }[]> = {
-  420: [{ left: 79, width: 79.66, height: 28 }, { left: 164.66, width: 79.67, height: 27 }, { left: 250.33, width: 79.67, height: 27 }],
+  // 420: re-recorded 2026-10-20 after the 12px phone text floor (the buttons were 11px: 79.66 wide).
+  420: [{ left: 79, width: 84.66, height: 28 }, { left: 169.66, width: 84.67, height: 28 }, { left: 260.33, width: 84.67, height: 28 }],
   1440: [{ left: 905, width: 93, height: 31 }, { left: 1006, width: 156, height: 31 }, { left: 1170, width: 103, height: 31 }],
 }
 for (const width of [420, 1440]) {
@@ -513,8 +514,9 @@ for (const width of [320, 340, 360, 375, 390, 400, 412, 414]) {
 }
 
 const HERO_ICON_WIDTHS: Record<number, number[]> = {
-  420: [12, 9, 11],
-  430: [12, 9, 11],
+  // 420 / 430: the Compare icon is 12 (was 11) since the 12px phone text floor.
+  420: [12, 9, 12],
+  430: [12, 9, 12],
   1440: [12, 10, 13],
 }
 for (const width of [420, 430, 1440]) {
