@@ -28,12 +28,15 @@
 
 ## Checklist
 
-- [ ] `npm run typecheck` passes
-- [ ] `npm run lint` passes
-- [ ] `npm run test` passes
+CI runs the backend and frontend unit tests on every pull request and on every push to
+`main`. Typecheck, lint and the e2e suite are not in CI; run them locally.
+
+- [ ] `npm run typecheck` passes (local only, not in CI)
+- [ ] `npm run lint` passes (local only, not in CI)
+- [ ] `npm test` and `(cd backend && npm test)` pass (CI runs both)
 - [ ] `npm run build` succeeds
 - [ ] Tests added/updated for the change (required for security-relevant code)
-- [ ] Docs updated (`README.md` / `AUDIT.md`) if behavior or setup changed
+- [ ] Docs updated (`README.md`, `.github/CONTRIBUTING.md`) if behavior or setup changed
 - [ ] No new analytics, telemetry, third-party scripts, or external CDN/font requests
 - [ ] Nostr private keys and watchlist data are still never sent to the backend
-- [ ] Commit messages follow Conventional Commits style
+- [ ] Commit messages are short imperative sentences (see `.github/CONTRIBUTING.md`)
