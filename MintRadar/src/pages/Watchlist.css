@@ -589,3 +589,8 @@
     gap: 8px;
   }
 }
+
+/* Phone text floor (2026-10-20): no HTML text below 12px at <=767px (docs/claude/mobile-and-tooltips.md). */
+@media (max-width: 767px) {
+  .wl-login-hint { font-size: 12px; }
+}

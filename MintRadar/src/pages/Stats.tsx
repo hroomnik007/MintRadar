@@ -1243,7 +1243,7 @@ export default function Stats() {
             </div>
           )}
           {trendCoverage && (
-            <div style={{marginTop:6,fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>{trendCoverage}</div>
+            <div className="trend-coverage" style={{marginTop:6,fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>{trendCoverage}</div>
           )}
         </div>
       </div>

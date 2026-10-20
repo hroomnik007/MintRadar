@@ -1208,7 +1208,7 @@ export default function Dashboard() {
               onClick={() => handleSortClick(s)}
             >
               {s === 'reliability' ? 'Reliability Score' : s === 'reviewCount' ? 'Most reviewed' : s.charAt(0).toUpperCase() + s.slice(1)}
-              {sortBy === s && <span style={{marginLeft: 3, fontSize: 10, opacity: 0.7}}>{sortDir === 'asc' ? '↑' : '↓'}</span>}
+              {sortBy === s && <span className="sort-arrow" style={{marginLeft: 3, fontSize: 10, opacity: 0.7}}>{sortDir === 'asc' ? '↑' : '↓'}</span>}
             </button>
           ))}
         </div>

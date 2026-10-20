@@ -1266,6 +1266,10 @@
   padding: 6px 0 0;
   margin-left: auto;
   cursor: pointer;
+  /* Touch target of at least 24 px (WCAG 2.5.8): the 23 px box grows by 1 px, which the negative bottom margin
+     takes back, so nothing below it moves. */
+  min-height: 24px;
+  margin-bottom: -1px;
 }
 
 /* Top + Software: plain rows with hairline dividers (no boxed rows). */
@@ -1335,4 +1339,16 @@
   .stats-geo-panel .dist-label { font-size: 13px; }
   .stats-geo-panel .dist-count { font-size: 13px; }
   .stats-geo-flag { flex-basis: 22px; width: 22px; font-size: 16px; }
+}
+
+/* Phone text floor (2026-10-20): no HTML text below 12px at <=767px (docs/claude/mobile-and-tooltips.md). The
+   `!important` ones override an inline font-size. */
+@media (max-width: 767px) {
+  .stats-tab-btn { font-size: 12px; }
+  .stats-top5-rank { font-size: 12px; }
+  .stats-movers-delta { font-size: 12px; }
+  .snr-nut-tag { font-size: 12px; }
+  .snr-nut-count { font-size: 12px; }
+  .stats-host-line { font-size: 12px !important; }
+  .trend-coverage { font-size: 12px !important; }
 }

@@ -472,3 +472,9 @@ a.token-action-btn:focus {
   .wizard-unit-opt:not(.active):hover { color: var(--text); }
   .wizard-adv-toggle:hover { color: var(--text); }
 }
+
+/* Phone text floor (2026-10-20): no HTML text below 12px at <=767px (docs/claude/mobile-and-tooltips.md). */
+@media (max-width: 767px) {
+  .wizard-opt-sub { font-size: 12px; }
+  .wizard-step-dot { font-size: 12px; }
+}

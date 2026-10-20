@@ -1148,11 +1148,11 @@ function MintDetailContent({ url }: { url: string }) {
                     {copiedContact === `keyset-${ks.id}` ? <Check size={13} /> : <Copy size={13} />}
                   </button>
                 </div>
-                <span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.06em'}}>{ks.unit}</span>
+                <span className="md-keyset-meta" style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.06em'}}>{ks.unit}</span>
                 {typeof ks.input_fee_ppk === 'number' && (
-                  <InfoTooltip text="Input fee per 1000 proofs spent from this keyset" width={200}><span style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>{formatKeysetFee(ks.input_fee_ppk)}</span></InfoTooltip>
+                  <InfoTooltip text="Input fee per 1000 proofs spent from this keyset" width={200}><span className="md-keyset-meta" style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>{formatKeysetFee(ks.input_fee_ppk)}</span></InfoTooltip>
                 )}
-                <span style={{
+                <span className="md-keyset-meta" style={{
                   fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,borderRadius:5,padding:'2px 7px',marginLeft:'auto',
                   color: ks.active ? 'var(--accent)' : 'var(--text3)',
                   background: ks.active ? 'var(--green-soft)' : 'var(--bg4)',
@@ -1355,7 +1355,7 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="md-sc-value sm" style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
               <span>{version ?? '—'}</span>
               {isOutdated && (
-                <span style={{fontSize:9,fontFamily:'var(--font-mono)',fontWeight:600,color:'color-mix(in srgb, var(--red) 75%, var(--text))',background:'var(--red-soft)',border:'0.5px solid var(--red-soft-strong)',borderRadius:4,padding:'1px 5px'}}>Outdated</span>
+                <span className="md-outdated-pill" style={{fontSize:9,fontFamily:'var(--font-mono)',fontWeight:600,color:'color-mix(in srgb, var(--red) 75%, var(--text))',background:'var(--red-soft)',border:'0.5px solid var(--red-soft-strong)',borderRadius:4,padding:'1px 5px'}}>Outdated</span>
               )}
             </div>
             <div className="md-sc-sub">software</div>
@@ -1828,7 +1828,7 @@ function MintDetailContent({ url }: { url: string }) {
                 <div className="md-panel-title" style={{marginBottom:0}}>NUT compatibility</div>
               {supportsBackupRestore ? (
                 <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
-                  <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--accent)',background:'var(--green-soft)',border:'0.5px solid var(--green-soft-strong)',borderRadius:5,padding:'2px 7px'}}>
+                  <span className="md-backup-pill" style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--accent)',background:'var(--green-soft)',border:'0.5px solid var(--green-soft-strong)',borderRadius:5,padding:'2px 7px'}}>
                     <ShieldCheck size={11} /> Backup supported
                   </span>
                   <InfoTooltip iconSize={11} width={220} about="backup support" text={BACKUP_SUPPORTED_TEXT} />

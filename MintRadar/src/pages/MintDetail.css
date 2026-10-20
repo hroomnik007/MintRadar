@@ -2612,3 +2612,23 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-panel-hint { margin: -8px 0 12px; font-size: 12.5px; line-height: 1.45; color: var(--text3); }
 .rb-scope-note,
 .rb-new-note { margin-top: 8px; text-align: center; font-size: 12px; line-height: 1.4; color: var(--text3); }
+
+/* Phone text floor (2026-10-20): no HTML text below 12px at <=767px (docs/claude/mobile-and-tooltips.md). The
+   `!important` ones override an inline font-size. */
+@media (max-width: 767px) {
+  .md-status-inline { font-size: 12px; }
+  .md-url { font-size: 12px; }
+  .md-quick-btn,
+  .md-compare-btn { font-size: 12px; }
+  .md-sc-reliability-num { font-size: 12px; }
+  .md-sc-reliability-badge { font-size: 12px; }
+  .unit-badge { font-size: 12px; }
+  .review-author-npub,
+  .review-date { font-size: 12px; }
+  .md-backup-pill,
+  .md-outdated-pill,
+  .md-keyset-meta { font-size: 12px !important; }
+}
+@media (max-width: 340px) {
+  .md-hist-summary > div > div:first-child { font-size: 12px !important; letter-spacing: 0 !important; }
+}

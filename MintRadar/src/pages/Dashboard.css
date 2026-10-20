@@ -125,6 +125,11 @@
   font-size: 14px;
   color: var(--text);
   margin-right: 4px;
+  /* Reserves the width of a two-digit count: the "—" shown while /api/mints/known is pending and the numbers that
+     replace it take the same space, so nothing after them moves when the data arrives. */
+  display: inline-block;
+  min-width: 2ch;
+  font-variant-numeric: tabular-nums;
 }
 .dash-status-sep {
   width: 1px;
@@ -2412,3 +2417,19 @@
 /* The filter tag's text is ~13 px high: its tooltip trigger is padded to 24 px (the close button sits beside the
    text, so only the vertical sides grow). */
 .filter-tag .info-tooltip--chip { --tt-hit-t: 6px; --tt-hit-b: 6px; }
+
+/* Phone text floor (2026-10-20): no HTML text below 12px at <=767px (docs/claude/mobile-and-tooltips.md). Five 12px
+   sort labels need ~361px: they fit one row at 390px and wrap onto a second row below that, so the active button is
+   never scrolled out of sight (the <=370px scroll fallback above no longer has anything to scroll). */
+@media (max-width: 767px) {
+  .sort-segment { flex-wrap: wrap; }
+  .sort-btn { font-size: 12px; padding-inline: 3px; }
+  .sort-btn .sort-arrow { font-size: 12px !important; } /* inline 10px on the arrow */
+  .card-host { font-size: 12px; }
+  .card-pill { font-size: 12px; }
+  .card-reliability-label,
+  .card-reliability-na { font-size: 12px; }
+  .card-reliability-no-reviews { font-size: 12px; }
+  .latency-block .latency-label { font-size: 12px; }
+  .latency-source { font-size: 12px; }
+}

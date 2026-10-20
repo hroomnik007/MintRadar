@@ -84,7 +84,7 @@ export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
             {name !== hostname && (
-              <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hostname}</div>
+              <div className="stats-host-line" style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hostname}</div>
             )}
           </div>
           <span className={`stats-movers-delta ${direction}`}>{direction === 'up' ? '+' : ''}{m.delta}</span>
