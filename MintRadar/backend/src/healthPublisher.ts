@@ -13,12 +13,12 @@ import { pool as db } from './db.js'
 // nostrService.ts installs the DNS-pinned WebSocket for every nostr-tools relay connection of the backend (importing it
 // is what makes the pool below use it) and owns the existing publish helper used for the profile.
 import { publishToRelays, META_RELAYS } from './nostrService.js'
-import { toWalletMint, type KnownMintLike, type Snapshot, type WalletMint } from './walletApi.js'
+import { toWalletMint, type KnownMintLike, type Snapshot, type WalletExtra, type WalletMint } from './walletApi.js'
 import { METHODOLOGY_VERSION } from './shared/methodology.js'
 import {
-  ATTESTATION_MAX_EVENTS_PER_RUN, ATTESTATION_RELAYS, buildHealthEvent, buildProfileTemplate, healthIdentifier,
-  resolveAttestationKey, shouldPublish,
-  type HealthInput, type KeyLog, type PublishCandidate, type PublishedState,
+  ATTESTATION_MAX_EVENTS_PER_RUN, ATTESTATION_RELAYS, ATTESTATION_STATE_CHANGE_MAX_PER_HOUR, buildHealthEvent,
+  buildProfileTemplate, healthIdentifier, publishReason, resolveAttestationKey,
+  type HealthInput, type KeyLog, type PublishCandidate, type PublishedState, type PublishReason,
 } from './healthAssertions.js'
 
 export const ATTESTATION_RELAY_PAUSE_MS = 200
@@ -38,6 +38,8 @@ export interface DueItem {
   d: string
   event: NostrEvent
   candidate: PublishCandidate
+  /** Why it is published; only 'state-change' counts against the hourly cap. Absent in tests that build items by hand. */
+  reason?: PublishReason
 }
 
 export function inputFromWalletMint(w: WalletMint, now: number): HealthInput {
@@ -53,6 +55,10 @@ export function inputFromWalletMint(w: WalletMint, now: number): HealthInput {
     scoreCappedNew: w.scoreCappedNew,
     audit: w.audit,
     lastCheckedAt: w.lastCheckedAt,
+    probes24h: w.sample.probes24h,
+    downSince: w.downSince,
+    keysets: w.keysets,
+    keysetsCheckedAt: w.keysetsCheckedAt,
     now,
   }
 }
@@ -60,24 +66,41 @@ export function inputFromWalletMint(w: WalletMint, now: number): HealthInput {
 export interface Plan {
   /** Mints that get an event at all (stored score, not archived). */
   eligible: number
-  /** Due events, never-published first, then the oldest; at most `limit`. */
-  due: Array<{ d: string; template: EventTemplate; candidate: PublishCandidate }>
+  /** Due events: state changes first, then never-published first and the oldest; at most `limit`. */
+  due: Array<{ d: string; template: EventTemplate; candidate: PublishCandidate; reason: PublishReason }>
   /** Due events that did not fit into this run (they stay due for the next one). */
   deferred: number
+  /** Of `due`, the state-change events (what the hourly cap counts). */
+  stateChanges: number
 }
 
-/** Which mints publish now. Pure: the snapshot rows, the stored states and the clock go in. */
+export interface PlanOptions {
+  limit?: number
+  /** How many state-change events this run may still publish (the hourly cap minus those of the last hour). */
+  stateChangeBudget?: number
+  /** probes24h, downSince and keysets by mint URL (Snapshot.walletExtra). */
+  extras?: ReadonlyMap<string, WalletExtra>
+}
+
+/**
+ * Which mints publish now. Pure: the snapshot rows, the stored states and the clock go in. A state change beyond
+ * `stateChangeBudget` is not planned and counts as deferred: nothing is stored for it, so it is still a state change
+ * (and due) at the next run.
+ */
 export function planCycle(
   rows: KnownMintLike[],
   states: ReadonlyMap<string, PublishedState>,
   nowMs: number,
-  limit: number = ATTESTATION_MAX_EVENTS_PER_RUN,
+  opts: PlanOptions = {},
 ): Plan {
+  const limit = opts.limit ?? ATTESTATION_MAX_EVENTS_PER_RUN
+  const budget = Math.max(0, opts.stateChangeBudget ?? ATTESTATION_STATE_CHANGE_MAX_PER_HOUR)
   const seen = new Set<string>()
-  const due: Plan['due'] = []
+  const changes: Plan['due'] = []
+  const others: Plan['due'] = []
   let eligible = 0
   for (const row of rows) {
-    const template = buildHealthEvent(inputFromWalletMint(toWalletMint(row, nowMs), nowMs))
+    const template = buildHealthEvent(inputFromWalletMint(toWalletMint(row, nowMs, undefined, opts.extras?.get(row.url)), nowMs))
     if (template === null) continue
     const d = healthIdentifier(row.url)
     if (d === null || seen.has(d)) continue
@@ -86,14 +109,25 @@ export function planCycle(
     const rankTag = template.tags.find(t => t[0] === 'rank')?.[1]
     const statusTag = template.tags.find(t => t[0] === 'mint_status')?.[1]
     const candidate: PublishCandidate = { rank: Number(rankTag), status: statusTag ?? '', methodology: METHODOLOGY_VERSION }
-    if (shouldPublish(states.get(d), candidate, nowMs)) due.push({ d, template, candidate })
+    const reason = publishReason(states.get(d), candidate, nowMs)
+    if (reason === null) continue
+    ;(reason === 'state-change' ? changes : others).push({ d, template, candidate, reason })
   }
-  due.sort((a, b) => {
+  const oldestFirst = (a: Plan['due'][number], b: Plan['due'][number]): number => {
     const pa = states.get(a.d)?.lastCreatedAt ?? -1
     const pb = states.get(b.d)?.lastCreatedAt ?? -1
     return pa - pb || (a.d < b.d ? -1 : a.d > b.d ? 1 : 0)
-  })
-  return { eligible, due: due.slice(0, limit), deferred: Math.max(0, due.length - limit) }
+  }
+  changes.sort(oldestFirst)
+  others.sort(oldestFirst)
+  const allowedChanges = changes.slice(0, budget)
+  const all = [...allowedChanges, ...others]
+  const due = all.slice(0, limit)
+  return {
+    eligible, due,
+    deferred: (changes.length - allowedChanges.length) + Math.max(0, all.length - limit),
+    stateChanges: due.filter(p => p.reason === 'state-change').length,
+  }
 }
 
 // ── State table ──────────────────────────────────────────────────────────────
@@ -221,6 +255,8 @@ export interface CycleDeps {
   publisher?: RelayPublisher
   now?: () => number
   sleep?: (ms: number) => Promise<void>
+  /** Test hook: the log of state-change publication times (ms) the hourly cap counts; default: one per process. */
+  stateChangeLog?: number[]
   /** Test hooks only; production always uses ATTESTATION_RELAYS and the constants above. */
   relays?: readonly string[]
   timeoutMs?: number
@@ -230,17 +266,33 @@ export interface CycleDeps {
 
 export interface CycleResult { eligible: number; due: number; deferred: number; accepted: number; relays: Record<string, RelayStats> }
 
+/** When this process planned its state-change events (ms). In memory on purpose: a restart can allow one more cap's worth
+ *  at most, never a republish of everything (attestation_state is persistent). Pruned to the last hour on every run. */
+const stateChangeLog: number[] = []
+const HOUR_MS = 3_600_000
+
+function stateChangeBudget(log: number[], nowMs: number): number {
+  while (log.length > 0 && (log[0] as number) <= nowMs - HOUR_MS) log.shift()
+  return Math.max(0, ATTESTATION_STATE_CHANGE_MAX_PER_HOUR - log.length)
+}
+
 export async function runAttestationCycle(deps: CycleDeps): Promise<CycleResult> {
   const log = deps.log ?? ((line: string) => console.log(line))
   const now = (deps.now ?? Date.now)()
   const snapshot = await deps.loadSnapshot()
   const states = await (deps.loadStates ?? loadAttestationStates)()
-  const plan = planCycle(snapshot.data as KnownMintLike[], states, now)
+  const changeLog = deps.stateChangeLog ?? stateChangeLog
+  const plan = planCycle(snapshot.data as KnownMintLike[], states, now, {
+    stateChangeBudget: stateChangeBudget(changeLog, now),
+    ...(snapshot.walletExtra ? { extras: snapshot.walletExtra } : {}),
+  })
   if (plan.due.length === 0) {
-    log(`[attestations] run: ${plan.eligible} eligible, nothing due`)
-    return { eligible: plan.eligible, due: 0, deferred: 0, accepted: 0, relays: {} }
+    log(`[attestations] run: ${plan.eligible} eligible, nothing due${plan.deferred > 0 ? ` (${plan.deferred} deferred)` : ''}`)
+    return { eligible: plan.eligible, due: 0, deferred: plan.deferred, accepted: 0, relays: {} }
   }
-  const items: DueItem[] = plan.due.map(p => ({ d: p.d, candidate: p.candidate, event: finalizeEvent(p.template, deps.secretKey) }))
+  const items: DueItem[] = plan.due.map(p => ({ d: p.d, candidate: p.candidate, reason: p.reason, event: finalizeEvent(p.template, deps.secretKey) }))
+  // Counted when planned, not when accepted: a relay that refuses must not get the same events again without limit.
+  for (let i = 0; i < plan.stateChanges; i++) changeLog.push(now)
   const saveState = deps.saveState ?? saveAttestationState
   const publisher = deps.publisher ?? createPoolPublisher()
   try {

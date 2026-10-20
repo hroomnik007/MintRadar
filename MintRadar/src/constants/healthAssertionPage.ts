@@ -19,6 +19,12 @@ export const HEALTH_FACTS = {
   minRankDelta: 2,
   refreshHours: 24,
   auditMaxAgeHours: 168,
+  /** A status change is published at the next publisher run (every 15 minutes), not after minIntervalHours. */
+  runIntervalMinutes: 15,
+  /** Least time between two events of one mint when a status change causes the second one. */
+  stateChangeMinGapMinutes: 5,
+  /** Most status-change events per hour over all mints; the rest waits for the next run. */
+  stateChangeMaxPerHour: 30,
   /** limit of the query for every mint. */
   queryLimit: 500,
 } as const

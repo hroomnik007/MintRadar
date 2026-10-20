@@ -676,7 +676,7 @@ app.get('/api', (_req: Request, res: Response): void => {
 // METHODOLOGY_CHANGES entry (it changes with the formula); /for-wallets = FOR_WALLETS_PAGE_LASTMOD, bumped by hand
 // when the page content changes.
 const METHODOLOGY_LASTMOD = METHODOLOGY_CHANGES.reduce((latest, c) => (c.date > latest ? c.date : latest), '')
-const FOR_WALLETS_PAGE_LASTMOD = '2026-10-17'
+const FOR_WALLETS_PAGE_LASTMOD = '2026-10-20'
 const SITEMAP_STATIC_PATHS: Array<{ loc: string; changefreq: string; priority: string; lastmod?: string }> = [
   { loc: '/', changefreq: 'hourly', priority: '1.0' },
   { loc: '/stats', changefreq: 'daily', priority: '0.8' },

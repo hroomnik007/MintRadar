@@ -2,7 +2,7 @@
 
 `early version` `optional`
 
-**Status: live since 2026-10-13 (first publication 17:48 UTC), early version.** MintRadar publishes these events now. The `mint_*` tags are MintRadar's own tags (see below), and the format may change before it is frozen. Changes are announced in this document and on [mintradar.org/for-wallets](https://mintradar.org/for-wallets#signed-health-assertions), and every event carries the `methodology` integer.
+**Status: live since 2026-10-13 (first publication 17:48 UTC), early version.** MintRadar publishes these events now. The `mint_*` tags are MintRadar's own tags (see below), and the format may change before it is frozen. Since 2026-10-20 a status change is published at the next run instead of after up to 6 hours, and seven tags were added (`mint_probes_24h`, `mint_down_since` and five keyset tags). All changes are additive: no tag was renamed and none changed its meaning or format. Changes are announced in this document and on [mintradar.org/for-wallets](https://mintradar.org/for-wallets#signed-health-assertions), and every event carries the `methodology` integer.
 
 ## Abstract
 
@@ -33,6 +33,12 @@ This is an application of kind `30385` of [NIP-85](https://github.com/nostr-prot
     ["mint_test", "0"],
     ["mint_new_capped", "0"],
     ["mint_checked_at", "1792151880"],
+    ["mint_probes_24h", "288"],
+    ["mint_keysets_verified", "1"],
+    ["mint_keysets_legacy", "0"],
+    ["mint_keysets_id_invalid", "0"],
+    ["mint_keyset_final_expiry", "2027-01-15T12:30:00.000Z"],
+    ["mint_keysets_checked_at", "1792151400"],
     ["methodology", "3"],
     ["methodology_url", "https://mintradar.org/methodology"],
     ["expiration", "1792324800"]
@@ -42,9 +48,19 @@ This is an application of kind `30385` of [NIP-85](https://github.com/nostr-prot
 }
 ```
 
-`id` and `sig` are placeholders. The values are an example, not a real mint.
+`id` and `sig` are placeholders. The values are an example, not a real mint. The example shows an online mint, so `mint_down_since` is absent; for a mint that is not online it sits right after `mint_probes_24h`:
+
+```json
+["mint_status", "degraded"],
+["mint_probes_24h", "288"],
+["mint_down_since", "2026-10-14T09:10:03.876Z"],
+```
+
+A signed event with all tags is about 1 kB (1.0 to 1.2 kB for the mints of 2026-10-20), far below the 64 kB event limit of common relays.
 
 ## Tags
+
+The `mint_*` tags are the **measurements**: what MintRadar observed. `rank` is the **derived score**: it is computed from those measurements and other inputs by the method of the `methodology` version (read `methodology_url`). The score is an operational health signal, not solvency and not a recommendation. Tags are in this order in the event; a tag whose value is unknown is omitted, never guessed.
 
 | Tag | Value | Meaning |
 |---|---|---|
@@ -59,15 +75,35 @@ This is an application of kind `30385` of [NIP-85](https://github.com/nostr-prot
 | `mint_test` | `0` \| `1` | `1` for a known test mint |
 | `mint_new_capped` | `0` \| `1` | `1` while the provider's cap for mints younger than 30 days limits the rank to 75 |
 | `mint_checked_at` | UNIX seconds | time of the last probe |
+| `mint_probes_24h` | integer | number of probes of the mint in the last 24 hours (the same number as `sample.probes24h` in the wallet API). The sample size behind the uptime values; there is no separate "low sample" tag. Omitted when unknown |
+| `mint_down_since` | ISO 8601 time, UTC | while `mint_status` is not `online`: the earliest failed probe after the last successful one (the same value as `downSince` in the wallet API). Omitted when unknown |
+| `mint_keysets_verified` | integer | active keysets whose id MintRadar recomputed from the keys and found correct (NUT-02 id versions `00` and `01`) |
+| `mint_keysets_legacy` | integer | active keysets with a legacy (base64-style) id; such an id cannot be recomputed, so it counts neither as verified nor as invalid |
+| `mint_keysets_id_invalid` | integer | active keysets whose id does not match their keys; only a confirmed mismatch counts, never an id that could not be checked |
+| `mint_keyset_final_expiry` | ISO 8601 time, UTC | the earliest final expiry among the active keysets; present only if an active keyset has one |
+| `mint_keysets_checked_at` | UNIX seconds | when the keysets that the four tags above describe were last read from the mint (the latest successful check) |
 | `methodology` | integer | version of the provider's scoring method; ranks of different versions are not comparable |
 | `methodology_url` | URL | where that method is described |
 | `expiration` | UNIX seconds | NIP-40: `created_at` + 172800 (48 hours) |
+
+The five keyset tags are present together or not at all: a mint whose keysets were never checked has none of them. A checked mint with no active keyset has `0` in the three counts. All counts are over the **active** keysets of the latest successful check, so `mint_keysets_verified` + `mint_keysets_legacy` + `mint_keysets_id_invalid` is at most the number of active keysets. Two time formats are in use: UNIX seconds for the `*_checked_at` and `*_audit_at` tags, ISO 8601 for `mint_down_since` and `mint_keyset_final_expiry` (the form the wallet API uses).
+
+Anyone may publish events of this shape under their own key: the format is open. Only the pinned key (below) is MintRadar's.
 
 `content` is the fixed sentence in the example. Reviews, review counts, mint names, IP addresses, network data, onion addresses, public keys of other people, contact details and error texts are never part of the event. Unknown tag names must be ignored by clients.
 
 ## Update rules
 
-Per mint the provider publishes at most one new event per 6 hours, and only if the rank changed by at least 2 points, or `mint_status` changed, or `methodology` changed, or the previous event is 24 hours old (so the 48 hour expiration never lapses). A mint without a score, or an archived mint, gets no new event; its last event expires after 48 hours. An offline mint is published with `mint_status` `offline`. Events go to `wss://nostr.mintradar.org`, `wss://relay.damus.io`, `wss://nos.lol` and `wss://relay.primal.net`.
+**Periodic.** Per mint the provider publishes at most one new event per 6 hours, and only if the rank changed by at least 2 points or `methodology` changed, or the previous event is 24 hours old (so the 48 hour expiration never lapses).
+
+**Status change.** A change of the `mint_status` value (for example `online` to `degraded`, or back) is the one exception to the 6 hours: it is published at the next run of the provider's publisher, which runs every 15 minutes. Two limits protect the relays:
+
+- at least 5 minutes between two events of one mint that a status change causes (a mint that flaps is published at most once per 5 minutes);
+- at most 30 such events per hour for all mints together. A change over the limit is not dropped; it waits for the next run.
+
+A failure that the provider's own network outage caused is not recorded as a status change (the provider holds such failures back), so it produces no event.
+
+A mint without a score, or an archived mint, gets no new event; its last event expires after 48 hours. An offline mint is published with `mint_status` `offline`. Events go to `wss://nostr.mintradar.org`, `wss://relay.damus.io`, `wss://nos.lol` and `wss://relay.primal.net`.
 
 ## Pinning the provider
 
@@ -98,7 +134,7 @@ A runnable example with the normalisation function is in `docs/examples/verify-h
 - **Stolen or misused key.** Whoever holds the key can sign false assertions. The 48 hour expiration limits how long a bad event lives; the provider will announce a new key here and in the NIP-05 file. Wallets that pin the key must update it by a release or a signed configuration, not by trusting a relay.
 - **Replay.** An old valid event can be re-sent by anyone. Check `expiration` and prefer the newest `created_at`; an event older than 48 hours is not current.
 - **Impersonation.** Anyone can publish a kind 30385 event for any `d`. Only the pinned `pubkey` counts. Do not accept a key from the event itself or from a relay hint.
-- **Stale data.** The signal is as old as `mint_checked_at`, and a mint that goes down between two events keeps its old `online` status for up to 6 hours (less when its status changed). Show the age, and fall back to your own checks for anything that must be current.
+- **Stale data.** The signal is as old as `mint_checked_at`, and a mint that goes down is shown with its new status at the next run, normally within about 15 minutes of the provider's probe cycle that recorded it, and at the latest when the 30 events per hour limit lets it through. Between runs an event keeps the old status. Show the age, and fall back to your own checks for anything that must be current.
 - **Mint-controlled text.** Only `mint_software` comes from the mint. It is restricted to a short character set but it is still text chosen by the mint operator: render it as plain text, never as a link or markup.
 - **Not solvency.** The event says nothing about reserves, custody, the operator's honesty or whether a deposit can be withdrawn. A high `rank` is not a reason to deposit more than you can afford to lose.
 

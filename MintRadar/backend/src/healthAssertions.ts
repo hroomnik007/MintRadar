@@ -12,6 +12,7 @@ import type { EventTemplate } from 'nostr-tools'
 import { normalizeUrl } from './discovery.js'
 import { METHODOLOGY_VERSION } from './shared/methodology.js'
 import { ATTESTATION_PUBKEY_HEX } from './shared/healthAssertionConstants.js'
+import type { WalletKeyset } from './walletApi.js'
 
 /** Public key (hex) of the MintRadar Health attestation identity: defined in shared/healthAssertionConstants.ts (one
  *  value for the publisher and the public page). The private key is only in the owner's file and, once activated, in
@@ -34,6 +35,13 @@ export const ATTESTATION_MIN_RANK_DELTA = 2
 export const ATTESTATION_REFRESH_MS = 24 * 60 * 60 * 1000
 export const ATTESTATION_EXPIRY_S = 172_800
 export const ATTESTATION_MAX_EVENTS_PER_RUN = 200
+/** A status change (the mint_status value differs from the last event) is published at the next run instead of waiting
+ *  for ATTESTATION_MIN_INTERVAL_MS, but never sooner than this after the mint's previous event (flapping). */
+export const ATTESTATION_STATE_CHANGE_MIN_GAP_MS = 5 * 60 * 1000
+/** At most this many state-change events per rolling hour over all mints; the rest is deferred to the next run, never
+ *  dropped. 61 eligible mints (2026-10-20): the periodic refresh is about 61 / 24 = 2.5 events an hour, a status change
+ *  is a rare event per mint, so 30 an hour is about half of the fleet and 30 x 4 relays = 120 relay writes an hour. */
+export const ATTESTATION_STATE_CHANGE_MAX_PER_HOUR = 30
 /** The audit tags are only sent while the audit data is at most this old. */
 export const ATTESTATION_AUDIT_MAX_AGE_MS = 168 * 60 * 60 * 1000
 
@@ -72,6 +80,13 @@ export interface HealthInput {
   scoreCappedNew: boolean
   audit: { swaps7d: number; attributedFailures: number; fetchedAt: string } | null
   lastCheckedAt: string | null
+  /** Probes in the last 24 hours (wallet API sample.probes24h); left out of the event when null or absent. */
+  probes24h?: number | null
+  /** Start of the current offline streak (wallet API downSince); used only while the mint is not online. */
+  downSince?: string | null
+  /** The keysets of the latest successful keysets check (wallet API keysets) and when that check ran. */
+  keysets?: readonly WalletKeyset[]
+  keysetsCheckedAt?: string | null
   /** Current time, ms. */
   now: number
 }
@@ -115,11 +130,41 @@ function unixSeconds(iso: string | null): number | null {
 
 const nonNegInt = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0
 
+/** The ISO 8601 UTC form of a time the wallet API already carries as ISO text; null when absent or unreadable. */
+function isoOrNull(v: string | null | undefined): string | null {
+  if (typeof v !== 'string') return null
+  const ms = new Date(v).getTime()
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : null
+}
+
+/**
+ * The keyset facts of the ACTIVE keysets of the latest successful check (all counts are over active keysets, so they
+ * partition them: verified + legacy + id_invalid <= active). Nothing at all for a mint that was never checked.
+ * mint_keysets_checked_at is UNIX seconds like the other *_at tags; mint_keyset_final_expiry is ISO 8601 UTC like the
+ * wallet API and only present when an active keyset has one (the earliest).
+ */
+function keysetTags(keysets: readonly WalletKeyset[] | undefined, checkedAtIso: string | null | undefined): string[][] {
+  const checkedAt = unixSeconds(checkedAtIso ?? null)
+  if (checkedAt === null || !Array.isArray(keysets)) return []
+  const active = keysets.filter(k => k.active)
+  const tags: string[][] = [
+    ['mint_keysets_verified', String(active.filter(k => k.idValid === true).length)],
+    ['mint_keysets_legacy', String(active.filter(k => k.idVersion === 'legacy').length)],
+    ['mint_keysets_id_invalid', String(active.filter(k => k.idValid === false).length)],
+  ]
+  const expiries = active.map(k => isoOrNull(k.finalExpiry)).filter((e): e is string => e !== null).sort()
+  if (expiries.length > 0) tags.push(['mint_keyset_final_expiry', expiries[0] as string])
+  tags.push(['mint_keysets_checked_at', String(checkedAt)])
+  return tags
+}
+
 /**
  * The unsigned kind 30385 event for one mint, or null when the mint gets none (no stored score, archived, or a URL
  * that may not appear in an event). Tags, in this order (v1 names are fixed): d, k, rank, mint_status,
  * mint_uptime_24h, mint_uptime_7d, mint_software, mint_outdated, mint_audit_swaps_7d, mint_audit_attributed_7d,
- * mint_audit_at, mint_test, mint_new_capped, mint_checked_at, methodology, methodology_url, expiration.
+ * mint_audit_at, mint_test, mint_new_capped, mint_checked_at, mint_probes_24h, mint_down_since, mint_keysets_verified,
+ * mint_keysets_legacy, mint_keysets_id_invalid, mint_keyset_final_expiry, mint_keysets_checked_at, methodology,
+ * methodology_url, expiration (the seven tags between mint_checked_at and methodology were added 2026-10-20).
  * A tag whose value is unknown (no uptime yet, version rule cannot decide, no probe time) is omitted, never guessed.
  */
 export function buildHealthEvent(input: HealthInput): EventTemplate | null {
@@ -155,6 +200,10 @@ export function buildHealthEvent(input: HealthInput): EventTemplate | null {
   tags.push(['mint_test', input.isTest ? '1' : '0'], ['mint_new_capped', input.scoreCappedNew ? '1' : '0'])
   const checked = unixSeconds(input.lastCheckedAt)
   if (checked !== null) tags.push(['mint_checked_at', String(checked)])
+  if (nonNegInt(input.probes24h)) tags.push(['mint_probes_24h', String(input.probes24h)])
+  const downSince = input.status === 'online' ? null : isoOrNull(input.downSince)
+  if (downSince !== null) tags.push(['mint_down_since', downSince])
+  tags.push(...keysetTags(input.keysets, input.keysetsCheckedAt))
   tags.push(
     ['methodology', String(METHODOLOGY_VERSION)],
     ['methodology_url', METHODOLOGY_URL],
@@ -198,6 +247,22 @@ export function shouldPublish(prev: PublishedState | null | undefined, next: Pub
   if (Math.abs(next.rank - prev.lastRank) >= ATTESTATION_MIN_RANK_DELTA) return true
   if (next.status !== prev.lastStatus) return true
   return next.methodology !== prev.lastMethodology
+}
+
+export type PublishReason = 'first' | 'periodic' | 'state-change'
+
+/**
+ * Why a mint publishes now, or null. 'first': never published. 'periodic': shouldPublish() (6 hour minimum, rank delta,
+ * methodology, 24 hour refresh), unchanged. 'state-change': the mint_status value differs from the last event and the
+ * previous event is at least ATTESTATION_STATE_CHANGE_MIN_GAP_MS old; this is the only reason that skips the 6 hour
+ * minimum, and the only one the hourly cap (ATTESTATION_STATE_CHANGE_MAX_PER_HOUR) applies to.
+ */
+export function publishReason(prev: PublishedState | null | undefined, next: PublishCandidate, nowMs: number): PublishReason | null {
+  if (!prev) return 'first'
+  if (shouldPublish(prev, next, nowMs)) return 'periodic'
+  const ageMs = nowMs - prev.lastCreatedAt * 1000
+  if (next.status !== prev.lastStatus && ageMs >= ATTESTATION_STATE_CHANGE_MIN_GAP_MS) return 'state-change'
+  return null
 }
 
 // ── Key handling ─────────────────────────────────────────────────────────────

@@ -9,8 +9,9 @@ import { generateSecretKey, getPublicKey, finalizeEvent } from 'nostr-tools'
 import type { Event as NostrEvent } from 'nostr-tools'
 import {
   buildHealthEvent, healthIdentifier, ATTESTATION_EXPIRY_S, ATTESTATION_MIN_INTERVAL_MS, ATTESTATION_MIN_RANK_DELTA,
-  ATTESTATION_REFRESH_MS, ATTESTATION_AUDIT_MAX_AGE_MS, type HealthInput,
+  ATTESTATION_REFRESH_MS, ATTESTATION_AUDIT_MAX_AGE_MS, ATTESTATION_STATE_CHANGE_MIN_GAP_MS, ATTESTATION_STATE_CHANGE_MAX_PER_HOUR, type HealthInput,
 } from '../healthAssertions.js'
+import { ATTESTATION_TICK_MS } from '../healthPublisher.js'
 import { ATTESTATION_PUBKEY_HEX, ATTESTATION_RELAYS_PUBLIC } from '../shared/healthAssertionConstants.js'
 import { HEALTH_URL_TABLE } from './healthUrlTable.js'
 // The code shown on /for-wallets (a frontend constant, plain text without aliases) and the file it is published as.
@@ -262,6 +263,9 @@ describe('the numbers and filters on the page equal the publisher', () => {
     expect(HEALTH_FACTS.minRankDelta).toBe(ATTESTATION_MIN_RANK_DELTA)
     expect(HEALTH_FACTS.refreshHours * 3_600_000).toBe(ATTESTATION_REFRESH_MS)
     expect(HEALTH_FACTS.auditMaxAgeHours * 3_600_000).toBe(ATTESTATION_AUDIT_MAX_AGE_MS)
+    expect(HEALTH_FACTS.runIntervalMinutes * 60_000).toBe(ATTESTATION_TICK_MS)
+    expect(HEALTH_FACTS.stateChangeMinGapMinutes * 60_000).toBe(ATTESTATION_STATE_CHANGE_MIN_GAP_MS)
+    expect(HEALTH_FACTS.stateChangeMaxPerHour).toBe(ATTESTATION_STATE_CHANGE_MAX_PER_HOUR)
   })
   it('the filters shown name the pinned key and the kind', () => {
     for (const f of [HEALTH_FILTER_ALL, HEALTH_FILTER_ONE]) {

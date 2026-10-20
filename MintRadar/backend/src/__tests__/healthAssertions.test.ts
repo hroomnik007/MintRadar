@@ -7,11 +7,12 @@ import { normalizeUrl } from '../discovery.js'
 import { METHODOLOGY_VERSION } from '../shared/methodology.js'
 import {
   ATTESTATION_AUDIT_MAX_AGE_MS, ATTESTATION_EXPIRY_S, ATTESTATION_MAX_EVENTS_PER_RUN, ATTESTATION_MIN_INTERVAL_MS,
-  ATTESTATION_MIN_RANK_DELTA, ATTESTATION_PROFILE, ATTESTATION_PROFILE_PICTURE_URL, ATTESTATION_PUBKEY_HEX, ATTESTATION_REFRESH_MS, ATTESTATION_RELAYS,
+  ATTESTATION_MIN_RANK_DELTA, ATTESTATION_STATE_CHANGE_MAX_PER_HOUR, ATTESTATION_STATE_CHANGE_MIN_GAP_MS, ATTESTATION_PROFILE, ATTESTATION_PROFILE_PICTURE_URL, ATTESTATION_PUBKEY_HEX, ATTESTATION_REFRESH_MS, ATTESTATION_RELAYS,
   HEALTH_CONTENT, HEALTH_KIND, METHODOLOGY_URL, buildHealthEvent, buildProfileTemplate, healthIdentifier,
-  resolveAttestationKey, sanitizeSoftware, shouldPublish,
+  publishReason, resolveAttestationKey, sanitizeSoftware, shouldPublish,
   type HealthInput, type PublishedState,
 } from '../healthAssertions.js'
+import type { WalletKeyset } from '../walletApi.js'
 import { HEALTH_URL_TABLE } from './healthUrlTable.js'
 
 const NOW = Date.UTC(2026, 9, 14, 12, 0, 0) // 2026-10-14T12:00:00Z
@@ -44,6 +45,8 @@ describe('constants', () => {
     expect(ATTESTATION_REFRESH_MS).toBe(24 * 3_600_000)
     expect(ATTESTATION_EXPIRY_S).toBe(172_800)
     expect(ATTESTATION_MAX_EVENTS_PER_RUN).toBe(200)
+    expect(ATTESTATION_STATE_CHANGE_MIN_GAP_MS).toBe(5 * 60_000)
+    expect(ATTESTATION_STATE_CHANGE_MAX_PER_HOUR).toBe(30)
     expect(ATTESTATION_AUDIT_MAX_AGE_MS).toBe(168 * 3_600_000)
     expect([...ATTESTATION_RELAYS]).toEqual(['wss://nostr.mintradar.org', 'wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net'])
     expect(ATTESTATION_PUBKEY_HEX).toMatch(/^[0-9a-f]{64}$/)
@@ -99,6 +102,95 @@ describe('buildHealthEvent — exact tags', () => {
       expect(names).not.toContain(gone)
     }
     expect(names).toEqual(['d', 'k', 'rank', 'mint_status', 'mint_test', 'mint_new_capped', 'methodology', 'methodology_url', 'expiration'])
+  })
+})
+
+const keyset = (over: Partial<WalletKeyset> = {}): WalletKeyset => ({
+  id: '00abcdef01234567', unit: 'sat', active: true, inputFeePpk: 0, finalExpiry: null, idVersion: 'v1', idValid: true, ...over,
+})
+const CHECKED = new Date(NOW - 600_000).toISOString()
+
+describe('buildHealthEvent — probe, outage and keyset tags (added 2026-10-20)', () => {
+  const tags = (over: Partial<HealthInput>) => buildHealthEvent(input(over))!.tags
+  const names = (over: Partial<HealthInput>) => tags(over).map(t => t[0])
+
+  it('are absent when the input carries no such data (an event looks exactly like before)', () => {
+    const n = names({})
+    for (const gone of ['mint_probes_24h', 'mint_down_since', 'mint_keysets_verified', 'mint_keysets_legacy', 'mint_keysets_id_invalid', 'mint_keyset_final_expiry', 'mint_keysets_checked_at']) {
+      expect(n).not.toContain(gone)
+    }
+  })
+
+  it('the existing tags keep their names, values and order next to the new ones (compatibility)', () => {
+    const old = buildHealthEvent(input())!.tags
+    const extended = buildHealthEvent(input({
+      probes24h: 288, downSince: null, keysets: [keyset()], keysetsCheckedAt: CHECKED,
+    }))!.tags
+    const newNames = new Set(['mint_probes_24h', 'mint_down_since', 'mint_keysets_verified', 'mint_keysets_legacy', 'mint_keysets_id_invalid', 'mint_keyset_final_expiry', 'mint_keysets_checked_at'])
+    expect(extended.filter(t => !newNames.has(t[0]!))).toEqual(old)
+    // the new tags sit between mint_checked_at and methodology
+    const order = extended.map(t => t[0])
+    expect(order.indexOf('mint_probes_24h')).toBe(order.indexOf('mint_checked_at') + 1)
+    expect(order.indexOf('methodology')).toBe(order.indexOf('mint_keysets_checked_at') + 1)
+  })
+
+  it('mint_probes_24h is the integer probe count (0 is a real value), omitted when unknown', () => {
+    expect(tagMap(tags({ probes24h: 288 }))['mint_probes_24h']).toBe('288')
+    expect(tagMap(tags({ probes24h: 0 }))['mint_probes_24h']).toBe('0')
+    for (const bad of [null, undefined, -1, 1.5, Number.NaN]) expect(names({ probes24h: bad as number | null })).not.toContain('mint_probes_24h')
+  })
+
+  it('mint_down_since: the wallet API value, only while the mint is not online', () => {
+    const since = '2026-10-14T09:10:03.876Z'
+    expect(tagMap(tags({ status: 'degraded', downSince: since }))['mint_down_since']).toBe(since)
+    expect(tagMap(tags({ status: 'offline', downSince: since }))['mint_down_since']).toBe(since)
+    expect(names({ status: 'online', downSince: since })).not.toContain('mint_down_since')
+    expect(names({ status: 'offline', downSince: null })).not.toContain('mint_down_since')
+    expect(names({ status: 'offline', downSince: 'not a date' })).not.toContain('mint_down_since')
+  })
+
+  it('keyset counts are over the active keysets: verified, legacy, invalid; unknown (null) is none of them', () => {
+    const t = tagMap(tags({
+      keysetsCheckedAt: CHECKED,
+      keysets: [
+        keyset({ id: '00a' }), keyset({ id: '00b' }), keyset({ id: '01c', idVersion: 'v2' }),
+        keyset({ id: 'legacy1', idVersion: 'legacy', idValid: null }),
+        keyset({ id: '00bad', idValid: false }),
+        keyset({ id: 'unk', idVersion: 'unknown', idValid: null }),
+        keyset({ id: '00old', active: false, idValid: false }), // inactive: not counted anywhere
+        keyset({ id: 'oldlegacy', active: false, idVersion: 'legacy', idValid: null }),
+      ],
+    }))
+    expect(t['mint_keysets_verified']).toBe('3')
+    expect(t['mint_keysets_legacy']).toBe('1')
+    expect(t['mint_keysets_id_invalid']).toBe('1')
+    expect(t['mint_keysets_checked_at']).toBe(String(Math.floor((NOW - 600_000) / 1000)))
+  })
+
+  it('mint_keyset_final_expiry is the earliest of the ACTIVE keysets, ISO, only when one has it', () => {
+    const t = tagMap(tags({
+      keysetsCheckedAt: CHECKED,
+      keysets: [
+        keyset({ finalExpiry: '2027-03-01T00:00:00Z' }), keyset({ finalExpiry: '2027-01-15T12:30:00Z' }),
+        keyset({ finalExpiry: '2026-11-01T00:00:00Z', active: false }), keyset(),
+      ],
+    }))
+    expect(t['mint_keyset_final_expiry']).toBe('2027-01-15T12:30:00.000Z')
+    expect(names({ keysetsCheckedAt: CHECKED, keysets: [keyset(), keyset({ finalExpiry: '2026-11-01T00:00:00Z', active: false })] })).not.toContain('mint_keyset_final_expiry')
+  })
+
+  it('a mint whose keysets were never checked gets none of the keyset tags; a checked mint with no keyset gets zeros', () => {
+    const none = names({ keysets: [], keysetsCheckedAt: null })
+    expect(none.filter(n => n.startsWith('mint_keyset'))).toEqual([])
+    expect(names({ keysets: [keyset()], keysetsCheckedAt: null }).filter(n => n.startsWith('mint_keyset'))).toEqual([])
+    const zero = tagMap(tags({ keysets: [], keysetsCheckedAt: CHECKED }))
+    expect([zero['mint_keysets_verified'], zero['mint_keysets_legacy'], zero['mint_keysets_id_invalid']]).toEqual(['0', '0', '0'])
+    expect(zero['mint_keyset_final_expiry']).toBeUndefined()
+  })
+
+  it('there is no verdict or low-sample tag', () => {
+    const all = names({ probes24h: 3, keysets: [keyset()], keysetsCheckedAt: CHECKED, status: 'offline', downSince: CHECKED })
+    expect(all.filter(n => /low|sample|verdict|trust|safe/i.test(n))).toEqual([])
   })
 })
 
@@ -323,6 +415,43 @@ describe('shouldPublish (fake clock)', () => {
 
   it('the 24 hour refresh keeps the 48 hour expiration from lapsing', () => {
     expect(ATTESTATION_REFRESH_MS * 2).toBeLessThanOrEqual(ATTESTATION_EXPIRY_S * 1000)
+  })
+})
+
+describe('publishReason (state changes skip the 6 hour minimum)', () => {
+  const H = 3_600_000
+  const MIN = 60_000
+  const prev = (over: Partial<PublishedState> = {}): PublishedState => ({
+    lastCreatedAt: Math.floor(NOW / 1000), lastRank: 80, lastStatus: 'online', lastMethodology: METHODOLOGY_VERSION, ...over,
+  })
+  const next = (over: Partial<{ rank: number; status: string; methodology: number }> = {}) => ({
+    rank: 80, status: 'online', methodology: METHODOLOGY_VERSION, ...over,
+  })
+
+  it('never published: first', () => {
+    expect(publishReason(null, next(), NOW)).toBe('first')
+  })
+  it('a status change publishes after 5 minutes, not before, and long before the 6 hours', () => {
+    expect(publishReason(prev(), next({ status: 'degraded' }), NOW + 5 * MIN - 1)).toBeNull()
+    expect(publishReason(prev(), next({ status: 'degraded' }), NOW + 5 * MIN)).toBe('state-change')
+    expect(publishReason(prev(), next({ status: 'offline' }), NOW + 15 * MIN)).toBe('state-change')
+    expect(publishReason(prev(), next({ status: 'offline' }), NOW + 6 * H - 1)).toBe('state-change')
+  })
+  it('after the 6 hours a status change is the periodic rule, as before', () => {
+    expect(publishReason(prev(), next({ status: 'offline' }), NOW + 6 * H)).toBe('periodic')
+  })
+  it('nothing else is faster: a rank change or a methodology bump inside the 6 hours waits', () => {
+    expect(publishReason(prev(), next({ rank: 10 }), NOW + 3 * H)).toBeNull()
+    expect(publishReason(prev(), next({ methodology: METHODOLOGY_VERSION + 1 }), NOW + 3 * H)).toBeNull()
+    expect(publishReason(prev(), next(), NOW + 3 * H)).toBeNull()
+  })
+  it('periodic rules are exactly shouldPublish', () => {
+    for (const at of [6 * H, 7 * H, 23 * H, 24 * H, 40 * H]) {
+      for (const n of [next(), next({ rank: 90 }), next({ status: 'offline' })]) {
+        const expected = shouldPublish(prev(), n, NOW + at)
+        expect(publishReason(prev(), n, NOW + at) === 'periodic').toBe(expected)
+      }
+    }
   })
 })
 

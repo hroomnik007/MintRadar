@@ -12,6 +12,8 @@ import { describe, it, expect } from 'vitest'
 import { WALLET_ENVELOPE_FIELDS, WALLET_MINT_FIELDS, WALLET_QUERY_PARAMS, WALLET_ERRORS } from '@/utils/walletFields'
 import { WALLET_API_FACTS } from '@/constants/forWalletsPage'
 import { METHODOLOGY_CHANGES, METHODOLOGY_VERSION } from '@/utils/methodology'
+import { HEALTH_ASSERTION_TAGS } from '@/utils/healthAssertionConstants'
+import { HEALTH_FACTS } from '@/constants/healthAssertionPage'
 
 const root = resolve(__dirname, '../..')
 const API_MD = 'docs/API.md'
@@ -19,6 +21,8 @@ const OPENAPI = 'docs/openapi/wallets-v1.yaml'
 const apiMd = readFileSync(resolve(root, API_MD), 'utf8')
 const openapi = readFileSync(resolve(root, OPENAPI), 'utf8')
 const openapiLines = openapi.split('\n')
+const HEALTH_MD = 'docs/nostr-health-assertions.md'
+const healthMd = readFileSync(resolve(root, HEALTH_MD), 'utf8')
 const backendIndex = readFileSync(resolve(root, 'backend/src/index.ts'), 'utf8')
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -197,5 +201,28 @@ describe(`${API_MD} matches the code constants`, () => {
     const fromFile = rows.map(r => `${r[0]} ${r[1]}`)
     expectSameNames('methodology versions (version date)', API_MD, fromFile, METHODOLOGY_CHANGES.map(c => `${c.version} ${c.date}`))
     expect(Math.max(...rows.map(r => Number(r[0]))), `${API_MD}: newest methodology version`).toBe(METHODOLOGY_VERSION)
+  })
+})
+
+// ── nostr-health-assertions.md (the signed health feed) ──────────────────────
+
+describe(`${HEALTH_MD} matches the publisher constants`, () => {
+  it('the tag table names equal HEALTH_ASSERTION_TAGS (every tag the builder emits, none invented)', () => {
+    const names = mdTable(healthMd, '| Tag | Value | Meaning |').flatMap(r => backticked(r[0]!))
+    expectSameNames('health tags', HEALTH_MD, names, HEALTH_ASSERTION_TAGS.map(t => t.name))
+  })
+
+  it('states the status-change limits of HEALTH_FACTS: the minutes between events of one mint and the events per hour', () => {
+    expect(/at least (\d+) minutes between two events of one mint/.exec(healthMd)?.[1], `${HEALTH_MD}: per-mint gap`)
+      .toBe(String(HEALTH_FACTS.stateChangeMinGapMinutes))
+    expect(/at most (\d+) such events per hour/.exec(healthMd)?.[1], `${HEALTH_MD}: hourly cap`)
+      .toBe(String(HEALTH_FACTS.stateChangeMaxPerHour))
+    expect(healthMd, `${HEALTH_MD}: run interval`).toContain(`every ${HEALTH_FACTS.runIntervalMinutes} minutes`)
+    expect(healthMd, `${HEALTH_MD}: periodic minimum`).toContain(`once per ${HEALTH_FACTS.minIntervalHours} hours`.replace('once', 'one new event'))
+  })
+
+  it('does not claim that other monitors publish this format', () => {
+    expect(healthMd).toContain('the format is open')
+    expect(healthMd).not.toMatch(/other (monitors|providers) (already )?publish/i)
   })
 })

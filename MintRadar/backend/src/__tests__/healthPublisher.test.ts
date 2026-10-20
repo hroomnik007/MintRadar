@@ -34,7 +34,11 @@ vi.mock('../db.js', () => ({ pool: { query: vi.fn() } }))
 
 import { pool as db } from '../db.js'
 import { METHODOLOGY_VERSION } from '../shared/methodology.js'
-import { ATTESTATION_MAX_EVENTS_PER_RUN, ATTESTATION_PUBKEY_HEX, ATTESTATION_RELAYS, type PublishedState } from '../healthAssertions.js'
+import {
+  ATTESTATION_MAX_EVENTS_PER_RUN, ATTESTATION_MIN_INTERVAL_MS, ATTESTATION_PUBKEY_HEX, ATTESTATION_RELAYS,
+  ATTESTATION_STATE_CHANGE_MAX_PER_HOUR, ATTESTATION_STATE_CHANGE_MIN_GAP_MS, type PublishedState,
+} from '../healthAssertions.js'
+import { evaluateVantageOutage, type VantageCashuInfo, type VantageMintResult } from '../vantageOutage.js'
 import {
   ATTESTATION_PROFILE_REFRESH_MS, ATTESTATION_RELAY_PAUSE_MS, ATTESTATION_START_OFFSET_MS, ATTESTATION_TICK_MS,
   loadAttestationStates, planCycle, publishBatch, runAttestationCycle, saveAttestationState, startAttestations,
@@ -435,6 +439,175 @@ describe('runAttestationCycle', () => {
     await runAttestationCycle({ secretKey: generateSecretKey(), loadSnapshot, loadStates, saveState: h.saveState, publisher: h.publisher, now: () => NOW, sleep: async () => {}, log: quiet })
     expect(loadSnapshot).toHaveBeenCalledTimes(1)
     expect(loadStates).toHaveBeenCalledTimes(1)
+  })
+})
+
+// ── State-change publication (2026-10-20) ────────────────────────────────────
+
+describe('state-change publication', () => {
+  const MIN = 60_000
+  const quietLog = (): void => {}
+  const sk = generateSecretKey()
+  const seconds = (ms: number): number => Math.floor(ms / 1000)
+  const published = (over: Partial<PublishedState> = {}): PublishedState => ({
+    lastCreatedAt: seconds(NOW), lastRank: 80, lastStatus: 'online', lastMethodology: METHODOLOGY_VERSION, ...over,
+  })
+  /** One run at `at` over `rows`, with the given stored states and state-change log. */
+  async function run(rows: KnownMintLike[], states: Map<string, PublishedState>, at: number, log: number[] = []) {
+    const h = harness()
+    for (const [k, v] of states) h.store.set(k, v)
+    const res = await runAttestationCycle({
+      secretKey: sk, loadSnapshot: async () => snapshotOf(rows), loadStates: h.loadStates, saveState: h.saveState, publisher: h.publisher,
+      now: () => at, sleep: async () => {}, log: quietLog, relays: ['wss://a.example'], stateChangeLog: log,
+    })
+    return { res, h }
+  }
+  const eventsOf = (h: ReturnType<typeof harness>) => h.sent.map(s => s.event)
+  const statusOf = (e: NostrEvent): string | undefined => e.tags.find(t => t[0] === 'mint_status')?.[1]
+
+  it('the constants: 5 minutes per mint, 30 an hour, inside the 6 hour minimum', () => {
+    expect(ATTESTATION_STATE_CHANGE_MIN_GAP_MS).toBe(5 * MIN)
+    expect(ATTESTATION_STATE_CHANGE_MAX_PER_HOUR).toBe(30)
+    expect(ATTESTATION_STATE_CHANGE_MIN_GAP_MS).toBeLessThan(ATTESTATION_MIN_INTERVAL_MS)
+  })
+
+  it('a status change inside the 6 hours publishes at the next run, correctly signed', async () => {
+    const at = NOW + 15 * MIN
+    const { res, h } = await run([row(1, { online: false, degraded: true })], new Map([['https://mint1.example.com', published()]]), at)
+    expect(res).toMatchObject({ due: 1, accepted: 1, deferred: 0 })
+    const [ev] = eventsOf(h) as [NostrEvent]
+    expect(statusOf(ev)).toBe('degraded')
+    expect(ev.created_at).toBe(seconds(at))
+    expect(verifyEvent(ev)).toBe(true)
+    expect(ev.pubkey).toBe(getPublicKey(sk))
+    expect(h.store.get('https://mint1.example.com')).toMatchObject({ lastStatus: 'degraded', lastCreatedAt: seconds(at) })
+  })
+
+  it('every change of the mint_status value counts (online to offline, degraded to online)', async () => {
+    const at = NOW + 20 * MIN
+    const rows = [row(1, { online: false }), row(2, { online: true })]
+    const states = new Map([
+      ['https://mint1.example.com', published()],
+      ['https://mint2.example.com', published({ lastStatus: 'degraded' })],
+    ])
+    const { h } = await run(rows, states, at)
+    expect(h.sent.map(s => [s.event.tags.find(t => t[0] === 'd')?.[1], statusOf(s.event)]).sort()).toEqual([
+      ['https://mint1.example.com', 'offline'], ['https://mint2.example.com', 'online'],
+    ])
+  })
+
+  it('an unchanged status still waits for the periodic rules (6 h minimum, rank delta, 24 h refresh)', async () => {
+    const rows = [row(1, { reliabilityScore: 40 })] // a big rank change, same status
+    const states = new Map([['https://mint1.example.com', published()]])
+    expect((await run(rows, states, NOW + 6 * 3_600_000 - MIN)).res.due).toBe(0)
+    expect((await run(rows, states, NOW + 6 * 3_600_000)).res.due).toBe(1) // rank delta, after the minimum
+    expect((await run([row(1)], states, NOW + 23 * 3_600_000)).res.due).toBe(0)
+    expect((await run([row(1)], states, NOW + 24 * 3_600_000)).res.due).toBe(1)
+  })
+
+  it('flapping: no second state-change event within 5 minutes of the mint\'s previous event, then it publishes', async () => {
+    const states = new Map([['https://mint1.example.com', published()]])
+    const flipped = [row(1, { online: false })]
+    expect((await run(flipped, states, NOW + ATTESTATION_STATE_CHANGE_MIN_GAP_MS - 1000)).res.due).toBe(0)
+    expect((await run(flipped, states, NOW + ATTESTATION_STATE_CHANGE_MIN_GAP_MS)).res.due).toBe(1)
+    // a real flap through the store: out at +15 min, back at +16 min is held, at +20 min it goes
+    const h = harness()
+    const base = { secretKey: sk, loadStates: h.loadStates, saveState: h.saveState, publisher: h.publisher, sleep: async () => {}, log: quietLog, relays: ['wss://a.example'], stateChangeLog: [] as number[] }
+    h.store.set('https://mint1.example.com', published())
+    const out = await runAttestationCycle({ ...base, loadSnapshot: async () => snapshotOf([row(1, { online: false })]), now: () => NOW + 15 * MIN })
+    expect(out.due).toBe(1)
+    const back = await runAttestationCycle({ ...base, loadSnapshot: async () => snapshotOf([row(1)]), now: () => NOW + 16 * MIN })
+    expect(back.due).toBe(0)
+    const later = await runAttestationCycle({ ...base, loadSnapshot: async () => snapshotOf([row(1)]), now: () => NOW + 20 * MIN })
+    expect(later.due).toBe(1)
+    expect(h.sent.map(s => statusOf(s.event))).toEqual(['offline', 'online'])
+  })
+
+  it('the hourly cap defers the surplus and never drops it: the next hour publishes the rest', async () => {
+    signing.cheap = true
+    const n = ATTESTATION_STATE_CHANGE_MAX_PER_HOUR + 12
+    const rows = manyRows(n).map(r => ({ ...r, online: false }))
+    const states = new Map(rows.map(r => [r.url, published()] as const))
+    const log: number[] = []
+    const h = harness()
+    for (const [k, v] of states) h.store.set(k, v)
+    const base = { secretKey: sk, loadSnapshot: async () => snapshotOf(rows), loadStates: h.loadStates, saveState: h.saveState, publisher: h.publisher, sleep: async () => {}, log: quietLog, relays: ['wss://a.example'], stateChangeLog: log }
+
+    const first = await runAttestationCycle({ ...base, now: () => NOW + 15 * MIN })
+    expect(first).toMatchObject({ due: ATTESTATION_STATE_CHANGE_MAX_PER_HOUR, deferred: 12, accepted: ATTESTATION_STATE_CHANGE_MAX_PER_HOUR })
+    // 15 minutes later the hour is not over: still the cap, nothing new goes out, the 12 stay deferred (not lost)
+    const second = await runAttestationCycle({ ...base, now: () => NOW + 30 * MIN })
+    expect(second.due).toBe(0)
+    expect(second.deferred).toBe(12)
+    expect(h.sent).toHaveLength(ATTESTATION_STATE_CHANGE_MAX_PER_HOUR)
+    // once the first batch is more than an hour old the budget is back and exactly the deferred 12 go out
+    const third = await runAttestationCycle({ ...base, now: () => NOW + 15 * MIN + 3_600_000 })
+    expect(third).toMatchObject({ due: 12, deferred: 0, accepted: 12 })
+    const urls = new Set(h.sent.map(s => s.event.tags.find(t => t[0] === 'd')?.[1]))
+    expect(urls.size).toBe(n)
+    expect(h.sent).toHaveLength(n)
+  })
+
+  it('the cap does not hold back periodic or first publications', async () => {
+    signing.cheap = true
+    const rows = manyRows(5)
+    const full = Array.from({ length: ATTESTATION_STATE_CHANGE_MAX_PER_HOUR }, (_, i) => NOW + i)
+    const { res } = await run(rows, new Map(), NOW + 15 * MIN, full) // never published
+    expect(res).toMatchObject({ due: 5, deferred: 0 })
+    const stale = new Map(rows.map(r => [r.url, published({ lastCreatedAt: seconds(NOW) - 30 * 3600 })] as const))
+    const { res: daily } = await run(rows.map(r => ({ ...r, online: false })), stale, NOW + 15 * MIN, [...full])
+    expect(daily.due).toBe(5) // old enough for the periodic rule: its status change rides along, uncapped
+  })
+
+  it('the cap counts what was planned, so a run with nothing accepted still uses up its budget', async () => {
+    const log: number[] = []
+    const h = harness({ reject: () => true })
+    const rows = [row(1, { online: false })]
+    await runAttestationCycle({
+      secretKey: sk, loadSnapshot: async () => snapshotOf(rows), loadStates: async () => new Map([['https://mint1.example.com', published()]]), saveState: h.saveState,
+      publisher: h.publisher, now: () => NOW + 15 * MIN, sleep: async () => {}, log: quietLog, relays: ['wss://a.example'], stateChangeLog: log,
+    })
+    expect(log).toEqual([NOW + 15 * MIN])
+  })
+
+  it('a forged variant of a state-change event fails verifyEvent, field by field', async () => {
+    const { h } = await run([row(1, { online: false })], new Map([['https://mint1.example.com', published()]]), NOW + 15 * MIN)
+    const ev = eventsOf(h)[0] as NostrEvent
+    expect(verifyEvent(ev)).toBe(true)
+    const forged: Record<string, NostrEvent> = {
+      id: { id: '0'.repeat(64), pubkey: ev.pubkey, created_at: ev.created_at, kind: ev.kind, tags: ev.tags, content: ev.content, sig: ev.sig },
+      pubkey: { id: ev.id, pubkey: getPublicKey(generateSecretKey()), created_at: ev.created_at, kind: ev.kind, tags: ev.tags, content: ev.content, sig: ev.sig },
+      created_at: { id: ev.id, pubkey: ev.pubkey, created_at: ev.created_at + 1, kind: ev.kind, tags: ev.tags, content: ev.content, sig: ev.sig },
+      kind: { id: ev.id, pubkey: ev.pubkey, created_at: ev.created_at, kind: 30386, tags: ev.tags, content: ev.content, sig: ev.sig },
+      tags: { id: ev.id, pubkey: ev.pubkey, created_at: ev.created_at, kind: ev.kind, tags: ev.tags.map(t => (t[0] === 'mint_status' ? ['mint_status', 'online'] : t)), content: ev.content, sig: ev.sig },
+      content: { id: ev.id, pubkey: ev.pubkey, created_at: ev.created_at, kind: ev.kind, tags: ev.tags, content: `${ev.content} `, sig: ev.sig },
+      sig: { id: ev.id, pubkey: ev.pubkey, created_at: ev.created_at, kind: ev.kind, tags: ev.tags, content: ev.content, sig: '0'.repeat(128) },
+    }
+    for (const [field, e] of Object.entries(forged)) expect(verifyEvent(e), field).toBe(false)
+  })
+})
+
+describe('vantage outage interaction', () => {
+  // runProbeCycle drops the held-back failures of a suspected vantage outage: nothing is written to mint_history or
+  // mints (probeCycle.test.ts: "failures are not recorded"), so the snapshot the publisher reads is exactly the one of
+  // the cycle before. This pins the premise (the scenario IS classified) and the consequence (no event, no relay call).
+  it('a classified outage cycle leaves every mint as it was: no state-change event is produced', async () => {
+    const urls = Array.from({ length: 50 }, (_, i) => `https://mint${i + 1}.example.com`)
+    const results = new Map<string, VantageMintResult>(urls.map(u => [u, { previousOnline: true, failureKind: 'dns' }]))
+    const cashu = new Map<string, VantageCashuInfo>(urls.map(u => [u, { state: 'ok', checkAgeMs: 2 * 60_000 }]))
+    expect(evaluateVantageOutage(results, cashu).classified).toBe(true)
+
+    const rows = manyRows(50) // unchanged: still online, as recorded before the outage cycle
+    const states = new Map<string, PublishedState>(rows.map(r => [r.url, { lastCreatedAt: Math.floor(NOW / 1000), lastRank: 80, lastStatus: 'online', lastMethodology: METHODOLOGY_VERSION }]))
+    const h = harness()
+    for (const [k, v] of states) h.store.set(k, v)
+    const res = await runAttestationCycle({
+      secretKey: generateSecretKey(), loadSnapshot: async () => snapshotOf(rows), loadStates: h.loadStates, saveState: h.saveState,
+      publisher: h.publisher, now: () => NOW + 15 * 60_000, sleep: async () => {}, log: () => {}, stateChangeLog: [],
+    })
+    expect(res).toMatchObject({ due: 0, accepted: 0, deferred: 0 })
+    expect(h.sent).toHaveLength(0)
+    expect(h.saveState).not.toHaveBeenCalled()
   })
 })
 

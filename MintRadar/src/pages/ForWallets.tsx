@@ -342,7 +342,12 @@ export default function ForWallets() {
               </tbody>
             </table>
           </div>
-          <p>Clients must ignore tags they do not know.</p>
+          <p>
+            The <code>mint_*</code> tags are the measurements; <code>rank</code> is the score derived from them by the
+            method of the <code>methodology</code> version. The score is a health signal, not solvency and not a
+            recommendation. Clients must ignore tags they do not know. The format is open: any monitor may publish
+            events of this shape under its own key.
+          </p>
 
           <h3 className="doc-h3">Updates and expiry</h3>
           <ul>
@@ -352,8 +357,15 @@ export default function ForWallets() {
             </li>
             <li>
               For each mint a new event is published at most every {HEALTH_FACTS.minIntervalHours} hours, if the
-              score changed by at least {HEALTH_FACTS.minRankDelta} points, the status changed or the methodology
-              changed. A mint whose event is {HEALTH_FACTS.refreshHours} hours old gets a new one anyway, so the expiry does not lapse.
+              score changed by at least {HEALTH_FACTS.minRankDelta} points or the methodology changed. A mint whose event
+              is {HEALTH_FACTS.refreshHours} hours old gets a new one anyway, so the expiry does not lapse.
+            </li>
+            <li data-testid="health-state-change-rule">
+              <strong>A change of <code>mint_status</code></strong> (for example online to degraded) does not wait for those{' '}
+              {HEALTH_FACTS.minIntervalHours} hours: it is published at the next run of the publisher, which runs every{' '}
+              {HEALTH_FACTS.runIntervalMinutes} minutes. Limits: at least {HEALTH_FACTS.stateChangeMinGapMinutes} minutes
+              between two events of one mint, and at most {HEALTH_FACTS.stateChangeMaxPerHour} such events per hour for all
+              mints. A change over the limit waits for the next run; none is dropped.
             </li>
           </ul>
 

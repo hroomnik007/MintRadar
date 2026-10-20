@@ -14,8 +14,10 @@ import {
 
 const NOW = Date.UTC(2026, 9, 14, 12, 0, 0)
 const full: HealthInput = {
-  url: 'https://mint.example.com', status: 'online', score: 91, uptime24hPct: 100, uptime7dPct: 99, software: 'Nutshell/0.17.5',
+  url: 'https://mint.example.com', status: 'degraded', score: 91, uptime24hPct: 100, uptime7dPct: 99, software: 'Nutshell/0.17.5',
   outdated: false, isTest: false, scoreCappedNew: false, lastCheckedAt: new Date(NOW - 60_000).toISOString(), now: NOW,
+  probes24h: 288, downSince: '2026-10-14T09:10:03.876Z', keysetsCheckedAt: new Date(NOW - 600_000).toISOString(),
+  keysets: [{ id: '00abcdef01234567', unit: 'sat', active: true, inputFeePpk: 0, finalExpiry: '2027-01-15T12:30:00Z', idVersion: 'v1', idValid: true }],
   audit: { swaps7d: 120, attributedFailures: 1, fetchedAt: new Date(NOW - 3_600_000).toISOString() },
 }
 // The fixed list of labels a tag may carry (the table on /for-wallets prints "defined by <NIP>" or "MintRadar tag").
@@ -26,6 +28,7 @@ describe('HEALTH_ASSERTION_TAGS equals what the builder can emit', () => {
   const variants: Record<string, HealthInput> = {
     'full data': full,
     offline: { ...full, status: 'offline', uptime24hPct: 0, uptime7dPct: null, outdated: null, software: null },
+    online: { ...full, status: 'online' },
     'no audit data': { ...full, audit: null },
     'test mint': { ...full, isTest: true, scoreCappedNew: true },
   }

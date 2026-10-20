@@ -89,7 +89,7 @@ describe('the signed health assertions section on /for-wallets', () => {
 
   it('states the update and publication rules, the disclaimer and the key rotation', () => {
     const text = section().textContent ?? ''
-    for (const needle of ['expires 48 hours', 'at most every 6 hours', 'if the score changed by at least 2 points', '24 hours old', 'Not published', 'onion or an IP address', 'unknown', 'not a bad mint',
+    for (const needle of ['expires 48 hours', 'at most every 6 hours', 'if the score changed by at least 2 points', '24 hours old', 'A change of mint_status', 'every 15 minutes', 'at least 5 minutes between two events of one mint', 'at most 30 such events per hour', 'none is dropped', 'any monitor may publish', 'the measurements', 'not solvency and not a recommendation', 'Not published', 'onion or an IP address', 'unknown', 'not a bad mint',
       'Operational health signal, not solvency, not a recommendation to deposit funds', 'A new key would be announced on this page']) {
       expect(text, needle).toContain(needle)
     }

@@ -47,7 +47,7 @@ describe('the attestation key agrees everywhere', () => {
     expect(ev.kind).toBe(30385)
     const exp = ev.tags.find(t => t[0] === 'expiration')![1]!
     expect(Number(exp)).toBe(ev.created_at + 172_800)
-    expect(ev.tags.map(t => t[0])).toEqual(['d', 'k', 'rank', 'mint_status', 'mint_uptime_24h', 'mint_uptime_7d', 'mint_software', 'mint_outdated', 'mint_audit_swaps_7d', 'mint_audit_attributed_7d', 'mint_audit_at', 'mint_test', 'mint_new_capped', 'mint_checked_at', 'methodology', 'methodology_url', 'expiration'])
+    expect(ev.tags.map(t => t[0])).toEqual(['d', 'k', 'rank', 'mint_status', 'mint_uptime_24h', 'mint_uptime_7d', 'mint_software', 'mint_outdated', 'mint_audit_swaps_7d', 'mint_audit_attributed_7d', 'mint_audit_at', 'mint_test', 'mint_new_capped', 'mint_checked_at', 'mint_probes_24h', 'mint_keysets_verified', 'mint_keysets_legacy', 'mint_keysets_id_invalid', 'mint_keyset_final_expiry', 'mint_keysets_checked_at', 'methodology', 'methodology_url', 'expiration'])
   })
 })
 
