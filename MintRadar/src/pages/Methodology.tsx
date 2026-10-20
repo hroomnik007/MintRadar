@@ -109,8 +109,8 @@ export default function Methodology() {
           <p>
             Every {M.cadence.probeMinutes} minutes the server in {PROBE_LOCATION} requests the mint&apos;s{' '}
             <code>/v1/info</code> ({M.cadence.probeTimeoutSeconds} second timeout, one retry after a network
-            failure). A probe counts as successful only if the answer is HTTP 200 with a valid JSON body that contains
-            a <code>nuts</code> object. Uptime is the share of successful probes among all probes of the last{' '}
+            failure). A probe counts as successful only if the answer is a 2xx response with a valid JSON body
+            in which <code>nuts</code> is an object. Uptime is the share of successful probes among all probes of the last{' '}
             {M.uptime.windowHours} hours, rounded to a whole percent; the component is that percentage times{' '}
             {M.uptime.factor.toFixed(2)}, rounded to a whole number. A mint with no probe in the window scores
             100 % if the probe now succeeds and 0 % if it fails.
