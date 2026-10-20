@@ -10,6 +10,7 @@ import { startReviewsSyncTimer } from './reviewsSchedule.js'
 import { refreshReliabilityMoversRollup } from './reliabilityMoversRollup.js'
 import { refreshReviewSurgeBaseline } from './reviewSurgeRollup.js'
 import { pool, pruneOldNotificationSubscriptions } from './db.js'
+import { logCronError } from './cronLog.js'
 import { publishServiceProfile } from './nostrService.js'
 import { fetchLatestUpstreamVersions } from './versionCatalog.js'
 import { isAllowlistMode, getAllowlistUrls } from './allowlist.js'
@@ -89,9 +90,7 @@ export function startCron(): void {
       // mints.last_reliability_score and the newest history rows are already current.
       await refreshReliabilityMoversRollup()
     } catch (err) {
-      if (process.env['NODE_ENV'] !== 'production') {
-        console.error('[cron] probe error:', err)
-      }
+      logCronError('probe', err)
     }
   })
 
@@ -104,9 +103,7 @@ export function startCron(): void {
     try {
       await syncAuditCz()
     } catch (err) {
-      if (process.env['NODE_ENV'] !== 'production') {
-        console.error('[cron] cashu.info sync error:', err)
-      }
+      logCronError('cashu.info sync', err)
     }
   })
 
@@ -118,9 +115,7 @@ export function startCron(): void {
       await new Promise<void>(r => setTimeout(r, Math.floor(Math.random() * 4 * 60_000)))
       await syncAuditCzDetails()
     } catch (err) {
-      if (process.env['NODE_ENV'] !== 'production') {
-        console.error('[cron] cashu.info detail error:', err)
-      }
+      logCronError('cashu.info detail', err)
     }
   })
 
@@ -129,9 +124,7 @@ export function startCron(): void {
     try {
       await pruneOldHistory()
     } catch (err) {
-      if (process.env['NODE_ENV'] !== 'production') {
-        console.error('[cron] prune error:', err)
-      }
+      logCronError('prune', err)
     }
   })
 
@@ -143,9 +136,7 @@ export function startCron(): void {
       const abandoned = await pruneAbandonedMints()
       console.log(`[cron] pruned ${abandoned} abandoned mint(s) (90d offline)`)
     } catch (err) {
-      if (process.env['NODE_ENV'] !== 'production') {
-        console.error('[cron] unvalidated mint prune error:', err)
-      }
+      logCronError('unvalidated mint prune', err)
     }
   })
 
@@ -162,9 +153,7 @@ export function startCron(): void {
       const { checked, invalid, reaped } = await revalidateMints()
       console.log(`[cron] revalidated ${checked} mint(s): ${invalid} not a valid Cashu mint, ${reaped} reaped`)
     } catch (err) {
-      if (process.env['NODE_ENV'] !== 'production') {
-        console.error('[cron] revalidation error:', err)
-      }
+      logCronError('revalidation', err)
     }
   })
 
@@ -174,9 +163,7 @@ export function startCron(): void {
       const deleted = await pruneOldNotificationSubscriptions()
       console.log(`[cron] pruned ${deleted} stale notification subscription(s)`)
     } catch (err) {
-      if (process.env['NODE_ENV'] !== 'production') {
-        console.error('[cron] notification subscription prune error:', err)
-      }
+      logCronError('notification subscription prune', err)
     }
     // Cheap, idempotent replaceable event — safe to repeat daily, keeps the
     // service profile fresh on relays with short retention.
@@ -190,9 +177,7 @@ export function startCron(): void {
     try {
       await refreshReviewSurgeBaseline()
     } catch (err) {
-      if (process.env['NODE_ENV'] !== 'production') {
-        console.error('[cron] review surge baseline error:', err)
-      }
+      logCronError('review surge baseline', err)
     }
   })
 
@@ -202,9 +187,7 @@ export function startCron(): void {
     try {
       await fetchLatestUpstreamVersions()
     } catch (err) {
-      if (process.env['NODE_ENV'] !== 'production') {
-        console.error('[cron] version catalog update error:', err)
-      }
+      logCronError('version catalog update', err)
     }
   })
 

@@ -27,7 +27,7 @@ export function attachPoolErrorHandler(
   })
 }
 
-function describePoolError(err: unknown): string {
+export function describePoolError(err: unknown): string {
   const e = (err ?? {}) as { message?: unknown; code?: unknown }
   const message = typeof e.message === 'string' ? e.message : 'unknown error'
   const code = typeof e.code === 'string' ? e.code : 'none'
