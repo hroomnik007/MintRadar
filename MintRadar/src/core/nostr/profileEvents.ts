@@ -21,3 +21,12 @@ export function pickNewestProfileEvents(
   }
   return best
 }
+
+// The acceptance rule for the login readers (client.ts), which act on the FIRST event that passes instead of waiting for
+// the newest: right kind, signed by the pubkey we asked about, signature valid. A relay can ignore the filter, so this
+// is checked here even though SimplePool already verifies signatures and filter matches (defence in depth; verifyEvent
+// caches its result on the event object, so a second call is free).
+export function isAcceptedEvent(ev: NostrEvent, kind: number, pubkey: string): boolean {
+  if (ev.kind !== kind || ev.pubkey !== pubkey) return false
+  try { return verifyEvent(ev) } catch { return false }
+}

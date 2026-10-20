@@ -1,10 +1,11 @@
-import { nip19, nip44, generateSecretKey, getPublicKey as nostrGetPublicKey, verifyEvent, finalizeEvent } from 'nostr-tools'
+import { nip19, nip44, generateSecretKey, getPublicKey as nostrGetPublicKey, finalizeEvent } from 'nostr-tools'
 import { BunkerSigner, parseBunkerInput, createNostrConnectURI, toBunkerURL } from 'nostr-tools/nip46'
 import { SimplePool } from 'nostr-tools/pool'
 import type { EventTemplate, Filter, NostrEvent } from 'nostr-tools'
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils'
 import { sharedPool } from '@/core/nostr/pool'
 import { sanitizeUserRelays } from '@/core/nostr/relayHints'
+import { isAcceptedEvent } from '@/core/nostr/profileEvents'
 import { useAuthStore } from '@/stores/auth.store'
 
 export interface NostrProfile {
@@ -33,17 +34,18 @@ const USER_BOOTSTRAP_TIMEOUT_MS = 6000
 
 type SubHandle = { close: (reason?: string) => void }
 
-// Resolve as soon as the first event that passes verifyEvent() AND is signed by
-// `expectedPubkey` arrives, then tear the subscription down — never block on the
+// Resolve as soon as the first event that passes isAcceptedEvent() (kind, author `expected.pubkey`,
+// signature) arrives, then tear the subscription down — never block on the
 // slower relays reaching EOSE (that per-relay ceiling was ~4.4s and dominated the
 // old querySync path). Resolves null on all-relays-EOSE-with-nothing or the timeout.
 //
-// `expectedPubkey` binding (2026-09-07 security audit, finding M6): a relay can
+// Author binding (2026-09-07 security audit, finding M6): a relay can
 // ignore the `authors` filter and serve a validly-signed event for a DIFFERENT
 // key. verifyEvent() only proves the signature is self-consistent, not that the
 // event belongs to the user we asked about — so callers that act on the result
-// (profile name/avatar, NIP-65 relay list) must pin the author explicitly.
-function subscribeFirstEvent(relays: string[], filter: Filter, timeoutMs: number, expectedPubkey?: string): Promise<NostrEvent | null> {
+// (profile name/avatar, NIP-65 relay list) must pin the author and kind explicitly.
+// A rejected event is ignored silently and the subscription keeps waiting.
+function subscribeFirstEvent(relays: string[], filter: Filter, timeoutMs: number, expected: { kind: number; pubkey: string }): Promise<NostrEvent | null> {
   return new Promise(resolve => {
     const held: { sub?: SubHandle } = {}
     let done = false
@@ -57,9 +59,7 @@ function subscribeFirstEvent(relays: string[], filter: Filter, timeoutMs: number
     const timer = setTimeout(() => finish(null), timeoutMs)
     held.sub = sharedPool.subscribeMany(relays, filter, {
       onevent: (ev: NostrEvent) => {
-        if (filter.kinds && !filter.kinds.includes(ev.kind)) return
-        if (!verifyEvent(ev)) return
-        if (expectedPubkey !== undefined && ev.pubkey !== expectedPubkey) return
+        if (!isAcceptedEvent(ev, expected.kind, expected.pubkey)) return
         finish(ev)
       },
       oneose: () => finish(null),
@@ -93,7 +93,7 @@ export async function fetchNostrProfile(pubkey: string, extraRelays?: string[]):
   const relays = own.length > 0
     ? [...new Set([...META_RELAYS, ...own])]
     : META_RELAYS
-  const event = await subscribeFirstEvent(relays, { kinds: [0], authors: [pubkey], limit: 1 }, USER_BOOTSTRAP_TIMEOUT_MS, pubkey)
+  const event = await subscribeFirstEvent(relays, { kinds: [0], authors: [pubkey], limit: 1 }, USER_BOOTSTRAP_TIMEOUT_MS, { kind: 0, pubkey })
   return event ? parseProfileMeta(event.content) : {}
 }
 
@@ -130,14 +130,14 @@ export function bootstrapUserData(pubkey: string): () => void {
 
   held.sub = sharedPool.subscribeMany(META_RELAYS, { kinds: [0, 10002], authors: [pubkey] }, {
     onevent: (ev: NostrEvent) => {
-      if (!verifyEvent(ev)) return
+      if (ev.kind !== 0 && ev.kind !== 10002) return
       // M6 (2026-09-07 security audit): a hostile relay in META_RELAYS can ignore
       // the `authors` filter and return a validly-signed kind:0 / kind:10002 for a
       // DIFFERENT pubkey. verifyEvent() does not bind the event to `pubkey`. Acting
       // on such an event would let the relay set the victim's displayed name/avatar
       // and — the real damage — swap in an attacker-controlled NIP-65 relay list,
       // redirecting the victim's outbound watchlist/DM traffic. Drop it.
-      if (ev.pubkey !== pubkey) return
+      if (!isAcceptedEvent(ev, ev.kind, pubkey)) return
       if (!stillCurrent()) { finish(); return }
       if (ev.kind === 0 && !gotProfile) {
         gotProfile = true
