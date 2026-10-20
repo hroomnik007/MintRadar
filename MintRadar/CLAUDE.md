@@ -198,7 +198,7 @@ Pick the tier by the risk of the change; each tier includes the one before it. B
 - **Tier 3, risky changes** (API shapes, dependency updates including Dependabot bumps, build or router configuration, login and key handling, notifications, anything that touches many pages): Tier 2 plus ONE full e2e run (`npm run test:e2e`) before pushing. A second full run only to investigate flakiness.
 - **Milestones:** one full e2e run before announcing the project to others and after a batch of Dependabot updates.
 - A task prompt names its tier; if it does not, the task decides by the rules above and says which tier it chose in the report. A full e2e run is never added "just in case" to a Tier 1 or Tier 2 change.
-- CI (the `test` job) runs the backend and frontend unit tests before every deploy, and the server runs the production build during the deploy; typecheck and lint are NOT in CI, and e2e is NOT in CI either (a broken e2e spec is only noticed when someone runs it).
+- CI (the `test` job) runs the backend and frontend unit tests before every deploy (the `Unit tests` workflow runs the same two suites on pull requests), and the server runs the production build during the deploy; typecheck and lint are NOT in CI, and e2e is NOT in CI either (a broken e2e spec is only noticed when someone runs it).
 
 ## Docs rule
 A change to user-visible behaviour, to which hosts the browser or the server contacts, or to what is stored about people or for how long updates the matching `docs/claude/` file in the SAME commit; if a public statement changes, also `About.tsx` and `docs/claude/privacy-and-about.md`.
