@@ -758,6 +758,7 @@
       "<DATE>",
       "<DATE>",
       "<DATE>",
+      "<DATE>",
       "Add Alpha Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
@@ -774,6 +775,7 @@
   "mint-alpha-nuts@390": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
+      "<DATE>",
       "Add Alpha Mint to watchlist",
       "Copy full keyset ID",
       "MintRadar",
@@ -785,8 +787,6 @@
   "mint-alpha-overview@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
-      "<DATE>",
-      "<DATE>",
       "<DATE>",
       "<DATE>",
       "<DATE>",
@@ -810,8 +810,6 @@
   "mint-alpha-overview@390": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
-      "<DATE>",
-      "<DATE>",
       "Add Alpha Mint to watchlist",
       "Copy",
       "Copy full public key",
@@ -866,8 +864,6 @@
       "<DATE>",
       "<DATE>",
       "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "Add Alpha Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy",
@@ -884,6 +880,7 @@
   },
   "mint-new-nuts@1440": {
     "texts": [
+      "<DATE>",
       "<DATE>",
       "<DATE>",
       "<DATE>",
@@ -906,6 +903,7 @@
   },
   "mint-new-nuts@390": {
     "texts": [
+      "<DATE>",
       "Add Newbie Mint to watchlist",
       "Copy full keyset ID",
       "MintRadar",
@@ -917,8 +915,6 @@
   },
   "mint-new-overview@1440": {
     "texts": [
-      "<DATE>",
-      "<DATE>",
       "<DATE>",
       "<DATE>",
       "<DATE>",
@@ -942,8 +938,6 @@
   },
   "mint-new-overview@390": {
     "texts": [
-      "<DATE>",
-      "<DATE>",
       "Add Newbie Mint to watchlist",
       "Copy",
       "Copy full public key",
@@ -992,8 +986,6 @@
       "<DATE>",
       "<DATE>",
       "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "Add Operator Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy",
@@ -1012,8 +1004,6 @@
   },
   "mint-operator-overview@390": {
     "texts": [
-      "<DATE>",
-      "<DATE>",
       "Add Operator Mint to watchlist",
       "Copy",
       "Copy",
@@ -1121,8 +1111,6 @@
       "<DATE>",
       "<DATE>",
       "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "Add Test Nut to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy",
@@ -1140,8 +1128,6 @@
   },
   "mint-test-overview@390": {
     "texts": [
-      "<DATE>",
-      "<DATE>",
       "Add Test Nut to watchlist",
       "Copy",
       "Copy full public key",

@@ -4,7 +4,7 @@ import { layoutReady, resize } from './fixtures/settle'
 
 type Page = import('@playwright/test').Page
 
-// Overview group "Fees and limits" (src/components/mint/MintFeesLimits.tsx, src/utils/feesLimits.ts): input fee examples
+// NUTs tab card "Fees and limits" (first card, before NUT compatibility; it used to be an Overview group; src/components/mint/MintFeesLimits.tsx, src/utils/feesLimits.ts): input fee examples
 // from the keysets the page already has (NUT-02 rule, rounded up) and the limits the mint declares in /v1/info.
 // Mocked endpoints only; nothing is requested from a mint by this group.
 
@@ -26,6 +26,8 @@ interface Setup {
   keysets?: unknown
   hold?: Promise<void>
   known?: Record<string, unknown>
+  /** Do not switch to the NUTs tab (the card must not be on the Overview). */
+  overview?: boolean
 }
 
 async function open(page: Page, setup: Setup = {}, size: [number, number] = [1440, 900]) {
@@ -42,6 +44,7 @@ async function open(page: Page, setup: Setup = {}, size: [number, number] = [144
   })
   await resize(page, size[0], size[1])
   await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
+  if (!setup.overview) await page.locator('.md-tab', { hasText: /^NUTs/ }).click()
   return { reached: () => reached }
 }
 
@@ -116,14 +119,27 @@ test('the muted sentence names /v1/info and the quote-time fee reserves; the sou
   await expect(group(page).locator('.info-tooltip')).toHaveCount(0)
 })
 
-test('it sits in the Overview after Network / Mint info and before Get in touch; no new tab', async ({ page }) => {
+test('it is the first card of the NUTs tab, before NUT compatibility, and no longer on the Overview; the old "NUT limits" card is gone', async ({ page }) => {
   await open(page, { keysets: KS_FEE })
   await expect(group(page)).toBeVisible()
-  const titles = await page.locator('.md-left .md-panel-title').allInnerTexts()
+  const titles = await page.locator('.md-panel-title').allInnerTexts()
   const i = titles.findIndex(t => /^Fees and limits$/i.test(t))
-  expect(i).toBeGreaterThan(0)
-  expect(titles.slice(0, i).some(t => /^Mint info$/i.test(t))).toBe(true)
+  const j = titles.findIndex(t => /^NUT compatibility$/i.test(t))
+  expect(i).toBeGreaterThanOrEqual(0)
+  expect(j).toBeGreaterThan(i)
+  expect(titles.slice(0, i).filter(t => !/^Keysets$/i.test(t))).toEqual([])
+  expect(titles.some(t => /^NUT limits$/i.test(t))).toBe(false)
   expect(await page.locator('.md-tab').allInnerTexts()).not.toContain('Fees')
+  await page.locator('.md-tab', { hasText: /^Overview/ }).click()
+  await expect(page.getByText('Mint info', { exact: true })).toBeVisible()
+  await expect(group(page)).toHaveCount(0)
+})
+
+test('the Overview itself has no Fees and limits group', async ({ page }) => {
+  await open(page, { keysets: KS_FEE, overview: true })
+  await expect(page.getByText('Mint info', { exact: true })).toBeVisible()
+  await expect(group(page)).toHaveCount(0)
+  await expect(page.locator('.md-panel-title', { hasText: /^Fees and limits$/ })).toHaveCount(0)
 })
 
 test('no request to a mint is made by the group: only our own API is contacted', async ({ page }) => {

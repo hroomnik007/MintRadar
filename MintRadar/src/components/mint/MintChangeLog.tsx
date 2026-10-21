@@ -4,7 +4,7 @@ import { useNow } from '@/hooks/useNow'
 import { LoadError } from '@/components/LoadError'
 import { formatTimeAgo } from '@/utils/mintFormatting'
 import { formatDate, formatDateTimeUtc } from '@/utils/formatDate'
-import { CHANGES_VISIBLE, MULTIPLE_CHANGES_TEXT, changeLabel, showFirstSeen, type MintChange } from '@/utils/mintChangeLog'
+import { CHANGES_VISIBLE, MULTIPLE_CHANGES_TEXT, changeLabel, showFirstSeen, webChangeRows, changeLogEmptySince, type MintChange } from '@/utils/mintChangeLog'
 
 export const CHANGE_LOG_ERROR = 'Change log is not available right now.'
 export const CHANGE_LOG_EMPTY = 'No changes recorded yet.'
@@ -34,11 +34,14 @@ function ChangeRow({ c, now }: { c: MintChange; now: number }) {
   )
 }
 
-/** Mint Detail → Overview. Fetched lazily when the panel mounts; the placeholder keeps the panel's height while it loads. */
+/**
+ * Mint Detail → History, below Version history. Fetched lazily when the panel mounts. Without rows to show there is no card,
+ * only one muted line; while it loads the line's height is reserved.
+ */
 export function MintChangeLog({ url }: { url: string }) {
   // Armed after the first commit: Mint Detail applies a #history / #audit deep link in an effect AFTER its first render, which
-  // briefly shows the Overview. A child effect runs before the parent's, so by the time this state is read the panel is already
-  // gone again on such a link and nothing is requested.
+  // briefly shows the Overview. A child effect runs before the parent's, so by the time this state is read nothing is mounted
+  // that should not request.
   const [armed, setArmed] = useState(false)
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setArmed(true) }, [])
@@ -46,21 +49,23 @@ export function MintChangeLog({ url }: { url: string }) {
   const isLoading = isPending && !isError
   const now = useNow()
   const [showAll, setShowAll] = useState(false)
-  const changes = data?.changes ?? []
+  // Version changes are left out here: Version history above already lists the software versions.
+  const changes = webChangeRows(data?.changes ?? [])
   const shown = showAll ? changes : changes.slice(0, CHANGES_VISIBLE)
 
+  if (isLoading) return <div className="md-changes-line" data-testid="change-log-loading" aria-busy="true" />
+  if (data && changes.length === 0) {
+    return (
+      <p className="md-changes-line" data-testid="change-log-empty">
+        {data.trackingSince ? changeLogEmptySince(formatDate(data.trackingSince)) : CHANGE_LOG_EMPTY}
+      </p>
+    )
+  }
   return (
-    <div className="md-panel md-changes" data-testid="change-log" aria-busy={isLoading}>
+    <div className="md-panel md-changes" data-testid="change-log">
       <div className="md-panel-title">Change log</div>
       <div className="md-panel-hint">{CHANGE_LOG_HINT}</div>
-      {isLoading && <div className="md-changes-placeholder" aria-hidden="true" />}
       {isError && <LoadError message={CHANGE_LOG_ERROR} onRetry={() => { void refetch() }} />}
-      {data && changes.length === 0 && (
-        <div className="md-changes-empty">
-          <div>{CHANGE_LOG_EMPTY}</div>
-          {data.trackingSince && <div className="md-changes-since">Tracking since {formatDate(data.trackingSince)}</div>}
-        </div>
-      )}
       {data && changes.length > 0 && (
         <>
           <ul className="md-changes-list">

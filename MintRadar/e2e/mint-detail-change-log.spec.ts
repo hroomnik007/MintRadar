@@ -2,9 +2,10 @@ import { test, expect, type Page, type Route } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_MINTS } from './fixtures/mocks'
 import { frames, layoutReady, resize, trackRequests } from './fixtures/settle'
 
-// Mint Detail "Change log" (Overview): the confirmed changes in a mint's public data, fetched lazily from
+// Mint Detail "Change log" (History tab, below Version history): the confirmed changes in a mint's public data, fetched lazily from
 // /api/mints/changes. Facts with a time: plain-words type, old → new, relative time with the absolute UTC time in title,
-// "seen first" only for a late confirmation. A failed request is a calm sentence, never "no changes".
+// "seen first" only for a late confirmation. version_changed rows are not listed on the web (Version history shows them). With no rows to show
+// there is no card, only one muted line. A failed request is a calm sentence, never "no changes".
 
 const ALPHA = MOCK_MINTS[0]!.url
 const H = 3_600_000
@@ -48,7 +49,7 @@ async function observeShift(page: Page): Promise<void> {
 const shiftTotal = (page: Page): Promise<number> =>
   page.evaluate(() => { const w = window as unknown as { __cls: number; __obs: PerformanceObserver }; w.__obs.takeRecords(); return w.__cls })
 
-async function open(page: Page, body: unknown | (() => { status?: number; json: unknown }), opts: { width?: number; height?: number; hash?: string } = {}) {
+async function open(page: Page, body: unknown | (() => { status?: number; json: unknown }), opts: { width?: number; height?: number; hash?: string; tab?: 'history' | 'overview' } = {}) {
   await mockRelays(page)
   await installApiMocks(page)
   await page.route('**/api/mints/outages**', r => r.fulfill({ json: { sinceLastOutageMs: null, avgRecoveryMs: null, outageCount: 0, outages: [] } }))
@@ -60,9 +61,11 @@ async function open(page: Page, body: unknown | (() => { status?: number; json: 
   }
   await resize(page, opts.width ?? 1440, opts.height ?? 900)
   await page.goto(`/mint/${encodeURIComponent(ALPHA)}${opts.hash ?? ''}`)
+  if (opts.tab !== 'overview' && !opts.hash) await page.locator('.md-tab', { hasText: /^History/ }).click()
 }
 
 const panel = (page: Page) => page.getByTestId('change-log')
+const line = (page: Page) => page.getByTestId('change-log-empty')
 const rows = (page: Page) => panel(page).getByTestId('change-row')
 
 /** No horizontal scroll on the page, and the panel and every row end inside the viewport. */
@@ -110,7 +113,7 @@ test.describe('Change log: a mint with history', () => {
   })
 
   test('the type labels never judge: no verdict word anywhere in the panel', async ({ page }) => {
-    await open(page, answer([row(1, { type: 'pubkey_changed', field: 'pubkey' }), row(2, { type: 'methods_changed', field: 'methods' }), row(3, { type: 'version_changed', field: 'version' })]))
+    await open(page, answer([row(1, { type: 'pubkey_changed', field: 'pubkey' }), row(2, { type: 'methods_changed', field: 'methods' }), row(3, { type: 'nuts_changed', field: 'nuts' })]))
     await expect(rows(page)).toHaveCount(3)
     expect(await panel(page).innerText()).not.toMatch(/suspicious|warning|unsafe|scam|danger|risk|rug|fraud/i)
   })
@@ -123,18 +126,48 @@ test.describe('Change log: a mint with history', () => {
 })
 
 test.describe('Change log: a mint without history', () => {
-  test('"No changes recorded yet." and the date tracking started', async ({ page }) => {
+  test('no card: one muted line with the date tracking started', async ({ page }) => {
     await open(page, answer([]))
-    await expect(panel(page).locator('.md-changes-empty')).toContainText('No changes recorded yet.')
-    await expect(panel(page).locator('.md-changes-since')).toHaveText('Tracking since 5 Oct 2026')
+    await expect(line(page)).toHaveText('No changes to keys, fees or keysets recorded since 5 Oct 2026.')
+    await expect(panel(page)).toHaveCount(0)
+    await expect(page.locator('.md-changes-line .md-panel-title')).toHaveCount(0)
     await expect(rows(page)).toHaveCount(0)
-    await expect(panel(page).getByRole('button')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /Show all/ })).toHaveCount(0)
   })
 
-  test('without a tracking date the muted line is left out', async ({ page }) => {
+  test('without a tracking date the line is "No changes recorded yet."', async ({ page }) => {
     await open(page, answer([], null))
-    await expect(panel(page).locator('.md-changes-empty')).toContainText('No changes recorded yet.')
-    await expect(panel(page).locator('.md-changes-since')).toHaveCount(0)
+    await expect(line(page)).toHaveText('No changes recorded yet.')
+    await expect(panel(page)).toHaveCount(0)
+  })
+
+  test('the line sits below Version history', async ({ page }) => {
+    await open(page, answer([]))
+    await expect(line(page)).toBeVisible()
+    const vh = (await page.locator('.md-panel', { hasText: 'Version history' }).last().boundingBox())!
+    const l = (await line(page).boundingBox())!
+    expect(l.y).toBeGreaterThanOrEqual(vh.y + vh.height - 1)
+  })
+})
+
+test.describe('Change log: version_changed rows are not listed on the web', () => {
+  test('they are left out; the newest 10 of the rest show, and "Show all" counts only the rest', async ({ page }) => {
+    const rest = Array.from({ length: 13 }, (_, i) => row(2 * i + 2, { newValue: `kept ${i + 1}` }))
+    const versions = Array.from({ length: 5 }, (_, i) => row(2 * i + 1, { type: 'version_changed', field: 'version', oldValue: 'Nutshell/0.15.0', newValue: 'Nutshell/0.16.0' }))
+    await open(page, answer([...versions, ...rest].sort((x, y) => Date.parse(y.observedAt) - Date.parse(x.observedAt))))
+    await expect(rows(page)).toHaveCount(10)
+    await expect(panel(page).locator('.md-change-type', { hasText: 'Version changed' })).toHaveCount(0)
+    await expect(rows(page).first().locator('.md-change-new')).toHaveText('kept 1')
+    await expect(rows(page).nth(9).locator('.md-change-new')).toHaveText('kept 10')
+    await panel(page).getByRole('button', { name: 'Show all (13)' }).click()
+    await expect(rows(page)).toHaveCount(13)
+    await expect(panel(page)).not.toContainText('Nutshell/0.16.0')
+  })
+
+  test('only version_changed rows: no card, the muted line', async ({ page }) => {
+    await open(page, answer([row(1, { type: 'version_changed', field: 'version' }), row(2, { type: 'version_changed', field: 'version' })]))
+    await expect(line(page)).toHaveText('No changes to keys, fees or keysets recorded since 5 Oct 2026.')
+    await expect(panel(page)).toHaveCount(0)
   })
 })
 
@@ -198,33 +231,33 @@ test.describe('Change log: the request fails', () => {
     await expect(panel(page).getByRole('alert')).toContainText('Change log is not available right now.')
   })
 
-  test('the rest of the Overview is untouched by a failing change log', async ({ page }) => {
+  test('the rest of the History tab is untouched by a failing change log', async ({ page }) => {
     await open(page, () => ({ status: 500, json: {} }))
     await expect(panel(page).getByRole('alert')).toBeVisible()
     await expect(page.locator('.md-tabs')).toBeVisible()
-    await expect(page.getByText('Mint info', { exact: true })).toBeVisible()
+    await expect(page.locator('.md-panel-title', { hasText: /^Version history$/ })).toBeVisible()
   })
 })
 
 test.describe('Change log: lazy and stable', () => {
-  test('requested only when the Overview is shown, once, for this mint', async ({ page }) => {
+  test('requested only when the History tab is shown, once, for this mint', async ({ page }) => {
     trackRequests(page)
     const requests: string[] = []
     await mockRelays(page)
     await installApiMocks(page)
     await page.route('**/api/mints/outages**', r => r.fulfill({ json: { sinceLastOutageMs: null, avgRecoveryMs: null, outageCount: 0, outages: [] } }))
     await page.route('**/api/mints/changes**', r => { requests.push(r.request().url()); return r.fulfill({ json: answer([row(1)]) }) })
-    await page.goto(`/mint/${encodeURIComponent(ALPHA)}#history`)
-    await expect(page.locator('.md-tab.active')).toHaveText('History')
+    await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
+    await expect(page.locator('.md-tab.active')).toHaveText('Overview')
     await frames(page, 6)
     expect(requests, 'not requested while another tab is open').toEqual([])
-    await page.locator('.md-tab', { hasText: 'Overview' }).click()
+    await page.locator('.md-tab', { hasText: /^History/ }).click()
     await expect(rows(page)).toHaveCount(1)
     expect(requests).toHaveLength(1)
     expect(new URL(requests[0]!).searchParams.get('url')).toBe(ALPHA)
   })
 
-  test('while the request is held the panel keeps its place with a placeholder; releasing it shifts nothing noticeable', async ({ page }) => {
+  test('while the request is held a line-high placeholder (no card) is shown; releasing it shifts nothing noticeable', async ({ page }) => {
     const gate = held(() => ({ json: answer([]) }))
     await observeShift(page)
     await mockRelays(page)
@@ -233,24 +266,29 @@ test.describe('Change log: lazy and stable', () => {
     await page.route('**/api/mints/changes**', gate.handler)
     await resize(page, 1440, 900)
     await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
+    await page.locator('.md-tab', { hasText: /^History/ }).click()
     await expect.poll(() => gate.requests.length, { message: 'the request reached the mock' }).toBe(1)
-    await expect(panel(page)).toHaveAttribute('aria-busy', 'true')
-    await expect(panel(page).locator('.md-changes-placeholder')).toBeVisible()
-    await expect(panel(page)).not.toContainText('No changes recorded yet.')
+    const loading = page.getByTestId('change-log-loading')
+    await expect(loading).toHaveAttribute('aria-busy', 'true')
+    await expect(panel(page)).toHaveCount(0)
+    await expect(page.getByText('No changes', { exact: false })).toHaveCount(0)
     await layoutReady(page)
-    const before = (await panel(page).boundingBox())!.height
+    const before = (await loading.boundingBox())!.height
+    const docBefore = await page.evaluate(() => document.documentElement.scrollHeight)
     const clsBefore = await shiftTotal(page)
     gate.release()
-    await expect(panel(page).locator('.md-changes-empty')).toBeVisible()
+    await expect(line(page)).toBeVisible()
     await layoutReady(page)
-    const after = (await panel(page).boundingBox())!.height
-    expect(Math.abs(after - before), `placeholder ${before}px vs loaded empty state ${after}px`).toBeLessThanOrEqual(12)
+    const after = (await line(page).boundingBox())!.height
+    const docAfter = await page.evaluate(() => document.documentElement.scrollHeight)
+    expect(Math.abs(after - before), `placeholder ${before}px vs loaded line ${after}px`).toBeLessThanOrEqual(2)
+    expect(Math.abs(docAfter - docBefore), 'the page height does not change').toBeLessThanOrEqual(2)
     expect((await shiftTotal(page)) - clsBefore).toBeLessThan(0.02)
   })
 })
 
 test.describe('Change log: mobile layout', () => {
-  test('390 px: the panel sits in the Overview column, rows stack and fit', async ({ page }) => {
+  test('390 px: the panel sits in the History column, rows stack and fit', async ({ page }) => {
     await open(page, answer([row(1, { type: 'pubkey_changed', field: 'pubkey', oldValue: '02' + 'ab'.repeat(32), newValue: '03' + 'cd'.repeat(32) }), row(5)]), { width: 390, height: 844 })
     await expect(rows(page)).toHaveCount(2)
     await expectContained(page)

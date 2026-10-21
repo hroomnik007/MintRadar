@@ -37,7 +37,6 @@ import { networkRows } from '@/utils/networkInfo'
 import { AuditCzTiles, AuditCzSwapTables, AuditStateText } from '@/components/AuditCzCards'
 import { AuditDirections } from '@/components/AuditDirections'
 import { supportedNutKeys } from '@/utils/nutSupport'
-import { MintNutzapFeatures } from '@/components/mint/MintNutzapFeatures'
 import { MintFeesLimits } from '@/components/mint/MintFeesLimits'
 import { formatDate, formatDateTimeUtc } from '@/utils/formatDate'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
@@ -52,7 +51,6 @@ import { IcClose } from '@/components/IcClose'
 import { clickableProps } from '@/utils/clickableProps'
 import { useAuditCz } from '@/hooks/useAuditCz'
 import { adaptAuditCz, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
-import { groupNutLimits, formatNutLimitRange } from '@/utils/nutLimits'
 import { sortUnits } from '@/utils/sortUnits'
 import {
   computeReliabilityScore as sharedComputeReliabilityScore,
@@ -178,6 +176,9 @@ interface NutMethod {
   min_amount?: number
   max_amount?: number
 }
+
+/** One muted sentence under the NUT compatibility grid: which NUTs nutzaps (NIP-61) rely on. No verdict. */
+const NUTZAP_NUTS_NOTE = 'NUT-07, NUT-10, NUT-11 and NUT-12 are the ones nutzaps (NIP-61) rely on.'
 
 interface NutConfig {
   disabled?: boolean
@@ -1744,21 +1745,6 @@ function MintDetailContent({ url }: { url: string }) {
 
           {(() => { const rows = networkRows(knownMint); return rows ? <MintNetworkCard rows={rows} /> : null })()}
 
-          {knownMint && (
-            <MintFeesLimits
-              keysets={feeKeysets}
-              keysetsPending={probeLoading && !feeKeysets}
-              units={knownMint.units}
-              mintMethods={knownMint.mintMethods}
-              meltMethods={knownMint.meltMethods}
-              disabled={{ mint: nut4Disabled, melt: nut5Disabled }}
-              fetchedAt={infoFetchedAt}
-              now={now}
-            />
-          )}
-
-          {knownMint && <MintNutzapFeatures declared={nutsDeclared ? declaredNutNumbers : null} fetchedAt={infoFetchedAt} now={now} />}
-
           {(email || twitter || nostr || operatorNip05 || (data?.contactChecks?.length ?? 0) > 0) && (
             <div className="md-panel">
               {(email || twitter || nostr) && (
@@ -1871,63 +1857,21 @@ function MintDetailContent({ url }: { url: string }) {
               <ContactChecksLine checks={data?.contactChecks} now={now} />
             </div>
           )}
-            <MintChangeLog url={url} />
           </>)}
 
           {activeTab === 'nuts' && (<>
-          {(() => {
-            const nut4 = (data?.info?.nuts?.['4'] ?? knownMint?.nutsLimits?.['4']) as NutConfig | null | undefined
-            const nut5 = (data?.info?.nuts?.['5'] ?? knownMint?.nutsLimits?.['5']) as NutConfig | null | undefined
-            const hasAnyLimits =
-              nut4?.methods?.some(m => m.min_amount != null || m.max_amount != null) ||
-              nut5?.methods?.some(m => m.min_amount != null || m.max_amount != null)
-            // Still render the grid when a method is disabled, so the "disabled by
-            // operator" state is shown instead of a silent omission.
-            const showLimitsGrid = hasAnyLimits || nut4Disabled || nut5Disabled
-            // Ranges shared by several payment methods collapse into one entry
-            // labelled with those methods — see groupNutLimits() for why this
-            // groups rather than plainly deduplicating.
-            const renderLimits = (cfg: NutConfig | null | undefined) => {
-              const groups = groupNutLimits(cfg?.methods)
-              if (!groups.length) return <span style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>—</span>
-              return (
-                <div style={{display:'flex',flexDirection:'column',gap:2}}>
-                  {groups.map((g, i) => (
-                    <span key={i} style={{fontSize:13,color:'var(--text)',fontFamily:'var(--font-mono)'}}>
-                      {formatNutLimitRange(g)}
-                      {g.methods.length > 0 && (
-                        <span style={{color:'var(--text3)'}}> ({g.methods.join(', ')})</span>
-                      )}
-                    </span>
-                  ))}
-                </div>
-              )
-            }
-            return (
-              <div className="md-panel">
-                <div className="md-panel-title">NUT limits</div>
-                {!showLimitsGrid ? (
-                  <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Limits not specified by this mint.</div>
-                ) : (
-                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
-                    {[{ key: 'NUT-04 (Minting)', cfg: nut4, disabled: nut4Disabled }, { key: 'NUT-05 (Melting)', cfg: nut5, disabled: nut5Disabled }].map(({ key, cfg, disabled }) => (
-                      <div key={key} className="md-limit-card" style={{opacity: disabled ? 0.75 : 1}}>
-                        <span style={{fontSize:13,fontWeight:600,color:'var(--text2)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',textDecoration: disabled ? 'line-through' : 'none'}}>{key}</span>
-                        {disabled ? (
-                          <span className="md-limit-off"><AlertTriangle size={11} /> Disabled by operator</span>
-                        ) : (
-                          <>
-                            <span className="md-limit-range-label">Min – Max</span>
-                            <div>{renderLimits(cfg)}</div>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })()}
+          {knownMint && (
+            <MintFeesLimits
+              keysets={feeKeysets}
+              keysetsPending={probeLoading && !feeKeysets}
+              units={knownMint.units}
+              mintMethods={knownMint.mintMethods}
+              meltMethods={knownMint.meltMethods}
+              disabled={{ mint: nut4Disabled, melt: nut5Disabled }}
+              fetchedAt={infoFetchedAt}
+              now={now}
+            />
+          )}
 
           {/* Mobile (<901px) only — on desktop the Keysets panel moves to the
               Overview sidebar next to "Units & Methods". */}
@@ -1979,6 +1923,7 @@ function MintDetailContent({ url }: { url: string }) {
                 )
               })}
             </div>
+            <div className="md-nut-nutzap-note">{NUTZAP_NUTS_NOTE}</div>
           </div>
           </>)}
 
@@ -2113,6 +2058,8 @@ function MintDetailContent({ url }: { url: string }) {
               </table>
             )}
           </div>
+
+          <MintChangeLog url={url} />
           </>)}
 
           {activeTab === 'audit' && (<>

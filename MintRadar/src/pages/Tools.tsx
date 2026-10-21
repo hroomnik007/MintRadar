@@ -925,14 +925,16 @@ export default function Tools() {
         description="Check a token before you redeem it, or find the mint that fits what you need."
       />
       <div className="tools-grid">
-        <div id="token" tabIndex={-1} className="tool-anchor">
-          <TokenInspector knownMints={mints} list={listState} />
+        <div className="tools-col">
+          <div id="token" tabIndex={-1} className="tool-anchor">
+            <TokenInspector knownMints={mints} list={listState} />
+          </div>
+          <div id="payment-request" tabIndex={-1} className="tool-anchor">
+            <PaymentRequestInspector knownMints={mints} list={listState} />
+          </div>
         </div>
         <div id="pick" tabIndex={-1} className="tool-anchor">
           <BestMintWizard knownMints={mints} />
-        </div>
-        <div id="payment-request" tabIndex={-1} className="tool-anchor tool-anchor-wide">
-          <PaymentRequestInspector knownMints={mints} list={listState} />
         </div>
       </div>
     </div>

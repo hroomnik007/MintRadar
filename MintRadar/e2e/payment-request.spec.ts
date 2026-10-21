@@ -195,6 +195,54 @@ test('decoding sends nothing: no request carries the pasted string, no /api call
 })
 
 test.describe('layout', () => {
+  // Task U: desktop = two columns (left: Token inspector, then Payment request inspector; right: Best mint for me); one column
+  // below 901 px; DOM order = visual order; natural card heights.
+  const boxes = (page: Page) => page.evaluate(() => {
+    const r = (sel: string) => { const b = document.querySelector(sel)!.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height, r: b.right, b: b.bottom } }
+    const order = Array.from(document.querySelectorAll('.tools-grid [id]')).filter(e => ['token', 'payment-request', 'pick'].includes(e.id)).map(e => e.id)
+    return { token: r('#token'), pr: r('#payment-request'), pick: r('#pick'), order, input: r('.pr-input'), prCard: r('[data-testid="payment-request-inspector"]') }
+  })
+
+  test('1440px and 901px: Token inspector and Payment request inspector stacked on the left, Best mint on the right, natural heights', async ({ page }) => {
+    for (const w of [1440, 901] as const) {
+      await open(page, [w, 900])
+      await layoutReady(page)
+      const b = await boxes(page)
+      expect(b.order, 'DOM order').toEqual(['token', 'payment-request', 'pick'])
+      expect(Math.abs(b.pr.x - b.token.x), `${w}: same column`).toBeLessThanOrEqual(1)
+      expect(Math.abs(b.pr.w - b.token.w), `${w}: same width`).toBeLessThanOrEqual(1)
+      expect(b.pr.y, `${w}: stacked under the Token inspector`).toBeGreaterThanOrEqual(b.token.b - 1)
+      expect(b.pick.x, `${w}: Best mint is the right column`).toBeGreaterThanOrEqual(b.token.r - 1)
+      expect(Math.abs(b.pick.y - b.token.y), `${w}: columns start together`).toBeLessThanOrEqual(1)
+      expect(b.pr.w, `${w}: the card is not full width`).toBeLessThan(b.pick.r - b.token.x - 100)
+      expect(b.input.r, `${w}: the textarea fits its column`).toBeLessThanOrEqual(b.token.r + 0.5)
+      // natural height: the wizard is not stretched to the left column and the left cards are not stretched to it
+      expect(Math.abs(b.token.h - (await page.locator('#token .tool-card').first().evaluate(e => e.getBoundingClientRect().height))), `${w}: token anchor = its card`).toBeLessThanOrEqual(2)
+    }
+  })
+
+  for (const w of [768, 390, 320] as const) {
+    test(`${w}px: one column in the order Token inspector, Payment request inspector, Best mint for me`, async ({ page }) => {
+      await open(page, [w, 900])
+      await layoutReady(page)
+      const b = await boxes(page)
+      expect(b.order).toEqual(['token', 'payment-request', 'pick'])
+      expect(Math.abs(b.pr.x - b.token.x)).toBeLessThanOrEqual(1)
+      expect(Math.abs(b.pick.x - b.token.x)).toBeLessThanOrEqual(1)
+      expect(b.pr.y).toBeGreaterThanOrEqual(b.token.b - 1)
+      expect(b.pick.y).toBeGreaterThanOrEqual(b.pr.b - 1)
+    })
+  }
+
+  test('the #payment-request anchor still scrolls to and focuses the card', async ({ page }) => {
+    await mockRelays(page)
+    await installApiMocks(page)
+    await resize(page, 1440, 900)
+    await page.goto('/tools#payment-request')
+    await expect(card(page)).toBeVisible()
+    await expect(page.locator('#payment-request')).toBeInViewport()
+  })
+
   const LONG_DESC = 'Lorem'.padEnd(300, 'ipsum')
   const LONG_URL = `https://${'very-long-subdomain-label-'.repeat(6)}example.com/${'path/segment/'.repeat(20)}end`
   const LONG_TARGET = `https://callback.example.com/${'q'.repeat(400)}`

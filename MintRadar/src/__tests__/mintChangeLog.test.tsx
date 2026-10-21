@@ -6,7 +6,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MintChangeLog, CHANGE_LOG_ERROR, CHANGE_LOG_EMPTY } from '@/components/mint/MintChangeLog'
 import {
-  CHANGE_LABELS, CHANGES_VISIBLE, changeLabel, confirmationGapMs, parseMintChanges, showFirstSeen, type MintChange,
+  CHANGE_LABELS, CHANGES_VISIBLE, changeLabel, webChangeRows, changeLogEmptySince, confirmationGapMs, parseMintChanges, showFirstSeen, type MintChange,
 } from '@/utils/mintChangeLog'
 
 const MINT = 'https://mint.example.com'
@@ -50,26 +50,51 @@ describe('helpers', () => {
   })
 })
 
+describe('web list helpers', () => {
+  it('webChangeRows drops version_changed only and keeps the order', () => {
+    const rows = [change(1), change(2, { type: 'version_changed' }), change(3, { type: 'pubkey_changed' })]
+    expect(webChangeRows(rows).map(c => c.type)).toEqual(['motd_changed', 'pubkey_changed'])
+  })
+  it('the muted line names keys, fees and keysets and the date', () => {
+    expect(changeLogEmptySince('5 Oct 2026')).toBe('No changes to keys, fees or keysets recorded since 5 Oct 2026.')
+  })
+})
+
 describe('MintChangeLog', () => {
-  it('while loading: the title, a placeholder, no text yet', () => {
+  it('while loading: no card and no text, only a line-high placeholder', () => {
     renderLog(() => new Promise<Response>(() => undefined))
-    const panel = screen.getByTestId('change-log')
-    expect(within(panel).getByText('Change log')).toBeInTheDocument()
-    expect(panel.querySelector('.md-changes-placeholder')).not.toBeNull()
-    expect(panel).toHaveAttribute('aria-busy', 'true')
-    expect(panel.textContent).not.toContain(CHANGE_LOG_EMPTY)
+    const loading = screen.getByTestId('change-log-loading')
+    expect(loading).toHaveAttribute('aria-busy', 'true')
+    expect(loading.textContent).toBe('')
+    expect(screen.queryByTestId('change-log')).toBeNull()
   })
 
-  it('empty: "No changes recorded yet." and the tracking date when the route has it', async () => {
+  it('empty: no card, one muted line with the tracking date when the route has it', async () => {
     renderLog(ok({ url: MINT, trackingSince: '2026-10-05T08:00:00.000Z', changes: [] }))
-    expect(await screen.findByText(CHANGE_LOG_EMPTY)).toBeInTheDocument()
-    expect(screen.getByText('Tracking since 5 Oct 2026')).toBeInTheDocument()
+    expect(await screen.findByText('No changes to keys, fees or keysets recorded since 5 Oct 2026.')).toBeInTheDocument()
+    expect(screen.queryByTestId('change-log')).toBeNull()
+    expect(screen.queryByText('Change log')).toBeNull()
   })
 
-  it('empty without a tracking date: the muted line is left out', async () => {
+  it('empty without a tracking date: "No changes recorded yet."', async () => {
     renderLog(ok({ url: MINT, trackingSince: null, changes: [] }))
-    await screen.findByText(CHANGE_LOG_EMPTY)
-    expect(screen.queryByText(/Tracking since/)).toBeNull()
+    expect(await screen.findByText(CHANGE_LOG_EMPTY)).toBeInTheDocument()
+    expect(screen.queryByTestId('change-log')).toBeNull()
+  })
+
+  it('version_changed rows are not listed; only those: the same muted line, no card', async () => {
+    renderLog(ok({ url: MINT, trackingSince: '2026-10-05T08:00:00.000Z', changes: [change(1, { type: 'version_changed', field: 'version' })] }))
+    expect(await screen.findByTestId('change-log-empty')).toBeInTheDocument()
+    expect(screen.queryByTestId('change-log')).toBeNull()
+  })
+
+  it('version_changed rows are skipped before the 10-row limit and the "Show all" count', async () => {
+    const rows = [...Array.from({ length: 4 }, (_, i) => change(i + 1, { type: 'version_changed', field: 'version', newValue: 'v' })), ...Array.from({ length: 12 }, (_, i) => change(i + 5))]
+    renderLog(ok({ url: MINT, trackingSince: null, changes: rows }))
+    await screen.findAllByTestId('change-row')
+    expect(screen.getAllByTestId('change-row')).toHaveLength(CHANGES_VISIBLE)
+    expect(screen.queryByText('Version changed')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Show all (12)' })).toBeInTheDocument()
   })
 
   it('a failed request is a calm sentence with Try again, not an empty log', async () => {

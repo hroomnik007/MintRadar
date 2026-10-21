@@ -19,6 +19,14 @@ export interface MintChangesData {
   changes: MintChange[]
 }
 
+/** The web list leaves out version_changed (Version history shows the software versions); the API and the stored rows keep them. */
+export function webChangeRows(changes: readonly MintChange[]): MintChange[] {
+  return changes.filter(c => c.type !== 'version_changed')
+}
+
+/** The one muted line shown instead of a card when there is nothing to list. */
+export const changeLogEmptySince = (since: string): string => `No changes to keys, fees or keysets recorded since ${since}.`
+
 /** The page shows this many rows; "Show all" expands to everything the route returned (up to 100). */
 export const CHANGES_VISIBLE = 10
 

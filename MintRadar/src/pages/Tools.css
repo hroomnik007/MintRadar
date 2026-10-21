@@ -13,6 +13,15 @@
   align-items: start;
 }
 
+/* Left column of the desktop layout: Token inspector, then Payment request inspector. The wizard is the right column;
+   cards keep their natural height (the grid aligns to start). One column <=900px, in DOM order. */
+.tools-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
 .tool-anchor {
   scroll-margin-top: 72px;
   border-radius: 12px;
@@ -395,6 +404,7 @@ a.token-action-btn:focus {
   .token-action-btn { min-height: 44px; }
   .token-spent .token-action-btn { width: 100%; }
   .tools-grid { padding: 12px var(--page-pad); gap: 12px; }
+  .tools-col { gap: 12px; }
   .tool-card { padding: 16px; }
   .wizard-options-row { flex-direction: column; }
   .wizard-options-row .wizard-opt { min-width: 0; width: 100%; }
@@ -484,7 +494,6 @@ a.token-action-btn:focus {
 }
 
 /* Payment request inspector (W7a): plain facts; every value wraps, nothing is a link except "View Mint Detail". */
-.tool-anchor-wide { grid-column: 1 / -1; }
 .pr-result { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .pr-dl { margin: 0; display: flex; flex-direction: column; background: var(--bg3); border-radius: 8px; padding: 2px 14px; }
 .pr-row { display: flex; flex-wrap: wrap; column-gap: 12px; row-gap: 2px; padding: 9px 0; border-bottom: 1px solid var(--border); min-width: 0; }
