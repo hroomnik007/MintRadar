@@ -882,7 +882,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
 }
 
 export default function Tools() {
-  const { data: knownMintsData } = useKnownMints()
+  const { data: knownMintsData, isError: knownMintsError } = useKnownMints()
   const mints = knownMintsData ?? []
 
   // Deep links: #pick focuses the wizard, #token the inspector.
@@ -924,7 +924,7 @@ export default function Tools() {
           <BestMintWizard knownMints={mints} />
         </div>
         <div id="payment-request" tabIndex={-1} className="tool-anchor tool-anchor-wide">
-          <PaymentRequestInspector knownMints={mints} />
+          <PaymentRequestInspector knownMints={mints} list={knownMintsData ? 'ready' : knownMintsError ? 'error' : 'loading'} />
         </div>
       </div>
     </div>

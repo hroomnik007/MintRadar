@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { PaymentRequest, PaymentRequestTransportType } from '@cashu/cashu-ts'
-import { installApiMocks, mockRelays, MOCK_MINTS } from './fixtures/mocks'
+import { installApiMocks, mockRelays, MOCK_MINTS, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 import { flush, layoutReady, resize } from './fixtures/settle'
 
 // Payment request inspector (NUT-18) on /tools: src/components/PaymentRequestInspector.tsx, src/utils/paymentRequest.ts.
@@ -221,4 +221,39 @@ test('keyboard: textarea, then the Mint Detail link, then the copy buttons; Ente
   await expect(result(page).getByRole('link', { name: 'View Mint Detail' })).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(page).toHaveURL(new RegExp(`/mint/${encodeURIComponent(KNOWN).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`))
+})
+
+test.describe('the known-mints list is not there (yet): nothing is claimed about a mint', () => {
+  test('while it loads: "Looking it up", never "Not tracked"; once it arrives the result is final', async ({ page }) => {
+    await mockRelays(page)
+    await installApiMocks(page)
+    let release: () => void = () => undefined
+    const gate = new Promise<void>(r => { release = r })
+    let reached = false
+    await page.route('**/api/mints/known', async route => { reached = true; await gate; await route.fulfill({ json: MOCK_KNOWN_MINTS }) })
+    await page.goto('/tools')
+    await expect(card(page)).toBeVisible()
+    await expect.poll(() => reached).toBe(true)
+    await input(page).fill(encode())
+    const mints = result(page).getByTestId('pr-mint')
+    await expect(mints).toHaveCount(2)
+    await expect(result(page).getByTestId('pr-mint-list-state')).toHaveText(["Looking it up in MintRadar's list…", "Looking it up in MintRadar's list…"])
+    await expect(result(page)).not.toContainText('Not tracked')
+    release()
+    await expect(mints.nth(0)).toContainText('Alpha Mint')
+    await expect(mints.nth(1)).toContainText('Not tracked by MintRadar.')
+    await expect(result(page).getByTestId('pr-mint-list-state')).toHaveCount(0)
+  })
+
+  test('when it cannot be loaded: a fixed line, never "Not tracked" and never a status', async ({ page }) => {
+    await mockRelays(page)
+    await installApiMocks(page)
+    await page.route('**/api/mints/known', route => route.fulfill({ status: 500, json: { error: 'boom' } }))
+    await page.goto('/tools')
+    await expect(card(page)).toBeVisible()
+    await input(page).fill(encode())
+    await expect(result(page).getByTestId('pr-mint-list-state').first()).toHaveText("MintRadar's list could not be loaded, so this mint is not looked up.")
+    await expect(result(page)).not.toContainText(/Not tracked|Online|Offline/)
+    await expect(result(page).getByTestId('pr-mint-status')).toHaveCount(0)
+  })
 })

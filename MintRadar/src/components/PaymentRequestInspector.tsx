@@ -26,7 +26,18 @@ function Row({ label, children, testId }: { label: string; children: React.React
   )
 }
 
-function AcceptedMint({ url, known }: { url: string; known: KnownMint | null }) {
+/** `list`: the known-mints list is still loading or could not be loaded; nothing is claimed about the mint then. */
+function AcceptedMint({ url, known, list }: { url: string; known: KnownMint | null; list: 'ready' | 'loading' | 'error' }) {
+  if (!known && list !== 'ready') {
+    return (
+      <li className="pr-mint" data-testid="pr-mint">
+        <div className="pr-text">{url}</div>
+        <div className="pr-mint-line pr-muted" data-testid="pr-mint-list-state">
+          {list === 'loading' ? "Looking it up in MintRadar's list…" : "MintRadar's list could not be loaded, so this mint is not looked up."}
+        </div>
+      </li>
+    )
+  }
   if (!known) {
     return (
       <li className="pr-mint" data-testid="pr-mint">
@@ -64,7 +75,7 @@ function AcceptedMint({ url, known }: { url: string; known: KnownMint | null }) 
  * state: no request is made for it. Targets and mint URLs are shown as text (a transport target is chosen by whoever
  * made the request), mints are matched against the known-mints list the page already loaded.
  */
-export function PaymentRequestInspector({ knownMints }: { knownMints: KnownMint[] }) {
+export function PaymentRequestInspector({ knownMints, list }: { knownMints: KnownMint[]; list: 'ready' | 'loading' | 'error' }) {
   const [input, setInput] = useState('')
   const parsed = useMemo(() => parsePaymentRequest(input), [input])
   const knownMap = useMemo(() => new Map(knownMints.map(m => [m.url, m] as const)), [knownMints])
@@ -115,7 +126,7 @@ export function PaymentRequestInspector({ knownMints }: { knownMints: KnownMint[
 
           <div className="pr-section">Accepted mints ({parsed.view.mints.length})</div>
           <ul className="pr-list">
-            {parsed.view.mints.map((m, i) => <AcceptedMint key={`${i}-${m}`} url={m} known={lookup(m)} />)}
+            {parsed.view.mints.map((m, i) => <AcceptedMint key={`${i}-${m}`} url={m} known={lookup(m)} list={list} />)}
           </ul>
 
           <div className="pr-section">Transports</div>
