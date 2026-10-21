@@ -20,9 +20,10 @@ import { pool } from './db.js'
  * The version of the format rules. Stored with every result (`rules`); a stored result of another version is recomputed
  * at the next successful probe of the mint, once (the new result carries the current version). Raise it whenever a rule
  * changes what formatValid or domainResolves can say. 2: nostr also accepts nprofile, an optional "nostr:" prefix,
- * all-uppercase bech32 and NIP-05 style local@domain (W6a correction).
+ * all-uppercase bech32 and NIP-05 style local@domain (W6a correction). 3: an e-mail domain must be a bare host name
+ * (a trailing path, port, query or fragment no longer passes).
  */
-export const CONTACT_RULES_VERSION = 2
+export const CONTACT_RULES_VERSION = 3
 export const CONTACT_CHECK_MAX_EMAILS = 3
 /** Entries read from one /v1/info (the rest is ignored). */
 export const CONTACT_CHECK_MAX_ENTRIES = 10
@@ -103,6 +104,8 @@ export function parseEmail(value: string): { valid: boolean; domain: string | nu
     const inner = domainRaw.slice(1, -1).replace(/^IPv6:/i, '')
     return isIP(inner) !== 0 ? { valid: true, domain: null } : invalid
   }
+  // domainToASCII parses a URL host and would drop a path, port or query: only a bare name goes in.
+  if (/[\s/\\?#:@[\]]/.test(domainRaw)) return invalid
   const ascii = domainToASCII(domainRaw).toLowerCase().replace(/\.$/, '')
   if (ascii.length === 0 || ascii.length > 253 || isIP(ascii) !== 0) return invalid
   if (!ascii.split('.').every(l => LABEL_RE.test(l))) return invalid

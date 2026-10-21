@@ -49,11 +49,12 @@ describe('kinds', () => {
 })
 
 describe('e-mail syntax', () => {
-  it.each(['a@example-mail.com', 'first.last+tag@sub.mail-host.org', "o'neil@mail-host.io", 'x@mail-host.technology'])('valid: %s', v => {
+  it.each(['a@example-mail.com', 'first.last+tag@sub.mail-host.org', "o'neil@mail-host.io", 'x@mail-host.technology', 'a@mail.com', 'a.b+tag@sub.mail.co.uk', 'info@bücher.de'])('valid: %s', v => {
     expect(m.parseEmail(v).valid).toBe(true)
   })
   it.each(['', 'plain', '@mail-host.com', 'a@', 'a b@mail-host.com', 'a@@mail-host.com', 'a@b@mail-host.com', '.a@mail-host.com', 'a.@mail-host.com',
-    'a..b@mail-host.com', 'a@-mail.com', 'a@mail..com', 'a@mail-.com', `${'x'.repeat(65)}@mail-host.com`, 'a@1.2.3.4', 'a@[not-an-ip]'])('invalid: %j', v => {
+    'a..b@mail-host.com', 'a@-mail.com', 'a@mail..com', 'a@mail-.com', `${'x'.repeat(65)}@mail-host.com`, 'a@1.2.3.4', 'a@[not-an-ip]',
+    'a@mail.com/x', 'a@mail.com:25', 'a@mail.com?x', 'a@mail.com#x', 'a@b@c.com'])('invalid: %j', v => {
     expect(m.parseEmail(v).valid).toBe(false)
   })
   it('converts an internationalised domain to punycode', () => {
@@ -431,7 +432,7 @@ describe('scheduling and storage', () => {
 
   it('what the API returns (readStoredContactChecks) has the four fields, never the rules version', () => {
     const at = new Date(NOW).toISOString()
-    const out = m.readStoredContactChecks([{ kind: 'nostr', formatValid: true, domainResolves: null, checkedAt: at, rules: 2 }])
+    const out = m.readStoredContactChecks([{ kind: 'nostr', formatValid: true, domainResolves: null, checkedAt: at, rules: m.CONTACT_RULES_VERSION }])
     expect(Object.keys(out![0]!).sort()).toEqual(['checkedAt', 'domainResolves', 'formatValid', 'kind'])
   })
 
