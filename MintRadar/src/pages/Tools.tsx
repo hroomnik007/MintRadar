@@ -10,6 +10,7 @@ import { useNow } from '@/hooks/useNow'
 import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, classifySignatureCheck, classifySpentCheck, tokenActionState, amountCarriesCurrencySymbol, stripTokenWhitespace, InvalidMintUrlError, type SignatureCheck, type TokenInfo, type TokenSpentCheck } from '@/utils/cashuToken'
 import { startTokenRun, classifyRunError, createRunGuard, type TokenRun } from '@/utils/tokenRun'
 import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel, computeDuplicateMintNames } from '@/utils/mintFormatting'
+import { PaymentRequestInspector } from '@/components/PaymentRequestInspector'
 import { PageHead } from '@/components/layout/PageHead'
 import { Zap, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Hourglass, ExternalLink, ArrowRight, type LucideIcon } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
@@ -17,6 +18,7 @@ import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation } from '@/utils/reliabilityScore'
 import { weightsFor, reviewsScore, type WizardCheck, type SizeOption } from '@/utils/wizardScoring'
 import { sortUnits } from '@/utils/sortUnits'
+import { formatDateTimeUtc } from '@/utils/formatDate'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import './Tools.css'
 
@@ -74,6 +76,9 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
   const [verify, setVerify] = useState<VerifyResult | null>(null)
   const [checkingSpent, setCheckingSpent] = useState(false)
   const [spentResult, setSpentResult] = useState<SpentCheckResult | null>(null)
+  // When the mint was asked (for the "asked mint <host> at <time>" source lines of the Verify part).
+  const [verifiedAt, setVerifiedAt] = useState<Date | null>(null)
+  const [spentAt, setSpentAt] = useState<Date | null>(null)
 
   // Cancellation: one AbortController-backed run per Inspect and per Check, plus a run-id guard
   // per kind as belt and braces (each async path discards its result if its id has moved on).
@@ -120,7 +125,9 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     inspectRun.current = null
     setInspected(true)
     setVerify(null)
+    setVerifiedAt(null)
     setSpentResult(null)
+    setSpentAt(null)
     setPhase('inspecting')
 
     // The local parse below is synchronous and effectively instant, so without a
@@ -171,6 +178,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     }
     if (outcome === null || !inspectGuard.current.isCurrent(id)) return
     setVerify(outcome)
+    setVerifiedAt(new Date())
     setPhase('idle')
   }
 
@@ -183,6 +191,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     checkRun.current = run
     setCheckingSpent(true)
     setSpentResult(null)
+    setSpentAt(null)
     const startedAt = Date.now()
 
     let outcome: SpentCheckResult | null
@@ -226,6 +235,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
     if (!checkGuard.current.isCurrent(id)) return
 
     setSpentResult(outcome)
+    setSpentAt(new Date())
     setCheckingSpent(false)
   }
 
@@ -240,7 +250,7 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
         className="token-input"
         placeholder="cashuB… or cashuA…"
         value={input}
-        onChange={e => { invalidateRuns(); setInput(e.target.value); setInspected(false); setResult(null); setParseError(null); setVerify(null); setPhase('idle'); setSpentResult(null); setCheckingSpent(false) }}
+        onChange={e => { invalidateRuns(); setInput(e.target.value); setInspected(false); setResult(null); setParseError(null); setVerify(null); setVerifiedAt(null); setPhase('idle'); setSpentResult(null); setSpentAt(null); setCheckingSpent(false) }}
         rows={3}
         spellCheck={false}
       />
@@ -264,6 +274,11 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
 
       {result && (
         <>
+          <section className="token-part" aria-labelledby="token-decode-title" data-testid="token-decode">
+          <div className="token-part-head">
+            <div className="token-part-title" id="token-decode-title">Decode</div>
+            <div className="token-part-sub">Read in your browser from the token itself. Nothing is sent.</div>
+          </div>
           <div className="token-result-grid">
             <div className="token-result-cell">
               <div className="trc-label">Mint</div>
@@ -338,10 +353,23 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             <span className="tdr-item"><span className="tdr-label">Unit</span>{result.unit}</span>
           </div>
 
+          {result.keysetIds.length > 0 && (
+            <div className="token-memo-row" data-testid="token-keyset-ids"><span className="tdr-label">Keyset ids</span> {result.keysetIds.join(', ')}</div>
+          )}
+          {result.conditions.length > 0 && (
+            <div className="token-memo-row" data-testid="token-conditions"><span className="tdr-label">Spending conditions</span> {result.conditions.join(', ')}</div>
+          )}
+
           {result.memo && (
             <div className="token-memo-row"><span className="tdr-label">Memo</span> {result.memo}</div>
           )}
+          </section>
 
+          <section className="token-part" aria-labelledby="token-verify-title" data-testid="token-verify-part">
+          <div className="token-part-head">
+            <div className="token-part-title" id="token-verify-title">Verify</div>
+            <div className="token-part-sub">Asks the mint named in the token.</div>
+          </div>
           <div className="token-verify">
             <div className="token-section-label">
               <span>Signature check</span>
@@ -374,6 +402,9 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             )}
             {verify?.status === 'bad-mint-url' && (
               <ResultNote tone="bad" Icon={CircleX}>{verify.message} A legitimate Cashu token points at a public https:// mint.</ResultNote>
+            )}
+            {verify && verify.status !== 'bad-mint-url' && verifiedAt && (
+              <div className="token-source" data-testid="token-verify-source">Asked mint {getHostname(result.mint)} at {formatDateTimeUtc(verifiedAt)}</div>
             )}
           </div>
 
@@ -420,7 +451,11 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
             {spentResult?.status === 'bad-mint-url' && (
               <ResultNote tone="bad" Icon={CircleX}>{spentResult.message} A legitimate Cashu token points at a public https:// mint.</ResultNote>
             )}
+            {spentResult && spentResult.status !== 'bad-mint-url' && spentAt && (
+              <div className="token-source" data-testid="token-spent-source">Asked mint {getHostname(result.mint)} at {formatDateTimeUtc(spentAt)}</div>
+            )}
           </div>
+          </section>
 
           <div className="token-actions">
             {/* Verified against the tools' own sources, not guessed. wallet.cashu.me reads
@@ -855,7 +890,7 @@ export default function Tools() {
   useEffect(() => {
     const applyHash = () => {
       const target = window.location.hash.replace('#', '')
-      if (target !== 'pick' && target !== 'token') return
+      if (target !== 'pick' && target !== 'token' && target !== 'payment-request') return
       const el = document.getElementById(target)
       if (!el) return
       el.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -887,6 +922,9 @@ export default function Tools() {
         </div>
         <div id="pick" tabIndex={-1} className="tool-anchor">
           <BestMintWizard knownMints={mints} />
+        </div>
+        <div id="payment-request" tabIndex={-1} className="tool-anchor tool-anchor-wide">
+          <PaymentRequestInspector knownMints={mints} />
         </div>
       </div>
     </div>

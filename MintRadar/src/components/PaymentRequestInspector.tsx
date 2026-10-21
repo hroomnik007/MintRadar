@@ -1,0 +1,139 @@
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import type { KnownMint } from '@/hooks/useKnownMints'
+import { CopyTextButton } from '@/components/mint/CopyTextButton'
+import { IcShield } from '@/components/mint/IcShield'
+import { formatTokenAmount } from '@/utils/cashuToken'
+import { normalizeMintUrl, displayName, cardReliabilityLabel, reliabilityColor } from '@/utils/mintFormatting'
+import { isTestMint } from '@/constants/testMints'
+import { parsePaymentRequest, mintStatusWord, type PaymentRequestView } from '@/utils/paymentRequest'
+
+const NOT_SPECIFIED = 'Not specified'
+
+function amountText(view: PaymentRequestView): string {
+  if (view.amount === null) return NOT_SPECIFIED
+  const n = Number(view.amount)
+  if (!view.unit || !Number.isSafeInteger(n)) return view.amount
+  return formatTokenAmount(n, view.unit)
+}
+
+function Row({ label, children, testId }: { label: string; children: React.ReactNode; testId?: string }) {
+  return (
+    <div className="pr-row" data-testid={testId}>
+      <dt className="pr-label">{label}</dt>
+      <dd className="pr-value">{children}</dd>
+    </div>
+  )
+}
+
+function AcceptedMint({ url, known }: { url: string; known: KnownMint | null }) {
+  if (!known) {
+    return (
+      <li className="pr-mint" data-testid="pr-mint">
+        <div className="pr-text">{url}</div>
+        <div className="pr-mint-line pr-muted">Not tracked by MintRadar.</div>
+      </li>
+    )
+  }
+  const test = isTestMint(known.url)
+  return (
+    <li className="pr-mint" data-testid="pr-mint">
+      <div className="pr-mint-head">
+        <span className="pr-mint-name">{displayName(known)}</span>
+        <span className="pr-mint-status" data-testid="pr-mint-status">● {mintStatusWord(known)}</span>
+      </div>
+      <div className="pr-text">{url}</div>
+      <div className="pr-mint-line">
+        {test ? (
+          <span className="pr-muted">Test mint. Ecash from it has no value.</span>
+        ) : known.reliabilityScore != null ? (
+          <span className="pr-score" style={{ color: reliabilityColor(known.reliabilityScore) }}>
+            <IcShield size={12} /><span>{cardReliabilityLabel(known.reliabilityScore)}</span>
+          </span>
+        ) : (
+          <span className="pr-muted">{cardReliabilityLabel(null)}</span>
+        )}
+        <Link className="pr-link" to={`/mint/${encodeURIComponent(known.url)}`}>View Mint Detail</Link>
+      </div>
+    </li>
+  )
+}
+
+/**
+ * Payment request inspector (NUT-18). The pasted "creqA…" string is decoded in the browser and kept only in React
+ * state: no request is made for it. Targets and mint URLs are shown as text (a transport target is chosen by whoever
+ * made the request), mints are matched against the known-mints list the page already loaded.
+ */
+export function PaymentRequestInspector({ knownMints }: { knownMints: KnownMint[] }) {
+  const [input, setInput] = useState('')
+  const parsed = useMemo(() => parsePaymentRequest(input), [input])
+  const knownMap = useMemo(() => new Map(knownMints.map(m => [m.url, m] as const)), [knownMints])
+  const lookup = (url: string): KnownMint | null => knownMap.get(normalizeMintUrl(url)) ?? knownMap.get(url) ?? null
+
+  return (
+    <div className="tool-card" data-testid="payment-request-inspector">
+      <div className="tool-header">
+        <div className="tool-title">Payment request inspector</div>
+        <div className="tool-subtitle">Paste a Cashu payment request (NUT-18, starts with creqA) to read what it asks for and which mints it accepts.</div>
+      </div>
+
+      <textarea
+        className="pr-input"
+        aria-label="Payment request"
+        placeholder="creqA…"
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        rows={3}
+        spellCheck={false}
+        autoComplete="off"
+      />
+      <div className="pr-note">Decoded in your browser; nothing you paste here is sent anywhere.</div>
+
+      {parsed.ok === false && parsed.reason === 'empty' && <div className="pr-hint">Paste a payment request first</div>}
+      {parsed.ok === false && parsed.reason !== 'empty' && (
+        <div className="pr-error" role="status" data-testid="pr-error">{parsed.message}</div>
+      )}
+
+      {parsed.ok && (
+        <div className="pr-result" data-testid="pr-result">
+          <dl className="pr-dl">
+            <Row label="Request id">{parsed.view.id ?? NOT_SPECIFIED}</Row>
+            <Row label="Amount" testId="pr-amount">{amountText(parsed.view)}</Row>
+            <Row label="Unit">{parsed.view.unit ?? NOT_SPECIFIED}</Row>
+            <Row label="Single use">{parsed.view.singleUse === true ? 'Yes' : NOT_SPECIFIED}</Row>
+            <Row label="Description">{parsed.view.description ?? NOT_SPECIFIED}</Row>
+            <Row label="Locking condition (NUT-10)" testId="pr-lock">
+              {parsed.view.lock ? (
+                <>
+                  <div>{parsed.view.lock.kind}</div>
+                  <div className="pr-text">{parsed.view.lock.data}</div>
+                  {parsed.view.lock.tags.map((t, i) => <div className="pr-text" key={i}>{t}</div>)}
+                </>
+              ) : NOT_SPECIFIED}
+            </Row>
+          </dl>
+
+          <div className="pr-section">Accepted mints ({parsed.view.mints.length})</div>
+          <ul className="pr-list">
+            {parsed.view.mints.map((m, i) => <AcceptedMint key={`${i}-${m}`} url={m} known={lookup(m)} />)}
+          </ul>
+
+          <div className="pr-section">Transports</div>
+          {parsed.view.transports.length === 0 ? (
+            <div className="pr-note">{NOT_SPECIFIED}</div>
+          ) : (
+            <ul className="pr-list">
+              {parsed.view.transports.map((t, i) => (
+                <li className="pr-transport" key={`${i}-${t.target}`} data-testid="pr-transport">
+                  <div className="pr-transport-type">{t.type}</div>
+                  <div className="pr-text" data-testid="pr-transport-target">{t.target}</div>
+                  <CopyTextButton label="Copy" what={`${t.type} transport target`} value={t.target} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}

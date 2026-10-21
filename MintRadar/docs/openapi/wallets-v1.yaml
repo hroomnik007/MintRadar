@@ -100,7 +100,8 @@ paths:
           description: >-
             Comma-separated NUT numbers, for example `4,5`: keep mints that advertise all of them (compared with the
             `nuts` field; leading zeros are ignored). 1 to 32 numbers of 1 to 3 digits; anything else is a `400`. A mint
-            with `nuts: null` never matches. Added 2026-10-20.
+            with `nuts: null` never matches. Added 2026-10-20. Example: `nuts=11,12` keeps the mints that declare both
+            NUT-11 (P2PK) and NUT-12 (DLEQ proofs), the two a Nutzap (NIP-61) relies on.
           schema: { type: string, pattern: '^ *[0-9]{1,3} *(, *[0-9]{1,3} *){0,31}$' }
           example: '4,5'
         - name: eligible

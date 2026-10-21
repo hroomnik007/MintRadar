@@ -73,7 +73,7 @@
 .tool-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 .tool-btn-primary:not(:disabled):hover { opacity: 0.85; }
 
-.token-input {
+.token-input, .pr-input {
   width: 100%;
   box-sizing: border-box;
   background: var(--bg3);
@@ -87,12 +87,12 @@
   outline: none;
   line-height: 1.5;
 }
-.token-input:focus { border-color: var(--accent); }
-.token-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-@media (max-width: 768px) { .token-input { resize: none; } }
-.token-input::placeholder { color: var(--text3); }
+.token-input:focus, .pr-input:focus { border-color: var(--accent); }
+.token-input:focus-visible, .pr-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 768px) { .token-input, .pr-input { resize: none; } }
+.token-input::placeholder, .pr-input::placeholder { color: var(--text3); }
 
-.token-error {
+.token-error, .pr-error {
   font-size: 12px;
   color: var(--red);
   font-family: var(--font-body);
@@ -168,6 +168,7 @@
   color: var(--text2);
   line-height: 1.5;
   word-break: break-word;
+  overflow-wrap: anywhere;
 }
 .token-details-row {
   display: flex;
@@ -237,8 +238,8 @@ a.token-action-btn:focus {
 .token-spent-caption { font-size: 12px; line-height: 1.45; color: var(--text3); font-family: var(--font-body); }
 
 /* Muted helper lines (privacy, spent check, wallet links) and the empty-input hint. */
-.token-note { font-size: 12px; line-height: 1.45; color: var(--text3); font-family: var(--font-body); }
-.token-hint { font-size: 12px; color: var(--text3); text-align: center; font-family: var(--font-body); }
+.token-note, .pr-note { font-size: 12px; line-height: 1.45; color: var(--text3); font-family: var(--font-body); }
+.token-hint, .pr-hint { font-size: 12px; color: var(--text3); text-align: center; font-family: var(--font-body); }
 
 /* Actions: Redeem to Lightning, View Mint Detail and Open in cashu.me share one row. */
 
@@ -478,3 +479,36 @@ a.token-action-btn:focus {
   .wizard-opt-sub { font-size: 12px; }
   .wizard-step-dot { font-size: 12px; }
 }
+
+/* Payment request inspector (W7a): plain facts; every value wraps, nothing is a link except "View Mint Detail". */
+.tool-anchor-wide { grid-column: 1 / -1; }
+.pr-result { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.pr-dl { margin: 0; display: flex; flex-direction: column; background: var(--bg3); border-radius: 8px; padding: 2px 14px; }
+.pr-row { display: flex; flex-wrap: wrap; column-gap: 12px; row-gap: 2px; padding: 9px 0; border-bottom: 1px solid var(--border); min-width: 0; }
+.pr-row:last-child { border-bottom: none; }
+.pr-label { flex: 0 0 190px; max-width: 100%; margin: 0; font-size: 12px; color: var(--text3); font-family: var(--font-body); }
+.pr-value { flex: 1 1 200px; min-width: 0; margin: 0; font-size: 14px; line-height: 1.45; color: var(--text); font-family: var(--font-body); overflow-wrap: anywhere; }
+.pr-text { font-family: var(--font-mono); font-size: 13px; line-height: 1.45; color: var(--text2); overflow-wrap: anywhere; min-width: 0; }
+.pr-section { font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.02em; font-family: var(--font-body); }
+.pr-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pr-mint, .pr-transport { background: var(--bg3); border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; align-items: flex-start; }
+.pr-mint-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; max-width: 100%; }
+.pr-mint-name { font-size: 15px; font-weight: 500; color: var(--text); font-family: var(--font-body); overflow-wrap: anywhere; }
+.pr-mint-status { font-size: 13px; color: var(--text2); font-family: var(--font-body); }
+.pr-mint-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 13px; font-family: var(--font-body); min-width: 0; }
+.pr-score { display: inline-flex; align-items: center; gap: 5px; }
+.pr-muted { color: var(--text3); }
+.pr-link { color: var(--green-bright); font-size: 13px; text-decoration: underline; text-underline-offset: 2px; }
+.pr-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.pr-transport-type { font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-mono); }
+@media (max-width: 700px) {
+  .pr-label { flex-basis: 100%; }
+  .pr-value { flex-basis: 100%; }
+}
+
+/* Token inspector result: "Decode" (local) and "Verify" (asks the mint) as two labelled parts. */
+.token-part { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.token-part-head { display: flex; flex-direction: column; gap: 2px; }
+.token-part-title { font-size: 14px; font-weight: 600; color: var(--text); font-family: var(--font-body); }
+.token-part-sub { font-size: 12px; line-height: 1.45; color: var(--text3); font-family: var(--font-body); }
+.token-source { font-size: 12px; line-height: 1.45; color: var(--text3); font-family: var(--font-body); overflow-wrap: anywhere; }

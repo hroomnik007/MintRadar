@@ -2712,6 +2712,16 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .md-fees-limits .md-info-value { text-align: left; flex-basis: 100%; }
 }
 
+/* Overview "Nutzap-related features" (W7a): same row recipe as Fees and limits */
+.md-nutzap .md-info-row { flex-wrap: wrap; column-gap: 12px; row-gap: 2px; min-height: 38px; }
+.md-nutzap .md-info-label { flex-shrink: 1; min-width: 0; overflow-wrap: anywhere; }
+.md-nutzap .md-info-value { flex: 1 1 auto; min-width: 0; text-align: right; overflow-wrap: break-word; max-width: 100%; }
+.md-nutzap .md-fl-note { margin-top: 10px; }
+.md-nutzap .md-fl-note span[title] { text-decoration: underline dotted; text-underline-offset: 2px; }
+@media (max-width: 480px) {
+  .md-nutzap .md-info-value { text-align: left; flex-basis: 100%; }
+}
+
 /* Audit tab: deposits / withdrawals split of the cashu.info 7-day window */
 .audit-directions { margin: 12px 0; }
 .audit-directions .md-info-row { flex-wrap: wrap; column-gap: 12px; row-gap: 2px; }

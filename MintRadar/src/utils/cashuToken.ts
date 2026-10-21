@@ -5,7 +5,7 @@
 // needed — which is exactly what the Token Inspector wants for a paste-and-look
 // tool. The heavier full decode (proofs + DLEQ) lives in decodeTokenWithMint()
 // below and needs the mint online.
-import { CheckStateEnum, getTokenMetadata, hasValidDleq, type Proof } from '@cashu/cashu-ts'
+import { CheckStateEnum, getDecodedToken, getTokenMetadata, hasValidDleq, type Proof } from '@cashu/cashu-ts'
 import { createMintWallet } from '@/utils/mintRequest'
 import type { TokenRun } from '@/utils/tokenRun'
 
@@ -18,6 +18,27 @@ export interface TokenInfo {
   /** Human-readable encoding version, e.g. "v4 (cashuB)". */
   version: string
   memo: string | null
+  /** Distinct keyset ids the proofs carry (empty when the encoding does not expose them locally). */
+  keysetIds: string[]
+  /** Distinct NUT-10 secret kinds the proofs are locked with ("P2PK", "HTLC", …); empty for plain secrets. */
+  conditions: string[]
+}
+
+/** Local only: the keyset ids and spending-condition kinds, read from the token itself. Never throws. */
+function localProofFacts(token: string, incomplete: ReadonlyArray<{ secret: string }>): { keysetIds: string[]; conditions: string[] } {
+  const conditions = new Set<string>()
+  for (const p of incomplete) {
+    if (typeof p.secret !== 'string' || !p.secret.startsWith('[')) continue
+    try {
+      const parsed: unknown = JSON.parse(p.secret)
+      if (Array.isArray(parsed) && typeof parsed[0] === 'string' && parsed[0]) conditions.add(parsed[0].slice(0, 32))
+    } catch { /* a plain secret that merely starts with "[" */ }
+  }
+  const keysetIds = new Set<string>()
+  try {
+    for (const p of getDecodedToken(token, []).proofs) if (typeof p.id === 'string' && p.id) keysetIds.add(p.id)
+  } catch { /* short ids need the mint's keysets: left to the Verify part */ }
+  return { keysetIds: [...keysetIds], conditions: [...conditions] }
 }
 
 /**
@@ -126,6 +147,7 @@ export function parseCashuToken(raw: string): TokenParseResult {
         proofsCount: meta.proofAmounts.length > 0 ? meta.proofAmounts.length : null,
         version: tokenVersionLabel(token),
         memo: meta.memo ?? null,
+        ...localProofFacts(token, meta.incompleteProofs),
       },
       error: null,
     }

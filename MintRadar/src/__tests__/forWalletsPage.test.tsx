@@ -205,6 +205,14 @@ describe('error codes and numbers', () => {
     expect(read('../../docs/API.md')).toContain(RECOMMEND_DEPRECATION.successorUrl)
   })
 
+  it('the NUT-11 and NUT-12 example query is a real list query and is in docs/API.md and the OpenAPI file', () => {
+    const q = new URL(WALLET_API_BASE + F.nutzapQuery)
+    expect(q.searchParams.get('nuts')).toBe('11,12')
+    expect(Array.from(q.searchParams.keys()).every(k => WALLET_QUERY_PARAMS.some(p => p.name === k))).toBe(true)
+    expect(read('../../docs/API.md')).toContain('/api/v1/wallets/mints?nuts=11,12')
+    expect(read('../../docs/openapi/wallets-v1.yaml')).toContain('nuts=11,12')
+  })
+
   it('the documentation links use the blob URL pattern of the footer API link and point at files that exist', () => {
     const footer = read('../components/layout/AppShell.tsx')
     expect(footer).toContain('https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/API.md')

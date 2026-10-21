@@ -122,6 +122,10 @@ export default function ForWallets() {
           <p>
             By default only online, scored mints that are not on the test-mint list are returned, best score first.
           </p>
+          <p data-testid="nuts-example">
+            To keep only mints that declare certain NUTs, use <code>nuts</code>. For example, mints that declare NUT-11 and NUT-12:{' '}
+            <code>{F.nutzapQuery}</code> (a mint is kept only when it lists all of them in its <code>/v1/info</code>).
+          </p>
           <h3 className="doc-h3">2. One mint by its URL</h3>
           <p>
             Percent-encode the whole mint URL (<code>encodeURIComponent</code>) and put it after{' '}

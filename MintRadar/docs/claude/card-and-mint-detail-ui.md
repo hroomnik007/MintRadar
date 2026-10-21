@@ -403,3 +403,12 @@ Facts only, no scoring change, no `METHODOLOGY_VERSION` bump, no new request to 
 - **Where the data comes from:** nothing new is stored. The split is in `audit_cz_detail.detail` since the detail job exists (validated `swaps7d.asSource` / `asDest` `{ total, success, failed, avgMs }`, window 7 days); the Audit tab already receives it, and the wallet API reads it with one more sub-select in the snapshot query (`audit_directions_json`, see `backend-api-and-data.md`).
 - Tests: `feeExamples.test.ts` (backend) and `feesLimits.test.ts`, `auditDirections.test.ts` (frontend); `e2e/mint-detail-fees-limits.spec.ts`, `e2e/mint-detail-audit-split.spec.ts`.
 
+
+### Mint Detail — "Nutzap-related features" group (2026-10-21, W7a)
+
+Facts only, no scoring change, no `METHODOLOGY_VERSION` bump, no verdict, no request of its own.
+
+- **Component:** `components/mint/MintNutzapFeatures.tsx` + pure rows in `utils/nutzapFeatures.ts`; a `.md-panel.md-nutzap` in the Overview left column, right after "Fees and limits" (only for a tracked mint, like that group). CSS: `.md-nutzap` in `MintDetail.css` (the `.md-info-row` recipe, value wraps under the label at 480 px, all text 12 px or more).
+- **Rows:** NUT-07 (Spent check), NUT-10 (Spending conditions), NUT-11 (P2PK locking), NUT-12 (DLEQ proofs), each "supported" or "not declared". "supported" = the number is a key of `nuts` in the mint's `/v1/info` (`data.info`, or the stored `knownMint.nutsLimits` before the probe answers) — **the same rule as the NUT compatibility grid, which also counts a key with `supported: false` as present.** While neither list is known the values read "—" (nothing is claimed either way). No combined "nutzap ready" line, on purpose.
+- **Why a group when the grid already lists the NUTs:** the grid shows only ✓ / – per card, with neither the words, nor the source, nor the time. The group says "declared by the mint in /v1/info · fetched <relative> ago" (absolute UTC in the `title`, `limitsSource()` from `utils/feesLimits.ts`, time = `infoFetchedAt` of the page).
+- **No tooltip** (so `tooltipExpected.ts` is unchanged). Tests: `nutzapFeatures.test.ts`, `e2e/mint-detail-nutzap.spec.ts`.

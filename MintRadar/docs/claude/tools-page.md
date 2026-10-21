@@ -6,8 +6,8 @@ A third Tools card (`MintLookup` component) briefly existed as an entry point in
 took a mint URL/hostname and navigated to `/mint/{encodeURIComponent(trimmed)}`, relying on
 `resolveMintDetailUrl`'s existing bare-host canonicalization — no mint-info UI of its own. Removed
 the next day: the component, its `.mint-lookup-*` CSS, the `#lookup` deep-link hash branch/anchor,
-and the `tools-mint-lookup` e2e spec are all deleted. **Tools currently has just the Wizard +
-Inspector row** — no third card. `resolveMintDetailUrl` and the `/mint/:slug` route themselves are
+and the `tools-mint-lookup` e2e spec are all deleted. **At that time Tools had just the Wizard +
+Inspector row** (a third card, the Payment request inspector, was added 2026-10-21, see below; it is not a mint lookup). `resolveMintDetailUrl` and the `/mint/:slug` route themselves are
 untouched, so pasting a bare host into the address bar still resolves correctly; only the Tools-page
 entry point for doing that was removed.
 
@@ -295,3 +295,22 @@ under the new text, and a dead mint left the UI stuck for cashu-ts's default 300
 - **Not done:** mint responses have no size limit (cashu-ts reads the body with `res.text()`); only the time limits
   above bound a hostile mint now.
 
+
+### Payment request inspector (NUT-18), 2026-10-21 (W7a)
+
+A third card on `/tools` (`#payment-request`, full width under the other two): `components/PaymentRequestInspector.tsx`, decoding in `utils/paymentRequest.ts`, CSS in `Tools.css` (`.pr-*`; its input / note / hint / error use their own classes `pr-input` / `pr-note` / `pr-hint` / `pr-error` because `tools.spec.ts` and three other specs select `.token-input`, `.token-hint` and `.token-error` and must keep matching only the Token inspector).
+
+- **Local only.** The pasted "creqA…" string is decoded in the browser by cashu-ts' `PaymentRequest.fromEncodedRequest` (already a dependency; no new one) and lives in React state only. No request is made for it (e2e asserts that no request carries the string and no `/api/` request is caused by decoding). Live decoding on input, no button.
+- **Input rules:** trimmed; must start with `creqA` ("Not a payment request: expected a string starting with creqA."); at most 4,096 characters (own calm message); anything that does not decode or lacks the required structure (mints missing or empty, a transport or NUT-10 option of the wrong shape) gives the one message "This does not look like a valid payment request." — no stack, no library text. Unknown extra fields are ignored. Nothing throws into the error boundary (`parsePaymentRequest()` never throws).
+- **Shown as facts:** request id, amount (`formatTokenAmount`, or "Not specified"), unit, single use ("Yes", otherwise "Not specified" — the library turns an absent `s` and an explicit `false` into the same `false`, so "No" cannot be told from "not set"), description, the NUT-10 locking condition (kind, data and tags as text), accepted mints, transports (type `nostr` / `post` and the target).
+- **Targets are text, never links.** Transport targets (URL, nprofile) and mint URLs are chosen by whoever made the request: plain text with a `CopyTextButton` (`Copy: <type> transport target`), no `<a>`, no icon, nothing requested for them. The only links are "View Mint Detail" for a tracked mint.
+- **Mints:** each URL goes through `normalizeMintUrl()` and is looked up in the known-mints list the page already loads. Tracked: name (`displayName`), status word (`mintStatusWord()`: Archived, Degraded, Online, Offline, Unknown, in that order of precedence), "Reliability <n>" (`cardReliabilityLabel`; a test mint shows "Test mint. Ecash from it has no value." instead of a score, as in the Token inspector) and the link. Untracked: the URL and "Not tracked by MintRadar." — no judgement.
+- Tests: `paymentRequest.test.ts` (no NUT-18 test vector exists in the repository, so vectors are built with the library plus a small hand-written CBOR encoder for unknown fields and a request without mints), `e2e/payment-request.spec.ts`.
+
+### Token inspector: Decode and Verify (2026-10-21, W7a)
+
+The result is two labelled parts (`.token-part`, `data-testid` `token-decode` / `token-verify-part`); only structure, headings and source lines are new, every text is the existing one.
+
+- **Decode** ("Read in your browser from the token itself. Nothing is sent."): the result grid (mint, amount, status and Reliability Score from the known-mints list the page already has), version / proofs / unit, **keyset ids** and **spending conditions** (new, `TokenInfo.keysetIds` / `conditions`, read by `localProofFacts()` in `cashuToken.ts` from the token's own bytes: ids via `getDecodedToken(token, [])` — a token that stores only a short keyset id (a v2 keyset) cannot be resolved without the mint, so no id is shown for it — and the kind of each NUT-10 secret, e.g. P2PK), memo.
+- **Verify** ("Asks the mint named in the token."): the Signature check (DLEQ) and Check if spent, each followed by "Asked mint <host> at <date, time UTC>" (`token-verify-source` / `token-spent-source`, hidden while pending and for the `bad-mint-url` case, where no request was made). If the mint does not answer, Decode stays and Verify shows the existing line "Could not reach mint to verify (try again later). This says nothing about the token itself."
+- Tests: `cashuToken.test.ts` (facts), `e2e/token-inspector-decode-verify.spec.ts`.

@@ -43,6 +43,8 @@ Machine-readable description: [`docs/openapi/wallets-v1.yaml`](openapi/wallets-v
 
 Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` last), then `name` (the hostname when `name` is `null`), then `url`.
 
+**Example, `nuts`:** `GET /api/v1/wallets/mints?nuts=11,12` returns the mints that declare **both** NUT-11 (P2PK) and NUT-12 (DLEQ proofs) in their `/v1/info`, which are the two a Nutzap (NIP-61) relies on. The mint list is still the default one (online, scored, not a test mint); the filter only narrows it. It states what a mint declares, nothing more.
+
 **Replacing `/mints/recommend`:** `GET /api/v1/wallets/mints?eligible=true&unit=sat&minScore=80&nuts=4,5&limit=5` returns the same mints in the same order as `GET /api/v1/mints/recommend?unit=sat&minScore=80&nuts=4,5&limit=5` (the defaults of `/mints/recommend` are `unit=sat`, `minScore=80`, `limit=5`; the list route has no `unit` default and a larger `limit` range). A test compares the two on a fixture.
 
 ### Response

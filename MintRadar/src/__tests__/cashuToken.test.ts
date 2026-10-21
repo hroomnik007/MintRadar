@@ -41,6 +41,22 @@ const V3_TOKEN = 'cashuA' + Buffer.from(JSON.stringify({
   memo: 'lunch',
 })).toString('base64url')
 
+describe('parseCashuToken: local facts for the Decode part', () => {
+  it('reads the keyset ids from the token itself, once each', () => {
+    const { info } = parseCashuToken(V4_TOKEN)
+    expect(info?.keysetIds).toEqual(['009a1f293253e41e'])
+    expect(info?.conditions).toEqual([])
+  })
+
+  it('names the kind of a NUT-10 secret (P2PK) and ignores plain secrets and bracketed non-secrets', () => {
+    const locked = getEncodedToken({ mint: MINT, unit: 'sat', proofs: [
+      { ...PROOFS[0]!, secret: '["P2PK",{"nonce":"a","data":"02ab","tags":[]}]' },
+      { ...PROOFS[1]!, secret: '[not json' },
+    ] })
+    expect(parseCashuToken(locked).info?.conditions).toEqual(['P2PK'])
+  })
+})
+
 describe('parseCashuToken', () => {
   it('decodes a v4 (cashuB) token', () => {
     const { info, error } = parseCashuToken(V4_TOKEN)

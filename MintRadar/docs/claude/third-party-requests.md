@@ -27,7 +27,7 @@ Every foreign origin below receives at least the visitor's **IP address and User
 - **bunker:// relay** (pasted by the user) is unchanged and still listed above.
 
 ### Not contacting anything third-party (verified)
-- Logged-out **Dashboard**, **Stats**, **Wallets**, **Learn**, **NUT explorer**, Token Inspector's *local decode*, **Submit a mint** Single-URL and Bulk (`/api/mint/probe`, `/api/mints/discover` are own origin) — zero foreign requests.
+- Logged-out **Dashboard**, **Stats**, **Wallets**, **Learn**, **NUT explorer**, Token Inspector's *local decode*, the **Payment request inspector** (decodes in the browser; the accepted mints and transport targets are never contacted), **Submit a mint** Single-URL and Bulk (`/api/mint/probe`, `/api/mints/discover` are own origin) — zero foreign requests.
 - Mint QR modal — zero requests; the QR is rendered locally (`QRCodeSVG`) since 2026-10-04 (was `api.qrserver.com`, which received the mint URL).
 - Reviewer / recommender avatars — no longer loaded since 2026-10-04 (initials tiles). Mint icons go through `/api/mint/icon`. Fonts are self-hosted. No analytics, no CDN scripts.
 - nostr.mintradar.org (our own relay) is one of the discovery/publish relays; it is first-party but still a separate origin.

@@ -36,6 +36,7 @@ import { MintNetworkCard } from '@/components/MintNetworkCard'
 import { networkRows } from '@/utils/networkInfo'
 import { AuditCzTiles, AuditCzSwapTables, AuditStateText } from '@/components/AuditCzCards'
 import { AuditDirections } from '@/components/AuditDirections'
+import { MintNutzapFeatures } from '@/components/mint/MintNutzapFeatures'
 import { MintFeesLimits } from '@/components/mint/MintFeesLimits'
 import { formatDate, formatDateTimeUtc } from '@/utils/formatDate'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
@@ -1749,6 +1750,8 @@ function MintDetailContent({ url }: { url: string }) {
               now={now}
             />
           )}
+
+          {knownMint && <MintNutzapFeatures declared={data?.info || knownMint.nutsLimits ? supportedNutNumbers : null} fetchedAt={infoFetchedAt} now={now} />}
 
           {(email || twitter || nostr || operatorNip05 || (data?.contactChecks?.length ?? 0) > 0) && (
             <div className="md-panel">
