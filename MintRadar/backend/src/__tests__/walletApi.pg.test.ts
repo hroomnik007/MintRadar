@@ -75,4 +75,46 @@ describe.skipIf(!url)('wallet API snapshot SQL against a real Postgres', () => {
       await pool.end()
     }
   })
+  it('auditByDirection and feeExamples come out of the real query: the mint\'s own detail row, else the alias row, else nothing', async () => {
+    process.env['DATABASE_URL'] = url
+    vi.resetModules()
+    const { initDb, pool } = await import('../db.js')
+    try {
+      await initDb()
+      const own = 'https://pg-w6b-own.example.com'
+      const viaAlias = 'https://pg-w6b-alias.example.com'
+      const canonical = 'https://pg-w6b-canonical.example.com'
+      const none = 'https://pg-w6b-none.example.com'
+      await pool.query('DELETE FROM mints WHERE url = ANY($1)', [[own, viaAlias, none]])
+      await pool.query('DELETE FROM audit_cz_detail WHERE url = ANY($1)', [[own, canonical]])
+      await pool.query('DELETE FROM audit_cz_aliases WHERE alias_url = $1', [viaAlias])
+      for (const u of [own, viaAlias, none]) await pool.query('INSERT INTO mints (url, discovered_at) VALUES ($1, NOW() - INTERVAL \'60 days\')', [u])
+      const detail = (asSource: unknown, asDest: unknown) => JSON.stringify({ swaps7d: { all: { total: 9 }, asSource, asDest } })
+      await pool.query('INSERT INTO audit_cz_detail (url, detail, fetched_at) VALUES ($1, $2::jsonb, NOW() - INTERVAL \'1 hour\'), ($3, $4::jsonb, NOW() - INTERVAL \'2 hours\')', [
+        own, detail({ total: 64, success: 51, failed: 13 }, { total: 62, success: 56, failed: 6 }), canonical, detail({ total: 4, success: 4, failed: 0 }, undefined),
+      ])
+      await pool.query('INSERT INTO audit_cz_aliases (alias_url, mint_url) VALUES ($1, $2)', [viaAlias, canonical])
+      await pool.query('UPDATE mints SET keysets_checked_at = NOW() WHERE url = $1', [own])
+      await pool.query(`INSERT INTO mint_keysets (url, keyset_id, unit, active, input_fee_ppk, id_version, last_seen_at) VALUES
+        ($1, '00k1', 'sat', true, 100, 'v1', NOW()), ($1, '00k2', 'sat', true, 250, 'v1', NOW()), ($1, '00k3', 'sat', false, 5000, 'v1', NOW())`, [own])
+
+      const { app } = await import('../index.js')
+      const get = async (u: string) => (await request(app).get('/api/wallets/mints/' + encodeURIComponent(u))).body.mint
+      const a = await get(own), b = await get(viaAlias), c = await get(none)
+      expect(a.auditByDirection.mint).toMatchObject({ attempts: 62, failures: 6, windowDays: 7, source: 'cashu.info' })
+      expect(a.auditByDirection.melt).toMatchObject({ attempts: 64, failures: 13 })
+      expect(a.auditByDirection.mint.syncedAt).toMatch(/^\d{4}-\d{2}-\d{2}T.*Z$/)
+      expect(b.auditByDirection.melt).toMatchObject({ attempts: 4, failures: 0 })
+      expect(b.auditByDirection.mint).toBeNull()
+      expect(c.auditByDirection).toEqual({ mint: null, melt: null })
+      expect(a.feeExamples).toEqual([{ unit: 'sat', inputFeePpk: 250, examples: [{ proofs: 1, fee: 1 }, { proofs: 16, fee: 4 }, { proofs: 100, fee: 25 }] }])
+      expect(c.feeExamples).toEqual([])
+
+      await pool.query('DELETE FROM mints WHERE url = ANY($1)', [[own, viaAlias, none]])
+      await pool.query('DELETE FROM audit_cz_detail WHERE url = ANY($1)', [[own, canonical]])
+      await pool.query('DELETE FROM audit_cz_aliases WHERE alias_url = $1', [viaAlias])
+    } finally {
+      await pool.end()
+    }
+  })
 })

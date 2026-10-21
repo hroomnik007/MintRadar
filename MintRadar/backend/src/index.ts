@@ -28,7 +28,7 @@ import { isTestMint } from './testMints.js'
 import { publicMintName, publicMintNameOrHost } from './mintNames.js'
 import {
   usesWalletRateLimit, isRecommendPath, isPublicCorsPath, PUBLIC_CORS_EXPOSE_HEADERS, parseWalletListQuery, walletListEnvelope, walletSingleEnvelope, recommendEnvelope,
-  memoizedBody, cachedBodyOf, buildCachedBody, sendCachedBody, sendWalletError, queryOf, keysetsOf, changesOf, type Snapshot, type WalletExtra,
+  memoizedBody, cachedBodyOf, buildCachedBody, sendCachedBody, sendWalletError, queryOf, keysetsOf, changesOf, type Snapshot, type WalletExtra, type AuditDirectionsRow,
 } from './walletApi.js'
 import { readStoredBreakdown } from './scoreBreakdown.js'
 import { readStoredContactChecks } from './contactChecks.js'
@@ -678,7 +678,7 @@ app.get('/api', (_req: Request, res: Response): void => {
 // METHODOLOGY_CHANGES entry (it changes with the formula); /for-wallets = FOR_WALLETS_PAGE_LASTMOD, bumped by hand
 // when the page content changes.
 const METHODOLOGY_LASTMOD = METHODOLOGY_CHANGES.reduce((latest, c) => (c.date > latest ? c.date : latest), '')
-const FOR_WALLETS_PAGE_LASTMOD = '2026-10-20'
+const FOR_WALLETS_PAGE_LASTMOD = '2026-10-21'
 const SITEMAP_STATIC_PATHS: Array<{ loc: string; changefreq: string; priority: string; lastmod?: string }> = [
   { loc: '/', changefreq: 'hourly', priority: '1.0' },
   { loc: '/stats', changefreq: 'daily', priority: '0.8' },
@@ -1486,6 +1486,14 @@ function computeKnownMints(): Promise<Snapshot> {
            FROM mint_keysets k
           WHERE k.url = m.url AND m.keysets_checked_at IS NOT NULL AND k.last_seen_at >= m.keysets_checked_at - INTERVAL '10 minutes'
         ) AS keysets_json,
+        -- Wallet API only: cashu.info's 7-day swaps per direction, read from the stored detail (auditCzDetail.ts); the row of the
+        -- mint itself, else the one of an alias cashu.info lists for it (the mapping the detail job writes the score inputs with).
+        (SELECT json_build_object('asSource', d.detail #> '{swaps7d,asSource}', 'asDest', d.detail #> '{swaps7d,asDest}', 'fetchedAt', d.fetched_at)
+           FROM audit_cz_detail d
+          WHERE d.url = rtrim(m.url, '/')
+             OR d.url IN (SELECT a.mint_url FROM audit_cz_aliases a WHERE a.alias_url = rtrim(m.url, '/'))
+          ORDER BY (d.url = rtrim(m.url, '/')) DESC, d.fetched_at DESC LIMIT 1
+        ) AS audit_directions_json,
         -- Wallet API only: the newest confirmed changes of the mint (mintChanges.ts), same read as everything else.
         (SELECT json_agg(json_build_object('type', c.change_type, 'field', c.field, 'old', c.old_value, 'new', c.new_value,
                   'observed', to_char(c.observed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
@@ -1668,6 +1676,7 @@ function computeKnownMints(): Promise<Snapshot> {
           keysetsCheckedAt: r.keysets_checked_at ? new Date(r.keysets_checked_at as string | Date).toISOString() : null,
           changes: changesOf(r.changes_json),
           contactChecks: readStoredContactChecks(r.contact_checks) ?? [],
+          auditDirections: (r.audit_directions_json as AuditDirectionsRow | null) ?? null,
         })
       }
       const now = Date.now()

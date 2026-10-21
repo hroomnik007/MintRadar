@@ -2697,3 +2697,27 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-change-arrow { color: var(--text3); flex: none; }
 .md-change-first { margin-top: 4px; font-size: 11.5px; color: var(--text3); }
 .md-changes-toggle { margin-top: 10px; }
+
+/* ── Overview "Fees and limits" (W6b): label left, value right, wraps under the label when the row is narrow ── */
+.md-fees-limits { --md-fl-row-h: 38px; }
+.md-fees-limits .md-info-row { flex-wrap: wrap; column-gap: 12px; row-gap: 2px; }
+.md-fees-limits .md-info-label { flex-shrink: 1; min-width: 0; overflow-wrap: anywhere; }
+.md-fees-limits .md-info-value { flex: 1 1 auto; min-width: 0; text-align: right; word-break: normal; overflow-wrap: break-word; max-width: 100%; }
+.md-fl-group-label { margin: 10px 0 2px; font-size: 12px; line-height: 1.4; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text3); }
+.md-fl-group-label:first-of-type { margin-top: 0; }
+.md-fl-note { margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--text3); overflow-wrap: anywhere; }
+.md-fl-source { margin-top: 4px; }
+.md-fl-note span[title] { text-decoration: underline dotted; text-underline-offset: 2px; }
+@media (max-width: 480px) {
+  .md-fees-limits .md-info-value { text-align: left; flex-basis: 100%; }
+}
+
+/* Audit tab: deposits / withdrawals split of the cashu.info 7-day window */
+.audit-directions { margin: 12px 0; }
+.audit-directions .md-info-row { flex-wrap: wrap; column-gap: 12px; row-gap: 2px; }
+.audit-directions .md-info-label { flex-shrink: 1; min-width: 0; }
+.audit-directions .md-info-value { flex: 1 1 auto; min-width: 0; text-align: right; word-break: normal; overflow-wrap: break-word; font-size: 13px; }
+.audit-directions .md-info-value span[title] { text-decoration: underline dotted; text-underline-offset: 2px; }
+@media (max-width: 480px) {
+  .audit-directions .md-info-value { text-align: left; flex-basis: 100%; }
+}

@@ -21,6 +21,8 @@ export const WALLET_API_FACTS = {
   recommendSunsetOn: '2027-01-26',
   /** The day the second batch of additive fields and parameters (method, maxInputFeePpk, include, facts, keysets, breakdown) was added. */
   walletAdditionsOn: '2026-10-20',
+  /** The day the facts feeExamples, limits and auditByDirection were added (single-mint endpoint and include=facts). */
+  walletFactsAddedOn: '2026-10-21',
   /** The list query that returns the same mints as /mints/recommend with its defaults. */
   recommendReplacementQuery: '/wallets/mints?eligible=true&unit=sat&minScore=80&limit=5',
 } as const

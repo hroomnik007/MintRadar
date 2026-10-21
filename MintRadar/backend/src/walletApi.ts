@@ -7,6 +7,7 @@ import { isTestMint } from './testMints.js'
 import { auditDataState } from './shared/auditScore.js'
 import type { ScoreBreakdown } from './scoreBreakdown.js'
 import type { ContactCheck } from './contactChecks.js'
+import { feeExamplesOf, type FeeExampleUnit } from './shared/feeExamples.js'
 export { WALLET_ENVELOPE_FIELDS, WALLET_MINT_FIELDS, WALLET_QUERY_PARAMS, WALLET_ERRORS } from './shared/walletFields.js'
 
 // Public API for wallets (docs/API.md, docs/openapi/wallets-v1.yaml): a compact, fixed-shape view of the
@@ -67,7 +68,19 @@ export interface WalletExtra {
   changes: WalletChange[]
   /** The stored facts about the contact entries (mints.contact_checks); never a value or a domain. */
   contactChecks?: ContactCheck[]
+  /** cashu.info's 7-day swaps split by direction (audit_cz_detail), with the time MintRadar stored them; null when none are stored. */
+  auditDirections?: AuditDirectionsRow | null
 }
+
+/** The part of audit_cz_detail.detail.swaps7d the per-direction facts read, as the snapshot query hands it over. */
+export interface AuditDirectionsRow {
+  asSource?: { total?: unknown; failed?: unknown } | null
+  asDest?: { total?: unknown; failed?: unknown } | null
+  fetchedAt: string | Date | null
+}
+
+/** One direction of cashu.info's 7-day swaps. melt = the mint was the source of a swap (it paid the invoice), mint = it was the destination. */
+export interface AuditDirection { attempts: number; failures: number; windowDays: number; source: string; syncedAt: string }
 
 /** One confirmed change (docs/API.md "Mint change log"); times are ISO 8601, the Nostr tags use UNIX seconds. */
 export interface WalletChange {
@@ -90,6 +103,8 @@ export interface WalletKeyset {
 }
 
 export interface WalletMethodEntry { method: string; unit: string; minAmount: number | null; maxAmount: number | null }
+
+export interface WalletLimit { method: string; unit: string; min: number | null; max: number | null }
 
 export type AuditNeutralReason = 'low_sample' | 'stale' | 'no_data'
 
@@ -135,9 +150,15 @@ export interface WalletMint {
   changes: WalletChange[]
   /** Facts about the contact entries (kind, formatValid, domainResolves, checkedAt); no values, no domains. */
   contactChecks: ContactCheck[]
+  /** Only with include=facts: input fee for spending 1, 16 and 100 proofs, per unit with an active keyset that states a fee (docs/API.md). [] when none. */
+  feeExamples: FeeExampleUnit[]
+  /** Only with include=facts: the limits the mint declares in /v1/info for NUT-04 (mint) and NUT-05 (melt), per method and unit. null when neither is stored. */
+  limits: { mint: WalletLimit[]; melt: WalletLimit[] } | null
+  /** Only with include=facts: cashu.info's 7-day swaps per direction. A part is null when that direction has no stored numbers. */
+  auditByDirection: { mint: AuditDirection | null; melt: AuditDirection | null }
 }
 
-const HEAVY_KEYS = { facts: ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'contactChecks'], keysets: ['keysets', 'keysetsCheckedAt'], methods: ['methods'], breakdown: ['scoreBreakdown'], changes: ['changes'] } as const
+const HEAVY_KEYS = { facts: ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'contactChecks', 'feeExamples', 'limits', 'auditByDirection'], keysets: ['keysets', 'keysetsCheckedAt'], methods: ['methods'], breakdown: ['scoreBreakdown'], changes: ['changes'] } as const
 
 function toIso(v: string | Date | null | undefined): string | null {
   if (v === null || v === undefined) return null
@@ -202,6 +223,31 @@ export function methodsOf(mint: Record<string, unknown>[] | null | undefined, me
     return out
   }
   return { mint: clean(mint), melt: clean(melt) }
+}
+
+/** The declared NUT-04/05 limits per method and unit: null for a limit the mint does not declare (or states in an unusable form). */
+export function limitsOf(mint: Record<string, unknown>[] | null | undefined, melt: Record<string, unknown>[] | null | undefined): WalletMint['limits'] {
+  const m = methodsOf(mint, melt)
+  if (m === null) return null
+  const pick = (list: WalletMethodEntry[]): WalletLimit[] => list.map(e => ({ method: e.method, unit: e.unit, min: e.minAmount, max: e.maxAmount }))
+  return { mint: pick(m.mint), melt: pick(m.melt) }
+}
+
+const AUDIT_DIRECTION_SOURCE = 'cashu.info'
+const AUDIT_DIRECTION_WINDOW_DAYS = 7
+
+/** One direction of the stored cashu.info detail; null when attempts or failures is not a non-negative integer or the store time is unusable. */
+function auditDirectionOf(d: { total?: unknown; failed?: unknown } | null | undefined, at: string | null): AuditDirection | null {
+  if (d === null || d === undefined || typeof d !== 'object' || at === null) return null
+  const { total, failed } = d
+  if (typeof total !== 'number' || !Number.isSafeInteger(total) || total < 0) return null
+  if (typeof failed !== 'number' || !Number.isSafeInteger(failed) || failed < 0) return null
+  return { attempts: total, failures: Math.min(failed, total), windowDays: AUDIT_DIRECTION_WINDOW_DAYS, source: AUDIT_DIRECTION_SOURCE, syncedAt: at }
+}
+
+export function auditByDirectionOf(row: AuditDirectionsRow | null | undefined): WalletMint['auditByDirection'] {
+  const at = row ? toIso(row.fetchedAt) : null
+  return { mint: auditDirectionOf(row?.asDest, at), melt: auditDirectionOf(row?.asSource, at) }
 }
 
 /** The changes_json column of the snapshot query (newest first) as WalletChange[]; entries of the wrong shape are dropped. */
@@ -301,6 +347,9 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviews
     scoreBreakdown: extra?.scoreBreakdown ?? null,
     changes: extra?.changes ?? [],
     contactChecks: extra?.contactChecks ?? [],
+    feeExamples: feeExamplesOf(extra?.keysets ?? []),
+    limits: limitsOf(m.mintMethods, m.meltMethods),
+    auditByDirection: auditByDirectionOf(extra?.auditDirections),
   }
 }
 

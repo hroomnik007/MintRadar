@@ -469,6 +469,6 @@ describe('privacy rule and CORS', () => {
   it('/api/mints/known is unchanged: none of the new wallet-only snapshot columns leaks into it', async () => {
     const res = await request(app).get('/api/mints/known')
     const ks = Object.keys(res.body[0])
-    for (const k of ['scoreBreakdown', 'keysets', 'downSince', 'probes24h', 'walletExtra', 'keysetsJson', 'score_breakdown', 'contactChecks', 'contact_checks']) expect(ks).not.toContain(k)
+    for (const k of ['scoreBreakdown', 'keysets', 'downSince', 'probes24h', 'walletExtra', 'keysetsJson', 'score_breakdown', 'contactChecks', 'contact_checks', 'feeExamples', 'limits', 'auditByDirection']) expect(ks).not.toContain(k)
   })
 })

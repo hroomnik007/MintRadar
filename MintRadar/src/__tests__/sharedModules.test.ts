@@ -158,3 +158,9 @@ describe('healthAssertionConstants: backend and frontend copies agree', () => {
     expect(codeOf('../utils/healthAssertionConstants.ts')).toBe(codeOf('../../backend/src/shared/healthAssertionConstants.ts'))
   })
 })
+
+describe('feeExamples: backend and frontend copies agree', () => {
+  it('has identical code (NUT-02 fee arithmetic and the fee examples)', () => {
+    expect(codeOf('../utils/feeExamples.ts')).toBe(codeOf('../../backend/src/shared/feeExamples.ts'))
+  })
+})

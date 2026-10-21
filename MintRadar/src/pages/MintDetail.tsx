@@ -35,6 +35,8 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { MintNetworkCard } from '@/components/MintNetworkCard'
 import { networkRows } from '@/utils/networkInfo'
 import { AuditCzTiles, AuditCzSwapTables, AuditStateText } from '@/components/AuditCzCards'
+import { AuditDirections } from '@/components/AuditDirections'
+import { MintFeesLimits } from '@/components/mint/MintFeesLimits'
 import { formatDate, formatDateTimeUtc } from '@/utils/formatDate'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
@@ -1158,12 +1160,15 @@ function MintDetailContent({ url }: { url: string }) {
   // active), no extra fetch. Rendered on the Overview sidebar on desktop
   // (≥901px) and on the NUTs tab on mobile (<901px); the two wrappers below
   // hide the copy that doesn't belong to the current breakpoint.
+  const liveKeysets = data?.keysets ?? null
+  // A mint that is not online has no live keysets: show the last known ones, labelled with their check date.
+  const lastKnownKeysets = unavailable && (!liveKeysets || liveKeysets.length === 0) && knownMint?.lastKeysets && knownMint.lastKeysets.length > 0 && knownMint.lastKeysetsCheckedAt
+    ? knownMint.lastKeysets.map(k => ({ id: k.id, unit: k.unit, active: k.active, ...(k.inputFeePpk !== null ? { input_fee_ppk: k.inputFeePpk } : {}) }))
+    : null
+  // The Fees and limits group computes its examples from the same keysets (a missing fee stays unknown, not 0).
+  const feeKeysets = (lastKnownKeysets ?? liveKeysets)?.map(k => ({ unit: k.unit, active: k.active, inputFeePpk: typeof k.input_fee_ppk === 'number' ? k.input_fee_ppk : null })) ?? null
   const keysetsPanel = (() => {
-    const liveKeysets = data?.keysets ?? null
-    // A mint that is not online has no live keysets: show the last known ones, labelled with their check date.
-    const lastKnown = unavailable && (!liveKeysets || liveKeysets.length === 0) && knownMint?.lastKeysets && knownMint.lastKeysets.length > 0 && knownMint.lastKeysetsCheckedAt
-      ? knownMint.lastKeysets.map(k => ({ id: k.id, unit: k.unit, active: k.active, ...(k.inputFeePpk !== null ? { input_fee_ppk: k.inputFeePpk } : {}) }))
-      : null
+    const lastKnown = lastKnownKeysets
     const keysets = lastKnown ?? liveKeysets
     return (
       <div className="md-panel">
@@ -1732,6 +1737,19 @@ function MintDetailContent({ url }: { url: string }) {
 
           {(() => { const rows = networkRows(knownMint); return rows ? <MintNetworkCard rows={rows} /> : null })()}
 
+          {knownMint && (
+            <MintFeesLimits
+              keysets={feeKeysets}
+              keysetsPending={probeLoading && !feeKeysets}
+              units={knownMint.units}
+              mintMethods={knownMint.mintMethods}
+              meltMethods={knownMint.meltMethods}
+              disabled={{ mint: nut4Disabled, melt: nut5Disabled }}
+              fetchedAt={infoFetchedAt}
+              now={now}
+            />
+          )}
+
           {(email || twitter || nostr || operatorNip05 || (data?.contactChecks?.length ?? 0) > 0) && (
             <div className="md-panel">
               {(email || twitter || nostr) && (
@@ -2115,7 +2133,7 @@ function MintDetailContent({ url }: { url: string }) {
                   : czData !== null
                     ? `The Reliability Score uses cashu.info's last ${AUDIT_WINDOW_DAYS} days; this view shows audit.8333.space's last ~${AUDIT_SWAPS_WINDOW} swaps.`
                     : `This view shows audit.8333.space's last ~${AUDIT_SWAPS_WINDOW} swaps; the Reliability Score does not use it.`}</p>
-                {czView ? <AuditCzTiles view={czView} /> : (<>
+                {czView ? <><AuditCzTiles view={czView} /><AuditDirections detail={auditCzData?.detail} now={now} /></> : (<>
                 {/* 5-second overview — always visible, never inside the mobile
                     collapse. Mints/Melts are audit.8333.space lifetime counts;
                     Recent success rate is the rolling ~100-swap window; Last

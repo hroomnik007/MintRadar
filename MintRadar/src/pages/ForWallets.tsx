@@ -189,7 +189,7 @@ export default function ForWallets() {
             messages, reviewer keys or review texts, or contact details (<code>contactChecks</code> says only whether MintRadar recognises the format of the entries a mint lists, never a value or a domain). They do carry the mint&apos;s public NUT-06
             key (<code>pubkey</code>) and whether it advertises a Tor address (<code>hasOnion</code>). The heavier fields{' '}
             <code>keysets</code>, <code>keysetsCheckedAt</code>, <code>methods</code> and <code>scoreBreakdown</code> are
-            in the list only with <code>include=</code> (so are <code>pubkey</code>, <code>firstSeenAt</code>, <code>lastOnlineAt</code>, <code>sample</code> and <code>contactChecks</code>, as <code>include=facts</code>) and always in the single-mint answer.{' '}
+            in the list only with <code>include=</code> (so are <code>pubkey</code>, <code>firstSeenAt</code>, <code>lastOnlineAt</code>, <code>sample</code>, <code>contactChecks</code>, <code>feeExamples</code>, <code>limits</code> and <code>auditByDirection</code>, as <code>include=facts</code>) and always in the single-mint answer.{' '}
             <code>scoreBreakdown</code> is what the score used at its last computation, written together with the score.
           </p>
           <p data-testid="request-privacy">
@@ -272,6 +272,11 @@ export default function ForWallets() {
             <li data-testid="additions-contact-checks">
               Also added {F.walletAdditionsOn}: the mint field <code>contactChecks</code> (on the single-mint endpoint, and in the list with <code>include=facts</code>): per contact entry the kind, whether MintRadar recognises the format of the value (<code>formatValid: false</code> means &quot;format not recognised by MintRadar&quot;, not that the contact is wrong),
               whether the domain of an e-mail address or of a NIP-05 style Nostr name has mail or address records in DNS (<code>null</code> when that is unknown; the name itself is never looked up) and when it was checked. The default list is unchanged.
+            </li>
+            <li data-testid="additions-fees-limits">
+              Also added {F.walletFactsAddedOn}: the mint fields <code>feeExamples</code>, <code>limits</code> and <code>auditByDirection</code> (on the single-mint endpoint, and in the list with <code>include=facts</code>).
+              <code>feeExamples</code> gives the input fee in plain amounts per unit, for spending 1, 16 and 100 proofs (NUT-02, rounded up), computed from the stored keysets. <code>limits</code> is what the mint declares in its <code>/v1/info</code> for deposits (NUT-04) and withdrawals (NUT-05); a limit it does not declare is <code>null</code>, and Lightning fee reserves are not included because they are only known when a quote is requested.
+              <code>auditByDirection</code> splits cashu.info&apos;s last 7 days into deposits (<code>mint</code>) and withdrawals (<code>melt</code>), with attempts, failures and the time MintRadar stored them; the score uses the combined number. The default list is unchanged.
             </li>
             <li>A removal is announced on this page and in <code>docs/API.md</code> at least {F.deprecationNoticeDays} days before it takes effect. A route that is going away also says so in its responses, with the <code>Deprecation</code> and <code>Sunset</code> headers and a <code>Link</code> header with <code>rel=&quot;successor-version&quot;</code>; the only route that does so today is the one below.</li>
             <li data-testid="recommend-deprecation">

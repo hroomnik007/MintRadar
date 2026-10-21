@@ -43,6 +43,7 @@ const FULL_EXTRA: WalletExtra = {
     contact: { points: 5, max: 5 }, newMintCap: { points: 0, cap: 75 }, sum: 92,
   },
   changes: [{ type: 'motd_changed', field: 'motd', oldValue: 'a', newValue: null, observedAt: '2026-10-13T11:00:00.000Z', firstSeenAt: '2026-10-13T10:55:00.000Z' }],
+  auditDirections: { asSource: { total: 64, failed: 13 }, asDest: { total: 62, failed: 6 }, fetchedAt: '2026-10-13T11:30:00.000Z' },
 }
 const EMPTY: KnownMintLike = {
   ...FULL, name: null, online: null, version: null, softwareLatest: null, nutsLimits: null, units: null,
@@ -72,7 +73,7 @@ describe('mint object: the field table equals the real mapper', () => {
     expect(new Set(WALLET_MINT_FIELDS.map(f => f.name)).size).toBe(WALLET_MINT_FIELDS.length)
     expect([...WALLET_MINT_FIELDS.map(f => f.name)].sort()).toEqual([...flatten(full)].sort())
     // the same keys with every input missing, except the nested ones of an object that is null then
-    expect(flatten(empty).sort()).toEqual(flatten(full).filter(k => !/^(audit|authRequired|methods|scoreBreakdown)\./.test(k)).sort())
+    expect(flatten(empty).sort()).toEqual(flatten(full).filter(k => !/^(audit|authRequired|methods|limits|scoreBreakdown)\./.test(k)).sort())
   })
 
   it('"Null: yes" is exactly the fields the mapper can return as null', () => {

@@ -37,7 +37,9 @@ info:
     `lastOnlineAt`, `sample` and the last four only with `include` or on the single-mint endpoint). The mint change log
     followed (also 2026-10-20): the mint field `changes` (single-mint endpoint and `include=changes`), the list parameter
     `changedSince` and the `include` value `changes`; the default list is unchanged. The mint field `contactChecks` followed
-    (also 2026-10-20: single-mint endpoint and `include=facts`); the default list is unchanged. The integer
+    (also 2026-10-20: single-mint endpoint and `include=facts`); the default list is unchanged. The mint fields `feeExamples`,
+    `limits` and `auditByDirection` followed on 2026-10-21 (single-mint endpoint and `include=facts`); the default list is
+    unchanged. The integer
     `methodology` changes whenever the score formula changes; scores of different methodology numbers are
     not comparable. The history is in `backend/src/shared/methodology.ts` and docs/API.md.
 
@@ -362,7 +364,7 @@ components:
         error messages, reviewer public keys, review texts or contact details (`contactChecks` states only whether MintRadar recognises the format of the entries, never a value or a domain). It does carry the mint's public NUT-06
         key (`pubkey`) and whether it advertises a Tor address (`hasOnion`). The fields from `pubkey` on were added on
         2026-10-20; `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `keysets`, `keysetsCheckedAt`, `methods`,
-        `scoreBreakdown`, `changes` and `contactChecks` are only present on the single-mint endpoint and in the list with the matching `include` value.
+        `scoreBreakdown`, `changes`, `contactChecks`, `feeExamples`, `limits` and `auditByDirection` are only present on the single-mint endpoint and in the list with the matching `include` value.
       required:
         - url
         - name
@@ -465,6 +467,28 @@ components:
             Only with `include=facts` (always on the single-mint endpoint). Facts about the contact entries the mint lists, one object per
             entry (at most 10 entries, at most 3 of kind email); an empty array when nothing was checked. No value and no domain is returned
             or stored, and no request is made to a contact value. Facts with a time, not a judgement; not part of the score. Added 2026-10-20.
+        feeExamples:
+          type: array
+          items: { $ref: '#/components/schemas/FeeExampleUnit' }
+          description: >-
+            Only with `include=facts` (always on the single-mint endpoint). The input fee in plain amounts for each unit that has an
+            active keyset stating a fee: the fee for spending 1, 16 and 100 proofs, computed as in NUT-02 (sum of the proofs'
+            input_fee_ppk divided by 1000, rounded up) from the stored keysets, not from a request to the mint. An empty array when
+            no keyset check has stored a fee yet. Added 2026-10-21.
+        limits:
+          description: >-
+            Only with `include=facts` (always on the single-mint endpoint). The limits the mint declares in its /v1/info for NUT-04
+            (mint) and NUT-05 (melt). Lightning fee reserves are not here (they depend on the invoice and are only known when a quote
+            is requested). Null when neither is stored. Added 2026-10-21.
+          oneOf:
+            - $ref: '#/components/schemas/Limits'
+            - type: 'null'
+        auditByDirection:
+          description: >-
+            Only with `include=facts` (always on the single-mint endpoint). cashu.info's swaps of the last 7 days split by direction,
+            the same stored data the audit part of the score counts in total (the score uses the combined number). Added 2026-10-21.
+          allOf:
+            - $ref: '#/components/schemas/AuditByDirection'
         downSince:
           type: [string, 'null']
           format: date-time
@@ -523,6 +547,58 @@ components:
             null: not applicable (another kind, an IP literal, localhost, a private or reserved name) or the lookup failed or timed out. null means unknown, never false.
             Only DNS is asked: /.well-known/nostr.json is never requested, so true says nothing about whether a NIP-05 name exists.
         checkedAt: { type: string, format: date-time, description: When the entry was checked (a mint is re-checked at most once every 24 hours). }
+    FeeExampleUnit:
+      type: object
+      required: [unit, inputFeePpk, examples]
+      properties:
+        unit: { type: string }
+        inputFeePpk: { type: integer, minimum: 0, description: The largest input_fee_ppk among the active keysets of this unit. }
+        examples:
+          type: array
+          description: Spending 1, 16 and 100 proofs.
+          items:
+            type: object
+            required: [proofs, fee]
+            properties:
+              proofs: { type: integer, enum: [1, 16, 100] }
+              fee: { type: integer, minimum: 0, description: 'ceil(inputFeePpk * proofs / 1000), in the unit.' }
+    Limits:
+      type: object
+      required: [mint, melt]
+      properties:
+        mint: { type: array, items: { $ref: '#/components/schemas/Limit' }, description: NUT-04 entries. }
+        melt: { type: array, items: { $ref: '#/components/schemas/Limit' }, description: NUT-05 entries. }
+    Limit:
+      type: object
+      required: [method, unit, min, max]
+      properties:
+        method: { type: string }
+        unit: { type: string }
+        min: { type: [integer, 'null'], minimum: 0, description: Null when the mint does not declare a minimum. }
+        max: { type: [integer, 'null'], minimum: 0, description: Null when the mint does not declare a maximum. }
+    AuditByDirection:
+      type: object
+      required: [mint, melt]
+      properties:
+        mint:
+          description: Swaps in which this mint was the destination (a Lightning deposit, NUT-04). Null when no numbers are stored.
+          oneOf:
+            - $ref: '#/components/schemas/AuditDirection'
+            - type: 'null'
+        melt:
+          description: Swaps in which this mint was the source (a Lightning withdrawal, NUT-05). Null when no numbers are stored.
+          oneOf:
+            - $ref: '#/components/schemas/AuditDirection'
+            - type: 'null'
+    AuditDirection:
+      type: object
+      required: [attempts, failures, windowDays, source, syncedAt]
+      properties:
+        attempts: { type: integer, minimum: 0 }
+        failures: { type: integer, minimum: 0, description: Every failed swap of this direction, including the ones cashu.info does not blame on the mint; never more than attempts. }
+        windowDays: { type: integer, enum: [7] }
+        source: { type: string, enum: [cashu.info] }
+        syncedAt: { type: string, format: date-time, description: When MintRadar stored the data. }
     Change:
       type: object
       required: [type, field, oldValue, newValue, observedAt, firstSeenAt]
