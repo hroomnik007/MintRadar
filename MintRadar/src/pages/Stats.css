@@ -1106,11 +1106,11 @@
 /* Reserved space for the cards whose content arrives asynchronously: their typical loaded height,
    so the rows below do not jump when the data lands. Cards may still grow past it; nothing is clipped. */
 .stats-geo-panel    { min-height: 300px; }
-.stats-movers-panel { min-height: 280px; }
+.stats-movers-panel { min-height: calc(280px + var(--stats-reserve-note, 0px)); }
 .stats-trend-panel  { min-height: 240px; }
 @media (max-width: 768px) {
   .stats-geo-panel    { min-height: 260px; }
-  .stats-movers-panel { min-height: 240px; }
+  .stats-movers-panel { min-height: calc(240px + var(--stats-reserve-note, 0px)); }
   .stats-trend-panel  { min-height: 220px; }
 }
 /* Layout shift rule (2026-10-20): a block whose data arrives later reserves its LOADED height, measured at the same
@@ -1120,8 +1120,12 @@
    head  = the page header (the loading screen has the short .stats-header, the loaded page the taller PageHead)
    board = the whole board (keeps the footer below the fold while /api/stats is pending)
    nhi   = the Network health index card, which is not rendered until /api/mints/known arrives
-   stack = Top by Reliability Score + Software in use + the gap */
+   stack = Top by Reliability Score + Software in use + the gap
+   note  = the muted methodology line under the movers (Stats.tsx adds .has-movers-note from the same condition that shows
+           it): one line, 31 px (margin 8 + padding 6 + the 11.5px mono line). It is added to the board and to the movers
+           card; a note that wraps (320 px, or two changes) adds more, below the fold, which only makes the page taller. */
 .stats-page {
+  --stats-reserve-note: 0px;
   --stats-reserve-head: 88px;
   --stats-reserve-board: 1326px;
   --stats-reserve-nhi: 346px;
@@ -1139,10 +1143,11 @@
 @media (max-width: 670px)  { .stats-page { --stats-reserve-head: 109px; } }
 @media (max-width: 640px)  { .stats-page { --stats-reserve-head: 75px; } }
 @media (max-width: 518px)  { .stats-page { --stats-reserve-head: 96px; } }
+.stats-page.has-movers-note { --stats-reserve-note: 31px; }
 .stats-header { min-height: var(--stats-reserve-head); }
 /* The loading block becomes the board in place, so it has the board's width and centring as well (above 1340 px the board is
    narrower than the viewport and a full-width block moved sideways). */
-.stats-loading { min-height: var(--stats-reserve-board); max-width: var(--dash-chrome-max); margin-inline: auto; width: 100%; }
+.stats-loading { min-height: calc(var(--stats-reserve-board) + var(--stats-reserve-note)); max-width: var(--dash-chrome-max); margin-inline: auto; width: 100%; }
 /* The Network health index has no placeholder (its card does not exist before the data does): an empty box in its
    grid area holds the row; the card, once rendered, sits in the same area and is at least as tall. */
 .stats-board-grid::before { content: ''; grid-area: nhi; min-height: var(--stats-reserve-nhi); }

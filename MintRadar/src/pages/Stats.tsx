@@ -844,8 +844,12 @@ export default function Stats() {
     'Live network-wide stats for Cashu mints: uptime, average Reliability Score, latency, NUT adoption and the Network Health Index.'
   )
 
+  // The movers note changes the height of the board (Stats.css --stats-reserve-note), so the reservations follow the
+  // same condition that shows the note: the selected movers window holds a methodology change.
+  const pageClass = moversNote !== '' ? 'stats-page has-movers-note' : 'stats-page'
+
   if (isLoading) return (
-    <div className="stats-page">
+    <div className={pageClass}>
       <div className="stats-header">
         <div className="stats-title">Statistics</div>
       </div>
@@ -854,7 +858,7 @@ export default function Stats() {
   )
 
   if (error !== null && error !== undefined || !data) return (
-    <div className="stats-page">
+    <div className={pageClass}>
       <div className="stats-header">
         <div className="stats-title">Statistics</div>
       </div>
@@ -866,7 +870,7 @@ export default function Stats() {
 
 
   return (
-    <div className="stats-page">
+    <div className={pageClass}>
       <PageHead
         title="Network stats"
         srTitle="Cashu mints: uptime, Reliability Score & NUT adoption"

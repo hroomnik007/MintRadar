@@ -2,22 +2,25 @@ import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays } from './fixtures/mocks'
 import { mockStatsEndpoints, STATS_ENDPOINTS, type StatsEndpoint, type StatsGate } from './fixtures/statsLayout'
 import { frames, layoutReady, networkQuiet, resize, trackRequests } from './fixtures/settle'
+import { methodologyChangesInWindow, moversMethodologyNote } from '../src/utils/methodologyMarkers'
 
 // /stats must not move while its data arrives: every endpoint is held in turn (released only after the request
 // reached the mock) and the layout shift of the page stays far below the "good" threshold. The reserved heights
 // (--stats-reserve-* in Stats.css) must also match the LOADED heights of the fixture in e2e/fixtures/statsLayout.ts.
 // Rule, measurements and how to re-measure: docs/claude/stats-dashboard-watchlist-ui.md ("Layout shift rule").
+// The spec runs with the real date: the board is taller by `note` px while the movers window holds a methodology change.
 
 const CLS_LIMIT = 0.02 // the task's hard limit is 0.05; this is the target
 const TOLERANCE = 12 // a reservation may differ from the loaded height by at most this many px
 
-// Loaded heights of the fixture (px), measured with the scratch script described in the docs.
-const LOADED: Record<number, { head: number; board: number; nhi: number; stack: number }> = {
-  1440: { head: 88.2, board: 1326.5, nhi: 346.2, stack: 618.1 },
-  1024: { head: 88.2, board: 1844.7, nhi: 332.7, stack: 618.1 },
-  768: { head: 88.2, board: 1615.5, nhi: 274.8, stack: 538.3 },
-  390: { head: 96.4, board: 2837.8, nhi: 181.3, stack: 560.8 },
-  320: { head: 96.4, board: 2983.3, nhi: 181.3, stack: 618.3 },
+// Loaded heights of the fixture (px), measured with the scratch script described in the docs. `board` is the board WITHOUT the
+// movers note; `note` is the height the note adds (a line of 31 px, two lines at 320 px).
+const LOADED: Record<number, { head: number; board: number; nhi: number; stack: number; note: number }> = {
+  1440: { head: 88.2, board: 1326.5, nhi: 346.2, stack: 618.1, note: 31.3 },
+  1024: { head: 88.2, board: 1844.7, nhi: 332.7, stack: 618.1, note: 31.6 },
+  768: { head: 88.2, board: 1615.5, nhi: 274.8, stack: 538.3, note: 31.5 },
+  390: { head: 96.4, board: 2837.8, nhi: 181.3, stack: 560.8, note: 31.5 },
+  320: { head: 96.4, board: 2983.3, nhi: 181.3, stack: 618.3, note: 48.5 },
 }
 const WIDTHS = Object.keys(LOADED).map(Number)
 
@@ -52,9 +55,6 @@ const shiftTotal = (page: Page): Promise<number> =>
 async function openStats(page: Page, width: number, held: StatsEndpoint[]): Promise<StatsGate> {
   trackRequests(page)
   await observeShift(page)
-  // The movers panel adds a muted note line while its window holds a methodology change (METHODOLOGY_CHANGES, newest v4 on
-  // 2026-10-21); the table of loaded heights below is measured without it, so the clock is pinned before that change.
-  await page.clock.setFixedTime(new Date('2026-10-20T12:00:00Z'))
   await mockRelays(page)
   await installApiMocks(page)
   const gate = await mockStatsEndpoints(page, held)
@@ -95,6 +95,8 @@ for (const width of WIDTHS) {
 
     test('the reserved heights match the loaded heights and the loading screen takes the loaded place', async ({ page }) => {
       const expected = LOADED[width]!
+      // The same condition as the page's: the default window (7d) holds a methodology change.
+      const noteHeight = moversMethodologyNote(methodologyChangesInWindow(7)) !== '' ? expected.note : 0
       const gate = await openStats(page, width, ['stats'])
       await gate.reached('stats')
       await frames(page, 3)
@@ -114,7 +116,7 @@ for (const width of WIDTHS) {
       expect(await heightOf(page, '.page-head'), 'loaded page header').toBeCloseTo(expected.head, -0.6)
       expect(await heightOf(page, '.stats-nhi-panel'), 'loaded Network health index').toBeCloseTo(expected.nhi, -0.6)
       expect(await heightOf(page, '.stats-stack'), 'loaded stack').toBeCloseTo(expected.stack, -0.6)
-      expect(boardBox.height, 'loaded board').toBeCloseTo(expected.board, -0.6)
+      expect(boardBox.height, 'loaded board').toBeCloseTo(expected.board + noteHeight, -0.6)
 
       // Each reservation is within TOLERANCE of the loaded height: not missing, not leaving a big empty space.
       for (const [name, reserve, height] of [
@@ -127,7 +129,7 @@ for (const width of WIDTHS) {
       }
       // The board reservation is the smallest loaded height of its width band (one value per grid layout): never taller
       // than the board, and tall enough to keep the footer below the fold while /api/stats is pending.
-      expect(boardReserve, 'board reservation against the loaded board').toBeLessThanOrEqual(expected.board + TOLERANCE)
+      expect(boardReserve, 'board reservation against the loaded board').toBeLessThanOrEqual(expected.board + noteHeight + TOLERANCE)
       expect(boardReserve, 'board reservation keeps the footer below the fold').toBeGreaterThan(page.viewportSize()!.height)
 
       // The block that waits is where the board will be, as wide and as tall.
@@ -160,5 +162,67 @@ for (const width of WIDTHS) {
       expect(Math.abs(after.stackTop - during.stackTop), 'top of the stack').toBeLessThanOrEqual(2)
       expect(Math.abs(after.nutTop - during.nutTop), 'top of NUT coverage').toBeLessThanOrEqual(2)
     })
+  })
+}
+
+// The movers note (a methodology change inside the selected window) makes the board taller; the space is reserved from the same
+// condition, so it is there at the first paint exactly when the note is shown. These tests pin the date on purpose: with the real
+// date the note disappears from the 7d window a week after a change. METHODOLOGY_CHANGES: v4 on 2026-10-21.
+const NOTE_RESERVE = 31
+const NOTE_CASES = [
+  // `note7` = the note of the default 7d view (what the waiting block and the first paint show), `note` = the note of `period`.
+  { name: '7d window holds the change', date: '2026-10-22T12:00:00Z', period: '7d', note7: true, note: true },
+  { name: '30d window holds the change', date: '2026-10-22T12:00:00Z', period: '30d', note7: true, note: true },
+  { name: '30d window holds the change, 7d does not', date: '2026-11-05T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '7d window holds no change', date: '2026-11-05T12:00:00Z', period: '7d', note7: false, note: false },
+  { name: '30d window holds no change', date: '2026-12-01T12:00:00Z', period: '30d', note7: false, note: false },
+] as const
+
+for (const width of [1440, 390]) {
+  test.describe(`movers note reservation at ${width}px`, () => {
+    for (const c of NOTE_CASES) {
+      test(`${c.name} (${c.period}, ${c.date.slice(0, 10)}): the movers card reserves the note ${c.note ? 'and the waiting block takes it' : 'only when it is shown'}`, async ({ page }) => {
+        const expected = LOADED[width]!
+        trackRequests(page)
+        await observeShift(page)
+        await page.clock.setFixedTime(new Date(c.date))
+        await mockRelays(page)
+        await installApiMocks(page)
+        const gate = await mockStatsEndpoints(page, ['stats'])
+        await resize(page, width, width >= 1024 ? 900 : 844)
+        await page.goto('/stats')
+        await gate.reached('stats')
+        await frames(page, 3)
+        const reserveOf = async (selector: string): Promise<number> => px(await page.locator(selector).evaluate(el => getComputedStyle(el).minHeight))
+        const baseBoard = px(await page.locator('.stats-page').evaluate(el => getComputedStyle(el).getPropertyValue('--stats-reserve-board')))
+        const waiting = await reserveOf('.stats-loading')
+        // The waiting block reserves the base board plus the note, from the first painted frame, only when the note will be shown
+        // (the default view is 7d).
+        expect(waiting - baseBoard, 'note space in the waiting block').toBe(c.note7 ? NOTE_RESERVE : 0)
+        gate.release('stats')
+        await loaded(page)
+        if (c.period === '30d') {
+          const toggle = page.locator('.stats-movers-panel').getByRole('button', { name: '30d', exact: true })
+          await toggle.click()
+          await expect(toggle).toHaveClass(/active/)
+          await expect(page.locator('.stats-movers-panel .stats-top5-row').first()).toBeVisible()
+        }
+        await networkQuiet(page)
+        await layoutReady(page)
+        await expect(page.locator('.stats-movers-note'), 'the note is shown exactly when the window holds a change').toHaveCount(c.note ? 1 : 0)
+        const baseMovers = width >= 769 ? 280 : 240
+        expect(await reserveOf('.stats-movers-panel'), 'movers card reservation').toBe(baseMovers + (c.note ? NOTE_RESERVE : 0))
+
+        // The default (7d) view: the loaded board is as tall as the table says, plus the note when it is shown, and the
+        // waiting block follows it. (A click on 30d happens after the first paint and is not a load shift; its note may wrap.)
+        if (c.period === '7d') {
+          const board = (await page.locator('.stats-board-grid').boundingBox())!.height
+          expect(board, 'loaded board').toBeCloseTo(expected.board + (c.note ? expected.note : 0), -0.6)
+          expect(waiting, 'the waiting block is not taller than the board').toBeLessThanOrEqual(board + TOLERANCE)
+          if (width === 1440) expect(board - waiting, 'the waiting block is within TOLERANCE of the board').toBeLessThanOrEqual(TOLERANCE)
+          expect(await shiftTotal(page), `layout shift (${c.name})`).toBeLessThan(CLS_LIMIT)
+        }
+      })
+    }
   })
 }
