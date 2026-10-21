@@ -23,6 +23,13 @@ const known = vi.hoisted(() => ({
 vi.mock('@/hooks/useKnownMints', () => ({ useKnownMints: () => known.state }))
 vi.mock('@/hooks/useNostrDiscovery', () => ({ useNostrDiscovery: () => undefined }))
 vi.mock('@/hooks/useFollowRecommendations', () => ({ useFollowRecommendations: () => ({ data: undefined, isLoading: false, isError: false }) }))
+// Mint Detail reads live reviews and profiles through sharedPool (useMintReviews, useMintOperatorNip05). Unmocked, that opened
+// real WebSockets to the public relays, and a connection that completed while jsdom was torn down raised an "Unhandled
+// Error" in about one whole-suite run in five (Task F3). A relay that never answers is what the score checks assume: the
+// promise stays pending, so nothing re-renders after the test (an answer would, once vi.unstubAllGlobals has run).
+vi.mock('@/core/nostr/pool', () => ({
+  sharedPool: { querySync: () => new Promise<never>(() => undefined), subscribeMany: () => ({ close: () => undefined }) },
+}))
 
 // jsdom has no IndexedDB: the probe's history save is the only Dexie use these renders reach.
 vi.mock('@/db', () => ({
