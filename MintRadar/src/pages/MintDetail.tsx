@@ -602,6 +602,8 @@ function MintDetailContent({ url }: { url: string }) {
   // cashu.info view: each of the two swap tables expands on its own.
   const [showAllCzFrom, setShowAllCzFrom] = useState(false)
   const [showAllCzTo, setShowAllCzTo] = useState(false)
+  // Keysets card: inactive keysets are folded by default. Keyed by mint like reviewsPageState, so switching mints folds them again without a reset effect.
+  const [keysetsExpandedFor, setKeysetsExpandedFor] = useState<string | null>(null)
   // Last ≤100 audit.8333.space swaps for this mint (backend/src/discovery.ts's
   // mint_audit_swaps, served via GET /api/mints/swaps — never audit.8333.space
   // directly). Lazily fetched only once the Audit tab is actually opened, and
@@ -1171,6 +1173,11 @@ function MintDetailContent({ url }: { url: string }) {
     const rawKeysets = lastKnown ?? liveKeysets
     // Active keysets first, inactive below; the order inside each group is the mint's own (display only, the data is untouched).
     const keysets = rawKeysets ? [...rawKeysets.filter(k => k.active), ...rawKeysets.filter(k => !k.active)] : rawKeysets
+    // Only the active keysets show by default. A mint with no active keyset or with a single keyset shows everything and has no button.
+    const activeCount = keysets ? keysets.filter(k => k.active).length : 0
+    const hiddenCount = keysets && keysets.length > 1 && activeCount > 0 ? keysets.length - activeCount : 0
+    const keysetsExpanded = keysetsExpandedFor === url
+    const shownKeysets = keysets && hiddenCount > 0 && !keysetsExpanded ? keysets.slice(0, activeCount) : keysets
     return (
       <div className="md-panel">
         <div className="md-panel-title">Keysets</div>
@@ -1180,7 +1187,7 @@ function MintDetailContent({ url }: { url: string }) {
           <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Keyset data not available.</div>
         ) : (
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
-            {keysets.map(ks => (
+            {shownKeysets?.map(ks => (
               <div key={ks.id} className="md-keyset-row" style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                 <div style={{display:'flex',alignItems:'center',gap:6,minWidth:0,flex:'1 1 100%'}}>
                   <span style={{fontSize:13,color:'var(--text)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0}}>{ks.id.slice(0, 8)}…{ks.id.slice(-8)}</span>
@@ -1215,6 +1222,11 @@ function MintDetailContent({ url }: { url: string }) {
                 </span>
               </div>
             ))}
+            {hiddenCount > 0 && (
+              <button type="button" className="md-keysets-toggle" aria-expanded={keysetsExpanded} onClick={() => setKeysetsExpandedFor(keysetsExpanded ? null : url)}>
+                {keysetsExpanded ? 'Show fewer' : `Show ${hiddenCount} inactive ${hiddenCount === 1 ? 'keyset' : 'keysets'}`}
+              </button>
+            )}
           </div>
         )}
       </div>

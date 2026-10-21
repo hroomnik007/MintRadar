@@ -32,6 +32,9 @@ test.describe('Mint Detail — Keysets panel placement (desktop)', () => {
     const overviewPanel = page.locator('.md-keysets-at-overview')
     await expect(overviewPanel).toBeVisible()
     await expect(overviewPanel.locator('.md-panel-title', { hasText: 'Keysets' })).toBeVisible()
+    // Two of the three keysets are active: those two show, the inactive one is folded behind the button.
+    await expect(overviewPanel.locator('.md-keyset-row')).toHaveCount(2)
+    await overviewPanel.getByRole('button', { name: 'Show 1 inactive keyset' }).click()
     await expect(overviewPanel.locator('.md-keyset-row')).toHaveCount(3)
     await expect(overviewPanel.getByText('100 ppk')).toBeVisible()
     await expect(overviewPanel.getByText('free')).toBeVisible()
@@ -61,6 +64,7 @@ test.describe('Mint Detail — Keysets panel placement (desktop)', () => {
 
     const panel = page.locator('.md-keysets-at-overview')
     await expect(panel.getByText('00ad268c…4d1f5826')).toBeVisible()
+    await panel.getByRole('button', { name: 'Show 1 inactive keyset' }).click()
     await expect(panel.getByText('Active', { exact: true })).toHaveCount(2)
     await expect(panel.getByText('Inactive', { exact: true })).toHaveCount(1)
 
@@ -98,6 +102,8 @@ test.describe('Mint Detail — Keysets panel placement (mobile)', () => {
     const panel = page.locator('.md-keysets-at-nuts')
     await expect(panel).toBeVisible()
     await expect(panel.locator('.md-panel-title', { hasText: 'Keysets' })).toBeVisible()
+    await expect(panel.locator('.md-keyset-row')).toHaveCount(2)
+    await panel.getByRole('button', { name: 'Show 1 inactive keyset' }).click()
     await expect(panel.locator('.md-keyset-row')).toHaveCount(3)
   })
 
@@ -106,6 +112,7 @@ test.describe('Mint Detail — Keysets panel placement (mobile)', () => {
     await openNutsTab(page)
     const panel = page.locator('.md-keysets-at-nuts')
     await expect(panel.locator('.md-panel-hint')).toHaveText(/tokens from old keys can still be spent/)
+    await panel.getByRole('button', { name: 'Show 1 inactive keyset' }).click()
     await expect(panel.getByText('Active', { exact: true })).toHaveCount(2)
     await expect(panel.getByText('Inactive', { exact: true })).toHaveCount(1)
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
@@ -140,6 +147,11 @@ test.describe('Mint Detail — Keysets order (active first)', () => {
     for (const copy of ['.md-keysets-at-overview', '.md-keysets-at-nuts']) {
       if (copy === '.md-keysets-at-nuts') await page.locator('.md-tab', { hasText: 'NUTs' }).click()
       const rows = page.locator(`${copy} .md-keyset-row`)
+      // The fold state belongs to the page (one state for both copies): the first copy starts folded, the second one is already expanded.
+      if (copy === '.md-keysets-at-overview') {
+        await expect(rows).toHaveCount(1)
+        await page.locator(copy).getByRole('button', { name: 'Show 3 inactive keysets' }).click()
+      }
       await expect(rows).toHaveCount(4)
       const ids = (await rows.allTextContents()).map(t => /[0-9a-f]{8}…[0-9a-f]{8}/.exec(t)?.[0])
       expect(ids, copy).toEqual(ORDER)
@@ -147,4 +159,79 @@ test.describe('Mint Detail — Keysets order (active first)', () => {
       await expect(rows.nth(1)).toContainText('Inactive')
     }
   })
+})
+
+test.describe('Mint Detail — Keysets fold (inactive keysets)', () => {
+  // Task Z2: only the active keysets show by default; the inactive ones sit behind a text button.
+  const FOUR = [
+    { id: '01ba0000deadbeef', unit: 'sat', active: true, input_fee_ppk: 100 },
+    { id: '0050aaaa11112222', unit: 'sat', active: false, input_fee_ppk: 0 },
+    { id: '00b4bbbb33334444', unit: 'sat', active: false, input_fee_ppk: 0 },
+    { id: '006bcccc55556666', unit: 'sat', active: false, input_fee_ppk: 0 },
+  ]
+  const ONE = [FOUR[0]!]
+  const NONE_ACTIVE = FOUR.slice(1)
+
+  for (const [label, viewport, copy] of [
+    ['desktop', { width: 1440, height: 900 }, '.md-keysets-at-overview'],
+    ['phone', { width: 390, height: 844 }, '.md-keysets-at-nuts'],
+  ] as const) {
+    test.describe(label, () => {
+      test.use({ viewport })
+
+      async function open(page: import('@playwright/test').Page, keysets: unknown) {
+        await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(keysets) }))
+        await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
+        await expect(page.locator('.md-tabs')).toBeVisible()
+        if (label === 'phone') await page.locator('.md-tab', { hasText: 'NUTs' }).click()
+        const panel = page.locator(copy)
+        await expect(panel.locator('.md-panel-title', { hasText: 'Keysets' })).toBeVisible()
+        return panel
+      }
+
+      test('4 keysets, 1 active: one row by default, the button expands to all four and back', async ({ page }) => {
+        const panel = await open(page, FOUR)
+        const rows = panel.locator('.md-keyset-row')
+        await expect(rows).toHaveCount(1)
+        await expect(rows.first()).toContainText('Active')
+        const toggle = panel.getByRole('button', { name: /inactive keysets?$|Show fewer/ })
+        await expect(toggle).toHaveText('Show 3 inactive keysets')
+        await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+        await toggle.click()
+        await expect(rows).toHaveCount(4)
+        await expect(toggle).toHaveText('Show fewer')
+        await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+        await toggle.click()
+        await expect(rows).toHaveCount(1)
+        await expect(toggle).toHaveText('Show 3 inactive keysets')
+      })
+
+      test('1 keyset: shown, no button', async ({ page }) => {
+        const panel = await open(page, ONE)
+        await expect(panel.locator('.md-keyset-row')).toHaveCount(1)
+        await expect(panel.locator('.md-keysets-toggle')).toHaveCount(0)
+      })
+
+      test('no active keyset: all rows shown, no button', async ({ page }) => {
+        const panel = await open(page, NONE_ACTIVE)
+        await expect(panel.locator('.md-keyset-row')).toHaveCount(3)
+        await expect(panel.locator('.md-keysets-toggle')).toHaveCount(0)
+      })
+    })
+  }
+
+  test.describe('phone touch target and text size', () => {
+    test.use({ viewport: { width: 390, height: 844 } })
+    test('the button is at least 44 px tall with text of 12 px or more', async ({ page }) => {
+      await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(FOUR) }))
+      await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
+      await page.locator('.md-tab', { hasText: 'NUTs' }).click()
+      const toggle = page.locator('.md-keysets-at-nuts .md-keysets-toggle')
+      await expect(toggle).toBeVisible()
+      const box = (await toggle.boundingBox())!
+      expect(box.height).toBeGreaterThanOrEqual(44)
+      expect(await toggle.evaluate(e => parseFloat(getComputedStyle(e).fontSize))).toBeGreaterThanOrEqual(12)
+    })
+  })
+
 })

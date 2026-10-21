@@ -160,6 +160,9 @@ test.describe('W5b C: a mint that is not online', () => {
         // Last known keysets instead of "Keyset data not available".
         const keysets = width === 1440 ? page.locator('.md-keysets-at-overview') : page.locator('.md-keysets-at-nuts')
         if (width !== 1440) await page.locator('.md-tab', { hasText: 'NUTs' }).click()
+        // One active, one inactive keyset: the active one shows, the inactive one is behind the button.
+        await expect(keysets.locator('.md-keyset-row')).toHaveCount(1)
+        await keysets.getByRole('button', { name: 'Show 1 inactive keyset' }).click()
         await expect(keysets.locator('.md-keyset-row')).toHaveCount(2)
         await expect(keysets).toContainText(/from the last successful check on \d{1,2} [A-Z][a-z]{2} \d{4}/)
         await expect(keysets).not.toContainText('Keyset data not available')

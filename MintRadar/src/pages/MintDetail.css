@@ -2295,6 +2295,23 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   padding: 10px 0 !important;
 }
 .md-keyset-row:first-child { border-top: 0 !important; }
+/* Folded inactive keysets: a text button under the rows (13px; 44px tall on phones and touch). */
+.md-keysets-toggle {
+  align-self: flex-start;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.md-keysets-toggle:hover { color: var(--text); }
+@media (pointer: coarse), (max-width: 700px) {
+  .md-keysets-toggle { min-height: 44px; display: inline-flex; align-items: center; }
+}
 
 /* Units and methods */
 .method-label { text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-size: 13px; }
