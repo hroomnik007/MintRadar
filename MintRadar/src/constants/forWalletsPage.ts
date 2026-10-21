@@ -23,6 +23,8 @@ export const WALLET_API_FACTS = {
   walletAdditionsOn: '2026-10-20',
   /** The day the facts feeExamples, limits and auditByDirection were added (single-mint endpoint and include=facts). */
   walletFactsAddedOn: '2026-10-21',
+  /** The day the mint field scoreStale was added (every object, default list included). */
+  walletScoreStaleAddedOn: '2026-10-21',
   /** The list query that returns the same mints as /mints/recommend with its defaults. */
   /** Example query: mints that declare NUT-11 (P2PK) and NUT-12 (DLEQ proofs), the two a Nutzap relies on. */
   nutzapQuery: '/wallets/mints?nuts=11,12',

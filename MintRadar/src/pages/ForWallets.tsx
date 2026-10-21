@@ -282,6 +282,10 @@ export default function ForWallets() {
               <code>feeExamples</code> gives the input fee in plain amounts per unit, for spending 1, 16 and 100 proofs (NUT-02, rounded up), computed from the stored keysets. <code>limits</code> is what the mint declares in its <code>/v1/info</code> for deposits (NUT-04) and withdrawals (NUT-05); a limit it does not declare is <code>null</code>, and Lightning fee reserves are not included because they are only known when a quote is requested.
               <code>auditByDirection</code> splits cashu.info&apos;s last 7 days into deposits (<code>mint</code>) and withdrawals (<code>melt</code>), with attempts, failures and the time MintRadar stored them; the score uses the combined number. The default list is unchanged.
             </li>
+            <li data-testid="additions-score-stale">
+              Also added {F.walletScoreStaleAddedOn}: the mint field <code>scoreStale</code>, on every object (the default list included). It is <code>true</code> when <code>status</code> is not <code>online</code> (offline, degraded or archived)
+              and <code>false</code> when it is. The <code>score</code> of a mint that is not online is the last measured one; it does not describe the mint now. <code>scoreStale</code> is derived from <code>status</code> only; the score itself is unchanged.
+            </li>
             <li>A removal is announced on this page and in <code>docs/API.md</code> at least {F.deprecationNoticeDays} days before it takes effect. A route that is going away also says so in its responses, with the <code>Deprecation</code> and <code>Sunset</code> headers and a <code>Link</code> header with <code>rel=&quot;successor-version&quot;</code>; the only route that does so today is the one below.</li>
             <li data-testid="recommend-deprecation">
               <strong>Deprecated: <code>GET /api/v1/mints/recommend</code></strong> (and <code>/api/mints/recommend</code>), since {F.recommendDeprecatedOn}. It may be removed from {F.recommendSunsetOn} on; until then it answers as before.
@@ -433,7 +437,7 @@ export default function ForWallets() {
             <li>Show the score with its label as <strong>operational health</strong> (for example &quot;Operational health 92/100&quot;), never as &quot;safe&quot; or &quot;trusted&quot;.</li>
             <li>Treat a <code>null</code> score as <strong>no data yet</strong>, not as a bad score.</li>
             <li>Hide test mints (<code>isTest: true</code>); the default list already leaves them out.</li>
-            <li>Show <code>status</code> next to the score, and a short hint while <code>scoreCappedNew</code> is true.</li>
+            <li>Show <code>status</code> next to the score, and a short hint while <code>scoreCappedNew</code> is true. When <code>scoreStale</code> is true, label the score as the last measured one.</li>
             <li>Filter by the <code>unit</code> your wallet holds.</li>
             <li>Show <code>name</code> and <code>software</code> as plain text: they come from the mints and are untrusted.</li>
             <li>Never present the score as a recommendation to deposit funds, and link people to the methodology.</li>

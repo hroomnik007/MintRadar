@@ -122,6 +122,8 @@ export interface WalletMint {
   name: string | null
   status: WalletMintStatus
   score: number | null
+  /** true when status is not "online" (offline, degraded, archived): score is then the last measured one. Derived from the status only. */
+  scoreStale: boolean
   scoreCappedNew: boolean
   uptime24hPct: number | null
   uptime7dPct: number | null
@@ -308,6 +310,7 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviews
     name: m.name ?? null,
     status,
     score,
+    scoreStale: status !== 'online',
     scoreCappedNew: underNewMintCap(m.discoveredAt, now),
     uptime24hPct: m.uptimePct24h ?? null,
     uptime7dPct: m.uptimePct7d ?? null,

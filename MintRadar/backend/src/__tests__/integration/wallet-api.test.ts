@@ -96,7 +96,7 @@ const V1_KEYS = [
   'audit', 'eligibleForRecommendation', 'isTest', 'lastCheckedAt', 'name', 'nuts', 'outdated', 'reviews', 'score',
   'scoreCappedNew', 'software', 'status', 'units', 'uptime24hPct', 'uptime7dPct', 'url',
 ]
-const W2B_LIGHT_KEYS = ['auditNeutralReason', 'authRequired', 'downSince', 'hasOnion']
+const W2B_LIGHT_KEYS = ['auditNeutralReason', 'authRequired', 'downSince', 'hasOnion', 'scoreStale']
 const W2B_HEAVY_KEYS = ['auditByDirection', 'changes', 'contactChecks', 'feeExamples', 'firstSeenAt', 'keysets', 'keysetsCheckedAt', 'lastOnlineAt', 'limits', 'methods', 'pubkey', 'sample', 'scoreBreakdown']
 const MINT_KEYS = [...V1_KEYS, ...W2B_LIGHT_KEYS].sort()
 const MINT_KEYS_FULL = [...MINT_KEYS, ...W2B_HEAVY_KEYS].sort()
@@ -229,6 +229,34 @@ describe('status, flags and fields', () => {
     expect(by['https://a.example.com']).toMatchObject({ scoreCappedNew: false, eligibleForRecommendation: true })
     expect(by['https://offline.example.com'].eligibleForRecommendation).toBe(false)
     expect(by['https://archived.example.com'].eligibleForRecommendation).toBe(false)
+  })
+
+  // scoreStale (2026-10-21): derived from the status only. The score value is the stored one whatever the status.
+  it('scoreStale is true for offline, degraded and archived and false for online, whatever the score', async () => {
+    const res = await list('?includeTest=true&includeOffline=true&includeArchived=true&includeUnscored=true&limit=200')
+    const by = Object.fromEntries(res.body.mints.map((m: { url: string }) => [m.url, m]))
+    expect(by['https://a.example.com']).toMatchObject({ status: 'online', scoreStale: false })
+    expect(by['https://offline.example.com']).toMatchObject({ status: 'offline', scoreStale: true })
+    expect(by['https://degraded.example.com']).toMatchObject({ status: 'degraded', scoreStale: true })
+    expect(by['https://archived.example.com']).toMatchObject({ status: 'archived', scoreStale: true })
+    // an online mint without a score is not stale; a not-online mint with a score is
+    expect(by['https://unscored.example.com']).toMatchObject({ status: 'online', score: null, scoreStale: false })
+    for (const m of res.body.mints as Array<{ status: string; scoreStale: unknown }>) {
+      expect(typeof m.scoreStale).toBe('boolean')
+      expect(m.scoreStale).toBe(m.status !== 'online')
+    }
+  })
+
+  it('every mint of the default list and the single-mint answer carry scoreStale; the score value does not change with it', async () => {
+    const def = await list()
+    expect(def.body.mints.length).toBeGreaterThan(0)
+    for (const m of def.body.mints) expect(m).toHaveProperty('scoreStale', false)
+    const all = await list('?includeTest=true&includeOffline=true&includeArchived=true&includeUnscored=true&limit=200')
+    const stale = all.body.mints.find((m: { url: string }) => m.url === 'https://offline.example.com')
+    expect(stale.score).toBe(60) // the stored score of the fixture row, unchanged by the stale flag
+    const one = await request(app).get('/api/wallets/mints/' + encodeURIComponent('https://archived.example.com'))
+    expect(one.status).toBe(200)
+    expect(one.body.mint).toMatchObject({ status: 'archived', scoreStale: true })
   })
 
   it('outdated follows the shared version rule; unknown or missing software is null', async () => {

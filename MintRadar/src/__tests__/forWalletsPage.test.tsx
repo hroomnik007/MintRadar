@@ -359,5 +359,13 @@ describe('page text added with the 2026-10-20 wallet additions', () => {
     }
     expect(text).toContain('what the score used at its last computation')
   })
+
+  it('names scoreStale, says the score of a mint that is not online is the last measured one, and dates the addition', () => {
+    const { container } = render(<MemoryRouter><ForWallets /></MemoryRouter>)
+    const li = container.querySelector('[data-testid="additions-score-stale"]')?.textContent ?? ''
+    expect(li).toContain(F.walletScoreStaleAddedOn)
+    for (const word of ['scoreStale', 'status', 'online', 'last measured one', 'default list']) expect(li, word).toContain(word)
+    expect(container.textContent).toContain('label the score as the last measured one')
+  })
 })
 
