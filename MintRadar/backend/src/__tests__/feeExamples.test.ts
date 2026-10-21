@@ -56,12 +56,18 @@ describe('feeExamplesOf', () => {
     expect(out.map(u => u.examples.map(x => x.fee))).toEqual([[1, 2, 10], [1, 16, 100], [0, 0, 0]])
   })
 
-  it('a unit without a stated fee, and a unit with only inactive keysets, is left out; nothing stored is an empty list', () => {
-    expect(feeExamplesOf([{ unit: 'sat', active: true, inputFeePpk: null }, { unit: 'usd', active: false, inputFeePpk: 10 }])).toEqual([])
+  it('a keyset that states no fee uses the NUT-02 default 0', () => {
+    const [e] = feeExamplesOf([{ unit: 'sat', active: true, inputFeePpk: null }])
+    expect(e).toEqual({ unit: 'sat', inputFeePpk: 0, examples: [{ proofs: 1, fee: 0 }, { proofs: 16, fee: 0 }, { proofs: 100, fee: 0 }] })
+    expect(feeExamplesOf([{ unit: 'sat', active: true, inputFeePpk: null }, { unit: 'usd', active: true, inputFeePpk: 100 }]).map(u => u.inputFeePpk)).toEqual([0, 100])
+  })
+
+  it('a unit with only inactive keysets is left out; nothing stored is an empty list', () => {
+    expect(feeExamplesOf([{ unit: 'sat', active: false, inputFeePpk: null }, { unit: 'usd', active: false, inputFeePpk: 10 }])).toEqual([])
     expect(feeExamplesOf([])).toEqual([])
   })
 
-  it('a null fee on one active keyset does not hide the stated fee of another', () => {
+  it('a missing fee on one active keyset does not lower the stated fee of another (max rule)', () => {
     expect(feeExamplesOf([{ unit: 'sat', active: true, inputFeePpk: null }, { unit: 'sat', active: true, inputFeePpk: 50 }])[0]?.inputFeePpk).toBe(50)
   })
 })

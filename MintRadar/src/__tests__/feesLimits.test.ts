@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { feesView, limitRows, limitsSource, reservedFeeLines, FEES_NOT_CHECKED, FEES_NOT_STATED, NO_INPUT_FEE, LIMIT_NOT_DECLARED, LIMITS_NOTE } from '@/utils/feesLimits'
+import { feesView, limitRows, limitsSource, reservedFeeLines, FEES_NOT_CHECKED, FEES_NO_ACTIVE_KEYSET, NO_INPUT_FEE, LIMIT_NOT_DECLARED, LIMITS_NOTE } from '@/utils/feesLimits'
 import { feeExamplesOf, inputFeeFor } from '@/utils/feeExamples'
 import { feeExamplesOf as beFeeExamplesOf } from '../../backend/src/shared/feeExamples'
 
@@ -28,11 +28,19 @@ describe('feesView', () => {
     const v = feesView([{ unit: 'usd', active: true, inputFeePpk: 0 }, { unit: 'sat', active: true, inputFeePpk: 1000 }])
     expect(v.rows.map(r => `${r.unit}: ${r.text}`)).toEqual(['sat: Spending 1 / 16 / 100 proofs: 1 / 16 / 100 sat', `usd: ${NO_INPUT_FEE}`])
   })
-  it('no keysets: "Keyset data not available yet"; keysets without a stated fee: its own sentence', () => {
+  it('a keyset that states no fee uses the NUT-02 default 0: "No input fee"; a stated number in another unit is unchanged', () => {
+    expect(feesView([{ unit: 'sat', active: true, inputFeePpk: null }]).rows).toEqual([{ unit: 'sat', text: NO_INPUT_FEE }])
+    const v = feesView([{ unit: 'sat', active: true, inputFeePpk: null }, { unit: 'usd', active: true, inputFeePpk: 100 }])
+    expect(v.rows.map(r => r.text)).toEqual([NO_INPUT_FEE, 'Spending 1 / 16 / 100 proofs: 1 / 2 / 10 usd'])
+  })
+  it('a missing fee on one active keyset does not lower the stated fee of another (max rule)', () => {
+    expect(feesView([{ unit: 'sat', active: true, inputFeePpk: null }, { unit: 'sat', active: true, inputFeePpk: 100 }]).rows[0]?.text).toBe('Spending 1 / 16 / 100 proofs: 1 / 2 / 10 sat')
+  })
+  it('no keysets: "Keyset data not available yet"; only inactive keysets: "No active keyset"', () => {
     expect(feesView(null).empty).toBe(FEES_NOT_CHECKED)
     expect(feesView([]).empty).toBe(FEES_NOT_CHECKED)
-    expect(feesView([{ unit: 'sat', active: true, inputFeePpk: null }]).empty).toBe(FEES_NOT_STATED)
-    expect(feesView([{ unit: 'sat', active: false, inputFeePpk: 5 }]).empty).toBe(FEES_NOT_STATED)
+    expect(feesView([{ unit: 'sat', active: false, inputFeePpk: 5 }]).empty).toBe(FEES_NO_ACTIVE_KEYSET)
+    expect(feesView([{ unit: 'sat', active: false, inputFeePpk: null }]).empty).toBe(FEES_NO_ACTIVE_KEYSET)
   })
 })
 

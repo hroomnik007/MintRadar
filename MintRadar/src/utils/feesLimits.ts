@@ -7,7 +7,7 @@ import { formatTimeAgo } from './mintFormatting'
 import { formatDateTimeUtc } from './formatDate'
 
 export const FEES_NOT_CHECKED = 'Keyset data not available yet'
-export const FEES_NOT_STATED = 'Input fee not stated by the mint'
+export const FEES_NO_ACTIVE_KEYSET = 'No active keyset'
 export const NO_INPUT_FEE = 'No input fee'
 export const LIMIT_NOT_DECLARED = 'not declared'
 export const LIMITS_NOTE =
@@ -21,7 +21,7 @@ export interface FeeRow {
 
 export interface FeesView {
   rows: FeeRow[]
-  /** Set when there is no row to show: the keysets are not checked yet, or none of the active ones states a fee. */
+  /** Set when there is no row to show: the keysets are not checked yet, or none of them is active. */
   empty: string | null
 }
 
@@ -29,7 +29,7 @@ export interface FeesView {
 export function feesView(keysets: readonly FeeKeysetLike[] | null | undefined): FeesView {
   if (!keysets || keysets.length === 0) return { rows: [], empty: FEES_NOT_CHECKED }
   const units = feeExamplesOf(keysets)
-  if (units.length === 0) return { rows: [], empty: FEES_NOT_STATED }
+  if (units.length === 0) return { rows: [], empty: FEES_NO_ACTIVE_KEYSET }
   return {
     rows: units.map(u => ({
       unit: u.unit,

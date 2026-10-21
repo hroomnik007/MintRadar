@@ -84,6 +84,12 @@ test('zero fee and undeclared limits: "No input fee" and "not declared", never a
   ])
 })
 
+test('a keyset that states no input_fee_ppk uses the NUT-02 default 0: "No input fee"', async ({ page }) => {
+  await open(page, { keysets: [{ id: '00ad268c4d1f5826', unit: 'sat', active: true }] })
+  await expect(fees(page).locator('.md-info-value')).toHaveText('No input fee')
+  await expect(fees(page)).not.toContainText('not stated')
+})
+
 test('declared limits per method and unit, with thousands separators', async ({ page }) => {
   await open(page, { keysets: KS_FEE })
   await expect(limits(page).locator('.md-info-row')).toHaveText([

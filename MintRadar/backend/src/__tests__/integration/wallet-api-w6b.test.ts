@@ -93,6 +93,21 @@ describe('feeExamples', () => {
   })
 })
 
+describe('feeExamples: a keyset without a stated fee uses the NUT-02 default 0', () => {
+  it('fee null counts as 0, a stated fee of another unit is unchanged, and the keysets field still shows null', async () => {
+    withRows([row('https://a.example.com', { keysets_json: [
+      { id: '00aaaaaaaaaaaaaa', unit: 'sat', active: true, fee: null, expiry: null, version: 'v1', valid: true },
+      { id: '01bbbbbbbbbbbbbb', unit: 'usd', active: true, fee: 100, expiry: null, version: 'v2', valid: true },
+    ] })])
+    const m = (await one('https://a.example.com')).body.mint
+    expect(m.feeExamples).toEqual([
+      { unit: 'sat', inputFeePpk: 0, examples: [{ proofs: 1, fee: 0 }, { proofs: 16, fee: 0 }, { proofs: 100, fee: 0 }] },
+      { unit: 'usd', inputFeePpk: 100, examples: [{ proofs: 1, fee: 1 }, { proofs: 16, fee: 2 }, { proofs: 100, fee: 10 }] },
+    ])
+    expect(m.keysets[0].inputFeePpk).toBeNull()
+  })
+})
+
 describe('limits', () => {
   it('per method and unit, null for a limit the mint does not declare', async () => {
     const m = (await one('https://a.example.com')).body.mint

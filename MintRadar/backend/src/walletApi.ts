@@ -150,7 +150,7 @@ export interface WalletMint {
   changes: WalletChange[]
   /** Facts about the contact entries (kind, formatValid, domainResolves, checkedAt); no values, no domains. */
   contactChecks: ContactCheck[]
-  /** Only with include=facts: input fee for spending 1, 16 and 100 proofs, per unit with an active keyset that states a fee (docs/API.md). [] when none. */
+  /** Only with include=facts: input fee for spending 1, 16 and 100 proofs, per unit with an active keyset (a missing fee counts as 0, docs/API.md). [] when none. */
   feeExamples: FeeExampleUnit[]
   /** Only with include=facts: the limits the mint declares in /v1/info for NUT-04 (mint) and NUT-05 (melt), per method and unit. null when neither is stored. */
   limits: { mint: WalletLimit[]; melt: WalletLimit[] } | null
