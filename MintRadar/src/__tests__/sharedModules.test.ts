@@ -177,5 +177,7 @@ describe('nutSupport: backend and frontend copies agree', () => {
     expect(beNut.isNutSupported(c.entry)).toBe(c.supported)
     expect(feNut.isNutDeclaredSupported(c.entry)).toBe(c.declaredSupported)
     expect(beNut.isNutDeclaredSupported(c.entry)).toBe(c.declaredSupported)
+    expect(feNut.supportedNutKeys({ '7': c.entry }).has('7')).toBe(c.inKeys)
+    expect(beNut.supportedNutKeys({ '7': c.entry }).has('7')).toBe(c.inKeys)
   })
 })

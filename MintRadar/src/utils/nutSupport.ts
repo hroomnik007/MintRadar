@@ -17,7 +17,7 @@ export function isNutDeclaredSupported(entry: unknown): boolean {
   return entry !== null && entry !== undefined && isNutSupported(entry)
 }
 
-/** The NUT numbers (as strings) of `nuts` that are declared as supported. */
+/** The NUT numbers (as strings) of `nuts` that are declared as supported (a null or absent value is not declared). */
 export function supportedNutKeys(nuts: Record<string, unknown> | null | undefined): Set<string> {
-  return new Set(Object.keys(nuts ?? {}).filter(k => isNutSupported(nuts![k])))
+  return new Set(Object.keys(nuts ?? {}).filter(k => isNutDeclaredSupported(nuts![k])))
 }

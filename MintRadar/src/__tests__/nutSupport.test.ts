@@ -6,6 +6,7 @@ describe('the shared table of cases', () => {
   it.each(NUT_SUPPORT_CASES.map(c => [c.name, c] as const))('%s', (_n, c) => {
     expect(isNutSupported(c.entry)).toBe(c.supported)
     expect(isNutDeclaredSupported(c.entry)).toBe(c.declaredSupported)
+    expect(supportedNutKeys({ '7': c.entry }).has('7')).toBe(c.inKeys)
   })
 })
 
@@ -31,6 +32,11 @@ describe('supportedNutKeys', () => {
     const keys = supportedNutKeys({ '7': { supported: false }, '10': { supported: true }, '11': { methods: [] }, '4': {} })
     expect([...keys].sort()).toEqual(['10', '11', '4'])
     expect(keys.has('12')).toBe(false)
+    expect(keys.has('7')).toBe(false)
+  })
+  it('a null value is not declared: it is not in the set (same rule as isNutDeclaredSupported)', () => {
+    const keys = supportedNutKeys({ '4': {}, '7': null, '10': { supported: true } })
+    expect([...keys].sort()).toEqual(['10', '4'])
     expect(keys.has('7')).toBe(false)
   })
   it('null and undefined give an empty set', () => {

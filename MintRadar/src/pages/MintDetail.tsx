@@ -915,9 +915,10 @@ function MintDetailContent({ url }: { url: string }) {
   const isWatching = watchlistMints.includes(url)
   const toggleWatch = () => { void (isWatching ? removeWatchedMint(url, displayName) : addMint(url)) }
 
-  const supportedNutNumbers = new Set(
-    data?.info ? Object.keys(data.info.nuts) : Object.keys(knownMint?.nutsLimits ?? {})
-  )
+  // The declared-as-supported NUT numbers (utils/nutSupport.ts: null, absent and `supported: false` are not support) — the
+  // rule the backend scores with since methodology 4, so the fallback score below, the NUT row and the grid agree with it.
+  const nutsDeclared: Record<string, unknown> | null = data?.info ? (data.info.nuts as Record<string, unknown>) : (knownMint?.nutsLimits ?? null)
+  const supportedNutNumbers = supportedNutKeys(nutsDeclared)
   const supportedNuts = TRACKED_NUTS.filter(nut =>
     supportedNutNumbers.has(String(parseInt(nut.slice(4), 10)))
   )
@@ -927,11 +928,6 @@ function MintDetailContent({ url }: { url: string }) {
   // capability that actually gates seed-phrase backup/restore is NUT-09
   // (restore signatures) — check that instead.
   const supportsBackupRestore = supportedNutNumbers.has('9')
-  // Display-only reading for the NUT grid, its modal and the Nutzap group: `supported: false` is not supported
-  // (utils/nutSupport.ts). The score above keeps counting presence, like the backend.
-  const nutsDeclared: Record<string, unknown> | null = data?.info ? (data.info.nuts as Record<string, unknown>) : (knownMint?.nutsLimits ?? null)
-  const declaredNutNumbers = supportedNutKeys(nutsDeclared)
-  const gridSupportedNuts = TRACKED_NUTS.filter(nut => declaredNutNumbers.has(String(parseInt(nut.slice(4), 10))))
 
   const reliabilityScore = knownMint?.reliabilityScore ?? computeReliabilityScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, { blamed: knownMint?.auditCzBlamed ?? null, total: knownMint?.auditCzTotal ?? null, fetchedAt: knownMint?.auditCzFetchedAt ?? null }, versionLatestMap)
   const tsInfo = reliabilityScoreInfo(reliabilityScore)
@@ -1890,11 +1886,11 @@ function MintDetailContent({ url }: { url: string }) {
               )}
             </div>
             <div className="nut-summary-line">
-              <strong>{gridSupportedNuts.length}</strong> of {TRACKED_NUTS.length} known NUTs supported
+              <strong>{supportedNuts.length}</strong> of {TRACKED_NUTS.length} known NUTs supported
             </div>
             <div className="nut-grid">
               {TRACKED_NUTS.map(nut => {
-                const supported = gridSupportedNuts.includes(nut)
+                const supported = supportedNuts.includes(nut)
                 const meta = NUT_DESCRIPTIONS[nut]
                 const nutKey = parseInt(nut.slice(4), 10).toString()
                 const rawConfig = data?.info?.nuts?.[nutKey]
@@ -2748,7 +2744,7 @@ function MintDetailContent({ url }: { url: string }) {
 
       {selectedNut && (() => {
         const meta = NUT_DESCRIPTIONS[selectedNut]
-        const supported = gridSupportedNuts.includes(selectedNut)
+        const supported = supportedNuts.includes(selectedNut)
         const nutKey = parseInt(selectedNut.slice(4), 10).toString()
         const rawNutConfig = data?.info?.nuts?.[nutKey] ?? knownMint?.nutsLimits?.[nutKey]
         const nutConfig = (rawNutConfig !== null && typeof rawNutConfig === 'object') ? rawNutConfig as NutConfig : null

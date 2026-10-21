@@ -24,6 +24,10 @@ describe('nutSupport (backend)', () => {
     expect(isNutSupported(entry)).toBe(supported)
     expect(isNutDeclaredSupported(entry)).toBe(declaredSupported)
   })
+  it('supportedNutKeys drops a null value (not declared), like isNutDeclaredSupported', () => {
+    expect([...supportedNutKeys({ '7': null, '4': {}, '11': { supported: true } })].sort()).toEqual(['11', '4'])
+    expect(supportedNutKeys({ '7': null }).has('7')).toBe(false)
+  })
   it('supportedNutKeys drops supported:false', () => {
     expect([...supportedNutKeys({ '7': { supported: false }, '4': {}, '11': { supported: true } })].sort()).toEqual(['11', '4'])
   })
