@@ -37,11 +37,11 @@ describe('GET /api/v1/* alias', () => {
     expect(aliased.body).toEqual(legacy.body)
   })
 
-  it('/api/v1/mints/known is on the general per-IP limiter, same as /api/mints/known', async () => {
+  it('/api/v1/mints/known is on the read-only per-IP limiter, same as /api/mints/known', async () => {
     query.mockResolvedValue({ rows: [] })
     const res = await request(app).get('/api/v1/mints/known')
     expect(res.status).toBe(200)
-    expect(res.headers['x-ratelimit-limit']).toBe('60')
+    expect(res.headers['x-ratelimit-limit']).toBe('150')
   })
 
   it('a bare /api/v1 with a query string rewrites to /api with the query string preserved', async () => {

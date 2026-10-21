@@ -197,6 +197,20 @@ function checkRateLimit(ip: string): RateLimitResult {
 const WALLET_RATE_LIMIT_MAX = 300
 const walletRateLimitStore = new Map<string, RateLimitEntry>()
 
+// The website's own read-only GETs (everything a page load fetches from our database) have a third budget:
+// one Mint Detail load issues 9 of them (measured 2026-10-21), so 150/min = 10 loads + ~50% margin. Own counter,
+// so it neither eats from nor is eaten by the 60/min general counter (/api/mint/probe and the other routes keep that).
+const READ_RATE_LIMIT_MAX = 150
+const readRateLimitStore = new Map<string, RateLimitEntry>()
+const READ_RATE_LIMIT_PATHS = new Set([
+  '/api/mints/known', '/api/mints/history', '/api/mints/version-history', '/api/mints/outages', '/api/mints/changes',
+  '/api/mints/nostr-reviews', '/api/mints/daily-uptime', '/api/mints/swaps', '/api/mints/audit-cz',
+  '/api/stats/reliability-trend', '/api/stats/reliability-movers', '/api/nuts',
+])
+function usesReadRateLimit(path: string): boolean {
+  return READ_RATE_LIMIT_PATHS.has(path.toLowerCase().replace(/\/+$/, ''))
+}
+
 function setRateLimitHeaders(res: Response, r: RateLimitResult): number {
   const retryAfterSec = Math.max(1, Math.ceil((r.resetAt - Date.now()) / 1000))
   res.setHeader('X-RateLimit-Limit', String(r.limit))
@@ -214,7 +228,7 @@ function setRetryAfter(res: Response, store: Map<string, RateLimitEntry>, key: s
 // Prevent unbounded memory growth: an entry lives at most one window, expired ones are dropped every window.
 setInterval(() => {
   const now = Date.now()
-  for (const store of [rateLimitStore, walletRateLimitStore]) {
+  for (const store of [rateLimitStore, walletRateLimitStore, readRateLimitStore]) {
     for (const [ip, entry] of store) {
       if (now >= entry.resetAt) store.delete(ip)
     }
@@ -625,7 +639,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     next()
     return
   }
-  const r = checkRateLimit(ip)
+  const r = usesReadRateLimit(req.path) ? checkFixedWindow(readRateLimitStore, READ_RATE_LIMIT_MAX, ip) : checkRateLimit(ip)
   const retryAfterSec = setRateLimitHeaders(res, r)
   if (!r.allowed) {
     res.setHeader('Retry-After', String(retryAfterSec))

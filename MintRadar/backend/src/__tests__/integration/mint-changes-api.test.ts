@@ -171,10 +171,10 @@ describe('GET /api/mints/changes (website route)', () => {
     expect((await get('https://mint.example.com')).status).toBe(200)
   })
 
-  it('shares the general per-IP limit (60/min): the 61st request is a 429', async () => {
+  it('is on the read-only per-IP limit (150/min): the 151st request is a 429', async () => {
     stub(true)
     let last = 200
-    for (let i = 0; i < 61; i++) last = (await get('https://mint.example.com')).status
+    for (let i = 0; i < 151; i++) last = (await get('https://mint.example.com')).status
     expect(last).toBe(429)
   })
 })

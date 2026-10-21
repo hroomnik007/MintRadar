@@ -577,10 +577,10 @@ describe('rate limits', () => {
     expect(blocked.headers['x-ratelimit-remaining']).toBe('0')
     // wallet routes are on their own budget
     expect((await request(app).get('/api/wallets/mints').set('X-Forwarded-For', ip)).status).toBe(200)
-    // /api/mints/known is on the general budget like the other website routes; /health stays exempt
+    // /api/mints/known is on the separate read-only budget (150/min), not exhausted by the general one; /health stays exempt
     const known = await request(app).get('/api/mints/known').set('X-Forwarded-For', ip)
-    expect(known.status).toBe(429)
-    expect(known.headers['x-ratelimit-limit']).toBe('60')
+    expect(known.status).toBe(200)
+    expect(known.headers['x-ratelimit-limit']).toBe('150')
     const health = await request(app).get('/health').set('X-Forwarded-For', ip)
     expect(health.status).toBe(200)
     expect(health.headers['x-ratelimit-limit']).toBeUndefined()
@@ -702,7 +702,7 @@ describe('GET /api/mints/recommend', () => {
     const ip = '198.51.100.52'
     const get = () => request(app).get('/api/mints/recommendations').set('X-Forwarded-For', ip)
     expect((await get()).headers['x-ratelimit-limit']).toBe('60')
-    expect((await request(app).get('/api/nuts').set('X-Forwarded-For', ip)).headers['x-ratelimit-limit']).toBe('60')
+    expect((await request(app).get('/api/nuts').set('X-Forwarded-For', ip)).headers['x-ratelimit-limit']).toBe('150')
   })
 
   it('keeps the old error shape on a server error', async () => {
@@ -881,13 +881,13 @@ describe('/api/mints/known is a website route', () => {
     expect(Object.keys(res.body[0])).toEqual(expect.arrayContaining(['ipAddress', 'netAsn', 'netOrg', 'netCountry', 'serverLocation', 'pubkey', 'lastError', 'auditNErrors', 'reviewWeightedRating']))
   })
 
-  it('shares the general 60/min budget per IP (X-RateLimit-*), the 61st request is a 429 with Retry-After', async () => {
+  it('uses the read-only 150/min budget per IP (X-RateLimit-*), the 151st request is a 429 with Retry-After', async () => {
     const ip = '198.51.100.40'
     const get = () => request(app).get('/api/mints/known').set('X-Forwarded-For', ip)
     const first = await get()
-    expect(first.headers['x-ratelimit-limit']).toBe('60')
-    expect(first.headers['x-ratelimit-remaining']).toBe('59')
-    for (let i = 1; i < 60; i++) expect((await get()).status).toBe(200)
+    expect(first.headers['x-ratelimit-limit']).toBe('150')
+    expect(first.headers['x-ratelimit-remaining']).toBe('149')
+    for (let i = 1; i < 150; i++) expect((await get()).status).toBe(200)
     const blocked = await get()
     expect(blocked.status).toBe(429)
     expect(blocked.body).toEqual({ error: 'Too many requests' })

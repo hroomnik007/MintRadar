@@ -183,7 +183,8 @@ Every successful `GET` of `/api/v1/wallets/*`, `/api/v1/mints/known` and `/api/v
 |---|---|
 | `/api/v1/wallets/*` and `/api/v1/mints/recommend` | **300 requests per minute per IP address**, one counter shared by `/api/v1/wallets/*` and `/api/v1/mints/recommend` (the unversioned `/api/...` paths count the same); separate from the 60/min counter |
 | `/health`, `/api/stats`, `/api/mint/icon` | no limit (read-only, cached) |
-| every other read route, `/api/mints/known` included (since 2026-10-20) | **60 requests / minute / IP** |
+| the website's own read routes: `/api/v1/mints/{known,history,version-history,outages,changes,nostr-reviews,daily-uptime,swaps,audit-cz}`, `/api/v1/stats/{reliability-trend,reliability-movers}`, `/api/v1/nuts` (since 2026-10-21) | **150 requests / minute / IP**, one counter for all of them |
+| every other read route (`/api/v1/mint/probe` included) | **60 requests / minute / IP** |
 
 Responses of limited routes carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset` (Unix time, seconds, when the window ends). Every `429` carries `Retry-After` (seconds). Preflight requests are not counted. Counters are kept in memory and reset on a restart.
 
@@ -231,7 +232,8 @@ Every unknown path below `/api/v1/` is a JSON `404` in this envelope (`/api/v1/f
 | Endpoint type | Limit |
 |---|---|
 | `/api/v1/wallets/*` and `/api/v1/mints/recommend` | **300 requests per minute per IP address**, one counter shared by `/api/v1/wallets/*` and `/api/v1/mints/recommend` (the unversioned `/api/...` paths count the same); separate from the 60/min counter |
-| Read endpoints **except** those two and `/health`, `/api/stats` and `/api/mint/icon` (these three are exempt; `/api/mints/known` was exempt until 2026-10-20) | **60 requests / minute / IP** |
+| The website's own read endpoints: `/api/mints/{known,history,version-history,outages,changes,nostr-reviews,daily-uptime,swaps,audit-cz}`, `/api/stats/{reliability-trend,reliability-movers}`, `/api/nuts` (`/api/mints/known` was exempt until 2026-10-20; the separate bucket exists since 2026-10-21) | **150 requests / minute / IP**, one counter for all of them, separate from the 60/min counter |
+| Every other read endpoint **except** the wallet routes and `/health`, `/api/stats` and `/api/mint/icon` (these three are exempt), `/api/mint/probe` included | **60 requests / minute / IP** |
 | `/api/mint/submit` (POST) | **20 requests / hour / IP** |
 | `/api/mints/discover` (POST) | **3 requests / hour / IP** by default (`"source": "auto"`), **10 requests / hour / IP** with `"source": "bulk"` (two independent counters) |
 | `/api/mint/probe` for a URL that is **not** a tracked mint | additionally **10 requests / minute**, **60 requests / hour** and **3 concurrent probes** per IP (tracked mints: global limit only) |
@@ -244,7 +246,7 @@ X-RateLimit-Remaining: 58
 X-RateLimit-Reset: 1760293860
 ```
 
-(`/api/v1/wallets/*` and `/api/v1/mints/recommend` report `X-RateLimit-Limit: 300`.)
+(`/api/v1/wallets/*` and `/api/v1/mints/recommend` report `X-RateLimit-Limit: 300`, the website read endpoints above `150`.)
 
 Exceeding a limit returns HTTP `429 Too Many Requests` with a `Retry-After` header (seconds). The wallet routes answer with the error envelope described under "API for wallets (v1)"; every other route with:
 

@@ -49,7 +49,7 @@ Expected response time: best effort, typically within 7 days.
 | NIP-44 encrypted watchlist | Encrypted with the user's own Nostr key; server never sees plaintext; decryption happens entirely in the browser |
 | Backend SSRF | Outbound probe URLs go through `checkUrlSafety()` / `safeFetch()` (`backend/src/ssrf.ts`): HTTPS only, private/loopback/link-local/CGNAT/IPv4-in-IPv6 blocked, DNS re-checked at connect time, redirects re-validated |
 | XSS | No `dangerouslySetInnerHTML`; user-controlled URLs validated before rendering; CSP via Nginx — `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'` alongside `default-src`/`script-src 'self'` (no `'unsafe-inline'` on scripts) |
-| Rate limits | 60 req/min/IP on reads; tighter hourly caps on `/api/mint/submit` and `/api/mints/discover`; `/api/stats` also TTL-cached (60s) to close a connection-pool-exhaustion path on an otherwise rate-limit-exempt endpoint |
+| Rate limits | 150 req/min/IP on the website's read routes, 60 req/min/IP on the other reads; tighter hourly caps on `/api/mint/submit` and `/api/mints/discover`; `/api/stats` also TTL-cached (60s) to close a connection-pool-exhaustion path on an otherwise rate-limit-exempt endpoint |
 | Backend bind | Docker publishes the API as `127.0.0.1:3002` only — not on the public interface. Nginx on the host reverse-proxies `/api/` |
 | Self-inflated reputation | A mint can't buy its way onto a recommendation surface: review star ratings parsed from free-text content are clamped 1–5 server- and client-side, and Reliability Score / Best-Mint-Wizard / Stats top-5 lists exclude mints younger than 14 days (`isEligibleForRecommendation()`) regardless of score |
 
