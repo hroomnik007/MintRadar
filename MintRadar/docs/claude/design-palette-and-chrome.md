@@ -227,7 +227,7 @@ Follow-up fix commit addressing regressions/missed spots from the original redes
 
 A before/after reference mockup for all 5 items (tab "Opravy") was included in this commit as `mintradar_redesign_mockup.html`; the file has since been deleted (design system fully landed in code — see "Visual Redesign" above), so this is historical context only, not a file that still exists in the repo.
 
-Verified: typecheck, ESLint, 70/70 unit tests, production build all pass; visually confirmed via Playwright.
+Verified: typecheck, ESLint, unit tests (counts: "Test suites" in CLAUDE.md), production build all pass; visually confirmed via Playwright.
 
 ### Post-redesign fixes round 2 (commit f98694a)
 
@@ -242,7 +242,7 @@ Verified: typecheck, ESLint, 70/70 unit tests, production build all pass; visual
 
 A before/after reference mockup for all items (tabs "Watchlist prihlásený", "Mint Detail mobil header", "Latency btn / Offline / Card elevation") was included in this commit as `mintradar_redesign_mockup.html`; the file has since been deleted (see "Visual Redesign" above), so this is historical context only, not a file that still exists in the repo.
 
-Verified: typecheck, ESLint, 70/70 unit tests, production build all pass; visually confirmed via Playwright with mocked API (7 screenshots).
+Verified: typecheck, ESLint, unit tests (counts: "Test suites" in CLAUDE.md), production build all pass; visually confirmed via Playwright with mocked API (7 screenshots).
 
 ### Card elevation contrast fix (commit 9abda76)
 

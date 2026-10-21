@@ -6,6 +6,7 @@ Run commands and mocking strategy: CLAUDE.md ("Testing Infrastructure"). Tooltip
 
 ## Rules for every new or touched test
 
+- **Skips conditioned on the run mode or the viewport are allowed** (the `SHOTS=<dir>` screenshot tests, the tooltip text updater `TT_WRITE_TEXTS=1`, mobile-only or desktop-only cases): the `test.skip` carries the reason as its message. Skipping a test to hide a failure stays forbidden, and so does `test.fixme` (see the next rule).
 - **No `waitForTimeout`.** There is none left in `e2e/` (grep proves it); do not add one. No longer global timeouts, no `test.retry`, no `test.fixme` / `test.skip` (a spec that does not apply to a state is not generated for it), no weakened assertions.
 - **Wait for something the browser can report.** An auto-retrying `expect`, an awaited mocked response, a visible and stable element. `e2e/fixtures/settle.ts` has the helpers:
   - `frames(page, n)` — n painted animation frames (not usable after `page.clock.install()`).

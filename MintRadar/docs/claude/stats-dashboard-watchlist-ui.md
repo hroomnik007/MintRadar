@@ -330,7 +330,7 @@ a dead chain (left in place, not deleted).
 - File: `Dashboard.tsx`
 - **Status "All" showed only the online-pool (2026-10-01):** clicking All in the Filters panel left "Show 51 of 76" and the "25 mints hidden" banner, because the pool still stripped degraded (24h+ offline) + archived mints for every status except Offline. Pointer/overlay was NOT the cause (the radio under the pointer is the real input; same behaviour before the panel redesign). Fix: `poolForStatus()` / `revealsHiddenMints()` in `src/utils/mintCounts.ts` — All and Offline both reveal the whole tracked set, only Online (with "Show" off) strips it; used by both the grid pool and the panel's `draftCount`. All = every tracked mint (incl. test mints unless Hide test mints is ticked), `?status=all`.
 
-Verified: typecheck ✅, build ✅, 70/70 unit tests ✅, Playwright confirmed both scenarios (Status=Offline shows offline mints including 24h+; Reset restores default state).
+Verified: typecheck ✅, build ✅, unit tests ✅ (counts: "Test suites" in CLAUDE.md), Playwright confirmed both scenarios (Status=Offline shows offline mints including 24h+; Reset restores default state).
 
 ### Dashboard controls row (2026-09-05)
 
