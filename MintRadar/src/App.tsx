@@ -19,9 +19,10 @@ const lazyFallback = (
   <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text2)' }}>Loading…</div>
 )
 
-// The Stats route's fallback is as tall as the viewport, so the footer is already below the fold when the first frame
-// is painted and does not jump out of view when the page arrives (docs/claude/stats-dashboard-watchlist-ui.md, "Layout shift rule").
-const statsFallback = (
+// The fallback of the long lazy routes (Stats, Tools, Mint Detail) is as tall as the viewport, so the footer is already
+// below the fold when the first frame is painted and does not jump out of view when the page arrives
+// (docs/claude/stats-dashboard-watchlist-ui.md, "Layout shift rule").
+const viewportFallback = (
   <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text2)', minHeight: '100vh' }}>Loading…</div>
 )
 
@@ -32,8 +33,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> },
       { path: 'watchlist', element: <Watchlist /> },
-      { path: 'stats', element: <Suspense fallback={statsFallback}><Stats /></Suspense> },
-      { path: 'tools', element: <Suspense fallback={lazyFallback}><Tools /></Suspense> },
+      { path: 'stats', element: <Suspense fallback={viewportFallback}><Stats /></Suspense> },
+      { path: 'tools', element: <Suspense fallback={viewportFallback}><Tools /></Suspense> },
       { path: 'about', element: <Suspense fallback={lazyFallback}><About /></Suspense> },
       { path: 'methodology', element: <Suspense fallback={lazyFallback}><Methodology /></Suspense> },
       { path: 'for-wallets', element: <Suspense fallback={lazyFallback}><ForWallets /></Suspense> },
@@ -42,7 +43,7 @@ export const router = createBrowserRouter([
       { path: 'learn/:moduleId', element: <LearnModule /> },
       { path: 'nuts', element: <NutExplorer /> },
       { path: 'mint/nostr/:naddr', element: <MintNaddr /> },
-      { path: 'mint/:url', element: <Suspense fallback={lazyFallback}><MintDetail /></Suspense> },
+      { path: 'mint/:url', element: <Suspense fallback={viewportFallback}><MintDetail /></Suspense> },
       { path: '*', element: <NotFound /> },
     ],
   },

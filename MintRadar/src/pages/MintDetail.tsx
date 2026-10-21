@@ -2924,7 +2924,7 @@ export default function MintDetail() {
   // A failed list is an error state with a retry, never "Not a tracked mint" (the list is simply missing).
   if (knownMintsData === undefined) {
     return (
-      <div className="mint-detail">
+      <div className="mint-detail mint-detail-pending">
         <div className="md-header">
           <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
         </div>
