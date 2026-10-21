@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { nip19 } from 'nostr-tools'
 
 const { connectMock, clientQueryMock, clientReleaseMock, poolQueryMock } = vi.hoisted(() => ({
   connectMock: vi.fn(),
@@ -20,6 +21,7 @@ import {
   recomputeReviewCountRollups,
   aggregateReviews,
   operatorKeysOf,
+  contactKeysOf,
   type SyncedReview,
 } from '../reviewsSync.js'
 
@@ -133,6 +135,44 @@ describe('operatorKeysOf', () => {
   it('is empty without data', () => {
     expect(operatorKeysOf(undefined).size).toBe(0)
     expect(operatorKeysOf({ contact_nostr: null, nostr_announce_pubkey: null }).size).toBe(0)
+  })
+})
+
+// Part L (2026-10-21): a key the mint lists as its contact is only LABELLED in the Reviews tab. Counting follows the operator rule
+// alone, which also needs the announcement author.
+describe('contact-listed keys and the counting rule', () => {
+  const five = (pubkey: string) => ({ pubkey, rating: 5, comment: 'x' })
+  const counted = (row: { contact_nostr: unknown; nostr_announce_pubkey: unknown }, rows: Array<{ pubkey: string; rating: number | null; comment: string }>) =>
+    aggregateReviews(rows, operatorKeysOf(row))
+
+  it('contact match without a known announcement: the key is listed AND its review is counted', () => {
+    const row = { contact_nostr: [OPERATOR_HEX], nostr_announce_pubkey: null }
+    expect(contactKeysOf(row).has(OPERATOR_HEX)).toBe(true)
+    expect(counted(row, [five(OPERATOR_HEX), five('b')])).toEqual({ count: 2, avg: 5, operatorCount: 0, ratedCount: 2 })
+  })
+  it('contact AND announcement match: the review is excluded (operator rule unchanged)', () => {
+    const row = { contact_nostr: [OPERATOR_HEX], nostr_announce_pubkey: OPERATOR_HEX }
+    expect(operatorKeysOf(row).has(OPERATOR_HEX)).toBe(true)
+    expect(counted(row, [five(OPERATOR_HEX), five('b')])).toEqual({ count: 1, avg: 5, operatorCount: 1, ratedCount: 1 })
+  })
+  it('hostile mint: it lists a critic as its contact (announcement by someone else): the critic stays counted, only labelled', () => {
+    const row = { contact_nostr: [CRITIC_HEX], nostr_announce_pubkey: OPERATOR_HEX }
+    expect(contactKeysOf(row).has(CRITIC_HEX)).toBe(true)
+    expect(counted(row, [{ pubkey: CRITIC_HEX, rating: 1, comment: 'ran off with my sats' }, five('b')])).toEqual({ count: 2, avg: 3, operatorCount: 0, ratedCount: 2 })
+  })
+  it('no contact match, no contact list, no row: no listed key', () => {
+    expect(contactKeysOf({ contact_nostr: [OPERATOR_HEX] }).has(CRITIC_HEX)).toBe(false)
+    expect(contactKeysOf({ contact_nostr: null }).size).toBe(0)
+    expect(contactKeysOf({ contact_nostr: 'not a list' }).size).toBe(0)
+    expect(contactKeysOf(undefined).size).toBe(0)
+  })
+  it('reads hex, npub, nprofile and an optional nostr: prefix; at most 3 entries; free text and NIP-05 names are not keys', () => {
+    const hex = (c: string) => c.repeat(64)
+    const keys = contactKeysOf({ contact_nostr: [
+      hex('a').toUpperCase(), `nostr:${nip19.npubEncode(hex('b'))}`, nip19.nprofileEncode({ pubkey: hex('c') }), hex('d'),
+    ] })
+    expect([...keys].sort()).toEqual([hex('a'), hex('b'), hex('c')]) // the fourth entry is past the limit
+    expect(contactKeysOf({ contact_nostr: ['alice@example.com', 'hello', 42, null] }).size).toBe(0)
   })
 })
 

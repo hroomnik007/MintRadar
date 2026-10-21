@@ -92,9 +92,9 @@ Tests: `reviewsRelayFetch.test.ts` (since plan: first run / after a failure / af
 - **Community-rating stat tile** reads `knownMint.reviewCount` / `reviewAvgRating` (the `mints` rollup, in `/api/mints/known`) while the live fetch is still running — `tileReviewCount` / `tileAvgRating` in `MintDetail.tsx`. This replaced a ~4s window where the empty live array made the tile flash a wrong "No reviews yet". `null` on both the rollup and the live side renders a "…" skeleton (same idea as the existing "Loading live mint data" placeholder).
 - Do not remove either mechanism without re-confirming with the maintainer — see the review-fetch investigation report for the full reasoning.
 
-**Operator reviews are labelled and not counted (2026-10-05; rule tightened the same day).** A review
-written by the mint's own operator key is shown with a text badge "Operator" but is NOT in the Community
-Rating or the review count. **A key is the operator ONLY when BOTH sources agree:** it is (a) listed in the
+**Operator reviews are labelled and not counted (2026-10-05; rule tightened the same day; wording corrected 2026-10-21, Task Y L).** A review
+from a key that is both listed as the mint's Nostr contact and the author of its NIP-87 announcement is shown with a text badge "Operator" but is NOT in the Community
+Rating or the review count. **Public wording (all places, 2026-10-21):** "Reviews from a key that is both listed as the mint's Nostr contact and the author of the mint's NIP-87 announcement are not counted." — never "reviews written by the operator": the rule proves a key match, not who wrote the review, and for a mint without a known announcement (most of them: `nostrAnnouncePubkey` null) NO review is excluded, so a review from a key the mint lists as its own contact IS counted (one of three reviews of LNpay). Sites: `OPERATOR_REVIEW_NOTE` and `operatorExcludedText()` (`tooltipTexts.ts`), Methodology, About, README, `docs/API.md`, `docs/openapi/wallets-v1.yaml`, `WALLET_MINT_FIELDS` `reviews.operatorCount`. **A key is the operator ONLY when BOTH sources agree:** it is (a) listed in the
 mint's NUT-06 `contact` entries with method `nostr` as an npub, nprofile or 64-char hex (optional `nostr:`
 prefix; at most 3 entries, 300 chars each) AND (b) the author of the NIP-87 announcement (kind:38172) for the
 mint's URL (`mints.nostr_announce_pubkey`). `operatorPubkeys(source)` (`backend/src/shared/operatorPubkeys.ts`,
@@ -114,8 +114,9 @@ announcement is not known to the backend (`nostrAnnouncePubkey` null) has no ope
 by an already-known pubkey and never persisted, so there is no stored resolution to use, and resolving one
 would be a new outbound request. Mitigations still in place: at most 3 contact keys are read, nothing is
 deleted, the tile and the badge say why a review is excluded.
+- **Neutral label "Key listed as this mint's contact" (2026-10-21, Task Y L):** a review whose author key equals a Nostr contact key the SAME mint lists (same normalisation as the rule: hex, npub, nprofile, optional `nostr:` prefix, at most 3 entries; `contactPubkeys()` in both copies of `operatorPubkeys.ts`, `operatorPubkeys()` is now `contactPubkeys` ∩ announcement author, behaviour unchanged) and that is NOT excluded as an operator review. The exclusion rule is untouched (it protects against a hostile mint listing a critic's key): the labelled review is COUNTED in the rating, the count, the averages and every filter. Data path: `GET /api/mints/nostr-reviews` adds one boolean `listedAsContact` per item (`contactKeysOf()` in `reviewsSync.ts` from `mints.contact_nostr`, read by two uncorrelated sub-selects in the same query together with `nostr_announce_pubkey`; works for an offline mint, the stored list is used; it is `false` for an operator-excluded review so that review keeps only its "Operator" treatment). No contact value leaves the server, the wallet API does not carry the flag. Frontend: `contactListedKeys()` / `showContactLabel()` / `CONTACT_LISTED_LABEL` in `reviewUtils.ts`; `<span class="review-contact-label">` (12 px, `--text3`, wraps with `overflow-wrap: anywhere`) as the last line of `.review-author`, under the short key. A labelled row is one line (two at 320 px) taller than an unlabelled one; review rows have no reserved height, so nothing was re-recorded. Tests: backend `nostr-reviews.test.ts` (contact only flagged and counted, contact + announcement unflagged and excluded, no match, hostile critic only labelled, normalisation, no contact value in the body), `reviewsSync.test.ts`, `operatorPubkeys.test.ts` (both copies, `sharedModules.test.ts`); frontend `contactListedLabel.test.ts`; `e2e/mint-detail-contact-label.spec.ts` (1440 / 390 / 320, counts and chips unchanged, wording of Methodology / About / for-wallets). Mutations: exclude on contact alone fails the rule tests; dropping the label fails the e2e.
 - **Backend:** the probe stores the raw `nostr` contact strings in `mints.contact_nostr` (JSONB, rewritten on
-  every successful probe, never returned by an endpoint). `reviewsSync.ts` `aggregateReviews()` is the single
+  every successful probe, never returned by an endpoint; only the `listedAsContact` boolean above is derived from it). `reviewsSync.ts` `aggregateReviews()` is the single
   counting rule (empty events and operator reviews excluded) used by `persistMintReviews` and
   `recomputeReviewCountRollups` (now computed in JS from the stored rows; the operator set is taken from
   the mints rows at aggregation time). It writes `review_count`, `review_avg_rating` and the new
@@ -129,7 +130,7 @@ deleted, the tile and the badge say why a review is excluded.
   probe's contact list + `knownMint.nostrAnnouncePubkey`; while the live contact list or the known-mints
   row is unavailable (loading or offline mint) the tile keeps the backend rollup, which applies the same rule. When
   at least one operator review is excluded, an ⓘ (`.operator-excluded-info`) says "Excludes N review(s)
-  written by the mint's operator." The list and its filter chips still count/show ALL reviews (the chip
+  from a key that is both listed as the mint's Nostr contact and the author of its NIP-87 announcement." The list and its filter chips still count/show ALL reviews (the chip
   group's tooltip says so when it differs from the tile). Cards, Compare and the Rating sort read the
   backend rollup and are therefore operator-free.
 - About page sentence and `privacy-and-about.md` updated accordingly.

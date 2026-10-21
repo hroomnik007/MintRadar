@@ -22,7 +22,7 @@ import { pool } from './db.js'
 import { getKnownMints } from './prober.js'
 import { parseReviewRatingAndComment } from './reviews.js'
 import { runProfilesSyncForServer } from './profilesSync.js'
-import { operatorPubkeys } from './shared/operatorPubkeys.js'
+import { operatorPubkeys, contactPubkeys } from './shared/operatorPubkeys.js'
 import {
   REVIEW_BATCH_SIZE,
   REVIEW_CONNECT_TIMEOUT_MS,
@@ -140,6 +140,13 @@ export function operatorKeysOf(row: { contact_nostr?: unknown; nostr_announce_pu
     : []
   const announcePubkey = typeof row.nostr_announce_pubkey === 'string' ? row.nostr_announce_pubkey : null
   return operatorPubkeys({ contact, announcePubkey })
+}
+
+/** Hex keys of the nostr contact entries a mints row lists ({ contact_nostr }); same parsing and limits as the operator rule.
+ *  Only a boolean per review ever leaves the server (GET /api/mints/nostr-reviews `listedAsContact`), never a contact value. */
+export function contactKeysOf(row: { contact_nostr?: unknown } | undefined): Set<string> {
+  if (!row || !Array.isArray(row.contact_nostr)) return new Set()
+  return contactPubkeys((row.contact_nostr as unknown[]).map(info => ({ method: 'nostr', info })))
 }
 
 /** The one counting rule behind mints.review_count / review_avg_rating / review_operator_count / review_rated_count. */

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import type { Express } from 'express'
+import { nip19 } from 'nostr-tools'
 
 // GET /api/mints/nostr-reviews serves the `mint_reviews` rows that the hourly
 // background sync (reviewsSync.ts) populates from Nostr relays — it no longer
@@ -157,5 +158,55 @@ describe('GET /api/mints/nostr-reviews', () => {
     const res = await request(app).get('/api/mints/nostr-reviews').query({ url: 'https://mint.example.com' })
 
     expect(res.headers['cache-control']).toMatch(/max-age=\d+/)
+  })
+})
+
+// Part L (2026-10-21): `listedAsContact` — the author's key is one of the nostr contacts the mint itself lists AND the review is not
+// excluded as an operator review (that rule also needs the announcement author). A boolean per item; never a contact value.
+describe('GET /api/mints/nostr-reviews: listedAsContact', () => {
+  const hex = (c: string) => c.repeat(64)
+  const CONTACT = hex('a'), ANNOUNCER = hex('e'), CRITIC = hex('c'), OTHER = hex('b')
+  const get = async (mint: { contact_nostr: unknown; nostr_announce_pubkey: unknown }, pubkeys: string[]) => {
+    queryMock.mockResolvedValue({ rows: pubkeys.map(pubkey => ({ ...row({ pubkey }), ...mint })) })
+    const res = await request(app).get('/api/mints/nostr-reviews').query({ url: 'https://mint.example.com' })
+    expect(res.status).toBe(200)
+    return Object.fromEntries((res.body as Array<{ pubkey: string; listedAsContact: boolean }>).map(r => [r.pubkey, r.listedAsContact]))
+  }
+
+  it('contact match without a known announcement is flagged (works for any mint, the data is the stored list)', async () => {
+    expect(await get({ contact_nostr: [CONTACT], nostr_announce_pubkey: null }, [CONTACT, OTHER])).toEqual({ [CONTACT]: true, [OTHER]: false })
+  })
+  it('contact AND announcement match is the excluded operator review: not flagged', async () => {
+    expect(await get({ contact_nostr: [CONTACT], nostr_announce_pubkey: CONTACT }, [CONTACT, OTHER])).toEqual({ [CONTACT]: false, [OTHER]: false })
+  })
+  it('hostile: the mint lists a critic as its contact, someone else announced it: the critic is only labelled', async () => {
+    expect(await get({ contact_nostr: [CRITIC], nostr_announce_pubkey: ANNOUNCER }, [CRITIC, ANNOUNCER])).toEqual({ [CRITIC]: true, [ANNOUNCER]: false })
+  })
+  it('no contact match, no stored contacts: nothing is flagged', async () => {
+    expect(await get({ contact_nostr: [CONTACT], nostr_announce_pubkey: null }, [OTHER])).toEqual({ [OTHER]: false })
+    expect(await get({ contact_nostr: null, nostr_announce_pubkey: null }, [CONTACT])).toEqual({ [CONTACT]: false })
+  })
+  it('same normalisation as the operator rule: npub, nprofile, nostr: prefix, upper-case hex', async () => {
+    const mint = { contact_nostr: [nip19.npubEncode(hex('1')), `nostr:${nip19.nprofileEncode({ pubkey: hex('2') })}`, hex('3').toUpperCase()], nostr_announce_pubkey: null }
+    expect(await get(mint, [hex('1'), hex('2'), hex('3'), hex('4')])).toEqual({ [hex('1')]: true, [hex('2')]: true, [hex('3')]: true, [hex('4')]: false })
+  })
+  it('never exposes a contact value or the stored columns, and adds no other field', async () => {
+    const contacts = [nip19.npubEncode(CONTACT), 'alice@example.com', 'https://t.me/secret']
+    queryMock.mockResolvedValue({ rows: [{ ...row({ pubkey: CONTACT }), contact_nostr: contacts, nostr_announce_pubkey: ANNOUNCER }] })
+    const res = await request(app).get('/api/mints/nostr-reviews').query({ url: 'https://mint.example.com' })
+    expect(Object.keys(res.body[0]).sort()).toEqual(['content', 'createdAt', 'id', 'listedAsContact', 'pubkey', 'rating', 'source'])
+    const text = JSON.stringify(res.body)
+    for (const c of contacts) expect(text).not.toContain(c)
+    expect(text).not.toContain('contact_nostr')
+    expect(text).not.toContain('nostr_announce_pubkey')
+    expect(text).not.toContain(ANNOUNCER)
+  })
+  it('asks for the contact list and the announcement author of the same mint url, once', async () => {
+    queryMock.mockResolvedValue({ rows: [] })
+    await request(app).get('/api/mints/nostr-reviews').query({ url: 'https://mint.example.com' })
+    const [sql, params] = queryMock.mock.calls[0]!
+    expect(sql).toMatch(/\(SELECT contact_nostr FROM mints WHERE url = \$1\) AS contact_nostr/)
+    expect(sql).toMatch(/\(SELECT nostr_announce_pubkey FROM mints WHERE url = \$1\) AS nostr_announce_pubkey/)
+    expect(params).toEqual(['https://mint.example.com'])
   })
 })

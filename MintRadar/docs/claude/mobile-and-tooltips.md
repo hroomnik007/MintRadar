@@ -288,7 +288,7 @@ Measured (touch context): visible height 27px ≤640px (padding 7/8), 30px above
 **Removed or merged tooltips (2026-10-14, review verdicts REMOVE / MERGE):**
 - cashu.info tile "Avg swap time": no ⓘ any more (`AuditCzTile.tooltip` is optional); the label says what it is and the sibling tiles' tooltips and the tab's ⓘ state the 7 days and the source.
 - "Hide test mints": the `title` on the checkbox label is gone; the one explanation is the InfoTooltip on the "Test mints hidden" tag (the card's "Test mint" badge only exists while test mints are shown, so it cannot carry it).
-- Reviews tab filter-group `title` ("Counts every listed review ..."): gone; its fact moved into the Community Rating tile's ⓘ (`operatorExcludedText()`: "... The Reviews tab still lists it, marked Operator.").
+- Reviews tab filter-group `title` ("Counts every listed review ..."): gone; its fact moved into the Community Rating tile's ⓘ (`operatorExcludedText()`: "Excludes N review(s) from a key that is both listed as the mint's Nostr contact and the author of its NIP-87 announcement. The Reviews tab still lists it, marked Operator.").
 
 **Four more explanations removed (2026-10-14, owner decision; `e2e/tooltips-removed-captions.spec.ts`).** The ⓘ and its text are gone; the rows INSIDE the score
 breakdowns and every other tooltip stay. Where each fact lives now:

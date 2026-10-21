@@ -21,7 +21,7 @@ import {
 import { useKnownMints } from '@/hooks/useKnownMints'
 import { LoadError, LoadingNote, MINT_LIST_ERROR, LIVE_DATA_ERROR } from '@/components/LoadError'
 import { useMintReviews } from '@/hooks/useMintReviews'
-import { mergeStoredAndLiveReviews, visibleReviews, withServerProfileFallback, type ServerAuthorProfile } from '@/utils/reviewUtils'
+import { mergeStoredAndLiveReviews, visibleReviews, withServerProfileFallback, contactListedKeys, showContactLabel, CONTACT_LISTED_LABEL, type ServerAuthorProfile } from '@/utils/reviewUtils'
 import { useMintOperatorNip05 } from '@/hooks/useMintOperatorNip05'
 import { useVerifiedNip05 } from '@/hooks/useVerifiedNip05'
 import { usePendingAutoWatch } from '@/hooks/usePendingAutoWatch'
@@ -495,7 +495,7 @@ function MintDetailContent({ url }: { url: string }) {
     queryFn: async () => {
       const res = await fetch(`/api/mints/nostr-reviews?url=${encodeURIComponent(url)}`)
       if (!res.ok) throw new Error('Failed to fetch stored reviews')
-      return res.json() as Promise<Array<{ id: string; pubkey: string; content: string; rating: number | null; createdAt: number; source: 'nostr' } & ServerAuthorProfile>>
+      return res.json() as Promise<Array<{ id: string; pubkey: string; content: string; rating: number | null; createdAt: number; source: 'nostr'; listedAsContact?: boolean } & ServerAuthorProfile>>
     },
     staleTime: NOSTR_REVIEWS_STALE_TIME_MS,
     retry: false,
@@ -508,6 +508,10 @@ function MintDetailContent({ url }: { url: string }) {
     () => [...new Set((nostrReviewsData ?? []).map(r => r.pubkey))],
     [nostrReviewsData],
   )
+  // Authors whose key the mint itself lists as a nostr contact and whose review is NOT excluded as an operator review
+  // (the server decides from the stored contacts, also for an offline mint). Only a neutral label in the list: it never
+  // changes a count, an average or a filter.
+  const contactListed = useMemo(() => contactListedKeys(nostrReviewsData), [nostrReviewsData])
   const { reviews, loading: reviewsLoading, profiles: nostrProfiles } = useMintReviews(url, nostrReviewsPubkeys)
   // Shared shape for mergeStoredAndLiveReviews' two input arrays — `source` has
   // to be the same literal-union type on both sides, not narrowed to a single
@@ -2327,6 +2331,9 @@ function MintDetailContent({ url }: { url: string }) {
                               )}
                             </span>
                             <span className="review-author-npub">{shortNpub(npub)}</span>
+                            {showContactLabel(r.pubkey, contactListed, operatorKeys) && (
+                              <span className="review-contact-label">{CONTACT_LISTED_LABEL}</span>
+                            )}
                           </div>
                           <div className="review-meta">
                             {r.rating !== null && (

@@ -111,7 +111,7 @@ A hand-maintained list of Cashu-compatible wallets — each with supported platf
 Mint Detail shows community reviews as **kind:38000** events. On page load they're fetched live from a small fast relay set; a server-side sync additionally aggregates reviews from a broader relay set so counts and averages stay complete. Ratings are parsed from the review's rating tag or its `[N/5]` marker. Author profiles (name + avatar) are resolved from Nostr. Avatars are only loaded over HTTPS.
 
 - Events with **neither a rating nor a comment** are not shown in the list and are not counted on mint cards
-- The mint operator's own reviews are labelled and not counted in the Community Rating
+- Reviews from a key that is both listed as the mint's Nostr contact and the author of the mint's NIP-87 announcement are labelled and not counted in the Community Rating; a review from a key the mint lists only as a contact is counted and carries a neutral label
 - Filter chips: **All**, **5★**, **Critical**, and a separate **Hide anon** toggle
 - A short disclaimer notes these are unverified NIP-87 events from the open Nostr network
 - Write your own review from the page, with a "Signing with …" indicator for the active login method

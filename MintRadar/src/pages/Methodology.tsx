@@ -223,9 +223,11 @@ export default function Methodology() {
           <h2 id="reviews" tabIndex={-1} className="about-h2">Reviews are separate</h2>
           <p>
             People&apos;s reviews (NIP-87, from Nostr) form the separate <strong>Community Rating</strong>. It is never
-            part of the Reliability Score and the score never changes because of a review. Reviews written by a
-            mint&apos;s own operator are labelled and not counted in the Community Rating. MintRadar does not verify
-            reviewers.
+            part of the Reliability Score and the score never changes because of a review. Reviews from a key that is
+            both listed as the mint&apos;s Nostr contact and the author of the mint&apos;s NIP-87 announcement are
+            labelled Operator and not counted in the Community Rating. A review from a key that the mint lists only as
+            a contact is counted and carries the neutral label &quot;Key listed as this mint&apos;s contact&quot;.
+            MintRadar does not verify reviewers.
           </p>
         </section>
 

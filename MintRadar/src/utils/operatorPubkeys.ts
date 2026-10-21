@@ -45,6 +45,23 @@ function toHexPubkey(raw: string): string | null {
   return null
 }
 
+/** Lowercase hex pubkeys of the nostr contact entries a mint lists (at most 3 entries are read, same parsing and
+ *  limits as the operator rule). The mint writes this list itself, so a key in it proves nothing about the person
+ *  behind the key: it is only ever used for the neutral "Key listed as this mint's contact" label and as the first
+ *  half of the operator rule below. */
+export function contactPubkeys(contact: OperatorSource['contact']): Set<string> {
+  const out = new Set<string>()
+  let seen = 0
+  for (const c of Array.isArray(contact) ? contact : []) {
+    if (seen >= MAX_CONTACTS) break
+    if (!c || c.method !== 'nostr' || typeof c.info !== 'string') continue
+    seen++
+    const hex = toHexPubkey(c.info)
+    if (hex !== null) out.add(hex)
+  }
+  return out
+}
+
 /** Lowercase hex pubkeys of the mint's operator keys: the contact keys (at most 3) that are also the
  *  announcement author. Empty when either source is missing or they disagree. */
 export function operatorPubkeys(source: OperatorSource): Set<string> {
@@ -53,14 +70,6 @@ export function operatorPubkeys(source: OperatorSource): Set<string> {
     ? source.announcePubkey.toLowerCase()
     : null
   if (announcer === null) return out
-  const contact = Array.isArray(source.contact) ? source.contact : []
-  let seen = 0
-  for (const c of contact) {
-    if (seen >= MAX_CONTACTS) break
-    if (!c || c.method !== 'nostr' || typeof c.info !== 'string') continue
-    seen++
-    const hex = toHexPubkey(c.info)
-    if (hex === announcer) out.add(hex)
-  }
+  if (contactPubkeys(source.contact).has(announcer)) out.add(announcer)
   return out
 }

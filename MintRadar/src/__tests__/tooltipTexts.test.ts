@@ -89,8 +89,8 @@ describe('numbers in the built texts equal their sources', () => {
     expect(beRatio).toBe(2)
   })
   it('operator-excluded note counts the reviews and says where they still are', () => {
-    expect(T.operatorExcludedText(1)).toBe("Excludes 1 review written by the mint's operator. The Reviews tab still lists it, marked Operator.")
-    expect(T.operatorExcludedText(3)).toBe("Excludes 3 reviews written by the mint's operator. The Reviews tab still lists them, marked Operator.")
+    expect(T.operatorExcludedText(1)).toBe("Excludes 1 review from a key that is both listed as the mint's Nostr contact and the author of its NIP-87 announcement. The Reviews tab still lists it, marked Operator.")
+    expect(T.operatorExcludedText(3)).toBe("Excludes 3 reviews from a key that is both listed as the mint's Nostr contact and the author of its NIP-87 announcement. The Reviews tab still lists them, marked Operator.")
   })
   it('new-mint cap texts carry the cap and the days', () => {
     expect(numbers(T.newMintBadgeText())).toEqual([NEW_MINT_RELIABILITY_CAP, NEW_MINT_MAX_DAYS])

@@ -5,8 +5,8 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import { nip19 } from 'nostr-tools'
-import { operatorPubkeys as feOperators, type OperatorSource } from '@/utils/operatorPubkeys'
-import { operatorPubkeys as beOperators } from '../../backend/src/shared/operatorPubkeys'
+import { operatorPubkeys as feOperators, contactPubkeys as feContacts, type OperatorSource } from '@/utils/operatorPubkeys'
+import { operatorPubkeys as beOperators, contactPubkeys as beContacts } from '../../backend/src/shared/operatorPubkeys'
 import { cleanMintNameDetailed as feClean } from '@/utils/cleanMintName'
 import { cleanMintNameDetailed as beClean } from '../../backend/src/shared/cleanMintName'
 import * as feAudit from '@/utils/auditScore'
@@ -51,6 +51,7 @@ describe('operatorPubkeys: backend and frontend copies agree', () => {
   })
   it.each(OPERATOR_CASES.map((c, i) => [i, c] as const))('case %i', (_i, c) => {
     expect([...feOperators(c)].sort()).toEqual([...beOperators(c)].sort())
+    expect([...feContacts(c.contact)].sort()).toEqual([...beContacts(c.contact)].sort())
   })
 })
 

@@ -137,3 +137,17 @@ export function withServerProfileFallback<T extends { pubkey: string; profile?: 
     return { ...r, profile: { ...r.profile, name, ...(nip05 ? { nip05 } : {}), fromServer: true } }
   })
 }
+
+/** The neutral label of a review whose author key the mint itself lists as a Nostr contact (and that is not an operator review). A fact about the mint's list, never a verdict. */
+export const CONTACT_LISTED_LABEL = "Key listed as this mint's contact"
+
+/** Lowercase hex keys flagged `listedAsContact` by GET /api/mints/nostr-reviews (the server compares the author with the mint's stored contacts; no contact value is ever sent). */
+export function contactListedKeys(items: ReadonlyArray<{ pubkey: string; listedAsContact?: boolean }> | undefined): Set<string> {
+  return new Set((items ?? []).filter(r => r.listedAsContact === true).map(r => r.pubkey.toLowerCase()))
+}
+
+/** Label only a flagged review that is not already treated as an operator review. Display only: it never touches a count, an average or a filter. */
+export function showContactLabel(pubkey: string, listed: ReadonlySet<string>, operators: ReadonlySet<string>): boolean {
+  const k = pubkey.toLowerCase()
+  return listed.has(k) && !operators.has(k)
+}

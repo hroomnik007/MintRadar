@@ -79,7 +79,7 @@ const RELIABILITY_MOVERS_CACHE_TTL = 10 * 60_000 // 10 minutes
 // kind:38000 reviews (the hourly background sync). GET /api/mints/nostr-reviews no
 // longer touches a relay — it serves the DB rows that sync populates.
 export { REVIEW_SYNC_RELAYS as NOSTR_REVIEWS_RELAYS } from './reviewsSync.js'
-import { aggregateReviews, operatorKeysOf, type ReviewAggregate } from './reviewsSync.js'
+import { aggregateReviews, operatorKeysOf, contactKeysOf, type ReviewAggregate } from './reviewsSync.js'
 
 const REQUIRED_ENV_VARS = ['DATABASE_URL', 'ALLOWED_ORIGINS'] as const
 const missingVars = REQUIRED_ENV_VARS.filter(v => !process.env[v])
@@ -2288,13 +2288,20 @@ app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {
 
   pool
     .query(
-      `SELECT r.event_id, r.pubkey, r.rating, r.comment, r.created_at, p.found, p.name, p.display_name, p.nip05
+      `SELECT r.event_id, r.pubkey, r.rating, r.comment, r.created_at, p.found, p.name, p.display_name, p.nip05,
+              (SELECT contact_nostr FROM mints WHERE url = $1) AS contact_nostr,
+              (SELECT nostr_announce_pubkey FROM mints WHERE url = $1) AS nostr_announce_pubkey
        FROM mint_reviews r LEFT JOIN nostr_profiles p ON p.pubkey = r.pubkey
        WHERE r.url = $1
        ORDER BY r.created_at DESC`,
       [url],
     )
     .then(result => {
+      // The mint's own listed nostr contacts and its announcement author, only to compare with each review author (every row
+      // carries the same two values); a boolean per review leaves the server, never a contact value.
+      const mintRow = result.rows[0] as { contact_nostr?: unknown; nostr_announce_pubkey?: unknown } | undefined
+      const contactKeys = contactKeysOf(mintRow)
+      const operatorKeys = operatorKeysOf(mintRow)
       const reviews = result.rows.map(r => ({
         id: r.event_id as string,
         pubkey: r.pubkey as string,
@@ -2302,6 +2309,10 @@ app.get('/api/mints/nostr-reviews', (req: Request, res: Response): void => {
         rating: r.rating as number | null,
         createdAt: Number(r.created_at),
         source: 'nostr' as const,
+        // The author's key is one of the nostr contacts the mint itself lists and the review is NOT excluded as an operator
+        // review (that rule also needs the announcement author: shared/operatorPubkeys.ts). Shown as a neutral label only; it
+        // never excludes a review or changes a count, average or score.
+        listedAsContact: contactKeys.has(String(r.pubkey).toLowerCase()) && !operatorKeys.has(String(r.pubkey).toLowerCase()),
         // Untrusted display text only (profilesSync.ts); never used for rating, operator rule or any score.
         ...profileFieldsForReview(r),
       }))

@@ -699,7 +699,7 @@ components:
         fetchedAt: { type: string, format: date-time }
     Reviews:
       type: object
-      description: Community Rating, the same definitions as the MintRadar website. Reviews written by the mint's own operator are left out of `count`, `ratedCount` and `avg`.
+      description: Community Rating, the same definitions as the MintRadar website. Reviews from a key that is both listed as the mint's Nostr contact and the author of its NIP-87 announcement are left out of `count`, `ratedCount` and `avg`.
       required: [count, ratedCount, avg, operatorCount]
       properties:
         count: { type: integer, minimum: 0, description: Counted NIP-87 reviews. }
@@ -707,4 +707,4 @@ components:
         avg:
           type: [number, 'null']
           description: Average rating over the rated reviews (one decimal); null when none.
-        operatorCount: { type: integer, minimum: 0, description: Reviews written by the mint's own operator. }
+        operatorCount: { type: integer, minimum: 0, description: Reviews from a key that is both listed as the mint's Nostr contact and the author of its NIP-87 announcement. }

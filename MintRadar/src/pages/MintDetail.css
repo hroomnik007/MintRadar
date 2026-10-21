@@ -992,6 +992,13 @@ button.md-url-copy.copied > svg { opacity: 1; }
   font-family: var(--font-mono);
   color: var(--text3);
 }
+/* Neutral fact line under the npub of a review whose author key the mint lists as its contact (not an operator review). */
+.review-contact-label {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text3);
+  overflow-wrap: anywhere;
+}
 .review-meta {
   display: flex;
   flex-direction: column;

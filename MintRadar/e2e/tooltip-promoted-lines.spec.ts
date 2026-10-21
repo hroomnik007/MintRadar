@@ -62,7 +62,7 @@ for (const vp of VIEWPORTS) {
       await page.goto(mintPath(OPERATOR_MINT, '#reviews'))
       await expect(page.locator('.review-operator-badge')).toBeVisible()
       const note = page.locator('.reviews-disclaimer', { hasText: 'Operator:' })
-      await expect(note).toHaveText('Operator: a review published by a key the mint lists as its contact that also announced the mint on Nostr.')
+      await expect(note).toHaveText('Operator: a key that is both listed as the mint\'s Nostr contact and the author of its NIP-87 announcement. Reviews from such a key are not counted.')
       await expect(page.locator('[data-tooltip-trigger] .review-operator-badge')).toHaveCount(0)
       expect(await note.evaluate(e => e.scrollWidth <= e.clientWidth + 1)).toBe(true)
       expect(await noSideScroll(page)).toBe(true)

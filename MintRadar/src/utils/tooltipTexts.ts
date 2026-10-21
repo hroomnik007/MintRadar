@@ -134,9 +134,9 @@ export function compareAuditSuccessText(): string {
   return `Last ${AUDIT_WINDOW_DAYS} days from cashu.info; only failures attributed to the mint count. n/a below ${AUDIT_MIN_SAMPLES} swaps. Not a solvency or reserves signal.`
 }
 
-/** Community Rating tile: how many operator reviews it leaves out (the Reviews tab still lists them). */
+/** Community Rating tile: how many reviews it leaves out under the operator rule (contact AND announcement author; the Reviews tab still lists them). */
 export function operatorExcludedText(n: number): string {
-  return `Excludes ${n} review${n === 1 ? '' : 's'} written by the mint's operator. The Reviews tab still lists ${n === 1 ? 'it' : 'them'}, marked Operator.`
+  return `Excludes ${n} review${n === 1 ? '' : 's'} from a key that is both listed as the mint's Nostr contact and the author of its NIP-87 announcement. The Reviews tab still lists ${n === 1 ? 'it' : 'them'}, marked Operator.`
 }
 
 /** Card chip "Same op". */
@@ -177,7 +177,7 @@ export function newMintCapNote(): string {
 }
 
 /** Mint Detail > Reviews: the visible line that explains the "Operator" badge (it replaced the badge's tooltip). */
-export const OPERATOR_REVIEW_NOTE = 'Operator: a review published by a key the mint lists as its contact that also announced the mint on Nostr.'
+export const OPERATOR_REVIEW_NOTE = "Operator: a key that is both listed as the mint's Nostr contact and the author of its NIP-87 announcement. Reviews from such a key are not counted."
 
 /** Watchlist: the line under the "More alerts" pills. */
 export function moreAlertsNote(): string {

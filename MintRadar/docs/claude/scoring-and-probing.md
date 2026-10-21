@@ -71,7 +71,7 @@ a small shared SVG component (`size` prop, default 13px, `currentColor` stroke) 
 by the Best Mint wizard's result rows (`Tools.tsx`) and
 `LearnIcons.tsx`. Do not duplicate this shield inline in a new component; import `IcShield`.
 
-Community Rating excludes the mint's own operator's reviews (labelled "Operator"; operator = contact key that also authored the mint's announcement, see "Operator reviews are
+Community Rating excludes reviews from a key that is both a listed Nostr contact and the author of the mint's NIP-87 announcement (labelled "Operator"; a contact-only key is counted and only labelled, Task Y L; operator = contact key that also authored the mint's announcement, see "Operator reviews are
 labelled and not counted" in reviews-and-nostr.md); the Reliability Score formula is unaffected.
 
 ## NUT list — single source of truth (2026-08-19)
