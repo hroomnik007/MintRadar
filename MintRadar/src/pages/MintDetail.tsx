@@ -1382,6 +1382,8 @@ function MintDetailContent({ url }: { url: string }) {
                 <InfoTooltip className="latency-client-info" iconSize={11} width={200} about="your latency from this browser" text="Your latency from this browser to the mint (client-side measurement)." />
               </span>
             </div>
+            {/* Desktop strip: ends the first row (value + button) whatever the width of the value, so the label never climbs into it when the value is the short "—" of a mint without latency. */}
+            <span className="md-sc-latency-break" aria-hidden="true" />
             {clientLatency !== null && (
               <div style={{fontSize:10,marginTop:4,fontFamily:'var(--font-mono)',color: typeof clientLatency === 'number' ? 'var(--text)' : 'var(--text3)'}}>
                 {typeof clientLatency === 'number' ? `Your latency: ${clientLatency}ms` : clientLatency}
