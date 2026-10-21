@@ -1384,6 +1384,11 @@ button.md-url-copy.copied > svg { opacity: 1; }
     grid-template-columns: 1fr;
     padding: 12px 18px;
   }
+  /* Stacked layout: the right column (Units and methods) sits BELOW the tab, so while the Audit data loads it must not
+     be inside the first screen, or it leaves it when the audit card arrives (layout shift 0.137 at 390 x 844 on a
+     #audit deep link, Task Z3). 480px puts it under the fold of every phone and stays below the smallest loaded
+     Audit card measured (631px at 768px wide, 763-855px on phones). */
+  .md-audit-loading { min-height: 480px; }
   .md-tabs { padding: 0 18px; }
   .md-tab { padding: 10px 10px; font-size: 13px; }
   .md-header {

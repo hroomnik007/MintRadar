@@ -2071,7 +2071,7 @@ function MintDetailContent({ url }: { url: string }) {
 
           {activeTab === 'audit' && (<>
             {auditCzLoading ? (
-              <div style={{fontSize:12.5,color:'var(--text3)',fontFamily:'var(--font-mono)'}} role="status">Loading audit data…</div>
+              <div className="md-audit-loading" style={{fontSize:12.5,color:'var(--text3)',fontFamily:'var(--font-mono)'}} role="status">Loading audit data…</div>
             ) : (czView !== null || has8333Audit) ? (
               <div className="md-panel md-audit-collapsible" style={{background:'var(--bg)'}}>
                 {/* Desktop heading (the mobile collapse toggle below is display:none here). */}
