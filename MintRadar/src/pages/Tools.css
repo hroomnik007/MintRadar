@@ -506,7 +506,9 @@ a.token-action-btn:focus {
 .pr-mint, .pr-transport { background: var(--bg3); border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; align-items: flex-start; }
 .pr-mint-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; max-width: 100%; }
 .pr-mint-name { font-size: 15px; font-weight: 500; color: var(--text); font-family: var(--font-body); overflow-wrap: anywhere; }
-.pr-mint-status { font-size: 13px; color: var(--text2); font-family: var(--font-body); }
+.pr-mint-status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text2); font-family: var(--font-body); }
+/* Same 9px dot as the Dashboard card (.status-dot in Dashboard.css, a lazy chunk, so not reusable here); colour from statusDotColor(). */
+.pr-mint-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 .pr-mint-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 13px; font-family: var(--font-body); min-width: 0; }
 .pr-score { display: inline-flex; align-items: center; gap: 5px; }
 .pr-muted { color: var(--text3); }

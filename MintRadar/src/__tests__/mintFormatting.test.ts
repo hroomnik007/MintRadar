@@ -22,6 +22,7 @@ import {
   cardLatencyLocationSuffix,
   cardLightningLabel,
   resolveMintDetailUrl,
+  statusDotColor,
 } from '../utils/mintFormatting'
 
 const M = (method: string, unit = 'sat') => ({ method, unit, min_amount: 0, max_amount: 1000 })
@@ -765,5 +766,16 @@ describe('auditReliabilityColor minimum sample floor', () => {
     expect(auditReliabilityColor(9, 0, 10)).toBe('var(--t3)')
     expect(auditReliabilityColor(10, 0, 10)).toBe('var(--fast)')
     expect(auditReliabilityColor(null, 0, 10)).toBe('var(--t3)')
+  })
+})
+
+// ── statusDotColor ─────────────────────────────────────────────
+describe('statusDotColor', () => {
+  it('online is green, offline and degraded (offline 24h+) are red, archived and unknown are muted', () => {
+    expect(statusDotColor('Online')).toBe('var(--green-bright)')
+    expect(statusDotColor('Offline')).toBe('var(--red)')
+    expect(statusDotColor('Degraded')).toBe('var(--red)')
+    expect(statusDotColor('Archived')).toBe('var(--text3)')
+    expect(statusDotColor('Unknown')).toBe('var(--text3)')
   })
 })

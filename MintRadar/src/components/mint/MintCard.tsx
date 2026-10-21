@@ -14,7 +14,7 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
-import { displayName as mintDisplayName, shouldShowHostLine, isNewMint, cardLatencyLabel, cardLatencyLocationSuffix, cardLightningLabel, uptimeColor, formatTimeAgo } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, shouldShowHostLine, isNewMint, cardLatencyLabel, cardLatencyLocationSuffix, cardLightningLabel, uptimeColor, formatTimeAgo, statusDotColor } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
 import { NotifyStrip } from '@/components/mint/NotifyStrip'
 import { removeWatchedMint } from '@/core/nostr/removeWatchedMint'
@@ -130,7 +130,7 @@ export function MintCard({
               </Link>
               <span
                 className={`status-dot${isOnline ? ' online' : ''}`}
-                style={{ background: isOnline ? 'var(--green-bright)' : 'var(--red)' }}
+                style={{ background: statusDotColor(isOnline ? 'Online' : 'Offline') }}
                 title={isOnline ? 'Online' : 'Offline'}
               />
             </div>

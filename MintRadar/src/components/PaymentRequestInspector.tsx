@@ -4,11 +4,12 @@ import type { KnownMint } from '@/hooks/useKnownMints'
 import { CopyTextButton } from '@/components/mint/CopyTextButton'
 import { IcShield } from '@/components/mint/IcShield'
 import { formatTokenAmount } from '@/utils/cashuToken'
-import { normalizeMintUrl, displayName, cardReliabilityLabel, reliabilityColor } from '@/utils/mintFormatting'
+import { normalizeMintUrl, displayName, cardReliabilityLabel, reliabilityColor, statusDotColor } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
 import { parsePaymentRequest, mintStatusWord, type PaymentRequestView } from '@/utils/paymentRequest'
 
 const NOT_SPECIFIED = 'Not specified'
+const NO_TRANSPORTS = 'None listed: the payment is returned directly (in-band)'
 
 function amountText(view: PaymentRequestView): string {
   if (view.amount === null) return NOT_SPECIFIED
@@ -47,11 +48,15 @@ function AcceptedMint({ url, known, list }: { url: string; known: KnownMint | nu
     )
   }
   const test = isTestMint(known.url)
+  const status = mintStatusWord(known)
   return (
     <li className="pr-mint" data-testid="pr-mint">
       <div className="pr-mint-head">
         <span className="pr-mint-name">{displayName(known)}</span>
-        <span className="pr-mint-status" data-testid="pr-mint-status">● {mintStatusWord(known)}</span>
+        <span className="pr-mint-status" data-testid="pr-mint-status">
+          <span className="pr-mint-dot" data-testid="pr-mint-dot" style={{ background: statusDotColor(status) }} aria-hidden="true" />
+          {status}
+        </span>
       </div>
       <div className="pr-text">{url}</div>
       <div className="pr-mint-line">
@@ -135,7 +140,7 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
 
           <div className="pr-section">Transports</div>
           {parsed.view.transports.length === 0 ? (
-            <div className="pr-note">{NOT_SPECIFIED}</div>
+            <div className="pr-note" data-testid="pr-no-transports">{NO_TRANSPORTS}</div>
           ) : (
             <ul className="pr-list">
               {parsed.view.transports.map((t, i) => (

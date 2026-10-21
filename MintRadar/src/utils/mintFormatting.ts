@@ -434,6 +434,16 @@ export function reliabilityColor(score: number): string {
   return 'var(--red)'
 }
 
+// statusDotColor: the one colour of the status dot, shared by the Dashboard card (online / offline) and the
+// Payment request inspector (every status word). A degraded mint is offline 24h+, so it is red like on the card;
+// archived and unknown mints are not a failure and use the muted text token.
+export type StatusDotWord = 'Online' | 'Offline' | 'Degraded' | 'Archived' | 'Unknown'
+export function statusDotColor(status: StatusDotWord): string {
+  if (status === 'Online') return 'var(--green-bright)'
+  if (status === 'Offline' || status === 'Degraded') return 'var(--red)'
+  return 'var(--text3)'
+}
+
 // ── Reliability Score donut geometry ────────────────────────────────
 // The Mint Detail / Stats gauges draw the arc as a stroke-dasharray on an
 // r=27 SVG <circle>, so the drawable circumference is 2·π·27 ≈ 169.646.

@@ -52,7 +52,7 @@ test('a valid request: plain facts, a known mint with its name, status and Relia
   const mints = result(page).getByTestId('pr-mint')
   await expect(mints).toHaveCount(2)
   await expect(mints.nth(0)).toContainText('Alpha Mint')
-  await expect(mints.nth(0).getByTestId('pr-mint-status')).toHaveText('● Online')
+  await expect(mints.nth(0).getByTestId('pr-mint-status')).toHaveText('Online')
   await expect(mints.nth(0)).toContainText('Reliability 92')
   await expect(mints.nth(0).getByRole('link', { name: 'View Mint Detail' })).toHaveAttribute('href', `/mint/${encodeURIComponent(KNOWN)}`)
   await expect(mints.nth(1)).toContainText(UNKNOWN)
@@ -80,7 +80,8 @@ test('a request with nothing in it at all shows "Not specified" everywhere and i
   await expect(result(page).getByTestId('pr-no-mints')).toHaveText('No mints specified')
   await expect(result(page).locator('.pr-value')).toHaveText(Array(6).fill('Not specified'))
   await expect(result(page).getByText('Transports')).toBeVisible()
-  await expect(result(page).locator('.pr-note', { hasText: 'Not specified' })).toHaveCount(1)
+  await expect(result(page).getByTestId('pr-no-transports')).toHaveText('None listed: the payment is returned directly (in-band)')
+  await expect(result(page).locator('.pr-note', { hasText: 'Not specified' })).toHaveCount(0)
 })
 
 test('amount absent reads "Not specified"; nothing else is invented', async ({ page }) => {
@@ -330,4 +331,41 @@ test.describe('the known-mints list is not there (yet): nothing is claimed about
     await expect(result(page)).not.toContainText(/Not tracked|Online|Offline/)
     await expect(result(page).getByTestId('pr-mint-status')).toHaveCount(0)
   })
+})
+
+// Task Q1: transports wording and the status dot.
+const NO_TRANSPORT_REQUEST = 'creqApGFpaHRlc3QwMDAyYWEYZGF1Y3NhdGFkb05vIG1pbnRzIGxpc3RlZA'
+const NO_TRANSPORTS_TEXT = 'None listed: the payment is returned directly (in-band)'
+
+test('no transports: the Transports section explains in-band return; a request with a transport does not show it', async ({ page }) => {
+  await open(page)
+  await input(page).fill(NO_TRANSPORT_REQUEST)
+  await expect(result(page)).toBeVisible()
+  await expect(result(page).getByTestId('pr-no-transports')).toHaveText(NO_TRANSPORTS_TEXT)
+  // The other rows keep "Not specified" (Single use, Locking condition): the new sentence is only for transports.
+  await expect(page.getByTestId('pr-lock')).toHaveText(/Not specified/)
+  await expect(result(page).locator('.pr-value', { hasText: 'Not specified' }).first()).toBeVisible()
+
+  await input(page).fill(encode({ transports: [{ type: PaymentRequestTransportType.POST, target: POST_URL }] }))
+  await expect(result(page).getByTestId('pr-transport')).toHaveCount(1)
+  await expect(result(page).getByTestId('pr-no-transports')).toHaveCount(0)
+  await expect(result(page)).not.toContainText('None listed')
+})
+
+test('the status dot of an online mint in the inspector has the same computed colour as the dot on the mint card', async ({ page }) => {
+  await mockRelays(page)
+  await installApiMocks(page)
+  await resize(page, 1440, 900)
+  await page.goto('/')
+  const cardDot = page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('.status-dot')
+  await expect(cardDot).toBeVisible()
+  const cardColor = await cardDot.evaluate(el => getComputedStyle(el).backgroundColor)
+
+  await page.goto('/tools')
+  await expect(card(page)).toBeVisible()
+  await input(page).fill(encode())
+  const dot = result(page).getByTestId('pr-mint').first().getByTestId('pr-mint-dot')
+  await expect(dot).toBeVisible()
+  expect(await dot.evaluate(el => getComputedStyle(el).backgroundColor)).toBe(cardColor)
+  expect(cardColor).not.toBe('rgba(0, 0, 0, 0)')
 })
