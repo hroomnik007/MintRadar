@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { PaymentRequest, PaymentRequestTransportType } from '@cashu/cashu-ts'
 import { installApiMocks, mockRelays, MOCK_MINTS, MOCK_KNOWN_MINTS } from './fixtures/mocks'
-import { flush, layoutReady, resize } from './fixtures/settle'
+import { flush, layoutReady, networkQuiet, resize, trackRequests } from './fixtures/settle'
 
 // Payment request inspector (NUT-18) on /tools: src/components/PaymentRequestInspector.tsx, src/utils/paymentRequest.ts.
 // The pasted string is decoded in the browser; nothing is requested for it.
@@ -172,7 +172,13 @@ test.describe('malformed input gives one calm message and never reaches the erro
 })
 
 test('decoding sends nothing: no request carries the pasted string, no /api call is caused by decoding', async ({ page }) => {
+  // The app warms the Stats page by itself once the mint list has rendered (scheduleStatsWarmup: its chunk and /api/stats).
+  // That is background work of the app, not of decoding: wait for it to finish before looking at what decoding sends.
+  trackRequests(page)
+  const warmedUp = page.waitForRequest(r => /\/api\/stats(\?|$)/.test(r.url()))
   await open(page)
+  await warmedUp
+  await networkQuiet(page)
   const text = encode({ amount: 7, description: 'private-marker-9137', transports: [{ type: PaymentRequestTransportType.POST, target: POST_URL }] })
   await flush(page)
   const seen: { url: string; body: string | null }[] = []

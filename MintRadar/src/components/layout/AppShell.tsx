@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { prefetchStats } from '@/core/mint/prefetch'
+import { prefetchStats, scheduleStatsWarmup } from '@/core/mint/prefetch'
 import { QRCodeSVG } from 'qrcode.react'
 import { Zap, TriangleAlert } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
@@ -92,14 +92,15 @@ const FOCUS_COPY = {
 export function AppShell() {
   const queryClient = useQueryClient()
   const warmStats = useCallback(() => prefetchStats(queryClient), [queryClient])
-  // Idle warm-up so even a first click without a prior hover (keyboard, fast tap)
-  // finds the Stats chunk + data already loaded.
-  useEffect(() => {
-    const ric = (window as { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback
-    const id = ric ? ric(warmStats) : window.setTimeout(warmStats, 2000)
-    return () => { if (!ric) window.clearTimeout(id) }
-  }, [warmStats])
   const { pathname } = useLocation()
+  // Idle warm-up so even a first click without a prior hover (keyboard, fast tap) finds the Stats chunk + data already
+  // loaded. It starts after the mint list has rendered, not at app start (scheduleStatsWarmup), except on /stats itself
+  // where there is nothing to wait for, and runs once.
+  const statsWarmed = useRef(false)
+  useEffect(() => {
+    if (statsWarmed.current) return
+    return scheduleStatsWarmup(queryClient, () => { statsWarmed.current = true; warmStats() }, pathname !== '/stats')
+  }, [pathname, queryClient, warmStats])
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
 
   useEffect(() => {

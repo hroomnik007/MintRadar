@@ -107,9 +107,12 @@ async function fetchKnownMints(): Promise<KnownMint[]> {
   return data
 }
 
+// Also read by the Stats idle warm-up (src/core/mint/prefetch.ts), which waits for this query to settle.
+export const KNOWN_MINTS_QUERY_KEY = ['mints-known'] as const
+
 export function useKnownMints() {
   return useQuery({
-    queryKey: ['mints-known'],
+    queryKey: KNOWN_MINTS_QUERY_KEY,
     queryFn: fetchKnownMints,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
