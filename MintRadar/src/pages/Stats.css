@@ -1121,9 +1121,10 @@
    board = the whole board (keeps the footer below the fold while /api/stats is pending)
    nhi   = the Network health index card, which is not rendered until /api/mints/known arrives
    stack = Top by Reliability Score + Software in use + the gap
-   note  = the muted methodology line under the movers (Stats.tsx adds .has-movers-note from the same condition that shows
-           it): one line, 31 px (margin 8 + padding 6 + the 11.5px mono line). It is added to the board and to the movers
-           card; a note that wraps (320 px, or two changes) adds more, below the fold, which only makes the page taller. */
+   note  = the muted methodology line under the movers (Stats.tsx adds .has-movers-note and .movers-note-n<changes> from the
+           same condition that shows it): its REAL height (margin 8 + padding 6 + the lines), measured at every width 320
+           to 1600 for 1, 2 and 3 changes (docs, "Movers note reservation"). One line is 31.25 px at 11.5px type (768 px
+           and up) and 32 px at 12px (phones), two lines 48.5 px and 50 px. It is added to the board and to the movers card. */
 .stats-page {
   --stats-reserve-note: 0px;
   --stats-reserve-head: 88px;
@@ -1143,7 +1144,21 @@
 @media (max-width: 670px)  { .stats-page { --stats-reserve-head: 109px; } }
 @media (max-width: 640px)  { .stats-page { --stats-reserve-head: 75px; } }
 @media (max-width: 518px)  { .stats-page { --stats-reserve-head: 96px; } }
-.stats-page.has-movers-note { --stats-reserve-note: 31px; }
+/* One-change note (n1) wraps below 373 px only (12px type). 2 / 3 changes (30d, or a 7d window with two) wrap on narrow
+   phones, on the narrow two-column tablet cards and in the desktop card. Edges: the widths measured above, where the line
+   count flips. */
+.stats-page.has-movers-note { --stats-reserve-note: 31.25px; }
+@media (min-width: 768px) {
+  .stats-page.movers-note-n2, .stats-page.movers-note-n3 { --stats-reserve-note: 48.5px; }
+}
+@media (min-width: 920px) and (max-width: 1279px) { .stats-page.movers-note-n2 { --stats-reserve-note: 31.25px; } }
+@media (min-width: 1088px) and (max-width: 1279px) { .stats-page.movers-note-n3 { --stats-reserve-note: 31.25px; } }
+@media (max-width: 767px) {
+  .stats-page.has-movers-note { --stats-reserve-note: 32px; }
+}
+@media (max-width: 372px) { .stats-page.movers-note-n1 { --stats-reserve-note: 50px; } }
+@media (max-width: 449px) { .stats-page.movers-note-n2 { --stats-reserve-note: 50px; } }
+@media (max-width: 533px) { .stats-page.movers-note-n3 { --stats-reserve-note: 50px; } }
 .stats-header { min-height: var(--stats-reserve-head); }
 /* The loading block becomes the board in place, so it has the board's width and centring as well (above 1340 px the board is
    narrower than the viewport and a full-width block moved sideways). */
@@ -1404,4 +1419,5 @@
   .trend-summary-sep { font-size: 12px; }
   .stats-host-line { font-size: 12px !important; }
   .trend-coverage { font-size: 12px !important; }
+  .stats-movers-note { font-size: 12px; }
 }

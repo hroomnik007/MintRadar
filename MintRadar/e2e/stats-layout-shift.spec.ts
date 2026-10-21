@@ -14,13 +14,14 @@ const CLS_LIMIT = 0.02 // the task's hard limit is 0.05; this is the target
 const TOLERANCE = 12 // a reservation may differ from the loaded height by at most this many px
 
 // Loaded heights of the fixture (px), measured with the scratch script described in the docs. `board` is the board WITHOUT the
-// movers note; `note` is the height the note adds (a line of 31 px, two lines at 320 px).
+// movers note; `note` is the height the note adds for the 7d default view (31.25 px at 11.5px type, 32 px on a phone at 12px,
+// 50 px at 320 px where it wraps).
 const LOADED: Record<number, { head: number; board: number; nhi: number; stack: number; note: number }> = {
-  1440: { head: 88.2, board: 1326.5, nhi: 346.2, stack: 618.1, note: 31.3 },
-  1024: { head: 88.2, board: 1844.7, nhi: 332.7, stack: 618.1, note: 31.6 },
-  768: { head: 88.2, board: 1615.5, nhi: 274.8, stack: 538.3, note: 31.5 },
-  390: { head: 96.4, board: 2837.8, nhi: 181.3, stack: 560.8, note: 31.5 },
-  320: { head: 96.4, board: 2983.3, nhi: 181.3, stack: 618.3, note: 48.5 },
+  1440: { head: 88.2, board: 1326.5, nhi: 346.2, stack: 618.1, note: 31.25 },
+  1024: { head: 88.2, board: 1844.7, nhi: 332.7, stack: 618.1, note: 31.25 },
+  768: { head: 88.2, board: 1615.5, nhi: 274.8, stack: 538.3, note: 31.25 },
+  390: { head: 96.4, board: 2837.8, nhi: 181.3, stack: 560.8, note: 32 },
+  320: { head: 96.4, board: 2983.3, nhi: 181.3, stack: 618.3, note: 50 },
 }
 const WIDTHS = Object.keys(LOADED).map(Number)
 
@@ -166,22 +167,23 @@ for (const width of WIDTHS) {
 }
 
 // The movers note (a methodology change inside the selected window) makes the board taller; the space is reserved from the same
-// condition, so it is there at the first paint exactly when the note is shown. These tests pin the date on purpose: with the real
-// date the note disappears from the 7d window a week after a change. METHODOLOGY_CHANGES: v4 on 2026-10-21.
-const NOTE_RESERVE = 31
+// condition, so it is there at the first paint exactly when the note is shown, and it equals the note's real height (margin
+// + lines, within 1 px) at every width, for 1, 2 and 3 changes. These tests pin the date on purpose: with the real date the
+// note disappears from the 7d window a week after a change. METHODOLOGY_CHANGES: v2 on 2026-10-08, v3 on 2026-10-09, v4 on 2026-10-21.
 const NOTE_CASES = [
   // `note7` = the note of the default 7d view (what the waiting block and the first paint show), `note` = the note of `period`.
-  { name: '7d window holds the change', date: '2026-10-22T12:00:00Z', period: '7d', note7: true, note: true },
-  { name: '30d window holds the change', date: '2026-10-22T12:00:00Z', period: '30d', note7: true, note: true },
-  { name: '30d window holds the change, 7d does not', date: '2026-11-05T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '7d window holds one change', date: '2026-10-22T12:00:00Z', period: '7d', note7: true, note: true },
+  { name: '30d window holds three changes', date: '2026-10-22T12:00:00Z', period: '30d', note7: true, note: true },
+  { name: '30d window holds three changes, 7d none', date: '2026-11-05T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds two changes, 7d none', date: '2026-11-08T12:00:00Z', period: '30d', note7: false, note: true },
   { name: '7d window holds no change', date: '2026-11-05T12:00:00Z', period: '7d', note7: false, note: false },
   { name: '30d window holds no change', date: '2026-12-01T12:00:00Z', period: '30d', note7: false, note: false },
 ] as const
 
-for (const width of [1440, 390]) {
+for (const width of [1440, 1024, 768, 390, 320]) {
   test.describe(`movers note reservation at ${width}px`, () => {
     for (const c of NOTE_CASES) {
-      test(`${c.name} (${c.period}, ${c.date.slice(0, 10)}): the movers card reserves the note ${c.note ? 'and the waiting block takes it' : 'only when it is shown'}`, async ({ page }) => {
+      test(`${c.name} (${c.period}, ${c.date.slice(0, 10)}): the reservation is the real height of the note`, async ({ page }) => {
         const expected = LOADED[width]!
         trackRequests(page)
         await observeShift(page)
@@ -194,13 +196,26 @@ for (const width of [1440, 390]) {
         await gate.reached('stats')
         await frames(page, 3)
         const reserveOf = async (selector: string): Promise<number> => px(await page.locator(selector).evaluate(el => getComputedStyle(el).minHeight))
+        const noteReserve = async (): Promise<number> => px(await page.locator('.stats-page').evaluate(el => getComputedStyle(el).getPropertyValue('--stats-reserve-note')))
+        // The real height of the note: its box plus its top margin.
+        const noteActual = async (): Promise<number> => page.locator('.stats-movers-note').evaluate(el => el.getBoundingClientRect().height + parseFloat(getComputedStyle(el).marginTop))
         const baseBoard = px(await page.locator('.stats-page').evaluate(el => getComputedStyle(el).getPropertyValue('--stats-reserve-board')))
         const waiting = await reserveOf('.stats-loading')
+        const reserve7 = await noteReserve()
         // The waiting block reserves the base board plus the note, from the first painted frame, only when the note will be shown
         // (the default view is 7d).
-        expect(waiting - baseBoard, 'note space in the waiting block').toBe(c.note7 ? NOTE_RESERVE : 0)
+        expect(waiting - baseBoard, 'note space in the waiting block').toBeCloseTo(reserve7, 1)
+        if (!c.note7) expect(reserve7, 'no note, no reserved space').toBe(0)
         gate.release('stats')
         await loaded(page)
+        if (c.note7) {
+          expect(Math.abs(reserve7 - await noteActual()), 'reserved against the real height of the 7d note').toBeLessThanOrEqual(1)
+          const board = (await page.locator('.stats-board-grid').boundingBox())!.height
+          expect(board, 'loaded board').toBeCloseTo(expected.board + expected.note, -0.6)
+          expect(waiting, 'the waiting block is not taller than the board').toBeLessThanOrEqual(board + TOLERANCE)
+          if (width === 1440) expect(board - waiting, 'the waiting block is within TOLERANCE of the board').toBeLessThanOrEqual(TOLERANCE)
+        }
+        if (c.period === '7d') expect(await shiftTotal(page), `layout shift (${c.name})`).toBeLessThan(CLS_LIMIT)
         if (c.period === '30d') {
           const toggle = page.locator('.stats-movers-panel').getByRole('button', { name: '30d', exact: true })
           await toggle.click()
@@ -210,18 +225,11 @@ for (const width of [1440, 390]) {
         await networkQuiet(page)
         await layoutReady(page)
         await expect(page.locator('.stats-movers-note'), 'the note is shown exactly when the window holds a change').toHaveCount(c.note ? 1 : 0)
+        const reserve = await noteReserve()
+        if (c.note) expect(Math.abs(reserve - await noteActual()), `reserved (${reserve}px) against the real height of the ${c.period} note`).toBeLessThanOrEqual(1)
+        else expect(reserve, 'no note, no reserved space').toBe(0)
         const baseMovers = width >= 769 ? 280 : 240
-        expect(await reserveOf('.stats-movers-panel'), 'movers card reservation').toBe(baseMovers + (c.note ? NOTE_RESERVE : 0))
-
-        // The default (7d) view: the loaded board is as tall as the table says, plus the note when it is shown, and the
-        // waiting block follows it. (A click on 30d happens after the first paint and is not a load shift; its note may wrap.)
-        if (c.period === '7d') {
-          const board = (await page.locator('.stats-board-grid').boundingBox())!.height
-          expect(board, 'loaded board').toBeCloseTo(expected.board + (c.note ? expected.note : 0), -0.6)
-          expect(waiting, 'the waiting block is not taller than the board').toBeLessThanOrEqual(board + TOLERANCE)
-          if (width === 1440) expect(board - waiting, 'the waiting block is within TOLERANCE of the board').toBeLessThanOrEqual(TOLERANCE)
-          expect(await shiftTotal(page), `layout shift (${c.name})`).toBeLessThan(CLS_LIMIT)
-        }
+        expect(await reserveOf('.stats-movers-panel'), 'movers card reservation').toBeCloseTo(baseMovers + reserve, 1)
       })
     }
   })

@@ -715,7 +715,8 @@ export default function Stats() {
   interface ReliabilityMover { url: string; name: string | null; delta: number }
   interface ReliabilityMoversResponse { period: '7d' | '30d'; risers: ReliabilityMover[]; fallers: ReliabilityMover[] }
 
-  const moversNote = moversMethodologyNote(methodologyChangesInWindow(moversPeriod === '7d' ? 7 : 30))
+  const moversChanges = methodologyChangesInWindow(moversPeriod === '7d' ? 7 : 30)
+  const moversNote = moversMethodologyNote(moversChanges)
 
   const { data: moversData, isPending: moversPending, isFetching: moversFetching } = useQuery({
     queryKey: ['stats-reliability-movers', moversPeriod],
@@ -845,8 +846,9 @@ export default function Stats() {
   )
 
   // The movers note changes the height of the board (Stats.css --stats-reserve-note), so the reservations follow the
-  // same condition that shows the note: the selected movers window holds a methodology change.
-  const pageClass = moversNote !== '' ? 'stats-page has-movers-note' : 'stats-page'
+  // same condition that shows the note: the selected movers window holds a methodology change. The number of changes
+  // (the note's length: 1, 2, 3 or more) picks the line count per width band there.
+  const pageClass = moversNote === '' ? 'stats-page' : `stats-page has-movers-note movers-note-n${Math.min(moversChanges.length, 3)}`
 
   if (isLoading) return (
     <div className={pageClass}>
