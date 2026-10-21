@@ -65,7 +65,10 @@ function ResultNote({ tone, Icon, children }: { tone: ResultTone; Icon: LucideIc
   )
 }
 
-function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
+/** Whether MintRadar's known-mints list has loaded: "Not in database" is only true once it has. */
+type ListState = 'ready' | 'loading' | 'error'
+
+function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: ListState }) {
   const navigate = useNavigate()
   const now = useNow()
   const [input, setInput] = useState('')
@@ -322,8 +325,12 @@ function TokenInspector({ knownMints }: { knownMints: KnownMint[] }) {
                     </div>
                   )}
                 </>
-              ) : (
+              ) : list === 'ready' ? (
                 <div className="trc-value trc-muted">Not in database</div>
+              ) : (
+                <div className="trc-value trc-muted" data-testid="token-list-state">
+                  {list === 'loading' ? "Looking it up in MintRadar's list…" : "MintRadar's list is not available right now."}
+                </div>
               )}
             </div>
             <div className="token-result-cell">
@@ -884,6 +891,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
 export default function Tools() {
   const { data: knownMintsData, isError: knownMintsError } = useKnownMints()
   const mints = knownMintsData ?? []
+  const listState: ListState = knownMintsData ? 'ready' : knownMintsError ? 'error' : 'loading'
 
   // Deep links: #pick focuses the wizard, #token the inspector.
   // Honoured on first load and on hashchange.
@@ -918,13 +926,13 @@ export default function Tools() {
       />
       <div className="tools-grid">
         <div id="token" tabIndex={-1} className="tool-anchor">
-          <TokenInspector knownMints={mints} />
+          <TokenInspector knownMints={mints} list={listState} />
         </div>
         <div id="pick" tabIndex={-1} className="tool-anchor">
           <BestMintWizard knownMints={mints} />
         </div>
         <div id="payment-request" tabIndex={-1} className="tool-anchor tool-anchor-wide">
-          <PaymentRequestInspector knownMints={mints} list={knownMintsData ? 'ready' : knownMintsError ? 'error' : 'loading'} />
+          <PaymentRequestInspector knownMints={mints} list={listState} />
         </div>
       </div>
     </div>

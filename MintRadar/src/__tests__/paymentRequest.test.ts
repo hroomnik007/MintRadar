@@ -70,8 +70,34 @@ describe('parsePaymentRequest', () => {
     }
   })
 
-  it('missing, empty or malformed mints are invalid', () => {
-    for (const raw of [{ u: 'sat' }, { m: [] }, { m: 'https://x.example' }, { m: [1] }, { m: [''] }]) {
+  it('no mints (absent or an empty list) is a valid request: every NUT-18 field is optional', () => {
+    for (const raw of [{ u: 'sat' }, { m: [] }, {}, { i: 'x', a: 5 }]) {
+      const r = parsePaymentRequest(creq(raw))
+      expect(r.ok, JSON.stringify(raw)).toBe(true)
+      if (r.ok) expect(r.view.mints, JSON.stringify(raw)).toEqual([])
+    }
+  })
+
+  it('a library-encoded empty request (base64 padding included) is valid', () => {
+    expect(parsePaymentRequest(new PaymentRequest().toEncodedCreqA()).ok).toBe(true)
+  })
+
+  it('a request with no field at all decodes, and every optional field is null or empty (never invalid)', () => {
+    const r = parsePaymentRequest(creq({}))
+    expect(r.ok && r.view).toEqual({ id: null, amount: null, unit: null, singleUse: null, description: null, mints: [], transports: [], lock: null })
+  })
+
+  it('each optional field may be absent on its own', () => {
+    const full = { i: 'a', a: 3, u: 'sat', s: true, d: 'hi', m: [MINT], t: [{ t: 'post', a: 'https://p.example' }], nut10: { k: 'P2PK', d: '02ab' } }
+    for (const key of Object.keys(full)) {
+      const { [key as keyof typeof full]: _omit, ...rest } = full
+      void _omit
+      expect(parsePaymentRequest(creq(rest)).ok, `without ${key}`).toBe(true)
+    }
+  })
+
+  it('a mints field of the wrong type is still unusable', () => {
+    for (const raw of [{ m: 'https://x.example' }, { m: [1] }]) {
       expect(parsePaymentRequest(creq(raw)), JSON.stringify(raw)).toMatchObject({ ok: false, message: PAYMENT_REQUEST_INVALID })
     }
   })

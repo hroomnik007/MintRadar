@@ -478,6 +478,9 @@ a.token-action-btn:focus {
 @media (max-width: 767px) {
   .wizard-opt-sub { font-size: 12px; }
   .wizard-step-dot { font-size: 12px; }
+  /* Token inspector result (W7a follow-up): labels, sub lines, details row, memo/keyset/condition rows, section label. */
+  .trc-label, .trc-sub, .tdr-label, .token-details-row, .token-memo-row, .token-section-label { font-size: 12px; }
+  .token-test-mint-badge { font-size: 12px !important; } /* the chip carries its size inline */
 }
 
 /* Payment request inspector (W7a): plain facts; every value wraps, nothing is a link except "View Mint Detail". */

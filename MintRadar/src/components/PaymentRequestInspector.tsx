@@ -124,10 +124,14 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
             </Row>
           </dl>
 
-          <div className="pr-section">Accepted mints ({parsed.view.mints.length})</div>
+          <div className="pr-section">Accepted mints{parsed.view.mints.length > 0 ? ` (${parsed.view.mints.length})` : ''}</div>
+          {parsed.view.mints.length === 0 ? (
+            <div className="pr-note" data-testid="pr-no-mints">No mints specified</div>
+          ) : (
           <ul className="pr-list">
             {parsed.view.mints.map((m, i) => <AcceptedMint key={`${i}-${m}`} url={m} known={lookup(m)} list={list} />)}
           </ul>
+          )}
 
           <div className="pr-section">Transports</div>
           {parsed.view.transports.length === 0 ? (

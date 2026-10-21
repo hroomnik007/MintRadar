@@ -93,3 +93,26 @@ test('height is reserved: the group does not change height when the probe answer
   const after = await group(page).boundingBox()
   expect(Math.abs((after?.height ?? 0) - (before?.height ?? 0))).toBeLessThanOrEqual(1)
 })
+
+test('the four shapes of a NUT entry: supported:false is not supported, in the panel and in the NUT card grid', async ({ page }) => {
+  // 7: supported:false, 10: supported:true, 11: presence-only object with settings, 12: absent
+  await open(page, { '4': {}, '5': {}, '7': { supported: false }, '10': { supported: true }, '11': { disabled: false, methods: [] } })
+  await expect(row(page, 7).locator('.md-info-value')).toHaveText('not declared')
+  await expect(row(page, 10).locator('.md-info-value')).toHaveText('supported')
+  await expect(row(page, 11).locator('.md-info-value')).toHaveText('supported')
+  await expect(row(page, 12).locator('.md-info-value')).toHaveText('not declared')
+
+  await page.locator('.md-tab', { hasText: /^NUTs/ }).click()
+  const cardOf = (nut: number) => page.locator('.nut-card', { has: page.locator('.nut-name', { hasText: new RegExp(`^NUT-${String(nut).padStart(2, '0')}$`) }) })
+  await expect(cardOf(7)).toHaveClass(/unsupported/)
+  await expect(cardOf(7).locator('.nut-check')).toHaveText('–')
+  await expect(cardOf(10)).toHaveClass(/\bsupported\b/)
+  await expect(cardOf(10).locator('.nut-check')).toHaveText('✓')
+  await expect(cardOf(11)).toHaveClass(/\bsupported\b/)
+  await expect(cardOf(12)).toHaveClass(/unsupported/)
+  // The summary line counts the same cards: 4, 5, 10, 11.
+  await expect(page.locator('.nut-summary-line strong')).toHaveText('4')
+  // The modal agrees with the card.
+  await cardOf(7).click()
+  await expect(page.locator('.nm-status')).toHaveText('– Not supported')
+})

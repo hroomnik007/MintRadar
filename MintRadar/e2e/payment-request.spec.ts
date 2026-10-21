@@ -62,6 +62,27 @@ test('a valid request: plain facts, a known mint with its name, status and Relia
   await expect(mints.nth(1).getByRole('link')).toHaveCount(0)
 })
 
+test('a request without mints is valid: "No mints specified" instead of an error', async ({ page }) => {
+  await open(page)
+  await input(page).fill(new PaymentRequest(undefined, 'x', 1, 'sat', undefined).toEncodedCreqA())
+  await expect(errorBox(page)).toHaveCount(0)
+  await expect(result(page)).toBeVisible()
+  await expect(result(page).getByTestId('pr-no-mints')).toHaveText('No mints specified')
+  await expect(result(page).getByTestId('pr-mint')).toHaveCount(0)
+  await expect(page.getByTestId('pr-amount')).toContainText('1')
+})
+
+test('a request with nothing in it at all shows "Not specified" everywhere and is still valid', async ({ page }) => {
+  await open(page)
+  await input(page).fill(new PaymentRequest().toEncodedCreqA())
+  await expect(errorBox(page)).toHaveCount(0)
+  await expect(result(page)).toBeVisible()
+  await expect(result(page).getByTestId('pr-no-mints')).toHaveText('No mints specified')
+  await expect(result(page).locator('.pr-value')).toHaveText(Array(6).fill('Not specified'))
+  await expect(result(page).getByText('Transports')).toBeVisible()
+  await expect(result(page).locator('.pr-note', { hasText: 'Not specified' })).toHaveCount(1)
+})
+
 test('amount absent reads "Not specified"; nothing else is invented', async ({ page }) => {
   await open(page)
   await input(page).fill(encode())
@@ -112,7 +133,6 @@ test.describe('malformed input gives one calm message and never reaches the erro
     'creq without version': 'creqBabcdef',
     'bad base64': 'creqA!!!!%%%%',
     'bad CBOR': 'creqA' + Buffer.from([0xff, 0xff, 0xff, 0xff]).toString('base64url'),
-    'no mints': new PaymentRequest(undefined, 'x', 1, 'sat', undefined).toEncodedCreqA(),
   }
   for (const [name, text] of Object.entries(CASES)) {
     test(name, async ({ page }) => {

@@ -1,0 +1,32 @@
+import { describe, it, expect } from 'vitest'
+import { isNutSupported, supportedNutKeys } from '../utils/nutSupport'
+
+describe('isNutSupported', () => {
+  it('supported:false is not supported', () => {
+    expect(isNutSupported({ supported: false })).toBe(false)
+    expect(isNutSupported({ supported: false, methods: [] })).toBe(false)
+  })
+  it('supported:true, a presence-only object (settings, no supported key) and an empty object are supported', () => {
+    expect(isNutSupported({ supported: true })).toBe(true)
+    expect(isNutSupported({ methods: [{ method: 'bolt11', unit: 'sat' }], disabled: false })).toBe(true)
+    expect(isNutSupported({})).toBe(true)
+  })
+  it('only the boolean false counts as "not supported" (a string or 0 does not)', () => {
+    expect(isNutSupported({ supported: 'false' })).toBe(true)
+    expect(isNutSupported({ supported: 0 })).toBe(true)
+    expect(isNutSupported(true)).toBe(true)
+  })
+})
+
+describe('supportedNutKeys', () => {
+  it('keeps the four shapes apart; an absent key is simply not there', () => {
+    const keys = supportedNutKeys({ '7': { supported: false }, '10': { supported: true }, '11': { methods: [] }, '4': {} })
+    expect([...keys].sort()).toEqual(['10', '11', '4'])
+    expect(keys.has('12')).toBe(false)
+    expect(keys.has('7')).toBe(false)
+  })
+  it('null and undefined give an empty set', () => {
+    expect(supportedNutKeys(null).size).toBe(0)
+    expect(supportedNutKeys(undefined).size).toBe(0)
+  })
+})

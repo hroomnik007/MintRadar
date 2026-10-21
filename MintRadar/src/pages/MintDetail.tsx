@@ -36,6 +36,7 @@ import { MintNetworkCard } from '@/components/MintNetworkCard'
 import { networkRows } from '@/utils/networkInfo'
 import { AuditCzTiles, AuditCzSwapTables, AuditStateText } from '@/components/AuditCzCards'
 import { AuditDirections } from '@/components/AuditDirections'
+import { supportedNutKeys } from '@/utils/nutSupport'
 import { MintNutzapFeatures } from '@/components/mint/MintNutzapFeatures'
 import { MintFeesLimits } from '@/components/mint/MintFeesLimits'
 import { formatDate, formatDateTimeUtc } from '@/utils/formatDate'
@@ -926,6 +927,11 @@ function MintDetailContent({ url }: { url: string }) {
   // capability that actually gates seed-phrase backup/restore is NUT-09
   // (restore signatures) — check that instead.
   const supportsBackupRestore = supportedNutNumbers.has('9')
+  // Display-only reading for the NUT grid, its modal and the Nutzap group: `supported: false` is not supported
+  // (utils/nutSupport.ts). The score above keeps counting presence, like the backend.
+  const nutsDeclared: Record<string, unknown> | null = data?.info ? (data.info.nuts as Record<string, unknown>) : (knownMint?.nutsLimits ?? null)
+  const declaredNutNumbers = supportedNutKeys(nutsDeclared)
+  const gridSupportedNuts = TRACKED_NUTS.filter(nut => declaredNutNumbers.has(String(parseInt(nut.slice(4), 10))))
 
   const reliabilityScore = knownMint?.reliabilityScore ?? computeReliabilityScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, { blamed: knownMint?.auditCzBlamed ?? null, total: knownMint?.auditCzTotal ?? null, fetchedAt: knownMint?.auditCzFetchedAt ?? null }, versionLatestMap)
   const tsInfo = reliabilityScoreInfo(reliabilityScore)
@@ -1751,7 +1757,7 @@ function MintDetailContent({ url }: { url: string }) {
             />
           )}
 
-          {knownMint && <MintNutzapFeatures declared={data?.info || knownMint.nutsLimits ? supportedNutNumbers : null} fetchedAt={infoFetchedAt} now={now} />}
+          {knownMint && <MintNutzapFeatures declared={nutsDeclared ? declaredNutNumbers : null} fetchedAt={infoFetchedAt} now={now} />}
 
           {(email || twitter || nostr || operatorNip05 || (data?.contactChecks?.length ?? 0) > 0) && (
             <div className="md-panel">
@@ -1947,11 +1953,11 @@ function MintDetailContent({ url }: { url: string }) {
               )}
             </div>
             <div className="nut-summary-line">
-              <strong>{supportedNuts.length}</strong> of {TRACKED_NUTS.length} known NUTs supported
+              <strong>{gridSupportedNuts.length}</strong> of {TRACKED_NUTS.length} known NUTs supported
             </div>
             <div className="nut-grid">
               {TRACKED_NUTS.map(nut => {
-                const supported = supportedNuts.includes(nut)
+                const supported = gridSupportedNuts.includes(nut)
                 const meta = NUT_DESCRIPTIONS[nut]
                 const nutKey = parseInt(nut.slice(4), 10).toString()
                 const rawConfig = data?.info?.nuts?.[nutKey]
@@ -2799,7 +2805,7 @@ function MintDetailContent({ url }: { url: string }) {
 
       {selectedNut && (() => {
         const meta = NUT_DESCRIPTIONS[selectedNut]
-        const supported = supportedNuts.includes(selectedNut)
+        const supported = gridSupportedNuts.includes(selectedNut)
         const nutKey = parseInt(selectedNut.slice(4), 10).toString()
         const rawNutConfig = data?.info?.nuts?.[nutKey] ?? knownMint?.nutsLimits?.[nutKey]
         const nutConfig = (rawNutConfig !== null && typeof rawNutConfig === 'object') ? rawNutConfig as NutConfig : null

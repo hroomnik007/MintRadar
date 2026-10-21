@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { installApiMocks, mockRelays, probePayload, MOCK_KNOWN_MINTS, MOCK_MINTS } from './fixtures/mocks'
+import { PaymentRequest, PaymentRequestTransportType } from '@cashu/cashu-ts'
+import { installApiMocks, mockRelays, probePayload, makeCashuToken, MOCK_KNOWN_MINTS, MOCK_MINTS } from './fixtures/mocks'
 import { AUDIT_ROUTES, loadRoute, type AuditRoute } from './fixtures/pageAudit'
 import { trendDaysOf, trendPayload } from './fixtures/trendSeries'
 import { frames, layoutReady, networkQuiet, resize, trackRequests } from './fixtures/settle'
@@ -88,6 +89,23 @@ for (const phone of PHONES) {
         }
       })
     }
+
+    test(`tools: the Token inspector result and the Payment request result have no HTML text below ${MIN_TEXT_PX}px`, async ({ page }) => {
+      await page.setViewportSize(phone)
+      await loadRoute(page, AUDIT_ROUTES.find(r => r.id === 'tools')!)
+      // A test mint: its chip is part of the result and carries its own size.
+      await page.locator('.token-input').fill(makeCashuToken('https://testnut.cashu.space', [21], 'sat', 'a memo'))
+      await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+      await expect(page.locator('.token-result-grid')).toBeVisible()
+      await expect(page.locator('.token-verify-result').first()).toBeVisible()
+      await expect(page.locator('.token-test-mint-badge')).toBeVisible()
+      await page.getByRole('textbox', { name: 'Payment request' }).fill(new PaymentRequest([{ type: PaymentRequestTransportType.POST, target: 'https://pay.example.com/cb' }], 'r1', 5, 'sat', [MOCK_MINTS[0]!.url, 'https://stranger.example'], 'd', true).toEncodedCreqA())
+      await expect(page.getByTestId('pr-result')).toBeVisible()
+      await layoutReady(page)
+      const { examined, small } = await page.evaluate(scanText, MIN_TEXT_PX)
+      expect(examined, 'tools result was scanned').toBeGreaterThan(30)
+      expect(small, `tools result text below ${MIN_TEXT_PX}px`).toEqual([])
+    })
 
     test('stats: "Show details" of the Network health index is at least 24x24', async ({ page }) => {
       await page.setViewportSize(phone)

@@ -179,3 +179,45 @@ test('keyboard order: textarea, Inspect, the Signature check help, Check if spen
   expect(names[3]).toMatch(/View Mint Detail/)
   expect(names[4]).toMatch(/Open in cashu\.me/)
 })
+
+test.describe('"Not in database" only when the known-mints list really lacks the mint', () => {
+  const statusCell = (page: Page) => page.locator('.token-result-cell', { hasText: 'Mint Status' })
+
+  test('pasted before the list has loaded: a neutral lookup line, then the real answer', async ({ page }) => {
+    await mockRelays(page)
+    await installApiMocks(page)
+    let release: () => void = () => undefined
+    const gate = new Promise<void>(r => { release = r })
+    let reached = false
+    await page.route('**/api/mints/known', async route => { reached = true; await gate; await route.fulfill({ json: MOCK_KNOWN_MINTS }) })
+    await page.goto('/tools')
+    await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
+    await expect.poll(() => reached).toBe(true)
+    await inspect(page, makeCashuToken(MINT, [21]))
+    await expect(decode(page)).toBeVisible()
+    await expect(page.getByTestId('token-list-state')).toHaveText("Looking it up in MintRadar's list…")
+    await expect(statusCell(page)).not.toContainText('Not in database')
+    release()
+    await expect(statusCell(page)).toContainText('Online')
+    await expect(page.getByTestId('token-list-state')).toHaveCount(0)
+  })
+
+  test('the list request fails: one fixed sentence, never "Not in database"', async ({ page }) => {
+    await mockRelays(page)
+    await installApiMocks(page)
+    await page.route('**/api/mints/known', route => route.fulfill({ status: 500, json: { error: 'boom' } }))
+    await page.goto('/tools')
+    await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
+    await inspect(page, makeCashuToken(MINT, [21]))
+    await expect(page.getByTestId('token-list-state')).toHaveText("MintRadar's list is not available right now.", { timeout: 20_000 })
+    await expect(statusCell(page)).not.toContainText('Not in database')
+    await expect(decode(page)).toContainText('alpha.mint.example')
+  })
+
+  test('a loaded list that lacks the mint: "Not in database"', async ({ page }) => {
+    await open(page)
+    await inspect(page, makeCashuToken('https://never-seen.mint.example', [21]))
+    await expect(statusCell(page)).toContainText('Not in database')
+    await expect(page.getByTestId('token-list-state')).toHaveCount(0)
+  })
+})

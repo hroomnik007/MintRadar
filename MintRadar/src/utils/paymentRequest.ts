@@ -42,6 +42,21 @@ const fail = (reason: 'prefix' | 'too-long' | 'invalid', message: string): Payme
 
 const str = (v: unknown): string | null => (typeof v === 'string' ? v : null)
 
+/**
+ * With every field optional, the library turns ANY decodable CBOR value that is not a map (a string, a number, an array) into
+ * an empty request. A payment request is a CBOR map, so the first byte must be of major type 5 (0xa0 to 0xbf).
+ */
+function payloadIsCborMap(payload: string): boolean {
+  const head = payload.slice(0, 4).replace(/=+$/, '').replace(/-/g, '+').replace(/_/g, '/')
+  if (head.length < 2 || !/^[A-Za-z0-9+/]+$/.test(head)) return false
+  try {
+    const first = atob(head.padEnd(4, '=').slice(0, 4)).charCodeAt(0)
+    return first >= 0xa0 && first <= 0xbf
+  } catch {
+    return false
+  }
+}
+
 /** Trim, check the prefix and the length, decode, validate. Never throws. */
 export function parsePaymentRequest(raw: string): PaymentRequestParse {
   const text = raw.trim()
@@ -49,14 +64,19 @@ export function parsePaymentRequest(raw: string): PaymentRequestParse {
   if (!text.startsWith(PAYMENT_REQUEST_PREFIX)) return fail('prefix', 'Not a payment request: expected a string starting with creqA.')
   if (text.length > PAYMENT_REQUEST_MAX_LENGTH) return fail('too-long', PAYMENT_REQUEST_TOO_LONG)
 
+  if (!payloadIsCborMap(text.slice(PAYMENT_REQUEST_PREFIX.length))) return fail('invalid', PAYMENT_REQUEST_INVALID)
+
   try {
     const req = PaymentRequest.fromEncodedRequest(text) as unknown as Record<string, unknown>
     if (typeof req !== 'object' || req === null) return fail('invalid', PAYMENT_REQUEST_INVALID)
 
+    // Every field of NUT-18 is optional, so an absent `mints` (or an empty list) is a valid request with no accepted
+    // mints; only a field that is present but of the wrong type makes the input unusable.
     const mintsRaw = req.mints
-    if (!Array.isArray(mintsRaw) || mintsRaw.length === 0 || !mintsRaw.every(m => typeof m === 'string' && m.trim() !== '')) {
+    if (mintsRaw !== undefined && mintsRaw !== null && (!Array.isArray(mintsRaw) || !mintsRaw.every(m => typeof m === 'string'))) {
       return fail('invalid', PAYMENT_REQUEST_INVALID)
     }
+    const mints = ((mintsRaw ?? []) as string[]).filter(m => m.trim() !== '')
 
     let amount: string | null = null
     if (req.amount !== undefined && req.amount !== null) {
@@ -96,7 +116,7 @@ export function parsePaymentRequest(raw: string): PaymentRequestParse {
         unit: str(req.unit),
         singleUse: typeof req.singleUse === 'boolean' ? (req.singleUse ? true : null) : null,
         description: str(req.description),
-        mints: mintsRaw as string[],
+        mints,
         transports,
         lock,
       },
