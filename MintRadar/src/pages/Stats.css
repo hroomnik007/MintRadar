@@ -1419,5 +1419,6 @@
   .trend-summary-sep { font-size: 12px; }
   .stats-host-line { font-size: 12px !important; }
   .trend-coverage { font-size: 12px !important; }
+  .stats-movers-empty,
   .stats-movers-note { font-size: 12px; }
 }

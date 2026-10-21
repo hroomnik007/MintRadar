@@ -50,9 +50,14 @@ function scanText(minPx: number): ScanResult {
   return { examined, small }
 }
 
-// States the plain mocks leave out and production data has: a Stats trend with data (the Current / High / Low row)
-// and a mint that reports its clock and Lightning methods (the "in sync" label, the method chips).
+// States the plain mocks leave out and production data has: a Stats trend with data (the Current / High / Low row),
+// Stats movers with no risers and fallers (the "No significant changes this period" lines) and a mint that reports
+// its clock and Lightning methods (the "in sync" label, the method chips).
 const EXTRA_ROUTES: AuditRoute[] = [
+  {
+    id: 'stats-no-movers', path: '/stats', ready: '.stats-movers-empty',
+    before: async page => { await page.route('**/api/stats/reliability-movers**', r => r.fulfill({ json: { period: '7d', risers: [], fallers: [] } })) },
+  },
   {
     id: 'stats-with-trend', path: '/stats', ready: '.trend-summary-row',
     before: async page => { await page.route('**/api/stats/reliability-trend**', r => r.fulfill({ json: trendPayload(trendDaysOf(r.request().url())) })) },
