@@ -3,6 +3,7 @@ import type { Request, Response } from 'express'
 import { NEW_MINT_MAX_DAYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
 import { classifyVersion, MAX_VERSION_LENGTH, type LatestVersion } from './shared/versionRule.js'
 import { METHODOLOGY_VERSION } from './shared/methodology.js'
+import { isNutDeclaredSupported } from './shared/nutSupport.js'
 import { isTestMint } from './testMints.js'
 import { auditDataState } from './shared/auditScore.js'
 import type { ScoreBreakdown } from './scoreBreakdown.js'
@@ -166,11 +167,11 @@ function toIso(v: string | Date | null | undefined): string | null {
   return Number.isFinite(d.getTime()) ? d.toISOString() : null
 }
 
-/** NUT numbers (as strings, ascending) the mint advertises: the keys of nutsLimits whose value is not null. */
+/** NUT numbers (as strings, ascending) the mint advertises: the keys of nutsLimits that are declared and not `supported: false` (shared/nutSupport.ts). */
 export function nutsOf(nutsLimits: Record<string, unknown> | null): string[] | null {
   if (nutsLimits === null || typeof nutsLimits !== 'object') return null
   return Object.keys(nutsLimits)
-    .filter(k => nutsLimits[k] != null)
+    .filter(k => isNutDeclaredSupported(nutsLimits[k]))
     .sort((a, b) => Number(a) - Number(b) || a.localeCompare(b))
 }
 
@@ -338,7 +339,7 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviews
     hasOnion: m.hasOnion === true,
     authRequired: m.nutsLimits === null || m.nutsLimits === undefined || typeof m.nutsLimits !== 'object'
       ? null
-      : { clear: m.nutsLimits['21'] != null, blind: m.nutsLimits['22'] != null },
+      : { clear: isNutDeclaredSupported(m.nutsLimits['21']), blind: isNutDeclaredSupported(m.nutsLimits['22']) },
     sample: { probes24h: extra?.probes24h ?? null, swaps7d: typeof m.auditCzTotal === 'number' ? m.auditCzTotal : null },
     auditNeutralReason: auditNeutralReasonOf(m, now),
     keysets: extra?.keysets ?? [],

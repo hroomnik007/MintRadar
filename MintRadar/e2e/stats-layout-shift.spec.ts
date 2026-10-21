@@ -52,6 +52,9 @@ const shiftTotal = (page: Page): Promise<number> =>
 async function openStats(page: Page, width: number, held: StatsEndpoint[]): Promise<StatsGate> {
   trackRequests(page)
   await observeShift(page)
+  // The movers panel adds a muted note line while its window holds a methodology change (METHODOLOGY_CHANGES, newest v4 on
+  // 2026-10-21); the table of loaded heights below is measured without it, so the clock is pinned before that change.
+  await page.clock.setFixedTime(new Date('2026-10-20T12:00:00Z'))
   await mockRelays(page)
   await installApiMocks(page)
   const gate = await mockStatsEndpoints(page, held)

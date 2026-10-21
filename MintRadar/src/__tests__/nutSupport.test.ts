@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { isNutSupported, supportedNutKeys } from '../utils/nutSupport'
+import { isNutSupported, isNutDeclaredSupported, supportedNutKeys } from '../utils/nutSupport'
+import { NUT_SUPPORT_CASES } from './nutSupportCases'
+
+describe('the shared table of cases', () => {
+  it.each(NUT_SUPPORT_CASES.map(c => [c.name, c] as const))('%s', (_n, c) => {
+    expect(isNutSupported(c.entry)).toBe(c.supported)
+    expect(isNutDeclaredSupported(c.entry)).toBe(c.declaredSupported)
+  })
+})
 
 describe('isNutSupported', () => {
   it('supported:false is not supported', () => {

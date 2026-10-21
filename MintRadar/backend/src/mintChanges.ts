@@ -18,6 +18,7 @@
 //    ONE row per change type whose new_value is MULTIPLE_CHANGES_TEXT (no counter, old_value NULL).
 import { pool } from './db.js'
 import { normalizeMintPubkey } from './mintPubkey.js'
+import { isNutDeclaredSupported } from './shared/nutSupport.js'
 import { notifyMintChanges, isNotificationServiceEnabled, type ChangeNotice } from './nostrService.js'
 import type { ParsedKeyset } from './keysetsSync.js'
 
@@ -102,7 +103,7 @@ function sortedUnique(items: Iterable<string>): string[] {
 }
 
 function nutKeys(nuts: Obj): string {
-  const keys = Object.keys(nuts).filter(k => /^\d{1,3}$/.test(k)).sort((a, b) => Number(a) - Number(b))
+  const keys = Object.keys(nuts).filter(k => /^\d{1,3}$/.test(k) && isNutDeclaredSupported(nuts[k])).sort((a, b) => Number(a) - Number(b))
   return keys.length === 0 ? 'none' : keys.join(', ')
 }
 
@@ -320,14 +321,25 @@ export function diffKeysets(oldList: readonly KeysetSnap[], newList: readonly Ke
   return out
 }
 
+/**
+ * Version of the rule the stored `info.nuts` baseline is built with. 1 = a NUT entry with `supported: false` is not a
+ * supported NUT (methodology 4, 2026-10-21); rows built before have 0. A row with an older stamp gets its nuts baseline
+ * replaced silently by the next successful observation (no change row), then the stamp is set.
+ */
+export const NUTS_RULES_VERSION = 1
+
 export interface MintChangeState {
   info: unknown
   keysets: unknown
+  /** The stamp of the row; undefined (a test double, no row) is read as current. */
+  nutsRules?: number
 }
 
 export interface StatePatch {
   info?: Record<string, string>
   keysets?: KeysetSnap[]
+  /** Set together with `info` when the nuts baseline was written or rebuilt under NUTS_RULES_VERSION. */
+  nutsRules?: number
 }
 
 export interface ChangeDeps {
@@ -349,9 +361,17 @@ export async function observeInfo(url: string, raw: unknown, deps: ChangeDeps): 
   const changes: DetectedChange[] = []
   let dirty = false
   const now = deps.now()
+  const staleNutsRules = snap.nuts !== undefined && (state.nutsRules ?? NUTS_RULES_VERSION) < NUTS_RULES_VERSION
   for (const f of fields) {
     const key = `${url}\ninfo:${f}`
     const observed = snap[f] as string
+    if (f === 'nuts' && staleNutsRules) {
+      // The stored list was built under an older rule: replace it without a change row, without waiting for a confirmation.
+      deps.pending.delete(key)
+      next[f] = observed
+      dirty = true
+      continue
+    }
     const step = stepValue(stored[f], deps.pending.get(key), observed, now)
     if (step.kind === 'pending') { deps.pending.set(key, step.pending); continue }
     deps.pending.delete(key)
@@ -363,7 +383,7 @@ export async function observeInfo(url: string, raw: unknown, deps: ChangeDeps): 
     }
   }
   if (!dirty) return []
-  return deps.commit(url, { info: next }, changes)
+  return deps.commit(url, staleNutsRules ? { info: next, nutsRules: NUTS_RULES_VERSION } : { info: next }, changes)
 }
 
 /** One successful, complete /v1/keysets answer. Returns the changes that were confirmed by it. */
@@ -402,9 +422,9 @@ export function decideStorage(rowsToday: number, hasMergedRowForType: boolean): 
 const DAY_START_SQL = `(date_trunc('day', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')`
 
 export async function loadState(url: string): Promise<MintChangeState> {
-  const res = await pool.query('SELECT info, keysets FROM mint_change_state WHERE url = $1', [url])
-  const row = res.rows[0] as { info: unknown; keysets: unknown } | undefined
-  return { info: row?.info ?? null, keysets: row?.keysets ?? null }
+  const res = await pool.query('SELECT info, keysets, nuts_rules FROM mint_change_state WHERE url = $1', [url])
+  const row = res.rows[0] as { info: unknown; keysets: unknown; nuts_rules: number } | undefined
+  return { info: row?.info ?? null, keysets: row?.keysets ?? null, nutsRules: row?.nuts_rules ?? 0 }
 }
 
 export async function commitChanges(url: string, patch: StatePatch, changes: DetectedChange[]): Promise<StoredChange[]> {
@@ -412,12 +432,13 @@ export async function commitChanges(url: string, patch: StatePatch, changes: Det
   try {
     await client.query('BEGIN')
     await client.query(
-      `INSERT INTO mint_change_state (url, info, keysets) VALUES ($1, $2::jsonb, $3::jsonb)
+      `INSERT INTO mint_change_state (url, info, keysets, nuts_rules) VALUES ($1, $2::jsonb, $3::jsonb, COALESCE($4::int, 0))
        ON CONFLICT (url) DO UPDATE SET
          info = COALESCE($2::jsonb, mint_change_state.info),
          keysets = COALESCE($3::jsonb, mint_change_state.keysets),
+         nuts_rules = COALESCE($4::int, mint_change_state.nuts_rules),
          updated_at = NOW()`,
-      [url, patch.info ? JSON.stringify(patch.info) : null, patch.keysets ? JSON.stringify(patch.keysets) : null],
+      [url, patch.info ? JSON.stringify(patch.info) : null, patch.keysets ? JSON.stringify(patch.keysets) : null, patch.nutsRules ?? null],
     )
     const stored: StoredChange[] = []
     if (changes.length > 0) {

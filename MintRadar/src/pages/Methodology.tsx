@@ -98,7 +98,7 @@ export default function Methodology() {
               <tbody>
                 <tr><th scope="row">Uptime</th><td>{w.uptime}</td><td>MintRadar probes of the last {M.uptime.windowHours} hours</td></tr>
                 <tr><th scope="row">Audit reliability</th><td>{w.audit}</td><td>cashu.info swaps of the last {M.audit.windowDays} days</td></tr>
-                <tr><th scope="row">NUT support</th><td>{w.nuts}</td><td>NUTs the mint says it supports in <code>/v1/info</code></td></tr>
+                <tr><th scope="row">NUT support</th><td>{w.nuts}</td><td>NUTs the mint says it supports in <code>/v1/info</code> (an entry with <code>&quot;supported&quot;: false</code> does not count)</td></tr>
                 <tr><th scope="row">Software version</th><td>{w.version}</td><td>The version the mint reports, against the newest stable release</td></tr>
                 <tr><th scope="row">Contact</th><td>{w.contact}</td><td>Contact channels the mint publishes</td></tr>
               </tbody>
@@ -151,8 +151,8 @@ export default function Methodology() {
 
           <h3 className="doc-h3">NUT support ({w.nuts} points)</h3>
           <p>
-            The number of the {M.nuts.tracked.length} tracked NUTs that the mint lists in its <code>/v1/info</code>,
-            divided by {M.nuts.tracked.length}, times {w.nuts}, rounded. Tracked:{' '}
+            The number of the {M.nuts.tracked.length} tracked NUTs that the mint lists in its <code>/v1/info</code>
+            and does not mark with <code>&quot;supported&quot;: false</code>, divided by {M.nuts.tracked.length}, times {w.nuts}, rounded. Tracked:{' '}
             {M.nuts.tracked.map(nutLabel).join(', ')}. Not counted: the NUTs every mint implements (NUT-00 to NUT-03
             and NUT-06), NUTs that only wallets use, authentication (NUT-21, NUT-22) and the payment-method NUTs
             (NUT-23, NUT-25, NUT-30).

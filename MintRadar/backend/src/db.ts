@@ -526,6 +526,9 @@ export async function initDb(): Promise<void> {
        tracking_since TIMESTAMPTZ NOT NULL DEFAULT NOW(),
        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
      )`,
+    // Version of the rule the stored `info.nuts` baseline was built with (NUTS_RULES_VERSION in mintChanges.ts; 0 = built before
+    // supported:false meant "not supported"). An older stamp makes the next observation replace the baseline silently, no change row.
+    'ALTER TABLE mint_change_state ADD COLUMN IF NOT EXISTS nuts_rules INTEGER NOT NULL DEFAULT 0',
     // Facts about the mint's contact entries (contactChecks.ts): [{ kind, formatValid, domainResolves, checkedAt }] per entry,
     // never a contact value or a domain. NULL until the first check after the deploy. Nullable, no default: metadata only.
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS contact_checks JSONB',

@@ -124,7 +124,7 @@ export default function ForWallets() {
           </p>
           <p data-testid="nuts-example">
             To keep only mints that declare certain NUTs, use <code>nuts</code>. For example, mints that declare NUT-11 and NUT-12:{' '}
-            <code>{F.nutzapQuery}</code> (a mint is kept only when it lists all of them in its <code>/v1/info</code>).
+            <code>{F.nutzapQuery}</code> (a mint is kept only when it lists all of them in its <code>/v1/info</code>; an entry with <code>&quot;supported&quot;: false</code> does not count as listed).
           </p>
           <h3 className="doc-h3">2. One mint by its URL</h3>
           <p>

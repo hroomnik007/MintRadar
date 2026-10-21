@@ -489,6 +489,31 @@ describe('state-change publication', () => {
   const eventsOf = (h: ReturnType<typeof harness>) => h.sent.map(s => s.event)
   const statusOf = (e: NostrEvent): string | undefined => e.tags.find(t => t[0] === 'mint_status')?.[1]
 
+  it('a methodology bump republishes every mint with the new methodology tag: as "periodic" (not a state change), so the 30 an hour cap does not apply; the 6 hour minimum and the 200 per run cap do', async () => {
+    const n = ATTESTATION_STATE_CHANGE_MAX_PER_HOUR + 20
+    const rows = Array.from({ length: n }, (_, i) => row(i + 1))
+    const old = (ageMs: number): Map<string, PublishedState> => new Map(rows.map(r => [
+      r.url, published({ lastCreatedAt: seconds(NOW - ageMs), lastRank: 80, lastMethodology: METHODOLOGY_VERSION - 1 }),
+    ]))
+    // older than 6 hours: all 50 are due in ONE run, none of them counted as a state change
+    const aged = await run(rows, old(ATTESTATION_MIN_INTERVAL_MS + MIN), NOW)
+    expect(aged.res).toMatchObject({ eligible: n, due: n, accepted: n })
+    expect(aged.res.deferred).toBe(0)
+    const methodologyTag = (e: NostrEvent): string | undefined => e.tags.find(t => t[0] === 'methodology')?.[1]
+    expect(eventsOf(aged.h)).toHaveLength(n)
+    expect(new Set(eventsOf(aged.h).map(methodologyTag))).toEqual(new Set([String(METHODOLOGY_VERSION)]))
+    expect([...aged.h.store.values()].every(v => v.lastMethodology === METHODOLOGY_VERSION)).toBe(true)
+    // the cap log stays empty: a methodology refresh does not use the state-change budget
+    const log: number[] = []
+    await run(rows, old(ATTESTATION_MIN_INTERVAL_MS + MIN), NOW, log)
+    expect(log).toHaveLength(0)
+    // younger than 6 hours: nothing yet; it follows at the first run after the 6 hours
+    const young = await run(rows, old(2 * 3_600_000), NOW)
+    expect(young.res.due).toBe(0)
+    const later = await run(rows, old(2 * 3_600_000), NOW + 4 * 3_600_000 + MIN)
+    expect(later.res.due).toBe(n)
+  })
+
   it('the constants: 5 minutes per mint, 30 an hour, inside the 6 hour minimum', () => {
     expect(ATTESTATION_STATE_CHANGE_MIN_GAP_MS).toBe(5 * MIN)
     expect(ATTESTATION_STATE_CHANGE_MAX_PER_HOUR).toBe(30)

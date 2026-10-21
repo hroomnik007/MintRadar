@@ -4,6 +4,7 @@ import pLimit from 'p-limit'
 import { pool } from './db.js'
 import { checkUrlSafety, safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 import { computeReliabilityScore, TRACKED_NUT_KEYS } from './shared/reliabilityScore.js'
+import { isNutDeclaredSupported } from './shared/nutSupport.js'
 import { notifySubscribers, notifyAlert, recordAlertClear, isNotificationServiceEnabled, type AlertKind } from './nostrService.js'
 import { mintMeltCondition, versionCondition, nutLossTransition, type Condition } from './alertTriggers.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
@@ -482,7 +483,7 @@ export async function probeMintToDb(url: string, onDeferFailure?: (f: DeferredPr
           // payment-method (23/25/30) keys, which are real features but not
           // part of the NUT-support score; counting all of Object.keys(nuts)
           // previously let those inflate this component.
-          const nutCount = TRACKED_NUT_KEYS.filter(key => nuts[key] != null).length
+          const nutCount = TRACKED_NUT_KEYS.filter(key => isNutDeclaredSupported(nuts[key])).length
           const nameRaw = typeof raw['name'] === 'string' ? raw['name'].trim().slice(0, 100) : null
           const name = nameRaw && nameRaw.length > 0 ? nameRaw : null
 

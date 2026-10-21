@@ -42,6 +42,24 @@ describe.skipIf(!url)('mint_changes / mint_change_state against a real Postgres'
     }
   })
 
+  it('nuts_rules: a row starts at 0, loadState reads it, a patch with nutsRules sets it and a patch without leaves it', async () => {
+    const m = await setup()
+    const mint = 'https://pg-changes-nutrules.example.com'
+    try {
+      await m.pool.query('INSERT INTO mints (url) VALUES ($1) ON CONFLICT DO NOTHING', [mint])
+      expect((await m.loadState(mint)).nutsRules).toBe(0) // no row yet: 0
+      await m.commitChanges(mint, { info: { nuts: '4, 5, 7' } }, [])
+      expect((await m.loadState(mint)).nutsRules).toBe(0)
+      await m.commitChanges(mint, { info: { nuts: '4, 5' }, nutsRules: m.NUTS_RULES_VERSION }, [])
+      expect(await m.loadState(mint)).toMatchObject({ info: { nuts: '4, 5' }, nutsRules: m.NUTS_RULES_VERSION })
+      await m.commitChanges(mint, { info: { nuts: '4, 5, 12' } }, [])
+      expect((await m.loadState(mint)).nutsRules).toBe(m.NUTS_RULES_VERSION)
+    } finally {
+      await m.pool.query('DELETE FROM mints WHERE url = $1', [mint])
+      await m.pool.end()
+    }
+  })
+
   it('a row for an unknown mint is refused by the foreign key, and the whole commit (state included) rolls back', async () => {
     const m = await setup()
     try {

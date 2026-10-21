@@ -2,6 +2,7 @@ import './wsPolyfill.js'
 import express, { type Request, type Response, type NextFunction } from 'express'
 import cors from 'cors'
 import { pool, initDb } from './db.js'
+import { isNutDeclaredSupported } from './shared/nutSupport.js'
 import { isSafeUrl, isWellFormedMintUrl, checkWsUrlSafety, safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 import { upsertMint, probeMintToDb, validateCashuMintProbe, parseMintMethods, classifyFetchError, type MintMethodEntry } from './prober.js'
 import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type ProbeFailure, type SafeFetchRejection } from './probeErrorKind.js'
@@ -798,7 +799,7 @@ app.get('/api/mint/probe', (req: Request, res: Response): void => {
               version: status.info.version,
               // keys only — enough for `Object.keys(nuts).length`, none of the
               // per-NUT config an arbitrary host might stuff in here.
-              nuts: Object.fromEntries(Object.keys(status.info.nuts).map(k => [k, {}])),
+              nuts: Object.fromEntries(Object.keys(status.info.nuts).filter(k => isNutDeclaredSupported(status.info!.nuts[k])).map(k => [k, {}])),
             }
           : null,
         keysets: null,
@@ -1227,9 +1228,9 @@ app.get('/api/nuts', (_req: Request, res: Response): void => {
       const nuts = TRACKED_NUT_KEYS.map(key => ({
         nut: `NUT-${key.padStart(2, '0')}`,
         percent: total > 0
-          ? Math.round(rows.filter(r => r.nuts_limits[key] != null).length / total * 100)
+          ? Math.round(rows.filter(r => isNutDeclaredSupported(r.nuts_limits[key])).length / total * 100)
           : 0,
-        mints: rows.filter(r => r.nuts_limits[key] != null).map(r => r.url),
+        mints: rows.filter(r => isNutDeclaredSupported(r.nuts_limits[key])).map(r => r.url),
       }))
       res.json(nuts)
     })
@@ -1286,9 +1287,9 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
       const totalForAdoption = onlineWithNuts.length
       const nutAdoption = MINT_ADVERTISED_NUT_KEYS.map(key => ({
         nut: `NUT-${key.padStart(2, '0')}`,
-        count: onlineWithNuts.filter(r => r.nuts_limits && r.nuts_limits[key] != null).length,
+        count: onlineWithNuts.filter(r => r.nuts_limits && isNutDeclaredSupported(r.nuts_limits[key])).length,
         percent: totalForAdoption > 0
-          ? Math.round(onlineWithNuts.filter(r => r.nuts_limits && r.nuts_limits[key] != null).length / totalForAdoption * 100)
+          ? Math.round(onlineWithNuts.filter(r => r.nuts_limits && isNutDeclaredSupported(r.nuts_limits[key])).length / totalForAdoption * 100)
           : 0,
       }))
       const top5 = [...rows]

@@ -17,6 +17,9 @@ import * as beVersion from '../../backend/src/shared/versionRule'
 import { TEST_MINT_URLS as feTestMints, isTestMint as feIsTestMint } from '@/constants/testMints'
 import { TEST_MINT_URLS as beTestMints, isTestMint as beIsTestMint } from '../../backend/src/testMints'
 import { VERSION_CASES, ORDER_CASES } from './versionCases'
+import * as feNut from '@/utils/nutSupport'
+import * as beNut from '../../backend/src/shared/nutSupport'
+import { NUT_SUPPORT_CASES } from './nutSupportCases'
 import { computeReliabilityScore as beScore } from '../../backend/src/shared/reliabilityScore'
 
 const codeOf = (rel: string) =>
@@ -162,5 +165,17 @@ describe('healthAssertionConstants: backend and frontend copies agree', () => {
 describe('feeExamples: backend and frontend copies agree', () => {
   it('has identical code (NUT-02 fee arithmetic and the fee examples)', () => {
     expect(codeOf('../utils/feeExamples.ts')).toBe(codeOf('../../backend/src/shared/feeExamples.ts'))
+  })
+})
+
+describe('nutSupport: backend and frontend copies agree', () => {
+  it('has identical code', () => {
+    expect(codeOf('../utils/nutSupport.ts')).toBe(codeOf('../../backend/src/shared/nutSupport.ts'))
+  })
+  it.each(NUT_SUPPORT_CASES.map(c => [c.name, c] as const))('%s', (_n, c) => {
+    expect(feNut.isNutSupported(c.entry)).toBe(c.supported)
+    expect(beNut.isNutSupported(c.entry)).toBe(c.supported)
+    expect(feNut.isNutDeclaredSupported(c.entry)).toBe(c.declaredSupported)
+    expect(beNut.isNutDeclaredSupported(c.entry)).toBe(c.declaredSupported)
   })
 })
