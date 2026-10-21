@@ -1,4 +1,4 @@
-// Cache-busting for the brand assets that live un-hashed in public/ (favicons, app icons).
+// Cache-busting for the assets that live un-hashed in public/ (favicons, app icons, the early-preload script).
 // nginx serves them with a long cache, so every reference in a build carries ?v=<first 8 hex of the
 // file's sha256>: the URL changes exactly when the bytes change. Build only — dev leaves URLs alone.
 import { createHash } from 'node:crypto'
@@ -12,6 +12,7 @@ const HTML_ASSETS = [
   '/favicon-32x32.png',
   '/favicon-16x16.png',
   '/apple-touch-icon.png',
+  '/early-preload.js',
 ]
 // og:image / twitter:image (/og-image-reliability.png) are deliberately NOT in this list: X caches the card image by
 // path and ignores ?v=, so a changed OG image gets a new file name instead (see docs/claude/design-palette-and-chrome.md).
@@ -25,9 +26,9 @@ export function withBrandHash(publicPath: string, root = process.cwd()): string 
   return `${publicPath}?v=${brandHash(publicPath, root)}`
 }
 
-// Rewrites href/content attributes that point at one of HTML_ASSETS (relative or on SITE).
+// Rewrites href/content/src attributes that point at one of HTML_ASSETS (relative or on SITE).
 export function addBrandHashesToHtml(html: string, root = process.cwd()): string {
-  return html.replace(/\b(href|content)="((?:https:\/\/mintradar\.org)?)(\/[^"?#]+)"/g, (match, attr: string, origin: string, path: string) =>
+  return html.replace(/\b(href|content|src)="((?:https:\/\/mintradar\.org)?)(\/[^"?#]+)"/g, (match, attr: string, origin: string, path: string) =>
     HTML_ASSETS.includes(path) ? `${attr}="${origin}${withBrandHash(path, root)}"` : match,
   )
 }

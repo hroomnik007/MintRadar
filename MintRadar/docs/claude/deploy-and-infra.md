@@ -156,6 +156,12 @@ The `mintradar.org` / `www.mintradar.org` HTTPS server block (the only 443 block
 
 Applied with a backup `/etc/nginx/sites-available/mintradar.org.conf.bak-20261020-092445`, one `sed` insert, `sudo nginx -t`, `sudo systemctl reload nginx`; live file and `deploy/nginx.conf` identical afterwards. **Rollback:** `sudo cp -p /etc/nginx/sites-available/mintradar.org.conf.bak-20261020-092445 /etc/nginx/sites-available/mintradar.org.conf`, `sudo nginx -t`, `sudo systemctl reload nginx`.
 
+### Early preload of the mint list (Task P2, 2026-10-21)
+
+`public/early-preload.js` (linked from `index.html` as `<script async src="/early-preload.js">`, built as `/early-preload.js?v=<sha256 prefix>` by `vite-brand-assets.ts`) adds `<link rel="preload" as="fetch" href="/api/mints/known" crossorigin="anonymous">` to `<head>` **on `/` only**. Why a script and not a static `<link>`: the HTML shell is shared by every route, and a preload on a route that never reads the list (About, Methodology, For wallets, Wallets, Learn) downloads 23 KB gzip for nothing and prints "preloaded but not used" in the console. The CSP (`script-src 'self'`, no inline script) is unchanged: the route check lives in an external same-origin file. Vite does not bundle `public/` and merges all `<script type="module">` of the HTML into one entry, so a separate early module is not possible; the file is un-hashed in `public/`, hence the `?v=` rule above (nginx caches `*.js` for a year).
+
+Rules that keep the request single: the preload must match `fetchKnownMints` (`src/hooks/useKnownMints.ts`) exactly: same URL, no headers, same-origin credentials. `crossorigin="anonymous"` is required for `as="fetch"` even on the same origin; without it Chromium does not reuse the response and the request goes out twice (mutation-proved). The preload request carries `Origin: https://mintradar.org` (CORS mode); the backend allow-list accepts that origin (`ALLOWED_ORIGINS`), a foreign Origin still gets the JSON 403. Pinned by `src/__tests__/earlyPreload.test.ts` and `e2e/known-mints-preload.spec.ts` (exactly one `/api/mints/known` request on `/`, none and no preload link on the other routes).
+
 ### Service Worker / PWA auto-update
 
 `vite-plugin-pwa` (`registerType: 'autoUpdate'`) only reliably delivers deploys to users when ALL THREE of the following are correct simultaneously:
