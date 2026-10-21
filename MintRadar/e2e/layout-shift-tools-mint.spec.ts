@@ -3,9 +3,13 @@ import { installApiMocks, mockRelays, MOCK_MINTS } from './fixtures/mocks'
 import { frames, layoutReady, networkQuiet, resize, trackRequests } from './fixtures/settle'
 
 // /tools and Mint Detail must not move while they load. The lazy route fallback (App.tsx) and the pending state of Mint
-// Detail (`.mint-detail-pending`) are as tall as the viewport, so the footer is already below the fold when the page
+// Detail (its root, `.mint-detail`, in every state) are as tall as the viewport, so the footer is already below the fold when the page
 // arrives; before Task X it jumped out of view (0.104 on /tools at 390 px, 0.14 on Mint Detail). Rule and numbers:
 // docs/claude/stats-dashboard-watchlist-ui.md ("Layout shift rule") and card-and-mint-detail-ui.md.
+// Task Y M: the root of Mint Detail is at least as tall as the viewport in EVERY state (`.mint-detail { min-height: 100dvh }`), so
+// the footer stays below the first screen while the data arrives (each response held in turn) and in the short "Not a tracked
+// mint" state. A local reproduction of the live 0.19 (minibits, History, 390 px) did not find a state with the footer in view
+// (34 delay profiles on a production build, shifts at most 0.06); the one short state that exists is "Not a tracked mint".
 // What stays and is NOT limited tighter: the About and Get in touch panels of Mint Detail arrive with the live /v1/info
 // data of the mint and their size is the mint's (about 0.06 at the fixture), hence the 0.1 budget of the task.
 
@@ -67,5 +71,63 @@ for (const width of [390, 1440]) {
       await frames(page, 3)
       expect((await shiftTotal(page)) - before, `layout shift of the ${tab} tab at ${width}px`).toBeLessThan(TAB_LIMIT)
     }
+  })
+}
+
+// ── Task Y M: the footer stays below the first screen in every state ──────────────────────────────────────────────────────
+const footerBelowFold = (page: Page): Promise<boolean> =>
+  page.evaluate(() => document.querySelector('footer.app-footer')!.getBoundingClientRect().top >= window.innerHeight)
+
+/** Holds every request matching `pattern` until release(); release() waits until a request has reached the mock. */
+function gate(page: Page, pattern: string, answer: (route: import('@playwright/test').Route) => Promise<void>) {
+  let waiting = 0
+  let open: () => void = () => {}
+  const opened = new Promise<void>(r => { open = r })
+  const ready = page.route(pattern, async route => { waiting++; await opened; await answer(route) })
+  return {
+    ready,
+    release: async () => { await expect.poll(() => waiting, { message: `a request for ${pattern} reached the mock` }).toBeGreaterThan(0); open() },
+  }
+}
+
+for (const width of [390, 1440]) {
+  test(`Mint Detail at ${width}px: the footer is below the first screen while each response is held in turn, shift below ${MINT_LIMIT}`, async ({ page }) => {
+    await prepare(page, width)
+    const known = gate(page, '**/api/mints/known', r => r.fallback())
+    const probe = gate(page, '**/api/mint/probe**', r => r.fallback())
+    const history = gate(page, '**/api/mints/history**', r => r.fallback())
+    const reviews = gate(page, '**/api/mints/nostr-reviews**', r => r.fallback())
+    await Promise.all([known.ready, probe.ready, history.ready, reviews.ready])
+    await page.goto(`/mint/${encodeURIComponent(MOCK_MINTS[0]!.url)}`)
+
+    // 1. everything pending: the viewport-high page
+    await expect(page.locator('.mint-detail')).toBeVisible()
+    expect(await footerBelowFold(page), 'pending').toBe(true)
+    // 2. the tracked-mint list arrived, the probe, history and reviews did not
+    await known.release()
+    await expect(page.locator('.md-tabs')).toBeVisible()
+    expect(await footerBelowFold(page), 'known only').toBe(true)
+    // 3. the probe arrived
+    await probe.release()
+    await expect(page.locator('.md-panel-title', { hasText: 'About' })).toBeVisible()
+    expect(await footerBelowFold(page), 'known + probe').toBe(true)
+    // 4. the rest, on the History tab (the chart arrives from its lazy chunk)
+    await page.locator('.md-tab', { hasText: /^History/ }).click()
+    await history.release()
+    await reviews.release()
+    await networkQuiet(page)
+    await layoutReady(page)
+    await frames(page, 3)
+    expect(await footerBelowFold(page), 'loaded').toBe(true)
+    expect(await shiftTotal(page), `layout shift of the delayed Mint Detail load at ${width}px`).toBeLessThan(MINT_LIMIT)
+  })
+
+  test(`Mint Detail at ${width}px: the short "Not a tracked mint" state keeps the footer below the first screen`, async ({ page }) => {
+    await prepare(page, width)
+    await page.goto(`/mint/${encodeURIComponent('https://nobody.mint.example')}`)
+    await expect(page.getByRole('heading', { name: 'Not a tracked mint' })).toBeVisible()
+    await layoutReady(page)
+    expect(await footerBelowFold(page), 'Not a tracked mint').toBe(true)
+    expect(await shiftTotal(page)).toBeLessThan(MINT_LIMIT)
   })
 }

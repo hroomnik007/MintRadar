@@ -8,10 +8,12 @@
   width: 100%;
   max-width: var(--dash-chrome-max);
   margin-inline: auto;
+  /* The page is at least as tall as the viewport in EVERY state (pending, partial, loaded, error, "Not a tracked mint"), so the
+     footer stays below the first screen while data arrives and never jumps in or out of view (Task X: pending only; Task Y M:
+     all states). vh is the fallback for browsers without the dynamic viewport unit. */
+  min-height: 100vh;
+  min-height: 100dvh;
 }
-/* While the tracked-mint list is pending the page is as tall as the viewport, so the footer is already below the fold
-   (the lazy route fallback in App.tsx is too) and does not jump out of view when the page arrives. */
-.mint-detail-pending { min-height: 100vh; }
 
 /* ── Header ─────────────────────────────────────────────────── */
 .md-header {
