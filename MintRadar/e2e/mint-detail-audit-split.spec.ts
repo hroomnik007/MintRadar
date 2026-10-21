@@ -189,6 +189,55 @@ test.describe('swap tables behind a tablist', () => {
   })
 })
 
+// Task Z: on phones the State text of a failed row was cut by its 54 px cell ("failed (melt)" read "…led (me"). It wraps now.
+for (const [w, h] of [[640, 900], [390, 844], [320, 640]] as const) {
+  test(`State text of failed rows is not clipped and the page does not scroll sideways @ ${w}px`, async ({ page }) => {
+    await resize(page, w, h)
+    const swaps = [
+      ...czSwapList([ok, { ...melt, kind: 'a-rather-long-destination-host-name', stage: 'melt' }, { kind: 'another-long-mint-host-name', status: 'failed', stage: 'mint', error: 'mint failed', durationMs: 12345, amount: 1234567 }, limits, pending]),
+      ...czSwapList([ok, melt, { kind: 'another-long-mint-host-name', status: 'failed', stage: 'mint', error: 'mint failed', durationMs: 12345 }]).map((x, i) => ({ ...x, id: `t${i}`, direction: 'to' as const, at: ago((90 + i) * 60_000) })),
+    ]
+    await gotoAuditTab(page, czOnly(auditCzResponse({ swaps })))
+    await layoutReady(page)
+    for (const panel of ['from', 'to'] as const) {
+      if (panel === 'to') await page.getByRole('tab', { name: /^To this mint/ }).click()
+      const rows = page.locator('.audit-swaps-table tbody tr')
+      await expect(rows.first()).toBeVisible()
+      await layoutReady(page)
+      const m = await page.evaluate(() => {
+        const out: Array<{ state: string; cellClipped: boolean; textOutside: boolean; amountClipped: boolean; fontPx: number }> = []
+        for (const tr of document.querySelectorAll('.audit-swaps-table tbody tr:not(:first-child)')) {
+          const cells = tr.querySelectorAll('td')
+          const td = cells[cells.length - 1] as HTMLElement
+          const amount = cells[1] as HTMLElement
+          const trigger = (td.querySelector('[data-tooltip-trigger]') ?? td) as HTMLElement
+          const cr = td.getBoundingClientRect(), tr2 = trigger.getBoundingClientRect()
+          out.push({
+            state: (trigger.textContent ?? '').trim(),
+            cellClipped: td.scrollWidth > td.clientWidth + 1 || trigger.scrollWidth > trigger.clientWidth + 1,
+            textOutside: tr2.right > cr.right + 1 || tr2.left < cr.left - 1,
+            amountClipped: amount.scrollWidth > amount.clientWidth + 1,
+            fontPx: parseFloat(getComputedStyle(td).fontSize),
+          })
+        }
+        return { rows: out, doc: document.documentElement.scrollWidth - window.innerWidth, wrap: (document.querySelector('.audit-swaps-table-wrap') as HTMLElement).scrollWidth - (document.querySelector('.audit-swaps-table-wrap') as HTMLElement).clientWidth }
+      })
+      expect(m.rows.length, panel).toBeGreaterThan(1)
+      for (const r of m.rows) {
+        expect(r.cellClipped, `${panel}: "${r.state}" is cut`).toBe(false)
+        expect(r.textOutside, `${panel}: "${r.state}" leaves its cell`).toBe(false)
+        expect(r.amountClipped, `${panel}: amount cut next to "${r.state}"`).toBe(false)
+        expect(r.fontPx).toBeGreaterThanOrEqual(12)
+      }
+      expect(m.doc, panel).toBeLessThanOrEqual(0)
+      expect(m.wrap, `${panel}: the table scrolls inside its box`).toBeLessThanOrEqual(0)
+    }
+    // the failed row keeps its styling and its full state is in the text
+    await page.getByRole('tab', { name: /^From this mint/ }).click()
+    await expect(page.locator('tr.audit-swap-row-fail').first()).toContainText('failed (melt)')
+  })
+}
+
 for (const [w, h] of [[1440, 900], [768, 1024], [390, 844], [320, 640]] as const) {
   test(`layout at ${w}px: inside the panel, no overflow, 12px floor on phones`, async ({ page }) => {
     await resize(page, w, h)
