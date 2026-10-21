@@ -473,7 +473,7 @@ components:
           items: { $ref: '#/components/schemas/FeeExampleUnit' }
           description: >-
             Only with `include=facts` (always on the single-mint endpoint). The input fee in plain amounts for each unit that has an
-            active keyset (a keyset that states no input_fee_ppk counts as 0, the NUT-02 default): the fee for spending 1, 16 and 100 proofs, computed as in NUT-02 (sum of the proofs'
+            active keyset (a keyset that states no input_fee_ppk, or an unusable value, counts as 0, the NUT-02 default; keysets[].inputFeePpk stays null for both): the fee for spending 1, 16 and 100 proofs, computed as in NUT-02 (sum of the proofs'
             input_fee_ppk divided by 1000, rounded up) from the stored keysets, not from a request to the mint. An empty array when
             no keyset check has stored an active keyset yet. Added 2026-10-21.
         limits:

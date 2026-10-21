@@ -27,6 +27,9 @@ export function feeExamplesOf(keysets: readonly FeeKeysetLike[]): FeeExampleUnit
   const byUnit = new Map<string, number>()
   for (const k of keysets) {
     if (!k.active) continue
+    // inputFeePpk is null both when the field is missing and when the mint stated an unusable value (negative,
+    // fractional, above 1,000,000): the stored value cannot tell them apart, and both count as 0 here. A read of
+    // /v1/keysets of every tracked mint on 2026-10-21 found no unusable value (71 active keysets, all with a valid number).
     const unit = k.unit.toLowerCase()
     byUnit.set(unit, Math.max(byUnit.get(unit) ?? 0, k.inputFeePpk ?? 0))
   }
