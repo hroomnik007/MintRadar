@@ -427,6 +427,18 @@ export function reliabilityScoreInfo(score: number): ReliabilityScoreInfo {
   return                  { label: 'Low Reliability',      color: 'var(--red)', bg: 'var(--red-soft)',   border: 'var(--red-soft-strong)'   }
 }
 
+// What Mint Detail shows instead of a score while a mint WITHOUT a stored score is still missing the 24 h history its
+// fallback score is computed from (or that request failed): a neutral placeholder, never a number computed with the
+// missing uptime as 0 (that showed 31 for a moment before the real 71, Task F3). Same box as the score, so nothing moves.
+export const SCORE_PENDING_TEXT = '—'
+export const SCORE_PENDING_ARIA_LABEL = 'Score not available yet'
+export const SCORE_PENDING_INFO = {
+  label: 'Not available yet',
+  color: 'var(--text3)',
+  bg: 'transparent',
+  border: 'var(--border)',
+} as const
+
 // reliabilityColor: used in Dashboard list view (same thresholds as reliabilityScoreInfo)
 export function reliabilityColor(score: number): string {
   if (score >= 70) return 'var(--accent)'

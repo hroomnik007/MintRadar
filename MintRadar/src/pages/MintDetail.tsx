@@ -38,7 +38,7 @@ import { AuditCzTiles, AuditCzSourceLine, AuditCzSwapTables, AuditStateText } fr
 import { supportedNutKeys } from '@/utils/nutSupport'
 import { MintFeesLimits } from '@/components/mint/MintFeesLimits'
 import { formatDate, formatDateTimeUtc } from '@/utils/formatDate'
-import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, SCORE_PENDING_ARIA_LABEL, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
 import { operatorPubkeys } from '@/utils/operatorPubkeys'
@@ -276,7 +276,8 @@ function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, n
   detail?: string
   // Where the number comes from: source, window, sample, time.
   source?: SourceLine
-  score: number
+  // null = not known yet: shown as "—/max" with an empty bar.
+  score: number | null
   max: number
   color: string
   tooltip: string
@@ -291,13 +292,13 @@ function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, n
         <div className="rb-row-right">
           {note && <InfoTooltip text={tooltip} width={220}><span className="rb-row-note">{note}</span></InfoTooltip>}
           <span className="rb-row-display">{display}</span>
-          <span className="rb-row-score" style={{ color }}>{score}/{max}</span>
+          <span className="rb-row-score" style={{ color }}>{score ?? SCORE_PENDING_TEXT}/{max}</span>
         </div>
       </div>
       {detail && <div className="rb-row-detail">{detail}</div>}
       {source && <SourceLineView line={source} />}
       <div className="rb-row-bar">
-        <div style={{ height: '100%', width: `${(score / max) * 100}%`, background: color, borderRadius: 2, transition: 'width 0.3s ease' }} />
+        <div style={{ height: '100%', width: `${((score ?? 0) / max) * 100}%`, background: color, borderRadius: 2, transition: 'width 0.3s ease' }} />
       </div>
     </div>
   )
@@ -935,9 +936,17 @@ function MintDetailContent({ url }: { url: string }) {
   // (restore signatures) — check that instead.
   const supportsBackupRestore = supportedNutNumbers.has('9')
 
-  const reliabilityScore = knownMint?.reliabilityScore ?? computeReliabilityScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, { blamed: knownMint?.auditCzBlamed ?? null, total: knownMint?.auditCzTotal ?? null, fetchedAt: knownMint?.auditCzFetchedAt ?? null }, versionLatestMap)
-  const tsInfo = reliabilityScoreInfo(reliabilityScore)
-  const reliabilityDonut = reliabilityDonutArc(reliabilityScore)
+  // The stored (server-side) score wins. Without one, the score is computed here from the 24 h uptime: until that history
+  // has arrived (or when its request failed) there is no score to show, and computing it with uptime 0 showed a wrong
+  // number for a moment (Task F3). Every place below shows SCORE_PENDING_* while `reliabilityScore` is null.
+  const fallbackScore = () => computeReliabilityScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, { blamed: knownMint?.auditCzBlamed ?? null, total: knownMint?.auditCzTotal ?? null, fetchedAt: knownMint?.auditCzFetchedAt ?? null }, versionLatestMap)
+  const reliabilityScore: number | null = knownMint?.reliabilityScore ?? (uptime24hData ? fallbackScore() : null)
+  const scorePending = reliabilityScore === null
+  const scoreText = scorePending ? SCORE_PENDING_TEXT : String(reliabilityScore)
+  // role="img" gives the placeholder's aria-label something to be announced on.
+  const scoreA11y = scorePending ? { role: 'img', 'aria-label': SCORE_PENDING_ARIA_LABEL } as const : {}
+  const tsInfo = reliabilityScore === null ? SCORE_PENDING_INFO : reliabilityScoreInfo(reliabilityScore)
+  const reliabilityDonut = reliabilityDonutArc(reliabilityScore ?? 0)
 
   // Reliability Score Breakdown modal rows — hoisted out of the modal's JSX (was a
   // nested IIFE) because the react-compiler ESLint rules disallow reading a
@@ -1007,7 +1016,7 @@ function MintDetailContent({ url }: { url: string }) {
   const infoSource = infoSourceLine({ fetchedAt: infoFetchedAt, now })
   const versionSource = infoSourceLine({ fetchedAt: infoFetchedAt, now, comparedWithLatest: true })
   const reliabilityBreakdownRows = [
-    { label: UPTIME_ROW_LABEL, display: `${uptimePct}%`, source: uptimeSource, score: breakdownUScore, max: UPTIME_POINTS, color: uptimeColor(uptimePct), tooltip: uptimeRowText() },
+    { label: UPTIME_ROW_LABEL, display: scorePending ? SCORE_PENDING_TEXT : `${uptimePct}%`, source: uptimeSource, score: scorePending ? null : breakdownUScore, max: UPTIME_POINTS, color: scorePending ? 'var(--text3)' : uptimeColor(uptimePct), tooltip: uptimeRowText() },
     { label: AUDIT_ROW_LABEL, display: breakdownAuditDisplay, source: auditRowSource, ...(auditDetailText ? { detail: auditDetailText } : {}), score: breakdownAScore, max: AUDIT_POINTS, color: auditRowColor, tooltip: auditRowText(), ...(auditStaleNote ? { note: auditStaleNote } : {}) },
     { label: NUT_ROW_LABEL, display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, source: infoSource, score: breakdownNScore, max: NUT_POINTS, color: supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: NUT_ROW_TEXT },
     { label: VERSION_ROW_LABEL, display: version ?? 'Unknown', source: versionSource, score: breakdownVScore, max: VERSION_POINTS, color: breakdownVScore >= 12 ? 'var(--accent)' : breakdownVScore >= 6 ? 'var(--amber)' : 'var(--red)', tooltip: versionRowText() },
@@ -1502,11 +1511,12 @@ function MintDetailContent({ url }: { url: string }) {
               <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="8" />
               <circle cx="36" cy="36" r="27" fill="none" stroke="var(--green-bright)" strokeWidth="8"
                 strokeDasharray={reliabilityDonut.dashArray}
+                strokeOpacity={scorePending ? 0 : 1}
                 strokeDashoffset={reliabilityDonut.dashOffset}
                 strokeLinecap="round"
                 transform="rotate(-90 36 36)" />
             </svg>
-            <span className="md-sc-reliability-num">{reliabilityScore}</span>
+            <span className="md-sc-reliability-num" {...scoreA11y}>{scoreText}</span>
           </div>
           <div className="md-sc-reliability-meta">
             <div className="md-sc-label">Reliability</div>
@@ -1550,7 +1560,7 @@ function MintDetailContent({ url }: { url: string }) {
                   <div className="md-ua-line">Last check <span title={formatDateTimeUtc(knownMint.lastCheckedAt)}>{formatTimeAgo(new Date(knownMint.lastCheckedAt), now)}</span></div>
                 )}
                 {lastErrorText && <div className="md-ua-line">Last error: {lastErrorText}</div>}
-                <div className="md-ua-line md-ua-score">Reliability Score {reliabilityScore}. {LAST_SCORE_CAPTION}</div>
+                <div className="md-ua-line md-ua-score">Reliability Score {scoreText}. {LAST_SCORE_CAPTION}</div>
                 <div className="md-ua-todo">
                   <div className="md-panel-title">What to do with tokens from an unreachable mint</div>
                   <ul className="md-ua-list">
@@ -1955,7 +1965,7 @@ function MintDetailContent({ url }: { url: string }) {
               {[
                 { label: 'Average latency', value: chartAvgLatency !== null ? `${chartAvgLatency} ms` : '—', delta: deltaStr(chartAvgLatency, chartPrevLatency, ' ms', chartPrevInsufficientHistory), color: 'var(--text)' },
                 { label: 'Average uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%', chartPrevInsufficientHistory), color: 'var(--accent)' },
-                { label: 'Average reliability', value: `${reliabilityScore}`, delta: null, color: tsInfo.color },
+                { label: 'Average reliability', value: scoreText, delta: null, color: tsInfo.color },
               ].map(({ label, value, delta, color }) => (
                 <div key={label} className="md-hist-fig">
                   <div className="md-hist-fig-value" style={{ color }}>{value}</div>
@@ -2448,11 +2458,12 @@ function MintDetailContent({ url }: { url: string }) {
                   <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
                   <circle cx="36" cy="36" r="27" fill="none" stroke="var(--green-bright)" strokeWidth="7"
                     strokeDasharray={reliabilityDonut.dashArray}
+                strokeOpacity={scorePending ? 0 : 1}
                     strokeDashoffset={reliabilityDonut.dashOffset}
                     strokeLinecap="round"
                     transform="rotate(-90 36 36)" />
                 </svg>
-                <div className="gauge-num" style={{ color: 'var(--green-bright)', fontFamily: 'var(--font-mono-data)' }}>{reliabilityScore}</div>
+                <div className="gauge-num" style={{ color: scorePending ? 'var(--text3)' : 'var(--green-bright)', fontFamily: 'var(--font-mono-data)' }} {...scoreA11y}>{scoreText}</div>
               </div>
               <div className="reliability-badges">
                 <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:5,padding:'4px 10px',textAlign:'center'}}>{tsInfo.label}</span>
@@ -2642,7 +2653,7 @@ function MintDetailContent({ url }: { url: string }) {
               <button type="button" className="rb-close" onClick={() => setShowReliabilityBreakdown(false)} aria-label="Close"><IcClose /></button>
             </div>
             <div className="rb-hero">
-              <div className="rb-hero-score" style={{color:reliabilityScoreColor(reliabilityScore)}}>{reliabilityScore}</div>
+              <div className="rb-hero-score" style={{color:reliabilityScore === null ? 'var(--text3)' : reliabilityScoreColor(reliabilityScore)}} {...scoreA11y}>{scoreText}</div>
               <span className="rb-hero-badge" style={{color:tsInfo.color,background:tsInfo.bg,borderColor:tsInfo.border}}>{tsInfo.label}</span>
               {limitedDataLabel}
             </div>
