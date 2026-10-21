@@ -1,80 +1,221 @@
 import { test, expect } from '@playwright/test'
-import { NO_8333, auditCzResponse, czDetail, gotoAuditTab } from './fixtures/auditCz'
+import { NO_8333, auditCzResponse, czDetail, czSwapList, gotoAuditTab, ago } from './fixtures/auditCz'
 import { layoutReady, resize } from './fixtures/settle'
 
 type Page = import('@playwright/test').Page
 
-// Audit tab, cashu.info view: "Deposits (mint)" and "Withdrawals (melt)" rows (src/components/AuditDirections.tsx).
-// Facts of the stored 7-day window split by direction; the score keeps using the combined number.
+// Audit tab, cashu.info view (Task Y G): the Deposits / Withdrawals tiles (the W6b rows are gone), the one source line,
+// the caption of the swap strip and the two swap tables behind a tablist.
 
-const rows = (page: Page) => page.getByTestId('audit-directions').locator('.md-info-row')
-const row = (page: Page, dir: 'mint' | 'melt') => page.getByTestId('audit-directions').locator(`[data-direction="${dir}"]`)
-
+const tile = (page: Page, key: 'mints' | 'melts') => page.locator(`.audit-cz-tiles [data-tile="${key}"]`)
 const czOnly = (cz: unknown) => ({ alpha: { ...NO_8333 }, cz })
+const ok = { kind: 'ok', durationMs: 1000 }
+const melt = { kind: 'melt', status: 'failed', stage: 'melt', error: 'melt failed', durationMs: 500 }
+const limits = { kind: 'limits', status: 'failed', stage: 'limits', error: 'Amount 3 sat is below the mint minimum of 100 sat', durationMs: null }
+const pending = { kind: 'pending', status: 'pending', durationMs: null }
 
-test('both directions: attempts, failures, window, source and sync time; deposits first', async ({ page }) => {
-  await gotoAuditTab(page, czOnly(auditCzResponse()))
-  await expect(rows(page)).toHaveCount(2)
-  await expect(row(page, 'mint').locator('.md-info-label')).toHaveText('Deposits (mint)')
-  await expect(row(page, 'melt').locator('.md-info-label')).toHaveText('Withdrawals (melt)')
-  // asDest (62 attempts, 6 failed) is the deposit side, asSource (64, 13) the withdrawal side
-  await expect(row(page, 'mint').locator('.md-info-value')).toHaveText('62 attempts, 6 failures · 7 days · cashu.info · synced 10 min ago')
-  await expect(row(page, 'melt').locator('.md-info-value')).toHaveText('64 attempts, 13 failures · 7 days · cashu.info · synced 10 min ago')
-  await expect(row(page, 'mint').locator('span[title]')).toHaveAttribute('title', /^\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC$/)
+test.describe('tiles', () => {
+  test('Deposits (mint) first, then Withdrawals (melt): successful / attempts and "N failed"', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse()))
+    await expect(page.locator('.audit-cz-tiles .audit-cz-tile-label')).toHaveText(
+      ['Deposits (mint)', 'Withdrawals (melt)', 'Without a failure caused by this mint', 'Avg swap time'])
+    // asDest (62 attempts, 56 ok, 6 failed) is the deposit side, asSource (64, 51, 13) the withdrawal side
+    await expect(tile(page, 'mints').locator('.audit-summary-value')).toHaveText('56 / 62')
+    await expect(tile(page, 'mints').locator('.audit-cz-tile-sub')).toHaveText('6 failed')
+    await expect(tile(page, 'melts').locator('.audit-summary-value')).toHaveText('51 / 64')
+    await expect(tile(page, 'melts').locator('.audit-cz-tile-sub')).toHaveText('13 failed')
+  })
+
+  test('the W6b rows and their two sentences are gone', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse()))
+    await expect(page.locator('.audit-cz-tiles')).toBeVisible()
+    await expect(page.getByTestId('audit-directions')).toHaveCount(0)
+    await expect(page.getByText(/uses this same cashu\.info window/)).toHaveCount(0)
+    await expect(page.getByText(/These rows are the same data split by direction/)).toHaveCount(0)
+    await expect(page.getByText(/attempts?, \d+ failures?/)).toHaveCount(0)
+  })
+
+  test('no failures: no subtext; a very small sample is shown as it is, in the one constant colour', async ({ page }) => {
+    const cz = auditCzResponse({ detail: czDetail({ swaps7d: { all: { total: 11, success: 9, failed: 2 }, asSource: { total: 10, success: 10, failed: 0 }, asDest: { total: 1, success: 0, failed: 1 }, errorsBlamed: 1 } }) })
+    await gotoAuditTab(page, czOnly(cz))
+    await expect(tile(page, 'melts').locator('.audit-summary-value')).toHaveText('10 / 10')
+    await expect(tile(page, 'melts').locator('.audit-cz-tile-sub')).toHaveCount(0)
+    await expect(tile(page, 'mints').locator('.audit-summary-value')).toHaveText('0 / 1')
+    await expect(tile(page, 'mints').locator('.audit-cz-tile-sub')).toHaveText('1 failed')
+    const color = (key: 'mints' | 'melts') => tile(page, key).locator('.audit-summary-value').evaluate(e => getComputedStyle(e).color)
+    expect(await color('mints')).toBe(await color('melts'))
+  })
+
+  test('a direction without numbers says "No data" instead of numbers', async ({ page }) => {
+    const cz = auditCzResponse({ detail: czDetail({ swaps7d: { all: { total: 30, success: 30, failed: 0 }, asSource: { total: 30, success: 30, failed: 0 }, errorsBlamed: 0 } }) })
+    await gotoAuditTab(page, czOnly(cz))
+    await expect(tile(page, 'mints').locator('.audit-summary-value')).toHaveText('No data')
+    await expect(tile(page, 'mints').locator('.audit-cz-tile-sub')).toHaveCount(0)
+    await expect(tile(page, 'melts').locator('.audit-summary-value')).toHaveText('30 / 30')
+  })
+
+  test('no swaps block at all: both direction tiles say "No data"', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse({ detail: czDetail({ swaps7d: undefined }) })))
+    await expect(page.locator('.audit-cz-tiles .audit-summary-value')).toHaveText(['No data', 'No data'])
+  })
+
+  test('the tile tooltips say what mint and melt mean for this mint', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse()))
+    await tile(page, 'mints').locator('.info-tooltip').hover()
+    await expect(page.getByRole('tooltip')).toHaveText('Deposits into this mint (mint operations) in the last 7 days, counted by cashu.info: successful of all.')
+    await tile(page, 'melts').locator('.info-tooltip').hover()
+    await expect(page.getByRole('tooltip')).toHaveText('Withdrawals from this mint (melt operations) in the last 7 days, counted by cashu.info: successful of all.')
+  })
 })
 
-test('one muted sentence: the score uses the combined number, these rows are the same data split', async ({ page }) => {
-  await gotoAuditTab(page, czOnly(auditCzResponse()))
-  await expect(page.getByTestId('audit-directions').locator('.audit-cz-muted')).toHaveText('The Reliability Score uses the combined number. These rows are the same data split by direction.')
+test.describe('source line and header tooltip', () => {
+  test('one line under the tiles: cashu.info · last 7 days · synced <relative>, the UTC time in the title', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse()))
+    const line = page.getByTestId('audit-cz-source')
+    await expect(line).toHaveText('cashu.info · last 7 days · synced 10 min ago')
+    await expect(line.locator('span[title]')).toHaveAttribute('title', /^\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC$/)
+    await expect(page.getByTestId('audit-cz-source')).toHaveCount(1)
+    // under the tiles, not before them
+    const [tilesY, lineY] = await Promise.all([page.locator('.audit-cz-tiles').boundingBox(), line.boundingBox()])
+    expect(lineY!.y).toBeGreaterThan(tilesY!.y + tilesY!.height - 1)
+  })
+
+  test('the Audit stats ⓘ carries the meaning of the old rows, with the real window', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse()))
+    await page.locator('.md-audit-header-main .md-audit-info').hover()
+    await expect(page.getByRole('tooltip')).toHaveText('audit.8333.space has no recent data for this mint. The Reliability Score uses the combined cashu.info number for the last 7 days. Deposits and withdrawals are the same data split by direction.')
+  })
 })
 
-test('a very small sample is shown as it is, and nothing is coloured to judge it', async ({ page }) => {
-  const cz = auditCzResponse({ detail: czDetail({ swaps7d: { all: { total: 11, success: 9, failed: 2 }, asSource: { total: 10, success: 10, failed: 0 }, asDest: { total: 1, success: 0, failed: 1 }, errorsBlamed: 1 } }) })
-  await gotoAuditTab(page, czOnly(cz))
-  await expect(row(page, 'mint').locator('.md-info-value')).toContainText('1 attempt, 1 failure')
-  // one constant colour: a direction with 100% failures looks like any other row
-  const color = (dir: 'mint' | 'melt') => row(page, dir).locator('.md-info-value').evaluate(e => getComputedStyle(e).color)
-  expect(await color('mint')).toBe(await color('melt'))
+test.describe('swap strip caption', () => {
+  test('states exactly what the strip shows', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse({ swaps: czSwapList([ok, melt, limits, pending, ok]) })))
+    await expect(page.locator('.audit-swap-bar-mark')).toHaveCount(5)
+    await expect(page.getByTestId('audit-swap-bar-caption')).toHaveText(
+      "The latest 5 swaps MintRadar stored from cashu.info, both directions, newest first. Green: succeeded. Red: failed. Grey: not counted against the mint (below the mint's minimum, the auditor's balance, or no outcome yet).")
+    // the marks follow the caption: 2 green, 1 red, 2 grey, newest left
+    await expect(page.locator('.audit-swap-bar-ok')).toHaveCount(2)
+    await expect(page.locator('.audit-swap-bar-fail')).toHaveCount(1)
+    await expect(page.locator('.audit-swap-bar-neutral')).toHaveCount(2)
+    await expect(page.locator('.audit-swap-bar-mark').first()).toHaveClass(/audit-swap-bar-ok/)
+  })
+
+  test('no swaps: no strip and no caption', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse({ swaps: [] })))
+    await expect(page.locator('.audit-cz-tiles')).toBeVisible()
+    await expect(page.getByTestId('audit-swap-bar-caption')).toHaveCount(0)
+  })
 })
 
-test('a direction without numbers says "No data from cashu.info"', async ({ page }) => {
-  const cz = auditCzResponse({ detail: czDetail({ swaps7d: { all: { total: 30, success: 30, failed: 0 }, asSource: { total: 30, success: 30, failed: 0 }, errorsBlamed: 0 } }) })
-  await gotoAuditTab(page, czOnly(cz))
-  await expect(row(page, 'mint').locator('.md-info-value')).toHaveText('No data from cashu.info')
-  await expect(row(page, 'melt').locator('.md-info-value')).toContainText('30 attempts, 0 failures')
-})
+test.describe('swap tables behind a tablist', () => {
+  const twoDirections = () => [
+    ...czSwapList([ok, melt, ok, ok, ok, ok, ok]),
+    ...czSwapList([ok, melt]).map((s, i) => ({ ...s, id: `t${i}`, direction: 'to' as const, otherMintUrl: `https://src${i}.example`, at: ago((90 + i) * 60_000) })),
+  ]
 
-test('no swaps block at all: both rows say no data', async ({ page }) => {
-  const cz = auditCzResponse({ detail: czDetail({ swaps7d: undefined }) })
-  await gotoAuditTab(page, czOnly(cz))
-  await expect(rows(page).locator('.md-info-value')).toHaveText(['No data from cashu.info', 'No data from cashu.info'])
-})
+  test('tablist semantics: roles, names, counts, one panel at a time, From first', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse({ swaps: twoDirections() })))
+    const list = page.getByRole('tablist', { name: 'Swap direction' })
+    await expect(list).toBeVisible()
+    const tabs = list.getByRole('tab')
+    await expect(tabs).toHaveText(['From this mint (7)', 'To this mint (2)'])
+    await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
+    await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'false')
+    await expect(tabs.first()).toHaveAttribute('tabindex', '0')
+    await expect(tabs.nth(1)).toHaveAttribute('tabindex', '-1')
+    // exactly one table, labelled by the selected tab
+    await expect(page.getByRole('tabpanel')).toHaveCount(1)
+    await expect(page.getByTestId('audit-cz-table')).toHaveCount(1)
+    await expect(page.getByRole('tabpanel')).toHaveAccessibleName('From this mint (7)')
+    await expect(page.getByRole('tabpanel').locator('th').first()).toHaveText('To')
+    await expect(page.getByRole('tabpanel').locator('tbody tr')).toHaveCount(5)
+    await expect(page.getByRole('tabpanel').locator('.audit-swaps-show-all-btn')).toHaveText('Show all (7)')
+    // the failed-row styling and the cashu.info link are kept
+    await expect(page.getByRole('tabpanel').locator('tr.audit-swap-row-fail')).toHaveCount(1)
+    await expect(page.getByRole('link', { name: 'Open on cashu.info →' })).toBeVisible()
+  })
 
-test('the existing tiles are unchanged next to the rows', async ({ page }) => {
-  await gotoAuditTab(page, czOnly(auditCzResponse()))
-  await expect(page.locator('.audit-cz-tiles [data-tile="melts"] .audit-summary-value')).toHaveText('51 / 64')
-  await expect(page.locator('.audit-cz-tiles [data-tile="mints"] .audit-summary-value')).toHaveText('56 / 62')
+  test('arrow keys, Home and End move between the tabs and switch the panel', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse({ swaps: twoDirections() })))
+    const from = page.getByRole('tab', { name: /^From this mint/ })
+    const to = page.getByRole('tab', { name: /^To this mint/ })
+    await from.focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(to).toBeFocused()
+    await expect(to).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByRole('tabpanel').locator('th').first()).toHaveText('From')
+    await expect(page.getByRole('tabpanel').locator('tbody tr')).toHaveCount(2)
+    await page.keyboard.press('ArrowRight') // wraps
+    await expect(from).toBeFocused()
+    await page.keyboard.press('End')
+    await expect(to).toBeFocused()
+    await page.keyboard.press('Home')
+    await expect(from).toBeFocused()
+    await expect(from).toHaveAttribute('aria-selected', 'true')
+    await page.keyboard.press('ArrowLeft') // wraps back
+    await expect(to).toBeFocused()
+    // Tab leaves the tablist for the panel content: the inactive tab is not a Tab stop
+    await expect(from).toHaveAttribute('tabindex', '-1')
+  })
+
+  test('switching panels does not move anything above the control', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse({ swaps: twoDirections() })))
+    await expect(page.getByRole('tablist', { name: 'Swap direction' })).toBeVisible()
+    const above = async () => page.evaluate(() => {
+      const list = document.querySelector('[role="tablist"][aria-label="Swap direction"]')!
+      const top = list.getBoundingClientRect().top
+      return [...document.querySelectorAll('.audit-cz-tiles, .audit-cz-source, .audit-swap-bar, .audit-swap-bar-caption, [role="tablist"]')]
+        .map(e => [Math.round(e.getBoundingClientRect().top - top), Math.round(e.getBoundingClientRect().height)])
+    })
+    const before = await above()
+    await page.getByRole('tab', { name: /^To this mint/ }).click()
+    await expect(page.getByRole('tabpanel').locator('tbody tr')).toHaveCount(2)
+    expect(await above()).toEqual(before)
+  })
+
+  test('44 px touch targets on phones', async ({ page }) => {
+    await resize(page, 390, 844)
+    await gotoAuditTab(page, czOnly(auditCzResponse({ swaps: twoDirections() })))
+    for (const tab of await page.getByRole('tab').all()) {
+      const box = await tab.boundingBox()
+      expect(box!.height).toBeGreaterThanOrEqual(44)
+      expect(box!.width).toBeGreaterThanOrEqual(44)
+    }
+  })
+
+  test('a direction with no failure rows shows no failed styling', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse({ swaps: czSwapList([ok, ok]) })))
+    await expect(page.getByRole('tabpanel').locator('tr.audit-swap-row-fail')).toHaveCount(0)
+  })
 })
 
 for (const [w, h] of [[1440, 900], [768, 1024], [390, 844], [320, 640]] as const) {
   test(`layout at ${w}px: inside the panel, no overflow, 12px floor on phones`, async ({ page }) => {
     await resize(page, w, h)
-    await gotoAuditTab(page, czOnly(auditCzResponse()))
-    await expect(rows(page)).toHaveCount(2)
+    const swaps = [
+      ...czSwapList([ok, melt, limits, ok, pending, ok, ok]),
+      ...czSwapList([ok, melt]).map((s, i) => ({ ...s, id: `t${i}`, direction: 'to' as const, otherMintUrl: `https://a-rather-long-source-host-name-${i}.mint.example`, at: ago((90 + i) * 60_000) })),
+    ]
+    await gotoAuditTab(page, czOnly(auditCzResponse({ swaps })))
+    await expect(page.getByRole('tab')).toHaveCount(2)
     await layoutReady(page)
-    const m = await page.getByTestId('audit-directions').evaluate(panel => {
-      const pr = panel.getBoundingClientRect()
-      const out: string[] = []
-      const small: string[] = []
-      for (const el of panel.querySelectorAll<HTMLElement>('*')) {
-        const r = el.getBoundingClientRect()
-        if (r.width > 0 && (r.right > pr.right + 1 || r.left < pr.left - 1)) out.push(String(el.className || el.tagName))
-        if ([...el.childNodes].some(n => n.nodeType === 3 && (n.textContent ?? '').trim()) && parseFloat(getComputedStyle(el).fontSize) < 12) small.push(String(el.className || el.tagName))
-      }
-      return { out, small, docOverflow: document.documentElement.scrollWidth - window.innerWidth }
-    })
-    expect(m.out).toEqual([])
-    expect(m.docOverflow).toBeLessThanOrEqual(0)
-    if (w <= 480) expect(m.small).toEqual([])
+    for (const panel of ['from', 'to'] as const) {
+      if (panel === 'to') await page.getByRole('tab', { name: /^To this mint/ }).click()
+      const m = await page.locator('.md-audit-collapsible').evaluate(root => {
+        const pr = root.getBoundingClientRect()
+        const out: string[] = []
+        const small: string[] = []
+        for (const el of root.querySelectorAll<HTMLElement>('*')) {
+          if (el.closest('.audit-swaps-table-wrap')) continue // the table scrolls inside its own box
+          const r = el.getBoundingClientRect()
+          if (r.width > 0 && (r.right > pr.right + 1 || r.left < pr.left - 1)) out.push(String(el.className || el.tagName))
+          if (!el.closest('.sr-only') && [...el.childNodes].some(n => n.nodeType === 3 && (n.textContent ?? '').trim()) && parseFloat(getComputedStyle(el).fontSize) < 12) small.push(String(el.className || el.tagName))
+        }
+        return { out, small, docOverflow: document.documentElement.scrollWidth - window.innerWidth }
+      })
+      expect(m.out, panel).toEqual([])
+      expect(m.docOverflow, panel).toBeLessThanOrEqual(0)
+      if (w <= 480) expect(m.small, panel).toEqual([])
+    }
   })
 }

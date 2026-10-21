@@ -104,18 +104,17 @@ describe('numbers in the built texts equal their sources', () => {
     expect(numbers(T.compareAuditSuccessText())).toEqual([T.AUDIT_WINDOW_DAYS, AUDIT_MIN_SAMPLES])
   })
   it('cashu.info tiles: 7 days', () => {
-    expect(numbers(T.payoutsTileText())).toEqual([T.AUDIT_WINDOW_DAYS])
-    expect(numbers(T.receivesTileText())).toEqual([T.AUDIT_WINDOW_DAYS])
+    expect(numbers(T.depositsTileText())).toEqual([T.AUDIT_WINDOW_DAYS])
+    expect(numbers(T.withdrawalsTileText())).toEqual([T.AUDIT_WINDOW_DAYS])
     const f = (n: number) => String(n)
     expect(T.cleanTileText(107, 126, 0, 19, f)).toBe('107 of 126 swaps in the last 7 days, 19 failed for other reasons')
     expect(T.cleanTileText(120, 126, 4, 2, f)).toBe('120 of 126 swaps in the last 7 days, 4 attributed to this mint, 2 other failures')
     expect(T.cleanTileText(126, 126, 0, 0, f)).toBe('126 of 126 swaps in the last 7 days')
   })
-  it('cashu.info view text builds from the parts it is given', () => {
-    const base = { fallbackFrom8333: false, checkedMinutesAgo: 9, notRecent: false, failuresAttributed: 1 }
-    expect(T.cashuInfoViewText(base)).toBe('This tab shows cashu.info data, checked 9 minutes ago. cashu.info attributes 1 failure to this mint.')
-    expect(T.cashuInfoViewText({ ...base, checkedMinutesAgo: 1, notRecent: true, failuresAttributed: 3 })).toBe('This tab shows cashu.info data, checked 1 minute ago, not updated recently. cashu.info attributes 3 failures to this mint.')
-    expect(T.cashuInfoViewText({ ...base, fallbackFrom8333: true, checkedMinutesAgo: null, failuresAttributed: null })).toBe('audit.8333.space has no recent data for this mint, so this tab shows cashu.info data. Failures are attributed by cashu.info.')
+  it('cashu.info view text: the score uses the combined number, the tiles are the same data split by direction', () => {
+    expect(T.cashuInfoViewText({ fallbackFrom8333: false })).toBe('The Reliability Score uses the combined cashu.info number for the last 7 days. Deposits and withdrawals are the same data split by direction.')
+    expect(T.cashuInfoViewText({ fallbackFrom8333: true })).toBe('audit.8333.space has no recent data for this mint. The Reliability Score uses the combined cashu.info number for the last 7 days. Deposits and withdrawals are the same data split by direction.')
+    expect(numbers(T.cashuInfoViewText({ fallbackFrom8333: false }))).toEqual([T.AUDIT_WINDOW_DAYS])
   })
   it('More alerts note: ratio, window, minors, cooldowns', () => {
     expect(numbers(T.moreAlertsNote())).toEqual([T.AUDIT_WINDOW_DAYS, T.OUTDATED_AFTER_MINORS, 4, 5, T.MINT_MELT_COOLDOWN_HOURS, T.OTHER_ALERT_COOLDOWN_HOURS])
@@ -150,9 +149,9 @@ const BUILT: Record<string, string> = {
   AUDIT_MINTS_TEXT: T.AUDIT_MINTS_TEXT, AUDIT_MELTS_TEXT: T.AUDIT_MELTS_TEXT, auditSuccessRateText: T.auditSuccessRateText(),
   REVIEWS_NIP87_TEXT: T.REVIEWS_NIP87_TEXT, SIGNATURE_CHECK_TEXT: T.SIGNATURE_CHECK_TEXT, INPUT_FEE_TEXT: T.INPUT_FEE_TEXT,
   compareAuditSuccessText: T.compareAuditSuccessText(), sameOperatorText: T.sameOperatorText(['alpha.mint.example', 'twin.mint.example']),
-  payoutsTileText: T.payoutsTileText(), receivesTileText: T.receivesTileText(),
+  depositsTileText: T.depositsTileText(), withdrawalsTileText: T.withdrawalsTileText(),
   cleanTileText: T.cleanTileText(120, 126, 4, 2, n => n.toLocaleString('en-US')),
-  cashuInfoViewText: T.cashuInfoViewText({ fallbackFrom8333: true, checkedMinutesAgo: 12, notRecent: true, failuresAttributed: 3 }),
+  cashuInfoViewText: T.cashuInfoViewText({ fallbackFrom8333: true }),
   moreAlertsNote: T.moreAlertsNote(), KEYSETS_HINT: T.KEYSETS_HINT, newMintBadgeText: T.newMintBadgeText(), newMintCapNote: T.newMintCapNote(), OPERATOR_REVIEW_NOTE: T.OPERATOR_REVIEW_NOTE, operatorExcludedText: T.operatorExcludedText(2),
   nhiOnlineSetText: nhiOnlineSetText(), nhiOnlineRowText: nhiOnlineRowText(26), nhiReliabilityRowText: nhiReliabilityRowText(),
   nhiAdvancedRowText: nhiAdvancedRowText(),

@@ -145,11 +145,11 @@ export function sameOperatorText(hosts: readonly string[]): string {
 }
 
 /** cashu.info tiles (Mint Detail > Audit). */
-export function payoutsTileText(): string {
-  return `Swaps in the last ${AUDIT_WINDOW_DAYS} days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)`
+export function depositsTileText(): string {
+  return `Deposits into this mint (mint operations) in the last ${AUDIT_WINDOW_DAYS} days, counted by cashu.info: successful of all.`
 }
-export function receivesTileText(): string {
-  return `Swaps in the last ${AUDIT_WINDOW_DAYS} days in which this mint received ecash from another mint (successful of all)`
+export function withdrawalsTileText(): string {
+  return `Withdrawals from this mint (melt operations) in the last ${AUDIT_WINDOW_DAYS} days, counted by cashu.info: successful of all.`
 }
 /** The "without a failure" tile: `clean` of `total` swaps, `blamed` attributed to the mint, `other` failures for other reasons. */
 export function cleanTileText(clean: number, total: number, blamed: number, other: number, fmt: (n: number) => string): string {
@@ -160,18 +160,9 @@ export function cleanTileText(clean: number, total: number, blamed: number, othe
 }
 
 /** Audit tab: the ⓘ of the cashu.info view. */
-export function cashuInfoViewText(o: { fallbackFrom8333: boolean; checkedMinutesAgo: number | null; notRecent: boolean; failuresAttributed: number | null }): string {
-  const lead = o.fallbackFrom8333
-    ? 'audit.8333.space has no recent data for this mint, so this tab shows cashu.info data'
-    : 'This tab shows cashu.info data'
-  const parts = [
-    o.checkedMinutesAgo !== null && Number.isFinite(o.checkedMinutesAgo) ? `checked ${o.checkedMinutesAgo} minute${o.checkedMinutesAgo === 1 ? '' : 's'} ago` : null,
-    o.notRecent ? 'not updated recently' : null,
-  ].filter(Boolean)
-  const failures = o.failuresAttributed !== null
-    ? `cashu.info attributes ${o.failuresAttributed} failure${o.failuresAttributed === 1 ? '' : 's'} to this mint.`
-    : 'Failures are attributed by cashu.info.'
-  return `${lead}${parts.length ? `, ${parts.join(', ')}` : ''}. ${failures}`
+export function cashuInfoViewText(o: { fallbackFrom8333: boolean }): string {
+  const lead = o.fallbackFrom8333 ? 'audit.8333.space has no recent data for this mint. ' : ''
+  return `${lead}The Reliability Score uses the combined cashu.info number for the last ${AUDIT_WINDOW_DAYS} days. Deposits and withdrawals are the same data split by direction.`
 }
 
 /** Mint Detail > Keysets: the visible line under the title (it replaced the tooltip). */

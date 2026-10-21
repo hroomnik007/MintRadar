@@ -34,8 +34,7 @@ import { MintComparePicker } from '@/components/MintComparePicker'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { MintNetworkCard } from '@/components/MintNetworkCard'
 import { networkRows } from '@/utils/networkInfo'
-import { AuditCzTiles, AuditCzSwapTables, AuditStateText } from '@/components/AuditCzCards'
-import { AuditDirections } from '@/components/AuditDirections'
+import { AuditCzTiles, AuditCzSourceLine, AuditCzSwapTables, AuditStateText } from '@/components/AuditCzCards'
 import { supportedNutKeys } from '@/utils/nutSupport'
 import { MintFeesLimits } from '@/components/mint/MintFeesLimits'
 import { formatDate, formatDateTimeUtc } from '@/utils/formatDate'
@@ -988,15 +987,7 @@ function MintDetailContent({ url }: { url: string }) {
   const auditNeedsFallback = !has8333Audit || freshness.auditorDataOld || freshness.syncStale
   const auditSource = auditSourcePick ?? (auditNeedsFallback ? 'cz' : '8333')
   const czView = czData !== null && (!has8333Audit || auditSource === 'cz') ? czData : null
-  const czCheckedMin = czView?.checkedAt ? Math.max(0, Math.floor((now - new Date(czView.checkedAt).getTime()) / 60_000)) : null
-  const czInfoText = czView
-    ? cashuInfoViewText({
-        fallbackFrom8333: !(has8333Audit && !auditNeedsFallback),
-        checkedMinutesAgo: czCheckedMin,
-        notRecent: czView.notRecent,
-        failuresAttributed: czView.failuresAttributed,
-      })
-    : null
+  const czInfoText = czView ? cashuInfoViewText({ fallbackFrom8333: !(has8333Audit && !auditNeedsFallback) }) : null
   const auditSwitch = czData !== null && has8333Audit ? (
     <div className="md-audit-seg" role="group" aria-label="Audit source">
       <button type="button" className={`md-audit-seg-btn${czView ? ' active' : ''}`} aria-pressed={czView !== null} onClick={() => setAuditSourcePick('cz')}>cashu.info</button>
@@ -2086,12 +2077,10 @@ function MintDetailContent({ url }: { url: string }) {
                 </div>
 
                 {!czView && audit8333Stale && <p className="audit-cz-muted">{audit8333Stale}</p>}
-                <p className="audit-cz-muted">{czView
-                  ? `The Reliability Score uses this same cashu.info window: the last ${AUDIT_WINDOW_DAYS} days.`
-                  : czData !== null
-                    ? `The Reliability Score uses cashu.info's last ${AUDIT_WINDOW_DAYS} days; this view shows audit.8333.space's last ~${AUDIT_SWAPS_WINDOW} swaps.`
-                    : `This view shows audit.8333.space's last ~${AUDIT_SWAPS_WINDOW} swaps; the Reliability Score does not use it.`}</p>
-                {czView ? <><AuditCzTiles view={czView} /><AuditDirections detail={auditCzData?.detail} now={now} /></> : (<>
+                {!czView && <p className="audit-cz-muted">{czData !== null
+                  ? `The Reliability Score uses cashu.info's last ${AUDIT_WINDOW_DAYS} days; this view shows audit.8333.space's last ~${AUDIT_SWAPS_WINDOW} swaps.`
+                  : `This view shows audit.8333.space's last ~${AUDIT_SWAPS_WINDOW} swaps; the Reliability Score does not use it.`}</p>}
+                {czView ? <><AuditCzTiles view={czView} /><AuditCzSourceLine view={czView} now={now} /></> : (<>
                 {/* 5-second overview — always visible, never inside the mobile
                     collapse. Mints/Melts are audit.8333.space lifetime counts;
                     Recent success rate is the rolling ~100-swap window; Last
@@ -2150,6 +2139,11 @@ function MintDetailContent({ url }: { url: string }) {
                       />
                     ))}
                   </div>
+                )}
+                {czView && auditSwapBarItems.length > 0 && (
+                  <p className="audit-cz-muted audit-swap-bar-caption" data-testid="audit-swap-bar-caption">
+                    The {auditSwapBarItems.length === 1 ? 'latest swap' : `latest ${auditSwapBarItems.length} swaps`} MintRadar stored from cashu.info, both directions, newest first. Green: succeeded. Red: failed. Grey: not counted against the mint (below the mint's minimum, the auditor's balance, or no outcome yet).
+                  </p>
                 )}
 
                 {czView ? (<>

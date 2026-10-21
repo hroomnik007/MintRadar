@@ -1,5 +1,8 @@
-import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
-import { payoutsTileText, receivesTileText, cleanTileText } from './tooltipTexts'
+import type { AuditCzData, AuditCzDetail, AuditCzDirectionCounts } from '@/hooks/useAuditCz'
+import { depositsTileText, withdrawalsTileText, cleanTileText, AUDIT_WINDOW_DAYS } from './tooltipTexts'
+import { formatTimeAgo } from './mintFormatting'
+import { formatDateTimeUtc } from './formatDate'
+import type { SourceLine } from './scoreSources'
 
 // Adapter: cashu.info endpoint response → what the cashu.info Audit tab renders (four tiles from
 // the stored 7-day detail, the auditor's checks, the outcome bar and two swap tables from the swaps
@@ -41,6 +44,10 @@ export interface AuditCzTile {
   label: string
   /** The ⓘ text; a tile whose label already says it all (Avg swap time) has none. */
   tooltip?: string
+  /** Small muted line under the tile ("6 failed"); only a direction tile with failures has one. */
+  sub?: string
+  /** A direction tile whose numbers the source did not send: the value reads "No data". */
+  noData?: boolean
 }
 
 export interface AuditCzView {
@@ -56,8 +63,6 @@ export interface AuditCzView {
   /** This mint received ("Swaps to this mint", first column From = the source). */
   toRows: AuditSwapRow[]
   tiles: AuditCzTile[]
-  /** attributedFailures as published by the cashu.info feed (feeds the header tooltip sentence). */
-  failuresAttributed: number | null
 }
 
 function swapState(status: string): string {
@@ -148,20 +153,21 @@ export function formatAvgSwapTime(ms: number): string {
 
 const fmt = (n: number) => n.toLocaleString('en-US')
 
+/** One direction tile: successful / attempts, "N failed" under it when the source counts failures, "No data" when the numbers are missing. */
+function directionTile(key: 'melts' | 'mints', label: string, tooltip: string, d: AuditCzDirectionCounts | undefined): AuditCzTile {
+  const ok = num(d?.success), all = num(d?.total), failed = num(d?.failed)
+  if (ok === undefined || all === undefined) return { key, value: 'No data', label, tooltip, noData: true }
+  return { key, value: `${fmt(ok)} / ${fmt(all)}`, label, tooltip, ...(failed !== undefined && failed > 0 ? { sub: `${fmt(Math.min(failed, all))} failed` } : {}) }
+}
+
 function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
   const s = d.swaps7d
-  if (!s) return []
-  const tiles: AuditCzTile[] = []
-  const meltsOk = num(s.asSource?.success), meltsAll = num(s.asSource?.total)
-  if (meltsOk !== undefined && meltsAll !== undefined) tiles.push({
-    key: 'melts', value: `${fmt(meltsOk)} / ${fmt(meltsAll)}`, label: 'Payouts',
-    tooltip: payoutsTileText(),
-  })
-  const mintsOk = num(s.asDest?.success), mintsAll = num(s.asDest?.total)
-  if (mintsOk !== undefined && mintsAll !== undefined) tiles.push({
-    key: 'mints', value: `${fmt(mintsOk)} / ${fmt(mintsAll)}`, label: 'Receives',
-    tooltip: receivesTileText(),
-  })
+  // Deposits (mint) first: asDest = this mint was the destination of a swap. Withdrawals (melt) = asSource.
+  const tiles: AuditCzTile[] = [
+    directionTile('mints', 'Deposits (mint)', depositsTileText(), s?.asDest),
+    directionTile('melts', 'Withdrawals (melt)', withdrawalsTileText(), s?.asSource),
+  ]
+  if (!s) return tiles
   // The one success figure of this view is the one the Reliability Score's audit part uses: swaps without a
   // failure that cashu.info attributes to this mint, (total - blamed) / total of the same 7-day window.
   // Never "x / y" in the big number; whole percent, capped at 99 while anything is attributed so "1 of 200 caused" cannot read as 100%.
@@ -218,6 +224,15 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
     fromRows: rows.filter(r => r.direction === 'from'),
     toRows: rows.filter(r => r.direction === 'to'),
     tiles: auditCzTiles(data.detail),
-    failuresAttributed: data.mint.attributedFailures,
   }
+}
+
+/** The one source line under the tiles: "cashu.info · last 7 days · synced 10 min ago" (absolute UTC time in `time.title`). */
+export function auditCzSourceLine(view: Pick<AuditCzView, 'checkedAt' | 'notRecent'>, now: number): SourceLine {
+  const parts = ['cashu.info', `last ${AUDIT_WINDOW_DAYS} days`]
+  const at = view.checkedAt ? new Date(view.checkedAt) : null
+  const time = at && Number.isFinite(at.getTime()) ? { verb: 'synced', label: formatTimeAgo(at, now), title: formatDateTimeUtc(at) } : null
+  // The detail job runs every 30 minutes; the old header tooltip said "not updated recently" in this case.
+  if (view.notRecent) parts.push('not updated recently')
+  return { parts, time }
 }

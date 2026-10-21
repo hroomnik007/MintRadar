@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { adaptAuditCz, auditCzNeutralKind, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, type AuditCzView } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzSourceLine, auditCzNeutralKind, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, type AuditCzView } from '@/utils/auditCz'
 import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
 
 type Row = AuditCzData['swaps'][number]
@@ -35,14 +35,14 @@ const tiles = (d: AuditCzDetail) => Object.fromEntries(view([], d).tiles.map(t =
 describe('tiles from the stored detail (LNpay values)', () => {
   it('fractions, the one success tile and average time', () => {
     const t = tiles(LNPAY)
-    expect(t['melts']).toMatchObject({ value: '51 / 64', label: 'Payouts' })
-    expect(t['mints']).toMatchObject({ value: '56 / 62', label: 'Receives' })
+    expect(t['mints']).toMatchObject({ value: '56 / 62', label: 'Deposits (mint)', sub: '6 failed' })
+    expect(t['melts']).toMatchObject({ value: '51 / 64', label: 'Withdrawals (melt)', sub: '13 failed' })
     expect(t['clean']).toMatchObject({ value: '100%', label: 'Without a failure caused by this mint', tooltip: '126 of 126 swaps in the last 7 days, 19 failed for other reasons' })
     expect(t['clean']).not.toHaveProperty('caption')
     expect(t['clean']).not.toHaveProperty('captionNote')
     expect(t['avg']).toMatchObject({ value: '8.3 s', label: 'Avg swap time' })
     // four tiles, no overall "Success rate" that mixes in unattributed failures
-    expect(view([]).tiles.map(x => x.key)).toEqual(['melts', 'mints', 'clean', 'avg'])
+    expect(view([]).tiles.map(x => x.key)).toEqual(['mints', 'melts', 'clean', 'avg'])
     expect(view([]).tiles.map(x => x.label)).not.toContain('Success rate')
   })
   it('success tile: LNpay-like, 0 blamed of 105 with 16 failed', () => {
@@ -80,12 +80,28 @@ describe('tiles from the stored detail (LNpay values)', () => {
     expect(w({ total: 20 }, -1)).toBeUndefined()
     expect(w({ total: 20, failed: -3 }, 0)).toMatchObject({ value: '100%', tooltip: '20 of 20 swaps in the last 7 days' })
   })
-  it('a tile whose field is missing is hidden', () => {
-    expect(Object.keys(tiles({ fetchedAt: null, swaps7d: { asSource: { success: 1, total: 2 } } }))).toEqual(['melts'])
-    expect(Object.keys(tiles({ fetchedAt: null, swaps7d: { asDest: { success: 3 } } }))).toEqual([])
-    expect(Object.keys(tiles({ fetchedAt: null }))).toEqual([])
-    expect(Object.keys(tiles({ fetchedAt: null, swaps7d: { errorsBlamed: 2 } }))).toEqual([])
-    expect(Object.keys(tiles({ fetchedAt: null, swaps7d: { all: { total: 9 } } }))).toEqual([])
+  it('a direction without numbers reads "No data"; the other tiles are hidden when their field is missing', () => {
+    const keys = (d: AuditCzDetail) => view([], d).tiles.map(t => t.key)
+    const dir = (d: AuditCzDetail) => tiles(d)
+    expect(dir({ fetchedAt: null, swaps7d: { asSource: { success: 1, total: 2 } } })['mints']).toMatchObject({ value: 'No data', noData: true })
+    expect(dir({ fetchedAt: null, swaps7d: { asSource: { success: 1, total: 2 } } })['melts']).toMatchObject({ value: '1 / 2' })
+    expect(dir({ fetchedAt: null, swaps7d: { asDest: { success: 3 } } })['mints']).toMatchObject({ value: 'No data' })
+    expect(dir({ fetchedAt: null, swaps7d: { asDest: { success: -3, total: 4 } } })['mints']).toMatchObject({ value: 'No data' })
+    // no swaps block at all: the two direction tiles say "No data", nothing else is invented
+    expect(keys({ fetchedAt: null })).toEqual(['mints', 'melts'])
+    expect(dir({ fetchedAt: null })['melts']).toMatchObject({ value: 'No data' })
+    expect(keys({ fetchedAt: null, swaps7d: { errorsBlamed: 2 } })).toEqual(['mints', 'melts'])
+    expect(keys({ fetchedAt: null, swaps7d: { all: { total: 9 } } })).toEqual(['mints', 'melts'])
+  })
+  it('"N failed" only for a direction that has failures; one small sample is shown as it is', () => {
+    const t = tiles({ fetchedAt: null, swaps7d: { asSource: { total: 10, success: 10, failed: 0 }, asDest: { total: 1, success: 0, failed: 1 } } })
+    expect(t['melts']).toMatchObject({ value: '10 / 10' })
+    expect(t['melts']).not.toHaveProperty('sub')
+    expect(t['mints']).toMatchObject({ value: '0 / 1', sub: '1 failed' })
+    // no failed count sent: no subtext, never a number derived from the others
+    expect(tiles({ fetchedAt: null, swaps7d: { asSource: { total: 10, success: 7 } } })['melts']).not.toHaveProperty('sub')
+    // a hostile failed count above the attempts is clamped
+    expect(tiles({ fetchedAt: null, swaps7d: { asSource: { total: 3, success: 0, failed: 99 } } })['melts']).toMatchObject({ sub: '3 failed' })
   })
   it('formats the average: seconds with one decimal, under a second in ms', () => {
     expect(formatAvgSwapTime(8289)).toBe('8.3 s')
@@ -96,8 +112,8 @@ describe('tiles from the stored detail (LNpay values)', () => {
   })
   it('tooltips are the honest wording', () => {
     const t = tiles(LNPAY)
-    expect(t['melts']?.tooltip).toBe('Swaps in the last 7 days in which this mint paid out a Lightning invoice, counted by cashu.info (successful of all)')
-    expect(t['mints']?.tooltip).toBe('Swaps in the last 7 days in which this mint received ecash from another mint (successful of all)')
+    expect(t['mints']?.tooltip).toBe('Deposits into this mint (mint operations) in the last 7 days, counted by cashu.info: successful of all.')
+    expect(t['melts']?.tooltip).toBe('Withdrawals from this mint (melt operations) in the last 7 days, counted by cashu.info: successful of all.')
     expect(t['clean']?.tooltip).toBe('126 of 126 swaps in the last 7 days, 19 failed for other reasons')
     // The Avg swap time tile has no ⓘ: its label says it, the window and source are in the sibling tooltips.
     expect(t['avg']?.tooltip).toBeUndefined()
@@ -208,4 +224,19 @@ describe('sourceHref accepts only https://cashu.info/mint/<id>', () => {
     'javascript:alert(1)',
     null,
   ])('rejects %s', u => { expect(href(u)).toBeNull() })
+})
+
+describe('source line under the tiles', () => {
+  const NOW = Date.parse('2026-10-07T07:30:00Z')
+  it('"cashu.info · last 7 days · synced 30 min ago", absolute UTC time for the title', () => {
+    const line = auditCzSourceLine(view([], LNPAY, {}, NOW), NOW)
+    expect(line.parts).toEqual(['cashu.info', 'last 7 days'])
+    expect(line.time).toEqual({ verb: 'synced', label: '30 min ago', title: '7 Oct 2026, 07:00 UTC' })
+  })
+  it('older than three detail runs: says so; no stored time: no "synced" part', () => {
+    const late = Date.parse('2026-10-07T12:00:00Z')
+    expect(auditCzSourceLine(view([], LNPAY, {}, late), late).parts).toEqual(['cashu.info', 'last 7 days', 'not updated recently'])
+    expect(auditCzSourceLine({ checkedAt: null, notRecent: false }, NOW).time).toBeNull()
+    expect(auditCzSourceLine({ checkedAt: 'garbage', notRecent: false }, NOW).time).toBeNull()
+  })
 })

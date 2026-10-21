@@ -2713,14 +2713,28 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .md-fees-limits .md-info-value { text-align: left; flex-basis: 100%; }
 }
 
-/* Audit tab: deposits / withdrawals split of the cashu.info 7-day window */
-.audit-directions { margin: 12px 0; }
-.audit-directions .md-info-row { flex-wrap: wrap; column-gap: 12px; row-gap: 2px; }
-.audit-directions .md-info-label { flex-shrink: 1; min-width: 0; }
-.audit-directions .md-info-value { flex: 1 1 auto; min-width: 0; text-align: right; word-break: normal; overflow-wrap: break-word; font-size: 13px; }
-.audit-directions .md-info-value span[title] { text-decoration: underline dotted; text-underline-offset: 2px; }
-@media (max-width: 480px) {
-  .audit-directions .md-info-value { text-align: left; flex-basis: 100%; }
+/* Audit tab, cashu.info view (Task Y G): direction tiles with an optional "N failed" line, one source line,
+   the strip caption, and the segmented control for the two swap tables. */
+.audit-cz-tile-sub { font-size: 12px; line-height: 1.4; color: var(--text3); }
+.audit-cz-tiles .audit-cz-tile-nodata { font-weight: 500; color: var(--text3); }
+.audit-cz-source { margin: 0 0 4px; overflow-wrap: anywhere; }
+.audit-cz-source span[title] { text-decoration: underline dotted; text-underline-offset: 2px; }
+.audit-swap-bar-caption { margin: 0 0 4px; overflow-wrap: anywhere; }
+.audit-cz-swaps { margin-top: 14px; }
+.audit-cz-seg { display: inline-flex; max-width: 100%; background: var(--bg2); border-radius: 6px; padding: 2px; gap: 2px; }
+.audit-cz-seg-btn {
+  background: none; border: none; border-radius: 5px; cursor: pointer; min-width: 0;
+  font-family: var(--font-body); font-size: 13px; line-height: 1.25; color: var(--text3);
+  padding: 6px 14px; white-space: normal; text-align: center;
+  transition: background 150ms ease, color 150ms ease;
+}
+.audit-cz-seg-btn.active { background: var(--surface-3); color: var(--text); }
+.audit-cz-seg-btn:hover:not(.active) { color: var(--text2); }
+.audit-cz-seg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.audit-cz-swaps .audit-cz-card { border-top: 0; padding-top: 0; margin-top: 12px; }
+@media (max-width: 767px) {
+  .audit-cz-seg { display: flex; }
+  .audit-cz-seg-btn { flex: 1 1 0; min-height: 44px; padding: 6px 8px; line-height: 1.25; }
 }
 /* NUTs tab: the one sentence under the NUT compatibility grid */
 .md-nut-nutzap-note { margin-top: 12px; font-size: 12px; line-height: 1.5; color: var(--text3); }

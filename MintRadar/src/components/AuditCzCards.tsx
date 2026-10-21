@@ -1,5 +1,6 @@
+import { useId, useRef, useState, type KeyboardEvent } from 'react'
 import { InfoTooltip } from '@/components/InfoTooltip'
-import { auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, type AuditCzView, type AuditSwapRow } from '@/utils/auditCz'
+import { auditCzStateTitle, auditCzSourceLine, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, type AuditCzView, type AuditSwapRow } from '@/utils/auditCz'
 import { mintHostname } from '@/utils/mintFormatting'
 
 // The cashu.info view of the Audit tab below the header: four tiles, the auditor's checks and two
@@ -17,15 +18,27 @@ export function AuditCzTiles({ view }: { view: AuditCzView }) {
         const lead = t.label.slice(0, cut), last = t.label.slice(cut)
         return (
         <div className="audit-summary-cell" key={t.key} data-tile={t.key}>
-          <div className="audit-summary-value" style={{ color: 'var(--accent)' }}>{t.value}</div>
+          <div className={`audit-summary-value${t.noData ? ' audit-cz-tile-nodata' : ''}`} {...(t.noData ? {} : { style: { color: 'var(--accent)' } })}>{t.value}</div>
           <div className="audit-summary-label audit-cz-tile-label">
             {lead}
             <span className="audit-cz-tile-tail">{last}{t.tooltip ? <InfoTooltip text={t.tooltip} width={240} iconSize={11} label={`About ${t.label}`} /> : null}</span>
           </div>
+          {t.sub && <div className="audit-cz-tile-sub">{t.sub}</div>}
         </div>
         )
       })}
     </div>
+  )
+}
+
+/** One muted line under the tiles: where the numbers come from, which window, when they were stored. */
+export function AuditCzSourceLine({ view, now }: { view: AuditCzView; now: number }) {
+  const line = auditCzSourceLine(view, now)
+  return (
+    <p className="audit-cz-muted audit-cz-source" data-testid="audit-cz-source">
+      {line.parts.join(' · ')}
+      {line.time && <>{' · '}<span title={line.time.title}>{line.time.verb} {line.time.label}</span></>}
+    </p>
   )
 }
 
@@ -39,7 +52,6 @@ function SwapTable({ title, firstHeader, rows, expanded, onToggle }: {
   const shown = expanded ? rows : rows.slice(0, ROWS_DEFAULT)
   return (
     <div className="audit-cz-card" data-testid="audit-cz-table">
-      <div className="audit-cz-card-title">{title}</div>
       {rows.length === 0 ? (
         <p className="audit-cz-muted">No swaps collected yet</p>
       ) : (
@@ -92,6 +104,13 @@ export function AuditStateText({ row: s }: { row: AuditSwapRow }) {
   )
 }
 
+type SwapPanel = 'from' | 'to'
+const PANELS: readonly SwapPanel[] = ['from', 'to']
+
+/**
+ * The two swap tables behind one segmented control (a tablist): "From this mint (N) | To this mint (M)", one table at a time,
+ * "From this mint" first. Arrow keys / Home / End move between the tabs (automatic activation); only the active panel is in the DOM.
+ */
 export function AuditCzSwapTables({ view, expandedFrom, expandedTo, onToggleFrom, onToggleTo }: {
   view: AuditCzView
   expandedFrom: boolean
@@ -99,10 +118,53 @@ export function AuditCzSwapTables({ view, expandedFrom, expandedTo, onToggleFrom
   onToggleFrom: () => void
   onToggleTo: () => void
 }) {
+  const [active, setActive] = useState<SwapPanel>('from')
+  const uid = useId()
+  const tabRefs = useRef<Record<SwapPanel, HTMLButtonElement | null>>({ from: null, to: null })
+  const tabId = (p: SwapPanel) => `${uid}-tab-${p}`
+  const panelId = (p: SwapPanel) => `${uid}-panel-${p}`
+  const labels: Record<SwapPanel, string> = {
+    from: `From this mint (${view.fromRows.length})`,
+    to: `To this mint (${view.toRows.length})`,
+  }
+  function onKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
+    const i = PANELS.indexOf(active)
+    let next: SwapPanel | null = null
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = PANELS[(i + 1) % PANELS.length] ?? null
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = PANELS[(i + PANELS.length - 1) % PANELS.length] ?? null
+    else if (e.key === 'Home') next = PANELS[0] ?? null
+    else if (e.key === 'End') next = PANELS[PANELS.length - 1] ?? null
+    if (!next) return
+    e.preventDefault()
+    setActive(next)
+    tabRefs.current[next]?.focus()
+  }
   return (
-    <>
-      <SwapTable title="Swaps from this mint" firstHeader="To" rows={view.fromRows} expanded={expandedFrom} onToggle={onToggleFrom} />
-      <SwapTable title="Swaps to this mint" firstHeader="From" rows={view.toRows} expanded={expandedTo} onToggle={onToggleTo} />
-    </>
+    <div className="audit-cz-swaps">
+      <div className="audit-cz-seg" role="tablist" aria-label="Swap direction">
+        {PANELS.map(p => (
+          <button
+            key={p}
+            type="button"
+            role="tab"
+            id={tabId(p)}
+            ref={el => { tabRefs.current[p] = el }}
+            aria-selected={active === p}
+            aria-controls={panelId(p)}
+            tabIndex={active === p ? 0 : -1}
+            className={`audit-cz-seg-btn${active === p ? ' active' : ''}`}
+            onClick={() => setActive(p)}
+            onKeyDown={onKeyDown}
+          >
+            {labels[p]}
+          </button>
+        ))}
+      </div>
+      <div role="tabpanel" id={panelId(active)} aria-labelledby={tabId(active)}>
+        {active === 'from'
+          ? <SwapTable title="Swaps from this mint" firstHeader="To" rows={view.fromRows} expanded={expandedFrom} onToggle={onToggleFrom} />
+          : <SwapTable title="Swaps to this mint" firstHeader="From" rows={view.toRows} expanded={expandedTo} onToggle={onToggleTo} />}
+      </div>
+    </div>
   )
 }
