@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import type { Express } from 'express'
+import { createHash } from 'node:crypto'
 
 // GET /api/mint/icon — SSRF-safe favicon proxy (see backend/src/mintIcon.ts).
 // The frontend routes every mint <img> here instead of fetching a mint-supplied
@@ -69,13 +70,71 @@ describe('GET /api/mint/icon', () => {
     const res = await request(app).get('/api/mint/icon?url=https://mint.example').expect(200)
 
     expect(res.headers['content-type']).toBe('image/png')
-    expect(res.headers['cache-control']).toContain('max-age=86400')
+    expect(res.headers['cache-control']).toBe('public, max-age=604800')
     expect(res.headers['content-security-policy']).toContain("default-src 'none'")
     expect(res.headers['cross-origin-resource-policy']).toBe('same-origin')
     expect(res.headers['x-content-type-options']).toBe('nosniff')
     expect(Buffer.compare(res.body as Buffer, PNG)).toBe(0)
     // safeFetch (SSRF guard) is what actually reached out — never the browser.
     expect(safeFetch).toHaveBeenCalledWith('https://mint.example/icon.png', expect.objectContaining({ timeoutMs: 5000 }))
+  })
+
+  describe('ETag and conditional requests (Task P2 part 3)', () => {
+    const ICON_URL = '/api/mint/icon?url=https://mint.example'
+    const arrange = (body: Buffer = PNG) => {
+      query.mockResolvedValue({ rows: [{ icon_url: 'https://mint.example/icon.png' }] })
+      safeFetch.mockResolvedValue(fakeRes({ contentType: 'image/png', body }))
+    }
+    const etagOf = (body: Buffer) => `"${createHash('sha256').update(body).digest('hex').slice(0, 32)}"`
+
+    it('a 200 carries a strong ETag that is the hash of the bytes, and the 7-day Cache-Control', async () => {
+      arrange()
+      const res = await request(app).get(ICON_URL).expect(200)
+      expect(res.headers['etag']).toBe(etagOf(PNG))
+      expect(res.headers['etag']).toMatch(/^"[0-9a-f]{32}"$/) // strong: no W/ prefix
+      expect(res.headers['cache-control']).toBe('public, max-age=604800')
+      expect(Buffer.compare(res.body as Buffer, PNG)).toBe(0)
+    })
+
+    it('different bytes give a different ETag', async () => {
+      arrange()
+      const a = await request(app).get(ICON_URL).expect(200)
+      arrange(Buffer.concat([PNG, Buffer.from([9, 9])]))
+      const b = await request(app).get('/api/mint/icon?url=https://other.example').expect(200)
+      expect(a.headers['etag']).not.toBe(b.headers['etag'])
+    })
+
+    it('If-None-Match with the current ETag answers 304 with no body, keeping ETag and Cache-Control', async () => {
+      arrange()
+      const first = await request(app).get(ICON_URL).expect(200)
+      const res = await request(app).get(ICON_URL).set('If-None-Match', first.headers['etag'] as string).expect(304)
+      expect(res.text).toBe('')
+      expect(res.headers['etag']).toBe(first.headers['etag'])
+      expect(res.headers['cache-control']).toBe('public, max-age=604800')
+      expect(res.headers['content-type']).toBeUndefined()
+      expect(res.headers['content-security-policy']).toContain("default-src 'none'")
+      expect(res.headers['cross-origin-resource-policy']).toBe('same-origin')
+    })
+
+    it('a list of ETags that contains the current one is a match too', async () => {
+      arrange()
+      const first = await request(app).get(ICON_URL).expect(200)
+      await request(app).get(ICON_URL).set('If-None-Match', `"nope", ${first.headers['etag'] as string}`).expect(304)
+    })
+
+    it('If-None-Match with another ETag answers 200 with the full body', async () => {
+      arrange()
+      const res = await request(app).get(ICON_URL).set('If-None-Match', '"0000000000000000000000000000000f"').expect(200)
+      expect(Buffer.compare(res.body as Buffer, PNG)).toBe(0)
+      expect(res.headers['etag']).toBe(etagOf(PNG))
+    })
+
+    it('the 204 "no icon" answer keeps its 30 minutes, has no ETag and is never turned into a 304', async () => {
+      query.mockResolvedValue({ rows: [] })
+      const res = await request(app).get('/api/mint/icon?url=https://unknown.example').set('If-None-Match', '*').expect(204)
+      expect(res.headers['cache-control']).toBe('public, max-age=1800')
+      expect(res.headers['etag']).toBeUndefined()
+    })
   })
 
   it('answers an unknown mint with 204 and no body, without any outbound fetch', async () => {

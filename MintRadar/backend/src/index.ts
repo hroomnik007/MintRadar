@@ -21,7 +21,7 @@ import { normalizeUrl, getSyncTimesFromDb, getAuditUpstreamStatus } from './disc
 import { computeDegraded } from './degraded.js'
 import { authenticateNip98 } from './nip98Auth.js'
 import { fetchOgMintData, renderMintOgHtml, renderPageOgHtml } from './og.js'
-import { getMintIcon } from './mintIcon.js'
+import { getMintIcon, iconEtag } from './mintIcon.js'
 import { computeReliabilityMovers, type MintScoreSnapshot } from './reliabilityMovers.js'
 import { globalMeanRating, weightedRating } from './weightedRating.js'
 import { hasRecentReviewSurge } from './reviewSurge.js'
@@ -1811,7 +1811,15 @@ app.get('/api/mint/icon', (req: Request, res: Response): void => {
       // opaque same-origin resource.
       res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox")
       res.setHeader('Cross-Origin-Resource-Policy', 'same-origin')
-      res.setHeader('Cache-Control', 'public, max-age=86400')
+      // 7 days in the browser (was 1 day): the icon of a mint changes rarely, the server cache is 6 h, and a copy that
+      // expired is revalidated by its strong ETag (304, no body). The 204 "no icon" answer keeps its 30 minutes.
+      res.setHeader('Cache-Control', 'public, max-age=604800')
+      res.setHeader('ETag', iconEtag(icon.body))
+      if (req.fresh) {
+        res.removeHeader('Content-Type')
+        res.status(304).end()
+        return
+      }
       res.end(icon.body)
     })
     .catch((err: unknown) => {

@@ -20,7 +20,7 @@ vi.mock('../ssrf.js', async (importOriginal) => {
 })
 vi.mock('../discovery.js', () => ({ normalizeUrl: (u: string) => u.trim() }))
 
-import { getMintIcon, _resetMintIconCache, sniffRasterImageType } from '../mintIcon.js'
+import { getMintIcon, _resetMintIconCache, sniffRasterImageType, iconEtag } from '../mintIcon.js'
 
 const MINT = 'https://mint.example'
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3])
@@ -233,5 +233,14 @@ describe('sniffRasterImageType', () => {
   })
   it('returns null for a too-short buffer', () => {
     expect(sniffRasterImageType(Buffer.from([0x89, 0x50]))).toBeNull()
+  })
+})
+
+describe('iconEtag', () => {
+  it('is a strong, quoted 32-hex hash of the bytes: equal bytes equal ETag, other bytes other ETag', () => {
+    const a = iconEtag(Buffer.from(PNG))
+    expect(a).toMatch(/^"[0-9a-f]{32}"$/)
+    expect(iconEtag(Buffer.from(PNG))).toBe(a)
+    expect(iconEtag(Buffer.from(JPEG))).not.toBe(a)
   })
 })

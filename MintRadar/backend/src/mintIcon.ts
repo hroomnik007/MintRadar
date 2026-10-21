@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { pool } from './db.js'
 import { safeFetch, readBodyLimited, ResponseTooLargeError } from './ssrf.js'
 import { normalizeUrl } from './discovery.js'
@@ -53,6 +54,18 @@ const ALLOWED_CONTENT_TYPES = new Set([
 export interface MintIcon {
   body: Buffer
   contentType: string
+}
+
+// Strong ETag of the bytes we serve (sha256, first 32 hex), so a browser whose 7-day copy expired revalidates with a 304
+// instead of downloading the icon again. Computed once per cached icon object (weak key: dropped with the cache entry).
+const etagByBody = new WeakMap<Buffer, string>()
+export function iconEtag(body: Buffer): string {
+  let etag = etagByBody.get(body)
+  if (!etag) {
+    etag = `"${createHash('sha256').update(body).digest('hex').slice(0, 32)}"`
+    etagByBody.set(body, etag)
+  }
+  return etag
 }
 
 interface CacheEntry {
