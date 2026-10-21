@@ -84,10 +84,9 @@ describe('source and note', () => {
     expect(limitsSource(null, now).time).toBeNull()
     expect(limitsSource('garbage', now).time).toBeNull()
   })
-  it('the note names /v1/info and the quote-time fee reserves', () => {
-    expect(LIMITS_NOTE).toContain('/v1/info')
-    expect(LIMITS_NOTE).toContain('Lightning fee reserves')
-    expect(LIMITS_NOTE).toContain('quote')
+  it('the tooltip text says the mint declares the limits and names the quote-time fee reserves, within the tooltip length limit', () => {
+    expect(LIMITS_NOTE).toBe('Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.')
+    expect(LIMITS_NOTE.length).toBeLessThanOrEqual(220)
   })
   it('reserves one line per listed unit, at least one', () => {
     expect(reservedFeeLines(['sat', 'usd'])).toBe(2)

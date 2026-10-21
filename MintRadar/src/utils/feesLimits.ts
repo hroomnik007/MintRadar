@@ -11,7 +11,7 @@ export const FEES_NO_ACTIVE_KEYSET = 'No active keyset'
 export const NO_INPUT_FEE = 'No input fee'
 export const LIMIT_NOT_DECLARED = 'not declared'
 export const LIMITS_NOTE =
-  'Limits are declared by the mint in /v1/info. Lightning fee reserves depend on the invoice and are only known when a quote is requested, so MintRadar does not show them.'
+  'Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.'
 
 export interface FeeRow {
   unit: string

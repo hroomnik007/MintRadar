@@ -1,3 +1,4 @@
+import { InfoTooltip } from '@/components/InfoTooltip'
 import type { FeeKeysetLike } from '@/utils/feeExamples'
 import { feesView, limitRows, limitsSource, reservedFeeLines, LIMITS_NOTE } from '@/utils/feesLimits'
 
@@ -24,21 +25,22 @@ export function MintFeesLimits({ keysets, keysetsPending, units, mintMethods, me
   const reserved = reservedFeeLines(units)
   return (
     <div className="md-panel md-fees-limits" data-testid="mint-fees-limits">
-      <div className="md-panel-title">Fees and limits</div>
-      <div className="md-fl-group-label">Input fee</div>
-      <div className="md-info-grid md-info-list" style={keysetsPending ? { minHeight: `calc(${reserved} * var(--md-fl-row-h))` } : undefined} data-testid="mint-fees">
+      <div className="md-fl-head">
+        <div className="md-panel-title">Fees and limits</div>
+        <InfoTooltip iconSize={12} width={240} about="Fees and limits" text={LIMITS_NOTE} />
+      </div>
+      <div className="md-info-grid md-info-list md-fl-fees" style={keysetsPending ? { minHeight: `calc(${reserved} * var(--md-fl-row-h))` } : undefined} data-testid="mint-fees">
         {keysetsPending ? (
           <div className="md-info-row"><span className="md-info-label">Checking keysets…</span></div>
         ) : fees.empty ? (
           <div className="md-info-row"><span className="md-info-label">{fees.empty}</span></div>
         ) : fees.rows.map(r => (
           <div className="md-info-row" key={r.unit}>
-            <span className="md-info-label">{r.unit}</span>
+            <span className="md-info-label">Input fee · {r.unit}</span>
             <span className="md-info-value">{r.text}</span>
           </div>
         ))}
       </div>
-      <div className="md-fl-group-label">Declared limits</div>
       <div className="md-info-grid md-info-list" data-testid="mint-limits">
         {limits.map(r => (
           <div className="md-info-row" key={r.key}>
@@ -48,8 +50,7 @@ export function MintFeesLimits({ keysets, keysetsPending, units, mintMethods, me
         ))}
       </div>
       <div className="md-fl-note">
-        <div>{LIMITS_NOTE}</div>
-        <div className="md-fl-source">
+        <div>
           {src.text}
           {src.time && <>{' · '}<span title={src.time.title}>fetched {src.time.label}</span></>}
         </div>

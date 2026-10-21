@@ -58,7 +58,7 @@ test('a mint with an input fee: examples for 1 / 16 / 100 proofs, rounded up, in
   await expect(group(page)).toBeVisible()
   await expect(group(page).locator('.md-panel-title')).toHaveText('Fees and limits')
   await expect(fees(page).locator('.md-info-row')).toHaveCount(1)
-  await expect(fees(page).locator('.md-info-label')).toHaveText('sat')
+  await expect(fees(page).locator('.md-info-label')).toHaveText('Input fee · sat')
   await expect(fees(page).locator('.md-info-value')).toHaveText('Spending 1 / 16 / 100 proofs: 1 / 2 / 10 sat')
 })
 
@@ -107,16 +107,51 @@ test('no keyset data: "Keyset data not available yet"; the limits still show', a
   await expect(limits(page)).toContainText('min 1, max 1,000,000')
 })
 
-test('the muted sentence names /v1/info and the quote-time fee reserves; the source time carries the absolute UTC time', async ({ page }) => {
+const SENTENCE = 'Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.'
+const infoButton = (page: Page) => group(page).locator('.md-fl-head button[data-tooltip-trigger]')
+
+test('the source line stays under the rows; its time carries the absolute UTC time; no sub-headings, one divider between fee and limit rows', async ({ page }) => {
   await open(page, { keysets: KS_FEE })
   const note = group(page).locator('.md-fl-note')
-  await expect(note).toContainText('Limits are declared by the mint in /v1/info.')
-  await expect(note).toContainText('Lightning fee reserves depend on the invoice and are only known when a quote is requested')
-  await expect(note).toContainText('declared by the mint in /v1/info · fetched 5 min ago')
+  await expect(note).toHaveText('declared by the mint in /v1/info · fetched 5 min ago')
   await expect(note.locator('span[title]')).toHaveAttribute('title', /^\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC$/)
-  // no explanation hides in a title attribute, and the group has no tooltip of its own
+  // no explanation hides in a title attribute
   await expect(group(page).locator('[title]:not(span[title])')).toHaveCount(0)
-  await expect(group(page).locator('.info-tooltip')).toHaveCount(0)
+  await expect(group(page)).not.toContainText(/input fee$/im)
+  await expect(group(page)).not.toContainText('Declared limits')
+  await expect(group(page).locator('.md-fl-group-label')).toHaveCount(0)
+  const border = (loc: ReturnType<typeof fees>) => loc.locator('.md-info-row').last().evaluate(el => getComputedStyle(el).borderBottomWidth)
+  expect(await border(fees(page))).toBe('1px')
+  expect(await border(limits(page))).toBe('0px')
+})
+
+test('the explanatory sentence is not in the card body; it is in the header tooltip, which opens by click and by keyboard', async ({ page }) => {
+  await open(page, { keysets: KS_FEE })
+  await layoutReady(page)
+  // not visible in the card body, and not in the DOM at all while the tooltip is closed
+  await expect(group(page).getByText('Lightning fee reserves')).toHaveCount(0)
+  await expect(group(page).locator('.md-fl-note')).not.toContainText('Lightning fee reserves')
+  const btn = infoButton(page)
+  await expect(btn).toHaveCount(1)
+  await expect(btn).toHaveAttribute('aria-label', 'More information about Fees and limits')
+  const tip = page.locator('[role="tooltip"]')
+  // by click
+  await btn.click()
+  await expect(btn).toHaveAttribute('aria-describedby', /.+/)
+  await expect(tip).toHaveText(SENTENCE)
+  await expect(group(page).locator('.md-fl-note')).not.toContainText('Lightning fee reserves')
+  await page.keyboard.press('Escape')
+  await expect(tip).toHaveCount(0)
+  // by keyboard
+  await page.locator('body').click({ position: { x: 1, y: 1 } })
+  await btn.focus()
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Shift+Tab')
+  await expect(btn).toBeFocused()
+  await expect(tip).toHaveText(SENTENCE)
+  await page.keyboard.press('Escape')
+  await expect(tip).toHaveCount(0)
+  await expect(btn).toBeFocused()
 })
 
 test('it is the first card of the NUTs tab, before NUT compatibility, and no longer on the Overview; the old "NUT limits" card is gone', async ({ page }) => {

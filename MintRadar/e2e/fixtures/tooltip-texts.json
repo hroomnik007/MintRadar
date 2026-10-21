@@ -764,13 +764,14 @@
       "Copy full keyset ID",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
+      "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
       "MintRadar",
       "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 8
+    "triggers": 9
   },
   "mint-alpha-nuts@390": {
     "texts": [
@@ -778,11 +779,12 @@
       "<DATE>",
       "Add Alpha Mint to watchlist",
       "Copy full keyset ID",
+      "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
       "MintRadar",
       "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 3
+    "triggers": 4
   },
   "mint-alpha-overview@1440": {
     "texts": [
@@ -892,6 +894,7 @@
       "Copy full keyset ID",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
+      "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
@@ -899,19 +902,20 @@
       "This mint does not support NUT-09, so wallets cannot restore ecash from a seed phrase here. Keep your own token backups.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 9
+    "triggers": 10
   },
   "mint-new-nuts@390": {
     "texts": [
       "<DATE>",
       "Add Newbie Mint to watchlist",
       "Copy full keyset ID",
+      "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
       "MintRadar",
       "Reliability Score capped at 75 for the first 30 days.",
       "This mint does not support NUT-09, so wallets cannot restore ecash from a seed phrase here. Keep your own token backups.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
-    "triggers": 3
+    "triggers": 4
   },
   "mint-new-overview@1440": {
     "texts": [

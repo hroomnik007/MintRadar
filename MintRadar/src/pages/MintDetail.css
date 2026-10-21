@@ -2701,10 +2701,10 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-fees-limits .md-info-row { flex-wrap: wrap; column-gap: 12px; row-gap: 2px; }
 .md-fees-limits .md-info-label { flex-shrink: 1; min-width: 0; overflow-wrap: anywhere; }
 .md-fees-limits .md-info-value { flex: 1 1 auto; min-width: 0; text-align: right; word-break: normal; overflow-wrap: break-word; max-width: 100%; }
-.md-fl-group-label { margin: 10px 0 2px; font-size: 12px; line-height: 1.4; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text3); }
-.md-fl-group-label:first-of-type { margin-top: 0; }
+.md-fl-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+.md-fl-head .md-panel-title { margin-bottom: 0; min-width: 0; overflow-wrap: anywhere; }
+.md-fees-limits .md-fl-fees .md-info-row:last-child { border-bottom: 1px solid var(--border); }
 .md-fl-note { margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--text3); overflow-wrap: anywhere; }
-.md-fl-source { margin-top: 4px; }
 .md-fl-note span[title] { text-decoration: underline dotted; text-underline-offset: 2px; }
 @media (max-width: 480px) {
   .md-fees-limits .md-info-value { text-align: left; flex-basis: 100%; }
