@@ -330,6 +330,8 @@ test.describe('Tools', () => {
     await expect(spentResult).toBeVisible({ timeout: 15_000 })
     await expect(spentResult).toContainText(/Could not check spent status/)
     await expect(spentResult).toHaveClass(/tv-unknown/)
+    // the fetch / library error text is not shown, only the fixed sentence
+    await expect(spentResult).toHaveText('Could not check spent status — Could not reach the mint. This says nothing about the token itself.')
 
     // Rest of the inspector stays intact.
     await expect(page.locator('.token-result-grid')).toBeVisible()
@@ -348,6 +350,28 @@ test.describe('Tools', () => {
     // No result grid is rendered for an invalid token.
     await expect(page.locator('.token-result-grid')).toHaveCount(0)
   })
+
+  // The decoder's own messages ("Malformed UTF-8 sequence", "Unexpected end of data", "Invalid base64url string") are technical:
+  // the page shows one calm sentence and keeps them out of the DOM.
+  const TECHNICAL = /UTF-8|Unexpected|Malformed|position \d|base64|Unsupported length|Byte string|end of data|\bEOF\b|Unterminated|simple or float/i
+  const BAD_TOKENS: Array<[string, string, string]> = [
+    ['random text', 'this-is-not-a-cashu-token', 'Not a Cashu token — expected a string starting with cashuA (v3) or cashuB (v4).'],
+    ['a truncated cashuA token', makeCashuToken(MOCK_MINTS[0]!.url, [21, 8]).slice(0, 60), 'This does not look like a valid Cashu token.'],
+    ['a cashuA token that is not JSON', 'cashuA' + Buffer.from('not json at all').toString('base64url'), 'This does not look like a valid Cashu token.'],
+    ['a cashuB token with bad CBOR', 'cashuB' + Buffer.from([0xa1, 0x61, 0x74, 0x9f]).toString('base64url'), 'This does not look like a valid Cashu token.'],
+    ['a cashuB token cut off after the prefix', 'cashuB', 'This does not look like a valid Cashu token.'],
+  ]
+  for (const [name, input, message] of BAD_TOKENS) {
+    test(`Token Inspector shows no library error text for ${name}`, async ({ page }) => {
+      await page.locator('.token-input').fill(input)
+      await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+      await expect(page.locator('.token-error')).toHaveText(message)
+      await expect(page.locator('.token-result-grid')).toHaveCount(0)
+      // nothing technical anywhere in the page text, and the sentence has no parenthesised detail
+      expect(await page.locator('body').innerText()).not.toMatch(TECHNICAL)
+      if (message.startsWith('This does not')) expect(await page.locator('.token-error').innerText()).not.toContain('(')
+    })
+  }
 
   test('Token Inspector states what stays local and what contacts the mint, and the cashu.me link note shows with the result', async ({ page }) => {
     const note = page.locator('.token-note').first()

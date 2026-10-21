@@ -124,6 +124,9 @@ export function amountCarriesCurrencySymbol(unit: string): boolean {
   return MINOR_UNIT_EXPONENT[key] !== undefined && (CURRENCY_SYMBOL[key] ?? '') !== ''
 }
 
+/** The one sentence shown for a cashuA / cashuB string that cannot be decoded (no library error text). */
+export const INVALID_TOKEN_MESSAGE = 'This does not look like a valid Cashu token.'
+
 /**
  * Decode a Cashu token to its metadata. Never throws — an undecodable token
  * comes back as `{ info: null, error }` so the caller can render a message
@@ -151,9 +154,9 @@ export function parseCashuToken(raw: string): TokenParseResult {
       },
       error: null,
     }
-  } catch (err) {
-    const detail = err instanceof Error && err.message ? ` (${err.message})` : ''
-    return { info: null, error: `Could not decode this token — it looks malformed or truncated${detail}.` }
+  } catch {
+    // The decoder's own message ("Malformed UTF-8 sequence", "Unexpected end of data", ...) is technical and says nothing the visitor can act on: never shown.
+    return { info: null, error: INVALID_TOKEN_MESSAGE }
   }
 }
 

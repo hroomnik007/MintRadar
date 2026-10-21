@@ -216,9 +216,9 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
             break
           default: {
             // Mint offline/unreachable, or the token itself couldn't be resolved —
-            // either way this must not take down the rest of the inspector UI.
-            const detail = err instanceof Error && err.message ? err.message : 'Could not reach the mint.'
-            outcome = { status: 'error', message: detail }
+            // either way this must not take down the rest of the inspector UI. The library's own
+            // error text is technical (network and decoder internals) and is never shown.
+            outcome = { status: 'error', message: 'Could not reach the mint.' }
           }
         }
       }

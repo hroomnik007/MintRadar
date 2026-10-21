@@ -3,7 +3,7 @@ import { Amount, getEncodedToken, CheckStateEnum, Wallet } from '@cashu/cashu-ts
 import {
   parseCashuToken, formatTokenAmount, checkTokenSpentState, decodeTokenWithMint,
   classifySignatureCheck, classifySpentCheck, tokenActionState, amountCarriesCurrencySymbol, stripTokenWhitespace,
-  assertProbeableMintUrl, InvalidMintUrlError,
+  assertProbeableMintUrl, InvalidMintUrlError, INVALID_TOKEN_MESSAGE,
 } from '../utils/cashuToken'
 
 // checkTokenSpentState() needs a live mint (Wallet.loadMint/checkProofsStates), so the
@@ -102,6 +102,30 @@ describe('parseCashuToken', () => {
     const { info, error } = parseCashuToken('cashuBnot-a-real-token')
     expect(info).toBeNull()
     expect(error).toBeTruthy()
+  })
+
+  // The decoder's own message ("Unexpected end of data", "Malformed UTF-8 sequence", "Invalid base64url string") never reaches the user.
+  it('an undecodable cashuA / cashuB string gets the one calm sentence, with no library text', () => {
+    const b64 = (b: Buffer | string) => Buffer.from(b).toString('base64url')
+    const bad = [
+      'cashuA',                                                    // nothing after the prefix
+      V3_TOKEN.slice(0, V3_TOKEN.length - 25),                     // truncated cashuA (unterminated JSON string)
+      'cashuA' + b64('not json at all'),
+      'cashuA' + b64(Buffer.from([0xff, 0xfe, 0xfd])),            // invalid UTF-8
+      'cashuA%%%%',                                                // not base64url
+      'cashuB',
+      'cashuB' + b64(Buffer.from([0xa1, 0x61, 0x74, 0x9f])),     // CBOR: indefinite array never closed
+      'cashuB' + b64(Buffer.from([0xff, 0xff, 0xff, 0x01])),     // CBOR: stray break / unknown simple value
+      'cashuBo2F0gaJhaUgA',                                        // CBOR: byte string longer than the data
+    ]
+    for (const t of bad) {
+      const { info, error } = parseCashuToken(t)
+      expect(info, t).toBeNull()
+      expect(error, t).toBe(INVALID_TOKEN_MESSAGE)
+    }
+    expect(INVALID_TOKEN_MESSAGE).toBe('This does not look like a valid Cashu token.')
+    // random text keeps its own, app-written hint
+    expect(parseCashuToken('hello world').error).toBe('Not a Cashu token — expected a string starting with cashuA (v3) or cashuB (v4).')
   })
 })
 
