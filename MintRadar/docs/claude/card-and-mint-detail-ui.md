@@ -212,6 +212,8 @@ It's also no longer "directly under Units & Methods" but side by side with it
 the NUTs tab" test still has one pre-existing unrelated failure (a stale `"100 ppk"` fee-display
 assertion, not caused by this rework — see that section).
 
+**Order (Task Y F, 2026-10-21):** `keysetsPanel` lists ACTIVE keysets first and inactive ones below; inside each group the mint's own order is kept. Display only: the wallet API and the stored `last_keysets` are untouched, and the Fees and limits examples read the unsorted list. Both copies (Overview sidebar, NUTs tab) come from the one `keysetsPanel`. Test: `mint-detail-keysets.spec.ts` ("Keysets order", inactive ids sorting before the active one); mutation: remove the sort -> it fails.
+
 ### Mint Detail sidebar rework + Watchlist button row (2026-09-20, commits `d802279`→`24187c5`)
 
 Same-day follow-up session to the "Reliability Score breakdown always visible on Overview" change

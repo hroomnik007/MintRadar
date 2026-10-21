@@ -1177,7 +1177,9 @@ function MintDetailContent({ url }: { url: string }) {
   const feeKeysets = (lastKnownKeysets ?? liveKeysets)?.map(k => ({ unit: k.unit, active: k.active, inputFeePpk: typeof k.input_fee_ppk === 'number' ? k.input_fee_ppk : null })) ?? null
   const keysetsPanel = (() => {
     const lastKnown = lastKnownKeysets
-    const keysets = lastKnown ?? liveKeysets
+    const rawKeysets = lastKnown ?? liveKeysets
+    // Active keysets first, inactive below; the order inside each group is the mint's own (display only, the data is untouched).
+    const keysets = rawKeysets ? [...rawKeysets.filter(k => k.active), ...rawKeysets.filter(k => !k.active)] : rawKeysets
     return (
       <div className="md-panel">
         <div className="md-panel-title">Keysets</div>

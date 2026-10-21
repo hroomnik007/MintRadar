@@ -122,3 +122,29 @@ test.describe('Mint Detail — Keysets panel placement (mobile)', () => {
     await expect(panel.getByText('Active', { exact: true })).toHaveCount(0)
   })
 })
+
+test.describe('Mint Detail — Keysets order (active first)', () => {
+  // The inactive ids sort BEFORE the active one, so only an explicit sort puts the active keyset first.
+  const MIXED = [
+    { id: '0050aaaa11112222', unit: 'sat', active: false, input_fee_ppk: 0 },
+    { id: '00b4bbbb33334444', unit: 'sat', active: false, input_fee_ppk: 0 },
+    { id: '006bcccc55556666', unit: 'sat', active: false, input_fee_ppk: 0 },
+    { id: '01ba0000deadbeef', unit: 'sat', active: true, input_fee_ppk: 100 },
+  ]
+  const ORDER = ['01ba0000…deadbeef', '0050aaaa…11112222', '00b4bbbb…33334444', '006bcccc…55556666']
+
+  test('both copies list the active keyset first, inactive ones keep their relative order', async ({ page }) => {
+    await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(MIXED) }))
+    await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
+    // The desktop copy lives in the Overview sidebar, the mobile copy on the NUTs tab (one is CSS-hidden per breakpoint): read the text, not the visibility.
+    for (const copy of ['.md-keysets-at-overview', '.md-keysets-at-nuts']) {
+      if (copy === '.md-keysets-at-nuts') await page.locator('.md-tab', { hasText: 'NUTs' }).click()
+      const rows = page.locator(`${copy} .md-keyset-row`)
+      await expect(rows).toHaveCount(4)
+      const ids = (await rows.allTextContents()).map(t => /[0-9a-f]{8}…[0-9a-f]{8}/.exec(t)?.[0])
+      expect(ids, copy).toEqual(ORDER)
+      await expect(rows.first()).toContainText('Active')
+      await expect(rows.nth(1)).toContainText('Inactive')
+    }
+  })
+})
