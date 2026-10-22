@@ -38,6 +38,7 @@ import { verifyNip05 } from './nip05Verify.js'
 import { isAllowlistMode, isAllowedUrl } from './allowlist.js'
 import { profileFieldsForReview } from './profilesSync.js'
 import { createSwrCache, makeRefreshErrorLogger, KNOWN_MINTS_CACHE_TTL } from './knownMintsCache.js'
+import { createStatsCache, STATS_CACHE_TTL } from './statsCache.js'
 
 // ONE computation of the /api/mints/known rows, shared with the wallet API (walletApi.ts): at most one database read
 // per KNOWN_MINTS_CACHE_TTL for all of them, concurrent callers join the read in flight.
@@ -49,16 +50,11 @@ const knownMints = createSwrCache<Snapshot>({
 })
 const invalidateKnownMints = (): void => knownMints.invalidate()
 
-// /api/stats is in RATE_LIMIT_EXEMPT (see below) but, unlike the other
-// exempt endpoints, ran two live pool.query() calls via Promise.all on every
-// single request with no cache — against the shared `pool` (max: 5), that let
-// ordinary traffic (Stats page open + Dashboard's own periodic refetch, no
-// attack needed) exhaust the connection pool. Same in-process TTL cache shape
-// as knownMintsCache above; the underlying data only moves once per 5-min
-// probe cycle, so a 60s cache is well within tolerance and needs no
-// invalidation beyond the TTL expiring.
-let statsCache: { data: object; expiresAt: number } | null = null
-const STATS_CACHE_TTL = 60_000 // 60 seconds
+// /api/stats is in RATE_LIMIT_EXEMPT (see below) but, unlike the other exempt endpoints, ran two live pool.query() calls
+// on every single request, which let ordinary traffic exhaust the shared `pool` (max: 5). It is now served from a
+// stale-while-revalidate snapshot (statsCache.ts, same holder as knownMints above): fresh < 60 s, stale + ONE background
+// refresh < 5 min, a 45 s timer and the start-up warm-up keep it from expiring under a running server.
+const stats = createStatsCache(() => computeStats())
 
 // /api/stats/reliability-trend aggregates ~1.3M mint_history rows for 90d (sequential scan, ~1.3s; MIN(checked_at) another
 // ~0.3s, EXPLAIN ANALYZE 2026-10-16) and the result only changes once a day, so each period is cached for 10 minutes,
@@ -1255,12 +1251,8 @@ app.get('/api/nuts', (_req: Request, res: Response): void => {
     })
 })
 
-app.get('/api/stats', (_req: Request, res: Response): void => {
-  if (statsCache && Date.now() < statsCache.expiresAt) {
-    sendCachedBody(res, cachedBodyOf(statsCache.data), Math.floor(STATS_CACHE_TTL / 1000))
-    return
-  }
-  Promise.all([
+async function computeStats(): Promise<object> {
+  const [mintsResult, latencyResult] = await Promise.all([
     pool.query(`
       SELECT m.url, m.name, m.last_reliability_score, m.nuts_limits, m.discovered_at,
         latest.online AS online, latest.latency_ms
@@ -1280,50 +1272,52 @@ app.get('/api/stats', (_req: Request, res: Response): void => {
         AND latency_ms < 10000
     `),
   ])
-    .then(([mintsResult, latencyResult]) => {
-      type MintRow = { url: string; name: string | null; last_reliability_score: number | null; nuts_limits: Record<string, unknown> | null; discovered_at: string | Date | null; online: boolean | null; latency_ms: number | null }
-      const rows = mintsResult.rows as MintRow[]
-      const online = rows.filter(r => r.online === true)
-      const offline = rows.filter(r => r.online === false)
-      const onlineReliabilityScores = online.map(r => r.last_reliability_score ?? 0)
-      const avgReliabilityScore = onlineReliabilityScores.length > 0
-        ? Math.round(onlineReliabilityScores.reduce((a, b) => a + b) / onlineReliabilityScores.length)
-        : null
-      const avgLatency24h = latencyResult.rows[0]?.avg_latency as number | null ?? null
-      const low = onlineReliabilityScores.filter(s => s < 40).length
-      const moderate = onlineReliabilityScores.filter(s => s >= 40 && s < 70).length
-      const high = onlineReliabilityScores.filter(s => s >= 70).length
-      // MINT_ADVERTISED_NUT_KEYS, not TRACKED_NUT_KEYS — Stats.tsx's NUT
-      // Coverage panel only ever iterates the frontend's TRACKED_NUTS (14) so
-      // extra entries here are simply ignored there, but the Network Health
-      // Index's "advanced adoption" component also reads this array directly
-      // for a few auth/payment-method NUTs (21/22/25) outside the 14.
-      const onlineWithNuts = online.filter(r => r.nuts_limits != null)
-      const totalForAdoption = onlineWithNuts.length
-      const nutAdoption = MINT_ADVERTISED_NUT_KEYS.map(key => ({
-        nut: `NUT-${key.padStart(2, '0')}`,
-        count: onlineWithNuts.filter(r => r.nuts_limits && isNutDeclaredSupported(r.nuts_limits[key])).length,
-        percent: totalForAdoption > 0
-          ? Math.round(onlineWithNuts.filter(r => r.nuts_limits && isNutDeclaredSupported(r.nuts_limits[key])).length / totalForAdoption * 100)
-          : 0,
-      }))
-      const top5 = [...rows]
-        .filter(r => r.last_reliability_score != null)
-        // Known dev/test-only mints are excluded from this "best of" list —
-        // still fully visible/probed elsewhere, just not proactively recommended.
-        .filter(r => !isTestMint(r.url as string))
-        // Minimum observation window before a mint can be recommended — see
-        // isEligibleForRecommendation (2026-09-19 audit run-3 MEDIUM finding).
-        // Additive to NEW_MINT_RELIABILITY_CAP (score-side discount); this is the
-        // ranking-eligibility side.
-        .filter(r => isEligibleForRecommendation(r.discovered_at))
-        .sort((a, b) => (b.last_reliability_score as number) - (a.last_reliability_score as number))
-        .slice(0, 5)
-        .map(r => ({ url: r.url, name: publicMintName(r.name, r.url).name, reliabilityScore: r.last_reliability_score as number }))
-      const data = { totalMints: rows.length, onlineMints: online.length, offlineMints: offline.length, avgReliabilityScore, avgLatency24h, reliabilityDistribution: { low, moderate, high }, nutAdoption, top5ByReliabilityScore: top5 }
-      statsCache = { data, expiresAt: Date.now() + STATS_CACHE_TTL }
-      sendCachedBody(res, cachedBodyOf(data), Math.floor(STATS_CACHE_TTL / 1000))
-    })
+  type MintRow = { url: string; name: string | null; last_reliability_score: number | null; nuts_limits: Record<string, unknown> | null; discovered_at: string | Date | null; online: boolean | null; latency_ms: number | null }
+  const rows = mintsResult.rows as MintRow[]
+  const online = rows.filter(r => r.online === true)
+  const offline = rows.filter(r => r.online === false)
+  const onlineReliabilityScores = online.map(r => r.last_reliability_score ?? 0)
+  const avgReliabilityScore = onlineReliabilityScores.length > 0
+    ? Math.round(onlineReliabilityScores.reduce((a, b) => a + b) / onlineReliabilityScores.length)
+    : null
+  const avgLatency24h = latencyResult.rows[0]?.avg_latency as number | null ?? null
+  const low = onlineReliabilityScores.filter(s => s < 40).length
+  const moderate = onlineReliabilityScores.filter(s => s >= 40 && s < 70).length
+  const high = onlineReliabilityScores.filter(s => s >= 70).length
+  // MINT_ADVERTISED_NUT_KEYS, not TRACKED_NUT_KEYS — Stats.tsx's NUT
+  // Coverage panel only ever iterates the frontend's TRACKED_NUTS (14) so
+  // extra entries here are simply ignored there, but the Network Health
+  // Index's "advanced adoption" component also reads this array directly
+  // for a few auth/payment-method NUTs (21/22/25) outside the 14.
+  const onlineWithNuts = online.filter(r => r.nuts_limits != null)
+  const totalForAdoption = onlineWithNuts.length
+  const nutAdoption = MINT_ADVERTISED_NUT_KEYS.map(key => ({
+    nut: `NUT-${key.padStart(2, '0')}`,
+    count: onlineWithNuts.filter(r => r.nuts_limits && isNutDeclaredSupported(r.nuts_limits[key])).length,
+    percent: totalForAdoption > 0
+      ? Math.round(onlineWithNuts.filter(r => r.nuts_limits && isNutDeclaredSupported(r.nuts_limits[key])).length / totalForAdoption * 100)
+      : 0,
+  }))
+  const top5 = [...rows]
+    .filter(r => r.last_reliability_score != null)
+    // Known dev/test-only mints are excluded from this "best of" list —
+    // still fully visible/probed elsewhere, just not proactively recommended.
+    .filter(r => !isTestMint(r.url as string))
+    // Minimum observation window before a mint can be recommended — see
+    // isEligibleForRecommendation (2026-09-19 audit run-3 MEDIUM finding).
+    // Additive to NEW_MINT_RELIABILITY_CAP (score-side discount); this is the
+    // ranking-eligibility side.
+    .filter(r => isEligibleForRecommendation(r.discovered_at))
+    .sort((a, b) => (b.last_reliability_score as number) - (a.last_reliability_score as number))
+    .slice(0, 5)
+    .map(r => ({ url: r.url, name: publicMintName(r.name, r.url).name, reliabilityScore: r.last_reliability_score as number }))
+  const data = { totalMints: rows.length, onlineMints: online.length, offlineMints: offline.length, avgReliabilityScore, avgLatency24h, reliabilityDistribution: { low, moderate, high }, nutAdoption, top5ByReliabilityScore: top5 }
+  return data
+}
+
+app.get('/api/stats', (_req: Request, res: Response): void => {
+  stats.get()
+    .then(data => sendCachedBody(res, cachedBodyOf(data), Math.floor(STATS_CACHE_TTL / 1000)))
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/stats]', err)
       res.status(500).json({ error: 'Internal server error' })
@@ -2626,6 +2620,7 @@ if (process.env['NODE_ENV'] !== 'test') {
       .then(() => {
         startCron()
         knownMints.start() // fire-and-forget warm-up + 45 s refresh timer (unref'ed); failures are logged, never thrown
+        stats.start() // same for /api/stats (statsCache.ts)
         refreshReliabilityTrendCache()
         setInterval(refreshReliabilityTrendCache, RELIABILITY_TREND_REFRESH_MS).unref()
         void publishServiceProfile()

@@ -76,7 +76,7 @@ export function createSwrCache<T>(opts: SwrCacheOptions<T>): SwrCache<T> {
 }
 
 /** One concise line per REFRESH_LOG_INTERVAL; only the error class and code, never the message (it can carry a connection string). */
-export function makeRefreshErrorLogger(log: (line: string) => void = console.error): (err: unknown) => void {
+export function makeRefreshErrorLogger(log: (line: string) => void = console.error, label = 'known-mints'): (err: unknown) => void {
   let last = -Infinity
   return err => {
     const now = Date.now()
@@ -84,6 +84,6 @@ export function makeRefreshErrorLogger(log: (line: string) => void = console.err
     last = now
     const code = (err as { code?: unknown } | null)?.code
     const name = err instanceof Error ? err.name : typeof err
-    log(`[known-mints] background refresh failed: ${name}${typeof code === 'string' ? ` (${code})` : ''}`)
+    log(`[${label}] background refresh failed: ${name}${typeof code === 'string' ? ` (${code})` : ''}`)
   }
 }
