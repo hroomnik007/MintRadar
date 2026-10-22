@@ -43,7 +43,7 @@ describe('feeUnitLabel', () => {
   it('the tooltip text is the approved plain-language explanation and avoids the technical words', () => {
     expect(FEE_PER_COIN_TEXT).toBe('Your balance is made of many small coins. The mint charges a small fee per coin used and rounds the total up, so small payments cost relatively more. Fewer, larger coins keep fees low.')
     expect(FEE_PER_COIN_TEXT).not.toMatch(/proof|ecash note/i)
-    expect(KEYSET_FEE_TEXT).toBe('Input fee per 1000 coins spent from this keyset, in parts per thousand of the smallest unit.')
+    expect(KEYSET_FEE_TEXT).toBe('Input fee in parts per thousand of the smallest unit, charged per coin spent from this keyset (150 ppk = 0.15 of a unit per coin).')
     expect(KEYSET_FEE_TEXT).not.toMatch(/proof|ecash note/i)
   })
 })

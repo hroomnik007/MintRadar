@@ -67,7 +67,7 @@ function SwapTable({ title, firstHeader, rows, expanded, onToggle }: {
                     <td>{s.toUrl ? mintHostname(s.toUrl) : '—'}</td>
                     <td>{s.amount !== null ? `${s.amount} sat` : '—'}</td>
                     <td>{s.fee !== null ? s.fee : '—'}</td>
-                    <td>{s.timeTakenMs !== null ? formatSwapDuration(s.timeTakenMs) : '—'}</td>
+                    <td>{s.timeTakenMs !== null ? <DurationText text={formatSwapDuration(s.timeTakenMs)} /> : '—'}</td>
                     {/* Rows that are not OK: the failure text as tooltip and as visually hidden text (a title is not available on touch or to screen readers). Plain text only. */}
                     <td>
                       <AuditStateText row={s} />
@@ -86,6 +86,16 @@ function SwapTable({ title, firstHeader, rows, expanded, onToggle }: {
       )}
     </div>
   )
+}
+
+/**
+ * A swap duration ("4 h 48 min", "2 d 3 h") whose value-and-unit pairs never split: on phones the narrow cell may wrap at the
+ * space BETWEEN pairs ("4 h" / "48 min"), not inside one. The text stays exactly the formatted string.
+ */
+function DurationText({ text }: { text: string }) {
+  const pairs = text.match(/\d+ [a-z]+/g)
+  if (!pairs || pairs.length < 2 || pairs.join(' ') !== text) return <>{text}</>
+  return <>{pairs.map((p, i) => <Fragment key={i}>{i > 0 ? ' ' : null}<span className="audit-dur-pair">{p}</span></Fragment>)}</>
 }
 
 /** A line-break opportunity after each "_" ("mint_quote" wraps as "mint_" / "quote", never inside a word); no <wbr> text is added. */

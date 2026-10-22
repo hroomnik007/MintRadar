@@ -2414,7 +2414,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 /* Phones: swap tables fit the card, no sideways scroll. Fixed layout keeps every column on the same
    x in every row; the mint name takes the leftover width and is cut with an ellipsis. Amount and State WRAP instead
    of being cut (Task Z: "failed (melt)" used to show as "…led (me"): two lines of 12 px text, the break at the space or
-   anywhere in an unbroken token. The Fee column (the lowest-value one) is not shown on phones, and the Duration column
+   anywhere in an unbroken token. Duration wraps the same way but only between its value-and-unit pairs ("4 h" / "48 min",
+   Task C2: "4 h 48 min" used to show as "4 h 48 ..."; a pair is .audit-dur-pair, never split). The Fee column (the lowest-value one) is not shown on phones, and the Duration column
    not below 360 px; the counterpart, amount and state always are. */
 @media (max-width: 640px) {
   .audit-cz-card .audit-swaps-table { table-layout: fixed; font-size: 12px; }
@@ -2425,7 +2426,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .audit-cz-card .audit-swaps-table th:nth-child(3),
   .audit-cz-card .audit-swaps-table td:nth-child(3) { display: none; }
   .audit-cz-card .audit-swaps-table th:nth-child(4),
-  .audit-cz-card .audit-swaps-table td:nth-child(4) { width: 70px; }
+  .audit-cz-card .audit-swaps-table td:nth-child(4) { width: 70px; white-space: normal; overflow: visible; }
+  .audit-cz-card .audit-swaps-table td:nth-child(4) .audit-dur-pair { white-space: nowrap; }
   .audit-cz-card .audit-swaps-table th:nth-child(5),
   .audit-cz-card .audit-swaps-table td:nth-child(5) { width: 64px; padding-right: 0; white-space: normal; overflow: visible; overflow-wrap: anywhere; }
   .audit-cz-card .audit-swaps-table td:nth-child(5) .info-tooltip,

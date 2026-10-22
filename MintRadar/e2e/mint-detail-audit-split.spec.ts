@@ -190,13 +190,14 @@ test.describe('swap tables behind a tablist', () => {
 })
 
 // Task Z: on phones the State text of a failed row was cut by its 54 px cell ("failed (melt)" read "…led (me"). It wraps now.
+// Task C2: and so does the Duration column ("4 h 48 min", "2 d 3 h" in the rows below): never cut, wrapping only between its value-and-unit pairs.
 // Task A1 fix 3: and it wraps only at the space or after an underscore ("failed (mint_quote)" was "mint_qu" / "ote)"), never inside a word.
 for (const [w, h] of [[640, 900], [390, 844], [320, 640]] as const) {
   test(`State text of failed rows is not clipped and the page does not scroll sideways @ ${w}px`, async ({ page }) => {
     await resize(page, w, h)
     const swaps = [
-      ...czSwapList([ok, { ...melt, kind: 'a-rather-long-destination-host-name', stage: 'melt' }, { kind: 'another-long-mint-host-name', status: 'failed', stage: 'mint_quote', error: 'mint failed', durationMs: 12345, amount: 1234567 }, limits, pending]),
-      ...czSwapList([ok, melt, { kind: 'another-long-mint-host-name', status: 'failed', stage: 'mint_quote', error: 'mint failed', durationMs: 12345 }]).map((x, i) => ({ ...x, id: `t${i}`, direction: 'to' as const, at: ago((90 + i) * 60_000) })),
+      ...czSwapList([ok, { ...melt, kind: 'a-rather-long-destination-host-name', stage: 'melt', durationMs: 17289722 }, { kind: 'another-long-mint-host-name', status: 'failed', stage: 'mint_quote', error: 'mint failed', durationMs: 183600000, amount: 1234567 }, limits, pending]),
+      ...czSwapList([ok, melt, { kind: 'another-long-mint-host-name', status: 'failed', stage: 'mint_quote', error: 'mint failed', durationMs: 17289722 }]).map((x, i) => ({ ...x, id: `t${i}`, direction: 'to' as const, at: ago((90 + i) * 60_000) })),
     ]
     await gotoAuditTab(page, czOnly(auditCzResponse({ swaps })))
     await layoutReady(page)
@@ -206,14 +207,44 @@ for (const [w, h] of [[640, 900], [390, 844], [320, 640]] as const) {
       await expect(rows.first()).toBeVisible()
       await layoutReady(page)
       const m = await page.evaluate(() => {
-        const out: Array<{ state: string; cellClipped: boolean; textOutside: boolean; amountClipped: boolean; fontPx: number; splitWords: string[] }> = []
+        const out: Array<{ state: string; cellClipped: boolean; textOutside: boolean; amountClipped: boolean; fontPx: number; splitWords: string[]; duration: { text: string; clipped: boolean; outside: boolean; splitPairs: string[] } | null }> = []
         for (const tr of document.querySelectorAll('.audit-swaps-table tbody tr:not(:first-child)')) {
           const cells = tr.querySelectorAll('td')
           const td = cells[cells.length - 1] as HTMLElement
           const amount = cells[1] as HTMLElement
+          const dur = cells[3] as HTMLElement
           const trigger = (td.querySelector('[data-tooltip-trigger]') ?? td) as HTMLElement
           const cr = td.getBoundingClientRect(), tr2 = trigger.getBoundingClientRect()
+          // Task C2: Duration ("4 h 48 min") wraps between its value-and-unit pairs ("4 h" / "48 min"), is never cut and never breaks inside a pair.
+          // It is not shown under 360 px (display: none), where there is nothing to measure.
+          const durationMeasure = () => {
+            if (getComputedStyle(dur).display === 'none') return null
+            const dr = dur.getBoundingClientRect()
+            const chars: Array<{ ch: string; top: number; right: number }> = []
+            const t = dur.firstChild ? document.createTreeWalker(dur, NodeFilter.SHOW_TEXT) : null
+            for (let n = t?.nextNode() ?? null; n; n = t!.nextNode()) {
+              const text = n.textContent ?? ''
+              for (let i = 0; i < text.length; i++) {
+                const range = document.createRange()
+                range.setStart(n, i); range.setEnd(n, i + 1)
+                const rect = range.getClientRects()[0]
+                if (rect) chars.push({ ch: text[i]!, top: rect.top, right: rect.right })
+              }
+            }
+            const full = chars.map(c => c.ch).join('')
+            const splitPairs = [...full.matchAll(/\d+ [a-z]+/g)].filter(m => {
+              const part = chars.slice(m.index, m.index + m[0].length)
+              return part.some(c => Math.abs(c.top - part[0]!.top) > 3)
+            }).map(m => m[0])
+            return {
+              text: (dur.textContent ?? '').trim(),
+              clipped: dur.scrollWidth > dur.clientWidth + 1,
+              outside: chars.some(c => c.right > dr.right + 1),
+              splitPairs,
+            }
+          }
           out.push({
+            duration: durationMeasure(),
             state: (trigger.textContent ?? '').trim(),
             cellClipped: td.scrollWidth > td.clientWidth + 1 || trigger.scrollWidth > trigger.clientWidth + 1,
             textOutside: tr2.right > cr.right + 1 || tr2.left < cr.left - 1,
@@ -256,7 +287,16 @@ for (const [w, h] of [[640, 900], [390, 844], [320, 640]] as const) {
         expect(r.amountClipped, `${panel}: amount cut next to "${r.state}"`).toBe(false)
         expect(r.fontPx).toBeGreaterThanOrEqual(12)
         expect(r.splitWords, `${panel}: "${r.state}" breaks inside a word`).toEqual([])
+        if (r.duration) {
+          expect(r.duration.clipped, `${panel}: duration "${r.duration.text}" is cut`).toBe(false)
+          expect(r.duration.outside, `${panel}: duration "${r.duration.text}" leaves its cell`).toBe(false)
+          expect(r.duration.splitPairs, `${panel}: duration "${r.duration.text}" breaks inside a number or unit`).toEqual([])
+        }
       }
+      // the long durations are in the rows (so the check above ran on them) and, where the column shows, they wrap at the space
+      const texts = m.rows.map(r => r.duration?.text).filter(Boolean)
+      if (w >= 360) expect(texts, panel).toEqual(expect.arrayContaining(['4 h 48 min']))
+      if (w >= 360 && panel === 'from') expect(texts, panel).toContain('2 d 3 h')
       expect(m.doc, panel).toBeLessThanOrEqual(0)
       expect(m.wrap, `${panel}: the table scrolls inside its box`).toBeLessThanOrEqual(0)
     }

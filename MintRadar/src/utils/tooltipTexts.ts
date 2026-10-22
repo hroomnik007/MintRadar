@@ -132,7 +132,7 @@ export const SIGNATURE_CHECK_TEXT = "Checks each proof's signature proof (NUT-12
 export const FEE_PER_COIN_TEXT = 'Your balance is made of many small coins. The mint charges a small fee per coin used and rounds the total up, so small payments cost relatively more. Fewer, larger coins keep fees low.'
 
 /** Mint Detail, Keysets panel: the "150 ppk" chip of a keyset (the panel says "coins" where the wallet API says "proofs"). */
-export const KEYSET_FEE_TEXT = 'Input fee per 1000 coins spent from this keyset, in parts per thousand of the smallest unit.'
+export const KEYSET_FEE_TEXT = 'Input fee in parts per thousand of the smallest unit, charged per coin spent from this keyset (150 ppk = 0.15 of a unit per coin).'
 
 /** Compare modal. */
 export const INPUT_FEE_TEXT = "Fee per 1000 coins spent, from the active keyset of the mint's main unit (NUT-02 input_fee_ppk). \"free\" = none, n/a = not reported."
