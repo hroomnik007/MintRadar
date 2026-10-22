@@ -336,6 +336,17 @@ describe('`units` and the `unit` filter say what the code lists (parseMintMethod
   })
 })
 
+describe('`contactChecks.domainResolves` says when it is null and false (backend/src/contactChecks.ts) in every document', () => {
+  const sentence = 'domainResolves is null when the DNS check could not be completed at the last check (for example a timeout) or does not apply to the contact; it is checked again on the next contact check, about every 24 hours. NXDOMAIN and a domain with no mail records (no MX and no A/AAAA records, or a null MX) give false.'
+  const plain = (t: string) => stripTicks(oneLine(t))
+  it('API.md, the OpenAPI file and the /for-wallets field table carry the sentence', () => {
+    const field = mdTable(apiMd, '| Mint field |').find(r => backticked(r[0]!)[0] === 'contactChecks')![2]!
+    expect(plain(field), `${API_MD} contactChecks field`).toContain(sentence)
+    expect(plain(openapi), OPENAPI).toContain(sentence)
+    expect(plain(WALLET_MINT_FIELDS.find(f => f.name === 'contactChecks')!.meaning), 'WALLET_MINT_FIELDS contactChecks').toContain(sentence)
+  })
+})
+
 // ── nostr-health-assertions.md (the signed health feed) ──────────────────────
 
 describe(`${HEALTH_MD} matches the publisher constants`, () => {

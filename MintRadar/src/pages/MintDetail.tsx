@@ -38,7 +38,7 @@ import { AuditCzTiles, AuditCzSourceLine, AuditCzSwapTables, AuditStateText } fr
 import { supportedNutKeys } from '@/utils/nutSupport'
 import { MintFeesLimits } from '@/components/mint/MintFeesLimits'
 import { formatDate, formatDateTimeUtc } from '@/utils/formatDate'
-import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, SCORE_PENDING_ARIA_LABEL, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, UPTIME_PENDING_ARIA_LABEL, SCORE_PENDING_ARIA_LABEL, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
 import { operatorPubkeys } from '@/utils/operatorPubkeys'
@@ -268,9 +268,11 @@ function SourceLineView({ line }: { line: SourceLine }) {
   )
 }
 
-function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, note, detail, source }: {
+function ReliabilityBreakdownRow({ label, display, displayLabel, score, max, color, tooltip, note, detail, source }: {
   label: string
   display: string
+  // aria-label of a placeholder display ("—"), so it is announced as "not available yet".
+  displayLabel?: string
   note?: string
   // Full-width explanation under the row (wraps; `display` is ellipsized at 170px).
   detail?: string
@@ -291,7 +293,7 @@ function ReliabilityBreakdownRow({ label, display, score, max, color, tooltip, n
         </span>
         <div className="rb-row-right">
           {note && <InfoTooltip text={tooltip} width={220}><span className="rb-row-note">{note}</span></InfoTooltip>}
-          <span className="rb-row-display">{display}</span>
+          <span className="rb-row-display" {...(displayLabel ? { role: 'img', 'aria-label': displayLabel } : {})}>{display}</span>
           <span className="rb-row-score" style={{ color }}>{score ?? SCORE_PENDING_TEXT}/{max}</span>
         </div>
       </div>
@@ -954,6 +956,9 @@ function MintDetailContent({ url }: { url: string }) {
   // nested IIFE) because the react-compiler ESLint rules disallow reading a
   // ref from inside a hand-rolled nested function during render.
   const breakdownUScore = uptimeComponent(uptimePct)
+  // The 24 h history is missing (not loaded yet, or its request failed): the Uptime row shows a placeholder, never the 0 that
+  // `uptimePct` stands in for (a mint with a stored score showed a red 0% and 0/40 until the history arrived).
+  const uptimeRowPending = scorePending || uptime24hData === undefined
   const breakdownNScore = nutComponent(supportedNuts.length)
   const breakdownVScore = versionComponent(version, versionLatestMap)
   const breakdownContactFields = [email, twitter, nostr].filter(Boolean)
@@ -1018,7 +1023,7 @@ function MintDetailContent({ url }: { url: string }) {
   const infoSource = infoSourceLine({ fetchedAt: infoFetchedAt, now })
   const versionSource = infoSourceLine({ fetchedAt: infoFetchedAt, now, comparedWithLatest: true })
   const reliabilityBreakdownRows = [
-    { label: UPTIME_ROW_LABEL, display: scorePending ? SCORE_PENDING_TEXT : `${uptimePct}%`, source: uptimeSource, score: scorePending ? null : breakdownUScore, max: UPTIME_POINTS, color: scorePending ? 'var(--text3)' : uptimeColor(uptimePct), tooltip: uptimeRowText() },
+    { label: UPTIME_ROW_LABEL, display: uptimeRowPending ? SCORE_PENDING_TEXT : `${uptimePct}%`, ...(uptimeRowPending ? { displayLabel: UPTIME_PENDING_ARIA_LABEL } : {}), source: uptimeSource, score: uptimeRowPending ? null : breakdownUScore, max: UPTIME_POINTS, color: uptimeRowPending ? 'var(--text3)' : uptimeColor(uptimePct), tooltip: uptimeRowText() },
     { label: AUDIT_ROW_LABEL, display: breakdownAuditDisplay, source: auditRowSource, ...(auditDetailText ? { detail: auditDetailText } : {}), score: breakdownAScore, max: AUDIT_POINTS, color: auditRowColor, tooltip: auditRowText(), ...(auditStaleNote ? { note: auditStaleNote } : {}) },
     { label: NUT_ROW_LABEL, display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, source: infoSource, score: breakdownNScore, max: NUT_POINTS, color: supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: NUT_ROW_TEXT },
     { label: VERSION_ROW_LABEL, display: version ?? 'Unknown', source: versionSource, score: breakdownVScore, max: VERSION_POINTS, color: breakdownVScore >= 12 ? 'var(--accent)' : breakdownVScore >= 6 ? 'var(--amber)' : 'var(--red)', tooltip: versionRowText() },

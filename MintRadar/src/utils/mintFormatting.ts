@@ -432,6 +432,8 @@ export function reliabilityScoreInfo(score: number): ReliabilityScoreInfo {
 // missing uptime as 0 (that showed 31 for a moment before the real 71, Task F3). Same box as the score, so nothing moves.
 export const SCORE_PENDING_TEXT = '—'
 export const SCORE_PENDING_ARIA_LABEL = 'Score not available yet'
+// The Uptime row of the breakdown while the 24 h history is missing (also for a mint WITH a stored score): "—", not a 0% in red.
+export const UPTIME_PENDING_ARIA_LABEL = 'Uptime not available yet'
 export const SCORE_PENDING_INFO = {
   label: 'Not available yet',
   color: 'var(--text3)',
