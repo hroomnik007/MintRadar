@@ -3,7 +3,7 @@
 // not be the one who waits for it: a snapshot past its TTL is served at once while ONE background refresh runs.
 
 export const KNOWN_MINTS_CACHE_TTL = 60_000 // younger than this: served as is
-export const KNOWN_MINTS_STALE_LIMIT = 10 * 60_000 // older than the TTL but younger than this: served, refreshed in the background
+export const KNOWN_MINTS_STALE_LIMIT = 5 * 60_000 // older than the TTL but younger than this: served, refreshed in the background
 export const KNOWN_MINTS_REFRESH_INTERVAL = 45_000 // timer refresh, below the TTL so a running server never serves an expired snapshot
 const REFRESH_LOG_INTERVAL = 5 * 60_000 // at most one "refresh failed" line per this long
 

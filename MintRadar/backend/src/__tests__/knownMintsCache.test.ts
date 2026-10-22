@@ -38,7 +38,7 @@ async function prime(value = 'v1'): Promise<void> {
 describe('constants', () => {
   it('has the documented values and the timer below the TTL', () => {
     expect(TTL).toBe(60_000)
-    expect(STALE).toBe(600_000)
+    expect(STALE).toBe(300_000)
     expect(KNOWN_MINTS_REFRESH_INTERVAL).toBe(45_000)
     expect(KNOWN_MINTS_REFRESH_INTERVAL).toBeLessThan(TTL)
   })

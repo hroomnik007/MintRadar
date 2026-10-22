@@ -244,6 +244,42 @@ describe('the DNS lookup', () => {
     await vi.advanceTimersByTimeAsync(m.DNS_TIMEOUT_MS * 3 + 10)
     expect(await p).toBeNull()
   })
+  describe('one retry when the first attempt could not tell', () => {
+    it('a timeout, then an answer: true', async () => {
+      dnsMock.resolveMx.mockRejectedValueOnce(err('ETIMEOUT')).mockResolvedValueOnce([{ exchange: 'mx.mail-host.com', priority: 10 }])
+      expect(await m.resolveMailDomain('mail-host.com')).toBe(true)
+      expect(dnsMock.resolveMx).toHaveBeenCalledTimes(2)
+    })
+    it('a timeout twice: null, and no third try', async () => {
+      dnsMock.resolveMx.mockRejectedValue(err('ETIMEOUT'))
+      expect(await m.resolveMailDomain('mail-host.com')).toBeNull()
+      expect(dnsMock.resolveMx).toHaveBeenCalledTimes(2)
+    })
+    it('NXDOMAIN is a definite answer: false, asked once', async () => {
+      dnsMock.resolveMx.mockRejectedValue(err('ENOTFOUND'))
+      dnsMock.resolve4.mockRejectedValue(err('ENOTFOUND'))
+      dnsMock.resolve6.mockRejectedValue(err('ENOTFOUND'))
+      expect(await m.resolveMailDomain('mail-host.com')).toBe(false)
+      expect(dnsMock.resolveMx).toHaveBeenCalledTimes(1)
+      expect(dnsMock.resolve4).toHaveBeenCalledTimes(1)
+    })
+    it('a definite answer on the first try does no second lookup', async () => {
+      expect(await m.resolveMailDomain('mail-host.com')).toBe(true)
+      expect(dnsMock.resolveMx).toHaveBeenCalledTimes(1)
+    })
+    it('the retry never goes past the overall deadline', async () => {
+      vi.useFakeTimers()
+      dnsMock.resolveMx
+        .mockImplementationOnce(() => new Promise((_, reject) => setTimeout(() => reject(err('ETIMEOUT')), m.DNS_TIMEOUT_MS)))
+        .mockReturnValue(new Promise(() => undefined))
+      const p = m.resolveMailDomain('mail-host.com')
+      await vi.advanceTimersByTimeAsync(m.DNS_TIMEOUT_MS * 3 + 10)
+      expect(await p).toBeNull()
+      expect(dnsMock.resolveMx).toHaveBeenCalledTimes(2)
+      await vi.advanceTimersByTimeAsync(m.DNS_TIMEOUT_MS * 10)
+      expect(dnsMock.resolveMx).toHaveBeenCalledTimes(2)
+    })
+  })
   it('a resolver that throws synchronously is unknown (null)', async () => {
     dnsMock.resolveMx.mockImplementation(() => { throw new Error('boom mail-host.com') })
     expect(await m.resolveMailDomain('mail-host.com')).toBeNull()

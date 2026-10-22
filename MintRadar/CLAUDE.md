@@ -22,6 +22,7 @@
 | Mobile layout, navbar, overflow fixes, tooltips, chart focus ring, **modal dialogs (`useModalFocus`, role/aria-modal/name, focus trap/restore)** | `docs/claude/mobile-and-tooltips.md` |
 | Writing or changing an **e2e spec** (`e2e/`): waits, held mocks, the settle helpers, the permanent contract specs, allow-lists, tooltip expected counts, known application findings | `docs/claude/e2e-conventions.md` |
 | The `/about` page (privacy notice, rules): what it claims and the source of every claim; **update `About.tsx` when provider backups/snapshots, log fields or retention, the backup script, the relay write policy, notification storage, a new browser request or `PROBE_LOCATION` change** | `docs/claude/privacy-and-about.md` |
+| What is planned after the public announcement: week-by-week backlog, "only on feedback" items, fixed future dates | `docs/claude/post-announcement-backlog.md` |
 | Security audit history, hardening rationale, external reviews, ESLint cleanup | `docs/claude/security-audit-and-reviews-history.md` |
 
 ## Project

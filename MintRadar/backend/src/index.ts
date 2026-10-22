@@ -42,7 +42,7 @@ import { createStatsCache, STATS_CACHE_TTL } from './statsCache.js'
 
 // ONE computation of the /api/mints/known rows, shared with the wallet API (walletApi.ts): at most one database read
 // per KNOWN_MINTS_CACHE_TTL for all of them, concurrent callers join the read in flight.
-// Stale-while-revalidate (knownMintsCache.ts): fresh < 60 s, served stale + one background refresh < 10 min, a 45 s timer
+// Stale-while-revalidate (knownMintsCache.ts): fresh < 60 s, served stale + one background refresh < 5 min, a 45 s timer
 // and a start-up warm-up keep it from expiring under a running server.
 const knownMints = createSwrCache<Snapshot>({
   compute: () => computeKnownMints(),

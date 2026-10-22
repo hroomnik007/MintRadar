@@ -405,7 +405,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                   <div className="cmp-mobile-row cmp-mobile-row-last">
                     <span className="cmp-mobile-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       Backup
-                      <InfoTooltip iconSize={11} width={200} about="Backup" text="Whether this mint supports NUT-09, letting wallets restore proofs after data loss." />
+                      <InfoTooltip iconSize={11} width={200} about="Backup" text="Whether this mint supports NUT-09, letting wallets restore coins after data loss." />
                     </span>
                     <span className="cmp-mobile-val">
                       {d.supportsBackupRestore
@@ -577,7 +577,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           {/* ── Backup ── */}
           <div className="cmp-lbl cmp-last" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             Backup
-            <InfoTooltip iconSize={11} width={200} about="Backup" text="Whether this mint supports NUT-09, letting wallets restore proofs after data loss." />
+            <InfoTooltip iconSize={11} width={200} about="Backup" text="Whether this mint supports NUT-09, letting wallets restore coins after data loss." />
           </div>
           {mints.map((mint, i) => {
             const d = allData[i]!

@@ -193,7 +193,7 @@ function withDeadline<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
 let resolver: Resolver | null = null
 
 /** The system resolver, one query per name and type, a short timeout. Errors are reduced to "unknown" (null). */
-export const resolveMailDomain: MailLookup = (domain) => withDeadline((async () => {
+async function lookupOnce(domain: string): Promise<boolean | null> {
   try {
     resolver ??= new Resolver({ timeout: DNS_TIMEOUT_MS, tries: 1 })
     const r = resolver
@@ -212,6 +212,15 @@ export const resolveMailDomain: MailLookup = (domain) => withDeadline((async () 
   } catch {
     return null
   }
+}
+
+/**
+ * One immediate retry when the first attempt could not tell (null: timeout, SERVFAIL, a throwing resolver); a definite
+ * answer (true/false, including NXDOMAIN/ENODATA) is never asked twice. Both attempts share the one overall deadline.
+ */
+export const resolveMailDomain: MailLookup = (domain) => withDeadline((async () => {
+  const first = await lookupOnce(domain)
+  return first !== null ? first : lookupOnce(domain)
 })(), DNS_TIMEOUT_MS * 3, null)
 
 export interface DomainChecker {
