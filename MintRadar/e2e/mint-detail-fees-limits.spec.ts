@@ -97,7 +97,7 @@ test('the effective fee is the largest of the ACTIVE keysets; several units get 
   await expect(examples(page)).toHaveText([EX('1 / 4 / 25', 'sat'), EX('1 / 16 / 100', 'cents')])
 })
 
-const FEE_TIP = 'Your balance is made of many small coins. When you pay, the mint adds up a small fee for each coin used and rounds the total up to a whole unit, so small payments cost relatively more. Wallets can keep fees low by holding fewer, larger coins.'
+const FEE_TIP = 'Your balance is made of many small coins. The mint charges a small fee per coin used and rounds the total up, so small payments cost relatively more. Fewer, larger coins keep fees low.'
 
 test('plain wording: "coins" instead of "proofs", cents for usd and eur, the raw unit for any other unit; the numbers are unchanged', async ({ page }) => {
   await open(page, { keysets: [

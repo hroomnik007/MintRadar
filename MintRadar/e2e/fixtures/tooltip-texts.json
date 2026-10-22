@@ -34,7 +34,7 @@
       "Compare Test Nut",
       "Compare Twin Mint",
       "Delta Mint",
-      "Fee per 1000 proofs spent, from the active keyset of the mint's main unit (NUT-02 input_fee_ppk). \"free\" = none, n/a = not reported.",
+      "Fee per 1000 coins spent, from the active keyset of the mint's main unit (NUT-02 input_fee_ppk). \"free\" = none, n/a = not reported.",
       "Last 7 days from cashu.info; only failures attributed to the mint count. n/a below 10 swaps. Not a solvency or reserves signal.",
       "List view",
       "MintRadar",
@@ -91,7 +91,7 @@
       "Compare Test Nut",
       "Compare Twin Mint",
       "Delta Mint",
-      "Fee per 1000 proofs spent, from the active keyset of the mint's main unit (NUT-02 input_fee_ppk). \"free\" = none, n/a = not reported.",
+      "Fee per 1000 coins spent, from the active keyset of the mint's main unit (NUT-02 input_fee_ppk). \"free\" = none, n/a = not reported.",
       "Last 7 days from cashu.info; only failures attributed to the mint count. n/a below 10 swaps. Not a solvency or reserves signal.",
       "List view",
       "MintRadar",
@@ -898,7 +898,7 @@
       "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Your balance is made of many small coins. When you pay, the mint adds up a small fee for each coin used and rounds the total up to a whole unit, so small payments cost relatively more. Wallets can keep fees low by holding fewer, larger coins.",
+      "Your balance is made of many small coins. The mint charges a small fee per coin used and rounds the total up, so small payments cost relatively more. Fewer, larger coins keep fees low.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
     "triggers": 11
@@ -913,7 +913,7 @@
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
       "MintRadar",
       "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
-      "Your balance is made of many small coins. When you pay, the mint adds up a small fee for each coin used and rounds the total up to a whole unit, so small payments cost relatively more. Wallets can keep fees low by holding fewer, larger coins.",
+      "Your balance is made of many small coins. The mint charges a small fee per coin used and rounds the total up, so small payments cost relatively more. Fewer, larger coins keep fees low.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
     "triggers": 6

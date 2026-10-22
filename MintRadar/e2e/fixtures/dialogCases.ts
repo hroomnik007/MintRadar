@@ -110,7 +110,7 @@ export const CASES: ModalCase[] = [
     dialog: css('.cmp-modal'), close: '.cmp-modal-header button',
     tooltip: {
       target: p => p.locator('.cmp-modal .cmp-lbl', { hasText: 'Input fee' }).locator('svg').first(),
-      popup: p => p.getByText(/Fee per 1000 proofs spent/),
+      popup: p => p.getByText(/Fee per 1000 coins spent/),
     },
   },
   {

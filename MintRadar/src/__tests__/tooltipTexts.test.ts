@@ -132,12 +132,9 @@ describe('numbers in the built texts equal their sources', () => {
 const ALL_CAPS_OK = new Set(['DLEQ', 'JSON', 'HTTP', 'HTTPS', 'BOLT']) // technical names
 const VERDICT = /\b(safe|safely|secure|securely|trusted|guaranteed?|recommended?)\b/i
 
-// The only texts exempt from the 220-character limit (every other rule still applies to them): owner-approved wording that is longer.
-const LONG_OK = new Set([T.FEE_PER_COIN_TEXT]) // Task B2, 242 characters
-
 export function styleProblems(text: string): string[] {
   const out: string[] = []
-  if (text.length > 220 && !LONG_OK.has(text)) out.push(`${text.length} characters`)
+  if (text.length > 220) out.push(`${text.length} characters`)
   for (const w of text.match(/\b[A-Z]{4,}\b/g) ?? []) if (!ALL_CAPS_OK.has(w)) out.push(`ALL CAPS word ${w}`)
   for (const v of text.matchAll(new RegExp(VERDICT.source, 'gi'))) out.push(`verdict word "${v[0]}"`)
   if (/\bminter\b/i.test(text)) out.push('"minter"')
