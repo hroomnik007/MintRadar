@@ -573,7 +573,7 @@ Rollback: restore the backup list and restart the relay; for the backend delete 
 
 ## Task D3d: backend warm-up after a deploy (2026-10-22)
 
-The backend restarts on every backend deploy and the in-process `/api/mints/known` snapshot is empty then. Since D3d the start-up chain (after `initDb()` and the seed) starts a fire-and-forget warm-up and a 45 s refresh timer, so the first visitor after a restart normally gets the snapshot instead of waiting for the multi-second 7-day aggregate; a request that arrives before the warm-up has finished still computes synchronously and shares that computation. Constants, the stale-while-revalidate rule and invalidation: `backend-api-and-data.md` ("Known-mints snapshot: stale-while-revalidate"). Nothing in nginx or the database changed.
+The backend restarts on every backend deploy and the in-process `/api/mints/known` snapshot is empty then. Since D3d the start-up chain (after `initDb()` and the seed) starts a fire-and-forget warm-up and a 45 s refresh timer, so the first visitor after a restart normally gets the snapshot instead of waiting for the snapshot computation (3.3 to 3.9 s with database JIT, about 0.5 s since task E2b, see `backend-api-and-data.md` "Database JIT is off"); a request that arrives before the warm-up has finished still computes synchronously and shares that computation. Constants, the stale-while-revalidate rule and invalidation: `backend-api-and-data.md` ("Known-mints snapshot: stale-while-revalidate"). Nothing in nginx or the database changed.
 
 ## Docker log limits (2026-10-04)
 

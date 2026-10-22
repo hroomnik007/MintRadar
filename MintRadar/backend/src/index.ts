@@ -39,13 +39,14 @@ import { isAllowlistMode, isAllowedUrl } from './allowlist.js'
 import { profileFieldsForReview } from './profilesSync.js'
 import { createSwrCache, makeRefreshErrorLogger, KNOWN_MINTS_CACHE_TTL } from './knownMintsCache.js'
 import { createStatsCache, STATS_CACHE_TTL } from './statsCache.js'
+import { timedSnapshot } from './snapshotTiming.js'
 
 // ONE computation of the /api/mints/known rows, shared with the wallet API (walletApi.ts): at most one database read
 // per KNOWN_MINTS_CACHE_TTL for all of them, concurrent callers join the read in flight.
 // Stale-while-revalidate (knownMintsCache.ts): fresh < 60 s, served stale + one background refresh < 5 min, a 45 s timer
 // and a start-up warm-up keep it from expiring under a running server.
 const knownMints = createSwrCache<Snapshot>({
-  compute: () => computeKnownMints(),
+  compute: timedSnapshot('known-mints', () => computeKnownMints()),
   onRefreshError: makeRefreshErrorLogger(),
 })
 const invalidateKnownMints = (): void => knownMints.invalidate()
@@ -54,7 +55,7 @@ const invalidateKnownMints = (): void => knownMints.invalidate()
 // on every single request, which let ordinary traffic exhaust the shared `pool` (max: 5). It is now served from a
 // stale-while-revalidate snapshot (statsCache.ts, same holder as knownMints above): fresh < 60 s, stale + ONE background
 // refresh < 5 min, a 45 s timer and the start-up warm-up keep it from expiring under a running server.
-const stats = createStatsCache(() => computeStats())
+const stats = createStatsCache(timedSnapshot('stats', () => computeStats()))
 
 // /api/stats/reliability-trend aggregates ~1.3M mint_history rows for 90d (sequential scan, ~1.3s; MIN(checked_at) another
 // ~0.3s, EXPLAIN ANALYZE 2026-10-16) and the result only changes once a day, so each period is cached for 10 minutes,

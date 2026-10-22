@@ -35,8 +35,27 @@ export function describePoolError(err: unknown): string {
   return `${clean} (code ${code.slice(0, 40)})`
 }
 
+// Startup option sent with every connection of the pool. JIT is off because the planner's cost estimate for the large
+// /api/mints/known query (a GROUP BY over about 40 columns) is far above jit_above_cost: compiling 123 functions took
+// 3.3 to 3.9 s of a 3.9 s execution, against 0.49 s without JIT (task E2, 2026-10-22).
+const JIT_OFF_OPTION = '-c jit=off'
+
+// An explicit `options` in the pool config replaces both the `options` query parameter of the connection string and
+// PGOPTIONS, so those are carried over here instead of being overwritten.
+export function poolOptions(connectionString: string | undefined, pgOptions: string | undefined): string {
+  let existing = pgOptions
+  if (connectionString) {
+    try {
+      existing = new URL(connectionString).searchParams.get('options') ?? existing
+    } catch { /* an unparsable string is left to pg */ }
+  }
+  const trimmed = existing?.trim()
+  return trimmed ? `${trimmed} ${JIT_OFF_OPTION}` : JIT_OFF_OPTION
+}
+
 export const pool = new Pool({
   connectionString: process.env['DATABASE_URL'],
+  options: poolOptions(process.env['DATABASE_URL'], process.env['PGOPTIONS']),
   max: 5,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
