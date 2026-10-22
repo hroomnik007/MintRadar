@@ -285,13 +285,15 @@ Health check. Available at `/health` and `/api/v1/health` (identical payload). T
 
 **Response:**
 ```json
-{ "status": "ok", "timestamp": "2026-06-25T10:00:00.000Z", "lastProbeAt": "2026-06-25T09:58:12.000Z", "lastVantageOutageAt": null, "lastAuditSyncAt": "2026-06-25T06:00:03.000Z", "lastReviewsSyncAt": "2026-06-25T07:12:44.000Z", "auditUpstream": "ok", "auditUpstreamCheckedAt": "2026-06-25T06:00:01.000Z",
+{ "status": "ok", "ready": true, "timestamp": "2026-06-25T10:00:00.000Z", "lastProbeAt": "2026-06-25T09:58:12.000Z", "lastVantageOutageAt": null, "lastAuditSyncAt": "2026-06-25T06:00:03.000Z", "lastReviewsSyncAt": "2026-06-25T07:12:44.000Z", "auditUpstream": "ok", "auditUpstreamCheckedAt": "2026-06-25T06:00:01.000Z",
   "auditCz": { "lastSyncAt": "2026-06-25T09:53:00.000Z", "mintsStored": 62, "swapsStored": 98, "skipped": { "mints": 0, "swaps": 2 } },
   "sources": { "ownProbe": { "usedForScore": true, "lastProbeAt": "2026-06-25T09:58:12.000Z" },
     "cashuInfo": { "usedForScore": true, "lastSyncAt": "2026-06-25T09:53:00.000Z", "status": "ok" },
     "reviews": { "usedForScore": false, "lastSyncAt": "2026-06-25T07:12:44.000Z" },
     "audit8333": { "usedForScore": false, "lastSyncAt": "2026-06-25T06:00:03.000Z", "status": "ok" } } }
 ```
+
+`ready` is a boolean: `false` while the backend is starting (database routes under `/api/` and `/sitemap.xml` answer `503` with `{"error":"starting"}` and `Retry-After: 2` then), `true` afterwards. `/health` itself always answers `200`; while `ready` is `false` it makes no database call, so `lastAuditSyncAt` and `lastReviewsSyncAt` are `null` (and `lastProbeAt` is `null` too until the first probe cycle).
 
 `lastProbeAt` is when the 5-minute probe cycle last finished sweeping every mint (not merely "process is alive") — `null` until the first cycle completes after a restart.
 

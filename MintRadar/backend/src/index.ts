@@ -656,14 +656,19 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // ── Routes ─────────────────────────────────────────────────────
 
 app.get('/health', async (_req: Request, res: Response) => {
-  const { lastAuditSyncAt, lastReviewsSyncAt } = await getSyncTimesFromDb()
+  // While starting (initDb() may hold DDL locks) /health makes no database call at all: the two database-derived
+  // sync times are null, everything else is in-memory and unchanged. Once ready it reads them as before.
+  const ready = isReady()
+  const { lastAuditSyncAt, lastReviewsSyncAt } = ready
+    ? await getSyncTimesFromDb()
+    : { lastAuditSyncAt: null, lastReviewsSyncAt: null }
   const lastProbeAt = getLastProbeCompletedAt()
   const audit8333 = getAuditUpstreamStatus()
   const auditCz = getAuditCzSyncStatus()
   res.json({
     status: 'ok',
     // false while initDb() and the seed are still running (other database routes answer 503 then); status stays 200.
-    ready: isReady(),
+    ready,
     timestamp: new Date().toISOString(),
     lastProbeAt,
     lastVantageOutageAt: getLastVantageOutageAt(),

@@ -134,3 +134,33 @@ describe('start-up wiring in index.ts', () => {
     expect(src.indexOf('app.use(readinessGate)')).toBeLessThan(src.indexOf('app.use(express.json())'))
   })
 })
+
+describe('/health makes no database call before ready (E4b)', () => {
+  it.each(['/health', '/api/v1/health'])('%s: zero pool calls, usual 200 and fields, ready:false', async (path) => {
+    const { pool } = await import('../../db.js')
+    const query = pool.query as unknown as ReturnType<typeof vi.fn>
+    readiness.setReadyForTests(false)
+    query.mockClear()
+    const res = await request(app).get(path)
+    expect(query).not.toHaveBeenCalled()
+    expect(res.status).toBe(200)
+    expect(res.body.ready).toBe(false)
+    expect(res.body.lastAuditSyncAt).toBeNull()
+    expect(res.body.lastReviewsSyncAt).toBeNull()
+    for (const k of ['status', 'timestamp', 'lastProbeAt', 'lastVantageOutageAt', 'auditUpstream', 'auditUpstreamCheckedAt', 'auditCz', 'sources']) {
+      expect(res.body).toHaveProperty(k)
+    }
+  })
+
+  it.each(['/health', '/api/v1/health'])('%s: queries the database as before once ready', async (path) => {
+    const { pool } = await import('../../db.js')
+    const query = pool.query as unknown as ReturnType<typeof vi.fn>
+    readiness.setReadyForTests(true)
+    query.mockClear()
+    query.mockResolvedValue({ rows: [{ last_sync: '2026-10-22T06:00:00.000Z', last_reviews_sync: null }] })
+    const res = await request(app).get(path)
+    expect(query).toHaveBeenCalled()
+    expect(res.body.ready).toBe(true)
+    expect(res.body.lastAuditSyncAt).toBe('2026-10-22T06:00:00.000Z')
+  })
+})
