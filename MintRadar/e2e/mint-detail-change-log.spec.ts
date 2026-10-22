@@ -10,7 +10,10 @@ import { frames, layoutReady, resize, trackRequests } from './fixtures/settle'
 const ALPHA = MOCK_MINTS[0]!.url
 const H = 3_600_000
 const D = 24 * H
-const ago = (ms: number) => new Date(Date.now() - ms).toISOString()
+// One clock reading for every fixture time: the 70-minute row is exactly on the "seen first" threshold (shown above it only), so two
+// Date.now() calls (observedAt, firstSeenAt) a millisecond apart would push the gap over it.
+const T0 = Date.now()
+const ago = (ms: number) => new Date(T0 - ms).toISOString()
 const SINCE = '2026-10-05T08:00:00.000Z'
 
 interface Row { type: string; field: string; oldValue: string | null; newValue: string | null; observedAt: string; firstSeenAt: string }
