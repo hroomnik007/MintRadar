@@ -41,7 +41,7 @@ import {
 import { evaluateVantageOutage, type VantageCashuInfo, type VantageMintResult } from '../vantageOutage.js'
 import {
   ATTESTATION_PROFILE_REFRESH_MS, ATTESTATION_RELAY_PAUSE_MS, ATTESTATION_START_OFFSET_MS, ATTESTATION_TICK_MS,
-  loadAttestationStates, planCycle, publishBatch, runAttestationCycle, saveAttestationState, startAttestations,
+  describeRelayError, ATTESTATION_ERROR_MAX_CHARS, loadAttestationStates, planCycle, publishBatch, runAttestationCycle, saveAttestationState, startAttestations,
   type DueItem, type RelayPublisher,
 } from '../healthPublisher.js'
 import type { KnownMintLike, Snapshot } from '../walletApi.js'
@@ -363,7 +363,7 @@ describe('publishBatch', () => {
 describe('runAttestationCycle', () => {
   const quiet = () => {}
 
-  it('only ever talks to the four relay constants, signs with the key, and records the state after acceptance', async () => {
+  it('only ever talks to the six relay constants, signs with the key, and records the state after acceptance', async () => {
     const sk = generateSecretKey()
     const h = harness()
     const res = await runAttestationCycle({
@@ -372,7 +372,7 @@ describe('runAttestationCycle', () => {
     })
     expect(res).toMatchObject({ eligible: 5, due: 5, accepted: 5 })
     expect([...new Set(h.sent.map(s => s.relay))].sort()).toEqual([...ATTESTATION_RELAYS].sort())
-    expect(h.sent).toHaveLength(5 * 4)
+    expect(h.sent).toHaveLength(5 * 6)
     for (const { event } of h.sent) {
       expect(verifyEvent(event)).toBe(true)
       expect(event.pubkey).toBe(getPublicKey(sk))
@@ -424,7 +424,7 @@ describe('runAttestationCycle', () => {
     expect(h.store.size).toBe(6)
   })
 
-  it('publishes at most 200 events per run to at most 4 relays', async () => {
+  it('publishes at most 200 events per run to at most 6 relays', async () => {
     signing.cheap = true
     const sk = generateSecretKey()
     const h = harness()
@@ -434,7 +434,7 @@ describe('runAttestationCycle', () => {
     })
     expect(res.due).toBe(200)
     expect(res.deferred).toBe(60)
-    expect(h.sent.length).toBeLessThanOrEqual(200 * 4)
+    expect(h.sent.length).toBeLessThanOrEqual(200 * 6)
     // the deferred mints go out in the next run
     const next = await runAttestationCycle({
       secretKey: sk, loadSnapshot: async () => snapshotOf(manyRows(260)), loadStates: h.loadStates, saveState: h.saveState,
@@ -685,5 +685,46 @@ describe('attestation_state access', () => {
     expect(String(sql)).toMatch(/INSERT INTO attestation_state/)
     expect(String(sql)).toMatch(/ON CONFLICT \(mint_url\) DO UPDATE/)
     expect(params).toEqual(['https://a.example', 'e'.repeat(64), 1791979200, 80, 'online', 3])
+  })
+})
+
+describe('failure reasons in the run log', () => {
+  it('describeRelayError: one line, cut to 120 characters, ids and keys blanked, never throws on odd values', () => {
+    expect(ATTESTATION_ERROR_MAX_CHARS).toBe(120)
+    expect(describeRelayError(new Error('timeout'))).toBe('timeout')
+    expect(describeRelayError(new Error('blocked: pubkey\n not  allowed'))).toBe('blocked: pubkey not allowed')
+    expect(describeRelayError(new Error('x'.repeat(500)))).toHaveLength(120)
+    expect(describeRelayError(new Error('x'.repeat(120)))).toBe('x'.repeat(120))
+    expect(describeRelayError(new Error('dup ' + 'a'.repeat(64) + ' ' + 'b'.repeat(64)))).toBe('dup … …')
+    expect(describeRelayError('Unexpected server response: 503')).toBe('Unexpected server response: 503')
+    expect(describeRelayError(undefined)).toBe('unknown error')
+    expect(describeRelayError(new Error(''))).not.toBe('')
+  })
+
+  it('logs at most ONE failure line per relay and run, with the first reason, and none for a healthy relay', async () => {
+    const sk = generateSecretKey()
+    const h = harness()
+    const publisher: RelayPublisher = {
+      publish: async (relay, event) => {
+        h.sent.push({ relay, event })
+        if (relay === 'wss://nostr.mom') throw new Error('Unexpected server response: 503 ' + 'z'.repeat(300))
+        if (relay === 'wss://nos.lol') throw new Error('blocked: not on the allow-list')
+      },
+      close: vi.fn(),
+    }
+    const lines: string[] = []
+    await runAttestationCycle({
+      secretKey: sk, loadSnapshot: async () => snapshotOf(manyRows(6)), loadStates: h.loadStates, saveState: h.saveState,
+      publisher, now: () => NOW, sleep: async () => {}, log: l => lines.push(l),
+    })
+    const failures = lines.filter(l => l.startsWith('[attestations] relay '))
+    expect(failures).toHaveLength(2)
+    expect(failures.filter(l => l.includes(' nostr.mom '))).toHaveLength(1)
+    expect(failures.find(l => l.includes(' nos.lol '))).toBe('[attestations] relay nos.lol failed=3: blocked: not on the allow-list')
+    const mom = failures.find(l => l.includes(' nostr.mom ')) as string
+    expect(mom.split(': ').slice(1).join(': ').length).toBeLessThanOrEqual(120)
+    expect(mom).toContain('503')
+    expect(lines.some(l => l.includes('relay.damus.io failed'))).toBe(false)
+    expect(lines.join('\n')).not.toContain(sk.toString())
   })
 })

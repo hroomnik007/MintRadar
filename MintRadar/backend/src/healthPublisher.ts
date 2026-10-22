@@ -4,7 +4,7 @@
 //
 // One timer tick (every 15 minutes with jitter, single-flight) reads the stored values (the shared known-mints snapshot,
 // which is ONE database read cached for 60 s, plus the small attestation_state table), decides with shouldPublish() and
-// publishes at most ATTESTATION_MAX_EVENTS_PER_RUN events to the four ATTESTATION_RELAYS. It never probes a mint.
+// publishes at most ATTESTATION_MAX_EVENTS_PER_RUN events to the six ATTESTATION_RELAYS. It never probes a mint.
 
 import { finalizeEvent } from 'nostr-tools'
 import type { Event as NostrEvent, EventTemplate } from 'nostr-tools'
@@ -191,7 +191,23 @@ export function createPoolPublisher(): RelayPublisher {
 }
 
 export interface RelayStats { ok: number; failed: number; skipped: number }
-export interface BatchStats { accepted: number; relays: Record<string, RelayStats> }
+/** `errors`: per relay with failures, the reason of its first failure (describeRelayError), for the run log only. */
+export interface BatchStats { accepted: number; relays: Record<string, RelayStats>; errors: Record<string, string> }
+
+export const ATTESTATION_ERROR_MAX_CHARS = 120
+
+/** A short, log-safe reason for a failed publish: the error message (timeout, HTTP/WebSocket status, the relay's "OK false"
+ *  text) on one line, 64-hex runs (event ids, keys) and bech32 keys blanked, cut to ATTESTATION_ERROR_MAX_CHARS. */
+export function describeRelayError(err: unknown): string {
+  const raw = err instanceof Error ? (err.message || err.name) : typeof err === 'string' ? err : 'unknown error'
+  const clean = raw
+    .replace(/[0-9a-fA-F]{64}/g, '…')
+    .replace(/\b(?:nsec|npub|nprofile|nevent|note)1[02-9ac-hj-np-z]{20,}/gi, '…')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const text = clean || 'unknown error'
+  return text.length > ATTESTATION_ERROR_MAX_CHARS ? `${text.slice(0, ATTESTATION_ERROR_MAX_CHARS - 1)}…` : text
+}
 
 export interface BatchDeps {
   publisher: RelayPublisher
@@ -219,6 +235,7 @@ export async function publishBatch(items: DueItem[], deps: BatchDeps): Promise<B
   const maxFailures = deps.maxFailures ?? ATTESTATION_RELAY_MAX_FAILURES
   const accepted = new Set<string>()
   const stats: Record<string, RelayStats> = {}
+  const errors: Record<string, string> = {}
 
   await Promise.all(relays.map(async relay => {
     const s: RelayStats = { ok: 0, failed: 0, skipped: 0 }
@@ -230,8 +247,9 @@ export async function publishBatch(items: DueItem[], deps: BatchDeps): Promise<B
       const item = items[i] as DueItem
       try {
         await deps.publisher.publish(relay, item.event, timeoutMs)
-      } catch {
+      } catch (err) {
         s.failed++
+        if (!(relay in errors)) errors[relay] = describeRelayError(err)
         streak++
         continue
       }
@@ -243,10 +261,17 @@ export async function publishBatch(items: DueItem[], deps: BatchDeps): Promise<B
       }
     }
   }))
-  return { accepted: accepted.size, relays: stats }
+  return { accepted: accepted.size, relays: stats, errors }
 }
 
 // ── One run ──────────────────────────────────────────────────────────────────
+
+/** At most ONE line per relay and run, only for relays with failures: the count and the first failure's reason. */
+export function relayFailureLines(stats: BatchStats): string[] {
+  return Object.entries(stats.relays)
+    .filter(([, s]) => s.failed > 0)
+    .map(([url, s]) => `[attestations] relay ${url.replace(/^wss?:\/\//, '')} failed=${s.failed}: ${stats.errors[url] ?? 'unknown error'}`)
+}
 
 export interface CycleDeps {
   secretKey: Uint8Array
@@ -310,6 +335,7 @@ export async function runAttestationCycle(deps: CycleDeps): Promise<CycleResult>
       .map(([url, s]) => `${url.replace(/^wss?:\/\//, '')} ok=${s.ok} failed=${s.failed} skipped=${s.skipped}`)
       .join('; ')
     log(`[attestations] run: ${plan.eligible} eligible, ${items.length} due (${plan.deferred} deferred), ${stats.accepted} accepted by at least one relay; ${perRelay}`)
+    for (const line of relayFailureLines(stats)) log(line)
     return { eligible: plan.eligible, due: items.length, deferred: plan.deferred, accepted: stats.accepted, relays: stats.relays }
   } finally {
     publisher.close()

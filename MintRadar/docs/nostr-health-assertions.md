@@ -104,7 +104,7 @@ Anyone may publish events of this shape under their own key: the format is open.
 
 A failure that the provider's own network outage caused is not recorded as a status change (the provider holds such failures back), so it produces no event.
 
-A mint without a score, or an archived mint, gets no new event; its last event expires after 48 hours. An offline mint is published with `mint_status` `offline`. Events go to `wss://nostr.mintradar.org`, `wss://relay.damus.io`, `wss://nos.lol` and `wss://relay.primal.net`.
+A mint without a score, or an archived mint, gets no new event; its last event expires after 48 hours. An offline mint is published with `mint_status` `offline`. Events go to `wss://nostr.mintradar.org`, `wss://relay.damus.io`, `wss://nos.lol`, `wss://relay.primal.net`, `wss://nostr.cypherpunk.today` and `wss://nostr.mom`. The public pages deliberately list only the three relays that are known to hold every event (`wss://nostr.mintradar.org`, `wss://nos.lol`, `wss://relay.primal.net`).
 
 ## Pinning the provider
 
