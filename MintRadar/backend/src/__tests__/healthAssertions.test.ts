@@ -48,7 +48,7 @@ describe('constants', () => {
     expect(ATTESTATION_STATE_CHANGE_MIN_GAP_MS).toBe(5 * 60_000)
     expect(ATTESTATION_STATE_CHANGE_MAX_PER_HOUR).toBe(30)
     expect(ATTESTATION_AUDIT_MAX_AGE_MS).toBe(168 * 3_600_000)
-    expect([...ATTESTATION_RELAYS]).toEqual(['wss://nostr.mintradar.org', 'wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net', 'wss://nostr.cypherpunk.today', 'wss://nostr.mom'])
+    expect([...ATTESTATION_RELAYS]).toEqual(['wss://nostr.mintradar.org', 'wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net', 'wss://nostr.mom'])
     expect(ATTESTATION_PUBKEY_HEX).toMatch(/^[0-9a-f]{64}$/)
   })
 })

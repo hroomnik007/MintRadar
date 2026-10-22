@@ -363,7 +363,7 @@ describe('publishBatch', () => {
 describe('runAttestationCycle', () => {
   const quiet = () => {}
 
-  it('only ever talks to the six relay constants, signs with the key, and records the state after acceptance', async () => {
+  it('only ever talks to the five relay constants, signs with the key, and records the state after acceptance', async () => {
     const sk = generateSecretKey()
     const h = harness()
     const res = await runAttestationCycle({
@@ -372,7 +372,7 @@ describe('runAttestationCycle', () => {
     })
     expect(res).toMatchObject({ eligible: 5, due: 5, accepted: 5 })
     expect([...new Set(h.sent.map(s => s.relay))].sort()).toEqual([...ATTESTATION_RELAYS].sort())
-    expect(h.sent).toHaveLength(5 * 6)
+    expect(h.sent).toHaveLength(5 * 5)
     for (const { event } of h.sent) {
       expect(verifyEvent(event)).toBe(true)
       expect(event.pubkey).toBe(getPublicKey(sk))
@@ -424,7 +424,7 @@ describe('runAttestationCycle', () => {
     expect(h.store.size).toBe(6)
   })
 
-  it('publishes at most 200 events per run to at most 6 relays', async () => {
+  it('publishes at most 200 events per run to at most 5 relays', async () => {
     signing.cheap = true
     const sk = generateSecretKey()
     const h = harness()
@@ -434,7 +434,7 @@ describe('runAttestationCycle', () => {
     })
     expect(res.due).toBe(200)
     expect(res.deferred).toBe(60)
-    expect(h.sent.length).toBeLessThanOrEqual(200 * 6)
+    expect(h.sent.length).toBeLessThanOrEqual(200 * 5)
     // the deferred mints go out in the next run
     const next = await runAttestationCycle({
       secretKey: sk, loadSnapshot: async () => snapshotOf(manyRows(260)), loadStates: h.loadStates, saveState: h.saveState,

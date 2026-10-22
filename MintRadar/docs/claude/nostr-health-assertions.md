@@ -6,7 +6,7 @@
 
 ## What it is
 
-The backend signs one **kind 30385** event per tracked mint (NIP-85 "NIP-73 identifier as subject": `d` = the mint URL, `k` = `web`, `rank` = the Reliability Score) and publishes it to six relays (the public pages deliberately list only the three that are known to hold every event, `ATTESTATION_RELAYS_PUBLIC`). A wallet that pins the MintRadar Health public key can verify the signature and read an *operational health* signal without calling mintradar.org. It is not solvency and not advice; the event content says so.
+The backend signs one **kind 30385** event per tracked mint (NIP-85 "NIP-73 identifier as subject": `d` = the mint URL, `k` = `web`, `rank` = the Reliability Score) and publishes it to five relays (the public pages deliberately list only the three that are known to hold every event, `ATTESTATION_RELAYS_PUBLIC`). A wallet that pins the MintRadar Health public key can verify the signature and read an *operational health* signal without calling mintradar.org. It is not solvency and not advice; the event content says so.
 
 - Identity: the public key `ATTESTATION_PUBKEY_HEX` (`backend/src/healthAssertions.ts`) = npub `npub19hwhe6vr85hd3g9l4tus8nr37etyrusd37q5yycpvwnzt2ntjswqjaru7p`, NIP-05 `health@mintradar.org` (`public/.well-known/nostr.json`, name `health`, relay hint `wss://nostr.mintradar.org`). The private key exists only in the owner's file and, once activated, in the server's `backend/.env` as `ATTESTATION_SERVICE_NSEC`. Separate from `NOTIFICATION_SERVICE_NSEC`, which is never used for assertions.
 - Profile (kind 0): name and display name `MintRadar Health`, about `Operational health signals for Cashu mints, computed by MintRadar. Not solvency, not advice. Method: https://mintradar.org/methodology`, website `https://mintradar.org`, nip05 `health@mintradar.org`, picture `https://mintradar.org/icons/icon-512x512.png` (`ATTESTATION_PROFILE_PICTURE_URL`: the site's own 512 px app icon, a static PNG; no banner, no third-party host, no data URI). Published at start and once a day (checked on the 15-minute tick) to the own relay and `META_RELAYS` of `nostrService.ts` (the service-profile relays), through the existing `publishToRelays` helper.
@@ -43,13 +43,13 @@ Tags, in this order: `d` (normalised mint URL, fragment dropped), `k` = `web`, `
 |---|---|---|
 | `ATTESTATION_MIN_INTERVAL_MS` | 6 h | per mint, at most one new event (not for a status change, see below) |
 | `ATTESTATION_STATE_CHANGE_MIN_GAP_MS` | 5 min | least time between a mint's previous event and a state-change event for it (flapping) |
-| `ATTESTATION_STATE_CHANGE_MAX_PER_HOUR` | 30 | state-change events per rolling hour over all mints (in-memory log in `healthPublisher.ts`, a restart can allow one extra cap's worth); arithmetic: 61 eligible mints, periodic refresh about 61/24 = 2.5 events an hour, so 30 is about half the fleet an hour and 30 x 6 relays = 180 relay writes an hour |
+| `ATTESTATION_STATE_CHANGE_MAX_PER_HOUR` | 30 | state-change events per rolling hour over all mints (in-memory log in `healthPublisher.ts`, a restart can allow one extra cap's worth); arithmetic: 61 eligible mints, periodic refresh about 61/24 = 2.5 events an hour, so 30 is about half the fleet an hour and 30 x 5 relays = 150 relay writes an hour |
 | `ATTESTATION_MIN_RANK_DELTA` | 2 | rank change that justifies a new event |
 | `ATTESTATION_REFRESH_MS` | 24 h | daily hard refresh, so the 48 h expiration never lapses |
 | `ATTESTATION_EXPIRY_S` | 172800 | NIP-40 expiration after `created_at` |
 | `ATTESTATION_MAX_EVENTS_PER_RUN` | 200 | never-published mints first, then the oldest; the rest waits for the next run |
 | `ATTESTATION_AUDIT_MAX_AGE_MS` | 168 h | audit tags are left out when older |
-| `ATTESTATION_RELAYS` | `wss://nostr.mintradar.org`, `wss://relay.damus.io`, `wss://nos.lol`, `wss://relay.primal.net`, `wss://nostr.cypherpunk.today`, `wss://nostr.mom` | the only connections the assertion publisher opens |
+| `ATTESTATION_RELAYS` | `wss://nostr.mintradar.org`, `wss://relay.damus.io`, `wss://nos.lol`, `wss://relay.primal.net`, `wss://nostr.mom` | the only connections the assertion publisher opens |
 | `ATTESTATION_RELAY_PAUSE_MS` / `_TIMEOUT_MS` / `_MAX_FAILURES` | 200 ms / 5 s / 3 | between events per relay / per event and relay / consecutive failures before a relay is skipped for the rest of the run |
 | `ATTESTATION_TICK_MS` + jitter | 15 min + up to 60 s, first tick 90 s after start | own timer, single-flight (a tick that finds the previous run still going is skipped) |
 
@@ -105,6 +105,6 @@ The steps below were performed on 2026-10-13 (owner: key; gated server task: the
 ## Security notes
 
 - Key handling and logs: see the table above. Only `ATTESTATION_RELAYS` are used as targets of assertions (no user, mint or database-supplied relay), through the backend's DNS-pinned WebSocket class (SSRF guard at connect time). The profile goes to the own relay and `META_RELAYS` (constants too).
-- Bounded: at most 200 events per run (of which at most 30 per hour caused by status changes), 6 relays, 15-minute ticks, 200 ms pause, 5 s timeout, 3-failure skip.
+- Bounded: at most 200 events per run (of which at most 30 per hour caused by status changes), 5 relays, 15-minute ticks, 200 ms pause, 5 s timeout, 3-failure skip.
 - A stolen key could sign false assertions; wallets pin the key and check `created_at` and `expiration` (spec). Rotating the key means a new pubkey in `ATTESTATION_PUBKEY_HEX`, the NIP-05 file, the relay list and the docs, and telling wallets.
 - Backup: `deploy/strfry/backup-own-events.sh` reads the same `privileged-pubkeys.txt`, so the new key automatically gets the base kinds (38172, 38000) only. Its kind 30385 and kind 0 events are not backed up on purpose: they expire or are re-published daily.

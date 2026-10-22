@@ -28,7 +28,6 @@ export const ATTESTATION_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
   'wss://relay.primal.net',
-  'wss://nostr.cypherpunk.today',
   'wss://nostr.mom',
 ] as const
 
@@ -42,7 +41,7 @@ export const ATTESTATION_MAX_EVENTS_PER_RUN = 200
 export const ATTESTATION_STATE_CHANGE_MIN_GAP_MS = 5 * 60 * 1000
 /** At most this many state-change events per rolling hour over all mints; the rest is deferred to the next run, never
  *  dropped. 61 eligible mints (2026-10-20): the periodic refresh is about 61 / 24 = 2.5 events an hour, a status change
- *  is a rare event per mint, so 30 an hour is about half of the fleet and 30 x 6 relays = 180 relay writes an hour. */
+ *  is a rare event per mint, so 30 an hour is about half of the fleet and 30 x 5 relays = 150 relay writes an hour. */
 export const ATTESTATION_STATE_CHANGE_MAX_PER_HOUR = 30
 /** The audit tags are only sent while the audit data is at most this old. */
 export const ATTESTATION_AUDIT_MAX_AGE_MS = 168 * 60 * 60 * 1000

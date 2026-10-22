@@ -4,7 +4,7 @@
 //
 // One timer tick (every 15 minutes with jitter, single-flight) reads the stored values (the shared known-mints snapshot,
 // which is ONE database read cached for 60 s, plus the small attestation_state table), decides with shouldPublish() and
-// publishes at most ATTESTATION_MAX_EVENTS_PER_RUN events to the six ATTESTATION_RELAYS. It never probes a mint.
+// publishes at most ATTESTATION_MAX_EVENTS_PER_RUN events to the five ATTESTATION_RELAYS. It never probes a mint.
 
 import { finalizeEvent } from 'nostr-tools'
 import type { Event as NostrEvent, EventTemplate } from 'nostr-tools'
