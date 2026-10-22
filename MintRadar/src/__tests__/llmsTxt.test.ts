@@ -115,3 +115,23 @@ describe('deploy/nginx.conf, Task D1b blocks', () => {
     expect(conf).toContain('    location / {\n        try_files $uri $uri/ /index.html;\n    }')
   })
 })
+
+// Task E3: the prefix location must win over the static-asset regex location, otherwise a mint URL that ends in an
+// asset extension (/mint/https%3A%2F%2Fexample.com%2Ficon.svg) gets a bare nginx 404 instead of the app shell.
+describe('deploy/nginx.conf, Task E3 /mint/ precedence', () => {
+  const conf = read('deploy/nginx.conf')
+
+  it('declares /mint/ once, as a ^~ prefix location', () => {
+    expect(conf).toMatch(/^ {4}location \^~ \/mint\/ \{$/m)
+    expect(conf.match(/location [^\n]*\/mint\/ \{/g)).toHaveLength(1)
+  })
+})
+
+describe('deploy/strfry/docker-compose.strfry.yml, Task E3 healthcheck', () => {
+  const compose = read('deploy/strfry/docker-compose.strfry.yml')
+
+  it('checks the NIP-11 answer on 127.0.0.1:7777 with the agreed timings', () => {
+    expect(compose).toContain('"--header=Accept: application/nostr+json", "http://127.0.0.1:7777/"]')
+    for (const line of ['interval: 30s', 'timeout: 5s', 'retries: 3', 'start_period: 20s']) expect(compose).toContain(`      ${line}\n`)
+  })
+})
