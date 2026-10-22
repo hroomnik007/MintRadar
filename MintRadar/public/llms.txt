@@ -1,0 +1,11 @@
+# MintRadar
+
+> Independent monitoring of Cashu ecash mints. MintRadar probes all known mints every 5 minutes and computes a Reliability Score from the results.
+
+MintRadar publishes an operational health signal. It is not a statement about solvency or custody, and not a recommendation to deposit funds. It is based on MintRadar's probes and third-party audit data, and it can be wrong or out of date.
+
+- [For wallets](https://mintradar.org/for-wallets): the Wallet API v1, base URL https://mintradar.org/api/v1/wallets/
+- [OpenAPI description](https://mintradar.org/docs/openapi/wallets-v1.yaml): the OpenAPI 3.1 file of the Wallet API
+- [Methodology](https://mintradar.org/methodology): how the Reliability Score is calculated
+- [Sitemap](https://mintradar.org/sitemap.xml)
+- Signed health records: Nostr kind 30385 events on the relay wss://nostr.mintradar.org, described in [docs/nostr-health-assertions.md](https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/nostr-health-assertions.md)

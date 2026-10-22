@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { resolve } from 'path'
 import { brandAssetsPlugin, withBrandHash } from './vite-brand-assets'
+import { openApiAssetPlugin } from './vite-openapi'
 
 // Manifest icons carry ?v=<content hash> in builds (see vite-brand-assets.ts); dev leaves them untouched.
 const icon = (command: string, path: string) => (command === 'build' ? withBrandHash(path) : path)
@@ -11,6 +12,7 @@ export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     brandAssetsPlugin(),
+    openApiAssetPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
@@ -36,7 +38,7 @@ export default defineConfig(({ command }) => ({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // Workbox's default ignores only utm_*/fbclid; "v" is the brand-asset content hash (?v=…).
         ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^v$/],
-        navigateFallbackDenylist: [/^\/api\//, /^\/\.well-known\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/\.well-known\//, /^\/docs\//, /^\/llms\.txt$/],
         runtimeCaching: [
           {
             urlPattern: /^\/api\//,
