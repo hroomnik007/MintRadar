@@ -3,7 +3,7 @@
 # then ships a minimal runtime image. Pinned to a tagged release for reproducibility.
 ARG STRFRY_REF=1.1.3
 
-FROM alpine:3.20 AS build
+FROM alpine:3.24 AS build
 
 WORKDIR /build
 
@@ -16,7 +16,7 @@ RUN apk --no-cache add \
     pkgconfig \
     libtool \
     ca-certificates \
-    libressl-dev \
+    openssl-dev \
     zlib-dev \
     lmdb-dev \
     flatbuffers-dev \
@@ -30,24 +30,20 @@ RUN git clone --branch "${STRFRY_REF}" --depth 1 https://github.com/hoytech/strf
 RUN make setup-golpe
 RUN make -j"$(nproc)"
 
-FROM alpine:3.20
+FROM alpine:3.24
 
 WORKDIR /app
 
-# libressl3.8-libssl/-libcrypto (not the generic "libressl" meta-package,
-# which on alpine:3.20 resolves to a different provider with mismatched
-# sonames — libssl.so.3 instead of the libssl.so.55 the binary was actually
-# linked against by libressl-dev in the build stage, causing a "symbol not
-# found" crash-loop at startup) pin the exact runtime .so files matching the
-# builder's libressl-dev version.
+# libssl3/libcrypto3 are the runtime counterparts of the openssl-dev the binary
+# is linked against in the build stage (same OpenSSL 3.x series, same sonames).
 RUN apk --no-cache add \
     lmdb \
     flatbuffers \
     libsecp256k1 \
     libb2 \
     zstd \
-    libressl3.8-libssl \
-    libressl3.8-libcrypto \
+    libssl3 \
+    libcrypto3 \
     jq \
   && rm -rf /var/cache/apk/*
 

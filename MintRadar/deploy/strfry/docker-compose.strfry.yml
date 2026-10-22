@@ -5,6 +5,8 @@
 services:
   strfry:
     build: .
+    # Pinned so `up -d` starts exactly the tested image and never rebuilds implicitly.
+    image: mintradar-strfry-strfry:20261022-alpine324
     container_name: mintradar-strfry
     restart: unless-stopped
     volumes:
