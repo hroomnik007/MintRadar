@@ -14,6 +14,8 @@ import { WALLET_API_FACTS } from '@/constants/forWalletsPage'
 import { METHODOLOGY_CHANGES, METHODOLOGY_VERSION } from '@/utils/methodology'
 import { HEALTH_ASSERTION_TAGS } from '@/utils/healthAssertionConstants'
 import { HEALTH_FACTS } from '@/constants/healthAssertionPage'
+import { computeDegraded } from '../../backend/src/degraded'
+import { walletListEnvelope, parseWalletListQuery, type KnownMintLike, type WalletExtra } from '../../backend/src/walletApi'
 
 const root = resolve(__dirname, '../..')
 const API_MD = 'docs/API.md'
@@ -203,6 +205,134 @@ describe(`${API_MD} matches the code constants`, () => {
     const fromFile = rows.map(r => `${r[0]} ${r[1]}`)
     expectSameNames('methodology versions (version date)', API_MD, fromFile, METHODOLOGY_CHANGES.map(c => `${c.version} ${c.date}`))
     expect(Math.max(...rows.map(r => Number(r[0]))), `${API_MD}: newest methodology version`).toBe(METHODOLOGY_VERSION)
+  })
+})
+
+// ── include=facts: the fields the list adds, in every document that names them ──
+
+const forWalletsPage = readFileSync(resolve(root, 'src/pages/ForWallets.tsx'), 'utf8')
+const oneLine = (text: string): string => text.replace(/\s+/g, ' ')
+
+/** The fields the REAL list answer gains with include=facts: its keys with the include minus its keys without. */
+function factsFieldsOfTheList(): string[] {
+  const mint: KnownMintLike = {
+    url: 'https://mint.example.com', name: 'Example Mint', archived: false, degraded: false, online: true,
+    version: 'Nutshell/0.21.0', softwareLatest: { major: 0, minor: 21 }, nutsLimits: { '4': {}, '5': {} }, units: ['sat'],
+    auditCzTotal: 104, auditCzBlamed: 0, auditCzFetchedAt: '2026-10-12T17:40:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z',
+    reliabilityScore: 92, uptimePct24h: 100, uptimePct7d: 99, lastCheckedAt: '2026-10-13T11:59:00.000Z',
+    reviewCount: 0, reviewRatedCount: 0, reviewAvgRating: null, operatorReviewCount: 0, latencyMs: 120,
+    pubkey: '02' + 'ab'.repeat(32), hasOnion: false, lastOnlineAt: '2026-10-13T11:59:00.000Z',
+    mintMethods: [{ method: 'bolt11', unit: 'sat', min_amount: 1, max_amount: 100000 }], meltMethods: [{ method: 'bolt11', unit: 'sat' }],
+  }
+  const extra: WalletExtra = {
+    probes24h: 288, downSince: null, keysetsCheckedAt: null, keysets: [], scoreBreakdown: null, changes: [], auditDirections: null,
+  }
+  const snap = { data: [mint], computedAt: Date.UTC(2026, 9, 13, 12, 0, 0), walletExtra: new Map([[mint.url, extra]]) }
+  const keysOf = (q: Record<string, unknown>): string[] => {
+    const r = parseWalletListQuery(q)
+    if (!r.ok) throw new Error(r.message)
+    return Object.keys(((walletListEnvelope(snap, r.filter) as { mints: object[] }).mints[0]) as object)
+  }
+  const without = new Set(keysOf({}))
+  return keysOf({ include: 'facts' }).filter(k => !without.has(k))
+}
+
+describe('the fields of include=facts (the real list) are named in /for-wallets, the OpenAPI file and API.md', () => {
+  const facts = factsFieldsOfTheList()
+
+  it('the real list gains the expected fields with include=facts (a new heavy field must be added to the documents)', () => {
+    expect(facts.length).toBeGreaterThanOrEqual(8)
+    expect(facts).toEqual(expect.arrayContaining(['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'contactChecks', 'feeExamples', 'limits', 'auditByDirection']))
+  })
+
+  it('API.md: the include row lists exactly these fields behind `facts`', () => {
+    const row = mdTable(apiMd, '| Parameter | Default |').find(r => stripTicks(r[0]!) === 'include')!
+    const m = /\(`facts` brings ([^;]+);/.exec(row[2]!)
+    expect(m, `${API_MD}: the include row names what facts brings`).not.toBeNull()
+    expectSameNames('include=facts fields', API_MD, backticked(m![1]!), facts)
+  })
+
+  it('OpenAPI: the include parameter lists exactly these fields behind `facts`', () => {
+    const m = /\(`facts` brings ([^;]+);/.exec(oneLine(openapi))
+    expect(m, `${OPENAPI}: the include parameter names what facts brings`).not.toBeNull()
+    expectSameNames('include=facts fields', OPENAPI, backticked(m![1]!), facts)
+  })
+
+  it('OpenAPI: the list endpoint description names every one of them as an include-only field', () => {
+    const m = /The heavier fields \(([^)]+)\) are only in the objects when `include` asks for them/.exec(oneLine(openapi))
+    expect(m, `${OPENAPI}: the list description names the heavier fields`).not.toBeNull()
+    const named = new Set(backticked(m![1]!))
+    expect(facts.filter(f => !named.has(f)), `${OPENAPI}: facts fields missing from the list description`).toEqual([])
+  })
+
+  it('/for-wallets: the include row of the parameter table and the prose list exactly these fields', () => {
+    const meaning = WALLET_QUERY_PARAMS.find(p => p.name === 'include')!.meaning
+    const t = /facts \(([^)]+)\)/.exec(meaning)
+    expect(t, 'WALLET_QUERY_PARAMS include: names what facts brings').not.toBeNull()
+    expectSameNames('include=facts fields', 'WALLET_QUERY_PARAMS (the /for-wallets parameter table)', t![1]!.split(/,\s*|\s+and\s+/).filter(Boolean), facts)
+    const p = /so are (.*?), as <code>include=facts<\/code>/s.exec(oneLine(forWalletsPage))
+    expect(p, 'src/pages/ForWallets.tsx: the sentence naming the include=facts fields').not.toBeNull()
+    expectSameNames('include=facts fields', 'src/pages/ForWallets.tsx', [...p![1]!.matchAll(/<code>([^<]+)<\/code>/g)].map(x => x[1]!), facts)
+  })
+
+  it('every one of them says "include=facts" in the field table of /for-wallets (WALLET_MINT_FIELDS) and in API.md', () => {
+    const rows = mdTable(apiMd, '| Mint field |')
+    for (const f of facts) {
+      expect(WALLET_MINT_FIELDS.find(x => x.name === f)?.meaning, `WALLET_MINT_FIELDS ${f}`).toContain('include=facts')
+      const row = rows.find(r => backticked(r[0]!)[0] === f)
+      expect(row?.[2], `${API_MD}: field table row ${f}`).toContain('include=facts')
+    }
+  })
+})
+
+// ── `degraded` and `units`: one rule, said the same way everywhere ──────────────
+
+describe('`degraded` is defined as the code defines it (backend/src/degraded.ts) in every document', () => {
+  it('the code: at least 4 probes in 24 hours and none online, or a failed latest probe older than 24 hours', () => {
+    const now = Date.UTC(2026, 9, 22, 12)
+    const hours = (h: number) => new Date(now - h * 3_600_000).toISOString()
+    expect(computeDegraded(4, 0, false, hours(1), now)).toBe(true)
+    expect(computeDegraded(3, 0, false, hours(1), now)).toBe(false)
+    expect(computeDegraded(4, 1, false, hours(1), now)).toBe(false)
+    expect(computeDegraded(0, 0, false, hours(24.5), now)).toBe(true)
+    expect(computeDegraded(0, 0, false, hours(23.5), now)).toBe(false)
+    expect(computeDegraded(0, 0, null, null, now)).toBe(false)
+  })
+
+  const places: Array<[string, string]> = [
+    [`${API_MD} status row`, mdTable(apiMd, '| Mint field |').find(r => backticked(r[0]!)[0] === 'status')![2]!],
+    [`${OPENAPI} status`, oneLine(openapi.slice(openapi.indexOf('          enum: [online, offline, degraded, archived]'), openapi.indexOf('        score:\n          type: [integer', openapi.indexOf('          enum: [online, offline, degraded, archived]'))))],
+    ['WALLET_MINT_FIELDS status (/for-wallets)', WALLET_MINT_FIELDS.find(f => f.name === 'status')!.meaning],
+    ['HEALTH_ASSERTION_TAGS mint_status (/for-wallets)', HEALTH_ASSERTION_TAGS.find(t => t.name === 'mint_status')!.meaning],
+    [`${HEALTH_MD} mint_status row`, mdTable(healthMd, '| Tag | Value | Meaning |').find(r => backticked(r[0]!)[0] === 'mint_status')![2]!],
+  ]
+  for (const [where, text] of places) {
+    it(`${where} says: latest probe failed, at least 4 probes in the last 24 hours with no success, or that failed probe more than 24 hours old`, () => {
+      const t = stripTicks(oneLine(text))
+      expect(t, where).toContain('the latest probe failed')
+      expect(t, where).toMatch(/at least 4 probes in the last 24 hours (and none of them succeeded|all failed)/)
+      expect(t, where).toContain('that failed probe is more than 24 hours old')
+      expect(t, where).not.toContain('no successful probe')
+    })
+  }
+})
+
+describe('`units` and the `unit` filter say what the code lists (parseMintMethods: payment methods of NUT-04/05, not keysets)', () => {
+  const sentence = 'units and the unit= filter list the units for which the mint declares a payment method (NUT-04/05); units that appear only in keysets (include=keysets) are not included, so a mint with no declared methods has units: null.'
+  const plain = (t: string) => stripTicks(oneLine(t))
+  it('the field and the filter carry the sentence in API.md, the OpenAPI file and /for-wallets', () => {
+    const unitRow = mdTable(apiMd, '| Parameter | Default |').find(r => stripTicks(r[0]!) === 'unit')![2]!
+    const unitField = mdTable(apiMd, '| Mint field |').find(r => backticked(r[0]!)[0] === 'units')![2]!
+    for (const [where, text] of [
+      [`${API_MD} unit parameter`, unitRow], [`${API_MD} units field`, unitField],
+      [OPENAPI, openapi],
+    ] as const) expect(plain(text), where).toContain(sentence)
+    expect(plain(openapi).split(sentence).length - 1, `${OPENAPI}: unit parameter and units property`).toBe(2)
+    for (const [where, text] of [
+      ['WALLET_QUERY_PARAMS unit', WALLET_QUERY_PARAMS.find(p => p.name === 'unit')!.meaning],
+      ['WALLET_MINT_FIELDS units', WALLET_MINT_FIELDS.find(f => f.name === 'units')!.meaning],
+    ] as const) expect(plain(text), where).toContain(sentence)
+    expect(plain(openapi)).not.toContain("keysets list")
   })
 })
 

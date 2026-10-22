@@ -1,6 +1,6 @@
-import { useId, useRef, useState, type KeyboardEvent } from 'react'
+import { Fragment, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { InfoTooltip } from '@/components/InfoTooltip'
-import { auditCzStateTitle, auditCzSourceLine, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, type AuditCzView, type AuditSwapRow } from '@/utils/auditCz'
+import { auditCzStateTitle, auditCzSourceLine, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, formatSwapDuration, type AuditCzView, type AuditSwapRow } from '@/utils/auditCz'
 import { mintHostname } from '@/utils/mintFormatting'
 
 // The cashu.info view of the Audit tab below the header: four tiles, the auditor's checks and two
@@ -67,7 +67,7 @@ function SwapTable({ title, firstHeader, rows, expanded, onToggle }: {
                     <td>{s.toUrl ? mintHostname(s.toUrl) : '—'}</td>
                     <td>{s.amount !== null ? `${s.amount} sat` : '—'}</td>
                     <td>{s.fee !== null ? s.fee : '—'}</td>
-                    <td>{s.timeTakenMs !== null ? `${Math.round(s.timeTakenMs)} ms` : '—'}</td>
+                    <td>{s.timeTakenMs !== null ? formatSwapDuration(s.timeTakenMs) : '—'}</td>
                     {/* Rows that are not OK: the failure text as tooltip and as visually hidden text (a title is not available on touch or to screen readers). Plain text only. */}
                     <td>
                       <AuditStateText row={s} />
@@ -88,6 +88,11 @@ function SwapTable({ title, firstHeader, rows, expanded, onToggle }: {
   )
 }
 
+/** A line-break opportunity after each "_" ("mint_quote" wraps as "mint_" / "quote", never inside a word); no <wbr> text is added. */
+function breakAfterUnderscore(text: string): ReactNode {
+  return text.split('_').map((part, i, all) => <Fragment key={i}>{part}{i < all.length - 1 ? <>_<wbr /></> : null}</Fragment>)
+}
+
 /**
  * The State cell text of a swap row: the state (or the grey-row wording) and, for a row that is not OK, the failure
  * text as an InfoTooltip on it and as visually hidden text (a title is not available on touch or to screen readers).
@@ -95,7 +100,7 @@ function SwapTable({ title, firstHeader, rows, expanded, onToggle }: {
  */
 export function AuditStateText({ row: s }: { row: AuditSwapRow }) {
   const tip = auditCzStateTitle(s)
-  const text = s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TEXT[s.neutral] : <>{s.state}{s.stage ? ` (${s.stage})` : null}</>
+  const text = s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TEXT[s.neutral] : <>{breakAfterUnderscore(s.state)}{s.stage ? <>{' ('}{breakAfterUnderscore(s.stage)}{')'}</> : null}</>
   return (
     <>
       {tip ? <InfoTooltip text={tip} width={240}><span>{text}</span></InfoTooltip> : text}

@@ -27,7 +27,7 @@ Machine-readable description: [`docs/openapi/wallets-v1.yaml`](openapi/wallets-v
 
 | Parameter | Default | Meaning |
 |---|---|---|
-| `unit` | — | Keep mints that list this unit (`sat`, `usd`, `eur`, …; case-insensitive; 1 to 16 letters, digits, `_` or `-`, an empty value is a `400`). Mints whose units are unknown (`units: null`) never match. |
+| `unit` | — | Keep mints that list this unit (`sat`, `usd`, `eur`, …; case-insensitive; 1 to 16 letters, digits, `_` or `-`, an empty value is a `400`). Mints whose units are unknown (`units: null`) never match. `units` and the `unit=` filter list the units for which the mint declares a payment method (NUT-04/05); units that appear only in keysets (`include=keysets`) are not included, so a mint with no declared methods has `units: null`. |
 | `minScore` | — | Integer 0 to 100: keep mints with `score >= minScore` (a mint without a score never matches). |
 | `includeOffline` | `false` | Also return `offline` and `degraded` mints (see `status` for the exact rule). |
 | `includeArchived` | `false` | Also return `archived` mints (see `status`). This flag alone is enough for them. |
@@ -121,7 +121,7 @@ Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` l
 | `scoreCappedNew` | boolean | `true` while the mint is younger than 30 days: its score is capped at 75. |
 | `uptime24hPct`, `uptime7dPct` | integer \| null | Share of successful probes in the last 24 hours / 7 days (percent, rounded); `null` when there was no probe in the window. |
 | `lastCheckedAt` | string, ISO 8601 UTC \| null | Latest probe. |
-| `units` | string[] \| null | Units the mint's keysets list; `null` when unknown. |
+| `units` | string[] \| null | Units the mint lists (`sat`, `usd`, `eur`, …); `null` when unknown. `units` and the `unit=` filter list the units for which the mint declares a payment method (NUT-04/05); units that appear only in keysets (`include=keysets`) are not included, so a mint with no declared methods has `units: null`. |
 | `nuts` | string[] \| null | NUT numbers the mint advertises (ascending, as strings); a NUT whose `/v1/info` entry has `"supported": false` is **not** counted as supported and is not listed (since methodology 4, 2026-10-21); `null` when unknown. |
 | `software` | string \| null | The mint's own version string (`Nutshell/0.21.0`); untrusted text, at most 100 characters. |
 | `outdated` | boolean \| null | `true`: two or more minor versions behind the newest stable release of that software family. `false`: not outdated. `null`: unknown software, no or unreadable version, or no reference release. |

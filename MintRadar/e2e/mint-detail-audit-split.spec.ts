@@ -190,12 +190,13 @@ test.describe('swap tables behind a tablist', () => {
 })
 
 // Task Z: on phones the State text of a failed row was cut by its 54 px cell ("failed (melt)" read "…led (me"). It wraps now.
+// Task A1 fix 3: and it wraps only at the space or after an underscore ("failed (mint_quote)" was "mint_qu" / "ote)"), never inside a word.
 for (const [w, h] of [[640, 900], [390, 844], [320, 640]] as const) {
   test(`State text of failed rows is not clipped and the page does not scroll sideways @ ${w}px`, async ({ page }) => {
     await resize(page, w, h)
     const swaps = [
-      ...czSwapList([ok, { ...melt, kind: 'a-rather-long-destination-host-name', stage: 'melt' }, { kind: 'another-long-mint-host-name', status: 'failed', stage: 'mint', error: 'mint failed', durationMs: 12345, amount: 1234567 }, limits, pending]),
-      ...czSwapList([ok, melt, { kind: 'another-long-mint-host-name', status: 'failed', stage: 'mint', error: 'mint failed', durationMs: 12345 }]).map((x, i) => ({ ...x, id: `t${i}`, direction: 'to' as const, at: ago((90 + i) * 60_000) })),
+      ...czSwapList([ok, { ...melt, kind: 'a-rather-long-destination-host-name', stage: 'melt' }, { kind: 'another-long-mint-host-name', status: 'failed', stage: 'mint_quote', error: 'mint failed', durationMs: 12345, amount: 1234567 }, limits, pending]),
+      ...czSwapList([ok, melt, { kind: 'another-long-mint-host-name', status: 'failed', stage: 'mint_quote', error: 'mint failed', durationMs: 12345 }]).map((x, i) => ({ ...x, id: `t${i}`, direction: 'to' as const, at: ago((90 + i) * 60_000) })),
     ]
     await gotoAuditTab(page, czOnly(auditCzResponse({ swaps })))
     await layoutReady(page)
@@ -205,7 +206,7 @@ for (const [w, h] of [[640, 900], [390, 844], [320, 640]] as const) {
       await expect(rows.first()).toBeVisible()
       await layoutReady(page)
       const m = await page.evaluate(() => {
-        const out: Array<{ state: string; cellClipped: boolean; textOutside: boolean; amountClipped: boolean; fontPx: number }> = []
+        const out: Array<{ state: string; cellClipped: boolean; textOutside: boolean; amountClipped: boolean; fontPx: number; splitWords: string[] }> = []
         for (const tr of document.querySelectorAll('.audit-swaps-table tbody tr:not(:first-child)')) {
           const cells = tr.querySelectorAll('td')
           const td = cells[cells.length - 1] as HTMLElement
@@ -218,6 +219,32 @@ for (const [w, h] of [[640, 900], [390, 844], [320, 640]] as const) {
             textOutside: tr2.right > cr.right + 1 || tr2.left < cr.left - 1,
             amountClipped: amount.scrollWidth > amount.clientWidth + 1,
             fontPx: parseFloat(getComputedStyle(td).fontSize),
+            // A word is a run of characters between a space and the next space or underscore (the underscore stays with the word before it).
+            // Every character of it must sit on one line: a word split over two lines is a mid-word wrap.
+            splitWords: (() => {
+              const chars: Array<{ ch: string; top: number }> = []
+              const walker = document.createTreeWalker(trigger, NodeFilter.SHOW_TEXT)
+              for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+                if ((n.parentElement as HTMLElement).closest('.sr-only')) continue
+                const text = n.textContent ?? ''
+                for (let i = 0; i < text.length; i++) {
+                  const range = document.createRange()
+                  range.setStart(n, i); range.setEnd(n, i + 1)
+                  const rect = range.getClientRects()[0]
+                  if (rect) chars.push({ ch: text[i]!, top: rect.top })
+                }
+              }
+              const split: string[] = []
+              let word: typeof chars = []
+              const flush = () => { if (word.length && word.some(c => Math.abs(c.top - word[0]!.top) > 3)) split.push(word.map(c => c.ch).join('')); word = [] }
+              for (const c of chars) {
+                if (/\s/.test(c.ch)) { flush(); continue }
+                word.push(c)
+                if (c.ch === '_') flush()
+              }
+              flush()
+              return split
+            })(),
           })
         }
         return { rows: out, doc: document.documentElement.scrollWidth - window.innerWidth, wrap: (document.querySelector('.audit-swaps-table-wrap') as HTMLElement).scrollWidth - (document.querySelector('.audit-swaps-table-wrap') as HTMLElement).clientWidth }
@@ -228,6 +255,7 @@ for (const [w, h] of [[640, 900], [390, 844], [320, 640]] as const) {
         expect(r.textOutside, `${panel}: "${r.state}" leaves its cell`).toBe(false)
         expect(r.amountClipped, `${panel}: amount cut next to "${r.state}"`).toBe(false)
         expect(r.fontPx).toBeGreaterThanOrEqual(12)
+        expect(r.splitWords, `${panel}: "${r.state}" breaks inside a word`).toEqual([])
       }
       expect(m.doc, panel).toBeLessThanOrEqual(0)
       expect(m.wrap, `${panel}: the table scrolls inside its box`).toBeLessThanOrEqual(0)
@@ -235,8 +263,25 @@ for (const [w, h] of [[640, 900], [390, 844], [320, 640]] as const) {
     // the failed row keeps its styling and its full state is in the text
     await page.getByRole('tab', { name: /^From this mint/ }).click()
     await expect(page.locator('tr.audit-swap-row-fail').first()).toContainText('failed (melt)')
+    await expect(page.locator('tr.audit-swap-row-fail', { hasText: 'failed (mint_quote)' })).toHaveCount(1)
   })
 }
+
+// Task A1 fix 2: under a minute the Duration cell stays in ms, from a minute on it is a short human form (4 h 48 min, not 17289722 ms).
+test('Duration of a swap: ms under a minute, a short form from a minute on, in both tables', async ({ page }) => {
+  await resize(page, 1440, 900)
+  const swaps = [
+    ...czSwapList([{ ...ok, durationMs: 1759 }, { ...melt, durationMs: 17289722 }, { ...melt, durationMs: 62000 }, { ...melt, durationMs: 183600000 }]),
+    ...czSwapList([{ ...melt, durationMs: 59999 }, { ...melt, durationMs: 3600000 }]).map((x, i) => ({ ...x, id: `t${i}`, direction: 'to' as const, at: ago((90 + i) * 60_000) })),
+  ]
+  await gotoAuditTab(page, czOnly(auditCzResponse({ swaps })))
+  const durations = () => page.locator('.audit-swaps-table tbody tr').evaluateAll(trs => trs.map(tr => tr.querySelectorAll('td')[3]!.textContent))
+  await expect(page.locator('.audit-swaps-table tbody tr').first()).toBeVisible()
+  expect(await durations()).toEqual(['1759 ms', '4 h 48 min', '1 min 2 s', '2 d 3 h'])
+  await page.getByRole('tab', { name: /^To this mint/ }).click()
+  await expect(page.locator('.audit-swaps-table tbody tr')).toHaveCount(2)
+  expect(await durations()).toEqual(['59999 ms', '1 h'])
+})
 
 for (const [w, h] of [[1440, 900], [768, 1024], [390, 844], [320, 640]] as const) {
   test(`layout at ${w}px: inside the panel, no overflow, 12px floor on phones`, async ({ page }) => {

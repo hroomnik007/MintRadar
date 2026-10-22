@@ -21,8 +21,8 @@ test.describe('Mint Detail', () => {
     await expect(summary).toContainText('50 ms')            // latency from known-mints
     await expect(summary).toContainText('99%')              // uptime 24h from history
     await expect(summary).toContainText('Nutshell/0.16.0')  // version
-    // NUTs count = number of keys in the probe info.nuts (12 for Alpha).
-    await expect(summary.locator('.md-sc-value.green')).toHaveText('12')
+    // NUTs count = the tracked NUTs the probe's info.nuts declares as supported (Alpha declares 12 keys, one of them, 13, is not tracked: 11).
+    await expect(summary.locator('.md-sc-value.green')).toHaveText('11')
   })
 
   test('tab navigation switches panels', async ({ page }) => {
@@ -148,7 +148,7 @@ test.describe('Mint Detail — /mint/:url canonicalisation (bare-host collision 
     await expect(page.locator('.md-tabs')).toBeVisible()
     await expect(page.getByText('Alpha Mint').first()).toBeVisible()
     await expect(page.locator('.md-status-inline')).toContainText('Online')
-    await expect(page.locator('.md-summary').locator('.md-sc-value.green')).toHaveText('12')
+    await expect(page.locator('.md-summary').locator('.md-sc-value.green')).toHaveText('11')
     await expect(page.locator('.md-not-tracked')).toHaveCount(0)
   })
 

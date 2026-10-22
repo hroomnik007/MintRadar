@@ -882,7 +882,6 @@ function MintDetailContent({ url }: { url: string }) {
   const version = data?.info?.version ?? knownMint?.version ?? undefined
   // The one "latest" of this mint's software family, as the API sent it with the stored score (versionRule.ts).
   const versionLatestMap = latestMapFor(knownMint?.version, knownMint?.softwareLatest)
-  const nutCount = data?.info ? Object.keys(data.info.nuts).length : (knownMint?.nutCount ?? 0)
   const motd = data?.info?.motd
   const description = data?.info?.description
   const pubkey = data?.info?.pubkey
@@ -929,6 +928,9 @@ function MintDetailContent({ url }: { url: string }) {
   const supportedNuts = TRACKED_NUTS.filter(nut =>
     supportedNutNumbers.has(String(parseInt(nut.slice(4), 10)))
   )
+  // Header NUT count: the same tracked + declared-as-supported count as the NUTs tab and the score (the stored one until the
+  // live /v1/info arrives). Object.keys(nuts).length also counted untracked NUTs and `supported: false` entries.
+  const nutCount = data?.info ? supportedNuts.length : (knownMint?.nutCount ?? 0)
   // NUT-13 (deterministic secrets) is wallet-side only — mints never advertise
   // it in /v1/info (confirmed against live Nutshell mints and the cashubtc/nuts
   // spec, which lists no mint implementations for NUT-13 at all). The mint-side

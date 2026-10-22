@@ -38,7 +38,7 @@ export const HEALTH_ASSERTION_TAGS: readonly HealthAssertionTag[] = [
   { name: 'd', type: 'text (URL)', source: 'NIP-85', presence: 'always', meaning: 'The NIP-73 identifier of the subject: the mint URL, normalised (https, lower-case host, no default port, no trailing slash on a bare host, no fragment).' },
   { name: 'k', type: 'text', source: 'NIP-73', presence: 'always', meaning: 'Always web: the NIP-73 type of the d value (NIP-85 says to add it).' },
   { name: 'rank', type: 'integer 0 to 100', source: 'NIP-85', presence: 'always', meaning: 'The Reliability Score of the mint (the same number as score in the API).' },
-  { name: 'mint_status', type: 'online | offline | degraded', source: 'MintRadar', presence: 'always', meaning: 'State at the last probe. degraded: no successful probe in the last 24 hours.' },
+  { name: 'mint_status', type: 'online | offline | degraded', source: 'MintRadar', presence: 'always', meaning: 'State at the last probe. degraded: the latest probe failed and either at least 4 probes in the last 24 hours all failed or that failed probe is more than 24 hours old.' },
   { name: 'mint_uptime_24h', type: 'integer 0 to 100', source: 'MintRadar', presence: 'when known', meaning: 'Percentage of successful probes in the last 24 hours.' },
   { name: 'mint_uptime_7d', type: 'integer 0 to 100', source: 'MintRadar', presence: 'when known', meaning: 'Percentage of successful probes in the last 7 days.' },
   { name: 'mint_software', type: 'text, up to 64 characters', source: 'MintRadar', presence: 'when the version string is short and plain', meaning: 'The version string the mint reports about itself. It comes from the mint: show it as plain text, never as a link or markup.' },

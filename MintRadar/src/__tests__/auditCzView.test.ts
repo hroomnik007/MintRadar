@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { adaptAuditCz, auditCzSourceLine, auditCzNeutralKind, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, type AuditCzView } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzSourceLine, auditCzNeutralKind, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, type AuditCzView } from '@/utils/auditCz'
 import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
 
 type Row = AuditCzData['swaps'][number]
@@ -109,6 +109,19 @@ describe('tiles from the stored detail (LNpay values)', () => {
     expect(formatAvgSwapTime(999.4)).toBe('999 ms')
     expect(formatAvgSwapTime(999.6)).toBe('1.0 s')
     expect(formatAvgSwapTime(0)).toBe('0 ms')
+  })
+  it('formats a swap duration: ms under a minute, a short human form from a minute on', () => {
+    expect(formatSwapDuration(0)).toBe('0 ms')
+    expect(formatSwapDuration(1759)).toBe('1759 ms')
+    expect(formatSwapDuration(59999)).toBe('59999 ms')
+    expect(formatSwapDuration(60000)).toBe('1 min')
+    expect(formatSwapDuration(62000)).toBe('1 min 2 s')
+    expect(formatSwapDuration(3599999)).toBe('59 min 59 s')
+    expect(formatSwapDuration(3600000)).toBe('1 h')
+    expect(formatSwapDuration(17289722)).toBe('4 h 48 min')
+    expect(formatSwapDuration(86399999)).toBe('23 h 59 min')
+    expect(formatSwapDuration(86400000)).toBe('1 d')
+    expect(formatSwapDuration(183600000)).toBe('2 d 3 h')
   })
   it('tooltips are the honest wording', () => {
     const t = tiles(LNPAY)

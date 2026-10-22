@@ -67,11 +67,11 @@ paths:
         then `uptime7dPct` descending (null last), then `name` (the hostname when `name` is null), then `url`.
         A query value that is present but invalid (a repeated parameter included; the boolean flags take exactly `true` or `false`) is a `400`; unknown parameters are ignored.
         `total` counts the mints that match the filters before `limit` is applied; `truncated` is true when `limit` cut the list.
-        The heavier fields (`pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `keysets`, `keysetsCheckedAt`, `methods`, `scoreBreakdown`) are only in the objects when `include` asks for them.
+        The heavier fields (`pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection`, `keysets`, `keysetsCheckedAt`, `methods`, `scoreBreakdown`) are only in the objects when `include` asks for them.
       parameters:
         - name: unit
           in: query
-          description: 'Keep mints that list this unit (case-insensitive). Mints with `units: null` never match.'
+          description: 'Keep mints that list this unit (case-insensitive). Mints with `units: null` never match. `units` and the `unit=` filter list the units for which the mint declares a payment method (NUT-04/05); units that appear only in keysets (`include=keysets`) are not included, so a mint with no declared methods has `units: null`.'
           schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,16}$' }
           example: sat
         - name: minScore
@@ -128,7 +128,7 @@ paths:
           in: query
           description: >-
             Comma-separated list of `facts`, `keysets`, `methods`, `breakdown`, `changes`: add the heavier fields of that name to every object
-            (`facts` brings `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample` and `contactChecks`; `keysets` brings `keysets` and `keysetsCheckedAt`; `methods` brings
+            (`facts` brings `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `feeExamples`, `limits` and `auditByDirection`; `keysets` brings `keysets` and `keysetsCheckedAt`; `methods` brings
             `methods`; `breakdown` brings `scoreBreakdown`; `changes` brings the newest 10 `changes` of each mint).
             An unknown value is a `400`. Added 2026-10-20.
           schema: { type: string, pattern: '^(facts|keysets|methods|breakdown|changes)(,(facts|keysets|methods|breakdown|changes))*$' }
@@ -433,7 +433,7 @@ components:
         units:
           type: [array, 'null']
           items: { type: string }
-          description: Units the mint's keysets list; null when unknown.
+          description: 'Units the mint lists (sat, usd, eur, ...); null when unknown. `units` and the `unit=` filter list the units for which the mint declares a payment method (NUT-04/05); units that appear only in keysets (`include=keysets`) are not included, so a mint with no declared methods has `units: null`.'
         nuts:
           type: [array, 'null']
           items: { type: string }

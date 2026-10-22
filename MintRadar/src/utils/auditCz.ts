@@ -151,6 +151,23 @@ export function formatAvgSwapTime(ms: number): string {
   return r < 1000 ? `${r} ms` : `${(r / 1000).toFixed(1)} s`
 }
 
+/**
+ * The Duration cell of a swap row. Under 60 s: "{n} ms", as before. From 60 s: the two biggest units, whole numbers
+ * (cut, not rounded) and a zero part left out: "1 min 2 s", "4 h 48 min", "2 d 3 h", "1 d". A failed swap can run for hours
+ * before it fails or expires, which was unreadable in milliseconds.
+ */
+export function formatSwapDuration(ms: number): string {
+  const r = Math.round(ms)
+  if (r < 60_000) return `${r} ms`
+  const parts = (big: number, bigUnit: string, rest: number, restUnit: string) => (rest > 0 ? `${big} ${bigUnit} ${rest} ${restUnit}` : `${big} ${bigUnit}`)
+  const totalS = Math.floor(r / 1000)
+  if (totalS < 3600) return parts(Math.floor(totalS / 60), 'min', totalS % 60, 's')
+  const totalMin = Math.floor(totalS / 60)
+  if (totalMin < 1440) return parts(Math.floor(totalMin / 60), 'h', totalMin % 60, 'min')
+  const totalH = Math.floor(totalMin / 60)
+  return parts(Math.floor(totalH / 24), 'd', totalH % 24, 'h')
+}
+
 const fmt = (n: number) => n.toLocaleString('en-US')
 
 /** One direction tile: successful / attempts, "N failed" under it when the source counts failures, "No data" when the numbers are missing. */

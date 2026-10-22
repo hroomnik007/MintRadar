@@ -38,7 +38,7 @@ export const WALLET_MINT_FIELDS: readonly WalletField[] = [
   { name: 'uptime24hPct', type: 'integer', nullable: true, meaning: 'Share of successful probes in the last 24 hours, in percent.' },
   { name: 'uptime7dPct', type: 'integer', nullable: true, meaning: 'Share of successful probes in the last 7 days, in percent.' },
   { name: 'lastCheckedAt', type: 'string (ISO 8601, UTC)', nullable: true, meaning: 'Time of the latest probe.' },
-  { name: 'units', type: 'string[]', nullable: true, meaning: 'Units the mint lists (sat, usd, eur, ...). null when unknown.' },
+  { name: 'units', type: 'string[]', nullable: true, meaning: 'Units the mint lists (sat, usd, eur, ...). null when unknown. units and the unit= filter list the units for which the mint declares a payment method (NUT-04/05); units that appear only in keysets (include=keysets) are not included, so a mint with no declared methods has units: null.' },
   { name: 'nuts', type: 'string[]', nullable: true, meaning: 'NUT numbers the mint advertises, ascending, as strings. A NUT whose /v1/info entry has "supported": false is not listed. null when unknown.' },
   { name: 'software', type: 'string', nullable: true, meaning: 'The mint\'s own version string, for example Nutshell/0.21.0. Untrusted text, at most 100 characters.' },
   { name: 'outdated', type: 'boolean', nullable: true, meaning: 'true: two or more minor versions behind the newest stable release. false: not outdated. null: unknown software, no or unreadable version, or no reference release.' },
@@ -101,7 +101,7 @@ export interface WalletQueryParam {
 
 /** The optional list query parameters; a present but invalid value is a 400, unknown parameters are ignored. */
 export const WALLET_QUERY_PARAMS: readonly WalletQueryParam[] = [
-  { name: 'unit', type: 'string', default: 'any', meaning: 'Keep mints that list this unit (sat, usd, eur, ...; case-insensitive; 1 to 16 letters, digits, _ or -). Mints whose units are unknown never match.' },
+  { name: 'unit', type: 'string', default: 'any', meaning: 'Keep mints that list this unit (sat, usd, eur, ...; case-insensitive; 1 to 16 letters, digits, _ or -). Mints whose units are unknown never match. units and the unit= filter list the units for which the mint declares a payment method (NUT-04/05); units that appear only in keysets (include=keysets) are not included, so a mint with no declared methods has units: null.' },
   { name: 'minScore', type: 'integer 0 to 100', default: 'none', meaning: 'Keep mints with score >= minScore. A mint without a score never matches.' },
   { name: 'includeOffline', type: 'true | false', default: 'false', meaning: 'Also return offline and degraded mints.' },
   { name: 'includeArchived', type: 'true | false', default: 'false', meaning: 'Also return archived mints (see status).' },
@@ -111,7 +111,7 @@ export const WALLET_QUERY_PARAMS: readonly WalletQueryParam[] = [
   { name: 'eligible', type: 'true | false', default: 'none', meaning: 'true: keep only mints with eligibleForRecommendation: true, the ones the deprecated /mints/recommend would return. false: keep only the others. Combine with unit, minScore, nuts and limit to replace /mints/recommend.' },
   { name: 'method', type: 'bolt11 | bolt12 | onchain', default: 'none', meaning: 'Keep mints that advertise this payment method in NUT-04 or NUT-05, on any unit; with unit also given, on that unit. A mint whose methods are unknown never matches. Added 2026-10-20.' },
   { name: 'maxInputFeePpk', type: 'integer 0 to 1000000', default: 'none', meaning: 'Keep mints whose active keysets for unit (every unit when unit is not given) all have inputFeePpk <= this value. A mint with an unknown fee, or without an active keyset in scope, is excluded. Added 2026-10-20.' },
-  { name: 'include', type: 'comma-separated: facts, keysets, methods, breakdown, changes', default: 'none', meaning: 'Add the heavier fields to every object of the list: facts (pubkey, firstSeenAt, lastOnlineAt, sample, contactChecks), keysets (and keysetsCheckedAt), methods, breakdown (scoreBreakdown), changes (the newest 10 per mint). Unknown values are a 400. Added 2026-10-20.' },
+  { name: 'include', type: 'comma-separated: facts, keysets, methods, breakdown, changes', default: 'none', meaning: 'Add the heavier fields to every object of the list: facts (pubkey, firstSeenAt, lastOnlineAt, sample, contactChecks, feeExamples, limits and auditByDirection), keysets (and keysetsCheckedAt), methods, breakdown (scoreBreakdown), changes (the newest 10 per mint). Unknown values are a 400. Added 2026-10-20.' },
   { name: 'changedSince', type: 'ISO 8601 UTC time or UNIX seconds', default: 'none', meaning: 'Keep mints with at least one confirmed change observed after this time. Accepted: an ISO 8601 time with Z or an offset (2026-10-20T12:00:00Z; encode + as %2B), a bare date (00:00 UTC), or UNIX seconds (9 to 11 digits). Anything else is a 400. The JSON API writes times as ISO 8601; the Nostr tags use UNIX seconds. Added 2026-10-20.' },
   { name: 'limit', type: 'integer 1 to 200', default: '100', meaning: 'Maximum number of mints returned.' },
 ]

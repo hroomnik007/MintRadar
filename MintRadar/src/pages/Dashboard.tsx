@@ -24,6 +24,7 @@ import { isNotRecommendedMint, partitionNotRecommended } from '@/utils/notRecomm
 import { cleanMintName } from '@/utils/cleanMintName'
 import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolForStatus } from '@/utils/mintCounts'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
+import { isNutDeclaredSupported } from '@/utils/nutSupport'
 import { SITE_DESCRIPTION } from '@/constants/routeMeta'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
 import { InfoTooltip } from '@/components/InfoTooltip'
@@ -942,6 +943,7 @@ export default function Dashboard() {
         .then(data => {
           if (data === null || ctrl.signal.aborted) return
           if (data.online && data.info) {
+            const nuts = data.info.nuts as Record<string, unknown>
             setProbe({
               url: submitUrl,
               state: 'success',
@@ -949,7 +951,8 @@ export default function Dashboard() {
                 // Cleaned like every displayed mint name (cleanMintName.ts); '' = nothing displayable -> "Unknown mint".
                 name: cleanMintName(data.info.name, '') || null,
                 version: data.info.version ?? null,
-                nutCount: Object.keys(data.info.nuts).length,
+                // The tracked NUTs the mint declares as supported, like the mint card and the score (not every key of `nuts`).
+                nutCount: TRACKED_NUT_KEYS.filter(key => isNutDeclaredSupported(nuts[key])).length,
                 latencyMs: data.latencyMs,
               },
             })
