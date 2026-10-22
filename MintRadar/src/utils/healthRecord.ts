@@ -4,6 +4,7 @@
 import { nip19 } from 'nostr-tools'
 import { ATTESTATION_PUBKEY_HEX, ATTESTATION_RELAYS_PUBLIC } from './healthAssertionConstants'
 import { normalizeMintUrl } from './mintFormatting'
+import { njumpNaddrUrl } from './nostrLinks'
 
 /** NIP-85 "NIP-73 identifier as subject" (addressable), same value as HEALTH_KIND in backend/src/healthAssertions.ts. */
 export const HEALTH_KIND = 30385
@@ -22,8 +23,13 @@ export function healthIdentifier(rawUrl: string): string | null {
   return normalizeMintUrl(parsed.toString())
 }
 
+/** The MintRadar relay the record is read from (the first of the public relays; the naddr and the nak command carry all of them). */
+export const HEALTH_RELAY_URL: string = ATTESTATION_RELAYS_PUBLIC[0]
+
 export interface HealthRecord {
   naddr: string
+  /** njump.me page for humans; null when it cannot be built (then no link is shown). */
+  njumpUrl: string | null
   nakCommand: string
 }
 
@@ -35,5 +41,5 @@ export function healthRecordFor(rawUrl: string): HealthRecord | null {
   const naddr = nip19.naddrEncode({ kind: HEALTH_KIND, pubkey: ATTESTATION_PUBKEY_HEX, identifier: d, relays })
   const quoted = `'${d.replace(/'/g, `'\\''`)}'`
   const nakCommand = `nak req -k ${HEALTH_KIND} -a ${ATTESTATION_PUBKEY_HEX} -d ${quoted} ${relays.join(' ')}`
-  return { naddr, nakCommand }
+  return { naddr, njumpUrl: njumpNaddrUrl(naddr), nakCommand }
 }

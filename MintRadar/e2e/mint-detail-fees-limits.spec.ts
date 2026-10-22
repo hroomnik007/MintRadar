@@ -53,13 +53,13 @@ const KS_FEE = [
   { id: '00c074b96c7e2b0e', unit: 'sat', active: false, input_fee_ppk: 5000 },
 ]
 
-test('a mint with an input fee: examples for 1 / 16 / 100 proofs, rounded up, in the unit', async ({ page }) => {
+test('a mint with an input fee: the fee for spending 1 / 16 / 100 coins, rounded up, in the unit', async ({ page }) => {
   await open(page, { keysets: KS_FEE })
   await expect(group(page)).toBeVisible()
   await expect(group(page).locator('.md-panel-title')).toHaveText('Fees and limits')
   await expect(fees(page).locator('.md-info-row')).toHaveCount(1)
   await expect(fees(page).locator('.md-info-label')).toHaveText('Input fee · sat')
-  await expect(fees(page).locator('.md-info-value')).toHaveText('Spending 1 / 16 / 100 proofs: 1 / 2 / 10 sat')
+  await expect(fees(page).locator('.md-info-value')).toHaveText('Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 sat')
 })
 
 test('the effective fee is the largest of the ACTIVE keysets; several units get a row each', async ({ page }) => {
@@ -70,9 +70,49 @@ test('the effective fee is the largest of the ACTIVE keysets; several units get 
   ] })
   await expect(fees(page).locator('.md-info-row')).toHaveCount(2)
   await expect(fees(page).locator('.md-info-value')).toHaveText([
-    'Spending 1 / 16 / 100 proofs: 1 / 4 / 25 sat',
-    'Spending 1 / 16 / 100 proofs: 1 / 16 / 100 usd',
+    'Fee when you spend 1 / 16 / 100 coins: 1 / 4 / 25 sat',
+    'Fee when you spend 1 / 16 / 100 coins: 1 / 16 / 100 cents',
   ])
+})
+
+const FEE_TIP = 'Your balance is made of many small coins. When you pay, the mint charges a small fee for each coin used. Wallets can keep this low by holding fewer, larger coins.'
+
+test('plain wording: "coins" instead of "proofs", cents for usd and eur, the raw unit for any other unit; the numbers are unchanged', async ({ page }) => {
+  await open(page, { keysets: [
+    ...KS_FEE,
+    { id: '01bbbbbbbbbbbbbb', unit: 'usd', active: true, input_fee_ppk: 100 },
+    { id: '01cccccccccccccc', unit: 'eur', active: true, input_fee_ppk: 1000 },
+    { id: '00dddddddddddddd', unit: 'lek', active: true, input_fee_ppk: 100 },
+  ] })
+  await expect(fees(page).locator('.md-info-label')).toHaveText(['Input fee · sat', 'Input fee · eur', 'Input fee · lek', 'Input fee · usd'])
+  await expect(fees(page).locator('.md-info-value')).toHaveText([
+    'Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 sat',
+    'Fee when you spend 1 / 16 / 100 coins: 1 / 16 / 100 cents',
+    'Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 lek',
+    'Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 cents',
+  ])
+  // nothing in the card body uses the technical words
+  await expect(group(page)).not.toContainText(/proof|ecash note/i)
+})
+
+test('the fee rows have a plain-language tooltip (button, named, opens by click, text as approved); a row without a fee has none', async ({ page }) => {
+  await open(page, { keysets: [...KS_FEE, { id: '01bbbbbbbbbbbbbb', unit: 'usd', active: true, input_fee_ppk: 0 }] })
+  await layoutReady(page)
+  const btn = fees(page).locator('button[data-tooltip-trigger]')
+  await expect(btn).toHaveCount(1)
+  await expect(btn).toHaveAttribute('aria-label', 'More information about input fee in sat')
+  // contract: a real button, a hit area of at least 24 x 24 px (the icon itself stays small), no overlap with the label's text
+  const box = (await btn.boundingBox())!
+  expect(box.width).toBeGreaterThanOrEqual(23.99)
+  expect(box.height).toBeGreaterThanOrEqual(23.99)
+  await expect(btn).toHaveAttribute('type', 'button')
+  await btn.click()
+  await expect(btn).toHaveAttribute('aria-describedby', /.+/)
+  const tip = page.locator('[role="tooltip"]')
+  await expect(tip).toHaveText(FEE_TIP)
+  expect(await tip.innerText()).not.toMatch(/proof|ecash note/i)
+  await page.keyboard.press('Escape')
+  await expect(tip).toHaveCount(0)
 })
 
 test('zero fee and undeclared limits: "No input fee" and "not declared", never a number', async ({ page }) => {
@@ -207,7 +247,7 @@ test('while the probe is held the group keeps its place; releasing it shifts not
   const shift = () => page.evaluate(() => { const w = window as unknown as { __cls: number; __obs: PerformanceObserver }; w.__obs.takeRecords(); return w.__cls })
   const clsBefore = await shift()
   letThrough()
-  await expect(fees(page).locator('.md-info-value')).toHaveText('Spending 1 / 16 / 100 proofs: 1 / 2 / 10 sat')
+  await expect(fees(page).locator('.md-info-value')).toHaveText('Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 sat')
   await layoutReady(page)
   const after = (await group(page).boundingBox())!.height
   expect(Math.abs(after - before), `placeholder ${before}px vs loaded ${after}px`).toBeLessThanOrEqual(12)

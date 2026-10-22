@@ -128,6 +128,9 @@ export const REVIEWS_NIP87_TEXT = 'Anyone can create a key, so ratings can be in
 /** Tools: the signature check of the Token Inspector. */
 export const SIGNATURE_CHECK_TEXT = "Checks each proof's signature proof (NUT-12 DLEQ), when it has one. A pass means this mint signed it. It does not show the token is unspent or the mint is reliable."
 
+/** Mint Detail, Fees and limits card: what the fee examples mean (the card says "coins" where the wallet API says "proofs"). */
+export const FEE_PER_COIN_TEXT = 'Your balance is made of many small coins. When you pay, the mint charges a small fee for each coin used. Wallets can keep this low by holding fewer, larger coins.'
+
 /** Compare modal. */
 export const INPUT_FEE_TEXT = "Fee per 1000 proofs spent, from the active keyset of the mint's main unit (NUT-02 input_fee_ppk). \"free\" = none, n/a = not reported."
 export function compareAuditSuccessText(): string {

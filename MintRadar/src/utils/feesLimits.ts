@@ -13,9 +13,21 @@ export const LIMIT_NOT_DECLARED = 'not declared'
 export const LIMITS_NOTE =
   'Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.'
 
+/**
+ * The unit as a person reads an amount of it: "sat" stays, the two fiat units the app knows (usd, eur: the
+ * Dashboard unit filter) count in cents, any other unit is shown as the mint states it. Only the label changes,
+ * never the number (a usd keyset's fee is already stated in cents).
+ */
+export function feeUnitLabel(unit: string): string {
+  const u = unit.trim().toLowerCase()
+  if (u === 'sat') return 'sat'
+  if (u === 'usd' || u === 'eur') return 'cents'
+  return unit
+}
+
 export interface FeeRow {
   unit: string
-  /** "Spending 1 / 16 / 100 proofs: 1 / 2 / 10 sat", or "No input fee". */
+  /** "Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 sat", or "No input fee". */
   text: string
 }
 
@@ -35,7 +47,7 @@ export function feesView(keysets: readonly FeeKeysetLike[] | null | undefined): 
       unit: u.unit,
       text: u.inputFeePpk === 0
         ? NO_INPUT_FEE
-        : `Spending ${FEE_EXAMPLE_PROOFS.join(' / ')} proofs: ${u.examples.map(e => e.fee.toLocaleString('en-US')).join(' / ')} ${u.unit}`,
+        : `Fee when you spend ${FEE_EXAMPLE_PROOFS.join(' / ')} coins: ${u.examples.map(e => e.fee.toLocaleString('en-US')).join(' / ')} ${feeUnitLabel(u.unit)}`,
     })),
     empty: null,
   }

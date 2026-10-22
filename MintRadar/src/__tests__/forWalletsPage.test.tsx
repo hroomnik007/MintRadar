@@ -21,6 +21,8 @@ import {
   type KnownMintLike, type WalletExtra,
 } from '../../backend/src/walletApi'
 import { RECOMMEND_DEPRECATION } from '../../backend/src/deprecation'
+import { HEALTH_RECORD_READ_CODE, HEALTH_RECORD_READ_TEXT, HEALTH_RECORD_READ_TITLE } from '@/constants/healthAssertionPage'
+import { healthIdentifier as beHealthIdentifier } from '../../backend/src/healthAssertions'
 
 const read = (rel: string) => readFileSync(resolve(__dirname, rel), 'utf8')
 const NOW = Date.UTC(2026, 9, 13, 12, 0, 0)
@@ -213,6 +215,21 @@ describe('error codes and numbers', () => {
     expect(read('../../docs/openapi/wallets-v1.yaml')).toContain('nuts=11,12')
   })
 
+  it('the "find the record of a mint from the API" example is the same on the page and in docs/API.md, uses only the url field, and the API gives no naddr or njump field', () => {
+    const api = read('../../docs/API.md').replace(/`/g, '')
+    expect(api).toContain(HEALTH_RECORD_READ_TITLE)
+    for (const t of HEALTH_RECORD_READ_TEXT) expect(api, t).toContain(t)
+    expect(read('../../docs/API.md')).toContain(HEALTH_RECORD_READ_CODE.split('\n').map(l => l).join('\n  '))
+    // the d tag of the record is the url field: the publisher's identifier of an API url is that url itself
+    for (const u of ['https://mint.minibits.cash/Bitcoin', 'https://mint.example.com', 'https://mint.example.com:3338/x']) {
+      const apiUrl = toWalletMint({ ...FULL, url: u }, NOW).url
+      expect(beHealthIdentifier(apiUrl)).toBe(apiUrl)
+    }
+    // nothing was added to the API: no field carries the address or the link
+    const names = [...WALLET_MINT_FIELDS, ...WALLET_ENVELOPE_FIELDS].map(f => f.name.toLowerCase())
+    expect(names.filter(n => /naddr|njump|nak/.test(n))).toEqual([])
+  })
+
   it('the documentation links use the blob URL pattern of the footer API link and point at files that exist', () => {
     const footer = read('../components/layout/AppShell.tsx')
     expect(footer).toContain('https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/API.md')
@@ -327,7 +344,8 @@ describe('the rendered page', () => {
     const c = renderPage()
     const buttons = Array.from(c.querySelectorAll<HTMLButtonElement>('.doc-copy-btn'))
     const blocks = Array.from(c.querySelectorAll('.doc-code-pre code')).map(b => b.textContent)
-    expect(buttons.length).toBe(WALLET_EXAMPLES.length + 1 + 6) // the examples, the error body and the 6 blocks of the signed assertions section (npub, hex, 2 filters, install, snippet)
+    expect(buttons.length).toBe(WALLET_EXAMPLES.length + 1 + 7) // the examples, the error body and the 7 blocks of the signed assertions section (npub, hex, 2 filters, the record-from-the-API example, install, snippet)
+    expect(blocks).toContain(HEALTH_RECORD_READ_CODE)
     expect(blocks).toHaveLength(buttons.length)
     for (const ex of WALLET_EXAMPLES) expect(blocks).toContain(ex.code)
     fireEvent.click(buttons[1]!)

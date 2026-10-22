@@ -12,6 +12,7 @@ import {
 } from '@/utils/healthAssertionConstants'
 import {
   ATTESTATION_NPUB, HEALTH_FACTS, HEALTH_FILTER_ALL, HEALTH_FILTER_ONE, HEALTH_SECTION_ID, HEALTH_SECTION_TITLE,
+  HEALTH_RECORD_READ_CODE, HEALTH_RECORD_READ_TEXT, HEALTH_RECORD_READ_TITLE,
   HEALTH_EXAMPLE_URL, HEALTH_SPEC_URL, HEALTH_SPEC_TAGS_URL,
 } from '@/constants/healthAssertionPage'
 import { VERIFY_HEALTH_FILE_NAME, VERIFY_HEALTH_INSTALL, VERIFY_HEALTH_RUNTIME_SENTENCE, VERIFY_HEALTH_SNIPPET } from '@/constants/verifyHealthSnippet'
@@ -341,6 +342,12 @@ export default function ForWallets() {
             For a single mint add <code>&quot;#d&quot;</code> with the normalised mint URL (rules below):
           </p>
           <CodeBlock label="Filter" title="Filter for one mint" code={HEALTH_FILTER_ONE} />
+
+          <h3 className="doc-h3">{HEALTH_RECORD_READ_TITLE}</h3>
+          <div data-testid="health-record-read">
+            {HEALTH_RECORD_READ_TEXT.map(t => <p key={t}>{t}</p>)}
+            <CodeBlock label="JavaScript" title="Filter, naddr and njump link for one mint" code={HEALTH_RECORD_READ_CODE} />
+          </div>
 
           <h3 className="doc-h3">Tags</h3>
           <div className="doc-table-wrap" tabIndex={0} role="region" aria-label="Tags of a health assertion">

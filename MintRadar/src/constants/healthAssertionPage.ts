@@ -4,7 +4,7 @@
 // purpose: the backend test loads this file without the "@" alias.
 
 import { nip19 } from 'nostr-tools'
-import { ATTESTATION_PUBKEY_HEX } from '../utils/healthAssertionConstants'
+import { ATTESTATION_PUBKEY_HEX, ATTESTATION_RELAYS_PUBLIC } from '../utils/healthAssertionConstants'
 import { REPO_BLOB_URL } from './contact'
 
 export const HEALTH_SECTION_ID = 'signed-health-assertions'
@@ -31,6 +31,27 @@ export const HEALTH_FACTS = {
 
 export const HEALTH_FILTER_ALL = `{ kinds: [30385], authors: ['${ATTESTATION_PUBKEY_HEX}'], limit: ${HEALTH_FACTS.queryLimit} }`
 export const HEALTH_FILTER_ONE = `{ kinds: [30385], authors: ['${ATTESTATION_PUBKEY_HEX}'], '#d': ['https://mint.example.com'] }`
+
+export const HEALTH_RECORD_READ_TITLE = 'Find the record of a mint from the API'
+/**
+ * The same sentences and the same code are in docs/API.md (forWalletsPage.test.tsx compares them, ignoring backticks):
+ * what the API gives (the url field) and what a wallet builds from it. The API itself returns no naddr and no link.
+ */
+export const HEALTH_RECORD_READ_TEXT = [
+  'To read the signed record of a mint you found through the API, use its url field as the d tag, query the relays published with the signed health assertions with the filter for one mint, and check the signature against the pinned MintRadar Health key.',
+  'The record also has an address (naddr) that Nostr clients understand: kind 30385, the MintRadar Health key, the d tag, and the relays as hints.',
+  'For people, https://njump.me/<naddr> opens the record in a browser. njump.me is an external site, so offer the link as an option.',
+  'The API returns neither the naddr nor the link: build them from the url field, as below.',
+] as const
+export const HEALTH_RECORD_READ_CODE = `// mint.url is the url field of the wallet API
+const filter = { kinds: [30385], authors: ['${ATTESTATION_PUBKEY_HEX}'], '#d': [mint.url] }
+const naddr = nip19.naddrEncode({
+  kind: 30385,
+  pubkey: '${ATTESTATION_PUBKEY_HEX}',
+  identifier: mint.url,
+  relays: [${ATTESTATION_RELAYS_PUBLIC.map(r => `'${r}'`).join(', ')}],
+})
+const njump = \`https://njump.me/\${naddr}\` // optional, for people`
 
 export const HEALTH_RUN_EXAMPLE = 'npm install nostr-tools\nnode verify-health.mjs https://mint.example.com'
 

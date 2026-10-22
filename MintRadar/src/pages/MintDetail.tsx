@@ -66,7 +66,7 @@ import { ContactChecksLine } from '@/components/ContactChecksLine'
 import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
 import { LAST_SCORE_CAPTION, KEEP_WALLET_SENTENCE, TEMPORARY_SENTENCE, contactSentence, restoreSentence, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
-import { healthRecordFor } from '@/utils/healthRecord'
+import { healthRecordFor, HEALTH_RELAY_URL } from '@/utils/healthRecord'
 import { AUDIT_SWAPS_WINDOW, AUDIT_WINDOW_DAYS } from '@/utils/tooltipTexts'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { reviewAvatarColor, avatarTextColor } from '@/utils/avatarColors'
@@ -1699,14 +1699,32 @@ function MintDetailContent({ url }: { url: string }) {
                 <span className="md-info-value md-hr-value">
                   {healthRecord ? (
                     <>
+                      {healthRecord.njumpUrl && (
+                        <a
+                          href={healthRecord.njumpUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="md-hr-view"
+                          aria-label="View on Nostr (opens njump.me, an external site, in a new tab)"
+                        >View on Nostr<ExternalLink size={12} aria-hidden="true" /></a>
+                      )}
                       <CopyTextButton label="Copy naddr" what="the Nostr address (naddr) of the signed health record" value={healthRecord.naddr} />
-                      <CopyTextButton label="Copy nak command" what="a nak command that fetches the signed health record" value={healthRecord.nakCommand} />
                     </>
                   ) : (
                     <span className="md-hr-none">No current record</span>
                   )}
                   <Link to="/for-wallets#signed-health-assertions" className="md-hr-link">About signed health records</Link>
                 </span>
+                {healthRecord && (
+                  <details className="md-hr-dev">
+                    <summary>For developers</summary>
+                    <div className="md-hr-dev-body">
+                      <div className="md-hr-dev-relay">Relay <code>{HEALTH_RELAY_URL}</code></div>
+                      <CopyTextButton label="Copy nak command" what="a nak command that fetches the signed health record" value={healthRecord.nakCommand} />
+                      <p className="md-hr-dev-note">Requires the nak command-line tool (<a href="https://github.com/fiatjaf/nak" target="_blank" rel="noopener noreferrer">github.com/fiatjaf/nak</a>).</p>
+                    </div>
+                  </details>
+                )}
               </div>
               {tosUrl && (tosUrl.startsWith('https://') || tosUrl.startsWith('http://')) && (
                 <div className="md-info-row">

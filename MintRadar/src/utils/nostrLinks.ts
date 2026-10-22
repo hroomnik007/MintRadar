@@ -22,6 +22,17 @@ export function njumpEventUrl(eventId: string | null | undefined): string | null
   try { return NJUMP + nip19.neventEncode({ id: s }) } catch { return NJUMP + s }
 }
 
+/** njump.me page of an addressable event, or null when `naddr` is not a valid naddr (the caller then renders no link). */
+export function njumpNaddrUrl(naddr: string | null | undefined): string | null {
+  if (!naddr) return null
+  const raw = naddr.trim()
+  if (!raw.startsWith('naddr1')) return null
+  try {
+    if (nip19.decode(raw).type !== 'naddr') return null
+  } catch { return null }
+  return NJUMP + raw
+}
+
 export function npubFromPubkey(hexOrNpub: string | null | undefined): string | null {
   if (!hexOrNpub) return null
   const s = hexOrNpub.trim()

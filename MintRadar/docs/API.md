@@ -225,6 +225,23 @@ Every unknown path below `/api/v1/` is a JSON `404` in this envelope (`/api/v1/f
 | 4 | 2026-10-21 | NUT part: a NUT entry with "supported": false in /v1/info no longer counts as support for the NUT component; a NUT counts when the mint lists it and does not mark it as not supported. |
 
 - **Signed health assertions on Nostr** (kind 30385, early version, published under the key `health@mintradar.org`) carry the same `score` as `rank` and the same `methodology` integer. They are not part of this HTTP API; see [mintradar.org/for-wallets](https://mintradar.org/for-wallets#signed-health-assertions) and [nostr-health-assertions.md](nostr-health-assertions.md).
+
+  **Find the record of a mint from the API**
+
+  To read the signed record of a mint you found through the API, use its `url` field as the `d` tag, query the relays published with the signed health assertions with the filter for one mint, and check the signature against the pinned MintRadar Health key. The record also has an address (naddr) that Nostr clients understand: kind `30385`, the MintRadar Health key, the `d` tag, and the relays as hints. For people, `https://njump.me/<naddr>` opens the record in a browser. njump.me is an external site, so offer the link as an option. The API returns neither the naddr nor the link: build them from the `url` field, as below.
+
+  ```js
+  // mint.url is the url field of the wallet API
+  const filter = { kinds: [30385], authors: ['2ddd7ce9833d2ed8a0bfaaf903cc71f65641f20d8f8142130163a625aa6b941c'], '#d': [mint.url] }
+  const naddr = nip19.naddrEncode({
+    kind: 30385,
+    pubkey: '2ddd7ce9833d2ed8a0bfaaf903cc71f65641f20d8f8142130163a625aa6b941c',
+    identifier: mint.url,
+    relays: ['wss://nostr.mintradar.org', 'wss://nos.lol', 'wss://relay.primal.net'],
+  })
+  const njump = `https://njump.me/${naddr}` // optional, for people
+  ```
+
 - Everything under "Internal routes" below has **no stability guarantee**.
 
 ---

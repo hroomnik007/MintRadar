@@ -1,6 +1,7 @@
 import { InfoTooltip } from '@/components/InfoTooltip'
 import type { FeeKeysetLike } from '@/utils/feeExamples'
-import { feesView, limitRows, limitsSource, reservedFeeLines, LIMITS_NOTE } from '@/utils/feesLimits'
+import { feesView, limitRows, limitsSource, reservedFeeLines, LIMITS_NOTE, NO_INPUT_FEE } from '@/utils/feesLimits'
+import { FEE_PER_COIN_TEXT } from '@/utils/tooltipTexts'
 
 type MethodLike = { method: string; unit: string; [key: string]: unknown }
 
@@ -36,7 +37,10 @@ export function MintFeesLimits({ keysets, keysetsPending, units, mintMethods, me
           <div className="md-info-row"><span className="md-info-label">{fees.empty}</span></div>
         ) : fees.rows.map(r => (
           <div className="md-info-row" key={r.unit}>
-            <span className="md-info-label">Input fee · {r.unit}</span>
+            <span className="md-info-label md-info-label-tip">
+              Input fee · {r.unit}
+              {r.text !== NO_INPUT_FEE && <InfoTooltip iconSize={11} width={240} about={`input fee in ${r.unit}`} text={FEE_PER_COIN_TEXT} />}
+            </span>
             <span className="md-info-value">{r.text}</span>
           </div>
         ))}

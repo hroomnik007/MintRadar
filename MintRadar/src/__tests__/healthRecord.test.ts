@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { nip19 } from 'nostr-tools'
-import { healthIdentifier, healthRecordFor, HEALTH_KIND } from '@/utils/healthRecord'
+import { healthIdentifier, healthRecordFor, HEALTH_KIND, HEALTH_RELAY_URL } from '@/utils/healthRecord'
+import { njumpNaddrUrl } from '@/utils/nostrLinks'
 import { ATTESTATION_PUBKEY_HEX, ATTESTATION_RELAYS_PUBLIC } from '@/utils/healthAssertionConstants'
 import { healthIdentifier as backendIdentifier, HEALTH_KIND as BACKEND_KIND } from '../../backend/src/healthAssertions'
 
@@ -30,6 +31,17 @@ describe('Signed health record', () => {
   it('nak command carries kind, author, d tag (single-quoted) and the relays', () => {
     const rec = healthRecordFor("https://mint.example.com/it's")!
     expect(rec.nakCommand).toBe(`nak req -k 30385 -a ${ATTESTATION_PUBKEY_HEX} -d 'https://mint.example.com/it'\\''s' ${ATTESTATION_RELAYS_PUBLIC.join(' ')}`)
+  })
+  it('njump link is https://njump.me/<naddr> and the relay shown is the first public relay', () => {
+    const rec = healthRecordFor('https://mint.minibits.cash/Bitcoin/')!
+    expect(rec.njumpUrl).toBe(`https://njump.me/${rec.naddr}`)
+    expect(HEALTH_RELAY_URL).toBe(ATTESTATION_RELAYS_PUBLIC[0])
+    expect(HEALTH_RELAY_URL).toBe('wss://nostr.mintradar.org')
+  })
+  it('no njump link without a usable naddr (nothing broken is ever rendered)', () => {
+    for (const bad of [null, undefined, '', '   ', 'https://mint.example.com', 'npub1abc', 'naddr1notvalid', 'nevent1qqs']) expect(njumpNaddrUrl(bad)).toBeNull()
+    const naddr = healthRecordFor('https://mint.example.com')!.naddr
+    expect(njumpNaddrUrl(naddr)).toBe(`https://njump.me/${naddr}`)
   })
   it('gives no record for a URL that gets no event', () => {
     expect(healthRecordFor('https://abc.onion')).toBeNull()
