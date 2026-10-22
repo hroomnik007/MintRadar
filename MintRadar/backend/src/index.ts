@@ -17,6 +17,7 @@ import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
 import { getLastVantageOutageAt } from './probeCycle.js'
 import { publishServiceProfile } from './nostrService.js'
 import { startAttestations } from './healthPublisher.js'
+import { readinessGate, isReady, openGateAfter } from './readiness.js'
 import { normalizeUrl, getSyncTimesFromDb, getAuditUpstreamStatus } from './discovery.js'
 import { computeDegraded } from './degraded.js'
 import { authenticateNip98 } from './nip98Auth.js'
@@ -478,6 +479,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   restrictedCors(req, res, next)
 })
 
+// Readiness gate (readiness.ts): 503 {"error":"starting"} + Retry-After: 2 on database-dependent routes until
+// initDb() and the seed have finished. Before the body parser and the rate limiter, so a refused request costs
+// neither a parse nor a rate-limit slot.
+app.use(readinessGate)
+
 app.use(express.json())
 
 // Rate limiting — exempt public read-only endpoints that sit behind Cache-Control
@@ -656,6 +662,8 @@ app.get('/health', async (_req: Request, res: Response) => {
   const auditCz = getAuditCzSyncStatus()
   res.json({
     status: 'ok',
+    // false while initDb() and the seed are still running (other database routes answer 503 then); status stays 200.
+    ready: isReady(),
     timestamp: new Date().toISOString(),
     lastProbeAt,
     lastVantageOutageAt: getLastVantageOutageAt(),
@@ -1406,7 +1414,7 @@ app.get('/api/stats/reliability-trend', (req: Request, res: Response): void => {
 // `mints`: last_reliability_score is the "latest" snapshot (written by every probe),
 // and reliability_score_{7,30}d_ago are the point-in-time snapshots rolled up by
 // refreshReliabilityMoversRollup() (reliabilityMoversRollup.ts) on the probe cron — this
-// used to be two DISTINCT ON passes over all of mint_history (~2.5s cold) run
+// used to be two DISTINCT ON passes over all of mint_history (~2.5s measured) run
 // on every cache miss. A mint with no old-enough scored history has a NULL
 // snapshot and is filtered out here (same effect as the old INNER JOIN). The
 // +/-3 threshold and top-3 ranking live in reliabilityMovers.ts (computeReliabilityMovers),
@@ -2616,8 +2624,7 @@ if (process.env['NODE_ENV'] !== 'test') {
 
   const server = app.listen(PORT, () => {
     console.log(`MintRadar backend listening on port ${PORT}`)
-    initDb()
-      .then(() => seedKnownMints(upsertMint))
+    openGateAfter(() => initDb().then(() => seedKnownMints(upsertMint)))
       .then(() => {
         startCron()
         knownMints.start() // fire-and-forget warm-up + 45 s refresh timer (unref'ed); failures are logged, never thrown

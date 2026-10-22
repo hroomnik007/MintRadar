@@ -3,7 +3,7 @@ import { pool } from './db.js'
 // Precomputes each mint's Reliability Score "N days ago" snapshot into
 // mints.reliability_score_7d_ago / reliability_score_30d_ago, so GET /api/stats/reliability-movers
 // is a plain indexed read of `mints` rather than two DISTINCT ON passes over the
-// whole mint_history table (~2M rows, ~2.5s cold) on every cache miss. Same
+// whole mint_history table (~2M rows, ~2.5s measured) on every cache miss. Same
 // rollup idea as review_count / review_avg_rating (reviewsSync.ts).
 //
 // The "latest" score is NOT rolled up here — it already lives on

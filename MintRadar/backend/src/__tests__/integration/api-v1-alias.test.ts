@@ -69,7 +69,7 @@ describe('GET /api/v1/* alias', () => {
     const strip = (body: Record<string, unknown>) => { const rest = { ...body }; delete rest['timestamp']; return rest }
     expect(strip(aliased.body)).toEqual(strip(root.body))
     expect(Object.keys(root.body).sort()).toEqual(
-      ['auditCz', 'auditUpstream', 'auditUpstreamCheckedAt', 'lastAuditSyncAt', 'lastProbeAt', 'lastReviewsSyncAt', 'lastVantageOutageAt', 'sources', 'status', 'timestamp'],
+      ['auditCz', 'auditUpstream', 'auditUpstreamCheckedAt', 'lastAuditSyncAt', 'lastProbeAt', 'lastReviewsSyncAt', 'lastVantageOutageAt', 'ready', 'sources', 'status', 'timestamp'],
     )
     expect(root.body.auditUpstream).toBe('unknown')
     expect(root.body.auditUpstreamCheckedAt).toBeNull()

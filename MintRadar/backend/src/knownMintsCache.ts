@@ -1,6 +1,7 @@
 // Stale-while-revalidate holder for the /api/mints/known snapshot (index.ts: loadKnownMints). The computation is a
-// 7-day aggregate over mint_history that takes seconds when the data is not in the database cache, so a visitor must
-// not be the one who waits for it: a snapshot past its TTL is served at once while ONE background refresh runs.
+// 7-day aggregate over mint_history that took 3.3 to 3.9 s while database JIT was on (tasks E2/E2b: JIT compilation
+// of the large query, not a cold cache; about 0.5 s with JIT off, see db.ts poolOptions), so a visitor must not be the
+// one who waits for it: a snapshot past its TTL is served at once while ONE background refresh runs.
 
 export const KNOWN_MINTS_CACHE_TTL = 60_000 // younger than this: served as is
 export const KNOWN_MINTS_STALE_LIMIT = 5 * 60_000 // older than the TTL but younger than this: served, refreshed in the background
