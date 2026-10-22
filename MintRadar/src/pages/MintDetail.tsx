@@ -956,9 +956,10 @@ function MintDetailContent({ url }: { url: string }) {
   // nested IIFE) because the react-compiler ESLint rules disallow reading a
   // ref from inside a hand-rolled nested function during render.
   const breakdownUScore = uptimeComponent(uptimePct)
-  // The 24 h history is missing (not loaded yet, or its request failed): the Uptime row shows a placeholder, never the 0 that
-  // `uptimePct` stands in for (a mint with a stored score showed a red 0% and 0/40 until the history arrived).
-  const uptimeRowPending = scorePending || uptime24hData === undefined
+  // The 24 h history is missing (not loaded yet, or its request failed) or loaded without data (uptimePct null): the Uptime row
+  // shows a placeholder, never the 0 that `uptimePct` stands in for (a mint with a stored score showed a red 0% and 0/40). A
+  // real 0 (uptimePct 0, a mint that was really down) is still shown as "0%".
+  const uptimeRowPending = scorePending || uptime24hData === undefined || uptime24hData.uptimePct === null
   const breakdownNScore = nutComponent(supportedNuts.length)
   const breakdownVScore = versionComponent(version, versionLatestMap)
   const breakdownContactFields = [email, twitter, nostr].filter(Boolean)

@@ -15,19 +15,21 @@ const SHIFT_LIMIT = 0.02
 
 type History = 'held' | 'fail'
 
-const historyOf = (uptimePct: number) => {
+// `null` is a loaded history without data (no probes in the window): the API answers uptimePct null, not 0.
+const historyOf = (uptimePct: number | null) => {
   const bucket = new Date(Date.now() - 3_600_000).toISOString()
+  const up = uptimePct ?? 0
   return {
     period: '24h',
-    segments: [{ bucket, online: uptimePct > 0, latencyMs: uptimePct > 0 ? 50 : null, total: 12, onlineCount: Math.round(uptimePct * 12 / 100), uptimePct, reliabilityScore: 50 }],
+    segments: [{ bucket, online: up > 0, latencyMs: up > 0 ? 50 : null, total: uptimePct === null ? 0 : 12, onlineCount: Math.round(up * 12 / 100), uptimePct, reliabilityScore: 50 }],
     uptimePct, avgLatencyMs: 55, prevUptimePct: 98, prevAvgLatencyMs: 60, earliestCheckedAt: bucket, daysOfDataAvailable: 1, periodDays: 1,
-    prevPeriodInsufficientHistory: false, history: [{ online: uptimePct > 0, latencyMs: 50, checkedAt: bucket }],
+    prevPeriodInsufficientHistory: false, history: [{ online: up > 0, latencyMs: 50, checkedAt: bucket }],
   }
 }
 
 interface Opened { release: () => void; reached: Promise<void>; historyRequests: () => number }
 
-async function open(page: Page, o: { history: History; uptimePct: number; size: [number, number] }): Promise<Opened> {
+async function open(page: Page, o: { history: History; uptimePct: number | null; size: [number, number] }): Promise<Opened> {
   trackRequests(page)
   await page.addInitScript(() => {
     const w = window as unknown as { __cls: number; __obs: PerformanceObserver }
@@ -119,6 +121,23 @@ test.describe('Mint Detail Uptime row with a stored score and a missing 24 h his
     await expect(display(page)).toHaveText('0%')
     await expect(display(page)).not.toHaveAttribute('aria-label', /.+/)
     await expect(score(page)).toHaveText('0/40')
+  })
+
+  test('(3b) a loaded history WITHOUT data (uptimePct null) keeps the placeholder: no "0%", no "0/40"', async ({ page }) => {
+    const m = await open(page, { history: 'held', uptimePct: null, size: [1440, 900] })
+    await m.reached
+    m.release()
+    await networkQuiet(page)
+    await frames(page, 3)
+    await expect(gaugeNum(page)).toHaveText('88')
+    await expect(display(page)).toHaveText(PLACEHOLDER)
+    await expect(display(page)).toHaveAttribute('aria-label', 'Uptime not available yet')
+    await expect(score(page)).toHaveText(`${PLACEHOLDER}/40`)
+    await expect(display(page)).not.toHaveText('0%')
+    await expect(page.locator('.md-reliability-panel').getByText('0%', { exact: true })).toHaveCount(0)
+    const colour = await score(page).evaluate(el => getComputedStyle(el).color)
+    const text3 = await page.evaluate(() => { const s = document.createElement('span'); s.style.color = 'var(--text3)'; document.body.appendChild(s); const c = getComputedStyle(s).color; s.remove(); return c })
+    expect(colour, 'the placeholder has the neutral colour').toBe(text3)
   })
 
   test('(4) the history request fails: placeholder, no "0%", no page error', async ({ page }) => {
