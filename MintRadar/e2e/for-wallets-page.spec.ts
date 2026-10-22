@@ -94,7 +94,7 @@ test.describe('For wallets page', () => {
     await expectLinksValid(page)
     await expectExternalLinksSafe(page)
     await expect(page.getByRole('link', { name: 'docs/API.md' })).toHaveAttribute('href', 'https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/API.md')
-    await expect(page.getByRole('link', { name: 'docs/openapi/wallets-v1.yaml' })).toHaveAttribute('href', 'https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/openapi/wallets-v1.yaml')
+    await expect(page.getByRole('link', { name: 'docs/openapi/wallets-v1.yaml' })).toHaveAttribute('href', 'https://mintradar.org/docs/openapi/wallets-v1.yaml')
     await expect(page.getByRole('link', { name: 'Reliability Score methodology' })).toHaveAttribute('href', '/methodology')
   })
 

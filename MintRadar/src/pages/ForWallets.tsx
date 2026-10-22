@@ -455,7 +455,7 @@ export default function ForWallets() {
           <h2 id="links" tabIndex={-1} className="about-h2">Docs and contact</h2>
           <ul>
             <li><a href={DOCS_API_URL} target="_blank" rel="noopener noreferrer">docs/API.md</a>: the full API description.</li>
-            <li><a href={DOCS_OPENAPI_URL} target="_blank" rel="noopener noreferrer">docs/openapi/wallets-v1.yaml</a>: the OpenAPI 3.1 description (the file in the GitHub repository).</li>
+            <li><a href={DOCS_OPENAPI_URL} target="_blank" rel="noopener noreferrer">docs/openapi/wallets-v1.yaml</a>: the OpenAPI 3.1 file, served by this site (the source file is in the GitHub repository).</li>
             <li><Link to="/methodology">Reliability Score methodology</Link>: how the score is computed, with its change log.</li>
           </ul>
           <p>Questions, a mistake in a score, or a field you need:</p>

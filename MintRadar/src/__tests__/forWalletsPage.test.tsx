@@ -230,11 +230,11 @@ describe('error codes and numbers', () => {
     expect(names.filter(n => /naddr|njump|nak/.test(n))).toEqual([])
   })
 
-  it('the documentation links use the blob URL pattern of the footer API link and point at files that exist', () => {
+  it('the API.md link uses the blob URL pattern of the footer API link, the OpenAPI link is the published file, and the source files exist', () => {
     const footer = read('../components/layout/AppShell.tsx')
     expect(footer).toContain('https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/API.md')
     expect(DOCS_API_URL).toBe('https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/API.md')
-    expect(DOCS_OPENAPI_URL).toBe('https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/openapi/wallets-v1.yaml')
+    expect(DOCS_OPENAPI_URL).toBe('https://mintradar.org/docs/openapi/wallets-v1.yaml')
     expect(read('../../docs/openapi/wallets-v1.yaml').length).toBeGreaterThan(100)
   })
 })

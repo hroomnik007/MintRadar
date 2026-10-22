@@ -32,7 +32,7 @@ export const WALLET_API_FACTS = {
 } as const
 
 export const DOCS_API_URL = `${REPO_BLOB_URL}/docs/API.md`
-export const DOCS_OPENAPI_URL = `${REPO_BLOB_URL}/docs/openapi/wallets-v1.yaml`
+export const DOCS_OPENAPI_URL = 'https://mintradar.org/docs/openapi/wallets-v1.yaml'
 
 export interface WalletExample {
   id: string
