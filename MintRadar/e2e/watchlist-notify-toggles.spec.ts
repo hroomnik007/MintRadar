@@ -253,7 +253,7 @@ test.describe('Watchlist notification toggles', () => {
     await openWatchlist(page)
     const explainer = page.locator('.wl-notify-explainer')
     await expect(explainer).toHaveCount(1)
-    await expect(explainer).toHaveText('Optional: turn on Nostr DMs for a watched mint. You get one message when it goes down and one when it comes back (at most one of each per hour), even if this tab is closed. "More alerts" are optional too, and all messages are limited in frequency (at most 40 a day). If any alert is on for a mint, you also get a message when its public key or input fee changes. Your Nostr client must support private messages.')
+    await expect(explainer).toHaveText("Optional Nostr DMs: one when a watched mint goes down, one when it's back (max once an hour each, 40 a day in total). With any alert on, you also get key and fee changes. Needs a Nostr client with private messages.")
     expect(await explainer.evaluate(el => getComputedStyle(el).fontSize)).toBe('11.5px')
     const e = (await explainer.boundingBox())!
     const g = (await page.locator('.wl-grid').boundingBox())!

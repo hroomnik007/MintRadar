@@ -38,7 +38,7 @@ describe('texts equal the literals they replaced (current values)', () => {
     expect(T.noOutagesText()).toBe('No outages in the last 30 days.')
   })
   it('watchlist explainer and notices', () => {
-    expect(T.watchlistNotifyExplainer()).toBe('Optional: turn on Nostr DMs for a watched mint. You get one message when it goes down and one when it comes back (at most one of each per hour), even if this tab is closed. "More alerts" are optional too, and all messages are limited in frequency (at most 40 a day). If any alert is on for a mint, you also get a message when its public key or input fee changes. Your Nostr client must support private messages.')
+    expect(T.watchlistNotifyExplainer()).toBe("Optional Nostr DMs: one when a watched mint goes down, one when it's back (max once an hour each, 40 a day in total). With any alert on, you also get key and fee changes. Needs a Nostr client with private messages.")
     expect(T.notifyStopNotice('Alpha')).toBe("Couldn't turn off notifications for Alpha. They stop within 30 days.")
     expect(T.notifyLimitText()).toBe('Notification limit reached (50 mints).')
   })
@@ -63,8 +63,8 @@ describe('each text follows its constant', () => {
     expect(T.cooldownUnit(60)).toBe('hour')
     expect(T.cooldownUnit(120)).toBe('2 hours')
     expect(T.cooldownUnit(45)).toBe('45 minutes')
-    expect(T.watchlistNotifyExplainer(120, 25)).toContain('(at most one of each per 2 hours)')
-    expect(T.watchlistNotifyExplainer(120, 25)).toContain('(at most 25 a day)')
+    expect(T.watchlistNotifyExplainer(120, 25)).toContain('max once per 2 hours each')
+    expect(T.watchlistNotifyExplainer(120, 25)).toContain('25 a day in total')
   })
   it('notices', () => {
     expect(T.notifyStopNotice('Alpha', 7)).toContain('within 7 days.')
