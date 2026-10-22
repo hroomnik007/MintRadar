@@ -25,7 +25,7 @@ test.describe('Notification copy matches the opt-in behaviour', () => {
     await mockNotifyApi(page)
     await openWatchlist(page)
     const text = await expectNoPromise(page, '.watchlist-page')
-    expect(text).toContain('Optional: turn on Nostr DMs for a watched mint. You get one message when it goes down and one when it comes back (at most one of each per hour), even if this tab is closed. "More alerts" are optional too, and all messages are limited in frequency (at most 40 a day). Your Nostr client must support private messages.')
+    expect(text).toContain('Optional: turn on Nostr DMs for a watched mint. You get one message when it goes down and one when it comes back (at most one of each per hour), even if this tab is closed. "More alerts" are optional too, and all messages are limited in frequency (at most 40 a day). If any alert is on for a mint, you also get a message when its public key or input fee changes. Your Nostr client must support private messages.')
     const meta = await metaDescription(page)
     expect(meta).toMatch(OPTIONAL)
     expect(meta).not.toMatch(GET_NOTIFIED)

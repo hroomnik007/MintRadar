@@ -248,7 +248,7 @@ export function cooldownUnit(minutes: number): string {
 }
 /** Explainer above the Watchlist cards. */
 export function watchlistNotifyExplainer(cooldownMinutes: number = UPDOWN_COOLDOWN_MINUTES, dailyCap: number = DM_DAILY_CAP): string {
-  return `Optional: turn on Nostr DMs for a watched mint. You get one message when it goes down and one when it comes back (at most one of each per ${cooldownUnit(cooldownMinutes)}), even if this tab is closed. "More alerts" are optional too, and all messages are limited in frequency (at most ${dailyCap} a day). Your Nostr client must support private messages.`
+  return `Optional: turn on Nostr DMs for a watched mint. You get one message when it goes down and one when it comes back (at most one of each per ${cooldownUnit(cooldownMinutes)}), even if this tab is closed. "More alerts" are optional too, and all messages are limited in frequency (at most ${dailyCap} a day). If any alert is on for a mint, you also get a message when its public key or input fee changes. Your Nostr client must support private messages.`
 }
 /** Notice after a failed unsubscribe on removing a watched mint. */
 export function notifyStopNotice(name: string, days: number = NOTIFICATION_RETENTION_DAYS): string {

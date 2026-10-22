@@ -34,9 +34,11 @@ Do not start without a reason from users or wallet teams.
 |---|---|
 | Methodology v4 | For real, through a shadow phase |
 | "Best mint for me" | |
-| Nutzap-related items | kind 10019 adoption signal per mint, nutzap checks, Cashu-native donation (deferred by the owner) |
+| Nutzap: kind 10019 adoption signal | **BUILD LATER** (Task E5, measured 2026-10-22). 455 distinct authors across damus, nos.lol, primal and our relay (our relay holds 1 event); 325 of them (71 %) list the Minibits default mint, so the signal mostly reflects one wallet's default. Start only after wallet-team or user feedback. First step: daily relay sweep, `verifyEvent`, newest event per author, at most 10 mint tags, `normalizeUrl`, one integer column on `mints`, shown only above a threshold (e.g. >= 5), never part of the Trust Score, optional additive API field. |
+| Nutzap: "capable" verdict, "which mint to put your 10019 on" hint | **Do not build** (a verdict and a recommendation, see Task U). |
+| Nutzap: Cashu-native donation | Deferred by the owner; no design is recorded. |
 | Watchlist without login | |
-| DM notification settings | Decided on 2026-10-02 to drop notification mute until subscribers reach dozens |
+| DM notification settings | **DO NOT BUILD** (Task E5). Triggers unchanged: dozens of subscribers, a complaint, or a flapping mint with a subscription (mute was dropped on 2026-10-02). Smallest step when a trigger comes: two separate pills for key rotation and fee change, then a global pause. No digest, no quiet hours without a reason. |
 | Atomic deploy | |
 | Icon resize | Needs a new dependency |
 | Deferring vendor-nostr and vendor-db | |
