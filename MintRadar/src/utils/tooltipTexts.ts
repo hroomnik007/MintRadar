@@ -128,8 +128,14 @@ export const REVIEWS_NIP87_TEXT = 'Anyone can create a key, so ratings can be in
 /** Tools: the signature check of the Token Inspector. */
 export const SIGNATURE_CHECK_TEXT = "Checks each proof's signature proof (NUT-12 DLEQ), when it has one. A pass means this mint signed it. It does not show the token is unspent or the mint is reliable."
 
-/** Mint Detail, Fees and limits card: what the fee examples mean (the card says "coins" where the wallet API says "proofs"). */
-export const FEE_PER_COIN_TEXT = 'Your balance is made of many small coins. When you pay, the mint charges a small fee for each coin used. Wallets can keep this low by holding fewer, larger coins.'
+/**
+ * Mint Detail, Fees and limits card: what the fee rate and the rounded examples mean (the card says "coins" where the wallet API
+ * says "proofs"). Owner-approved wording of Task B2, 242 characters: the one text exempt from the 220 limit (tooltipTexts.test.ts).
+ */
+export const FEE_PER_COIN_TEXT = 'Your balance is made of many small coins. When you pay, the mint adds up a small fee for each coin used and rounds the total up to a whole unit, so small payments cost relatively more. Wallets can keep fees low by holding fewer, larger coins.'
+
+/** Mint Detail, Keysets panel: the "150 ppk" chip of a keyset (the panel says "coins" where the wallet API says "proofs"). */
+export const KEYSET_FEE_TEXT = 'Input fee per 1000 coins spent from this keyset, in parts per thousand of the smallest unit.'
 
 /** Compare modal. */
 export const INPUT_FEE_TEXT = "Fee per 1000 proofs spent, from the active keyset of the mint's main unit (NUT-02 input_fee_ppk). \"free\" = none, n/a = not reported."

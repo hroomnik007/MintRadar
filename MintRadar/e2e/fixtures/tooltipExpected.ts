@@ -38,6 +38,8 @@ export const EXPECTED_TOOLTIPS: Record<string, Cell[]> = {
   'mint-alpha-overview': [[3, 3], [3, 3], [8, 8], [8, 8], [8, 8]],
   'mint-alpha-history': [[2, 2], [2, 2], [7, 7], [7, 7], [7, 7]],
   'mint-alpha-nuts': [[4, 4], [4, 4], [9, 8], [9, 8], [9, 8]],
+  // A mint with an input fee (Task B2): the Fees and limits card adds the fee row's ⓘ, and the Keysets panel's "150 ppk" chip is a trigger (phones: NUTs tab; wide: sidebar).
+  'mint-fee-nuts': [[6, 6], [6, 6], [11, 8], [11, 8], [11, 8]],
   'mint-alpha-audit': [[7, 7], [7, 7], [12, 8], [12, 8], [12, 8]],
   'mint-alpha-audit-cz': [[7, 7], [7, 7], [12, 8], [12, 8], [12, 8]],
   'mint-alpha-audit-8333': [[7, 7], [7, 7], [12, 8], [12, 8], [12, 8]],

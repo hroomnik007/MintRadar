@@ -1,4 +1,5 @@
-// "Fees and limits" group of the Mint Detail Overview. Facts only: the fee examples are computed from the stored keysets
+// "Fees and limits" card of the Mint Detail NUTs tab. Facts only: the fee rate (input_fee_ppk of the ACTIVE keyset of each
+// unit, the highest when several are active) and the examples are computed from the stored keysets
 // (utils/feeExamples.ts, the NUT-02 rule), the limits are the ones the mint declares in /v1/info (NUT-04 / NUT-05).
 // Nothing here judges a number and nothing is requested from a mint.
 import { feeExamplesOf, FEE_EXAMPLE_PROOFS, type FeeKeysetLike } from './feeExamples'
@@ -25,10 +26,22 @@ export function feeUnitLabel(unit: string): string {
   return unit
 }
 
+/**
+ * The fee RATE per coin as a plain decimal: ppk / 1000 without trailing zeros and without floating-point artefacts
+ * (integer arithmetic on the thousandths): 150 -> "0.15", 100 -> "0.1", 1000 -> "1", 1 -> "0.001".
+ */
+export function formatFeeRate(ppk: number): string {
+  const whole = Math.floor(ppk / 1000).toLocaleString('en-US')
+  const thousandths = String(ppk % 1000).padStart(3, '0').replace(/0+$/, '')
+  return thousandths ? `${whole}.${thousandths}` : whole
+}
+
 export interface FeeRow {
   unit: string
-  /** "Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 sat", or "No input fee". */
+  /** "0.15 sat per coin · 150 ppk" (the rate), or "No input fee". */
   text: string
+  /** "You pay (rounded up per payment): 1 / 3 / 15 sat for 1 / 16 / 100 coins"; null for "No input fee". */
+  examples: string | null
 }
 
 export interface FeesView {
@@ -43,12 +56,13 @@ export function feesView(keysets: readonly FeeKeysetLike[] | null | undefined): 
   const units = feeExamplesOf(keysets)
   if (units.length === 0) return { rows: [], empty: FEES_NO_ACTIVE_KEYSET }
   return {
-    rows: units.map(u => ({
-      unit: u.unit,
-      text: u.inputFeePpk === 0
-        ? NO_INPUT_FEE
-        : `Fee when you spend ${FEE_EXAMPLE_PROOFS.join(' / ')} coins: ${u.examples.map(e => e.fee.toLocaleString('en-US')).join(' / ')} ${feeUnitLabel(u.unit)}`,
-    })),
+    rows: units.map(u => u.inputFeePpk === 0
+      ? { unit: u.unit, text: NO_INPUT_FEE, examples: null }
+      : {
+        unit: u.unit,
+        text: `${formatFeeRate(u.inputFeePpk)} ${feeUnitLabel(u.unit)} per coin · ${u.inputFeePpk} ppk`,
+        examples: `You pay (rounded up per payment): ${u.examples.map(e => e.fee.toLocaleString('en-US')).join(' / ')} ${feeUnitLabel(u.unit)} for ${FEE_EXAMPLE_PROOFS.join(' / ')} coins`,
+      }),
     empty: null,
   }
 }

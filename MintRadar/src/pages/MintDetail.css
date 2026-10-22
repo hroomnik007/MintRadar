@@ -2764,16 +2764,22 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-changes-toggle { margin-top: 10px; }
 
 /* ── Overview "Fees and limits" (W6b): label left, value right, wraps under the label when the row is narrow ── */
-.md-fees-limits { --md-fl-row-h: 38px; }
+.md-fees-limits { --md-fl-row-h: 47px; } /* Task B2: midway between a "No input fee" row (38px) and a fee row with its examples line (56px) */
 .md-fees-limits .md-info-row { flex-wrap: wrap; column-gap: 12px; row-gap: 2px; }
 .md-fees-limits .md-info-label { flex-shrink: 1; min-width: 0; overflow-wrap: anywhere; }
 .md-fees-limits .md-info-value { flex: 1 1 auto; min-width: 0; text-align: right; word-break: normal; overflow-wrap: break-word; max-width: 100%; }
 .md-fl-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
 .md-fl-head .md-panel-title { margin-bottom: 0; min-width: 0; overflow-wrap: anywhere; }
 .md-fees-limits .md-fl-fees .md-info-row:last-child { border-bottom: 1px solid var(--border); }
+/* Fee row (Task B2): the rate on the first line, the rounded examples under it (muted, still 12px or more). */
+.md-fees-limits .md-fee-rate, .md-fees-limits .md-fee-examples { display: block; }
+.md-fees-limits .md-fee-examples { margin-top: 2px; font-size: 12px; line-height: 1.4; color: var(--text3); }
+/* Keysets panel "150 ppk" chip: 11px text made the trigger 23.5px high at desktop size; 4px above and below makes it 24.5px (the layout does not move). */
+.info-tooltip.md-keyset-fee-tip { --tt-hit-t: 4px; --tt-hit-b: 4px; }
 .md-fl-note { margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--text3); overflow-wrap: anywhere; }
 .md-fl-note span[title] { text-decoration: underline dotted; text-underline-offset: 2px; }
 @media (max-width: 480px) {
+  .md-fees-limits { --md-fl-row-h: 78px; } /* the value sits under the label: "No input fee" row ~60px, fee row ~96px */
   .md-fees-limits .md-info-value { text-align: left; flex-basis: 100%; }
 }
 

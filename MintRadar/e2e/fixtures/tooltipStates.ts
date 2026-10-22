@@ -57,8 +57,14 @@ const reviewsFor = (url: string) => {
   return []
 }
 
-/** Mocks for every page below (call before goto). */
-export async function installTooltipMocks(page: Page): Promise<void> {
+/** Keysets of a mint with an input fee (Task B2): one inactive keyset with another fee, one active with 150 ppk. */
+export const FEE_KEYSETS = [
+  { id: '00ad268c4d1f5826', unit: 'sat', active: true, input_fee_ppk: 150 },
+  { id: '00c074b96c7e2b0e', unit: 'sat', active: false, input_fee_ppk: 0 },
+]
+
+/** Mocks for every page below (call before goto). `keysets` replaces the probe's keysets (default: one active keyset without a fee). */
+export async function installTooltipMocks(page: Page, opts: { keysets?: unknown } = {}): Promise<void> {
   trackRequests(page)
   await mockRelays(page)
   await installApiMocks(page)
@@ -86,7 +92,7 @@ export async function installTooltipMocks(page: Page): Promise<void> {
       ...(target === NEW_MINT ? { nuts: { '4': { methods: [] }, '5': { methods: [] }, '7': { methods: [] } } } : {}),
       ...(target === OPERATOR_MINT ? { contact: [{ method: 'nostr', info: OPERATOR_NPUB }, { method: 'email', info: 'op@example.com' }] } : {}),
     }
-    r.fulfill({ json: { ...p, info } })
+    r.fulfill({ json: { ...p, info, ...(opts.keysets !== undefined ? { keysets: opts.keysets } : {}) } })
   })
 }
 
@@ -121,6 +127,17 @@ const mint = (id: string, url: string, tab: string, extra?: (p: Page) => Promise
     await expect(page.locator('.md-tabs')).toBeVisible()
     await settle(page)
     if (extra) await extra(page)
+    return true
+  },
+})
+
+const feeMint = (tab: string): TooltipState => ({
+  id: `mint-fee-${tab}`,
+  run: async page => {
+    await installTooltipMocks(page, { keysets: FEE_KEYSETS })
+    await page.goto(mintPath(ALPHA, `#${tab}`))
+    await expect(page.locator('.md-tabs')).toBeVisible()
+    await settle(page)
     return true
   },
 })
@@ -229,6 +246,8 @@ export const TOOLTIP_STATES: TooltipState[] = [
   mint('alpha', ALPHA, 'history'),
   mint('alpha', ALPHA, 'nuts'),
   mint('alpha', ALPHA, 'audit'),
+  // A mint with an input fee: the Fees and limits card (NUTs tab) and the "150 ppk" chip of the Keysets panel.
+  feeMint('nuts'),
   {
     // The cashu.info view of the Audit tab (segment "cashu.info"): its tiles, heading and swap tables carry tooltips.
     id: 'mint-alpha-audit-cz',

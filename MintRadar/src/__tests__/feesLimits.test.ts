@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { feesView, feeUnitLabel, limitRows, limitsSource, reservedFeeLines, FEES_NOT_CHECKED, FEES_NO_ACTIVE_KEYSET, NO_INPUT_FEE, LIMIT_NOT_DECLARED, LIMITS_NOTE } from '@/utils/feesLimits'
+import { feesView, feeUnitLabel, formatFeeRate, limitRows, limitsSource, reservedFeeLines, FEES_NOT_CHECKED, FEES_NO_ACTIVE_KEYSET, NO_INPUT_FEE, LIMIT_NOT_DECLARED, LIMITS_NOTE } from '@/utils/feesLimits'
 import { feeExamplesOf, inputFeeFor } from '@/utils/feeExamples'
-import { FEE_PER_COIN_TEXT } from '@/utils/tooltipTexts'
+import { FEE_PER_COIN_TEXT, KEYSET_FEE_TEXT } from '@/utils/tooltipTexts'
 import { feeExamplesOf as beFeeExamplesOf } from '../../backend/src/shared/feeExamples'
 
 describe('NUT-02 arithmetic (frontend copy)', () => {
@@ -30,41 +30,79 @@ describe('feeUnitLabel', () => {
     expect(feeUnitLabel('Sat')).toBe('sat')
     expect(feeUnitLabel('LEK')).toBe('LEK')
   })
-  it('only the label changes: a usd fee keeps its numbers, never claims sat, and the rows use the plain word "coins"', () => {
+  it('only the label changes: a usd fee keeps its numbers, never claims sat, and both lines use the unit label and the plain word "coins"', () => {
     const v = feesView([{ unit: 'sat', active: true, inputFeePpk: 100 }, { unit: 'usd', active: true, inputFeePpk: 100 }, { unit: 'eur', active: true, inputFeePpk: 1000 }, { unit: 'lek', active: true, inputFeePpk: 100 }])
-    expect(v.rows.map(r => `${r.unit}: ${r.text}`)).toEqual([
-      'sat: Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 sat',
-      'eur: Fee when you spend 1 / 16 / 100 coins: 1 / 16 / 100 cents',
-      'lek: Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 lek',
-      'usd: Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 cents',
+    expect(v.rows.map(r => `${r.unit}: ${r.text} | ${r.examples}`)).toEqual([
+      'sat: 0.1 sat per coin · 100 ppk | You pay (rounded up per payment): 1 / 2 / 10 sat for 1 / 16 / 100 coins',
+      'eur: 1 cents per coin · 1000 ppk | You pay (rounded up per payment): 1 / 16 / 100 cents for 1 / 16 / 100 coins',
+      'lek: 0.1 lek per coin · 100 ppk | You pay (rounded up per payment): 1 / 2 / 10 lek for 1 / 16 / 100 coins',
+      'usd: 0.1 cents per coin · 100 ppk | You pay (rounded up per payment): 1 / 2 / 10 cents for 1 / 16 / 100 coins',
     ])
-    for (const r of v.rows) expect(r.text).not.toMatch(/proof|ecash note/i)
+    for (const r of v.rows) expect(`${r.text} ${r.examples}`).not.toMatch(/proof|ecash note/i)
   })
   it('the tooltip text is the approved plain-language explanation and avoids the technical words', () => {
-    expect(FEE_PER_COIN_TEXT).toBe('Your balance is made of many small coins. When you pay, the mint charges a small fee for each coin used. Wallets can keep this low by holding fewer, larger coins.')
+    expect(FEE_PER_COIN_TEXT).toBe('Your balance is made of many small coins. When you pay, the mint adds up a small fee for each coin used and rounds the total up to a whole unit, so small payments cost relatively more. Wallets can keep fees low by holding fewer, larger coins.')
     expect(FEE_PER_COIN_TEXT).not.toMatch(/proof|ecash note/i)
+    expect(KEYSET_FEE_TEXT).toBe('Input fee per 1000 coins spent from this keyset, in parts per thousand of the smallest unit.')
+    expect(KEYSET_FEE_TEXT).not.toMatch(/proof|ecash note/i)
+  })
+})
+
+describe('formatFeeRate', () => {
+  it.each([
+    [1, '0.001'], [10, '0.01'], [100, '0.1'], [150, '0.15'], [250, '0.25'], [333, '0.333'], [1000, '1'], [1500, '1.5'],
+  ])('%i ppk -> "%s" per coin', (ppk, expected) => {
+    expect(formatFeeRate(ppk)).toBe(expected)
+  })
+  it('has no floating-point artefacts and keeps whole numbers whole', () => {
+    expect(formatFeeRate(7)).toBe('0.007')
+    expect(formatFeeRate(1001)).toBe('1.001')
+    expect(formatFeeRate(999)).toBe('0.999')
+    expect(formatFeeRate(10_000)).toBe('10')
+    expect(formatFeeRate(1_000_000)).toBe('1,000')
   })
 })
 
 describe('feesView', () => {
-  it('shows the fee for spending 1 / 16 / 100 coins in the unit, rounded up', () => {
-    expect(feesView([{ unit: 'sat', active: true, inputFeePpk: 100 }])).toEqual({ rows: [{ unit: 'sat', text: 'Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 sat' }], empty: null })
-    expect(feesView([{ unit: 'sat', active: true, inputFeePpk: 999 }]).rows[0]?.text).toBe('Fee when you spend 1 / 16 / 100 coins: 1 / 16 / 100 sat')
+  it('shows the rate per coin first and the rounded examples for spending 1 / 16 / 100 coins', () => {
+    expect(feesView([{ unit: 'sat', active: true, inputFeePpk: 100 }])).toEqual({
+      rows: [{ unit: 'sat', text: '0.1 sat per coin · 100 ppk', examples: 'You pay (rounded up per payment): 1 / 2 / 10 sat for 1 / 16 / 100 coins' }], empty: null,
+    })
+    const r = feesView([{ unit: 'sat', active: true, inputFeePpk: 999 }]).rows[0]
+    expect(r?.text).toBe('0.999 sat per coin · 999 ppk')
+    expect(r?.examples).toBe('You pay (rounded up per payment): 1 / 16 / 100 sat for 1 / 16 / 100 coins')
   })
-  it('zero fee: "No input fee"', () => {
-    expect(feesView([{ unit: 'sat', active: true, inputFeePpk: 0 }]).rows[0]?.text).toBe(NO_INPUT_FEE)
+  it('150 ppk: one coin is 0.15, but the payment is rounded up per payment: 1 / 3 / 15 sat', () => {
+    const r = feesView([{ unit: 'sat', active: true, inputFeePpk: 150 }]).rows[0]
+    expect(r?.text).toBe('0.15 sat per coin · 150 ppk')
+    expect(r?.examples).toBe('You pay (rounded up per payment): 1 / 3 / 15 sat for 1 / 16 / 100 coins')
+  })
+  it('the rate comes from the ACTIVE keyset, whatever the other keysets of the unit state (mint.macadamia.cash: 4 sat keysets, one active)', () => {
+    const rate = (ks: { active: boolean; inputFeePpk: number | null }[]) => feesView(ks.map(k => ({ unit: 'sat', ...k }))).rows[0]?.text
+    // inactive 0 ppk listed first, active 150 ppk
+    expect(rate([{ active: false, inputFeePpk: 0 }, { active: true, inputFeePpk: 150 }])).toBe('0.15 sat per coin · 150 ppk')
+    // the real shape: three inactive (150, 0, 0) and one active (150)
+    expect(rate([{ active: false, inputFeePpk: 150 }, { active: false, inputFeePpk: 0 }, { active: false, inputFeePpk: 0 }, { active: true, inputFeePpk: 150 }])).toBe('0.15 sat per coin · 150 ppk')
+    // an inactive keyset with a HIGHER fee does not raise the rate
+    expect(rate([{ active: true, inputFeePpk: 150 }, { active: false, inputFeePpk: 5000 }])).toBe('0.15 sat per coin · 150 ppk')
+  })
+  it('several ACTIVE keysets of a unit with different fees: the highest is shown, never an average', () => {
+    expect(feesView([{ unit: 'sat', active: true, inputFeePpk: 100 }, { unit: 'sat', active: true, inputFeePpk: 250 }]).rows[0]?.text).toBe('0.25 sat per coin · 250 ppk')
+  })
+  it('zero fee: "No input fee" and no examples line', () => {
+    expect(feesView([{ unit: 'sat', active: true, inputFeePpk: 0 }]).rows[0]).toEqual({ unit: 'sat', text: NO_INPUT_FEE, examples: null })
   })
   it('several units: one row each', () => {
     const v = feesView([{ unit: 'usd', active: true, inputFeePpk: 0 }, { unit: 'sat', active: true, inputFeePpk: 1000 }])
-    expect(v.rows.map(r => `${r.unit}: ${r.text}`)).toEqual(['sat: Fee when you spend 1 / 16 / 100 coins: 1 / 16 / 100 sat', `usd: ${NO_INPUT_FEE}`])
+    expect(v.rows.map(r => `${r.unit}: ${r.text}`)).toEqual(['sat: 1 sat per coin · 1000 ppk', `usd: ${NO_INPUT_FEE}`])
   })
   it('a keyset that states no fee uses the NUT-02 default 0: "No input fee"; a stated number in another unit is unchanged', () => {
-    expect(feesView([{ unit: 'sat', active: true, inputFeePpk: null }]).rows).toEqual([{ unit: 'sat', text: NO_INPUT_FEE }])
+    expect(feesView([{ unit: 'sat', active: true, inputFeePpk: null }]).rows.map(r => r.text)).toEqual([NO_INPUT_FEE])
     const v = feesView([{ unit: 'sat', active: true, inputFeePpk: null }, { unit: 'usd', active: true, inputFeePpk: 100 }])
-    expect(v.rows.map(r => r.text)).toEqual([NO_INPUT_FEE, 'Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 cents'])
+    expect(v.rows.map(r => r.text)).toEqual([NO_INPUT_FEE, '0.1 cents per coin · 100 ppk'])
   })
   it('a missing fee on one active keyset does not lower the stated fee of another (max rule)', () => {
-    expect(feesView([{ unit: 'sat', active: true, inputFeePpk: null }, { unit: 'sat', active: true, inputFeePpk: 100 }]).rows[0]?.text).toBe('Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 sat')
+    expect(feesView([{ unit: 'sat', active: true, inputFeePpk: null }, { unit: 'sat', active: true, inputFeePpk: 100 }]).rows[0]?.text).toBe('0.1 sat per coin · 100 ppk')
   })
   it('no keysets: "Keyset data not available yet"; only inactive keysets: "No active keyset"', () => {
     expect(feesView(null).empty).toBe(FEES_NOT_CHECKED)

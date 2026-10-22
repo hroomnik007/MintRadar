@@ -878,6 +878,46 @@
     ],
     "triggers": 8
   },
+  "mint-fee-nuts@1440": {
+    "texts": [
+      "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "<DATE>",
+      "Add Alpha Mint to watchlist",
+      "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
+      "Copy full keyset ID",
+      "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
+      "Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.",
+      "Input fee per 1000 coins spent from this keyset, in parts per thousand of the smallest unit.",
+      "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
+      "MintRadar",
+      "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
+      "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
+      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Your balance is made of many small coins. When you pay, the mint adds up a small fee for each coin used and rounds the total up to a whole unit, so small payments cost relatively more. Wallets can keep fees low by holding fewer, larger coins.",
+      "Your latency from this browser to the mint (client-side measurement)."
+    ],
+    "triggers": 11
+  },
+  "mint-fee-nuts@390": {
+    "texts": [
+      "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
+      "<DATE>",
+      "Add Alpha Mint to watchlist",
+      "Copy full keyset ID",
+      "Input fee per 1000 coins spent from this keyset, in parts per thousand of the smallest unit.",
+      "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
+      "MintRadar",
+      "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
+      "Your balance is made of many small coins. When you pay, the mint adds up a small fee for each coin used and rounds the total up to a whole unit, so small payments cost relatively more. Wallets can keep fees low by holding fewer, larger coins.",
+      "Your latency from this browser to the mint (client-side measurement)."
+    ],
+    "triggers": 6
+  },
   "mint-new-nuts@1440": {
     "texts": [
       "<DATE>",

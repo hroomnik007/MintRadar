@@ -132,9 +132,12 @@ describe('numbers in the built texts equal their sources', () => {
 const ALL_CAPS_OK = new Set(['DLEQ', 'JSON', 'HTTP', 'HTTPS', 'BOLT']) // technical names
 const VERDICT = /\b(safe|safely|secure|securely|trusted|guaranteed?|recommended?)\b/i
 
+// The only texts exempt from the 220-character limit (every other rule still applies to them): owner-approved wording that is longer.
+const LONG_OK = new Set([T.FEE_PER_COIN_TEXT]) // Task B2, 242 characters
+
 export function styleProblems(text: string): string[] {
   const out: string[] = []
-  if (text.length > 220) out.push(`${text.length} characters`)
+  if (text.length > 220 && !LONG_OK.has(text)) out.push(`${text.length} characters`)
   for (const w of text.match(/\b[A-Z]{4,}\b/g) ?? []) if (!ALL_CAPS_OK.has(w)) out.push(`ALL CAPS word ${w}`)
   for (const v of text.matchAll(new RegExp(VERDICT.source, 'gi'))) out.push(`verdict word "${v[0]}"`)
   if (/\bminter\b/i.test(text)) out.push('"minter"')
@@ -147,7 +150,7 @@ const BUILT: Record<string, string> = {
   UNIT_FILTER_TEXT: T.UNIT_FILTER_TEXT, HIDE_TEST_MINTS_TEXT: T.HIDE_TEST_MINTS_TEXT, outdatedSoftwareText: T.outdatedSoftwareText(),
   TRACKING_HISTORY_TEXT: T.TRACKING_HISTORY_TEXT, BACKUP_SUPPORTED_TEXT: T.BACKUP_SUPPORTED_TEXT, NO_BACKUP_TEXT: T.NO_BACKUP_TEXT,
   AUDIT_MINTS_TEXT: T.AUDIT_MINTS_TEXT, AUDIT_MELTS_TEXT: T.AUDIT_MELTS_TEXT, auditSuccessRateText: T.auditSuccessRateText(),
-  REVIEWS_NIP87_TEXT: T.REVIEWS_NIP87_TEXT, SIGNATURE_CHECK_TEXT: T.SIGNATURE_CHECK_TEXT, INPUT_FEE_TEXT: T.INPUT_FEE_TEXT, FEE_PER_COIN_TEXT: T.FEE_PER_COIN_TEXT,
+  REVIEWS_NIP87_TEXT: T.REVIEWS_NIP87_TEXT, SIGNATURE_CHECK_TEXT: T.SIGNATURE_CHECK_TEXT, INPUT_FEE_TEXT: T.INPUT_FEE_TEXT, FEE_PER_COIN_TEXT: T.FEE_PER_COIN_TEXT, KEYSET_FEE_TEXT: T.KEYSET_FEE_TEXT,
   compareAuditSuccessText: T.compareAuditSuccessText(), sameOperatorText: T.sameOperatorText(['alpha.mint.example', 'twin.mint.example']),
   depositsTileText: T.depositsTileText(), withdrawalsTileText: T.withdrawalsTileText(),
   cleanTileText: T.cleanTileText(120, 126, 4, 2, n => n.toLocaleString('en-US')),

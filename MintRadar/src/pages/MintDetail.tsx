@@ -13,7 +13,7 @@ import {
   reviewSurgeText, AUDIT_MINTS_TEXT, AUDIT_MELTS_TEXT, auditSuccessRateText, uptimeRowText, auditRowText, NUT_ROW_TEXT,
   versionRowText, contactRowText, scoreFormulaText, BACKUP_SUPPORTED_TEXT, NO_BACKUP_TEXT, REVIEWS_NIP87_TEXT, cashuInfoViewText,
   HTTP_ERROR_EXPLANATIONS, NON_HTTP_ERROR_EXPLANATIONS, operatorExcludedText,
-  KEYSETS_HINT, newMintBadgeText, newMintCapNote, OPERATOR_REVIEW_NOTE,
+  KEYSETS_HINT, KEYSET_FEE_TEXT, newMintBadgeText, newMintCapNote, OPERATOR_REVIEW_NOTE,
   UPTIME_ROW_LABEL, AUDIT_ROW_LABEL, NUT_ROW_LABEL, VERSION_ROW_LABEL, CONTACT_ROW_LABEL,
   UPTIME_POINTS, AUDIT_POINTS, NUT_POINTS, VERSION_POINTS, CONTACT_POINTS,
   auditTooFewDetail, auditTooOldDetail, outagesCountLabel, noOutagesText, OUTAGES_WINDOW_DAYS,
@@ -1221,7 +1221,7 @@ function MintDetailContent({ url }: { url: string }) {
                 </div>
                 <span className="md-keyset-meta" style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.06em'}}>{ks.unit}</span>
                 {typeof ks.input_fee_ppk === 'number' && (
-                  <InfoTooltip text="Input fee per 1000 proofs spent from this keyset" width={200}><span className="md-keyset-meta" style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>{formatKeysetFee(ks.input_fee_ppk)}</span></InfoTooltip>
+                  <InfoTooltip text={KEYSET_FEE_TEXT} width={200} className="md-keyset-fee-tip"><span className="md-keyset-meta" style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>{formatKeysetFee(ks.input_fee_ppk)}</span></InfoTooltip>
                 )}
                 <span className="md-keyset-meta" style={{
                   fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,borderRadius:5,padding:'2px 7px',marginLeft:'auto',

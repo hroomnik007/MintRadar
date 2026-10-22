@@ -12,6 +12,9 @@ const ALPHA = 'https://alpha.mint.example'
 const group = (page: Page) => page.getByTestId('mint-fees-limits')
 const fees = (page: Page) => page.getByTestId('mint-fees')
 const limits = (page: Page) => page.getByTestId('mint-limits')
+const rates = (page: Page) => fees(page).locator('.md-fee-rate')
+const examples = (page: Page) => fees(page).locator('.md-fee-examples')
+const EX = (fees3: string, unit: string) => `You pay (rounded up per payment): ${fees3} ${unit} for 1 / 16 / 100 coins`
 
 function probeWith(keysets: unknown) {
   return {
@@ -53,13 +56,34 @@ const KS_FEE = [
   { id: '00c074b96c7e2b0e', unit: 'sat', active: false, input_fee_ppk: 5000 },
 ]
 
-test('a mint with an input fee: the fee for spending 1 / 16 / 100 coins, rounded up, in the unit', async ({ page }) => {
+test('a mint with an input fee: the rate per coin first, then the fee for spending 1 / 16 / 100 coins, rounded up, in the unit', async ({ page }) => {
   await open(page, { keysets: KS_FEE })
   await expect(group(page)).toBeVisible()
   await expect(group(page).locator('.md-panel-title')).toHaveText('Fees and limits')
   await expect(fees(page).locator('.md-info-row')).toHaveCount(1)
   await expect(fees(page).locator('.md-info-label')).toHaveText('Input fee · sat')
-  await expect(fees(page).locator('.md-info-value')).toHaveText('Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 sat')
+  await expect(rates(page)).toHaveText('0.1 sat per coin · 100 ppk')
+  await expect(examples(page)).toHaveText(EX('1 / 2 / 10', 'sat'))
+})
+
+test('150 ppk (mint.macadamia.cash): the rate line says 0.15 per coin, the examples line shows the payment rounded up per payment', async ({ page }) => {
+  // an inactive keyset with another fee must not decide the rate: the ACTIVE keyset (150 ppk) does
+  await open(page, { keysets: [
+    { id: '00c074b96c7e2b0e', unit: 'sat', active: false, input_fee_ppk: 0 },
+    { id: '00ad268c4d1f5826', unit: 'sat', active: true, input_fee_ppk: 150 },
+    { id: '00ffee11aa22bb33', unit: 'sat', active: false, input_fee_ppk: 5000 },
+  ] })
+  await expect(rates(page)).toHaveText('0.15 sat per coin · 150 ppk')
+  await expect(examples(page)).toHaveText('You pay (rounded up per payment): 1 / 3 / 15 sat for 1 / 16 / 100 coins')
+  // the rate is the primary line: it comes first in the row and is not smaller than the examples
+  const sizes = await fees(page).locator('.md-info-value').evaluate(el => {
+    const r = el.querySelector('.md-fee-rate')!, x = el.querySelector('.md-fee-examples')!
+    return { rateTop: r.getBoundingClientRect().top, exTop: x.getBoundingClientRect().top, rate: parseFloat(getComputedStyle(r).fontSize), ex: parseFloat(getComputedStyle(x).fontSize) }
+  })
+  expect(sizes.rateTop).toBeLessThan(sizes.exTop)
+  expect(sizes.rate).toBeGreaterThanOrEqual(sizes.ex)
+  expect(sizes.ex).toBeGreaterThanOrEqual(12)
+  await expect(group(page).locator('button[data-tooltip-trigger]').first()).toBeVisible()
 })
 
 test('the effective fee is the largest of the ACTIVE keysets; several units get a row each', async ({ page }) => {
@@ -69,13 +93,11 @@ test('the effective fee is the largest of the ACTIVE keysets; several units get 
     { id: '01bbbbbbbbbbbbbb', unit: 'usd', active: true, input_fee_ppk: 1000 },
   ] })
   await expect(fees(page).locator('.md-info-row')).toHaveCount(2)
-  await expect(fees(page).locator('.md-info-value')).toHaveText([
-    'Fee when you spend 1 / 16 / 100 coins: 1 / 4 / 25 sat',
-    'Fee when you spend 1 / 16 / 100 coins: 1 / 16 / 100 cents',
-  ])
+  await expect(rates(page)).toHaveText(['0.25 sat per coin · 250 ppk', '1 cents per coin · 1000 ppk'])
+  await expect(examples(page)).toHaveText([EX('1 / 4 / 25', 'sat'), EX('1 / 16 / 100', 'cents')])
 })
 
-const FEE_TIP = 'Your balance is made of many small coins. When you pay, the mint charges a small fee for each coin used. Wallets can keep this low by holding fewer, larger coins.'
+const FEE_TIP = 'Your balance is made of many small coins. When you pay, the mint adds up a small fee for each coin used and rounds the total up to a whole unit, so small payments cost relatively more. Wallets can keep fees low by holding fewer, larger coins.'
 
 test('plain wording: "coins" instead of "proofs", cents for usd and eur, the raw unit for any other unit; the numbers are unchanged', async ({ page }) => {
   await open(page, { keysets: [
@@ -85,12 +107,8 @@ test('plain wording: "coins" instead of "proofs", cents for usd and eur, the raw
     { id: '00dddddddddddddd', unit: 'lek', active: true, input_fee_ppk: 100 },
   ] })
   await expect(fees(page).locator('.md-info-label')).toHaveText(['Input fee · sat', 'Input fee · eur', 'Input fee · lek', 'Input fee · usd'])
-  await expect(fees(page).locator('.md-info-value')).toHaveText([
-    'Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 sat',
-    'Fee when you spend 1 / 16 / 100 coins: 1 / 16 / 100 cents',
-    'Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 lek',
-    'Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 cents',
-  ])
+  await expect(rates(page)).toHaveText(['0.1 sat per coin · 100 ppk', '1 cents per coin · 1000 ppk', '0.1 lek per coin · 100 ppk', '0.1 cents per coin · 100 ppk'])
+  await expect(examples(page)).toHaveText([EX('1 / 2 / 10', 'sat'), EX('1 / 16 / 100', 'cents'), EX('1 / 2 / 10', 'lek'), EX('1 / 2 / 10', 'cents')])
   // nothing in the card body uses the technical words
   await expect(group(page)).not.toContainText(/proof|ecash note/i)
 })
@@ -226,7 +244,13 @@ test('no request to a mint is made by the group: only our own API is contacted',
   expect([...hosts].filter(h => h !== own)).toEqual([])
 })
 
-test('while the probe is held the group keeps its place; releasing it shifts nothing noticeable', async ({ page }) => {
+const HELD_CASES = [
+  { name: 'a fee row (two lines)', keysets: KS_FEE, shown: '0.1 sat per coin · 100 ppk' },
+  { name: 'a "No input fee" row (one line)', keysets: [{ id: '00ad268c4d1f5826', unit: 'sat', active: true, input_fee_ppk: 0 }], shown: 'No input fee' },
+] as const
+
+for (const [w, h] of [[1440, 900], [390, 844], [320, 640]] as const) for (const c of HELD_CASES) {
+test(`while the probe is held the group keeps its place; releasing it shifts nothing noticeable (${w}px, ${c.name})`, async ({ page }) => {
   let letThrough!: () => void
   const hold = new Promise<void>(res => { letThrough = res })
   await page.addInitScript(() => {
@@ -237,7 +261,7 @@ test('while the probe is held the group keeps its place; releasing it shifts not
     })
     w.__obs.observe({ type: 'layout-shift', buffered: true })
   })
-  const m = await open(page, { keysets: KS_FEE, hold })
+  const m = await open(page, { keysets: c.keysets, hold }, [w, h])
   await expect.poll(() => m.reached(), { message: 'the probe request reached the mock' }).toBe(1)
   await expect(group(page)).toBeVisible()
   await expect(fees(page)).toContainText('Checking keysets')
@@ -247,12 +271,14 @@ test('while the probe is held the group keeps its place; releasing it shifts not
   const shift = () => page.evaluate(() => { const w = window as unknown as { __cls: number; __obs: PerformanceObserver }; w.__obs.takeRecords(); return w.__cls })
   const clsBefore = await shift()
   letThrough()
-  await expect(fees(page).locator('.md-info-value')).toHaveText('Fee when you spend 1 / 16 / 100 coins: 1 / 2 / 10 sat')
+  await expect(fees(page).locator('.md-info-value')).toContainText(c.shown)
   await layoutReady(page)
   const after = (await group(page).boundingBox())!.height
-  expect(Math.abs(after - before), `placeholder ${before}px vs loaded ${after}px`).toBeLessThanOrEqual(12)
+  // the reserved row height is the midpoint of a one-line and a two-line row: 12px on desktop (as before), 20px where the value sits under the label (<= 480px)
+  expect(Math.abs(after - before), `placeholder ${before}px vs loaded ${after}px`).toBeLessThanOrEqual(w <= 480 ? 20 : 12)
   expect((await shift()) - clsBefore).toBeLessThan(0.02)
 })
+}
 
 for (const [w, h] of [[1440, 900], [768, 1024], [390, 844], [320, 640]] as const) {
   test(`layout at ${w}px: no horizontal overflow, text at least 12px on phones, rows wrap inside the panel`, async ({ page }) => {

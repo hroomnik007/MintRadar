@@ -6,7 +6,7 @@ import { FEE_PER_COIN_TEXT } from '@/utils/tooltipTexts'
 type MethodLike = { method: string; unit: string; [key: string]: unknown }
 
 /**
- * Overview group "Fees and limits": input fee examples per unit (from the stored keysets) and the limits the mint
+ * NUTs tab card "Fees and limits": the input fee rate and rounded examples per unit (from the stored keysets) and the limits the mint
  * declares in /v1/info. Label left, value right (the .md-info-row recipe); every number is plain text.
  */
 export function MintFeesLimits({ keysets, keysetsPending, units, mintMethods, meltMethods, disabled, fetchedAt, now }: {
@@ -41,7 +41,10 @@ export function MintFeesLimits({ keysets, keysetsPending, units, mintMethods, me
               Input fee · {r.unit}
               {r.text !== NO_INPUT_FEE && <InfoTooltip iconSize={11} width={240} about={`input fee in ${r.unit}`} text={FEE_PER_COIN_TEXT} />}
             </span>
-            <span className="md-info-value">{r.text}</span>
+            <span className="md-info-value">
+              <span className="md-fee-rate">{r.text}</span>
+              {r.examples && <span className="md-fee-examples">{r.examples}</span>}
+            </span>
           </div>
         ))}
       </div>
