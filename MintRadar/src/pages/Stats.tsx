@@ -18,7 +18,7 @@ import { isEligibleForRecommendation } from '@/utils/reliabilityScore'
 import { compareMintVersionNumbers, classifyVersion } from '@/utils/versionRule'
 import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
 import { useIsMobile } from '@/hooks/useIsMobile'
-import { PageHead } from '@/components/layout/PageHead'
+import { StatsPageHead } from '@/components/stats/StatsPageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { LoadError } from '@/components/LoadError'
@@ -852,18 +852,14 @@ export default function Stats() {
 
   if (isLoading) return (
     <div className={pageClass}>
-      <div className="stats-header">
-        <div className="stats-title">Statistics</div>
-      </div>
+      <StatsPageHead />
       <div className="stats-loading">Loading…</div>
     </div>
   )
 
   if (error !== null && error !== undefined || !data) return (
     <div className={pageClass}>
-      <div className="stats-header">
-        <div className="stats-title">Statistics</div>
-      </div>
+      <StatsPageHead />
       <LoadError message={STATS_ERROR} onRetry={() => { void refetch() }} />
     </div>
   )
@@ -873,11 +869,7 @@ export default function Stats() {
 
   return (
     <div className={pageClass}>
-      <PageHead
-        title="Network stats"
-        srTitle="Cashu mints: uptime, Reliability Score & NUT adoption"
-        description={`How the Cashu mint network is doing right now, measured from ${PROBE_LOCATION}.`}
-      />
+      <StatsPageHead />
       {/* Board (grid areas in Stats.css). DOM order = visual reading order at every breakpoint:
           Network health, The network right now, [Top + Software], NUT coverage, Geographic distribution,
           movers, trend. Desktop: 3 rows; tablet: 2 columns; mobile: one column. Extra cards go last. */}

@@ -145,7 +145,7 @@ What moved, measured on that fixture before the change (phone: Lighthouse report
 | What | Why it moved |
 |---|---|
 | Footer (up to 0.9 at 390 px) | While `/api/stats` is pending the page is a short "Loading…" screen with the footer in view; the board then pushes the footer out of view. The route fallback had the same problem one step earlier. |
-| Page header (about 0.02 at 1440, 0.04 at 390) | The loading screen has the short `.stats-header` (59 px); the loaded page has the taller `PageHead` (75 to 109 px). React reuses the DOM node, so the board starts 29 to 50 px lower than the waiting block did. |
+| Page header (about 0.02 at 1440, 0.04 at 390) | (History: the loading screen had the short `.stats-header` (59 px) and the loaded page the taller `PageHead`; both are `StatsPageHead` now) (75 to 109 px). React reuses the DOM node, so the board starts 29 to 50 px lower than the waiting block did. |
 | Network health index (0.07 to 0.37) | Its card is not rendered until `/api/mints/known` arrives, so row 1 was only as tall as "The network right now" and everything below moved down 90 to 130 px. |
 | Left stack (`.stats-stack`) | Top by Reliability Score shows "No data yet" and Software in use shows "No data" while known mints load; the stack grew from 250 to 561 px on a phone. |
 | Waiting block width (1440 px) | The full-width "Loading…" block became the centred board (`--dash-chrome-max`), a 58 px sideways move. |
@@ -154,12 +154,12 @@ The reservations (all in `Stats.css`, values as `--stats-reserve-*` custom prope
 
 | Block | Rule | Values (px) by width |
 |---|---|---|
-| Page header | `.stats-header { min-height }` (the loading and error screens; equals the loaded `PageHead`) | 96 up to 518, 75 for 519 to 640, 109 for 641 to 670, 88 from 671 |
+| Page header | none since Task D3b: the loading and error screens render the same `StatsPageHead` as the loaded page | 96 up to 518, 75 for 519 to 640, 109 for 641 to 670, 88 from 671 |
 | Waiting block | `.stats-loading { min-height }` (becomes the board in place; also takes the board's max width and centring) | 2730 up to 767, 1616 at 768, 1822 for 769 to 1279, 1326 from 1280 (keeps the footer below the fold) |
 | Network health index | `.stats-board-grid::before { grid-area: nhi; min-height }` (an empty box: the card does not exist before its data does; the card later sits in the same area) | 181 up to 767, 275 at 768, 355 for 769 to 1007, 333 for 1008 to 1269, 310 for 1270 to 1279, 346 from 1280 |
 | Left stack | `.stats-stack { min-height }` = Top by Reliability Score + Software in use + gap | 618 up to 329, 583 for 330 to 359, 561 for 360 to 409, 521 for 410 to 767, 538 at 768, 659 for 769 to 799, 618 from 800 |
 
-Also: the `/stats` route fallback (`statsFallback` in `App.tsx`) is as tall as the viewport (`min-height: 100vh`), because the footer must be below the fold from the first painted frame. It has no `.stats-*` classes: `Stats.css` is in the lazy chunk and is not loaded while the fallback shows.
+Also: the `/stats` route fallback (`statsFallback` in `App.tsx`) is as tall as the viewport (`min-height: 100vh`), because the footer must be below the fold from the first painted frame. It has no `.stats-*` classes: `Stats.css` is in the lazy chunk and is not loaded while the fallback shows. Since Task D3b (2026-10-22) it paints the page header (`StatsPageHead`, `src/components/stats/StatsPageHead.tsx`, not lazy, no data: the single source of the title and the description) and a "Loading…" note with the box of `.stats-loading`; the loading, error and loaded states of Stats.tsx render the same component, so the header never changes text or height. Local 150 ms / 1.6 Mbit/s / CPU 4x, median of 3: `/stats` LCP 2592 -> 2184 ms (3344 ms before Recharts went lazy). Pinned by `e2e/stats-header-first.spec.ts`.
 
 Result (same fixture, worst case of every endpoint held 1.5 s, all released at once, known last): layout shift 0.0000 to 0.0019 at 1440, 1280, 1024, 768, 390 and 320 px; the document height and the boxes of the main cards after loading are unchanged (0 px, at most 0.3 px). A reserved block with nothing to fill it (known mints fail: no Network health index) leaves an empty area of its reserved height.
 

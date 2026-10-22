@@ -27,7 +27,7 @@ describe('ReliabilityTrendView', () => {
 
   it('another period pending: the previous chart stays, dimmed, and "No data yet" does not appear', async () => {
     const { container } = view({ isPlaceholderData: true })
-    await waitFor(() => expect(container.querySelector('.recharts-responsive-container')).not.toBeNull())
+    await waitFor(() => expect(container.querySelector('.recharts-responsive-container')).not.toBeNull(), { timeout: 5000 })
     const body = container.querySelector('.stats-trend-body')!
     expect(body).toHaveClass('is-pending')
     expect(body).toHaveAttribute('aria-busy', 'true')

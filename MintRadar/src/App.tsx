@@ -13,6 +13,7 @@ import NotFound from '@/pages/NotFound'
 // Moved into their own module (routerLazy.tsx) so this file's only export is
 // `router` — a file mixing component exports with a non-component export
 // breaks react-refresh's fast-refresh detection (react-refresh/only-export-components).
+import { StatsPageHead } from '@/components/stats/StatsPageHead'
 import { Stats, MintDetail, Tools, About, Methodology, ForWallets } from '@/routerLazy'
 
 const lazyFallback = (
@@ -26,6 +27,16 @@ const viewportFallback = (
   <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text2)', minHeight: '100vh' }}>Loading…</div>
 )
 
+// The /stats fallback paints the page header (no data, not lazy) so the title and the description do not wait for the Stats
+// chunk. The waiting note below it has the box of Stats' own `.stats-loading` (Stats.css is in the lazy chunk and is not
+// loaded yet), and the whole fallback is as tall as the viewport for the same footer reason as viewportFallback.
+const statsFallback = (
+  <div style={{ minHeight: '100vh' }}>
+    <StatsPageHead />
+    <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text3)', fontFamily: 'var(--font-mono)', fontSize: 13, maxWidth: 'var(--dash-chrome-max)', marginInline: 'auto', width: '100%', boxSizing: 'content-box' }}>Loading…</div>
+  </div>
+)
+
 export const router = createBrowserRouter([
   {
     element: <AppShell />,
@@ -33,7 +44,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> },
       { path: 'watchlist', element: <Watchlist /> },
-      { path: 'stats', element: <Suspense fallback={viewportFallback}><Stats /></Suspense> },
+      { path: 'stats', element: <Suspense fallback={statsFallback}><Stats /></Suspense> },
       { path: 'tools', element: <Suspense fallback={viewportFallback}><Tools /></Suspense> },
       { path: 'about', element: <Suspense fallback={lazyFallback}><About /></Suspense> },
       { path: 'methodology', element: <Suspense fallback={lazyFallback}><Methodology /></Suspense> },

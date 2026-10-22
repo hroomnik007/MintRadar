@@ -17,19 +17,6 @@
   --stats-header-gap: 10px;
 }
 
-.stats-header {
-  padding: 14px 24px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg2);
-}
-
-.stats-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.02em;
-}
-
 .stats-subtitle {
   font-size: 11px;
   color: var(--text3);
@@ -48,7 +35,7 @@
 /* ── Flat metric bar ─────────────────────────────────────────── */
 /* Constrained + centered to the same width/inset as .mint-grid (Dashboard)
    so the hero tile row's left edge lines up with the first Dashboard mint
-   card. .stats-header above stays full-bleed (unchanged). */
+   card. */
 
 
 /* Hero tiles reuse Dashboard's .stat-card / .stat-row / .stat-icon /
@@ -1117,7 +1104,7 @@
    breakpoints as the grid (docs/claude/stats-dashboard-watchlist-ui.md, "Reserved heights and how to re-measure").
    Each value is the smallest loaded height in its width band, so a reservation never exceeds the loaded block by more
    than a few px and never clips (it is a min-height). Values: realistic fixture e2e/fixtures/statsLayout.ts.
-   head  = the page header (the loading screen has the short .stats-header, the loaded page the taller PageHead)
+   (the page header is the same StatsPageHead component in the fallback, loading, error and loaded states: no reservation)
    board = the whole board (keeps the footer below the fold while /api/stats is pending)
    nhi   = the Network health index card, which is not rendered until /api/mints/known arrives
    stack = Top by Reliability Score + Software in use + the gap
@@ -1127,7 +1114,6 @@
            and up) and 32 px at 12px (phones), two lines 48.5 px and 50 px. It is added to the board and to the movers card. */
 .stats-page {
   --stats-reserve-note: 0px;
-  --stats-reserve-head: 88px;
   --stats-reserve-board: 1326px;
   --stats-reserve-nhi: 346px;
   --stats-reserve-stack: 618px;
@@ -1141,9 +1127,6 @@
 @media (max-width: 409px)  { .stats-page { --stats-reserve-stack: 561px; } }
 @media (max-width: 359px)  { .stats-page { --stats-reserve-stack: 583px; } }
 @media (max-width: 329px)  { .stats-page { --stats-reserve-stack: 618px; } }
-@media (max-width: 670px)  { .stats-page { --stats-reserve-head: 109px; } }
-@media (max-width: 640px)  { .stats-page { --stats-reserve-head: 75px; } }
-@media (max-width: 518px)  { .stats-page { --stats-reserve-head: 96px; } }
 /* One-change note (n1) wraps below 373 px only (12px type). 2 / 3 changes (30d, or a 7d window with two) wrap on narrow
    phones, on the narrow two-column tablet cards and in the desktop card. Edges: the widths measured above, where the line
    count flips. */
@@ -1159,7 +1142,6 @@
 @media (max-width: 372px) { .stats-page.movers-note-n1 { --stats-reserve-note: 50px; } }
 @media (max-width: 449px) { .stats-page.movers-note-n2 { --stats-reserve-note: 50px; } }
 @media (max-width: 533px) { .stats-page.movers-note-n3 { --stats-reserve-note: 50px; } }
-.stats-header { min-height: var(--stats-reserve-head); }
 /* The loading block becomes the board in place, so it has the board's width and centring as well (above 1340 px the board is
    narrower than the viewport and a full-width block moved sideways). */
 .stats-loading { min-height: calc(var(--stats-reserve-board) + var(--stats-reserve-note)); max-width: var(--dash-chrome-max); margin-inline: auto; width: 100%; }

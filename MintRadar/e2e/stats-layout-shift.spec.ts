@@ -102,7 +102,7 @@ for (const width of WIDTHS) {
       await gate.reached('stats')
       await frames(page, 3)
       // Loading screen: the header and the block that becomes the board.
-      const headReserve = px(await page.locator('.stats-header').evaluate(el => getComputedStyle(el).minHeight))
+      const headWaiting = await heightOf(page, '.page-head')
       const boardReserve = px(await page.locator('.stats-loading').evaluate(el => getComputedStyle(el).minHeight))
       const loadingTop = await topOf(page, '.stats-loading')
       const loadingBox = (await page.locator('.stats-loading').boundingBox())!
@@ -121,7 +121,7 @@ for (const width of WIDTHS) {
 
       // Each reservation is within TOLERANCE of the loaded height: not missing, not leaving a big empty space.
       for (const [name, reserve, height] of [
-        ['header', headReserve, expected.head],
+        ['header', headWaiting, expected.head],
         ['Network health index', nhiReserve, expected.nhi],
         ['stack', stackReserve, expected.stack],
       ] as const) {

@@ -45,7 +45,7 @@ for (const mode of ['500', 'network'] as const) {
       expect(alert).toHaveTextContent('Could not load the statistics. Please try again.')
       expect(document.body.textContent).not.toContain('secret-internal-detail')
       expect(document.body.textContent).not.toContain('Failed to load')
-      expect(screen.getByText('Statistics')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 1, name: /Network stats/ })).toBeInTheDocument()
       const before = state.calls.stats
       fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
       await waitFor(() => expect(state.calls.stats).toBe(before + 1))
