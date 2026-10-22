@@ -37,16 +37,17 @@ import { setDeprecationHeaders, RECOMMEND_DEPRECATION } from './deprecation.js'
 import { verifyNip05 } from './nip05Verify.js'
 import { isAllowlistMode, isAllowedUrl } from './allowlist.js'
 import { profileFieldsForReview } from './profilesSync.js'
+import { createSwrCache, makeRefreshErrorLogger, KNOWN_MINTS_CACHE_TTL } from './knownMintsCache.js'
 
 // ONE computation of the /api/mints/known rows, shared with the wallet API (walletApi.ts): at most one database read
 // per KNOWN_MINTS_CACHE_TTL for all of them, concurrent callers join the read in flight.
-let knownMintsCache: (Snapshot & { expiresAt: number }) | null = null
-let knownMintsInflight: Promise<Snapshot> | null = null
-function invalidateKnownMints(): void {
-  knownMintsCache = null
-  knownMintsInflight = null
-}
-const KNOWN_MINTS_CACHE_TTL = 60_000 // 60 seconds
+// Stale-while-revalidate (knownMintsCache.ts): fresh < 60 s, served stale + one background refresh < 10 min, a 45 s timer
+// and a start-up warm-up keep it from expiring under a running server.
+const knownMints = createSwrCache<Snapshot>({
+  compute: () => computeKnownMints(),
+  onRefreshError: makeRefreshErrorLogger(),
+})
+const invalidateKnownMints = (): void => knownMints.invalidate()
 
 // /api/stats is in RATE_LIMIT_EXEMPT (see below) but, unlike the other
 // exempt endpoints, ran two live pool.query() calls via Promise.all on every
@@ -1459,14 +1460,10 @@ function latestOfFamily(version: string | null, latestVersions: LatestVersions):
   return family ? latestVersions[family] ?? null : null
 }
 
-// The /api/mints/known rows: ONE database read (plus the cached software-version map) per KNOWN_MINTS_CACHE_TTL for
-// every caller (this route, the wallet API, /api/mints/recommend); callers during a read join it.
+// The /api/mints/known rows: ONE database read (plus the cached software-version map) per refresh for every caller
+// (this route, the wallet API, /api/mints/recommend); callers during a read join it. See knownMintsCache.ts.
 function loadKnownMints(): Promise<Snapshot> {
-  if (knownMintsCache && Date.now() < knownMintsCache.expiresAt) return Promise.resolve(knownMintsCache)
-  if (knownMintsInflight) return knownMintsInflight
-  const p: Promise<Snapshot> = computeKnownMints().finally(() => { if (knownMintsInflight === p) knownMintsInflight = null })
-  knownMintsInflight = p
-  return p
+  return knownMints.get()
 }
 
 function computeKnownMints(): Promise<Snapshot> {
@@ -1695,9 +1692,7 @@ function computeKnownMints(): Promise<Snapshot> {
         })
       }
       const now = Date.now()
-      const snapshot = { data, computedAt: now, expiresAt: now + KNOWN_MINTS_CACHE_TTL, reviewFallback, walletExtra }
-      knownMintsCache = snapshot
-      return snapshot
+      return { data, computedAt: now, reviewFallback, walletExtra }
     })
 }
 
@@ -2630,6 +2625,7 @@ if (process.env['NODE_ENV'] !== 'test') {
       .then(() => seedKnownMints(upsertMint))
       .then(() => {
         startCron()
+        knownMints.start() // fire-and-forget warm-up + 45 s refresh timer (unref'ed); failures are logged, never thrown
         refreshReliabilityTrendCache()
         setInterval(refreshReliabilityTrendCache, RELIABILITY_TREND_REFRESH_MS).unref()
         void publishServiceProfile()

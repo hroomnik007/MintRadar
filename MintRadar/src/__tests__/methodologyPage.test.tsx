@@ -188,7 +188,7 @@ describe('cadence', () => {
     const cron = read('../../backend/src/cron.ts')
     expect(M.cadence.detailMinutes).toBe(30)
     expect(cron).toContain("cron.schedule('8,38 * * * *'")
-    expect(read('../../backend/src/index.ts')).toContain(`const KNOWN_MINTS_CACHE_TTL = ${M.cadence.snapshotSeconds}_000`)
+    expect(read('../../backend/src/knownMintsCache.ts')).toContain(`const KNOWN_MINTS_CACHE_TTL = ${M.cadence.snapshotSeconds}_000`)
   })
 })
 

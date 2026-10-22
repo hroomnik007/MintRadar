@@ -569,6 +569,10 @@ Rollback: restore the backup list and restart the relay; for the backend delete 
 - **`application/yaml` is in `gzip_types`**, so the OpenAPI file is sent compressed (it was served plain: `application/yaml` is not in nginx's default list).
 - **/for-wallets** now links `https://mintradar.org/docs/openapi/wallets-v1.yaml` (`DOCS_OPENAPI_URL`) instead of the GitHub blob URL; the text still says the source file is in the GitHub repository. `docs/API.md` links the file relatively and is unchanged. `FOR_WALLETS_PAGE_LASTMOD` was already 2026-10-22.
 
+## Task D3d: backend warm-up after a deploy (2026-10-22)
+
+The backend restarts on every backend deploy and the in-process `/api/mints/known` snapshot is empty then. Since D3d the start-up chain (after `initDb()` and the seed) starts a fire-and-forget warm-up and a 45 s refresh timer, so the first visitor after a restart normally gets the snapshot instead of waiting for the multi-second 7-day aggregate; a request that arrives before the warm-up has finished still computes synchronously and shares that computation. Constants, the stale-while-revalidate rule and invalidation: `backend-api-and-data.md` ("Known-mints snapshot: stale-while-revalidate"). Nothing in nginx or the database changed.
+
 ## Docker log limits (2026-10-04)
 
 `docker-compose.yml`: the `backend` and `postgres` services use `logging: driver: json-file`, `max-size: "10m"`, `max-file: "3"` (≤ 30 MB per container; same values as the separate strfry relay container, which is NOT in this compose file and was not touched). Before this they had `json-file` with no limits, so the logs grew until the container was recreated.
