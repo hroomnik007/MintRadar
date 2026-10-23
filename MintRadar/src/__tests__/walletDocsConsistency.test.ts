@@ -337,7 +337,7 @@ describe('`units` and the `unit` filter say what the code lists (parseMintMethod
 })
 
 describe('`contactChecks.domainResolves` says when it is null and false (backend/src/contactChecks.ts) in every document', () => {
-  const sentence = 'domainResolves is null when the DNS check could not be completed at the last check (for example a timeout) or does not apply to the contact; it is checked again on the next contact check, about every 24 hours. NXDOMAIN and a domain with no mail records (no MX and no A/AAAA records, or a null MX) give false.'
+  const sentence = 'domainResolves is null when the DNS check could not be completed at the last check (for example a timeout) or does not apply to the contact; it is checked again on the next contact check, about every 24 hours. If a later check cannot be completed, an earlier true is kept for up to 24 hours after that answer (checkedAt is then the time of that answer); a real false always replaces it. NXDOMAIN and a domain with no mail records (no MX and no A/AAAA records, or a null MX) give false.'
   const plain = (t: string) => stripTicks(oneLine(t))
   it('API.md, the OpenAPI file and the /for-wallets field table carry the sentence', () => {
     const field = mdTable(apiMd, '| Mint field |').find(r => backticked(r[0]!)[0] === 'contactChecks')![2]!

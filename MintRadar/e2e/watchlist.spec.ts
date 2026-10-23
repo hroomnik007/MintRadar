@@ -15,10 +15,33 @@ test.describe('Watchlist', () => {
     await expect(gate.getByRole('heading', { name: 'My Watchlist' })).toBeVisible()
     await expect(gate.getByText(/sync your watchlist across devices/)).toBeVisible()
     await expect(gate.getByRole('button', { name: /Login via Nostr/ })).toBeVisible()
-    await expect(gate.getByText(/Stored on Nostr\. Optional DMs when a watched mint goes down or comes back up\./)).toBeVisible()
+    await expect(gate.getByText(/Stored on Nostr\. Optional DMs when a watched mint goes down or comes back up, plus key and fee changes\./)).toBeVisible()
     // No watchlist grid is rendered.
     await expect(page.locator('.wl-grid')).toHaveCount(0)
   })
+
+  for (const width of [320, 360, 390, 768, 1440]) {
+    test(`signed-out hint and empty-state text fit without horizontal overflow at ${width}px, never longer than 4 lines`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 })
+      const noOverflow = () => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)
+      const lines = (loc: ReturnType<typeof page.locator>) => loc.evaluate(el => {
+        const cs = getComputedStyle(el)
+        const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.2
+        return Math.round(el.getBoundingClientRect().height / lh)
+      })
+      await page.goto('/watchlist')
+      const hint = page.locator('.wl-login-hint')
+      await expect(hint).toBeVisible()
+      expect(await noOverflow()).toBe(true)
+      expect(await lines(hint)).toBeLessThanOrEqual(4)
+      await loginAs(page)
+      await page.goto('/watchlist')
+      const sub = page.locator('.wl-empty-sub')
+      await expect(sub).toHaveText(/hear when its status, key or fee changes\./)
+      expect(await noOverflow()).toBe(true)
+      expect(await lines(sub)).toBeLessThanOrEqual(4)
+    })
+  }
 
   test('adds a mint from the Dashboard and shows it on the watchlist (logged in)', async ({ page }) => {
     // NOTE: The "+ Watch" control on a Dashboard card only renders for a

@@ -237,11 +237,25 @@ describe('the DNS lookup', () => {
     dnsMock.resolve4.mockRejectedValue(err('ETIMEOUT'))
     expect(await m.resolveMailDomain('mail-host.com')).toBeNull()
   })
+  it('two full attempts (two queries in a row each) fit inside the overall deadline', () => {
+    expect(4 * m.DNS_TIMEOUT_MS).toBeLessThan(m.DNS_TOTAL_MS)
+  })
+  it('the second attempt of a slow first one still runs and can answer inside the deadline', async () => {
+    vi.useFakeTimers()
+    // first attempt: MX answers nothing, A/AAAA time out at the per-query limit; second attempt answers
+    dnsMock.resolveMx.mockRejectedValueOnce(err('ENODATA')).mockResolvedValueOnce([{ exchange: 'mx.mail-host.com', priority: 10 }])
+    dnsMock.resolve4.mockImplementationOnce(() => new Promise((_, reject) => setTimeout(() => reject(err('ETIMEOUT')), m.DNS_TIMEOUT_MS)))
+    dnsMock.resolve6.mockImplementationOnce(() => new Promise((_, reject) => setTimeout(() => reject(err('ETIMEOUT')), m.DNS_TIMEOUT_MS)))
+    const p = m.resolveMailDomain('mail-host.com')
+    await vi.advanceTimersByTimeAsync(m.DNS_TIMEOUT_MS + 10)
+    expect(await p).toBe(true)
+    expect(dnsMock.resolveMx).toHaveBeenCalledTimes(2)
+  })
   it('a resolver that never answers is unknown (null) once the deadline passes', async () => {
     vi.useFakeTimers()
     dnsMock.resolveMx.mockReturnValue(new Promise(() => undefined))
     const p = m.resolveMailDomain('mail-host.com')
-    await vi.advanceTimersByTimeAsync(m.DNS_TIMEOUT_MS * 3 + 10)
+    await vi.advanceTimersByTimeAsync(m.DNS_TOTAL_MS + 10)
     expect(await p).toBeNull()
   })
   describe('one retry when the first attempt could not tell', () => {
@@ -273,7 +287,7 @@ describe('the DNS lookup', () => {
         .mockImplementationOnce(() => new Promise((_, reject) => setTimeout(() => reject(err('ETIMEOUT')), m.DNS_TIMEOUT_MS)))
         .mockReturnValue(new Promise(() => undefined))
       const p = m.resolveMailDomain('mail-host.com')
-      await vi.advanceTimersByTimeAsync(m.DNS_TIMEOUT_MS * 3 + 10)
+      await vi.advanceTimersByTimeAsync(m.DNS_TOTAL_MS + 10)
       expect(await p).toBeNull()
       expect(dnsMock.resolveMx).toHaveBeenCalledTimes(2)
       await vi.advanceTimersByTimeAsync(m.DNS_TIMEOUT_MS * 10)
@@ -478,6 +492,61 @@ describe('scheduling and storage', () => {
     expect(query).not.toHaveBeenCalled()
     await m.scheduleContactChecks('https://mint.example', [], fresh, opts())
     expect(JSON.parse((query.mock.calls[0] as [string, string[]])[1][0] as string)).toEqual([])
+  })
+
+  describe('a lookup that could not tell keeps an earlier true for 24 h (domainResolves)', () => {
+    const H = 3_600_000
+    // The mint adds a twitter entry, so the kinds differ from the stored ones and the check is due before the 24 h are over.
+    const EMAIL = [{ method: 'email', info: 'ops@mail-host.com' }, { method: 'twitter', info: '@canary' }]
+    const storedAt = (value: boolean | null, ageMs: number, rules = m.CONTACT_RULES_VERSION) =>
+      [{ kind: 'email', formatValid: true, domainResolves: value, checkedAt: new Date(NOW - ageMs).toISOString(), rules }]
+    const written = async (stored: unknown, lookup: () => Promise<boolean | null>) => {
+      await m.scheduleContactChecks('https://mint.example', EMAIL, stored, opts(lookup))
+      expect(query).toHaveBeenCalledTimes(1)
+      return JSON.parse((query.mock.calls[0] as [string, string[]])[1][0] as string) as Array<Record<string, unknown>>
+    }
+    it('null within 24 h: true stays, with the checkedAt of the real answer', async () => {
+      const [e] = await written(storedAt(true, 23 * H), async () => null)
+      expect(e).toMatchObject({ domainResolves: true, checkedAt: new Date(NOW - 23 * H).toISOString() })
+    })
+    it('null after 24 h: becomes null with the new checkedAt', async () => {
+      const [e] = await written(storedAt(true, 25 * H), async () => null)
+      expect(e).toMatchObject({ domainResolves: null, checkedAt: new Date(NOW).toISOString() })
+    })
+    it('exactly 24 h is already too old', async () => {
+      const [e] = await written(storedAt(true, 24 * H), async () => null)
+      expect(e).toMatchObject({ domainResolves: null })
+    })
+    it('a real false overwrites true', async () => {
+      const [e] = await written(storedAt(true, 25 * H), async () => false)
+      expect(e).toMatchObject({ domainResolves: false, checkedAt: new Date(NOW).toISOString() })
+      expect(m.keepKnownTrue([{ kind: 'email', formatValid: true, domainResolves: false, checkedAt: 'x' }], storedAt(true, H) as unknown as m.ContactCheck[], NOW)[0]!.domainResolves).toBe(false)
+    })
+    it('a true overwrites null', async () => {
+      const [e] = await written(storedAt(null, 25 * H), async () => true)
+      expect(e).toMatchObject({ domainResolves: true, checkedAt: new Date(NOW).toISOString() })
+    })
+    it('null never turns a stored null or false into true, and other rules versions or kinds are not carried over', () => {
+      const next: m.ContactCheck[] = [{ kind: 'email', formatValid: true, domainResolves: null, checkedAt: new Date(NOW).toISOString() }]
+      const stored = (v: boolean | null, kind: m.ContactKind = 'email') => [{ kind, formatValid: true, domainResolves: v, checkedAt: new Date(NOW - H).toISOString() }]
+      expect(m.keepKnownTrue(next, stored(null), NOW)[0]!.domainResolves).toBeNull()
+      expect(m.keepKnownTrue(next, stored(false), NOW)[0]!.domainResolves).toBeNull()
+      expect(m.keepKnownTrue(next, stored(true, 'nostr'), NOW)[0]!.domainResolves).toBeNull()
+      expect(m.keepKnownTrue(next, null, NOW)).toBe(next)
+    })
+    it('an entry whose stored rules version is old is not carried over', async () => {
+      const [e] = await written(storedAt(true, 25 * H, m.CONTACT_RULES_VERSION - 1), async () => null)
+      expect(e).toMatchObject({ domainResolves: null })
+      query.mockClear()
+      const [f] = await written(storedAt(true, H, m.CONTACT_RULES_VERSION - 1), async () => null)
+      expect(f).toMatchObject({ domainResolves: null })
+    })
+    it('a kept true keeps the old checkedAt, so the check is due again at the next probe', () => {
+      const kept = m.keepKnownTrue(
+        [{ kind: 'email', formatValid: true, domainResolves: null, checkedAt: new Date(NOW).toISOString() }],
+        storedAt(true, 20 * H) as unknown as m.ContactCheck[], NOW)
+      expect(m.isCheckDue(kept, [{ kind: 'email', value: '' }], NOW + 5 * H)).toBe(true)
+    })
   })
 
   it('a failed store never rejects and logs no text of the error', async () => {

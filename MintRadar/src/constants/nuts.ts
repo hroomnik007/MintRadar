@@ -58,7 +58,7 @@ export const TRACKED_NUT_KEYS: string[] = TRACKED_NUTS.map(
 export const NUT_META: Record<string, NutMeta> = {
   'NUT-04': { short: 'Mint tokens', desc: 'Minting new Cashu tokens against a Lightning invoice.', specNum: '04' },
   'NUT-05': { short: 'Melt tokens', desc: 'Melting Cashu tokens to pay a Lightning invoice.', specNum: '05' },
-  'NUT-07': { short: 'Token state', desc: 'Checking whether a proof has been spent or is still valid.', specNum: '07' },
+  'NUT-07': { short: 'Token state', desc: 'Checking whether a coin has been spent or is still valid.', specNum: '07' },
   'NUT-08': { short: 'Overpay melt', desc: 'Overpaying melt fees and receiving change tokens back.', specNum: '08' },
   'NUT-09': { short: 'Restore', desc: 'Restoring blinded signatures from mint backup data.', specNum: '09' },
   'NUT-10': { short: 'Spending conditions', desc: 'Spending conditions that must be met to use a proof.', specNum: '10' },

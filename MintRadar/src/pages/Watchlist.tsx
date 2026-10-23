@@ -301,7 +301,7 @@ export default function Watchlist() {
           >
             <Zap size={14} strokeWidth={2.2} aria-hidden="true" /> Login via Nostr
           </button>
-          <div className="wl-login-hint">Stored on Nostr. Optional DMs when a watched mint goes down or comes back up.</div>
+          <div className="wl-login-hint">Stored on Nostr. Optional DMs when a watched mint goes down or comes back up, plus key and fee changes.</div>
         </div>
       </div>
     )
@@ -330,7 +330,7 @@ export default function Watchlist() {
             <div className="wl-empty">
               <div className="wl-empty-icon"><IcRadar /></div>
               <div className="wl-empty-title">No mints watched yet</div>
-              <div className="wl-empty-sub">Add mints from the Dashboard with + Watch. Your list syncs over Nostr. Turn on Nostr DMs per mint if you want to hear when its status changes.</div>
+              <div className="wl-empty-sub">Add mints from the Dashboard with + Watch. Your list syncs over Nostr. Turn on Nostr DMs per mint if you want to hear when its status, key or fee changes.</div>
               <button type="button" className="wl-add-btn" onClick={() => navigate('/')}>
                 Go to Dashboard
               </button>

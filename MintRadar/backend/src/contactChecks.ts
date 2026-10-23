@@ -32,7 +32,14 @@ export const CONTACT_CHECK_VALUE_MAX = 300
 export const CONTACT_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
 export const DOMAIN_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 export const DOMAIN_CACHE_MAX = 500
-export const DNS_TIMEOUT_MS = 3000
+/**
+ * One DNS query. An attempt is at most two queries in a row (MX, then A and AAAA side by side), and a lookup is at most two
+ * attempts, so the worst case is 4 x DNS_TIMEOUT_MS: that must stay below DNS_TOTAL_MS or the overall deadline cuts the
+ * second attempt off (a test pins it).
+ */
+export const DNS_TIMEOUT_MS = 2000
+/** The one overall deadline of a domain lookup, both attempts included. */
+export const DNS_TOTAL_MS = 9000
 export const DNS_CONCURRENCY = 5
 /** Domains waiting for a free lookup slot; beyond this a domain stays unknown instead of queueing without bound. */
 export const DNS_QUEUE_MAX = 500
@@ -43,7 +50,11 @@ export type ContactKind = typeof CONTACT_KINDS[number]
 export interface ContactCheck {
   kind: ContactKind
   formatValid: boolean
-  /** true/false: DNS answered; null: not applicable (not an e-mail, not a public domain) or the lookup failed or timed out. */
+  /**
+   * true/false: DNS answered; null: not applicable (not an e-mail, not a public domain) or the lookup failed or timed out.
+   * A check that could not be completed keeps an earlier true for up to 24 h (then checkedAt is the time of that earlier
+   * answer, see keepKnownTrue); a real false always replaces it.
+   */
   domainResolves: boolean | null
   checkedAt: string
 }
@@ -221,7 +232,7 @@ async function lookupOnce(domain: string): Promise<boolean | null> {
 export const resolveMailDomain: MailLookup = (domain) => withDeadline((async () => {
   const first = await lookupOnce(domain)
   return first !== null ? first : lookupOnce(domain)
-})(), DNS_TIMEOUT_MS * 3, null)
+})(), DNS_TOTAL_MS, null)
 
 export interface DomainChecker {
   /** Never throws. Only definite answers are cached. */
@@ -358,6 +369,26 @@ export function readStoredContactChecks(raw: unknown): ContactCheck[] | null {
   return out
 }
 
+/** How long an earlier true is kept when a later lookup could not tell. */
+export const DOMAIN_KEEP_TRUE_MS = 24 * 60 * 60 * 1000
+
+/**
+ * A lookup that could not be completed (null) must not wipe a domainResolves that was true: for up to 24 h after the last real
+ * answer the entry keeps true and that answer's checkedAt (so the window cannot restart with every failed check). Entries are
+ * matched by position and kind; only a still well-formed entry is carried over. A real false or true is never touched, and
+ * after 24 h the null stands. No value or domain is involved: only what is already stored is read.
+ */
+export function keepKnownTrue(next: ContactCheck[], stored: ContactCheck[] | null, now: number): ContactCheck[] {
+  if (stored === null) return next
+  return next.map((c, i) => {
+    const prev = stored[i]
+    if (c.domainResolves !== null || !c.formatValid || prev === undefined) return c
+    if (prev.kind !== c.kind || prev.domainResolves !== true) return c
+    const age = now - Date.parse(prev.checkedAt)
+    return age >= 0 && age < DOMAIN_KEEP_TRUE_MS ? { ...c, domainResolves: true, checkedAt: prev.checkedAt } : c
+  })
+}
+
 const signature = (kinds: readonly string[]): string => [...kinds].sort().join(',')
 
 /** true when every stored entry carries the current rules version (a stored column that is not an array has none). */
@@ -393,7 +424,7 @@ export async function scheduleContactChecks(
   try {
     const now = (opts.now ?? Date.now)()
     if (!isCheckDue(readStoredContactChecks(storedRaw), entriesOf(rawContact), now, storedRulesCurrent(storedRaw))) return
-    const checks = await computeContactChecks(rawContact, opts)
+    const checks = keepKnownTrue(await computeContactChecks(rawContact, opts), storedRulesCurrent(storedRaw) ? readStoredContactChecks(storedRaw) : null, now)
     await pool.query('UPDATE mints SET contact_checks = $1::jsonb WHERE url = $2', [JSON.stringify(checks.map(c => ({ ...c, rules: CONTACT_RULES_VERSION }))), url])
   } catch {
     console.error('[contact-checks] check or store failed')
