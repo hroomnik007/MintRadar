@@ -554,7 +554,7 @@ components:
           description: >-
             E-mail entries and NIP-05 style nostr entries (name@domain) only. true: DNS has MX (else A/AAAA) records for the domain; false: DNS says it has none;
             null: not applicable (another kind, an IP literal, localhost, a private or reserved name) or the lookup failed or timed out. null means unknown, never false.
-            domainResolves is null when the DNS check could not be completed at the last check (for example a timeout) or does not apply to the contact; it is checked again on the next contact check, about every 24 hours. If a later check cannot be completed, an earlier true is kept for up to 24 hours after that answer (checkedAt is then the time of that answer); a real false always replaces it. NXDOMAIN and a domain with no mail records (no MX and no A/AAAA records, or a null MX) give false.
+            domainResolves is null when the DNS check could not be completed at the last check (for example a timeout) or does not apply to the contact; it is checked again on the next contact check, about every 24 hours. If a later check cannot be completed, an earlier true is kept for up to 48 hours after that answer (checkedAt is then the time of that answer); a real false always replaces it. NXDOMAIN and a domain with no mail records (no MX and no A/AAAA records, or a null MX) give false.
             Only DNS is asked: /.well-known/nostr.json is never requested, so true says nothing about whether a NIP-05 name exists.
         checkedAt: { type: string, format: date-time, description: When the entry was checked (a mint is re-checked at most once every 24 hours). }
     FeeExampleUnit:

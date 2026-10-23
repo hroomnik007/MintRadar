@@ -52,7 +52,7 @@ export interface ContactCheck {
   formatValid: boolean
   /**
    * true/false: DNS answered; null: not applicable (not an e-mail, not a public domain) or the lookup failed or timed out.
-   * A check that could not be completed keeps an earlier true for up to 24 h (then checkedAt is the time of that earlier
+   * A check that could not be completed keeps an earlier true for up to 48 h (then checkedAt is the time of that earlier
    * answer, see keepKnownTrue); a real false always replaces it.
    */
   domainResolves: boolean | null
@@ -369,14 +369,14 @@ export function readStoredContactChecks(raw: unknown): ContactCheck[] | null {
   return out
 }
 
-/** How long an earlier true is kept when a later lookup could not tell. */
-export const DOMAIN_KEEP_TRUE_MS = 24 * 60 * 60 * 1000
+/** How long an earlier true is kept when a later lookup could not tell: two re-check intervals, so one missed daily check is bridged. */
+export const DOMAIN_KEEP_TRUE_MS = 2 * CONTACT_CHECK_INTERVAL_MS
 
 /**
- * A lookup that could not be completed (null) must not wipe a domainResolves that was true: for up to 24 h after the last real
+ * A lookup that could not be completed (null) must not wipe a domainResolves that was true: for up to 48 h after the last real
  * answer the entry keeps true and that answer's checkedAt (so the window cannot restart with every failed check). Entries are
  * matched by position and kind; only a still well-formed entry is carried over. A real false or true is never touched, and
- * after 24 h the null stands. No value or domain is involved: only what is already stored is read.
+ * after 48 h the null stands. No value or domain is involved: only what is already stored is read.
  */
 export function keepKnownTrue(next: ContactCheck[], stored: ContactCheck[] | null, now: number): ContactCheck[] {
   if (stored === null) return next

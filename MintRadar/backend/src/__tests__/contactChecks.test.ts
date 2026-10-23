@@ -494,9 +494,9 @@ describe('scheduling and storage', () => {
     expect(JSON.parse((query.mock.calls[0] as [string, string[]])[1][0] as string)).toEqual([])
   })
 
-  describe('a lookup that could not tell keeps an earlier true for 24 h (domainResolves)', () => {
+  describe('a lookup that could not tell keeps an earlier true for 48 h (domainResolves)', () => {
     const H = 3_600_000
-    // The mint adds a twitter entry, so the kinds differ from the stored ones and the check is due before the 24 h are over.
+    // The mint adds a twitter entry, so the kinds differ from the stored ones and the check is due before the 48 h are over.
     const EMAIL = [{ method: 'email', info: 'ops@mail-host.com' }, { method: 'twitter', info: '@canary' }]
     const storedAt = (value: boolean | null, ageMs: number, rules = m.CONTACT_RULES_VERSION) =>
       [{ kind: 'email', formatValid: true, domainResolves: value, checkedAt: new Date(NOW - ageMs).toISOString(), rules }]
@@ -505,17 +505,25 @@ describe('scheduling and storage', () => {
       expect(query).toHaveBeenCalledTimes(1)
       return JSON.parse((query.mock.calls[0] as [string, string[]])[1][0] as string) as Array<Record<string, unknown>>
     }
-    it('null within 24 h: true stays, with the checkedAt of the real answer', async () => {
-      const [e] = await written(storedAt(true, 23 * H), async () => null)
-      expect(e).toMatchObject({ domainResolves: true, checkedAt: new Date(NOW - 23 * H).toISOString() })
+    it('null within 48 h: true stays, with the checkedAt of the real answer', async () => {
+      const [e] = await written(storedAt(true, 47 * H), async () => null)
+      expect(e).toMatchObject({ domainResolves: true, checkedAt: new Date(NOW - 47 * H).toISOString() })
     })
-    it('null after 24 h: becomes null with the new checkedAt', async () => {
-      const [e] = await written(storedAt(true, 25 * H), async () => null)
+    it('null after 48 h: becomes null with the new checkedAt', async () => {
+      const [e] = await written(storedAt(true, 49 * H), async () => null)
       expect(e).toMatchObject({ domainResolves: null, checkedAt: new Date(NOW).toISOString() })
     })
-    it('exactly 24 h is already too old', async () => {
-      const [e] = await written(storedAt(true, 24 * H), async () => null)
+    it('exactly 48 h is already too old', async () => {
+      const [e] = await written(storedAt(true, 48 * H), async () => null)
       expect(e).toMatchObject({ domainResolves: null })
+    })
+    it('one missed daily check: the regular re-check ~24 h after the last true returns null and true is kept', async () => {
+      const at = 24 * H + 5 * 60_000 // the regular re-check, same kinds, a little past the 24 h interval
+      await m.scheduleContactChecks('https://mint.example', [EMAIL[0]], storedAt(true, at), opts(async () => null))
+      expect(query).toHaveBeenCalledTimes(1)
+      const [e] = JSON.parse((query.mock.calls[0] as [string, string[]])[1][0] as string) as Array<Record<string, unknown>>
+      expect(e).toMatchObject({ domainResolves: true, checkedAt: new Date(NOW - at).toISOString() })
+      expect(m.DOMAIN_KEEP_TRUE_MS).toBe(48 * H)
     })
     it('a real false overwrites true', async () => {
       const [e] = await written(storedAt(true, 25 * H), async () => false)
