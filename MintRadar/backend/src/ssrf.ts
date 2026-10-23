@@ -4,6 +4,7 @@ import { lookup as dnsLookupCb } from 'dns'
 import type { LookupAddress } from 'dns'
 import type { LookupFunction } from 'net'
 import { Agent, fetch as undiciFetch } from 'undici'
+import { hasNulByte, authorityOf } from './hostnameGuard.js'
 
 const BLOCKED_RANGES = [
   'loopback', 'private', 'linkLocal', 'uniqueLocal',
@@ -107,6 +108,7 @@ class DnsTimeoutError extends Error {
 }
 
 async function boundedLookup(hostname: string, budget: DnsBudget): Promise<LookupAddress[]> {
+  if (hasNulByte(hostname)) throw new Error('Host name contains a NUL byte')
   const limitMs = Math.min(budget.deadlineAt - Date.now(), DNS_LOOKUP_CEILING_MS - budget.dnsUsedMs)
   if (limitMs <= 0) throw new DnsTimeoutError()
   const startedAt = Date.now()
@@ -132,11 +134,14 @@ async function checkUrlSafetyForProtocols(
   budget: DnsBudget = { deadlineAt: Infinity, dnsUsedMs: 0 }
 ): Promise<UrlSafetyResult> {
   try {
+    // A NUL byte (raw or %00) in the host part: refused before any DNS call (checked on the raw string, before the URL parser).
+    if (hasNulByte(authorityOf(rawUrl))) return 'blocked'
     const url = new URL(rawUrl)
     if (!allowedProtocols.includes(url.protocol)) return 'blocked'
     if (rawUrl.length > 500) return 'blocked'
 
     const hostname = url.hostname
+    if (hasNulByte(hostname)) return 'blocked'
 
     // Block if hostname is already a private/blocked IP address. URL.hostname keeps the brackets of an
     // IPv6 literal ("[::1]"), which ipaddr.js cannot parse — strip them so IPv6 literals go through the
@@ -274,6 +279,7 @@ export async function isSafeWsUrl(rawUrl: string): Promise<boolean> {
 // while preserving the original hostname for SNI and the Host header.
 // Bounded by DNS_LOOKUP_CEILING_MS too (the WebSocket path has no other deadline); an answer after the timeout is dropped.
 export const safeLookup: LookupFunction = (hostname, options, callback): void => {
+  if (hasNulByte(hostname)) { callback(new Error('Host name contains a NUL byte'), '', 0); return }
   let settled = false
   const finish = (err: NodeJS.ErrnoException | null, address: string | LookupAddress[], family?: number): void => {
     if (settled) return

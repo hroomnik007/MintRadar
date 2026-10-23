@@ -200,6 +200,7 @@ When a deployed change doesn't appear to users, verify in this order before assu
 
 ## Dependency policy (2026-10-14)
 
+- **Pinned Node version: 22.23.4 (2026-10-23, security release of 2026-10-21: Brotli decoder out-of-bounds write CVE-2026-111497, dns.resolve NUL truncation CVE-2026-105482, TLS hostname checks).** Pinned exactly in `backend/Dockerfile` (`node:22.23.4-alpine`), `.nvmrc` and the `setup-node` step of `deploy.yml` and `tests.yml`; `nodeEngine.test.ts` keeps them identical. **Rule: the pin must be bumped on every Node security release** (all four places in one commit, then rebuild the backend image with `--pull`). `engines` stays `>=22`. Untrusted hosts are also refused when they carry a NUL byte before any DNS call (`backend/src/hostnameGuard.ts`).
 - **Node 22 is required (2026-10-20):** `engines.node` is `>=22` in both `package.json` files, `.nvmrc` says `22`, the backend Dockerfile is `FROM node:22-alpine`, the deploy workflow uses 22. Node 20 fails the frontend and backend unit suites with `webidl.util.markAsUncloneable is not a function`. The engines field is a warning only (no `engine-strict` in any `.npmrc`, `package.json` or workflow); `src/__tests__/nodeEngine.test.ts` keeps the four places in step.
 
 Result of a read-only dependency audit followed by a cleanup (commits `d3833b8b`..`7f25ffad`): fewer packages, no new tool. `npm audit` was and is 0 in both roots.

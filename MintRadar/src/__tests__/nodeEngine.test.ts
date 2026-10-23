@@ -21,9 +21,20 @@ describe('Node major version', () => {
 
   it('the backend Dockerfile, .nvmrc and both engines name the same major', () => {
     const docker = /^FROM node:(\d+)/m.exec(read('backend/Dockerfile'))?.[1]
-    const nvmrc = /^(\d+)\s*$/.exec(read('.nvmrc'))?.[1]
+    const nvmrc = /^(\d+)(?:\.\d+\.\d+)?\s*$/.exec(read('.nvmrc'))?.[1]
     const majors = [major(frontend.engines?.node ?? ''), major(backend.engines?.node ?? ''), docker, nvmrc]
     expect(majors).toEqual(['22', '22', '22', '22'])
+  })
+
+  it('the exact Node version is pinned identically in Dockerfile, .nvmrc and both workflows (bump on every Node security release)', () => {
+    const wf = (f: string) => /node-version:\s*(\S+)/.exec(readFileSync(resolve(root, '..', '.github/workflows', f), 'utf8'))?.[1]
+    const pins = [
+      /^FROM node:(\d+\.\d+\.\d+)-alpine\s*$/m.exec(read('backend/Dockerfile'))?.[1],
+      /^(\d+\.\d+\.\d+)\s*$/.exec(read('.nvmrc'))?.[1],
+      wf('deploy.yml'),
+      wf('tests.yml'),
+    ]
+    expect(pins).toEqual(['22.23.4', '22.23.4', '22.23.4', '22.23.4'])
   })
 
   it('the engines field stays a warning (no engine-strict)', () => {

@@ -23,6 +23,11 @@ describe('resolveMintIpv4', () => {
     expect(await resolveMintIpv4('https://1.2.3.4')).toBeNull()
     expect(dnsMock.resolve4).not.toHaveBeenCalled()
   })
+  it('a NUL byte in the host (also %00, also in the middle): null, no lookup', async () => {
+    expect(await resolveMintIpv4('https://example.com\0.evil.test')).toBeNull()
+    expect(await resolveMintIpv4('https://example.com%00.evil.test')).toBeNull()
+    expect(dnsMock.resolve4).not.toHaveBeenCalled()
+  })
   it('no A record: null; any other error: undefined (keep the old value)', async () => {
     dnsMock.resolve4.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'ENODATA' }))
     expect(await resolveMintIpv4('https://v6only.example')).toBeNull()

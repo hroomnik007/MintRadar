@@ -6,9 +6,11 @@ import { resolve4 } from 'dns/promises'
 import { isIP } from 'net'
 import { pool } from './db.js'
 import { isBlockedIpString } from './ssrf.js'
+import { hasNulByte } from './hostnameGuard.js'
 
 /** undefined = lookup failed (keep what we have); null = no usable public IPv4 (onion host, IP literal, only private answers). */
 export async function resolveMintIpv4(mintUrl: string): Promise<string | null | undefined> {
+  if (hasNulByte(mintUrl)) return null
   let host: string
   try { host = new URL(mintUrl).hostname.toLowerCase() } catch { return null }
   if (host === '' || host.endsWith('.onion') || host.startsWith('[') || isIP(host) !== 0) return null

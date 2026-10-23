@@ -202,6 +202,23 @@ describe('checks per entry', () => {
   })
 })
 
+describe('a NUL byte in a domain (CVE-2026-105482)', () => {
+  const NUL_DOMAINS = ['example.com\0.evil.test', 'example.com%00.evil.test', 'mail-host.com\0']
+  it.each(NUL_DOMAINS)('resolveMailDomain(%j) is "could not be checked" (null) and asks no resolver', async (d) => {
+    expect(await m.resolveMailDomain(d)).toBeNull()
+    expect(dnsMock.resolveMx).not.toHaveBeenCalled()
+    expect(dnsMock.resolve4).not.toHaveBeenCalled()
+    expect(dnsMock.resolve6).not.toHaveBeenCalled()
+  })
+  it.each(NUL_DOMAINS)('the domain checker answers null for %j without a lookup and caches nothing', async (d) => {
+    const lookup = vi.fn(yes)
+    const c = m.createDomainChecker({ lookup })
+    expect(await c.check(d)).toBeNull()
+    expect(lookup).not.toHaveBeenCalled()
+    expect(c.cacheSize).toBe(0)
+  })
+})
+
 describe('the DNS lookup', () => {
   it('MX records: true', async () => {
     expect(await m.resolveMailDomain('mail-host.com')).toBe(true)

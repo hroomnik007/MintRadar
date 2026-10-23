@@ -15,6 +15,7 @@ import { isIP } from 'net'
 import { domainToASCII } from 'url'
 import { nip19 } from 'nostr-tools'
 import { pool } from './db.js'
+import { hasNulByte } from './hostnameGuard.js'
 
 /**
  * The version of the format rules. Stored with every result (`rules`); a stored result of another version is recomputed
@@ -229,7 +230,7 @@ async function lookupOnce(domain: string): Promise<boolean | null> {
  * One immediate retry when the first attempt could not tell (null: timeout, SERVFAIL, a throwing resolver); a definite
  * answer (true/false, including NXDOMAIN/ENODATA) is never asked twice. Both attempts share the one overall deadline.
  */
-export const resolveMailDomain: MailLookup = (domain) => withDeadline((async () => {
+export const resolveMailDomain: MailLookup = (domain) => hasNulByte(domain) ? Promise.resolve(null) : withDeadline((async () => {
   const first = await lookupOnce(domain)
   return first !== null ? first : lookupOnce(domain)
 })(), DNS_TOTAL_MS, null)
@@ -285,6 +286,8 @@ export function createDomainChecker(opts: {
   return {
     get cacheSize() { return cache.size },
     check(domain) {
+      // A name with a NUL byte is "could not be checked" (null), never a lookup and never cached.
+      if (hasNulByte(domain)) return Promise.resolve(null)
       const hit = cache.get(domain)
       if (hit && now() - hit.at < ttlMs) return Promise.resolve(hit.value)
       const pending = inflight.get(domain)

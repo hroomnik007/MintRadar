@@ -2,6 +2,7 @@ import dns from 'dns'
 import { fetch as undiciFetch } from 'undici'
 import pLimit from 'p-limit'
 import { pool } from './db.js'
+import { hasNulByte } from './hostnameGuard.js'
 import { checkUrlSafety, safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 import { computeReliabilityScore, TRACKED_NUT_KEYS } from './shared/reliabilityScore.js'
 import { isNutDeclaredSupported } from './shared/nutSupport.js'
@@ -37,7 +38,8 @@ export function parseIpinfoOrg(v: unknown): { asn: number | null; org: string | 
   return { asn: Number.isSafeInteger(asn) && asn < 4_294_967_296 ? asn : null, org: org === '' ? null : org }
 }
 
-async function lookupGeo(mintUrl: string): Promise<GeoInfo | null> {
+export async function lookupGeo(mintUrl: string): Promise<GeoInfo | null> {
+  if (hasNulByte(mintUrl)) return null
   try {
     const hostname = new URL(mintUrl).hostname
     console.log(`[geo] looking up: ${hostname}`)
