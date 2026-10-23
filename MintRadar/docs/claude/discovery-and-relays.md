@@ -277,3 +277,8 @@ no evidence to justify touching the rest of `PROFILE_RELAYS`.
 its two follow-up commits were scoped to `relays.ts` + its backend mirrors +
 `NOTIFICATION_RELAYS` only.
 
+## Allowlist mode (`MINT_ALLOWLIST`), what is and is not off (2026-10-23, Task H1)
+
+`backend/src/allowlist.ts` (`isAllowlistMode()`); self-hosting text: "Private mode" in the root README, example line in `backend/.env.example`. Off in this mode (each guard verified in code): Nostr + API discovery (start and 6 h interval, `cron.ts`), the reviews sync and the reviewer profile sync (`startReviewsSyncTimer` `shouldSkip`), the daily service-profile publish, the kind 30385 feed (`startAttestations`), the cashu.info feed and detail syncs (the audit part is then neutral, `AUDIT_NEUTRAL`), `refreshServerLocations` (start + daily), `refreshMintAddresses` and, since Task H1, `backfillServerLocations` (30 s after start; it was unguarded and sent every mint's IP to ipinfo.io; test `cronAllowlistGeo.test.ts`). `/api/mint/submit` and `/api/mint/probe` answer 403 for a URL outside the list, `/api/mints/discover` always.
+
+Known gaps (NOT changed in Task H1, reported): (1) the probe's own geo step (`prober.ts`, "Geo-IP lookup") still sends the resolved IP of a mint with `server_location IS NULL` to ipinfo.io; (2) `queueContactChecks` still resolves the contact domains of `/v1/info` with the system resolver; (3) `index.ts` calls `publishServiceProfile()` once at start without the guard (only with `NOTIFICATION_SERVICE_NSEC`; the event has no mint data); (4) DM notifications carry the mint hostname and the `/mint/<url>` link (not the mint name) to Nostr relays. The README lists (1) to (4) as "still leaves the server".

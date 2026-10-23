@@ -226,8 +226,9 @@ export function startCron(): void {
     await discoverMintsFromApi()
   }, 10_000)
 
-  // Backfill server_location for mints that were never resolved (one-time catch-up)
-  setTimeout(() => { void backfillServerLocations() }, 30_000)
+  // Backfill server_location for mints that were never resolved (one-time catch-up). Sends each mint's address to ipinfo.io,
+  // so allowlist mode skips it like the daily refresh below.
+  setTimeout(() => { if (!isAllowlistMode()) void backfillServerLocations() }, 30_000)
   // Refresh every mint's location (a mint that moved hosts kept its first city): once after boot, then daily.
   setTimeout(() => { if (!isAllowlistMode()) void refreshServerLocations() }, 120_000)
   cron.schedule('30 5 * * *', async () => {

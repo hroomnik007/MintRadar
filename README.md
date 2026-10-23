@@ -232,6 +232,35 @@ npm run typecheck && npm run build
 
 Serve the `dist/` directory with Nginx. See `MintRadar/deploy/nginx.conf` for the Nginx configuration of the hosted instance — it includes the security headers (CSP, HSTS, X-Frame-Options) and the `/api/` reverse proxy block.
 
+### Private mode (`MINT_ALLOWLIST`)
+
+To monitor a fixed set of mints (for example your own) and nothing else, set a comma-separated list of mint URLs in `backend/.env`:
+
+```env
+MINT_ALLOWLIST=https://mint.example.com,https://other-mint.example.org
+```
+
+Only `https://` entries count. An empty value, or a list without a single valid `https://` URL, means normal mode (the public behaviour is unchanged). At every start the listed mints are added to the database instead of the built-in public seed list.
+
+While the list is active, the backend does not:
+
+- discover mints (Nostr and API discovery, at start and every 6 hours);
+- run the Nostr reviews sync (and the reviewer profile sync that rides on it);
+- publish the daily service profile;
+- publish the signed health assertions (Nostr kind 30385), even if `ATTESTATION_SERVICE_NSEC` is set;
+- sync the cashu.info feed or its per-mint audit detail. The audit part of the Reliability Score is then neutral (its stored data, if any, goes stale and counts as neutral);
+- refresh mint locations (daily and at start) or mint IP addresses.
+
+`POST /api/mint/submit` and `GET /api/mint/probe` answer `403` for a URL that is not in the list, and `POST /api/mints/discover` answers `403` to every request.
+
+What still leaves the server in this mode:
+
+- Probing itself: every listed mint is contacted every 5 minutes, as always.
+- The first successful probe of a mint without a stored location resolves its host and sends the IP address (not the hostname) to ipinfo.io.
+- The contact entries a mint publishes in `/v1/info` are looked up in DNS (system resolver) to check that the domain exists.
+- If Nostr DM notifications are enabled (`NOTIFICATION_SERVICE_NSEC`), a notification contains the mint's hostname and a `mintradar.org/mint/...` link with its URL, and it is published to Nostr relays. Leave `NOTIFICATION_SERVICE_NSEC` unset for a private deployment.
+- With `NOTIFICATION_SERVICE_NSEC` set, the generic "MintRadar Alerts" service profile is also published once at start (it contains no mint data).
+
 ---
 
 ## 🔐 Security
