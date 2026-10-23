@@ -13,6 +13,7 @@ import { normalizeMintPubkey } from './mintPubkey.js'
 import { recordInfoObservation } from './mintChanges.js'
 import { queueContactChecks } from './contactChecks.js'
 import { computeScoreBreakdown } from './scoreBreakdown.js'
+import { isAllowlistMode } from './allowlist.js'
 import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type SafeFetchRejection } from './probeErrorKind.js'
 
 function isCloudflareIP(address: string): boolean {
@@ -579,8 +580,9 @@ export async function probeMintToDb(url: string, onDeferFailure?: (f: DeferredPr
         }
       } catch { lastError = 'Invalid JSON response' }
 
-      // Geo-IP lookup — isolated so errors never affect probe result or lastError
-      if (online) {
+      // Geo-IP lookup — isolated so errors never affect probe result or lastError.
+      // Skipped in allowlist mode: it sends the mint's resolved IP to ipinfo.io.
+      if (online && !isAllowlistMode()) {
         try {
           const locRow = await pool.query('SELECT server_location FROM mints WHERE url = $1', [url])
           const currentLoc = locRow.rows[0]?.server_location as string | null | undefined

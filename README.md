@@ -249,14 +249,13 @@ While the list is active, the backend does not:
 - publish the daily service profile;
 - publish the signed health assertions (Nostr kind 30385), even if `ATTESTATION_SERVICE_NSEC` is set;
 - sync the cashu.info feed or its per-mint audit detail. The audit part of the Reliability Score is then neutral (its stored data, if any, goes stale and counts as neutral);
-- refresh mint locations (daily and at start) or mint IP addresses.
+- look up mint locations (ipinfo.io: the daily refresh, the start-up catch-up and the geolocation step of the probe) or refresh mint IP addresses. Mints in this mode have no location.
 
 `POST /api/mint/submit` and `GET /api/mint/probe` answer `403` for a URL that is not in the list, and `POST /api/mints/discover` answers `403` to every request.
 
 What still leaves the server in this mode:
 
 - Probing itself: every listed mint is contacted every 5 minutes, as always.
-- The first successful probe of a mint without a stored location resolves its host and sends the IP address (not the hostname) to ipinfo.io.
 - The contact entries a mint publishes in `/v1/info` are looked up in DNS (system resolver) to check that the domain exists.
 - If Nostr DM notifications are enabled (`NOTIFICATION_SERVICE_NSEC`), a notification contains the mint's hostname and a `mintradar.org/mint/...` link with its URL, and it is published to Nostr relays. Leave `NOTIFICATION_SERVICE_NSEC` unset for a private deployment.
 - With `NOTIFICATION_SERVICE_NSEC` set, the generic "MintRadar Alerts" service profile is also published once at start (it contains no mint data).
