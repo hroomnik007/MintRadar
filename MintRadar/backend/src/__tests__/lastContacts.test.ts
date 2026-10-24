@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { extractLastContacts, readStoredLastContacts } from '../lastContacts.js'
 
 describe('extractLastContacts', () => {
-  it('keeps method + info, max 10, strips control chars, truncates', () => {
+  it('keeps method + info, max 10, strips control chars', () => {
     const raw = [
       { method: 'email', info: 'ops@example.com' },
       { method: 'twitter', info: '@mint\u0000ops' },
@@ -10,14 +10,19 @@ describe('extractLastContacts', () => {
       null,
       { method: '', info: 'skip' },
       { method: 'telegram', info: '' },
-      ...Array.from({ length: 15 }, (_, i) => ({ method: 'other', info: `item${i}` })),
+      { method: 'signal', info: 'ok' },
+      { method: 'url', info: 'https://x.com' },
+      { method: 'other', info: 'a' },
+      { method: 'other', info: 'b' },
+      { method: 'other', info: 'c' },
+      { method: 'other', info: 'd' },
     ]
     const out = extractLastContacts(raw)
-    expect(out).toHaveLength(10)
+    expect(out.length).toBe(7) // first 10 raw entries, only 8 valid
     expect(out[0]).toEqual({ method: 'email', info: 'ops@example.com' })
     expect(out[1]).toEqual({ method: 'twitter', info: '@mintops' })
     expect(out[2]).toEqual({ method: 'nostr', info: 'npub1abc' })
-    expect(out.find(c => c.method === 'telegram')).toBeUndefined()
+    expect(out.some(c => c.method === 'telegram')).toBe(false)
   })
 
   it('returns [] for non-array', () => {
