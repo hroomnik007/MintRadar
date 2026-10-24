@@ -1801,7 +1801,7 @@ function MintDetailContent({ url }: { url: string }) {
                   <div className="md-panel-title">Get in touch</div>
                   {contactsAreLastSeen && lastContactsAt && (
                     <div className="md-contact-lastseen" style={{ fontSize: '0.75rem', color: 'var(--text3)', marginBottom: 8 }}>
-                      last seen {formatTimeAgo(lastContactsAt)}
+                      last seen {formatTimeAgo(new Date(lastContactsAt))}
                     </div>
                   )}
                   <div className="md-contact-grid">

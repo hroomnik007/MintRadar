@@ -35,6 +35,9 @@ export interface MintStatus {
   errorKind?: ProbeErrorKind
   // Facts about the contact entries of a tracked mint (kind, formatValid, domainResolves, checkedAt); never a value.
   contactChecks?: ContactCheckFact[]
+  // Last published NUT-06 contacts (method + info) for offline display. Known mints only.
+  lastContacts?: { method: string; info: string }[]
+  lastContactsAt?: string | null
 }
 
 const MAX_URL_LENGTH = 500
@@ -117,6 +120,8 @@ async function probeMintViaProxy(url: string, signal?: AbortSignal): Promise<Min
     ...(typeof raw['error'] === 'string' ? { error: raw['error'] } : {}),
     ...(isProbeErrorKind(raw['errorKind']) ? { errorKind: raw['errorKind'] } : {}),
     ...(raw['contactChecks'] !== undefined ? { contactChecks: readContactChecks(raw['contactChecks']) } : {}),
+    ...(Array.isArray(raw['lastContacts']) ? { lastContacts: raw['lastContacts'] as { method: string; info: string }[] } : {}),
+    ...(typeof raw['lastContactsAt'] === 'string' ? { lastContactsAt: raw['lastContactsAt'] } : {}),
   }
 }
 
