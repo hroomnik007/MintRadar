@@ -165,6 +165,9 @@ export default function About() {
               <strong>Submitting a mint</strong> stores only its address, nothing about who submitted it.
             </li>
             <li>
+              <strong>Mint contacts.</strong> We store the last version of the contact details (email, Twitter, Nostr, etc.) that a mint itself publishes in its <code>/v1/info</code>, so they remain visible on Mint Detail while the mint is offline. They are overwritten on every successful probe, removed when the mint removes them, and deleted after 90 days without a successful probe.
+            </li>
+            <li>
               <strong>In your browser</strong> we store your watchlist and notification settings. A private key
               (nsec) stays in memory for the session only and is never stored or sent.
             </li>

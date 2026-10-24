@@ -34,6 +34,7 @@ import {
 } from './walletApi.js'
 import { readStoredBreakdown } from './scoreBreakdown.js'
 import { readStoredContactChecks } from './contactChecks.js'
+import { readStoredLastContacts } from './lastContacts.js'
 import { setDeprecationHeaders, RECOMMEND_DEPRECATION } from './deprecation.js'
 import { verifyNip05 } from './nip05Verify.js'
 import { isAllowlistMode, isAllowedUrl } from './allowlist.js'
@@ -791,14 +792,24 @@ app.get('/api/mint/probe', (req: Request, res: Response): void => {
   // The DB lookup runs first so an unknown URL can be charged to the dedicated
   // unknown-probe limiter BEFORE any outbound fetch happens.
   const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown'
-  pool.query('SELECT contact_checks FROM mints WHERE url = $1', [url])
+  pool.query('SELECT contact_checks, last_contacts, last_contacts_at FROM mints WHERE url = $1', [url])
     .then(async (known) => {
       if ((known.rowCount ?? 0) > 0) {
         const status = await probeMint(url)
         // Additive, known mints only: the stored facts about the contact entries (contactChecks.ts), which Mint Detail shows
         // as one muted line under the contact information. Never a value or a domain; [] while nothing was checked.
         const contactChecks = readStoredContactChecks(known.rows[0]?.contact_checks) ?? []
-        res.json(status.info ? { ...status, info: { ...status.info, name: publicMintNameOrHost(status.info.name, url) }, contactChecks } : { ...status, contactChecks })
+        // Last published contacts for offline display. Only returned for known mints; never for unknown URLs.
+        const lastContacts = readStoredLastContacts(known.rows[0]?.last_contacts)
+        const lastContactsAt = known.rows[0]?.last_contacts_at ?? null
+        const body: Record<string, unknown> = status.info
+          ? { ...status, info: { ...status.info, name: publicMintNameOrHost(status.info.name, url) }, contactChecks }
+          : { ...status, contactChecks }
+        if (lastContacts && lastContacts.length > 0) {
+          body.lastContacts = lastContacts
+          body.lastContactsAt = lastContactsAt
+        }
+        res.json(body)
         return
       }
       const admit = tryAcquireUnknownProbe(ip)

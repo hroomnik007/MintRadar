@@ -893,9 +893,15 @@ function MintDetailContent({ url }: { url: string }) {
   const descriptionLong = data?.info?.description_long ?? knownMint?.descriptionLong ?? undefined
   const mintTime = data?.info?.time
 
-  const email = data?.info?.contact?.find(c => c.method === 'email')?.info
-  const twitter = data?.info?.contact?.find(c => c.method === 'twitter')?.info
-  const nostr = data?.info?.contact?.find(c => c.method === 'nostr')?.info
+  // Live contacts from the probe; fall back to last published contacts when the mint is offline.
+  const liveContact = data?.info?.contact
+  const lastContacts = data?.lastContacts as { method: string; info: string }[] | undefined
+  const lastContactsAt = data?.lastContactsAt as string | null | undefined
+  const contactSource = liveContact ?? lastContacts
+  const email = contactSource?.find(c => c.method === 'email')?.info
+  const twitter = contactSource?.find(c => c.method === 'twitter')?.info
+  const nostr = contactSource?.find(c => c.method === 'nostr')?.info
+  const contactsAreLastSeen = !liveContact && !!lastContacts?.length
   const urls = data?.info?.urls
   const hasOnionAlias = listHasOnion(urls)
   const trackedIsOnion = urlIsOnion(url)
@@ -1793,6 +1799,11 @@ function MintDetailContent({ url }: { url: string }) {
               {(email || twitter || nostr) && (
                 <>
                   <div className="md-panel-title">Get in touch</div>
+                  {contactsAreLastSeen && lastContactsAt && (
+                    <div className="md-contact-lastseen" style={{ fontSize: '0.75rem', color: 'var(--text3)', marginBottom: 8 }}>
+                      last seen {formatTimeAgo(lastContactsAt)}
+                    </div>
+                  )}
                   <div className="md-contact-grid">
                     {email && (
                       <div className="md-contact-card">

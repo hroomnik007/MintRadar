@@ -1,5 +1,5 @@
 import cron from 'node-cron'
-import { getKnownMints, pruneOldHistory, pruneUnvalidatedMints, pruneAbandonedMints, revalidateMints, backfillServerLocations, refreshServerLocations } from './prober.js'
+import { getKnownMints, pruneOldHistory, pruneUnvalidatedMints, pruneAbandonedMints, clearStaleLastContacts, revalidateMints, backfillServerLocations, refreshServerLocations } from './prober.js'
 import { runProbeCycle, getLastVantageOutageAt } from './probeCycle.js'
 import { runKeysetsTick } from './keysetsSync.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
@@ -148,6 +148,8 @@ export function startCron(): void {
       console.log(`[cron] pruned ${deleted} unvalidated mint candidate(s)`)
       const abandoned = await pruneAbandonedMints()
       console.log(`[cron] pruned ${abandoned} abandoned mint(s) (90d offline)`)
+      const cleared = await clearStaleLastContacts()
+      if (cleared > 0) console.log(`[cron] cleared last_contacts for ${cleared} mint(s) offline >90d`)
     } catch (err) {
       logCronError('unvalidated mint prune', err)
     }

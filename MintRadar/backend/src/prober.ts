@@ -11,7 +11,8 @@ import { mintMeltCondition, versionCondition, nutLossTransition, type Condition 
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { normalizeMintPubkey } from './mintPubkey.js'
 import { recordInfoObservation } from './mintChanges.js'
-import { queueContactChecks } from './contactChecks.js'
+import { queueContactChecks, entriesOf } from './contactChecks.js'
+import { extractLastContacts } from './lastContacts.js'
 import { computeScoreBreakdown } from './scoreBreakdown.js'
 import { isAllowlistMode } from './allowlist.js'
 import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type SafeFetchRejection } from './probeErrorKind.js'
@@ -301,6 +302,17 @@ export async function pruneAbandonedMints(): Promise<number> {
   )
   return res.rowCount ?? 0
 }
+/** Clear last_contacts for mints with no successful probe in 90 days. */
+export async function clearStaleLastContacts(): Promise<number> {
+  const res = await pool.query(
+    `UPDATE mints
+     SET last_contacts = NULL, last_contacts_at = NULL
+     WHERE last_contacts IS NOT NULL
+       AND (last_online_at IS NULL OR last_online_at < NOW() - INTERVAL '90 days')`
+  )
+  return res.rowCount ?? 0
+}
+
 
 // ── Recurring revalidation ──────────────────────────────────────────────────
 //
@@ -546,7 +558,10 @@ export async function probeMintToDb(url: string, onDeferFailure?: (f: DeferredPr
               -- contact methods), and this line only runs on a successful probe
               contact_count    = $12,
               -- successful probes only, like contact_nostr: the mint's own current answer
-              has_onion        = $15
+              has_onion        = $15,
+              -- last published NUT-06 contacts (method + info, max 10). Overwritten every successful probe.
+              last_contacts    = $16::jsonb,
+              last_contacts_at = NOW()
             WHERE url = $8`,
             [
               name, iconUrl, version, nutCount, tosUrl, descriptionLong, JSON.stringify(nuts), url,
@@ -557,6 +572,7 @@ export async function probeMintToDb(url: string, onDeferFailure?: (f: DeferredPr
               pubkey,
               JSON.stringify(contactNostr),
               hasOnion,
+              JSON.stringify(extractLastContacts(raw['contact'])),
             ]
           )
 
