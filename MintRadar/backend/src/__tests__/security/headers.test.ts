@@ -56,7 +56,7 @@ describe('HTTP security headers', () => {
   })
 
   it('sets all security headers on a 404 (unknown route)', async () => {
-    const res = await request(app).get('/this/route/does/not/exist')
+    const res = await request(app).get('/api/this/route/does/not/exist')
 
     expect(res.status).toBe(404)
     for (const [header, value] of Object.entries(EXPECTED_HEADERS)) {
