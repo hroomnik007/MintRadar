@@ -333,6 +333,8 @@ export interface MintChangeState {
   keysets: unknown
   /** The stamp of the row; undefined (a test double, no row) is read as current. */
   nutsRules?: number
+  pendingKeysets?: { value: string; firstSeenAt: number } | null
+  pendingInfo?: { [field: string]: { value: string; firstSeenAt: number } } | null
 }
 
 export interface StatePatch {
@@ -459,7 +461,7 @@ export async function loadState(url: string): Promise<MintChangeState & { pendin
     info: row?.info ?? null,
     keysets: row?.keysets ?? null,
     nutsRules: row?.nuts_rules ?? 0,
-    pendingKeysets: pk !== null && pkAt !== null ? { value: pk, firstSeenAt: new Date(pkAt).getTime() } : null,
+    pendingKeysets: pk !== null && pkAt != null ? { value: pk, firstSeenAt: new Date(pkAt as string | Date).getTime() } : null,
     pendingInfo: (row?.pending_info as PendingInfo | null) ?? null,
   }
 }
