@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isNutSupported, isNutDeclaredSupported, supportedNutKeys } from '../shared/nutSupport.js'
+import { isNutSupported, isNutDeclaredSupported, supportedNutKeys, mintSupportsNut } from '../shared/nutSupport.js'
 
 // The same table as src/__tests__/nutSupportCases.ts; src/__tests__/sharedModules.test.ts runs both helper copies
 // against that one, so the two cannot drift apart.
@@ -23,6 +23,11 @@ describe('nutSupport (backend)', () => {
   it.each(CASES)('%s', (_name, entry, supported, declaredSupported) => {
     expect(isNutSupported(entry)).toBe(supported)
     expect(isNutDeclaredSupported(entry)).toBe(declaredSupported)
+    expect(mintSupportsNut({ '7': entry }, '7')).toBe(declaredSupported)
+  })
+  it('mintSupportsNut: null / absent nuts object is not support', () => {
+    expect(mintSupportsNut(null, '7')).toBe(false)
+    expect(mintSupportsNut(undefined, '7')).toBe(false)
   })
   it('supportedNutKeys drops a null value (not declared), like isNutDeclaredSupported', () => {
     expect([...supportedNutKeys({ '7': null, '4': {}, '11': { supported: true } })].sort()).toEqual(['11', '4'])

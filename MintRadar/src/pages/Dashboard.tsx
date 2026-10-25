@@ -27,6 +27,7 @@ import { collapseOnline, mobileCollapseApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_
 import { useMediaQuery } from '@/hooks/useIsMobile'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { isNutDeclaredSupported } from '@/utils/nutSupport'
+import { hasRequiredNuts } from '@/utils/nutFilters'
 import { SITE_DESCRIPTION } from '@/constants/routeMeta'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
 import { InfoTooltip } from '@/components/InfoTooltip'
@@ -179,7 +180,7 @@ function applyFilters(
     if (filters.requiredNuts.length > 0) {
       const nuts = mint.nutsLimits as Record<string, unknown> | null
       if (!nuts) return false
-      if (!filters.requiredNuts.every(nut => nuts[nut] != null)) return false
+      if (!hasRequiredNuts(nuts, filters.requiredNuts)) return false
     }
     return true
   })

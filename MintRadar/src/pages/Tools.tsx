@@ -1,6 +1,7 @@
 import { SIGNATURE_CHECK_TEXT } from '@/utils/tooltipTexts'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { clickableProps } from '@/utils/clickableProps'
+import { passesWizardNutChecks } from '@/utils/nutFilters'
 import { useNavigate } from 'react-router-dom'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { MintFavicon } from '@/components/mint/MintFavicon'
@@ -653,13 +654,9 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       // A mint that doesn't issue this unit can't serve the user at all, so it
       // is dropped before scoring rather than ranked and then explained away.
       .filter(m => (m.units ?? []).includes(selectedUnit))
-      // NUT-9 (restore signatures) is the mint-side capability that actually
-      // gates seed-phrase backup/restore — see the note in MintDetail.tsx.
-      .filter(m => !checks.has('seed') || m.nutsLimits?.['9'] != null)
-      // P2PK (NUT-11) — locking ecash to a public key.
-      .filter(m => !checks.has('p2pk') || m.nutsLimits?.['11'] != null)
-      // WebSocket (NUT-17) — live balance/payment update subscriptions.
-      .filter(m => !checks.has('ws') || m.nutsLimits?.['17'] != null)
+      // Seed restore (NUT-9), locked payments (NUT-11), WebSocket (NUT-17): the NUT must be declared
+      // and not `supported: false` (passesWizardNutChecks, src/utils/nutFilters.ts).
+      .filter(m => passesWizardNutChecks(m.nutsLimits, checks))
       // Lightning in + out means both mint (deposit) and melt (withdraw) support
       // bolt11/bolt12 — cardLightningLabel() only returns 'LN' when both sides do.
       .filter(m => !checks.has('ln') || cardLightningLabel(m) === 'LN')

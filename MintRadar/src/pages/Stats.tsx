@@ -13,6 +13,7 @@ import { ReliabilityMoversPanel } from '@/components/stats/ReliabilityMoversPane
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { trackedCount, onlineCount as countOnline } from '@/utils/mintCounts'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
+import { onlineMintsSupportingNut } from '@/utils/nutFilters'
 import { reliabilityColor, reliabilityScoreInfo, reliabilityDonutArc, displayName, computeDuplicateMintNames, mintAgeBadge } from '@/utils/mintFormatting'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation } from '@/utils/reliabilityScore'
@@ -687,12 +688,13 @@ export default function Stats() {
 
   const nutModalMints = useMemo(() => {
     if (!nutModal || !knownMintsData) return []
-    // NUT support = the mint's /v1/info advertised the NUT (same test the
-    // Dashboard ?nuts= filter uses). nutModal is "NUT-09"; the nuts object is
+    // NUT support = the mint's /v1/info declares the NUT and does not mark it
+    // `supported: false` (onlineMintsSupportingNut — the same rule as /api/stats nutAdoption,
+    // which this modal's count comes from, and the Dashboard ?nuts= filter). nutModal is "NUT-09"; the nuts object is
     // keyed by the unpadded number.
     const key = String(parseInt(nutModal.slice(4), 10))
     // Online mints only: the NUT coverage card's count (/api/stats nutAdoption) is over online mints.
-    return knownMintsData.filter(m => m.online === true && (m.nutsLimits as Record<string, unknown> | null)?.[key] != null)
+    return onlineMintsSupportingNut(knownMintsData, key)
   }, [nutModal, knownMintsData])
 
   const { data: trendResponse, isPending: trendPending, isError: trendError, isPlaceholderData: trendPlaceholder, refetch: refetchTrend } = useReliabilityTrend(trendDays)

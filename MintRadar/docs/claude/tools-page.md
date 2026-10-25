@@ -100,6 +100,9 @@ options are unchanged.
   when collapsed, toggle reads "· N selected" so filters are never hidden). Line icons come from
   `lucide-react` (`Zap`, `ShieldCheck`, `PlugZap`, `KeyRound`, `Lock`, `Satellite`); NUT numbers no
   longer appear in visible text. "Pick at least one" hint shows while nothing is selected.
+  Restore from seed / Locked payments / Live updates filter on NUT-9 / 11 / 17 through
+  `passesWizardNutChecks` (`src/utils/nutFilters.ts`, 2026-10-25): a `{ supported: false }` entry does
+  NOT pass (before, `nutsLimits[key] != null` let it through) — the shared `nutSupport` rule.
 
 ### Best Mint Wizard recommendation age gate (2026-09-19, audit run-3 follow-up)
 
