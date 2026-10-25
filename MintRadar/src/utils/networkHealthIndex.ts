@@ -1,5 +1,6 @@
 import { numberWord } from './tooltipTexts'
 import { FRESH_MINT_MONTHS, methodsHaveMethod } from './mintFormatting'
+import { isNutSupported } from './nutSupport'
 
 // Network Health Index (NHI) on the Stats page: the weights, the list of "advanced" features and
 // every tooltip/explanation string that describes them. The computation (Stats.tsx) and the texts
@@ -80,7 +81,13 @@ export interface AdoptionMint {
 export function methodAdoptionPercent(mints: readonly AdoptionMint[], method: string): number {
   const population = mints.filter(m => m.online === true && m.nutsLimits != null)
   if (population.length === 0) return 0
-  const offering = population.filter(m => methodsHaveMethod(m.mintMethods, method) || methodsHaveMethod(m.meltMethods, method)).length
+  // A method only counts when its NUT (04 = mint, 05 = melt) is not marked `supported: false` — the shared
+  // NUT-support rule (isNutSupported, nutSupport.ts; the methods themselves can only come from that entry). The population itself stays "online with a stored nuts object", as on the backend.
+  const offering = population.filter(m => {
+    const nuts = m.nutsLimits as Record<string, unknown>
+    return (isNutSupported(nuts['4']) && methodsHaveMethod(m.mintMethods, method))
+      || (isNutSupported(nuts['5']) && methodsHaveMethod(m.meltMethods, method))
+  }).length
   return Math.round(offering / population.length * 100)
 }
 

@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } fro
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import type { NostrEvent } from 'nostr-tools'
-import { sharedPool } from '@/core/nostr/pool'
+import { loadSharedPool } from '@/core/nostr/lazy'
 import { useNostrDiscovery } from '@/hooks/useNostrDiscovery'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
@@ -23,10 +23,11 @@ import { ratingSortKey } from '@/utils/bayesianRating'
 import { isNotRecommendedMint, partitionNotRecommended } from '@/utils/notRecommended'
 import { cleanMintName } from '@/utils/cleanMintName'
 import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolForStatus } from '@/utils/mintCounts'
-import { collapseOnline, mobileCollapseApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY, MOBILE_EXPANDED_KEY } from '@/utils/mobileCollapse'
+import { collapseOnline, showingNoteText, mobileCollapseApplies, showLessApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY, MOBILE_EXPANDED_KEY } from '@/utils/mobileCollapse'
 import { useMediaQuery } from '@/hooks/useIsMobile'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { isNutDeclaredSupported } from '@/utils/nutSupport'
+import { hasRequiredNuts } from '@/utils/nutFilters'
 import { SITE_DESCRIPTION } from '@/constants/routeMeta'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
 import { InfoTooltip } from '@/components/InfoTooltip'
@@ -179,7 +180,7 @@ function applyFilters(
     if (filters.requiredNuts.length > 0) {
       const nuts = mint.nutsLimits as Record<string, unknown> | null
       if (!nuts) return false
-      if (!filters.requiredNuts.every(nut => nuts[nut] != null)) return false
+      if (!hasRequiredNuts(nuts, filters.requiredNuts)) return false
     }
     return true
   })
@@ -347,10 +348,21 @@ function ShowAllButton({ total, onClick }: { total: number; onClick: () => void 
   )
 }
 
+/** End of an expanded phone list: collapses back to the first MOBILE_COLLAPSED_ONLINE online mints. */
+function ShowLessButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" className="show-all-mints-btn" data-testid="show-less-mints" onClick={onClick}>
+      Show less
+    </button>
+  )
+}
+
 interface EmptyStateProps {
   /** Phone default view: cap the online mints at this many (mobileCollapse.ts); null = show all. */
   collapseOnlineTo?: number | null
   onShowAll?: (() => void) | undefined
+  /** Expanded phone default view only (showLessApplies); undefined on tablet/desktop and with a search/filter. */
+  onShowLess?: (() => void) | undefined
   filtersActive?: boolean
   onClearSearch?: (() => void) | undefined
   onResetFilters?: (() => void) | undefined
@@ -372,6 +384,7 @@ function MintListView({
   onAddMint,
   collapseOnlineTo = null,
   onShowAll,
+  onShowLess,
 }: {
   mints: KnownMint[]
   search: string
@@ -475,8 +488,9 @@ function MintListView({
         </table>
       </div>
       {collapsed && onShowAll && <ShowAllButton total={onlineTotal} onClick={onShowAll} />}
+      {!collapsed && onShowLess && onlineTotal > MOBILE_COLLAPSED_ONLINE && <ShowLessButton onClick={onShowLess} />}
       <div className="grid-showing-note" style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center', marginTop: 16, fontFamily: 'var(--font-mono)' }}>
-        Showing {shown.length} of {totalAll || sortedFiltered.length}
+        {showingNoteText(shown, totalAll || sortedFiltered.length, { collapsed, onlineTotal })}
         <UnitHiddenNote excluded={unitExcluded} selected={unitSelected} search={search} />
       </div>
     </>
@@ -505,6 +519,7 @@ function MintGrid({
   onAddMint,
   collapseOnlineTo = null,
   onShowAll,
+  onShowLess,
 }: {
   mints: KnownMint[]
   search: string
@@ -570,8 +585,9 @@ function MintGrid({
         ))}
       </div>
       {collapsed && onShowAll && <ShowAllButton total={onlineTotal} onClick={onShowAll} />}
+      {!collapsed && onShowLess && onlineTotal > MOBILE_COLLAPSED_ONLINE && <ShowLessButton onClick={onShowLess} />}
       <div className="grid-showing-note" style={{fontSize:13,color:'var(--text3)',textAlign:'center',marginTop:16,fontFamily:'var(--font-mono)'}}>
-        Showing {shown.length} of {totalAll || sortedFiltered.length}
+        {showingNoteText(shown, totalAll || sortedFiltered.length, { collapsed, onlineTotal })}
         <UnitHiddenNote excluded={unitExcluded} selected={unitSelected} search={search} />
       </div>
     </>
@@ -781,6 +797,28 @@ export default function Dashboard() {
     setMobileExpanded(true)
     try { sessionStorage.setItem(MOBILE_EXPANDED_KEY, '1') } catch { /* private mode: expanded for this view only */ }
   }
+  const showLess = showLessApplies({ isPhone, expanded: mobileExpanded, search, activeFilterCount, status: activeFilters.status })
+  // "Show less" sits at the end of a long list; after the collapse the page is much shorter and the visitor would
+  // land near the footer, so the effect below brings the top of the mint list back into view (smooth, or instant
+  // with reduced motion) and moves focus to the "Show all N" button that replaces the one they pressed.
+  const collapseScrollPending = useRef(false)
+  function showFewerMints(): void {
+    try { sessionStorage.removeItem(MOBILE_EXPANDED_KEY) } catch { /* private mode: nothing stored */ }
+    collapseScrollPending.current = true
+    setMobileExpanded(false)
+  }
+  useEffect(() => {
+    if (!collapseScrollPending.current || collapseOnlineTo === null) return
+    collapseScrollPending.current = false
+    const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const anchor = gridAnchorRef.current
+    // The phone navbar wraps to two rows (~104 px), more than the anchor's 72 px CSS scroll-margin: measure it so the
+    // first card lands just below the sticky bar instead of under it.
+    const nav = document.querySelector<HTMLElement>('.navbar')
+    if (anchor && nav) anchor.style.scrollMarginTop = `${Math.round(nav.getBoundingClientRect().height) + 12}px`
+    anchor?.scrollIntoView?.({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+    document.querySelector<HTMLButtonElement>('[data-testid="show-all-mints"]')?.focus({ preventScroll: true })
+  }, [collapseOnlineTo])
   function openSubmit(): void {
     setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setProbe({ url: '', state: 'error', result: null }); setNostrLookup({ input: '', outcome: 'empty', url: '' }); setBulkInput(''); setBulkSettled(''); setBulkError(null); setBulkSkipped(0); setBulkProgress([]); setBulkRunning(false); setBulkDone(false); setBulkRateLimitMsg(null)
   }
@@ -1015,26 +1053,32 @@ export default function Dashboard() {
       setNostrLookup(c.kind === 'url' ? { input, outcome: 'found', url: c.url } : { input, outcome: 'nonhttps', url: '' })
     }
     const timer = setTimeout(() => {
-      const startedAt = Date.now()
       hardTimeout = setTimeout(settle, 8000)
-      for (const relay of NOSTR_LOOKUP_RELAYS) {
-        let relayDone = false
-        const relayFinished = (answeredByRelay: boolean) => {
-          if (relayDone) return
-          relayDone = true
-          if (answeredByRelay) answered++
-          pending--
-          if (pending === 0) settle()
+      // The relay pool (nostr-tools) loads on first use, not with the home page (src/core/nostr/lazy.ts). The 8 s
+      // deadline already runs, so a slow or failed load ends as "unreachable" like silent relays do.
+      void loadSharedPool().then(sharedPool => {
+        if (stale) return
+        // Measured from the subscribe, so the module download does not count against a relay's answer time.
+        const startedAt = Date.now()
+        for (const relay of NOSTR_LOOKUP_RELAYS) {
+          let relayDone = false
+          const relayFinished = (answeredByRelay: boolean) => {
+            if (relayDone) return
+            relayDone = true
+            if (answeredByRelay) answered++
+            pending--
+            if (pending === 0) settle()
+          }
+          const sub = sharedPool.subscribeMany([relay], { kinds: [38172], authors: [pubkey], limit: 5 }, {
+            onevent: e => { events.push(e) },
+            // Faster than the library's own EOSE timeout = the relay really answered. A relay that failed or closed
+            // also reports EOSE, synchronously before its onclose: the microtask lets onclose (a failure) win.
+            oneose: () => { queueMicrotask(() => { relayFinished(Date.now() - startedAt < LOOKUP_REAL_EOSE_MS); sub.close('lookup done') }) },
+            onclose: () => relayFinished(false),
+          })
+          subs.push(sub)
         }
-        const sub = sharedPool.subscribeMany([relay], { kinds: [38172], authors: [pubkey], limit: 5 }, {
-          onevent: e => { events.push(e) },
-          // Faster than the library's own EOSE timeout = the relay really answered. A relay that failed or closed
-          // also reports EOSE, synchronously before its onclose: the microtask lets onclose (a failure) win.
-          oneose: () => { queueMicrotask(() => { relayFinished(Date.now() - startedAt < LOOKUP_REAL_EOSE_MS); sub.close('lookup done') }) },
-          onclose: () => relayFinished(false),
-        })
-        subs.push(sub)
-      }
+      }, () => {})
     }, 600)
     return () => { stale = true; clearTimeout(timer); clearTimeout(hardTimeout); subs.forEach(sub => sub.close('stale')) }
   }, [submitTrimmed, lookupPubkey, showSubmit])
@@ -1522,6 +1566,7 @@ export default function Dashboard() {
               mints={filteredMints}
               collapseOnlineTo={collapseOnlineTo}
               onShowAll={showAllMints}
+              onShowLess={showLess ? showFewerMints : undefined}
               filtersActive={activeFilterCount > 0}
               onClearSearch={clearSearch}
               onResetFilters={resetFilters}
@@ -1539,6 +1584,7 @@ export default function Dashboard() {
               mints={filteredMints}
               collapseOnlineTo={collapseOnlineTo}
               onShowAll={showAllMints}
+              onShowLess={showLess ? showFewerMints : undefined}
               filtersActive={activeFilterCount > 0}
               onClearSearch={clearSearch}
               onResetFilters={resetFilters}

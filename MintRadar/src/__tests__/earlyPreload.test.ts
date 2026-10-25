@@ -27,7 +27,14 @@ describe('early preload of the known-mints request', () => {
     expect(link.getAttribute('crossorigin')).toBe('anonymous')
   })
 
-  it.each(['/stats', '/about', '/methodology', '/for-wallets', '/wallets', '/learn', '/mint/https%3A%2F%2Fx.example', '/nope'])(
+  it.each(['/mint/https%3A%2F%2Fx.example', '/mint/https%3A%2F%2Fx.example/', '/mint/x.example'])(
+    'also preloads on the mint detail route %s (MintDetail reads the same list)', route => {
+      const links = runAt(route)
+      expect(links).toHaveLength(1)
+      expect(links[0]?.getAttribute('href')).toBe('/api/mints/known')
+    })
+
+  it.each(['/stats', '/about', '/methodology', '/for-wallets', '/wallets', '/learn', '/mint/nostr/naddr1abc', '/mint/a/b', '/mint/', '/nope'])(
     'adds nothing on %s (the preload would be unused there)', route => {
       expect(runAt(route)).toHaveLength(0)
     })

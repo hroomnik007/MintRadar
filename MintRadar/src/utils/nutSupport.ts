@@ -21,3 +21,8 @@ export function isNutDeclaredSupported(entry: unknown): boolean {
 export function supportedNutKeys(nuts: Record<string, unknown> | null | undefined): Set<string> {
   return new Set(Object.keys(nuts ?? {}).filter(k => isNutDeclaredSupported(nuts![k])))
 }
+
+/** True when the mint's `nuts` object declares NUT `key` as supported (same rule as isNutDeclaredSupported); a null or absent `nuts` is false. */
+export function mintSupportsNut(nuts: Record<string, unknown> | null | undefined, key: string): boolean {
+  return nuts != null && isNutDeclaredSupported(nuts[key])
+}

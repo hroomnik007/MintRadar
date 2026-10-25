@@ -166,3 +166,81 @@ describe('GET /api/mint/probe', () => {
     expect(r.body.keysets).toBeNull()
   })
 })
+
+// Stage 2 perf (2026-10-25): a known mint the cron last saw offline is probed with a short deadline and no
+// retry, and an offline result for a known mint is reused for OFFLINE_PROBE_CACHE_MS. Display-only: no DB write.
+describe('GET /api/mint/probe: known-down fast path and offline cache', () => {
+  const infoCalls = () => safeFetch.mock.calls.filter(c => String(c[0]).endsWith('/v1/info')).length
+  const knownRow = (lastProbeOnline: boolean | null) => ({ rowCount: 1, rows: [{ last_probe_online: lastProbeOnline }] })
+  const networkDown = () => safeFetch.mockImplementation(async () => null)
+
+  it('a known-down mint with a network failure is answered without the 1 s retry', async () => {
+    query.mockResolvedValue(knownRow(false))
+    networkDown()
+    const t0 = Date.now()
+    const r = await request(app).get('/api/mint/probe?url=https://down.example').expect(200)
+    expect(r.body.online).toBe(false)
+    expect(infoCalls()).toBe(1)
+    expect(Date.now() - t0).toBeLessThan(900)
+  })
+
+  it('a mint the cron last saw ONLINE keeps the retry (unchanged)', async () => {
+    query.mockResolvedValue(knownRow(true))
+    networkDown()
+    await request(app).get('/api/mint/probe?url=https://blip.example').expect(200)
+    expect(infoCalls()).toBe(2)
+  })
+
+  it('a known-down mint whose host never answers gives up at the short deadline', async () => {
+    query.mockResolvedValue(knownRow(false))
+    safeFetch.mockImplementation(() => new Promise(() => {}))
+    const t0 = Date.now()
+    const r = await request(app).get('/api/mint/probe?url=https://hang.example').expect(200)
+    const took = Date.now() - t0
+    expect(r.body.online).toBe(false)
+    expect(r.body.errorKind).toBe('timeout')
+    expect(took).toBeGreaterThanOrEqual(3_900)
+    expect(took).toBeLessThan(6_000)
+  }, 10_000)
+
+  it('reuses an offline result for a known mint instead of probing again', async () => {
+    query.mockResolvedValue(knownRow(false))
+    networkDown()
+    const a = await request(app).get('/api/mint/probe?url=https://down.example').expect(200)
+    const b = await request(app).get('/api/mint/probe?url=https://down.example').expect(200)
+    expect(infoCalls()).toBe(1)
+    expect(b.body.online).toBe(false)
+    expect(b.body.checkedAt).toBe(a.body.checkedAt)
+  })
+
+  it('never caches an online result', async () => {
+    query.mockResolvedValue(knownRow(true))
+    serveMint(FULL_INFO)
+    await request(app).get('/api/mint/probe?url=https://up.example').expect(200)
+    await request(app).get('/api/mint/probe?url=https://up.example').expect(200)
+    expect(infoCalls()).toBe(2)
+  })
+
+  it('concurrent requests for one known mint share a single probe', async () => {
+    query.mockResolvedValue(knownRow(true))
+    safeFetch.mockImplementation(async (u: string) => {
+      await new Promise(r => setTimeout(r, 150)) // slow enough that both requests overlap
+      return u.endsWith('/v1/info') ? res(FULL_INFO) : res(KEYSETS)
+    })
+    const [a, b] = await Promise.all([
+      request(app).get('/api/mint/probe?url=https://up.example'),
+      request(app).get('/api/mint/probe?url=https://up.example'),
+    ])
+    expect(a.body.online).toBe(true)
+    expect(b.body.online).toBe(true)
+    expect(infoCalls()).toBe(1)
+  })
+
+  it('unknown URLs are not cached (each request is its own rate-limited probe)', async () => {
+    query.mockResolvedValue({ rowCount: 0, rows: [] })
+    networkDown()
+    await request(app).get('/api/mint/probe?url=https://unknown.example').expect(200)
+    await request(app).get('/api/mint/probe?url=https://unknown.example').expect(200)
+    expect(infoCalls()).toBe(4) // two probes, each with its retry
+  })
+})

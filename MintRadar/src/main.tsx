@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from 'react-router-dom'
 import { router } from '@/App'
 import { useWatchlistStore } from '@/stores/watchlist.store'
-import { restoreBunkerSession } from '@/core/nostr/client'
+import { startBunkerRestore } from '@/core/nostr/lazy'
 import { clearStaleNsecSession } from '@/stores/auth.store'
 import { reloadOnChunkError } from '@/utils/chunkReload'
 import './index.css'
@@ -17,7 +17,7 @@ window.addEventListener('vite:preloadError', event => {
 })
 
 void useWatchlistStore.getState().loadFromDb()
-void restoreBunkerSession()
+void startBunkerRestore()
 clearStaleNsecSession()
 
 const queryClient = new QueryClient({

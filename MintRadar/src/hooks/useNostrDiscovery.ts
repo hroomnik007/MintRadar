@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react'
-import { verifyEvent } from 'nostr-tools'
 import { useAuthStore } from '@/stores/auth.store'
 import { useQueryClient } from '@tanstack/react-query'
-import { sharedPool } from '@/core/nostr/pool'
+import { loadSharedPool } from '@/core/nostr/lazy'
 import { DISCOVERY_RELAYS } from '@/core/nostr/relays'
 
 export function useNostrDiscovery() {
@@ -20,6 +19,8 @@ export function useNostrDiscovery() {
       const discovered: Set<string> = new Set()
 
       try {
+        // Logged-in only, on the home page: nostr-tools is loaded here, not in the initial bundle (lazy.ts).
+        const [sharedPool, { verifyEvent }] = await Promise.all([loadSharedPool(), import('nostr-tools')])
         const events = await Promise.race([
           sharedPool.querySync(DISCOVERY_RELAYS, { kinds: [38172], limit: 500 }),
           new Promise<never>((_, reject) =>

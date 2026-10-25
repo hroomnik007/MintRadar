@@ -34,3 +34,24 @@ export function collapseOnline<T extends { online?: boolean | null }>(sorted: re
 export function mobileCollapseApplies(opts: { isPhone: boolean; expanded: boolean; search: string; activeFilterCount: number; status: string }): boolean {
   return opts.isPhone && !opts.expanded && opts.search.trim() === '' && opts.activeFilterCount === 0 && opts.status === 'online'
 }
+
+/**
+ * Whether an expanded phone list offers "Show less" (2026-10-25): exactly when the cut would apply again if the
+ * expanded flag were cleared (phone, default view). A search or filter shows everything anyway, so no button there.
+ */
+export function showLessApplies(opts: { isPhone: boolean; expanded: boolean; search: string; activeFilterCount: number; status: string }): boolean {
+  return opts.expanded && mobileCollapseApplies({ ...opts, expanded: false })
+}
+
+/**
+ * The "Showing X of Y" line under the list. Uncollapsed (desktop, tablet, any search/filter, an expanded phone
+ * list) it is unchanged: "Showing {shown} of {total}". While the phone cut is on, Y would be every tracked mint
+ * (e.g. 62) right next to "Show all 50" (online), which reads as a contradiction, so it counts online mints only:
+ * "Showing 10 of 50 online", plus " · N offline" when the hidden-mints toggle revealed non-online rows.
+ */
+export function showingNoteText<T extends { online?: boolean | null }>(shown: readonly T[], total: number, collapse: Pick<CollapseResult<T>, 'collapsed' | 'onlineTotal'>): string {
+  if (!collapse.collapsed) return `Showing ${shown.length} of ${total}`
+  const onlineShown = shown.reduce((n, m) => n + (m.online === true ? 1 : 0), 0)
+  const others = shown.length - onlineShown
+  return `Showing ${onlineShown} of ${collapse.onlineTotal} online${others > 0 ? ` · ${others} offline` : ''}`
+}

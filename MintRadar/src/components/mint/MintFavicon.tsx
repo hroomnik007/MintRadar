@@ -32,6 +32,7 @@ export function MintFavicon({ url, iconUrl, size = 22, radius = 5, className = '
         src={proxiedSrc}
         alt=""
         loading="lazy"
+        decoding="async"
         width={size}
         height={size}
         className={className}

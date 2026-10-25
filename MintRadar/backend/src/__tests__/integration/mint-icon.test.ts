@@ -70,7 +70,7 @@ describe('GET /api/mint/icon', () => {
     const res = await request(app).get('/api/mint/icon?url=https://mint.example').expect(200)
 
     expect(res.headers['content-type']).toBe('image/png')
-    expect(res.headers['cache-control']).toBe('public, max-age=604800')
+    expect(res.headers['cache-control']).toBe('public, max-age=604800, stale-while-revalidate=86400')
     expect(res.headers['content-security-policy']).toContain("default-src 'none'")
     expect(res.headers['cross-origin-resource-policy']).toBe('same-origin')
     expect(res.headers['x-content-type-options']).toBe('nosniff')
@@ -92,7 +92,7 @@ describe('GET /api/mint/icon', () => {
       const res = await request(app).get(ICON_URL).expect(200)
       expect(res.headers['etag']).toBe(etagOf(PNG))
       expect(res.headers['etag']).toMatch(/^"[0-9a-f]{32}"$/) // strong: no W/ prefix
-      expect(res.headers['cache-control']).toBe('public, max-age=604800')
+      expect(res.headers['cache-control']).toBe('public, max-age=604800, stale-while-revalidate=86400')
       expect(Buffer.compare(res.body as Buffer, PNG)).toBe(0)
     })
 
@@ -110,7 +110,7 @@ describe('GET /api/mint/icon', () => {
       const res = await request(app).get(ICON_URL).set('If-None-Match', first.headers['etag'] as string).expect(304)
       expect(res.text).toBe('')
       expect(res.headers['etag']).toBe(first.headers['etag'])
-      expect(res.headers['cache-control']).toBe('public, max-age=604800')
+      expect(res.headers['cache-control']).toBe('public, max-age=604800, stale-while-revalidate=86400')
       expect(res.headers['content-type']).toBeUndefined()
       expect(res.headers['content-security-policy']).toContain("default-src 'none'")
       expect(res.headers['cross-origin-resource-policy']).toBe('same-origin')

@@ -14,7 +14,8 @@
 // the critic's key to have signed an announcement for that mint too.
 // NIP-05 contact entries (name@domain) are NOT resolved: neither side holds a verified, persisted
 // resolution, and fetching one here would be a new outbound request.
-import { nip19 } from 'nostr-tools'
+// The nip19 entry alone (bech32 only): in the frontend this keeps the rest of nostr-tools out of the initial bundle.
+import * as nip19 from 'nostr-tools/nip19'
 
 export interface OperatorSource {
   /** NUT-06 `contact` array as published by the mint (only method "nostr" entries are read). */

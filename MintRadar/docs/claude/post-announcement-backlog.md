@@ -23,7 +23,7 @@ What is planned after the public announcement. Nothing in the "By feedback only"
 | Start-up order | `app.listen` before `initDb`, with a test |
 | "proofs" wording | Compare "Backup" tooltip (done in task E1) |
 | `h7` aggregate | `EXPLAIN (ANALYZE, BUFFERS)` on the production database for the 7-day aggregate before deciding on an index `mint_history(checked_at)` |
-| brotli on nginx | About -0.1 s on `/stats`; needs the module and a server apply |
+| brotli on nginx | **Declined 2026-10-25** (needs a third-party nginx module; minimal external dependencies). Built-in `gzip_static` with build-time gzip -9 instead, see `deploy-and-infra.md`, "Precompressed .gz assets". |
 | Inline critical CSS | Render-blocking today; needs a CSP check |
 
 ## By feedback only
@@ -40,8 +40,8 @@ Do not start without a reason from users or wallet teams.
 | Watchlist without login | |
 | DM notification settings | **DO NOT BUILD** (Task E5). Triggers unchanged: dozens of subscribers, a complaint, or a flapping mint with a subscription (mute was dropped on 2026-10-02). Smallest step when a trigger comes: two separate pills for key rotation and fee change, then a global pause. No digest, no quiet hours without a reason. |
 | Atomic deploy | |
-| Icon resize | Needs a new dependency |
-| Deferring vendor-nostr and vendor-db | |
+| Icon resize | **Declined 2026-10-25:** built in Stage 2 with `sharp`, reverted before release (minimal external dependencies). Icons get a 7-day cache + `stale-while-revalidate` + ETag, `loading=lazy`, `decoding=async`, width/height instead. Revisit only with a dependency-free approach. |
+| Deferring vendor-nostr and vendor-db | **Done 2026-10-25** (Stage 2 perf): out of the initial modulepreload, loaded on first use / after first paint; see `deploy-and-infra.md`, "Code splitting & bundle layout". |
 | SSR | |
 | JetBrains Mono | |
 | OSV scanning | Deferred |

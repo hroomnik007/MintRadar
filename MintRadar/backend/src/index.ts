@@ -256,6 +256,48 @@ const ON_DEMAND_NETWORK_RETRY_DELAY_MS = 1_000
 const ON_DEMAND_5XX_RETRY_DELAY_MS = 2_000
 const ON_DEMAND_MIN_RETRY_MS = 1_500
 
+// Known-down mints (Stage 2 perf, 2026-10-25). Mint Detail of an offline mint used to wait ~2.4 s (a refused /
+// failed connect, the 1 s retry wait and the retry) or up to the 12 s deadline (a host that never answers) for a
+// result the cron prober already knew. A mint whose LAST cron probe (mint_history) was offline is probed with a
+// shorter deadline and no retry: the retry exists so a transient blip does not disagree with the cron's
+// last-known status (see probeMintWithin), and here the cron says offline too. A mint that is back up still
+// answers within the shorter deadline (the probe is display-only: it never writes mint_history or the score).
+export const KNOWN_DOWN_PROBE_DEADLINE_MS = 4_000
+// An OFFLINE on-demand result for a known mint is reused for this long (every visitor of a down mint's page,
+// a reload, Compare), so they get it at once instead of re-probing a dead host. Online results are never cached.
+// Shorter than the frontend's 2 min staleTime for the probe query (src/hooks/useMintProbe.ts).
+export const OFFLINE_PROBE_CACHE_MS = 60_000
+const OFFLINE_PROBE_CACHE_MAX = 1_000
+const offlineProbeCache = new Map<string, { status: MintStatus; expiresAt: number }>()
+// One probe per known mint at a time: concurrent requests for the same url share it.
+const knownProbeInFlight = new Map<string, Promise<MintStatus>>()
+
+// On-demand probe of a KNOWN mint, with the offline cache, in-flight sharing and the known-down fast path.
+async function probeKnownMint(url: string, knownDown: boolean): Promise<MintStatus> {
+  const now = Date.now()
+  const cached = offlineProbeCache.get(url)
+  if (cached && cached.expiresAt > now) return cached.status
+  if (cached) offlineProbeCache.delete(url)
+  const pending = knownProbeInFlight.get(url)
+  if (pending) return pending
+  const run = probeMint(url, knownDown ? { deadlineMs: KNOWN_DOWN_PROBE_DEADLINE_MS, retry: false } : {})
+    .then(status => {
+      if (!status.online) {
+        if (offlineProbeCache.size >= OFFLINE_PROBE_CACHE_MAX) {
+          const oldest = offlineProbeCache.keys().next().value
+          if (oldest !== undefined) offlineProbeCache.delete(oldest)
+        }
+        offlineProbeCache.set(url, { status, expiresAt: Date.now() + OFFLINE_PROBE_CACHE_MS })
+      } else {
+        offlineProbeCache.delete(url)
+      }
+      return status
+    })
+    .finally(() => { knownProbeInFlight.delete(url) })
+  knownProbeInFlight.set(url, run)
+  return run
+}
+
 // safeFetch for /v1/info that also remembers WHY a null came back (network
 // error object or guard rejection), so probeMint can classify the failure.
 function fetchInfoTraced(target: string, timeoutMs: number): {
@@ -271,8 +313,15 @@ function fetchInfoTraced(target: string, timeoutMs: number): {
   return { res, trace }
 }
 
-async function probeMintWithin(url: string, start: number): Promise<MintStatus> {
-  const deadlineAt = start + ON_DEMAND_PROBE_DEADLINE_MS
+interface ProbeOptions {
+  /** Overall deadline (default ON_DEMAND_PROBE_DEADLINE_MS). */
+  deadlineMs?: number
+  /** Retry once on a network failure / transient 5xx (default true). */
+  retry?: boolean
+}
+
+async function probeMintWithin(url: string, start: number, opts: ProbeOptions = {}): Promise<MintStatus> {
+  const deadlineAt = start + (opts.deadlineMs ?? ON_DEMAND_PROBE_DEADLINE_MS)
   const remainingMs = (): number => deadlineAt - Date.now()
   // Each request gets the usual per-request ceiling, but never more than what
   // is left of the overall deadline.
@@ -296,7 +345,7 @@ async function probeMintWithin(url: string, start: number): Promise<MintStatus> 
   let infoTrace = firstInfo.trace
   const firstStatus = infoResFirst?.status
   const isTransient5xx = firstStatus === 502 || firstStatus === 503 || firstStatus === 504
-  if (infoResFirst === null || (isTransient5xx && infoResFirst.headers?.get?.('cf-mitigated') == null)) {
+  if (opts.retry !== false && (infoResFirst === null || (isTransient5xx && infoResFirst.headers?.get?.('cf-mitigated') == null))) {
     const delayMs = infoResFirst === null ? ON_DEMAND_NETWORK_RETRY_DELAY_MS : ON_DEMAND_5XX_RETRY_DELAY_MS
     if (remainingMs() >= delayMs + ON_DEMAND_MIN_RETRY_MS) {
       await new Promise<void>(r => setTimeout(r, delayMs))
@@ -382,7 +431,7 @@ async function probeMintWithin(url: string, start: number): Promise<MintStatus> 
 // Hard cap: safeFetch's own deadline cannot cover its DNS pre-check or a stalled
 // body read in every case, so the whole probe is also raced against the
 // deadline. The losing inner promise just finishes in the background.
-async function probeMint(url: string): Promise<MintStatus> {
+async function probeMint(url: string, opts: ProbeOptions = {}): Promise<MintStatus> {
   const start = Date.now()
   let timer: ReturnType<typeof setTimeout> | undefined
   const capped = new Promise<MintStatus>(resolve => {
@@ -398,10 +447,10 @@ async function probeMint(url: string): Promise<MintStatus> {
       units: null,
       mintMethods: null,
       meltMethods: null,
-    }), ON_DEMAND_PROBE_DEADLINE_MS)
+    }), opts.deadlineMs ?? ON_DEMAND_PROBE_DEADLINE_MS)
   })
   try {
-    return await Promise.race([probeMintWithin(url, start), capped])
+    return await Promise.race([probeMintWithin(url, start, opts), capped])
   } finally {
     clearTimeout(timer)
   }
@@ -796,14 +845,16 @@ app.get('/api/mint/probe', (req: Request, res: Response): void => {
   // unknown-probe limiter BEFORE any outbound fetch happens.
   const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown'
   pool.query(
-    `SELECT m.contact_checks, m.last_contacts, m.last_contacts_at, m.last_online_at, s.info AS change_state_info
+    `SELECT m.contact_checks, m.last_contacts, m.last_contacts_at, m.last_online_at, s.info AS change_state_info,
+            (SELECT h.online FROM mint_history h WHERE h.url = m.url ORDER BY h.checked_at DESC LIMIT 1) AS last_probe_online
        FROM mints m LEFT JOIN mint_change_state s ON s.url = m.url
       WHERE m.url = $1`,
     [url],
   )
     .then(async (known) => {
       if ((known.rowCount ?? 0) > 0) {
-        const status = await probeMint(url)
+        // last_probe_online === false: the cron's latest probe found it offline (known-down fast path).
+        const status = await probeKnownMint(url, known.rows[0]?.last_probe_online === false)
         // Additive, known mints only: the stored facts about the contact entries (contactChecks.ts), which Mint Detail shows
         // as one muted line under the contact information. Never a value or a domain; [] while nothing was checked.
         const contactChecks = readStoredContactChecks(known.rows[0]?.contact_checks) ?? []
@@ -1821,8 +1872,9 @@ app.get('/api/mint/icon', (req: Request, res: Response): void => {
       res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox")
       res.setHeader('Cross-Origin-Resource-Policy', 'same-origin')
       // 7 days in the browser (was 1 day): the icon of a mint changes rarely, the server cache is 6 h, and a copy that
-      // expired is revalidated by its strong ETag (304, no body). The 204 "no icon" answer keeps its 30 minutes.
-      res.setHeader('Cache-Control', 'public, max-age=604800')
+      // expired is revalidated by its strong ETag (304, no body). stale-while-revalidate: for a day past that the stale
+      // copy shows at once while the 304 check runs in the background. The 204 "no icon" answer keeps its 30 minutes.
+      res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400')
       res.setHeader('ETag', iconEtag(icon.body))
       if (req.fresh) {
         res.removeHeader('Content-Type')

@@ -13,3 +13,7 @@ export const About = lazy(() => import('@/pages/About'))
 export const Methodology = lazy(() => import('@/pages/Methodology'))
 // For wallets is a long static text page (the API quick start): not in the initial payload.
 export const ForWallets = lazy(() => import('@/pages/ForWallets'))
+// Watchlist (relay sync, Nostr follow recommendations) and the Nostr-announced mint page (MintNaddr) are the pages that
+// import nostr-tools directly; lazy, so the Nostr vendor bundle is not in the initial payload (src/core/nostr/lazy.ts).
+export const Watchlist = lazy(() => import('@/pages/Watchlist'))
+export const MintNaddr = lazy(() => import('@/pages/MintNaddr'))

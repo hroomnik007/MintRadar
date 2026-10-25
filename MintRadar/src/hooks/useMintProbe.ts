@@ -1,8 +1,9 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { probeMint, type MintStatus } from '@core/mint/api'
-import { db } from '@/db'
+import { loadDb } from '@/core/nostr/lazy'
 
 async function saveHistory(result: MintStatus): Promise<void> {
+  const db = await loadDb()
   await db.mintHistory.add({
     url: result.url,
     online: result.online,

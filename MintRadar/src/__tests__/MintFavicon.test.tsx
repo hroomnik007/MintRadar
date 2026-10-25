@@ -36,6 +36,17 @@ describe('MintFavicon', () => {
     )
   })
 
+  it('is lazy, decodes off the main thread and reserves its box (no layout shift, no srcset/resize param)', () => {
+    const { container } = render(<MintFavicon url="https://mint.example" iconUrl="https://mint.example/i.png" size={38} />)
+    const img = container.querySelector('img')!
+    expect(img.getAttribute('loading')).toBe('lazy')
+    expect(img.getAttribute('decoding')).toBe('async')
+    expect(img.getAttribute('width')).toBe('38')
+    expect(img.getAttribute('height')).toBe('38')
+    expect(img.hasAttribute('srcset')).toBe(false)
+    expect(img.getAttribute('src')).not.toContain('&s=')
+  })
+
   it('renders a two-letter hostname monogram (no <img>) when the mint has no icon', () => {
     const { container } = render(<MintFavicon url="https://minibits.cash" iconUrl={null} />)
     expect(container.querySelector('img')).toBeNull()

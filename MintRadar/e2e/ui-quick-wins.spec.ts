@@ -30,19 +30,71 @@ test.describe('phone: first 10 online mints + "Show all N"', () => {
     await expect(names.last()).toHaveText('Mint 09')
     const showAll = page.getByTestId('show-all-mints')
     await expect(showAll).toHaveText('Show all 14')
-    await expect(page.locator('.grid-showing-note')).toContainText('Showing 10 of')
+    // Collapsed: the count is over ONLINE mints, so it matches "Show all 14" instead of the tracked total.
+    await expect(page.locator('.grid-showing-note')).toHaveText('Showing 10 of 14 online')
 
     // The hidden-mints toggle still reveals the offline mint while the online list stays cut.
     await page.locator('.degraded-note').click()
     await expect(page.locator('.card-name', { hasText: 'Offline Mint' })).toBeVisible()
     await expect(page.locator('.mint-grid .card-name', { hasText: /^Mint / })).toHaveCount(10)
+    await expect(page.locator('.grid-showing-note')).toHaveText('Showing 10 of 14 online · 1 offline')
 
     await showAll.click()
     await expect(page.locator('.mint-grid .card-name', { hasText: /^Mint / })).toHaveCount(14)
     await expect(showAll).toHaveCount(0)
+    // Expanded: the usual "Showing X of Y" (no "online").
+    await expect(page.locator('.grid-showing-note')).toHaveText(/^Showing \d+ of \d+$/)
     // Stays expanded on a reload of the same tab (Back from a mint page needs the same rows).
     await page.reload()
     await expect(page.locator('.mint-grid .card-name', { hasText: /^Mint / })).toHaveCount(14)
+  })
+
+  test('"Show less" at the end of the expanded list collapses to 10 and brings the list top back into view', async ({ page }) => {
+    await routeMany(page)
+    await page.goto('/')
+    await expect(page.getByTestId('show-less-mints')).toHaveCount(0)
+    await page.getByTestId('show-all-mints').click()
+    const cards = page.locator('.mint-grid .card-name', { hasText: /^Mint / })
+    await expect(cards).toHaveCount(14)
+    const showLess = page.getByTestId('show-less-mints')
+    await expect(showLess).toHaveText('Show less')
+    // At the end of the online list: below the last card, above the "Showing X of Y" line.
+    const lastCard = await page.locator('.mint-grid .mint-card').last().boundingBox()
+    const btn = await showLess.boundingBox()
+    const note = await page.locator('.grid-showing-note').boundingBox()
+    expect(btn!.y).toBeGreaterThan(lastCard!.y + lastCard!.height - 1)
+    expect(note!.y).toBeGreaterThan(btn!.y)
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    const scrolledDown = await page.evaluate(() => window.scrollY)
+    await showLess.click()
+    await expect(cards).toHaveCount(10)
+    await expect(showLess).toHaveCount(0)
+    await expect(page.getByTestId('show-all-mints')).toHaveText('Show all 14')
+    await expect(page.getByTestId('show-all-mints')).toBeFocused()
+    expect(await page.evaluate(k => sessionStorage.getItem(k), 'mintradar:dash-expanded')).toBeNull()
+    // Scrolled (smoothly) up to the top of the mint list: the first card is in the viewport, not left far above it,
+    // and its top edge is below the sticky (two-row on phones) navbar, not hidden under it.
+    const navBottom = await page.locator('.navbar').evaluate(el => el.getBoundingClientRect().bottom)
+    await expect.poll(async () => {
+      const box = await page.locator('.mint-grid .mint-card').first().boundingBox()
+      return box !== null && box.y >= navBottom && box.y < 844
+    }).toBe(true)
+    expect(await page.evaluate(() => window.scrollY)).toBeLessThan(scrolledDown)
+    await expect(page.locator('.grid-showing-note')).toHaveText('Showing 10 of 14 online')
+    // The cleared flag survives a reload: collapsed again.
+    await page.reload()
+    await expect(cards).toHaveCount(10)
+  })
+
+  test('no "Show less" when a search or filter already shows everything', async ({ page }) => {
+    await routeMany(page)
+    await page.addInitScript(() => sessionStorage.setItem('mintradar:dash-expanded', '1'))
+    await page.goto('/?q=mint.example')
+    await expect(page.locator('.mint-grid .card-name', { hasText: /^Mint / })).toHaveCount(14)
+    await expect(page.getByTestId('show-less-mints')).toHaveCount(0)
+    await page.goto('/')
+    await expect(page.getByTestId('show-less-mints')).toBeVisible()
   })
 
   test('a search or a non-default filter shows every result', async ({ page }) => {
@@ -66,6 +118,9 @@ test.describe('tablet and desktop never cut the list', () => {
       await page.goto('/')
       await expect(page.locator('.mint-grid .card-name')).toHaveCount(14)
       await expect(page.getByTestId('show-all-mints')).toHaveCount(0)
+      await expect(page.getByTestId('show-less-mints')).toHaveCount(0)
+      // Desktop/tablet copy unchanged.
+      await expect(page.locator('.grid-showing-note')).toHaveText(/^Showing 14 of \d+$/)
     })
   }
 })

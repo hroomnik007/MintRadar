@@ -1,4 +1,5 @@
-import { nip19 } from 'nostr-tools'
+// The nip19 entry alone (bech32 only): this module is reachable from the initial bundle, the full nostr-tools is not.
+import * as nip19 from 'nostr-tools/nip19'
 
 const NJUMP = 'https://njump.me/'
 

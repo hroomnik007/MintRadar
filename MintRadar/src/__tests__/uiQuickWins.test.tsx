@@ -8,7 +8,7 @@ vi.mock('@/core/nostr/pool', () => ({
   sharedPool: { querySync: () => new Promise<never>(() => undefined), subscribeMany: () => ({ close: () => undefined }) },
 }))
 
-import { collapseOnline, mobileCollapseApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY } from '@/utils/mobileCollapse'
+import { collapseOnline, showingNoteText, mobileCollapseApplies, showLessApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY } from '@/utils/mobileCollapse'
 import { archivedUrlSet, withoutArchivedMovers } from '@/utils/reliabilityMovers'
 import { CopyTextButton } from '@/components/mint/CopyTextButton'
 import { COMPARE_AUDIT_LABEL } from '@/utils/compareLabels'
@@ -16,6 +16,21 @@ import { LOW_RELIABILITY_TEXT, reliabilityScoreInfo } from '@/utils/mintFormatti
 import MintNaddr, { NADDR_INVALID_TEXT } from '@/pages/MintNaddr'
 
 const m = (url: string, online: boolean) => ({ url, online })
+
+describe('"Showing X of Y" note (showingNoteText)', () => {
+  const on = (n: number) => Array.from({ length: n }, () => ({ online: true }))
+  it('uncollapsed: unchanged desktop copy over the tracked total', () => {
+    const shown = [...on(50), { online: false }]
+    expect(showingNoteText(shown, 62, { collapsed: false, onlineTotal: 50 })).toBe('Showing 51 of 62')
+  })
+  it('collapsed (phone): counts online mints so it matches "Show all N"', () => {
+    expect(showingNoteText(on(10), 62, { collapsed: true, onlineTotal: 50 })).toBe('Showing 10 of 50 online')
+  })
+  it('collapsed with revealed offline rows: names them separately', () => {
+    const shown = [...on(10), { online: false }, { online: null }]
+    expect(showingNoteText(shown, 62, { collapsed: true, onlineTotal: 50 })).toBe('Showing 10 of 50 online · 2 offline')
+  })
+})
 
 describe('phone dashboard cut (collapseOnline)', () => {
   const online = Array.from({ length: 14 }, (_, i) => m(`on${i}`, true))
@@ -46,6 +61,17 @@ describe('phone dashboard cut (collapseOnline)', () => {
     expect(mobileCollapseApplies({ ...base, activeFilterCount: 1 })).toBe(false)
     expect(mobileCollapseApplies({ ...base, status: 'all' })).toBe(false)
     expect(MOBILE_COLLAPSE_QUERY).toBe('(max-width: 640px)')
+  })
+  it('offers "Show less" only on an expanded phone default view', () => {
+    const expanded = { isPhone: true, expanded: true, search: '', activeFilterCount: 0, status: 'online' }
+    expect(showLessApplies(expanded)).toBe(true)
+    expect(showLessApplies({ ...expanded, expanded: false })).toBe(false)
+    // Desktop / tablet unchanged: never a button, even with the session flag left over from a phone-width window.
+    expect(showLessApplies({ ...expanded, isPhone: false })).toBe(false)
+    // A search or filter already shows every result, so there is nothing to collapse back to.
+    expect(showLessApplies({ ...expanded, search: 'x' })).toBe(false)
+    expect(showLessApplies({ ...expanded, activeFilterCount: 2 })).toBe(false)
+    expect(showLessApplies({ ...expanded, status: 'all' })).toBe(false)
   })
 })
 

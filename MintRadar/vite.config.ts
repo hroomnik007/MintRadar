@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { resolve } from 'path'
 import { brandAssetsPlugin, withBrandHash } from './vite-brand-assets'
 import { openApiAssetPlugin } from './vite-openapi'
+import { precompressPlugin } from './vite-precompress'
 
 // Manifest icons carry ?v=<content hash> in builds (see vite-brand-assets.ts); dev leaves them untouched.
 const icon = (command: string, path: string) => (command === 'build' ? withBrandHash(path) : path)
@@ -15,6 +16,9 @@ export default defineConfig(({ command }) => ({
     openApiAssetPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
+      // `<script defer src="/registerSW.js">` instead of a parser-blocking `<script>` in <head> (Stage 2 perf):
+      // registration only needs to happen after the document is parsed; the SW itself is unchanged.
+      injectRegister: 'script-defer',
       manifest: {
         name: 'MintRadar',
         short_name: 'MintRadar',
@@ -51,6 +55,7 @@ export default defineConfig(({ command }) => ({
         ],
       },
     }),
+    precompressPlugin(),
   ],
   resolve: {
     alias: {
@@ -73,6 +78,10 @@ export default defineConfig(({ command }) => ({
             // whole 380 kB chart bundle to preload on every page.
             { name: 'vendor-immer', test: /\/immer\// },
             { name: 'vendor-react', test: /\/react\/|\/react-dom\/|\/react-router-dom\// },
+            // The nip19 entry (bech32 npub/naddr/nevent encoding) is all the initial bundle uses of nostr-tools (mint
+            // links, submit input, operator keys); before vendor-nostr and crypto so the eager code does not preload them.
+            // The rest of nostr-tools (relays, signing, login) loads on demand (src/core/nostr/lazy.ts).
+            { name: 'vendor-nip19', test: /\/nostr-tools\/lib\/esm\/nip19\.js|\/@scure\/base\/|\/@noble\/hashes\/(esm\/)?utils\.js/ },
             { name: 'vendor-nostr', test: /\/nostr-tools\// },
             { name: 'vendor-charts', test: /\/recharts\// },
             { name: 'vendor-db', test: /\/dexie\/|\/dexie-react-hooks\// },

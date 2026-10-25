@@ -2,7 +2,7 @@ import { test, expect, type Request } from '@playwright/test'
 import { installApiMocks, mockRelays } from './fixtures/mocks'
 import { flush } from './fixtures/settle'
 
-// The mint list request is started at HTML parse time by /early-preload.js (a preload, on "/" only) and the app's own
+// The mint list request is started at HTML parse time by /early-preload.js (a preload, on "/" and "/mint/:url" only) and the app's own
 // fetch must reuse it: one request per page load, not two. Mocked API; counts come from the browser's request events.
 
 const KNOWN = /\/api\/mints\/known(\?|$)/
@@ -34,6 +34,22 @@ test.describe('known-mints preload', () => {
     await expect(page.locator('.mint-card').first()).toBeVisible()
     await flush(page)
     expect(seen).toHaveLength(1)
+  })
+
+  test('a mint detail page issues exactly one /api/mints/known request, started by the preload', async ({ page }) => {
+    const seen = trackKnown(page)
+    await page.goto(`/mint/${encodeURIComponent('https://alpha.mint.example')}`)
+    await expect(page.getByText('Alpha Mint').first()).toBeVisible()
+    await flush(page)
+    expect(seen).toHaveLength(1)
+    await expect(page.locator('head link[rel="preload"][as="fetch"][href="/api/mints/known"][crossorigin="anonymous"]')).toHaveCount(1)
+  })
+
+  test('/mint/nostr/<naddr> (two segments, MintNaddr) adds no preload', async ({ page }) => {
+    await page.goto('/mint/nostr/not-an-naddr')
+    await expect(page.getByTestId('naddr-error')).toBeVisible()
+    await page.waitForLoadState('load')
+    await expect(page.locator('head link[rel="preload"]')).toHaveCount(0)
   })
 
   for (const route of ['/about', '/methodology', '/wallets', '/learn']) {

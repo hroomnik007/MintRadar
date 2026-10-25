@@ -86,6 +86,16 @@ describe('BOLT12 and on-chain adoption (payment methods in NUT-04/05, not nuts k
     expect(methodAdoptionPercent([], 'bolt12')).toBe(0)
   })
 
+  it('does not count a method whose NUT-04/05 entry is `supported: false` (shared nutSupport rule); the mint stays in the population', () => {
+    const off = [
+      mint({ nutsLimits: { '4': { supported: false, methods: [] }, '5': {} }, mintMethods: [{ method: 'bolt12', unit: 'sat' }] }),
+      mint({ nutsLimits: { '4': {}, '5': { supported: false } }, meltMethods: [{ method: 'bolt12', unit: 'sat' }] }),
+      mint({ nutsLimits: { '4': { supported: false }, '5': {} }, meltMethods: [{ method: 'bolt12', unit: 'sat' }] }),
+    ]
+    // population 3; only the third offers bolt12 through a supported NUT (05)
+    expect(methodAdoptionPercent(off, 'bolt12')).toBe(33)
+  })
+
   it('the index takes BOLT12/on-chain from the methods and ignores nuts keys 25 and 30', () => {
     const a = adoption({ '11': 100, '12': 100, '14': 100, '17': 100, '21': 0, '22': 0, '25': 100, '30': 100 })
     // keys 25/30 at 100% in nutAdoption no longer count: (100*4 + 0 + 0 + 67 + 33) / 8
