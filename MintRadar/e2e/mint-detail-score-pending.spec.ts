@@ -78,12 +78,13 @@ test.describe('Mint Detail score without a stored score', () => {
     await expect(page.locator('.md-reliability-panel .rb-row-display').first()).toHaveText(PLACEHOLDER)
     await expect(uptimeScore(page)).toHaveText(`${PLACEHOLDER}/40`)
     await expect(page.locator('.md-reliability-panel')).not.toContainText(/\b31\b/)
-    // the History tab's "Average reliability" tile is the same score
+    // the History tab's "Average reliability" tile is the mean of the chart period's segment scores (92 in the mock),
+    // not the current score: it does not wait for the held 24 h history (data audit 2026-10-25)
     await page.locator('.md-tab', { hasText: /^History/ }).click()
-    await expect(page.locator('.md-hist-fig', { hasText: 'Average reliability' }).locator('.md-hist-fig-value')).toHaveText(PLACEHOLDER)
+    await expect(page.locator('.md-hist-fig', { hasText: 'Average reliability' }).locator('.md-hist-fig-value')).toHaveText('92')
 
     m.release()
-    await expect(page.locator('.md-hist-fig', { hasText: 'Average reliability' }).locator('.md-hist-fig-value')).toHaveText('71')
+    await expect(page.locator('.md-hist-fig', { hasText: 'Average reliability' }).locator('.md-hist-fig-value')).toHaveText('92')
     await page.locator('.md-tab', { hasText: /^Overview/ }).click()
     await expect(gaugeNum(page)).toHaveText('71')
     await expect(gaugeNum(page)).not.toHaveAttribute('aria-label', /.+/)

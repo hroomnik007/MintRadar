@@ -69,10 +69,10 @@ test.describe('tiles', () => {
 })
 
 test.describe('source line and header tooltip', () => {
-  test('one line under the tiles: cashu.info · last 7 days · synced <relative>, the UTC time in the title', async ({ page }) => {
+  test('one line under the tiles: cashu.info · last 7 days · facts · synced <relative>, the UTC time in the title', async ({ page }) => {
     await gotoAuditTab(page, czOnly(auditCzResponse()))
     const line = page.getByTestId('audit-cz-source')
-    await expect(line).toHaveText('cashu.info · last 7 days · synced 10 min ago')
+    await expect(line).toHaveText('cashu.info · last 7 days · DLEQ valid 56 / invalid 0 / missing 0 · proof states checked 9 / spent 0 / pending 0 · uptime 30d 97% · synced 10 min ago')
     await expect(line.locator('span[title]')).toHaveAttribute('title', /^\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC$/)
     await expect(page.getByTestId('audit-cz-source')).toHaveCount(1)
     // under the tiles, not before them
