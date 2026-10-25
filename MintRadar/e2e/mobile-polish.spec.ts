@@ -183,7 +183,9 @@ test.describe('home status strip: the data arriving moves nothing', () => {
 
       release()
       await expect(page.locator('.dash-status-item b').first()).toHaveText('12')
-      await expect(page.locator('.mint-card')).toHaveCount(12)
+      // Phones show the first 10 online mints and a "Show all 12" button (ui-quick-wins.spec.ts).
+      await expect(page.locator('.mint-card')).toHaveCount(10)
+      await expect(page.getByTestId('show-all-mints')).toHaveText('Show all 12')
       await networkQuiet(page)
       await frames(page, 3)
 

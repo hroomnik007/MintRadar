@@ -4,13 +4,16 @@ import { useSyncExternalStore } from 'react'
 // mobile header and Dashboard's responsive rules).
 const QUERY = '(max-width: 768px)'
 
+// Environments without matchMedia (jsdom without a stub, very old browsers) read as "not matching".
 function subscribe(query: string, listener: () => void): () => void {
+  if (typeof window.matchMedia !== 'function') return () => undefined
   const mql = window.matchMedia(query)
   mql.addEventListener('change', listener)
   return () => mql.removeEventListener('change', listener)
 }
 
 function getSnapshot(query: string): boolean {
+  if (typeof window.matchMedia !== 'function') return false
   return window.matchMedia(query).matches
 }
 
