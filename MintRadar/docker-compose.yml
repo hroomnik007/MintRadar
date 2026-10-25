@@ -12,6 +12,10 @@ services:
     # would expose Express on the public NIC and skip Nginx rate-limit/IP headers.
     ports:
       - "127.0.0.1:3002:3002"
+    # Read-only view of the built frontend so the backend can serve dist/index.html with per-route SEO
+    # meta and real 404s (backend/src/spaHtml.ts, nginx `location @spa_html`). Only index.html is read.
+    volumes:
+      - ${MINTRADAR_DIST_DIR:-/var/www/mintradar/dist}:/srv/mintradar-dist:ro
     depends_on:
       - postgres
     networks:
