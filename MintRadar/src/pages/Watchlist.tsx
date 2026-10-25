@@ -21,6 +21,8 @@ import { showWatchlistCount } from '@/utils/watchlistCount'
 import { useLegacyNotifyNotice, LEGACY_NOTIFY_NOTICE_TEXT } from '@/hooks/useLegacyNotifyNotice'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import './Watchlist.css'
+// Preloads the alerts strip MintCard loads lazily (it shows only here), so the cards don't render it a beat late.
+import '@/components/mint/NotifyStrip'
 import { pluralize } from '@/utils/plural'
 
 // Same lazy-loading rationale as Dashboard.tsx — Recharts only loads once a

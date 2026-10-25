@@ -1,7 +1,8 @@
 // The "Signed health record" row on Mint Detail: where the mint's kind 30385 health event lives on Nostr.
 // Pure: no relay connection, nothing fetched. The `d` tag is the backend's healthIdentifier() (the normalised
 // URL without a fragment); src/__tests__/healthRecord.test.ts pins this copy against the backend function.
-import { nip19 } from 'nostr-tools'
+// The nip19 entry alone (bech32 only): this module is reachable from the initial bundle, the full nostr-tools is not.
+import * as nip19 from 'nostr-tools/nip19'
 import { ATTESTATION_PUBKEY_HEX, ATTESTATION_RELAYS_PUBLIC } from './healthAssertionConstants'
 import { normalizeMintUrl } from './mintFormatting'
 import { njumpNaddrUrl } from './nostrLinks'

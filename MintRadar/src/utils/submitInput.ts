@@ -1,4 +1,5 @@
-import { nip19 } from 'nostr-tools'
+// The nip19 entry alone (bech32 only): this module is reachable from the initial bundle, the full nostr-tools is not.
+import * as nip19 from 'nostr-tools/nip19'
 
 // Classifies what the user typed into the Submit-a-mint field. Pure and synchronous: only an `url` or an `npub`
 // result may ever lead to a /api/mint/probe request or a relay request; every other class stays in the browser.

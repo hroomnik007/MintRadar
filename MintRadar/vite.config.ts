@@ -78,6 +78,10 @@ export default defineConfig(({ command }) => ({
             // whole 380 kB chart bundle to preload on every page.
             { name: 'vendor-immer', test: /\/immer\// },
             { name: 'vendor-react', test: /\/react\/|\/react-dom\/|\/react-router-dom\// },
+            // The nip19 entry (bech32 npub/naddr/nevent encoding) is all the initial bundle uses of nostr-tools (mint
+            // links, submit input, operator keys); before vendor-nostr and crypto so the eager code does not preload them.
+            // The rest of nostr-tools (relays, signing, login) loads on demand (src/core/nostr/lazy.ts).
+            { name: 'vendor-nip19', test: /\/nostr-tools\/lib\/esm\/nip19\.js|\/@scure\/base\/|\/@noble\/hashes\/(esm\/)?utils\.js/ },
             { name: 'vendor-nostr', test: /\/nostr-tools\// },
             { name: 'vendor-charts', test: /\/recharts\// },
             { name: 'vendor-db', test: /\/dexie\/|\/dexie-react-hooks\// },

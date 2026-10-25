@@ -1,5 +1,5 @@
 import { reviewSurgeText, sameOperatorText } from '@/utils/tooltipTexts'
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { IcClose } from '@/components/IcClose'
 import { Link } from 'react-router-dom'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
@@ -17,9 +17,14 @@ import { useAuthStore } from '@/stores/auth.store'
 import { CARD_LATENCY_LABEL } from '@/utils/compareLabels'
 import { displayName as mintDisplayName, shouldShowHostLine, isNewMint, cardLatencyLabel, cardLatencyLocationSuffix, cardLightningLabel, uptimeColor, formatTimeAgo, statusDotColor } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
-import { NotifyStrip } from '@/components/mint/NotifyStrip'
-import { removeWatchedMint } from '@/core/nostr/removeWatchedMint'
 import { sortUnits } from '@/utils/sortUnits'
+
+// MintCard is on the home page, so what pulls in Dexie and the relay code (alerts strip, unwatch with its
+// subscription cancel) is loaded on use, not with the card (src/core/nostr/lazy.ts). The Watchlist page, the only
+// place the strip shows, imports it statically, so it is ready by the time the cards render there.
+const NotifyStrip = lazy(() => import('@/components/mint/NotifyStrip').then(m => ({ default: m.NotifyStrip })))
+const removeWatchedMint = (url: string, name: string) =>
+  import('@/core/nostr/removeWatchedMint').then(m => m.removeWatchedMint(url, name))
 
 function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
@@ -287,7 +292,11 @@ export function MintCard({
         )}
       </div>
 
-      {showNotifyToggles && <NotifyStrip mintUrl={mint.url} name={displayName} />}
+      {showNotifyToggles && (
+        <Suspense fallback={null}>
+          <NotifyStrip mintUrl={mint.url} name={displayName} />
+        </Suspense>
+      )}
     </div>
       {showWatchLoginModal && (
         <div

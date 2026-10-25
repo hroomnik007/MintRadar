@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
-import { bootstrapUserData } from '@/core/nostr/client'
+import { loadNostrClient } from '@/core/nostr/lazy'
 import { sanitizeUserRelays } from '@/core/nostr/relayHints'
 
 // Reads the logged-in user's NIP-65 (kind:10002) read/write relay lists from the
@@ -18,7 +18,16 @@ export function useUserRelays(): { read: string[] | null; write: string[] | null
   useEffect(() => {
     if (!pubkey) return
     if (nip65Relays !== null) return  // already cached (shared across all instances / persisted)
-    return bootstrapUserData(pubkey)
+    // The client module is loaded lazily (lazy.ts); a cleanup before it lands cancels the bootstrap.
+    let cancelled = false
+    let stop: (() => void) | undefined
+    void loadNostrClient().then(m => {
+      if (!cancelled) stop = m.bootstrapUserData(pubkey)
+    }).catch(() => {})
+    return () => {
+      cancelled = true
+      stop?.()
+    }
   }, [pubkey, nip65Relays])
 
   // Only what we connect to is filtered (public wss:// hosts, max 10 each); the stored list stays as published.

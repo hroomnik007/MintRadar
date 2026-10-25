@@ -1,6 +1,9 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { loginWithNip07, loginWithNsec, loginWithBunker, removeBunkerShim, removeNsecShim, hasActiveNsecKey, type NostrProfile } from '@/core/nostr/client'
+import type { NostrProfile } from '@/core/nostr/client'
+// The client (nostr-tools) is loaded on the first login, not at startup (src/core/nostr/lazy.ts).
+import { loadNostrClient, loadedNostrClient, withNostrClientIfLoaded } from '@/core/nostr/lazy'
+import { clearStoredBunkerSession } from '@/core/nostr/bunkerSessionKeys'
 
 export interface Nip65Relays {
   read: string[]
@@ -43,7 +46,7 @@ export const useAuthStore = create<AuthState>()(
       login: async () => {
         set({ isLoading: true, error: null })
         try {
-          const profile = await loginWithNip07()
+          const profile = await (await loadNostrClient()).loginWithNip07()
           set({ profile, method: 'nip07', isLoading: false })
         } catch (err) {
           set({
@@ -56,7 +59,7 @@ export const useAuthStore = create<AuthState>()(
       loginNsec: async (input: string) => {
         set({ isLoading: true, error: null })
         try {
-          const profile = await loginWithNsec(input)
+          const profile = await (await loadNostrClient()).loginWithNsec(input)
           set({ profile, method: 'nsec', isLoading: false })
         } catch (err) {
           set({
@@ -69,7 +72,7 @@ export const useAuthStore = create<AuthState>()(
       loginBunker: async (input: string) => {
         set({ isLoading: true, error: null })
         try {
-          const profile = await loginWithBunker(input)
+          const profile = await (await loadNostrClient()).loginWithBunker(input)
           set({ profile, method: 'remote-signer', isLoading: false })
         } catch (err) {
           set({
@@ -80,8 +83,13 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        removeBunkerShim()
-        removeNsecShim()
+        // Shims exist only once the client module ran; a load still in flight is torn down when it lands.
+        // The stored bunker keys go now, so a startup restore still in flight finds nothing to install.
+        clearStoredBunkerSession()
+        withNostrClientIfLoaded(c => {
+          c.removeBunkerShim()
+          c.removeNsecShim()
+        })
         set({ profile: null, method: null, nip65Relays: null, error: null })
       },
 
@@ -118,7 +126,7 @@ export const STALE_NSEC_NOTICE = 'Your key was cleared when the page reloaded. L
 // nip07 (window.nostr may be injected late) and remote-signer (restored by
 // restoreBunkerSession) are deliberately left alone.
 export function clearStaleNsecSession(): void {
-  if (useAuthStore.getState().method !== 'nsec' || hasActiveNsecKey()) return
+  if (useAuthStore.getState().method !== 'nsec' || loadedNostrClient()?.hasActiveNsecKey()) return
   useAuthStore.getState().logout()
   useAuthStore.setState({ sessionNotice: STALE_NSEC_NOTICE })
 }

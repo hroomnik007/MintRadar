@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useWatchlistSync } from '@/hooks/useWatchlistSync'
 import { useModalFocus } from '@/hooks/useModalFocus'
-import { initBunkerQR } from '@/core/nostr/client'
+import { loadNostrClient } from '@/core/nostr/lazy'
 import { NavLogo } from './NavLogo'
 import { AccountMenu } from './AccountMenu'
 import './AppShell.css'
@@ -151,6 +151,9 @@ export function AppShell() {
   const [qrUri, setQrUri] = useState('')
   const [copiedUri, setCopiedUri] = useState(false)
   const qrCancelRef = useRef<(() => void) | null>(null)
+  // The pairing whose client-module load is still pending (startPairing); a newer start, a teardown or an unmount
+  // replaces/clears it so a late load never opens sockets for an abandoned attempt.
+  const pairingAttemptRef = useRef<object | null>(null)
 
   const [nip07Available, setNip07Available] = useState(false)
   useEffect(() => {
@@ -175,7 +178,14 @@ export function AppShell() {
     setCopiedUri(false)
     qrCancelRef.current?.()
     qrCancelRef.current = null
+    pairingAttemptRef.current = null
   }, [])
+
+  // The Nostr client (nostr-tools, ~147 kB) is not in the initial bundle (src/core/nostr/lazy.ts): start loading it
+  // as soon as the login modal opens, so a method picked a moment later does not wait for the download.
+  useEffect(() => {
+    if (showLoginModal) void loadNostrClient().catch(() => {})
+  }, [showLoginModal])
 
   // Close modal on Escape key
   useEffect(() => {
@@ -199,37 +209,50 @@ export function AppShell() {
 
   // Start a fresh nostrconnect pairing: opens the websockets, shows the QR, and
   // begins the 120s timeout. Any prior attempt is aborted first. Stale promise
-  // callbacks bail out by comparing qrCancelRef against their own `cancel`.
+  // callbacks bail out by comparing qrCancelRef against their own `cancel`. The Nostr client module loads first
+  // (lazy.ts; normally already loaded since the modal opened); pairingAttemptRef guards that wait.
   const startPairing = useCallback(() => {
     qrCancelRef.current?.()
-    const { uri, loginPromise, cancel } = initBunkerQR()
-    qrCancelRef.current = cancel
-    setQrUri(uri)
-    setCopiedUri(false)
-    setBunkerError('')
-    void loginPromise
-      .then(p => {
-        if (qrCancelRef.current !== cancel) return
-        qrCancelRef.current = null
-        useAuthStore.setState({ profile: p, method: 'remote-signer', isLoading: false, error: null })
-        closeLoginModal()
-      })
-      .catch((err: unknown) => {
-        if (qrCancelRef.current !== cancel || !(err instanceof Error)) return
-        if (err.name !== 'AbortError' && !err.message.includes('subscription closed')) {
-          setBunkerError(err.message || 'Pairing failed')
-        }
-      })
+    qrCancelRef.current = null
+    const attempt = {}
+    pairingAttemptRef.current = attempt
+    void loadNostrClient().then(({ initBunkerQR }) => {
+      if (pairingAttemptRef.current !== attempt) return
+      pairingAttemptRef.current = null
+      const { uri, loginPromise, cancel } = initBunkerQR()
+      qrCancelRef.current = cancel
+      setQrUri(uri)
+      setCopiedUri(false)
+      setBunkerError('')
+      void loginPromise
+        .then(p => {
+          if (qrCancelRef.current !== cancel) return
+          qrCancelRef.current = null
+          useAuthStore.setState({ profile: p, method: 'remote-signer', isLoading: false, error: null })
+          closeLoginModal()
+        })
+        .catch((err: unknown) => {
+          if (qrCancelRef.current !== cancel || !(err instanceof Error)) return
+          if (err.name !== 'AbortError' && !err.message.includes('subscription closed')) {
+            setBunkerError(err.message || 'Pairing failed')
+          }
+        })
+    }, () => {
+      if (pairingAttemptRef.current !== attempt) return
+      pairingAttemptRef.current = null
+      setBunkerError('Could not load the sign-in module. Check your connection and try again.')
+    })
   }, [closeLoginModal])
 
   // Abort a live pairing if the component ever unmounts.
-  useEffect(() => () => { qrCancelRef.current?.() }, [])
+  useEffect(() => () => { qrCancelRef.current?.(); pairingAttemptRef.current = null }, [])
 
   // Tear down a live Remote-signer pairing (websockets + QR state). Shared by the
   // "Back" link and any other path that leaves the focused Remote-signer view.
   const teardownPairing = useCallback(() => {
     qrCancelRef.current?.()
     qrCancelRef.current = null
+    pairingAttemptRef.current = null
     setQrUri('')
     setCopiedUri(false)
     setBunkerError('')

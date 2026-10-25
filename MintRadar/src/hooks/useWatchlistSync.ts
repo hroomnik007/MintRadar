@@ -1,10 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
-import { fetchRemoteWatchlist, publishWatchlist } from '@/core/nostr/watchlistSync'
 import { useUserRelays } from '@/hooks/useUserRelays'
-import { refreshAllSubscriptions } from '@/core/nostr/notificationSubscription'
-import { db } from '@/db'
+import { loadDb, whenBunkerRestored } from '@/core/nostr/lazy'
+
+// Runs on every page (AppShell), so the relay/signer/Dexie modules are loaded only once someone is logged in
+// (src/core/nostr/lazy.ts): nothing here is in the initial bundle.
+const loadWatchlistSync = () => import('@/core/nostr/watchlistSync')
+const loadNotificationSubscription = () => import('@/core/nostr/notificationSubscription')
 
 const WATCHLIST_OWNER_KEY = 'watchlistOwner'
 
@@ -63,6 +66,12 @@ export function useWatchlistSync() {
       const isStale = () => useAuthStore.getState().profile?.pubkey !== pubkey
 
       try {
+        // A remote-signer session restored at startup installs its window.nostr shim only after the client
+        // module has loaded; the fetch below decrypts through it.
+        await whenBunkerRestored()
+        const [db, { fetchRemoteWatchlist }] = await Promise.all([loadDb(), loadWatchlistSync()])
+        if (isStale()) { console.warn('sync: pubkey changed while loading — aborting before any Dexie write'); return }
+
         // Check if the Dexie data belongs to the current pubkey.
         // If a different user was previously logged in on this device, their Dexie
         // data must be cleared before loading — otherwise they'd see another user's mints.
@@ -132,7 +141,7 @@ export function useWatchlistSync() {
         // (resets their 30-day retention clock) for every entry whose
         // notifications the server has confirmed as on. Non-blocking — failures are logged and
         // swallowed inside refreshAllSubscriptions itself.
-        void refreshAllSubscriptions(userReadRelaysRef.current)
+        void loadNotificationSubscription().then(m => m.refreshAllSubscriptions(userReadRelaysRef.current))
       } catch (err) {
         if (isStale()) { console.warn('sync: error after pubkey change — ignoring', err); return }
         console.warn('sync: error during Phase 1:', err)
@@ -164,6 +173,7 @@ export function useWatchlistSync() {
     if (syncedForPubkey.current !== pubkey) return
     if (isSyncing.current) return
     if (import.meta.env.DEV) { console.log('sync: Phase 2 publishing', mints.length, 'mints to relays') }
-    void publishWatchlist(pubkey, mints, userWriteRelaysRef.current)
+    const relays = userWriteRelaysRef.current
+    void loadWatchlistSync().then(m => m.publishWatchlist(pubkey, mints, relays))
   }, [mints, profile?.pubkey])
 }

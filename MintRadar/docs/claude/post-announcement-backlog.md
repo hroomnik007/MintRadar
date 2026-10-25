@@ -41,7 +41,7 @@ Do not start without a reason from users or wallet teams.
 | DM notification settings | **DO NOT BUILD** (Task E5). Triggers unchanged: dozens of subscribers, a complaint, or a flapping mint with a subscription (mute was dropped on 2026-10-02). Smallest step when a trigger comes: two separate pills for key rotation and fee change, then a global pause. No digest, no quiet hours without a reason. |
 | Atomic deploy | |
 | Icon resize | Needs a new dependency |
-| Deferring vendor-nostr and vendor-db | |
+| Deferring vendor-nostr and vendor-db | **Done 2026-10-25** (Stage 2 perf): out of the initial modulepreload, loaded on first use / after first paint; see `deploy-and-infra.md`, "Code splitting & bundle layout". |
 | SSR | |
 | JetBrains Mono | |
 | OSV scanning | Deferred |

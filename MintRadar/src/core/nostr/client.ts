@@ -7,6 +7,7 @@ import { sharedPool } from '@/core/nostr/pool'
 import { sanitizeUserRelays } from '@/core/nostr/relayHints'
 import { isAcceptedEvent } from '@/core/nostr/profileEvents'
 import { useAuthStore } from '@/stores/auth.store'
+import { BUNKER_URI_KEY, BUNKER_SECRET_KEY, BUNKER_PUBKEY_KEY } from '@/core/nostr/bunkerSessionKeys'
 
 export interface NostrProfile {
   pubkey: string
@@ -291,9 +292,7 @@ let activeBunkerPool: SimplePool | null = null
 // Saved NIP-07 extension reference so it can be restored on logout
 let originalNostr: Window['nostr'] | undefined = undefined
 
-const BUNKER_URI_KEY = 'bunkerURI'
-const BUNKER_SECRET_KEY = 'bunkerClientSecretKey'
-const BUNKER_PUBKEY_KEY = 'bunkerPubkey'
+// BUNKER_*_KEY: in bunkerSessionKeys.ts, so startup can check for a stored session without loading this module.
 
 const NIP46_RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net', 'wss://relay.snort.social', 'wss://nostr.bitcoiner.social', 'wss://nostr.cypherpunk.today']
 
@@ -515,6 +514,8 @@ export async function restoreBunkerSession(): Promise<void> {
     const clientSecretKey = hexToBytes(secretHex)
     const bp = await parseBunkerInput(storedUri)
     if (!bp) throw new Error('Invalid stored bunker URI')
+    // Logged out while this was loading or parsing (logout clears the keys): install nothing.
+    if (sessionStorage.getItem(BUNKER_PUBKEY_KEY) !== storedPubkey) return
     const signer = BunkerSigner.fromBunker(clientSecretKey, bp, {
       onauth: openRemoteSignerAuthUrl,
     })

@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } fro
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import type { NostrEvent } from 'nostr-tools'
-import { sharedPool } from '@/core/nostr/pool'
+import { loadSharedPool } from '@/core/nostr/lazy'
 import { useNostrDiscovery } from '@/hooks/useNostrDiscovery'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
@@ -1016,26 +1016,32 @@ export default function Dashboard() {
       setNostrLookup(c.kind === 'url' ? { input, outcome: 'found', url: c.url } : { input, outcome: 'nonhttps', url: '' })
     }
     const timer = setTimeout(() => {
-      const startedAt = Date.now()
       hardTimeout = setTimeout(settle, 8000)
-      for (const relay of NOSTR_LOOKUP_RELAYS) {
-        let relayDone = false
-        const relayFinished = (answeredByRelay: boolean) => {
-          if (relayDone) return
-          relayDone = true
-          if (answeredByRelay) answered++
-          pending--
-          if (pending === 0) settle()
+      // The relay pool (nostr-tools) loads on first use, not with the home page (src/core/nostr/lazy.ts). The 8 s
+      // deadline already runs, so a slow or failed load ends as "unreachable" like silent relays do.
+      void loadSharedPool().then(sharedPool => {
+        if (stale) return
+        // Measured from the subscribe, so the module download does not count against a relay's answer time.
+        const startedAt = Date.now()
+        for (const relay of NOSTR_LOOKUP_RELAYS) {
+          let relayDone = false
+          const relayFinished = (answeredByRelay: boolean) => {
+            if (relayDone) return
+            relayDone = true
+            if (answeredByRelay) answered++
+            pending--
+            if (pending === 0) settle()
+          }
+          const sub = sharedPool.subscribeMany([relay], { kinds: [38172], authors: [pubkey], limit: 5 }, {
+            onevent: e => { events.push(e) },
+            // Faster than the library's own EOSE timeout = the relay really answered. A relay that failed or closed
+            // also reports EOSE, synchronously before its onclose: the microtask lets onclose (a failure) win.
+            oneose: () => { queueMicrotask(() => { relayFinished(Date.now() - startedAt < LOOKUP_REAL_EOSE_MS); sub.close('lookup done') }) },
+            onclose: () => relayFinished(false),
+          })
+          subs.push(sub)
         }
-        const sub = sharedPool.subscribeMany([relay], { kinds: [38172], authors: [pubkey], limit: 5 }, {
-          onevent: e => { events.push(e) },
-          // Faster than the library's own EOSE timeout = the relay really answered. A relay that failed or closed
-          // also reports EOSE, synchronously before its onclose: the microtask lets onclose (a failure) win.
-          oneose: () => { queueMicrotask(() => { relayFinished(Date.now() - startedAt < LOOKUP_REAL_EOSE_MS); sub.close('lookup done') }) },
-          onclose: () => relayFinished(false),
-        })
-        subs.push(sub)
-      }
+      }, () => {})
     }, 600)
     return () => { stale = true; clearTimeout(timer); clearTimeout(hardTimeout); subs.forEach(sub => sub.close('stale')) }
   }, [submitTrimmed, lookupPubkey, showSubmit])

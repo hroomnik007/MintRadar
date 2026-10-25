@@ -3,7 +3,8 @@
 // below are compared with the publisher in backend/src/__tests__/verifyHealthSnippet.test.ts. Relative imports on
 // purpose: the backend test loads this file without the "@" alias.
 
-import { nip19 } from 'nostr-tools'
+// The nip19 entry alone (bech32 only): this module is reachable from the initial bundle, the full nostr-tools is not.
+import * as nip19 from 'nostr-tools/nip19'
 import { ATTESTATION_PUBKEY_HEX, ATTESTATION_RELAYS_PUBLIC } from '../utils/healthAssertionConstants'
 import { REPO_BLOB_URL } from './contact'
 

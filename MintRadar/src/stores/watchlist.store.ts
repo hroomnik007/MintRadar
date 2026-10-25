@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import { db } from '@/db'
+// Dexie is loaded on first use, not in the initial bundle (src/core/nostr/lazy.ts).
+import { loadDb } from '@/core/nostr/lazy'
 
 /**
  * 'pending' — Phase 1 sync (relay fetch + Dexie load) hasn't finished yet for
@@ -62,7 +63,7 @@ export const useWatchlistStore = create<WatchlistState>()(
     },
 
     loadFromDb: async () => {
-      const entries = await db.watchlist.toArray()
+      const entries = await (await loadDb()).watchlist.toArray()
       set(state => {
         state.mints = entries.map(e => e.url)
         state.isLoaded = true
@@ -73,7 +74,7 @@ export const useWatchlistStore = create<WatchlistState>()(
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         throw new TypeError('URL must start with http:// or https://')
       }
-      await db.watchlist.put({
+      await (await loadDb()).watchlist.put({
         url,
         addedAt: new Date(),
         // A newly watched mint starts with notifications OFF; the user turns them on deliberately
@@ -89,14 +90,14 @@ export const useWatchlistStore = create<WatchlistState>()(
     },
 
     removeMint: async (url: string) => {
-      await db.watchlist.delete(url)
+      await (await loadDb()).watchlist.delete(url)
       set(state => {
         state.mints = state.mints.filter(m => m !== url)
       })
     },
 
     clearWatchlist: async () => {
-      await db.watchlist.clear()
+      await (await loadDb()).watchlist.clear()
       set(state => {
         state.mints = []
         state.isLoaded = false
