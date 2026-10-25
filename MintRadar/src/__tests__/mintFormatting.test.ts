@@ -504,7 +504,7 @@ describe('reliabilityScoreInfo', () => {
   })
 
   it('Low Reliability badge has a red color', () => {
-    expect(reliabilityScoreInfo(20).color).toBe('var(--red)')
+    expect(reliabilityScoreInfo(20).color).toBe('color-mix(in srgb, var(--red) 75%, var(--text))')
   })
 })
 

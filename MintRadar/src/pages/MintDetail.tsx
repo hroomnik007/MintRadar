@@ -1037,7 +1037,7 @@ function MintDetailContent({ url }: { url: string }) {
       : auditState === 'too-old'
         ? auditTooOldDetail()
         : 'No cashu.info audit data: neutral'
-  // Swaps without an attributed failure / all swaps, the same figure as Compare's "Audit success" (it used to show the
+  // Swaps without an attributed failure / all swaps, the same figure as Compare's "No mint fault (7d)" row (it used to show the
   // attributed failures, "0 / 13", next to 25/25, which read as 0 successes).
   const breakdownAuditDisplay = auditState === 'scored' ? (auditSuccessText(auditCzBlamed, auditCzTotal) ?? 'neutral') : 'neutral'
   const auditAgeDays = auditAgeH !== null && auditAgeH > 24 && (auditState === 'scored' || auditState === 'too-few') ? Math.floor(auditAgeH / 24) : null
@@ -1106,6 +1106,7 @@ function MintDetailContent({ url }: { url: string }) {
   ) : null
   // Mint that is not online: an honest block at the top of the Overview (since when, last error, what to do).
   const unavailable = !isOnline && knownMint !== null
+  const isArchived = !isOnline && knownMint?.archived === true
   const unavailableInfo = unavailable ? unavailableHeadline({ since: knownMint?.offlineSince ?? knownMint?.lastOnlineAt, archived: knownMint?.archived === true, now }) : null
   const lastErrorText = sanitizeLastError(knownMint?.lastError)
   const unavailableContacts = [email && `email ${email}`, twitter && `Twitter ${twitter}`, nostr && `Nostr ${nostr}`].filter((c): c is string => !!c)
@@ -1304,6 +1305,7 @@ function MintDetailContent({ url }: { url: string }) {
                       color: copiedContact === `keyset-${ks.id}` ? 'var(--accent)' : 'var(--text3)',
                       padding: '2px 4px', display: 'flex', flexShrink: 0,
                     }}
+                    className="md-copy-icon"
                     title="Copy full keyset ID"
                     aria-label="Copy full keyset ID"
                   >
@@ -1380,11 +1382,13 @@ function MintDetailContent({ url }: { url: string }) {
           <div className="md-avatar-id">
             <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? knownMint?.iconUrl ?? null} size={avatarSize} radius={16} className="md-hdr-favicon" />
             <div className="md-namebox" ref={nameboxRef}>
-              <h1 className="md-name" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                <span {...(resolvedNameFull ? { title: resolvedNameFull } : {})}>{displayName}</span>
-                <span className={`md-status-inline ${isOnline ? '' : 'offline'}`}>
+              {/* The h1 holds only the name (2026-10-25): with the status and badges inside it, a screen reader
+                  read the heading as "21MintOnline". The flex row and its look stay on the outer .md-name. */}
+              <div className="md-name" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                <h1 className="md-name-h1" {...(resolvedNameFull ? { title: resolvedNameFull } : {})}>{displayName}</h1>
+                <span className={`md-status-inline ${isOnline ? '' : isArchived ? 'offline archived' : 'offline'}`}>
                   <span className={`status-dot ${isOnline ? '' : 'offline'}`} />
-                  <span>{isOnline ? 'Online' : 'Offline'}</span>
+                  <span>{isOnline ? 'Online' : isArchived ? 'Archived' : 'Offline'}</span>
                 </span>
                 {isNew && (
                   <InfoTooltip text={newMintBadgeText()} width={240}><span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}}>New</span></InfoTooltip>
@@ -1396,7 +1400,7 @@ function MintDetailContent({ url }: { url: string }) {
                     </span>
                   </InfoTooltip>
                 )}
-              </h1>
+              </div>
               <button
                 type="button"
                 className={`md-url md-url-copy ${copiedLink ? 'copied' : ''}`}
@@ -1462,6 +1466,9 @@ function MintDetailContent({ url }: { url: string }) {
           <button className="md-quick-btn" onClick={() => setShowQr(true)}>
             <QrCode size={12} /> Mint QR
           </button>
+          {/* Not for an archived mint (2026-10-25): it is no longer probed and was offline for a long time, so adding it
+              to a wallet is a dead end. Mint QR stays (the URL itself is still a fact). */}
+          {!isArchived && (
           <a
             className="md-quick-btn"
             href={`https://wallet.cashu.me/?mint=${encodeURIComponent(url)}`}
@@ -1472,6 +1479,7 @@ function MintDetailContent({ url }: { url: string }) {
             <span className="md-qb-full">Open in Cashu.me</span>
             <span className="md-qb-short">Cashu.me</span>
           </a>
+          )}
         </div>
         <div className="md-hdr-right">
           <button
@@ -1795,7 +1803,8 @@ function MintDetailContent({ url }: { url: string }) {
                         color: copiedContact === 'pubkey' ? 'var(--accent)' : 'var(--text3)',
                         padding: '2px 4px', flexShrink: 0, display: 'flex',
                       }}
-                      title="Copy full public key"
+                      className="md-copy-icon"
+                    title="Copy full public key"
                       aria-label="Copy full public key"
                     >
                       {copiedContact === 'pubkey' ? <Check size={13} /> : <Copy size={13} />}
@@ -1882,6 +1891,7 @@ function MintDetailContent({ url }: { url: string }) {
                             color: copiedContact === `url-${u}` ? 'var(--accent)' : 'var(--text3)', padding:'2px 4px',
                             flexShrink:0, display:'flex',
                           }}
+                          className="md-copy-icon md-copy-icon--stack"
                           title="Copy URL"
                           aria-label="Copy URL"
                         >
@@ -1928,6 +1938,7 @@ function MintDetailContent({ url }: { url: string }) {
                             padding: '2px 4px', marginLeft: 'auto',
                             flexShrink: 0, display: 'flex',
                           }}
+                          className="md-copy-icon"
                           title="Copy"
                           aria-label="Copy"
                         >
@@ -1955,6 +1966,7 @@ function MintDetailContent({ url }: { url: string }) {
                             padding: '2px 4px', marginLeft: 'auto',
                             flexShrink: 0, display: 'flex',
                           }}
+                          className="md-copy-icon"
                           title="Copy"
                           aria-label="Copy"
                         >
@@ -1986,6 +1998,7 @@ function MintDetailContent({ url }: { url: string }) {
                             padding: '2px 4px', marginLeft: 'auto',
                             flexShrink: 0, display: 'flex',
                           }}
+                          className="md-copy-icon"
                           title="Copy"
                           aria-label="Copy"
                         >

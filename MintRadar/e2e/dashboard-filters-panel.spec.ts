@@ -398,6 +398,11 @@ for (const vp of [{ width: 1440, height: 900, name: 'desktop one-row' }, { width
       await expect(page.locator('.filter-seg-opt.active')).toHaveText('Online')
       await expect(showBtn(page)).toHaveText('Show 51 of 76')
       await showBtn(page).click()
+      // Default Online view on a phone (<= 640px): the first 10, then "Show all 51" (ui-quick-wins.spec.ts).
+      if ((page.viewportSize()?.width ?? 1280) <= 640) {
+        await expect(page.locator('.mint-card')).toHaveCount(10)
+        await page.getByTestId('show-all-mints').click()
+      }
       await expect(page.locator('.mint-card')).toHaveCount(51)
       expect(new URL(page.url()).searchParams.has('status')).toBe(false)
       await expect(page.locator('.degraded-note')).toContainText('25 mints hidden')

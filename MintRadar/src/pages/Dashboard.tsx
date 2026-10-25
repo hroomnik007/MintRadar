@@ -1,7 +1,7 @@
 import { UNIT_FILTER_TEXT, HIDE_TEST_MINTS_TEXT, hiddenMintsText } from '@/utils/tooltipTexts'
 import { DEGRADED_AFTER_HOURS } from '@/utils/networkHealthIndex'
 import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import type { NostrEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
@@ -23,6 +23,8 @@ import { ratingSortKey } from '@/utils/bayesianRating'
 import { isNotRecommendedMint, partitionNotRecommended } from '@/utils/notRecommended'
 import { cleanMintName } from '@/utils/cleanMintName'
 import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolForStatus } from '@/utils/mintCounts'
+import { collapseOnline, mobileCollapseApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY, MOBILE_EXPANDED_KEY } from '@/utils/mobileCollapse'
+import { useMediaQuery } from '@/hooks/useIsMobile'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { isNutDeclaredSupported } from '@/utils/nutSupport'
 import { SITE_DESCRIPTION } from '@/constants/routeMeta'
@@ -304,6 +306,57 @@ function UnitHiddenNote({ excluded, selected, search }: { excluded: KnownMint[];
   return note ? <span className="grid-unit-hidden-note" data-testid="unit-hidden-note"> · {note}</span> : null
 }
 
+// Shown instead of the grid / table when the search (and filters) leave no mint (2026-10-25). Before, the page showed
+// an empty grid and "Showing 0 of N" with nothing to do next.
+function NoMintsMatch({
+  search,
+  filtersActive,
+  onClearSearch,
+  onResetFilters,
+  onAddMint,
+}: {
+  search: string
+  filtersActive: boolean
+  onClearSearch?: (() => void) | undefined
+  onResetFilters?: (() => void) | undefined
+  onAddMint?: (() => void) | undefined
+}) {
+  const q = search.trim()
+  return (
+    <div className="no-mints-match" role="status" data-testid="no-mints-match">
+      <p className="no-mints-match-title">
+        {q ? <>No mints match <span className="no-mints-match-q">“{q}”</span></> : 'No mints match these filters'}
+      </p>
+      {q && filtersActive && <p className="no-mints-match-sub">Filters are on too, so some mints may be hidden by them.</p>}
+      <div className="no-mints-match-actions">
+        {q && onClearSearch && <button type="button" className="no-mints-match-btn" onClick={onClearSearch}>Clear search</button>}
+        {filtersActive && onResetFilters && <button type="button" className="no-mints-match-btn" onClick={onResetFilters}>Reset filters</button>}
+        {onAddMint && (
+          <button type="button" className="no-mints-match-link" onClick={onAddMint}>Know a mint we don’t list? Add mint</button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ShowAllButton({ total, onClick }: { total: number; onClick: () => void }) {
+  return (
+    <button type="button" className="show-all-mints-btn" data-testid="show-all-mints" onClick={onClick}>
+      Show all {total}
+    </button>
+  )
+}
+
+interface EmptyStateProps {
+  /** Phone default view: cap the online mints at this many (mobileCollapse.ts); null = show all. */
+  collapseOnlineTo?: number | null
+  onShowAll?: (() => void) | undefined
+  filtersActive?: boolean
+  onClearSearch?: (() => void) | undefined
+  onResetFilters?: (() => void) | undefined
+  onAddMint?: (() => void) | undefined
+}
+
 function MintListView({
   mints,
   search,
@@ -313,6 +366,12 @@ function MintListView({
   unitExcluded = EMPTY_MINTS,
   unitSelected = EMPTY_UNITS,
   duplicateDisplayNames = EMPTY_DUPLICATE_NAMES,
+  filtersActive = false,
+  onClearSearch,
+  onResetFilters,
+  onAddMint,
+  collapseOnlineTo = null,
+  onShowAll,
 }: {
   mints: KnownMint[]
   search: string
@@ -322,7 +381,7 @@ function MintListView({
   unitExcluded?: KnownMint[]
   unitSelected?: UnitFilterValue[]
   duplicateDisplayNames?: ReadonlySet<string> | undefined
-}) {
+} & EmptyStateProps) {
   const navigate = useNavigate()
   const { onMintPointerEnter, onMintPointerLeave } = useMintHoverPrefetch()
   const sortedFiltered = useMemo(() => {
@@ -357,6 +416,12 @@ function MintListView({
     }))
   }, [mints, search, sortBy, sortDir, duplicateDisplayNames])
 
+  if (sortedFiltered.length === 0 && (search.trim() !== '' || filtersActive)) {
+    return <NoMintsMatch search={search} filtersActive={filtersActive} onClearSearch={onClearSearch} onResetFilters={onResetFilters} onAddMint={onAddMint} />
+  }
+
+  const { shown, onlineTotal, collapsed } = collapseOnline(sortedFiltered, collapseOnlineTo)
+
   return (
     <>
       <div className="mint-list-table-wrap">
@@ -372,8 +437,9 @@ function MintListView({
             </tr>
           </thead>
           <tbody>
-            {sortedFiltered.map(mint => {
+            {shown.map(mint => {
               const isOnline = mint.online === true
+              const isArchived = !isOnline && mint.archived === true
               const displayName = mintDisplayName(mint, duplicateDisplayNames)
               const score = mint.reliabilityScore ?? null
               return (
@@ -386,8 +452,8 @@ function MintListView({
                     </div>
                   </td>
                   <td>
-                    <span style={{ fontSize: 10, color: isOnline ? 'var(--accent)' : 'var(--red)' }}>
-                      ●<span className="status-text-mobile-hide">{isOnline ? ' Online' : ' Offline'}</span>
+                    <span style={{ fontSize: 10, color: isOnline ? 'var(--accent)' : isArchived ? 'var(--text3)' : 'var(--red)' }}>
+                      ●<span className="status-text-mobile-hide">{isOnline ? ' Online' : isArchived ? ' Archived' : ' Offline'}</span>
                     </span>
                   </td>
                   <td style={{ color: uptimeColor(mint.uptimePct24h), fontFamily: 'var(--font-mono-data)', fontSize: 12 }}>
@@ -408,8 +474,9 @@ function MintListView({
           </tbody>
         </table>
       </div>
+      {collapsed && onShowAll && <ShowAllButton total={onlineTotal} onClick={onShowAll} />}
       <div className="grid-showing-note" style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center', marginTop: 16, fontFamily: 'var(--font-mono)' }}>
-        Showing {sortedFiltered.length} of {totalAll || sortedFiltered.length}
+        Showing {shown.length} of {totalAll || sortedFiltered.length}
         <UnitHiddenNote excluded={unitExcluded} selected={unitSelected} search={search} />
       </div>
     </>
@@ -432,6 +499,12 @@ function MintGrid({
   unitSelected = EMPTY_UNITS,
   pubkeyGroups = EMPTY_PUBKEY_GROUPS,
   duplicateDisplayNames = EMPTY_DUPLICATE_NAMES,
+  filtersActive = false,
+  onClearSearch,
+  onResetFilters,
+  onAddMint,
+  collapseOnlineTo = null,
+  onShowAll,
 }: {
   mints: KnownMint[]
   search: string
@@ -443,7 +516,7 @@ function MintGrid({
   unitSelected?: UnitFilterValue[]
   pubkeyGroups?: Map<string, string[]>
   duplicateDisplayNames?: ReadonlySet<string> | undefined
-}) {
+} & EmptyStateProps) {
   const sortedFiltered = useMemo(() => {
     const q = search.toLowerCase()
     const filtered = mints.filter(mint => {
@@ -477,10 +550,16 @@ function MintGrid({
     }))
   }, [mints, search, sortBy, sortDir, duplicateDisplayNames])
 
+  if (sortedFiltered.length === 0 && (search.trim() !== '' || filtersActive)) {
+    return <NoMintsMatch search={search} filtersActive={filtersActive} onClearSearch={onClearSearch} onResetFilters={onResetFilters} onAddMint={onAddMint} />
+  }
+
+  const { shown, onlineTotal, collapsed } = collapseOnline(sortedFiltered, collapseOnlineTo)
+
   return (
     <>
       <div className="mint-grid">
-        {sortedFiltered.map(mint => (
+        {shown.map(mint => (
           <MintCard
             key={mint.url}
             mint={mint}
@@ -490,8 +569,9 @@ function MintGrid({
           />
         ))}
       </div>
+      {collapsed && onShowAll && <ShowAllButton total={onlineTotal} onClick={onShowAll} />}
       <div className="grid-showing-note" style={{fontSize:13,color:'var(--text3)',textAlign:'center',marginTop:16,fontFamily:'var(--font-mono)'}}>
-        Showing {sortedFiltered.length} of {totalAll || sortedFiltered.length}
+        Showing {shown.length} of {totalAll || sortedFiltered.length}
         <UnitHiddenNote excluded={unitExcluded} selected={unitSelected} search={search} />
       </div>
     </>
@@ -691,6 +771,42 @@ export default function Dashboard() {
     return rest.filter(m => !mintMatchesUnits(m, activeFilters.units))
   }, [allMints, activeFilters, showDegraded, search])
   const activeFilterCount = countActiveFilters(activeFilters)
+  // Phone default view: first MOBILE_COLLAPSED_ONLINE online mints + "Show all N" (mobileCollapse.ts).
+  const isPhone = useMediaQuery(MOBILE_COLLAPSE_QUERY)
+  const [mobileExpanded, setMobileExpanded] = useState(() => {
+    try { return sessionStorage.getItem(MOBILE_EXPANDED_KEY) === '1' } catch { return false }
+  })
+  const collapseOnlineTo = mobileCollapseApplies({ isPhone, expanded: mobileExpanded, search, activeFilterCount, status: activeFilters.status }) ? MOBILE_COLLAPSED_ONLINE : null
+  function showAllMints(): void {
+    setMobileExpanded(true)
+    try { sessionStorage.setItem(MOBILE_EXPANDED_KEY, '1') } catch { /* private mode: expanded for this view only */ }
+  }
+  function openSubmit(): void {
+    setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setProbe({ url: '', state: 'error', result: null }); setNostrLookup({ input: '', outcome: 'empty', url: '' }); setBulkInput(''); setBulkSettled(''); setBulkError(null); setBulkSkipped(0); setBulkProgress([]); setBulkRunning(false); setBulkDone(false); setBulkRateLimitMsg(null)
+  }
+  // "Add a mint" from a page that is not the Dashboard (the bad-naddr page, MintNaddr.tsx) arrives with
+  // state { openAddMint: true }: open the modal once and drop the state so Back / a refresh does not reopen it.
+  const location = useLocation()
+  const openAddMintRequested = (location.state as { openAddMint?: boolean } | null)?.openAddMint === true
+  // Opened during render (React's "adjust state on a prop change" pattern), keyed by the history entry so it runs once;
+  // the effect only rewrites the history entry.
+  const [handledAddMintKey, setHandledAddMintKey] = useState<string | null>(null)
+  if (openAddMintRequested && handledAddMintKey !== location.key) {
+    setHandledAddMintKey(location.key)
+    openSubmit()
+  }
+  useEffect(() => {
+    if (!openAddMintRequested) return
+    navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: null })
+  }, [openAddMintRequested, navigate, location.pathname, location.search])
+  function clearSearch(): void {
+    commitFilters({ search: '' }, { replace: true })
+    searchInputRef.current?.focus({ preventScroll: true })
+  }
+  function resetFilters(): void {
+    setPendingFilters(DEFAULT_FILTERS)
+    commitFilters({ filters: DEFAULT_FILTERS })
+  }
 
   // Live count for the filter panel's "Show N of M" button: the same pure
   // applyFilters/pool chain as filteredMints above, but over the *draft*
@@ -1210,7 +1326,14 @@ export default function Dashboard() {
               className={`sort-btn${sortBy === s ? ' active' : ''}`}
               onClick={() => handleSortClick(s)}
             >
-              {s === 'reliability' ? 'Reliability Score' : s === 'reviewCount' ? 'Most reviewed' : s.charAt(0).toUpperCase() + s.slice(1)}
+              {s === 'reliability' || s === 'reviewCount' ? (
+                // Two labels, one shown at a time by CSS (display: none), so the accessible name is always the visible
+                // text. The short one fits all five chips on one row at 320–389px (see .sort-lbl-short in Dashboard.css).
+                <>
+                  <span className="sort-lbl-full">{s === 'reliability' ? 'Reliability Score' : 'Most reviewed'}</span>
+                  <span className="sort-lbl-short">{s === 'reliability' ? 'Reliability' : 'Reviews'}</span>
+                </>
+              ) : s.charAt(0).toUpperCase() + s.slice(1)}
               {sortBy === s && <span className="sort-arrow" style={{marginLeft: 3, fontSize: 10, opacity: 0.7}}>{sortDir === 'asc' ? '↑' : '↓'}</span>}
             </button>
           ))}
@@ -1226,19 +1349,18 @@ export default function Dashboard() {
         <button
           type="button"
           className="refresh-btn"
-          title="Reset filters & refresh"
-          aria-label="Reset filters and refresh"
+          title="Refresh mint list"
+          aria-label="Refresh mint list"
           onClick={() => {
-            commitFilters({ search: '', sortBy: 'reliability', sortDir: DEFAULT_SORT_DIRS.reliability, filters: DEFAULT_FILTERS })
-            setPendingFilters(DEFAULT_FILTERS)
-            setShowFilters(false)
-            setShowDegraded(false)
+            // Refresh only (2026-10-25): it used to also reset the search, sort and filters, which threw away a
+            // filtered view just to get fresh numbers. Resetting lives in the Filters panel ("Reset") and in the
+            // no-results state ("Clear search" / "Reset filters").
             void queryClient.invalidateQueries({ queryKey: ['mints-known'] })
           }}
         >
           <IcRefresh />
         </button>
-        <button type="button" className="submit-btn" ref={submitBtnRef} onClick={() => { setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setProbe({ url: '', state: 'error', result: null }); setNostrLookup({ input: '', outcome: 'empty', url: '' }); setBulkInput(''); setBulkSettled(''); setBulkError(null); setBulkSkipped(0); setBulkProgress([]); setBulkRunning(false); setBulkDone(false); setBulkRateLimitMsg(null) }}>
+        <button type="button" className="submit-btn" ref={submitBtnRef} onClick={openSubmit}>
           <IcPlus /> Add mint
         </button>
       </div>
@@ -1349,7 +1471,7 @@ export default function Dashboard() {
                 Hide test mints
               </label>
               <div className="filter-actions-row">
-                <button type="button" className="filter-reset-btn" onClick={() => { setPendingFilters(DEFAULT_FILTERS); commitFilters({ filters: DEFAULT_FILTERS }) }}>Reset</button>
+                <button type="button" className="filter-reset-btn" onClick={resetFilters}>Reset</button>
                 <button
                   type="button"
                   className="filter-apply-btn"
@@ -1398,6 +1520,12 @@ export default function Dashboard() {
           {viewMode === 'list' ? (
             <MintListView
               mints={filteredMints}
+              collapseOnlineTo={collapseOnlineTo}
+              onShowAll={showAllMints}
+              filtersActive={activeFilterCount > 0}
+              onClearSearch={clearSearch}
+              onResetFilters={resetFilters}
+              onAddMint={openSubmit}
               search={search}
               sortBy={sortBy}
               sortDir={sortDir}
@@ -1409,6 +1537,12 @@ export default function Dashboard() {
           ) : (
             <MintGrid
               mints={filteredMints}
+              collapseOnlineTo={collapseOnlineTo}
+              onShowAll={showAllMints}
+              filtersActive={activeFilterCount > 0}
+              onClearSearch={clearSearch}
+              onResetFilters={resetFilters}
+              onAddMint={openSubmit}
               search={search}
               sortBy={sortBy}
               sortDir={sortDir}

@@ -1040,3 +1040,53 @@
   .nostr-remote-connect { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .nostr-method-chevron { transition: none; } .nostr-method-card:hover .nostr-method-chevron { transform: none; } }
+
+/* Touch hit areas for the nav links (2026-10-25): an invisible ::before makes each link 44px tall on a coarse pointer;
+   the text, spacing and the mouse/desktop look are unchanged. Two-row phone nav (≤640px): the links are 27px boxes on
+   their own row, 8px below the Login button / account chip (top: -8px stops at its bottom edge) and 8px above the
+   navbar's bottom edge; sideways they reach 2px into the gap (the narrowest gap is 5px at 320px). One-row nav
+   (≥641px, tablets): the tabs sit in a 43px group with 2–4px gaps, so vertical only. */
+@media (pointer: coarse) {
+  .nav-tab { position: relative; }
+  .nav-tab::before {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    height: 44px;
+    transform: translateY(-50%);
+  }
+}
+@media (pointer: coarse) and (max-width: 640px) {
+  .nav-tab::before { top: -8px; bottom: -9px; height: auto; transform: none; left: -2px; right: -2px; }
+}
+
+/* ≤359px (2026-10-25): the six 14px labels need 288px + 5×6px gaps = 318px and the row has 292px at 320px, so "Learn"
+   wrapped onto a second row. 12.5px type (above the 12px phone floor) and a 4px minimum gap bring it to ≈277px, so
+   about 7px is left between labels; from 360px nothing changes. */
+@media (max-width: 359.98px) {
+  .navbar-tabs { column-gap: 4px; }
+  .nav-tab { font-size: 12.5px; }
+}
+
+/* Skip to content (2026-10-25): first Tab stop of every page. Off-screen above the navbar until focused, then it slides in
+   at the top-left over the navbar (z-index above the navbar's 100, below modals' 200). Not display:none / clip, so it is
+   a real, sized Tab stop. */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 150;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--bg3);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(calc(-100% - 16px));
+}
+.skip-link:focus { transform: none; outline: 2px solid var(--accent); outline-offset: 2px; }
+.skip-link:focus:not(:focus-visible) { outline: none; }
+/* main receives focus only from the skip link (tabindex -1): no ring around the whole page. */
+.app-content:focus { outline: none; }

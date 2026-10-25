@@ -298,6 +298,21 @@ export function AppShell() {
 
   return (
     <div className="app-shell">
+      {/* Skip link (2026-10-25): the first Tab stop, visually hidden until focused. It moves focus with JS instead of
+          following the hash, so the router and the pages that read location.hash (/for-wallets) are not touched. */}
+      <a
+        className="skip-link"
+        href="#main-content"
+        onClick={e => {
+          const main = document.getElementById('main-content')
+          if (!main) return
+          e.preventDefault()
+          main.focus({ preventScroll: true })
+          main.scrollIntoView({ block: 'start' })
+        }}
+      >
+        Skip to content
+      </a>
       <nav className="navbar" aria-label="Main">
        <div className={`navbar-inner${profile !== null ? ' is-authed' : ''}`}>
         <NavLink to="/" className="navbar-brand nav-logo" title="MintRadar">
@@ -560,7 +575,7 @@ export function AppShell() {
         </div>
       ))}
 
-      <main className="app-content">
+      <main className="app-content" id="main-content" tabIndex={-1}>
         <Outlet />
       </main>
 

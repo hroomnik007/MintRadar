@@ -170,8 +170,8 @@ export function storedKeysetsAsLive(last: ReadonlyArray<{ id: string; unit: stri
 }
 
 /**
- * "Audit success" value from cashu.info's stored 7-day figures (auditCzTotal / auditCzBlamed): swaps without a
- * failure attributed to the mint, out of all its swaps. The breakdown's Audit row and Compare's "Audit success"
+ * Compare audit-row value ("No mint fault (7d)", was "Audit success") from cashu.info's stored 7-day figures (auditCzTotal / auditCzBlamed): swaps without a
+ * failure attributed to the mint, out of all its swaps. The breakdown's Audit row and Compare's "No mint fault (7d)"
  * row both use it, so the two always show the same "x / y". Null without a stored total (callers show neutral / n/a).
  */
 export function auditSuccessText(blamed: number | null | undefined, total: number | null | undefined): string | null {

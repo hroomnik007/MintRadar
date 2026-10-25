@@ -53,7 +53,8 @@ export const EXPECTED_TOOLTIPS: Record<string, Cell[]> = {
   'mint-new-nuts': [[4, 4], [4, 4], [9, 8], [9, 8], [9, 8]],
   'mint-operator-overview': [[2, 2], [2, 2], [7, 7], [7, 7], [7, 7]],
   'mint-operator-reviews': [[3, 3], [3, 3], [8, 8], [8, 8], [8, 8]],
-  'compare-modal': same([7, 3]),
+  // +1 (2026-10-25): the ⓘ next to "NUT Support" explains the green / grey NUT chips.
+  'compare-modal': same([8, 3]),
   // 0 opened: the Submit dialog has no ⓘ of its own; the page's four triggers sit behind its overlay.
   'submit-modal': same([4, 0]),
   // 0 opened: same for the login dialog.

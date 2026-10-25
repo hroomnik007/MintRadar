@@ -9,6 +9,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 const known = vi.hoisted(() => ({
   state: { data: undefined as unknown, isLoading: false, isError: false, refetch: vi.fn() },
 }))
+vi.mock('@/core/nostr/pool', () => ({
+  sharedPool: { querySync: () => new Promise<never>(() => undefined), subscribeMany: () => ({ close: () => undefined }) },
+}))
 vi.mock('@/hooks/useKnownMints', () => ({ useKnownMints: () => known.state }))
 vi.mock('react-router-dom', async importOriginal => ({
   ...(await importOriginal<typeof import('react-router-dom')>()),
@@ -20,6 +23,10 @@ import MintDetail from '@/pages/MintDetail'
 import LearnModule from '@/pages/LearnModule'
 import NotFound from '@/pages/NotFound'
 import MintNaddr from '@/pages/MintNaddr'
+import { nip19 } from 'nostr-tools'
+
+// A well-formed kind-38172 link: the page asks the relays (mocked to never answer) and shows "Resolving mint…".
+const VALID_NADDR = nip19.naddrEncode({ kind: 38172, pubkey: 'a'.repeat(64), identifier: 'mint-id', relays: [] })
 
 function h1s(path: string, route: string, ui: React.ReactElement) {
   const { container } = render(
@@ -53,6 +60,9 @@ describe('exactly one h1 on every not-found style state', () => {
     expect(h1s('/nope', '*', <NotFound />)).toEqual(['Page not found'])
   })
   it('naddr link while it resolves', () => {
-    expect(h1s('/mint/nostr/x', '/mint/nostr/:naddr', <MintNaddr />)).toEqual(['Resolving mint…'])
+    expect(h1s(`/mint/nostr/${VALID_NADDR}`, '/mint/nostr/:naddr', <MintNaddr />)).toEqual(['Resolving mint…'])
+  })
+  it('naddr link that does not decode', () => {
+    expect(h1s('/mint/nostr/x', '/mint/nostr/:naddr', <MintNaddr />)).toEqual(['Mint link not found'])
   })
 })

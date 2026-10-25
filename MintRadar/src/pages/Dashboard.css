@@ -518,10 +518,12 @@
 }
 
 /* ── Mint Grid — auto-fill on desktop ───────────────────────── */
+/* Columns stretch to the row (1fr, not a 300px cap) so the first and last card line up with the search row and the
+   Add mint button at every width (2026-10-25): with 300px columns centred, 1280px showed 3 cards inset 156px from the
+   toolbar (4 × 300 + 3 × 16 = 1248 > the 1244px row) and 768px 2 cards inset 58px. */
 .mint-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 300px));
-  justify-content: center;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 16px;
   padding: 16px var(--page-pad);
   margin-inline: auto;
@@ -536,7 +538,8 @@
   border-radius: var(--r);
   padding: 11px 13px;
   cursor: pointer;
-  max-width: 300px;
+  /* No max-width: the card fills its grid track (Home: 1fr columns, so the grid edges meet the toolbar's; the
+     Watchlist grid caps its own tracks at 300px). */
   /* Grid/flex item: without this the nowrap card name sets the item's min-content
      width and the 1fr mobile track grows past the viewport (data-driven text must
      never widen the page). */
@@ -2433,3 +2436,132 @@
   .latency-block .latency-label { font-size: 12px; }
   .latency-source { font-size: 12px; }
 }
+
+/* Touch hit areas (2026-10-25): on a coarse pointer the small Home controls get an invisible pseudo-element that
+   reaches 44px; the visible boxes, the layout and the mouse/desktop look do not change (nothing here applies to a
+   fine pointer). Where two controls sit close together the extension stops halfway into the gap, so a tap never
+   lands on the neighbour:
+   - card ⇄ / ☆: 26px buttons 6px apart (32px pitch). 44px tall; sideways 3px towards each other (the middle of the
+     gap) and 9px outwards, so 38×44 each. Both are z-index: 1 above the stretched card link (::after), so the extra
+     band opens the button, not the card. ::before, because .card-link owns the card's ::after.
+   - sort chips: 2px apart, so vertical only (29px → 44px). The ≤370px scroll fallback on .sort-segment would clip
+     the band (overflow-x: auto also clips y); the segment wraps since 2026-10-20 and nothing scrolls, so it is
+     overflow: visible on touch.
+   - view toggle (2px apart) and refresh: vertical only. */
+@media (pointer: coarse) {
+  .mint-card .card-compare-btn::before,
+  .mint-card .card-star::before {
+    content: '';
+    position: absolute;
+    top: -10px; bottom: -10px; /* from the padding box: 24 + 20 = 44 */
+    left: -4px; right: -4px;   /* 1px border + 3px = half of the 6px gap */
+  }
+  .mint-card .card-compare-btn::before { left: -10px; }
+  .mint-card .card-star::before { right: -10px; }
+  .mint-card .card-star:only-child::before { left: -10px; }
+
+  .sort-segment { overflow: visible; }
+  .sort-btn,
+  .view-toggle-btn,
+  .refresh-btn { position: relative; }
+  .sort-btn::before,
+  .view-toggle-btn::before,
+  .refresh-btn::before {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    height: 44px;
+    transform: translateY(-50%);
+  }
+}
+
+/* Sort chips below 390px (2026-10-25): at the 12px phone floor the five labels need ~361px and wrapped, leaving
+   "Reliability Score" alone on a second row at 320–389px. There the two long labels switch to a short form
+   ("Most reviewed" → "Reviews", "Reliability Score" → "Reliability"; 305 → 233px of text, the row has 240px at
+   320px), so all five stay on one row. display: none drops the hidden label from the accessible name too, so the
+   name always equals the visible text. From 390px nothing changes. */
+.sort-lbl-short { display: none; }
+@media (max-width: 389.98px) {
+  .sort-lbl-full { display: none; }
+  .sort-lbl-short { display: inline; }
+}
+
+/* No results (2026-10-25): replaces the empty grid / table when the search or the filters leave no mint. Same content
+   edges as the grid; buttons in the toolbar's quiet style (36px, 44px hit area on touch through min-height). */
+.no-mints-match {
+  max-width: calc(var(--dash-chrome-max) - var(--page-pad) * 2);
+  width: calc(100% - var(--page-pad) * 2);
+  margin: 16px auto 8px;
+  padding: 28px 16px;
+  border: 1px dashed var(--border);
+  border-radius: var(--r);
+  text-align: center;
+}
+.no-mints-match-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.no-mints-match-q { font-family: var(--font-mono); font-weight: 500; }
+.no-mints-match-sub { margin: 6px 0 0; font-size: 12.5px; color: var(--text3); }
+.no-mints-match-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 14px;
+}
+.no-mints-match-btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: var(--bg3);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.no-mints-match-btn:hover { border-color: var(--accent); }
+.no-mints-match-link {
+  min-height: 36px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.no-mints-match-btn:focus-visible,
+.no-mints-match-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (pointer: coarse) {
+  .no-mints-match-btn,
+  .no-mints-match-link { min-height: 44px; }
+}
+
+/* Phone default view (≤640px, mobileCollapse.ts): "Show all N" under the first 10 online mints. Full-width up to the
+   grid edges, same quiet style as the no-results buttons; 44px tall (a phone-only control). */
+.show-all-mints-btn {
+  display: block;
+  width: calc(100% - var(--page-pad) * 2);
+  max-width: calc(var(--dash-chrome-max) - var(--page-pad) * 2);
+  min-height: 44px;
+  margin: 14px auto 0;
+  border-radius: var(--r);
+  border: 1px solid var(--border2);
+  background: var(--bg3);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.show-all-mints-btn:hover { border-color: var(--accent); }
+.show-all-mints-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
