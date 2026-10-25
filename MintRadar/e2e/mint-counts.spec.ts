@@ -48,12 +48,12 @@ test.describe('Mint counts agree everywhere', () => {
     await expect(footer(page)).toHaveText('Showing 90 of 90')
     await expect(page.locator('.mint-card')).toHaveCount(90)
     await expect(status).toContainText('49 online mints')
-    // Archived cards render without NaN/undefined and without console errors.
+    // Archived cards render without NaN/undefined and without console errors, and say they are archived.
     for (const n of ['Mint 91', 'Mint 92']) {
       const card = page.locator('.mint-card', { hasText: n })
       await expect(card).toBeVisible()
       await expect(card).not.toContainText(/NaN|undefined|null/)
-      await expect(card).not.toContainText('Archived')
+      await expect(card.locator('.card-hdr-archived')).toHaveText('Archived')
     }
     expect(errors).toEqual([])
   })

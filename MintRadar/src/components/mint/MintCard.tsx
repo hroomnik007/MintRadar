@@ -78,6 +78,10 @@ export function MintCard({
   const hostname = getHostname(mint.url)
   const isOnline = mint.online === true
   const isOfflineDegraded = mint.degraded === true
+  // Archived (2026-10-25): the backend stopped probing the mint after a long outage. The card says "Archived" (muted,
+  // not the red "Offline 24h+"): it is a state of the listing, not a fresh failure. Still dimmed like a degraded card.
+  const isArchived = mint.archived === true
+  const statusWord = isOnline ? 'Online' : isArchived ? 'Archived' : 'Offline'
   // Offline (24h+) cards are not dimmed with opacity; status colours are muted towards a text token instead.
   const offlineTone = (color: string, base: string) =>
     isOfflineDegraded ? `color-mix(in srgb, ${color} 50%, ${base})` : color
@@ -131,8 +135,8 @@ export function MintCard({
               </Link>
               <span
                 className={`status-dot${isOnline ? ' online' : ''}`}
-                style={{ background: statusDotColor(isOnline ? 'Online' : 'Offline') }}
-                title={isOnline ? 'Online' : 'Offline'}
+                style={{ background: statusDotColor(statusWord) }}
+                title={statusWord}
               />
             </div>
             {showHost && <div className="card-host" title={hostname}>{hostname}</div>}
@@ -190,7 +194,11 @@ export function MintCard({
             {uptimePct24h}% up 24h
           </span>
         )}
-        {isOfflineDegraded ? (
+        {isArchived && !isOnline ? (
+          <span className="card-pill card-hdr-badge card-hdr-archived" style={{ fontWeight: 600, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border2)' }}>
+            Archived
+          </span>
+        ) : isOfflineDegraded ? (
           <span className="card-pill card-hdr-badge" style={{ fontWeight: 600, color: 'color-mix(in srgb, var(--red) 65%, var(--text))', background: 'var(--red-soft)', border: '1px solid var(--red-soft-strong)' }}>
             Offline 24h+
           </span>

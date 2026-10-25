@@ -289,6 +289,11 @@ button.md-url-copy.copied > svg { opacity: 1; }
   flex-shrink: 0;
 }
 .md-status-inline.offline { color: var(--red); }
+/* Archived: muted, not red — the listing is retired, not a fresh outage (2026-10-25). */
+.md-status-inline.archived { color: var(--text2); }
+.md-status-inline.archived .status-dot { background: var(--text3); }
+/* The h1 is only the mint name inside the .md-name row (2026-10-25); it takes the row's type so nothing moves. */
+.md-name-h1 { font: inherit; color: inherit; letter-spacing: inherit; line-height: inherit; margin: 0; min-width: 0; overflow-wrap: anywhere; }
 
 .md-sc-latency-break { display: none; }
 /* Compact Reliability Score tile — only shown inside .md-summary at ≤640px.
@@ -1458,7 +1463,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   .md-back::before {
     content: '';
     position: absolute;
-    inset: -8px;
+    inset: -9px; /* from the padding box (1px border): 26 + 18 = 44 */
   }
   .md-back-label { display: none; }
   /* Mobile keeps the original fixed 40px avatar column — deliberately no
@@ -2043,6 +2048,9 @@ button.md-url-copy.copied > svg { opacity: 1; }
   cursor: pointer;
 }
 .md-not-tracked-link:hover { text-decoration: underline; }
+/* Bad /mint/nostr/ link (MintNaddr.tsx): two ways on, side by side, wrapping on a phone. 44px tall targets on touch. */
+.md-naddr-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 20px; }
+@media (pointer: coarse) { .md-naddr-actions .md-not-tracked-link { min-height: 44px; } }
 
 .review-card { position: relative; padding-bottom: 36px; }
 .review-actions {
@@ -2822,3 +2830,31 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 }
 /* NUTs tab: the one sentence under the NUT compatibility grid */
 .md-nut-nutzap-note { margin-top: 12px; font-size: 12px; line-height: 1.5; color: var(--text3); }
+
+/* Touch hit areas for the small Mint Detail icons (2026-10-25): an invisible ::before reaches 44px on a coarse pointer;
+   the 24px visible buttons, the layout and the mouse/desktop look do not change.
+   - .md-copy-icon (public key, keyset ID, contact cards): 44×44 centred; nothing interactive within 10px.
+   - .md-copy-icon--stack (the URLs list): rows are 33px apart, so the band is 33px tall and meets the next row's
+     band without crossing it.
+   - .review-action-btn (copy npub / open on Nostr / copy link): 24px buttons 1px apart, so vertical only.
+   - .md-watch-star-hero: 34px → 44px, centred (the header corner, nothing beside it). */
+@media (pointer: coarse) {
+  .md-copy-icon,
+  .review-action-btn { position: relative; }
+  .md-copy-icon::before,
+  .md-watch-star-hero::before {
+    content: '';
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 44px; height: 44px;
+    transform: translate(-50%, -50%);
+  }
+  .md-copy-icon--stack::before { height: 33px; }
+  .review-action-btn::before {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    height: 44px;
+    transform: translateY(-50%);
+  }
+}
