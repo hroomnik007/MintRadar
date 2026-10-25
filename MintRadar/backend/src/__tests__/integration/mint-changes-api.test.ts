@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import type { Express } from 'express'
 
-// Mint change log on the wire: the wallet API's additive `changes` (single mint always, list only with include=changes plus the
-// `changedSince` filter) and the website route GET /api/mints/changes. The pool is mocked at the db.js boundary exactly like
+// Mint change log on the wire: the wallet API's additive `changes` and `changesPending` (single mint always, list only with
+// include=changes plus the `changedSince` filter, which ignores pending) and the website route GET /api/mints/changes. The pool is mocked at the db.js boundary exactly like
 // wallet-api-w2b.test.ts (the snapshot SQL itself runs against Postgres in walletApi.pg.test.ts).
 
 vi.mock('../../db.js', () => ({ pool: { query: vi.fn() }, initDb: vi.fn() }))
@@ -32,12 +32,18 @@ function row(url: string, o: Record<string, unknown> = {}) {
   }
 }
 
+const KS_OLD = [{ id: '00aa', unit: 'sat', active: true, fee: 100, expiry: null }]
+const KS_NEW = [{ id: '00aa', unit: 'sat', active: false, fee: 100, expiry: null }, { id: '01cbb9', unit: 'sat', active: true, fee: 200, expiry: null }]
+const PENDING_STATE = { info: { motd: 'hi' }, keysets: KS_OLD, pendingKeysets: KS_NEW, pendingKeysetsFirstSeenAt: '2026-10-23T10:00:00Z', pendingInfo: null }
+
 const MANY = Array.from({ length: 60 }, (_, i) => change(i, 0.01 * (i + 1)))
 const ROWS = [
   row('https://history.example.com', { changes_json: [change(1, 1, { type: 'input_fee_changed', field: 'input_fee', old: 'sat: 0 ppk', new: 'sat: 100 ppk' }), change(2, 40)] }),
   row('https://none.example.com', { last_reliability_score: 80, changes_json: null }),
   row('https://many.example.com', { last_reliability_score: 70, changes_json: MANY.slice(0, 50) }),
   row('https://old.example.com', { last_reliability_score: 60, changes_json: [change(3, 100)] }),
+  // nothing confirmed, but a keysets change waits for its confirming check
+  row('https://pending.example.com', { last_reliability_score: 50, changes_json: null, pending_state_json: PENDING_STATE }),
 ]
 
 beforeEach(async () => {
@@ -120,17 +126,44 @@ describe('wallet API: changes', () => {
   it('an empty changedSince is a 400 too', async () => {
     expect((await list('?changedSince=')).status).toBe(400)
   })
+
+  it('changesPending: { firstSeenAt, diff } only for a mint with a pending change, null otherwise, never inside `changes`', async () => {
+    const m = (await one('https://pending.example.com')).body.mint
+    expect(m.changes).toEqual([])
+    expect(m.changesPending).toEqual({
+      firstSeenAt: '2026-10-23T10:00:00.000Z',
+      diff: [
+        { type: 'keyset_added', field: 'keyset', oldValue: null, newValue: '01cbb9 (sat, active, 200 ppk)', firstSeenAt: '2026-10-23T10:00:00.000Z' },
+        { type: 'keyset_deactivated', field: 'keyset', oldValue: '00aa (sat, active, 100 ppk)', newValue: '00aa (sat, inactive, 100 ppk)', firstSeenAt: '2026-10-23T10:00:00.000Z' },
+        { type: 'input_fee_changed', field: 'input_fee', oldValue: 'sat: 100 ppk', newValue: 'sat: 200 ppk', firstSeenAt: '2026-10-23T10:00:00.000Z' },
+      ],
+    })
+    expect((await one('https://history.example.com')).body.mint.changesPending).toBeNull()
+    // the list: only with include=changes, like `changes`
+    expect(by((await list()).body, 'https://pending.example.com')).not.toHaveProperty('changesPending')
+    const inc = (await list('?include=changes')).body
+    expect(by(inc, 'https://pending.example.com')['changesPending']).toMatchObject({ firstSeenAt: '2026-10-23T10:00:00.000Z' })
+    expect(by(inc, 'https://none.example.com')['changesPending']).toBeNull()
+  })
+
+  it('a pending change is not a change for changedSince', async () => {
+    expect(urls((await list('?changedSince=2026-10-01')).body)).not.toContain('https://pending.example.com')
+  })
 })
 
 describe('GET /api/mints/changes (website route)', () => {
   const get = (url?: string) => request(app).get('/api/mints/changes').query(url === undefined ? {} : { url })
-  function stub(known: boolean) {
+  let writes: string[] = []
+  function stub(known: boolean, state: Record<string, unknown> = { tracking_since: new Date('2026-10-20T08:00:00Z') }) {
+    writes = []
     query.mockImplementation(async (sql: string) => {
+      if (/^\s*(INSERT|UPDATE|DELETE)/i.test(sql)) writes.push(sql)
       if (/SELECT 1 FROM mints WHERE url/.test(sql)) return { rows: known ? [{ '?column?': 1 }] : [], rowCount: known ? 1 : 0 }
       if (/FROM mint_changes WHERE url/.test(sql)) {
         return { rows: [{ change_type: 'pubkey_changed', field: 'pubkey', old_value: 'aa', new_value: 'bb', observed_at: new Date('2026-10-20T12:00:00Z'), first_seen_at: new Date('2026-10-20T11:55:00Z') }] }
       }
-      if (/FROM mint_change_state/.test(sql)) return { rows: [{ tracking_since: new Date('2026-10-20T08:00:00Z') }] }
+      if (/FROM mint_change_state/.test(sql)) return { rows: [state] }
+      if (/FROM mint_keysets WHERE url/.test(sql)) return { rows: [{ keyset_id: '00aa', first_seen_at: new Date('2026-10-18T09:00:00Z'), last_seen_at: new Date('2026-10-24T09:00:00Z') }] }
       return { rows: [], rowCount: 0 }
     })
   }
@@ -144,16 +177,37 @@ describe('GET /api/mints/changes (website route)', () => {
     expect((await get('https://unknown.example.com')).status).toBe(404)
   })
 
-  it('200: url, trackingSince and the changes with ISO times, cacheable like the other shared-data routes', async () => {
+  it('200: url, trackingSince, the changes with ISO times and keysetsSeen; no `pending` key when nothing is pending', async () => {
     stub(true)
     const res = await get('https://mint.example.com')
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
       url: 'https://mint.example.com', trackingSince: '2026-10-20T08:00:00.000Z',
       changes: [{ type: 'pubkey_changed', field: 'pubkey', oldValue: 'aa', newValue: 'bb', observedAt: '2026-10-20T12:00:00.000Z', firstSeenAt: '2026-10-20T11:55:00.000Z' }],
+      keysetsSeen: [{ id: '00aa', firstSeenAt: '2026-10-18T09:00:00.000Z', lastSeenAt: '2026-10-24T09:00:00.000Z' }],
     })
     expect(res.headers['cache-control']).toBe('public, max-age=60')
     expect(res.headers['etag']).toBeTruthy()
+  })
+
+  it('`pending` { firstSeenAt, diff } when a keysets and a MOTD change wait for confirmation; it is never in `changes`', async () => {
+    stub(true, {
+      tracking_since: new Date('2026-10-20T08:00:00Z'), info: { motd: 'old motd' }, keysets: KS_OLD, pending_keysets: KS_NEW,
+      pending_keysets_first_seen_at: new Date('2026-10-23T10:00:00Z'),
+      pending_info: { motd: { value: 'new motd', firstSeenAt: Date.parse('2026-10-23T09:00:00Z') } },
+    })
+    const res = await get('https://mint.example.com')
+    expect(res.body.changes).toHaveLength(1)
+    expect(res.body.pending.firstSeenAt).toBe('2026-10-23T09:00:00.000Z')
+    expect(res.body.pending.diff.map((d: { type: string }) => d.type)).toEqual(['keyset_added', 'keyset_deactivated', 'input_fee_changed', 'motd_changed'])
+    expect(res.body.pending.diff[3]).toEqual({ type: 'motd_changed', field: 'motd', oldValue: 'old motd', newValue: 'new motd', firstSeenAt: '2026-10-23T09:00:00.000Z' })
+    // a read: nothing written (no change row, no counter, no DM path)
+    expect(writes).toEqual([])
+  })
+
+  it('a pending value equal to the stored one (stale) is no `pending`', async () => {
+    stub(true, { tracking_since: new Date('2026-10-20T08:00:00Z'), info: {}, keysets: KS_OLD, pending_keysets: KS_OLD, pending_keysets_first_seen_at: new Date('2026-10-23T10:00:00Z'), pending_info: null })
+    expect((await get('https://mint.example.com')).body).not.toHaveProperty('pending')
   })
 
   it('a database error is a plain 500 without details', async () => {

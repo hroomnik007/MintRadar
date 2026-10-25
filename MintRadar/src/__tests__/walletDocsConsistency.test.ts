@@ -99,6 +99,7 @@ describe(`${OPENAPI} matches the code constants`, () => {
       ...schemaProperties('Limits').map(n => `limits.${n}`),
       ...schemaProperties('AuditByDirection').map(n => `auditByDirection.${n}`),
       ...schemaProperties('ScoreBreakdown').map(n => `scoreBreakdown.${n}`),
+      ...schemaProperties('ChangesPending').map(n => `changesPending.${n}`),
     ]
     expectSameNames('mint fields', OPENAPI, names, WALLET_MINT_FIELDS.map(f => f.name))
   })
@@ -109,8 +110,8 @@ describe(`${OPENAPI} matches the code constants`, () => {
     const req = lineIndex(lines, '      required:', mint)
     const required: string[] = []
     for (let i = req + 1; /^ {8}- /.test(lines[i]!); i++) required.push(lines[i]!.replace(/^ {8}- /, '').trim())
-    // The twelve heavier fields are only present with include= (or on the single-mint endpoint), so they are not required.
-    const optional = ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'keysets', 'keysetsCheckedAt', 'methods', 'scoreBreakdown', 'changes', 'contactChecks', 'feeExamples', 'limits', 'auditByDirection']
+    // The heavier fields are only present with include= (or on the single-mint endpoint), so they are not required.
+    const optional = ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'keysets', 'keysetsCheckedAt', 'methods', 'scoreBreakdown', 'changes', 'changesPending', 'contactChecks', 'feeExamples', 'limits', 'auditByDirection']
     expectSameNames('required mint fields', OPENAPI, required, schemaProperties('Mint').filter(n => !optional.includes(n)))
     for (const n of optional) expect(schemaProperties('Mint'), `${OPENAPI}: optional mint field ${n}`).toContain(n)
   })
