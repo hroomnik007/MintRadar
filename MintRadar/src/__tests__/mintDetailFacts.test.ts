@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   outageTiles, outageErrorCell, breakdownRowScore, breakdownPointsColor, storedBreakdownTotal, contactKindsText, infoTextFor,
-  readLastInfo, averageReliability, latencyPercentilesText, showTorFor, contactsNotSavedYet, storedKeysetsAsLive, CONTACTS_NOT_SAVED_TEXT, auditSuccessText,
+  readLastInfo, averageReliability, latencyPercentilesText, swapStripText, showTorFor, contactsNotSavedYet, storedKeysetsAsLive, CONTACTS_NOT_SAVED_TEXT, auditSuccessText,
   type OutagesResponse, type StoredScoreBreakdown, type BreakdownPart,
 } from '@/utils/mintDetailFacts'
 import { pickInputFee } from '@/utils/mintProbeDisplay'
@@ -106,10 +106,21 @@ describe('History summary', () => {
     expect(averageReliability([{ reliabilityScore: null }])).toBeNull()
     expect(averageReliability(undefined)).toBeNull()
   })
-  it('median / p95 line', () => {
+  it('median / p95 tooltip text, with the selected period', () => {
+    expect(latencyPercentilesText(206, 250, '7d')).toBe('Median 206 ms · p95 250 ms over the last 7 days')
+    expect(latencyPercentilesText(206, 250, '24h')).toBe('Median 206 ms · p95 250 ms over the last 24 hours')
+    expect(latencyPercentilesText(206, 250, '90d')).toBe('Median 206 ms · p95 250 ms over the last 90 days')
     expect(latencyPercentilesText(120, 480.4)).toBe('Median 120 ms · p95 480 ms')
     expect(latencyPercentilesText(120, null)).toBe('Median 120 ms · p95 —')
     expect(latencyPercentilesText(null, undefined)).toBeNull()
+  })
+})
+
+describe('swap strip tooltip', () => {
+  it('counts the marks, singular for one, no verdict wording', () => {
+    expect(swapStripText(5)).toMatch(/^The latest 5 swaps MintRadar stored from cashu\.info, both directions, newest first\. Green: succeeded\. Red: failed\. Grey: not counted against the mint/)
+    expect(swapStripText(1)).toMatch(/^The latest swap MintRadar stored/)
+    expect(swapStripText(5)).not.toMatch(/safe|trust|solven|honest|verified|risk/i)
   })
 })
 
