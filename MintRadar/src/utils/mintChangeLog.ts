@@ -1,5 +1,6 @@
-// Mint change log on Mint Detail: confirmed changes in a mint's public data (backend/src/mintChanges.ts), shown as facts
-// with a time. Plain words for the type, never a verdict: a change is neither good nor bad here.
+// Change dates on Mint Detail: confirmed changes in a mint's public data (backend/src/mintChanges.ts), read from
+// /api/mints/changes and shown where the data lives (keysets, fees, mint info; see utils/changeDates.ts). Plain facts with
+// a date, never a verdict: a change is neither good nor bad here.
 
 export interface MintChange {
   type: string
@@ -12,64 +13,69 @@ export interface MintChange {
   firstSeenAt: string
 }
 
+/** A value seen once that waits for its confirming observation. Never a confirmed date. */
+export interface PendingMintChange {
+  type: string
+  field: string
+  oldValue: string | null
+  newValue: string | null
+  /** ISO 8601: when the value was seen. */
+  firstSeenAt: string
+}
+
+export interface MintChangesPending {
+  firstSeenAt: string
+  diff: PendingMintChange[]
+}
+
+/** When MintRadar first and last saw a keyset in a keysets check (mint_keysets). */
+export interface KeysetSeen {
+  id: string
+  firstSeenAt: string
+  lastSeenAt: string
+}
+
 export interface MintChangesData {
   url: string
   /** ISO 8601: when MintRadar started tracking this mint's public data, or null. */
   trackingSince: string | null
+  /** Newest first (the route's order). */
   changes: MintChange[]
-}
-
-/** The web list leaves out version_changed (Version history shows the software versions); the API and the stored rows keep them. */
-export function webChangeRows(changes: readonly MintChange[]): MintChange[] {
-  return changes.filter(c => c.type !== 'version_changed')
-}
-
-/** The one muted line shown instead of a card when there is nothing to list. */
-export const changeLogEmptySince = (since: string): string => `No changes to keys, fees or keysets recorded since ${since}.`
-
-/** The page shows this many rows; "Show all" expands to everything the route returned (up to 100). */
-export const CHANGES_VISIBLE = 10
-
-export const CHANGE_LABELS: Record<string, string> = {
-  pubkey_changed: 'Public key changed',
-  input_fee_changed: 'Input fee changed',
-  keyset_added: 'Keyset added',
-  keyset_removed: 'Keyset removed',
-  keyset_deactivated: 'Keyset deactivated',
-  keyset_reactivated: 'Keyset reactivated',
-  keyset_final_expiry_changed: 'Keyset final expiry changed',
-  motd_changed: 'Message of the day changed',
-  name_changed: 'Name changed',
-  description_changed: 'Description changed',
-  contact_changed: 'Contact methods changed',
-  version_changed: 'Version changed',
-  nuts_changed: 'Supported NUTs changed',
-  methods_changed: 'Payment methods changed',
-}
-
-/** A type this build does not know (a later addition) still reads as plain words. */
-export function changeLabel(type: string): string {
-  return CHANGE_LABELS[type] ?? 'Change recorded'
+  /** null when nothing waits for confirmation. */
+  pending: MintChangesPending | null
+  keysetsSeen: KeysetSeen[]
 }
 
 /** The text of the day-summary row the backend writes when a mint changes more than 20 times in a UTC day. */
 export const MULTIPLE_CHANGES_TEXT = 'multiple changes'
 
-/**
- * A change is confirmed by a second observation: one probe interval later for /v1/info data, one keysets check (an hour) later
- * for keyset data. "Seen first" is shown only when the gap is clearly longer than that (a restart or an outage delayed it).
- */
-const INFO_CONFIRM_GAP_MS = 10 * 60_000
-const KEYSETS_CONFIRM_GAP_MS = 70 * 60_000
+const str = (v: unknown): string | null => (typeof v === 'string' ? v : null)
 
-export function confirmationGapMs(type: string): number {
-  return type.startsWith('keyset_') || type === 'input_fee_changed' ? KEYSETS_CONFIRM_GAP_MS : INFO_CONFIRM_GAP_MS
+function parsePending(raw: unknown): MintChangesPending | null {
+  if (typeof raw !== 'object' || raw === null) return null
+  const r = raw as Record<string, unknown>
+  if (!Array.isArray(r['diff'])) return null
+  const diff: PendingMintChange[] = []
+  for (const e of r['diff'] as unknown[]) {
+    if (typeof e !== 'object' || e === null) continue
+    const c = e as Record<string, unknown>
+    if (typeof c['type'] !== 'string' || typeof c['field'] !== 'string' || typeof c['firstSeenAt'] !== 'string') continue
+    diff.push({ type: c['type'], field: c['field'], oldValue: str(c['oldValue']), newValue: str(c['newValue']), firstSeenAt: c['firstSeenAt'] })
+  }
+  if (diff.length === 0) return null
+  return { firstSeenAt: str(r['firstSeenAt']) ?? diff[0]!.firstSeenAt, diff }
 }
 
-export function showFirstSeen(c: MintChange): boolean {
-  const first = Date.parse(c.firstSeenAt)
-  const seen = Date.parse(c.observedAt)
-  return Number.isFinite(first) && Number.isFinite(seen) && seen - first > confirmationGapMs(c.type)
+function parseKeysetsSeen(raw: unknown): KeysetSeen[] {
+  if (!Array.isArray(raw)) return []
+  const out: KeysetSeen[] = []
+  for (const e of raw as unknown[]) {
+    if (typeof e !== 'object' || e === null) continue
+    const k = e as Record<string, unknown>
+    if (typeof k['id'] !== 'string' || typeof k['firstSeenAt'] !== 'string') continue
+    out.push({ id: k['id'], firstSeenAt: k['firstSeenAt'], lastSeenAt: str(k['lastSeenAt']) ?? k['firstSeenAt'] })
+  }
+  return out
 }
 
 /** A route answer in the expected shape, or null (anything else is treated as "not available", never as "no changes"). */
@@ -84,14 +90,16 @@ export function parseMintChanges(raw: unknown): MintChangesData | null {
     if (typeof c['type'] !== 'string' || typeof c['field'] !== 'string' || typeof c['observedAt'] !== 'string' || typeof c['firstSeenAt'] !== 'string') return null
     changes.push({
       type: c['type'], field: c['field'],
-      oldValue: typeof c['oldValue'] === 'string' ? c['oldValue'] : null,
-      newValue: typeof c['newValue'] === 'string' ? c['newValue'] : null,
+      oldValue: str(c['oldValue']),
+      newValue: str(c['newValue']),
       observedAt: c['observedAt'], firstSeenAt: c['firstSeenAt'],
     })
   }
   return {
-    url: typeof r['url'] === 'string' ? r['url'] : '',
-    trackingSince: typeof r['trackingSince'] === 'string' ? r['trackingSince'] : null,
+    url: str(r['url']) ?? '',
+    trackingSince: str(r['trackingSince']),
     changes,
+    pending: parsePending(r['pending']),
+    keysetsSeen: parseKeysetsSeen(r['keysetsSeen']),
   }
 }

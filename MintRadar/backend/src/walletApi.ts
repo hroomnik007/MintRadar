@@ -67,6 +67,8 @@ export interface WalletExtra {
   keysetsCheckedAt: string | null
   /** Confirmed changes of the mint's public data (mint_changes), newest first, at most 50. */
   changes: WalletChange[]
+  /** What the mint showed once and was not confirmed yet (mintChanges.ts pendingOf); null or absent when nothing is pending. */
+  changesPending?: WalletPendingChanges | null
   /** The stored facts about the contact entries (mints.contact_checks); never a value or a domain. */
   contactChecks?: ContactCheck[]
   /** cashu.info's 7-day swaps split by direction (audit_cz_detail), with the time MintRadar stored them; null when none are stored. */
@@ -92,6 +94,17 @@ export interface WalletChange {
   observedAt: string
   firstSeenAt: string
 }
+
+/** A difference seen once that waits for its confirming observation. Never in `changes`, never counted by changedSince. */
+export interface WalletPendingChange {
+  type: string
+  field: string
+  oldValue: string | null
+  newValue: string | null
+  firstSeenAt: string
+}
+
+export interface WalletPendingChanges { firstSeenAt: string; diff: WalletPendingChange[] }
 
 export interface WalletKeyset {
   id: string
@@ -151,6 +164,8 @@ export interface WalletMint {
   methods: { mint: WalletMethodEntry[]; melt: WalletMethodEntry[] } | null
   scoreBreakdown: ScoreBreakdown | null
   changes: WalletChange[]
+  /** With `changes`: the unconfirmed differences ({ firstSeenAt, diff }), null when nothing is pending. */
+  changesPending: WalletPendingChanges | null
   /** Facts about the contact entries (kind, formatValid, domainResolves, checkedAt); no values, no domains. */
   contactChecks: ContactCheck[]
   /** Only with include=facts: input fee for spending 1, 16 and 100 proofs, per unit with an active keyset (a missing fee counts as 0, docs/API.md). [] when none. */
@@ -161,7 +176,7 @@ export interface WalletMint {
   auditByDirection: { mint: AuditDirection | null; melt: AuditDirection | null }
 }
 
-const HEAVY_KEYS = { facts: ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'contactChecks', 'feeExamples', 'limits', 'auditByDirection'], keysets: ['keysets', 'keysetsCheckedAt'], methods: ['methods'], breakdown: ['scoreBreakdown'], changes: ['changes'] } as const
+const HEAVY_KEYS = { facts: ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'contactChecks', 'feeExamples', 'limits', 'auditByDirection'], keysets: ['keysets', 'keysetsCheckedAt'], methods: ['methods'], breakdown: ['scoreBreakdown'], changes: ['changes', 'changesPending'] } as const
 
 function toIso(v: string | Date | null | undefined): string | null {
   if (v === null || v === undefined) return null
@@ -350,6 +365,7 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviews
     methods: methodsOf(m.mintMethods, m.meltMethods),
     scoreBreakdown: extra?.scoreBreakdown ?? null,
     changes: extra?.changes ?? [],
+    changesPending: extra?.changesPending ?? null,
     contactChecks: extra?.contactChecks ?? [],
     feeExamples: feeExamplesOf(extra?.keysets ?? []),
     limits: limitsOf(m.mintMethods, m.meltMethods),

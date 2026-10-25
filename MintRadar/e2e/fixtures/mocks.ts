@@ -242,10 +242,10 @@ export async function installApiMocks(page: Page): Promise<void> {
   )
   await page.route('**/api/mints/daily-uptime**', route => route.fulfill({ json: [] }))
   await page.route('**/api/mints/nostr-reviews**', route => route.fulfill({ json: [] }))
-  // Mint change log: a mint with no recorded changes (specs that look at the log override this route).
+  // Mint changes (dates next to keysets, fees, mint info): a mint with no recorded changes (specs that look at dates override this route).
   await page.route('**/api/mints/changes**', route => {
     const target = new URL(route.request().url()).searchParams.get('url') ?? ''
-    route.fulfill({ json: { url: target, trackingSince: '2026-10-20T08:00:00.000Z', changes: [] } })
+    route.fulfill({ json: { url: target, trackingSince: '2026-10-20T08:00:00.000Z', changes: [], keysetsSeen: [] } })
   })
   await page.route('**/api/mint/probe**', route => {
     const u = new URL(route.request().url())

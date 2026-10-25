@@ -2730,6 +2730,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 @media (max-width: 640px) { .md-hr-value { flex-basis: 100%; justify-content: flex-start; } }
 /* "View on Nostr" (njump.me, external) is the primary action of the row; same size and touch target as the copy buttons. */
 .md-hr-view { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 12px; box-sizing: border-box; border: 1px solid var(--accent); border-radius: var(--radius-sm); background: var(--green-soft); color: var(--accent); font-size: 12px; text-decoration: none; }
+/* "View on Nostr" and "Copy naddr" side by side: one height, padding, font and line height (only the colours differ). */
+.md-hr-view, .md-hr-value .doc-copy-btn { height: 32px; min-height: 32px; padding: 0 12px; box-sizing: border-box; font-family: inherit; font-size: 12px; line-height: 1; display: inline-flex; align-items: center; }
 .md-hr-view:hover { background: var(--green-soft-strong); }
 .md-hr-view:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* "For developers": a native <details>, collapsed, full width under the row; the summary has the height of the copy buttons. */
@@ -2746,27 +2748,27 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-hr-dev-note { margin: 0; font-size: 12px; line-height: 1.5; color: var(--text3); overflow-wrap: anywhere; }
 .md-hr-dev-note a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 @media (pointer: coarse) {
-  .md-hr-view { min-height: 44px; padding-inline: 16px; }
+  .md-hr-view, .md-hr-value .doc-copy-btn { height: 44px; min-height: 44px; padding-inline: 16px; }
   .md-hr-dev summary { min-height: 44px; }
 }
 
-/* ── Change log (Mint Detail → History): confirmed changes in the mint's public data. Values wrap (overflow-wrap) on every width.
-   The loading placeholder is as tall as the muted "no changes" line, so the page does not move while the (lazy) request is in flight. ── */
-.md-changes-line { margin: 0; font-size: 13px; line-height: 1.45; color: var(--text3); min-height: 19px; overflow-wrap: anywhere; }
-.md-changes-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.md-change { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; min-width: 0; }
-.md-change-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 2px 12px; }
-.md-change-type { font-size: 13px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; min-width: 0; }
-.md-change-time { font-size: 11.5px; color: var(--text3); font-family: var(--font-mono); white-space: nowrap; }
-.md-change-vals { margin-top: 5px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
-.md-change-val { font-size: 12.5px; line-height: 1.45; font-family: var(--font-mono); color: var(--text2); overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
-.md-change-new { color: var(--text); }
-.md-change-arrow { color: var(--text3); flex: none; }
-.md-change-first { margin-top: 4px; font-size: 11.5px; color: var(--text3); }
-.md-changes-toggle { margin-top: 10px; }
+/* ── Change dates next to the data (keysets, fees, mint info; utils/changeDates.ts): a short muted date, the full time in the
+   title. A value seen once is the dashed "seen …, not confirmed yet" tag, never a date. ── */
+.md-chg-date { font-size: 12px; line-height: 1.45; color: var(--text3); font-family: var(--font-mono); overflow-wrap: anywhere; }
+.md-chg-pending { display: inline-block; font-size: 12px; line-height: 1.4; color: var(--text3); border: 1px dashed var(--border2); border-radius: 5px; padding: 0 6px; overflow-wrap: anywhere; }
+.md-keyset-dates, .md-info-dates, .md-fee-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
+.md-keyset-dates { flex-basis: 100%; }
+.md-info-row:has(> .md-info-dates) { flex-wrap: wrap; }
+.md-info-row > .md-info-dates { flex-basis: 100%; justify-content: flex-end; }
+.md-motd-dates { margin-top: 6px; }
+.md-fee-dates { flex-basis: 100%; }
+.md-fee-history-toggle { background: none; border: none; padding: 2px 0; font: inherit; font-size: 12px; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.md-fee-history-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }
+.md-fee-history { flex-basis: 100%; list-style: none; margin: 2px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 12px; line-height: 1.45; color: var(--text2); font-family: var(--font-mono); overflow-wrap: anywhere; }
+@media (pointer: coarse) { .md-fee-history-toggle { min-height: 44px; } }
 
 /* ── Overview "Fees and limits" (W6b): label left, value right, wraps under the label when the row is narrow ── */
-.md-fees-limits { --md-fl-row-h: 47px; } /* Task B2: midway between a "No input fee" row (38px) and a fee row with its examples line (56px) */
+.md-fees-limits { --md-fl-row-h: 47px; --md-fl-date-h: 21px; } /* Task B2: midway between a "No input fee" row (38px) and a fee row with its examples line (56px) */
 .md-fees-limits .md-info-row { flex-wrap: wrap; column-gap: 12px; row-gap: 2px; }
 .md-fees-limits .md-info-label { flex-shrink: 1; min-width: 0; overflow-wrap: anywhere; }
 .md-fees-limits .md-info-value { flex: 1 1 auto; min-width: 0; text-align: right; word-break: normal; overflow-wrap: break-word; max-width: 100%; }

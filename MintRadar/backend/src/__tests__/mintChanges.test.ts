@@ -14,7 +14,8 @@ import {
   sanitizeText, sanitizeVersion, normalizeInfo, normalizeStoredInfo, normalizeKeysets, normalizeStoredKeysets, feesByUnit,
   stepValue, diffKeysets, decideStorage, observeInfo, observeKeysets, noticesOf, recordKeysetsObservation, recordInfoObservation,
   MAX_CHANGES_PER_MINT_PER_DAY, TEXT_MAX, VERSION_MAX, CHANGE_TYPES,
-  type ChangeDeps, type MintChangeState, type StatePatch, type DetectedChange, type StoredChange, type KeysetSnap, type Pending,
+  pendingOf,
+  type ChangeDeps, type MintChangeState, type PendingPatch, type StatePatch, type DetectedChange, type StoredChange, type KeysetSnap, type Pending,
 } from '../mintChanges.js'
 import { notifyMintChanges } from '../nostrService.js'
 
@@ -32,7 +33,7 @@ function makeDeps(initial: MintChangeState = { info: null, keysets: null }) {
     load: async () => state,
     commit: async (_url, patch, changes) => {
       commits.push({ patch, changes })
-      state = { info: patch.info ?? state.info, keysets: patch.keysets ?? state.keysets }
+      state = { ...state, info: patch.info ?? state.info, keysets: patch.keysets ?? state.keysets }
       return changes.map(c => ({ ...c, id: ++id, observedAt: new Date(clock), merged: false }) as StoredChange)
     },
     pending: new Map<string, Pending>(),
@@ -341,5 +342,154 @@ describe('what may become a DM', () => {
     tick(); await recordInfoObservation(MINT, info({ motd: 'new', pubkey: PK2 }), deps)
     expect(notify).toHaveBeenCalledTimes(1)
     expect(notify.mock.calls[0]![1].map(n => n.type)).toEqual(['pubkey_changed'])
+  })
+})
+
+/**
+ * The persisted pending state (mint_change_state.pending_*): a fake row the deps load from and savePending writes to. A
+ * "restart" is a fresh in-memory pending map over the same row, exactly what a new process sees.
+ */
+function persistedDeps() {
+  const row: MintChangeState = { info: null, keysets: null, pendingKeysets: null, pendingInfo: null }
+  let clock = 1_000_000
+  const commits: Array<{ patch: StatePatch; changes: DetectedChange[] }> = []
+  const saves: PendingPatch[] = []
+  const make = (): ChangeDeps => ({
+    load: async () => ({ ...row, pendingInfo: row.pendingInfo ? { ...row.pendingInfo } : null }),
+    commit: async (_url, patch, changes) => {
+      commits.push({ patch, changes })
+      if (patch.info) row.info = patch.info
+      if (patch.keysets) row.keysets = patch.keysets
+      return changes.map((c, i) => ({ ...c, id: i + 1, observedAt: new Date(clock), merged: false }) as StoredChange)
+    },
+    savePending: async (_url, patch) => {
+      saves.push(patch)
+      if (patch.keysets !== undefined) row.pendingKeysets = patch.keysets
+      if (patch.info) {
+        const next = { ...(row.pendingInfo ?? {}) }
+        for (const [f, p] of Object.entries(patch.info)) { if (p) next[f] = p; else delete next[f] }
+        row.pendingInfo = Object.keys(next).length > 0 ? next : null
+      }
+    },
+    pending: new Map<string, Pending>(),
+    now: () => clock,
+  })
+  return { row, commits, saves, make, tick: (ms = 3_600_000) => { clock += ms }, now: () => clock }
+}
+
+describe('persisted pending state', () => {
+  const ks = (list: KeysetSnap[]) => normalizeKeysets(asParsed(list))
+  const A = [KS({ id: 'a', fee: 0 })]
+  const B = [KS({ id: 'a', fee: 100 })]
+  const C = [KS({ id: 'a', fee: 300 })]
+
+  it('a keysets pending value survives a restart and is confirmed with its ORIGINAL firstSeenAt', async () => {
+    const db = persistedDeps()
+    await observeKeysets(MINT, ks(A), db.make())
+    db.tick(); const seenAt = db.now()
+    expect(await observeKeysets(MINT, ks(B), db.make())).toEqual([])
+    expect(db.row.pendingKeysets).toEqual({ value: JSON.stringify(ks(B)), firstSeenAt: seenAt })
+    db.tick() // restart: a new process with an empty in-memory map
+    const stored = await observeKeysets(MINT, ks(B), db.make())
+    expect(stored.map(c => c.type)).toEqual(['input_fee_changed'])
+    expect(stored[0]!.firstSeenAt).toBe(seenAt)
+    expect(db.row.pendingKeysets).toBeNull()
+  })
+
+  it('an info pending value survives a restart too; the same value as stored writes nothing to the pending state', async () => {
+    const db = persistedDeps()
+    await observeInfo(MINT, info(), db.make())
+    db.tick(); await observeInfo(MINT, info(), db.make())
+    expect(db.saves).toEqual([]) // nothing pending, nothing written per probe
+    db.tick(); const seenAt = db.now()
+    await observeInfo(MINT, info({ motd: 'new' }), db.make())
+    expect(db.row.pendingInfo).toEqual({ motd: { value: 'new', firstSeenAt: seenAt } })
+    db.tick(); const stored = await observeInfo(MINT, info({ motd: 'new' }), db.make())
+    expect(stored).toMatchObject([{ type: 'motd_changed', oldValue: 'hello', newValue: 'new', firstSeenAt: seenAt }])
+    expect(db.row.pendingInfo).toBeNull()
+  })
+
+  it('pending, then a failed fetch (no observation), then the matching answer: confirmed with the original firstSeenAt', async () => {
+    const db = persistedDeps()
+    const deps = db.make()
+    await recordKeysetsObservation(MINT, { keysets: asParsed(A), skipped: 0, ignored: 0 }, deps)
+    db.tick(); const seenAt = db.now()
+    await recordKeysetsObservation(MINT, { keysets: asParsed(B), skipped: 0, ignored: 0 }, deps)
+    db.tick(); await recordKeysetsObservation(MINT, { keysets: asParsed(B), skipped: 1, ignored: 0 }, deps) // a partial answer = a failed check
+    expect(written(db.commits)).toEqual([])
+    db.tick(); await recordKeysetsObservation(MINT, { keysets: asParsed(B), skipped: 0, ignored: 0 }, deps)
+    expect(written(db.commits)).toMatchObject([{ type: 'input_fee_changed', firstSeenAt: seenAt }])
+  })
+
+  it('A, B, C, C: a third value replaces the pending one; it is confirmed with the firstSeenAt of C, B is never a change', async () => {
+    const db = persistedDeps()
+    await observeKeysets(MINT, ks(A), db.make())
+    db.tick(); await observeKeysets(MINT, ks(B), db.make())
+    db.tick(); const cSeen = db.now()
+    await observeKeysets(MINT, ks(C), db.make())
+    expect(db.row.pendingKeysets!.firstSeenAt).toBe(cSeen)
+    db.tick(); const stored = await observeKeysets(MINT, ks(C), db.make())
+    expect(stored).toMatchObject([{ type: 'input_fee_changed', oldValue: 'sat: 0 ppk', newValue: 'sat: 300 ppk', firstSeenAt: cSeen }])
+  })
+
+  it('A, B, B: confirmed with the firstSeenAt of the first B', async () => {
+    const db = persistedDeps()
+    await observeKeysets(MINT, ks(A), db.make())
+    db.tick(); const bSeen = db.now()
+    await observeKeysets(MINT, ks(B), db.make())
+    db.tick(); expect((await observeKeysets(MINT, ks(B), db.make()))[0]!.firstSeenAt).toBe(bSeen)
+  })
+
+  it('pending then the stored value again: cancelled, cleared from the row, no change', async () => {
+    const db = persistedDeps()
+    await observeKeysets(MINT, ks(A), db.make())
+    db.tick(); await observeKeysets(MINT, ks(B), db.make())
+    db.tick(); await observeKeysets(MINT, ks(A), db.make())
+    expect(db.row.pendingKeysets).toBeNull()
+    db.tick(); expect(await observeKeysets(MINT, ks(B), db.make())).toEqual([])
+    expect(written(db.commits)).toEqual([])
+  })
+
+  it('a failing pending write does not break the observation (the in-memory pending still confirms)', async () => {
+    const db = persistedDeps()
+    const deps = { ...db.make(), savePending: async () => { throw new Error('db down') } }
+    const err = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    await observeKeysets(MINT, ks(A), deps)
+    db.tick(); await observeKeysets(MINT, ks(B), deps)
+    db.tick(); expect((await observeKeysets(MINT, ks(B), deps)).map(c => c.type)).toEqual(['input_fee_changed'])
+    err.mockRestore()
+  })
+
+  it('a v2 (66 hex) keyset added together with a fee change: keyset_added + keyset_deactivated + input_fee_changed (sat 100 -> 200)', async () => {
+    const OLD = '00' + 'ab'.repeat(7)
+    const NEW = '01' + 'cb'.repeat(32)
+    expect(NEW).toMatch(/^[0-9a-f]{66}$/)
+    const db = persistedDeps()
+    await observeKeysets(MINT, ks([KS({ id: OLD, fee: 100 })]), db.make())
+    const next = ks([KS({ id: OLD, fee: 100, active: false }), KS({ id: NEW, fee: 200 })])
+    db.tick(); await observeKeysets(MINT, next, db.make())
+    // what the read side shows meanwhile
+    const pending = pendingOf({ info: null, keysets: db.row.keysets, pendingKeysets: JSON.parse(db.row.pendingKeysets!.value), pendingKeysetsFirstSeenAt: new Date(db.row.pendingKeysets!.firstSeenAt), pendingInfo: null })
+    expect(pending!.diff.map(d => d.type)).toEqual(['keyset_added', 'keyset_deactivated', 'input_fee_changed'])
+    db.tick(); const stored = await observeKeysets(MINT, next, db.make())
+    expect(stored.map(c => c.type)).toEqual(['keyset_added', 'keyset_deactivated', 'input_fee_changed'])
+    expect(stored[0]!.newValue).toBe(`${NEW} (sat, active, 200 ppk)`)
+    expect(stored[2]).toMatchObject({ oldValue: 'sat: 100 ppk', newValue: 'sat: 200 ppk', fees: [{ unit: 'sat', oldPpk: 100, newPpk: 200 }] })
+  })
+})
+
+describe('pendingOf (the read side)', () => {
+  const stored = [KS({ id: 'a', fee: 0 })]
+  it('nothing pending, a stale pending (equal to the stored list) or no stored baseline: undefined', () => {
+    expect(pendingOf(undefined)).toBeUndefined()
+    expect(pendingOf({ info: {}, keysets: stored, pendingKeysets: null, pendingKeysetsFirstSeenAt: null, pendingInfo: null })).toBeUndefined()
+    expect(pendingOf({ info: {}, keysets: stored, pendingKeysets: stored, pendingKeysetsFirstSeenAt: '2026-10-23T10:00:00Z', pendingInfo: null })).toBeUndefined()
+    expect(pendingOf({ info: {}, keysets: null, pendingKeysets: [KS({ id: 'b' })], pendingKeysetsFirstSeenAt: '2026-10-23T10:00:00Z', pendingInfo: null })).toBeUndefined()
+    // an info field never stored is a baseline, not a pending change
+    expect(pendingOf({ info: {}, keysets: null, pendingKeysets: null, pendingKeysetsFirstSeenAt: null, pendingInfo: { motd: { value: 'x', firstSeenAt: 1 } } })).toBeUndefined()
+  })
+  it('ISO times and only the documented keys (no source, no fees, no ms)', () => {
+    const p = pendingOf({ info: {}, keysets: stored, pendingKeysets: [KS({ id: 'a', fee: 100 })], pendingKeysetsFirstSeenAt: '2026-10-23T10:00:00Z', pendingInfo: null })!
+    expect(p).toEqual({ firstSeenAt: '2026-10-23T10:00:00.000Z', diff: [{ type: 'input_fee_changed', field: 'input_fee', oldValue: 'sat: 0 ppk', newValue: 'sat: 100 ppk', firstSeenAt: '2026-10-23T10:00:00.000Z' }] })
   })
 })

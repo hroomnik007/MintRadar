@@ -80,7 +80,7 @@ export async function extractTooltipTexts(page: Page): Promise<Extracted> {
         await expect.poll(async () => { text = await readPopup(POPUP); return text.length > 0 }, { message: `tooltip of trigger ${i} appears` }).toBe(true)
       }
     }
-    if (text) texts.push(text.replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/g, '<ISO>').replace(/\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC/g, '<DATE>'))
+    if (text) texts.push(text.replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/g, '<ISO>').replace(/\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC/g, '<DATE>').replace(/\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} \(your time\)/g, '<LOCAL>'))
     if (covered) await loc.evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })))
     await page.mouse.move(1, 1)
     if (isComponent) await expect(page.locator(POPUP), 'the tooltip is closed before the next trigger').toHaveCount(0)
@@ -91,7 +91,7 @@ export async function extractTooltipTexts(page: Page): Promise<Extracted> {
     const visible = (e: Element) => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' }
     return Array.from(document.querySelectorAll('[title]'))
       .filter(e => !e.closest('svg') && visible(e))
-      .map(e => (e.getAttribute('title') ?? '').replace(/\s+/g, ' ').trim().replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/g, '<ISO>').replace(/\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC/g, '<DATE>'))
+      .map(e => (e.getAttribute('title') ?? '').replace(/\s+/g, ' ').trim().replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/g, '<ISO>').replace(/\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC/g, '<DATE>').replace(/\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} \(your time\)/g, '<LOCAL>'))
       .filter(Boolean)
   })
   return { texts: [...texts, ...titles].sort(), triggers: count }

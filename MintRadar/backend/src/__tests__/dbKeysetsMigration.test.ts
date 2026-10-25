@@ -35,7 +35,9 @@ describe('initDb — mint_keysets', () => {
     await initDb()
     expect(queries.filter(q => /mint_keysets|keysets_checked_at/.test(q))).toEqual(first)
     for (const q of first) {
-      expect(q).toMatch(/IF NOT EXISTS/)
+      // The pending keysets backfill (mint_change_state, guarded by `pending_keysets IS NULL`) reads mint_keysets; see
+      // dbMintChangesMigration.test.ts. Every schema statement is IF NOT EXISTS.
+      if (!/^\s*UPDATE mint_change_state/.test(q)) expect(q).toMatch(/IF NOT EXISTS/)
       expect(q.replace('ON DELETE CASCADE', '')).not.toMatch(/DROP|TRUNCATE|DELETE|RENAME/i)
     }
   })

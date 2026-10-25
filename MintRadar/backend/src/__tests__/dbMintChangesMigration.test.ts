@@ -41,8 +41,19 @@ describe('initDb — mint change log', () => {
     expect(pick(queries)).toEqual(first)
     expect(first.length).toBeGreaterThanOrEqual(4)
     for (const q of first) {
-      expect(q).toMatch(/IF NOT EXISTS/)
+      // The pending keysets backfill is a data UPDATE, idempotent by its `pending_keysets IS NULL` guard (run twice against a
+      // real PostgreSQL in mintChanges.pg.test.ts); every schema statement is IF NOT EXISTS.
+      if (/^\s*UPDATE mint_change_state/.test(q)) expect(q).toMatch(/s\.pending_keysets IS NULL AND sub\.first_seen IS NOT NULL/)
+      else expect(q).toMatch(/IF NOT EXISTS/)
       expect(q.replace(/ON DELETE CASCADE/g, '')).not.toMatch(/DROP|TRUNCATE|DELETE|RENAME/i)
     }
+  })
+
+  it('the pending keysets backfill writes only pending columns, never mint_changes', async () => {
+    await initDb()
+    const backfill = queries.filter(q => /^\s*UPDATE mint_change_state/.test(q))
+    expect(backfill).toHaveLength(1)
+    expect(backfill[0]).toMatch(/SET pending_keysets = sub\.list, pending_keysets_first_seen_at = sub\.first_seen/)
+    expect(backfill[0]).not.toMatch(/INSERT|mint_changes\b/)
   })
 })

@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 vi.mock('pg', () => ({ Pool: class { on = () => this; query = async () => ({ rows: [], rowCount: 0 }) } }))
 
 import {
-  parseKeysetsResponse, parseKeysResponse, collectMintKeysets, runKeysetsTick, keysetsSlotOf, keysetsSlotAt,
+  parseKeysetsResponse, parseKeysResponse, collectMintKeysets, runKeysetsTick, keysetsSlotOf, keysetsSlotAt, keysetsTickUrls,
   KEYSETS_MAX_PER_MINT, KEYSETS_SLOTS_PER_HOUR, KEYSETS_VANTAGE_SKIP_MS,
   type KeysetsDeps, type StoredKeyset,
 } from '../keysetsSync.js'
@@ -248,5 +248,74 @@ describe('slots and the tick', () => {
       listOnlineUrls: async () => { throw new Error('db down') },
     })
     expect(stats.failed).toBe(1)
+  })
+
+  describe('mints with a pending keysets change', () => {
+    const urls = Array.from({ length: 60 }, (_, i) => `https://p${i}.example.com`)
+    const inSlot = (slot: number) => urls.filter(u => keysetsSlotOf(u) === slot)
+    const outSlot = (slot: number) => urls.filter(u => keysetsSlotOf(u) !== slot)
+    const minute = (slot: number) => `2026-10-20T12:${String(2 + 5 * slot).padStart(2, '0')}:00`
+    function visitor(routes: Record<string, unknown> = {}) {
+      const visited: string[] = []
+      const stored: string[] = []
+      const deps: KeysetsDeps = {
+        fetchJson: async (url) => { if (url.endsWith('/v1/keysets')) visited.push(url.replace('/v1/keysets', '')); return url in routes ? routes[url] : null },
+        store: async (url) => { stored.push(url) },
+        pendingMismatch: new Set(),
+      }
+      return { deps, visited, stored }
+    }
+
+    it('an online pending mint outside its slot is re-checked in the NEXT tick, once per pending value', async () => {
+      const other = outSlot(3)[0]!
+      const fast = new Set<string>()
+      const pending = [{ url: other, firstSeenAt: 111 }]
+      const run = async (now: string, p = pending) => {
+        const v = visitor()
+        await runKeysetsTick({ deps: v.deps, now: at(now), random: () => 0, sleep: noSleep, listOnlineUrls: async () => urls, listPendingKeysets: async () => p, fastRechecked: fast, lastVantageOutageAt: () => null, log: () => undefined })
+        return v.visited
+      }
+      expect(await run(minute(3))).toEqual([...inSlot(3), other])
+      // the same pending value again (the re-check did not confirm, e.g. it failed): not every tick, it waits for its slot
+      expect(await run(minute(4))).toEqual(inSlot(4).filter(u => u !== other).concat(keysetsSlotOf(other) === 4 ? [other] : []))
+      // a NEW pending value (another firstSeenAt) gets its own fast re-check
+      expect(await run(minute(3), [{ url: other, firstSeenAt: 222 }])).toContain(other)
+    })
+
+    it('an OFFLINE mint with a pending value is still fetched in its own slot, never outside it', () => {
+      const slot = 5
+      const offline = inSlot(slot)[0]!
+      const offlineOther = outSlot(slot)[0]!
+      const online = urls.filter(u => u !== offline && u !== offlineOther)
+      const picked = keysetsTickUrls(online, [{ url: offline, firstSeenAt: 1 }, { url: offlineOther, firstSeenAt: 1 }], slot, new Set())
+      expect(picked).toContain(offline)
+      expect(picked).not.toContain(offlineOther)
+      // without a pending value an offline mint is not visited
+      expect(keysetsTickUrls(online, [], slot, new Set())).not.toContain(offline)
+    })
+
+    it('the re-check set is bounded: values that are no longer pending are forgotten', () => {
+      const fast = new Set<string>()
+      const other = outSlot(0)[0]!
+      keysetsTickUrls(urls, [{ url: other, firstSeenAt: 1 }], 0, fast)
+      expect(fast.size).toBe(1)
+      keysetsTickUrls(urls, [], 0, fast)
+      expect(fast.size).toBe(0)
+    })
+
+    it('a failed fetch of a pending mint writes nothing', async () => {
+      const other = outSlot(2)[0]!
+      const v = visitor()
+      const stats = await runKeysetsTick({ deps: v.deps, now: at(minute(2)), random: () => 0, sleep: noSleep, listOnlineUrls: async () => [other], listPendingKeysets: async () => [{ url: other, firstSeenAt: 1 }], fastRechecked: new Set(), lastVantageOutageAt: () => null, log: () => undefined })
+      expect(v.visited).toEqual([other])
+      expect(v.stored).toEqual([])
+      expect(stats).toMatchObject({ mints: 1, failed: 1, ok: 0 })
+    })
+
+    it('a failing pending query does not stop the slot: its online mints are still visited', async () => {
+      const v = visitor()
+      await runKeysetsTick({ deps: v.deps, now: at(minute(7)), random: () => 0, sleep: noSleep, listOnlineUrls: async () => urls, listPendingKeysets: async () => { throw new Error('db down') }, fastRechecked: new Set(), lastVantageOutageAt: () => null, log: () => undefined })
+      expect(v.visited).toEqual(inSlot(7))
+    })
   })
 })

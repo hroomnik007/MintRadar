@@ -548,8 +548,9 @@ export async function initDb(): Promise<void> {
     // Version of the rule the stored `info.nuts` baseline was built with (NUTS_RULES_VERSION in mintChanges.ts; 0 = built before
     // supported:false meant "not supported"). An older stamp makes the next observation replace the baseline silently, no change row.
     'ALTER TABLE mint_change_state ADD COLUMN IF NOT EXISTS nuts_rules INTEGER NOT NULL DEFAULT 0',
-    // Persisted pending observations (survive restart / offline). pending_keysets is the JSON signature string,
-    // pending_info is a map of field -> { value, firstSeenAt }. Cleared on confirmation or when the mint removes the value.
+    // Persisted pending observations (survive a restart or an offline period; mintChanges.ts savePendingState). pending_keysets
+    // is the observed keysets list (jsonb array), pending_info a map field -> { value, firstSeenAt (ms) }. Cleared when the
+    // value is confirmed or the mint shows the stored value again.
     'ALTER TABLE mint_change_state ADD COLUMN IF NOT EXISTS pending_keysets JSONB',
     'ALTER TABLE mint_change_state ADD COLUMN IF NOT EXISTS pending_keysets_first_seen_at TIMESTAMPTZ',
     'ALTER TABLE mint_change_state ADD COLUMN IF NOT EXISTS pending_info JSONB',
@@ -569,31 +570,32 @@ export async function initDb(): Promise<void> {
   }
 
 
-  // One-off backfill: keysets in mint_keysets whose first_seen_at > tracking_since and that are missing from the
-  // stored keysets baseline become pending (so mint.lnpay.cz shows 01cbb9 as "seen once"). Idempotent.
+  // Backfill of the pending keysets (mintChanges.ts): a mint whose LATEST keysets check (mint_keysets rows seen within 10
+  // minutes of mints.keysets_checked_at, the same window as the wallet API's keysets) lists a keyset that first appeared after
+  // tracking_since and is missing from the stored baseline gets that whole list as its pending value (so mint.lnpay.cz shows
+  // 01cbb9 as "seen once"), with the earliest first_seen_at of the new keysets as its first-seen time. Same jsonb shape as
+  // savePendingState writes ({ id, unit, active, fee, expiry (UNIX s) }). Idempotent: only rows without a pending value are
+  // touched; no mint_changes row is written, the next matching keysets check confirms it as usual.
   await pool.query(`
-    DO $$
-    BEGIN
-      IF NOT EXISTS (SELECT 1 FROM mint_change_state WHERE pending_keysets IS NOT NULL LIMIT 1) THEN
-        UPDATE mint_change_state s
-        SET pending_keysets = sub.sig,
-            pending_keysets_first_seen_at = sub.first_seen
-        FROM (
-          SELECT k.url,
-                 jsonb_agg(jsonb_build_object('id', k.keyset_id, 'unit', k.unit, 'active', k.active, 'inputFeePpk', k.input_fee_ppk) ORDER BY k.keyset_id) AS sig,
-                 MIN(k.first_seen_at) AS first_seen
-            FROM mint_keysets k
-            JOIN mint_change_state s2 ON s2.url = k.url
-           WHERE k.first_seen_at > s2.tracking_since
-             AND s2.pending_keysets IS NULL
-             AND NOT EXISTS (
-               SELECT 1 FROM jsonb_array_elements(s2.keysets) e WHERE e->>'id' = k.keyset_id
-             )
-           GROUP BY k.url
-        ) sub
-        WHERE s.url = sub.url;
-      END IF;
-    END $$
+    UPDATE mint_change_state s
+       SET pending_keysets = sub.list, pending_keysets_first_seen_at = sub.first_seen
+      FROM (
+        SELECT k.url,
+               jsonb_agg(jsonb_build_object('id', k.keyset_id, 'unit', lower(k.unit), 'active', k.active, 'fee', k.input_fee_ppk,
+                         'expiry', CASE WHEN k.final_expiry IS NULL THEN NULL ELSE EXTRACT(EPOCH FROM k.final_expiry)::bigint END)
+                         ORDER BY k.keyset_id) AS list,
+               MIN(k.first_seen_at) FILTER (
+                 WHERE k.first_seen_at > s2.tracking_since
+                   AND NOT (s2.keysets @> jsonb_build_array(jsonb_build_object('id', k.keyset_id)))
+               ) AS first_seen
+          FROM mint_keysets k
+          JOIN mints m ON m.url = k.url
+          JOIN mint_change_state s2 ON s2.url = k.url
+         WHERE m.keysets_checked_at IS NOT NULL AND k.last_seen_at >= m.keysets_checked_at - INTERVAL '10 minutes'
+           AND s2.pending_keysets IS NULL AND jsonb_typeof(s2.keysets) = 'array'
+         GROUP BY k.url, s2.tracking_since, s2.keysets
+      ) sub
+     WHERE s.url = sub.url AND s.pending_keysets IS NULL AND sub.first_seen IS NOT NULL
   `)
   // Seed software_versions so scoring works identically right after deploy, even
   // before fetchLatestUpstreamVersions' daily cron job has run for the first time.

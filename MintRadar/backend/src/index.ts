@@ -11,7 +11,7 @@ import { getLatestVersionsMap } from './versionCatalog.js'
 import type { LatestVersions } from './shared/versionRule.js'
 import { METHODOLOGY_CHANGES } from './shared/methodology.js'
 import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
-import { listMintChanges, ROUTE_CHANGES_MAX, WALLET_CHANGES_PER_MINT } from './mintChanges.js'
+import { listMintChanges, pendingOf, ROUTE_CHANGES_MAX, WALLET_CHANGES_PER_MINT, type PendingSource } from './mintChanges.js'
 import { getAuditCzForMint, getAuditCzSyncStatus, auditCzSourceStatus, clampAuditCzLimit } from './auditCz.js'
 import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
 import { getLastVantageOutageAt } from './probeCycle.js'
@@ -1531,6 +1531,12 @@ function computeKnownMints(): Promise<Snapshot> {
                   'first', to_char(c.first_seen_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) ORDER BY c.observed_at DESC, c.id DESC)
            FROM (SELECT * FROM mint_changes WHERE url = m.url ORDER BY observed_at DESC, id DESC LIMIT ${WALLET_CHANGES_PER_MINT}) c
         ) AS changes_json,
+        -- Wallet API only: the state columns pendingOf (mintChanges.ts) needs, only for a mint with something pending.
+        (SELECT json_build_object('info', s.info, 'keysets', s.keysets, 'pendingKeysets', s.pending_keysets,
+                  'pendingKeysetsFirstSeenAt', s.pending_keysets_first_seen_at, 'pendingInfo', s.pending_info)
+           FROM mint_change_state s
+          WHERE s.url = m.url AND (s.pending_keysets IS NOT NULL OR s.pending_info IS NOT NULL)
+        ) AS pending_state_json,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
         h7.total_7d,
@@ -1706,6 +1712,7 @@ function computeKnownMints(): Promise<Snapshot> {
           keysets: keysetsOf(r.keysets_json),
           keysetsCheckedAt: r.keysets_checked_at ? new Date(r.keysets_checked_at as string | Date).toISOString() : null,
           changes: changesOf(r.changes_json),
+          changesPending: pendingOf(r.pending_state_json as PendingSource | null) ?? null,
           contactChecks: readStoredContactChecks(r.contact_checks) ?? [],
           auditDirections: (r.audit_directions_json as AuditDirectionsRow | null) ?? null,
         })
@@ -2067,7 +2074,9 @@ app.get('/api/mints/audit-cz', (req: Request, res: Response): void => {
 })
 
 // GET /api/mints/changes?url= — the mint change log of ONE tracked mint (mintChanges.ts) for the Mint Detail page: the newest
-// confirmed changes (up to ROUTE_CHANGES_MAX) and when tracking of the mint started. A website route like /api/mints/known (the
+// confirmed changes (up to ROUTE_CHANGES_MAX), when tracking of the mint started, `pending` (only when a difference was seen
+// once and waits for its confirming observation; never a change) and `keysetsSeen` (first/last seen of each keyset in
+// mint_keysets, for the keyset dates). A website route like /api/mints/known (the
 // default CORS allow-list and the general per-IP limit); the wallet API serves the same rows as `changes`. Unknown url -> 404,
 // so it is no oracle for anything but "is this mint tracked".
 app.get('/api/mints/changes', (req: Request, res: Response): void => {

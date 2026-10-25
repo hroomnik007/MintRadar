@@ -333,8 +333,16 @@ export interface MintChangeState {
   keysets: unknown
   /** The stamp of the row; undefined (a test double, no row) is read as current. */
   nutsRules?: number
-  pendingKeysets?: { value: string; firstSeenAt: number } | null
-  pendingInfo?: { [field: string]: { value: string; firstSeenAt: number } } | null
+  /** The persisted pending keysets observation (mint_change_state.pending_keysets), as the same signature observeKeysets builds. */
+  pendingKeysets?: Pending | null
+  /** The persisted pending info observations (mint_change_state.pending_info), by field. */
+  pendingInfo?: Record<string, Pending> | null
+}
+
+/** What changed in the pending state: a value to keep, or null to clear it. */
+export interface PendingPatch {
+  keysets?: Pending | null
+  info?: Record<string, Pending | null>
 }
 
 export interface StatePatch {
@@ -350,6 +358,18 @@ export interface ChangeDeps {
   commit: (url: string, patch: StatePatch, changes: DetectedChange[]) => Promise<StoredChange[]>
   pending: Map<string, Pending>
   now: () => number
+  /** Persists the pending state (survives a restart). Optional: a test double without it keeps pending in memory only. */
+  savePending?: (url: string, patch: PendingPatch) => Promise<void>
+}
+
+/** Best effort: a lost pending value can only delay a change (the next observation starts it again), never invent one. */
+async function persistPending(url: string, patch: PendingPatch, deps: ChangeDeps): Promise<void> {
+  if (!deps.savePending || (patch.keysets === undefined && (!patch.info || Object.keys(patch.info).length === 0))) return
+  try {
+    await deps.savePending(url, patch)
+  } catch (err) {
+    console.error(`[changes] saving the pending state failed for ${url}:`, err)
+  }
 }
 
 /** One successful /v1/info body. Returns the changes that were confirmed by it. */
@@ -364,30 +384,28 @@ export async function observeInfo(url: string, raw: unknown, deps: ChangeDeps): 
   let dirty = false
   const now = deps.now()
   const staleNutsRules = snap.nuts !== undefined && (state.nutsRules ?? NUTS_RULES_VERSION) < NUTS_RULES_VERSION
+  const pendingPatch: Record<string, Pending | null> = {}
   for (const f of fields) {
     const key = `${url}\ninfo:${f}`
     const observed = snap[f] as string
+    // Prefer the in-memory pending; after a restart only the persisted one is there.
+    const pending = deps.pending.get(key) ?? state.pendingInfo?.[f]
     if (f === 'nuts' && staleNutsRules) {
       // The stored list was built under an older rule: replace it without a change row, without waiting for a confirmation.
       deps.pending.delete(key)
+      if (pending !== undefined) pendingPatch[f] = null
       next[f] = observed
       dirty = true
       continue
     }
-    const mem = deps.pending.get(key)
-    const fromDb = state.pendingInfo?.[f]
-    const pending = mem ?? (fromDb ? { value: fromDb.value, firstSeenAt: fromDb.firstSeenAt } : undefined)
     const step = stepValue(stored[f], pending, observed, now)
     if (step.kind === 'pending') {
       deps.pending.set(key, step.pending)
-      void Promise.resolve(pool.query(
-        'INSERT INTO mint_change_state (url, pending_info) VALUES ($1, $2::jsonb) ON CONFLICT (url) DO UPDATE SET pending_info = COALESCE(mint_change_state.pending_info, \'{}\'::jsonb) || $2::jsonb',
-        [url, JSON.stringify({ [f]: step.pending })],
-      )).catch(() => undefined)
+      pendingPatch[f] = step.pending
       continue
     }
     deps.pending.delete(key)
-    void Promise.resolve(pool.query('UPDATE mint_change_state SET pending_info = pending_info - $2 WHERE url = $1', [url, f])).catch(() => undefined)
+    if (pending !== undefined) pendingPatch[f] = null
     if (step.kind === 'same') continue
     next[f] = observed
     dirty = true
@@ -395,8 +413,10 @@ export async function observeInfo(url: string, raw: unknown, deps: ChangeDeps): 
       changes.push({ type: INFO_FIELD_TYPES[f], field: f, oldValue: stored[f] ?? null, newValue: observed, firstSeenAt: step.firstSeenAt, source: 'info' })
     }
   }
-  if (!dirty) return []
-  return deps.commit(url, staleNutsRules ? { info: next, nutsRules: NUTS_RULES_VERSION } : { info: next }, changes)
+  // The baseline and the changes first: when that commit fails, the pending state stays as it was.
+  const out = dirty ? await deps.commit(url, staleNutsRules ? { info: next, nutsRules: NUTS_RULES_VERSION } : { info: next }, changes) : []
+  await persistPending(url, { info: pendingPatch }, deps)
+  return out
 }
 
 /** One successful, complete /v1/keysets answer. Returns the changes that were confirmed by it. */
@@ -408,25 +428,24 @@ export async function observeKeysets(url: string, observedList: readonly KeysetS
   const signature = JSON.stringify(observedList)
   if (stored === null) {
     deps.pending.delete(key)
-    return deps.commit(url, { keysets: [...observedList] }, [])
+    const out = await deps.commit(url, { keysets: [...observedList] }, [])
+    if (state.pendingKeysets) await persistPending(url, { keysets: null }, deps)
+    return out
   }
-  // Prefer the in-memory pending (tests); fall back to the persisted one (restart / offline).
-  const mem = deps.pending.get(key)
-  const pending = mem ?? state.pendingKeysets ?? undefined
+  // Prefer the in-memory pending; after a restart only the persisted one is there.
+  const pending = deps.pending.get(key) ?? state.pendingKeysets ?? undefined
   const step = stepValue(JSON.stringify(stored), pending, signature, deps.now())
   if (step.kind === 'pending') {
     deps.pending.set(key, step.pending)
-    // Persist so a restart does not drop it. Best-effort; tests mock the pool.
-    void Promise.resolve(pool.query(
-      'INSERT INTO mint_change_state (url, pending_keysets, pending_keysets_first_seen_at) VALUES ($1, $2, to_timestamp($3/1000.0)) ON CONFLICT (url) DO UPDATE SET pending_keysets = $2, pending_keysets_first_seen_at = to_timestamp($3/1000.0)',
-      [url, step.pending.value, step.pending.firstSeenAt],
-    )).catch(() => undefined)
+    await persistPending(url, { keysets: step.pending }, deps)
     return []
   }
   deps.pending.delete(key)
-  void Promise.resolve(pool.query('UPDATE mint_change_state SET pending_keysets = NULL, pending_keysets_first_seen_at = NULL WHERE url = $1', [url])).catch(() => undefined)
-  if (step.kind !== 'confirmed') return []
-  return deps.commit(url, { keysets: [...observedList] }, diffKeysets(stored, observedList, step.firstSeenAt))
+  const out = step.kind === 'confirmed'
+    ? await deps.commit(url, { keysets: [...observedList] }, diffKeysets(stored, observedList, step.firstSeenAt))
+    : []
+  if (pending !== undefined) await persistPending(url, { keysets: null }, deps)
+  return out
 }
 
 // ── Per-day cap ─────────────────────────────────────────────────────────────
@@ -446,23 +465,67 @@ export function decideStorage(rowsToday: number, hasMergedRowForType: boolean): 
 
 const DAY_START_SQL = `(date_trunc('day', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')`
 
-export interface PendingKeysets { value: string; firstSeenAt: number }
-export interface PendingInfo { [field: string]: { value: string; firstSeenAt: number } }
+/** A persisted pending keysets list (jsonb array) as the signature observeKeysets compares; null when absent or unreadable. */
+function pendingKeysetsOf(raw: unknown, at: unknown): Pending | null {
+  const list = normalizeStoredKeysets(raw)
+  const ms = at instanceof Date || typeof at === 'string' ? new Date(at).getTime() : NaN
+  if (list === null || list.length === 0 || !Number.isFinite(ms)) return null
+  return { value: JSON.stringify(list), firstSeenAt: ms }
+}
 
-export async function loadState(url: string): Promise<MintChangeState & { pendingKeysets: PendingKeysets | null; pendingInfo: PendingInfo | null }> {
+/** A persisted pending_info map; entries of the wrong shape are dropped. */
+function pendingInfoOf(raw: unknown): Record<string, Pending> | null {
+  if (!isObj(raw)) return null
+  const out: Record<string, Pending> = {}
+  for (const [f, e] of Object.entries(raw)) {
+    if (!(f in INFO_FIELD_TYPES) || !isObj(e) || typeof e['value'] !== 'string' || typeof e['firstSeenAt'] !== 'number' || !Number.isFinite(e['firstSeenAt'])) continue
+    out[f] = { value: e['value'], firstSeenAt: e['firstSeenAt'] }
+  }
+  return Object.keys(out).length > 0 ? out : null
+}
+
+export async function loadState(url: string): Promise<MintChangeState> {
   const res = await pool.query(
     'SELECT info, keysets, nuts_rules, pending_keysets, pending_keysets_first_seen_at, pending_info FROM mint_change_state WHERE url = $1',
     [url],
   )
-  const row = res.rows[0] as { info: unknown; keysets: unknown; nuts_rules: number; pending_keysets: string | null; pending_keysets_first_seen_at: Date | string | null; pending_info: unknown } | undefined
-  const pk = row?.pending_keysets ?? null
-  const pkAt = row?.pending_keysets_first_seen_at
+  const row = res.rows[0] as Record<string, unknown> | undefined
   return {
-    info: row?.info ?? null,
-    keysets: row?.keysets ?? null,
-    nutsRules: row?.nuts_rules ?? 0,
-    pendingKeysets: pk !== null && pkAt != null ? { value: pk, firstSeenAt: new Date(pkAt as string | Date).getTime() } : null,
-    pendingInfo: (row?.pending_info as PendingInfo | null) ?? null,
+    info: row?.['info'] ?? null,
+    keysets: row?.['keysets'] ?? null,
+    nutsRules: (row?.['nuts_rules'] as number | undefined) ?? 0,
+    pendingKeysets: pendingKeysetsOf(row?.['pending_keysets'], row?.['pending_keysets_first_seen_at']),
+    pendingInfo: pendingInfoOf(row?.['pending_info']),
+  }
+}
+
+/**
+ * Writes the pending state of a mint that already has a mint_change_state row (a pending value only exists after the
+ * baseline). pending_keysets is the keysets list as jsonb (the signature is rebuilt from it on load), pending_info a map
+ * field -> { value, firstSeenAt (ms) }; an emptied map is stored as NULL.
+ */
+export async function savePendingState(url: string, patch: PendingPatch): Promise<void> {
+  if (patch.keysets !== undefined) {
+    await pool.query(
+      `UPDATE mint_change_state SET pending_keysets = $2::jsonb,
+              pending_keysets_first_seen_at = CASE WHEN $3::double precision IS NULL THEN NULL ELSE to_timestamp($3::double precision / 1000.0) END
+        WHERE url = $1`,
+      [url, patch.keysets ? patch.keysets.value : null, patch.keysets ? patch.keysets.firstSeenAt : null],
+    )
+  }
+  const info = Object.entries(patch.info ?? {})
+  if (info.length > 0) {
+    const set: Record<string, Pending> = {}
+    const clear: string[] = []
+    for (const [f, p] of info) {
+      if (p) set[f] = p
+      else clear.push(f)
+    }
+    await pool.query(
+      `UPDATE mint_change_state SET pending_info = NULLIF((COALESCE(pending_info, '{}'::jsonb) - $3::text[]) || $2::jsonb, '{}'::jsonb)
+        WHERE url = $1`,
+      [url, JSON.stringify(set), clear],
+    )
   }
 }
 
@@ -520,7 +583,8 @@ export async function commitChanges(url: string, patch: StatePatch, changes: Det
     await client.query('COMMIT')
     return stored
   } catch (err) {
-    await client.query('ROLLBACK')
+    // A failing ROLLBACK must not hide the error that caused it.
+    await client.query('ROLLBACK').catch(() => undefined)
     throw err
   } finally {
     client.release()
@@ -528,7 +592,7 @@ export async function commitChanges(url: string, patch: StatePatch, changes: Det
 }
 
 const pendingStore = new Map<string, Pending>()
-const defaultDeps: ChangeDeps = { load: loadState, commit: commitChanges, pending: pendingStore, now: () => Date.now() }
+const defaultDeps: ChangeDeps = { load: loadState, commit: commitChanges, pending: pendingStore, now: () => Date.now(), savePending: savePendingState }
 
 /** Only a confirmed public key or input fee change is ever sent as a DM; a merged row is not (it is a summary). */
 export function noticesOf(changes: readonly StoredChange[]): ChangeNotice[] {
@@ -596,29 +660,95 @@ function rowOf(r: Record<string, unknown>): ChangeRow {
   }
 }
 
-/** The newest changes of ONE mint (the web route) and when tracking of it started. */
-export async function listMintChanges(url: string, limit: number = ROUTE_CHANGES_MAX): Promise<{ trackingSince: string | null; changes: ChangeRow[]; pending?: { firstSeenAt: string; diff: DetectedChange[] } }> {
-  const [rows, state] = await Promise.all([
+/** One change that was seen once and waits for its confirming observation; same shape as ChangeRow without observedAt. */
+export interface PendingChangeRow {
+  type: string
+  field: string
+  oldValue: string | null
+  newValue: string | null
+  firstSeenAt: string
+}
+
+/** What a mint shows that differs from its stored baseline and was not confirmed yet. Never a mint_changes row, never counted, never a DM. */
+export interface PendingChanges {
+  /** The earliest firstSeenAt of the entries. */
+  firstSeenAt: string
+  diff: PendingChangeRow[]
+}
+
+/** The stored state columns the pending read needs (mint_change_state). */
+export interface PendingSource {
+  info?: unknown
+  keysets?: unknown
+  pendingKeysets?: unknown
+  pendingKeysetsFirstSeenAt?: unknown
+  pendingInfo?: unknown
+}
+
+/**
+ * The pending changes of one mint: diffKeysets(stored, pending keysets) and the pending info fields whose value differs
+ * from the stored one, in the same text form a confirmed change would have. undefined when nothing is pending.
+ */
+export function pendingOf(src: PendingSource | null | undefined): PendingChanges | undefined {
+  if (!src) return undefined
+  const diff: PendingChangeRow[] = []
+  const stored = normalizeStoredKeysets(src.keysets)
+  const pk = pendingKeysetsOf(src.pendingKeysets, src.pendingKeysetsFirstSeenAt)
+  if (stored !== null && pk !== null) {
+    for (const c of diffKeysets(stored, JSON.parse(pk.value) as KeysetSnap[], pk.firstSeenAt)) {
+      diff.push({ type: c.type, field: c.field, oldValue: c.oldValue, newValue: c.newValue, firstSeenAt: new Date(c.firstSeenAt).toISOString() })
+    }
+  }
+  const pi = pendingInfoOf(src.pendingInfo)
+  if (pi !== null) {
+    const storedInfo = normalizeStoredInfo(src.info)
+    for (const f of INFO_FIELDS) {
+      const p = pi[f]
+      // A field that was never stored is a baseline, not a change; a pending value equal to the stored one is stale.
+      if (p === undefined || storedInfo[f] === undefined || storedInfo[f] === p.value) continue
+      diff.push({ type: INFO_FIELD_TYPES[f], field: f, oldValue: storedInfo[f]!, newValue: p.value, firstSeenAt: new Date(p.firstSeenAt).toISOString() })
+    }
+  }
+  if (diff.length === 0) return undefined
+  const first = Math.min(...diff.map(d => Date.parse(d.firstSeenAt)))
+  return { firstSeenAt: new Date(first).toISOString(), diff }
+}
+
+/** When MintRadar first and last saw each keyset of the mint in a keysets check (mint_keysets), ordered by id. */
+export interface KeysetSeenRow { id: string; firstSeenAt: string; lastSeenAt: string }
+
+export interface MintChangesRead {
+  trackingSince: string | null
+  changes: ChangeRow[]
+  /** Only when something is pending (see PendingChanges). */
+  pending?: PendingChanges
+  keysetsSeen: KeysetSeenRow[]
+}
+
+/** The newest changes of ONE mint (the web route), when tracking of it started, what is pending and the keyset seen dates. */
+export async function listMintChanges(url: string, limit: number = ROUTE_CHANGES_MAX): Promise<MintChangesRead> {
+  const [rows, state, seen] = await Promise.all([
     pool.query(
       `SELECT change_type, field, old_value, new_value, observed_at, first_seen_at
          FROM mint_changes WHERE url = $1 ORDER BY observed_at DESC, id DESC LIMIT $2`, [url, limit]),
-    pool.query('SELECT tracking_since, keysets, pending_keysets, pending_keysets_first_seen_at FROM mint_change_state WHERE url = $1', [url]),
+    pool.query('SELECT tracking_since, info, keysets, pending_keysets, pending_keysets_first_seen_at, pending_info FROM mint_change_state WHERE url = $1', [url]),
+    pool.query('SELECT keyset_id, first_seen_at, last_seen_at FROM mint_keysets WHERE url = $1 ORDER BY keyset_id', [url]),
   ])
-  const since = state.rows[0]?.tracking_since as Date | string | undefined
-  const result: { trackingSince: string | null; changes: ChangeRow[]; pending?: { firstSeenAt: string; diff: DetectedChange[] } } = {
+  const st = state.rows[0] as Record<string, unknown> | undefined
+  const since = st?.['tracking_since'] as Date | string | undefined
+  const pending = pendingOf(st ? {
+    info: st['info'], keysets: st['keysets'], pendingKeysets: st['pending_keysets'],
+    pendingKeysetsFirstSeenAt: st['pending_keysets_first_seen_at'], pendingInfo: st['pending_info'],
+  } : undefined)
+  const keysetsSeen: KeysetSeenRow[] = []
+  for (const r of ((seen?.rows ?? []) as Record<string, unknown>[])) {
+    if (typeof r['keyset_id'] !== 'string' || !r['first_seen_at'] || !r['last_seen_at']) continue
+    keysetsSeen.push({ id: r['keyset_id'], firstSeenAt: iso(r['first_seen_at'] as Date | string), lastSeenAt: iso(r['last_seen_at'] as Date | string) })
+  }
+  return {
     trackingSince: since ? iso(since) : null,
     changes: (rows.rows as Record<string, unknown>[]).map(rowOf),
+    ...(pending ? { pending } : {}),
+    keysetsSeen,
   }
-  const pk = state.rows[0]?.pending_keysets as string | null | undefined
-  const pkAt = state.rows[0]?.pending_keysets_first_seen_at as Date | string | null | undefined
-  const storedKs = state.rows[0]?.keysets
-  if (pk && pkAt && Array.isArray(storedKs)) {
-    try {
-      const pendingList = JSON.parse(pk) as KeysetSnap[]
-      const stored = normalizeStoredKeysets(storedKs) ?? []
-      const diff = diffKeysets(stored, pendingList, new Date(pkAt).getTime())
-      if (diff.length > 0) result.pending = { firstSeenAt: iso(pkAt), diff }
-    } catch { /* malformed pending is ignored */ }
-  }
-  return result
 }

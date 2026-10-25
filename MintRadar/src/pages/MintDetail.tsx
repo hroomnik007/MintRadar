@@ -6,7 +6,9 @@ import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcStar } from '@/components/mint/IcStar'
-import { MintChangeLog } from '@/components/mint/MintChangeLog'
+import { ChangeDate, PendingTag } from '@/components/mint/ChangeDate'
+import { useMintChanges } from '@/hooks/useMintChanges'
+import { infoDates, infoTitle, keysetDates, keysetPending } from '@/utils/changeDates'
 import { CopyTextButton } from '@/components/mint/CopyTextButton'
 import { useMintProbe } from '@/hooks/useMintProbe'
 import {
@@ -198,14 +200,14 @@ const NUT_DESCRIPTIONS: Record<string, { short: string; desc: string; features: 
   'NUT-00': { short: 'Notation & crypto', desc: 'Cryptographic notation and the blind Diffie-Hellman key exchange (BDHKE) scheme underlying every Cashu operation.', features: ['Blind signatures (BDHKE)', 'Protocol notation', 'hash_to_curve mapping'], useCase: 'Defines the cryptographic foundation every other NUT builds on.' },
   'NUT-01': { short: 'Mint keys', desc: 'Retrieving public keys from the mint for each amount.', features: ['Amount-specific keypairs', 'Key retrieval API', 'Key validation'], useCase: 'Clients use mint keys to verify token signatures.' },
   'NUT-02': { short: 'Keysets & fees', desc: 'Keysets (grouped mint public keys with rotation) and the per-coin fee charged when spending a coin from them.', features: ['Keyset IDs', 'Active/inactive rotation', 'Per-input fees (input_fee_ppk)'], useCase: 'Allows mints to rotate keys, support multiple currencies, and charge spending fees.' },
-  'NUT-03': { short: 'Swap', desc: 'Swapping coins for new ones of equal value.', features: ['Proof exchange', 'Change splitting', 'Privacy improvement'], useCase: 'Core operation for splitting and combining tokens.' },
+  'NUT-03': { short: 'Swap', desc: 'Swapping coins for new ones of equal value.', features: ['Coin exchange', 'Change splitting', 'Privacy improvement'], useCase: 'Core operation for splitting and combining tokens.' },
   'NUT-04': { short: 'Mint tokens', desc: 'Minting new Cashu tokens against a Lightning invoice.', features: ['Lightning invoice creation', 'Token issuance', 'Amount verification'], useCase: 'Entry point for getting Cashu tokens from Lightning.' },
   'NUT-05': { short: 'Melt tokens', desc: 'Melting Cashu tokens to pay a Lightning invoice.', features: ['Invoice payment', 'Fee estimation', 'Change return'], useCase: 'Exit point for spending Cashu tokens via Lightning.' },
   'NUT-06': { short: 'Mint info', desc: 'Retrieving mint metadata, capabilities and contact info.', features: ['Version info', 'Supported NUTs', 'Contact details', 'MOTD'], useCase: 'Clients discover mint capabilities before interacting.' },
-  'NUT-07': { short: 'Token state', desc: 'Checking whether a coin has been spent or is still valid.', features: ['Spent proof detection', 'Pending state', 'Batch checking'], useCase: 'Verify token validity without redeeming it.' },
+  'NUT-07': { short: 'Token state', desc: 'Checking whether a coin has been spent or is still valid.', features: ['Spent coin detection', 'Pending state', 'Batch checking'], useCase: 'Verify token validity without redeeming it.' },
   'NUT-08': { short: 'Overpay melt', desc: 'Overpaying melt fees and receiving change back.', features: ['Fee overpayment', 'Change tokens', 'Fee estimation'], useCase: 'Handle variable Lightning routing fees gracefully.' },
   'NUT-09': { short: 'Restore', desc: 'Restoring blinded signatures from mint backup data.', features: ['Signature restoration', 'Backup validation', 'Deterministic secrets'], useCase: 'Recover tokens from backup without double-spend risk.' },
-  'NUT-10': { short: 'Spending cond.', desc: 'Spending conditions that must be met to use a proof.', features: ['Conditional spending', 'Script conditions', 'Extensible'], useCase: 'Base for advanced features like P2PK and HTLCs.' },
+  'NUT-10': { short: 'Spending cond.', desc: 'Spending conditions that must be met to use a coin.', features: ['Conditional spending', 'Script conditions', 'Extensible'], useCase: 'Base for advanced features like P2PK and HTLCs.' },
   'NUT-11': { short: 'Pay-to-PK', desc: 'Lock tokens to a specific public key for secure transfers.', features: ['Public key locking', 'Signature verification', 'Selective unlock'], useCase: 'Send tokens that only a specific recipient can spend.' },
   'NUT-12': { short: 'DLEQ proofs', desc: 'Discrete Log Equality proofs for verifiable blind signatures.', features: ['Cryptographic proofs', 'Signature verification', 'Privacy preserving'], useCase: 'Clients verify mint honesty without revealing token data.' },
   'NUT-14': { short: 'HTLCs', desc: 'Hash Time Locked Contracts for atomic swaps.', features: ['Hash preimage', 'Timelock expiry', 'Atomic swaps'], useCase: 'Enable trustless cross-mint or cross-chain swaps.' },
@@ -368,6 +370,8 @@ function MintDetailContent({ url }: { url: string }) {
   const navigate = useNavigate()
   const now = useNow()
   const { data, isLoading, isError: probeError, refetch: refetchProbe } = useMintProbe(url)
+  // Confirmed changes, values seen once and keyset seen dates: dates next to the keysets, fees and mint info (no panel of their own).
+  const { data: mintChanges } = useMintChanges(url)
   const { data: knownMintsData } = useKnownMints()
   const knownMint = knownMintsData?.find(m => m.url === url) ?? null
   const operatorNip05 = useMintOperatorNip05(knownMint?.nostrAnnouncePubkey ?? null)
@@ -1180,6 +1184,21 @@ function MintDetailContent({ url }: { url: string }) {
     return `${diff >= 0 ? '+' : ''}${diff.toFixed(0)}${unit} vs prev period`
   }
 
+  // Change dates of the mint info values (utils/changeDates.ts): pubkey "since" only when a change is recorded, MOTD "last
+  // changed", name / description only in the title.
+  const pubkeyDates = infoDates('pubkey', mintChanges, now)
+  const motdDates = infoDates('motd', mintChanges, now)
+  const nameTitle = infoTitle(infoDates('name', mintChanges, now))
+  const descriptionTitle = infoTitle(infoDates('description', mintChanges, now))
+  const nameDates = nameTitle ? { title: nameTitle } : null
+  const descriptionDates = descriptionTitle ? { title: descriptionTitle } : null
+  const motdDatesLine = (motdDates.changed || motdDates.pending) ? (
+    <div className="md-info-dates md-motd-dates" data-testid="motd-dates">
+      {motdDates.changed && <ChangeDate prefix="last changed" mark={motdDates.changed} testId="motd-changed" />}
+      {motdDates.pending && <PendingTag mark={motdDates.pending} />}
+    </div>
+  ) : null
+
   // Keysets panel — same data (data.keysets from the existing probe: id/unit/
   // active), no extra fetch. Rendered on the Overview sidebar on desktop
   // (≥901px) and on the NUTs tab on mobile (<901px); the two wrappers below
@@ -1243,6 +1262,17 @@ function MintDetailContent({ url }: { url: string }) {
                 }}>
                   {ks.active ? 'Active' : 'Inactive'}
                 </span>
+                {(() => {
+                  const d = keysetDates(ks.id, ks.active, mintChanges, now)
+                  const p = keysetPending(ks.id, mintChanges, now)
+                  if (!d && !p) return null
+                  return (
+                    <div className="md-keyset-dates" data-testid="keyset-dates">
+                      {d && <span className="md-chg-date" title={d.title}>{d.text}</span>}
+                      {p && <PendingTag mark={p} />}
+                    </div>
+                  )
+                })()}
               </div>
             ))}
             {hiddenCount > 0 && (
@@ -1599,6 +1629,7 @@ function MintDetailContent({ url }: { url: string }) {
                     <div className="md-mint-alert-body">
                       <div className="md-mint-alert-title">Operator notice</div>
                       <div className="md-mint-alert-text">{motd}</div>
+                      {motdDatesLine}
                     </div>
                   </div>
                 )}
@@ -1606,12 +1637,13 @@ function MintDetailContent({ url }: { url: string }) {
                   <div className="md-motd">
                     <div className="md-motd-label">Message of the Day</div>
                     <div className="md-motd-text">{motd}</div>
+                    {motdDatesLine}
                   </div>
                 )}
                 {description && (
                   <div className="md-info-row md-desc-row">
                     <span className="md-info-label">Description</span>
-                    <span className="md-info-value">{description}</span>
+                    <span className="md-info-value" title={descriptionDates?.title}>{description}</span>
                   </div>
                 )}
                 {descriptionLong && (
@@ -1663,7 +1695,7 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="md-info-grid md-info-list">
               <div className="md-info-row">
                 <span className="md-info-label">Name</span>
-                <span className="md-info-value">{name ?? '—'}</span>
+                <span className="md-info-value" title={nameDates?.title}>{name ?? '—'}</span>
               </div>
               <div className="md-info-row">
                 <span className="md-info-label">Version</span>
@@ -1704,6 +1736,12 @@ function MintDetailContent({ url }: { url: string }) {
                       {copiedContact === 'pubkey' ? <Check size={13} /> : <Copy size={13} />}
                     </button>
                   </div>
+                  {(pubkeyDates.changed || pubkeyDates.pending) && (
+                    <div className="md-info-dates" data-testid="pubkey-dates">
+                      {pubkeyDates.changed && <ChangeDate prefix="since" mark={pubkeyDates.changed} testId="pubkey-since" />}
+                      {pubkeyDates.pending && <PendingTag mark={pubkeyDates.pending} />}
+                    </div>
+                  )}
                 </div>
               )}
               <div className="md-info-row md-hr-row">
@@ -1924,6 +1962,7 @@ function MintDetailContent({ url }: { url: string }) {
               disabled={{ mint: nut4Disabled, melt: nut5Disabled }}
               fetchedAt={infoFetchedAt}
               now={now}
+              changes={mintChanges}
             />
           )}
 
@@ -2113,7 +2152,6 @@ function MintDetailContent({ url }: { url: string }) {
             )}
           </div>
 
-          <MintChangeLog url={url} />
           </>)}
 
           {activeTab === 'audit' && (<>
