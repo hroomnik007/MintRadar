@@ -12,7 +12,7 @@ import { type KnownMint } from '@/hooks/useKnownMints'
 import { classifyMintVersion, latestMapFor } from '@/utils/versionRule'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { AUDIT_MIN_SAMPLES, auditDataState } from '@/utils/auditScore'
-import { formatAuditSuccessRatio, auditReliabilityColor, formatTimeAgo } from '@/utils/mintFormatting'
+import { auditReliabilityColor, formatTimeAgo } from '@/utils/mintFormatting'
 import { useNow } from '@/hooks/useNow'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { formatDate } from '@/utils/formatDate'
@@ -21,7 +21,7 @@ import { pickInputFee } from '@/utils/mintProbeDisplay'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { IcClose } from '@/components/IcClose'
 import './ComparisonModal.css'
-import { storedKeysetsAsLive } from '@/utils/mintDetailFacts'
+import { auditSuccessText, storedKeysetsAsLive } from '@/utils/mintDetailFacts'
 import { COMPARE_UPTIME_LABEL, COMPARE_LATENCY_LABEL, COMPARE_LATENCY_TITLE } from '@/utils/compareLabels'
 
 function reliabilityScoreInfo(score: number) {
@@ -48,7 +48,7 @@ function auditSuccessDisplay(mint: KnownMint, now: number): { text: string; colo
     return { text: 'n/a', color: 'var(--text3)' }
   }
   return {
-    text: formatAuditSuccessRatio(total, Math.min(blamed ?? 0, total ?? 0)),
+    text: auditSuccessText(blamed, total) ?? 'n/a',
     color: auditReliabilityColor(total, blamed, AUDIT_MIN_SAMPLES),
   }
 }

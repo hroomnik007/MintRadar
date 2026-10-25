@@ -2,6 +2,7 @@
 // breakdown from the stored record, last known info of an unavailable mint, the History summary and small offline
 // fallbacks. Operational facts only; no verdict wording.
 import type { ContactCheckFact } from './contactChecks'
+import { formatAuditSuccessRatio } from './mintFormatting'
 
 // ── Outages ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -150,4 +151,14 @@ export function contactsNotSavedYet(checks: readonly ContactCheckFact[] | null |
 export function storedKeysetsAsLive(last: ReadonlyArray<{ id: string; unit: string; active: boolean; inputFeePpk: number | null }> | null | undefined): Array<{ id: string; unit: string; active: boolean; input_fee_ppk?: number }> | null {
   if (!last || last.length === 0) return null
   return last.map(k => ({ id: k.id, unit: k.unit, active: k.active, ...(typeof k.inputFeePpk === 'number' ? { input_fee_ppk: k.inputFeePpk } : {}) }))
+}
+
+/**
+ * "Audit success" value from cashu.info's stored 7-day figures (auditCzTotal / auditCzBlamed): swaps without a
+ * failure attributed to the mint, out of all its swaps. The breakdown's Audit row and Compare's "Audit success"
+ * row both use it, so the two always show the same "x / y". Null without a stored total (callers show neutral / n/a).
+ */
+export function auditSuccessText(blamed: number | null | undefined, total: number | null | undefined): string | null {
+  if (total === null || total === undefined) return null
+  return formatAuditSuccessRatio(total, Math.min(blamed ?? 0, total))
 }

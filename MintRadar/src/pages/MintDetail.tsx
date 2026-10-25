@@ -65,7 +65,7 @@ import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLo
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
 import { ContactChecksLine } from '@/components/ContactChecksLine'
-import { outageTiles, outageErrorCell, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, contactsNotSavedYet, CONTACTS_NOT_SAVED_TEXT, type OutagesResponse } from '@/utils/mintDetailFacts'
+import { auditSuccessText, outageTiles, outageErrorCell, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, contactsNotSavedYet, CONTACTS_NOT_SAVED_TEXT, type OutagesResponse } from '@/utils/mintDetailFacts'
 import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
 import { LAST_SCORE_CAPTION, KEEP_WALLET_SENTENCE, TEMPORARY_SENTENCE, contactSentence, restoreSentence, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
@@ -998,7 +998,9 @@ function MintDetailContent({ url }: { url: string }) {
       : auditState === 'too-old'
         ? auditTooOldDetail()
         : 'No cashu.info audit data: neutral'
-  const breakdownAuditDisplay = auditState === 'scored' ? `${Math.min(auditCzBlamed ?? 0, auditCzTotal ?? 0)} / ${auditCzTotal}` : 'neutral'
+  // Swaps without an attributed failure / all swaps, the same figure as Compare's "Audit success" (it used to show the
+  // attributed failures, "0 / 13", next to 25/25, which read as 0 successes).
+  const breakdownAuditDisplay = auditState === 'scored' ? (auditSuccessText(auditCzBlamed, auditCzTotal) ?? 'neutral') : 'neutral'
   const auditAgeDays = auditAgeH !== null && auditAgeH > 24 && (auditState === 'scored' || auditState === 'too-few') ? Math.floor(auditAgeH / 24) : null
   const auditStaleNote = auditAgeDays !== null ? `data ${auditAgeDays} ${auditAgeDays === 1 ? 'day' : 'days'} old` : undefined
   const breakdownAuditRecentTotal = knownMint?.auditRecentTotal ?? null

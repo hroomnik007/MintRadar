@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   outageTiles, outageErrorCell, breakdownRowScore, breakdownPointsColor, storedBreakdownTotal, contactKindsText, infoTextFor,
-  readLastInfo, averageReliability, latencyPercentilesText, showTorFor, contactsNotSavedYet, storedKeysetsAsLive, CONTACTS_NOT_SAVED_TEXT,
+  readLastInfo, averageReliability, latencyPercentilesText, showTorFor, contactsNotSavedYet, storedKeysetsAsLive, CONTACTS_NOT_SAVED_TEXT, auditSuccessText,
   type OutagesResponse, type StoredScoreBreakdown, type BreakdownPart,
 } from '@/utils/mintDetailFacts'
 import { pickInputFee } from '@/utils/mintProbeDisplay'
@@ -146,5 +146,28 @@ describe('honest single-sample labels', () => {
     expect(COMPARE_UPTIME_LABEL).toBe('Uptime 24h')
     expect(COMPARE_LATENCY_LABEL).toBe('Latency (last check)')
     expect(CARD_LATENCY_LABEL).toBe('Latency (last check)')
+  })
+})
+
+describe('Audit row value: the same "x / y" as Compare\'s "Audit success"', () => {
+  // mint.lnpay.cz on 2026-10-25: offline, stored cashu.info 7-day figures auditCzTotal 13, auditCzBlamed 0, stored audit 25/25.
+  const LNPAY_STORED: StoredScoreBreakdown = {
+    uptime: { points: 0, max: 40 }, audit: { points: 25, max: 25 }, nuts: { points: 15, max: 15 },
+    version: { points: 15, max: 15 }, contact: { points: 5, max: 5 }, newMintCap: { points: 0, cap: 75 }, sum: 60,
+  }
+  it('lnpay-like offline mint: 13 / 13 next to 25/25, not the attributed failures "0 / 13"', () => {
+    expect(auditSuccessText(0, 13)).toBe('13 / 13')
+    expect(auditSuccessText(0, 13)).not.toBe('0 / 13')
+    // the live audit score (null while offline) does not change the stored points
+    expect(breakdownRowScore(LNPAY_STORED, 'audit', null)).toBe(25)
+  })
+  it('subtracts only the failures attributed to the mint, clamped to the total', () => {
+    expect(auditSuccessText(2, 100)).toBe('98 / 100')
+    expect(auditSuccessText(null, 10)).toBe('10 / 10')
+    expect(auditSuccessText(20, 13)).toBe('0 / 13')
+  })
+  it('no stored total: null (the row shows neutral, Compare n/a), never a made-up 0', () => {
+    expect(auditSuccessText(0, null)).toBeNull()
+    expect(auditSuccessText(undefined, undefined)).toBeNull()
   })
 })
