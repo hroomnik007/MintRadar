@@ -7,6 +7,7 @@ import {
 } from 'recharts'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useModalFocus } from '@/hooks/useModalFocus'
+import { supportedNutKeys } from '@/utils/nutSupport'
 import { IcShield } from '@/components/mint/IcShield'
 import { type KnownMint } from '@/hooks/useKnownMints'
 import { classifyMintVersion, latestMapFor } from '@/utils/versionRule'
@@ -119,10 +120,12 @@ function useMintCompareData(mint: KnownMint) {
   // NUT-13 (deterministic secrets) is wallet-side only — mints never advertise
   // it in /v1/info. NUT-09 (restore signatures) is the mint-side capability
   // that actually gates backup/restore — matches MintDetail's supportsBackupRestore.
-  const supportsBackupRestore = nutsLimits['9'] != null
+  // One NUT rule with the score and Mint Detail (utils/nutSupport.ts): absent, null and `supported: false` are not support.
+  const supportedNuts = supportedNutKeys(nutsLimits)
+  const supportsBackupRestore = supportedNuts.has('9')
   // Same rule and the same "latest" as everywhere else (versionRule.ts + the value the API sends with the mint).
   const isOutdated = classifyMintVersion(mint.version, latestMapFor(mint.version, mint.softwareLatest)).label === 'outdated'
-  return { isOnline, displayName, hostname, reliabilityScore, tsInfo, isNew, nutsLimits, supportsBackupRestore, isOutdated }
+  return { isOnline, displayName, hostname, reliabilityScore, tsInfo, isNew, nutsLimits, supportedNuts, supportsBackupRestore, isOutdated }
 }
 
 export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClose: () => void }) {
@@ -387,7 +390,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                     </span>
                     <span className="cmp-mobile-val">
                       {TRACKED_NUT_KEYS.map(key => {
-                        const supported = d.nutsLimits[key] != null
+                        const supported = d.supportedNuts.has(key)
                         return (
                           <span key={key} style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', padding: '1px 5px', borderRadius: 3, background: supported ? 'var(--green-soft)' : 'var(--bg3)', color: supported ? 'var(--accent)' : 'var(--text3)', border: `0.5px solid ${supported ? 'var(--green-soft-strong)' : 'var(--border)'}` }}>
                             {key.padStart(2, '0')}
@@ -542,8 +545,8 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           ))}
 
           {/* ── NUT Support ── */}
-          {/* The ⓘ says what green / grey mean (2026-10-25). Note: green is `nutsLimits[key] != null`, so a NUT the mint lists
-              as {supported:false} is green here while the score counts it as unsupported (isNutDeclaredSupported). */}
+          {/* The ⓘ says what green / grey mean (2026-10-25). Green = supportedNutKeys (utils/nutSupport.ts), the rule the score
+              and Mint Detail use, so a NUT listed as {supported:false} is grey here too. */}
           <div className="cmp-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             NUT Support
             <InfoTooltip iconSize={11} width={220} about="NUT Support" text={COMPARE_NUT_SUPPORT_TEXT} />
@@ -554,7 +557,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               <div key={mint.url} className="cmp-val">
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, width: '100%' }}>
                   {TRACKED_NUT_KEYS.map(key => {
-                    const supported = d.nutsLimits[key] != null
+                    const supported = d.supportedNuts.has(key)
                     return (
                       <span key={key} style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', padding: '1px 5px', borderRadius: 3, background: supported ? 'var(--green-soft)' : 'var(--bg3)', color: supported ? 'var(--accent)' : 'var(--text3)', border: `0.5px solid ${supported ? 'var(--green-soft-strong)' : 'var(--border)'}` }}>
                         {key.padStart(2, '0')}

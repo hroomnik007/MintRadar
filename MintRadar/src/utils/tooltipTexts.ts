@@ -142,7 +142,7 @@ export function compareAuditSuccessText(): string {
 
 /** Compare modal, NUT Support row: what a green and a grey chip mean. A chip is green when the NUT's key is present in the
  *  mint's /v1/info `nuts` object (stored as nuts_limits), grey when the key is absent — "not advertised", not "tested broken". */
-export const COMPARE_NUT_SUPPORT_TEXT = 'Green: the mint lists this NUT in its /v1/info. Grey: it does not list it, so a wallet should not count on that feature.'
+export const COMPARE_NUT_SUPPORT_TEXT = 'Green: the mint lists this NUT in its /v1/info as supported. Grey: it does not list it, or marks it as not supported, so a wallet should not count on that feature.'
 
 /** Community Rating tile: how many reviews it leaves out under the operator rule (contact AND announcement author; the Reviews tab still lists them). */
 export function operatorExcludedText(n: number): string {
