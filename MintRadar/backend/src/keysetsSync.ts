@@ -4,7 +4,8 @@
 // Schedule: a cron tick every 5 minutes, offset from the probe cycle (cron.ts). Every mint has ONE fixed slot of
 // KEYSETS_SLOTS_PER_HOUR (a hash of its URL), so each mint is visited once per hour and the load is spread over the
 // whole hour; inside a tick the mints go one at a time after a random start offset. A tick right after a suspected
-// vantage outage (probeCycle.ts) does nothing.
+// vantage outage (probeCycle.ts) does nothing. A mint with a pending keysets change (mintChanges.ts) is visited once more
+// in the next tick (if online) and in its own slot even while offline (keysetsTickUrls).
 //
 // Failure rule (the same principle as mints.pubkey / nuts_limits, which a failed probe never overwrites): any failure
 // of the keysets request (network, status, size, bad JSON, schema surprise) writes NOTHING, so the stored rows and
@@ -232,10 +233,15 @@ async function defaultStore(url: string, rows: StoredKeyset[]): Promise<void> {
 }
 
 
-async function listPendingKeysetsUrls(): Promise<string[]> {
-  const res = await pool.query('SELECT url FROM mint_change_state WHERE pending_keysets IS NOT NULL')
-  return (res.rows as Array<{ url: string }>).map(r => r.url)
+/** Mints with a persisted pending keysets value (mintChanges.ts) and when it was first seen (ms). */
+export interface PendingKeysetsMint { url: string; firstSeenAt: number }
+
+async function defaultListPendingKeysets(): Promise<PendingKeysetsMint[]> {
+  const res = await pool.query('SELECT url, pending_keysets_first_seen_at FROM mint_change_state WHERE pending_keysets IS NOT NULL ORDER BY url')
+  return (res.rows as Array<{ url: string; pending_keysets_first_seen_at: Date | string | null }>)
+    .map(r => ({ url: r.url, firstSeenAt: r.pending_keysets_first_seen_at ? new Date(r.pending_keysets_first_seen_at).getTime() : NaN }))
 }
+
 async function defaultListOnlineUrls(): Promise<string[]> {
   const res = await pool.query(
     `SELECT url FROM (
@@ -258,6 +264,10 @@ export interface KeysetsTickOptions {
   random?: () => number
   sleep?: (ms: number) => Promise<void>
   listOnlineUrls?: () => Promise<string[]>
+  /** Mints with a pending keysets value (mint_change_state.pending_keysets). */
+  listPendingKeysets?: () => Promise<PendingKeysetsMint[]>
+  /** `${url}\n${firstSeenAt}` of the pending values already re-checked outside their slot (one extra fetch each). */
+  fastRechecked?: Set<string>
   /** ISO time of the last suspected vantage outage (probeCycle.getLastVantageOutageAt), or null. */
   lastVantageOutageAt?: () => string | null
   log?: (line: string) => void
@@ -279,9 +289,38 @@ export interface KeysetsTickStats {
 
 const defaultSleep = (ms: number): Promise<void> => new Promise(r => setTimeout(r, ms))
 const sharedPending = new Set<string>()
+const sharedFastRechecked = new Set<string>()
 let running = false
 
-/** One cron tick: the online mints of the current slot, one at a time. Never throws; logs one counts-only line. */
+/**
+ * The mints one tick visits: the online mints of its slot; the mints of its slot with a pending keysets value even when
+ * offline (a pending value must not wait for the mint to look online again); and, once per pending value, an online mint
+ * with a pending value outside its slot (fast confirmation, the next tick instead of the next hour). Exported for tests.
+ */
+export function keysetsTickUrls(online: readonly string[], pending: readonly PendingKeysetsMint[], slot: number, fastRechecked: Set<string>): string[] {
+  const onlineSet = new Set(online)
+  const urls = online.filter(u => keysetsSlotOf(u) === slot)
+  const picked = new Set(urls)
+  const live = new Set<string>()
+  for (const p of pending) {
+    const key = `${p.url}\n${p.firstSeenAt}`
+    live.add(key)
+    if (picked.has(p.url)) continue
+    if (keysetsSlotOf(p.url) === slot) {
+      urls.push(p.url)
+      picked.add(p.url)
+    } else if (onlineSet.has(p.url) && !fastRechecked.has(key)) {
+      fastRechecked.add(key)
+      urls.push(p.url)
+      picked.add(p.url)
+    }
+  }
+  // Forget re-checks of values that are no longer pending (confirmed, replaced or cleared).
+  for (const k of fastRechecked) if (!live.has(k)) fastRechecked.delete(k)
+  return urls
+}
+
+/** One cron tick: the mints of keysetsTickUrls, one at a time. Never throws; logs one counts-only line. */
 export async function runKeysetsTick(opts: KeysetsTickOptions = {}): Promise<KeysetsTickStats> {
   const now = opts.now ?? (() => new Date())
   const random = opts.random ?? Math.random
@@ -309,12 +348,9 @@ export async function runKeysetsTick(opts: KeysetsTickOptions = {}): Promise<Key
   running = true
   try {
     const online = await (opts.listOnlineUrls ?? defaultListOnlineUrls)()
-    const pending = await listPendingKeysetsUrls()
-    // Fast confirmation: any mint with a pending keysets value is re-checked this tick (outside its slot).
-    // Offline mints with pending are still fetched in their own slot.
-    const slotUrls = online.filter(u => keysetsSlotOf(u) === slot)
-    const fast = pending.filter(u => !slotUrls.includes(u))
-    const urls = [...slotUrls, ...fast]
+    // A failing pending query must not stop the slot: the tick then visits the online mints of its slot only.
+    const pending = await (opts.listPendingKeysets ?? defaultListPendingKeysets)().catch(() => [] as PendingKeysetsMint[])
+    const urls = keysetsTickUrls(online, pending, slot, opts.fastRechecked ?? sharedFastRechecked)
     stats.mints = urls.length
     if (urls.length > 0) await sleep(Math.floor(random() * KEYSETS_TICK_JITTER_MAX_MS))
     for (let i = 0; i < urls.length; i++) {
