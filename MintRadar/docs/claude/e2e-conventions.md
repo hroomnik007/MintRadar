@@ -72,3 +72,8 @@ Each of these makes its spec fail: focus not returned after Escape; Tab trap rem
 | F6 | — | Page structure | **won't fix (owner decision 2026-10-16)**: the flat structure is accepted, the exemption in the spec stays as it is. Home, Stats, Tools, Wallets, Learn, Watchlist and Mint Detail expose only the h1; their section titles are `div`s, so heading navigation finds nothing between the h1 and the footer. No level is *skipped* (the spec asserts that), the structure is flat. | Headings list of a screen reader on `/stats`. |
 
 Not application findings but worth knowing: `installApiMocks` has no answer for `/api/mints/outages` (Mint Detail asks for it; the dev proxy answers 502) — `fixtures/pageAudit.ts` mocks it for the page specs; the older specs that open a mint page log that 502 without failing.
+
+## Skip link and `ui-quick-wins.spec.ts` (2026-10-25)
+
+- The first Tab stop of every page is now "Skip to content" (`a.skip-link`, visually hidden until focused, then fixed at the top left). It moves focus to `main#main-content` (`tabIndex={-1}`) by script, so hash routes are not touched. Specs that count Tab stops from the top start one stop later; `keyboard-and-landmarks.spec.ts` still finds the first control within 3 stops.
+- `e2e/ui-quick-wins.spec.ts`: phone list cut (390 px touch, collapsed / expanded / search / filters), 768 and 1280 px not cut, no-results state, refresh keeps filters, skip link, Mint Detail h1 text, archived card / detail / Stats movers, bad naddr page.
