@@ -240,7 +240,6 @@ export async function installApiMocks(page: Page): Promise<void> {
   await page.route('**/api/mints/version-history**', route =>
     route.fulfill({ json: { history: [{ version: 'Nutshell/0.16.0', firstSeenAt: daysAgo(30) }], latestGlobalVersion: 'Nutshell/0.16.0' } }),
   )
-  await page.route('**/api/mints/daily-uptime**', route => route.fulfill({ json: [] }))
   await page.route('**/api/mints/nostr-reviews**', route => route.fulfill({ json: [] }))
   // Mint changes (dates next to keysets, fees, mint info): a mint with no recorded changes (specs that look at dates override this route).
   await page.route('**/api/mints/changes**', route => {

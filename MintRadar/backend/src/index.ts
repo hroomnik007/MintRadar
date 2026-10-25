@@ -30,7 +30,7 @@ import { isTestMint } from './testMints.js'
 import { publicMintName, publicMintNameOrHost } from './mintNames.js'
 import {
   usesWalletRateLimit, isRecommendPath, isPublicCorsPath, PUBLIC_CORS_EXPOSE_HEADERS, parseWalletListQuery, walletListEnvelope, walletSingleEnvelope, recommendEnvelope,
-  memoizedBody, cachedBodyOf, buildCachedBody, sendCachedBody, sendWalletError, queryOf, keysetsOf, changesOf, type Snapshot, type WalletExtra, type AuditDirectionsRow,
+  memoizedBody, cachedBodyOf, buildCachedBody, sendCachedBody, sendWalletError, queryOf, keysetsOf, changesOf, type Snapshot, type WalletExtra, type AuditDirectionsRow, latency24hOf,
 } from './walletApi.js'
 import { readStoredBreakdown } from './scoreBreakdown.js'
 import { readStoredContactChecks } from './contactChecks.js'
@@ -42,6 +42,9 @@ import { profileFieldsForReview } from './profilesSync.js'
 import { createSwrCache, makeRefreshErrorLogger, KNOWN_MINTS_CACHE_TTL } from './knownMintsCache.js'
 import { createStatsCache, STATS_CACHE_TTL } from './statsCache.js'
 import { timedSnapshot } from './snapshotTiming.js'
+import { summarizeOutages, type OutageRow } from './outages.js'
+import { lastInfoOf } from './lastInfo.js'
+import { historyLatencyPercentilesSql, latencyPercentilesOf } from './latencyPercentiles.js'
 
 // ONE computation of the /api/mints/known rows, shared with the wallet API (walletApi.ts): at most one database read
 // per KNOWN_MINTS_CACHE_TTL for all of them, concurrent callers join the read in flight.
@@ -204,7 +207,7 @@ const READ_RATE_LIMIT_MAX = 150
 const readRateLimitStore = new Map<string, RateLimitEntry>()
 const READ_RATE_LIMIT_PATHS = new Set([
   '/api/mints/known', '/api/mints/history', '/api/mints/version-history', '/api/mints/outages', '/api/mints/changes',
-  '/api/mints/nostr-reviews', '/api/mints/daily-uptime', '/api/mints/swaps', '/api/mints/audit-cz',
+  '/api/mints/nostr-reviews', '/api/mints/swaps', '/api/mints/audit-cz',
   '/api/stats/reliability-trend', '/api/stats/reliability-movers', '/api/nuts',
 ])
 function usesReadRateLimit(path: string): boolean {
@@ -792,7 +795,12 @@ app.get('/api/mint/probe', (req: Request, res: Response): void => {
   // The DB lookup runs first so an unknown URL can be charged to the dedicated
   // unknown-probe limiter BEFORE any outbound fetch happens.
   const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown'
-  pool.query('SELECT contact_checks, last_contacts, last_contacts_at FROM mints WHERE url = $1', [url])
+  pool.query(
+    `SELECT m.contact_checks, m.last_contacts, m.last_contacts_at, m.last_online_at, s.info AS change_state_info
+       FROM mints m LEFT JOIN mint_change_state s ON s.url = m.url
+      WHERE m.url = $1`,
+    [url],
+  )
     .then(async (known) => {
       if ((known.rowCount ?? 0) > 0) {
         const status = await probeMint(url)
@@ -809,6 +817,10 @@ app.get('/api/mint/probe', (req: Request, res: Response): void => {
           body.lastContacts = lastContacts
           body.lastContactsAt = lastContactsAt
         }
+        // Additive, known mints only (same gate as lastContacts): the last CONFIRMED, sanitised MOTD and short description
+        // (mint_change_state.info, mintChanges.ts), for Mint Detail while the live /v1/info is missing. Never for an unknown URL.
+        const lastInfo = lastInfoOf(known.rows[0]?.change_state_info, known.rows[0]?.last_online_at)
+        if (lastInfo) body.lastInfo = lastInfo
         res.json(body)
         return
       }
@@ -997,7 +1009,10 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
         pool.query(segmentsQuery, [url]),
         pool.query(prevQuery, [url]),
         pool.query('SELECT MIN(checked_at) AS earliest FROM mint_history WHERE url = $1', [url]),
-      ]).then(([segResult, prevResult, earliestResult]) => {
+        // Additive: median and p95 of the successful probes' latency over the same window as the segments (one value
+        // per probe, not per bucket, so a quiet bucket does not weigh as much as a busy one).
+        pool.query(historyLatencyPercentilesSql(PERIOD_DAYS[period]), [url]),
+      ]).then(([segResult, prevResult, earliestResult, pctResult]) => {
         const segments = segResult.rows.map(r => ({
           bucket: (r.bucket as Date).toISOString(),
           online: r.online as boolean,
@@ -1039,6 +1054,7 @@ app.get('/api/mints/history', (req: Request, res: Response): void => {
           segments,
           uptimePct,
           avgLatencyMs,
+          ...latencyPercentilesOf(pctResult?.rows?.[0]),
           prevUptimePct,
           prevAvgLatencyMs,
           earliestCheckedAt,
@@ -1165,53 +1181,7 @@ app.get('/api/mints/outages', (req: Request, res: Response): void => {
          ORDER BY checked_at ASC`,
         [url, days]
       ).then(result => {
-        const rows = result.rows as { online: boolean; checked_at: Date }[]
-        const outages: { startedAt: string; durationMs: number; error: string }[] = []
-        let blockStart: Date | null = null
-        let blockCount = 0
-
-        for (const row of rows) {
-          if (!row.online) {
-            if (blockStart === null) blockStart = row.checked_at
-            blockCount++
-          } else if (blockStart !== null) {
-            if (blockCount >= 2) {
-              const durationMs = row.checked_at.getTime() - blockStart.getTime()
-              outages.push({
-                startedAt: blockStart.toISOString(),
-                durationMs,
-                error: 'offline',
-              })
-            }
-            blockStart = null
-            blockCount = 0
-          }
-        }
-        // Open block at the end of the window
-        if (blockStart !== null && blockCount >= 2) {
-          const last = rows[rows.length - 1]!
-          const durationMs = last.checked_at.getTime() - blockStart.getTime()
-          outages.push({
-            startedAt: blockStart.toISOString(),
-            durationMs,
-            error: 'offline',
-          })
-        }
-
-        const lastOutage = outages[outages.length - 1]
-        const sinceLastOutageMs = lastOutage
-          ? Date.now() - new Date(lastOutage.startedAt).getTime() - lastOutage.durationMs
-          : null
-        const avgRecoveryMs = outages.length > 0
-          ? Math.round(outages.reduce((s, o) => s + o.durationMs, 0) / outages.length)
-          : null
-
-        res.json({
-          sinceLastOutageMs,
-          avgRecoveryMs,
-          outageCount: outages.length,
-          outages: outages.slice(-20),
-        })
+        res.json(summarizeOutages(result.rows as OutageRow[]))
       })
     })
     .catch((err: unknown) => {
@@ -1504,8 +1474,9 @@ function computeKnownMints(): Promise<Snapshot> {
           (SELECT json_agg(json_build_object('pubkey', r.pubkey, 'rating', r.rating, 'comment', r.comment))
              FROM mint_reviews r WHERE r.url = m.url)
         END AS stored_reviews,
-        -- Wallet API only (never in /api/mints/known): the breakdown stored with the score, the start of the current
-        -- offline streak (first failed probe after the last successful one) and the keysets of the latest keysets check.
+        -- The breakdown stored with the score (also in /api/mints/known since 2026-10-25, scoreBreakdown), and for the
+        -- wallet API only: the start of the current offline streak (first failed probe after the last successful one)
+        -- and the keysets of the latest keysets check.
         m.score_breakdown, m.keysets_checked_at,
         CASE WHEN latest.online = false THEN
           (SELECT MIN(d.checked_at) FROM mint_history d
@@ -1541,6 +1512,13 @@ function computeKnownMints(): Promise<Snapshot> {
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
         h7.total_7d,
         h7.online_count_7d,
+        -- Wallet API only: 30-day uptime (same rule as the 7-day one) and the latency percentiles of the successful
+        -- probes of the last 24 hours (latency24h).
+        h7.total_30d,
+        h7.online_count_30d,
+        percentile_cont(0.5) WITHIN GROUP (ORDER BY h.latency_ms) FILTER (WHERE h.online AND h.latency_ms IS NOT NULL) AS latency_p50_24h,
+        percentile_cont(0.95) WITHIN GROUP (ORDER BY h.latency_ms) FILTER (WHERE h.online AND h.latency_ms IS NOT NULL) AS latency_p95_24h,
+        COUNT(h.latency_ms) FILTER (WHERE h.online) AS latency_samples_24h,
         latest.online AS latest_online,
         latest.latency_ms AS latest_latency_ms,
         latest.checked_at AS latest_checked_at,
@@ -1548,10 +1526,14 @@ function computeKnownMints(): Promise<Snapshot> {
       FROM mints m
       LEFT JOIN mint_history h ON h.url = m.url AND h.checked_at > NOW() - INTERVAL '24 hours'
       LEFT JOIN (
-        SELECT url, COUNT(*) AS total_7d,
-          COALESCE(SUM(CASE WHEN online THEN 1 ELSE 0 END), 0) AS online_count_7d
+        -- One scan of the last 30 days for both windows (7d feeds uptimePct7d, 30d the wallet API's uptime30dPct).
+        SELECT url,
+          COUNT(*) FILTER (WHERE checked_at > NOW() - INTERVAL '7 days') AS total_7d,
+          COUNT(*) FILTER (WHERE online AND checked_at > NOW() - INTERVAL '7 days') AS online_count_7d,
+          COUNT(*) AS total_30d,
+          COUNT(*) FILTER (WHERE online) AS online_count_30d
         FROM mint_history
-        WHERE checked_at > NOW() - INTERVAL '7 days'
+        WHERE checked_at > NOW() - INTERVAL '30 days'
         GROUP BY url
       ) h7 ON h7.url = m.url
       LEFT JOIN LATERAL (
@@ -1566,7 +1548,7 @@ function computeKnownMints(): Promise<Snapshot> {
         m.audit_cz_total, m.audit_cz_blamed, m.audit_cz_fetched_at,
         m.discovered_at, m.last_reliability_score, m.last_error, m.server_location, m.ip_address, m.net_asn, m.net_org, m.net_country, m.has_onion,
         m.review_count, m.review_avg_rating, m.review_count_7d_ago, m.review_count_7d_ago_at,
-        h7.total_7d, h7.online_count_7d,
+        h7.total_7d, h7.online_count_7d, h7.total_30d, h7.online_count_30d,
         latest.online, latest.latency_ms, latest.checked_at
     `),
     // The ONE "latest" per software family (versionCatalog.ts), sent with every mint so the labels and the
@@ -1643,6 +1625,10 @@ function computeKnownMints(): Promise<Snapshot> {
           nostrAnnouncePubkey: (r.nostr_announce_pubkey as string | null) ?? null,
           nostrAnnounceD: (r.nostr_announce_d as string | null) ?? null,
           reliabilityScore: (r.last_reliability_score as number | null) ?? null,
+          // Additive: the per-component points stored with reliabilityScore (mints.score_breakdown, written in the same
+          // UPDATE by prober.ts), so Mint Detail's score modal shows the points the stored score used, not a live
+          // recomputation. null until the first probe cycle that stored it.
+          scoreBreakdown: readStoredBreakdown(r.score_breakdown),
           lastError: (r.last_error as string | null) ?? null,
           uptimePct24h: total === 0 ? null : Math.round(onlineCount / total * 100),
           // Same computation as uptimePct24h, over a 7-day window — feeds the
@@ -1709,6 +1695,8 @@ function computeKnownMints(): Promise<Snapshot> {
           probes24h: Number(r.total ?? 0),
           downSince: r.down_since ? new Date(r.down_since as string | Date).toISOString() : null,
           scoreBreakdown: readStoredBreakdown(r.score_breakdown),
+          uptime30dPct: Number(r.total_30d ?? 0) === 0 ? null : Math.round(Number(r.online_count_30d ?? 0) / Number(r.total_30d) * 100),
+          latency24h: latency24hOf(r.latency_p50_24h, r.latency_p95_24h, r.latency_samples_24h),
           keysets: keysetsOf(r.keysets_json),
           keysetsCheckedAt: r.keysets_checked_at ? new Date(r.keysets_checked_at as string | Date).toISOString() : null,
           changes: changesOf(r.changes_json),
@@ -1913,66 +1901,13 @@ app.get('/api/og/page', (req: Request, res: Response): void => {
   res.send(html)
 })
 
-app.get('/api/mints/daily-uptime', (req: Request, res: Response): void => {
-  const url = req.query['url']
-
-  if (typeof url !== 'string' || url.length === 0) {
-    res.status(400).json({ error: 'Missing required query parameter: url' })
-    return
-  }
-
-  if (!url.startsWith('https://')) {
-    res.status(400).json({ error: 'url must start with https://' })
-    return
-  }
-
-  if (url.length > MAX_URL_LENGTH) {
-    res.status(400).json({ error: `url exceeds maximum length of ${MAX_URL_LENGTH} characters` })
-    return
-  }
-
-  Promise.resolve(isWellFormedMintUrl(url))
-    .then(safe => {
-      if (!safe) {
-        res.status(400).json({ error: 'Invalid url' })
-        return
-      }
-      return pool
-        .query(
-          `SELECT
-            (DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS day,
-            SUM(CASE WHEN online THEN 1 ELSE 0 END)::int AS online_count,
-            COUNT(*)::int AS total_count
-           FROM mint_history
-           WHERE url = $1 AND checked_at > NOW() - INTERVAL '30 days'
-           GROUP BY DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC')
-           ORDER BY DATE_TRUNC('day', checked_at AT TIME ZONE 'UTC') ASC`,
-          [url]
-        )
-        .then(result => {
-          res.json({
-            url,
-            days: result.rows.map(r => ({
-              day: (r.day as Date).toISOString().slice(0, 10),
-              onlineCount: r.online_count as number,
-              totalCount: r.total_count as number,
-            })),
-          })
-        })
-    })
-    .catch((err: unknown) => {
-      if (IS_DEV) console.error('[/api/mints/daily-uptime]', err)
-      res.status(500).json({ error: 'Internal server error' })
-    })
-})
-
 // GET /api/mints/swaps?url= — the audit.8333.space rolling-window swap detail
 // (mint_audit_swaps) for one mint, kept OUT of /api/mints/known: that endpoint
 // is fetched on every Dashboard load for every mint, and embedding up to 100
 // swap rows per mint there would multiply its payload size ~65x for a feature
 // only the (currently unbuilt) Mint Detail Audit tab would use. /api/mints/known
 // keeps only the small scalar auditAvgTimeMs; this endpoint serves the full list
-// on demand, same shape as /api/mints/history|version-history|daily-uptime.
+// on demand, same shape as /api/mints/history|version-history.
 app.get('/api/mints/swaps', (req: Request, res: Response): void => {
   const url = req.query['url']
 

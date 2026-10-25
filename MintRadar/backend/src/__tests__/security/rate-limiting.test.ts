@@ -167,7 +167,7 @@ describe('general limiter wiring', () => {
 describe('read-only bucket', () => {
   const READ_PATHS = [
     '/api/mints/known', '/api/mints/history', '/api/mints/version-history', '/api/mints/outages', '/api/mints/changes',
-    '/api/mints/nostr-reviews', '/api/mints/daily-uptime', '/api/mints/swaps', '/api/mints/audit-cz',
+    '/api/mints/nostr-reviews', '/api/mints/swaps', '/api/mints/audit-cz',
     '/api/stats/reliability-trend', '/api/stats/reliability-movers', '/api/nuts',
   ]
   // A bad request is rejected by the handler (or answered from the empty mock) after the limiter, which is all these tests need.
