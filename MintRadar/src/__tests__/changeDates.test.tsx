@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
-import { dateMark, feeDates, infoDates, infoTitle, keysetDates, keysetPending, parseFeeText, NOT_CONFIRMED } from '@/utils/changeDates'
+import { changeMark, dateMark, feeDates, infoDates, infoTitle, keysetDates, keysetPending, parseFeeText, NOT_CONFIRMED } from '@/utils/changeDates'
 import { parseMintChanges, type MintChange, type MintChangesData } from '@/utils/mintChangeLog'
 import { MintFeesLimits } from '@/components/mint/MintFeesLimits'
 
@@ -151,7 +151,15 @@ describe('infoDates', () => {
   it('name / description: the date only as a title', () => {
     expect(infoTitle(infoDates('name', data(), NOW))).toBeUndefined()
     const d = data({ changes: [ch('name_changed', 'Old', 'New', '2026-10-19T09:00:00Z', 'name')] })
-    expect(infoTitle(infoDates('name', d, NOW))).toMatch(/^Last changed .*19 Oct 2026, 09:00 UTC$/)
+    expect(infoTitle(infoDates('name', d, NOW))).toMatch(/^Last changed .*19 Oct 2026, 09:00 UTC, confirmed .*19 Oct 2026, 10:00 UTC$/)
+  })
+
+  it('a confirmed change is dated by firstSeenAt; the confirming observedAt is only in the title', () => {
+    const d = data({ changes: [ch('pubkey_changed', '02aa', '03bb', '2026-10-22T09:00:00Z', 'pubkey')] })
+    const m = changeMark(d.changes[0]!, NOW)
+    expect(m.label).toBe(lbl('2026-10-22T09:00:00Z'))
+    expect(m.title).toMatch(/22 Oct 2026, 09:00 UTC, confirmed .*\(your time\) · 22 Oct 2026, 10:00 UTC$/)
+    expect(infoDates('pubkey', d, NOW).changed).toEqual(m)
   })
 })
 
