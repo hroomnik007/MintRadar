@@ -68,16 +68,13 @@ test.describe('tiles', () => {
   })
 })
 
-test.describe('source line and header tooltip', () => {
-  test('one line under the tiles: cashu.info · last 7 days · facts · synced <relative>, the UTC time in the title', async ({ page }) => {
+test.describe('no source line; header tooltip', () => {
+  test('no cashu.info source line under the tiles (uptime and DLEQ are shown elsewhere)', async ({ page }) => {
     await gotoAuditTab(page, czOnly(auditCzResponse()))
-    const line = page.getByTestId('audit-cz-source')
-    await expect(line).toHaveText('cashu.info · last 7 days · DLEQ valid 56 / invalid 0 / missing 0 · proof states checked 9 / spent 0 / pending 0 · uptime 30d 97% · synced 10 min ago')
-    await expect(line.locator('span[title]')).toHaveAttribute('title', /^\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC$/)
-    await expect(page.getByTestId('audit-cz-source')).toHaveCount(1)
-    // under the tiles, not before them
-    const [tilesY, lineY] = await Promise.all([page.locator('.audit-cz-tiles').boundingBox(), line.boundingBox()])
-    expect(lineY!.y).toBeGreaterThan(tilesY!.y + tilesY!.height - 1)
+    await expect(page.locator('.audit-cz-tiles')).toBeVisible()
+    await expect(page.locator('.audit-cz-source')).toHaveCount(0)
+    await expect(page.locator('body')).not.toContainText('DLEQ valid')
+    await expect(page.locator('body')).not.toContainText('uptime 30d')
   })
 
   test('the Audit stats ⓘ carries the meaning of the old rows, with the real window', async ({ page }) => {
@@ -88,10 +85,13 @@ test.describe('source line and header tooltip', () => {
 })
 
 test.describe('swap strip caption', () => {
-  test('states exactly what the strip shows', async ({ page }) => {
+  test('the ⓘ at the end of the strip states exactly what it shows', async ({ page }) => {
     await gotoAuditTab(page, czOnly(auditCzResponse({ swaps: czSwapList([ok, melt, limits, pending, ok]) })))
     await expect(page.locator('.audit-swap-bar-mark')).toHaveCount(5)
-    await expect(page.getByTestId('audit-swap-bar-caption')).toHaveText(
+    await expect(page.locator('.audit-swap-bar-caption')).toHaveCount(0) // no paragraph under the strip
+    await expect(page.locator('body')).not.toContainText('The latest 5 swaps')
+    await page.getByTestId('audit-swap-bar-caption').locator('.info-tooltip').hover()
+    await expect(page.getByRole('tooltip')).toHaveText(
       "The latest 5 swaps MintRadar stored from cashu.info, both directions, newest first. Green: succeeded. Red: failed. Grey: not counted against the mint (below the mint's minimum, the auditor's balance, or no outcome yet).")
     // the marks follow the caption: 2 green, 1 red, 2 grey, newest left
     await expect(page.locator('.audit-swap-bar-ok')).toHaveCount(2)
@@ -164,7 +164,7 @@ test.describe('swap tables behind a tablist', () => {
     const above = async () => page.evaluate(() => {
       const list = document.querySelector('[role="tablist"][aria-label="Swap direction"]')!
       const top = list.getBoundingClientRect().top
-      return [...document.querySelectorAll('.audit-cz-tiles, .audit-cz-source, .audit-swap-bar, .audit-swap-bar-caption, [role="tablist"]')]
+      return [...document.querySelectorAll('.audit-cz-tiles, .audit-swap-bar, [role="tablist"]')]
         .map(e => [Math.round(e.getBoundingClientRect().top - top), Math.round(e.getBoundingClientRect().height)])
     })
     const before = await above()

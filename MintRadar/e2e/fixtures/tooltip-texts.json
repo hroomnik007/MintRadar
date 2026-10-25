@@ -36,6 +36,7 @@
       "Delta Mint",
       "Fee per 1000 coins spent, from the active keyset of the mint's main unit (NUT-02 input_fee_ppk). \"free\" = none, n/a = not reported.",
       "Last 7 days from cashu.info; only failures attributed to the mint count. n/a below 10 swaps. Not a solvency or reserves signal.",
+      "Latency of the last check (one sample)",
       "List view",
       "MintRadar",
       "Newbie Mint",
@@ -66,7 +67,7 @@
       "testnut.cashu.space",
       "twin.mint.example"
     ],
-    "triggers": 7
+    "triggers": 8
   },
   "compare-modal@390": {
     "texts": [
@@ -93,6 +94,7 @@
       "Delta Mint",
       "Fee per 1000 coins spent, from the active keyset of the mint's main unit (NUT-02 input_fee_ppk). \"free\" = none, n/a = not reported.",
       "Last 7 days from cashu.info; only failures attributed to the mint count. n/a below 10 swaps. Not a solvency or reserves signal.",
+      "Latency of the last check (one sample)",
       "List view",
       "MintRadar",
       "Newbie Mint",
@@ -122,7 +124,7 @@
       "testnut.cashu.space",
       "twin.mint.example"
     ],
-    "triggers": 7
+    "triggers": 8
   },
   "for-wallets@1440": {
     "texts": [
@@ -590,8 +592,8 @@
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Last swaps, newest first",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "OK · <DATE>",
@@ -599,6 +601,7 @@
       "OK · <DATE>",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
       "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
@@ -612,6 +615,7 @@
       "All-time count of mint operations that audit.8333.space has recorded for this mint.",
       "Average duration of the successful swaps in the same rolling window as Recent success rate.",
       "Last swaps, newest first",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "OK · <DATE>",
       "OK · <DATE>",
@@ -631,48 +635,50 @@
       "<DATE>",
       "<DATE>",
       "<DATE>",
-      "<DATE>",
       "Add Alpha Mint to watchlist",
       "Already there when MintRadar started tracking this mint on <LOCAL> · <DATE>",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
       "Deposits into this mint (mint operations) in the last 7 days, counted by cashu.info: successful of all.",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Last swaps, newest first",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "OK · <DATE>",
       "OK · <DATE>",
       "OK · <DATE>",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "The Reliability Score uses the combined cashu.info number for the last 7 days. Deposits and withdrawals are the same data split by direction.",
+      "The latest 4 swaps MintRadar stored from cashu.info, both directions, newest first. Green: succeeded. Red: failed. Grey: not counted against the mint (below the mint's minimum, the auditor's balance, or no outcome yet).",
       "Withdrawals from this mint (melt operations) in the last 7 days, counted by cashu.info: successful of all.",
       "Your latency from this browser to the mint (client-side measurement).",
       "failed · <DATE>",
       "melt quote failed"
     ],
-    "triggers": 12
+    "triggers": 13
   },
   "mint-alpha-audit-cz@390": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "126 of 126 swaps in the last 7 days, 19 failed for other reasons",
-      "<DATE>",
       "Add Alpha Mint to watchlist",
       "Deposits into this mint (mint operations) in the last 7 days, counted by cashu.info: successful of all.",
       "Last swaps, newest first",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "OK · <DATE>",
       "OK · <DATE>",
       "OK · <DATE>",
       "The Reliability Score uses the combined cashu.info number for the last 7 days. Deposits and withdrawals are the same data split by direction.",
+      "The latest 4 swaps MintRadar stored from cashu.info, both directions, newest first. Green: succeeded. Red: failed. Grey: not counted against the mint (below the mint's minimum, the auditor's balance, or no outcome yet).",
       "Withdrawals from this mint (melt operations) in the last 7 days, counted by cashu.info: successful of all.",
       "Your latency from this browser to the mint (client-side measurement).",
       "failed · <DATE>",
       "melt quote failed"
     ],
-    "triggers": 7
+    "triggers": 8
   },
   "mint-alpha-audit@1440": {
     "texts": [
@@ -690,8 +696,8 @@
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Last swaps, newest first",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "OK · <DATE>",
@@ -699,6 +705,7 @@
       "OK · <DATE>",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
       "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
@@ -712,6 +719,7 @@
       "All-time count of mint operations that audit.8333.space has recorded for this mint.",
       "Average duration of the successful swaps in the same rolling window as Recent success rate.",
       "Last swaps, newest first",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "OK · <DATE>",
       "OK · <DATE>",
@@ -735,10 +743,11 @@
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
     "triggers": 7
@@ -747,6 +756,7 @@
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "Add Alpha Mint to watchlist",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
@@ -767,12 +777,13 @@
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
     "triggers": 9
@@ -786,6 +797,7 @@
       "Already there when MintRadar started tracking this mint on <LOCAL> · <DATE>",
       "Copy full keyset ID",
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
       "Your latency from this browser to the mint (client-side measurement)."
@@ -808,10 +820,11 @@
       "Copy full public key",
       "Country where the IP block is registered, not where the server stands. For the server's city see Geographic Distribution on the Stats page.",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
     "triggers": 8
@@ -823,6 +836,7 @@
       "Copy",
       "Copy full public key",
       "Country where the IP block is registered, not where the server stands. For the server's city see Geographic Distribution on the Stats page.",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
@@ -844,11 +858,12 @@
       "Copy link to this review",
       "Copy reviewer npub",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Open this review on Nostr",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
     "triggers": 8
@@ -860,6 +875,7 @@
       "Anyone can create a key, so ratings can be inflated. Treat them as a hint, not proof.",
       "Copy link to this review",
       "Copy reviewer npub",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "Open this review on Nostr",
       "Your latency from this browser to the mint (client-side measurement)."
@@ -880,10 +896,11 @@
       "Copy full public key",
       "Country where the IP block is registered, not where the server stands. For the server's city see Geographic Distribution on the Stats page.",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
     "triggers": 8
@@ -903,13 +920,14 @@
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Input fee in parts per thousand of the smallest unit, charged per coin spent from this keyset (150 ppk = 0.15 of a unit per coin).",
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Your balance is made of many small coins. The mint charges a small fee per coin used and rounds the total up, so small payments cost relatively more. Fewer, larger coins keep fees low.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
@@ -925,6 +943,7 @@
       "Copy full keyset ID",
       "Input fee in parts per thousand of the smallest unit, charged per coin spent from this keyset (150 ppk = 0.15 of a unit per coin).",
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
+      "Mint also advertises a .onion URL",
       "MintRadar",
       "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
       "Your balance is made of many small coins. The mint charges a small fee per coin used and rounds the total up, so small payments cost relatively more. Fewer, larger coins keep fees low.",
@@ -947,12 +966,12 @@
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
       "Reliability Score capped at 75 for the first 30 days.",
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "This mint does not support NUT-09, so wallets cannot restore ecash from a seed phrase here. Keep your own token backups.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
@@ -988,11 +1007,11 @@
       "Copy full keyset ID",
       "Copy full public key",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
       "Reliability Score capped at 75 for the first 30 days.",
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
     "triggers": 8
@@ -1020,10 +1039,10 @@
       "Copy full keyset ID",
       "Copy full public key",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "The mint's server is unreachable — the application behind the proxy may have crashed or restarted",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
@@ -1057,10 +1076,10 @@
       "Copy full public key",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Excludes 1 review from a key that is both listed as the mint's Nostr contact and the author of its NIP-87 announcement. The Reviews tab still lists it, marked Operator.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
     "triggers": 7
@@ -1095,12 +1114,12 @@
       "Copy reviewer npub",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Excludes 1 review from a key that is both listed as the mint's Nostr contact and the author of its NIP-87 announcement. The Reviews tab still lists it, marked Operator.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Open this review on Nostr",
       "Open this review on Nostr",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
     "triggers": 8
@@ -1136,7 +1155,6 @@
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Last swaps, newest first",
       "MintRadar",
       "Not for real funds — for testing and development only",
@@ -1146,6 +1164,7 @@
       "OK · <DATE>",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
       "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
@@ -1183,11 +1202,11 @@
       "Copy full keyset ID",
       "Copy full public key",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "MintRadar",
       "Not for real funds — for testing and development only",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Your latency from this browser to the mint (client-side measurement)."
     ],
     "triggers": 7

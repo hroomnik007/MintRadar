@@ -88,7 +88,7 @@ test.describe('Mint Detail display fixes', () => {
     await expect(page.locator('body')).not.toContainText('old motd')
   })
 
-  test('History summary: average reliability of the segments, median / p95 latency', async ({ page }) => {
+  test('History summary: average reliability of the segments, median / p95 latency in an ⓘ (no extra line)', async ({ page }) => {
     const b = (h: number) => ago(h * H)
     const history = {
       period: '24h', uptimePct: 99, avgLatencyMs: 55, prevUptimePct: 98, prevAvgLatencyMs: 60, earliestCheckedAt: ago(30 * 24 * H),
@@ -103,7 +103,15 @@ test.describe('Mint Detail display fixes', () => {
     await open(page, { history })
     await page.locator('.md-tab', { hasText: 'History' }).click()
     await expect(page.locator('.md-hist-fig', { hasText: 'Average reliability' }).locator('.md-hist-fig-value')).toHaveText('85')
-    await expect(page.getByTestId('hist-latency-percentiles')).toHaveText('Median 48 ms · p95 210 ms')
+    // median / p95: an ⓘ next to the average latency value, not a visible line that widens the summary
+    await expect(page.locator('.md-hist-summary').first()).not.toContainText('Median')
+    const latency = page.locator('.md-hist-fig', { hasText: 'Average latency' })
+    await latency.getByTestId('hist-latency-percentiles').locator('.info-tooltip').hover()
+    await expect(page.getByRole('tooltip')).toHaveText('Median 48 ms · p95 210 ms over the last 7 days')
+    // same height as the uptime figure (no extra row) and nothing overflows
+    const [lat, up] = await Promise.all([latency.boundingBox(), page.locator('.md-hist-fig', { hasText: 'Average uptime' }).boundingBox()])
+    expect(Math.round(lat!.height)).toBe(Math.round(up!.height))
+    expect(await page.locator('.md-hist-summary').first().evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true)
   })
 
   test('Tor chip from the stored hasOnion while the mint is offline', async ({ page }) => {

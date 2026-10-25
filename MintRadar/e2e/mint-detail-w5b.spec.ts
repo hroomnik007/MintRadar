@@ -72,9 +72,9 @@ test.describe('W5b A: source line under every score row', () => {
     await expect(page.getByText("The Reliability Score uses cashu.info's last 7 days; this view shows audit.8333.space's last ~100 swaps.")).toBeVisible()
   })
 
-  test('Audit tab, cashu.info view: no sentence under the heading, the window is in the ⓘ and the source line', async ({ page }) => {
+  test('Audit tab, cashu.info view: no sentence under the heading, the window is in the ⓘ', async ({ page }) => {
     await gotoAuditTab(page, { alpha: NO_8333, cz: auditCzResponse() })
-    await expect(page.getByTestId('audit-cz-source')).toBeVisible()
+    await expect(page.locator('.audit-cz-tiles')).toBeVisible()
     await expect(page.getByText(/uses this same cashu\.info window/)).toHaveCount(0)
     await expect(page.getByText(/These rows are the same data split by direction/)).toHaveCount(0)
     await page.locator('.md-audit-header-main .md-audit-info').hover()
