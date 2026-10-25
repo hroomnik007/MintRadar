@@ -14,8 +14,10 @@ import { publicMintName } from './mintNames.js'
 import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 import type { StoredAuditCzDetail, AuditCzDetailResponse } from './auditCzDetail.js'
 
-// Historical identifier (the service was audit.cashu.cz): stays as the `source` column / API value.
+// Historical identifier (the service was audit.cashu.cz): stays as the stored `source` column value.
 export const AUDIT_CZ_SOURCE = 'audit.cashu.cz'
+/** The `source` /api/mints/audit-cz answers since 2026-10-25: the service's current name (the stored column keeps AUDIT_CZ_SOURCE). */
+export const AUDIT_CZ_API_SOURCE = 'cashu.info'
 /** The one place that names the source host; every URL below is built from it. */
 export const AUDIT_CZ_BASE_URL = 'https://cashu.info'
 const AUDIT_CZ_MINTS_URL = `${AUDIT_CZ_BASE_URL}/api/v1/mints`
@@ -379,7 +381,7 @@ export interface AuditCzStats7d {
 }
 
 export interface AuditCzResponse {
-  source: typeof AUDIT_CZ_SOURCE
+  source: typeof AUDIT_CZ_API_SOURCE
   sourceUrl: string | null
   fetchedAt: string | null
   covered: boolean
@@ -484,7 +486,7 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
   const row = m.rows[0] as Record<string, unknown> | undefined
   if (!row) {
     const f = await pool.query(`SELECT MAX(fetched_at) AS fetched_at FROM audit_cz_mints`)
-    return { source: AUDIT_CZ_SOURCE, sourceUrl: null, fetchedAt: iso((f.rows[0] as Record<string, unknown> | undefined)?.['fetched_at']), covered: false, mint: null, swaps: [], stats7d: null }
+    return { source: AUDIT_CZ_API_SOURCE, sourceUrl: null, fetchedAt: iso((f.rows[0] as Record<string, unknown> | undefined)?.['fetched_at']), covered: false, mint: null, swaps: [], stats7d: null }
   }
   const canonical = row['url'] as string
   const al = await pool.query(`SELECT alias_url FROM audit_cz_aliases WHERE mint_url = $1`, [canonical])
@@ -541,7 +543,7 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
   })
   const detail = await readAuditCzDetail(canonical)
   return {
-    source: AUDIT_CZ_SOURCE,
+    source: AUDIT_CZ_API_SOURCE,
     // Rebuilt from the id, so a row stored under the old host is served with the new page URL.
     sourceUrl: (() => { const id = auditCzIdFromPage(row['page'] as string | null); return id ? auditCzPageUrl(id) : null })(),
     fetchedAt: iso(row['fetched_at']),

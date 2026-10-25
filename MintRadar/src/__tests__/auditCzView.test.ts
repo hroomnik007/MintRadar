@@ -24,7 +24,7 @@ const LNPAY: AuditCzDetail = {
   fetchedAt: '2026-10-07T07:00:00.000Z',
 }
 const data = (swaps: Row[], detail: AuditCzData['detail'] = LNPAY, over: Partial<AuditCzData> = {}): AuditCzData => ({
-  source: 'audit.cashu.cz', sourceUrl: null, fetchedAt: '2026-10-07T07:05:00.000Z', covered: true,
+  source: 'cashu.info', sourceUrl: null, fetchedAt: '2026-10-07T07:05:00.000Z', covered: true,
   mint: { state: 'ok', uptime24h: 1, uptime7d: 1, uptime30d: 1, attributedFailures: 0, minted: 1, melted: 1, lastCheck: null },
   swaps, stats7d: null, detail, ...over,
 })

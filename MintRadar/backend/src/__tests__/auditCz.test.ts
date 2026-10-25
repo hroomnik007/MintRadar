@@ -12,7 +12,7 @@ const { db, fetchMock, readMock, poolMock } = vi.hoisted(() => {
   }
   const exec = (sql: string, p: unknown[] = []) => {
     if (sql.includes('INSERT INTO audit_cz_mints')) {
-      db.mints.set(p[0] as string, { url: p[0], state: p[1], uptime24h: p[2], uptime7d: p[3], uptime30d: p[4], attributed_failures: p[5], minted: p[6], melted: p[7], last_check: p[8], page: p[9], fetched_at: new Date('2026-10-04T10:00:00Z') })
+      db.mints.set(p[0] as string, { url: p[0], state: p[1], uptime24h: p[2], uptime7d: p[3], uptime30d: p[4], attributed_failures: p[5], minted: p[6], melted: p[7], last_check: p[8], page: p[9], fetched_at: new Date('2026-10-04T10:00:00Z'), source: p[10] })
     } else if (sql.includes('INSERT INTO audit_cz_aliases')) {
       db.aliases.set(p[0] as string, p[1] as string)
     } else if (sql.includes('INSERT INTO audit_cz_swaps')) {
@@ -66,7 +66,7 @@ vi.mock('../ssrf.js', () => ({
   RESPONSE_CAPS: { auditCzMints: 1048576, auditCzSwaps: 1048576, auditCzMintDetail: 65536 },
 }))
 
-import { auditCzKey, parseAuditCzMintsResponse, parseAuditCzSwapsResponse, syncAuditCz, getAuditCzForMint, getAuditCzSyncStatus, auditCzIdFromPage } from '../auditCz.js'
+import { auditCzKey, parseAuditCzMintsResponse, parseAuditCzSwapsResponse, syncAuditCz, getAuditCzForMint, getAuditCzSyncStatus, auditCzIdFromPage, AUDIT_CZ_SOURCE } from '../auditCz.js'
 
 const mint = (o: Record<string, unknown> = {}) => ({
   id: 'mint0001', url: 'https://mint.minibits.cash/Bitcoin', isTest: false, aliases: [], name: 'Minibits', state: 'ok',
@@ -131,6 +131,15 @@ describe('URL mapping', () => {
     expect(db.mints.get('https://b.example')?.['page']).toBeNull()
     expect(db.mints.get('https://c.example')?.['page']).toBeNull()
     expect(db.mints.has('https://b.example')).toBe(true)
+  })
+
+  it("answers source 'cashu.info' (covered and not covered) while the stored column keeps 'audit.cashu.cz'", async () => {
+    feed([mint()], [])
+    await syncAuditCz()
+    expect((await getAuditCzForMint('https://mint.minibits.cash/Bitcoin')).source).toBe('cashu.info')
+    expect((await getAuditCzForMint('https://not-covered.example')).source).toBe('cashu.info')
+    expect(db.mints.get('https://mint.minibits.cash/Bitcoin')?.['source']).toBe(AUDIT_CZ_SOURCE)
+    expect(AUDIT_CZ_SOURCE).toBe('audit.cashu.cz')
   })
 
   it('serves a row stored under the old host with the rebuilt cashu.info page URL', async () => {

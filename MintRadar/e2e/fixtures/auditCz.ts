@@ -72,7 +72,7 @@ export function czDetail(over: Record<string, unknown> = {}, fetchedMinutesAgo =
 
 export function auditCzResponse(over: Record<string, unknown> = {}) {
   return {
-    source: 'audit.cashu.cz',
+    source: 'cashu.info',
     sourceUrl: CZ_PAGE_URL,
     fetchedAt: ago(5 * 60_000),
     covered: true,
@@ -87,7 +87,7 @@ export function auditCzResponse(over: Record<string, unknown> = {}) {
   }
 }
 
-export const NOT_COVERED = { source: 'audit.cashu.cz', sourceUrl: null, fetchedAt: ago(5 * 60_000), covered: false, mint: null, swaps: [], stats7d: null }
+export const NOT_COVERED = { source: 'cashu.info', sourceUrl: null, fetchedAt: ago(5 * 60_000), covered: false, mint: null, swaps: [], stats7d: null }
 
 /** audit.8333.space data as the known-mints payload carries it: fresh by default. */
 export const FRESH_8333 = {
