@@ -127,6 +127,19 @@ describe('deploy/nginx.conf, Task E3 /mint/ precedence', () => {
   })
 })
 
+// Stage 2 perf (2026-10-25): precompressed .gz served by the built-in gzip_static module; no brotli (would need a
+// third-party nginx module), and on-the-fly gzip stays for the API.
+describe('deploy/nginx.conf, gzip_static', () => {
+  const conf = read('deploy/nginx.conf')
+
+  it('enables gzip_static once at server level, keeps gzip on, and has no brotli directive', () => {
+    expect(conf.match(/^ {4}gzip_static on;$/gm)).toHaveLength(1)
+    expect(conf).toMatch(/^ {4}gzip on;$/m)
+    expect(conf).not.toMatch(/^\s*brotli/m)
+    expect(conf).not.toMatch(/load_module/)
+  })
+})
+
 describe('deploy/strfry/docker-compose.strfry.yml, Task E3 healthcheck', () => {
   const compose = read('deploy/strfry/docker-compose.strfry.yml')
 

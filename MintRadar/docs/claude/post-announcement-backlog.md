@@ -23,7 +23,7 @@ What is planned after the public announcement. Nothing in the "By feedback only"
 | Start-up order | `app.listen` before `initDb`, with a test |
 | "proofs" wording | Compare "Backup" tooltip (done in task E1) |
 | `h7` aggregate | `EXPLAIN (ANALYZE, BUFFERS)` on the production database for the 7-day aggregate before deciding on an index `mint_history(checked_at)` |
-| brotli on nginx | About -0.1 s on `/stats`; needs the module and a server apply |
+| brotli on nginx | **Declined 2026-10-25** (needs a third-party nginx module; minimal external dependencies). Built-in `gzip_static` with build-time gzip -9 instead, see `deploy-and-infra.md`, "Precompressed .gz assets". |
 | Inline critical CSS | Render-blocking today; needs a CSP check |
 
 ## By feedback only
