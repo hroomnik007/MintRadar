@@ -94,6 +94,9 @@ export function keysetDates(id: string, active: boolean, data: MintChangesData |
   if (!data) return null
   // A keyset seen once (not confirmed) has no date yet: only the pending tag (keysetPending) shows.
   if (data.pending?.diff.some(c => c.type === 'keyset_added' && aboutKeyset(c.newValue, id))) return null
+  // Any other change of the keyset waiting for its confirmation: only confirmed dates may show, never a guess from the
+  // tracking start or the first sighting ("Active since before ...", "first seen inactive ...") next to the pending tag.
+  const pendingHere = data.pending?.diff.some(c => c.type.startsWith('keyset_') && keysetChange(c, id)) ?? false
   const mine = chronological(data.changes.filter(c => !isMerged(c) && keysetChange(c, id) && Number.isFinite(ms(c.firstSeenAt))))
   const seen = data.keysetsSeen.find(k => k.id === id) ?? null
   const tracking = data.trackingSince !== null && Number.isFinite(ms(data.trackingSince)) ? data.trackingSince : null
@@ -101,9 +104,9 @@ export function keysetDates(id: string, active: boolean, data: MintChangesData |
   // The start of the (last) active period: a reactivation before the deactivation, else the addition, else the first sighting.
   const startChange = [...mine].reverse().find(c => (c.type === 'keyset_reactivated' || c.type === 'keyset_added')
     && (deactivated === null || active || ms(c.firstSeenAt) <= ms(deactivated.firstSeenAt))) ?? null
-  const startIso = startChange?.firstSeenAt ?? seen?.firstSeenAt ?? null
+  const startIso = startChange?.firstSeenAt ?? (pendingHere ? null : seen?.firstSeenAt ?? null)
   // Already there when tracking started: no change dates it, and it was first seen no later than the tracking start.
-  const beforeTracking = startChange === null && tracking !== null && (startIso === null || ms(startIso) <= ms(tracking))
+  const beforeTracking = !pendingHere && startChange === null && tracking !== null && (startIso === null || ms(startIso) <= ms(tracking))
   const start = beforeTracking ? dateMark(tracking!, now) : startChange !== null ? changeMark(startChange, now) : startIso !== null ? dateMark(startIso, now) : null
   const startLabel = start ? `${beforeTracking ? 'before ' : ''}${start.label}` : null
   const startTitle = start ? (beforeTracking ? `Already there when MintRadar started tracking this mint on ${start.title}` : `First seen ${start.title}`) : null
@@ -119,7 +122,7 @@ export function keysetDates(id: string, active: boolean, data: MintChangesData |
       title: [startTitle, `Inactive since ${to.title}`].filter(Boolean).join('; '),
     }
   }
-  if (!seen) return null
+  if (!seen || pendingHere) return null
   const first = dateMark(seen.firstSeenAt, now)
   return { text: `inactive, first seen inactive ${first.label}`, title: `First seen (already inactive) ${first.title}` }
 }
@@ -204,7 +207,8 @@ export function feeDates(unit: string, data: MintChangesData | null | undefined,
   const newPpk = p ? parseFeeText(p.newValue)?.[unit] : undefined
   return {
     since: sinceChange !== null ? changeMark(sinceChange, now) : null,
-    unchangedSince: sinceChange === null && tracking !== null ? dateMark(tracking, now) : null,
+    // A fee change of the unit waiting for its confirmation: never "unchanged since" next to the pending tag.
+    unchangedSince: sinceChange === null && !p && tracking !== null ? dateMark(tracking, now) : null,
     history,
     pending: p ? pendingMark(p, now, newPpk !== undefined ? `New fee ${feeValueText(newPpk, unit)}` : 'Fee change') : null,
   }
