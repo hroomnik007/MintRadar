@@ -206,6 +206,74 @@ describe('MintFeesLimits with change dates', () => {
   })
 })
 
+describe('after the backfill deploy (mint.lnpay.cz): pending keyset and fee changes, keysetsSeen present', () => {
+  // The backfill stores the last keysets check as pending: 01cbb9 added (active, 200 ppk), 004558 deactivated, fee sat 100 -> 200.
+  const NEW = '01cbb9af40e36ae5eff136308e1052c46f49837121dacf117845ec760bcefb1ac9'
+  const OLD = '004558e8362903b1'
+  const FREE = '00534ab3e6b75ca1'
+  const SEEN_AT = '2026-10-25T10:00:00.000Z'
+  const lnpay = (changes: MintChange[] = []) => data({
+    trackingSince: '2026-10-20T21:35:03.220Z',
+    changes,
+    pending: { firstSeenAt: SEEN_AT, diff: [
+      { type: 'keyset_added', field: 'keysets', oldValue: null, newValue: `${NEW} (sat, active, 200 ppk)`, firstSeenAt: SEEN_AT },
+      { type: 'keyset_deactivated', field: 'keysets', oldValue: `${OLD} (sat, active, 100 ppk)`, newValue: `${OLD} (sat, inactive, 100 ppk)`, firstSeenAt: SEEN_AT },
+      { type: 'input_fee_changed', field: 'fees', oldValue: 'sat: 100 ppk', newValue: 'sat: 200 ppk', firstSeenAt: SEEN_AT },
+    ] },
+    keysetsSeen: [
+      { id: NEW, firstSeenAt: '2026-10-20T21:35:03.220Z', lastSeenAt: SEEN_AT },
+      { id: OLD, firstSeenAt: '2026-10-20T21:35:03.220Z', lastSeenAt: SEEN_AT },
+      { id: FREE, firstSeenAt: '2026-10-20T21:35:03.220Z', lastSeenAt: SEEN_AT },
+    ],
+  })
+
+  it('the new keyset shows only the pending tag, never "Active since before ..."', () => {
+    expect(keysetDates(NEW, true, lnpay(), NOW)).toBeNull()
+    expect(keysetPending(NEW, lnpay(), NOW)?.text).toBe(`seen 2h ago, ${NOT_CONFIRMED}`)
+  })
+
+  it('the deactivated keyset shows only the pending tag, never "first seen inactive ..." or a range', () => {
+    expect(keysetDates(OLD, false, lnpay(), NOW)).toBeNull()
+    expect(keysetDates(OLD, true, lnpay(), NOW)).toBeNull()
+    expect(keysetPending(OLD, lnpay(), NOW)?.title).toMatch(/^Deactivation seen once/)
+  })
+
+  it('a keyset the pending change does not touch keeps its dates', () => {
+    expect(keysetDates(FREE, false, lnpay(), NOW)?.text).toBe(`inactive, first seen inactive ${lbl('2026-10-20T21:35:03.220Z')}`)
+    expect(keysetPending(FREE, lnpay(), NOW)).toBeNull()
+  })
+
+  it('a confirmed earlier date of the keyset stays next to the pending tag', () => {
+    const d = lnpay([ch('keyset_added', null, `${OLD} (sat, active, 100 ppk)`, '2026-10-21T09:00:00Z')])
+    expect(keysetDates(OLD, true, d, NOW)?.text).toBe(`Active since ${lbl('2026-10-21T09:00:00Z')}`)
+  })
+
+  it('the sat fee shows only the pending tag, never "unchanged since ..."', () => {
+    const f = feeDates('sat', lnpay(), NOW)!
+    expect(f.unchangedSince).toBeNull()
+    expect(f.since).toBeNull()
+    expect(f.pending?.text).toBe(`seen 2h ago, ${NOT_CONFIRMED}`)
+    expect(f.pending?.title).toMatch(/New fee 200 ppk/)
+  })
+
+  it('a previous confirmed fee change still dates "since" and keeps its history next to the pending tag', () => {
+    const f = feeDates('sat', lnpay([ch('input_fee_changed', 'sat: 0 ppk', 'sat: 100 ppk', '2026-10-22T09:00:00Z', 'fees')]), NOW)!
+    expect(f.since?.label).toBe(lbl('2026-10-22T09:00:00Z'))
+    expect(f.unchangedSince).toBeNull()
+    expect(f.history).toHaveLength(1)
+    expect(f.pending).not.toBeNull()
+  })
+
+  it('the Fees and limits card renders the tag and no "unchanged since" for sat', () => {
+    render(<MintFeesLimits keysets={[{ unit: 'sat', active: true, inputFeePpk: 200 }]} keysetsPending={false} units={['sat']} mintMethods={[]} meltMethods={[]}
+      disabled={{ mint: false, melt: false }} fetchedAt={null} now={NOW} changes={lnpay()} />)
+    const sat = screen.getByTestId('fee-row-sat')
+    expect(sat.querySelector('[data-testid="fee-unchanged"]')).toBeNull()
+    expect(sat.querySelector('[data-testid="fee-since"]')).toBeNull()
+    expect(sat.querySelector('[data-testid="pending-tag"]')?.textContent).toBe(`seen 2h ago, ${NOT_CONFIRMED}`)
+  })
+})
+
 describe('the Changes panel is gone and the record buttons match', () => {
   const src = (p: string) => readFileSync(resolve(__dirname, '..', p), 'utf8')
   it('Mint Detail no longer renders the change log panel', () => {
