@@ -267,7 +267,7 @@ test.describe('W5b D: Signed health record', () => {
       expect(m.out).toEqual([])
       // the new controls are at least as tall as the existing copy buttons (they set the row's target size today)
       expect(m.copy).toBeGreaterThan(0)
-      expect(m.view).toBeGreaterThanOrEqual(m.copy)
+      expect(m.view, '"View on Nostr" is exactly as tall as "Copy naddr"').toBe(m.copy)
       expect(m.summary).toBeGreaterThanOrEqual(m.copy)
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     })
