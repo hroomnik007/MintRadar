@@ -110,7 +110,6 @@ describe('title attributes are not used for explanations', () => {
     ['pages/NutExplorer.tsx', /title=\{url\}/, 'the full URL behind an ellipsis'],
     ['pages/Tools.tsx', /title="Opens the Cashu redeem page/, 'the host is a link; a button inside it would nest controls'],
     ['pages/Dashboard.tsx', /title=\{(displayName|getHostname\(mint\.url\)|lookupResult\.url|p\.url)\}|title="(Card view|List view|Reset filters & refresh)"/, 'repeats visible text / labels an icon-only button'],
-    ['components/mint/MintChangeLog.tsx', /title=\{formatDateTimeUtc\(c\.(observedAt|firstSeenAt)\)\}/, 'the absolute UTC time behind a relative time ("2h ago") in the change log'],
     ['pages/MintDetail.tsx', /title="(Copy full keyset ID|Copy full public key|Copy URL|Copy|Copy reviewer npub|Open this review on Nostr|Copy link to this review|Mint clock vs this browser|Last swaps, newest first)"|title=\{(isWatching|resolvedNameFull|`Add|`Remove|trackedIsOnion|s\.neutral|AUDIT_CZ_NEUTRAL_TITLE|line\.time\.title|formatDateTimeUtc\(knownMint\.lastCheckedAt\))|\{ title: (resolvedNameFull|AUDIT_CZ_NEUTRAL_TITLE)/, 'labels of icon-only buttons; the Tor chip sits inside the copy-URL button; the swap bar marks are chart-like hover values; table rows cannot hold a button; the absolute time behind a relative time ("3 min ago") in the score source lines and the unavailable block'],
   ]
 

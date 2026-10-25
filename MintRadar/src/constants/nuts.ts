@@ -61,7 +61,7 @@ export const NUT_META: Record<string, NutMeta> = {
   'NUT-07': { short: 'Token state', desc: 'Checking whether a coin has been spent or is still valid.', specNum: '07' },
   'NUT-08': { short: 'Overpay melt', desc: 'Overpaying melt fees and receiving change tokens back.', specNum: '08' },
   'NUT-09': { short: 'Restore', desc: 'Restoring blinded signatures from mint backup data.', specNum: '09' },
-  'NUT-10': { short: 'Spending conditions', desc: 'Spending conditions that must be met to use a proof.', specNum: '10' },
+  'NUT-10': { short: 'Spending conditions', desc: 'Spending conditions that must be met to use a coin.', specNum: '10' },
   'NUT-11': { short: 'Pay-to-PK', desc: 'Lock tokens to a specific public key for secure transfers.', specNum: '11' },
   'NUT-12': { short: 'DLEQ proofs', desc: 'Discrete Log Equality proofs for verifiable blind signatures.', specNum: '12' },
   'NUT-14': { short: 'HTLCs', desc: 'Hash Time Locked Contracts for atomic swaps.', specNum: '14' },
