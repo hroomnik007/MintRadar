@@ -36,6 +36,14 @@ export function mobileCollapseApplies(opts: { isPhone: boolean; expanded: boolea
 }
 
 /**
+ * Whether an expanded phone list offers "Show less" (2026-10-25): exactly when the cut would apply again if the
+ * expanded flag were cleared (phone, default view). A search or filter shows everything anyway, so no button there.
+ */
+export function showLessApplies(opts: { isPhone: boolean; expanded: boolean; search: string; activeFilterCount: number; status: string }): boolean {
+  return opts.expanded && mobileCollapseApplies({ ...opts, expanded: false })
+}
+
+/**
  * The "Showing X of Y" line under the list. Uncollapsed (desktop, tablet, any search/filter, an expanded phone
  * list) it is unchanged: "Showing {shown} of {total}". While the phone cut is on, Y would be every tracked mint
  * (e.g. 62) right next to "Show all 50" (online), which reads as a contradiction, so it counts online mints only:

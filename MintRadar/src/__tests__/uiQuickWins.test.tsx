@@ -8,7 +8,7 @@ vi.mock('@/core/nostr/pool', () => ({
   sharedPool: { querySync: () => new Promise<never>(() => undefined), subscribeMany: () => ({ close: () => undefined }) },
 }))
 
-import { collapseOnline, showingNoteText, mobileCollapseApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY } from '@/utils/mobileCollapse'
+import { collapseOnline, showingNoteText, mobileCollapseApplies, showLessApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY } from '@/utils/mobileCollapse'
 import { archivedUrlSet, withoutArchivedMovers } from '@/utils/reliabilityMovers'
 import { CopyTextButton } from '@/components/mint/CopyTextButton'
 import { COMPARE_AUDIT_LABEL } from '@/utils/compareLabels'
@@ -61,6 +61,17 @@ describe('phone dashboard cut (collapseOnline)', () => {
     expect(mobileCollapseApplies({ ...base, activeFilterCount: 1 })).toBe(false)
     expect(mobileCollapseApplies({ ...base, status: 'all' })).toBe(false)
     expect(MOBILE_COLLAPSE_QUERY).toBe('(max-width: 640px)')
+  })
+  it('offers "Show less" only on an expanded phone default view', () => {
+    const expanded = { isPhone: true, expanded: true, search: '', activeFilterCount: 0, status: 'online' }
+    expect(showLessApplies(expanded)).toBe(true)
+    expect(showLessApplies({ ...expanded, expanded: false })).toBe(false)
+    // Desktop / tablet unchanged: never a button, even with the session flag left over from a phone-width window.
+    expect(showLessApplies({ ...expanded, isPhone: false })).toBe(false)
+    // A search or filter already shows every result, so there is nothing to collapse back to.
+    expect(showLessApplies({ ...expanded, search: 'x' })).toBe(false)
+    expect(showLessApplies({ ...expanded, activeFilterCount: 2 })).toBe(false)
+    expect(showLessApplies({ ...expanded, status: 'all' })).toBe(false)
   })
 })
 

@@ -23,7 +23,7 @@ import { ratingSortKey } from '@/utils/bayesianRating'
 import { isNotRecommendedMint, partitionNotRecommended } from '@/utils/notRecommended'
 import { cleanMintName } from '@/utils/cleanMintName'
 import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolForStatus } from '@/utils/mintCounts'
-import { collapseOnline, showingNoteText, mobileCollapseApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY, MOBILE_EXPANDED_KEY } from '@/utils/mobileCollapse'
+import { collapseOnline, showingNoteText, mobileCollapseApplies, showLessApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY, MOBILE_EXPANDED_KEY } from '@/utils/mobileCollapse'
 import { useMediaQuery } from '@/hooks/useIsMobile'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { isNutDeclaredSupported } from '@/utils/nutSupport'
@@ -348,10 +348,21 @@ function ShowAllButton({ total, onClick }: { total: number; onClick: () => void 
   )
 }
 
+/** End of an expanded phone list: collapses back to the first MOBILE_COLLAPSED_ONLINE online mints. */
+function ShowLessButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" className="show-all-mints-btn" data-testid="show-less-mints" onClick={onClick}>
+      Show less
+    </button>
+  )
+}
+
 interface EmptyStateProps {
   /** Phone default view: cap the online mints at this many (mobileCollapse.ts); null = show all. */
   collapseOnlineTo?: number | null
   onShowAll?: (() => void) | undefined
+  /** Expanded phone default view only (showLessApplies); undefined on tablet/desktop and with a search/filter. */
+  onShowLess?: (() => void) | undefined
   filtersActive?: boolean
   onClearSearch?: (() => void) | undefined
   onResetFilters?: (() => void) | undefined
@@ -373,6 +384,7 @@ function MintListView({
   onAddMint,
   collapseOnlineTo = null,
   onShowAll,
+  onShowLess,
 }: {
   mints: KnownMint[]
   search: string
@@ -476,6 +488,7 @@ function MintListView({
         </table>
       </div>
       {collapsed && onShowAll && <ShowAllButton total={onlineTotal} onClick={onShowAll} />}
+      {!collapsed && onShowLess && onlineTotal > MOBILE_COLLAPSED_ONLINE && <ShowLessButton onClick={onShowLess} />}
       <div className="grid-showing-note" style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center', marginTop: 16, fontFamily: 'var(--font-mono)' }}>
         {showingNoteText(shown, totalAll || sortedFiltered.length, { collapsed, onlineTotal })}
         <UnitHiddenNote excluded={unitExcluded} selected={unitSelected} search={search} />
@@ -506,6 +519,7 @@ function MintGrid({
   onAddMint,
   collapseOnlineTo = null,
   onShowAll,
+  onShowLess,
 }: {
   mints: KnownMint[]
   search: string
@@ -571,6 +585,7 @@ function MintGrid({
         ))}
       </div>
       {collapsed && onShowAll && <ShowAllButton total={onlineTotal} onClick={onShowAll} />}
+      {!collapsed && onShowLess && onlineTotal > MOBILE_COLLAPSED_ONLINE && <ShowLessButton onClick={onShowLess} />}
       <div className="grid-showing-note" style={{fontSize:13,color:'var(--text3)',textAlign:'center',marginTop:16,fontFamily:'var(--font-mono)'}}>
         {showingNoteText(shown, totalAll || sortedFiltered.length, { collapsed, onlineTotal })}
         <UnitHiddenNote excluded={unitExcluded} selected={unitSelected} search={search} />
@@ -782,6 +797,23 @@ export default function Dashboard() {
     setMobileExpanded(true)
     try { sessionStorage.setItem(MOBILE_EXPANDED_KEY, '1') } catch { /* private mode: expanded for this view only */ }
   }
+  const showLess = showLessApplies({ isPhone, expanded: mobileExpanded, search, activeFilterCount, status: activeFilters.status })
+  // "Show less" sits at the end of a long list; after the collapse the page is much shorter and the visitor would
+  // land near the footer, so the effect below brings the top of the mint list back into view (smooth, or instant
+  // with reduced motion) and moves focus to the "Show all N" button that replaces the one they pressed.
+  const collapseScrollPending = useRef(false)
+  function showFewerMints(): void {
+    try { sessionStorage.removeItem(MOBILE_EXPANDED_KEY) } catch { /* private mode: nothing stored */ }
+    collapseScrollPending.current = true
+    setMobileExpanded(false)
+  }
+  useEffect(() => {
+    if (!collapseScrollPending.current || collapseOnlineTo === null) return
+    collapseScrollPending.current = false
+    const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    gridAnchorRef.current?.scrollIntoView?.({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+    document.querySelector<HTMLButtonElement>('[data-testid="show-all-mints"]')?.focus({ preventScroll: true })
+  }, [collapseOnlineTo])
   function openSubmit(): void {
     setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setProbe({ url: '', state: 'error', result: null }); setNostrLookup({ input: '', outcome: 'empty', url: '' }); setBulkInput(''); setBulkSettled(''); setBulkError(null); setBulkSkipped(0); setBulkProgress([]); setBulkRunning(false); setBulkDone(false); setBulkRateLimitMsg(null)
   }
@@ -1529,6 +1561,7 @@ export default function Dashboard() {
               mints={filteredMints}
               collapseOnlineTo={collapseOnlineTo}
               onShowAll={showAllMints}
+              onShowLess={showLess ? showFewerMints : undefined}
               filtersActive={activeFilterCount > 0}
               onClearSearch={clearSearch}
               onResetFilters={resetFilters}
@@ -1546,6 +1579,7 @@ export default function Dashboard() {
               mints={filteredMints}
               collapseOnlineTo={collapseOnlineTo}
               onShowAll={showAllMints}
+              onShowLess={showLess ? showFewerMints : undefined}
               filtersActive={activeFilterCount > 0}
               onClearSearch={clearSearch}
               onResetFilters={resetFilters}
