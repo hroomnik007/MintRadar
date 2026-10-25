@@ -31,7 +31,6 @@ let app: Express
 let query: ReturnType<typeof vi.fn>
 let safeFetch: ReturnType<typeof vi.fn>
 
-const iconEtag = (b: Buffer): string => `"${createHash('sha256').update(b).digest('hex').slice(0, 32)}"`
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3])
 
 function fakeRes(opts: { ok?: boolean; contentType?: string; body?: Buffer }) {
@@ -215,79 +214,5 @@ describe('GET /api/mint/icon', () => {
         expect(res.status).not.toBe(429)
       })
     }
-  })
-
-  describe('resized variants (?s=64|128, iconResize.ts)', () => {
-    const ICON_URL = '/api/mint/icon?url=https://resize.example'
-    let BIG_PNG: Buffer
-    beforeEach(async () => {
-      const sharp = (await import('sharp')).default
-      // A noisy 512×512 RGBA PNG: big, like the logos mints really ship.
-      const raw = Buffer.alloc(512 * 512 * 4)
-      for (let i = 0; i < raw.length; i++) raw[i] = (i * 2654435761) >>> 24
-      BIG_PNG = await sharp(raw, { raw: { width: 512, height: 512, channels: 4 } }).png().toBuffer()
-      query.mockResolvedValue({ rows: [{ icon_url: 'https://resize.example/logo.png' }] })
-      safeFetch.mockResolvedValue(fakeRes({ contentType: 'image/png', body: BIG_PNG }))
-    })
-
-    it('serves WebP bounded to 64 px when Accept lists image/webp, with Vary: Accept and its own ETag', async () => {
-      const sharp = (await import('sharp')).default
-      const res = await request(app).get(`${ICON_URL}&s=64`).set('Accept', 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8')
-        .buffer(true).parse((r, cb) => { const c: Buffer[] = []; r.on('data', (d: Buffer) => c.push(d)); r.on('end', () => cb(null, Buffer.concat(c))) })
-        .expect(200)
-      expect(res.headers['content-type']).toBe('image/webp')
-      expect(res.headers['vary']).toMatch(/(^|, )Accept(,|$)/)
-      expect(res.headers['cache-control']).toBe('public, max-age=604800, stale-while-revalidate=86400')
-      expect(res.headers['content-security-policy']).toBe("default-src 'none'; sandbox")
-      const body = res.body as Buffer
-      expect(body.length).toBeLessThan(BIG_PNG.length / 4)
-      expect(res.headers['etag']).toBe(`"${createHash('sha256').update(body).digest('hex').slice(0, 32)}"`)
-      const meta = await sharp(body).metadata()
-      expect(meta.format).toBe('webp')
-      expect(meta.width).toBe(64)
-      expect(meta.height).toBe(64)
-    })
-
-    it('falls back to PNG (128 px) for a client without image/webp, and 304s its variant ETag', async () => {
-      const sharp = (await import('sharp')).default
-      const res = await request(app).get(`${ICON_URL}&s=128`).set('Accept', '*/*')
-        .buffer(true).parse((r, cb) => { const c: Buffer[] = []; r.on('data', (d: Buffer) => c.push(d)); r.on('end', () => cb(null, Buffer.concat(c))) })
-        .expect(200)
-      expect(res.headers['content-type']).toBe('image/png')
-      const meta = await sharp(res.body as Buffer).metadata()
-      expect(meta.format).toBe('png')
-      expect(meta.width).toBe(128)
-      const again = await request(app).get(`${ICON_URL}&s=128`).set('Accept', '*/*').set('If-None-Match', res.headers['etag'] as string).expect(304)
-      expect(again.headers['vary']).toMatch(/(^|, )Accept(,|$)/)
-      expect(safeFetch).toHaveBeenCalledTimes(1) // source cached, variant cached
-    })
-
-    it('keeps serving the original bytes without ?s, or with an unsupported size', async () => {
-      for (const q of ['', '&s=32', '&s=abc', '&s=128px']) {
-        const res = await request(app).get(`${ICON_URL}${q}`).set('Accept', 'image/webp').expect(200)
-        expect(res.headers['content-type']).toBe('image/png')
-        expect(res.headers['etag']).toBe(iconEtag(BIG_PNG))
-        expect(res.headers['vary'] ?? '').not.toMatch(/Accept/)
-      }
-    })
-
-    it('serves the original when the image cannot be decoded (e.g. ICO, corrupt) — never a 204 for a resize failure', async () => {
-      safeFetch.mockResolvedValue(fakeRes({ contentType: 'image/png', body: PNG })) // magic bytes only, not a real PNG
-      const res = await request(app).get('/api/mint/icon?url=https://corrupt.example&s=64').set('Accept', 'image/webp').expect(200)
-      expect(res.headers['content-type']).toBe('image/png')
-      expect(res.headers['etag']).toBe(iconEtag(PNG))
-    })
-
-    it('serves the original when sharp is unavailable (native binary missing)', async () => {
-      const resize = await import('../../iconResize.js')
-      resize._setSharpForTests(null)
-      try {
-        const res = await request(app).get(`${ICON_URL}&s=64`).set('Accept', 'image/webp').expect(200)
-        expect(res.headers['content-type']).toBe('image/png')
-        expect(res.headers['etag']).toBe(iconEtag(BIG_PNG))
-      } finally {
-        resize._setSharpForTests(undefined)
-      }
-    })
   })
 })

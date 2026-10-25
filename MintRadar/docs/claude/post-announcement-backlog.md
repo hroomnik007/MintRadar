@@ -40,7 +40,7 @@ Do not start without a reason from users or wallet teams.
 | Watchlist without login | |
 | DM notification settings | **DO NOT BUILD** (Task E5). Triggers unchanged: dozens of subscribers, a complaint, or a flapping mint with a subscription (mute was dropped on 2026-10-02). Smallest step when a trigger comes: two separate pills for key rotation and fee change, then a global pause. No digest, no quiet hours without a reason. |
 | Atomic deploy | |
-| Icon resize | **Done 2026-10-25** (Stage 2 perf): sharp in the backend, `?s=64|128` WebP/PNG variants; see `backend-api-and-data.md`, "Icon resize variants". |
+| Icon resize | **Declined 2026-10-25:** built in Stage 2 with `sharp`, reverted before release (minimal external dependencies). Icons get a 7-day cache + `stale-while-revalidate` + ETag, `loading=lazy`, `decoding=async`, width/height instead. Revisit only with a dependency-free approach. |
 | Deferring vendor-nostr and vendor-db | **Done 2026-10-25** (Stage 2 perf): out of the initial modulepreload, loaded on first use / after first paint; see `deploy-and-infra.md`, "Code splitting & bundle layout". |
 | SSR | |
 | JetBrains Mono | |

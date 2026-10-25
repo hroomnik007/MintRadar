@@ -22,7 +22,7 @@ describe('MintFavicon', () => {
     )
     const img = container.querySelector('img')
     expect(img).not.toBeNull()
-    expect(img!.getAttribute('src')).toBe('/api/mint/icon?url=https%3A%2F%2Fmint.example&s=64')
+    expect(img!.getAttribute('src')).toBe('/api/mint/icon?url=https%3A%2F%2Fmint.example')
     // The attacker-controlled URL must not appear anywhere in the rendered output.
     expect(container.innerHTML).not.toContain('tracker.evil.example')
   })
@@ -32,21 +32,19 @@ describe('MintFavicon', () => {
       <MintFavicon url="https://mint.example:3338/Bitcoin" iconUrl="https://mint.example/i.png" />,
     )
     expect(container.querySelector('img')!.getAttribute('src')).toBe(
-      `/api/mint/icon?url=${encodeURIComponent('https://mint.example:3338/Bitcoin')}&s=64`,
+      `/api/mint/icon?url=${encodeURIComponent('https://mint.example:3338/Bitcoin')}`,
     )
   })
 
-  it('asks the proxy for a resized variant per screen density, async-decoded and lazy', () => {
+  it('is lazy, decodes off the main thread and reserves its box (no layout shift, no srcset/resize param)', () => {
     const { container } = render(<MintFavicon url="https://mint.example" iconUrl="https://mint.example/i.png" size={38} />)
     const img = container.querySelector('img')!
-    const u = '/api/mint/icon?url=https%3A%2F%2Fmint.example'
-    expect(img.getAttribute('src')).toBe(`${u}&s=64`)
-    expect(img.getAttribute('srcset')).toBe(`${u}&s=64 1x, ${u}&s=128 2x, ${u}&s=128 3x`)
-    expect(img.getAttribute('decoding')).toBe('async')
     expect(img.getAttribute('loading')).toBe('lazy')
+    expect(img.getAttribute('decoding')).toBe('async')
     expect(img.getAttribute('width')).toBe('38')
     expect(img.getAttribute('height')).toBe('38')
-    expect(container.innerHTML).not.toContain('mint.example/i.png')
+    expect(img.hasAttribute('srcset')).toBe(false)
+    expect(img.getAttribute('src')).not.toContain('&s=')
   })
 
   it('renders a two-letter hostname monogram (no <img>) when the mint has no icon', () => {
