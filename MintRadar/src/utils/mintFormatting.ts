@@ -421,10 +421,14 @@ export interface ReliabilityScoreInfo {
 }
 
 // reliabilityScoreInfo: full badge object for the MintDetail panel
+export const LOW_RELIABILITY_TEXT = 'color-mix(in srgb, var(--red) 75%, var(--text))'
+
 export function reliabilityScoreInfo(score: number): ReliabilityScoreInfo {
   if (score >= 70) return { label: 'High Reliability',     color: 'var(--accent)', bg: 'var(--green-soft)',  border: 'var(--green-soft-strong)'  }
   if (score >= 40) return { label: 'Moderate Reliability', color: 'var(--amber)', bg: 'var(--amber-soft)',   border: 'var(--amber-soft-strong)'   }
-  return                  { label: 'Low Reliability',      color: 'var(--red)', bg: 'var(--red-soft)',   border: 'var(--red-soft-strong)'   }
+  // Low: --red mixed toward --text (2026-10-25). Plain --red on --red-soft over a raised surface was 3.96:1 (axe on an
+  // archived mint's detail page); the 75 % mix is ~5.3:1 there, the same text tone as the Stats "down" movers.
+  return                  { label: 'Low Reliability',      color: LOW_RELIABILITY_TEXT, bg: 'var(--red-soft)',   border: 'var(--red-soft-strong)'   }
 }
 
 // What Mint Detail shows instead of a score while a mint WITHOUT a stored score is still missing the 24 h history its

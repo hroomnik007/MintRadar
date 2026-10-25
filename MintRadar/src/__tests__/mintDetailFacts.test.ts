@@ -164,7 +164,7 @@ describe('honest single-sample labels', () => {
   })
 })
 
-describe('Audit row value: the same "x / y" as Compare\'s "Audit success"', () => {
+describe('Audit row value: the same "x / y" as Compare\'s "No mint fault (7d)"', () => {
   // mint.lnpay.cz on 2026-10-25: offline, stored cashu.info 7-day figures auditCzTotal 13, auditCzBlamed 0, stored audit 25/25.
   const LNPAY_STORED: StoredScoreBreakdown = {
     uptime: { points: 0, max: 40 }, audit: { points: 25, max: 25 }, nuts: { points: 15, max: 15 },

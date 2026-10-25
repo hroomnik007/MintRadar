@@ -1,3 +1,4 @@
+import { archivedUrlSet, withoutArchivedMovers } from '@/utils/reliabilityMovers'
 import { outdatedSoftwareText, TRACKING_HISTORY_TEXT } from '@/utils/tooltipTexts'
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
@@ -733,6 +734,8 @@ export default function Stats() {
   // isPending is true only with no data at all (first load); once keepPreviousData
   // has something to show it flips false and isFetching carries the refresh state.
   const moversLoading = moversPending
+  const archivedUrls = useMemo(() => archivedUrlSet(knownMintsData), [knownMintsData])
+  const moversShown = useMemo(() => withoutArchivedMovers(moversData, archivedUrls), [moversData, archivedUrls])
   const moversRefreshing = moversFetching && !moversPending
 
   const versionDist = useMemo(() => {
@@ -1213,7 +1216,7 @@ export default function Stats() {
         <ReliabilityMoversPanel
           period={moversPeriod}
           onPeriodChange={setMoversPeriod}
-          data={moversData}
+          data={moversShown}
           loading={moversLoading}
           refreshing={moversRefreshing}
           onMintClick={url => navigate(`/mint/${encodeURIComponent(url)}`)}

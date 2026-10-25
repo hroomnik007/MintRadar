@@ -1,4 +1,4 @@
-import { INPUT_FEE_TEXT, compareAuditSuccessText } from '@/utils/tooltipTexts'
+import { INPUT_FEE_TEXT, compareAuditSuccessText, COMPARE_NUT_SUPPORT_TEXT } from '@/utils/tooltipTexts'
 import { useEffect, useMemo, useState } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import {
@@ -12,7 +12,7 @@ import { type KnownMint } from '@/hooks/useKnownMints'
 import { classifyMintVersion, latestMapFor } from '@/utils/versionRule'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { AUDIT_MIN_SAMPLES, auditDataState } from '@/utils/auditScore'
-import { auditReliabilityColor, formatTimeAgo } from '@/utils/mintFormatting'
+import { auditReliabilityColor, formatTimeAgo, LOW_RELIABILITY_TEXT } from '@/utils/mintFormatting'
 import { useNow } from '@/hooks/useNow'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { formatDate } from '@/utils/formatDate'
@@ -22,12 +22,12 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { IcClose } from '@/components/IcClose'
 import './ComparisonModal.css'
 import { auditSuccessText, storedKeysetsAsLive } from '@/utils/mintDetailFacts'
-import { COMPARE_UPTIME_LABEL, COMPARE_LATENCY_LABEL, COMPARE_LATENCY_TITLE } from '@/utils/compareLabels'
+import { COMPARE_UPTIME_LABEL, COMPARE_LATENCY_LABEL, COMPARE_LATENCY_TITLE, COMPARE_AUDIT_LABEL } from '@/utils/compareLabels'
 
 function reliabilityScoreInfo(score: number) {
   if (score >= 70) return { label: 'High Reliability', color: 'var(--accent)', bg: 'var(--green-soft)', border: 'var(--green-soft-strong)' }
   if (score >= 40) return { label: 'Moderate Reliability', color: 'var(--amber)', bg: 'var(--amber-soft)', border: 'var(--amber-soft-strong)' }
-  return { label: 'Low Reliability', color: 'var(--red)', bg: 'var(--red-soft)', border: 'var(--red-soft-strong)' }
+  return { label: 'Low Reliability', color: LOW_RELIABILITY_TEXT, bg: 'var(--red-soft)', border: 'var(--red-soft-strong)' }
 }
 
 function uptimeColor(pct: number | null | undefined): string {
@@ -37,7 +37,7 @@ function uptimeColor(pct: number | null | undefined): string {
   return 'var(--red)'
 }
 
-// "Audit success" row — the same cashu.info 7-day window, minimum-sample floor and staleness
+// Audit row (COMPARE_AUDIT_LABEL, "No mint fault (7d)"; was "Audit success") — the same cashu.info 7-day window, minimum-sample floor and staleness
 // rule the Reliability Score's audit part scores on (auditDataState() from shared/auditScore.ts), so
 // the row never disagrees with the Mint Detail breakdown. "Successes" here means swaps not
 // attributed to the mint (cashu.info attributes only the failures the mint caused).
@@ -381,7 +381,10 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                   </div>
 
                   <div className="cmp-mobile-row cmp-mobile-row-wrap">
-                    <span className="cmp-mobile-lbl">NUT Support</span>
+                    <span className="cmp-mobile-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      NUT Support
+                      <InfoTooltip iconSize={11} width={220} about="NUT Support" text={COMPARE_NUT_SUPPORT_TEXT} />
+                    </span>
                     <span className="cmp-mobile-val">
                       {TRACKED_NUT_KEYS.map(key => {
                         const supported = d.nutsLimits[key] != null
@@ -406,8 +409,8 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
 
                   <div className="cmp-mobile-row">
                     <span className="cmp-mobile-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      Audit success
-                      <InfoTooltip iconSize={11} width={200} about="Audit success" text={compareAuditSuccessText()} />
+                      {COMPARE_AUDIT_LABEL}
+                      <InfoTooltip iconSize={11} width={200} about={COMPARE_AUDIT_LABEL} text={compareAuditSuccessText()} />
                     </span>
                     <span className="cmp-mobile-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: auditSuccessDisplay(mint, now).color }}>
                       {auditSuccessDisplay(mint, now).text}
@@ -539,7 +542,12 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           ))}
 
           {/* ── NUT Support ── */}
-          <div className="cmp-lbl">NUT Support</div>
+          {/* The ⓘ says what green / grey mean (2026-10-25). Note: green is `nutsLimits[key] != null`, so a NUT the mint lists
+              as {supported:false} is green here while the score counts it as unsupported (isNutDeclaredSupported). */}
+          <div className="cmp-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            NUT Support
+            <InfoTooltip iconSize={11} width={220} about="NUT Support" text={COMPARE_NUT_SUPPORT_TEXT} />
+          </div>
           {mints.map((mint, i) => {
             const d = allData[i]!
             return (
@@ -572,10 +580,10 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             )
           })}
 
-          {/* ── Audit success (cashu.info 7-day window, same fields/threshold as the Reliability Score's audit part) ── */}
+          {/* ── Audit row, COMPARE_AUDIT_LABEL (cashu.info 7-day window, same fields/threshold as the Reliability Score's audit part) ── */}
           <div className="cmp-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            Audit success
-            <InfoTooltip iconSize={11} width={200} about="Audit success" text={compareAuditSuccessText()} />
+            {COMPARE_AUDIT_LABEL}
+            <InfoTooltip iconSize={11} width={200} about={COMPARE_AUDIT_LABEL} text={compareAuditSuccessText()} />
           </div>
           {mints.map(mint => {
             const audit = auditSuccessDisplay(mint, now)
