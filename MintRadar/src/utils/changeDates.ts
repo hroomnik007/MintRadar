@@ -42,6 +42,18 @@ export function dateMark(iso: string, now: number = Date.now()): DateMark {
   }
 }
 
+/**
+ * The date of a confirmed change: when its new value was first seen (the row label), with the confirming observation
+ * (observedAt, one interval later) added to the title.
+ */
+export function changeMark(c: Pick<MintChange, 'firstSeenAt' | 'observedAt'>, now: number = Date.now()): DateMark {
+  const m = dateMark(c.firstSeenAt, now)
+  const confirmed = c.observedAt && Number.isFinite(Date.parse(c.observedAt)) && c.observedAt !== c.firstSeenAt
+    ? `, confirmed ${formatLocalDateTime(c.observedAt)} (your time) · ${formatDateTimeUtc(c.observedAt)}`
+    : ''
+  return { ...m, title: `${m.title}${confirmed}` }
+}
+
 export function pendingMark(p: PendingMintChange, now: number = Date.now(), what?: string): PendingMark {
   return {
     iso: p.firstSeenAt,
@@ -92,7 +104,7 @@ export function keysetDates(id: string, active: boolean, data: MintChangesData |
   const startIso = startChange?.firstSeenAt ?? seen?.firstSeenAt ?? null
   // Already there when tracking started: no change dates it, and it was first seen no later than the tracking start.
   const beforeTracking = startChange === null && tracking !== null && (startIso === null || ms(startIso) <= ms(tracking))
-  const start = beforeTracking ? dateMark(tracking!, now) : startIso !== null ? dateMark(startIso, now) : null
+  const start = beforeTracking ? dateMark(tracking!, now) : startChange !== null ? changeMark(startChange, now) : startIso !== null ? dateMark(startIso, now) : null
   const startLabel = start ? `${beforeTracking ? 'before ' : ''}${start.label}` : null
   const startTitle = start ? (beforeTracking ? `Already there when MintRadar started tracking this mint on ${start.title}` : `First seen ${start.title}`) : null
 
@@ -101,7 +113,7 @@ export function keysetDates(id: string, active: boolean, data: MintChangesData |
     return { text: `Active since ${startLabel}`, title: startTitle! }
   }
   if (deactivated !== null) {
-    const to = dateMark(deactivated.firstSeenAt, now)
+    const to = changeMark(deactivated, now)
     return {
       text: `${startLabel ?? 'before'} – ${to.label}`.replace(/^before – /, 'until '),
       title: [startTitle, `Inactive since ${to.title}`].filter(Boolean).join('; '),
@@ -159,24 +171,24 @@ export interface FeeDates {
 /** The fee dates of one unit of the Fees and limits card; null when the route has nothing for the mint. */
 export function feeDates(unit: string, data: MintChangesData | null | undefined, now: number = Date.now()): FeeDates | null {
   if (!data) return null
-  const transitions: { at: string; oldPpk: number | undefined }[] = []
-  let mergedAt: string | null = null
+  const transitions: { change: MintChange; oldPpk: number | undefined }[] = []
+  let merged: MintChange | null = null
   for (const c of chronological(data.changes.filter(c => c.type === 'input_fee_changed' && Number.isFinite(ms(c.firstSeenAt))))) {
-    if (isMerged(c)) { mergedAt = c.firstSeenAt; continue }
+    if (isMerged(c)) { merged = c; continue }
     const o = parseFeeText(c.oldValue), n = parseFeeText(c.newValue)
     if (o === null || n === null || o[unit] === n[unit]) continue
-    transitions.push({ at: c.firstSeenAt, oldPpk: o[unit] })
+    transitions.push({ change: c, oldPpk: o[unit] })
   }
-  const lastAt = transitions.length > 0 ? transitions[transitions.length - 1]!.at : null
+  const last = transitions.length > 0 ? transitions[transitions.length - 1]!.change : null
   // A day with more than 20 fee changes is one row without values: it may have changed the unit, so it dates "since" when newer.
-  const sinceIso = mergedAt !== null && (lastAt === null || ms(mergedAt) > ms(lastAt)) ? mergedAt : lastAt
+  const mergedRow = merged as MintChange | null
+  const sinceChange = mergedRow !== null && (last === null || ms(mergedRow.firstSeenAt) > ms(last.firstSeenAt)) ? mergedRow : last
   const tracking = data.trackingSince !== null && Number.isFinite(ms(data.trackingSince)) ? data.trackingSince : null
   const history: FeeHistoryRow[] = []
   transitions.forEach((t, i) => {
     if (t.oldPpk === undefined) return
-    const to = dateMark(t.at, now)
-    const fromIso = i > 0 ? transitions[i - 1]!.at : tracking
-    const from = fromIso !== null ? dateMark(fromIso, now) : null
+    const to = changeMark(t.change, now)
+    const from = i > 0 ? changeMark(transitions[i - 1]!.change, now) : tracking !== null ? dateMark(tracking, now) : null
     const range = from ? `${i === 0 ? 'before ' : ''}${from.label} – ${to.label}` : `until ${to.label}`
     history.unshift({
       ppk: t.oldPpk,
@@ -191,8 +203,8 @@ export function feeDates(unit: string, data: MintChangesData | null | undefined,
   })
   const newPpk = p ? parseFeeText(p.newValue)?.[unit] : undefined
   return {
-    since: sinceIso !== null ? dateMark(sinceIso, now) : null,
-    unchangedSince: sinceIso === null && tracking !== null ? dateMark(tracking, now) : null,
+    since: sinceChange !== null ? changeMark(sinceChange, now) : null,
+    unchangedSince: sinceChange === null && tracking !== null ? dateMark(tracking, now) : null,
     history,
     pending: p ? pendingMark(p, now, newPpk !== undefined ? `New fee ${feeValueText(newPpk, unit)}` : 'Fee change') : null,
   }
@@ -215,7 +227,7 @@ export function infoDates(field: InfoField, data: MintChangesData | null | undef
   const type = INFO_TYPES[field]
   const c = latest(data.changes, type)
   const p = data.pending?.diff.find(d => d.type === type) ?? null
-  return { changed: c ? dateMark(c.firstSeenAt, now) : null, pending: p ? pendingMark(p, now, 'A new value') : null }
+  return { changed: c ? changeMark(c, now) : null, pending: p ? pendingMark(p, now, 'A new value') : null }
 }
 
 /** The title of a name / description value: the date lives only there (no new row). undefined when nothing is recorded. */

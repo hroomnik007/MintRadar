@@ -31,13 +31,15 @@ export function MintFeesLimits({ keysets, keysetsPending, units, mintMethods, me
   const limits = limitRows(mintMethods, meltMethods, disabled)
   const src = limitsSource(fetchedAt, now)
   const reserved = reservedFeeLines(units)
+  // With the change data known, every fee row gets a dates line ("since" / "unchanged since"): reserve it too while waiting.
+  const datesLine = !!changes && (changes.trackingSince !== null || changes.changes.length > 0)
   return (
     <div className="md-panel md-fees-limits" data-testid="mint-fees-limits">
       <div className="md-fl-head">
         <div className="md-panel-title">Fees and limits</div>
         <InfoTooltip iconSize={12} width={240} about="Fees and limits" text={LIMITS_NOTE} />
       </div>
-      <div className="md-info-grid md-info-list md-fl-fees" style={keysetsPending ? { minHeight: `calc(${reserved} * var(--md-fl-row-h))` } : undefined} data-testid="mint-fees">
+      <div className="md-info-grid md-info-list md-fl-fees" style={keysetsPending ? { minHeight: `calc(${reserved} * (var(--md-fl-row-h)${datesLine ? ' + var(--md-fl-date-h)' : ''}))` } : undefined} data-testid="mint-fees">
         {keysetsPending ? (
           <div className="md-info-row"><span className="md-info-label">Checking keysets…</span></div>
         ) : fees.empty ? (

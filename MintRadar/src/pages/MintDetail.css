@@ -2768,7 +2768,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 @media (pointer: coarse) { .md-fee-history-toggle { min-height: 44px; } }
 
 /* ── Overview "Fees and limits" (W6b): label left, value right, wraps under the label when the row is narrow ── */
-.md-fees-limits { --md-fl-row-h: 47px; } /* Task B2: midway between a "No input fee" row (38px) and a fee row with its examples line (56px) */
+.md-fees-limits { --md-fl-row-h: 47px; --md-fl-date-h: 21px; } /* Task B2: midway between a "No input fee" row (38px) and a fee row with its examples line (56px) */
 .md-fees-limits .md-info-row { flex-wrap: wrap; column-gap: 12px; row-gap: 2px; }
 .md-fees-limits .md-info-label { flex-shrink: 1; min-width: 0; overflow-wrap: anywhere; }
 .md-fees-limits .md-info-value { flex: 1 1 auto; min-width: 0; text-align: right; word-break: normal; overflow-wrap: break-word; max-width: 100%; }
