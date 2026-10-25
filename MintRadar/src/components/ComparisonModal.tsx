@@ -12,7 +12,7 @@ import { type KnownMint } from '@/hooks/useKnownMints'
 import { classifyMintVersion, latestMapFor } from '@/utils/versionRule'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { AUDIT_MIN_SAMPLES, auditDataState } from '@/utils/auditScore'
-import { formatAuditSuccessRatio, auditReliabilityColor } from '@/utils/mintFormatting'
+import { formatAuditSuccessRatio, auditReliabilityColor, formatTimeAgo } from '@/utils/mintFormatting'
 import { useNow } from '@/hooks/useNow'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { formatDate } from '@/utils/formatDate'
@@ -21,6 +21,8 @@ import { pickInputFee } from '@/utils/mintProbeDisplay'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { IcClose } from '@/components/IcClose'
 import './ComparisonModal.css'
+import { storedKeysetsAsLive } from '@/utils/mintDetailFacts'
+import { COMPARE_UPTIME_LABEL, COMPARE_LATENCY_LABEL, COMPARE_LATENCY_TITLE } from '@/utils/compareLabels'
 
 function reliabilityScoreInfo(score: number) {
   if (score >= 70) return { label: 'High Reliability', color: 'var(--accent)', bg: 'var(--green-soft)', border: 'var(--green-soft-strong)' }
@@ -140,7 +142,8 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
   const d3 = useMintCompareData(mints[3] ?? EMPTY_MINT)
   const allData = [d0, d1, d2, d3].slice(0, mints.length)
 
-  const gridCols = `132px ${mints.map(() => 'minmax(150px, 1fr)').join(' ')}`
+  // 160px fits the longest label, "Latency (last check)" + its info icon, without running into the values.
+  const gridCols = `160px ${mints.map(() => 'minmax(150px, 1fr)').join(' ')}`
 
   const isMobile = useIsMobile()
   const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('7d')
@@ -164,12 +167,21 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
   const feeCell = (i: number) => {
     const q = probeQueries[i]
     if (!q || q.isLoading) return <span style={{ color: 'var(--text3)' }}>…</span>
-    const fee = pickInputFee(q.data?.keysets)
+    // Live keysets first; a mint that did not answer falls back to the keysets of its last successful check.
+    const live = pickInputFee(q.data?.keysets)
+    const stored = live ? null : pickInputFee(storedKeysetsAsLive(mints[i]?.lastKeysets))
+    const fee = live ?? stored
     if (!fee) return <span style={{ color: 'var(--text3)' }}>n/a</span>
+    const checkedAt = stored ? mints[i]?.lastKeysetsCheckedAt : null
     return (
       <>
         <span>{fee.label}</span>
         <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{fee.unit}</span>
+        {stored && (
+          <span className="cmp-fee-lastchecked" style={{ display: 'block', fontSize: 11, color: 'var(--text3)', fontWeight: 400 }}>
+            last checked{checkedAt ? ` ${formatTimeAgo(new Date(checkedAt))}` : ''}
+          </span>
+        )}
       </>
     )
   }
@@ -341,14 +353,14 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                   </div>
 
                   <div className="cmp-mobile-row">
-                    <span className="cmp-mobile-lbl">Uptime</span>
+                    <span className="cmp-mobile-lbl">{COMPARE_UPTIME_LABEL}</span>
                     <span className="cmp-mobile-val" style={{ color: uptimeColor(uptimePct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
                       {uptimePct !== null ? `${uptimePct}%` : '—'}
                     </span>
                   </div>
 
                   <div className="cmp-mobile-row">
-                    <span className="cmp-mobile-lbl">Latency</span>
+                    <span className="cmp-mobile-lbl">{COMPARE_LATENCY_LABEL}<InfoTooltip iconSize={11} width={200} about="Latency" text={COMPARE_LATENCY_TITLE} /></span>
                     <span className="cmp-mobile-val" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
                       {d.isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
                     </span>
@@ -489,7 +501,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           })}
 
           {/* ── Uptime (24h, matches Mint Detail's header figure) ── */}
-          <div className="cmp-lbl">Uptime</div>
+          <div className="cmp-lbl">{COMPARE_UPTIME_LABEL}</div>
           {mints.map((mint, i) => {
             const uptimePct = uptime24hQueries[i]?.data?.uptimePct ?? null
             return (
@@ -500,7 +512,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           })}
 
           {/* ── Latency ── */}
-          <div className="cmp-lbl">Latency</div>
+          <div className="cmp-lbl">{COMPARE_LATENCY_LABEL}<InfoTooltip iconSize={11} width={200} about="Latency" text={COMPARE_LATENCY_TITLE} /></div>
           {mints.map((mint, i) => {
             const d = allData[i]!
             return (

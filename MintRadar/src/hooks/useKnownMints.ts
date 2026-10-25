@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import type { StoredScoreBreakdown } from '@/utils/mintDetailFacts'
 
 export interface KnownMint {
   url: string
@@ -58,6 +59,8 @@ export interface KnownMint {
   nostrAnnouncePubkey?: string | null
   nostrAnnounceD?: string | null
   reliabilityScore?: number | null
+  /** What the stored score used at its last computation (backend scoreBreakdown.ts); null until the first probe that wrote it. */
+  scoreBreakdown?: StoredScoreBreakdown | null
   lastError?: string | null
   uptimePct24h?: number | null
   /** Same computation as uptimePct24h, over a 7-day window. Feeds the Stats

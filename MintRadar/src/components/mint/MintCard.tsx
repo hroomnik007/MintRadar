@@ -14,6 +14,7 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
+import { CARD_LATENCY_LABEL } from '@/utils/compareLabels'
 import { displayName as mintDisplayName, shouldShowHostLine, isNewMint, cardLatencyLabel, cardLatencyLocationSuffix, cardLightningLabel, uptimeColor, formatTimeAgo, statusDotColor } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
 import { NotifyStrip } from '@/components/mint/NotifyStrip'
@@ -211,7 +212,7 @@ export function MintCard({
         <div className="card-lower-row">
         <div className="card-bottom-main">
           <div className="latency-block">
-            <div className="latency-label">{isOfflineDegraded ? 'Last seen' : 'Latency'}</div>
+            <div className="latency-label">{isOfflineDegraded ? 'Last seen' : isOnline && mint.latencyMs !== null ? CARD_LATENCY_LABEL : 'Latency'}</div>
             {isOfflineDegraded ? (
               <div
                 className="latency-value muted"
