@@ -572,23 +572,28 @@ export async function initDb(): Promise<void> {
   // One-off backfill: keysets in mint_keysets whose first_seen_at > tracking_since and that are missing from the
   // stored keysets baseline become pending (so mint.lnpay.cz shows 01cbb9 as "seen once"). Idempotent.
   await pool.query(`
-    UPDATE mint_change_state s
-    SET pending_keysets = sub.sig,
-        pending_keysets_first_seen_at = sub.first_seen
-    FROM (
-      SELECT k.url,
-             jsonb_agg(jsonb_build_object('id', k.keyset_id, 'unit', k.unit, 'active', k.active, 'inputFeePpk', k.input_fee_ppk) ORDER BY k.keyset_id) AS sig,
-             MIN(k.first_seen_at) AS first_seen
-        FROM mint_keysets k
-        JOIN mint_change_state s2 ON s2.url = k.url
-       WHERE k.first_seen_at > s2.tracking_since
-         AND s2.pending_keysets IS NULL
-         AND NOT EXISTS (
-           SELECT 1 FROM jsonb_array_elements(s2.keysets) e WHERE e->>'id' = k.keyset_id
-         )
-       GROUP BY k.url
-    ) sub
-    WHERE s.url = sub.url
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM mint_change_state WHERE pending_keysets IS NOT NULL LIMIT 1) THEN
+        UPDATE mint_change_state s
+        SET pending_keysets = sub.sig,
+            pending_keysets_first_seen_at = sub.first_seen
+        FROM (
+          SELECT k.url,
+                 jsonb_agg(jsonb_build_object('id', k.keyset_id, 'unit', k.unit, 'active', k.active, 'inputFeePpk', k.input_fee_ppk) ORDER BY k.keyset_id) AS sig,
+                 MIN(k.first_seen_at) AS first_seen
+            FROM mint_keysets k
+            JOIN mint_change_state s2 ON s2.url = k.url
+           WHERE k.first_seen_at > s2.tracking_since
+             AND s2.pending_keysets IS NULL
+             AND NOT EXISTS (
+               SELECT 1 FROM jsonb_array_elements(s2.keysets) e WHERE e->>'id' = k.keyset_id
+             )
+           GROUP BY k.url
+        ) sub
+        WHERE s.url = sub.url;
+      END IF;
+    END $$
   `)
   // Seed software_versions so scoring works identically right after deploy, even
   // before fetchLatestUpstreamVersions' daily cron job has run for the first time.
