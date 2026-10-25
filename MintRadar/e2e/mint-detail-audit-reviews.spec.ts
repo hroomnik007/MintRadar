@@ -36,12 +36,12 @@ test('Audit tab strip shows the audit.8333.space window; the Reliability Score b
 
   await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-summary-strip.png' })
 
-  // The sidebar Reliability Score breakdown reads the cashu.info 7-day window instead (1 of 50), not the strip's 3/100.
+  // The sidebar Reliability Score breakdown reads the cashu.info 7-day window instead (1 attributed failure of 50 → 49 / 50 without one, as in Compare), not the strip's 3/100.
   // The breakdown is always visible inline on the Overview sidebar panel now
   // (no "Details ›" click needed).
   const reliabilityPanel = page.locator('.md-reliability-panel')
   await expect(reliabilityPanel.getByText('Audit reliability (25%)')).toBeVisible()
-  await expect(reliabilityPanel.getByText('1 / 50')).toBeVisible()
+  await expect(reliabilityPanel.getByText('49 / 50')).toBeVisible()
   await expect(reliabilityPanel.getByText('3.0% err')).toHaveCount(0)
   await page.screenshot({ path: 'test-results/audit-breakdown-crosscheck.png' })
 })
