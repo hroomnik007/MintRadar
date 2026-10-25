@@ -23,6 +23,7 @@ import { computeDegraded } from './degraded.js'
 import { authenticateNip98 } from './nip98Auth.js'
 import { fetchOgMintData, renderMintOgHtml, renderPageOgHtml } from './og.js'
 import { getMintIcon, iconEtag } from './mintIcon.js'
+import { parseIconSize, pickIconFormat, resizeIcon } from './iconResize.js'
 import { computeReliabilityMovers, type MintScoreSnapshot } from './reliabilityMovers.js'
 import { globalMeanRating, weightedRating } from './weightedRating.js'
 import { hasRecentReviewSurge } from './reviewSurge.js'
@@ -1859,12 +1860,20 @@ app.get('/api/mint/icon', (req: Request, res: Response): void => {
     return
   }
 
+  // `s=64|128`: a resized copy (WebP or PNG by Accept) for the card slots, see iconResize.ts. No/other `s` → the
+  // original bytes, as before (old cached HTML/JS and third-party embeds keep working).
+  const size = parseIconSize(req.query['s'])
+  const format = pickIconFormat(req.get('accept'))
+
   getMintIcon(rawUrl)
+    .then(source => (source && size !== null ? resizeIcon(source, size, format) : source))
     .then(icon => {
       if (!icon) {
         sendNoIcon(res)
         return
       }
+      // The resized answer depends on Accept (WebP vs PNG): shared caches must key on it (appended: CORS sets Vary: Origin).
+      if (size !== null) res.vary('Accept')
       res.setHeader('Content-Type', icon.contentType)
       // Belt-and-suspenders against a mint serving something script-y that slipped
       // the content-type allow-list: no active content, no framing, treat as an
@@ -1872,8 +1881,10 @@ app.get('/api/mint/icon', (req: Request, res: Response): void => {
       res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox")
       res.setHeader('Cross-Origin-Resource-Policy', 'same-origin')
       // 7 days in the browser (was 1 day): the icon of a mint changes rarely, the server cache is 6 h, and a copy that
-      // expired is revalidated by its strong ETag (304, no body). The 204 "no icon" answer keeps its 30 minutes.
-      res.setHeader('Cache-Control', 'public, max-age=604800')
+      // expired is revalidated by its strong ETag (304, no body) — per variant, the ETag hashes the bytes served.
+      // stale-while-revalidate: for a day past that the stale copy shows at once while the 304 check runs in the
+      // background. The 204 "no icon" answer keeps its 30 minutes.
+      res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400')
       res.setHeader('ETag', iconEtag(icon.body))
       if (req.fresh) {
         res.removeHeader('Content-Type')

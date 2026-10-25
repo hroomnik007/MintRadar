@@ -32,9 +32,10 @@ const NEGATIVE_TTL_MS = 24 * 60 * 60 * 1000
 // favicon failures were legitimate operator logos rejected purely for size.
 // 512 KB comfortably covers a high-res PNG logo while still bounding worst-case
 // memory (MAX_CACHE_ENTRIES * 512 KB). The handful of mints shipping a 1–2 MB
-// image as their favicon still fall back to the monogram — re-encoding them
-// server-side would mean a native image dependency (sharp), which is not worth
-// it for that few mints with an unreasonably large asset.
+// image as their favicon still fall back to the monogram. (sharp is a backend
+// dependency since 2026-10-25, but only for the ?s=64|128 display variants in
+// iconResize.ts; the fetch cap is deliberately unchanged, so it still bounds
+// memory and the bytes we download from a mint-controlled host.)
 const MAX_ICON_BYTES = 512 * 1024
 const MAX_CACHE_ENTRIES = 500
 

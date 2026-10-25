@@ -44,7 +44,7 @@ test('mint favicons load through /api/mint/icon, never from the mint-supplied ho
     has: page.locator('.card-name', { hasText: 'Alpha Mint' }),
   })
   const favicon = alphaCard.locator('img').first()
-  await expect(favicon).toHaveAttribute('src', '/api/mint/icon?url=https%3A%2F%2Falpha.mint.example')
+  await expect(favicon).toHaveAttribute('src', '/api/mint/icon?url=https%3A%2F%2Falpha.mint.example&s=64')
   await expect(favicon).toBeVisible()
 
   // The proxy was asked for the MINT url, and the attacker host was never hit.

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { mintFaviconInitials, mintHostname } from '@/utils/mintFormatting'
 import { hasIconFailedRecently, markIconFailed } from '@/utils/mintIconFailureCache'
+import { iconVariantFor, mintIconSrc, mintIconSrcSet } from '@/utils/mintIconSrc'
 
 interface Props {
   url: string
@@ -24,14 +25,18 @@ export function MintFavicon({ url, iconUrl, size = 22, radius = 5, className = '
   // (2026-09-07 security audit). The proxy answers 204 No Content for anything
   // unsafe/unfetchable (no console noise, unlike a 404) and the img error event still fires,
   // so onError drops us to the SVG placeholder below.
-  const proxiedSrc = iconUrl ? `/api/mint/icon?url=${encodeURIComponent(url)}` : null
+  // The proxy resizes to 64 or 128 px (`&s=`), so a 22 px card icon no longer downloads a 512 px original; srcSet
+  // picks the variant for the screen density. Without sharp on the server `&s=` is ignored (original bytes).
+  const proxiedSrc = iconUrl ? mintIconSrc(url, iconVariantFor(size)) : null
 
   if (proxiedSrc && !imgFailed) {
     return (
       <img
         src={proxiedSrc}
+        srcSet={mintIconSrcSet(url, size)}
         alt=""
         loading="lazy"
+        decoding="async"
         width={size}
         height={size}
         className={className}
