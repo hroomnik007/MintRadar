@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { adaptAuditCz, auditCzNeutralKind, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, type AuditCzView } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzNeutralKind, auditCzSyncNote, AUDIT_CZ_NOT_RECENT_TEXT, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, type AuditCzView } from '@/utils/auditCz'
 import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
 
 type Row = AuditCzData['swaps'][number]
@@ -151,6 +151,15 @@ describe('the two tables, the bar rows and the freshness', () => {
     expect(view([], LNPAY, {}, Date.parse('2026-10-07T08:31:00Z')).notRecent).toBe(true)
     expect(view([], { ...LNPAY, fetchedAt: null }, { fetchedAt: '2026-10-07T07:00:00Z' }, Date.parse('2026-10-07T09:00:00Z')).notRecent).toBe(true)
     expect(view([], { ...LNPAY, fetchedAt: null }, { fetchedAt: null }).notRecent).toBe(false)
+  })
+  it('header sync note: "synced …" while fresh, "not updated recently" (stale) after 90 minutes, nothing without a time', () => {
+    const at = (iso: string) => Date.parse(iso)
+    expect(auditCzSyncNote(view([], LNPAY, {}, at('2026-10-07T07:30:00Z')), at('2026-10-07T07:30:00Z'))).toEqual({ text: 'synced 30 min ago', stale: false })
+    expect(auditCzSyncNote(view([], LNPAY, {}, at('2026-10-07T08:29:00Z')), at('2026-10-07T08:29:00Z'))).toEqual({ text: 'synced 1h ago', stale: false })
+    expect(auditCzSyncNote(view([], LNPAY, {}, at('2026-10-07T08:31:00Z')), at('2026-10-07T08:31:00Z'))).toEqual({ text: AUDIT_CZ_NOT_RECENT_TEXT, stale: true })
+    expect(AUDIT_CZ_NOT_RECENT_TEXT).toBe('not updated recently')
+    expect(auditCzSyncNote({ checkedAt: null, notRecent: false }, at('2026-10-07T08:00:00Z'))).toBeNull()
+    expect(auditCzSyncNote({ checkedAt: 'garbage', notRecent: false }, at('2026-10-07T08:00:00Z'))).toBeNull()
   })
 })
 

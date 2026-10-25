@@ -1,5 +1,6 @@
 import type { AuditCzData, AuditCzDetail, AuditCzDirectionCounts } from '@/hooks/useAuditCz'
 import { depositsTileText, withdrawalsTileText, cleanTileText } from './tooltipTexts'
+import { formatTimeAgo } from './mintFormatting'
 
 // Adapter: cashu.info endpoint response → what the cashu.info Audit tab renders (four tiles from
 // the stored 7-day detail, the auditor's checks, the outcome bar and two swap tables from the swaps
@@ -239,4 +240,17 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
     toRows: rows.filter(r => r.direction === 'to'),
     tiles: auditCzTiles(data.detail),
   }
+}
+
+export const AUDIT_CZ_NOT_RECENT_TEXT = 'not updated recently'
+
+/**
+ * The sync note after "via cashu.info" in the Audit stats header: "synced 2h ago", or "not updated recently"
+ * (warning colour) once the stored detail is older than AUDIT_CZ_NOT_RECENT_MS. Null when no sync time is known.
+ */
+export function auditCzSyncNote(view: Pick<AuditCzView, 'checkedAt' | 'notRecent'>, now: number): { text: string; stale: boolean } | null {
+  if (view.notRecent) return { text: AUDIT_CZ_NOT_RECENT_TEXT, stale: true }
+  const at = view.checkedAt ? new Date(view.checkedAt) : null
+  if (!at || !Number.isFinite(at.getTime())) return null
+  return { text: `synced ${formatTimeAgo(at, now)}`, stale: false }
 }

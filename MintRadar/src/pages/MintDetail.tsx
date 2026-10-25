@@ -51,7 +51,7 @@ import { auditFreshness, audit8333StaleLine } from '@/utils/auditFreshness'
 import { IcClose } from '@/components/IcClose'
 import { clickableProps } from '@/utils/clickableProps'
 import { useAuditCz } from '@/hooks/useAuditCz'
-import { adaptAuditCz, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzSyncNote, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
 import { sortUnits } from '@/utils/sortUnits'
 import {
   computeReliabilityScore as sharedComputeReliabilityScore,
@@ -65,7 +65,7 @@ import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLo
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
 import { ContactChecksLine } from '@/components/ContactChecksLine'
-import { auditSuccessText, outageTiles, outageErrorCell, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, swapStripText, showTorFor, contactsNotSavedYet, CONTACTS_NOT_SAVED_TEXT, type OutagesResponse } from '@/utils/mintDetailFacts'
+import { auditSuccessText, outageTiles, outageErrorCell, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, swapStripText, swapStripLabel, showTorFor, contactsNotSavedYet, CONTACTS_NOT_SAVED_TEXT, type OutagesResponse } from '@/utils/mintDetailFacts'
 import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
 import { LAST_SCORE_CAPTION, KEEP_WALLET_SENTENCE, TEMPORARY_SENTENCE, contactSentence, restoreSentence, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
@@ -1025,6 +1025,7 @@ function MintDetailContent({ url }: { url: string }) {
   const auditSource = auditSourcePick ?? (auditNeedsFallback ? 'cz' : '8333')
   const czView = czData !== null && (!has8333Audit || auditSource === 'cz') ? czData : null
   const czInfoText = czView ? cashuInfoViewText({ fallbackFrom8333: !(has8333Audit && !auditNeedsFallback) }) : null
+  const czSyncNote = czView ? auditCzSyncNote(czView, now) : null
   const auditSwitch = czData !== null && has8333Audit ? (
     <div className="md-audit-seg" role="group" aria-label="Audit source">
       <button type="button" className={`md-audit-seg-btn${czView ? ' active' : ''}`} aria-pressed={czView !== null} onClick={() => setAuditSourcePick('cz')}>cashu.info</button>
@@ -2191,6 +2192,7 @@ function MintDetailContent({ url }: { url: string }) {
                   <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
                   <span className="md-audit-via">· via {czView ? 'cashu.info' : 'audit.8333.space'}</span>
                   <AuditSourceInfoIcon {...(czInfoText ? { text: czInfoText } : {})} />
+                  {czSyncNote && <span className={`md-audit-via md-audit-sync${czSyncNote.stale ? ' md-audit-sync-stale' : ''}`} data-testid="audit-cz-sync">· {czSyncNote.text}</span>}
                   {auditSwitch}
                 </div>
                 {/* Mobile heading (mirrors the desktop one above; the collapse
@@ -2199,6 +2201,7 @@ function MintDetailContent({ url }: { url: string }) {
                   <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
                   <span style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>· via {czView ? 'cashu.info' : 'audit.8333.space'}</span>
                   <AuditSourceInfoIcon {...(czInfoText ? { text: czInfoText } : {})} />
+                  {czSyncNote && <span className={`md-audit-via md-audit-sync${czSyncNote.stale ? ' md-audit-sync-stale' : ''}`} data-testid="audit-cz-sync-mobile">· {czSyncNote.text}</span>}
                   {auditSwitch}
                 </div>
 
@@ -2255,8 +2258,14 @@ function MintDetailContent({ url }: { url: string }) {
                     already orders by created_at DESC, so no client-side
                     reverse is needed). Nothing renders here until the swap
                     fetch actually resolves with data — never a fake/empty bar. */}
+                {czView && auditSwapBarItems.length > 0 && (
+                  <div className="audit-cz-muted audit-swap-bar-label" data-testid="audit-swap-bar-caption">
+                    {swapStripLabel(auditSwapBarItems.length)}
+                    <InfoTooltip iconSize={12} width={300} label="About the swap strip" style={TT_GAP_LEFT} text={swapStripText(auditSwapBarItems.length)} />
+                  </div>
+                )}
                 {auditSwapBarItems.length > 0 && (
-                  <div className="audit-swap-bar" title="Last swaps, newest first">
+                  <div className={`audit-swap-bar${czView ? ' audit-swap-bar-labelled' : ''}`} title="Last swaps, newest first">
                     {auditSwapBarItems.map(s => (
                       <div
                         key={s.swapId}
@@ -2264,8 +2273,6 @@ function MintDetailContent({ url }: { url: string }) {
                         title={s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TITLE[s.neutral] : `${s.state}${s.stage ? ` (${s.stage})` : ''}${s.createdAt ? ` · ${formatDateTimeUtc(s.createdAt)}` : ''}`}
                       />
                     ))}
-                    {/* What the marks mean: an ⓘ at the end of the strip (a paragraph here widened the card). */}
-                    {czView && <span className="audit-swap-bar-info" data-testid="audit-swap-bar-caption"><InfoTooltip iconSize={12} width={300} label="About the swap strip" text={swapStripText(auditSwapBarItems.length)} /></span>}
                   </div>
                 )}
 

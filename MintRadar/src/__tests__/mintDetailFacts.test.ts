@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   outageTiles, outageErrorCell, breakdownRowScore, breakdownPointsColor, storedBreakdownTotal, contactKindsText, infoTextFor,
-  readLastInfo, averageReliability, latencyPercentilesText, swapStripText, showTorFor, contactsNotSavedYet, storedKeysetsAsLive, CONTACTS_NOT_SAVED_TEXT, auditSuccessText,
+  readLastInfo, averageReliability, latencyPercentilesText, swapStripText, swapStripLabel, showTorFor, contactsNotSavedYet, storedKeysetsAsLive, CONTACTS_NOT_SAVED_TEXT, auditSuccessText,
   type OutagesResponse, type StoredScoreBreakdown, type BreakdownPart,
 } from '@/utils/mintDetailFacts'
 import { pickInputFee } from '@/utils/mintProbeDisplay'
@@ -121,6 +121,10 @@ describe('swap strip tooltip', () => {
     expect(swapStripText(5)).toMatch(/^The latest 5 swaps MintRadar stored from cashu\.info, both directions, newest first\. Green: succeeded\. Red: failed\. Grey: not counted against the mint/)
     expect(swapStripText(1)).toMatch(/^The latest swap MintRadar stored/)
     expect(swapStripText(5)).not.toMatch(/safe|trust|solven|honest|verified|risk/i)
+  })
+  it('the label above the strip: "Last N swaps", singular for one', () => {
+    expect(swapStripLabel(35)).toBe('Last 35 swaps')
+    expect(swapStripLabel(1)).toBe('Last swap')
   })
 })
 

@@ -139,6 +139,11 @@ export function latencyPercentilesText(p50: number | null | undefined, p95: numb
   return `Median ${f(p50)} · p95 ${f(p95)}${period ? ` over ${PERIOD_TEXT[period]}` : ''}`
 }
 
+/** The muted label above the swap strip on the Audit tab (its ⓘ sits next to it): "Last 35 swaps". */
+export function swapStripLabel(count: number): string {
+  return count === 1 ? 'Last swap' : `Last ${count} swaps`
+}
+
 /** The swap strip's ⓘ on the Audit tab: what the coloured marks are (was a paragraph under the strip). */
 export function swapStripText(count: number): string {
   return `The ${count === 1 ? 'latest swap' : `latest ${count} swaps`} MintRadar stored from cashu.info, both directions, newest first. Green: succeeded. Red: failed. Grey: not counted against the mint (below the mint's minimum, the auditor's balance, or no outcome yet).`

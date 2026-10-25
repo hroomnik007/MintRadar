@@ -1910,6 +1910,9 @@ button.md-url-copy.copied > svg { opacity: 1; }
   color: var(--text3);
   font-family: var(--font-mono);
 }
+/* "· synced 2h ago" after "via cashu.info": wraps as one unit on narrow screens; amber once not updated recently. */
+.md-audit-sync { white-space: nowrap; }
+.md-audit-sync-stale { color: var(--amber); }
 
 /* Source switch in the Audit card header (cashu.info | audit.8333.space): same recipe as the
    Stats page "Uptime | Reliability" toggle (.stats-tab-toggle / .stats-tab-btn — Stats.css can't be
@@ -2794,7 +2797,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
    the strip caption, and the segmented control for the two swap tables. */
 .audit-cz-tile-sub { font-size: 12px; line-height: 1.4; color: var(--text3); }
 .audit-cz-tiles .audit-cz-tile-nodata { font-weight: 500; color: var(--text3); }
-.audit-swap-bar-info { display: inline-flex; align-items: center; height: 16px; margin-left: 4px; }
+.audit-swap-bar-label { display: flex; align-items: center; margin: 10px 0 0; font-size: 12px; }
+.audit-swap-bar.audit-swap-bar-labelled { margin-top: 6px; }
 .audit-cz-swaps { margin-top: 14px; }
 .audit-cz-seg { display: inline-flex; max-width: 100%; background: var(--bg2); border-radius: 6px; padding: 2px; gap: 2px; }
 .audit-cz-seg-btn {

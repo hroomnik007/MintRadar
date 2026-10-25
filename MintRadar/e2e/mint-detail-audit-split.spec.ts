@@ -84,13 +84,54 @@ test.describe('no source line; header tooltip', () => {
   })
 })
 
+test.describe('header sync note', () => {
+  test('fresh: "· synced N min ago" right after "via cashu.info", muted', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse()))
+    const note = page.getByTestId('audit-cz-sync')
+    await expect(note).toHaveText('· synced 10 min ago')
+    await expect(note).not.toHaveClass(/md-audit-sync-stale/)
+    // after "· via cashu.info" and its ⓘ (the ⓘ stays with the source name)
+    await expect(page.locator('.md-audit-header-main .md-audit-via').first()).toHaveText('· via cashu.info')
+    await expect(page.locator('.md-audit-header-main .md-audit-info').locator('xpath=following-sibling::*[1]')).toHaveAttribute('data-testid', 'audit-cz-sync')
+    await expect(note).not.toHaveAttribute('title', /.*/)
+  })
+
+  test('stale (older than 90 minutes): "· not updated recently" in the warning colour', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse({ detail: czDetail({}, 120) })))
+    const note = page.getByTestId('audit-cz-sync')
+    await expect(note).toHaveText('· not updated recently')
+    await expect(note).toHaveClass(/md-audit-sync-stale/)
+    const color = await note.evaluate(e => getComputedStyle(e).color)
+    const via = await page.locator('.md-audit-header-main .md-audit-via').first().evaluate(e => getComputedStyle(e).color)
+    expect(color).not.toBe(via)
+  })
+
+  test('mobile 390: the note sits in the header without widening the card', async ({ page }) => {
+    await resize(page, 390, 844)
+    await gotoAuditTab(page, czOnly(auditCzResponse({ detail: czDetail({}, 120) })))
+    const note = page.getByTestId('audit-cz-sync-mobile')
+    await expect(note).toHaveText('· not updated recently')
+    await layoutReady(page)
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    expect(overflow).toBeLessThanOrEqual(0)
+    const card = await page.locator('.md-audit-collapsible').boundingBox()
+    const box = await note.boundingBox()
+    expect(box!.x + box!.width).toBeLessThanOrEqual(card!.x + card!.width)
+  })
+})
+
 test.describe('swap strip caption', () => {
-  test('the ⓘ at the end of the strip states exactly what it shows', async ({ page }) => {
+  test('the label above the strip says "Last N swaps" and its ⓘ states exactly what it shows', async ({ page }) => {
     await gotoAuditTab(page, czOnly(auditCzResponse({ swaps: czSwapList([ok, melt, limits, pending, ok]) })))
     await expect(page.locator('.audit-swap-bar-mark')).toHaveCount(5)
     await expect(page.locator('.audit-swap-bar-caption')).toHaveCount(0) // no paragraph under the strip
     await expect(page.locator('body')).not.toContainText('The latest 5 swaps')
-    await page.getByTestId('audit-swap-bar-caption').locator('.info-tooltip').hover()
+    const label = page.getByTestId('audit-swap-bar-caption')
+    await expect(label).toHaveText('Last 5 swaps')
+    // above the strip, and no ⓘ left inside the strip
+    expect((await label.boundingBox())!.y).toBeLessThan((await page.locator('.audit-swap-bar').boundingBox())!.y)
+    await expect(page.locator('.audit-swap-bar .info-tooltip')).toHaveCount(0)
+    await label.locator('.info-tooltip').hover()
     await expect(page.getByRole('tooltip')).toHaveText(
       "The latest 5 swaps MintRadar stored from cashu.info, both directions, newest first. Green: succeeded. Red: failed. Grey: not counted against the mint (below the mint's minimum, the auditor's balance, or no outcome yet).")
     // the marks follow the caption: 2 green, 1 red, 2 grey, newest left
