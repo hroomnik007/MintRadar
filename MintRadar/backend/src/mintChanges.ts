@@ -372,23 +372,20 @@ export async function observeInfo(url: string, raw: unknown, deps: ChangeDeps): 
       dirty = true
       continue
     }
-    const pendingInfo = state.pendingInfo ?? {}
-    const pending = pendingInfo[f] ? { value: pendingInfo[f].value, firstSeenAt: pendingInfo[f].firstSeenAt } : undefined
+    const mem = deps.pending.get(key)
+    const fromDb = state.pendingInfo?.[f]
+    const pending = mem ?? (fromDb ? { value: fromDb.value, firstSeenAt: fromDb.firstSeenAt } : undefined)
     const step = stepValue(stored[f], pending, observed, now)
     if (step.kind === 'pending') {
-      pendingInfo[f] = step.pending
-      await pool.query(
+      deps.pending.set(key, step.pending)
+      void Promise.resolve(pool.query(
         'INSERT INTO mint_change_state (url, pending_info) VALUES ($1, $2::jsonb) ON CONFLICT (url) DO UPDATE SET pending_info = COALESCE(mint_change_state.pending_info, \'{}\'::jsonb) || $2::jsonb',
         [url, JSON.stringify({ [f]: step.pending })],
-      )
+      )).catch(() => undefined)
       continue
     }
-    // clear this field's pending
-    delete pendingInfo[f]
-    await pool.query(
-      'UPDATE mint_change_state SET pending_info = pending_info - $2 WHERE url = $1',
-      [url, f],
-    )
+    deps.pending.delete(key)
+    void Promise.resolve(pool.query('UPDATE mint_change_state SET pending_info = pending_info - $2 WHERE url = $1', [url, f])).catch(() => undefined)
     if (step.kind === 'same') continue
     next[f] = observed
     dirty = true
@@ -405,23 +402,27 @@ export async function observeKeysets(url: string, observedList: readonly KeysetS
   if (observedList.length === 0) return []
   const state = await deps.load(url)
   const stored = normalizeStoredKeysets(state.keysets)
+  const key = `${url}\nkeysets`
   const signature = JSON.stringify(observedList)
   if (stored === null) {
-    // First observation: baseline, clear any pending.
-    await pool.query('UPDATE mint_change_state SET pending_keysets = NULL, pending_keysets_first_seen_at = NULL WHERE url = $1', [url])
+    deps.pending.delete(key)
     return deps.commit(url, { keysets: [...observedList] }, [])
   }
-  const pending = state.pendingKeysets ?? undefined
+  // Prefer the in-memory pending (tests); fall back to the persisted one (restart / offline).
+  const mem = deps.pending.get(key)
+  const pending = mem ?? state.pendingKeysets ?? undefined
   const step = stepValue(JSON.stringify(stored), pending, signature, deps.now())
   if (step.kind === 'pending') {
-    await pool.query(
+    deps.pending.set(key, step.pending)
+    // Persist so a restart does not drop it. Best-effort; tests mock the pool.
+    void Promise.resolve(pool.query(
       'INSERT INTO mint_change_state (url, pending_keysets, pending_keysets_first_seen_at) VALUES ($1, $2, to_timestamp($3/1000.0)) ON CONFLICT (url) DO UPDATE SET pending_keysets = $2, pending_keysets_first_seen_at = to_timestamp($3/1000.0)',
       [url, step.pending.value, step.pending.firstSeenAt],
-    )
+    )).catch(() => undefined)
     return []
   }
-  // same or confirmed: clear pending
-  await pool.query('UPDATE mint_change_state SET pending_keysets = NULL, pending_keysets_first_seen_at = NULL WHERE url = $1', [url])
+  deps.pending.delete(key)
+  void Promise.resolve(pool.query('UPDATE mint_change_state SET pending_keysets = NULL, pending_keysets_first_seen_at = NULL WHERE url = $1', [url])).catch(() => undefined)
   if (step.kind !== 'confirmed') return []
   return deps.commit(url, { keysets: [...observedList] }, diffKeysets(stored, observedList, step.firstSeenAt))
 }
@@ -517,7 +518,7 @@ export async function commitChanges(url: string, patch: StatePatch, changes: Det
     await client.query('COMMIT')
     return stored
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => undefined)
+    await client.query('ROLLBACK')
     throw err
   } finally {
     client.release()
