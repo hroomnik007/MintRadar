@@ -126,11 +126,22 @@ export function averageReliability(segments: ReadonlyArray<{ reliabilityScore: n
   return Math.round(v.reduce((a, b) => a + b, 0) / v.length)
 }
 
-/** "Median 120 ms · p95 480 ms" under the average latency; null when neither is known. */
-export function latencyPercentilesText(p50: number | null | undefined, p95: number | null | undefined): string | null {
+const PERIOD_TEXT = { '24h': 'the last 24 hours', '7d': 'the last 7 days', '30d': 'the last 30 days', '90d': 'the last 90 days' } as const
+export type HistoryPeriod = keyof typeof PERIOD_TEXT
+
+/**
+ * "Median 120 ms · p95 480 ms over the last 7 days": the ⓘ next to the average latency of the History summary
+ * (a tooltip, not a line under the value, so the summary keeps its width). Null when neither is known.
+ */
+export function latencyPercentilesText(p50: number | null | undefined, p95: number | null | undefined, period?: HistoryPeriod): string | null {
   if (p50 == null && p95 == null) return null
   const f = (v: number | null | undefined) => (v == null ? '—' : `${Math.round(v)} ms`)
-  return `Median ${f(p50)} · p95 ${f(p95)}`
+  return `Median ${f(p50)} · p95 ${f(p95)}${period ? ` over ${PERIOD_TEXT[period]}` : ''}`
+}
+
+/** The swap strip's ⓘ on the Audit tab: what the coloured marks are (was a paragraph under the strip). */
+export function swapStripText(count: number): string {
+  return `The ${count === 1 ? 'latest swap' : `latest ${count} swaps`} MintRadar stored from cashu.info, both directions, newest first. Green: succeeded. Red: failed. Grey: not counted against the mint (below the mint's minimum, the auditor's balance, or no outcome yet).`
 }
 
 // ── Small offline fallbacks ──────────────────────────────────────────────────────────────────────────────────────────

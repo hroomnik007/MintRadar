@@ -36,7 +36,7 @@ import { MintComparePicker } from '@/components/MintComparePicker'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { MintNetworkCard } from '@/components/MintNetworkCard'
 import { networkRows } from '@/utils/networkInfo'
-import { AuditCzTiles, AuditCzSourceLine, AuditCzSwapTables, AuditStateText } from '@/components/AuditCzCards'
+import { AuditCzTiles, AuditCzSwapTables, AuditStateText } from '@/components/AuditCzCards'
 import { supportedNutKeys } from '@/utils/nutSupport'
 import { MintFeesLimits } from '@/components/mint/MintFeesLimits'
 import { formatDate, formatDateTimeUtc } from '@/utils/formatDate'
@@ -65,7 +65,7 @@ import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLo
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
 import { ContactChecksLine } from '@/components/ContactChecksLine'
-import { auditSuccessText, outageTiles, outageErrorCell, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, contactsNotSavedYet, CONTACTS_NOT_SAVED_TEXT, type OutagesResponse } from '@/utils/mintDetailFacts'
+import { auditSuccessText, outageTiles, outageErrorCell, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, swapStripText, showTorFor, contactsNotSavedYet, CONTACTS_NOT_SAVED_TEXT, type OutagesResponse } from '@/utils/mintDetailFacts'
 import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
 import { LAST_SCORE_CAPTION, KEEP_WALLET_SENTENCE, TEMPORARY_SENTENCE, contactSentence, restoreSentence, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
@@ -1192,7 +1192,7 @@ function MintDetailContent({ url }: { url: string }) {
   const chartPrevInsufficientHistory = chartHistoryData?.prevPeriodInsufficientHistory ?? false
   // Mean of the period's non-null segment scores (never the current score); "—" when the period has none.
   const chartAvgReliability = averageReliability(chartHistoryData?.segments)
-  const chartLatencyPercentiles = latencyPercentilesText(chartHistoryData?.p50LatencyMs, chartHistoryData?.p95LatencyMs)
+  const chartLatencyPercentiles = latencyPercentilesText(chartHistoryData?.p50LatencyMs, chartHistoryData?.p95LatencyMs, chartInterval)
   const chartCoverage = chartHistoryData && chartHistoryData.daysOfDataAvailable < chartHistoryData.periodDays
     ? `Showing ${chartHistoryData.daysOfDataAvailable} of ${chartHistoryData.periodDays} days of data (history retention started recently)`
     : null
@@ -2070,14 +2070,13 @@ function MintDetailContent({ url }: { url: string }) {
             {/* Summary metric cards */}
             <div className="md-hist-summary">
               {[
-                { label: 'Average latency', value: chartAvgLatency !== null ? `${chartAvgLatency} ms` : '—', delta: deltaStr(chartAvgLatency, chartPrevLatency, ' ms', chartPrevInsufficientHistory), sub: chartLatencyPercentiles, color: 'var(--text)' },
-                { label: 'Average uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%', chartPrevInsufficientHistory), sub: null, color: 'var(--accent)' },
-                { label: 'Average reliability', value: chartAvgReliability !== null ? String(chartAvgReliability) : '—', delta: null, sub: null, color: chartAvgReliability !== null ? reliabilityScoreInfo(chartAvgReliability).color : 'var(--text3)' },
-              ].map(({ label, value, delta, sub, color }) => (
+                { label: 'Average latency', value: chartAvgLatency !== null ? `${chartAvgLatency} ms` : '—', delta: deltaStr(chartAvgLatency, chartPrevLatency, ' ms', chartPrevInsufficientHistory), tip: chartAvgLatency !== null ? chartLatencyPercentiles : null, color: 'var(--text)' },
+                { label: 'Average uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%', chartPrevInsufficientHistory), tip: null, color: 'var(--accent)' },
+                { label: 'Average reliability', value: chartAvgReliability !== null ? String(chartAvgReliability) : '—', delta: null, tip: null, color: chartAvgReliability !== null ? reliabilityScoreInfo(chartAvgReliability).color : 'var(--text3)' },
+              ].map(({ label, value, delta, tip, color }) => (
                 <div key={label} className="md-hist-fig">
-                  <div className="md-hist-fig-value" style={{ color }}>{value}</div>
+                  <div className="md-hist-fig-value" style={{ color }}>{value}{tip && <span className="md-hist-fig-tip" data-testid="hist-latency-percentiles"><InfoTooltip iconSize={12} width={240} about={label} text={tip} /></span>}</div>
                   <div className="md-hist-fig-label">{label}</div>
-                  {sub && <div className="md-hist-fig-delta" data-testid="hist-latency-percentiles">{sub}</div>}
                   {delta && <div className="md-hist-fig-delta">{delta}</div>}
                 </div>
               ))}
@@ -2207,7 +2206,7 @@ function MintDetailContent({ url }: { url: string }) {
                 {!czView && <p className="audit-cz-muted">{czData !== null
                   ? `The Reliability Score uses cashu.info's last ${AUDIT_WINDOW_DAYS} days; this view shows audit.8333.space's last ~${AUDIT_SWAPS_WINDOW} swaps.`
                   : `This view shows audit.8333.space's last ~${AUDIT_SWAPS_WINDOW} swaps; the Reliability Score does not use it.`}</p>}
-                {czView ? <><AuditCzTiles view={czView} /><AuditCzSourceLine view={czView} now={now} /></> : (<>
+                {czView ? <AuditCzTiles view={czView} /> : (<>
                 {/* 5-second overview — always visible, never inside the mobile
                     collapse. Mints/Melts are audit.8333.space lifetime counts;
                     Recent success rate is the rolling ~100-swap window; Last
@@ -2265,12 +2264,9 @@ function MintDetailContent({ url }: { url: string }) {
                         title={s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TITLE[s.neutral] : `${s.state}${s.stage ? ` (${s.stage})` : ''}${s.createdAt ? ` · ${formatDateTimeUtc(s.createdAt)}` : ''}`}
                       />
                     ))}
+                    {/* What the marks mean: an ⓘ at the end of the strip (a paragraph here widened the card). */}
+                    {czView && <span className="audit-swap-bar-info" data-testid="audit-swap-bar-caption"><InfoTooltip iconSize={12} width={300} label="About the swap strip" text={swapStripText(auditSwapBarItems.length)} /></span>}
                   </div>
-                )}
-                {czView && auditSwapBarItems.length > 0 && (
-                  <p className="audit-cz-muted audit-swap-bar-caption" data-testid="audit-swap-bar-caption">
-                    The {auditSwapBarItems.length === 1 ? 'latest swap' : `latest ${auditSwapBarItems.length} swaps`} MintRadar stored from cashu.info, both directions, newest first. Green: succeeded. Red: failed. Grey: not counted against the mint (below the mint's minimum, the auditor's balance, or no outcome yet).
-                  </p>
                 )}
 
                 {czView ? (<>

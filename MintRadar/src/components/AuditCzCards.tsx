@@ -1,6 +1,6 @@
 import { Fragment, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { InfoTooltip } from '@/components/InfoTooltip'
-import { auditCzStateTitle, auditCzSourceLine, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, formatSwapDuration, type AuditCzView, type AuditSwapRow } from '@/utils/auditCz'
+import { auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, formatSwapDuration, type AuditCzView, type AuditSwapRow } from '@/utils/auditCz'
 import { mintHostname } from '@/utils/mintFormatting'
 
 // The cashu.info view of the Audit tab below the header: four tiles, the auditor's checks and two
@@ -28,17 +28,6 @@ export function AuditCzTiles({ view }: { view: AuditCzView }) {
         )
       })}
     </div>
-  )
-}
-
-/** One muted line under the tiles: where the numbers come from, which window, when they were stored. */
-export function AuditCzSourceLine({ view, now }: { view: AuditCzView; now: number }) {
-  const line = auditCzSourceLine(view, now)
-  return (
-    <p className="audit-cz-muted audit-cz-source" data-testid="audit-cz-source">
-      {line.parts.join(' · ')}
-      {line.time && <>{' · '}<span title={line.time.title}>{line.time.verb} {line.time.label}</span></>}
-    </p>
   )
 }
 

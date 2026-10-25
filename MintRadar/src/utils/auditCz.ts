@@ -1,8 +1,5 @@
 import type { AuditCzData, AuditCzDetail, AuditCzDirectionCounts } from '@/hooks/useAuditCz'
-import { depositsTileText, withdrawalsTileText, cleanTileText, AUDIT_WINDOW_DAYS } from './tooltipTexts'
-import { formatTimeAgo } from './mintFormatting'
-import { formatDateTimeUtc } from './formatDate'
-import type { SourceLine } from './scoreSources'
+import { depositsTileText, withdrawalsTileText, cleanTileText } from './tooltipTexts'
 
 // Adapter: cashu.info endpoint response → what the cashu.info Audit tab renders (four tiles from
 // the stored 7-day detail, the auditor's checks, the outcome bar and two swap tables from the swaps
@@ -63,8 +60,6 @@ export interface AuditCzView {
   /** This mint received ("Swaps to this mint", first column From = the source). */
   toRows: AuditSwapRow[]
   tiles: AuditCzTile[]
-  /** Facts for the source line, each only when cashu.info sent it: DLEQ counts, proof-state counts, 30-day uptime. */
-  facts: string[]
 }
 
 function swapState(status: string): string {
@@ -243,39 +238,5 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
     fromRows: rows.filter(r => r.direction === 'from'),
     toRows: rows.filter(r => r.direction === 'to'),
     tiles: auditCzTiles(data.detail),
-    facts: auditCzFacts(data.detail, data.mint.uptime30d),
   }
-}
-
-/** "a / b / c" of the parts that are present ("valid 6 / invalid 0"); null when none is. */
-function countsText(pairs: Array<[string, unknown]>): string | null {
-  const present = pairs.flatMap(([label, v]) => { const n = num(v); return n === undefined ? [] : [`${label} ${fmt(n)}`] })
-  return present.length > 0 ? present.join(' / ') : null
-}
-
-/** The source line's facts, in this order: DLEQ, proof states (only when present), uptime 30d. Counts only, no verdict. */
-export function auditCzFacts(d: AuditCzDetail, uptime30d: number | null | undefined): string[] {
-  const out: string[] = []
-  const dleq = d.swaps7d?.dleq
-  const dleqText = dleq ? countsText([['valid', dleq.valid], ['invalid', dleq.invalid], ['missing', dleq.missing]]) : null
-  if (dleqText) out.push(`DLEQ ${dleqText}`)
-  const ps = d.integrity?.proof_state
-  const psText = ps ? countsText([['checked', ps.checked], ['spent', ps.spent], ['pending', ps.pending]]) : null
-  if (psText) out.push(`proof states ${psText}`)
-  const up = num(uptime30d)
-  if (up !== undefined && up <= 100) out.push(`uptime 30d ${Math.round(up)}%`)
-  return out
-}
-
-/**
- * The one source line under the tiles: "cashu.info · last 7 days · DLEQ valid 6 / invalid 0 / missing 0 · uptime 30d 92% ·
- * synced 10 min ago" (absolute UTC time in `time.title`). A fact cashu.info did not send is left out.
- */
-export function auditCzSourceLine(view: Pick<AuditCzView, 'checkedAt' | 'notRecent'> & { facts?: string[] }, now: number): SourceLine {
-  const parts = ['cashu.info', `last ${AUDIT_WINDOW_DAYS} days`, ...(view.facts ?? [])]
-  const at = view.checkedAt ? new Date(view.checkedAt) : null
-  const time = at && Number.isFinite(at.getTime()) ? { verb: 'synced', label: formatTimeAgo(at, now), title: formatDateTimeUtc(at) } : null
-  // The detail job runs every 30 minutes; the old header tooltip said "not updated recently" in this case.
-  if (view.notRecent) parts.push('not updated recently')
-  return { parts, time }
 }
