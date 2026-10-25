@@ -169,6 +169,27 @@ Applied with a backup `/etc/nginx/sites-available/mintradar.org.conf.bak-2026102
 
 Rules that keep the request single: the preload must match `fetchKnownMints` (`src/hooks/useKnownMints.ts`) exactly: same URL, no headers, same-origin credentials. `crossorigin="anonymous"` is required for `as="fetch"` even on the same origin; without it Chromium does not reuse the response and the request goes out twice (mutation-proved). The preload request carries `Origin: https://mintradar.org` (CORS mode); the backend allow-list accepts that origin (`ALLOWED_ORIGINS`), a foreign Origin still gets the JSON 403. Pinned by `src/__tests__/earlyPreload.test.ts` and `e2e/known-mints-preload.spec.ts` (exactly one `/api/mints/known` request on `/`, none and no preload link on the other routes).
 
+### Brotli and precompressed assets (Stage 2 perf, 2026-10-25) — repo side done, server side NOT applied
+
+**Live today (checked 2026-10-25, GET with `Accept-Encoding: br, gzip`):** no response is brotli; JS/CSS/JSON come back `Content-Encoding: gzip` (on-the-fly, `gzip_comp_level 5`, block above). The live nginx has no brotli module loaded and no `gzip_static`/`brotli_static`.
+
+**Repo side (done):** `vite-precompress.ts` (`precompressPlugin()`, last plugin in `vite.config.ts`, runs at `closeBundle`) writes `<file>.br` (brotli quality 11) and `<file>.gz` (gzip -9) next to every `.js .css .html .svg .json .webmanifest .xml .txt .yaml` file of at least 1024 B in `dist/` (the same threshold as `gzip_min_length`). No new dependency (`node:zlib`). The Workbox `globPatterns` do not match `.br`/`.gz`, so the precache list is unchanged. `deploy.yml` already copies the whole `dist/` to `/var/www/mintradar/dist/`, so the files arrive with the next deploy and are **ignored** by nginx until the server is changed. Test: `src/__tests__/precompress.test.ts`. Measured on the 2026-10-25 build: the initial JS + CSS is 194 KiB as gzip-5 (what nginx sends now), 192 KiB as gzip-9 and 167 KiB as brotli-11 (−14 %).
+
+**`deploy/nginx.conf` was deliberately NOT edited** (it is reference-only, applied by hand, and the daily drift check would flag any edit until it is applied). What the server needs, in this order (owner, by hand):
+1. `apt-cache policy libnginx-mod-http-brotli-static` (Debian 12+/Ubuntu 22.04+ package it; elsewhere build `ngx_brotli` for the exact nginx version). Install it; it drops a `load_module` line into `/etc/nginx/modules-enabled/`.
+2. In the `mintradar.org` server block, next to the existing gzip block:
+   ```nginx
+   gzip_static on;    # serve dist/*.gz when present (module built into the distro nginx)
+   brotli_static on;  # serve dist/*.br to clients that send Accept-Encoding: br (needs step 1)
+   ```
+   Keep `gzip on;` for the API and anything without a precompressed copy. Do not add `brotli on;` (on-the-fly brotli) unless the `libnginx-mod-http-brotli-filter` module is also installed; the static files are enough for the app.
+3. `sudo nginx -t && sudo systemctl reload nginx`, copy the same lines into `deploy/nginx.conf` in a commit so the drift check stays clean, then check: `curl -sI -H 'Accept-Encoding: br' https://mintradar.org/assets/<index>.js` → `Content-Encoding: br`, `Vary: Accept-Encoding`, and the same `Cache-Control` as before.
+**Gotcha once `gzip_static` is on:** `deploy.yml` replaces `dist/assets/` but only overwrites the root files, so a root file that later drops below 1024 B (e.g. `robots.txt`) would leave its old `.gz`/`.br` behind and nginx would serve the stale copy. Today every root file that has a copy is rewritten by every build; if that ever changes, delete root `*.br`/`*.gz` in the deploy before the copy.
+
+### registerSW.js is `defer` (Stage 2 perf, 2026-10-25)
+
+`VitePWA({ injectRegister: 'script-defer' })` makes the build emit `<script id="vite-plugin-pwa:register-sw" src="/registerSW.js" defer>` instead of a parser-blocking script in `<head>`. `public/registerSW.js` is unchanged and still registers on `window.load` (a deferred script runs before `DOMContentLoaded`, so the listener is always attached in time). CSP is unaffected (same file, still `'self'`). The three auto-update rules below still hold.
+
 ### Service Worker / PWA auto-update
 
 `vite-plugin-pwa` (`registerType: 'autoUpdate'`) only reliably delivers deploys to users when ALL THREE of the following are correct simultaneously:

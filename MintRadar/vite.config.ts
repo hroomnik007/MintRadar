@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { resolve } from 'path'
 import { brandAssetsPlugin, withBrandHash } from './vite-brand-assets'
 import { openApiAssetPlugin } from './vite-openapi'
+import { precompressPlugin } from './vite-precompress'
 
 // Manifest icons carry ?v=<content hash> in builds (see vite-brand-assets.ts); dev leaves them untouched.
 const icon = (command: string, path: string) => (command === 'build' ? withBrandHash(path) : path)
@@ -15,6 +16,9 @@ export default defineConfig(({ command }) => ({
     openApiAssetPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
+      // `<script defer src="/registerSW.js">` instead of a parser-blocking `<script>` in <head> (Stage 2 perf):
+      // registration only needs to happen after the document is parsed; the SW itself is unchanged.
+      injectRegister: 'script-defer',
       manifest: {
         name: 'MintRadar',
         short_name: 'MintRadar',
@@ -51,6 +55,7 @@ export default defineConfig(({ command }) => ({
         ],
       },
     }),
+    precompressPlugin(),
   ],
   resolve: {
     alias: {
