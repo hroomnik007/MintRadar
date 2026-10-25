@@ -570,6 +570,34 @@ export async function initDb(): Promise<void> {
   }
 
 
+  // Repair of the pending keysets written by the first backfill (deployed 2026-10-25 12:09 UTC), which stored only the NEW
+  // keysets as the pending list: read against the baseline that list claims keyset_removed for keysets the mint still lists
+  // (mint.lnpay.cz: 004558e8362903b1, 00534ab3e6b75ca1). A pending list that omits a keyset which is in the stored baseline AND in
+  // the mint's latest keysets check (same 10-minute window as the backfill below), where that check is not older than the
+  // pending first sighting, is replaced by the whole latest list. pending_keysets_first_seen_at is kept. Idempotent: a repaired
+  // list contains every keyset of the latest check, so it no longer matches. No mint_changes row, nothing confirmed; the
+  // next matching keysets check confirms it as usual.
+  await pool.query(`
+    UPDATE mint_change_state s
+       SET pending_keysets = sub.list
+      FROM (
+        SELECT k.url,
+               jsonb_agg(jsonb_build_object('id', k.keyset_id, 'unit', lower(k.unit), 'active', k.active, 'fee', k.input_fee_ppk,
+                         'expiry', CASE WHEN k.final_expiry IS NULL THEN NULL ELSE EXTRACT(EPOCH FROM k.final_expiry)::bigint END)
+                         ORDER BY k.keyset_id) AS list,
+               bool_or(s2.keysets @> jsonb_build_array(jsonb_build_object('id', k.keyset_id))
+                       AND NOT (s2.pending_keysets @> jsonb_build_array(jsonb_build_object('id', k.keyset_id)))) AS omits_listed
+          FROM mint_keysets k
+          JOIN mints m ON m.url = k.url
+          JOIN mint_change_state s2 ON s2.url = k.url
+         WHERE m.keysets_checked_at IS NOT NULL AND k.last_seen_at >= m.keysets_checked_at - INTERVAL '10 minutes'
+           AND jsonb_typeof(s2.pending_keysets) = 'array' AND jsonb_typeof(s2.keysets) = 'array'
+           AND s2.pending_keysets_first_seen_at IS NOT NULL AND m.keysets_checked_at >= s2.pending_keysets_first_seen_at
+         GROUP BY k.url
+      ) sub
+     WHERE s.url = sub.url AND sub.omits_listed
+  `)
+
   // Backfill of the pending keysets (mintChanges.ts): a mint whose LATEST keysets check (mint_keysets rows seen within 10
   // minutes of mints.keysets_checked_at, the same window as the wallet API's keysets) lists a keyset that first appeared after
   // tracking_since and is missing from the stored baseline gets that whole list as its pending value (so mint.lnpay.cz shows

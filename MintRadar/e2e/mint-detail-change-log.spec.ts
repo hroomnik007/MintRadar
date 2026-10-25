@@ -135,4 +135,33 @@ test('"View on Nostr" and "Copy naddr" have the same height, padding and font si
     return { view: pick('.md-hr-view'), copy: pick('.md-hr-value .doc-copy-btn') }
   })
   expect(m.view).toEqual(m.copy)
+  expect(m.view).toEqual({ h: 32, pad: '6px 12px', fs: '12px' })
+})
+
+test('touch, 390 px: both record buttons stay compact (32px, 6px 12px) with a 44px tall invisible tap area', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true })
+  const page = await ctx.newPage()
+  expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'touch emulation').toBe(true)
+  await open(page, answer(), 390)
+  const rowEl = page.locator('.md-hr-row')
+  await expect(rowEl.locator('.md-hr-view')).toBeVisible()
+  await layoutReady(page)
+  const m = await rowEl.evaluate(el => {
+    const pick = (sel: string) => {
+      const n = el.querySelector<HTMLElement>(sel)!
+      const cs = getComputedStyle(n), after = getComputedStyle(n, '::after')
+      return { h: n.getBoundingClientRect().height, pad: `${cs.paddingTop} ${cs.paddingRight}`, fs: cs.fontSize, tap: parseFloat(after.height), pos: after.position }
+    }
+    return { view: pick('.md-hr-view'), copy: pick('.md-hr-value .doc-copy-btn') }
+  })
+  expect(m.view).toEqual({ h: 32, pad: '6px 12px', fs: '12px', tap: 44, pos: 'absolute' })
+  expect(m.copy).toEqual(m.view)
+  // a tap 5px above the visible Copy naddr button (inside the 44px area) still copies
+  await page.evaluate(() => { Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (t: string) => { (window as unknown as { __copied?: string }).__copied = t } }, configurable: true }) })
+  const copy = rowEl.locator('.md-hr-value .doc-copy-btn')
+  await copy.scrollIntoViewIfNeeded()
+  const b = (await copy.boundingBox())!
+  await page.touchscreen.tap(b.x + b.width / 2, b.y - 5)
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __copied?: string }).__copied)).toMatch(/^naddr1/)
+  await ctx.close()
 })

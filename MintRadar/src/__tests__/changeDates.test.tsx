@@ -280,9 +280,13 @@ describe('the Changes panel is gone and the record buttons match', () => {
     const page = src('pages/MintDetail.tsx')
     expect(page).not.toMatch(/MintChangeLog|No changes to keys, fees or keysets recorded since/)
   })
-  it('"View on Nostr" and "Copy naddr" share one height, padding, font size and line height', () => {
+  it('"View on Nostr" and "Copy naddr" share one compact height, padding, font size and line height, also on touch', () => {
     const css = src('pages/MintDetail.css')
-    expect(css).toMatch(/\.md-hr-view, \.md-hr-value \.doc-copy-btn \{ height: 32px; min-height: 32px; padding: 0 12px; box-sizing: border-box; font-family: inherit; font-size: 12px; line-height: 1;/)
-    expect(css).toMatch(/\.md-hr-view, \.md-hr-value \.doc-copy-btn \{ height: 44px; min-height: 44px; padding-inline: 16px; \}/)
+    expect(css).toMatch(/\.md-hr-view, \.md-hr-value \.doc-copy-btn \{ position: relative; height: 32px; min-height: 32px; padding: 6px 12px; box-sizing: border-box; font-family: inherit; font-size: 12px; line-height: 1;/)
+    const touch = css.slice(css.indexOf('@media (pointer: coarse)', css.indexOf('.md-hr-dev-note')))
+    expect(touch).toMatch(/\.md-hr-view, \.md-hr-value \.doc-copy-btn \{ height: 32px; min-height: 32px; padding: 6px 12px; \}/)
+    // the visual size stays compact; an invisible pseudo-element keeps a 44px tall tap area
+    expect(touch).toMatch(/\.md-hr-view::after, \.md-hr-value \.doc-copy-btn::after \{ content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px;/)
+    expect(css).not.toMatch(/\.md-hr-view, \.md-hr-value \.doc-copy-btn \{ height: 44px/)
   })
 })
