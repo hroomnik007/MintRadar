@@ -7,8 +7,8 @@
 //
 // Rules (docs/claude/backend-api-and-data.md "Mint change log"):
 //  - Baseline: the first observation of a mint, or of a field that was never stored, writes NO change.
-//  - Confirmation: a difference becomes a change only when two consecutive successful observations agree (in-memory
-//    pending state; a restart loses it, which can only delay a change, never invent one).
+//  - Confirmation: a difference becomes a change only when two consecutive successful observations agree (pending state
+//    is persisted in mint_change_state; a restart or an offline period no longer drops it).
 //  - A failed fetch, a non-2xx, a field missing from a partial answer, an empty or partly malformed keysets answer never
 //    compares and never overwrites the stored state (the callers do not call in then).
 //  - Stored values are normalised (trimmed, spaces collapsed, lists sorted, fees as numbers) and sanitised text: plain,
@@ -372,9 +372,23 @@ export async function observeInfo(url: string, raw: unknown, deps: ChangeDeps): 
       dirty = true
       continue
     }
-    const step = stepValue(stored[f], deps.pending.get(key), observed, now)
-    if (step.kind === 'pending') { deps.pending.set(key, step.pending); continue }
-    deps.pending.delete(key)
+    const pendingInfo = state.pendingInfo ?? {}
+    const pending = pendingInfo[f] ? { value: pendingInfo[f].value, firstSeenAt: pendingInfo[f].firstSeenAt } : undefined
+    const step = stepValue(stored[f], pending, observed, now)
+    if (step.kind === 'pending') {
+      pendingInfo[f] = step.pending
+      await pool.query(
+        'INSERT INTO mint_change_state (url, pending_info) VALUES ($1, $2::jsonb) ON CONFLICT (url) DO UPDATE SET pending_info = COALESCE(mint_change_state.pending_info, \'{}\'::jsonb) || $2::jsonb',
+        [url, JSON.stringify({ [f]: step.pending })],
+      )
+      continue
+    }
+    // clear this field's pending
+    delete pendingInfo[f]
+    await pool.query(
+      'UPDATE mint_change_state SET pending_info = pending_info - $2 WHERE url = $1',
+      [url, f],
+    )
     if (step.kind === 'same') continue
     next[f] = observed
     dirty = true
@@ -391,15 +405,23 @@ export async function observeKeysets(url: string, observedList: readonly KeysetS
   if (observedList.length === 0) return []
   const state = await deps.load(url)
   const stored = normalizeStoredKeysets(state.keysets)
-  const key = `${url}\nkeysets`
   const signature = JSON.stringify(observedList)
   if (stored === null) {
-    deps.pending.delete(key)
+    // First observation: baseline, clear any pending.
+    await pool.query('UPDATE mint_change_state SET pending_keysets = NULL, pending_keysets_first_seen_at = NULL WHERE url = $1', [url])
     return deps.commit(url, { keysets: [...observedList] }, [])
   }
-  const step = stepValue(JSON.stringify(stored), deps.pending.get(key), signature, deps.now())
-  if (step.kind === 'pending') { deps.pending.set(key, step.pending); return [] }
-  deps.pending.delete(key)
+  const pending = state.pendingKeysets ?? undefined
+  const step = stepValue(JSON.stringify(stored), pending, signature, deps.now())
+  if (step.kind === 'pending') {
+    await pool.query(
+      'INSERT INTO mint_change_state (url, pending_keysets, pending_keysets_first_seen_at) VALUES ($1, $2, to_timestamp($3/1000.0)) ON CONFLICT (url) DO UPDATE SET pending_keysets = $2, pending_keysets_first_seen_at = to_timestamp($3/1000.0)',
+      [url, step.pending.value, step.pending.firstSeenAt],
+    )
+    return []
+  }
+  // same or confirmed: clear pending
+  await pool.query('UPDATE mint_change_state SET pending_keysets = NULL, pending_keysets_first_seen_at = NULL WHERE url = $1', [url])
   if (step.kind !== 'confirmed') return []
   return deps.commit(url, { keysets: [...observedList] }, diffKeysets(stored, observedList, step.firstSeenAt))
 }
@@ -421,10 +443,24 @@ export function decideStorage(rowsToday: number, hasMergedRowForType: boolean): 
 
 const DAY_START_SQL = `(date_trunc('day', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')`
 
-export async function loadState(url: string): Promise<MintChangeState> {
-  const res = await pool.query('SELECT info, keysets, nuts_rules FROM mint_change_state WHERE url = $1', [url])
-  const row = res.rows[0] as { info: unknown; keysets: unknown; nuts_rules: number } | undefined
-  return { info: row?.info ?? null, keysets: row?.keysets ?? null, nutsRules: row?.nuts_rules ?? 0 }
+export interface PendingKeysets { value: string; firstSeenAt: number }
+export interface PendingInfo { [field: string]: { value: string; firstSeenAt: number } }
+
+export async function loadState(url: string): Promise<MintChangeState & { pendingKeysets: PendingKeysets | null; pendingInfo: PendingInfo | null }> {
+  const res = await pool.query(
+    'SELECT info, keysets, nuts_rules, pending_keysets, pending_keysets_first_seen_at, pending_info FROM mint_change_state WHERE url = $1',
+    [url],
+  )
+  const row = res.rows[0] as { info: unknown; keysets: unknown; nuts_rules: number; pending_keysets: string | null; pending_keysets_first_seen_at: Date | string | null; pending_info: unknown } | undefined
+  const pk = row?.pending_keysets ?? null
+  const pkAt = row?.pending_keysets_first_seen_at
+  return {
+    info: row?.info ?? null,
+    keysets: row?.keysets ?? null,
+    nutsRules: row?.nuts_rules ?? 0,
+    pendingKeysets: pk !== null && pkAt !== null ? { value: pk, firstSeenAt: new Date(pkAt).getTime() } : null,
+    pendingInfo: (row?.pending_info as PendingInfo | null) ?? null,
+  }
 }
 
 export async function commitChanges(url: string, patch: StatePatch, changes: DetectedChange[]): Promise<StoredChange[]> {
@@ -558,13 +594,28 @@ function rowOf(r: Record<string, unknown>): ChangeRow {
 }
 
 /** The newest changes of ONE mint (the web route) and when tracking of it started. */
-export async function listMintChanges(url: string, limit: number = ROUTE_CHANGES_MAX): Promise<{ trackingSince: string | null; changes: ChangeRow[] }> {
+export async function listMintChanges(url: string, limit: number = ROUTE_CHANGES_MAX): Promise<{ trackingSince: string | null; changes: ChangeRow[]; pending?: { firstSeenAt: string; diff: DetectedChange[] } }> {
   const [rows, state] = await Promise.all([
     pool.query(
       `SELECT change_type, field, old_value, new_value, observed_at, first_seen_at
          FROM mint_changes WHERE url = $1 ORDER BY observed_at DESC, id DESC LIMIT $2`, [url, limit]),
-    pool.query('SELECT tracking_since FROM mint_change_state WHERE url = $1', [url]),
+    pool.query('SELECT tracking_since, keysets, pending_keysets, pending_keysets_first_seen_at FROM mint_change_state WHERE url = $1', [url]),
   ])
   const since = state.rows[0]?.tracking_since as Date | string | undefined
-  return { trackingSince: since ? iso(since) : null, changes: (rows.rows as Record<string, unknown>[]).map(rowOf) }
+  const result: { trackingSince: string | null; changes: ChangeRow[]; pending?: { firstSeenAt: string; diff: DetectedChange[] } } = {
+    trackingSince: since ? iso(since) : null,
+    changes: (rows.rows as Record<string, unknown>[]).map(rowOf),
+  }
+  const pk = state.rows[0]?.pending_keysets as string | null | undefined
+  const pkAt = state.rows[0]?.pending_keysets_first_seen_at as Date | string | null | undefined
+  const storedKs = state.rows[0]?.keysets
+  if (pk && pkAt && Array.isArray(storedKs)) {
+    try {
+      const pendingList = JSON.parse(pk) as KeysetSnap[]
+      const stored = normalizeStoredKeysets(storedKs) ?? []
+      const diff = diffKeysets(stored, pendingList, new Date(pkAt).getTime())
+      if (diff.length > 0) result.pending = { firstSeenAt: iso(pkAt), diff }
+    } catch { /* malformed pending is ignored */ }
+  }
+  return result
 }

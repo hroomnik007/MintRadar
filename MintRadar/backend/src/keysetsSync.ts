@@ -231,6 +231,11 @@ async function defaultStore(url: string, rows: StoredKeyset[]): Promise<void> {
   await pool.query('UPDATE mints SET keysets_checked_at = NOW() WHERE url = $1', [url])
 }
 
+
+async function listPendingKeysetsUrls(): Promise<string[]> {
+  const res = await pool.query('SELECT url FROM mint_change_state WHERE pending_keysets IS NOT NULL')
+  return (res.rows as Array<{ url: string }>).map(r => r.url)
+}
 async function defaultListOnlineUrls(): Promise<string[]> {
   const res = await pool.query(
     `SELECT url FROM (
@@ -303,7 +308,13 @@ export async function runKeysetsTick(opts: KeysetsTickOptions = {}): Promise<Key
 
   running = true
   try {
-    const urls = (await (opts.listOnlineUrls ?? defaultListOnlineUrls)()).filter(u => keysetsSlotOf(u) === slot)
+    const online = await (opts.listOnlineUrls ?? defaultListOnlineUrls)()
+    const pending = await listPendingKeysetsUrls()
+    // Fast confirmation: any mint with a pending keysets value is re-checked this tick (outside its slot).
+    // Offline mints with pending are still fetched in their own slot.
+    const slotUrls = online.filter(u => keysetsSlotOf(u) === slot)
+    const fast = pending.filter(u => !slotUrls.includes(u))
+    const urls = [...slotUrls, ...fast]
     stats.mints = urls.length
     if (urls.length > 0) await sleep(Math.floor(random() * KEYSETS_TICK_JITTER_MAX_MS))
     for (let i = 0; i < urls.length; i++) {

@@ -548,6 +548,11 @@ export async function initDb(): Promise<void> {
     // Version of the rule the stored `info.nuts` baseline was built with (NUTS_RULES_VERSION in mintChanges.ts; 0 = built before
     // supported:false meant "not supported"). An older stamp makes the next observation replace the baseline silently, no change row.
     'ALTER TABLE mint_change_state ADD COLUMN IF NOT EXISTS nuts_rules INTEGER NOT NULL DEFAULT 0',
+    // Persisted pending observations (survive restart / offline). pending_keysets is the JSON signature string,
+    // pending_info is a map of field -> { value, firstSeenAt }. Cleared on confirmation or when the mint removes the value.
+    'ALTER TABLE mint_change_state ADD COLUMN IF NOT EXISTS pending_keysets JSONB',
+    'ALTER TABLE mint_change_state ADD COLUMN IF NOT EXISTS pending_keysets_first_seen_at TIMESTAMPTZ',
+    'ALTER TABLE mint_change_state ADD COLUMN IF NOT EXISTS pending_info JSONB',
     // Facts about the mint's contact entries (contactChecks.ts): [{ kind, formatValid, domainResolves, checkedAt }] per entry,
     // never a contact value or a domain. NULL until the first check after the deploy. Nullable, no default: metadata only.
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS contact_checks JSONB',
@@ -563,6 +568,28 @@ export async function initDb(): Promise<void> {
     await pool.query(sql)
   }
 
+
+  // One-off backfill: keysets in mint_keysets whose first_seen_at > tracking_since and that are missing from the
+  // stored keysets baseline become pending (so mint.lnpay.cz shows 01cbb9 as "seen once"). Idempotent.
+  await pool.query(`
+    UPDATE mint_change_state s
+    SET pending_keysets = sub.sig,
+        pending_keysets_first_seen_at = sub.first_seen
+    FROM (
+      SELECT k.url,
+             jsonb_agg(jsonb_build_object('id', k.keyset_id, 'unit', k.unit, 'active', k.active, 'inputFeePpk', k.input_fee_ppk) ORDER BY k.keyset_id) AS sig,
+             MIN(k.first_seen_at) AS first_seen
+        FROM mint_keysets k
+        JOIN mint_change_state s2 ON s2.url = k.url
+       WHERE k.first_seen_at > s2.tracking_since
+         AND s2.pending_keysets IS NULL
+         AND NOT EXISTS (
+           SELECT 1 FROM jsonb_array_elements(s2.keysets) e WHERE e->>'id' = k.keyset_id
+         )
+       GROUP BY k.url
+    ) sub
+    WHERE s.url = sub.url
+  `)
   // Seed software_versions so scoring works identically right after deploy, even
   // before fetchLatestUpstreamVersions' daily cron job has run for the first time.
   // Initial values only (major.minor is what the version rule uses; the exact patch doesn't
