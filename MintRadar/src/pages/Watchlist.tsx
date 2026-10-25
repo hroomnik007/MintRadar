@@ -15,6 +15,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { MintCard } from '@/components/mint/MintCard'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { ROUTE_META_BY_PATH } from '@/utils/pageMeta'
 import { displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { watchlistNotifyExplainer } from '@/utils/tooltipTexts'
 import { showWatchlistCount } from '@/utils/watchlistCount'
@@ -284,11 +285,7 @@ export default function Watchlist() {
     // a page was appended (e.g. browser scroll anchoring) would otherwise never load the next one.
   }, [listKey, knownLoading, syncStatus, visibleCount])
 
-  useDocumentMeta(
-    'My Watchlist - MintRadar',
-    'Track your favorite Cashu mints and optionally get a Nostr DM when one goes offline or comes back online.',
-    { noindex: true }
-  )
+  useDocumentMeta(ROUTE_META_BY_PATH['/watchlist'].title, ROUTE_META_BY_PATH['/watchlist'].description, { noindex: true })
 
   if (profile === null) {
     return (

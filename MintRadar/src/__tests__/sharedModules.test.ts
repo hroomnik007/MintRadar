@@ -157,6 +157,18 @@ describe('pageMeta: backend and frontend copies agree', () => {
   })
 })
 
+describe('mintSlug: backend and frontend copies agree', () => {
+  it('has identical code (Mint Detail slug resolution and display name, used by the server-side head)', () => {
+    expect(codeOf('../utils/mintSlug.ts')).toBe(codeOf('../../backend/src/shared/mintSlug.ts'))
+  })
+})
+
+describe('learnModules: backend and frontend copies agree', () => {
+  it('has identical code (the Learn module list the server-side head and the sitemap use)', () => {
+    expect(codeOf('../constants/learnModules.ts')).toBe(codeOf('../../backend/src/shared/learnModules.ts'))
+  })
+})
+
 describe('healthAssertionConstants: backend and frontend copies agree', () => {
   it('has identical code (key, NIP-05 name, public relays and the tag list of the health assertions)', () => {
     expect(codeOf('../utils/healthAssertionConstants.ts')).toBe(codeOf('../../backend/src/shared/healthAssertionConstants.ts'))

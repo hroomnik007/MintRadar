@@ -112,7 +112,15 @@ describe('deploy/nginx.conf, Task D1b blocks', () => {
 
   it('answers the AI catalog path with a real 404 and leaves location / alone', () => {
     expect(block('/.well-known/ai-catalog.json')).toContain('return 404;')
-    expect(conf).toContain('    location / {\n        try_files $uri $uri/ /index.html;\n    }')
+    expect(conf).toContain('    location / {\n        try_files $uri @spa_html;\n    }')
+  })
+
+  // Stage 3 SEO: SPA routes go to the backend (per-route meta, real 404s) with the static app shell as fallback.
+  it('sends SPA routes to the backend and falls back to the static index.html when it is unavailable', () => {
+    expect(conf).toMatch(/location @spa_html \{[^}]*proxy_pass http:\/\/127\.0\.0\.1:3002;[^}]*error_page 429 500 502 503 504 = @spa_static;/)
+    expect(conf).not.toMatch(/error_page[^;\n]*\b404\b[^;\n]*@spa_static/)
+    expect(conf).toContain('    location @spa_static {\n        try_files /index.html =503;\n    }')
+    expect(conf).not.toContain('try_files $uri $uri/ /index.html;')
   })
 })
 

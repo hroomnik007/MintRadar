@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { ROUTE_META_BY_PATH } from '@/utils/pageMeta'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
 import { WALLET_API_FACTS } from '@/constants/forWalletsPage'
 import './About.css'
@@ -60,10 +61,7 @@ function useNavbarOffset(pageRef: React.RefObject<HTMLDivElement | null>): void 
 }
 
 export default function About() {
-  useDocumentMeta(
-    'About and privacy | MintRadar',
-    'What MintRadar is, how it measures Cashu mints, what data it keeps about you and the rules of using it.',
-  )
+  useDocumentMeta(ROUTE_META_BY_PATH['/about'].title, ROUTE_META_BY_PATH['/about'].description)
   const { hash } = useLocation()
   const pageRef = useRef<HTMLDivElement>(null)
   useNavbarOffset(pageRef)

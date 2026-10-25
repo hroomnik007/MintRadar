@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { NOT_FOUND_TITLE } from '@/utils/pageMeta'
 import './NotFound.css'
 
 // Catch-all route (src/App.tsx). Separate from RouteError, which stays the screen for real
 // chunk-load / render failures. `notFound` removes the canonical link instead of pointing it at whatever
 // unknown path was requested.
 export default function NotFound() {
-  useDocumentMeta('Page not found | MintRadar', undefined, { noindex: true, notFound: true })
+  useDocumentMeta(NOT_FOUND_TITLE, undefined, { noindex: true, notFound: true })
 
   return (
     <div className="not-found-page">

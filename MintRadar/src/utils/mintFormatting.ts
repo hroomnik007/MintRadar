@@ -4,6 +4,9 @@
 
 import { PROBE_LOCATION } from '@/constants/probeLocation'
 import { cleanMintName } from '@/utils/cleanMintName'
+import { duplicateNamesOf, mintHostname, resolveStrippedMintName, stripCleanedNameQuotes } from '@/utils/mintSlug'
+
+export { mintHostname, resolveMintDetailUrl, type MintDetailResolution } from '@/utils/mintSlug'
 
 // Below this many NIP-87 reviews a Community Rating average is too thin to lean
 // on — the displayed number is de-emphasised (the Rating *sort* already handles
@@ -13,10 +16,7 @@ export const MIN_MEANINGFUL_REVIEWS = 3
 
 // ── Mint hostname ──────────────────────────────────────────────
 // Single shared implementation of the "URL → hostname (or the raw string if
-// unparsable)" fallback that several components used to each inline.
-export function mintHostname(url: string): string {
-  try { return new URL(url).hostname } catch { return url }
-}
+// unparsable)" fallback that several components used to each inline (mintSlug.ts, re-exported above).
 
 // ── Same-operator (shared NUT-06 pubkey) grouping ──────────────
 // Groups known mints by their /v1/info pubkey so cards can flag "Same
@@ -51,88 +51,7 @@ export function sameOperatorUrls(
 }
 
 // ── Mint-detail route param → tracked mint ─────────────────────
-// The /mint/:url route param can be a bare host ("21mint.me") pasted by a user,
-// not just the percent-encoded canonical URL the app links to
-// ("https%3A%2F%2F21mint.me"). Without canonicalisation a bare host never
-// matches a tracked row, so the page used to fall through to a hollow live-probe
-// stub (0 NUTs, ~3% Reliability) instead of the real, tracked mint.
-export type MintDetailResolution =
-  | { kind: 'ok'; url: string }
-  | { kind: 'redirect'; url: string }
-  | { kind: 'not-tracked'; slug: string; suggestion: string | null }
-
-interface KnownMintLike { url: string; online?: boolean | null; reliabilityScore?: number | null }
-
-function stripHostPrefix(host: string): string {
-  return host.replace(/^(?:www\.|mint\.)+/, '')
-}
-
-// Among several tracked rows on the same host, pick the one the Dashboard treats
-// as *the* mint: a row that has actually been probed (online !== null) beats a
-// never-probed NIP-87-only stub; then a bare-root https://host; then the higher
-// Reliability Score; then the shorter (path-less) URL.
-function pickDashboardRow(rows: KnownMintLike[], host: string): KnownMintLike {
-  return [...rows].sort((a, b) => {
-    const aProbed = a.online != null ? 0 : 1
-    const bProbed = b.online != null ? 0 : 1
-    if (aProbed !== bProbed) return aProbed - bProbed
-    const aRoot = a.url === `https://${host}` ? 0 : 1
-    const bRoot = b.url === `https://${host}` ? 0 : 1
-    if (aRoot !== bRoot) return aRoot - bRoot
-    const at = a.reliabilityScore ?? -1
-    const bt = b.reliabilityScore ?? -1
-    if (at !== bt) return bt - at
-    return a.url.length - b.url.length
-  })[0]!
-}
-
-function closestKnownHostUrl(host: string, known: KnownMintLike[]): string | null {
-  const target = stripHostPrefix(host)
-  for (const m of known) {
-    const kh = mintHostname(m.url).toLowerCase()
-    if (stripHostPrefix(kh) === target || kh.endsWith('.' + host) || host.endsWith('.' + kh)) {
-      return m.url
-    }
-  }
-  return null
-}
-
-export function resolveMintDetailUrl(slug: string, known: KnownMintLike[]): MintDetailResolution {
-  const trimmed = slug.trim()
-
-  // 1. The slug is already an exact tracked URL (the canonical encoded form, or
-  //    a real http:// row) — render it as-is.
-  if (known.some(m => m.url === trimmed)) return { kind: 'ok', url: trimmed }
-
-  // 2. Canonicalise a bare host → https://host (keep any path; never append a
-  //    trailing slash — that would be a *different* URL / a second mint row) and
-  //    resolve by hostname. Hostname match is authoritative: among every tracked
-  //    row on that host, pickDashboardRow() chooses the one the Dashboard shows
-  //    — a probed row always beats a never-probed NIP-87-only stub, even the
-  //    stub that happens to be the exact bare-root URL.
-  const hasScheme = /^https?:\/\//i.test(trimmed)
-  const withScheme = hasScheme ? trimmed : `https://${trimmed}`
-
-  let host = ''
-  try { host = new URL(withScheme).hostname.toLowerCase() } catch { host = '' }
-
-  if (host) {
-    const hostMatches = known.filter(m => mintHostname(m.url).toLowerCase() === host)
-    if (hostMatches.length > 0) {
-      const best = pickDashboardRow(hostMatches, host)
-      return best.url === trimmed ? { kind: 'ok', url: best.url } : { kind: 'redirect', url: best.url }
-    }
-  } else {
-    // Slug isn't URL-parseable — last-ditch exact-match on the scheme-prefixed
-    // and trailing-slash-stripped forms.
-    const canonical = withScheme.replace(/\/+$/, '')
-    if (canonical !== trimmed && known.some(m => m.url === canonical)) return { kind: 'redirect', url: canonical }
-    if (withScheme !== trimmed && known.some(m => m.url === withScheme)) return { kind: 'redirect', url: withScheme }
-  }
-
-  // 3. Nothing tracked under this host — do not render a fake full detail.
-  return { kind: 'not-tracked', slug: trimmed, suggestion: host ? closestKnownHostUrl(host, known) : null }
-}
+// resolveMintDetailUrl and MintDetailResolution live in mintSlug.ts (shared with the server-side head, see there).
 
 // ── Mint display name ──────────────────────────────────────────
 // The name shown on cards, in the Name sort, and in the Compare picker.
@@ -142,24 +61,13 @@ export function resolveMintDetailUrl(slug: string, known: KnownMintLike[]): Mint
 //
 // "Cashu test mint" is deliberately NOT a denylist entry — it's a real known
 // test mint that carries its own "Test mint" badge, so its name is kept.
-const GENERIC_NAME_DENYLIST = new Set(['cashu', 'cashu mint', 'mint'])
+// The denylist and the rules live in mintSlug.ts (shared with the server-side head of Mint Detail).
 
-// Trims a raw mint `name` and strips one pair of wrapping quotes (" or ') —
-// the same cleanup resolveMintName() applies before deciding whether to use
-// it as the title. Shared so displayName() and computeDuplicateMintNames()
-// can't drift on what counts as "the same name".
+// Display cleaning first (controls, zero-width, bidi, emoji spam, length cap; see cleanMintName.ts), then one pair of
+// wrapping quotes. No url: a name with nothing displayable left comes back '' so the host fallback still applies.
+// Shared so displayName() and computeDuplicateMintNames() can't drift on what counts as "the same name".
 function stripWrappingQuotes(rawName: string | null | undefined): string {
-  // Display cleaning first (controls, zero-width, bidi, emoji spam, length cap; see cleanMintName.ts).
-  // No url: a name with nothing displayable left comes back '' so the host fallback below still applies.
-  let name = cleanMintName(rawName, '')
-  if (name.length >= 2) {
-    const first = name[0]
-    const last = name[name.length - 1]
-    if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
-      name = name.slice(1, -1).trim()
-    }
-  }
-  return name
+  return stripCleanedNameQuotes(cleanMintName(rawName, ''))
 }
 
 // Computes the set of normalized (lowercased) names that appear on 2+ mints in the given
@@ -173,17 +81,7 @@ function stripWrappingQuotes(rawName: string | null | undefined): string {
 // mint tracked) is not a collision and should keep its real name as the
 // title, with the hostname shown as a normal, non-duplicate subtitle.
 export function computeDuplicateMintNames(mints: ReadonlyArray<{ name?: string | null | undefined }>): Set<string> {
-  const counts = new Map<string, number>()
-  for (const m of mints) {
-    const key = stripWrappingQuotes(m.name).toLowerCase()
-    if (key === '') continue
-    counts.set(key, (counts.get(key) ?? 0) + 1)
-  }
-  const duplicates = new Set<string>()
-  for (const [key, count] of counts) {
-    if (count >= 2) duplicates.add(key)
-  }
-  return duplicates
+  return duplicateNamesOf(mints.map(m => stripWrappingQuotes(m.name)))
 }
 
 // Shared by displayName() and shouldShowHostLine() so the two stay in sync —
@@ -203,22 +101,7 @@ function resolveMintName(
   mint: { name?: string | null | undefined; url: string },
   duplicateNames?: ReadonlySet<string> | undefined,
 ): { text: string; isFallback: boolean } {
-  const host = mintHostname(mint.url)
-  const name = stripWrappingQuotes(mint.name)
-  if (name === '' || GENERIC_NAME_DENYLIST.has(name.toLowerCase())) return { text: host, isFallback: true }
-  // If the resolved name is just a parent-domain suffix of the hostname
-  // (e.g. name "aleafnd.org" for host "bitcoin.aleafnd.org"), two sibling
-  // mints under the same parent domain would collapse to an identical title.
-  // Fall back to the full hostname so they stay distinguishable — but only
-  // when a sibling sharing that exact name is actually present in
-  // `duplicateNames`; otherwise this mint's own name is real, deliberate
-  // information (e.g. "cashu.chat" for host "mint.cashu.chat") and is kept.
-  // An EXACT match (name === hostname) is deliberately excluded from this
-  // guard entirely — see the comment above.
-  const nl = name.toLowerCase()
-  const hl = host.toLowerCase()
-  if (hl !== nl && hl.endsWith('.' + nl) && duplicateNames?.has(nl)) return { text: host, isFallback: true }
-  return { text: name, isFallback: false }
+  return resolveStrippedMintName(stripWrappingQuotes(mint.name), mint.url, duplicateNames)
 }
 
 export function displayName(
