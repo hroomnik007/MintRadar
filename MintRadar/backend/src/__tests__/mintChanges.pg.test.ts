@@ -234,4 +234,56 @@ describe.skipIf(!url)('mint_changes / mint_change_state against a real Postgres'
       await m.pool.end()
     }
   })
+
+  it('repair: a pending list from the first backfill that omits keysets the mint still lists (lnpay) is rebuilt from the latest check, first sighting kept, idempotent', async () => {
+    const m = await setup()
+    const mint = 'https://pg-changes-repair-lnpay.example.com'
+    const fresh = 'https://pg-changes-repair-fresh.example.com' // pending newer than the latest check: left alone
+    const ok = 'https://pg-changes-repair-ok.example.com' // a complete pending list: left alone
+    const OLD = '004558e8362903b1'
+    const FREE = '00534ab3e6b75ca1'
+    const NEW = '01cbb9' + 'af'.repeat(29)
+    const base = [{ id: OLD, unit: 'sat', active: true, fee: 100, expiry: null }, { id: FREE, unit: 'sat', active: false, fee: 0, expiry: null }]
+    const buggy = [{ id: NEW, unit: 'sat', active: true, fee: 200, expiry: null }]
+    const latest = [{ id: OLD, unit: 'sat', active: false, fee: 100, expiry: null }, { id: FREE, unit: 'sat', active: false, fee: 0, expiry: null }, ...buggy]
+    try {
+      for (const [u, checked] of [[mint, '2026-10-25T13:00:00Z'], [fresh, '2026-10-23T09:00:00Z'], [ok, '2026-10-25T13:00:00Z']] as const) {
+        await m.pool.query('INSERT INTO mints (url, keysets_checked_at) VALUES ($1, $2) ON CONFLICT (url) DO UPDATE SET keysets_checked_at = EXCLUDED.keysets_checked_at', [u, checked])
+        await m.commitChanges(u, { keysets: base }, [])
+        await m.pool.query(`UPDATE mint_change_state SET tracking_since = '2026-10-20T21:35:03Z', pending_keysets = $2::jsonb,
+                              pending_keysets_first_seen_at = '2026-10-23T10:00:00Z' WHERE url = $1`, [u, JSON.stringify(u === ok ? latest : buggy)])
+        for (const k of latest) {
+          await m.pool.query(
+            `INSERT INTO mint_keysets (url, keyset_id, unit, active, input_fee_ppk, final_expiry, id_version, id_valid, first_seen_at, last_seen_at, last_checked_at)
+             VALUES ($1, $2, 'sat', $3, $4, NULL, $5, true, $6, $7, $7)
+             ON CONFLICT (url, keyset_id) DO UPDATE SET active = EXCLUDED.active, input_fee_ppk = EXCLUDED.input_fee_ppk, last_seen_at = EXCLUDED.last_seen_at`,
+            [u, k.id, k.active, k.fee, k.id === NEW ? 'v2' : 'v1', k.id === NEW ? '2026-10-23T10:00:00Z' : '2026-10-01T00:00:00Z', checked])
+        }
+      }
+      const before = await m.listMintChanges(mint)
+      expect(before.pending!.diff.filter(d => d.type === 'keyset_removed')).toHaveLength(2) // the live bug
+      await m.initDb()
+      await m.initDb() // idempotent
+      const row = (await m.pool.query('SELECT pending_keysets, pending_keysets_first_seen_at FROM mint_change_state WHERE url = $1', [mint])).rows[0]
+      expect(row.pending_keysets).toEqual(latest.slice().sort((a, b) => a.id.localeCompare(b.id)))
+      expect(row.pending_keysets_first_seen_at.toISOString()).toBe('2026-10-23T10:00:00.000Z')
+      const read = await m.listMintChanges(mint)
+      expect(read.pending).toMatchObject({ firstSeenAt: '2026-10-23T10:00:00.000Z' })
+      expect(read.pending!.diff.map(d => [d.type, d.oldValue, d.newValue])).toEqual([
+        ['keyset_added', null, `${NEW} (sat, active, 200 ppk)`],
+        ['keyset_deactivated', `${OLD} (sat, active, 100 ppk)`, `${OLD} (sat, inactive, 100 ppk)`],
+        ['input_fee_changed', 'sat: 100 ppk', 'sat: 200 ppk'],
+      ])
+      expect(read.pending!.diff.some(d => d.type === 'keyset_removed')).toBe(false)
+      // nothing confirmed, no change row, the baseline untouched
+      expect((await m.pool.query('SELECT 1 FROM mint_changes WHERE url = ANY($1)', [[mint, fresh, ok]])).rowCount).toBe(0)
+      expect((await m.loadState(mint)).keysets).toEqual(base)
+      // a pending observation newer than the latest keysets check is not rewritten
+      expect((await m.pool.query('SELECT pending_keysets FROM mint_change_state WHERE url = $1', [fresh])).rows[0].pending_keysets).toEqual(buggy)
+      expect((await m.pool.query('SELECT pending_keysets FROM mint_change_state WHERE url = $1', [ok])).rows[0].pending_keysets).toEqual(latest)
+    } finally {
+      await m.pool.query('DELETE FROM mints WHERE url = ANY($1)', [[mint, fresh, ok]])
+      await m.pool.end()
+    }
+  })
 })

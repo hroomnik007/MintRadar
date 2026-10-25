@@ -41,19 +41,24 @@ describe('initDb — mint change log', () => {
     expect(pick(queries)).toEqual(first)
     expect(first.length).toBeGreaterThanOrEqual(4)
     for (const q of first) {
-      // The pending keysets backfill is a data UPDATE, idempotent by its `pending_keysets IS NULL` guard (run twice against a
-      // real PostgreSQL in mintChanges.pg.test.ts); every schema statement is IF NOT EXISTS.
-      if (/^\s*UPDATE mint_change_state/.test(q)) expect(q).toMatch(/s\.pending_keysets IS NULL AND sub\.first_seen IS NOT NULL/)
+      // The pending keysets backfill and its repair are data UPDATEs: the backfill is idempotent by its `pending_keysets IS NULL`
+      // guard, the repair by `sub.omits_listed` (a repaired list holds every keyset of the latest check); both run twice against
+      // a real PostgreSQL in mintChanges.pg.test.ts. Every schema statement is IF NOT EXISTS.
+      if (/^\s*UPDATE mint_change_state/.test(q)) expect(q).toMatch(/s\.pending_keysets IS NULL AND sub\.first_seen IS NOT NULL|WHERE s\.url = sub\.url AND sub\.omits_listed/)
       else expect(q).toMatch(/IF NOT EXISTS/)
       expect(q.replace(/ON DELETE CASCADE/g, '')).not.toMatch(/DROP|TRUNCATE|DELETE|RENAME/i)
     }
   })
 
-  it('the pending keysets backfill writes only pending columns, never mint_changes', async () => {
+  it('the pending keysets repair and backfill write only pending columns, never mint_changes', async () => {
     await initDb()
-    const backfill = queries.filter(q => /^\s*UPDATE mint_change_state/.test(q))
-    expect(backfill).toHaveLength(1)
-    expect(backfill[0]).toMatch(/SET pending_keysets = sub\.list, pending_keysets_first_seen_at = sub\.first_seen/)
-    expect(backfill[0]).not.toMatch(/INSERT|mint_changes\b/)
+    const updates = queries.filter(q => /^\s*UPDATE mint_change_state/.test(q))
+    expect(updates).toHaveLength(2)
+    const [repair, backfill] = updates as [string, string]
+    // the repair runs first and rewrites only the pending list: the first sighting and the baseline stay
+    expect(repair).toMatch(/SET pending_keysets = sub\.list\s+FROM/)
+    expect(repair).not.toMatch(/pending_keysets_first_seen_at =|SET keysets|INSERT|mint_changes\b/)
+    expect(backfill).toMatch(/SET pending_keysets = sub\.list, pending_keysets_first_seen_at = sub\.first_seen/)
+    expect(backfill).not.toMatch(/INSERT|mint_changes\b/)
   })
 })
