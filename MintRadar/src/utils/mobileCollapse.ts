@@ -55,3 +55,15 @@ export function showingNoteText<T extends { online?: boolean | null }>(shown: re
   const others = shown.length - onlineShown
   return `Showing ${onlineShown} of ${collapse.onlineTotal} online${others > 0 ? ` · ${others} offline` : ''}`
 }
+
+/**
+ * After "Show less" (2026-10-25): back to the very top of the page (scrollY 0), so the intro, the stats strip,
+ * search, filters, sort and the view toggle are in view again, not just the first card. Smooth unless the visitor
+ * asked for reduced motion. Focus goes to `focusTarget` (the Dashboard heading, tabIndex -1) without a second
+ * scroll; deliberately never the search input, which would open the on-screen keyboard on a phone.
+ */
+export function scrollPageTopAfterCollapse(win: Pick<Window, 'scrollTo' | 'matchMedia'>, focusTarget: HTMLElement | null): void {
+  const reduce = typeof win.matchMedia === 'function' && win.matchMedia('(prefers-reduced-motion: reduce)').matches
+  win.scrollTo({ top: 0, left: 0, behavior: reduce ? 'auto' : 'smooth' })
+  focusTarget?.focus({ preventScroll: true })
+}

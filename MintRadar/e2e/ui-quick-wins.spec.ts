@@ -49,7 +49,7 @@ test.describe('phone: first 10 online mints + "Show all N"', () => {
     await expect(page.locator('.mint-grid .card-name', { hasText: /^Mint / })).toHaveCount(14)
   })
 
-  test('"Show less" at the end of the expanded list collapses to 10 and brings the list top back into view', async ({ page }) => {
+  test('"Show less" at the end of the expanded list collapses to 10 and scrolls to the very top of the page', async ({ page }) => {
     await routeMany(page)
     await page.goto('/')
     await expect(page.getByTestId('show-less-mints')).toHaveCount(0)
@@ -71,16 +71,15 @@ test.describe('phone: first 10 online mints + "Show all N"', () => {
     await expect(cards).toHaveCount(10)
     await expect(showLess).toHaveCount(0)
     await expect(page.getByTestId('show-all-mints')).toHaveText('Show all 14')
-    await expect(page.getByTestId('show-all-mints')).toBeFocused()
+    // Focus goes to the Dashboard heading (no keyboard pops up on a phone), not the search input.
+    await expect(page.getByTestId('dashboard-heading')).toBeFocused()
+    await expect(page.locator('.search-input')).not.toBeFocused()
     expect(await page.evaluate(k => sessionStorage.getItem(k), 'mintradar:dash-expanded')).toBeNull()
-    // Scrolled (smoothly) up to the top of the mint list: the first card is in the viewport, not left far above it,
-    // and its top edge is below the sticky (two-row on phones) navbar, not hidden under it.
-    const navBottom = await page.locator('.navbar').evaluate(el => el.getBoundingClientRect().bottom)
-    await expect.poll(async () => {
-      const box = await page.locator('.mint-grid .mint-card').first().boundingBox()
-      return box !== null && box.y >= navBottom && box.y < 844
-    }).toBe(true)
-    expect(await page.evaluate(() => window.scrollY)).toBeLessThan(scrolledDown)
+    // Scrolled (smoothly) to the very top of the page: scrollY 0, so the intro, search and the controls are in view.
+    expect(scrolledDown).toBeGreaterThan(0)
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
+    await expect(page.locator('.dash-intro')).toBeInViewport()
+    await expect(page.locator('.search-input')).toBeInViewport()
     await expect(page.locator('.grid-showing-note')).toHaveText('Showing 10 of 14 online')
     // The cleared flag survives a reload: collapsed again.
     await page.reload()
