@@ -8,7 +8,7 @@ vi.mock('@/core/nostr/pool', () => ({
   sharedPool: { querySync: () => new Promise<never>(() => undefined), subscribeMany: () => ({ close: () => undefined }) },
 }))
 
-import { collapseOnline, mobileCollapseApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY } from '@/utils/mobileCollapse'
+import { collapseOnline, showingNoteText, mobileCollapseApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY } from '@/utils/mobileCollapse'
 import { archivedUrlSet, withoutArchivedMovers } from '@/utils/reliabilityMovers'
 import { CopyTextButton } from '@/components/mint/CopyTextButton'
 import { COMPARE_AUDIT_LABEL } from '@/utils/compareLabels'
@@ -16,6 +16,21 @@ import { LOW_RELIABILITY_TEXT, reliabilityScoreInfo } from '@/utils/mintFormatti
 import MintNaddr, { NADDR_INVALID_TEXT } from '@/pages/MintNaddr'
 
 const m = (url: string, online: boolean) => ({ url, online })
+
+describe('"Showing X of Y" note (showingNoteText)', () => {
+  const on = (n: number) => Array.from({ length: n }, () => ({ online: true }))
+  it('uncollapsed: unchanged desktop copy over the tracked total', () => {
+    const shown = [...on(50), { online: false }]
+    expect(showingNoteText(shown, 62, { collapsed: false, onlineTotal: 50 })).toBe('Showing 51 of 62')
+  })
+  it('collapsed (phone): counts online mints so it matches "Show all N"', () => {
+    expect(showingNoteText(on(10), 62, { collapsed: true, onlineTotal: 50 })).toBe('Showing 10 of 50 online')
+  })
+  it('collapsed with revealed offline rows: names them separately', () => {
+    const shown = [...on(10), { online: false }, { online: null }]
+    expect(showingNoteText(shown, 62, { collapsed: true, onlineTotal: 50 })).toBe('Showing 10 of 50 online · 2 offline')
+  })
+})
 
 describe('phone dashboard cut (collapseOnline)', () => {
   const online = Array.from({ length: 14 }, (_, i) => m(`on${i}`, true))

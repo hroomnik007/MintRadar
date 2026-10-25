@@ -30,16 +30,20 @@ test.describe('phone: first 10 online mints + "Show all N"', () => {
     await expect(names.last()).toHaveText('Mint 09')
     const showAll = page.getByTestId('show-all-mints')
     await expect(showAll).toHaveText('Show all 14')
-    await expect(page.locator('.grid-showing-note')).toContainText('Showing 10 of')
+    // Collapsed: the count is over ONLINE mints, so it matches "Show all 14" instead of the tracked total.
+    await expect(page.locator('.grid-showing-note')).toHaveText('Showing 10 of 14 online')
 
     // The hidden-mints toggle still reveals the offline mint while the online list stays cut.
     await page.locator('.degraded-note').click()
     await expect(page.locator('.card-name', { hasText: 'Offline Mint' })).toBeVisible()
     await expect(page.locator('.mint-grid .card-name', { hasText: /^Mint / })).toHaveCount(10)
+    await expect(page.locator('.grid-showing-note')).toHaveText('Showing 10 of 14 online · 1 offline')
 
     await showAll.click()
     await expect(page.locator('.mint-grid .card-name', { hasText: /^Mint / })).toHaveCount(14)
     await expect(showAll).toHaveCount(0)
+    // Expanded: the usual "Showing X of Y" (no "online").
+    await expect(page.locator('.grid-showing-note')).toHaveText(/^Showing \d+ of \d+$/)
     // Stays expanded on a reload of the same tab (Back from a mint page needs the same rows).
     await page.reload()
     await expect(page.locator('.mint-grid .card-name', { hasText: /^Mint / })).toHaveCount(14)
@@ -66,6 +70,8 @@ test.describe('tablet and desktop never cut the list', () => {
       await page.goto('/')
       await expect(page.locator('.mint-grid .card-name')).toHaveCount(14)
       await expect(page.getByTestId('show-all-mints')).toHaveCount(0)
+      // Desktop/tablet copy unchanged.
+      await expect(page.locator('.grid-showing-note')).toHaveText(/^Showing 14 of \d+$/)
     })
   }
 })

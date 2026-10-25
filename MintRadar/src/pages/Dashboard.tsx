@@ -23,7 +23,7 @@ import { ratingSortKey } from '@/utils/bayesianRating'
 import { isNotRecommendedMint, partitionNotRecommended } from '@/utils/notRecommended'
 import { cleanMintName } from '@/utils/cleanMintName'
 import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolForStatus } from '@/utils/mintCounts'
-import { collapseOnline, mobileCollapseApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY, MOBILE_EXPANDED_KEY } from '@/utils/mobileCollapse'
+import { collapseOnline, showingNoteText, mobileCollapseApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY, MOBILE_EXPANDED_KEY } from '@/utils/mobileCollapse'
 import { useMediaQuery } from '@/hooks/useIsMobile'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { isNutDeclaredSupported } from '@/utils/nutSupport'
@@ -477,7 +477,7 @@ function MintListView({
       </div>
       {collapsed && onShowAll && <ShowAllButton total={onlineTotal} onClick={onShowAll} />}
       <div className="grid-showing-note" style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center', marginTop: 16, fontFamily: 'var(--font-mono)' }}>
-        Showing {shown.length} of {totalAll || sortedFiltered.length}
+        {showingNoteText(shown, totalAll || sortedFiltered.length, { collapsed, onlineTotal })}
         <UnitHiddenNote excluded={unitExcluded} selected={unitSelected} search={search} />
       </div>
     </>
@@ -572,7 +572,7 @@ function MintGrid({
       </div>
       {collapsed && onShowAll && <ShowAllButton total={onlineTotal} onClick={onShowAll} />}
       <div className="grid-showing-note" style={{fontSize:13,color:'var(--text3)',textAlign:'center',marginTop:16,fontFamily:'var(--font-mono)'}}>
-        Showing {shown.length} of {totalAll || sortedFiltered.length}
+        {showingNoteText(shown, totalAll || sortedFiltered.length, { collapsed, onlineTotal })}
         <UnitHiddenNote excluded={unitExcluded} selected={unitSelected} search={search} />
       </div>
     </>
