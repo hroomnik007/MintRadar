@@ -241,15 +241,52 @@ describe('sourceHref accepts only https://cashu.info/mint/<id>', () => {
 
 describe('source line under the tiles', () => {
   const NOW = Date.parse('2026-10-07T07:30:00Z')
-  it('"cashu.info · last 7 days · synced 30 min ago", absolute UTC time for the title', () => {
+  const FACTS = ['DLEQ valid 56 / invalid 0 / missing 0', 'proof states checked 9 / spent 0 / pending 0', 'uptime 30d 1%']
+  it('"cashu.info · last 7 days · <facts> · synced 30 min ago", absolute UTC time for the title', () => {
     const line = auditCzSourceLine(view([], LNPAY, {}, NOW), NOW)
-    expect(line.parts).toEqual(['cashu.info', 'last 7 days'])
+    expect(line.parts).toEqual(['cashu.info', 'last 7 days', ...FACTS])
     expect(line.time).toEqual({ verb: 'synced', label: '30 min ago', title: '7 Oct 2026, 07:00 UTC' })
   })
   it('older than three detail runs: says so; no stored time: no "synced" part', () => {
     const late = Date.parse('2026-10-07T12:00:00Z')
-    expect(auditCzSourceLine(view([], LNPAY, {}, late), late).parts).toEqual(['cashu.info', 'last 7 days', 'not updated recently'])
+    expect(auditCzSourceLine(view([], LNPAY, {}, late), late).parts).toEqual(['cashu.info', 'last 7 days', ...FACTS, 'not updated recently'])
     expect(auditCzSourceLine({ checkedAt: null, notRecent: false }, NOW).time).toBeNull()
     expect(auditCzSourceLine({ checkedAt: 'garbage', notRecent: false }, NOW).time).toBeNull()
+  })
+})
+
+describe('cashu.info facts in the source line', () => {
+  const NOW = Date.parse('2026-10-25T14:15:00Z')
+  // The stored detail of mint.lnpay.cz on 2026-10-25 (prod /api/mints/audit-cz).
+  const LNPAY_NOW: AuditCzDetail = {
+    swaps7d: {
+      all: { avgMs: 2846, total: 13, failed: 2, success: 11 },
+      dleq: { valid: 6, invalid: 0, missing: 0 },
+      asDest: { avgMs: 2861, total: 6, failed: 0, success: 6 },
+      asSource: { avgMs: 2828, total: 7, failed: 2, success: 5 },
+      errorsBlamed: 0,
+    },
+    fetchedAt: '2026-10-25T14:09:43.865Z',
+  }
+  const mint = { state: 'error', uptime24h: 0, uptime7d: 70.98, uptime30d: 91.96, attributedFailures: 0, minted: 75, melted: 66, lastCheck: null }
+  it('lnpay: DLEQ valid 6 / invalid 0 / missing 0, uptime 30d 92%, synced time; no proof states when absent', () => {
+    const v = view([], LNPAY_NOW, { mint }, NOW)
+    const line = auditCzSourceLine(v, NOW)
+    expect(line.parts).toEqual(['cashu.info', 'last 7 days', 'DLEQ valid 6 / invalid 0 / missing 0', 'uptime 30d 92%'])
+    expect(line.time?.label).toBe('5 min ago')
+  })
+  it('adds the proof-state counts only when present', () => {
+    expect(view([], LNPAY, {}, Date.parse('2026-10-07T07:30:00Z')).facts).toContain('proof states checked 9 / spent 0 / pending 0')
+  })
+  it('missing fields hide their parts', () => {
+    const v = view([], { ...LNPAY_NOW, swaps7d: { ...LNPAY_NOW.swaps7d, dleq: { valid: 6 } } }, { mint: { ...mint, uptime30d: null } }, NOW)
+    expect(v.facts).toEqual(['DLEQ valid 6'])
+    const none = view([], { fetchedAt: '2026-10-25T14:09:43.865Z', swaps7d: {} }, { mint: { ...mint, uptime30d: null } }, NOW)
+    expect(none.facts).toEqual([])
+    expect(auditCzSourceLine(none, NOW).parts).toEqual(['cashu.info', 'last 7 days'])
+  })
+  it('no verdict wording', () => {
+    const text = auditCzSourceLine(view([], LNPAY, {}, NOW), NOW).parts.join(' ')
+    expect(text).not.toMatch(/safe|trust|solven|honest|verified|risk/i)
   })
 })
