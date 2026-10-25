@@ -62,6 +62,10 @@ export interface WalletExtra {
   downSince: string | null
   /** The breakdown stored with the score (mints.score_breakdown); null until the first probe cycle after the deploy. */
   scoreBreakdown: ScoreBreakdown | null
+  /** Share of successful probes in the last 30 days, in percent; null without probes in that window. */
+  uptime30dPct?: number | null
+  /** Latency percentiles of the successful probes of the last 24 hours; null without such a probe. */
+  latency24h?: WalletLatency24h | null
   /** Keysets present in the latest successful keysets check, ordered by id. */
   keysets: WalletKeyset[]
   keysetsCheckedAt: string | null
@@ -128,6 +132,18 @@ export const WALLET_INCLUDES = ['facts', 'keysets', 'methods', 'breakdown', 'cha
 export const WALLET_LIST_CHANGES_CAP = 10
 export type WalletInclude = typeof WALLET_INCLUDES[number]
 
+/** p50/p95 of latency_ms over the successful probes of the last 24 hours (percentile_cont), rounded to whole ms. */
+export interface WalletLatency24h { p50Ms: number; p95Ms: number; samples: number }
+
+/** The snapshot query's percentile columns as latency24h; null when there is no successful probe with a latency. */
+export function latency24hOf(p50: unknown, p95: unknown, samples: unknown): WalletLatency24h | null {
+  const n = Number(samples ?? 0)
+  const a = p50 == null ? NaN : Number(p50)
+  const b = p95 == null ? NaN : Number(p95)
+  if (!(n > 0) || !Number.isFinite(a) || !Number.isFinite(b)) return null
+  return { p50Ms: Math.round(a), p95Ms: Math.round(b), samples: n }
+}
+
 export type WalletMintStatus = 'online' | 'offline' | 'degraded' | 'archived'
 
 export interface WalletMint {
@@ -140,6 +156,8 @@ export interface WalletMint {
   scoreCappedNew: boolean
   uptime24hPct: number | null
   uptime7dPct: number | null
+  /** Additive 2026-10-25: share of successful probes in the last 30 days, in percent. */
+  uptime30dPct: number | null
   lastCheckedAt: string | null
   units: string[] | null
   nuts: string[] | null
@@ -174,9 +192,11 @@ export interface WalletMint {
   limits: { mint: WalletLimit[]; melt: WalletLimit[] } | null
   /** Only with include=facts: cashu.info's 7-day swaps per direction. A part is null when that direction has no stored numbers. */
   auditByDirection: { mint: AuditDirection | null; melt: AuditDirection | null }
+  /** Only with include=facts (additive 2026-10-25): latency percentiles of the successful probes of the last 24 hours. */
+  latency24h: WalletLatency24h | null
 }
 
-const HEAVY_KEYS = { facts: ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'contactChecks', 'feeExamples', 'limits', 'auditByDirection'], keysets: ['keysets', 'keysetsCheckedAt'], methods: ['methods'], breakdown: ['scoreBreakdown'], changes: ['changes', 'changesPending'] } as const
+const HEAVY_KEYS = { facts: ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'contactChecks', 'feeExamples', 'limits', 'auditByDirection', 'latency24h'], keysets: ['keysets', 'keysetsCheckedAt'], methods: ['methods'], breakdown: ['scoreBreakdown'], changes: ['changes', 'changesPending'] } as const
 
 function toIso(v: string | Date | null | undefined): string | null {
   if (v === null || v === undefined) return null
@@ -329,6 +349,7 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviews
     scoreCappedNew: underNewMintCap(m.discoveredAt, now),
     uptime24hPct: m.uptimePct24h ?? null,
     uptime7dPct: m.uptimePct7d ?? null,
+    uptime30dPct: extra?.uptime30dPct ?? null,
     lastCheckedAt: toIso(m.lastCheckedAt),
     units: Array.isArray(m.units) ? m.units : null,
     nuts: nutsOf(m.nutsLimits),
@@ -370,6 +391,7 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviews
     feeExamples: feeExamplesOf(extra?.keysets ?? []),
     limits: limitsOf(m.mintMethods, m.meltMethods),
     auditByDirection: auditByDirectionOf(extra?.auditDirections),
+    latency24h: extra?.latency24h ?? null,
   }
 }
 

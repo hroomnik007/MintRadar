@@ -68,16 +68,13 @@ test.describe('tiles', () => {
   })
 })
 
-test.describe('source line and header tooltip', () => {
-  test('one line under the tiles: cashu.info · last 7 days · synced <relative>, the UTC time in the title', async ({ page }) => {
+test.describe('no source line; header tooltip', () => {
+  test('no cashu.info source line under the tiles (uptime and DLEQ are shown elsewhere)', async ({ page }) => {
     await gotoAuditTab(page, czOnly(auditCzResponse()))
-    const line = page.getByTestId('audit-cz-source')
-    await expect(line).toHaveText('cashu.info · last 7 days · synced 10 min ago')
-    await expect(line.locator('span[title]')).toHaveAttribute('title', /^\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC$/)
-    await expect(page.getByTestId('audit-cz-source')).toHaveCount(1)
-    // under the tiles, not before them
-    const [tilesY, lineY] = await Promise.all([page.locator('.audit-cz-tiles').boundingBox(), line.boundingBox()])
-    expect(lineY!.y).toBeGreaterThan(tilesY!.y + tilesY!.height - 1)
+    await expect(page.locator('.audit-cz-tiles')).toBeVisible()
+    await expect(page.locator('.audit-cz-source')).toHaveCount(0)
+    await expect(page.locator('body')).not.toContainText('DLEQ valid')
+    await expect(page.locator('body')).not.toContainText('uptime 30d')
   })
 
   test('the Audit stats ⓘ carries the meaning of the old rows, with the real window', async ({ page }) => {
@@ -87,11 +84,89 @@ test.describe('source line and header tooltip', () => {
   })
 })
 
+test.describe('header sync note', () => {
+  test('fresh: "· synced N min ago" right after "via cashu.info", muted, styled like "fetched …" under Fees & limits', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse()))
+    const note = page.getByTestId('audit-cz-sync')
+    await expect(note).toHaveText('· synced 10 min ago')
+    await expect(note).not.toHaveClass(/md-audit-sync-wrapped/) // fits on the header line at desktop size: the dot shows
+    await expect(note.locator('.md-audit-sync-sep')).toBeVisible()
+    await expect(note).not.toHaveClass(/md-audit-sync-stale/)
+    // after "· via cashu.info" and its ⓘ (the ⓘ stays with the source name)
+    await expect(page.locator('.md-audit-header-main .md-audit-via').first()).toHaveText('· via cashu.info')
+    await expect(page.locator('.md-audit-header-main .md-audit-info').locator('xpath=following-sibling::*[1]')).toHaveAttribute('data-testid', 'audit-cz-sync')
+    await expect(page.locator('[data-testid="audit-cz-sync"], [data-testid="audit-cz-sync"] *').and(page.locator('[title]'))).toHaveCount(0)
+    // the same look as the "fetched …" time: muted 12 px body font, dotted underline on the time
+    const time = note.locator('.md-audit-sync-time')
+    const style = await time.evaluate(e => { const c = getComputedStyle(e); return { line: c.textDecorationLine, deco: c.textDecorationStyle, size: c.fontSize } })
+    expect(style).toEqual({ line: 'underline', deco: 'dotted', size: '12px' })
+  })
+
+  test('the time opens a tooltip with the exact sync time', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse()))
+    await page.getByTestId('audit-cz-sync').locator('.md-audit-sync-time').hover()
+    await expect(page.getByRole('tooltip')).toHaveText(/^Last synced from cashu\.info: \d{1,2} [A-Z][a-z]{2} \d{4}, \d\d:\d\d UTC\.$/)
+  })
+
+  test('stale (older than 90 minutes): "· not updated recently" in the warning colour', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse({ detail: czDetail({}, 120) })))
+    const note = page.getByTestId('audit-cz-sync')
+    await expect(note).toHaveText('· not updated recently')
+    await expect(note).toHaveClass(/md-audit-sync-stale/)
+    const color = await note.evaluate(e => getComputedStyle(e).color)
+    const via = await page.locator('.md-audit-header-main .md-audit-via').first().evaluate(e => getComputedStyle(e).color)
+    expect(color).not.toBe(via)
+    await note.locator('.md-audit-sync-time').hover()
+    await expect(page.getByRole('tooltip')).toHaveText(/^Last synced from cashu\.info: .+ UTC, more than 90 minutes ago\.$/)
+  })
+
+  test('mobile 390: the note wraps onto its own line without a leading dot and without widening the card', async ({ page }) => {
+    await resize(page, 390, 844)
+    await gotoAuditTab(page, czOnly(auditCzResponse({ detail: czDetail({}, 120) })))
+    const note = page.getByTestId('audit-cz-sync-mobile')
+    await expect(note).toHaveText('· not updated recently')
+    await expect(note).toHaveClass(/md-audit-sync-wrapped/)
+    await expect(note.locator('.md-audit-sync-sep')).toBeHidden() // no leading dot on its own line
+    await layoutReady(page)
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    expect(overflow).toBeLessThanOrEqual(0)
+    const card = await page.locator('.md-audit-collapsible').boundingBox()
+    const box = await note.boundingBox()
+    expect(box!.x + box!.width).toBeLessThanOrEqual(card!.x + card!.width)
+    const via = await page.locator('.md-audit-toggle .md-audit-via').boundingBox()
+    expect(box!.y).toBeGreaterThanOrEqual(via!.y + via!.height - 1) // on the next line
+    const title = await page.locator('.md-audit-toggle .md-panel-title').boundingBox()
+    const text = await note.locator('.md-audit-sync-time').boundingBox()
+    expect(Math.abs(text!.x - title!.x)).toBeLessThanOrEqual(1.5) // starts at the left edge, where the dot would have been
+    // "via cashu.info" uses the same font in both headers
+    const fonts = await page.locator('.md-audit-toggle .md-audit-via').evaluate(e => getComputedStyle(e).fontFamily)
+    expect(fonts).not.toMatch(/mono/i)
+  })
+
+  test('the dot comes back once the note fits on the line again', async ({ page }) => {
+    await resize(page, 360, 800)
+    await gotoAuditTab(page, czOnly(auditCzResponse({ detail: czDetail({}, 120) })))
+    const note = page.getByTestId('audit-cz-sync-mobile')
+    await expect(note).toHaveClass(/md-audit-sync-wrapped/)
+    await resize(page, 700, 900)
+    await expect(note).not.toHaveClass(/md-audit-sync-wrapped/)
+    await expect(note.locator('.md-audit-sync-sep')).toBeVisible()
+  })
+})
+
 test.describe('swap strip caption', () => {
-  test('states exactly what the strip shows', async ({ page }) => {
+  test('the label above the strip says "Last N swaps" and its ⓘ states exactly what it shows', async ({ page }) => {
     await gotoAuditTab(page, czOnly(auditCzResponse({ swaps: czSwapList([ok, melt, limits, pending, ok]) })))
     await expect(page.locator('.audit-swap-bar-mark')).toHaveCount(5)
-    await expect(page.getByTestId('audit-swap-bar-caption')).toHaveText(
+    await expect(page.locator('.audit-swap-bar-caption')).toHaveCount(0) // no paragraph under the strip
+    await expect(page.locator('body')).not.toContainText('The latest 5 swaps')
+    const label = page.getByTestId('audit-swap-bar-caption')
+    await expect(label).toHaveText('Last 5 swaps')
+    // above the strip, and no ⓘ left inside the strip
+    expect((await label.boundingBox())!.y).toBeLessThan((await page.locator('.audit-swap-bar').boundingBox())!.y)
+    await expect(page.locator('.audit-swap-bar .info-tooltip')).toHaveCount(0)
+    await label.locator('.info-tooltip').hover()
+    await expect(page.getByRole('tooltip')).toHaveText(
       "The latest 5 swaps MintRadar stored from cashu.info, both directions, newest first. Green: succeeded. Red: failed. Grey: not counted against the mint (below the mint's minimum, the auditor's balance, or no outcome yet).")
     // the marks follow the caption: 2 green, 1 red, 2 grey, newest left
     await expect(page.locator('.audit-swap-bar-ok')).toHaveCount(2)
@@ -164,7 +239,7 @@ test.describe('swap tables behind a tablist', () => {
     const above = async () => page.evaluate(() => {
       const list = document.querySelector('[role="tablist"][aria-label="Swap direction"]')!
       const top = list.getBoundingClientRect().top
-      return [...document.querySelectorAll('.audit-cz-tiles, .audit-cz-source, .audit-swap-bar, .audit-swap-bar-caption, [role="tablist"]')]
+      return [...document.querySelectorAll('.audit-cz-tiles, .audit-swap-bar, [role="tablist"]')]
         .map(e => [Math.round(e.getBoundingClientRect().top - top), Math.round(e.getBoundingClientRect().height)])
     })
     const before = await above()

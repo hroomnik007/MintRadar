@@ -1,5 +1,6 @@
 import { isProbeErrorKind, type ProbeErrorKind } from '@/utils/probeErrorMessages'
 import { readContactChecks, type ContactCheckFact } from '@/utils/contactChecks'
+import { readLastInfo, type LastInfo } from '@/utils/mintDetailFacts'
 
 export interface MintInfo {
   name: string
@@ -38,6 +39,8 @@ export interface MintStatus {
   // Last published NUT-06 contacts (method + info) for offline display. Known mints only.
   lastContacts?: { method: string; info: string }[]
   lastContactsAt?: string | null
+  // Last confirmed MOTD / description of a known mint and when it was last seen online. Known mints only.
+  lastInfo?: LastInfo
 }
 
 const MAX_URL_LENGTH = 500
@@ -110,6 +113,7 @@ async function probeMintViaProxy(url: string, signal?: AbortSignal): Promise<Min
     throw new TypeError('Invalid proxy response')
   }
   const raw = data as Record<string, unknown>
+  const lastInfo = readLastInfo(raw['lastInfo'])
   return {
     url: typeof raw['url'] === 'string' ? raw['url'] : url,
     online: raw['online'] === true,
@@ -122,6 +126,7 @@ async function probeMintViaProxy(url: string, signal?: AbortSignal): Promise<Min
     ...(raw['contactChecks'] !== undefined ? { contactChecks: readContactChecks(raw['contactChecks']) } : {}),
     ...(Array.isArray(raw['lastContacts']) ? { lastContacts: raw['lastContacts'] as { method: string; info: string }[] } : {}),
     ...(typeof raw['lastContactsAt'] === 'string' ? { lastContactsAt: raw['lastContactsAt'] } : {}),
+    ...(lastInfo ? { lastInfo } : {}),
   }
 }
 

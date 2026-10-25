@@ -1910,6 +1910,14 @@ button.md-url-copy.copied > svg { opacity: 1; }
   color: var(--text3);
   font-family: var(--font-mono);
 }
+/* "· synced 2h ago" after "via cashu.info": the same look as the "fetched 5 min ago" under Fees & limits (.md-fl-note:
+   muted 12 px body font, dotted underline on the time); wraps as one unit on narrow screens; amber once not updated recently. */
+.md-audit-sync { white-space: nowrap; font-family: var(--font-body); font-size: 12px; line-height: 1.5; color: var(--text3); }
+.md-audit-sync-stale { color: var(--amber); }
+.md-audit-sync .md-audit-sync-time { text-decoration: underline dotted; text-underline-offset: 2px; }
+/* Wrapped onto its own line: no leading dot, the text starts at the line's left edge (see AuditSyncNote). */
+.md-audit-sync-wrapped { transform: translateX(calc(-1 * var(--md-sync-sep, 0px))); }
+.md-audit-sync-wrapped .md-audit-sync-sep { visibility: hidden; }
 
 /* Source switch in the Audit card header (cashu.info | audit.8333.space): same recipe as the
    Stats page "Uptime | Reliability" toggle (.stats-tab-toggle / .stats-tab-btn — Stats.css can't be
@@ -2359,6 +2367,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-hist-fig { padding: 0 20px; border-left: 1px solid var(--border); min-width: 0; }
 .md-hist-fig:first-child { border-left: 0; padding-left: 0; }
 .md-hist-fig-value { font-family: var(--font-mono-data); font-weight: 700; font-size: 26px; line-height: 1.15; letter-spacing: -0.03em; }
+.md-hist-fig-tip { display: inline-flex; vertical-align: middle; margin-left: 6px; letter-spacing: 0; }
 .md-hist-fig-label { font-size: 13px; color: var(--text2); margin-top: 2px; }
 .md-hist-fig-delta { font-size: 12px; color: var(--text3); margin-top: 2px; }
 
@@ -2793,9 +2802,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
    the strip caption, and the segmented control for the two swap tables. */
 .audit-cz-tile-sub { font-size: 12px; line-height: 1.4; color: var(--text3); }
 .audit-cz-tiles .audit-cz-tile-nodata { font-weight: 500; color: var(--text3); }
-.audit-cz-source { margin: 0 0 4px; overflow-wrap: anywhere; }
-.audit-cz-source span[title] { text-decoration: underline dotted; text-underline-offset: 2px; }
-.audit-swap-bar-caption { margin: 0 0 4px; overflow-wrap: anywhere; }
+.audit-swap-bar-label { display: flex; align-items: center; margin: 10px 0 0; font-size: 12px; }
+.audit-swap-bar.audit-swap-bar-labelled { margin-top: 6px; }
 .audit-cz-swaps { margin-top: 14px; }
 .audit-cz-seg { display: inline-flex; max-width: 100%; background: var(--bg2); border-radius: 6px; padding: 2px; gap: 2px; }
 .audit-cz-seg-btn {

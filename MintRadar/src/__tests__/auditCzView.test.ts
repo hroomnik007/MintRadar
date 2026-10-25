@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { adaptAuditCz, auditCzSourceLine, auditCzNeutralKind, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, type AuditCzView } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzNeutralKind, auditCzSyncNote, AUDIT_CZ_NOT_RECENT_TEXT, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, type AuditCzView } from '@/utils/auditCz'
 import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
 
 type Row = AuditCzData['swaps'][number]
@@ -24,7 +24,7 @@ const LNPAY: AuditCzDetail = {
   fetchedAt: '2026-10-07T07:00:00.000Z',
 }
 const data = (swaps: Row[], detail: AuditCzData['detail'] = LNPAY, over: Partial<AuditCzData> = {}): AuditCzData => ({
-  source: 'audit.cashu.cz', sourceUrl: null, fetchedAt: '2026-10-07T07:05:00.000Z', covered: true,
+  source: 'cashu.info', sourceUrl: null, fetchedAt: '2026-10-07T07:05:00.000Z', covered: true,
   mint: { state: 'ok', uptime24h: 1, uptime7d: 1, uptime30d: 1, attributedFailures: 0, minted: 1, melted: 1, lastCheck: null },
   swaps, stats7d: null, detail, ...over,
 })
@@ -152,6 +152,16 @@ describe('the two tables, the bar rows and the freshness', () => {
     expect(view([], { ...LNPAY, fetchedAt: null }, { fetchedAt: '2026-10-07T07:00:00Z' }, Date.parse('2026-10-07T09:00:00Z')).notRecent).toBe(true)
     expect(view([], { ...LNPAY, fetchedAt: null }, { fetchedAt: null }).notRecent).toBe(false)
   })
+  it('header sync note: "synced …" while fresh, "not updated recently" (stale) after 90 minutes, nothing without a time', () => {
+    const at = (iso: string) => Date.parse(iso)
+    expect(auditCzSyncNote(view([], LNPAY, {}, at('2026-10-07T07:30:00Z')), at('2026-10-07T07:30:00Z'))).toEqual({ text: 'synced 30 min ago', stale: false, tip: 'Last synced from cashu.info: 7 Oct 2026, 07:00 UTC.' })
+    expect(auditCzSyncNote(view([], LNPAY, {}, at('2026-10-07T08:29:00Z')), at('2026-10-07T08:29:00Z'))).toMatchObject({ text: 'synced 1h ago', stale: false })
+    expect(auditCzSyncNote(view([], LNPAY, {}, at('2026-10-07T08:31:00Z')), at('2026-10-07T08:31:00Z'))).toEqual({ text: AUDIT_CZ_NOT_RECENT_TEXT, stale: true, tip: 'Last synced from cashu.info: 7 Oct 2026, 07:00 UTC, more than 90 minutes ago.' })
+    expect(auditCzSyncNote({ checkedAt: null, notRecent: true }, at('2026-10-07T08:00:00Z'))).toEqual({ text: AUDIT_CZ_NOT_RECENT_TEXT, stale: true, tip: null })
+    expect(AUDIT_CZ_NOT_RECENT_TEXT).toBe('not updated recently')
+    expect(auditCzSyncNote({ checkedAt: null, notRecent: false }, at('2026-10-07T08:00:00Z'))).toBeNull()
+    expect(auditCzSyncNote({ checkedAt: 'garbage', notRecent: false }, at('2026-10-07T08:00:00Z'))).toBeNull()
+  })
 })
 
 describe('neutral classification (adapter) and the error-text fallback', () => {
@@ -237,19 +247,4 @@ describe('sourceHref accepts only https://cashu.info/mint/<id>', () => {
     'javascript:alert(1)',
     null,
   ])('rejects %s', u => { expect(href(u)).toBeNull() })
-})
-
-describe('source line under the tiles', () => {
-  const NOW = Date.parse('2026-10-07T07:30:00Z')
-  it('"cashu.info · last 7 days · synced 30 min ago", absolute UTC time for the title', () => {
-    const line = auditCzSourceLine(view([], LNPAY, {}, NOW), NOW)
-    expect(line.parts).toEqual(['cashu.info', 'last 7 days'])
-    expect(line.time).toEqual({ verb: 'synced', label: '30 min ago', title: '7 Oct 2026, 07:00 UTC' })
-  })
-  it('older than three detail runs: says so; no stored time: no "synced" part', () => {
-    const late = Date.parse('2026-10-07T12:00:00Z')
-    expect(auditCzSourceLine(view([], LNPAY, {}, late), late).parts).toEqual(['cashu.info', 'last 7 days', 'not updated recently'])
-    expect(auditCzSourceLine({ checkedAt: null, notRecent: false }, NOW).time).toBeNull()
-    expect(auditCzSourceLine({ checkedAt: 'garbage', notRecent: false }, NOW).time).toBeNull()
-  })
 })

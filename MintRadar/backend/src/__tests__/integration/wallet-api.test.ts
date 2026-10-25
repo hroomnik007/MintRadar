@@ -96,8 +96,8 @@ const V1_KEYS = [
   'audit', 'eligibleForRecommendation', 'isTest', 'lastCheckedAt', 'name', 'nuts', 'outdated', 'reviews', 'score',
   'scoreCappedNew', 'software', 'status', 'units', 'uptime24hPct', 'uptime7dPct', 'url',
 ]
-const W2B_LIGHT_KEYS = ['auditNeutralReason', 'authRequired', 'downSince', 'hasOnion', 'scoreStale']
-const W2B_HEAVY_KEYS = ['auditByDirection', 'changes', 'changesPending', 'contactChecks', 'feeExamples', 'firstSeenAt', 'keysets', 'keysetsCheckedAt', 'lastOnlineAt', 'limits', 'methods', 'pubkey', 'sample', 'scoreBreakdown']
+const W2B_LIGHT_KEYS = ['auditNeutralReason', 'authRequired', 'downSince', 'hasOnion', 'scoreStale', 'uptime30dPct']
+const W2B_HEAVY_KEYS = ['auditByDirection', 'changes', 'changesPending', 'contactChecks', 'feeExamples', 'firstSeenAt', 'keysets', 'keysetsCheckedAt', 'lastOnlineAt', 'latency24h', 'limits', 'methods', 'pubkey', 'sample', 'scoreBreakdown']
 const MINT_KEYS = [...V1_KEYS, ...W2B_LIGHT_KEYS].sort()
 const MINT_KEYS_FULL = [...MINT_KEYS, ...W2B_HEAVY_KEYS].sort()
 
@@ -203,6 +203,7 @@ describe('contract', () => {
         "reviewRatedCount",
         "reviewSurge",
         "reviewWeightedRating",
+        "scoreBreakdown",
         "serverLocation",
         "softwareLatest",
         "tosUrl",

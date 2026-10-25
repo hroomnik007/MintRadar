@@ -31,4 +31,12 @@ describe('probeMint (browser, via /api/mint/probe)', () => {
     expect(r.error).toBe('Mint unreachable')
     expect(r.errorKind).toBe('timeout')
   })
+
+  it('keeps lastInfo of a known offline mint; absent lastInfo stays absent', async () => {
+    const base = { url: URL_, online: false, latencyMs: null, info: null, keysets: null, checkedAt: '2026-10-25T10:00:00.000Z' }
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ ...base, lastInfo: { motd: 'Back soon', description: 'Test mint', seenAt: '2026-10-23T19:15:01.246Z' } })))
+    expect((await probeMint(URL_)).lastInfo).toEqual({ motd: 'Back soon', description: 'Test mint', seenAt: '2026-10-23T19:15:01.246Z' })
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json(base)))
+    expect(await probeMint(URL_)).not.toHaveProperty('lastInfo')
+  })
 })

@@ -98,6 +98,7 @@ describe(`${OPENAPI} matches the code constants`, () => {
       ...schemaProperties('Methods').map(n => `methods.${n}`),
       ...schemaProperties('Limits').map(n => `limits.${n}`),
       ...schemaProperties('AuditByDirection').map(n => `auditByDirection.${n}`),
+      ...schemaProperties('Latency24h').map(n => `latency24h.${n}`),
       ...schemaProperties('ScoreBreakdown').map(n => `scoreBreakdown.${n}`),
       ...schemaProperties('ChangesPending').map(n => `changesPending.${n}`),
     ]
@@ -111,7 +112,7 @@ describe(`${OPENAPI} matches the code constants`, () => {
     const required: string[] = []
     for (let i = req + 1; /^ {8}- /.test(lines[i]!); i++) required.push(lines[i]!.replace(/^ {8}- /, '').trim())
     // The heavier fields are only present with include= (or on the single-mint endpoint), so they are not required.
-    const optional = ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'keysets', 'keysetsCheckedAt', 'methods', 'scoreBreakdown', 'changes', 'changesPending', 'contactChecks', 'feeExamples', 'limits', 'auditByDirection']
+    const optional = ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'keysets', 'keysetsCheckedAt', 'methods', 'scoreBreakdown', 'changes', 'changesPending', 'contactChecks', 'feeExamples', 'limits', 'auditByDirection', 'latency24h']
     expectSameNames('required mint fields', OPENAPI, required, schemaProperties('Mint').filter(n => !optional.includes(n)))
     for (const n of optional) expect(schemaProperties('Mint'), `${OPENAPI}: optional mint field ${n}`).toContain(n)
   })

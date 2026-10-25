@@ -120,6 +120,25 @@ describe('GET /api/mints/known', () => {
     expect(mint.auditRecentErrors).toBe(0)
   })
 
+  it('adds the STORED score breakdown (score_breakdown) as scoreBreakdown; null when none or invalid is stored', async () => {
+    // lnpay case (2026-10-25): offline, stored record 60 = 16 + 25 + 9 + 5 + 5 with the contact part 5/5
+    const stored = {
+      uptime: { points: 16, max: 40 }, audit: { points: 25, max: 25 }, nuts: { points: 9, max: 15 },
+      version: { points: 5, max: 15 }, contact: { points: 5, max: 5 }, newMintCap: { points: 0, cap: 75 }, sum: 60,
+    }
+    query.mockResolvedValueOnce({ rows: [
+      sampleRow({ url: 'https://a.example', last_reliability_score: 60, score_breakdown: stored, latest_online: false }),
+      sampleRow({ url: 'https://b.example', score_breakdown: null }),
+      sampleRow({ url: 'https://c.example', score_breakdown: { uptime: 'x' } }),
+    ] })
+    const res = await request(app).get('/api/mints/known')
+    const byUrl = Object.fromEntries((res.body as Array<{ url: string }>).map(m => [m.url, m])) as Record<string, { scoreBreakdown: unknown; reliabilityScore: number }>
+    expect(byUrl['https://a.example']!.scoreBreakdown).toEqual(stored)
+    expect(byUrl['https://a.example']!.reliabilityScore).toBe(60)
+    expect(byUrl['https://b.example']!.scoreBreakdown).toBeNull()
+    expect(byUrl['https://c.example']!.scoreBreakdown).toBeNull()
+  })
+
   it('auditCz fields are null for a mint without a detail', async () => {
     query.mockResolvedValueOnce({ rows: [sampleRow({ audit_cz_total: null, audit_cz_blamed: null, audit_cz_fetched_at: null })] })
     const res = await request(app).get('/api/mints/known')

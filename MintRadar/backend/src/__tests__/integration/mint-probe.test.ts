@@ -101,6 +101,37 @@ describe('GET /api/mint/probe', () => {
     expect((await request(app).get('/api/mint/probe?url=https://mint.example').expect(200)).body.contactChecks).toEqual([])
   })
 
+  it('adds lastInfo (the last confirmed MOTD and description) for a KNOWN offline mint', async () => {
+    query.mockResolvedValue({ rowCount: 1, rows: [{
+      contact_checks: null, last_contacts: null, last_contacts_at: null,
+      last_online_at: new Date('2026-10-24T08:00:00.000Z'),
+      change_state_info: { motd: 'Maintenance on Sunday', description: 'A community mint', version: 'Nutshell/0.16.0' },
+    }] })
+    serveMint(null) // offline now
+
+    const r = await request(app).get('/api/mint/probe?url=https://mint.example').expect(200)
+
+    expect(r.body.online).toBe(false)
+    expect(r.body.lastInfo).toEqual({ motd: 'Maintenance on Sunday', description: 'A community mint', seenAt: '2026-10-24T08:00:00.000Z' })
+  })
+
+  it('omits lastInfo for a known mint without a stored MOTD or description', async () => {
+    query.mockResolvedValue({ rowCount: 1, rows: [{ last_online_at: '2026-10-24T08:00:00.000Z', change_state_info: { version: 'x' } }] })
+    serveMint(null)
+    const r = await request(app).get('/api/mint/probe?url=https://mint.example').expect(200)
+    expect(r.body).not.toHaveProperty('lastInfo')
+  })
+
+  it('never returns lastInfo for an UNKNOWN url', async () => {
+    query.mockResolvedValue({ rowCount: 0, rows: [] })
+    serveMint(FULL_INFO)
+    const r = await request(app).get('/api/mint/probe?url=https://attacker-chosen-host.example').expect(200)
+    expect(r.body).not.toHaveProperty('lastInfo')
+    serveMint(null)
+    const off = await request(app).get('/api/mint/probe?url=https://other-host.example').expect(200)
+    expect(off.body).not.toHaveProperty('lastInfo')
+  })
+
   it('returns only online/latency + a STRIPPED info for an UNKNOWN url (not a general fetch oracle)', async () => {
     query.mockResolvedValue({ rowCount: 0, rows: [] }) // not a known mint
     serveMint(FULL_INFO)

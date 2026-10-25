@@ -47,7 +47,7 @@ test.describe('Compare: Input fee row', () => {
     // Placed right after Latency, before NUT Count.
     const labels = await grid.locator('.cmp-lbl').evaluateAll(els => els.map(e => (e.textContent ?? '').trim()))
     const i = labels.findIndex(l => l.startsWith('Input fee'))
-    expect(labels[i - 1]).toBe('Latency')
+    expect(labels[i - 1]).toBe('Latency (last check)')
     expect(labels[i + 1]).toBe('NUT Count')
     await shot(page)
   })

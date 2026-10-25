@@ -821,7 +821,7 @@ test.describe('390px viewport', () => {
 // ── score breakdown row: identical whether or not the Audit tab was opened ──
 test.describe('Reliability breakdown: audit row', () => {
   const auditRow = (page: Page) => page.locator('.md-reliability-panel .rb-row', { hasText: 'Audit reliability (25%)' })
-  const TIP = 'Failures that cashu.info attributes to this mint, out of its swaps in the last 7 days (not the overall success rate). Under 10 swaps or no recent data: neutral 12.5 of 25.'
+  const TIP = 'Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.'
   const detail = () => czDetail({ swaps7d: { all: { total: 105, success: 89, failed: 16, avgMs: 9418 }, asSource: { total: 54, success: 42, failed: 12 }, asDest: { total: 51, success: 47, failed: 4 }, errorsBlamed: 0, dleq: { valid: 47, invalid: 0, missing: 0 } } })
   const snapshot = async (page: Page) => ({
     detail: await auditRow(page).locator('.rb-row-detail').count(),
@@ -835,7 +835,7 @@ test.describe('Reliability breakdown: audit row', () => {
     const czRequests = () => h.requests.filter(u => new URL(u, 'http://x').pathname === '/api/mints/audit-cz')
     await expect(auditRow(page).locator('.rb-row-score')).toHaveText('25/25')
     const before = await snapshot(page)
-    expect(before).toMatchObject({ detail: 0, display: '0 / 100', score: '25/25' })
+    expect(before).toMatchObject({ detail: 0, display: '100 / 100', score: '25/25' })
     expect(before.text).not.toMatch(/swaps succeeded|attributed to this mint \(cashu\.info\)|had a failure/)
     await auditRow(page).locator('svg').first().hover()
     await expect(page.getByText(TIP, { exact: true })).toBeVisible()

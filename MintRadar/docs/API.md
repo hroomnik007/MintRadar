@@ -4,7 +4,7 @@ MintRadar provides a public read-only API for querying Cashu mint data. All endp
 
 **Versioning:** every endpoint is also reachable under `/api/v1/` (e.g. `/api/v1/mints/known`) — same response shape, same rate limits, no behavior differences. `/api/v1` is the preferred path going forward; the unversioned `/api/*` is kept as a legacy alias and may be removed in a future release.
 
-**Stable for wallets:** only [API for wallets (v1)](#api-for-wallets-v1) carries a stability guarantee. `GET /api/mints/recommend` is public with the same CORS and caching rules, but it is **deprecated** (since 2026-10-20, see "Stability"); use the list route of the wallet API instead. Every other route is **internal**: it serves the MintRadar website, may change without notice and has no stability guarantee (`/api/mints/known` (see below), `/api/mints/outages`, `swaps`, `audit-cz`, `nostr-reviews`, `history`, `version-history`, `daily-uptime`, `/api/nuts`, `/api/stats`, `/api/stats/reliability-trend`, `/api/stats/reliability-movers`, `/api/mint/icon`, `/api/nip05/verify`, `/api/og/mint`, `/sitemap.xml`, the notification routes; those from `history` to `nostr-reviews`, `stats` and `probe` are described below as a convenience).
+**Stable for wallets:** only [API for wallets (v1)](#api-for-wallets-v1) carries a stability guarantee. `GET /api/mints/recommend` is public with the same CORS and caching rules, but it is **deprecated** (since 2026-10-20, see "Stability"); use the list route of the wallet API instead. Every other route is **internal**: it serves the MintRadar website, may change without notice and has no stability guarantee (`/api/mints/known` (see below), `/api/mints/outages`, `swaps`, `audit-cz`, `nostr-reviews`, `history`, `version-history`, `/api/nuts`, `/api/stats`, `/api/stats/reliability-trend`, `/api/stats/reliability-movers`, `/api/mint/icon`, `/api/nip05/verify`, `/api/og/mint`, `/sitemap.xml`, the notification routes; those from `history` to `nostr-reviews`, `outages`, `stats` and `probe` are described below as a convenience).
 
 ---
 
@@ -38,7 +38,7 @@ Machine-readable description: [`docs/openapi/wallets-v1.yaml`](openapi/wallets-v
 | `method` | — | `bolt11`, `bolt12` or `onchain` (lower case or upper case): keep mints that advertise this payment method in NUT-04 (mint) **or** NUT-05 (melt), on any unit; when `unit` is also given, on **that** unit (the method entry must carry that unit). A mint whose methods are unknown (`methods: null`) never matches. Any other value, an empty value or a repeated parameter is a `400`. |
 | `maxInputFeePpk` | — | Integer 0 to 1000000: keep mints whose **active** keysets for `unit` (every unit when `unit` is not given) **all** have `inputFeePpk <= maxInputFeePpk`. A mint whose fee is unknown (`null`) for any keyset in that scope, a mint without an active keyset in that scope and a mint whose keysets were never checked are **excluded** when this filter is used. Anything else is a `400`. |
 | `changedSince` | — | Keep mints with at least one confirmed change (see `changes`) **observed after** this time. Accepted: an ISO 8601 time with `Z` or an offset (`2026-10-20T12:00:00Z`; encode a `+` as `%2B`), a bare date (`2026-10-20`, meaning 00:00 UTC) or UNIX seconds (9 to 11 digits). Anything else (no zone on a time, a month 13, an empty value, a repeated parameter) is a `400` `invalid_parameter`. `total` and `truncated` count the matches. The JSON API writes times as ISO 8601; the Nostr tags use UNIX seconds. |
-| `include` | — | Comma-separated, exactly the values `facts`, `keysets`, `methods`, `breakdown`, `changes`: add the heavier fields to **every object of the list** (`facts` brings `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `feeExamples`, `limits` and `auditByDirection`; `keysets` brings `keysets` and `keysetsCheckedAt`; `methods` brings `methods`; `breakdown` brings `scoreBreakdown`; `changes` brings the newest 10 `changes` of each mint and `changesPending`). Without it the list objects do not carry them (it keeps the default list about 20% larger than before the additions instead of about 60%); the single-mint endpoint always does. An unknown value, an empty value or a repeated parameter is a `400` `invalid_parameter`. |
+| `include` | — | Comma-separated, exactly the values `facts`, `keysets`, `methods`, `breakdown`, `changes`: add the heavier fields to **every object of the list** (`facts` brings `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection` and `latency24h`; `keysets` brings `keysets` and `keysetsCheckedAt`; `methods` brings `methods`; `breakdown` brings `scoreBreakdown`; `changes` brings the newest 10 `changes` of each mint and `changesPending`). Without it the list objects do not carry them (it keeps the default list about 20% larger than before the additions instead of about 60%); the single-mint endpoint always does. An unknown value, an empty value or a repeated parameter is a `400` `invalid_parameter`. |
 | `limit` | `100` | Integer 1 to 200 (`400` outside that range). |
 
 Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` last), then `name` (the hostname when `name` is `null`), then `url`.
@@ -64,6 +64,7 @@ Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` l
       "scoreCappedNew": false,
       "uptime24hPct": 100,
       "uptime7dPct": 99,
+      "uptime30dPct": 98,
       "lastCheckedAt": "2026-10-12T18:29:41.000Z",
       "units": ["sat"],
       "nuts": ["4", "5", "7", "8", "9", "10", "11", "12"],
@@ -92,6 +93,7 @@ Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` l
 "contactChecks": [{ "kind": "email", "formatValid": true, "domainResolves": true, "checkedAt": "2026-10-20T12:00:00.000Z" }, { "kind": "nostr", "formatValid": true, "domainResolves": null, "checkedAt": "2026-10-20T12:00:00.000Z" }],
 "feeExamples": [{ "unit": "sat", "inputFeePpk": 100, "examples": [{ "proofs": 1, "fee": 1 }, { "proofs": 16, "fee": 2 }, { "proofs": 100, "fee": 10 }] }],
 "limits": { "mint": [{ "method": "bolt11", "unit": "sat", "min": 1, "max": 100000 }], "melt": [{ "method": "bolt11", "unit": "sat", "min": null, "max": null }] },
+"latency24h": { "p50Ms": 138, "p95Ms": 412, "samples": 286 },
 "auditByDirection": { "mint": { "attempts": 62, "failures": 6, "windowDays": 7, "source": "cashu.info", "syncedAt": "2026-10-21T04:00:00.000Z" }, "melt": { "attempts": 64, "failures": 13, "windowDays": 7, "source": "cashu.info", "syncedAt": "2026-10-21T04:00:00.000Z" } },
 "keysets": [{ "id": "00aaaaaaaaaaaaaa", "unit": "sat", "active": true, "inputFeePpk": 100, "finalExpiry": null, "idVersion": "v1", "idValid": true }],
 "keysetsCheckedAt": "2026-10-12T18:00:03.000Z",
@@ -119,7 +121,7 @@ Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` l
 | `score` | integer 0–100 \| null | The stored Reliability Score (operational health: uptime 40, audit 25, NUTs 15, software version 15, contact 5). `null` until the first probe. |
 | `scoreStale` | boolean | `true` when `status` is not `online` (offline, degraded or archived), `false` when it is online. The `score` of a mint that is not online is the **last measured one**: the mint is not reachable now, so the score says nothing about the present. Derived from `status` only; the score value is not changed. Always present, also in the default list. (Added 2026-10-21.) |
 | `scoreCappedNew` | boolean | `true` while the mint is younger than 30 days: its score is capped at 75. |
-| `uptime24hPct`, `uptime7dPct` | integer \| null | Share of successful probes in the last 24 hours / 7 days (percent, rounded); `null` when there was no probe in the window. |
+| `uptime24hPct`, `uptime7dPct`, `uptime30dPct` | integer \| null | Share of successful probes in the last 24 hours / 7 days / 30 days (percent, rounded); `null` when there was no probe in the window. `uptime30dPct` was added on 2026-10-25 (on every object, the default list included). |
 | `lastCheckedAt` | string, ISO 8601 UTC \| null | Latest probe. |
 | `units` | string[] \| null | Units the mint lists (`sat`, `usd`, `eur`, …); `null` when unknown. `units` and the `unit=` filter list the units for which the mint declares a payment method (NUT-04/05); units that appear only in keysets (`include=keysets`) are not included, so a mint with no declared methods has `units: null`. |
 | `nuts` | string[] \| null | NUT numbers the mint advertises (ascending, as strings); a NUT whose `/v1/info` entry has `"supported": false` is **not** counted as supported and is not listed (since methodology 4, 2026-10-21); `null` when unknown. |
@@ -140,6 +142,7 @@ Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` l
 | `feeExamples` | object[] | **Only with `include=facts`; always on the single-mint endpoint.** The input fee in plain amounts, for each unit that has an active keyset: `{ unit, inputFeePpk, examples: [{ proofs, fee }] }`. `inputFeePpk` is the largest `input_fee_ppk` among the **active** keysets of that unit (the same "effective fee" as the change log); a keyset that states no `input_fee_ppk`, or a value that is not an integer from 0 to 1,000,000, counts as `0` (the NUT-02 default for a missing field; the `keysets` field still shows `null` for both). `examples` has three entries, for spending 1, 16 and 100 proofs, computed as in NUT-02: the sum of the spent proofs' `input_fee_ppk` divided by 1000, **rounded up**, in the unit (`inputFeePpk` 100: 1 proof costs 1, 16 proofs cost 2, 100 proofs cost 10). Computed from the stored keysets, **not** from a request to the mint. Units without an active keyset are left out; an empty array (never `null`) when no keyset check has stored an active keyset yet. Facts, not a judgement; the score does not use them. (Added 2026-10-21.) |
 | `limits` | object \| null | **Only with `include=facts`; always on the single-mint endpoint.** The limits the mint **declares** in its `/v1/info` for NUT-04 (`mint`, Lightning deposits) and NUT-05 (`melt`, Lightning withdrawals): `{ "mint": [{ method, unit, min, max }], "melt": [{ method, unit, min, max }] }`. `min` and `max` are non-negative integers, or `null` when the mint does not declare that limit (or states it in a form that is not a non-negative integer). `null` when neither NUT-04 nor NUT-05 entries are stored. Lightning fee reserves are **not** here: they depend on the invoice and are only known when a quote is requested. The same entries as `methods`, with the amounts under shorter names. (Added 2026-10-21.) |
 | `auditByDirection` | object | **Only with `include=facts`; always on the single-mint endpoint.** cashu.info's swaps of the last 7 days split by direction, the same stored data that the audit part of the score counts in total (the score uses the combined number, not these): `{ "mint": { attempts, failures, windowDays, source, syncedAt } \| null, "melt": { … } \| null }`. `mint` = swaps in which this mint was the **destination** (a Lightning deposit, NUT-04), `melt` = swaps in which it was the **source** (a Lightning withdrawal, NUT-05). `attempts` and `failures` are non-negative integers (`failures` counts every failed swap of that direction, including those cashu.info does not blame on the mint, and is never larger than `attempts`), `windowDays` is `7`, `source` is `"cashu.info"`, `syncedAt` is the time MintRadar stored the data (ISO 8601 UTC). A direction is `null` when no numbers are stored for it; a small number of attempts is returned as it is. (Added 2026-10-21.) |
+| `latency24h` | object \| null | **Only with `include=facts`; always on the single-mint endpoint.** Response time of the successful probes of the last 24 hours: `{ p50Ms, p95Ms, samples }`, the median and the 95th percentile in whole milliseconds (`percentile_cont` over the probes, not over hourly averages) and how many probes they rest on. `null` when there is no successful probe with a measured time in that window. (Added 2026-10-25.) |
 | `auditNeutralReason` | `"low_sample"` \| `"stale"` \| `"no_data"` \| null | Why the audit part of the score is the neutral value 12.5: `low_sample` (fewer swaps than the minimum of 10), `stale` (the stored detail is older than 168 hours), `no_data` (nothing stored). `null` while the audit part is measured. It uses the audit rule of the score (no separate thresholds) and is evaluated when the response is built, so right after a change of the stored detail it can be one probe cycle ahead of `scoreBreakdown.audit`. |
 | `keysets` | object[] | **Only with `include=keysets`; always on the single-mint endpoint.** The keysets found by the latest successful check (MintRadar asks each mint once an hour), ordered by `id`: `id`, `unit`, `active`, `inputFeePpk` (integer, or `null` when the mint stated no valid fee), `finalExpiry` (ISO 8601 or `null`), `idVersion` (`v1`, `v2` or `legacy`) and `idValid` (`true` or `false` after MintRadar compared the keyset id with the keys it derives from them; `null` means it could not be verified, for example an inactive keyset or a legacy id). A keyset the mint no longer lists is left out. An empty array when the mint was never checked. |
 | `keysetsCheckedAt` | string, ISO 8601 UTC \| null | **Only with `include=keysets`; always on the single-mint endpoint.** Time of the latest successful keysets check; `null` when there was none. |
@@ -186,7 +189,7 @@ Every successful `GET` of `/api/v1/wallets/*`, `/api/v1/mints/known` and `/api/v
 |---|---|
 | `/api/v1/wallets/*` and `/api/v1/mints/recommend` | **300 requests per minute per IP address**, one counter shared by `/api/v1/wallets/*` and `/api/v1/mints/recommend` (the unversioned `/api/...` paths count the same); separate from the 60/min counter |
 | `/health`, `/api/stats`, `/api/mint/icon` | no limit (read-only, cached) |
-| the website's own read routes: `/api/v1/mints/{known,history,version-history,outages,changes,nostr-reviews,daily-uptime,swaps,audit-cz}`, `/api/v1/stats/{reliability-trend,reliability-movers}`, `/api/v1/nuts` (since 2026-10-21) | **150 requests / minute / IP**, one counter for all of them |
+| the website's own read routes: `/api/v1/mints/{known,history,version-history,outages,changes,nostr-reviews,swaps,audit-cz}`, `/api/v1/stats/{reliability-trend,reliability-movers}`, `/api/v1/nuts` (since 2026-10-21) | **150 requests / minute / IP**, one counter for all of them |
 | every other read route (`/api/v1/mint/probe` included) | **60 requests / minute / IP** |
 
 Responses of limited routes carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset` (Unix time, seconds, when the window ends). Every `429` carries `Retry-After` (seconds). Preflight requests are not counted. Counters are kept in memory and reset on a restart.
@@ -215,7 +218,7 @@ Every unknown path below `/api/v1/` is a JSON `404` in this envelope (`/api/v1/f
 - Inside v1 a field is **never renamed or removed**, and its type does not change; changes are **additive** (new fields, new optional parameters). Clients must ignore fields they do not know.
 - A removal is announced in this document and on [mintradar.org/for-wallets](https://mintradar.org/for-wallets#stability) at least **90 days** before it takes effect. A route that is going away also says so in its responses: `Deprecation: @<unix seconds>` (RFC 9745, the day of the announcement), `Sunset: <HTTP-date>` (the earliest day of removal) and `Link: <successor>; rel="successor-version"`. Only the route below sends them today; every other route does not.
 - **Deprecated: `GET /api/v1/mints/recommend`** (and the unversioned `/api/mints/recommend`, the same route), **since 2026-10-20, sunset 2027-01-26** (98 days). It keeps answering exactly as before until then and sends `Deprecation: @1792454400`, `Sunset: Tue, 26 Jan 2027 00:00:00 GMT` and `Link: <https://mintradar.org/api/v1/wallets/mints?eligible=true&unit=sat&minScore=80&limit=5>; rel="successor-version"`. Replacement: `GET /api/v1/wallets/mints?eligible=true&unit=sat&minScore=80&nuts=4,5&limit=5` (see "Replacing `/mints/recommend`").
-- **Additions to v1** (nothing was renamed, removed or changed): 2026-10-20 — the list parameters `nuts` and `eligible`; unknown paths below `/api/v1/` answer a JSON `404`. 2026-10-20 (second addition) — the list parameters `method`, `maxInputFeePpk` and `include`; the list envelope fields `total` and `truncated`; the single-mint envelope field `canonicalUrl` and the case-insensitive path lookup behind it (a `404` that used to be returned for a path that differed only in case can now be a `200`); the mint fields `downSince`, `hasOnion`, `authRequired`, `auditNeutralReason` (on every object) and `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `keysets`, `keysetsCheckedAt`, `methods`, `scoreBreakdown` (single-mint endpoint and `include=`); the exposed CORS headers `Deprecation`, `Sunset` and `Link`. The mint object now carries `pubkey` and `hasOnion`, which earlier text of this document excluded; the rest of the privacy list is unchanged. 2026-10-20 (third addition) — the mint field `changes` (single-mint endpoint and `include=changes`), the list parameter `changedSince` and the `include` value `changes`; the default list is unchanged. 2026-10-20 (fourth addition) — the mint field `contactChecks` (single-mint endpoint and `include=facts`); the default list is unchanged. 2026-10-21 (fifth addition) — the mint fields `feeExamples`, `limits` and `auditByDirection` (single-mint endpoint and `include=facts`); the default list is unchanged. 2026-10-25 — the mint field `changesPending` (single-mint endpoint and `include=changes`; never counted by `changedSince`); the default list is unchanged. 2026-10-21 — the mint field `scoreStale` (on every object, the default list included: a boolean that is `true` when `status` is not `online`; the score of such a mint is the last measured one; the score itself is unchanged).
+- **Additions to v1** (nothing was renamed, removed or changed): 2026-10-20 — the list parameters `nuts` and `eligible`; unknown paths below `/api/v1/` answer a JSON `404`. 2026-10-20 (second addition) — the list parameters `method`, `maxInputFeePpk` and `include`; the list envelope fields `total` and `truncated`; the single-mint envelope field `canonicalUrl` and the case-insensitive path lookup behind it (a `404` that used to be returned for a path that differed only in case can now be a `200`); the mint fields `downSince`, `hasOnion`, `authRequired`, `auditNeutralReason` (on every object) and `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `keysets`, `keysetsCheckedAt`, `methods`, `scoreBreakdown` (single-mint endpoint and `include=`); the exposed CORS headers `Deprecation`, `Sunset` and `Link`. The mint object now carries `pubkey` and `hasOnion`, which earlier text of this document excluded; the rest of the privacy list is unchanged. 2026-10-20 (third addition) — the mint field `changes` (single-mint endpoint and `include=changes`), the list parameter `changedSince` and the `include` value `changes`; the default list is unchanged. 2026-10-20 (fourth addition) — the mint field `contactChecks` (single-mint endpoint and `include=facts`); the default list is unchanged. 2026-10-21 (fifth addition) — the mint fields `feeExamples`, `limits` and `auditByDirection` (single-mint endpoint and `include=facts`); the default list is unchanged. 2026-10-25 — the mint field `changesPending` (single-mint endpoint and `include=changes`; never counted by `changedSince`); the default list is unchanged. 2026-10-25 (second addition) — the mint field `uptime30dPct` (on every object, the default list included) and the mint field `latency24h` (single-mint endpoint and `include=facts`). 2026-10-21 — the mint field `scoreStale` (on every object, the default list included: a boolean that is `true` when `status` is not `online`; the score of such a mint is the last measured one; the score itself is unchanged).
 - `methodology` is an integer that changes **whenever the score formula changes** (weights, audit rule, version rule, NUT rule, new-mint cap). `score` values from different `methodology` numbers are not comparable. The history lives in `backend/src/shared/methodology.ts` (`METHODOLOGY_CHANGES`) and is shown on [mintradar.org/methodology](https://mintradar.org/methodology):
 
 | Version | Date | Change |
@@ -252,7 +255,7 @@ Every unknown path below `/api/v1/` is a JSON `404` in this envelope (`/api/v1/f
 | Endpoint type | Limit |
 |---|---|
 | `/api/v1/wallets/*` and `/api/v1/mints/recommend` | **300 requests per minute per IP address**, one counter shared by `/api/v1/wallets/*` and `/api/v1/mints/recommend` (the unversioned `/api/...` paths count the same); separate from the 60/min counter |
-| The website's own read endpoints: `/api/mints/{known,history,version-history,outages,changes,nostr-reviews,daily-uptime,swaps,audit-cz}`, `/api/stats/{reliability-trend,reliability-movers}`, `/api/nuts` (`/api/mints/known` was exempt until 2026-10-20; the separate bucket exists since 2026-10-21) | **150 requests / minute / IP**, one counter for all of them, separate from the 60/min counter |
+| The website's own read endpoints: `/api/mints/{known,history,version-history,outages,changes,nostr-reviews,swaps,audit-cz}`, `/api/stats/{reliability-trend,reliability-movers}`, `/api/nuts` (`/api/mints/known` was exempt until 2026-10-20; the separate bucket exists since 2026-10-21) | **150 requests / minute / IP**, one counter for all of them, separate from the 60/min counter |
 | Every other read endpoint **except** the wallet routes and `/health`, `/api/stats` and `/api/mint/icon` (these three are exempt), `/api/mint/probe` included | **60 requests / minute / IP** |
 | `/api/mint/submit` (POST) | **20 requests / hour / IP** |
 | `/api/mints/discover` (POST) | **3 requests / hour / IP** by default (`"source": "auto"`), **10 requests / hour / IP** with `"source": "bulk"` (two independent counters) |
@@ -328,6 +331,8 @@ All known mints with current online status, latency, reliability score, and meta
 **Access (changed 2026-10-20):** this is the website's own data feed, an **internal** route. A browser request from another origin gets `403` `{"error":{"code":"cors_forbidden",…}}` and the answer carries no `Access-Control-Allow-Origin: *` (it was public with `*` before); the website's own origins, servers and tools that send no `Origin` header work as before. It counts against the general limit of **60 requests / minute / IP** (it was exempt); the website needs about one request per page load (it caches the answer for 5 minutes in the browser). Wallets should use [`/api/v1/wallets/mints`](#api-for-wallets-v1), a compact summary with a stability guarantee that is open to any origin.
 
 **Response:** Array of mint objects. Every response carries `Cache-Control: public, max-age=300` and an `ETag` (`If-None-Match` gives `304`; see "Caching" for the weak form). This array also carries website-only fields (`ipAddress`, `netAsn`, …) that may change.
+
+`scoreBreakdown` (additive, 2026-10-25) is the **stored** breakdown of `reliabilityScore` (the record written together with the score: `{ uptime, audit, nuts, version, contact: { points, max }, newMintCap: { points, cap }, sum }`, the same shape as the wallet API field), or `null` when none is stored (records from before the breakdown was stored, or an invalid one). Mint Detail's score modal shows these points; it never recomputes them from live data while a stored breakdown exists.
 
 `softwareLatest` (additive, 2026-10-09) is `{ "major": 0, "minor": 21 }`, the latest release line of **this mint's own software family** (Nutshell, cdk-mintd), or `null` for other software and for mints without a version. It is the ONE "latest" the stored `reliabilityScore` (version component) and every "outdated" label are measured against: a mint is "outdated" when it is two or more minor versions behind it (`docs/claude/scoring-and-probing.md`). It comes from the GitHub release catalog (no pre-releases, 14-day grace period) and falls back to the highest stable version that at least two distinct tracked mints report exactly (no value, `null`, when none qualifies).
 
@@ -431,12 +436,43 @@ Bucketed uptime/latency/reliability history for a single mint.
   ],
   "uptimePct": 99,
   "avgLatencyMs": 145,
+  "p50LatencyMs": 131,
+  "p95LatencyMs": 402,
   "prevUptimePct": 98,
   "prevAvgLatencyMs": 152
 }
 ```
 
+`p50LatencyMs` / `p95LatencyMs` (additive, 2026-10-25): the median and the 95th percentile of the response time of the **successful probes with a measured latency** in the selected period (`percentile_cont` over the single probes, not over the bucket averages), whole milliseconds; `null` when the period has none. `avgLatencyMs` stays the mean.
+
 `reliabilityScore` in segments is `null` for records before reliability score history was introduced (historical backfill not available). The response also carries `earliestCheckedAt` (first probe ever stored for the mint, or `null`), `periodDays`, `daysOfDataAvailable`, `prevPeriodInsufficientHistory` (boolean) and a legacy `history` array (`online`, `latencyMs`, `checkedAt` per segment). An unknown `period` falls back to `24h` (no `400`); the older `days=7` is read as `period=7d`.
+
+---
+
+### `GET /api/mints/outages`
+
+Outage blocks of one mint for Mint Detail (History tab). **Query parameters:** `url` (required, `https://…`), `days` (optional, 1–90, default 30). An outage is a run of **at least 2** consecutive failed probes (a single failed probe is ignored as noise).
+
+**Response:**
+```json
+{
+  "sinceLastOutageMs": null,
+  "avgRecoveryMs": 5400000,
+  "outageCount": 3,
+  "recoveredCount": 2,
+  "ongoing": true,
+  "currentOutage": { "startedAt": "2026-10-25T06:00:00.000Z", "durationMs": 21600000 },
+  "outages": [
+    { "startedAt": "2026-10-25T06:00:00.000Z", "durationMs": 21600000, "error": "offline", "ongoing": true, "truncatedAtWindowStart": false }
+  ]
+}
+```
+
+- `ongoing` / `currentOutage` (additive, 2026-10-25): `true` and `{ startedAt, durationMs }` when the newest probe of the window is part of an outage; its duration runs to the time of the answer. `false` / `null` otherwise.
+- `avgRecoveryMs`: the mean duration of the **recovered** outages only (an ongoing outage has no recovery time yet), whole milliseconds; `null` when none recovered (changed 2026-10-25: it used to include the open block). `recoveredCount` (additive) is how many it rests on.
+- `sinceLastOutageMs`: time since the end of the newest recovered outage; `null` while an outage is ongoing (changed 2026-10-25) and when there was none.
+- `outageCount`: all outages in the window, the ongoing one included. `outages`: the newest 20, oldest first.
+- Per outage, `ongoing` (additive) and `truncatedAtWindowStart` (additive): the block begins with the first probe of the window, so it may have started earlier and its real duration is unknown. `error` is always `"offline"` (kept for compatibility; it is not the probe's error).
 
 ---
 
@@ -459,26 +495,6 @@ Software version timeline for a single mint. `latestGlobalVersion` is `<family>/
 
 ---
 
-### `GET /api/mints/daily-uptime`
-
-Daily uptime counts for the last 30 days for a single mint.
-
-**Query parameters:** `url` (required, `https://…`)
-
-**Response:**
-```json
-{
-  "url": "https://mint.example.com",
-  "days": [
-    { "day": "2026-06-25", "onlineCount": 288, "totalCount": 288 }
-  ]
-}
-```
-
-`days` is ordered by `day` ascending (UTC days); days without a probe are absent.
-
----
-
 ### `GET /api/mints/audit-cz`
 
 Data from the third-party audit service cashu.info for one mint, refreshed server-side every 10 minutes (feeds) and every 30 minutes (the per-mint `detail`); the endpoint reads the database only and never calls cashu.info. This endpoint itself is display only and never merged into any MintRadar value; the Reliability Score's audit part reads two numbers of the same stored `detail` (`swaps7d.all.total`, `swaps7d.errorsBlamed`) through `auditCzTotal` / `auditCzBlamed` / `auditCzFetchedAt` of `/api/mints/known`. Also reachable as `/api/v1/mints/audit-cz`; it is not rate-limit exempt (the global 60 requests / minute / IP applies).
@@ -494,7 +510,7 @@ Data from the third-party audit service cashu.info for one mint, refreshed serve
 **Response (covered), `200`:**
 ```json
 {
-  "source": "audit.cashu.cz",
+  "source": "cashu.info",
   "sourceUrl": "https://cashu.info/mint/abc12345",
   "fetchedAt": "2026-10-04T10:03:01.000Z",
   "covered": true,
@@ -523,7 +539,7 @@ Data from the third-party audit service cashu.info for one mint, refreshed serve
 
 | Field | Type | Notes |
 |---|---|---|
-| `source` | string | Always `"audit.cashu.cz"`: the historical identifier of the source, kept so clients do not break. The service now lives at cashu.info (the same project, "Cashu Mints Auditor"). |
+| `source` | string | Always `"cashu.info"` (since 2026-10-25; it was the historical `"audit.cashu.cz"` before). The service is the "Cashu Mints Auditor" at cashu.info. The stored rows keep the old identifier in the database; only the answer changed. |
 | `sourceUrl` | string \| null | The mint's page on cashu.info (always `https://cashu.info/mint/<id>`, **built by MintRadar** from the id after `^[A-Za-z0-9]{8,64}$` validation, never copied from the feed; rows stored under the old host `audit.cashu.cz` are rewritten at startup and on read); `null` when not covered. |
 | `fetchedAt` | string (ISO) \| null | When MintRadar last stored this mint from their feed (covered), or the newest fetch of the whole feed (not covered; `null` if nothing was ever fetched). |
 | `covered` | boolean | `true` when the mint is in their feed. |
@@ -563,7 +579,7 @@ Which swaps are returned: with `direction=from` the swaps whose source is this m
 
 `detail7d` (the old derived summary) was **removed** when the new Audit tab shipped; read `detail.swaps7d` instead.
 
-**Not covered:** still `200`, `{ "source": "audit.cashu.cz", "sourceUrl": null, "fetchedAt": <newest feed fetch or null>, "covered": false, "mint": null, "swaps": [], "stats7d": null }` — no `detail` key. This happens for any well-formed `https://` URL that is not in their feed, and `direction` / `limit` are still validated first.
+**Not covered:** still `200`, `{ "source": "cashu.info", "sourceUrl": null, "fetchedAt": <newest feed fetch or null>, "covered": false, "mint": null, "swaps": [], "stats7d": null }` — no `detail` key. This happens for any well-formed `https://` URL that is not in their feed, and `direction` / `limit` are still validated first.
 
 **Errors:** `400` `{"error":"Missing required query parameter: url"}` (missing, empty or repeated `url`), `{"error":"url must start with https://"}`, `{"error":"url exceeds maximum length of 500 characters"}`, `{"error":"Invalid url"}` (not well-formed, has whitespace or credentials, private/loopback host), `{"error":"direction must be from, to, or both"}`; `429` from the global rate limit; `500` `{"error":"Internal server error"}`. Successful responses carry `Cache-Control: public, max-age=60` and an `ETag`.
 
@@ -588,6 +604,8 @@ On-demand live probe of a single mint URL. Triggers an outbound fetch.
   "checkedAt": "2026-06-25T10:00:00.000Z"
 }
 ```
+
+**Known mints only (additive):** `contactChecks` (facts about the stored contact entries, never a value), `lastContacts` / `lastContactsAt` (the last published contacts, only when stored) and, since 2026-10-25, `lastInfo`: `{ "motd": string | null, "description": string | null, "seenAt": ISO 8601 UTC | null }`, the last **confirmed** MOTD and short description of the change log baseline (`mint_change_state.info`: plain text, links replaced by `[link]`, at most 200 characters), for Mint Detail while the live `/v1/info` is missing. `seenAt` is the mint's last successful probe (`mints.last_online_at`), not the time the value was confirmed; a value that changed and is still waiting for its second observation is not shown, so `lastInfo` can be older than `seenAt`. The key is absent when neither a MOTD nor a description is stored, and is never in the answer for an unknown URL.
 
 For a URL that is **not** a tracked mint the response is reduced: `keysets` is `null` and `info` carries only `name`, `version` and the NUT numbers as keys of `nuts` (each with `{}`); the example above is the answer for a tracked mint.
 

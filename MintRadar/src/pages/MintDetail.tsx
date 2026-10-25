@@ -1,7 +1,7 @@
 import { nip19 } from 'nostr-tools'
 import { njumpProfileUrl, njumpEventUrl, npubFromPubkey, mintAnnounceNaddr } from '@/utils/nostrLinks'
 import { useParams, useNavigate, Navigate, Link } from 'react-router-dom'
-import { Fragment, useEffect, useState, useMemo, useCallback, lazy, Suspense, type CSSProperties, type JSX, type ReactNode } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, useMemo, useCallback, lazy, Suspense, type CSSProperties, type JSX, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
@@ -36,7 +36,7 @@ import { MintComparePicker } from '@/components/MintComparePicker'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { MintNetworkCard } from '@/components/MintNetworkCard'
 import { networkRows } from '@/utils/networkInfo'
-import { AuditCzTiles, AuditCzSourceLine, AuditCzSwapTables, AuditStateText } from '@/components/AuditCzCards'
+import { AuditCzTiles, AuditCzSwapTables, AuditStateText } from '@/components/AuditCzCards'
 import { supportedNutKeys } from '@/utils/nutSupport'
 import { MintFeesLimits } from '@/components/mint/MintFeesLimits'
 import { formatDate, formatDateTimeUtc } from '@/utils/formatDate'
@@ -51,7 +51,7 @@ import { auditFreshness, audit8333StaleLine } from '@/utils/auditFreshness'
 import { IcClose } from '@/components/IcClose'
 import { clickableProps } from '@/utils/clickableProps'
 import { useAuditCz } from '@/hooks/useAuditCz'
-import { adaptAuditCz, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzSyncNote, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
 import { sortUnits } from '@/utils/sortUnits'
 import {
   computeReliabilityScore as sharedComputeReliabilityScore,
@@ -65,6 +65,7 @@ import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLo
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
 import { ContactChecksLine } from '@/components/ContactChecksLine'
+import { auditSuccessText, outageTiles, outageErrorCell, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, swapStripText, swapStripLabel, showTorFor, contactsNotSavedYet, CONTACTS_NOT_SAVED_TEXT, type OutagesResponse } from '@/utils/mintDetailFacts'
 import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
 import { LAST_SCORE_CAPTION, KEEP_WALLET_SENTENCE, TEMPORARY_SENTENCE, contactSentence, restoreSentence, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
@@ -168,6 +169,45 @@ function AuditSourceInfoIcon({ text }: { text?: string }) {
       about="Audit stats"
       text={text ?? 'These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.'}
     />
+  )
+}
+
+// The cashu.info sync note in the Audit stats header ("· synced 17 min ago" / "· not updated recently"). The time
+// looks like the "fetched 5 min ago" under Fees & limits (muted 12 px, dotted underline) and its tooltip gives the
+// exact sync time. When the note does not fit after the source ⓘ it wraps onto the next line and its leading "·" is
+// hidden: the dot keeps its place in the layout (so the note never jumps back up once the dot is gone) and the note
+// is shifted left by the dot's width with a transform, which does not change the layout, so the text starts at the
+// left edge of the line.
+function AuditSyncNote({ note, testId }: { note: { text: string; stale: boolean; tip: string | null }; testId: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [wrapped, setWrapped] = useState(false)
+  useLayoutEffect(() => {
+    const el = ref.current
+    const row = el?.parentElement
+    const prev = el?.previousElementSibling as HTMLElement | null | undefined
+    const dot = el?.querySelector<HTMLElement>('.md-audit-sync-sep')
+    if (!el || !row || !prev || !dot) return
+    const check = () => {
+      const rowBox = row.getBoundingClientRect()
+      if (rowBox.width === 0) return // the other (hidden) header
+      const rowCs = getComputedStyle(row)
+      el.style.setProperty('--md-sync-sep', `${dot.getBoundingClientRect().width}px`)
+      const prevRight = prev.getBoundingClientRect().right + (parseFloat(getComputedStyle(prev).marginRight) || 0)
+      const free = rowBox.right - (parseFloat(rowCs.paddingRight) || 0) - (parseFloat(rowCs.borderRightWidth) || 0) - prevRight - (parseFloat(rowCs.columnGap) || 0)
+      setWrapped(el.getBoundingClientRect().width > free + 0.5)
+    }
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(row)
+    return () => ro.disconnect()
+  }, [note.text])
+  return (
+    <span ref={ref} className={`md-audit-sync${note.stale ? ' md-audit-sync-stale' : ''}${wrapped ? ' md-audit-sync-wrapped' : ''}`} data-testid={testId}>
+      <span className="md-audit-sync-sep" aria-hidden={wrapped || undefined}>·{' '}</span>
+      {note.tip
+        ? <InfoTooltip className="md-audit-sync-time" width={230} text={note.tip}>{note.text}</InfoTooltip>
+        : <span>{note.text}</span>}
+    </span>
   )
 }
 
@@ -408,6 +448,8 @@ function MintDetailContent({ url }: { url: string }) {
         segments: Array<{ bucket: string; online: boolean; latencyMs: number | null; total: number; onlineCount: number; uptimePct: number | null; reliabilityScore: number | null }>
         uptimePct: number | null
         avgLatencyMs: number | null
+        p50LatencyMs?: number | null
+        p95LatencyMs?: number | null
         prevUptimePct: number | null
         prevAvgLatencyMs: number | null
         earliestCheckedAt: string | null
@@ -453,12 +495,7 @@ function MintDetailContent({ url }: { url: string }) {
     queryFn: async () => {
       const res = await fetch(`/api/mints/outages?url=${encodeURIComponent(url)}&days=${OUTAGES_WINDOW_DAYS}`)
       if (!res.ok) throw new Error('Failed to fetch outages')
-      return await res.json() as {
-        sinceLastOutageMs: number | null
-        avgRecoveryMs: number | null
-        outageCount: number
-        outages: Array<{ startedAt: string; durationMs: number; error: string }>
-      }
+      return await res.json() as OutagesResponse
     },
     staleTime: 5 * 60 * 1000,
   })
@@ -888,9 +925,12 @@ function MintDetailContent({ url }: { url: string }) {
   const version = data?.info?.version ?? knownMint?.version ?? undefined
   // The one "latest" of this mint's software family, as the API sent it with the stored score (versionRule.ts).
   const versionLatestMap = latestMapFor(knownMint?.version, knownMint?.softwareLatest)
-  const motd = data?.info?.motd
-  const description = data?.info?.description
-  const pubkey = data?.info?.pubkey
+  // Live MOTD / description, else the last confirmed values of a known mint (probe `lastInfo`) with a muted "last seen".
+  const infoText = infoTextFor(data?.info, data?.lastInfo)
+  const motd = infoText.motd
+  const description = infoText.description
+  const infoLastSeenAt = infoText.lastSeenAt
+  const pubkey = data?.info?.pubkey ?? knownMint?.pubkey ?? undefined
   const name = resolvedName ?? (knownMint ? mintHostname(url) : undefined)
 
   const tosUrl = data?.info?.tos_url ?? knownMint?.tosUrl ?? undefined
@@ -909,7 +949,7 @@ function MintDetailContent({ url }: { url: string }) {
   const urls = data?.info?.urls
   const hasOnionAlias = listHasOnion(urls)
   const trackedIsOnion = urlIsOnion(url)
-  const showTor = trackedIsOnion || hasOnionAlias
+  const showTor = showTorFor(trackedIsOnion, hasOnionAlias, knownMint?.hasOnion)
 
   const uptimePct = uptime24hData?.uptimePct ?? 0
 
@@ -974,7 +1014,12 @@ function MintDetailContent({ url }: { url: string }) {
   const breakdownVScore = versionComponent(version, versionLatestMap)
   const breakdownContactFields = [email, twitter, nostr].filter(Boolean)
   const breakdownCScore = contactComponent(breakdownContactFields.length)
-  const breakdownContactDisplay = breakdownContactFields.length === 0 ? 'None' : (email ? 'Email' : '') + (twitter ? (email ? ' + Twitter' : 'Twitter') : '') + (nostr ? ((email || twitter) ? ' + Nostr' : 'Nostr') : '')
+  // The stored record of the shown score (/api/mints/known scoreBreakdown): its points per row win, so the rows add up to
+  // the score; the live values below are display text only. null (not written yet): the live computation, as before.
+  const storedBreakdown = knownMint?.reliabilityScore != null ? (knownMint.scoreBreakdown ?? null) : null
+  const breakdownContactDisplay = breakdownContactFields.length === 0
+    ? (storedBreakdown && storedBreakdown.contact.points > 0 ? (contactKindsText(data?.contactChecks) ?? 'Listed at last check') : 'None')
+    : (email ? 'Email' : '') + (twitter ? (email ? ' + Twitter' : 'Twitter') : '') + (nostr ? ((email || twitter) ? ' + Nostr' : 'Nostr') : '')
   // Audit part of the score: cashu.info's 7-day attributed failures (mints.audit_cz_*), the same
   // functions the server scores with (shared/auditScore.ts). The audit.8333.space figures below
   // (breakdownAuditRecent*) are for the Audit tab only.
@@ -992,7 +1037,9 @@ function MintDetailContent({ url }: { url: string }) {
       : auditState === 'too-old'
         ? auditTooOldDetail()
         : 'No cashu.info audit data: neutral'
-  const breakdownAuditDisplay = auditState === 'scored' ? `${Math.min(auditCzBlamed ?? 0, auditCzTotal ?? 0)} / ${auditCzTotal}` : 'neutral'
+  // Swaps without an attributed failure / all swaps, the same figure as Compare's "Audit success" (it used to show the
+  // attributed failures, "0 / 13", next to 25/25, which read as 0 successes).
+  const breakdownAuditDisplay = auditState === 'scored' ? (auditSuccessText(auditCzBlamed, auditCzTotal) ?? 'neutral') : 'neutral'
   const auditAgeDays = auditAgeH !== null && auditAgeH > 24 && (auditState === 'scored' || auditState === 'too-few') ? Math.floor(auditAgeH / 24) : null
   const auditStaleNote = auditAgeDays !== null ? `data ${auditAgeDays} ${auditAgeDays === 1 ? 'day' : 'days'} old` : undefined
   const breakdownAuditRecentTotal = knownMint?.auditRecentTotal ?? null
@@ -1017,6 +1064,7 @@ function MintDetailContent({ url }: { url: string }) {
   const auditSource = auditSourcePick ?? (auditNeedsFallback ? 'cz' : '8333')
   const czView = czData !== null && (!has8333Audit || auditSource === 'cz') ? czData : null
   const czInfoText = czView ? cashuInfoViewText({ fallbackFrom8333: !(has8333Audit && !auditNeedsFallback) }) : null
+  const czSyncNote = czView ? auditCzSyncNote(czView, now) : null
   const auditSwitch = czData !== null && has8333Audit ? (
     <div className="md-audit-seg" role="group" aria-label="Audit source">
       <button type="button" className={`md-audit-seg-btn${czView ? ' active' : ''}`} aria-pressed={czView !== null} onClick={() => setAuditSourcePick('cz')}>cashu.info</button>
@@ -1033,13 +1081,22 @@ function MintDetailContent({ url }: { url: string }) {
   const auditRowSource = auditSourceLine({ blamed: auditCzBlamed, total: auditCzTotal, fetchedAt: auditCzFetchedAt, now })
   const infoSource = infoSourceLine({ fetchedAt: infoFetchedAt, now })
   const versionSource = infoSourceLine({ fetchedAt: infoFetchedAt, now, comparedWithLatest: true })
+  const rowUScore = breakdownRowScore(storedBreakdown, 'uptime', uptimeRowPending ? null : breakdownUScore)
+  const rowAScore = breakdownRowScore(storedBreakdown, 'audit', breakdownAScore)
+  const rowNScore = breakdownRowScore(storedBreakdown, 'nuts', breakdownNScore)
+  const rowVScore = breakdownRowScore(storedBreakdown, 'version', breakdownVScore)
+  const rowCScore = breakdownRowScore(storedBreakdown, 'contact', breakdownCScore)
   const reliabilityBreakdownRows = [
-    { label: UPTIME_ROW_LABEL, display: uptimeRowPending ? SCORE_PENDING_TEXT : `${uptimePct}%`, ...(uptimeRowPending ? { displayLabel: UPTIME_PENDING_ARIA_LABEL } : {}), source: uptimeSource, score: uptimeRowPending ? null : breakdownUScore, max: UPTIME_POINTS, color: uptimeRowPending ? 'var(--text3)' : uptimeColor(uptimePct), tooltip: uptimeRowText() },
-    { label: AUDIT_ROW_LABEL, display: breakdownAuditDisplay, source: auditRowSource, ...(auditDetailText ? { detail: auditDetailText } : {}), score: breakdownAScore, max: AUDIT_POINTS, color: auditRowColor, tooltip: auditRowText(), ...(auditStaleNote ? { note: auditStaleNote } : {}) },
-    { label: NUT_ROW_LABEL, display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, source: infoSource, score: breakdownNScore, max: NUT_POINTS, color: supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: NUT_ROW_TEXT },
-    { label: VERSION_ROW_LABEL, display: version ?? 'Unknown', source: versionSource, score: breakdownVScore, max: VERSION_POINTS, color: breakdownVScore >= 12 ? 'var(--accent)' : breakdownVScore >= 6 ? 'var(--amber)' : 'var(--red)', tooltip: versionRowText() },
-    { label: CONTACT_ROW_LABEL, display: breakdownContactDisplay, source: infoSource, score: breakdownCScore, max: CONTACT_POINTS, color: breakdownCScore >= 4 ? 'var(--accent)' : breakdownCScore >= 2 ? 'var(--amber)' : 'var(--red)', tooltip: contactRowText() },
+    { label: UPTIME_ROW_LABEL, display: uptimeRowPending ? SCORE_PENDING_TEXT : `${uptimePct}%`, ...(uptimeRowPending ? { displayLabel: UPTIME_PENDING_ARIA_LABEL } : {}), source: uptimeSource, score: rowUScore, max: UPTIME_POINTS, color: storedBreakdown ? breakdownPointsColor(rowUScore, UPTIME_POINTS) : uptimeRowPending ? 'var(--text3)' : uptimeColor(uptimePct), tooltip: uptimeRowText() },
+    { label: AUDIT_ROW_LABEL, display: breakdownAuditDisplay, source: auditRowSource, ...(auditDetailText ? { detail: auditDetailText } : {}), score: rowAScore, max: AUDIT_POINTS, color: auditRowColor, tooltip: auditRowText(), ...(auditStaleNote ? { note: auditStaleNote } : {}) },
+    { label: NUT_ROW_LABEL, display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, source: infoSource, score: rowNScore, max: NUT_POINTS, color: storedBreakdown ? breakdownPointsColor(rowNScore, NUT_POINTS) : supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: NUT_ROW_TEXT },
+    { label: VERSION_ROW_LABEL, display: version ?? 'Unknown', source: versionSource, score: rowVScore, max: VERSION_POINTS, color: breakdownPointsColor(rowVScore, VERSION_POINTS), tooltip: versionRowText() },
+    { label: CONTACT_ROW_LABEL, display: breakdownContactDisplay, source: infoSource, score: rowCScore, max: CONTACT_POINTS, color: breakdownPointsColor(rowCScore, CONTACT_POINTS), tooltip: contactRowText() },
   ]
+  // The stored new-mint cap correction (0 or negative): one line under the rows, so they still add up to the score.
+  const storedCapLine = storedBreakdown && storedBreakdown.newMintCap.points < 0
+    ? <div className="rb-cap-line" data-testid="rb-cap-line">New-mint cap: {storedBreakdown.newMintCap.points} (score capped at {storedBreakdown.newMintCap.cap})</div>
+    : null
   // "Limited data": the audit part is neutral, or the new-mint cap applies (the score's own constants).
   const limitedReasons = limitedDataReasons({ auditBlamed: auditCzBlamed, auditTotal: auditCzTotal, auditFetchedAt: auditCzFetchedAt, discoveredAt, now })
   const limitedDataLabel = limitedReasons.length > 0 ? (
@@ -1173,6 +1230,9 @@ function MintDetailContent({ url }: { url: string }) {
   const chartAvgUptime = chartHistoryData?.uptimePct ?? null
   const chartPrevUptime = chartHistoryData?.prevUptimePct ?? null
   const chartPrevInsufficientHistory = chartHistoryData?.prevPeriodInsufficientHistory ?? false
+  // Mean of the period's non-null segment scores (never the current score); "—" when the period has none.
+  const chartAvgReliability = averageReliability(chartHistoryData?.segments)
+  const chartLatencyPercentiles = latencyPercentilesText(chartHistoryData?.p50LatencyMs, chartHistoryData?.p95LatencyMs, chartInterval)
   const chartCoverage = chartHistoryData && chartHistoryData.daysOfDataAvailable < chartHistoryData.periodDays
     ? `Showing ${chartHistoryData.daysOfDataAvailable} of ${chartHistoryData.periodDays} days of data (history retention started recently)`
     : null
@@ -1620,6 +1680,11 @@ function MintDetailContent({ url }: { url: string }) {
             {(motd || description || descriptionLong) && (
               <div className="md-panel">
                 <div className="md-panel-title">About</div>
+                {infoLastSeenAt && (motd || description) && (
+                  <div className="md-info-lastseen" data-testid="info-lastseen" style={{ fontSize: '0.75rem', color: 'var(--text3)', marginBottom: 8 }}>
+                    MOTD and description last seen {formatTimeAgo(new Date(infoLastSeenAt))}
+                  </div>
+                )}
                 {motd && isMotdAlert(motd) && (
                   <div
                     className={`md-mint-alert${motd.trim().length <= 24 ? ' md-mint-alert--inline' : ''}`}
@@ -1946,6 +2011,12 @@ function MintDetailContent({ url }: { url: string }) {
                   </span>
                 </div>
               )}
+              {contactsNotSavedYet(data?.contactChecks, contactSource?.length ?? 0) && (
+                <>
+                  <div className="md-panel-title">Get in touch</div>
+                  <div className="md-contact-notsaved" data-testid="contacts-not-saved" style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 8 }}>{CONTACTS_NOT_SAVED_TEXT}</div>
+                </>
+              )}
               <ContactChecksLine checks={data?.contactChecks} now={now} />
             </div>
           )}
@@ -2039,12 +2110,12 @@ function MintDetailContent({ url }: { url: string }) {
             {/* Summary metric cards */}
             <div className="md-hist-summary">
               {[
-                { label: 'Average latency', value: chartAvgLatency !== null ? `${chartAvgLatency} ms` : '—', delta: deltaStr(chartAvgLatency, chartPrevLatency, ' ms', chartPrevInsufficientHistory), color: 'var(--text)' },
-                { label: 'Average uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%', chartPrevInsufficientHistory), color: 'var(--accent)' },
-                { label: 'Average reliability', value: scoreText, delta: null, color: tsInfo.color },
-              ].map(({ label, value, delta, color }) => (
+                { label: 'Average latency', value: chartAvgLatency !== null ? `${chartAvgLatency} ms` : '—', delta: deltaStr(chartAvgLatency, chartPrevLatency, ' ms', chartPrevInsufficientHistory), tip: chartAvgLatency !== null ? chartLatencyPercentiles : null, color: 'var(--text)' },
+                { label: 'Average uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%', chartPrevInsufficientHistory), tip: null, color: 'var(--accent)' },
+                { label: 'Average reliability', value: chartAvgReliability !== null ? String(chartAvgReliability) : '—', delta: null, tip: null, color: chartAvgReliability !== null ? reliabilityScoreInfo(chartAvgReliability).color : 'var(--text3)' },
+              ].map(({ label, value, delta, tip, color }) => (
                 <div key={label} className="md-hist-fig">
-                  <div className="md-hist-fig-value" style={{ color }}>{value}</div>
+                  <div className="md-hist-fig-value" style={{ color }}>{value}{tip && <span className="md-hist-fig-tip" data-testid="hist-latency-percentiles"><InfoTooltip iconSize={12} width={240} about={label} text={tip} /></span>}</div>
                   <div className="md-hist-fig-label">{label}</div>
                   {delta && <div className="md-hist-fig-delta">{delta}</div>}
                 </div>
@@ -2083,13 +2154,9 @@ function MintDetailContent({ url }: { url: string }) {
           <div className="md-panel">
             <div className="md-panel-title">Outages</div>
             <div className="md-hist-summary" style={{ marginBottom: 12 }}>
-              {[
-                { label: 'Since last outage', value: outagesData?.sinceLastOutageMs != null ? formatDuration(outagesData.sinceLastOutageMs) : '—' },
-                { label: 'Time to recover', value: outagesData?.avgRecoveryMs != null ? formatDuration(outagesData.avgRecoveryMs) : '—' },
-                { label: outagesCountLabel(), value: outagesData?.outageCount != null ? String(outagesData.outageCount) : '—' },
-              ].map(({ label, value }) => (
-                <div key={label} className="md-hist-fig">
-                  <div className="md-hist-fig-value">{value}</div>
+              {outageTiles(outagesData, outagesCountLabel(), formatDuration).map(({ key, label, value }) => (
+                <div key={key} className="md-hist-fig" data-testid={`outage-tile-${key}`}>
+                  <div className="md-hist-fig-value" style={key === 'down' ? { color: 'var(--red)' } : undefined}>{value}</div>
                   <div className="md-hist-fig-label">{label}</div>
                 </div>
               ))}
@@ -2107,10 +2174,10 @@ function MintDetailContent({ url }: { url: string }) {
                   </thead>
                   <tbody>
                     {outagesData.outages.slice().reverse().map((o, i) => (
-                      <tr key={i}>
-                        <td className="md-vh-ver md-vh-to md-vh-wrap">{formatOutageStart(o.startedAt)}</td>
-                        <td className="md-vh-ver md-vh-to md-vh-wrap">{formatDuration(o.durationMs)}</td>
-                        <td className="md-vh-ver md-vh-to md-vh-wrap">{o.error}</td>
+                      <tr key={i} {...(o.ongoing ? { 'data-ongoing': 'true' } : {})}>
+                        <td className="md-vh-ver md-vh-to md-vh-wrap">{o.truncatedAtWindowStart ? '≤ ' : ''}{formatOutageStart(o.startedAt)}{o.truncatedAtWindowStart && <InfoTooltip iconSize={11} width={200} about="Outage start" text={`Started before the ${OUTAGES_WINDOW_DAYS}-day window`} />}</td>
+                        <td className="md-vh-ver md-vh-to md-vh-wrap">{formatDuration(o.durationMs)}{o.ongoing ? ' (ongoing)' : ''}</td>
+                        <td className="md-vh-ver md-vh-to md-vh-wrap">{outageErrorCell(o, lastErrorText)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -2164,14 +2231,16 @@ function MintDetailContent({ url }: { url: string }) {
                   <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
                   <span className="md-audit-via">· via {czView ? 'cashu.info' : 'audit.8333.space'}</span>
                   <AuditSourceInfoIcon {...(czInfoText ? { text: czInfoText } : {})} />
+                  {czSyncNote && <AuditSyncNote note={czSyncNote} testId="audit-cz-sync" />}
                   {auditSwitch}
                 </div>
                 {/* Mobile heading (mirrors the desktop one above; the collapse
                     toggle was removed once the Audit tab lost its collapsible body). */}
                 <div className="md-audit-toggle">
                   <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
-                  <span style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>· via {czView ? 'cashu.info' : 'audit.8333.space'}</span>
+                  <span className="md-audit-via">· via {czView ? 'cashu.info' : 'audit.8333.space'}</span>
                   <AuditSourceInfoIcon {...(czInfoText ? { text: czInfoText } : {})} />
+                  {czSyncNote && <AuditSyncNote note={czSyncNote} testId="audit-cz-sync-mobile" />}
                   {auditSwitch}
                 </div>
 
@@ -2179,7 +2248,7 @@ function MintDetailContent({ url }: { url: string }) {
                 {!czView && <p className="audit-cz-muted">{czData !== null
                   ? `The Reliability Score uses cashu.info's last ${AUDIT_WINDOW_DAYS} days; this view shows audit.8333.space's last ~${AUDIT_SWAPS_WINDOW} swaps.`
                   : `This view shows audit.8333.space's last ~${AUDIT_SWAPS_WINDOW} swaps; the Reliability Score does not use it.`}</p>}
-                {czView ? <><AuditCzTiles view={czView} /><AuditCzSourceLine view={czView} now={now} /></> : (<>
+                {czView ? <AuditCzTiles view={czView} /> : (<>
                 {/* 5-second overview — always visible, never inside the mobile
                     collapse. Mints/Melts are audit.8333.space lifetime counts;
                     Recent success rate is the rolling ~100-swap window; Last
@@ -2228,8 +2297,14 @@ function MintDetailContent({ url }: { url: string }) {
                     already orders by created_at DESC, so no client-side
                     reverse is needed). Nothing renders here until the swap
                     fetch actually resolves with data — never a fake/empty bar. */}
+                {czView && auditSwapBarItems.length > 0 && (
+                  <div className="audit-cz-muted audit-swap-bar-label" data-testid="audit-swap-bar-caption">
+                    {swapStripLabel(auditSwapBarItems.length)}
+                    <InfoTooltip iconSize={12} width={300} label="About the swap strip" style={TT_GAP_LEFT} text={swapStripText(auditSwapBarItems.length)} />
+                  </div>
+                )}
                 {auditSwapBarItems.length > 0 && (
-                  <div className="audit-swap-bar" title="Last swaps, newest first">
+                  <div className={`audit-swap-bar${czView ? ' audit-swap-bar-labelled' : ''}`} title="Last swaps, newest first">
                     {auditSwapBarItems.map(s => (
                       <div
                         key={s.swapId}
@@ -2238,11 +2313,6 @@ function MintDetailContent({ url }: { url: string }) {
                       />
                     ))}
                   </div>
-                )}
-                {czView && auditSwapBarItems.length > 0 && (
-                  <p className="audit-cz-muted audit-swap-bar-caption" data-testid="audit-swap-bar-caption">
-                    The {auditSwapBarItems.length === 1 ? 'latest swap' : `latest ${auditSwapBarItems.length} swaps`} MintRadar stored from cashu.info, both directions, newest first. Green: succeeded. Red: failed. Grey: not counted against the mint (below the mint's minimum, the auditor's balance, or no outcome yet).
-                  </p>
                 )}
 
                 {czView ? (<>
@@ -2555,6 +2625,7 @@ function MintDetailContent({ url }: { url: string }) {
               {reliabilityBreakdownRows.map(row => (
                 <ReliabilityBreakdownRow key={row.label} {...row} />
               ))}
+              {storedCapLine}
             </div>
           </div>
 
@@ -2736,6 +2807,7 @@ function MintDetailContent({ url }: { url: string }) {
             {reliabilityBreakdownRows.map(row => (
               <ReliabilityBreakdownRow key={row.label} {...row} />
             ))}
+            {storedCapLine}
             <div className="rb-formula">
               {scoreFormulaText()}
               {' '}<Link to="/methodology" className="rb-method-link">How the score is computed</Link>

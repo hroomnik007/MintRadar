@@ -58,16 +58,16 @@ const SCORED = ''
 const TOO_FEW = 'Not enough audit data yet (fewer than 10 swaps in the last 7 days): neutral'
 
 const CASES: Case[] = [
-  { name: 'no failures attributed: full 25 points', audit: { total: 100, blamed: 0, fetchedAt: ago(H) }, detail: SCORED, points: 25, display: '0 / 100' },
-  { name: 'under 1% attributed (1 of 200): 20 points', audit: { total: 200, blamed: 1, fetchedAt: ago(H) }, detail: SCORED, points: 20, display: '1 / 200' },
-  { name: 'under 5% attributed (2 of 100): 15 points', audit: { total: 100, blamed: 2, fetchedAt: ago(H) }, detail: SCORED, points: 15, display: '2 / 100' },
-  { name: 'under 15% attributed (10 of 100): 10 points', audit: { total: 100, blamed: 10, fetchedAt: ago(H) }, detail: SCORED, points: 10, display: '10 / 100' },
-  { name: '15% or more attributed (20 of 100): 5 points', audit: { total: 100, blamed: 20, fetchedAt: ago(H) }, detail: SCORED, points: 5, display: '20 / 100' },
-  { name: 'exactly 10 swaps is still scored', audit: { total: 10, blamed: 0, fetchedAt: ago(H) }, detail: SCORED, points: 25, display: '0 / 10' },
+  { name: 'no failures attributed: full 25 points', audit: { total: 100, blamed: 0, fetchedAt: ago(H) }, detail: SCORED, points: 25, display: '100 / 100' },
+  { name: 'under 1% attributed (1 of 200): 20 points', audit: { total: 200, blamed: 1, fetchedAt: ago(H) }, detail: SCORED, points: 20, display: '199 / 200' },
+  { name: 'under 5% attributed (2 of 100): 15 points', audit: { total: 100, blamed: 2, fetchedAt: ago(H) }, detail: SCORED, points: 15, display: '98 / 100' },
+  { name: 'under 15% attributed (10 of 100): 10 points', audit: { total: 100, blamed: 10, fetchedAt: ago(H) }, detail: SCORED, points: 10, display: '90 / 100' },
+  { name: '15% or more attributed (20 of 100): 5 points', audit: { total: 100, blamed: 20, fetchedAt: ago(H) }, detail: SCORED, points: 5, display: '80 / 100' },
+  { name: 'exactly 10 swaps is still scored', audit: { total: 10, blamed: 0, fetchedAt: ago(H) }, detail: SCORED, points: 25, display: '10 / 10' },
   { name: 'fewer than 10 swaps (9): neutral 12.5 and the "not enough" text', audit: { total: 9, blamed: 0, fetchedAt: ago(H) }, detail: TOO_FEW, points: 12.5, display: 'neutral' },
   { name: 'no detail stored: neutral 12.5', audit: { total: null, blamed: null, fetchedAt: null }, detail: 'No cashu.info audit data: neutral', points: 12.5, display: 'neutral' },
-  { name: 'detail 30 hours old: still scored, note "data 1 day old"', audit: { total: 100, blamed: 0, fetchedAt: ago(30 * H) }, detail: SCORED, points: 25, display: '0 / 100', note: 'data 1 day old' },
-  { name: 'detail 5 days old: still scored, note "data 5 days old"', audit: { total: 100, blamed: 2, fetchedAt: ago(5 * D + H) }, detail: SCORED, points: 15, display: '2 / 100', note: 'data 5 days old' },
+  { name: 'detail 30 hours old: still scored, note "data 1 day old"', audit: { total: 100, blamed: 0, fetchedAt: ago(30 * H) }, detail: SCORED, points: 25, display: '100 / 100', note: 'data 1 day old' },
+  { name: 'detail 5 days old: still scored, note "data 5 days old"', audit: { total: 100, blamed: 2, fetchedAt: ago(5 * D + H) }, detail: SCORED, points: 15, display: '98 / 100', note: 'data 5 days old' },
   { name: 'detail older than 168 hours: neutral 12.5, no note', audit: { total: 100, blamed: 0, fetchedAt: ago(8 * D) }, detail: 'Audit data older than 7 days: neutral', points: 12.5, display: 'neutral' },
 ]
 

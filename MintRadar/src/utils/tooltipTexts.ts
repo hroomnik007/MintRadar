@@ -98,7 +98,7 @@ export function uptimeRowText(): string {
   return `Percentage of successful checks over the last ${UPTIME_WINDOW_HOURS}h. 100% uptime = full points.`
 }
 export function auditRowText(): string {
-  return `Failures that cashu.info attributes to this mint, out of its swaps in the last ${AUDIT_WINDOW_DAYS} days (not the overall success rate). Under ${AUDIT_MIN_SAMPLES} swaps or no recent data: neutral ${AUDIT_NEUTRAL} of ${AUDIT_POINTS}.`
+  return `Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last ${AUDIT_WINDOW_DAYS} days (failures caused elsewhere are not counted against it). Under ${AUDIT_MIN_SAMPLES} swaps or no recent data: neutral ${AUDIT_NEUTRAL} of ${AUDIT_POINTS}.`
 }
 export const NUT_ROW_TEXT = 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.'
 export function versionRowText(): string {

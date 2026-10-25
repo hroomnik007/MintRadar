@@ -39,7 +39,7 @@ info:
     `changedSince` and the `include` value `changes`; the default list is unchanged. The mint field `contactChecks` followed
     (also 2026-10-20: single-mint endpoint and `include=facts`); the default list is unchanged. The mint fields `feeExamples`,
     `limits` and `auditByDirection` followed on 2026-10-21 (single-mint endpoint and `include=facts`); the default list is
-    unchanged. The mint field `scoreStale` (true when `status` is not `online`) was added on 2026-10-21 on every object, the default list included. The integer
+    unchanged. The mint field `scoreStale` (true when `status` is not `online`) was added on 2026-10-21 on every object, the default list included. On 2026-10-25 the mint field `uptime30dPct` was added on every object (the default list included) and `latency24h` with `include=facts` and on the single-mint endpoint. The integer
     `methodology` changes whenever the score formula changes; scores of different methodology numbers are
     not comparable. The history is in `backend/src/shared/methodology.ts` and docs/API.md.
 
@@ -67,7 +67,7 @@ paths:
         then `uptime7dPct` descending (null last), then `name` (the hostname when `name` is null), then `url`.
         A query value that is present but invalid (a repeated parameter included; the boolean flags take exactly `true` or `false`) is a `400`; unknown parameters are ignored.
         `total` counts the mints that match the filters before `limit` is applied; `truncated` is true when `limit` cut the list.
-        The heavier fields (`pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection`, `keysets`, `keysetsCheckedAt`, `methods`, `scoreBreakdown`) are only in the objects when `include` asks for them.
+        The heavier fields (`pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection`, `latency24h`, `keysets`, `keysetsCheckedAt`, `methods`, `scoreBreakdown`) are only in the objects when `include` asks for them.
       parameters:
         - name: unit
           in: query
@@ -128,7 +128,7 @@ paths:
           in: query
           description: >-
             Comma-separated list of `facts`, `keysets`, `methods`, `breakdown`, `changes`: add the heavier fields of that name to every object
-            (`facts` brings `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `feeExamples`, `limits` and `auditByDirection`; `keysets` brings `keysets` and `keysetsCheckedAt`; `methods` brings
+            (`facts` brings `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection` and `latency24h`; `keysets` brings `keysets` and `keysetsCheckedAt`; `methods` brings
             `methods`; `breakdown` brings `scoreBreakdown`; `changes` brings the newest 10 `changes` of each mint and `changesPending`).
             An unknown value is a `400`. Added 2026-10-20.
           schema: { type: string, pattern: '^(facts|keysets|methods|breakdown|changes)(,(facts|keysets|methods|breakdown|changes))*$' }
@@ -366,7 +366,7 @@ components:
         error messages, reviewer public keys, review texts or contact details (`contactChecks` states only whether MintRadar recognises the format of the entries, never a value or a domain). It does carry the mint's public NUT-06
         key (`pubkey`) and whether it advertises a Tor address (`hasOnion`). The fields from `pubkey` on were added on
         2026-10-20; `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `keysets`, `keysetsCheckedAt`, `methods`,
-        `scoreBreakdown`, `changes`, `changesPending`, `contactChecks`, `feeExamples`, `limits` and `auditByDirection` are only present on the single-mint endpoint and in the list with the matching `include` value.
+        `scoreBreakdown`, `changes`, `changesPending`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection` and `latency24h` are only present on the single-mint endpoint and in the list with the matching `include` value.
       required:
         - url
         - name
@@ -376,6 +376,7 @@ components:
         - scoreCappedNew
         - uptime24hPct
         - uptime7dPct
+        - uptime30dPct
         - lastCheckedAt
         - units
         - nuts
@@ -427,6 +428,11 @@ components:
           type: [integer, 'null']
           minimum: 0
           maximum: 100
+        uptime30dPct:
+          type: [integer, 'null']
+          minimum: 0
+          maximum: 100
+          description: Share of successful probes in the last 30 days, in percent; null when there is no probe in that window. Always present, also in the default list (added 2026-10-25).
         lastCheckedAt:
           type: [string, 'null']
           format: date-time
@@ -498,6 +504,14 @@ components:
             the same stored data the audit part of the score counts in total (the score uses the combined number). Added 2026-10-21.
           allOf:
             - $ref: '#/components/schemas/AuditByDirection'
+        latency24h:
+          description: >-
+            Only with `include=facts` (always on the single-mint endpoint). Response time of the successful probes of the last 24 hours:
+            the median (`p50Ms`) and the 95th percentile (`p95Ms`) in whole milliseconds and how many probes they rest on (`samples`).
+            Null when there is no successful probe with a measured time in that window. Added 2026-10-25.
+          oneOf:
+            - $ref: '#/components/schemas/Latency24h'
+            - type: 'null'
         downSince:
           type: [string, 'null']
           format: date-time
@@ -608,6 +622,13 @@ components:
           oneOf:
             - $ref: '#/components/schemas/AuditDirection'
             - type: 'null'
+    Latency24h:
+      type: object
+      required: [p50Ms, p95Ms, samples]
+      properties:
+        p50Ms: { type: integer, minimum: 0, description: Median response time of the successful probes of the last 24 hours, ms. }
+        p95Ms: { type: integer, minimum: 0, description: 95th percentile of the same probes, ms. }
+        samples: { type: integer, minimum: 1, description: Successful probes with a measured time in the last 24 hours. }
     AuditDirection:
       type: object
       required: [attempts, failures, windowDays, source, syncedAt]
