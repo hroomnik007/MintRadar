@@ -166,10 +166,6 @@
   .grid-score-explainer { flex-basis: 100%; font-size: 13px; }
 }
 
-.mint-grid-anchor {
-  scroll-margin-top: 72px;
-}
-
 .dash-actions {
   display: flex;
   gap: 8px;

@@ -8,7 +8,7 @@ vi.mock('@/core/nostr/pool', () => ({
   sharedPool: { querySync: () => new Promise<never>(() => undefined), subscribeMany: () => ({ close: () => undefined }) },
 }))
 
-import { collapseOnline, showingNoteText, mobileCollapseApplies, showLessApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY } from '@/utils/mobileCollapse'
+import { collapseOnline, showingNoteText, mobileCollapseApplies, showLessApplies, scrollPageTopAfterCollapse, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY } from '@/utils/mobileCollapse'
 import { archivedUrlSet, withoutArchivedMovers } from '@/utils/reliabilityMovers'
 import { CopyTextButton } from '@/components/mint/CopyTextButton'
 import { COMPARE_AUDIT_LABEL } from '@/utils/compareLabels'
@@ -29,6 +29,33 @@ describe('"Showing X of Y" note (showingNoteText)', () => {
   it('collapsed with revealed offline rows: names them separately', () => {
     const shown = [...on(10), { online: false }, { online: null }]
     expect(showingNoteText(shown, 62, { collapsed: true, onlineTotal: 50 })).toBe('Showing 10 of 50 online · 2 offline')
+  })
+})
+
+describe('"Show less" scroll target (scrollPageTopAfterCollapse)', () => {
+  const win = (reduce: boolean) => ({
+    scrollTo: vi.fn(),
+    matchMedia: vi.fn((q: string) => ({ matches: reduce && q === '(prefers-reduced-motion: reduce)' }) as MediaQueryList),
+  })
+  it('scrolls smoothly to the very top of the page (not to the first card)', () => {
+    const w = win(false)
+    scrollPageTopAfterCollapse(w as unknown as Window, null)
+    expect(w.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'smooth' })
+  })
+  it('jumps without animation under prefers-reduced-motion', () => {
+    const w = win(true)
+    scrollPageTopAfterCollapse(w as unknown as Window, null)
+    expect(w.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'auto' })
+  })
+  it('focuses the given heading without a second scroll, never an input', () => {
+    const h = document.createElement('h1')
+    h.tabIndex = -1
+    document.body.appendChild(h)
+    const focus = vi.spyOn(h, 'focus')
+    scrollPageTopAfterCollapse(win(false) as unknown as Window, h)
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+    expect(document.activeElement).toBe(h)
+    h.remove()
   })
 })
 

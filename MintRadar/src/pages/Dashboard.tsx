@@ -23,7 +23,7 @@ import { ratingSortKey } from '@/utils/bayesianRating'
 import { isNotRecommendedMint, partitionNotRecommended } from '@/utils/notRecommended'
 import { cleanMintName } from '@/utils/cleanMintName'
 import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolForStatus } from '@/utils/mintCounts'
-import { collapseOnline, showingNoteText, mobileCollapseApplies, showLessApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY, MOBILE_EXPANDED_KEY } from '@/utils/mobileCollapse'
+import { collapseOnline, showingNoteText, mobileCollapseApplies, showLessApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY, MOBILE_EXPANDED_KEY, scrollPageTopAfterCollapse } from '@/utils/mobileCollapse'
 import { useMediaQuery } from '@/hooks/useIsMobile'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { isNutDeclaredSupported } from '@/utils/nutSupport'
@@ -602,7 +602,7 @@ export default function Dashboard() {
   // back/forward — see parseFilterParams/buildFilterParams above.
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
-  const gridAnchorRef = useRef<HTMLDivElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
   const { search, sortBy, sortDir, filters: activeFilters, compareUrls } = useMemo(
     () => parseFilterParams(searchParams),
     [searchParams]
@@ -799,8 +799,8 @@ export default function Dashboard() {
   }
   const showLess = showLessApplies({ isPhone, expanded: mobileExpanded, search, activeFilterCount, status: activeFilters.status })
   // "Show less" sits at the end of a long list; after the collapse the page is much shorter and the visitor would
-  // land near the footer, so the effect below brings the top of the mint list back into view (smooth, or instant
-  // with reduced motion) and moves focus to the "Show all N" button that replaces the one they pressed.
+  // land near the footer, so the effect below goes back to the very top of the page and focuses the Dashboard heading
+  // (scrollPageTopAfterCollapse in mobileCollapse.ts).
   const collapseScrollPending = useRef(false)
   function showFewerMints(): void {
     try { sessionStorage.removeItem(MOBILE_EXPANDED_KEY) } catch { /* private mode: nothing stored */ }
@@ -810,14 +810,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!collapseScrollPending.current || collapseOnlineTo === null) return
     collapseScrollPending.current = false
-    const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const anchor = gridAnchorRef.current
-    // The phone navbar wraps to two rows (~104 px), more than the anchor's 72 px CSS scroll-margin: measure it so the
-    // first card lands just below the sticky bar instead of under it.
-    const nav = document.querySelector<HTMLElement>('.navbar')
-    if (anchor && nav) anchor.style.scrollMarginTop = `${Math.round(nav.getBoundingClientRect().height) + 12}px`
-    anchor?.scrollIntoView?.({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
-    document.querySelector<HTMLButtonElement>('[data-testid="show-all-mints"]')?.focus({ preventScroll: true })
+    scrollPageTopAfterCollapse(window, headingRef.current)
   }, [collapseOnlineTo])
   function openSubmit(): void {
     setShowSubmit(true); setSubmitTab('single'); setSubmitState('idle'); setSubmitInput(''); setProbe({ url: '', state: 'error', result: null }); setNostrLookup({ input: '', outcome: 'empty', url: '' }); setBulkInput(''); setBulkSettled(''); setBulkError(null); setBulkSkipped(0); setBulkProgress([]); setBulkRunning(false); setBulkDone(false); setBulkRateLimitMsg(null)
@@ -1288,7 +1281,7 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
-      <h1 className="sr-only">MintRadar — Cashu Mints Reliability Score & Uptime Monitor</h1>
+      <h1 ref={headingRef} tabIndex={-1} className="sr-only" data-testid="dashboard-heading">MintRadar — Cashu Mints Reliability Score & Uptime Monitor</h1>
 
       <div className="dash-intro">
         <div className="dash-actions" role="group" aria-label="Get started">
@@ -1550,8 +1543,6 @@ export default function Dashboard() {
           ))}
         </div>
       )}
-
-      <div ref={gridAnchorRef} className="mint-grid-anchor" aria-hidden="true" />
 
       {knownError ? (
         <LoadError message={MINT_LIST_ERROR} onRetry={() => void refetchKnown()} />
