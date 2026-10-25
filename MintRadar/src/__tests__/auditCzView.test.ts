@@ -154,9 +154,10 @@ describe('the two tables, the bar rows and the freshness', () => {
   })
   it('header sync note: "synced …" while fresh, "not updated recently" (stale) after 90 minutes, nothing without a time', () => {
     const at = (iso: string) => Date.parse(iso)
-    expect(auditCzSyncNote(view([], LNPAY, {}, at('2026-10-07T07:30:00Z')), at('2026-10-07T07:30:00Z'))).toEqual({ text: 'synced 30 min ago', stale: false })
-    expect(auditCzSyncNote(view([], LNPAY, {}, at('2026-10-07T08:29:00Z')), at('2026-10-07T08:29:00Z'))).toEqual({ text: 'synced 1h ago', stale: false })
-    expect(auditCzSyncNote(view([], LNPAY, {}, at('2026-10-07T08:31:00Z')), at('2026-10-07T08:31:00Z'))).toEqual({ text: AUDIT_CZ_NOT_RECENT_TEXT, stale: true })
+    expect(auditCzSyncNote(view([], LNPAY, {}, at('2026-10-07T07:30:00Z')), at('2026-10-07T07:30:00Z'))).toEqual({ text: 'synced 30 min ago', stale: false, tip: 'Last synced from cashu.info: 7 Oct 2026, 07:00 UTC.' })
+    expect(auditCzSyncNote(view([], LNPAY, {}, at('2026-10-07T08:29:00Z')), at('2026-10-07T08:29:00Z'))).toMatchObject({ text: 'synced 1h ago', stale: false })
+    expect(auditCzSyncNote(view([], LNPAY, {}, at('2026-10-07T08:31:00Z')), at('2026-10-07T08:31:00Z'))).toEqual({ text: AUDIT_CZ_NOT_RECENT_TEXT, stale: true, tip: 'Last synced from cashu.info: 7 Oct 2026, 07:00 UTC, more than 90 minutes ago.' })
+    expect(auditCzSyncNote({ checkedAt: null, notRecent: true }, at('2026-10-07T08:00:00Z'))).toEqual({ text: AUDIT_CZ_NOT_RECENT_TEXT, stale: true, tip: null })
     expect(AUDIT_CZ_NOT_RECENT_TEXT).toBe('not updated recently')
     expect(auditCzSyncNote({ checkedAt: null, notRecent: false }, at('2026-10-07T08:00:00Z'))).toBeNull()
     expect(auditCzSyncNote({ checkedAt: 'garbage', notRecent: false }, at('2026-10-07T08:00:00Z'))).toBeNull()

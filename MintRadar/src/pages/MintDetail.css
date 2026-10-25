@@ -1910,9 +1910,14 @@ button.md-url-copy.copied > svg { opacity: 1; }
   color: var(--text3);
   font-family: var(--font-mono);
 }
-/* "· synced 2h ago" after "via cashu.info": wraps as one unit on narrow screens; amber once not updated recently. */
-.md-audit-sync { white-space: nowrap; }
+/* "· synced 2h ago" after "via cashu.info": the same look as the "fetched 5 min ago" under Fees & limits (.md-fl-note:
+   muted 12 px body font, dotted underline on the time); wraps as one unit on narrow screens; amber once not updated recently. */
+.md-audit-sync { white-space: nowrap; font-family: var(--font-body); font-size: 12px; line-height: 1.5; color: var(--text3); }
 .md-audit-sync-stale { color: var(--amber); }
+.md-audit-sync .md-audit-sync-time { text-decoration: underline dotted; text-underline-offset: 2px; }
+/* Wrapped onto its own line: no leading dot, the text starts at the line's left edge (see AuditSyncNote). */
+.md-audit-sync-wrapped { transform: translateX(calc(-1 * var(--md-sync-sep, 0px))); }
+.md-audit-sync-wrapped .md-audit-sync-sep { visibility: hidden; }
 
 /* Source switch in the Audit card header (cashu.info | audit.8333.space): same recipe as the
    Stats page "Uptime | Reliability" toggle (.stats-tab-toggle / .stats-tab-btn — Stats.css can't be

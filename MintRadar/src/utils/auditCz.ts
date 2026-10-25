@@ -1,6 +1,7 @@
 import type { AuditCzData, AuditCzDetail, AuditCzDirectionCounts } from '@/hooks/useAuditCz'
 import { depositsTileText, withdrawalsTileText, cleanTileText } from './tooltipTexts'
 import { formatTimeAgo } from './mintFormatting'
+import { formatDateTimeUtc } from './formatDate'
 
 // Adapter: cashu.info endpoint response → what the cashu.info Audit tab renders (four tiles from
 // the stored 7-day detail, the auditor's checks, the outcome bar and two swap tables from the swaps
@@ -246,11 +247,17 @@ export const AUDIT_CZ_NOT_RECENT_TEXT = 'not updated recently'
 
 /**
  * The sync note after "via cashu.info" in the Audit stats header: "synced 2h ago", or "not updated recently"
- * (warning colour) once the stored detail is older than AUDIT_CZ_NOT_RECENT_MS. Null when no sync time is known.
+ * (warning colour) once the stored detail is older than AUDIT_CZ_NOT_RECENT_MS. `tip` is the exact sync time
+ * (UTC, like the "fetched …" time under Fees & limits), shown in a tooltip; null when the time is unknown.
+ * The whole note is null when there is nothing to say.
  */
-export function auditCzSyncNote(view: Pick<AuditCzView, 'checkedAt' | 'notRecent'>, now: number): { text: string; stale: boolean } | null {
-  if (view.notRecent) return { text: AUDIT_CZ_NOT_RECENT_TEXT, stale: true }
+export function auditCzSyncNote(view: Pick<AuditCzView, 'checkedAt' | 'notRecent'>, now: number): { text: string; stale: boolean; tip: string | null } | null {
   const at = view.checkedAt ? new Date(view.checkedAt) : null
-  if (!at || !Number.isFinite(at.getTime())) return null
-  return { text: `synced ${formatTimeAgo(at, now)}`, stale: false }
+  const valid = !!at && Number.isFinite(at.getTime())
+  const exact = valid ? formatDateTimeUtc(at) : ''
+  if (view.notRecent) {
+    return { text: AUDIT_CZ_NOT_RECENT_TEXT, stale: true, tip: exact ? `Last synced from cashu.info: ${exact}, more than 90 minutes ago.` : null }
+  }
+  if (!valid) return null
+  return { text: `synced ${formatTimeAgo(at, now)}`, stale: false, tip: `Last synced from cashu.info: ${exact}.` }
 }

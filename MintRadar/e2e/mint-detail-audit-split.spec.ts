@@ -85,15 +85,27 @@ test.describe('no source line; header tooltip', () => {
 })
 
 test.describe('header sync note', () => {
-  test('fresh: "· synced N min ago" right after "via cashu.info", muted', async ({ page }) => {
+  test('fresh: "· synced N min ago" right after "via cashu.info", muted, styled like "fetched …" under Fees & limits', async ({ page }) => {
     await gotoAuditTab(page, czOnly(auditCzResponse()))
     const note = page.getByTestId('audit-cz-sync')
     await expect(note).toHaveText('· synced 10 min ago')
+    await expect(note).not.toHaveClass(/md-audit-sync-wrapped/) // fits on the header line at desktop size: the dot shows
+    await expect(note.locator('.md-audit-sync-sep')).toBeVisible()
     await expect(note).not.toHaveClass(/md-audit-sync-stale/)
     // after "· via cashu.info" and its ⓘ (the ⓘ stays with the source name)
     await expect(page.locator('.md-audit-header-main .md-audit-via').first()).toHaveText('· via cashu.info')
     await expect(page.locator('.md-audit-header-main .md-audit-info').locator('xpath=following-sibling::*[1]')).toHaveAttribute('data-testid', 'audit-cz-sync')
-    await expect(note).not.toHaveAttribute('title', /.*/)
+    await expect(page.locator('[data-testid="audit-cz-sync"], [data-testid="audit-cz-sync"] *').and(page.locator('[title]'))).toHaveCount(0)
+    // the same look as the "fetched …" time: muted 12 px body font, dotted underline on the time
+    const time = note.locator('.md-audit-sync-time')
+    const style = await time.evaluate(e => { const c = getComputedStyle(e); return { line: c.textDecorationLine, deco: c.textDecorationStyle, size: c.fontSize } })
+    expect(style).toEqual({ line: 'underline', deco: 'dotted', size: '12px' })
+  })
+
+  test('the time opens a tooltip with the exact sync time', async ({ page }) => {
+    await gotoAuditTab(page, czOnly(auditCzResponse()))
+    await page.getByTestId('audit-cz-sync').locator('.md-audit-sync-time').hover()
+    await expect(page.getByRole('tooltip')).toHaveText(/^Last synced from cashu\.info: \d{1,2} [A-Z][a-z]{2} \d{4}, \d\d:\d\d UTC\.$/)
   })
 
   test('stale (older than 90 minutes): "· not updated recently" in the warning colour', async ({ page }) => {
@@ -104,19 +116,41 @@ test.describe('header sync note', () => {
     const color = await note.evaluate(e => getComputedStyle(e).color)
     const via = await page.locator('.md-audit-header-main .md-audit-via').first().evaluate(e => getComputedStyle(e).color)
     expect(color).not.toBe(via)
+    await note.locator('.md-audit-sync-time').hover()
+    await expect(page.getByRole('tooltip')).toHaveText(/^Last synced from cashu\.info: .+ UTC, more than 90 minutes ago\.$/)
   })
 
-  test('mobile 390: the note sits in the header without widening the card', async ({ page }) => {
+  test('mobile 390: the note wraps onto its own line without a leading dot and without widening the card', async ({ page }) => {
     await resize(page, 390, 844)
     await gotoAuditTab(page, czOnly(auditCzResponse({ detail: czDetail({}, 120) })))
     const note = page.getByTestId('audit-cz-sync-mobile')
     await expect(note).toHaveText('· not updated recently')
+    await expect(note).toHaveClass(/md-audit-sync-wrapped/)
+    await expect(note.locator('.md-audit-sync-sep')).toBeHidden() // no leading dot on its own line
     await layoutReady(page)
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     expect(overflow).toBeLessThanOrEqual(0)
     const card = await page.locator('.md-audit-collapsible').boundingBox()
     const box = await note.boundingBox()
     expect(box!.x + box!.width).toBeLessThanOrEqual(card!.x + card!.width)
+    const via = await page.locator('.md-audit-toggle .md-audit-via').boundingBox()
+    expect(box!.y).toBeGreaterThanOrEqual(via!.y + via!.height - 1) // on the next line
+    const title = await page.locator('.md-audit-toggle .md-panel-title').boundingBox()
+    const text = await note.locator('.md-audit-sync-time').boundingBox()
+    expect(Math.abs(text!.x - title!.x)).toBeLessThanOrEqual(1.5) // starts at the left edge, where the dot would have been
+    // "via cashu.info" uses the same font in both headers
+    const fonts = await page.locator('.md-audit-toggle .md-audit-via').evaluate(e => getComputedStyle(e).fontFamily)
+    expect(fonts).not.toMatch(/mono/i)
+  })
+
+  test('the dot comes back once the note fits on the line again', async ({ page }) => {
+    await resize(page, 360, 800)
+    await gotoAuditTab(page, czOnly(auditCzResponse({ detail: czDetail({}, 120) })))
+    const note = page.getByTestId('audit-cz-sync-mobile')
+    await expect(note).toHaveClass(/md-audit-sync-wrapped/)
+    await resize(page, 700, 900)
+    await expect(note).not.toHaveClass(/md-audit-sync-wrapped/)
+    await expect(note.locator('.md-audit-sync-sep')).toBeVisible()
   })
 })
 

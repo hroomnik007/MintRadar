@@ -1,7 +1,7 @@
 import { nip19 } from 'nostr-tools'
 import { njumpProfileUrl, njumpEventUrl, npubFromPubkey, mintAnnounceNaddr } from '@/utils/nostrLinks'
 import { useParams, useNavigate, Navigate, Link } from 'react-router-dom'
-import { Fragment, useEffect, useState, useMemo, useCallback, lazy, Suspense, type CSSProperties, type JSX, type ReactNode } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, useMemo, useCallback, lazy, Suspense, type CSSProperties, type JSX, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
@@ -169,6 +169,45 @@ function AuditSourceInfoIcon({ text }: { text?: string }) {
       about="Audit stats"
       text={text ?? 'These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.'}
     />
+  )
+}
+
+// The cashu.info sync note in the Audit stats header ("· synced 17 min ago" / "· not updated recently"). The time
+// looks like the "fetched 5 min ago" under Fees & limits (muted 12 px, dotted underline) and its tooltip gives the
+// exact sync time. When the note does not fit after the source ⓘ it wraps onto the next line and its leading "·" is
+// hidden: the dot keeps its place in the layout (so the note never jumps back up once the dot is gone) and the note
+// is shifted left by the dot's width with a transform, which does not change the layout, so the text starts at the
+// left edge of the line.
+function AuditSyncNote({ note, testId }: { note: { text: string; stale: boolean; tip: string | null }; testId: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [wrapped, setWrapped] = useState(false)
+  useLayoutEffect(() => {
+    const el = ref.current
+    const row = el?.parentElement
+    const prev = el?.previousElementSibling as HTMLElement | null | undefined
+    const dot = el?.querySelector<HTMLElement>('.md-audit-sync-sep')
+    if (!el || !row || !prev || !dot) return
+    const check = () => {
+      const rowBox = row.getBoundingClientRect()
+      if (rowBox.width === 0) return // the other (hidden) header
+      const rowCs = getComputedStyle(row)
+      el.style.setProperty('--md-sync-sep', `${dot.getBoundingClientRect().width}px`)
+      const prevRight = prev.getBoundingClientRect().right + (parseFloat(getComputedStyle(prev).marginRight) || 0)
+      const free = rowBox.right - (parseFloat(rowCs.paddingRight) || 0) - (parseFloat(rowCs.borderRightWidth) || 0) - prevRight - (parseFloat(rowCs.columnGap) || 0)
+      setWrapped(el.getBoundingClientRect().width > free + 0.5)
+    }
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(row)
+    return () => ro.disconnect()
+  }, [note.text])
+  return (
+    <span ref={ref} className={`md-audit-sync${note.stale ? ' md-audit-sync-stale' : ''}${wrapped ? ' md-audit-sync-wrapped' : ''}`} data-testid={testId}>
+      <span className="md-audit-sync-sep" aria-hidden={wrapped || undefined}>·{' '}</span>
+      {note.tip
+        ? <InfoTooltip className="md-audit-sync-time" width={230} text={note.tip}>{note.text}</InfoTooltip>
+        : <span>{note.text}</span>}
+    </span>
   )
 }
 
@@ -2192,16 +2231,16 @@ function MintDetailContent({ url }: { url: string }) {
                   <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
                   <span className="md-audit-via">· via {czView ? 'cashu.info' : 'audit.8333.space'}</span>
                   <AuditSourceInfoIcon {...(czInfoText ? { text: czInfoText } : {})} />
-                  {czSyncNote && <span className={`md-audit-via md-audit-sync${czSyncNote.stale ? ' md-audit-sync-stale' : ''}`} data-testid="audit-cz-sync">· {czSyncNote.text}</span>}
+                  {czSyncNote && <AuditSyncNote note={czSyncNote} testId="audit-cz-sync" />}
                   {auditSwitch}
                 </div>
                 {/* Mobile heading (mirrors the desktop one above; the collapse
                     toggle was removed once the Audit tab lost its collapsible body). */}
                 <div className="md-audit-toggle">
                   <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
-                  <span style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>· via {czView ? 'cashu.info' : 'audit.8333.space'}</span>
+                  <span className="md-audit-via">· via {czView ? 'cashu.info' : 'audit.8333.space'}</span>
                   <AuditSourceInfoIcon {...(czInfoText ? { text: czInfoText } : {})} />
-                  {czSyncNote && <span className={`md-audit-via md-audit-sync${czSyncNote.stale ? ' md-audit-sync-stale' : ''}`} data-testid="audit-cz-sync-mobile">· {czSyncNote.text}</span>}
+                  {czSyncNote && <AuditSyncNote note={czSyncNote} testId="audit-cz-sync-mobile" />}
                   {auditSwitch}
                 </div>
 

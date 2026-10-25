@@ -642,6 +642,7 @@
       "Deposits into this mint (mint operations) in the last 7 days, counted by cashu.info: successful of all.",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "Last swaps, newest first",
+      "Last synced from cashu.info: <DATE>.",
       "Mint also advertises a .onion URL",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.",
@@ -657,7 +658,7 @@
       "failed · <DATE>",
       "melt quote failed"
     ],
-    "triggers": 13
+    "triggers": 14
   },
   "mint-alpha-audit-cz@390": {
     "texts": [
@@ -666,6 +667,7 @@
       "Add Alpha Mint to watchlist",
       "Deposits into this mint (mint operations) in the last 7 days, counted by cashu.info: successful of all.",
       "Last swaps, newest first",
+      "Last synced from cashu.info: <DATE>.",
       "Mint also advertises a .onion URL",
       "MintRadar",
       "OK · <DATE>",
@@ -678,7 +680,7 @@
       "failed · <DATE>",
       "melt quote failed"
     ],
-    "triggers": 8
+    "triggers": 9
   },
   "mint-alpha-audit@1440": {
     "texts": [
