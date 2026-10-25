@@ -811,7 +811,12 @@ export default function Dashboard() {
     if (!collapseScrollPending.current || collapseOnlineTo === null) return
     collapseScrollPending.current = false
     const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    gridAnchorRef.current?.scrollIntoView?.({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+    const anchor = gridAnchorRef.current
+    // The phone navbar wraps to two rows (~104 px), more than the anchor's 72 px CSS scroll-margin: measure it so the
+    // first card lands just below the sticky bar instead of under it.
+    const nav = document.querySelector<HTMLElement>('.navbar')
+    if (anchor && nav) anchor.style.scrollMarginTop = `${Math.round(nav.getBoundingClientRect().height) + 12}px`
+    anchor?.scrollIntoView?.({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
     document.querySelector<HTMLButtonElement>('[data-testid="show-all-mints"]')?.focus({ preventScroll: true })
   }, [collapseOnlineTo])
   function openSubmit(): void {

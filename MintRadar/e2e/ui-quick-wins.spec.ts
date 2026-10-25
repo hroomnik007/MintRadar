@@ -73,10 +73,12 @@ test.describe('phone: first 10 online mints + "Show all N"', () => {
     await expect(page.getByTestId('show-all-mints')).toHaveText('Show all 14')
     await expect(page.getByTestId('show-all-mints')).toBeFocused()
     expect(await page.evaluate(k => sessionStorage.getItem(k), 'mintradar:dash-expanded')).toBeNull()
-    // Scrolled (smoothly) up to the top of the mint list: the first card is in the viewport, not left far above it.
+    // Scrolled (smoothly) up to the top of the mint list: the first card is in the viewport, not left far above it,
+    // and its top edge is below the sticky (two-row on phones) navbar, not hidden under it.
+    const navBottom = await page.locator('.navbar').evaluate(el => el.getBoundingClientRect().bottom)
     await expect.poll(async () => {
       const box = await page.locator('.mint-grid .mint-card').first().boundingBox()
-      return box !== null && box.y >= 0 && box.y < 844
+      return box !== null && box.y >= navBottom && box.y < 844
     }).toBe(true)
     expect(await page.evaluate(() => window.scrollY)).toBeLessThan(scrolledDown)
     await expect(page.locator('.grid-showing-note')).toHaveText('Showing 10 of 14 online')
