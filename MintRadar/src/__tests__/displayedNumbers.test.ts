@@ -86,7 +86,8 @@ describe('each text follows its constant', () => {
 })
 
 describe('the components use the generated texts, not typed numbers', () => {
-  const md = read('../pages/MintDetail.tsx')
+  // MintDetail plus its extracted tab components (src/pages/mintDetail/), so moving a tab out keeps this guard's coverage.
+  const md = ['../pages/MintDetail.tsx', '../pages/mintDetail/HistoryTab.tsx', '../pages/mintDetail/NutsTab.tsx'].map(read).join('\n')
   it('Mint Detail', () => {
     for (const lit of ["'Uptime (40%)'", "'Audit reliability (25%)'", "'NUT Support (15%)'", "'Version (15%)'", "'Contact (5%)'", 'last 7 days', 'last 30 days', 'Outages (30d)', '&days=30']) {
       expect(md, lit).not.toContain(lit)
