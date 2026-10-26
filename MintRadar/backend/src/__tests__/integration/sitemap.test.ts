@@ -63,6 +63,35 @@ describe('GET /sitemap.xml', () => {
     expect(res.text).toContain(encodeURIComponent('https://a.example'))
   })
 
+  it('excludes archived mints (no successful probe for 30+ days, latest probe not online)', async () => {
+    const ago = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString()
+    query.mockResolvedValueOnce({
+      rows: [
+        { url: 'https://gone.example', last_online_at: ago(45), latest_online: false },
+        { url: 'https://down-recently.example', last_online_at: ago(3), latest_online: false },
+        { url: 'https://back.example', last_online_at: ago(45), latest_online: true },
+        { url: 'https://never.example', last_online_at: null, latest_online: null },
+      ],
+    })
+
+    const res = await request(app).get('/sitemap.xml')
+
+    expect(res.status).toBe(200)
+    expect(res.text).not.toContain(encodeURIComponent('https://gone.example'))
+    for (const u of ['https://down-recently.example', 'https://back.example', 'https://never.example']) {
+      expect(res.text).toContain(encodeURIComponent(u))
+    }
+  })
+
+  it('lists every Learn module from the shared module list', async () => {
+    query.mockResolvedValueOnce({ rows: [] })
+    const { LEARN_MODULES } = await import('../../shared/learnModules.js')
+
+    const res = await request(app).get('/sitemap.xml')
+
+    for (const m of LEARN_MODULES) expect(res.text).toContain(`<loc>https://mintradar.org/learn/${m.id}</loc>`)
+  })
+
   it('still returns the static routes for an empty mints table', async () => {
     query.mockResolvedValueOnce({ rows: [] })
 

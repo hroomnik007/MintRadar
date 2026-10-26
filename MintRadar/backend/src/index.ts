@@ -27,6 +27,9 @@ import { computeReliabilityMovers, type MintScoreSnapshot } from './reliabilityM
 import { globalMeanRating, weightedRating } from './weightedRating.js'
 import { hasRecentReviewSurge } from './reviewSurge.js'
 import { isTestMint } from './testMints.js'
+import { isArchivedMint } from './archived.js'
+import { LEARN_MODULES } from './shared/learnModules.js'
+import { loadSpaTemplate, renderSpaHtml, resolveSpaHead, type SpaKnownMint } from './spaHtml.js'
 import { publicMintName, publicMintNameOrHost } from './mintNames.js'
 import {
   usesWalletRateLimit, isRecommendPath, isPublicCorsPath, PUBLIC_CORS_EXPOSE_HEADERS, parseWalletListQuery, walletListEnvelope, walletSingleEnvelope, recommendEnvelope,
@@ -210,7 +213,10 @@ const READ_RATE_LIMIT_PATHS = new Set([
   '/api/mints/nostr-reviews', '/api/mints/swaps', '/api/mints/audit-cz',
   '/api/stats/reliability-trend', '/api/stats/reliability-movers', '/api/nuts',
 ])
+// The server-side head of the SPA pages (spaHtml.ts, every non-/api path that reaches the backend) counts against
+// the read budget too: it is one page load, served from the cached snapshot.
 function usesReadRateLimit(path: string): boolean {
+  if (!/^\/api(?:\/|$)/i.test(path)) return true
   return READ_RATE_LIMIT_PATHS.has(path.toLowerCase().replace(/\/+$/, ''))
 }
 
@@ -750,9 +756,8 @@ app.get('/api', (_req: Request, res: Response): void => {
   })
 })
 
-// Static routes here must stay in sync with LEARN_MODULES (src/constants/learnModules.ts)
-// and App.tsx's route list — there is no shared workspace between frontend/backend to
-// import that from, same caveat as testMints.ts/reliabilityScore.ts.
+// Static routes here must stay in sync with App.tsx's route list (spaHtml.ts SPA_STATIC_ROUTES has the same list).
+// The Learn modules come from shared/learnModules.ts, the backend copy of src/constants/learnModules.ts.
 // `lastmod` (YYYY-MM-DD) only where the content has a date of its own: /methodology = the date of the newest
 // METHODOLOGY_CHANGES entry (it changes with the formula); /for-wallets = FOR_WALLETS_PAGE_LASTMOD, bumped by hand
 // when the page content changes.
@@ -764,11 +769,8 @@ const SITEMAP_STATIC_PATHS: Array<{ loc: string; changefreq: string; priority: s
   { loc: '/tools', changefreq: 'weekly', priority: '0.7' },
   { loc: '/wallets', changefreq: 'weekly', priority: '0.6' },
   { loc: '/learn', changefreq: 'monthly', priority: '0.6' },
-  { loc: '/learn/cashu-basics', changefreq: 'monthly', priority: '0.5' },
-  { loc: '/learn/understanding-the-risks', changefreq: 'monthly', priority: '0.5' },
-  { loc: '/learn/how-to-choose-a-mint', changefreq: 'monthly', priority: '0.5' },
-  { loc: '/learn/getting-started-with-a-wallet', changefreq: 'monthly', priority: '0.5' },
-  { loc: '/learn/safe-habits', changefreq: 'monthly', priority: '0.5' },
+  ...[...LEARN_MODULES].sort((a, b) => a.order - b.order)
+    .map(m => ({ loc: `/learn/${m.id}`, changefreq: 'monthly', priority: '0.5' })),
   { loc: '/about', changefreq: 'monthly', priority: '0.5' },
   { loc: '/methodology', changefreq: 'monthly', priority: '0.6', lastmod: METHODOLOGY_LASTMOD },
   { loc: '/for-wallets', changefreq: 'monthly', priority: '0.6', lastmod: FOR_WALLETS_PAGE_LASTMOD },
@@ -779,9 +781,18 @@ const SITEMAP_STATIC_PATHS: Array<{ loc: string; changefreq: string; priority: s
 // See docs/claude/deploy-and-infra.md "Deploy Pipeline Notes" — nginx routes /sitemap.xml here instead of
 // serving a static frontend file, mirroring the /health proxy above.
 app.get('/sitemap.xml', (_req: Request, res: Response): void => {
-  pool.query('SELECT url FROM mints ORDER BY url')
+  // Archived mints (archived.ts, the same rule as the `archived` flag of /api/mints/known) are left out: their page
+  // stays reachable, but a mint gone for 30+ days is not a page to ask a search engine to crawl.
+  pool.query(`
+    SELECT m.url, m.last_online_at, latest.online AS latest_online
+      FROM mints m
+      LEFT JOIN LATERAL (
+        SELECT online FROM mint_history WHERE url = m.url ORDER BY checked_at DESC, id DESC LIMIT 1
+      ) latest ON true
+     ORDER BY m.url`)
     .then(result => {
-      const mintUrls = (result.rows as { url: string }[])
+      const mintUrls = (result.rows as { url: string; last_online_at?: Date | string | null; latest_online?: boolean | null }[])
+        .filter(r => !isArchivedMint(r.last_online_at, r.latest_online))
         .map(r => r.url)
         .filter(url => !isTestMint(url))
 
@@ -1633,11 +1644,7 @@ function computeKnownMints(): Promise<Snapshot> {
           lastOnlineAt: (r.last_online_at as Date | string | null)
             ? new Date(r.last_online_at as Date | string).toISOString()
             : null,
-          archived: (() => {
-            const lo = r.last_online_at as Date | string | null
-            if (!lo || r.latest_online === true) return false
-            return Date.now() - new Date(lo).getTime() > 30 * 86_400_000
-          })(),
+          archived: isArchivedMint(r.last_online_at as Date | string | null, r.latest_online as boolean | null),
           online: r.latest_online as boolean | null,
           latencyMs: r.latest_latency_ms as number | null,
           version: r.version as string | null,
@@ -2610,6 +2617,36 @@ app.post('/api/notifications/unsubscribe', (req: Request, res: Response): void =
 app.use('/api', (req: Request, res: Response): void => {
   if (/^\/api\/v1(?:[/?]|$)/i.test(req.originalUrl)) sendWalletError(res, 404, 'not_found', 'Unknown API route')
   else res.status(404).json({ error: 'Not found' })
+})
+
+// Server-side head of the SPA (spaHtml.ts): nginx sends an HTML navigation that is not a static file here
+// (location @spa_html, deploy/nginx.conf) and answers with the built index.html itself when this returns an error.
+// Every path that is not /api/*, /health or /sitemap.xml (those are answered above). 503 while starting, when the
+// template is missing or the known-mints snapshot is not there in SPA_SNAPSHOT_WAIT_MS: nginx then serves the plain
+// index.html, the page works exactly as before, only without the server-side head and status.
+const SPA_SNAPSHOT_WAIT_MS = 2_000
+const SPA_EXCLUDED_PATH = new RegExp('^(?:/api(?:/|$)|/health$|/sitemap\\.xml$)', 'i')
+app.use((req: Request, res: Response, next: NextFunction): void => {
+  if ((req.method !== 'GET' && req.method !== 'HEAD') || SPA_EXCLUDED_PATH.test(req.path)) { next(); return }
+  const unavailable = (): void => { res.status(503).set('Cache-Control', 'no-store').type('text/plain').send('Unavailable') }
+  if (!isReady()) { unavailable(); return }
+  let timer: NodeJS.Timeout | undefined
+  const timeout = new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), SPA_SNAPSHOT_WAIT_MS) })
+  Promise.all([loadSpaTemplate(), Promise.race([loadKnownMints(), timeout])])
+    .then(([template, snap]) => {
+      if (template === null || snap === null || !Array.isArray(snap.data)) { unavailable(); return }
+      const head = resolveSpaHead(req.path, snap.data as SpaKnownMint[])
+      res.status(head.status)
+      res.set('Content-Type', 'text/html; charset=utf-8')
+      // index.html is never cached (the hashed assets are); same for its server-rendered form.
+      res.set('Cache-Control', 'no-cache')
+      res.send(renderSpaHtml(template, head))
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[spa-html]', err)
+      unavailable()
+    })
+    .finally(() => clearTimeout(timer))
 })
 
 // ── Start ──────────────────────────────────────────────────────

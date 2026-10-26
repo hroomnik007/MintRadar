@@ -3,6 +3,7 @@ import type { WalletInfo } from '@/constants/wallets'
 import { WalletPlatformIcon } from '@/components/wallets/WalletIcons'
 import { PageHead } from '@/components/layout/PageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { ROUTE_META_BY_PATH } from '@/utils/pageMeta'
 import './Wallets.css'
 
 function hostname(url: string): string {
@@ -40,10 +41,7 @@ export default function Wallets() {
   const wallets = WALLETS.filter(w => !w.selfHost)
   const selfHost = WALLETS.filter(w => w.selfHost)
 
-  useDocumentMeta(
-    'Cashu Wallets - MintRadar',
-    'Wallets that work with Cashu mints, plus how to run your own mint. A plain list, no ranking or reviews.'
-  )
+  useDocumentMeta(ROUTE_META_BY_PATH['/wallets'].title, ROUTE_META_BY_PATH['/wallets'].description)
 
   return (
     <div className="wallets-page">

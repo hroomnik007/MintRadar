@@ -21,6 +21,7 @@ import { weightsFor, reviewsScore, type WizardCheck, type SizeOption } from '@/u
 import { sortUnits } from '@/utils/sortUnits'
 import { formatDateTimeUtc } from '@/utils/formatDate'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { ROUTE_META_BY_PATH } from '@/utils/pageMeta'
 import './Tools.css'
 
 function getHostname(url: string): string {
@@ -909,10 +910,7 @@ export default function Tools() {
     return () => window.removeEventListener('hashchange', applyHash)
   }, [])
 
-  useDocumentMeta(
-    'Cashu Mint Tools - Token Inspector & Best Mint Finder | MintRadar',
-    'Inspect a Cashu token before redeeming it, or find the best Cashu mint for you with the Best Mint wizard.'
-  )
+  useDocumentMeta(ROUTE_META_BY_PATH['/tools'].title, ROUTE_META_BY_PATH['/tools'].description)
 
   return (
     <div className="tools-page">

@@ -60,6 +60,7 @@ import {
 } from '@/utils/reliabilityScore'
 import { classifyMintVersion, latestMapFor, type LatestVersions } from '@/utils/versionRule'
 import { useNow } from '@/hooks/useNow'
+import { mintDetailMeta } from '@/utils/pageMeta'
 import { useDocumentMeta, useNoindex, useRemoveCanonical } from '@/hooks/useDocumentMeta'
 import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLocation'
 import { useElementHeight } from '@/hooks/useElementHeight'
@@ -428,13 +429,8 @@ function MintDetailContent({ url }: { url: string }) {
   const resolvedName = knownMint ? (knownMint.name ?? null) : ((liveName?.name ?? '') || null)
   const resolvedNameFull = knownMint ? (knownMint.nameFull ?? null) : (liveName?.full ?? null)
   const metaDisplayName = mintDisplayName({ name: resolvedName, url }, duplicateDisplayNames)
-  useDocumentMeta(
-    `${metaDisplayName} - Cashu Mint Reliability Score & Uptime | MintRadar`,
-    knownMint
-      ? `${metaDisplayName} (${mintHostname(url)}) is ${knownMint.online ? 'online' : 'offline'} with a Reliability Score of ${knownMint.reliabilityScore ?? '—'}/100. See live uptime, latency, NUT support and reviews on MintRadar.`
-      : `Live Reliability Score, uptime, latency and NUT support for the Cashu mint ${mintHostname(url)} on MintRadar.`,
-    { canonicalPath: `/mint/${encodeURIComponent(url)}` },
-  )
+  const meta = mintDetailMeta(metaDisplayName, mintHostname(url), knownMint)
+  useDocumentMeta(meta.title, meta.description, { canonicalPath: `/mint/${encodeURIComponent(url)}` })
 
   const [chartInterval, setChartInterval] = useState<'24h' | '7d' | '30d' | '90d'>('7d')
   const [chartMetric, setChartMetric] = useState<'latency' | 'uptime' | 'reliability'>('latency')

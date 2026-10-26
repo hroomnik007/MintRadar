@@ -10,6 +10,7 @@ import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { LoadError, MINT_LIST_ERROR } from '@/components/LoadError'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { ROUTE_META_BY_PATH } from '@/utils/pageMeta'
 import { useModalFocus } from '@/hooks/useModalFocus'
 
 import type { MintStatus } from '@core/mint/api'
@@ -28,7 +29,6 @@ import { useMediaQuery } from '@/hooks/useIsMobile'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { isNutDeclaredSupported } from '@/utils/nutSupport'
 import { hasRequiredNuts } from '@/utils/nutFilters'
-import { SITE_DESCRIPTION } from '@/constants/routeMeta'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { probeErrorMessage, probeRateLimitMessage, isProbeErrorKind, type ProbeErrorKind } from '@/utils/probeErrorMessages'
@@ -1274,10 +1274,7 @@ export default function Dashboard() {
     : bulkValidCount === 0 ? (bulkSettled.trim() === '' ? 'Paste at least one https:// mint URL.' : 'No valid https:// mint URLs yet.')
     : null
 
-  useDocumentMeta(
-    'MintRadar - Cashu Mints Directory & Reliability Score Monitor',
-    SITE_DESCRIPTION
-  )
+  useDocumentMeta(ROUTE_META_BY_PATH['/'].title, ROUTE_META_BY_PATH['/'].description)
 
   return (
     <div className="dashboard">

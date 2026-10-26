@@ -23,12 +23,12 @@ import { useLocation } from 'react-router-dom'
 // start with a single "/" is ignored and the route path is used.
 //
 // `notFound: true` (unknown Learn module, unknown or untracked mint, the 404 route): such a page has no address of
-// its own, so the canonical link is REMOVED instead of set (it comes back on unmount) and the sharing tags keep the
-// static defaults of index.html. `useRemoveCanonical()` does just that for states that set no title.
+// its own, so the canonical link is REMOVED instead of set (it comes back on unmount), og:url names the address
+// that was opened (not the home page) and the other sharing tags keep what the head already had. `useRemoveCanonical()` does just that for states that set no title.
 // Every not-found state is also `noindex, follow`: pass `noindex` next to `notFound` (the Learn module, the 404
 // route) or call `useNoindex()` next to `useRemoveCanonical()` (the Mint Detail states that set no title). The
-// robots tag is put back on unmount. This is client-side only: a crawler that does not run JavaScript still gets
-// status 200 and the static head for an unknown path (a real 404 is not part of this hook).
+// robots tag is put back on unmount. A crawler that does not run JavaScript gets the same head from the server
+// (backend/src/spaHtml.ts: route-specific tags, and HTTP 404 for a page that does not exist).
 const SITE_ORIGIN = 'https://mintradar.org'
 
 // Sets one tag attribute and returns the function that puts the previous state back.
@@ -72,8 +72,18 @@ function removeCanonical(): () => void {
   }
 }
 
+// A not-found state: no canonical, and og:url names the address that was opened (never the home page, which a
+// shared link to a missing page would otherwise preview as). Both come back on unmount.
+function notFoundTags(ownUrl: string): () => void {
+  const undoCanonical = removeCanonical()
+  const undoOgUrl = setTag('meta[property="og:url"]', metaBy('property', 'og:url'), 'content', ownUrl)
+  return () => { undoOgUrl(); undoCanonical() }
+}
+
 export function useRemoveCanonical(): void {
-  useEffect(() => removeCanonical(), [])
+  const { pathname } = useLocation()
+  const ownUrl = canonicalUrlFor(pathname)
+  useEffect(() => notFoundTags(ownUrl), [ownUrl])
 }
 
 // Sets <meta name="robots" content="noindex, follow"> (creating it when missing) and returns the function that
@@ -118,7 +128,7 @@ export function useDocumentMeta(
     : canonicalUrlFor(pathname)
 
   useEffect(() => {
-    if (notFound) return removeCanonical()
+    if (notFound) return notFoundTags(canonicalUrlFor(pathname))
     const undo = [
       setTag('link[rel="canonical"]', canonicalLink, 'href', canonical),
       setTag('meta[property="og:url"]', metaBy('property', 'og:url'), 'content', canonical),
@@ -132,7 +142,7 @@ export function useDocumentMeta(
       )
     }
     return () => { for (const fn of undo.reverse()) fn() }
-  }, [canonical, notFound, title, description])
+  }, [canonical, notFound, pathname, title, description])
 
   useEffect(() => {
     const prevTitle = document.title

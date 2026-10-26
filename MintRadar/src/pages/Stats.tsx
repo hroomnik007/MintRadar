@@ -22,6 +22,7 @@ import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geo
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { StatsPageHead } from '@/components/stats/StatsPageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { ROUTE_META_BY_PATH } from '@/utils/pageMeta'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { LoadError } from '@/components/LoadError'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
@@ -845,10 +846,7 @@ export default function Stats() {
     }
   }, [data, knownMintsData, versionDist])
 
-  useDocumentMeta(
-    'Cashu Mints Network Stats - MintRadar',
-    'Live network-wide stats for Cashu mints: uptime, average Reliability Score, latency, NUT adoption and the Network Health Index.'
-  )
+  useDocumentMeta(ROUTE_META_BY_PATH['/stats'].title, ROUTE_META_BY_PATH['/stats'].description)
 
   // The movers note changes the height of the board (Stats.css --stats-reserve-note), so the reservations follow the
   // same condition that shows the note: the selected movers window holds a methodology change. The number of changes

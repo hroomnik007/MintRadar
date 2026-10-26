@@ -3,6 +3,7 @@ import type { ComponentType, LazyExoticComponent } from 'react'
 import { useParams, useNavigate, Link, Navigate } from 'react-router-dom'
 import { LEARN_MODULES } from '@/constants/learnModules'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { LEARN_MODULE_NOT_FOUND_TITLE, learnModuleTitle } from '@/utils/pageMeta'
 import './LearnModule.css'
 
 const MODULE_COMPONENTS: Record<string, LazyExoticComponent<ComponentType>> = {
@@ -31,7 +32,7 @@ export default function LearnModule() {
   const ModuleComponent = mod ? MODULE_COMPONENTS[mod.id] : null
 
   useDocumentMeta(
-    mod ? `${mod.title} - MintRadar Learn` : 'Module not found - MintRadar Learn',
+    mod ? learnModuleTitle(mod.title) : LEARN_MODULE_NOT_FOUND_TITLE,
     mod ? mod.summary : undefined,
     { notFound: mod === null, noindex: mod === null },
   )

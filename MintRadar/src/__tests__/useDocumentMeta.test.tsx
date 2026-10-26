@@ -117,13 +117,15 @@ describe('useDocumentMeta route tags', () => {
 })
 
 describe('useDocumentMeta notFound', () => {
-  it('removes the canonical, leaves the other sharing tags static and puts the canonical back on unmount', () => {
+  it('removes the canonical, points og:url at the opened address (not home), leaves the other sharing tags and puts both back on unmount', () => {
     const { unmount } = renderHook(() => useDocumentMeta('Module not found - MintRadar Learn', undefined, { notFound: true }), { wrapper: wrapperAt('/learn/99') })
     expect(count('link[rel="canonical"]')).toBe(0)
-    expect(ogUrl()).toBe('https://mintradar.org')
+    expect(ogUrl()).toBe('https://mintradar.org/learn/99')
+    expect(count('meta[property="og:url"]')).toBe(1)
     expect(ogTitle()).toBe('Home OG')
     expect(document.title).toBe('Module not found - MintRadar Learn')
     unmount()
+    expect(ogUrl()).toBe('https://mintradar.org')
     expect(canonical()).toBe(HOME)
     expect(count('link[rel="canonical"]')).toBe(1)
   })
@@ -144,12 +146,14 @@ describe('useDocumentMeta notFound', () => {
     expect(count('link[rel="canonical"]')).toBe(1)
   })
 
-  it('useRemoveCanonical removes the canonical without touching title or the other tags', () => {
+  it('useRemoveCanonical removes the canonical and points og:url at the opened address, without touching title or the other tags', () => {
     const { unmount } = renderHook(() => useRemoveCanonical(), { wrapper: wrapperAt('/mint/x') })
     expect(count('link[rel="canonical"]')).toBe(0)
     expect(document.title).toBe('Home')
-    expect(ogUrl()).toBe('https://mintradar.org')
+    expect(ogUrl()).toBe('https://mintradar.org/mint/x')
+    expect(ogTitle()).toBe('Home OG')
     unmount()
+    expect(ogUrl()).toBe('https://mintradar.org')
     expect(canonical()).toBe(HOME)
   })
 })

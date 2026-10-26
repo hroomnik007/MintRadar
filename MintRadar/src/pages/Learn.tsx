@@ -3,15 +3,13 @@ import { LEARN_MODULES } from '@/constants/learnModules'
 import { LearnModuleIcon } from '@/components/learn/LearnIcons'
 import { PageHead } from '@/components/layout/PageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { ROUTE_META_BY_PATH } from '@/utils/pageMeta'
 import './Learn.css'
 
 export default function Learn() {
   const modules = [...LEARN_MODULES].sort((a, b) => a.order - b.order)
 
-  useDocumentMeta(
-    'Learn Cashu - MintRadar',
-    'A short course on how Cashu works, what can go wrong, and how to choose a safe Cashu mint.'
-  )
+  useDocumentMeta(ROUTE_META_BY_PATH['/learn'].title, ROUTE_META_BY_PATH['/learn'].description)
 
   return (
     <div className="learn-page">
