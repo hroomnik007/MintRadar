@@ -1,7 +1,7 @@
 import { nip19 } from 'nostr-tools'
 import { njumpProfileUrl, njumpEventUrl, npubFromPubkey, mintAnnounceNaddr } from '@/utils/nostrLinks'
 import { useParams, useNavigate, Navigate, Link } from 'react-router-dom'
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, useMemo, useCallback, lazy, Suspense, type CSSProperties, type ReactNode } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, useMemo, useCallback, lazy, Suspense, type CSSProperties } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
@@ -18,7 +18,7 @@ import {
   KEYSETS_HINT, KEYSET_FEE_TEXT, newMintBadgeText, newMintCapNote, OPERATOR_REVIEW_NOTE,
   UPTIME_ROW_LABEL, AUDIT_ROW_LABEL, NUT_ROW_LABEL, VERSION_ROW_LABEL, CONTACT_ROW_LABEL,
   UPTIME_POINTS, AUDIT_POINTS, NUT_POINTS, VERSION_POINTS, CONTACT_POINTS,
-  auditTooFewDetail, auditTooOldDetail, outagesCountLabel, noOutagesText, OUTAGES_WINDOW_DAYS,
+  auditTooFewDetail, auditTooOldDetail, OUTAGES_WINDOW_DAYS,
 } from '@/utils/tooltipTexts'
 import { useKnownMints } from '@/hooks/useKnownMints'
 import { LoadError, LoadingNote, MINT_LIST_ERROR, LIVE_DATA_ERROR } from '@/components/LoadError'
@@ -64,7 +64,7 @@ import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLo
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
 import { ContactChecksLine } from '@/components/ContactChecksLine'
-import { auditSuccessText, outageTiles, outageErrorCell, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, swapStripText, swapStripLabel, showTorFor, contactsNotSavedYet, CONTACTS_NOT_SAVED_TEXT, type OutagesResponse } from '@/utils/mintDetailFacts'
+import { auditSuccessText, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, swapStripText, swapStripLabel, showTorFor, contactsNotSavedYet, CONTACTS_NOT_SAVED_TEXT, type OutagesResponse } from '@/utils/mintDetailFacts'
 import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
 import { LAST_SCORE_CAPTION, KEEP_WALLET_SENTENCE, TEMPORARY_SENTENCE, contactSentence, restoreSentence, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
@@ -72,16 +72,14 @@ import { healthRecordFor, HEALTH_RELAY_URL } from '@/utils/healthRecord'
 import { AUDIT_SWAPS_WINDOW, AUDIT_WINDOW_DAYS } from '@/utils/tooltipTexts'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { NutsTab } from './mintDetail/NutsTab'
+import { HistoryTab } from './mintDetail/HistoryTab'
 import { NUT_DESCRIPTIONS, type NutConfig } from './mintDetail/nutCatalog'
 import { reviewAvatarColor, avatarTextColor } from '@/utils/avatarColors'
 import './MintDetail.css'
 
-// Heavy, rarely needed parts load on demand: the Compare modal (only when opened) and the History chart (recharts, only on
-// the History tab).
+// Heavy, rarely needed parts load on demand: the Compare modal (only when opened). The History chart (recharts) is lazy in
+// mintDetail/HistoryTab.tsx.
 const ComparisonModal = lazy(() => import('@/components/ComparisonModal').then(m => ({ default: m.ComparisonModal })))
-const MintDetailHistoryChart = lazy(() => import('./MintDetailHistoryChart'))
-// Chart height; the Suspense placeholder uses the same value so the History tab does not jump when the chunk arrives.
-const HISTORY_CHART_HEIGHT = 140
 import {
   Copy, Check, Info, AlertTriangle,
   Shield,
@@ -114,29 +112,6 @@ function formatReviewDate(ts: number): string {
   return new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
 
-/** "17 Sep 13:30" — day, short month, 24h time, in the viewer's local time zone. */
-function formatOutageStart(iso: string): string {
-  const d = new Date(iso)
-  const date = formatDate(d, { year: false, local: true })
-  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
-  return `${date} ${time}`
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 60000) return `${Math.round(ms / 1000)}s`
-  if (ms < 3600000) return `${Math.round(ms / 60000)} min`
-  const h = Math.floor(ms / 3600000)
-  const m = Math.round((ms % 3600000) / 60000)
-  if (h < 24) return m > 0 ? `${h}h ${m}m` : `${h}h`
-  const d = Math.floor(h / 24)
-  const rh = h % 24
-  return rh > 0 ? `${d}d ${rh}h` : `${d}d`
-}
-/** A version string with a line-break opportunity after each "/" ("Nutshell/0.20.3"); no <wbr> text is added. */
-function versionWithBreaks(v: string): ReactNode {
-  const parts = v.split('/')
-  return parts.map((part, i) => (i === 0 ? part : <Fragment key={i}>/<wbr />{part}</Fragment>))
-}
 /** A five-character ★/☆ string for a rating, rounded to whole stars. */
 function starString(rating: number): string {
   const full = Math.max(0, Math.min(5, Math.round(rating)))
@@ -1157,13 +1132,6 @@ function MintDetailContent({ url }: { url: string }) {
     ? `Showing ${chartHistoryData.daysOfDataAvailable} of ${chartHistoryData.periodDays} days of data (history retention started recently)`
     : null
 
-  function deltaStr(curr: number | null, prev: number | null, unit = '', insufficientHistory = false): string | null {
-    if (prev === null) return (curr !== null && insufficientHistory) ? 'Not enough history yet' : null
-    if (curr === null) return null
-    const diff = curr - prev
-    return `${diff >= 0 ? '+' : ''}${diff.toFixed(0)}${unit} vs prev period`
-  }
-
   // Change dates of the mint info values (utils/changeDates.ts): pubkey "since" only when a change is recorded, MOTD "last
   // changed", name / description only in the title.
   const pubkeyDates = infoDates('pubkey', mintChanges, now)
@@ -1975,135 +1943,26 @@ function MintDetailContent({ url }: { url: string }) {
             />
           )}
 
-          {activeTab === 'history' && (<>
-            <div className="md-panel">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div className="md-panel-title" style={{ marginBottom: 0 }}>Historical data</div>
-              <div className="md-seg" role="group" aria-label="Period">
-                {(['24h', '7d', '30d', '90d'] as const).map(iv => (
-                  <button
-                    key={iv}
-                    type="button"
-                    onClick={() => setChartInterval(iv)}
-                    className={chartInterval === iv ? 'on' : ''}
-                  >{iv}</button>
-                ))}
-              </div>
-            </div>
-
-            {/* Summary metric cards */}
-            <div className="md-hist-summary">
-              {[
-                { label: 'Average latency', value: chartAvgLatency !== null ? `${chartAvgLatency} ms` : '—', delta: deltaStr(chartAvgLatency, chartPrevLatency, ' ms', chartPrevInsufficientHistory), tip: chartAvgLatency !== null ? chartLatencyPercentiles : null, color: 'var(--text)' },
-                { label: 'Average uptime', value: chartAvgUptime !== null ? `${chartAvgUptime}%` : '—', delta: deltaStr(chartAvgUptime, chartPrevUptime, '%', chartPrevInsufficientHistory), tip: null, color: 'var(--accent)' },
-                { label: 'Average reliability', value: chartAvgReliability !== null ? String(chartAvgReliability) : '—', delta: null, tip: null, color: chartAvgReliability !== null ? reliabilityScoreInfo(chartAvgReliability).color : 'var(--text3)' },
-              ].map(({ label, value, delta, tip, color }) => (
-                <div key={label} className="md-hist-fig">
-                  <div className="md-hist-fig-value" style={{ color }}>{value}{tip && <span className="md-hist-fig-tip" data-testid="hist-latency-percentiles"><InfoTooltip iconSize={12} width={240} about={label} text={tip} /></span>}</div>
-                  <div className="md-hist-fig-label">{label}</div>
-                  {delta && <div className="md-hist-fig-delta">{delta}</div>}
-                </div>
-              ))}
-            </div>
-
-            {/* Tab switcher */}
-            <div className="md-seg md-hist-metric" role="group" aria-label="Metric">
-              {([['latency', 'Latency'], ['uptime', 'Uptime'], ['reliability', 'Reliability Score']] as const).map(([m, label]) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setChartMetric(m)}
-                  className={chartMetric === m ? 'on' : ''}
-                >{label}</button>
-              ))}
-            </div>
-
-            {/* Line chart */}
-            {histLineData.length === 0 ? (
-              <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>No historical data for this period.</p>
-            ) : chartMetric === 'latency' && histLineData.filter(d => d.latency !== null).length === 0 ? (
-              <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>No latency samples — mint was offline this period.</p>
-            ) : histLineData.filter(d => d[chartMetric] !== null).length === 0 ? (
-              <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>Not enough data for this period</p>
-            ) : (
-              <Suspense fallback={<div style={{ height: HISTORY_CHART_HEIGHT }} />}>
-                <MintDetailHistoryChart data={histLineData} metric={chartMetric} interval={chartInterval} height={HISTORY_CHART_HEIGHT} />
-              </Suspense>
-            )}
-            {chartCoverage && (
-              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>{chartCoverage}</div>
-            )}
-          </div>
-
-          <div className="md-panel">
-            <div className="md-panel-title">Outages</div>
-            <div className="md-hist-summary" style={{ marginBottom: 12 }}>
-              {outageTiles(outagesData, outagesCountLabel(), formatDuration).map(({ key, label, value }) => (
-                <div key={key} className="md-hist-fig" data-testid={`outage-tile-${key}`}>
-                  <div className="md-hist-fig-value" style={key === 'down' ? { color: 'var(--red)' } : undefined}>{value}</div>
-                  <div className="md-hist-fig-label">{label}</div>
-                </div>
-              ))}
-            </div>
-            <details>
-              <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text2)', marginBottom: 8 }}>Show outage details</summary>
-              {outagesData?.outages && outagesData.outages.length > 0 ? (
-                <table className="md-vh-table">
-                  <thead>
-                    <tr>
-                      <th>Started</th>
-                      <th>Duration</th>
-                      <th>Error</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {outagesData.outages.slice().reverse().map((o, i) => (
-                      <tr key={i} {...(o.ongoing ? { 'data-ongoing': 'true' } : {})}>
-                        <td className="md-vh-ver md-vh-to md-vh-wrap">{o.truncatedAtWindowStart ? '≤ ' : ''}{formatOutageStart(o.startedAt)}{o.truncatedAtWindowStart && <InfoTooltip iconSize={11} width={200} about="Outage start" text={`Started before the ${OUTAGES_WINDOW_DAYS}-day window`} />}</td>
-                        <td className="md-vh-ver md-vh-to md-vh-wrap">{formatDuration(o.durationMs)}{o.ongoing ? ' (ongoing)' : ''}</td>
-                        <td className="md-vh-ver md-vh-to md-vh-wrap">{outageErrorCell(o, lastErrorText)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div style={{ fontSize: 13, color: 'var(--text3)' }}>{noOutagesText()}</div>
-              )}
-            </details>
-          </div>
-
-          <div className="md-panel">
-            <div className="md-panel-title">Version history</div>
-            {!versionHistory || versionHistory.length === 0 ? (
-              <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>No version history available.</div>
-            ) : (
-              <table className="md-vh-table">
-                <colgroup>
-                  <col className="md-vh-col-date" />
-                  <col className="md-vh-col-from" />
-                  <col />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>From</th>
-                    <th>To</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {versionHistory.map((vh, i) => (
-                    <tr key={i}>
-                      <td className="md-vh-date">{formatDate(vh.firstSeenAt)}</td>
-                      <td className="md-vh-ver md-vh-from">{versionHistory[i + 1] ? versionWithBreaks(versionHistory[i + 1]!.version) : '—'}</td>
-                      <td className="md-vh-ver md-vh-to">{versionWithBreaks(vh.version)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-
-          </>)}
+          {activeTab === 'history' && (
+            <HistoryTab
+              chartInterval={chartInterval}
+              onChartInterval={setChartInterval}
+              chartMetric={chartMetric}
+              onChartMetric={setChartMetric}
+              chartAvgLatency={chartAvgLatency}
+              chartPrevLatency={chartPrevLatency}
+              chartAvgUptime={chartAvgUptime}
+              chartPrevUptime={chartPrevUptime}
+              chartPrevInsufficientHistory={chartPrevInsufficientHistory}
+              chartAvgReliability={chartAvgReliability}
+              chartLatencyPercentiles={chartLatencyPercentiles}
+              chartCoverage={chartCoverage}
+              histLineData={histLineData}
+              outagesData={outagesData}
+              lastErrorText={lastErrorText}
+              versionHistory={versionHistory}
+            />
+          )}
 
           {activeTab === 'audit' && (<>
             {auditCzLoading ? (
