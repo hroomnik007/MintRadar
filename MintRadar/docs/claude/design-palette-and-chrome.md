@@ -444,3 +444,8 @@ The compact Reliability tile on Mint Detail (<= 640px, `.md-sc-reliability`) put
 ## Dashboard grid follows the toolbar width (2026-10-25)
 
 `.mint-grid` is `repeat(auto-fill, minmax(260px, 1fr))` without `justify-content`, and `.mint-card` no longer has `max-width: 300px`: the cards fill the `--dash-chrome-max` column, so the grid's left and right edges line up with the toolbar at 1280 and 768 px (before, 300 px-capped cards left a gap on the right). Phones keep one column.
+
+## Stack summary: fonts and palette (moved from CLAUDE.md, C3-9)
+
+- Fonts: DM Sans (self-hosted variable, weights 100–900), JetBrains Mono (self-hosted; Regular 400, Medium 500, Bold 700)
+- CSS: CSS variables — "patina/copper" palette as of 2026-07-24 (var(--bg) #0b1512, var(--surface)/var(--surface-2)/var(--surface-3), var(--green)/var(--green-bright) #45ad8c/#5cc9a3, var(--copper) #d98a5a, var(--amber), var(--red), var(--text)/var(--text-dim)/var(--text-faint)); see "Visual Redesign" section below for details

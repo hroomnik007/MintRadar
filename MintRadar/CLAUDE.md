@@ -43,18 +43,12 @@ Sensitive values are in CLAUDE.local.md (gitignored) — ask the developer
 - Frontend: React 19 + TypeScript + Vite 8 + TanStack Query v5 + Zustand + Dexie (IndexedDB) + Recharts + vite-plugin-pwa
 - Backend: Node.js 22 + Express 5 + TypeScript + pg (PostgreSQL 17) + nostr-tools
 - Auth: Nostr NIP-07 (nos2x-fox, Alby) + nsec manual entry (key held in memory for the session to enable signing, zeroed on logout — see Nostr Login below) + NIP-46 bunker (implemented, nostr-tools/nip46 BunkerSigner)
-- Fonts: DM Sans (self-hosted variable, weights 100–900), JetBrains Mono (self-hosted; Regular 400, Medium 500, Bold 700)
-- CSS: CSS variables — "patina/copper" palette as of 2026-07-24 (var(--bg) #0b1512, var(--surface)/var(--surface-2)/var(--surface-3), var(--green)/var(--green-bright) #45ad8c/#5cc9a3, var(--copper) #d98a5a, var(--amber), var(--red), var(--text)/var(--text-dim)/var(--text-faint)); see "Visual Redesign" section below for details
+- Fonts and CSS: DM Sans + JetBrains Mono (self-hosted), CSS variables with the "patina/copper" palette; hex values and tokens: `docs/claude/design-palette-and-chrome.md`.
 
 ## Architecture
-- Personal watchlist → IndexedDB (never on server); logout calls resetInMemory() — Dexie NOT wiped on logout; see Watchlist Persistence below
-- Public mint history → PostgreSQL (mint_history table)
-- Mint discovery → NIP-87 kind:38172 server cron every 6h + client-side after Nostr login
-- Backend proxy → /api/* proxied by Nginx to localhost:3002
-- Cron every 5min → probes all mints via /v1/info → writes to mint_history
-- Online status: mint is ONLINE only if /v1/info returns a 2xx response (`res.ok`) with valid JSON whose `nuts` field is an object (`backend/src/prober.ts`)
-- Notifications → sent only by the server (NIP-17 gift-wrapped DMs from `nostrService.ts`) after the user turns on a pill ("Goes down" / "Goes up") for a mint; the browser never publishes DMs
-- Reviews → NIP-87 kind:38000 events, read/write directly from browser via Nostr relays
+- Watchlist: IndexedDB only (never on the server). Public mint history: PostgreSQL. `/api/*` is proxied by Nginx to the backend.
+- Cron every 5 min probes `/v1/info`: a mint is ONLINE only on a 2xx (`res.ok`) with valid JSON whose `nuts` is an object (`backend/src/prober.ts`).
+- Notifications: sent only by the server (NIP-17 DMs); the browser never publishes DMs. Reviews: NIP-87 kind:38000, read/written by the browser. Details: Index table.
 
 ## Hard invariants (lifted verbatim from docs/claude files — they stay in core on purpose)
 
