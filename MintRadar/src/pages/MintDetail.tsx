@@ -1,5 +1,4 @@
-import { nip19 } from 'nostr-tools'
-import { njumpProfileUrl, njumpEventUrl, npubFromPubkey, mintAnnounceNaddr } from '@/utils/nostrLinks'
+import { njumpProfileUrl, njumpEventUrl, mintAnnounceNaddr } from '@/utils/nostrLinks'
 import { useParams, useNavigate, Navigate, Link } from 'react-router-dom'
 import { Fragment, useEffect, useState, useMemo, useCallback, lazy, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -13,9 +12,9 @@ import { CopyTextButton } from '@/components/mint/CopyTextButton'
 import { useMintProbe } from '@/hooks/useMintProbe'
 import {
   reviewSurgeText, AUDIT_MINTS_TEXT, AUDIT_MELTS_TEXT, auditSuccessRateText, uptimeRowText, auditRowText, NUT_ROW_TEXT,
-  versionRowText, contactRowText, scoreFormulaText, REVIEWS_NIP87_TEXT, cashuInfoViewText,
+  versionRowText, contactRowText, scoreFormulaText, cashuInfoViewText,
   HTTP_ERROR_EXPLANATIONS, NON_HTTP_ERROR_EXPLANATIONS, operatorExcludedText,
-  KEYSETS_HINT, KEYSET_FEE_TEXT, newMintBadgeText, newMintCapNote, OPERATOR_REVIEW_NOTE,
+  KEYSETS_HINT, KEYSET_FEE_TEXT, newMintBadgeText, newMintCapNote,
   UPTIME_ROW_LABEL, AUDIT_ROW_LABEL, NUT_ROW_LABEL, VERSION_ROW_LABEL, CONTACT_ROW_LABEL,
   UPTIME_POINTS, AUDIT_POINTS, NUT_POINTS, VERSION_POINTS, CONTACT_POINTS,
   auditTooFewDetail, auditTooOldDetail, OUTAGES_WINDOW_DAYS,
@@ -23,7 +22,7 @@ import {
 import { useKnownMints } from '@/hooks/useKnownMints'
 import { LoadError, LoadingNote, MINT_LIST_ERROR, LIVE_DATA_ERROR } from '@/components/LoadError'
 import { useMintReviews } from '@/hooks/useMintReviews'
-import { mergeStoredAndLiveReviews, visibleReviews, withServerProfileFallback, contactListedKeys, showContactLabel, CONTACT_LISTED_LABEL, type ServerAuthorProfile } from '@/utils/reviewUtils'
+import { mergeStoredAndLiveReviews, visibleReviews, withServerProfileFallback, contactListedKeys, type ServerAuthorProfile } from '@/utils/reviewUtils'
 import { useMintOperatorNip05 } from '@/hooks/useMintOperatorNip05'
 import { useVerifiedNip05 } from '@/hooks/useVerifiedNip05'
 import { usePendingAutoWatch } from '@/hooks/usePendingAutoWatch'
@@ -72,6 +71,8 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { NutsTab } from './mintDetail/NutsTab'
 import { HistoryTab } from './mintDetail/HistoryTab'
 import { AuditTab, AUDIT_SWAP_ROWS_DEFAULT } from './mintDetail/AuditTab'
+import { ReviewsTab } from './mintDetail/ReviewsTab'
+import { shortNpub, starString, type MergedReviewCandidate } from './mintDetail/reviewFormat'
 import { NUT_DESCRIPTIONS, type NutConfig } from './mintDetail/nutCatalog'
 import { reviewAvatarColor, avatarTextColor } from '@/utils/avatarColors'
 import './MintDetail.css'
@@ -85,13 +86,9 @@ import {
   Clock, GitBranch, Layers, Zap, QrCode,
   Star, Mail, AtSign,
   ExternalLink,
-  Link2,
   ArrowUpRight,
 } from 'lucide-react'
 
-function shortNpub(npub: string): string {
-  return npub.slice(0, 10) + '...' + npub.slice(-4)
-}
 // Short label for the "Signing with" row — mirrors AppShell's navbar profile
 // METHOD_BADGE so the two read identically (Extension / nsec / Remote signer).
 const METHOD_BADGE: Record<'nip07' | 'nsec' | 'remote-signer', string> = {
@@ -107,38 +104,6 @@ const RATING_LABELS: Record<1 | 2 | 3 | 4 | 5, string> = {
   4: 'solid',
   5: 'works great',
 }
-function formatReviewDate(ts: number): string {
-  return new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-}
-
-/** A five-character ★/☆ string for a rating, rounded to whole stars. */
-function starString(rating: number): string {
-  const full = Math.max(0, Math.min(5, Math.round(rating)))
-  return '★'.repeat(full) + '☆'.repeat(5 - full)
-}
-/** Page numbers to show in a pager, collapsing long runs to '…'. */
-function reviewPageList(current: number, total: number): (number | '…')[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-  const out: (number | '…')[] = [1]
-  const start = Math.max(2, current - 1)
-  const end = Math.min(total - 1, current + 1)
-  if (start > 2) out.push('…')
-  for (let i = start; i <= end; i++) out.push(i)
-  if (end < total - 1) out.push('…')
-  out.push(total)
-  return out
-}
-
-interface MergedReviewCandidate {
-  id: string
-  pubkey: string
-  rating: number | null
-  comment: string
-  createdAt: number
-  source: 'mintradar' | 'nostr'
-  profile?: { name?: string; nip05?: string; picture?: string; fromServer?: boolean }
-}
-
 // One row of the Reliability Score breakdown (label + info tooltip + measured
 // value + score bar). Rendered both inline on the Overview sidebar panel and
 // inside the "Reliability Score Breakdown" modal; each usage has its own tooltip.
@@ -1942,186 +1907,34 @@ function MintDetailContent({ url }: { url: string }) {
           )}
 
           {activeTab === 'reviews' && (
-            <div className="md-panel">
-              <div className="reviews-header">
-                <div className="md-panel-title" style={{marginBottom:0}}>Reviews</div>
-                {isLoggedIn && (
-                  <button className="reviews-write-btn" onClick={() => setShowReviewModal(true)}>
-                    Write a review
-                  </button>
-                )}
-              </div>
-              <div className="reviews-disclaimer" style={{display:'flex',alignItems:'center',gap:5}}>
-                <span>Reviews · NIP-87</span>
-                <InfoTooltip
-                  width={260}
-                  label="About NIP-87 reviews"
-                  text={REVIEWS_NIP87_TEXT}
-                />
-              </div>
-              {operatorListedCount > 0 && <div className="reviews-disclaimer">{OPERATOR_REVIEW_NOTE}</div>}
-              {reviewsLoading ? (
-                <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>Loading reviews...</div>
-              ) : mergedReviews.length === 0 ? (
-                <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>
-                  {storedReviewsFailed ? 'Reviews are not available right now.' : 'No Nostr reviews found for this mint yet.'}
-                </div>
-              ) : (
-                <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:8}}>
-                  <div className="reviews-filter-row">
-                    <div
-                      className="reviews-filter-group"
-                      role="group"
-                      aria-label="Filter reviews by rating"
-                    >
-                      <button
-                        type="button"
-                        className={`reviews-filter-chip${activeReviewFilter === 'all' ? ' active' : ''}`}
-                        aria-pressed={activeReviewFilter === 'all'}
-                        onClick={() => setReviewFilter('all')}
-                      >All · {reviewCountBase.length}</button>
-                      <button
-                        type="button"
-                        className={`reviews-filter-chip${activeReviewFilter === '5star' ? ' active' : ''}`}
-                        aria-pressed={activeReviewFilter === '5star'}
-                        onClick={() => setReviewFilter('5star')}
-                      >5★ · {reviewFilterFiveStarCount}</button>
-                      <button
-                        type="button"
-                        className={`reviews-filter-chip${activeReviewFilter === 'critical' ? ' active' : ''}`}
-                        aria-pressed={activeReviewFilter === 'critical'}
-                        onClick={() => setReviewFilter('critical')}
-                      >Critical · {reviewFilterCriticalCount}</button>
-                    </div>
-                    <button
-                      type="button"
-                      className={`reviews-filter-chip toggle${hideAnonActive ? ' active' : ''}`}
-                      aria-pressed={hideAnonActive}
-                      onClick={toggleReviewHideAnon}
-                    >Hide anon · {reviewFilterAnonCount}</button>
-                  </div>
-                  {filteredReviews.length === 0 ? (
-                    <div style={{fontSize:13,color:'var(--text3)'}}>No reviews match this filter.</div>
-                  ) : (
-                    <>
-                  {pagedReviews.map(r => {
-                    const npub = nip19.npubEncode(r.pubkey)
-                    const profile = r.profile
-                    const displayName = profile?.name ?? shortNpub(npub)
-                    const initial = (profile?.name ?? npub).slice(0, 1).toUpperCase()
-                    return (
-                      <div key={r.id} id={`review-${r.id}`} className={`review-card${highlightedReview === r.id ? ' review-card-hl' : ''}`}>
-                        <div className="review-card-header">
-                          <div className="review-avatar">
-                            <div className="review-avatar-fallback" style={{ background: reviewAvatarColor(r.pubkey), color: avatarTextColor(reviewAvatarColor(r.pubkey)) }}>{initial}</div>
-                            {profile?.picture?.startsWith('https://') && (
-                              <img src={profile.picture} alt="" className="review-avatar-img" referrerPolicy="no-referrer" onError={e => { e.currentTarget.style.display = 'none' }} />
-                            )}
-                          </div>
-                          <div className="review-author">
-                            <span className="review-author-name">
-                              <span className="review-author-name-text">
-                                {displayName}
-                                {profile?.name && verifiedNip05ByPubkey[r.pubkey] && (
-                                  <span className="review-author-nip05">{verifiedNip05ByPubkey[r.pubkey]}</span>
-                                )}
-                                {profile?.fromServer && profile.nip05 && !verifiedNip05ByPubkey[r.pubkey] && (
-                                  <span className="review-author-nip05-claimed">claimed NIP-05: {profile.nip05}</span>
-                                )}
-                              </span>
-                              {operatorKeys.has(r.pubkey.toLowerCase()) && (
-                                <span className="review-operator-badge">Operator</span>
-                              )}
-                            </span>
-                            <span className="review-author-npub">{shortNpub(npub)}</span>
-                            {showContactLabel(r.pubkey, contactListed, operatorKeys) && (
-                              <span className="review-contact-label">{CONTACT_LISTED_LABEL}</span>
-                            )}
-                          </div>
-                          <div className="review-meta">
-                            {r.rating !== null && (
-                              <span className="review-stars">{starString(r.rating)}</span>
-                            )}
-                            <span className="review-date">{formatReviewDate(r.createdAt)}</span>
-                            <span className="review-actions">
-                              <button
-                                type="button"
-                                className="review-action-btn"
-                                title="Copy reviewer npub"
-                                aria-label="Copy reviewer npub"
-                                onClick={e => {
-                                  e.preventDefault()
-                                  const np = npubFromPubkey(r.pubkey)
-                                  if (!np) return
-                                  void navigator.clipboard.writeText(np).then(() => {
-                                    setCopiedReviewAction(r.id + '-npub')
-                                    window.setTimeout(() => setCopiedReviewAction(null), 1500)
-                                  })
-                                }}
-                              >{copiedReviewAction === r.id + '-npub' ? <Check size={13} /> : <Copy size={13} />}</button>
-                              {njumpEventUrl(r.id) && (
-                                <a
-                                  href={njumpEventUrl(r.id)!}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="review-action-btn"
-                                  title="Open this review on Nostr"
-                                ><ExternalLink size={13} /></a>
-                              )}
-                              <button
-                                type="button"
-                                className="review-action-btn"
-                                title="Copy link to this review"
-                                aria-label="Copy link to this review"
-                                onClick={e => {
-                                  e.preventDefault()
-                                  const permalink = `${window.location.origin}/mint/${encodeURIComponent(url)}#review-${r.id}`
-                                  void navigator.clipboard.writeText(permalink).then(() => {
-                                    setCopiedReviewAction(r.id + '-link')
-                                    window.setTimeout(() => setCopiedReviewAction(null), 1500)
-                                  })
-                                }}
-                              >{copiedReviewAction === r.id + '-link' ? <Check size={13} /> : <Link2 size={13} />}</button>
-                            </span>
-                          </div>
-                        </div>
-                        {r.comment && <p className="review-comment">{r.comment}</p>}
-                      </div>
-                    )
-                  })}
-                  {reviewsTotalPages > 1 && (
-                    <nav className="reviews-pagination" aria-label="Reviews pages">
-                      <button
-                        className="reviews-page-btn"
-                        disabled={reviewsPage === 1}
-                        onClick={() => goToReviewsPage(reviewsPage - 1)}
-                        aria-label="Previous page"
-                      >‹</button>
-                      {reviewPageList(reviewsPage, reviewsTotalPages).map((p, i) =>
-                        p === '…'
-                          ? <span key={`gap-${i}`} className="reviews-page-ellipsis">…</span>
-                          : (
-                            <button
-                              key={p}
-                              className={`reviews-page-btn${p === reviewsPage ? ' active' : ''}`}
-                              aria-current={p === reviewsPage ? 'page' : undefined}
-                              onClick={() => goToReviewsPage(p)}
-                            >{p}</button>
-                          ),
-                      )}
-                      <button
-                        className="reviews-page-btn"
-                        disabled={reviewsPage === reviewsTotalPages}
-                        onClick={() => goToReviewsPage(reviewsPage + 1)}
-                        aria-label="Next page"
-                      >›</button>
-                    </nav>
-                  )}
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
+            <ReviewsTab
+              url={url}
+              isLoggedIn={isLoggedIn}
+              setShowReviewModal={setShowReviewModal}
+              operatorListedCount={operatorListedCount}
+              reviewsLoading={reviewsLoading}
+              mergedReviews={mergedReviews}
+              storedReviewsFailed={storedReviewsFailed}
+              activeReviewFilter={activeReviewFilter}
+              setReviewFilter={setReviewFilter}
+              reviewCountBase={reviewCountBase}
+              reviewFilterFiveStarCount={reviewFilterFiveStarCount}
+              reviewFilterCriticalCount={reviewFilterCriticalCount}
+              hideAnonActive={hideAnonActive}
+              toggleReviewHideAnon={toggleReviewHideAnon}
+              reviewFilterAnonCount={reviewFilterAnonCount}
+              filteredReviews={filteredReviews}
+              pagedReviews={pagedReviews}
+              highlightedReview={highlightedReview}
+              verifiedNip05ByPubkey={verifiedNip05ByPubkey}
+              operatorKeys={operatorKeys}
+              contactListed={contactListed}
+              copiedReviewAction={copiedReviewAction}
+              setCopiedReviewAction={setCopiedReviewAction}
+              reviewsPage={reviewsPage}
+              reviewsTotalPages={reviewsTotalPages}
+              goToReviewsPage={goToReviewsPage}
+            />
           )}
 
         </div>
