@@ -4,6 +4,10 @@
 //  (c) every relative link of the README, the pointer README and CONTRIBUTING.md resolves.
 // A number that is not backed by a constant below must not be added to the README: generalise it or
 // link to /methodology instead (see docs/claude/methodology-and-wallet-pages.md).
+// Install steps in the README use `npm ci` and were run in a scratch copy before it was written; the backend
+// must be built (`backend/dist`) before `docker compose up -d`. The URL-parameter passage is guarded by
+// readmeUrlParams.test.ts (root README only). `MintRadar/README.md` is a short pointer; the one CONTRIBUTING
+// file is `.github/CONTRIBUTING.md`.
 import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
