@@ -1,7 +1,7 @@
 import { nip19 } from 'nostr-tools'
 import { njumpProfileUrl, njumpEventUrl, npubFromPubkey, mintAnnounceNaddr } from '@/utils/nostrLinks'
 import { useParams, useNavigate, Navigate, Link } from 'react-router-dom'
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, useMemo, useCallback, lazy, Suspense, type CSSProperties, type JSX, type ReactNode } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, useMemo, useCallback, lazy, Suspense, type CSSProperties, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
@@ -13,7 +13,7 @@ import { CopyTextButton } from '@/components/mint/CopyTextButton'
 import { useMintProbe } from '@/hooks/useMintProbe'
 import {
   reviewSurgeText, AUDIT_MINTS_TEXT, AUDIT_MELTS_TEXT, auditSuccessRateText, uptimeRowText, auditRowText, NUT_ROW_TEXT,
-  versionRowText, contactRowText, scoreFormulaText, BACKUP_SUPPORTED_TEXT, NO_BACKUP_TEXT, REVIEWS_NIP87_TEXT, cashuInfoViewText,
+  versionRowText, contactRowText, scoreFormulaText, REVIEWS_NIP87_TEXT, cashuInfoViewText,
   HTTP_ERROR_EXPLANATIONS, NON_HTTP_ERROR_EXPLANATIONS, operatorExcludedText,
   KEYSETS_HINT, KEYSET_FEE_TEXT, newMintBadgeText, newMintCapNote, OPERATOR_REVIEW_NOTE,
   UPTIME_ROW_LABEL, AUDIT_ROW_LABEL, NUT_ROW_LABEL, VERSION_ROW_LABEL, CONTACT_ROW_LABEL,
@@ -38,7 +38,6 @@ import { MintNetworkCard } from '@/components/MintNetworkCard'
 import { networkRows } from '@/utils/networkInfo'
 import { AuditCzTiles, AuditCzSwapTables, AuditStateText } from '@/components/AuditCzCards'
 import { supportedNutKeys } from '@/utils/nutSupport'
-import { MintFeesLimits } from '@/components/mint/MintFeesLimits'
 import { formatDate, formatDateTimeUtc } from '@/utils/formatDate'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, UPTIME_PENDING_ARIA_LABEL, SCORE_PENDING_ARIA_LABEL, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
@@ -49,7 +48,6 @@ import { formatKeysetFee, clockDriftLabel, urlIsOnion, listHasOnion, isMotdAlert
 import { auditComponent, auditDataState, auditAgeHours, isAuditUnknown, AUDIT_MIN_SAMPLES } from '@/utils/auditScore'
 import { auditFreshness, audit8333StaleLine } from '@/utils/auditFreshness'
 import { IcClose } from '@/components/IcClose'
-import { clickableProps } from '@/utils/clickableProps'
 import { useAuditCz } from '@/hooks/useAuditCz'
 import { adaptAuditCz, auditCzSyncNote, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
 import { sortUnits } from '@/utils/sortUnits'
@@ -73,6 +71,8 @@ import { LAST_SCORE_CAPTION, KEEP_WALLET_SENTENCE, TEMPORARY_SENTENCE, contactSe
 import { healthRecordFor, HEALTH_RELAY_URL } from '@/utils/healthRecord'
 import { AUDIT_SWAPS_WINDOW, AUDIT_WINDOW_DAYS } from '@/utils/tooltipTexts'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { NutsTab } from './mintDetail/NutsTab'
+import { NUT_DESCRIPTIONS, type NutConfig } from './mintDetail/nutCatalog'
 import { reviewAvatarColor, avatarTextColor } from '@/utils/avatarColors'
 import './MintDetail.css'
 
@@ -83,11 +83,10 @@ const MintDetailHistoryChart = lazy(() => import('./MintDetailHistoryChart'))
 // Chart height; the Suspense placeholder uses the same value so the History tab does not jump when the chunk arrives.
 const HISTORY_CHART_HEIGHT = 140
 import {
-  Copy, Check, Info, ShieldCheck, ShieldOff, AlertTriangle,
-  Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
-  Clock, GitBranch, Plug, Database, Award, Layers, Zap, QrCode,
-  Receipt, UserCheck, EyeOff, CreditCard, Send, Code, Cloud,
-  Fingerprint, Bitcoin, Star, Mail, AtSign,
+  Copy, Check, Info, AlertTriangle,
+  Shield,
+  Clock, GitBranch, Layers, Zap, QrCode,
+  Star, Mail, AtSign,
   ExternalLink,
   Link2,
   ArrowUpRight,
@@ -212,21 +211,6 @@ function AuditSyncNote({ note, testId }: { note: { text: string; stale: boolean;
   )
 }
 
-interface NutMethod {
-  method: string
-  unit: string
-  min_amount?: number
-  max_amount?: number
-}
-
-/** One muted sentence under the NUT compatibility grid: which NUTs nutzaps (NIP-61) rely on. No verdict. */
-const NUTZAP_NUTS_NOTE = 'NUT-07, NUT-10, NUT-11 and NUT-12 are the ones nutzaps (NIP-61) rely on.'
-
-interface NutConfig {
-  disabled?: boolean
-  methods?: NutMethod[]
-}
-
 interface MergedReviewCandidate {
   id: string
   pubkey: string
@@ -235,67 +219,6 @@ interface MergedReviewCandidate {
   createdAt: number
   source: 'mintradar' | 'nostr'
   profile?: { name?: string; nip05?: string; picture?: string; fromServer?: boolean }
-}
-
-const NUT_DESCRIPTIONS: Record<string, { short: string; desc: string; features: string[]; useCase: string }> = {
-  'NUT-00': { short: 'Notation & crypto', desc: 'Cryptographic notation and the blind Diffie-Hellman key exchange (BDHKE) scheme underlying every Cashu operation.', features: ['Blind signatures (BDHKE)', 'Protocol notation', 'hash_to_curve mapping'], useCase: 'Defines the cryptographic foundation every other NUT builds on.' },
-  'NUT-01': { short: 'Mint keys', desc: 'Retrieving public keys from the mint for each amount.', features: ['Amount-specific keypairs', 'Key retrieval API', 'Key validation'], useCase: 'Clients use mint keys to verify token signatures.' },
-  'NUT-02': { short: 'Keysets & fees', desc: 'Keysets (grouped mint public keys with rotation) and the per-coin fee charged when spending a coin from them.', features: ['Keyset IDs', 'Active/inactive rotation', 'Per-input fees (input_fee_ppk)'], useCase: 'Allows mints to rotate keys, support multiple currencies, and charge spending fees.' },
-  'NUT-03': { short: 'Swap', desc: 'Swapping coins for new ones of equal value.', features: ['Coin exchange', 'Change splitting', 'Privacy improvement'], useCase: 'Core operation for splitting and combining tokens.' },
-  'NUT-04': { short: 'Mint tokens', desc: 'Minting new Cashu tokens against a Lightning invoice.', features: ['Lightning invoice creation', 'Token issuance', 'Amount verification'], useCase: 'Entry point for getting Cashu tokens from Lightning.' },
-  'NUT-05': { short: 'Melt tokens', desc: 'Melting Cashu tokens to pay a Lightning invoice.', features: ['Invoice payment', 'Fee estimation', 'Change return'], useCase: 'Exit point for spending Cashu tokens via Lightning.' },
-  'NUT-06': { short: 'Mint info', desc: 'Retrieving mint metadata, capabilities and contact info.', features: ['Version info', 'Supported NUTs', 'Contact details', 'MOTD'], useCase: 'Clients discover mint capabilities before interacting.' },
-  'NUT-07': { short: 'Token state', desc: 'Checking whether a coin has been spent or is still valid.', features: ['Spent coin detection', 'Pending state', 'Batch checking'], useCase: 'Verify token validity without redeeming it.' },
-  'NUT-08': { short: 'Overpay melt', desc: 'Overpaying melt fees and receiving change back.', features: ['Fee overpayment', 'Change tokens', 'Fee estimation'], useCase: 'Handle variable Lightning routing fees gracefully.' },
-  'NUT-09': { short: 'Restore', desc: 'Restoring blinded signatures from mint backup data.', features: ['Signature restoration', 'Backup validation', 'Deterministic secrets'], useCase: 'Recover tokens from backup without double-spend risk.' },
-  'NUT-10': { short: 'Spending cond.', desc: 'Spending conditions that must be met to use a coin.', features: ['Conditional spending', 'Script conditions', 'Extensible'], useCase: 'Base for advanced features like P2PK and HTLCs.' },
-  'NUT-11': { short: 'Pay-to-PK', desc: 'Lock tokens to a specific public key for secure transfers.', features: ['Public key locking', 'Signature verification', 'Selective unlock'], useCase: 'Send tokens that only a specific recipient can spend.' },
-  'NUT-12': { short: 'DLEQ proofs', desc: 'Discrete Log Equality proofs for verifiable blind signatures.', features: ['Cryptographic proofs', 'Signature verification', 'Privacy preserving'], useCase: 'Clients verify mint honesty without revealing token data.' },
-  'NUT-14': { short: 'HTLCs', desc: 'Hash Time Locked Contracts for atomic swaps.', features: ['Hash preimage', 'Timelock expiry', 'Atomic swaps'], useCase: 'Enable trustless cross-mint or cross-chain swaps.' },
-  'NUT-15': { short: 'Multi-mint MPP', desc: 'Split a single Lightning payment across multiple mints simultaneously, so wallets can pay one invoice using balances from several mints at once.', features: ['Multi-mint payments', 'Amount splitting', 'Atomic all-or-nothing'], useCase: 'Pay a large invoice by combining balances from multiple mints in one atomic payment.' },
-  'NUT-16': { short: 'Animated QR', desc: 'Animated QR codes for transferring large tokens between devices.', features: ['Chunked QR frames', 'Large token transfer', 'Offline transfer'], useCase: 'Move big tokens between devices when no network is available.' },
-  'NUT-17': { short: 'WebSocket', desc: 'Real-time mint updates via WebSocket subscription.', features: ['Live updates', 'Event subscription', 'Low latency'], useCase: 'Receive instant confirmation without polling.' },
-  'NUT-18': { short: 'Payment req.', desc: 'Structured payment requests so wallets can pay a requested amount.', features: ['Structured requests', 'Amount + mint hints', 'Wallet interop'], useCase: 'Let a payee encode exactly what they want to be paid.' },
-  'NUT-19': { short: 'Cached responses', desc: 'Mints cache successful responses for critical operations so wallets can replay after a network error.', features: ['Response caching', 'Network recovery', 'Idempotent replay'], useCase: 'Prevents loss of funds when a network interruption occurs during mint/swap/melt.' },
-  'NUT-20': { short: 'Mint quote sig', desc: 'Mint signs quote requests for authenticity.', features: ['Quote signatures', 'Request authentication', 'Replay protection'], useCase: 'Prevent quote tampering between client and mint.' },
-  'NUT-21': { short: 'Clear auth', desc: 'Clear-text (OAuth/OpenID) authentication for protected mint endpoints.', features: ['OAuth / OpenID', 'Access tokens', 'Protected endpoints'], useCase: 'Restrict mint access to authenticated users.' },
-  'NUT-22': { short: 'Blind auth', desc: 'Blind authentication tokens for privacy-preserving mint access.', features: ['Blind auth tokens', 'Unlinkable access', 'Rate limiting'], useCase: 'Authenticate to a mint without revealing your identity.' },
-  'NUT-23': { short: 'BOLT11', desc: 'BOLT11 Lightning invoices as a payment method for mint and melt.', features: ['Lightning invoices', 'Mint & melt method', 'Standard payments'], useCase: 'Fund and spend tokens via ordinary Lightning invoices.' },
-  'NUT-24': { short: 'HTTP 402', desc: 'HTTP 402 Payment Required flow for paywalled resources using Cashu.', features: ['402 paywall flow', 'Machine payments', 'Resource access'], useCase: 'Pay for web resources programmatically with Cashu tokens.' },
-  'NUT-25': { short: 'BOLT12', desc: 'BOLT12 offers as a payment method for mint and melt.', features: ['BOLT12 offers', 'Reusable payment codes', 'Mint & melt method'], useCase: 'Use reusable Lightning offers instead of single-use invoices.' },
-  'NUT-26': { short: 'Bech32m req.', desc: 'Bech32m encoding for Cashu payment requests.', features: ['Bech32m encoding', 'Compact requests', 'Error detection'], useCase: 'Share payment requests as short, typo-resistant strings.' },
-  'NUT-27': { short: 'Nostr backup', desc: 'Backing up wallet state to Nostr relays for cross-device recovery.', features: ['Nostr relay backup', 'Cross-device sync', 'Encrypted state'], useCase: 'Restore a wallet from Nostr on a new device.' },
-  'NUT-28': { short: 'Pay-to-BK', desc: 'Lock tokens to a blinded public key for enhanced recipient privacy.', features: ['Blinded key lock', 'Recipient privacy', 'Selective unlock'], useCase: 'Send tokens to a recipient without exposing their public key.' },
-  'NUT-29': { short: 'Batched minting', desc: 'Wallets can mint tokens for multiple quotes in a single atomic request.', features: ['Multi-quote batch', 'Atomic operation', 'Efficiency'], useCase: 'Reduces round-trips when minting from multiple paid invoices at once.' },
-  'NUT-30': { short: 'Onchain', desc: 'On-chain Bitcoin as a payment method for mint and melt.', features: ['On-chain Bitcoin', 'Mint & melt method', 'Chain settlement'], useCase: 'Fund or redeem tokens directly with on-chain Bitcoin.' },
-}
-
-const NUT_ICONS: Record<string, JSX.Element> = {
-  'NUT-04': <Coins size={13} />,
-  'NUT-05': <Flame size={13} />,
-  'NUT-07': <Info size={13} />,
-  'NUT-08': <SlidersHorizontal size={13} />,
-  'NUT-09': <RefreshCw size={13} />,
-  'NUT-10': <Lock size={13} />,
-  'NUT-11': <Key size={13} />,
-  'NUT-12': <Shield size={13} />,
-  'NUT-14': <Clock size={13} />,
-  'NUT-15': <GitBranch size={13} />,
-  'NUT-16': <QrCode size={13} />,
-  'NUT-17': <Plug size={13} />,
-  'NUT-18': <Receipt size={13} />,
-  'NUT-19': <Database size={13} />,
-  'NUT-20': <Award size={13} />,
-  'NUT-21': <UserCheck size={13} />,
-  'NUT-22': <EyeOff size={13} />,
-  'NUT-23': <Zap size={13} />,
-  'NUT-24': <CreditCard size={13} />,
-  'NUT-25': <Send size={13} />,
-  'NUT-26': <Code size={13} />,
-  'NUT-27': <Cloud size={13} />,
-  'NUT-28': <Fingerprint size={13} />,
-  'NUT-29': <Layers size={13} />,
-  'NUT-30': <Bitcoin size={13} />,
 }
 
 // One row of the Reliability Score breakdown (label + info tooltip + measured
@@ -2031,74 +1954,26 @@ function MintDetailContent({ url }: { url: string }) {
           )}
           </>)}
 
-          {activeTab === 'nuts' && (<>
-          {knownMint && (
-            <MintFeesLimits
-              keysets={feeKeysets}
-              keysetsPending={probeLoading && !feeKeysets}
-              units={knownMint.units}
-              mintMethods={knownMint.mintMethods}
-              meltMethods={knownMint.meltMethods}
-              disabled={{ mint: nut4Disabled, melt: nut5Disabled }}
-              fetchedAt={infoFetchedAt}
-              now={now}
-              changes={mintChanges}
+          {activeTab === 'nuts' && (
+            <NutsTab
+              feesLimits={knownMint ? {
+                keysets: feeKeysets,
+                keysetsPending: probeLoading && !feeKeysets,
+                units: knownMint.units,
+                mintMethods: knownMint.mintMethods,
+                meltMethods: knownMint.meltMethods,
+                disabled: { mint: nut4Disabled, melt: nut5Disabled },
+                fetchedAt: infoFetchedAt,
+                now,
+                changes: mintChanges,
+              } : null}
+              keysetsPanel={keysetsPanel}
+              supportsBackupRestore={supportsBackupRestore}
+              supportedNuts={supportedNuts}
+              liveNuts={data?.info?.nuts}
+              onSelectNut={setSelectedNut}
             />
           )}
-
-          {/* Mobile (<901px) only — on desktop the Keysets panel moves to the
-              Overview sidebar next to "Units & Methods". */}
-          <div className="md-keysets-at-nuts">{keysetsPanel}</div>
-
-            <div className="md-panel">
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:11}}>
-                <div className="md-panel-title" style={{marginBottom:0}}>NUT compatibility</div>
-              {supportsBackupRestore ? (
-                <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
-                  <span className="md-backup-pill" style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--accent)',background:'var(--green-soft)',border:'0.5px solid var(--green-soft-strong)',borderRadius:5,padding:'2px 7px'}}>
-                    <ShieldCheck size={11} /> Backup supported
-                  </span>
-                  <InfoTooltip iconSize={11} width={220} about="backup support" text={BACKUP_SUPPORTED_TEXT} />
-                </span>
-              ) : (
-                <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
-                  <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--text3)',background:'var(--bg3)',border:'0.5px solid var(--border)',borderRadius:5,padding:'2px 7px'}}>
-                    <ShieldOff size={11} /> No backup
-                  </span>
-                  <InfoTooltip iconSize={11} width={220} about="backup support" text={NO_BACKUP_TEXT} />
-                </span>
-              )}
-            </div>
-            <div className="nut-summary-line">
-              <strong>{supportedNuts.length}</strong> of {TRACKED_NUTS.length} known NUTs supported
-            </div>
-            <div className="nut-grid">
-              {TRACKED_NUTS.map(nut => {
-                const supported = supportedNuts.includes(nut)
-                const meta = NUT_DESCRIPTIONS[nut]
-                const nutKey = parseInt(nut.slice(4), 10).toString()
-                const rawConfig = data?.info?.nuts?.[nutKey]
-                const nutConfig = (rawConfig !== null && rawConfig !== undefined && typeof rawConfig === 'object') ? rawConfig as NutConfig : null
-                const isDisabled = supported && nutConfig?.disabled === true
-                return (
-                  <div key={nut} className={`nut-card ${isDisabled ? 'nut-disabled' : supported ? 'supported' : 'unsupported'}`} {...clickableProps(() => setSelectedNut(nut))}>
-                    <div className={`nut-icon ${isDisabled ? 'nut-disabled' : supported ? 'supported' : 'unsupported'}`}>
-                      {NUT_ICONS[nut] ?? (isDisabled ? '!' : supported ? '●' : '○')}
-                    </div>
-                    <div className="nut-info">
-                      <div className="nut-name">{nut}</div>
-                      <div className="nut-desc">{isDisabled ? 'Disabled by operator' : meta?.short ?? ''}</div>
-                    </div>
-                    <span className="nut-check" style={{ color: isDisabled ? 'var(--amber)' : supported ? 'var(--accent)' : 'var(--text3)' }}>
-                      {isDisabled ? '!' : supported ? '✓' : '–'}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-            <div className="md-nut-nutzap-note">{NUTZAP_NUTS_NOTE}</div>
-          </div>
-          </>)}
 
           {activeTab === 'history' && (<>
             <div className="md-panel">
