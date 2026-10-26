@@ -77,3 +77,11 @@ Not application findings but worth knowing: `installApiMocks` has no answer for 
 
 - The first Tab stop of every page is now "Skip to content" (`a.skip-link`, visually hidden until focused, then fixed at the top left). It moves focus to `main#main-content` (`tabIndex={-1}`) by script, so hash routes are not touched. Specs that count Tab stops from the top start one stop later; `keyboard-and-landmarks.spec.ts` still finds the first control within 3 stops.
 - `e2e/ui-quick-wins.spec.ts`: phone list cut (390 px touch, collapsed / expanded / search / filters), 768 and 1280 px not cut, no-results state, refresh keeps filters, skip link, Mint Detail h1 text, archived card / detail / Stats movers, bad naddr page.
+
+## E2E mocking strategy (moved from CLAUDE.md, C3-8)
+
+- **HTTP:** `page.route('**/api/**', …)` with deterministic fixtures in `e2e/fixtures/mocks.ts`
+- **Nostr relays (wss):** `page.routeWebSocket(/^wss:\/\//)` stub — replies `["EOSE", subId]` to every `REQ`, `["OK", id, true, ""]` to every `EVENT`. Required because `SimplePool.querySync()` hangs until EOSE; simply closing the socket is not sufficient.
+- **NIP-07 login:** `page.addInitScript()` injects `window.nostr` mock (getPublicKey/signEvent/nip04/nip44) and pre-seeds Zustand persist key `mintradar_session` in `sessionStorage`
+
+Note (not a bug): The `+ Watch` button on Dashboard mint cards only renders when `isLoggedIn === true` (intentional — watchlist is identity-bound). E2E tests for the add-to-watchlist flow therefore require a mocked NIP-07 session.

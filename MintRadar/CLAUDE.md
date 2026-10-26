@@ -105,11 +105,6 @@ No test counts are kept in this file (they drift). Each suite prints its current
 | Frontend unit | Vitest | `src/__tests__/` | `npm test` prints "Test Files" and "Tests" |
 | E2E | Playwright | `e2e/` | `npx playwright test --list` prints the number of tests and spec files; known skips are marked in the specs |
 
-### Key tested modules
-
-- **Backend:** `normalizeUrl`, Reliability Score calculation (prober.ts), degraded/offline detection logic, review parsing (kind:38000 regex), SSRF guard (`backend/src/ssrf.ts`) — DNS rebinding, private ranges, link-local
-- **Frontend:** `mintFormatting` and `reviewUtils` (extracted from components into `src/utils/` for testability), Reliability Score display helpers. `mintFormatting.test.ts`'s `mintAgeBadge` Fresh/Established color assertions were updated 2026-07-24 to the new redesign hex values (`#d3a446`/`#5cc9a3`) — see "Visual Redesign" section.
-
 ### Run commands
 
 Run from the app directory (the one holding `package.json`, `e2e/` and `backend/`). Each command is self-contained, so the block can be pasted as-is:
@@ -128,20 +123,6 @@ npm run lint
 # E2E
 npm run test:e2e
 ```
-
-### E2E mocking strategy
-
-- **HTTP:** `page.route('**/api/**', …)` with deterministic fixtures in `e2e/fixtures/mocks.ts`
-- **Nostr relays (wss):** `page.routeWebSocket(/^wss:\/\//)` stub — replies `["EOSE", subId]` to every `REQ`, `["OK", id, true, ""]` to every `EVENT`. Required because `SimplePool.querySync()` hangs until EOSE; simply closing the socket is not sufficient.
-- **NIP-07 login:** `page.addInitScript()` injects `window.nostr` mock (getPublicKey/signEvent/nip04/nip44) and pre-seeds Zustand persist key `mintradar_session` in `sessionStorage`
-
-### Notable finding (not a bug)
-
-The `+ Watch` button on Dashboard mint cards only renders when `isLoggedIn === true` (intentional — watchlist is identity-bound). E2E tests for the add-to-watchlist flow therefore require a mocked NIP-07 session.
-
-### CI
-
-`test` job in `.github/workflows/deploy.yml` runs the full suite (backend + frontend unit; e2e is separate). `deploy` job declares `needs: test` — a failing test blocks deployment.
 
 ## Verification policy
 Pick the tier by the risk of the change; each tier includes the one before it. Backend: its own lint, typecheck and build.
