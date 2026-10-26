@@ -67,8 +67,6 @@ Commit with the "Git rules" below, then `git push origin main && git push gitea 
 
 ## Git rules (several sessions can touch this checkout)
 
-Another session once committed in this checkout between my steps and swept up my staged `git rm` of a hook while `Dashboard.tsx` still imported it; that commit went to `main` and turned Deploy red. These rules prevent that.
-
 - **Never `git add -A` and never `git commit -a`.** Stage only the files you changed: `git add <paths>`.
 - **Before every task** print `git status`, `git stash list` and `git log --oneline -5`. If there are uncommitted changes you did not make: stop and ask.
 - **Before every commit** run `git status` and `git diff --cached --stat`. If a file you did not touch is staged: stop and ask.
