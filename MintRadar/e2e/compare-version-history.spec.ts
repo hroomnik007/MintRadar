@@ -10,8 +10,8 @@ import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 // Desktop keeps the side-by-side .cmp-vh-grid (mint = column, `overflow-x:
 // auto` for the column-count case). Mobile (≤768px) no longer renders that
 // grid at all — a side-by-side table never fit a phone viewport regardless
-// of scroll handling. Instead it shows one mint's version history at a time
-// (.cmp-mobile-vh), switched via the same tabs as the main comparison table.
+// of scroll handling. Instead it lists each mint's version history in its own
+// group, one under another (.cmp-mobile-vh).
 // These pin: entries render un-clipped at 2/3/4 mints on both desktop and
 // mobile, the desktop section scrolls when it genuinely overflows, and the
 // mobile section never causes horizontal page overflow.

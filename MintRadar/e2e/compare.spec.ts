@@ -74,9 +74,9 @@ test.describe('Compare (Mint Diff Tool)', () => {
 
     await expect(page.getByText('Historical Trends')).toBeVisible()
     // Mobile layout renders one mini chart per mint with its name as a heading,
-    // rather than a single overlaid multi-line chart. (The mobile stacked
-    // comparison table above also renders each mint's name — in a tab and in
-    // the active mint's header — so scope this to the chart heading specifically.)
+    // rather than a single overlaid multi-line chart. (The mobile side-by-side
+    // comparison table above also renders each mint's name — in its column
+    // header — so scope this to the chart heading specifically.)
     const modal = page.locator('.cmp-modal')
     await expect(modal.locator('.cmp-mobile-chart-name')).toHaveCount(2)
     await expect(modal.locator('.cmp-mobile-chart-name', { hasText: 'Alpha Mint' })).toBeVisible()

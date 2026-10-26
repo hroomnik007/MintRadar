@@ -1,0 +1,63 @@
+/* "On this page" of /for-wallets (DocToc.tsx). Builds on .about-toc (pages/About.css): the sticky column on
+   wide screens and the sticky row of pills up to 900px stay as they are; this adds the current-section mark
+   and, at ≤640px, folds the pills behind one button. */
+.doc-toc-toggle { display: none; }
+
+.about-toc-link.is-active {
+  color: var(--text);
+  border-left-color: var(--accent);
+}
+
+@media (max-width: 900px) {
+  .about-toc-link.is-active { border-color: var(--accent); }
+}
+
+@media (max-width: 640px) {
+  .doc-toc { padding-top: 6px; padding-bottom: 6px; }
+  .doc-toc-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    background: var(--bg2);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .doc-toc-toggle-title {
+    flex-shrink: 0;
+    color: var(--text3);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .doc-toc-toggle-current {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .doc-toc-chevron { flex-shrink: 0; color: var(--text3); transition: transform var(--transition); }
+  .doc-toc.is-open .doc-toc-chevron { transform: rotate(180deg); }
+
+  .doc-toc:not(.is-open) .doc-toc-list { display: none; }
+  .doc-toc.is-open .doc-toc-list {
+    margin-top: 8px;
+    max-height: 60vh;
+    overflow-y: auto;
+    justify-content: flex-start;
+  }
+  .about-page .doc-toc ~ .about-text .about-h2 { scroll-margin-top: calc(var(--about-scroll-offset) + 76px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doc-toc-chevron { transition: none; }
+}

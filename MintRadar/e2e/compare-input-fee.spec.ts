@@ -52,15 +52,14 @@ test.describe('Compare: Input fee row', () => {
     await shot(page)
   })
 
-  test('mobile: the row shows for the selected mint tab', async ({ page }) => {
-    test.skip((page.viewportSize()?.width ?? 1280) > 768, 'mobile stack only')
+  test('mobile: the row shows every mint side by side', async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 1280) > 768, 'mobile table only')
     await openCompare(page)
-    const val = () => page.locator('.cmp-mobile-row', { hasText: 'Input fee' }).locator('.cmp-input-fee')
-    await expect(val()).toContainText('100 ppk')
-    await page.locator('.cmp-mobile-tabs button').nth(1).click()
-    await expect(val()).toContainText('free')
-    await page.locator('.cmp-mobile-tabs button').nth(2).click()
-    await expect(val()).toHaveText('n/a')
+    const vals = page.locator('table.cmp-m-table tr[data-row="fee"] td .cmp-input-fee')
+    await expect(vals).toHaveCount(3)
+    await expect(vals.nth(0)).toContainText('100 ppk')
+    await expect(vals.nth(1)).toContainText('free')
+    await expect(vals.nth(2)).toHaveText('n/a')
     await shot(page)
   })
 })
