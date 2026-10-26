@@ -130,7 +130,12 @@ signal there is real distinct humans (the user's follows) recommending a URL, wh
 "score gamed by a brand-new mint" vulnerability class this gate addresses. It already has its
 own `isTestMint()` filter (`fetchFollowRecs`), unchanged.
 
-<!-- moved to CLAUDE.md, Hard invariants -->
+### Discovery relays (backend + frontend) — unified 2026-07-24
+Frontend source of truth: `src/core/nostr/relays.ts` (`DISCOVERY_RELAYS`), imported by
+`src/core/nostr/mintDiscovery.ts` and `src/hooks/useNostrDiscovery.ts`. Backend can't import
+this (separate npm package, no workspace set up) — `backend/src/discovery.ts` keeps its own
+`DISCOVERY_RELAYS` constant manually in sync; mirror any change to both.
+
 **Superseded 2026-09-19 by a live audit — see below for the current 10-relay list and why.**
 The 17-relay list below is left as historical context for the additions/removals documented
 in this section; do not treat it as the current `DISCOVERY_RELAYS` contents.
@@ -199,7 +204,9 @@ returning occasional 503s. Investigated each:
   (483ms) — all verified reachable via a direct `ws` handshake test before adding.
   `relay.current.fyi` (DNS doesn't resolve) and `relay.nostrati.com`/`relayable.org`
   (502/timeout) were also tried as candidates and rejected as unreliable.
-<!-- moved to CLAUDE.md, Hard invariants -->
+- All 4 relay-list locations kept in sync: frontend `DISCOVERY_RELAYS` + `PROFILE_RELAYS`
+  (`src/core/nostr/relays.ts`), backend `DISCOVERY_RELAYS` (`discovery.ts`), backend
+  `NOSTR_REVIEWS_RELAYS` (`index.ts`).
 
 **Streaming vs. batch discovery:** considered and deliberately rejected. Discovery runs in
 the background with no live UI to update, so a streaming subscription (incremental

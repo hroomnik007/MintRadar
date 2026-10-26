@@ -58,28 +58,11 @@ Sensitive values are in CLAUDE.local.md (gitignored) — ask the developer
 
 ## Hard invariants (lifted verbatim from docs/claude files — they stay in core on purpose)
 
-<!-- from docs/claude/backend-api-and-data.md — Backend API (/api/mint/icon) -->
 - Icon proxy `GET /api/mint/icon`: every mint `<img>` goes through it (never a mint-supplied `icon_url`); known mints only, `safeFetch`, raster only, any failure → 204. Details: `docs/claude/backend-api-and-data.md` ("Icon proxy", "GET /api/mint/icon").
-<!-- from docs/claude/discovery-and-relays.md — Discovery pipeline (safeFetch) -->
 - Outbound API calls use `safeFetch`. The root `SimplePool` in `discovery.ts` / `reviewsSync.ts` is NOT DNS-pinned (safe only because its relay lists are hardcoded; a dynamic list must use `DnsPinnedWebSocket`). Details: `docs/claude/discovery-and-relays.md` ("Discovery pipeline").
-<!-- from docs/claude/discovery-and-relays.md — Discovery relays (manual sync) -->
-## Discovery relays (backend + frontend) — unified 2026-07-24
-Frontend source of truth: `src/core/nostr/relays.ts` (`DISCOVERY_RELAYS`), imported by
-`src/core/nostr/mintDiscovery.ts` and `src/hooks/useNostrDiscovery.ts`. Backend can't import
-this (separate npm package, no workspace set up) — `backend/src/discovery.ts` keeps its own
-`DISCOVERY_RELAYS` constant manually in sync; mirror any change to both.
-
-<!-- from docs/claude/discovery-and-relays.md — Discovery relays (4 relay-list locations) -->
-- All 4 relay-list locations kept in sync: frontend `DISCOVERY_RELAYS` + `PROFILE_RELAYS`
-  (`src/core/nostr/relays.ts`), backend `DISCOVERY_RELAYS` (`discovery.ts`), backend
-  `NOSTR_REVIEWS_RELAYS` (`index.ts`).
-<!-- from docs/claude/tools-page.md — Token Inspector (no third-party icon fetch) -->
-- **Mint icon (icon only for tracked mints, no third-party icon fetch)** — the MINT cell shows a
-  `MintFavicon` tile (36px desktop / 32px mobile, `.trc-mint-icon`) left of name + hostname, ONLY when
-  the token's mint is in the known-mints list (`mintInfo`); it uses the same component and
-  `/api/mint/icon` backend proxy as the Dashboard, with the initials tile when the mint has no icon.
-  For an untracked mint the token's mint URL is chosen by whoever made the token, so NO icon element
-  is rendered and nothing is requested for it — never build an icon URL from the token. Covered by
+## Relay lists and mint icons
+- Relay lists live in 4 places and must be changed together: frontend `DISCOVERY_RELAYS` + `PROFILE_RELAYS` (`src/core/nostr/relays.ts`), backend `DISCOVERY_RELAYS` (`discovery.ts`), backend `NOSTR_REVIEWS_RELAYS` (`index.ts`); the backend cannot import the frontend file. Details: `docs/claude/discovery-and-relays.md`.
+- Token Inspector shows a mint icon only for tracked mints; never build an icon URL from a token. Details: `docs/claude/tools-page.md` ("Token Inspector").
 
 ## Key features
 - Dashboard: compact/expanded card view, filter panel (**Status + Min. Reliability Score + Hide test mints** — the "Mint age" Fresh/Established/Veteran/OG block was removed 2026-09-08, and the Capabilities Restore/Bolt12/LN group was removed 2026-09-10, see "Dashboard default view + Capabilities filters removed" below; `requiredNuts` state still exists but URL-only, no panel UI), search, sort (default **Reliability Score desc**, "Most reviewed" before Rating; see "Dashboard controls row" and "Dashboard default view" below), mint comparison tool (up to 4, see "Compare feature" above), stats bar, submit form (single + bulk). One-line explainer above the grid (`.grid-score-explainer`): **"We score how it runs. They score how it went. You pick."** (13.5px / `--t2`).

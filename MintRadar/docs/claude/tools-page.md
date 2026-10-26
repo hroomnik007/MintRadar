@@ -237,7 +237,12 @@ blocks only non-public hosts).
   isn't outweighed. They use `--font-mono-data` (a *system* mono stack, not the self-hosted
   JetBrains Mono), so 500 renders as Medium only where the OS mono font has it and otherwise as 400;
   the computed weight is 500 either way. No font files added.
-<!-- moved to CLAUDE.md, Hard invariants -->
+- **Mint icon (icon only for tracked mints, no third-party icon fetch)** — the MINT cell shows a
+  `MintFavicon` tile (36px desktop / 32px mobile, `.trc-mint-icon`) left of name + hostname, ONLY when
+  the token's mint is in the known-mints list (`mintInfo`); it uses the same component and
+  `/api/mint/icon` backend proxy as the Dashboard, with the initials tile when the mint has no icon.
+  For an untracked mint the token's mint URL is chosen by whoever made the token, so NO icon element
+  is rendered and nothing is requested for it — never build an icon URL from the token. Covered by
   the "Token Inspector mint icon" e2e tests.
 - **Display rules** — offline line "This mint didn't answer its last check, so checking or
   redeeming may not work." shows above the Check row only for a tracked mint with `online ===
