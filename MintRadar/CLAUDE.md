@@ -50,7 +50,7 @@ Sensitive values are in CLAUDE.local.md (gitignored) — ask the developer
 - Cron every 5 min probes `/v1/info`: a mint is ONLINE only on a 2xx (`res.ok`) with valid JSON whose `nuts` is an object (`backend/src/prober.ts`).
 - Notifications: sent only by the server (NIP-17 DMs); the browser never publishes DMs. Reviews: NIP-87 kind:38000, read/written by the browser. Details: Index table.
 
-## Hard invariants (lifted verbatim from docs/claude files — they stay in core on purpose)
+## Hard invariants (one-line rules; details in the linked docs/claude files)
 
 - Icon proxy `GET /api/mint/icon`: every mint `<img>` goes through it (never a mint-supplied `icon_url`); known mints only, `safeFetch`, raster only, any failure → 204. Details: `docs/claude/backend-api-and-data.md` ("Icon proxy", "GET /api/mint/icon").
 - Outbound API calls use `safeFetch`. The root `SimplePool` in `discovery.ts` / `reviewsSync.ts` is NOT DNS-pinned (safe only because its relay lists are hardcoded; a dynamic list must use `DnsPinnedWebSocket`). Details: `docs/claude/discovery-and-relays.md` ("Discovery pipeline").
