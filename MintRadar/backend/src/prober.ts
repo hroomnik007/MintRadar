@@ -11,7 +11,7 @@ import { mintMeltCondition, versionCondition, nutLossTransition, type Condition 
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { normalizeMintPubkey } from './mintPubkey.js'
 import { recordInfoObservation } from './mintChanges.js'
-import { queueContactChecks, entriesOf } from './contactChecks.js'
+import { queueContactChecks } from './contactChecks.js'
 import { extractLastContacts } from './lastContacts.js'
 import { computeScoreBreakdown } from './scoreBreakdown.js'
 import { isAllowlistMode } from './allowlist.js'

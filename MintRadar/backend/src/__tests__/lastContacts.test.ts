@@ -40,4 +40,15 @@ describe('readStoredLastContacts', () => {
     expect(readStoredLastContacts([{ method: 'email' }])).toBeNull()
     expect(readStoredLastContacts('x')).toBeNull()
   })
+
+  it('strips exactly C0, DEL and C1 control characters (same set as the old regex)', () => {
+    // eslint-disable-next-line no-control-regex
+    const legacy = /[\u0000-\u001f\u007f-\u009f]/g
+    for (let c = 0; c <= 0xffff; c++) {
+      const info = `a${String.fromCharCode(c)}b`
+      const got = extractLastContacts([{ method: 'email', info }])[0]?.info
+      expect(got, `U+${c.toString(16)}`).toBe(info.replace(legacy, '').trim())
+    }
+    expect(extractLastContacts([{ method: 'email', info: 'a\u{1F600}\u0085b' }])[0]?.info).toBe('a\u{1F600}b')
+  })
 })

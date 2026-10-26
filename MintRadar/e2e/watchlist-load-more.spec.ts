@@ -54,6 +54,15 @@ async function setup(page: Page, relay: Relay, opts: { knownDelayMs?: number } =
 async function seedIndexedDb(page: Page) {
   await page.goto('/')
   await expect(page.locator('.navbar-profile')).toBeVisible()
+  // The app's own login sync (useWatchlistSync Phase 1) runs on this page too: it reads the Dexie owner, then
+  // clears the watchlist when that owner is not the logged-in user. Seeding while it is still in flight let the
+  // clear land after the seed now and then ("No mints watched yet"). It records the owner as its last Dexie write,
+  // so seed only once that is there.
+  await expect.poll(() => page.evaluate(async () => {
+    const path = '/src/db/index.ts'
+    const { db } = await import(/* @vite-ignore */ path)
+    return (await db.meta.get('watchlistOwner'))?.value ?? null
+  }), { timeout: 10000 }).toBe(pk)
   await page.evaluate(async ({ urls, owner }) => {
     const path = '/src/db/index.ts'
     const { db } = await import(/* @vite-ignore */ path)
