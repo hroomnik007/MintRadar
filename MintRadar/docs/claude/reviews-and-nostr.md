@@ -226,3 +226,10 @@ The Zustand-persisted auth state (`profile`, `method`, `nip65Relays` in sessionS
 
 ## Stored reviews unavailable (2026-10-20)
 `GET /api/mints/nostr-reviews` failing (non-2xx or thrown) is an error state of the query in `MintDetail.tsx` and of `prefetchMintDetail`, never a cached `[]`. The Community rating tile then uses the `review_count`/rating rollup of `/api/mints/known`, and the Reviews tab says "Reviews are not available right now." instead of "No Nostr reviews found for this mint yet." Spec: `e2e/mint-detail-reviews-unavailable.spec.ts` (HTTP 500 and network error; mutation: `return []` on `!res.ok` fails it).
+
+## Login methods (moved from CLAUDE.md, C3-6)
+
+Login modal (`src/components/layout/AppShell.tsx`) supports three methods selectable via radio cards:
+- **NIP-07** — calls `window.nostr.getPublicKey()`; all signing stays in the extension
+- **nsec** — decoded in `src/core/nostr/client.ts:loginWithNsec`, then held in a module-scoped variable (`activeNsecPrivkey`) for the session via `installNsecShim()` so the app can sign on the user's behalf (notifications, watchlist sync, reviews) — mirrors `installBunkerShim()`'s pattern. **Never written to any storage API** (sessionStorage/localStorage/IndexedDB) — in-memory only, so it does not survive a page reload. Zeroed via `.fill(0)` and cleared on logout by `removeNsecShim()` (called from `useAuthStore.logout()`, alongside `removeBunkerShim()`). The login modal explicitly discloses this to the user (nsec security notice box + footer line in `AppShell.tsx`).
+- **Amber / NIP-46 bunker** — fully implemented via `nostr-tools/nip46` `BunkerSigner`; accepts `bunker://` URI or NIP-05 identifier; QR pairing flow for mobile Amber; session persisted in `sessionStorage` (`bunkerURI`, `bunkerClientSecretKey`, `bunkerPubkey`); 30s connection timeout; client keypair is ephemeral (NOT the user's identity key)

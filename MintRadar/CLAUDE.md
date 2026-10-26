@@ -84,12 +84,9 @@ Another session once committed in this checkout between my steps and swept up my
 - **Remotes: `origin` (GitHub) is the source of truth; local `main` tracks `origin/main`.** Push with one command from one sha: `git push origin main && git push gitea main`. **NEVER `git pull`, `git rebase` or `git merge` from gitea.** If the push to gitea is rejected or the host is unreachable: report it and STOP (no rebase, merge or force). Realigning a diverged gitea: see `docs/claude/deploy-and-infra.md` ("Gitea remote").
 
 ## Nostr Login
-
-Login modal (`src/components/layout/AppShell.tsx`) supports three methods selectable via radio cards:
-- **NIP-07** — calls `window.nostr.getPublicKey()`; all signing stays in the extension
-- **nsec** — decoded in `src/core/nostr/client.ts:loginWithNsec`, then held in a module-scoped variable (`activeNsecPrivkey`) for the session via `installNsecShim()` so the app can sign on the user's behalf (notifications, watchlist sync, reviews) — mirrors `installBunkerShim()`'s pattern. **Never written to any storage API** (sessionStorage/localStorage/IndexedDB) — in-memory only, so it does not survive a page reload. Zeroed via `.fill(0)` and cleared on logout by `removeNsecShim()` (called from `useAuthStore.logout()`, alongside `removeBunkerShim()`). The login modal explicitly discloses this to the user (nsec security notice box + footer line in `AppShell.tsx`).
-- **Amber / NIP-46 bunker** — fully implemented via `nostr-tools/nip46` `BunkerSigner`; accepts `bunker://` URI or NIP-05 identifier; QR pairing flow for mobile Amber; session persisted in `sessionStorage` (`bunkerURI`, `bunkerClientSecretKey`, `bunkerPubkey`); 30s connection timeout; client keypair is ephemeral (NOT the user's identity key)
-  - Remote-signer (`onauth`) URLs are opened only as `https://` with `noopener,noreferrer` (`openRemoteSignerAuthUrl()`), and a cancelled `initBunkerQR` pairing must commit no state. History and reasoning: `docs/claude/security-audit-and-reviews-history.md` ("Nostr Login: 2026-09-07 audit fixes").
+Three methods (NIP-07, nsec, Amber/NIP-46 bunker) in the login modal of `AppShell.tsx`; implementation details: `docs/claude/reviews-and-nostr.md` ("Login methods").
+- **nsec is held in memory only** (`activeNsecPrivkey`), never written to any storage API, zeroed on logout. It does not survive a reload.
+- Remote-signer (`onauth`) URLs are opened only as `https://` with `noopener,noreferrer` (`openRemoteSignerAuthUrl()`), and a cancelled `initBunkerQR` pairing must commit no state. History and reasoning: `docs/claude/security-audit-and-reviews-history.md` ("Nostr Login: 2026-09-07 audit fixes").
 
 `sessionStorage` (Zustand persist) stores only the public `NostrProfile` `{ pubkey, npub, name, picture }` — no private key material is ever written to any storage API. For nsec logins the raw key is held in JS memory only (see above), which is a deliberate trade-off (enables signing) — do not add any persistence for it without re-confirming with the maintainer, since that would defeat the "in-memory only, lost on reload" guarantee.
 
