@@ -81,7 +81,7 @@ Relay failures are normal. Right after the deploy of the allow-list change but b
 
 The key is never logged, never part of an error message (the decode error is dropped), never stored in the database and never returned by any endpoint. Tests capture all console output and prove no part of the key or its hex appears.
 
-## Activation (done 2026-10-13) and rollback
+## Activation (done 2026-10-13), read-only checks and rollback note
 
 The owner applied the activation on the server on 2026-10-13: the service key went into the backend configuration, the key was added to the own relay's allow-list, and the backend was recreated. The owner applies this on the server; see the private runbook. The read-only checks below stay public.
 

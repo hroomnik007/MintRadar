@@ -304,7 +304,7 @@ The MintRadar database is dumped every 6 hours by `scripts/backup-db.sh` (run fr
 
 **Negentropy (NIP-77) stays enabled** in `deploy/strfry/strfry.conf`: a PR that disabled it (#162) was reverted (`9bc451d4`) on 2026-10-26 by owner decision. The server keeps its own copy of `strfry.conf`, kept in sync by hand; the deploy does not copy it.
 
-## Relay allow-list and the health-assertion activation checklist (2026-10-14)
+## Relay allow-list and health-assertion status (2026-10-14)
 
 `deploy/strfry/privileged-pubkeys.txt` is the ONE list of privileged authors of the own relay (`wss://nostr.mintradar.org`): `writePolicy.sh` (inside the strfry container, bind-mounted read-only, **read once at startup**) lets these keys write any kind, everyone else only kinds 38172 and 38000; `backup-own-events.sh` reads the same file for its author list (every listed author gets the base kinds 38172 and 38000; extra kinds are per author in `EXTRA_KINDS_BY_AUTHOR`, nothing for the health key). Three keys are listed: the maintainer identity, the MintRadar service identity (alerts) and, since 2026-10-14, the **MintRadar Health** attestation key (`2ddd7ce9…941c`). The repository copy is only the source: the file on the server (the strfry install directory on the server) changes when the gated server step copies it and restarts the relay container; a deploy of the repository does not do that.
 
