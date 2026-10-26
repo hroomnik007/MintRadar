@@ -357,8 +357,8 @@ is deliberately not set, because the plugin appends it to the glob patterns and 
 - **Social platforms** keep their own copy of a card image per URL: after a deploy that changes `og-image.png`, re-scrape
   `https://mintradar.org/` in each platform's sharing debugger (Facebook/LinkedIn card validators etc.); with a new file name the
   og:image URL is new, but the page itself still has to be re-fetched.
-- **nginx (manual, not applied):** `deploy/nginx.conf` is reference-only; the live file is
-  `/etc/nginx/sites-available/mintradar.org.conf`. Hashed `/assets/*` files currently share the one 1-year-immutable rule. To give
+- **nginx (manual, not applied):** `deploy/nginx.conf` is reference-only; the live file is the server's `mintradar.org.conf`.
+  Hashed `/assets/*` files currently share the one 1-year-immutable rule. To give
   the un-hashed brand files a short revalidating cache, add this block **above** the `location ~* \.(js|css|png|svg|ico|woff2|webmanifest)$`
   block (regex locations: first match wins):
   ```nginx
@@ -372,8 +372,8 @@ is deliberately not set, because the plugin appends it to the glob patterns and 
       add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self' https: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';" always;
   }
   ```
-  (no `expires` here — it would add a second `Cache-Control`). Steps: `sudo nano /etc/nginx/sites-available/mintradar.org.conf`,
-  `sudo nginx -t`, `sudo systemctl reload nginx`, then `curl -sI https://mintradar.org/og-image.png | grep -i cache-control`;
+  (no `expires` here — it would add a second `Cache-Control`). Steps: the owner edits the live file on the server, tests the config and reloads nginx (private runbook),
+  then `curl -sI https://mintradar.org/og-image.png | grep -i cache-control`;
   mirror the block in `deploy/nginx.conf` (the daily drift check compares the two).
 
 ## Dimmed states (offline cards) — no whole-card opacity (2026-10-02)
