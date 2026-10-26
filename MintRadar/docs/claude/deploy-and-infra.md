@@ -29,7 +29,7 @@
 
 ## Gitea remote (2026-10-12)
 
-- `origin` (GitHub) is the source of truth; local `main` tracks `origin/main`. Gitea is a push-only copy on a LAN host (`aqua-twitter.local`, may not resolve on VPN).
+- `origin` (GitHub) is the source of truth; local `main` tracks `origin/main`. Gitea is a push-only copy on a private Gitea mirror (may not resolve on VPN).
 - Push with one command from one sha: `git push origin main && git push gitea main`.
 - **NEVER run `git pull`, `git rebase` or `git merge` from gitea.** Alternating `pull --rebase origin` / `pull --rebase gitea` on 2026-10-10 rewrote hashes and made the two remotes diverge (5 commits with patch-identical twins under different hashes).
 - If the push to gitea is rejected or the host is unreachable: report it and STOP (no rebase, merge or force).
