@@ -476,3 +476,16 @@ Moved verbatim from the former "Key features" block of CLAUDE.md. Section names 
 - Wallets: curated list, `src/constants/wallets.ts`. Main grid = 8 end-user wallets (Minibits, Nutstash, Macadamia, Sovran, Cashu.me, Agicash, Coinos, Zeus). **Nutshell** carries `selfHost: true` and renders in a separate **"Run your own mint"** subsection below the grid (2026-09-08 — it's the reference implementation, not a consumer wallet). Card head: platform icon on the left + `.wallet-platform-tag` chips on the right only (the duplicate standalone platform word was removed). `Agicash` was renamed from `Boardwalk Cash`; `eNuts` was removed. No documented inclusion criteria beyond maintainer judgment.
 - Nostr: NIP-07 login, profile fetch (kind:0), reviews (kind:38000), server-sent DM notifications (opt-in pills), watchlist sync (NIP-44 kind:10003)
 - Learn: educational modules under `src/pages/learn/` (`LearnModule.tsx` router, `LEARN_MODULES` metadata). Slugs: `cashu-basics`, `understanding-the-risks`, `how-to-choose-a-mint`, `getting-started-with-a-wallet`, `safe-habits`. **`/learn/1`…`/learn/5` `<Navigate replace>` to the slug** (matched by `.order`); any other number or unknown slug → "Module not found". Footer nav: `← Previous`, `Next: {title}` for middle modules, **"Browse mints" → `/`** on the last module; "← Back to Learn" kept. Module 4/5 also carry their own in-content CTA `Link` (Module 4 → `/wallets`, Module 5 → `/watchlist`).
+
+## Watchlist Persistence (moved from CLAUDE.md, C3-7)
+
+**Rule:** Logout MUST call `resetInMemory()`, NOT `clearWatchlist()`. Dexie must survive logout.
+
+**Why:** `fetchRemoteWatchlist()` returns `[]` when `window.nostr?.nip44` is unavailable (nsec login, older extensions, relay timeout). If Dexie was cleared on logout and the relay returns empty, the watchlist is permanently lost.
+
+**Implementation:**
+- Dexie `meta` table (version 2): stores `{ key: 'watchlistOwner', value: pubkeyHex }` after every successful sync
+- `useWatchlistSync` Phase 1: reads `watchlistOwner` before fetching remote
+  - Same pubkey → Dexie preserved as fallback if remote returns `[]`
+  - Different pubkey → Dexie cleared (different user on same device), then load from remote
+- `handleLogout` in `AppShell.tsx` calls `resetInMemory()` (in-memory Zustand reset only)

@@ -91,17 +91,7 @@ Three methods (NIP-07, nsec, Amber/NIP-46 bunker) in the login modal of `AppShel
 `sessionStorage` (Zustand persist) stores only the public `NostrProfile` `{ pubkey, npub, name, picture }` — no private key material is ever written to any storage API. For nsec logins the raw key is held in JS memory only (see above), which is a deliberate trade-off (enables signing) — do not add any persistence for it without re-confirming with the maintainer, since that would defeat the "in-memory only, lost on reload" guarantee.
 
 ## Watchlist Persistence
-
-**Rule:** Logout MUST call `resetInMemory()`, NOT `clearWatchlist()`. Dexie must survive logout.
-
-**Why:** `fetchRemoteWatchlist()` returns `[]` when `window.nostr?.nip44` is unavailable (nsec login, older extensions, relay timeout). If Dexie was cleared on logout and the relay returns empty, the watchlist is permanently lost.
-
-**Implementation:**
-- Dexie `meta` table (version 2): stores `{ key: 'watchlistOwner', value: pubkeyHex }` after every successful sync
-- `useWatchlistSync` Phase 1: reads `watchlistOwner` before fetching remote
-  - Same pubkey → Dexie preserved as fallback if remote returns `[]`
-  - Different pubkey → Dexie cleared (different user on same device), then load from remote
-- `handleLogout` in `AppShell.tsx` calls `resetInMemory()` (in-memory Zustand reset only)
+**Rule:** Logout MUST call `resetInMemory()`, NOT `clearWatchlist()`; Dexie must survive logout (a cleared Dexie plus an empty relay answer would lose the watchlist for good). Why and implementation: `docs/claude/stats-dashboard-watchlist-ui.md` ("Watchlist Persistence").
 
 ## Testing Infrastructure
 
