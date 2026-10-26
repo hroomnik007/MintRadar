@@ -1,4 +1,4 @@
-// Helpers of the /for-wallets "On this page" navigation (components/DocToc.tsx).
+// Helpers of the /for-wallets and /methodology "On this page" navigation (components/DocToc.tsx).
 
 export interface HeadingTop { id: string; top: number }
 
