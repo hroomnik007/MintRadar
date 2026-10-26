@@ -40,6 +40,7 @@ import { isTestMint } from '@/constants/testMints'
 import { operatorPubkeys } from '@/utils/operatorPubkeys'
 import { cleanMintNameDetailed } from '@/utils/cleanMintName'
 import { formatKeysetFee, urlIsOnion, listHasOnion } from '@/utils/mintProbeDisplay'
+import { keysetExpiry, keysetExpiryMs } from '@/utils/keysetExpiry'
 import { auditComponent, auditDataState, auditAgeHours, isAuditUnknown, AUDIT_MIN_SAMPLES } from '@/utils/auditScore'
 import { auditFreshness, audit8333StaleLine } from '@/utils/auditFreshness'
 import { IcClose } from '@/components/IcClose'
@@ -1051,7 +1052,10 @@ function MintDetailContent({ url }: { url: string }) {
   const liveKeysets = data?.keysets ?? null
   // A mint that is not online has no live keysets: show the last known ones, labelled with their check date.
   const lastKnownKeysets = unavailable && (!liveKeysets || liveKeysets.length === 0) && knownMint?.lastKeysets && knownMint.lastKeysets.length > 0 && knownMint.lastKeysetsCheckedAt
-    ? knownMint.lastKeysets.map(k => ({ id: k.id, unit: k.unit, active: k.active, ...(k.inputFeePpk !== null ? { input_fee_ppk: k.inputFeePpk } : {}) }))
+    ? knownMint.lastKeysets.map(k => {
+        const expiryMs = keysetExpiryMs(k.finalExpiry)
+        return { id: k.id, unit: k.unit, active: k.active, ...(k.inputFeePpk !== null ? { input_fee_ppk: k.inputFeePpk } : {}), ...(expiryMs !== null ? { final_expiry: expiryMs / 1000 } : {}) }
+      })
     : null
   // The Fees and limits group computes its examples from the same keysets (a missing fee stays unknown, not 0).
   const feeKeysets = (lastKnownKeysets ?? liveKeysets)?.map(k => ({ unit: k.unit, active: k.active, inputFeePpk: typeof k.input_fee_ppk === 'number' ? k.input_fee_ppk : null })) ?? null
@@ -1111,10 +1115,13 @@ function MintDetailContent({ url }: { url: string }) {
                 {(() => {
                   const d = keysetDates(ks.id, ks.active, mintChanges, now)
                   const p = keysetPending(ks.id, mintChanges, now)
-                  if (!d && !p) return null
+                  // Only when the mint states a final expiry; highlighted under 30 days or once past.
+                  const x = keysetExpiry(ks.final_expiry, now)
+                  if (!d && !p && !x) return null
                   return (
                     <div className="md-keyset-dates" data-testid="keyset-dates">
                       {d && <span className="md-chg-date" title={d.title}>{d.text}</span>}
+                      {x && <span className={`md-chg-date md-keyset-expiry${x.soon ? ' md-keyset-expiry--soon' : ''}`} data-testid="keyset-expiry" title={x.title}>{x.text}</span>}
                       {p && <PendingTag mark={p} />}
                     </div>
                   )

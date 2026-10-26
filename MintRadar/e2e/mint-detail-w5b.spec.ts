@@ -182,6 +182,21 @@ test.describe('W5b C: a mint that is not online', () => {
     await open(page, GONE, { ...UNAVAILABLE.offline, lastKeysets: [], lastKeysetsCheckedAt: null, lastError: 'Mint unreachable' }, { probeOffline: true })
     await expect(page.locator('.md-keysets-at-overview')).toContainText('Keyset data not available.')
   })
+
+  test('the stored keysets carry their final expiry (ISO) into the row', async ({ page }) => {
+    await open(page, GONE, {
+      ...UNAVAILABLE.offline, lastError: 'Mint unreachable', lastKeysetsCheckedAt: ago(9 * D),
+      lastKeysets: [
+        { id: '00ad268c4d1f5826', unit: 'sat', active: true, inputFeePpk: 100, finalExpiry: new Date(Date.now() + 10 * D).toISOString() },
+        { id: '00ad268c4d1f5827', unit: 'sat', active: true, inputFeePpk: 100, finalExpiry: null },
+      ],
+    }, { probeOffline: true })
+    const rows = page.locator('.md-keysets-at-overview .md-keyset-row')
+    await expect(rows).toHaveCount(2)
+    await expect(rows.nth(0).getByTestId('keyset-expiry')).toHaveText(/^Expires \d{1,2} [A-Z][a-z]{2} \d{4}$/)
+    await expect(rows.nth(0).getByTestId('keyset-expiry')).toHaveClass(/md-keyset-expiry--soon/)
+    await expect(rows.nth(1).getByTestId('keyset-expiry')).toHaveCount(0)
+  })
 })
 
 test.describe('W5b D: Signed health record', () => {

@@ -22,6 +22,8 @@ export interface MintKeyset {
   unit: string
   active: boolean
   input_fee_ppk?: number
+  /** NUT-02 final expiry, UNIX seconds, as the mint states it (unvalidated; read it with utils/keysetExpiry.ts). */
+  final_expiry?: number | null
 }
 
 export interface MintStatus {

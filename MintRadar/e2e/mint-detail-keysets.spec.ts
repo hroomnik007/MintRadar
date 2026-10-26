@@ -235,3 +235,53 @@ test.describe('Mint Detail — Keysets fold (inactive keysets)', () => {
   })
 
 })
+
+test.describe('Mint Detail — Keyset final expiry', () => {
+  const DAY_S = 86_400
+  const nowS = () => Math.floor(Date.now() / 1000)
+
+  test('shown only when the mint sets it; amber under 30 days and once past', async ({ page }) => {
+    const ks = [
+      { id: '00aa000000000001', unit: 'sat', active: true, input_fee_ppk: 0, final_expiry: nowS() + 10 * DAY_S },
+      { id: '00aa000000000002', unit: 'sat', active: true, input_fee_ppk: 0, final_expiry: nowS() + 180 * DAY_S },
+      { id: '00aa000000000003', unit: 'usd', active: true, input_fee_ppk: 0 },
+      { id: '00aa000000000004', unit: 'sat', active: true, input_fee_ppk: 0, final_expiry: null },
+      { id: '00aa000000000005', unit: 'sat', active: false, input_fee_ppk: 0, final_expiry: nowS() - 3 * DAY_S },
+    ]
+    await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(ks) }))
+    await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
+    const panel = page.locator('.md-keysets-at-overview')
+    await panel.getByRole('button', { name: 'Show 1 inactive keyset' }).click()
+    const rows = panel.locator('.md-keyset-row')
+    await expect(rows).toHaveCount(5)
+
+    const soon = rows.nth(0).getByTestId('keyset-expiry')
+    await expect(soon).toHaveText(/^Expires \d{1,2} [A-Z][a-z]{2} \d{4}$/)
+    await expect(soon).toHaveClass(/md-keyset-expiry--soon/)
+    await expect(soon).toHaveAttribute('title', /\(your time\) · .* UTC$/)
+    // the amber token (--amber: #d3a446), not the muted date colour
+    await expect(soon).toHaveCSS('color', 'rgb(211, 164, 70)')
+
+    const later = rows.nth(1).getByTestId('keyset-expiry')
+    await expect(later).toHaveText(/^Expires /)
+    await expect(later).not.toHaveClass(/md-keyset-expiry--soon/)
+    const muted = await rows.nth(1).locator('.md-chg-date').first().evaluate(e => getComputedStyle(e).color)
+    expect(await later.evaluate(e => getComputedStyle(e).color)).toBe(muted)
+
+    await expect(rows.nth(2).getByTestId('keyset-expiry')).toHaveCount(0)
+    await expect(rows.nth(3).getByTestId('keyset-expiry')).toHaveCount(0)
+
+    const past = rows.nth(4).getByTestId('keyset-expiry')
+    await expect(past).toHaveText(/^Expired /)
+    await expect(past).toHaveClass(/md-keyset-expiry--soon/)
+    await expect(past).toHaveCSS('color', 'rgb(211, 164, 70)')
+  })
+
+  test('a mint without any expiry renders no expiry line and no dates line', async ({ page }) => {
+    await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(KS) }))
+    await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
+    const panel = page.locator('.md-keysets-at-overview')
+    await expect(panel.locator('.md-keyset-row')).toHaveCount(2)
+    await expect(panel.getByTestId('keyset-expiry')).toHaveCount(0)
+  })
+})

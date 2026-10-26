@@ -2777,6 +2777,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-chg-pending { display: inline-block; font-size: 12px; line-height: 1.4; color: var(--text3); border: 1px dashed var(--border2); border-radius: 5px; padding: 0 6px; overflow-wrap: anywhere; }
 .md-keyset-dates, .md-info-dates, .md-fee-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
 .md-keyset-dates { flex-basis: 100%; }
+/* A keyset's final expiry (only when the mint states one, utils/keysetExpiry.ts): amber when under 30 days or past. */
+.md-keyset-expiry--soon { color: var(--amber); font-weight: 600; }
 .md-info-row:has(> .md-info-dates) { flex-wrap: wrap; }
 .md-info-row > .md-info-dates { flex-basis: 100%; justify-content: flex-end; }
 .md-motd-dates { margin-top: 6px; }

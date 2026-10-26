@@ -80,7 +80,7 @@ export interface KnownMint {
   /** Only for a mint that is not online (null/[] otherwise): start of the current offline streak, and the keysets of
    *  the last successful keysets check with its time (Mint Detail's "unavailable" block). */
   offlineSince?: string | null
-  lastKeysets?: { id: string; unit: string; active: boolean; inputFeePpk: number | null }[]
+  lastKeysets?: { id: string; unit: string; active: boolean; inputFeePpk: number | null; finalExpiry?: string | null }[]
   lastKeysetsCheckedAt?: string | null
   // NIP-87 review rollup, refreshed by the backend's 6h reviews sync
   // (backend/src/reviewsSync.ts). Null until that sync has run for the mint.
