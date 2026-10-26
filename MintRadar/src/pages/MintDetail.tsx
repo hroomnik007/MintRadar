@@ -1,7 +1,7 @@
 import { nip19 } from 'nostr-tools'
 import { njumpProfileUrl, njumpEventUrl, npubFromPubkey, mintAnnounceNaddr } from '@/utils/nostrLinks'
 import { useParams, useNavigate, Navigate, Link } from 'react-router-dom'
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, useMemo, useCallback, lazy, Suspense, type CSSProperties } from 'react'
+import { Fragment, useEffect, useState, useMemo, useCallback, lazy, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
@@ -36,7 +36,6 @@ import { MintComparePicker } from '@/components/MintComparePicker'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { MintNetworkCard } from '@/components/MintNetworkCard'
 import { networkRows } from '@/utils/networkInfo'
-import { AuditCzTiles, AuditCzSwapTables, AuditStateText } from '@/components/AuditCzCards'
 import { supportedNutKeys } from '@/utils/nutSupport'
 import { formatDate, formatDateTimeUtc } from '@/utils/formatDate'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, UPTIME_PENDING_ARIA_LABEL, SCORE_PENDING_ARIA_LABEL, formatTimeAgo, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
@@ -49,7 +48,7 @@ import { auditComponent, auditDataState, auditAgeHours, isAuditUnknown, AUDIT_MI
 import { auditFreshness, audit8333StaleLine } from '@/utils/auditFreshness'
 import { IcClose } from '@/components/IcClose'
 import { useAuditCz } from '@/hooks/useAuditCz'
-import { adaptAuditCz, auditCzSyncNote, AUDIT_CZ_NEUTRAL_TITLE, type AuditSwapRow } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzSyncNote, type AuditSwapRow } from '@/utils/auditCz'
 import { sortUnits } from '@/utils/sortUnits'
 import {
   computeReliabilityScore as sharedComputeReliabilityScore,
@@ -64,15 +63,15 @@ import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLo
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
 import { ContactChecksLine } from '@/components/ContactChecksLine'
-import { auditSuccessText, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, swapStripText, swapStripLabel, showTorFor, contactsNotSavedYet, CONTACTS_NOT_SAVED_TEXT, type OutagesResponse } from '@/utils/mintDetailFacts'
+import { auditSuccessText, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, contactsNotSavedYet, CONTACTS_NOT_SAVED_TEXT, type OutagesResponse } from '@/utils/mintDetailFacts'
 import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
 import { LAST_SCORE_CAPTION, KEEP_WALLET_SENTENCE, TEMPORARY_SENTENCE, contactSentence, restoreSentence, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
 import { healthRecordFor, HEALTH_RELAY_URL } from '@/utils/healthRecord'
-import { AUDIT_SWAPS_WINDOW, AUDIT_WINDOW_DAYS } from '@/utils/tooltipTexts'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { NutsTab } from './mintDetail/NutsTab'
 import { HistoryTab } from './mintDetail/HistoryTab'
+import { AuditTab, AUDIT_SWAP_ROWS_DEFAULT } from './mintDetail/AuditTab'
 import { NUT_DESCRIPTIONS, type NutConfig } from './mintDetail/nutCatalog'
 import { reviewAvatarColor, avatarTextColor } from '@/utils/avatarColors'
 import './MintDetail.css'
@@ -128,62 +127,6 @@ function reviewPageList(current: number, total: number): (number | '…')[] {
   if (end < total - 1) out.push('…')
   out.push(total)
   return out
-}
-
-// The Audit tiles' ⓘ sits 3 px after the label (the trigger's hit-area padding is compensated by InfoTooltip.css).
-const TT_GAP_LEFT = { '--tt-ml': '3px' } as CSSProperties
-
-// ⓘ next to the "Audit stats" heading: the shared InfoTooltip with the audit explanation (or the given text). A local
-// component so the identical icon can be dropped into both the desktop header and the mobile heading.
-function AuditSourceInfoIcon({ text }: { text?: string }) {
-  return (
-    <InfoTooltip
-      className="md-audit-info"
-      iconSize={11}
-      width={230}
-      about="Audit stats"
-      text={text ?? 'These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked.'}
-    />
-  )
-}
-
-// The cashu.info sync note in the Audit stats header ("· synced 17 min ago" / "· not updated recently"). The time
-// looks like the "fetched 5 min ago" under Fees & limits (muted 12 px, dotted underline) and its tooltip gives the
-// exact sync time. When the note does not fit after the source ⓘ it wraps onto the next line and its leading "·" is
-// hidden: the dot keeps its place in the layout (so the note never jumps back up once the dot is gone) and the note
-// is shifted left by the dot's width with a transform, which does not change the layout, so the text starts at the
-// left edge of the line.
-function AuditSyncNote({ note, testId }: { note: { text: string; stale: boolean; tip: string | null }; testId: string }) {
-  const ref = useRef<HTMLSpanElement>(null)
-  const [wrapped, setWrapped] = useState(false)
-  useLayoutEffect(() => {
-    const el = ref.current
-    const row = el?.parentElement
-    const prev = el?.previousElementSibling as HTMLElement | null | undefined
-    const dot = el?.querySelector<HTMLElement>('.md-audit-sync-sep')
-    if (!el || !row || !prev || !dot) return
-    const check = () => {
-      const rowBox = row.getBoundingClientRect()
-      if (rowBox.width === 0) return // the other (hidden) header
-      const rowCs = getComputedStyle(row)
-      el.style.setProperty('--md-sync-sep', `${dot.getBoundingClientRect().width}px`)
-      const prevRight = prev.getBoundingClientRect().right + (parseFloat(getComputedStyle(prev).marginRight) || 0)
-      const free = rowBox.right - (parseFloat(rowCs.paddingRight) || 0) - (parseFloat(rowCs.borderRightWidth) || 0) - prevRight - (parseFloat(rowCs.columnGap) || 0)
-      setWrapped(el.getBoundingClientRect().width > free + 0.5)
-    }
-    check()
-    const ro = new ResizeObserver(check)
-    ro.observe(row)
-    return () => ro.disconnect()
-  }, [note.text])
-  return (
-    <span ref={ref} className={`md-audit-sync${note.stale ? ' md-audit-sync-stale' : ''}${wrapped ? ' md-audit-sync-wrapped' : ''}`} data-testid={testId}>
-      <span className="md-audit-sync-sep" aria-hidden={wrapped || undefined}>·{' '}</span>
-      {note.tip
-        ? <InfoTooltip className="md-audit-sync-time" width={230} text={note.tip}>{note.text}</InfoTooltip>
-        : <span>{note.text}</span>}
-    </span>
-  )
 }
 
 interface MergedReviewCandidate {
@@ -1056,7 +999,6 @@ function MintDetailContent({ url }: { url: string }) {
   // this same array so they can never disagree.
   const auditSwaps: AuditSwapRow[] = auditSwapsData?.swaps ?? []
   const AUDIT_SWAP_BAR_MAX = 44
-  const AUDIT_SWAP_ROWS_DEFAULT = 8
   // cashu.info view: the bar shows the stored swaps of both directions together.
   const auditSwapBarItems = (czView ? czView.swaps : auditSwaps).slice(0, AUDIT_SWAP_BAR_MAX)
   const auditRecentSwapRows = showAllAuditSwaps ? auditSwaps : auditSwaps.slice(0, AUDIT_SWAP_ROWS_DEFAULT)
@@ -1964,189 +1906,40 @@ function MintDetailContent({ url }: { url: string }) {
             />
           )}
 
-          {activeTab === 'audit' && (<>
-            {auditCzLoading ? (
-              <div className="md-audit-loading" style={{fontSize:12.5,color:'var(--text3)',fontFamily:'var(--font-mono)'}} role="status">Loading audit data…</div>
-            ) : (czView !== null || has8333Audit) ? (
-              <div className="md-panel md-audit-collapsible" style={{background:'var(--bg)'}}>
-                {/* Desktop heading (the mobile collapse toggle below is display:none here). */}
-                <div className="md-audit-header md-audit-header-main">
-                  <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
-                  <span className="md-audit-via">· via {czView ? 'cashu.info' : 'audit.8333.space'}</span>
-                  <AuditSourceInfoIcon {...(czInfoText ? { text: czInfoText } : {})} />
-                  {czSyncNote && <AuditSyncNote note={czSyncNote} testId="audit-cz-sync" />}
-                  {auditSwitch}
-                </div>
-                {/* Mobile heading (mirrors the desktop one above; the collapse
-                    toggle was removed once the Audit tab lost its collapsible body). */}
-                <div className="md-audit-toggle">
-                  <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
-                  <span className="md-audit-via">· via {czView ? 'cashu.info' : 'audit.8333.space'}</span>
-                  <AuditSourceInfoIcon {...(czInfoText ? { text: czInfoText } : {})} />
-                  {czSyncNote && <AuditSyncNote note={czSyncNote} testId="audit-cz-sync-mobile" />}
-                  {auditSwitch}
-                </div>
-
-                {!czView && audit8333Stale && <p className="audit-cz-muted">{audit8333Stale}</p>}
-                {!czView && <p className="audit-cz-muted">{czData !== null
-                  ? `The Reliability Score uses cashu.info's last ${AUDIT_WINDOW_DAYS} days; this view shows audit.8333.space's last ~${AUDIT_SWAPS_WINDOW} swaps.`
-                  : `This view shows audit.8333.space's last ~${AUDIT_SWAPS_WINDOW} swaps; the Reliability Score does not use it.`}</p>}
-                {czView ? <AuditCzTiles view={czView} /> : (<>
-                {/* 5-second overview — always visible, never inside the mobile
-                    collapse. Mints/Melts are audit.8333.space lifetime counts;
-                    Recent success rate is the rolling ~100-swap window; Last
-                    checked is OUR 6h cron's write time (auditSyncedAt). */}
-                <div className="audit-summary-strip">
-                  <div className="audit-summary-cell">
-                    <div className="audit-summary-value" style={{color:'var(--accent)'}}>{stripMints === null ? '—' : stripMints.toLocaleString()}</div>
-                    <div className="audit-summary-label">
-                      Mints
-                      <InfoTooltip iconSize={11} width={180} about="Mints" style={TT_GAP_LEFT} text={tipMints} />
-                    </div>
-                  </div>
-                  <div className="audit-summary-cell">
-                    <div className="audit-summary-value" style={{color:'var(--accent)'}}>{stripMelts === null ? '—' : stripMelts.toLocaleString()}</div>
-                    <div className="audit-summary-label">
-                      Melts
-                      <InfoTooltip iconSize={11} width={180} about="Melts" style={TT_GAP_LEFT} text={tipMelts} />
-                    </div>
-                  </div>
-                  <div className="audit-summary-cell">
-                    <div className="audit-summary-value" style={{color: stripReliabilityColor}}>
-                      {stripRecentSuccessDisplay !== '—' && (
-                        <>
-                          <span className="audit-summary-main">{stripRecentSuccessDisplay}</span>
-                          <span className="audit-summary-dot">·</span>
-                        </>
-                      )}
-                      <span className="audit-summary-sub">{stripRecentSuccessSub}</span>
-                    </div>
-                    <div className="audit-summary-label">
-                      Recent success rate
-                      <InfoTooltip iconSize={11} width={180} about="Recent success rate" style={TT_GAP_LEFT} text={tipSuccess} />
-                    </div>
-                  </div>
-                  <div className="audit-summary-cell">
-                    <div className="audit-summary-value" style={{fontSize:15}}>{stripAvgTimeDisplay}</div>
-                    <div className="audit-summary-label">
-                      Avg swap time
-                      <InfoTooltip iconSize={11} width={180} about="Avg swap time" style={TT_GAP_LEFT} text={tipAvg} />
-                    </div>
-                  </div>
-                </div>
-                </>)}
-
-                {/* Outcome bar — last ≤44 swaps, newest left (the backend
-                    already orders by created_at DESC, so no client-side
-                    reverse is needed). Nothing renders here until the swap
-                    fetch actually resolves with data — never a fake/empty bar. */}
-                {czView && auditSwapBarItems.length > 0 && (
-                  <div className="audit-cz-muted audit-swap-bar-label" data-testid="audit-swap-bar-caption">
-                    {swapStripLabel(auditSwapBarItems.length)}
-                    <InfoTooltip iconSize={12} width={300} label="About the swap strip" style={TT_GAP_LEFT} text={swapStripText(auditSwapBarItems.length)} />
-                  </div>
-                )}
-                {auditSwapBarItems.length > 0 && (
-                  <div className={`audit-swap-bar${czView ? ' audit-swap-bar-labelled' : ''}`} title="Last swaps, newest first">
-                    {auditSwapBarItems.map(s => (
-                      <div
-                        key={s.swapId}
-                        className={`audit-swap-bar-mark ${s.state === 'OK' ? 'audit-swap-bar-ok' : s.neutral ? 'audit-swap-bar-neutral' : 'audit-swap-bar-fail'}`}
-                        title={s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TITLE[s.neutral] : `${s.state}${s.stage ? ` (${s.stage})` : ''}${s.createdAt ? ` · ${formatDateTimeUtc(s.createdAt)}` : ''}`}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {czView ? (<>
-                  <AuditCzSwapTables view={czView} expandedFrom={showAllCzFrom} expandedTo={showAllCzTo} onToggleFrom={() => setShowAllCzFrom(v => !v)} onToggleTo={() => setShowAllCzTo(v => !v)} />
-                </>) : (<>
-                {/* Recent swaps — last 8, newest first. Failed rows are muted red. */}
-                {auditRecentSwapRows.length > 0 && (
-                  <div className="audit-recent-swaps">
-                    <div className="audit-recent-swaps-title">Recent swaps</div>
-                    <div className="audit-swaps-table-wrap" tabIndex={0} role="group" aria-label="Recent swaps (scrollable)">
-                      <table className="audit-swaps-table">
-                        <thead>
-                          <tr>
-                            <th>To</th>
-                            <th>Amount</th>
-                            <th>Fee</th>
-                            <th>Duration</th>
-                            <th>State</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {auditRecentSwapRows.map(s => (
-                            <tr key={s.swapId} className={s.state === 'OK' ? '' : s.neutral ? 'audit-swap-row-neutral' : 'audit-swap-row-fail'} {...(s.neutral === 'limits' || s.neutral === 'balance' ? { title: AUDIT_CZ_NEUTRAL_TITLE[s.neutral] } : {})}>
-                              <td>{s.counterpart ?? (s.toUrl ? mintHostname(s.toUrl) : '—')}</td>
-                              <td>{s.amount !== null ? `${s.amount} sat` : '—'}</td>
-                              <td>{s.fee !== null ? s.fee : '—'}</td>
-                              <td>{s.timeTakenMs !== null ? `${Math.round(s.timeTakenMs)} ms` : '—'}</td>
-                              {/* cz rows that are not OK: the failure text as tooltip and as visually hidden text (a title is not available on touch or to screen readers). Plain text only. */}
-                              <td>
-                                <AuditStateText row={s} />
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    {auditSwaps.length > AUDIT_SWAP_ROWS_DEFAULT && (
-                      <button
-                        type="button"
-                        className="audit-swaps-show-all-btn"
-                        onClick={() => setShowAllAuditSwaps(v => !v)}
-                      >
-                        {showAllAuditSwaps ? 'Show fewer' : `Show all (${auditSwaps.length})`}
-                      </button>
-                    )}
-                  </div>
-                )}
-                {!czView && auditSwapsLoading && auditSwaps.length === 0 && (
-                  <div style={{fontSize:12.5,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:4}}>Loading recent swaps…</div>
-                )}
-                {!czView && auditSwapsError && (
-                  <div className="audit-swaps-error-banner" role="status">
-                    Couldn't load recent swaps
-                    <button type="button" className="audit-swaps-retry-btn" onClick={() => void refetchAuditSwaps()}>
-                      Retry
-                    </button>
-                  </div>
-                )}
-                </>)}
-
-                {czView ? (czView.sourceHref && (
-                  <a
-                    href={czView.sourceHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="audit-external-link"
-                  >
-                    Open on cashu.info →
-                  </a>
-                )) : (
-                <a
-                  href="https://audit.8333.space/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="audit-external-link"
-                >
-                  Open on audit.8333.space →
-                </a>
-                )}
-              </div>
-            ) : (
-              <div className="md-panel">
-                <div className="md-audit-header">
-                  <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
-                  <span className="md-audit-via">· via audit.8333.space</span>
-                  <AuditSourceInfoIcon />
-                </div>
-                <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>No audit data available for this mint.</div>
-              </div>
-            )}
-          </>)}
+          {activeTab === 'audit' && (
+            <AuditTab
+              auditCzLoading={auditCzLoading}
+              czView={czView}
+              has8333Audit={has8333Audit}
+              czInfoText={czInfoText}
+              czSyncNote={czSyncNote}
+              auditSwitch={auditSwitch}
+              audit8333Stale={audit8333Stale}
+              czData={czData}
+              stripMints={stripMints}
+              stripMelts={stripMelts}
+              stripReliabilityColor={stripReliabilityColor}
+              stripRecentSuccessDisplay={stripRecentSuccessDisplay}
+              stripRecentSuccessSub={stripRecentSuccessSub}
+              stripAvgTimeDisplay={stripAvgTimeDisplay}
+              tipMints={tipMints}
+              tipMelts={tipMelts}
+              tipSuccess={tipSuccess}
+              tipAvg={tipAvg}
+              auditSwapBarItems={auditSwapBarItems}
+              auditRecentSwapRows={auditRecentSwapRows}
+              auditSwaps={auditSwaps}
+              showAllAuditSwaps={showAllAuditSwaps}
+              setShowAllAuditSwaps={setShowAllAuditSwaps}
+              showAllCzFrom={showAllCzFrom}
+              showAllCzTo={showAllCzTo}
+              setShowAllCzFrom={setShowAllCzFrom}
+              setShowAllCzTo={setShowAllCzTo}
+              auditSwapsLoading={auditSwapsLoading}
+              auditSwapsError={auditSwapsError}
+              refetchAuditSwaps={refetchAuditSwaps}
+            />
+          )}
 
           {activeTab === 'reviews' && (
             <div className="md-panel">
