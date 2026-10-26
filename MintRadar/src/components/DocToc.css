@@ -1,4 +1,4 @@
-/* "On this page" of /for-wallets (DocToc.tsx). Builds on .about-toc (pages/About.css): the sticky column on
+/* "On this page" of /for-wallets and /methodology (DocToc.tsx). Builds on .about-toc (pages/About.css): the sticky column on
    wide screens and the sticky row of pills up to 900px stay as they are; this adds the current-section mark
    and, at ≤640px, folds the pills behind one button. */
 .doc-toc-toggle { display: none; }

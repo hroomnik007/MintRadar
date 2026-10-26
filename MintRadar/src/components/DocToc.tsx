@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { activeSectionId, tocScrollBehavior } from '@/utils/docToc'
 import './DocToc.css'
 
-// "On this page" of a long doc page (/for-wallets). Same look as the About / Methodology list (.about-toc), plus:
+// "On this page" of a long doc page (/for-wallets, /methodology). Same look as the About list (.about-toc), plus:
 // - the current section is marked (aria-current="location"),
 // - a click scrolls smoothly (instantly with prefers-reduced-motion) and moves focus to the section heading,
 // - on phones (≤640px) the sticky list folds into one "On this page" button, so it no longer covers a quarter
