@@ -407,11 +407,45 @@ for (const width of [340, 360, 375, 412, 414, 428]) {
   }
 }
 
+// The ↗ (Cashu.me) and ⇆ (Compare) icons are text glyphs outside the bundled DM Sans subsets, so they render in
+// the OS fallback font (DejaVu Sans on Linux, another font on macOS) and their advance differs by 1–2px between
+// machines. The boxes below were recorded with the glyph widths in HERO_GLYPHS_RECORDED; the test measures the
+// glyphs on the machine it runs on and shifts the expected boxes by exactly that difference, using the row's own
+// layout rule, so the 0.05px tolerance stays and nothing else about the boxes is relaxed.
+const HERO_GLYPHS_RECORDED: Record<number, [cashu: number, compare: number]> = {
+  420: [9, 12],
+  1440: [10, 13],
+}
+// Natural (unshrunk) advance of each decorative glyph icon at its own computed font, measured in a hidden probe.
+const heroGlyphWidths = (page: Page) => page.evaluate(() =>
+  [...document.querySelectorAll('.md-quick-btn > span[aria-hidden="true"], .md-compare-btn > span[aria-hidden="true"]')].map(icon => {
+    const cs = getComputedStyle(icon)
+    const probe = document.createElement('span')
+    Object.assign(probe.style, { position: 'absolute', visibility: 'hidden', whiteSpace: 'nowrap', font: cs.font, letterSpacing: cs.letterSpacing })
+    probe.textContent = icon.textContent
+    document.body.appendChild(probe)
+    const w = probe.getBoundingClientRect().width
+    probe.remove()
+    return w
+  }))
 // Boxes recorded from the code BEFORE the text-only change (x, width, height; the fixture's plain mint).
 const HERO_BOXES: Record<number, { left: number; width: number; height: number }[]> = {
   // 420: re-recorded 2026-10-20 after the 12px phone text floor (the buttons were 11px: 79.66 wide).
   420: [{ left: 79, width: 84.66, height: 28 }, { left: 169.66, width: 84.67, height: 28 }, { left: 260.33, width: 84.67, height: 28 }],
   1440: [{ left: 905, width: 93, height: 31 }, { left: 1006, width: 156, height: 31 }, { left: 1170, width: 103, height: 31 }],
+}
+// Expected boxes for this machine's glyph widths. 420 (≤640px): the row is three equal flex thirds whose total
+// follows its content, so a glyph difference is shared equally. 1440: buttons are content-sized and right-aligned,
+// so a button grows by its own glyph difference and moves left by the growth of itself and every button after it.
+const expectedHeroBoxes = (width: number, glyphs: number[]) => {
+  const [rc, rk] = HERO_GLYPHS_RECORDED[width]!
+  const d = [0, glyphs[0]! - rc, glyphs[1]! - rk]
+  const rec = HERO_BOXES[width]!
+  if (width <= 640) {
+    const share = (d[1]! + d[2]!) / 3
+    return rec.map((b, i) => ({ ...b, left: b.left + i * share, width: b.width + share }))
+  }
+  return rec.map((b, i) => ({ ...b, left: b.left - d.slice(i).reduce((a, x) => a + x, 0), width: b.width + d[i]! }))
 }
 for (const width of [420, 1440]) {
   test(`Mint Detail hero button boxes are unchanged @ ${width}px`, async ({ page }) => {
@@ -420,9 +454,12 @@ for (const width of [420, 1440]) {
     await expect(page.locator('.md-tabs')).toBeVisible()
     await settled(page)
     const btns = await heroButtons(page)
-    HERO_BOXES[width]!.forEach((want, i) => {
+    const glyphs = await heroGlyphWidths(page)
+    expect(btns).toHaveLength(3)
+    expect(glyphs).toHaveLength(2)
+    expectedHeroBoxes(width, glyphs).forEach((want, i) => {
       for (const k of ['left', 'width', 'height'] as const) {
-        expect(Math.abs(btns[i]![k] - want[k]), `${btns[i]!.label}.${k}`).toBeLessThanOrEqual(0.05)
+        expect(Math.abs(btns[i]![k] - want[k]), `${btns[i]!.label}.${k} (glyphs ${glyphs.join('/')}px)`).toBeLessThanOrEqual(0.05)
       }
     })
   })
@@ -513,12 +550,10 @@ for (const width of [320, 340, 360, 375, 390, 400, 412, 414]) {
   })
 }
 
-const HERO_ICON_WIDTHS: Record<number, number[]> = {
-  // 420 / 430: the Compare icon is 12 (was 11) since the 12px phone text floor.
-  420: [12, 9, 12],
-  430: [12, 9, 12],
-  1440: [12, 10, 13],
-}
+// Mint QR is a 12px SVG on every machine. The ↗ / ⇆ glyph icons come from the OS fallback font (see
+// HERO_GLYPHS_RECORDED), so they are checked against their own natural width on this machine: rendered at full
+// size means not flex-shrunk, which is what this test guards.
+const HERO_QR_ICON = 12
 for (const width of [420, 430, 1440]) {
   test(`Mint Detail hero icons keep their size @ ${width}px`, async ({ page }) => {
     const { url } = await mount(page, {}, { width })
@@ -526,9 +561,14 @@ for (const width of [420, 430, 1440]) {
     await expect(page.locator('.md-tabs')).toBeVisible()
     await settled(page)
     const icons = await heroIcons(page)
+    const glyphs = await heroGlyphWidths(page)
+    expect(icons).toHaveLength(3)
+    expect(glyphs).toHaveLength(2)
+    const want = [HERO_QR_ICON, ...glyphs]
     icons.forEach((ic, i) => {
       expect(ic.display).not.toBe('none')
-      expect(Math.abs(ic.width - HERO_ICON_WIDTHS[width]![i]!), `icon ${i}`).toBeLessThanOrEqual(0.3)
+      expect(want[i]!, `icon ${i} natural width`).toBeGreaterThan(5)
+      expect(Math.abs(ic.width - want[i]!), `icon ${i}: ${ic.width}px, natural ${want[i]}px`).toBeLessThanOrEqual(0.3)
     })
   })
 }

@@ -5,11 +5,25 @@
 // Privacy: only method + info that the mint itself publishes in /v1/info. Same caps and sanitization
 // as contact checks (max 10 entries, value length limited, control characters stripped). No history.
 
-import { CONTACT_CHECK_MAX_ENTRIES, CONTACT_CHECK_VALUE_MAX, kindOf } from './contactChecks.js'
+import { CONTACT_CHECK_MAX_ENTRIES, CONTACT_CHECK_VALUE_MAX } from './contactChecks.js'
 
 export interface LastContact {
   method: string
   info: string
+}
+
+/** C0 (U+0000–U+001F), DEL and C1 (U+007F–U+009F) control characters. */
+function isControlChar(code: number): boolean {
+  return code <= 0x1f || (code >= 0x7f && code <= 0x9f)
+}
+
+/** Remove control characters (same set as the former /[\u0000-\u001f\u007f-\u009f]/g). */
+function stripControlChars(s: string): string {
+  let out = ''
+  for (let i = 0; i < s.length; i++) {
+    if (!isControlChar(s.charCodeAt(i))) out += s[i]
+  }
+  return out
 }
 
 /** Extract and sanitize NUT-06 contact entries. Max 10, info truncated, control chars stripped. */
@@ -23,7 +37,7 @@ export function extractLastContacts(raw: unknown): LastContact[] {
     if (!method) continue
     const infoRaw = typeof rec['info'] === 'string' ? rec['info'] : ''
     // Strip control characters, then truncate. Empty after strip is skipped.
-    const info = infoRaw.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').trim().slice(0, CONTACT_CHECK_VALUE_MAX)
+    const info = stripControlChars(infoRaw).trim().slice(0, CONTACT_CHECK_VALUE_MAX)
     if (!info) continue
     out.push({ method, info })
   }

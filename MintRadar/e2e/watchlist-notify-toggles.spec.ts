@@ -211,10 +211,17 @@ test.describe('Watchlist notification toggles', () => {
   test('filled and outline states differ in background and border; widths are identical in every state', async ({ page }) => {
     const api = await mockNotifyApi(page)
     await openWatchlist(page, { seed: [{ url: BRAVO, down: true, up: true, confirmed: true }] })
-    const style = (loc: ReturnType<typeof down>) => loc.evaluate(el => {
+    // .notify-pill transitions background/border/color, so a pill that just switched state reports an in-between
+    // (at first still transparent) colour. Read the settled state: wait for the pressed state, then for any
+    // running transition on the pill to finish.
+    const style = (loc: ReturnType<typeof down>) => loc.evaluate(async el => {
+      await Promise.all(el.getAnimations().map(a => a.finished))
       const cs = getComputedStyle(el)
       return { bg: cs.backgroundColor, border: cs.borderTopColor, width: el.getBoundingClientRect().width, height: el.getBoundingClientRect().height }
     })
+    await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
+    await expect(down(page, BRAVO)).toHaveAttribute('aria-pressed', 'true')
+    await expect(up(page, BRAVO)).toHaveAttribute('aria-pressed', 'true')
     const off = await style(down(page, ALPHA))
     const on = await style(down(page, BRAVO))
     expect(on.bg).not.toBe(off.bg)
