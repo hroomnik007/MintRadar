@@ -90,20 +90,9 @@ this (separate npm package, no workspace set up) — `backend/src/discovery.ts` 
 - Nostr: NIP-07 login, profile fetch (kind:0), reviews (kind:38000), server-sent DM notifications (opt-in pills), watchlist sync (NIP-44 kind:10003)
 - Learn: educational modules under `src/pages/learn/` (`LearnModule.tsx` router, `LEARN_MODULES` metadata). Slugs: `cashu-basics`, `understanding-the-risks`, `how-to-choose-a-mint`, `getting-started-with-a-wallet`, `safe-habits`. **`/learn/1`…`/learn/5` `<Navigate replace>` to the slug** (matched by `.order`); any other number or unknown slug → "Module not found". Footer nav: `← Previous`, `Next: {title}` for middle modules, **"Browse mints" → `/`** on the last module; "← Back to Learn" kept. Module 4/5 also carry their own in-content CTA `Link` (Module 4 → `/wallets`, Module 5 → `/watchlist`).
 
-## Deploy workflow (ALWAYS do all steps)
-See CLAUDE.local.md for $VPS_HOST, $VPS_USER, $VPS_REPO_PATH, $VPS_DIST_PATH values.
-
-Backend (only if backend changed):
-1. Commit + push local changes (stage only your own files — see "Git rules" below): git add <paths> && git commit -m "..." && git push origin main && git push gitea main
-2. On server pull + build: ssh $VPS_USER@$VPS_HOST "cd $VPS_REPO_PATH && git pull origin main && cd backend && npm run build"
-3. Rebuild + restart Docker image: ssh $VPS_USER@$VPS_HOST "cd $VPS_REPO_PATH && docker compose build backend && docker compose up -d backend"
-   NOTE: `docker compose restart` does NOT pick up code changes — always use `build` + `up -d`
-
-Frontend:
-4. Build frontend: npm run typecheck && npm run build
-5. Deploy: rsync -avz --delete dist/ $VPS_USER@$VPS_HOST:$VPS_DIST_PATH/
-6. Reload nginx: ssh $VPS_USER@$VPS_HOST "sudo systemctl reload nginx"
-7. Commit (same rules, see "Git rules" below): git add <paths> && git commit -m "type: description" && git push origin main && git push gitea main
+## Deploy workflow
+Deploys run in CI (`.github/workflows/deploy.yml`): a push to `main` first runs the backend and frontend unit tests (`test` job), then the `deploy` job (`needs: test`) updates the server checkout, rebuilds the backend image (`docker compose build --pull backend` + `up -d`), builds the frontend and copies `dist/` to the web root. There is no manual rsync or SSH step.
+Commit with the "Git rules" below, then `git push origin main && git push gitea main` and check the CI result. Details, nginx (applied by hand) and server notes: `docs/claude/deploy-and-infra.md`.
 
 ## Git rules (several sessions can touch this checkout)
 
@@ -213,8 +202,8 @@ A change to the Reliability Score formula (component weights, the audit rule, th
 - A failed API call is never shown as a mint state (offline / unknown / "Not a tracked mint" / zero counts): show `LoadError` (`src/components/LoadError.tsx`, fixed text + Try again) instead; `docs/claude/stats-dashboard-watchlist-ui.md` ("Error states")
 - New tooltips use the `InfoTooltip` component (`src/components/InfoTooltip.tsx`) with a label or `about` — never a `title` attribute for an explanation and never a bespoke popup; contract and how to add one: `docs/claude/mobile-and-tooltips.md`
 - ALWAYS run typecheck before build — `npm run typecheck` is `tsc -b && npm run typecheck:e2e`: `tsc -b` covers the app (`src`) and node (`vite.config.ts`) projects, `typecheck:e2e` (`tsc -p tsconfig.e2e.json`, same strictness flags as `tsconfig.app.json`, `e2e/**/*.ts`) covers the Playwright specs and fixtures (noEmit, buildinfo gitignored). `npm run lint` is `eslint src e2e`. **`npm run build` (`tsc -b && vite build`) intentionally does NOT check e2e**, and `tsconfig.e2e.json` must never be added to the references in `tsconfig.json`: the server runs `npm run build` during a deploy, after the backend is already live, so a type error in a spec must not be able to fail the frontend step. A spec's types are checked locally (this rule) only. (`npm run typecheck` used to be `tsc --noEmit` on the root tsconfig, which has `files: []` and only references, so it checked 0 files — fixed 2026-10-03; e2e was added 2026-10-05.)
-- ALWAYS rsync dist after build
-- ALWAYS commit and push after deploy: `git push origin main && git push gitea main` (both remotes required)
+- Never rsync `dist/` by hand: CI deploys on push to `main`
+- ALWAYS push to both remotes: `git push origin main && git push gitea main`
 - Commit messages: a short imperative sentence. The prefixes the repository actually uses (`fix:`, `style:`, `feat:`, `test:`, `e2e:`, `docs:`, `chore:`) are allowed, not required.
 - Node 22 is required (`engines`, `.nvmrc`, Dockerfile, deploy workflow): Node 20 fails the frontend and backend unit suites with `webidl.util.markAsUncloneable is not a function`; `docs/claude/deploy-and-infra.md` ("Dependency policy")
 - New dependency: only with a written reason in the commit message, prefer Node/browser APIs and packages already installed, no packages with install scripts; rules, the quarterly audit method and the kept-on-purpose list are in `docs/claude/deploy-and-infra.md` ("Dependency policy")
