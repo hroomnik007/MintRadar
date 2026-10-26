@@ -1983,59 +1983,137 @@
   border-bottom: none;
 }
 
-/* ── Comparison modal — mobile stacked layout (≤768px) ───────────
+/* ── Comparison modal — mobile side-by-side table (≤768px) ───────
    Only ever rendered when useIsMobile() is true (same 768px breakpoint),
    so these aren't wrapped in their own @media block — the JS conditional
-   already gates it. Replaces the side-by-side mint-per-column table with
-   a single-mint-at-a-time view switched via tabs, so nothing ever needs
-   to scroll horizontally past the viewport. */
-.cmp-mobile-tabs {
+   already gates it. One column per mint, the label column sticky on the
+   left. Two mints fit a 375–390px screen without scrolling; with three or
+   four the table scrolls sideways INSIDE its own region (.cmp-m-scroll),
+   so the page itself never scrolls sideways. "Only differences" hides the
+   rows where every mint has the same value. */
+.cmp-m-toolbar {
   display: flex;
-  gap: 6px;
-  padding: 0 20px 12px;
-  margin-bottom: 4px;
-  overflow-x: auto;
-  scrollbar-width: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 0 12px 6px;
 }
-.cmp-mobile-tabs::-webkit-scrollbar { display: none; }
-
-.cmp-mobile-tab {
+.cmp-m-hint { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+.cmp-m-switch {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  max-width: 140px;
-  padding: 6px 12px;
-  border-radius: 20px;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 10px 0 6px;
   border: 1px solid var(--border);
+  border-radius: 999px;
   background: var(--bg3);
-  color: var(--text3);
+  color: var(--text2);
+  font-family: var(--font-body);
   font-size: 12px;
   font-weight: 600;
-  font-family: var(--font-body);
   cursor: pointer;
+}
+.cmp-m-switch.on { color: var(--text); border-color: var(--green-soft-strong); }
+.cmp-m-switch:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.cmp-m-switch-track {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--border2);
+  transition: background var(--transition);
+}
+.cmp-m-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform var(--transition);
+}
+.cmp-m-switch.on .cmp-m-switch-track { background: var(--accent); }
+.cmp-m-switch.on .cmp-m-switch-thumb { transform: translateX(12px); background: var(--bg); }
+@media (prefers-reduced-motion: reduce) {
+  .cmp-m-switch-track, .cmp-m-switch-thumb { transition: none; }
+}
+.cmp-m-status { margin: 0; padding: 0 12px; font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+.cmp-m-status:empty { display: none; }
+
+.cmp-m-scroll {
+  overflow-x: auto;
+  margin: 6px 0 8px;
+  overscroll-behavior-x: contain;
+}
+.cmp-m-scroll:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+.cmp-m-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+.cmp-m-table th,
+.cmp-m-table td {
+  padding: 9px 8px;
+  border-bottom: 0.5px solid var(--border2);
+  text-align: left;
+  vertical-align: middle;
+}
+.cmp-m-table tbody tr:last-child th,
+.cmp-m-table tbody tr:last-child td { border-bottom: none; }
+.cmp-m-corner,
+.cmp-m-lbl {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  width: 96px;
+  background: var(--bg2);
+  box-shadow: 1px 0 0 var(--border2);
+}
+.cmp-m-corner { padding-left: 12px; }
+.cmp-m-lbl {
+  padding-left: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-family: var(--font-mono);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.cmp-m-lbl .info-tooltip { vertical-align: middle; margin-left: 2px; }
+.cmp-m-mint { vertical-align: bottom; }
+.cmp-m-mint-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.cmp-m-mint-name {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.cmp-mobile-tab span { overflow: hidden; text-overflow: ellipsis; }
-.cmp-mobile-tab.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--bg);
+.cmp-m-mint-host {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+.cmp-m-mint .cmp-mobile-badge { display: inline-block; margin-top: 4px; }
+.cmp-m-val { font-size: 13px; color: var(--text); min-width: 0; }
+.cmp-m-stack { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.cmp-m-chips { display: flex; flex-wrap: wrap; gap: 3px; }
 
-.cmp-mobile-stack { padding: 0 20px 8px; }
-
-.cmp-mobile-header-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-bottom: 14px;
-  margin-bottom: 4px;
-  border-bottom: 0.5px solid var(--border2);
-  flex-wrap: wrap;
-}
-.cmp-mobile-name { font-size: 14px; font-weight: 700; color: var(--text); }
-.cmp-mobile-host { font-size: 11px; color: var(--text3); font-family: var(--font-mono); word-break: break-all; }
 .cmp-mobile-badge {
   font-size: 9px;
   border: 0.5px solid;
@@ -2044,44 +2122,17 @@
   font-family: var(--font-mono);
 }
 
-.cmp-mobile-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 11px 0;
-  border-bottom: 0.5px solid var(--border2);
-}
-.cmp-mobile-row-wrap { align-items: flex-start; flex-direction: column; gap: 6px; }
-.cmp-mobile-row-last { border-bottom: none; }
-
-.cmp-mobile-lbl {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text3);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  font-family: var(--font-mono);
-  flex-shrink: 0;
-}
-.cmp-mobile-val {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
-  min-width: 0;
-  justify-content: flex-end;
-}
-.cmp-mobile-row-wrap .cmp-mobile-val { justify-content: flex-start; width: 100%; }
-
 .cmp-mobile-vh {
   padding: 0 20px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 200px;
+  max-height: 280px;
   overflow-y: auto;
 }
+.cmp-mobile-vh-group { display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; border-bottom: 0.5px solid var(--border2); }
+.cmp-mobile-vh-group:last-child { border-bottom: none; }
+.cmp-mobile-vh-name { font-size: 11px; font-weight: 700; color: var(--text2); font-family: var(--font-mono); }
 
 /* ── Submit tabs ─────────────────────────────────────────────── */
 .submit-tabs {
@@ -2273,10 +2324,10 @@
      min-width-constrained card. The desktop min-width (min(900px, 90vw))
      plus the overlay's own 20px padding never fit a phone viewport — the
      modal was forced wider than the space actually available and pushed
-     past the screen edge. The horizontal side-by-side .cmp-grid/.cmp-vh-grid
-     (mint = column) is replaced entirely by a stacked, tabbed layout below
-     (see .cmp-mobile-* rules) rather than relying on their overflow-x:auto,
-     which scrolled the table but never fit a narrow screen usefully. */
+     past the screen edge. The desktop .cmp-grid/.cmp-vh-grid is replaced by
+     the mobile side-by-side table (.cmp-m-* rules), whose sticky label column
+     and narrower mint columns fit two mints on a phone and scroll sideways
+     inside the table, never the page, for three or four. */
   .cmp-overlay { padding: 0; align-items: flex-end; }
   .cmp-modal { min-width: 0; width: 100%; max-width: 100%; max-height: 92dvh; border-radius: 16px 16px 0 0; }
 }

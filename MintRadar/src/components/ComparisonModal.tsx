@@ -1,5 +1,5 @@
 import { INPUT_FEE_TEXT, compareAuditSuccessText, COMPARE_NUT_SUPPORT_TEXT } from '@/utils/tooltipTexts'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import {
   XAxis, YAxis, CartesianGrid,
@@ -23,6 +23,7 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { IcClose } from '@/components/IcClose'
 import './ComparisonModal.css'
 import { auditSuccessText, storedKeysetsAsLive } from '@/utils/mintDetailFacts'
+import { visibleCompareRows, type CompareKey, type CompareRowKeys } from '@/utils/compareDiff'
 import { COMPARE_UPTIME_LABEL, COMPARE_LATENCY_LABEL, COMPARE_LATENCY_TITLE, COMPARE_AUDIT_LABEL } from '@/utils/compareLabels'
 
 function reliabilityScoreInfo(score: number) {
@@ -151,10 +152,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
   const isMobile = useIsMobile()
   const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('7d')
   const [metric, setMetric] = useState<HistoryMetric>('latency')
-  // Mobile only: which mint's single-column stack is shown (see .cmp-mobile-*
-  // layout below). The desktop side-by-side .cmp-grid ignores this entirely.
-  const [activeIdx, setActiveIdx] = useState(0)
-  const activeMintIdx = Math.min(activeIdx, mints.length - 1)
+  // Mobile only: the side-by-side table can hide the rows where every mint has the same value.
+  // The desktop .cmp-grid does not use it.
+  const [onlyDifferences, setOnlyDifferences] = useState(false)
 
   // Input fee comes from the existing on-demand probe (/api/mint/probe → live
   // /v1/keysets), the same source Mint Detail's Keysets panel uses. Own query key
@@ -230,6 +230,141 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
     })),
   })
 
+  // ── Mobile table rows (≤768px): one row per fact, one column per mint, the label column sticky. ──
+  // `keys` is what "Only differences" compares (utils/compareDiff.ts); null = still loading, the row stays.
+  const nutKey = (i: number) => TRACKED_NUT_KEYS.filter(k => allData[i]!.supportedNuts.has(k)).join(',')
+  const feeKey = (i: number): CompareKey => {
+    const q = probeQueries[i]
+    if (!q || q.isLoading) return null
+    const fee = pickInputFee(q.data?.keysets) ?? pickInputFee(storedKeysetsAsLive(mints[i]?.lastKeysets))
+    return fee ? `${fee.label} ${fee.unit}` : 'n/a'
+  }
+  const uptimeKey = (i: number): CompareKey => {
+    const q = uptime24hQueries[i]
+    if (!q || q.isLoading) return null
+    return String(q.data?.uptimePct ?? '—')
+  }
+  const mobileRows: Array<CompareRowKeys & { label: ReactNode; cell: (i: number) => ReactNode }> = !isMobile ? [] : [
+    {
+      id: 'status', label: 'Status',
+      keys: allData.map(d => (d.isOnline ? 'online' : 'offline')),
+      cell: i => (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, fontFamily: 'var(--font-mono)' }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: allData[i]!.isOnline ? 'var(--accent)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
+          {allData[i]!.isOnline ? 'Online' : 'Offline'}
+        </span>
+      ),
+    },
+    {
+      id: 'reliability', label: 'Reliability Score',
+      keys: allData.map(d => (d.isOnline ? String(d.reliabilityScore) : '—')),
+      cell: i => {
+        const d = allData[i]!
+        return (
+          <span className="cmp-m-stack">
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: d.tsInfo.color }}>
+              <IcShield size={12} />
+              <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? d.reliabilityScore : '—'}</span>
+            </span>
+            {d.isOnline && (
+              <span style={{ fontSize: 10, color: d.tsInfo.color, background: d.tsInfo.bg, border: `0.5px solid ${d.tsInfo.border}`, borderRadius: 4, padding: '1px 4px', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>{d.tsInfo.label}</span>
+            )}
+          </span>
+        )
+      },
+    },
+    {
+      id: 'rating', label: 'Community Rating',
+      keys: mints.map(m => ((m.reviewCount ?? 0) > 0 && m.reviewAvgRating != null ? `${m.reviewAvgRating.toFixed(1)}|${m.reviewCount}` : '—')),
+      cell: i => {
+        const m = mints[i]!
+        const count = m.reviewCount ?? 0
+        const avg = m.reviewAvgRating
+        return count > 0 && avg != null ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
+            <span style={{ fontSize: 15, lineHeight: 1 }}>★</span>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>{avg.toFixed(1)}</span>
+            <span style={{ fontSize: 12, color: 'var(--text3)' }}>({count})</span>
+          </span>
+        ) : <span style={{ fontSize: 14, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>—</span>
+      },
+    },
+    {
+      id: 'uptime', label: COMPARE_UPTIME_LABEL,
+      keys: mints.map((_, i) => uptimeKey(i)),
+      cell: i => {
+        const uptimePct = uptime24hQueries[i]?.data?.uptimePct ?? null
+        return <span style={{ color: uptimeColor(uptimePct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{uptimePct !== null ? `${uptimePct}%` : '—'}</span>
+      },
+    },
+    {
+      id: 'latency', label: <>{COMPARE_LATENCY_LABEL}<InfoTooltip iconSize={11} width={200} about="Latency" text={COMPARE_LATENCY_TITLE} /></>,
+      keys: mints.map((m, i) => (allData[i]!.isOnline && m.latencyMs != null ? String(m.latencyMs) : '—')),
+      cell: i => (
+        <span style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
+          {allData[i]!.isOnline && mints[i]!.latencyMs != null ? `${mints[i]!.latencyMs}ms` : '—'}
+        </span>
+      ),
+    },
+    {
+      id: 'fee', label: <>Input fee{feeLabelInfo}</>,
+      keys: mints.map((_, i) => feeKey(i)),
+      cell: i => <span className="cmp-input-fee" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{feeCell(i)}</span>,
+    },
+    {
+      id: 'nut-count', label: 'NUT Count',
+      keys: mints.map(m => String(m.nutCount ?? 0)),
+      cell: i => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{mints[i]!.nutCount ?? 0} / {TRACKED_NUT_KEYS.length}</span>,
+    },
+    {
+      id: 'nut-support', label: <>NUT Support<InfoTooltip iconSize={11} width={220} about="NUT Support" text={COMPARE_NUT_SUPPORT_TEXT} /></>,
+      keys: mints.map((_, i) => nutKey(i)),
+      cell: i => (
+        <span className="cmp-m-chips">
+          {TRACKED_NUT_KEYS.map(key => {
+            const supported = allData[i]!.supportedNuts.has(key)
+            return (
+              <span key={key} style={{ fontSize: 10, fontFamily: 'var(--font-mono)', padding: '1px 4px', borderRadius: 3, background: supported ? 'var(--green-soft)' : 'var(--bg3)', color: supported ? 'var(--accent)' : 'var(--text3)', border: `0.5px solid ${supported ? 'var(--green-soft-strong)' : 'var(--border)'}` }}>
+                {key.padStart(2, '0')}
+              </span>
+            )
+          })}
+        </span>
+      ),
+    },
+    {
+      id: 'version', label: 'Version',
+      keys: mints.map((m, i) => `${m.version ?? '—'}|${allData[i]!.isOutdated ? 'outdated' : ''}`),
+      cell: i => {
+        const mint = mints[i]!
+        return (
+        <span className="cmp-m-stack">
+          <span title={mint.version ?? undefined} style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text)', overflowWrap: 'anywhere' }}>{mint.version ?? '—'}</span>
+          {allData[i]!.isOutdated && (
+            <span style={{ fontSize: 10, color: 'color-mix(in srgb, var(--red) 75%, var(--text))', background: 'var(--red-soft)', border: '0.5px solid var(--red-soft-strong)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>Outdated</span>
+          )}
+        </span>
+        )
+      },
+    },
+    {
+      id: 'audit', label: <>{COMPARE_AUDIT_LABEL}<InfoTooltip iconSize={11} width={200} about={COMPARE_AUDIT_LABEL} text={compareAuditSuccessText()} /></>,
+      keys: mints.map(m => auditSuccessDisplay(m, now).text),
+      cell: i => {
+        const audit = auditSuccessDisplay(mints[i]!, now)
+        return <span style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: audit.color }}>{audit.text}</span>
+      },
+    },
+    {
+      id: 'backup', label: <>Backup<InfoTooltip iconSize={11} width={200} about="Backup" text="Whether this mint supports NUT-09, letting wallets restore coins after data loss." /></>,
+      keys: allData.map(d => (d.supportsBackupRestore ? 'yes' : 'no')),
+      cell: i => (allData[i]!.supportsBackupRestore
+        ? <span style={{ fontSize: 11, color: 'var(--accent)', background: 'var(--green-soft)', border: '0.5px solid var(--green-soft-strong)', borderRadius: 4, padding: '2px 6px', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>✓ Supported</span>
+        : <span style={{ fontSize: 11, color: 'var(--text3)', background: 'var(--bg3)', border: '0.5px solid var(--border)', borderRadius: 4, padding: '2px 6px', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>No backup</span>),
+    },
+  ]
+  const shownMobileRows = visibleCompareRows(mobileRows, onlyDifferences)
+
   const isLoadingHistory = historyQueries.some(q => q.isLoading)
 
   const loadedHistory = historyQueries.map(q => q.data).filter((d): d is HistoryResponse => d != null)
@@ -281,160 +416,60 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
 
         {isMobile ? (
           <>
-            <div className="cmp-mobile-tabs" role="tablist" aria-label="Select mint to view">
-              {mints.map((mint, i) => {
-                const d = allData[i]!
-                return (
-                  <button
-                    key={mint.url}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeMintIdx === i}
-                    className={`cmp-mobile-tab${activeMintIdx === i ? ' active' : ''}`}
-                    onClick={() => setActiveIdx(i)}
-                  >
-                    <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={14} />
-                    <span>{d.displayName}</span>
-                  </button>
-                )
-              })}
+            <div className="cmp-m-toolbar">
+              <span className="cmp-m-hint" id="cmp-m-hint">
+                {mints.length} mints side by side{mints.length > 2 ? ', scroll sideways for more' : ''}
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={onlyDifferences}
+                className={`cmp-m-switch${onlyDifferences ? ' on' : ''}`}
+                onClick={() => setOnlyDifferences(v => !v)}
+              >
+                <span className="cmp-m-switch-track" aria-hidden="true"><span className="cmp-m-switch-thumb" /></span>
+                Only differences
+              </button>
             </div>
-
-            {(() => {
-              const mint = mints[activeMintIdx]!
-              const d = allData[activeMintIdx]!
-              const uptimePct = uptime24hQueries[activeMintIdx]?.data?.uptimePct ?? null
-              const count = mint.reviewCount ?? 0
-              const avg = mint.reviewAvgRating
-              return (
-                <div className="cmp-mobile-stack">
-                  <div className="cmp-mobile-header-row">
-                    <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={28} />
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div className="cmp-mobile-name">{d.displayName}</div>
-                      <div className="cmp-mobile-host">{d.hostname}</div>
-                    </div>
-                    {d.isNew && <span className="cmp-mobile-badge" style={{ color: 'var(--accent)', background: 'var(--green-soft)', borderColor: 'var(--green-soft-strong)' }}>New</span>}
-                  </div>
-
-                  <div className="cmp-mobile-row">
-                    <span className="cmp-mobile-lbl">Status</span>
-                    <span className="cmp-mobile-val">
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, fontFamily: 'var(--font-mono)' }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: d.isOnline ? 'var(--accent)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
-                        {d.isOnline ? 'Online' : 'Offline'}
-                      </span>
-                    </span>
-                  </div>
-
-                  <div className="cmp-mobile-row">
-                    <span className="cmp-mobile-lbl">Reliability Score</span>
-                    <span className="cmp-mobile-val">
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: d.tsInfo.color }}>
-                        <IcShield size={12} />
-                        <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? d.reliabilityScore : '—'}</span>
-                      </span>
-                      {d.isOnline && (
-                        <span style={{ fontSize: 11, color: d.tsInfo.color, background: d.tsInfo.bg, border: `0.5px solid ${d.tsInfo.border}`, borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-mono)' }}>{d.tsInfo.label}</span>
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="cmp-mobile-row">
-                    <span className="cmp-mobile-lbl">Community Rating</span>
-                    <span className="cmp-mobile-val">
-                      {count > 0 && avg != null ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
-                          <span style={{ fontSize: 16, lineHeight: 1 }}>★</span>
-                          <span style={{ fontSize: 15, fontWeight: 700 }}>{avg.toFixed(1)}</span>
-                          <span style={{ fontSize: 12, color: 'var(--text3)' }}>({count})</span>
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: 14, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>—</span>
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="cmp-mobile-row">
-                    <span className="cmp-mobile-lbl">{COMPARE_UPTIME_LABEL}</span>
-                    <span className="cmp-mobile-val" style={{ color: uptimeColor(uptimePct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-                      {uptimePct !== null ? `${uptimePct}%` : '—'}
-                    </span>
-                  </div>
-
-                  <div className="cmp-mobile-row">
-                    <span className="cmp-mobile-lbl">{COMPARE_LATENCY_LABEL}<InfoTooltip iconSize={11} width={200} about="Latency" text={COMPARE_LATENCY_TITLE} /></span>
-                    <span className="cmp-mobile-val" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-                      {d.isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
-                    </span>
-                  </div>
-
-                  <div className="cmp-mobile-row">
-                    <span className="cmp-mobile-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>Input fee{feeLabelInfo}</span>
-                    <span className="cmp-mobile-val cmp-input-fee" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-                      {feeCell(activeMintIdx)}
-                    </span>
-                  </div>
-
-                  <div className="cmp-mobile-row">
-                    <span className="cmp-mobile-lbl">NUT Count</span>
-                    <span className="cmp-mobile-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-                      {mint.nutCount ?? 0} / {TRACKED_NUT_KEYS.length}
-                    </span>
-                  </div>
-
-                  <div className="cmp-mobile-row cmp-mobile-row-wrap">
-                    <span className="cmp-mobile-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      NUT Support
-                      <InfoTooltip iconSize={11} width={220} about="NUT Support" text={COMPARE_NUT_SUPPORT_TEXT} />
-                    </span>
-                    <span className="cmp-mobile-val">
-                      {TRACKED_NUT_KEYS.map(key => {
-                        const supported = d.supportedNuts.has(key)
-                        return (
-                          <span key={key} style={{ fontSize: 10.5, fontFamily: 'var(--font-mono)', padding: '1px 5px', borderRadius: 3, background: supported ? 'var(--green-soft)' : 'var(--bg3)', color: supported ? 'var(--accent)' : 'var(--text3)', border: `0.5px solid ${supported ? 'var(--green-soft-strong)' : 'var(--border)'}` }}>
-                            {key.padStart(2, '0')}
+            <p className="cmp-m-status" role="status" aria-live="polite">
+              {onlyDifferences
+                ? (shownMobileRows.length === 0
+                  ? 'Every row has the same value for these mints.'
+                  : `${shownMobileRows.length} of ${mobileRows.length} rows differ; rows with the same value are hidden.`)
+                : ''}
+            </p>
+            <div className="cmp-m-scroll" role="region" aria-label="Mint comparison table" aria-describedby="cmp-m-hint" tabIndex={0}>
+              <table className="cmp-m-table" style={mints.length > 2 ? { width: 96 + mints.length * 132 } : undefined}>
+                <thead>
+                  <tr>
+                    <th scope="col" className="cmp-m-corner"><span className="sr-only">Metric</span></th>
+                    {mints.map((mint, i) => {
+                      const d = allData[i]!
+                      return (
+                        <th key={mint.url} scope="col" className="cmp-m-mint">
+                          <span className="cmp-m-mint-row">
+                            <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={18} />
+                            <span className="cmp-m-mint-name">{d.displayName}</span>
                           </span>
-                        )
-                      })}
-                    </span>
-                  </div>
-
-                  <div className="cmp-mobile-row">
-                    <span className="cmp-mobile-lbl">Version</span>
-                    <span className="cmp-mobile-val">
-                      <span title={mint.version ?? undefined} style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text)', whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{mint.version ?? '—'}</span>
-                      {d.isOutdated && (
-                        <span style={{ fontSize: 10, color: 'color-mix(in srgb, var(--red) 75%, var(--text))', background: 'var(--red-soft)', border: '0.5px solid var(--red-soft-strong)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-mono)' }}>Outdated</span>
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="cmp-mobile-row">
-                    <span className="cmp-mobile-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      {COMPARE_AUDIT_LABEL}
-                      <InfoTooltip iconSize={11} width={200} about={COMPARE_AUDIT_LABEL} text={compareAuditSuccessText()} />
-                    </span>
-                    <span className="cmp-mobile-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: auditSuccessDisplay(mint, now).color }}>
-                      {auditSuccessDisplay(mint, now).text}
-                    </span>
-                  </div>
-
-                  <div className="cmp-mobile-row cmp-mobile-row-last">
-                    <span className="cmp-mobile-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      Backup
-                      <InfoTooltip iconSize={11} width={200} about="Backup" text="Whether this mint supports NUT-09, letting wallets restore coins after data loss." />
-                    </span>
-                    <span className="cmp-mobile-val">
-                      {d.supportsBackupRestore
-                        ? <span style={{ fontSize: 11.5, color: 'var(--accent)', background: 'var(--green-soft)', border: '0.5px solid var(--green-soft-strong)', borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>✓ Supported</span>
-                        : <span style={{ fontSize: 11.5, color: 'var(--text3)', background: 'var(--bg3)', border: '0.5px solid var(--border)', borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-mono)' }}>No backup</span>
-                      }
-                    </span>
-                  </div>
-                </div>
-              )
-            })()}
+                          <span className="cmp-m-mint-host">{d.hostname}</span>
+                          {d.isNew && <span className="cmp-mobile-badge" style={{ color: 'var(--accent)', background: 'var(--green-soft)', borderColor: 'var(--green-soft-strong)' }}>New</span>}
+                        </th>
+                      )
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {shownMobileRows.map(row => (
+                    <tr key={row.id} data-row={row.id}>
+                      <th scope="row" className="cmp-m-lbl">{row.label}</th>
+                      {mints.map((mint, i) => (
+                        <td key={mint.url} className="cmp-m-val">{row.cell(i)}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </>
         ) : (
         <div className="cmp-grid" style={{ gridTemplateColumns: gridCols }}>
@@ -751,21 +786,26 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           {/* ── Software Version History ── */}
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
-              Software Version History{isMobile ? ` — ${allData[activeMintIdx]!.displayName}` : ''}
+              Software Version History
             </div>
             {isMobile ? (
               <div className="cmp-mobile-vh">
-                {(() => {
-                  const versionHistory = versionQueries[activeMintIdx]?.data?.history ?? []
-                  return versionHistory.length === 0 ? (
-                    <span className="cmp-vh-entry" style={{ color: 'var(--text3)' }}>No data</span>
-                  ) : versionHistory.map((vh, j) => (
-                    <div key={j} className="cmp-vh-entry">
-                      <div className="cmp-vh-version" style={{ fontWeight: j === 0 ? 700 : 500 }}>{vh.version}</div>
-                      <div className="cmp-vh-since">since {formatDate(vh.firstSeenAt, { local: true })}</div>
+                {mints.map((mint, i) => {
+                  const versionHistory = versionQueries[i]?.data?.history ?? []
+                  return (
+                    <div key={mint.url} className="cmp-mobile-vh-group">
+                      <div className="cmp-mobile-vh-name">{allData[i]!.displayName}</div>
+                      {versionHistory.length === 0 ? (
+                        <span className="cmp-vh-entry" style={{ color: 'var(--text3)' }}>No data</span>
+                      ) : versionHistory.map((vh, j) => (
+                        <div key={j} className="cmp-vh-entry">
+                          <div className="cmp-vh-version" style={{ fontWeight: j === 0 ? 700 : 500 }}>{vh.version}</div>
+                          <div className="cmp-vh-since">since {formatDate(vh.firstSeenAt, { local: true })}</div>
+                        </div>
+                      ))}
                     </div>
-                  ))
-                })()}
+                  )
+                })}
               </div>
             ) : (
               <div className="cmp-vh-grid" style={{ gridTemplateColumns: gridCols }}>

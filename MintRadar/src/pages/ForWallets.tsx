@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { DocToc } from '@/components/DocToc'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { useHashScroll, useNavbarOffset } from '@/hooks/useDocPageScroll'
 import { CodeBlock } from '@/components/CodeBlock'
@@ -85,20 +86,13 @@ export default function ForWallets() {
   const { hash } = useLocation()
   const pageRef = useRef<HTMLDivElement>(null)
   useNavbarOffset(pageRef)
-  useHashScroll(hash)
+  // Set by the "On this page" links, which scroll smoothly and move focus themselves.
+  const tocHandledRef = useRef(false)
+  useHashScroll(hash, tocHandledRef)
 
   return (
     <div className="about-page doc-page" ref={pageRef}>
-      <nav className="about-toc" aria-label="On this page">
-        <p className="about-toc-title">On this page</p>
-        <ul>
-          {SECTIONS.map(s => (
-            <li key={s.id}>
-              <Link to={{ hash: `#${s.id}` }} className="about-toc-link">{s.label}</Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <DocToc sections={SECTIONS} handledRef={tocHandledRef} />
 
       <div className="about-text">
         <h1 className="about-h1">MintRadar for wallets</h1>

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import type { RefObject } from 'react'
+import type { MutableRefObject, RefObject } from 'react'
 
 // The two scroll helpers of the long static text pages (/methodology, /for-wallets). They behave like the
 // private ones in pages/About.tsx, which stays as it is.
@@ -7,10 +7,13 @@ import type { RefObject } from 'react'
 // Scrolls the element named by the URL hash into view and moves keyboard focus to it. The AppShell resets
 // the scroll to the top on every pathname change from an effect that runs AFTER this page's effects, so the
 // scroll waits one frame; it is repeated once the web fonts are in because they re-wrap the text above.
-export function useHashScroll(hash: string): void {
+// `handledRef` (optional): set to true by an in-page link that already scrolled (smoothly) and moved focus itself;
+// that one hash change is then left alone instead of being jumped to a second time.
+export function useHashScroll(hash: string, handledRef?: MutableRefObject<boolean>): void {
   useEffect(() => {
     const id = decodeURIComponent(hash.replace(/^#/, ''))
     if (!id) return
+    if (handledRef?.current) { handledRef.current = false; return }
     let cancelled = false
     const go = (focus: boolean): void => {
       if (cancelled) return
@@ -22,7 +25,7 @@ export function useHashScroll(hash: string): void {
     const raf = requestAnimationFrame(() => go(true))
     void document.fonts?.ready.then(() => go(false))
     return () => { cancelled = true; cancelAnimationFrame(raf) }
-  }, [hash])
+  }, [hash, handledRef])
 }
 
 // The sticky navbar is 51px on desktop, 86px on phones and 117px at ~320px (its tabs wrap), so a fixed

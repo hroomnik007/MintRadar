@@ -62,13 +62,16 @@ export async function expectExternalLinksSafe(page: Page): Promise<void> {
 }
 
 /**
- * Starting at the top of `main`, Tab reaches every link, button and scroll box of `main` in DOM order, and each focused
+ * Starting at the top of `main`, Tab reaches every rendered link, button and scroll box of `main` in DOM order, and each focused
  * element shows a focus indicator.
  */
 export async function expectKeyboardOrder(page: Page): Promise<void> {
   const expected = await page.evaluate(() => {
     const main = document.querySelector('main')!
+    // Controls that are not rendered (display: none, e.g. the phone-only
+    // "On this page" toggle on desktop) are not tab stops.
     const items = Array.from(main.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex="0"]'))
+      .filter(el => el.getClientRects().length > 0)
     items.forEach((el, i) => el.setAttribute('data-tab-index', String(i)))
     main.setAttribute('tabindex', '-1')
     main.focus()
