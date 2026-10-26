@@ -9,7 +9,7 @@ What is planned after the public announcement. Nothing in the "By feedback only"
 | Wallet teams and gorrdy | Answer their questions; make small doc/API fixes from their feedback |
 | Minibits courtesy note | Tell them their Nostr contact value is shown in a shortened "npub..." form |
 | Monitoring | PageSpeed, `/health`, the new kind 30385 event, error logs |
-| Server clean-up (after one week) | nginx backups `*.bak-*`, `/home/deploy/s1-build/`, `*.pre-s1` files, `pre-s1-data.mdb`, the strfry rollback image tag `alpine320-1.1.3-rollback` |
+| Server clean-up (after one week) | server clean-up after the announcement; tracked privately |
 | About 2026-10-30 | SQL report on the relay delivery counters |
 
 ## Weeks 2-3 (small, low risk)
