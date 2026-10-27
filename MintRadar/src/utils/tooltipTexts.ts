@@ -100,7 +100,7 @@ export function uptimeRowText(): string {
 export function auditRowText(): string {
   return `Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last ${AUDIT_WINDOW_DAYS} days (failures caused elsewhere are not counted against it). Under ${AUDIT_MIN_SAMPLES} swaps or no recent data: neutral ${AUDIT_NEUTRAL} of ${AUDIT_POINTS}.`
 }
-export const NUT_ROW_TEXT = 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs.'
+export const NUT_ROW_TEXT = 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.'
 export function versionRowText(): string {
   const p = pointsForMinorsBehind
   const middle = [OUTDATED_AFTER_MINORS, OUTDATED_AFTER_MINORS + 1, OUTDATED_AFTER_MINORS + 2]

@@ -12,7 +12,6 @@ import { IcShield } from '@/components/mint/IcShield'
 import { type KnownMint } from '@/hooks/useKnownMints'
 import { classifyMintVersion, latestMapFor } from '@/utils/versionRule'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
-import { offeredNutCount } from '@/utils/nutFilters'
 import { AUDIT_MIN_SAMPLES, auditDataState } from '@/utils/auditScore'
 import { auditReliabilityColor, formatTimeAgo, LOW_RELIABILITY_TEXT, mintStatusLabel } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
@@ -319,8 +318,8 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
     },
     {
       id: 'nut-count', label: 'NUT Count',
-      keys: mints.map(m => String(offeredNutCount(m) ?? 0)),
-      cell: i => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{offeredNutCount(mints[i]!) ?? 0} / {TRACKED_NUT_KEYS.length}</span>,
+      keys: mints.map(m => String(m.nutCount ?? 0)),
+      cell: i => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{mints[i]!.nutCount ?? 0} / {TRACKED_NUT_KEYS.length}</span>,
     },
     {
       id: 'nut-support', label: <>NUT Support<InfoTooltip iconSize={11} width={220} about="NUT Support" text={COMPARE_NUT_SUPPORT_TEXT} /></>,
@@ -581,7 +580,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           <div className="cmp-lbl">NUT Count</div>
           {mints.map(mint => (
             <div key={mint.url} className="cmp-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-              {offeredNutCount(mint) ?? 0} / {TRACKED_NUT_KEYS.length}
+              {mint.nutCount ?? 0} / {TRACKED_NUT_KEYS.length}
             </div>
           ))}
 

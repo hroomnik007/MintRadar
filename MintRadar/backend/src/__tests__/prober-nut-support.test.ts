@@ -76,3 +76,30 @@ describe('probe: nut_count and the score with "supported": false', () => {
     expect(full - storedScore()).toBe(nutComponent(14) - nutComponent(10)) // 15 - 11 = 4 points
   })
 })
+
+describe('probe: nut_count and the score with a switched-off NUT-04/05 (methodology 5)', () => {
+  const all = { '4': {}, '5': {}, '7': {}, '8': {}, '9': {}, '10': {}, '11': {}, '12': {}, '14': {}, '15': {}, '17': {}, '19': {}, '20': {}, '29': {} }
+
+  it('a NUT-04/05 with disabled: true does not count; disabled: false and a missing flag still count', async () => {
+    serve({ '4': { methods: [], disabled: true }, '5': { methods: [], disabled: false }, '7': {} })
+    await probeMintToDb(MINT)
+    expect(storedNutCount).toBe(2) // 5 and 7
+  })
+
+  it('the score drops by exactly the NUT component share (Lek: 4 and 5 switched off)', async () => {
+    serve(all)
+    await probeMintToDb(MINT)
+    const full = storedScore()
+    const { nutComponent } = await import('../shared/reliabilityScore.js')
+    serve({ ...all, '4': { methods: [], disabled: true }, '5': { methods: [], disabled: true } })
+    await probeMintToDb(MINT)
+    expect(storedNutCount).toBe(12)
+    expect(full - storedScore()).toBe(nutComponent(14) - nutComponent(12)) // 15 - 13 = 2 points
+  })
+
+  it('disabled: true on a NUT that is also supported: false counts once as not supported (no double effect)', async () => {
+    serve({ ...all, '4': { supported: false, disabled: true } })
+    await probeMintToDb(MINT)
+    expect(storedNutCount).toBe(13)
+  })
+})
