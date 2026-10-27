@@ -1947,6 +1947,12 @@
   min-width: 0;
 }
 
+/* Compare: declared limits per method and unit (utils/compareMethods.ts), one label + value pair per line. */
+.cmp-limits { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cmp-limit { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.cmp-limit-label { font-size: 12px; color: var(--text3); overflow-wrap: anywhere; }
+.cmp-limit-value { font-family: var(--font-mono); font-size: 12px; color: var(--text); overflow-wrap: anywhere; }
+
 /* Software Version History — each entry is version + "since <date>" stacked
    on two lines (grows the column taller, not wider), so text is never
    clipped and no dedicated nowrap/scroll wrapper is needed for it. Mirrors

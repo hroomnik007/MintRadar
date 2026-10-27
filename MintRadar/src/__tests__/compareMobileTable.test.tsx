@@ -90,6 +90,43 @@ describe('mobile Compare table', () => {
     expect(rowIds(baseElement)).not.toContain('latency')
   })
 
+  it('methods, limits and units rows: a switched-off side reads "Disabled by the mint"; Only differences compares them', () => {
+    const withMethods: KnownMint = {
+      ...A, units: ['sat'],
+      mintMethods: [{ method: 'bolt11', unit: 'sat', min_amount: 1, max_amount: 1000 }, { method: 'bolt12', unit: 'sat', min_amount: 1, max_amount: 500 }],
+      meltMethods: [{ method: 'bolt11', unit: 'sat', min_amount: 1, max_amount: 800 }],
+    }
+    const off: KnownMint = { ...withMethods, url: 'https://off.mint.example', name: 'Off Mint', nutsLimits: { '4': { methods: [], disabled: true }, '5': {} } }
+    const { baseElement } = renderModal([withMethods, off])
+    const row = (id: string) => baseElement.querySelector(`table.cmp-m-table tbody tr[data-row="${id}"]`) as HTMLElement
+    expect(rowIds(baseElement)).toEqual(expect.arrayContaining(['deposit-methods', 'withdrawal-methods', 'limits', 'units']))
+    const dep = row('deposit-methods').querySelectorAll('td')
+    expect(dep[0]!.textContent).toBe('bolt11, bolt12')
+    expect(dep[1]!.textContent).toContain('Disabled by the mint')
+    const lim = row('limits').querySelectorAll('td')
+    expect(lim[0]!.textContent).toContain('Deposit · bolt12 · satmin 1, max 500')
+    expect(lim[1]!.textContent).toContain('Depositdisabled by the mint')
+    expect(row('units').textContent).toContain('SAT')
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Only differences' }))
+    const shown = rowIds(baseElement)
+    expect(shown).toContain('deposit-methods')
+    expect(shown).toContain('limits')
+    expect(shown).not.toContain('withdrawal-methods')
+    expect(shown).not.toContain('units')
+  })
+
+  it('desktop grid shows the same methods, limits and units rows', () => {
+    mobile = false
+    const off: KnownMint = { ...B, nutsLimits: { '4': {}, '5': { methods: [], disabled: true } }, units: ['sat', 'usd'] }
+    const { baseElement } = renderModal([{ ...A, mintMethods: [{ method: 'bolt11', unit: 'sat' }], meltMethods: [{ method: 'bolt11', unit: 'sat' }] }, off])
+    const cells = (id: string) => Array.from(baseElement.querySelectorAll(`.cmp-grid .cmp-val[data-row="${id}"]`)).map(e => e.textContent)
+    expect(cells('deposit-methods')).toEqual(['bolt11', 'None declared'])
+    expect(cells('withdrawal-methods')[1]).toContain('Disabled by the mint')
+    expect(cells('units')).toEqual(['SAT', 'SAT, USD'])
+    expect(cells('limits')[0]).toContain('min not declared, max not declared')
+  })
+
   it('desktop keeps the grid and has no switch', () => {
     mobile = false
     const { baseElement } = renderModal([A, B])

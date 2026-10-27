@@ -44,11 +44,11 @@ test.describe('Compare: Input fee row', () => {
     await expect(cells.nth(1)).toContainText('free')
     await expect(cells.nth(2)).toHaveText('n/a')
     await expect(grid).not.toContainText('999')
-    // Placed right after Latency, before NUT Count.
+    // Placed right after Latency, before the methods rows (2026-10-27: Deposit methods, …, Units, then NUT Count).
     const labels = await grid.locator('.cmp-lbl').evaluateAll(els => els.map(e => (e.textContent ?? '').trim()))
     const i = labels.findIndex(l => l.startsWith('Input fee'))
     expect(labels[i - 1]).toBe('Latency (last check)')
-    expect(labels[i + 1]).toBe('NUT Count')
+    expect(labels[i + 1]).toBe('Deposit methods')
     await shot(page)
   })
 
