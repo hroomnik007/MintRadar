@@ -8,6 +8,7 @@
 import { CheckStateEnum, getDecodedToken, getTokenMetadata, hasValidDleq, type Proof } from '@cashu/cashu-ts'
 import { createMintWallet } from '@/utils/mintRequest'
 import type { TokenRun } from '@/utils/tokenRun'
+import { inputFeeFor } from '@/utils/feeExamples'
 
 export interface TokenInfo {
   mint: string
@@ -235,6 +236,72 @@ export interface FullTokenDecode {
   proofsWithDleq: number
   /** True only when every proof carries a DLEQ proof AND all of them verify. */
   allDleqValid: boolean
+  /** Status and input fee of each keyset the proofs use, from the keysets the mint listed during loadMint. */
+  keysets: TokenFeeFacts
+}
+
+/** What the mint says about one keyset the token's proofs use. */
+export interface KeysetLookup {
+  active: boolean
+  /** null: the keyset states no (valid) input_fee_ppk; NUT-02 says 0 then (same rule as feeExamples.ts). */
+  inputFeePpk: number | null
+}
+
+export interface TokenKeysetFact {
+  id: string
+  /** Number of the token's proofs from this keyset. */
+  proofs: number
+  /** unknown: the mint does not list this keyset id. */
+  status: 'active' | 'inactive' | 'unknown'
+  /** The keyset's input_fee_ppk (absent = 0, NUT-02); null when the keyset is unknown. */
+  inputFeePpk: number | null
+}
+
+export interface TokenFeeFacts {
+  keysets: TokenKeysetFact[]
+  /**
+   * NUT-02 input fee of spending all of the token's proofs in one swap (which is what claiming it is):
+   * ceil(sum of each proof's keyset input_fee_ppk / 1000), in the keysets' unit. null when any keyset is
+   * unknown: never guessed.
+   */
+  fee: number | null
+}
+
+/**
+ * Keyset status and the exact claim fee for a token whose proofs carry `proofKeysetIds` (one entry per proof).
+ * Pure: `lookup` answers from keysets the caller already has (the live ones from Verify, or stored ones).
+ */
+export function tokenFeeFacts(proofKeysetIds: readonly string[], lookup: (id: string) => KeysetLookup | null): TokenFeeFacts {
+  const counts = new Map<string, number>()
+  for (const id of proofKeysetIds) counts.set(id, (counts.get(id) ?? 0) + 1)
+  let ppkSum = 0
+  let known = proofKeysetIds.length > 0
+  const keysets: TokenKeysetFact[] = []
+  for (const [id, proofs] of counts) {
+    const k = lookup(id)
+    if (!k) {
+      known = false
+      keysets.push({ id, proofs, status: 'unknown', inputFeePpk: null })
+      continue
+    }
+    const ppk = k.inputFeePpk ?? 0
+    ppkSum += ppk * proofs
+    keysets.push({ id, proofs, status: k.active ? 'active' : 'inactive', inputFeePpk: ppk })
+  }
+  return { keysets, fee: known ? inputFeeFor(ppkSum, 1) : null }
+}
+
+/**
+ * The keyset id of every proof, read locally (one entry per proof, so counts survive). null when the token stores
+ * short keyset ids (v2 keysets) that only the mint can resolve, or when it cannot be decoded. Never throws.
+ */
+export function localProofKeysetIds(raw: string): string[] | null {
+  try {
+    const ids = getDecodedToken(stripTokenWhitespace(raw), []).proofs.map(p => p.id)
+    return ids.length > 0 && ids.every(id => typeof id === 'string' && id.length > 0) ? ids : null
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -275,12 +342,21 @@ export async function decodeTokenWithMint(raw: string, opts: { run?: TokenRun } 
   })
 
   const proofsWithDleq = proofs.filter(p => p.hasDleq).length
+  // loadMint fetched /v1/keysets: every keyset the mint lists, any unit, active or not (getKeyset(id) is a direct,
+  // cross-unit lookup that does not need the keys, so an inactive keyset whose keys were not loaded is still found).
+  const chain = wallet.keyChain
+  const keysets = tokenFeeFacts(decoded.proofs.map(p => p.id), id => {
+    if (!chain.hasKeyset(id)) return null
+    const k = chain.getKeyset(id)
+    return { active: k.isActive, inputFeePpk: k.fee }
+  })
 
   return {
     info: { ...info, proofsCount: proofs.length },
     proofs,
     proofsWithDleq,
     allDleqValid: proofs.length > 0 && proofs.every(p => p.hasDleq && p.dleqValid === true),
+    keysets,
   }
 }
 
