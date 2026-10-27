@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS, MOCK_MINTS } from './fixtures/mocks'
+import { installApiMocks, mockRelays, mockProbedVersion, MOCK_KNOWN_MINTS, MOCK_MINTS } from './fixtures/mocks'
 import { layoutReady, resize } from './fixtures/settle'
 
 // Hero stats row of a mint that is not online (no latency: the value reads "—"): the Latency tile must be built like the one
@@ -8,6 +8,9 @@ import { layoutReady, resize } from './fixtures/settle'
 
 const ALPHA = MOCK_MINTS[0]!.url
 const GONE = 'https://gone.mint.example'
+// A current version for every state: an archived mint shows no "Outdated" pill (2026-10-27), which would change the
+// height of the Version tile on phones; this spec is about the Latency tile only.
+const LATEST = 'Nutshell/0.20.0'
 const H = 3_600_000
 const D = 24 * H
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString()
@@ -24,8 +27,9 @@ async function open(page: Page, state: keyof typeof STATES, width: number, heigh
   await installApiMocks(page)
   await page.route('**/api/mints/outages**', r => r.fulfill({ json: { sinceLastOutageMs: null, avgRecoveryMs: null, outageCount: 0, outages: [] } }))
   const base = MOCK_KNOWN_MINTS.find(m => m.url === ALPHA)!
-  const rows = [...MOCK_KNOWN_MINTS, { ...base, url: GONE, name: 'Gone Mint', ...STATES[state] }]
+  const rows = [...MOCK_KNOWN_MINTS, { ...base, url: GONE, name: 'Gone Mint', version: LATEST, ...STATES[state] }]
   await page.route('**/api/mints/known', r => r.fulfill({ json: rows }))
+  if (state === 'online') await mockProbedVersion(page, LATEST)
   if (state !== 'online') {
     await page.route('**/api/mint/probe**', r => r.fulfill({
       json: { url: GONE, online: false, latencyMs: null, info: null, keysets: null, checkedAt: new Date().toISOString(), error: 'Mint unreachable' },

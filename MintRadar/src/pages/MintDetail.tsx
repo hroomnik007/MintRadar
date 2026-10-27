@@ -909,7 +909,9 @@ function MintDetailContent({ url }: { url: string }) {
   const nostrAnnouncedAt = knownMint?.nostrAnnouncedAt ?? null
   const nostrAnnounceHref = njumpEventUrl(knownMint?.nostrAnnounceId)
   const isNew = isNewMint(discoveredAt)
-  const isOutdated = classifyMintVersion(version, versionLatestMap).label === 'outdated'
+  // No "Outdated" pill on an archived mint (2026-10-27): the version is the last one it reported and it is no longer
+  // probed, so comparing it with the current release adds nothing. The version text itself stays.
+  const isOutdated = !isArchived && classifyMintVersion(version, versionLatestMap).label === 'outdated'
 
   // audit.8333.space lifetime counters (display-only "Audit stats" panel) — the
   // rolling-window figures that feed Reliability Score are auditRecent* / breakdownAudit* above.
@@ -1254,12 +1256,14 @@ function MintDetailContent({ url }: { url: string }) {
               )}
             </span>
           )}
+          {/* Not for an archived mint: it is no longer probed and was offline for a long time, so adding it to a wallet is
+              a dead end. "Open in Cashu.me" went first (2026-10-25); Mint QR (its dialog is "Add … to wallet") followed
+              (2026-10-27). The URL itself stays in the header. */}
+          {!isArchived && (
+          <>
           <button className="md-quick-btn" onClick={() => setShowQr(true)}>
             <QrCode size={12} /> Mint QR
           </button>
-          {/* Not for an archived mint (2026-10-25): it is no longer probed and was offline for a long time, so adding it
-              to a wallet is a dead end. Mint QR stays (the URL itself is still a fact). */}
-          {!isArchived && (
           <a
             className="md-quick-btn"
             href={`https://wallet.cashu.me/?mint=${encodeURIComponent(url)}`}
@@ -1270,6 +1274,7 @@ function MintDetailContent({ url }: { url: string }) {
             <span className="md-qb-full">Open in Cashu.me</span>
             <span className="md-qb-short">Cashu.me</span>
           </a>
+          </>
           )}
         </div>
         <div className="md-hdr-right">
@@ -1743,7 +1748,7 @@ function MintDetailContent({ url }: { url: string }) {
         </div>
       </div>
 
-      {showQr && (
+      {showQr && !isArchived && (
         <div className="qr-modal-overlay" onClick={() => setShowQr(false)}>
           <div className="qr-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="qr-modal-title" ref={dialogRef}>
             <div className="qr-modal-header">
