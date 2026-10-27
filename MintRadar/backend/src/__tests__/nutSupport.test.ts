@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isNutSupported, isNutDeclaredSupported, supportedNutKeys, mintSupportsNut } from '../shared/nutSupport.js'
+import { isNutSupported, isNutDeclaredSupported, supportedNutKeys, mintSupportsNut, isNutDisabled, isNutOffered, offeredNutKeys, mintOffersNut } from '../shared/nutSupport.js'
 
 // The same table as src/__tests__/nutSupportCases.ts; src/__tests__/sharedModules.test.ts runs both helper copies
 // against that one, so the two cannot drift apart.
@@ -35,5 +35,19 @@ describe('nutSupport (backend)', () => {
   })
   it('supportedNutKeys drops supported:false', () => {
     expect([...supportedNutKeys({ '7': { supported: false }, '4': {}, '11': { supported: true } })].sort()).toEqual(['11', '4'])
+  })
+  it('a switched-off NUT-04/05 (disabled: true) is declared (score, `nuts`) but not offered (site lists and filters)', () => {
+    const lek = { '4': { methods: [], disabled: true }, '5': { methods: [], disabled: true }, '7': {}, '12': {} }
+    expect(isNutDeclaredSupported(lek['4'])).toBe(true)
+    expect(isNutDisabled(lek['4'])).toBe(true)
+    expect(isNutOffered(lek['4'])).toBe(false)
+    expect(isNutDisabled({ disabled: false })).toBe(false)
+    expect(isNutDisabled({ disabled: 'true' })).toBe(false)
+    expect(isNutDisabled(null)).toBe(false)
+    expect([...supportedNutKeys(lek)].sort()).toEqual(['12', '4', '5', '7'])
+    expect([...offeredNutKeys(lek)].sort()).toEqual(['12', '7'])
+    expect(mintOffersNut(lek, '4')).toBe(false)
+    expect(mintOffersNut(lek, '7')).toBe(true)
+    expect(mintOffersNut(null, '7')).toBe(false)
   })
 })

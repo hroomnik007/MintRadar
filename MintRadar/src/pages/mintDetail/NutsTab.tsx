@@ -14,7 +14,7 @@ import { MintFeesLimits } from '@/components/mint/MintFeesLimits'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { clickableProps } from '@/utils/clickableProps'
 import { BACKUP_SUPPORTED_TEXT, NO_BACKUP_TEXT } from '@/utils/tooltipTexts'
-import { NUT_DESCRIPTIONS, type NutConfig } from './nutCatalog'
+import { NUT_DESCRIPTIONS } from './nutCatalog'
 
 /** One muted sentence under the NUT compatibility grid: which NUTs nutzaps (NIP-61) rely on. No verdict. */
 const NUTZAP_NUTS_NOTE = 'NUT-07, NUT-10, NUT-11 and NUT-12 are the ones nutzaps (NIP-61) rely on.'
@@ -53,14 +53,14 @@ export interface NutsTabProps {
   /** The shared Keysets panel (shown here on mobile only; CSS hides it on desktop). */
   keysetsPanel: ReactNode
   supportsBackupRestore: boolean
-  /** Tracked NUTs the mint declares as supported. */
+  /** Tracked NUTs the mint declares as supported and has not switched off. */
   supportedNuts: string[]
-  /** `nuts` from the live /v1/info, used to spot NUTs disabled by the operator. */
-  liveNuts: Record<string, unknown> | undefined
+  /** Tracked NUTs the mint declares but switched off (NUT-04/05 `disabled: true`, live /v1/info else the stored one). */
+  disabledNuts: string[]
   onSelectNut: (nut: string) => void
 }
 
-export function NutsTab({ feesLimits, keysetsPanel, supportsBackupRestore, supportedNuts, liveNuts, onSelectNut }: NutsTabProps) {
+export function NutsTab({ feesLimits, keysetsPanel, supportsBackupRestore, supportedNuts, disabledNuts, onSelectNut }: NutsTabProps) {
   return (<>
     {feesLimits && (
       <MintFeesLimits {...feesLimits} />
@@ -91,15 +91,13 @@ export function NutsTab({ feesLimits, keysetsPanel, supportsBackupRestore, suppo
       </div>
       <div className="nut-summary-line">
         <strong>{supportedNuts.length}</strong> of {TRACKED_NUTS.length} known NUTs supported
+        {disabledNuts.length > 0 && <> · {disabledNuts.length} disabled</>}
       </div>
       <div className="nut-grid">
         {TRACKED_NUTS.map(nut => {
-          const supported = supportedNuts.includes(nut)
+          const isDisabled = disabledNuts.includes(nut)
+          const supported = isDisabled || supportedNuts.includes(nut)
           const meta = NUT_DESCRIPTIONS[nut]
-          const nutKey = parseInt(nut.slice(4), 10).toString()
-          const rawConfig = liveNuts?.[nutKey]
-          const nutConfig = (rawConfig !== null && rawConfig !== undefined && typeof rawConfig === 'object') ? rawConfig as NutConfig : null
-          const isDisabled = supported && nutConfig?.disabled === true
           return (
             <div key={nut} className={`nut-card ${isDisabled ? 'nut-disabled' : supported ? 'supported' : 'unsupported'}`} {...clickableProps(() => onSelectNut(nut))}>
               <div className={`nut-icon ${isDisabled ? 'nut-disabled' : supported ? 'supported' : 'unsupported'}`}>

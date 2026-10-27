@@ -3,7 +3,7 @@ import type { Request, Response } from 'express'
 import { NEW_MINT_MAX_DAYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
 import { classifyVersion, MAX_VERSION_LENGTH, type LatestVersion } from './shared/versionRule.js'
 import { METHODOLOGY_VERSION } from './shared/methodology.js'
-import { isNutDeclaredSupported } from './shared/nutSupport.js'
+import { isNutDeclaredSupported, isNutDisabled } from './shared/nutSupport.js'
 import { isTestMint } from './testMints.js'
 import { auditDataState } from './shared/auditScore.js'
 import type { ScoreBreakdown } from './scoreBreakdown.js'
@@ -161,6 +161,10 @@ export interface WalletMint {
   lastCheckedAt: string | null
   units: string[] | null
   nuts: string[] | null
+  /** Additive 2026-10-27: NUT-04 (minting) listed with `disabled: true`; null when the NUTs are unknown. NUT-04 stays in `nuts`. */
+  mintDisabled: boolean | null
+  /** Additive 2026-10-27: NUT-05 (melting) listed with `disabled: true`; null when the NUTs are unknown. NUT-05 stays in `nuts`. */
+  meltDisabled: boolean | null
   software: string | null
   outdated: boolean | null
   isTest: boolean
@@ -210,6 +214,12 @@ export function nutsOf(nutsLimits: Record<string, unknown> | null): string[] | n
   return Object.keys(nutsLimits)
     .filter(k => isNutDeclaredSupported(nutsLimits[k]))
     .sort((a, b) => Number(a) - Number(b) || a.localeCompare(b))
+}
+
+/** True when NUT `key` is listed with `disabled: true` (shared/nutSupport.ts isNutDisabled); null when the NUTs are unknown. */
+export function nutDisabledOf(nutsLimits: Record<string, unknown> | null | undefined, key: string): boolean | null {
+  if (nutsLimits === null || nutsLimits === undefined || typeof nutsLimits !== 'object') return null
+  return isNutDisabled(nutsLimits[key])
 }
 
 function statusOf(m: KnownMintLike): WalletMintStatus {
@@ -353,6 +363,8 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviews
     lastCheckedAt: toIso(m.lastCheckedAt),
     units: Array.isArray(m.units) ? m.units : null,
     nuts: nutsOf(m.nutsLimits),
+    mintDisabled: nutDisabledOf(m.nutsLimits, '4'),
+    meltDisabled: nutDisabledOf(m.nutsLimits, '5'),
     software: typeof m.version === 'string' ? m.version.slice(0, MAX_VERSION_LENGTH) : null,
     outdated: outdatedOf(m.version, m.softwareLatest),
     isTest: test,

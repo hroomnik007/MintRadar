@@ -2,7 +2,7 @@ import './wsPolyfill.js'
 import express, { type Request, type Response, type NextFunction } from 'express'
 import cors from 'cors'
 import { pool, initDb } from './db.js'
-import { isNutDeclaredSupported } from './shared/nutSupport.js'
+import { isNutDeclaredSupported, isNutOffered } from './shared/nutSupport.js'
 import { isSafeUrl, isWellFormedMintUrl, checkWsUrlSafety, safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 import { upsertMint, probeMintToDb, validateCashuMintProbe, parseMintMethods, classifyFetchError, type MintMethodEntry } from './prober.js'
 import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type ProbeFailure, type SafeFetchRejection } from './probeErrorKind.js'
@@ -1296,9 +1296,9 @@ app.get('/api/nuts', (_req: Request, res: Response): void => {
       const nuts = TRACKED_NUT_KEYS.map(key => ({
         nut: `NUT-${key.padStart(2, '0')}`,
         percent: total > 0
-          ? Math.round(rows.filter(r => isNutDeclaredSupported(r.nuts_limits[key])).length / total * 100)
+          ? Math.round(rows.filter(r => isNutOffered(r.nuts_limits[key])).length / total * 100)
           : 0,
-        mints: rows.filter(r => isNutDeclaredSupported(r.nuts_limits[key])).map(r => r.url),
+        mints: rows.filter(r => isNutOffered(r.nuts_limits[key])).map(r => r.url),
       }))
       res.json(nuts)
     })
@@ -1346,13 +1346,14 @@ async function computeStats(): Promise<object> {
   // extra entries here are simply ignored there, but the Network Health
   // Index's "advanced adoption" component also reads this array directly
   // for a few auth/payment-method NUTs (21/22/25) outside the 14.
+  // Offered, not only declared (2026-10-27): a switched-off NUT-04/05 (`disabled: true`) is not counted as adoption.
   const onlineWithNuts = online.filter(r => r.nuts_limits != null)
   const totalForAdoption = onlineWithNuts.length
   const nutAdoption = MINT_ADVERTISED_NUT_KEYS.map(key => ({
     nut: `NUT-${key.padStart(2, '0')}`,
-    count: onlineWithNuts.filter(r => r.nuts_limits && isNutDeclaredSupported(r.nuts_limits[key])).length,
+    count: onlineWithNuts.filter(r => r.nuts_limits && isNutOffered(r.nuts_limits[key])).length,
     percent: totalForAdoption > 0
-      ? Math.round(onlineWithNuts.filter(r => r.nuts_limits && isNutDeclaredSupported(r.nuts_limits[key])).length / totalForAdoption * 100)
+      ? Math.round(onlineWithNuts.filter(r => r.nuts_limits && isNutOffered(r.nuts_limits[key])).length / totalForAdoption * 100)
       : 0,
   }))
   const top5 = [...rows]

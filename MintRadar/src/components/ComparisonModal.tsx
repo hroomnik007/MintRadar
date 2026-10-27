@@ -7,11 +7,12 @@ import {
 } from 'recharts'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useModalFocus } from '@/hooks/useModalFocus'
-import { supportedNutKeys } from '@/utils/nutSupport'
+import { offeredNutKeys } from '@/utils/nutSupport'
 import { IcShield } from '@/components/mint/IcShield'
 import { type KnownMint } from '@/hooks/useKnownMints'
 import { classifyMintVersion, latestMapFor } from '@/utils/versionRule'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
+import { offeredNutCount } from '@/utils/nutFilters'
 import { AUDIT_MIN_SAMPLES, auditDataState } from '@/utils/auditScore'
 import { auditReliabilityColor, formatTimeAgo, LOW_RELIABILITY_TEXT } from '@/utils/mintFormatting'
 import { useNow } from '@/hooks/useNow'
@@ -121,8 +122,9 @@ function useMintCompareData(mint: KnownMint) {
   // NUT-13 (deterministic secrets) is wallet-side only — mints never advertise
   // it in /v1/info. NUT-09 (restore signatures) is the mint-side capability
   // that actually gates backup/restore — matches MintDetail's supportsBackupRestore.
-  // One NUT rule with the score and Mint Detail (utils/nutSupport.ts): absent, null and `supported: false` are not support.
-  const supportedNuts = supportedNutKeys(nutsLimits)
+  // One NUT rule with Mint Detail (utils/nutSupport.ts): absent, null and `supported: false` are not support, and a
+  // switched-off NUT-04/05 (`disabled: true`) is not offered (2026-10-27).
+  const supportedNuts = offeredNutKeys(nutsLimits)
   const supportsBackupRestore = supportedNuts.has('9')
   // Same rule and the same "latest" as everywhere else (versionRule.ts + the value the API sends with the mint).
   const isOutdated = classifyMintVersion(mint.version, latestMapFor(mint.version, mint.softwareLatest)).label === 'outdated'
@@ -313,8 +315,8 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
     },
     {
       id: 'nut-count', label: 'NUT Count',
-      keys: mints.map(m => String(m.nutCount ?? 0)),
-      cell: i => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{mints[i]!.nutCount ?? 0} / {TRACKED_NUT_KEYS.length}</span>,
+      keys: mints.map(m => String(offeredNutCount(m) ?? 0)),
+      cell: i => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{offeredNutCount(mints[i]!) ?? 0} / {TRACKED_NUT_KEYS.length}</span>,
     },
     {
       id: 'nut-support', label: <>NUT Support<InfoTooltip iconSize={11} width={220} about="NUT Support" text={COMPARE_NUT_SUPPORT_TEXT} /></>,
@@ -575,7 +577,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           <div className="cmp-lbl">NUT Count</div>
           {mints.map(mint => (
             <div key={mint.url} className="cmp-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-              {mint.nutCount ?? 0} / {TRACKED_NUT_KEYS.length}
+              {offeredNutCount(mint) ?? 0} / {TRACKED_NUT_KEYS.length}
             </div>
           ))}
 

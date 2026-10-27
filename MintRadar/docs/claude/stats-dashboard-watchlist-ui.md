@@ -498,3 +498,7 @@ Moved verbatim from the former "Key features" block of CLAUDE.md. Section names 
   - Same pubkey → Dexie preserved as fallback if remote returns `[]`
   - Different pubkey → Dexie cleared (different user on same device), then load from remote
 - `handleLogout` in `AppShell.tsx` calls `resetInMemory()` (in-memory Zustand reset only)
+
+## Switched-off NUT-04/05 in lists and filters (2026-10-27)
+
+- A NUT-04/05 entry with `disabled: true` is **not offered**: the Dashboard `?nuts=` filter, the Best Mint wizard checks and the Stats NUT coverage modal use `mintOffersNut` (`utils/nutFilters.ts`); Compare's NUT chips and Backup row use `offeredNutKeys`; the list-view NUT column and Compare's "NUT Count" show `offeredNutCount(mint)` (stored `nutCount` less the disabled tracked NUTs; the stored count stays the score input). The add-a-mint probe preview counts offered NUTs. Backend `/api/nuts` and `/api/stats` `nutAdoption` use `isNutOffered` too (the Network Health Index reads only NUT-21/22/25 from that array, so it is unaffected). `COMPARE_NUT_SUPPORT_TEXT` names the switched-off case.

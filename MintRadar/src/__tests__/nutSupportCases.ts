@@ -10,6 +10,8 @@ export interface NutSupportCase {
   declaredSupported: boolean
   /** supportedNutKeys({ '7': entry }).has('7'): the same rule as isNutDeclaredSupported (a null value is not declared). */
   inKeys: boolean
+  /** isNutOffered / offeredNutKeys / mintOffersNut: declared and not `disabled: true`. Defaults to declaredSupported. */
+  offered?: boolean
 }
 
 export const NUT_SUPPORT_CASES: NutSupportCase[] = [
@@ -24,6 +26,9 @@ export const NUT_SUPPORT_CASES: NutSupportCase[] = [
   { name: 'false (non-object)', entry: false, supported: true, declaredSupported: true, inKeys: true },
   { name: 'a number', entry: 5, supported: true, declaredSupported: true, inKeys: true },
   { name: 'an array', entry: [], supported: true, declaredSupported: true, inKeys: true },
+  { name: 'disabled: true (NUT-04/05 switched off)', entry: { methods: [], disabled: true }, supported: true, declaredSupported: true, inKeys: true, offered: false },
+  { name: 'disabled: "true" (a string) is not the boolean', entry: { methods: [], disabled: 'true' }, supported: true, declaredSupported: true, inKeys: true, offered: true },
+  { name: 'supported: false and disabled: true', entry: { supported: false, disabled: true }, supported: false, declaredSupported: false, inKeys: false, offered: false },
   { name: 'null', entry: null, supported: true, declaredSupported: false, inKeys: false },
   { name: 'undefined (absent)', entry: undefined, supported: true, declaredSupported: false, inKeys: false },
 ]

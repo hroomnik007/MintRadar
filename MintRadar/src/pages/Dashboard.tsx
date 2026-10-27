@@ -27,8 +27,8 @@ import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolFor
 import { collapseOnline, showingNoteText, mobileCollapseApplies, showLessApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY, MOBILE_EXPANDED_KEY, scrollPageTopAfterCollapse } from '@/utils/mobileCollapse'
 import { useMediaQuery } from '@/hooks/useIsMobile'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
-import { isNutDeclaredSupported } from '@/utils/nutSupport'
-import { hasRequiredNuts } from '@/utils/nutFilters'
+import { isNutOffered } from '@/utils/nutSupport'
+import { hasRequiredNuts, offeredNutCount } from '@/utils/nutFilters'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { probeErrorMessage, probeRateLimitMessage, isProbeErrorKind, type ProbeErrorKind } from '@/utils/probeErrorMessages'
@@ -479,7 +479,7 @@ function MintListView({
                     {score != null ? `${score}` : '—'}
                   </td>
                   <td className="col-hide-mobile" style={{ fontFamily: 'var(--font-mono-data)', fontSize: 12, color: 'var(--text2)' }}>
-                    {mint.nutCount != null ? `${mint.nutCount}/${TRACKED_NUT_KEYS.length}` : '—'}
+                    {offeredNutCount(mint) != null ? `${offeredNutCount(mint)}/${TRACKED_NUT_KEYS.length}` : '—'}
                   </td>
                 </tr>
               )
@@ -1104,8 +1104,8 @@ export default function Dashboard() {
                 // Cleaned like every displayed mint name (cleanMintName.ts); '' = nothing displayable -> "Unknown mint".
                 name: cleanMintName(data.info.name, '') || null,
                 version: data.info.version ?? null,
-                // The tracked NUTs the mint declares as supported, like the mint card and the score (not every key of `nuts`).
-                nutCount: TRACKED_NUT_KEYS.filter(key => isNutDeclaredSupported(nuts[key])).length,
+                // The tracked NUTs the mint offers (declared, not switched off), like the Mint detail header (not every key of `nuts`).
+                nutCount: TRACKED_NUT_KEYS.filter(key => isNutOffered(nuts[key])).length,
                 latencyMs: data.latencyMs,
               },
             })
