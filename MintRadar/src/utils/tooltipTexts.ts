@@ -71,6 +71,9 @@ export function reviewSurgeText(): string {
 }
 
 /** Dashboard Filters > Unit. */
+/** The Dashboard "Method" filter (utils/methodFilter.ts). */
+export const METHOD_FILTER_TEXT = 'Shows only mints that offer this payment method for deposits or withdrawals, in any unit. A method the mint switched off does not count.'
+
 export const UNIT_FILTER_TEXT = 'Shows only mints that list a selected unit. Mints with unknown units are hidden while a unit is selected.'
 
 /** The "Hide test mints" filter (the tag shown while it is on). */

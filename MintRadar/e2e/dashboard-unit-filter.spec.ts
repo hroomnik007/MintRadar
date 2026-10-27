@@ -225,8 +225,9 @@ test.describe('Dashboard unit filter', () => {
     // Unit control starts 29.79px further left on one row) and the 16px gap between stacked rows
     // (--filter-row-gap): 390/360 stack 4 rows (+24px over the 8px gap), 320 wraps the footer once more (228).
     // Re-measured 2026-10-07 for the sans labels (both 64px wide, so the controls start 23.8px further right); heights unchanged.
+    // Re-measured 2026-10-27 for the 72px labels (room for the Method filter's ⓘ touch area): +8px per label; heights unchanged.
     const baseline: Record<number, [number, number, number]> = {
-      1440: [56, 181, 418], 900: [100, 103, 340], 600: [184, 99, 99], 390: [184, 99, 99], 360: [184, 99, 99], 320: [228, 99, 99],
+      1440: [56, 189, 434], 900: [100, 111, 356], 600: [184, 107, 107], 390: [184, 107, 107], 360: [184, 107, 107], 320: [228, 107, 107],
     }
     for (const [w, [h, sx, ux]] of Object.entries(baseline)) {
       await page.setViewportSize({ width: Number(w), height: 900 })
