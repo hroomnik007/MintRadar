@@ -404,9 +404,10 @@ const toHex = (b: Uint8Array) => Buffer.from(b).toString('hex')
 export function makeDleqMint(
   mint: string,
   proofSpecs: { amount: number; dleq: DleqKind }[],
-  opts: { hideKeys?: boolean } = {},
+  opts: { hideKeys?: boolean; inputFeePpk?: number; active?: boolean } = {},
 ): DleqMintFixture {
-  const keys = createNewMintKeys(4, undefined, { unit: 'sat', input_fee_ppk: 0 })
+  const fee = opts.inputFeePpk ?? 0
+  const keys = createNewMintKeys(4, undefined, { unit: 'sat', input_fee_ppk: fee })
   const id = keys.keysetId
   const proofs = proofSpecs.map(({ amount, dleq: kind }, i) => {
     const secret = `dleq-fixture-secret-${i}-${amount}`
@@ -431,7 +432,7 @@ export function makeDleqMint(
     token: getEncodedToken({ mint, unit: 'sat', proofs } as Parameters<typeof getEncodedToken>[0]),
     routes: {
       info: { name: 'Fixture mint', nuts: { 4: { methods: [], disabled: false }, 5: { methods: [], disabled: false } } },
-      keysets: { keysets: [{ id, unit: 'sat', active: true, input_fee_ppk: 0 }] },
+      keysets: { keysets: [{ id, unit: 'sat', active: opts.active ?? true, input_fee_ppk: fee }] },
       keys: {
         keysets: [{
           id, unit: 'sat',

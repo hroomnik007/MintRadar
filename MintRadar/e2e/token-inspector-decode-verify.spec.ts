@@ -156,7 +156,7 @@ for (const w of [320, 390, 1440] as const) {
   })
 }
 
-test('keyboard order: textarea, Inspect, the Signature check help, Check if spent, then the actions', async ({ page }) => {
+test('keyboard order: textarea, Inspect, the Signature check help, the Mint fee help, Check if spent, then the actions', async ({ page }) => {
   const fx = makeDleqMint(MINT, [{ amount: 1, dleq: 'valid' }])
   await serveMintInPage(page, fx)
   await open(page)
@@ -166,7 +166,7 @@ test('keyboard order: textarea, Inspect, the Signature check help, Check if spen
   await expect(verify(page)).toContainText('Verified.', { timeout: 15_000 })
   await page.getByRole('button', { name: /Inspect & Verify Token/ }).focus()
   const names: string[] = []
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 6; i++) {
     await page.keyboard.press('Tab')
     names.push(await page.evaluate(() => {
       const a = document.activeElement as HTMLElement | null
@@ -174,10 +174,11 @@ test('keyboard order: textarea, Inspect, the Signature check help, Check if spen
     }))
   }
   expect(names[0]).toMatch(/Signature check/i)
-  expect(names[1]).toMatch(/Check if spent/)
-  expect(names[2]).toMatch(/Redeem to Lightning/)
-  expect(names[3]).toMatch(/View Mint Detail/)
-  expect(names[4]).toMatch(/Open in cashu\.me/)
+  expect(names[1]).toMatch(/Mint fee/i)
+  expect(names[2]).toMatch(/Check if spent/)
+  expect(names[3]).toMatch(/Redeem to Lightning/)
+  expect(names[4]).toMatch(/View Mint Detail/)
+  expect(names[5]).toMatch(/Open in cashu\.me/)
 })
 
 test.describe('"Not in database" only when the known-mints list really lacks the mint', () => {
