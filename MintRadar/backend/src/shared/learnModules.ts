@@ -39,7 +39,7 @@ export const LEARN_MODULES: LearnModuleMeta[] = [
     title: 'Getting Started with a Wallet',
     summary: 'Choosing a wallet, adding your first mint, making a deposit, sending tokens, and why backing up your seed phrase is non-negotiable.',
     order: 4,
-    readingMinutes: 3,
+    readingMinutes: 4,
   },
   {
     id: 'safe-habits',
