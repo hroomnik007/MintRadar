@@ -4,6 +4,7 @@ import { NEW_MINT_MAX_DAYS, isEligibleForRecommendation } from './shared/reliabi
 import { classifyVersion, MAX_VERSION_LENGTH, type LatestVersion } from './shared/versionRule.js'
 import { METHODOLOGY_VERSION } from './shared/methodology.js'
 import { isNutDeclaredSupported, isNutDisabled } from './shared/nutSupport.js'
+import { mintStatus, type MintStatus } from './shared/mintStatus.js'
 import { isTestMint } from './testMints.js'
 import { auditDataState } from './shared/auditScore.js'
 import type { ScoreBreakdown } from './scoreBreakdown.js'
@@ -144,7 +145,7 @@ export function latency24hOf(p50: unknown, p95: unknown, samples: unknown): Wall
   return { p50Ms: Math.round(a), p95Ms: Math.round(b), samples: n }
 }
 
-export type WalletMintStatus = 'online' | 'offline' | 'degraded' | 'archived'
+export type WalletMintStatus = MintStatus
 
 export interface WalletMint {
   url: string
@@ -222,10 +223,9 @@ export function nutDisabledOf(nutsLimits: Record<string, unknown> | null | undef
   return isNutDisabled(nutsLimits[key])
 }
 
+/** The shared status rule (shared/mintStatus.ts): the website shows the same state from the same snapshot. */
 function statusOf(m: KnownMintLike): WalletMintStatus {
-  if (m.archived) return 'archived'
-  if (m.degraded) return 'degraded'
-  return m.online === true ? 'online' : 'offline'
+  return mintStatus(m)
 }
 
 /** True while the 75-point cap for mints younger than NEW_MINT_MAX_DAYS applies (same rule as applyNewMintCap). */

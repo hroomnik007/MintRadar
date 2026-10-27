@@ -85,7 +85,7 @@ test.describe('MintCard — copy & reduced badge set', () => {
     await expect(card(page, 'Charlie Mint').locator('.latency-value')).toHaveText('n/a')
   })
 
-  test('Offline 24h+ card shows Last seen from lastOnlineAt, not the last probe time', async ({ page }) => {
+  test('Degraded card shows Last seen from lastOnlineAt, not the last probe time', async ({ page }) => {
     const sixDaysAgo = new Date(Date.now() - 6 * 86_400_000).toISOString()
     const rows = MOCK_KNOWN_MINTS.map(m => {
       // Charlie has been probed recently (lastCheckedAt is ~"now" in the fixture)

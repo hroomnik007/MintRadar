@@ -34,7 +34,8 @@ import { MintComparePicker } from '@/components/MintComparePicker'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { supportedNutKeys, offeredNutKeys } from '@/utils/nutSupport'
 import { formatDate } from '@/utils/formatDate'
-import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, UPTIME_PENDING_ARIA_LABEL, SCORE_PENDING_ARIA_LABEL, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, UPTIME_PENDING_ARIA_LABEL, SCORE_PENDING_ARIA_LABEL, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames, mintStatusLabel } from '@/utils/mintFormatting'
+import { mintStatus } from '@/utils/mintStatus'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
 import { operatorPubkeys } from '@/utils/operatorPubkeys'
@@ -907,6 +908,12 @@ function MintDetailContent({ url }: { url: string }) {
   // Mint that is not online: an honest block at the top of the Overview (since when, last error, what to do).
   const unavailable = !isOnline && knownMint !== null
   const isArchived = !isOnline && knownMint?.archived === true
+  // Status word (2026-10-27): the shared rule of the wallet API `status` (utils/mintStatus.ts), so a mint the API calls
+  // `degraded` reads "Degraded" here as on its card (lnpay was degraded in the API but "Offline" here). The one
+  // input that can differ from the API is `online`: a live probe from this page is newer than the snapshot, and when
+  // it succeeds the mint is Online even if the snapshot still says degraded.
+  const status = mintStatus({ online: isOnline, degraded: !isOnline && knownMint?.degraded === true, archived: isArchived })
+  const statusLabel = mintStatusLabel(status)
   const unavailableInfo = unavailable ? unavailableHeadline({ since: knownMint?.offlineSince ?? knownMint?.lastOnlineAt, archived: knownMint?.archived === true, now }) : null
   const lastErrorText = sanitizeLastError(knownMint?.lastError)
   const unavailableContacts = [email && `email ${email}`, twitter && `Twitter ${twitter}`, nostr && `Nostr ${nostr}`].filter((c): c is string => !!c)
@@ -1186,9 +1193,9 @@ function MintDetailContent({ url }: { url: string }) {
                   read the heading as "21MintOnline". The flex row and its look stay on the outer .md-name. */}
               <div className="md-name" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                 <h1 className="md-name-h1" {...(resolvedNameFull ? { title: resolvedNameFull } : {})}>{displayName}</h1>
-                <span className={`md-status-inline ${isOnline ? '' : isArchived ? 'offline archived' : 'offline'}`}>
+                <span className={`md-status-inline ${status === 'online' ? '' : status === 'archived' ? 'offline archived' : status === 'degraded' ? 'offline degraded' : 'offline'}`} data-status={status}>
                   <span className={`status-dot ${isOnline ? '' : 'offline'}`} />
-                  <span>{isOnline ? 'Online' : isArchived ? 'Archived' : 'Offline'}</span>
+                  <span>{statusLabel}</span>
                 </span>
                 {isNew && (
                   <InfoTooltip text={newMintBadgeText()} width={240}><span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}}>New</span></InfoTooltip>

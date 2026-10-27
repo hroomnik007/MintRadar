@@ -14,8 +14,9 @@ describe('escapeHtml', () => {
 })
 
 describe('mintStatusLabel', () => {
-  it('is Degraded when degraded, regardless of online value', () => {
+  it('is "Degraded" when degraded, regardless of online value (same word as the website)', () => {
     expect(mintStatusLabel({ online: true, degraded: true })).toBe('Degraded')
+    expect(mintStatusLabel({ online: false, degraded: true })).toBe('Degraded')
   })
 
   it('is Online when online and not degraded', () => {

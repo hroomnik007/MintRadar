@@ -5,6 +5,7 @@
 import { PROBE_LOCATION } from '@/constants/probeLocation'
 import { cleanMintName } from '@/utils/cleanMintName'
 import { duplicateNamesOf, mintHostname, resolveStrippedMintName, stripCleanedNameQuotes } from '@/utils/mintSlug'
+import type { MintStatus } from '@/utils/mintStatus'
 
 export { mintHostname, resolveMintDetailUrl, type MintDetailResolution } from '@/utils/mintSlug'
 
@@ -335,14 +336,28 @@ export function reliabilityColor(score: number): string {
   return 'var(--red)'
 }
 
-// statusDotColor: the one colour of the status dot, shared by the Dashboard card (online / offline) and the
-// Payment request inspector (every status word). A degraded mint is offline 24h+, so it is red like on the card;
-// archived and unknown mints are not a failure and use the muted text token.
+// statusDotColor: the one colour of the status dot, shared by the Dashboard card, Mint detail, Compare and the
+// Payment request inspector (every status word). A degraded mint is offline 24h+, so it is red like a plain offline
+// one; archived and unknown mints are not a failure and use the muted text token.
 export type StatusDotWord = 'Online' | 'Offline' | 'Degraded' | 'Archived' | 'Unknown'
 export function statusDotColor(status: StatusDotWord): string {
   if (status === 'Online') return 'var(--green-bright)'
   if (status === 'Offline' || status === 'Degraded') return 'var(--red)'
   return 'var(--text3)'
+}
+
+// mintStatusLabel (2026-10-27): the word for a status from the shared rule (utils/mintStatus.ts, the same function
+// as the wallet API `status`). API `degraded` reads "Degraded" everywhere on the site (card badge, Dashboard list,
+// Mint detail, Compare, Payment request inspector, link preview): a plain fact, the same words as the Dashboard's
+// "hidden (offline 24h+)" note.
+export const MINT_STATUS_LABEL: Record<MintStatus, Exclude<StatusDotWord, 'Unknown'>> = {
+  online: 'Online',
+  offline: 'Offline',
+  degraded: 'Degraded',
+  archived: 'Archived',
+}
+export function mintStatusLabel(status: MintStatus): Exclude<StatusDotWord, 'Unknown'> {
+  return MINT_STATUS_LABEL[status]
 }
 
 // ── Reliability Score donut geometry ────────────────────────────────
