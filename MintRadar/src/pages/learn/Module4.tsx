@@ -34,7 +34,18 @@ export default function Module4() {
         Sending ecash is different from a normal Bitcoin transaction — there's no address, no block confirmation. You generate a token (a long text string starting with <code>cashuA</code> or <code>cashuB</code>), and send it to someone however you like: paste it in a chat, show a QR code, even embed it in an emoji. The recipient pastes it into their own wallet to receive it.
       </p>
       <p>
-        Because this doesn't touch the Lightning Network, it's instant and free — this is one of Cashu's biggest advantages for small, frequent payments.
+        Because this doesn't touch the Lightning Network, it's instant and has no Lightning fee (a mint's input fee, below, can still apply) — this is one of Cashu's biggest advantages for small, frequent payments.
+      </p>
+
+      <h2>Fees</h2>
+      <p>
+        Your balance is held as many coins of different sizes. Some mints charge a small <strong>input fee</strong> for each coin you spend, rounded up, so a payment that uses many small coins costs more than one that uses a few large ones.
+      </p>
+      <p>
+        When you withdraw to Lightning (melt), the mint also holds a <strong>Lightning fee reserve</strong> for routing. It depends on the invoice, so your wallet shows it when you request the withdrawal. Mints that support NUT-08 return the part that wasn't used.
+      </p>
+      <p>
+        A mint's input fee and its deposit and withdrawal limits are on its MintRadar page, in the <strong>Fees and limits</strong> card on the NUTs tab.
       </p>
 
       <h2>Backing up your wallet</h2>
