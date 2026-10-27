@@ -19,6 +19,7 @@
 - A mint is ONLINE only if the endpoint answers with a successful HTTP status and valid JSON whose `nuts` field is an object
 - Server-side latency measured from Nuremberg, DE (Hetzner Cloud)
 - "Show my latency" button for a client-side test directly from your browser
+- Each mint reads **Online**, **Degraded**, **Offline** or **Archived**; the site and the wallet API use the same rule (see [mintradar.org/methodology](https://mintradar.org/methodology))
 
 ### 🛡️ Reliability Score System
 
@@ -30,7 +31,7 @@ Five components feed the score:
 |-----------|-------|
 | Uptime | Availability over the last 24 hours |
 | Audit Reliability | Share of the last 7 days' swaps whose failure [cashu.info](https://cashu.info) attributes to the mint. Too few swaps, no cashu.info data, or stale data scores a neutral middle value, not zero. audit.8333.space is not used for the score |
-| NUT Support | Supported NUT specs, out of the set of mint-side NUTs MintRadar tracks |
+| NUT Support | Supported NUT specs, out of the set of mint-side NUTs MintRadar tracks. A NUT-04 or NUT-05 the mint has switched off (`"disabled": true` in `/v1/info`) does not count |
 | Version Freshness | How far the mint's software (Nutshell or cdk) is behind the newest stable release of the same software |
 | Contact Info | Contact methods provided (email, Twitter, Nostr); capped, so a long contact list cannot inflate the score |
 
@@ -43,16 +44,22 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 ### 🔍 Dashboard & Discovery
 
 - Search by name or URL
-- Filter panel: Status (All / Online / Offline), Unit (SAT / USD / EUR, any of the selected), Reliability Score minimum, Hide test mints
+- Filter panel: Status (All / Online / Offline), Unit (SAT / USD / EUR, any of the selected), Method (one payment method the mints advertise in NUT-04 or NUT-05, such as bolt11, bolt12 or onchain; a side the mint switched off does not count), Reliability Score minimum, Hide test mints
 - There is **no NUT filter** in the panel; the only way to filter by NUT is a `?nuts=` link (comma-separated NUT numbers, e.g. `?nuts=9,12`; a mint must support all of them), shown as dismissible `NUT-NN` tags
 - Active filters shown as dismissible tags at the top of the open panel
-- Dashboard state lives in the URL, so views can be shared as links: `?q=` (search), `?sort=` (`name`/`latency`/`rating`/`reliability`/`reviewCount`) with `?dir=` (`asc`/`desc`), `?status=` (`all`/`offline`), `?reliability=` (0–100), `?testmints=hide`, `?unit=` (`sat`, `usd`, `eur`, comma-separated, e.g. `?unit=sat,usd`) and `?compare=` (comma-separated mint URLs, also on the Watchlist page); default values are omitted
-- Deep links: Mint Detail tabs open from the URL hash (`#overview`, `#history`, `#nuts`, `#audit`, `#reviews`, `#review-<id>`), and Tools from `/tools#pick` and `/tools#token`
+- Dashboard state lives in the URL, so views can be shared as links: `?q=` (search), `?sort=` (`name`/`latency`/`rating`/`reliability`/`reviewCount`) with `?dir=` (`asc`/`desc`), `?status=` (`all`/`offline`), `?reliability=` (0–100), `?testmints=hide`, `?unit=` (`sat`, `usd`, `eur`, comma-separated, e.g. `?unit=sat,usd`), `?method=` (one method, e.g. `?method=bolt12`) and `?compare=` (comma-separated mint URLs, also on the Watchlist page); default values are omitted
+- Deep links: Mint Detail tabs open from the URL hash (`#overview`, `#history`, `#nuts`, `#audit`, `#reviews`, `#review-<id>`), and Tools from `/tools#token`, `/tools#payment-request` and `/tools#pick`
 - Counts: the header shows online and tracked mints; "tracked" is every mint in the database (archived ones included), and the grid footer reads "Showing X of <tracked>". Mints the default view hides (offline, degraded, archived) sit behind a "N mints hidden (offline 24h+)" toggle; **Show** reveals all of them
 - Sort by Latency / Name / Reliability Score / **Rating** / **Most reviewed** (asc/desc) — Rating uses a confidence-adjusted average, (n·avg + 5·3.5) / (n + 5), so mints with few reviews rank lower and a mint with one 5★ review doesn't outrank one with eighty 4.8★ (the stars and counts shown do not change)
 - Compact (list) and expanded (card) view toggle
 - Single URL or bulk mint submission (paste multiple URLs at once)
 - Recently discovered mints get a **New** badge; known dev/test mints are badged separately
+
+### 🪙 Mint Detail
+
+- Header, NUTs tab and NUT dialog show a NUT-04 (deposit) or NUT-05 (withdrawal) the mint has switched off as **Disabled by operator**; Open in Cashu.me is then hidden
+- **Fees and limits** card on the NUTs tab: the mint's input fee per coin, with examples per unit, and the min/max limits per payment method
+- Archived mints keep their history, but hide the Mint QR, the Cashu.me button and the Outdated pill
 
 ### 📈 Historical Data
 
@@ -67,13 +74,13 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 - Network Health Index (one score for the whole network, with its components)
 - Top mints by Reliability Score and by uptime
 - Software in use across known mints
-- NUT coverage across the network
+- NUT coverage across the network, and the **NUT Explorer** ([mintradar.org/nuts](https://mintradar.org/nuts)): how many online mints support each NUT, and which ones
 - Geographic distribution of the mints' servers
 - Reliability movers — recent risers and fallers — and a Reliability Score trend chart
 
 ### ⚖️ Mint Comparison Tool
 
-Compare up to **4** mints side-by-side: Status, Reliability Score, Community Rating, Uptime, Latency, NUT support grid, software version and its history. On narrow screens the table becomes a stacked/tabbed layout — one mint at a time, no horizontal scrolling.
+Compare up to **4** mints side-by-side: Status, Reliability Score, Community Rating, Uptime, Latency, Input fee, Deposit and Withdrawal methods (a side the mint switched off is marked), Limits, Units, NUT count and support grid, software version and its history. The mint picker works from the keyboard. On narrow screens the mints stay side by side in a compact table with a fixed label column (more than two scroll sideways), and an **Only differences** switch hides the rows where all mints agree.
 
 ### 👁️ Watchlist with Nostr Login
 
@@ -89,7 +96,8 @@ Automatic mint discovery on a schedule from a set of public Nostr relays, using 
 
 ### 🔧 Tools
 
-- **Token Inspector** — paste a Cashu token (`cashuA` / `cashuB`) to see its mint, amount, unit, proof count, memo, mint status, and Reliability Score, plus a signature check (NUT-12) — with a link to Mint Detail or Cashu.me. Optional **Check if spent** queries the mint (NUT-07) for unspent / spent / pending / partial proofs
+- **Token Inspector** — paste a Cashu token (`cashuA` / `cashuB`) to see its mint, amount, unit, proof count, memo, mint status, and Reliability Score, plus a signature check (NUT-12), the exact fee to claim the token (the mint's input fee per coin, rounded up) and whether its keyset is still active at the mint — with a link to Mint Detail or Cashu.me. Optional **Check if spent** queries the mint (NUT-07) for unspent / spent / pending / partial proofs
+- **Payment request inspector** — paste a NUT-18 payment request (`creqA…`) to see its amount, unit, description, locking condition, transports and accepted mints, each accepted mint with its MintRadar status and Reliability Score when it is tracked
 - **Best Mint for Me** — a short wizard: pick your currency unit and how much you plan to store, then multi-select what matters (fast latency measured from your browser, Reliability Score, Lightning in + out, seed-phrase restore/NUT-09, locked payments (P2PK)/NUT-11, live WebSocket updates/NUT-17). The top matches show latency, uptime, Reliability Score, community rating, LN support, and mint/melt limits for the chosen unit
 
 ### 📚 Learn
@@ -99,7 +107,7 @@ A 5-module "Cashu 101" course, written as plain-language text with illustrated d
 1. **Cashu Basics** — what Cashu is: the mint holds the Bitcoin, you hold a bearer token, and blind signatures keep transfers private
 2. **Understanding the Risks** — why a mint can disappear or refuse to pay, why nobody can currently verify that a mint has real backing, and how to limit what you stand to lose
 3. **How to Choose a Cashu Mint** — what to check (uptime, NUT support, software freshness, operator transparency) and how MintRadar's Reliability Score combines those signals
-4. **Getting Started with a Wallet** — choosing a wallet, setting up your first mint, a first deposit, sending and receiving tokens, and backing up your wallet
+4. **Getting Started with a Wallet** — choosing a wallet, setting up your first mint, a first deposit, sending and receiving tokens, fees (a mint's input fee per coin and the Lightning fee reserve when you withdraw), and backing up your wallet
 5. **Day-to-day habits** — keeping your backup current, spreading funds across mints, checking before you commit, redeeming regularly and keeping an eye on your mints
 
 ### 👛 Wallet Directory
@@ -126,7 +134,7 @@ Sharing a mint page link on Twitter/X, Discord, Telegram, Slack, WhatsApp or Fac
 - **No cookies**
 - Fonts are self-hosted — no requests to Google Fonts or any external font CDN
 - Nostr private keys **never leave your browser** and are never stored or transmitted to the backend
-- Token Inspector: a pasted token is decoded in your browser and never sent to MintRadar's servers. Verifying and "Check if spent" contact the mint named in the token; "Open in cashu.me" puts the token in the link's #fragment, which browsers do not send to servers, and "Redeem to Lightning" opens the redeem page without the token
+- Token Inspector and Payment request inspector: a pasted token or request is decoded in your browser and never sent to MintRadar's servers; the inspector does not contact a request's accepted mints or transports. Verifying and "Check if spent" contact the mint named in the token; "Open in cashu.me" puts the token in the link's #fragment, which browsers do not send to servers, and "Redeem to Lightning" opens the redeem page without the token
 - Watchlist data lives in your browser (IndexedDB) and optionally encrypted on Nostr relays under your own key; a mint's URL is additionally sent to MintRadar's backend only while you have notifications on for that mint, so it knows what to monitor for your downtime/recovery DMs
 
 ### 🔁 Automatic Backups
@@ -135,7 +143,7 @@ The hosted instance takes regular automatic database backups.
 
 ### 📎 Public API
 
-Read-only JSON under `https://mintradar.org/api/`, including an API for wallets (`GET /api/v1/wallets/mints`). Rate-limited. See [MintRadar/docs/API.md](MintRadar/docs/API.md). How the score is computed (with its change log): [mintradar.org/methodology](https://mintradar.org/methodology); a quick start for wallet developers: [mintradar.org/for-wallets](https://mintradar.org/for-wallets). Signed health assertions (Nostr kind 30385) are published under the key health@mintradar.org: see [mintradar.org/for-wallets](https://mintradar.org/for-wallets#signed-health-assertions).
+Read-only JSON under `https://mintradar.org/api/`, including a stable API for wallets (`GET /api/v1/wallets/mints`, OpenAPI file in [MintRadar/docs/openapi/wallets-v1.yaml](MintRadar/docs/openapi/wallets-v1.yaml)). Per mint it gives status, Reliability Score, units, NUTs, `mintDisabled` / `meltDisabled` for a switched-off NUT-04 / NUT-05, and on request methods, limits, keysets and `feeExamples`; the list filters by `unit`, `minScore`, `nuts`, `method`, `maxInputFeePpk`, `eligible` and `changedSince`. Rate-limited. See [MintRadar/docs/API.md](MintRadar/docs/API.md). How the score is computed (with its change log): [mintradar.org/methodology](https://mintradar.org/methodology); a quick start for wallet developers: [mintradar.org/for-wallets](https://mintradar.org/for-wallets). Signed health assertions (Nostr kind 30385) are published under the key health@mintradar.org: see [mintradar.org/for-wallets](https://mintradar.org/for-wallets#signed-health-assertions).
 
 ---
 
