@@ -91,17 +91,20 @@
 .md-picker-search::placeholder { color: var(--text3); }
 .md-picker-search:focus, .md-picker-search:focus-visible { border-color: var(--green); outline: 2px solid var(--green-soft-strong); outline-offset: 1px; }
 .md-picker-list { padding: 8px 8px; margin-top: 8px; }
-.md-picker-list:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
-.md-picker-item { gap: 12px; padding: 10px 12px; border-radius: 10px; }
+.md-picker-options { display: flex; flex-direction: column; }
+/* The items are <button role="option"> (2026-10-27): reset the native button look so nothing changes visually. */
+.md-picker-item { width: 100%; margin: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; gap: 12px; padding: 10px 12px; border-radius: 10px; }
+.md-picker-item:focus { outline: none; }
+.md-picker-item:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
 .md-picker-item:hover:not(.disabled) { background: rgba(255, 255, 255, 0.04); }
 .md-picker-item.checked { background: var(--green-soft); }
 .md-picker-check { width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--border2); border-radius: 5px; font-size: 11px; line-height: 1; color: var(--bg); transition: background var(--transition), border-color var(--transition); }
 .md-picker-item.checked .md-picker-check { background: var(--green); border-color: var(--green); }
 .md-picker-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--accent); }
 .md-picker-dot.off { background: var(--red); }
-.md-picker-text { min-width: 0; }
-.md-picker-name { font-size: 15px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.md-picker-host { font-size: 13px; color: var(--text3); font-family: var(--font-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.md-picker-text { min-width: 0; display: block; }
+.md-picker-name { display: block; font-size: 15px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.md-picker-host { display: block; font-size: 13px; color: var(--text3); font-family: var(--font-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .md-picker-empty { padding: 20px 16px; font-size: 14px; color: var(--text3); text-align: center; }
 .md-picker-footer { padding: 14px 20px; border-top: 1px solid var(--border); }
 .md-picker-count { font-size: 14px; color: var(--text3); }

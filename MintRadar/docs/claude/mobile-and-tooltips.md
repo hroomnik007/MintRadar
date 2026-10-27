@@ -34,7 +34,7 @@ It is a React 19 callback ref (works for dialogs rendered conditionally inside a
 | Write a review | `MintDetail.tsx` | `aria-label` (already had role + aria-modal before) |
 | Mint QR · Reliability breakdown · NUT detail | `MintDetail.tsx` | `#qr-modal-title` / `#reliability-breakdown-title` / `#nut-modal-title` |
 | Submit a mint | `Dashboard.tsx` | `#submit-modal-title` |
-| Compare picker (Dashboard / Watchlist / Mint Detail) | `MintComparePicker.tsx` | `#md-picker-title` — starts in the search field (`autoFocus` replaced by `useModalFocus('.md-picker-search')`) |
+| Compare picker (Dashboard / Watchlist / Mint Detail) | `MintComparePicker.tsx` | `#md-picker-title` — starts in the search field (`autoFocus` replaced by `useModalFocus('.md-picker-search')`); the list is one Tab stop (listbox of button options, arrow keys inside, ArrowDown from search enters it) |
 | Comparison | `ComparisonModal.tsx` | `#cmp-modal-title` |
 | Stats: software versions / location mints / NUT coverage / other locations / Network Health | `Stats.tsx` | `aria-label` |
 
