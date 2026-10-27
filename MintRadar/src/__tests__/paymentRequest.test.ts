@@ -123,7 +123,7 @@ describe('parsePaymentRequest', () => {
 describe('mintStatusWord', () => {
   it('archived, degraded, online, offline, unknown', () => {
     expect(mintStatusWord({ online: false, archived: true })).toBe('Archived')
-    expect(mintStatusWord({ online: false, degraded: true })).toBe('Degraded')
+    expect(mintStatusWord({ online: false, degraded: true })).toBe('Offline 24h+')
     expect(mintStatusWord({ online: true })).toBe('Online')
     expect(mintStatusWord({ online: false })).toBe('Offline')
     expect(mintStatusWord({ online: null })).toBe('Unknown')

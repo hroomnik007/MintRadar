@@ -14,7 +14,8 @@ import { classifyMintVersion, latestMapFor } from '@/utils/versionRule'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { offeredNutCount } from '@/utils/nutFilters'
 import { AUDIT_MIN_SAMPLES, auditDataState } from '@/utils/auditScore'
-import { auditReliabilityColor, formatTimeAgo, LOW_RELIABILITY_TEXT } from '@/utils/mintFormatting'
+import { auditReliabilityColor, formatTimeAgo, LOW_RELIABILITY_TEXT, mintStatusLabel } from '@/utils/mintFormatting'
+import { mintStatus } from '@/utils/mintStatus'
 import { useNow } from '@/hooks/useNow'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { formatDate } from '@/utils/formatDate'
@@ -113,6 +114,9 @@ const EMPTY_MINT: KnownMint = {
 function useMintCompareData(mint: KnownMint) {
   const now = useNow()
   const isOnline = mint.online === true
+  // Same status rule and word as the card, Mint detail and the wallet API (utils/mintStatus.ts, 2026-10-27).
+  const status = mintStatus(mint)
+  const statusLabel = mintStatusLabel(status)
   const displayName = mint.name ?? getHostname(mint.url)
   const hostname = getHostname(mint.url)
   const reliabilityScore = listReliabilityScore(mint)
@@ -128,7 +132,7 @@ function useMintCompareData(mint: KnownMint) {
   const supportsBackupRestore = supportedNuts.has('9')
   // Same rule and the same "latest" as everywhere else (versionRule.ts + the value the API sends with the mint).
   const isOutdated = classifyMintVersion(mint.version, latestMapFor(mint.version, mint.softwareLatest)).label === 'outdated'
-  return { isOnline, displayName, hostname, reliabilityScore, tsInfo, isNew, nutsLimits, supportedNuts, supportsBackupRestore, isOutdated }
+  return { isOnline, status, statusLabel, displayName, hostname, reliabilityScore, tsInfo, isNew, nutsLimits, supportedNuts, supportsBackupRestore, isOutdated }
 }
 
 export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClose: () => void }) {
@@ -249,11 +253,11 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
   const mobileRows: Array<CompareRowKeys & { label: ReactNode; cell: (i: number) => ReactNode }> = !isMobile ? [] : [
     {
       id: 'status', label: 'Status',
-      keys: allData.map(d => (d.isOnline ? 'online' : 'offline')),
+      keys: allData.map(d => d.status),
       cell: i => (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, fontFamily: 'var(--font-mono)' }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: allData[i]!.isOnline ? 'var(--accent)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
-          {allData[i]!.isOnline ? 'Online' : 'Offline'}
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: allData[i]!.isOnline ? 'var(--accent)' : allData[i]!.status === 'archived' ? 'var(--text3)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
+          {allData[i]!.statusLabel}
         </span>
       ),
     },
@@ -499,8 +503,8 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             return (
               <div key={mint.url} className="cmp-val">
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, fontFamily: 'var(--font-mono)' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: d.isOnline ? 'var(--accent)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
-                  {d.isOnline ? 'Online' : 'Offline'}
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: d.isOnline ? 'var(--accent)' : d.status === 'archived' ? 'var(--text3)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
+                  {d.statusLabel}
                 </span>
               </div>
             )

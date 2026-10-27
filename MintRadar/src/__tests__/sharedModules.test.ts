@@ -21,6 +21,8 @@ import * as feNut from '@/utils/nutSupport'
 import * as beNut from '../../backend/src/shared/nutSupport'
 import { NUT_SUPPORT_CASES } from './nutSupportCases'
 import { computeReliabilityScore as beScore } from '../../backend/src/shared/reliabilityScore'
+import * as feStatus from '@/utils/mintStatus'
+import * as beStatus from '../../backend/src/shared/mintStatus'
 
 const codeOf = (rel: string) =>
   readFileSync(resolve(__dirname, rel), 'utf8')
@@ -205,5 +207,23 @@ describe('nutSupport: backend and frontend copies agree', () => {
   it('mintSupportsNut: a null or absent nuts object is not support', () => {
     expect(feNut.mintSupportsNut(null, '7')).toBe(false)
     expect(beNut.mintSupportsNut(undefined, '7')).toBe(false)
+  })
+})
+
+describe('mintStatus: backend and frontend copies agree (one status rule for the site and the wallet API)', () => {
+  it('has identical code', () => {
+    expect(codeOf('../utils/mintStatus.ts')).toBe(codeOf('../../backend/src/shared/mintStatus.ts'))
+  })
+  const B = [true, false, null, undefined] as const
+  const cases = B.flatMap(online => B.flatMap(degraded => B.map(archived => ({ online, degraded, archived }))))
+  it.each(cases.map(c => [JSON.stringify(c), c] as const))('%s', (_n, c) => {
+    expect(feStatus.mintStatus(c)).toBe(beStatus.mintStatus(c))
+  })
+  it('orders archived, then degraded, then the latest probe', () => {
+    expect(feStatus.mintStatus({ online: false, degraded: true, archived: true })).toBe('archived')
+    expect(feStatus.mintStatus({ online: false, degraded: true, archived: false })).toBe('degraded')
+    expect(feStatus.mintStatus({ online: true, degraded: false })).toBe('online')
+    expect(feStatus.mintStatus({ online: false })).toBe('offline')
+    expect(feStatus.mintStatus({ online: null })).toBe('offline')
   })
 })

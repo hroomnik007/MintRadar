@@ -17,7 +17,8 @@ import type { MintStatus } from '@core/mint/api'
 import { MintCard } from '@/components/mint/MintCard'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
-import { latencyColor, reliabilityColor, uptimeColor, displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames } from '@/utils/mintFormatting'
+import { latencyColor, reliabilityColor, uptimeColor, displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames, mintStatusLabel } from '@/utils/mintFormatting'
+import { mintStatus } from '@/utils/mintStatus'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import { listReliabilityScore, compareReliabilityThenRating } from '@/utils/reliabilitySort'
 import { ratingSortKey } from '@/utils/bayesianRating'
@@ -453,6 +454,8 @@ function MintListView({
             {shown.map(mint => {
               const isOnline = mint.online === true
               const isArchived = !isOnline && mint.archived === true
+              // Same status rule and word as the card and the wallet API (2026-10-27): degraded reads "Offline 24h+".
+              const statusLabel = mintStatusLabel(mintStatus(mint))
               const displayName = mintDisplayName(mint, duplicateDisplayNames)
               const score = mint.reliabilityScore ?? null
               return (
@@ -466,7 +469,7 @@ function MintListView({
                   </td>
                   <td>
                     <span style={{ fontSize: 10, color: isOnline ? 'var(--accent)' : isArchived ? 'var(--text3)' : 'var(--red)' }}>
-                      ●<span className="status-text-mobile-hide">{isOnline ? ' Online' : isArchived ? ' Archived' : ' Offline'}</span>
+                      ●<span className="status-text-mobile-hide"> {statusLabel}</span>
                     </span>
                   </td>
                   <td style={{ color: uptimeColor(mint.uptimePct24h), fontFamily: 'var(--font-mono-data)', fontSize: 12 }}>

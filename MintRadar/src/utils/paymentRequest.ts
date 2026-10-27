@@ -3,6 +3,8 @@
 // every field is checked for its type and anything unexpected is either ignored (unknown extra fields) or makes the
 // whole request invalid (a calm single message, no technical detail).
 import { PaymentRequest } from '@cashu/cashu-ts'
+import { mintStatus } from '@/utils/mintStatus'
+import { mintStatusLabel, type StatusDotWord } from '@/utils/mintFormatting'
 
 export const PAYMENT_REQUEST_PREFIX = 'creqA'
 export const PAYMENT_REQUEST_MAX_LENGTH = 4096
@@ -126,11 +128,9 @@ export function parsePaymentRequest(raw: string): PaymentRequestParse {
   }
 }
 
-/** Status words as the spec names them. A flag order that mirrors how the site treats the data: archived first. */
-export function mintStatusWord(m: { online: boolean | null; degraded?: boolean; archived?: boolean }): 'Online' | 'Offline' | 'Degraded' | 'Archived' | 'Unknown' {
-  if (m.archived === true) return 'Archived'
-  if (m.degraded === true) return 'Degraded'
-  if (m.online === true) return 'Online'
-  if (m.online === false) return 'Offline'
-  return 'Unknown'
+/** The site's status word (shared rule in utils/mintStatus.ts, the same as the wallet API `status`; 2026-10-27).
+ *  Only a mint with no probe result and no flag is "Unknown" here. */
+export function mintStatusWord(m: { online: boolean | null; degraded?: boolean; archived?: boolean }): StatusDotWord {
+  if (m.online == null && m.degraded !== true && m.archived !== true) return 'Unknown'
+  return mintStatusLabel(mintStatus(m))
 }

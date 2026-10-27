@@ -774,7 +774,7 @@ describe('statusDotColor', () => {
   it('online is green, offline and degraded (offline 24h+) are red, archived and unknown are muted', () => {
     expect(statusDotColor('Online')).toBe('var(--green-bright)')
     expect(statusDotColor('Offline')).toBe('var(--red)')
-    expect(statusDotColor('Degraded')).toBe('var(--red)')
+    expect(statusDotColor('Offline 24h+')).toBe('var(--red)')
     expect(statusDotColor('Archived')).toBe('var(--text3)')
     expect(statusDotColor('Unknown')).toBe('var(--text3)')
   })

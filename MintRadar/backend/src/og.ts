@@ -1,5 +1,6 @@
 import { pool } from './db.js'
 import { computeDegraded } from './degraded.js'
+import { mintStatus } from './shared/mintStatus.js'
 import { publicMintName, isHiddenMintName } from './mintNames.js'
 import { PAGE_META, OG_PAGE_SLUGS } from './shared/pageMeta.js'
 
@@ -28,10 +29,11 @@ export function escapeHtml(input: string): string {
     .replace(/'/g, '&#39;')
 }
 
+// Same rule and words as the website (shared/mintStatus.ts, src/utils/mintFormatting.ts mintStatusLabel, 2026-10-27):
+// a degraded mint reads "Offline 24h+", like its Dashboard card and Mint detail page.
 export function mintStatusLabel(mint: Pick<OgMintData, 'online' | 'degraded'>): string {
-  if (mint.degraded) return 'Degraded'
-  if (mint.online === true) return 'Online'
-  return 'Offline'
+  const s = mintStatus(mint)
+  return s === 'online' ? 'Online' : s === 'degraded' ? 'Offline 24h+' : 'Offline'
 }
 
 function hostnameOf(url: string): string {

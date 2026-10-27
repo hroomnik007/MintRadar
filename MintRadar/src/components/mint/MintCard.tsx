@@ -15,7 +15,8 @@ import type { KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { CARD_LATENCY_LABEL } from '@/utils/compareLabels'
-import { displayName as mintDisplayName, shouldShowHostLine, isNewMint, cardLatencyLabel, cardLatencyLocationSuffix, cardLightningLabel, uptimeColor, formatTimeAgo, statusDotColor } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, shouldShowHostLine, isNewMint, cardLatencyLabel, cardLatencyLocationSuffix, cardLightningLabel, uptimeColor, formatTimeAgo, statusDotColor, mintStatusLabel } from '@/utils/mintFormatting'
+import { mintStatus } from '@/utils/mintStatus'
 import { isTestMint } from '@/constants/testMints'
 import { sortUnits } from '@/utils/sortUnits'
 
@@ -86,7 +87,9 @@ export function MintCard({
   // Archived (2026-10-25): the backend stopped probing the mint after a long outage. The card says "Archived" (muted,
   // not the red "Offline 24h+"): it is a state of the listing, not a fresh failure. Still dimmed like a degraded card.
   const isArchived = mint.archived === true
-  const statusWord = isOnline ? 'Online' : isArchived ? 'Archived' : 'Offline'
+  // One status rule with the wallet API (utils/mintStatus.ts, 2026-10-27): the dot title says "Offline 24h+" for a
+  // degraded mint, the same word as its badge.
+  const statusWord = mintStatusLabel(mintStatus(mint))
   // Offline (24h+) cards are not dimmed with opacity; status colours are muted towards a text token instead.
   const offlineTone = (color: string, base: string) =>
     isOfflineDegraded ? `color-mix(in srgb, ${color} 50%, ${base})` : color
