@@ -487,3 +487,11 @@ Test: `e2e/layout-shift-tools-mint.spec.ts` ("#audit deep link at 390px": the ri
 - **Low reliability text** (`LOW_RELIABILITY_TEXT` = `color-mix(in srgb, var(--red) 75%, var(--text))`, used by `reliabilityScoreInfo()` and Compare): 5.3:1 on the archived/offline card background (`#322f28`), was 3.96:1 with plain `--red`.
 - **`/mint/nostr/:naddr` failures** (`MintNaddr.tsx`): a link that does not decode to a kind-38172 naddr, or whose announcement is missing / has no https `u` tag, shows "Mint link not found" (`.md-not-tracked`, `data-testid="naddr-error"`) with "Browse tracked mints →" and "Add a mint" (opens the Submit dialog on `/`); a relay timeout shows `LoadError` with Retry. It no longer redirects to `/` silently. The decode is synchronous (no relay request for a bad link).
 - **Copy buttons** (`CopyTextButton`): `aria-label` is "<visible label>: <what>" (WCAG 2.5.3 label in name), e.g. "Copy URL: mint URL".
+
+## Switched-off NUT-04/05 (`disabled: true`, 2026-10-27)
+
+- A mint that lists NUT-04 (minting) or NUT-05 (melting) in `/v1/info` with `"disabled": true` (Lek: `"4": { "methods": [], "disabled": true }`) has it shown as **disabled, not supported**. Helpers in BOTH `nutSupport` copies (identical code): `isNutDisabled` (only the boolean `true`), `isNutOffered` (declared and not disabled), `offeredNutKeys`, `mintOffersNut`.
+- Mint detail: `offeredNuts` / `disabledNuts` next to `supportedNuts` (live `/v1/info`, else the stored `nutsLimits`). The header tile reads e.g. "11 · supported · 2 disabled" (sub-line `supported · N disabled`); the NUTs tab summary "11 of 14 known NUTs supported · 2 disabled"; the grid cards and the NUT modal read "Disabled by operator" from `disabledNuts` (NutsTab no longer takes `liveNuts`).
+- **Cashu.me is hidden** when NUT-04 OR NUT-05 is disabled (`walletActionsOff`; adding a mint that does not issue or pay out right now is a dead end). Mint QR stays (the URL is still a fact).
+- **Not changed on purpose:** the fallback score, the Score tab NUT row and `nutComponent` still use the declared `supportedNuts` (the backend score counts declared NUTs; changing that needs a methodology bump, reported to the user).
+- Tests: `e2e/mint-detail-disabled-nuts.spec.ts` (1280 + 390), `nutFilters.test.ts`, `sharedModules.test.ts`, backend `nutSupport.test.ts`.

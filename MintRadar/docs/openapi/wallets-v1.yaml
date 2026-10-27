@@ -181,6 +181,8 @@ paths:
                         lastCheckedAt: '2026-10-12T18:29:41.000Z'
                         units: [sat]
                         nuts: ['4', '5', '7', '8', '9', '10', '11', '12']
+                        mintDisabled: false
+                        meltDisabled: false
                         software: Nutshell/0.21.0
                         outdated: false
                         isTest: false
@@ -380,6 +382,8 @@ components:
         - lastCheckedAt
         - units
         - nuts
+        - mintDisabled
+        - meltDisabled
         - software
         - outdated
         - isTest
@@ -444,6 +448,19 @@ components:
           type: [array, 'null']
           items: { type: string }
           description: NUT numbers the mint advertises, ascending, as strings. A NUT whose `/v1/info` entry has `supported: false` is not counted as supported and is not listed (since methodology 4, 2026-10-21); null when unknown.
+        mintDisabled:
+          type: [boolean, 'null']
+          description: >-
+            True when the mint lists NUT-04 (minting) in its `/v1/info` with `disabled: true`: it does not issue new ecash
+            right now. False when NUT-04 is listed without it or not listed; null when the mint's NUTs are unknown. NUT-04
+            stays in `nuts` (it is declared), so `nuts` and the `nuts=` filter are unchanged. Always present, also in the
+            default list (added 2026-10-27).
+        meltDisabled:
+          type: [boolean, 'null']
+          description: >-
+            True when the mint lists NUT-05 (melting) in its `/v1/info` with `disabled: true`: it does not pay out
+            (withdraw) right now. False when NUT-05 is listed without it or not listed; null when the mint's NUTs are
+            unknown. NUT-05 stays in `nuts`. Always present, also in the default list (added 2026-10-27).
         software:
           type: [string, 'null']
           maxLength: 100

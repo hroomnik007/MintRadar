@@ -68,6 +68,8 @@ Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` l
       "lastCheckedAt": "2026-10-12T18:29:41.000Z",
       "units": ["sat"],
       "nuts": ["4", "5", "7", "8", "9", "10", "11", "12"],
+      "mintDisabled": false,
+      "meltDisabled": false,
       "software": "Nutshell/0.21.0",
       "outdated": false,
       "isTest": false,
@@ -125,6 +127,7 @@ Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` l
 | `lastCheckedAt` | string, ISO 8601 UTC \| null | Latest probe. |
 | `units` | string[] \| null | Units the mint lists (`sat`, `usd`, `eur`, …); `null` when unknown. `units` and the `unit=` filter list the units for which the mint declares a payment method (NUT-04/05); units that appear only in keysets (`include=keysets`) are not included, so a mint with no declared methods has `units: null`. |
 | `nuts` | string[] \| null | NUT numbers the mint advertises (ascending, as strings); a NUT whose `/v1/info` entry has `"supported": false` is **not** counted as supported and is not listed (since methodology 4, 2026-10-21); `null` when unknown. |
+| `mintDisabled`, `meltDisabled` | boolean \| null | `true` when the mint lists NUT-04 (minting) / NUT-05 (melting) in its `/v1/info` with `"disabled": true`: it does not issue new ecash / does not pay out right now. `false` when the NUT is listed without it or not listed; `null` when the mint's NUTs are unknown. The NUT itself stays in `nuts` (it is declared), so `nuts` and the `nuts=` filter are unchanged; check these two before you offer a mint for deposits or withdrawals. On every object, the default list included. (Added 2026-10-27.) |
 | `software` | string \| null | The mint's own version string (`Nutshell/0.21.0`); untrusted text, at most 100 characters. |
 | `outdated` | boolean \| null | `true`: two or more minor versions behind the newest stable release of that software family. `false`: not outdated. `null`: unknown software, no or unreadable version, or no reference release. |
 | `isTest` | boolean | On MintRadar's manual test-mint list. Test mints are never recommended. |

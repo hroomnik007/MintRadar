@@ -32,7 +32,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { InfoTooltip } from '@/components/InfoTooltip'
-import { supportedNutKeys } from '@/utils/nutSupport'
+import { supportedNutKeys, offeredNutKeys } from '@/utils/nutSupport'
 import { formatDate } from '@/utils/formatDate'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, UPTIME_PENDING_ARIA_LABEL, SCORE_PENDING_ARIA_LABEL, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { TRACKED_NUTS } from '@/constants/nuts'
@@ -773,9 +773,16 @@ function MintDetailContent({ url }: { url: string }) {
   const supportedNuts = TRACKED_NUTS.filter(nut =>
     supportedNutNumbers.has(String(parseInt(nut.slice(4), 10)))
   )
-  // Header NUT count: the same tracked + declared-as-supported count as the NUTs tab and the score (the stored one until the
-  // live /v1/info arrives). Object.keys(nuts).length also counted untracked NUTs and `supported: false` entries.
-  const nutCount = data?.info ? supportedNuts.length : (knownMint?.nutCount ?? 0)
+  // Switched off (2026-10-27): a declared NUT-04/05 with `disabled: true` still counts for the score (supportedNuts above),
+  // but the header, the NUTs tab and the NUT modal show it as disabled, not supported.
+  const offeredNutNumbers = offeredNutKeys(nutsDeclared)
+  const offeredNuts = supportedNuts.filter(nut => offeredNutNumbers.has(String(parseInt(nut.slice(4), 10))))
+  const disabledNuts = supportedNuts.filter(nut => !offeredNuts.includes(nut))
+  // Header NUT count: the same tracked + offered count as the NUTs tab (the stored one until the live /v1/info arrives,
+  // less the switched-off ones). Object.keys(nuts).length also counted untracked NUTs and `supported: false` entries.
+  const nutCount = Math.max(0, (data?.info ? supportedNuts.length : (knownMint?.nutCount ?? 0)) - disabledNuts.length)
+  // Adding a mint that does not issue or does not pay out ecash right now to a wallet is a dead end, like an archived one.
+  const walletActionsOff = nut4Disabled || nut5Disabled
   // NUT-13 (deterministic secrets) is wallet-side only — mints never advertise
   // it in /v1/info (confirmed against live Nutshell mints and the cashubtc/nuts
   // spec, which lists no mint implementations for NUT-13 at all). The mint-side
@@ -1264,6 +1271,9 @@ function MintDetailContent({ url }: { url: string }) {
           <button className="md-quick-btn" onClick={() => setShowQr(true)}>
             <QrCode size={12} /> Mint QR
           </button>
+          {/* Nor for a mint that switched minting or melting off (NUT-04/05 `disabled: true`, 2026-10-27): Cashu.me
+              only; Mint QR stays for it (the URL is still a fact). */}
+          {!walletActionsOff && (
           <a
             className="md-quick-btn"
             href={`https://wallet.cashu.me/?mint=${encodeURIComponent(url)}`}
@@ -1274,6 +1284,7 @@ function MintDetailContent({ url }: { url: string }) {
             <span className="md-qb-full">Open in Cashu.me</span>
             <span className="md-qb-short">Cashu.me</span>
           </a>
+          )}
           </>
           )}
         </div>
@@ -1350,7 +1361,7 @@ function MintDetailContent({ url }: { url: string }) {
           <div style={{flex:1}}>
             <div className="md-sc-label">NUTs</div>
             <div className="md-sc-value green">{nutCount}</div>
-            <div className="md-sc-sub">supported</div>
+            <div className="md-sc-sub">{disabledNuts.length > 0 ? `supported · ${disabledNuts.length} disabled` : 'supported'}</div>
           </div>
         </div>
         <div className="md-sc">
@@ -1518,8 +1529,8 @@ function MintDetailContent({ url }: { url: string }) {
               } : null}
               keysetsPanel={keysetsPanel}
               supportsBackupRestore={supportsBackupRestore}
-              supportedNuts={supportedNuts}
-              liveNuts={data?.info?.nuts}
+              supportedNuts={offeredNuts}
+              disabledNuts={disabledNuts}
               onSelectNut={setSelectedNut}
             />
           )}
@@ -1950,7 +1961,7 @@ function MintDetailContent({ url }: { url: string }) {
         const nutKey = parseInt(selectedNut.slice(4), 10).toString()
         const rawNutConfig = data?.info?.nuts?.[nutKey] ?? knownMint?.nutsLimits?.[nutKey]
         const nutConfig = (rawNutConfig !== null && typeof rawNutConfig === 'object') ? rawNutConfig as NutConfig : null
-        const isNutDisabled = supported && nutConfig?.disabled === true
+        const isNutDisabled = disabledNuts.includes(selectedNut)
         return (
           <div className="nm-overlay" onClick={() => setSelectedNut(null)}>
             <div

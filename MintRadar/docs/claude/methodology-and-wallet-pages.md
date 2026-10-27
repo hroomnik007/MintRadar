@@ -22,6 +22,8 @@ Quick start for the Wallet API v1 (contract: `docs/API.md` "API for wallets (v1)
 
 **Methodology 4 (2026-10-21):** `METHODOLOGY_VERSION` 3 → 4, entry "NUT part: a NUT entry with \"supported\": false …" (both copies, `docs/API.md` table, `docs/openapi` example, `docs/nostr-health-assertions.md` example tag, `Methodology.tsx` NUT paragraph and table row). The wallet API `nuts` field / `nuts=` filter / `authRequired` meanings (`walletFields.ts` both copies, API.md, OpenAPI, `/for-wallets` nuts example) say that `supported: false` is not counted. `FOR_WALLETS_PAGE_LASTMOD` already read 2026-10-21.
 
+**`mintDisabled` / `meltDisabled` (2026-10-27, additive, no methodology bump):** on every mint object (default list included): `true` when NUT-04 / NUT-05 is listed with `"disabled": true` (`walletApi.ts` `nutDisabledOf`, shared `isNutDisabled`), `false` otherwise, `null` when the NUTs are unknown. `nuts` and the `nuts=` filter are unchanged (a switched-off NUT is still declared), documented in both walletFields copies, API.md and the OpenAPI file (also in `required`). Test: `src/__tests__/walletNutDisabled.test.ts`.
+
 ## Footer and sitemap
 
 - Footer (`AppShell.tsx`): `© 2026 MintRadar.org · API · About · Methodology · For wallets`; the existing `flex-wrap` row wraps and centres at 320/390 px, the 44px touch area is the existing `::before` on coarse pointers (`e2e/footer-doc-links.spec.ts` checks that a tap on a link hits that link).

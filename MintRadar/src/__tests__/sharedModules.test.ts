@@ -194,6 +194,13 @@ describe('nutSupport: backend and frontend copies agree', () => {
     expect(beNut.supportedNutKeys({ '7': c.entry }).has('7')).toBe(c.inKeys)
     expect(feNut.mintSupportsNut({ '7': c.entry }, '7')).toBe(c.declaredSupported)
     expect(beNut.mintSupportsNut({ '7': c.entry }, '7')).toBe(c.declaredSupported)
+    const offered = c.offered ?? c.declaredSupported
+    for (const m of [feNut, beNut]) {
+      expect(m.isNutOffered(c.entry)).toBe(offered)
+      expect(m.offeredNutKeys({ '7': c.entry }).has('7')).toBe(offered)
+      expect(m.mintOffersNut({ '7': c.entry }, '7')).toBe(offered)
+      expect(m.isNutDisabled(c.entry)).toBe(c.entry !== null && typeof c.entry === 'object' && (c.entry as { disabled?: unknown }).disabled === true)
+    }
   })
   it('mintSupportsNut: a null or absent nuts object is not support', () => {
     expect(feNut.mintSupportsNut(null, '7')).toBe(false)

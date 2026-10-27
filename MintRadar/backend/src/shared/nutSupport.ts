@@ -26,3 +26,27 @@ export function supportedNutKeys(nuts: Record<string, unknown> | null | undefine
 export function mintSupportsNut(nuts: Record<string, unknown> | null | undefined, key: string): boolean {
   return nuts != null && isNutDeclaredSupported(nuts[key])
 }
+
+// Switched off (2026-10-27): NUT-04 (minting) and NUT-05 (melting) carry `disabled: true` when the operator turned
+// deposits or withdrawals off (Lek: "4": { "methods": [], "disabled": true }). The NUT is still DECLARED, so the rule
+// above (and the Reliability Score NUT component, the wallet API `nuts` field) still count it; the website shows it
+// as disabled and its lists and filters treat it as not offered. The wallet API exposes it as mintDisabled/meltDisabled.
+/** True when `entry` is an object with `disabled: true` (only the boolean counts). */
+export function isNutDisabled(entry: unknown): boolean {
+  return entry !== null && typeof entry === 'object' && (entry as { disabled?: unknown }).disabled === true
+}
+
+/** True when `entry` is declared as supported and not switched off: the mint offers it right now. */
+export function isNutOffered(entry: unknown): boolean {
+  return isNutDeclaredSupported(entry) && !isNutDisabled(entry)
+}
+
+/** The NUT numbers (as strings) of `nuts` that are declared and not switched off. */
+export function offeredNutKeys(nuts: Record<string, unknown> | null | undefined): Set<string> {
+  return new Set(Object.keys(nuts ?? {}).filter(k => isNutOffered(nuts![k])))
+}
+
+/** True when the mint's `nuts` object offers NUT `key` right now (declared, not `disabled: true`); a null or absent `nuts` is false. */
+export function mintOffersNut(nuts: Record<string, unknown> | null | undefined, key: string): boolean {
+  return nuts != null && isNutOffered(nuts[key])
+}
