@@ -39,7 +39,7 @@ info:
     `changedSince` and the `include` value `changes`; the default list is unchanged. The mint field `contactChecks` followed
     (also 2026-10-20: single-mint endpoint and `include=facts`); the default list is unchanged. The mint fields `feeExamples`,
     `limits` and `auditByDirection` followed on 2026-10-21 (single-mint endpoint and `include=facts`); the default list is
-    unchanged. The mint field `scoreStale` (true when `status` is not `online`) was added on 2026-10-21 on every object, the default list included. On 2026-10-25 the mint field `uptime30dPct` was added on every object (the default list included) and `latency24h` with `include=facts` and on the single-mint endpoint. The integer
+    unchanged. The mint field `scoreStale` (true when `status` is not `online`) was added on 2026-10-21 on every object, the default list included. On 2026-10-25 the mint field `uptime30dPct` was added on every object (the default list included) and `latency24h` with `include=facts` and on the single-mint endpoint. On 2026-10-27 the mint fields `mintDisabled` and `meltDisabled` were added on every object. Refinement of 2026-10-27 (no field or parameter changed): the `method` filter no longer counts a NUT-04 or NUT-05 side the mint has switched off (`disabled: true`), as the mintradar.org Dashboard filter does; such a mint can drop out of a `method=` result. The integer
     `methodology` changes whenever the score formula changes; scores of different methodology numbers are
     not comparable. The history is in `backend/src/shared/methodology.ts` and docs/API.md.
 
@@ -114,7 +114,9 @@ paths:
           in: query
           description: >-
             Keep mints that advertise this payment method in NUT-04 (mint) or NUT-05 (melt), on any unit; with `unit`
-            also given, on that unit. A mint with `methods: null` never matches. Added 2026-10-20.
+            also given, on that unit. A side the mint has switched off (`mintDisabled` / `meltDisabled` true) does not
+            count, although `methods` still lists its entries (refined 2026-10-27). A mint with `methods: null` never
+            matches. Added 2026-10-20.
           schema: { type: string, enum: [bolt11, bolt12, onchain] }
         - name: maxInputFeePpk
           in: query
@@ -453,14 +455,15 @@ components:
           description: >-
             True when the mint lists NUT-04 (minting) in its `/v1/info` with `disabled: true`: it does not issue new ecash
             right now. False when NUT-04 is listed without it or not listed; null when the mint's NUTs are unknown. NUT-04
-            stays in `nuts` (it is declared), so `nuts` and the `nuts=` filter are unchanged. Always present, also in the
-            default list (added 2026-10-27).
+            stays in `nuts` (it is declared), so `nuts` and the `nuts=` filter are unchanged; the `method=` filter does
+            not count this side. Always present, also in the default list (added 2026-10-27).
         meltDisabled:
           type: [boolean, 'null']
           description: >-
             True when the mint lists NUT-05 (melting) in its `/v1/info` with `disabled: true`: it does not pay out
             (withdraw) right now. False when NUT-05 is listed without it or not listed; null when the mint's NUTs are
-            unknown. NUT-05 stays in `nuts`. Always present, also in the default list (added 2026-10-27).
+            unknown. NUT-05 stays in `nuts`; the `method=` filter does not count this side. Always present, also in the
+            default list (added 2026-10-27).
         software:
           type: [string, 'null']
           maxLength: 100

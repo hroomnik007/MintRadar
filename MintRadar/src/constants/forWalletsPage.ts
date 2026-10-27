@@ -25,6 +25,8 @@ export const WALLET_API_FACTS = {
   walletFactsAddedOn: '2026-10-21',
   /** The day the mint field scoreStale was added (every object, default list included). */
   walletScoreStaleAddedOn: '2026-10-21',
+  /** The day the method= filter stopped counting a switched-off NUT-04/05 side (a refinement, no field changed). */
+  walletMethodDisabledOn: '2026-10-27',
   /** The list query that returns the same mints as /mints/recommend with its defaults. */
   /** Example query: mints that declare NUT-11 (P2PK) and NUT-12 (DLEQ proofs), the two a Nutzap relies on. */
   nutzapQuery: '/wallets/mints?nuts=11,12',

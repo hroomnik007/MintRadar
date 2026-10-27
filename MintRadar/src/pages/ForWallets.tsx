@@ -281,6 +281,9 @@ export default function ForWallets() {
               Also added {F.walletScoreStaleAddedOn}: the mint field <code>scoreStale</code>, on every object (the default list included). It is <code>true</code> when <code>status</code> is not <code>online</code> (offline, degraded or archived)
               and <code>false</code> when it is. The <code>score</code> of a mint that is not online is the last measured one; it does not describe the mint now. <code>scoreStale</code> is derived from <code>status</code> only; the score itself is unchanged.
             </li>
+            <li data-testid="refinement-method-disabled">
+              Refined {F.walletMethodDisabledOn}: the <code>method</code> filter no longer counts a deposit (NUT-04) or withdrawal (NUT-05) side the mint has switched off (<code>mintDisabled</code> / <code>meltDisabled</code> is <code>true</code>), as the Dashboard filter does. No field or parameter changed.
+            </li>
             <li>A removal is announced on this page and in <code>docs/API.md</code> at least {F.deprecationNoticeDays} days before it takes effect. A route that is going away also says so in its responses, with the <code>Deprecation</code> and <code>Sunset</code> headers and a <code>Link</code> header with <code>rel=&quot;successor-version&quot;</code>; the only route that does so today is the one below.</li>
             <li data-testid="recommend-deprecation">
               <strong>Deprecated: <code>GET /api/v1/mints/recommend</code></strong> (and <code>/api/mints/recommend</code>), since {F.recommendDeprecatedOn}. It may be removed from {F.recommendSunsetOn} on; until then it answers as before.

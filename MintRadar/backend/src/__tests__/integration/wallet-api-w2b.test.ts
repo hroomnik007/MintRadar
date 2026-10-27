@@ -305,6 +305,23 @@ describe('method= filter', () => {
     expect(urlsOf((await listWith([row('https://a.example.com', { mint_methods: null, melt_methods: null })], '?method=bolt11')).body)).toEqual([])
   })
 
+  it('a side switched off with disabled: true does not count (2026-10-27); the methods field still lists it', async () => {
+    const methods = { mint_methods: [{ method: 'bolt12', unit: 'sat' }], melt_methods: [{ method: 'bolt11', unit: 'sat' }] }
+    withRows([
+      row('https://a.example.com', { ...methods, nuts_limits: { '4': { disabled: true }, '5': {}, '7': {} } }),
+      row('https://b.example.com', { ...methods, nuts_limits: { '4': {}, '5': { disabled: true }, '7': {} } }),
+      row('https://c.example.com', { ...methods, nuts_limits: { '4': { disabled: true }, '5': { disabled: true }, '7': {} } }),
+      row('https://d.example.com', { ...methods, nuts_limits: { '4': { disabled: 'true' }, '5': {}, '7': {} } }),
+    ])
+    expect(urlsOf((await list('?method=bolt12')).body)).toEqual(['https://b.example.com', 'https://d.example.com'])
+    expect(urlsOf((await list('?method=bolt11')).body)).toEqual(['https://a.example.com', 'https://d.example.com'])
+    expect(urlsOf((await list('?method=bolt11&unit=sat')).body)).toEqual(['https://a.example.com', 'https://d.example.com'])
+    const all = (await list('?include=methods')).body
+    const cm = all.mints.find((m: { url: string }) => m.url === 'https://c.example.com')
+    expect(cm.methods.mint).toHaveLength(1)
+    expect(cm.methods.melt).toHaveLength(1)
+  })
+
   it('anything but bolt11, bolt12 or onchain is a 400', async () => {
     for (const qs of ['?method=', '?method=lightning', '?method=bolt11,bolt12', '?method=bolt11&method=bolt12']) {
       const res = await list(qs)

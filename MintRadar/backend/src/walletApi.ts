@@ -426,7 +426,7 @@ export interface WalletListFilter {
   eligible?: boolean
   /** NUT numbers the mint must advertise (the `nuts` query parameter, and /api/mints/recommend). */
   requiredNuts?: string[]
-  /** The `method` query parameter: the mint advertises it (mint or melt), for `unit` when that is given too. */
+  /** The `method` query parameter: the mint advertises it (mint or melt, a switched-off side not counted), for `unit` when that is given too. */
   method?: string
   /** The `maxInputFeePpk` query parameter. */
   maxInputFeePpk?: number
@@ -566,9 +566,12 @@ function nutRequirementMet(m: WalletMint, n: string): boolean {
   return set.includes(n) || set.includes(n.replace(/^0+/, ''))
 }
 
+// A NUT-04 (mint) or NUT-05 (melt) side the mint switched off (`disabled: true`) does not meet `method=`, as on the
+// website's Dashboard method filter (2026-10-27). The `methods` and `limits` fields still list its entries.
 function methodRequirementMet(m: WalletMint, method: string, unit: string | undefined): boolean {
   if (m.methods === null) return false
-  return [...m.methods.mint, ...m.methods.melt].some(e => e.method === method && (unit === undefined || e.unit === unit))
+  const sides = [m.mintDisabled === true ? [] : m.methods.mint, m.meltDisabled === true ? [] : m.methods.melt]
+  return sides.flat().some(e => e.method === method && (unit === undefined || e.unit === unit))
 }
 
 /**
