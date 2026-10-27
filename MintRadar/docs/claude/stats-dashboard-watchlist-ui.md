@@ -10,6 +10,15 @@
   component+stylesheet pair (2026-09-02/03, PRs #78/#79). Filters candidates to online mints
   and closes on Escape. Callers pass a pre-filtered `candidates` pool and get back the
   selected URLs via `onConfirm`.
+- **Picker keyboard + full list (2026-10-27):** the list is a `role="listbox"` (`aria-multiselectable`)
+  of real `<button type="button" role="option">` items (`aria-selected`, `aria-disabled` once 3 are
+  picked — still focusable so arrows pass over them). Roving tabindex: ONE Tab stop for the list,
+  ArrowUp/ArrowDown/Home/End move, Enter/Space toggle (native button click), ArrowDown in the search
+  field jumps into the list. Visible `:focus-visible` ring (2px green). The buttons are reset so the
+  look is unchanged. Every candidate is listed — the old `slice(0, 50)` cap is gone, so a mint can be
+  found by scrolling without searching. The empty state ("No mints match your search.", `role="status"`)
+  sits outside the listbox. Tests: `src/__tests__/mintComparePicker.test.tsx`,
+  `e2e/compare-picker-keyboard.spec.ts`.
 - **Mobile stacked/tabbed layout (≤768px, 2026-09-04):** `ComparisonModal`'s desktop
   side-by-side table is replaced on mobile (gated by `useIsMobile()`, same 768px breakpoint)
   with `.cmp-mobile-tabs` (one tab per compared mint, horizontally scrollable) +
