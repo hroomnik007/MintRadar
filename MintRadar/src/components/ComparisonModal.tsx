@@ -25,6 +25,7 @@ import { IcClose } from '@/components/IcClose'
 import './ComparisonModal.css'
 import { auditSuccessText, storedKeysetsAsLive } from '@/utils/mintDetailFacts'
 import { visibleCompareRows, type CompareKey, type CompareRowKeys } from '@/utils/compareDiff'
+import { compareMethods, limitsKey, type CompareMethods, type MethodsCell } from '@/utils/compareMethods'
 import { COMPARE_UPTIME_LABEL, COMPARE_LATENCY_LABEL, COMPARE_LATENCY_TITLE, COMPARE_AUDIT_LABEL } from '@/utils/compareLabels'
 
 function reliabilityScoreInfo(score: number) {
@@ -54,6 +55,29 @@ function auditSuccessDisplay(mint: KnownMint, now: number): { text: string; colo
     text: auditSuccessText(blamed, total) ?? 'n/a',
     color: auditReliabilityColor(total, blamed, AUDIT_MIN_SAMPLES),
   }
+}
+
+// Deposit / Withdrawal methods cell: a switched-off side is greyed and says so (same words as Mint Detail, #168).
+function MethodsValue({ cell, size }: { cell: MethodsCell; size: number }) {
+  return (
+    <span className={`cmp-methods cmp-methods-${cell.state}`} style={{ fontFamily: 'var(--font-mono)', fontSize: cell.state === 'list' ? size : 12, fontWeight: cell.state === 'list' ? 600 : 400, color: cell.state === 'list' ? 'var(--text)' : 'var(--text3)', overflowWrap: 'anywhere' }}>
+      {cell.state === 'disabled' && <span aria-hidden="true">⊘ </span>}{cell.text}
+    </span>
+  )
+}
+
+// Limits cell: one "Deposit · bolt11 · sat" line with its "min 1, max 1,000,000" per method and unit (limitRows()).
+function LimitsValue({ m }: { m: CompareMethods }) {
+  return (
+    <span className="cmp-limits">
+      {m.limits.map(r => (
+        <span key={r.key} className="cmp-limit">
+          <span className="cmp-limit-label">{r.label}</span>
+          <span className="cmp-limit-value">{r.value}</span>
+        </span>
+      ))}
+    </span>
+  )
 }
 
 function listReliabilityScore(mint: KnownMint): number {
@@ -131,7 +155,9 @@ function useMintCompareData(mint: KnownMint) {
   const supportsBackupRestore = supportedNuts.has('9')
   // Same rule and the same "latest" as everywhere else (versionRule.ts + the value the API sends with the mint).
   const isOutdated = classifyMintVersion(mint.version, latestMapFor(mint.version, mint.softwareLatest)).label === 'outdated'
-  return { isOnline, status, statusLabel, displayName, hostname, reliabilityScore, tsInfo, isNew, nutsLimits, supportedNuts, supportsBackupRestore, isOutdated }
+  // Payment methods, declared limits and units from /v1/info (NUT-04 / NUT-05), with switched-off sides (#168).
+  const methods = compareMethods(mint)
+  return { isOnline, status, statusLabel, displayName, hostname, reliabilityScore, tsInfo, isNew, nutsLimits, supportedNuts, supportsBackupRestore, isOutdated, methods }
 }
 
 export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClose: () => void }) {
@@ -315,6 +341,26 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
       id: 'fee', label: <>Input fee{feeLabelInfo}</>,
       keys: mints.map((_, i) => feeKey(i)),
       cell: i => <span className="cmp-input-fee" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{feeCell(i)}</span>,
+    },
+    {
+      id: 'deposit-methods', label: 'Deposit methods',
+      keys: allData.map(d => d.methods.deposit.text),
+      cell: i => <MethodsValue cell={allData[i]!.methods.deposit} size={13} />,
+    },
+    {
+      id: 'withdrawal-methods', label: 'Withdrawal methods',
+      keys: allData.map(d => d.methods.withdrawal.text),
+      cell: i => <MethodsValue cell={allData[i]!.methods.withdrawal} size={13} />,
+    },
+    {
+      id: 'limits', label: 'Limits',
+      keys: allData.map(d => limitsKey(d.methods.limits)),
+      cell: i => <LimitsValue m={allData[i]!.methods} />,
+    },
+    {
+      id: 'units', label: 'Units',
+      keys: allData.map(d => d.methods.units),
+      cell: i => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600 }}>{allData[i]!.methods.units}</span>,
     },
     {
       id: 'nut-count', label: 'NUT Count',
@@ -574,6 +620,24 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             <div key={mint.url} className="cmp-val cmp-input-fee" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
               {feeCell(i)}
             </div>
+          ))}
+
+          {/* ── Deposit / Withdrawal methods, Limits, Units (NUT-04 / NUT-05 in /v1/info, utils/compareMethods.ts) ── */}
+          <div className="cmp-lbl">Deposit methods</div>
+          {mints.map((mint, i) => (
+            <div key={mint.url} className="cmp-val" data-row="deposit-methods"><MethodsValue cell={allData[i]!.methods.deposit} size={14} /></div>
+          ))}
+          <div className="cmp-lbl">Withdrawal methods</div>
+          {mints.map((mint, i) => (
+            <div key={mint.url} className="cmp-val" data-row="withdrawal-methods"><MethodsValue cell={allData[i]!.methods.withdrawal} size={14} /></div>
+          ))}
+          <div className="cmp-lbl">Limits</div>
+          {mints.map((mint, i) => (
+            <div key={mint.url} className="cmp-val" data-row="limits"><LimitsValue m={allData[i]!.methods} /></div>
+          ))}
+          <div className="cmp-lbl">Units</div>
+          {mints.map((mint, i) => (
+            <div key={mint.url} className="cmp-val" data-row="units" style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600 }}>{allData[i]!.methods.units}</div>
           ))}
 
           {/* ── NUT Count ── */}
