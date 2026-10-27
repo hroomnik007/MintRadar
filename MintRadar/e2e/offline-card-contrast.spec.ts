@@ -8,7 +8,7 @@ import { measureEffective } from './fixtures/contrast'
 // and would mask a `.mint-card.offline { opacity }` rule, so it is switched off here.
 const TEXT: [string, string][] = [
   ['name', '.card-name'], ['hostname', '.card-host'], ['unit chip', '.card-pill >> nth=0'],
-  ['LN chip', '.card-ln'], ['up chip', '.card-pill >> nth=2'], ['Offline 24h+ badge', '.card-hdr-badge'],
+  ['LN chip', '.card-ln'], ['up chip', '.card-pill >> nth=2'], ['Degraded badge', '.card-hdr-badge'],
   ['LAST SEEN label', '.latency-label'], ['last seen value', '.latency-value'], ['RELIABILITY label', '.card-reliability-label'],
   ['rating value', '.card-reliability-rating-val'], ['rating count', '.card-reliability-rating-n'],
 ]

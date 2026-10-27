@@ -235,7 +235,7 @@ Verified: typecheck, ESLint, unit tests (counts: "Test suites" in CLAUDE.md), pr
 - Shared utilities moved into `mintFormatting.ts`: `mintAgeBadge`, `uptimeColor`, `formatTimeAgo` — Watchlist no longer has its own duplicate version.
 - New design token `--surface-card` (slightly lighter than `--surface`) + `inset` top highlight on `.mint-card` — visually distinguishes mint cards from other panels.
 - Watchlist CTA (empty state) — `.wl-add-btn` is a solid primary button (`var(--green)` fill), deliberately distinct from the smaller outline nav button (secondary vs. primary action).
-- Offline/degraded mint cards — opacity 0.7, "Offline 24h+" badge, "Last seen" instead of latency. **Fixed 2026-09-19:** was reading `lastCheckedAt` (the last *probe* time — always recent, since the 5-min cron never stops probing an offline mint), which made a mint that's been down for days claim it was "seen" minutes ago. Now reads `lastOnlineAt` (`mints.last_online_at`, updated only on a successful probe — see `prober.ts`) — the genuine last-seen-online time — and falls back to **"Never seen online"** when that column is `null`. `lastCheckedAt` is unaffected everywhere else it's used (online cards, Audit tab).
+- Offline/degraded mint cards — opacity 0.7, "Degraded" badge, "Last seen" instead of latency. **Fixed 2026-09-19:** was reading `lastCheckedAt` (the last *probe* time — always recent, since the 5-min cron never stops probing an offline mint), which made a mint that's been down for days claim it was "seen" minutes ago. Now reads `lastOnlineAt` (`mints.last_online_at`, updated only on a successful probe — see `prober.ts`) — the genuine last-seen-online time — and falls back to **"Never seen online"** when that column is `null`. `lastCheckedAt` is unaffected everywhere else it's used (online cards, Audit tab).
 - Mint Detail mobile header — compact version on the mobile breakpoint only (icon back button, online pill on the same row, Watch/Compare 50/50); desktop layout unchanged.
 - "Show my latency" button unified with the others (tonal outline).
 - "NIP-87" badge on Watchlist: purple → copper (`--copper`).
@@ -387,7 +387,7 @@ decorative parts (avatar `opacity .55` + `grayscale(.6)`, chip fill/border).
 `MintCard`): card fill `color-mix(--surface-card 72%, --bg)`, border `color-mix(--text 10%, transparent)`, name `--text2`, chips
 `color-mix(--elevated 70%, --bg)` fill / `--text 7%` border / `--text3` text, avatar `.card-avatar-offline`. Status colours that are
 inline in `MintCard.tsx` (score, uptime chip) go through `offlineTone(color, base)` = `color-mix(color 50%, base)`; the
-"Offline 24h+" badge text is `color-mix(--red 65%, --text)`. The status dot stays full `--red`.
+"Degraded" badge text is `color-mix(--red 65%, --text)`. The status dot stays full `--red`.
 
 Thresholds (checked as *effective* colours by `e2e/offline-card-contrast.spec.ts` via `e2e/fixtures/contrast.ts`): text 4.5:1,
 large text (score) 3:1, icons/dot/controls 3:1, card vs page >= 1.31:1.

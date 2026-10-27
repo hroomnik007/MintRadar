@@ -3,7 +3,7 @@ import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS, probePayload } from './f
 
 // One status rule for the site and the wallet API (2026-10-27, utils/mintStatus.ts). A mint the API calls
 // `degraded` (lnpay: no successful probe for days) read "Offline" on its Mint detail page while the card said
-// "Offline 24h+". Now the Mint detail pill, the card dot, the list view and Compare all say "Offline 24h+".
+// "Degraded". Now the Mint detail pill, the card dot, the list view and Compare all say "Degraded".
 // A successful live probe from the page is newer than the snapshot and still wins ("Online").
 const CH = 'https://charlie.mint.example'
 const ago = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString()
@@ -29,17 +29,17 @@ for (const vp of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
   test.describe(`${vp.width}px`, () => {
     test.use({ viewport: vp })
 
-    test('a degraded mint reads "Offline 24h+" on Mint detail and on its card', async ({ page }) => {
+    test('a degraded mint reads "Degraded" on Mint detail and on its card', async ({ page }) => {
       await setup(page, { degraded: true, liveOnline: false })
       await page.goto('/mint/charlie.mint.example')
       const pill = page.locator('.md-status-inline')
-      await expect(pill).toHaveText('Offline 24h+')
+      await expect(pill).toHaveText('Degraded')
       await expect(pill).toHaveAttribute('data-status', 'degraded')
       await expect(pill).toHaveClass(/offline/)
       await page.goto('/?status=all')
       const card = page.locator('.mint-card', { hasText: 'Charlie Mint' })
-      await expect(card.locator('.card-hdr-badge')).toHaveText('Offline 24h+')
-      await expect(card.locator('.status-dot')).toHaveAttribute('title', 'Offline 24h+')
+      await expect(card.locator('.card-hdr-badge')).toHaveText('Degraded')
+      await expect(card.locator('.status-dot')).toHaveAttribute('title', 'Degraded')
     })
 
     test('an offline mint under the degraded rule still reads "Offline"', async ({ page }) => {
@@ -63,7 +63,7 @@ test('list view and Compare use the same word for a degraded mint', async ({ pag
   await page.goto('/?status=all')
   await page.locator('.view-toggle-btn[title="List view"]').click()
   const row = page.locator('.mint-list-row', { hasText: 'Charlie Mint' })
-  await expect(row.locator('td').nth(1)).toHaveText('● Offline 24h+')
+  await expect(row.locator('td').nth(1)).toHaveText('● Degraded')
   await expect(page.locator('.mint-list-row', { hasText: 'Alpha Mint' }).locator('td').nth(1)).toHaveText('● Online')
 
   await page.goto('/mint/charlie.mint.example')
@@ -72,6 +72,6 @@ test('list view and Compare use the same word for a degraded mint', async ({ pag
   await page.locator('.md-picker-confirm').click()
   await expect(page.getByText('Mint Comparison')).toBeVisible()
   const cells = page.locator('.cmp-lbl', { hasText: /^Status$/ }).locator('xpath=following-sibling::div[contains(@class,"cmp-val")]')
-  await expect(cells.filter({ hasText: 'Offline 24h+' })).toHaveCount(1)
+  await expect(cells.filter({ hasText: 'Degraded' })).toHaveCount(1)
   await expect(cells.filter({ hasText: 'Online' })).toHaveCount(1)
 })

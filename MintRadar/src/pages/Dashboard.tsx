@@ -454,7 +454,7 @@ function MintListView({
             {shown.map(mint => {
               const isOnline = mint.online === true
               const isArchived = !isOnline && mint.archived === true
-              // Same status rule and word as the card and the wallet API (2026-10-27): degraded reads "Offline 24h+".
+              // Same status rule and word as the card and the wallet API (2026-10-27): degraded reads "Degraded".
               const statusLabel = mintStatusLabel(mintStatus(mint))
               const displayName = mintDisplayName(mint, duplicateDisplayNames)
               const score = mint.reliabilityScore ?? null

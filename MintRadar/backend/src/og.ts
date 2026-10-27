@@ -30,10 +30,10 @@ export function escapeHtml(input: string): string {
 }
 
 // Same rule and words as the website (shared/mintStatus.ts, src/utils/mintFormatting.ts mintStatusLabel, 2026-10-27):
-// a degraded mint reads "Offline 24h+", like its Dashboard card and Mint detail page.
+// a degraded mint reads "Degraded", like its Dashboard card and Mint detail page.
 export function mintStatusLabel(mint: Pick<OgMintData, 'online' | 'degraded'>): string {
   const s = mintStatus(mint)
-  return s === 'online' ? 'Online' : s === 'degraded' ? 'Offline 24h+' : 'Offline'
+  return s === 'online' ? 'Online' : s === 'degraded' ? 'Degraded' : 'Offline'
 }
 
 function hostnameOf(url: string): string {

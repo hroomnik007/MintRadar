@@ -46,7 +46,7 @@ for (const w of [1440, 390]) {
   test.describe(`${w}px`, () => {
     test.use({ viewport: { width: w, height: 900 } })
 
-    test('dashboard cards: Test mint, New, Same op, up-24h tones, Offline 24h+, unit/LN chips', async ({ page }) => {
+    test('dashboard cards: Test mint, New, Same op, up-24h tones, Degraded, unit/LN chips', async ({ page }) => {
       await setup(page)
       await page.goto('/?testmints=show&status=all')
       await expect(page.locator('.mint-card')).toHaveCount(11)
@@ -54,7 +54,7 @@ for (const w of [1440, 390]) {
       assertAll(recs, 'cards')
       expectSeen(recs, [
         ['card-reliability-badge-test-mint', 'Test mint'], ['card-reliability-badge-same-op', 'Same op'],
-        ['card-hdr-new', 'New'], ['card-hdr-badge', 'Offline 24h+'], ['card-pill', '40 % up 24h'],
+        ['card-hdr-new', 'New'], ['card-hdr-badge', 'Degraded'], ['card-pill', '40 % up 24h'],
         ['card-pill', '85 % up 24h'], ['card-pill', '99 % up 24h'], ['card-pill', /^SAT$/],
       ], 'cards')
       if (w === 1440) expectSeen(recs, [['search-shortcut', '/']], 'cards')

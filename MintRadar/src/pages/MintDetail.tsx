@@ -909,7 +909,7 @@ function MintDetailContent({ url }: { url: string }) {
   const unavailable = !isOnline && knownMint !== null
   const isArchived = !isOnline && knownMint?.archived === true
   // Status word (2026-10-27): the shared rule of the wallet API `status` (utils/mintStatus.ts), so a mint the API calls
-  // `degraded` reads "Offline 24h+" here as on its card (lnpay was degraded in the API but "Offline" here). The one
+  // `degraded` reads "Degraded" here as on its card (lnpay was degraded in the API but "Offline" here). The one
   // input that can differ from the API is `online`: a live probe from this page is newer than the snapshot, and when
   // it succeeds the mint is Online even if the snapshot still says degraded.
   const status = mintStatus({ online: isOnline, degraded: !isOnline && knownMint?.degraded === true, archived: isArchived })

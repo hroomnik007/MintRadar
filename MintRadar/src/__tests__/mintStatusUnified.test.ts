@@ -22,7 +22,7 @@ const NOW = Date.UTC(2026, 9, 27, 6, 5, 0)
 const snapshots: Array<[string, Partial<KnownMintLike>, string, string]> = [
   ['online', { online: true }, 'online', 'Online'],
   ['offline, under the degraded rule', { online: false }, 'offline', 'Offline'],
-  ['degraded (lnpay: no successful probe for 3 days)', { online: false, degraded: true }, 'degraded', 'Offline 24h+'],
+  ['degraded (lnpay: no successful probe for 3 days)', { online: false, degraded: true }, 'degraded', 'Degraded'],
   ['archived', { online: false, degraded: true, archived: true }, 'archived', 'Archived'],
   ['never probed', { online: null }, 'offline', 'Offline'],
 ]
@@ -35,18 +35,18 @@ describe('the site and the wallet API derive the same status from the same snaps
     expect(mintStatusLabel(mintStatus(m))).toBe(word)
   })
 
-  it('every API status has a site word; degraded reads "Offline 24h+" (the card badge and the Dashboard note)', () => {
-    expect(MINT_STATUS_LABEL).toEqual({ online: 'Online', offline: 'Offline', degraded: 'Offline 24h+', archived: 'Archived' })
+  it('every API status has a site word; degraded reads "Degraded" (the card badge and the Dashboard note)', () => {
+    expect(MINT_STATUS_LABEL).toEqual({ online: 'Online', offline: 'Offline', degraded: 'Degraded', archived: 'Archived' })
   })
 
   it('the Payment request inspector and the link preview use the same words', () => {
-    expect(mintStatusWord({ online: false, degraded: true })).toBe('Offline 24h+')
+    expect(mintStatusWord({ online: false, degraded: true })).toBe('Degraded')
     expect(mintStatusWord({ online: false, degraded: true, archived: true })).toBe('Archived')
     expect(mintStatusWord({ online: null })).toBe('Unknown')
-    expect(ogStatusLabel({ online: false, degraded: true })).toBe('Offline 24h+')
+    expect(ogStatusLabel({ online: false, degraded: true })).toBe('Degraded')
   })
 
   it('a degraded dot is red like an offline one', () => {
-    expect(statusDotColor('Offline 24h+')).toBe(statusDotColor('Offline'))
+    expect(statusDotColor('Degraded')).toBe(statusDotColor('Offline'))
   })
 })
