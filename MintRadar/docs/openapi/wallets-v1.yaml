@@ -164,7 +164,7 @@ paths:
                 lnpay-like:
                   summary: One online mint
                   value:
-                    methodology: 4
+                    methodology: 5
                     generatedAt: '2026-10-12T18:30:12.345Z'
                     count: 1
                     total: 1

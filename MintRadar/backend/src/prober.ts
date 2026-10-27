@@ -5,7 +5,7 @@ import { pool } from './db.js'
 import { hasNulByte } from './hostnameGuard.js'
 import { checkUrlSafety, safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 import { computeReliabilityScore, TRACKED_NUT_KEYS } from './shared/reliabilityScore.js'
-import { isNutDeclaredSupported } from './shared/nutSupport.js'
+import { isNutOffered } from './shared/nutSupport.js'
 import { notifySubscribers, notifyAlert, recordAlertClear, isNotificationServiceEnabled, type AlertKind } from './nostrService.js'
 import { mintMeltCondition, versionCondition, nutLossTransition, type Condition } from './alertTriggers.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
@@ -497,8 +497,9 @@ export async function probeMintToDb(url: string, onDeferFailure?: (f: DeferredPr
           // count. A mint's own nuts object can also carry auth (21/22) and
           // payment-method (23/25/30) keys, which are real features but not
           // part of the NUT-support score; counting all of Object.keys(nuts)
-          // previously let those inflate this component.
-          const nutCount = TRACKED_NUT_KEYS.filter(key => isNutDeclaredSupported(nuts[key])).length
+          // previously let those inflate this component. Methodology 5: a NUT-04/05 the mint has
+          // switched off ("disabled": true) does not count either (shared/nutSupport.ts isNutOffered).
+          const nutCount = TRACKED_NUT_KEYS.filter(key => isNutOffered(nuts[key])).length
           const nameRaw = typeof raw['name'] === 'string' ? raw['name'].trim().slice(0, 100) : null
           const name = nameRaw && nameRaw.length > 0 ? nameRaw : null
 

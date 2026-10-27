@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { passesWizardNutChecks, hasRequiredNuts, onlineMintsSupportingNut, offeredNutCount, WIZARD_NUT_CHECKS } from '@/utils/nutFilters'
+import { passesWizardNutChecks, hasRequiredNuts, onlineMintsSupportingNut, WIZARD_NUT_CHECKS } from '@/utils/nutFilters'
 import { NUT_SUPPORT_CASES } from './nutSupportCases'
 
 // Tools (Best Mint wizard), Stats (NUT coverage modal) and the Dashboard ?nuts= filter all read the
@@ -49,14 +49,5 @@ describe('nutFilters', () => {
     expect(hasRequiredNuts(lek, ['7'])).toBe(true)
     expect(hasRequiredNuts({ '4': { methods: [], disabled: false } }, ['4'])).toBe(true)
     expect(onlineMintsSupportingNut([{ online: true, nutsLimits: lek }], '5')).toEqual([])
-  })
-
-  it('offeredNutCount: the stored count less the switched-off tracked NUTs; null stays null', () => {
-    const lek = { '4': { methods: [], disabled: true }, '5': { methods: [], disabled: true }, '7': {}, '12': {} }
-    expect(offeredNutCount({ nutCount: 4, nutsLimits: lek })).toBe(2)
-    expect(offeredNutCount({ nutCount: 4, nutsLimits: null })).toBe(4)
-    expect(offeredNutCount({ nutCount: null, nutsLimits: lek })).toBeNull()
-    expect(offeredNutCount({ nutCount: 1, nutsLimits: lek })).toBe(0)
-    expect(offeredNutCount({ nutCount: 4, nutsLimits: { '4': { supported: false, disabled: true } } })).toBe(4)
   })
 })

@@ -39,7 +39,7 @@ This is an application of kind `30385` of [NIP-85](https://github.com/nostr-prot
     ["mint_keysets_id_invalid", "0"],
     ["mint_keyset_final_expiry", "1800016200"],
     ["mint_keysets_checked_at", "1792151400"],
-    ["methodology", "4"],
+    ["methodology", "5"],
     ["methodology_url", "https://mintradar.org/methodology"],
     ["expiration", "1792324800"]
   ],

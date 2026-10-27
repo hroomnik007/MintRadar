@@ -1,6 +1,7 @@
 // NUT-04 (minting) / NUT-05 (melting) with `disabled: true` in /v1/info (2026-10-27): Mint detail shows them as
 // disabled, not supported (header count, NUTs tab), hides the Cashu.me button, and the lists and filters treat them
-// as not offered (list view NUT column, ?nuts=4). The Reliability Score NUT row still counts declared NUTs.
+// as not offered (list view NUT column, ?nuts=4). Since methodology 5 they do not count for the score either: the
+// backend stores the offered count (the mock below does the same) and the score breakdown NUT row reads it.
 import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS, probePayload } from './fixtures/mocks'
 
@@ -14,7 +15,7 @@ async function setup(page: Page, keys: string[]) {
   await mockRelays(page)
   await installApiMocks(page)
   await page.route('**/api/mints/known', r => r.fulfill({
-    json: MOCK_KNOWN_MINTS.map(m => m.url === DELTA ? { ...m, nutsLimits: off(m.nutsLimits as Nuts, keys), mintMethods: [], meltMethods: [] } : m),
+    json: MOCK_KNOWN_MINTS.map(m => m.url === DELTA ? { ...m, nutCount: (m.nutCount as number) - keys.length, nutsLimits: off(m.nutsLimits as Nuts, keys), mintMethods: [], meltMethods: [] } : m),
   }))
   await page.route('**/api/mint/probe**', r => {
     const u = new URL(r.request().url()).searchParams.get('url') ?? ''
@@ -44,9 +45,20 @@ for (const vp of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
       }
       await expect(page.locator('.nut-card', { hasText: 'NUT-07' })).toHaveClass(/supported/)
 
-      // The modal of a disabled NUT says so (the score still counts the NUT as declared; methodology unchanged).
+      // The modal of a disabled NUT says so.
       await page.locator('.nut-card', { hasText: 'NUT-04' }).click()
       await expect(page.locator('.nm-status')).toHaveText('⊘ Disabled by operator')
+    })
+
+    test('score breakdown: the NUT row counts offered NUTs only and names the disabled ones', async ({ page }) => {
+      await setup(page, ['4', '5'])
+      await page.goto('/mint/delta.mint.example')
+      if (vp.width < 600) await page.locator('.md-sc-reliability').click()
+      const row = page.locator(vp.width < 600 ? '.rb-modal .rb-row' : '.rb-row', { hasText: 'NUT Support' }).first()
+      // The probe declares 13 tracked NUTs; 4 and 5 are switched off, so 11 count: round(11 / 14 * 15) = 12 points.
+      await expect(row.locator('.rb-row-display')).toHaveText('11 / 14 NUTs · 2 disabled')
+      await expect(row.locator('.rb-row-score')).toHaveText('12/15')
+      await expect(nutTileOf(page).locator('.md-sc-value')).toHaveText('11')
     })
 
     test('only melting switched off: Cashu.me hidden as well, 1 disabled', async ({ page }) => {
@@ -61,6 +73,8 @@ for (const vp of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
       await page.goto('/mint/delta.mint.example')
       await expect(nutTileOf(page).locator('.md-sc-sub')).toHaveText('supported')
       await expect(page.getByRole('link', { name: /Cashu\.me/ })).toBeVisible()
+      if (vp.width < 600) await page.locator('.md-sc-reliability').click()
+      await expect(page.locator(vp.width < 600 ? '.rb-modal .rb-row' : '.rb-row', { hasText: 'NUT Support' }).first().locator('.rb-row-display')).toHaveText('13 / 14 NUTs')
     })
   })
 }

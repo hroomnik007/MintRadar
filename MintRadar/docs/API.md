@@ -51,7 +51,7 @@ Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` l
 
 ```json
 {
-  "methodology": 4,
+  "methodology": 5,
   "generatedAt": "2026-10-12T18:30:12.345Z",
   "count": 1,
   "mints": [
@@ -230,6 +230,7 @@ Every unknown path below `/api/v1/` is a JSON `404` in this envelope (`/api/v1/f
 | 2 | 2026-10-08 | Audit part now from cashu.info: failures attributed to the mint divided by swaps in 7 days; neutral under 10 swaps or without recent data. |
 | 3 | 2026-10-09 | Version part follows one rule: outdated means two or more minor versions behind the newest stable release; zero or one behind scores full points. |
 | 4 | 2026-10-21 | NUT part: a NUT entry with "supported": false in /v1/info no longer counts as support for the NUT component; a NUT counts when the mint lists it and does not mark it as not supported. |
+| 5 | 2026-10-27 | NUT part: a NUT the mint has switched off (NUT-04 minting or NUT-05 melting with "disabled": true in /v1/info) no longer counts for the NUT component. |
 
 - **Signed health assertions on Nostr** (kind 30385, early version, published under the key `health@mintradar.org`) carry the same `score` as `rank` and the same `methodology` integer. They are not part of this HTTP API; see [mintradar.org/for-wallets](https://mintradar.org/for-wallets#signed-health-assertions) and [nostr-health-assertions.md](nostr-health-assertions.md).
 
@@ -741,7 +742,7 @@ curl "https://mintradar.org/api/v1/mints/recommend?unit=sat&minScore=85&limit=3&
     }
   ],
   "generatedAt": "2026-10-12T18:30:12.345Z",
-  "methodology": 4
+  "methodology": 5
 }
 ```
 

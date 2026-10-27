@@ -851,7 +851,7 @@ export default function Stats() {
   // The movers note changes the height of the board (Stats.css --stats-reserve-note), so the reservations follow the
   // same condition that shows the note: the selected movers window holds a methodology change. The number of changes
   // (the note's length: 1, 2, 3 or more) picks the line count per width band there.
-  const pageClass = moversNote === '' ? 'stats-page' : `stats-page has-movers-note movers-note-n${Math.min(moversChanges.length, 3)}`
+  const pageClass = moversNote === '' ? 'stats-page' : `stats-page has-movers-note movers-note-n${Math.min(moversChanges.length, 4)}`
 
   if (isLoading) return (
     <div className={pageClass}>

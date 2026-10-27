@@ -774,14 +774,15 @@ function MintDetailContent({ url }: { url: string }) {
   const supportedNuts = TRACKED_NUTS.filter(nut =>
     supportedNutNumbers.has(String(parseInt(nut.slice(4), 10)))
   )
-  // Switched off (2026-10-27): a declared NUT-04/05 with `disabled: true` still counts for the score (supportedNuts above),
-  // but the header, the NUTs tab and the NUT modal show it as disabled, not supported.
+  // Switched off (2026-10-27): a declared NUT-04/05 with `disabled: true` is shown as disabled, not supported, and since
+  // methodology 5 it does not count for the score either: the fallback score, the NUT row and the header use offeredNuts.
   const offeredNutNumbers = offeredNutKeys(nutsDeclared)
   const offeredNuts = supportedNuts.filter(nut => offeredNutNumbers.has(String(parseInt(nut.slice(4), 10))))
   const disabledNuts = supportedNuts.filter(nut => !offeredNuts.includes(nut))
-  // Header NUT count: the same tracked + offered count as the NUTs tab (the stored one until the live /v1/info arrives,
-  // less the switched-off ones). Object.keys(nuts).length also counted untracked NUTs and `supported: false` entries.
-  const nutCount = Math.max(0, (data?.info ? supportedNuts.length : (knownMint?.nutCount ?? 0)) - disabledNuts.length)
+  // Header NUT count: the same tracked + offered count as the NUTs tab (the stored one until the live /v1/info arrives;
+  // since methodology 5 the stored count already leaves the switched-off ones out). Object.keys(nuts).length also
+  // counted untracked NUTs and `supported: false` entries.
+  const nutCount = data?.info ? offeredNuts.length : (knownMint?.nutCount ?? 0)
   // Adding a mint that does not issue or does not pay out ecash right now to a wallet is a dead end, like an archived one.
   const walletActionsOff = nut4Disabled || nut5Disabled
   // NUT-13 (deterministic secrets) is wallet-side only — mints never advertise
@@ -794,7 +795,7 @@ function MintDetailContent({ url }: { url: string }) {
   // The stored (server-side) score wins. Without one, the score is computed here from the 24 h uptime: until that history
   // has arrived (or when its request failed) there is no score to show, and computing it with uptime 0 showed a wrong
   // number for a moment (Task F3). Every place below shows SCORE_PENDING_* while `reliabilityScore` is null.
-  const fallbackScore = () => computeReliabilityScore(uptimePct, supportedNuts.length, version, email, twitter, nostr, { blamed: knownMint?.auditCzBlamed ?? null, total: knownMint?.auditCzTotal ?? null, fetchedAt: knownMint?.auditCzFetchedAt ?? null }, versionLatestMap)
+  const fallbackScore = () => computeReliabilityScore(uptimePct, offeredNuts.length, version, email, twitter, nostr, { blamed: knownMint?.auditCzBlamed ?? null, total: knownMint?.auditCzTotal ?? null, fetchedAt: knownMint?.auditCzFetchedAt ?? null }, versionLatestMap)
   const reliabilityScore: number | null = knownMint?.reliabilityScore ?? (uptime24hData ? fallbackScore() : null)
   const scorePending = reliabilityScore === null
   const scoreText = scorePending ? SCORE_PENDING_TEXT : String(reliabilityScore)
@@ -811,7 +812,7 @@ function MintDetailContent({ url }: { url: string }) {
   // shows a placeholder, never the 0 that `uptimePct` stands in for (a mint with a stored score showed a red 0% and 0/40). A
   // real 0 (uptimePct 0, a mint that was really down) is still shown as "0%".
   const uptimeRowPending = scorePending || uptime24hData === undefined || uptime24hData.uptimePct === null
-  const breakdownNScore = nutComponent(supportedNuts.length)
+  const breakdownNScore = nutComponent(offeredNuts.length)
   const breakdownVScore = versionComponent(version, versionLatestMap)
   const breakdownContactFields = [email, twitter, nostr].filter(Boolean)
   const breakdownCScore = contactComponent(breakdownContactFields.length)
@@ -890,7 +891,7 @@ function MintDetailContent({ url }: { url: string }) {
   const reliabilityBreakdownRows = [
     { label: UPTIME_ROW_LABEL, display: uptimeRowPending ? SCORE_PENDING_TEXT : `${uptimePct}%`, ...(uptimeRowPending ? { displayLabel: UPTIME_PENDING_ARIA_LABEL } : {}), source: uptimeSource, score: rowUScore, max: UPTIME_POINTS, color: storedBreakdown ? breakdownPointsColor(rowUScore, UPTIME_POINTS) : uptimeRowPending ? 'var(--text3)' : uptimeColor(uptimePct), tooltip: uptimeRowText() },
     { label: AUDIT_ROW_LABEL, display: breakdownAuditDisplay, source: auditRowSource, ...(auditDetailText ? { detail: auditDetailText } : {}), score: rowAScore, max: AUDIT_POINTS, color: auditRowColor, tooltip: auditRowText(), ...(auditStaleNote ? { note: auditStaleNote } : {}) },
-    { label: NUT_ROW_LABEL, display: `${supportedNuts.length} / ${TRACKED_NUTS.length} NUTs`, source: infoSource, score: rowNScore, max: NUT_POINTS, color: storedBreakdown ? breakdownPointsColor(rowNScore, NUT_POINTS) : supportedNuts.length >= 12 ? 'var(--accent)' : supportedNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: NUT_ROW_TEXT },
+    { label: NUT_ROW_LABEL, display: `${offeredNuts.length} / ${TRACKED_NUTS.length} NUTs${disabledNuts.length > 0 ? ` · ${disabledNuts.length} disabled` : ''}`, source: infoSource, score: rowNScore, max: NUT_POINTS, color: storedBreakdown ? breakdownPointsColor(rowNScore, NUT_POINTS) : offeredNuts.length >= 12 ? 'var(--accent)' : offeredNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: NUT_ROW_TEXT },
     { label: VERSION_ROW_LABEL, display: version ?? 'Unknown', source: versionSource, score: rowVScore, max: VERSION_POINTS, color: breakdownPointsColor(rowVScore, VERSION_POINTS), tooltip: versionRowText() },
     { label: CONTACT_ROW_LABEL, display: breakdownContactDisplay, source: infoSource, score: rowCScore, max: CONTACT_POINTS, color: breakdownPointsColor(rowCScore, CONTACT_POINTS), tooltip: contactRowText() },
   ]

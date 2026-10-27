@@ -35,6 +35,7 @@ Tags, in this order: `d` (normalised mint URL, fragment dropped), `k` = `web`, `
 - **Which mints:** a non-null stored score and not archived. Offline mints are published (`mint_status` `offline`), test mints with `mint_test` `1`. A mint whose score becomes null or that is archived gets no new event; its old one expires after 48 hours.
 - **A new alert-like or API field must not be added to the event without updating the spec (`docs/nostr-health-assertions.md`) first.** Tag names are a v1 contract with wallets.
 - **2026-10-21 (methodology 4):** every event now carries `methodology` 4. A bump is a `periodic` reason in `publishReason`, NOT a `state-change`, so the 30 an hour state-change cap does not apply to it; the 6 hour minimum since each mint's last event and the 200 per run cap do (`healthPublisher.test.ts`: "a methodology bump republishes every mint …"). The cap was not changed.
+- **2026-10-27 (methodology 5):** every event carries `methodology` 5 (switched-off NUT-04/05 no longer count); same republish pacing as for 4.
 - **A methodology bump refreshes all assertions:** `shouldPublish` treats a changed `methodology` as a reason to publish, so every mint gets a new event on the next runs (paced by the 6 hour minimum and the 200 per run cap). Bumping `METHODOLOGY_VERSION` needs nothing else for the assertions.
 
 ## Constants

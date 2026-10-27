@@ -2,7 +2,7 @@ import './wsPolyfill.js'
 import express, { type Request, type Response, type NextFunction } from 'express'
 import cors from 'cors'
 import { pool, initDb } from './db.js'
-import { isNutDeclaredSupported, isNutOffered } from './shared/nutSupport.js'
+import { isNutDeclaredSupported, isNutDisabled, isNutOffered } from './shared/nutSupport.js'
 import { isSafeUrl, isWellFormedMintUrl, checkWsUrlSafety, safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 import { upsertMint, probeMintToDb, validateCashuMintProbe, parseMintMethods, classifyFetchError, type MintMethodEntry } from './prober.js'
 import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type ProbeFailure, type SafeFetchRejection } from './probeErrorKind.js'
@@ -908,8 +908,9 @@ app.get('/api/mint/probe', (req: Request, res: Response): void => {
               name: publicMintNameOrHost(status.info.name, url),
               version: status.info.version,
               // keys only — enough for `Object.keys(nuts).length`, none of the
-              // per-NUT config an arbitrary host might stuff in here.
-              nuts: Object.fromEntries(Object.keys(status.info.nuts).filter(k => isNutDeclaredSupported(status.info!.nuts[k])).map(k => [k, {}])),
+              // per-NUT config an arbitrary host might stuff in here. A switched-off NUT-04/05 keeps only
+              // `disabled: true`, so the page counts it the way the score does (methodology 5).
+              nuts: Object.fromEntries(Object.keys(status.info.nuts).filter(k => isNutDeclaredSupported(status.info!.nuts[k])).map(k => [k, isNutDisabled(status.info!.nuts[k]) ? { disabled: true } : {}])),
             }
           : null,
         keysets: null,

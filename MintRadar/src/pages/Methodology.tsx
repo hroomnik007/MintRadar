@@ -92,7 +92,7 @@ export default function Methodology() {
               <tbody>
                 <tr><th scope="row">Uptime</th><td>{w.uptime}</td><td>MintRadar probes of the last {M.uptime.windowHours} hours</td></tr>
                 <tr><th scope="row">Audit reliability</th><td>{w.audit}</td><td>cashu.info swaps of the last {M.audit.windowDays} days</td></tr>
-                <tr><th scope="row">NUT support</th><td>{w.nuts}</td><td>NUTs the mint says it supports in <code>/v1/info</code> (an entry with <code>&quot;supported&quot;: false</code> does not count)</td></tr>
+                <tr><th scope="row">NUT support</th><td>{w.nuts}</td><td>NUTs the mint says it supports in <code>/v1/info</code> (an entry with <code>&quot;supported&quot;: false</code>, or a NUT-04/05 the mint has switched off, does not count)</td></tr>
                 <tr><th scope="row">Software version</th><td>{w.version}</td><td>The version the mint reports, against the newest stable release</td></tr>
                 <tr><th scope="row">Contact</th><td>{w.contact}</td><td>Contact channels the mint publishes</td></tr>
               </tbody>
@@ -149,7 +149,8 @@ export default function Methodology() {
             and does not mark with <code>&quot;supported&quot;: false</code>, divided by {M.nuts.tracked.length}, times {w.nuts}, rounded. Tracked:{' '}
             {M.nuts.tracked.map(nutLabel).join(', ')}. Not counted: the NUTs every mint implements (NUT-00 to NUT-03
             and NUT-06), NUTs that only wallets use, authentication (NUT-21, NUT-22) and the payment-method NUTs
-            (NUT-23, NUT-25, NUT-30).
+            (NUT-23, NUT-25, NUT-30). A NUT-04 (minting) or NUT-05 (melting) entry with{' '}
+            <code>&quot;disabled&quot;: true</code> does not count either: the mint has switched it off for now.
           </p>
 
           <h3 className="doc-h3">Software version ({w.version} points)</h3>
