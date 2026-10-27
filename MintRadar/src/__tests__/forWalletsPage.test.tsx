@@ -388,5 +388,12 @@ describe('page text added with the 2026-10-20 wallet additions', () => {
     for (const word of ['scoreStale', 'status', 'online', 'last measured one', 'default list']) expect(li, word).toContain(word)
     expect(container.textContent).toContain('label the score as the last measured one')
   })
+
+  it('dates the method= refinement and names the switched-off side fields', () => {
+    const { container } = render(<MemoryRouter><ForWallets /></MemoryRouter>)
+    const li = container.querySelector('[data-testid="refinement-method-disabled"]')?.textContent ?? ''
+    expect(li).toContain(F.walletMethodDisabledOn)
+    for (const word of ['method', 'NUT-04', 'NUT-05', 'mintDisabled', 'meltDisabled', 'switched off']) expect(li, word).toContain(word)
+  })
 })
 

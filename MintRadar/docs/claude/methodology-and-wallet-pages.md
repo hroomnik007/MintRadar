@@ -26,6 +26,8 @@ Quick start for the Wallet API v1 (contract: `docs/API.md` "API for wallets (v1)
 
 **`mintDisabled` / `meltDisabled` (2026-10-27, additive, no methodology bump):** on every mint object (default list included): `true` when NUT-04 / NUT-05 is listed with `"disabled": true` (`walletApi.ts` `nutDisabledOf`, shared `isNutDisabled`), `false` otherwise, `null` when the NUTs are unknown. `nuts` and the `nuts=` filter are unchanged (a switched-off NUT is still declared), documented in both walletFields copies, API.md and the OpenAPI file (also in `required`). Test: `src/__tests__/walletNutDisabled.test.ts`.
 
+**`method=` skips a switched-off side (2026-10-27, refinement, `ara/api-method-disabled`):** `methodRequirementMet` ignores `methods.mint` when `mintDisabled === true` and `methods.melt` when `meltDisabled === true` (the Dashboard `offeredMethods` rule). `methods`, `limits`, `nuts` and the `nuts=` filter are unchanged. Documented as a dated refinement (not an addition) in the OpenAPI `info.description` and `method` parameter, the `mintDisabled`/`meltDisabled` descriptions, `docs/API.md` (`method` row and a "Refinements in v1" bullet) and on /for-wallets (Stability `li[data-testid=refinement-method-disabled]`, date `WALLET_API_FACTS.walletMethodDisabledOn`). Tests: `wallet-api-w2b.test.ts` ("a side switched off …"), `forWalletsPage.test.tsx`.
+
 ## Footer and sitemap
 
 - Footer (`AppShell.tsx`): `© 2026 MintRadar.org · API · About · Methodology · For wallets`; the existing `flex-wrap` row wraps and centres at 320/390 px, the 44px touch area is the existing `::before` on coarse pointers (`e2e/footer-doc-links.spec.ts` checks that a tap on a link hits that link).
