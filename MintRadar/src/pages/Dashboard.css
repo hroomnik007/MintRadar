@@ -1509,9 +1509,10 @@
 }
 .filter-field-label {
   flex: 0 0 auto;
-  /* Both labels ("Status", "Unit") share one width so the two controls start at the same left edge;
-     the Unit info icon sits in the empty tail of its label */
-  width: 64px;
+  /* The labels ("Status", "Unit", "Method") share one width so the controls start at the same left edge;
+     the info icons sit in the empty tail of their label. 72px (was 64) since the Method filter (2026-10-27): its
+     icon's 44px touch area must end before the control starts. */
+  width: 72px;
   font-family: var(--font-body);
   font-size: 13px;
   letter-spacing: 0;
@@ -1527,7 +1528,7 @@
 .filter-field-labelcell {
   flex: 0 0 auto;
   position: relative;
-  width: 64px;
+  width: 72px;
   display: flex;
   align-items: center;
   font-family: var(--font-body);
@@ -1536,6 +1537,8 @@
 .filter-field-labelcell .filter-field-label { flex: 0 0 auto; }
 /* Absolutely positioned: the trigger's vertical negative margins would move it (top: 50% centres the padded box), only the left one is needed. */
 .filter-field-labelcell .filter-unit-tip { position: absolute; left: 44px; top: 50%; transform: translateY(-50%); flex: 0 0 auto; margin-block: 0; }
+/* "Method" is wider than "Unit": its icon sits further right, still inside the shared label width plus the gap. */
+.filter-field-labelcell .filter-method-tip { left: 52px; }
 .filter-unit-tip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 /* Touch: 44px hit area through an invisible ::before (the icon itself stays 12px). */
 @media (pointer: coarse), (max-width: 600px) {
