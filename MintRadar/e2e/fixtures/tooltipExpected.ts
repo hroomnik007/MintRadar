@@ -27,7 +27,8 @@ export const EXPECTED_TOOLTIPS: Record<string, Cell[]> = {
   'stats-nhi-dialog': [[6, 5], [6, 5], [6, 5], null, null],
   // 0: the Tools page has explanatory text only; tooltips appear on a token RESULT (next state).
   tools: same([0, 0]),
-  'tools-token-test-mint': same([2, 2]),
+  // 3 since 2026-10-27: the Verify part's "Mint fee" ⓘ joined the Signature check and the redeem ones.
+  'tools-token-test-mint': same([3, 3]),
   // 0 on the content pages: their explanations are visible text (the pages hold no InfoTooltip).
   wallets: same([0, 0]),
   learn: same([0, 0]),

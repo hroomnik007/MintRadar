@@ -3,7 +3,7 @@ import { Amount, getEncodedToken, CheckStateEnum, Wallet } from '@cashu/cashu-ts
 import {
   parseCashuToken, formatTokenAmount, checkTokenSpentState, decodeTokenWithMint,
   classifySignatureCheck, classifySpentCheck, tokenActionState, amountCarriesCurrencySymbol, stripTokenWhitespace,
-  assertProbeableMintUrl, InvalidMintUrlError, INVALID_TOKEN_MESSAGE,
+  assertProbeableMintUrl, InvalidMintUrlError, INVALID_TOKEN_MESSAGE, tokenFeeFacts, localProofKeysetIds,
 } from '../utils/cashuToken'
 
 // checkTokenSpentState() needs a live mint (Wallet.loadMint/checkProofsStates), so the
@@ -13,6 +13,8 @@ import {
 const mockLoadMint = vi.fn()
 const mockDecodeToken = vi.fn()
 const mockCheckProofsStates = vi.fn()
+const mockGetKeyset = vi.fn()
+const mockKeyChain = { hasKeyset: vi.fn(), getKeyset: vi.fn() }
 vi.mock('@cashu/cashu-ts', async importOriginal => {
   const actual = await importOriginal<typeof import('@cashu/cashu-ts')>()
   return {
@@ -21,6 +23,8 @@ vi.mock('@cashu/cashu-ts', async importOriginal => {
       this.loadMint = mockLoadMint
       this.decodeToken = mockDecodeToken
       this.checkProofsStates = mockCheckProofsStates
+      this.getKeyset = mockGetKeyset
+      this.keyChain = mockKeyChain
     }),
   }
 })
@@ -370,5 +374,79 @@ describe('amountCarriesCurrencySymbol', () => {
     expect(amountCarriesCurrencySymbol('zzz')).toBe(false)
     // exponent known but no symbol mapped → formatted amount is a bare number, keep the label
     expect(amountCarriesCurrencySymbol('chf')).toBe(false)
+  })
+})
+
+describe('tokenFeeFacts: the NUT-02 claim fee and keyset status', () => {
+  const lookup = (table: Record<string, { active: boolean; inputFeePpk: number | null }>) => (id: string) => table[id] ?? null
+
+  it('adds the input_fee_ppk of every proof and rounds up once (ceil(sum / 1000))', () => {
+    // 3 proofs at 100 ppk + 2 at 250 ppk = 800 ppk -> 1 unit; a per-keyset rounding would give 2.
+    const f = tokenFeeFacts(['a', 'a', 'a', 'b', 'b'], lookup({ a: { active: true, inputFeePpk: 100 }, b: { active: true, inputFeePpk: 250 } }))
+    expect(f.fee).toBe(1)
+    expect(f.keysets).toEqual([
+      { id: 'a', proofs: 3, status: 'active', inputFeePpk: 100 },
+      { id: 'b', proofs: 2, status: 'active', inputFeePpk: 250 },
+    ])
+    expect(tokenFeeFacts(['a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a'], lookup({ a: { active: true, inputFeePpk: 100 } })).fee).toBe(2)
+    expect(tokenFeeFacts(['a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a'], lookup({ a: { active: true, inputFeePpk: 100 } })).fee).toBe(1)
+  })
+
+  it('a keyset without input_fee_ppk costs 0 (NUT-02 default), so the fee is 0, not unknown', () => {
+    const f = tokenFeeFacts(['a', 'a'], lookup({ a: { active: true, inputFeePpk: null } }))
+    expect(f.fee).toBe(0)
+    expect(f.keysets[0]!.inputFeePpk).toBe(0)
+  })
+
+  it('marks an inactive keyset; its coins still pay that keyset\'s fee', () => {
+    const f = tokenFeeFacts(['old'], lookup({ old: { active: false, inputFeePpk: 1000 } }))
+    expect(f.keysets[0]!.status).toBe('inactive')
+    expect(f.fee).toBe(1)
+  })
+
+  it('a keyset the mint does not list makes the fee unknown (null), never a guess', () => {
+    const f = tokenFeeFacts(['a', 'gone'], lookup({ a: { active: true, inputFeePpk: 0 } }))
+    expect(f.fee).toBeNull()
+    expect(f.keysets[1]).toEqual({ id: 'gone', proofs: 1, status: 'unknown', inputFeePpk: null })
+  })
+
+  it('no proofs: fee unknown', () => {
+    expect(tokenFeeFacts([], () => ({ active: true, inputFeePpk: 0 })).fee).toBeNull()
+  })
+})
+
+describe('localProofKeysetIds', () => {
+  it('one keyset id per proof, read locally', () => {
+    expect(localProofKeysetIds(V4_TOKEN)).toEqual(['009a1f293253e41e', '009a1f293253e41e'])
+    expect(localProofKeysetIds(V3_TOKEN)).toEqual(['009a1f293253e41e', '009a1f293253e41e'])
+  })
+  it('null for text that is not a token', () => {
+    expect(localProofKeysetIds('cashuBnope')).toBeNull()
+    expect(localProofKeysetIds('')).toBeNull()
+  })
+})
+
+describe('decodeTokenWithMint: keysets come from what the mint listed', () => {
+  beforeEach(() => {
+    mockLoadMint.mockReset().mockResolvedValue(undefined)
+    mockDecodeToken.mockReset().mockReturnValue({ mint: MINT, unit: 'sat', proofs: PROOFS })
+    mockGetKeyset.mockReset().mockImplementation(() => { throw new Error('no keys') })
+    mockKeyChain.hasKeyset.mockReset()
+    mockKeyChain.getKeyset.mockReset()
+  })
+
+  it('reports status and fee from the mint\'s keyset (inactive, 500 ppk, 2 proofs -> 1 sat)', async () => {
+    mockKeyChain.hasKeyset.mockReturnValue(true)
+    mockKeyChain.getKeyset.mockReturnValue({ isActive: false, fee: 500 })
+    const d = await decodeTokenWithMint(V4_TOKEN)
+    expect(d.keysets).toEqual({ fee: 1, keysets: [{ id: '009a1f293253e41e', proofs: 2, status: 'inactive', inputFeePpk: 500 }] })
+  })
+
+  it('a keyset the mint does not list: unknown, fee null', async () => {
+    mockKeyChain.hasKeyset.mockReturnValue(false)
+    const d = await decodeTokenWithMint(V4_TOKEN)
+    expect(d.keysets.fee).toBeNull()
+    expect(d.keysets.keysets[0]!.status).toBe('unknown')
+    expect(mockKeyChain.getKeyset).not.toHaveBeenCalled()
   })
 })

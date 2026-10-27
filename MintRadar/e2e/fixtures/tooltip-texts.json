@@ -1450,18 +1450,20 @@
       "Checks each proof's signature proof (NUT-12 DLEQ), when it has one. A pass means this mint signed it. It does not show the token is unspent or the mint is reliable.",
       "MintRadar",
       "Not for real funds — for testing and development only",
-      "Opens the Cashu redeem page. Paste your token there."
+      "Opens the Cashu redeem page. Paste your token there.",
+      "The mint's input fee for swapping all of this token's coins, as its keysets state it: the per-coin fees added up and rounded up to a whole unit."
     ],
-    "triggers": 2
+    "triggers": 3
   },
   "tools-token-test-mint@390": {
     "texts": [
       "Checks each proof's signature proof (NUT-12 DLEQ), when it has one. A pass means this mint signed it. It does not show the token is unspent or the mint is reliable.",
       "MintRadar",
       "Not for real funds — for testing and development only",
-      "Opens the Cashu redeem page. Paste your token there."
+      "Opens the Cashu redeem page. Paste your token there.",
+      "The mint's input fee for swapping all of this token's coins, as its keysets state it: the per-coin fees added up and rounded up to a whole unit."
     ],
-    "triggers": 2
+    "triggers": 3
   },
   "tools@1440": {
     "texts": [

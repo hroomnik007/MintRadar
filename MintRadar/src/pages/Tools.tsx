@@ -1,4 +1,4 @@
-import { SIGNATURE_CHECK_TEXT } from '@/utils/tooltipTexts'
+import { SIGNATURE_CHECK_TEXT, CLAIM_FEE_TEXT } from '@/utils/tooltipTexts'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { clickableProps } from '@/utils/clickableProps'
 import { passesWizardNutChecks } from '@/utils/nutFilters'
@@ -8,12 +8,13 @@ import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcShield } from '@/components/mint/IcShield'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { useNow } from '@/hooks/useNow'
-import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, classifySignatureCheck, classifySpentCheck, tokenActionState, amountCarriesCurrencySymbol, stripTokenWhitespace, InvalidMintUrlError, type SignatureCheck, type TokenInfo, type TokenSpentCheck } from '@/utils/cashuToken'
+import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, classifySignatureCheck, classifySpentCheck, tokenActionState, amountCarriesCurrencySymbol, stripTokenWhitespace, InvalidMintUrlError, tokenFeeFacts, localProofKeysetIds, type SignatureCheck, type TokenInfo, type TokenSpentCheck, type TokenFeeFacts } from '@/utils/cashuToken'
+import { feeUnitLabel, formatFeeRate } from '@/utils/feesLimits'
 import { startTokenRun, classifyRunError, createRunGuard, type TokenRun } from '@/utils/tokenRun'
 import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { PaymentRequestInspector } from '@/components/PaymentRequestInspector'
 import { PageHead } from '@/components/layout/PageHead'
-import { Zap, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Hourglass, ExternalLink, ArrowRight, type LucideIcon } from 'lucide-react'
+import { Zap, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Coins, Hourglass, ExternalLink, ArrowRight, type LucideIcon } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation } from '@/utils/reliabilityScore'
@@ -58,11 +59,68 @@ type SpentCheckResult =
 // copper (we couldn't find out — says nothing about the token), neutral = grey (nothing
 // to report either way), loading = grey while a request is in flight.
 type ResultTone = 'ok' | 'bad' | 'unknown' | 'neutral' | 'loading'
-function ResultNote({ tone, Icon, children }: { tone: ResultTone; Icon: LucideIcon; children: React.ReactNode }) {
+// `fee` styles the line the same way under its own class, so the Signature check line stays the one .token-verify-result.
+function ResultNote({ tone, Icon, children, fee = false }: { tone: ResultTone; Icon: LucideIcon; children: React.ReactNode; fee?: boolean }) {
   return (
-    <div role="status" className={`token-verify-result tv-${tone}`}>
+    <div role="status" className={`${fee ? 'token-fee-result' : 'token-verify-result'} tv-${tone}`}>
       <Icon size={14} aria-hidden="true" className={`tv-icon${tone === 'loading' ? ' tv-spin' : ''}`} />
       <span>{children}</span>
+    </div>
+  )
+}
+
+/** "2 sat", "$0.02": an amount in the token's unit. */
+function amountInUnit(amount: number, unit: string): string {
+  return amountCarriesCurrencySymbol(unit) ? formatTokenAmount(amount, unit) : `${formatTokenAmount(amount, unit)} ${unit}`
+}
+
+/**
+ * The Verify part's "Mint fee" block: the exact NUT-02 claim fee and the status of each keyset the coins come from.
+ * `source` says where the keysets came from: the mint just now, or MintRadar's last stored keysets check.
+ */
+function ClaimFee({ facts, unit, source, storedAt }: { facts: TokenFeeFacts | null; unit: string; source: 'mint' | 'stored' | 'none'; storedAt?: string | null }) {
+  const unknownFromMint = source === 'mint' ? 'the mint does not list' : "the mint's last listed keysets do not include"
+  const unknownIds = facts?.keysets.filter(k => k.status === 'unknown').map(k => k.id) ?? []
+  return (
+    <div className="token-verify" data-testid="token-claim-fee">
+      <div className="token-section-label">
+        <span>Mint fee</span>
+        <InfoTooltip text={CLAIM_FEE_TEXT} about="Mint fee" />
+      </div>
+      {!facts || facts.fee === null ? (
+        <ResultNote fee tone="unknown" Icon={TriangleAlert}>
+          {!facts
+            ? 'Mint fee unknown: the mint could not be reached.'
+            : `Mint fee unknown: ${unknownFromMint} ${unknownIds.length === 1 ? 'this keyset' : 'these keysets'}.`}
+        </ResultNote>
+      ) : facts.fee === 0 ? (
+        <ResultNote fee tone="neutral" Icon={CircleMinus}>No mint fee to claim this token.</ResultNote>
+      ) : (
+        <ResultNote fee tone="neutral" Icon={Coins}>Claiming this token costs {amountInUnit(facts.fee, unit)} in mint fees.</ResultNote>
+      )}
+      {facts && facts.keysets.length > 0 && (
+        <ul className="token-keysets" data-testid="token-keyset-status">
+          {facts.keysets.map(k => (
+            <li key={k.id} className="token-keyset">
+              <span className="token-keyset-id">{k.id}</span>
+              <span className="token-keyset-meta">
+                {k.proofs} {k.proofs === 1 ? 'coin' : 'coins'}
+                {k.inputFeePpk !== null && <> · {k.inputFeePpk === 0 ? 'no input fee' : `${formatFeeRate(k.inputFeePpk)} ${feeUnitLabel(unit)} per coin`}</>}
+              </span>
+              <span className={`token-keyset-status tks-${k.status}`}>
+                {k.status === 'active' && 'Active'}
+                {k.status === 'inactive' && 'Inactive. The mint no longer issues coins from this keyset. Swap these coins to an active keyset soon.'}
+                {k.status === 'unknown' && (source === 'mint' ? 'Unknown. Not listed by the mint.' : "Unknown. Not in the mint's last listed keysets.")}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {source === 'stored' && (
+        <div className="token-source" data-testid="token-claim-fee-source">
+          From MintRadar's last keyset check{storedAt ? ` (${formatDateTimeUtc(storedAt)})` : ''}. The mint did not answer now.
+        </div>
+      )}
     </div>
   )
 }
@@ -79,6 +137,8 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
   const [inspected, setInspected] = useState(false)
   const [phase, setPhase] = useState<Phase>('idle')
   const [verify, setVerify] = useState<VerifyResult | null>(null)
+  // Keyset status and claim fee from the keysets the mint listed during Verify (null until it answered).
+  const [feeFacts, setFeeFacts] = useState<TokenFeeFacts | null>(null)
   const [checkingSpent, setCheckingSpent] = useState(false)
   const [spentResult, setSpentResult] = useState<SpentCheckResult | null>(null)
   // When the mint was asked (for the "asked mint <host> at <time>" source lines of the Verify part).
@@ -122,6 +182,19 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
   const mintOffline = mintInfo != null && mintInfo.online === false
   const isTestMintToken = result !== null && isTestMint(mintInfo?.url ?? result.mint)
 
+  // When the mint did not answer Verify, the keysets MintRadar last stored for it (kept for mints that are offline)
+  // still give the fee and status; the block says so. Without them the fee stays "unknown", never guessed.
+  const storedFeeFacts = useMemo(() => {
+    if (verify?.status !== 'unreachable' || !mintInfo?.lastKeysets?.length) return null
+    const ids = localProofKeysetIds(cleanToken)
+    if (!ids) return null
+    const byId = new Map(mintInfo.lastKeysets.map(k => [k.id, k]))
+    return tokenFeeFacts(ids, id => {
+      const k = byId.get(id)
+      return k ? { active: k.active, inputFeePpk: k.inputFeePpk } : null
+    })
+  }, [verify, mintInfo, cleanToken])
+
   const handleInspectAndVerify = async () => {
     const token = cleanToken
     if (!token) return
@@ -130,6 +203,7 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
     inspectRun.current = null
     setInspected(true)
     setVerify(null)
+    setFeeFacts(null)
     setVerifiedAt(null)
     setSpentResult(null)
     setSpentAt(null)
@@ -158,8 +232,10 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
     const run = startTokenRun()
     inspectRun.current = run
     let outcome: VerifyResult | null
+    let facts: TokenFeeFacts | null = null
     try {
       const decoded = await run.race(decodeTokenWithMint(token, { run }))
+      facts = decoded.keysets
       // Only a DLEQ that was present AND checked AND failed is "invalid"; a missing DLEQ
       // or an unresolved keyset is never evidence against the token (see classifySignatureCheck).
       outcome = classifySignatureCheck(decoded.proofs)
@@ -183,6 +259,7 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
     }
     if (outcome === null || !inspectGuard.current.isCurrent(id)) return
     setVerify(outcome)
+    setFeeFacts(facts)
     setVerifiedAt(new Date())
     setPhase('idle')
   }
@@ -255,7 +332,7 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
         className="token-input"
         placeholder="cashuB… or cashuA…"
         value={input}
-        onChange={e => { invalidateRuns(); setInput(e.target.value); setInspected(false); setResult(null); setParseError(null); setVerify(null); setVerifiedAt(null); setPhase('idle'); setSpentResult(null); setSpentAt(null); setCheckingSpent(false) }}
+        onChange={e => { invalidateRuns(); setInput(e.target.value); setInspected(false); setResult(null); setParseError(null); setVerify(null); setFeeFacts(null); setVerifiedAt(null); setPhase('idle'); setSpentResult(null); setSpentAt(null); setCheckingSpent(false) }}
         rows={3}
         spellCheck={false}
       />
@@ -416,6 +493,14 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
               <div className="token-source" data-testid="token-verify-source">Asked mint {getHostname(result.mint)} at {formatDateTimeUtc(verifiedAt)}</div>
             )}
           </div>
+
+          {verify && verify.status !== 'bad-mint-url' && (
+            feeFacts
+              ? <ClaimFee facts={feeFacts} unit={result.unit} source="mint" />
+              : storedFeeFacts
+                ? <ClaimFee facts={storedFeeFacts} unit={result.unit} source="stored" storedAt={mintInfo?.lastKeysetsCheckedAt ?? null} />
+                : <ClaimFee facts={null} unit={result.unit} source="none" />
+          )}
 
           {mintOffline && (
             <div className="token-note">This mint didn't answer its last check, so checking or redeeming may not work.</div>

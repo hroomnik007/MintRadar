@@ -131,6 +131,9 @@ export const REVIEWS_NIP87_TEXT = 'Anyone can create a key, so ratings can be in
 /** Tools: the signature check of the Token Inspector. */
 export const SIGNATURE_CHECK_TEXT = "Checks each proof's signature proof (NUT-12 DLEQ), when it has one. A pass means this mint signed it. It does not show the token is unspent or the mint is reliable."
 
+/** Token Inspector, Verify part, "Mint fee": the NUT-02 input fee of claiming the token (the inspector says "coins" where the spec says "proofs"). */
+export const CLAIM_FEE_TEXT = "The mint's input fee for swapping all of this token's coins, as its keysets state it: the per-coin fees added up and rounded up to a whole unit."
+
 /** Mint Detail, Fees and limits card: what the fee rate and the rounded examples mean (the card says "coins" where the wallet API says "proofs"). */
 export const FEE_PER_COIN_TEXT = 'Your balance is made of many small coins. The mint charges a small fee per coin used and rounds the total up, so small payments cost relatively more. Fewer, larger coins keep fees low.'
 
