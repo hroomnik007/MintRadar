@@ -325,12 +325,12 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
     <div className="tool-card">
       <div className="tool-header">
         <div className="tool-title">Token inspector</div>
-        <div className="tool-subtitle">Paste a Cashu token (cashuA or cashuB) to check its mint, amount and reliability before redeeming.</div>
+        <div className="tool-subtitle">Paste a Cashu token (v4 or v3) to check its mint, amount and reliability before redeeming.</div>
       </div>
 
       <textarea
         className="token-input"
-        placeholder="cashuB… or cashuA…"
+        placeholder="v4 token (cashuB…) or v3 token (cashuA…)"
         value={input}
         onChange={e => { invalidateRuns(); setInput(e.target.value); setInspected(false); setResult(null); setParseError(null); setVerify(null); setFeeFacts(null); setVerifiedAt(null); setPhase('idle'); setSpentResult(null); setSpentAt(null); setCheckingSpent(false) }}
         rows={3}

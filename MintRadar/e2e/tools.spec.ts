@@ -382,8 +382,8 @@ test.describe('Tools', () => {
     await expect(note).not.toContainText('send the full token to cashu.me')
     // The separate line under the action buttons is gone — its content lives in the line above.
     await expect(page.getByText('These open cashu.me with your full token in the link.')).toHaveCount(0)
-    await expect(page.getByPlaceholder('cashuB… or cashuA…')).toBeVisible()
-    await expect(page.locator('.tool-subtitle', { hasText: 'Paste a Cashu token (cashuA or cashuB)' })).toBeVisible()
+    await expect(page.getByPlaceholder('v4 token (cashuB…) or v3 token (cashuA…)')).toBeVisible()
+    await expect(page.locator('.tool-subtitle', { hasText: 'Paste a Cashu token (v4 or v3)' })).toBeVisible()
 
     // The wallet link's caveat is stated next to the buttons, once the result and its actions are shown.
     await page.locator('.token-input').fill(makeCashuToken(MOCK_MINTS[0]!.url, [21]))
