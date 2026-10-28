@@ -52,6 +52,13 @@ describe.skipIf(!hasJq)('deploy/strfry/writePolicy.sh', { timeout: 30_000 }, () 
     expect(run(lines, { OPEN_PER_IP_HOURLY: '3' })).toEqual(['accept', 'accept', 'accept', 'reject', 'reject', 'reject'])
   })
 
+  it('counts different spellings of one IPv6 /64 as one client (compressed, upper case, leading zeros)', () => {
+    const lines = ['2001:db8:0:0:1:2:3:4', '2001:DB8::1:2:3:5', '2001:0db8::9', '2001:db8::', '2001:db8:0:1::7']
+      .map(ip => ev('hhhh', 38000, ip))
+    // the first four share the prefix 2001:db8:0:0, the last one is another /64
+    expect(run(lines, { OPEN_PER_IP_HOURLY: '2' })).toEqual(['accept', 'accept', 'reject', 'reject', 'accept'])
+  })
+
   it('a heavy source cannot use up the room of occasional writers (two-tier global limit)', () => {
     const env = { OPEN_PER_IP_HOURLY: '100', OPEN_LIGHT_SOURCE_EVENTS: '2', OPEN_GLOBAL_HOURLY: '8', OPEN_GLOBAL_HARD_HOURLY: '12' }
     const heavy = Array.from({ length: 12 }, () => ev('eeee', 38000, '5.5.5.5'))

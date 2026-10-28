@@ -45,6 +45,31 @@ count_event() {
   wc -c < "$f"
 }
 
+# The /64 prefix of an IPv6 address in one canonical form: "::" expanded to the missing zero groups, leading zeros
+# dropped, lower case, then the first four groups. So 2001:db8::1:2, 2001:DB8:0:0:1:2:3:5 and 2001:db8::9 are one
+# client. An address with a dotted IPv4 tail (::ffff:1.2.3.4) is left as it is (its own bucket).
+v6_prefix64() {
+  printf '%s' "$1" | awk '
+    index($0, ".") { print; next }
+    {
+      if (index($0, "::") == 0) { nl = split($0, L, ":"); nr = 0 }
+      else {
+        split($0, P, "::")
+        nl = (P[1] == "") ? 0 : split(P[1], L, ":")
+        nr = (P[2] == "") ? 0 : split(P[2], R, ":")
+      }
+      k = 0
+      for (i = 1; i <= nl; i++) G[++k] = L[i]
+      if (index($0, "::") != 0) { for (i = 1; i <= 8 - nl - nr; i++) G[++k] = "0"; for (i = 1; i <= nr; i++) G[++k] = R[i] }
+      out = ""
+      for (i = 1; i <= 4; i++) {
+        g = tolower(G[i]); sub(/^0+/, "", g); if (g == "") g = "0"
+        out = out (i > 1 ? ":" : "") g
+      }
+      print out
+    }'
+}
+
 # The count of bucket $1 for this hour without adding to it (0 when there is none yet).
 peek_count() {
   f="$RATE_DIR/$1.$hour"
@@ -75,9 +100,9 @@ while IFS= read -r line; do
   elif [ "$kind" = "38172" ] || [ "$kind" = "38000" ]; then
     action="accept"
     msg=""
-    # An IPv6 client is its /64 (the first four groups; one customer can rotate the rest at will). File-name safe;
+    # An IPv6 client is its /64 (one customer can rotate the rest at will). File-name safe;
     # an empty or odd value shares the "unknown" bucket.
-    case "$ip" in *:*) ip=$(printf '%s' "$ip" | cut -d: -f1-4) ;; esac
+    case "$ip" in *:*) ip=$(v6_prefix64 "$ip") ;; esac
     ip=$(printf '%s' "$ip" | tr -c 'A-Za-z0-9' '_' | cut -c1-64)
     [ -n "$ip" ] || ip=unknown
     hour=$(( $(date +%s) / 3600 ))
