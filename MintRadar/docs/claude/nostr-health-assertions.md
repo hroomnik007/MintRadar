@@ -48,7 +48,8 @@ Tags, in this order: `d` (normalised mint URL, fragment dropped), `k` = `web`, `
 | `ATTESTATION_MIN_RANK_DELTA` | 2 | rank change that justifies a new event |
 | `ATTESTATION_REFRESH_MS` | 24 h | daily hard refresh, so the 48 h expiration never lapses |
 | `ATTESTATION_EXPIRY_S` | 172800 | NIP-40 expiration after `created_at` |
-| `ATTESTATION_MAX_EVENTS_PER_RUN` | 200 | never-published mints first, then the oldest; the rest waits for the next run |
+| `ATTESTATION_MAX_EVENTS_PER_RUN` | 200 | budgeted state changes, then refreshes of mints that already have an event (oldest first), then first events; the rest waits for the next run |
+| `ATTESTATION_MAX_FIRST_PER_RUN` | 50 | first events per run (2026-10-28, audit run-4): mints are open to anyone to register, so an uncapped, first-sorted `first` list let a flood of new mints push every refresh out and let the 48 h expirations lapse; the surplus counts as `deferred` and goes out in the following runs |
 | `ATTESTATION_AUDIT_MAX_AGE_MS` | 168 h | audit tags are left out when older |
 | `ATTESTATION_RELAYS` | `wss://nostr.mintradar.org`, `wss://relay.damus.io`, `wss://nos.lol`, `wss://relay.primal.net`, `wss://nostr.mom` | the only connections the assertion publisher opens |
 | `ATTESTATION_RELAY_PAUSE_MS` / `_TIMEOUT_MS` / `_MAX_FAILURES` | 200 ms / 5 s / 3 | between events per relay / per event and relay / consecutive failures before a relay is skipped for the rest of the run |
@@ -56,7 +57,7 @@ Tags, in this order: `d` (normalised mint URL, fragment dropped), `k` = `web`, `
 
 ## Decision rule and state
 
-`publishReason(prev, next, now)` (2026-10-20) returns `first`, `periodic`, `state-change` or null. `periodic` is exactly `shouldPublish` below. `state-change`: not periodic, `mint_status` differs from `last_status` and the last event is at least 5 minutes old. Only `state-change` is capped (`planCycle` takes a `stateChangeBudget` = cap minus the state-change events planned in the last hour; the surplus counts as `deferred`, nothing is stored for it so it is still a status change at the next run). State changes go first in a run, then the old order. The cap counts events when they are planned, not when a relay accepted them, so a refusing relay cannot cause unlimited retries. A mint whose last event is already 6 h old uses the periodic path and is not capped.
+`publishReason(prev, next, now)` (2026-10-20) returns `first`, `periodic`, `state-change` or null. `periodic` is exactly `shouldPublish` below. `state-change`: not periodic, `mint_status` differs from `last_status` and the last event is at least 5 minutes old. Only `state-change` is capped (`planCycle` takes a `stateChangeBudget` = cap minus the state-change events planned in the last hour; the surplus counts as `deferred`, nothing is stored for it so it is still a status change at the next run). State changes go first in a run, then refreshes (oldest first), then first events (at most `ATTESTATION_MAX_FIRST_PER_RUN` per run, oldest first). The cap counts events when they are planned, not when a relay accepted them, so a refusing relay cannot cause unlimited retries. A mint whose last event is already 6 h old uses the periodic path and is not capped.
 
 **Vantage outages:** `runProbeCycle` drops held-back failures without writing `mint_history` or `mints` (see `scoring-and-probing.md`), so the snapshot the publisher reads is the previous one and no state-change event appears (pinned in `healthPublisher.test.ts`, "vantage outage interaction").
 
@@ -101,6 +102,6 @@ The owner applied the activation on the server on 2026-10-13: the service key we
 ## Security notes
 
 - Key handling and logs: see the table above. Only `ATTESTATION_RELAYS` are used as targets of assertions (no user, mint or database-supplied relay), through the backend's DNS-pinned WebSocket class (SSRF guard at connect time). The profile goes to the own relay and `META_RELAYS` (constants too).
-- Bounded: at most 200 events per run (of which at most 30 per hour caused by status changes), 5 relays, 15-minute ticks, 200 ms pause, 5 s timeout, 3-failure skip.
+- Bounded: at most 200 events per run (of which at most 30 per hour caused by status changes and at most 50 first events), 5 relays, 15-minute ticks, 200 ms pause, 5 s timeout, 3-failure skip.
 - A stolen key could sign false assertions; wallets pin the key and check `created_at` and `expiration` (spec). Rotating the key means a new pubkey in `ATTESTATION_PUBKEY_HEX`, the NIP-05 file, the relay list and the docs, and telling wallets.
 - Backup: `deploy/strfry/backup-own-events.sh` reads the same `privileged-pubkeys.txt`, so the new key automatically gets the base kinds (38172, 38000) only. Its kind 30385 and kind 0 events are not backed up on purpose: they expire or are re-published daily.

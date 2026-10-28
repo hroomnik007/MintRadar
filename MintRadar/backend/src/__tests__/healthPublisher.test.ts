@@ -35,7 +35,7 @@ vi.mock('../db.js', () => ({ pool: { query: vi.fn() } }))
 import { pool as db } from '../db.js'
 import { METHODOLOGY_VERSION } from '../shared/methodology.js'
 import {
-  ATTESTATION_MAX_EVENTS_PER_RUN, ATTESTATION_MIN_INTERVAL_MS, ATTESTATION_PUBKEY_HEX, ATTESTATION_RELAYS,
+  ATTESTATION_MAX_EVENTS_PER_RUN, ATTESTATION_MAX_FIRST_PER_RUN, ATTESTATION_MIN_INTERVAL_MS, ATTESTATION_PUBKEY_HEX, ATTESTATION_RELAYS,
   ATTESTATION_STATE_CHANGE_MAX_PER_HOUR, ATTESTATION_STATE_CHANGE_MIN_GAP_MS, type PublishedState,
 } from '../healthAssertions.js'
 import { evaluateVantageOutage, type VantageCashuInfo, type VantageMintResult } from '../vantageOutage.js'
@@ -265,16 +265,26 @@ describe('planCycle', () => {
     expect(planCycle([row(2, { archived: true })], states, NOW).due).toEqual([])
   })
 
-  it('caps the run at 200 events: never-published first, then the oldest', () => {
+  it('plans refreshes before first events and caps first events per run, so a flood of new mints cannot starve a refresh', () => {
     const rows = manyRows(250)
     const states = new Map<string, PublishedState>()
     // mints 1..50 were published long ago (due for the daily refresh), 51..250 never published
     for (let i = 1; i <= 50; i++) states.set(`https://mint${i}.example.com`, { lastCreatedAt: Math.floor(NOW / 1000) - 30 * 3600 - i, lastRank: 80, lastStatus: 'online', lastMethodology: METHODOLOGY_VERSION })
     const plan = planCycle(rows, states, NOW)
+    expect(plan.due).toHaveLength(50 + ATTESTATION_MAX_FIRST_PER_RUN)
+    expect(plan.due.slice(0, 50).every(p => states.has(p.d))).toBe(true) // every refresh is in, ahead of the first events
+    expect(plan.due.slice(50).every(p => !states.has(p.d))).toBe(true)
+    expect(plan.deferred).toBe(200 - ATTESTATION_MAX_FIRST_PER_RUN)
+  })
+
+  it('caps the run at 200 events: the oldest refreshes first', () => {
+    const rows = manyRows(250)
+    const states = new Map<string, PublishedState>()
+    for (let i = 1; i <= 250; i++) states.set(`https://mint${i}.example.com`, { lastCreatedAt: Math.floor(NOW / 1000) - 30 * 3600 - i, lastRank: 80, lastStatus: 'online', lastMethodology: METHODOLOGY_VERSION })
+    const plan = planCycle(rows, states, NOW)
     expect(plan.due).toHaveLength(ATTESTATION_MAX_EVENTS_PER_RUN)
     expect(plan.deferred).toBe(50)
-    expect(plan.due.slice(0, 200).every(p => !states.has(p.d))).toBe(true) // the 200 never-published mints fill the run
-    expect(plan.due.some(p => states.has(p.d))).toBe(false)
+    expect(plan.due[0]?.d).toBe('https://mint250.example.com') // the oldest state goes first
   })
 
   it('refreshes the oldest published mints first when everything is already published', () => {
@@ -424,7 +434,7 @@ describe('runAttestationCycle', () => {
     expect(h.store.size).toBe(6)
   })
 
-  it('publishes at most 200 events per run to at most 5 relays', async () => {
+  it('publishes at most ATTESTATION_MAX_FIRST_PER_RUN first events per run to at most 5 relays', async () => {
     signing.cheap = true
     const sk = generateSecretKey()
     const h = harness()
@@ -432,15 +442,15 @@ describe('runAttestationCycle', () => {
       secretKey: sk, loadSnapshot: async () => snapshotOf(manyRows(260)), loadStates: h.loadStates, saveState: h.saveState,
       publisher: h.publisher, now: () => NOW, sleep: async () => {}, log: quiet,
     })
-    expect(res.due).toBe(200)
-    expect(res.deferred).toBe(60)
-    expect(h.sent.length).toBeLessThanOrEqual(200 * 5)
-    // the deferred mints go out in the next run
+    expect(res.due).toBe(ATTESTATION_MAX_FIRST_PER_RUN)
+    expect(res.deferred).toBe(260 - ATTESTATION_MAX_FIRST_PER_RUN)
+    expect(h.sent.length).toBeLessThanOrEqual(ATTESTATION_MAX_FIRST_PER_RUN * 5)
+    // the deferred mints go out in the following runs, another batch at a time
     const next = await runAttestationCycle({
       secretKey: sk, loadSnapshot: async () => snapshotOf(manyRows(260)), loadStates: h.loadStates, saveState: h.saveState,
       publisher: h.publisher, now: () => NOW + 15 * 60_000, sleep: async () => {}, log: quiet,
     })
-    expect(next.due).toBe(60)
+    expect(next.due).toBe(ATTESTATION_MAX_FIRST_PER_RUN)
   })
 
   it('logs counts only (no event ids, no mint URLs)', async () => {

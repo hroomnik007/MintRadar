@@ -16,7 +16,7 @@ import { publishToRelays, META_RELAYS } from './nostrService.js'
 import { toWalletMint, type KnownMintLike, type Snapshot, type WalletExtra, type WalletMint } from './walletApi.js'
 import { METHODOLOGY_VERSION } from './shared/methodology.js'
 import {
-  ATTESTATION_MAX_EVENTS_PER_RUN, ATTESTATION_RELAYS, ATTESTATION_STATE_CHANGE_MAX_PER_HOUR, buildHealthEvent,
+  ATTESTATION_MAX_EVENTS_PER_RUN, ATTESTATION_MAX_FIRST_PER_RUN, ATTESTATION_RELAYS, ATTESTATION_STATE_CHANGE_MAX_PER_HOUR, buildHealthEvent,
   buildProfileTemplate, healthIdentifier, publishReason, resolveAttestationKey,
   type HealthInput, type KeyLog, type PublishCandidate, type PublishedState, type PublishReason,
 } from './healthAssertions.js'
@@ -98,7 +98,8 @@ export function planCycle(
   const budget = Math.max(0, opts.stateChangeBudget ?? ATTESTATION_STATE_CHANGE_MAX_PER_HOUR)
   const seen = new Set<string>()
   const changes: Plan['due'] = []
-  const others: Plan['due'] = []
+  const refreshes: Plan['due'] = []
+  const firsts: Plan['due'] = []
   let eligible = 0
   for (const row of rows) {
     const template = buildHealthEvent(inputFromWalletMint(toWalletMint(row, nowMs, undefined, opts.extras?.get(row.url)), nowMs))
@@ -112,7 +113,7 @@ export function planCycle(
     const candidate: PublishCandidate = { rank: Number(rankTag), status: statusTag ?? '', methodology: METHODOLOGY_VERSION }
     const reason = publishReason(states.get(d), candidate, nowMs)
     if (reason === null) continue
-    ;(reason === 'state-change' ? changes : others).push({ d, template, candidate, reason })
+    ;(reason === 'state-change' ? changes : reason === 'first' ? firsts : refreshes).push({ d, template, candidate, reason })
   }
   const oldestFirst = (a: Plan['due'][number], b: Plan['due'][number]): number => {
     const pa = states.get(a.d)?.lastCreatedAt ?? -1
@@ -120,13 +121,18 @@ export function planCycle(
     return pa - pb || (a.d < b.d ? -1 : a.d > b.d ? 1 : 0)
   }
   changes.sort(oldestFirst)
-  others.sort(oldestFirst)
+  refreshes.sort(oldestFirst)
+  firsts.sort(oldestFirst)
   const allowedChanges = changes.slice(0, budget)
-  const all = [...allowedChanges, ...others]
+  // Order: budgeted state changes, then refreshes of mints that already have an event (their 48 hour expiration is
+  // what runs out), then first events up to ATTESTATION_MAX_FIRST_PER_RUN. A flood of new mints can only use the
+  // leftover room and never pushes a refresh out.
+  const allowedFirsts = firsts.slice(0, ATTESTATION_MAX_FIRST_PER_RUN)
+  const all = [...allowedChanges, ...refreshes, ...allowedFirsts]
   const due = all.slice(0, limit)
   return {
     eligible, due,
-    deferred: (changes.length - allowedChanges.length) + Math.max(0, all.length - limit),
+    deferred: (changes.length - allowedChanges.length) + (firsts.length - allowedFirsts.length) + Math.max(0, all.length - limit),
     stateChanges: due.filter(p => p.reason === 'state-change').length,
   }
 }

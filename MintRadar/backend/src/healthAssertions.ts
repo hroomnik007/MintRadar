@@ -36,6 +36,10 @@ export const ATTESTATION_MIN_RANK_DELTA = 2
 export const ATTESTATION_REFRESH_MS = 24 * 60 * 60 * 1000
 export const ATTESTATION_EXPIRY_S = 172_800
 export const ATTESTATION_MAX_EVENTS_PER_RUN = 200
+/** At most this many never-published mints get their first event per run. Mints are open to anyone to register, so
+ *  without a cap a flood of new ones would fill every run and the refreshes of the real mints (48 hour expiration)
+ *  would lapse. Refreshes are planned before first events as well (healthPublisher.ts, planCycle). */
+export const ATTESTATION_MAX_FIRST_PER_RUN = 50
 /** A status change (the mint_status value differs from the last event) is published at the next run instead of waiting
  *  for ATTESTATION_MIN_INTERVAL_MS, but never sooner than this after the mint's previous event (flapping). */
 export const ATTESTATION_STATE_CHANGE_MIN_GAP_MS = 5 * 60 * 1000

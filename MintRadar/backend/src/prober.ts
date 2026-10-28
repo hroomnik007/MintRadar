@@ -362,7 +362,7 @@ async function revalidateMintContent(url: string): Promise<RevalidationStatus> {
   }
 
   if (!infoRes) return 'unreachable'
-  if (infoRes.status >= 500) return 'unreachable'
+  if (infoRes.status >= 500 || infoRes.status === 429) return 'unreachable' // 429: up but throttling us, not 'not a mint'
   if (!infoRes.ok) return 'not-a-mint' // 4xx — the mint API genuinely isn't here
 
   try {
@@ -429,6 +429,14 @@ export interface DeferredProbeFailure {
   commit: () => Promise<void>
 }
 
+// A mint answering 429 to our probe is up but throttling us, so a few of those are skipped without a history row.
+// A mint that keeps doing it for RATE_LIMITED_PROBES_BEFORE_FAILURE consecutive cycles (~1 h at the 5-minute cadence)
+// is recorded as failed ('HTTP 429'): otherwise the last stored score and "online" state would stay frozen and
+// look fresh for as long as the 429s last (a hostile mint answering 429 only to our IP, or a CDN rate-limiting it
+// while the origin is down). In-memory: a restart only delays the failure by another hour.
+export const RATE_LIMITED_PROBES_BEFORE_FAILURE = 12
+const rateLimitedProbes = new Map<string, number>()
+
 /**
  * With `onDeferFailure`, a failure caused by our own network (DNS, timeout, unreachable, TLS) is handed to it
  * instead of being recorded. Without it (discovery, submit) behaviour is unchanged.
@@ -461,6 +469,7 @@ export async function probeMintToDb(url: string, onDeferFailure?: (f: DeferredPr
   let networkFailed = false
   let contactCount: number | null = null
   let nutTransition: 'lost' | 'restored' | null = null
+  let rateLimitedOut = false
 
   try {
     let res = await safeFetch(`${url}/v1/info`, {
@@ -616,8 +625,14 @@ export async function probeMintToDb(url: string, onDeferFailure?: (f: DeferredPr
       }
     } else if (res && res.status === 429) {
       // Rate-limited — mint is up, just throttling us. Skip this probe cycle
-      // entirely rather than recording a false-positive offline.
-      return
+      // entirely rather than recording a false-positive offline, but only for a bounded number of cycles.
+      const n = (rateLimitedProbes.get(url) ?? 0) + 1
+      if (n < RATE_LIMITED_PROBES_BEFORE_FAILURE) {
+        rateLimitedProbes.set(url, n)
+        return
+      }
+      rateLimitedOut = true
+      lastError = 'HTTP 429'
     } else if (res && [502, 503, 504].includes(res.status)) {
       // Likely a transient server-side blip (restart/deploy) — retry once
       // before concluding the mint is offline.
@@ -652,6 +667,7 @@ export async function probeMintToDb(url: string, onDeferFailure?: (f: DeferredPr
   } catch {
     lastError = 'Unreachable'
   }
+  if (!rateLimitedOut) rateLimitedProbes.delete(url)
 
   if (!online && networkFailed && onDeferFailure) {
     onDeferFailure({
@@ -701,7 +717,7 @@ async function recordProbeResult(url: string, result: ProbeResult): Promise<void
   } else if (
     lastError === 'Invalid Cashu response' ||
     lastError === 'Invalid JSON response' ||
-    /^HTTP 4\d\d$/.test(lastError ?? '')
+    (/^HTTP 4\d\d$/.test(lastError ?? '') && lastError !== 'HTTP 429')
   ) {
     await pool.query('UPDATE mints SET invalid_since = COALESCE(invalid_since, NOW()) WHERE url = $1', [url])
   }
