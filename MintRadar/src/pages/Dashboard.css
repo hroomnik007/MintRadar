@@ -1480,9 +1480,9 @@
 }
 .filter-tag > button:not([data-tooltip-trigger]):hover { opacity: 1; }
 
-/* One layout for every width (2026-10-01). Wide: Status · Unit · Reliability · [Hide test
-   mints … Reset · Show N of M] on one 36px row; narrower: flex-wrap moves the footer
-   (checkbox + buttons) to the last line. Mobile block below stacks the selection controls. */
+/* One layout for every width (2026-10-01). Row 1 (.filter-main): Status · Unit · Method · Reliability; row 2
+   (.filter-footer): Hide test mints · Software · Reset · Show N of M. Each row wraps on its own when it is too
+   narrow; the mobile block below stacks the selection controls. */
 .filter-bar {
   /* Vertical gap between rows that wrap or stack, for EVERY pointer (the touch layout must stay
      identical to the mouse layout, see dashboard-filters-panel.spec.ts). Hit-area arithmetic: a
@@ -1496,6 +1496,24 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--filter-row-gap) 12px;
+  /* Lets .filter-main ask how wide the panel is (container query below), not how wide the window is. */
+  container-type: inline-size;
+}
+
+/* Row 1: Status · Unit · Method · Reliability. The footer (row 2) always starts on its own line. While all four groups
+   fit on one line (container query: the measured width of the four groups plus three 12px gaps) the free space goes
+   BETWEEN the groups (space-between), so the row has no empty end and the controls keep their size; narrower, the
+   groups wrap left-aligned with the normal 12px gap. */
+.filter-main {
+  flex: 1 1 100%;
+  min-width: 0; /* may shrink below its content, like .filter-field: the phone rows then shrink their options instead of overflowing the panel */
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--filter-row-gap) 12px;
+}
+@container (min-width: 1100px) {
+  .filter-main { justify-content: space-between; }
 }
 
 /* Field = plain text label in front of a segmented control. The label is not part of the
@@ -1523,27 +1541,6 @@
   user-select: none;
 }
 
-/* Unit label + info icon share one cell of the same fixed width as the Status label, so the icon
-   (in the spare ~2 characters after "UNIT") never moves the segmented control. */
-.filter-field-labelcell {
-  flex: 0 0 auto;
-  position: relative;
-  width: 72px;
-  display: flex;
-  align-items: center;
-  font-family: var(--font-body);
-  font-size: 13px;
-}
-.filter-field-labelcell .filter-field-label { flex: 0 0 auto; }
-/* Absolutely positioned: the trigger's vertical negative margins would move it (top: 50% centres the padded box), only the left one is needed. */
-.filter-field-labelcell .filter-unit-tip { position: absolute; left: 44px; top: 50%; transform: translateY(-50%); flex: 0 0 auto; margin-block: 0; }
-/* "Method" is wider than "Unit": its icon sits further right, still inside the shared label width plus the gap. */
-.filter-field-labelcell .filter-method-tip { left: 52px; }
-.filter-unit-tip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
-/* Touch: 44px hit area through an invisible ::before (the icon itself stays 12px). */
-@media (pointer: coarse), (max-width: 600px) {
-  .filter-unit-tip::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
-}
 .grid-unit-hidden-note { opacity: 0.85; }
 
 /* Segmented control — a row of buttons, same visual language as .wizard-unit-seg (Tools):
@@ -1621,6 +1618,9 @@
   .filter-seg-opt::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; bottom: -8px; }
 }
 
+/* Family names such as "Nutshell-CF" stay on one line (the segment is 28px high) and the option is as wide as its name (the other segments share their width equally). */
+.filter-software-chip { white-space: nowrap; flex: 1 0 auto; }
+
 .filter-rel {
   display: flex;
   align-items: center;
@@ -1632,8 +1632,9 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  flex: 1 1 auto;
-  gap: 8px 12px;
+  flex: 1 1 100%;
+  /* 12px between wrapped lines: the checkbox / buttons own 4px above and below on touch, the Software segment 8px (4 + 8). */
+  gap: 12px 12px;
 }
 .filter-check {
   position: relative;
@@ -1671,16 +1672,22 @@
 @media (max-width: 600px) {
   .filter-panel { padding-block: 7px; }
   /* Rows keep --filter-row-gap (16px): the touch bands of two neighbouring rows meet without overlapping */
-  .filter-bar { gap: var(--filter-row-gap) 8px; }
+  .filter-bar, .filter-main { gap: var(--filter-row-gap) 8px; }
   .filter-field { flex: 1 1 100%; }
   .filter-field .filter-seg { flex: 1 1 auto; }
   .filter-seg-opt { min-width: 0; }
+  .filter-software-chip { padding-inline: 4px; }
   .filter-rel { flex: 1 1 100%; }
   .filter-rel .filter-slider { flex: 1 1 auto; width: auto; min-width: 0; }
-  .filter-footer { flex: 1 1 100%; gap: 8px 6px; }
+  .filter-footer { flex: 1 1 100%; gap: 12px 6px; }
   .filter-check { flex: 1 1 auto; }
   .filter-actions-row { flex: 1 1 auto; margin-left: 0; gap: 6px; }
   .filter-apply-btn { flex: 1 1 auto; }
+}
+/* Below ~400px the label plus four single-line options no longer fit one line: the options take their own line. */
+@media (max-width: 400px) {
+  .filter-software { flex-wrap: wrap; }
+  .filter-software .filter-seg { flex: 1 1 100%; }
 }
 
 .filter-group-nuts {

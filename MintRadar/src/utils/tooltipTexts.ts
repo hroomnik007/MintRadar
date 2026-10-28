@@ -70,12 +70,6 @@ export function reviewSurgeText(): string {
   return `${SURGE_ABSOLUTE_GAIN} or more new reviews in about a week, or at least ${RATIO_WORDS[SURGE_RATIO] ?? `${SURGE_RATIO} times`} the count from a base of ${SURGE_RATIO_MIN_BASELINE} or more. Ratings can be gamed, so read this one with care.`
 }
 
-/** Dashboard Filters > Unit. */
-/** The Dashboard "Method" filter (utils/methodFilter.ts). */
-export const METHOD_FILTER_TEXT = 'Shows only mints that offer this payment method for deposits or withdrawals, in any unit. A method the mint switched off does not count.'
-
-export const UNIT_FILTER_TEXT = 'Shows only mints that list a selected unit. Mints with unknown units are hidden while a unit is selected.'
-
 /** The "Hide test mints" filter (the tag shown while it is on). */
 export const HIDE_TEST_MINTS_TEXT = "Hides the mints on MintRadar's test-mint list (fake sats)."
 

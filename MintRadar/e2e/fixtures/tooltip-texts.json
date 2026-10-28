@@ -177,8 +177,6 @@
       "Refresh mint list",
       "Same operator as alpha.mint.example (shared public key). Kept as separate mints.",
       "Same operator as twin.mint.example (shared public key). Kept as separate mints.",
-      "Shows only mints that list a selected unit. Mints with unknown units are hidden while a unit is selected.",
-      "Shows only mints that offer this payment method for deposits or withdrawals, in any unit. A method the mint switched off does not count.",
       "Twin Mint",
       "alpha.mint.example",
       "bravo.mint.example",
@@ -188,7 +186,7 @@
       "operator.mint.example",
       "twin.mint.example"
     ],
-    "triggers": 6
+    "triggers": 4
   },
   "home-filters-hidetest@390": {
     "texts": [
@@ -226,8 +224,6 @@
       "Refresh mint list",
       "Same operator as alpha.mint.example (shared public key). Kept as separate mints.",
       "Same operator as twin.mint.example (shared public key). Kept as separate mints.",
-      "Shows only mints that list a selected unit. Mints with unknown units are hidden while a unit is selected.",
-      "Shows only mints that offer this payment method for deposits or withdrawals, in any unit. A method the mint switched off does not count.",
       "Twin Mint",
       "alpha.mint.example",
       "bravo.mint.example",
@@ -237,7 +233,7 @@
       "operator.mint.example",
       "twin.mint.example"
     ],
-    "triggers": 6
+    "triggers": 4
   },
   "home-filters@1440": {
     "texts": [
@@ -278,8 +274,6 @@
       "Refresh mint list",
       "Same operator as alpha.mint.example (shared public key). Kept as separate mints.",
       "Same operator as twin.mint.example (shared public key). Kept as separate mints.",
-      "Shows only mints that list a selected unit. Mints with unknown units are hidden while a unit is selected.",
-      "Shows only mints that offer this payment method for deposits or withdrawals, in any unit. A method the mint switched off does not count.",
       "Test Nut",
       "Twin Mint",
       "alpha.mint.example",
@@ -291,7 +285,7 @@
       "testnut.cashu.space",
       "twin.mint.example"
     ],
-    "triggers": 6
+    "triggers": 4
   },
   "home-filters@390": {
     "texts": [
@@ -332,8 +326,6 @@
       "Refresh mint list",
       "Same operator as alpha.mint.example (shared public key). Kept as separate mints.",
       "Same operator as twin.mint.example (shared public key). Kept as separate mints.",
-      "Shows only mints that list a selected unit. Mints with unknown units are hidden while a unit is selected.",
-      "Shows only mints that offer this payment method for deposits or withdrawals, in any unit. A method the mint switched off does not count.",
       "Test Nut",
       "Twin Mint",
       "alpha.mint.example",
@@ -345,7 +337,7 @@
       "testnut.cashu.space",
       "twin.mint.example"
     ],
-    "triggers": 6
+    "triggers": 4
   },
   "home@1440": {
     "texts": [

@@ -14,9 +14,9 @@ const same = (c: Cell): Cell[] => [c, c, c, c, c]
 
 export const EXPECTED_TOOLTIPS: Record<string, Cell[]> = {
   home: same([4, 3]),
-  // 6 (2026-10-27): the Filters panel gained the Method filter's ⓘ next to the Unit one.
-  'home-filters': same([6, 5]),
-  'home-filters-hidetest': same([6, 5]),
+  // 4 (F1, 2026-10-28): the Unit and Method ⓘ icons were removed from the Filters panel (it had 6 since 2026-10-27).
+  'home-filters': same([4, 3]),
+  'home-filters-hidetest': same([4, 3]),
   // 0: the notification strip's explanations are visible text since 2026-10-14 (tooltip-promoted-lines.spec.ts); the cards carry no ⓘ.
   'watchlist-3-notify': same([0, 0]),
   // The outdated-software ⓘ is the only one below 1024 px; the wide layout adds the Network Health Index rows.

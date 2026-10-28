@@ -1,4 +1,4 @@
-import { UNIT_FILTER_TEXT, METHOD_FILTER_TEXT, HIDE_TEST_MINTS_TEXT, hiddenMintsText } from '@/utils/tooltipTexts'
+import { HIDE_TEST_MINTS_TEXT, hiddenMintsText } from '@/utils/tooltipTexts'
 import { DEGRADED_AFTER_HOURS } from '@/utils/networkHealthIndex'
 import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -31,6 +31,7 @@ import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { isNutOffered } from '@/utils/nutSupport'
 import { hasRequiredNuts } from '@/utils/nutFilters'
 import { parseMethodParam, mintMatchesMethod, methodOptions } from '@/utils/methodFilter'
+import { parseSoftwareParam, buildSoftwareParam, mintMatchesSoftware, softwareGroups } from '@/utils/softwareFilter'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { probeErrorMessage, probeRateLimitMessage, isProbeErrorKind, type ProbeErrorKind } from '@/utils/probeErrorMessages'
@@ -154,6 +155,8 @@ interface FilterState {
   units: UnitFilterValue[]
   /** Payment method (?method=bolt12, utils/methodFilter.ts): offered on deposit or withdrawal, any unit. null = any. */
   method: string | null
+  /** Software groups (?software=nutshell,cdk,other,unknown, utils/softwareFilter.ts), OR. [] = any. */
+  software: string[]
 }
 // New default Dashboard view (2026-09-09): online-only, test mints hidden,
 // sorted by Reliability Score desc. The Name-sort freeze from earlier passes is
@@ -162,12 +165,14 @@ interface FilterState {
 // mints (they still carry a "Test mint" badge). An earlier pass defaulted this
 // ON — that is deliberately lifted here. ?testmints=hide is emitted only when
 // the user turns the checkbox on; the default never emits a param.
-const DEFAULT_FILTERS: FilterState = { status: 'online', minReliabilityScore: 0, requiredNuts: [], hideTestMints: false, units: [], method: null }
+const DEFAULT_FILTERS: FilterState = { status: 'online', minReliabilityScore: 0, requiredNuts: [], hideTestMints: false, units: [], method: null, software: [] }
+
+const EMPTY_FAMILIES: ReadonlySet<string> = new Set()
 
 function applyFilters(
   mints: KnownMint[],
   filters: FilterState,
-  opts: { showDegraded?: boolean; searching?: boolean } = {},
+  opts: { showDegraded?: boolean; searching?: boolean; softwareFamilies?: ReadonlySet<string> } = {},
 ): KnownMint[] {
   return mints.filter(mint => {
     // A name/url search reaches every mint — test mints and the online-only
@@ -182,6 +187,7 @@ function applyFilters(
     if (listReliabilityScore(mint) < filters.minReliabilityScore) return false
     if (!mintMatchesUnits(mint, filters.units)) return false
     if (!mintMatchesMethod(mint, filters.method)) return false
+    if (!mintMatchesSoftware(mint, filters.software, opts.softwareFamilies ?? EMPTY_FAMILIES)) return false
     if (filters.requiredNuts.length > 0) {
       const nuts = mint.nutsLimits as Record<string, unknown> | null
       if (!nuts) return false
@@ -193,8 +199,6 @@ function applyFilters(
 
 const HIDE_TEST_MINTS_TOOLTIP = HIDE_TEST_MINTS_TEXT
 
-const UNIT_FILTER_TOOLTIP = UNIT_FILTER_TEXT
-
 function countActiveFilters(f: FilterState): number {
   return [
     // 'all' widens the view (no status filter) so it isn't "active"; only an
@@ -205,6 +209,7 @@ function countActiveFilters(f: FilterState): number {
     f.hideTestMints !== DEFAULT_FILTERS.hideTestMints ? 1 : 0,
     f.units.length > 0 ? 1 : 0,
     f.method !== null ? 1 : 0,
+    f.software.length > 0 ? 1 : 0,
   ].reduce((a, b) => a + b, 0)
 }
 
@@ -248,12 +253,13 @@ function parseFilterParams(params: URLSearchParams): {
   const hideTestMints = params.get('testmints') === 'hide'
   const units = parseUnitParam(params.get('unit'))
   const method = parseMethodParam(params.get('method'))
+  const software = parseSoftwareParam(params.get('software'))
   const compareUrls = parseCompareParam(params.get('compare'))
   return {
     search: params.get('q') ?? '',
     sortBy,
     sortDir,
-    filters: { status, minReliabilityScore, requiredNuts, hideTestMints, units, method },
+    filters: { status, minReliabilityScore, requiredNuts, hideTestMints, units, method, software },
     compareUrls,
   }
 }
@@ -270,6 +276,8 @@ function buildFilterParams(search: string, sortBy: SortByValue, sortDir: 'asc' |
   const unitParam = buildUnitParam(filters.units)
   if (unitParam) params.set('unit', unitParam)
   if (filters.method) params.set('method', filters.method)
+  const softwareParam = buildSoftwareParam(filters.software)
+  if (softwareParam) params.set('software', softwareParam)
   if (compareUrls.length > 0) params.set('compare', buildCompareParam(compareUrls))
   return params
 }
@@ -784,18 +792,23 @@ export default function Dashboard() {
   )
   const hiddenCount = hiddenByDefaultCount(trackedMints, activeFilters.status)
 
+  // Software groups come from ALL tracked mints (not the status pool), so an option does not appear or vanish when Status changes.
+  const softwareChoices = useMemo(() => softwareGroups(trackedMints, pendingFilters.software), [trackedMints, pendingFilters.software])
+  const softwareFamilies = useMemo(() => softwareGroups(trackedMints).families, [trackedMints])
+
   const filteredMints = useMemo(() => {
     return applyFilters(allMints, activeFilters, {
       showDegraded,
       searching: search.trim().length > 0,
+      softwareFamilies,
     })
-  }, [allMints, activeFilters, showDegraded, search])
+  }, [allMints, activeFilters, showDegraded, search, softwareFamilies])
   // Mints that pass every filter except Unit (only needed for the footer note while a unit is selected).
   const unitExcluded = useMemo(() => {
     if (activeFilters.units.length === 0) return EMPTY_MINTS
-    const rest = applyFilters(allMints, { ...activeFilters, units: [] }, { showDegraded, searching: search.trim().length > 0 })
+    const rest = applyFilters(allMints, { ...activeFilters, units: [] }, { showDegraded, searching: search.trim().length > 0, softwareFamilies })
     return rest.filter(m => !mintMatchesUnits(m, activeFilters.units))
-  }, [allMints, activeFilters, showDegraded, search])
+  }, [allMints, activeFilters, showDegraded, search, softwareFamilies])
   const activeFilterCount = countActiveFilters(activeFilters)
   // Method filter options: what the tracked mints offer right now (a switched-off NUT-04/05 side does not count), plus the selected one.
   const methodChoices = useMemo(() => methodOptions(allMints, pendingFilters.method), [allMints, pendingFilters.method])
@@ -857,8 +870,8 @@ export default function Dashboard() {
   const draftCount = useMemo(() => {
     if (!showFilters) return 0
     const pool = poolForStatus(trackedMints, pendingFilters.status, showDegraded) as KnownMint[]
-    return applyFilters(pool, pendingFilters, { showDegraded, searching: search.trim().length > 0 }).length
-  }, [showFilters, trackedMints, pendingFilters, showDegraded, search])
+    return applyFilters(pool, pendingFilters, { showDegraded, searching: search.trim().length > 0, softwareFamilies }).length
+  }, [showFilters, trackedMints, pendingFilters, showDegraded, search, softwareFamilies])
 
   const onlineCount = countOnline(trackedMints)
 
@@ -1446,6 +1459,12 @@ export default function Dashboard() {
                   <button type="button" aria-label="Clear method filter" onClick={() => { const f = { ...activeFilters, method: null }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
+              {activeFilters.software.length > 0 && (
+                <span className="filter-tag">
+                  Software: {activeFilters.software.map(k => softwareChoices.options.find(o => o.key === k)?.name ?? k).join(', ')}
+                  <button type="button" aria-label="Clear software filter" onClick={() => { const f = { ...activeFilters, software: [] }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
+                </span>
+              )}
               {activeFilters.requiredNuts.map(nut => (
                 <span key={nut} className="filter-tag">
                   NUT-{nut.padStart(2, '0')}
@@ -1459,6 +1478,7 @@ export default function Dashboard() {
               Reliability slider, then the footer (Hide test mints · Reset · Show N of M).
               flex-wrap decides the rows — see .filter-bar in Dashboard.css. */}
           <div className="filter-bar">
+            <div className="filter-main">
             <div className="filter-field">
               <span className="filter-field-label" id="filter-status-label">Status</span>
               <div className="filter-seg" role="radiogroup" aria-labelledby="filter-status-label">
@@ -1472,17 +1492,7 @@ export default function Dashboard() {
             </div>
 
             <div className="filter-field">
-              <span className="filter-field-labelcell">
-                <span className="filter-field-label" id="filter-unit-label">Unit</span>
-                <InfoTooltip
-                  className="filter-unit-tip"
-                  iconSize={12}
-                  width={240}
-                  openOnFocus
-                  label={UNIT_FILTER_TOOLTIP}
-                  text={UNIT_FILTER_TOOLTIP}
-                />
-              </span>
+              <span className="filter-field-label" id="filter-unit-label">Unit</span>
               <div className="filter-seg" role="group" aria-labelledby="filter-unit-label">
                 {UNIT_FILTER_OPTIONS.map(u => {
                   const on = pendingFilters.units.includes(u)
@@ -1504,17 +1514,7 @@ export default function Dashboard() {
 
             {methodChoices.length > 0 && (
               <div className="filter-field">
-                <span className="filter-field-labelcell">
-                  <span className="filter-field-label" id="filter-method-label">Method</span>
-                  <InfoTooltip
-                    className="filter-unit-tip filter-method-tip"
-                    iconSize={12}
-                    width={240}
-                    openOnFocus
-                    label={METHOD_FILTER_TEXT}
-                    text={METHOD_FILTER_TEXT}
-                  />
-                </span>
+                <span className="filter-field-label" id="filter-method-label">Method</span>
                 <div className="filter-seg" role="group" aria-labelledby="filter-method-label">
                   {methodChoices.map(m => {
                     const on = pendingFilters.method === m
@@ -1545,6 +1545,7 @@ export default function Dashboard() {
                 aria-label="Minimum Reliability Score"
               />
             </div>
+            </div>
 
             <div className="filter-footer">
               <label className="filter-check">
@@ -1555,6 +1556,28 @@ export default function Dashboard() {
                 />
                 Hide test mints
               </label>
+              {softwareChoices.options.length > 0 && (
+                <div className="filter-field filter-software">
+                  <span className="filter-field-label" id="filter-software-label">Software</span>
+                  <div className="filter-seg" role="group" aria-labelledby="filter-software-label">
+                    {softwareChoices.options.map(o => {
+                      const on = pendingFilters.software.includes(o.key)
+                      return (
+                        <button
+                          key={o.key}
+                          type="button"
+                          className={`filter-seg-opt filter-software-chip${on ? ' active' : ''}`}
+                          aria-pressed={on}
+                          data-software={o.key}
+                          onClick={() => setPendingFilters(p => ({ ...p, software: softwareChoices.options.map(x => x.key).filter(k => k === o.key ? !on : p.software.includes(k)) }))}
+                        >
+                          {o.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
               <div className="filter-actions-row">
                 <button type="button" className="filter-reset-btn" onClick={resetFilters}>Reset</button>
                 <button

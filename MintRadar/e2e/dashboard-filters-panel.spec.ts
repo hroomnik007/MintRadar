@@ -227,12 +227,13 @@ test.describe('Filters panel — layout', () => {
     })
   }
 
-  test('panel height: ≤ 200px at 390px, a single ~56px row on a wide window', async ({ page }) => {
+  // F1 (2026-10-28): the footer is always its own row and gained the Software control, so a wide panel is two rows (~100px) and 390px stacks one more row.
+  test('panel height: ≤ 360px at 390px, two ~100px rows on a wide window', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await openPanel(page)
-    expect((await page.locator('.filter-panel').boundingBox())!.height).toBeLessThanOrEqual(200)
+    expect((await page.locator('.filter-panel').boundingBox())!.height).toBeLessThanOrEqual(360)
     await page.setViewportSize({ width: 1440, height: 900 })
-    expect((await page.locator('.filter-panel').boundingBox())!.height).toBeLessThanOrEqual(58)
+    expect((await page.locator('.filter-panel').boundingBox())!.height).toBeLessThanOrEqual(106)
   })
 
   // The segments are 28px with 10px text since 6ed4592 / 20b0541 (compact); the checkbox row and
@@ -261,7 +262,7 @@ test.describe('Filters panel — layout', () => {
       page.getByRole('button', { name: 'Reset', exact: true }),
       showBtn(page),
     ]
-    expect(targets).toHaveLength(9)
+    expect(targets).toHaveLength(10) // 3 status + 3 unit + 1 software option (the default mocks) + checkbox + Reset + Show
     for (const t of targets) {
       const r = await t.evaluate(el => {
         // The Reliability slider (44px hit area, z-index above the neighbouring rows' 4px bands) wins the
@@ -282,8 +283,8 @@ test.describe('Filters panel — layout', () => {
           up: ownsPoint(el, x, b.top - 3), down: ownsPoint(el, x, b.bottom + 3),
         }
       })
-      // The first 6 targets are the segment options (28px since 6ed4592 / 20b0541); the rest are 36px.
-      expect(r.h).toBe(targets.indexOf(t) < 6 ? 28 : 36)
+      // The first 7 targets are the segment options (28px since 6ed4592 / 20b0541); the rest are 36px.
+      expect(r.h).toBe(targets.indexOf(t) < 7 ? 28 : 36)
       expect(r.pseudoContent).toBe('""')
       expect(r.pseudoH).toBeGreaterThanOrEqual(44)
       expect(r, `target ${targets.indexOf(t)}`).toMatchObject({ up: true, down: true })
@@ -536,7 +537,7 @@ test.describe('Filters panel — labels versus options', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await openPanel(page)
     const lefts = await page.locator('.filter-seg').evaluateAll(els => els.map(e => e.getBoundingClientRect().left))
-    expect(lefts).toHaveLength(2)
+    expect(lefts.length).toBeGreaterThanOrEqual(2) // Status, Unit (+ Software)
     expect(lefts[0]).toBeCloseTo(lefts[1]!, 1)
     const labels = await page.locator('.filter-field-label').evaluateAll(els => els.map(e => e.getBoundingClientRect().width))
     expect(labels[0]).toBeCloseTo(labels[1]!, 1)

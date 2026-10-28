@@ -144,7 +144,7 @@ export function styleProblems(text: string): string[] {
 const BUILT: Record<string, string> = {
   scoreFormulaText: T.scoreFormulaText(), uptimeRowText: T.uptimeRowText(), auditRowText: T.auditRowText(), NUT_ROW_TEXT: T.NUT_ROW_TEXT,
   versionRowText: T.versionRowText(), contactRowText: T.contactRowText(), reviewSurgeText: T.reviewSurgeText(),
-  UNIT_FILTER_TEXT: T.UNIT_FILTER_TEXT, HIDE_TEST_MINTS_TEXT: T.HIDE_TEST_MINTS_TEXT, outdatedSoftwareText: T.outdatedSoftwareText(),
+  HIDE_TEST_MINTS_TEXT: T.HIDE_TEST_MINTS_TEXT, outdatedSoftwareText: T.outdatedSoftwareText(),
   TRACKING_HISTORY_TEXT: T.TRACKING_HISTORY_TEXT, BACKUP_SUPPORTED_TEXT: T.BACKUP_SUPPORTED_TEXT, NO_BACKUP_TEXT: T.NO_BACKUP_TEXT,
   AUDIT_MINTS_TEXT: T.AUDIT_MINTS_TEXT, AUDIT_MELTS_TEXT: T.AUDIT_MELTS_TEXT, auditSuccessRateText: T.auditSuccessRateText(),
   REVIEWS_NIP87_TEXT: T.REVIEWS_NIP87_TEXT, SIGNATURE_CHECK_TEXT: T.SIGNATURE_CHECK_TEXT, INPUT_FEE_TEXT: T.INPUT_FEE_TEXT, FEE_PER_COIN_TEXT: T.FEE_PER_COIN_TEXT, KEYSET_FEE_TEXT: T.KEYSET_FEE_TEXT,

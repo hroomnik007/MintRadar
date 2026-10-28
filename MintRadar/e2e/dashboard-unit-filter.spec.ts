@@ -177,69 +177,17 @@ test.describe('Dashboard unit filter', () => {
     await ctx.close()
   })
 
-  const TIP = 'Shows only mints that list a selected unit. Mints with unknown units are hidden while a unit is selected.'
-  const tip = (page: Page) => page.locator('.filter-unit-tip')
   const note = (page: Page) => page.getByTestId('unit-hidden-note')
 
-  test('Unit info icon is focusable and shows the tooltip on keyboard focus and on hover', async ({ page }) => {
+  test('Unit and Method labels are plain text: no info icon next to them (removed in F1)', async ({ page }) => {
     await setup(page)
     await page.goto('/')
     await openPanel(page)
-    await expect(tip(page)).toHaveAttribute('aria-label', TIP)
-    expect(await tip(page).evaluate(el => el.tagName)).toBe('BUTTON') // a real, focusable button
-    // The label itself stays plain text.
     expect(await page.locator('#filter-unit-label').evaluate(el => el.tagName)).toBe('SPAN')
-    await page.locator('.filter-btn').focus()
-    await page.keyboard.press('Tab')
-    for (let i = 0; i < 12; i++) {
-      if (await tip(page).evaluate(el => el === document.activeElement)) break
-      await page.keyboard.press('Tab')
-    }
-    await expect(tip(page)).toBeFocused()
-    await expect(page.getByRole('tooltip')).toHaveText(TIP)
-    await page.keyboard.press('Escape')
-    await expect(page.getByRole('tooltip')).toHaveCount(0)
-    // The first Escape closes only the tooltip; the panel stays (see tooltip-escape.spec.ts).
-    await expect(page.locator('.filter-panel')).toBeVisible()
-    await tip(page).hover()
-    await expect(page.getByRole('tooltip')).toHaveText(TIP)
-  })
-
-  test('Unit info icon stays vertically centred on its label (the hit-area padding does not move it)', async ({ page }) => {
-    await setup(page)
-    await page.goto('/')
-    await openPanel(page)
-    const c = await page.evaluate(() => {
-      const mid = (r: DOMRect) => r.top + r.height / 2
-      const label = document.querySelector('#filter-unit-label')!.getBoundingClientRect()
-      const icon = document.querySelector('.filter-unit-tip svg')!.getBoundingClientRect()
-      return { dy: Math.abs(mid(label) - mid(icon)) }
-    })
-    expect(c.dy).toBeLessThan(2.5)
-  })
-
-  test('Unit info icon does not move the controls: panel height and Status/Unit left edges unchanged', async ({ page }) => {
-    await setup(page)
-    // Baseline measured before the info icon was added (no unit selected): panel height / status x / unit x.
-    // Re-measured 2026-10-05 for the segment size change (28px segments, 44px minimum width, 8px padding: the
-    // Unit control starts 29.79px further left on one row) and the 16px gap between stacked rows
-    // (--filter-row-gap): 390/360 stack 4 rows (+24px over the 8px gap), 320 wraps the footer once more (228).
-    // Re-measured 2026-10-07 for the sans labels (both 64px wide, so the controls start 23.8px further right); heights unchanged.
-    // Re-measured 2026-10-27 for the 72px labels (room for the Method filter's ⓘ touch area): +8px per label; heights unchanged.
-    const baseline: Record<number, [number, number, number]> = {
-      1440: [56, 189, 434], 900: [100, 111, 356], 600: [184, 107, 107], 390: [184, 107, 107], 360: [184, 107, 107], 320: [228, 107, 107],
-    }
-    for (const [w, [h, sx, ux]] of Object.entries(baseline)) {
-      await page.setViewportSize({ width: Number(w), height: 900 })
-      await page.goto('/')
-      await openPanel(page)
-      const r = await page.evaluate(() => {
-        const seg = document.querySelectorAll('.filter-seg')
-        return [document.querySelector('.filter-panel')!.getBoundingClientRect().height, seg[0]!.getBoundingClientRect().x, seg[1]!.getBoundingClientRect().x]
-      })
-      expect(r[0]).toBe(h)
-      expect(r[1]).toBeCloseTo(sx, 1)
-      expect(r[2]).toBeCloseTo(ux, 1)
+    await expect(page.locator('.filter-unit-tip, .filter-method-tip')).toHaveCount(0)
+    for (const id of ['filter-unit-label', 'filter-method-label']) {
+      const field = page.locator(`#${id}`).locator('xpath=..')
+      await expect(field.locator('[data-tooltip-trigger], svg.lucide-info')).toHaveCount(0)
     }
   })
 
@@ -287,14 +235,8 @@ test.describe('Dashboard unit filter', () => {
       await page.goto('/?unit=sat')
       await expect(note(page)).toBeVisible()
       await openPanel(page)
-      await page.locator('.filter-btn').focus()
-      for (let i = 0; i < 12 && !(await tip(page).evaluate(el => el === document.activeElement)); i++) await page.keyboard.press('Tab')
-      await expect(page.getByRole('tooltip')).toBeVisible()
       const o = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }))
       expect(o.sw).toBeLessThanOrEqual(o.cw)
-      const pop = (await page.getByRole('tooltip').boundingBox())!
-      expect(pop.x).toBeGreaterThanOrEqual(0)
-      expect(pop.x + pop.width).toBeLessThanOrEqual(width)
     })
   }
 })

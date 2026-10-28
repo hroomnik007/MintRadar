@@ -6,12 +6,13 @@ import { installApiMocks, mockRelays, loginAs, MOCK_MINTS } from './fixtures/moc
 
 const ALPHA = MOCK_MINTS[0]!.url
 const panel = (page: Page) => page.locator('.filter-panel')
-const unitTip = (page: Page) => page.locator('.filter-unit-tip')
+// The Unit / Method info icons are gone (F1); the panel's remaining tooltip is the "Test mints hidden" tag (?testmints=hide).
+const unitTip = (page: Page) => page.locator('.filter-active-tags [data-tooltip-trigger]')
 
 async function openFilters(page: Page) {
   await mockRelays(page)
   await installApiMocks(page)
-  await page.goto('/')
+  await page.goto('/?testmints=hide')
   await page.locator('.filter-btn').click()
   await expect(panel(page)).toBeVisible()
 }
@@ -37,7 +38,7 @@ async function openBreakdownModal(page: Page) {
 }
 
 test.describe('Escape and ⓘ tooltips', () => {
-  test('Filters panel, UNIT icon: first Escape closes only the tooltip, second closes the panel', async ({ page }) => {
+  test('Filters panel, "Test mints hidden" tag: first Escape closes only the tooltip, second closes the panel', async ({ page }) => {
     await openFilters(page)
     await focusUnitIcon(page)
 
