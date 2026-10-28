@@ -650,6 +650,22 @@ test.describe('Tools', () => {
     await expect(page.locator('.wizard-rec-reason')).toHaveText('Best match for your filters')
   })
 
+  test('Best Mint Wizard never recommends an "online" mint whose newest probe is older than 3 hours', async ({ page }) => {
+    await page.route('**/api/mints/known', route => {
+      const stale = new Date(Date.now() - 5 * 3_600_000).toISOString()
+      route.fulfill({ json: MOCK_KNOWN_MINTS.map(m => (m.name === 'Alpha Mint' ? { ...m, lastCheckedAt: stale } : m)) })
+    })
+    await page.reload()
+    await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
+    await page.getByRole('radio', { name: 'SAT', exact: true }).click()
+    await page.locator('.wizard-opt', { hasText: 'Small' }).click()
+    await page.locator('.wizard-opt', { hasText: 'Reliable' }).click()
+    await page.getByRole('button', { name: /Find my mint/ }).click()
+
+    await expect(page.locator('.wizard-rec-row').first()).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('.wizard-rec-row', { hasText: 'Alpha Mint' })).toHaveCount(0)
+  })
+
   test('Best Mint Wizard walks through its questions and recommends mints', async ({ page }) => {
     // Step 1 — currency, then how much to store (the latter auto-advances to step 2).
     await expect(page.getByRole('radiogroup', { name: 'Currency unit' })).toBeVisible()

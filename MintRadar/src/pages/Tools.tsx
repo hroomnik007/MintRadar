@@ -17,7 +17,7 @@ import { PageHead } from '@/components/layout/PageHead'
 import { Zap, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Coins, Hourglass, ExternalLink, ArrowRight, type LucideIcon } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
-import { isEligibleForRecommendation } from '@/utils/reliabilityScore'
+import { isEligibleForRecommendation, hasFreshProbe } from '@/utils/reliabilityScore'
 import { weightsFor, reviewsScore, type WizardCheck, type SizeOption } from '@/utils/wizardScoring'
 import { sortUnits } from '@/utils/sortUnits'
 import { formatDateTimeUtc } from '@/utils/formatDate'
@@ -728,7 +728,8 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
     setRecs(null)
 
     const candidates = knownMints
-      .filter(m => m.online === true && m.reliabilityScore != null)
+      // Online AND probed recently (hasFreshProbe, methodology 6), like the wallet API's eligibleForRecommendation.
+      .filter(m => m.online === true && hasFreshProbe(m.lastCheckedAt) && m.reliabilityScore != null)
       // Dev/test-only mints (fake sats, "do not use as default", etc.) are
       // real and findable via Dashboard/Watchlist/Search, but the wizard is
       // an active recommendation — never suggest one as someone's mint.

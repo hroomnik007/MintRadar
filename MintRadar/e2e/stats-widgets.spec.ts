@@ -41,6 +41,23 @@ test('Uptime tab list excludes test mints; Reliability tab also excludes them (a
   await expect(widget.locator('.stats-top5-row', { hasText: 'Testnut' })).toHaveCount(0)
 })
 
+test('Uptime and Reliability tabs leave out an "online" mint whose newest probe is older than 3 hours', async ({ page }) => {
+  const stale = new Date(Date.now() - 5 * 3_600_000).toISOString()
+  // Old enough for the 14-day recommendation age gate, so only the probe age can keep the first one out.
+  const old = new Date(Date.now() - 60 * 86_400_000).toISOString()
+  await knownMints(page, [
+    { ...MOCK_KNOWN_MINTS[1], name: 'Zulu Mint', online: true, discoveredAt: old, lastCheckedAt: stale, uptimePct24h: 100, uptimePct7d: 100, reliabilityScore: 99 },
+    { ...MOCK_KNOWN_MINTS[3], name: 'Yankee Mint', online: true, discoveredAt: old, uptimePct24h: 95, uptimePct7d: 95, reliabilityScore: 78 },
+  ])
+  await page.goto('/stats')
+  const widget = page.locator('.stats-panel').filter({ has: page.getByRole('button', { name: 'Uptime', exact: true }) })
+  await expect(widget.locator('.stats-top5-row', { hasText: 'Yankee Mint' })).toBeVisible()
+  await expect(widget.locator('.stats-top5-row', { hasText: 'Zulu Mint' })).toHaveCount(0)
+  await widget.getByRole('button', { name: 'Reliability', exact: true }).click()
+  await expect(widget.locator('.stats-top5-row', { hasText: 'Yankee Mint' })).toBeVisible()
+  await expect(widget.locator('.stats-top5-row', { hasText: 'Zulu Mint' })).toHaveCount(0)
+})
+
 test('Uptime tab rows never show a hostname/URL subtitle under the name', async ({ page }) => {
   const base = MOCK_KNOWN_MINTS[0]!
   await knownMints(page, [

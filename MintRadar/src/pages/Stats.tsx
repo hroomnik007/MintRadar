@@ -16,7 +16,7 @@ import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
 import { onlineMintsSupportingNut } from '@/utils/nutFilters'
 import { reliabilityColor, reliabilityScoreInfo, reliabilityDonutArc, displayName, computeDuplicateMintNames, mintAgeBadge } from '@/utils/mintFormatting'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
-import { isEligibleForRecommendation } from '@/utils/reliabilityScore'
+import { isEligibleForRecommendation, hasFreshProbe } from '@/utils/reliabilityScore'
 import { compareMintVersionNumbers, classifyVersion } from '@/utils/versionRule'
 import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -642,7 +642,9 @@ export default function Stats() {
       // Test/dev mints are excluded from this "best of" list (same as the
       // Best Mint wizard and the backend's top5ByReliabilityScore); the Reliability tab
       // just below has its own, separate isTestMint()/age-gate filtering.
-      .filter(m => m.online === true && m.uptimePct7d != null && !isNotRecommendedMint(m))
+      // Online AND probed recently (hasFreshProbe, methodology 6): "online" alone is only the newest stored probe,
+      // however old, so a mint whose probes stopped landing would keep its place here.
+      .filter(m => m.online === true && hasFreshProbe(m.lastCheckedAt) && m.uptimePct7d != null && !isNotRecommendedMint(m))
       .sort((a, b) => (b.uptimePct7d ?? 0) - (a.uptimePct7d ?? 0))
       .slice(0, 5)
   }, [knownMintsData])
@@ -650,7 +652,7 @@ export default function Stats() {
   const top5ByReliability = useMemo(() => {
     if (!knownMintsData) return []
     return [...knownMintsData]
-      .filter(m => m.online === true && m.reliabilityScore != null)
+      .filter(m => m.online === true && hasFreshProbe(m.lastCheckedAt) && m.reliabilityScore != null)
       // Known dev/test-only mints are excluded from this recommendation list —
       // this mirror previously had NO test-mint exclusion at all, unlike the
       // backend's top5ByReliabilityScore and this page's own top5ByUptime just above
@@ -851,7 +853,7 @@ export default function Stats() {
   // The movers note changes the height of the board (Stats.css --stats-reserve-note), so the reservations follow the
   // same condition that shows the note: the selected movers window holds a methodology change. The number of changes
   // (the note's length: 1, 2, 3 or more) picks the line count per width band there.
-  const pageClass = moversNote === '' ? 'stats-page' : `stats-page has-movers-note movers-note-n${Math.min(moversChanges.length, 4)}`
+  const pageClass = moversNote === '' ? 'stats-page' : `stats-page has-movers-note movers-note-n${Math.min(moversChanges.length, 5)}`
 
   if (isLoading) return (
     <div className={pageClass}>

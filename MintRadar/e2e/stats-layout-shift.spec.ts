@@ -14,16 +14,28 @@ const CLS_LIMIT = 0.02 // the task's hard limit is 0.05; this is the target
 const TOLERANCE = 12 // a reservation may differ from the loaded height by at most this many px
 
 // Loaded heights of the fixture (px), measured with the scratch script described in the docs. `board` is the board WITHOUT the
-// movers note; `note` is the height the note adds for the 7d default view (31.25 px at 11.5px type, 32 px on a phone at 12px,
-// 50 px at 320 px where it wraps). `note2` is the same for a 7d window that holds two changes (v4 + v5 until 2026-10-28):
-// two lines in the desktop card, at 768 and on phones, one line in the 1024 tablet card.
-const LOADED: Record<number, { head: number; board: number; nhi: number; stack: number; note: number; note2: number }> = {
-  1440: { head: 88.2, board: 1326.5, nhi: 346.2, stack: 618.1, note: 31.25, note2: 48.5 },
-  1024: { head: 88.2, board: 1844.7, nhi: 332.7, stack: 618.1, note: 31.25, note2: 31.25 },
-  768: { head: 88.2, board: 1615.5, nhi: 274.8, stack: 538.3, note: 31.25, note2: 48.5 },
-  390: { head: 96.4, board: 2837.8, nhi: 181.3, stack: 560.8, note: 32, note2: 50 },
-  320: { head: 96.4, board: 2983.3, nhi: 181.3, stack: 618.3, note: 50, note2: 50 },
+// movers note (the note's height comes from NOTE_HEIGHTS below, by the number of changes in the 7d window).
+const LOADED: Record<number, { head: number; board: number; nhi: number; stack: number }> = {
+  1440: { head: 88.2, board: 1326.5, nhi: 346.2, stack: 618.1 },
+  1024: { head: 88.2, board: 1844.7, nhi: 332.7, stack: 618.1 },
+  768: { head: 88.2, board: 1615.5, nhi: 274.8, stack: 538.3 },
+  390: { head: 96.4, board: 2837.8, nhi: 181.3, stack: 560.8 },
+  320: { head: 96.4, board: 2983.3, nhi: 181.3, stack: 618.3 },
 }
+
+// The REAL height of the movers note (px) by the number of changes it lists, as [from width, to width, height] ranges,
+// measured at every width 320 to 1600 (1 px steps) on 2026-10-28 with methodology v6. The change log can only produce one
+// text per count (a window holds the NEWEST changes): n1 `28 Oct (v6)` ... n5 `8 Oct (v2)` to `28 Oct (v6)`. A new
+// METHODOLOGY_CHANGES entry changes the texts: re-measure (docs/claude/stats-dashboard-watchlist-ui.md).
+const NOTE_HEIGHTS: Record<number, ReadonlyArray<readonly [number, number, number]>> = {
+  1: [[320, 372, 50], [373, 767, 32], [768, 1600, 31.25]],
+  2: [[320, 456, 50], [457, 767, 32], [768, 933, 48.5], [934, 1279, 31.25], [1280, 1600, 48.5]],
+  3: [[320, 547, 50], [548, 767, 32], [768, 1115, 48.5], [1116, 1279, 31.25], [1280, 1600, 48.5]],
+  4: [[320, 358, 68], [359, 639, 50], [640, 767, 32], [768, 1600, 48.5]],
+  5: [[320, 393, 68], [394, 723, 50], [724, 767, 32], [768, 807, 65.75], [808, 1600, 48.5]],
+}
+const noteHeightAt = (width: number, count: number): number =>
+  count === 0 ? 0 : NOTE_HEIGHTS[Math.min(count, 5)]!.find(([from, to]) => width >= from && width <= to)![2]
 const WIDTHS = Object.keys(LOADED).map(Number)
 
 type Scenario = { name: string; held: StatsEndpoint[]; order: StatsEndpoint[][] }
@@ -97,10 +109,10 @@ for (const width of WIDTHS) {
 
     test('the reserved heights match the loaded heights and the loading screen takes the loaded place', async ({ page }) => {
       const expected = LOADED[width]!
-      // The same condition as the page's: the default window (7d) holds a methodology change (one, or two right after a
-      // change that followed another within a week).
+      // The same condition as the page's: the default window (7d) holds a methodology change (one, or several right after
+      // changes that followed one another within a week).
       const changes7 = methodologyChangesInWindow(7)
-      const noteHeight = moversMethodologyNote(changes7) === '' ? 0 : changes7.length >= 2 ? expected.note2 : expected.note
+      const noteHeight = moversMethodologyNote(changes7) === '' ? 0 : noteHeightAt(width, changes7.length)
       const gate = await openStats(page, width, ['stats'])
       await gate.reached('stats')
       await frames(page, 3)
@@ -171,16 +183,21 @@ for (const width of WIDTHS) {
 
 // The movers note (a methodology change inside the selected window) makes the board taller; the space is reserved from the same
 // condition, so it is there at the first paint exactly when the note is shown, and it equals the note's real height (margin
-// + lines, within 1 px) at every width, for 1, 2, 3 and 4 changes. These tests pin the date on purpose: with the real date the
-// note disappears from the 7d window a week after a change. METHODOLOGY_CHANGES: v2 on 2026-10-08, v3 on 2026-10-09, v4 on 2026-10-21, v5 on 2026-10-27.
+// + lines, within 1 px) at every width, for 1 to 5 changes. These tests pin the date on purpose: with the real date the
+// note disappears from the 7d window a week after a change. METHODOLOGY_CHANGES: v2 on 2026-10-08, v3 on 2026-10-09, v4 on
+// 2026-10-21, v5 on 2026-10-27, v6 on 2026-10-28. A window always holds the NEWEST changes, so each date below gives the
+// text that the live page can show for that count (the dates are day-granular, both ends included).
 const NOTE_CASES = [
   // `note7` = the note of the default 7d view (what the waiting block and the first paint show), `note` = the note of `period`.
-  { name: '7d window holds one change', date: '2026-10-22T12:00:00Z', period: '7d', note7: true, note: true },
-  { name: '30d window holds three changes', date: '2026-10-22T12:00:00Z', period: '30d', note7: true, note: true },
-  { name: '7d window holds two changes', date: '2026-10-27T12:00:00Z', period: '7d', note7: true, note: true },
-  { name: '30d window holds four changes, 7d none', date: '2026-11-05T12:00:00Z', period: '30d', note7: false, note: true },
-  { name: '30d window holds three changes, 7d none', date: '2026-11-08T12:00:00Z', period: '30d', note7: false, note: true },
-  { name: '30d window holds two changes, 7d none', date: '2026-11-15T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '7d window holds three changes', date: '2026-10-28T12:00:00Z', period: '7d', note7: true, note: true },
+  { name: '7d window holds two changes', date: '2026-10-30T12:00:00Z', period: '7d', note7: true, note: true },
+  { name: '7d window holds one change', date: '2026-11-04T12:00:00Z', period: '7d', note7: true, note: true },
+  { name: '30d window holds five changes, 7d two', date: '2026-10-30T12:00:00Z', period: '30d', note7: true, note: true },
+  { name: '30d window holds five changes, 7d none', date: '2026-11-05T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds four changes, 7d none', date: '2026-11-08T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds three changes, 7d none', date: '2026-11-09T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds two changes, 7d none', date: '2026-11-21T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds one change, 7d none', date: '2026-11-27T12:00:00Z', period: '30d', note7: false, note: true },
   { name: '7d window holds no change', date: '2026-11-05T12:00:00Z', period: '7d', note7: false, note: false },
   { name: '30d window holds no change', date: '2026-12-01T12:00:00Z', period: '30d', note7: false, note: false },
 ] as const
@@ -216,7 +233,7 @@ for (const width of [1440, 1024, 768, 390, 320]) {
         if (c.note7) {
           expect(Math.abs(reserve7 - await noteActual()), 'reserved against the real height of the 7d note').toBeLessThanOrEqual(1)
           const board = (await page.locator('.stats-board-grid').boundingBox())!.height
-          const note7Height = methodologyChangesInWindow(7, Date.parse(c.date)).length >= 2 ? expected.note2 : expected.note
+          const note7Height = noteHeightAt(width, methodologyChangesInWindow(7, Date.parse(c.date)).length)
           expect(board, 'loaded board').toBeCloseTo(expected.board + note7Height, -0.6)
           expect(waiting, 'the waiting block is not taller than the board').toBeLessThanOrEqual(board + TOLERANCE)
           if (width === 1440) expect(board - waiting, 'the waiting block is within TOLERANCE of the board').toBeLessThanOrEqual(TOLERANCE)

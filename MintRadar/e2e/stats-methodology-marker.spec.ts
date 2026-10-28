@@ -4,7 +4,7 @@ import { trendPayload, emptyTrendPayload, trendDaysOf } from './fixtures/trendSe
 import { resize, networkQuiet } from './fixtures/settle'
 
 // Reliability Score trend: a thin vertical marker, labelled with the version, at each methodology change inside the
-// shown period (METHODOLOGY_CHANGES: v2 on 2026-10-08, v3 on 2026-10-09, v4 on 2026-10-21 and v5 on 2026-10-27 outside the mock series; v1 is the initial formula, not a change).
+// shown period (METHODOLOGY_CHANGES: v2 on 2026-10-08, v3 on 2026-10-09, v4 on 2026-10-21, v5 on 2026-10-27 and v6 on 2026-10-28 outside the mock series; v1 is the initial formula, not a change).
 // The movers panel adds one muted line when its window holds a change. The mock series ends on 2026-10-16.
 
 async function open(page: Page, width: number, series: (days: 30 | 90) => unknown = trendPayload) {
@@ -54,7 +54,7 @@ for (const width of [1440, 768, 390, 320]) {
 test('no marker when the shown period holds no change, and none on an empty chart', async ({ page }) => {
   await open(page, 1440, days => {
     const p = trendPayload(days, '2026-10-30')
-    return { ...p, trend: p.trend.filter(d => d.date > '2026-10-27') } // starts after v5, the newest change
+    return { ...p, trend: p.trend.filter(d => d.date > '2026-10-28') } // starts after v6, the newest change
   })
   await expect(page.locator('.stats-trend-panel .recharts-area')).toBeVisible()
   await expect(page.locator('.stats-trend-marker')).toHaveCount(0)
