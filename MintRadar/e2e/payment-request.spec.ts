@@ -25,6 +25,10 @@ function encode(opts: { mints?: string[]; amount?: number; description?: string;
   ).toEncodedCreqA()
 }
 
+// NUT-26 example, copied from the spec text (nuts/26.md): id demo123, 1000 sat, single use, one mint, "Coffee payment".
+const NUT26_EXAMPLE = 'CREQB1QYQQWER9D4HNZV3NQGQQSQQQQQQQQQQRAQPSQQGQQSQQZQG9QQVXSAR5WPEN5TE0D45KUAPWV4UXZMTSD3JJUCM0D5RQQRJRDANXVET9YPCXZ7TDV4H8GXHR3TQ'
+const PREFIX_ERROR = 'Not a payment request: expected a string starting with creqA or creqB.'
+
 const card = (page: Page) => page.getByTestId('payment-request-inspector')
 const input = (page: Page) => card(page).getByRole('textbox', { name: 'Payment request' })
 const result = (page: Page) => card(page).getByTestId('pr-result')
@@ -144,13 +148,30 @@ test.describe('malformed input gives one calm message and never reaches the erro
       await input(page).fill(text)
       await expect(errorBox(page)).toBeVisible()
       await expect(result(page)).toHaveCount(0)
-      if (name === 'wrong prefix' || name === 'creq without version') await expect(errorBox(page)).toContainText('expected a string starting with creqA')
+      if (name === 'wrong prefix' || name === 'creq without version') await expect(errorBox(page)).toHaveText(PREFIX_ERROR)
       else await expect(errorBox(page)).toHaveText('This does not look like a valid payment request.')
       await expect(page.locator('.route-error, [data-testid="route-error"]')).toHaveCount(0)
       await expect(card(page)).toBeVisible()
       expect(problems).toEqual([])
     })
   }
+
+  test('a creqB with a bad checksum gives the one calm message', async ({ page }) => {
+    const problems: string[] = []
+    page.on('pageerror', e => problems.push(`pageerror: ${e.message}`))
+    await open(page)
+    await input(page).fill(NUT26_EXAMPLE.slice(0, -1) + 'P')
+    await expect(errorBox(page)).toHaveText('This does not look like a valid payment request.')
+    await expect(result(page)).toHaveCount(0)
+    expect(problems).toEqual([])
+  })
+
+  test('a creqB over 1,023 characters: a calm length message', async ({ page }) => {
+    await open(page)
+    await input(page).fill('creqb1' + 'q'.repeat(1100))
+    await expect(errorBox(page)).toContainText('longer than 1,023 characters')
+    await expect(result(page)).toHaveCount(0)
+  })
 
   test('over 4096 characters: a calm length message', async ({ page }) => {
     await open(page)
@@ -170,6 +191,49 @@ test.describe('malformed input gives one calm message and never reaches the erro
     await expect(result(page)).toHaveCount(0)
     await expect(card(page)).toContainText('Paste a payment request first')
   })
+})
+
+test('NUT-26 creqB: the example of the spec shows its mint and description, with the one-shot note and no open-amount note', async ({ page }) => {
+  await open(page)
+  await expect(input(page)).toHaveAttribute('placeholder', 'creqA… or creqB…')
+  await expect(card(page)).toContainText('Paste a Cashu payment request (NUT-18 creqA or NUT-26 creqB) to read what it asks for and which mints it accepts.')
+  await input(page).fill(NUT26_EXAMPLE)
+  await expect(errorBox(page)).toHaveCount(0)
+  await expect(result(page)).toContainText('demo123')
+  await expect(result(page)).toContainText('Coffee payment')
+  await expect(page.getByTestId('pr-amount')).toContainText('1,000')
+  const mints = result(page).getByTestId('pr-mint')
+  await expect(mints).toHaveCount(1)
+  await expect(mints.first()).toContainText('https://mint.example.com')
+  await expect(result(page).getByTestId('pr-one-shot')).toHaveText('One-shot: this request can be paid only once.')
+  await expect(result(page).getByTestId('pr-open-amount')).toHaveCount(0)
+  // lower case is accepted too
+  await input(page).fill(NUT26_EXAMPLE.toLowerCase())
+  await expect(result(page)).toContainText('Coffee payment')
+})
+
+test('notes: open amount when no amount is set; nothing about reuse for a request that is not single use', async ({ page }) => {
+  await open(page)
+  await input(page).fill(encode())
+  await expect(result(page).getByTestId('pr-open-amount')).toHaveText('Open amount: the sender chooses how much to send.')
+  await expect(result(page).getByTestId('pr-one-shot')).toHaveCount(0)
+  await expect(result(page)).not.toContainText(/reusable/i)
+  await input(page).fill(encode({ amount: 21 }))
+  await expect(result(page).getByTestId('pr-amount')).toContainText('21')
+  await expect(result(page).getByTestId('pr-open-amount')).toHaveCount(0)
+})
+
+test('transport tags are plain text after the type (nostr · NIPs: 17); a relay hint is a plain line, never a link', async ({ page }) => {
+  await open(page)
+  const encoded = new PaymentRequest(
+    [{ type: PaymentRequestTransportType.NOSTR, target: NPROFILE, tags: [['n', '17'], ['r', 'wss://relay.example.com']] }],
+    'tags-1', undefined, undefined, [KNOWN],
+  ).toEncodedCreqA()
+  await input(page).fill(encoded)
+  const row = result(page).getByTestId('pr-transport')
+  await expect(row.getByTestId('pr-transport-type')).toHaveText('nostr · NIPs: 17')
+  await expect(row.getByTestId('pr-transport-tag')).toHaveText('Relays: wss://relay.example.com')
+  await expect(row.locator('a')).toHaveCount(0)
 })
 
 test('decoding sends nothing: no request carries the pasted string, no /api call is caused by decoding', async ({ page }) => {

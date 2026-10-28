@@ -6,9 +6,11 @@ import { IcShield } from '@/components/mint/IcShield'
 import { formatTokenAmount } from '@/utils/cashuToken'
 import { normalizeMintUrl, displayName, cardReliabilityLabel, reliabilityColor, statusDotColor } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
-import { parsePaymentRequest, mintStatusWord, type PaymentRequestView } from '@/utils/paymentRequest'
+import { parsePaymentRequest, mintStatusWord, transportTagLines, type PaymentRequestView } from '@/utils/paymentRequest'
 
 const NOT_SPECIFIED = 'Not specified'
+const OPEN_AMOUNT = 'Open amount: the sender chooses how much to send.'
+const ONE_SHOT = 'One-shot: this request can be paid only once.'
 const NO_TRANSPORTS = 'None listed: the payment is returned directly (in-band)'
 
 function amountText(view: PaymentRequestView): string {
@@ -76,7 +78,7 @@ function AcceptedMint({ url, known, list }: { url: string; known: KnownMint | nu
 }
 
 /**
- * Payment request inspector (NUT-18). The pasted "creqA…" string is decoded in the browser and kept only in React
+ * Payment request inspector (NUT-18 creqA, NUT-26 creqB). The pasted string is decoded in the browser and kept only in React
  * state: no request is made for it. Targets and mint URLs are shown as text (a transport target is chosen by whoever
  * made the request), mints are matched against the known-mints list the page already loaded.
  */
@@ -90,13 +92,13 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
     <div className="tool-card" data-testid="payment-request-inspector">
       <div className="tool-header">
         <div className="tool-title">Payment request inspector</div>
-        <div className="tool-subtitle">Paste a Cashu payment request (NUT-18, starts with creqA) to read what it asks for and which mints it accepts.</div>
+        <div className="tool-subtitle">Paste a Cashu payment request (NUT-18 creqA or NUT-26 creqB) to read what it asks for and which mints it accepts.</div>
       </div>
 
       <textarea
         className="pr-input"
         aria-label="Payment request"
-        placeholder="creqA…"
+        placeholder="creqA… or creqB…"
         value={input}
         onChange={e => setInput(e.target.value)}
         rows={3}
@@ -128,6 +130,8 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
               ) : NOT_SPECIFIED}
             </Row>
           </dl>
+          {parsed.view.amount === null && <div className="pr-note" data-testid="pr-open-amount">{OPEN_AMOUNT}</div>}
+          {parsed.view.singleUse === true && <div className="pr-note" data-testid="pr-one-shot">{ONE_SHOT}</div>}
 
           <div className="pr-section">Accepted mints{parsed.view.mints.length > 0 ? ` (${parsed.view.mints.length})` : ''}</div>
           {parsed.view.mints.length === 0 ? (
@@ -143,13 +147,17 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
             <div className="pr-note" data-testid="pr-no-transports">{NO_TRANSPORTS}</div>
           ) : (
             <ul className="pr-list">
-              {parsed.view.transports.map((t, i) => (
-                <li className="pr-transport" key={`${i}-${t.target}`} data-testid="pr-transport">
-                  <div className="pr-transport-type">{t.type}</div>
-                  <div className="pr-text" data-testid="pr-transport-target">{t.target}</div>
-                  <CopyTextButton label="Copy" what={`${t.type} transport target`} value={t.target} />
-                </li>
-              ))}
+              {parsed.view.transports.map((t, i) => {
+                const { nips, lines } = transportTagLines(t.tags)
+                return (
+                  <li className="pr-transport" key={`${i}-${t.target}`} data-testid="pr-transport">
+                    <div className="pr-transport-type" data-testid="pr-transport-type">{t.type}{nips !== null && <span className="pr-transport-nips">{` · NIPs: ${nips}`}</span>}</div>
+                    <div className="pr-text" data-testid="pr-transport-target">{t.target}</div>
+                    {lines.map((l, j) => <div className="pr-text" key={j} data-testid="pr-transport-tag">{l}</div>)}
+                    <CopyTextButton label="Copy" what={`${t.type} transport target`} value={t.target} />
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>

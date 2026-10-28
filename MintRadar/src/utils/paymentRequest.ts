@@ -1,5 +1,5 @@
-// NUT-18 payment request ("creqA…") decoding for the Payment request inspector. Everything here is local: the string is
-// decoded in the browser by cashu-ts (already a dependency) and never leaves it. The decoder's output is not trusted:
+// NUT-18 ("creqA…") and NUT-26 ("creqb1…") payment request decoding for the Payment request inspector. Everything here
+// is local: the string is decoded in the browser by cashu-ts (already a dependency, both formats) and never leaves it. The decoder's output is not trusted:
 // every field is checked for its type and anything unexpected is either ignored (unknown extra fields) or makes the
 // whole request invalid (a calm single message, no technical detail).
 import { PaymentRequest } from '@cashu/cashu-ts'
@@ -8,14 +8,21 @@ import { mintStatusLabel, type StatusDotWord } from '@/utils/mintFormatting'
 
 export const PAYMENT_REQUEST_PREFIX = 'creqA'
 export const PAYMENT_REQUEST_MAX_LENGTH = 4096
+/** cashu-ts reads a creqb string of at most 1023 characters (the bech32m limit it decodes with). */
+export const PAYMENT_REQUEST_CREQB_MAX_LENGTH = 1023
 export const PAYMENT_REQUEST_INVALID = 'This does not look like a valid payment request.'
-export const PAYMENT_REQUEST_TOO_LONG = `This payment request is longer than ${PAYMENT_REQUEST_MAX_LENGTH.toLocaleString('en-US')} characters, which is more than this tool reads.`
+export const PAYMENT_REQUEST_PREFIX_ERROR = 'Not a payment request: expected a string starting with creqA or creqB.'
+const tooLong = (max: number) => `This payment request is longer than ${max.toLocaleString('en-US')} characters, which is more than this tool reads.`
+export const PAYMENT_REQUEST_TOO_LONG = tooLong(PAYMENT_REQUEST_MAX_LENGTH)
+export const PAYMENT_REQUEST_CREQB_TOO_LONG = tooLong(PAYMENT_REQUEST_CREQB_MAX_LENGTH)
 
 export interface PaymentRequestTransportView {
   /** "nostr", "post", or the raw type text of any other transport. */
   type: string
   /** Shown as text only; never turned into a link. */
   target: string
+  /** The transport's tags, e.g. `{ key: 'n', values: ['17'] }`. Text only. */
+  tags: { key: string; values: string[] }[]
 }
 
 export interface PaymentRequestLock {
@@ -59,14 +66,27 @@ function payloadIsCborMap(payload: string): boolean {
   }
 }
 
+/** Tag text for the Transports list: the NIPs of an `n` tag go after the type, anything else (relay hints included) is a line. */
+export function transportTagLines(tags: PaymentRequestTransportView['tags']): { nips: string | null; lines: string[] } {
+  const nips = tags.filter(t => t.key === 'n').flatMap(t => t.values)
+  const lines = tags.filter(t => t.key !== 'n').map(t => `${t.key === 'r' ? 'Relays' : t.key}: ${t.values.join(', ')}`)
+  return { nips: nips.length > 0 ? nips.join(', ') : null, lines }
+}
+
 /** Trim, check the prefix and the length, decode, validate. Never throws. */
 export function parsePaymentRequest(raw: string): PaymentRequestParse {
-  const text = raw.trim()
-  if (!text) return { ok: false, reason: 'empty', message: '' }
-  if (!text.startsWith(PAYMENT_REQUEST_PREFIX)) return fail('prefix', 'Not a payment request: expected a string starting with creqA.')
-  if (text.length > PAYMENT_REQUEST_MAX_LENGTH) return fail('too-long', PAYMENT_REQUEST_TOO_LONG)
+  const trimmed = raw.trim()
+  if (!trimmed) return { ok: false, reason: 'empty', message: '' }
+  // The prefix is case-insensitive (NUT-26: QR codes carry upper case); the payload of a creqA string is not, so only
+  // its first five characters are normalised. A creqb string is lower-cased by the library itself.
+  const isA = trimmed.slice(0, 5).toLowerCase() === 'creqa'
+  const isB = trimmed.slice(0, 6).toLowerCase() === 'creqb1'
+  if (!isA && !isB) return fail('prefix', PAYMENT_REQUEST_PREFIX_ERROR)
+  if (trimmed.length > PAYMENT_REQUEST_MAX_LENGTH) return fail('too-long', PAYMENT_REQUEST_TOO_LONG)
+  if (isB && trimmed.length > PAYMENT_REQUEST_CREQB_MAX_LENGTH) return fail('too-long', PAYMENT_REQUEST_CREQB_TOO_LONG)
+  const text = isA ? PAYMENT_REQUEST_PREFIX + trimmed.slice(PAYMENT_REQUEST_PREFIX.length) : trimmed
 
-  if (!payloadIsCborMap(text.slice(PAYMENT_REQUEST_PREFIX.length))) return fail('invalid', PAYMENT_REQUEST_INVALID)
+  if (isA && !payloadIsCborMap(text.slice(PAYMENT_REQUEST_PREFIX.length))) return fail('invalid', PAYMENT_REQUEST_INVALID)
 
   try {
     const req = PaymentRequest.fromEncodedRequest(text) as unknown as Record<string, unknown>
@@ -95,7 +115,12 @@ export function parsePaymentRequest(raw: string): PaymentRequestParse {
       const type = o ? str(o.type) : null
       const target = o ? str(o.target) : null
       if (type === null || target === null) return fail('invalid', PAYMENT_REQUEST_INVALID)
-      transports.push({ type, target })
+      const tags = o && Array.isArray(o.tags)
+        ? (o.tags as unknown[])
+            .filter((g): g is [string, ...string[]] => Array.isArray(g) && typeof g[0] === 'string')
+            .map(g => ({ key: g[0], values: g.slice(1).filter((x): x is string => typeof x === 'string') }))
+        : []
+      transports.push({ type, target, tags })
     }
 
     let lock: PaymentRequestLock | null = null
