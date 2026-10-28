@@ -5,7 +5,7 @@
 // it would need a third-party nginx module (decided 2026-10-25, minimal external dependencies). Not precached: the
 // Workbox globPatterns (vite.config.ts) do not match .gz. No dependency: node:zlib.
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { extname, join } from 'node:path'
+import { extname, join, resolve } from 'node:path'
 import { gzipSync } from 'node:zlib'
 import type { Plugin, ResolvedConfig } from 'vite'
 
@@ -47,7 +47,8 @@ export function precompressPlugin(): Plugin {
       order: 'post',
       sequential: true,
       handler() {
-        const n = precompressDir(join(config.root, config.build.outDir))
+        // resolve(): a relative outDir (the deploy build's default `dist`) is taken against the Vite root, an absolute one is left alone.
+        const n = precompressDir(resolve(config.root, config.build.outDir))
         config.logger.info(`precompress: ${n} files → .gz`)
       },
     },

@@ -4,7 +4,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { gunzipSync } from 'node:zlib'
-import { precompressDir, PRECOMPRESS_MIN_BYTES } from '../../vite-precompress'
+import type { ResolvedConfig } from 'vite'
+import { precompressDir, precompressPlugin, PRECOMPRESS_MIN_BYTES } from '../../vite-precompress'
 
 describe('precompressDir (build-time .gz for nginx gzip_static)', () => {
   let dir: string
@@ -42,5 +43,43 @@ describe('precompressDir (build-time .gz for nginx gzip_static)', () => {
     precompressDir(dir)
     expect(precompressDir(dir)).toBe(1)
     expect(existsSync(join(dir, 'a.css.gz.gz'))).toBe(false)
+  })
+})
+
+// The plugin's closeBundle scans build.outDir resolved against the Vite root: a relative outDir (the deploy build's
+// `dist`) lives under the root, an absolute one (a build into a temporary directory) must be used as it is.
+describe('precompressPlugin: outDir resolution', () => {
+  let root: string
+  let abs: string
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'precompress-root-'))
+    abs = mkdtempSync(join(tmpdir(), 'precompress-abs-'))
+  })
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+    rmSync(abs, { recursive: true, force: true })
+  })
+
+  function runPlugin(outDir: string): void {
+    const plugin = precompressPlugin()
+    const logged: string[] = []
+    const config = { root, build: { outDir }, logger: { info: (m: string) => { logged.push(m) } } } as unknown as ResolvedConfig
+    ;(plugin.configResolved as (c: ResolvedConfig) => void)(config)
+    const hook = plugin.closeBundle as unknown as { handler: () => void }
+    hook.handler()
+    expect(logged).toEqual(['precompress: 1 files → .gz'])
+  }
+
+  it('a relative outDir is resolved against the Vite root', () => {
+    mkdirSync(join(root, 'dist'))
+    writeFileSync(join(root, 'dist', 'a.js'), 'export const x = 1;\n'.repeat(200))
+    runPlugin('dist')
+    expect(existsSync(join(root, 'dist', 'a.js.gz'))).toBe(true)
+  })
+
+  it('an absolute outDir (outside the root) is left alone, not joined onto the root', () => {
+    writeFileSync(join(abs, 'a.js'), 'export const x = 1;\n'.repeat(200))
+    runPlugin(abs)
+    expect(existsSync(join(abs, 'a.js.gz'))).toBe(true)
   })
 })
