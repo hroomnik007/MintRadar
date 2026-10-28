@@ -1999,7 +1999,7 @@ function MintDetailContent({ url }: { url: string }) {
 
               {meta?.features && (
                 <div className="nm-sec">
-                  <div className="nm-sec-label">Features</div>
+                  <div className="nm-sec-label">What this NUT covers</div>
                   <div className="nm-chips">
                     {meta.features.map(f => <span key={f} className="nm-chip">{f}</span>)}
                   </div>

@@ -27,6 +27,13 @@ for (const vp of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
       await expect(page.locator('.nm .nm-fact', { hasText: 'Offered by' })).toHaveText('Offered by 3 of 3 online mints.')
     })
 
+    test('the "Features" heading is now "What this NUT covers"', async ({ page }) => {
+      await open(page, 'NUT-09')
+      await expect(page.locator('.nm .nm-sec-label', { hasText: 'What this NUT covers' })).toBeVisible()
+      await expect(page.locator('.nm .nm-sec-label', { hasText: /^Features$/ })).toHaveCount(0)
+      await expect(page.locator('.nm .nm-chip').first()).toBeVisible()
+    })
+
     test('the line has no link (there is no deep link to the Stats modal) and the number matches the Stats modal', async ({ page }) => {
       await open(page, 'NUT-09')
       await expect(page.locator('.nm .nm-fact', { hasText: 'Offered by' }).locator('a')).toHaveCount(0)
