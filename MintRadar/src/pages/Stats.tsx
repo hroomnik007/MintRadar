@@ -14,6 +14,7 @@ import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { trackedCount, onlineCount as countOnline } from '@/utils/mintCounts'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
 import { onlineMintsSupportingNut } from '@/utils/nutFilters'
+import { NutDescription, NutSpecLink } from '@/components/NutSpec'
 import { reliabilityColor, reliabilityScoreInfo, reliabilityDonutArc, displayName, computeDuplicateMintNames, mintAgeBadge } from '@/utils/mintFormatting'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation, hasFreshProbe } from '@/utils/reliabilityScore'
@@ -391,6 +392,8 @@ function NutMintsModal({ nut, mints, onClose, duplicateDisplayNames }: {
             <span className="nut-modal-title">{nut}{meta ? ` · ${meta.short}` : ''}</span>
             <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{mints.length} mint{mints.length !== 1 ? 's' : ''}</span>
           </div>
+          <NutDescription nut={nut} />
+          <NutSpecLink nut={nut} />
         </div>
         <div className="nut-modal-list" tabIndex={0} role="group" aria-label="Mints">
           {displayed.map(m => {

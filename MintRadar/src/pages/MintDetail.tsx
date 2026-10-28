@@ -33,6 +33,7 @@ import { useModalFocus } from '@/hooks/useModalFocus'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { supportedNutKeys, offeredNutKeys } from '@/utils/nutSupport'
+import { NutDescription, NutSpecLink } from '@/components/NutSpec'
 import { formatDate } from '@/utils/formatDate'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, UPTIME_PENDING_ARIA_LABEL, SCORE_PENDING_ARIA_LABEL, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames, mintStatusLabel } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
@@ -1988,7 +1989,7 @@ function MintDetailContent({ url }: { url: string }) {
                 <button type="button" className="rv-modal-close" onClick={() => setSelectedNut(null)} aria-label="Close"><IcClose /></button>
               </div>
 
-              <p className="nm-desc">{meta?.desc}</p>
+              <NutDescription nut={selectedNut} />
 
               {meta?.features && (
                 <div className="nm-sec">
@@ -2024,14 +2025,7 @@ function MintDetailContent({ url }: { url: string }) {
                 </div>
               )}
 
-              <a
-                className="nm-link"
-                href={`https://github.com/cashubtc/nuts/blob/main/${parseInt(selectedNut.replace('NUT-', ''), 10).toString().padStart(2, '0')}.md`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                ↗ View NUT spec on GitHub
-              </a>
+              <NutSpecLink nut={selectedNut} />
             </div>
           </div>
         )
