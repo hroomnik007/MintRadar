@@ -34,6 +34,7 @@ import { MintComparePicker } from '@/components/MintComparePicker'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { supportedNutKeys, offeredNutKeys } from '@/utils/nutSupport'
 import { NutDescription, NutSpecLink } from '@/components/NutSpec'
+import { nutOfferBreakdown } from '@/utils/nutFilters'
 import { formatDate } from '@/utils/formatDate'
 import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, UPTIME_PENDING_ARIA_LABEL, SCORE_PENDING_ARIA_LABEL, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames, mintStatusLabel } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
@@ -1971,6 +1972,8 @@ function MintDetailContent({ url }: { url: string }) {
         const rawNutConfig = data?.info?.nuts?.[nutKey] ?? knownMint?.nutsLimits?.[nutKey]
         const nutConfig = (rawNutConfig !== null && typeof rawNutConfig === 'object') ? rawNutConfig as NutConfig : null
         const isNutDisabled = disabledNuts.includes(selectedNut)
+        // How many online mints offer this NUT: the same client list and the same rule as the Stats NUT coverage modal.
+        const offerCounts = knownMintsData ? nutOfferBreakdown(knownMintsData, nutKey) : null
         return (
           <div className="nm-overlay" onClick={() => setSelectedNut(null)}>
             <div
@@ -1990,6 +1993,9 @@ function MintDetailContent({ url }: { url: string }) {
               </div>
 
               <NutDescription nut={selectedNut} />
+              {offerCounts && offerCounts.online > 0 && (
+                <p className="nm-text nm-fact">Offered by {offerCounts.offering.length} of {offerCounts.online} online mint{offerCounts.online !== 1 ? 's' : ''}.</p>
+              )}
 
               {meta?.features && (
                 <div className="nm-sec">
