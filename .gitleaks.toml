@@ -32,22 +32,26 @@ id = "generic-api-key"
 # A database URL with an inline password (postgres://user:PASSWORD@host/db). The built-in rules missed one that sat in
 # .github/workflows/deploy.yml in 2026-04 (a 32-character hex password), so this rule is deliberately generic:
 # any non-trivial password between "user:" and "@". The entropy floor drops placeholders such as "password",
-# "yourpassword" or "STRONG_PASSWORD" (all below 3.5 bits per character) while a random 32-hex value is about 4.
+# "yourpassword" or "STRONG_PASSWORD" (stopwords plus a low entropy) while a random 32-hex value is about 3.7 to 4.
 [[rules]]
 id = "postgres-url-inline-password"
 description = "Database connection URL with an inline password"
 regex = '''postgres(?:ql)?://[^:\s/@]+:([^@\s]{8,})@'''
 secretGroup = 1
-entropy = 3.5
+entropy = 3.0
 keywords = ["postgres"]
 
     [[rules.allowlists]]
-    stopwords = ["password", "changeme", "change-me", "secret", "example"]
+    stopwords = ["password", "changeme", "change-me", "secret", "s3cr3t", "example"]
 
 # The three April-2026 commits that held the former finance_user password (it no longer authenticates; checked
 # 2026-10-28). They stay in the public history until it is rewritten, so the history scan would flag them forever.
+# Scoped to this one rule, this one file and these commits: every other rule still scans them.
 [[allowlists]]
 description = "Former Finvu DB password in deploy.yml (already invalid)"
+targetRules = ["postgres-url-inline-password"]
+condition = "AND"
+paths = ['''^\.github/workflows/deploy\.yml$''']
 commits = [
     "0230a71b56cd1f3a5391d6fabb975509e2d29368",
     "e1ffff2a1f1471245bc6274c14aaf0365119398a",
