@@ -60,7 +60,7 @@ export const METHODOLOGY_PAGE = {
   },
 
   newMint: { capPoints: 75, capDays: 30 },
-  recommendation: { minAgeDays: 14 },
+  recommendation: { minAgeDays: 14, maxProbeAgeHours: 3 },
 
   cadence: {
     probeMinutes: 5,

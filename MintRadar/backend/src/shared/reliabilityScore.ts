@@ -145,6 +145,24 @@ export function isEligibleForRecommendation(
   return now - t >= MIN_RECOMMENDATION_AGE_DAYS * 86_400_000
 }
 
+/**
+ * A mint is recommended only while its NEWEST probe is at most this old (2026-10-28, audit run-4 follow-up). "Online"
+ * alone means "the latest stored probe succeeded" with no age: when probes stop landing for a mint (it answers 429
+ * or its host resolves to a blocked address, or our own probing stalls) that row, and the score stored with it, would
+ * otherwise stay "online" and recommended for good. The probe runs every 5 minutes, so 3 hours is 36 missed cycles.
+ */
+export const MAX_RECOMMENDATION_PROBE_AGE_HOURS = 3
+
+export function hasFreshProbe(
+  lastCheckedAt: string | Date | null | undefined,
+  now = Date.now()
+): boolean {
+  if (!lastCheckedAt) return false
+  const t = new Date(lastCheckedAt).getTime()
+  if (!Number.isFinite(t)) return false
+  return now - t <= MAX_RECOMMENDATION_PROBE_AGE_HOURS * 3_600_000
+}
+
 /** The cashu.info audit inputs stored on mints.audit_cz_* (see shared/auditScore.ts). */
 export interface AuditInput {
   blamed: number | null

@@ -55,7 +55,7 @@ export const WALLET_MINT_FIELDS: readonly WalletField[] = [
   { name: 'reviews.ratedCount', type: 'integer', nullable: false, meaning: 'How many of them carry a rating.' },
   { name: 'reviews.avg', type: 'number', nullable: true, meaning: 'Average rating over the rated reviews, one decimal. null when there are none.' },
   { name: 'reviews.operatorCount', type: 'integer', nullable: false, meaning: 'Reviews from a key that is both listed as the mint\'s Nostr contact and the author of its NIP-87 announcement. The other three leave them out.' },
-  { name: 'eligibleForRecommendation', type: 'boolean', nullable: false, meaning: 'true when the mint is online, has a score, is not a test mint and was first seen at least 14 days ago.' },
+  { name: 'eligibleForRecommendation', type: 'boolean', nullable: false, meaning: 'true when the mint is online, has a score, is not a test mint, was first seen at least 14 days ago and its newest probe is at most 3 hours old.' },
   // Added 2026-10-20 (all additive). downSince, hasOnion, authRequired and auditNeutralReason are on every object; the others only
   // with the matching include= value or on the single-mint endpoint.
   { name: 'pubkey', type: 'string', nullable: true, meaning: 'Only with include=facts (always on the single-mint endpoint). The mint\'s public NUT-06 key as MintRadar last stored it (66 hex characters). null when none is stored. Public data the mint publishes itself.' },

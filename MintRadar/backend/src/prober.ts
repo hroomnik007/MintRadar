@@ -447,6 +447,13 @@ export async function probeMintToDb(url: string, onDeferFailure?: (f: DeferredPr
     if (process.env['NODE_ENV'] !== 'production') {
       console.warn('[prober] blocked unsafe URL:', url)
     }
+    // No request is made, but the outcome is recorded: a mint whose host now resolves into a blocked range (DNS
+    // repointed to a private address) is not reachable for us. Returning silently left its last "online" row, its
+    // score and its place among the recommended mints frozen for good (audit run-4 follow-up). It does not start the
+    // reap clock (invalid_since); pruneAbandonedMints removes it 90 days after its last successful probe.
+    await recordProbeResult(url, {
+      online: false, latencyMs: null, lastError: 'Blocked address', contactCount: null, nutTransition: null,
+    })
     return
   }
   if (urlSafety === 'dns-error') {

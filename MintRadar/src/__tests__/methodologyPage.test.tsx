@@ -13,7 +13,7 @@ import { TRACKED_NUT_KEYS as feTrackedNutKeys } from '@/constants/nuts'
 import { METHODOLOGY_CHANGES, METHODOLOGY_VERSION } from '@/utils/methodology'
 import {
   uptimeComponent, nutComponent, versionComponent, contactComponent, applyNewMintCap, isEligibleForRecommendation,
-  NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP, MIN_RECOMMENDATION_AGE_DAYS, TRACKED_NUT_COUNT,
+  NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP, MIN_RECOMMENDATION_AGE_DAYS, MAX_RECOMMENDATION_PROBE_AGE_HOURS, hasFreshProbe, TRACKED_NUT_COUNT,
 } from '@/utils/reliabilityScore'
 import { auditComponent, AUDIT_MIN_SAMPLES, AUDIT_MAX_AGE_HOURS, AUDIT_NEUTRAL } from '@/utils/auditScore'
 import {
@@ -180,6 +180,18 @@ describe('cap and gate', () => {
     const first = (days: number) => new Date(NOW - days * DAY).toISOString()
     expect(isEligibleForRecommendation(first(M.recommendation.minAgeDays), NOW)).toBe(true)
     expect(isEligibleForRecommendation(first(M.recommendation.minAgeDays), NOW - 1)).toBe(false)
+  })
+
+  it('the probe-age gate equals the code constant, in both packages', () => {
+    expect(M.recommendation.maxProbeAgeHours).toBe(MAX_RECOMMENDATION_PROBE_AGE_HOURS)
+    expect(M.recommendation.maxProbeAgeHours).toBe(be.MAX_RECOMMENDATION_PROBE_AGE_HOURS)
+    const ago = (hours: number) => new Date(NOW - hours * 3_600_000).toISOString()
+    expect(hasFreshProbe(ago(M.recommendation.maxProbeAgeHours), NOW)).toBe(true)
+    expect(hasFreshProbe(ago(M.recommendation.maxProbeAgeHours), NOW + 1)).toBe(false)
+    expect(be.hasFreshProbe(ago(M.recommendation.maxProbeAgeHours), NOW)).toBe(true)
+    expect(be.hasFreshProbe(ago(M.recommendation.maxProbeAgeHours), NOW + 1)).toBe(false)
+    expect(hasFreshProbe(null, NOW)).toBe(false)
+    expect(hasFreshProbe('not a date', NOW)).toBe(false)
   })
 })
 

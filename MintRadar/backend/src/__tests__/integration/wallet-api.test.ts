@@ -234,6 +234,22 @@ describe('status, flags and fields', () => {
     expect(by['https://archived.example.com'].eligibleForRecommendation).toBe(false)
   })
 
+  it('a mint whose newest probe is older than 3 hours is not eligible, even though its stored status is online', async () => {
+    const hoursAgo = (h: number): string => new Date(Date.now() - h * 3_600_000).toISOString()
+    query.mockResolvedValue({
+      rows: [
+        row('https://fresh.example.com', { latest_checked_at: hoursAgo(2) }),
+        row('https://stale.example.com', { latest_checked_at: hoursAgo(4) }),
+      ],
+    })
+    const res = await list('?eligible=false&limit=200')
+    const by = Object.fromEntries(res.body.mints.map((m: { url: string }) => [m.url, m]))
+    expect(by['https://stale.example.com']).toMatchObject({ status: 'online', eligibleForRecommendation: false })
+    const all = await list('?limit=200')
+    const eligible = all.body.mints.filter((m: { eligibleForRecommendation: boolean }) => m.eligibleForRecommendation).map((m: { url: string }) => m.url)
+    expect(eligible).toEqual(['https://fresh.example.com'])
+  })
+
   // scoreStale (2026-10-21): derived from the status only. The score value is the stored one whatever the status.
   it('scoreStale is true for offline, degraded and archived and false for online, whatever the score', async () => {
     const res = await list('?includeTest=true&includeOffline=true&includeArchived=true&includeUnscored=true&limit=200')

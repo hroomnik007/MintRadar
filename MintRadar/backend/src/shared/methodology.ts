@@ -6,7 +6,7 @@
 // so the frontend copy src/utils/methodology.ts is byte-identical (code, comments aside);
 // src/__tests__/sharedModules.test.ts fails when they drift.
 
-export const METHODOLOGY_VERSION = 5
+export const METHODOLOGY_VERSION = 6
 
 export interface MethodologyChange {
   version: number
@@ -21,4 +21,5 @@ export const METHODOLOGY_CHANGES: readonly MethodologyChange[] = [
   { version: 3, date: '2026-10-09', summary: 'Version part follows one rule: outdated means two or more minor versions behind the newest stable release; zero or one behind scores full points.' },
   { version: 4, date: '2026-10-21', summary: 'NUT part: a NUT entry with "supported": false in /v1/info no longer counts as support for the NUT component; a NUT counts when the mint lists it and does not mark it as not supported.' },
   { version: 5, date: '2026-10-27', summary: 'NUT part: a NUT the mint has switched off (NUT-04 minting or NUT-05 melting with "disabled": true in /v1/info) no longer counts for the NUT component.' },
+  { version: 6, date: '2026-10-28', summary: 'Recommendation gate: a mint is eligible only if its newest probe is at most 3 hours old; the score formula is unchanged.' },
 ]

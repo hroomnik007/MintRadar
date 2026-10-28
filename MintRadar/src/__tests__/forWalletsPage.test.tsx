@@ -116,6 +116,7 @@ describe('mint object: the field table equals the real mapper', () => {
     expect(by('scoreCappedNew')).toContain(`younger than ${METHODOLOGY_PAGE.newMint.capDays} days`)
     expect(by('scoreCappedNew')).toContain(`capped at ${METHODOLOGY_PAGE.newMint.capPoints}`)
     expect(by('eligibleForRecommendation')).toContain(`at least ${METHODOLOGY_PAGE.recommendation.minAgeDays} days ago`)
+    expect(by('eligibleForRecommendation')).toContain(`at most ${METHODOLOGY_PAGE.recommendation.maxProbeAgeHours} hours old`)
     expect(by('outdated')).toContain('two or more minor versions')
     expect(by('audit')).toContain(`fewer than ${METHODOLOGY_PAGE.audit.minSwaps} swaps`)
     expect(by('audit')).toContain(`older than ${METHODOLOGY_PAGE.audit.maxAgeHours} hours`)

@@ -37,6 +37,8 @@ function mintRow(overrides: Record<string, unknown> = {}) {
     discovered_at: daysAgo(365),
     online: true,
     latency_ms: 100,
+    // Newest probe: just now (the "Most Reliable" list needs a fresh probe, hasFreshProbe)
+    checked_at: new Date().toISOString(),
     ...overrides,
   }
 }
@@ -219,5 +221,32 @@ describe('GET /api/stats', () => {
     expect(res.status).toBe(500)
     expect(res.body).toEqual({ error: 'Internal server error' })
     expect(JSON.stringify(res.body)).not.toContain('pool exhausted')
+  })
+  it('keeps an offline mint out of top5ByReliabilityScore even with a stored top score', async () => {
+    query
+      .mockResolvedValueOnce({
+        rows: [
+          mintRow({ url: 'https://up.example', last_reliability_score: 70 }),
+          mintRow({ url: 'https://down.example', last_reliability_score: 99, online: false }),
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ avg_latency: 150 }] })
+    const res = await request(app).get('/api/stats')
+    expect(res.body.top5ByReliabilityScore.map((m: { url: string }) => m.url)).toEqual(['https://up.example'])
+  })
+
+  it('keeps an "online" mint whose newest probe is older than 3 hours out of top5ByReliabilityScore', async () => {
+    const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString()
+    query
+      .mockResolvedValueOnce({
+        rows: [
+          mintRow({ url: 'https://fresh.example', last_reliability_score: 70, checked_at: hoursAgo(1) }),
+          mintRow({ url: 'https://stale.example', last_reliability_score: 99, checked_at: hoursAgo(5) }),
+          mintRow({ url: 'https://never.example', last_reliability_score: 98, checked_at: null }),
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ avg_latency: 150 }] })
+    const res = await request(app).get('/api/stats')
+    expect(res.body.top5ByReliabilityScore.map((m: { url: string }) => m.url)).toEqual(['https://fresh.example'])
   })
 })

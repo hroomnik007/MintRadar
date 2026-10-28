@@ -133,7 +133,7 @@ Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` l
 | `isTest` | boolean | On MintRadar's manual test-mint list. Test mints are never recommended. |
 | `audit` | object \| null | cashu.info's 7-day window: `swaps7d` (all swaps), `attributedFailures` (failures cashu.info attributes to this mint, never more than `swaps7d`), `fetchedAt` (ISO 8601). `null` when no data is stored. Fewer than 10 swaps or data older than 168 hours scores neutral in the Reliability Score. |
 | `reviews` | object | Community Rating, same definitions as the website: `count` (counted NIP-87 reviews), `ratedCount` (how many carry a rating; always an integer, `0` only when no counted review carries one), `avg` (average rating over those, one decimal, `null` when none), `operatorCount` (reviews from a key that is both listed as the mint's Nostr contact and the author of its NIP-87 announcement; they are left out of the other three). |
-| `eligibleForRecommendation` | boolean | `true` when the mint is online, has a score, is not a test mint and was first seen at least 14 days ago. |
+| `eligibleForRecommendation` | boolean | `true` when the mint is online, has a score, is not a test mint, was first seen at least 14 days ago and its newest probe (`lastCheckedAt`) is at most 3 hours old. |
 | `pubkey` | string \| null | **Only with `include=facts`; always on the single-mint endpoint.** The mint's public NUT-06 key as MintRadar last stored it (66 hex characters); `null` when none is stored. Public data the mint publishes itself. (Added 2026-10-20.) |
 | `firstSeenAt` | string, ISO 8601 UTC \| null | **Only with `include=facts`; always on the single-mint endpoint.** When MintRadar first saw the mint; `eligibleForRecommendation` counts from this date. |
 | `lastOnlineAt` | string, ISO 8601 UTC \| null | **Only with `include=facts`; always on the single-mint endpoint.** Time of the latest successful probe; `null` when the mint never answered. |
@@ -232,6 +232,7 @@ Every unknown path below `/api/v1/` is a JSON `404` in this envelope (`/api/v1/f
 | 3 | 2026-10-09 | Version part follows one rule: outdated means two or more minor versions behind the newest stable release; zero or one behind scores full points. |
 | 4 | 2026-10-21 | NUT part: a NUT entry with "supported": false in /v1/info no longer counts as support for the NUT component; a NUT counts when the mint lists it and does not mark it as not supported. |
 | 5 | 2026-10-27 | NUT part: a NUT the mint has switched off (NUT-04 minting or NUT-05 melting with "disabled": true in /v1/info) no longer counts for the NUT component. |
+| 6 | 2026-10-28 | Recommendation gate: a mint is eligible only if its newest probe is at most 3 hours old; the score formula is unchanged. |
 
 - **Signed health assertions on Nostr** (kind 30385, early version, published under the key `health@mintradar.org`) carry the same `score` as `rank` and the same `methodology` integer. They are not part of this HTTP API; see [mintradar.org/for-wallets](https://mintradar.org/for-wallets#signed-health-assertions) and [nostr-health-assertions.md](nostr-health-assertions.md).
 
@@ -708,7 +709,7 @@ The error shape of the wallet routes (`{ "error": { "code", "message" } }`) is d
 
 A short list of currently healthy mints for a wallet's default or suggested list. For a full, stable view of every mint use [`/api/v1/wallets/mints`](#api-for-wallets-v1); this route keeps the shape it was introduced with on 2026-10-10 (new fields may be added). Built on the same data and the same filter function as the wallet API; public with `Access-Control-Allow-Origin: *`, `Cache-Control: public, max-age=300` and an `ETag` (poll at most every 5 minutes); it uses the same per-IP limit as the wallet API, **300 requests / minute / IP** (one counter shared with `/api/v1/wallets/*`, same `X-RateLimit-*` headers and `Retry-After`; see "Rate limits").
 
-**Only mints with `eligibleForRecommendation` are returned** (since 2026-10-12): online, scored, not on the manual test-mint list, not archived, and first seen at least 14 days ago. Test mints and mints under 14 days never appear.
+**Only mints with `eligibleForRecommendation` are returned** (since 2026-10-12): online, scored, not on the manual test-mint list, not archived, first seen at least 14 days ago, and probed within the last 3 hours (since 2026-10-28; methodology version 6). Test mints, mints under 14 days and mints without a recent probe never appear.
 
 **Query parameters**
 

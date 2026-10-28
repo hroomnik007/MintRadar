@@ -483,7 +483,7 @@ components:
         reviews: { $ref: '#/components/schemas/Reviews' }
         eligibleForRecommendation:
           type: boolean
-          description: True when the mint is online, has a score, is not a test mint and was first seen at least 14 days ago.
+          description: True when the mint is online, has a score, is not a test mint, was first seen at least 14 days ago and its newest probe is at most 3 hours old.
         pubkey:
           type: [string, 'null']
           description: Only with `include=facts` (always on the single-mint endpoint). The mint's public NUT-06 key as MintRadar last stored it (66 hex characters); null when none is stored. Public data the mint publishes itself.

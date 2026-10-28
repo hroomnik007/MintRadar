@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import type { Request, Response } from 'express'
-import { NEW_MINT_MAX_DAYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
+import { NEW_MINT_MAX_DAYS, isEligibleForRecommendation, hasFreshProbe } from './shared/reliabilityScore.js'
 import { classifyVersion, MAX_VERSION_LENGTH, type LatestVersion } from './shared/versionRule.js'
 import { METHODOLOGY_VERSION } from './shared/methodology.js'
 import { isNutDeclaredSupported, isNutDisabled } from './shared/nutSupport.js'
@@ -382,7 +382,8 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviews
         operatorCount: m.operatorReviewCount ?? 0,
       },
     eligibleForRecommendation:
-      isEligibleForRecommendation(m.discoveredAt, now) && !test && status === 'online' && score !== null,
+      isEligibleForRecommendation(m.discoveredAt, now) && !test && status === 'online' && score !== null &&
+      hasFreshProbe(m.lastCheckedAt, now),
     pubkey: typeof m.pubkey === 'string' && PUBKEY_RE.test(m.pubkey) ? m.pubkey.toLowerCase() : null,
     firstSeenAt: toIso(m.discoveredAt),
     lastOnlineAt: toIso(m.lastOnlineAt),

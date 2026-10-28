@@ -10,7 +10,7 @@ import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } fr
 import { getLatestVersionsMap } from './versionCatalog.js'
 import type { LatestVersions } from './shared/versionRule.js'
 import { METHODOLOGY_CHANGES } from './shared/methodology.js'
-import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation } from './shared/reliabilityScore.js'
+import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation, hasFreshProbe } from './shared/reliabilityScore.js'
 import { listMintChanges, pendingOf, ROUTE_CHANGES_MAX, WALLET_CHANGES_PER_MINT, type PendingSource } from './mintChanges.js'
 import { getAuditCzForMint, getAuditCzSyncStatus, auditCzSourceStatus, clampAuditCzLimit } from './auditCz.js'
 import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
@@ -1313,10 +1313,10 @@ async function computeStats(): Promise<object> {
   const [mintsResult, latencyResult] = await Promise.all([
     pool.query(`
       SELECT m.url, m.name, m.last_reliability_score, m.nuts_limits, m.discovered_at,
-        latest.online AS online, latest.latency_ms
+        latest.online AS online, latest.latency_ms, latest.checked_at
       FROM mints m
       LEFT JOIN LATERAL (
-        SELECT online, latency_ms FROM mint_history
+        SELECT online, latency_ms, checked_at FROM mint_history
         WHERE url = m.url ORDER BY checked_at DESC, id DESC LIMIT 1
       ) latest ON true
     `),
@@ -1330,7 +1330,7 @@ async function computeStats(): Promise<object> {
         AND latency_ms < 10000
     `),
   ])
-  type MintRow = { url: string; name: string | null; last_reliability_score: number | null; nuts_limits: Record<string, unknown> | null; discovered_at: string | Date | null; online: boolean | null; latency_ms: number | null }
+  type MintRow = { url: string; name: string | null; last_reliability_score: number | null; nuts_limits: Record<string, unknown> | null; discovered_at: string | Date | null; online: boolean | null; latency_ms: number | null; checked_at: string | Date | null }
   const rows = mintsResult.rows as MintRow[]
   const online = rows.filter(r => r.online === true)
   const offline = rows.filter(r => r.online === false)
@@ -1358,6 +1358,9 @@ async function computeStats(): Promise<object> {
       : 0,
   }))
   const top5 = [...rows]
+    // Recommended only while online (the newest probe succeeded) AND that probe is recent (hasFreshProbe): the
+    // stored score of an offline or long-unprobed mint would otherwise keep it in the "Most Reliable" list.
+    .filter(r => r.online === true && hasFreshProbe(r.checked_at))
     .filter(r => r.last_reliability_score != null)
     // Known dev/test-only mints are excluded from this "best of" list —
     // still fully visible/probed elsewhere, just not proactively recommended.

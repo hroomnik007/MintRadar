@@ -26,6 +26,7 @@ let probeMintToDb: typeof import('../prober.js')['probeMintToDb']
 let LIMIT: number
 
 const historyInserts = () => query.mock.calls.filter(c => /INSERT INTO mint_history/.test(String(c[0]))).length
+const historyOnline = () => query.mock.calls.filter(c => /INSERT INTO mint_history/.test(String(c[0]))).map(c => (c[1] as unknown[])[1])
 const reapClockStarts = () => query.mock.calls.filter(c => /SET invalid_since = COALESCE/.test(String(c[0]))).length
 
 beforeEach(async () => {
@@ -63,5 +64,17 @@ describe('probe of a mint that answers 429', () => {
     safeFetch.mockResolvedValue({ ok: false, status: 429 })
     for (let i = 0; i < LIMIT - 1; i++) await probeMintToDb(MINT)
     expect(historyInserts()).toBe(before)
+  })
+})
+
+describe('probe of a mint whose host resolves into a blocked range', () => {
+  it('records a failed probe instead of returning silently (the old "online" row must not stay frozen)', async () => {
+    const lookup = (await import('dns/promises')).lookup as unknown as ReturnType<typeof vi.fn>
+    lookup.mockReset().mockResolvedValue([{ address: '10.0.0.5', family: 4 }])
+    await probeMintToDb(MINT)
+    expect(historyInserts()).toBe(1)
+    expect(historyOnline()).toEqual([false])
+    expect(safeFetch).not.toHaveBeenCalled() // still no request to the blocked address
+    expect(reapClockStarts()).toBe(0)
   })
 })

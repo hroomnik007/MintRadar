@@ -208,7 +208,8 @@ export default function Methodology() {
             <li>
               <strong>Recommendations need {M.recommendation.minAgeDays} days.</strong> A mint is eligible to appear in a
               recommendation (the top lists and the wallet API&apos;s <code>eligibleForRecommendation</code>) only when it
-              was first seen at least {M.recommendation.minAgeDays} days ago, is online and has a score.
+              was first seen at least {M.recommendation.minAgeDays} days ago, is online, has a score and was probed within the last{' '}
+              {M.recommendation.maxProbeAgeHours} hours.
             </li>
             <li><strong>Test mints are never recommended.</strong> Mints on MintRadar&apos;s manual test-mint list are marked and excluded.</li>
           </ul>
