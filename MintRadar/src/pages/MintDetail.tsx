@@ -1974,6 +1974,10 @@ function MintDetailContent({ url }: { url: string }) {
         const isNutDisabled = disabledNuts.includes(selectedNut)
         // How many online mints offer this NUT: the same client list and the same rule as the Stats NUT coverage modal.
         const offerCounts = knownMintsData ? nutOfferBreakdown(knownMintsData, nutKey) : null
+        // Not supported: say which of the two plain facts it is (absent vs. listed with `supported: false`); unknown while no data.
+        const declaredEntry = nutsDeclared?.[nutKey]
+        const stateFact = supported || isNutDisabled || nutsDeclared == null ? null
+          : declaredEntry != null ? 'Listed, marked unsupported by this mint' : 'Not listed by this mint'
         return (
           <div className="nm-overlay" onClick={() => setSelectedNut(null)}>
             <div
@@ -1993,6 +1997,7 @@ function MintDetailContent({ url }: { url: string }) {
               </div>
 
               <NutDescription nut={selectedNut} />
+              {stateFact && <p className="nm-text nm-fact">{stateFact}</p>}
               {offerCounts && offerCounts.online > 0 && (
                 <p className="nm-text nm-fact">Offered by {offerCounts.offering.length} of {offerCounts.online} online mint{offerCounts.online !== 1 ? 's' : ''}.</p>
               )}
