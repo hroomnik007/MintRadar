@@ -26,6 +26,8 @@ test.describe('Stats NUT coverage modal', () => {
     await expect(modal(page)).toBeVisible()
     await expect(modal(page).locator('.nut-modal-title')).toContainText('NUT-09')
 
+    await expect(modal(page).locator('.nut-modal-header')).toContainText('3 of 3')
+
     // supporting mints, sorted by Reliability desc: Alpha 92, Delta 78, Bravo 55
     const rows = modal(page).locator('.nut-modal-row')
     await expect(rows).toHaveCount(3)
@@ -35,8 +37,21 @@ test.describe('Stats NUT coverage modal', () => {
     await expect(modal(page).getByText('Charlie Mint')).toHaveCount(0)
 
     // footer online/offline + sort note
-    await expect(modal(page).locator('.nut-modal-footer')).toHaveText(/^3 online\s*Sorted by/)
+    await expect(modal(page).locator('.nut-modal-footer')).toHaveText(/^3 of 3 online mints offer this NUT\s*Sorted by/)
     await expect(modal(page).locator('.nut-modal-footer')).toContainText('Sorted by Reliability Score')
+  })
+
+  test('the denominator is every online mint, including one without NUT data', async ({ page }) => {
+    const echo = { ...MOCK_KNOWN_MINTS[0]!, url: 'https://echo.mint.example', name: 'Echo Mint', nutsLimits: null }
+    await page.route('**/api/mints/known', r => r.fulfill({ json: [...MOCK_KNOWN_MINTS, echo] }))
+    await page.goto('/stats')
+    await page.locator('.stats-nut-row', { hasText: 'NUT-09' }).click()
+
+    await expect(modal(page).locator('.nut-modal-header')).toContainText('3 of 4')
+    await expect(modal(page).locator('.nut-modal-footer')).toContainText('3 of 4 online mints offer this NUT')
+    await expect(modal(page).locator('.nut-modal-footer')).toContainText('Sorted by Reliability Score')
+    await expect(modal(page).locator('.nut-modal-note')).toContainText('Offline mints are not counted.')
+    await expect(modal(page).locator('.nut-modal-row')).toHaveCount(3)
   })
 
   test('no leftover age badges and no "Show on Dashboard" button in the modal', async ({ page }) => {

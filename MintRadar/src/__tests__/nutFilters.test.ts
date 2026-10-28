@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { passesWizardNutChecks, hasRequiredNuts, onlineMintsSupportingNut, WIZARD_NUT_CHECKS } from '@/utils/nutFilters'
+import { passesWizardNutChecks, hasRequiredNuts, onlineMintsSupportingNut, nutOfferBreakdown, WIZARD_NUT_CHECKS } from '@/utils/nutFilters'
 import { NUT_SUPPORT_CASES } from './nutSupportCases'
 
 // Tools (Best Mint wizard), Stats (NUT coverage modal) and the Dashboard ?nuts= filter all read the
@@ -49,5 +49,44 @@ describe('nutFilters', () => {
     expect(hasRequiredNuts(lek, ['7'])).toBe(true)
     expect(hasRequiredNuts({ '4': { methods: [], disabled: false } }, ['4'])).toBe(true)
     expect(onlineMintsSupportingNut([{ online: true, nutsLimits: lek }], '5')).toEqual([])
+  })
+
+  describe('nutOfferBreakdown (the "N of M" counts of the Stats and Mint Detail NUT modals)', () => {
+    const mints = [
+      { url: 'a', online: true, nutsLimits: { '9': {} } },
+      { url: 'b', online: true, nutsLimits: { '9': { supported: false } } },
+      { url: 'c', online: false, nutsLimits: { '9': {} } },
+      { url: 'd', online: true, nutsLimits: null },
+      { url: 'e', online: true, nutsLimits: { '7': {} } },
+      { url: 'f', online: true },
+      { url: 'g', online: true, nutsLimits: { '9': { methods: [], disabled: true } } },
+    ]
+
+    it('counts only online mints; offering + lacking + noData is the denominator', () => {
+      const r = nutOfferBreakdown(mints, '9')
+      expect(r.online).toBe(6)
+      expect(r.offering.map(m => m.url)).toEqual(['a'])
+      expect(r.lacking.map(m => m.url)).toEqual(['b', 'e', 'g'])
+      expect(r.noData).toBe(2)
+      expect(r.offering.length + r.lacking.length + r.noData).toBe(r.online)
+    })
+
+    it('a mint without nuts data is neither counted as offering nor listed as lacking', () => {
+      const r = nutOfferBreakdown(mints, '9')
+      expect(r.offering.map(m => m.url)).not.toContain('d')
+      expect(r.offering.map(m => m.url)).not.toContain('f')
+      expect(r.lacking.map(m => m.url)).not.toContain('d')
+      expect(r.lacking.map(m => m.url)).not.toContain('f')
+    })
+
+    it('offering is exactly what onlineMintsSupportingNut returns (one rule for both modals)', () => {
+      for (const key of ['4', '7', '9']) {
+        expect(nutOfferBreakdown(mints, key).offering).toEqual(onlineMintsSupportingNut(mints, key))
+      }
+    })
+
+    it('an empty list is 0 of 0', () => {
+      expect(nutOfferBreakdown([], '9')).toEqual({ online: 0, offering: [], lacking: [], noData: 0 })
+    })
   })
 })

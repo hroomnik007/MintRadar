@@ -13,7 +13,7 @@ import { ReliabilityMoversPanel } from '@/components/stats/ReliabilityMoversPane
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { trackedCount, onlineCount as countOnline } from '@/utils/mintCounts'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
-import { onlineMintsSupportingNut } from '@/utils/nutFilters'
+import { nutOfferBreakdown } from '@/utils/nutFilters'
 import { NutDescription, NutSpecLink } from '@/components/NutSpec'
 import { reliabilityColor, reliabilityScoreInfo, reliabilityDonutArc, displayName, computeDuplicateMintNames, mintAgeBadge } from '@/utils/mintFormatting'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
@@ -359,9 +359,12 @@ function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
 // panel. Same overlay/row/footer vocabulary as SoftwareModal / CityMintsModal;
 // a plain mint list (displayName link + Reliability %), no age badges, no
 // "Show on Dashboard" — the row is the only action and it goes to Mint Detail.
-function NutMintsModal({ nut, mints, onClose, duplicateDisplayNames }: {
+function NutMintsModal({ nut, mints, onlineTotal, onClose, duplicateDisplayNames }: {
   nut: string
+  /** Online mints that offer the NUT. */
   mints: KnownMint[]
+  /** All online mints (the denominator of "N of M"). */
+  onlineTotal: number
   onClose: () => void
   duplicateDisplayNames?: ReadonlySet<string> | undefined
 }) {
@@ -381,7 +384,6 @@ function NutMintsModal({ nut, mints, onClose, duplicateDisplayNames }: {
 
   const meta = NUT_META[nut]
   const displayed = showAll ? sorted : sorted.slice(0, 10)
-  const onlineCount = mints.filter(m => m.online === true).length
 
   return (
     <div className="nut-modal-overlay" onClick={onClose}>
@@ -390,7 +392,7 @@ function NutMintsModal({ nut, mints, onClose, duplicateDisplayNames }: {
         <div className="nut-modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <span className="nut-modal-title">{nut}{meta ? ` · ${meta.short}` : ''}</span>
-            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{mints.length} mint{mints.length !== 1 ? 's' : ''}</span>
+            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{mints.length} of {onlineTotal}</span>
           </div>
           <NutDescription nut={nut} />
           <NutSpecLink nut={nut} />
@@ -428,7 +430,7 @@ function NutMintsModal({ nut, mints, onClose, duplicateDisplayNames }: {
           {sorted.length === 0 && <div className="nut-modal-empty">No mints</div>}
         </div>
         <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span>{onlineCount} online</span>
+          <span>{mints.length} of {onlineTotal} online mints offer this NUT</span>
           <span>Sorted by Reliability Score</span>
         </div>
         <div className="nut-modal-note">Offline mints are not counted.</div>
@@ -692,15 +694,13 @@ export default function Stats() {
     return knownMintsData.filter(m => m.online === true && normalizeGeoLoc(m.serverLocation) === cityModal)
   }, [cityModal, knownMintsData])
 
-  const nutModalMints = useMemo(() => {
-    if (!nutModal || !knownMintsData) return []
+  const nutModalBreakdown = useMemo(() => {
+    if (!nutModal || !knownMintsData) return null
     // NUT support = the mint's /v1/info declares the NUT and does not mark it
-    // `supported: false` (onlineMintsSupportingNut — the same rule as /api/stats nutAdoption,
-    // which this modal's count comes from, and the Dashboard ?nuts= filter). nutModal is "NUT-09"; the nuts object is
-    // keyed by the unpadded number.
-    const key = String(parseInt(nutModal.slice(4), 10))
+    // `supported: false` (nutOfferBreakdown -> mintOffersNut: the same rule as /api/stats nutAdoption and the
+    // Dashboard ?nuts= filter). nutModal is "NUT-09"; the nuts object is keyed by the unpadded number.
     // Online mints only: the NUT coverage card's count (/api/stats nutAdoption) is over online mints.
-    return onlineMintsSupportingNut(knownMintsData, key)
+    return nutOfferBreakdown(knownMintsData, String(parseInt(nutModal.slice(4), 10)))
   }, [nutModal, knownMintsData])
 
   const { data: trendResponse, isPending: trendPending, isError: trendError, isPlaceholderData: trendPlaceholder, refetch: refetchTrend } = useReliabilityTrend(trendDays)
@@ -1272,7 +1272,8 @@ export default function Stats() {
       {nutModal !== null && (
         <NutMintsModal
           nut={nutModal}
-          mints={nutModalMints}
+          mints={nutModalBreakdown?.offering ?? []}
+          onlineTotal={nutModalBreakdown?.online ?? 0}
           onClose={() => setNutModal(null)}
           duplicateDisplayNames={duplicateDisplayNames}
         />

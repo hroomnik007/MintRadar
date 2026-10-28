@@ -34,3 +34,15 @@ export function hasRequiredNuts(nuts: Nuts, required: readonly string[]): boolea
 export function onlineMintsSupportingNut<T extends { online?: boolean | null; nutsLimits?: Nuts }>(mints: readonly T[], key: string): T[] {
   return mints.filter(m => m.online === true && mintOffersNut(m.nutsLimits, key))
 }
+
+/**
+ * Where every online mint stands for NUT `key`: `offering` (offers it), `lacking` (has NUT data and does not offer
+ * it) and `noData` (online but no `nuts` data stored yet: neither offering nor lacking). `online` is the denominator,
+ * so offering + lacking + noData === online. The Stats NUT coverage modal and the Mint Detail NUT modal both read it.
+ */
+export function nutOfferBreakdown<T extends { online?: boolean | null; nutsLimits?: Nuts }>(mints: readonly T[], key: string): { online: number; offering: T[]; lacking: T[]; noData: number } {
+  const online = mints.filter(m => m.online === true)
+  const offering = onlineMintsSupportingNut(online, key)
+  const lacking = online.filter(m => m.nutsLimits != null && !mintOffersNut(m.nutsLimits, key))
+  return { online: online.length, offering, lacking, noData: online.filter(m => m.nutsLimits == null).length }
+}
