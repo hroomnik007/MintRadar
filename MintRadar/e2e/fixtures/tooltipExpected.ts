@@ -36,7 +36,6 @@ export const EXPECTED_TOOLTIPS: Record<string, Cell[]> = {
   about: same([0, 0]),
   methodology: same([0, 0]),
   'for-wallets': same([0, 0]),
-  nuts: same([0, 0]),
   'mint-alpha-overview': [[3, 3], [3, 3], [8, 8], [8, 8], [8, 8]],
   'mint-alpha-history': [[2, 2], [2, 2], [7, 7], [7, 7], [7, 7]],
   'mint-alpha-nuts': [[4, 4], [4, 4], [9, 8], [9, 8], [9, 8]],

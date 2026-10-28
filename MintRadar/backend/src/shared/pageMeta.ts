@@ -67,10 +67,6 @@ export const ROUTE_META_BY_PATH = {
     title: 'About and privacy | MintRadar',
     description: 'What MintRadar is, how it measures Cashu mints, what data it keeps about you and the rules of using it.',
   },
-  '/nuts': {
-    title: 'Cashu NUT Explorer - MintRadar',
-    description: 'Cashu protocol NUT adoption across online mints: which NUT specifications each tracked mint supports.',
-  },
   '/watchlist': {
     title: 'My Watchlist - MintRadar',
     description: 'Track your favorite Cashu mints and optionally get a Nostr DM when one goes offline or comes back online.',

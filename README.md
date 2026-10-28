@@ -74,7 +74,7 @@ Interactive breakdown modal on each mint — hover any row for a tooltip explain
 - Network Health Index (one score for the whole network, with its components)
 - Top mints by Reliability Score and by uptime
 - Software in use across known mints
-- NUT coverage across the network, and the **NUT Explorer** ([mintradar.org/nuts](https://mintradar.org/nuts)): how many online mints support each NUT, and which ones
+- NUT coverage across the network (on [mintradar.org/stats](https://mintradar.org/stats)): how many online mints support each NUT, and which ones
 - Geographic distribution of the mints' servers
 - Reliability movers — recent risers and fallers — and a Reliability Score trend chart
 

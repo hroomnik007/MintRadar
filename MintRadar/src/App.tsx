@@ -9,7 +9,6 @@ import Dashboard from '@/pages/Dashboard'
 // eager Watchlist / MintNaddr imports used to put them, so the bundled CSS order is unchanged
 // (docs/claude/deploy-and-infra.md, "Code splitting & bundle layout").
 import '@/pages/Watchlist.css'
-import NutExplorer from '@/pages/NutExplorer'
 import '@/pages/MintDetail.css'
 import Learn from '@/pages/Learn'
 import LearnModule from '@/pages/LearnModule'
@@ -57,7 +56,6 @@ export const router = createBrowserRouter([
       { path: 'wallets', element: <Wallets /> },
       { path: 'learn', element: <Learn /> },
       { path: 'learn/:moduleId', element: <LearnModule /> },
-      { path: 'nuts', element: <NutExplorer /> },
       { path: 'mint/nostr/:naddr', element: <Suspense fallback={viewportFallback}><MintNaddr /></Suspense> },
       { path: 'mint/:url', element: <Suspense fallback={viewportFallback}><MintDetail /></Suspense> },
       { path: '*', element: <NotFound /> },

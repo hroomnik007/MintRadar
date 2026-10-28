@@ -10,7 +10,7 @@ import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } fr
 import { getLatestVersionsMap } from './versionCatalog.js'
 import type { LatestVersions } from './shared/versionRule.js'
 import { METHODOLOGY_CHANGES } from './shared/methodology.js'
-import { splitVersionString, canonicalSoftwareName, TRACKED_NUT_KEYS, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation, hasFreshProbe } from './shared/reliabilityScore.js'
+import { splitVersionString, canonicalSoftwareName, MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation, hasFreshProbe } from './shared/reliabilityScore.js'
 import { listMintChanges, pendingOf, ROUTE_CHANGES_MAX, WALLET_CHANGES_PER_MINT, type PendingSource } from './mintChanges.js'
 import { getAuditCzForMint, getAuditCzSyncStatus, auditCzSourceStatus, clampAuditCzLimit } from './auditCz.js'
 import { seedKnownMints, startCron, getLastProbeCompletedAt } from './cron.js'
@@ -211,7 +211,7 @@ const readRateLimitStore = new Map<string, RateLimitEntry>()
 const READ_RATE_LIMIT_PATHS = new Set([
   '/api/mints/known', '/api/mints/history', '/api/mints/version-history', '/api/mints/outages', '/api/mints/changes',
   '/api/mints/nostr-reviews', '/api/mints/swaps', '/api/mints/audit-cz',
-  '/api/stats/reliability-trend', '/api/stats/reliability-movers', '/api/nuts',
+  '/api/stats/reliability-trend', '/api/stats/reliability-movers',
 ])
 // The server-side head of the SPA pages (spaHtml.ts, every non-/api path that reaches the backend) counts against
 // the read budget too: it is one page load, served from the cached snapshot.
@@ -1276,35 +1276,6 @@ app.get('/api/mints/recommend', (req: Request, res: Response): void => {
       () => recommendEnvelope(snap, { unit, minScore, limit, requiredNuts }))))
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/mints/recommend]', err)
-      res.status(500).json({ error: 'Internal server error' })
-    })
-})
-
-app.get('/api/nuts', (_req: Request, res: Response): void => {
-  pool.query(`
-    SELECT m.url, m.name, m.nuts_limits
-    FROM mints m
-    JOIN LATERAL (
-      SELECT online FROM mint_history
-      WHERE url = m.url ORDER BY checked_at DESC, id DESC LIMIT 1
-    ) latest ON true
-    WHERE latest.online = true AND m.nuts_limits IS NOT NULL
-  `)
-    .then(result => {
-      type Row = { url: string; name: string | null; nuts_limits: Record<string, unknown> }
-      const rows = result.rows as Row[]
-      const total = rows.length
-      const nuts = TRACKED_NUT_KEYS.map(key => ({
-        nut: `NUT-${key.padStart(2, '0')}`,
-        percent: total > 0
-          ? Math.round(rows.filter(r => isNutOffered(r.nuts_limits[key])).length / total * 100)
-          : 0,
-        mints: rows.filter(r => isNutOffered(r.nuts_limits[key])).map(r => r.url),
-      }))
-      res.json(nuts)
-    })
-    .catch((err: unknown) => {
-      if (IS_DEV) console.error('[/api/nuts]', err)
       res.status(500).json({ error: 'Internal server error' })
     })
 })

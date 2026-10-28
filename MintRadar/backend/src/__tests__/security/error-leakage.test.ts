@@ -76,7 +76,6 @@ function assertNoLeak(body: unknown, text: string): void {
 const GET_ENDPOINTS: { name: string; req: () => request.Test }[] = [
   { name: 'GET /api/mints/known', req: () => request(app).get('/api/mints/known') },
   { name: 'GET /api/stats', req: () => request(app).get('/api/stats') },
-  { name: 'GET /api/nuts', req: () => request(app).get('/api/nuts') },
   { name: 'GET /api/stats/reliability-trend', req: () => request(app).get('/api/stats/reliability-trend') },
   {
     name: 'GET /api/mints/history',

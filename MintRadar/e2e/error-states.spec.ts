@@ -163,12 +163,10 @@ test('Mint Detail: a slow successful list shows a quiet Loading… (not an error
   await expect(page.locator('.md-tabs')).toBeVisible({ timeout: 15_000 })
 })
 
-// The Stats page and the NUT Explorer own their data (/api/stats, /api/nuts). A failure there shows the same
+// The Stats page owns its data (/api/stats). A failure there shows the same
 // error state (fixed sentence + "Try again"), never a raw error text, and "Try again" recovers once the mock is healthy.
 const OWN_DATA_PAGES = [
   { id: 'Stats', path: '/stats', route: '**/api/stats', text: 'Could not load the statistics. Please try again.', ready: '.nhi-gauge-wrap', ok: MOCK_STATS },
-  { id: 'NUT Explorer', path: '/nuts', route: '**/api/nuts', text: 'Could not load the NUT data. Please try again.', ready: '.nut-explorer-card',
-    ok: [{ nut: 'NUT-04', percent: 90, count: 3, mints: [MOCK_MINTS[0]!.url] }] },
 ]
 
 for (const pg of OWN_DATA_PAGES) {

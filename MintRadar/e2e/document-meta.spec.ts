@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_MINTS } from './fixtures/mocks'
 import { PAGE_META } from '../src/utils/pageMeta'
-import { SITE_DESCRIPTION, ROUTE_META_BY_PATH } from '../src/utils/pageMeta'
+import { SITE_DESCRIPTION } from '../src/utils/pageMeta'
 
 // One hook (useDocumentMeta) sets title, description, canonical and the social tags per route after load.
 // Mocks only. The static head of index.html is replaced on every route, including the root; the not-found
@@ -22,7 +22,6 @@ const ROUTES: Expected[] = [
   { path: '/tools', canonical: `${ORIGIN}/tools`, title: 'Cashu Mint Tools - Token Inspector & Best Mint Finder | MintRadar', description: 'Inspect a Cashu token before redeeming it, or find the best Cashu mint for you with the Best Mint wizard.' },
   { path: '/wallets', canonical: `${ORIGIN}/wallets`, title: 'Cashu Wallets - MintRadar', description: 'Wallets that work with Cashu mints, plus how to run your own mint. A plain list, no ranking or reviews.' },
   { path: '/watchlist', canonical: `${ORIGIN}/watchlist`, title: 'My Watchlist - MintRadar', description: 'Track your favorite Cashu mints and optionally get a Nostr DM when one goes offline or comes back online.' },
-  { path: '/nuts', canonical: `${ORIGIN}/nuts`, title: ROUTE_META_BY_PATH['/nuts'].title, description: ROUTE_META_BY_PATH['/nuts'].description },
   { path: '/methodology', canonical: `${ORIGIN}/methodology`, title: PAGE_META['/methodology'].title, description: PAGE_META['/methodology'].description },
   { path: '/for-wallets', canonical: `${ORIGIN}/for-wallets`, title: PAGE_META['/for-wallets'].title, description: PAGE_META['/for-wallets'].description },
 ]

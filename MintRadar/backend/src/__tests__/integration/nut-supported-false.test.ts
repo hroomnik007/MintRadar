@@ -4,7 +4,7 @@ import type { Express } from 'express'
 
 // Methodology 4 (2026-10-21): a NUT entry with `supported: false` in /v1/info is NOT a supported NUT in every place the
 // backend decides "NUT supported" from the nuts object (shared/nutSupport.ts): the wallet API `nuts` field and `nuts=`
-// filter, `authRequired`, the deprecated /recommend route, /api/nuts, /api/stats and the probe preview. The score and
+// filter, `authRequired`, the deprecated /recommend route, /api/stats and the probe preview. The score and
 // the change log are covered in prober-nut-support.test.ts and mintChanges.test.ts.
 
 vi.mock('../../db.js', () => ({ pool: { query: vi.fn() }, initDb: vi.fn() }))
@@ -81,15 +81,7 @@ describe('wallet API', () => {
   })
 })
 
-describe('/api/nuts and /api/stats NUT coverage', () => {
-  it('/api/nuts: a supported:false entry is not in the coverage percent or the mint list', async () => {
-    const r = await request(app).get('/api/nuts')
-    const nut11 = r.body.find((n: { nut: string }) => n.nut === 'NUT-11')
-    expect(nut11).toEqual({ nut: 'NUT-11', percent: 50, mints: ['https://yes.example.com'] })
-    const nut07 = r.body.find((n: { nut: string }) => n.nut === 'NUT-07')
-    expect(nut07).toEqual({ nut: 'NUT-07', percent: 0, mints: [] })
-  })
-
+describe('/api/stats NUT coverage', () => {
   it('/api/stats nutAdoption: count and percent skip supported:false', async () => {
     const rows = ROWS.map(r => ({ url: r.url, name: r.name, last_reliability_score: 80, nuts_limits: r.nuts_limits, discovered_at: ago(365), online: true, latency_ms: 100 }))
     query.mockReset()

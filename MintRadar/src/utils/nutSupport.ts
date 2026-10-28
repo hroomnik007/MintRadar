@@ -1,6 +1,6 @@
 // Which NUT numbers a mint DECLARES AS SUPPORTED in its /v1/info `nuts` object. ONE rule for the whole app
 // (the NUT card grid, its modal, the "Nutzap-related features" group, and, since methodology 4, the backend's
-// Reliability Score NUT component, /api/nuts, /api/stats, the wallet API `nuts` field and `nuts=` filter, `authRequired`
+// Reliability Score NUT component, /api/stats, the wallet API `nuts` field and `nuts=` filter, `authRequired`
 // and the mint change log):
 //   - absent or null: not declared;
 //   - an entry that is an object with `supported: false` (e.g. "7": { "supported": false }) is NOT supported;

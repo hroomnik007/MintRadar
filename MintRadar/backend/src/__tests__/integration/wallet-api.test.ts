@@ -561,7 +561,7 @@ describe('CORS', () => {
     expect(res.headers['access-control-allow-headers']).toBe('Content-Type, If-None-Match')
   })
 
-  it.each(['/api', '/api/stats', '/api/mints/known', '/api/v1/mints/known', '/api/mints/history?url=https://a.example.com', '/api/mint/probe?url=https://a.example.com', '/api/nuts', '/sitemap.xml'])(
+  it.each(['/api', '/api/stats', '/api/mints/known', '/api/v1/mints/known', '/api/mints/history?url=https://a.example.com', '/api/mint/probe?url=https://a.example.com', '/sitemap.xml'])(
     'restricted GET %s with a foreign origin is a JSON 403', async (path) => {
       const res = await request(app).get(path).set('Origin', FOREIGN)
       expect(res.status).toBe(403)
@@ -749,7 +749,7 @@ describe('GET /api/mints/recommend', () => {
     const ip = '198.51.100.52'
     const get = () => request(app).get('/api/mints/recommendations').set('X-Forwarded-For', ip)
     expect((await get()).headers['x-ratelimit-limit']).toBe('60')
-    expect((await request(app).get('/api/nuts').set('X-Forwarded-For', ip)).headers['x-ratelimit-limit']).toBe('150')
+    expect((await request(app).get('/api/stats/reliability-movers').set('X-Forwarded-For', ip)).headers['x-ratelimit-limit']).toBe('150')
   })
 
   it('keeps the old error shape on a server error', async () => {

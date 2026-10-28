@@ -141,7 +141,7 @@ describe('resolveSpaHead: every route of src/App.tsx is served with 200', () => 
 
   it('finds the routes in App.tsx', () => {
     expect(paths).toEqual(expect.arrayContaining(['stats', 'learn/:moduleId', 'mint/:url', 'mint/nostr/:naddr']))
-    expect(paths.length).toBeGreaterThanOrEqual(12)
+    expect(paths.length).toBeGreaterThanOrEqual(11)
   })
 
   it.each(paths)('/%s', p => {
@@ -151,5 +151,11 @@ describe('resolveSpaHead: every route of src/App.tsx is served with 200', () => 
 
   it('the index route (/) is 200', () => {
     expect(resolveSpaHead('/', KNOWN).status).toBe(200)
+  })
+
+  it('/nuts (the removed NUT Explorer) is an unknown path: 404 like any other', () => {
+    expect(paths).not.toContain('nuts')
+    expect(resolveSpaHead('/nuts', KNOWN).status).toBe(404)
+    expect(resolveSpaHead('/nuts', KNOWN).status).toBe(resolveSpaHead('/this/does/not/exist', KNOWN).status)
   })
 })

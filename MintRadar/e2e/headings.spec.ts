@@ -18,7 +18,6 @@ const STATES: [string, string][] = [
   ['Learn module', '/learn/cashu-basics'],
   ['Learn module not found (number)', '/learn/99'],
   ['Learn module not found (slug)', '/learn/not-a-module'],
-  ['NUT explorer', '/nuts'],
   ['Mint Detail', `/mint/${ALPHA}`],
   ['Not a tracked mint', `/mint/${encodeURIComponent('https://nope.example')}`],
   ['Invalid mint URL', '/mint/%25E0'],

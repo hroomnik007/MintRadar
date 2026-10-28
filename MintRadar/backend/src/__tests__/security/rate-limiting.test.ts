@@ -168,7 +168,7 @@ describe('read-only bucket', () => {
   const READ_PATHS = [
     '/api/mints/known', '/api/mints/history', '/api/mints/version-history', '/api/mints/outages', '/api/mints/changes',
     '/api/mints/nostr-reviews', '/api/mints/swaps', '/api/mints/audit-cz',
-    '/api/stats/reliability-trend', '/api/stats/reliability-movers', '/api/nuts',
+    '/api/stats/reliability-trend', '/api/stats/reliability-movers',
   ]
   // A bad request is rejected by the handler (or answered from the empty mock) after the limiter, which is all these tests need.
   const get = (path: string, ip: string) => request(app).get(path).set('X-Forwarded-For', ip)

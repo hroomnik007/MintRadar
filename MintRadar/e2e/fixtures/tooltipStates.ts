@@ -82,7 +82,6 @@ export async function installTooltipMocks(page: Page, opts: { keysets?: unknown 
   await page.route('**/api/notifications/**', r => r.fulfill({ json: { success: true } }))
   await page.route('**/api/nip05/verify**', r => r.fulfill({ json: { verified: false } }))
   await page.route('**/api/mint/icon**', r => r.fulfill({ status: 204 }))
-  await page.route('**/api/nuts', r => r.fulfill({ json: ['4', '5', '7', '8', '9', '10', '11', '12', '14', '15', '17', '19', '20', '29'].map((n, i) => ({ nut: `NUT-${n.padStart(2, '0')}`, percent: 90 - i * 5, count: 9 - (i % 4), mints: [ALPHA, TEST_MINT] })) }))
   await page.route('**/api/mint/probe**', r => {
     const target = new URL(r.request().url()).searchParams.get('url') ?? ''
     const p = probePayload(target)
@@ -241,7 +240,6 @@ export const TOOLTIP_STATES: TooltipState[] = [
   page_('about', '/about'),
   page_('methodology', '/methodology'),
   page_('for-wallets', '/for-wallets'),
-  page_('nuts', '/nuts'),
   mint('alpha', ALPHA, 'overview'),
   mint('alpha', ALPHA, 'history'),
   mint('alpha', ALPHA, 'nuts'),
