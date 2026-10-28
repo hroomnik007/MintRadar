@@ -21,8 +21,8 @@ let n = 0
 const ev = (pubkey: string, kind: number, ip = '1.1.1.1', content = 'x') =>
   JSON.stringify({ type: 'new', event: { id: `e${n++}`, pubkey, kind, content, tags: [] }, sourceType: 'IP4', sourceInfo: ip })
 
-function run(lines: string[]): string[] {
-  const r = spawnSync('sh', [script], { input: lines.join('\n') + '\n', env: { ...process.env, RATE_DIR: rateDir }, encoding: 'utf8' })
+function run(lines: string[], env: Record<string, string> = {}): string[] {
+  const r = spawnSync('sh', [script], { input: lines.join('\n') + '\n', env: { ...process.env, RATE_DIR: rateDir, ...env }, encoding: 'utf8' })
   return r.stdout.trim().split('\n').map(l => (JSON.parse(l) as { action: string }).action)
 }
 
@@ -45,6 +45,26 @@ describe.skipIf(!hasJq)('deploy/strfry/writePolicy.sh', { timeout: 30_000 }, () 
     expect(out.slice(0, 120).every(a => a === 'accept')).toBe(true)
     expect(out.slice(120, 125).every(a => a === 'reject')).toBe(true)
     expect(out.slice(125)).toEqual(['accept', 'accept'])
+  })
+
+  it('counts an IPv6 client by its /64, so rotating the rest of the address does not help', () => {
+    const lines = Array.from({ length: 6 }, (_, i) => ev('dddd', 38000, `2001:db8:1:2:${i}:aaaa:bbbb:cccc`))
+    expect(run(lines, { OPEN_PER_IP_HOURLY: '3' })).toEqual(['accept', 'accept', 'accept', 'reject', 'reject', 'reject'])
+  })
+
+  it('a heavy source cannot use up the room of occasional writers (two-tier global limit)', () => {
+    const env = { OPEN_PER_IP_HOURLY: '100', OPEN_LIGHT_SOURCE_EVENTS: '2', OPEN_GLOBAL_HOURLY: '8', OPEN_GLOBAL_HARD_HOURLY: '12' }
+    const heavy = Array.from({ length: 12 }, () => ev('eeee', 38000, '5.5.5.5'))
+    const out = run([...heavy, ev('ffff', 38000, '6.6.6.6'), ev('ffff', 38000, '7.7.7.7')], env)
+    expect(out.slice(0, 8).every(a => a === 'accept')).toBe(true) // up to the soft total
+    expect(out.slice(8, 12).every(a => a === 'reject')).toBe(true) // the heavy source is stopped at the soft total
+    expect(out.slice(12)).toEqual(['accept', 'accept']) // new sources still get in, up to the hard ceiling
+  })
+
+  it('stops everyone at the hard ceiling', () => {
+    const env = { OPEN_GLOBAL_HOURLY: '2', OPEN_GLOBAL_HARD_HOURLY: '3', OPEN_LIGHT_SOURCE_EVENTS: '5' }
+    const out = run([1, 2, 3, 4, 5].map(i => ev('gggg', 38000, `9.9.9.${i}`)), env)
+    expect(out).toEqual(['accept', 'accept', 'accept', 'reject', 'reject'])
   })
 
   it('treats a hostile client address as data, not a path', () => {
