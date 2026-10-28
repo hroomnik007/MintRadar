@@ -21,52 +21,53 @@
 //   npx tsx src/scripts/publishLearnModules.ts --print    # dry run + full converted Markdown, for review
 //   npx tsx src/scripts/publishLearnModules.ts --publish  # actually publishes
 //
+// Options (see USAGE in learnPublishRunner.ts): --only=1,3,4 (module numbers), --relays=wss://a,wss://b (instead
+// of LONGFORM_RELAYS, nostrService.ts), --delay=N (seconds between articles, default 15), --retry-delay=N (default
+// 60), --no-retry. Every relay that does not accept an article is printed with its reason; after the last article
+// the failed relays get the SAME signed event once more. Exit code 1 if a relay still failed, 2 for a bad option.
+// Example, resend modules 1, 3 and 4 to relay.damus.io only:
+//   npx tsx src/scripts/publishLearnModules.ts --only=1,3,4 --relays=wss://relay.damus.io --publish
+//
 // Requires NOTIFICATION_SERVICE_NSEC in the environment (same identity used
 // for kind:0 service profile / DM notifications) — publishLongFormArticle()
 // throws if it isn't set.
 
-import { publishLongFormArticle } from '../nostrService.js'
+import { publishLongFormArticle, publishToRelays, LONGFORM_RELAYS } from '../nostrService.js'
 import { findModulesDir, parseAllModules } from './learnModuleMarkdown.js'
+import { parseArgs, runPublishLearn, UsageError, USAGE } from './learnPublishRunner.js'
 
 async function main(): Promise<void> {
-  const shouldPublish = process.argv.includes('--publish')
-  const shouldPrint = process.argv.includes('--print')
+  let args
+  try {
+    args = parseArgs(process.argv.slice(2))
+  } catch (err) {
+    if (err instanceof UsageError) {
+      console.error(`[publish-learn] ${err.message}`)
+      console.error(USAGE)
+      process.exit(2)
+    }
+    throw err
+  }
 
   const modulesDir = findModulesDir()
   const modules = parseAllModules(modulesDir)
-
   console.log(`[publish-learn] parsed ${modules.length} modules from ${modulesDir}`)
-  console.log(shouldPublish ? '[publish-learn] mode: LIVE — publishing to relays' : '[publish-learn] mode: DRY RUN (pass --publish to actually send)')
-  console.log('')
 
-  for (const mod of modules) {
-    const identifier = `mintradar-learn-module-${mod.order}`
-    console.log(`--- ${identifier} ---`)
-    console.log(`title: ${mod.title}`)
-    console.log(`summary: ${mod.summary}`)
-    console.log(`content: ${mod.content.length} chars`)
-    if (shouldPrint) {
-      console.log('')
-      console.log(mod.content)
-      console.log('')
-    }
-
-    if (!shouldPublish) continue
-
-    const { succeeded, failed } = await publishLongFormArticle({
-      identifier,
-      title: mod.title,
-      summary: mod.summary,
-      content: mod.content,
-    })
-    console.log(`published: ${succeeded} succeeded, ${failed} failed`)
-  }
-
-  console.log('')
-  console.log(shouldPublish ? '[publish-learn] done' : '[publish-learn] dry run complete — re-run with --publish to send')
+  const { stillFailed } = await runPublishLearn(args, modules, {
+    publishArticle: (params, relays) => publishLongFormArticle(params, relays),
+    republish: (relays, event) => publishToRelays(relays, event),
+    sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
+    log: line => console.log(line),
+    defaultRelays: LONGFORM_RELAYS,
+  })
+  if (Object.keys(stillFailed).length > 0) process.exitCode = 1
 }
 
 main().catch(err => {
+  if (err instanceof UsageError) {
+    console.error(`[publish-learn] ${err.message}`)
+    process.exit(2)
+  }
   console.error('[publish-learn] failed:', err)
   process.exit(1)
 })

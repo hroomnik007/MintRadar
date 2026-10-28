@@ -77,6 +77,11 @@ export const META_RELAYS = [
   'wss://nostr.cypherpunk.today',
 ]
 
+// Relays for NIP-23 long-form articles (kind:30023, publishLongFormArticle): META_RELAYS without
+// purplepag.es, which keeps only profile/relay-list kinds and failed every Learn article publish
+// (2026-10-28: none of the five modules was stored there). kind:0 and DMs keep their own lists.
+export const LONGFORM_RELAYS: readonly string[] = META_RELAYS.filter(url => url !== 'wss://purplepag.es')
+
 // Mirrors the frontend's NOTIFICATION_RELAYS (src/hooks/useWatchlistNotifications.ts)
 // — same no-workspace caveat as above. Used as the fallback/redundancy set unioned
 // with each subscriber's own stored relays when delivering a DM.
@@ -133,11 +138,26 @@ export function isNotificationServiceEnabled(): boolean {
 // timeout → destroy. Matches the existing backend pattern (discovery.ts),
 // not the frontend's long-lived backoff-patched singleton (pool.ts), which
 // solves a different problem.
-export async function publishToRelays(relays: string[], event: NostrEvent): Promise<{ succeeded: number; failed: number }> {
+/** One relay's answer to a publish: its URL, whether it accepted the event, and the relay's OK message or the
+ *  rejection / timeout / connection reason (one line, capped at RELAY_REASON_MAX_CHARS). */
+export interface RelayPublishResult { relay: string; ok: boolean; message: string }
+export interface RelayPublishSummary { succeeded: number; failed: number; results: RelayPublishResult[] }
+
+export const RELAY_REASON_MAX_CHARS = 160
+
+export function relayReason(value: unknown): string {
+  const raw = value instanceof Error ? (value.message || value.name) : typeof value === 'string' ? value : ''
+  const text = raw.replace(/\s+/g, ' ').trim()
+  return text.length > RELAY_REASON_MAX_CHARS ? `${text.slice(0, RELAY_REASON_MAX_CHARS - 1)}…` : text
+}
+
+// `succeeded` / `failed` are unchanged for the existing callers; `results` adds the per-relay outcome, in the
+// order of `relays`.
+export async function publishToRelays(relays: readonly string[], event: NostrEvent): Promise<RelayPublishSummary> {
   const nostrPool = new SimplePool()
   try {
-    const pubs = nostrPool.publish(relays, event)
-    const results = await Promise.allSettled(
+    const pubs = nostrPool.publish([...relays], event)
+    const settled = await Promise.allSettled(
       pubs.map(p =>
         Promise.race([
           p,
@@ -145,8 +165,13 @@ export async function publishToRelays(relays: string[], event: NostrEvent): Prom
         ])
       )
     )
-    const succeeded = results.filter(r => r.status === 'fulfilled').length
-    return { succeeded, failed: results.length - succeeded }
+    const results: RelayPublishResult[] = settled.map((r, i) => ({
+      relay: relays[i] ?? '',
+      ok: r.status === 'fulfilled',
+      message: r.status === 'fulfilled' ? relayReason(r.value) : (relayReason(r.reason) || 'unknown error'),
+    }))
+    const succeeded = results.filter(r => r.ok).length
+    return { succeeded, failed: results.length - succeeded, results }
   } finally {
     nostrPool.destroy()
   }
@@ -182,14 +207,20 @@ export async function publishServiceProfile(): Promise<void> {
 // Publishes a NIP-23 long-form article (kind:30023). `identifier` is the
 // event's `d` tag — publishing again with the same identifier replaces the
 // previous version on relays that honor replaceable events, so this is safe
-// to re-run for edits. Same relay set and short-lived-pool publish pattern
-// as publishServiceProfile.
-export async function publishLongFormArticle(params: {
-  identifier: string
-  title: string
-  content: string
-  summary?: string
-}): Promise<{ succeeded: number; failed: number }> {
+// to re-run for edits. Short-lived-pool publish pattern as
+// publishServiceProfile, to LONGFORM_RELAYS unless `relays` is given. Returns
+// the signed event too, so a caller can retry the failed relays with the same
+// event (publishToRelays) instead of signing a new version. The failed relays
+// and their reasons are in `results` (publishLearnModules.ts prints them).
+export async function publishLongFormArticle(
+  params: {
+    identifier: string
+    title: string
+    content: string
+    summary?: string
+  },
+  relays: readonly string[] = LONGFORM_RELAYS,
+): Promise<RelayPublishSummary & { event: NostrEvent }> {
   if (!serviceSecretKey) throw new Error('NOTIFICATION_SERVICE_NSEC not configured — cannot publish')
 
   const tags: string[][] = [
@@ -208,9 +239,9 @@ export async function publishLongFormArticle(params: {
     },
     serviceSecretKey
   )
-  const { succeeded, failed } = await publishToRelays(META_RELAYS, event)
-  console.log(`[nostr-service] published kind:30023 "${params.identifier}" (${succeeded} succeeded, ${failed} failed)`)
-  return { succeeded, failed }
+  const summary = await publishToRelays(relays, event)
+  console.log(`[nostr-service] published kind:30023 "${params.identifier}" (${summary.succeeded} succeeded, ${summary.failed} failed)`)
+  return { ...summary, event }
 }
 
 // ---------------------------------------------------------------------------

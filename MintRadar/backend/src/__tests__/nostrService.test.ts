@@ -572,3 +572,77 @@ describe('per-subscriber daily cap', () => {
     expect(sqlCalls(/GREATEST/)).toHaveLength(0) // nothing was reserved, nothing to give back
   })
 })
+
+describe('publishToRelays per-relay results', () => {
+  it('keeps succeeded/failed and adds each relay with its OK message or rejection reason', async () => {
+    const svc = await loadWithNsec(undefined)
+    publishMock.mockImplementation((relays: string[]) => relays.map((url: string) =>
+      url.includes('damus') ? Promise.reject(new Error('rate-limited: slow down\n there'))
+        : url.includes('purple') ? Promise.reject('connection failure: Error: 403')
+          : Promise.resolve('')))
+    const event = { id: 'x' } as unknown as NostrEvent
+    const out = await svc.publishToRelays(['wss://relay.damus.io', 'wss://nos.lol', 'wss://purplepag.es'], event)
+    expect(out.succeeded).toBe(1)
+    expect(out.failed).toBe(2)
+    expect(out.results).toEqual([
+      { relay: 'wss://relay.damus.io', ok: false, message: 'rate-limited: slow down there' },
+      { relay: 'wss://nos.lol', ok: true, message: '' },
+      { relay: 'wss://purplepag.es', ok: false, message: 'connection failure: Error: 403' },
+    ])
+  })
+
+  it('reports a relay that never answers as "timeout" and an empty rejection as "unknown error"', async () => {
+    vi.useFakeTimers()
+    try {
+      const svc = await loadWithNsec(undefined)
+      publishMock.mockImplementation(() => [new Promise(() => undefined), Promise.reject(undefined)])
+      const pending = svc.publishToRelays(['wss://slow.example', 'wss://odd.example'], { id: 'x' } as unknown as NostrEvent)
+      await vi.advanceTimersByTimeAsync(5_000)
+      const out = await pending
+      expect(out.results).toEqual([
+        { relay: 'wss://slow.example', ok: false, message: 'timeout' },
+        { relay: 'wss://odd.example', ok: false, message: 'unknown error' },
+      ])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('caps a long reason', async () => {
+    const svc = await loadWithNsec(undefined)
+    expect(svc.relayReason('x'.repeat(500))).toHaveLength(svc.RELAY_REASON_MAX_CHARS)
+  })
+})
+
+describe('publishLongFormArticle relays', () => {
+  it('LONGFORM_RELAYS is META_RELAYS without purplepag.es; META_RELAYS is unchanged', async () => {
+    const svc = await loadWithNsec(undefined)
+    expect(svc.META_RELAYS).toContain('wss://purplepag.es')
+    expect(svc.LONGFORM_RELAYS).not.toContain('wss://purplepag.es')
+    expect([...svc.LONGFORM_RELAYS]).toEqual(svc.META_RELAYS.filter(u => u !== 'wss://purplepag.es'))
+  })
+
+  it('publishes a signed kind:30023 to LONGFORM_RELAYS by default and returns the event and per-relay results', async () => {
+    const sk = generateSecretKey()
+    const svc = await loadWithNsec(nip19.nsecEncode(sk))
+    const out = await svc.publishLongFormArticle({ identifier: 'mintradar-learn-module-1', title: 'T', content: '## A', summary: 'S' })
+    const [relays, event] = publishMock.mock.calls[0] as [string[], NostrEvent]
+    expect(relays).toEqual([...svc.LONGFORM_RELAYS])
+    expect(event.kind).toBe(30023)
+    expect(verifyEvent(event)).toBe(true)
+    expect(out.event).toBe(event)
+    expect(out.results.map(r => r.relay)).toEqual([...svc.LONGFORM_RELAYS])
+  })
+
+  it('publishes only to the relays it is given', async () => {
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    await svc.publishLongFormArticle({ identifier: 'd', title: 'T', content: 'c' }, ['wss://relay.damus.io'])
+    expect(publishMock.mock.calls[0]?.[0]).toEqual(['wss://relay.damus.io'])
+  })
+
+  it('kind:0 service profile still goes to META_RELAYS (incl. purplepag.es)', async () => {
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    await svc.publishServiceProfile()
+    expect(publishMock.mock.calls[0]?.[0]).toEqual(svc.META_RELAYS)
+  })
+})
