@@ -31,7 +31,7 @@ export default function Module4() {
 
       <h2>Sending and receiving tokens</h2>
       <p>
-        Sending ecash is different from a normal Bitcoin transaction — there's no address, no block confirmation. You generate a token (a long text string starting with <code>cashuA</code> or <code>cashuB</code>), and send it to someone however you like: paste it in a chat, show a QR code, even embed it in an emoji. The recipient pastes it into their own wallet to receive it.
+        Sending ecash is different from a normal Bitcoin transaction — there's no address, no block confirmation. You generate a token (a long text string starting with <code>cashuB</code> for a v4 token or <code>cashuA</code> for a v3 token), and send it to someone however you like: paste it in a chat, show a QR code, even embed it in an emoji. The recipient pastes it into their own wallet to receive it.
       </p>
       <p>
         Because this doesn't touch the Lightning Network, it's instant and has no Lightning fee (a mint's input fee, below, can still apply) — this is one of Cashu's biggest advantages for small, frequent payments.
