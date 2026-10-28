@@ -50,8 +50,48 @@ test.describe('Stats NUT coverage modal', () => {
     await expect(modal(page).locator('.nut-modal-header')).toContainText('3 of 4')
     await expect(modal(page).locator('.nut-modal-footer')).toContainText('3 of 4 online mints offer this NUT')
     await expect(modal(page).locator('.nut-modal-footer')).toContainText('Sorted by Reliability Score')
-    await expect(modal(page).locator('.nut-modal-note')).toContainText('Offline mints are not counted.')
+    await expect(modal(page).getByText('Offline mints are not counted.')).toBeVisible()
     await expect(modal(page).locator('.nut-modal-row')).toHaveCount(3)
+  })
+
+  test('mints without this NUT sit in a collapsed section; mints with no NUT data only get a line', async ({ page }) => {
+    const mk = (m: (typeof MOCK_KNOWN_MINTS)[number], nutsLimits: Record<string, unknown> | null) => ({ ...m, nutsLimits })
+    const [alpha, bravo, , delta] = MOCK_KNOWN_MINTS
+    const echo = { ...alpha!, url: 'https://echo.mint.example', name: 'Echo Mint', nutsLimits: null }
+    await page.route('**/api/mints/known', r => r.fulfill({ json: [mk(alpha!, { '9': {} }), mk(bravo!, { '9': { supported: false } }), MOCK_KNOWN_MINTS[2], mk(delta!, { '7': {} }), echo] }))
+    await page.goto('/stats')
+    await page.locator('.stats-nut-row', { hasText: 'NUT-09' }).click()
+
+    await expect(modal(page).locator('.nut-modal-header')).toContainText('1 of 4')
+    const toggle = modal(page).getByRole('button', { name: /Online mints without this NUT \(2\)/ })
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    // collapsed: only the offering mint is a row
+    await expect(modal(page).locator('.nut-modal-row')).toHaveCount(1)
+
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    const rows = modal(page).locator('.nut-modal-row')
+    await expect(rows).toHaveCount(3)
+    await expect(rows.nth(1)).toContainText('Delta Mint')
+    await expect(rows.nth(2)).toContainText('Bravo Mint')
+    // the mint without NUT data is in neither list; one plain line says so
+    await expect(modal(page).getByText('Echo Mint')).toHaveCount(0)
+    await expect(modal(page).locator('.nut-modal-note')).toHaveText(['1 online mint has no NUT data yet.', 'Offline mints are not counted.'])
+  })
+
+  test('no "no NUT data" line and no collapsed section when nothing applies', async ({ page }) => {
+    await page.goto('/stats')
+    await page.locator('.stats-nut-row', { hasText: 'NUT-09' }).click()
+    await expect(modal(page).getByRole('button', { name: /without this NUT/ })).toHaveCount(0)
+    await expect(modal(page).getByText(/no NUT data yet/)).toHaveCount(0)
+  })
+
+  test('the modal shows the NUT description and the spec link', async ({ page }) => {
+    await page.goto('/stats')
+    await page.locator('.stats-nut-row', { hasText: 'NUT-09' }).click()
+    await expect(modal(page).locator('.nm-desc')).toHaveText('Restoring blinded signatures from mint backup data.')
+    const link = modal(page).getByRole('link', { name: /View NUT spec on GitHub/ })
+    await expect(link).toHaveAttribute('href', 'https://github.com/cashubtc/nuts/blob/main/09.md')
   })
 
   test('no leftover age badges and no "Show on Dashboard" button in the modal', async ({ page }) => {

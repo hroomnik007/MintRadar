@@ -43,7 +43,7 @@ test('NUT coverage: the modal lists the mints the card counts, not the offline o
   await expect(modal(page).locator('.nut-modal-row')).toHaveCount(nut09)
   await expect(modal(page).getByText('Offline', { exact: false }).filter({ hasText: /Mint Offline/ })).toHaveCount(0)
   await expect(modal(page).locator('.nut-modal-note')).toHaveText(NOTE)
-  await expect(modal(page).locator('.nut-modal-footer')).toHaveText(/^\d+ online\s*Sorted by Reliability Score$/)
+  await expect(modal(page).locator('.nut-modal-footer')).toHaveText(new RegExp(`^${nut09} of ${online} online mints offer this NUT\\s*Sorted by Reliability Score$`))
   await expect(modal(page).locator('.nut-modal-footer')).not.toContainText('offline')
 })
 

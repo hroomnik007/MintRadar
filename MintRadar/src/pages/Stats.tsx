@@ -359,10 +359,14 @@ function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
 // panel. Same overlay/row/footer vocabulary as SoftwareModal / CityMintsModal;
 // a plain mint list (displayName link + Reliability %), no age badges, no
 // "Show on Dashboard" — the row is the only action and it goes to Mint Detail.
-function NutMintsModal({ nut, mints, onlineTotal, onClose, duplicateDisplayNames }: {
+function NutMintsModal({ nut, mints, lacking, noData, onlineTotal, onClose, duplicateDisplayNames }: {
   nut: string
   /** Online mints that offer the NUT. */
   mints: KnownMint[]
+  /** Online mints that have NUT data and do not offer this NUT. */
+  lacking: KnownMint[]
+  /** Online mints with no NUT data stored yet (in neither list). */
+  noData: number
   /** All online mints (the denominator of "N of M"). */
   onlineTotal: number
   onClose: () => void
@@ -370,6 +374,8 @@ function NutMintsModal({ nut, mints, onlineTotal, onClose, duplicateDisplayNames
 }) {
   const navigate = useNavigate()
   const [showAll, setShowAll] = useState(false)
+  const [lackingOpen, setLackingOpen] = useState(false)
+  const [showAllLacking, setShowAllLacking] = useState(false)
 
   const dialogRef = useModalFocus()
   useEffect(() => {
@@ -382,8 +388,34 @@ function NutMintsModal({ nut, mints, onlineTotal, onClose, duplicateDisplayNames
     [...mints].sort((a, b) => (b.reliabilityScore ?? 0) - (a.reliabilityScore ?? 0))
   , [mints])
 
+  const sortedLacking = useMemo(() =>
+    [...lacking].sort((a, b) => (b.reliabilityScore ?? 0) - (a.reliabilityScore ?? 0))
+  , [lacking])
+
   const meta = NUT_META[nut]
   const displayed = showAll ? sorted : sorted.slice(0, 10)
+  const displayedLacking = showAllLacking ? sortedLacking : sortedLacking.slice(0, 10)
+
+  const renderRow = (m: KnownMint) => {
+    const score = m.reliabilityScore ?? null
+    const scoreColor = score != null ? (score >= 70 ? 'var(--green-bright)' : score >= 40 ? 'var(--amber)' : 'color-mix(in srgb, var(--red) 80%, var(--text))') : 'var(--text3)'
+    return (
+      <div
+        key={m.url}
+        className="nut-modal-row"
+        style={{ cursor: 'pointer' }}
+        onClick={() => { onClose(); navigate(`/mint/${encodeURIComponent(m.url)}`) }}
+      >
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? 'var(--green-bright)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
+        <div className="nut-modal-row-info" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <span className="nut-modal-row-name mint-link">{displayName(m, duplicateDisplayNames)}</span>
+        </div>
+        <span style={{ fontSize: 12, fontFamily: 'var(--font-mono-data)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
+          {score != null ? score : '—'}
+        </span>
+      </div>
+    )
+  }
 
   return (
     <div className="nut-modal-overlay" onClick={onClose}>
@@ -398,26 +430,7 @@ function NutMintsModal({ nut, mints, onlineTotal, onClose, duplicateDisplayNames
           <NutSpecLink nut={nut} />
         </div>
         <div className="nut-modal-list" tabIndex={0} role="group" aria-label="Mints">
-          {displayed.map(m => {
-            const score = m.reliabilityScore ?? null
-            const scoreColor = score != null ? (score >= 70 ? 'var(--green-bright)' : score >= 40 ? 'var(--amber)' : 'color-mix(in srgb, var(--red) 80%, var(--text))') : 'var(--text3)'
-            return (
-              <div
-                key={m.url}
-                className="nut-modal-row"
-                style={{ cursor: 'pointer' }}
-                onClick={() => { onClose(); navigate(`/mint/${encodeURIComponent(m.url)}`) }}
-              >
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: m.online === true ? 'var(--green-bright)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
-                <div className="nut-modal-row-info" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <span className="nut-modal-row-name mint-link">{displayName(m, duplicateDisplayNames)}</span>
-                </div>
-                <span style={{ fontSize: 12, fontFamily: 'var(--font-mono-data)', fontWeight: 700, color: scoreColor, flexShrink: 0 }}>
-                  {score != null ? score : '—'}
-                </span>
-              </div>
-            )
-          })}
+          {displayed.map(renderRow)}
           {!showAll && sorted.length > 10 && (
             <button
               type="button"
@@ -428,11 +441,38 @@ function NutMintsModal({ nut, mints, onlineTotal, onClose, duplicateDisplayNames
             </button>
           )}
           {sorted.length === 0 && <div className="nut-modal-empty">No mints</div>}
+          {sortedLacking.length > 0 && (
+            <>
+              <button
+                type="button"
+                className="nut-modal-lacking-toggle"
+                aria-expanded={lackingOpen}
+                onClick={() => setLackingOpen(o => !o)}
+              >
+                <span aria-hidden="true">{lackingOpen ? '▾' : '▸'}</span> Online mints without this NUT ({sortedLacking.length})
+              </button>
+              {lackingOpen && (
+                <>
+                  {displayedLacking.map(renderRow)}
+                  {!showAllLacking && sortedLacking.length > 10 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllLacking(true)}
+                      style={{ width: '100%', background: 'none', border: 'none', color: 'var(--accent)', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer', padding: '8px 0' }}
+                    >
+                      Show all {sortedLacking.length} mints
+                    </button>
+                  )}
+                </>
+              )}
+            </>
+          )}
         </div>
         <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span>{mints.length} of {onlineTotal} online mints offer this NUT</span>
           <span>Sorted by Reliability Score</span>
         </div>
+        {noData > 0 && <div className="nut-modal-note">{noData} online mint{noData !== 1 ? 's have' : ' has'} no NUT data yet.</div>}
         <div className="nut-modal-note">Offline mints are not counted.</div>
       </div>
     </div>
@@ -1273,6 +1313,8 @@ export default function Stats() {
         <NutMintsModal
           nut={nutModal}
           mints={nutModalBreakdown?.offering ?? []}
+          lacking={nutModalBreakdown?.lacking ?? []}
+          noData={nutModalBreakdown?.noData ?? 0}
           onlineTotal={nutModalBreakdown?.online ?? 0}
           onClose={() => setNutModal(null)}
           duplicateDisplayNames={duplicateDisplayNames}
