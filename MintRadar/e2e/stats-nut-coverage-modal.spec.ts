@@ -128,4 +128,59 @@ test.describe('Stats NUT coverage modal', () => {
     await modal(page).locator('.nut-modal-close').click()
     await expect(modal(page)).toHaveCount(0)
   })
+
+  // Narrow-screen layout: 49 online mints, 26 of them offering NUT-19 (long title "NUT-19 · Cached responses").
+  test.describe('header and footer layout', () => {
+    const many = Array.from({ length: 49 }, (_, i) => ({
+      ...MOCK_KNOWN_MINTS[0]!, url: `https://m${i}.example`, name: `Mint ${i}`, online: true, reliabilityScore: 90 - i,
+      nutsLimits: { '4': {}, '5': {}, ...(i < 26 ? { '19': {} } : {}) },
+    }))
+    type Box = { y: number; h: number; lh: number }
+    const boxes = (page: import('@playwright/test').Page, sel: string) => page.locator(sel).evaluateAll(els => els.map(e => {
+      const r = e.getBoundingClientRect()
+      return { y: r.top, h: r.height, lh: parseFloat(getComputedStyle(e).lineHeight) || parseFloat(getComputedStyle(e).fontSize) * 1.5 }
+    })) as Promise<Box[]>
+
+    const open = async (page: import('@playwright/test').Page, width: number) => {
+      await page.setViewportSize({ width, height: 800 })
+      await page.route('**/api/mints/known', r => r.fulfill({ json: many }))
+      await page.goto('/stats')
+      await page.locator('.stats-nut-row', { hasText: 'NUT-19' }).click()
+      await expect(modal(page).locator('.nut-modal-header')).toContainText('26 of 49')
+    }
+
+    for (const width of [390, 360, 320]) {
+      test(`${width}px: the count badge is one line and sits on the first line of the title`, async ({ page }) => {
+        await open(page, width)
+        const [badge] = await boxes(page, '.nut-modal-count-badge')
+        const [title] = await boxes(page, '.nut-modal-title')
+        expect(badge!.h).toBeLessThanOrEqual(badge!.lh + 8)
+        expect(Math.abs(badge!.y - title!.y)).toBeLessThanOrEqual(3)
+        expect(badge!.y + badge!.h).toBeLessThanOrEqual(title!.y + title!.lh + 3)
+      })
+    }
+
+    test('390px: footer items are stacked and "offer this NUT" is one line', async ({ page }) => {
+      await open(page, 390)
+      const items = await boxes(page, '.nut-modal-footer > span')
+      expect(items).toHaveLength(2)
+      expect(items[1]!.y).toBeGreaterThan(items[0]!.y + items[0]!.h - 1)
+      expect(items[0]!.h).toBeLessThanOrEqual(items[0]!.lh + 2)
+    })
+
+    test('1440px: footer items share one row', async ({ page }) => {
+      await open(page, 1440)
+      const items = await boxes(page, '.nut-modal-footer > span')
+      expect(Math.abs(items[0]!.y - items[1]!.y)).toBeLessThan(2)
+    })
+
+    test('320px: no horizontal overflow, description spans the content width', async ({ page }) => {
+      await open(page, 320)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+      expect(await modal(page).evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true)
+      const desc = await modal(page).locator('.nm-desc').boundingBox()
+      const header = await modal(page).locator('.nut-modal-header').boundingBox()
+      expect(desc!.width).toBeGreaterThanOrEqual(header!.width - 1)
+    })
+  })
 })

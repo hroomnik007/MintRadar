@@ -831,6 +831,29 @@
 
 .nut-modal-header { padding-right: 44px; }
 
+/* NUT coverage modal: the 44px right padding only clears the close button beside the title row, so the
+   description and spec link below it use the full content width. */
+.nut-modal-header--full { padding-right: 0; }
+.nut-modal-head-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 4px;
+  padding-right: 44px;
+}
+.nut-modal-count-badge {
+  flex-shrink: 0;
+  margin-top: 1px;
+  white-space: nowrap;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text3);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 2px 7px;
+}
+
 .nut-modal-title {
   font-size: 17px;
   font-weight: 600;
@@ -959,6 +982,20 @@
   padding-top: 8px;
   border-top: 1px solid var(--border);
   flex-shrink: 0;
+}
+
+/* NUT coverage modal footer: count and sort note side by side on wide screens, one per line on phones. */
+.nut-modal-footer--split {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+@media (max-width: 600px) {
+  .nut-modal-footer--split {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .nut-modal-count-badge { font-size: 12px; }
 }
 
 /* Muted footnote under a modal footer ("Offline mints are not counted."). */
