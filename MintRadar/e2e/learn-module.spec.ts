@@ -47,3 +47,56 @@ test('the last module footer is "Browse mints" → Dashboard', async ({ page }) 
   await next.click()
   await expect(page).toHaveURL(/\/$/)
 })
+
+// Learn article column (L1): 16px body text in a ~780px centred column; phones keep full width minus padding.
+// The text pages (/about, /methodology, /for-wallets) have their own rules and must stay as they were.
+test.describe('Learn article column', () => {
+  test('1440px: paragraphs and list items are at least 16px, the column is 740-820px wide and centred', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    for (const slug of SLUGS) {
+      await page.goto(`/learn/${slug}`)
+      await expect(page.locator('.learn-content h1')).toBeVisible()
+      const m = await page.evaluate(() => {
+        const col = document.querySelector('.learn-module')!.getBoundingClientRect()
+        const sizes = [...document.querySelectorAll('.learn-content p, .learn-content li')].map(e => parseFloat(getComputedStyle(e).fontSize))
+        return { w: col.width, left: col.left, right: window.innerWidth - col.right, min: Math.min(...sizes), n: sizes.length }
+      })
+      expect(m.n, slug).toBeGreaterThan(3)
+      expect(m.min, slug).toBeGreaterThanOrEqual(16)
+      expect(m.w, slug).toBeGreaterThanOrEqual(740)
+      expect(m.w, slug).toBeLessThanOrEqual(820)
+      expect(Math.abs(m.left - m.right), slug).toBeLessThanOrEqual(3)
+    }
+  })
+
+  for (const w of [390, 320]) {
+    test(`${w}px: no horizontal overflow on any module, and the column fills the width minus the page padding`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: 800 })
+      for (const slug of SLUGS) {
+        await page.goto(`/learn/${slug}`)
+        await expect(page.locator('.learn-content h1')).toBeVisible()
+        const m = await page.evaluate(() => {
+          const col = document.querySelector('.learn-module')!.getBoundingClientRect()
+          return { over: document.documentElement.scrollWidth - window.innerWidth, left: col.left, right: window.innerWidth - col.right }
+        })
+        expect(m.over, slug).toBeLessThanOrEqual(0)
+        expect(m.left, slug).toBeGreaterThanOrEqual(0)
+        expect(Math.abs(m.left - m.right), slug).toBeLessThanOrEqual(1)
+      }
+    })
+  }
+
+  test('1440px: /about, /methodology and /for-wallets keep their 780px column and 15px text', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    for (const path of ['/about', '/methodology', '/for-wallets']) {
+      await page.goto(path)
+      await expect(page.locator('.about-text p').first()).toBeVisible()
+      const m = await page.evaluate(() => ({
+        w: document.querySelector('.about-text')!.getBoundingClientRect().width,
+        fs: getComputedStyle([...document.querySelectorAll('.about-text p')].sort((x, y) => y.textContent!.length - x.textContent!.length)[0]).fontSize,
+        li: getComputedStyle(document.querySelector('.about-text li')!).fontSize,
+      }))
+      expect(m, path).toEqual({ w: 780, fs: '15px', li: '15px' })
+    }
+  })
+})
