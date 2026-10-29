@@ -15,6 +15,8 @@ const MINT_PREFERRED = 'Mint list is preferred, not strict: other mints are acce
 // NUT-18: the per-method fee applies only to ecash from a mint outside the list (or from any mint if there is no list);
 // the payer owes the lowest fee among the listed methods that its mint supports.
 const OTHER_MINTS_NOTE = 'A fee applies only to ecash from a mint outside the accepted mints list, or from any mint if no list is given. The payer owes the lowest fee among the listed methods its mint supports.'
+// NUT-18: with a strict list the sender MUST only send proofs from the listed mints, so the fee (which concerns mints outside the list) does not apply.
+const STRICT_LIST_NOTE = 'The mint list above is strict, so ecash from other mints is not accepted and this fee does not apply.'
 const NO_TRANSPORTS = 'None listed: the payment is returned directly (in-band)'
 
 function amountText(view: PaymentRequestView): string {
@@ -165,6 +167,9 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
                 ))}
               </ul>
               <div className="pr-note" data-testid="pr-methods-note">{OTHER_MINTS_NOTE}</div>
+              {parsed.view.mints.length > 0 && parsed.view.mintPreferred !== true && (
+                <div className="pr-note" data-testid="pr-methods-strict">{STRICT_LIST_NOTE}</div>
+              )}
             </>
           )}
 

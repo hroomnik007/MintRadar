@@ -32,9 +32,12 @@ const NUT26_EXAMPLE = 'CREQB1QYQQWER9D4HNZV3NQGQQSQQQQQQQQQQRAQPSQQGQQSQQZQG9QQV
 // B_MP_SM is the same request as creqB (TLV tags 0x09 and 0x0a), in upper case as a QR code carries it.
 const A_MP_SM = 'creqApmFpZWV4dC0xYWEVYXVjc2F0YW2BeBpodHRwczovL2FscGhhLm1pbnQuZXhhbXBsZWJtcPVic22CoWJtbmZib2x0MTGiYm1uZ29uY2hhaW5ibWYYMg'
 const A_MP_FALSE = 'creqAo2FpZWV4dC0yYW2BeBpodHRwczovL2FscGhhLm1pbnQuZXhhbXBsZWJtcPQ'
+const A_SM_STRICT = 'creqAo2FpZWV4dC00YW2BeBpodHRwczovL2FscGhhLm1pbnQuZXhhbXBsZWJzbYKhYm1uZmJvbHQxMaJibW5nb25jaGFpbmJtZhgy'
+const A_SM_NO_MINTS = 'creqAo2FpZWV4dC01YXVjc2F0YnNtgaJibW5nb25jaGFpbmJtZhgy'
 const A_MP_NO_MINTS = 'creqAomFpZWV4dC0zYm1w9Q'
 const B_MP_SM = 'CREQB1QYQQ2ETCWSKNZQSQPQQQQQQQQQQQQ9GRQQQSQPGQRF58GARSWVAZ7TMPD3CXSCFWD45KUAPWV4UXZMTSD3JSJQQPQY9QQZGPQQRXYMMVWSCNZZSQZ5QSQPM0DE3KSCTFDCPQQZQQQQQQQQQQQQEQ4HJCD4'
 const MINT_PREFERRED = 'Mint list is preferred, not strict: other mints are accepted too.'
+const STRICT_LIST_NOTE = 'The mint list above is strict, so ecash from other mints is not accepted and this fee does not apply.'
 const OTHER_MINTS_NOTE = 'A fee applies only to ecash from a mint outside the accepted mints list, or from any mint if no list is given. The payer owes the lowest fee among the listed methods its mint supports.'
 const PREFIX_ERROR = 'Not a payment request: expected a string starting with creqA or creqB.'
 
@@ -247,6 +250,22 @@ for (const [name, text] of [['creqA', A_MP_SM], ['creqB', B_MP_SM]] as const) {
     await expect(result(page).locator('a')).toHaveCount(1) // still only "View Mint Detail"
   })
 }
+
+test('a strict mint list with sm adds one sentence; a preferred list or no list does not', async ({ page }) => {
+  await open(page)
+  const strict = result(page).getByTestId('pr-methods-strict')
+  await input(page).fill(A_SM_STRICT) // m set, mp absent: strict
+  await expect(result(page).getByTestId('pr-method')).toHaveCount(2)
+  await expect(result(page).getByTestId('pr-methods-note')).toHaveText(OTHER_MINTS_NOTE)
+  await expect(strict).toHaveText(STRICT_LIST_NOTE)
+  await input(page).fill(A_MP_SM) // mp true: preferred
+  await expect(result(page).getByTestId('pr-method')).toHaveCount(2)
+  await expect(strict).toHaveCount(0)
+  await input(page).fill(A_SM_NO_MINTS) // no list at all
+  await expect(result(page).getByTestId('pr-method')).toHaveText(['onchain · fee 50 sat'])
+  await expect(result(page).getByTestId('pr-methods-note')).toHaveText(OTHER_MINTS_NOTE)
+  await expect(strict).toHaveCount(0)
+})
 
 test('without mp and sm nothing new is shown; mp false (strict) shows nothing; mp true without a mint list shows no note', async ({ page }) => {
   await open(page)
