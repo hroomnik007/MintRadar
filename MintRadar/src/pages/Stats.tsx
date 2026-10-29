@@ -421,10 +421,10 @@ function NutMintsModal({ nut, mints, lacking, noData, onlineTotal, onClose, dupl
     <div className="nut-modal-overlay" onClick={onClose}>
       <div className="nut-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`${nut}${meta ? ` · ${meta.short}` : ''}`} ref={dialogRef}>
         <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close"><IcClose /></button>
-        <div className="nut-modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+        <div className="nut-modal-header nut-modal-header--full">
+          <div className="nut-modal-head-row">
             <span className="nut-modal-title">{nut}{meta ? ` · ${meta.short}` : ''}</span>
-            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{mints.length} of {onlineTotal}</span>
+            <span className="nut-modal-count-badge">{mints.length} of {onlineTotal}</span>
           </div>
           <NutDescription nut={nut} />
           <NutSpecLink nut={nut} />
@@ -468,7 +468,7 @@ function NutMintsModal({ nut, mints, lacking, noData, onlineTotal, onClose, dupl
             </>
           )}
         </div>
-        <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <div className="nut-modal-footer nut-modal-footer--split">
           <span>{mints.length} of {onlineTotal} online mints offer this NUT</span>
           <span>Sorted by Reliability Score</span>
         </div>
