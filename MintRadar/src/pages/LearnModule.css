@@ -1,6 +1,7 @@
 /* Page chrome stays at dashboard width so the Learn index → module
    transition does not jump the viewport inset. The article itself is
-   narrower for readable line length. */
+   narrower than the page chrome (780px, the same column as the text pages
+   /about, /methodology, /for-wallets); the 16px body text sets the line length. */
 .learn-module-page {
   max-width: var(--dash-chrome-max);
   margin-inline: auto;
@@ -9,18 +10,18 @@
 }
 
 .learn-module {
-  max-width: 720px;
+  max-width: 780px;
   margin-inline: auto;
   width: 100%;
 }
 
 .learn-back-link {
   display: inline-block;
-  font-size: 12px;
+  font-size: 13px;
   font-family: var(--font-mono);
   color: var(--text3);
   text-decoration: none;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   transition: color 150ms ease;
 }
 
@@ -50,43 +51,43 @@
 
 /* ── Module content typography ──────────────────────────── */
 .learn-content h1 {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 600;
   color: var(--text);
   letter-spacing: -0.01em;
-  margin: 0 0 20px;
+  margin: 0 0 22px;
 }
 
 .learn-content h2 {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--text);
   letter-spacing: -0.01em;
-  margin: 28px 0 10px;
+  margin: 32px 0 12px;
 }
 
 .learn-content h2:first-of-type {
-  margin-top: 20px;
+  margin-top: 22px;
 }
 
 .learn-content p {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.7;
   color: var(--text2);
-  margin: 0 0 14px;
+  margin: 0 0 16px;
 }
 
 .learn-content ul,
 .learn-content ol {
-  margin: 0 0 14px;
-  padding-left: 22px;
+  margin: 0 0 16px;
+  padding-left: 24px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .learn-content li {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.7;
   color: var(--text2);
 }
@@ -107,7 +108,7 @@
   border-radius: 4px;
   padding: 1px 6px;
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--accent);
 }
 
@@ -116,12 +117,12 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 18px;
+  padding: 11px 20px;
   background: var(--accent);
   color: #06120e;
   border: none;
   border-radius: var(--radius-m);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
@@ -149,7 +150,7 @@
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  padding: 10px 14px;
+  padding: 12px 16px;
   cursor: pointer;
   text-align: left;
   transition: border-color 150ms ease;
@@ -166,7 +167,7 @@
 }
 
 .learn-nav-dir {
-  font-size: 10px;
+  font-size: 11px;
   font-family: var(--font-mono);
   color: var(--text3);
   text-transform: uppercase;
@@ -174,7 +175,7 @@
 }
 
 .learn-nav-title {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--text);
 }
@@ -185,6 +186,13 @@
   }
 
   .learn-content h1 {
-    font-size: 20px;
+    font-size: 22px;
+  }
+}
+
+/* 12px minimum on phones (see mobile-and-tooltips.md): the two small mono labels of the module footer. */
+@media (max-width: 767px) {
+  .learn-nav-dir {
+    font-size: 12px;
   }
 }

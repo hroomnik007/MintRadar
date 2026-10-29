@@ -59,6 +59,10 @@ loaded, animations are off and the boxes are stable for two animation frames; a 
 `EDGES_REPORT=<file>` turns the spec into a read-only measurement dump. A measured mismatch that cannot be fixed yet is marked `test.fixme` in the spec with
 the measured difference (none open at the moment). The ≤640px footer rule uses `var(--page-pad)` too, so the footer's inner row matches the navbar at every width.
 
+**2d) Learn article column (L1, 2026-10-29)**
+
+The Learn index (`/learn`) is a card grid at `--dash-chrome-max` and is unchanged. The five module pages (`LearnModule.css`, `KeyTakeaway.css`, `LearnDiagrams.css`) keep the chrome-width page shell (`.learn-module-page`), with the article `.learn-module` centred at `max-width: 780px` (was 720px; the same column as `.about-text` on /about, /methodology, /for-wallets, which have their own `.about-*` rules and were not touched). Body text (`.learn-content p`, `li`, the Key takeaway quote) is 16px / line-height 1.7 (was 14px); h1 28px (22px ≤700px), h2 18px, inline code 14px, CTA 15px, module footer title 15px, diagram labels 13–14px. 16px in 780px gives about 100 characters per line at 1440px (14px in 720px gave about 108); a 70–80 character line would need a column of roughly 560px, which was not chosen. Phones keep full width minus `--page-pad`; the small mono labels (`.learn-nav-dir`, `.key-takeaway-label`, `.risk-link-label`) are 12px at ≤767px / ≤620px. Tests: `Learn article column` in `e2e/learn-module.spec.ts`.
+
 **3) State before this wave**
 
 Each page defined its own width independently, so first-card left edges did not line up across

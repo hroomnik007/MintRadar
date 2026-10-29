@@ -3,12 +3,12 @@
   border: 1px solid var(--copper-soft-strong);
   border-left: 3px solid var(--copper);
   border-radius: var(--r);
-  padding: 14px 18px;
+  padding: 16px 20px;
   margin: 20px 0;
 }
 
 .key-takeaway-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--copper);
   text-transform: uppercase;
@@ -19,7 +19,7 @@
 
 .key-takeaway-quote {
   margin: 0;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.6;
   color: var(--text);
 }
@@ -30,4 +30,11 @@
 
 .key-takeaway-quote p:first-child {
   margin-top: 0;
+}
+
+/* 12px minimum on phones. */
+@media (max-width: 767px) {
+  .key-takeaway-label {
+    font-size: 12px;
+  }
 }
