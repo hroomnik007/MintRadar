@@ -6,8 +6,8 @@ const v = (version: string | null) => ({ version })
 describe('softwareFamily', () => {
   it('names the known prefixes cleanly and maps cdk-mintd onto cdk', () => {
     expect(softwareFamily('Nutshell/0.16.3')).toEqual({ key: 'nutshell', name: 'Nutshell' })
-    expect(softwareFamily('cdk-mintd/0.9.1')).toEqual({ key: 'cdk', name: 'CDK' })
-    expect(softwareFamily('cdk/0.9.1')).toEqual({ key: 'cdk', name: 'CDK' })
+    expect(softwareFamily('cdk-mintd/0.9.1')).toEqual({ key: 'cdk', name: 'CDK-Mintd' })
+    expect(softwareFamily('cdk/0.9.1')).toEqual({ key: 'cdk', name: 'CDK-Mintd' })
   })
   it('is case-insensitive for known families', () => {
     expect(softwareFamily('NUTSHELL/0.16.3')).toEqual({ key: 'nutshell', name: 'Nutshell' })
@@ -35,16 +35,19 @@ describe('softwareGroups', () => {
     v('LekMint/1.0'), v('Solo/2'),
     v(null),
   ]
-  it('lists families with at least 2 mints by count, then Other (single-mint families), then Unknown', () => {
+  it('lists every family by count (then name), then Unknown; Other stays out while no family is below the threshold', () => {
     expect(softwareGroups(mints).options).toEqual([
-      { key: 'nutshell', name: 'Nutshell' }, { key: 'cdk', name: 'CDK' }, { key: 'nutshell-cf', name: 'Nutshell-CF' },
-      { key: SOFTWARE_OTHER, name: 'Other' }, { key: SOFTWARE_UNKNOWN, name: 'Unknown' },
+      { key: 'nutshell', name: 'Nutshell' }, { key: 'cdk', name: 'CDK-Mintd' }, { key: 'nutshell-cf', name: 'Nutshell-CF' },
+      { key: 'lekmint', name: 'LekMint' }, { key: 'solo', name: 'Solo' }, { key: SOFTWARE_UNKNOWN, name: 'Unknown' },
     ])
-    expect([...softwareGroups(mints).families].sort()).toEqual(['cdk', 'nutshell', 'nutshell-cf'])
+    expect([...softwareGroups(mints).families].sort()).toEqual(['cdk', 'lekmint', 'nutshell', 'nutshell-cf', 'solo'])
   })
   it('leaves out Other / Unknown when no mint falls in them, and uses the most reported spelling', () => {
     const g = softwareGroups([v('Foo/1'), v('FOO/2'), v('FOO/3')])
     expect(g.options).toEqual([{ key: 'foo', name: 'FOO' }])
+  })
+  it('keeps a selected Other listed so it can be cleared', () => {
+    expect(softwareGroups([v('Foo/1')], [SOFTWARE_OTHER]).options.map(o => o.key)).toEqual(['foo', SOFTWARE_OTHER])
   })
   it('keeps a selected key nobody has, so it can be cleared', () => {
     expect(softwareGroups([v('Foo/1'), v('Foo/2')], ['bar']).options.map(o => o.key)).toEqual(['foo', 'bar'])

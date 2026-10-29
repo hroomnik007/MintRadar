@@ -1,18 +1,18 @@
 // Dashboard software filter (?software=nutshell,cdk,other). Pure helpers, no React.
 // A mint's software family is the part of its `version` string before "/" ("Nutshell/0.16.3", "cdk-mintd/0.9.1"),
 // parsed by the same splitVersionString / canonicalSoftwareName the cards and the Reliability Score use. Families
-// with at least MIN_MINTS_FOR_OPTION mints get their own option, the rest share "Other"; a mint without a version
-// string is "Unknown". Multi-select, OR (like Unit): a mint passes if it belongs to at least one selected group.
+// with at least MIN_MINTS_FOR_OPTION mints get their own option (today every family does, so "Other" only shows when it is
+// selected in the URL); a mint without a version string is "Unknown". Multi-select, OR (like Unit): a mint passes if it belongs to at least one selected group.
 import { splitVersionString, canonicalSoftwareName } from '@/utils/versionRule'
 
 export const SOFTWARE_OTHER = 'other'
 export const SOFTWARE_UNKNOWN = 'unknown'
 /** A family needs this many mints (over all tracked mints) to be listed on its own. */
-export const MIN_MINTS_FOR_OPTION = 2
+export const MIN_MINTS_FOR_OPTION = 1
 
 const KEY_RE = /^[a-z0-9._-]{1,32}$/
 /** Clean names for the families versionRule knows; any other family keeps the spelling mints report. */
-const DISPLAY_NAMES: Record<string, string> = { nutshell: 'Nutshell', cdk: 'CDK' }
+const DISPLAY_NAMES: Record<string, string> = { nutshell: 'Nutshell', cdk: 'CDK-Mintd' }
 
 type SoftwareMint = { version?: string | null }
 export interface SoftwareFamily { key: string; name: string }

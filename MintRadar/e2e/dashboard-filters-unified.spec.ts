@@ -14,7 +14,7 @@ const mk = (name: string, version: string | null, over: Record<string, unknown> 
   mintMethods: ['bolt11', 'bolt12', 'onchain', 'paypal', 'venmo'].map(x => m(x)), meltMethods: [m('bolt11')],
   ...over,
 })
-// Four software options (Nutshell, CDK, Nutshell-CF, Other) and five methods: the longest texts the panel shows today.
+// Four software options (Nutshell, CDK-Mintd, Nutshell-CF, LekMint) and five methods: the longest texts the panel shows today.
 const mints = [
   mk('Alpha', 'Nutshell/0.16.3'), mk('Bravo', 'Nutshell/0.17.0'), mk('Charlie', 'cdk-mintd/0.9.1'), mk('Delta', 'cdk-mintd/0.9.2'),
   mk('Echo', 'Nutshell-CF/0.1'), mk('Foxtrot', 'Nutshell-CF/0.2'), mk('Golf', 'LekMint/1.0'),

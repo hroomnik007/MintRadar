@@ -1,5 +1,5 @@
 // Dashboard software filter (?software=, utils/softwareFilter.ts) and the row-1 layout of the filter panel (F1):
-// families with ≥2 mints + Other + Unknown, multi-select OR, in the badge / Reset / URL; Unit and Method labels
+// every family (a single-mint one too) + Unknown, multi-select OR, in the badge / Reset / URL; Unit and Method labels
 // carry no info icon; at wide widths row 1 has no empty end and the slider keeps its width.
 import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
@@ -35,13 +35,13 @@ const chip = (page: Page, k: string) => page.locator(`.filter-software-chip[data
 const openPanel = async (page: Page) => { await page.locator('.filter-btn').click(); await expect(page.locator('.filter-panel')).toBeVisible() }
 
 test.describe('Dashboard software filter', () => {
-  test('options: families with 2+ mints (by count), then Other and Unknown', async ({ page }) => {
+  test('options: every family by count, then Unknown', async ({ page }) => {
     await setup(page)
     await page.goto('/')
     await expect(cards(page)).toHaveCount(7)
     await openPanel(page)
     await expect(page.locator('#filter-software-label')).toHaveText('Software')
-    await expect(page.locator('.filter-software-chip')).toHaveText(['Nutshell', 'CDK', 'Other', 'Unknown'])
+    await expect(page.locator('.filter-software-chip')).toHaveText(['Nutshell', 'CDK-Mintd', 'LekMint', 'Unknown'])
   })
 
   test('selecting an option changes the count and the cards; Apply puts it in the URL and the badge', async ({ page }) => {
@@ -58,16 +58,16 @@ test.describe('Dashboard software filter', () => {
     await expect(page.locator('.filter-btn')).toContainText('1')
   })
 
-  test('multi-select ORs: CDK + Other + Unknown', async ({ page }) => {
+  test('multi-select ORs: CDK + LekMint + Unknown', async ({ page }) => {
     await setup(page)
     await page.goto('/')
     await openPanel(page)
-    for (const k of ['cdk', 'other', 'unknown']) await chip(page, k).click()
+    for (const k of ['cdk', 'lekmint', 'unknown']) await chip(page, k).click()
     await expect(page.locator('.filter-apply-btn')).toHaveText('Show 4 of 7')
     await page.locator('.filter-apply-btn').click()
     await expect(cards(page)).toHaveCount(4)
     expect(await names(page)).toEqual(['Delta Mint', 'Echo Mint', 'Foxtrot Mint', 'Golf Mint'])
-    await expect(page).toHaveURL(/software=cdk%2Cother%2Cunknown|software=cdk,other,unknown/)
+    await expect(page).toHaveURL(/software=cdk%2Clekmint%2Cunknown|software=cdk,lekmint,unknown/)
   })
 
   test('combines with Unit and Method (AND between filters)', async ({ page }) => {
