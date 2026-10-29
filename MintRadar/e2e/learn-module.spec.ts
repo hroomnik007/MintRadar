@@ -93,7 +93,7 @@ test.describe('Learn article column', () => {
       await expect(page.locator('.about-text p').first()).toBeVisible()
       const m = await page.evaluate(() => ({
         w: document.querySelector('.about-text')!.getBoundingClientRect().width,
-        fs: getComputedStyle([...document.querySelectorAll('.about-text p')].sort((x, y) => y.textContent!.length - x.textContent!.length)[0]).fontSize,
+        fs: getComputedStyle([...document.querySelectorAll('.about-text p')].sort((x, y) => y.textContent!.length - x.textContent!.length)[0]!).fontSize,
         li: getComputedStyle(document.querySelector('.about-text li')!).fontSize,
       }))
       expect(m, path).toEqual({ w: 780, fs: '15px', li: '15px' })
