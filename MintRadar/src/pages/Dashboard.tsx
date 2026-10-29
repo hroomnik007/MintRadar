@@ -1474,9 +1474,9 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* One layout for every width (2026-10-01): Status + Unit segmented controls,
-              Reliability slider, then the footer (Hide test mints · Reset · Show N of M).
-              flex-wrap decides the rows — see .filter-bar in Dashboard.css. */}
+          {/* Two rows on desktop, one column on phones (F2): .filter-main = the four segmented groups (Status, Unit,
+              Method, Software), .filter-footer = Reliability, Hide test mints, Reset, Show N of M. The DOM order is
+              the phone order. See .filter-bar in Dashboard.css. */}
           <div className="filter-bar">
             <div className="filter-main">
             <div className="filter-field">
@@ -1535,19 +1535,41 @@ export default function Dashboard() {
               </div>
             )}
 
-            <div className="filter-rel">
-              <span className="filter-group-label">Reliability ≥ <strong>{pendingFilters.minReliabilityScore}</strong></span>
-              <input
-                type="range" min={0} max={100} step={5}
-                value={pendingFilters.minReliabilityScore}
-                onChange={e => setPendingFilters(p => ({ ...p, minReliabilityScore: parseInt(e.target.value) }))}
-                className="filter-slider"
-                aria-label="Minimum Reliability Score"
-              />
-            </div>
+            {softwareChoices.options.length > 0 && (
+              <div className="filter-field filter-software">
+                <span className="filter-field-label" id="filter-software-label">Software</span>
+                <div className="filter-seg" role="group" aria-labelledby="filter-software-label">
+                  {softwareChoices.options.map(o => {
+                    const on = pendingFilters.software.includes(o.key)
+                    return (
+                      <button
+                        key={o.key}
+                        type="button"
+                        className={`filter-seg-opt filter-software-chip${on ? ' active' : ''}`}
+                        aria-pressed={on}
+                        data-software={o.key}
+                        onClick={() => setPendingFilters(p => ({ ...p, software: softwareChoices.options.map(x => x.key).filter(k => k === o.key ? !on : p.software.includes(k)) }))}
+                      >
+                        {o.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
             </div>
 
             <div className="filter-footer">
+              <div className="filter-rel">
+                <span className="filter-group-label">Reliability ≥ <strong>{pendingFilters.minReliabilityScore}</strong></span>
+                <input
+                  type="range" min={0} max={100} step={5}
+                  value={pendingFilters.minReliabilityScore}
+                  onChange={e => setPendingFilters(p => ({ ...p, minReliabilityScore: parseInt(e.target.value) }))}
+                  className="filter-slider"
+                  aria-label="Minimum Reliability Score"
+                />
+              </div>
               <label className="filter-check">
                 <input
                   type="checkbox"
@@ -1556,28 +1578,6 @@ export default function Dashboard() {
                 />
                 Hide test mints
               </label>
-              {softwareChoices.options.length > 0 && (
-                <div className="filter-field filter-software">
-                  <span className="filter-field-label" id="filter-software-label">Software</span>
-                  <div className="filter-seg" role="group" aria-labelledby="filter-software-label">
-                    {softwareChoices.options.map(o => {
-                      const on = pendingFilters.software.includes(o.key)
-                      return (
-                        <button
-                          key={o.key}
-                          type="button"
-                          className={`filter-seg-opt filter-software-chip${on ? ' active' : ''}`}
-                          aria-pressed={on}
-                          data-software={o.key}
-                          onClick={() => setPendingFilters(p => ({ ...p, software: softwareChoices.options.map(x => x.key).filter(k => k === o.key ? !on : p.software.includes(k)) }))}
-                        >
-                          {o.name}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
               <div className="filter-actions-row">
                 <button type="button" className="filter-reset-btn" onClick={resetFilters}>Reset</button>
                 <button

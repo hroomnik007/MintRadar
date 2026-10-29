@@ -2,7 +2,7 @@
 > Note: references like "see X below" in this file may point into another docs/claude file; the map is the index in CLAUDE.md.
 ## Mobile Responsive Fixes (as of 2026-06-30)
 
-- **Filter panel (Dashboard only as of 2026-09-04 — see "Watchlist changes" below):** (NUT chips removed — see stats-dashboard-watchlist-ui.md) STATUS + MIN RELIABILITY SCORE side by side (50/50) using `filter-group-row-top` wrapper with `display: contents` on desktop (transparent to flex layout) and `display: flex; flex-direction: row` at ≤768px
+- **Filter panel (Dashboard only):** on phones (≤600px) one column in DOM order Status, Unit, Method, Software, Reliability, Hide test mints, then Reset + Show N of M; labels share a 72px column and the controls fill the rest, at ≤380px the labels sit above their controls; all four segmented groups share one style (28px, 12.5px, `padding: 0 4px` on phones); the checkbox label is 12px. Details, heights and the desktop rows: `stats-dashboard-watchlist-ui.md` ("Filters panel layout", "Since F2").
 - **Stats page:** Sections stack vertically on mobile; NUT Coverage bars don't overflow (`overflow: hidden`, shorter progress bar max-width)
 - **Mint Detail:** Public key truncated on mobile (first+last 8 chars), full hex on desktop
 

@@ -238,14 +238,15 @@ test.describe('Filters panel — layout', () => {
 
   // The segments are 28px with 10px text since 6ed4592 / 20b0541 (compact); the checkbox row and
   // the buttons are still 36px. The touch target of a segment is 28 + 8 + 8 = 44px (test below).
-  test('segments are 28px tall, checkbox row and buttons are 36px tall', async ({ page }) => {
+  // F2 (2026-10-29): Reset and "Show N of M" are as tall as the segments (28px); only the checkbox row stays 36px.
+  test('segments, Reset and Show are 28px tall, the checkbox row is 36px tall', async ({ page }) => {
     await openPanel(page)
     const expected: Array<[ReturnType<Page['locator']>, number]> = [
       [page.locator('.filter-seg').first(), 28],
       [page.locator('.filter-seg').nth(1), 28],
       [page.locator('.filter-check'), 36],
-      [page.getByRole('button', { name: 'Reset', exact: true }), 36],
-      [showBtn(page), 36],
+      [page.getByRole('button', { name: 'Reset', exact: true }), 28],
+      [showBtn(page), 28],
     ]
     for (const [loc, height] of expected) {
       expect((await loc.boundingBox())!.height).toBe(height)
@@ -283,8 +284,8 @@ test.describe('Filters panel — layout', () => {
           up: ownsPoint(el, x, b.top - 3), down: ownsPoint(el, x, b.bottom + 3),
         }
       })
-      // The first 7 targets are the segment options (28px since 6ed4592 / 20b0541); the rest are 36px.
-      expect(r.h).toBe(targets.indexOf(t) < 7 ? 28 : 36)
+      // Targets 0-6 are the segment options (28px since 6ed4592 / 20b0541), 7 is the checkbox row (36px), 8 and 9 are Reset / Show (28px since F2).
+      expect(r.h).toBe(targets.indexOf(t) === 7 ? 36 : 28)
       expect(r.pseudoContent).toBe('""')
       expect(r.pseudoH).toBeGreaterThanOrEqual(44)
       expect(r, `target ${targets.indexOf(t)}`).toMatchObject({ up: true, down: true })
@@ -334,12 +335,15 @@ for (const vp of [320, 390, 600, 900]) {
     expect(r.status1, 'a point 1px below each Status option').toEqual([true, true, true])
     expect(r.statusBand, 'Status band reaches 6.5px below').toEqual([true, true, true])
     expect(r.check1, '1px above the checkbox row').toBe(true)
-    if (r.stacked) {
+    if (r.stacked && vp > 380) {
       expect(r.gap, 'Status and Unit rows are 16px apart').toBeCloseTo(16, 0)
-      expect(r.unit1, 'a point 1px above each Unit chip').toEqual([true, true, true])
-      expect(r.unitBand, 'Unit band reaches 6.5px above').toEqual([true, true, true])
       expect(r.beforeMid, 'gap, 1.5px before its middle: Status').toEqual([true, true, true])
       expect(r.afterMid, 'gap, 1.5px after its middle: Unit').toEqual([true, true, true])
+    }
+    if (r.stacked) {
+      // At 380px and below the Unit label sits above its control (F2), so the rows are 16px + label apart (the middle of the gap is the label); the bands still hold.
+      expect(r.unit1, 'a point 1px above each Unit chip').toEqual([true, true, true])
+      expect(r.unitBand, 'Unit band reaches 6.5px above').toEqual([true, true, true])
     }
   })
 }
