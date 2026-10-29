@@ -11,6 +11,10 @@ import { parsePaymentRequest, mintStatusWord, transportTagLines, type PaymentReq
 const NOT_SPECIFIED = 'Not specified'
 const OPEN_AMOUNT = 'Open amount: the sender chooses how much to send.'
 const ONE_SHOT = 'One-shot: this request can be paid only once.'
+const MINT_PREFERRED = 'Mint list is preferred, not strict: other mints are accepted too.'
+// NUT-18: the per-method fee applies only to ecash from a mint outside the list (or from any mint if there is no list);
+// the payer owes the lowest fee among the listed methods that its mint supports.
+const OTHER_MINTS_NOTE = 'A fee applies only to ecash from a mint outside the accepted mints list, or from any mint if no list is given. The payer owes the lowest fee among the listed methods its mint supports.'
 const NO_TRANSPORTS = 'None listed: the payment is returned directly (in-band)'
 
 function amountText(view: PaymentRequestView): string {
@@ -18,6 +22,13 @@ function amountText(view: PaymentRequestView): string {
   const n = Number(view.amount)
   if (!view.unit || !Number.isSafeInteger(n)) return view.amount
   return formatTokenAmount(n, view.unit)
+}
+
+function methodText(m: { method: string; fee: bigint | null }, unit: string | null): string {
+  if (m.fee === null || m.fee === 0n) return `${m.method} · no extra fee`
+  const n = Number(m.fee)
+  const fee = unit && Number.isSafeInteger(n) ? formatTokenAmount(n, unit) : m.fee.toString()
+  return `${m.method} · fee ${fee}${unit ? ` ${unit}` : ''}`
 }
 
 function Row({ label, children, testId }: { label: string; children: React.ReactNode; testId?: string }) {
@@ -140,6 +151,21 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
           <ul className="pr-list">
             {parsed.view.mints.map((m, i) => <AcceptedMint key={`${i}-${m}`} url={m} known={lookup(m)} list={list} />)}
           </ul>
+          )}
+          {parsed.view.mintPreferred === true && parsed.view.mints.length > 0 && (
+            <div className="pr-note" data-testid="pr-mint-preferred">{MINT_PREFERRED}</div>
+          )}
+
+          {parsed.view.supportedMethods !== null && parsed.view.supportedMethods.length > 0 && (
+            <>
+              <div className="pr-section">Other mints</div>
+              <ul className="pr-list" data-testid="pr-methods">
+                {parsed.view.supportedMethods.map((m, i) => (
+                  <li className="pr-method" key={`${i}-${m.method}`} data-testid="pr-method">{methodText(m, parsed.view.unit)}</li>
+                ))}
+              </ul>
+              <div className="pr-note" data-testid="pr-methods-note">{OTHER_MINTS_NOTE}</div>
+            </>
           )}
 
           <div className="pr-section">Transports</div>

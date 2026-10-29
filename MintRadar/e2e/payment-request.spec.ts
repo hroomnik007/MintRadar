@@ -27,6 +27,15 @@ function encode(opts: { mints?: string[]; amount?: number; description?: string;
 
 // NUT-26 example, copied from the spec text (nuts/26.md): id demo123, 1000 sat, single use, one mint, "Coffee payment".
 const NUT26_EXAMPLE = 'CREQB1QYQQWER9D4HNZV3NQGQQSQQQQQQQQQQRAQPSQQGQQSQQZQG9QQVXSAR5WPEN5TE0D45KUAPWV4UXZMTSD3JJUCM0D5RQQRJRDANXVET9YPCXZ7TDV4H8GXHR3TQ'
+// Requests with the NUT-18 mint-list flag `mp` and the supported methods `sm` / `mf`, which cashu-ts cannot encode or decode
+// (built by hand; "Alpha Mint" is the tracked mint of the mocks). A_MP_SM = id ext-1, 21 sat, mp true, bolt11 and onchain with mf 50;
+// B_MP_SM is the same request as creqB (TLV tags 0x09 and 0x0a), in upper case as a QR code carries it.
+const A_MP_SM = 'creqApmFpZWV4dC0xYWEVYXVjc2F0YW2BeBpodHRwczovL2FscGhhLm1pbnQuZXhhbXBsZWJtcPVic22CoWJtbmZib2x0MTGiYm1uZ29uY2hhaW5ibWYYMg'
+const A_MP_FALSE = 'creqAo2FpZWV4dC0yYW2BeBpodHRwczovL2FscGhhLm1pbnQuZXhhbXBsZWJtcPQ'
+const A_MP_NO_MINTS = 'creqAomFpZWV4dC0zYm1w9Q'
+const B_MP_SM = 'CREQB1QYQQ2ETCWSKNZQSQPQQQQQQQQQQQQ9GRQQQSQPGQRF58GARSWVAZ7TMPD3CXSCFWD45KUAPWV4UXZMTSD3JSJQQPQY9QQZGPQQRXYMMVWSCNZZSQZ5QSQPM0DE3KSCTFDCPQQZQQQQQQQQQQQQEQ4HJCD4'
+const MINT_PREFERRED = 'Mint list is preferred, not strict: other mints are accepted too.'
+const OTHER_MINTS_NOTE = 'A fee applies only to ecash from a mint outside the accepted mints list, or from any mint if no list is given. The payer owes the lowest fee among the listed methods its mint supports.'
 const PREFIX_ERROR = 'Not a payment request: expected a string starting with creqA or creqB.'
 
 const card = (page: Page) => page.getByTestId('payment-request-inspector')
@@ -221,6 +230,33 @@ test('notes: open amount when no amount is set; nothing about reuse for a reques
   await input(page).fill(encode({ amount: 21 }))
   await expect(result(page).getByTestId('pr-amount')).toContainText('21')
   await expect(result(page).getByTestId('pr-open-amount')).toHaveCount(0)
+})
+
+for (const [name, text] of [['creqA', A_MP_SM], ['creqB', B_MP_SM]] as const) {
+  test(`${name} with mp and sm: the preferred-list note and the "Other mints" rows with their fee in the request's unit`, async ({ page }) => {
+    await open(page)
+    await input(page).fill(text)
+    await expect(errorBox(page)).toHaveCount(0)
+    await expect(result(page)).toContainText('ext-1')
+    await expect(result(page).getByTestId('pr-mint')).toHaveCount(1)
+    await expect(result(page).getByTestId('pr-mint-preferred')).toHaveText(MINT_PREFERRED)
+    await expect(result(page).getByText('Other mints', { exact: true })).toBeVisible()
+    const rows = result(page).getByTestId('pr-method')
+    await expect(rows).toHaveText(['bolt11 · no extra fee', 'onchain · fee 50 sat'])
+    await expect(result(page).getByTestId('pr-methods-note')).toHaveText(OTHER_MINTS_NOTE)
+    await expect(result(page).locator('a')).toHaveCount(1) // still only "View Mint Detail"
+  })
+}
+
+test('without mp and sm nothing new is shown; mp false (strict) shows nothing; mp true without a mint list shows no note', async ({ page }) => {
+  await open(page)
+  for (const text of [encode(), encode({ amount: 21 }), NUT26_EXAMPLE, A_MP_FALSE, A_MP_NO_MINTS]) {
+    await input(page).fill(text)
+    await expect(result(page)).toBeVisible()
+    await expect(result(page).getByTestId('pr-mint-preferred')).toHaveCount(0)
+    await expect(result(page).getByTestId('pr-methods')).toHaveCount(0)
+    await expect(result(page).getByText('Other mints', { exact: true })).toHaveCount(0)
+  }
 })
 
 test('transport tags are plain text after the type (nostr · NIPs: 17); a relay hint is a plain line, never a link', async ({ page }) => {

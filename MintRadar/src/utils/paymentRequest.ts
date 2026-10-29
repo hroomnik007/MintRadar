@@ -3,6 +3,7 @@
 // every field is checked for its type and anything unexpected is either ignored (unknown extra fields) or makes the
 // whole request invalid (a calm single message, no technical detail).
 import { PaymentRequest } from '@cashu/cashu-ts'
+import { readPaymentRequestExtras, type PaymentRequestMethod } from '@/utils/paymentRequestExtras'
 import { mintStatus } from '@/utils/mintStatus'
 import { mintStatusLabel, type StatusDotWord } from '@/utils/mintFormatting'
 
@@ -41,6 +42,11 @@ export interface PaymentRequestView {
   mints: string[]
   transports: PaymentRequestTransportView[]
   lock: PaymentRequestLock | null
+  /** `mp` (NUT-18) / tag 0x09 (NUT-26), from `paymentRequestExtras.ts` because cashu-ts drops it: true = the mint list is
+   *  preferred, not strict; false = strict; null = absent or unreadable. */
+  mintPreferred: boolean | null
+  /** `sm` with `mf` (NUT-18) / tag 0x0a (NUT-26), same source: null = absent or unreadable. */
+  supportedMethods: PaymentRequestMethod[] | null
 }
 
 export type PaymentRequestParse =
@@ -135,6 +141,7 @@ export function parsePaymentRequest(raw: string): PaymentRequestParse {
       lock = { kind, data, tags }
     }
 
+    const extras = readPaymentRequestExtras(trimmed)
     return {
       ok: true,
       view: {
@@ -146,6 +153,8 @@ export function parsePaymentRequest(raw: string): PaymentRequestParse {
         mints,
         transports,
         lock,
+        mintPreferred: extras.mintPreferred,
+        supportedMethods: extras.supportedMethods,
       },
     }
   } catch {

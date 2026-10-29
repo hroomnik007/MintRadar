@@ -71,6 +71,7 @@ describe('parsePaymentRequest', () => {
       mints: [MINT, 'https://beta.mint.example'],
       transports: [{ type: 'nostr', target: NPROFILE, tags: [{ key: 'n', values: ['17'] }] }, { type: 'post', target: 'https://pay.example/cb', tags: [] }],
       lock: { kind: 'P2PK', data: '02' + 'ab'.repeat(32), tags: ['locktime: 1700000000'] },
+      mintPreferred: null, supportedMethods: null,
     })
   })
 
@@ -125,7 +126,7 @@ describe('parsePaymentRequest', () => {
 
   it('a request with no field at all decodes, and every optional field is null or empty (never invalid)', () => {
     const r = parsePaymentRequest(creq({}))
-    expect(r.ok && r.view).toEqual({ id: null, amount: null, unit: null, singleUse: null, description: null, mints: [], transports: [], lock: null })
+    expect(r.ok && r.view).toEqual({ id: null, amount: null, unit: null, singleUse: null, description: null, mints: [], transports: [], lock: null, mintPreferred: null, supportedMethods: null })
   })
 
   it('each optional field may be absent on its own', () => {
@@ -164,7 +165,7 @@ describe('parsePaymentRequest', () => {
 describe('parsePaymentRequest: NUT-26 creqB', () => {
   const EXAMPLE_VIEW = {
     id: 'demo123', amount: '1000', unit: 'sat', singleUse: true, description: 'Coffee payment',
-    mints: ['https://mint.example.com'], transports: [], lock: null,
+    mints: ['https://mint.example.com'], transports: [], lock: null, mintPreferred: null, supportedMethods: null,
   }
 
   it('decodes the example of the NUT-26 text', () => {
