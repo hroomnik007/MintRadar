@@ -724,6 +724,7 @@ app.get('/health', async (_req: Request, res: Response) => {
   const lastProbeAt = getLastProbeCompletedAt()
   const audit8333 = getAuditUpstreamStatus()
   const auditCz = getAuditCzSyncStatus()
+  const cashuInfoStatus = auditCzSourceStatus(auditCz)
   res.json({
     status: 'ok',
     // false while initDb() and the seed are still running (other database routes answer 503 then); status stays 200.
@@ -733,13 +734,16 @@ app.get('/health', async (_req: Request, res: Response) => {
     lastVantageOutageAt: getLastVantageOutageAt(),
     lastAuditSyncAt,
     lastReviewsSyncAt,
-    ...audit8333,
+    // auditUpstream(CheckedAt) follow cashu.info, the audit source of the score (since 2026-10-29); the legacy
+    // audit.8333.space outcome is only in sources.audit8333.
+    auditUpstream: cashuInfoStatus,
+    auditUpstreamCheckedAt: auditCz.lastSyncAt,
     auditCz,
     // Additive (2026-10-20): the same facts grouped by input. usedForScore says whether the source feeds the
     // Reliability Score (docs/API.md "GET /health"); audit.8333.space is display only since methodology 2.
     sources: {
       ownProbe: { usedForScore: true, lastProbeAt },
-      cashuInfo: { usedForScore: true, lastSyncAt: auditCz.lastSyncAt, status: auditCzSourceStatus(auditCz) },
+      cashuInfo: { usedForScore: true, lastSyncAt: auditCz.lastSyncAt, status: cashuInfoStatus },
       reviews: { usedForScore: false, lastSyncAt: lastReviewsSyncAt },
       audit8333: { usedForScore: false, lastSyncAt: lastAuditSyncAt, status: audit8333.auditUpstream },
     },

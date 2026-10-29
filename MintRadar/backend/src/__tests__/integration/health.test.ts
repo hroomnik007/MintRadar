@@ -77,7 +77,7 @@ describe('GET /health', () => {
       expect(Object.keys(s.audit8333).sort()).toEqual(['lastSyncAt', 'status', 'usedForScore'])
       expect(s.audit8333.usedForScore).toBe(false)
       expect(s.audit8333.lastSyncAt).toBe(res.body.lastAuditSyncAt)
-      expect(s.audit8333.status).toBe(res.body.auditUpstream)
+      expect(s.cashuInfo.status).toBe(res.body.auditUpstream)
     }
   })
 

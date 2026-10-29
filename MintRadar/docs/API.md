@@ -295,7 +295,7 @@ Health check. Available at `/health` and `/api/v1/health` (identical payload). T
 
 **Response:**
 ```json
-{ "status": "ok", "ready": true, "timestamp": "2026-06-25T10:00:00.000Z", "lastProbeAt": "2026-06-25T09:58:12.000Z", "lastVantageOutageAt": null, "lastAuditSyncAt": "2026-06-25T06:00:03.000Z", "lastReviewsSyncAt": "2026-06-25T07:12:44.000Z", "auditUpstream": "ok", "auditUpstreamCheckedAt": "2026-06-25T06:00:01.000Z",
+{ "status": "ok", "ready": true, "timestamp": "2026-06-25T10:00:00.000Z", "lastProbeAt": "2026-06-25T09:58:12.000Z", "lastVantageOutageAt": null, "lastAuditSyncAt": "2026-06-25T06:00:03.000Z", "lastReviewsSyncAt": "2026-06-25T07:12:44.000Z", "auditUpstream": "ok", "auditUpstreamCheckedAt": "2026-06-25T09:53:00.000Z",
   "auditCz": { "lastSyncAt": "2026-06-25T09:53:00.000Z", "mintsStored": 62, "swapsStored": 98, "skipped": { "mints": 0, "swaps": 2 } },
   "sources": { "ownProbe": { "usedForScore": true, "lastProbeAt": "2026-06-25T09:58:12.000Z" },
     "cashuInfo": { "usedForScore": true, "lastSyncAt": "2026-06-25T09:53:00.000Z", "status": "ok" },
@@ -313,7 +313,7 @@ Health check. Available at `/health` and `/api/v1/health` (identical payload). T
 
 `lastReviewsSyncAt` is the newest `reviews_checked_at` in the database (`MAX(reviews_checked_at)`, read in the same query and the same 30s cache as `lastAuditSyncAt`), so it also **survives restarts**. It is `null` only if no mint has ever been reviews-synced. It is stamped for every mint that at least one relay answered for (and whose DB write completed) in the hourly reviews sync, even when nothing changed, so it should advance about every 60 minutes (+ up to a few minutes of start offset and jitter). Caveat: an answer with no events still counts, so this proves the sync job is running and at least one relay is reachable, not that every relay is. If no relay answers at all, nothing is stamped.
 
-`auditUpstream` is `"ok"`, `"down"` or `"unknown"` and `auditUpstreamCheckedAt` is an ISO timestamp or `null`. They report the outcome of the **last audit sync attempt** (the 6h discovery cron against api.audit.8333.space), **not a live check**: `/health` never calls the upstream. A successful list fetch is `ok`; a non-OK HTTP response, timeout, network error or malformed body is `down`. The state is in-memory only, so after a restart or deploy it is `"unknown"` (with `auditUpstreamCheckedAt: null`) until the next sync, up to 6h later.
+`auditUpstream` is `"ok"`, `"partial"`, `"down"` or `"unknown"` and `auditUpstreamCheckedAt` is an ISO timestamp or `null`. Since 2026-10-29 they describe **cashu.info**, the audit source of the Reliability Score, and are the same values as `sources.cashuInfo.status` and `auditCz.lastSyncAt`: the outcome of the **last cashu.info sync cycle** (every 10 minutes), **not a live check** — `/health` never calls the upstream. `ok` = both feeds were stored in that cycle, `partial` = one, `down` = none, `unknown` (with `auditUpstreamCheckedAt: null`) = no cycle yet since the last restart or deploy, at most about 10 minutes. Before 2026-10-29 these two fields described the legacy audit.8333.space; that outcome is now only in `sources.audit8333.status`. The field names are kept so existing clients keep working; note the new value `partial`.
 
 `auditCz` reports the **last cashu.info sync cycle** (every 10 minutes, see `GET /api/mints/audit-cz`), in memory only: `lastSyncAt` is when that cycle finished, `mintsStored` / `swapsStored` are the rows written (`null` when that response failed and nothing was written), `skipped` the number of items dropped as malformed or unknown per response. All fields are `null` until the first cycle after a restart. A `skipped` above 0 means the upstream sent something we do not parse. Counts only — no item contents, URLs or error strings.
 
@@ -324,7 +324,7 @@ Health check. Available at `/health` and `/api/v1/health` (identical payload). T
 | `sources.ownProbe` | `lastProbeAt` (the same value as top-level `lastProbeAt`) | **yes** — MintRadar's own 5-minute probes: uptime, NUTs, software version and contact |
 | `sources.cashuInfo` | `lastSyncAt` (the last cashu.info sync cycle, as `auditCz.lastSyncAt`), `status` | **yes** — the audit part (25 points) comes from cashu.info's 7-day swap data. `status`: `ok` (both feeds stored in the last cycle), `partial` (one), `down` (none), `unknown` (no cycle yet since the last restart) |
 | `sources.reviews` | `lastSyncAt` (as top-level `lastReviewsSyncAt`) | no — Community Rating is shown next to the score and never part of it |
-| `sources.audit8333` | `lastSyncAt` (as top-level `lastAuditSyncAt`), `status` (as top-level `auditUpstream`: `ok`, `down`, `unknown`) | **no — legacy, display only.** audit.8333.space data is shown on a mint's Audit tab; since methodology 2 (2026-10-08) it is not an input of the score |
+| `sources.audit8333` | `lastSyncAt` (as top-level `lastAuditSyncAt`), `status` (the last audit.8333.space sync attempt, 6h cron: `ok`, `down`, `unknown`; no longer the top-level `auditUpstream`) | **no — legacy, display only.** audit.8333.space data is shown on a mint's Audit tab; since methodology 2 (2026-10-08) it is not an input of the score |
 
 Only timestamps, counts and these short status words are exposed — no error messages, upstream URL or status codes.
 
