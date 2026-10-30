@@ -73,11 +73,6 @@ export function reviewSurgeText(): string {
 /** The "Hide test mints" filter (the tag shown while it is on). */
 export const HIDE_TEST_MINTS_TEXT = "Hides the mints on MintRadar's test-mint list (fake sats)."
 
-/** The "Hide outdated software" filter on the Dashboard (the rule; the "N mints with unknown software are kept" note stays visible). */
-export function hideOutdatedText(): string {
-  return `Hides mints running software that is ${OUTDATED_AFTER_MINORS} or more minor versions behind the newest stable release of the same family (Nutshell, CDK-Mintd). Mints with unknown software are kept.`
-}
-
 /** Stats: tracked mints running outdated software. */
 export function outdatedSoftwareText(): string {
   return `Share of tracked Nutshell and cdk-mintd mints that are ${numberWord(OUTDATED_AFTER_MINORS)} or more minor versions behind the newest stable release. Pre-releases of a current line are not counted. Not a security score.`

@@ -162,7 +162,6 @@
       "Compare Operator Mint",
       "Compare Twin Mint",
       "Delta Mint",
-      "Hides mints running software that is 2 or more minor versions behind the newest stable release of the same family (Nutshell, CDK-Mintd). Mints with unknown software are kept.",
       "Hides the mints on MintRadar's test-mint list (fake sats).",
       "List view",
       "MintRadar",
@@ -187,7 +186,7 @@
       "operator.mint.example",
       "twin.mint.example"
     ],
-    "triggers": 5
+    "triggers": 4
   },
   "home-filters-hidetest@390": {
     "texts": [
@@ -210,7 +209,6 @@
       "Compare Operator Mint",
       "Compare Twin Mint",
       "Delta Mint",
-      "Hides mints running software that is 2 or more minor versions behind the newest stable release of the same family (Nutshell, CDK-Mintd). Mints with unknown software are kept.",
       "Hides the mints on MintRadar's test-mint list (fake sats).",
       "List view",
       "MintRadar",
@@ -235,7 +233,7 @@
       "operator.mint.example",
       "twin.mint.example"
     ],
-    "triggers": 5
+    "triggers": 4
   },
   "home-filters@1440": {
     "texts": [
@@ -260,7 +258,6 @@
       "Compare Test Nut",
       "Compare Twin Mint",
       "Delta Mint",
-      "Hides mints running software that is 2 or more minor versions behind the newest stable release of the same family (Nutshell, CDK-Mintd). Mints with unknown software are kept.",
       "List view",
       "MintRadar",
       "Newbie Mint",
@@ -288,7 +285,7 @@
       "testnut.cashu.space",
       "twin.mint.example"
     ],
-    "triggers": 5
+    "triggers": 4
   },
   "home-filters@390": {
     "texts": [
@@ -313,7 +310,6 @@
       "Compare Test Nut",
       "Compare Twin Mint",
       "Delta Mint",
-      "Hides mints running software that is 2 or more minor versions behind the newest stable release of the same family (Nutshell, CDK-Mintd). Mints with unknown software are kept.",
       "List view",
       "MintRadar",
       "Newbie Mint",
@@ -341,7 +337,7 @@
       "testnut.cashu.space",
       "twin.mint.example"
     ],
-    "triggers": 5
+    "triggers": 4
   },
   "home@1440": {
     "texts": [

@@ -1,4 +1,4 @@
-import { HIDE_TEST_MINTS_TEXT, hiddenMintsText, hideOutdatedText } from '@/utils/tooltipTexts'
+import { HIDE_TEST_MINTS_TEXT, hiddenMintsText } from '@/utils/tooltipTexts'
 import { DEGRADED_AFTER_HOURS } from '@/utils/networkHealthIndex'
 import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -1588,7 +1588,6 @@ export default function Dashboard() {
                   />
                   Hide outdated software
                 </label>
-                <InfoTooltip text={hideOutdatedText()} width={260} about="Hide outdated software" />
                 {pendingFilters.hideOutdated && (
                   <span className="filter-hint" data-testid="filter-outdated-kept" aria-live="polite">{unknownKeptNote(draftUnknownKept)}</span>
                 )}
