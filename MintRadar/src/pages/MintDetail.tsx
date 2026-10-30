@@ -45,7 +45,7 @@ import { cleanMintNameDetailed } from '@/utils/cleanMintName'
 import { formatKeysetFee, urlIsOnion, listHasOnion } from '@/utils/mintProbeDisplay'
 import { keysetExpiry, keysetExpiryMs } from '@/utils/keysetExpiry'
 import { auditComponent, auditDataState, auditAgeHours, isAuditUnknown, AUDIT_MIN_SAMPLES } from '@/utils/auditScore'
-import { auditFreshness, audit8333StaleLine } from '@/utils/auditFreshness'
+import { auditFreshness, audit8333StaleLine, auditNeedsFallback as auditNeeds8333Fallback } from '@/utils/auditFreshness'
 import { IcClose } from '@/components/IcClose'
 import { useAuditCz } from '@/hooks/useAuditCz'
 import { adaptAuditCz, auditCzSyncNote, type AuditSwapRow } from '@/utils/auditCz'
@@ -861,15 +861,17 @@ function MintDetailContent({ url }: { url: string }) {
   const freshness = auditFreshness(auditCheckedAt, auditSyncedAt)
   const audit8333Stale = audit8333StaleLine(auditSyncedAt, now)
 
-  // Audit tab source: cashu.info is shown by default only when the audit.8333.space data is
-  // missing or stale; with both sources present the header switch lets the visitor pick.
+  // Audit tab source: while the audit.8333.space data is missing or stale (auditNeedsFallback, the one condition) the
+  // tab shows only the cashu.info view and nothing that names audit.8333.space (no switch, label, link, age line or
+  // strip); with fresh 8333 data both sources are present and the header switch lets the visitor pick.
   const has8333Audit = knownMint !== null && knownMint.auditNMints !== null
-  const auditNeedsFallback = !has8333Audit || freshness.auditorDataOld || freshness.syncStale
-  const auditSource = auditSourcePick ?? (auditNeedsFallback ? 'cz' : '8333')
-  const czView = czData !== null && (!has8333Audit || auditSource === 'cz') ? czData : null
-  const czInfoText = czView ? cashuInfoViewText({ fallbackFrom8333: !(has8333Audit && !auditNeedsFallback) }) : null
+  const auditNeedsFallback = auditNeeds8333Fallback(has8333Audit, freshness)
+  const show8333Audit = !auditNeedsFallback
+  const auditSource = show8333Audit ? (auditSourcePick ?? '8333') : 'cz'
+  const czView = czData !== null && auditSource === 'cz' ? czData : null
+  const czInfoText = czView ? cashuInfoViewText() : null
   const czSyncNote = czView ? auditCzSyncNote(czView, now) : null
-  const auditSwitch = czData !== null && has8333Audit ? (
+  const auditSwitch = czData !== null && show8333Audit ? (
     <div className="md-audit-seg" role="group" aria-label="Audit source">
       <button type="button" className={`md-audit-seg-btn${czView ? ' active' : ''}`} aria-pressed={czView !== null} onClick={() => setAuditSourcePick('cz')}>cashu.info</button>
       <button type="button" className={`md-audit-seg-btn${czView ? '' : ' active'}`} aria-pressed={czView === null} onClick={() => setAuditSourcePick('8333')}>8333.space</button>
@@ -1570,7 +1572,7 @@ function MintDetailContent({ url }: { url: string }) {
             <AuditTab
               auditCzLoading={auditCzLoading}
               czView={czView}
-              has8333Audit={has8333Audit}
+              show8333Audit={show8333Audit}
               czInfoText={czInfoText}
               czSyncNote={czSyncNote}
               auditSwitch={auditSwitch}

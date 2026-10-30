@@ -80,7 +80,7 @@ test.describe('no source line; header tooltip', () => {
   test('the Audit stats ⓘ carries the meaning of the old rows, with the real window', async ({ page }) => {
     await gotoAuditTab(page, czOnly(auditCzResponse()))
     await page.locator('.md-audit-header-main .md-audit-info').hover()
-    await expect(page.getByRole('tooltip')).toHaveText('audit.8333.space has no recent data for this mint. The Reliability Score uses the combined cashu.info number for the last 7 days. Deposits and withdrawals are the same data split by direction.')
+    await expect(page.getByRole('tooltip')).toHaveText('The Reliability Score uses the combined cashu.info number for the last 7 days. Deposits and withdrawals are the same data split by direction.')
   })
 })
 

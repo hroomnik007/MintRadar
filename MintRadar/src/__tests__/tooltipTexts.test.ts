@@ -112,9 +112,12 @@ describe('numbers in the built texts equal their sources', () => {
     expect(T.cleanTileText(126, 126, 0, 0, f)).toBe('126 of 126 swaps in the last 7 days')
   })
   it('cashu.info view text: the score uses the combined number, the tiles are the same data split by direction', () => {
-    expect(T.cashuInfoViewText({ fallbackFrom8333: false })).toBe('The Reliability Score uses the combined cashu.info number for the last 7 days. Deposits and withdrawals are the same data split by direction.')
-    expect(T.cashuInfoViewText({ fallbackFrom8333: true })).toBe('audit.8333.space has no recent data for this mint. The Reliability Score uses the combined cashu.info number for the last 7 days. Deposits and withdrawals are the same data split by direction.')
-    expect(numbers(T.cashuInfoViewText({ fallbackFrom8333: false }))).toEqual([T.AUDIT_WINDOW_DAYS])
+    expect(T.cashuInfoViewText()).toBe('The Reliability Score uses the combined cashu.info number for the last 7 days. Deposits and withdrawals are the same data split by direction.')
+    expect(numbers(T.cashuInfoViewText())).toEqual([T.AUDIT_WINDOW_DAYS])
+  })
+  it('Audit tab texts shown while audit.8333.space is hidden do not name it', () => {
+    expect(T.cashuInfoViewText()).not.toMatch(/8333/)
+    expect(T.auditNoDataText()).not.toMatch(/8333/)
   })
   it('More alerts note: ratio, window, minors, cooldowns', () => {
     expect(numbers(T.moreAlertsNote())).toEqual([T.AUDIT_WINDOW_DAYS, T.OUTDATED_AFTER_MINORS, 4, 5, T.MINT_MELT_COOLDOWN_HOURS, T.OTHER_ALERT_COOLDOWN_HOURS])
@@ -151,7 +154,7 @@ const BUILT: Record<string, string> = {
   compareAuditSuccessText: T.compareAuditSuccessText(), sameOperatorText: T.sameOperatorText(['alpha.mint.example', 'twin.mint.example']),
   depositsTileText: T.depositsTileText(), withdrawalsTileText: T.withdrawalsTileText(),
   cleanTileText: T.cleanTileText(120, 126, 4, 2, n => n.toLocaleString('en-US')),
-  cashuInfoViewText: T.cashuInfoViewText({ fallbackFrom8333: true }),
+  cashuInfoViewText: T.cashuInfoViewText(), auditNoDataText: T.auditNoDataText(),
   moreAlertsNote: T.moreAlertsNote(), KEYSETS_HINT: T.KEYSETS_HINT, newMintBadgeText: T.newMintBadgeText(), newMintCapNote: T.newMintCapNote(), OPERATOR_REVIEW_NOTE: T.OPERATOR_REVIEW_NOTE, operatorExcludedText: T.operatorExcludedText(2),
   nhiOnlineSetText: nhiOnlineSetText(), nhiOnlineRowText: nhiOnlineRowText(26), nhiReliabilityRowText: nhiReliabilityRowText(),
   nhiAdvancedRowText: nhiAdvancedRowText(),

@@ -169,10 +169,14 @@ export function cleanTileText(clean: number, total: number, blamed: number, othe
   return `${head}, ${fmt(blamed)} attributed to this mint${other > 0 ? `, ${fmt(other)} other failure${other === 1 ? '' : 's'}` : ''}`
 }
 
-/** Audit tab: the ⓘ of the cashu.info view. */
-export function cashuInfoViewText(o: { fallbackFrom8333: boolean }): string {
-  const lead = o.fallbackFrom8333 ? 'audit.8333.space has no recent data for this mint. ' : ''
-  return `${lead}The Reliability Score uses the combined cashu.info number for the last ${AUDIT_WINDOW_DAYS} days. Deposits and withdrawals are the same data split by direction.`
+/** Audit tab: the ⓘ of the cashu.info view. It never names audit.8333.space: that source is hidden while its data is stale. */
+export function cashuInfoViewText(): string {
+  return `The Reliability Score uses the combined cashu.info number for the last ${AUDIT_WINDOW_DAYS} days. Deposits and withdrawals are the same data split by direction.`
+}
+
+/** Audit tab: the ⓘ of the "No audit data" panel while audit.8333.space is hidden (it does not name that service). */
+export function auditNoDataText(): string {
+  return `Audit stats come from cashu.info, which runs test swaps through mints. It has no data for this mint; the Reliability Score then counts the audit part as neutral.`
 }
 
 /** Mint Detail > Keysets: the visible line under the title (it replaced the tooltip). */

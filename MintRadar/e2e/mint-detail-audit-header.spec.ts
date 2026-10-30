@@ -71,11 +71,12 @@ test.describe('Audit stats heading — no-data fallback', () => {
     const header = page.locator('.md-audit-header')
     await expect(header).toBeVisible()
     await expect(header).toContainText('Audit stats')
-    await expect(header).toContainText('via audit.8333.space')
+    // No 8333 data: audit.8333.space is hidden (auditNeedsFallback), so no "via" label and an ⓘ that does not name it.
+    await expect(header).not.toContainText('8333')
     await expect(page.getByText('No audit data available for this mint.')).toBeVisible()
 
     await header.locator('.md-audit-info').hover()
-    await expect(page.getByText(TOOLTIP_RE)).toBeVisible()
+    await expect(page.getByRole('tooltip')).toHaveText(/^Audit stats come from cashu\.info/)
 
     await page.locator('.md-panel', { hasText: 'No audit data' }).screenshot({ path: 'test-results/audit-header-nodata-desktop.png' })
   })

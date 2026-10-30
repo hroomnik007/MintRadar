@@ -10,7 +10,7 @@ import { formatDateTimeUtc } from '@/utils/formatDate'
 import { mintHostname } from '@/utils/mintFormatting'
 import { AUDIT_CZ_NEUTRAL_TITLE, type AuditCzView, type AuditSwapRow } from '@/utils/auditCz'
 import { swapStripLabel, swapStripText } from '@/utils/mintDetailFacts'
-import { AUDIT_SWAPS_WINDOW, AUDIT_WINDOW_DAYS } from '@/utils/tooltipTexts'
+import { AUDIT_SWAPS_WINDOW, AUDIT_WINDOW_DAYS, auditNoDataText } from '@/utils/tooltipTexts'
 
 /** Rows of the "Recent swaps" table shown before "Show all". */
 export const AUDIT_SWAP_ROWS_DEFAULT = 8
@@ -74,7 +74,8 @@ function AuditSyncNote({ note, testId }: { note: { text: string; stale: boolean;
 export interface AuditTabProps {
   auditCzLoading: boolean
   czView: AuditCzView | null
-  has8333Audit: boolean
+  /** audit.8333.space data present and fresh (MintDetail's !auditNeedsFallback); false hides every 8333 element. */
+  show8333Audit: boolean
   czInfoText: string | null
   czSyncNote: { text: string; stale: boolean; tip: string | null } | null
   auditSwitch: ReactNode
@@ -105,7 +106,7 @@ export interface AuditTabProps {
 }
 
 export function AuditTab({
-  auditCzLoading, czView, has8333Audit, czInfoText, czSyncNote, auditSwitch,
+  auditCzLoading, czView, show8333Audit, czInfoText, czSyncNote, auditSwitch,
   audit8333Stale, czData, stripMints, stripMelts, stripReliabilityColor, stripRecentSuccessDisplay,
   stripRecentSuccessSub, stripAvgTimeDisplay, tipMints, tipMelts, tipSuccess, tipAvg,
   auditSwapBarItems, auditRecentSwapRows, auditSwaps, showAllAuditSwaps, setShowAllAuditSwaps, showAllCzFrom,
@@ -114,7 +115,7 @@ export function AuditTab({
   return (<>
             {auditCzLoading ? (
               <div className="md-audit-loading" style={{fontSize:12.5,color:'var(--text3)',fontFamily:'var(--font-mono)'}} role="status">Loading audit data…</div>
-            ) : (czView !== null || has8333Audit) ? (
+            ) : (czView !== null || show8333Audit) ? (
               <div className="md-panel md-audit-collapsible" style={{background:'var(--bg)'}}>
                 {/* Desktop heading (the mobile collapse toggle below is display:none here). */}
                 <div className="md-audit-header md-audit-header-main">
@@ -287,8 +288,7 @@ export function AuditTab({
               <div className="md-panel">
                 <div className="md-audit-header">
                   <span className="md-panel-title" style={{marginBottom:0}}>Audit stats</span>
-                  <span className="md-audit-via">· via audit.8333.space</span>
-                  <AuditSourceInfoIcon />
+                  <AuditSourceInfoIcon text={auditNoDataText()} />
                 </div>
                 <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>No audit data available for this mint.</div>
               </div>

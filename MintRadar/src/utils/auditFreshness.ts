@@ -40,6 +40,15 @@ export function auditFreshness(
 }
 
 /**
+ * True while the audit.8333.space data is missing, or old by either clock (auditorDataOld or syncStale above). It is the
+ * ONE condition of the Mint Detail Audit tab: while it holds, the tab shows only the cashu.info view and hides every
+ * element that names audit.8333.space (source switch, "via" label, link, age line, strip, tooltip texts).
+ */
+export function auditNeedsFallback(has8333Audit: boolean, f: Pick<AuditFreshness, 'auditorDataOld' | 'syncStale'>): boolean {
+  return !has8333Audit || f.auditorDataOld || f.syncStale
+}
+
+/**
  * The line under the Audit heading while audit.8333.space data is on screen and MintRadar's last sync from it is older
  * than AUDIT_SYNC_STALE_HOURS: how old the data is (whole days) and since when the service has not answered. Built from
  * the stored sync time only; null while the sync is fresh or unknown.
