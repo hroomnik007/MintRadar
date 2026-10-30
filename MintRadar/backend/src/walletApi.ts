@@ -205,7 +205,7 @@ export interface WalletMint {
   auditByDirection: { mint: AuditDirection | null; melt: AuditDirection | null }
   /** Only with include=facts (additive 2026-10-25): latency percentiles of the successful probes of the last 24 hours. */
   latency24h: WalletLatency24h | null
-  /** Only with include=facts (additive 2026-10-30): the stored NIP-87 kind:38172 announcement (shared/nip87Announcement.ts). checkedAt is omitted until a discovery run has reached the relays. */
+  /** Only with include=facts (additive 2026-10-30): the stored NIP-87 kind:38172 announcement (shared/nip87Announcement.ts). checkedAt is present only for "not_seen" and omitted until a discovery run has reached the relays. */
   nip87: Nip87AnnouncementFacts
 }
 

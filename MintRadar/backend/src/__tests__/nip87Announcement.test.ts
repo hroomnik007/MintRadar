@@ -62,24 +62,26 @@ describe('wallet API nip87 field', () => {
 
 describe('checkedAt (app_state discovery_last_success_at)', () => {
   const CHECKED = '2026-10-31T06:00:12.000Z'
-  it('present when the key is stored, for seen and not seen', () => {
-    expect(nip87AnnouncementOf({ announcedAt: AT, announceD: PK, infoPubkey: PK, checkedAt: CHECKED }).checkedAt).toBe(CHECKED)
+  it('present when the key is stored for not seen; omitted for seen', () => {
+    expect('checkedAt' in nip87AnnouncementOf({ announcedAt: AT, announceD: PK, infoPubkey: PK, checkedAt: CHECKED })).toBe(false)
     expect(nip87AnnouncementOf({ checkedAt: new Date(CHECKED) })).toEqual({ announcement: 'not_seen', dMatchesInfoPubkey: null, eventCreatedAt: null, checkedAt: CHECKED })
   })
   it('the key is omitted (not null, not empty) when the value is missing or not a date', () => {
     for (const c of [undefined, null, '', 'garbage']) {
-      const f = nip87AnnouncementOf({ announcedAt: AT, checkedAt: c })
+      const f = nip87AnnouncementOf({ checkedAt: c })
       expect('checkedAt' in f, String(c)).toBe(false)
     }
   })
-  it('wallet API: present and omitted', () => {
+  it('wallet API: present for not seen, omitted for seen and without the key', () => {
     const base = { url: 'https://a.example.com', name: 'A', archived: false, degraded: false, online: true, version: null, softwareLatest: null,
       nutsLimits: null, units: null, auditCzTotal: null, auditCzBlamed: null, auditCzFetchedAt: null, discoveredAt: null,
       reliabilityScore: null, uptimePct24h: null, uptimePct7d: null, lastCheckedAt: null, reviewCount: null, reviewRatedCount: null,
       reviewAvgRating: null, operatorReviewCount: null, latencyMs: null, pubkey: PK, nostrAnnouncedAt: AT, nostrAnnounceD: PK } as KnownMintLike
-    expect(toWalletMint({ ...base, nostrCheckedAt: CHECKED }).nip87.checkedAt).toBe(CHECKED)
-    expect('checkedAt' in toWalletMint(base).nip87).toBe(false)
-    expect('checkedAt' in toWalletMint({ ...base, nostrCheckedAt: null }).nip87).toBe(false)
+    expect('checkedAt' in toWalletMint({ ...base, nostrCheckedAt: CHECKED }).nip87).toBe(false)
+    const unannounced = { ...base, nostrAnnouncedAt: null, nostrAnnounceD: null }
+    expect(toWalletMint({ ...unannounced, nostrCheckedAt: CHECKED }).nip87).toEqual({ announcement: 'not_seen', dMatchesInfoPubkey: null, eventCreatedAt: null, checkedAt: CHECKED })
+    expect('checkedAt' in toWalletMint(unannounced).nip87).toBe(false)
+    expect('checkedAt' in toWalletMint({ ...unannounced, nostrCheckedAt: null }).nip87).toBe(false)
   })
   it('appStateTimeIso normalises a stored value and returns null otherwise', () => {
     expect(appStateTimeIso('2026-10-31T06:00:12Z')).toBe(CHECKED)

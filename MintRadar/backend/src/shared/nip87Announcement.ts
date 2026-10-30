@@ -5,7 +5,8 @@
 // NIP-87: the `d` tag SHOULD be the mint's pubkey (from /v1/info); the event author is whoever published it, so it says
 // nothing about the mint. The key match is therefore decided only when the `d` tag has the shape of a mint pubkey
 // (33-byte compressed secp256k1, 66 hex characters, 02/03 prefix) and the mint's pubkey is known; otherwise it is null
-// (not comparable), never false. "not_seen" means not seen on our relays, not that no announcement exists.
+// (not comparable), never false. "seen" means an announcement event was seen by discovery at some point and stored; it is
+// not re-checked against the relays afterwards. "not_seen" means none was seen on our relays, not that none exists.
 // The frontend copy (src/utils/nip87Announcement.ts) has the same code; src/__tests__/sharedModules.test.ts pins both.
 
 export type Nip87Seen = 'seen' | 'not_seen'
@@ -16,7 +17,7 @@ export interface Nip87AnnouncementFacts {
   dMatchesInfoPubkey: boolean | null
   /** The announcement event's created_at (ISO 8601); null when not seen. */
   eventCreatedAt: string | null
-  /** When the last discovery run that reached our relays ran (ISO 8601); the key is ABSENT until there was one. */
+  /** Only for "not_seen": when the last discovery run that reached our relays ran (ISO 8601); ABSENT for "seen" and until there was a run. */
   checkedAt?: string
 }
 
@@ -46,9 +47,8 @@ function isoOf(v: string | Date | null | undefined): string | null {
 export function nip87AnnouncementOf(m: Nip87AnnouncementInput): Nip87AnnouncementFacts {
   const eventCreatedAt = isoOf(m.announcedAt)
   const checkedAt = isoOf(m.checkedAt)
-  const checked = checkedAt === null ? {} : { checkedAt }
-  if (eventCreatedAt === null) return { announcement: 'not_seen', dMatchesInfoPubkey: null, eventCreatedAt: null, ...checked }
+  if (eventCreatedAt === null) return { announcement: 'not_seen', dMatchesInfoPubkey: null, eventCreatedAt: null, ...(checkedAt === null ? {} : { checkedAt }) }
   const d = pubkeyShaped(m.announceD)
   const info = pubkeyShaped(m.infoPubkey)
-  return { announcement: 'seen', dMatchesInfoPubkey: d !== null && info !== null ? d === info : null, eventCreatedAt, ...checked }
+  return { announcement: 'seen', dMatchesInfoPubkey: d !== null && info !== null ? d === info : null, eventCreatedAt }
 }

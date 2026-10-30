@@ -535,7 +535,7 @@ components:
         nip87:
           description: >-
             Only with `include=facts` (always on the single-mint endpoint). The mint's NIP-87 announcement (Nostr kind 38172) as
-            MintRadar's discovery last stored it from its relays. Added 2026-10-30; `checkedAt` added 2026-10-30.
+            MintRadar's discovery stored it from its relays. Added 2026-10-30.
           allOf:
             - $ref: '#/components/schemas/Nip87'
         downSince:
@@ -655,7 +655,7 @@ components:
         announcement:
           type: string
           enum: [seen, not_seen]
-          description: '`seen`: an announcement for this URL was seen on our relays. `not_seen`: none was seen on our relays; it may still exist elsewhere.'
+          description: '`seen`: an announcement event was seen by discovery at some point and stored; it is not re-checked against the relays afterwards. `not_seen`: none was seen on our relays; it may still exist elsewhere.'
         dMatchesInfoPubkey:
           type: [boolean, 'null']
           description: >-
@@ -670,8 +670,9 @@ components:
           type: string
           format: date-time
           description: >-
-            When MintRadar's discovery last ran with a relay completing the kind 38172 query. The key is omitted until there has
-            been such a run; a run in which every relay failed or timed out does not change it.
+            Time of the last discovery run that reached the relays (a relay completed the kind 38172 query). Present only when
+            `announcement` is `not_seen`; omitted for `seen` and until there has been such a run. A run in which every relay
+            failed or timed out does not change it.
     Latency24h:
       type: object
       required: [p50Ms, p95Ms, samples]

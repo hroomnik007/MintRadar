@@ -78,9 +78,11 @@ describe('mint object: the field table equals the real mapper', () => {
 
   it('lists exactly the keys the mapper produces (nested keys as parent.child)', () => {
     expect(new Set(WALLET_MINT_FIELDS.map(f => f.name)).size).toBe(WALLET_MINT_FIELDS.length)
-    expect([...WALLET_MINT_FIELDS.map(f => f.name)].sort()).toEqual([...flatten(full)].sort())
+    // nip87.checkedAt exists only for a mint without a stored announcement (EMPTY), the other nip87 keys for both
+    expect([...WALLET_MINT_FIELDS.map(f => f.name)].sort()).toEqual([...new Set([...flatten(full), ...flatten(empty)])].sort())
+    expect(flatten(full)).not.toContain('nip87.checkedAt')
     // the same keys with every input missing, except the nested ones of an object that is null then
-    expect(flatten(empty).sort()).toEqual(flatten(full).filter(k => !/^(audit|authRequired|methods|limits|scoreBreakdown|changesPending|latency24h)\./.test(k)).sort())
+    expect(flatten(empty).sort()).toEqual([...flatten(full).filter(k => !/^(audit|authRequired|methods|limits|scoreBreakdown|changesPending|latency24h)\./.test(k)), 'nip87.checkedAt'].sort())
   })
 
   it('"Null: yes" is exactly the fields the mapper can return as null', () => {

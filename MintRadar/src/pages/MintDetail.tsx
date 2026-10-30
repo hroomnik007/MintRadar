@@ -1,6 +1,6 @@
 import { njumpEventUrl, mintAnnounceNaddr } from '@/utils/nostrLinks'
 import { nip87AnnouncementOf } from '@/utils/nip87Announcement'
-import { NIP87_ANNOUNCEMENT_LABEL, NIP87_NOT_SEEN_TEXT, nip87KeyText, nip87SeenSuffix, nip87CheckedLabel } from '@/utils/nip87Texts'
+import { NIP87_ANNOUNCEMENT_LABEL, NIP87_NOT_SEEN_TEXT, nip87KeyText, nip87StoredSuffix, nip87CheckedLabel } from '@/utils/nip87Texts'
 import { useParams, useNavigate, Navigate, Link } from 'react-router-dom'
 import { Fragment, useEffect, useState, useMemo, useCallback, lazy, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -1259,7 +1259,7 @@ function MintDetailContent({ url }: { url: string }) {
                     {nostrAnnounceHref ? (
                       <a href={nostrAnnounceHref} target="_blank" rel="noopener noreferrer">{NIP87_ANNOUNCEMENT_LABEL}</a>
                     ) : NIP87_ANNOUNCEMENT_LABEL}
-                    {nip87SeenSuffix(nip87.eventCreatedAt)}
+                    {nip87StoredSuffix(nip87.eventCreatedAt)}
                   </>) : NIP87_NOT_SEEN_TEXT}
                   {nip87Checked && <>{nip87Checked.text}<span title={nip87Checked.title} data-testid="md-nip87-checked">{nip87Checked.label}</span></>}
                   {nip87Key && <span className="md-announce-key" data-testid="md-nip87-key">{nip87Key}</span>}
