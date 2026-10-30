@@ -1637,7 +1637,8 @@
   /* Row 2: Reliability · Hide test mints · [Reset · Show N of M at the right end]. 12px between wrapped lines (a button's 8px touch band + the checkbox's / slider's 4px). */
   gap: 12px 12px;
 }
-.filter-check {
+.filter-check,
+.filter-outdated-check {
   position: relative;
   display: flex;
   align-items: center;
@@ -1649,7 +1650,8 @@
   font-family: var(--font-body);
   white-space: nowrap;
 }
-.filter-check input[type="checkbox"] {
+.filter-check input[type="checkbox"],
+.filter-outdated-check input[type="checkbox"] {
   accent-color: var(--accent);
   cursor: pointer;
   /* Override the global `input { width: 100% }` base rule (src/index.css). */
@@ -1657,7 +1659,19 @@
   flex: 0 0 auto;
 }
 @media (pointer: coarse), (max-width: 600px) {
-  .filter-check::before { content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
+  .filter-check::before,
+  .filter-outdated-check::before { content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
+}
+/* "Hide outdated software" (first item of .filter-footer, right after Software in the DOM): the checkbox, then the rule
+   and, while it is on, the "N mints with unknown software are kept." note; both texts wrap instead of widening the row. */
+.filter-outdated { display: flex; align-items: center; flex-wrap: wrap; column-gap: 10px; row-gap: 0; min-width: 0; }
+.filter-hint {
+  flex: 1 1 220px;
+  max-width: 380px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--text2);
 }
 
 .filter-actions-row {
@@ -1682,7 +1696,7 @@
   .filter-footer { flex: 1 1 100%; gap: 12px 6px; }
   .filter-rel { flex: 1 1 100%; }
   .filter-rel .filter-slider { flex: 1 1 auto; width: auto; min-width: 0; }
-  .filter-check { flex: 1 1 100%; }
+  .filter-check, .filter-outdated { flex: 1 1 100%; }
   .filter-actions-row { flex: 1 1 100%; margin-left: 0; gap: 6px; }
   .filter-apply-btn { flex: 1 1 auto; }
 }

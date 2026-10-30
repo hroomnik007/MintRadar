@@ -32,6 +32,7 @@ import { isNutOffered } from '@/utils/nutSupport'
 import { hasRequiredNuts } from '@/utils/nutFilters'
 import { parseMethodParam, mintMatchesMethod, methodOptions } from '@/utils/methodFilter'
 import { parseSoftwareParam, buildSoftwareParam, mintMatchesSoftware, softwareGroups } from '@/utils/softwareFilter'
+import { OUTDATED_PARAM, HIDE_OUTDATED_HINT, parseOutdatedParam, buildOutdatedParam, mintMatchesOutdated, hasUnknownVersion, unknownKeptNote } from '@/utils/outdatedFilter'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { probeErrorMessage, probeRateLimitMessage, isProbeErrorKind, type ProbeErrorKind } from '@/utils/probeErrorMessages'
@@ -157,6 +158,8 @@ interface FilterState {
   method: string | null
   /** Software groups (?software=nutshell,cdk,other,unknown, utils/softwareFilter.ts), OR. [] = any. */
   software: string[]
+  /** Hide mints the shared version rule labels "outdated" (?outdated=hide, utils/outdatedFilter.ts). Unknown versions stay. */
+  hideOutdated: boolean
 }
 // New default Dashboard view (2026-09-09): online-only, test mints hidden,
 // sorted by Reliability Score desc. The Name-sort freeze from earlier passes is
@@ -165,7 +168,7 @@ interface FilterState {
 // mints (they still carry a "Test mint" badge). An earlier pass defaulted this
 // ON — that is deliberately lifted here. ?testmints=hide is emitted only when
 // the user turns the checkbox on; the default never emits a param.
-const DEFAULT_FILTERS: FilterState = { status: 'online', minReliabilityScore: 0, requiredNuts: [], hideTestMints: false, units: [], method: null, software: [] }
+const DEFAULT_FILTERS: FilterState = { status: 'online', minReliabilityScore: 0, requiredNuts: [], hideTestMints: false, units: [], method: null, software: [], hideOutdated: false }
 
 const EMPTY_FAMILIES: ReadonlySet<string> = new Set()
 
@@ -188,6 +191,7 @@ function applyFilters(
     if (!mintMatchesUnits(mint, filters.units)) return false
     if (!mintMatchesMethod(mint, filters.method)) return false
     if (!mintMatchesSoftware(mint, filters.software, opts.softwareFamilies ?? EMPTY_FAMILIES)) return false
+    if (!mintMatchesOutdated(mint, filters.hideOutdated)) return false
     if (filters.requiredNuts.length > 0) {
       const nuts = mint.nutsLimits as Record<string, unknown> | null
       if (!nuts) return false
@@ -210,6 +214,7 @@ function countActiveFilters(f: FilterState): number {
     f.units.length > 0 ? 1 : 0,
     f.method !== null ? 1 : 0,
     f.software.length > 0 ? 1 : 0,
+    f.hideOutdated ? 1 : 0,
   ].reduce((a, b) => a + b, 0)
 }
 
@@ -254,12 +259,13 @@ function parseFilterParams(params: URLSearchParams): {
   const units = parseUnitParam(params.get('unit'))
   const method = parseMethodParam(params.get('method'))
   const software = parseSoftwareParam(params.get('software'))
+  const hideOutdated = parseOutdatedParam(params.get(OUTDATED_PARAM))
   const compareUrls = parseCompareParam(params.get('compare'))
   return {
     search: params.get('q') ?? '',
     sortBy,
     sortDir,
-    filters: { status, minReliabilityScore, requiredNuts, hideTestMints, units, method, software },
+    filters: { status, minReliabilityScore, requiredNuts, hideTestMints, units, method, software, hideOutdated },
     compareUrls,
   }
 }
@@ -278,6 +284,8 @@ function buildFilterParams(search: string, sortBy: SortByValue, sortDir: 'asc' |
   if (filters.method) params.set('method', filters.method)
   const softwareParam = buildSoftwareParam(filters.software)
   if (softwareParam) params.set('software', softwareParam)
+  const outdatedParam = buildOutdatedParam(filters.hideOutdated)
+  if (outdatedParam) params.set(OUTDATED_PARAM, outdatedParam)
   if (compareUrls.length > 0) params.set('compare', buildCompareParam(compareUrls))
   return params
 }
@@ -867,10 +875,13 @@ export default function Dashboard() {
   // Live count for the filter panel's "Show N of M" button: the same pure
   // applyFilters/pool chain as filteredMints above, but over the *draft*
   // (pendingFilters). Only computed while the panel is open.
-  const draftCount = useMemo(() => {
-    if (!showFilters) return 0
+  // draftUnknownKept: of those mints, how many have a version the rule cannot compare (the "Hide outdated software"
+  // note, shown only while that checkbox is on).
+  const { draftCount, draftUnknownKept } = useMemo(() => {
+    if (!showFilters) return { draftCount: 0, draftUnknownKept: 0 }
     const pool = poolForStatus(trackedMints, pendingFilters.status, showDegraded) as KnownMint[]
-    return applyFilters(pool, pendingFilters, { showDegraded, searching: search.trim().length > 0, softwareFamilies }).length
+    const shown = applyFilters(pool, pendingFilters, { showDegraded, searching: search.trim().length > 0, softwareFamilies })
+    return { draftCount: shown.length, draftUnknownKept: pendingFilters.hideOutdated ? shown.filter(hasUnknownVersion).length : 0 }
   }, [showFilters, trackedMints, pendingFilters, showDegraded, search, softwareFamilies])
 
   const onlineCount = countOnline(trackedMints)
@@ -1465,6 +1476,12 @@ export default function Dashboard() {
                   <button type="button" aria-label="Clear software filter" onClick={() => { const f = { ...activeFilters, software: [] }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
+              {activeFilters.hideOutdated && (
+                <span className="filter-tag">
+                  Outdated software hidden
+                  <button type="button" aria-label="Clear outdated software filter" onClick={() => { const f = { ...activeFilters, hideOutdated: false }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
+                </span>
+              )}
               {activeFilters.requiredNuts.map(nut => (
                 <span key={nut} className="filter-tag">
                   NUT-{nut.padStart(2, '0')}
@@ -1560,6 +1577,23 @@ export default function Dashboard() {
             </div>
 
             <div className="filter-footer">
+              {/* "Hide outdated software" comes right after Software in the DOM (and on phones): the first control of row 2,
+                  so row 1 keeps the four segmented groups. */}
+              <div className="filter-outdated">
+                <label className="filter-outdated-check">
+                  <input
+                    type="checkbox"
+                    checked={pendingFilters.hideOutdated}
+                    aria-describedby="filter-outdated-hint"
+                    onChange={e => setPendingFilters(p => ({ ...p, hideOutdated: e.target.checked }))}
+                  />
+                  Hide outdated software
+                </label>
+                <span className="filter-hint" id="filter-outdated-hint">{HIDE_OUTDATED_HINT}</span>
+                {pendingFilters.hideOutdated && (
+                  <span className="filter-hint" data-testid="filter-outdated-kept" aria-live="polite">{unknownKeptNote(draftUnknownKept)}</span>
+                )}
+              </div>
               <div className="filter-rel">
                 <span className="filter-group-label">Reliability ≥ <strong>{pendingFilters.minReliabilityScore}</strong></span>
                 <input

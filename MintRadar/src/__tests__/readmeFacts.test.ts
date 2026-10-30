@@ -16,6 +16,7 @@ import { PROBE_LOCATION } from '@/constants/probeLocation'
 import { LEARN_MODULES } from '@/constants/learnModules'
 import { MAX_COMPARE_MINTS } from '@/utils/compareUrlParam'
 import { RATING_PRIOR, RATING_PRIOR_WEIGHT } from '@/utils/bayesianRating'
+import { OUTDATED_AFTER_MINORS } from '@/utils/tooltipTexts'
 
 const ROOT = process.cwd() // the app directory (MintRadar/MintRadar)
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
@@ -61,6 +62,11 @@ describe('README numbers equal the code', () => {
 
   it('probe location', () => {
     expect(readme).toContain(`from ${PROBE_LOCATION}, DE`)
+  })
+
+  it('Hide outdated software threshold (?outdated=hide)', () => {
+    expect(readme).toContain(`${OUTDATED_AFTER_MINORS} or more minor versions behind the newest stable release of the same software`)
+    expect(readme).toContain('`?outdated=hide`')
   })
 
   it('compare limit', () => {
