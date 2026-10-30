@@ -1,15 +1,16 @@
 name: Nginx Config Drift Check
 
-# Read-only, informational check: compares the repo's deploy/nginx.conf against
+# Read-only check: compares the repo's deploy/nginx.conf against
 # the live nginx config on the VPS (which is deployed manually — see MintRadar/docs/claude/deploy-and-infra.md
 # "deploy/nginx.conf is reference/documentation only"). Runs independently of
-# the deploy workflow: no `needs:` link to it, and never fails the run on drift
-# — it only surfaces the diff in the Job Summary so it doesn't get missed.
+# the deploy workflow: no `needs:` link to it, so it can never block a deploy. It writes the diff to the Job Summary and,
+# as its LAST step (after the summary of every file is complete), fails the run when a file drifted or could not be
+# read, so GitHub reports the run as failed (and notifies).
 #
 # Since 2026-10-30 the same job also compares the strfry relay files that the relay container bind-mounts from
 # /opt/mintradar-strfry on the server (deploy/strfry/{strfry.conf,writePolicy.sh,privileged-pubkeys.txt,
 # docker-compose.strfry.yml}; those are copied by hand too, the deploy does not touch them). Same SSH connection
-# secrets, read-only (`sudo base64` of a fixed file list), same Job Summary reporting, never fails on drift.
+# secrets, read-only (`sudo base64` of a fixed file list), same Job Summary reporting, same final failure rule.
 #
 # Capture format (2026-10-30): appleboy/ssh-action's captured stdout drops empty lines and appends its own banner
 # ("=====", "Successfully executed commands to all hosts."), so a plain `cat` can never be byte-exact. Each file is
@@ -56,6 +57,9 @@ jobs:
           set -euo pipefail
           REPO_CONF="MintRadar/deploy/nginx.conf"
           LIVE_CONF="$RUNNER_TEMP/live-nginx.conf"
+          # Files with a problem (name and reason, one per line); the last step of the job fails when this is not empty.
+          PROBLEMS="$RUNNER_TEMP/drift-problems.txt"
+          : > "$PROBLEMS"
 
           # The one marker line of this file out of the action's output, decoded byte for byte. Fails (return 1) when the
           # line is missing, is not valid base64 or decodes to nothing: the file could not be read.
@@ -77,6 +81,7 @@ jobs:
 
           if ! decode_live nginx.conf "$LIVE_CONF"; then
             echo "⚠️ **Could not read the live config on the server** (missing or empty)." >> "$GITHUB_STEP_SUMMARY"
+            echo "nginx.conf (could not be read)" >> "$PROBLEMS"
           elif diff -u "$REPO_CONF" "$LIVE_CONF" > "$RUNNER_TEMP/diff.txt"; then
             echo "✅ **No drift detected** — repo and live config match." >> "$GITHUB_STEP_SUMMARY"
           else
@@ -92,9 +97,8 @@ jobs:
               echo "intentional (a manual server-side change), update the repo file to match."
               echo "If it isn't, the server is running an unreviewed config."
             } >> "$GITHUB_STEP_SUMMARY"
+            echo "nginx.conf (drift)" >> "$PROBLEMS"
           fi
-          # Informational only — never fail the job on drift.
-          exit 0
 
       - name: Fetch live strfry config from server
         id: fetch_live_strfry
@@ -121,6 +125,7 @@ jobs:
           set -euo pipefail
           LIVE_DIR="$RUNNER_TEMP/live-strfry"
           mkdir -p "$LIVE_DIR"
+          PROBLEMS="$RUNNER_TEMP/drift-problems.txt"
 
           # Same decoder as the nginx step. The names come from the fixed list below, never from the server output.
           decode_live() {
@@ -145,6 +150,7 @@ jobs:
             if ! decode_live "$f" "$LIVE_FILE"; then
               echo "⚠️ **\`$f\`: could not be read on the server** (missing or empty)." >> "$GITHUB_STEP_SUMMARY"
               echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "$f (could not be read)" >> "$PROBLEMS"
               continue
             fi
             if diff -u "$REPO_FILE" "$LIVE_FILE" > "$RUNNER_TEMP/diff-$f.txt"; then
@@ -159,11 +165,21 @@ jobs:
                 echo '```'
                 echo ""
               } >> "$GITHUB_STEP_SUMMARY"
+              echo "$f (drift)" >> "$PROBLEMS"
             fi
           done
           {
             echo "These files are copied to the server by hand (the deploy does not do it); see MintRadar/docs/claude/deploy-and-infra.md."
             echo "If a difference is intentional, update the repo file; if not, the relay runs an unreviewed file."
           } >> "$GITHUB_STEP_SUMMARY"
-          # Informational only — never fail the job on drift.
-          exit 0
+
+      - name: Fail the run if a file drifted or could not be read
+        run: |
+          set -euo pipefail
+          PROBLEMS="$RUNNER_TEMP/drift-problems.txt"
+          # The Job Summary of all five files is complete at this point. Only file names and the reason are printed.
+          if [ -s "$PROBLEMS" ]; then
+            echo "::error title=Config drift::Problem in: $(paste -sd ',' "$PROBLEMS" | sed 's/,/, /g')"
+            exit 1
+          fi
+          echo "No drift: all five files are identical to the repo."
