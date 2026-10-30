@@ -1492,7 +1492,7 @@ export default function Dashboard() {
           )}
 
           {/* Two rows on desktop, one column on phones (F2): .filter-main = the four segmented groups (Status, Unit,
-              Method, Software), .filter-footer = Reliability, Hide test mints, Reset, Show N of M. The DOM order is
+              Method, Software), .filter-footer = Hide outdated software, Hide test mints, Reliability, Reset, Show N of M. The DOM order is
               the phone order. See .filter-bar in Dashboard.css. */}
           <div className="filter-bar">
             <div className="filter-main">
@@ -1578,7 +1578,7 @@ export default function Dashboard() {
 
             <div className="filter-footer">
               {/* "Hide outdated software" comes right after Software in the DOM (and on phones): the first control of row 2,
-                  so row 1 keeps the four segmented groups. */}
+                  so row 1 keeps the four segmented groups. "Hide test mints" follows it directly, then Reliability. */}
               <div className="filter-outdated">
                 <label className="filter-outdated-check">
                   <input
@@ -1592,6 +1592,14 @@ export default function Dashboard() {
                   <span className="filter-hint" data-testid="filter-outdated-kept" aria-live="polite">{unknownKeptNote(draftUnknownKept)}</span>
                 )}
               </div>
+              <label className="filter-check">
+                <input
+                  type="checkbox"
+                  checked={pendingFilters.hideTestMints}
+                  onChange={e => setPendingFilters(p => ({ ...p, hideTestMints: e.target.checked }))}
+                />
+                Hide test mints
+              </label>
               <div className="filter-rel">
                 <span className="filter-group-label">Reliability ≥ <strong>{pendingFilters.minReliabilityScore}</strong></span>
                 <input
@@ -1602,14 +1610,6 @@ export default function Dashboard() {
                   aria-label="Minimum Reliability Score"
                 />
               </div>
-              <label className="filter-check">
-                <input
-                  type="checkbox"
-                  checked={pendingFilters.hideTestMints}
-                  onChange={e => setPendingFilters(p => ({ ...p, hideTestMints: e.target.checked }))}
-                />
-                Hide test mints
-              </label>
               <div className="filter-actions-row">
                 <button type="button" className="filter-reset-btn" onClick={resetFilters}>Reset</button>
                 <button

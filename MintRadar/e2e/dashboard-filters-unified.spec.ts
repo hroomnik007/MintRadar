@@ -77,29 +77,28 @@ for (const width of [1440, 390]) {
   })
 }
 
-test('1440px: row 1 holds the four groups, row 2 holds Reliability, the checkbox, Reset and Show', async ({ page }) => {
+test('1440px: row 1 holds the four groups, row 2 holds Hide outdated, Hide test mints, Reliability, Reset and Show', async ({ page }) => {
   await open(page, 1440)
   const top = async (sel: string) => (await page.locator(sel).first().boundingBox())!
   const row1 = await Promise.all(GROUPS.map(g => top(seg(g))))
-  const row2 = await Promise.all(['.filter-slider', '.filter-check', '.filter-reset-btn', '.filter-apply-btn'].map(top))
+  const row2 = await Promise.all(['.filter-outdated-check', '.filter-check', '.filter-slider', '.filter-reset-btn', '.filter-apply-btn'].map(top))
   for (const b of row1) expect(Math.abs(b.y - row1[0]!.y)).toBeLessThan(2)
   for (const b of row2) expect(b.y + b.height / 2).toBeGreaterThan(row1[0]!.y + 28 + 8)
   const mid = row2.map(b => b.y + b.height / 2)
   expect(Math.max(...mid) - Math.min(...mid)).toBeLessThan(2)                       // one line
-  // left to right: Reliability, checkbox, Reset, Show; the buttons end at the panel's right edge
-  expect(row2[0]!.x).toBeLessThan(row2[1]!.x)
-  expect(row2[1]!.x).toBeLessThan(row2[2]!.x)
+  // left to right: Hide outdated, Hide test mints, Reliability, Reset, Show; the buttons end at the panel's right edge
+  for (let i = 1; i < row2.length; i++) expect(row2[i - 1]!.x, `row 2 control ${i}`).toBeLessThan(row2[i]!.x)
   const main = (await page.locator('.filter-main').boundingBox())!
-  expect(Math.abs(row2[3]!.x + row2[3]!.width - (main.x + main.width))).toBeLessThan(2)
+  expect(Math.abs(row2[4]!.x + row2[4]!.width - (main.x + main.width))).toBeLessThan(2)
   // row 1: the free space sits between the groups, the last group ends at the right edge
   const last = row1[3]!
   expect(Math.abs(last.x + last.width - (main.x + main.width))).toBeLessThan(2)
   expect((await page.locator('.filter-slider').boundingBox())!.width).toBe(140)
 })
 
-test('390px: one column in the order Status, Unit, Method, Software, Reliability, checkbox, buttons; controls share one right edge', async ({ page }) => {
+test('390px: one column in the order Status, Unit, Method, Software, the two checkboxes, Reliability, buttons; controls share one right edge', async ({ page }) => {
   await open(page, 390)
-  const sel = [seg('status'), seg('unit'), seg('method'), seg('software'), '.filter-rel', '.filter-check', '.filter-actions-row']
+  const sel = [seg('status'), seg('unit'), seg('method'), seg('software'), '.filter-outdated-check', '.filter-rel', '.filter-actions-row']
   const boxes = await Promise.all(sel.map(async s => (await page.locator(s).first().boundingBox())!))
   for (let i = 1; i < boxes.length; i++) expect(boxes[i]!.y, `${sel[i]} below ${sel[i - 1]}`).toBeGreaterThan(boxes[i - 1]!.y)
   const domOrder = await page.evaluate((s: string[]) => {
@@ -116,6 +115,25 @@ test('390px: one column in the order Status, Unit, Method, Software, Reliability
     const w = await page.locator(`${seg(g)} .filter-seg-opt`).evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().width)))
     expect(Math.max(...w) - Math.min(...w), g).toBeLessThanOrEqual(1)
   }
+})
+
+test('row 2 order: Hide outdated, Hide test mints, Reliability (DOM = visual) at 1440px; the two checkboxes share a row at 390px', async ({ page }) => {
+  const sel = ['.filter-outdated-check', '.filter-check', '.filter-rel']
+  const domOrder = () => page.evaluate((s: string[]) => {
+    const els = s.map(x => document.querySelector(x)!)
+    return els.every((e, i) => i === 0 || !!(els[i - 1]!.compareDocumentPosition(e) & Node.DOCUMENT_POSITION_FOLLOWING))
+  }, sel)
+  await open(page, 1440)
+  const wide = await Promise.all(sel.map(async s => (await page.locator(s).boundingBox())!))
+  expect(wide[0]!.x + wide[0]!.width).toBeLessThanOrEqual(wide[1]!.x)
+  expect(wide[1]!.x + wide[1]!.width).toBeLessThanOrEqual(wide[2]!.x)
+  expect(await domOrder()).toBe(true)
+  await open(page, 390)
+  const [out, test, rel] = await Promise.all(sel.map(async s => (await page.locator(s).boundingBox())!))
+  expect(Math.abs(out!.y - test!.y), 'Hide outdated and Hide test mints on one row').toBeLessThan(2)
+  expect(out!.x + out!.width).toBeLessThanOrEqual(test!.x)
+  expect(rel!.y, 'Reliability below the checkboxes').toBeGreaterThan(out!.y + out!.height)
+  expect(await domOrder()).toBe(true)
 })
 
 for (const width of [390, 360, 320]) {
