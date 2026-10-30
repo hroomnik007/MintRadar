@@ -5,6 +5,11 @@ name: Nginx Config Drift Check
 # "deploy/nginx.conf is reference/documentation only"). Runs independently of
 # the deploy workflow: no `needs:` link to it, and never fails the run on drift
 # — it only surfaces the diff in the Job Summary so it doesn't get missed.
+#
+# Since 2026-10-30 the same job also compares the strfry relay files that the relay container bind-mounts from
+# /opt/mintradar-strfry on the server (deploy/strfry/{strfry.conf,writePolicy.sh,privileged-pubkeys.txt,
+# docker-compose.strfry.yml}; those are copied by hand too, the deploy does not touch them). Same SSH connection
+# secrets, read-only (`sudo cat` only), same Job Summary reporting, never fails on drift.
 on:
   schedule:
     - cron: '0 6 * * *' # 06:00 UTC daily
@@ -18,6 +23,8 @@ jobs:
     name: Compare repo vs. live nginx config
     # Pinned on 2026-10-08: GitHub moves ubuntu-latest to Ubuntu 26 on 2026-10-19; move deliberately.
     runs-on: ubuntu-24.04
+    # Typical 8-13 s over the last 12 runs; 3x the slowest is under a minute, 2 minutes leaves room for the extra file reads.
+    timeout-minutes: 2
     steps:
       - uses: actions/checkout@v7
 
@@ -74,5 +81,78 @@ jobs:
               echo "If it isn't, the server is running an unreviewed config."
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+          # Informational only — never fail the job on drift.
+          exit 0
+
+      - name: Fetch live strfry config from server
+        id: fetch_live_strfry
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          capture_stdout: true
+          script: |
+            set -eu
+            for f in strfry.conf writePolicy.sh privileged-pubkeys.txt docker-compose.strfry.yml; do
+              echo "@@@MINTRADAR-DRIFT-FILE@@@ $f"
+              sudo cat "/opt/mintradar-strfry/$f" || echo "@@@MINTRADAR-DRIFT-MISSING@@@"
+            done
+
+      - name: Diff repo strfry files against live files
+        env:
+          LIVE_STRFRY_CONTENT: ${{ steps.fetch_live_strfry.outputs.stdout }}
+        run: |
+          set -euo pipefail
+          LIVE_DIR="$RUNNER_TEMP/live-strfry"
+          mkdir -p "$LIVE_DIR"
+
+          # Split the captured output at the marker lines, one file per name (names are accepted only in the fixed
+          # shape below, so nothing the server prints can pick a path outside $LIVE_DIR).
+          printf '%s\n' "$LIVE_STRFRY_CONTENT" | awk -v dir="$LIVE_DIR" '
+            /^@@@MINTRADAR-DRIFT-FILE@@@ / {
+              if (out != "") close(out)
+              name = substr($0, length("@@@MINTRADAR-DRIFT-FILE@@@ ") + 1)
+              out = (name ~ /^[A-Za-z0-9._-]+$/ && name !~ /^\.+$/) ? dir "/" name : ""
+              if (out != "") printf "" > out
+              next
+            }
+            out != "" { print >> out }
+          '
+
+          {
+            echo ""
+            echo "## Strfry Config Drift Check"
+            echo ""
+            echo "Comparing \`deploy/strfry/*\` (repo) against \`/opt/mintradar-strfry/*\` (live on server)."
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          for f in strfry.conf writePolicy.sh privileged-pubkeys.txt docker-compose.strfry.yml; do
+            REPO_FILE="MintRadar/deploy/strfry/$f"
+            LIVE_FILE="$LIVE_DIR/$f"
+            if [ ! -s "$LIVE_FILE" ] || grep -q '^@@@MINTRADAR-DRIFT-MISSING@@@' "$LIVE_FILE"; then
+              echo "⚠️ **\`$f\`: could not be read on the server** (missing or empty)." >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+            if diff -u "$REPO_FILE" "$LIVE_FILE" > "$RUNNER_TEMP/diff-$f.txt"; then
+              echo "✅ \`$f\`: no drift." >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+            else
+              {
+                echo "⚠️ **\`$f\`: drift detected** — repo and live file differ."
+                echo ""
+                echo '```diff'
+                cat "$RUNNER_TEMP/diff-$f.txt"
+                echo '```'
+                echo ""
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+          {
+            echo "These files are copied to the server by hand (the deploy does not do it); see MintRadar/docs/claude/deploy-and-infra.md."
+            echo "If a difference is intentional, update the repo file; if not, the relay runs an unreviewed file."
+          } >> "$GITHUB_STEP_SUMMARY"
           # Informational only — never fail the job on drift.
           exit 0
