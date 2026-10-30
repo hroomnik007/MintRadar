@@ -535,7 +535,7 @@ components:
         nip87:
           description: >-
             Only with `include=facts` (always on the single-mint endpoint). The mint's NIP-87 announcement (Nostr kind 38172) as
-            MintRadar's discovery last stored it from its relays. Added 2026-10-30; `checkedAt` added 2026-10-31.
+            MintRadar's discovery last stored it from its relays. Added 2026-10-30; `checkedAt` added 2026-10-30.
           allOf:
             - $ref: '#/components/schemas/Nip87'
         downSince:
