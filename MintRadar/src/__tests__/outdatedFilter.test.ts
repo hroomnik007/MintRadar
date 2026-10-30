@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
-  HIDE_OUTDATED_HINT, buildOutdatedParam, hasUnknownVersion, isOutdatedMint, mintMatchesOutdated, parseOutdatedParam,
+  buildOutdatedParam, hasUnknownVersion, isOutdatedMint, mintMatchesOutdated, parseOutdatedParam,
   unknownKeptNote,
 } from '@/utils/outdatedFilter'
+import { hideOutdatedText } from '@/utils/tooltipTexts'
 import { mintMatchesSoftware } from '@/utils/softwareFilter'
 import { classifyMintVersion, latestMapFor } from '@/utils/versionRule'
 
@@ -40,8 +41,8 @@ describe('outdated filter: the shared version rule decides', () => {
     expect(mintMatchesOutdated(twoBehind, false)).toBe(true)
     expect(mintMatchesOutdated(cdkOld, false)).toBe(true)
   })
-  it('the hint states the rule with the shared threshold', () => {
-    expect(HIDE_OUTDATED_HINT).toBe('2 or more minor versions behind the newest stable release of the same software.')
+  it('the tooltip states the rule with the shared threshold', () => {
+    expect(hideOutdatedText()).toBe('Hides mints running software that is 2 or more minor versions behind the newest stable release of the same family (Nutshell, CDK-Mintd). Mints with unknown software are kept.')
   })
 })
 

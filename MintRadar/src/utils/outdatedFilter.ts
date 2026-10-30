@@ -4,15 +4,11 @@
 // release of the same family; nothing else is compared here. A mint whose version cannot be compared (unknown software
 // such as Nutshell-CF or LekMint, no `softwareLatest`, an unreadable or missing version) is never hidden.
 import { classifyMintVersion, latestMapFor, type LatestVersion } from '@/utils/versionRule'
-import { OUTDATED_AFTER_MINORS } from '@/utils/tooltipTexts'
 
 type VersionedMint = { version?: string | null; softwareLatest?: LatestVersion | null }
 
 export const OUTDATED_PARAM = 'outdated'
 export const OUTDATED_PARAM_HIDE = 'hide'
-
-/** The visible hint under the checkbox: the rule, with the shared threshold. */
-export const HIDE_OUTDATED_HINT = `${OUTDATED_AFTER_MINORS} or more minor versions behind the newest stable release of the same software.`
 
 /** ?outdated=hide → true; anything else (absent, other values) → false. */
 export function parseOutdatedParam(raw: string | null): boolean {

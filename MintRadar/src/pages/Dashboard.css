@@ -1662,8 +1662,8 @@
   .filter-check::before,
   .filter-outdated-check::before { content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
 }
-/* "Hide outdated software" (first item of .filter-footer, right after Software in the DOM): the checkbox, then the rule
-   and, while it is on, the "N mints with unknown software are kept." note; both texts wrap instead of widening the row. */
+/* "Hide outdated software" (first item of .filter-footer, right after Software in the DOM): the checkbox, the ⓘ tooltip
+   carrying the rule and, while it is on, the "N mints with unknown software are kept." note, which wraps instead of widening the row. */
 .filter-outdated { display: flex; align-items: center; flex-wrap: wrap; column-gap: 10px; row-gap: 0; min-width: 0; }
 .filter-hint {
   flex: 1 1 220px;

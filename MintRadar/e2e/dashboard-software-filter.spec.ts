@@ -126,7 +126,9 @@ test.describe('Filter panel row 1 (F1)', () => {
       await expect(page.locator(`#${id}`)).toBeVisible()
       await expect(page.locator(`#${id}`).locator('xpath=..').locator('[data-tooltip-trigger], svg')).toHaveCount(0)
     }
-    await expect(page.locator('.filter-panel [data-tooltip-trigger]')).toHaveCount(0)
+    // the only tooltip in the panel is the one on "Hide outdated software"
+    await expect(page.locator('.filter-panel [data-tooltip-trigger]')).toHaveCount(1)
+    await expect(page.locator('.filter-outdated [data-tooltip-trigger]')).toHaveCount(1)
   })
 
   const geometry = (page: Page) => page.evaluate(() => {

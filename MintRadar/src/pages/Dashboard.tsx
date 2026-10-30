@@ -1,4 +1,4 @@
-import { HIDE_TEST_MINTS_TEXT, hiddenMintsText } from '@/utils/tooltipTexts'
+import { HIDE_TEST_MINTS_TEXT, hiddenMintsText, hideOutdatedText } from '@/utils/tooltipTexts'
 import { DEGRADED_AFTER_HOURS } from '@/utils/networkHealthIndex'
 import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -32,7 +32,7 @@ import { isNutOffered } from '@/utils/nutSupport'
 import { hasRequiredNuts } from '@/utils/nutFilters'
 import { parseMethodParam, mintMatchesMethod, methodOptions } from '@/utils/methodFilter'
 import { parseSoftwareParam, buildSoftwareParam, mintMatchesSoftware, softwareGroups } from '@/utils/softwareFilter'
-import { OUTDATED_PARAM, HIDE_OUTDATED_HINT, parseOutdatedParam, buildOutdatedParam, mintMatchesOutdated, hasUnknownVersion, unknownKeptNote } from '@/utils/outdatedFilter'
+import { OUTDATED_PARAM, parseOutdatedParam, buildOutdatedParam, mintMatchesOutdated, hasUnknownVersion, unknownKeptNote } from '@/utils/outdatedFilter'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { probeErrorMessage, probeRateLimitMessage, isProbeErrorKind, type ProbeErrorKind } from '@/utils/probeErrorMessages'
@@ -1584,12 +1584,11 @@ export default function Dashboard() {
                   <input
                     type="checkbox"
                     checked={pendingFilters.hideOutdated}
-                    aria-describedby="filter-outdated-hint"
                     onChange={e => setPendingFilters(p => ({ ...p, hideOutdated: e.target.checked }))}
                   />
                   Hide outdated software
                 </label>
-                <span className="filter-hint" id="filter-outdated-hint">{HIDE_OUTDATED_HINT}</span>
+                <InfoTooltip text={hideOutdatedText()} width={260} about="Hide outdated software" />
                 {pendingFilters.hideOutdated && (
                   <span className="filter-hint" data-testid="filter-outdated-kept" aria-live="polite">{unknownKeptNote(draftUnknownKept)}</span>
                 )}

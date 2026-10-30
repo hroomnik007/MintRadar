@@ -38,7 +38,7 @@ test('hides the outdated mints, keeps unknown versions with their count, URL onl
   await expect(cards(page)).toHaveCount(6)
   await expect(page).not.toHaveURL(/outdated=/)
   await openPanel(page)
-  await expect(page.locator('#filter-outdated-hint')).toHaveText('2 or more minor versions behind the newest stable release of the same software.')
+  await expect(page.locator('#filter-outdated-hint')).toHaveCount(0)
   await expect(page.getByTestId('filter-outdated-kept')).toHaveCount(0)
   await box(page).check()
   await expect(page.locator('.filter-apply-btn')).toHaveText('Show 4 of 6')
