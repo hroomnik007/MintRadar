@@ -16,6 +16,8 @@ jobs:
     name: Run tests
     # Pinned on 2026-10-08: GitHub moves ubuntu-latest to Ubuntu 26 on 2026-10-19; move deliberately.
     runs-on: ubuntu-24.04
+    # Typical 90-135 s over the last 10 runs; about 3x the slowest of them.
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -33,8 +35,12 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-24.04
+    # Typical 62-72 s, but each SSH step may legitimately run up to its 30 m command_timeout (slow registry); this only
+    # catches a hang that command_timeout does not.
+    timeout-minutes: 45
     steps:
       - name: Deploy backend via SSH
+        timeout-minutes: 35
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
           host: ${{ secrets.HETZNER_HOST }}
@@ -54,6 +60,7 @@ jobs:
             docker compose up -d
 
       - name: Deploy frontend via SSH
+        timeout-minutes: 35
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
           host: ${{ secrets.HETZNER_HOST }}
