@@ -1,10 +1,5 @@
 // Single source of truth for the list of Cashu NUTs this app tracks, and their
 // display metadata.
-//
-// Previously duplicated in four places — MintDetail.tsx (ALL_NUTS), Stats.tsx
-// (NUT_ORDER + its own NUT_META), ComparisonModal.tsx (NUT_FILTER_KEYS) and
-// NutExplorer.tsx (NUT_META) — which meant adding a NUT to the app took four
-// coordinated edits and the copies had already drifted in wording.
 
 export interface NutMeta {
   /** Short label shown on cards and rows. */

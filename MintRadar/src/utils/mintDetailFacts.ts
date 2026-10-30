@@ -3,6 +3,7 @@
 // fallbacks. Operational facts only; no verdict wording.
 import type { ContactCheckFact } from './contactChecks'
 import { formatAuditSuccessRatio } from './mintFormatting'
+import { limitsSource } from './feesLimits'
 
 // ── Outages ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -177,4 +178,20 @@ export function storedKeysetsAsLive(last: ReadonlyArray<{ id: string; unit: stri
 export function auditSuccessText(blamed: number | null | undefined, total: number | null | undefined): string | null {
   if (total === null || total === undefined) return null
   return formatAuditSuccessRatio(total, Math.min(blamed ?? 0, total))
+}
+
+// ── NUTs tab: the nutzap sentence under the NUT grid ─────────────────────────────────────────────────────────────────
+
+/** Which NUTs nutzaps (NIP-61) rely on. No verdict about the mint. */
+export const NUTZAP_NUTS_NOTE = 'NUT-07, NUT-10, NUT-11 and NUT-12 are the ones nutzaps (NIP-61) rely on'
+
+/**
+ * The sentence with the source and time of the grid above: " · from the mint's /v1/info, checked 5 min ago" (the exact
+ * UTC time as `title`, like "fetched …" under Fees and limits, same helper). `fetchedAt` is the page's latest successful
+ * /v1/info time (the latest probe while online, else the last time the mint was seen online). Without a time the source
+ * stays and the time is left out.
+ */
+export function nutzapNote(fetchedAt: string | null | undefined, now: number): { lead: string; time: { label: string; title: string } | null } {
+  const src = limitsSource(fetchedAt, now)
+  return { lead: `${NUTZAP_NUTS_NOTE} · from the mint's /v1/info`, time: src.time }
 }

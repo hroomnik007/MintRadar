@@ -84,9 +84,9 @@ live: `TRACKED_NUTS` (14 entries, ascending), `TRACKED_NUT_KEYS` (the unpadded `
 form used by `/v1/info`'s `nuts` object and the `nuts_limits` column), `NUT_META`
 (short label / description / `specNum`) and `nutSpecUrl()`.
 
-It replaced four drifting copies: `MintDetail.tsx`'s `ALL_NUTS`, `Stats.tsx`'s `NUT_ORDER`
-(plus its own near-identical `NUT_META`), `ComparisonModal.tsx`'s `NUT_FILTER_KEYS`, and
-`NutExplorer.tsx`'s `NUT_META`. `src/__tests__/nuts.test.ts` pins the invariants, including
+It replaced drifting copies in `MintDetail.tsx` (`ALL_NUTS`), `Stats.tsx` (`NUT_ORDER` plus its own
+near-identical `NUT_META`) and `ComparisonModal.tsx` (`NUT_FILTER_KEYS`); the fourth copy lived in the `/nuts` NUT Explorer
+page, which was removed in N1 (2026-10-28). `src/__tests__/nuts.test.ts` pins the invariants, including
 `TRACKED_NUTS.length === TRACKED_NUT_COUNT` (the Reliability Score's NUT divisor).
 
 **`Dashboard.tsx`'s `NUT_FILTER_KEYS`** is now just `TRACKED_NUT_KEYS` re-exported under the

@@ -15,9 +15,8 @@ import { TRACKED_NUTS } from '@/constants/nuts'
 import { clickableProps } from '@/utils/clickableProps'
 import { BACKUP_SUPPORTED_TEXT, NO_BACKUP_TEXT } from '@/utils/tooltipTexts'
 import { NUT_DESCRIPTIONS } from './nutCatalog'
+import { nutzapNote } from '@/utils/mintDetailFacts'
 
-/** One muted sentence under the NUT compatibility grid: which NUTs nutzaps (NIP-61) rely on. No verdict. */
-const NUTZAP_NUTS_NOTE = 'NUT-07, NUT-10, NUT-11 and NUT-12 are the ones nutzaps (NIP-61) rely on.'
 
 const NUT_ICONS: Record<string, JSX.Element> = {
   'NUT-04': <Coins size={13} />,
@@ -58,9 +57,13 @@ export interface NutsTabProps {
   /** Tracked NUTs the mint declares but switched off (NUT-04/05 `disabled: true`, live /v1/info else the stored one). */
   disabledNuts: string[]
   onSelectNut: (nut: string) => void
+  /** Latest successful /v1/info time (MintDetail's infoFetchedAt: lastCheckedAt while online, else lastOnlineAt), for the nutzap sentence. */
+  infoFetchedAt: string | null | undefined
+  now: number
 }
 
-export function NutsTab({ feesLimits, keysetsPanel, supportsBackupRestore, supportedNuts, disabledNuts, onSelectNut }: NutsTabProps) {
+export function NutsTab({ feesLimits, keysetsPanel, supportsBackupRestore, supportedNuts, disabledNuts, onSelectNut, infoFetchedAt, now }: NutsTabProps) {
+  const nutzapLine = nutzapNote(infoFetchedAt, now)
   return (<>
     {feesLimits && (
       <MintFeesLimits {...feesLimits} />
@@ -114,7 +117,11 @@ export function NutsTab({ feesLimits, keysetsPanel, supportsBackupRestore, suppo
           )
         })}
       </div>
-      <div className="md-nut-nutzap-note">{NUTZAP_NUTS_NOTE}</div>
+      {/* One muted sentence under the grid: which NUTs nutzaps (NIP-61) rely on, with the source and time of the grid. No verdict. */}
+      <div className="md-nut-nutzap-note">
+        {nutzapLine.lead}
+        {nutzapLine.time ? <>, checked <span title={nutzapLine.time.title}>{nutzapLine.time.label}</span>.</> : '.'}
+      </div>
     </div>
   </>)
 }

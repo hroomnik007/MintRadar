@@ -8,7 +8,7 @@ type Page = import('@playwright/test').Page
 // the NUTs tab (no verdict, no "ready"), and the NUT card grid that follows `supported:false` / presence-only / absent entries.
 
 const ALPHA = 'https://alpha.mint.example'
-const SENTENCE = 'NUT-07, NUT-10, NUT-11 and NUT-12 are the ones nutzaps (NIP-61) rely on.'
+const SENTENCE = "NUT-07, NUT-10, NUT-11 and NUT-12 are the ones nutzaps (NIP-61) rely on · from the mint's /v1/info, checked 5 min ago."
 const note = (page: Page) => page.locator('.md-nut-nutzap-note')
 
 async function open(page: Page, nuts: Record<string, unknown>, size: [number, number] = [1440, 900], tab: 'nuts' | 'overview' = 'nuts', knownOver: Record<string, unknown> = {}) {

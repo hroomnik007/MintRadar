@@ -1550,6 +1550,8 @@ function MintDetailContent({ url }: { url: string }) {
               supportedNuts={offeredNuts}
               disabledNuts={disabledNuts}
               onSelectNut={setSelectedNut}
+              infoFetchedAt={infoFetchedAt}
+              now={now}
             />
           )}
 
