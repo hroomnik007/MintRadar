@@ -9,7 +9,12 @@ name: Nginx Config Drift Check
 # Since 2026-10-30 the same job also compares the strfry relay files that the relay container bind-mounts from
 # /opt/mintradar-strfry on the server (deploy/strfry/{strfry.conf,writePolicy.sh,privileged-pubkeys.txt,
 # docker-compose.strfry.yml}; those are copied by hand too, the deploy does not touch them). Same SSH connection
-# secrets, read-only (`sudo cat` only), same Job Summary reporting, never fails on drift.
+# secrets, read-only (`sudo base64` of a fixed file list), same Job Summary reporting, never fails on drift.
+#
+# Capture format (2026-10-30): appleboy/ssh-action's captured stdout drops empty lines and appends its own banner
+# ("=====", "Successfully executed commands to all hosts."), so a plain `cat` can never be byte-exact. Each file is
+# therefore printed base64-encoded on ONE line, `@@@MINTRADAR-DRIFT-B64@@@ <name> <base64>` (or
+# `@@@MINTRADAR-DRIFT-MISSING@@@ <name>`); the runner picks that line out, decodes it and diffs the decoded bytes.
 on:
   schedule:
     - cron: '0 6 * * *' # 06:00 UTC daily
@@ -37,7 +42,12 @@ jobs:
           key: ${{ secrets.HETZNER_SSH_KEY }}
           capture_stdout: true
           script: |
-            sudo cat /etc/nginx/sites-available/mintradar.org.conf
+            set -eu
+            if out=$(sudo base64 -w0 /etc/nginx/sites-available/mintradar.org.conf); then
+              echo "@@@MINTRADAR-DRIFT-B64@@@ nginx.conf $out"
+            else
+              echo "@@@MINTRADAR-DRIFT-MISSING@@@ nginx.conf"
+            fi
 
       - name: Diff repo config against live config
         env:
@@ -47,15 +57,15 @@ jobs:
           REPO_CONF="MintRadar/deploy/nginx.conf"
           LIVE_CONF="$RUNNER_TEMP/live-nginx.conf"
 
-          printf '%s' "$LIVE_CONF_CONTENT" > "$LIVE_CONF"
-
-          # appleboy/ssh-action's capture_stdout strips the file's trailing
-          # newline; the repo copy keeps one. Re-add it here so an otherwise
-          # byte-identical config doesn't surface as spurious "\ No newline at
-          # end of file" drift.
-          if [ -n "$(tail -c1 "$LIVE_CONF" 2>/dev/null)" ]; then
-            printf '\n' >> "$LIVE_CONF"
-          fi
+          # The one marker line of this file out of the action's output, decoded byte for byte. Fails (return 1) when the
+          # line is missing, is not valid base64 or decodes to nothing: the file could not be read.
+          decode_live() {
+            local name="$1" dest="$2" b64
+            b64=$(printf '%s\n' "$LIVE_CONF_CONTENT" | awk -v n="$name" '$1 == "@@@MINTRADAR-DRIFT-B64@@@" && $2 == n && NF == 3 && $3 ~ /^[A-Za-z0-9+\/=]+$/ { print $3; exit }')
+            [ -n "$b64" ] || return 1
+            printf '%s' "$b64" | base64 -d > "$dest" 2>/dev/null || return 1
+            [ -s "$dest" ]
+          }
 
           {
             echo "## Nginx Config Drift Check"
@@ -65,7 +75,9 @@ jobs:
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if diff -u "$REPO_CONF" "$LIVE_CONF" > "$RUNNER_TEMP/diff.txt"; then
+          if ! decode_live nginx.conf "$LIVE_CONF"; then
+            echo "⚠️ **Could not read the live config on the server** (missing or empty)." >> "$GITHUB_STEP_SUMMARY"
+          elif diff -u "$REPO_CONF" "$LIVE_CONF" > "$RUNNER_TEMP/diff.txt"; then
             echo "✅ **No drift detected** — repo and live config match." >> "$GITHUB_STEP_SUMMARY"
           else
             {
@@ -95,8 +107,11 @@ jobs:
           script: |
             set -eu
             for f in strfry.conf writePolicy.sh privileged-pubkeys.txt docker-compose.strfry.yml; do
-              echo "@@@MINTRADAR-DRIFT-FILE@@@ $f"
-              sudo cat "/opt/mintradar-strfry/$f" || echo "@@@MINTRADAR-DRIFT-MISSING@@@"
+              if out=$(sudo base64 -w0 "/opt/mintradar-strfry/$f"); then
+                echo "@@@MINTRADAR-DRIFT-B64@@@ $f $out"
+              else
+                echo "@@@MINTRADAR-DRIFT-MISSING@@@ $f"
+              fi
             done
 
       - name: Diff repo strfry files against live files
@@ -107,18 +122,14 @@ jobs:
           LIVE_DIR="$RUNNER_TEMP/live-strfry"
           mkdir -p "$LIVE_DIR"
 
-          # Split the captured output at the marker lines, one file per name (names are accepted only in the fixed
-          # shape below, so nothing the server prints can pick a path outside $LIVE_DIR).
-          printf '%s\n' "$LIVE_STRFRY_CONTENT" | awk -v dir="$LIVE_DIR" '
-            /^@@@MINTRADAR-DRIFT-FILE@@@ / {
-              if (out != "") close(out)
-              name = substr($0, length("@@@MINTRADAR-DRIFT-FILE@@@ ") + 1)
-              out = (name ~ /^[A-Za-z0-9._-]+$/ && name !~ /^\.+$/) ? dir "/" name : ""
-              if (out != "") printf "" > out
-              next
-            }
-            out != "" { print >> out }
-          '
+          # Same decoder as the nginx step. The names come from the fixed list below, never from the server output.
+          decode_live() {
+            local name="$1" dest="$2" b64
+            b64=$(printf '%s\n' "$LIVE_STRFRY_CONTENT" | awk -v n="$name" '$1 == "@@@MINTRADAR-DRIFT-B64@@@" && $2 == n && NF == 3 && $3 ~ /^[A-Za-z0-9+\/=]+$/ { print $3; exit }')
+            [ -n "$b64" ] || return 1
+            printf '%s' "$b64" | base64 -d > "$dest" 2>/dev/null || return 1
+            [ -s "$dest" ]
+          }
 
           {
             echo ""
@@ -131,7 +142,7 @@ jobs:
           for f in strfry.conf writePolicy.sh privileged-pubkeys.txt docker-compose.strfry.yml; do
             REPO_FILE="MintRadar/deploy/strfry/$f"
             LIVE_FILE="$LIVE_DIR/$f"
-            if [ ! -s "$LIVE_FILE" ] || grep -q '^@@@MINTRADAR-DRIFT-MISSING@@@' "$LIVE_FILE"; then
+            if ! decode_live "$f" "$LIVE_FILE"; then
               echo "⚠️ **\`$f\`: could not be read on the server** (missing or empty)." >> "$GITHUB_STEP_SUMMARY"
               echo "" >> "$GITHUB_STEP_SUMMARY"
               continue
