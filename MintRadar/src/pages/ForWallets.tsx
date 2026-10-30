@@ -188,7 +188,7 @@ export default function ForWallets() {
             messages, reviewer keys or review texts, or contact details (<code>contactChecks</code> says only whether MintRadar recognises the format of the entries a mint lists, never a value or a domain). They do carry the mint&apos;s public NUT-06
             key (<code>pubkey</code>) and whether it advertises a Tor address (<code>hasOnion</code>). The heavier fields{' '}
             <code>keysets</code>, <code>keysetsCheckedAt</code>, <code>methods</code> and <code>scoreBreakdown</code> are
-            in the list only with <code>include=</code> (so are <code>pubkey</code>, <code>firstSeenAt</code>, <code>lastOnlineAt</code>, <code>sample</code>, <code>contactChecks</code>, <code>feeExamples</code>, <code>limits</code>, <code>auditByDirection</code> and <code>latency24h</code>, as <code>include=facts</code>) and always in the single-mint answer.{' '}
+            in the list only with <code>include=</code> (so are <code>pubkey</code>, <code>firstSeenAt</code>, <code>lastOnlineAt</code>, <code>sample</code>, <code>contactChecks</code>, <code>feeExamples</code>, <code>limits</code>, <code>auditByDirection</code>, <code>latency24h</code> and <code>nip87</code>, as <code>include=facts</code>) and always in the single-mint answer.{' '}
             <code>scoreBreakdown</code> is what the score used at its last computation, written together with the score.
           </p>
           <p data-testid="request-privacy">

@@ -39,7 +39,7 @@ info:
     `changedSince` and the `include` value `changes`; the default list is unchanged. The mint field `contactChecks` followed
     (also 2026-10-20: single-mint endpoint and `include=facts`); the default list is unchanged. The mint fields `feeExamples`,
     `limits` and `auditByDirection` followed on 2026-10-21 (single-mint endpoint and `include=facts`); the default list is
-    unchanged. The mint field `scoreStale` (true when `status` is not `online`) was added on 2026-10-21 on every object, the default list included. On 2026-10-25 the mint field `uptime30dPct` was added on every object (the default list included) and `latency24h` with `include=facts` and on the single-mint endpoint. On 2026-10-27 the mint fields `mintDisabled` and `meltDisabled` were added on every object. Refinement of 2026-10-27 (no field or parameter changed): the `method` filter no longer counts a NUT-04 or NUT-05 side the mint has switched off (`disabled: true`), as the mintradar.org Dashboard filter does; such a mint can drop out of a `method=` result. The integer
+    unchanged. The mint field `scoreStale` (true when `status` is not `online`) was added on 2026-10-21 on every object, the default list included. On 2026-10-25 the mint field `uptime30dPct` was added on every object (the default list included) and `latency24h` with `include=facts` and on the single-mint endpoint. On 2026-10-27 the mint fields `mintDisabled` and `meltDisabled` were added on every object. On 2026-10-30 the mint field `nip87` was added with `include=facts` and on the single-mint endpoint. Refinement of 2026-10-27 (no field or parameter changed): the `method` filter no longer counts a NUT-04 or NUT-05 side the mint has switched off (`disabled: true`), as the mintradar.org Dashboard filter does; such a mint can drop out of a `method=` result. The integer
     `methodology` changes whenever the score formula changes; scores of different methodology numbers are
     not comparable. The history is in `backend/src/shared/methodology.ts` and docs/API.md.
 
@@ -67,7 +67,7 @@ paths:
         then `uptime7dPct` descending (null last), then `name` (the hostname when `name` is null), then `url`.
         A query value that is present but invalid (a repeated parameter included; the boolean flags take exactly `true` or `false`) is a `400`; unknown parameters are ignored.
         `total` counts the mints that match the filters before `limit` is applied; `truncated` is true when `limit` cut the list.
-        The heavier fields (`pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection`, `latency24h`, `keysets`, `keysetsCheckedAt`, `methods`, `scoreBreakdown`) are only in the objects when `include` asks for them.
+        The heavier fields (`pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection`, `latency24h`, `nip87`, `keysets`, `keysetsCheckedAt`, `methods`, `scoreBreakdown`) are only in the objects when `include` asks for them.
       parameters:
         - name: unit
           in: query
@@ -130,7 +130,7 @@ paths:
           in: query
           description: >-
             Comma-separated list of `facts`, `keysets`, `methods`, `breakdown`, `changes`: add the heavier fields of that name to every object
-            (`facts` brings `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection` and `latency24h`; `keysets` brings `keysets` and `keysetsCheckedAt`; `methods` brings
+            (`facts` brings `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection`, `latency24h` and `nip87`; `keysets` brings `keysets` and `keysetsCheckedAt`; `methods` brings
             `methods`; `breakdown` brings `scoreBreakdown`; `changes` brings the newest 10 `changes` of each mint and `changesPending`).
             An unknown value is a `400`. Added 2026-10-20.
           schema: { type: string, pattern: '^(facts|keysets|methods|breakdown|changes)(,(facts|keysets|methods|breakdown|changes))*$' }
@@ -370,7 +370,7 @@ components:
         error messages, reviewer public keys, review texts or contact details (`contactChecks` states only whether MintRadar recognises the format of the entries, never a value or a domain). It does carry the mint's public NUT-06
         key (`pubkey`) and whether it advertises a Tor address (`hasOnion`). The fields from `pubkey` on were added on
         2026-10-20; `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `keysets`, `keysetsCheckedAt`, `methods`,
-        `scoreBreakdown`, `changes`, `changesPending`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection` and `latency24h` are only present on the single-mint endpoint and in the list with the matching `include` value.
+        `scoreBreakdown`, `changes`, `changesPending`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection`, `latency24h` and `nip87` are only present on the single-mint endpoint and in the list with the matching `include` value.
       required:
         - url
         - name
@@ -532,6 +532,13 @@ components:
           oneOf:
             - $ref: '#/components/schemas/Latency24h'
             - type: 'null'
+        nip87:
+          description: >-
+            Only with `include=facts` (always on the single-mint endpoint). The mint's NIP-87 announcement (Nostr kind 38172) as
+            MintRadar's discovery last stored it from its relays. There is no check time: the time of the last discovery run is
+            not stored. Added 2026-10-30.
+          allOf:
+            - $ref: '#/components/schemas/Nip87'
         downSince:
           type: [string, 'null']
           format: date-time
@@ -642,6 +649,24 @@ components:
           oneOf:
             - $ref: '#/components/schemas/AuditDirection'
             - type: 'null'
+    Nip87:
+      type: object
+      required: [announcement, dMatchesInfoPubkey, eventCreatedAt]
+      properties:
+        announcement:
+          type: string
+          enum: [seen, not_seen]
+          description: '`seen`: an announcement for this URL was seen on our relays. `not_seen`: none was seen on our relays; it may still exist elsewhere.'
+        dMatchesInfoPubkey:
+          type: [boolean, 'null']
+          description: >-
+            Whether the announcement's `d` tag equals the pubkey in the mint's /v1/info. Null when not comparable: no announcement
+            seen, a `d` tag that is missing or not shaped like a mint pubkey (66 hex characters, 02/03 prefix), or no stored
+            /v1/info pubkey. Anyone can publish an announcement; a match is a fact about the event, not about who published it.
+        eventCreatedAt:
+          type: [string, 'null']
+          format: date-time
+          description: created_at of the stored announcement event; null when none was seen.
     Latency24h:
       type: object
       required: [p50Ms, p95Ms, samples]

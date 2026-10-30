@@ -70,9 +70,22 @@ across components.
   Replaced the Fresh/Established/Veteran/OG age badges on the card (see "Card badges" below).
 - **`firstSeenLabel(discoveredAt)`** → `"First seen by MintRadar <Mon YYYY>"` (UTC), or `null`.
   Mint Detail header only. The "by MintRadar" wording (added 2026-09-20) disambiguates this from
-  the adjacent "Announced on Nostr" date — this one is `discovered_at` (when MintRadar's own
+  the adjacent NIP-87 announcement line (was "Announced on Nostr" until 2026-10-30) — this one is `discovered_at` (when MintRadar's own
   probe/discovery first indexed the mint), the other is the mint's own NIP-87 announcement date,
   and the two can differ substantially.
+- **NIP-87 announcement line (2026-10-30)** in `.md-announce-row` under the URL (`data-testid="md-nip87"`): facts from
+  `nip87AnnouncementOf()` (`src/utils/nip87Announcement.ts`, byte-identical to `backend/src/shared/nip87Announcement.ts`,
+  pinned by `sharedModules.test.ts`) over the stored `nostrAnnouncedAt` / `nostrAnnounceD` and the /v1/info `pubkey`; texts in
+  `src/utils/nip87Texts.ts`. Seen: "NIP-87 announcement (kind:38172) · seen on our relays · 14 Mar 2026" (the label links
+  to the existing njump event URL). Not seen: "No NIP-87 announcement seen on our relays" — never "does not exist" or
+  "verified". Key sentence (`.md-announce-key`, own line) only when the `d` tag is pubkey-shaped (66 hex, 02/03 prefix)
+  and the mint's pubkey is stored: "Announcement key matches / differs from the mint's /v1/info pubkey"; NIP-87 says `d`
+  SHOULD be the mint pubkey and anyone can publish an announcement, so a missing or other-shaped `d` shows nothing
+  (live 2026-10-30: 17 of 19 stored `d` tags are not pubkey-shaped). **No "checked {time}":** the time of the last
+  discovery run that reached the relays is not stored anywhere (no column, no `app_state` key, not in memory), and the
+  task forbids a new column or a substitute time. Same facts in the wallet API `nip87` (`include=facts` / single mint),
+  without `checkedAt`. Nothing new is fetched. Tests: `nip87Texts.test.ts`, `sharedModules.test.ts`,
+  `backend/src/__tests__/nip87Announcement.test.ts`.
 - **`resolveMintDetailUrl(slug, known)`** (2026-09-08, commit `bbf3eab`) — canonicalizes the
   `/mint/:url` route param. See "Mint Detail route param canonicalization" below.
 - Also here (own sections / mentions elsewhere): `reliabilityDonutArc`, `auditReliabilityColor`,

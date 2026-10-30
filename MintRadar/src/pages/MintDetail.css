@@ -137,6 +137,10 @@
   text-overflow: ellipsis;
 }
 
+/* NIP-87 line: wraps (it is longer than the old "Announced on Nostr · Mon YYYY"); the key-match sentence on its own line. */
+.md-announce-nip87 { white-space: normal; overflow-wrap: anywhere; }
+.md-announce-key { display: block; }
+
 .md-hdr-actions {
   display: flex;
   align-items: center;

@@ -97,7 +97,7 @@ const V1_KEYS = [
   'scoreCappedNew', 'software', 'status', 'units', 'uptime24hPct', 'uptime7dPct', 'url',
 ]
 const W2B_LIGHT_KEYS = ['auditNeutralReason', 'authRequired', 'downSince', 'hasOnion', 'scoreStale', 'uptime30dPct']
-const W2B_HEAVY_KEYS = ['auditByDirection', 'changes', 'changesPending', 'contactChecks', 'feeExamples', 'firstSeenAt', 'keysets', 'keysetsCheckedAt', 'lastOnlineAt', 'latency24h', 'limits', 'methods', 'pubkey', 'sample', 'scoreBreakdown']
+const W2B_HEAVY_KEYS = ['auditByDirection', 'changes', 'changesPending', 'contactChecks', 'feeExamples', 'firstSeenAt', 'keysets', 'keysetsCheckedAt', 'lastOnlineAt', 'latency24h', 'limits', 'methods', 'nip87', 'pubkey', 'sample', 'scoreBreakdown']
 // 2026-10-27: NUT-04/05 switched off by the operator (`disabled: true`), on every object.
 const NUT_DISABLED_KEYS = ['meltDisabled', 'mintDisabled']
 const MINT_KEYS = [...V1_KEYS, ...W2B_LIGHT_KEYS, ...NUT_DISABLED_KEYS].sort()

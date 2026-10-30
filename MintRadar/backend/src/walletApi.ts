@@ -10,6 +10,7 @@ import { auditDataState } from './shared/auditScore.js'
 import type { ScoreBreakdown } from './scoreBreakdown.js'
 import type { ContactCheck } from './contactChecks.js'
 import { feeExamplesOf, type FeeExampleUnit } from './shared/feeExamples.js'
+import { nip87AnnouncementOf, type Nip87AnnouncementFacts } from './shared/nip87Announcement.js'
 export { WALLET_ENVELOPE_FIELDS, WALLET_MINT_FIELDS, WALLET_QUERY_PARAMS, WALLET_ERRORS } from './shared/walletFields.js'
 
 // Public API for wallets (docs/API.md, docs/openapi/wallets-v1.yaml): a compact, fixed-shape view of the
@@ -53,6 +54,9 @@ export interface KnownMintLike {
   lastOnlineAt?: string | Date | null
   mintMethods?: Record<string, unknown>[] | null
   meltMethods?: Record<string, unknown>[] | null
+  // The stored NIP-87 announcement (discovery.ts): event created_at and `d` tag; read by `nip87` (2026-10-30).
+  nostrAnnouncedAt?: string | Date | null
+  nostrAnnounceD?: string | null
 }
 
 /** Per-mint data the snapshot carries beside the /api/mints/known rows (never serialised there). */
@@ -199,9 +203,11 @@ export interface WalletMint {
   auditByDirection: { mint: AuditDirection | null; melt: AuditDirection | null }
   /** Only with include=facts (additive 2026-10-25): latency percentiles of the successful probes of the last 24 hours. */
   latency24h: WalletLatency24h | null
+  /** Only with include=facts (additive 2026-10-30): the stored NIP-87 kind:38172 announcement (shared/nip87Announcement.ts). No checkedAt: the time of the last discovery run is not stored. */
+  nip87: Nip87AnnouncementFacts
 }
 
-const HEAVY_KEYS = { facts: ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'contactChecks', 'feeExamples', 'limits', 'auditByDirection', 'latency24h'], keysets: ['keysets', 'keysetsCheckedAt'], methods: ['methods'], breakdown: ['scoreBreakdown'], changes: ['changes', 'changesPending'] } as const
+const HEAVY_KEYS = { facts: ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'contactChecks', 'feeExamples', 'limits', 'auditByDirection', 'latency24h', 'nip87'], keysets: ['keysets', 'keysetsCheckedAt'], methods: ['methods'], breakdown: ['scoreBreakdown'], changes: ['changes', 'changesPending'] } as const
 
 function toIso(v: string | Date | null | undefined): string | null {
   if (v === null || v === undefined) return null
@@ -405,6 +411,7 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviews
     limits: limitsOf(m.mintMethods, m.meltMethods),
     auditByDirection: auditByDirectionOf(extra?.auditDirections),
     latency24h: extra?.latency24h ?? null,
+    nip87: nip87AnnouncementOf({ announcedAt: m.nostrAnnouncedAt, announceD: m.nostrAnnounceD, infoPubkey: m.pubkey }),
   }
 }
 

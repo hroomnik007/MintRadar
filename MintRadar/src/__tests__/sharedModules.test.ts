@@ -23,6 +23,8 @@ import { NUT_SUPPORT_CASES } from './nutSupportCases'
 import { computeReliabilityScore as beScore } from '../../backend/src/shared/reliabilityScore'
 import * as feStatus from '@/utils/mintStatus'
 import * as beStatus from '../../backend/src/shared/mintStatus'
+import * as feNip87 from '@/utils/nip87Announcement'
+import * as beNip87 from '../../backend/src/shared/nip87Announcement'
 
 const codeOf = (rel: string) =>
   readFileSync(resolve(__dirname, rel), 'utf8')
@@ -225,5 +227,20 @@ describe('mintStatus: backend and frontend copies agree (one status rule for the
     expect(feStatus.mintStatus({ online: true, degraded: false })).toBe('online')
     expect(feStatus.mintStatus({ online: false })).toBe('offline')
     expect(feStatus.mintStatus({ online: null })).toBe('offline')
+  })
+})
+
+describe('nip87Announcement: backend and frontend copies agree (Mint Detail line and wallet API nip87)', () => {
+  it('the code is byte-identical (comments aside)', () => {
+    expect(codeOf('../utils/nip87Announcement.ts')).toBe(codeOf('../../backend/src/shared/nip87Announcement.ts'))
+  })
+  const PK = '02' + 'ab'.repeat(32)
+  const cases = [
+    {}, { announcedAt: '2026-03-14T09:20:00.000Z' }, { announcedAt: '2026-03-14T09:20:00.000Z', announceD: PK, infoPubkey: PK },
+    { announcedAt: '2026-03-14T09:20:00.000Z', announceD: '03' + 'cd'.repeat(32), infoPubkey: PK },
+    { announcedAt: '2026-03-14T09:20:00.000Z', announceD: 'uuid-like', infoPubkey: PK }, { announcedAt: 'bad', announceD: PK, infoPubkey: PK },
+  ]
+  it.each(cases)('same answer for %o', c => {
+    expect(feNip87.nip87AnnouncementOf(c)).toEqual(beNip87.nip87AnnouncementOf(c))
   })
 })

@@ -1,4 +1,6 @@
 import { njumpEventUrl, mintAnnounceNaddr } from '@/utils/nostrLinks'
+import { nip87AnnouncementOf } from '@/utils/nip87Announcement'
+import { NIP87_ANNOUNCEMENT_LABEL, NIP87_NOT_SEEN_TEXT, nip87KeyText, nip87SeenSuffix } from '@/utils/nip87Texts'
 import { useParams, useNavigate, Navigate, Link } from 'react-router-dom'
 import { Fragment, useEffect, useState, useMemo, useCallback, lazy, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -925,7 +927,9 @@ function MintDetailContent({ url }: { url: string }) {
   // Signed health record: only a mint with a current event (not archived, scored, https host that may appear in an event).
   const healthRecord = knownMint && knownMint.archived !== true && typeof knownMint.reliabilityScore === 'number' ? healthRecordFor(url) : null
   const firstSeen = firstSeenLabel(discoveredAt)
-  const nostrAnnouncedAt = knownMint?.nostrAnnouncedAt ?? null
+  // NIP-87 announcement line (header): only the stored discovery data, nothing is fetched here.
+  const nip87 = knownMint ? nip87AnnouncementOf({ announcedAt: knownMint.nostrAnnouncedAt, announceD: knownMint.nostrAnnounceD, infoPubkey: knownMint.pubkey }) : null
+  const nip87Key = nip87 ? nip87KeyText(nip87) : null
   const nostrAnnounceHref = njumpEventUrl(knownMint?.nostrAnnounceId)
   const isNew = isNewMint(discoveredAt)
   // No "Outdated" pill on an archived mint (2026-10-27): the version is the last one it reported and it is no longer
@@ -1248,13 +1252,15 @@ function MintDetailContent({ url }: { url: string }) {
                 <div className="md-first-seen" style={{fontSize:12,fontFamily:'var(--font-mono)',color:'var(--text-faint)',marginTop:4}}>{firstSeen}</div>
               )}
               <div className="md-announce-row">
-              {nostrAnnouncedAt && (
-                <div className="md-first-seen md-announce-label">
-                  {nostrAnnounceHref ? (
-                    <a href={nostrAnnounceHref} target="_blank" rel="noopener noreferrer">Announced on Nostr</a>
-                  ) : 'Announced on Nostr'}
-                  {' · '}
-                  {new Date(nostrAnnouncedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+              {nip87 && (
+                <div className="md-first-seen md-announce-label md-announce-nip87" data-testid="md-nip87">
+                  {nip87.announcement === 'seen' ? (<>
+                    {nostrAnnounceHref ? (
+                      <a href={nostrAnnounceHref} target="_blank" rel="noopener noreferrer">{NIP87_ANNOUNCEMENT_LABEL}</a>
+                    ) : NIP87_ANNOUNCEMENT_LABEL}
+                    {nip87SeenSuffix(nip87.eventCreatedAt)}
+                  </>) : NIP87_NOT_SEEN_TEXT}
+                  {nip87Key && <span className="md-announce-key" data-testid="md-nip87-key">{nip87Key}</span>}
                 </div>
               )}
         <div className="md-hdr-actions">
