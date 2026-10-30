@@ -16,12 +16,16 @@ export interface Nip87AnnouncementFacts {
   dMatchesInfoPubkey: boolean | null
   /** The announcement event's created_at (ISO 8601); null when not seen. */
   eventCreatedAt: string | null
+  /** When the last discovery run that reached our relays ran (ISO 8601); the key is ABSENT until there was one. */
+  checkedAt?: string
 }
 
 export interface Nip87AnnouncementInput {
   announcedAt?: string | Date | null | undefined
   announceD?: string | null | undefined
   infoPubkey?: string | null | undefined
+  /** app_state discovery_last_success_at as stored by discovery.ts. */
+  checkedAt?: string | Date | null | undefined
 }
 
 const MINT_PUBKEY_RE = /^0[23][0-9a-f]{64}$/
@@ -41,8 +45,10 @@ function isoOf(v: string | Date | null | undefined): string | null {
 
 export function nip87AnnouncementOf(m: Nip87AnnouncementInput): Nip87AnnouncementFacts {
   const eventCreatedAt = isoOf(m.announcedAt)
-  if (eventCreatedAt === null) return { announcement: 'not_seen', dMatchesInfoPubkey: null, eventCreatedAt: null }
+  const checkedAt = isoOf(m.checkedAt)
+  const checked = checkedAt === null ? {} : { checkedAt }
+  if (eventCreatedAt === null) return { announcement: 'not_seen', dMatchesInfoPubkey: null, eventCreatedAt: null, ...checked }
   const d = pubkeyShaped(m.announceD)
   const info = pubkeyShaped(m.infoPubkey)
-  return { announcement: 'seen', dMatchesInfoPubkey: d !== null && info !== null ? d === info : null, eventCreatedAt }
+  return { announcement: 'seen', dMatchesInfoPubkey: d !== null && info !== null ? d === info : null, eventCreatedAt, ...checked }
 }

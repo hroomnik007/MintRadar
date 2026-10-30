@@ -104,6 +104,7 @@ export const WALLET_MINT_FIELDS: readonly WalletField[] = [
   { name: 'nip87.announcement', type: '"seen" | "not_seen"', nullable: false, meaning: 'seen: an announcement for this URL was seen on our relays. not_seen: none was seen on our relays; it may still exist elsewhere.' },
   { name: 'nip87.dMatchesInfoPubkey', type: 'boolean', nullable: true, meaning: 'Whether the announcement\'s d tag equals the pubkey in the mint\'s /v1/info. null when not comparable: no announcement seen, a d tag that is missing or not shaped like a mint pubkey (66 hex characters, 02/03 prefix), or no stored /v1/info pubkey. Anyone can publish an announcement; a match is a fact about the event, not about who published it.' },
   { name: 'nip87.eventCreatedAt', type: 'string (ISO 8601, UTC)', nullable: true, meaning: 'created_at of the stored announcement event; null when none was seen.' },
+  { name: 'nip87.checkedAt', type: 'string (ISO 8601, UTC)', nullable: false, meaning: 'When MintRadar\'s discovery last ran with a relay completing the kind 38172 query. The key is omitted until there has been such a run; a run in which every relay failed or timed out does not change it. Added 2026-10-31.' },
 ]
 
 export interface WalletQueryParam {

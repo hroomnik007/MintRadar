@@ -3,6 +3,7 @@ import { normalizeURL as normalizeRelayUrl } from 'nostr-tools/utils'
 import type { Filter } from 'nostr-tools'
 import { RelayWebSocket } from './wsPolyfill.js'
 import { pool } from './db.js'
+import { setAppState, DISCOVERY_LAST_SUCCESS_KEY } from './appState.js'
 import { probeMintToDb, isValidCashuMint } from './prober.js'
 import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 
@@ -113,6 +114,17 @@ export function computeSilentRelays(
   )
 }
 
+/**
+ * Whether this run's kind:38172 query reached the relays: the query itself settled (no overall timeout) AND either a relay
+ * delivered an event or at least one relay did not fail to connect (querySync only resolves once the connected relays
+ * are done, EOSE included). False when every relay failed or unreachable, or the query timed out; never based on event
+ * time or the current time.
+ */
+export function discoveryReachedRelays(queryFulfilled: boolean, relaysWithEvents: number, failedRelays: number, totalRelays: number): boolean {
+  if (!queryFulfilled) return false
+  return relaysWithEvents > 0 || failedRelays < totalRelays
+}
+
 export async function discoverMintsFromNostr(): Promise<number> {
   // Always install 'ws' as globalThis.WebSocket — see nostrService.ts for why
   // this must not be guarded by `if (!globalThis.WebSocket)`: Node 22's native
@@ -166,7 +178,14 @@ export async function discoverMintsFromNostr(): Promise<number> {
         `[discovery] kind:38172 per-relay: ${formatRelayBreakdown(res38172.value, nostrPool.seenOn)} ` +
         `(${res38172.value.length} events total)`
       )
-      for (const url of relayUrlsThatResponded(res38172.value, nostrPool.seenOn)) respondedRelays.add(url)
+      const responded38172 = relayUrlsThatResponded(res38172.value, nostrPool.seenOn)
+      for (const url of responded38172) respondedRelays.add(url)
+      // Record the time of this run for the "checked" label (Mint Detail NIP-87 row, wallet API nip87.checkedAt). Written only
+      // when a relay really completed the kind:38172 query; otherwise the earlier value stays. A write failure must not
+      // fail the run.
+      if (discoveryReachedRelays(true, responded38172.size, failedRelays.size, DISCOVERY_RELAYS.length)) {
+        await setAppState(DISCOVERY_LAST_SUCCESS_KEY, new Date().toISOString()).catch(err => console.error('[discovery] could not store discovery_last_success_at:', err))
+      }
       for (const event of res38172.value.filter(e => verifyEvent(e))) {
         const uTag = event.tags.find((t: string[]) => t[0] === 'u')
         if (!uTag || !uTag[1]) continue

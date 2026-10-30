@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { nip87AnnouncementOf, pubkeyShaped } from '../shared/nip87Announcement.js'
 import { toWalletMint, type KnownMintLike } from '../walletApi.js'
+import { discoveryReachedRelays } from '../discovery.js'
+import { appStateTimeIso } from '../appState.js'
 
 const PK = '02' + 'ab'.repeat(32)
 const OTHER = '03' + 'cd'.repeat(32)
@@ -56,4 +58,39 @@ describe('wallet API nip87 field', () => {
     expect(toWalletMint({ ...base, nostrAnnouncedAt: AT, nostrAnnounceD: 'not-a-key' }).nip87.dMatchesInfoPubkey).toBeNull()
     expect(toWalletMint({ ...base, nostrAnnouncedAt: AT }).nip87.dMatchesInfoPubkey).toBeNull()
   })
+})
+
+describe('checkedAt (app_state discovery_last_success_at)', () => {
+  const CHECKED = '2026-10-31T06:00:12.000Z'
+  it('present when the key is stored, for seen and not seen', () => {
+    expect(nip87AnnouncementOf({ announcedAt: AT, announceD: PK, infoPubkey: PK, checkedAt: CHECKED }).checkedAt).toBe(CHECKED)
+    expect(nip87AnnouncementOf({ checkedAt: new Date(CHECKED) })).toEqual({ announcement: 'not_seen', dMatchesInfoPubkey: null, eventCreatedAt: null, checkedAt: CHECKED })
+  })
+  it('the key is omitted (not null, not empty) when the value is missing or not a date', () => {
+    for (const c of [undefined, null, '', 'garbage']) {
+      const f = nip87AnnouncementOf({ announcedAt: AT, checkedAt: c })
+      expect('checkedAt' in f, String(c)).toBe(false)
+    }
+  })
+  it('wallet API: present and omitted', () => {
+    const base = { url: 'https://a.example.com', name: 'A', archived: false, degraded: false, online: true, version: null, softwareLatest: null,
+      nutsLimits: null, units: null, auditCzTotal: null, auditCzBlamed: null, auditCzFetchedAt: null, discoveredAt: null,
+      reliabilityScore: null, uptimePct24h: null, uptimePct7d: null, lastCheckedAt: null, reviewCount: null, reviewRatedCount: null,
+      reviewAvgRating: null, operatorReviewCount: null, latencyMs: null, pubkey: PK, nostrAnnouncedAt: AT, nostrAnnounceD: PK } as KnownMintLike
+    expect(toWalletMint({ ...base, nostrCheckedAt: CHECKED }).nip87.checkedAt).toBe(CHECKED)
+    expect('checkedAt' in toWalletMint(base).nip87).toBe(false)
+    expect('checkedAt' in toWalletMint({ ...base, nostrCheckedAt: null }).nip87).toBe(false)
+  })
+  it('appStateTimeIso normalises a stored value and returns null otherwise', () => {
+    expect(appStateTimeIso('2026-10-31T06:00:12Z')).toBe(CHECKED)
+    expect(appStateTimeIso(null)).toBeNull()
+    expect(appStateTimeIso('x')).toBeNull()
+  })
+})
+
+describe('discoveryReachedRelays (decides whether discovery_last_success_at is written)', () => {
+  it('a relay delivered events: reached', () => expect(discoveryReachedRelays(true, 3, 2, 10)).toBe(true))
+  it('no events but at least one relay did not fail (EOSE with nothing): reached', () => expect(discoveryReachedRelays(true, 0, 9, 10)).toBe(true))
+  it('every relay failed to connect: not reached', () => expect(discoveryReachedRelays(true, 0, 10, 10)).toBe(false))
+  it('the query timed out or rejected: not reached', () => expect(discoveryReachedRelays(false, 0, 0, 10)).toBe(false))
 })

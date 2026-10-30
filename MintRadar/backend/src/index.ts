@@ -7,6 +7,7 @@ import { isSafeUrl, isWellFormedMintUrl, checkWsUrlSafety, safeFetch, readJsonLi
 import { upsertMint, probeMintToDb, validateCashuMintProbe, parseMintMethods, classifyFetchError, type MintMethodEntry } from './prober.js'
 import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type ProbeFailure, type SafeFetchRejection } from './probeErrorKind.js'
 import { normalizeMintPubkey, findMintsByPubkey, persistMintPubkeyIfChanged } from './mintPubkey.js'
+import { appStateTimeIso } from './appState.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import type { LatestVersions } from './shared/versionRule.js'
 import { METHODOLOGY_CHANGES } from './shared/methodology.js'
@@ -1507,7 +1508,7 @@ function computeKnownMints(): Promise<Snapshot> {
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
         m.audit_cz_total, m.audit_cz_blamed, m.audit_cz_fetched_at,
-        m.discovered_at, m.nostr_announced_at, m.nostr_announce_id, m.nostr_announce_pubkey, m.nostr_announce_d, m.last_reliability_score, m.last_error, m.server_location, m.ip_address, m.net_asn, m.net_org, m.net_country, m.has_onion,
+        m.discovered_at, m.nostr_announced_at, m.nostr_announce_id, m.nostr_announce_pubkey, m.nostr_announce_d, (SELECT a.value FROM app_state a WHERE a.key = 'discovery_last_success_at') AS nostr_checked_at, m.last_reliability_score, m.last_error, m.server_location, m.ip_address, m.net_asn, m.net_org, m.net_country, m.has_onion,
         m.review_count, m.review_avg_rating, m.review_operator_count, m.review_rated_count, m.review_count_7d_ago, m.review_count_7d_ago_at,
         m.contact_nostr, m.contact_checks,
         -- Only while the rollup is missing (review_rated_count IS NULL: before the first recount after a deploy or
@@ -1662,6 +1663,9 @@ function computeKnownMints(): Promise<Snapshot> {
           nostrAnnounceId: (r.nostr_announce_id as string | null) ?? null,
           nostrAnnouncePubkey: (r.nostr_announce_pubkey as string | null) ?? null,
           nostrAnnounceD: (r.nostr_announce_d as string | null) ?? null,
+          // Additive: time of the last discovery run in which a relay completed the kind:38172 query (app_state
+          // discovery_last_success_at); null until the first such run. Same value on every row.
+          nostrCheckedAt: appStateTimeIso(r.nostr_checked_at),
           reliabilityScore: (r.last_reliability_score as number | null) ?? null,
           // Additive: the per-component points stored with reliabilityScore (mints.score_breakdown, written in the same
           // UPDATE by prober.ts), so Mint Detail's score modal shows the points the stored score used, not a live

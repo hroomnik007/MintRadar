@@ -239,6 +239,7 @@ describe('nip87Announcement: backend and frontend copies agree (Mint Detail line
     {}, { announcedAt: '2026-03-14T09:20:00.000Z' }, { announcedAt: '2026-03-14T09:20:00.000Z', announceD: PK, infoPubkey: PK },
     { announcedAt: '2026-03-14T09:20:00.000Z', announceD: '03' + 'cd'.repeat(32), infoPubkey: PK },
     { announcedAt: '2026-03-14T09:20:00.000Z', announceD: 'uuid-like', infoPubkey: PK }, { announcedAt: 'bad', announceD: PK, infoPubkey: PK },
+    { announcedAt: '2026-03-14T09:20:00.000Z', checkedAt: '2026-10-31T06:00:00.000Z' }, { checkedAt: 'bad' }, { checkedAt: null },
   ]
   it.each(cases)('same answer for %o', c => {
     expect(feNip87.nip87AnnouncementOf(c)).toEqual(beNip87.nip87AnnouncementOf(c))

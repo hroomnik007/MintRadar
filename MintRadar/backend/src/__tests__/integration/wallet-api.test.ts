@@ -193,6 +193,7 @@ describe('contract', () => {
         "nostrAnnounceId",
         "nostrAnnouncePubkey",
         "nostrAnnouncedAt",
+        "nostrCheckedAt",
         "nutCount",
         "nutsLimits",
         "offlineSince",

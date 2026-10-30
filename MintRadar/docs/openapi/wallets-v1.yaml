@@ -535,8 +535,7 @@ components:
         nip87:
           description: >-
             Only with `include=facts` (always on the single-mint endpoint). The mint's NIP-87 announcement (Nostr kind 38172) as
-            MintRadar's discovery last stored it from its relays. There is no check time: the time of the last discovery run is
-            not stored. Added 2026-10-30.
+            MintRadar's discovery last stored it from its relays. Added 2026-10-30; `checkedAt` added 2026-10-31.
           allOf:
             - $ref: '#/components/schemas/Nip87'
         downSince:
@@ -667,6 +666,12 @@ components:
           type: [string, 'null']
           format: date-time
           description: created_at of the stored announcement event; null when none was seen.
+        checkedAt:
+          type: string
+          format: date-time
+          description: >-
+            When MintRadar's discovery last ran with a relay completing the kind 38172 query. The key is omitted until there has
+            been such a run; a run in which every relay failed or timed out does not change it.
     Latency24h:
       type: object
       required: [p50Ms, p95Ms, samples]

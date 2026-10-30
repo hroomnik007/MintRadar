@@ -58,6 +58,8 @@ export interface KnownMint {
   // still-live announcement (nostrAnnounceId alone isn't enough for naddr).
   nostrAnnouncePubkey?: string | null
   nostrAnnounceD?: string | null
+  // Time of the last discovery run that reached the relays (app_state discovery_last_success_at); null until the first one.
+  nostrCheckedAt?: string | null
   reliabilityScore?: number | null
   /** What the stored score used at its last computation (backend scoreBreakdown.ts); null until the first probe that wrote it. */
   scoreBreakdown?: StoredScoreBreakdown | null

@@ -57,6 +57,8 @@ export interface KnownMintLike {
   // The stored NIP-87 announcement (discovery.ts): event created_at and `d` tag; read by `nip87` (2026-10-30).
   nostrAnnouncedAt?: string | Date | null
   nostrAnnounceD?: string | null
+  /** The last discovery run that reached the relays (app_state discovery_last_success_at); absent/null before the first one. */
+  nostrCheckedAt?: string | Date | null
 }
 
 /** Per-mint data the snapshot carries beside the /api/mints/known rows (never serialised there). */
@@ -203,7 +205,7 @@ export interface WalletMint {
   auditByDirection: { mint: AuditDirection | null; melt: AuditDirection | null }
   /** Only with include=facts (additive 2026-10-25): latency percentiles of the successful probes of the last 24 hours. */
   latency24h: WalletLatency24h | null
-  /** Only with include=facts (additive 2026-10-30): the stored NIP-87 kind:38172 announcement (shared/nip87Announcement.ts). No checkedAt: the time of the last discovery run is not stored. */
+  /** Only with include=facts (additive 2026-10-30): the stored NIP-87 kind:38172 announcement (shared/nip87Announcement.ts). checkedAt is omitted until a discovery run has reached the relays. */
   nip87: Nip87AnnouncementFacts
 }
 
@@ -411,7 +413,7 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviews
     limits: limitsOf(m.mintMethods, m.meltMethods),
     auditByDirection: auditByDirectionOf(extra?.auditDirections),
     latency24h: extra?.latency24h ?? null,
-    nip87: nip87AnnouncementOf({ announcedAt: m.nostrAnnouncedAt, announceD: m.nostrAnnounceD, infoPubkey: m.pubkey }),
+    nip87: nip87AnnouncementOf({ announcedAt: m.nostrAnnouncedAt, announceD: m.nostrAnnounceD, infoPubkey: m.pubkey, checkedAt: m.nostrCheckedAt }),
   }
 }
 

@@ -35,7 +35,7 @@ const FULL: KnownMintLike = {
   lastCheckedAt: '2026-10-13T11:59:00.000Z', reviewCount: 12, reviewRatedCount: 10, reviewAvgRating: 4.6,
   operatorReviewCount: 1, latencyMs: 120,
   pubkey: '02' + 'ab'.repeat(32), hasOnion: true, lastOnlineAt: '2026-10-13T11:59:00.000Z',
-  nostrAnnouncedAt: '2026-03-14T09:20:00.000Z', nostrAnnounceD: '02' + 'ab'.repeat(32),
+  nostrAnnouncedAt: '2026-03-14T09:20:00.000Z', nostrAnnounceD: '02' + 'ab'.repeat(32), nostrCheckedAt: '2026-10-31T06:00:12.000Z',
   mintMethods: [{ method: 'bolt11', unit: 'sat', min_amount: 1, max_amount: 100000 }], meltMethods: [{ method: 'bolt11', unit: 'sat' }],
 }
 const FULL_EXTRA: WalletExtra = {
