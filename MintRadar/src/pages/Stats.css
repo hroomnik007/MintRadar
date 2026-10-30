@@ -984,6 +984,12 @@
   flex-shrink: 0;
 }
 
+/* Software and Geographic modal footers: two items side by side, no gap, no wrapping rule (was inline). */
+.nut-modal-footer--between {
+  display: flex;
+  justify-content: space-between;
+}
+
 /* NUT coverage modal footer: count and sort note side by side on wide screens, one per line on phones. */
 .nut-modal-footer--split {
   display: flex;

@@ -161,7 +161,7 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose, duplicateDisplayNam
         )}
         {sorted.length === 0 && <div className="nut-modal-empty">No mints</div>}
       </div>
-      <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <div className="nut-modal-footer nut-modal-footer--between">
         <span>{onlineCount} online</span>
         <span>Sorted by Reliability Score</span>
       </div>
@@ -211,7 +211,7 @@ function SoftwareVersionsView({ sw, versions, total, accentColor, onSelectVersio
         })}
         {versions.length === 0 && <div className="nut-modal-empty">No versions</div>}
       </div>
-      <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <div className="nut-modal-footer nut-modal-footer--between">
         <span>{total} mint{total !== 1 ? 's' : ''} running {sw}</span>
         <span>Newest version first</span>
       </div>
@@ -345,7 +345,7 @@ function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
           )}
           {sorted.length === 0 && <div className="nut-modal-empty">No mints</div>}
         </div>
-        <div className="nut-modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <div className="nut-modal-footer nut-modal-footer--between">
           <span>{onlineCount} online</span>
           <span>Sorted by Reliability Score</span>
         </div>
