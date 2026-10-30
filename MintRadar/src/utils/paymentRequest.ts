@@ -162,6 +162,23 @@ export function parsePaymentRequest(raw: string): PaymentRequestParse {
   }
 }
 
+/** NUT-18 mint-list type: with a non-empty mint list, `mp` true = "preferred", `mp` false or omitted = "strict" (the
+ *  default; NUT-26 tag 0x09 "defaults to 0 if absent"). Without a mint list `mp` is ignored ("If `m` is not set, `mp`
+ *  SHOULD be ignored"), so the answer is null. An `mp` the extras reader could not read counts as omitted. */
+export type MintListType = 'strict' | 'preferred'
+export function mintListType(view: Pick<PaymentRequestView, 'mints' | 'mintPreferred'>): MintListType | null {
+  if (view.mints.length === 0) return null
+  return view.mintPreferred === true ? 'preferred' : 'strict'
+}
+
+/** The one sentence under "Accepted mints" about the list type; null without a mint list. */
+export const MINT_LIST_STRICT_TEXT = 'Mint list: strict (only ecash from these mints is accepted).'
+export const MINT_LIST_PREFERRED_TEXT = 'Mint list: preferred (ecash from other mints is accepted too).'
+export function mintListTypeText(view: Pick<PaymentRequestView, 'mints' | 'mintPreferred'>): string | null {
+  const t = mintListType(view)
+  return t === null ? null : t === 'preferred' ? MINT_LIST_PREFERRED_TEXT : MINT_LIST_STRICT_TEXT
+}
+
 /** The site's status word (shared rule in utils/mintStatus.ts, the same as the wallet API `status`; 2026-10-27).
  *  Only a mint with no probe result and no flag is "Unknown" here. */
 export function mintStatusWord(m: { online: boolean | null; degraded?: boolean; archived?: boolean }): StatusDotWord {

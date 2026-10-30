@@ -36,8 +36,9 @@ const A_SM_STRICT = 'creqAo2FpZWV4dC00YW2BeBpodHRwczovL2FscGhhLm1pbnQuZXhhbXBsZW
 const A_SM_NO_MINTS = 'creqAo2FpZWV4dC01YXVjc2F0YnNtgaJibW5nb25jaGFpbmJtZhgy'
 const A_MP_NO_MINTS = 'creqAomFpZWV4dC0zYm1w9Q'
 const B_MP_SM = 'CREQB1QYQQ2ETCWSKNZQSQPQQQQQQQQQQQQ9GRQQQSQPGQRF58GARSWVAZ7TMPD3CXSCFWD45KUAPWV4UXZMTSD3JSJQQPQY9QQZGPQQRXYMMVWSCNZZSQZ5QSQPM0DE3KSCTFDCPQQZQQQQQQQQQQQQEQ4HJCD4'
-const MINT_PREFERRED = 'Mint list is preferred, not strict: other mints are accepted too.'
-const STRICT_LIST_NOTE = 'The mint list above is strict, so ecash from other mints is not accepted and this fee does not apply.'
+const MINT_PREFERRED = 'Mint list: preferred (ecash from other mints is accepted too).'
+const MINT_STRICT = 'Mint list: strict (only ecash from these mints is accepted).'
+const STRICT_LIST_NOTE = 'Because the mint list is strict, this fee does not apply.'
 const OTHER_MINTS_NOTE = 'A fee applies only to ecash from a mint outside the accepted mints list, or from any mint if no list is given. The payer owes the lowest fee among the listed methods its mint supports.'
 const PREFIX_ERROR = 'Not a payment request: expected a string starting with creqA or creqB.'
 
@@ -242,7 +243,7 @@ for (const [name, text] of [['creqA', A_MP_SM], ['creqB', B_MP_SM]] as const) {
     await expect(errorBox(page)).toHaveCount(0)
     await expect(result(page)).toContainText('ext-1')
     await expect(result(page).getByTestId('pr-mint')).toHaveCount(1)
-    await expect(result(page).getByTestId('pr-mint-preferred')).toHaveText(MINT_PREFERRED)
+    await expect(result(page).getByTestId('pr-mint-list-type')).toHaveText(MINT_PREFERRED)
     await expect(result(page).getByText('Other mints', { exact: true })).toBeVisible()
     const rows = result(page).getByTestId('pr-method')
     await expect(rows).toHaveText(['bolt11 · no extra fee', 'onchain · fee 50 sat'])
@@ -256,6 +257,7 @@ test('a strict mint list with sm adds one sentence; a preferred list or no list 
   const strict = result(page).getByTestId('pr-methods-strict')
   await input(page).fill(A_SM_STRICT) // m set, mp absent: strict
   await expect(result(page).getByTestId('pr-method')).toHaveCount(2)
+  await expect(result(page).getByTestId('pr-mint-list-type')).toHaveText(MINT_STRICT)
   await expect(result(page).getByTestId('pr-methods-note')).toHaveText(OTHER_MINTS_NOTE)
   await expect(strict).toHaveText(STRICT_LIST_NOTE)
   await input(page).fill(A_MP_SM) // mp true: preferred
@@ -267,15 +269,20 @@ test('a strict mint list with sm adds one sentence; a preferred list or no list 
   await expect(strict).toHaveCount(0)
 })
 
-test('without mp and sm nothing new is shown; mp false (strict) shows nothing; mp true without a mint list shows no note', async ({ page }) => {
+test('a mint list always says its type: mp absent or false = strict, without sm too; mp true without a mint list says nothing', async ({ page }) => {
   await open(page)
-  for (const text of [encode(), encode({ amount: 21 }), NUT26_EXAMPLE, A_MP_FALSE, A_MP_NO_MINTS]) {
+  // These all list mints and have no mp (or mp false): "Mint list: strict", and no "Other mints" section without sm.
+  for (const text of [encode(), encode({ amount: 21 }), NUT26_EXAMPLE, A_MP_FALSE]) {
     await input(page).fill(text)
     await expect(result(page)).toBeVisible()
-    await expect(result(page).getByTestId('pr-mint-preferred')).toHaveCount(0)
+    await expect(result(page).getByTestId('pr-mint-list-type')).toHaveText(MINT_STRICT)
     await expect(result(page).getByTestId('pr-methods')).toHaveCount(0)
     await expect(result(page).getByText('Other mints', { exact: true })).toHaveCount(0)
   }
+  // No mint list: mp is ignored (NUT-18), so no sentence about the list.
+  await input(page).fill(A_MP_NO_MINTS)
+  await expect(result(page)).toBeVisible()
+  await expect(result(page).getByTestId('pr-mint-list-type')).toHaveCount(0)
 })
 
 test('transport tags are plain text after the type (nostr · NIPs: 17); a relay hint is a plain line, never a link', async ({ page }) => {

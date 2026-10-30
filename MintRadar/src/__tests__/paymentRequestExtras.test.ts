@@ -3,7 +3,7 @@ import { PaymentRequest } from '@cashu/cashu-ts'
 import {
   readPaymentRequestExtras, NO_EXTRAS, EXTRAS_MAX_METHODS, EXTRAS_MAX_METHOD_BYTES, EXTRAS_CREQB_MAX_LENGTH, EXTRAS_MAX_LENGTH,
 } from '../utils/paymentRequestExtras'
-import { parsePaymentRequest } from '../utils/paymentRequest'
+import { parsePaymentRequest, mintListType, mintListTypeText, MINT_LIST_STRICT_TEXT, MINT_LIST_PREFERRED_TEXT } from '../utils/paymentRequest'
 
 // The vectors are built by hand: cashu-ts cannot encode mp / sm (that is why paymentRequestExtras.ts exists). A small
 // CBOR encoder and a small bech32m encoder (BIP-350), both test-only, make creqA and creqB strings from plain values.
@@ -297,5 +297,45 @@ describe('readPaymentRequestExtras: random mutations', () => {
     expect(calls).toBe(1200)
     // "a few milliseconds" in practice (the worst of 1,200 calls measured 1.2 to 1.9 ms in three runs); the bound is looser so a busy CI machine does not flake
     expect(worst).toBeLessThan(50)
+  })
+})
+
+// NUT-18: with a mint list, mp true = preferred, mp false or omitted = strict; without a list mp is ignored. The sentence
+// does not depend on sm.
+describe('mint list type sentence (creqA and creqB, mp true / false / omitted, with and without sm)', () => {
+  const SM_A = { sm: [{ mn: 'bolt11' }, { mn: 'onchain', mf: 50 }] }
+  const SM_B = [...method('bolt11'), ...method('onchain', 50n)]
+  const MP_B = (v: 0 | 1 | null) => (v === null ? [] : tlv(0x09, [v]))
+  const cases: Array<[string, boolean | null, boolean, string]> = []
+  for (const mp of [true, false, null] as const) {
+    for (const sm of [true, false]) {
+      const a = creqAOf({ i: 'x', m: [MINT], ...(mp === null ? {} : { mp }), ...(sm ? SM_A : {}) })
+      const b = creqB([...tlv(0x01, utf8('x')), ...tlv(0x05, utf8(MINT)), ...MP_B(mp === null ? null : mp ? 1 : 0), ...(sm ? SM_B : [])])
+      cases.push(['creqA', mp, sm, a], ['creqB', mp, sm, b])
+    }
+  }
+  it.each(cases)('%s, mp %s, sm %s', (_fmt, mp, sm, text) => {
+    const r = parsePaymentRequest(text)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.view.supportedMethods !== null).toBe(sm)
+    expect(mintListType(r.view)).toBe(mp === true ? 'preferred' : 'strict')
+    expect(mintListTypeText(r.view)).toBe(mp === true ? MINT_LIST_PREFERRED_TEXT : MINT_LIST_STRICT_TEXT)
+  })
+  it('the exact sentences', () => {
+    expect(MINT_LIST_STRICT_TEXT.startsWith('Mint list: strict')).toBe(true)
+    expect(MINT_LIST_PREFERRED_TEXT.startsWith('Mint list: preferred')).toBe(true)
+  })
+  it('no mint list: no sentence, whatever mp says (creqA and creqB, with and without sm)', () => {
+    for (const text of [
+      creqAOf({ i: 'x', mp: true }), creqAOf({ i: 'x', mp: false, ...SM_A }), creqAOf({ i: 'x' }),
+      creqB([...tlv(0x01, utf8('x')), ...tlv(0x09, [1])]), creqB([...tlv(0x01, utf8('x')), ...SM_B]),
+    ]) {
+      const r = parsePaymentRequest(text)
+      expect(r.ok).toBe(true)
+      if (!r.ok) return
+      expect(mintListType(r.view)).toBeNull()
+      expect(mintListTypeText(r.view)).toBeNull()
+    }
   })
 })

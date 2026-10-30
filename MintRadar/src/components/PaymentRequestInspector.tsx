@@ -6,17 +6,17 @@ import { IcShield } from '@/components/mint/IcShield'
 import { formatTokenAmount } from '@/utils/cashuToken'
 import { normalizeMintUrl, displayName, cardReliabilityLabel, reliabilityColor, statusDotColor } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
-import { parsePaymentRequest, mintStatusWord, transportTagLines, type PaymentRequestView } from '@/utils/paymentRequest'
+import { parsePaymentRequest, mintStatusWord, transportTagLines, mintListType, mintListTypeText, type PaymentRequestView } from '@/utils/paymentRequest'
 
 const NOT_SPECIFIED = 'Not specified'
 const OPEN_AMOUNT = 'Open amount: the sender chooses how much to send.'
 const ONE_SHOT = 'One-shot: this request can be paid only once.'
-const MINT_PREFERRED = 'Mint list is preferred, not strict: other mints are accepted too.'
 // NUT-18: the per-method fee applies only to ecash from a mint outside the list (or from any mint if there is no list);
 // the payer owes the lowest fee among the listed methods that its mint supports.
 const OTHER_MINTS_NOTE = 'A fee applies only to ecash from a mint outside the accepted mints list, or from any mint if no list is given. The payer owes the lowest fee among the listed methods its mint supports.'
 // NUT-18: with a strict list the sender MUST only send proofs from the listed mints, so the fee (which concerns mints outside the list) does not apply.
-const STRICT_LIST_NOTE = 'The mint list above is strict, so ecash from other mints is not accepted and this fee does not apply.'
+// The list type itself is the "Mint list: strict" sentence under the mints, so this note only adds the fee consequence.
+const STRICT_LIST_NOTE = 'Because the mint list is strict, this fee does not apply.'
 const NO_TRANSPORTS = 'None listed: the payment is returned directly (in-band)'
 
 function amountText(view: PaymentRequestView): string {
@@ -154,8 +154,8 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
             {parsed.view.mints.map((m, i) => <AcceptedMint key={`${i}-${m}`} url={m} known={lookup(m)} list={list} />)}
           </ul>
           )}
-          {parsed.view.mintPreferred === true && parsed.view.mints.length > 0 && (
-            <div className="pr-note" data-testid="pr-mint-preferred">{MINT_PREFERRED}</div>
+          {mintListTypeText(parsed.view) !== null && (
+            <div className="pr-note" data-testid="pr-mint-list-type">{mintListTypeText(parsed.view)}</div>
           )}
 
           {parsed.view.supportedMethods !== null && parsed.view.supportedMethods.length > 0 && (
@@ -167,7 +167,7 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
                 ))}
               </ul>
               <div className="pr-note" data-testid="pr-methods-note">{OTHER_MINTS_NOTE}</div>
-              {parsed.view.mints.length > 0 && parsed.view.mintPreferred !== true && (
+              {mintListType(parsed.view) === 'strict' && (
                 <div className="pr-note" data-testid="pr-methods-strict">{STRICT_LIST_NOTE}</div>
               )}
             </>
