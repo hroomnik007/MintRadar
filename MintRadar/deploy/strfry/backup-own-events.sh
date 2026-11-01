@@ -211,14 +211,25 @@ run_pull_and_push() {
   local dedup_file
   dedup_file=$(mktemp)
   trap "rm -f '$work_file' '$push_log' '$dedup_file'" RETURN
-  jq -c -s 'unique_by(.id) | .[]' "$work_file" > "$dedup_file"
+  # Same event id once; and of each replaceable (0, 3, 10000-19999) or addressable (30000-39999, per d tag) event only
+  # the newest version, because a relay answers an older version with "replaced: have newer event".
+  jq -c -s 'unique_by(.id)
+    | map(. + {rk: (if (.kind == 0 or .kind == 3 or (.kind >= 10000 and .kind < 20000)) then "\(.kind):\(.pubkey)"
+        elif (.kind >= 30000 and .kind < 40000) then "\(.kind):\(.pubkey):\((.tags | map(select(.[0] == "d")) | .[0][1]) // "")"
+        else .id end)})
+    | group_by(.rk) | map(max_by(.created_at)) | .[] | del(.rk)' "$work_file" > "$dedup_file"
   PUSHED_COUNT=$(wc -l < "$dedup_file" | tr -d ' ')
   echo "[backup-own-events] pushing $PUSHED_COUNT unique event(s) to $TARGET_RELAY (kinds: $kinds)"
 
   if ! nak event "$TARGET_RELAY" < "$dedup_file" >"$push_log" 2>&1; then
-    echo "[backup-own-events] FATAL: push to $TARGET_RELAY failed" >&2
-    cat "$push_log" >&2
-    return 1
+    # A relay that already holds a newer (replaceable) or the same event refuses with "replaced:" / "duplicate:".
+    # That is the backup's goal already reached, not a failure. Any other "failed" line is one.
+    if grep -i 'failed' "$push_log" | grep -viE 'replaced:|duplicate:|failed to publish to any of the relays' | grep -q .; then
+      echo "[backup-own-events] FATAL: push to $TARGET_RELAY failed" >&2
+      grep -i 'failed' "$push_log" | cut -c1-200 >&2
+      return 1
+    fi
+    echo "[backup-own-events] note: some events were refused as replaced/duplicate (already have newer) — not an error"
   fi
   echo "[backup-own-events] push completed ($PUSHED_COUNT event(s), kinds: $kinds)"
   return 0
