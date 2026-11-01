@@ -81,9 +81,18 @@ BASE_KINDS="38172 38000"
 # (profile metadata), kind:3 (contacts), kind:5 (deletions), kind:7
 # (reactions), and assorted replaceable list/app-data kinds (10001-10050,
 # 30078, 30443, 31602, 31925, 34237) — social-graph/metadata, not notes.
+# 2026-11-01: widened with the identity-recovery kinds: 0 (profile), 3 (contacts), 10002 (relay list, NIP-65), 10050
+# (DM relay list), 10000 (mute list), 10003 (bookmarks) and 30000/30003 (lists, bookmark sets). After adding them, run
+# once by hand: --backfill-author=1757995286af8c2b... --backfill-kinds="0 3 10002 10050 10000 10003 30000 30003".
+# Still excluded on purpose: 5 and 7 (deletions, reactions: noise), 30078 (other apps' data) and NIP-60 wallet state
+# (7375, 7376, 17375: a stale copy lists already-spent proofs; the real wallet backup is the NUT-13 seed). Note that
+# strfry rejects events older than rejectEventsOlderThanSeconds (3 years), so a profile or contact list last changed
+# longer ago than that is not accepted by the push.
+# Direct messages (kind 4, 1059) are NOT pulled here: reading them from other relays needs NIP-42 as the owner, i.e.
+# the nsec. They reach this relay by being addressed to it (DM relay list 10050), see writePolicy.sh.
 # The app service pubkey's scope deliberately does NOT change here.
 declare -A EXTRA_KINDS_BY_AUTHOR=(
-  ["1757995286af8c2bcdcfd13a300e9c40bc4a67e761118c5b365573406c6b37bc"]="1 30023"
+  ["1757995286af8c2bcdcfd13a300e9c40bc4a67e761118c5b365573406c6b37bc"]="1 30023 0 3 10002 10050 10000 10003 30000 30003"
 )
 
 # --- --backfill-* argument parsing -----------------------------------------
