@@ -18,8 +18,8 @@ beforeEach(() => { rateDir = mkdtempSync(join(tmpdir(), 'wp-')) })
 afterEach(() => { rmSync(rateDir, { recursive: true, force: true }) })
 
 let n = 0
-const ev = (pubkey: string, kind: number, ip = '1.1.1.1', content = 'x', tags: string[][] = []) =>
-  JSON.stringify({ type: 'new', event: { id: `e${n++}`, pubkey, kind, content, tags }, sourceType: 'IP4', sourceInfo: ip })
+const ev = (pubkey: string, kind: number, ip = '1.1.1.1', content = 'x') =>
+  JSON.stringify({ type: 'new', event: { id: `e${n++}`, pubkey, kind, content, tags: [] }, sourceType: 'IP4', sourceInfo: ip })
 
 function run(lines: string[], env: Record<string, string> = {}): string[] {
   const r = spawnSync('sh', [script], { input: lines.join('\n') + '\n', env: { ...process.env, RATE_DIR: rateDir, ...env }, encoding: 'utf8' })
@@ -33,34 +33,6 @@ describe.skipIf(!hasJq)('deploy/strfry/writePolicy.sh', { timeout: 30_000 }, () 
 
   it('always accepts a privileged key, any kind', () => {
     expect(run([ev(privileged, 1), ev(privileged, 30385)])).toEqual(['accept', 'accept'])
-  })
-
-  it('accepts a DM (kind 4 or gift wrap 1059) addressed to a privileged key, from any author', () => {
-    const toMe = [['p', privileged]]
-    expect(run([ev('aaaa', 4, '1.1.1.1', 'x', toMe), ev('bbbb', 1059, '1.1.1.2', 'x', toMe)])).toEqual(['accept', 'accept'])
-  })
-
-  it('rejects a DM addressed to someone else, without a p tag, or with an empty client address', () => {
-    expect(run([
-      ev('aaaa', 4, '1.1.1.1', 'x', [['p', 'cccc']]),
-      ev('aaaa', 1059),
-      ev('aaaa', 1059, '', 'x', [['e', 'abc']]),
-    ])).toEqual(['reject', 'reject', 'reject'])
-  })
-
-  it('finds the privileged p tag among others, also with an empty client address', () => {
-    expect(run([ev('aaaa', 1059, '', 'x', [['p', 'cccc'], ['p', privileged]])])).toEqual(['accept'])
-  })
-
-  it('does not accept other kinds just because they mention a privileged key', () => {
-    expect(run([ev('aaaa', 1, '1.1.1.1', 'x', [['p', privileged]]), ev('aaaa', 7, '1.1.1.1', 'x', [['p', privileged]])])).toEqual(['reject', 'reject'])
-  })
-
-  it('bounds DMs like the other open kinds (size and per-IP rate)', () => {
-    const toMe = [['p', privileged]]
-    expect(run([ev('aaaa', 1059, '1.1.1.1', 'y'.repeat(20000), toMe)])).toEqual(['reject'])
-    const lines = Array.from({ length: 5 }, () => ev('dddd', 1059, '4.4.4.4', 'x', toMe))
-    expect(run(lines, { OPEN_PER_IP_HOURLY: '3' })).toEqual(['accept', 'accept', 'accept', 'reject', 'reject'])
   })
 
   it('rejects an oversized open event', () => {

@@ -88,8 +88,9 @@ BASE_KINDS="38172 38000"
 # (7375, 7376, 17375: a stale copy lists already-spent proofs; the real wallet backup is the NUT-13 seed). Note that
 # strfry rejects events older than rejectEventsOlderThanSeconds (3 years), so a profile or contact list last changed
 # longer ago than that is not accepted by the push.
-# Direct messages (kind 4, 1059) are NOT pulled here: reading them from other relays needs NIP-42 as the owner, i.e.
-# the nsec. They reach this relay by being addressed to it (DM relay list 10050), see writePolicy.sh.
+# Direct messages (kind 4, 1059) are deliberately NOT stored on this relay: its reads are public (strfry 1.1.3 has no
+# per-kind read restriction; NIP-42 there only serves NIP-70 protected events), so anything stored here can be read by
+# anyone. Do not put this relay in the DM relay list (10050).
 # The app service pubkey's scope deliberately does NOT change here.
 declare -A EXTRA_KINDS_BY_AUTHOR=(
   ["1757995286af8c2bcdcfd13a300e9c40bc4a67e761118c5b365573406c6b37bc"]="1 30023 0 3 10002 10050 10000 10003 30000 30003"

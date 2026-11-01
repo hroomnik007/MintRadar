@@ -9,12 +9,8 @@
 # Policy:
 #   - Any pubkey in PRIVILEGED_PUBKEYS may write any event kind.
 #   - Everyone else may write ONLY kind 38172 (NIP-87 mint announcement) and
-#     kind 38000 (review), plus kind 4 and kind 1059 (direct message / NIP-17 gift wrap) that are ADDRESSED TO a
-#     privileged key (a `p` tag with its pubkey). A gift wrap is signed by a throw-away key, so the author can never
-#     be checked; the recipient is the only handle. The relay is the privileged keys' DM inbox: reads of kind 4/1059
-#     are limited to the involved pubkey by NIP-42 (strfry.conf `restrictedReadKinds`). Everything else, including
-#     kind 1, is rejected.
-#   - Those open kinds are open to any key, so they are bounded (2026-10-28 audit): at most
+#     kind 38000 (review). Everything else, including kind 1, is rejected.
+#   - Those two kinds are open to any key, so they are bounded (2026-10-28 audit): at most
 #     MAX_OPEN_EVENT_BYTES per event and OPEN_PER_IP_HOURLY per client per hour (an IPv6 client is its /64), plus a
 #     total per hour in two tiers: a source that already sent more than OPEN_LIGHT_SOURCE_EVENTS this hour stops at
 #     OPEN_GLOBAL_HOURLY in total, everyone stops at OPEN_GLOBAL_HARD_HOURLY. So one heavy source cannot use up the
@@ -80,17 +76,6 @@ peek_count() {
   if [ -f "$f" ]; then wc -c < "$f"; else echo 0; fi
 }
 
-# True when the event is addressed to a privileged key: one of its `p` tag values (the fields after the first five)
-# is a privileged pubkey. A malformed event has no such fields and is not addressed to anyone.
-addressed_to_privileged() {
-  [ "$#" -gt 5 ] || return 1
-  shift 5
-  for t in "$@"; do
-    is_privileged "$t" && return 0
-  done
-  return 1
-}
-
 is_privileged() {
   pk="$1"
   for p in $PRIVILEGED_PUBKEYS; do
@@ -103,17 +88,16 @@ is_privileged() {
 set -f
 
 while IFS= read -r line; do
-  # One jq call per event: id, pubkey, kind, size of the event JSON in characters, client address (never empty, so
-  # the fields after it stay in place), then the first 20 `p` tag values. A line that is not valid JSON yields no
-  # fields, so the kind is empty and the event is rejected below.
-  fields=$(printf '%s\n' "$line" | jq -r '[(.event.id // ""), (.event.pubkey // ""), ((.event.kind // -1) | tostring), ((.event | tojson | length) | tostring), ((.sourceInfo // "") | if . == "" then "unknown" else . end)] + ([.event.tags[]? | select(.[0] == "p") | .[1] | strings] | .[:20]) | join(" ")' 2>/dev/null)
+  # One jq call per event: id, pubkey, kind, size of the event JSON in characters, client address. A line that is not
+  # valid JSON yields no fields, so the kind is empty and the event is rejected below.
+  fields=$(printf '%s\n' "$line" | jq -r '[(.event.id // ""), (.event.pubkey // ""), ((.event.kind // -1) | tostring), ((.event | tojson | length) | tostring), (.sourceInfo // "")] | join(" ")' 2>/dev/null)
   set -- $fields
   id="${1:-}"; pubkey="${2:-}"; kind="${3:--1}"; size="${4:-0}"; ip="${5:-}"
 
   if is_privileged "$pubkey"; then
     action="accept"
     msg=""
-  elif [ "$kind" = "38172" ] || [ "$kind" = "38000" ] || { { [ "$kind" = "4" ] || [ "$kind" = "1059" ]; } && addressed_to_privileged "$@"; }; then
+  elif [ "$kind" = "38172" ] || [ "$kind" = "38000" ]; then
     action="accept"
     msg=""
     # An IPv6 client is its /64 (one customer can rotate the rest at will). File-name safe;
@@ -152,7 +136,7 @@ while IFS= read -r line; do
     fi
   else
     action="reject"
-    msg="blocked: this relay only accepts kind 38172 (mint announcement), kind 38000 (review) and direct messages to its operator from non-privileged pubkeys"
+    msg="blocked: this relay only accepts kind 38172 (mint announcement) and kind 38000 (review) from non-privileged pubkeys"
   fi
 
   jq -c -n --arg id "$id" --arg action "$action" --arg msg "$msg" \
