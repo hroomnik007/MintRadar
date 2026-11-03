@@ -6,7 +6,7 @@ import { IcShield } from '@/components/mint/IcShield'
 import { formatTokenAmount } from '@/utils/cashuToken'
 import { normalizeMintUrl, displayName, cardReliabilityLabel, reliabilityColor, statusDotColor } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
-import { parsePaymentRequest, mintStatusWord, transportTagLines, mintListType, mintListTypeText, type PaymentRequestView } from '@/utils/paymentRequest'
+import { parsePaymentRequest, bitcoinLinkNote, mintStatusWord, transportTagLines, mintListType, mintListTypeText, type PaymentRequestView } from '@/utils/paymentRequest'
 
 const NOT_SPECIFIED = 'Not specified'
 const OPEN_AMOUNT = 'Open amount: the sender chooses how much to send.'
@@ -91,7 +91,7 @@ function AcceptedMint({ url, known, list }: { url: string; known: KnownMint | nu
 }
 
 /**
- * Payment request inspector (NUT-18 creqA, NUT-26 creqB). The pasted string is decoded in the browser and kept only in React
+ * Payment request inspector (NUT-18 creqA, NUT-26 creqB, or a bitcoin: link containing one). The pasted string is decoded in the browser and kept only in React
  * state: no request is made for it. Targets and mint URLs are shown as text (a transport target is chosen by whoever
  * made the request), mints are matched against the known-mints list the page already loaded.
  */
@@ -105,13 +105,13 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
     <div className="tool-card" data-testid="payment-request-inspector">
       <div className="tool-header">
         <div className="tool-title">Payment request inspector</div>
-        <div className="tool-subtitle">Paste a Cashu payment request (NUT-18 creqA or NUT-26 creqB) to read what it asks for and which mints it accepts.</div>
+        <div className="tool-subtitle">Paste a Cashu payment request (NUT-18 creqA, NUT-26 creqB or a bitcoin: link that contains one) to read what it asks for and which mints it accepts.</div>
       </div>
 
       <textarea
         className="pr-input"
         aria-label="Payment request"
-        placeholder="creqA… or creqB…"
+        placeholder="creqA…, creqB… or bitcoin:?creq=…"
         value={input}
         onChange={e => setInput(e.target.value)}
         rows={3}
@@ -119,6 +119,7 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
         autoComplete="off"
       />
       <div className="pr-note">Decoded in your browser; nothing you paste here is sent anywhere.</div>
+      {parsed.ok && parsed.link && <div className="pr-note" data-testid="pr-link-note">{bitcoinLinkNote(parsed.link)}</div>}
 
       {parsed.ok === false && parsed.reason === 'empty' && <div className="pr-hint">Paste a payment request first</div>}
       {parsed.ok === false && parsed.reason !== 'empty' && (

@@ -12,7 +12,12 @@ export const PAYMENT_REQUEST_MAX_LENGTH = 4096
 /** cashu-ts reads a creqb string of at most 1023 characters (the bech32m limit it decodes with). */
 export const PAYMENT_REQUEST_CREQB_MAX_LENGTH = 1023
 export const PAYMENT_REQUEST_INVALID = 'This does not look like a valid payment request.'
-export const PAYMENT_REQUEST_PREFIX_ERROR = 'Not a payment request: expected a string starting with creqA or creqB.'
+export const PAYMENT_REQUEST_PREFIX_ERROR = 'Not a payment request: expected creqA, creqB or a bitcoin: link with a creq parameter.'
+/** A pasted BIP-321 `bitcoin:` URI may also carry an invoice or an offer, so its cap is higher than the creq caps. */
+export const BITCOIN_LINK_MAX_LENGTH = 8192
+export const BITCOIN_LINK_MAX_PARAMS = 32
+export const BITCOIN_LINK_TOO_LONG = `This bitcoin: link is longer than ${BITCOIN_LINK_MAX_LENGTH.toLocaleString('en-US')} characters, more than this tool reads.`
+export const BITCOIN_LINK_NO_CREQ = 'This bitcoin: link has no creq parameter, so there is no Cashu payment request in it.'
 const tooLong = (max: number) => `This payment request is longer than ${max.toLocaleString('en-US')} characters, which is more than this tool reads.`
 export const PAYMENT_REQUEST_TOO_LONG = tooLong(PAYMENT_REQUEST_MAX_LENGTH)
 export const PAYMENT_REQUEST_CREQB_TOO_LONG = tooLong(PAYMENT_REQUEST_CREQB_MAX_LENGTH)
@@ -49,11 +54,19 @@ export interface PaymentRequestView {
   supportedMethods: PaymentRequestMethod[] | null
 }
 
-export type PaymentRequestParse =
-  | { ok: true; view: PaymentRequestView }
-  | { ok: false; reason: 'empty' | 'prefix' | 'too-long' | 'invalid'; message: string }
+/** Facts about a pasted `bitcoin:` link. Only names of what is present; the invoice, offer and address are never kept. */
+export interface BitcoinLinkInfo {
+  /** In this order: Lightning invoice (`lightning`), BOLT12 offer (`lno`), on-chain address (after the colon). */
+  also: string[]
+  /** How many `creq` parameters were found among the first 32 parameters. */
+  creqCount: number
+}
 
-const fail = (reason: 'prefix' | 'too-long' | 'invalid', message: string): PaymentRequestParse => ({ ok: false, reason, message })
+export type PaymentRequestParse =
+  | { ok: true; view: PaymentRequestView; link?: BitcoinLinkInfo }
+  | { ok: false; reason: 'empty' | 'prefix' | 'too-long' | 'invalid' | 'no-creq'; message: string }
+
+const fail = (reason: 'prefix' | 'too-long' | 'invalid' | 'no-creq', message: string): PaymentRequestParse => ({ ok: false, reason, message })
 
 const str = (v: unknown): string | null => (typeof v === 'string' ? v : null)
 
@@ -79,10 +92,63 @@ export function transportTagLines(tags: PaymentRequestTransportView['tags']): { 
   return { nips: nips.length > 0 ? nips.join(', ') : null, lines }
 }
 
-/** Trim, check the prefix and the length, decode, validate. Never throws. */
+const safeDecode = (v: string): string | null => {
+  try { return decodeURIComponent(v) } catch { return null }
+}
+
+/** The one muted line under the input when the input was a `bitcoin:` link. Plain text. */
+export function bitcoinLinkNote(link: BitcoinLinkInfo): string {
+  const base = link.also.length > 0
+    ? `From a bitcoin: link. The link also offers: ${link.also.join(', ')}. Only the Cashu payment request (creq) is decoded here.`
+    : 'From a bitcoin: link.'
+  return link.creqCount > 1 ? `${base} The link has ${link.creqCount} creq parameters; the first one is shown.` : base
+}
+
+/** BIP-321 `bitcoin:` URI, parsed by hand: [address]["?" key=value {"&" key=value}]["#" fragment]. Never throws. */
+function parseBitcoinLink(trimmed: string): PaymentRequestParse {
+  if (trimmed.length > BITCOIN_LINK_MAX_LENGTH) return fail('too-long', BITCOIN_LINK_TOO_LONG)
+  let rest = trimmed.slice('bitcoin:'.length)
+  const hash = rest.indexOf('#')
+  if (hash >= 0) rest = rest.slice(0, hash)
+  const q = rest.indexOf('?')
+  const address = (q >= 0 ? rest.slice(0, q) : rest).trim()
+  const query = q >= 0 ? rest.slice(q + 1) : ''
+  const present = { lightning: false, lno: false }
+  let first: string | null = null
+  let creqCount = 0
+  const pairs = query === '' ? [] : query.split('&', BITCOIN_LINK_MAX_PARAMS)
+  for (const pair of pairs) {
+    const eq = pair.indexOf('=')
+    const key = (safeDecode(eq >= 0 ? pair.slice(0, eq) : pair) ?? '').toLowerCase()
+    const value = eq >= 0 ? pair.slice(eq + 1) : ''
+    if (key === 'creq') {
+      creqCount++
+      if (first === null) first = value
+    } else if ((key === 'lightning' || key === 'lno') && value !== '') {
+      present[key] = true
+    }
+  }
+  if (first === null) return fail('no-creq', BITCOIN_LINK_NO_CREQ)
+  const decoded = safeDecode(first)
+  if (decoded === null) return fail('invalid', PAYMENT_REQUEST_INVALID)
+  const creq = decoded.trim()
+  if (!creq) return fail('prefix', PAYMENT_REQUEST_PREFIX_ERROR)
+  const result = decodeCreq(creq)
+  if (!result.ok) return result
+  const also = [present.lightning && 'Lightning invoice', present.lno && 'BOLT12 offer', address !== '' && 'on-chain address'].filter((x): x is string => x !== false)
+  return { ...result, link: { also, creqCount } }
+}
+
+/** Trim, then decode a creq string or a pasted `bitcoin:` link that contains one. Never throws. */
 export function parsePaymentRequest(raw: string): PaymentRequestParse {
   const trimmed = raw.trim()
   if (!trimmed) return { ok: false, reason: 'empty', message: '' }
+  if (trimmed.slice(0, 8).toLowerCase() === 'bitcoin:') return parseBitcoinLink(trimmed)
+  return decodeCreq(trimmed)
+}
+
+/** Check the prefix and the length, decode, validate. Input is already trimmed and non-empty. */
+function decodeCreq(trimmed: string): PaymentRequestParse {
   // The prefix is case-insensitive (NUT-26: QR codes carry upper case); the payload of a creqA string is not, so only
   // its first five characters are normalised. A creqb string is lower-cased by the library itself.
   const isA = trimmed.slice(0, 5).toLowerCase() === 'creqa'
