@@ -175,10 +175,10 @@ test('mobile: "Only differences" hides rows where every mint has the same value'
   await expect(rows).toHaveCount(total)
 })
 
-test('desktop: the Compare grid is unchanged and has no mobile toggle', async ({ page }) => {
+test('desktop: the Compare grid is shown (not the phone table) and carries the same switch, off by default', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 })
   await openCompare(page, ['Delta Mint', 'Bravo Mint'])
   await expect(page.locator('.cmp-grid')).toBeVisible()
   await expect(page.locator('table.cmp-m-table')).toHaveCount(0)
-  await expect(page.getByRole('switch', { name: 'Only differences' })).toHaveCount(0)
+  await expect(page.getByRole('switch', { name: 'Only differences' })).toHaveAttribute('aria-checked', 'false')
 })

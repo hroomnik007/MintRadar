@@ -2077,6 +2077,9 @@
 }
 .cmp-m-status { margin: 0; padding: 0 12px; font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
 .cmp-m-status:empty { display: none; }
+/* Desktop: the same switch and status line above the side-by-side .cmp-grid (12px minimum, aligned with the grid's 20px padding). */
+.cmp-d-toolbar { display: flex; justify-content: flex-end; padding: 10px 20px 0; }
+.cmp-m-status.cmp-d-status { padding: 6px 20px 0; font-size: 12px; text-align: right; }
 
 .cmp-m-scroll {
   overflow-x: auto;

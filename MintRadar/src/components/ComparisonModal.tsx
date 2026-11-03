@@ -183,8 +183,8 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
   const isMobile = useIsMobile()
   const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('7d')
   const [metric, setMetric] = useState<HistoryMetric>('latency')
-  // Mobile only: the side-by-side table can hide the rows where every mint has the same value.
-  // The desktop .cmp-grid does not use it.
+  // Both layouts (phone table and desktop .cmp-grid) can hide the rows where every mint has the same value.
+  // One state, so a resize between the two keeps the choice; off every time the modal opens.
   const [onlyDifferences, setOnlyDifferences] = useState(false)
 
   // Input fee comes from the existing on-demand probe (/api/mint/probe → live
@@ -261,7 +261,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
     })),
   })
 
-  // ── Mobile table rows (≤768px): one row per fact, one column per mint, the label column sticky. ──
+  // ── Compare rows: one row per fact, one column per mint. The phone table renders them; the desktop grid only asks which ids stay. ──
   // `keys` is what "Only differences" compares (utils/compareDiff.ts); null = still loading, the row stays.
   const nutKey = (i: number) => TRACKED_NUT_KEYS.filter(k => allData[i]!.supportedNuts.has(k)).join(',')
   const feeKey = (i: number): CompareKey => {
@@ -275,7 +275,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
     if (!q || q.isLoading) return null
     return String(q.data?.uptimePct ?? '—')
   }
-  const mobileRows: Array<CompareRowKeys & { label: ReactNode; cell: (i: number) => ReactNode }> = !isMobile ? [] : [
+  const compareRows: Array<CompareRowKeys & { label: ReactNode; cell: (i: number) => ReactNode }> = [
     {
       id: 'status', label: 'Status',
       keys: allData.map(d => d.status),
@@ -414,7 +414,26 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
         : <span style={{ fontSize: 11, color: 'var(--text3)', background: 'var(--bg3)', border: '0.5px solid var(--border)', borderRadius: 4, padding: '2px 6px', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>No backup</span>),
     },
   ]
-  const shownMobileRows = visibleCompareRows(mobileRows, onlyDifferences)
+  const shownCompareRows = visibleCompareRows(compareRows, onlyDifferences)
+  const shownIds = new Set(shownCompareRows.map(r => r.id))
+  const showRow = (id: string) => shownIds.has(id)
+  const onlyDiffSwitch = (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={onlyDifferences}
+      className={`cmp-m-switch${onlyDifferences ? ' on' : ''}`}
+      onClick={() => setOnlyDifferences(v => !v)}
+    >
+      <span className="cmp-m-switch-track" aria-hidden="true"><span className="cmp-m-switch-thumb" /></span>
+      Only differences
+    </button>
+  )
+  const onlyDiffStatusText = onlyDifferences
+    ? (shownCompareRows.length === 0
+      ? 'Every row has the same value for these mints.'
+      : `${shownCompareRows.length} of ${compareRows.length} rows differ; rows with the same value are hidden.`)
+    : ''
 
   const isLoadingHistory = historyQueries.some(q => q.isLoading)
 
@@ -471,24 +490,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               <span className="cmp-m-hint" id="cmp-m-hint">
                 {mints.length} mints side by side{mints.length > 2 ? ', scroll sideways for more' : ''}
               </span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={onlyDifferences}
-                className={`cmp-m-switch${onlyDifferences ? ' on' : ''}`}
-                onClick={() => setOnlyDifferences(v => !v)}
-              >
-                <span className="cmp-m-switch-track" aria-hidden="true"><span className="cmp-m-switch-thumb" /></span>
-                Only differences
-              </button>
+              {onlyDiffSwitch}
             </div>
-            <p className="cmp-m-status" role="status" aria-live="polite">
-              {onlyDifferences
-                ? (shownMobileRows.length === 0
-                  ? 'Every row has the same value for these mints.'
-                  : `${shownMobileRows.length} of ${mobileRows.length} rows differ; rows with the same value are hidden.`)
-                : ''}
-            </p>
+            <p className="cmp-m-status" role="status" aria-live="polite">{onlyDiffStatusText}</p>
             <div className="cmp-m-scroll" role="region" aria-label="Mint comparison table" aria-describedby="cmp-m-hint" tabIndex={0}>
               <table className="cmp-m-table" style={mints.length > 2 ? { width: 96 + mints.length * 132 } : undefined}>
                 <thead>
@@ -510,7 +514,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                   </tr>
                 </thead>
                 <tbody>
-                  {shownMobileRows.map(row => (
+                  {shownCompareRows.map(row => (
                     <tr key={row.id} data-row={row.id}>
                       <th scope="row" className="cmp-m-lbl">{row.label}</th>
                       {mints.map((mint, i) => (
@@ -523,6 +527,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             </div>
           </>
         ) : (
+        <>
+        <div className="cmp-d-toolbar">{onlyDiffSwitch}</div>
+        <p className="cmp-m-status cmp-d-status" role="status" aria-live="polite">{onlyDiffStatusText}</p>
         <div className="cmp-grid" style={{ gridTemplateColumns: gridCols }}>
 
           {/* ── Mint ── */}
@@ -541,6 +548,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             )
           })}
 
+          {showRow('status') && (<>
           {/* ── Status ── */}
           <div className="cmp-lbl">Status</div>
           {mints.map((mint, i) => {
@@ -554,7 +562,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               </div>
             )
           })}
+          </>)}
 
+          {showRow('reliability') && (<>
           {/* ── Reliability Score ── */}
           <div className="cmp-lbl">Reliability Score</div>
           {mints.map((mint, i) => {
@@ -571,7 +581,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               </div>
             )
           })}
+          </>)}
 
+          {showRow('rating') && (<>
           {/* ── Community Rating (NIP-87 reviews, matches the ★ badge on mint cards) ── */}
           <div className="cmp-lbl">Community Rating</div>
           {mints.map(mint => {
@@ -591,7 +603,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               </div>
             )
           })}
+          </>)}
 
+          {showRow('uptime') && (<>
           {/* ── Uptime (24h, matches Mint Detail's header figure) ── */}
           <div className="cmp-lbl">{COMPARE_UPTIME_LABEL}</div>
           {mints.map((mint, i) => {
@@ -602,7 +616,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               </div>
             )
           })}
+          </>)}
 
+          {showRow('latency') && (<>
           {/* ── Latency ── */}
           <div className="cmp-lbl">{COMPARE_LATENCY_LABEL}<InfoTooltip iconSize={11} width={200} about="Latency" text={COMPARE_LATENCY_TITLE} /></div>
           {mints.map((mint, i) => {
@@ -613,7 +629,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               </div>
             )
           })}
+          </>)}
 
+          {showRow('fee') && (<>
           {/* ── Input fee ── */}
           <div className="cmp-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>Input fee{feeLabelInfo}</div>
           {mints.map((mint, i) => (
@@ -623,23 +641,37 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           ))}
 
           {/* ── Deposit / Withdrawal methods, Limits, Units (NUT-04 / NUT-05 in /v1/info, utils/compareMethods.ts) ── */}
+          </>)}
+
+          {showRow('deposit-methods') && (<>
           <div className="cmp-lbl">Deposit methods</div>
           {mints.map((mint, i) => (
             <div key={mint.url} className="cmp-val" data-row="deposit-methods"><MethodsValue cell={allData[i]!.methods.deposit} size={14} /></div>
           ))}
+          </>)}
+
+          {showRow('withdrawal-methods') && (<>
           <div className="cmp-lbl">Withdrawal methods</div>
           {mints.map((mint, i) => (
             <div key={mint.url} className="cmp-val" data-row="withdrawal-methods"><MethodsValue cell={allData[i]!.methods.withdrawal} size={14} /></div>
           ))}
+          </>)}
+
+          {showRow('limits') && (<>
           <div className="cmp-lbl">Limits</div>
           {mints.map((mint, i) => (
             <div key={mint.url} className="cmp-val" data-row="limits"><LimitsValue m={allData[i]!.methods} /></div>
           ))}
+          </>)}
+
+          {showRow('units') && (<>
           <div className="cmp-lbl">Units</div>
           {mints.map((mint, i) => (
             <div key={mint.url} className="cmp-val" data-row="units" style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600 }}>{allData[i]!.methods.units}</div>
           ))}
+          </>)}
 
+          {showRow('nut-count') && (<>
           {/* ── NUT Count ── */}
           <div className="cmp-lbl">NUT Count</div>
           {mints.map(mint => (
@@ -647,7 +679,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               {mint.nutCount ?? 0} / {TRACKED_NUT_KEYS.length}
             </div>
           ))}
+          </>)}
 
+          {showRow('nut-support') && (<>
           {/* ── NUT Support ── */}
           {/* The ⓘ says what green / grey mean (2026-10-25). Green = supportedNutKeys (utils/nutSupport.ts), the rule the score
               and Mint Detail use, so a NUT listed as {supported:false} is grey here too. */}
@@ -672,7 +706,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               </div>
             )
           })}
+          </>)}
 
+          {showRow('version') && (<>
           {/* ── Version ── */}
           <div className="cmp-lbl">Version</div>
           {mints.map((mint, i) => {
@@ -686,7 +722,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               </div>
             )
           })}
+          </>)}
 
+          {showRow('audit') && (<>
           {/* ── Audit row, COMPARE_AUDIT_LABEL (cashu.info 7-day window, same fields/threshold as the Reliability Score's audit part) ── */}
           <div className="cmp-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {COMPARE_AUDIT_LABEL}
@@ -700,7 +738,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               </div>
             )
           })}
+          </>)}
 
+          {showRow('backup') && (<>
           {/* ── Backup ── */}
           <div className="cmp-lbl cmp-last" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             Backup
@@ -717,8 +757,10 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               </div>
             )
           })}
+          </>)}
 
         </div>
+        </>
         )}
 
         <div style={{ padding: '4px 20px 20px', borderTop: '1px solid var(--border)' }}>
